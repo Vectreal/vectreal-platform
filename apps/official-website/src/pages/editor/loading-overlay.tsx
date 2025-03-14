@@ -1,9 +1,9 @@
-import LoadingSpinner from '../../components/loading-spinner';
+import { DefaultSpinner } from '@vctrl/shared/components';
 
 const LoadingOverlay = () => {
   return (
     <div className="absolute top-0 left-0 w-full h-full bg-zinc-950/25 flex items-center justify-center">
-      <LoadingSpinner />
+      <DefaultSpinner />
     </div>
   );
 };

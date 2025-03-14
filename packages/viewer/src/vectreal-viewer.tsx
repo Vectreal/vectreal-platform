@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 import { PropsWithChildren, Suspense } from 'react';
 import { Object3D } from 'three';
 import { Canvas } from '@react-three/fiber';
+import { DefaultSpinner } from '@vctrl/shared/components';
 import { cn } from '@vctrl/shared/lib/utils';
 
 import {
@@ -32,7 +33,6 @@ import {
 } from './components/scene';
 
 import {
-  DefaultSpinner,
   InfoPopover,
   SpinnerWrapper,
   type InfoPopoverProps,
