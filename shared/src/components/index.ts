@@ -4,6 +4,7 @@ export * from './background-beams';
 export * from './badge';
 export * from './button';
 export * from './card';
+export * from './default-spinner';
 export * from './dialog';
 export * from './dropdown-menu';
 export * from './glowing-stars';

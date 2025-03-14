@@ -17,6 +17,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  DefaultSpinner,
 } from '@vctrl/shared/components';
 
 import { sendCustomEvent } from '../lib/utils/ga-utils';
@@ -26,7 +27,6 @@ import reactGraphic from '../components/assets/react-graphic.png';
 import TypographyMuted from '../components/typography/typography-muted';
 import TypographyLead from '../components/typography/typography-lead';
 import ModelScene from '../components/title-model-scene';
-import LoadingSpinner from '../components/loading-spinner';
 
 const featureContent = [
   {
@@ -131,7 +131,7 @@ const Home = () => {
             <Suspense
               fallback={
                 <div className="w-full h-full flex items-center justify-center">
-                  <LoadingSpinner />
+                  <DefaultSpinner />
                 </div>
               }
             >
