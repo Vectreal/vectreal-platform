@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Vector3 } from 'three';
 
@@ -26,7 +26,7 @@ const Editor = () => {
   );
 
   function handleReset() {
-    reset()
+    reset();
   }
 
   function handleNotLoadedFiles(files?: File[]) {
@@ -79,7 +79,7 @@ const Editor = () => {
     <section className="h-dvh overflow-hidden mx-[-1rem]">
       <UploadInfoDialog open={!hasShownInfo} onClose={handleClose} />
 
-      {file ? (
+      {!isFileLoading && file ? (
         <VectrealViewer
           model={file?.model}
           key="model-viewer"
