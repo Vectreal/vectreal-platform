@@ -1,3 +1,16 @@
+## 0.9.5 (2025-03-14)
+
+### 🩹 Fixes
+
+- **apps/official-website:** Editor Model loading ([c041f2a](https://github.com/Vectreal/vectreal-platform/commit/c041f2a))
+- **apps/official-website/editor:** missing import for useState and improved loading state handling ([7b37f54](https://github.com/Vectreal/vectreal-platform/commit/7b37f54))
+- **packages/hooks:** ensure buffers are converted to Uint8Array before adding to zip file ([4e1f99d](https://github.com/Vectreal/vectreal-platform/commit/4e1f99d))
+
+### ❤️ Thank You
+
+- Mo
+- Schlomoh
+
 ## 0.9.4 (2024-11-24)
 
 ### 🩹 Fixes
