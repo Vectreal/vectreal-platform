@@ -211,7 +211,7 @@ function useOptimizerIntegration(
       const gltfLoader = createGltfLoader();
 
       gltfLoader.parse(
-        modelBuffer.buffer,
+        modelBuffer.buffer as ArrayBuffer,
         '',
         (gltf) => {
           dispatch({

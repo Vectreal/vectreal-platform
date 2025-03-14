@@ -5,7 +5,7 @@ import { getFileExtension } from './file-helpers';
 
 /**
  * Handles processing and adding images to a zip file.
- * 
+ *
  * @param images The images property of the GLTF model's asset.
  * @param textures The textures property of the GLTF model's asset.
  * @param zip The zip file to add images to.
@@ -26,7 +26,8 @@ export const handleImages = (
     if (image.data instanceof ArrayBuffer || image.data instanceof Uint8Array) {
       const buffer =
         image.data instanceof Uint8Array ? image.data.buffer : image.data;
-      zip.file(fileName, buffer, { binary: true });
+      const uint8Array = new Uint8Array(buffer);
+      zip.file(fileName, uint8Array, { binary: true });
     } else if (image.uri.startsWith('data:')) {
       // Handle data URIs
       const binaryData = dataURItoBlob(image.uri);
@@ -37,14 +38,13 @@ export const handleImages = (
   });
 };
 
-
 /**
  * Handles processing and adding buffers to a zip file.
- * 
+ *
  * @param buffers The buffers property of the GLTF model's asset.
  * @param zip The zip file to add buffers to.
  * @param baseFileName The base file name to use for the exported file.
- * 
+ *
  * Only ArrayBuffers and URIBufferObjects with a uri of type data URL are supported.
  * If the buffer is not an ArrayBuffer, it must have a uri that starts with 'data:'.
  * If the buffer is not an ArrayBuffer and does not have a uri, a warning is logged
@@ -57,9 +57,9 @@ export const handleBuffers = (
 ): void => {
   buffers.forEach((buffer, index) => {
     const fileName = `${baseFileName}.bin`;
-
     if (buffer instanceof ArrayBuffer) {
-      zip.file(fileName, buffer, { binary: true });
+      const uint8Array = new Uint8Array(buffer);
+      zip.file(fileName, uint8Array, { binary: true });
     } else if (buffer.uri) {
       // If buffer.uri is a data URL, we need to convert it to binary data
       const binaryData = dataURItoBlob(buffer.uri);
