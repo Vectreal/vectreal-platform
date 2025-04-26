@@ -1,7 +1,7 @@
 import {
   RouterProvider as BaseRouterProvider,
   createBrowserRouter,
-} from 'react-router-dom';
+} from 'react-router';
 import { lazy, Suspense } from 'react';
 import { DefaultSpinner } from '@vctrl/shared/components';
 

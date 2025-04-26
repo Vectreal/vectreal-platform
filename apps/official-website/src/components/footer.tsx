@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 
 const Footer = () => (
   <footer className="flex flex-col gap-16 min-h-[20rem]">

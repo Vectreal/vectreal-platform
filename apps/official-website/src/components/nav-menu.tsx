@@ -1,5 +1,5 @@
 import { forwardRef } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router';
 import {
   CubeIcon,
   DiscordLogoIcon,

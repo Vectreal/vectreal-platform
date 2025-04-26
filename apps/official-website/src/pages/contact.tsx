@@ -1,5 +1,5 @@
 import { FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 
 import { Button, Input, Label, Textarea } from '@vctrl/shared/components';
 

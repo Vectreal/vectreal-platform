@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import {
   EyeOpenIcon,
   GitHubLogoIcon,
