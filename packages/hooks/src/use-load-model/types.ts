@@ -14,62 +14,62 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { Object3D } from 'three';
+import { Object3D } from 'three'
 
 export enum ModelFileTypes {
-  gltf = 'gltf',
-  glb = 'glb',
-  usdz = 'usdz',
+	gltf = 'gltf',
+	glb = 'glb',
+	usdz = 'usdz'
 }
 
-export type InputFileOrDirectory = (File | FileSystemDirectoryHandle)[];
+export type InputFileOrDirectory = (File | FileSystemDirectoryHandle)[]
 
 export interface ReducedGltf {
-  images: { name: string; uri: string }[];
-  buffers: { bytelength: string; uri: string }[];
+	images: { name: string; uri: string }[]
+	buffers: { bytelength: string; uri: string }[]
 }
 
 export interface ModelFile {
-  model: Object3D;
-  type: ModelFileTypes;
-  name: string;
+	model: Object3D
+	type: ModelFileTypes
+	name: string
 }
 
 // Updated State interface
-export interface State {
-  file: ModelFile | null;
-  isFileLoading: boolean;
-  progress: number;
-  supportedFileTypes: ModelFileTypes[];
+export interface LoadData {
+	file: ModelFile | null
+	isFileLoading: boolean
+	progress: number
+	supportedFileTypes: ModelFileTypes[]
 }
 
 // Updated Action types
 export type Action =
-  | { type: 'set-file'; payload: ModelFile }
-  | { type: 'set-file-loading'; payload: boolean }
-  | { type: 'set-progress'; payload: number }
-  | { type: 'reset-state' };
+	| { type: 'set-file'; payload: ModelFile }
+	| { type: 'set-file-loading'; payload: boolean }
+	| { type: 'set-progress'; payload: number }
+	| { type: 'reset-state' }
 
 // Updated Event types
 export type EventTypes =
-  | 'multiple-models'
-  | 'not-loaded-files'
-  | 'load-start'
-  | 'load-progress'
-  | 'load-complete'
-  | 'load-reset'
-  | 'load-error';
+	| 'multiple-models'
+	| 'not-loaded-files'
+	| 'load-start'
+	| 'load-progress'
+	| 'load-complete'
+	| 'load-reset'
+	| 'load-error'
 
 // Updated event data types
 export type EventData = {
-  'multiple-models': File[];
-  'not-loaded-files': File[];
-  'load-start': null;
-  'load-progress': number;
-  'load-complete': State['file'];
-  'load-reset': null;
-  'load-error': Error | unknown;
-};
+	'multiple-models': File[]
+	'not-loaded-files': File[]
+	'load-start': null
+	'load-progress': number
+	'load-complete': LoadData['file']
+	'load-reset': null
+	'load-error': Error | unknown
+}
 
 // Updated EventHandler type
-export type EventHandler<T extends EventTypes> = (data?: EventData[T]) => void;
+export type EventHandler<T extends EventTypes> = (data?: EventData[T]) => void

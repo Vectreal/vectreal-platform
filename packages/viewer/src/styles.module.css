@@ -1,183 +1,219 @@
-/* Color schemes */
-@define-mixin colors-light {
-  --vctrl-bg: #f3f4f6;
-  --vctrl-hover-bg: #e5e7eb;
-  --vctrl-active-bg: #d1d5db;
-  --vctrl-text: #1f2937;
-  --vctrl-border: #181818;
+/* Color schemes as CSS variables */
+:root {
+	/* Light theme variables (default) */
+	--vctrl-bg: #f3f4f6;
+	--vctrl-hover-bg: #e5e7eb;
+	--vctrl-active-bg: #d1d5db;
+	--vctrl-text: #1f2937;
+	--vctrl-border: #181818;
 }
 
-@define-mixin colors-dark {
-  --vctrl-bg: #141414;
-  --vctrl-hover-bg: #363636;
-  --vctrl-active-bg: #585858;
-  --vctrl-text: #959595;
-  --vctrl-border: rgba(229, 231, 235, 0.5);
+/* Dark theme variables */
+.dark-theme {
+	--vctrl-bg: #141414;
+	--vctrl-hover-bg: #363636;
+	--vctrl-active-bg: #585858;
+	--vctrl-text: #959595;
+	--vctrl-border: rgba(229, 231, 235, 0.5);
 }
 
-/* Mixins for reusable styles */
-@define-mixin vctrl-bg-hover-active {
-  background-color: var(--vctrl-bg);
-  cursor: pointer;
+/* Reusable utility class instead of mixin */
+.bg-hover-active {
+	background-color: var(--vctrl-bg);
+	cursor: pointer;
+}
 
-  &:hover {
-    background-color: var(--vctrl-hover-bg);
-  }
+.bg-hover-active:hover {
+	background-color: var(--vctrl-hover-bg);
+}
 
-  &:active {
-    background-color: var(--vctrl-active-bg);
-  }
+.bg-hover-active:active {
+	background-color: var(--vctrl-active-bg);
 }
 
 /* Base light theme */
 .viewer {
-  @mixin colors-light;
+	/* Light theme by default */
+	overflow: clip;
+	font-family: poppins, sans-serif;
+	font-size: 16px;
+
+	button {
+		border: none;
+	}
+
+	a {
+		text-decoration: none;
+		color: unset;
+	}
+
+	p {
+		margin: 0;
+	}
 }
 
 /* Dark mode variants */
 @media (prefers-color-scheme: dark) {
-  .viewer {
-    @mixin colors-dark;
-  }
+	.viewer {
+		--vctrl-bg: #141414;
+		--vctrl-hover-bg: #363636;
+		--vctrl-active-bg: #585858;
+		--vctrl-text: #959595;
+		--vctrl-border: rgba(229, 231, 235, 0.5);
+	}
 }
 
+/* Class-based theme variants */
 .viewer.dark,
 html.dark {
-  @mixin colors-dark;
+	--vctrl-bg: #141414;
+	--vctrl-hover-bg: #363636;
+	--vctrl-active-bg: #585858;
+	--vctrl-text: #959595;
+	--vctrl-border: rgba(229, 231, 235, 0.5);
 }
 
 .viewer.light,
 html.light {
-  @mixin colors-light;
-}
-
-.viewer {
-  overflow: clip;
-  font-family: poppins, sans-serif;
-  font-size: 16px;
-
-  button {
-    border: none;
-  }
-
-  a {
-    text-decoration: none;
-    color: unset;
-  }
-
-  p {
-    margin: 0;
-  }
+	--vctrl-bg: #f3f4f6;
+	--vctrl-hover-bg: #e5e7eb;
+	--vctrl-active-bg: #d1d5db;
+	--vctrl-text: #1f2937;
+	--vctrl-border: #181818;
 }
 
 .viewer,
-.viewer-canvas,
-.spinner-wrapper {
-  width: 100%;
-  height: 100%;
-}
-
-.spinner-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.viewer-canvas {
+	width: 100%;
+	height: 100%;
 }
 
 .popover {
-  position: absolute;
-  bottom: 0;
-  margin: 0.5rem;
+	position: absolute;
+	z-index: 100;
+	bottom: 0;
+	margin: 0.5rem;
 
-  .popover-trigger {
-    position: relative;
-    width: 1.5rem;
-    height: 1.5rem;
+	.popover-trigger {
+		position: relative;
+		width: 1.5rem;
+		height: 1.5rem;
 
-    button {
-      @mixin vctrl-bg-hover-active;
-      width: inherit;
-      height: inherit;
-      padding: 0.25rem;
-      border-radius: 50%;
-      z-index: 10;
+		button {
+			/* Replace @apply with direct class usage */
+			background-color: var(--vctrl-bg);
+			cursor: pointer;
+			width: inherit;
+			height: inherit;
+			padding: 0.25rem;
+			border-radius: 50%;
+			z-index: 10;
 
-      svg {
-        color: var(--vctrl-text);
-        width: 1rem;
-        height: 1rem;
-      }
-    }
-  }
+			&:hover {
+				background-color: var(--vctrl-hover-bg);
+			}
 
-  .popover-modal {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 16rem;
+			&:active {
+				background-color: var(--vctrl-active-bg);
+			}
 
-    display: flex;
-    flex-direction: column;
+			svg {
+				color: var(--vctrl-text);
+				width: 1rem;
+				height: 1rem;
+			}
+		}
+	}
 
-    border-radius: 0.5rem;
-    overflow: hidden;
-    background-color: var(--vctrl-bg);
+	.popover-modal {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		width: 16rem;
 
-    transition: all 0.3s ease-out;
+		display: flex;
+		flex-direction: column;
 
-    &.hide {
-      translate: -0.5rem 0.5rem;
-      opacity: 0;
-      visibility: hidden;
-    }
+		border-radius: 0.5rem;
+		overflow: hidden;
+		background-color: var(--vctrl-bg);
 
-    &.show {
-      translate: 0 0;
-      opacity: 1;
-      visibility: visible;
-    }
+		transition: all 0.3s ease-out;
 
-    .text-container {
-      flex-grow: 1;
-      padding: 1rem;
+		&.hide {
+			translate: -0.5rem 0.5rem;
+			opacity: 0;
+			visibility: hidden;
+		}
 
-      p {
-        font-size: 0.875rem;
-        color: var(--vctrl-text);
-      }
-    }
+		&.show {
+			translate: 0 0;
+			opacity: 1;
+			visibility: visible;
+		}
 
-    .popover-close {
-      @mixin vctrl-bg-hover-active;
-      position: absolute;
-      right: 0;
-      top: 0;
-      width: 2rem;
-      height: 2rem;
-      margin: 0.5rem;
-      padding: 0.5rem;
-      border-radius: 0.25rem;
-      color: var(--vctrl-text);
-      transition: all 0.3s ease-in-out;
-    }
+		.text-container {
+			flex-grow: 1;
+			padding: 1rem;
 
-    .popover-footer {
-      @mixin vctrl-bg-hover-active;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
-      padding: 0.5rem 1rem;
-      font-size: 0.75rem;
-      border-top: 1px solid var(--vctrl-border);
-      color: var(--vctrl-text);
-      transition:
-        color 0.3s,
-        background-color 0.3s;
+			p {
+				font-size: 0.875rem;
+				color: var(--vctrl-text);
+			}
+		}
 
-      svg {
-        height: 1rem;
-        width: 1rem;
-      }
-    }
-  }
+		.popover-close {
+			/* Replace @apply with direct class properties */
+			background-color: var(--vctrl-bg);
+			cursor: pointer;
+			position: absolute;
+			right: 0;
+			top: 0;
+			width: 2rem;
+			height: 2rem;
+			margin: 0.5rem;
+			padding: 0.5rem;
+			border-radius: 0.25rem;
+			color: var(--vctrl-text);
+			transition: all 0.3s ease-in-out;
+
+			&:hover {
+				background-color: var(--vctrl-hover-bg);
+			}
+
+			&:active {
+				background-color: var(--vctrl-active-bg);
+			}
+		}
+
+		.popover-footer {
+			/* Replace @apply with direct class properties */
+			background-color: var(--vctrl-bg);
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 0.5rem;
+			padding: 0.5rem 1rem;
+			font-size: 0.75rem;
+			border-top: 1px solid var(--vctrl-border);
+			color: var(--vctrl-text);
+			transition:
+				color 0.3s,
+				background-color 0.3s;
+
+			&:hover {
+				background-color: var(--vctrl-hover-bg);
+			}
+
+			&:active {
+				background-color: var(--vctrl-active-bg);
+			}
+
+			svg {
+				height: 1rem;
+				width: 1rem;
+			}
+		}
+	}
 }

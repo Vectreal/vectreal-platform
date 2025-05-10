@@ -1,0 +1,73 @@
+{
+	"root": true,
+	"ignorePatterns": ["**/*"],
+	"plugins": ["@nx"],
+	"rules": {
+		"sort-imports": [
+			"error",
+			{
+				"ignoreCase": true,
+				"ignoreDeclarationSort": true,
+				"ignoreMemberSort": false,
+				"memberSyntaxSortOrder": ["none", "all", "multiple", "single"],
+				"allowSeparatedGroups": true
+			}
+		],
+		"import/order": [
+			"error",
+			{
+				"groups": [
+					"builtin",
+					"external",
+					"internal",
+					"parent",
+					"sibling",
+					"index"
+				],
+				"newlines-between": "always-and-inside-groups",
+				"pathGroups": [
+					{
+						"pattern": "*.{css,scss}",
+						"group": "index",
+						"patternOptions": { "matchBase": true },
+						"position": "after"
+					}
+				],
+				"alphabetize": {
+					"order": "asc",
+					"caseInsensitive": true
+				}
+			}
+		]
+	},
+	"overrides": [
+		{
+			"files": ["*.ts", "*.tsx", "*.js", "*.jsx"],
+			"rules": {
+				"@nx/enforce-module-boundaries": [
+					"error",
+					{
+						"enforceBuildableLibDependency": true,
+						"allow": [],
+						"depConstraints": [
+							{
+								"sourceTag": "*",
+								"onlyDependOnLibsWithTags": ["*"]
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			"files": ["*.ts", "*.tsx"],
+			"extends": ["plugin:@nx/typescript"],
+			"rules": {}
+		},
+		{
+			"files": ["*.js", "*.jsx"],
+			"extends": ["plugin:@nx/javascript"],
+			"rules": {}
+		}
+	]
+}

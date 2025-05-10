@@ -1,27 +1,43 @@
 {
-  "compileOnSave": false,
-  "compilerOptions": {
-    "rootDir": ".",
-    "sourceMap": true,
-    "declaration": false,
-    "moduleResolution": "node",
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "importHelpers": true,
-    "target": "es2015",
-    "module": "esnext",
-    "lib": ["es2020", "dom"],
-    "skipLibCheck": true,
-    "skipDefaultLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@vctrl/hooks": ["packages/hooks/src/index.ts"],
-      "@vctrl/hooks/*": ["packages/hooks/src/*"],
-      "@vctrl/official-website/*": ["apps/official-website/src/*"],
-      "@vctrl/shared/*": ["shared/src/*"],
-      "@vctrl/viewer": ["packages/viewer/src/index.ts"],
-      "@vctrl/viewer/*": ["packages/viewer/src/*"]
-    }
-  },
-  "exclude": ["node_modules", "tmp"]
+	"compileOnSave": false,
+	"compilerOptions": {
+		"rootDir": ".",
+		"sourceMap": true,
+		"declaration": false,
+		"moduleResolution": "node",
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"importHelpers": true,
+		"target": "es2015",
+		"module": "esnext",
+		"lib": ["es2020", "dom"],
+		"skipLibCheck": true,
+		"skipDefaultLibCheck": true,
+		"baseUrl": ".",
+		"paths": {
+			// shadcn/ui
+			"@vctrl-ui/ui/*": ["shared/ui/src/ui/*"],
+			"@vctrl-ui/styles/*": ["shared/ui/src/styles/*"],
+			"@vctrl-ui/assets/*": ["shared/ui/src/assets/*"],
+			"@vctrl-ui/hooks/*": ["shared/ui/src/hooks/*"],
+			"@vctrl-ui/utils": ["shared/utils/src/index.ts"],
+			"@vctrl/platform/*": ["apps/vercel-platform/app/*"],
+
+			//
+			"@vctrl/hooks/use-load-model": [
+				"packages/hooks/src/use-load-model/*",
+				"packages/hooks/src/use-load-model/index.ts"
+			],
+			"@vctrl/hooks/use-export-model": [
+				"packages/hooks/src/use-export-model/index.ts"
+			],
+			"@vctrl/hooks/use-optimize-model": [
+				"packages/hooks/src/use-optimize-model/*",
+				"packages/hooks/src/use-optimize-model/index.ts"
+			],
+			"@vctrl/viewer": ["packages/viewer/src/index.ts"],
+			"@vctrl/official-website/*": ["apps/official-website/src/*"]
+		}
+	},
+	"exclude": ["node_modules", "tmp"]
 }

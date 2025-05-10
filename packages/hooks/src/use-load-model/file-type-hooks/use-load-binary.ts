@@ -14,10 +14,10 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { useCallback } from 'react';
+import { useCallback } from 'react'
 
-import { Action, ModelFileTypes } from '../types';
-import { createGltfLoader, createUsdzLoader } from '../loaders';
+import { createGltfLoader, createUsdzLoader } from '../loaders'
+import { Action, ModelFileTypes } from '../types'
 
 /**
  * Hook to load binary files
@@ -26,65 +26,65 @@ import { createGltfLoader, createUsdzLoader } from '../loaders';
  * @returns An object containing the loadBinary function
  */
 function useLoadBinary(dispatch: React.Dispatch<Action>) {
-  /**
-   * Function to read binary files
-   *
-   * @param file - The binary file to read
-   * @param fileType - The type of file to read
-   * @param onProgress - The function to call when progress is made
-   * @returns {void}
-   */
-  const loadBinary = useCallback(
-    (file: File, fileType: ModelFileTypes, onProgress: () => void) => {
-      const reader = new FileReader();
+	/**
+	 * Function to read binary files
+	 *
+	 * @param file - The binary file to read
+	 * @param fileType - The type of file to read
+	 * @param onProgress - The function to call when progress is made
+	 * @returns {void}
+	 */
+	const loadBinary = useCallback(
+		(file: File, fileType: ModelFileTypes, onProgress: () => void) => {
+			const reader = new FileReader()
 
-      reader.onload = async (event: ProgressEvent<FileReader>) => {
-        if (event.target?.result) {
-          const arrayBuffer = event.target.result as ArrayBuffer;
+			reader.onload = async (event: ProgressEvent<FileReader>) => {
+				if (event.target?.result) {
+					const arrayBuffer = event.target.result as ArrayBuffer
 
-          if (fileType === ModelFileTypes.glb) {
-            const gltfLoader = createGltfLoader();
+					if (fileType === ModelFileTypes.glb) {
+						const gltfLoader = createGltfLoader()
 
-            gltfLoader.parse(arrayBuffer, '', (gltf) => {
-              dispatch({
-                type: 'set-file',
-                payload: {
-                  model: gltf.scene,
-                  type: ModelFileTypes.glb,
-                  name: file.name,
-                },
-              });
-            });
-          } else if (fileType === ModelFileTypes.usdz) {
-            const usdzLoader = createUsdzLoader();
-            const model = usdzLoader.parse(arrayBuffer);
+						gltfLoader.parse(arrayBuffer, '', (gltf) => {
+							dispatch({
+								type: 'set-file',
+								payload: {
+									model: gltf.scene,
+									type: ModelFileTypes.glb,
+									name: file.name
+								}
+							})
+						})
+					} else if (fileType === ModelFileTypes.usdz) {
+						const usdzLoader = createUsdzLoader()
+						const model = usdzLoader.parse(arrayBuffer)
 
-            dispatch({
-              type: 'set-file',
-              payload: {
-                model: model,
-                type: ModelFileTypes.usdz,
-                name: file.name,
-              },
-            });
-          }
+						dispatch({
+							type: 'set-file',
+							payload: {
+								model: model,
+								type: ModelFileTypes.usdz,
+								name: file.name
+							}
+						})
+					}
 
-          onProgress(); // Call progress callback when binary file is loaded
-          dispatch({ type: 'set-file-loading', payload: false });
-        }
-      };
+					onProgress() // Call progress callback when binary file is loaded
+					dispatch({ type: 'set-file-loading', payload: false })
+				}
+			}
 
-      reader.onerror = (error) => {
-        console.error('Error reading file:', error);
-        dispatch({ type: 'set-file-loading', payload: false });
-      };
+			reader.onerror = (error) => {
+				console.error('Error reading file:', error)
+				dispatch({ type: 'set-file-loading', payload: false })
+			}
 
-      reader.readAsArrayBuffer(file);
-    },
-    [dispatch],
-  );
+			reader.readAsArrayBuffer(file)
+		},
+		[dispatch]
+	)
 
-  return { loadBinary };
+	return { loadBinary }
 }
 
-export default useLoadBinary;
+export default useLoadBinary

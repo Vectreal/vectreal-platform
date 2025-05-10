@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
 import { Grid, GridProps as ThreeGridProps } from '@react-three/drei';
-import { Box3, Mesh, Object3D, Vector3 } from 'three';
 import { useThree } from '@react-three/fiber';
+import { useCallback, useEffect, useState } from 'react';
+import { Box3, Mesh, Object3D, Vector3 } from 'three';
 
 /**
  * Props for the SceneGrid component, extending ThreeGridProps from '@react-three/drei'.

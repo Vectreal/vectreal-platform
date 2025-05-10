@@ -1,14 +1,10 @@
 /// <reference types='vitest' />
+import path from 'path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 import react from '@vitejs/plugin-react';
-import path from 'path';
-
-import tailwindcss from 'tailwindcss';
-import autoprefixer from 'autoprefixer';
-import postcssMixins from 'postcss-mixins';
-import postcssNested from 'postcss-nested';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   root: __dirname,
@@ -16,6 +12,7 @@ export default defineConfig({
 
   plugins: [
     react(),
+    tailwindcss(),
     nxViteTsPaths(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -57,24 +54,10 @@ export default defineConfig({
     }),
   ],
 
-  css: {
-    postcss: {
-      plugins: [autoprefixer, postcssNested, postcssMixins, tailwindcss],
-    },
-  },
-
   // Uncomment this if you are using workers.
   // worker: {
   //  plugins: [ nxViteTsPaths() ],
   // },
-
-  resolve: {
-    alias: {
-      '@vctrl/hooks': path.resolve(__dirname, '../../packages/hooks/src'),
-      '@vctrl/viewer': path.resolve(__dirname, '../../packages/viewer/src'),
-      '@vctrl/shared': path.resolve(__dirname, '../../shared/src'),
-    },
-  },
 
   build: {
     chunkSizeWarningLimit: 700, // three lib is always around 680kb
@@ -95,7 +78,7 @@ export default defineConfig({
           ],
           'react-three-fiber': ['@react-three/fiber'],
           'react-three-drei': ['@react-three/drei'],
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'react-vendor': ['react', 'react-dom', 'react-router'],
           'ui-vendor': [
             '@radix-ui/react-accordion',
             '@radix-ui/react-avatar',

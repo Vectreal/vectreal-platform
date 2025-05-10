@@ -14,31 +14,31 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { WebGLRenderer } from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
-import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader';
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module';
+import { WebGLRenderer } from 'three'
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module'
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
+import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
 
-import eventSystem from '../event-system';
+import eventSystem from '../event-system'
 
 function createGltfLoader() {
-  const dracoLoader = new DRACOLoader();
-  dracoLoader.setDecoderPath('/draco/');
+	const dracoLoader = new DRACOLoader()
+	dracoLoader.setDecoderPath('/draco/')
 
-  const ktxLoader = new KTX2Loader();
-  ktxLoader.setTranscoderPath('/draco/');
+	const ktxLoader = new KTX2Loader()
+	ktxLoader.setTranscoderPath('/draco/')
 
-  const gltfLoader = new GLTFLoader()
-    .setDRACOLoader(dracoLoader)
-    .setKTX2Loader(ktxLoader.detectSupport(new WebGLRenderer()))
-    .setMeshoptDecoder(MeshoptDecoder);
+	const gltfLoader = new GLTFLoader()
+		.setDRACOLoader(dracoLoader)
+		.setKTX2Loader(ktxLoader.detectSupport(new WebGLRenderer()))
+		.setMeshoptDecoder(MeshoptDecoder)
 
-  gltfLoader.manager.onError = (url) => {
-    eventSystem.emit('load-error', `Failed to load file ${url}`);
-  };
+	gltfLoader.manager.onError = (url) => {
+		eventSystem.emit('load-error', `Failed to load file ${url}`)
+	}
 
-  return gltfLoader;
+	return gltfLoader
 }
 
-export default createGltfLoader;
+export default createGltfLoader

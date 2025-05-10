@@ -1,38 +1,32 @@
 {
-  "extends": ["plugin:@nx/react", "../../.eslintrc.json"],
-  "ignorePatterns": ["!**/*"],
-  "overrides": [
-    {
-      "files": ["*.json"],
-      "parser": "jsonc-eslint-parser",
-      "rules": {
-        "@nx/dependency-checks": [
-          "error",
-          {
-            "includeTransitiveDependencies": true,
-            "ignoredDependencies": [
-              "@nx/vite",
-              "@vitejs/plugin-react",
-              "clsx",
-              "react-loader-spinner",
-              "vite",
-              "vite-plugin-dts"
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "files": ["*.ts", "*.tsx", "*.js", "*.jsx"],
-      "rules": {}
-    },
-    {
-      "files": ["*.ts", "*.tsx"],
-      "rules": {}
-    },
-    {
-      "files": ["*.js", "*.jsx"],
-      "rules": {}
-    }
-  ]
+	"extends": ["plugin:@nx/react", "../../.eslintrc"],
+	"ignorePatterns": ["!**/*"],
+	"overrides": [
+		{
+			"files": ["*.json"],
+			"parser": "jsonc-eslint-parser",
+			"rules": {
+				"@nx/dependency-checks": [
+					"error",
+					{
+						"includeTransitiveDependencies": false,
+						"ignoredFiles": ["vite.config.ts"], // list of files that should be skipped for check
+						"ignoredDependencies": ["@vctrl/ui", "@vctrl/utils"]
+					}
+				]
+			}
+		},
+		{
+			"files": ["*.ts", "*.tsx", "*.js", "*.jsx"],
+			"rules": {}
+		},
+		{
+			"files": ["*.ts", "*.tsx"],
+			"rules": {}
+		},
+		{
+			"files": ["*.js", "*.jsx"],
+			"rules": {}
+		}
+	]
 }

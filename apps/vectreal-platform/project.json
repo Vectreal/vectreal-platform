@@ -1,9 +1,17 @@
 {
-  "name": "vectreal-platform",
-  "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "apps/vectreal-platform/src",
-  "projectType": "application",
-  "tags": [],
-  "// targets": "to see all targets run: nx show project vectreal-platform --web",
-  "targets": {}
+	"name": "vectreal-platform",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "apps/vectreal-platform/src",
+	"projectType": "application",
+	"tags": [],
+	"// targets": "to see all targets run: nx show project vectreal-platform --web",
+	"targets": {
+		// "build": {
+		// 	"executor": "@nx/vite:build",
+		// 	"options": {
+		// 		"outputPath": "../../dist/apps/vectreal-platform",
+		// 		"configFile": "apps/vectreal-platform/vite.config.ts"
+		// 	}
+		// }
+	}
 }
