@@ -203,7 +203,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 					<div className="w-full">
 						<ol className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
 							<li className="grow">
-								<BasicCard>
+								<BasicCard highlight>
 									<CardHeader>
 										<CardTitle className="text-4xl font-light">
 											0<span className="text-accent pl-1 font-bold">1</span>
@@ -220,7 +220,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 								</BasicCard>
 							</li>
 							<li className="grow">
-								<BasicCard>
+								<BasicCard highlight>
 									<CardHeader>
 										<CardTitle className="text-4xl font-light">
 											0<span className="text-accent pl-1 font-bold">2</span>
@@ -237,7 +237,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 							</li>
 
 							<li className="grow">
-								<BasicCard>
+								<BasicCard highlight>
 									<CardHeader>
 										<CardTitle className="text-4xl font-light">
 											0<span className="text-accent pl-1 font-bold">3</span>
@@ -253,7 +253,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 								</BasicCard>
 							</li>
 							<li className="grow">
-								<BasicCard>
+								<BasicCard highlight>
 									<CardHeader>
 										<CardTitle className="text-4xl font-light">
 											0<span className="text-accent pl-1 font-bold">4</span>

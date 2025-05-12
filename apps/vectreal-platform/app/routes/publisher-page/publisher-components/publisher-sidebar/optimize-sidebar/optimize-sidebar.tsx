@@ -1,4 +1,5 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
+import { ModelSize } from '@vctrl/hooks/use-optimize-model'
 import {
 	Accordion,
 	AccordionContent,
@@ -13,35 +14,20 @@ import {
 	CardTitle
 } from '@vctrl-ui/ui/card'
 import { Separator } from '@vctrl-ui/ui/separator'
-import { cn } from '@vctrl-ui/utils'
+import { cn, formatFileSize } from '@vctrl-ui/utils'
 import { motion } from 'framer-motion'
 import {
 	ArrowRightIcon,
 	CheckIcon,
-	Box as CubeIcon,
 	FileIcon,
 	FileQuestion,
-	LayersIcon,
 	Settings2,
 	Star
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-/**
- * Format the file size for display.
- *
- * @param bytes - The size in bytes.
- * @returns A human-readable file size string.
- */
-const formatFileSize = (bytes: number): string => {
-	if (bytes >= 1024 * 1024) {
-		return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
-	} else if (bytes >= 1024) {
-		return `${(bytes / 1024).toFixed(2)} KB`
-	} else {
-		return `${bytes} bytes`
-	}
-}
+import { BasicOptimizationPanel } from './basic-optimization-panel'
+import SceneDetails from './scene-details'
 
 const OptimizeSidebarContent = () => {
 	const { optimize, on, off } = useModelContext()
@@ -49,7 +35,7 @@ const OptimizeSidebarContent = () => {
 
 	const [, setShow] = useState(true)
 
-	const [size, setSize] = useState<ReturnType<typeof getSize> | null>(null)
+	const [size, setSize] = useState<ModelSize | null>(null)
 	const [initialCaptured, setInitialCaptured] = useState(false)
 	const initialReports = useRef<{
 		report: typeof report
@@ -63,13 +49,13 @@ const OptimizeSidebarContent = () => {
 		setSize(null)
 		setShow(false)
 		setInitialCaptured(false)
-		resetOptimize()
+		resetOptimize?.()
 		initialReports.current = null
 	}, [setShow, resetOptimize])
 
 	useEffect(() => {
 		// Update the current size whenever the report changes
-		setSize(getSize())
+		setSize(getSize?.() ?? null)
 	}, [getSize, report])
 
 	useEffect(() => {
@@ -239,95 +225,99 @@ const OptimizeSidebarContent = () => {
 
 			<Separator />
 
-			<CardContent className="p-6">
-				<div className="space-y-6">
-					<div className="flex items-center justify-between">
-						<motion.div
-							className="text-center"
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5 }}
-						>
-							<div className="text-3xl font-bold">
-								{formatFileSize(initialFileSize)}
-							</div>
-							<div className="text-sm text-zinc-400">Original</div>
-						</motion.div>
-						<ArrowRightIcon
-							className={cn(
-								'h-8 w-8 transform',
-								currentFileSize < initialFileSize
-									? 'rotate-45 text-emerald-400'
-									: 'text-gray-400'
-							)}
-						/>
-						<motion.div
-							className="text-center"
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5, delay: 0.2 }}
-						>
-							<div
-								className={cn(
-									'text-3xl font-bold',
-									currentFileSize < initialFileSize
-										? 'text-emerald-400'
-										: 'text-gray-400'
-								)}
-							>
-								{formatFileSize(currentFileSize)}
-							</div>
-							<div className="text-sm text-zinc-400">Optimized</div>
-						</motion.div>
-					</div>
-					<motion.div
-						className="rounded-lg bg-zinc-900 p-4"
-						initial={{ opacity: 0, y: 20 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.5, delay: 0.4 }}
-					>
-						<h4
-							className={cn(
-								'flex items-center text-sm font-semibold',
-								currentFileSize < initialFileSize && 'mb-3'
-							)}
-						>
-							{optimizations.length > 0 ? (
-								<>
-									<CheckIcon className="mr-2 h-4 w-4 text-emerald-400" />
-									Optimizations Applied
-								</>
-							) : (
-								<>
-									<FileQuestion className="mr-2 h-4 w-4 text-gray-400" />
-									No optimizations applied yet
-								</>
-							)}
-						</h4>
-						<ul className="space-y-2">
-							{optimizations.map((opt, index) => (
-								<motion.li
-									key={index}
-									className="flex justify-between text-sm"
-									initial={{ opacity: 0, x: -20 }}
-									animate={{ opacity: 1, x: 0 }}
-									transition={{
-										delay: 0.6 + index * 0.1,
-										duration: 0.3
-									}}
+			{!!optimizations.length && (
+				<>
+					<CardContent className="p-6">
+						<div className="space-y-6">
+							<div className="flex items-center justify-between">
+								<motion.div
+									className="text-center"
+									initial={{ opacity: 0, y: 20 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{ duration: 0.5 }}
 								>
-									<span className="text-zinc-400 capitalize">
-										{opt.name} size reduction
-									</span>
-									<span className="text-emerald-400">{opt.reduction}%</span>
-								</motion.li>
-							))}
-						</ul>
-					</motion.div>
-				</div>
-			</CardContent>
+									<div className="text-3xl font-bold">
+										{formatFileSize(initialFileSize)}
+									</div>
+									<div className="text-sm text-zinc-400">Original</div>
+								</motion.div>
+								<ArrowRightIcon
+									className={cn(
+										'h-8 w-8 transform',
+										currentFileSize < initialFileSize
+											? 'rotate-45 text-emerald-400'
+											: 'text-gray-400'
+									)}
+								/>
+								<motion.div
+									className="text-center"
+									initial={{ opacity: 0, y: 20 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{ duration: 0.5, delay: 0.2 }}
+								>
+									<div
+										className={cn(
+											'text-3xl font-bold',
+											currentFileSize < initialFileSize
+												? 'text-emerald-400'
+												: 'text-gray-400'
+										)}
+									>
+										{formatFileSize(currentFileSize)}
+									</div>
+									<div className="text-sm text-zinc-400">Optimized</div>
+								</motion.div>
+							</div>
+							<motion.div
+								className="rounded-lg bg-zinc-900 p-4"
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.5, delay: 0.4 }}
+							>
+								<h4
+									className={cn(
+										'flex items-center text-sm font-semibold',
+										currentFileSize < initialFileSize && 'mb-3'
+									)}
+								>
+									{optimizations.length > 0 ? (
+										<>
+											<CheckIcon className="mr-2 h-4 w-4 text-emerald-400" />
+											Optimizations Applied
+										</>
+									) : (
+										<>
+											<FileQuestion className="mr-2 h-4 w-4 text-gray-400" />
+											No optimizations applied yet
+										</>
+									)}
+								</h4>
+								<ul className="space-y-2">
+									{optimizations.map((opt, index) => (
+										<motion.li
+											key={index}
+											className="flex justify-between text-sm"
+											initial={{ opacity: 0, x: -20 }}
+											animate={{ opacity: 1, x: 0 }}
+											transition={{
+												delay: 0.6 + index * 0.1,
+												duration: 0.3
+											}}
+										>
+											<span className="text-zinc-400 capitalize">
+												{opt.name} size reduction
+											</span>
+											<span className="text-emerald-400">{opt.reduction}%</span>
+										</motion.li>
+									))}
+								</ul>
+							</motion.div>
+						</div>
+					</CardContent>
 
-			<Separator />
+					<Separator />
+				</>
+			)}
 
 			<Accordion type="single" defaultValue="basic" collapsible>
 				<AccordionItem value="basic" className="px-6">
@@ -337,7 +327,9 @@ const OptimizeSidebarContent = () => {
 							Optimization
 						</span>
 					</AccordionTrigger>
-					<AccordionContent></AccordionContent>
+					<AccordionContent>
+						<BasicOptimizationPanel />
+					</AccordionContent>
 				</AccordionItem>
 				<AccordionItem value="advanced" className="px-6">
 					<AccordionTrigger>
@@ -346,41 +338,7 @@ const OptimizeSidebarContent = () => {
 							Advanced Optimization
 						</span>
 					</AccordionTrigger>
-					<AccordionContent>
-						<div className="grid grid-cols-2 gap-4">
-							<div className="flex items-center space-x-2">
-								<LayersIcon className="h-5 w-5 text-zinc-400" />
-								<div>
-									<p className="text-sm font-medium">Vertex Count</p>
-									<p className="text-xs text-zinc-400">
-										{initialVerticesTotal.toLocaleString()} →{' '}
-										{currentVerticesTotal.toLocaleString()}
-									</p>
-								</div>
-							</div>
-
-							<div className="flex items-center space-x-2">
-								<CubeIcon className="h-5 w-5 text-zinc-400" />
-								<div>
-									<p className="text-sm font-medium">GL Primitives</p>
-									<p className="text-xs text-zinc-400">
-										{initialPrimitivesTotal.toLocaleString()} →{' '}
-										{currentPrimitivesTotal.toLocaleString()}
-									</p>
-								</div>
-							</div>
-							<div className="flex items-center space-x-2">
-								<FileIcon className="h-5 w-5 text-zinc-400" />
-								<div>
-									<p className="text-sm font-medium">Textures Size</p>
-									<p className="text-xs text-zinc-400">
-										{formatFileSize(initialTexturesSizeTotal)} →{' '}
-										{formatFileSize(currentTexturesSizeTotal)}
-									</p>
-								</div>
-							</div>
-						</div>
-					</AccordionContent>
+					<AccordionContent></AccordionContent>
 				</AccordionItem>
 				<AccordionItem value="details" className="px-6">
 					<AccordionTrigger>
@@ -390,39 +348,20 @@ const OptimizeSidebarContent = () => {
 						</span>
 					</AccordionTrigger>
 					<AccordionContent>
-						<div className="grid grid-cols-2 gap-4">
-							<div className="flex items-center space-x-2">
-								<LayersIcon className="h-5 w-5 text-zinc-400" />
-								<div>
-									<p className="text-sm font-medium">Vertex Count</p>
-									<p className="text-xs text-zinc-400">
-										{initialVerticesTotal.toLocaleString()} →{' '}
-										{currentVerticesTotal.toLocaleString()}
-									</p>
-								</div>
-							</div>
-
-							<div className="flex items-center space-x-2">
-								<CubeIcon className="h-5 w-5 text-zinc-400" />
-								<div>
-									<p className="text-sm font-medium">GL Primitives</p>
-									<p className="text-xs text-zinc-400">
-										{initialPrimitivesTotal.toLocaleString()} →{' '}
-										{currentPrimitivesTotal.toLocaleString()}
-									</p>
-								</div>
-							</div>
-							<div className="flex items-center space-x-2">
-								<FileIcon className="h-5 w-5 text-zinc-400" />
-								<div>
-									<p className="text-sm font-medium">Textures Size</p>
-									<p className="text-xs text-zinc-400">
-										{formatFileSize(initialTexturesSizeTotal)} →{' '}
-										{formatFileSize(currentTexturesSizeTotal)}
-									</p>
-								</div>
-							</div>
-						</div>
+						<SceneDetails
+							vertices={{
+								initial: initialVerticesTotal,
+								current: currentVerticesTotal
+							}}
+							primitives={{
+								initial: initialPrimitivesTotal,
+								current: currentPrimitivesTotal
+							}}
+							textures={{
+								initial: initialTexturesSizeTotal,
+								current: currentTexturesSizeTotal
+							}}
+						/>
 					</AccordionContent>
 				</AccordionItem>
 			</Accordion>

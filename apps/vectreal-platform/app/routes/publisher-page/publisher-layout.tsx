@@ -1,5 +1,6 @@
 import { ModelProvider, useModelContext } from '@vctrl/hooks/use-load-model'
 import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
+
 import { AnimatePresence } from 'framer-motion'
 import { Provider, useAtom } from 'jotai/react'
 
@@ -13,7 +14,7 @@ import {
 
 import { FloatingToolbar } from './publisher-components/floating-toolbar'
 import { PublisherSidebar } from './publisher-components/publisher-sidebar'
-import Stepper from './publisher-components/stepper'
+import { Stepper } from './publisher-components/stepper'
 
 const AnimatedLayout = ({ children }: PropsWithChildren) => {
 	const { file } = useModelContext()

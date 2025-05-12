@@ -82,6 +82,14 @@ const processAtom = atomWithStorage<ProcessState>(
 	processInitialState
 )
 
+export interface OptimizationState {
+	textures: {
+		size: number
+		quality: number
+		format: 'jpg' | 'png'
+	}
+}
+
 // Create a store to manage the state of the atoms
 const publisherConfigStore = createStore()
 

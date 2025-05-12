@@ -192,6 +192,16 @@ function useLoadModel(optimizer?: ReturnType<typeof useOptimizeModel>) {
 	}
 }
 
+type OptimizerReturnType = ReturnType<typeof useOptimizeModel>
+type Optimizations = OptimizerReturnType['optimizations']
+type OptimizerIntegrationReturn = Partial<OptimizerReturnType> & {
+	applyOptimization: <TOptions>(
+		optimizationFunction: ((options?: TOptions) => Promise<void>) | undefined,
+		options?: TOptions
+	) => Promise<void>
+	optimizations: Optimizations
+}
+
 /**
  * Hook to integrate the optimizer into the model loading process.
  *
@@ -230,13 +240,7 @@ function useOptimizerIntegration(
 		[dispatch, file]
 	)
 
-	/**
-	 * Runs the specified optimization function with optional parameters.
-	 *
-	 * @param optimizationFunction - The optimization function to run.
-	 * @param options - Optional parameters for the optimization function.
-	 */
-	const runOptimization = useCallback(
+	const applyOptimization = useCallback(
 		async <TOptions>(
 			optimizationFunction: ((options?: TOptions) => Promise<void>) | undefined,
 			options?: TOptions
@@ -262,67 +266,20 @@ function useOptimizerIntegration(
 		[optimizer, dispatchNewModel]
 	)
 
-	// Define types for options using Parameters and ReturnType utility types
-	type SimplifyOptions = Parameters<
-		ReturnType<typeof useOptimizeModel>['simplifyOptimization']
-	>[0]
-	type DedupOptions = Parameters<
-		ReturnType<typeof useOptimizeModel>['dedupOptimization']
-	>[0]
-	type QuantizeOptions = Parameters<
-		ReturnType<typeof useOptimizeModel>['quantizeOptimization']
-	>[0]
-	type NormalsOptions = Parameters<
-		ReturnType<typeof useOptimizeModel>['normalsOptimization']
-	>[0]
-	type TexturesOptions = Parameters<
-		ReturnType<typeof useOptimizeModel>['texturesOptimization']
-	>[0]
-
-	const createUnavailableHandler = (message: string) => () => {
-		console.warn(message)
-	}
-
-	const unavailableHandler = {
-		simplifyOptimization: createUnavailableHandler(
-			'Optimizer is not available'
-		),
-		dedupOptimization: createUnavailableHandler('Optimizer is not available'),
-		quantizeOptimization: createUnavailableHandler(
-			'Optimizer is not available'
-		),
-		normalsOptimization: createUnavailableHandler('Optimizer is not available'),
-		texturesCompressOptimization: createUnavailableHandler(
-			'Optimizer is not available'
-		),
-		getSize: createUnavailableHandler('Optimizer is not available'),
-		reset: createUnavailableHandler('Optimizer is not available'),
-		report: null,
-		error: null,
-		loading: false
-	}
-
-	if (!optimizer) {
-		return unavailableHandler
-	}
-
 	return {
-		simplifyOptimization: (options?: SimplifyOptions) =>
-			runOptimization<SimplifyOptions>(optimizer.simplifyOptimization, options),
-		dedupOptimization: (options?: DedupOptions) =>
-			runOptimization(optimizer.dedupOptimization, options),
-		quantizeOptimization: (options?: QuantizeOptions) =>
-			runOptimization<QuantizeOptions>(optimizer.quantizeOptimization, options),
-		normalsOptimization: (options?: NormalsOptions) =>
-			runOptimization<NormalsOptions>(optimizer.normalsOptimization, options),
-		texturesCompressOptimization: (options?: TexturesOptions) =>
-			runOptimization<TexturesOptions>(optimizer.texturesOptimization, options),
-		getSize: optimizer.getSize,
-		reset: optimizer.reset,
-		report: optimizer.report, // Include the report state
-		error: optimizer.error, // Include the error state
-		loading: optimizer.loading // Include the loading state
-	}
+		/**
+		 * Applies the specified optimization function with optional parameters.
+		 *
+		 * @param optimizationFunction - The optimization function to run.
+		 * @param options - Optional parameters for the optimization function.
+		 */
+		applyOptimization,
+		optimizations: optimizer?.optimizations,
+		getSize: optimizer?.getSize,
+		reset: optimizer?.reset,
+		report: optimizer?.report,
+		error: optimizer?.error,
+		loading: optimizer?.loading
+	} as OptimizerIntegrationReturn
 }
-
 export default useLoadModel

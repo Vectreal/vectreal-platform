@@ -1,11 +1,10 @@
-import { proces } from '@vctrl/platform/lib/stores/publisher-config-store'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@vctrl-ui/ui/tabs'
 import { motion } from 'framer-motion'
 import { useAtom } from 'jotai/react'
 
 import { processAtom } from '../../../../lib/stores/publisher-config-store'
 
-import OptimizeSidebarContent from './optimize-sidebar-content'
+import { OptimizeSidebar } from './optimize-sidebar'
 
 const sidebarVariants = {
 	open: {
@@ -57,7 +56,7 @@ const PublisherSidebar = () => {
 						<TabsTrigger value="compose">Compose</TabsTrigger>
 					</TabsList>
 					<TabsContent key="optimize" value="optimize">
-						<OptimizeSidebarContent />
+						<OptimizeSidebar />
 					</TabsContent>
 					<TabsContent value="compose"></TabsContent>
 				</Tabs>

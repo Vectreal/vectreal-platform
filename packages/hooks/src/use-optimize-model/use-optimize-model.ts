@@ -25,11 +25,16 @@ import {
 } from '@gltf-transform/extensions'
 import {
 	dedup,
+	DedupOptions,
 	inspect,
 	normals,
+	NormalsOptions,
 	quantize,
+	QuantizeOptions,
 	simplify,
+	SimplifyOptions,
 	textureCompress,
+	TextureCompressOptions,
 	weld
 } from '@gltf-transform/functions'
 import { MeshoptSimplifier } from 'meshoptimizer'
@@ -66,12 +71,6 @@ const useOptimizeModel = () => {
 		])
 	)
 
-	/**
-	 * Loads a Three.js Object3D model into the optimizer.
-	 *
-	 * @param model - The Three.js Object3D model to load.
-	 * @returns A promise that resolves when the model is loaded.
-	 */
 	const load = useCallback(async (model: Object3D): Promise<void> => {
 		dispatch({ type: 'LOAD_START' })
 
@@ -118,23 +117,15 @@ const useOptimizeModel = () => {
 		[modelDoc]
 	)
 
-	/**
-	 * Simplifies the current model document using MeshoptSimplifier.
-	 *
-	 * @param options - Optional parameters to control simplification.
-	 * @param options.ratio - The simplification ratio - default = 0.5.
-	 * @param options.error - The simplification error value - default = 0.001.
-	 * @returns A promise that resolves when the model has been simplified.
-	 */
 	const simplifyOptimization = useCallback(
-		async (options?: { ratio?: number; error?: number }): Promise<void> => {
+		async (options?: Omit<SimplifyOptions, 'simplifier'>): Promise<void> => {
 			const { ratio = 0.5, error: simplifierError = 0.001 } = options || {}
 
 			await applyTransforms([
 				weld(),
 				simplify({
-					simplifier: MeshoptSimplifier,
 					ratio,
+					simplifier: MeshoptSimplifier,
 					error: simplifierError
 				})
 			])
@@ -142,62 +133,34 @@ const useOptimizeModel = () => {
 		[applyTransforms]
 	)
 
-	/**
-	 * De-duplicates the current model document.
-	 *
-	 * @returns A promise that resolves when the model has been deduplicated.
-	 */
 	const dedupOptimization = useCallback(
-		async (options?: Parameters<typeof dedup>[0]): Promise<void> => {
+		async (options?: DedupOptions): Promise<void> => {
 			await applyTransforms([dedup(options)])
 		},
 		[applyTransforms]
 	)
 
-	/**
-	 * Quantizes the current model document.
-	 *
-	 * @param options - Optional parameters to control quantization.
-	 * @returns A promise that resolves when the model has been quantized.
-	 */
 	const quantizeOptimization = useCallback(
-		async (options?: Parameters<typeof quantize>[0]): Promise<void> => {
+		async (options?: QuantizeOptions): Promise<void> => {
 			await applyTransforms([quantize(options)])
 		},
 		[applyTransforms]
 	)
 
-	/**
-	 * Optimizes the normals of a model by applying the specified transformations.
-	 *
-	 * @param options - Optional parameters for the normals transformation function.
-	 * @returns A promise that resolves when the optimization is complete.
-	 */
 	const normalsOptimization = useCallback(
-		async (options?: Parameters<typeof normals>[0]): Promise<void> => {
+		async (options?: NormalsOptions): Promise<void> => {
 			await applyTransforms([normals(options)])
 		},
 		[applyTransforms]
 	)
 
-	/**
-	 * Compresses the relevant texture data in the document using texture compression.
-	 *
-	 * @param options - Optional parameters to control texture compression.
-	 * @returns A promise that resolves when the model has been compressed.
-	 */
 	const texturesOptimization = useCallback(
-		async (options?: Parameters<typeof textureCompress>[0]): Promise<void> => {
+		async (options?: TextureCompressOptions): Promise<void> => {
 			options && (await applyTransforms([textureCompress(options)]))
 		},
 		[applyTransforms]
 	)
 
-	/**
-	 * Retrieves the current model document as a binary ArrayBuffer.
-	 *
-	 * @returns A promise that resolves with the model's ArrayBuffer or null if no model is loaded.
-	 */
 	const getModel = useCallback(async (): Promise<Uint8Array | null> => {
 		if (!modelDoc) return null
 
@@ -209,11 +172,6 @@ const useOptimizeModel = () => {
 		}
 	}, [modelDoc])
 
-	/**
-	 * Calculates and returns the size details of the current model document.
-	 *
-	 * @returns An object containing the file size in bytes and a human-readable string, or null if no report is available.
-	 */
 	const getSize = useCallback((): ModelSize | null => {
 		if (!modelReport) return null
 
@@ -229,26 +187,75 @@ const useOptimizeModel = () => {
 		return { fileSize, displayFileSize }
 	}, [modelReport])
 
-	/**
-	 * Resets the current model and report.
-	 */
 	const reset = useCallback((): void => {
 		dispatch({ type: 'RESET' })
 	}, [])
 
 	return {
+		/**
+		 * Loads a Three.js Object3D model into the optimizer.
+		 *
+		 * @param model - The Three.js Object3D model to load.
+		 * @returns A promise that resolves when the model is loaded.
+		 */
 		load,
+		/**
+		 * Retrieves the current model document as a binary ArrayBuffer.
+		 *
+		 * @returns A promise that resolves with the model's ArrayBuffer or null if no model is loaded.
+		 */
 		getModel,
+		/**
+		 * Calculates and returns the size details of the current model document.
+		 *
+		 * @returns An object containing the file size in bytes and a human-readable string, or null if no report is available.
+		 */
 		getSize,
-		report: modelReport,
-		simplifyOptimization,
-		dedupOptimization,
-		quantizeOptimization,
-		normalsOptimization,
-		texturesOptimization,
+		/**
+		 * Resets the current model and report.
+		 */
 		reset,
+		report: modelReport,
 		error,
-		loading
+		loading,
+		optimizations: {
+			/**
+			 * Simplifies the current model document using MeshoptSimplifier.
+			 *
+			 * @param options - Optional parameters to control simplification.
+			 * @param options.ratio - The simplification ratio - default = 0.5.
+			 * @param options.error - The simplification error value - default = 0.001.
+			 * @returns A promise that resolves when the model has been simplified.
+			 */
+			simplifyOptimization,
+			/**
+			 * De-duplicates the current model document.
+			 *
+			 * @returns A promise that resolves when the model has been deduplicated.
+			 */
+			dedupOptimization,
+			/**
+			 * Quantizes the current model document.
+			 *
+			 * @param options - Optional parameters to control quantization.
+			 * @returns A promise that resolves when the model has been quantized.
+			 */
+			quantizeOptimization,
+			/**
+			 * Optimizes the normals of a model by applying the specified transformations.
+			 *
+			 * @param options - Optional parameters for the normals transformation function.
+			 * @returns A promise that resolves when the optimization is complete.
+			 */
+			normalsOptimization,
+			/**
+			 * Compresses the relevant texture data in the document using texture compression.
+			 *
+			 * @param options - Optional parameters to control texture compression.
+			 * @returns A promise that resolves when the model has been compressed.
+			 */
+			texturesOptimization
+		}
 	}
 }
 
