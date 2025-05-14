@@ -7,12 +7,6 @@ interface DetailsData {
 }
 
 interface SceneDetailsProps {
-	// initialVerticesTotal: number
-	// currentVerticesTotal: number
-	// initialPrimitivesTotal: number
-	// currentPrimitivesTotal: number
-	// initialTexturesSizeTotal: number
-	// currentTexturesSizeTotal: number
 	vertices: DetailsData
 	primitives: DetailsData
 	textures: DetailsData
@@ -24,7 +18,7 @@ const SceneDetails = ({
 	textures
 }: SceneDetailsProps) => {
 	return (
-		<div className="grid grid-cols-2 gap-4">
+		<div className="bg-muted/25 grid grid-cols-2 gap-4 rounded-xl p-4 text-sm">
 			<div className="flex items-center space-x-2">
 				<LayersIcon className="h-5 w-5 text-zinc-400" />
 				<div>

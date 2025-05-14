@@ -15,7 +15,7 @@ import {
 	controlsAtom,
 	envAtom,
 	groundAtom,
-	infoAtom,
+	metaAtom,
 	processAtom
 } from '../../lib/stores/publisher-config-store'
 
@@ -38,7 +38,7 @@ const PublisherPage = ({ loaderData }: Route.ComponentProps) => {
 	const [{ autoRotate }] = useAtom(controlsAtom)
 	const [{ showGrid }] = useAtom(groundAtom)
 	const setProcess = useSetAtom(processAtom)
-	const setInfo = useSetAtom(infoAtom)
+	const setMeta = useSetAtom(metaAtom)
 
 	function handleReset() {
 		reset()
@@ -55,7 +55,7 @@ const PublisherPage = ({ loaderData }: Route.ComponentProps) => {
 
 		setLoadingStarted(false)
 
-		setInfo((prev) => ({
+		setMeta((prev) => ({
 			...prev,
 			sceneName: data.name.split('.').at(0) || ''
 		}))
@@ -63,7 +63,7 @@ const PublisherPage = ({ loaderData }: Route.ComponentProps) => {
 		setProcess((prev) => ({
 			...prev,
 			step: 'preparing',
-			showInfo: false,
+			showInfo: true,
 			showSidebar: false
 		}))
 	}
@@ -135,7 +135,7 @@ const PublisherPage = ({ loaderData }: Route.ComponentProps) => {
 										backgroundBlurriness: hdr.blurriness
 									},
 									stage: {
-										adjustCamera: 1,
+										adjustCamera: false,
 										preset: hdr.stagePreset
 									}
 								}}

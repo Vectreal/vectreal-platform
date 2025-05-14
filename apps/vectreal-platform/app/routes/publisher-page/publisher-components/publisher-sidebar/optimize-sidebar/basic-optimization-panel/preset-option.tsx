@@ -24,6 +24,22 @@ const itemInfoVariants = {
 	}
 }
 
+const selectedTextVariants = {
+	show: {
+		y: 0,
+		opacity: 1,
+		transition: { delay: 0.2, ease: 'anticipate' }
+	},
+	initial: {
+		y: 5,
+		opacity: 0
+	},
+	hide: {
+		y: -5,
+		opacity: 0
+	}
+}
+
 const PresetOption: React.FC<PresetOptionProps> = ({
 	preset,
 	isSelected,
@@ -35,20 +51,20 @@ const PresetOption: React.FC<PresetOptionProps> = ({
 		<button
 			onClick={onSelect}
 			className={cn(
-				'group relative w-full rounded-xl px-3 py-2.5 text-left',
+				'group relative w-full rounded-xl border border-transparent p-2 text-left',
 				'cursor-pointer select-none',
 				!isSelected &&
-					'hover:bg-primary/5 focus-visible:bg-primary/10 focus:outline-none',
-				isSelected && 'bg-primary/10'
+					'hover:bg-accent/5 focus-visible:bg-accent/10 bg-muted/25 focus:outline-none',
+				isSelected && 'bg-accent/10 border-accent/50'
 			)}
 		>
-			<div className="flex items-center gap-3">
+			<div className="flex items-center gap-2">
 				<div
 					className={cn(
-						'flex h-6 w-6 items-center justify-center rounded-md transition-all duration-300',
+						'flex h-6 w-6 items-center justify-center rounded-md transition-all duration-500',
 						isSelected
-							? 'bg-primary text-primary-foreground fill-primary-foreground'
-							: 'bg-muted text-muted-foreground fill-muted-foreground group-hover:bg-primary/20 group-hover:text-primary'
+							? 'bg-accent text-primary-foreground fill-primary-foreground'
+							: 'bg-muted text-muted-foreground fill-muted-foreground group-hover:bg-accent/20 group-hover:text-accent'
 					)}
 				>
 					<IconComponent size={16} />
@@ -64,20 +80,32 @@ const PresetOption: React.FC<PresetOptionProps> = ({
 				>
 					{preset.label}
 				</span>
+				<AnimatePresence mode="wait">
+					{isSelected && (
+						<motion.small
+							variants={selectedTextVariants}
+							key="selected-text"
+							initial="initial"
+							animate="show"
+							exit="hide"
+							className="text-muted-foreground/75"
+						>
+							selected
+						</motion.small>
+					)}
+				</AnimatePresence>
 			</div>
-
-			<AnimatePresence mode="wait">
+			<AnimatePresence>
 				{isSelected && (
 					<motion.div
-						layout
 						key={preset.id}
 						variants={itemInfoVariants}
 						initial="closed"
 						animate="open"
 						exit="closed"
-						className="overflow-hidden pl-9"
+						className="overflow-hidden pl-8"
 					>
-						<p className="text-muted-foreground text-xs">
+						<p className="text-muted-foreground pt-2 text-xs">
 							{preset.description}
 						</p>
 					</motion.div>

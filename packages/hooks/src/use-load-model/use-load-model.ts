@@ -195,8 +195,14 @@ function useLoadModel(optimizer?: ReturnType<typeof useOptimizeModel>) {
 type OptimizerReturnType = ReturnType<typeof useOptimizeModel>
 type Optimizations = OptimizerReturnType['optimizations']
 type OptimizerIntegrationReturn = Partial<OptimizerReturnType> & {
+	/**
+	 * Applies the specified optimization function with optional parameters.
+	 *
+	 * @param optimizationFunction - (Optional) The optimization function to run before updating the model with the optimizer model document.
+	 * @param options - Optional parameters for the optimization function.
+	 */
 	applyOptimization: <TOptions>(
-		optimizationFunction: ((options?: TOptions) => Promise<void>) | undefined,
+		optimizationFunction?: ((options?: TOptions) => Promise<void>) | undefined,
 		options?: TOptions
 	) => Promise<void>
 	optimizations: Optimizations
@@ -242,17 +248,20 @@ function useOptimizerIntegration(
 
 	const applyOptimization = useCallback(
 		async <TOptions>(
-			optimizationFunction: ((options?: TOptions) => Promise<void>) | undefined,
+			optimizationFunction?:
+				| ((options?: TOptions) => Promise<void>)
+				| undefined,
 			options?: TOptions
 		) => {
-			if (!optimizer || !optimizationFunction) {
-				console.warn('Optimizer or optimization function is not available')
+			if (!optimizer) {
+				console.warn('Optimizer is not available')
 				return
 			}
 
 			try {
 				// Apply the optimization with optional parameters
-				await optimizationFunction(options)
+				if (optimizationFunction) await optimizationFunction(options)
+
 				const optimizedModel = await optimizer.getModel()
 
 				if (optimizedModel) {
@@ -267,13 +276,7 @@ function useOptimizerIntegration(
 	)
 
 	return {
-		/**
-		 * Applies the specified optimization function with optional parameters.
-		 *
-		 * @param optimizationFunction - The optimization function to run.
-		 * @param options - Optional parameters for the optimization function.
-		 */
-		applyOptimization,
+		applyOptimization: applyOptimization,
 		optimizations: optimizer?.optimizations,
 		getSize: optimizer?.getSize,
 		reset: optimizer?.reset,

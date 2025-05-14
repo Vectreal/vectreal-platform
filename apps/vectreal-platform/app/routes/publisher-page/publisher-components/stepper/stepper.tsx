@@ -5,13 +5,11 @@ import {
 	TooltipProvider,
 	TooltipTrigger
 } from '@vctrl-ui/ui/tooltip'
-
 import { cn } from '@vctrl-ui/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom, useAtomValue } from 'jotai/react'
 import { RESET } from 'jotai/utils'
 import { Info, X } from 'lucide-react'
-
 import { useEffect } from 'react'
 
 import {
@@ -147,7 +145,7 @@ const Stepper = () => {
 							animate="visible"
 							exit="hidden"
 							key="info-button"
-							transition={{ duration: 0.5, ease: 'backInOut' }}
+							transition={{ duration: 0.5, ease: 'easeInOut' }}
 							className="absolute right-0 bottom-0 z-20 mr-4 mb-16 flex h-fit w-fit justify-end gap-4"
 						>
 							<Tooltip>

@@ -4,16 +4,18 @@ import { atomWithReset, atomWithStorage } from 'jotai/utils'
 import { atom, createStore } from 'jotai/vanilla'
 import { ComponentProps } from 'react'
 
-interface InfoState {
+import { mediumPreset } from '../constants/optimizations'
+
+interface MetaState {
 	sceneName: string
 	isSaved: boolean
 }
 
-const infoInitialState: InfoState = {
+const metaInitialState: MetaState = {
 	sceneName: '',
 	isSaved: true
 }
-const infoAtom = atomWithReset<InfoState>(infoInitialState)
+const metaAtom = atomWithReset<MetaState>(metaInitialState)
 
 //// Visual configuration
 interface ControlsState {
@@ -82,26 +84,81 @@ const processAtom = atomWithStorage<ProcessState>(
 	processInitialState
 )
 
-export interface OptimizationState {
-	textures: {
-		size: number
-		quality: number
-		format: 'jpg' | 'png'
-	}
+//// Optimization state
+export type OptimizationNames =
+	| 'simplification'
+	| 'texture'
+	| 'quantize'
+	| 'dedup'
+	| 'normals'
+
+interface BaseOptimization<Name = OptimizationNames> {
+	name: Name
+	enabled: boolean
 }
+
+interface SimplificationOptimization
+	extends BaseOptimization<'simplification'> {
+	/**
+	 * Target ratio (0–1) of vertices to keep.
+	 */
+	ratio: number
+	/**
+	 * Limit on error, as a fraction of mesh radius. Default: 0.0001 (0.01%).
+	 * Higher values will produce lower quality meshes.
+	 */
+	error: number
+}
+
+export interface TextureOptimization extends BaseOptimization<'texture'> {
+	resize: [number, number]
+	quality: number
+	targetFormat: 'jpeg' | 'png' | 'webp'
+}
+
+type QuantizeOptimization = BaseOptimization<'quantize'>
+
+type DedupOptimization = BaseOptimization<'dedup'>
+
+type NormalsOptimization = BaseOptimization<'normals'>
+
+export type PossibleOptimizations = {
+	simplification: SimplificationOptimization
+	texture: TextureOptimization
+	quantize: QuantizeOptimization
+	dedup: DedupOptimization
+	normals: NormalsOptimization
+}
+
+export type OptimizationPreset = 'low' | 'medium' | 'high'
+
+export interface OptimizationState {
+	plannedOptimizations: PossibleOptimizations
+	optimizationPreset: OptimizationPreset
+}
+
+const optimizationInitialState: OptimizationState = {
+	plannedOptimizations: mediumPreset,
+	optimizationPreset: 'medium'
+}
+
+export const optimizationAtom = atomWithReset<OptimizationState>(
+	optimizationInitialState
+)
 
 // Create a store to manage the state of the atoms
 const publisherConfigStore = createStore()
 
-publisherConfigStore.set(infoAtom, infoInitialState)
+publisherConfigStore.set(metaAtom, metaInitialState)
 publisherConfigStore.set(controlsAtom, controlsInitialState)
 publisherConfigStore.set(envAtom, envInitialState)
 publisherConfigStore.set(groundAtom, groundInitialState)
 publisherConfigStore.set(processAtom, processInitialState)
+publisherConfigStore.set(optimizationAtom, optimizationInitialState)
 
 export {
 	// atoms
-	infoAtom,
+	metaAtom,
 	controlsAtom,
 	envAtom,
 	groundAtom,

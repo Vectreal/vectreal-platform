@@ -1,13 +1,13 @@
 import { useAtom } from 'jotai/react'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 
-import { infoAtom } from '../../../../lib/stores/publisher-config-store'
+import { metaAtom } from '../../../../lib/stores/publisher-config-store'
 
 import { useToolbarContext } from './toolbar-context'
 
 export function SceneNameInput() {
 	const { setIsSaved } = useToolbarContext()
-	const [{ sceneName }, setInfo] = useAtom(infoAtom)
+	const [{ sceneName }, setInfo] = useAtom(metaAtom)
 	const [isEditing, setIsEditing] = useState(false)
 	const [localName, setLocalName] = useState(sceneName)
 	const inputRef = useRef<HTMLInputElement>(null)

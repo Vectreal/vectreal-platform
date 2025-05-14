@@ -1,35 +1,51 @@
-import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { cn } from '@vctrl-ui/utils'
-import { Check, Loader2 } from 'lucide-react'
-import { useState } from 'react'
+import { useAtom } from 'jotai/react'
+import { useCallback, useEffect } from 'react'
+
+import { optimizationPresets } from '../../../../../../lib/constants/optimizations'
+import { optimizationAtom } from '../../../../../../lib/stores/publisher-config-store'
 
 import { presetOptions } from './preset-data'
 import PresetOption from './preset-option'
-
-type OptimizationPreset = 'low' | 'medium' | 'high'
+import { OptimizationPreset } from './types'
 
 const BasicPanel = () => {
-	const [optimizationPreset, setOptimizationPreset] =
-		useState<OptimizationPreset>('medium')
+	const [{ optimizationPreset }, setOptimizationConfig] =
+		useAtom(optimizationAtom)
 
-	const {
-		optimize: { optimizations, applyOptimization }
-	} = useModelContext()
+	const handleSelectOptimizationPreset = useCallback(
+		(preset: OptimizationPreset) => {
+			if (optimizationPreset === preset) {
+				return
+			}
 
-	function handleSelectOptimizationPreset(preset: OptimizationPreset) {
-		setOptimizationPreset(preset)
-	}
+			setOptimizationConfig((prev) => ({
+				...prev,
+				optimizationPreset: preset,
+				plannedOptimizations: optimizationPresets[preset]
+			}))
+		},
+		[optimizationPreset, setOptimizationConfig]
+	)
 
-	const [isApplying, setIsApplying] = useState(false)
-	const [isSuccess, setIsSuccess] = useState(false)
-	const handleApplyOptimization = async () => {
-		setIsApplying(true)
-		setIsSuccess(false)
-	}
+	// initially set the optimization preset to the current one
+	useEffect(() => {
+		handleSelectOptimizationPreset(optimizationPreset)
+	}, [
+		handleSelectOptimizationPreset,
+		optimizationPreset,
+		setOptimizationConfig
+	])
 
 	return (
 		<div className="w-full">
 			<div className="space-y-2">
+				<p className="px-2">
+					Either select a preset or go to the advanced optimization options.
+				</p>
+				<small className="text-muted-foreground/75 mt-2 mb-6 block px-2">
+					After configuring you need to apply the optimizations to see the
+					changes.
+				</small>
 				{presetOptions.map((preset) => (
 					<PresetOption
 						key={preset.id}
@@ -38,47 +54,6 @@ const BasicPanel = () => {
 						onSelect={() => handleSelectOptimizationPreset(preset.id)}
 					/>
 				))}
-			</div>
-
-			<div className="border-border/50 mt-3 border-t pt-3">
-				<button
-					onClick={() => !isApplying && handleApplyOptimization()}
-					disabled={isApplying || isSuccess}
-					className={cn(
-						'group relative w-full overflow-hidden rounded-md px-3 py-2 text-sm font-medium transition-all duration-300',
-						'focus-visible:ring-ring focus:outline-none focus-visible:ring-2',
-						isApplying
-							? 'bg-muted text-muted-foreground cursor-not-allowed'
-							: isSuccess
-								? 'bg-success/10 text-success'
-								: 'bg-primary text-primary-foreground hover:bg-primary/90'
-					)}
-				>
-					<div className="relative flex items-center justify-center gap-2">
-						{isApplying ? (
-							<Loader2 className="h-4 w-4 animate-spin" />
-						) : isSuccess ? (
-							<Check className="h-4 w-4" />
-						) : null}
-
-						<span>
-							{isApplying
-								? 'Applying...'
-								: isSuccess
-									? 'Applied'
-									: 'Apply Optimization'}
-						</span>
-					</div>
-
-					<div
-						className={cn(
-							'absolute inset-0 -translate-x-full transform transition-transform duration-500',
-							'bg-gradient-to-r from-transparent via-white/20 to-transparent',
-							'group-hover:translate-x-full',
-							isApplying || isSuccess ? 'hidden' : ''
-						)}
-					/>
-				</button>
 			</div>
 		</div>
 	)
