@@ -1,3 +1,4 @@
+import { useIsMobile } from '@vctrl-ui/hooks/use-mobile'
 import { Button } from '@vctrl-ui/ui/button'
 import {
 	Tooltip,
@@ -9,7 +10,7 @@ import { cn } from '@vctrl-ui/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom, useAtomValue } from 'jotai/react'
 import { RESET } from 'jotai/utils'
-import { Info, X } from 'lucide-react'
+import { Info } from 'lucide-react'
 import { useEffect } from 'react'
 
 import {
@@ -17,8 +18,7 @@ import {
 	ProcessState
 } from '../../../../lib/stores/publisher-config-store'
 
-import PreparingStep from './steps/preparating'
-import UploadingStep from './steps/uploading'
+import PreparingStepInfo from './step-info/preparating'
 
 const infoVariants = {
 	hidden: {
@@ -95,7 +95,8 @@ const steps: ProcessState['step'][] = ['uploading', 'preparing', 'publishing']
 
 const Stepper = () => {
 	const currentStep = useAtomValue(processAtom).step
-	const [{ showInfo, showSidebar }, setProcess] = useAtom(processAtom)
+	const [{ showInfo, showSidebar, step }, setProcess] = useAtom(processAtom)
+	const isMobile = useIsMobile(true)
 
 	function handleInfoOpen(isOpen: boolean) {
 		setProcess((prev) => ({
@@ -119,26 +120,13 @@ const Stepper = () => {
 				transition={{ duration: 0.5, ease: 'backInOut' }}
 				className="border-border/50 bg-card/75 absolute bottom-0 left-0 z-20 mb-12 h-fit w-full border-t shadow-[0_5px_24px_rgba(0,0,0,.2)] backdrop-blur-xl"
 			>
-				<div className="relative mx-auto max-w-4xl p-4 py-8">
-					<Button
-						variant="ghost"
-						className="absolute top-0 right-0 z-20 mt-2 mr-8"
-						onClick={() => handleInfoOpen(false)}
-					>
-						<X className="" />
-					</Button>
-					{currentStep === 'uploading' ? (
-						<UploadingStep />
-					) : currentStep === 'preparing' ? (
-						<PreparingStep />
-					) : null}
-				</div>
+				{currentStep === 'preparing' ? <PreparingStepInfo /> : null}
 			</motion.div>
 
 			{/* Info open button */}
 			<TooltipProvider>
 				<AnimatePresence>
-					{!showInfo && !showSidebar && (
+					{!showInfo && step !== 'uploading' && !showSidebar && (
 						<motion.div
 							variants={infoVariants}
 							initial="hidden"
@@ -171,15 +159,25 @@ const Stepper = () => {
 
 			{/* Steps bar */}
 			<div className="bg-muted border-ring/25 relative z-30 h-full w-full border-t">
-				<ol className="mx-auto flex h-full w-full items-center justify-between md:max-w-2xl">
-					{steps.map((step, index) => (
-						<Step
-							key={step}
-							index={index}
-							step={step}
-							isActive={currentStep === step}
-						/>
-					))}
+				<ol
+					className={cn(
+						'mx-auto flex h-full w-full items-center md:max-w-2xl',
+						isMobile ? 'justify-center' : 'justify-between'
+					)}
+				>
+					{steps
+						.map((s) => (isMobile ? (step === s ? s : null) : s))
+						.map(
+							(step, index) =>
+								step && (
+									<Step
+										key={step}
+										index={index}
+										step={step}
+										isActive={currentStep === step}
+									/>
+								)
+						)}
 				</ol>
 			</div>
 		</div>

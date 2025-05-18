@@ -1,3 +1,8 @@
+import {
+	InspectMeshReport,
+	InspectReport,
+	InspectTextureReport
+} from '@gltf-transform/functions'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { ModelSize } from '@vctrl/hooks/use-optimize-model'
 import {
@@ -26,7 +31,7 @@ import {
 	SparklesIcon,
 	Star
 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { optimizationAtom } from '../../../../../lib/stores/publisher-config-store'
 
@@ -34,7 +39,221 @@ import { AdvancedPanel } from './advanced-optimization-panel'
 import { BasicOptimizationPanel } from './basic-optimization-panel'
 import SceneDetails from './scene-details'
 
-const OptimizeSidebarContent = () => {
+type OptimizationStat = {
+	name: 'mesh' | 'texture'
+	reduction: number
+}
+
+type ModelTotals = {
+	verticesTotal: number
+	primitivesTotal: number
+	texturesSizeTotal: number
+	fileSize: number
+}
+
+type OptimizationStats = {
+	optimizationStats: OptimizationStat[]
+	initialFileSize: number
+	currentFileSize: number
+}
+
+type FileSizeComparisonProps = {
+	initialFileSize: number
+	currentFileSize: number
+}
+
+type OptimizationSummaryProps = {
+	optimizationStats: OptimizationStat[]
+	currentFileSize: number
+	initialFileSize: number
+}
+
+type OptimizeButtonProps = {
+	onOptimize: () => Promise<void>
+	isPending: boolean
+}
+
+type InitialReportsRef = {
+	report: InspectReport | undefined
+	size: ModelSize | null
+} | null
+
+/**
+ * Helper function to sum a specific property over an array of objects.
+ */
+function sumProperty<K extends string>(
+	items: Record<K, number>[] | undefined,
+	property: K
+): number {
+	if (!items) return 0
+	return items.reduce((total, item) => total + (item[property] || 0), 0)
+}
+
+/**
+ * Calculate the percentage improvement.
+ */
+function calculatePercentageImprovement(
+	improvement: number,
+	initialTotal: number
+): number {
+	if (initialTotal === 0) return 0
+	return Math.round((improvement / initialTotal) * 100)
+}
+
+// Extracted OptimizationStats component for better modularity
+const OptimizationStats: React.FC<OptimizationStats> = ({
+	optimizationStats,
+	initialFileSize,
+	currentFileSize
+}) => {
+	if (!optimizationStats.length) return null
+
+	return (
+		<>
+			<CardContent className="p-6">
+				<div className="space-y-6">
+					<FileSizeComparison
+						initialFileSize={initialFileSize}
+						currentFileSize={currentFileSize}
+					/>
+					<OptimizationSummary
+						optimizationStats={optimizationStats}
+						currentFileSize={currentFileSize}
+						initialFileSize={initialFileSize}
+					/>
+				</div>
+			</CardContent>
+			<Separator />
+		</>
+	)
+}
+
+// File size comparison component
+const FileSizeComparison: React.FC<FileSizeComparisonProps> = ({
+	initialFileSize,
+	currentFileSize
+}) => (
+	<div className="flex items-center justify-between">
+		<motion.div
+			className="text-center"
+			initial={{ opacity: 0, y: 20 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ duration: 0.5 }}
+		>
+			<div className="text-3xl font-bold">
+				{formatFileSize(initialFileSize)}
+			</div>
+			<div className="text-sm text-zinc-400">Original</div>
+		</motion.div>
+		<ArrowRightIcon
+			className={cn(
+				'h-8 w-8 transform',
+				currentFileSize < initialFileSize
+					? 'rotate-45 text-emerald-400'
+					: 'text-gray-400'
+			)}
+		/>
+		<motion.div
+			className="text-center"
+			initial={{ opacity: 0, y: 20 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ duration: 0.5, delay: 0.2 }}
+		>
+			<div
+				className={cn(
+					'text-3xl font-bold',
+					currentFileSize < initialFileSize
+						? 'text-emerald-400'
+						: 'text-gray-400'
+				)}
+			>
+				{formatFileSize(currentFileSize)}
+			</div>
+			<div className="text-sm text-zinc-400">Optimized</div>
+		</motion.div>
+	</div>
+)
+
+// Optimization summary component
+const OptimizationSummary: React.FC<OptimizationSummaryProps> = ({
+	optimizationStats,
+	currentFileSize,
+	initialFileSize
+}) => (
+	<motion.div
+		className="rounded-lg bg-zinc-900 p-4"
+		initial={{ opacity: 0, y: 20 }}
+		animate={{ opacity: 1, y: 0 }}
+		transition={{ duration: 0.5, delay: 0.4 }}
+	>
+		<h4
+			className={cn(
+				'flex items-center text-sm font-semibold',
+				currentFileSize < initialFileSize && 'mb-3'
+			)}
+		>
+			{optimizationStats.length > 0 ? (
+				<>
+					<CheckIcon className="mr-2 h-4 w-4 text-emerald-400" />
+					Optimizations Applied
+				</>
+			) : (
+				<>
+					<FileQuestion className="mr-2 h-4 w-4 text-gray-400" />
+					No optimizations applied yet
+				</>
+			)}
+		</h4>
+		<ul className="space-y-2">
+			{optimizationStats.map((opt, index) => (
+				<motion.li
+					key={index}
+					className="flex justify-between text-sm"
+					initial={{ opacity: 0, x: -20 }}
+					animate={{ opacity: 1, x: 0 }}
+					transition={{
+						delay: 0.6 + index * 0.1,
+						duration: 0.3
+					}}
+				>
+					<span className="text-zinc-400 capitalize">
+						{opt.name} size reduction
+					</span>
+					<span className="text-emerald-400">{opt.reduction}%</span>
+				</motion.li>
+			))}
+		</ul>
+	</motion.div>
+)
+
+// Optimization button component
+const OptimizeButton: React.FC<OptimizeButtonProps> = ({
+	onOptimize,
+	isPending
+}) => (
+	<div className="border-t p-4">
+		<Button
+			variant="accent"
+			className="w-full"
+			onClick={onOptimize}
+			disabled={isPending}
+		>
+			{isPending ? (
+				<>
+					<SparklesIcon className="mr-2 h-4 w-4 animate-spin" />
+					Optimizing...
+				</>
+			) : (
+				<>
+					<SparklesIcon className="mr-2 h-4 w-4" />
+					Apply Optimizations
+				</>
+			)}
+		</Button>
+	</div>
+)
+
+const OptimizeSidebarContent: React.FC = () => {
 	const { optimize, on, off } = useModelContext()
 	const {
 		report,
@@ -47,17 +266,12 @@ const OptimizeSidebarContent = () => {
 	const [{ plannedOptimizations }] = useAtom(optimizationAtom)
 
 	const [size, setSize] = useState<ModelSize | null>(null)
-	const [initialCaptured, setInitialCaptured] = useState(false)
-	const initialReports = useRef<{
-		report: typeof report
-		size: typeof size
-	} | null>(null)
+	const [initialCaptured, setInitialCaptured] = useState<boolean>(false)
+	const [isPending, setIsPending] = useState<boolean>(false)
 
-	const [isPending, startTransition] = useTransition()
+	const initialReports = useRef<InitialReportsRef>(null)
 
-	/**
-	 * Reset function to reset all optimization state.
-	 */
+	// Reset function to reset all optimization state
 	const reset = useCallback(() => {
 		setSize(null)
 		setInitialCaptured(false)
@@ -65,186 +279,151 @@ const OptimizeSidebarContent = () => {
 		initialReports.current = null
 	}, [resetOptimize])
 
-	const handleOptimizeClick = useCallback(() => {
-		// Disable the button to prevent multiple clicks
-		startTransition(async () => {
-			try {
-				const optimizationOptions = Object.values(plannedOptimizations).filter(
-					(option) => option.enabled
-				)
+	// Handle optimization process
+	const handleOptimizeClick = useCallback(async () => {
+		if (isPending) return
 
-				let currentIndex = 0
+		setIsPending(true)
 
-				// Process one optimization per animation frame
-				const processNextOptimization = async () => {
-					if (currentIndex >= optimizationOptions.length) {
-						// All optimizations complete, apply changes
-						await applyOptimization()
-						console.log('optimizations applied successfully')
-						return
+		try {
+			const optimizationOptions = Object.values(plannedOptimizations).filter(
+				(option): option is typeof option => !!option && option.enabled
+			)
+
+			for (let i = 0; i < optimizationOptions.length; i++) {
+				const option = optimizationOptions[i]
+
+				try {
+					// Apply single optimization based on option type
+					if (option.name === 'simplification') {
+						await optimizations.simplifyOptimization(option)
+					} else if (option.name === 'texture') {
+						await optimizations.texturesOptimization(option)
+					} else if (option.name === 'quantize') {
+						await optimizations.quantizeOptimization()
+					} else if (option.name === 'dedup') {
+						await optimizations.dedupOptimization()
+					} else if (option.name === 'normals') {
+						await optimizations.normalsOptimization()
 					}
 
-					const option = optimizationOptions[currentIndex++]
-
-					try {
-						// Apply single optimization
-						if (option.name === 'simplification') {
-							await optimizations.simplifyOptimization(option)
-						} else if (option.name === 'texture') {
-							await optimizations.texturesOptimization(option)
-						} else if (option.name === 'quantize') {
-							await optimizations.quantizeOptimization()
-						} else if (option.name === 'dedup') {
-							await optimizations.dedupOptimization()
-						} else if (option.name === 'normals') {
-							await optimizations.normalsOptimization()
-						}
-
-						// Schedule next optimization
-						requestAnimationFrame(() => {
-							setTimeout(processNextOptimization, 0)
-						})
-					} catch (error) {
-						console.error(`Error processing ${option.name}:`, error)
-					}
+					// Let UI update between optimizations
+					await new Promise<void>((resolve) =>
+						requestAnimationFrame(() => setTimeout(() => resolve(), 0))
+					)
+				} catch (error) {
+					console.error(`Error processing ${option.name}:`, error)
 				}
-
-				// Start the process
-				processNextOptimization()
-			} catch (error) {
-				console.error('Error during optimization:', error)
 			}
-		})
-	}, [applyOptimization, optimizations, plannedOptimizations])
 
+			// Apply all optimizations
+			await applyOptimization()
+			console.log('optimizations applied successfully')
+		} catch (error) {
+			console.error('Error during optimization:', error)
+		} finally {
+			setIsPending(false)
+		}
+	}, [applyOptimization, optimizations, plannedOptimizations, isPending])
+
+	// Update size when report changes
 	useEffect(() => {
-		// Update the current size whenever the report changes
 		setSize(getSize?.() ?? null)
 	}, [getSize, report])
 
+	// Capture initial state
 	useEffect(() => {
-		// Capture the initial report and size before any optimizations
 		if (!initialCaptured && report && size) {
 			initialReports.current = { report, size }
 			setInitialCaptured(true)
 		}
 	}, [initialCaptured, report, size])
 
+	// Reset on model load
 	useEffect(() => {
-		// Reset the optimization state when a new model is loaded
 		on('load-start', reset)
-
-		return () => {
-			off('load-start', reset)
-		}
+		return () => off('load-start', reset)
 	}, [off, on, reset])
 
-	// Retrieve the initial reports and sizes
-	const initial = initialReports.current
+	// Memoized calculations for model statistics
+	const {
+		initialTotals,
+		currentTotals,
+		percentageImprovements,
+		optimizationStats
+	} = useMemo(() => {
+		const initial = initialReports.current
 
-	/**
-	 * Helper function to sum a specific property over an array of objects.
-	 *
-	 * @param items - Array of objects with a numeric property.
-	 * @param property - Name of the property to sum.
-	 * @returns Sum of the property values.
-	 */
-	const sumProperty = <K extends string>(
-		items: Record<K, number>[],
-		property: K
-	): number => items.reduce((total, item) => total + (item[property] || 0), 0)
-
-	// Safely retrieve the initial totals
-	const initialVerticesTotal = initial?.report?.meshes?.properties
-		? sumProperty(initial.report.meshes.properties, 'vertices')
-		: 0
-
-	const initialPrimitivesTotal = initial?.report?.meshes?.properties
-		? sumProperty(initial.report.meshes.properties, 'glPrimitives')
-		: 0
-
-	const initialTexturesSizeTotal = initial?.report?.textures?.properties
-		? sumProperty(initial.report.textures.properties, 'size')
-		: 0
-
-	const initialFileSize = initial?.size?.fileSize || 0
-
-	// Safely retrieve the current totals
-	const currentVerticesTotal = report?.meshes?.properties
-		? sumProperty(report.meshes.properties, 'vertices')
-		: 0
-
-	const currentPrimitivesTotal = report?.meshes?.properties
-		? sumProperty(report.meshes.properties, 'glPrimitives')
-		: 0
-
-	const currentTexturesSizeTotal = report?.textures?.properties
-		? sumProperty(report.textures.properties, 'size')
-		: 0
-
-	const currentFileSize = size?.fileSize || 0
-
-	// Calculate the improvements
-	const improvements = {
-		verticesCount: initialVerticesTotal - currentVerticesTotal,
-		primitivesCount: initialPrimitivesTotal - currentPrimitivesTotal,
-		texturesSize: initialTexturesSizeTotal - currentTexturesSizeTotal,
-		totalSize: initialFileSize - currentFileSize
-	}
-
-	/**
-	 * Calculate the percentage improvement.
-	 *
-	 * @param improvement - The absolute improvement (positive or negative).
-	 * @param initialTotal - The initial total value.
-	 * @returns The percentage improvement (a value between -100 and 100).
-	 */
-	const calculatePercentageImprovement = (
-		improvement: number,
-		initialTotal: number
-	): number => {
-		if (initialTotal === 0) {
-			// Avoid division by zero; if initial total is zero, return 0% improvement
-			return 0
-		}
-		return Math.round((improvement / initialTotal) * 100)
-	}
-
-	// Calculate the percentage improvements
-	const percentageImprovements = {
-		verticesCount: calculatePercentageImprovement(
-			improvements.verticesCount,
-			initialVerticesTotal
-		),
-		primitivesCount: calculatePercentageImprovement(
-			improvements.primitivesCount,
-			initialPrimitivesTotal
-		),
-		texturesSize: calculatePercentageImprovement(
-			improvements.texturesSize,
-			initialTexturesSizeTotal
-		),
-		totalSize: calculatePercentageImprovement(
-			improvements.totalSize,
-			initialFileSize
+		// Initial stats
+		const initialVerticesTotal = sumProperty<'vertices'>(
+			initial?.report?.meshes?.properties as InspectMeshReport[],
+			'vertices'
 		)
-	}
 
-	/**
-	 * An array of optimizations based on the percentage improvements.
-	 * If an optimization has a value of 0 (no improvement), skip it.
-	 * If an optimization has a value greater than 0, add it to the array with the name:
-	 * - 'mesh' for mesh optimizations
-	 * - 'texture' for texture optimizations
-	 * @param percentageImprovements - The percentage improvements
-	 * @returns An array of optimizations with the name and reduction percentage
-	 */
-	const optimizationStats = Object.entries(percentageImprovements).reduce(
-		(acc, [key, value]) => {
+		const initialPrimitivesTotal = sumProperty<'glPrimitives'>(
+			initial?.report?.meshes?.properties as InspectMeshReport[],
+			'glPrimitives'
+		)
+
+		const initialTexturesSizeTotal = sumProperty<'size'>(
+			initial?.report?.textures?.properties as InspectTextureReport[],
+			'size'
+		)
+
+		const initialFileSize = initial?.size?.fileSize || 0
+
+		// Current stats
+		const currentVerticesTotal = sumProperty<'vertices'>(
+			report?.meshes?.properties as InspectMeshReport[],
+			'vertices'
+		)
+
+		const currentPrimitivesTotal = sumProperty<'glPrimitives'>(
+			report?.meshes?.properties as InspectMeshReport[],
+			'glPrimitives'
+		)
+
+		const currentTexturesSizeTotal = sumProperty<'size'>(
+			report?.textures?.properties as InspectTextureReport[],
+			'size'
+		)
+
+		const currentFileSize = size?.fileSize || 0
+
+		// Calculate improvements
+		const improvements = {
+			verticesCount: initialVerticesTotal - currentVerticesTotal,
+			primitivesCount: initialPrimitivesTotal - currentPrimitivesTotal,
+			texturesSize: initialTexturesSizeTotal - currentTexturesSizeTotal,
+			totalSize: initialFileSize - currentFileSize
+		}
+
+		// Calculate percentage improvements
+		const percentageImprovements = {
+			verticesCount: calculatePercentageImprovement(
+				improvements.verticesCount,
+				initialVerticesTotal
+			),
+			primitivesCount: calculatePercentageImprovement(
+				improvements.primitivesCount,
+				initialPrimitivesTotal
+			),
+			texturesSize: calculatePercentageImprovement(
+				improvements.texturesSize,
+				initialTexturesSizeTotal
+			),
+			totalSize: calculatePercentageImprovement(
+				improvements.totalSize,
+				initialFileSize
+			)
+		}
+
+		// Generate optimization stats
+		const optimizationStats = Object.entries(percentageImprovements).reduce<
+			OptimizationStat[]
+		>((acc, [key, value]) => {
 			if (value === 0) return acc
 
-			// Check if the optimization is a mesh or texture optimization
-			// and add it to the array only if it's not already there
 			if (
 				key === 'texturesSize' &&
 				!acc.find(({ name }) => name === 'texture')
@@ -260,19 +439,36 @@ const OptimizeSidebarContent = () => {
 			}
 
 			return acc
-		},
-		[] as { name: 'mesh' | 'texture'; reduction: number }[]
-	)
+		}, [])
+
+		return {
+			initialTotals: {
+				verticesTotal: initialVerticesTotal,
+				primitivesTotal: initialPrimitivesTotal,
+				texturesSizeTotal: initialTexturesSizeTotal,
+				fileSize: initialFileSize
+			} as ModelTotals,
+			currentTotals: {
+				verticesTotal: currentVerticesTotal,
+				primitivesTotal: currentPrimitivesTotal,
+				texturesSizeTotal: currentTexturesSizeTotal,
+				fileSize: currentFileSize
+			} as ModelTotals,
+			improvements,
+			percentageImprovements,
+			optimizationStats
+		}
+	}, [report, size])
 
 	return (
 		<div className="flex h-full flex-col">
-			<div className="grow overflow-y-auto">
+			<div className="no-scrollbar grow overflow-y-auto">
 				<CardHeader className="py-6">
 					<CardTitle>
 						<motion.span
 							className={cn(
 								'font-bold',
-								currentFileSize < initialFileSize
+								currentTotals.fileSize < initialTotals.fileSize
 									? 'text-accent'
 									: 'text-muted-foreground'
 							)}
@@ -289,101 +485,11 @@ const OptimizeSidebarContent = () => {
 
 				<Separator />
 
-				{!!optimizationStats.length && (
-					<>
-						<CardContent className="p-6">
-							<div className="space-y-6">
-								<div className="flex items-center justify-between">
-									<motion.div
-										className="text-center"
-										initial={{ opacity: 0, y: 20 }}
-										animate={{ opacity: 1, y: 0 }}
-										transition={{ duration: 0.5 }}
-									>
-										<div className="text-3xl font-bold">
-											{formatFileSize(initialFileSize)}
-										</div>
-										<div className="text-sm text-zinc-400">Original</div>
-									</motion.div>
-									<ArrowRightIcon
-										className={cn(
-											'h-8 w-8 transform',
-											currentFileSize < initialFileSize
-												? 'rotate-45 text-emerald-400'
-												: 'text-gray-400'
-										)}
-									/>
-									<motion.div
-										className="text-center"
-										initial={{ opacity: 0, y: 20 }}
-										animate={{ opacity: 1, y: 0 }}
-										transition={{ duration: 0.5, delay: 0.2 }}
-									>
-										<div
-											className={cn(
-												'text-3xl font-bold',
-												currentFileSize < initialFileSize
-													? 'text-emerald-400'
-													: 'text-gray-400'
-											)}
-										>
-											{formatFileSize(currentFileSize)}
-										</div>
-										<div className="text-sm text-zinc-400">Optimized</div>
-									</motion.div>
-								</div>
-								<motion.div
-									className="rounded-lg bg-zinc-900 p-4"
-									initial={{ opacity: 0, y: 20 }}
-									animate={{ opacity: 1, y: 0 }}
-									transition={{ duration: 0.5, delay: 0.4 }}
-								>
-									<h4
-										className={cn(
-											'flex items-center text-sm font-semibold',
-											currentFileSize < initialFileSize && 'mb-3'
-										)}
-									>
-										{optimizationStats.length > 0 ? (
-											<>
-												<CheckIcon className="mr-2 h-4 w-4 text-emerald-400" />
-												Optimizations Applied
-											</>
-										) : (
-											<>
-												<FileQuestion className="mr-2 h-4 w-4 text-gray-400" />
-												No optimizations applied yet
-											</>
-										)}
-									</h4>
-									<ul className="space-y-2">
-										{optimizationStats.map((opt, index) => (
-											<motion.li
-												key={index}
-												className="flex justify-between text-sm"
-												initial={{ opacity: 0, x: -20 }}
-												animate={{ opacity: 1, x: 0 }}
-												transition={{
-													delay: 0.6 + index * 0.1,
-													duration: 0.3
-												}}
-											>
-												<span className="text-zinc-400 capitalize">
-													{opt.name} size reduction
-												</span>
-												<span className="text-emerald-400">
-													{opt.reduction}%
-												</span>
-											</motion.li>
-										))}
-									</ul>
-								</motion.div>
-							</div>
-						</CardContent>
-
-						<Separator />
-					</>
-				)}
+				<OptimizationStats
+					optimizationStats={optimizationStats}
+					initialFileSize={initialTotals.fileSize}
+					currentFileSize={currentTotals.fileSize}
+				/>
 
 				<Accordion type="single" defaultValue="basic" collapsible>
 					<AccordionItem value="basic" className="px-4">
@@ -418,42 +524,24 @@ const OptimizeSidebarContent = () => {
 						<AccordionContent>
 							<SceneDetails
 								vertices={{
-									initial: initialVerticesTotal,
-									current: currentVerticesTotal
+									initial: initialTotals.verticesTotal,
+									current: currentTotals.verticesTotal
 								}}
 								primitives={{
-									initial: initialPrimitivesTotal,
-									current: currentPrimitivesTotal
+									initial: initialTotals.primitivesTotal,
+									current: currentTotals.primitivesTotal
 								}}
 								textures={{
-									initial: initialTexturesSizeTotal,
-									current: currentTexturesSizeTotal
+									initial: initialTotals.texturesSizeTotal,
+									current: currentTotals.texturesSizeTotal
 								}}
 							/>
 						</AccordionContent>
 					</AccordionItem>
 				</Accordion>
 			</div>
-			<div className="bg-muted/50">
-				<Button
-					variant="ghost"
-					className="w-full rounded-none border-t"
-					onClick={handleOptimizeClick}
-					disabled={isPending}
-				>
-					{isPending ? (
-						<>
-							<SparklesIcon className="mr-2 h-4 w-4 animate-spin" />
-							Optimizing...
-						</>
-					) : (
-						<>
-							<SparklesIcon className="mr-2 h-4 w-4" />
-							Apply Optimizations
-						</>
-					)}
-				</Button>
-			</div>
+
+			<OptimizeButton onOptimize={handleOptimizeClick} isPending={isPending} />
 		</div>
 	)
 }

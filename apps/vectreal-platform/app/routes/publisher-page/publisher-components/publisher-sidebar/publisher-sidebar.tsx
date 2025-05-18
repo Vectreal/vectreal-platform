@@ -57,10 +57,10 @@ const PublisherSidebar = () => {
 					className="h-full w-[400px] gap-0"
 				>
 					<TabsList className="bg-muted/50 grid h-12 w-full grid-cols-2 rounded-none border-b p-2 shadow-md">
-						<TabsTrigger className="cursor-pointer" value="optimize">
+						<TabsTrigger className="" value="optimize">
 							Optimize
 						</TabsTrigger>
-						<TabsTrigger className="cursor-pointer" value="compose">
+						<TabsTrigger className="" value="compose">
 							Compose
 						</TabsTrigger>
 					</TabsList>
@@ -81,7 +81,7 @@ const PublisherSidebar = () => {
 				aria-hidden={!showSidebar}
 				type="button"
 				onClick={() => changeSidebarVisibility(!showSidebar)}
-				className="border-accent/10 bg-muted/50 text-foreground hover:bg-accent/50 focus-visible:bg-accent/50 absolute top-1/2 -right-6 z-20 mr-[1px] -translate-y-1/2 cursor-pointer rounded-l-none rounded-r-xl border border-l-0 p-4 px-1 backdrop-blur-lg transition-all duration-300"
+				className="border-accent/10 bg-muted/50 text-foreground hover:bg-accent/50 focus-visible:bg-accent/50 absolute top-1/2 -right-6 z-20 mr-[1px] -translate-y-1/2 rounded-l-none rounded-r-xl border border-l-0 p-4 px-1 backdrop-blur-lg transition-all duration-300"
 			>
 				<ChevronLeft size={14} />
 			</motion.button>

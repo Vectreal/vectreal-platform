@@ -52,7 +52,7 @@ const PresetOption: React.FC<PresetOptionProps> = ({
 			onClick={onSelect}
 			className={cn(
 				'group relative w-full rounded-xl border border-transparent p-2 text-left',
-				'cursor-pointer select-none',
+				'select-none',
 				!isSelected &&
 					'hover:bg-accent/5 focus-visible:bg-accent/10 bg-muted/25 focus:outline-none',
 				isSelected && 'bg-accent/10 border-accent/50'

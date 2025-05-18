@@ -1,15 +1,26 @@
 import { Card } from '@vctrl-ui/ui/card'
 import { cn } from '@vctrl-ui/utils'
+import { ComponentProps } from 'react'
 
-interface BasicCardProps extends React.PropsWithChildren {
+interface BasicCardProps extends ComponentProps<'div'> {
 	className?: string
 	highlight?: boolean
 }
 
-const BasicCard = ({ children, className, highlight }: BasicCardProps) => {
+const BasicCard = ({
+	children,
+	className,
+	highlight,
+	...props
+}: BasicCardProps) => {
 	return (
-		<div className="group relative h-full">
-			<div className="bg-accent/50 absolute top-0 left-0 m-3 mt-0! h-2 w-8 rounded-full blur-xl transition-all group-hover:w-16 md:m-6" />
+		<div className="group relative h-full" {...props}>
+			<div
+				className={cn(
+					'bg-accent/50 absolute top-0 left-0 m-3 mt-0! animate-pulse rounded-full blur-xl transition-all md:m-6',
+					highlight ? 'h-2 group-hover:w-16' : 'h-[1px] w-8'
+				)}
+			/>
 			<div
 				className={cn(
 					'bg-accent absolute top-0 left-0 z-10 m-3 mt-0! h-1 w-8 rounded-b-full transition-all md:m-6',

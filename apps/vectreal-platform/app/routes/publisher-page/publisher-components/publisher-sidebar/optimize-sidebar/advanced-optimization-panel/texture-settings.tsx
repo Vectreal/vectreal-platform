@@ -26,6 +26,7 @@ import {
 const textureSize = [
 	{ value: 256, label: '256×256' },
 	{ value: 512, label: '512×512' },
+	{ value: 768, label: '768×768' },
 	{ value: 1024, label: '1024×1024' },
 	{ value: 2048, label: '2048×2048' }
 ]

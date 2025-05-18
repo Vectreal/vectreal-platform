@@ -7,7 +7,7 @@ export const lowPreset: PossibleOptimizations = {
 	simplification: {
 		name: 'simplification',
 		enabled: true,
-		ratio: 0.5,
+		ratio: 0.8,
 		error: 0.001
 	},
 	texture: {
@@ -35,7 +35,7 @@ export const mediumPreset: PossibleOptimizations = {
 	simplification: {
 		name: 'simplification',
 		enabled: true,
-		ratio: 0.5,
+		ratio: 0.6,
 		error: 0.005
 	},
 	texture: {
@@ -63,7 +63,7 @@ export const highPreset: PossibleOptimizations = {
 	simplification: {
 		name: 'simplification',
 		enabled: true,
-		ratio: 0.8,
+		ratio: 0.5,
 		error: 0.01
 	},
 	texture: {

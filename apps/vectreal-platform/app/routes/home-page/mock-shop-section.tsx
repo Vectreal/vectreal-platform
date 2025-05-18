@@ -66,7 +66,7 @@ const MockShopSection = () => {
 								].map((option) => (
 									<div
 										key={option.name}
-										className={`w-8 h-8 rounded-full ${option.color} cursor-pointer ${option.name === 'Alpine Blue' ? 'ring-2 ring-offset-2 ring-blue-600' : ''}`}
+										className={`w-8 h-8 rounded-full ${option.color}  ${option.name === 'Alpine Blue' ? 'ring-2 ring-offset-2 ring-blue-600' : ''}`}
 										title={option.name}
 									/>
 								))}

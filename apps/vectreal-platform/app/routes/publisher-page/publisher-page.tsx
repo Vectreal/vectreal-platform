@@ -170,24 +170,7 @@ const PublisherPage = ({ loaderData }: Route.ComponentProps) => {
 							transition={{ duration: 0.3 }}
 							className="relative flex h-full w-full items-center justify-center"
 						>
-							<DropZone key="drop-zone" isMobile={isMobile}>
-								<div className="flex flex-col items-center justify-center gap-4 text-center">
-									<h1 className="text-4xl font-bold">
-										Drag & Drop{' '}
-										<small className="inline font-light">or click</small>
-									</h1>
-									<p className="text-muted-foreground text-sm">
-										Drop your files here or click to upload.
-									</p>
-									<Button variant="outline" size="lg">
-										<FileUp className="mr-2 h-4 w-4" />
-										Upload Files
-									</Button>
-									<p className="text-muted-foreground text-sm">
-										Free download afterwards - no registration required
-									</p>
-								</div>
-							</DropZone>
+							<DropZone key="drop-zone" isMobile={isMobile} />
 						</motion.div>
 					)}
 				</AnimatePresence>
