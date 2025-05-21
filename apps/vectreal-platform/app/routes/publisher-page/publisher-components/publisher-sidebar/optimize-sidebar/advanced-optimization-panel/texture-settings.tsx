@@ -1,3 +1,4 @@
+import { useGraph } from '@react-three/fiber'
 import { Label } from '@vctrl-ui/ui/label'
 import {
 	Select,
@@ -18,6 +19,9 @@ import { cn } from '@vctrl-ui/utils'
 import { useAtom } from 'jotai'
 import { Info } from 'lucide-react'
 
+import { useEffect, useState } from 'react'
+import { MeshStandardMaterial, Object3D, Texture } from 'three'
+
 import {
 	optimizationAtom,
 	TextureOptimization
@@ -31,7 +35,16 @@ const textureSize = [
 	{ value: 2048, label: '2048×2048' }
 ]
 
-export function TextureSettings() {
+interface TextureSettingsProps {
+	model?: Object3D
+}
+
+export const TextureSettings: React.FC<TextureSettingsProps> = ({ model }) => {
+	const [currentModelState, setCurrentModelState] = useState(
+		model || new Object3D()
+	)
+
+	const { materials } = useGraph(currentModelState)
 	const [{ plannedOptimizations }, setOptimization] = useAtom(optimizationAtom)
 	const {
 		enabled,
@@ -39,6 +52,38 @@ export function TextureSettings() {
 		quality,
 		targetFormat
 	} = plannedOptimizations.texture
+
+	useEffect(() => {
+		console.log('model changed', model)
+		if (model && model !== currentModelState) {
+			setCurrentModelState(model)
+		}
+	}, [model, currentModelState])
+
+	useEffect(() => {
+		console.log('materials', materials)
+
+		const textures = Object.values(materials)
+			.reduce((textures, material) => {
+				if (material instanceof MeshStandardMaterial) {
+					Object.values(material).forEach((value) => {
+						if (value instanceof Texture) {
+							textures.push(value)
+						}
+					})
+				}
+				return textures
+			}, [] as Texture[])
+			.flat()
+			// filter out empty textures
+			.filter((texture) => texture.source.data)
+			// filter out duplicates
+			.filter((texture, index, self) => {
+				return index === self.findIndex((t) => t.image === texture.image)
+			})
+
+		console.log('textures', textures)
+	}, [materials])
 
 	function setTexture(updates: Partial<TextureOptimization>) {
 		setOptimization((optimization) => ({
@@ -99,6 +144,27 @@ export function TextureSettings() {
 							{textureSize.map((option) => (
 								<SelectItem key={option.value} value={option.value.toString()}>
 									{option.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+
+				<div className="space-y-3">
+					<Label htmlFor="texture-size">Excluded Textures</Label>
+					<Select
+						value={resize.toString()}
+						onValueChange={(value) =>
+							setTexture({ resize: [parseInt(value), parseInt(value)] })
+						}
+					>
+						<SelectTrigger id="texture-size" className="w-full">
+							<SelectValue placeholder="Select texture size" />
+						</SelectTrigger>
+						<SelectContent>
+							{textureSize.map((option) => (
+								<SelectItem key={option.value} value={option.value.toString()}>
+									{/* {materials.label} */}
 								</SelectItem>
 							))}
 						</SelectContent>

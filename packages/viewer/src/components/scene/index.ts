@@ -1,9 +1,5 @@
 export { default as SceneModel } from './scene-model'
-export {
-	default as SceneCamera,
-	type RequiredCameraProps,
-	defaultCameraOptions
-} from './scene-camera'
+export { default as SceneCamera, defaultCameraOptions } from './scene-camera'
 export {
 	default as SceneControls,
 	type ControlsProps,
@@ -16,7 +12,7 @@ export {
 } from './scene-grid'
 export {
 	default as SceneEnvironment,
-	type EnvProps,
+	type EnvironmentProps,
 	defaultEnvOptions
 } from './scene-environment'
 export { default as ScenePostProcessing } from './scene-postprocessing'

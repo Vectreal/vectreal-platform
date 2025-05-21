@@ -278,7 +278,6 @@ function useOptimizerIntegration(
 	return {
 		applyOptimization: applyOptimization,
 		optimizations: optimizer?.optimizations,
-		getSize: optimizer?.getSize,
 		reset: optimizer?.reset,
 		report: optimizer?.report,
 		error: optimizer?.error,

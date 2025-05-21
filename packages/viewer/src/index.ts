@@ -1,1 +1,1 @@
-export { default as VectrealViewer } from './vectreal-viewer';
+export { default as VectrealViewer } from './vectreal-viewer'

@@ -1,3 +1,5 @@
+import { Object3D } from 'three'
+
 import { SimplificationSettings } from './simplification-settings'
 import { TextureSettings } from './texture-settings'
 import {
@@ -6,11 +8,16 @@ import {
 	QuantizeSetting
 } from './toggle-settings'
 
-function AdvancedPanel() {
+interface AdvancedPanelProps {
+	model?: Object3D
+}
+
+const AdvancedPanel: React.FC<AdvancedPanelProps> = (props) => {
 	return (
 		<div className="mx-auto w-full max-w-3xl space-y-6">
 			<SimplificationSettings />
-			<TextureSettings />
+			<TextureSettings {...props} />
+
 			<div className="space-y-6">
 				<QuantizeSetting />
 				<DedupSetting />

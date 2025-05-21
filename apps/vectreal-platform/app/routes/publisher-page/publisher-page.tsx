@@ -1,13 +1,11 @@
 import { ModelFile, useModelContext } from '@vctrl/hooks/use-load-model'
 import { VectrealViewer } from '@vctrl/viewer'
 import { useIsMobile } from '@vctrl-ui/hooks/use-mobile'
-import { Button } from '@vctrl-ui/ui/button'
 import { LoadingSpinner } from '@vctrl-ui/ui/loading-spinner'
 import { SpinnerWrapper } from '@vctrl-ui/ui/spinner-wrapper'
 import { AnimatePresence } from 'framer-motion'
 import { motion } from 'framer-motion'
 import { useAtom, useSetAtom } from 'jotai/react'
-import { FileUp } from 'lucide-react'
 import { Suspense, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -28,7 +26,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	return { isMobile: isMobileRequest(request) }
 }
 
-const PublisherPage = ({ loaderData }: Route.ComponentProps) => {
+const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 	const [loadingStarted, setLoadingStarted] = useState(false)
 	const isMobile = useIsMobile(loaderData.isMobile)
 	const { isFileLoading, file, on, off, reset } = useModelContext()
@@ -125,19 +123,11 @@ const PublisherPage = ({ loaderData }: Route.ComponentProps) => {
 									showInfo: false
 								}}
 								gridOptions={{ showGrid }}
+								toneMappingOptions={{
+									exposure: 0.7
+								}}
 								envOptions={{
-									backgroundColor: hdr.backgroundColor,
-									env: {
-										preset: hdr.preset,
-										background: hdr.asBackground,
-										backgroundIntensity: hdr.backgroundIntensity,
-										environmentIntensity: hdr.exposure,
-										backgroundBlurriness: hdr.blurriness
-									},
-									stage: {
-										adjustCamera: false,
-										preset: hdr.stagePreset
-									}
+									backgroundColor: hdr.backgroundColor
 								}}
 								controlsOptions={{
 									autoRotate: autoRotate.enabled,
@@ -145,7 +135,6 @@ const PublisherPage = ({ loaderData }: Route.ComponentProps) => {
 									dampingFactor: 0.2,
 									zoomSpeed: 0.4
 								}}
-								cameraOptions={{ position: [0, 5, 5] }}
 							/>
 						</motion.div>
 					) : isFileLoading || loadingStarted ? (

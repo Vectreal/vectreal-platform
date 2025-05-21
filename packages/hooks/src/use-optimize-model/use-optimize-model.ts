@@ -52,7 +52,7 @@ import { Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter'
 
 import { initialState, reducer } from './state'
-import { ModelSize } from './types'
+import { useCalcOptimizationInfo } from './use-calc-optimization-info'
 
 /**
  * Custom React hook for optimizing Three.js models using glTF-Transform.
@@ -65,7 +65,8 @@ import { ModelSize } from './types'
 const useOptimizeModel = () => {
 	// Use useReducer to manage complex state transitions.
 	const [state, dispatch] = useReducer(reducer, initialState)
-	const { modelDoc, modelReport, error, loading } = state
+	const { model, report, error, loading } = state
+	const { optimizationInfo, reset: resetInfo } = useCalcOptimizationInfo(state)
 
 	// Initialize the GLTFExporter and WebIO with required extensions.
 	const exporterRef = useRef<GLTFExporter>(new GLTFExporter())
@@ -102,7 +103,7 @@ const useOptimizeModel = () => {
 
 			dispatch({
 				type: 'LOAD_SUCCESS',
-				payload: { modelDoc: doc, modelReport: report }
+				payload: { model: doc, report: report }
 			})
 		} catch (err) {
 			dispatch({ type: 'LOAD_ERROR', payload: err as Error })
@@ -117,22 +118,22 @@ const useOptimizeModel = () => {
 	 */
 	const applyTransforms = useCallback(
 		async (transforms: Transform[]): Promise<void> => {
-			if (!modelDoc) return
+			if (!model) return
 
 			try {
-				await modelDoc.transform(...transforms)
+				await model.transform(...transforms)
 
 				// Update the model report after transformations.
-				const report = inspect(modelDoc)
+				const report = inspect(model)
 				dispatch({
 					type: 'LOAD_SUCCESS',
-					payload: { modelDoc, modelReport: report }
+					payload: { model: model, report: report }
 				})
 			} catch (err) {
 				console.error('Error applying transforms:', err)
 			}
 		},
-		[modelDoc]
+		[model]
 	)
 
 	const simplifyOptimization = useCallback(
@@ -180,34 +181,20 @@ const useOptimizeModel = () => {
 	)
 
 	const getModel = useCallback(async (): Promise<Uint8Array | null> => {
-		if (!modelDoc) return null
+		if (!model) return null
 
 		try {
-			return await ioRef.current.writeBinary(modelDoc)
+			return await ioRef.current.writeBinary(model)
 		} catch (err) {
 			console.error('Error getting model binary:', err)
 			return null
 		}
-	}, [modelDoc])
-
-	const getSize = useCallback((): ModelSize | null => {
-		if (!modelReport) return null
-
-		const sumSize = (properties: { size: number }[]) =>
-			properties.reduce((total, prop) => total + prop.size, 0)
-
-		const meshesSize = sumSize(modelReport.meshes.properties)
-		const texturesSize = sumSize(modelReport.textures.properties)
-
-		const fileSize = meshesSize + texturesSize
-		const displayFileSize = `${(fileSize / (1024 * 1024)).toFixed(2)} MB`
-
-		return { fileSize, displayFileSize }
-	}, [modelReport])
+	}, [model])
 
 	const reset = useCallback((): void => {
 		dispatch({ type: 'RESET' })
-	}, [])
+		resetInfo()
+	}, [resetInfo])
 
 	return {
 		/**
@@ -224,19 +211,14 @@ const useOptimizeModel = () => {
 		 */
 		getModel,
 		/**
-		 * Calculates and returns the size details of the current model document.
-		 *
-		 * @returns An object containing the file size in bytes and a human-readable string, or null if no report is available.
-		 */
-		getSize,
-		/**
 		 * Resets the current model and report.
 		 */
 		reset,
-		report: modelReport,
+		report,
 		error,
 		loading,
 		optimizations: {
+			info: optimizationInfo,
 			/**
 			 * Simplifies the current model document using MeshoptSimplifier.
 			 *

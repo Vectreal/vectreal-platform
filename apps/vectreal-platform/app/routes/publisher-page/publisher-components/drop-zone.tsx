@@ -11,7 +11,9 @@ import {
 	FileQuestion,
 	FolderUp,
 	Image,
-	Upload
+	Rocket,
+	Upload,
+	UserX2
 } from 'lucide-react'
 import { ComponentProps, useEffect, useTransition } from 'react'
 import { useDropzone } from 'react-dropzone'
@@ -66,7 +68,7 @@ const DropZone = ({ children, isMobile }: Props) => {
 					</header>
 					<div className="flex flex-col gap-4 md:flex-row lg:grid lg:grid-cols-[2fr_1fr]">
 						<div
-							className="flex h-full flex-col-reverse md:flex-col"
+							className="flex h-full flex-col-reverse gap-4 md:flex-col"
 							onClick={onClick}
 						>
 							{isMobile ? (
@@ -115,28 +117,52 @@ const DropZone = ({ children, isMobile }: Props) => {
 									</div>
 								</BasicCard>
 							)}
-							{!isMobile && (
-								<div className="grid gap-4 text-left sm:grid-cols-2">
-									<div className="bg-card/80 rounded-lg p-4">
-										<h3 className="mb-2 text-lg! font-medium">
-											No Registration Required
-										</h3>
-										<p className="text-muted-foreground text-sm">
-											Process your files locally - no account needed until
-											you're ready to publish
-										</p>
+							<div className="flex items-center justify-center gap-2">
+								<Button
+									variant="ghost"
+									className="hover:bg-accent/50 flex h-auto grow items-center justify-start gap-3 rounded-xl p-3"
+									onClick={() => window.open('#', '_blank')}
+								>
+									<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md">
+										<Book className="h-4 w-4" />
 									</div>
-									<div className="bg-card/80 rounded-lg p-4">
-										<h3 className="mb-2 text-lg! font-medium">
-											Instant Publishing
-										</h3>
-										<p className="text-muted-foreground text-sm">
-											Share your optimized 3D content directly through Vectreal
-											when ready
-										</p>
+									<div className="text-left">
+										<div className="font-medium">Quick Start Guide</div>
+										<div className="text-muted-foreground text-xs">
+											Learn the basics in 5 minutes
+										</div>
 									</div>
-								</div>
-							)}
+								</Button>
+
+								<Button
+									variant="ghost"
+									className="hover:bg-accent/50 flex h-auto grow items-center justify-start gap-3 rounded-xl p-3"
+									onClick={() => window.open('#', '_blank')}
+								>
+									<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md">
+										<FileQuestion className="h-4 w-4" />
+									</div>
+									<div className="text-left">
+										<div className="font-medium">Common Questions</div>
+										<div className="text-muted-foreground text-xs">
+											Get instant answers
+										</div>
+									</div>
+								</Button>
+
+								<Button
+									variant="ghost"
+									className="hover:bg-accent/50 flex h-auto grow items-center justify-start gap-3 rounded-xl p-3"
+									onClick={() => window.open('#', '_blank')}
+								>
+									<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md">
+										<ExternalLink className="h-4 w-4" />{' '}
+									</div>
+									<div className="text-left">
+										<div className="font-medium"> Visit Help Center</div>
+									</div>
+								</Button>
+							</div>
 						</div>
 						<div className="flex flex-col gap-6">
 							<BasicCard className="py-0 text-left">
@@ -164,52 +190,38 @@ const DropZone = ({ children, isMobile }: Props) => {
 											<li>WEBP (modern format)</li>
 										</ul>
 									</div>
+									{!isMobile && (
+										<>
+											<div className="space-y-3">
+												<div className="flex items-center gap-3">
+													<UserX2 className="text-accent/75 h-5 w-5" />
+													<h3 className="text-lg! font-medium">
+														No Registration Required
+													</h3>
+												</div>
+
+												<p className="text-muted-foreground text-sm">
+													Process your files locally - no account needed until
+													you're ready to publish
+												</p>
+											</div>
+											<div className="space-y-3">
+												<div className="flex items-center gap-3">
+													<Rocket className="text-accent/75 h-5 w-5" />
+													<h3 className="text-lg! font-medium">
+														Instant Publishing
+													</h3>
+												</div>
+
+												<p className="text-muted-foreground text-sm">
+													Share your optimized 3D content directly through
+													Vectreal when ready
+												</p>
+											</div>
+										</>
+									)}
 								</CardContent>
 							</BasicCard>
-							<Button
-								variant="ghost"
-								className="hover:bg-accent/50 flex h-auto w-full items-center justify-start gap-3 rounded-xl p-3"
-								onClick={() => window.open('#', '_blank')}
-							>
-								<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md">
-									<Book className="h-4 w-4" />
-								</div>
-								<div className="text-left">
-									<div className="font-medium">Quick Start Guide</div>
-									<div className="text-muted-foreground text-xs">
-										Learn the basics in 5 minutes
-									</div>
-								</div>
-							</Button>
-
-							<Button
-								variant="ghost"
-								className="hover:bg-accent/50 flex h-auto w-full items-center justify-start gap-3 rounded-xl p-3"
-								onClick={() => window.open('#', '_blank')}
-							>
-								<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md">
-									<FileQuestion className="h-4 w-4" />
-								</div>
-								<div className="text-left">
-									<div className="font-medium">Common Questions</div>
-									<div className="text-muted-foreground text-xs">
-										Get instant answers
-									</div>
-								</div>
-							</Button>
-
-							<Button
-								variant="ghost"
-								className="hover:bg-accent/50 flex h-auto w-full items-center justify-start gap-3 rounded-xl p-3"
-								onClick={() => window.open('#', '_blank')}
-							>
-								<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md">
-									<ExternalLink className="h-4 w-4" />{' '}
-								</div>
-								<div className="text-left">
-									<div className="font-medium"> Visit Help Center</div>
-								</div>
-							</Button>
 						</div>
 					</div>
 				</div>

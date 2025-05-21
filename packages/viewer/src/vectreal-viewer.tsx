@@ -14,7 +14,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { PerspectiveCameraProps } from '@react-three/drei'
+import { Center, PerspectiveCameraProps } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { LoadingSpinner as DefaultSpinner } from '@vctrl-ui/ui/loading-spinner'
 import { SpinnerWrapper } from '@vctrl-ui/ui/spinner-wrapper'
@@ -26,7 +26,7 @@ import { Object3D } from 'three'
 import { InfoPopover, type InfoPopoverProps } from './components'
 import {
 	ControlsProps,
-	EnvProps,
+	EnvironmentProps,
 	GridProps,
 	SceneCamera,
 	SceneControls,
@@ -62,10 +62,13 @@ interface VectrealViewerProps extends PropsWithChildren {
 	controlsOptions?: ControlsProps
 
 	/**
-	 * Options for the react-three environment and stage components.
+	 * Options for the react-three environment components with custom hdr map presets.
 	 */
-	envOptions?: EnvProps
+	envOptions?: EnvironmentProps
 
+	/**
+	 * Options for the tone mapping.
+	 */
 	toneMappingOptions?: ToneMappingProps
 
 	/**
@@ -157,15 +160,15 @@ const VectrealViewer = ({ model, ...props }: VectrealViewerProps) => {
 						{/* <Perf /> */}
 						{/* <ScenePostProcessing /> */}
 						<SceneControls {...controlsOptions} />
-						<SceneCamera {...cameraOptions} />
-						<SceneEnvironment {...envOptions?.env} />
+						<SceneCamera model={model} {...cameraOptions} />
+						<SceneEnvironment {...envOptions} />
 						<SceneGrid {...gridOptions} />
 						<SceneToneMapping
 							mapping={toneMappingOptions?.mapping}
 							exposure={toneMappingOptions?.exposure}
 						/>
 
-						<SceneModel object={model || null} envOptions={envOptions?.stage} />
+						<SceneModel object={model} />
 
 						{children}
 					</Canvas>

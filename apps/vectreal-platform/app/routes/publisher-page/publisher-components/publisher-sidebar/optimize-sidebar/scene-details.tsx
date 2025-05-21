@@ -1,22 +1,12 @@
+import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { formatFileSize } from '@vctrl-ui/utils'
-import { Box, FileIcon, LayersIcon } from 'lucide-react'
-
-interface DetailsData {
-	initial: number
-	current: number
-}
+import { Box, FileIcon, Grid, LayersIcon } from 'lucide-react'
 
 interface SceneDetailsProps {
-	vertices: DetailsData
-	primitives: DetailsData
-	textures: DetailsData
+	info: OptimizationInfo
 }
 
-const SceneDetails = ({
-	vertices,
-	primitives,
-	textures
-}: SceneDetailsProps) => {
+const SceneDetails = ({ info: { initial, optimized } }: SceneDetailsProps) => {
 	return (
 		<div className="bg-muted/25 grid grid-cols-2 gap-4 rounded-xl p-4 text-sm">
 			<div className="flex items-center space-x-2">
@@ -24,8 +14,8 @@ const SceneDetails = ({
 				<div>
 					<p className="text-sm font-medium">Vertex Count</p>
 					<p className="text-xs text-zinc-400">
-						{vertices.initial.toLocaleString()} →{' '}
-						{vertices.current.toLocaleString()}
+						{initial.verticesCount.toLocaleString()} →{' '}
+						{optimized.verticesCount.toLocaleString()}
 					</p>
 				</div>
 			</div>
@@ -35,18 +25,29 @@ const SceneDetails = ({
 				<div>
 					<p className="text-sm font-medium">GL Primitives</p>
 					<p className="text-xs text-zinc-400">
-						{primitives.initial.toLocaleString()} →{' '}
-						{primitives.current.toLocaleString()}
+						{initial.primitivesCount.toLocaleString()} →{' '}
+						{optimized.primitivesCount.toLocaleString()}
 					</p>
 				</div>
 			</div>
+			<div className="flex items-center space-x-2">
+				<Grid className="h-5 w-5 text-zinc-400" />
+				<div>
+					<p className="text-sm font-medium">Meshes Size</p>
+					<p className="text-xs text-zinc-400">
+						{formatFileSize(initial.meshesSize)} →{' '}
+						{formatFileSize(optimized.meshesSize)}
+					</p>
+				</div>
+			</div>
+
 			<div className="flex items-center space-x-2">
 				<FileIcon className="h-5 w-5 text-zinc-400" />
 				<div>
 					<p className="text-sm font-medium">Textures Size</p>
 					<p className="text-xs text-zinc-400">
-						{formatFileSize(textures.initial)} →{' '}
-						{formatFileSize(textures.current)}
+						{formatFileSize(initial.texturesSize)} →{' '}
+						{formatFileSize(optimized.texturesSize)}
 					</p>
 				</div>
 			</div>

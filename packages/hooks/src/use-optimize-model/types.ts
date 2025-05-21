@@ -1,22 +1,27 @@
 import { Document } from '@gltf-transform/core'
 import { InspectReport } from '@gltf-transform/functions'
 
-/**
- * Interface representing the size details of the model.
- */
-export interface ModelSize {
-	/** The file size in bytes. */
-	fileSize: number
-	/** The file size formatted as a human-readable string. */
-	displayFileSize: string
+interface ModelTotals {
+	verticesCount: number
+	primitivesCount: number
+	texturesSize: number
+	meshesSize: number
+	sceneBytes: number
+}
+
+export interface OptimizationInfo {
+	initial: ModelTotals
+	optimized: ModelTotals
+	improvement: ModelTotals
 }
 
 /**
  * Interface representing the state of the model optimizer.
  */
-export interface State {
-	modelDoc: Document | null
-	modelReport: InspectReport | null
+export interface OptimizationState {
+	model: Document | null
+	report: InspectReport | null
+	info: OptimizationInfo | null
 	error: Error | null
 	loading: boolean
 }
@@ -28,7 +33,7 @@ export type Action =
 	| { type: 'LOAD_START' }
 	| {
 			type: 'LOAD_SUCCESS'
-			payload: { modelDoc: Document; modelReport: InspectReport }
+			payload: { model: Document; report: InspectReport }
 	  }
 	| { type: 'LOAD_ERROR'; payload: Error }
 	| { type: 'RESET' }

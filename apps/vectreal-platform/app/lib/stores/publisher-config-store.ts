@@ -17,54 +17,6 @@ const metaInitialState: MetaState = {
 }
 const metaAtom = atomWithReset<MetaState>(metaInitialState)
 
-//// Visual configuration
-interface ControlsState {
-	autoRotate: {
-		enabled: boolean
-		speed: number
-	}
-}
-
-const controlsInitialState: ControlsState = {
-	autoRotate: {
-		enabled: true,
-		speed: 0.5
-	}
-}
-
-const controlsAtom = atom<ControlsState>(controlsInitialState)
-
-interface ENVState {
-	asBackground: boolean
-	backgroundIntensity: number
-	exposure: number
-	preset: PresetsType
-	blurriness: number
-	stagePreset: ComponentProps<typeof Stage>['preset']
-	backgroundColor: string
-}
-
-const envInitialState: ENVState = {
-	asBackground: false,
-	backgroundIntensity: 1,
-	exposure: 1,
-	blurriness: 0.5,
-	preset: 'apartment',
-	stagePreset: 'soft',
-	backgroundColor: 'rgba(0, 0, 0, 0)'
-}
-
-const envAtom = atom<ENVState>(envInitialState)
-
-interface GroundState {
-	showGrid: boolean
-}
-
-const groundInitialState: GroundState = {
-	showGrid: false
-}
-const groundAtom = atom<GroundState>(groundInitialState)
-
 //// Process state
 export interface ProcessState {
 	step: 'uploading' | 'preparing' | 'publishing'
@@ -145,6 +97,54 @@ const optimizationInitialState: OptimizationState = {
 export const optimizationAtom = atomWithReset<OptimizationState>(
 	optimizationInitialState
 )
+
+//// Compose state
+interface ControlsState {
+	autoRotate: {
+		enabled: boolean
+		speed: number
+	}
+}
+
+const controlsInitialState: ControlsState = {
+	autoRotate: {
+		enabled: true,
+		speed: 0.5
+	}
+}
+
+const controlsAtom = atom<ControlsState>(controlsInitialState)
+
+interface ENVState {
+	asBackground: boolean
+	backgroundIntensity: number
+	exposure: number
+	preset: PresetsType
+	blurriness: number
+	stagePreset: ComponentProps<typeof Stage>['preset']
+	backgroundColor: string
+}
+
+const envInitialState: ENVState = {
+	asBackground: false,
+	backgroundIntensity: 1,
+	exposure: 1,
+	blurriness: 0.5,
+	preset: 'apartment',
+	stagePreset: 'soft',
+	backgroundColor: 'rgba(0, 0, 0, 0)'
+}
+
+const envAtom = atom<ENVState>(envInitialState)
+
+interface GroundState {
+	showGrid: boolean
+}
+
+const groundInitialState: GroundState = {
+	showGrid: false
+}
+const groundAtom = atom<GroundState>(groundInitialState)
 
 // Create a store to manage the state of the atoms
 const publisherConfigStore = createStore()
