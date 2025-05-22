@@ -1,11 +1,10 @@
 import {
 	Environment,
-	Stage,
 	EnvironmentProps as ThreeEnvironmentProps
 } from '@react-three/drei'
-import { ComponentProps, CSSProperties } from 'react'
+import { CSSProperties } from 'react'
 
-export type EnvironmentKeys =
+export type EnvironmentKey =
 	| 'nature-moonlit'
 	| 'nature-park'
 	| 'nature-park-overcast'
@@ -21,17 +20,17 @@ export type EnvironmentKeys =
 	| 'studio-natural'
 	| 'studio-soft'
 
-export type EnvironmentTypes = 'nature' | 'night' | 'outdoor' | 'studio'
+export type EnvironmentType = 'nature' | 'night' | 'outdoor' | 'studio'
 
 export type EnvironmentResolution = '1k' | '4k'
 
 export interface EnvironmentMap {
-	id: EnvironmentKeys
-	type: EnvironmentTypes
+	id: EnvironmentKey
+	type: EnvironmentType
 	resolution: EnvironmentResolution
 }
 
-export type EnvironmentMaps = Record<EnvironmentKeys, EnvironmentMap>
+export type EnvironmentMaps = Record<EnvironmentKey, EnvironmentMap>
 
 type InheritedEnvProps = Pick<
 	ThreeEnvironmentProps,
@@ -45,7 +44,7 @@ type InheritedEnvProps = Pick<
 >
 
 export interface EnvironmentProps extends InheritedEnvProps {
-	preset?: EnvironmentKeys
+	preset?: EnvironmentKey
 	environmentResolution?: EnvironmentResolution
 	backgroundColor?: CSSProperties['backgroundColor']
 }
@@ -77,7 +76,7 @@ const SceneEnvironment = (props: EnvironmentProps) => {
 
 	const url = buildEnvUrl({
 		id: defaultEnvOptions.preset,
-		type: preset?.split('-')[0] as EnvironmentTypes,
+		type: preset?.split('-')[0] as EnvironmentType,
 		resolution: environmentResolution ?? '1k'
 	})
 

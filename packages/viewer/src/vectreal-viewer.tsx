@@ -19,7 +19,7 @@ import { Canvas } from '@react-three/fiber'
 import { LoadingSpinner as DefaultSpinner } from '@vctrl-ui/ui/loading-spinner'
 import { SpinnerWrapper } from '@vctrl-ui/ui/spinner-wrapper'
 import { cn } from '@vctrl-ui/utils'
-import { Perf } from 'r3f-perf'
+// import { Perf } from 'r3f-perf'
 import { PropsWithChildren, Suspense } from 'react'
 import { Object3D } from 'three'
 
@@ -33,14 +33,15 @@ import {
 	SceneEnvironment,
 	SceneGrid,
 	SceneModel,
-	ScenePostProcessing,
+	SceneShadows,
 	SceneToneMapping,
+	ShadowProps,
 	ToneMappingProps
 } from './components/scene'
 
 import styles from './styles.module.css'
 
-interface VectrealViewerProps extends PropsWithChildren {
+export interface VectrealViewerProps extends PropsWithChildren {
 	/**
 	 * The 3D model to render in the viewer. (three.js `Object3D`)
 	 */
@@ -65,6 +66,11 @@ interface VectrealViewerProps extends PropsWithChildren {
 	 * Options for the react-three environment components with custom hdr map presets.
 	 */
 	envOptions?: EnvironmentProps
+
+	/**
+	 * Options for the shadows.
+	 */
+	shadowOptions?: ShadowProps
 
 	/**
 	 * Options for the tone mapping.
@@ -133,6 +139,7 @@ const VectrealViewer = ({ model, ...props }: VectrealViewerProps) => {
 		gridOptions,
 		controlsOptions,
 		infoPopoverOptions,
+		shadowOptions,
 		toneMappingOptions,
 		loader = <DefaultSpinner />
 	} = props
@@ -160,17 +167,19 @@ const VectrealViewer = ({ model, ...props }: VectrealViewerProps) => {
 						{/* <Perf /> */}
 						{/* <ScenePostProcessing /> */}
 						<SceneControls {...controlsOptions} />
-						<SceneCamera model={model} {...cameraOptions} />
+						<SceneCamera {...cameraOptions} />
 						<SceneEnvironment {...envOptions} />
 						<SceneGrid {...gridOptions} />
+						<SceneShadows {...shadowOptions} />
 						<SceneToneMapping
 							mapping={toneMappingOptions?.mapping}
 							exposure={toneMappingOptions?.exposure}
 						/>
 
-						<SceneModel object={model} />
-
-						{children}
+						<Center top>
+							<SceneModel object={model} />
+							{children}
+						</Center>
 					</Canvas>
 				)}
 			</Suspense>

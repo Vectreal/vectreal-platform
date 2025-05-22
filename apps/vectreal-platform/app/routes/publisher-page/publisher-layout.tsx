@@ -27,7 +27,7 @@ const AnimatedLayout = ({ children }: PropsWithChildren) => {
 			<main className="h-screen w-full overflow-hidden">
 				<section className="flex h-full w-full flex-col overflow-hidden">
 					{isNotUploadStep && <FloatingToolbar />}
-					<div className="relative mb-12 flex grow flex-row overflow-hidden">
+					<div className="relative mb-12 flex grow overflow-hidden">
 						{isNotUploadStep && <PublisherSidebar />}
 						{children}
 					</div>

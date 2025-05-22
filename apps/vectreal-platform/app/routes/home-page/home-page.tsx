@@ -28,7 +28,7 @@ import community from '../../assets/images/community.webp'
 import studioDisplay from '../../assets/images/studio-display.jpg'
 import { BasicCard, Section } from '../../components'
 
-import { isMobileRequest } from '../../lib/utils/isMobileRequest'
+import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
 import { Route } from './+types/home-page'
 import FiletypeCarousel from './file-type-carousel'

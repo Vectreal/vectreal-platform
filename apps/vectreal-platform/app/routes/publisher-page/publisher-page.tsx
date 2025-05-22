@@ -11,13 +11,13 @@ import { toast } from 'sonner'
 
 import {
 	controlsAtom,
-	envAtom,
+	environmentAtom,
 	groundAtom,
 	metaAtom,
-	processAtom
+	processAtom,
+	toneMappingAtom
 } from '../../lib/stores/publisher-config-store'
-
-import { isMobileRequest } from '../../lib/utils/isMobileRequest'
+import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
 import { Route } from './+types/publisher-page'
 import DropZone from './publisher-components/drop-zone'
@@ -32,8 +32,9 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 	const { isFileLoading, file, on, off, reset } = useModelContext()
 
 	// publisher data store
-	const [hdr] = useAtom(envAtom)
-	const [{ autoRotate }] = useAtom(controlsAtom)
+	const [env] = useAtom(environmentAtom)
+	const [toneMapping] = useAtom(toneMappingAtom)
+	const [controls] = useAtom(controlsAtom)
 	const [{ showGrid }] = useAtom(groundAtom)
 	const setProcess = useSetAtom(processAtom)
 	const setMeta = useSetAtom(metaAtom)
@@ -123,18 +124,9 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 									showInfo: false
 								}}
 								gridOptions={{ showGrid }}
-								toneMappingOptions={{
-									exposure: 0.7
-								}}
-								envOptions={{
-									backgroundColor: hdr.backgroundColor
-								}}
-								controlsOptions={{
-									autoRotate: autoRotate.enabled,
-									autoRotateSpeed: autoRotate.speed,
-									dampingFactor: 0.2,
-									zoomSpeed: 0.4
-								}}
+								toneMappingOptions={toneMapping}
+								envOptions={env}
+								controlsOptions={controls}
 							/>
 						</motion.div>
 					) : isFileLoading || loadingStarted ? (

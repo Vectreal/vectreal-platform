@@ -13,9 +13,19 @@ export {
 export {
 	default as SceneEnvironment,
 	type EnvironmentProps,
+	type EnvironmentMap,
+	type EnvironmentMaps,
+	type EnvironmentKey,
+	type EnvironmentType,
+	type EnvironmentResolution,
 	defaultEnvOptions
 } from './scene-environment'
 export { default as ScenePostProcessing } from './scene-postprocessing'
+export {
+	default as SceneShadows,
+	type ShadowProps,
+	defaultShadowOptions
+} from './scene-shadows'
 export {
 	default as SceneToneMapping,
 	type ToneMappingProps

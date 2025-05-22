@@ -1,8 +1,7 @@
 import { OrbitControls, OrbitControlsProps } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
-import { RefObject, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Box3, Object3D, Vector3 } from 'three'
-import { OrbitControls as ThreeOrbitControls } from 'three-stdlib'
 
 export interface ControlsProps extends OrbitControlsProps {
 	/**
@@ -20,7 +19,7 @@ export const defaultControlsOptions: ControlsProps = {
 	rotateSpeed: 0.5,
 	enableDamping: true,
 	dampingFactor: 0.25,
-	maxDistance: 5
+	maxDistance: 10
 }
 /**
  * SceneControls component that enables orbit controls after a specified timeout.

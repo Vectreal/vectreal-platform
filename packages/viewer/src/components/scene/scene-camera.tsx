@@ -14,16 +14,12 @@ export const defaultCameraOptions: RequiredCameraProps = {
 	far: 1000
 }
 
-interface InternalCameraProps extends PerspectiveCameraProps {
-	model: Object3D
-}
-
 /**
  * Configures the Three.js camera using provided props.
  *
- * @param {CameraProps} props - Camera configuration.
+ * @param {PerspectiveCameraProps} props - Camera configuration.
  */
-const SceneCamera = (props: InternalCameraProps) => {
+const SceneCamera = (props: PerspectiveCameraProps) => {
 	const { ...cameraOptions } = { ...defaultCameraOptions, ...props }
 	const [position, setPosition] = useState(new Vector3(0, 0, 0))
 
@@ -31,11 +27,26 @@ const SceneCamera = (props: InternalCameraProps) => {
 
 	useEffect(() => {
 		const box = new Box3()
-		scene.traverse((object) => {
-			if (object instanceof Object3D) {
+
+		// recursively traverse the scene to find the focus target
+		const traverseScene = (object: Object3D) => {
+			if (object.name === 'focus-target') {
 				box.expandByObject(object)
+			} else if (object.children.length > 0) {
+				object.children.forEach((child) => {
+					if (child instanceof Object3D) {
+						traverseScene(child)
+					}
+				})
+			}
+		}
+
+		scene.children.forEach((object) => {
+			if (object instanceof Object3D) {
+				traverseScene(object)
 			}
 		})
+
 		const center = box.getCenter(new Vector3())
 		const size = box.getSize(new Vector3())
 

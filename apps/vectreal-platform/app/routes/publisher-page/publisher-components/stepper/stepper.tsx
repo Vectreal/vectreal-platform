@@ -18,7 +18,7 @@ import {
 	ProcessState
 } from '../../../../lib/stores/publisher-config-store'
 
-import PreparingStepInfo from './step-info/preparating'
+import PreparingStepInfo from './step-info/preparing'
 
 const infoVariants = {
 	hidden: {
@@ -96,7 +96,7 @@ const steps: ProcessState['step'][] = ['uploading', 'preparing', 'publishing']
 const Stepper = () => {
 	const currentStep = useAtomValue(processAtom).step
 	const [{ showInfo, showSidebar, step }, setProcess] = useAtom(processAtom)
-	const isMobile = useIsMobile(true)
+	const isMobile = useIsMobile(false)
 
 	function handleInfoOpen(isOpen: boolean) {
 		setProcess((prev) => ({

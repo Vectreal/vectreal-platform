@@ -4,8 +4,8 @@ import { useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 
 export interface ToneMappingProps {
-	mapping?: string
 	exposure?: number
+	mapping?: 'ACESFilmic'
 }
 
 // const options = ['No', 'Linear', 'AgX', 'ACESFilmic', 'Reinhard', 'Cineon', 'Custom']

@@ -17,6 +17,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 import { Transform, WebIO } from '@gltf-transform/core'
 import {
 	KHRDracoMeshCompression,
+	KHRLightsPunctual,
 	KHRMaterialsAnisotropy,
 	KHRMaterialsClearcoat,
 	KHRMaterialsDiffuseTransmission,
@@ -30,7 +31,8 @@ import {
 	KHRMaterialsTransmission,
 	KHRMaterialsUnlit,
 	KHRMaterialsVolume,
-	KHRMeshQuantization
+	KHRMeshQuantization,
+	KHRTextureTransform
 } from '@gltf-transform/extensions'
 import {
 	dedup,
@@ -73,6 +75,7 @@ const useOptimizeModel = () => {
 	const ioRef = useRef<WebIO>(
 		new WebIO().registerExtensions([
 			KHRDracoMeshCompression,
+			KHRLightsPunctual,
 			KHRMaterialsAnisotropy,
 			KHRMaterialsClearcoat,
 			KHRMaterialsDiffuseTransmission,
@@ -86,7 +89,8 @@ const useOptimizeModel = () => {
 			KHRMaterialsTransmission,
 			KHRMaterialsUnlit,
 			KHRMaterialsVolume,
-			KHRMeshQuantization
+			KHRMeshQuantization,
+			KHRTextureTransform
 		])
 	)
 

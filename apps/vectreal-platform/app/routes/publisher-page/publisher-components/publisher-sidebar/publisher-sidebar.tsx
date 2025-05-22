@@ -1,8 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@vctrl-ui/ui/tabs'
 import { motion } from 'framer-motion'
 import { useAtom } from 'jotai/react'
-
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 
 import { processAtom } from '../../../../lib/stores/publisher-config-store'
 
@@ -48,9 +47,9 @@ const PublisherSidebar = () => {
 			animate={showSidebar ? 'open' : 'closed'}
 			exit="closed"
 			key="sidebar"
-			className="relative"
+			className="bg-muted/50 absolute top-0 bottom-0 left-0 z-20 border-r shadow-xl backdrop-blur-2xl"
 		>
-			<aside className="bg-muted/50 z-30 h-full overflow-hidden border-r shadow-xl">
+			<aside className="h-full overflow-hidden">
 				<Tabs
 					value={mode}
 					onValueChange={handleTabChange}
@@ -81,7 +80,7 @@ const PublisherSidebar = () => {
 				aria-hidden={!showSidebar}
 				type="button"
 				onClick={() => changeSidebarVisibility(!showSidebar)}
-				className="border-accent/10 bg-muted/50 text-foreground hover:bg-accent/50 focus-visible:bg-accent/50 absolute top-1/2 -right-6 z-20 mr-[1px] -translate-y-1/2 rounded-l-none rounded-r-xl border border-l-0 p-4 px-1 backdrop-blur-lg transition-all duration-300"
+				className="border-accent/10 bg-muted text-foreground hover:bg-accent/50 focus-visible:bg-accent/50 absolute top-1/2 -right-6 z-20 -translate-y-1/2 rounded-l-none rounded-r-xl border border-l-0 p-4 px-1 shadow-xl transition-all duration-300"
 			>
 				<ChevronLeft size={14} />
 			</motion.button>

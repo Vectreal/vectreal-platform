@@ -67,10 +67,7 @@ const DropZone = ({ children, isMobile }: Props) => {
 						</div>
 					</header>
 					<div className="flex flex-col gap-4 md:flex-row lg:grid lg:grid-cols-[2fr_1fr]">
-						<div
-							className="flex h-full flex-col-reverse gap-4 md:flex-col"
-							onClick={onClick}
-						>
+						<div className="flex h-full flex-col gap-4" onClick={onClick}>
 							{isMobile ? (
 								<Button className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 transition-all duration-300">
 									<Upload className="h-4 w-4" />
@@ -117,50 +114,56 @@ const DropZone = ({ children, isMobile }: Props) => {
 									</div>
 								</BasicCard>
 							)}
-							<div className="flex items-center justify-center gap-2">
+							<div className="flex flex-row items-center justify-center gap-2">
 								<Button
 									variant="ghost"
-									className="hover:bg-accent/50 flex h-auto grow items-center justify-start gap-3 rounded-xl p-3"
+									className="hover:bg-accent/50 flex h-auto grow items-center justify-center gap-3 rounded-xl p-3 md:justify-start"
 									onClick={() => window.open('#', '_blank')}
 								>
-									<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md">
+									<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md max-md:w-full">
 										<Book className="h-4 w-4" />
 									</div>
-									<div className="text-left">
-										<div className="font-medium">Quick Start Guide</div>
-										<div className="text-muted-foreground text-xs">
-											Learn the basics in 5 minutes
+									{!isMobile && (
+										<div className="text-left">
+											<div className="font-medium">Quick Start Guide</div>
+											<div className="text-muted-foreground text-xs">
+												Learn the basics in 5 minutes
+											</div>
 										</div>
-									</div>
+									)}
 								</Button>
 
 								<Button
 									variant="ghost"
-									className="hover:bg-accent/50 flex h-auto grow items-center justify-start gap-3 rounded-xl p-3"
+									className="hover:bg-accent/50 flex h-auto grow items-center justify-center gap-3 rounded-xl p-3 md:justify-start"
 									onClick={() => window.open('#', '_blank')}
 								>
-									<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md">
+									<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md max-md:w-full">
 										<FileQuestion className="h-4 w-4" />
 									</div>
-									<div className="text-left">
-										<div className="font-medium">Common Questions</div>
-										<div className="text-muted-foreground text-xs">
-											Get instant answers
+									{!isMobile && (
+										<div className="text-left">
+											<div className="font-medium">Common Questions</div>
+											<div className="text-muted-foreground text-xs">
+												Get instant answers
+											</div>
 										</div>
-									</div>
+									)}
 								</Button>
 
 								<Button
 									variant="ghost"
-									className="hover:bg-accent/50 flex h-auto grow items-center justify-start gap-3 rounded-xl p-3"
+									className="hover:bg-accent/50 flex h-auto grow items-center justify-center gap-3 rounded-xl p-3 md:justify-start"
 									onClick={() => window.open('#', '_blank')}
 								>
-									<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md">
+									<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md max-md:w-full">
 										<ExternalLink className="h-4 w-4" />{' '}
 									</div>
-									<div className="text-left">
-										<div className="font-medium"> Visit Help Center</div>
-									</div>
+									{!isMobile && (
+										<div className="text-left">
+											<div className="font-medium"> Visit Help Center</div>
+										</div>
+									)}
 								</Button>
 							</div>
 						</div>

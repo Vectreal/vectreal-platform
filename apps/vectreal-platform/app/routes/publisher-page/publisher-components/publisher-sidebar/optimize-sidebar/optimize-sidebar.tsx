@@ -203,7 +203,7 @@ const calculateOptimizationStats = (
 }
 
 const OptimizeSidebarContent: React.FC = () => {
-	const { optimize, file, on, off } = useModelContext()
+	const { optimize, on, off } = useModelContext()
 	const {
 		reset: resetOptimize,
 		applyOptimization,
@@ -323,7 +323,7 @@ const OptimizeSidebarContent: React.FC = () => {
 							</span>
 						</AccordionTrigger>
 						<AccordionContent>
-							<AdvancedPanel model={file?.model} />
+							<AdvancedPanel />
 						</AccordionContent>
 					</AccordionItem>
 					<AccordionItem value="details" className="px-4">

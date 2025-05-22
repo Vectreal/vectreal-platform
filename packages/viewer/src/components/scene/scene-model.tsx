@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Object3D } from 'three'
 
 interface ModelProps {
@@ -15,9 +16,22 @@ const SceneModel = (props: ModelProps) => {
 		...props
 	}
 
-	if (!object) return null
+	useEffect(() => {
+		if (!object) return
 
-	return <primitive object={object} />
+		object.traverse((child) => {
+			if (child instanceof Object3D) {
+				child.castShadow = true
+				child.receiveShadow = true
+			}
+		})
+	}, [object])
+
+	return (
+		<group name="focus-target" dispose={null}>
+			<primitive object={object} />
+		</group>
+	)
 }
 
 export default SceneModel

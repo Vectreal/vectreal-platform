@@ -1,8 +1,10 @@
-import { Stage } from '@react-three/drei'
-import { PresetsType } from '@react-three/drei/helpers/environment-assets'
+import {
+	ControlsProps,
+	EnvironmentProps,
+	ToneMappingProps
+} from '@vctrl/viewer'
 import { atomWithReset, atomWithStorage } from 'jotai/utils'
 import { atom, createStore } from 'jotai/vanilla'
-import { ComponentProps } from 'react'
 
 import { mediumPreset } from '../constants/optimizations'
 
@@ -99,43 +101,33 @@ export const optimizationAtom = atomWithReset<OptimizationState>(
 )
 
 //// Compose state
-interface ControlsState {
-	autoRotate: {
-		enabled: boolean
-		speed: number
-	}
+const controlsInitialState: ControlsProps = {
+	autoRotate: true,
+	autoRotateSpeed: 1,
+	dampingFactor: 0.2,
+	zoomSpeed: 0.4
 }
 
-const controlsInitialState: ControlsState = {
-	autoRotate: {
-		enabled: true,
-		speed: 0.5
-	}
+const controlsAtom = atom<ControlsProps>(controlsInitialState)
+
+const tonemappingInitialState: ToneMappingProps = {
+	exposure: 0.9,
+	mapping: 'ACESFilmic'
 }
 
-const controlsAtom = atom<ControlsState>(controlsInitialState)
+const toneMappingAtom = atom<ToneMappingProps>(tonemappingInitialState)
 
-interface ENVState {
-	asBackground: boolean
-	backgroundIntensity: number
-	exposure: number
-	preset: PresetsType
-	blurriness: number
-	stagePreset: ComponentProps<typeof Stage>['preset']
-	backgroundColor: string
-}
-
-const envInitialState: ENVState = {
-	asBackground: false,
+const envInitialState: EnvironmentProps = {
+	background: false,
 	backgroundIntensity: 1,
-	exposure: 1,
-	blurriness: 0.5,
-	preset: 'apartment',
-	stagePreset: 'soft',
-	backgroundColor: 'rgba(0, 0, 0, 0)'
+	environmentIntensity: 1,
+	environmentResolution: '1k',
+	preset: 'studio-natural',
+	backgroundColor: 'rgba(0, 0, 0, 0)',
+	backgroundBlurriness: 0.5
 }
 
-const envAtom = atom<ENVState>(envInitialState)
+const environmentAtom = atom<EnvironmentProps>(envInitialState)
 
 interface GroundState {
 	showGrid: boolean
@@ -151,7 +143,8 @@ const publisherConfigStore = createStore()
 
 publisherConfigStore.set(metaAtom, metaInitialState)
 publisherConfigStore.set(controlsAtom, controlsInitialState)
-publisherConfigStore.set(envAtom, envInitialState)
+publisherConfigStore.set(toneMappingAtom, tonemappingInitialState)
+publisherConfigStore.set(environmentAtom, envInitialState)
 publisherConfigStore.set(groundAtom, groundInitialState)
 publisherConfigStore.set(processAtom, processInitialState)
 publisherConfigStore.set(optimizationAtom, optimizationInitialState)
@@ -160,7 +153,8 @@ export {
 	// atoms
 	metaAtom,
 	controlsAtom,
-	envAtom,
+	toneMappingAtom,
+	environmentAtom,
 	groundAtom,
 	processAtom,
 	// store
