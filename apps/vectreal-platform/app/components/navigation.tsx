@@ -19,7 +19,7 @@ interface Props {
 	mode?: 'full' | 'float'
 }
 
-const Navigation = ({ isHomePage, mode }: Props) => {
+export const Navigation = ({ isHomePage, mode }: Props) => {
 	return (
 		<motion.nav
 			layout="size"
@@ -44,5 +44,3 @@ const Navigation = ({ isHomePage, mode }: Props) => {
 		</motion.nav>
 	)
 }
-
-export default Navigation

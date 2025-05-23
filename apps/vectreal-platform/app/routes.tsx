@@ -10,9 +10,9 @@ export default [
 	route('api/update-theme', './routes/api/update-theme.ts'),
 	// public routes
 
-	layout('./components/navigation/nav-layout.tsx', [
+	layout('./routes/layouts/nav-layout.tsx', [
 		index('./routes/home-page/home-page.tsx'),
-		layout('./routes/publisher-page/publisher-layout.tsx', [
+		layout('./routes/layouts/publisher-layout.tsx', [
 			route('publisher', './routes/publisher-page/publisher-page.tsx')
 		])
 	])

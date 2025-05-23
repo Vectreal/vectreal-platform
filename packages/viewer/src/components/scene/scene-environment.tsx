@@ -16,6 +16,7 @@ export type EnvironmentKey =
 	| 'outdoor-golden-hour'
 	| 'outdoor-noon'
 	| 'outdoor-overcast'
+	| 'outdoor-sky'
 	| 'studio-key'
 	| 'studio-natural'
 	| 'studio-soft'
@@ -50,7 +51,7 @@ export interface EnvironmentProps extends InheritedEnvProps {
 }
 
 export const defaultEnvOptions = {
-	preset: 'nature-snow',
+	preset: 'studio-natural',
 	environmentIntensity: 1,
 	backgroundIntensity: 1,
 	background: false,
@@ -70,12 +71,12 @@ const buildEnvUrl = ({ id, type, resolution }: EnvironmentMap) => {
  */
 const SceneEnvironment = (props: EnvironmentProps) => {
 	const { preset, environmentResolution, ...rest } = {
-		...props,
-		...defaultEnvOptions
+		...defaultEnvOptions,
+		...props
 	}
 
 	const url = buildEnvUrl({
-		id: defaultEnvOptions.preset,
+		id: preset,
 		type: preset?.split('-')[0] as EnvironmentType,
 		resolution: environmentResolution ?? '1k'
 	})

@@ -4,7 +4,7 @@ import { SceneNameInput } from './scene-name-input'
 import { StatusIndicator } from './status-indicator'
 import { ToolbarProvider } from './toolbar-context'
 
-export function FloatingToolbar() {
+export function Toolbar() {
 	return (
 		<ToolbarProvider>
 			<motion.div className="relative z-50 mt-10 md:mt-12">

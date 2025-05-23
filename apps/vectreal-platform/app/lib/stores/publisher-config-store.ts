@@ -103,7 +103,7 @@ export const optimizationAtom = atomWithReset<OptimizationState>(
 //// Compose state
 const controlsInitialState: ControlsProps = {
 	autoRotate: true,
-	autoRotateSpeed: 1,
+	autoRotateSpeed: 0.25,
 	dampingFactor: 0.2,
 	zoomSpeed: 0.4
 }
@@ -122,7 +122,7 @@ const envInitialState: EnvironmentProps = {
 	backgroundIntensity: 1,
 	environmentIntensity: 1,
 	environmentResolution: '1k',
-	preset: 'studio-natural',
+	preset: 'night-stars',
 	backgroundColor: 'rgba(0, 0, 0, 0)',
 	backgroundBlurriness: 0.5
 }

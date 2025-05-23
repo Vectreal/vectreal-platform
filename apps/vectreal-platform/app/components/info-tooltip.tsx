@@ -1,0 +1,30 @@
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger
+} from '@vctrl-ui/ui/tooltip'
+import { Info } from 'lucide-react'
+
+/**
+ * Props for InfoTooltip component
+ */
+interface InfoTooltipProps {
+	content: string
+}
+
+/**
+ * InfoTooltip component for displaying help information
+ */
+export const InfoTooltip = ({ content }: InfoTooltipProps) => (
+	<TooltipProvider>
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<Info className="text-muted-foreground h-4 w-4 cursor-help" />
+			</TooltipTrigger>
+			<TooltipContent className="max-w-80">
+				<p>{content}</p>
+			</TooltipContent>
+		</Tooltip>
+	</TooltipProvider>
+)

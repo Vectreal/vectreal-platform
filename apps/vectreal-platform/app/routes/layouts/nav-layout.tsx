@@ -2,8 +2,9 @@ import { useIsAtTop } from '@vctrl-ui/hooks/use-is-at-top'
 import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router'
 
+import { Navigation } from '../../components/navigation'
+
 import { Route } from './+types/nav-layout'
-import Navigation from './navigation'
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
 	const location = new URL(request.url)

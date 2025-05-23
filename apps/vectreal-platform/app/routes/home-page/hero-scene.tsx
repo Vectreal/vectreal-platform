@@ -2,10 +2,12 @@
 import { Environment, Stage, useGLTF } from '@react-three/drei'
 
 import { Canvas as BaseCanvas, useFrame } from '@react-three/fiber'
+import { EffectComposer, ToneMapping } from '@react-three/postprocessing'
 import { useIsMobile } from '@vctrl-ui/hooks/use-mobile'
 import { LoadingSpinner } from '@vctrl-ui/ui/loading-spinner'
 import { SpinnerWrapper } from '@vctrl-ui/ui/spinner-wrapper'
 import { motion } from 'framer-motion'
+import { ToneMappingMode } from 'postprocessing'
 import React, { Suspense, useEffect, useRef, useState } from 'react'
 
 import { Group } from 'three'
@@ -52,14 +54,25 @@ const Model = ({ url, loadedState }: ModelProps) => {
 				rotation={[0, 0, isMobile ? 0 : 1.5]}
 			>
 				<Stage
-					environment="sunset"
+					environment={null}
 					shadows={isMobile ? true : false}
+					intensity={0}
 					adjustCamera={isMobile ? 0.75 : 0.65}
 				>
 					<group scale={0.02}>
 						<primitive object={scene} />
 					</group>
 				</Stage>
+				<Environment
+					files="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/abandoned_garage_1k.hdr"
+					background={false}
+				/>
+				<EffectComposer>
+					<ToneMapping
+						toneMapptinMode={ToneMappingMode.ACES_FILMIC}
+						adaptionRate={1}
+					/>
+				</EffectComposer>
 			</group>
 		)
 	)

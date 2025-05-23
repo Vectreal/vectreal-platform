@@ -18,6 +18,7 @@ import { cn } from '@vctrl-ui/utils'
 import { useAtom } from 'jotai'
 import { Info } from 'lucide-react'
 
+import { SettingSlider } from '../../../../../../components'
 import {
 	optimizationAtom,
 	TextureOptimization
@@ -105,21 +106,23 @@ export const TextureSettings: React.FC = () => {
 					</Select>
 				</div>
 
-				<div className="space-y-3">
-					<div className="flex items-center justify-between">
-						<Label htmlFor="quality-slider">Quality</Label>
-						<span className="text-accent text-sm font-medium">{quality}%</span>
-					</div>
-					<Slider
-						id="quality-slider"
-						min={30}
-						max={100}
-						step={1}
-						value={[quality]}
-						onValueChange={(value) => setTexture({ quality: value[0] })}
-						className="py-1"
-					/>
-				</div>
+				<SettingSlider
+					id="quality-slider"
+					label="Quality"
+					sliderProps={{
+						value: quality,
+						min: 30,
+						max: 100,
+						step: 1,
+						onChange: (value) => setTexture({ quality: value })
+					}}
+					labelProps={{
+						low: 'Lower quality',
+						high: 'Higher quality'
+					}}
+					formatValue={(value) => `${value}%`}
+				/>
+
 				<div className="space-y-3">
 					<Label htmlFor="texture-size">Texture format</Label>
 					<Select

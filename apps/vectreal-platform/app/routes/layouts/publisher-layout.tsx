@@ -12,9 +12,9 @@ import {
 	publisherConfigStore
 } from '../../lib/stores/publisher-config-store'
 
-import { FloatingToolbar } from './publisher-components/floating-toolbar'
-import { PublisherSidebar } from './publisher-components/publisher-sidebar'
-import { Stepper } from './publisher-components/stepper'
+import { Sidebar } from '../publisher-page/publisher-components/sidebar'
+import { Stepper } from '../publisher-page/publisher-components/stepper'
+import { Toolbar } from '../publisher-page/publisher-components/toolbar'
 
 const AnimatedLayout = ({ children }: PropsWithChildren) => {
 	const { file } = useModelContext()
@@ -26,9 +26,9 @@ const AnimatedLayout = ({ children }: PropsWithChildren) => {
 		<AnimatePresence>
 			<main className="h-screen w-full overflow-hidden">
 				<section className="flex h-full w-full flex-col overflow-hidden">
-					{isNotUploadStep && <FloatingToolbar />}
+					{isNotUploadStep && <Toolbar />}
 					<div className="relative mb-12 flex grow overflow-hidden">
-						{isNotUploadStep && <PublisherSidebar />}
+						{isNotUploadStep && <Sidebar />}
 						{children}
 					</div>
 					<Stepper />

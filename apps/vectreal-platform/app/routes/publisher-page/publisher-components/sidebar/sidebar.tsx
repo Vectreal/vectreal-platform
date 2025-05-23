@@ -5,6 +5,7 @@ import { ChevronLeft } from 'lucide-react'
 
 import { processAtom } from '../../../../lib/stores/publisher-config-store'
 
+import { ComposeSidebar } from './compose-sidebar'
 import { OptimizeSidebar } from './optimize-sidebar'
 
 const sidebarVariants = {
@@ -70,7 +71,9 @@ const PublisherSidebar = () => {
 					>
 						<OptimizeSidebar />
 					</TabsContent>
-					<TabsContent value="compose"></TabsContent>
+					<TabsContent value="compose">
+						<ComposeSidebar />
+					</TabsContent>
 				</Tabs>
 			</aside>
 

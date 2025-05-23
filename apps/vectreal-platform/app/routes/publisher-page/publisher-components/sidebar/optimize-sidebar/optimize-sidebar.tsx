@@ -306,8 +306,8 @@ const OptimizeSidebarContent: React.FC = () => {
 				<Accordion type="single" defaultValue="basic" collapsible>
 					<AccordionItem value="basic" className="px-4">
 						<AccordionTrigger className="px-2">
-							<span className="flex items-center gap-2">
-								<Star className="inline" size={12} />
+							<span className="flex items-center gap-3">
+								<Star className="inline" size={14} />
 								Optimization
 							</span>
 						</AccordionTrigger>
@@ -317,8 +317,8 @@ const OptimizeSidebarContent: React.FC = () => {
 					</AccordionItem>
 					<AccordionItem value="advanced" className="px-4">
 						<AccordionTrigger className="px-2">
-							<span className="flex items-center gap-2">
-								<Settings2 className="inline" size={12} />
+							<span className="flex items-center gap-3">
+								<Settings2 className="inline" size={14} />
 								Advanced Optimization
 							</span>
 						</AccordionTrigger>
@@ -328,8 +328,8 @@ const OptimizeSidebarContent: React.FC = () => {
 					</AccordionItem>
 					<AccordionItem value="details" className="px-4">
 						<AccordionTrigger className="px-2">
-							<span className="flex items-center gap-2">
-								<FileIcon className="inline" size={12} />
+							<span className="flex items-center gap-3">
+								<FileIcon className="inline" size={14} />
 								Scene Details
 							</span>
 						</AccordionTrigger>
