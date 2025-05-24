@@ -2,7 +2,7 @@ import { ModelProvider, useModelContext } from '@vctrl/hooks/use-load-model'
 import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
 
 import { AnimatePresence } from 'framer-motion'
-import { Provider, useAtom } from 'jotai/react'
+import { Provider, useAtomValue } from 'jotai/react'
 
 import { PropsWithChildren } from 'react'
 import { Outlet } from 'react-router'
@@ -13,12 +13,14 @@ import {
 	processAtom,
 	publisherConfigStore
 } from '../../lib/stores/publisher-config-store'
+import SidebarButtons from '../publisher-page/sidebar-buttons'
 
 const AnimatedLayout = ({ children }: PropsWithChildren) => {
 	const { file } = useModelContext()
-	const [{ step }] = useAtom(processAtom)
+	const { step } = useAtomValue(processAtom)
 
 	const isNotUploadStep = file?.model && step !== 'uploading'
+	const isPreparingStep = file?.model && step === 'preparing'
 
 	return (
 		<AnimatePresence>
@@ -27,6 +29,7 @@ const AnimatedLayout = ({ children }: PropsWithChildren) => {
 					{isNotUploadStep && <Toolbar />}
 					<div className="relative mb-12 flex grow overflow-hidden">
 						{isNotUploadStep && <Sidebar />}
+						{isPreparingStep && <SidebarButtons />}
 						{children}
 					</div>
 					<Stepper />

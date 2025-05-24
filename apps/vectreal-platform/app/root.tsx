@@ -13,9 +13,9 @@ import {
 } from 'react-router'
 
 import { Route } from './+types/root'
-import ThemeProvider from './lib/contexts/client.theme-provider'
-import { csrfSession } from './lib/sessions/csrf-session.server'
-import { getSession } from './lib/sessions/theme-session.server'
+import ThemeProvider from './contexts/client.theme-provider'
+import { csrfSession } from './sessions/csrf-session.server'
+import { getSession } from './sessions/theme-session.server'
 
 import styles from './global.module.css'
 import '@vctrl-ui/styles/globals.css'

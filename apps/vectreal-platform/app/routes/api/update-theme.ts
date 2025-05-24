@@ -1,9 +1,6 @@
 import { ApiResponse } from '@vctrl-ui/utils'
 
-import {
-	commitSession,
-	getSession
-} from '../../lib/sessions/theme-session.server'
+import { commitSession, getSession } from '../../sessions/theme-session.server'
 
 import type { Route } from './+types/update-theme'
 

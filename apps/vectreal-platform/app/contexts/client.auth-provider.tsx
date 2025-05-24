@@ -11,7 +11,7 @@ import {
 import { useFetcher } from 'react-router'
 import { toast } from 'sonner'
 
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 
 // Define the interface that will be exposed to consumers
 interface IAuthContext {

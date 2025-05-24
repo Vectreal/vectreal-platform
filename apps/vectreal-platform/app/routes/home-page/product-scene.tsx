@@ -56,9 +56,7 @@ const Model = ({ url }: { url: string }) => {
 				maxDistance: 2.5
 			}}
 			envOptions={{
-				env: {
-					preset: 'city'
-				}
+				preset: 'nature-park'
 			}}
 			model={scene}
 			infoPopoverOptions={{

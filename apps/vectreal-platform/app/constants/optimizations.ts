@@ -1,7 +1,7 @@
 import {
 	OptimizationPreset,
 	PossibleOptimizations
-} from '../stores/publisher-config-store'
+} from '../lib/stores/publisher-config-store'
 
 export const lowPreset: PossibleOptimizations = {
 	simplification: {

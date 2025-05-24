@@ -6,7 +6,7 @@ import {
 import { atomWithReset, atomWithStorage } from 'jotai/utils'
 import { atom, createStore } from 'jotai/vanilla'
 
-import { mediumPreset } from '../constants/optimizations'
+import { mediumPreset } from '../../constants/optimizations'
 
 interface MetaState {
 	sceneName: string
@@ -20,9 +20,10 @@ const metaInitialState: MetaState = {
 const metaAtom = atomWithReset<MetaState>(metaInitialState)
 
 //// Process state
+export type SidebarMode = 'optimize' | 'compose' | 'publish'
 export interface ProcessState {
 	step: 'uploading' | 'preparing' | 'publishing'
-	mode: 'optimize' | 'compose' | 'publish'
+	mode: SidebarMode
 	showSidebar: boolean
 	showInfo: boolean
 }

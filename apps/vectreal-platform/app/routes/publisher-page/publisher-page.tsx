@@ -9,7 +9,6 @@ import { useAtom, useSetAtom } from 'jotai/react'
 import { Suspense, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
-import { DropZone } from '../../components/publisher'
 import {
 	controlsAtom,
 	environmentAtom,
@@ -21,6 +20,7 @@ import {
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
 import { Route } from './+types/publisher-page'
+import { DropZone } from './drop-zone'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	return { isMobile: isMobileRequest(request) }
