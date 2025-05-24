@@ -2,7 +2,7 @@ import { Label } from '@vctrl-ui/ui/label'
 
 import { Slider } from '@vctrl-ui/ui/slider'
 
-import { InfoTooltip } from '../info-tooltip'
+import { InfoTooltip } from '../../info-tooltip'
 
 /**
  * Props for SettingSlider component

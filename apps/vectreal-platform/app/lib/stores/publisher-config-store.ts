@@ -104,6 +104,7 @@ export const optimizationAtom = atomWithReset<OptimizationState>(
 const controlsInitialState: ControlsProps = {
 	autoRotate: true,
 	autoRotateSpeed: 0.25,
+	maxDistance: 100,
 	dampingFactor: 0.2,
 	zoomSpeed: 0.4
 }

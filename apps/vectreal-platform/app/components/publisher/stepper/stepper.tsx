@@ -16,7 +16,7 @@ import { useEffect } from 'react'
 import {
 	processAtom,
 	ProcessState
-} from '../../../../lib/stores/publisher-config-store'
+} from '../../../lib/stores/publisher-config-store'
 
 import PreparingStepInfo from './step-info/preparing'
 

@@ -10,7 +10,7 @@ import {
 import { useAtom } from 'jotai'
 import { FilePlus, Image } from 'lucide-react'
 
-import { processAtom } from '../../../../../lib/stores/publisher-config-store'
+import { processAtom } from '../../../../lib/stores/publisher-config-store'
 
 const PreparingStepInfo = () => {
 	const [{ showInfo }, setProcess] = useAtom(processAtom)
