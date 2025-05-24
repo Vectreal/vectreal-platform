@@ -15,9 +15,9 @@ import {
 	SelectValue
 } from '@vctrl-ui/ui/select'
 import { useAtom } from 'jotai/react'
-import { useCallback, useEffect } from 'react'
+import { useCallback } from 'react'
 
-import { environmentAtom } from '../../../../../../lib/stores/publisher-config-store'
+import { environmentAtom } from '../../../../../lib/stores/publisher-config-store'
 
 const environmentPresets: EnvironmentKey[] = [
 	'nature-moonlit',

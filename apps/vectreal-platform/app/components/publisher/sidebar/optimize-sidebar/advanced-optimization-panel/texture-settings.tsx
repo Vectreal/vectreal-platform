@@ -18,11 +18,11 @@ import { cn } from '@vctrl-ui/utils'
 import { useAtom } from 'jotai'
 import { Info } from 'lucide-react'
 
-import { SettingSlider } from '../../../../../../components'
+import { SettingSlider } from '../../../../../components'
 import {
 	optimizationAtom,
 	TextureOptimization
-} from '../../../../../../lib/stores/publisher-config-store'
+} from '../../../../../lib/stores/publisher-config-store'
 
 const textureSize = [
 	{ value: 256, label: '256×256' },

@@ -8,7 +8,7 @@ import {
 import { useAtom } from 'jotai'
 import { Info } from 'lucide-react'
 
-import { optimizationAtom } from '../../../../../../lib/stores/publisher-config-store'
+import { optimizationAtom } from '../../../../../lib/stores/publisher-config-store'
 
 interface ToggleSettingProps {
 	type: 'quantize' | 'dedup' | 'normals'

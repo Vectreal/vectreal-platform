@@ -1,7 +1,7 @@
 import { useAtom } from 'jotai/react'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 
-import { metaAtom } from '../../../../lib/stores/publisher-config-store'
+import { metaAtom } from '../../../lib/stores/publisher-config-store'
 
 import { useToolbarContext } from './toolbar-context'
 

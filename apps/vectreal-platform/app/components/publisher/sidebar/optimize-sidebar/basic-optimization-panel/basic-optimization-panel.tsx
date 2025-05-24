@@ -1,8 +1,8 @@
 import { useAtom } from 'jotai/react'
 import { useCallback, useEffect } from 'react'
 
-import { optimizationPresets } from '../../../../../../lib/constants/optimizations'
-import { optimizationAtom } from '../../../../../../lib/stores/publisher-config-store'
+import { optimizationPresets } from '../../../../../lib/constants/optimizations'
+import { optimizationAtom } from '../../../../../lib/stores/publisher-config-store'
 
 import { presetOptions } from './preset-data'
 import PresetOption from './preset-option'

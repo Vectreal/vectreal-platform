@@ -27,7 +27,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
-import { optimizationAtom } from '../../../../../lib/stores/publisher-config-store'
+import { optimizationAtom } from '../../../../lib/stores/publisher-config-store'
 
 import { AdvancedPanel } from './advanced-optimization-panel'
 import { BasicOptimizationPanel } from './basic-optimization-panel'

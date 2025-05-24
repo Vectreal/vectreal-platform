@@ -4,8 +4,8 @@ import { cn } from '@vctrl-ui/utils'
 import { useAtom } from 'jotai'
 
 // Store
-import { InfoTooltip, SettingSlider } from '../../../../../../components'
-import { optimizationAtom } from '../../../../../../lib/stores/publisher-config-store'
+import { InfoTooltip, SettingSlider } from '../../../../../components'
+import { optimizationAtom } from '../../../../../lib/stores/publisher-config-store'
 
 /**
  * Type definitions for optimization state structure

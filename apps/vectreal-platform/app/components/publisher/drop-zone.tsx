@@ -2,7 +2,7 @@ import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { InputFileOrDirectory } from '@vctrl/hooks/use-load-model'
 import { useAcceptPattern } from '@vctrl-ui/hooks/use-accept-pattern'
 import { Button } from '@vctrl-ui/ui/button'
-import { Card, CardContent } from '@vctrl-ui/ui/card'
+import { CardContent } from '@vctrl-ui/ui/card'
 import { cn } from '@vctrl-ui/utils'
 import {
 	Book,
@@ -18,7 +18,7 @@ import {
 import { ComponentProps, useEffect, useTransition } from 'react'
 import { useDropzone } from 'react-dropzone'
 
-import { BasicCard } from '../../../components'
+import { BasicCard } from '../../components'
 
 declare module 'react' {
 	interface InputHTMLAttributes<T> extends HTMLAttributes<T> {
@@ -28,11 +28,11 @@ declare module 'react' {
 	}
 }
 
-interface Props extends React.PropsWithChildren {
+interface Props {
 	isMobile?: boolean
 }
 
-const DropZone = ({ children, isMobile }: Props) => {
+export const DropZone = ({ isMobile }: Props) => {
 	const acceptPattern = useAcceptPattern(isMobile)
 	const { getRootProps, getInputProps, isDragActive, acceptedFiles } =
 		useDropzone()
@@ -240,5 +240,3 @@ const DropZone = ({ children, isMobile }: Props) => {
 		</div>
 	)
 }
-
-export default DropZone

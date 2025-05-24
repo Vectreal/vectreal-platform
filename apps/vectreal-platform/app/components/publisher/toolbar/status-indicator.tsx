@@ -3,7 +3,7 @@ import { cn } from '@vctrl-ui/utils'
 import { useSetAtom } from 'jotai/react'
 import { FileWarning } from 'lucide-react'
 
-import { processAtom } from '../../../../lib/stores/publisher-config-store'
+import { processAtom } from '../../../lib/stores/publisher-config-store'
 
 import { useToolbarContext } from './toolbar-context'
 

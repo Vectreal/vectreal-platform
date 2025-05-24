@@ -8,13 +8,11 @@ import { PropsWithChildren } from 'react'
 import { Outlet } from 'react-router'
 
 import { Stepper } from '../../components/'
+import { Sidebar, Toolbar } from '../../components/publisher'
 import {
 	processAtom,
 	publisherConfigStore
 } from '../../lib/stores/publisher-config-store'
-
-import { Sidebar } from '../publisher-page/publisher-components/sidebar'
-import { Toolbar } from '../publisher-page/publisher-components/toolbar'
 
 const AnimatedLayout = ({ children }: PropsWithChildren) => {
 	const { file } = useModelContext()

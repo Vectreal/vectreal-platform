@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { useAtom } from 'jotai/react'
 import { ChevronLeft } from 'lucide-react'
 
-import { processAtom } from '../../../../lib/stores/publisher-config-store'
+import { processAtom } from '../../../lib/stores/publisher-config-store'
 
 import { ComposeSidebar } from './compose-sidebar'
 import { OptimizeSidebar } from './optimize-sidebar'
