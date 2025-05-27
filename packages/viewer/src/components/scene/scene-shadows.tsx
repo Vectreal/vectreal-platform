@@ -7,30 +7,37 @@ import {
 	ContactShadowsProps as ThreeContactShadowsProps
 } from '@react-three/drei'
 
+export interface BaseShadowsProps {
+	type: 'accumulative' | 'contact'
+}
+
 export interface AccumulativeShadowsProps
-	extends ThreeAccumulativeShadowsProps {
+	extends BaseShadowsProps,
+		ThreeAccumulativeShadowsProps {
 	type: 'accumulative'
 	light?: RandomizedLightProps
 }
 
-export interface SoftShadowsProps extends ThreeContactShadowsProps {
-	type: 'soft'
+export interface ContactShadowProps
+	extends BaseShadowsProps,
+		ThreeContactShadowsProps {
+	type: 'contact'
 }
 
-export type ShadowsProps = AccumulativeShadowsProps | SoftShadowsProps
+export type ShadowsProps = AccumulativeShadowsProps | ContactShadowProps
 
-export const defaultShadowsOptions: ShadowsProps = {
+export const defaultShadowsOptions: ShadowsProps | BaseShadowsProps = {
 	type: 'accumulative',
 	temporal: true,
 	frames: 100,
 	alphaTest: 0.8,
-	scale: 10,
+	scale: 2,
 	colorBlend: 2,
 	color: 'black',
 	toneMapped: true,
 	opacity: 1,
 	light: {
-		intensity: Math.PI,
+		intensity: Number(Math.PI.toFixed(2)),
 		amount: 10,
 		radius: 25,
 		ambient: 0.75,
@@ -52,7 +59,7 @@ const SceneShadows = (props: ShadowsProps) => {
 		<AccumulativeShadows {...shadowOptions}>
 			<RandomizedLight {...shadowOptions.light} />
 		</AccumulativeShadows>
-	) : shadowOptions.type === 'soft' ? (
+	) : shadowOptions.type === 'contact' ? (
 		<ContactShadows {...shadowOptions} />
 	) : null
 }

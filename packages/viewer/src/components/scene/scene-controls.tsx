@@ -15,6 +15,7 @@ export const defaultControlsOptions = {
 	maxPolarAngle: Math.PI / 2,
 	autoRotate: true,
 	autoRotateSpeed: 0.25,
+	enableZoom: true,
 	zoomSpeed: 0.4,
 	panSpeed: 0.5,
 	rotateSpeed: 0.5,

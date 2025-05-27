@@ -24,8 +24,9 @@ export { default as ScenePostProcessing } from './scene-postprocessing'
 export {
 	default as SceneShadows,
 	type ShadowsProps,
+	type BaseShadowsProps,
 	type AccumulativeShadowsProps,
-	type SoftShadowsProps,
+	type ContactShadowProps as SoftShadowsProps,
 	defaultShadowsOptions as defaultShadowOptions
 } from './scene-shadows'
 export {

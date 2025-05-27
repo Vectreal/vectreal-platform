@@ -7,8 +7,9 @@ import {
 
 import { CardDescription, CardHeader, CardTitle } from '@vctrl-ui/ui/card'
 import { Separator } from '@vctrl-ui/ui/separator'
-import { MountainSnow, Tornado } from 'lucide-react'
+import { Camera, MountainSnow, Tornado } from 'lucide-react'
 
+import { CameraControlsSettings } from './camera-controls-settings'
 import { EnvironmentSettings } from './environment-settings'
 import { ShadowSettings } from './shadow-settings'
 
@@ -25,7 +26,7 @@ const ComposeSidebarContent: React.FC = () => {
 
 			<Separator />
 
-			<Accordion type="single" defaultValue="environment" collapsible>
+			<Accordion type="single" collapsible>
 				<AccordionItem value="environment" className="px-4">
 					<AccordionTrigger className="px-2">
 						<span className="flex items-center gap-3">
@@ -46,6 +47,17 @@ const ComposeSidebarContent: React.FC = () => {
 					</AccordionTrigger>
 					<AccordionContent>
 						<ShadowSettings />
+					</AccordionContent>
+				</AccordionItem>
+				<AccordionItem value="camera-controls" className="px-4">
+					<AccordionTrigger className="px-2">
+						<span className="flex items-center gap-3">
+							<Camera className="inline" size={14} />
+							Camera Controls
+						</span>
+					</AccordionTrigger>
+					<AccordionContent>
+						<CameraControlsSettings />
 					</AccordionContent>
 				</AccordionItem>
 			</Accordion>
