@@ -52,11 +52,12 @@ export interface EnvironmentProps extends InheritedEnvProps {
 
 export const defaultEnvOptions = {
 	preset: 'studio-natural',
-	environmentIntensity: 1,
-	backgroundIntensity: 1,
 	background: false,
-	backgroundBlurriness: 0,
-	ground: false
+	backgroundIntensity: 1,
+	environmentIntensity: 1,
+	environmentResolution: '1k',
+	backgroundColor: 'rgba(0, 0, 0, 0)',
+	backgroundBlurriness: 0.5
 } satisfies EnvironmentProps
 
 const buildEnvUrl = ({ id, type, resolution }: EnvironmentMap) => {

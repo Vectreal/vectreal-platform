@@ -12,9 +12,9 @@ import { toast } from 'sonner'
 import {
 	controlsAtom,
 	environmentAtom,
-	groundAtom,
 	metaAtom,
 	processAtom,
+	shadowsAtom,
 	toneMappingAtom
 } from '../../lib/stores/publisher-config-store'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
@@ -35,7 +35,8 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 	const [env] = useAtom(environmentAtom)
 	const [toneMapping] = useAtom(toneMappingAtom)
 	const [controls] = useAtom(controlsAtom)
-	const [{ showGrid }] = useAtom(groundAtom)
+	const [shadows] = useAtom(shadowsAtom)
+
 	const setProcess = useSetAtom(processAtom)
 	const setMeta = useSetAtom(metaAtom)
 
@@ -120,13 +121,11 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 							<VectrealViewer
 								model={file?.model}
 								key="model-viewer"
-								infoPopoverOptions={{
-									showInfo: false
-								}}
-								gridOptions={{ showGrid }}
+								infoPopoverOptions={{ showInfo: false }}
 								toneMappingOptions={toneMapping}
 								envOptions={env}
 								controlsOptions={controls}
+								shadowsOptions={shadows}
 							/>
 						</motion.div>
 					) : isFileLoading || loadingStarted ? (

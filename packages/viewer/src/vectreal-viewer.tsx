@@ -35,7 +35,7 @@ import {
 	SceneModel,
 	SceneShadows,
 	SceneToneMapping,
-	ShadowProps,
+	ShadowsProps,
 	ToneMappingProps
 } from './components/scene'
 
@@ -70,7 +70,7 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	/**
 	 * Options for the shadows.
 	 */
-	shadowOptions?: ShadowProps
+	shadowsOptions?: ShadowsProps
 
 	/**
 	 * Options for the tone mapping.
@@ -125,7 +125,6 @@ export interface VectrealViewerProps extends PropsWithChildren {
  *     <VectrealViewer
  *       model={model}
  *       controlsOptions={{ maxPolarAngle: Math.PI / 2 }}
- *       envOptions={{ stage: { preset: 'sunset' } }}
  *     />
  *   );
  * };
@@ -139,7 +138,7 @@ const VectrealViewer = ({ model, ...props }: VectrealViewerProps) => {
 		gridOptions,
 		controlsOptions,
 		infoPopoverOptions,
-		shadowOptions,
+		shadowsOptions,
 		toneMappingOptions,
 		loader = <DefaultSpinner />
 	} = props
@@ -170,7 +169,7 @@ const VectrealViewer = ({ model, ...props }: VectrealViewerProps) => {
 						<SceneCamera {...cameraOptions} />
 						<SceneEnvironment {...envOptions} />
 						<SceneGrid {...gridOptions} />
-						<SceneShadows {...shadowOptions} />
+						<SceneShadows {...shadowsOptions} />
 						<SceneToneMapping
 							mapping={toneMappingOptions?.mapping}
 							exposure={toneMappingOptions?.exposure}

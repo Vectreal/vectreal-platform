@@ -1,4 +1,5 @@
 // UI Components
+import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { Switch } from '@vctrl-ui/ui/switch'
 import { cn } from '@vctrl-ui/utils'
 import { useAtom } from 'jotai'
@@ -41,10 +42,18 @@ const useSimplificationSettings = () => {
  */
 export function SimplificationSettings() {
 	const { settings, updateSettings } = useSimplificationSettings()
+	const { optimize } = useModelContext()
+	const { report } = optimize
+	const totalVertices =
+		report?.meshes.properties.reduce(
+			(total, mesh) => total + mesh.vertices,
+			0
+		) || 0
+
 	const { enabled, ratio, error } = settings
 
 	// Calculate estimated polygon reduction based on ratio
-	const estimatedPolygons = Math.round(100000 * ratio)
+	const estimatedVertices = Math.round(totalVertices * (1 - ratio))
 
 	// Format decimal values consistently
 	const formatDecimal = (value: number) => value.toFixed(3)
@@ -70,7 +79,8 @@ export function SimplificationSettings() {
 			>
 				<SettingSlider
 					id="ratio-slider"
-					label="Ratio"
+					label="Reduction Target"
+					tooltip="Sets how much to reduce the original vertex count. A value of 0.5 aims to keep 50% of vertices."
 					sliderProps={{
 						value: ratio,
 						min: 0,
@@ -79,22 +89,22 @@ export function SimplificationSettings() {
 						onChange: (value) => updateSettings({ ratio: value })
 					}}
 					labelProps={{
-						low: 'More optimized',
-						high: 'Higher quality'
+						low: 'Smaller file size',
+						high: 'Better detail'
 					}}
 				/>
 
 				<div className="bg-muted/50 rounded-md p-3 text-sm">
-					<span className="text-muted-foreground">Estimated polygons: </span>
+					<span className="text-muted-foreground">Estimated vertices: </span>
 					<span className="text-accent font-medium">
-						{estimatedPolygons.toLocaleString()}
+						{estimatedVertices.toLocaleString()}
 					</span>
 				</div>
 
 				<SettingSlider
 					id="error-slider"
-					label="Error Threshold"
-					tooltip="Controls how much the simplified mesh can deviate from the original. Higher values allow more deviation but produce smaller files."
+					label="Deviation Limit"
+					tooltip="Determines maximum allowed deviation from original mesh. Higher values allow more simplification but less accuracy."
 					sliderProps={{
 						value: error,
 						min: 0.0005,
@@ -103,8 +113,8 @@ export function SimplificationSettings() {
 						onChange: (value) => updateSettings({ error: value })
 					}}
 					labelProps={{
-						low: 'Higher accuracy',
-						high: 'Lower accuracy'
+						low: 'More precise',
+						high: 'More optimized'
 					}}
 					formatValue={formatDecimal}
 				/>

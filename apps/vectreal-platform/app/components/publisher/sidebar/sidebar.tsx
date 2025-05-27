@@ -48,7 +48,7 @@ const PublisherSidebar = () => {
 			animate={showSidebar ? 'open' : 'closed'}
 			exit="closed"
 			key="sidebar"
-			className="bg-muted/50 absolute top-0 bottom-0 left-0 z-20 border-r shadow-xl backdrop-blur-2xl"
+			className="bg-card/75 absolute top-0 bottom-0 left-0 z-20 border-r shadow-xl backdrop-blur-2xl"
 		>
 			<aside className="h-full overflow-hidden">
 				<Tabs
@@ -67,11 +67,11 @@ const PublisherSidebar = () => {
 					<TabsContent
 						key="optimize"
 						value="optimize"
-						className="relative h-full w-full overflow-auto"
+						className="relative overflow-auto"
 					>
 						<OptimizeSidebar />
 					</TabsContent>
-					<TabsContent value="compose">
+					<TabsContent value="compose" className="relative overflow-auto">
 						<ComposeSidebar />
 					</TabsContent>
 				</Tabs>

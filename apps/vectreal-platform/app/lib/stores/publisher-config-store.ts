@@ -1,6 +1,11 @@
 import {
 	ControlsProps,
+	defaultControlsOptions,
+	defaultEnvOptions,
+	defaultShadowOptions,
+	defaultToneMappingOptions,
 	EnvironmentProps,
+	ShadowsProps,
 	ToneMappingProps
 } from '@vctrl/viewer'
 import { atomWithReset, atomWithStorage } from 'jotai/utils'
@@ -51,7 +56,6 @@ interface BaseOptimization<Name = OptimizationNames> {
 	name: Name
 	enabled: boolean
 }
-
 interface SimplificationOptimization
 	extends BaseOptimization<'simplification'> {
 	/**
@@ -64,17 +68,13 @@ interface SimplificationOptimization
 	 */
 	error: number
 }
-
 export interface TextureOptimization extends BaseOptimization<'texture'> {
 	resize: [number, number]
 	quality: number
 	targetFormat: 'jpeg' | 'png' | 'webp'
 }
-
 type QuantizeOptimization = BaseOptimization<'quantize'>
-
 type DedupOptimization = BaseOptimization<'dedup'>
-
 type NormalsOptimization = BaseOptimization<'normals'>
 
 export type PossibleOptimizations = {
@@ -97,68 +97,36 @@ const optimizationInitialState: OptimizationState = {
 	optimizationPreset: 'medium'
 }
 
-export const optimizationAtom = atomWithReset<OptimizationState>(
+const optimizationAtom = atomWithReset<OptimizationState>(
 	optimizationInitialState
 )
 
 //// Compose state
-const controlsInitialState: ControlsProps = {
-	autoRotate: true,
-	autoRotateSpeed: 0.25,
-	maxDistance: 100,
-	dampingFactor: 0.2,
-	zoomSpeed: 0.4
-}
-
-const controlsAtom = atom<ControlsProps>(controlsInitialState)
-
-const tonemappingInitialState: ToneMappingProps = {
-	exposure: 0.9,
-	mapping: 'ACESFilmic'
-}
-
-const toneMappingAtom = atom<ToneMappingProps>(tonemappingInitialState)
-
-const envInitialState: EnvironmentProps = {
-	background: false,
-	backgroundIntensity: 1,
-	environmentIntensity: 1,
-	environmentResolution: '1k',
-	preset: 'night-stars',
-	backgroundColor: 'rgba(0, 0, 0, 0)',
-	backgroundBlurriness: 0.5
-}
-
-const environmentAtom = atom<EnvironmentProps>(envInitialState)
-
-interface GroundState {
-	showGrid: boolean
-}
-
-const groundInitialState: GroundState = {
-	showGrid: false
-}
-const groundAtom = atom<GroundState>(groundInitialState)
+const controlsAtom = atom<ControlsProps>(defaultControlsOptions)
+const toneMappingAtom = atom<ToneMappingProps>(defaultToneMappingOptions)
+const environmentAtom = atom<EnvironmentProps>(defaultEnvOptions)
+const shadowsAtom = atom<ShadowsProps>(defaultShadowOptions)
 
 // Create a store to manage the state of the atoms
 const publisherConfigStore = createStore()
 
 publisherConfigStore.set(metaAtom, metaInitialState)
-publisherConfigStore.set(controlsAtom, controlsInitialState)
-publisherConfigStore.set(toneMappingAtom, tonemappingInitialState)
-publisherConfigStore.set(environmentAtom, envInitialState)
-publisherConfigStore.set(groundAtom, groundInitialState)
+publisherConfigStore.set(controlsAtom, defaultControlsOptions)
+publisherConfigStore.set(toneMappingAtom, defaultToneMappingOptions)
+publisherConfigStore.set(environmentAtom, defaultEnvOptions)
+publisherConfigStore.set(shadowsAtom, defaultShadowOptions)
 publisherConfigStore.set(processAtom, processInitialState)
 publisherConfigStore.set(optimizationAtom, optimizationInitialState)
 
 export {
 	// atoms
 	metaAtom,
+	processAtom,
+	optimizationAtom,
 	controlsAtom,
 	toneMappingAtom,
 	environmentAtom,
-	groundAtom,
-	processAtom,
+	shadowsAtom,
 	// store
 	publisherConfigStore
 }

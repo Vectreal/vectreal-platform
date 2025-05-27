@@ -8,9 +8,14 @@ export interface ToneMappingProps {
 	mapping?: 'ACESFilmic'
 }
 
+export const defaultToneMappingOptions = {
+	exposure: 0.85,
+	mapping: 'ACESFilmic'
+} satisfies ToneMappingProps
+
 // const options = ['No', 'Linear', 'AgX', 'ACESFilmic', 'Reinhard', 'Cineon', 'Custom']
 
-function Tone({ mapping = 'ACESFilmic', exposure = 1.5 }: ToneMappingProps) {
+function Tone({ mapping, exposure }: Required<ToneMappingProps>) {
 	const gl = useThree((state) => state.gl)
 
 	useEffect(() => {
@@ -54,10 +59,12 @@ function Tone({ mapping = 'ACESFilmic', exposure = 1.5 }: ToneMappingProps) {
 	return null
 }
 
-export default function SceneToneMapping({
-	mapping,
-	exposure
-}: ToneMappingProps) {
+export default function SceneToneMapping(props: ToneMappingProps) {
+	const { mapping, exposure } = {
+		...defaultToneMappingOptions,
+		...props
+	}
+
 	const toneMapping = useMemo(() => {
 		return <Tone mapping={mapping} exposure={exposure} />
 	}, [mapping, exposure])

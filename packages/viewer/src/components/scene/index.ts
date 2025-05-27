@@ -23,10 +23,13 @@ export {
 export { default as ScenePostProcessing } from './scene-postprocessing'
 export {
 	default as SceneShadows,
-	type ShadowProps,
-	defaultShadowOptions
+	type ShadowsProps,
+	type AccumulativeShadowsProps,
+	type SoftShadowsProps,
+	defaultShadowsOptions as defaultShadowOptions
 } from './scene-shadows'
 export {
 	default as SceneToneMapping,
-	type ToneMappingProps
+	type ToneMappingProps,
+	defaultToneMappingOptions
 } from './scene-tone-mapping'

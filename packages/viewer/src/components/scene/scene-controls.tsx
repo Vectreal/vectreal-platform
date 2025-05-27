@@ -10,17 +10,18 @@ export interface ControlsProps extends OrbitControlsProps {
 	controlsTimeout?: number
 }
 
-export const defaultControlsOptions: ControlsProps = {
+export const defaultControlsOptions = {
 	controlsTimeout: 0,
 	maxPolarAngle: Math.PI / 2,
 	autoRotate: true,
-	zoomSpeed: 0.25,
+	autoRotateSpeed: 0.25,
+	zoomSpeed: 0.4,
 	panSpeed: 0.5,
 	rotateSpeed: 0.5,
 	enableDamping: true,
-	dampingFactor: 0.25,
-	maxDistance: 10
-}
+	dampingFactor: 0.2
+} satisfies ControlsProps
+
 /**
  * SceneControls component that enables orbit controls after a specified timeout.
  */
