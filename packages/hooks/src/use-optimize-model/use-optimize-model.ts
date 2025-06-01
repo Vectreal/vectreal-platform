@@ -68,7 +68,7 @@ const useOptimizeModel = () => {
 	// Use useReducer to manage complex state transitions.
 	const [state, dispatch] = useReducer(reducer, initialState)
 	const { model, report, error, loading } = state
-	const { optimizationInfo, reset: resetInfo } = useCalcOptimizationInfo(state)
+	const { info, reset: resetInfo } = useCalcOptimizationInfo(state)
 
 	// Initialize the GLTFExporter and WebIO with required extensions.
 	const exporterRef = useRef<GLTFExporter>(new GLTFExporter())
@@ -218,11 +218,11 @@ const useOptimizeModel = () => {
 		 * Resets the current model and report.
 		 */
 		reset,
-		report,
 		error,
 		loading,
 		optimizations: {
-			info: optimizationInfo,
+			report,
+			info,
 			/**
 			 * Simplifies the current model document using MeshoptSimplifier.
 			 *

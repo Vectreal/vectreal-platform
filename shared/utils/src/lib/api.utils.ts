@@ -1,28 +1,55 @@
 import type { ApiResponseType } from '../types/api-core'
 
 export class ApiResponse {
-	static success<T>(data: T, status = 200): Response {
+	static success<T>(
+		data: T,
+		status = 200,
+		options?: { headers?: Headers | Record<string, string> }
+	): Response {
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json'
+		}
+		if (options?.headers) {
+			if (options.headers instanceof Headers) {
+				options.headers.forEach((value, key) => {
+					headers[key] = value
+				})
+			} else {
+				Object.assign(headers, options.headers)
+			}
+		}
 		return new Response(
 			JSON.stringify({ success: true, data } as ApiResponseType<T>),
 			{
 				status,
-				headers: {
-					'Content-Type': 'application/json',
-					'Cache-Control': 'no-store'
-				}
+				headers
 			}
 		)
 	}
 
-	static error(message: string, status = 400): Response {
+	static error(
+		message: string,
+		status = 400,
+		options?: { headers?: Headers | Record<string, string> }
+	): Response {
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+			'Cache-Control': 'no-store'
+		}
+		if (options?.headers) {
+			if (options.headers instanceof Headers) {
+				options.headers.forEach((value, key) => {
+					headers[key] = value
+				})
+			} else {
+				Object.assign(headers, options.headers)
+			}
+		}
 		return new Response(
 			JSON.stringify({ success: false, error: message } as ApiResponseType),
 			{
 				status,
-				headers: {
-					'Content-Type': 'application/json',
-					'Cache-Control': 'no-store'
-				}
+				headers
 			}
 		)
 	}

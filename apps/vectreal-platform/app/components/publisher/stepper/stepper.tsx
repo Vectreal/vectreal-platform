@@ -1,16 +1,8 @@
 import { useIsMobile } from '@vctrl-ui/hooks/use-mobile'
-import { Button } from '@vctrl-ui/ui/button'
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger
-} from '@vctrl-ui/ui/tooltip'
 import { cn } from '@vctrl-ui/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom, useAtomValue } from 'jotai/react'
 import { RESET } from 'jotai/utils'
-import { Info } from 'lucide-react'
 import { useEffect } from 'react'
 
 import {
@@ -39,7 +31,7 @@ const highlightVariants = {
 		width: 50
 	},
 	visible: {
-		transition: { delay: 1.5 },
+		transition: { delay: 1 },
 		opacity: 1,
 		width: '100%'
 	}
@@ -72,7 +64,7 @@ const Step = ({ isActive, step, index }: StepProps) => {
 			</div>
 
 			{/* Highlight line */}
-			<AnimatePresence>
+			<AnimatePresence mode="wait">
 				{isActive ? (
 					<motion.div
 						variants={highlightVariants}
@@ -95,15 +87,8 @@ const steps: ProcessState['step'][] = ['uploading', 'preparing', 'publishing']
 
 const Stepper = () => {
 	const currentStep = useAtomValue(processAtom).step
-	const [{ showInfo, showSidebar, step }, setProcess] = useAtom(processAtom)
+	const [{ showInfo, step }, setProcess] = useAtom(processAtom)
 	const isMobile = useIsMobile(false)
-
-	function handleInfoOpen(isOpen: boolean) {
-		setProcess((prev) => ({
-			...prev,
-			showInfo: isOpen
-		}))
-	}
 
 	// Reset the process state when the component unmounts
 	useEffect(() => {
@@ -122,40 +107,6 @@ const Stepper = () => {
 			>
 				{currentStep === 'preparing' ? <PreparingStepInfo /> : null}
 			</motion.div>
-
-			{/* Info open button */}
-			<TooltipProvider>
-				<AnimatePresence>
-					{!showInfo && step !== 'uploading' && !showSidebar && (
-						<motion.div
-							variants={infoVariants}
-							initial="hidden"
-							animate="visible"
-							exit="hidden"
-							key="info-button"
-							transition={{ duration: 0.5, ease: 'easeInOut' }}
-							className="absolute right-0 bottom-0 z-20 mr-4 mb-16 flex h-fit w-fit justify-end gap-4"
-						>
-							<Tooltip>
-								<TooltipTrigger>
-									<Button
-										asChild
-										size="icon"
-										variant="outline"
-										className="text-muted-foreground hover:text-muted-foreground p-2"
-										onClick={() => handleInfoOpen(true)}
-									>
-										<Info size={12} />
-									</Button>
-									<TooltipContent>
-										Information about the current step
-									</TooltipContent>
-								</TooltipTrigger>
-							</Tooltip>
-						</motion.div>
-					)}
-				</AnimatePresence>
-			</TooltipProvider>
 
 			{/* Steps bar */}
 			<div className="bg-muted border-ring/25 relative z-30 h-full w-full border-t">

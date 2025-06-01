@@ -1,7 +1,10 @@
 import fileSaver from 'file-saver'
 import JSZip from 'jszip'
 
-import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter'
+import {
+	GLTFExporter,
+	GLTFExporterOptions
+} from 'three/examples/jsm/exporters/GLTFExporter'
 
 import { ModelFile } from '../use-load-model'
 
@@ -59,7 +62,7 @@ const useExportModel = (
 		const options = {
 			binary,
 			includeCustomExtensions: true
-		}
+		} satisfies GLTFExporterOptions
 
 		exporter.parse(
 			scene,

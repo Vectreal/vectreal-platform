@@ -1,9 +1,7 @@
 import { ModelProvider, useModelContext } from '@vctrl/hooks/use-load-model'
 import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
-
 import { AnimatePresence } from 'framer-motion'
 import { Provider, useAtomValue } from 'jotai/react'
-
 import { PropsWithChildren } from 'react'
 import { Outlet } from 'react-router'
 
@@ -13,7 +11,7 @@ import {
 	processAtom,
 	publisherConfigStore
 } from '../../lib/stores/publisher-config-store'
-import SidebarButtons from '../publisher-page/sidebar-buttons'
+import PublisherButtons from '../publisher-page/publisher-buttons'
 
 const AnimatedLayout = ({ children }: PropsWithChildren) => {
 	const { file } = useModelContext()
@@ -29,7 +27,7 @@ const AnimatedLayout = ({ children }: PropsWithChildren) => {
 					{isNotUploadStep && <Toolbar />}
 					<div className="relative mb-12 flex grow overflow-hidden">
 						{isNotUploadStep && <Sidebar />}
-						{isPreparingStep && <SidebarButtons />}
+						{isPreparingStep && <PublisherButtons />}
 						{children}
 					</div>
 					<Stepper />

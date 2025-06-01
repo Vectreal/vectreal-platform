@@ -51,7 +51,7 @@ export const defaultShadowsOptions: ShadowsProps | BaseShadowsProps = {
  *
  * @param {ShadowsProps} props - Shadow configuration options.
  */
-const SceneShadows = (props: ShadowsProps) => {
+const SceneShadows = (props?: ShadowsProps | object) => {
 	const { ...shadowOptions } = { ...defaultShadowsOptions, ...props }
 	console.debug('SceneShadows', shadowOptions)
 

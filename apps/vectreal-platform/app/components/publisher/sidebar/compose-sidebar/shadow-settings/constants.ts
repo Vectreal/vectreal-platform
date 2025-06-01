@@ -24,6 +24,14 @@ export const ACCUMULATIVE_FIELDS = [
 		tooltip: 'Overall scale of the shadow area.'
 	},
 	{
+		key: 'resolution',
+		label: 'Resolution',
+		min: 128,
+		max: 4096,
+		step: 128,
+		tooltip: 'Shadow map resolution.'
+	},
+	{
 		key: 'colorBlend',
 		label: 'Color Blend',
 		min: 0,

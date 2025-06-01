@@ -17,7 +17,7 @@ const MockShopSection = () => {
 			</span>
 
 			<div className="mt-8 grid w-full grid-cols-1 gap-4 md:grid-cols-[3fr_2fr]">
-				<BasicCard className="bg-muted/50 relative max-h-[400px] min-h-[300px] w-full overflow-hidden rounded-xl py-0 md:max-h-[600px] md:min-h-[500px]">
+				<BasicCard className="relative max-h-[400px] min-h-[300px] w-full overflow-hidden py-0 md:max-h-[600px] md:min-h-[500px]">
 					<ProductScene />
 
 					<div className="absolute right-4 bottom-4 p-2 text-sm backdrop-blur-sm">

@@ -1,17 +1,7 @@
 import { cn } from '@vctrl-ui/utils'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Battery, BatteryFull, BatteryMedium } from 'lucide-react'
-import React from 'react'
 
-import { PresetOptionProps } from './types'
-
-const iconComponents = {
-	'battery-full': BatteryFull,
-	'battery-medium': BatteryMedium,
-	'battery-low': Battery
-} as const
-
-export type IconType = keyof typeof iconComponents
+import { RadioAccordionOptionProps } from './types'
 
 const itemInfoVariants = {
 	open: {
@@ -40,12 +30,10 @@ const selectedTextVariants = {
 	}
 }
 
-const PresetOption: React.FC<PresetOptionProps> = ({
-	preset,
-	isSelected,
-	onSelect
-}) => {
-	const IconComponent = iconComponents[preset.icon as IconType]
+const RadioAccordionItem = <T extends string>(
+	props: RadioAccordionOptionProps<T>
+) => {
+	const { option, isSelected, onSelect } = props
 
 	return (
 		<button
@@ -67,7 +55,7 @@ const PresetOption: React.FC<PresetOptionProps> = ({
 							: 'bg-muted text-muted-foreground fill-muted-foreground group-hover:bg-accent/20 group-hover:text-accent'
 					)}
 				>
-					<IconComponent size={16} />
+					{option.icon}
 				</div>
 
 				<span
@@ -78,7 +66,7 @@ const PresetOption: React.FC<PresetOptionProps> = ({
 							: 'text-muted-foreground group-hover:text-foreground'
 					)}
 				>
-					{preset.label}
+					{option.label}
 				</span>
 				<AnimatePresence mode="wait">
 					{isSelected && (
@@ -98,7 +86,7 @@ const PresetOption: React.FC<PresetOptionProps> = ({
 			<AnimatePresence>
 				{isSelected && (
 					<motion.div
-						key={preset.id}
+						key={option.id}
 						variants={itemInfoVariants}
 						initial="closed"
 						animate="open"
@@ -106,7 +94,7 @@ const PresetOption: React.FC<PresetOptionProps> = ({
 						className="overflow-hidden pl-8"
 					>
 						<p className="text-muted-foreground pt-2 text-xs">
-							{preset.description}
+							{option.description}
 						</p>
 					</motion.div>
 				)}
@@ -115,4 +103,4 @@ const PresetOption: React.FC<PresetOptionProps> = ({
 	)
 }
 
-export default PresetOption
+export default RadioAccordionItem

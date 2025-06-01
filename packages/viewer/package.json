@@ -50,8 +50,7 @@
 		"@react-three/drei": "^10.0.7",
 		"@react-three/fiber": "^9.1.2",
 		"@react-three/postprocessing": "^3.0.4",
-		"postprocessing": "^6.37.3",
-    "r3f-perf": "^7.2.3"
+		"postprocessing": "^6.37.3"
 	},
 	"peerDependencies": {
 		"three": "^0.176.0",

@@ -16,6 +16,7 @@ import { mediumPreset } from '../../constants/optimizations'
 interface MetaState {
 	sceneName: string
 	isSaved: boolean
+	thumbnailUrl?: string
 }
 
 const metaInitialState: MetaState = {

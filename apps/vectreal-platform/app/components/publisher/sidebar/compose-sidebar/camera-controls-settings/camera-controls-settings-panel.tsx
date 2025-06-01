@@ -76,7 +76,7 @@ const CameraControlsSettingsPanel = () => {
 						min: 0,
 						max: 0.5,
 						step: 0.01,
-						value: controls.dampingFactor ?? 0.1,
+						value: controls.dampingFactor ?? 0.25,
 						onChange: (value) =>
 							setControls((prev) => ({
 								...prev,

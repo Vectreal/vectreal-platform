@@ -1,6 +1,4 @@
-import { IconProps } from '@vctrl-ui/assets/icons/types'
-
-export const GithubLogo = ({ className }: IconProps) => {
+export const GithubLogo = ({ className }: { className?: string }) => {
 	return (
 		<svg
 			className={className}

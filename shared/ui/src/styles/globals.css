@@ -138,7 +138,7 @@
 		/* &:before {
 			@apply bg-muted border-border/50 absolute inset-0 -z-10 rounded-xl border shadow-xl backdrop-blur-xl content-[''];
 			}
-			
+
 		&:after {
 			@apply to-muted/50 border-ring/50 absolute inset-0 -z-20 -m-2 rounded-xl border border-solid bg-radial-[at_100%_0%] from-amber-600/50 backdrop-blur-xl content-[''];
 		} */

@@ -11,18 +11,21 @@ import {
 	ScrollRestoration,
 	useRouteLoaderData
 } from 'react-router'
+import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/root'
-import ThemeProvider from './contexts/client.theme-provider'
-import { csrfSession } from './sessions/csrf-session.server'
-import { getSession } from './sessions/theme-session.server'
+import ThemeProvider from './contexts/theme-provider'
+import { csrfSession } from './lib/sessions/csrf-session.server'
+import { getSession } from './lib/sessions/theme-session.server'
 
 import styles from './global.module.css'
 import '@vctrl-ui/styles/globals.css'
 
 export const meta: MetaFunction = () => [
 	{
-		title: 'New Nx React Router App'
+		title: 'Vectreal Platform',
+		name: 'description',
+		content: 'Your platform for creating and sharing 3D scenes.'
 	}
 ]
 
@@ -79,11 +82,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App({ loaderData }: Route.ComponentProps) {
 	return (
-		<ThemeProvider
-			defaultTheme={(loaderData?.theme as 'dark') || 'system'}
-			storageKey="theme-mode"
-		>
-			<Outlet />
-		</ThemeProvider>
+		<AuthenticityTokenProvider token={loaderData?.csrf}>
+			<ThemeProvider
+				defaultTheme={(loaderData?.theme as 'dark') || 'system'}
+				storageKey="theme-mode"
+			>
+				<Outlet />
+			</ThemeProvider>
+		</AuthenticityTokenProvider>
 	)
 }

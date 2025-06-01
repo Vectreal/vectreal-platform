@@ -84,7 +84,6 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 								<Button
 									onClick={handlePublisherClick}
 									size="lg"
-									variant="accent"
 									className="group hover:border-accent/50 border-1 transition-all hover:scale-[1.02] hover:animate-pulse"
 								>
 									<Sparkle className="mr-2 h-5 w-5 transition-all group-hover:rotate-12" />
@@ -203,7 +202,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 					<div className="w-full">
 						<ol className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
 							<li className="grow">
-								<BasicCard highlight>
+								<BasicCard highlight className="h-full">
 									<CardHeader>
 										<CardTitle className="text-4xl font-light">
 											0<span className="text-accent pl-1 font-bold">1</span>
@@ -220,7 +219,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 								</BasicCard>
 							</li>
 							<li className="grow">
-								<BasicCard highlight>
+								<BasicCard highlight className="h-full">
 									<CardHeader>
 										<CardTitle className="text-4xl font-light">
 											0<span className="text-accent pl-1 font-bold">2</span>
@@ -237,7 +236,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 							</li>
 
 							<li className="grow">
-								<BasicCard highlight>
+								<BasicCard highlight className="h-full">
 									<CardHeader>
 										<CardTitle className="text-4xl font-light">
 											0<span className="text-accent pl-1 font-bold">3</span>
@@ -253,7 +252,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 								</BasicCard>
 							</li>
 							<li className="grow">
-								<BasicCard highlight>
+								<BasicCard highlight className="h-full">
 									<CardHeader>
 										<CardTitle className="text-4xl font-light">
 											0<span className="text-accent pl-1 font-bold">4</span>
@@ -287,7 +286,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 					<div className="flex flex-col gap-4 md:gap-6">
 						<div className="flex flex-col-reverse justify-between gap-4 md:grid md:grid-cols-2">
 							<div className="flex flex-col gap-4">
-								<BasicCard className="bg-muted/50 border-none">
+								<BasicCard>
 									<CardHeader>
 										<CardTitle className="text-xl font-medium">
 											Artists & Designers
@@ -300,7 +299,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 										</p>
 									</CardContent>
 								</BasicCard>
-								<BasicCard className="bg-muted/50 border-none">
+								<BasicCard>
 									<CardHeader>
 										<CardTitle className="text-xl font-medium">
 											Developers
@@ -313,7 +312,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 										</p>
 									</CardContent>
 								</BasicCard>
-								<BasicCard className="bg-muted/50 border-none">
+								<BasicCard>
 									<CardHeader>
 										<CardTitle className="text-xl font-medium">
 											Businesses
@@ -340,7 +339,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 							<p className="mb-2">
 								Ready to transform your 3D content experience?
 							</p>
-							<Button variant="accent" onClick={handlePublisherClick}>
+							<Button onClick={handlePublisherClick}>
 								<Sparkle className="mr-2" />
 								Launch Your First Model
 							</Button>
@@ -362,7 +361,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 					</div>
 
 					<div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-						<BasicCard className="bg-muted/50 h-full">
+						<BasicCard>
 							<CardHeader>
 								<CardTitle className="text-5xl font-bold">
 									60<span className="text-accent font-light">%</span>
@@ -387,7 +386,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 							</CardContent>
 						</BasicCard>
 
-						<BasicCard className="bg-muted/50 h-full">
+						<BasicCard>
 							<CardHeader>
 								<CardTitle className="text-5xl font-bold">
 									44<span className="text-accent font-light">%</span>
@@ -412,7 +411,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 							</CardContent>
 						</BasicCard>
 
-						<BasicCard className="bg-muted/50 h-full">
+						<BasicCard>
 							<CardHeader>
 								<CardTitle className="text-5xl font-bold">
 									94<span className="text-accent font-light">%</span>
@@ -470,11 +469,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 										immediately
 									</li>
 								</ul>
-								<Button
-									variant="accent"
-									className="mt-2"
-									onClick={handlePublisherClick}
-								>
+								<Button className="mt-2" onClick={handlePublisherClick}>
 									<Sparkle className="mr-2" />
 									Launch Your First Model
 								</Button>

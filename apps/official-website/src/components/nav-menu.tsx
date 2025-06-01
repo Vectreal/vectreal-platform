@@ -9,7 +9,7 @@ import {
 	TwitterLogoIcon
 } from '@radix-ui/react-icons'
 
-import { cn } from '@vctrl/shared/lib/utils'
+import { cn } from '@vctrl/@vctrl-ui/utils'
 
 import {
 	Button,

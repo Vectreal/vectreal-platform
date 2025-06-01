@@ -43,7 +43,9 @@ const useSimplificationSettings = () => {
 export function SimplificationSettings() {
 	const { settings, updateSettings } = useSimplificationSettings()
 	const { optimize } = useModelContext()
-	const { report } = optimize
+	const {
+		optimizations: { report }
+	} = optimize
 	const totalVertices =
 		report?.meshes.properties.reduce(
 			(total, mesh) => total + mesh.vertices,

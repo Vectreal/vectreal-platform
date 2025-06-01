@@ -79,8 +79,6 @@ export interface VectrealViewerProps extends PropsWithChildren {
 
 	/**
 	 * Options for the grid.
-	 *
-	 * @see {@link https://drei.docs.pmnd.rs/gizmos/grid}
 	 */
 	gridOptions?: GridProps
 
@@ -93,6 +91,11 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * JSX element to render while the model is loading.
 	 */
 	loader?: React.ReactNode
+
+	/**
+	 * Callback function to handle screenshot generation (accept data URL via param).
+	 */
+	onScreenshot?: (dataUrl: string) => void
 }
 
 /**
@@ -140,6 +143,7 @@ const VectrealViewer = ({ model, ...props }: VectrealViewerProps) => {
 		infoPopoverOptions,
 		shadowsOptions,
 		toneMappingOptions,
+		onScreenshot,
 		loader = <DefaultSpinner />
 	} = props
 
@@ -176,7 +180,7 @@ const VectrealViewer = ({ model, ...props }: VectrealViewerProps) => {
 						/>
 
 						<Center top>
-							<SceneModel object={model} />
+							<SceneModel onScreenshot={onScreenshot} object={model} />
 							{children}
 						</Center>
 					</Canvas>

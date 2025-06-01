@@ -6,6 +6,7 @@ import { EffectComposer, ToneMapping } from '@react-three/postprocessing'
 import { useIsMobile } from '@vctrl-ui/hooks/use-mobile'
 import { LoadingSpinner } from '@vctrl-ui/ui/loading-spinner'
 import { SpinnerWrapper } from '@vctrl-ui/ui/spinner-wrapper'
+import { cn } from '@vctrl-ui/utils'
 import { motion } from 'framer-motion'
 import { ToneMappingMode } from 'postprocessing'
 import React, { Suspense, useEffect, useRef, useState } from 'react'
@@ -19,9 +20,10 @@ type ReactState<T> = [T, React.Dispatch<React.SetStateAction<T>>]
 interface ModelProps {
 	url: string
 	loadedState: ReactState<boolean>
+	vertical?: boolean
 }
 
-const Model = ({ url, loadedState }: ModelProps) => {
+const Model = ({ url, loadedState, vertical }: ModelProps) => {
 	const [isLoaded, setIsLoaded] = loadedState
 
 	const isMobile = useIsMobile()
@@ -50,14 +52,14 @@ const Model = ({ url, loadedState }: ModelProps) => {
 		scene && (
 			<group
 				ref={stageRef}
-				position={[0, 0, 0]}
-				rotation={[0, 0, isMobile ? 0 : 1.5]}
+				position={[0, 0.5, 0]}
+				rotation={[0, 0, isMobile || vertical ? 0 : 1.5]}
 			>
 				<Stage
 					environment={null}
 					shadows={isMobile ? true : false}
 					intensity={0}
-					adjustCamera={isMobile ? 0.75 : 0.65}
+					adjustCamera={isMobile ? 0.75 : 0.8}
 				>
 					<group scale={0.02}>
 						<primitive object={scene} />
@@ -78,12 +80,22 @@ const Model = ({ url, loadedState }: ModelProps) => {
 	)
 }
 
-const appearance = {
+const fadeVariants = {
 	hidden: { opacity: 0 },
 	visible: { opacity: 1 }
 }
 
-const HeroScene = ({ className }: { className?: string }) => {
+interface HeroSceneProps {
+	className?: string
+	vertical?: boolean
+	limitHeight?: boolean
+}
+
+const HeroScene = ({
+	className,
+	limitHeight = true,
+	...props
+}: HeroSceneProps) => {
 	const [modelUrl, setModelUrl] = useState('')
 
 	const loadedState = useState(false)
@@ -97,27 +109,35 @@ const HeroScene = ({ className }: { className?: string }) => {
 		<>
 			<motion.div
 				className={className}
-				variants={appearance}
+				variants={fadeVariants}
 				initial="hidden"
 				animate={isLodaded ? 'visible' : 'hidden'}
 				transition={{ duration: 0.5, delay: 0.5, ease: 'easeInOut' }}
 				exit="hidden"
 			>
-				<BaseCanvas className="absolute! left-0! h-full max-h-4/5 sm:max-h-7/10">
+				<BaseCanvas
+					className={cn(
+						'absolute! left-0! h-full',
+						limitHeight && 'max-h-4/5 sm:max-h-7/10'
+					)}
+				>
 					<pointLight position={[10, 10, 10]} intensity={2} />
 					<ambientLight />
 					<Environment preset="sunset" />
 					<Suspense fallback={null}>
-						<Model url={modelUrl} loadedState={loadedState} />
+						<Model url={modelUrl} loadedState={loadedState} {...props} />
 					</Suspense>
 				</BaseCanvas>
 			</motion.div>
 			<motion.div
-				variants={appearance}
+				variants={fadeVariants}
 				initial="hidden"
 				animate={!isLodaded ? 'visible' : 'hidden'}
 				exit="hidden"
-				className="absolute top-0 left-0 z-10 h-4/5 w-full"
+				className={cn(
+					'absolute top-0 left-0 z-10 w-full',
+					limitHeight ? 'h-4/5' : 'h-full'
+				)}
 			>
 				<SpinnerWrapper>
 					<div className="text-muted! flex flex-col items-center justify-center gap-4 rounded-xl">

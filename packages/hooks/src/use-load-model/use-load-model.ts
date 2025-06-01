@@ -279,7 +279,7 @@ function useOptimizerIntegration(
 		applyOptimization: applyOptimization,
 		optimizations: optimizer?.optimizations,
 		reset: optimizer?.reset,
-		report: optimizer?.report,
+		report: optimizer?.optimizations.report,
 		error: optimizer?.error,
 		loading: optimizer?.loading
 	} as OptimizerIntegrationReturn

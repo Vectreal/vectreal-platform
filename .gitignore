@@ -9,3 +9,10 @@ storybook-static
 *.log
 vite.config.*.timestamp*
 vitest.config.*.timestamp*
+.env
+.env.local
+.env.development
+.env.production
+
+.cursor/rules/nx-rules.mdc
+.github/instructions/nx.instructions.md

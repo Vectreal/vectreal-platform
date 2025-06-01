@@ -29,8 +29,10 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { optimizationAtom } from '../../../../lib/stores/publisher-config-store'
 
+import { sidebarContentVariants } from '../animation'
+
 import { AdvancedPanel } from './advanced-optimization-panel'
-import { BasicOptimizationPanel } from './basic-optimization-panel'
+import BasicOptimizationPanel from './basic-optimization-panel'
 import SceneDetails from './scene-details'
 
 interface OptimizationInfoProps {
@@ -103,8 +105,8 @@ const OptimizationSummary: React.FC<OptimizatoinSummaryProps> = ({
 						<motion.li
 							key={index}
 							className="flex justify-between text-sm"
-							initial={{ opacity: 0, x: -20 }}
-							animate={{ opacity: 1, x: 0 }}
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
 							transition={{
 								delay: 0.6 + index * 0.1,
 								duration: 0.3
@@ -155,12 +157,7 @@ const OptimizeButton: React.FC<OptimizeButtonProps> = ({
 	onOptimize
 }) => (
 	<div className="border-t p-4">
-		<Button
-			variant="accent"
-			className="w-full"
-			onClick={onOptimize}
-			disabled={isPending}
-		>
+		<Button className="w-full" onClick={onOptimize} disabled={isPending}>
 			{isPending ? (
 				<>
 					<SparklesIcon className="mr-2 h-4 w-4 animate-spin" />
@@ -271,7 +268,14 @@ const OptimizeSidebarContent: React.FC = () => {
 	}, [off, on, resetOptimize])
 
 	return (
-		<div className="flex h-full flex-col">
+		<motion.div
+			variants={sidebarContentVariants}
+			initial="initial"
+			animate="animate"
+			exit="exit"
+			key="optimize-sidebar"
+			className="flex h-full flex-col"
+		>
 			<div className="no-scrollbar grow overflow-y-auto">
 				<CardHeader className="py-6">
 					<CardTitle>
@@ -345,7 +349,7 @@ const OptimizeSidebarContent: React.FC = () => {
 				isPending={isPending}
 				hasOptimized={info.optimized.sceneBytes < info.initial.sceneBytes}
 			/>
-		</div>
+		</motion.div>
 	)
 }
 

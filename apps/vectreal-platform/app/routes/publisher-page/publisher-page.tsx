@@ -88,6 +88,13 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 		setLoadingStarted(true)
 	}
 
+	function handleScreenshot(url: string) {
+		setMeta((prev) => ({
+			...prev,
+			thumbnailUrl: url
+		}))
+	}
+
 	useEffect(() => {
 		on('load-reset', handleReset)
 		on('not-loaded-files', handleNotLoadedFiles)
@@ -126,6 +133,7 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 								envOptions={env}
 								controlsOptions={controls}
 								shadowsOptions={shadows}
+								onScreenshot={handleScreenshot}
 							/>
 						</motion.div>
 					) : isFileLoading || loadingStarted ? (

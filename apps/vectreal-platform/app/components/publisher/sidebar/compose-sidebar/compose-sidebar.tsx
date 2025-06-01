@@ -7,7 +7,10 @@ import {
 
 import { CardDescription, CardHeader, CardTitle } from '@vctrl-ui/ui/card'
 import { Separator } from '@vctrl-ui/ui/separator'
+import { motion } from 'framer-motion'
 import { Camera, MountainSnow, Tornado } from 'lucide-react'
+
+import { sidebarContentVariants } from '../animation'
 
 import { CameraControlsSettings } from './camera-controls-settings'
 import { EnvironmentSettings } from './environment-settings'
@@ -15,7 +18,14 @@ import { ShadowSettings } from './shadow-settings'
 
 const ComposeSidebarContent: React.FC = () => {
 	return (
-		<div className="no-scrollbar flex h-full grow flex-col overflow-y-auto">
+		<motion.div
+			variants={sidebarContentVariants}
+			initial="initial"
+			animate="animate"
+			exit="exit"
+			key="compose-sidebar"
+			className="no-scrollbar flex h-full grow flex-col overflow-y-auto"
+		>
 			<CardHeader className="py-6">
 				<CardTitle>Compose Your Scene</CardTitle>
 				<CardDescription>
@@ -61,7 +71,7 @@ const ComposeSidebarContent: React.FC = () => {
 					</AccordionContent>
 				</AccordionItem>
 			</Accordion>
-		</div>
+		</motion.div>
 	)
 }
 

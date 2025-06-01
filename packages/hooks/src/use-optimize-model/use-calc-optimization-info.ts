@@ -18,7 +18,7 @@ function sumProperty<K extends string>(
 }
 
 export interface OptimizationInfoData {
-	optimizationInfo: OptimizationInfo
+	info: OptimizationInfo
 	reset: () => void
 }
 
@@ -117,7 +117,7 @@ export const useCalcOptimizationInfo = (
 	}, [])
 
 	return {
-		optimizationInfo: info,
+		info,
 		reset
 	}
 }

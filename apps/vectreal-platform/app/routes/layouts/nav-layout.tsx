@@ -1,8 +1,10 @@
 import { useIsAtTop } from '@vctrl-ui/hooks/use-is-at-top'
 import { useEffect, useState } from 'react'
-import { Outlet } from 'react-router'
+import { data, Outlet } from 'react-router'
 
 import { Navigation } from '../../components/navigation'
+
+import { createClient } from '../../lib/supabase.server'
 
 import { Route } from './+types/nav-layout'
 
@@ -10,17 +12,23 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 	const location = new URL(request.url)
 	const pathname = location.pathname
 
-	return {
-		pathname
-	}
+	const { client, headers } = await createClient(request)
+
+	const {
+		data: { user }
+	} = await client.auth.getUser()
+
+	return data({ pathname, user }, { headers })
 }
 
 const NavLayout = ({ loaderData }: Route.ComponentProps) => {
-	const { pathname } = loaderData
+	const { pathname, user } = loaderData
 	const isHomePage = pathname === '/' || pathname === '/home'
+	const isSignupPage = pathname === '/sign-up' || pathname === '/sign-in'
 
 	const [windowHeight, setWindowHeight] = useState(0)
 	const { isAtTop, ref: atTopTracker } = useIsAtTop(windowHeight)
+
 	useEffect(() => {
 		function handleResize() {
 			setWindowHeight(window.innerHeight)
@@ -38,8 +46,9 @@ const NavLayout = ({ loaderData }: Route.ComponentProps) => {
 			{/* "At-top-tracker" */}
 			<div ref={atTopTracker} />
 			<Navigation
-				isHomePage={isHomePage}
-				mode={isHomePage && isAtTop ? 'float' : 'full'}
+				user={user}
+				pathname={pathname}
+				mode={(isHomePage || isSignupPage) && isAtTop ? 'float' : 'full'}
 			/>
 
 			<Outlet />
