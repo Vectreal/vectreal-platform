@@ -5,7 +5,7 @@ import { createClient } from '../../../lib/supabase.server'
 
 import { Route } from './+types/confirm'
 
-export const loader = async ({ request }: Route.ActionArgs) => {
+export const loader = async ({ request }: Route.LoaderArgs) => {
 	const { searchParams } = new URL(request.url)
 	const token_hash = searchParams.get('token_hash')
 	const type = searchParams.get('type') as EmailOtpType | null
@@ -20,12 +20,12 @@ export const loader = async ({ request }: Route.ActionArgs) => {
 		})
 		if (!error) {
 			// redirect user to specified redirect URL or root of app
-			redirect(next, { headers })
+			return redirect(next, { headers })
 		}
 	}
 
 	// redirect the user to an error page with some instructions
-	redirect('/error', {
+	return redirect('/error', {
 		headers
 	})
 }

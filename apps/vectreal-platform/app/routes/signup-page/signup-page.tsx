@@ -1,7 +1,11 @@
 import { User } from '@supabase/supabase-js'
+import {
+	AlertDescription,
+	AlertTitle,
+	Alert as BaseAlert
+} from '@vctrl-ui/ui/alert'
 import { Button } from '@vctrl-ui/ui/button'
 import { Input } from '@vctrl-ui/ui/input'
-
 import {
 	Tooltip,
 	TooltipContent,
@@ -9,20 +13,38 @@ import {
 	TooltipTrigger
 } from '@vctrl-ui/ui/tooltip'
 import { ApiResponse } from '@vctrl-ui/utils'
-import { Eye, EyeClosed } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
+import { AlertCircle, Eye, EyeClosed } from 'lucide-react'
 import { useState } from 'react'
+
 import { data, Form, redirect } from 'react-router'
 
 import { createClient } from '../../lib/supabase.server'
 
 import { Route } from './+types/signup-page'
 
+/**
+ * User input fields for signup form.
+ */
 interface UserInput {
 	username: string
 	email: string
 	password: string
 }
 
+const Alert = motion.create(BaseAlert)
+
+const showVariants = {
+	hidden: { opacity: 0, y: 10 },
+	visible: { opacity: 1, y: 0 }
+}
+
+/**
+ * Validate signup form data.
+ * @param formData FormData from the request
+ * @returns errors and sanitized data
+ */
 function validateSignup(formData: FormData) {
 	const errors: Record<string, string> = {}
 
@@ -44,6 +66,10 @@ function validateSignup(formData: FormData) {
 	return { errors, data }
 }
 
+/**
+ * Action handler for signup form submission.
+ * Handles user registration via Supabase.
+ */
 export async function action({
 	request
 }: Route.ActionArgs): Promise<ApiResponse> {
@@ -72,6 +98,9 @@ export async function action({
 	)
 }
 
+/**
+ * Loader for the signup page. Redirects authenticated users.
+ */
 export const loader = async ({ request }: Route.LoaderArgs) => {
 	const { client } = await createClient(request)
 	const {
@@ -88,8 +117,13 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 	}
 }
 
+/**
+ * SignupPage component renders the registration form and handles UI state.
+ * @param loaderData Loader data from the route
+ * @param props Additional props
+ */
 const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
-	const [showPassword, setShowPassword] = useState(false)
+	const [showPassword, setShowPassword] = useState<boolean>(false)
 	const togglePasswordVisibility = () => {
 		setShowPassword((prev) => !prev)
 	}
@@ -99,7 +133,7 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 		| { user: User }
 		| { errors?: Record<string, string> }
 
-	const errors =
+	const errors: Record<string, string> =
 		typeof actionData === 'object' &&
 		actionData !== null &&
 		'errors' in actionData
@@ -113,87 +147,140 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 			? (actionData.data as { user: User })
 			: null
 
-	const verified = actionResultData?.user?.user_metadata.email_verified
-	console.log('SignupPage actionResultUser:', actionResultData)
-	console.log('SignupPage verified:', verified)
+	const isEmailVerified = actionResultData?.user?.user_metadata?.email_verified
 
 	return (
-		<Form className="w-full max-w-md" method="post" action="/sign-up">
-			<div className="mb-4">
-				<label className="mb-2 block text-sm font-medium" htmlFor="username">
-					Username
-				</label>
-				<Input
-					name="username"
-					placeholder="your-username"
-					type="text"
-					id="username"
-					className="w-full p-2"
-					required
-				/>
-				{errors?.username && (
-					<p className="text-destructive mt-1 text-sm">{errors.username}</p>
-				)}
-			</div>
-			<div className="mb-4">
-				<label className="mb-2 block text-sm font-medium" htmlFor="email">
-					Email
-				</label>
-				<Input
-					name="email"
-					placeholder="example@yay.com"
-					type="email"
-					id="email"
-					className="w-full p-2"
-					required
-				/>
-				{errors?.email && (
-					<p className="text-destructive mt-1 text-sm">{errors.email}</p>
-				)}
-			</div>
-			<div className="mb-4">
-				<label className="mb-2 block text-sm font-medium" htmlFor="password">
-					Password
-				</label>
-				<span className="relative w-full">
+		<AnimatePresence mode="wait">
+			{/* Email verification alert */}
+			{isEmailVerified === false && (
+				<Alert
+					key={isEmailVerified ? 'verified' : 'unverified'}
+					variants={showVariants}
+					variant="destructive"
+					initial="hidden"
+					animate="visible"
+					exit="hidden"
+					className="bg-muted/50 text-accent"
+					role="alert"
+					aria-live="assertive"
+				>
+					<AlertCircle className="h-4 w-4" aria-hidden="true" />
+					<AlertTitle className="font-medium">
+						Email Verification Required
+					</AlertTitle>
+					<AlertDescription className="text-accent! font-light">
+						Please verify your email before signing in.
+					</AlertDescription>
+				</Alert>
+			)}
+			<Form
+				className="w-full max-w-md"
+				method="post"
+				action="/sign-up"
+				aria-label="Sign up form"
+				noValidate
+			>
+				<div className="mb-4">
+					<label className="mb-2 block text-sm font-medium" htmlFor="username">
+						Username
+					</label>
 					<Input
-						name="password"
-						placeholder="********"
-						type={showPassword ? 'text' : 'password'}
-						id="password"
+						name="username"
+						placeholder="your-username"
+						type="text"
+						id="username"
 						className="w-full p-2"
 						required
+						aria-invalid={!!errors?.username}
+						aria-describedby={errors?.username ? 'username-error' : undefined}
 					/>
-					<TooltipProvider>
-						<Tooltip>
-							<TooltipTrigger
-								type="button"
-								className="[&_svg]:text-muted-foreground absolute top-1/2 right-0 -translate-y-1/2 p-2 px-3 [&_svg]:h-4 [&_svg]:w-4"
-							>
-								<Button
-									onClick={togglePasswordVisibility}
-									asChild
+					{errors?.username && (
+						<p
+							id="username-error"
+							className="text-destructive mt-1 text-sm"
+							role="alert"
+						>
+							{errors.username}
+						</p>
+					)}
+				</div>
+				<div className="mb-4">
+					<label className="mb-2 block text-sm font-medium" htmlFor="email">
+						Email
+					</label>
+					<Input
+						name="email"
+						placeholder="example@yay.com"
+						type="email"
+						id="email"
+						className="w-full p-2"
+						required
+						aria-invalid={!!errors?.email}
+						aria-describedby={errors?.email ? 'email-error' : undefined}
+					/>
+					{errors?.email && (
+						<p
+							id="email-error"
+							className="text-destructive mt-1 text-sm"
+							role="alert"
+						>
+							{errors.email}
+						</p>
+					)}
+				</div>
+				<div className="mb-4">
+					<label className="mb-2 block text-sm font-medium" htmlFor="password">
+						Password
+					</label>
+					<span className="relative w-full">
+						<Input
+							name="password"
+							placeholder="********"
+							type={showPassword ? 'text' : 'password'}
+							id="password"
+							className="w-full p-2"
+							required
+							aria-invalid={!!errors?.password}
+							aria-describedby={errors?.password ? 'password-error' : undefined}
+						/>
+						<TooltipProvider>
+							<Tooltip>
+								<TooltipTrigger
 									type="button"
-									size="icon"
-									variant="ghost"
+									className="[&_svg]:text-muted-foreground absolute top-1/2 right-0 -translate-y-1/2 p-2 px-3 [&_svg]:h-4 [&_svg]:w-4"
+									aria-label={showPassword ? 'Hide password' : 'Show password'}
 								>
-									{showPassword ? <EyeClosed /> : <Eye />}
-								</Button>
-								<TooltipContent>
-									{showPassword ? 'Hide password' : 'Show password'}
-								</TooltipContent>
-							</TooltipTrigger>
-						</Tooltip>
-					</TooltipProvider>
-				</span>
-				{errors?.password && (
-					<p className="text-destructive mt-1 text-sm">{errors.password}</p>
-				)}
-			</div>
-			<Button type="submit" className="w-full">
-				Sign Up
-			</Button>
-		</Form>
+									<Button
+										onClick={togglePasswordVisibility}
+										asChild
+										type="button"
+										size="icon"
+										variant="ghost"
+									>
+										{showPassword ? <EyeClosed /> : <Eye />}
+									</Button>
+									<TooltipContent>
+										{showPassword ? 'Hide password' : 'Show password'}
+									</TooltipContent>
+								</TooltipTrigger>
+							</Tooltip>
+						</TooltipProvider>
+					</span>
+					{errors?.password && (
+						<p
+							id="password-error"
+							className="text-destructive mt-1 text-sm"
+							role="alert"
+						>
+							{errors.password}
+						</p>
+					)}
+				</div>
+				<Button type="submit" className="w-full">
+					Sign Up
+				</Button>
+			</Form>
+		</AnimatePresence>
 	)
 }
 

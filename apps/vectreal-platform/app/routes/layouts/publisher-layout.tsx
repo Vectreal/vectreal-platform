@@ -22,16 +22,14 @@ const AnimatedLayout = ({ children }: PropsWithChildren) => {
 
 	return (
 		<AnimatePresence>
-			<main className="h-screen w-full overflow-hidden">
-				<section className="flex h-full w-full flex-col overflow-hidden">
-					{isNotUploadStep && <Toolbar />}
-					<div className="relative mb-12 flex grow overflow-hidden">
-						{isNotUploadStep && <Sidebar />}
-						{isPreparingStep && <PublisherButtons />}
-						{children}
-					</div>
-					<Stepper />
-				</section>
+			<main className="flex h-screen w-full flex-col overflow-hidden">
+				{isNotUploadStep && <Toolbar />}
+				<div className="relative mb-12 flex grow overflow-hidden">
+					{isNotUploadStep && <Sidebar />}
+					{isPreparingStep && <PublisherButtons />}
+					{children}
+				</div>
+				<Stepper />
 			</main>
 		</AnimatePresence>
 	)

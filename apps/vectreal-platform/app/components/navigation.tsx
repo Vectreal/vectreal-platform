@@ -1,5 +1,6 @@
 import { User } from '@supabase/supabase-js'
 import { VectrealLogoAnimated } from '@vctrl-ui/assets/icons/vectreal-logo-animated'
+import { Avatar, AvatarFallback, AvatarImage } from '@vctrl-ui/ui/avatar'
 import { Button } from '@vctrl-ui/ui/button'
 import {
 	DropdownMenu,
@@ -9,50 +10,89 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger
 } from '@vctrl-ui/ui/dropdown-menu'
-import { cn } from '@vctrl-ui/utils'
-import { AnimatePresence, motion, Variants } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Sparkles } from 'lucide-react'
-import { Link, useFetcher } from 'react-router'
+import { Link, useFetcher, useNavigate } from 'react-router'
 
-const navVariants: Variants = {
-	full: {
-		margin: 0,
-		borderBottomWidth: 1
-	},
-	float: {
-		margin: '1rem 0.75rem 0 0.75rem',
-		borderBottomWidth: 0
-	}
-}
-
-const floatyNavVariants: Variants = {
-	float: {
-		borderRadius: '1rem',
-		boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-		background: 'var(--background)',
-		border: '1px solid var(--border)'
-	},
-	full: {
-		borderRadius: '0',
-		boxShadow: 'none',
-		background: 'transparent',
-		border: 'none'
-	}
-}
-
-interface Props {
+interface NavigationProps {
 	pathname: string
 	mode?: 'full' | 'float'
 	user: User | null
 }
 
-export const Navigation = ({ mode, pathname, user }: Props) => {
-	const isFloating = mode === 'float'
+/**
+ * SignUpButton renders the sign up call-to-action.
+ */
+function SignUpButton() {
+	return (
+		<Link viewTransition to="/sign-up" aria-label="Sign up">
+			<Button variant="ghost" size="sm">
+				Sign Up For Free
+			</Button>
+		</Link>
+	)
+}
+
+/**
+ * PublisherButton renders the publisher navigation button.
+ */
+function PublisherButton() {
+	return (
+		<Link viewTransition to="/publisher" aria-label="Go to Publisher">
+			<Button variant="ghost" size="sm">
+				Go to Publisher
+				<Sparkles />
+			</Button>
+		</Link>
+	)
+}
+
+/**
+ * UserMenu renders the user avatar and dropdown menu.
+ */
+function UserMenu({ user, onLogout }: { user: User; onLogout: () => void }) {
+	const navigate = useNavigate()
+	const userImageSrc = user?.user_metadata?.avatar_url || ''
+	const userInitial = user.user_metadata?.full_name?.charAt(0) || 'U'
+
+	async function handleMenuItemClick(to: 'dashboard') {
+		await navigate(to, { viewTransition: true })
+	}
+
+	return (
+		<DropdownMenu modal={false}>
+			<DropdownMenuTrigger aria-label="Open user menu">
+				<Avatar className="h-8 w-8 rounded-lg">
+					<AvatarImage
+						className="rounded-lg"
+						src={userImageSrc}
+						alt={user.user_metadata?.full_name || 'User Avatar'}
+					/>
+					<AvatarFallback className="rounded-lg">{userInitial}</AvatarFallback>
+				</Avatar>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent side="bottom" className="mr-4 min-w-64 capitalize">
+				<DropdownMenuLabel>
+					Hey, {user.user_metadata?.full_name.split(' ').at(0) || user.email}!
+				</DropdownMenuLabel>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem onClick={() => handleMenuItemClick('dashboard')}>
+					Dashboard
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem onClick={onLogout}>Log Out</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	)
+}
+
+/**
+ * Navigation is the main navigation bar for the app shell.
+ */
+export const Navigation = ({ mode, pathname, user }: NavigationProps) => {
 	const isSigninPage =
 		pathname.startsWith('/sign-up') || pathname.startsWith('/sign-in')
 	const isPublisherPage = pathname.startsWith('/publisher')
-
-	const userImageSrc = user?.user_metadata?.avatar_url || ''
 
 	const { submit } = useFetcher()
 
@@ -64,36 +104,23 @@ export const Navigation = ({ mode, pathname, user }: Props) => {
 	}
 
 	return (
-		<motion.nav
-			layout="size"
-			variants={navVariants}
-			transition={{ duration: 0.5, ease: 'easeOut' }}
-			initial={mode ? 'float' : 'full'}
-			animate={isFloating ? 'float' : 'full'}
-			className={cn(
-				'bg-muted/40 fixed top-0 right-0 left-0 z-50 flex h-10 items-center justify-between px-4 md:h-12',
-				isFloating
-					? 'border-transparent bg-transparent'
-					: 'border-accent/20 backdrop-blur-2xl'
-			)}
+		<nav
+			className="bg-background fixed top-0 right-0 left-0 z-50 flex items-center justify-between p-2 px-4"
+			aria-label="Main navigation"
 		>
-			<Link to="/" className="flex h-full items-center" viewTransition>
+			<Link
+				to="/"
+				className="flex h-full items-center"
+				viewTransition
+				aria-label="Home"
+			>
 				<VectrealLogoAnimated
-					className="text-muted-foreground h-5 md:h-6"
-					colored={isFloating}
-					small={mode !== 'float'}
+					className="text-muted-foreground h-5 md:h-7"
+					colored={false}
+					small
 				/>
 			</Link>
-			<motion.div
-				variants={floatyNavVariants}
-				transition={{ duration: 0.5, ease: 'easeOut' }}
-				initial={mode ? 'float' : 'full'}
-				animate={isFloating ? 'float' : 'full'}
-				className={cn(
-					'flex h-full items-center justify-center gap-2 p-2 px-1',
-					isFloating && 'backdrop-blur-lg'
-				)}
-			>
+			<div className="flex h-full items-center justify-center gap-2">
 				<AnimatePresence initial={false}>
 					{!isSigninPage && !user && (
 						<motion.div
@@ -104,14 +131,7 @@ export const Navigation = ({ mode, pathname, user }: Props) => {
 							className="overflow-hidden"
 							key="sign-in-button"
 						>
-							<Link viewTransition to="/sign-up">
-								<Button
-									variant="ghost"
-									className={cn(isFloating && 'rounded-lg')}
-								>
-									Sign Up For Free
-								</Button>
-							</Link>
+							<SignUpButton />
 						</motion.div>
 					)}
 					{!isPublisherPage && (
@@ -123,51 +143,12 @@ export const Navigation = ({ mode, pathname, user }: Props) => {
 							className="overflow-hidden"
 							key="publisher-button"
 						>
-							<Link viewTransition to="/publisher">
-								<Button
-									variant="ghost"
-									className={cn(isFloating && 'rounded-lg')}
-								>
-									Go to Publisher
-									<Sparkles />
-								</Button>
-							</Link>
+							<PublisherButton />
 						</motion.div>
 					)}
-					{user && (
-						<DropdownMenu modal={false}>
-							<DropdownMenuTrigger className="mr-1">
-								{userImageSrc ? (
-									<img
-										src={userImageSrc}
-										alt="User Avatar"
-										className="border-muted h-8 w-8 rounded-lg border object-cover"
-									/>
-								) : (
-									<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-lg">
-										{user.email?.charAt(0).toUpperCase() || '?'}
-									</div>
-								)}
-							</DropdownMenuTrigger>
-							<DropdownMenuContent
-								side="bottom"
-								className={cn('mt-2 min-w-64', isFloating ? 'mr-8' : 'mr-4')}
-							>
-								<DropdownMenuLabel>My Account</DropdownMenuLabel>
-								<DropdownMenuSeparator />
-								<DropdownMenuItem>Profile</DropdownMenuItem>
-								<DropdownMenuItem>Billing</DropdownMenuItem>
-								<DropdownMenuItem>Team</DropdownMenuItem>
-								<DropdownMenuItem>Subscription</DropdownMenuItem>
-								<DropdownMenuSeparator />
-								<DropdownMenuItem onClick={handleLogout}>
-									Log Out
-								</DropdownMenuItem>
-							</DropdownMenuContent>
-						</DropdownMenu>
-					)}
+					{user && <UserMenu user={user} onLogout={handleLogout} />}
 				</AnimatePresence>
-			</motion.div>
-		</motion.nav>
+			</div>
+		</nav>
 	)
 }

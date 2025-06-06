@@ -11,23 +11,15 @@ import {
 } from '@vctrl-ui/ui/card'
 
 import { AnimatePresence, motion } from 'framer-motion'
-import {
-	ArrowUp,
-	Brain,
-	Brush,
-	Check,
-	Code,
-	Globe,
-	Sparkle,
-	Wrench
-} from 'lucide-react'
+import { ArrowUp, Check, Globe, Sparkle, Wrench } from 'lucide-react'
 
-import { useNavigate } from 'react-router'
+import { redirect, useNavigate } from 'react-router'
 
 import community from '../../assets/images/community.webp'
 import studioDisplay from '../../assets/images/studio-display.jpg'
 import { BasicCard, Section } from '../../components'
 
+import { createClient } from '../../lib/supabase.server'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
 import { Route } from './+types/home-page'
@@ -36,6 +28,23 @@ import HeroScene from './hero-scene'
 import MockShopSection from './mock-shop-section'
 
 export async function loader({ request }: Route.LoaderArgs) {
+	const { client, headers } = await createClient(request)
+	const {
+		data: { user }
+	} = await client.auth.getUser()
+
+	// Create a new URL object to parse the request URL
+	const url = new URL(request.url)
+	const isRootPage = url.pathname === '/'
+
+	// If the user is authenticated and trying to access the root page, redirect to the dashboard
+	// This makes the dashboard the landing page for authenticated users
+	if (user && isRootPage) {
+		return redirect('/dashboard', {
+			headers
+		})
+	}
+
 	/**
 	 * Determine if the request comes from a mobile client by the headers in the request
 	 */
@@ -51,10 +60,10 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 
 	return (
 		<main>
-			<section className="flex h-svh flex-col overflow-clip">
+			<section className="-mt-12 flex h-svh flex-col overflow-clip">
 				<HeroScene className="-mb-24 h-full w-full grow md:-mb-48" />
 
-				<div className="z-10 flex flex-col items-start justify-center px-4 pb-8 md:pb-16">
+				<div className="z-10 flex flex-col items-start justify-center px-4">
 					<span className="mx-auto mb-2 flex w-full max-w-5xl flex-wrap gap-2 md:mb-4 md:gap-4">
 						<Badge className="bg-muted/50 text-primary/80 border-accent/25 border font-light backdrop-blur-2xl">
 							<ArrowUp /> Full control at scale
@@ -63,11 +72,9 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 							<Sparkle /> Optimized for performance
 						</Badge>
 					</span>
-					<div className="from-muted/75 border-accent/20 relative mx-auto w-full max-w-5xl overflow-hidden rounded-xl border-t bg-linear-to-b to-transparent p-6 shadow-lg backdrop-blur-md md:p-8 md:pb-0">
-						{/* Glass container gradient overlay that fades to transparent */}
-						<div className="from-accent/10 absolute inset-0 -z-10 h-full w-full overflow-hidden bg-radial-[at_0%_0%] via-transparent to-transparent opacity-50" />
 
-						<div className="relative z-10 w-full text-center">
+					<BasicCard className="relative mx-auto w-full max-w-5xl shadow-lg">
+						<CardContent className="text-center">
 							<h1 className="from-primary to-primary/50 bg-gradient-to-br bg-clip-text text-3xl leading-tight font-medium text-transparent sm:text-4xl md:text-6xl lg:text-7xl">
 								Upload. Prepare. Publish.
 							</h1>
@@ -77,7 +84,10 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 								<span className="hidden sm:inline">
 									<br />
 								</span>
-								Now it's time to share it—with style, speed, and purpose.
+								<strong className="text-foreground font-medium">
+									Now it's time to share it
+								</strong>
+								—with style, speed, and purpose.
 							</p>
 
 							<div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center">
@@ -111,7 +121,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 										}}
 										exit={{ opacity: 0, height: 0 }}
 										transition={{ duration: 0.5 }}
-										className="bg-background/20 mx-auto mt-8 max-w-3xl space-x-4 overflow-clip rounded-full border border-white/10 shadow-md backdrop-blur-sm"
+										className="bg-background/20 mx-auto mt-8 flex max-w-3xl justify-center gap-4 space-x-4 overflow-clip rounded-full border border-white/10 shadow-md backdrop-blur-sm"
 									>
 										{[
 											{ icon: Check, text: 'No registration' },
@@ -135,37 +145,15 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 									</motion.div>
 								)}
 							</AnimatePresence>
-						</div>
-					</div>
+						</CardContent>
+					</BasicCard>
 				</div>
 			</section>
 
-			<div className="to-muted/25 border-muted-foreground/20 -mb-24 overflow-clip border-b bg-linear-to-b from-transparent px-8 py-12 backdrop-blur-2xl" />
+			{/* <div className="to-muted/25 border-muted-foreground/20 -mb-24 overflow-clip border-b bg-linear-to-b from-transparent px-8 py-12 backdrop-blur-2xl" /> */}
 
 			<Section>
-				<div className="text-primary relative flex flex-wrap justify-center gap-8">
-					<div className="bg-accent/25 absolute left-1/2 h-full w-1/4 -translate-x-1/2 blur-2xl" />
-
-					<span className="flex items-center gap-2 text-sm font-light">
-						<span role="img" aria-label="artist emoji">
-							<Brush size={12} />
-						</span>
-						For artists
-					</span>
-					<span className="flex items-center gap-2 text-sm font-light">
-						<span role="img" aria-label="dev emoji">
-							<Code size={12} />
-						</span>
-						For devs.
-					</span>
-					<span className="flex items-center gap-2 text-sm font-light">
-						<span role="img" aria-label="problem-solver emoji">
-							<Brain size={12} />
-						</span>
-						For innovators.
-					</span>
-				</div>
-				<div className="mt-16 mb-32 flex flex-col gap-4 text-center">
+				<div className="mb-16 flex flex-col gap-4 text-center">
 					<p>Whether you're testing concepts or powering an online store</p>
 					<h3>
 						Vectreal gives you{' '}

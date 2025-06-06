@@ -59,7 +59,7 @@ const Model = ({ url, loadedState, vertical }: ModelProps) => {
 					environment={null}
 					shadows={isMobile ? true : false}
 					intensity={0}
-					adjustCamera={isMobile ? 0.75 : 0.8}
+					adjustCamera={isMobile ? 0.75 : 0.7}
 				>
 					<group scale={0.02}>
 						<primitive object={scene} />

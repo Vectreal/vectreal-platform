@@ -47,7 +47,7 @@ const SigninLayout = () => {
 	}
 
 	const handleSwitch = () => {
-		navigate(isSignUp ? '/sign-in' : '/sign-up')
+		navigate(isSignUp ? '/sign-in' : '/sign-up', { viewTransition: true })
 	}
 
 	return (
