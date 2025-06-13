@@ -1,4 +1,6 @@
-import { IconProps } from '@vctrl-ui/assets/icons/types'
+interface IconProps {
+	className?: string
+}
 
 export const VectrealLogoSmall = ({ className }: IconProps) => {
 	return (

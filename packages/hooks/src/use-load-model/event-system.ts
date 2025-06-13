@@ -20,6 +20,7 @@ const listeners = {} as Record<EventTypes, EventHandler<EventTypes>[]>
 const eventSystem = {
 	emit<T extends EventTypes>(event: T, data?: EventData[T]): void {
 		const handlers = listeners[event]
+		console.debug(`Event emitted: ${event}`, data)
 		if (handlers) {
 			handlers.forEach((handler) => handler(data))
 		}

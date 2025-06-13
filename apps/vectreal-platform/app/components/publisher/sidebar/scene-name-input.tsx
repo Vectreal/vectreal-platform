@@ -1,12 +1,16 @@
+import { Input } from '@vctrl-ui/ui/input'
 import { useAtom } from 'jotai/react'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 
 import { metaAtom } from '../../../lib/stores/publisher-config-store'
 
-import { useToolbarContext } from './toolbar-context'
-
 export function SceneNameInput() {
-	const { setIsSaved } = useToolbarContext()
+	const { setIsSaved } = {
+		setIsSaved: (bool: boolean) => {
+			return null // Placeholder for context, replace with actual context if needed
+		}
+	} // Placeholder for context, replace with actual context if needed
+	// const { setIsSaved } = useToolbarContext()
 	const [{ sceneName }, setInfo] = useAtom(metaAtom)
 	const [isEditing, setIsEditing] = useState(false)
 	const [localName, setLocalName] = useState(sceneName)
@@ -58,30 +62,30 @@ export function SceneNameInput() {
 	}
 
 	return (
-		<div className="relative grow p-2 md:max-w-[400px]">
+		<div className="border-muted/50 relative grow border-b p-2 pb-0">
 			{isEditing ? (
 				<div className="relative flex w-full items-center">
-					<input
+					<Input
 						ref={inputRef}
 						type="text"
 						value={localName}
 						onChange={(e) => setLocalName(e.target.value)}
 						onKeyDown={handleKeyDown}
 						onBlur={saveChanges}
-						className="w-32 grow border-b border-neutral-700 bg-transparent px-2 py-1 text-sm text-white transition-all duration-300 outline-none focus:border-orange-500"
+						className="text-foreground focus: w-32 grow rounded-sm bg-transparent px-2! py-1! text-sm transition-all duration-300 not-[:focus]:border-0"
 						aria-label="Scene name"
 					/>
 
 					{/* Typing indicator */}
 					<span
-						className="absolute top-1/2 right-2 h-1.5 w-1.5 -translate-y-1/2 transform animate-pulse rounded-full bg-orange-500"
+						className="bg-accent absolute top-1/2 right-2 h-1.5 w-1.5 -translate-y-1/2 transform animate-pulse rounded-full"
 						aria-hidden="true"
 					/>
 				</div>
 			) : (
 				<button
 					onClick={() => setIsEditing(true)}
-					className="flex w-full grow items-center px-2 text-sm text-white/90 transition-all duration-300 hover:scale-[1.02] hover:text-white active:scale-[0.98]"
+					className="text-foreground/90 hover:text-foreground flex w-full grow items-center border-3 border-transparent px-2 py-1 text-sm transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
 				>
 					<span className="w-full truncate text-left">{sceneName}</span>
 				</button>

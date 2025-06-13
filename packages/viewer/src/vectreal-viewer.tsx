@@ -162,7 +162,6 @@ const VectrealViewer = ({ model, ...props }: VectrealViewerProps) => {
 			<Suspense fallback={<SpinnerWrapper>{loader}</SpinnerWrapper>}>
 				{model && (
 					<Canvas
-						style={{ backgroundColor: envOptions?.backgroundColor }}
 						className={cn('vctrl-viewer-canvas', styles['viewer-canvas'])}
 						// dpr={[1, 1.5]}
 						shadows

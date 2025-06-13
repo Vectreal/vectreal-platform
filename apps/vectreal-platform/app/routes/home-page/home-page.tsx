@@ -157,7 +157,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 					<p>Whether you're testing concepts or powering an online store</p>
 					<h3>
 						Vectreal gives you{' '}
-						<span className="text-orange">everything you need</span> to get from
+						<span className="text-accent">everything you need</span> to get from
 						file to frame.
 					</h3>
 				</div>

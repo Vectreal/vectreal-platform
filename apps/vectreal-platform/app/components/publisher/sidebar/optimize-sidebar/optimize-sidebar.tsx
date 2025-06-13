@@ -1,19 +1,8 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
-import {
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-	AccordionTrigger
-} from '@vctrl-ui/ui/accordion'
+import { Accordion, AccordionContent } from '@vctrl-ui/ui/accordion'
 import { Button } from '@vctrl-ui/ui/button'
-import {
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle
-} from '@vctrl-ui/ui/card'
-import { Separator } from '@vctrl-ui/ui/separator'
+import { CardTitle } from '@vctrl-ui/ui/card'
 import { cn, formatFileSize } from '@vctrl-ui/utils'
 import { motion } from 'framer-motion'
 import { useAtom } from 'jotai'
@@ -28,8 +17,7 @@ import {
 import { useCallback, useEffect, useState } from 'react'
 
 import { optimizationAtom } from '../../../../lib/stores/publisher-config-store'
-
-import { sidebarContentVariants } from '../animation'
+import { AccordionItem, AccordionTrigger } from '../accordion-components'
 
 import { AdvancedPanel } from './advanced-optimization-panel'
 import BasicOptimizationPanel from './basic-optimization-panel'
@@ -133,13 +121,8 @@ const OptimizationStats: React.FC<OptimizationStatsProps> = (props) => {
 
 	return (
 		<>
-			<CardContent className="p-6">
-				<div className="space-y-6">
-					<FileSizeComparison info={info} />
-					<OptimizationSummary optimizationStats={optimizationStats} />
-				</div>
-			</CardContent>
-			<Separator />
+			<FileSizeComparison info={info} />
+			<OptimizationSummary optimizationStats={optimizationStats} />
 		</>
 	)
 }
@@ -156,21 +139,30 @@ const OptimizeButton: React.FC<OptimizeButtonProps> = ({
 	isPending,
 	onOptimize
 }) => (
-	<div className="border-t p-4">
-		<Button className="w-full" onClick={onOptimize} disabled={isPending}>
-			{isPending ? (
-				<>
-					<SparklesIcon className="mr-2 h-4 w-4 animate-spin" />
-					Optimizing...
-				</>
-			) : (
-				<>
-					<SparklesIcon className="mr-2 h-4 w-4" />
-					{hasOptimized ? 'Optimize More' : 'Apply Optimizations'}
-				</>
-			)}
-		</Button>
-	</div>
+	<>
+		<div className="h-9" />
+
+		<div className="bg-muted/50 fixed bottom-0 left-0 z-10 flex w-full shadow-2xl backdrop-blur-xl">
+			<Button
+				variant="secondary"
+				className="m-2 grow rounded-lg"
+				onClick={onOptimize}
+				disabled={isPending}
+			>
+				{isPending ? (
+					<>
+						<SparklesIcon className="mr-2 h-4 w-4 animate-spin" />
+						Optimizing...
+					</>
+				) : (
+					<>
+						<SparklesIcon className="mr-2 h-4 w-4" />
+						{hasOptimized ? 'Optimize More' : 'Apply Optimizations'}
+					</>
+				)}
+			</Button>
+		</div>
+	</>
 )
 
 const calculateOptimizationStats = (
@@ -267,89 +259,92 @@ const OptimizeSidebarContent: React.FC = () => {
 		return () => off('load-start', resetOptimize)
 	}, [off, on, resetOptimize])
 
+	const hasImproved = info.optimized.sceneBytes < info.initial.sceneBytes
+
 	return (
-		<motion.div
-			variants={sidebarContentVariants}
-			initial="initial"
-			animate="animate"
-			exit="exit"
-			key="optimize-sidebar"
-			className="flex h-full flex-col"
-		>
-			<div className="no-scrollbar grow overflow-y-auto">
-				<CardHeader className="py-6">
-					<CardTitle>
-						<motion.span
-							className={cn(
-								'font-bold',
-								info.optimized.sceneBytes < info.initial.sceneBytes
-									? 'text-accent'
-									: 'text-muted-foreground'
+		<>
+			<Accordion type="single" className="space-y-2" collapsible>
+				<AccordionItem value="stats">
+					<AccordionTrigger
+						disabled={!hasImproved}
+						className="px-2 hover:no-underline"
+					>
+						<CardTitle>
+							<span className="inline-flex items-center justify-between gap-2">
+								<p
+									className={cn(
+										'font-bold',
+										hasImproved ? 'text-accent' : 'text-muted-foreground'
+									)}
+								>
+									<motion.span
+										initial={{ opacity: 0, y: -20 }}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ delay: 0.1, duration: 0.5 }}
+									>
+										{hasImproved
+											? Math.round(
+													(info.improvement.sceneBytes /
+														info.initial.sceneBytes) *
+														100
+												)
+											: 0}
+										%
+									</motion.span>{' '}
+									optimization
+								</p>
+								<small className="text-muted-foreground text-xs font-light whitespace-nowrap">
+									Now {formatFileSize(info.optimized.sceneBytes)}{' '}
+								</small>
+							</span>
+							{hasImproved && (
+								<p className="text-muted-foreground text-xs">
+									{formatFileSize(info.improvement.sceneBytes)} reduction
+								</p>
 							)}
-							initial={{ opacity: 0, y: -20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ delay: 0.1, duration: 0.5 }}
-						>
-							{info.improvement.sceneBytes > 0
-								? Math.round(
-										(info.improvement.sceneBytes / info.initial.sceneBytes) *
-											100
-									)
-								: 0}
-							%
-						</motion.span>{' '}
-						Reduced Scene Size
-					</CardTitle>
-					<CardDescription>Enhancement summary</CardDescription>
-				</CardHeader>
-
-				<Separator />
-
-				<OptimizationStats info={info} optimizationStats={optimizationStats} />
-
-				<Accordion type="single" defaultValue="basic" collapsible>
-					<AccordionItem value="basic" className="px-4">
-						<AccordionTrigger className="px-2">
-							<span className="flex items-center gap-3">
-								<Star className="inline" size={14} />
-								Optimization
-							</span>
-						</AccordionTrigger>
-						<AccordionContent>
-							<BasicOptimizationPanel />
-						</AccordionContent>
-					</AccordionItem>
-					<AccordionItem value="advanced" className="px-4">
-						<AccordionTrigger className="px-2">
-							<span className="flex items-center gap-3">
-								<Settings2 className="inline" size={14} />
-								Advanced Optimization
-							</span>
-						</AccordionTrigger>
-						<AccordionContent>
-							<AdvancedPanel />
-						</AccordionContent>
-					</AccordionItem>
-					<AccordionItem value="details" className="px-4">
-						<AccordionTrigger className="px-2">
-							<span className="flex items-center gap-3">
-								<FileIcon className="inline" size={14} />
-								Scene Details
-							</span>
-						</AccordionTrigger>
-						<AccordionContent>
-							<SceneDetails info={info} />
-						</AccordionContent>
-					</AccordionItem>
-				</Accordion>
-			</div>
-
+						</CardTitle>
+					</AccordionTrigger>
+					<AccordionContent>
+						<OptimizationStats
+							info={info}
+							optimizationStats={optimizationStats}
+						/>
+					</AccordionContent>
+				</AccordionItem>
+				<AccordionItem value="basic">
+					<AccordionTrigger>
+						<Star className="inline" size={14} />
+						Optimization
+					</AccordionTrigger>
+					<AccordionContent>
+						<BasicOptimizationPanel />
+					</AccordionContent>
+				</AccordionItem>
+				<AccordionItem value="advanced">
+					<AccordionTrigger>
+						<Settings2 className="inline" size={14} />
+						Advanced Optimization
+					</AccordionTrigger>
+					<AccordionContent>
+						<AdvancedPanel />
+					</AccordionContent>
+				</AccordionItem>
+				<AccordionItem value="details">
+					<AccordionTrigger>
+						<FileIcon className="inline" size={14} />
+						Scene Details
+					</AccordionTrigger>
+					<AccordionContent>
+						<SceneDetails info={info} />
+					</AccordionContent>
+				</AccordionItem>
+			</Accordion>
 			<OptimizeButton
 				onOptimize={handleOptimizeClick}
 				isPending={isPending}
-				hasOptimized={info.optimized.sceneBytes < info.initial.sceneBytes}
+				hasOptimized={hasImproved}
 			/>
-		</motion.div>
+		</>
 	)
 }
 

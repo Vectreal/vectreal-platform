@@ -52,12 +52,12 @@ export const DropZone = ({ isMobile }: Props) => {
 	const { onClick, ...containerProps } = getRootProps<ComponentProps<'div'>>()
 
 	return (
-		<div className="h-full w-full pt-12">
+		<div className="h-full w-full">
 			<div
 				{...containerProps}
 				className="flex h-full w-full flex-col items-center justify-center gap-4 text-center"
 			>
-				<div className="w-full max-w-7xl p-4">
+				<div className="w-full max-w-6xl p-4">
 					<header className="mb-8 flex items-center justify-between text-left">
 						<div>
 							<h1 className="text-4xl tracking-tight">Upload Your 3D Assets</h1>
@@ -66,7 +66,8 @@ export const DropZone = ({ isMobile }: Props) => {
 							</p>
 						</div>
 					</header>
-					<div className="flex flex-col gap-4 md:flex-row lg:grid lg:grid-cols-[2fr_1fr]">
+					<div className="flex flex-col gap-4">
+						{/* <div className="flex flex-col gap-4 md:flex-row lg:grid lg:grid-cols-[2fr_1fr]"> */}
 						<div className="flex h-full flex-col gap-4" onClick={onClick}>
 							{isMobile ? (
 								<Button className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 transition-all duration-300">
@@ -100,7 +101,7 @@ export const DropZone = ({ isMobile }: Props) => {
 										<h2 className="mb-2 text-xl! font-semibold md:text-2xl!">
 											{isDragActive
 												? 'Drop to Start Processing'
-												: 'Drop Your 3D Files Here'}
+												: 'Drop Your 3D Files Anywhere'}
 										</h2>
 
 										<p className="text-muted-foreground mb-6 max-w-md text-center">
@@ -167,7 +168,7 @@ export const DropZone = ({ isMobile }: Props) => {
 								</Button>
 							</div>
 						</div>
-						<div className="flex flex-col gap-6">
+						{/* <div className="flex flex-col gap-6">
 							<BasicCard className="py-0 text-left">
 								<CardContent className="space-y-4 p-4">
 									<div className="space-y-3">
@@ -225,7 +226,7 @@ export const DropZone = ({ isMobile }: Props) => {
 									)}
 								</CardContent>
 							</BasicCard>
-						</div>
+						</div> */}
 					</div>
 				</div>
 

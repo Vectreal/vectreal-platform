@@ -1,0 +1,89 @@
+import { useModelContext } from '@vctrl/hooks/use-load-model'
+import { TooltipProvider } from '@vctrl-ui/ui/tooltip'
+import { useAtom } from 'jotai'
+import { ArrowLeft, ArrowRight, Pen, Stars } from 'lucide-react'
+
+import {
+	processAtom,
+	SidebarMode
+} from '../../lib/stores/publisher-config-store'
+import { TooltipButton } from '../tooltip-button'
+
+const PublisherButtons = () => {
+	const { file } = useModelContext()
+	const [{ step }, setProcess] = useAtom(processAtom)
+
+	const handleOpenSidebar = (sidebar: SidebarMode) => {
+		setProcess((prev) => ({
+			...prev,
+			mode: sidebar,
+			showSidebar: true,
+			showInfo: false
+		}))
+	}
+
+	const goToPublishing = () => {
+		setProcess((prev) => ({
+			...prev,
+			step: 'publishing',
+			mode: 'publish',
+			showSidebar: true,
+			showInfo: false
+		}))
+	}
+
+	const goToPreparing = () => {
+		setProcess((prev) => ({
+			...prev,
+			step: 'preparing',
+			mode: 'optimize',
+			showSidebar: true,
+			showInfo: false
+		}))
+	}
+
+	const isPreparingStep = file?.model && step === 'preparing'
+	const isPublishingStep = file?.model && step === 'publishing'
+
+	return (
+		<TooltipProvider>
+			<div className="absolute right-0 bottom-0 left-0 z-10 flex justify-between gap-2 p-4">
+				{isPreparingStep && (
+					<>
+						<span className="space-x-2">
+							<TooltipButton
+								onClick={() => handleOpenSidebar('optimize')}
+								info="Optimize your 3D model"
+							>
+								<Stars size={14} className="inline" /> Optimize
+							</TooltipButton>
+							<TooltipButton
+								onClick={() => handleOpenSidebar('compose')}
+								info="Compose your 3D scene"
+							>
+								<Pen size={14} className="inline" />
+								Compose
+							</TooltipButton>
+						</span>
+
+						<TooltipButton
+							onClick={goToPublishing}
+							info="Publish your 3D scene"
+						>
+							<ArrowRight size={14} className="inline" />
+							Go to Publishing
+						</TooltipButton>
+					</>
+				)}
+				{isPublishingStep && (
+					<TooltipButton onClick={goToPreparing} info="Publish your 3D scene">
+						<ArrowLeft size={14} className="inline" />
+						Go Back to Preparing
+					</TooltipButton>
+				)}
+			</div>
+		</TooltipProvider>
+	)
+}
+
+export default PublisherButtons

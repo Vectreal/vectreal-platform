@@ -2,7 +2,6 @@ import {
 	Environment,
 	EnvironmentProps as ThreeEnvironmentProps
 } from '@react-three/drei'
-import { CSSProperties } from 'react'
 
 export type EnvironmentKey =
 	| 'nature-moonlit'
@@ -47,7 +46,6 @@ type InheritedEnvProps = Pick<
 export interface EnvironmentProps extends InheritedEnvProps {
 	preset?: EnvironmentKey
 	environmentResolution?: EnvironmentResolution
-	backgroundColor?: CSSProperties['backgroundColor']
 }
 
 export const defaultEnvOptions = {
@@ -56,7 +54,6 @@ export const defaultEnvOptions = {
 	backgroundIntensity: 1,
 	environmentIntensity: 1,
 	environmentResolution: '1k',
-	backgroundColor: 'rgba(0, 0, 0, 0)',
 	backgroundBlurriness: 0.5
 } satisfies EnvironmentProps
 

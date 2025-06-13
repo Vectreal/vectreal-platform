@@ -1,14 +1,11 @@
-import {
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-	AccordionTrigger
-} from '@vctrl-ui/ui/accordion'
-import { Button } from '@vctrl-ui/ui/button'
+import { Accordion, AccordionContent } from '@vctrl-ui/ui/accordion'
+
 import { CardDescription, CardHeader, CardTitle } from '@vctrl-ui/ui/card'
 import { Separator } from '@vctrl-ui/ui/separator'
 import { motion } from 'framer-motion'
-import { BookMarked, Code, Globe, Save } from 'lucide-react'
+import { BookMarked, Code, Save } from 'lucide-react'
+
+import { AccordionItem, AccordionTrigger } from '../accordion-components'
 
 import { sidebarContentVariants } from '../animation'
 
@@ -20,15 +17,15 @@ import { ScenePreview } from './sections/scene-preview'
 
 const PublishSidebarContent: React.FC = () => {
 	return (
-		<motion.div
-			variants={sidebarContentVariants}
-			initial="initial"
-			animate="animate"
-			exit="exit"
-			key="publish-sidebar"
-			className="flex h-full flex-col"
-		>
-			<div className="no-scrollbar grow overflow-y-auto">
+		<div className="no-scrollbar grow overflow-auto pb-2">
+			<motion.div
+				variants={sidebarContentVariants}
+				initial="initial"
+				animate="animate"
+				exit="exit"
+				key="publish-sidebar"
+				className="overflow-auto"
+			>
 				<CardHeader className="py-6">
 					<CardTitle>Publish Your Scene</CardTitle>
 					<CardDescription>
@@ -42,7 +39,7 @@ const PublishSidebarContent: React.FC = () => {
 
 				<Separator />
 
-				<Accordion type="single" defaultValue="save" collapsible>
+				<Accordion type="single" collapsible className="space-y-2 px-2">
 					<AccordionItem value="save" className="px-4">
 						<AccordionTrigger className="px-2">
 							<span className="flex items-center gap-3">
@@ -112,15 +109,8 @@ const PublishSidebarContent: React.FC = () => {
 						</AccordionContent>
 					</AccordionItem>
 				</Accordion>
-			</div>
-
-			<div className="border-t p-4">
-				<Button className="w-full">
-					<Globe className="mr-2 h-4 w-4" />
-					Publish Scene
-				</Button>
-			</div>
-		</motion.div>
+			</motion.div>
+		</div>
 	)
 }
 

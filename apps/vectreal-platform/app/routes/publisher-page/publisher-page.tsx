@@ -6,6 +6,7 @@ import { SpinnerWrapper } from '@vctrl-ui/ui/spinner-wrapper'
 import { AnimatePresence } from 'framer-motion'
 import { motion } from 'framer-motion'
 import { useAtom, useSetAtom } from 'jotai/react'
+import { RESET } from 'jotai/utils'
 import { Suspense, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -39,10 +40,6 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 
 	const setProcess = useSetAtom(processAtom)
 	const setMeta = useSetAtom(metaAtom)
-
-	function handleReset() {
-		reset()
-	}
 
 	function handleNotLoadedFiles(files?: File[]) {
 		toast.error(`Not loaded files: ${files?.map((f) => f.name).join(', ')}`)
@@ -78,6 +75,15 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 		}
 	}, [file, setProcess])
 
+	useEffect(() => {
+		return () => {
+			// Reset the model context when the component unmounts
+			reset()
+			// Reset the process state when the component unmounts
+			setProcess(RESET)
+		}
+	}, [setProcess, reset])
+
 	function handleLoadError(error: unknown) {
 		console.error('Load error:', error)
 		toast.error(error as string)
@@ -96,14 +102,12 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 	}
 
 	useEffect(() => {
-		on('load-reset', handleReset)
 		on('not-loaded-files', handleNotLoadedFiles)
 		on('load-complete', handleLoadComplete)
 		on('load-error', handleLoadError)
 		on('load-start', handleLoadStart)
 
 		return () => {
-			off('load-reset', handleReset)
 			off('not-loaded-files', handleNotLoadedFiles)
 			off('load-complete', handleLoadComplete)
 			off('load-error', handleLoadError)
@@ -113,7 +117,7 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 	}, [])
 
 	return (
-		<div className="grow overflow-hidden">
+		<div className="-z-0 grow overflow-clip">
 			<Suspense fallback={null}>
 				<AnimatePresence>
 					{!isFileLoading && file?.model ? (
@@ -126,6 +130,7 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 							className="bg-muted/50 flex h-full w-full"
 						>
 							<VectrealViewer
+								className="z-10 after:absolute after:inset-0 after:-z-10 after:w-[50%] after:bg-linear-to-r after:from-black/20 after:to-transparent"
 								model={file?.model}
 								key="model-viewer"
 								infoPopoverOptions={{ showInfo: false }}

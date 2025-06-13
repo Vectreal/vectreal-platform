@@ -4,12 +4,10 @@ import { cn, formatFileSize } from '@vctrl-ui/utils'
 import { useAtom } from 'jotai/react'
 import { FileCheck2, FileWarning } from 'lucide-react'
 
-import { processAtom } from '../../../lib/stores/publisher-config-store'
-
-import { useToolbarContext } from './toolbar-context'
+import { processAtom } from '../../lib/stores/publisher-config-store'
 
 export function StatusIndicator() {
-	const { isSaved, isSaving } = useToolbarContext()
+	const { isSaved, isSaving } = { isSaved: false, isSaving: false } // Placeholder for context, replace with actual context if needed
 	const { optimize } = useModelContext()
 	const {
 		optimizations: { info }
@@ -35,13 +33,14 @@ export function StatusIndicator() {
 	)
 
 	return (
-		<div className="relative flex grow items-center justify-end gap-4 px-4">
-			<Button
+		<div className="fixed top-0 left-1/2 z-20 m-4 flex -translate-x-1/2 items-center gap-4">
+			<div className="absolute inset-0 -z-10 scale-150 bg-black/50 blur-3xl" />
+			{/* <Button
 				disabled={showSidebar}
 				size="sm"
-				variant="ghost"
+				variant="secondary"
 				onClick={handleOptimizeClick}
-				className="text-muted-foreground inline-flex items-center gap-2 text-sm"
+				className="text-muted-foreground inline-flex items-center gap-2 rounded-xl text-sm"
 			>
 				{isOptimized ? (
 					<>
@@ -58,12 +57,7 @@ export function StatusIndicator() {
 						<p>Not optimized</p>
 					</>
 				)}
-			</Button>
-
-			<div
-				className="mx-2 ml-1 h-5 w-px bg-neutral-700/50"
-				aria-hidden="true"
-			/>
+			</Button> */}
 
 			<div
 				className={cn(
@@ -71,8 +65,8 @@ export function StatusIndicator() {
 					isSaved
 						? 'text-green-300'
 						: isSaving
-							? 'text-orange-300'
-							: 'text-yellow-300'
+							? 'text-orange-500'
+							: 'text-yellow-500'
 				)}
 			>
 				<div className="relative">
@@ -83,7 +77,7 @@ export function StatusIndicator() {
 								? 'bg-green-400 after:bg-green-400'
 								: isSaving
 									? 'animate-pulse bg-orange-400 after:bg-orange-400'
-									: 'bg-yellow-400 after:bg-yellow-400'
+									: 'bg-yellow-400 after:bg-yellow-500'
 						)}
 						aria-hidden="true"
 					/>

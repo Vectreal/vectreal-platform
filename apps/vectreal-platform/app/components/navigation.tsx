@@ -16,7 +16,6 @@ import { Link, useFetcher, useNavigate } from 'react-router'
 
 interface NavigationProps {
 	pathname: string
-	mode?: 'full' | 'float'
 	user: User | null
 }
 
@@ -89,7 +88,7 @@ function UserMenu({ user, onLogout }: { user: User; onLogout: () => void }) {
 /**
  * Navigation is the main navigation bar for the app shell.
  */
-export const Navigation = ({ mode, pathname, user }: NavigationProps) => {
+export const Navigation = ({ pathname, user }: NavigationProps) => {
 	const isSigninPage =
 		pathname.startsWith('/sign-up') || pathname.startsWith('/sign-in')
 	const isPublisherPage = pathname.startsWith('/publisher')
@@ -105,49 +104,51 @@ export const Navigation = ({ mode, pathname, user }: NavigationProps) => {
 
 	return (
 		<nav
-			className="bg-background fixed top-0 right-0 left-0 z-50 flex items-center justify-between p-2 px-4"
+			className="bg-background/50 fixed top-0 right-0 left-0 z-50 shadow-2xl backdrop-blur-2xl"
 			aria-label="Main navigation"
 		>
-			<Link
-				to="/"
-				className="flex h-full items-center"
-				viewTransition
-				aria-label="Home"
-			>
-				<VectrealLogoAnimated
-					className="text-muted-foreground h-5 md:h-7"
-					colored={false}
-					small
-				/>
-			</Link>
-			<div className="flex h-full items-center justify-center gap-2">
-				<AnimatePresence initial={false}>
-					{!isSigninPage && !user && (
-						<motion.div
-							initial={{ opacity: 0, width: 0 }}
-							animate={{ opacity: 1, width: 'auto' }}
-							exit={{ opacity: 0, width: 0 }}
-							transition={{ duration: 0.3, ease: 'easeInOut' }}
-							className="overflow-hidden"
-							key="sign-in-button"
-						>
-							<SignUpButton />
-						</motion.div>
-					)}
-					{!isPublisherPage && (
-						<motion.div
-							initial={{ opacity: 0, width: 0 }}
-							animate={{ opacity: 1, width: 'auto' }}
-							exit={{ opacity: 0, width: 0 }}
-							transition={{ duration: 0.3, ease: 'easeInOut' }}
-							className="overflow-hidden"
-							key="publisher-button"
-						>
-							<PublisherButton />
-						</motion.div>
-					)}
-					{user && <UserMenu user={user} onLogout={handleLogout} />}
-				</AnimatePresence>
+			<div className="flex w-full items-center justify-between p-2 px-8">
+				<Link
+					to="/"
+					className="flex h-full items-center"
+					viewTransition
+					aria-label="Home"
+				>
+					<VectrealLogoAnimated
+						className="text-muted-foreground h-5 md:h-7"
+						colored
+						// small
+					/>
+				</Link>
+				<div className="flex h-full items-center justify-center gap-2">
+					<AnimatePresence initial={false}>
+						{!isSigninPage && !user && (
+							<motion.div
+								initial={{ opacity: 0, width: 0 }}
+								animate={{ opacity: 1, width: 'auto' }}
+								exit={{ opacity: 0, width: 0 }}
+								transition={{ duration: 0.3, ease: 'easeInOut' }}
+								className="overflow-hidden"
+								key="sign-in-button"
+							>
+								<SignUpButton />
+							</motion.div>
+						)}
+						{!isPublisherPage && (
+							<motion.div
+								initial={{ opacity: 0, width: 0 }}
+								animate={{ opacity: 1, width: 'auto' }}
+								exit={{ opacity: 0, width: 0 }}
+								transition={{ duration: 0.3, ease: 'easeInOut' }}
+								className="overflow-hidden"
+								key="publisher-button"
+							>
+								<PublisherButton />
+							</motion.div>
+						)}
+						{user && <UserMenu user={user} onLogout={handleLogout} />}
+					</AnimatePresence>
+				</div>
 			</div>
 		</nav>
 	)

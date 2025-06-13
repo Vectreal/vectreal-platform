@@ -19,8 +19,8 @@ export const ACCUMULATIVE_FIELDS = [
 		key: 'scale',
 		label: 'Shadow Scale',
 		min: 0.1,
-		max: 25,
-		step: 0.1,
+		max: 100,
+		step: 1,
 		tooltip: 'Overall scale of the shadow area.'
 	},
 	{
@@ -105,8 +105,8 @@ export const CONTACT_FIELDS = [
 		key: 'scale',
 		label: 'Shadow Scale',
 		min: 0.1,
-		max: 10,
-		step: 0.1,
+		max: 100,
+		step: 1,
 		tooltip: 'Overall scale of the shadow area.'
 	},
 	{

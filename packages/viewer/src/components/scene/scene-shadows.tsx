@@ -31,7 +31,7 @@ export const defaultShadowsOptions: ShadowsProps | BaseShadowsProps = {
 	temporal: true,
 	frames: 100,
 	alphaTest: 0.8,
-	scale: 2,
+	scale: 5,
 	colorBlend: 2,
 	color: 'black',
 	toneMapped: true,
@@ -53,7 +53,6 @@ export const defaultShadowsOptions: ShadowsProps | BaseShadowsProps = {
  */
 const SceneShadows = (props?: ShadowsProps | object) => {
 	const { ...shadowOptions } = { ...defaultShadowsOptions, ...props }
-	console.debug('SceneShadows', shadowOptions)
 
 	return shadowOptions.type === 'accumulative' ? (
 		<AccumulativeShadows {...shadowOptions}>

@@ -1,24 +1,27 @@
 import {
-	Sidebar,
 	SidebarContent,
 	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarGroupLabel,
-	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
 	SidebarRail
 } from '@vctrl-ui/ui/sidebar'
-import { List, Settings } from 'lucide-react'
+import { ArrowRight, Building, List, Rocket, Settings } from 'lucide-react'
 
 // Menu items.
-const items = [
+const manageLinks = [
 	{
-		title: 'Home',
+		title: 'Projects',
 		url: '#',
 		icon: List
+	},
+	{
+		title: 'Organizations',
+		url: '#',
+		icon: Building
 	},
 	{
 		title: 'Settings',
@@ -26,17 +29,23 @@ const items = [
 		icon: Settings
 	}
 ]
+const quickLinks = [
+	{
+		title: 'Publisher',
+		url: '/publisher',
+		icon: Rocket
+	}
+]
 
 const DashboardSidebar = () => {
 	return (
-		<Sidebar variant="inset" collapsible="icon">
-			<SidebarHeader>zayy</SidebarHeader>
+		<>
 			<SidebarContent>
 				<SidebarGroup>
-					<SidebarGroupLabel>Application</SidebarGroupLabel>
+					<SidebarGroupLabel>Manage</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<SidebarMenu>
-							{items.map((item) => (
+							{manageLinks.map((item) => (
 								<SidebarMenuItem key={item.title}>
 									<SidebarMenuButton asChild>
 										<a href={item.url}>
@@ -49,10 +58,28 @@ const DashboardSidebar = () => {
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>
+				<SidebarGroup>
+					<SidebarGroupLabel>Quick Links</SidebarGroupLabel>
+					<SidebarGroupContent>
+						<SidebarMenu>
+							{quickLinks.map((item) => (
+								<SidebarMenuItem key={item.title}>
+									<SidebarMenuButton asChild>
+										<a href={item.url}>
+											<item.icon />
+											<span>{item.title}</span>
+											<ArrowRight className="ml-auto h-4 w-4" />
+										</a>
+									</SidebarMenuButton>
+								</SidebarMenuItem>
+							))}
+						</SidebarMenu>
+					</SidebarGroupContent>
+				</SidebarGroup>
 			</SidebarContent>
 			<SidebarRail />
 			<SidebarFooter>zooo</SidebarFooter>
-		</Sidebar>
+		</>
 	)
 }
 

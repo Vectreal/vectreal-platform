@@ -1,48 +1,27 @@
+import { VectrealLogoSmall } from '@vctrl-ui/assets/icons/vectreal-logo-small'
+import { Button } from '@vctrl-ui/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@vctrl-ui/ui/tabs'
-import { AnimatePresence, motion } from 'framer-motion'
+import { Tooltip, TooltipProvider } from '@vctrl-ui/ui/tooltip'
+import { cn } from '@vctrl-ui/utils'
+import { motion } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import { useAtom } from 'jotai/react'
-import { ChevronLeft } from 'lucide-react'
+import { BarChart4, Camera, SidebarIcon } from 'lucide-react'
 import { useCallback } from 'react'
+
+import { Link } from 'react-router'
 
 import {
 	processAtom,
 	SidebarMode
 } from '../../../lib/stores/publisher-config-store'
 
+import { TooltipButton } from '../../tooltip-button'
+
 import { ComposeSidebar } from './compose-sidebar'
 import { OptimizeSidebar } from './optimize-sidebar'
 import { PublishSidebar } from './publish-sidebar'
-
-const SIDEBAR_WIDTH = 400
-
-const sidebarVariants = {
-	open: {
-		opacity: 1,
-		width: `${SIDEBAR_WIDTH}px`,
-		transition: { staggerChildren: 0.2 }
-	},
-	closed: {
-		opacity: 0,
-		width: 0
-	}
-}
-
-const sidebarContentVariants = {
-	hidden: { opacity: 0 },
-	visible: { opacity: 1 }
-}
-
-const SidebarMotionAside = ({ children }: React.PropsWithChildren) => (
-	<motion.aside
-		variants={sidebarContentVariants}
-		initial="hidden"
-		animate="visible"
-		exit="hidden"
-		className="h-full overflow-hidden"
-	>
-		{children}
-	</motion.aside>
-)
+import { SceneNameInput } from './scene-name-input'
 
 const SidebarTabs = ({
 	mode,
@@ -54,39 +33,40 @@ const SidebarTabs = ({
 	<Tabs
 		value={mode}
 		onValueChange={onTabChange}
-		className="h-full w-[400px] gap-0"
+		className="m-2 h-full overflow-hidden"
 	>
-		<TabsList className="bg-muted/50 grid h-12 w-full grid-cols-2 rounded-none border-b p-2 shadow-md">
-			<TabsTrigger value="optimize">Optimize</TabsTrigger>
-			<TabsTrigger value="compose">Compose</TabsTrigger>
+		<TabsList className="bg-muted/25 w-full shadow-2xl">
+			<TabsTrigger value="optimize">
+				<BarChart4 /> Optimize
+			</TabsTrigger>
+			<TabsTrigger value="compose">
+				<Camera />
+				Compose
+			</TabsTrigger>
 		</TabsList>
 		<TabsContent
 			value="optimize"
-			className="no-scrollbar relative overflow-auto"
+			className="no-scrollbar space-y-2 overflow-auto rounded-xl"
 		>
 			<OptimizeSidebar />
 		</TabsContent>
 		<TabsContent
 			value="compose"
-			className="no-scrollbar relative overflow-auto"
+			className="no-scrollbar space-y-2 overflow-auto rounded-xl"
 		>
 			<ComposeSidebar />
 		</TabsContent>
 	</Tabs>
 )
 
+const variants = {
+	hidden: { opacity: 0, x: '-100%', display: 'none' },
+	visible: { opacity: 1, x: 0, display: 'flex' },
+	exit: { opacity: 0, x: '-100%', dislay: 'none' }
+}
+
 const PublisherSidebar = () => {
 	const [{ mode, step, showSidebar }, setProcessState] = useAtom(processAtom)
-
-	const changeSidebarVisibility = useCallback(
-		(isOpen: boolean) => {
-			setProcessState((prev) => ({
-				...prev,
-				showSidebar: isOpen
-			}))
-		},
-		[setProcessState]
-	)
 
 	const handleTabChange = useCallback(
 		(value: string) => {
@@ -98,38 +78,64 @@ const PublisherSidebar = () => {
 		[setProcessState]
 	)
 
+	const toggleSidebar = useCallback(() => {
+		setProcessState((prev) => ({
+			...prev,
+			showSidebar: !prev.showSidebar
+		}))
+	}, [setProcessState])
+
 	return (
-		<motion.div
-			variants={sidebarVariants}
-			initial="closed"
-			animate={showSidebar ? 'open' : 'closed'}
-			exit="closed"
-			key="sidebar"
-			className="bg-card/75 absolute top-0 bottom-0 left-0 z-20 border-r shadow-xl backdrop-blur-2xl"
-		>
-			<AnimatePresence mode="wait">
-				{step === 'preparing' && (
-					<SidebarMotionAside key="prepare">
-						<SidebarTabs mode={mode} onTabChange={handleTabChange} />
-					</SidebarMotionAside>
+		<TooltipProvider>
+			<div className="fixed left-0 z-20 flex h-full flex-col justify-end">
+				<AnimatePresence mode="wait">
+					<motion.div
+						key="sidebar"
+						initial="hidden"
+						animate={showSidebar ? 'visible' : 'hidden'}
+						exit="exit"
+						variants={variants}
+						transition={{ type: 'ease', duration: 0.3 }}
+						className="bg-muted/50 relative m-4 h-full w-92 flex-col overflow-hidden rounded-xl backdrop-blur-2xl"
+					>
+						<div className="flex w-full items-center gap-2 pl-4">
+							<Link to="/dashboard" className="group">
+								<VectrealLogoSmall className="h-5 w-5 transition-opacity group-hover:opacity-70" />
+							</Link>
+							<SceneNameInput />
+						</div>
+
+						{step === 'preparing' && (
+							<SidebarTabs mode={mode} onTabChange={handleTabChange} />
+						)}
+						{step === 'publishing' && <PublishSidebar />}
+					</motion.div>
+				</AnimatePresence>
+			</div>
+
+			<div
+				className={cn(
+					'fixed top-0 z-20 m-4 flex gap-2 transition-all',
+					showSidebar ? 'left-94' : 'left-0'
 				)}
-				{step === 'publishing' && (
-					<SidebarMotionAside key="publish">
-						<PublishSidebar />
-					</SidebarMotionAside>
-				)}
-			</AnimatePresence>
-			<motion.button
-				title="Close sidebar"
-				aria-label="Close sidebar"
-				aria-hidden={!showSidebar}
-				type="button"
-				onClick={() => changeSidebarVisibility(!showSidebar)}
-				className="border-accent/10 bg-muted text-foreground hover:bg-accent/50 focus-visible:bg-accent/50 absolute top-1/2 -right-6 z-20 -translate-y-1/2 rounded-l-none rounded-r-xl border border-l-0 p-4 px-1 shadow-xl transition-all duration-300"
 			>
-				<ChevronLeft size={14} />
-			</motion.button>
-		</motion.div>
+				{!showSidebar && (
+					<TooltipButton info="Go to your dashboard" size="icon">
+						<Link to="/dashboard" className="group">
+							<VectrealLogoSmall className="text-muted-foreground ml-[2px] h-5 w-5 transition-opacity group-hover:opacity-70" />
+						</Link>
+					</TooltipButton>
+				)}
+
+				<TooltipButton
+					size="icon"
+					info="Toggle Sidebar"
+					onClick={toggleSidebar}
+				>
+					<SidebarIcon className="text-muted-foreground h-5 w-5" />
+				</TooltipButton>
+			</div>
+		</TooltipProvider>
 	)
 }
 
