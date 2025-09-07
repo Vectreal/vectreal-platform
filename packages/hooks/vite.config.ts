@@ -61,16 +61,15 @@ export default defineConfig({
 				'three',
 				'react/jsx-runtime',
 				'file-saver',
-				'jszip',
-				'@gltf-transform/core',
-				'@gltf-transform/functions',
-				'@gltf-transform/extensions'
+				'jszip'
+				// '@gltf-transform/core',
+				// '@gltf-transform/functions',
+				// '@gltf-transform/extensions'
 			],
 			output: {
 				globals: {
 					react: 'React',
-					'react-dom': 'ReactDOM',
-					three: 'THREE'
+					'react-dom': 'ReactDOM'
 				}
 			}
 		}

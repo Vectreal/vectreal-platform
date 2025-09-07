@@ -1,4 +1,6 @@
-import { IconProps } from '@vctrl-ui/assets/icons/types'
+interface IconProps {
+	className?: string
+}
 
 const CrossIcon = ({ className }: IconProps) => (
 	<svg
