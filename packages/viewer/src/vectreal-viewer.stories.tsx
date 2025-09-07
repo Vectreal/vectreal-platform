@@ -1,5 +1,5 @@
 import { useGLTF } from '@react-three/drei'
-import type { Meta, StoryObj } from '@storybook/react'
+import type { Meta, StoryObj } from '@storybook/react-vite'
 import React, { ComponentProps } from 'react'
 import type { TypeWithDeepControls } from 'storybook-addon-deep-controls'
 
