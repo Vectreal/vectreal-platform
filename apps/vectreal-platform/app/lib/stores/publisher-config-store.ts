@@ -13,7 +13,7 @@ import { atom, createStore } from 'jotai/vanilla'
 
 import { mediumPreset } from '../../constants/optimizations'
 
-interface MetaState {
+export interface MetaState {
 	sceneName: string
 	isSaved: boolean
 	thumbnailUrl?: string

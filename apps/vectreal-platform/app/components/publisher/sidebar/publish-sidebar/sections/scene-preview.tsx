@@ -1,5 +1,3 @@
-import { Card } from '@vctrl-ui/ui/card'
-
 import { motion } from 'framer-motion'
 import { useAtom } from 'jotai'
 import { useEffect, useState } from 'react'

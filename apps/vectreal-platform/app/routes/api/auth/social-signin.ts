@@ -9,9 +9,33 @@ import { Route } from './+types/social-signin'
 export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData()
 	const provider = formData.get('provider')
+	const convertAnonymous = formData.get('convertAnonymous') === 'true'
 
 	const { client, headers } = await createClient(request)
 
+	// If we're converting an anonymous user, use linkIdentity instead
+	if (convertAnonymous) {
+		const { data: currentUser } = await client.auth.getUser()
+
+		if (currentUser.user?.is_anonymous) {
+			const { data, error } = await client.auth.linkIdentity({
+				provider: provider as 'google' | 'github',
+				options: {
+					redirectTo: `${process.env.VECTREAL_URL}/auth/callback?convert=true`
+				}
+			})
+
+			if (error) {
+				return ApiResponse.serverError(error.message)
+			}
+
+			if (data.url) {
+				return redirect(data.url, { headers })
+			}
+		}
+	}
+
+	// Standard OAuth signin
 	const { data, error } = await client.auth.signInWithOAuth({
 		provider: provider as 'google' | 'github',
 		options: { redirectTo: `${process.env.VECTREAL_URL}/auth/callback` }

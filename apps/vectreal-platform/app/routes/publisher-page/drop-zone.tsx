@@ -2,18 +2,13 @@ import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { InputFileOrDirectory } from '@vctrl/hooks/use-load-model'
 import { useAcceptPattern } from '@vctrl-ui/hooks/use-accept-pattern'
 import { Button } from '@vctrl-ui/ui/button'
-import { CardContent } from '@vctrl-ui/ui/card'
 import { cn } from '@vctrl-ui/utils'
 import {
 	Book,
 	ExternalLink,
-	File,
 	FileQuestion,
 	FolderUp,
-	Image,
-	Rocket,
-	Upload,
-	UserX2
+	Upload
 } from 'lucide-react'
 import { ComponentProps, useEffect, useTransition } from 'react'
 import { useDropzone } from 'react-dropzone'

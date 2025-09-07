@@ -1,23 +1,34 @@
 import { Button } from '@vctrl-ui/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@vctrl-ui/ui/tooltip'
-import { PropsWithChildren } from 'react'
+import { cn } from '@vctrl-ui/utils'
+import { ComponentProps } from 'react'
 
-interface ButtonProps extends PropsWithChildren {
-	onClick?: () => void
+interface ButtonProps extends ComponentProps<'button'> {
 	info: string
 	size?: 'icon' | 'sm'
 }
 
-const TooltipButton = ({ children, info, size, onClick }: ButtonProps) => {
+const TooltipButton = ({
+	children,
+	info,
+	size,
+	className,
+	disabled,
+	...buttonProps
+}: ButtonProps) => {
 	return (
 		<Tooltip>
-			<TooltipTrigger>
+			<TooltipTrigger
+				disabled={disabled}
+				className={cn({ 'opacity-50': disabled })}
+			>
 				<Button
 					asChild
 					variant="secondary"
-					className="rounded-xl"
-					onClick={onClick}
+					className={cn('rounded-xl', className)}
 					size={size}
+					disabled={disabled}
+					{...buttonProps}
 				>
 					<span>{children}</span>
 				</Button>

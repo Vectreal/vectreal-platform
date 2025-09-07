@@ -9,6 +9,7 @@ import {
 	Outlet,
 	Scripts,
 	ScrollRestoration,
+	useRouteError,
 	useRouteLoaderData
 } from 'react-router'
 import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
@@ -61,6 +62,26 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export function Layout({ children }: { children: React.ReactNode }) {
 	const loaderData = useRouteLoaderData('root')
+	const error = useRouteError()
+
+	if (error) {
+		console.error('Error in root layout:', error)
+		return (
+			<html lang="en">
+				<head>
+					<Meta />
+					<Links />
+				</head>
+				<body>
+					<div className="error">
+						<h1>Something went wrong</h1>
+						<p>{JSON.stringify(error)}</p>
+					</div>
+					<Scripts />
+				</body>
+			</html>
+		)
+	}
 
 	return (
 		<html lang="en" className={cn(styles.global, loaderData?.theme || 'dark')}>

@@ -90,7 +90,10 @@ export async function action({
 	})
 
 	if (signupData?.user) {
-		return ApiResponse.success({ user: signupData.user }, 200, { headers })
+		const additionalHeaders = new Headers(headers)
+		return ApiResponse.success({ user: signupData.user }, 200, {
+			headers: additionalHeaders
+		})
 	}
 
 	return ApiResponse.serverError(
@@ -107,10 +110,17 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 		data: { user }
 	} = await client.auth.getUser()
 
-	if (user) return redirect('/dashboard')
+	if (user) {
+		// Default redirect
+		return redirect('/dashboard')
+	}
 
-	// Return a consistent schema for the loader
+	// Check if this is a scene preservation flow
+	const url = new URL(request.url)
+	const sceneSaved = url.searchParams.get('scene_saved') === 'true'
+
 	return {
+		sceneSaved,
 		user: user ?? null,
 		isAuthenticated: !!user,
 		message: user ? 'Already authenticated' : null
@@ -173,6 +183,23 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 					</AlertDescription>
 				</Alert>
 			)}
+
+			{/* Scene preservation notice */}
+			{loaderData?.sceneSaved && (
+				<div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+					<p className="font-medium">
+						<span role="img" aria-label="celebration">
+							🎉
+						</span>{' '}
+						Scene Saved Temporarily!
+					</p>
+					<p>
+						Your scene configuration has been saved. Sign up with Google or
+						GitHub to convert to a permanent account and access your scene.
+					</p>
+				</div>
+			)}
+
 			<Form
 				className="w-full max-w-md"
 				method="post"

@@ -7,7 +7,7 @@ import { AnimatePresence } from 'framer-motion'
 import { motion } from 'framer-motion'
 import { useAtom, useSetAtom } from 'jotai/react'
 import { RESET } from 'jotai/utils'
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -24,7 +24,13 @@ import { Route } from './+types/publisher-page'
 import { DropZone } from './drop-zone'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	return { isMobile: isMobileRequest(request) }
+	const url = new URL(request.url)
+	const step = url.pathname.split('/').pop()
+
+	return {
+		isMobile: isMobileRequest(request),
+		currentStep: step || 'upload'
+	}
 }
 
 const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
@@ -37,9 +43,8 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 	const [toneMapping] = useAtom(toneMappingAtom)
 	const [controls] = useAtom(controlsAtom)
 	const [shadows] = useAtom(shadowsAtom)
-
-	const setProcess = useSetAtom(processAtom)
 	const setMeta = useSetAtom(metaAtom)
+	const setProcess = useSetAtom(processAtom)
 
 	function handleNotLoadedFiles(files?: File[]) {
 		toast.error(`Not loaded files: ${files?.map((f) => f.name).join(', ')}`)
@@ -49,7 +54,6 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 		if (!data) return
 
 		toast.success(`Loaded ${data.name}`)
-
 		setLoadingStarted(false)
 
 		setMeta((prev) => ({
@@ -94,12 +98,14 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 		setLoadingStarted(true)
 	}
 
-	function handleScreenshot(url: string) {
-		setMeta((prev) => ({
-			...prev,
-			thumbnailUrl: url
-		}))
-	}
+	const handleScreenshot = useCallback((url: string) => {
+		// setMeta((prev) => ({
+		// 	...prev,
+		// 	thumbnailUrl: url
+		// }))
+
+		console.log('Screenshot taken')
+	}, [])
 
 	useEffect(() => {
 		on('not-loaded-files', handleNotLoadedFiles)

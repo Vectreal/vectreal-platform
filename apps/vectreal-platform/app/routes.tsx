@@ -8,6 +8,9 @@ import {
 export default [
 	// API
 	route('api/update-theme', './routes/api/update-theme.ts'),
+	route('api/convert-anonymous-user', './routes/api/convert-anonymous-user.ts'),
+	route('api/scene-settings', './routes/api/scene-settings.ts'),
+	route('api/upload-thumbnail', './routes/api/upload-thumbnail.ts'),
 
 	// auth
 	route('auth/logout', './routes/api/auth/logout.ts'),

@@ -15,17 +15,17 @@ type ThemeProviderProps = {
 	storageKey?: string
 }
 
-type ThemeProviderState = {
+type ThemeState = {
 	theme: Theme
 	setTheme: (theme: Theme) => void
 }
 
-const initialState: ThemeProviderState = {
+const initialState: ThemeState = {
 	theme: 'system',
 	setTheme: () => null
 }
 
-const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
+const ThemeContext = createContext<ThemeState>(initialState)
 
 function getTheme(defaultTheme: Theme = 'system'): Theme {
 	if (typeof window === 'undefined') return defaultTheme
@@ -98,16 +98,16 @@ function ThemeProvider({
 	}
 
 	return (
-		<ThemeProviderContext.Provider {...props} value={value}>
+		<ThemeContext.Provider {...props} value={value}>
 			{children}
-		</ThemeProviderContext.Provider>
+		</ThemeContext.Provider>
 	)
 }
 
 export default ThemeProvider
 
 export const useTheme = () => {
-	const context = useContext(ThemeProviderContext)
+	const context = useContext(ThemeContext)
 
 	if (context === undefined)
 		throw new Error('useTheme must be used within a ThemeProvider')
