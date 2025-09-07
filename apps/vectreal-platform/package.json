@@ -1,10 +1,6 @@
 {
-  "name": "vectreal-platform",
-  "private": true,
-  "type": "module",
-  "scripts": {},
-  "engines": {
-    "node": "22"
-  },
-  "sideEffects": false
+	"name": "vectreal-platform",
+	"private": true,
+	"type": "module",
+	"scripts": {}
 }

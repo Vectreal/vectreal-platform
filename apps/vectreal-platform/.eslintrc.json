@@ -1,16 +1,35 @@
 {
 	"extends": ["plugin:@nx/react", "../../.eslintrc"],
-	"ignorePatterns": [
-		"!**/*",
-		"**/build",
-		"**/.react-router",
-		"**/vite.config.*.timestamp*",
-		"**/vitest.config.*.timestamp*"
-	],
+	"ignorePatterns": ["!**/*", "storybook-static", ".react-router"],
 	"overrides": [
 		{
+			"files": ["*.json"],
+			"parser": "jsonc-eslint-parser",
+			"rules": {
+				"@nx/dependency-checks": [
+					"error",
+					{
+						"includeTransitiveDependencies": false,
+						"ignoredDependencies": [
+							// "@vctrl-ui/utils",
+							// "@vctrl-ui/ui",
+							// "@vctrl/utils",
+							// "@vctrl/ui"
+						]
+					}
+				]
+			}
+		},
+		{
 			"files": ["*.ts", "*.tsx", "*.js", "*.jsx"],
-			"rules": {}
+			"rules": {
+				"@nx/enforce-module-boundaries": [
+					1,
+					{
+						"enforceBuildableLibDependency": false
+					}
+				]
+			}
 		},
 		{
 			"files": ["*.ts", "*.tsx"],
