@@ -3,5 +3,6 @@
 	"editor.codeActionsOnSave": {
 		"source.fixAll.eslint": "always"
 	},
-	"nxConsole.generateAiAgentRules": true
+	"nxConsole.generateAiAgentRules": true,
+	"typescript.tsdk": "node_modules/typescript/lib"
 }

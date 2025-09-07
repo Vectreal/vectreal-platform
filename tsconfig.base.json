@@ -15,23 +15,22 @@
 		"skipDefaultLibCheck": true,
 		"baseUrl": ".",
 		"paths": {
-			// shadcn/ui
-			"@vctrl-ui/ui/*": ["shared/ui/src/ui/*"],
-			"@vctrl-ui/styles/*": ["shared/ui/src/styles/*"],
 			"@vctrl-ui/assets/*": ["shared/ui/src/assets/*"],
 			"@vctrl-ui/hooks/*": ["shared/ui/src/hooks/*"],
+			"@vctrl-ui/styles/*": ["shared/ui/src/styles/*"],
+			"@vctrl-ui/ui/*": ["shared/ui/src/ui/*"],
 			"@vctrl-ui/utils": ["shared/utils/src/index.ts"],
-			"@vctrl/hooks/use-load-model": [
-				"packages/hooks/src/use-load-model/index.ts"
-			],
 			"@vctrl/hooks/use-export-model": [
 				"packages/hooks/src/use-export-model/index.ts"
+			],
+			"@vctrl/hooks/use-load-model": [
+				"packages/hooks/src/use-load-model/index.ts"
 			],
 			"@vctrl/hooks/use-optimize-model": [
 				"packages/hooks/src/use-optimize-model/index.ts"
 			],
-			"@vctrl/viewer": ["packages/viewer/src/index.ts"],
-			"@vctrl/official-website/*": ["apps/official-website/src/*"]
+			"@vctrl/official-website/*": ["apps/official-website/src/*"],
+			"@vctrl/viewer": ["packages/viewer/src/index.ts"]
 		}
 	},
 	"exclude": ["node_modules", "tmp"]
