@@ -33,7 +33,7 @@ const FileSizeComparison: React.FC<OptimizationInfoProps> = ({ info }) => {
 	const currentFileSize = info.optimized.sceneBytes
 
 	return (
-		<div className="flex items-center justify-between">
+		<div className="flex items-center justify-between py-4">
 			<motion.div
 				className="text-center"
 				initial={{ opacity: 0, y: 20 }}

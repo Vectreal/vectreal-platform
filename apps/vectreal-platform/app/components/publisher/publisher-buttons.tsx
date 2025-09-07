@@ -1,5 +1,6 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { TooltipProvider } from '@vctrl-ui/ui/tooltip'
+import { cn } from '@vctrl-ui/utils'
 import { useAtom } from 'jotai'
 import { ArrowLeft, ArrowRight, Pen, Stars } from 'lucide-react'
 
@@ -7,11 +8,12 @@ import {
 	processAtom,
 	SidebarMode
 } from '../../lib/stores/publisher-config-store'
+
 import { TooltipButton } from '../tooltip-button'
 
 const PublisherButtons = () => {
 	const { file } = useModelContext()
-	const [{ step }, setProcess] = useAtom(processAtom)
+	const [{ step, showSidebar }, setProcess] = useAtom(processAtom)
 
 	const handleOpenSidebar = (sidebar: SidebarMode) => {
 		setProcess((prev) => ({
@@ -76,10 +78,17 @@ const PublisherButtons = () => {
 					</>
 				)}
 				{isPublishingStep && (
-					<TooltipButton onClick={goToPreparing} info="Publish your 3D scene">
-						<ArrowLeft size={14} className="inline" />
-						Go Back to Preparing
-					</TooltipButton>
+					<span
+						className={cn(
+							'fixed bottom-0 z-20 m-4 flex gap-2 transition-all duration-300 ease-in-out',
+							showSidebar ? 'left-94' : 'left-0'
+						)}
+					>
+						<TooltipButton onClick={goToPreparing} info="Go back to preparing">
+							<ArrowLeft size={14} className="inline" />
+							Go Back to Preparing
+						</TooltipButton>
+					</span>
 				)}
 			</div>
 		</TooltipProvider>

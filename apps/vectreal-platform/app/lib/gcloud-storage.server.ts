@@ -3,7 +3,7 @@ import { Storage } from '@google-cloud/storage'
 const isDev = import.meta.env.DEV
 
 const credentials = isDev
-	? './credentials/google-storage-local-dev-sa.json'
+	? 'apps/vectreal-platform/credentials/google-storage-local-dev-sa.json'
 	: '/etc/gcloud-credentials.json'
 
 export async function createStorage(credentialsJson?: string) {

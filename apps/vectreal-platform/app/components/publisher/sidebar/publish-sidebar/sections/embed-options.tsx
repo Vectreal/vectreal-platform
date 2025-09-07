@@ -1,11 +1,9 @@
 import { Button } from '@vctrl-ui/ui/button'
-import { Checkbox } from '@vctrl-ui/ui/checkbox'
 import { Input } from '@vctrl-ui/ui/input'
 import { Label } from '@vctrl-ui/ui/label'
 import { Separator } from '@vctrl-ui/ui/separator'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@vctrl-ui/ui/tabs'
 import { motion } from 'framer-motion'
-import { ClipboardCopy, Code, Laptop, Smartphone } from 'lucide-react'
+import { ClipboardCopy } from 'lucide-react'
 import { useState } from 'react'
 
 import { itemVariants } from '../../animation'
@@ -13,10 +11,9 @@ import { itemVariants } from '../../animation'
 export const EmbedOptions: React.FC = () => {
 	const [width, setWidth] = useState('100%')
 	const [height, setHeight] = useState('400px')
-	const [autoRotate, setAutoRotate] = useState(true)
-	const [showControls, setShowControls] = useState(true)
-	const [showUI, setShowUI] = useState(true)
-	const [platform, setPlatform] = useState('website')
+	const [autoRotate] = useState(true)
+	const [showControls] = useState(true)
+	const [showUI] = useState(true)
 
 	const generateEmbedCode = () => {
 		return `<iframe

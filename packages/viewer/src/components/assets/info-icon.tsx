@@ -1,4 +1,6 @@
-import { type IconProps } from '@vctrl-ui/assets/icons/types'
+interface IconProps {
+	className?: string
+}
 
 const InfoIcon = ({ className }: IconProps) => (
 	<svg

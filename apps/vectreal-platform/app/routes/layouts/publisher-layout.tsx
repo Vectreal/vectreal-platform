@@ -7,7 +7,11 @@ import { PropsWithChildren, useCallback } from 'react'
 import { Outlet, useLocation } from 'react-router'
 
 import { Navigation } from '../../components'
-import { PublisherSidebar, Stepper } from '../../components/publisher'
+import {
+	PublisherSidebar,
+	SaveButton,
+	Stepper
+} from '../../components/publisher'
 import PublisherButtons from '../../components/publisher/publisher-buttons'
 import {
 	processAtom,
@@ -23,12 +27,20 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 	const {
 		data: { user }
 	} = await client.auth.getUser()
-	return { user }
+
+	const loaderData = { user: user || null, sceneId: null }
+
+	return loaderData
+
+	// const db = getDbClient()
+	// const dbUser = await db.select().from(users).where(eq(users.id, user.id))
 }
+
 const AnimatedLayout = ({
 	children,
-	user
-}: PropsWithChildren<{ user: User | null }>) => {
+	user,
+	sceneId
+}: PropsWithChildren<{ user: User | null; sceneId: string | null }>) => {
 	const location = useLocation()
 	const pathname = location.pathname
 	const { file } = useModelContext()
@@ -39,11 +51,14 @@ const AnimatedLayout = ({
 	return (
 		<>
 			{isUploadStep && <Navigation pathname={pathname} user={user} />}
-			{!isUploadStep && <Stepper />}
 			<main className="flex h-screen w-full flex-col overflow-hidden">
-				{!isUploadStep && <PublisherSidebar />}
-				{/* {isPreparingStep && <StatusIndicator />} */}
-				<PublisherButtons />
+				{!isUploadStep && (
+					<>
+						<Stepper /> <PublisherSidebar user={user} />
+						<SaveButton sceneId={sceneId} userId={user?.id} />
+						<PublisherButtons />
+					</>
+				)}
 				{children}
 			</main>
 		</>
@@ -53,7 +68,7 @@ const AnimatedLayout = ({
 const Layout = ({ loaderData }: Route.ComponentProps) => {
 	const optimizer = useOptimizeModel()
 	const [{ showSidebar }, setProcessState] = useAtom(processAtom)
-	const { user } = loaderData
+	const { user, sceneId } = loaderData
 
 	const handleOpenChange = useCallback(
 		(isOpen: boolean) => {
@@ -69,7 +84,7 @@ const Layout = ({ loaderData }: Route.ComponentProps) => {
 		<SidebarProvider open={showSidebar} onOpenChange={handleOpenChange}>
 			<ModelProvider optimizer={optimizer}>
 				<Provider store={publisherConfigStore}>
-					<AnimatedLayout user={user}>
+					<AnimatedLayout user={user} sceneId={sceneId}>
 						<Outlet />
 					</AnimatedLayout>
 				</Provider>

@@ -6,7 +6,7 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@vctrl-ui/ui/select'
-import { Slider } from '@vctrl-ui/ui/slider'
+
 import { Switch } from '@vctrl-ui/ui/switch'
 import {
 	Tooltip,

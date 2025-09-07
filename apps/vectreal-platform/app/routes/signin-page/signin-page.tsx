@@ -54,7 +54,12 @@ export async function action({ request }: Route.ActionArgs) {
 	})
 
 	if (data?.user && data.session) {
-		return ApiResponse.success(data, 200, { headers })
+		const additionalHeaders = new Headers(headers)
+
+		// Default redirect to dashboard
+		return redirect('/dashboard', {
+			headers: additionalHeaders
+		})
 	}
 
 	if (error) {
@@ -68,9 +73,17 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 		data: { user }
 	} = await client.auth.getUser()
 
-	if (user) return redirect('/dashboard')
+	if (user) {
+		// Default redirect
+		return redirect('/dashboard')
+	}
+
+	// Check if this is a scene preservation flow
+	const url = new URL(request.url)
+	const sceneSaved = url.searchParams.get('scene_saved') === 'true'
 
 	return {
+		sceneSaved,
 		user: user ?? null,
 		isAuthenticated: !!user,
 		message: user ? 'Already authenticated' : null
@@ -86,66 +99,83 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	const errors = actionData?.errors
 
 	return (
-		<Form className="w-full max-w-md" method="post" action="/sign-in">
-			<div className="mb-4">
-				<label className="mb-2 block text-sm font-medium" htmlFor="email">
-					Email
-				</label>
-				<Input
-					name="email"
-					placeholder="example@yay.com"
-					type="email"
-					id="email"
-					className="w-full p-2"
-					required
-				/>
-				{errors?.email && (
-					<p className="text-destructive mt-1 text-sm">{errors.email}</p>
-				)}
-			</div>
-			<div className="mb-4">
-				<label className="mb-2 block text-sm font-medium" htmlFor="password">
-					Password
-				</label>
-				<span className="relative w-full">
+		<div className="w-full max-w-md">
+			{loaderData?.sceneSaved && (
+				<div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+					<p className="font-medium">
+						<span role="img" aria-label="celebration">
+							🎉
+						</span>{' '}
+						Scene Saved Temporarily!
+					</p>
+					<p>
+						Your scene configuration has been saved. Sign in with Google or
+						GitHub to convert to a permanent account and access your scene.
+					</p>
+				</div>
+			)}
+
+			<Form className="w-full" method="post" action="/sign-in">
+				<div className="mb-4">
+					<label className="mb-2 block text-sm font-medium" htmlFor="email">
+						Email
+					</label>
 					<Input
-						name="password"
-						placeholder="********"
-						type={showPassword ? 'text' : 'password'}
-						id="password"
+						name="email"
+						placeholder="example@yay.com"
+						type="email"
+						id="email"
 						className="w-full p-2"
 						required
 					/>
-					<TooltipProvider>
-						<Tooltip>
-							<TooltipTrigger
-								type="button"
-								className="[&_svg]:text-muted-foreground absolute top-1/2 right-0 -translate-y-1/2 p-2 px-3 [&_svg]:h-4 [&_svg]:w-4"
-							>
-								<Button
-									onClick={togglePasswordVisibility}
-									asChild
+					{errors?.email && (
+						<p className="text-destructive mt-1 text-sm">{errors.email}</p>
+					)}
+				</div>
+				<div className="mb-4">
+					<label className="mb-2 block text-sm font-medium" htmlFor="password">
+						Password
+					</label>
+					<span className="relative w-full">
+						<Input
+							name="password"
+							placeholder="********"
+							type={showPassword ? 'text' : 'password'}
+							id="password"
+							className="w-full p-2"
+							required
+						/>
+						<TooltipProvider>
+							<Tooltip>
+								<TooltipTrigger
 									type="button"
-									size="icon"
-									variant="ghost"
+									className="[&_svg]:text-muted-foreground absolute top-1/2 right-0 -translate-y-1/2 p-2 px-3 [&_svg]:h-4 [&_svg]:w-4"
 								>
-									{showPassword ? <EyeClosed /> : <Eye />}
-								</Button>
-								<TooltipContent>
-									{showPassword ? 'Hide password' : 'Show password'}
-								</TooltipContent>
-							</TooltipTrigger>
-						</Tooltip>
-					</TooltipProvider>
-				</span>
-				{errors?.password && (
-					<p className="text-destructive mt-1 text-sm">{errors.password}</p>
-				)}
-			</div>
-			<Button type="submit" className="w-full">
-				Sign In
-			</Button>
-		</Form>
+									<Button
+										onClick={togglePasswordVisibility}
+										asChild
+										type="button"
+										size="icon"
+										variant="ghost"
+									>
+										{showPassword ? <EyeClosed /> : <Eye />}
+									</Button>
+									<TooltipContent>
+										{showPassword ? 'Hide password' : 'Show password'}
+									</TooltipContent>
+								</TooltipTrigger>
+							</Tooltip>
+						</TooltipProvider>
+					</span>
+					{errors?.password && (
+						<p className="text-destructive mt-1 text-sm">{errors.password}</p>
+					)}
+				</div>
+				<Button type="submit" className="w-full">
+					Sign In
+				</Button>
+			</Form>
+		</div>
 	)
 }
 

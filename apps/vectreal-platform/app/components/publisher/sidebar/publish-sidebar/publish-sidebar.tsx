@@ -15,7 +15,17 @@ import { SaveOptions } from './sections/save-options'
 import { ScenePreview } from './sections/scene-preview'
 // import { ShareOptions } from './sections/share-options'
 
-const PublishSidebarContent: React.FC = () => {
+interface PublishSidebarProps {
+	userId?: string
+	sceneId?: string
+	projectId?: string
+}
+
+const PublishSidebarContent: React.FC<PublishSidebarProps> = ({
+	userId,
+	sceneId,
+	projectId
+}) => {
 	return (
 		<div className="no-scrollbar grow overflow-auto pb-2">
 			<motion.div
@@ -48,7 +58,11 @@ const PublishSidebarContent: React.FC = () => {
 							</span>
 						</AccordionTrigger>
 						<AccordionContent>
-							<SaveOptions />
+							<SaveOptions
+								userId={userId}
+								sceneId={sceneId}
+								projectId={projectId}
+							/>
 						</AccordionContent>
 					</AccordionItem>
 

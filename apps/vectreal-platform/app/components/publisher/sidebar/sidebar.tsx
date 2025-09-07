@@ -1,7 +1,7 @@
+import { User } from '@supabase/supabase-js'
 import { VectrealLogoSmall } from '@vctrl-ui/assets/icons/vectreal-logo-small'
-import { Button } from '@vctrl-ui/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@vctrl-ui/ui/tabs'
-import { Tooltip, TooltipProvider } from '@vctrl-ui/ui/tooltip'
+import { TooltipProvider } from '@vctrl-ui/ui/tooltip'
 import { cn } from '@vctrl-ui/utils'
 import { motion } from 'framer-motion'
 import { AnimatePresence } from 'framer-motion'
@@ -65,7 +65,7 @@ const variants = {
 	exit: { opacity: 0, x: '-100%', dislay: 'none' }
 }
 
-const PublisherSidebar = () => {
+const PublisherSidebar = ({ user }: { user: User | null }) => {
 	const [{ mode, step, showSidebar }, setProcessState] = useAtom(processAtom)
 
 	const handleTabChange = useCallback(
@@ -108,7 +108,13 @@ const PublisherSidebar = () => {
 						{step === 'preparing' && (
 							<SidebarTabs mode={mode} onTabChange={handleTabChange} />
 						)}
-						{step === 'publishing' && <PublishSidebar />}
+						{step === 'publishing' && (
+							<PublishSidebar
+								userId={user?.id}
+								sceneId={undefined} // TODO: Get from scene context
+								projectId={undefined} // TODO: Get from project context
+							/>
+						)}
 					</motion.div>
 				</AnimatePresence>
 			</div>
