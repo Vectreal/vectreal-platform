@@ -6,14 +6,8 @@
 		"app/**/*.tsx",
 		"app/**/*.js",
 		"app/**/*.jsx",
-		"components/**/*.ts",
-		"components/**/*.tsx",
-		"components/**/*.js",
-		"components/**/*.jsx",
-		"**/.server/**/*.ts",
-		"**/.server/**/*.tsx",
-		"**/.client/**/*.ts",
-		"**/.client/**/*.tsx"
+		"workers/**/*",
+		"worker-configuration.d.ts"
 	],
 	"exclude": [
 		"tests/**/*.spec.ts",
@@ -39,7 +33,8 @@
 	],
 
 	"compilerOptions": {
-		"types": ["node", "vite/client"],
+		"lib": ["dom", "dom.iterable", "esnext"],
+		"types": ["node", "vite/client", "@react-router/node"],
 		"rootDirs": [".", "./.react-router/types"]
 	}
 }
