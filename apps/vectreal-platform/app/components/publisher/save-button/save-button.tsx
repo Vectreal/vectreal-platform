@@ -6,8 +6,10 @@ import { useCallback, useState } from 'react'
 
 import { toast } from 'sonner'
 
-import { useSceneSettings } from '../../lib/hooks/use-scene-settings'
-import { TooltipButton } from '../tooltip-button'
+import { useAuth } from '../../../contexts/auth-context'
+import { TooltipButton } from '../../tooltip-button'
+
+import { useSceneSettings } from './use-scene-settings'
 
 interface SaveButtonProps {
 	sceneId: string | null
@@ -15,7 +17,7 @@ interface SaveButtonProps {
 	onSave?: (success: boolean) => void
 }
 
-export function SaveButton({ sceneId, userId }: SaveButtonProps) {
+function SaveButton({ sceneId, userId }: SaveButtonProps) {
 	const [isSaving, setIsSaving] = useState(false)
 	const [isSaved, setIsSaved] = useState(false)
 	const { saveSceneSettings, hasUnsavedChanges } = useSceneSettings({
@@ -108,7 +110,7 @@ export function SaveButton({ sceneId, userId }: SaveButtonProps) {
 	}, [saveSceneSettings, userId, hasChanges])
 
 	return (
-		<div className="fixed right-0 top-0 z-20 m-4 flex items-center gap-6">
+		<div className="fixed top-0 right-0 z-20 m-4 flex items-center gap-6">
 			<div
 				className={cn(
 					'flex items-center gap-3 text-xs font-medium transition-all duration-300',
@@ -123,7 +125,7 @@ export function SaveButton({ sceneId, userId }: SaveButtonProps) {
 				<div className="relative">
 					<span
 						className={cn(
-							'inline-block h-2 w-2 rounded-full after:absolute after:left-0 after:top-0 after:h-full after:w-full after:animate-pulse after:opacity-50 after:blur-md',
+							'inline-block h-2 w-2 rounded-full after:absolute after:top-0 after:left-0 after:h-full after:w-full after:animate-pulse after:opacity-50 after:blur-md',
 							isSaved || !hasChanges
 								? 'bg-green-400 after:bg-green-400'
 								: isSaving
@@ -149,3 +151,5 @@ export function SaveButton({ sceneId, userId }: SaveButtonProps) {
 		</div>
 	)
 }
+
+export default SaveButton

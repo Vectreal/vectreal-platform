@@ -14,10 +14,9 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 }
 
 const Layout = ({ loaderData }: Route.ComponentProps) => {
-	const { pathname } = useLocation()
 	return (
 		<>
-			<Navigation user={loaderData.user} pathname={pathname} />
+			<Navigation user={loaderData.user} />
 			<Outlet />
 		</>
 	)

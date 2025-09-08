@@ -10,22 +10,23 @@ import {
 	SidebarRail
 } from '@vctrl-ui/ui/sidebar'
 import { ArrowRight, Building, List, Rocket, Settings } from 'lucide-react'
+import { Link } from 'react-router'
 
 // Menu items.
 const manageLinks = [
 	{
 		title: 'Projects',
-		url: '#',
+		url: '/dashboard/projects',
 		icon: List
 	},
 	{
 		title: 'Organizations',
-		url: '#',
+		url: '/dashboard/organizations',
 		icon: Building
 	},
 	{
 		title: 'Settings',
-		url: '#',
+		url: '/dashboard/settings',
 		icon: Settings
 	}
 ]
@@ -37,7 +38,7 @@ const quickLinks = [
 	}
 ]
 
-const DashboardSidebar = () => {
+const DashboardSidebarContent = () => {
 	return (
 		<>
 			<SidebarContent>
@@ -48,10 +49,10 @@ const DashboardSidebar = () => {
 							{manageLinks.map((item) => (
 								<SidebarMenuItem key={item.title}>
 									<SidebarMenuButton asChild>
-										<a href={item.url}>
+										<Link viewTransition to={item.url}>
 											<item.icon />
 											<span>{item.title}</span>
-										</a>
+										</Link>
 									</SidebarMenuButton>
 								</SidebarMenuItem>
 							))}
@@ -65,11 +66,11 @@ const DashboardSidebar = () => {
 							{quickLinks.map((item) => (
 								<SidebarMenuItem key={item.title}>
 									<SidebarMenuButton asChild>
-										<a href={item.url}>
+										<Link to={item.url}>
 											<item.icon />
 											<span>{item.title}</span>
 											<ArrowRight className="ml-auto h-4 w-4" />
-										</a>
+										</Link>
 									</SidebarMenuButton>
 								</SidebarMenuItem>
 							))}
@@ -83,4 +84,4 @@ const DashboardSidebar = () => {
 	)
 }
 
-export default DashboardSidebar
+export default DashboardSidebarContent

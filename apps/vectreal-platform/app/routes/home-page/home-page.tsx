@@ -12,8 +12,7 @@ import {
 
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowUp, Check, Globe, Sparkle, Wrench } from 'lucide-react'
-
-import { redirect, useNavigate } from 'react-router'
+import { Link, redirect, useNavigate } from 'react-router'
 
 import community from '../../assets/images/community.webp'
 import studioDisplay from '../../assets/images/studio-display.jpg'
@@ -362,14 +361,14 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 								</p>
 								<div className="text-muted-foreground/75 flex items-center text-sm">
 									<span>AP News</span>
-									<a
-										href="https://apnews.com/press-release/globe-newswire/technology-business-lifestyle-79fe640885f900736beed0fe33f7d972"
+									<Link
+										to="https://apnews.com/press-release/globe-newswire/technology-business-lifestyle-79fe640885f900736beed0fe33f7d972"
 										className="ml-auto"
 										target="_blank"
 										rel="noreferrer"
 									>
 										Read more →
-									</a>
+									</Link>
 								</div>
 							</CardContent>
 						</BasicCard>
@@ -387,14 +386,14 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 								</p>
 								<div className="text-muted-foreground/75 flex items-center text-sm">
 									<span>Shopify</span>
-									<a
-										href="https://www.shopify.com/ie/case-studies/rebecca-minkoff"
+									<Link
+										to="https://www.shopify.com/ie/case-studies/rebecca-minkoff"
 										className="ml-auto"
 										target="_blank"
 										rel="noreferrer"
 									>
 										Read more →
-									</a>
+									</Link>
 								</div>
 							</CardContent>
 						</BasicCard>
@@ -412,14 +411,14 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 								</p>
 								<div className="text-muted-foreground/75 flex items-center text-sm">
 									<span>Harvard Business Review</span>
-									<a
-										href="https://hbr.org/2020/10/how-ar-is-redefining-retail-in-the-pandemic"
+									<Link
+										to="https://hbr.org/2020/10/how-ar-is-redefining-retail-in-the-pandemic"
 										className="ml-auto"
 										target="_blank"
 										rel="noreferrer"
 									>
 										Read more →
-									</a>
+									</Link>
 								</div>
 							</CardContent>
 						</BasicCard>

@@ -8,14 +8,12 @@ import { AnimatePresence } from 'framer-motion'
 import { useAtom } from 'jotai/react'
 import { BarChart4, Camera, SidebarIcon } from 'lucide-react'
 import { useCallback } from 'react'
-
 import { Link } from 'react-router'
 
 import {
 	processAtom,
 	SidebarMode
 } from '../../../lib/stores/publisher-config-store'
-
 import { TooltipButton } from '../../tooltip-button'
 
 import { ComposeSidebar } from './compose-sidebar'
@@ -65,7 +63,11 @@ const variants = {
 	exit: { opacity: 0, x: '-100%', dislay: 'none' }
 }
 
-const PublisherSidebar = ({ user }: { user: User | null }) => {
+interface PublisherSidebarProps {
+	user: User | null
+}
+
+const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
 	const [{ mode, step, showSidebar }, setProcessState] = useAtom(processAtom)
 
 	const handleTabChange = useCallback(

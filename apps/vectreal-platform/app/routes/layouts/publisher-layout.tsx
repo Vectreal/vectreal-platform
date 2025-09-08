@@ -4,15 +4,15 @@ import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
 import { SidebarProvider } from '@vctrl-ui/ui/sidebar'
 import { Provider, useAtom, useAtomValue } from 'jotai/react'
 import { PropsWithChildren, useCallback } from 'react'
-import { Outlet, useLocation } from 'react-router'
+import { Outlet } from 'react-router'
 
 import { Navigation } from '../../components'
 import {
+	PublisherButtons,
 	PublisherSidebar,
 	SaveButton,
 	Stepper
 } from '../../components/publisher'
-import PublisherButtons from '../../components/publisher/publisher-buttons'
 import {
 	processAtom,
 	publisherConfigStore
@@ -36,39 +36,38 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 	// const dbUser = await db.select().from(users).where(eq(users.id, user.id))
 }
 
-const AnimatedLayout = ({
-	children,
-	user,
-	sceneId
-}: PropsWithChildren<{ user: User | null; sceneId: string | null }>) => {
-	const location = useLocation()
-	const pathname = location.pathname
+interface AnimatedLayoutProps extends PropsWithChildren {
+	user: User | null
+	sceneId: string | null
+}
+
+const AnimatedLayout = ({ children, user, sceneId }: AnimatedLayoutProps) => {
 	const { file } = useModelContext()
 	const { step } = useAtomValue(processAtom)
 
 	const isUploadStep = !file?.model && step === 'uploading'
 
 	return (
-		<>
-			{isUploadStep && <Navigation pathname={pathname} user={user} />}
-			<main className="flex h-screen w-full flex-col overflow-hidden">
-				{!isUploadStep && (
-					<>
-						<Stepper /> <PublisherSidebar user={user} />
-						<SaveButton sceneId={sceneId} userId={user?.id} />
-						<PublisherButtons />
-					</>
-				)}
-				{children}
-			</main>
-		</>
+		<main className="flex h-screen w-full flex-col overflow-hidden">
+			{isUploadStep ? (
+				<Navigation user={user} />
+			) : (
+				<>
+					<Stepper />
+					<PublisherSidebar user={user} />
+					<SaveButton sceneId={sceneId} userId={user?.id} />
+					<PublisherButtons />
+				</>
+			)}
+			{children}
+		</main>
 	)
 }
 
 const Layout = ({ loaderData }: Route.ComponentProps) => {
 	const optimizer = useOptimizeModel()
 	const [{ showSidebar }, setProcessState] = useAtom(processAtom)
-	const { user, sceneId } = loaderData
+	const { user } = loaderData
 
 	const handleOpenChange = useCallback(
 		(isOpen: boolean) => {
@@ -84,7 +83,7 @@ const Layout = ({ loaderData }: Route.ComponentProps) => {
 		<SidebarProvider open={showSidebar} onOpenChange={handleOpenChange}>
 			<ModelProvider optimizer={optimizer}>
 				<Provider store={publisherConfigStore}>
-					<AnimatedLayout user={user} sceneId={sceneId}>
+					<AnimatedLayout user={user} sceneId={null}>
 						<Outlet />
 					</AnimatedLayout>
 				</Provider>

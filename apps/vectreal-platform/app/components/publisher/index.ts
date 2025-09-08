@@ -1,3 +1,4 @@
+export { default as PublisherButtons } from './publisher-buttons'
 export * from './settings-components'
 export * from './stepper'
 export * from './sidebar'

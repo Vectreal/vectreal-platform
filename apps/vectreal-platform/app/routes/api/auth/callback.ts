@@ -25,8 +25,19 @@ export async function loader({ request }: Route.ActionArgs) {
 		const { data: userData } = await client.auth.getUser()
 
 		if (userData.user) {
-			// Initialize user with defaults (user, organization, project) in local database
-			await userService.initializeUserDefaults(userData.user)
+			try {
+				// Initialize user with defaults (user, organization, project) in local database
+				await userService.initializeUserDefaults(userData.user)
+				console.log('User initialized successfully:', userData.user.id)
+			} catch (dbError) {
+				console.error('Database error during user initialization:', {
+					error: dbError,
+					userId: userData.user.id,
+					userEmail: userData.user.email
+				})
+				// Don't fail the auth flow, but log the error
+				// User will still be authenticated via Supabase
+			}
 		}
 
 		// Check if this was an anonymous user conversion

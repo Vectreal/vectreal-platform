@@ -41,28 +41,38 @@ export class UserService {
 	async ensureUserExists(
 		supabaseUser: User
 	): Promise<typeof users.$inferSelect> {
-		// Check if user already exists
-		const existingUser = await this.db
-			.select()
-			.from(users)
-			.where(eq(users.id, supabaseUser.id))
-			.limit(1)
+		try {
+			// Check if user already exists
+			const existingUser = await this.db
+				.select()
+				.from(users)
+				.where(eq(users.id, supabaseUser.id))
+				.limit(1)
 
-		if (existingUser.length > 0) {
-			return existingUser[0]
-		}
+			if (existingUser.length > 0) {
+				return existingUser[0]
+			}
 
-		// Create new user
-		const [newUser] = await this.db
-			.insert(users)
-			.values({
-				id: supabaseUser.id,
-				email: supabaseUser.email || '',
-				name: supabaseUser.user_metadata?.name || supabaseUser.email || 'User'
+			// Create new user
+			const [newUser] = await this.db
+				.insert(users)
+				.values({
+					id: supabaseUser.id,
+					email: supabaseUser.email || '',
+					name: supabaseUser.user_metadata?.name || supabaseUser.email || 'User'
+				})
+				.returning()
+
+			return newUser
+		} catch (error) {
+			console.error('Database error in ensureUserExists:', {
+				error,
+				userId: supabaseUser.id,
+				userEmail: supabaseUser.email,
+				userName: supabaseUser.user_metadata?.name
 			})
-			.returning()
-
-		return newUser
+			throw error
+		}
 	}
 
 	/**

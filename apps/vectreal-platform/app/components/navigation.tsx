@@ -12,10 +12,9 @@ import {
 } from '@vctrl-ui/ui/dropdown-menu'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Sparkles } from 'lucide-react'
-import { Link, useFetcher, useNavigate } from 'react-router'
+import { Link, useFetcher, useLocation, useNavigate } from 'react-router'
 
 interface NavigationProps {
-	pathname: string
 	user: User | null
 }
 
@@ -88,7 +87,8 @@ function UserMenu({ user, onLogout }: { user: User; onLogout: () => void }) {
 /**
  * Navigation is the main navigation bar for the app shell.
  */
-export const Navigation = ({ pathname, user }: NavigationProps) => {
+export const Navigation = ({ user }: NavigationProps) => {
+	const { pathname } = useLocation()
 	const isSigninPage =
 		pathname.startsWith('/sign-up') || pathname.startsWith('/sign-in')
 	const isPublisherPage = pathname.startsWith('/publisher')

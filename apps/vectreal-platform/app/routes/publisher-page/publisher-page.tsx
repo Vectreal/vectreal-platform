@@ -24,12 +24,8 @@ import { Route } from './+types/publisher-page'
 import { DropZone } from './drop-zone'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const url = new URL(request.url)
-	const step = url.pathname.split('/').pop()
-
 	return {
-		isMobile: isMobileRequest(request),
-		currentStep: step || 'upload'
+		isMobile: isMobileRequest(request)
 	}
 }
 
