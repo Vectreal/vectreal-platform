@@ -99,8 +99,6 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 		// 	...prev,
 		// 	thumbnailUrl: url
 		// }))
-
-		console.log('Screenshot taken')
 	}, [])
 
 	useEffect(() => {

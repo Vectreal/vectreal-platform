@@ -29,7 +29,7 @@ const BasicCard = ({
 			/>
 			<div
 				className={cn(
-					'bg-accent absolute top-0 left-0 m-3 mt-0! h-1 w-8 rounded-b-full transition-all md:m-6',
+					'bg-accent absolute top-0 left-0 z-10 m-3 mt-0! h-1 w-8 rounded-b-full transition-all md:m-6',
 					typeof highlight === 'boolean'
 						? highlight
 							? 'h-1 group-hover:w-16'

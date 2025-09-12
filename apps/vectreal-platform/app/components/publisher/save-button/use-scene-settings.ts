@@ -8,7 +8,7 @@ import {
 	shadowsAtom,
 	toneMappingAtom
 } from '../../../lib/stores/publisher-config-store'
-import type { SceneSettingsData } from '../../../lib/types/api'
+import type { SceneSettingsData } from '../../../types/api'
 
 export interface UseSceneSettingsParams {
 	sceneId: null | string

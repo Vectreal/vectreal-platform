@@ -6,3 +6,6 @@ export * from './use-organizations'
 
 // Project hooks
 export * from './use-projects'
+
+// Scene hooks
+export * from './use-scenes'

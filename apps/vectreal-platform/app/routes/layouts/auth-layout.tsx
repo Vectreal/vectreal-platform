@@ -1,8 +1,10 @@
 import { Outlet, redirect, useLoaderData } from 'react-router'
 
 import { AuthContext } from '../../contexts/auth-context'
-import { projectService } from '../../lib/services/project.service'
-import { userService } from '../../lib/services/user.service'
+import { type sceneFolders, type scenes } from '../../db/schema'
+import { projectService } from '../../lib/services/project-service.server'
+import { sceneService } from '../../lib/services/scene-service.server'
+import { userService } from '../../lib/services/user-service.server'
 import { createClient } from '../../lib/supabase.server'
 
 import { Route } from './+types/auth-layout'
@@ -29,20 +31,49 @@ export const loader = async ({ request }: Route.ActionArgs) => {
 		// Get all projects the user has access to
 		const userProjects = await projectService.getUserProjects(user.id)
 
-		console.log('Auth Layout Data:', {
-			userExists: !!user,
-			userWithDefaults,
-			organizationsCount: organizations.length,
-			projectsCount: userProjects.length,
-			organizations,
-			projects: userProjects
-		})
+		// Get all scenes and scene folders for the user's projects
+		const allScenes: Array<{
+			scene: typeof scenes.$inferSelect
+			projectId: string
+		}> = []
+		const allSceneFolders: Array<{
+			folder: typeof sceneFolders.$inferSelect
+			projectId: string
+		}> = []
+
+		// Fetch scenes and folders for each project the user has access to
+		for (const { project } of userProjects) {
+			try {
+				const [projectScenes, projectFolders] = await Promise.all([
+					sceneService.getProjectScenes(project.id, user.id),
+					sceneService.getProjectSceneFolders(project.id, user.id)
+				])
+
+				// Add scenes with project context
+				projectScenes.forEach((scene) => {
+					allScenes.push({ scene, projectId: project.id })
+				})
+
+				// Add folders with project context
+				projectFolders.forEach((folder) => {
+					allSceneFolders.push({ folder, projectId: project.id })
+				})
+			} catch (error) {
+				console.error(
+					`Failed to fetch scenes/folders for project ${project.id}:`,
+					error
+				)
+				// Continue with other projects if one fails
+			}
+		}
 
 		return {
 			user,
 			userWithDefaults,
 			organizations,
-			projects: userProjects
+			projects: userProjects,
+			scenes: allScenes,
+			sceneFolders: allSceneFolders
 		}
 	} catch (error) {
 		console.error('Failed to initialize user:', error)
@@ -52,6 +83,8 @@ export const loader = async ({ request }: Route.ActionArgs) => {
 			userWithDefaults: null,
 			organizations: [],
 			projects: [],
+			scenes: [],
+			sceneFolders: [],
 			error: 'Failed to initialize user data'
 		}
 	}

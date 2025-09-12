@@ -1,15 +1,15 @@
 import { Badge } from '@vctrl-ui/ui/badge'
 import { Button } from '@vctrl-ui/ui/button'
-import { FolderOpen, Plus, Settings } from 'lucide-react'
-import { Link } from 'react-router'
+import { FolderOpen, Plus } from 'lucide-react'
+import { Link, Outlet, useLocation } from 'react-router'
 
-import DashboardCard from '../../components/dashboard/dashboard-card'
+import DashboardCard from '../../../components/dashboard/dashboard-card'
+import { useUserScenes } from '../../../contexts/auth-context'
 import {
-	useDefaultProject,
 	useProjectCreationCapabilities,
 	useProjectsByOrganization,
-	useProjectStats
-} from '../../hooks'
+	useSceneStats
+} from '../../../hooks'
 
 import { Route } from './+types/projects'
 
@@ -18,18 +18,20 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 const ProjectsPage = () => {
+	const location = useLocation()
 	const projectsByOrg = useProjectsByOrganization()
-	const projectStats = useProjectStats()
-	const defaultProject = useDefaultProject()
-	const creationCapabilities = useProjectCreationCapabilities()
 
-	// Debug logging
-	console.log('Projects data:', {
-		projectsByOrg,
-		projectStats,
-		defaultProject,
-		creationCapabilities
-	})
+	const creationCapabilities = useProjectCreationCapabilities()
+	const scenes = useUserScenes()
+	const sceneStats = useSceneStats(scenes)
+
+	// Check if we're at a child route like /new
+	const isChildRoute = location.pathname.includes('/new')
+
+	// If we're at a child route, only show the outlet
+	if (isChildRoute) {
+		return <Outlet />
+	}
 
 	return (
 		<div className="p-6">
@@ -44,7 +46,7 @@ const ProjectsPage = () => {
 										<span className="bg-muted/50 mr-2 rounded-xl p-1 px-3">
 											{organization.name}
 										</span>
-										contains:
+										projects:
 									</h3>
 									<Badge variant="outline">
 										{orgProjects.length} project
@@ -54,21 +56,20 @@ const ProjectsPage = () => {
 								{orgProjects.length > 0 ? (
 									<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 										{orgProjects.map(({ project }) => (
-											<Link
+											<DashboardCard
 												key={project.id}
-												to={`/dashboard/projects/${project.id}`}
-												className="block"
+												title={project.name}
+												description={`Slug: ${project.slug}`}
+												linkTo={`/dashboard/projects/${project.id}`}
+												icon={<FolderOpen className="h-5 w-5" />}
+												id={project.id}
 											>
-												<DashboardCard
-													title={project.name}
-													description={`Slug: ${project.slug}`}
-													linkTo={`/dashboard/projects/${project.id}`}
-													icon={<FolderOpen className="h-5 w-5" />}
-													id={project.id}
-												>
-													<div className="space-y-2"></div>
-												</DashboardCard>
-											</Link>
+												<div className="space-y-2">
+													<div className="text-sm text-gray-600">
+														{sceneStats.byProject[project.id] || 0} scenes
+													</div>
+												</div>
+											</DashboardCard>
 										))}
 									</div>
 								) : (

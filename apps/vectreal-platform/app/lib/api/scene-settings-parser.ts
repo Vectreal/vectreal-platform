@@ -1,8 +1,8 @@
-import type { SceneSettingsRequest } from '../types/api'
+import type { SceneSettingsRequest } from '../../types/api'
 
-import { ApiResponseBuilder } from '../utils/api-responses'
+import { PlatformApiService } from '../services/platform-api-service.server'
 
-import { PlatformApiService } from './platform-api.server'
+import { ApiResponseBuilder } from './api-responses'
 
 /**
  * Request parser for scene settings API operations.
@@ -100,6 +100,11 @@ export class SceneSettingsParser {
 	private static parseAssetIds(
 		requestData: Record<string, unknown>
 	): string[] | Response {
+		console.log(
+			'Parsing assetIds from requestData:',
+			requestData,
+			requestData.assetIds
+		)
 		let assetIds: string[] = []
 
 		if (requestData.assetIds) {

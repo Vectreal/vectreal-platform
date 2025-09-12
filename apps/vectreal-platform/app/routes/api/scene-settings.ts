@@ -1,11 +1,11 @@
 import { ActionFunctionArgs } from 'react-router'
 
-import { PlatformApiService } from '../../lib/api/platform-api.server'
+import { ApiResponseBuilder } from '../../lib/api/api-responses'
 import * as sceneSettingsOps from '../../lib/api/scene-settings-operations'
 import { SceneSettingsParser } from '../../lib/api/scene-settings-parser'
+import { PlatformApiService } from '../../lib/services/platform-api-service.server'
 
-import type { SceneSettingsAction } from '../../lib/types/api'
-import { ApiResponseBuilder } from '../../lib/utils/api-responses'
+import type { SceneSettingsAction } from '../../types/api'
 
 /**
  * Handles scene settings API requests.

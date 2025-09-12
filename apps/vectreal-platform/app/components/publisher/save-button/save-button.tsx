@@ -1,12 +1,9 @@
 // import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { cn } from '@vctrl-ui/utils'
-
 import { SaveIcon } from 'lucide-react'
 import { useCallback, useState } from 'react'
-
 import { toast } from 'sonner'
 
-import { useAuth } from '../../../contexts/auth-context'
 import { TooltipButton } from '../../tooltip-button'
 
 import { useSceneSettings } from './use-scene-settings'
@@ -38,10 +35,8 @@ function SaveButton({ sceneId, userId }: SaveButtonProps) {
 
 	const handleSave = useCallback(async () => {
 		if (!userId) {
-			toast.error(
-				'Missing required information to save scene settings, got: \n' +
-					JSON.stringify({ userId }, null, 2)
-			)
+			toast.error('Missing required information to save scene setting')
+
 			return
 		}
 

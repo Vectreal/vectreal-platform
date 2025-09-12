@@ -1,6 +1,5 @@
 import { Badge } from '@vctrl-ui/ui/badge'
 import { Building2, Settings, Users } from 'lucide-react'
-import { Link } from 'react-router'
 
 import DashboardCard from '../../components/dashboard/dashboard-card'
 import {
@@ -21,14 +20,6 @@ const OrganizationsPage = () => {
 	const sortedOrganizations = useSortedOrganizations()
 	const primaryOrganization = usePrimaryOrganization()
 	const stats = useOrganizationStats()
-
-	// Debug logging
-	console.log('Organizations data:', {
-		organizations,
-		sortedOrganizations,
-		primaryOrganization,
-		stats
-	})
 
 	return (
 		<div className="p-6">
@@ -102,44 +93,39 @@ const OrganizationsPage = () => {
 				{organizations.length > 0 ? (
 					<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 						{sortedOrganizations.byRole.map(({ organization, membership }) => (
-							<Link
+							<DashboardCard
 								key={organization.id}
-								to={`/dashboard/organizations/${organization.id}`}
-								className="block"
+								title={organization.name}
+								description={`${membership.role} • Joined ${new Date(membership.joinedAt).toLocaleDateString()}`}
+								linkTo={`/dashboard/organizations/${organization.id}`}
+								icon={<Building2 className="h-5 w-5" />}
+								id={organization.id}
 							>
-								<DashboardCard
-									title={organization.name}
-									description={`${membership.role} • Joined ${new Date(membership.joinedAt).toLocaleDateString()}`}
-									linkTo={`/dashboard/organizations/${organization.id}`}
-									icon={<Building2 className="h-5 w-5" />}
-									id={organization.id}
-								>
-									<div className="space-y-2">
-										<div className="flex items-center justify-between">
-											<span className="text-sm text-gray-600">Role</span>
-											<Badge
-												variant={
-													membership.role === 'owner'
-														? 'default'
-														: membership.role === 'admin'
-															? 'secondary'
-															: 'outline'
-												}
-											>
-												{membership.role}
-											</Badge>
-										</div>
-										<div className="flex items-center justify-between">
-											<span className="text-sm text-gray-600">Owner</span>
-											<span className="text-sm">
-												{organization.ownerId === membership.userId
-													? 'You'
-													: 'Other'}
-											</span>
-										</div>
+								<div className="space-y-2">
+									<div className="flex items-center justify-between">
+										<span className="text-sm text-gray-600">Role</span>
+										<Badge
+											variant={
+												membership.role === 'owner'
+													? 'default'
+													: membership.role === 'admin'
+														? 'secondary'
+														: 'outline'
+											}
+										>
+											{membership.role}
+										</Badge>
 									</div>
-								</DashboardCard>
-							</Link>
+									<div className="flex items-center justify-between">
+										<span className="text-sm text-gray-600">Owner</span>
+										<span className="text-sm">
+											{organization.ownerId === membership.userId
+												? 'You'
+												: 'Other'}
+										</span>
+									</div>
+								</div>
+							</DashboardCard>
 						))}
 					</div>
 				) : (

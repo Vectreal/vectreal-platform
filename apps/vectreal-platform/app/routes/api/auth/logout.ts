@@ -9,8 +9,6 @@ import { Route } from './+types/logout'
 export async function loader({ request }: Route.ActionArgs) {
 	const { client, headers } = await createClient(request)
 
-	console.log('Logging out user...')
-
 	// Sign out the user
 	const { error } = await client.auth.signOut()
 

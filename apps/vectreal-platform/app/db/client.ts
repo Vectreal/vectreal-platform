@@ -26,12 +26,12 @@ export function getDbClient() {
 		max_lifetime: parseInt(process.env.DB_MAX_LIFETIME || '1800'), // Close connections after time (30 min default)
 		// For serverless/development environments
 		transform: {
-			undefined: null, // Transform undefined to null for PostgreSQL compatibility
+			undefined: null // Transform undefined to null for PostgreSQL compatibility
 		},
 		// Prevent connection leaks in development
-		debug: process.env.NODE_ENV === 'development' ? console.log : false,
+		debug: process.env.NODE_ENV === 'development' ? console.log : false
 	})
-	
+
 	cachedClient = drizzle({ client, schema })
 	return cachedClient
 }
@@ -43,7 +43,9 @@ export function getDbClient() {
 export async function closeDbConnection() {
 	if (cachedClient) {
 		// Access the underlying postgres client for cleanup
-		const client = (cachedClient as unknown as { $client: { end(): Promise<void> } }).$client
+		const client = (
+			cachedClient as unknown as { $client: { end(): Promise<void> } }
+		).$client
 		if (client && typeof client.end === 'function') {
 			await client.end()
 		}

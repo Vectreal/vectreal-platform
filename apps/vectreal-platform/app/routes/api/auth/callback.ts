@@ -2,7 +2,7 @@ import { ApiResponse } from '@vctrl-ui/utils'
 
 import { redirect } from 'react-router'
 
-import { userService } from '../../../lib/services/user.service'
+import { userService } from '../../../lib/services/user-service.server'
 import { createClient } from '../../../lib/supabase.server'
 
 import { Route } from './+types/callback'

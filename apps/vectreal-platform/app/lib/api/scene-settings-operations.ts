@@ -1,14 +1,15 @@
 import { randomUUID } from 'crypto'
 
-import { sceneSettingsService } from '../services/scene-settings.service'
-import { userService } from '../services/user.service'
-
+import { UUID_REGEX } from '../../constants/utility-constants'
 import type {
 	GetSceneSettingsParams,
 	SaveSceneSettingsParams,
 	SceneSettingsRequest
-} from '../types/api'
-import { ApiResponseBuilder } from '../utils/api-responses'
+} from '../../types/api'
+import { sceneSettingsService } from '../services/scene-settings-service.server'
+import { userService } from '../services/user-service.server'
+
+import { ApiResponseBuilder } from './api-responses'
 
 /**
  * Validates and normalizes scene ID.
@@ -22,10 +23,7 @@ function validateSceneId(sceneId: string | undefined): string | null {
 		return null
 	}
 
-	// Validate UUID format
-	const uuidRegex =
-		/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-	if (!uuidRegex.test(sceneId)) {
+	if (!UUID_REGEX.test(sceneId)) {
 		throw new Error('Scene ID must be a valid UUID format')
 	}
 

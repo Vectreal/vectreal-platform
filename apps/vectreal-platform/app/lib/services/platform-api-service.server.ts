@@ -1,14 +1,8 @@
-import { randomUUID as uuidv4 } from 'crypto'
-
 import type { Bucket } from '@google-cloud/storage'
 
-import { getDbClient } from '../../db/client'
-import { assets } from '../../db/schema/project/assets'
-import { folders } from '../../db/schema/project/folders'
+import type { ApiUserContext } from '../../types/api'
+import { ApiResponseBuilder } from '../api/api-responses'
 import { createClient } from '../supabase.server'
-
-import type { ApiUserContext } from '../types/api'
-import { ApiResponseBuilder } from '../utils/api-responses'
 
 /**
  * Platform API service for common server operations.
@@ -179,90 +173,3 @@ export const parseActionRequest = PlatformApiService.parseActionRequest
 export const buildStoragePath = PlatformApiService.buildStoragePath
 export const saveBase64File = PlatformApiService.saveBase64File
 export const determineAssetType = PlatformApiService.determineAssetType
-
-/**
- * Creates an "Assets" folder for a project if it doesn't exist.
- * @param projectId - The project ID
- * @returns The assets folder record
- */
-export async function ensureAssetsFolder(projectId: string) {
-	const db = getDbClient()
-	let folder = await db.query.folders.findFirst({
-		where: (f, { and, eq }) =>
-			and(eq(f.projectId, projectId), eq(f.name, 'Assets'))
-	})
-
-	if (!folder) {
-		const id = uuidv4()
-		await db.insert(folders).values({ id, name: 'Assets', projectId })
-		folder = { id, name: 'Assets', projectId, parentFolderId: null }
-	}
-
-	return folder
-}
-
-/**
- * Inserts an asset record into the database.
- * @param params - Asset insertion parameters
- * @returns The created asset ID
- */
-export async function insertAsset(params: {
-	readonly folderId: string
-	readonly fileName: string
-	readonly filePath: string
-	readonly fileSize: number
-	readonly mimeType: string
-	readonly ownerId: string
-	readonly sceneId: string
-	readonly isMainFile: boolean
-	readonly relatedTo?: string
-}): Promise<string> {
-	const {
-		folderId,
-		fileName,
-		filePath,
-		fileSize,
-		mimeType,
-		ownerId,
-		sceneId,
-		isMainFile,
-		relatedTo
-	} = params
-
-	const db = getDbClient()
-	const id = uuidv4()
-
-	await db.insert(assets).values({
-		id,
-		folderId,
-		name: fileName,
-		type: PlatformApiService.determineAssetType(fileName, mimeType),
-		filePath,
-		fileSize,
-		mimeType,
-		ownerId,
-		metadata: {
-			publicUrl: `https://storage.googleapis.com/${
-				process.env.GOOGLE_CLOUD_STORAGE_PUBLIC_BUCKET ||
-				'vectreal-public-bucket'
-			}/${filePath}`,
-			isMainFile,
-			sceneId,
-			...(relatedTo ? { relatedToMainFile: relatedTo } : {})
-		}
-	})
-
-	return id
-}
-
-/**
- * Fetches a scene by ID ensuring it exists.
- * @param sceneId - The scene ID to fetch
- * @returns The scene record or undefined if not found
- */
-export async function getScene(sceneId: string) {
-	const db = getDbClient()
-	return db.query.scenes.findFirst({
-		where: (s, { eq }) => eq(s.id, sceneId)
-	})
-}

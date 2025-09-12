@@ -1,4 +1,4 @@
-import type { ApiResponse } from '../types/api'
+import type { ApiResponse } from '../../types/api'
 
 /**
  * Utility class for creating standardized API responses.
