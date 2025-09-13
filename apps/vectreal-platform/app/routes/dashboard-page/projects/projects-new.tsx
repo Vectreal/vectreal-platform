@@ -6,7 +6,7 @@ const ProjectsNewPage = () => {
 	return (
 		<div className="p-6">
 			<div className="mb-6 flex items-center gap-4">
-				<Link to="/dashboard/projects/">
+				<Link viewTransition to="/dashboard/projects/">
 					<Button variant="outline" size="sm">
 						<ArrowLeft className="mr-2 h-4 w-4" />
 						Back to Projects

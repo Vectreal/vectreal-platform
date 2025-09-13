@@ -37,7 +37,7 @@ const ProjectPage = () => {
 						The project you're looking for doesn't exist or you don't have
 						access to it.
 					</p>
-					<Link to="/dashboard/projects">
+					<Link viewTransition to="/dashboard/projects">
 						<Button className="mt-4">Back to Projects</Button>
 					</Link>
 				</div>

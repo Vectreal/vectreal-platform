@@ -98,6 +98,7 @@ const SigninLayout = () => {
 								<p className="text-muted-foreground mt-2 max-w-xs text-center text-xs">
 									By continuing, you agree to our{' '}
 									<Link
+										viewTransition
 										to="/privacy-policy"
 										className="hover:text-primary underline"
 									>
@@ -105,6 +106,7 @@ const SigninLayout = () => {
 									</Link>{' '}
 									and{' '}
 									<Link
+										viewTransition
 										to="/terms-of-service"
 										className="hover:text-primary underline"
 									>

@@ -49,7 +49,7 @@ export const DashboardActions = memo<DashboardActionsProps>(
 					)
 				case ACTION_VARIANT.PROJECT_LIST:
 					return (
-						<Link to="/dashboard/projects/new">
+						<Link viewTransition to="/dashboard/projects/new">
 							<Button>
 								<Plus className="mr-2 h-4 w-4" />
 								New Project
@@ -72,7 +72,7 @@ export const DashboardActions = memo<DashboardActionsProps>(
 								<Plus className="mr-2 h-4 w-4" />
 								New Folder
 							</Button>
-							<Link to="/publisher">
+							<Link viewTransition to="/publisher">
 								<Button>
 									<Rocket className="mr-2 h-4 w-4" />
 									New Scene
@@ -88,7 +88,7 @@ export const DashboardActions = memo<DashboardActionsProps>(
 								<Plus className="mr-2 h-4 w-4" />
 								New Folder
 							</Button>
-							<Link to="/publisher">
+							<Link viewTransition to="/publisher">
 								<Button>
 									<Rocket className="mr-2 h-4 w-4" />
 									New Scene
@@ -99,7 +99,7 @@ export const DashboardActions = memo<DashboardActionsProps>(
 
 				case ACTION_VARIANT.SCENE_DETAIL:
 					return (
-						<Link to="/publisher">
+						<Link viewTransition to="/publisher">
 							<Button>
 								<Edit className="mr-2 h-4 w-4" />
 								Edit Scene

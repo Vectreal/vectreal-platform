@@ -89,7 +89,7 @@ const DashboardPage = () => {
 				<div>
 					<div className="mb-4 flex items-center justify-between">
 						<h2 className="text-xl font-semibold">Recent Scenes</h2>
-						<Link to="/dashboard/projects">
+						<Link viewTransition to="/dashboard/projects">
 							<Button variant="outline" size="sm">
 								View All
 							</Button>
@@ -127,7 +127,7 @@ const DashboardPage = () => {
 					<p className="mt-1 text-gray-500">
 						Get started by creating your first project.
 					</p>
-					<Link to="/dashboard/projects/new">
+					<Link viewTransition to="/dashboard/projects/new">
 						<Button className="mt-4">
 							<Plus className="mr-2 h-4 w-4" />
 							Create Your First Project

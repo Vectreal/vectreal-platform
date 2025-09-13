@@ -29,6 +29,7 @@ const InfoContent = () => (
 		<small className="text-muted-foreground">
 			by Arsen Ismailov is licensed under{' '}
 			<Link
+				viewTransition
 				className="underline! transition-opacity hover:opacity-50"
 				to="http://creativecommons.org/licenses/by/4.0/"
 			>

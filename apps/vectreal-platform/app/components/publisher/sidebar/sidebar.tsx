@@ -101,7 +101,7 @@ const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
 						className="bg-muted/50 relative m-4 h-full w-92 flex-col overflow-hidden rounded-xl backdrop-blur-2xl"
 					>
 						<div className="flex w-full items-center gap-2 pl-4">
-							<Link to="/dashboard" className="group">
+							<Link viewTransition to="/dashboard" className="group">
 								<VectrealLogoSmall className="h-5 w-5 transition-opacity group-hover:opacity-70" />
 							</Link>
 							<SceneNameInput />
@@ -129,7 +129,7 @@ const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
 			>
 				{!showSidebar && (
 					<TooltipButton info="Go to your dashboard" size="icon">
-						<Link to="/dashboard" className="group">
+						<Link viewTransition to="/dashboard" className="group">
 							<VectrealLogoSmall className="text-muted-foreground ml-[2px] h-5 w-5 transition-opacity group-hover:opacity-70" />
 						</Link>
 					</TooltipButton>

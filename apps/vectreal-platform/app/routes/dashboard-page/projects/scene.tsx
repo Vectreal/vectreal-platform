@@ -25,7 +25,7 @@ const ScenePage = () => {
 						The scene you're looking for doesn't exist or you don't have access
 						to it.
 					</p>
-					<Link to={`/dashboard/projects/${projectId}`}>
+					<Link viewTransition to={`/dashboard/projects/${projectId}`}>
 						<Button className="mt-4">Back to Project</Button>
 					</Link>
 				</div>

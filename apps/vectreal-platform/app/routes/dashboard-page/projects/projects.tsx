@@ -82,6 +82,7 @@ const ProjectsPage = () => {
 											(org) => org.id === organization.id
 										) && (
 											<Link
+												viewTransition
 												to={`/dashboard/projects/new?org=${organization.id}`}
 											>
 												<Button variant="outline" size="sm" className="mt-2">
@@ -105,7 +106,7 @@ const ProjectsPage = () => {
 							Get started by creating your first project.
 						</p>
 						{creationCapabilities.canCreateProjects && (
-							<Link to="/dashboard/projects/new">
+							<Link viewTransition to="/dashboard/projects/new">
 								<Button className="mt-4">
 									<Plus className="mr-2 h-4 w-4" />
 									Create Your First Project
