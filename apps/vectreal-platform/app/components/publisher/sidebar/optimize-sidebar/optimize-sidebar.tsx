@@ -14,7 +14,7 @@ import {
 	SparklesIcon,
 	Star
 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { optimizationAtom } from '../../../../lib/stores/publisher-config-store'
 import { AccordionItem, AccordionTrigger } from '../accordion-components'
@@ -199,7 +199,10 @@ const OptimizeSidebarContent: React.FC = () => {
 		optimizations: { info, ...optimizations }
 	} = optimize
 
-	const optimizationStats = calculateOptimizationStats(info)
+	const optimizationStats = useMemo(
+		() => calculateOptimizationStats(info),
+		[info]
+	)
 
 	const [{ plannedOptimizations }] = useAtom(optimizationAtom)
 
@@ -244,8 +247,6 @@ const OptimizeSidebarContent: React.FC = () => {
 
 			// Apply all optimizations
 			await applyOptimization()
-
-			console.log('optimizations applied successfully')
 		} catch (error) {
 			console.error('Error during optimization:', error)
 		} finally {

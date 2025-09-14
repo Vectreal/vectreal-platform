@@ -24,11 +24,6 @@ export enum ModelFileTypes {
 
 export type InputFileOrDirectory = (File | FileSystemDirectoryHandle)[]
 
-export interface ReducedGltf {
-	images: { name: string; uri: string }[]
-	buffers: { bytelength: string; uri: string }[]
-}
-
 export interface ModelFile {
 	model: Object3D
 	type: ModelFileTypes

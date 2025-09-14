@@ -15,26 +15,9 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import { Transform, WebIO } from '@gltf-transform/core'
+import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 import {
-	KHRDracoMeshCompression,
-	KHRLightsPunctual,
-	KHRMaterialsAnisotropy,
-	KHRMaterialsClearcoat,
-	KHRMaterialsDiffuseTransmission,
-	KHRMaterialsDispersion,
-	KHRMaterialsEmissiveStrength,
-	KHRMaterialsIOR,
-	KHRMaterialsIridescence,
-	KHRMaterialsPBRSpecularGlossiness,
-	KHRMaterialsSheen,
-	KHRMaterialsSpecular,
-	KHRMaterialsTransmission,
-	KHRMaterialsUnlit,
-	KHRMaterialsVolume,
-	KHRMeshQuantization,
-	KHRTextureTransform
-} from '@gltf-transform/extensions'
-import {
+	cloneDocument,
 	dedup,
 	DedupOptions,
 	inspect,
@@ -70,29 +53,9 @@ const useOptimizeModel = () => {
 	const { model, report, error, loading } = state
 	const { info, reset: resetInfo } = useCalcOptimizationInfo(state)
 
-	// Initialize the GLTFExporter and WebIO with required extensions.
+	// Initialize the GLTFExporter and WebIO with available extensions.
 	const exporterRef = useRef<GLTFExporter>(new GLTFExporter())
-	const ioRef = useRef<WebIO>(
-		new WebIO().registerExtensions([
-			KHRDracoMeshCompression,
-			KHRLightsPunctual,
-			KHRMaterialsAnisotropy,
-			KHRMaterialsClearcoat,
-			KHRMaterialsDiffuseTransmission,
-			KHRMaterialsDispersion,
-			KHRMaterialsEmissiveStrength,
-			KHRMaterialsIOR,
-			KHRMaterialsIridescence,
-			KHRMaterialsPBRSpecularGlossiness,
-			KHRMaterialsSheen,
-			KHRMaterialsSpecular,
-			KHRMaterialsTransmission,
-			KHRMaterialsUnlit,
-			KHRMaterialsVolume,
-			KHRMeshQuantization,
-			KHRTextureTransform
-		])
-	)
+	const ioRef = useRef<WebIO>(new WebIO().registerExtensions(ALL_EXTENSIONS))
 
 	const load = useCallback(async (model: Object3D): Promise<void> => {
 		dispatch({ type: 'LOAD_START' })
@@ -125,13 +88,39 @@ const useOptimizeModel = () => {
 			if (!model) return
 
 			try {
-				await model.transform(...transforms)
+				// Create a safe copy and get original size before any mutations
+				const safeCopyDoc = cloneDocument(model)
+				const originalSize = (await ioRef.current.writeBinary(safeCopyDoc))
+					.byteLength
 
-				// Update the model report after transformations.
-				const report = inspect(model)
+				// Create a working copy to apply transforms to
+				const workingDoc = cloneDocument(model)
+				await workingDoc.transform(...transforms)
+				console.log(
+					`Applied transforms: ${transforms.map((t) => t.name).join(', ')}`
+				)
+
+				// Check if transformation resulted in a model with increased size
+				const newSize = (await ioRef.current.writeBinary(workingDoc)).byteLength
+
+				if (newSize > originalSize) {
+					console.warn(
+						`${transforms.map((t) => t.name).join(', ')} transformation${transforms.length > 1 ? 's' : ''} increased model size, reverting to previous state.`
+					)
+					console.warn(
+						`Original size: ${originalSize} bytes, New size: ${newSize} bytes.`
+					)
+
+					// Keep the original model unchanged - no state update needed
+					return
+				}
+
+				// If optimization was beneficial, update the model with the transformed version
+				const report = inspect(workingDoc)
+
 				dispatch({
 					type: 'LOAD_SUCCESS',
-					payload: { model: model, report: report }
+					payload: { model: workingDoc, report }
 				})
 			} catch (err) {
 				console.error('Error applying transforms:', err)

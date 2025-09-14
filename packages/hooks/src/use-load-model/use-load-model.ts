@@ -21,7 +21,6 @@ import { useOptimizeModel } from '../use-optimize-model'
 
 import eventSystem from './event-system'
 import { useLoadBinary, useLoadGltf } from './file-type-hooks'
-import { createGltfLoader } from './loaders'
 import reducer, { initialState } from './state'
 import {
 	Action,
@@ -221,30 +220,7 @@ function useOptimizerIntegration(
 	dispatch: React.Dispatch<Action>,
 	file: ModelFile | null
 ) {
-	const dispatchNewModel = useCallback(
-		(modelBuffer: Uint8Array) => {
-			const gltfLoader = createGltfLoader()
-
-			gltfLoader.parse(
-				modelBuffer.buffer as ArrayBuffer,
-				'',
-				(gltf) => {
-					dispatch({
-						type: 'set-file',
-						payload: {
-							model: gltf.scene,
-							type: ModelFileTypes.glb,
-							name: file?.name || 'optimized.glb'
-						}
-					})
-				},
-				(error) => {
-					console.error('Error loading new model:', error)
-				}
-			)
-		},
-		[dispatch, file]
-	)
+	const { loadBinary } = useLoadBinary(dispatch)
 
 	const applyOptimization = useCallback(
 		async <TOptions>(
@@ -263,20 +239,30 @@ function useOptimizerIntegration(
 				if (optimizationFunction) await optimizationFunction(options)
 
 				const optimizedModel = await optimizer.getModel()
-
-				if (optimizedModel) {
-					dispatchNewModel(optimizedModel)
+				if (!optimizedModel) {
+					console.warn('No optimized model available after optimization')
+					return
 				}
+
+				loadBinary(
+					new File([optimizedModel], file?.name || 'optimized_model.glb', {
+						type: 'model/gltf-binary'
+					}),
+					ModelFileTypes.glb,
+					() => {
+						/* no progress update on optimization load */
+					}
+				)
 			} catch (error) {
 				console.error('Optimization failed:', error)
 				// Optionally dispatch an error action here
 			}
 		},
-		[optimizer, dispatchNewModel]
+		[optimizer, loadBinary, file]
 	)
 
 	return {
-		applyOptimization: applyOptimization,
+		applyOptimization,
 		optimizations: optimizer?.optimizations,
 		reset: optimizer?.reset,
 		report: optimizer?.optimizations.report,

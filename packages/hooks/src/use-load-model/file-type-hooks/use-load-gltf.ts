@@ -13,76 +13,12 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
-
 import { useCallback } from 'react'
 
 import { createGltfLoader } from '../loaders'
-import { Action, ModelFileTypes, ReducedGltf } from '../types'
-import { arrayBufferToBase64 } from '../utils'
+import { Action, ModelFileTypes } from '../types'
 
 function useLoadGltf(dispatch: React.Dispatch<Action>) {
-	const embedExternalResources = useCallback(
-		async (
-			gltfContent: ReducedGltf,
-			otherFiles: File[],
-			onProgress: (progress: number) => void
-		) => {
-			const fileMap = new Map(otherFiles.map((file) => [file.name, file]))
-			const totalFiles =
-				(gltfContent.buffers?.length || 0) + (gltfContent.images?.length || 0)
-			let processedFiles = 0
-
-			const updateProgress = () => {
-				processedFiles++
-				onProgress((processedFiles / totalFiles) * 100)
-			}
-
-			// Embed buffers
-			if (gltfContent.buffers) {
-				for (let i = 0; i < gltfContent.buffers.length; i++) {
-					const buffer = gltfContent.buffers[i]
-					if (!buffer.uri || buffer.uri.startsWith('data:')) {
-						updateProgress()
-						continue
-					}
-
-					const fileName = buffer.uri.split('/').pop() || ''
-					const file = fileMap.get(fileName)
-					if (file) {
-						const arrayBuffer = await file.arrayBuffer()
-						const base64 = await arrayBufferToBase64(arrayBuffer)
-						buffer.uri = `data:application/octet-stream;base64,${base64}`
-					}
-					updateProgress()
-				}
-			}
-
-			// Embed images
-			if (gltfContent.images) {
-				for (let i = 0; i < gltfContent.images.length; i++) {
-					const image = gltfContent.images[i]
-					if (!image.uri || image.uri.startsWith('data:')) {
-						updateProgress()
-						continue
-					}
-
-					const fileName = image.uri.split('/').pop() || ''
-					const file = fileMap.get(fileName)
-					if (file) {
-						const arrayBuffer = await file.arrayBuffer()
-						const base64 = await arrayBufferToBase64(arrayBuffer)
-						const mimeType = file.type || 'image/png'
-						image.uri = `data:${mimeType};base64,${base64}`
-					}
-					updateProgress()
-				}
-			}
-
-			return gltfContent
-		},
-		[]
-	)
-
 	const loadGltf = useCallback(
 		(
 			gltfFile: File,
@@ -90,39 +26,60 @@ function useLoadGltf(dispatch: React.Dispatch<Action>) {
 			onProgress: (progress: number) => void
 		) => {
 			const reader = new FileReader()
+
 			reader.onload = async (e) => {
-				const gltfContent = JSON.parse(e.target?.result as string)
-				onProgress(10) // Initial progress after parsing GLTF
+				try {
+					onProgress(10) // Initial progress after parsing GLTF
 
-				const modifiedGLTF = await embedExternalResources(
-					gltfContent,
-					otherFiles,
-					(embeddingProgress) => {
-						// Map embedding progress to 10-90% range
-						onProgress(10 + embeddingProgress * 0.8)
-					}
-				)
+					// Create blob map only for external files (textures, buffers, etc.)
+					const fileEntries = await Promise.all(
+						otherFiles.map(
+							async (file): Promise<[string, Blob]> => [
+								file.name,
+								new Blob([await file.arrayBuffer()])
+							]
+						)
+					)
 
-				const gltfLoader = createGltfLoader()
+					const [gltfLoader, blobUrls] = createGltfLoader(new Map(fileEntries))
 
-				gltfLoader.parse(JSON.stringify(modifiedGLTF), '', (gltf) => {
-					dispatch({
-						type: 'set-file',
-						payload: {
-							model: gltf.scene,
-							type: ModelFileTypes.gltf,
-							name: gltfFile.name
+					// Load GLTF directly using parse method with the file content
+					const gltfArrayBuffer = await gltfFile.arrayBuffer()
+
+					gltfLoader.parse(
+						gltfArrayBuffer,
+						'',
+						(gltf) => {
+							console.log('GLTF loaded successfully:', gltf)
+							dispatch({
+								type: 'set-file',
+								payload: {
+									model: gltf.scene,
+									type: ModelFileTypes.gltf,
+									name: gltfFile.name
+								}
+							})
+
+							// Clean up blob URLs
+							blobUrls.forEach((url) => URL.revokeObjectURL(url))
+
+							onProgress(100) // Final progress
+							dispatch({ type: 'set-file-loading', payload: false })
+						},
+						(error) => {
+							console.error('Error loading GLTF:', error)
+							dispatch({ type: 'set-file-loading', payload: false })
 						}
-					})
-				})
-
-				onProgress(100) // Final progress
-				dispatch({ type: 'set-file-loading', payload: false })
+					)
+				} catch (error) {
+					console.error('Error parsing GLTF file:', error)
+					dispatch({ type: 'set-file-loading', payload: false })
+				}
 			}
 
 			reader.readAsText(gltfFile)
 		},
-		[dispatch, embedExternalResources]
+		[dispatch]
 	)
 
 	return { loadGltf }

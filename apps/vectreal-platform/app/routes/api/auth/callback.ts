@@ -28,7 +28,6 @@ export async function loader({ request }: Route.ActionArgs) {
 			try {
 				// Initialize user with defaults (user, organization, project) in local database
 				await userService.initializeUserDefaults(userData.user)
-				console.log('User initialized successfully:', userData.user.id)
 			} catch (dbError) {
 				console.error('Database error during user initialization:', {
 					error: dbError,

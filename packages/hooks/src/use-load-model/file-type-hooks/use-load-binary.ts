@@ -43,7 +43,7 @@ function useLoadBinary(dispatch: React.Dispatch<Action>) {
 					const arrayBuffer = event.target.result as ArrayBuffer
 
 					if (fileType === ModelFileTypes.glb) {
-						const gltfLoader = createGltfLoader()
+						const [gltfLoader] = createGltfLoader()
 
 						gltfLoader.parse(arrayBuffer, '', (gltf) => {
 							dispatch({

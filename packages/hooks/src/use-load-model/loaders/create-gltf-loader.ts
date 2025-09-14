@@ -14,7 +14,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { WebGLRenderer } from 'three'
+import { LoadingManager, WebGLRenderer } from 'three'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
@@ -22,23 +22,39 @@ import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
 
 import eventSystem from '../event-system'
 
-function createGltfLoader() {
+function createGltfLoader(fileBlobs?: Map<string, Blob>) {
 	const dracoLoader = new DRACOLoader()
 	dracoLoader.setDecoderPath('/draco/')
 
 	const ktxLoader = new KTX2Loader()
 	ktxLoader.setTranscoderPath('/draco/')
 
-	const gltfLoader = new GLTFLoader()
+	const manager = new LoadingManager()
+	const blobUrls: string[] = []
+
+	manager.setURLModifier((url) => {
+		if (!fileBlobs) return url
+
+		const blob = fileBlobs?.get(url)
+		if (!blob) {
+			console.warn(`File not found in blob map: ${url}`)
+			return url // Return original URL as fallback
+		}
+		const blobUrl = URL.createObjectURL(blob)
+		blobUrls.push(blobUrl)
+		return blobUrl
+	})
+
+	manager.onError = (url) => {
+		eventSystem.emit('load-error', `Failed to load file ${url}`)
+	}
+
+	const gltfLoader = new GLTFLoader(manager)
 		.setDRACOLoader(dracoLoader)
 		.setKTX2Loader(ktxLoader.detectSupport(new WebGLRenderer()))
 		.setMeshoptDecoder(MeshoptDecoder)
 
-	gltfLoader.manager.onError = (url) => {
-		eventSystem.emit('load-error', `Failed to load file ${url}`)
-	}
-
-	return gltfLoader
+	return [gltfLoader, blobUrls] as const
 }
 
 export default createGltfLoader
