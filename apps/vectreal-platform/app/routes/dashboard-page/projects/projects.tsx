@@ -4,7 +4,6 @@ import { FolderOpen, Plus } from 'lucide-react'
 import { Link, Outlet, useLocation } from 'react-router'
 
 import DashboardCard from '../../../components/dashboard/dashboard-card'
-import { useUserScenes } from '../../../contexts/auth-context'
 import {
 	useProjectCreationCapabilities,
 	useProjectsByOrganization,
@@ -22,8 +21,7 @@ const ProjectsPage = () => {
 	const projectsByOrg = useProjectsByOrganization()
 
 	const creationCapabilities = useProjectCreationCapabilities()
-	const scenes = useUserScenes()
-	const sceneStats = useSceneStats(scenes)
+	const sceneStats = useSceneStats()
 
 	// Check if we're at a child route like /new
 	const isChildRoute = location.pathname.includes('/new')

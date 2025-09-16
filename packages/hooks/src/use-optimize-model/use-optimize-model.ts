@@ -1,3 +1,5 @@
+'use client'
+
 /* vectreal-core | vctrl/hooks
 Copyright (C) 2024 Moritz Becker
 
@@ -14,63 +16,68 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-import { Transform, WebIO } from '@gltf-transform/core'
-import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 import {
-	cloneDocument,
-	dedup,
-	DedupOptions,
-	inspect,
-	normals,
-	NormalsOptions,
-	quantize,
-	QuantizeOptions,
-	simplify,
-	SimplifyOptions,
-	textureCompress,
-	TextureCompressOptions,
-	weld
-} from '@gltf-transform/functions'
-import { MeshoptSimplifier } from 'meshoptimizer'
-import { useCallback, useReducer, useRef } from 'react'
+	type DedupOptions,
+	ModelOptimizer,
+	type NormalsOptions,
+	type OptimizationProgress,
+	type QuantizeOptions,
+	type SimplifyOptions,
+	type TextureCompressOptions
+} from '@vctrl/core'
+import { useCallback, useEffect, useReducer, useRef } from 'react'
 import { Object3D } from 'three'
-import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter'
 
 import { initialState, reducer } from './state'
 import { useCalcOptimizationInfo } from './use-calc-optimization-info'
 
 /**
- * Custom React hook for optimizing Three.js models using glTF-Transform.
+ * Custom React hook for optimizing Three.js models using the core ModelOptimizer.
  *
- * This hook provides functions to load, optimize, and retrieve Three.js models.
- * Optimizations include deduplication, quantization, and simplification of model meshes and textures.
+ * This hook provides a React-friendly interface to the server-side optimization
+ * capabilities while gracefully handling browser limitations (like Sharp for textures).
  *
  * @returns An object containing functions to interact with the model optimizer.
  */
 const useOptimizeModel = () => {
 	// Use useReducer to manage complex state transitions.
 	const [state, dispatch] = useReducer(reducer, initialState)
-	const { model, report, error, loading } = state
+	const { report, error, loading } = state
 	const { info, reset: resetInfo } = useCalcOptimizationInfo(state)
 
-	// Initialize the GLTFExporter and WebIO with available extensions.
-	const exporterRef = useRef<GLTFExporter>(new GLTFExporter())
-	const ioRef = useRef<WebIO>(new WebIO().registerExtensions(ALL_EXTENSIONS))
+	// Initialize the ModelOptimizer with progress tracking
+	const optimizerRef = useRef<ModelOptimizer>(new ModelOptimizer())
+
+	useEffect(() => {
+		const optimizer = optimizerRef.current
+
+		// Set up progress tracking
+		optimizer.onProgress((progress: OptimizationProgress) => {
+			// Could dispatch progress updates to state if needed
+			console.log(`${progress.operation}: ${progress.progress}%`)
+		})
+
+		return () => {
+			optimizer.reset()
+		}
+	}, [])
 
 	const load = useCallback(async (model: Object3D): Promise<void> => {
 		dispatch({ type: 'LOAD_START' })
 
 		try {
-			const parseOptions = { binary: true }
-			const binary = await exporterRef.current.parseAsync(model, parseOptions)
-			const modelBuffer = new Uint8Array(binary as ArrayBuffer)
-			const doc = await ioRef.current.readBinary(modelBuffer)
+			const optimizer = optimizerRef.current
+			await optimizer.loadFromThreeJS(model)
 
-			const report = inspect(doc)
+			// Get the report from the optimizer
+			const optimizationReport = await optimizer.getReport()
 
 			dispatch({
 				type: 'LOAD_SUCCESS',
-				payload: { model: doc, report: report }
+				payload: {
+					model: await optimizer.export(), // Store as Uint8Array for now
+					report: optimizationReport
+				}
 			})
 		} catch (err) {
 			dispatch({ type: 'LOAD_ERROR', payload: err as Error })
@@ -78,113 +85,137 @@ const useOptimizeModel = () => {
 		}
 	}, [])
 
-	/**
-	 * Helper function to apply transformations to the model document and update the state.
-	 *
-	 * @param transforms - Array of transforms to apply.
-	 */
-	const applyTransforms = useCallback(
-		async (transforms: Transform[]): Promise<void> => {
-			if (!model) return
+	const simplifyOptimization = useCallback(
+		async (options?: SimplifyOptions): Promise<void> => {
+			if (!optimizerRef.current.hasModel()) return
 
 			try {
-				// Create a safe copy and get original size before any mutations
-				const safeCopyDoc = cloneDocument(model)
-				const originalSize = (await ioRef.current.writeBinary(safeCopyDoc))
-					.byteLength
-
-				// Create a working copy to apply transforms to
-				const workingDoc = cloneDocument(model)
-				await workingDoc.transform(...transforms)
-				console.log(
-					`Applied transforms: ${transforms.map((t) => t.name).join(', ')}`
-				)
-
-				// Check if transformation resulted in a model with increased size
-				const newSize = (await ioRef.current.writeBinary(workingDoc)).byteLength
-
-				if (newSize > originalSize) {
-					console.warn(
-						`${transforms.map((t) => t.name).join(', ')} transformation${transforms.length > 1 ? 's' : ''} increased model size, reverting to previous state.`
-					)
-					console.warn(
-						`Original size: ${originalSize} bytes, New size: ${newSize} bytes.`
-					)
-
-					// Keep the original model unchanged - no state update needed
-					return
-				}
-
-				// If optimization was beneficial, update the model with the transformed version
-				const report = inspect(workingDoc)
+				await optimizerRef.current.simplify(options)
+				const report = await optimizerRef.current.getReport()
 
 				dispatch({
 					type: 'LOAD_SUCCESS',
-					payload: { model: workingDoc, report }
+					payload: {
+						model: await optimizerRef.current.export(),
+						report
+					}
 				})
 			} catch (err) {
-				console.error('Error applying transforms:', err)
+				console.error('Simplification failed:', err)
 			}
 		},
-		[model]
-	)
-
-	const simplifyOptimization = useCallback(
-		async (options?: Omit<SimplifyOptions, 'simplifier'>): Promise<void> => {
-			const { ratio = 0.5, error: simplifierError = 0.001 } = options || {}
-
-			await applyTransforms([
-				weld(),
-				simplify({
-					ratio,
-					simplifier: MeshoptSimplifier,
-					error: simplifierError
-				})
-			])
-		},
-		[applyTransforms]
+		[]
 	)
 
 	const dedupOptimization = useCallback(
 		async (options?: DedupOptions): Promise<void> => {
-			await applyTransforms([dedup(options)])
+			if (!optimizerRef.current.hasModel()) return
+
+			try {
+				await optimizerRef.current.deduplicate(options)
+				const report = await optimizerRef.current.getReport()
+
+				dispatch({
+					type: 'LOAD_SUCCESS',
+					payload: {
+						model: await optimizerRef.current.export(),
+						report
+					}
+				})
+			} catch (err) {
+				console.error('Deduplication failed:', err)
+			}
 		},
-		[applyTransforms]
+		[]
 	)
 
 	const quantizeOptimization = useCallback(
 		async (options?: QuantizeOptions): Promise<void> => {
-			await applyTransforms([quantize(options)])
+			if (!optimizerRef.current.hasModel()) return
+
+			try {
+				await optimizerRef.current.quantize(options)
+				const report = await optimizerRef.current.getReport()
+
+				dispatch({
+					type: 'LOAD_SUCCESS',
+					payload: {
+						model: await optimizerRef.current.export(),
+						report
+					}
+				})
+			} catch (err) {
+				console.error('Quantization failed:', err)
+			}
 		},
-		[applyTransforms]
+		[]
 	)
 
 	const normalsOptimization = useCallback(
 		async (options?: NormalsOptions): Promise<void> => {
-			await applyTransforms([normals(options)])
+			if (!optimizerRef.current.hasModel()) return
+
+			try {
+				await optimizerRef.current.optimizeNormals(options)
+				const report = await optimizerRef.current.getReport()
+
+				dispatch({
+					type: 'LOAD_SUCCESS',
+					payload: {
+						model: await optimizerRef.current.export(),
+						report
+					}
+				})
+			} catch (err) {
+				console.error('Normals optimization failed:', err)
+			}
 		},
-		[applyTransforms]
+		[]
 	)
 
 	const texturesOptimization = useCallback(
 		async (options?: TextureCompressOptions): Promise<void> => {
-			options && (await applyTransforms([textureCompress(options)]))
+			if (!optimizerRef.current.hasModel()) return
+
+			// Check if we're in a browser environment
+			if (typeof window !== 'undefined') {
+				console.warn(
+					'Texture compression requires a Node.js server environment. This operation will be skipped in the browser.'
+				)
+				return
+			}
+
+			try {
+				await optimizerRef.current.compressTextures(options)
+				const report = await optimizerRef.current.getReport()
+
+				dispatch({
+					type: 'LOAD_SUCCESS',
+					payload: {
+						model: await optimizerRef.current.export(),
+						report
+					}
+				})
+			} catch (err) {
+				console.error('Texture compression failed:', err)
+			}
 		},
-		[applyTransforms]
+		[]
 	)
 
 	const getModel = useCallback(async (): Promise<Uint8Array | null> => {
-		if (!model) return null
+		if (!optimizerRef.current.hasModel()) return null
 
 		try {
-			return await ioRef.current.writeBinary(model)
+			return await optimizerRef.current.export()
 		} catch (err) {
 			console.error('Error getting model binary:', err)
 			return null
 		}
-	}, [model])
+	}, [])
 
 	const reset = useCallback((): void => {
+		optimizerRef.current.reset()
 		dispatch({ type: 'RESET' })
 		resetInfo()
 	}, [resetInfo])
@@ -216,8 +247,6 @@ const useOptimizeModel = () => {
 			 * Simplifies the current model document using MeshoptSimplifier.
 			 *
 			 * @param options - Optional parameters to control simplification.
-			 * @param options.ratio - The simplification ratio - default = 0.5.
-			 * @param options.error - The simplification error value - default = 0.001.
 			 * @returns A promise that resolves when the model has been simplified.
 			 */
 			simplifyOptimization,
@@ -243,6 +272,7 @@ const useOptimizeModel = () => {
 			normalsOptimization,
 			/**
 			 * Compresses the relevant texture data in the document using texture compression.
+			 * Note: Only works in Node.js server environments.
 			 *
 			 * @param options - Optional parameters to control texture compression.
 			 * @returns A promise that resolves when the model has been compressed.

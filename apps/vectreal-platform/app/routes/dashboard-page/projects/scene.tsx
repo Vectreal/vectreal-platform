@@ -4,7 +4,6 @@ import { Edit, Eye, Settings } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 
 import { BasicCard } from '../../../components'
-import { useUserScenes } from '../../../contexts/auth-context'
 import { useProject, useScene } from '../../../hooks'
 
 const ScenePage = () => {
@@ -13,8 +12,7 @@ const ScenePage = () => {
 	const sceneId = params.sceneId
 
 	const project = useProject(projectId || '')
-	const scenes = useUserScenes()
-	const scene = useScene(sceneId || '', scenes)
+	const scene = useScene(sceneId || '')
 
 	if (!scene || !project || !projectId || !sceneId) {
 		return (

@@ -30,7 +30,15 @@
 				"packages/hooks/src/use-optimize-model/index.ts"
 			],
 			"@vctrl/official-website/*": ["apps/official-website/src/*"],
-			"@vctrl/viewer": ["packages/viewer/src/index.ts"]
+			"@vctrl/viewer": ["packages/viewer/src/index.ts"],
+			"@vctrl/core": ["packages/core/src/index.ts"],
+			"@vctrl/core/model-loader": ["packages/core/src/model-loader/index.ts"],
+			"@vctrl/core/model-optimizer": [
+				"packages/core/src/model-optimizer/index.ts"
+			],
+			"@vctrl/core/model-exporter": [
+				"packages/core/src/model-exporter/index.ts"
+			]
 		}
 	},
 	"exclude": ["node_modules", "tmp"]

@@ -57,33 +57,3 @@ export const useAuth = () => {
 	}
 	return context
 }
-
-export const useCurrentUser = () => {
-	const { user } = useAuth()
-	return user
-}
-
-export const useUserWithDefaults = () => {
-	const { userWithDefaults } = useAuth()
-	return userWithDefaults
-}
-
-export const useUserOrganizations = () => {
-	const { organizations } = useAuth()
-	return organizations
-}
-
-export const useUserProjects = () => {
-	const { projects } = useAuth()
-	return projects
-}
-
-export const useUserScenes = () => {
-	const { scenes } = useAuth()
-	return scenes
-}
-
-export const useUserSceneFolders = () => {
-	const { sceneFolders } = useAuth()
-	return sceneFolders
-}

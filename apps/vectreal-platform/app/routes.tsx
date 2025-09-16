@@ -10,6 +10,7 @@ export default [
 	// API
 	route('api/update-theme', './routes/api/update-theme.ts'),
 	route('api/scene-settings', './routes/api/scene-settings.ts'),
+	route('api/optimize-model', './routes/api/optimize-model.ts'),
 
 	// auth
 	route('auth/logout', './routes/api/auth/logout.ts'),

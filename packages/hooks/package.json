@@ -60,12 +60,8 @@
 		"vite-plugin-dts": "4.5.3"
 	},
 	"dependencies": {
-		"@gltf-transform/core": "^4.0.8",
-		"@gltf-transform/extensions": "^4.0.10",
-		"@gltf-transform/functions": "^4.0.8",
+		"@vctrl/core": "workspace:*",
 		"file-saver": "^2.0.5",
-		"jszip": "^3.10.1",
-		"meshoptimizer": "^0.21.0",
 		"three": "^0.177.0"
 	}
 }

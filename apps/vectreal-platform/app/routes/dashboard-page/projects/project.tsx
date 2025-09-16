@@ -5,10 +5,6 @@ import { File, Folder, Plus } from 'lucide-react'
 import { Link, Outlet, useLocation, useParams } from 'react-router'
 
 import DashboardCard from '../../../components/dashboard/dashboard-card'
-import {
-	useUserSceneFolders,
-	useUserScenes
-} from '../../../contexts/auth-context'
 import { useProject, useProjectContent } from '../../../hooks'
 
 const ProjectPage = () => {
@@ -17,14 +13,8 @@ const ProjectPage = () => {
 	const projectId = params.projectId
 
 	const project = useProject(projectId || '')
-	const scenes = useUserScenes()
-	const sceneFolders = useUserSceneFolders()
 
-	const projectContent = useProjectContent(
-		projectId || '',
-		sceneFolders,
-		scenes
-	)
+	const projectContent = useProjectContent(projectId || '')
 
 	if (!project || !projectId) {
 		return (

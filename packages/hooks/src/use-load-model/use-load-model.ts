@@ -14,20 +14,15 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { useCallback, useEffect, useReducer, useRef } from 'react'
+import { LoadProgress, ModelFileTypes, ModelLoader } from '@vctrl/core'
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import { Object3D } from 'three'
 
 import { useOptimizeModel } from '../use-optimize-model'
 
 import eventSystem from './event-system'
-import { useLoadBinary, useLoadGltf } from './file-type-hooks'
 import reducer, { initialState } from './state'
-import {
-	Action,
-	InputFileOrDirectory,
-	ModelFile,
-	ModelFileTypes
-} from './types'
+import { Action, InputFileOrDirectory, ModelFile } from './types'
 import { readDirectory } from './utils'
 
 /**
@@ -40,8 +35,18 @@ function useLoadModel(optimizer?: ReturnType<typeof useOptimizeModel>) {
 	const uploadCompleteRef = useRef(false)
 	const [state, dispatch] = useReducer(reducer, initialState)
 
-	const { loadGltf } = useLoadGltf(dispatch)
-	const { loadBinary } = useLoadBinary(dispatch)
+	// Create ModelLoader instance
+	const modelLoader = useMemo(() => {
+		const loader = new ModelLoader()
+
+		// Set up progress callback
+		loader.onProgress((progress: LoadProgress) => {
+			dispatch({ type: 'set-progress', payload: progress.progress })
+			eventSystem.emit('load-progress', progress.progress)
+		})
+
+		return loader
+	}, [])
 
 	const getFileOfType = useCallback(
 		(files: File[], fileType: ModelFileTypes) =>
@@ -59,8 +64,59 @@ function useLoadModel(optimizer?: ReturnType<typeof useOptimizeModel>) {
 		eventSystem.emit('load-reset')
 	}, [])
 
+	const loadBinaryModel = useCallback(
+		async (file: File, fileType: ModelFileTypes) => {
+			try {
+				const result = await modelLoader.loadToThreeJS(file)
+
+				dispatch({
+					type: 'set-file',
+					payload: {
+						model: result.scene,
+						type: fileType,
+						name: file.name
+					}
+				})
+
+				dispatch({ type: 'set-file-loading', payload: false })
+			} catch (error) {
+				console.error('Error loading binary model:', error)
+				dispatch({ type: 'set-file-loading', payload: false })
+				eventSystem.emit('load-error', error)
+			}
+		},
+		[modelLoader]
+	)
+
+	const loadGltfModel = useCallback(
+		async (gltfFile: File, otherFiles: File[]) => {
+			try {
+				const result = await modelLoader.loadGLTFWithAssetsToThreeJS(
+					gltfFile,
+					otherFiles
+				)
+
+				dispatch({
+					type: 'set-file',
+					payload: {
+						model: result.scene,
+						type: ModelFileTypes.gltf,
+						name: gltfFile.name
+					}
+				})
+
+				dispatch({ type: 'set-file-loading', payload: false })
+			} catch (error) {
+				console.error('Error loading GLTF model:', error)
+				dispatch({ type: 'set-file-loading', payload: false })
+				eventSystem.emit('load-error', error)
+			}
+		},
+		[modelLoader]
+	)
+
 	const processFiles = useCallback(
-		(files: File[]) => {
+		async (files: File[]) => {
 			if (files.length === 0) return
 
 			const gltfFile = getFileOfType(files, ModelFileTypes.gltf)
@@ -80,27 +136,27 @@ function useLoadModel(optimizer?: ReturnType<typeof useOptimizeModel>) {
 				(file) => file !== gltfFile && file !== glbFile && file !== usdzFile
 			)
 
-			const updateFileProgress = (progress: number) => {
-				updateProgress(progress)
-
-				if (progress === 100) {
-					uploadCompleteRef.current = true
-				}
+			const updateFileProgress = () => {
+				uploadCompleteRef.current = true
+				updateProgress(100)
 			}
 
 			if (gltfFile) {
-				loadGltf(gltfFile, otherFiles, updateFileProgress)
+				await loadGltfModel(gltfFile, otherFiles)
+				updateFileProgress()
 			} else if (glbFile) {
-				loadBinary(glbFile, ModelFileTypes.glb, () => updateFileProgress(100))
+				await loadBinaryModel(glbFile, ModelFileTypes.glb)
+				updateFileProgress()
 			} else if (usdzFile) {
-				loadBinary(usdzFile, ModelFileTypes.usdz, () => updateFileProgress(100))
+				await loadBinaryModel(usdzFile, ModelFileTypes.usdz)
+				updateFileProgress()
 			} else {
 				eventSystem.emit('not-loaded-files', files)
 				dispatch({ type: 'set-file-loading', payload: false })
 				return
 			}
 		},
-		[updateProgress, getFileOfType, loadGltf, loadBinary]
+		[getFileOfType, loadGltfModel, loadBinaryModel, updateProgress]
 	)
 
 	const load = useCallback(
@@ -144,7 +200,8 @@ function useLoadModel(optimizer?: ReturnType<typeof useOptimizeModel>) {
 	const optimizerIntegration = useOptimizerIntegration(
 		optimizer,
 		dispatch,
-		state.file
+		state.file,
+		modelLoader
 	)
 
 	return {
@@ -213,15 +270,15 @@ type OptimizerIntegrationReturn = Partial<OptimizerReturnType> & {
  * @param optimizer - The optimizer instance.
  * @param dispatch - The dispatch function from useReducer.
  * @param file - The current model file.
+ * @param modelLoader - The ModelLoader instance.
  * @returns An object containing optimization functions and optimizer states.
  */
 function useOptimizerIntegration(
 	optimizer: ReturnType<typeof useOptimizeModel> | undefined,
 	dispatch: React.Dispatch<Action>,
-	file: ModelFile | null
+	file: ModelFile | null,
+	modelLoader: ModelLoader
 ) {
-	const { loadBinary } = useLoadBinary(dispatch)
-
 	const applyOptimization = useCallback(
 		async <TOptions>(
 			optimizationFunction?:
@@ -244,21 +301,31 @@ function useOptimizerIntegration(
 					return
 				}
 
-				loadBinary(
-					new File([optimizedModel], file?.name || 'optimized_model.glb', {
+				// Create a File object from the optimized model and load it
+				const optimizedFile = new File(
+					[optimizedModel],
+					file?.name || 'optimized_model.glb',
+					{
 						type: 'model/gltf-binary'
-					}),
-					ModelFileTypes.glb,
-					() => {
-						/* no progress update on optimization load */
 					}
 				)
+
+				const result = await modelLoader.loadToThreeJS(optimizedFile)
+
+				dispatch({
+					type: 'set-file',
+					payload: {
+						model: result.scene,
+						type: ModelFileTypes.glb,
+						name: optimizedFile.name
+					}
+				})
 			} catch (error) {
 				console.error('Optimization failed:', error)
 				// Optionally dispatch an error action here
 			}
 		},
-		[optimizer, loadBinary, file]
+		[optimizer, modelLoader, file, dispatch]
 	)
 
 	return {

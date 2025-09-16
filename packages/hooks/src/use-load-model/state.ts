@@ -14,7 +14,9 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { Action, LoadData, ModelFileTypes } from './types'
+import { ModelFileTypes } from '@vctrl/core'
+
+import { Action, LoadData } from './types'
 
 /**
  * Initial state for the useReadModelFiles hook
@@ -41,7 +43,11 @@ export const initialState: LoadData = {
 	 * List of supported file types
 	 * @type {ModelFileTypes[]}
 	 */
-	supportedFileTypes: Object.values(ModelFileTypes)
+	supportedFileTypes: [
+		ModelFileTypes.gltf,
+		ModelFileTypes.glb,
+		ModelFileTypes.usdz
+	]
 }
 
 /**

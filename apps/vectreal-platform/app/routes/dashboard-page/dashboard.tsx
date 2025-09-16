@@ -5,10 +5,11 @@ import { Link } from 'react-router'
 
 import DashboardCard from '../../components/dashboard/dashboard-card'
 import {
-	useUserOrganizations,
-	useUserScenes
-} from '../../contexts/auth-context'
-import { useProjectStats, useRecentScenes, useSceneStats } from '../../hooks'
+	useOrganizations,
+	useProjectStats,
+	useRecentScenes,
+	useSceneStats
+} from '../../hooks'
 
 import { Route } from './+types/dashboard'
 
@@ -17,11 +18,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 const DashboardPage = () => {
-	const organizations = useUserOrganizations()
-	const scenes = useUserScenes()
+	const organizations = useOrganizations()
 	const projectStats = useProjectStats()
-	const sceneStats = useSceneStats(scenes)
-	const recentScenes = useRecentScenes(scenes, 6)
+	const sceneStats = useSceneStats()
+	const recentScenes = useRecentScenes(6)
 
 	return (
 		<div className="space-y-8 p-6">

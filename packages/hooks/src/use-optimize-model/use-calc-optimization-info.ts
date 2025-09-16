@@ -1,20 +1,38 @@
-import {
-	InspectMeshReport,
-	InspectTextureReport
-} from '@gltf-transform/functions'
+import { OptimizationReport } from '@vctrl/core'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { OptimizationInfo, OptimizationState } from './types'
 
 /**
- * Helper function to sum a specific property over an array of objects.
+ * Helper function to safely get stats from optimization report.
  */
-function sumProperty<K extends string>(
-	items: Record<K, number>[] | undefined,
-	property: K
-): number {
-	if (!items) return 0
-	return items.reduce((total, item) => total + (item[property] || 0), 0)
+function getStatsFromReport(report: OptimizationReport | null): {
+	vertices: number
+	primitives: number
+	meshes: number
+	textures: number
+	materials: number
+	totalSize: number
+} {
+	if (!report) {
+		return {
+			vertices: 0,
+			primitives: 0,
+			meshes: 0,
+			textures: 0,
+			materials: 0,
+			totalSize: 0
+		}
+	}
+
+	return {
+		vertices: report.stats.vertices.after || 0,
+		primitives: report.stats.triangles.after || 0,
+		meshes: report.stats.meshes.after || 0,
+		textures: report.stats.textures.after || 0,
+		materials: report.stats.materials.after || 0,
+		totalSize: report.optimizedSize || 0
+	}
 }
 
 export interface OptimizationInfoData {
@@ -25,94 +43,49 @@ export interface OptimizationInfoData {
 export const useCalcOptimizationInfo = (
 	state: OptimizationState
 ): OptimizationInfoData => {
-	const initialReport = useRef<Pick<OptimizationState, 'report'>>(state)
+	const initialReport = useRef<OptimizationReport | null>(null)
 	const [initialCaptured, setInitialCaptured] = useState<boolean>(false)
 	const report = state.report
 
 	// Capture initial state
 	useEffect(() => {
 		if (!initialCaptured && report) {
-			initialReport.current = { report }
+			initialReport.current = report
 			setInitialCaptured(true)
 		}
 	}, [initialCaptured, report])
 
 	const info = useMemo(() => {
-		const initial = initialReport.current
-
-		// Initial stats
-		const initialVerticesTotal = sumProperty(
-			initial?.report?.meshes?.properties as InspectMeshReport[],
-			'vertices'
-		)
-
-		const initialPrimitivesTotal = sumProperty(
-			initial?.report?.meshes?.properties as InspectMeshReport[],
-			'glPrimitives'
-		)
-
-		const initialMeshesSizeTotal = sumProperty(
-			initial?.report?.meshes?.properties as InspectMeshReport[],
-			'size'
-		)
-
-		const initialTexturesSizeTotal = sumProperty(
-			initial?.report?.textures?.properties as InspectTextureReport[],
-			'size'
-		)
-
-		const totalBytes = initialMeshesSizeTotal + initialTexturesSizeTotal
-
-		// Current stats
-		const currentVerticesTotal = sumProperty(
-			report?.meshes?.properties as InspectMeshReport[],
-			'vertices'
-		)
-
-		const currentPrimitivesTotal = sumProperty(
-			report?.meshes?.properties as InspectMeshReport[],
-			'glPrimitives'
-		)
-
-		const currentMeshesSizeTotal = sumProperty(
-			report?.meshes?.properties as InspectMeshReport[],
-			'size'
-		)
-
-		const currentTexturesSizeTotal = sumProperty(
-			report?.textures?.properties as InspectTextureReport[],
-			'size'
-		)
-
-		const currentTotalBytes = currentMeshesSizeTotal + currentTexturesSizeTotal
+		const initial = getStatsFromReport(initialReport.current)
+		const current = getStatsFromReport(report)
 
 		return {
 			initial: {
-				verticesCount: initialVerticesTotal,
-				primitivesCount: initialPrimitivesTotal,
-				meshesSize: initialMeshesSizeTotal,
-				texturesSize: initialTexturesSizeTotal,
-				sceneBytes: totalBytes
+				verticesCount: initial.vertices,
+				primitivesCount: initial.primitives,
+				meshesSize: initial.meshes,
+				texturesSize: initial.textures,
+				sceneBytes: initial.totalSize
 			},
 			optimized: {
-				verticesCount: currentVerticesTotal,
-				primitivesCount: currentPrimitivesTotal,
-				meshesSize: currentMeshesSizeTotal,
-				texturesSize: currentTexturesSizeTotal,
-				sceneBytes: currentTotalBytes
+				verticesCount: current.vertices,
+				primitivesCount: current.primitives,
+				meshesSize: current.meshes,
+				texturesSize: current.textures,
+				sceneBytes: current.totalSize
 			},
 			improvement: {
-				verticesCount: initialVerticesTotal - currentVerticesTotal,
-				primitivesCount: initialPrimitivesTotal - currentPrimitivesTotal,
-				meshesSize: initialMeshesSizeTotal - currentMeshesSizeTotal,
-				texturesSize: initialTexturesSizeTotal - currentTexturesSizeTotal,
-				sceneBytes: totalBytes - currentTotalBytes
+				verticesCount: initial.vertices - current.vertices,
+				primitivesCount: initial.primitives - current.primitives,
+				meshesSize: initial.meshes - current.meshes,
+				texturesSize: initial.textures - current.textures,
+				sceneBytes: initial.totalSize - current.totalSize
 			}
 		}
 	}, [report])
 
 	const reset = useCallback(() => {
-		initialReport.current = { report: null }
+		initialReport.current = null
 		setInitialCaptured(false)
 	}, [])
 

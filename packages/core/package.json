@@ -1,0 +1,71 @@
+{
+	"version": "0.9.5",
+	"name": "@vctrl/core",
+	"description": "vctrl/core is the foundational package providing server-side 3D model processing capabilities. It contains the core classes for loading, optimizing, and exporting 3D models using glTF-Transform and Three.js, designed for Node.js environments.",
+	"bugs": {
+		"url": "https://github.com/vectreal/vectreal-core/issues"
+	},
+	"homepage": "https://core.vectreal.com",
+	"keywords": [
+		"vectreal",
+		"3d",
+		"model",
+		"gltf",
+		"glb",
+		"usdz",
+		"optimization",
+		"three",
+		"server-side",
+		"node",
+		"gltf-transform"
+	],
+	"repository": {
+		"url": "https://github.com/vectreal/vectreal-core",
+		"type": "https"
+	},
+	"license": "AGPL-3.0-only",
+	"types": "./index.d.ts",
+	"main": "./index.cjs.js",
+	"module": "./index.es.js",
+	"type": "module",
+	"publishConfig": {
+		"access": "public"
+	},
+	"exports": {
+		".": {
+			"types": "./index.d.ts",
+			"import": "./index.es.js",
+			"require": "./index.cjs.js"
+		},
+		"./model-loader": {
+			"types": "./model-loader/index.d.ts",
+			"import": "./model-loader.es.js",
+			"require": "./model-loader.cjs.js"
+		},
+		"./model-optimizer": {
+			"types": "./model-optimizer/index.d.ts",
+			"import": "./model-optimizer.es.js",
+			"require": "./model-optimizer.cjs.js"
+		},
+		"./model-exporter": {
+			"types": "./model-exporter/index.d.ts",
+			"import": "./model-exporter.es.js",
+			"require": "./model-exporter.cjs.js"
+		}
+	},
+	"peerDependencies": {
+		"@nx/vite": "21.3.0",
+		"vite": "^6.2.2",
+		"vite-plugin-dts": "4.5.3"
+	},
+	"dependencies": {
+		"@gltf-transform/core": "^4.0.8",
+		"@gltf-transform/extensions": "^4.0.10",
+		"@gltf-transform/functions": "^4.0.8",
+		"file-saver": "^2.0.5",
+		"jszip": "^3.10.1",
+		"meshoptimizer": "^0.21.0",
+		"sharp": "^0.34.3",
+		"three": "^0.177.0"
+	}
+}

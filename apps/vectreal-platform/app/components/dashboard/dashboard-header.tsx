@@ -13,7 +13,6 @@ import { memo } from 'react'
 import { useMemo } from 'react'
 import { useLocation } from 'react-router'
 
-import { useUserSceneFolders, useUserScenes } from '../../contexts/auth-context'
 import {
 	useFolderContent,
 	useProject,
@@ -43,17 +42,11 @@ export const useDynamicHeader = (): DynamicHeaderContent => {
 	const { view, projectId, routeType, routeId } = routeParams
 
 	// Hooks for data fetching
-	const sceneFolders = useUserSceneFolders()
-	const scenes = useUserScenes()
 	const project = useProject(projectId || '')
-	const projectContent = useProjectContent(
-		projectId || '',
-		sceneFolders,
-		scenes
-	)
-	const folderContent = useFolderContent(routeId || '', sceneFolders, scenes)
-	const folder = useSceneFolder(routeId || '', sceneFolders)
-	const scene = useScene(routeType || '', scenes)
+	const projectContent = useProjectContent(projectId || '')
+	const folderContent = useFolderContent(routeId || '')
+	const folder = useSceneFolder(routeId || '')
+	const scene = useScene(routeType || '')
 
 	// Route type checks
 	const isFolder = isFolderRoute(routeParams)

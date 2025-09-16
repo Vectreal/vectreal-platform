@@ -1,4 +1,4 @@
-import { useAuth, useCurrentUser } from '../../contexts/auth-context'
+import { useAuth } from '../../contexts/auth-context'
 
 import { Route } from './+types/dashboard'
 
@@ -7,8 +7,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 const SettingsPage = () => {
-	const auth = useAuth()
-	const user = useCurrentUser()
+	const { user, error } = useAuth()
 
 	return (
 		<div className="p-6">
@@ -27,12 +26,12 @@ const SettingsPage = () => {
 					</p>
 				</section>
 				{/* Error Display */}
-				{auth.error && (
+				{error && (
 					<section className="rounded-lg border border-red-200 bg-red-50 p-4">
 						<h2 className="mb-2 text-lg font-semibold text-red-800">
 							Initialization Error
 						</h2>
-						<p className="text-red-700">{auth.error}</p>
+						<p className="text-red-700">{error}</p>
 					</section>
 				)}
 			</div>

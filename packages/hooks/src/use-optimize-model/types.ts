@@ -1,5 +1,4 @@
-import { Document } from '@gltf-transform/core'
-import { InspectReport } from '@gltf-transform/functions'
+import { OptimizationReport } from '@vctrl/core'
 
 interface ModelTotals {
 	verticesCount: number
@@ -19,8 +18,8 @@ export interface OptimizationInfo {
  * Interface representing the state of the model optimizer.
  */
 export interface OptimizationState {
-	model: Document | null
-	report: InspectReport | null
+	model: Uint8Array | null // Store optimized model as binary data
+	report: OptimizationReport | null
 	info: OptimizationInfo | null
 	error: Error | null
 	loading: boolean
@@ -33,7 +32,7 @@ export type Action =
 	| { type: 'LOAD_START' }
 	| {
 			type: 'LOAD_SUCCESS'
-			payload: { model: Document; report: InspectReport }
+			payload: { model: Uint8Array; report: OptimizationReport }
 	  }
 	| { type: 'LOAD_ERROR'; payload: Error }
 	| { type: 'RESET' }

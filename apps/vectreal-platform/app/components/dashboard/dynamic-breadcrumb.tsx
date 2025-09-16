@@ -14,8 +14,6 @@ import {
 import React, { memo } from 'react'
 import { Link, useLocation } from 'react-router'
 
-import { useUserSceneFolders, useUserScenes } from '../../contexts/auth-context'
-
 import { useFolderBreadcrumbs, useProject, useScene } from '../../hooks'
 
 import {
@@ -38,13 +36,10 @@ export const DynamicBreadcrumb = memo(() => {
 	const { view, projectId, routeType, routeId } = routeParams
 
 	// Data hooks - only fetch what we need based on route
-	const sceneFolders = useUserSceneFolders()
-	const scenes = useUserScenes()
 	const project = useProject(projectId || '')
-	const scene = useScene(routeType || '', scenes)
+	const scene = useScene(routeType || '')
 	const folderBreadcrumbs = useFolderBreadcrumbs(
-		routeId || scene?.scene.folderId || '',
-		sceneFolders
+		routeId || scene?.scene.folderId || ''
 	)
 
 	// Early return if view is invalid
