@@ -10,7 +10,7 @@ import { Info } from 'lucide-react'
  * Props for InfoTooltip component
  */
 interface InfoTooltipProps {
-	content: string
+	content: string | React.ReactNode
 }
 
 /**
@@ -22,9 +22,7 @@ export const InfoTooltip = ({ content }: InfoTooltipProps) => (
 			<TooltipTrigger asChild>
 				<Info className="text-muted-foreground h-4 w-4 cursor-help" />
 			</TooltipTrigger>
-			<TooltipContent className="max-w-80">
-				<p>{content}</p>
-			</TooltipContent>
+			<TooltipContent className="max-w-80">{content}</TooltipContent>
 		</Tooltip>
 	</TooltipProvider>
 )

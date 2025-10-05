@@ -1,7 +1,7 @@
-import {
+import type {
 	OptimizationPreset,
 	PossibleOptimizations
-} from '../lib/stores/publisher-config-store'
+} from '../types/publisher-config'
 
 export const lowPreset: PossibleOptimizations = {
 	simplification: {
@@ -15,7 +15,10 @@ export const lowPreset: PossibleOptimizations = {
 		enabled: true,
 		resize: [2048, 2048],
 		quality: 90,
-		targetFormat: 'webp'
+		targetFormat: 'webp',
+		serverOptions: {
+			enabled: true
+		}
 	},
 	quantize: {
 		name: 'quantize',
@@ -43,7 +46,10 @@ export const mediumPreset: PossibleOptimizations = {
 		enabled: true,
 		resize: [1024, 1024],
 		quality: 80,
-		targetFormat: 'webp'
+		targetFormat: 'webp',
+		serverOptions: {
+			enabled: true
+		}
 	},
 	quantize: {
 		name: 'quantize',
@@ -71,7 +77,10 @@ export const highPreset: PossibleOptimizations = {
 		enabled: true,
 		resize: [512, 512],
 		quality: 70,
-		targetFormat: 'webp'
+		targetFormat: 'webp',
+		serverOptions: {
+			enabled: true
+		}
 	},
 	quantize: {
 		name: 'quantize',

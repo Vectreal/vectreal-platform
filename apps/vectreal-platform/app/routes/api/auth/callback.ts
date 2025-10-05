@@ -11,7 +11,6 @@ export async function loader({ request }: Route.ActionArgs) {
 	const requestUrl = new URL(request.url)
 	const code = requestUrl.searchParams.get('code')
 	const next = requestUrl.searchParams.get('next') || '/dashboard'
-	const convert = requestUrl.searchParams.get('convert') === 'true'
 
 	if (!code) return ApiResponse.badRequest('Missing code parameter')
 
@@ -36,29 +35,6 @@ export async function loader({ request }: Route.ActionArgs) {
 				})
 				// Don't fail the auth flow, but log the error
 				// User will still be authenticated via Supabase
-			}
-		}
-
-		// Check if this was an anonymous user conversion
-		if (convert) {
-			if (userData.user) {
-				// Get the temp scene data from user metadata
-				const tempSceneData = userData.user.user_metadata?.tempScene
-
-				if (tempSceneData) {
-					// Clear the temp scene data from metadata
-					await client.auth.updateUser({
-						data: {
-							tempScene: null
-						}
-					})
-
-					// TODO: Create permanent scene record in database
-					// For now, redirect to publisher with scene config
-					return redirect('/publisher?scene_converted=true', {
-						headers
-					})
-				}
 			}
 		}
 

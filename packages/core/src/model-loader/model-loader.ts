@@ -14,7 +14,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-import { WebIO } from '@gltf-transform/core'
+import { Document, WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 
 import {
@@ -52,8 +52,6 @@ export class ModelLoader {
 	/**
 	 * Load a model from a file path (Node.js) or File object (browser).
 	 */
-	public async loadFromFile(filePath: string): Promise<ModelLoadResult>
-	public async loadFromFile(file: File): Promise<ModelLoadResult>
 	public async loadFromFile(input: string | File): Promise<ModelLoadResult> {
 		if (typeof input === 'string') {
 			return this.loadFromFilePath(input)
@@ -191,15 +189,75 @@ export class ModelLoader {
 
 			this.emitProgress('Processing assets', 25)
 
+			// Validate that referenced images exist in assets
+			if (gltfJson.images) {
+				const missingImages: string[] = []
+				console.log(
+					'GLTF Images validation:',
+					JSON.stringify(gltfJson.images, null, 2)
+				)
+				console.log('Available assets:', Array.from(assets.keys()))
+
+				gltfJson.images.forEach((image: any, index: number) => {
+					if (image.uri) {
+						const imageName = decodeURIComponent(image.uri)
+						const basename = imageName.split('/').pop() || imageName
+
+						// Check multiple possible asset key variations
+						const hasAsset =
+							assets.has(imageName) ||
+							assets.has(basename) ||
+							assets.has(image.uri) ||
+							assets.has(imageName.replace(/^\.\//, '')) || // Remove ./ prefix
+							assets.has(basename.replace(/^\.\//, ''))
+
+						if (!hasAsset && !image.bufferView && image.bufferView !== 0) {
+							missingImages.push(`Image ${index}: ${imageName}`)
+						}
+					} else if (!image.bufferView && image.bufferView !== 0) {
+						// bufferView can be 0 (valid index), so we need to check for undefined/null
+						missingImages.push(`Image ${index}: (no URI or bufferView)`)
+					}
+				})
+
+				if (missingImages.length > 0) {
+					const availableAssets = Array.from(assets.keys()).join(', ')
+					throw new Error(
+						`Missing required image files:\n${missingImages.join('\n')}\n\nAvailable assets: ${availableAssets || '(none)'}`
+					)
+				}
+			}
+
 			// Create resource map for glTF-Transform
 			const resources: { [key: string]: Uint8Array } = {}
 
 			// Add main GLTF file
 			resources['model.gltf'] = gltfBuffer
 
-			// Add assets
+			// Add assets with multiple key variations for better resolution
 			for (const [name, data] of assets.entries()) {
 				resources[name] = data
+
+				// Also add with decoded URI in case the GLTF uses URI encoding
+				const decodedName = decodeURIComponent(name)
+				if (decodedName !== name) {
+					resources[decodedName] = data
+				}
+
+				// Add with just the basename
+				const basename = name.split('/').pop() || name
+				if (basename !== name) {
+					resources[basename] = data
+				}
+
+				// Add with ./ prefix (common in GLTF files)
+				resources[`./${basename}`] = data
+
+				// Add with decoded ./ prefix
+				if (decodedName !== name) {
+					const decodedBasename = decodedName.split('/').pop() || decodedName
+					resources[`./${decodedBasename}`] = data
+				}
 			}
 
 			this.emitProgress('Parsing model data', 75)
@@ -251,11 +309,17 @@ export class ModelLoader {
 			// Read GLTF file
 			const gltfBuffer = new Uint8Array(await gltfFile.arrayBuffer())
 
-			// Read asset files
+			// Read asset files - normalize filenames to handle different path separators
 			const assetMap = new Map<string, Uint8Array>()
 			for (const file of assetFiles) {
 				const buffer = new Uint8Array(await file.arrayBuffer())
+				// Store both the original filename and just the basename
 				assetMap.set(file.name, buffer)
+				// Also store with just the basename in case GLTF uses relative paths
+				const basename = file.name.split('/').pop() || file.name
+				if (basename !== file.name) {
+					assetMap.set(basename, buffer)
+				}
 			}
 
 			this.emitProgress('Processing GLTF with assets', 50)
@@ -299,7 +363,7 @@ export class ModelLoader {
 	 * @returns Promise resolving to the Three.js scene result
 	 */
 	public async documentToThreeJS(
-		document: any,
+		document: Document,
 		modelResult: ModelLoadResult
 	): Promise<ThreeJSModelResult> {
 		try {
@@ -328,9 +392,17 @@ export class ModelLoader {
 						})
 					},
 					(error) => {
-						reject(
-							new Error(`Failed to convert document to Three.js: ${error}`)
-						)
+						// Enhanced error message for common issues
+						let errorMessage = `Failed to convert document to Three.js: ${error}`
+
+						if (
+							error &&
+							error.toString().includes('missing URI and bufferView')
+						) {
+							errorMessage = `${errorMessage}\n\nThis error typically occurs when the GLTF file references external textures or resources that are missing. Please ensure all required asset files (images, textures, .bin files) are uploaded together with the .gltf file.`
+						}
+
+						reject(new Error(errorMessage))
 					}
 				)
 			})
@@ -346,7 +418,7 @@ export class ModelLoader {
 	public async loadToThreeJS(
 		input: string | File
 	): Promise<ThreeJSModelResult> {
-		const modelResult = await this.loadFromFile(input as any)
+		const modelResult = await this.loadFromFile(input)
 		return this.documentToThreeJS(modelResult.data, modelResult)
 	}
 

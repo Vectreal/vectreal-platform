@@ -66,6 +66,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 	if (error) {
 		console.error('Error in root layout:', error)
+
+		// Extract error message safely
+		let errorMessage = 'An unexpected error occurred'
+		if (error instanceof Error) {
+			errorMessage = error.message
+		} else if (typeof error === 'string') {
+			errorMessage = error
+		} else if (error && typeof error === 'object') {
+			errorMessage = JSON.stringify(error, null, 2)
+		}
+
 		return (
 			<html lang="en">
 				<head>
@@ -75,7 +86,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				<body>
 					<div className="error">
 						<h1>Something went wrong</h1>
-						<p>{JSON.stringify(error)}</p>
+						<pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+							{errorMessage}
+						</pre>
 					</div>
 					<Scripts />
 				</body>

@@ -14,20 +14,20 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-import { Document, Transform, WebIO } from '@gltf-transform/core'
+import { Document, JSONDocument, Transform, WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 import {
 	cloneDocument,
+	compressTexture,
 	dedup,
 	DedupOptions as GltfDedupOptions,
-	inspect,
-	normals,
 	NormalsOptions as GltfNormalsOptions,
-	quantize,
 	QuantizeOptions as GltfQuantizeOptions,
+	inspect,
+	InspectReport,
+	normals,
+	quantize,
 	simplify,
-	SimplifyOptions as GltfSimplifyOptions,
-	textureCompress,
 	weld
 } from '@gltf-transform/functions'
 import { MeshoptSimplifier } from 'meshoptimizer'
@@ -57,10 +57,11 @@ import {
  * Designed for Node.js server environments with full Sharp support.
  */
 export class ModelOptimizer {
-	private document: Document | null = null
+	private _document: Document | null = null
 	private io: WebIO
 	private exporter: GLTFExporter
 	private originalSize = 0
+	private originalReport: InspectReport | null = null
 	private appliedOptimizations: string[] = []
 	private progressCallback?: (progress: OptimizationProgress) => void
 
@@ -105,8 +106,30 @@ export class ModelOptimizer {
 		this.emitProgress('Loading model from buffer', 0)
 
 		try {
-			this.document = await this.io.readBinary(buffer)
+			// Basic validation before attempting to load
+			if (buffer.byteLength === 0) {
+				throw new Error('Buffer is empty')
+			}
+
+			// Check for GLB magic number
+			const magicBytes = buffer.slice(0, 4)
+			const magic = String.fromCharCode(...magicBytes)
+
+			if (magic !== 'glTF') {
+				console.error('Invalid buffer format:', {
+					byteLength: buffer.byteLength,
+					firstBytes: Array.from(buffer.slice(0, 16)),
+					magicString: magic
+				})
+				throw new Error(
+					`Invalid glTF 2.0 binary. Expected 'glTF' magic bytes, got '${magic}'`
+				)
+			}
+
+			this._document = await this.io.readBinary(buffer)
 			this.originalSize = buffer.byteLength
+			// Capture original report for comparison
+			this.originalReport = inspect(this._document)
 			this.emitProgress('Model loaded successfully', 100)
 		} catch (error) {
 			throw new Error(`Failed to load model from buffer: ${error}`)
@@ -114,7 +137,7 @@ export class ModelOptimizer {
 	}
 
 	/**
-	 * Load a model from a file path.
+	 * Load a glb model model from a file path.
 	 *
 	 * @param filePath - Path to the model file
 	 */
@@ -128,6 +151,23 @@ export class ModelOptimizer {
 			await this.loadFromBuffer(new Uint8Array(buffer))
 		} catch (error) {
 			throw new Error(`Failed to load model from file: ${error}`)
+		}
+	}
+
+	/**
+	 * Load a model from a JSON glTF document.
+	 *
+	 * @param json - The JSON glTF document
+	 */
+	public async loadFromJSON(json: JSONDocument): Promise<void> {
+		this.emitProgress('Loading model from JSON document', 0)
+
+		try {
+			this._document = await this.io.readJSON(json)
+			const binary = await this.export()
+			this.originalSize = binary.byteLength
+		} catch (error) {
+			throw new Error(`Failed to load model from JSON document: ${error}`)
 		}
 	}
 
@@ -217,23 +257,105 @@ export class ModelOptimizer {
 		this.emitProgress('Compressing textures', 0)
 
 		try {
-			// Dynamic import of Sharp for server environments
-			const sharp = await import('sharp')
+			// Import Sharp for server-side texture processing
+			const sharpModule = await import('sharp')
+			const sharp = sharpModule.default || sharpModule
 
-			const transform = textureCompress({
-				encoder: sharp.default,
-				targetFormat: options.targetFormat || 'webp',
-				quality: options.quality || 80,
-				...options
+			if (typeof sharp !== 'function') {
+				throw new Error('Sharp is not available or not properly installed')
+			}
+
+			// Extract only the options that textureCompress expects
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			const { serverOptions, ...textureCompressOptions } = options
+
+			console.log('Texture compression options:', {
+				targetFormat: textureCompressOptions.targetFormat,
+				quality: textureCompressOptions.quality,
+				resize: textureCompressOptions.resize,
+				sharpAvailable: typeof sharp === 'function'
 			})
 
-			await this.applyTransforms([transform], 'texture compression')
+			// Log texture info before compression
+			console.log('Before texture compression:')
+			if (!this._document) {
+				throw new Error('Document is not loaded')
+			}
+			const textures = this._document.getRoot().listTextures()
+			textures.forEach((texture, i) => {
+				console.log(
+					`Texture ${i}: ${texture.getMimeType() || 'unknown mime type'}`
+				)
+			})
+
+			// Apply compression to each texture individually
+			console.log('Compressing textures individually...')
+			for (let i = 0; i < textures?.length; i++) {
+				const texture = textures[i]
+				console.log(`Processing texture ${i}/${textures.length}`)
+
+				try {
+					await compressTexture(texture, {
+						encoder: sharp,
+						targetFormat: textureCompressOptions.targetFormat,
+						quality: textureCompressOptions.quality,
+						resize: textureCompressOptions.resize
+					})
+					console.log(
+						`Texture ${i} compressed successfully to ${texture.getMimeType()}`
+					)
+				} catch (error) {
+					console.warn(`Failed to compress texture ${i}:`, error)
+				}
+			}
+
+			console.log('All textures processed')
+			this.appliedOptimizations.push('texture compression')
+
+			// Log texture info after compression
+			console.log('After texture compression:')
+			textures.forEach((texture, i) => {
+				console.log(
+					`Texture ${i}: ${texture.getMimeType() || 'unknown mime type'}`
+				)
+			})
+
 			this.emitProgress('Texture compression complete', 100)
 		} catch (error) {
-			throw new Error(
-				`Texture compression failed: ${error}. Make sure Sharp is available in server environment.`
+			// If Sharp fails, try basic texture optimization
+			console.warn(
+				'Sharp-based compression failed, applying basic optimization:',
+				error
 			)
+			await this.applyBasicTextureOptimization(options)
 		}
+	}
+
+	/**
+	 * Apply basic texture optimization without Sharp.
+	 * This provides fallback functionality when Sharp is not available.
+	 */
+	private async applyBasicTextureOptimization(
+		options: TextureCompressOptions
+	): Promise<void> {
+		this.emitProgress('Applying basic texture optimization', 50)
+
+		// Import basic texture optimization transforms that don't require Sharp
+		const { dedup, prune } = await import('@gltf-transform/functions')
+
+		const transforms = [
+			dedup(), // Remove duplicate resources including textures
+			prune() // Remove unused resources including textures
+		]
+
+		await this.applyTransforms(transforms, 'basic texture optimization')
+
+		console.warn(
+			'Applied basic texture optimization only. ' +
+				'For advanced compression (WebP, JPEG conversion), ensure Sharp is properly configured.'
+		)
+
+		this.emitProgress('Basic texture optimization complete', 100)
 	}
 
 	/**
@@ -282,10 +404,64 @@ export class ModelOptimizer {
 	 * Get the optimization report with statistics.
 	 */
 	public async getReport(): Promise<OptimizationReport> {
-		this.ensureModelLoaded()
+		const document = this.ensureModelLoaded()
 
-		const report = inspect(this.document!)
+		const currentInspectReport = inspect(document)
 		const currentSize = (await this.export()).byteLength
+
+		// Helper function to calculate vertex and primitive counts from inspect report
+		const calculateCounts = (inspectReport: InspectReport) => {
+			let vertices = 0
+			let primitives = 0
+
+			if (inspectReport.meshes && inspectReport.meshes.properties) {
+				inspectReport.meshes.properties.forEach((mesh) => {
+					vertices += mesh.vertices || 0
+					primitives += mesh.glPrimitives || 0
+				})
+			}
+
+			return { vertices, primitives }
+		}
+
+		// Helper function to calculate texture memory usage in bytes
+		const calculateTextureSize = (inspectReport: InspectReport) => {
+			let totalSize = 0
+			if (inspectReport.textures && inspectReport.textures.properties) {
+				inspectReport.textures.properties.forEach((texture) => {
+					// Use the actual size property if available, otherwise use gpuSize
+					totalSize += texture.size || texture.gpuSize || 0
+				})
+			}
+			return totalSize
+		}
+
+		// Helper function to calculate mesh memory usage in bytes
+		const calculateMeshSize = (inspectReport: InspectReport) => {
+			let totalSize = 0
+			if (inspectReport.meshes && inspectReport.meshes.properties) {
+				inspectReport.meshes.properties.forEach((mesh) => {
+					// Use the actual size property from the mesh report
+					totalSize += mesh.size || 0
+				})
+			}
+			return totalSize
+		}
+
+		const originalCounts = this.originalReport
+			? calculateCounts(this.originalReport)
+			: { vertices: 0, primitives: 0 }
+		const currentCounts = calculateCounts(currentInspectReport)
+
+		const originalTextureSize = this.originalReport
+			? calculateTextureSize(this.originalReport)
+			: 0
+		const currentTextureSize = calculateTextureSize(currentInspectReport)
+
+		const originalMeshSize = this.originalReport
+			? calculateMeshSize(this.originalReport)
+			: 0
+		const currentMeshSize = calculateMeshSize(currentInspectReport)
 
 		return {
 			originalSize: this.originalSize,
@@ -293,16 +469,33 @@ export class ModelOptimizer {
 			compressionRatio: this.originalSize / currentSize,
 			appliedOptimizations: [...this.appliedOptimizations],
 			stats: {
-				vertices: { before: 0, after: 0 }, // TODO: Extract from report
-				triangles: { before: 0, after: 0 },
-				materials: { before: 0, after: Object.keys(report.materials).length },
-				textures: { before: 0, after: Object.keys(report.textures).length },
-				meshes: { before: 0, after: Object.keys(report.meshes).length },
-				nodes: {
-					before: 0,
-					after: (report as any).nodes
-						? Object.keys((report as any).nodes).length
+				vertices: {
+					before: originalCounts.vertices,
+					after: currentCounts.vertices
+				},
+				triangles: {
+					before: originalCounts.primitives,
+					after: currentCounts.primitives
+				},
+				materials: {
+					before: this.originalReport?.materials?.properties
+						? this.originalReport.materials.properties.length
+						: 0,
+					after: currentInspectReport.materials?.properties
+						? currentInspectReport.materials.properties.length
 						: 0
+				},
+				textures: {
+					before: originalTextureSize,
+					after: currentTextureSize
+				},
+				meshes: {
+					before: originalMeshSize,
+					after: currentMeshSize
+				},
+				nodes: {
+					before: 0, // Node count not available in inspect report
+					after: 0 // Node count not available in inspect report
 				}
 			}
 		}
@@ -312,24 +505,25 @@ export class ModelOptimizer {
 	 * Export the optimized model as binary GLB.
 	 */
 	public async export(): Promise<Uint8Array> {
-		this.ensureModelLoaded()
-		return await this.io.writeBinary(this.document!)
+		const document = this.ensureModelLoaded()
+		return await this.io.writeBinary(document)
 	}
 
 	/**
-	 * Export the optimized model as JSON glTF.
+	 * Export the optimized model as JSON GLTF + resources
 	 */
-	public async exportGLTF(): Promise<any> {
-		this.ensureModelLoaded()
-		return await this.io.writeJSON(this.document!)
+	public async exportJSON(): Promise<JSONDocument> {
+		const document = this.ensureModelLoaded()
+		return await this.io.writeJSON(document)
 	}
 
 	/**
 	 * Reset the optimizer state.
 	 */
 	public reset(): void {
-		this.document = null
+		this._document = null
 		this.originalSize = 0
+		this.originalReport = null
 		this.appliedOptimizations = []
 	}
 
@@ -337,30 +531,59 @@ export class ModelOptimizer {
 	 * Check if a model is currently loaded.
 	 */
 	public hasModel(): boolean {
-		return this.document !== null
+		return this._document !== null
 	}
 
-	private ensureModelLoaded(): void {
-		if (!this.document) {
+	/**
+	 * Get the list of applied optimizations.
+	 */
+	public getAppliedOptimizations(): string[] {
+		return [...this.appliedOptimizations]
+	}
+
+	/**
+	 * Add an optimization to the list of applied optimizations.
+	 */
+	public addAppliedOptimization(optimizationName: string): void {
+		if (!this.appliedOptimizations.includes(optimizationName)) {
+			this.appliedOptimizations.push(optimizationName)
+		}
+	}
+
+	/**
+	 * Set the list of applied optimizations.
+	 */
+	public setAppliedOptimizations(optimizations: string[]): void {
+		this.appliedOptimizations = [...optimizations]
+	}
+
+	public ensureModelLoaded(): Document {
+		if (!this._document) {
 			throw new Error(
 				'No model loaded. Call loadFromThreeJS(), loadFromBuffer(), or loadFromFile() first.'
 			)
 		}
+
+		return this._document
+	}
+
+	get document() {
+		return this.ensureModelLoaded()
 	}
 
 	private async applyTransforms(
 		transforms: Transform[],
 		operationName: string
 	): Promise<void> {
-		if (!this.document) return
+		if (!this._document) return
 
 		try {
 			// Create a safe copy and get original size before any mutations
-			const safeCopyDoc = cloneDocument(this.document)
+			const safeCopyDoc = cloneDocument(this._document)
 			const originalSize = (await this.io.writeBinary(safeCopyDoc)).byteLength
 
 			// Create a working copy to apply transforms to
-			const workingDoc = cloneDocument(this.document)
+			const workingDoc = cloneDocument(this._document)
 			await workingDoc.transform(...transforms)
 
 			// Check if transformation resulted in a model with increased size
@@ -374,11 +597,8 @@ export class ModelOptimizer {
 			}
 
 			// If optimization was beneficial, update the model and track the optimization
-			this.document = workingDoc
+			this._document = workingDoc
 			this.appliedOptimizations.push(operationName)
-			console.log(
-				`Applied ${operationName}: ${originalSize} → ${newSize} bytes`
-			)
 		} catch (error) {
 			throw new Error(`Failed to apply ${operationName}: ${error}`)
 		}

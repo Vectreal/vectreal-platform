@@ -17,49 +17,179 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 import { ModelFileTypes } from '@vctrl/core'
 import { Object3D } from 'three'
 
+import { useOptimizeModel } from '../use-optimize-model'
+
+import eventSystem from './event-system'
+import { initialState } from './state'
+
+/**
+ * Type representing the input for file/folder uploads.
+ * Can be either File objects or FileSystemDirectoryHandle for folder drag-and-drop.
+ */
 export type InputFileOrDirectory = (File | FileSystemDirectoryHandle)[]
 
+/**
+ * Represents a loaded 3D model file with its metadata.
+ */
 export interface ModelFile {
+	/** The Three.js Object3D scene containing the loaded model */
 	model: Object3D
+	/** The file type/format of the model (GLTF, GLB, USDZ) */
 	type: ModelFileTypes
+	/** The original filename of the model */
 	name: string
 }
 
-// Updated State interface
+/**
+ * State interface for model loading data.
+ * Contains the current loaded file, loading status, and progress information.
+ */
 export interface LoadData {
+	/** The currently loaded model file, or null if no model is loaded */
 	file: ModelFile | null
+	/** Whether a file is currently being loaded */
 	isFileLoading: boolean
+	/** Loading progress percentage (0-100) */
 	progress: number
+	/** List of supported model file types */
 	supportedFileTypes: ModelFileTypes[]
 }
 
-// Updated Action types
+/**
+ * Action types for the model loading reducer.
+ * Defines all possible state mutations for model loading operations.
+ */
 export type Action =
 	| { type: 'set-file'; payload: ModelFile }
 	| { type: 'set-file-loading'; payload: boolean }
 	| { type: 'set-progress'; payload: number }
 	| { type: 'reset-state' }
 
-// Updated Event types
+/**
+ * Available event types emitted by the model loading system.
+ * Used for subscribing to various stages of the loading process.
+ */
 export type EventTypes =
-	| 'multiple-models'
-	| 'not-loaded-files'
-	| 'load-start'
-	| 'load-progress'
-	| 'load-complete'
-	| 'load-reset'
-	| 'load-error'
+	| 'multiple-models' // Emitted when multiple model files are detected in upload
+	| 'not-loaded-files' // Emitted when no supported files are found
+	| 'load-start' // Emitted when loading begins
+	| 'load-progress' // Emitted during loading progress updates
+	| 'load-complete' // Emitted when loading successfully completes
+	| 'load-reset' // Emitted when the state is reset
+	| 'load-error' // Emitted when an error occurs during loading
 
-// Updated event data types
+/**
+ * Maps event types to their corresponding data payloads.
+ * Ensures type safety when handling events.
+ */
 export type EventData = {
+	/** Array of model files when multiple are detected */
 	'multiple-models': File[]
+	/** Array of unsupported files */
 	'not-loaded-files': File[]
+	/** No data for load start event */
 	'load-start': null
+	/** Progress value (0-100) */
 	'load-progress': number
+	/** The loaded model file data */
 	'load-complete': LoadData['file']
+	/** No data for reset event */
 	'load-reset': null
+	/** Error object when loading fails */
 	'load-error': Error | unknown
 }
 
-// Updated EventHandler type
+/**
+ * Type-safe event handler function.
+ * @template T - The event type being handled
+ */
 export type EventHandler<T extends EventTypes> = (data?: EventData[T]) => void
+
+/**
+ * Return type for the useLoadModel hook.
+ * Conditionally includes optimizer integration based on whether an optimizer was provided.
+ *
+ * @template HasOptimizer - Boolean indicating if optimizer integration is included
+ */
+export type UseLoadModelReturn<HasOptimizer extends boolean> =
+	typeof initialState & {
+		/**
+		 * Subscribe to model loading events.
+		 * @param event - The event type to listen for
+		 * @param handler - Callback function to handle the event
+		 */
+		on: typeof eventSystem.on
+		/**
+		 * Unsubscribe from model loading events.
+		 * @param event - The event type to stop listening for
+		 * @param handler - The callback function to remove
+		 */
+		off: typeof eventSystem.off
+		/**
+		 * Load 3D model files from File objects or directory handles.
+		 * Supports GLTF, GLB, and USDZ formats with associated assets.
+		 */
+		load: (filesOrDirectories: InputFileOrDirectory) => Promise<void>
+		/**
+		 * Reset the model loading state and clear any loaded models.
+		 */
+		reset: () => void
+		/**
+		 * Optimizer integration object.
+		 * - When optimizer is provided: Contains full optimization methods and state
+		 * - When no optimizer: null
+		 */
+		optimizer: HasOptimizer extends true
+			? OptimizerIntegrationReturn<true>
+			: null
+	}
+
+/**
+ * Return type of the useOptimizeModel hook.
+ * Provides access to all optimization methods and state.
+ */
+export type OptimizerReturnType = ReturnType<typeof useOptimizeModel>
+
+/**
+ * Conditional return type for optimizer integration.
+ * Extends the optimizer with additional integration methods when present.
+ *
+ * @template HasOptimizer - Boolean indicating if optimizer is integrated
+ */
+export type OptimizerIntegrationReturn<HasOptimizer extends boolean = false> =
+	HasOptimizer extends true
+		? OptimizerReturnType & {
+				/**
+				 * Applies an optimization and updates the loaded model with the result.
+				 *
+				 * This method:
+				 * 1. Runs the specified optimization function
+				 * 2. Retrieves the optimized model
+				 * 3. Loads it back into the scene
+				 * 4. Updates the model state
+				 *
+				 * @template TOptions - Type of options for the optimization function
+				 * @param optimizationFunction - The optimization to apply (e.g., simplifyOptimization)
+				 * @param options - Configuration options for the optimization
+				 * @returns Promise that resolves when optimization is complete and model is updated
+				 *
+				 * @example
+				 * // Apply simplification optimization
+				 * await optimizer.applyOptimization(
+				 *   optimizer.simplifyOptimization,
+				 *   { ratio: 0.5 }
+				 * )
+				 *
+				 * @example
+				 * // Apply multiple optimizations in sequence
+				 * await optimizer.applyOptimization(optimizer.dedupOptimization)
+				 * await optimizer.applyOptimization(optimizer.quantizeOptimization, { bits: 12 })
+				 */
+				applyOptimization: <TOptions>(
+					optimizationFunction?:
+						| ((options?: TOptions) => Promise<void>)
+						| undefined,
+					options?: TOptions
+				) => Promise<void>
+			}
+		: null

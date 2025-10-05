@@ -86,7 +86,16 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 
 	function handleLoadError(error: unknown) {
 		console.error('Load error:', error)
-		toast.error(error as string)
+
+		// Extract error message properly
+		let errorMessage = 'Failed to load model'
+		if (error instanceof Error) {
+			errorMessage = error.message
+		} else if (typeof error === 'string') {
+			errorMessage = error
+		}
+
+		toast.error(errorMessage)
 		setLoadingStarted(false)
 	}
 

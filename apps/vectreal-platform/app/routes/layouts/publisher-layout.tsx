@@ -80,15 +80,15 @@ const Layout = ({ loaderData }: Route.ComponentProps) => {
 	)
 
 	return (
-		<SidebarProvider open={showSidebar} onOpenChange={handleOpenChange}>
-			<ModelProvider optimizer={optimizer}>
+		<ModelProvider optimizer={optimizer}>
+			<SidebarProvider open={showSidebar} onOpenChange={handleOpenChange}>
 				<Provider store={publisherConfigStore}>
 					<AnimatedLayout user={user} sceneId={null}>
 						<Outlet />
 					</AnimatedLayout>
 				</Provider>
-			</ModelProvider>
-		</SidebarProvider>
+			</SidebarProvider>
+		</ModelProvider>
 	)
 }
 

@@ -28,23 +28,10 @@ export class PlatformApiService {
 	 * @returns User context or error response
 	 */
 	static async getAuthUser(
-		request: Request,
-		options: { allowAnonymous?: boolean } = {}
+		request: Request
 	): Promise<ApiUserContext | Response> {
 		const { client, headers } = await createClient(request)
-		let user = (await client.auth.getUser()).data.user
-
-		if (!user && options.allowAnonymous) {
-			const { data: authData, error } = await client.auth.signInAnonymously()
-
-			if (error || !authData.user) {
-				return ApiResponseBuilder.serverError(
-					'Failed to create anonymous session'
-				)
-			}
-
-			user = authData.user
-		}
+		const user = (await client.auth.getUser()).data.user
 
 		if (!user) {
 			return ApiResponseBuilder.unauthorized()
@@ -96,14 +83,13 @@ export class PlatformApiService {
 	 */
 	static buildStoragePath(params: {
 		readonly userId: string
-		readonly isAnonymous: boolean
 		readonly sceneId?: string
 		readonly fileName: string
 		readonly kind: 'asset' | 'thumbnail'
 	}): string {
-		const { userId, isAnonymous, sceneId, fileName, kind } = params
+		const { userId, sceneId, fileName, kind } = params
 
-		const userPrefix = isAnonymous ? `anon/${userId}` : `user/${userId}`
+		const userPrefix = `user/${userId}`
 		const scenePrefix = sceneId ? `scenes/${sceneId}` : 'global'
 
 		return `${userPrefix}/${scenePrefix}/${kind}/${fileName}`

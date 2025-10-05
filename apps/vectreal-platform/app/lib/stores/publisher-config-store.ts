@@ -12,27 +12,17 @@ import { atomWithReset, atomWithStorage } from 'jotai/utils'
 import { atom, createStore } from 'jotai/vanilla'
 
 import { mediumPreset } from '../../constants/optimizations'
-
-export interface MetaState {
-	sceneName: string
-	isSaved: boolean
-	thumbnailUrl?: string
-}
+import type {
+	MetaState,
+	OptimizationState,
+	ProcessState
+} from '../../types/publisher-config'
 
 const metaInitialState: MetaState = {
 	sceneName: '',
 	isSaved: true
 }
 const metaAtom = atomWithReset<MetaState>(metaInitialState)
-
-//// Process state
-export type SidebarMode = 'optimize' | 'compose' | 'publish'
-export interface ProcessState {
-	step: 'uploading' | 'preparing' | 'publishing'
-	mode: SidebarMode
-	showSidebar: boolean
-	showInfo: boolean
-}
 
 const processInitialState: ProcessState = {
 	step: 'uploading',
@@ -44,54 +34,6 @@ const processAtom = atomWithStorage<ProcessState>(
 	'publisher-process',
 	processInitialState
 )
-
-//// Optimization state
-export type OptimizationNames =
-	| 'simplification'
-	| 'texture'
-	| 'quantize'
-	| 'dedup'
-	| 'normals'
-
-interface BaseOptimization<Name = OptimizationNames> {
-	name: Name
-	enabled: boolean
-}
-interface SimplificationOptimization
-	extends BaseOptimization<'simplification'> {
-	/**
-	 * Target ratio (0–1) of vertices to keep.
-	 */
-	ratio: number
-	/**
-	 * Limit on error, as a fraction of mesh radius. Default: 0.0001 (0.01%).
-	 * Higher values will produce lower quality meshes.
-	 */
-	error: number
-}
-export interface TextureOptimization extends BaseOptimization<'texture'> {
-	resize: [number, number]
-	quality: number
-	targetFormat: 'jpeg' | 'png' | 'webp'
-}
-type QuantizeOptimization = BaseOptimization<'quantize'>
-type DedupOptimization = BaseOptimization<'dedup'>
-type NormalsOptimization = BaseOptimization<'normals'>
-
-export type PossibleOptimizations = {
-	simplification: SimplificationOptimization
-	texture: TextureOptimization
-	quantize: QuantizeOptimization
-	dedup: DedupOptimization
-	normals: NormalsOptimization
-}
-
-export type OptimizationPreset = 'low' | 'medium' | 'high'
-
-export interface OptimizationState {
-	plannedOptimizations: PossibleOptimizations
-	optimizationPreset: OptimizationPreset
-}
 
 const optimizationInitialState: OptimizationState = {
 	plannedOptimizations: mediumPreset,

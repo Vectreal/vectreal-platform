@@ -4,11 +4,10 @@ import { Action, OptimizationState } from './types'
  * Initial state for the reducer.
  */
 export const initialState: OptimizationState = {
-	model: null,
-	report: null,
 	info: null,
 	error: null,
-	loading: false
+	loading: false,
+	report: null
 }
 
 /**
@@ -29,7 +28,6 @@ export const reducer = (
 			return {
 				...state,
 				loading: false,
-				model: action.payload.model,
 				report: action.payload.report
 			}
 		case 'LOAD_ERROR':

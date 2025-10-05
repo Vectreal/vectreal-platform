@@ -18,7 +18,6 @@ export interface OptimizationInfo {
  * Interface representing the state of the model optimizer.
  */
 export interface OptimizationState {
-	model: Uint8Array | null // Store optimized model as binary data
 	report: OptimizationReport | null
 	info: OptimizationInfo | null
 	error: Error | null
@@ -32,7 +31,7 @@ export type Action =
 	| { type: 'LOAD_START' }
 	| {
 			type: 'LOAD_SUCCESS'
-			payload: { model: Uint8Array; report: OptimizationReport }
+			payload: { report: OptimizationReport }
 	  }
 	| { type: 'LOAD_ERROR'; payload: Error }
 	| { type: 'RESET' }

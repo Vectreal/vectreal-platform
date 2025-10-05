@@ -22,24 +22,52 @@ import { useOptimizeModel } from '../use-optimize-model'
 
 import eventSystem from './event-system'
 import reducer, { initialState } from './state'
-import { Action, InputFileOrDirectory, ModelFile } from './types'
+import {
+	Action,
+	InputFileOrDirectory,
+	ModelFile,
+	OptimizerIntegrationReturn,
+	UseLoadModelReturn
+} from './types'
 import { readDirectory } from './utils'
 
 /**
- * Custom hook to load and manage 3D models, integrating optimization functionalities.
+ * Custom hook to load and manage 3D models with optional optimization integration.
  *
- * @param optimizer - Optional optimizer hook returned from useOptimizeModel.
- * @returns An object containing the state, event handlers, and optimization functions.
+ * This hook provides a complete solution for loading 3D models (GLTF, GLB, USDZ) with
+ * optional integration of model optimization capabilities. The return type is conditionally
+ * typed based on whether an optimizer is provided.
+ *
+ * **Type Safety:**
+ * - When called with an optimizer: `optimizer` property is fully typed with optimization methods
+ * - When called without an optimizer: `optimizer` property is typed as `null`
+ *
+ * @example
+ * // With optimizer integration
+ * const optimizer = useOptimizeModel()
+ * const model = useLoadModel(optimizer)
+ * model.optimizer.applyOptimization() // ✅ Fully typed
+ *
+ * @example
+ * // Without optimizer
+ * const model = useLoadModel()
+ * model.optimizer // ✅ Typed as null
+ *
+ * @template T - The type of the optimizer parameter (inferred automatically)
+ * @param optimizer - Optional optimizer hook returned from useOptimizeModel
+ * @returns Model loading state and methods, with conditionally typed optimizer property
  */
-function useLoadModel(optimizer?: ReturnType<typeof useOptimizeModel>) {
+function useLoadModel<
+	T extends ReturnType<typeof useOptimizeModel> | undefined
+>(optimizer?: T): UseLoadModelReturn<T extends undefined ? false : true> {
 	const uploadCompleteRef = useRef(false)
 	const [state, dispatch] = useReducer(reducer, initialState)
 
-	// Create ModelLoader instance
+	// Create ModelLoader instance with progress tracking
 	const modelLoader = useMemo(() => {
 		const loader = new ModelLoader()
 
-		// Set up progress callback
+		// Set up progress callback to update state and emit events
 		loader.onProgress((progress: LoadProgress) => {
 			dispatch({ type: 'set-progress', payload: progress.progress })
 			eventSystem.emit('load-progress', progress.progress)
@@ -48,22 +76,38 @@ function useLoadModel(optimizer?: ReturnType<typeof useOptimizeModel>) {
 		return loader
 	}, [])
 
+	/**
+	 * Helper function to find a specific file type from an array of files.
+	 * Used to identify model files (GLTF, GLB, USDZ) from uploaded file lists.
+	 */
 	const getFileOfType = useCallback(
 		(files: File[], fileType: ModelFileTypes) =>
 			files.find((file) => file.name.endsWith('.' + fileType)),
 		[]
 	)
 
+	/**
+	 * Updates the loading progress state and emits a progress event.
+	 * Called during file upload and model loading operations.
+	 */
 	const updateProgress = useCallback((progress: number) => {
 		dispatch({ type: 'set-progress', payload: progress })
 		eventSystem.emit('load-progress', progress)
 	}, [])
 
+	/**
+	 * Resets the model loading state to initial values.
+	 * Clears any loaded models, progress, and emits a reset event.
+	 */
 	const reset = useCallback(() => {
 		dispatch({ type: 'reset-state' })
 		eventSystem.emit('load-reset')
 	}, [])
 
+	/**
+	 * Loads binary model files (GLB, USDZ) into Three.js scene.
+	 * Handles errors and updates loading state.
+	 */
 	const loadBinaryModel = useCallback(
 		async (file: File, fileType: ModelFileTypes) => {
 			try {
@@ -88,6 +132,10 @@ function useLoadModel(optimizer?: ReturnType<typeof useOptimizeModel>) {
 		[modelLoader]
 	)
 
+	/**
+	 * Loads GLTF models with their associated assets (textures, bins, etc.).
+	 * Handles the more complex GLTF format with external resources.
+	 */
 	const loadGltfModel = useCallback(
 		async (gltfFile: File, otherFiles: File[]) => {
 			try {
@@ -108,6 +156,11 @@ function useLoadModel(optimizer?: ReturnType<typeof useOptimizeModel>) {
 				dispatch({ type: 'set-file-loading', payload: false })
 			} catch (error) {
 				console.error('Error loading GLTF model:', error)
+				console.error('GLTF file:', gltfFile.name)
+				console.error(
+					'Asset files:',
+					otherFiles.map((f) => f.name)
+				)
 				dispatch({ type: 'set-file-loading', payload: false })
 				eventSystem.emit('load-error', error)
 			}
@@ -115,10 +168,18 @@ function useLoadModel(optimizer?: ReturnType<typeof useOptimizeModel>) {
 		[modelLoader]
 	)
 
+	/**
+	 * Processes an array of files to identify and load supported 3D model formats.
+	 * Validates that only one model file is present and emits appropriate events.
+	 *
+	 * Supported formats: GLTF, GLB, USDZ
+	 * Emits events for: multiple models found, no supported files found
+	 */
 	const processFiles = useCallback(
 		async (files: File[]) => {
 			if (files.length === 0) return
 
+			// Identify model files by type
 			const gltfFile = getFileOfType(files, ModelFileTypes.gltf)
 			const glbFile = getFileOfType(files, ModelFileTypes.glb)
 			const usdzFile = getFileOfType(files, ModelFileTypes.usdz)
@@ -127,20 +188,24 @@ function useLoadModel(optimizer?: ReturnType<typeof useOptimizeModel>) {
 				Boolean
 			) as File[]
 
+			// Emit error if multiple model files are found
 			if (supportedFiles.length > 1) {
 				eventSystem.emit('multiple-models', supportedFiles)
 				return
 			}
 
+			// Separate model file from asset files (textures, bins, etc.)
 			const otherFiles = files.filter(
 				(file) => file !== gltfFile && file !== glbFile && file !== usdzFile
 			)
 
+			// Mark upload as complete and set progress to 100%
 			const updateFileProgress = () => {
 				uploadCompleteRef.current = true
 				updateProgress(100)
 			}
 
+			// Load the appropriate model type
 			if (gltfFile) {
 				await loadGltfModel(gltfFile, otherFiles)
 				updateFileProgress()
@@ -151,6 +216,7 @@ function useLoadModel(optimizer?: ReturnType<typeof useOptimizeModel>) {
 				await loadBinaryModel(usdzFile, ModelFileTypes.usdz)
 				updateFileProgress()
 			} else {
+				// No supported model files found
 				eventSystem.emit('not-loaded-files', files)
 				dispatch({ type: 'set-file-loading', payload: false })
 				return
@@ -159,10 +225,18 @@ function useLoadModel(optimizer?: ReturnType<typeof useOptimizeModel>) {
 		[getFileOfType, loadGltfModel, loadBinaryModel, updateProgress]
 	)
 
+	/**
+	 * Main function to load 3D models from files or directories.
+	 * Accepts both File objects and FileSystemDirectoryHandle for folder uploads.
+	 * Resets state, processes all files, and integrates with optimizer if available.
+	 *
+	 * @param filesOrDirectories - Array of File objects or FileSystemDirectoryHandle objects
+	 */
 	const load = useCallback(
 		async (filesOrDirectories: InputFileOrDirectory) => {
 			const allFiles: File[] = []
 
+			// Emit load start event and reset state
 			eventSystem.emit('load-start')
 			dispatch({ type: 'reset-state' })
 			dispatch({ type: 'set-file-loading', payload: true })
@@ -170,10 +244,12 @@ function useLoadModel(optimizer?: ReturnType<typeof useOptimizeModel>) {
 			updateProgress(0)
 			uploadCompleteRef.current = false
 
+			// Process both files and directories
 			for (const item of filesOrDirectories) {
 				if (item instanceof File) {
 					allFiles.push(item)
 				} else if ('kind' in item && item.kind === 'directory') {
+					// Recursively read directory contents
 					const directoryFiles = await readDirectory(item)
 					allFiles.push(...directoryFiles)
 				}
@@ -184,19 +260,32 @@ function useLoadModel(optimizer?: ReturnType<typeof useOptimizeModel>) {
 		[processFiles, updateProgress]
 	)
 
-	// Integration with optimizer
+	/**
+	 * Effect to integrate loaded models with the optimizer (if provided).
+	 * When a model is successfully loaded and optimizer is available,
+	 * automatically loads the model into the optimizer for processing.
+	 */
 	useEffect(() => {
 		if (uploadCompleteRef.current && state.file) {
+			// Emit load complete event
 			eventSystem.emit('load-complete', state.file)
 			uploadCompleteRef.current = false
 
+			// If optimizer is available, load the model into it
 			if (optimizer && state.file.model) {
-				// Load the model into the optimizer
 				optimizer.load(state.file.model as Object3D)
 			}
 		}
 	}, [state.file, optimizer])
 
+	/**
+	 * Creates the optimizer integration object.
+	 * This provides additional methods for applying optimizations and
+	 * updating the loaded model with optimized versions.
+	 *
+	 * Returns null if no optimizer is provided, otherwise returns
+	 * the full optimizer interface with applyOptimization method.
+	 */
 	const optimizerIntegration = useOptimizerIntegration(
 		optimizer,
 		dispatch,
@@ -244,41 +333,38 @@ function useLoadModel(optimizer?: ReturnType<typeof useOptimizeModel>) {
 		 * - `error`: The error state of the optimizer.
 		 * - `loading`: The loading state of the optimizer.
 		 */
-		optimize: optimizerIntegration
-	}
-}
-
-type OptimizerReturnType = ReturnType<typeof useOptimizeModel>
-type Optimizations = OptimizerReturnType['optimizations']
-type OptimizerIntegrationReturn = Partial<OptimizerReturnType> & {
-	/**
-	 * Applies the specified optimization function with optional parameters.
-	 *
-	 * @param optimizationFunction - (Optional) The optimization function to run before updating the model with the optimizer model document.
-	 * @param options - Optional parameters for the optimization function.
-	 */
-	applyOptimization: <TOptions>(
-		optimizationFunction?: ((options?: TOptions) => Promise<void>) | undefined,
-		options?: TOptions
-	) => Promise<void>
-	optimizations: Optimizations
+		optimizer: optimizerIntegration
+	} as UseLoadModelReturn<T extends undefined ? false : true>
 }
 
 /**
  * Hook to integrate the optimizer into the model loading process.
  *
- * @param optimizer - The optimizer instance.
+ * @param instance - The optimizer instance.
  * @param dispatch - The dispatch function from useReducer.
  * @param file - The current model file.
  * @param modelLoader - The ModelLoader instance.
  * @returns An object containing optimization functions and optimizer states.
  */
 function useOptimizerIntegration(
-	optimizer: ReturnType<typeof useOptimizeModel> | undefined,
+	instance: ReturnType<typeof useOptimizeModel> | undefined,
 	dispatch: React.Dispatch<Action>,
 	file: ModelFile | null,
 	modelLoader: ModelLoader
-) {
+): OptimizerIntegrationReturn<boolean> {
+	/**
+	 * Applies an optimization to the current model and loads the result.
+	 *
+	 * This function:
+	 * 1. Runs the provided optimization function (e.g., simplify, compress)
+	 * 2. Retrieves the optimized model as a binary file
+	 * 3. Loads the optimized binary into a Three.js scene
+	 * 4. Updates the model state with the optimized version
+	 *
+	 * @template TOptions - The type of options for the optimization function
+	 * @param optimizationFunction - Optional function to run optimization (e.g., instance.simplifyOptimization)
+	 * @param options - Optional configuration for the optimization function
+	 */
 	const applyOptimization = useCallback(
 		async <TOptions>(
 			optimizationFunction?:
@@ -286,32 +372,43 @@ function useOptimizerIntegration(
 				| undefined,
 			options?: TOptions
 		) => {
-			if (!optimizer) {
+			if (!instance) {
 				console.warn('Optimizer is not available')
 				return
 			}
 
 			try {
-				// Apply the optimization with optional parameters
+				// Step 1: Apply the optimization with optional parameters
 				if (optimizationFunction) await optimizationFunction(options)
 
-				const optimizedModel = await optimizer.getModel()
+				// Step 2: Get the optimized model as a binary file
+				const optimizedModel = await instance.getModel()
 				if (!optimizedModel) {
 					console.warn('No optimized model available after optimization')
 					return
 				}
 
-				// Create a File object from the optimized model and load it
+				// Step 3: Create a File object from the optimized binary data
+				// Ensure we pass an ArrayBufferView (Uint8Array) backed by a real ArrayBuffer
+				// to the File constructor to satisfy BlobPart typing and avoid SharedArrayBuffer issues.
+				// We create a copy using .slice() which returns a Uint8Array backed by a standard ArrayBuffer.
+				const optimizedBlobPart =
+					optimizedModel instanceof Uint8Array
+						? optimizedModel.slice()
+						: new Uint8Array(optimizedModel as ArrayBufferLike).slice()
+
 				const optimizedFile = new File(
-					[optimizedModel],
+					[optimizedBlobPart],
 					file?.name || 'optimized_model.glb',
 					{
 						type: 'model/gltf-binary'
 					}
 				)
 
+				// Step 4: Load the optimized file into Three.js
 				const result = await modelLoader.loadToThreeJS(optimizedFile)
 
+				// Step 5: Update the state with the optimized model
 				dispatch({
 					type: 'set-file',
 					payload: {
@@ -322,19 +419,22 @@ function useOptimizerIntegration(
 				})
 			} catch (error) {
 				console.error('Optimization failed:', error)
-				// Optionally dispatch an error action here
+				// Error is logged, state remains unchanged
 			}
 		},
-		[optimizer, modelLoader, file, dispatch]
+		[instance, modelLoader, file, dispatch]
 	)
 
+	// Return null if no optimizer instance is provided
+	if (!instance) return null as OptimizerIntegrationReturn<boolean>
+
+	// Return the full optimizer interface with the applyOptimization method
 	return {
+		...instance,
 		applyOptimization,
-		optimizations: optimizer?.optimizations,
-		reset: optimizer?.reset,
-		report: optimizer?.optimizations.report,
-		error: optimizer?.error,
-		loading: optimizer?.loading
-	} as OptimizerIntegrationReturn
+		reset: instance?.reset,
+		error: instance?.error,
+		loading: instance?.loading
+	} as OptimizerIntegrationReturn<boolean>
 }
 export default useLoadModel

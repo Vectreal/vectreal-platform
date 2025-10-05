@@ -42,20 +42,16 @@ const useSimplificationSettings = () => {
  */
 export function SimplificationSettings() {
 	const { settings, updateSettings } = useSimplificationSettings()
-	const { optimize } = useModelContext()
 	const {
-		optimizations: { report }
-	} = optimize
-	const totalVertices =
-		report?.meshes.properties.reduce(
-			(total, mesh) => total + mesh.vertices,
-			0
-		) || 0
+		optimizer: { report }
+	} = useModelContext(true)
+
+	const totalVertices = report?.stats.vertices.after || 0
 
 	const { enabled, ratio, error } = settings
 
 	// Calculate estimated polygon reduction based on ratio
-	const estimatedVertices = Math.round(totalVertices * (1 - ratio))
+	const estimatedVertices = Math.round(totalVertices * (1 - (ratio || 0)))
 
 	// Format decimal values consistently
 	const formatDecimal = (value: number) => value.toFixed(3)
@@ -84,7 +80,7 @@ export function SimplificationSettings() {
 					label="Reduction Target"
 					tooltip="Sets how much to reduce the original vertex count. A value of 0.5 aims to keep 50% of vertices."
 					sliderProps={{
-						value: ratio,
+						value: ratio ?? 0,
 						min: 0,
 						max: 1,
 						step: 0.01,
@@ -108,7 +104,7 @@ export function SimplificationSettings() {
 					label="Deviation Limit"
 					tooltip="Determines maximum allowed deviation from original mesh. Higher values allow more simplification but less accuracy."
 					sliderProps={{
-						value: error,
+						value: error ?? 0.001,
 						min: 0.0005,
 						max: 0.02,
 						step: 0.001,

@@ -1,2 +1,2 @@
-export * from './ModelOptimizer'
+export * from './model-optimizer'
 export * from './types'

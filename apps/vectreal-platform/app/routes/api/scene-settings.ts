@@ -33,17 +33,6 @@ export async function action({ request }: ActionFunctionArgs) {
 	const { user } = authResult
 	const { action: actionType, ...requestData } = parsedRequest
 
-	console.log('Scene settings request - action:', actionType)
-	console.log('Scene settings request - sceneId:', requestData.sceneId)
-	console.log(
-		'Scene settings request - settings keys:',
-		Object.keys(requestData.settings)
-	)
-	console.log(
-		'Scene settings request - assetIds count:',
-		requestData.assetIds.length
-	)
-
 	try {
 		// Route to appropriate operations
 		switch (actionType as SceneSettingsAction) {

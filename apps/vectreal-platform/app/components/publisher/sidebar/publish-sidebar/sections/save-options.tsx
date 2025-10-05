@@ -2,11 +2,9 @@ import { useExportModel } from '@vctrl/hooks/use-export-model'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { Button } from '@vctrl-ui/ui/button'
 import { Separator } from '@vctrl-ui/ui/separator'
-
 import { motion } from 'framer-motion'
 import { Box, Download, FileAxis3d, Save, User } from 'lucide-react'
 import { useState } from 'react'
-
 import { toast } from 'sonner'
 
 import {
@@ -45,7 +43,7 @@ function handleExportSuccess() {
 	toast.info('Successfully exported model.')
 }
 
-function handleExportError(error: ErrorEvent) {
+function handleExportError(error: Error) {
 	toast.error(error.message)
 }
 
@@ -56,10 +54,10 @@ interface SaveOptionsProps {
 }
 
 export const SaveOptions: React.FC<SaveOptionsProps> = ({ userId }) => {
-	const [format, setFormat] = useState<ExportFormat>('glb')
-	const { file } = useModelContext()
+	const [format, setFormat] = useState<ExportFormat>('gltf')
+	const { file, optimizer } = useModelContext()
 
-	const { handleGltfExport } = useExportModel(
+	const { handleDocumentGltfExport } = useExportModel(
 		handleExportSuccess,
 		handleExportError
 	)
@@ -83,10 +81,18 @@ export const SaveOptions: React.FC<SaveOptionsProps> = ({ userId }) => {
 			toast.error('Please select a valid export format.')
 			return
 		}
+
+		const document = optimizer?._getDocument()
+
+		if (!document) {
+			toast.error('Model not loaded or optimization failed.')
+			return
+		}
+
 		if (selectedFormatOption.id === 'glb') {
-			handleGltfExport(file, true)
+			handleDocumentGltfExport(document, file, true)
 		} else if (selectedFormatOption.id === 'gltf') {
-			handleGltfExport(file, false)
+			handleDocumentGltfExport(document, file, false)
 		}
 	}
 

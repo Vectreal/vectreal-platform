@@ -10,10 +10,8 @@ import { AccordionItem, AccordionTrigger } from '../accordion-components'
 import { sidebarContentVariants } from '../animation'
 
 import { EmbedOptions } from './sections/embed-options'
-// import { PublishOptions } from './sections/publish-options'
 import { SaveOptions } from './sections/save-options'
 import { ScenePreview } from './sections/scene-preview'
-// import { ShareOptions } from './sections/share-options'
 
 interface PublishSidebarProps {
 	userId?: string

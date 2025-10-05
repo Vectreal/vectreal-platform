@@ -19,10 +19,8 @@ import { useAtom } from 'jotai'
 import { Info } from 'lucide-react'
 
 import { SettingSlider } from '../../../../../components'
-import {
-	optimizationAtom,
-	TextureOptimization
-} from '../../../../../lib/stores/publisher-config-store'
+import { optimizationAtom } from '../../../../../lib/stores/publisher-config-store'
+import { TextureOptimization } from '../../../../../types/publisher-config'
 
 const textureSize = [
 	{ value: 256, label: '256×256' },
@@ -36,8 +34,8 @@ export const TextureSettings: React.FC = () => {
 	const [{ plannedOptimizations }, setOptimization] = useAtom(optimizationAtom)
 	const {
 		enabled,
-		resize: [resize],
-		quality,
+		resize: [resize] = [1024, 1024],
+		quality = 80,
 		targetFormat
 	} = plannedOptimizations.texture
 

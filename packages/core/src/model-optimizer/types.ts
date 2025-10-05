@@ -48,15 +48,29 @@ export interface NormalsOptions {
 	overwrite?: boolean
 }
 
+export interface ServerOptions {
+	/** Whether to use the server for optimization */
+	enabled?: boolean
+	/** Server endpoint URL */
+	endpoint?: string
+	/** API key for authentication (if required) */
+	apiKey?: string
+	/** Search parameters to include in requests */
+	searchParams?: Record<string, string>
+	/** Additional headers to include in requests */
+	headers?: Record<string, string>
+}
+
 export interface TextureCompressOptions {
+	/** Maximum texture size */
+	resize?: [number, number]
 	/** Target texture format */
 	targetFormat?: 'webp' | 'jpeg' | 'png'
 	/** Compression quality (0-100) */
 	quality?: number
-	/** Resize images to power of 2 */
-	powerOfTwo?: boolean
-	/** Maximum texture size */
-	maxTextureSize?: number
+
+	/** Whether to use server endpoint (if available) */
+	serverOptions?: ServerOptions
 }
 
 export interface OptimizationReport {

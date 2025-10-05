@@ -1,3 +1,4 @@
+import { Document } from '@gltf-transform/core'
 import { ModelExporter } from '@vctrl/core'
 import fileSaver from 'file-saver'
 import { useCallback, useRef } from 'react'
@@ -17,7 +18,7 @@ const useExportModel = (
 ) => {
 	const exporterRef = useRef<ModelExporter>(new ModelExporter())
 
-	const handleGltfExport = useCallback(
+	const handleThreeGltfExport = useCallback(
 		async (file: ModelFile | null, binary: boolean): Promise<void> => {
 			const scene = file?.model
 			if (!scene) {
@@ -31,8 +32,14 @@ const useExportModel = (
 
 				if (binary) {
 					// Export as GLB
-					const result = await exporter.exportThreeJSGLB(scene)
-					fileSaver.saveAs(new Blob([result.data]), `${baseFileName}.glb`)
+					const result = await exporter.exportThreeJSGLB(scene, {})
+					if (!(result.data instanceof Uint8Array)) {
+						throw new Error('Expected GLB export to return Uint8Array')
+					}
+					fileSaver.saveAs(
+						new Blob([new Uint8Array(result.data)]),
+						`${baseFileName}.glb`
+					)
 				} else {
 					// Export as GLTF with ZIP
 					const result = await exporter.exportThreeJSGLTF(scene)
@@ -40,7 +47,10 @@ const useExportModel = (
 						result,
 						baseFileName
 					)
-					fileSaver.saveAs(new Blob([zipBuffer]), `${baseFileName}.zip`)
+					fileSaver.saveAs(
+						new Blob([new Uint8Array(zipBuffer)]),
+						`${baseFileName}.zip`
+					)
 				}
 
 				if (onSaved) onSaved()
@@ -52,8 +62,48 @@ const useExportModel = (
 		[onSaved, onError]
 	)
 
+	const handleDocumentGltfExport = useCallback(
+		async function (
+			jsonDocument: Document,
+			file: ModelFile | null,
+			binary = false
+		) {
+			try {
+				const exporter = exporterRef.current
+				const baseFileName = file?.name.replace(/\.[^/.]+$/, '') || 'model'
+
+				if (binary) {
+					// Export as GLB
+					const result = await exporter.exportDocumentGLB(jsonDocument)
+					fileSaver.saveAs(
+						new Blob([new Uint8Array(result.data)]),
+						`${baseFileName}.glb`
+					)
+				} else {
+					const result = await exporter.exportDocumentGLTF(jsonDocument)
+
+					// Export as GLTF with ZIP
+					const zipBuffer = await exporter.createZIPArchive(
+						result,
+						baseFileName
+					)
+					fileSaver.saveAs(
+						new Blob([new Uint8Array(zipBuffer)]),
+						`${baseFileName}.zip`
+					)
+				}
+
+				if (onSaved) onSaved()
+			} catch (error) {
+				console.error('Export failed:', error)
+				if (onError) onError(error as Error)
+			}
+		},
+		[onError, onSaved]
+	)
 	return {
-		handleGltfExport
+		handleThreeGltfExport,
+		handleDocumentGltfExport
 	}
 }
 

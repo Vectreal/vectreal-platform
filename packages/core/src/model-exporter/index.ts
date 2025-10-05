@@ -1,2 +1,2 @@
-export * from './ModelExporter'
+export * from './model-exporter'
 export * from './types'

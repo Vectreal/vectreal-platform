@@ -1,4 +1,4 @@
-/* vectreal-core | @vctrl/core
+/* vectreal-core | vctrl/hooks
 Copyright (C) 2024 Moritz Becker
 
 This program is free software: you can redistribute it and/or modify
@@ -14,31 +14,26 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-// Export all core services
-export * from './model-loader'
-export * from './model-optimizer'
-export * from './model-exporter'
+// Server communication utilities
+export {
+	createDefaultServerOptions,
+	createRequestHeaders,
+	extractErrorMessage,
+	handleServerResponseError,
+	performTextureOptimizationRequest,
+	prepareTextureOptimizationFormData
+} from './server-communication'
 
-// Re-export commonly used types for convenience
-export { ModelFileTypes } from './model-loader'
-export type {
-	ModelLoadResult,
-	LoadProgress,
-	ThreeJSModelResult
-} from './model-loader'
+// Texture optimization utilities
+export {
+	optimizeTextures,
+	performClientSideTextureOptimization,
+	performServerSideTextureOptimization,
+	shouldUseServerOptimization
+} from './texture-optimization'
 
-export type {
-	SimplifyOptions,
-	DedupOptions,
-	QuantizeOptions,
-	NormalsOptions,
-	TextureCompressOptions,
-	OptimizationReport,
-	OptimizationProgress
-} from './model-optimizer'
-
-export type {
-	ExportOptions,
-	ExportProgress,
-	ExportResult
-} from './model-exporter'
+// Validation utilities
+export {
+	validateResponseContentType,
+	validateServerResponse
+} from './validation'
