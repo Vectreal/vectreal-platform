@@ -36,8 +36,10 @@ function validateSceneId(sceneId: string | undefined): string | null {
  * @returns Saved scene settings with scene ID
  * @throws Error if user doesn't exist in local database
  */
-export async function saveSceneSettings(params: SaveSceneSettingsParams) {
-	const { sceneId, settings, assetIds, userId } = params
+export async function saveSceneSettings(
+	params: Omit<SaveSceneSettingsParams, 'projectId'>
+) {
+	const { sceneId, settings, gltfJson, userId } = params
 	// First, ensure user exists in local database (fallback for existing auth users)
 	const userExists = await userService.userExists(userId)
 	if (!userExists) {
@@ -75,8 +77,8 @@ export async function saveSceneSettings(params: SaveSceneSettingsParams) {
 		sceneId: finalSceneId,
 		projectId,
 		userId,
-		settingsData: settings,
-		assetIds
+		settings,
+		gltfJson
 	})
 
 	// Return the result with the actual scene ID used - ensure sceneId is set correctly
@@ -124,10 +126,6 @@ function validateSaveRequest(
 		return ApiResponseBuilder.badRequest('Settings must be a valid object')
 	}
 
-	if (!Array.isArray(request.assetIds)) {
-		return ApiResponseBuilder.badRequest('Asset IDs must be an array')
-	}
-
 	return null
 }
 
@@ -170,13 +168,18 @@ export async function saveSceneSettingsWithValidation(
 			return validationResult
 		}
 
-		const { sceneId, settings, assetIds } = request
+		// Ensure required fields exist after validation
+		if (!request.settings || !request.gltfJson) {
+			return ApiResponseBuilder.badRequest(
+				'Settings and GLTF data are required'
+			)
+		}
 
 		// Business logic: Save scene settings
 		const result = await saveSceneSettings({
-			sceneId,
-			settings,
-			assetIds: assetIds as string[], // Type assertion needed due to readonly constraint
+			sceneId: request.sceneId,
+			settings: request.settings,
+			gltfJson: request.gltfJson,
 			userId
 		})
 
@@ -187,6 +190,34 @@ export async function saveSceneSettingsWithValidation(
 			error instanceof Error ? error.message : 'Failed to save scene settings'
 		)
 	}
+}
+
+/**
+ * Serializes asset data Map for JSON transfer
+ */
+function serializeAssetData(
+	assetData:
+		| Map<string, { data: Uint8Array; mimeType: string; fileName: string }>
+		| undefined
+):
+	| Record<string, { data: number[]; mimeType: string; fileName: string }>
+	| undefined {
+	if (!assetData) return undefined
+
+	const serialized: Record<
+		string,
+		{ data: number[]; mimeType: string; fileName: string }
+	> = {}
+
+	assetData.forEach((value, key) => {
+		serialized[key] = {
+			data: Array.from(value.data), // Convert Uint8Array to number array
+			mimeType: value.mimeType,
+			fileName: value.fileName
+		}
+	})
+
+	return serialized
 }
 
 /**
@@ -214,6 +245,15 @@ export async function getSceneSettingsWithValidation(
 			sceneId,
 			userId
 		})
+
+		// Serialize asset data Map for JSON transfer
+		if (result && result.assetData) {
+			const serializedResult = {
+				...result,
+				assetData: serializeAssetData(result.assetData)
+			}
+			return ApiResponseBuilder.success(serializedResult)
+		}
 
 		return ApiResponseBuilder.success(result)
 	} catch (error) {

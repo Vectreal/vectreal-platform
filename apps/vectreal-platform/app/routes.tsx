@@ -37,7 +37,7 @@ export default [
 
 	// publisher
 	layout('./routes/layouts/publisher-layout.tsx', [
-		route('publisher', './routes/publisher-page/publisher-page.tsx')
+		route('publisher/:sceneId?', './routes/publisher-page/publisher-page.tsx')
 	]),
 
 	// Auth layout provides access to user context (user, orgs, default org/project)

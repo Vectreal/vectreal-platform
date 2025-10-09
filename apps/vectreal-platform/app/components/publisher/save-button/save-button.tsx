@@ -2,6 +2,7 @@
 import { cn } from '@vctrl-ui/utils'
 import { SaveIcon } from 'lucide-react'
 import { useCallback, useState } from 'react'
+import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
 import { TooltipButton } from '../../tooltip-button'
@@ -11,15 +12,18 @@ import { useSceneSettings } from './use-scene-settings'
 interface SaveButtonProps {
 	sceneId: string | null
 	userId?: string
+	assetIds?: string[]
 	onSave?: (success: boolean) => void
 }
 
-function SaveButton({ sceneId, userId }: SaveButtonProps) {
+function SaveButton({ sceneId, userId, assetIds }: SaveButtonProps) {
 	const [isSaving, setIsSaving] = useState(false)
 	const [isSaved, setIsSaved] = useState(false)
+	const navigate = useNavigate()
 	const { saveSceneSettings, hasUnsavedChanges } = useSceneSettings({
 		sceneId,
-		userId
+		userId,
+		assetIds
 	})
 
 	const hasChanges = hasUnsavedChanges()
@@ -60,6 +64,13 @@ function SaveButton({ sceneId, userId }: SaveButtonProps) {
 				} else {
 					toast.success('Scene settings saved successfully!')
 					setIsSaved(true)
+
+					// If this was a new scene (no sceneId before), update the URL
+					if (!sceneId && result.sceneId) {
+						console.log('Updating URL with new scene ID:', result.sceneId)
+						// Update URL without reloading the page - use route parameter
+						navigate(`/publisher/${result.sceneId}`, { replace: true })
+					}
 				}
 
 				// Reset saved state after a delay
@@ -102,7 +113,7 @@ function SaveButton({ sceneId, userId }: SaveButtonProps) {
 		} finally {
 			setIsSaving(false)
 		}
-	}, [saveSceneSettings, userId, hasChanges])
+	}, [saveSceneSettings, userId, hasChanges, sceneId, navigate])
 
 	return (
 		<div className="fixed top-0 right-0 z-20 m-4 flex items-center gap-6">

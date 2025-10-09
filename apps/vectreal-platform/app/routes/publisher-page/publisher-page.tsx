@@ -23,16 +23,18 @@ import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 import { Route } from './+types/publisher-page'
 import { DropZone } from './drop-zone'
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request, params }: Route.LoaderArgs) {
 	return {
-		isMobile: isMobileRequest(request)
+		isMobile: isMobileRequest(request),
+		sceneId: params.sceneId || null
 	}
 }
 
 const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 	const [loadingStarted, setLoadingStarted] = useState(false)
+	const [sceneLoadAttempted, setSceneLoadAttempted] = useState(false)
 	const isMobile = useIsMobile(loaderData.isMobile)
-	const { isFileLoading, file, on, off, reset } = useModelContext()
+	const { isFileLoading, file, on, off, reset, load } = useModelContext()
 
 	// publisher data store
 	const [env] = useAtom(environmentAtom)
@@ -41,6 +43,101 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 	const [shadows] = useAtom(shadowsAtom)
 	const setMeta = useSetAtom(metaAtom)
 	const setProcess = useSetAtom(processAtom)
+
+	// Load scene when sceneId is provided
+	useEffect(() => {
+		const sceneId = loaderData.sceneId
+
+		// Only load if we have a sceneId and no model is currently loaded and haven't attempted yet
+		if (sceneId && !file?.model && !isFileLoading && !sceneLoadAttempted) {
+			console.log('Loading scene from sceneId:', sceneId)
+			setSceneLoadAttempted(true)
+
+			// Fetch the scene data
+			const loadScene = async () => {
+				try {
+					setLoadingStarted(true)
+
+					const formData = new FormData()
+					formData.append('action', 'get-scene-settings')
+					formData.append('sceneId', sceneId)
+
+					const response = await fetch('/api/scene-settings', {
+						method: 'POST',
+						body: formData
+					})
+
+					const result = await response.json()
+
+					if (!response.ok || result.error) {
+						throw new Error(
+							result.error || `HTTP error! status: ${response.status}`
+						)
+					}
+
+					const data = result.data || result
+
+					// If we have GLTF data and assets, reconstruct and load the model
+					if (data.gltfJson && data.assetData) {
+						console.log('Reconstructing GLTF model with assets...')
+
+						// Create File objects for all assets
+						const assetFiles: File[] = []
+
+						// Convert asset data from server format into File objects
+						if (data.assetData && typeof data.assetData === 'object') {
+							for (const [, assetInfo] of Object.entries(data.assetData)) {
+								const info = assetInfo as {
+									data: number[]
+									fileName: string
+									mimeType: string
+								}
+								const uint8Array = new Uint8Array(info.data)
+								const blob = new Blob([uint8Array], { type: info.mimeType })
+								const file = new File([blob], info.fileName, {
+									type: info.mimeType
+								})
+
+								assetFiles.push(file)
+								console.log(`Created File object for ${info.fileName}`)
+							}
+						}
+
+						// Create GLTF file
+						const gltfJsonString = JSON.stringify(data.gltfJson)
+						const gltfBlob = new Blob([gltfJsonString], {
+							type: 'model/gltf+json'
+						})
+						const gltfFile = new File(
+							[gltfBlob],
+							`${data.meta?.sceneName || 'scene'}.gltf`,
+							{ type: 'model/gltf+json' }
+						)
+
+						// Load the GLTF file along with all asset files
+						// The loader expects the GLTF file and its assets together
+						await load([gltfFile, ...assetFiles])
+
+						toast.success(`Loaded scene: ${data.meta?.sceneName || sceneId}`)
+					}
+				} catch (error) {
+					console.error('Failed to load scene:', error)
+					toast.error(
+						`Failed to load scene: ${error instanceof Error ? error.message : 'Unknown error'}`
+					)
+				} finally {
+					setLoadingStarted(false)
+				}
+			}
+
+			loadScene()
+		}
+	}, [loaderData.sceneId, file?.model, isFileLoading, load, sceneLoadAttempted])
+
+	// Reset the scene load flag when sceneId changes
+	useEffect(() => {
+		setSceneLoadAttempted(false)
+	}, [loaderData.sceneId])
 
 	function handleNotLoadedFiles(files?: File[]) {
 		toast.error(`Not loaded files: ${files?.map((f) => f.name).join(', ')}`)

@@ -31,14 +31,14 @@ export async function action({ request }: ActionFunctionArgs) {
 	}
 
 	const { user } = authResult
-	const { action: actionType, ...requestData } = parsedRequest
+	const { action, ...requestData } = parsedRequest
 
 	try {
 		// Route to appropriate operations
-		switch (actionType as SceneSettingsAction) {
+		switch (action as SceneSettingsAction) {
 			case 'save-scene-settings': {
 				const result = await sceneSettingsOps.saveSceneSettingsWithValidation(
-					{ ...requestData, action: actionType },
+					{ ...requestData, action },
 					user.id
 				)
 				return result
@@ -46,14 +46,14 @@ export async function action({ request }: ActionFunctionArgs) {
 
 			case 'get-scene-settings': {
 				const result = await sceneSettingsOps.getSceneSettingsWithValidation(
-					{ ...requestData, action: actionType },
+					{ ...requestData, action },
 					user.id
 				)
 				return result
 			}
 
 			default:
-				return ApiResponseBuilder.badRequest(`Unknown action: ${actionType}`)
+				return ApiResponseBuilder.badRequest(`Unknown action: ${action}`)
 		}
 	} catch (error) {
 		console.error('Scene settings operation failed:', error)

@@ -66,7 +66,8 @@ const useExportModel = (
 		async function (
 			jsonDocument: Document,
 			file: ModelFile | null,
-			binary = false
+			binary = false,
+			download = true
 		) {
 			try {
 				const exporter = exporterRef.current
@@ -81,6 +82,8 @@ const useExportModel = (
 					)
 				} else {
 					const result = await exporter.exportDocumentGLTF(jsonDocument)
+
+					if (!download) return result
 
 					// Export as GLTF with ZIP
 					const zipBuffer = await exporter.createZIPArchive(

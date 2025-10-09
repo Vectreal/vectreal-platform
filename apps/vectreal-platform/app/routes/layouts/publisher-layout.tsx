@@ -22,18 +22,18 @@ import { createClient } from '../../lib/supabase.server'
 
 import { Route } from './+types/publisher-layout'
 
-export const loader = async ({ request }: Route.LoaderArgs) => {
+export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	const { client } = await createClient(request)
 	const {
 		data: { user }
 	} = await client.auth.getUser()
 
-	const loaderData = { user: user || null, sceneId: null }
+	const loaderData = {
+		user: user || null,
+		sceneId: params.sceneId || null
+	}
 
 	return loaderData
-
-	// const db = getDbClient()
-	// const dbUser = await db.select().from(users).where(eq(users.id, user.id))
 }
 
 interface AnimatedLayoutProps extends PropsWithChildren {
@@ -67,7 +67,7 @@ const AnimatedLayout = ({ children, user, sceneId }: AnimatedLayoutProps) => {
 const Layout = ({ loaderData }: Route.ComponentProps) => {
 	const optimizer = useOptimizeModel()
 	const [{ showSidebar }, setProcessState] = useAtom(processAtom)
-	const { user } = loaderData
+	const { user, sceneId } = loaderData
 
 	const handleOpenChange = useCallback(
 		(isOpen: boolean) => {
@@ -83,7 +83,7 @@ const Layout = ({ loaderData }: Route.ComponentProps) => {
 		<ModelProvider optimizer={optimizer}>
 			<SidebarProvider open={showSidebar} onOpenChange={handleOpenChange}>
 				<Provider store={publisherConfigStore}>
-					<AnimatedLayout user={user} sceneId={null}>
+					<AnimatedLayout user={user} sceneId={sceneId}>
 						<Outlet />
 					</AnimatedLayout>
 				</Provider>

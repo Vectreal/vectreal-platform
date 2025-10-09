@@ -1,9 +1,4 @@
-import {
-	ControlsProps,
-	EnvironmentProps,
-	ShadowsProps,
-	ToneMappingProps
-} from '@vctrl/viewer'
+import { JSONDocument } from '@gltf-transform/core'
 import { and, desc, eq } from 'drizzle-orm'
 import type { ExtractTablesWithRelations } from 'drizzle-orm'
 import type { PgTransaction } from 'drizzle-orm/pg-core'
@@ -22,43 +17,20 @@ import {
 } from '../../db/schema'
 
 import * as dbSchema from '../../db/schema'
+import {
+	CreateSceneSettingsParams,
+	type ExtendedGLTFDocument,
+	type GLTFExportResult,
+	SaveSceneSettingsParams,
+	SceneSettingsData,
+	type SerializedAsset,
+	UpdateSceneSettingsParams
+} from '../../types/api'
 
-/**
- * Scene settings data structure for API operations.
- */
-export interface SceneSettingsData {
-	readonly environment?: EnvironmentProps
-	readonly toneMapping?: ToneMappingProps
-	readonly controls?: ControlsProps
-	readonly shadows?: ShadowsProps
-	readonly meta?: {
-		readonly sceneName?: string
-		readonly thumbnailUrl?: string
-		readonly isSaved?: boolean
-	}
-}
-
-/**
- * Parameters for creating new scene settings.
- */
-export interface CreateSceneSettingsParams {
-	readonly sceneId: string
-	readonly projectId: string
-	readonly userId: string
-	readonly settingsData: SceneSettingsData
-	readonly assetIds?: readonly string[]
-}
-
-/**
- * Parameters for updating existing scene settings.
- */
-export interface UpdateSceneSettingsParams {
-	readonly sceneSettingsId: string
-	readonly userId: string
-	readonly settingsData: SceneSettingsData
-	readonly assetIds?: readonly string[]
-	readonly createNewVersion?: boolean
-}
+import {
+	assetStorageService,
+	type GLTFAssetData
+} from './asset-storage-service.server'
 
 type DbTransaction = PgTransaction<
 	PostgresJsQueryResultHKT,
@@ -93,8 +65,8 @@ class SceneSettingsService {
 	 * @param params - Scene settings creation parameters
 	 * @returns Created or updated scene settings
 	 */
-	async saveSceneSettings(params: CreateSceneSettingsParams) {
-		const { sceneId, projectId, userId, settingsData, assetIds = [] } = params
+	async saveSceneSettings(params: SaveSceneSettingsParams) {
+		const { sceneId, projectId, userId, settings, gltfJson } = params
 
 		return await this.db.transaction(async (tx) => {
 			// Ensure scene exists
@@ -102,14 +74,14 @@ class SceneSettingsService {
 				sceneId,
 				projectId,
 				userId,
-				sceneName: settingsData.meta?.sceneName
+				sceneName: settings.meta?.sceneName
 			})
 
 			// Get current latest version
-			const latestSettings = await this.getLatestSceneSettingsInternal(
+			const latestSettings = (await this.getLatestSceneSettingsInternal(
 				tx,
 				sceneId
-			)
+			)) as typeof sceneSettings.$inferSelect
 
 			// Check if settings have changed
 			if (latestSettings) {
@@ -120,9 +92,9 @@ class SceneSettingsService {
 
 				if (
 					this.hasNoChanges(
-						settingsData,
+						settings,
 						latestSettings,
-						assetIds,
+						gltfJson,
 						existingAssetIds
 					)
 				) {
@@ -130,21 +102,37 @@ class SceneSettingsService {
 				}
 			}
 
-			// Create new version
+			// Create new version with processed GLTF JSON
 			return await this.createNewSettingsVersion(tx, {
+				projectId,
 				sceneId: scene.id,
 				userId,
-				settingsData,
-				assetIds,
+				settings,
+				gltfJson,
 				previousVersion: latestSettings?.version || 0
 			})
 		})
 	}
 
 	/**
+	 * Type guard to check if gltfJson is a GLTFExportResult
+	 */
+	private isGLTFExportResult(
+		gltfJson: JSONDocument | GLTFExportResult
+	): gltfJson is GLTFExportResult {
+		return (
+			typeof gltfJson === 'object' &&
+			gltfJson !== null &&
+			'format' in gltfJson &&
+			gltfJson.format === 'gltf'
+		)
+	}
+
+	/**
 	 * Retrieves the latest scene settings for a scene.
+	 * Downloads assets from cloud storage and returns them with scene settings.
 	 * @param sceneId - The scene ID
-	 * @returns Latest scene settings with associated assets
+	 * @returns Latest scene settings with associated assets and asset data
 	 */
 	async getLatestSceneSettings(sceneId: string) {
 		const settings = await this.db
@@ -160,16 +148,49 @@ class SceneSettingsService {
 
 		if (settings.length === 0) return null
 
-		// Get associated assets
+		// Get associated asset records
 		const sceneAssetsData = await this.db
 			.select({ asset: assets })
 			.from(sceneAssets)
 			.innerJoin(assets, eq(sceneAssets.assetId, assets.id))
 			.where(eq(sceneAssets.sceneSettingsId, settings[0].id))
 
+		// Extract asset IDs
+		const assetIds = sceneAssetsData.map((sa) => sa.asset.id)
+
+		// Download asset data from cloud storage
+		let gltfJson: ExtendedGLTFDocument | null = null
+		let assetDataMap:
+			| Map<string, { data: Uint8Array; mimeType: string; fileName: string }>
+			| undefined
+
+		if (assetIds.length > 0) {
+			try {
+				assetDataMap = await assetStorageService.downloadAssets(assetIds)
+
+				// Find and parse the GLTF JSON asset
+				const gltfAsset = sceneAssetsData.find(
+					(sa) => sa.asset.mimeType === 'model/gltf+json'
+				)
+
+				if (gltfAsset && assetDataMap.has(gltfAsset.asset.id)) {
+					const gltfAssetData = assetDataMap.get(gltfAsset.asset.id)
+					if (gltfAssetData) {
+						const jsonString = new TextDecoder().decode(gltfAssetData.data)
+						gltfJson = JSON.parse(jsonString) as ExtendedGLTFDocument
+					}
+				}
+			} catch (error) {
+				console.error('Failed to download some assets:', error)
+				// Continue without asset data rather than failing completely
+			}
+		}
+
 		return {
 			...settings[0],
-			assets: sceneAssetsData.map((sa) => sa.asset)
+			assets: sceneAssetsData.map((sa) => sa.asset),
+			assetData: assetDataMap, // Map of assetId -> asset data for reconstruction
+			gltfJson // The parsed GLTF JSON document
 		}
 	}
 
@@ -192,7 +213,7 @@ class SceneSettingsService {
 	 * @returns New version of scene settings
 	 */
 	async createNewVersion(params: UpdateSceneSettingsParams) {
-		const { sceneSettingsId, userId, settingsData, assetIds = [] } = params
+		const { sceneSettingsId, userId, settings, gltfJson } = params
 
 		return await this.db.transaction(async (tx) => {
 			// Get current settings
@@ -206,18 +227,30 @@ class SceneSettingsService {
 				throw new Error('Scene settings not found')
 			}
 
+			// Get scene to retrieve projectId
+			const scene = await tx
+				.select()
+				.from(scenes)
+				.where(eq(scenes.id, currentSettings[0].sceneId))
+				.limit(1)
+
+			if (scene.length === 0) {
+				throw new Error('Scene not found')
+			}
+
 			// Mark current as not latest
 			await tx
 				.update(sceneSettings)
 				.set({ isLatest: false })
 				.where(eq(sceneSettings.sceneId, currentSettings[0].sceneId))
 
-			// Create new version
+			// Create new version (processGLTFExport is called within createNewSettingsVersion)
 			return await this.createNewSettingsVersion(tx, {
+				projectId: scene[0].projectId,
 				sceneId: currentSettings[0].sceneId,
 				userId,
-				settingsData,
-				assetIds,
+				settings,
+				gltfJson,
 				previousVersion: currentSettings[0].version
 			})
 		})
@@ -231,25 +264,58 @@ class SceneSettingsService {
 	async updateSceneSettings(
 		params: Omit<UpdateSceneSettingsParams, 'userId' | 'createNewVersion'>
 	) {
-		const { sceneSettingsId, settingsData, assetIds } = params
+		const { sceneSettingsId, settings, gltfJson } = params
 
 		return await this.db.transaction(async (tx) => {
+			// Get scene info for processing assets
+			const [currentSettings] = await tx
+				.select()
+				.from(sceneSettings)
+				.where(eq(sceneSettings.id, sceneSettingsId))
+				.limit(1)
+
+			if (!currentSettings) {
+				throw new Error('Scene settings not found')
+			}
+
+			const [scene] = await tx
+				.select()
+				.from(scenes)
+				.where(eq(scenes.id, currentSettings.sceneId))
+				.limit(1)
+
+			if (!scene) {
+				throw new Error('Scene not found')
+			}
+
+			// Process GLTF if provided
+			let processedGltf: ExtendedGLTFDocument | undefined
+			if (gltfJson !== undefined) {
+				const result = await this.processGLTFExport(
+					scene.id,
+					currentSettings.createdBy,
+					scene.projectId,
+					gltfJson
+				)
+				processedGltf = result.gltfDocument
+			}
+
 			// Update settings
 			const [updatedSettings] = await tx
 				.update(sceneSettings)
 				.set({
-					environment: settingsData.environment,
-					toneMapping: settingsData.toneMapping,
-					controls: settingsData.controls,
-					shadows: settingsData.shadows,
-					meta: settingsData.meta
+					environment: settings.environment,
+					toneMapping: settings.toneMapping,
+					controls: settings.controls,
+					shadows: settings.shadows,
+					meta: settings.meta
 				})
 				.where(eq(sceneSettings.id, sceneSettingsId))
 				.returning()
 
-			// Update assets if provided
-			if (assetIds !== undefined) {
-				await this.updateSceneAssets(tx, sceneSettingsId, assetIds)
+			// Update assets if GLTF was processed
+			if (processedGltf !== undefined) {
+				await this.updateSceneAssets(tx, sceneSettingsId, processedGltf)
 			}
 
 			return updatedSettings
@@ -344,22 +410,34 @@ class SceneSettingsService {
 	 */
 	private hasNoChanges(
 		currentSettings: SceneSettingsData,
-		existingSettings: {
-			environment: unknown
-			toneMapping: unknown
-			controls: unknown
-			shadows: unknown
-			meta: unknown
-		},
-		currentAssetIds: readonly string[],
+		existingSettings: typeof sceneSettings.$inferSelect,
+		gltfJson: JSONDocument | GLTFExportResult,
 		existingAssetIds: string[]
 	): boolean {
+		// Extract asset info from the GLTF JSON
+		let currentAssetIds: string[] = []
+
+		if (this.isGLTFExportResult(gltfJson)) {
+			// For GLTFExportResult, we need to check if the assets themselves have changed
+			// We'll do this by extracting the assets and comparing file names/sizes
+			const extractedAssets = this.extractGLTFAssets(gltfJson)
+			// For now, if we have new assets to process, consider it changed
+			if (extractedAssets.length > 0) {
+				return false
+			}
+		} else {
+			// For extended GLTF document, extract embedded asset IDs
+			currentAssetIds = this.extractAssetIdsFromGltf(
+				gltfJson as ExtendedGLTFDocument
+			)
+		}
+
 		const settingsChanged = this.compareSceneSettings(
 			currentSettings,
 			existingSettings
 		)
 		const assetsChanged = this.compareAssetIds(
-			[...currentAssetIds],
+			currentAssetIds,
 			existingAssetIds
 		)
 
@@ -371,13 +449,7 @@ class SceneSettingsService {
 	 */
 	private compareSceneSettings(
 		current: SceneSettingsData,
-		existing: {
-			environment: unknown
-			toneMapping: unknown
-			controls: unknown
-			shadows: unknown
-			meta: unknown
-		}
+		existing: typeof sceneSettings.$inferSelect
 	): boolean {
 		return (
 			JSON.stringify(current.environment) !==
@@ -461,15 +533,22 @@ class SceneSettingsService {
 	 */
 	private async createNewSettingsVersion(
 		tx: DbTransaction,
-		params: {
-			sceneId: string
-			userId: string
-			settingsData: SceneSettingsData
-			assetIds: readonly string[]
-			previousVersion: number
-		}
+		params: CreateSceneSettingsParams
 	) {
-		const { sceneId, userId, settingsData, assetIds, previousVersion } = params
+		const { sceneId, userId, settings, gltfJson, previousVersion, projectId } =
+			params
+
+		// Process GLTF export if provided - extract and upload assets
+		let assetIds: string[] = []
+		if (gltfJson) {
+			const processedGltf = await this.processGLTFExport(
+				sceneId,
+				userId,
+				projectId,
+				gltfJson
+			)
+			assetIds = processedGltf.assetIds
+		}
 
 		// Mark current latest as not latest
 		await tx
@@ -484,11 +563,11 @@ class SceneSettingsService {
 				sceneId,
 				version: previousVersion + 1,
 				isLatest: true,
-				environment: settingsData.environment,
-				toneMapping: settingsData.toneMapping,
-				controls: settingsData.controls,
-				shadows: settingsData.shadows,
-				meta: settingsData.meta,
+				environment: settings.environment,
+				toneMapping: settings.toneMapping,
+				controls: settings.controls,
+				shadows: settings.shadows,
+				meta: settings.meta,
 				createdBy: userId
 			})
 			.returning()
@@ -498,7 +577,8 @@ class SceneSettingsService {
 			await tx.insert(sceneAssets).values(
 				assetIds.map((assetId) => ({
 					sceneSettingsId: newSettings.id,
-					assetId
+					assetId,
+					usageType: 'gltf-asset'
 				}))
 			)
 		}
@@ -507,26 +587,271 @@ class SceneSettingsService {
 	}
 
 	/**
+	 * Extract asset data from GLTFExportResult (with separate assets)
+	 */
+	private extractGLTFAssets(
+		gltfExportResult: GLTFExportResult
+	): GLTFAssetData[] {
+		const extractedAssets: GLTFAssetData[] = []
+
+		console.log('Extracting GLTF assets:', {
+			isGLTFExportResult: this.isGLTFExportResult(gltfExportResult),
+			hasAssets: !!gltfExportResult.assets,
+			assetsType: Array.isArray(gltfExportResult.assets)
+				? 'array'
+				: gltfExportResult.assets instanceof Map
+					? 'map'
+					: typeof gltfExportResult.assets,
+			assetsCount: gltfExportResult.assets
+				? Array.isArray(gltfExportResult.assets)
+					? gltfExportResult.assets.length
+					: gltfExportResult.assets instanceof Map
+						? gltfExportResult.assets.size
+						: 0
+				: 0
+		})
+
+		if (
+			!this.isGLTFExportResult(gltfExportResult) ||
+			!gltfExportResult.assets
+		) {
+			console.warn('No assets found in GLTF export result')
+			return extractedAssets
+		}
+
+		// Handle Map format (from ModelExporter directly)
+		if (gltfExportResult.assets instanceof Map) {
+			gltfExportResult.assets.forEach((data: Uint8Array, fileName: string) => {
+				const extension = fileName.split('.').pop()?.toLowerCase()
+				let mimeType: string
+				let type: 'buffer' | 'image'
+
+				// Determine MIME type and asset type based on file extension
+				if (extension === 'bin') {
+					mimeType = 'application/octet-stream'
+					type = 'buffer'
+				} else if (extension === 'png') {
+					mimeType = 'image/png'
+					type = 'image'
+				} else if (extension === 'jpg' || extension === 'jpeg') {
+					mimeType = 'image/jpeg'
+					type = 'image'
+				} else if (extension === 'webp') {
+					mimeType = 'image/webp'
+					type = 'image'
+				} else {
+					mimeType = 'application/octet-stream'
+					type = 'buffer'
+				}
+
+				extractedAssets.push({
+					fileName,
+					data,
+					mimeType,
+					type
+				})
+			})
+		}
+		// Handle serialized array format (from JSON transfer)
+		else if (Array.isArray(gltfExportResult.assets)) {
+			gltfExportResult.assets.forEach((asset: SerializedAsset) => {
+				const fileName = asset.fileName
+				const extension = fileName.split('.').pop()?.toLowerCase()
+				let mimeType: string
+				let type: 'buffer' | 'image'
+
+				if (extension === 'bin') {
+					mimeType = 'application/octet-stream'
+					type = 'buffer'
+				} else if (extension === 'png') {
+					mimeType = 'image/png'
+					type = 'image'
+				} else if (extension === 'jpg' || extension === 'jpeg') {
+					mimeType = 'image/jpeg'
+					type = 'image'
+				} else if (extension === 'webp') {
+					mimeType = 'image/webp'
+					type = 'image'
+				} else {
+					mimeType = 'application/octet-stream'
+					type = 'buffer'
+				}
+
+				// Convert number array back to Uint8Array
+				const data = new Uint8Array(asset.data)
+
+				extractedAssets.push({
+					fileName,
+					data,
+					mimeType,
+					type
+				})
+			})
+		}
+
+		console.log(
+			`Extracted ${extractedAssets.length} assets from GLTF export result`
+		)
+		return extractedAssets
+	}
+
+	/**
+	 * Upload GLTF assets to cloud storage and return asset IDs
+	 */
+	private async uploadGLTFAssets(
+		sceneId: string,
+		userId: string,
+		projectId: string,
+		gltfExportResult: GLTFExportResult
+	): Promise<string[]> {
+		const gltfAssets = this.extractGLTFAssets(gltfExportResult)
+
+		if (gltfAssets.length === 0) {
+			return []
+		}
+
+		const uploadResults = await assetStorageService.uploadSceneAssets(
+			sceneId,
+			userId,
+			projectId,
+			gltfAssets
+		)
+
+		return uploadResults.map((result) => result.assetId)
+	}
+
+	/**
+	 * Process GLTF export: extract assets, upload to cloud, and create extended GLTF document
+	 * with embedded asset IDs for tracking.
+	 */
+	private async processGLTFExport(
+		sceneId: string,
+		userId: string,
+		projectId: string,
+		gltfJson: JSONDocument | GLTFExportResult
+	): Promise<{ assetIds: string[]; gltfDocument: ExtendedGLTFDocument }> {
+		// Check if this is a GLTFExportResult with separate assets
+		if (this.isGLTFExportResult(gltfJson)) {
+			// Extract and upload assets
+			const assetIds = await this.uploadGLTFAssets(
+				sceneId,
+				userId,
+				projectId,
+				gltfJson
+			)
+
+			// Upload the GLTF JSON itself as an asset
+			const gltfJsonData = JSON.stringify(gltfJson.data)
+			const gltfJsonAsset: GLTFAssetData = {
+				fileName: 'scene.gltf',
+				data: new TextEncoder().encode(gltfJsonData),
+				mimeType: 'model/gltf+json',
+				type: 'buffer'
+			}
+
+			const [gltfJsonUploadResult] =
+				await assetStorageService.uploadSceneAssets(
+					sceneId,
+					userId,
+					projectId,
+					[gltfJsonAsset]
+				)
+
+			// Include the GLTF JSON asset ID in the list
+			const allAssetIds = [...assetIds, gltfJsonUploadResult.assetId]
+
+			// Create extended GLTF document with asset IDs embedded
+			// Build a mutable object first, then cast to readonly interface
+			const baseDoc = gltfJson.data as unknown as ExtendedGLTFDocument
+			const extendedGltfDoc: ExtendedGLTFDocument = {
+				...baseDoc,
+				assetIds: allAssetIds,
+				asset: {
+					...baseDoc.asset,
+					extensions: {
+						...baseDoc.asset?.extensions,
+						VECTREAL_asset_metadata: {
+							assetIds: allAssetIds
+						}
+					}
+				}
+			}
+
+			return { assetIds: allAssetIds, gltfDocument: extendedGltfDoc }
+		} else {
+			// Already a plain JSONDocument - check if it has embedded asset IDs
+			const existingAssetIds = this.extractAssetIdsFromGltf(
+				gltfJson as ExtendedGLTFDocument
+			)
+
+			return {
+				assetIds: existingAssetIds,
+				gltfDocument: gltfJson as ExtendedGLTFDocument
+			}
+		}
+	}
+
+	/**
+	 * Extract asset IDs from already processed GLTF JSON with asset references
+	 */
+	private extractAssetIdsFromGltf(gltfJson: ExtendedGLTFDocument): string[] {
+		const assetIds: string[] = []
+
+		// Check if gltfJson has metadata with asset IDs
+		if (gltfJson.asset?.extensions) {
+			const extensions = gltfJson.asset.extensions
+			if (extensions.VECTREAL_asset_metadata?.assetIds) {
+				assetIds.push(...extensions.VECTREAL_asset_metadata.assetIds)
+			}
+		}
+
+		// Alternative: Extract from custom metadata if stored elsewhere
+		if (gltfJson.assetIds && Array.isArray(gltfJson.assetIds)) {
+			assetIds.push(...gltfJson.assetIds)
+		}
+
+		return assetIds
+	}
+
+	/**
 	 * Updates assets associated with scene settings.
+	 * Processes GLTF export result, uploads assets, and creates database links.
 	 */
 	private async updateSceneAssets(
 		tx: DbTransaction,
 		sceneSettingsId: string,
-		assetIds: readonly string[]
+		gltfJson: JSONDocument | GLTFExportResult | ExtendedGLTFDocument
 	) {
-		// Remove existing assets
+		// Remove existing asset links
 		await tx
 			.delete(sceneAssets)
 			.where(eq(sceneAssets.sceneSettingsId, sceneSettingsId))
 
-		// Add new assets
-		if (assetIds.length > 0) {
-			await tx.insert(sceneAssets).values(
-				assetIds.map((assetId) => ({
-					sceneSettingsId,
-					assetId
-				}))
-			)
+		// Add new asset links if asset IDs exist in the GLTF JSON
+		if (gltfJson) {
+			let assetIds: string[] = []
+
+			// Extract asset IDs based on the type of GLTF data
+			if (this.isGLTFExportResult(gltfJson)) {
+				// This shouldn't happen in updateSceneAssets as it should be processed first
+				console.warn(
+					'Received GLTFExportResult in updateSceneAssets - should be processed first'
+				)
+			} else {
+				assetIds = this.extractAssetIdsFromGltf(
+					gltfJson as ExtendedGLTFDocument
+				)
+			}
+
+			if (assetIds.length > 0) {
+				await tx.insert(sceneAssets).values(
+					assetIds.map((assetId) => ({
+						sceneSettingsId,
+						assetId,
+						usageType: 'gltf-asset'
+					}))
+				)
+			}
 		}
 	}
 

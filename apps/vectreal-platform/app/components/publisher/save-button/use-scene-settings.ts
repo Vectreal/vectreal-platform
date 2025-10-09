@@ -1,3 +1,5 @@
+import { useExportModel } from '@vctrl/hooks/use-export-model'
+import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
@@ -13,11 +15,13 @@ import type { SceneSettingsData } from '../../../types/api'
 export interface UseSceneSettingsParams {
 	sceneId: null | string
 	userId?: string
+	assetIds?: string[]
 }
 
 export function useSceneSettings(
-	{ sceneId, userId }: UseSceneSettingsParams = {
+	{ sceneId, userId, assetIds }: UseSceneSettingsParams = {
 		sceneId: null,
+		assetIds: [],
 		userId: undefined
 	}
 ) {
@@ -25,11 +29,22 @@ export function useSceneSettings(
 	const [lastSavedSettings, setLastSavedSettings] =
 		useState<SceneSettingsData | null>(null)
 	const [currentSceneId, setCurrentSceneId] = useState<string | null>(sceneId)
+	const [currentAssetIds, setCurrentAssetIds] = useState<string[]>(
+		assetIds || []
+	)
+
+	const { optimizer, file } = useModelContext(true)
+	const { handleDocumentGltfExport } = useExportModel()
 
 	// Update currentSceneId when sceneId prop changes
 	useEffect(() => {
 		setCurrentSceneId(sceneId)
 	}, [sceneId])
+
+	// Update currentAssetIds when sceneId prop changes
+	useEffect(() => {
+		setCurrentAssetIds([])
+	}, [assetIds])
 
 	// Get current settings from atoms
 	const [environment] = useAtom(environmentAtom)
@@ -65,10 +80,56 @@ export function useSceneSettings(
 		setIsLoading(true)
 		try {
 			const formData = new FormData()
+
+			const gltfDocument = optimizer._getDocument()
+			const gltfJson = await handleDocumentGltfExport(
+				gltfDocument,
+				file,
+				false,
+				false
+			)
+
+			console.log('Gltf JSON:', gltfJson)
+
+			// Convert Map to array for JSON serialization
+			let gltfJsonToSend: unknown = gltfJson
+			if (gltfJson && typeof gltfJson === 'object' && 'assets' in gltfJson) {
+				const assets = gltfJson.assets
+				if (assets instanceof Map) {
+					// Convert Map to array of SerializedAsset objects
+					const serializedAssets = Array.from(assets.entries()).map(
+						([fileName, data]) => ({
+							fileName,
+							data: Array.from(data), // Convert Uint8Array to number array
+							mimeType: fileName.endsWith('.bin')
+								? 'application/octet-stream'
+								: fileName.endsWith('.png')
+									? 'image/png'
+									: fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')
+										? 'image/jpeg'
+										: fileName.endsWith('.webp')
+											? 'image/webp'
+											: 'application/octet-stream'
+						})
+					)
+
+					gltfJsonToSend = {
+						...gltfJson,
+						assets: serializedAssets
+					}
+
+					console.log(
+						`Serialized ${serializedAssets.length} assets for transfer`
+					)
+				}
+			}
+
 			formData.append('action', 'save-scene-settings')
 			formData.append('sceneId', currentSceneId || '')
 			formData.append('userId', userId)
-			formData.append('settingsData', JSON.stringify(currentSettings))
+			formData.append('settings', JSON.stringify(currentSettings))
+			formData.append('assetIds', JSON.stringify(currentAssetIds))
+			formData.append('gltfJson', JSON.stringify(gltfJsonToSend))
 
 			// Use fetch instead of fetcher to get proper response handling
 			const response = await fetch('/api/scene-settings', {
@@ -109,7 +170,15 @@ export function useSceneSettings(
 		} finally {
 			setIsLoading(false)
 		}
-	}, [currentSceneId, userId, currentSettings])
+	}, [
+		currentSceneId,
+		currentAssetIds,
+		currentSettings,
+		optimizer,
+		file,
+		userId,
+		handleDocumentGltfExport
+	])
 
 	/**
 	 * Load scene settings from database and update atoms
@@ -157,7 +226,6 @@ export function useSceneSettings(
 					setLastSavedSettings(loadedSettings)
 				}
 
-				// In a real implementation, you would update atoms with the loaded settings
 				return data
 			} catch (error) {
 				console.error('Failed to load scene settings:', error)
@@ -249,8 +317,17 @@ export function useSceneSettings(
 	}, [currentSettings, lastSavedSettings])
 
 	// Load settings when currentSceneId changes and it's an existing scene
+	// BUT only if no model is currently loaded in the publisher
 	useEffect(() => {
+		// Don't auto-load if a model is already loaded - this prevents reloading
+		// when saving an existing scene or when the user has already loaded a model
+		if (file?.model) {
+			console.log('Model already loaded, skipping auto-load of scene settings')
+			return
+		}
+
 		if (currentSceneId && currentSceneId.trim() !== '') {
+			console.log('Loading scene settings for scene ID:', currentSceneId)
 			loadSceneSettings().catch((error) => {
 				// If loading fails, it might be a new scene, so reset saved settings
 				console.log(
@@ -263,7 +340,7 @@ export function useSceneSettings(
 			// No scene ID, reset saved settings
 			setLastSavedSettings(null)
 		}
-	}, [currentSceneId, loadSceneSettings])
+	}, [currentSceneId, loadSceneSettings, file?.model])
 
 	return {
 		// State
