@@ -163,7 +163,6 @@ export class AssetStorageService {
 			)
 
 			if (existingAsset) {
-				console.log(`Reusing existing asset ${existingAsset.id}: ${fileName}`)
 				results.push({
 					assetId: existingAsset.id,
 					fileName: existingAsset.name,
@@ -212,8 +211,6 @@ export class AssetStorageService {
 					fileSize: asset.data.byteLength,
 					mimeType: asset.mimeType
 				})
-
-				console.log(`Uploaded new asset ${assetId}: ${fileName}`)
 			} catch (error) {
 				console.error(`Failed to upload asset ${fileName}:`, error)
 				throw new Error(`Failed to upload asset ${fileName}: ${error}`)
@@ -316,8 +313,6 @@ export class AssetStorageService {
 
 				// Delete from database
 				await this.db.delete(assets).where(eq(assets.id, assetId))
-
-				console.log(`Deleted asset ${assetId}`)
 			} catch (error) {
 				console.error(`Failed to delete asset ${assetId}:`, error)
 				// Continue with other assets

@@ -1,5 +1,11 @@
 import { Badge } from '@vctrl-ui/ui/badge'
 import { Button } from '@vctrl-ui/ui/button'
+import {
+	Empty,
+	EmptyContent,
+	EmptyDescription,
+	EmptyHeader
+} from '@vctrl-ui/ui/empty'
 import { FolderOpen, Plus } from 'lucide-react'
 import { Link, Outlet, useLocation } from 'react-router'
 
@@ -15,6 +21,34 @@ import { Route } from './+types/projects'
 export async function loader({ request }: Route.LoaderArgs) {
 	return null
 }
+
+const EmptyProjectsState = ({
+	showCreateLink = false
+}: {
+	showCreateLink?: boolean
+}) => (
+	<Empty>
+		<EmptyHeader>No projects found</EmptyHeader>
+		<EmptyDescription>
+			Get started by creating your first project.
+		</EmptyDescription>
+		<EmptyContent>
+			{showCreateLink ? (
+				<Link viewTransition to="/dashboard/projects/new">
+					<Button>
+						<Plus className="mr-2 h-4 w-4" />
+						Create Your First Project
+					</Button>
+				</Link>
+			) : (
+				<Button disabled>
+					<Plus className="mr-2 h-4 w-4" />
+					Create Project
+				</Button>
+			)}
+		</EmptyContent>
+	</Empty>
+)
 
 const ProjectsPage = () => {
 	const location = useLocation()
@@ -71,47 +105,15 @@ const ProjectsPage = () => {
 										))}
 									</div>
 								) : (
-									<div className="rounded-lg border border-gray-200 p-6 text-center">
-										<FolderOpen className="mx-auto h-8 w-8 text-gray-400" />
-										<p className="mt-2 text-sm text-gray-500">
-											No projects in this organization
-										</p>
-										{creationCapabilities.availableOrganizations.some(
-											(org) => org.id === organization.id
-										) && (
-											<Link
-												viewTransition
-												to={`/dashboard/projects/new?org=${organization.id}`}
-											>
-												<Button variant="outline" size="sm" className="mt-2">
-													<Plus className="mr-1 h-3 w-3" />
-													Create Project
-												</Button>
-											</Link>
-										)}
-									</div>
+									<EmptyProjectsState />
 								)}
 							</div>
 						))}
 					</div>
 				) : (
-					<div className="rounded-lg border border-gray-200 p-8 text-center">
-						<FolderOpen className="mx-auto h-12 w-12 text-gray-400" />
-						<h3 className="mt-2 text-lg font-medium text-gray-900">
-							No projects found
-						</h3>
-						<p className="mt-1 text-gray-500">
-							Get started by creating your first project.
-						</p>
-						{creationCapabilities.canCreateProjects && (
-							<Link viewTransition to="/dashboard/projects/new">
-								<Button className="mt-4">
-									<Plus className="mr-2 h-4 w-4" />
-									Create Your First Project
-								</Button>
-							</Link>
-						)}
-					</div>
+					<EmptyProjectsState
+						showCreateLink={creationCapabilities.canCreateProjects}
+					/>
 				)}
 			</div>
 		</div>

@@ -56,9 +56,8 @@ export const useDynamicHeader = (): DynamicHeaderContent => {
 		// Scene route - show scene name and stats
 		if (isScene && scene && project) {
 			return {
-				title: scene.scene.name,
-				description:
-					scene.scene.description || `Scene in ${project.project.name}`,
+				title: scene.name,
+				description: scene.description || `Scene in ${project.project.name}`,
 				actionVariant: 'scene-detail' as ACTION_VARIANT
 			}
 		}
@@ -68,9 +67,9 @@ export const useDynamicHeader = (): DynamicHeaderContent => {
 			const totalItems =
 				folderContent.subfolders.length + folderContent.scenes.length
 			return {
-				title: folder.folder.name,
+				title: folder.name,
 				description:
-					folder.folder.description ||
+					folder.description ||
 					`${totalItems} items in ${project.project.name}`,
 				actionVariant: ACTION_VARIANT.FOLDER_DETAIL
 			}

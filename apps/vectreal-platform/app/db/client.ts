@@ -27,9 +27,9 @@ export function getDbClient() {
 		// For serverless/development environments
 		transform: {
 			undefined: null // Transform undefined to null for PostgreSQL compatibility
-		},
+		}
 		// Prevent connection leaks in development
-		debug: process.env.NODE_ENV === 'development' ? console.log : false
+		// debug: process.env.NODE_ENV === 'development' ? console.log : false
 	})
 
 	cachedClient = drizzle({ client, schema })

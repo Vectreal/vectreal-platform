@@ -18,7 +18,7 @@ import { useAtom } from 'jotai/react'
 import { useCallback } from 'react'
 
 import { InfoTooltip } from '../../../../'
-import { environmentAtom } from '../../../../../lib/stores/publisher-config-store'
+import { environmentAtom } from '../../../../../lib/stores/scene-settings-store'
 import { SettingSlider, SettingToggle } from '../../../settings-components'
 
 const ENVIRONMENT_PRESETS: EnvironmentKey[] = [

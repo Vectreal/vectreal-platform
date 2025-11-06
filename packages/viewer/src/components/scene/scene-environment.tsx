@@ -2,6 +2,7 @@ import {
 	Environment,
 	EnvironmentProps as ThreeEnvironmentProps
 } from '@react-three/drei'
+import { memo } from 'react'
 
 export type EnvironmentKey =
 	| 'nature-moonlit'
@@ -67,7 +68,7 @@ const buildEnvUrl = ({ id, type, resolution }: EnvironmentMap) => {
 /**
  * SceneEnvironment component that sets up the environment for a scene.
  */
-const SceneEnvironment = (props: EnvironmentProps) => {
+const SceneEnvironment = memo((props: EnvironmentProps) => {
 	const { preset, environmentResolution, ...rest } = {
 		...defaultEnvOptions,
 		...props
@@ -80,6 +81,6 @@ const SceneEnvironment = (props: EnvironmentProps) => {
 	})
 
 	return <Environment files={url} {...rest} />
-}
+})
 
 export default SceneEnvironment

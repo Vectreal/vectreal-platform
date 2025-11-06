@@ -1,6 +1,6 @@
 import { PerspectiveCamera, PerspectiveCameraProps } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Box3, Object3D, Vector3 } from 'three'
 
 type RequiredCameraProps = Required<
@@ -20,12 +20,22 @@ export const defaultCameraOptions: RequiredCameraProps = {
  * @param {PerspectiveCameraProps} props - Camera configuration.
  */
 const SceneCamera = (props: PerspectiveCameraProps) => {
+	const mountedRef = useRef(false)
 	const { ...cameraOptions } = { ...defaultCameraOptions, ...props }
 	const [position, setPosition] = useState(new Vector3(0, 0, 0))
 
 	const { scene } = useThree()
 
 	useEffect(() => {
+		mountedRef.current = true
+		return () => {
+			mountedRef.current = false
+		}
+	}, [mountedRef])
+
+	useEffect(() => {
+		if (!mountedRef.current) return
+
 		const box = new Box3()
 
 		// recursively traverse the scene to find the focus target

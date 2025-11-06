@@ -88,6 +88,25 @@ html.light {
 	height: 100%;
 }
 
+.viewer-canvas {
+	opacity: 0;
+	transition: opacity 0.5s ease-in-out;
+	transition-delay: 0.5s;
+}
+
+.loader-container {
+	opacity: 1;
+	transition: opacity 0.5s ease-in-out;
+}
+
+.fade-out {
+	opacity: 0;
+}
+
+.fade-in {
+	opacity: 1;
+}
+
 .popover {
 	position: absolute;
 	z-index: 100;

@@ -20,7 +20,7 @@ import { useState } from 'react'
 
 import { data, Form, redirect } from 'react-router'
 
-import { createClient } from '../../lib/supabase.server'
+import { createSupabaseClient } from '../../lib/supabase.server'
 
 import { Route } from './+types/signup-page'
 
@@ -82,7 +82,7 @@ export async function action({
 	const hasErrors = Object.keys(errors).length > 0
 	if (hasErrors) return data({ errors })
 
-	const { client, headers } = await createClient(request)
+	const { client, headers } = await createSupabaseClient(request)
 	const { data: signupData, error } = await client.auth.signUp({
 		email,
 		password,
@@ -105,7 +105,7 @@ export async function action({
  * Loader for the signup page. Redirects authenticated users.
  */
 export const loader = async ({ request }: Route.LoaderArgs) => {
-	const { client } = await createClient(request)
+	const { client } = await createSupabaseClient(request)
 	const {
 		data: { user }
 	} = await client.auth.getUser()

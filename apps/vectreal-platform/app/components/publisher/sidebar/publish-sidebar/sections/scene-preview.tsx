@@ -3,7 +3,7 @@ import { useAtom } from 'jotai'
 import { useEffect, useState } from 'react'
 
 import { BasicCard } from '../../../../../components/layout-components'
-import { metaAtom } from '../../../../../lib/stores/publisher-config-store'
+import { metaAtom } from '../../../../../lib/stores/scene-settings-store'
 
 export const ScenePreview: React.FC = () => {
 	const [isLoading, setIsLoading] = useState(true)

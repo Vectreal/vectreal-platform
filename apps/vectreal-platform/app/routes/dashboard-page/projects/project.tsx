@@ -1,11 +1,57 @@
 import { Badge } from '@vctrl-ui/ui/badge'
-
 import { Button } from '@vctrl-ui/ui/button'
+import {
+	Empty,
+	EmptyContent,
+	EmptyDescription,
+	EmptyHeader
+} from '@vctrl-ui/ui/empty'
 import { File, Folder, Plus } from 'lucide-react'
 import { Link, Outlet, useLocation, useParams } from 'react-router'
 
 import DashboardCard from '../../../components/dashboard/dashboard-card'
 import { useProject, useProjectContent } from '../../../hooks'
+
+const ProjectNotFoundState = () => (
+	<div className="p-6">
+		<Empty>
+			<EmptyHeader>Project Not Found</EmptyHeader>
+			<EmptyDescription>
+				The project you're looking for doesn't exist or you don't have access to
+				it.
+			</EmptyDescription>
+			<EmptyContent>
+				<Link viewTransition to="/dashboard/projects">
+					<Button>Back to Projects</Button>
+				</Link>
+			</EmptyContent>
+		</Empty>
+	</div>
+)
+
+const EmptyProjectContentState = () => (
+	<Empty>
+		<EmptyHeader>No content yet</EmptyHeader>
+		<EmptyDescription>
+			Start by creating your first scene or folder.
+		</EmptyDescription>
+		<EmptyContent>
+			<div className="flex justify-center gap-3">
+				<Button variant="outline">
+					<Plus className="mr-2 h-4 w-4" />
+					Create Folder
+				</Button>
+
+				<Link viewTransition to="/publisher">
+					<Button>
+						<Plus className="mr-2 h-4 w-4" />
+						Create Scene
+					</Button>
+				</Link>
+			</div>
+		</EmptyContent>
+	</Empty>
+)
 
 const ProjectPage = () => {
 	const params = useParams()
@@ -17,22 +63,7 @@ const ProjectPage = () => {
 	const projectContent = useProjectContent(projectId || '')
 
 	if (!project || !projectId) {
-		return (
-			<div className="p-6">
-				<div className="text-center">
-					<h1 className="text-2xl font-bold text-gray-900">
-						Project Not Found
-					</h1>
-					<p className="mt-2 text-gray-600">
-						The project you're looking for doesn't exist or you don't have
-						access to it.
-					</p>
-					<Link viewTransition to="/dashboard/projects">
-						<Button className="mt-4">Back to Projects</Button>
-					</Link>
-				</div>
-			</div>
-		)
+		return <ProjectNotFoundState />
 	}
 
 	// Check if we're at a child route (folder or scene)
@@ -49,7 +80,7 @@ const ProjectPage = () => {
 			{projectContent.folders.length > 0 || projectContent.scenes.length > 0 ? (
 				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 					{/* Folders */}
-					{projectContent.folders.map(({ folder }) => (
+					{projectContent.folders.map((folder) => (
 						<DashboardCard
 							key={folder.id}
 							title={folder.name}
@@ -65,7 +96,7 @@ const ProjectPage = () => {
 					))}
 
 					{/* Root Scenes */}
-					{projectContent.scenes.map(({ scene }) => (
+					{projectContent.scenes.map((scene) => (
 						<DashboardCard
 							key={scene.id}
 							title={scene.name}
@@ -84,25 +115,7 @@ const ProjectPage = () => {
 					))}
 				</div>
 			) : (
-				<div className="rounded-lg border border-gray-200 p-8 text-center">
-					<Folder className="mx-auto h-12 w-12 text-gray-400" />
-					<h3 className="mt-2 text-lg font-medium text-gray-900">
-						No content yet
-					</h3>
-					<p className="mt-1 text-gray-500">
-						Start by creating your first scene or folder.
-					</p>
-					<div className="mt-6 flex justify-center gap-3">
-						<Button variant="outline">
-							<Plus className="mr-2 h-4 w-4" />
-							Create Folder
-						</Button>
-						<Button>
-							<Plus className="mr-2 h-4 w-4" />
-							Create Scene
-						</Button>
-					</div>
-				</div>
+				<EmptyProjectContentState />
 			)}
 		</div>
 	)

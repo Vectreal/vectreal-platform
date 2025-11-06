@@ -5,7 +5,7 @@ import { VectrealViewer } from '@vctrl/viewer'
 import { LoadingSpinner } from '@vctrl-ui/ui/loading-spinner'
 import { SpinnerWrapper } from '@vctrl-ui/ui/spinner-wrapper'
 import { ExternalLink, Sparkles } from 'lucide-react'
-import { Suspense, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { Link } from 'react-router'
 
@@ -40,8 +40,13 @@ const InfoContent = () => (
 	</div>
 )
 
-const Model = ({ url }: { url: string }) => {
-	const { scene } = useGLTF(url)
+const ProductScene = () => {
+	const [modelUrl, setModelUrl] = useState('')
+	const { scene } = useGLTF(modelUrl || '', true) // preload = true
+
+	useEffect(() => {
+		setModelUrl(bike)
+	}, [])
 
 	return (
 		<VectrealViewer
@@ -63,29 +68,12 @@ const Model = ({ url }: { url: string }) => {
 			infoPopoverOptions={{
 				content: <InfoContent />
 			}}
+			loader={
+				<SpinnerWrapper>
+					<LoadingSpinner className="text-white" />
+				</SpinnerWrapper>
+			}
 		/>
-	)
-}
-
-const Loader = () => {
-	return (
-		<SpinnerWrapper>
-			<LoadingSpinner className="text-white" />
-		</SpinnerWrapper>
-	)
-}
-
-const ProductScene = () => {
-	const [modelUrl, setModelUrl] = useState('')
-
-	useEffect(() => {
-		setModelUrl(bike)
-	}, [])
-
-	return (
-		<Suspense fallback={<Loader />}>
-			{modelUrl ? <Model url={modelUrl} /> : <Loader />}
-		</Suspense>
 	)
 }
 

@@ -3,7 +3,7 @@ import { ApiResponse } from '@vctrl-ui/utils'
 import { redirect } from 'react-router'
 
 import { userService } from '../../../lib/services/user-service.server'
-import { createClient } from '../../../lib/supabase.server'
+import { createSupabaseClient } from '../../../lib/supabase.server'
 
 import { Route } from './+types/callback'
 
@@ -14,7 +14,7 @@ export async function loader({ request }: Route.ActionArgs) {
 
 	if (!code) return ApiResponse.badRequest('Missing code parameter')
 
-	const { client, headers } = await createClient(request)
+	const { client, headers } = await createSupabaseClient(request)
 	const { error } = await client.auth.exchangeCodeForSession(code)
 
 	if (error) {

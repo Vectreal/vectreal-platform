@@ -33,6 +33,7 @@ export type {
 	QuantizeOptions,
 	NormalsOptions,
 	TextureCompressOptions,
+	ServerOptions,
 	OptimizationReport,
 	OptimizationProgress
 } from './model-optimizer'

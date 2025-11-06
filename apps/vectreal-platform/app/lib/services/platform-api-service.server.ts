@@ -1,8 +1,8 @@
 import type { Bucket } from '@google-cloud/storage'
 
 import type { ApiUserContext } from '../../types/api'
-import { ApiResponseBuilder } from '../api/api-responses'
-import { createClient } from '../supabase.server'
+import { ApiResponseBuilder } from '../api/api-responses.server'
+import { createSupabaseClient } from '../supabase.server'
 
 /**
  * Platform API service for common server operations.
@@ -30,7 +30,7 @@ export class PlatformApiService {
 	static async getAuthUser(
 		request: Request
 	): Promise<ApiUserContext | Response> {
-		const { client, headers } = await createClient(request)
+		const { client, headers } = await createSupabaseClient(request)
 		const user = (await client.auth.getUser()).data.user
 
 		if (!user) {

@@ -9,7 +9,7 @@ import type {
 import { sceneSettingsService } from '../services/scene-settings-service.server'
 import { userService } from '../services/user-service.server'
 
-import { ApiResponseBuilder } from './api-responses'
+import { ApiResponseBuilder } from './api-responses.server'
 
 /**
  * Validates and normalizes scene ID.
@@ -169,9 +169,9 @@ export async function saveSceneSettingsWithValidation(
 		}
 
 		// Ensure required fields exist after validation
-		if (!request.settings || !request.gltfJson) {
+		if (!request.sceneId || !request.settings || !request.gltfJson) {
 			return ApiResponseBuilder.badRequest(
-				'Settings and GLTF data are required'
+				'Scene ID, settings, and GLTF data are required'
 			)
 		}
 
@@ -238,11 +238,13 @@ export async function getSceneSettingsWithValidation(
 			return validationResult
 		}
 
-		const { sceneId } = request
+		if (!request.sceneId) {
+			return ApiResponseBuilder.badRequest('Scene ID is required')
+		}
 
 		// Business logic: Get scene settings
 		const result = await getSceneSettings({
-			sceneId,
+			sceneId: request.sceneId,
 			userId
 		})
 

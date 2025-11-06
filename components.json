@@ -5,16 +5,16 @@
 	"tsx": true,
 	"tailwind": {
 		"config": "",
-		"css": "@vctrl-ui//styles/globals.css",
+		"css": "@vctrl-ui/styles/globals.css",
 		"baseColor": "neutral",
 		"cssVariables": true,
 		"prefix": ""
 	},
 	"aliases": {
-		"components": "@vctrl-ui/",
-		"utils": "@vctrl-ui//utils",
-		"hooks": "@vctrl-ui//hooks",
-		"types": "@vctrl-ui//types"
+		"components": "shared/ui/src/",
+		"utils": "@vctrl-ui/utils",
+		"hooks": "shared/ui/src/hooks",
+		"types": "shared/ui/src/types"
 	},
 	"iconLibrary": "lucide"
 }

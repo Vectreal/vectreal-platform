@@ -10,10 +10,8 @@ import { BarChart4, Camera, SidebarIcon } from 'lucide-react'
 import { useCallback } from 'react'
 import { Link } from 'react-router'
 
-import {
-	processAtom,
-	SidebarMode
-} from '../../../lib/stores/publisher-config-store'
+import { processAtom } from '../../../lib/stores/publisher-config-store'
+import { SidebarMode } from '../../../types/publisher-config'
 import { TooltipButton } from '../../tooltip-button'
 
 import { ComposeSidebar } from './compose-sidebar'
@@ -128,19 +126,24 @@ const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
 				)}
 			>
 				{!showSidebar && (
-					<TooltipButton info="Go to your dashboard" size="icon">
-						<Link viewTransition to="/dashboard" className="group">
+					<Link viewTransition to="/dashboard">
+						<TooltipButton
+							className="group"
+							info="Go to your dashboard"
+							size="icon"
+						>
 							<VectrealLogoSmall className="text-muted-foreground ml-[2px] h-5 w-5 transition-opacity group-hover:opacity-70" />
-						</Link>
-					</TooltipButton>
+						</TooltipButton>
+					</Link>
 				)}
 
 				<TooltipButton
+					className="group"
 					size="icon"
 					info="Toggle Sidebar"
 					onClick={toggleSidebar}
 				>
-					<SidebarIcon className="text-muted-foreground h-5 w-5" />
+					<SidebarIcon className="text-muted-foreground h-5 w-5 transition-opacity group-hover:opacity-70" />
 				</TooltipButton>
 			</div>
 		</TooltipProvider>

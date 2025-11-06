@@ -96,12 +96,12 @@ const DashboardPage = () => {
 						</Link>
 					</div>
 					<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-						{recentScenes.map(({ scene, projectId }) => (
+						{recentScenes.map((scene) => (
 							<DashboardCard
 								key={scene.id}
 								title={scene.name}
 								description={scene.description || 'No description'}
-								linkTo={`/dashboard/projects/${projectId}/${scene.id}`}
+								linkTo={`/dashboard/projects/${scene.projectId}/${scene.id}`}
 								icon={<File className="h-5 w-5 text-green-500" />}
 								id={scene.id}
 							>

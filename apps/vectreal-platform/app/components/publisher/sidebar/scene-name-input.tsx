@@ -2,7 +2,7 @@ import { Input } from '@vctrl-ui/ui/input'
 import { useAtom } from 'jotai/react'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 
-import { metaAtom } from '../../../lib/stores/publisher-config-store'
+import { metaAtom } from '../../../lib/stores/scene-settings-store'
 
 export function SceneNameInput() {
 	const { setIsSaved } = {

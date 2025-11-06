@@ -30,4 +30,9 @@
 		font-weight: 400;
 		color: var(--muted-foreground);
 	}
+
+	button,
+	a {
+		cursor: pointer;
+	}
 }

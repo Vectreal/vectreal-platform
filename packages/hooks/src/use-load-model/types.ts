@@ -14,7 +14,13 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { ModelFileTypes } from '@vctrl/core'
+import { ModelFileTypes, type ServerOptions } from '@vctrl/core'
+import {
+	ControlsProps,
+	EnvironmentProps,
+	ShadowsProps,
+	ToneMappingProps
+} from '@vctrl/viewer'
 import { Object3D } from 'three'
 
 import { useOptimizeModel } from '../use-optimize-model'
@@ -38,6 +44,99 @@ export interface ModelFile {
 	type: ModelFileTypes
 	/** The original filename of the model */
 	name: string
+}
+
+/**
+ * Configuration options for loading a scene from the server.
+ */
+export interface SceneLoadOptions {
+	/** The unique identifier of the scene to load */
+	sceneId: string
+	/** Server configuration (endpoint, auth, headers) */
+	serverOptions?: ServerOptions
+	/** Whether to automatically apply scene settings (default: true) */
+	applySettings?: boolean
+}
+
+/**
+ * Scene settings data structure.
+ * Contains all configurable viewer settings for a scene.
+ */
+export interface SceneSettings {
+	/** Environment/lighting configuration */
+	environment?: Record<string, unknown>
+	/** Tone mapping settings */
+	toneMapping?: Record<string, unknown>
+	/** Camera controls configuration */
+	controls?: Record<string, unknown>
+	/** Shadow rendering settings */
+	shadows?: Record<string, unknown>
+	/** Metadata (scene name, thumbnail, etc.) */
+	meta?: Record<string, unknown>
+}
+
+/**
+ * Server response data structure for scene loading.
+ * Contains the GLTF JSON, binary assets, and scene settings.
+ */
+export interface ServerSceneData {
+	/** The GLTF JSON structure */
+	gltfJson: Record<string, unknown>
+	/** Binary asset data keyed by asset identifier */
+	assetData: Record<
+		string,
+		{
+			/** Binary data as array of numbers */
+			data: number[]
+			/** Original filename of the asset */
+			fileName: string
+			/** MIME type of the asset */
+			mimeType: string
+		}
+	>
+	/** Scene metadata */
+	meta?: {
+		sceneName?: string
+		[key: string]: unknown
+	}
+	/** Environment/lighting configuration */
+	environment?: Record<string, unknown>
+	/** Tone mapping settings */
+	toneMapping?: Record<string, unknown>
+	/** Camera controls configuration */
+	controls?: Record<string, unknown>
+	/** Shadow rendering settings */
+	shadows?: Record<string, unknown>
+}
+
+export interface MetaState {
+	[key: string]: string | null | undefined
+	sceneName: string
+	thumbnailUrl: string | null
+}
+
+/**
+ * Result of a scene load operation.
+ * Combines the loaded model with its settings.
+ */
+export interface SceneLoadResult {
+	/** The loaded model file */
+	file: ModelFile
+	/** Scene ID that was loaded */
+	sceneId: string
+	/** Scene settings */
+	settings: {
+		/** Environment/lighting configuration */
+		environment?: EnvironmentProps
+		/** Tone mapping settings */
+		toneMapping?: ToneMappingProps
+		/** Camera controls configuration */
+		controls?: ControlsProps
+		/** Shadow rendering settings */
+		shadows?: ShadowsProps
+		/** Scene metadata */
+		meta?: MetaState
+	}
 }
 
 /**
@@ -77,6 +176,9 @@ export type EventTypes =
 	| 'load-complete' // Emitted when loading successfully completes
 	| 'load-reset' // Emitted when the state is reset
 	| 'load-error' // Emitted when an error occurs during loading
+	| 'server-load-start' // Emitted when server-based scene loading begins
+	| 'server-load-complete' // Emitted when server-based scene loading completes
+	| 'server-load-error' // Emitted when server-based scene loading fails
 
 /**
  * Maps event types to their corresponding data payloads.
@@ -97,6 +199,12 @@ export type EventData = {
 	'load-reset': null
 	/** Error object when loading fails */
 	'load-error': Error | unknown
+	/** Scene ID being loaded from server */
+	'server-load-start': string
+	/** Complete scene load result */
+	'server-load-complete': SceneLoadResult
+	/** Error during server scene loading */
+	'server-load-error': Error | unknown
 }
 
 /**
@@ -130,6 +238,28 @@ export type UseLoadModelReturn<HasOptimizer extends boolean> =
 		 * Supports GLTF, GLB, and USDZ formats with associated assets.
 		 */
 		load: (filesOrDirectories: InputFileOrDirectory) => Promise<void>
+		/**
+		 * Load a scene from the server by scene ID.
+		 * Fetches both the model and scene settings, applies them automatically.
+		 *
+		 * @param options - Scene loading configuration
+		 * @returns Promise resolving to the loaded scene data
+		 *
+		 * @example
+		 * ```tsx
+		 * const model = useLoadModel()
+		 *
+		 * // Load a scene from the server
+		 * const scene = await model.loadFromServer({
+		 *   sceneId: 'abc-123',
+		 *   serverOptions: {
+		 *     endpoint: '/api/load-scene',
+		 *     apiKey: 'optional-auth-token'
+		 *   }
+		 * })
+		 * ```
+		 */
+		loadFromServer: (options: SceneLoadOptions) => Promise<SceneLoadResult>
 		/**
 		 * Reset the model loading state and clear any loaded models.
 		 */

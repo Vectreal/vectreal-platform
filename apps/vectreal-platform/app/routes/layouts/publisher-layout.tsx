@@ -1,7 +1,9 @@
 import { User } from '@supabase/supabase-js'
 import { ModelProvider, useModelContext } from '@vctrl/hooks/use-load-model'
 import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
+import { LoadingSpinner } from '@vctrl-ui/ui/loading-spinner'
 import { SidebarProvider } from '@vctrl-ui/ui/sidebar'
+import { SpinnerWrapper } from '@vctrl-ui/ui/spinner-wrapper'
 import { Provider, useAtom, useAtomValue } from 'jotai/react'
 import { PropsWithChildren, useCallback } from 'react'
 import { Outlet } from 'react-router'
@@ -13,17 +15,19 @@ import {
 	SaveButton,
 	Stepper
 } from '../../components/publisher'
+import { useSceneLoader } from '../../hooks'
 import {
 	processAtom,
 	publisherConfigStore
 } from '../../lib/stores/publisher-config-store'
 
-import { createClient } from '../../lib/supabase.server'
+import { sceneSettingsStore } from '../../lib/stores/scene-settings-store'
+import { createSupabaseClient } from '../../lib/supabase.server'
 
 import { Route } from './+types/publisher-layout'
 
 export const loader = async ({ request, params }: Route.LoaderArgs) => {
-	const { client } = await createClient(request)
+	const { client } = await createSupabaseClient(request)
 	const {
 		data: { user }
 	} = await client.auth.getUser()
@@ -43,7 +47,15 @@ interface AnimatedLayoutProps extends PropsWithChildren {
 
 const AnimatedLayout = ({ children, user, sceneId }: AnimatedLayoutProps) => {
 	const { file } = useModelContext()
-	const { step } = useAtomValue(processAtom)
+	const processState = useAtomValue(processAtom)
+	const { step, hasUnsavedChanges } = processState
+
+	// Centralized scene loader - single source of truth (must be inside ModelProvider)
+	// This hook manages scene loading/saving but doesn't return state available via atoms
+	const { saveSceneSettings } = useSceneLoader({
+		sceneId,
+		userId: user?.id
+	})
 
 	const isUploadStep = !file?.model && step === 'uploading'
 
@@ -55,7 +67,12 @@ const AnimatedLayout = ({ children, user, sceneId }: AnimatedLayoutProps) => {
 				<>
 					<Stepper />
 					<PublisherSidebar user={user} />
-					<SaveButton sceneId={sceneId} userId={user?.id} />
+					<SaveButton
+						sceneId={sceneId}
+						userId={user?.id}
+						saveSceneSettings={saveSceneSettings}
+						hasUnsavedChanges={hasUnsavedChanges}
+					/>
 					<PublisherButtons />
 				</>
 			)}
@@ -83,9 +100,11 @@ const Layout = ({ loaderData }: Route.ComponentProps) => {
 		<ModelProvider optimizer={optimizer}>
 			<SidebarProvider open={showSidebar} onOpenChange={handleOpenChange}>
 				<Provider store={publisherConfigStore}>
-					<AnimatedLayout user={user} sceneId={sceneId}>
-						<Outlet />
-					</AnimatedLayout>
+					<Provider store={sceneSettingsStore}>
+						<AnimatedLayout user={user} sceneId={sceneId}>
+							<Outlet />
+						</AnimatedLayout>
+					</Provider>
 				</Provider>
 			</SidebarProvider>
 		</ModelProvider>

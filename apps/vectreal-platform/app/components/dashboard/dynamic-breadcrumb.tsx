@@ -39,7 +39,7 @@ export const DynamicBreadcrumb = memo(() => {
 	const project = useProject(projectId || '')
 	const scene = useScene(routeType || '')
 	const folderBreadcrumbs = useFolderBreadcrumbs(
-		routeId || scene?.scene.folderId || ''
+		routeId || scene?.folderId || ''
 	)
 
 	// Early return if view is invalid
@@ -57,7 +57,7 @@ export const DynamicBreadcrumb = memo(() => {
 			<BreadcrumbSeparator />
 			<BreadcrumbItem>
 				{isLast ? (
-					<BreadcrumbPage>{label}</BreadcrumbPage>
+					<BreadcrumbPage className="text-white">{label}</BreadcrumbPage>
 				) : (
 					<BreadcrumbLink asChild>
 						<Link viewTransition to={to}>
@@ -95,14 +95,14 @@ export const DynamicBreadcrumb = memo(() => {
 		// For scene routes: Dashboard > Projects > Project > [Folders...] > Scene
 		else if (isScene && projectId && routeType && scene && project) {
 			const projectName = project.project.name || 'Project'
-			const sceneName = scene.scene.name || 'Scene'
+			const sceneName = scene.name || 'Scene'
 
 			items.push(
 				renderBreadcrumbItem(`/dashboard/projects/${projectId}`, projectName)
 			)
 
 			// Add folder hierarchy if scene is in folders
-			if (scene.scene.folderId && folderBreadcrumbs.length > 0) {
+			if (scene.folderId && folderBreadcrumbs.length > 0) {
 				folderBreadcrumbs.forEach((breadcrumb) => {
 					items.push(
 						renderBreadcrumbItem(
@@ -131,7 +131,7 @@ export const DynamicBreadcrumb = memo(() => {
 
 	return (
 		<Breadcrumb className="grow">
-			<BreadcrumbList>
+			<BreadcrumbList className="text-white/75">
 				<BreadcrumbItem>
 					<BreadcrumbLink asChild>
 						<Link viewTransition to="/dashboard">

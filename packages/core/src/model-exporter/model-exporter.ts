@@ -74,13 +74,6 @@ export class ModelExporter {
 			this.emitProgress('Finalizing export', 90)
 			const buffer = binaryDoc as Uint8Array
 
-			// Optionally create a ZIP archive (for demonstration)
-			const zip = new JSZip()
-			zip.file('model.glb', buffer)
-
-			const zipBlob = await zip.generateAsync({ type: 'blob' })
-			console.log('Generated ZIP blob:', zipBlob)
-
 			const exportTime = Date.now() - startTime
 			this.emitProgress('Export completed', 100)
 

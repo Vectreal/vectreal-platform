@@ -4,7 +4,7 @@ import type { SceneSettingsRequest } from '../../types/api'
 
 import { PlatformApiService } from '../services/platform-api-service.server'
 
-import { ApiResponseBuilder } from './api-responses'
+import { ApiResponseBuilder } from './api-responses.server'
 
 /**
  * Request parser for scene settings API operations.
@@ -21,15 +21,6 @@ export class SceneSettingsParser {
 	): Promise<SceneSettingsRequest | Response> {
 		try {
 			const requestData = await PlatformApiService.parseActionRequest(request)
-
-			console.log('Parsing scene settings request:', {
-				action: requestData.action,
-				sceneId: requestData.sceneId,
-				hasSettings: !!requestData.settings,
-				settingsType: typeof requestData.settings,
-				hasGltfJson: !!requestData.gltfJson,
-				gltfJsonType: typeof requestData.gltfJson
-			})
 
 			// Extract required fields
 			const action = requestData.action as string
@@ -149,12 +140,6 @@ export class SceneSettingsParser {
 	private static parseAssetIds(
 		requestData: Record<string, unknown>
 	): string[] | Response {
-		console.log(
-			'Parsing assetIds from requestData:',
-			requestData,
-			requestData.assetIds
-		)
-
 		let assetIds: string[] = []
 
 		if (requestData.assetIds) {
@@ -193,12 +178,6 @@ export class SceneSettingsParser {
 	private static parseGltfJson(
 		requestData: Record<string, unknown>
 	): JSONDocument | undefined | Response {
-		console.log(
-			'Parsing gltfJson from requestData:',
-			requestData,
-			requestData.gltfJson
-		)
-
 		let gltf: JSONDocument | null = null
 
 		if (requestData.gltfJson) {

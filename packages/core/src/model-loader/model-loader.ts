@@ -14,7 +14,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-import { Document, WebIO } from '@gltf-transform/core'
+import { Document, GLTF, WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 
 import {
@@ -173,32 +173,44 @@ export class ModelLoader {
 	 * @param gltfBuffer - The GLTF JSON data
 	 * @param assets - Additional asset files (textures, buffers)
 	 * @param fileName - Original file name
+	 * @param isNestedCall - Internal flag to prevent progress reset when called from loadGLTFWithFileAssets
 	 * @returns Promise resolving to the loaded model result
 	 */
 	public async loadGLTFWithAssets(
 		gltfBuffer: Uint8Array,
 		assets: Map<string, Uint8Array>,
-		fileName: string
+		fileName: string,
+		isNestedCall = false
 	): Promise<ModelLoadResult> {
 		const startTime = Date.now()
-		this.emitProgress('Loading GLTF with assets', 0)
+
+		// Only emit starting progress if this is a direct call (not nested from loadGLTFWithFileAssets)
+		if (!isNestedCall) {
+			this.emitProgress('Loading GLTF with assets', 0)
+		}
 
 		try {
 			// Convert buffer to JSON
-			const gltfJson = JSON.parse(new TextDecoder().decode(gltfBuffer))
+			const gltfJson: GLTF.IGLTF = JSON.parse(
+				new TextDecoder().decode(gltfBuffer)
+			)
 
-			this.emitProgress('Processing assets', 25)
+			// Adjust progress based on whether this is a nested call
+			// If nested: we're already at 50%, so use 50-100 range
+			// If direct: use 0-100 range
+			const progressOffset = isNestedCall ? 50 : 0
+			const progressScale = isNestedCall ? 0.5 : 1
+
+			this.emitProgress(
+				'Processing assets',
+				progressOffset + 25 * progressScale
+			)
 
 			// Validate that referenced images exist in assets
 			if (gltfJson.images) {
 				const missingImages: string[] = []
-				console.log(
-					'GLTF Images validation:',
-					JSON.stringify(gltfJson.images, null, 2)
-				)
-				console.log('Available assets:', Array.from(assets.keys()))
 
-				gltfJson.images.forEach((image: any, index: number) => {
+				gltfJson.images.forEach((image, index: number) => {
 					if (image.uri) {
 						const imageName = decodeURIComponent(image.uri)
 						const basename = imageName.split('/').pop() || imageName
@@ -260,7 +272,10 @@ export class ModelLoader {
 				}
 			}
 
-			this.emitProgress('Parsing model data', 75)
+			this.emitProgress(
+				'Parsing model data',
+				progressOffset + 75 * progressScale
+			)
 
 			const document = await this.io.readJSON({
 				json: gltfJson,
@@ -324,7 +339,12 @@ export class ModelLoader {
 
 			this.emitProgress('Processing GLTF with assets', 50)
 
-			return await this.loadGLTFWithAssets(gltfBuffer, assetMap, gltfFile.name)
+			return await this.loadGLTFWithAssets(
+				gltfBuffer,
+				assetMap,
+				gltfFile.name,
+				true
+			)
 		} catch (error) {
 			throw new Error(`Failed to load GLTF with file assets: ${error}`)
 		}

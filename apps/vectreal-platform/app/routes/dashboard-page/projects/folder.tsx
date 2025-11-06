@@ -39,7 +39,7 @@ const FolderPage = () => {
 				folderContent.scenes.length > 0) ? (
 				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 					{/* Subfolders */}
-					{folderContent.subfolders.map(({ folder: subfolder }) => (
+					{folderContent.subfolders.map((subfolder) => (
 						<DashboardCard
 							key={subfolder.id}
 							title={subfolder.name}
@@ -55,7 +55,7 @@ const FolderPage = () => {
 					))}
 
 					{/* Scenes in Folder */}
-					{folderContent.scenes.map(({ scene }) => (
+					{folderContent.scenes.map((scene) => (
 						<DashboardCard
 							key={scene.id}
 							title={scene.name}

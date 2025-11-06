@@ -26,6 +26,7 @@
 			"@vctrl/hooks/use-load-model": [
 				"packages/hooks/src/use-load-model/index.ts"
 			],
+			"@vctrl/hooks/use-load-model/*": ["packages/hooks/src/use-load-model/*"],
 			"@vctrl/hooks/use-optimize-model": [
 				"packages/hooks/src/use-optimize-model/index.ts"
 			],

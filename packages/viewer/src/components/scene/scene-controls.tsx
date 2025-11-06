@@ -1,7 +1,7 @@
 import { OrbitControls, OrbitControlsProps } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
-import { useEffect, useState } from 'react'
-import { Box3, Object3D, Vector3 } from 'three'
+import { useEffect, useRef, useState } from 'react'
+import { Box3, Mesh, Object3D, Vector3 } from 'three'
 
 export interface ControlsProps extends OrbitControlsProps {
 	/**
@@ -32,6 +32,7 @@ const SceneControls = (props: ControlsProps) => {
 		...props
 	}
 
+	const mountedRef = useRef(false)
 	const [target, setTarget] = useState(new Vector3(0, 0, 0))
 	const [isControlsEnabled, setIsControlsEnabled] = useState(
 		controlsTimeout === 0
@@ -39,6 +40,15 @@ const SceneControls = (props: ControlsProps) => {
 	const { scene } = useThree()
 
 	useEffect(() => {
+		mountedRef.current = true
+		return () => {
+			mountedRef.current = false
+		}
+	}, [mountedRef])
+
+	useEffect(() => {
+		if (!mountedRef.current) return
+
 		const box = new Box3()
 		scene.traverse((object) => {
 			if (object instanceof Object3D) {

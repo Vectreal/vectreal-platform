@@ -11,7 +11,7 @@ import { Eye, EyeClosed } from 'lucide-react'
 import { useState } from 'react'
 import { Form, redirect } from 'react-router'
 
-import { createClient } from '../../lib/supabase.server'
+import { createSupabaseClient } from '../../lib/supabase.server'
 
 import { Route } from './+types/signin-page'
 
@@ -47,7 +47,7 @@ export async function action({ request }: Route.ActionArgs) {
 	const hasErrors = Object.keys(errors).length > 0
 	if (hasErrors) return { errors }
 
-	const { client, headers } = await createClient(request)
+	const { client, headers } = await createSupabaseClient(request)
 	const { data, error } = await client.auth.signInWithPassword({
 		email,
 		password
@@ -68,7 +68,7 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
-	const { client } = await createClient(request)
+	const { client } = await createSupabaseClient(request)
 	const {
 		data: { user }
 	} = await client.auth.getUser()

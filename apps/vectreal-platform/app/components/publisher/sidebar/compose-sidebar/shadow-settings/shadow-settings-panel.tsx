@@ -12,7 +12,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom } from 'jotai'
 
 import { InfoTooltip } from '../../../../../components/info-tooltip'
-import { shadowsAtom } from '../../../../../lib/stores/publisher-config-store'
+import { shadowsAtom } from '../../../../../lib/stores/scene-settings-store'
 import { SettingSlider } from '../../../settings-components'
 
 import {

@@ -11,7 +11,10 @@ export default [
 	route('api/update-theme', './routes/api/update-theme.ts'),
 	route('api/scene-settings', './routes/api/scene-settings.ts'),
 	route('api/optimize-textures', './routes/api/optimize-textures.ts'),
-
+	route(
+		'api/dashboard/scene-actions/:sceneId?',
+		'./routes/api/dashboard/scene-actions.ts'
+	),
 	// auth
 	route('auth/logout', './routes/api/auth/logout.ts'),
 	route('auth/social-signin', './routes/api/auth/social-signin.ts'),

@@ -7,35 +7,39 @@ import { toast } from 'sonner'
 
 import { TooltipButton } from '../../tooltip-button'
 
-import { useSceneSettings } from './use-scene-settings'
+interface SaveSceneResult {
+	sceneId?: string
+	unchanged?: boolean
+	[key: string]: unknown
+}
 
 interface SaveButtonProps {
 	sceneId: string | null
 	userId?: string
 	assetIds?: string[]
 	onSave?: (success: boolean) => void
+	saveSceneSettings: () => Promise<
+		SaveSceneResult | { unchanged: true } | undefined
+	>
+	hasUnsavedChanges: boolean
 }
 
-function SaveButton({ sceneId, userId, assetIds }: SaveButtonProps) {
-	const [isSaving, setIsSaving] = useState(false)
-	const [isSaved, setIsSaved] = useState(false)
+const SaveButton = ({
+	sceneId,
+	userId,
+	saveSceneSettings,
+	hasUnsavedChanges
+}: SaveButtonProps) => {
+	const [isSaveLoading, setIsSaveLoading] = useState(false)
 	const navigate = useNavigate()
-	const { saveSceneSettings, hasUnsavedChanges } = useSceneSettings({
-		sceneId,
-		userId,
-		assetIds
-	})
 
-	const hasChanges = hasUnsavedChanges()
-	const isDisabled = isSaving || !userId || !hasChanges
+	const isDisabled = isSaveLoading || !userId || !hasUnsavedChanges
 
-	const statusText = isSaved
-		? 'Scene is saved'
-		: isSaving
-			? 'Saving scene...'
-			: !hasChanges
-				? 'No changes to save'
-				: 'Click to save scene'
+	const statusText = isSaveLoading
+		? 'Saving scene...'
+		: !hasUnsavedChanges
+			? 'No changes to save'
+			: 'Click to save scene'
 
 	const handleSave = useCallback(async () => {
 		if (!userId) {
@@ -44,14 +48,7 @@ function SaveButton({ sceneId, userId, assetIds }: SaveButtonProps) {
 			return
 		}
 
-		// Don't save if no changes
-		if (!hasChanges) {
-			toast.info('No changes to save')
-			return
-		}
-
-		setIsSaving(true)
-		setIsSaved(false)
+		setIsSaveLoading(true)
 
 		try {
 			const result = await saveSceneSettings() // Asset IDs are now handled automatically by the API
@@ -60,23 +57,15 @@ function SaveButton({ sceneId, userId, assetIds }: SaveButtonProps) {
 				// Check if settings were unchanged (no new version created)
 				if (result.unchanged) {
 					toast.info('No changes were detected - scene is already up to date')
-					setIsSaved(true)
 				} else {
 					toast.success('Scene settings saved successfully!')
-					setIsSaved(true)
 
 					// If this was a new scene (no sceneId before), update the URL
 					if (!sceneId && result.sceneId) {
-						console.log('Updating URL with new scene ID:', result.sceneId)
 						// Update URL without reloading the page - use route parameter
 						navigate(`/publisher/${result.sceneId}`, { replace: true })
 					}
 				}
-
-				// Reset saved state after a delay
-				setTimeout(() => {
-					setIsSaved(false)
-				}, 3000)
 			} else {
 				toast.error('Failed to save scene settings')
 			}
@@ -111,30 +100,30 @@ function SaveButton({ sceneId, userId, assetIds }: SaveButtonProps) {
 				toast.error(`Failed to save: ${errorMessage}`)
 			}
 		} finally {
-			setIsSaving(false)
+			setIsSaveLoading(false)
 		}
-	}, [saveSceneSettings, userId, hasChanges, sceneId, navigate])
+	}, [saveSceneSettings, userId, sceneId, navigate])
 
 	return (
 		<div className="fixed top-0 right-0 z-20 m-4 flex items-center gap-6">
 			<div
 				className={cn(
 					'flex items-center gap-3 text-xs font-medium transition-all duration-300',
-					isSaved || !hasChanges
+					!hasUnsavedChanges
 						? 'text-green-300'
-						: isSaving
+						: isSaveLoading
 							? 'text-orange-500'
 							: 'text-yellow-500'
 				)}
 			>
-				{isSaved || !hasChanges ? 'Saved' : isSaving ? 'Saving...' : 'Unsaved'}
+				{!hasUnsavedChanges ? 'Saved' : isSaveLoading ? 'Saving...' : 'Unsaved'}
 				<div className="relative">
 					<span
 						className={cn(
 							'inline-block h-2 w-2 rounded-full after:absolute after:top-0 after:left-0 after:h-full after:w-full after:animate-pulse after:opacity-50 after:blur-md',
-							isSaved || !hasChanges
+							!hasUnsavedChanges
 								? 'bg-green-400 after:bg-green-400'
-								: isSaving
+								: isSaveLoading
 									? 'animate-pulse bg-orange-400 after:bg-orange-400'
 									: 'bg-yellow-400 after:bg-yellow-500'
 						)}

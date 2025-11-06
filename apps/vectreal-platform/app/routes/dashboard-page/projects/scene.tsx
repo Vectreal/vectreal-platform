@@ -1,25 +1,174 @@
+import {
+	ModelFile,
+	SceneLoadResult,
+	useLoadModel
+} from '@vctrl/hooks/use-load-model'
+import { VectrealViewer } from '@vctrl/viewer'
+import { Badge } from '@vctrl-ui/ui/badge'
 import { Button } from '@vctrl-ui/ui/button'
-import { CardContent, CardHeader } from '@vctrl-ui/ui/card'
-import { Edit, Eye, Settings } from 'lucide-react'
-import { Link, useParams } from 'react-router'
+import { CardContent, CardFooter, CardHeader } from '@vctrl-ui/ui/card'
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogOverlay,
+	DialogTitle
+} from '@vctrl-ui/ui/dialog'
+import { cn, formatFileSize } from '@vctrl-ui/utils'
+import { Eye, Trash2 } from 'lucide-react'
+import { memo, useCallback, useEffect, useState } from 'react'
+import { Link, useFetcher, useParams } from 'react-router'
 
 import { BasicCard } from '../../../components'
 import { useProject, useScene } from '../../../hooks'
 
+interface ConfirmDeleteModalProps {
+	isOpen: boolean
+	onClose: () => void
+	onConfirm: () => void
+}
+
+const ConfirmDeleteModal = ({
+	isOpen,
+	onClose,
+	onConfirm
+}: ConfirmDeleteModalProps) => {
+	return (
+		<Dialog open={isOpen} onOpenChange={onClose}>
+			<DialogOverlay />
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>Confirm Delete Scene</DialogTitle>
+					<DialogDescription>
+						Are you sure you want to delete this scene? This action cannot be
+						undone.
+					</DialogDescription>
+				</DialogHeader>
+				<DialogFooter>
+					<Button variant="outline" onClick={onClose}>
+						Cancel
+					</Button>
+					<Button
+						variant="destructive"
+						onClick={() => {
+							onConfirm()
+							onClose()
+						}}
+					>
+						Delete
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	)
+}
+
+interface PreviewModelProps {
+	file: ModelFile | null
+	sceneData?: SceneLoadResult
+}
+
+const PreviewModel = memo(({ file, sceneData }: PreviewModelProps) => {
+	const height = 'h-[80vh]'
+
+	return (
+		<div className={cn('relative', height)}>
+			<div className="h-full">
+				<VectrealViewer
+					infoPopoverOptions={{ showInfo: false }}
+					model={file?.model}
+					envOptions={sceneData?.settings?.environment}
+					toneMappingOptions={sceneData?.settings?.toneMapping}
+					controlsOptions={sceneData?.settings?.controls}
+					shadowsOptions={sceneData?.settings?.shadows}
+					loader={
+						<div className="text-center">
+							<div className="mb-4 text-lg font-medium">Loading scene...</div>
+							<div className="text-sm text-gray-500">
+								Please wait while we fetch your 3D model
+							</div>
+						</div>
+					}
+				/>
+			</div>
+			<div className="from-background absolute bottom-0 h-1/4 w-full bg-gradient-to-t to-transparent" />
+		</div>
+	)
+})
+
 const ScenePage = () => {
+	const { submit } = useFetcher()
+
 	const params = useParams()
 	const projectId = params.projectId
 	const sceneId = params.sceneId
 
+	// Use sceneId as key to create a new hook instance per scene
+	const { file, loadFromServer } = useLoadModel()
+
 	const project = useProject(projectId || '')
 	const scene = useScene(sceneId || '')
+
+	const [isLoadingScene, setIsLoadingScene] = useState(false)
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+	const [sceneData, setSceneData] = useState<SceneLoadResult>()
+
+	function handleDeleteClick() {
+		setShowDeleteConfirm(true)
+	}
+
+	const getSceneSettings = useCallback(async () => {
+		try {
+			if (!sceneId) return
+
+			setIsLoadingScene(true)
+
+			const sceneData = await loadFromServer({
+				sceneId,
+				serverOptions: {
+					endpoint: '/api/scene-settings'
+				}
+			})
+
+			setSceneData(sceneData)
+		} catch (error) {
+			console.error('Failed to load scene:', error)
+			setIsLoadingScene(false)
+		}
+	}, [loadFromServer, sceneId])
+
+	useEffect(() => {
+		if (sceneId && (!sceneData || sceneData.sceneId !== sceneId)) {
+			getSceneSettings()
+		}
+	}, [getSceneSettings, sceneData, sceneId])
+
+	async function handleConfirmDelete() {
+		await submit(
+			{ action: 'delete' },
+			{
+				method: 'post',
+				action: `/api/dashboard/scene-actions/${sceneId}`
+			}
+		)
+		// Future: implement delete logic
+		setShowDeleteConfirm(false)
+	}
+	// Stop loading state once file is actually loaded
+	useEffect(() => {
+		if (file?.model && isLoadingScene) {
+			setIsLoadingScene(false)
+		}
+	}, [file, isLoadingScene])
 
 	if (!scene || !project || !projectId || !sceneId) {
 		return (
 			<div className="p-6">
 				<div className="text-center">
 					<h1 className="text-2xl font-bold text-gray-900">Scene Not Found</h1>
-					<p className="mt-2 text-gray-600">
+					<p className="mt-2 opacity-75">
 						The scene you're looking for doesn't exist or you don't have access
 						to it.
 					</p>
@@ -32,90 +181,75 @@ const ScenePage = () => {
 	}
 
 	return (
-		<div className="p-6">
-			{/* Scene Details */}
-			<div className="grid gap-6 md:grid-cols-3">
-				{/* Main Content Area */}
-				<div className="md:col-span-2">
-					<BasicCard>
-						<CardHeader>
-							<h2 className="mb-4 text-xl font-semibold">Scene Preview</h2>
-						</CardHeader>
-						<CardContent className="flex aspect-video items-center justify-center overflow-hidden rounded-lg border">
-							{scene.scene.thumbnailUrl ? (
-								<img
-									src={scene.scene.thumbnailUrl}
-									alt={scene.scene.name}
-									className="h-full w-full object-cover"
-								/>
-							) : (
-								<div className="text-center">
-									<Eye className="mx-auto h-12 w-12 text-gray-400" />
-									<p className="mt-2 text-sm text-gray-500">
-										No preview available
-									</p>
-								</div>
-							)}
-						</CardContent>
-					</BasicCard>
-				</div>
+		<>
+			<ConfirmDeleteModal
+				isOpen={showDeleteConfirm}
+				onClose={() => setShowDeleteConfirm(false)}
+				onConfirm={handleConfirmDelete}
+			/>
 
-				{/* Sidebar */}
-				<div className="space-y-6">
+			<div className="relative h-full">
+				<PreviewModel file={file} sceneData={sceneData} />
+
+				{/* Scene Details */}
+				<div className="absolute bottom-0 left-1/2 w-full max-w-3xl -translate-x-1/2 p-4">
 					{/* Scene Info */}
 					<BasicCard>
 						<CardHeader>
-							<h3 className="mb-3 font-semibold">Scene Information</h3>
+							<span className="flex items-start justify-between">
+								<h3 className="grow truncate font-semibold">{scene.name}</h3>
+								<Badge>{scene.status}</Badge>
+							</span>
+							<code className="text-muted-foreground text-xs">{scene.id}</code>
 						</CardHeader>
-						<CardContent className="space-y-2 text-sm">
-							<div>
-								<span className="text-gray-600">ID:</span>
-								<code className="ml-2 text-xs">
-									{scene.scene.id.slice(0, 8)}...
-								</code>
-							</div>
-							<div>
-								<span className="text-gray-600">Status:</span>
-								<span className="ml-2">{scene.scene.status}</span>
-							</div>
-							<div>
-								<span className="text-gray-600">Created:</span>
-								<span className="ml-2">
-									{new Date(scene.scene.createdAt).toLocaleDateString()}
-								</span>
-							</div>
-							<div>
-								<span className="text-gray-600">Modified:</span>
-								<span className="ml-2">
-									{new Date(scene.scene.updatedAt).toLocaleDateString()}
-								</span>
-							</div>
-						</CardContent>
-					</BasicCard>
+						<CardContent>
+							<div className="grid grid-cols-1 gap-6 text-sm md:grid-cols-2">
+								<div>
+									<p className="text-muted-foreground mb-2">Description</p>
+									<p>{scene.description || 'No description provided.'}</p>
+								</div>
+								<div className="space-y-2">
+									<Link
+										className="block"
+										viewTransition
+										to={`/publisher/${scene.id}`}
+									>
+										<Button variant="outline" className="w-full justify-start">
+											<Eye className="mr-2 h-4 w-4" />
+											Open in Publisher
+										</Button>
+									</Link>
 
-					{/* Actions */}
-					<BasicCard>
-						<CardHeader>
-							<h3 className="mb-3 font-semibold">Quick Actions</h3>
-						</CardHeader>
-						<CardContent className="space-y-2">
-							<Button variant="outline" className="w-full justify-start">
-								<Eye className="mr-2 h-4 w-4" />
-								Open in Viewer
-							</Button>
-							<Button variant="outline" className="w-full justify-start">
-								<Edit className="mr-2 h-4 w-4" />
-								Open Editor
-							</Button>
-							<Button variant="outline" className="w-full justify-start">
-								<Settings className="mr-2 h-4 w-4" />
-								Scene Settings
-							</Button>
+									<Button
+										onClick={handleDeleteClick}
+										variant="outline"
+										className="w-full justify-start text-red-600 hover:text-red-700"
+									>
+										<Trash2 className="mr-2 h-4 w-4" />
+										Delete Scene
+									</Button>
+								</div>
+							</div>
 						</CardContent>
+
+						<CardFooter className="text-muted-foreground flex items-center justify-center gap-2 text-sm">
+							<div>
+								<span className="opacity-75">Created:</span>
+								<span className="ml-2">
+									{new Date(scene.createdAt).toLocaleDateString()}
+								</span>
+							</div>
+							<div>
+								<span className="opacity-75">Modified:</span>
+								<span className="ml-2">
+									{new Date(scene.updatedAt).toLocaleDateString()}
+								</span>
+							</div>
+						</CardFooter>
 					</BasicCard>
 				</div>
 			</div>
-		</div>
+		</>
 	)
 }
 

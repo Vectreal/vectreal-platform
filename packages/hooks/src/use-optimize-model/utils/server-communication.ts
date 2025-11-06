@@ -16,17 +16,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import { type ServerOptions, type TextureCompressOptions } from '@vctrl/core'
 
-/**
- * Creates default server options with required endpoint.
- */
-export const createDefaultServerOptions = (
-	serverOptions?: ServerOptions
-): ServerOptions & Required<Pick<ServerOptions, 'endpoint'>> => {
-	return {
-		endpoint: '/api/optimize-textures',
-		...serverOptions
-	}
-}
+import { ServerCommunicationService } from '../../utils/server-communication'
 
 /**
  * Prepares FormData for texture optimization request.
@@ -35,40 +25,10 @@ export const prepareTextureOptimizationFormData = async (
 	modelBuffer: Uint8Array,
 	options?: TextureCompressOptions
 ): Promise<FormData> => {
-	const requestData = new FormData()
-
-	requestData.append(
-		'model',
-		new Blob([new Uint8Array(modelBuffer)], {
-			type: 'model/gltf-binary'
-		}),
-		'model.glb'
+	return ServerCommunicationService.prepareTextureOptimizationFormData(
+		modelBuffer,
+		options as Record<string, unknown> | undefined
 	)
-
-	requestData.append(
-		'options',
-		JSON.stringify({
-			...options,
-			serverOptions: undefined // Remove serverOptions to avoid circular reference
-		})
-	)
-
-	return requestData
-}
-
-/**
- * Creates request headers for server communication.
- */
-export const createRequestHeaders = (
-	serverOptions: ServerOptions
-): HeadersInit => {
-	return {
-		// Include API key if provided
-		...(serverOptions.apiKey
-			? { Authorization: `Bearer ${serverOptions.apiKey}` }
-			: {}),
-		...serverOptions.headers
-	}
 }
 
 /**
@@ -78,45 +38,9 @@ export const performTextureOptimizationRequest = async (
 	serverOptions: ServerOptions & Required<Pick<ServerOptions, 'endpoint'>>,
 	formData: FormData
 ): Promise<Response> => {
-	const response = await fetch(serverOptions.endpoint, {
+	return fetch(serverOptions.endpoint, {
 		method: 'POST',
-		headers: createRequestHeaders(serverOptions),
+		headers: ServerCommunicationService.createRequestHeaders(serverOptions),
 		body: formData
 	})
-
-	return response
-}
-
-/**
- * Extracts error message from a failed response.
- */
-export const extractErrorMessage = async (
-	response: Response
-): Promise<string> => {
-	let errorMessage = `Server responded with ${response.status}: ${response.statusText}`
-
-	try {
-		const contentType = response.headers.get('content-type')
-		if (contentType?.includes('application/json')) {
-			const errorData = await response.json()
-			errorMessage = errorData.error || errorData.details || errorMessage
-		} else {
-			const errorText = await response.text()
-			if (errorText) errorMessage += ` - ${errorText}`
-		}
-	} catch {
-		// Fallback to basic error message if can't parse response
-	}
-
-	return errorMessage
-}
-
-/**
- * Handles server response errors and throws appropriate errors.
- */
-export const handleServerResponseError = async (
-	response: Response
-): Promise<never> => {
-	const errorMessage = await extractErrorMessage(response)
-	throw new Error(errorMessage)
 }

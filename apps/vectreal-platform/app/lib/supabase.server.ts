@@ -4,7 +4,7 @@ import {
 	serializeCookieHeader
 } from '@supabase/ssr'
 
-export async function createClient(request: Request) {
+export async function createSupabaseClient(request: Request) {
 	// Get the session from the request cookies
 	const headers = new Headers()
 

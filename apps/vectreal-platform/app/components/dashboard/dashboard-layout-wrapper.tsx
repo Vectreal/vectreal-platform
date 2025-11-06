@@ -9,7 +9,7 @@ import {
 	SidebarTrigger
 } from '@vctrl-ui/ui/sidebar'
 import { memo, useState } from 'react'
-import { Outlet } from 'react-router'
+import { Outlet, useParams } from 'react-router'
 
 import { LogoSidebar } from '../'
 
@@ -29,18 +29,24 @@ export const DashboardLayoutWrapper = memo(() => {
 		setSidebarOpen((prev) => !prev)
 	}
 
+	const { sceneId } = useParams()
+
 	return (
 		<SidebarProvider open={sidebarOpen} onOpenChange={toggleSidebar}>
 			<LogoSidebar open={sidebarOpen}>
 				<DashboardSidebarContent />
 			</LogoSidebar>
-			<SidebarInset className="relative overflow-clip">
-				<div className="flex items-center gap-4 p-4 px-6 pl-4">
+			<SidebarInset className="relative overflow-hidden">
+				<div className="from-background/75 absolute top-0 z-50 h-20 w-full bg-gradient-to-b to-transparent" />
+				<div className="absolute z-50 flex items-center gap-4 p-4 px-6 pl-4">
 					<SidebarTrigger />
 					<DynamicBreadcrumb />
 				</div>
-				<DashboardHeader />
-
+				{!sceneId && (
+					<div className="mt-16">
+						<DashboardHeader />
+					</div>
+				)}
 				<Outlet />
 			</SidebarInset>
 		</SidebarProvider>

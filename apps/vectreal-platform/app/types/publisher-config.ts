@@ -6,12 +6,6 @@ import {
 	type TextureCompressOptions
 } from '@vctrl/core'
 
-export interface MetaState {
-	sceneName: string
-	isSaved: boolean
-	thumbnailUrl?: string
-}
-
 //// Process state
 export type SidebarMode = 'optimize' | 'compose' | 'publish'
 export interface ProcessState {
@@ -19,6 +13,9 @@ export interface ProcessState {
 	mode: SidebarMode
 	showSidebar: boolean
 	showInfo: boolean
+	isLoading: boolean
+	isInitializing: boolean
+	hasUnsavedChanges: boolean
 }
 
 //// Optimization state

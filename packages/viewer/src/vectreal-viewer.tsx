@@ -17,10 +17,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 import { Center, PerspectiveCameraProps } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { LoadingSpinner as DefaultSpinner } from '@vctrl-ui/ui/loading-spinner'
-import { SpinnerWrapper } from '@vctrl-ui/ui/spinner-wrapper'
 import { cn } from '@vctrl-ui/utils'
 // import { Perf } from 'r3f-perf'
-import { PropsWithChildren, Suspense } from 'react'
+import { memo, PropsWithChildren, Suspense, useEffect, useState } from 'react'
 import { Object3D } from 'three'
 
 import { InfoPopover, type InfoPopoverProps } from './components'
@@ -132,7 +131,7 @@ export interface VectrealViewerProps extends PropsWithChildren {
  *   );
  * };
  */
-const VectrealViewer = ({ model, ...props }: VectrealViewerProps) => {
+const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	const {
 		className,
 		children,
@@ -147,6 +146,27 @@ const VectrealViewer = ({ model, ...props }: VectrealViewerProps) => {
 		loader = <DefaultSpinner />
 	} = props
 
+	const [showLoader, setShowLoader] = useState(!model)
+	const [isLoaderFading, setIsLoaderFading] = useState(false)
+	const [showCanvas, setShowCanvas] = useState(!!model)
+
+	useEffect(() => {
+		if (model && showLoader) {
+			// Start canvas fade in and loader fade out simultaneously
+			setIsLoaderFading(true)
+			setShowCanvas(true)
+
+			setTimeout(() => {
+				// After fade out duration, hide loader
+				setShowLoader(false)
+				setIsLoaderFading(false)
+			}, 500) // Matching this duration with CSS transition duration
+		} else if (!model && !showLoader) {
+			setShowLoader(true)
+			setShowCanvas(false)
+		}
+	}, [model, showLoader])
+
 	// Check if the dark mode is manually enabled - This needs to be js because of CSS modules and minification
 	const isManualDarkModel = className?.split(' ').includes('dark')
 
@@ -159,36 +179,57 @@ const VectrealViewer = ({ model, ...props }: VectrealViewerProps) => {
 				isManualDarkModel && styles.dark
 			)}
 		>
-			<Suspense fallback={<SpinnerWrapper>{loader}</SpinnerWrapper>}>
-				{model && (
-					<Canvas
-						className={cn('vctrl-viewer-canvas', styles['viewer-canvas'])}
-						// dpr={[1, 1.5]}
-						shadows
-					>
-						{/* <Perf /> */}
-						{/* <ScenePostProcessing /> */}
-						<SceneControls {...controlsOptions} />
-						<SceneCamera {...cameraOptions} />
-						<SceneEnvironment {...envOptions} />
-						<SceneGrid {...gridOptions} />
-						<SceneShadows {...shadowsOptions} />
-						<SceneToneMapping
-							mapping={toneMappingOptions?.mapping}
-							exposure={toneMappingOptions?.exposure}
-						/>
-
-						<Center top>
-							<SceneModel onScreenshot={onScreenshot} object={model} />
-							{children}
-						</Center>
-					</Canvas>
+			<Canvas
+				shadows
+				// gl={{
+				// 	preserveDrawingBuffer: true,
+				// 	powerPreference: 'high-performance'
+				// }}
+				// dpr={[1, 1.5]}
+				className={cn(
+					'vctrl-viewer-canvas',
+					styles['viewer-canvas'],
+					showCanvas && styles['fade-in']
 				)}
-			</Suspense>
+			>
+				<Suspense fallback={null}>
+					{model && (
+						<>
+							{/* <Perf /> */}
+							{/* <ScenePostProcessing /> */}
+							<SceneControls {...controlsOptions} />
+							<SceneCamera {...cameraOptions} />
+							<SceneEnvironment {...envOptions} />
+							<SceneGrid {...gridOptions} />
+							<SceneShadows {...shadowsOptions} />
+							<SceneToneMapping
+								mapping={toneMappingOptions?.mapping}
+								exposure={toneMappingOptions?.exposure}
+							/>
+
+							<Center top>
+								<SceneModel onScreenshot={onScreenshot} object={model} />
+								{children}
+							</Center>
+						</>
+					)}
+				</Suspense>
+			</Canvas>
+
+			{showLoader && (
+				<div
+					className={cn(
+						'absolute inset-0 flex h-full w-full flex-col items-center justify-center gap-4',
+						styles['loader-container'],
+						isLoaderFading && styles['fade-out']
+					)}
+				>
+					{loader}
+				</div>
+			)}
 
 			<InfoPopover {...infoPopoverOptions} />
 		</div>
 	)
-}
-
+})
 export default VectrealViewer

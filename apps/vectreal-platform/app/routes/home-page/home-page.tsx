@@ -18,7 +18,7 @@ import community from '../../assets/images/community.webp'
 import studioDisplay from '../../assets/images/studio-display.jpg'
 import { BasicCard, Section } from '../../components'
 
-import { createClient } from '../../lib/supabase.server'
+import { createSupabaseClient } from '../../lib/supabase.server'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
 import { Route } from './+types/home-page'
@@ -27,7 +27,7 @@ import HeroScene from './hero-scene'
 import MockShopSection from './mock-shop-section'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { client, headers } = await createClient(request)
+	const { client, headers } = await createSupabaseClient(request)
 	const {
 		data: { user }
 	} = await client.auth.getUser()

@@ -17,12 +17,8 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 import { JSONDocument } from '@gltf-transform/core'
 import { type ModelOptimizer, type TextureCompressOptions } from '@vctrl/core'
 
-import {
-	createDefaultServerOptions,
-	handleServerResponseError,
-	performTextureOptimizationRequest,
-	prepareTextureOptimizationFormData
-} from './server-communication'
+import { ServerCommunicationService } from '../../utils/server-communication'
+
 import { validateServerResponse } from './validation'
 
 /**
@@ -32,21 +28,25 @@ export const performServerSideTextureOptimization = async (
 	optimizer: ModelOptimizer,
 	options: TextureCompressOptions
 ): Promise<void> => {
-	const serverOptions = createDefaultServerOptions(options.serverOptions)
-	const modelBuffer = await optimizer.export()
-	const formData = await prepareTextureOptimizationFormData(
-		modelBuffer,
-		options
+	const serverOptions = ServerCommunicationService.createDefaultServerOptions(
+		options.serverOptions
 	)
-
-	try {
-		const response = await performTextureOptimizationRequest(
-			serverOptions,
-			formData
+	const modelBuffer = await optimizer.export()
+	const formData =
+		await ServerCommunicationService.prepareTextureOptimizationFormData(
+			modelBuffer,
+			options
 		)
 
+	try {
+		const response = await fetch(serverOptions.endpoint, {
+			method: 'POST',
+			headers: ServerCommunicationService.createRequestHeaders(serverOptions),
+			body: formData
+		})
+
 		if (!response.ok) {
-			await handleServerResponseError(response)
+			await ServerCommunicationService.handleServerResponseError(response)
 		}
 
 		await validateServerResponse(response)

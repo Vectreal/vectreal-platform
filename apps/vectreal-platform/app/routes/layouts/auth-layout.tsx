@@ -1,25 +1,41 @@
-import { Outlet, redirect, useLoaderData } from 'react-router'
+import { createContext, Outlet, redirect } from 'react-router'
 
 import { AuthContext } from '../../contexts/auth-context'
-import { type sceneFolders, type scenes } from '../../db/schema'
+import { type AuthContextType } from '../../contexts/auth-context'
+import { type sceneFolders } from '../../db/schema'
+import { FolderType, SceneType } from '../../hooks'
+import { PlatformApiService } from '../../lib/services/platform-api-service.server'
 import { projectService } from '../../lib/services/project-service.server'
 import { sceneService } from '../../lib/services/scene-service.server'
 import { userService } from '../../lib/services/user-service.server'
-import { createClient } from '../../lib/supabase.server'
 
 import { Route } from './+types/auth-layout'
 
-export const loader = async ({ request }: Route.ActionArgs) => {
-	const { client, headers } = await createClient(request)
+const defaults = {
+	user: null,
+	userWithDefaults: null,
+	organizations: [],
+	projects: [],
+	scenes: [],
+	sceneFolders: [],
+	error: 'Failed to initialize user data'
+}
 
-	const {
-		error,
-		data: { user }
-	} = await client.auth.getUser()
+const middlewareAuthContext = createContext<AuthContextType>(defaults)
 
-	if (error || !user) {
-		return redirect('/sign-up', { headers })
+const authMiddleware: Route.MiddlewareFunction = async ({
+	request,
+	context
+}) => {
+	const authResponse = await PlatformApiService.getAuthUser(request)
+
+	// In case of unauthorized, redirect to sign-up
+	// A response can only be an instance of Response if it's an error
+	if (authResponse instanceof Response) {
+		return redirect('/sign-up', { headers: authResponse.headers })
 	}
+
+	const { user } = authResponse
 
 	try {
 		// Initialize user defaults (creates user in local DB, default org, and project)
@@ -32,14 +48,8 @@ export const loader = async ({ request }: Route.ActionArgs) => {
 		const userProjects = await projectService.getUserProjects(user.id)
 
 		// Get all scenes and scene folders for the user's projects
-		const allScenes: Array<{
-			scene: typeof scenes.$inferSelect
-			projectId: string
-		}> = []
-		const allSceneFolders: Array<{
-			folder: typeof sceneFolders.$inferSelect
-			projectId: string
-		}> = []
+		const allScenes: Array<SceneType> = []
+		const allSceneFolders: Array<FolderType> = []
 
 		// Fetch scenes and folders for each project the user has access to
 		for (const { project } of userProjects) {
@@ -51,12 +61,12 @@ export const loader = async ({ request }: Route.ActionArgs) => {
 
 				// Add scenes with project context
 				projectScenes.forEach((scene) => {
-					allScenes.push({ scene, projectId: project.id })
+					allScenes.push(scene)
 				})
 
 				// Add folders with project context
 				projectFolders.forEach((folder) => {
-					allSceneFolders.push({ folder, projectId: project.id })
+					allSceneFolders.push(folder)
 				})
 			} catch (error) {
 				console.error(
@@ -67,32 +77,29 @@ export const loader = async ({ request }: Route.ActionArgs) => {
 			}
 		}
 
-		return {
+		context.set(middlewareAuthContext, {
 			user,
 			userWithDefaults,
 			organizations,
 			projects: userProjects,
 			scenes: allScenes,
 			sceneFolders: allSceneFolders
-		}
+		})
 	} catch (error) {
 		console.error('Failed to initialize user:', error)
 		// If user initialization fails, still allow access but log the error
-		return {
-			user,
-			userWithDefaults: null,
-			organizations: [],
-			projects: [],
-			scenes: [],
-			sceneFolders: [],
-			error: 'Failed to initialize user data'
-		}
+		context.set(middlewareAuthContext, { ...defaults, user })
 	}
 }
 
-const AuthLayout = () => {
-	const loaderData = useLoaderData<typeof loader>()
+export const middleware: Route.MiddlewareFunction[] = [authMiddleware]
 
+export const loader = async ({ request, context }: Route.ActionArgs) => {
+	const authContext = context.get(middlewareAuthContext)
+	return authContext
+}
+
+const AuthLayout = ({ loaderData }: Route.ComponentProps) => {
 	// Provide auth context to all child routes
 	return (
 		<AuthContext.Provider value={loaderData}>

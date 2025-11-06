@@ -6,6 +6,7 @@ import {
 	AccumulativeShadowsProps as ThreeAccumulativeShadowsProps,
 	ContactShadowsProps as ThreeContactShadowsProps
 } from '@react-three/drei'
+import { memo } from 'react'
 
 export interface BaseShadowsProps {
 	type: 'accumulative' | 'contact'
@@ -51,7 +52,7 @@ export const defaultShadowsOptions: ShadowsProps | BaseShadowsProps = {
  *
  * @param {ShadowsProps} props - Shadow configuration options.
  */
-const SceneShadows = (props?: ShadowsProps | object) => {
+const SceneShadows = memo((props?: ShadowsProps | object) => {
 	const { ...shadowOptions } = { ...defaultShadowsOptions, ...props }
 
 	return shadowOptions.type === 'accumulative' ? (
@@ -61,6 +62,6 @@ const SceneShadows = (props?: ShadowsProps | object) => {
 	) : shadowOptions.type === 'contact' ? (
 		<ContactShadows {...shadowOptions} />
 	) : null
-}
+})
 
 export default SceneShadows

@@ -1,7 +1,7 @@
 import { type EmailOtpType } from '@supabase/supabase-js'
 import { redirect } from 'react-router'
 
-import { createClient } from '../../../lib/supabase.server'
+import { createSupabaseClient } from '../../../lib/supabase.server'
 
 import { Route } from './+types/confirm'
 
@@ -11,7 +11,7 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 	const type = searchParams.get('type') as EmailOtpType | null
 	const next = searchParams.get('next') ?? '/dashboard'
 
-	const { client, headers } = await createClient(request)
+	const { client, headers } = await createSupabaseClient(request)
 
 	if (token_hash && type) {
 		const { error } = await client.auth.verifyOtp({

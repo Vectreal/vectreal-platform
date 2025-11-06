@@ -594,23 +594,6 @@ class SceneSettingsService {
 	): GLTFAssetData[] {
 		const extractedAssets: GLTFAssetData[] = []
 
-		console.log('Extracting GLTF assets:', {
-			isGLTFExportResult: this.isGLTFExportResult(gltfExportResult),
-			hasAssets: !!gltfExportResult.assets,
-			assetsType: Array.isArray(gltfExportResult.assets)
-				? 'array'
-				: gltfExportResult.assets instanceof Map
-					? 'map'
-					: typeof gltfExportResult.assets,
-			assetsCount: gltfExportResult.assets
-				? Array.isArray(gltfExportResult.assets)
-					? gltfExportResult.assets.length
-					: gltfExportResult.assets instanceof Map
-						? gltfExportResult.assets.size
-						: 0
-				: 0
-		})
-
 		if (
 			!this.isGLTFExportResult(gltfExportResult) ||
 			!gltfExportResult.assets
@@ -689,9 +672,6 @@ class SceneSettingsService {
 			})
 		}
 
-		console.log(
-			`Extracted ${extractedAssets.length} assets from GLTF export result`
-		)
 		return extractedAssets
 	}
 

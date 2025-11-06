@@ -1,7 +1,7 @@
 import { useAtom } from 'jotai'
 
 import { InfoTooltip } from '../../../../../components/info-tooltip'
-import { controlsAtom } from '../../../../../lib/stores/publisher-config-store'
+import { controlsAtom } from '../../../../../lib/stores/scene-settings-store'
 import { SettingSlider, SettingToggle } from '../../../settings-components'
 
 const CameraControlsSettingsPanel = () => {

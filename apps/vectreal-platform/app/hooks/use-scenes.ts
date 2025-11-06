@@ -6,31 +6,31 @@ import type { sceneFolders, scenes } from '../db/schema'
 /**
  * Types for scene and folder data with relationships
  */
-export interface SceneWithProject {
-	scene: typeof scenes.$inferSelect
-	projectId: string
-}
 
-export interface SceneFolderWithProject {
-	folder: typeof sceneFolders.$inferSelect
-	projectId: string
-}
+/**
+ * Type representing a Scene from the database
+ *
+ * created by extracting the inferred select type from the scenes schema
+ */
+export type SceneType = typeof scenes.$inferSelect
+
+export type FolderType = typeof sceneFolders.$inferSelect
 
 export interface ProjectContent {
-	folders: SceneFolderWithProject[]
-	scenes: SceneWithProject[]
+	folders: FolderType[]
+	scenes: SceneType[]
 }
 
 export interface FolderContent {
-	folder: typeof sceneFolders.$inferSelect
-	subfolders: SceneFolderWithProject[]
-	scenes: SceneWithProject[]
+	folder: FolderType
+	subfolders: FolderType[]
+	scenes: SceneType[]
 }
 
 /**
  * Hook to get all scenes accessible to the user
  */
-export const useScenes = (): SceneWithProject[] => {
+export const useScenes = (): SceneType[] => {
 	const { scenes } = useAuth()
 	return scenes
 }
@@ -38,7 +38,7 @@ export const useScenes = (): SceneWithProject[] => {
 /**
  * Hook to get all scene folders accessible to the user
  */
-export const useSceneFolders = (): SceneFolderWithProject[] => {
+export const useSceneFolders = (): FolderType[] => {
 	const { sceneFolders } = useAuth()
 	return sceneFolders
 }
@@ -46,7 +46,7 @@ export const useSceneFolders = (): SceneFolderWithProject[] => {
 /**
  * Hook to get all scenes for a specific project
  */
-export const useProjectScenes = (projectId: string): SceneWithProject[] => {
+export const useProjectScenes = (projectId: string): SceneType[] => {
 	const { scenes } = useAuth()
 
 	return useMemo(() => {
@@ -59,35 +59,36 @@ export const useProjectScenes = (projectId: string): SceneWithProject[] => {
 /**
  * Hook to get a specific scene by ID
  */
-export const useScene = (sceneId: string): SceneWithProject | null => {
+export const useScene = (sceneId: string): SceneType | null => {
 	const { scenes } = useAuth()
 
 	return useMemo(() => {
-		return scenes.find(({ scene }) => scene.id === sceneId) || null
+		return scenes.find(({ id }) => id === sceneId) || null
 	}, [scenes, sceneId])
 }
 
 /**
  * Hook to get scenes in a specific folder
  */
-export const useFolderScenes = (folderId: string): SceneWithProject[] => {
+export const useFolderScenes = (folderId: string): SceneType[] => {
 	const { scenes } = useAuth()
 
 	return useMemo(() => {
-		return scenes.filter(({ scene }) => scene.folderId === folderId)
+		return scenes.filter(
+			({ folderId: sceneFolderId }) => sceneFolderId === folderId
+		)
 	}, [scenes, folderId])
 }
 
 /**
  * Hook to get root scenes (not in any folder) for a project
  */
-export const useRootScenes = (projectId: string): SceneWithProject[] => {
+export const useRootScenes = (projectId: string): SceneType[] => {
 	const { scenes } = useAuth()
 
 	return useMemo(() => {
 		return scenes.filter(
-			({ scene, projectId: sceneProjectId }) =>
-				sceneProjectId === projectId && !scene.folderId
+			(scene) => scene.projectId === projectId && !scene.folderId
 		)
 	}, [scenes, projectId])
 }
@@ -95,9 +96,7 @@ export const useRootScenes = (projectId: string): SceneWithProject[] => {
 /**
  * Hook to get all scene folders for a project
  */
-export const useProjectSceneFolders = (
-	projectId: string
-): SceneFolderWithProject[] => {
+export const useProjectSceneFolders = (projectId: string): FolderType[] => {
 	const { sceneFolders } = useAuth()
 
 	return useMemo(() => {
@@ -110,15 +109,13 @@ export const useProjectSceneFolders = (
 /**
  * Hook to get root scene folders (no parent) for a project
  */
-export const useRootSceneFolders = (
-	projectId: string
-): SceneFolderWithProject[] => {
+export const useRootSceneFolders = (projectId: string): FolderType[] => {
 	const { sceneFolders } = useAuth()
 
 	return useMemo(() => {
 		return sceneFolders.filter(
-			({ folder, projectId: folderProjectId }) =>
-				folderProjectId === projectId && !folder.parentFolderId
+			({ projectId: folderProjectId, parentFolderId }) =>
+				folderProjectId === projectId && !parentFolderId
 		)
 	}, [sceneFolders, projectId])
 }
@@ -126,27 +123,24 @@ export const useRootSceneFolders = (
 /**
  * Hook to get a specific scene folder by ID
  */
-export const useSceneFolder = (
-	folderId: string
-): SceneFolderWithProject | null => {
+export const useSceneFolder = (folderId: string): FolderType | null => {
 	const { sceneFolders } = useAuth()
 
 	return useMemo(() => {
-		return sceneFolders.find(({ folder }) => folder.id === folderId) || null
+		return sceneFolders.find(({ id }) => id === folderId) || null
 	}, [sceneFolders, folderId])
 }
 
 /**
  * Hook to get child folders of a parent folder
  */
-export const useChildSceneFolders = (
-	parentFolderId: string
-): SceneFolderWithProject[] => {
+export const useChildSceneFolders = (parentFolderId: string): FolderType[] => {
 	const { sceneFolders } = useAuth()
 
 	return useMemo(() => {
 		return sceneFolders.filter(
-			({ folder }) => folder.parentFolderId === parentFolderId
+			({ parentFolderId: folderParentFolderId }) =>
+				folderParentFolderId === parentFolderId
 		)
 	}, [sceneFolders, parentFolderId])
 }
@@ -159,13 +153,13 @@ export const useProjectContent = (projectId: string): ProjectContent => {
 
 	return useMemo(() => {
 		const projectFolders = sceneFolders.filter(
-			({ folder, projectId: folderProjectId }) =>
-				folderProjectId === projectId && !folder.parentFolderId
+			({ projectId: folderProjectId, parentFolderId }) =>
+				folderProjectId === projectId && !parentFolderId
 		)
 
 		const projectScenes = scenes.filter(
-			({ scene, projectId: sceneProjectId }) =>
-				sceneProjectId === projectId && !scene.folderId
+			({ folderId, projectId: sceneProjectId }) =>
+				sceneProjectId === projectId && !folderId
 		)
 
 		return {
@@ -185,10 +179,10 @@ export const useFolderContent = (
 
 	return useMemo(() => {
 		const subfolders = sceneFolders.filter(
-			({ folder }) => folder.parentFolderId === folderId
+			({ parentFolderId }) => parentFolderId === folderId
 		)
 		const folderScenes = scenes.filter(
-			({ scene }) => scene.folderId === folderId
+			({ folderId: sceneFolderId }) => sceneFolderId === folderId
 		)
 
 		return {
@@ -207,8 +201,8 @@ export const useSceneStats = () => {
 	return useMemo(() => {
 		const total = scenes.length
 		const byStatus = scenes.reduce(
-			(acc, { scene }) => {
-				acc[scene.status] = (acc[scene.status] || 0) + 1
+			(acc, { status }) => {
+				acc[status] = (acc[status] || 0) + 1
 				return acc
 			},
 			{} as Record<string, number>
@@ -245,15 +239,17 @@ export const useFilteredScenes = (searchTerm?: string, status?: string) => {
 		if (searchTerm) {
 			const term = searchTerm.toLowerCase()
 			filtered = filtered.filter(
-				({ scene }) =>
-					scene.name.toLowerCase().includes(term) ||
-					(scene.description && scene.description.toLowerCase().includes(term))
+				({ name, description }) =>
+					name.toLowerCase().includes(term) ||
+					(description && description.toLowerCase().includes(term))
 			)
 		}
 
 		// Filter by status
 		if (status && status !== 'all') {
-			filtered = filtered.filter(({ scene }) => scene.status === status)
+			filtered = filtered.filter(
+				({ status: sceneStatus }) => sceneStatus === status
+			)
 		}
 
 		return filtered
@@ -267,24 +263,20 @@ export const useSortedScenes = () => {
 	const { scenes } = useAuth()
 
 	return useMemo(() => {
-		const byName = [...scenes].sort((a, b) =>
-			a.scene.name.localeCompare(b.scene.name)
-		)
+		const byName = [...scenes].sort((a, b) => a.name.localeCompare(b.name))
 
 		const byUpdated = [...scenes].sort(
 			(a, b) =>
-				new Date(b.scene.updatedAt).getTime() -
-				new Date(a.scene.updatedAt).getTime()
+				new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
 		)
 
 		const byCreated = [...scenes].sort(
 			(a, b) =>
-				new Date(b.scene.createdAt).getTime() -
-				new Date(a.scene.createdAt).getTime()
+				new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
 		)
 
 		const byStatus = [...scenes].sort((a, b) =>
-			a.scene.status.localeCompare(b.scene.status)
+			a.status.localeCompare(b.status)
 		)
 
 		return {
@@ -314,10 +306,10 @@ export const useSceneFolderStats = () => {
 		)
 
 		const rootFolders = sceneFolders.filter(
-			({ folder }) => !folder.parentFolderId
+			({ parentFolderId }) => !parentFolderId
 		)
 		const nestedFolders = sceneFolders.filter(
-			({ folder }) => folder.parentFolderId
+			({ parentFolderId }) => parentFolderId
 		)
 
 		return {
@@ -342,8 +334,7 @@ export const useRecentScenes = (limit = 5) => {
 		return [...scenes]
 			.sort(
 				(a, b) =>
-					new Date(b.scene.updatedAt).getTime() -
-					new Date(a.scene.updatedAt).getTime()
+					new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
 			)
 			.slice(0, limit)
 	}, [scenes, limit])
@@ -359,9 +350,7 @@ export const useFolderBreadcrumbs = (
 
 	return useMemo(() => {
 		const breadcrumbs: Array<{ id: string; name: string }> = []
-		const folderMap = new Map(
-			sceneFolders.map(({ folder }) => [folder.id, folder])
-		)
+		const folderMap = new Map(sceneFolders.map((folder) => [folder.id, folder]))
 
 		let currentFolderId: string | null = folderId
 
@@ -389,7 +378,7 @@ export const useHasSceneAccess = (sceneId: string): boolean => {
 	const { scenes } = useAuth()
 
 	return useMemo(() => {
-		return scenes.some(({ scene }) => scene.id === sceneId)
+		return scenes.some(({ id }) => id === sceneId)
 	}, [scenes, sceneId])
 }
 
@@ -400,7 +389,7 @@ export const useHasSceneFolderAccess = (folderId: string): boolean => {
 	const { sceneFolders } = useAuth()
 
 	return useMemo(() => {
-		return sceneFolders.some(({ folder }) => folder.id === folderId)
+		return sceneFolders.some((folder) => folder.id === folderId)
 	}, [sceneFolders, folderId])
 }
 
@@ -415,7 +404,7 @@ export const useScenesByProject = () => {
 			string,
 			{
 				project: (typeof projects)[0]['project']
-				scenes: SceneWithProject[]
+				scenes: SceneType[]
 			}
 		>()
 
@@ -450,7 +439,7 @@ export const useSceneFoldersByProject = () => {
 			string,
 			{
 				project: (typeof projects)[0]['project']
-				folders: SceneFolderWithProject[]
+				folders: FolderType[]
 			}
 		>()
 

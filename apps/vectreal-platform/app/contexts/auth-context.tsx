@@ -8,6 +8,7 @@ import type {
 	sceneFolders,
 	scenes
 } from '../db/schema'
+import { FolderType, SceneType } from '../hooks'
 import type { UserWithDefaults } from '../lib/services/user-service.server'
 
 /**
@@ -27,7 +28,7 @@ import type { UserWithDefaults } from '../lib/services/user-service.server'
  */
 
 export interface AuthContextType {
-	user: User
+	user: User | null
 	userWithDefaults: UserWithDefaults | null
 	organizations: Array<{
 		organization: typeof organizations.$inferSelect
@@ -37,14 +38,8 @@ export interface AuthContextType {
 		project: typeof projects.$inferSelect
 		organizationId: string
 	}>
-	scenes: Array<{
-		scene: typeof scenes.$inferSelect
-		projectId: string
-	}>
-	sceneFolders: Array<{
-		folder: typeof sceneFolders.$inferSelect
-		projectId: string
-	}>
+	scenes: Array<SceneType>
+	sceneFolders: Array<FolderType>
 	error?: string
 }
 

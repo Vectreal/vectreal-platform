@@ -1,12 +1,12 @@
 import { Outlet, useLocation } from 'react-router'
 
 import { Navigation } from '../../components'
-import { createClient } from '../../lib/supabase.server'
+import { createSupabaseClient } from '../../lib/supabase.server'
 
 import { Route } from './+types/nav-layout'
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
-	const { client } = await createClient(request)
+	const { client } = await createSupabaseClient(request)
 	const {
 		data: { user }
 	} = await client.auth.getUser()
