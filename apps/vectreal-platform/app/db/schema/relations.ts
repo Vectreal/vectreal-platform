@@ -9,6 +9,7 @@ import { projects } from './project/projects'
 import { sceneAssets } from './project/scene-assets'
 import { sceneFolders } from './project/scene-folders'
 import { sceneSettings } from './project/scene-settings'
+import { sceneStats } from './project/scene-stats'
 import { scenes } from './project/scenes'
 
 // Organization relations
@@ -28,6 +29,7 @@ export const organizationsRelations = relations(
 export const usersRelations = relations(users, ({ many }) => ({
 	sceneFolders: many(sceneFolders),
 	sceneSettings: many(sceneSettings),
+	sceneStats: many(sceneStats),
 	organizationMemberships: many(organizationMemberships)
 }))
 
@@ -70,7 +72,8 @@ export const scenesRelations = relations(scenes, ({ one, many }) => ({
 		fields: [scenes.folderId],
 		references: [sceneFolders.id]
 	}),
-	sceneSettings: many(sceneSettings)
+	sceneSettings: many(sceneSettings),
+	sceneStats: many(sceneStats)
 }))
 
 // Scene folder relations
@@ -147,4 +150,16 @@ export const foldersRelations = relations(folders, ({ one, many }) => ({
 	}),
 	children: many(folders),
 	assets: many(assets)
+}))
+
+// Scene stats relations
+export const sceneStatsRelations = relations(sceneStats, ({ one }) => ({
+	scene: one(scenes, {
+		fields: [sceneStats.sceneId],
+		references: [scenes.id]
+	}),
+	createdByUser: one(users, {
+		fields: [sceneStats.createdBy],
+		references: [users.id]
+	})
 }))

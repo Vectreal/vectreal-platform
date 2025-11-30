@@ -1,5 +1,7 @@
 import { randomUUID } from 'crypto'
 
+import { OptimizationReport } from '@vctrl/core'
+
 import { UUID_REGEX } from '../../constants/utility-constants'
 import type {
 	GetSceneSettingsParams,
@@ -37,9 +39,11 @@ function validateSceneId(sceneId: string | undefined): string | null {
  * @throws Error if user doesn't exist in local database
  */
 export async function saveSceneSettings(
-	params: Omit<SaveSceneSettingsParams, 'projectId'>
+	params: Omit<SaveSceneSettingsParams, 'projectId'> & {
+		optimizationReport?: unknown
+	}
 ) {
-	const { sceneId, settings, gltfJson, userId } = params
+	const { sceneId, settings, gltfJson, userId, optimizationReport } = params
 	// First, ensure user exists in local database (fallback for existing auth users)
 	const userExists = await userService.userExists(userId)
 	if (!userExists) {
@@ -78,7 +82,8 @@ export async function saveSceneSettings(
 		projectId,
 		userId,
 		settings,
-		gltfJson
+		gltfJson,
+		optimizationReport
 	})
 
 	// Return the result with the actual scene ID used - ensure sceneId is set correctly
@@ -158,7 +163,7 @@ function validateGetRequest(
  * @returns API response with saved settings or error
  */
 export async function saveSceneSettingsWithValidation(
-	request: SceneSettingsRequest,
+	request: SceneSettingsRequest & { optimizationReport?: unknown },
 	userId: string
 ): Promise<Response> {
 	try {
@@ -169,9 +174,10 @@ export async function saveSceneSettingsWithValidation(
 		}
 
 		// Ensure required fields exist after validation
-		if (!request.sceneId || !request.settings || !request.gltfJson) {
+		// Note: sceneId can be empty/null for new scenes
+		if (!request.settings || !request.gltfJson) {
 			return ApiResponseBuilder.badRequest(
-				'Scene ID, settings, and GLTF data are required'
+				'Settings and GLTF data are required'
 			)
 		}
 
@@ -180,7 +186,10 @@ export async function saveSceneSettingsWithValidation(
 			sceneId: request.sceneId,
 			settings: request.settings,
 			gltfJson: request.gltfJson,
-			userId
+			userId,
+			optimizationReport: request.optimizationReport as
+				| OptimizationReport
+				| undefined
 		})
 
 		return ApiResponseBuilder.success(result)

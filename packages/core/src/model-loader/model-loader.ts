@@ -211,6 +211,7 @@ export class ModelLoader {
 				const missingImages: string[] = []
 
 				gltfJson.images.forEach((image, index: number) => {
+					// Check if image has a URI reference
 					if (image.uri) {
 						const imageName = decodeURIComponent(image.uri)
 						const basename = imageName.split('/').pop() || imageName
@@ -223,11 +224,14 @@ export class ModelLoader {
 							assets.has(imageName.replace(/^\.\//, '')) || // Remove ./ prefix
 							assets.has(basename.replace(/^\.\//, ''))
 
-						if (!hasAsset && !image.bufferView && image.bufferView !== 0) {
+						if (!hasAsset) {
 							missingImages.push(`Image ${index}: ${imageName}`)
 						}
-					} else if (!image.bufferView && image.bufferView !== 0) {
-						// bufferView can be 0 (valid index), so we need to check for undefined/null
+					} else if (
+						typeof image.bufferView !== 'number' ||
+						image.bufferView < 0
+					) {
+						// Image must have either a URI or a valid bufferView index (>= 0)
 						missingImages.push(`Image ${index}: (no URI or bufferView)`)
 					}
 				})
@@ -246,29 +250,83 @@ export class ModelLoader {
 			// Add main GLTF file
 			resources['model.gltf'] = gltfBuffer
 
-			// Add assets with multiple key variations for better resolution
-			for (const [name, data] of assets.entries()) {
-				resources[name] = data
+			// Build a comprehensive resource map based on what the GLTF actually references
+			// First, collect all URI references from the GLTF
+			const referencedUris = new Set<string>()
 
-				// Also add with decoded URI in case the GLTF uses URI encoding
+			// Collect image URIs
+			if (gltfJson.images) {
+				gltfJson.images.forEach((image) => {
+					if (image.uri) {
+						referencedUris.add(image.uri)
+						// Also add decoded version
+						referencedUris.add(decodeURIComponent(image.uri))
+					}
+				})
+			}
+
+			// Collect buffer URIs (for .bin files)
+			if (gltfJson.buffers) {
+				gltfJson.buffers.forEach((buffer) => {
+					if (buffer.uri) {
+						referencedUris.add(buffer.uri)
+						referencedUris.add(decodeURIComponent(buffer.uri))
+					}
+				})
+			}
+
+			// Now map each asset to all possible URIs it might match
+			for (const [name, data] of assets.entries()) {
+				const basename = name.split('/').pop() || name
 				const decodedName = decodeURIComponent(name)
+				const decodedBasename = decodedName.split('/').pop() || decodedName
+
+				// Create a list of possible keys for this asset
+				const possibleKeys = new Set([
+					name,
+					basename,
+					decodedName,
+					decodedBasename,
+					`./${basename}`,
+					`./${decodedBasename}`
+				])
+
+				// Add this asset under any URI that matches any of its possible keys
+				for (const uri of referencedUris) {
+					const uriBasename = uri.split('/').pop() || uri
+					const decodedUri = decodeURIComponent(uri)
+					const decodedUriBasename = decodedUri.split('/').pop() || decodedUri
+
+					// Check if this URI matches this asset
+					if (
+						possibleKeys.has(uri) ||
+						possibleKeys.has(uriBasename) ||
+						possibleKeys.has(decodedUri) ||
+						possibleKeys.has(decodedUriBasename) ||
+						uri === basename ||
+						uri === decodedBasename ||
+						uriBasename === basename ||
+						uriBasename === decodedBasename ||
+						decodedUri === basename ||
+						decodedUri === decodedBasename ||
+						decodedUriBasename === basename ||
+						decodedUriBasename === decodedBasename
+					) {
+						// Add under the exact URI used in the GLTF
+						resources[uri] = data
+						// Also add under common variations
+						resources[decodedUri] = data
+					}
+				}
+
+				// Also add under the original name and common variations as fallback
+				resources[name] = data
+				resources[basename] = data
 				if (decodedName !== name) {
 					resources[decodedName] = data
 				}
-
-				// Add with just the basename
-				const basename = name.split('/').pop() || name
-				if (basename !== name) {
-					resources[basename] = data
-				}
-
-				// Add with ./ prefix (common in GLTF files)
-				resources[`./${basename}`] = data
-
-				// Add with decoded ./ prefix
-				if (decodedName !== name) {
-					const decodedBasename = decodedName.split('/').pop() || decodedName
-					resources[`./${decodedBasename}`] = data
+				if (decodedBasename !== basename) {
+					resources[decodedBasename] = data
 				}
 			}
 

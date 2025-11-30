@@ -22,7 +22,7 @@ import { memo, useCallback, useEffect, useState } from 'react'
 import { Link, useFetcher, useParams } from 'react-router'
 
 import { BasicCard } from '../../../components'
-import { useProject, useScene } from '../../../hooks'
+import { useProject, useScene, useSceneStats } from '../../../hooks'
 
 interface ConfirmDeleteModalProps {
 	isOpen: boolean

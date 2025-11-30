@@ -17,7 +17,6 @@ import { Link, redirect, useNavigate } from 'react-router'
 import community from '../../assets/images/community.webp'
 import studioDisplay from '../../assets/images/studio-display.jpg'
 import { BasicCard, Section } from '../../components'
-
 import { createSupabaseClient } from '../../lib/supabase.server'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 

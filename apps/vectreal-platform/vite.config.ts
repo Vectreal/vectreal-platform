@@ -18,6 +18,7 @@ export default defineConfig(({ mode, isSsrBuild, command }) => {
 			port: 4300,
 			host: 'localhost'
 		},
+		assetsInclude: ['**/*.gltf', '**/*.glb', '**/*.hdr'],
 		plugins: [
 			tailwindcss(),
 			nxViteTsPaths(),

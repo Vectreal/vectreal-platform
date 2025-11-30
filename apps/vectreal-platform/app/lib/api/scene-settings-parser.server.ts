@@ -58,12 +58,18 @@ export class SceneSettingsParser {
 				return assetIds
 			}
 
+			const optimizationReport = this.parseOptimizationReport(requestData)
+			if (optimizationReport instanceof Response) {
+				return optimizationReport
+			}
+
 			return {
 				action,
 				sceneId,
 				settings,
 				assetIds: assetIds || [],
-				gltfJson: gltfJsonData || undefined
+				gltfJson: gltfJsonData || undefined,
+				optimizationReport: optimizationReport || undefined
 			}
 		} catch (error) {
 			console.error('Failed to parse scene settings request:', error)
@@ -197,5 +203,39 @@ export class SceneSettingsParser {
 
 		// Return undefined if no gltfJson provided (it's optional for some operations)
 		return gltf || undefined
+	}
+
+	/**
+	 * Parses optimization report from request.
+	 */
+	private static parseOptimizationReport(
+		requestData: Record<string, unknown>
+	): Record<string, unknown> | undefined | Response {
+		if (!requestData.optimizationReport) {
+			return undefined
+		}
+
+		if (typeof requestData.optimizationReport === 'string') {
+			try {
+				const parsed = JSON.parse(requestData.optimizationReport)
+				if (typeof parsed !== 'object' || parsed === null) {
+					return ApiResponseBuilder.badRequest(
+						'Invalid optimization report format'
+					)
+				}
+				return parsed
+			} catch (error) {
+				console.error('Failed to parse optimizationReport:', error)
+				return ApiResponseBuilder.badRequest(
+					'Invalid optimization report format'
+				)
+			}
+		}
+
+		if (typeof requestData.optimizationReport === 'object') {
+			return requestData.optimizationReport as Record<string, unknown>
+		}
+
+		return undefined
 	}
 }

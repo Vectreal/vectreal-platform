@@ -88,6 +88,12 @@ export function useScenePersistence({
 		try {
 			const gltfJsonToSend = await serializeGltfDocument()
 
+			// Get optimization report if available
+			let optimizationReport = null
+			if (optimizer && optimizer.report) {
+				optimizationReport = optimizer.report
+			}
+
 			const formData = new FormData()
 			formData.append('action', 'save-scene-settings')
 			formData.append('sceneId', currentSceneId || '')
@@ -95,6 +101,14 @@ export function useScenePersistence({
 			formData.append('settings', JSON.stringify(currentSettings))
 			formData.append('assetIds', JSON.stringify(assetIds))
 			formData.append('gltfJson', JSON.stringify(gltfJsonToSend))
+
+			// Include optimization report if available
+			if (optimizationReport) {
+				formData.append(
+					'optimizationReport',
+					JSON.stringify(optimizationReport)
+				)
+			}
 
 			const response = await fetch('/api/scene-settings', {
 				method: 'POST',
@@ -120,7 +134,14 @@ export function useScenePersistence({
 			console.error('Failed to save scene settings:', error)
 			throw error
 		}
-	}, [currentSceneId, userId, assetIds, currentSettings, serializeGltfDocument])
+	}, [
+		currentSceneId,
+		userId,
+		assetIds,
+		currentSettings,
+		serializeGltfDocument,
+		optimizer
+	])
 
 	/**
 	 * Load scene settings from database

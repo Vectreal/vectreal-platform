@@ -1,15 +1,10 @@
-'use client'
-
 import { useGLTF } from '@react-three/drei'
 import { VectrealViewer } from '@vctrl/viewer'
 import { LoadingSpinner } from '@vctrl-ui/ui/loading-spinner'
 import { SpinnerWrapper } from '@vctrl-ui/ui/spinner-wrapper'
 import { ExternalLink, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
-
 import { Link } from 'react-router'
-
-import bike from '../../assets/models/bike.glb?url'
 
 const InfoContent = () => (
 	<div className="flex flex-col gap-2 font-[DM_Sans]">
@@ -40,16 +35,13 @@ const InfoContent = () => (
 	</div>
 )
 
-const ProductScene = () => {
-	const [modelUrl, setModelUrl] = useState('')
-	const { scene } = useGLTF(modelUrl || '', true) // preload = true
-
-	useEffect(() => {
-		setModelUrl(bike)
-	}, [])
+const BikeModel = () => {
+	const { scene } = useGLTF('/assets/models/bike.glb')
 
 	return (
 		<VectrealViewer
+			key="preview-shop-bike-scene"
+			model={scene}
 			cameraOptions={{
 				position: [-1.4, 0, 0]
 			}}
@@ -64,7 +56,6 @@ const ProductScene = () => {
 			envOptions={{
 				preset: 'nature-park'
 			}}
-			model={scene}
 			infoPopoverOptions={{
 				content: <InfoContent />
 			}}
@@ -75,6 +66,24 @@ const ProductScene = () => {
 			}
 		/>
 	)
+}
+
+const ProductScene = () => {
+	const [isClient, setIsClient] = useState(false)
+
+	useEffect(() => {
+		setIsClient(true)
+	}, [])
+
+	if (!isClient) {
+		return (
+			<SpinnerWrapper>
+				<LoadingSpinner className="text-white" />
+			</SpinnerWrapper>
+		)
+	}
+
+	return <BikeModel />
 }
 
 export default ProductScene

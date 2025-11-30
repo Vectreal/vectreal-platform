@@ -1,10 +1,12 @@
 import { JSONDocument } from '@gltf-transform/core'
+import type { OptimizationReport } from '@vctrl/core'
 import { and, desc, eq } from 'drizzle-orm'
 import type { ExtractTablesWithRelations } from 'drizzle-orm'
 import type { PgTransaction } from 'drizzle-orm/pg-core'
 import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js'
 
 import { getDbClient } from '../../db/client'
+import * as dbSchema from '../../db/schema'
 import {
 	assets,
 	organizations,
@@ -13,10 +15,9 @@ import {
 	sceneAssets,
 	sceneFolders,
 	scenes,
-	sceneSettings
+	sceneSettings,
+	sceneStats
 } from '../../db/schema'
-
-import * as dbSchema from '../../db/schema'
 import {
 	CreateSceneSettingsParams,
 	type ExtendedGLTFDocument,
@@ -26,6 +27,7 @@ import {
 	type SerializedAsset,
 	UpdateSceneSettingsParams
 } from '../../types/api'
+import { createSceneStatsFromReport } from '../utils/scene-stats-helpers'
 
 import {
 	assetStorageService,
@@ -65,8 +67,19 @@ class SceneSettingsService {
 	 * @param params - Scene settings creation parameters
 	 * @returns Created or updated scene settings
 	 */
-	async saveSceneSettings(params: SaveSceneSettingsParams) {
-		const { sceneId, projectId, userId, settings, gltfJson } = params
+	async saveSceneSettings(
+		params: SaveSceneSettingsParams & {
+			optimizationReport?: OptimizationReport
+		}
+	) {
+		const {
+			sceneId,
+			projectId,
+			userId,
+			settings,
+			gltfJson,
+			optimizationReport
+		} = params
 
 		return await this.db.transaction(async (tx) => {
 			// Ensure scene exists
@@ -109,7 +122,8 @@ class SceneSettingsService {
 				userId,
 				settings,
 				gltfJson,
-				previousVersion: latestSettings?.version || 0
+				previousVersion: latestSettings?.version || 0,
+				optimizationReport
 			})
 		})
 	}
@@ -367,6 +381,56 @@ class SceneSettingsService {
 		return userPermission.length > 0
 	}
 
+	/**
+	 * Retrieves scene stats for a specific scene.
+	 * @param sceneId - The scene ID
+	 * @param options - Query options (version, label, limit)
+	 * @returns Scene stats records
+	 */
+	async getSceneStats(
+		sceneId: string,
+		options?: { version?: number; label?: string; limit?: number }
+	) {
+		const conditions = [eq(sceneStats.sceneId, sceneId)]
+
+		if (options?.version !== undefined) {
+			conditions.push(eq(sceneStats.version, options.version))
+		}
+
+		if (options?.label) {
+			conditions.push(eq(sceneStats.label, options.label))
+		}
+
+		const query = this.db
+			.select()
+			.from(sceneStats)
+			.where(and(...conditions))
+			.orderBy(desc(sceneStats.version))
+			.$dynamic()
+
+		if (options?.limit) {
+			return await query.limit(options.limit)
+		}
+
+		return await query
+	}
+
+	/**
+	 * Retrieves the latest scene stats for a scene.
+	 * @param sceneId - The scene ID
+	 * @returns Latest scene stats or null
+	 */
+	async getLatestSceneStats(sceneId: string) {
+		const stats = await this.db
+			.select()
+			.from(sceneStats)
+			.where(eq(sceneStats.sceneId, sceneId))
+			.orderBy(desc(sceneStats.version))
+			.limit(1)
+
+		return stats.length > 0 ? stats[0] : null
+	}
+
 	// Private helper methods
 
 	/**
@@ -533,10 +597,19 @@ class SceneSettingsService {
 	 */
 	private async createNewSettingsVersion(
 		tx: DbTransaction,
-		params: CreateSceneSettingsParams
+		params: CreateSceneSettingsParams & {
+			optimizationReport?: OptimizationReport
+		}
 	) {
-		const { sceneId, userId, settings, gltfJson, previousVersion, projectId } =
-			params
+		const {
+			sceneId,
+			userId,
+			settings,
+			gltfJson,
+			previousVersion,
+			projectId,
+			optimizationReport
+		} = params
 
 		// Process GLTF export if provided - extract and upload assets
 		let assetIds: string[] = []
@@ -581,6 +654,25 @@ class SceneSettingsService {
 					usageType: 'gltf-asset'
 				}))
 			)
+		}
+
+		// Create scene stats if optimization report is available
+		if (optimizationReport) {
+			const statsData = createSceneStatsFromReport(
+				optimizationReport,
+				sceneId,
+				userId,
+				{
+					version: previousVersion + 1,
+					label:
+						previousVersion === 0
+							? 'initial'
+							: `version-${previousVersion + 1}`,
+					description: `Scene statistics for version ${previousVersion + 1}`
+				}
+			)
+
+			await tx.insert(sceneStats).values(statsData)
 		}
 
 		return newSettings

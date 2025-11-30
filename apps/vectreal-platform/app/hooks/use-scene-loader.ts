@@ -426,14 +426,10 @@ export function useSceneLoader(
 			return false
 		}
 
+		// If no saved baseline exists, check if we have a loaded model
+		// A loaded model without saved settings means unsaved changes
 		if (!lastSavedSettings) {
-			return !!(
-				currentSettings.environment ||
-				currentSettings.toneMapping ||
-				currentSettings.controls ||
-				currentSettings.shadows ||
-				currentSettings.meta
-			)
+			return !!file?.model
 		}
 
 		return (
@@ -448,10 +444,10 @@ export function useSceneLoader(
 			JSON.stringify(currentSettings.meta) !==
 				JSON.stringify(lastSavedSettings.meta)
 		)
-	}, [currentSettings, lastSavedSettings, isInitializing])
+	}, [currentSettings, lastSavedSettings, isInitializing, file])
 
 	useEffect(() => {
-		if (isInitializing || !lastSavedSettings || !currentSettings) {
+		if (isInitializing || !currentSettings) {
 			return
 		}
 

@@ -1,5 +1,6 @@
 import type { JSONDocument } from '@gltf-transform/core'
 import type { User } from '@supabase/supabase-js'
+import type { OptimizationReport } from '@vctrl/core'
 import type {
 	ControlsProps,
 	EnvironmentProps,
@@ -7,7 +8,7 @@ import type {
 	ToneMappingProps
 } from '@vctrl/viewer'
 
-import type { MetaState, ProcessState } from './publisher-config'
+import type { ProcessState } from './publisher-config'
 
 // ============================================================================
 // Asset Types
@@ -50,6 +51,7 @@ export interface ExtendedGLTFDocument extends JSONDocument {
 interface SceneMeta {
 	readonly sceneName?: string
 	readonly thumbnailUrl?: string
+	[key: string]: string | null | undefined
 }
 
 /** Common viewer properties shared across scene configurations. */
@@ -67,7 +69,7 @@ export interface SceneSettingsData extends ViewerSettings {
 
 /** Scene configuration for API operations (includes publisher metadata). */
 export interface SceneConfigData extends ViewerSettings {
-	readonly meta?: MetaState
+	readonly meta?: SceneMeta
 	readonly process?: ProcessState
 }
 
@@ -88,6 +90,7 @@ export interface SceneSettingsRequest extends Partial<BaseSceneParams> {
 	readonly settings?: SceneSettingsData
 	readonly assetIds?: string[]
 	readonly gltfJson?: JSONDocument
+	readonly optimizationReport?: unknown
 }
 
 /** Parameters for retrieving scene settings. */
@@ -98,6 +101,7 @@ export interface SaveSceneSettingsParams extends BaseSceneParams {
 	readonly projectId: string
 	readonly settings: SceneSettingsData
 	readonly gltfJson: JSONDocument
+	readonly optimizationReport?: OptimizationReport
 }
 
 /** Parameters for creating new scene settings. */
@@ -167,4 +171,52 @@ export enum ContentType {
 	JSON = 'application/json',
 	FORM_DATA = 'multipart/form-data',
 	FORM_URLENCODED = 'application/x-www-form-urlencoded'
+}
+
+// ============================================================================
+// Scene Stats Types
+// ============================================================================
+
+/** Parameters for saving scene stats alongside scene settings. */
+export interface SaveSceneStatsParams {
+	readonly sceneId: string
+	readonly userId: string
+	readonly version?: number
+	readonly label?: string
+	readonly description?: string
+	readonly optimizationReport?: OptimizationReport
+	readonly totalSceneSize?: number
+	readonly totalTextureSize?: number
+}
+
+/** Parameters for querying scene stats. */
+export interface GetSceneStatsParams {
+	readonly sceneId: string
+	readonly version?: number
+	readonly label?: string
+	readonly limit?: number
+}
+
+/** Scene stats response data. */
+export interface SceneStatsData {
+	readonly id: string
+	readonly sceneId: string
+	readonly version: number
+	readonly label?: string | null
+	readonly description?: string | null
+	readonly totalSceneSize?: number | null
+	readonly originalSize?: number | null
+	readonly optimizedSize?: number | null
+	readonly compressionRatio?: string | null
+	readonly totalTextureSize?: number | null
+	readonly textureCount?: number | null
+	readonly vertexCount?: number | null
+	readonly polygonCount?: number | null
+	readonly materialCount?: number | null
+	readonly meshCount?: number | null
+	readonly nodeCount?: number | null
+	readonly appliedOptimizations?: string[] | null
+	readonly optimizationSettings?: Record<string, unknown> | null
+	readonly createdAt: Date
+	readonly createdBy: string
 }

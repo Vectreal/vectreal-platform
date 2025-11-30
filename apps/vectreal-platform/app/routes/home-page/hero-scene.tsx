@@ -1,4 +1,3 @@
-'use client'
 import { Environment, Stage, useGLTF } from '@react-three/drei'
 
 import { Canvas as BaseCanvas, useFrame } from '@react-three/fiber'
