@@ -1,5 +1,5 @@
-import { Label } from '@vctrl-ui/ui/label'
-import { Switch } from '@vctrl-ui/ui/switch'
+import { Label } from '@shared/components/ui/label'
+import { Switch } from '@shared/components/ui/switch'
 
 import { InfoTooltip } from '../../info-tooltip'
 

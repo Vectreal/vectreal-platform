@@ -1,4 +1,4 @@
-import { Accordion, AccordionContent } from '@vctrl-ui/ui/accordion'
+import { Accordion, AccordionContent } from '@shared/components/ui/accordion'
 import { Camera, MountainSnow, Tornado } from 'lucide-react'
 
 import { AccordionItem, AccordionTrigger } from '../accordion-components'

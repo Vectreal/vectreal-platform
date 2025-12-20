@@ -1,4 +1,4 @@
-import { Badge } from '@vctrl-ui/ui/badge'
+import { Badge } from '@shared/components/ui/badge'
 import { Building2, Settings, Users } from 'lucide-react'
 
 import DashboardCard from '../../components/dashboard/dashboard-card'

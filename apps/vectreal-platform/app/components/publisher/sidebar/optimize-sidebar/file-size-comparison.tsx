@@ -1,5 +1,5 @@
 import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
-import { formatFileSize } from '@vctrl-ui/utils'
+import { formatFileSize } from '@shared/utils'
 import { motion } from 'framer-motion'
 import { ArrowRightIcon } from 'lucide-react'
 

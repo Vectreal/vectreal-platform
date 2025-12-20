@@ -70,15 +70,6 @@
 			"options": {
 				"lintFilePatterns": ["apps/vectreal-platform/**/*.{ts,tsx,js,jsx}"]
 			}
-		},
-		"typecheck": {
-			"executor": "@nx/js:tsc",
-			"outputs": ["{options.outputPath}"],
-			"options": {
-				"tsConfig": "apps/vectreal-platform/tsconfig.json",
-				"outputPath": "dist/apps/vectreal-platform/typecheck",
-				"main": "apps/vectreal-platform/src/main.tsx"
-			}
 		}
 	}
 }

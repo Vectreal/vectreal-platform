@@ -10,7 +10,7 @@ import {
 	BreadcrumbList,
 	BreadcrumbPage,
 	BreadcrumbSeparator
-} from '@vctrl-ui/ui/breadcrumb'
+} from '@shared/components/ui/breadcrumb'
 import React, { memo } from 'react'
 import { Link, useLocation } from 'react-router'
 

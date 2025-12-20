@@ -14,7 +14,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { LoadProgress, ModelFileTypes, ModelLoader } from '@vctrl/core'
+import { ModelFileTypes, ModelLoader, OperationProgress } from '@vctrl/core'
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import { Object3D } from 'three'
 
@@ -73,7 +73,7 @@ function useLoadModel<
 		const loader = new ModelLoader()
 
 		// Set up progress callback to update state and emit events
-		loader.onProgress((progress: LoadProgress) => {
+		loader.onProgress((progress: OperationProgress) => {
 			dispatch({ type: 'set-progress', payload: progress.progress })
 			// FInal load progress is set to 100% elsewhere
 			if (progress.progress === 100) return
@@ -345,15 +345,14 @@ function useLoadModel<
 
 				// Build the result object with settings
 				const sceneLoadResult = {
+					sceneId,
 					file: loadedFile,
 					settings: {
 						environment: sceneData.environment,
-						toneMapping: sceneData.toneMapping,
 						controls: sceneData.controls,
 						shadows: sceneData.shadows,
 						meta: sceneData.meta
-					},
-					sceneId
+					}
 				} as SceneLoadResult
 
 				// Emit server load complete event

@@ -1,4 +1,4 @@
-import { Button } from '@vctrl-ui/ui/button'
+import { Button } from '@shared/components/ui/button'
 import { useAtom, useAtomValue } from 'jotai/react'
 import { Info } from 'lucide-react'
 import { useCallback } from 'react'

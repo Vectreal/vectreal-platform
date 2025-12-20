@@ -1,5 +1,5 @@
 // import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { cn } from '@vctrl-ui/utils'
+import { cn } from '@shared/utils'
 import { SaveIcon } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router'

@@ -11,8 +11,8 @@ import { HydratedRouter } from 'react-router/dom'
 startTransition(() => {
 	hydrateRoot(
 		document,
-		<StrictMode>
-			<HydratedRouter />
-		</StrictMode>
+		// <StrictMode>
+		<HydratedRouter />
+		// </StrictMode>
 	)
 })

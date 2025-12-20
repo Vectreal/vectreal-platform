@@ -7,14 +7,11 @@
 		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": true
 	},
-	"include": ["src/**/*.ts"],
 	"exclude": [
 		"jest.config.ts",
 		"src/**/*.spec.ts",
 		"src/**/*.test.ts",
-		"**/*.stories.ts",
-		"**/*.stories.js",
-		"**/*.stories.jsx",
-		"**/*.stories.tsx"
-	]
+		"**/*.stories.ts"
+	],
+	"include": ["src/**/*.ts"]
 }

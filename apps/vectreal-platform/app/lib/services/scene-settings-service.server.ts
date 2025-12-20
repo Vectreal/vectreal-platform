@@ -319,7 +319,6 @@ class SceneSettingsService {
 				.update(sceneSettings)
 				.set({
 					environment: settings.environment,
-					toneMapping: settings.toneMapping,
 					controls: settings.controls,
 					shadows: settings.shadows,
 					meta: settings.meta
@@ -518,8 +517,6 @@ class SceneSettingsService {
 		return (
 			JSON.stringify(current.environment) !==
 				JSON.stringify(existing.environment) ||
-			JSON.stringify(current.toneMapping) !==
-				JSON.stringify(existing.toneMapping) ||
 			JSON.stringify(current.controls) !== JSON.stringify(existing.controls) ||
 			JSON.stringify(current.shadows) !== JSON.stringify(existing.shadows) ||
 			JSON.stringify(current.meta) !== JSON.stringify(existing.meta)
@@ -637,7 +634,6 @@ class SceneSettingsService {
 				version: previousVersion + 1,
 				isLatest: true,
 				environment: settings.environment,
-				toneMapping: settings.toneMapping,
 				controls: settings.controls,
 				shadows: settings.shadows,
 				meta: settings.meta,

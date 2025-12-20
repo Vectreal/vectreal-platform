@@ -16,6 +16,8 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import { GLTF } from '@gltf-transform/core'
 
+import type { SerializedAsset } from '../types'
+
 export type ModifiedTextureResources = {
 	images: GLTF.IImage[]
 	textures: GLTF.ITexture[]
@@ -32,15 +34,6 @@ export interface ExportOptions {
 
 export interface ExportModelOptions extends ExportOptions {
 	format?: 'glb' | 'gltf'
-}
-
-export interface ExportProgress {
-	/** Current operation name */
-	operation: string
-	/** Progress percentage (0-100) */
-	progress: number
-	/** Additional details */
-	details?: string
 }
 
 export interface GLBExportResult {
@@ -65,6 +58,25 @@ export interface GLTFExportResult {
 	exportTime: number
 	/** Additional files (textures, buffers for GLTF) */
 	assets?: Map<string, Uint8Array>
+}
+
+/**
+ * Serialized GLTF export result for JSON transfer.
+ * Used when Map<string, Uint8Array> needs to be serialized for API transport.
+ */
+export interface SerializedGLTFExportResult {
+	/** Exported GLTF JSON data */
+	data: Record<string, unknown>
+	/** Export format */
+	format: 'gltf'
+	/** File size in bytes */
+	size: number
+	/** Export duration in milliseconds */
+	exportTime: number
+	/** Additional files as serialized assets */
+	assets?: SerializedAsset[]
+	/** Asset IDs map for tracking uploaded assets */
+	assetIds?: Map<string, number>
 }
 
 export type ExportResult = GLBExportResult | GLTFExportResult

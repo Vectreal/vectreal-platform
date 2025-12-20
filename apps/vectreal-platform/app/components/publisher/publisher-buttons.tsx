@@ -1,6 +1,6 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { TooltipProvider } from '@vctrl-ui/ui/tooltip'
-import { cn } from '@vctrl-ui/utils'
+import { TooltipProvider } from '@shared/components/ui/tooltip'
+import { cn } from '@shared/utils'
 import { useAtom } from 'jotai'
 import { ArrowLeft, ArrowRight, Pen, Stars } from 'lucide-react'
 

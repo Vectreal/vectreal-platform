@@ -1,6 +1,6 @@
-import { Badge } from '@vctrl-ui/ui/badge'
-import { Button } from '@vctrl-ui/ui/button'
-import { Card, CardDescription, CardTitle } from '@vctrl-ui/ui/card'
+import { Badge } from '@shared/components/ui/badge'
+import { Button } from '@shared/components/ui/button'
+import { Card, CardDescription, CardTitle } from '@shared/components/ui/card'
 
 import { Star } from 'lucide-react'
 
@@ -17,7 +17,10 @@ const MockShopSection = () => {
 			</span>
 
 			<div className="mt-8 grid w-full grid-cols-1 gap-4 md:grid-cols-[3fr_2fr]">
-				<BasicCard className="relative max-h-[400px] min-h-[300px] w-full overflow-hidden py-0 md:max-h-[600px] md:min-h-[500px]">
+				<BasicCard
+					className="relative max-h-[400px] min-h-[300px] w-full overflow-hidden md:max-h-[600px] md:min-h-[500px]"
+					cardClassNames="py-0"
+				>
 					<ProductScene />
 
 					<div className="absolute right-4 bottom-4 p-2 text-sm backdrop-blur-sm">

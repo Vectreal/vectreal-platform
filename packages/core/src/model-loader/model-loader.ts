@@ -17,12 +17,9 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 import { Document, GLTF, WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 
-import {
-	LoadProgress,
-	ModelFileTypes,
-	ModelLoadResult,
-	ThreeJSModelResult
-} from './types'
+import { OperationProgress } from '../types'
+
+import { ModelFileTypes, ModelLoadResult, ThreeJSModelResult } from './types'
 
 /**
  * Universal 3D model loader service.
@@ -36,7 +33,7 @@ import {
  */
 export class ModelLoader {
 	private io: WebIO
-	private progressCallback?: (progress: LoadProgress) => void
+	private progressCallback?: (progress: OperationProgress) => void
 
 	constructor() {
 		this.io = new WebIO().registerExtensions(ALL_EXTENSIONS)
@@ -45,7 +42,7 @@ export class ModelLoader {
 	/**
 	 * Set a progress callback to receive loading progress updates.
 	 */
-	public onProgress(callback: (progress: LoadProgress) => void): void {
+	public onProgress(callback: (progress: OperationProgress) => void): void {
 		this.progressCallback = callback
 	}
 

@@ -1,20 +1,20 @@
-import { Label } from '@vctrl-ui/ui/label'
+import { Label } from '@shared/components/ui/label'
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue
-} from '@vctrl-ui/ui/select'
+} from '@shared/components/ui/select'
 
-import { Switch } from '@vctrl-ui/ui/switch'
+import { Switch } from '@shared/components/ui/switch'
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger
-} from '@vctrl-ui/ui/tooltip'
-import { cn } from '@vctrl-ui/utils'
+} from '@shared/components/ui/tooltip'
+import { cn } from '@shared/utils'
 import { useAtom } from 'jotai'
 import { Info } from 'lucide-react'
 

@@ -1,11 +1,11 @@
-import { Badge } from '@vctrl-ui/ui/badge'
-import { Button } from '@vctrl-ui/ui/button'
+import { Badge } from '@shared/components/ui/badge'
+import { Button } from '@shared/components/ui/button'
 import {
 	Empty,
 	EmptyContent,
 	EmptyDescription,
 	EmptyHeader
-} from '@vctrl-ui/ui/empty'
+} from '@shared/components/ui/empty'
 import { File, Folder, Plus } from 'lucide-react'
 import { Link, Outlet, useLocation, useParams } from 'react-router'
 

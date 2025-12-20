@@ -1,11 +1,6 @@
+import type { SceneMeta } from '@vctrl/core'
+import type { ControlsProps, EnvironmentProps, ShadowsProps } from '@vctrl/core'
 import type { InputFileOrDirectory } from '@vctrl/hooks/use-load-model'
-import { MetaState } from '@vctrl/hooks/use-load-model/types'
-import type {
-	ControlsProps,
-	EnvironmentProps,
-	ShadowsProps,
-	ToneMappingProps
-} from '@vctrl/viewer'
 
 export interface SceneData {
 	gltfJson: Record<string, unknown>
@@ -17,9 +12,8 @@ export interface SceneData {
 			mimeType: string
 		}
 	>
-	meta?: MetaState
+	meta?: SceneMeta
 	environment?: EnvironmentProps
-	toneMapping?: ToneMappingProps
 	controls?: ControlsProps
 	shadows?: ShadowsProps
 }

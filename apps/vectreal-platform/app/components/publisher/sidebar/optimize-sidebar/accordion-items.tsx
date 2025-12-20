@@ -1,5 +1,5 @@
 import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
-import { AccordionContent } from '@vctrl-ui/ui/accordion'
+import { AccordionContent } from '@shared/components/ui/accordion'
 import { FileIcon, Settings2, Star } from 'lucide-react'
 
 import { AccordionItem, AccordionTrigger } from '../accordion-components'

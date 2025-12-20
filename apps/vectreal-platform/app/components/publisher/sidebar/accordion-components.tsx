@@ -5,8 +5,8 @@ import {
 import {
 	AccordionItem as BaseAccordionItem,
 	AccordionTrigger as BaseAccordionTrigger
-} from '@vctrl-ui/ui/accordion'
-import { cn } from '@vctrl-ui/utils'
+} from '@shared/components/ui/accordion'
+import { cn } from '@shared/utils'
 
 export const AccordionItem = ({ className, ...props }: AccordionItemProps) => {
 	return (

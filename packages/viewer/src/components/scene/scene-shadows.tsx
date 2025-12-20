@@ -1,31 +1,10 @@
 import {
 	AccumulativeShadows,
 	ContactShadows,
-	RandomizedLight,
-	RandomizedLightProps,
-	AccumulativeShadowsProps as ThreeAccumulativeShadowsProps,
-	ContactShadowsProps as ThreeContactShadowsProps
+	RandomizedLight
 } from '@react-three/drei'
+import { BaseShadowsProps, ShadowsProps } from '@vctrl/core'
 import { memo } from 'react'
-
-export interface BaseShadowsProps {
-	type: 'accumulative' | 'contact'
-}
-
-export interface AccumulativeShadowsProps
-	extends BaseShadowsProps,
-		ThreeAccumulativeShadowsProps {
-	type: 'accumulative'
-	light?: RandomizedLightProps
-}
-
-export interface ContactShadowProps
-	extends BaseShadowsProps,
-		ThreeContactShadowsProps {
-	type: 'contact'
-}
-
-export type ShadowsProps = AccumulativeShadowsProps | ContactShadowProps
 
 export const defaultShadowsOptions: ShadowsProps | BaseShadowsProps = {
 	type: 'accumulative',

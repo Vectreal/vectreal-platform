@@ -2,8 +2,8 @@ import {
 	EnvironmentKey,
 	EnvironmentProps,
 	EnvironmentResolution
-} from '@vctrl/viewer'
-import { Label } from '@vctrl-ui/ui/label'
+} from '@vctrl/core'
+import { Label } from '@shared/components/ui/label'
 import {
 	Select,
 	SelectContent,
@@ -13,7 +13,7 @@ import {
 	SelectSeparator,
 	SelectTrigger,
 	SelectValue
-} from '@vctrl-ui/ui/select'
+} from '@shared/components/ui/select'
 import { useAtom } from 'jotai/react'
 import { useCallback } from 'react'
 

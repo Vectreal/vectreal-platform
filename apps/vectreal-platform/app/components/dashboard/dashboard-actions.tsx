@@ -3,7 +3,7 @@
  * @description Centralized action buttons component for different dashboard views
  */
 
-import { Button } from '@vctrl-ui/ui/button'
+import { Button } from '@shared/components/ui/button'
 import { Edit, Folder, FolderOpen, Plus, Rocket } from 'lucide-react'
 import { memo } from 'react'
 import { Link, useParams } from 'react-router'

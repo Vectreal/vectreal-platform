@@ -26,17 +26,16 @@ export default [
 		route('sign-up', './routes/signup-page/signup-page.tsx'),
 		route('sign-in', './routes/signin-page/signin-page.tsx')
 	]),
-	layout('./routes/layouts/nav-layout.tsx', [
-		// home page - index route
-		// This is the default route that will be loaded when the app starts
-		index('./routes/home-page/home-page.tsx', {
-			id: 'home-index'
-		}),
-		// For users which are authenticated, the home page is available at "/home"
-		route('home', './routes/home-page/home-page.tsx', {
-			id: 'home-page'
-		})
-	]),
+
+	// home page - index route
+	// This is the default route that will be loaded when the app starts
+	index('./routes/home-page/home-page.tsx', {
+		id: 'home-index'
+	}),
+	// For users which are authenticated, the home page is available at "/home"
+	route('home', './routes/home-page/home-page.tsx', {
+		id: 'home-page'
+	}),
 
 	// publisher
 	layout('./routes/layouts/publisher-layout.tsx', [

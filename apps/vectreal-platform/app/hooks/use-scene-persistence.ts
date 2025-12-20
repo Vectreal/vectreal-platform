@@ -1,15 +1,16 @@
+import { SceneSettings } from '@vctrl/core'
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import type { ModelFile } from '@vctrl/hooks/use-load-model'
-import { OptimizerIntegrationReturn } from 'packages/hooks/src/use-load-model/types'
+import { OptimizerIntegrationReturn } from '@vctrl/hooks/use-load-model/types'
 import { useCallback } from 'react'
 
-import type { SaveSceneResult, SceneSettingsData } from './use-scene-loader'
+import type { SaveSceneResult } from './use-scene-loader'
 
 interface UseScenePersistenceParams {
 	currentSceneId: string | null
 	userId?: string
 	assetIds?: string[]
-	currentSettings: SceneSettingsData
+	currentSettings: SceneSettings
 	optimizer: OptimizerIntegrationReturn<boolean> | null
 	modelFile: ModelFile | null
 }

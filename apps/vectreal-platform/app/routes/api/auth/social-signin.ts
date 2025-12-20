@@ -1,4 +1,4 @@
-import { ApiResponse } from '@vctrl-ui/utils'
+import { ApiResponse } from '@shared/utils'
 
 import { redirect } from 'react-router'
 

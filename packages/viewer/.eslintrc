@@ -15,12 +15,7 @@
 							"packages/viewer/src/vectreal-viewer.stories.tsx",
 							"packages/viewer/vite.config.ts"
 						], // list of files that should be skipped for check
-						"ignoredDependencies": [
-							"@vctrl-ui/utils",
-							"@vctrl-ui/ui",
-							"@vctrl/utils",
-							"@vctrl/ui"
-						]
+						"ignoredDependencies": ["@shared/*"]
 					}
 				]
 			}

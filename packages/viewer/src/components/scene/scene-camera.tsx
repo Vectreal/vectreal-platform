@@ -1,7 +1,4 @@
 import { PerspectiveCamera, PerspectiveCameraProps } from '@react-three/drei'
-import { useThree } from '@react-three/fiber'
-import { useEffect, useRef, useState } from 'react'
-import { Box3, Object3D, Vector3 } from 'three'
 
 type RequiredCameraProps = Required<
 	Pick<PerspectiveCameraProps, 'fov' | 'aspect' | 'near' | 'far'>
@@ -20,52 +17,9 @@ export const defaultCameraOptions: RequiredCameraProps = {
  * @param {PerspectiveCameraProps} props - Camera configuration.
  */
 const SceneCamera = (props: PerspectiveCameraProps) => {
-	const mountedRef = useRef(false)
 	const { ...cameraOptions } = { ...defaultCameraOptions, ...props }
-	const [position, setPosition] = useState(new Vector3(0, 0, 0))
 
-	const { scene } = useThree()
-
-	useEffect(() => {
-		mountedRef.current = true
-		return () => {
-			mountedRef.current = false
-		}
-	}, [mountedRef])
-
-	useEffect(() => {
-		if (!mountedRef.current) return
-
-		const box = new Box3()
-
-		// recursively traverse the scene to find the focus target
-		const traverseScene = (object: Object3D) => {
-			if (object.name === 'focus-target') {
-				box.expandByObject(object)
-			} else if (object.children.length > 0) {
-				object.children.forEach((child) => {
-					if (child instanceof Object3D) {
-						traverseScene(child)
-					}
-				})
-			}
-		}
-
-		scene.children.forEach((object) => {
-			if (object instanceof Object3D) {
-				traverseScene(object)
-			}
-		})
-
-		const center = box.getCenter(new Vector3())
-		const size = box.getSize(new Vector3())
-
-		setPosition(center.add(new Vector3(-size.x / 2, size.y / 2, size.z * 1.5)))
-	}, [scene, setPosition])
-
-	return (
-		<PerspectiveCamera position={position} makeDefault {...cameraOptions} />
-	)
+	return <PerspectiveCamera {...cameraOptions} />
 }
 
 export default SceneCamera

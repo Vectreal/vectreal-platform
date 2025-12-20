@@ -4,9 +4,7 @@ import { createContext, useContext } from 'react'
 import type {
 	organizationMemberships,
 	organizations,
-	projects,
-	sceneFolders,
-	scenes
+	projects
 } from '../db/schema'
 import { FolderType, SceneType } from '../hooks'
 import type { UserWithDefaults } from '../lib/services/user-service.server'

@@ -21,9 +21,10 @@ import JSZip from 'jszip'
 import { Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter'
 
+import { OperationProgress } from '../types'
+
 import {
 	ExportOptions,
-	ExportProgress,
 	ExportResult,
 	GLBExportResult,
 	GLTFExportResult
@@ -42,7 +43,7 @@ import {
 export class ModelExporter {
 	private io: WebIO
 	private threeExporter: GLTFExporter
-	private progressCallback?: (progress: ExportProgress) => void
+	private progressCallback?: (progress: OperationProgress) => void
 
 	constructor() {
 		this.io = new WebIO().registerExtensions(ALL_EXTENSIONS)
@@ -52,7 +53,7 @@ export class ModelExporter {
 	/**
 	 * Set a progress callback to receive export progress updates.
 	 */
-	public onProgress(callback: (progress: ExportProgress) => void): void {
+	public onProgress(callback: (progress: OperationProgress) => void): void {
 		this.progressCallback = callback
 	}
 

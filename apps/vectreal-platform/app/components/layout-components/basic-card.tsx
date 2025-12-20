@@ -1,5 +1,5 @@
-import { Card } from '@vctrl-ui/ui/card'
-import { cn } from '@vctrl-ui/utils'
+import { Card } from '@shared/components/ui/card'
+import { cn } from '@shared/utils'
 import { ComponentProps } from 'react'
 
 interface BasicCardProps extends ComponentProps<'div'> {

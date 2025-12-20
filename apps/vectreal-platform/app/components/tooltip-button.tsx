@@ -1,6 +1,10 @@
-import { Button } from '@vctrl-ui/ui/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@vctrl-ui/ui/tooltip'
-import { cn } from '@vctrl-ui/utils'
+import { Button } from '@shared/components/ui/button'
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger
+} from '@shared/components/ui/tooltip'
+import { cn } from '@shared/utils'
 import { ComponentProps } from 'react'
 
 interface ButtonProps extends ComponentProps<'button'> {

@@ -1,53 +1,6 @@
-import {
-	Environment,
-	EnvironmentProps as ThreeEnvironmentProps
-} from '@react-three/drei'
+import { Environment } from '@react-three/drei'
+import { EnvironmentMap, EnvironmentProps, EnvironmentType } from '@vctrl/core'
 import { memo } from 'react'
-
-export type EnvironmentKey =
-	| 'nature-moonlit'
-	| 'nature-park'
-	| 'nature-park-overcast'
-	| 'nature-snow'
-	| 'night-building'
-	| 'night-city'
-	| 'night-pure-sky'
-	| 'night-stars'
-	| 'outdoor-golden-hour'
-	| 'outdoor-noon'
-	| 'outdoor-overcast'
-	| 'outdoor-sky'
-	| 'studio-key'
-	| 'studio-natural'
-	| 'studio-soft'
-
-export type EnvironmentType = 'nature' | 'night' | 'outdoor' | 'studio'
-
-export type EnvironmentResolution = '1k' | '4k'
-
-export interface EnvironmentMap {
-	id: EnvironmentKey
-	type: EnvironmentType
-	resolution: EnvironmentResolution
-}
-
-export type EnvironmentMaps = Record<EnvironmentKey, EnvironmentMap>
-
-type InheritedEnvProps = Pick<
-	ThreeEnvironmentProps,
-	| 'background'
-	| 'backgroundBlurriness'
-	| 'environmentIntensity'
-	| 'ground'
-	| 'scene'
-	| 'files'
-	| 'backgroundIntensity'
->
-
-export interface EnvironmentProps extends InheritedEnvProps {
-	preset?: EnvironmentKey
-	environmentResolution?: EnvironmentResolution
-}
 
 export const defaultEnvOptions = {
 	preset: 'studio-natural',

@@ -1,4 +1,4 @@
-import useSceneScreenshot from '@vctrl-ui/hooks/use-scene-screenshot'
+import useSceneScreenshot from '@shared/components/hooks/use-scene-screenshot'
 import { memo, useEffect } from 'react'
 import { Object3D } from 'three'
 

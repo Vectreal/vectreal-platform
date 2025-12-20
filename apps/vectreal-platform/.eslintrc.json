@@ -11,8 +11,8 @@
 					{
 						"includeTransitiveDependencies": false,
 						"ignoredDependencies": [
-							// "@vctrl-ui/utils",
-							// "@vctrl-ui/ui",
+							// "@shared/components/utils",
+							// "@shared/components/ui",
 							// "@vctrl/utils",
 							// "@vctrl/ui"
 						]

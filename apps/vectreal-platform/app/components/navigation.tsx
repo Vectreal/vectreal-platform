@@ -1,7 +1,11 @@
 import { User } from '@supabase/supabase-js'
-import { VectrealLogoAnimated } from '@vctrl-ui/assets/icons/vectreal-logo-animated'
-import { Avatar, AvatarFallback, AvatarImage } from '@vctrl-ui/ui/avatar'
-import { Button } from '@vctrl-ui/ui/button'
+import { VectrealLogoAnimated } from '@shared/components/assets/icons/vectreal-logo-animated'
+import {
+	Avatar,
+	AvatarFallback,
+	AvatarImage
+} from '@shared/components/ui/avatar'
+import { Button } from '@shared/components/ui/button'
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -9,7 +13,7 @@ import {
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger
-} from '@vctrl-ui/ui/dropdown-menu'
+} from '@shared/components/ui/dropdown-menu'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Sparkles } from 'lucide-react'
 import { Link, useFetcher, useLocation, useNavigate } from 'react-router'
@@ -53,7 +57,7 @@ function UserMenu({ user, onLogout }: { user: User; onLogout: () => void }) {
 	const userImageSrc = user?.user_metadata?.avatar_url || ''
 	const userInitial = user.user_metadata?.full_name?.charAt(0) || 'U'
 
-	async function handleMenuItemClick(to: 'dashboard') {
+	async function handleMenuItemClick(to = '/dashboard') {
 		await navigate(to, { viewTransition: true })
 	}
 
@@ -74,7 +78,7 @@ function UserMenu({ user, onLogout }: { user: User; onLogout: () => void }) {
 					Hey, {user.user_metadata?.full_name.split(' ').at(0) || user.email}!
 				</DropdownMenuLabel>
 				<DropdownMenuSeparator />
-				<DropdownMenuItem onClick={() => handleMenuItemClick('dashboard')}>
+				<DropdownMenuItem onClick={() => handleMenuItemClick('/dashboard')}>
 					Dashboard
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
@@ -103,53 +107,56 @@ export const Navigation = ({ user }: NavigationProps) => {
 	}
 
 	return (
-		<nav
-			className="bg-background/50 fixed top-0 right-0 left-0 z-50 shadow-2xl backdrop-blur-2xl"
-			aria-label="Main navigation"
-		>
-			<div className="flex w-full items-center justify-between p-2 px-8">
-				<Link
-					to="/"
-					className="flex h-full items-center"
-					viewTransition
-					aria-label="Home"
-				>
-					<VectrealLogoAnimated
-						className="text-muted-foreground h-5 md:h-7"
-						colored
-						// small
-					/>
-				</Link>
-				<div className="flex h-full items-center justify-center gap-2">
-					<AnimatePresence initial={false}>
-						{!isSigninPage && !user && (
-							<motion.div
-								initial={{ opacity: 0, width: 0 }}
-								animate={{ opacity: 1, width: 'auto' }}
-								exit={{ opacity: 0, width: 0 }}
-								transition={{ duration: 0.3, ease: 'easeInOut' }}
-								className="overflow-hidden"
-								key="sign-in-button"
-							>
-								<SignUpButton />
-							</motion.div>
-						)}
-						{!isPublisherPage && (
-							<motion.div
-								initial={{ opacity: 0, width: 0 }}
-								animate={{ opacity: 1, width: 'auto' }}
-								exit={{ opacity: 0, width: 0 }}
-								transition={{ duration: 0.3, ease: 'easeInOut' }}
-								className="overflow-hidden"
-								key="publisher-button"
-							>
-								<PublisherButton />
-							</motion.div>
-						)}
-						{user && <UserMenu user={user} onLogout={handleLogout} />}
-					</AnimatePresence>
+		<>
+			<nav
+				className="bg-background/50 fixed top-0 right-0 left-0 z-50 shadow-2xl backdrop-blur-2xl"
+				aria-label="Main navigation"
+			>
+				<div className="flex w-full items-center justify-between p-2 px-8">
+					<Link
+						to="/"
+						className="flex h-full items-center"
+						viewTransition
+						aria-label="Home"
+					>
+						<VectrealLogoAnimated
+							className="text-muted-foreground h-5 md:h-7"
+							colored
+							// small
+						/>
+					</Link>
+					<div className="flex h-full items-center justify-center gap-2">
+						<AnimatePresence initial={false}>
+							{!isSigninPage && !user && (
+								<motion.div
+									initial={{ opacity: 0, width: 0 }}
+									animate={{ opacity: 1, width: 'auto' }}
+									exit={{ opacity: 0, width: 0 }}
+									transition={{ duration: 0.3, ease: 'easeInOut' }}
+									className="overflow-hidden"
+									key="sign-in-button"
+								>
+									<SignUpButton />
+								</motion.div>
+							)}
+							{!isPublisherPage && (
+								<motion.div
+									initial={{ opacity: 0, width: 0 }}
+									animate={{ opacity: 1, width: 'auto' }}
+									exit={{ opacity: 0, width: 0 }}
+									transition={{ duration: 0.3, ease: 'easeInOut' }}
+									className="overflow-hidden"
+									key="publisher-button"
+								>
+									<PublisherButton />
+								</motion.div>
+							)}
+							{user && <UserMenu user={user} onLogout={handleLogout} />}
+						</AnimatePresence>
+					</div>
 				</div>
-			</div>
-		</nav>
+			</nav>
+			<div className="h-12" /> {/* Spacer for fixed nav */}
+		</>
 	)
 }

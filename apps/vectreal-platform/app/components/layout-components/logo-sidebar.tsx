@@ -1,12 +1,12 @@
-import { VectrealLogoAnimated } from '@vctrl-ui/assets/icons/vectreal-logo-animated'
-import { VectrealLogoSmall } from '@vctrl-ui/assets/icons/vectreal-logo-small'
+import { VectrealLogoAnimated } from '@shared/components/assets/icons/vectreal-logo-animated'
+import { VectrealLogoSmall } from '@shared/components/assets/icons/vectreal-logo-small'
 import {
 	Sidebar,
 	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem
-} from '@vctrl-ui/ui/sidebar'
+} from '@shared/components/ui/sidebar'
 import { PropsWithChildren } from 'react'
 import { Link } from 'react-router'
 

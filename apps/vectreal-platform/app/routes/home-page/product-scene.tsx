@@ -1,7 +1,7 @@
 import { useGLTF } from '@react-three/drei'
+import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
+import { SpinnerWrapper } from '@shared/components/ui/spinner-wrapper'
 import { VectrealViewer } from '@vctrl/viewer'
-import { LoadingSpinner } from '@vctrl-ui/ui/loading-spinner'
-import { SpinnerWrapper } from '@vctrl-ui/ui/spinner-wrapper'
 import { ExternalLink, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
@@ -42,9 +42,6 @@ const BikeModel = () => {
 		<VectrealViewer
 			key="preview-shop-bike-scene"
 			model={scene}
-			cameraOptions={{
-				position: [-1.4, 0, 0]
-			}}
 			controlsOptions={{
 				autoRotate: true,
 				autoRotateSpeed: 0.25,

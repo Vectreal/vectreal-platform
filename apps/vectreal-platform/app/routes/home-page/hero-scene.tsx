@@ -1,18 +1,17 @@
-import { Environment, Stage, useGLTF } from '@react-three/drei'
+import { Stage, useGLTF } from '@react-three/drei'
 
-import { Canvas as BaseCanvas, useFrame } from '@react-three/fiber'
+import { useFrame } from '@react-three/fiber'
 import { EffectComposer, ToneMapping } from '@react-three/postprocessing'
-import { useIsMobile } from '@vctrl-ui/hooks/use-mobile'
-import { LoadingSpinner } from '@vctrl-ui/ui/loading-spinner'
-import { SpinnerWrapper } from '@vctrl-ui/ui/spinner-wrapper'
-import { cn } from '@vctrl-ui/utils'
+import { useIsMobile } from '@shared/components/hooks/use-mobile'
+import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
+import { SpinnerWrapper } from '@shared/components/ui/spinner-wrapper'
+import { cn } from '@shared/utils'
+import { VectrealViewer } from '@vctrl/viewer'
 import { motion } from 'framer-motion'
 import { ToneMappingMode } from 'postprocessing'
-import React, { Suspense, useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
-import { Group } from 'three'
-
-import rocket from '../../assets/models/rocket-v2.glb?url'
+import rocket from '../../assets/models/rocket-v3.glb?url'
 
 type ReactState<T> = [T, React.Dispatch<React.SetStateAction<T>>]
 
@@ -26,8 +25,6 @@ const Model = ({ url, loadedState, vertical }: ModelProps) => {
 	const [isLoaded, setIsLoaded] = loadedState
 
 	const isMobile = useIsMobile()
-	const stageRef = useRef<Group>(null)
-
 	const { scene } = useGLTF(url)
 
 	useEffect(() => {
@@ -40,40 +37,25 @@ const Model = ({ url, loadedState, vertical }: ModelProps) => {
 		if (!scene) return
 
 		const t = state.clock.getElapsedTime()
-		scene.rotation.x = 0
-		scene.rotation.y = t * Math.PI * 0.1
-		scene.rotation.z = 0
 
-		stageRef.current?.position.set(0, Math.cos(t * 1.5) * 0.2, 0)
+		scene.rotation.z = t * Math.PI * 0.1
 	})
 
 	return (
 		scene && (
-			<group
-				ref={stageRef}
-				position={[0, 0.5, 0]}
-				rotation={[0, 0, isMobile || vertical ? 0 : 1.5]}
-			>
-				<Stage
-					environment={null}
-					shadows={isMobile ? true : false}
-					intensity={0}
-					adjustCamera={isMobile ? 0.75 : 0.7}
-				>
-					<group scale={0.02}>
+			<group rotation={[0, 0, -Math.PI / 4]}>
+				<group rotation={[0, -Math.PI / 2, 0]}>
+					<Stage adjustCamera={0.8} environment={null} shadows={false}>
 						<primitive object={scene} />
-					</group>
-				</Stage>
-				<Environment
-					files="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/abandoned_garage_1k.hdr"
-					background={false}
-				/>
-				<EffectComposer>
-					<ToneMapping
-						toneMapptinMode={ToneMappingMode.ACES_FILMIC}
-						adaptionRate={1}
-					/>
-				</EffectComposer>
+
+						<EffectComposer>
+							<ToneMapping
+								toneMapptinMode={ToneMappingMode.ACES_FILMIC}
+								adaptionRate={1}
+							/>
+						</EffectComposer>
+					</Stage>
+				</group>
 			</group>
 		)
 	)
@@ -85,16 +67,10 @@ const fadeVariants = {
 }
 
 interface HeroSceneProps {
-	className?: string
 	vertical?: boolean
-	limitHeight?: boolean
 }
 
-const HeroScene = ({
-	className,
-	limitHeight = true,
-	...props
-}: HeroSceneProps) => {
+const HeroScene = ({ ...props }: HeroSceneProps) => {
 	const [modelUrl, setModelUrl] = useState('')
 
 	const loadedState = useState(false)
@@ -105,38 +81,30 @@ const HeroScene = ({
 	}, [])
 
 	return (
-		<>
+		<div className="relative w-full overflow-hidden">
 			<motion.div
-				className={className}
-				variants={fadeVariants}
 				initial="hidden"
 				animate={isLodaded ? 'visible' : 'hidden'}
-				transition={{ duration: 0.5, delay: 0.5, ease: 'easeInOut' }}
 				exit="hidden"
+				variants={fadeVariants}
+				transition={{ duration: 0.5, delay: 0.5, ease: 'easeInOut' }}
+				className="h-full"
 			>
-				<BaseCanvas
-					className={cn(
-						'absolute! left-0! h-full',
-						limitHeight && 'max-h-4/5 sm:max-h-7/10'
-					)}
+				<VectrealViewer
+					infoPopoverOptions={{ showInfo: false }}
+					envOptions={{ preset: 'night-city' }}
+					className={cn(!isLodaded && 'invisible')}
+					{...props}
 				>
-					<pointLight position={[10, 10, 10]} intensity={2} />
-					<ambientLight />
-					<Environment preset="sunset" />
-					<Suspense fallback={null}>
-						<Model url={modelUrl} loadedState={loadedState} {...props} />
-					</Suspense>
-				</BaseCanvas>
+					<Model url={modelUrl} loadedState={loadedState} {...props} />
+				</VectrealViewer>
 			</motion.div>
 			<motion.div
-				variants={fadeVariants}
 				initial="hidden"
 				animate={!isLodaded ? 'visible' : 'hidden'}
 				exit="hidden"
-				className={cn(
-					'absolute top-0 left-0 z-10 w-full',
-					limitHeight ? 'h-4/5' : 'h-full'
-				)}
+				variants={fadeVariants}
+				className="absolute inset-0 z-10"
 			>
 				<SpinnerWrapper>
 					<div className="text-muted! flex flex-col items-center justify-center gap-4 rounded-xl">
@@ -147,7 +115,7 @@ const HeroScene = ({
 					</div>
 				</SpinnerWrapper>
 			</motion.div>
-		</>
+		</div>
 	)
 }
 

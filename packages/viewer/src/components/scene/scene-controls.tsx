@@ -1,26 +1,21 @@
-import { OrbitControls, OrbitControlsProps } from '@react-three/drei'
+import { OrbitControls } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
+import { ControlsProps } from '@vctrl/core'
 import { useEffect, useRef, useState } from 'react'
-import { Box3, Mesh, Object3D, Vector3 } from 'three'
-
-export interface ControlsProps extends OrbitControlsProps {
-	/**
-	 * The timeout duration in milliseconds before enabling the controls.
-	 */
-	controlsTimeout?: number
-}
+import { Box3, Object3D, Vector3 } from 'three'
 
 export const defaultControlsOptions = {
 	controlsTimeout: 0,
 	maxPolarAngle: Math.PI / 2,
-	autoRotate: true,
+	autoRotate: false,
 	autoRotateSpeed: 0.25,
 	enableZoom: true,
 	zoomSpeed: 0.4,
 	panSpeed: 0.5,
 	rotateSpeed: 0.5,
 	enableDamping: true,
-	dampingFactor: 0.2
+	dampingFactor: 0.2,
+	makeDefault: true
 } satisfies ControlsProps
 
 /**

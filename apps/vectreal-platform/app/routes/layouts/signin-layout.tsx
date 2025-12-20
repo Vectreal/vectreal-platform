@@ -1,7 +1,7 @@
-import { GithubLogo } from '@vctrl-ui/assets/icons/github-logo'
-import GoogleLogo from '@vctrl-ui/assets/icons/google-logo'
-import { Button } from '@vctrl-ui/ui/button'
-import { Separator } from '@vctrl-ui/ui/separator'
+import { GithubLogo } from '@shared/components/assets/icons/github-logo'
+import GoogleLogo from '@shared/components/assets/icons/google-logo'
+import { Button } from '@shared/components/ui/button'
+import { Separator } from '@shared/components/ui/separator'
 import {
 	Link,
 	Outlet,

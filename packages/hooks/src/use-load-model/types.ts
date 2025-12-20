@@ -14,13 +14,11 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { ModelFileTypes, type ServerOptions } from '@vctrl/core'
 import {
-	ControlsProps,
-	EnvironmentProps,
-	ShadowsProps,
-	ToneMappingProps
-} from '@vctrl/viewer'
+	ModelFileTypes,
+	type SceneSettings,
+	type ServerOptions
+} from '@vctrl/core'
 import { Object3D } from 'three'
 
 import { useOptimizeModel } from '../use-optimize-model'
@@ -59,27 +57,10 @@ export interface SceneLoadOptions {
 }
 
 /**
- * Scene settings data structure.
- * Contains all configurable viewer settings for a scene.
- */
-export interface SceneSettings {
-	/** Environment/lighting configuration */
-	environment?: Record<string, unknown>
-	/** Tone mapping settings */
-	toneMapping?: Record<string, unknown>
-	/** Camera controls configuration */
-	controls?: Record<string, unknown>
-	/** Shadow rendering settings */
-	shadows?: Record<string, unknown>
-	/** Metadata (scene name, thumbnail, etc.) */
-	meta?: Record<string, unknown>
-}
-
-/**
  * Server response data structure for scene loading.
  * Contains the GLTF JSON, binary assets, and scene settings.
  */
-export interface ServerSceneData {
+export interface ServerSceneData extends SceneSettings {
 	/** The GLTF JSON structure */
 	gltfJson: Record<string, unknown>
 	/** Binary asset data keyed by asset identifier */
@@ -94,25 +75,6 @@ export interface ServerSceneData {
 			mimeType: string
 		}
 	>
-	/** Scene metadata */
-	meta?: {
-		sceneName?: string
-		[key: string]: unknown
-	}
-	/** Environment/lighting configuration */
-	environment?: Record<string, unknown>
-	/** Tone mapping settings */
-	toneMapping?: Record<string, unknown>
-	/** Camera controls configuration */
-	controls?: Record<string, unknown>
-	/** Shadow rendering settings */
-	shadows?: Record<string, unknown>
-}
-
-export interface MetaState {
-	[key: string]: string | null | undefined
-	sceneName: string
-	thumbnailUrl: string | null
 }
 
 /**
@@ -125,18 +87,7 @@ export interface SceneLoadResult {
 	/** Scene ID that was loaded */
 	sceneId: string
 	/** Scene settings */
-	settings: {
-		/** Environment/lighting configuration */
-		environment?: EnvironmentProps
-		/** Tone mapping settings */
-		toneMapping?: ToneMappingProps
-		/** Camera controls configuration */
-		controls?: ControlsProps
-		/** Shadow rendering settings */
-		shadows?: ShadowsProps
-		/** Scene metadata */
-		meta?: MetaState
-	}
+	settings: SceneSettings
 }
 
 /**

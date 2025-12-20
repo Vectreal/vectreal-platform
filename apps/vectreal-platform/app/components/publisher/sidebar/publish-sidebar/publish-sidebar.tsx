@@ -1,7 +1,11 @@
-import { Accordion, AccordionContent } from '@vctrl-ui/ui/accordion'
+import { Accordion, AccordionContent } from '@shared/components/ui/accordion'
 
-import { CardDescription, CardHeader, CardTitle } from '@vctrl-ui/ui/card'
-import { Separator } from '@vctrl-ui/ui/separator'
+import {
+	CardDescription,
+	CardHeader,
+	CardTitle
+} from '@shared/components/ui/card'
+import { Separator } from '@shared/components/ui/separator'
 import { motion } from 'framer-motion'
 import { BookMarked, Code, Save } from 'lucide-react'
 

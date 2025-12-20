@@ -5,6 +5,26 @@
 	"projectType": "library",
 	"tags": [],
 	"targets": {
+		"lint": {
+			"executor": "@nx/eslint:lint",
+			"outputs": ["{options.outputFile}"],
+			"options": {
+				"fix": true,
+				"lintFilePatterns": [
+					"packages/core/**/*.{ts,tsx,js,jsx}",
+					"packages/core/package.json"
+				]
+			}
+		},
+		"typecheck": {
+			"executor": "@nx/js:tsc",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"tsConfig": "packages/core/tsconfig.json",
+				"outputPath": "dist/packages/core/typecheck",
+				"main": "packages/core/src/index.ts"
+			}
+		},
 		"build": {
 			"executor": "@nx/vite:build",
 			"outputs": ["{options.outputPath}"],

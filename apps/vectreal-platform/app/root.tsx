@@ -1,5 +1,5 @@
-import { Toaster } from '@vctrl-ui/ui/sonner'
-import { cn } from '@vctrl-ui/utils'
+import { Toaster } from '@shared/components/ui/sonner'
+import { cn } from '@shared/utils'
 import {
 	data,
 	Links,
@@ -20,7 +20,7 @@ import { csrfSession } from './lib/sessions/csrf-session.server'
 import { getSession } from './lib/sessions/theme-session.server'
 
 import styles from './global.module.css'
-import '@vctrl-ui/styles/globals.css'
+import '@shared/components/styles/globals.css'
 
 export const meta: MetaFunction = () => [
 	{
@@ -50,11 +50,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const loaderData = { csrf, theme }
 
 	if (cookieHeader) {
-		return data(loaderData, {
-			headers: {
-				'Set-Cookie': cookieHeader
-			}
-		})
+		return data(loaderData, { headers: { 'Set-Cookie': cookieHeader } })
 	}
 
 	return loaderData

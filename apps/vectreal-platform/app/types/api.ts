@@ -1,35 +1,27 @@
 import type { JSONDocument } from '@gltf-transform/core'
 import type { User } from '@supabase/supabase-js'
-import type { OptimizationReport } from '@vctrl/core'
 import type {
 	ControlsProps,
 	EnvironmentProps,
-	ShadowsProps,
-	ToneMappingProps
-} from '@vctrl/viewer'
+	OptimizationReport,
+	SceneMeta,
+	SceneSettings,
+	SerializedAsset,
+	SerializedGLTFExportResult,
+	ShadowsProps
+} from '@vctrl/core'
 
 import type { ProcessState } from './publisher-config'
+
+// Re-export core types for convenience
+export type { SceneMeta, SceneSettings, SerializedAsset }
 
 // ============================================================================
 // Asset Types
 // ============================================================================
 
-/** Serialized asset for JSON transfer (Map cannot be serialized). */
-export interface SerializedAsset {
-	readonly fileName: string
-	readonly data: number[] // Uint8Array as number array for JSON
-	readonly mimeType: string
-}
-
-/** GLTF export result matching ModelExporter output. */
-export interface GLTFExportResult {
-	readonly data: Record<string, unknown>
-	readonly format: 'gltf'
-	readonly size: number
-	readonly exportTime: number
-	readonly assets?: Map<string, Uint8Array> | SerializedAsset[]
-	readonly assetIds?: Map<string, number>
-}
+/** GLTF export result for JSON transfer (uses SerializedGLTFExportResult from core). */
+export type GLTFExportResult = SerializedGLTFExportResult
 
 /** Extended GLTF document with asset metadata for tracking uploaded assets. */
 export interface ExtendedGLTFDocument extends JSONDocument {
@@ -47,28 +39,16 @@ export interface ExtendedGLTFDocument extends JSONDocument {
 // Scene Settings Types
 // ============================================================================
 
-/** Metadata for scene configuration. */
-interface SceneMeta {
-	readonly sceneName?: string
-	readonly thumbnailUrl?: string
-	[key: string]: string | null | undefined
-}
-
-/** Common viewer properties shared across scene configurations. */
-interface ViewerSettings {
+/** Scene settings for internal operations (uses core SceneSettings with readonly). */
+export interface SceneSettingsData {
 	readonly environment?: EnvironmentProps
-	readonly toneMapping?: ToneMappingProps
 	readonly controls?: ControlsProps
 	readonly shadows?: ShadowsProps
-}
-
-/** Scene settings for internal operations. */
-export interface SceneSettingsData extends ViewerSettings {
 	readonly meta?: SceneMeta
 }
 
 /** Scene configuration for API operations (includes publisher metadata). */
-export interface SceneConfigData extends ViewerSettings {
+export interface SceneConfigData extends SceneSettingsData {
 	readonly meta?: SceneMeta
 	readonly process?: ProcessState
 }

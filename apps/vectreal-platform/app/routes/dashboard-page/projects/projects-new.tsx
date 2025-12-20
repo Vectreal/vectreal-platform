@@ -1,4 +1,4 @@
-import { Button } from '@vctrl-ui/ui/button'
+import { Button } from '@shared/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { Link } from 'react-router'
 

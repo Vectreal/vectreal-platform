@@ -20,7 +20,7 @@ import {
 	type DedupOptions,
 	ModelOptimizer,
 	type NormalsOptions,
-	type OptimizationProgress,
+	type OperationProgress,
 	type QuantizeOptions,
 	type SimplifyOptions,
 	type TextureCompressOptions
@@ -83,7 +83,7 @@ const useOptimizeModel = () => {
 
 		// Set up progress callback for optimization operations
 		// Can be extended to dispatch progress updates to state if needed
-		optimizer.onProgress((progress: OptimizationProgress) => {
+		optimizer.onProgress((progress: OperationProgress) => {
 			// Future: dispatch({ type: 'UPDATE_PROGRESS', payload: progress })
 		})
 
@@ -251,7 +251,7 @@ const useOptimizeModel = () => {
 	 * and may not work in browser-only environments.
 	 *
 	 * @param options - Configuration options for texture compression
-	 * @param options.format - Target compression format (e.g., 'webp', 'ktx2')
+	 * @param options.format - Target compression format (e.g.,  from '@shared/ui', 'ktx2')
 	 * @param options.quality - Compression quality (0-100)
 	 * @returns Promise that resolves when texture compression is complete
 	 * @throws Error if Sharp is not available or compression fails

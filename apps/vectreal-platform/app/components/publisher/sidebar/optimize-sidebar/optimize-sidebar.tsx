@@ -1,4 +1,4 @@
-import { Accordion } from '@vctrl-ui/ui/accordion'
+import { Accordion } from '@shared/components/ui/accordion'
 import { useMemo } from 'react'
 
 import {

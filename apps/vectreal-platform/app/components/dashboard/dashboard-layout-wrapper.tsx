@@ -7,7 +7,7 @@ import {
 	SidebarInset,
 	SidebarProvider,
 	SidebarTrigger
-} from '@vctrl-ui/ui/sidebar'
+} from '@shared/components/ui/sidebar'
 import { memo, useState } from 'react'
 import { Outlet, useParams } from 'react-router'
 

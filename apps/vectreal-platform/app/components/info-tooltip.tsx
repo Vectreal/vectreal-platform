@@ -3,7 +3,7 @@ import {
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger
-} from '@vctrl-ui/ui/tooltip'
+} from '@shared/components/ui/tooltip'
 import { Info } from 'lucide-react'
 
 /**

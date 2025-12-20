@@ -1,12 +1,12 @@
-import { Button } from '@vctrl-ui/ui/button'
-import { Input } from '@vctrl-ui/ui/input'
+import { Button } from '@shared/components/ui/button'
+import { Input } from '@shared/components/ui/input'
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger
-} from '@vctrl-ui/ui/tooltip'
-import { ApiResponse } from '@vctrl-ui/utils'
+} from '@shared/components/ui/tooltip'
+import { ApiResponse } from '@shared/utils'
 import { Eye, EyeClosed } from 'lucide-react'
 import { useState } from 'react'
 import { Form, redirect } from 'react-router'

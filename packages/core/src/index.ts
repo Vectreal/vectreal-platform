@@ -14,32 +14,10 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
+// Export all base types first (single source of truth)
+export * from './types'
+
 // Export all core services
 export * from './model-loader'
 export * from './model-optimizer'
 export * from './model-exporter'
-
-// Re-export commonly used types for convenience
-export { ModelFileTypes } from './model-loader'
-export type {
-	ModelLoadResult,
-	LoadProgress,
-	ThreeJSModelResult
-} from './model-loader'
-
-export type {
-	SimplifyOptions,
-	DedupOptions,
-	QuantizeOptions,
-	NormalsOptions,
-	TextureCompressOptions,
-	ServerOptions,
-	OptimizationReport,
-	OptimizationProgress
-} from './model-optimizer'
-
-export type {
-	ExportOptions,
-	ExportProgress,
-	ExportResult
-} from './model-exporter'

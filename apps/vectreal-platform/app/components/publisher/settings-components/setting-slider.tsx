@@ -1,8 +1,8 @@
-import { Label } from '@vctrl-ui/ui/label'
+import { Label } from '@shared/components/ui/label'
 
-import { Slider } from '@vctrl-ui/ui/slider'
+import { Slider } from '@shared/components/ui/slider'
 
-import { cn } from '@vctrl-ui/utils'
+import { cn } from '@shared/utils'
 
 import { InfoTooltip } from '../../info-tooltip'
 

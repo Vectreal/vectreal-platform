@@ -1,4 +1,4 @@
-import { Input } from '@vctrl-ui/ui/input'
+import { Input } from '@shared/components/ui/input'
 import { useAtom } from 'jotai/react'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 

@@ -1,4 +1,4 @@
-import { cn } from '@vctrl-ui/utils'
+import { cn } from '@shared/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 
 import { RadioAccordionOptionProps } from './types'

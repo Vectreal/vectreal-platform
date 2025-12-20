@@ -1,11 +1,16 @@
-import { Card, CardDescription, CardHeader, CardTitle } from '@vctrl-ui/ui/card'
+import {
+	Card,
+	CardDescription,
+	CardHeader,
+	CardTitle
+} from '@shared/components/ui/card'
 import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogHeader,
 	DialogTitle
-} from '@vctrl-ui/ui/dialog'
+} from '@shared/components/ui/dialog'
 
 import { useAtom } from 'jotai'
 import { FilePlus, Image } from 'lucide-react'

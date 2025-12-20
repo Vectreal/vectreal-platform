@@ -14,6 +14,8 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
+import type { BeforeAfterMetric, ServerOptions } from '../types'
+
 export interface SimplifyOptions {
 	/** The simplification ratio (0.0 to 1.0) */
 	ratio?: number
@@ -48,19 +50,6 @@ export interface NormalsOptions {
 	overwrite?: boolean
 }
 
-export interface ServerOptions {
-	/** Whether to use the server for optimization */
-	enabled?: boolean
-	/** Server endpoint URL */
-	endpoint?: string
-	/** API key for authentication (if required) */
-	apiKey?: string
-	/** Search parameters to include in requests */
-	searchParams?: Record<string, string>
-	/** Additional headers to include in requests */
-	headers?: Record<string, string>
-}
-
 export interface TextureCompressOptions {
 	/** Maximum texture size */
 	resize?: [number, number]
@@ -84,20 +73,11 @@ export interface OptimizationReport {
 	appliedOptimizations: string[]
 	/** Optimization statistics */
 	stats: {
-		vertices: { before: number; after: number }
-		triangles: { before: number; after: number }
-		materials: { before: number; after: number }
-		textures: { before: number; after: number }
-		meshes: { before: number; after: number }
-		nodes: { before: number; after: number }
+		vertices: BeforeAfterMetric
+		triangles: BeforeAfterMetric
+		materials: BeforeAfterMetric
+		textures: BeforeAfterMetric
+		meshes: BeforeAfterMetric
+		nodes: BeforeAfterMetric
 	}
-}
-
-export interface OptimizationProgress {
-	/** Current operation name */
-	operation: string
-	/** Progress percentage (0-100) */
-	progress: number
-	/** Additional details */
-	details?: string
 }

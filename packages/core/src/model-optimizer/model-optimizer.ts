@@ -34,10 +34,11 @@ import { MeshoptSimplifier } from 'meshoptimizer'
 import { Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter'
 
+import { OperationProgress } from '../types'
+
 import {
 	DedupOptions,
 	NormalsOptions,
-	OptimizationProgress,
 	OptimizationReport,
 	QuantizeOptions,
 	SimplifyOptions,
@@ -63,7 +64,7 @@ export class ModelOptimizer {
 	private originalSize = 0
 	private originalReport: InspectReport | null = null
 	private appliedOptimizations: string[] = []
-	private progressCallback?: (progress: OptimizationProgress) => void
+	private progressCallback?: (progress: OperationProgress) => void
 
 	constructor() {
 		this.io = new WebIO().registerExtensions(ALL_EXTENSIONS)
@@ -73,7 +74,7 @@ export class ModelOptimizer {
 	/**
 	 * Set a progress callback to receive optimization progress updates.
 	 */
-	public onProgress(callback: (progress: OptimizationProgress) => void): void {
+	public onProgress(callback: (progress: OperationProgress) => void): void {
 		this.progressCallback = callback
 	}
 

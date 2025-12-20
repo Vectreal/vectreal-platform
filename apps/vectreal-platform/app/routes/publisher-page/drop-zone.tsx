@@ -1,8 +1,8 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { InputFileOrDirectory } from '@vctrl/hooks/use-load-model'
-import { useAcceptPattern } from '@vctrl-ui/hooks/use-accept-pattern'
-import { Button } from '@vctrl-ui/ui/button'
-import { cn } from '@vctrl-ui/utils'
+import { useAcceptPattern } from '@shared/components/hooks/use-accept-pattern'
+import { Button } from '@shared/components/ui/button'
+import { cn } from '@shared/utils'
 import {
 	Book,
 	ExternalLink,

@@ -1,13 +1,13 @@
 import { RandomizedLightProps } from '@react-three/drei'
-import { BaseShadowsProps, ShadowsProps } from '@vctrl/viewer'
-import { Label } from '@vctrl-ui/ui/label'
+import { Label } from '@shared/components/ui/label'
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue
-} from '@vctrl-ui/ui/select'
+} from '@shared/components/ui/select'
+import { BaseShadowsProps, ShadowsProps } from '@vctrl/core'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom } from 'jotai'
 

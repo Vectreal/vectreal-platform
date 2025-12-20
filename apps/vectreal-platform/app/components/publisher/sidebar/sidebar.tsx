@@ -1,8 +1,13 @@
 import { User } from '@supabase/supabase-js'
-import { VectrealLogoSmall } from '@vctrl-ui/assets/icons/vectreal-logo-small'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@vctrl-ui/ui/tabs'
-import { TooltipProvider } from '@vctrl-ui/ui/tooltip'
-import { cn } from '@vctrl-ui/utils'
+import { VectrealLogoSmall } from '@shared/components/assets/icons/vectreal-logo-small'
+import {
+	Tabs,
+	TabsContent,
+	TabsList,
+	TabsTrigger
+} from '@shared/components/ui/tabs'
+import { TooltipProvider } from '@shared/components/ui/tooltip'
+import { cn } from '@shared/utils'
 import { motion } from 'framer-motion'
 import { AnimatePresence } from 'framer-motion'
 import { useAtom } from 'jotai/react'

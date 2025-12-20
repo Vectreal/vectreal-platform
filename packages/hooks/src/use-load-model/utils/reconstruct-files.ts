@@ -14,41 +14,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import type { InputFileOrDirectory } from '../types'
-
-/**
- * Scene data structure from the server.
- * Contains GLTF JSON and associated binary assets (textures, bins, etc.).
- */
-export interface SceneData {
-	/** The GLTF JSON structure */
-	gltfJson: Record<string, unknown>
-	/** Binary asset data keyed by asset identifier */
-	assetData: Record<
-		string,
-		{
-			/** Binary data as array of numbers */
-			data: number[]
-			/** Original filename of the asset */
-			fileName: string
-			/** MIME type of the asset */
-			mimeType: string
-		}
-	>
-	/** Optional metadata about the scene */
-	meta?: {
-		sceneName?: string
-		[key: string]: unknown
-	}
-	/** Optional environment settings */
-	environment?: Record<string, unknown>
-	/** Optional tone mapping settings */
-	toneMapping?: Record<string, unknown>
-	/** Optional camera controls settings */
-	controls?: Record<string, unknown>
-	/** Optional shadow settings */
-	shadows?: Record<string, unknown>
-}
+import type { InputFileOrDirectory, ServerSceneData } from '../types'
 
 /**
  * Reconstructs GLTF and asset files from scene data received from the server.
@@ -77,7 +43,9 @@ export interface SceneData {
  * await modelLoader.load(files)
  * ```
  */
-export function reconstructGltfFiles(data: SceneData): InputFileOrDirectory {
+export function reconstructGltfFiles(
+	data: ServerSceneData
+): InputFileOrDirectory {
 	const assetFiles: File[] = []
 
 	// Convert asset data back to File objects

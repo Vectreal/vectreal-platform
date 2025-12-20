@@ -14,6 +14,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
+import type { Document } from '@gltf-transform/core'
 import type { Object3D } from 'three'
 
 export enum ModelFileTypes {
@@ -22,18 +23,9 @@ export enum ModelFileTypes {
 	usdz = 'usdz'
 }
 
-export interface LoadProgress {
-	/** Current operation name */
-	operation: string
-	/** Progress percentage (0-100) */
-	progress: number
-	/** Additional details */
-	details?: string
-}
-
 export interface ModelLoadResult {
 	/** The loaded model data */
-	data: any
+	data: Document
 	/** Model file type */
 	type: ModelFileTypes
 	/** File size in bytes */
@@ -48,5 +40,5 @@ export interface ThreeJSModelResult extends Omit<ModelLoadResult, 'data'> {
 	/** The loaded Three.js scene */
 	scene: Object3D
 	/** Original document data */
-	document: any
+	document: Document
 }

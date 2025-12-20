@@ -3,16 +3,16 @@ import {
 	AlertDescription,
 	AlertTitle,
 	Alert as BaseAlert
-} from '@vctrl-ui/ui/alert'
-import { Button } from '@vctrl-ui/ui/button'
-import { Input } from '@vctrl-ui/ui/input'
+} from '@shared/components/ui/alert'
+import { Button } from '@shared/components/ui/button'
+import { Input } from '@shared/components/ui/input'
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger
-} from '@vctrl-ui/ui/tooltip'
-import { ApiResponse } from '@vctrl-ui/utils'
+} from '@shared/components/ui/tooltip'
+import { ApiResponse } from '@shared/utils'
 import { motion } from 'framer-motion'
 import { AnimatePresence } from 'framer-motion'
 import { AlertCircle, Eye, EyeClosed } from 'lucide-react'

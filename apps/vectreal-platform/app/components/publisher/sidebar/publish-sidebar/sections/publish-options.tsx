@@ -1,14 +1,14 @@
-import { Input } from '@vctrl-ui/ui/input'
-import { Label } from '@vctrl-ui/ui/label'
+import { Input } from '@shared/components/ui/input'
+import { Label } from '@shared/components/ui/label'
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue
-} from '@vctrl-ui/ui/select'
-import { Switch } from '@vctrl-ui/ui/switch'
-import { Textarea } from '@vctrl-ui/ui/textarea'
+} from '@shared/components/ui/select'
+import { Switch } from '@shared/components/ui/switch'
+import { Textarea } from '@shared/components/ui/textarea'
 import { motion } from 'framer-motion'
 import { CheckCircle, EyeOff, Globe, Lock } from 'lucide-react'
 import { useState } from 'react'

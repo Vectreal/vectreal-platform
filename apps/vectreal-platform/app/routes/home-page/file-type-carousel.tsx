@@ -1,6 +1,6 @@
 'use client'
 
-import { Card } from '@vctrl-ui/ui/card'
+import { Card } from '@shared/components/ui/card'
 import { motion } from 'framer-motion'
 
 const fileTypes = [

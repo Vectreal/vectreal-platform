@@ -6,5 +6,5 @@ export {
 	type SceneLoadResult,
 	type ServerSceneData
 } from './types'
-export { reconstructGltfFiles, type SceneData } from './utils/reconstruct-files'
+export { reconstructGltfFiles } from './utils/reconstruct-files'
 export * from './model-context'

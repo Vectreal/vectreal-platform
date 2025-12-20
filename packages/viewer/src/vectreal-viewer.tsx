@@ -14,28 +14,27 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { Center, PerspectiveCameraProps } from '@react-three/drei'
+import { Center } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
-import { LoadingSpinner as DefaultSpinner } from '@vctrl-ui/ui/loading-spinner'
-import { cn } from '@vctrl-ui/utils'
+import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
+import { cn } from '@shared/utils'
+import {
+	ControlsProps,
+	EnvironmentProps,
+	GridProps,
+	ShadowsProps
+} from '@vctrl/core'
 // import { Perf } from 'r3f-perf'
 import { memo, PropsWithChildren, Suspense, useEffect, useState } from 'react'
 import { Object3D } from 'three'
 
 import { InfoPopover, type InfoPopoverProps } from './components'
 import {
-	ControlsProps,
-	EnvironmentProps,
-	GridProps,
-	SceneCamera,
 	SceneControls,
 	SceneEnvironment,
 	SceneGrid,
 	SceneModel,
-	SceneShadows,
-	SceneToneMapping,
-	ShadowsProps,
-	ToneMappingProps
+	SceneShadows
 } from './components/scene'
 
 import styles from './styles.module.css'
@@ -52,11 +51,6 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	className?: string
 
 	/**
-	 * Options for the camera.
-	 */
-	cameraOptions?: PerspectiveCameraProps
-
-	/**
 	 * Options for the OrbitControls.
 	 */
 	controlsOptions?: ControlsProps
@@ -70,11 +64,6 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * Options for the shadows.
 	 */
 	shadowsOptions?: ShadowsProps
-
-	/**
-	 * Options for the tone mapping.
-	 */
-	toneMappingOptions?: ToneMappingProps
 
 	/**
 	 * Options for the grid.
@@ -108,7 +97,6 @@ export interface VectrealViewerProps extends PropsWithChildren {
  * - `children`: Any React children to render inside the canvas.
  * - `model`: A 3D model to render as three `Object3D`.
  * - `className`: An optional className to apply to the outermost container element.
- * - `cameraOptions`: An optional object containing options for the camera.
  * - `controlsOptions`: An optional object containing options for the OrbitControls.
  * - `envOptions`: An optional object containing options for the environment.
  * - `gridOptions`: An optional object containing options for the grid.
@@ -135,13 +123,11 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	const {
 		className,
 		children,
-		cameraOptions,
 		envOptions,
 		gridOptions,
 		controlsOptions,
 		infoPopoverOptions,
 		shadowsOptions,
-		toneMappingOptions,
 		onScreenshot,
 		loader = <DefaultSpinner />
 	} = props
@@ -151,7 +137,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	const [showCanvas, setShowCanvas] = useState(!!model)
 
 	useEffect(() => {
-		if (model && showLoader) {
+		if ((model && showLoader) || children) {
 			// Start canvas fade in and loader fade out simultaneously
 			setIsLoaderFading(true)
 			setShowCanvas(true)
@@ -165,7 +151,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 			setShowLoader(true)
 			setShowCanvas(false)
 		}
-	}, [model, showLoader])
+	}, [model, showLoader, children])
 
 	// Check if the dark mode is manually enabled - This needs to be js because of CSS modules and minification
 	const isManualDarkModel = className?.split(' ').includes('dark')
@@ -193,30 +179,32 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 				)}
 			>
 				<Suspense fallback={null}>
-					{model && (
+					{(model || children) && (
 						<>
 							{/* <Perf /> */}
 							{/* <ScenePostProcessing /> */}
 							<SceneControls {...controlsOptions} />
-							<SceneCamera {...cameraOptions} />
 							<SceneEnvironment {...envOptions} />
 							<SceneGrid {...gridOptions} />
 							<SceneShadows {...shadowsOptions} />
-							<SceneToneMapping
+							{/* <SceneToneMapping
 								mapping={toneMappingOptions?.mapping}
 								exposure={toneMappingOptions?.exposure}
-							/>
+							/> */}
 
 							<Center top>
-								<SceneModel onScreenshot={onScreenshot} object={model} />
-								{children}
+								{model ? (
+									<SceneModel onScreenshot={onScreenshot} object={model} />
+								) : (
+									children
+								)}
 							</Center>
 						</>
 					)}
 				</Suspense>
 			</Canvas>
 
-			{showLoader && (
+			{showLoader && !children && (
 				<div
 					className={cn(
 						'absolute inset-0 flex h-full w-full flex-col items-center justify-center gap-4',

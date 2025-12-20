@@ -1,8 +1,8 @@
 import { LoaderFunctionArgs } from 'react-router'
 
 import { ApiResponseBuilder } from '../../lib/api/api-responses.server'
-import { sceneSettingsService } from '../../lib/services/scene-settings-service.server'
 import { PlatformApiService } from '../../lib/services/platform-api-service.server'
+import { sceneSettingsService } from '../../lib/services/scene-settings-service.server'
 
 /**
  * Handles scene stats API requests (GET only).

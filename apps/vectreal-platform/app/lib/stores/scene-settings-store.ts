@@ -1,41 +1,42 @@
-import { MetaState } from '@vctrl/hooks/use-load-model/types'
 import {
 	ControlsProps,
+	EnvironmentProps,
+	SceneMeta,
+	ShadowsProps
+} from '@vctrl/core'
+import {
 	defaultControlsOptions,
 	defaultEnvOptions,
-	defaultShadowOptions,
-	defaultToneMappingOptions,
-	EnvironmentProps,
-	ShadowsProps,
-	ToneMappingProps
+	defaultShadowOptions
 } from '@vctrl/viewer'
 import { atom, createStore } from 'jotai'
 import { atomWithReset } from 'jotai/utils'
 
 const sceneSettingsStore = createStore()
 
-const metaInitialState: MetaState = {
+const metaInitialState: SceneMeta = {
 	sceneName: '',
 	thumbnailUrl: null
 }
 
-const metaAtom = atomWithReset<MetaState>(metaInitialState)
+const metaAtom = atomWithReset<SceneMeta>(metaInitialState)
+
 const controlsAtom = atom<ControlsProps>(defaultControlsOptions)
-const toneMappingAtom = atom<ToneMappingProps>(defaultToneMappingOptions)
 const environmentAtom = atom<EnvironmentProps>(defaultEnvOptions)
 const shadowsAtom = atom<ShadowsProps>(defaultShadowOptions)
 
 sceneSettingsStore.set(metaAtom, metaInitialState)
+
 sceneSettingsStore.set(controlsAtom, defaultControlsOptions)
-sceneSettingsStore.set(toneMappingAtom, defaultToneMappingOptions)
 sceneSettingsStore.set(environmentAtom, defaultEnvOptions)
 sceneSettingsStore.set(shadowsAtom, defaultShadowOptions)
 
 export {
-	// atoms
+	// Management atoms
 	metaAtom,
+
+	// Vectreal viewer settings atoms
 	controlsAtom,
-	toneMappingAtom,
 	environmentAtom,
 	shadowsAtom,
 

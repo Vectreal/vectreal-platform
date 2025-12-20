@@ -4,7 +4,7 @@ import {
 	CardFooter,
 	CardHeader,
 	CardTitle
-} from '@vctrl-ui/ui/card'
+} from '@shared/components/ui/card'
 import { ChevronRight } from 'lucide-react'
 import { FC, PropsWithChildren } from 'react'
 import { Link } from 'react-router'

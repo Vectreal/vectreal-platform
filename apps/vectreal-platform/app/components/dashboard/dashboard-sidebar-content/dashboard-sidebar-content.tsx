@@ -8,7 +8,7 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 	SidebarRail
-} from '@vctrl-ui/ui/sidebar'
+} from '@shared/components/ui/sidebar'
 import { ArrowRight, Building, List, Rocket, Settings } from 'lucide-react'
 import { Link } from 'react-router'
 

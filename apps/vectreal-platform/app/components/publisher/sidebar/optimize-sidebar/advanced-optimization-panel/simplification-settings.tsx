@@ -1,7 +1,7 @@
 // UI Components
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { Switch } from '@vctrl-ui/ui/switch'
-import { cn } from '@vctrl-ui/utils'
+import { Switch } from '@shared/components/ui/switch'
+import { cn } from '@shared/utils'
 import { useAtom } from 'jotai'
 
 // Store

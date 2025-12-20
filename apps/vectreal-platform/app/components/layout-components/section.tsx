@@ -1,4 +1,4 @@
-import { cn } from '@vctrl-ui/utils'
+import { cn } from '@shared/utils'
 import { motion } from 'framer-motion'
 import { PropsWithChildren } from 'react'
 

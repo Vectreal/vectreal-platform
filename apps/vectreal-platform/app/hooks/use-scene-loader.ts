@@ -1,20 +1,10 @@
+import type { SceneSettings } from '@vctrl/core'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import type {
-	EventHandler,
-	MetaState,
-	ModelFile
-} from '@vctrl/hooks/use-load-model/types'
-import type {
-	ControlsProps,
-	EnvironmentProps,
-	ShadowsProps,
-	ToneMappingProps
-} from '@vctrl/viewer'
+import type { EventHandler, ModelFile } from '@vctrl/hooks/use-load-model/types'
 import {
 	defaultControlsOptions,
 	defaultEnvOptions,
-	defaultShadowOptions,
-	defaultToneMappingOptions
+	defaultShadowOptions
 } from '@vctrl/viewer'
 import { useAtom } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -25,8 +15,7 @@ import {
 	controlsAtom,
 	environmentAtom,
 	metaAtom,
-	shadowsAtom,
-	toneMappingAtom
+	shadowsAtom
 } from '../lib/stores/scene-settings-store'
 import type { SceneData } from '../lib/utils/scene-loader'
 import {
@@ -41,14 +30,6 @@ export interface UseSceneLoaderParams {
 	userId?: string
 	assetIds?: string[]
 	autoLoad?: boolean // Control whether to auto-load scene on mount
-}
-
-export interface SceneSettingsData {
-	environment: EnvironmentProps
-	toneMapping: ToneMappingProps
-	controls: ControlsProps
-	shadows: ShadowsProps
-	meta: MetaState
 }
 
 export interface SaveSceneResult {
@@ -163,7 +144,7 @@ export function useSceneLoader(
 
 	const sceneLoadAttemptedRef = useRef(false)
 	const [lastSavedSettings, setLastSavedSettings] =
-		useState<SceneSettingsData | null>(null)
+		useState<SceneSettings | null>(null)
 	const [currentSceneId, setCurrentSceneId] = useState<string | null>(
 		paramSceneId
 	)
@@ -180,7 +161,6 @@ export function useSceneLoader(
 
 	// Scene state atoms
 	const [env, setEnv] = useAtom(environmentAtom)
-	const [toneMapping, setToneMapping] = useAtom(toneMappingAtom)
 	const [controls, setControls] = useAtom(controlsAtom)
 	const [shadows, setShadows] = useAtom(shadowsAtom)
 	const [meta, setMeta] = useAtom(metaAtom)
@@ -221,15 +201,14 @@ export function useSceneLoader(
 	)
 
 	// Get current settings from atoms
-	const currentSettings: SceneSettingsData = useMemo(
+	const currentSettings: SceneSettings = useMemo(
 		() => ({
 			environment: env,
-			toneMapping,
 			controls,
 			shadows,
 			meta
 		}),
-		[env, toneMapping, controls, shadows, meta]
+		[env, controls, shadows, meta]
 	)
 
 	// Scene persistence operations
@@ -333,21 +312,19 @@ export function useSceneLoader(
 	const applySceneSettings = useCallback(
 		(data: SceneData) => {
 			if (data.environment) setEnv(data.environment)
-			if (data.toneMapping) setToneMapping(data.toneMapping)
 			if (data.controls) setControls(data.controls)
 			if (data.shadows) setShadows(data.shadows)
 			if (data.meta) setMeta(data.meta)
 
-			const loadedSettings: SceneSettingsData = {
+			const loadedSettings: SceneSettings = {
 				environment: data.environment || defaultEnvOptions,
-				toneMapping: data.toneMapping || defaultToneMappingOptions,
 				controls: data.controls || defaultControlsOptions,
 				shadows: data.shadows || defaultShadowOptions,
 				meta: data.meta || { sceneName: '', thumbnailUrl: null }
 			}
 			setLastSavedSettings(loadedSettings)
 		},
-		[setEnv, setToneMapping, setControls, setShadows, setMeta]
+		[setEnv, setControls, setShadows, setMeta]
 	)
 
 	/**
@@ -435,8 +412,6 @@ export function useSceneLoader(
 		return (
 			JSON.stringify(currentSettings.environment) !==
 				JSON.stringify(lastSavedSettings.environment) ||
-			JSON.stringify(currentSettings.toneMapping) !==
-				JSON.stringify(lastSavedSettings.toneMapping) ||
 			JSON.stringify(currentSettings.controls) !==
 				JSON.stringify(lastSavedSettings.controls) ||
 			JSON.stringify(currentSettings.shadows) !==

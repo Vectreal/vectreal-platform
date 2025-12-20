@@ -2,7 +2,6 @@ import { createContext, Outlet, redirect } from 'react-router'
 
 import { AuthContext } from '../../contexts/auth-context'
 import { type AuthContextType } from '../../contexts/auth-context'
-import { type sceneFolders } from '../../db/schema'
 import { FolderType, SceneType } from '../../hooks'
 import { PlatformApiService } from '../../lib/services/platform-api-service.server'
 import { projectService } from '../../lib/services/project-service.server'

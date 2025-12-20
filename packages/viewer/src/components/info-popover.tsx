@@ -1,5 +1,5 @@
-import { VectrealLogoSmall } from '@vctrl-ui/assets/icons/vectreal-logo-small'
-import { cn } from '@vctrl-ui/utils'
+import { VectrealLogoSmall } from '@shared/components/assets/icons/vectreal-logo-small'
+import { cn } from '@shared/utils'
 import { useEffect, useRef, useState } from 'react'
 
 import CrossIcon from './assets/cross-icon'

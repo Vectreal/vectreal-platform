@@ -1,8 +1,8 @@
+import { useIsMobile } from '@shared/components/hooks/use-mobile'
+import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
+import { SpinnerWrapper } from '@shared/components/ui/spinner-wrapper'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { VectrealViewer } from '@vctrl/viewer'
-import { useIsMobile } from '@vctrl-ui/hooks/use-mobile'
-import { LoadingSpinner } from '@vctrl-ui/ui/loading-spinner'
-import { SpinnerWrapper } from '@vctrl-ui/ui/spinner-wrapper'
 import { AnimatePresence } from 'framer-motion'
 import { motion } from 'framer-motion'
 import { useAtom, useAtomValue } from 'jotai/react'
@@ -13,8 +13,7 @@ import { processAtom } from '../../lib/stores/publisher-config-store'
 import {
 	controlsAtom,
 	environmentAtom,
-	shadowsAtom,
-	toneMappingAtom
+	shadowsAtom
 } from '../../lib/stores/scene-settings-store'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
@@ -84,7 +83,6 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 	const [{ isLoading: isDownloading, isInitializing }, setProcess] =
 		useAtom(processAtom)
 	const env = useAtomValue(environmentAtom)
-	const toneMapping = useAtomValue(toneMappingAtom)
 	const controls = useAtomValue(controlsAtom)
 	const shadows = useAtomValue(shadowsAtom)
 
@@ -120,7 +118,6 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 								model={file?.model}
 								key="model-viewer"
 								infoPopoverOptions={{ showInfo: false }}
-								toneMappingOptions={toneMapping}
 								envOptions={env}
 								controlsOptions={controls}
 								shadowsOptions={shadows}

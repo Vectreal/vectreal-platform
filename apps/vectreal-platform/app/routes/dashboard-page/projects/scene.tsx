@@ -1,12 +1,6 @@
-import {
-	ModelFile,
-	SceneLoadResult,
-	useLoadModel
-} from '@vctrl/hooks/use-load-model'
-import { VectrealViewer } from '@vctrl/viewer'
-import { Badge } from '@vctrl-ui/ui/badge'
-import { Button } from '@vctrl-ui/ui/button'
-import { CardContent, CardFooter, CardHeader } from '@vctrl-ui/ui/card'
+import { Badge } from '@shared/components/ui/badge'
+import { Button } from '@shared/components/ui/button'
+import { CardContent, CardFooter, CardHeader } from '@shared/components/ui/card'
 import {
 	Dialog,
 	DialogContent,
@@ -15,14 +9,20 @@ import {
 	DialogHeader,
 	DialogOverlay,
 	DialogTitle
-} from '@vctrl-ui/ui/dialog'
-import { cn, formatFileSize } from '@vctrl-ui/utils'
+} from '@shared/components/ui/dialog'
+import { cn } from '@shared/utils'
+import {
+	ModelFile,
+	SceneLoadResult,
+	useLoadModel
+} from '@vctrl/hooks/use-load-model'
+import { VectrealViewer } from '@vctrl/viewer'
 import { Eye, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useState } from 'react'
 import { Link, useFetcher, useParams } from 'react-router'
 
 import { BasicCard } from '../../../components'
-import { useProject, useScene, useSceneStats } from '../../../hooks'
+import { useProject, useScene } from '../../../hooks'
 
 interface ConfirmDeleteModalProps {
 	isOpen: boolean
@@ -80,7 +80,6 @@ const PreviewModel = memo(({ file, sceneData }: PreviewModelProps) => {
 					infoPopoverOptions={{ showInfo: false }}
 					model={file?.model}
 					envOptions={sceneData?.settings?.environment}
-					toneMappingOptions={sceneData?.settings?.toneMapping}
 					controlsOptions={sceneData?.settings?.controls}
 					shadowsOptions={sceneData?.settings?.shadows}
 					loader={

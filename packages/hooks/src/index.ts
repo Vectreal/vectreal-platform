@@ -20,12 +20,9 @@ export { default as useExportModel } from './use-export-model/use-export-model'
 export { default as useOptimizeModel } from './use-optimize-model/use-optimize-model'
 
 // Export utilities
+export { reconstructGltfFiles } from './use-load-model/utils/reconstruct-files'
 export { ServerCommunicationService } from './utils/server-communication'
 export type { ServerRequestConfig } from './utils/server-communication'
-export {
-	reconstructGltfFiles,
-	type SceneData
-} from './use-load-model/utils/reconstruct-files'
 
 // Re-export types for convenience
 export type {
@@ -35,7 +32,6 @@ export type {
 	LoadData,
 	UseLoadModelReturn,
 	SceneLoadOptions,
-	SceneSettings,
 	ServerSceneData,
 	SceneLoadResult
 } from './use-load-model/types'
