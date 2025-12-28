@@ -2,7 +2,6 @@ import { Stage, useGLTF } from '@react-three/drei'
 
 import { useFrame } from '@react-three/fiber'
 import { EffectComposer, ToneMapping } from '@react-three/postprocessing'
-import { useIsMobile } from '@shared/components/hooks/use-mobile'
 import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { SpinnerWrapper } from '@shared/components/ui/spinner-wrapper'
 import { cn } from '@shared/utils'
@@ -18,13 +17,10 @@ type ReactState<T> = [T, React.Dispatch<React.SetStateAction<T>>]
 interface ModelProps {
 	url: string
 	loadedState: ReactState<boolean>
-	vertical?: boolean
 }
 
-const Model = ({ url, loadedState, vertical }: ModelProps) => {
+const Model = ({ url, loadedState }: ModelProps) => {
 	const [isLoaded, setIsLoaded] = loadedState
-
-	const isMobile = useIsMobile()
 	const { scene } = useGLTF(url)
 
 	useEffect(() => {
@@ -70,7 +66,7 @@ interface HeroSceneProps {
 	vertical?: boolean
 }
 
-const HeroScene = ({ ...props }: HeroSceneProps) => {
+const HeroScene = ({ vertical }: HeroSceneProps) => {
 	const [modelUrl, setModelUrl] = useState('')
 
 	const loadedState = useState(false)
@@ -81,7 +77,12 @@ const HeroScene = ({ ...props }: HeroSceneProps) => {
 	}, [])
 
 	return (
-		<div className="relative w-full overflow-hidden">
+		<div
+			className={cn(
+				'relative w-full overflow-hidden',
+				vertical && 'max-md:h-[50vh] max-md:min-h-[300px]'
+			)}
+		>
 			<motion.div
 				initial="hidden"
 				animate={isLodaded ? 'visible' : 'hidden'}
@@ -94,9 +95,8 @@ const HeroScene = ({ ...props }: HeroSceneProps) => {
 					infoPopoverOptions={{ showInfo: false }}
 					envOptions={{ preset: 'night-city' }}
 					className={cn(!isLodaded && 'invisible')}
-					{...props}
 				>
-					<Model url={modelUrl} loadedState={loadedState} {...props} />
+					<Model url={modelUrl} loadedState={loadedState} />
 				</VectrealViewer>
 			</motion.div>
 			<motion.div

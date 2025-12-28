@@ -128,7 +128,7 @@ export interface EnvironmentProps extends InheritedEnvProps {
 /**
  * Base interface for shadow properties.
  */
-export interface BaseShadowsProps {
+export interface ShadowTypePropBase {
 	type: 'accumulative' | 'contact'
 }
 
@@ -136,7 +136,7 @@ export interface BaseShadowsProps {
  * Props for Accumulative Shadows.
  */
 export interface AccumulativeShadowsProps
-	extends BaseShadowsProps,
+	extends ShadowTypePropBase,
 		ThreeAccumulativeShadowsProps {
 	type: 'accumulative'
 	light?: RandomizedLightProps
@@ -146,7 +146,7 @@ export interface AccumulativeShadowsProps
  * Props for Contact Shadows.
  */
 export interface ContactShadowProps
-	extends BaseShadowsProps,
+	extends ShadowTypePropBase,
 		ThreeContactShadowsProps {
 	type: 'contact'
 }

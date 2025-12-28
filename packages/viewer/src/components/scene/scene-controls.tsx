@@ -1,8 +1,6 @@
 import { OrbitControls } from '@react-three/drei'
-import { useThree } from '@react-three/fiber'
 import { ControlsProps } from '@vctrl/core'
-import { useEffect, useRef, useState } from 'react'
-import { Box3, Object3D, Vector3 } from 'three'
+import { memo, useEffect, useRef, useState } from 'react'
 
 export const defaultControlsOptions = {
 	controlsTimeout: 0,
@@ -21,39 +19,25 @@ export const defaultControlsOptions = {
 /**
  * SceneControls component that enables orbit controls after a specified timeout.
  */
-const SceneControls = (props: ControlsProps) => {
+const SceneControls = memo((props: ControlsProps) => {
 	const { controlsTimeout, ...rest } = {
 		...defaultControlsOptions,
 		...props
 	}
 
 	const mountedRef = useRef(false)
-	const [target, setTarget] = useState(new Vector3(0, 0, 0))
 	const [isControlsEnabled, setIsControlsEnabled] = useState(
 		controlsTimeout === 0
 	)
-	const { scene } = useThree()
 
 	useEffect(() => {
+		if (mountedRef.current) return
 		mountedRef.current = true
+
 		return () => {
 			mountedRef.current = false
 		}
 	}, [mountedRef])
-
-	useEffect(() => {
-		if (!mountedRef.current) return
-
-		const box = new Box3()
-		scene.traverse((object) => {
-			if (object instanceof Object3D) {
-				box.expandByObject(object)
-			}
-		})
-		const center = box.getCenter(new Vector3())
-
-		setTarget(center)
-	}, [scene])
 
 	useEffect(() => {
 		if (!controlsTimeout) return
@@ -65,7 +49,6 @@ const SceneControls = (props: ControlsProps) => {
 		return () => clearTimeout(timeoutId)
 	}, [controlsTimeout])
 
-	return <OrbitControls target={target} enabled={isControlsEnabled} {...rest} />
-}
-
+	return <OrbitControls enabled={isControlsEnabled} {...rest} />
+})
 export default SceneControls

@@ -19,6 +19,7 @@ import { EventData, EventHandler, EventTypes } from './types'
 const listeners = {} as Record<EventTypes, EventHandler<EventTypes>[]>
 const eventSystem = {
 	emit<T extends EventTypes>(event: T, data?: EventData[T]): void {
+		console.log('Emitting event:', event, data)
 		const handlers = listeners[event]
 		console.debug(`Event emitted: ${event}`, data)
 		if (handlers) {

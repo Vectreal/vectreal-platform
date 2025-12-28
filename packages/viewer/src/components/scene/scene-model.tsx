@@ -1,4 +1,3 @@
-import useSceneScreenshot from '@shared/components/hooks/use-scene-screenshot'
 import { memo, useEffect } from 'react'
 import { Object3D } from 'three'
 
@@ -17,30 +16,11 @@ interface ModelProps {
  * SceneModel component that renders a 3D model in a `Stage`.
  */
 const SceneModel = memo((props: ModelProps) => {
-	const { object, onScreenshot } = props
-
-	const captureScreenshot = useSceneScreenshot()
+	const { object } = props
 
 	useEffect(() => {
-		if (!object) return
-
-		object.traverse((child) => {
-			if (child instanceof Object3D) {
-				child.castShadow = true
-				child.receiveShadow = true
-			}
-		})
-	}, [object])
-
-	useEffect(() => {
-		const timeout = setTimeout(() => {
-			if (!onScreenshot) return
-
-			const url = captureScreenshot()
-			onScreenshot(url)
-		}, 1000)
-		return () => clearTimeout(timeout)
-	}, [captureScreenshot, onScreenshot])
+		// Potentially add logic here to handle onScreenshot after model is loaded
+	}, [object, props.onScreenshot])
 
 	return (
 		<group name="focus-target" dispose={null}>

@@ -8,6 +8,7 @@ import {
 	CardHeader,
 	CardTitle
 } from '@shared/components/ui/card'
+import { cn } from '@shared/utils'
 import { User } from '@supabase/supabase-js'
 
 import { AnimatePresence, motion } from 'framer-motion'
@@ -15,14 +16,14 @@ import { Check, Globe, Sparkle, Wrench } from 'lucide-react'
 import { Link, redirect } from 'react-router'
 
 import community from '../../assets/images/community.webp'
-import starsBackground from '../../assets/images/stars.webp'
 import studioDisplay from '../../assets/images/studio-display.jpg'
-import { BasicCard, Navigation, Section } from '../../components'
+import { BasicCard, FadeInView, Navigation, Section } from '../../components'
 import { createSupabaseClient } from '../../lib/supabase.server'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
 import { Route } from './+types/home-page'
 import FiletypeCarousel from './file-type-carousel'
+import HeroParallaxBg from './hero-parallax-bg'
 import HeroScene from './hero-scene'
 import MockShopSection from './mock-shop-section'
 
@@ -76,31 +77,34 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 			<Navigation user={user} />
 
 			<main>
-				<section className="relative mx-auto flex max-w-[1800px] overflow-hidden pl-8">
+				<section
+					className={cn(
+						'relative mx-auto flex overflow-hidden xl:max-w-7xl',
+						isMobile ? 'max-md:flex-col-reverse' : 'pl-8'
+					)}
+				>
 					{/* Stars background */}
-					<img
-						src={starsBackground}
-						alt="Stars background"
-						className="absolute inset-0 -z-10 h-full w-full object-cover opacity-75 mix-blend-lighten"
-					/>
+					<HeroParallaxBg />
 					{/* Raidal gradient over the whole image from bottom left to top right in the accent color */}
-					<div className="from-accent/10 to-accent/0 absolute inset-0 -z-5 bg-radial-[at_bottom_left]" />
+					<div className="from-accent/20 to-accent/0 absolute inset-0 -z-5 bg-radial-[at_bottom_left]" />
 					{/* side to side vignette gradient */}
 					<div className="from-background to-background absolute inset-0 -z-5 bg-gradient-to-r via-transparent" />
 
-					<div className="flex w-full flex-col gap-4 py-16 pb-20">
+					<div
+						className={cn(
+							'flex w-full flex-col gap-4 py-16 pb-20',
+							isMobile && '-mt-32 w-[unset] px-6'
+						)}
+					>
 						<h1 className="from-primary to-primary/50 bg-gradient-to-br bg-clip-text text-3xl leading-[.9] font-black text-transparent uppercase sm:text-4xl md:text-6xl lg:text-9xl">
 							<div>Upload</div>
 							<div>Prepare</div>
 							<div>Publish</div>
 						</h1>
 
-						<div className="z-10 flex flex-col items-start justify-center px-4">
+						<div className="z-10 flex flex-col items-start justify-center">
 							<p className="text-foreground/90 mt-4 text-lg mix-blend-multiply! md:text-xl">
-								You've spent hours crafting your 3D model.
-								<span className="hidden sm:inline">
-									<br />
-								</span>
+								You've spent hours crafting your 3D model.{' '}
 								<strong className="text-foreground font-medium">
 									Now it's time to share it
 								</strong>
@@ -135,7 +139,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 						</div>
 					</div>
 
-					<HeroScene />
+					<HeroScene vertical={isMobile} />
 				</section>
 
 				{/* gradient border effect */}
@@ -143,430 +147,458 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 
 				<div className="-mt-6 h-12">
 					<AnimatePresence>
-						{!isMobile && (
-							<motion.div
-								layout="size"
-								initial={{ opacity: 0, height: 0 }}
-								animate={{
-									opacity: 1,
-									height: 'auto',
-									transition: { delay: 0.5 }
-								}}
-								exit={{ opacity: 0, height: 0 }}
-								transition={{ duration: 0.5 }}
-								className="bg-background/20 mx-auto flex max-w-3xl justify-center gap-4 space-x-4 overflow-clip rounded-full border border-white/10 shadow-md backdrop-blur-lg"
-							>
-								{[
-									{ icon: Check, text: 'No registration' },
-									{ icon: Check, text: 'Instant publishing' },
-									{ icon: Check, text: 'Simple drag & drop' },
-									{ icon: Check, text: 'Share immediately' }
-								].map((item, i) => (
-									<div
-										key={i}
-										className="text-foreground/90 inline-flex items-center gap-2 py-3 text-sm"
-									>
-										<item.icon className="text-primary h-4 w-4" />
-										<span>{item.text}</span>
-										{i < 3 && (
-											<span className="text-foreground/30 ml-1 hidden sm:inline">
-												•
-											</span>
-										)}
-									</div>
-								))}
-							</motion.div>
-						)}
+						<motion.div
+							layout="size"
+							initial={{ opacity: 0, height: 0 }}
+							animate={{
+								opacity: 1,
+								height: 'auto',
+								transition: { delay: 0.5 }
+							}}
+							exit={{ opacity: 0, height: 0 }}
+							transition={{ duration: 0.5 }}
+							className="bg-background/20 mx-auto flex w-fit max-w-3xl justify-center gap-4 space-x-4 overflow-clip rounded-full border border-white/10 px-4 shadow-md backdrop-blur-lg"
+						>
+							{(isMobile
+								? [
+										{
+											icon: Check,
+											text: 'Try Vectreal Free'
+										}
+									]
+								: [
+										{ icon: Check, text: 'No registration' },
+										{ icon: Check, text: 'Instant publishing' },
+										{ icon: Check, text: 'Simple drag & drop' },
+										{ icon: Check, text: 'Share immediately' }
+									]
+							).map((item, i) => (
+								<div
+									key={i}
+									className="text-foreground/90 inline-flex items-center gap-2 py-3 text-sm"
+								>
+									<item.icon className="text-primary h-4 w-4" />
+									<span>{item.text}</span>
+									{i < 3 && (
+										<span className="text-foreground/30 ml-1 hidden sm:inline">
+											•
+										</span>
+									)}
+								</div>
+							))}
+						</motion.div>
 					</AnimatePresence>
 				</div>
 				{/* <div className="to-muted/25 border-muted-foreground/20 -mb-24 overflow-clip border-b bg-linear-to-b from-transparent px-8 py-12 backdrop-blur-2xl" /> */}
 
-				<Section className="my-24">
-					<div className="mb-16 flex flex-col gap-4 text-center">
-						<p>Whether you're testing concepts or powering an online store</p>
-						<h3>
-							Vectreal gives you{' '}
-							<span className="text-accent">everything you need</span> to get
-							from file to frame.
-						</h3>
-					</div>
-				</Section>
-				<Section className="my-24">
-					<BasicCard>
-						<CardHeader>
-							<span>
-								<h2 className="mb-0!">Turn Your Creations Into Experiences</h2>
-								<CardDescription>
-									No complex pipelines. No vendor lock-in. Just you, your
-									vision, and the power to show it off.
-								</CardDescription>
-							</span>
-						</CardHeader>
-						<CardContent>
-							<p>
-								Vectreal is your all-in-one platform for preparing, managing,
-								and publishing 3D models for the web.
-							</p>
-						</CardContent>
-					</BasicCard>
-				</Section>
-
-				<Section>
-					<div className="flex flex-col gap-4">
-						<div className="w-full">
-							<h2>How It Works</h2>
-							<p>Effortless from Start to Finish</p>
-						</div>
-
-						<div className="w-full">
-							<ol className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-								<li className="grow">
-									<BasicCard highlight className="h-full">
-										<CardHeader>
-											<CardTitle className="text-4xl font-light">
-												0<span className="text-accent pl-1 font-bold">1</span>
-											</CardTitle>
-											<CardDescription>Upload</CardDescription>
-										</CardHeader>
-										<CardContent>
-											<p>
-												Just drag & drop your model — glTF, FBX, OBJ, STL and
-												more.
-											</p>
-											<p>Our system gets to work instantly.</p>
-										</CardContent>
-									</BasicCard>
-								</li>
-								<li className="grow">
-									<BasicCard highlight className="h-full">
-										<CardHeader>
-											<CardTitle className="text-4xl font-light">
-												0<span className="text-accent pl-1 font-bold">2</span>
-											</CardTitle>
-											<CardDescription>Optimize & Customize</CardDescription>
-										</CardHeader>
-										<CardContent>
-											<p>
-												Choose quality settings from raw to low, tweak lighting,
-												and refine camera angles—all in an immersive editor.
-											</p>
-										</CardContent>
-									</BasicCard>
-								</li>
-
-								<li className="grow">
-									<BasicCard highlight className="h-full">
-										<CardHeader>
-											<CardTitle className="text-4xl font-light">
-												0<span className="text-accent pl-1 font-bold">3</span>
-											</CardTitle>
-											<CardDescription>Manage</CardDescription>
-										</CardHeader>
-										<CardContent>
-											<p>
-												Secure cloud storage with versioning, asset
-												organization, and instant previews.
-											</p>
-										</CardContent>
-									</BasicCard>
-								</li>
-								<li className="grow">
-									<BasicCard highlight className="h-full">
-										<CardHeader>
-											<CardTitle className="text-4xl font-light">
-												0<span className="text-accent pl-1 font-bold">4</span>
-											</CardTitle>
-											<CardDescription>Publish</CardDescription>
-										</CardHeader>
-										<CardContent>
-											<p>
-												Unlock a code snippet for direct embed into websites,
-												portfolios, eCommerce, blogs—you name it.
-											</p>
-										</CardContent>
-									</BasicCard>
-								</li>
-							</ol>
-						</div>
-					</div>
-				</Section>
-				<Section border>
-					<div className="flex flex-col gap-8">
-						<div className="flex flex-col gap-4 text-center">
-							<h3 className="w-full text-center">
-								Have a model? Dive in and show it off.
+				<FadeInView>
+					<Section className="my-24">
+						<div className="mb-16 flex flex-col gap-4 text-center">
+							<p>Whether you're testing concepts or powering an online store</p>
+							<h3>
+								Vectreal gives you{' '}
+								<span className="text-accent">everything you need</span> to get
+								from file to frame.
 							</h3>
-							<p className="mx-auto max-w-2xl">
-								From portfolios to interactive experiences, Vectreal gives your
-								3D models the platform they deserve in under 2 minutes.
-							</p>
 						</div>
-
-						<div className="flex flex-col gap-4 md:gap-6">
-							<div className="flex flex-col-reverse justify-between gap-4 md:grid md:grid-cols-2">
-								<div className="flex flex-col gap-4">
-									<BasicCard>
-										<CardHeader>
-											<CardTitle className="text-xl font-medium">
-												Artists & Designers
-											</CardTitle>
-										</CardHeader>
-										<CardContent>
-											<p>
-												Showcase work with customizable environments that make
-												your models shine.
-											</p>
-										</CardContent>
-									</BasicCard>
-									<BasicCard>
-										<CardHeader>
-											<CardTitle className="text-xl font-medium">
-												Developers
-											</CardTitle>
-										</CardHeader>
-										<CardContent>
-											<p>
-												Integrate 3D content with minimal code and maximum
-												performance.
-											</p>
-										</CardContent>
-									</BasicCard>
-									<BasicCard>
-										<CardHeader>
-											<CardTitle className="text-xl font-medium">
-												Businesses
-											</CardTitle>
-										</CardHeader>
-										<CardContent>
-											<p>
-												Transform catalogs with interactive 3D models that boost
-												engagement.
-											</p>
-										</CardContent>
-									</BasicCard>
-								</div>
-								<div className="h-full grow overflow-hidden rounded-lg max-md:h-[400px]">
-									<img
-										src={studioDisplay}
-										alt="Studio display"
-										className="h-full w-full overflow-clip object-cover shadow-2xl"
-									/>
-								</div>
-							</div>
-
-							<div className="flex w-full flex-col gap-4 px-2 md:items-end">
-								<p className="mb-2">
-									Ready to transform your 3D content experience?
-								</p>
-
-								<Link to="/publisher">
-									<Button>
-										<Sparkle className="mr-2" />
-										Launch Your First Model
-									</Button>
-								</Link>
-							</div>
-						</div>
-					</div>
-				</Section>
-
-				<MockShopSection />
-
-				<Section>
-					<div className="flex flex-col gap-8">
-						<div className="w-full">
-							<h2>3D Content Drives Customer Engagement</h2>
-							<p>
-								Industry data proves interactive 3D models deliver measurable
-								business results
-							</p>
-						</div>
-
-						<div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-							<BasicCard>
-								<CardHeader>
-									<CardTitle className="text-5xl font-bold">
-										60<span className="text-accent font-light">%</span>
-									</CardTitle>
-								</CardHeader>
-								<CardContent className="flex grow flex-col justify-between">
-									<p className="mb-4">
-										higher purchase intent when products are showcased with
-										interactive 3D or AR experiences
-									</p>
-									<div className="text-muted-foreground/75 flex items-center text-sm">
-										<span>AP News</span>
-										<Link
-											viewTransition
-											to="https://apnews.com/press-release/globe-newswire/technology-business-lifestyle-79fe640885f900736beed0fe33f7d972"
-											className="ml-auto"
-											target="_blank"
-											rel="noreferrer"
-										>
-											Read more →
-										</Link>
-									</div>
-								</CardContent>
-							</BasicCard>
-
-							<BasicCard>
-								<CardHeader>
-									<CardTitle className="text-5xl font-bold">
-										44<span className="text-accent font-light">%</span>
-									</CardTitle>
-								</CardHeader>
-								<CardContent className="flex grow flex-col justify-between">
-									<p className="mb-4">
-										more products added to cart after customers engage with
-										interactive 3D product visualizations
-									</p>
-									<div className="text-muted-foreground/75 flex items-center text-sm">
-										<span>Shopify</span>
-										<Link
-											viewTransition
-											to="https://www.shopify.com/ie/case-studies/rebecca-minkoff"
-											className="ml-auto"
-											target="_blank"
-											rel="noreferrer"
-										>
-											Read more →
-										</Link>
-									</div>
-								</CardContent>
-							</BasicCard>
-
-							<BasicCard>
-								<CardHeader>
-									<CardTitle className="text-5xl font-bold">
-										94<span className="text-accent font-light">%</span>
-									</CardTitle>
-								</CardHeader>
-								<CardContent className="flex grow flex-col justify-between">
-									<p className="mb-4">
-										increase in conversion rates for products enhanced with
-										augmented reality features
-									</p>
-									<div className="text-muted-foreground/75 flex items-center text-sm">
-										<span>Harvard Business Review</span>
-										<Link
-											viewTransition
-											to="https://hbr.org/2020/10/how-ar-is-redefining-retail-in-the-pandemic"
-											className="ml-auto"
-											target="_blank"
-											rel="noreferrer"
-										>
-											Read more →
-										</Link>
-									</div>
-								</CardContent>
-							</BasicCard>
-						</div>
-					</div>
-				</Section>
-
-				<Section>
-					<div className="flex flex-col gap-4">
-						<div className="w-full">
-							<h2>Ready When You Are</h2>
-							<p>From Vision to Virtual in Minutes</p>
-							<p>Your 3D Vision Today - No barriers, no waiting</p>
-						</div>
+					</Section>
+				</FadeInView>
+				<FadeInView>
+					<Section className="my-24">
 						<BasicCard>
-							<CardContent className="flex w-full flex-col gap-4 md:flex-row">
-								<p className="w-full text-xl">
-									Your creative journey is just 120 seconds away.
+							<CardHeader>
+								<span>
+									<h2 className="mb-0!">
+										Turn Your Creations Into Experiences
+									</h2>
+									<CardDescription>
+										No complex pipelines. No vendor lock-in. Just you, your
+										vision, and the power to show it off.
+									</CardDescription>
+								</span>
+							</CardHeader>
+							<CardContent>
+								<p>
+									Vectreal is your all-in-one platform for preparing, managing,
+									and publishing 3D models for the web.
 								</p>
-								<div className="flex w-full flex-col gap-2 md:items-end">
-									<ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
-										<li className="flex items-center gap-2">
-											<Check size={16} className="text-primary" /> No
-											registration
-										</li>
-										<li className="flex items-center gap-2">
-											<Check size={16} className="text-primary" /> Instant
-											publishing
-										</li>
-										<li className="flex items-center gap-2">
-											<Check size={16} className="text-primary" /> Simple drag &
-											drop
-										</li>
-										<li className="flex items-center gap-2">
-											<Check size={16} className="text-primary" /> Share
-											immediately
-										</li>
-									</ul>
+							</CardContent>
+						</BasicCard>
+					</Section>
+				</FadeInView>
+				<FadeInView>
+					<Section>
+						<div className="flex flex-col gap-4">
+							<div className="w-full">
+								<h2>How It Works</h2>
+								<p>Effortless from Start to Finish</p>
+							</div>
+
+							<div className="w-full">
+								<ol className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+									<li className="grow">
+										<BasicCard highlight className="h-full">
+											<CardHeader>
+												<CardTitle className="text-4xl font-light">
+													0<span className="text-accent pl-1 font-bold">1</span>
+												</CardTitle>
+												<CardDescription>Upload</CardDescription>
+											</CardHeader>
+											<CardContent>
+												<p>
+													Just drag & drop your model — glTF, FBX, OBJ, STL and
+													more.
+												</p>
+												<p>Our system gets to work instantly.</p>
+											</CardContent>
+										</BasicCard>
+									</li>
+									<li className="grow">
+										<BasicCard highlight className="h-full">
+											<CardHeader>
+												<CardTitle className="text-4xl font-light">
+													0<span className="text-accent pl-1 font-bold">2</span>
+												</CardTitle>
+												<CardDescription>Optimize & Customize</CardDescription>
+											</CardHeader>
+											<CardContent>
+												<p>
+													Choose quality settings from raw to low, tweak
+													lighting, and refine camera angles—all in an immersive
+													editor.
+												</p>
+											</CardContent>
+										</BasicCard>
+									</li>
+
+									<li className="grow">
+										<BasicCard highlight className="h-full">
+											<CardHeader>
+												<CardTitle className="text-4xl font-light">
+													0<span className="text-accent pl-1 font-bold">3</span>
+												</CardTitle>
+												<CardDescription>Manage</CardDescription>
+											</CardHeader>
+											<CardContent>
+												<p>
+													Secure cloud storage with versioning, asset
+													organization, and instant previews.
+												</p>
+											</CardContent>
+										</BasicCard>
+									</li>
+									<li className="grow">
+										<BasicCard highlight className="h-full">
+											<CardHeader>
+												<CardTitle className="text-4xl font-light">
+													0<span className="text-accent pl-1 font-bold">4</span>
+												</CardTitle>
+												<CardDescription>Publish</CardDescription>
+											</CardHeader>
+											<CardContent>
+												<p>
+													Unlock a code snippet for direct embed into websites,
+													portfolios, eCommerce, blogs—you name it.
+												</p>
+											</CardContent>
+										</BasicCard>
+									</li>
+								</ol>
+							</div>
+						</div>
+					</Section>
+				</FadeInView>
+				<FadeInView>
+					<Section border>
+						<div className="flex flex-col gap-8">
+							<div className="flex flex-col gap-4 text-center">
+								<h3 className="w-full text-center">
+									Have a model? Dive in and show it off.
+								</h3>
+								<p className="mx-auto max-w-2xl">
+									From portfolios to interactive experiences, Vectreal gives
+									your 3D models the platform they deserve in under 2 minutes.
+								</p>
+							</div>
+
+							<div className="flex flex-col gap-4 md:gap-6">
+								<div className="flex flex-col-reverse justify-between gap-4 md:grid md:grid-cols-2">
+									<div className="flex flex-col gap-4">
+										<BasicCard>
+											<CardHeader>
+												<CardTitle className="text-xl font-medium">
+													Artists & Designers
+												</CardTitle>
+											</CardHeader>
+											<CardContent>
+												<p>
+													Showcase work with customizable environments that make
+													your models shine.
+												</p>
+											</CardContent>
+										</BasicCard>
+										<BasicCard>
+											<CardHeader>
+												<CardTitle className="text-xl font-medium">
+													Developers
+												</CardTitle>
+											</CardHeader>
+											<CardContent>
+												<p>
+													Integrate 3D content with minimal code and maximum
+													performance.
+												</p>
+											</CardContent>
+										</BasicCard>
+										<BasicCard>
+											<CardHeader>
+												<CardTitle className="text-xl font-medium">
+													Businesses
+												</CardTitle>
+											</CardHeader>
+											<CardContent>
+												<p>
+													Transform catalogs with interactive 3D models that
+													boost engagement.
+												</p>
+											</CardContent>
+										</BasicCard>
+									</div>
+									<div className="h-full grow overflow-hidden rounded-lg max-md:h-[400px]">
+										<img
+											src={studioDisplay}
+											alt="Studio display"
+											className="h-full w-full overflow-clip object-cover shadow-2xl"
+										/>
+									</div>
+								</div>
+
+								<div className="flex w-full flex-col gap-4 px-2 md:items-end">
+									<p className="mb-2">
+										Ready to transform your 3D content experience?
+									</p>
+
 									<Link to="/publisher">
-										<Button className="mt-2">
+										<Button>
 											<Sparkle className="mr-2" />
 											Launch Your First Model
 										</Button>
 									</Link>
 								</div>
-							</CardContent>
-						</BasicCard>
-					</div>
-				</Section>
-
-				<FiletypeCarousel />
-
-				<Section border>
-					<div className="flex flex-col gap-4">
-						<span>
-							<h2>Powered by Community</h2>
-							<p>Vectreal is built by and for the 3D community.</p>
-						</span>
-						<div className="mt-4 flex w-full flex-col-reverse gap-4 md:grid md:grid-cols-2">
-							<ul className="flex flex-col gap-4">
-								<li className="bg-muted grid grid-cols-[16px_auto] gap-4 rounded-xl p-4">
-									<Check className="mt-1 inline" size={16} /> 100% open-source
-								</li>
-								<li className="bg-muted grid grid-cols-[16px_auto] gap-4 rounded-xl p-4">
-									<Wrench className="mt-1 inline" size={16} /> Built by
-									developers, artists, and dreamers
-								</li>
-								<li className="bg-muted grid grid-cols-[16px_auto] gap-4 rounded-xl p-4">
-									<Globe className="mt-1 inline" size={16} /> Global
-									contributors, shared knowledge, real collaboration
-								</li>
-								<li className="mt-auto flex flex-col gap-2">
-									<p>
-										Join the community that’s reimagining how 3D lives on the
-										web.
-									</p>
-									<Button className="mt-2">
-										<GithubLogo /> Meet the Community
-									</Button>
-								</li>
-							</ul>
-							<div className="h-full max-h-[400px] grow overflow-hidden rounded-lg max-md:max-h-[300px]">
-								<img
-									src={community}
-									alt="Studio display"
-									className="h-full w-full overflow-clip object-cover shadow-2xl"
-								/>
 							</div>
 						</div>
-					</div>
-				</Section>
+					</Section>
+				</FadeInView>
 
-				<Section>
-					<div className="flex flex-col gap-4">
-						<div className="w-full">
-							<h2>Resources & Learning</h2>
-							<p>Want to dive deeper?</p>
-						</div>
+				<FadeInView>
+					<MockShopSection />
+				</FadeInView>
 
-						<Card className="bg-muted/50 flex w-full flex-col gap-4 rounded-xl p-4 md:p-6">
-							<CardContent className="p-0">
-								<p className="mb-4">
-									We've got guides, best practices, case studies, and tutorials
-									to help you go from beginner to pro.
+				<FadeInView>
+					<Section>
+						<div className="flex flex-col gap-8">
+							<div className="w-full">
+								<h2>3D Content Drives Customer Engagement</h2>
+								<p>
+									Industry data proves interactive 3D models deliver measurable
+									business results
 								</p>
-								<Button className="w-fit">Explore our Knowledge Hub</Button>
-							</CardContent>
-						</Card>
-					</div>
-				</Section>
+							</div>
+
+							<div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+								<BasicCard>
+									<CardHeader>
+										<CardTitle className="text-5xl font-bold">
+											60<span className="text-accent font-light">%</span>
+										</CardTitle>
+									</CardHeader>
+									<CardContent className="flex grow flex-col justify-between">
+										<p className="mb-4">
+											higher purchase intent when products are showcased with
+											interactive 3D or AR experiences
+										</p>
+										<div className="text-muted-foreground/75 flex items-center text-sm">
+											<span>AP News</span>
+											<Link
+												viewTransition
+												to="https://apnews.com/press-release/globe-newswire/technology-business-lifestyle-79fe640885f900736beed0fe33f7d972"
+												className="ml-auto"
+												target="_blank"
+												rel="noreferrer"
+											>
+												Read more →
+											</Link>
+										</div>
+									</CardContent>
+								</BasicCard>
+
+								<BasicCard>
+									<CardHeader>
+										<CardTitle className="text-5xl font-bold">
+											44<span className="text-accent font-light">%</span>
+										</CardTitle>
+									</CardHeader>
+									<CardContent className="flex grow flex-col justify-between">
+										<p className="mb-4">
+											more products added to cart after customers engage with
+											interactive 3D product visualizations
+										</p>
+										<div className="text-muted-foreground/75 flex items-center text-sm">
+											<span>Shopify</span>
+											<Link
+												viewTransition
+												to="https://www.shopify.com/ie/case-studies/rebecca-minkoff"
+												className="ml-auto"
+												target="_blank"
+												rel="noreferrer"
+											>
+												Read more →
+											</Link>
+										</div>
+									</CardContent>
+								</BasicCard>
+
+								<BasicCard>
+									<CardHeader>
+										<CardTitle className="text-5xl font-bold">
+											94<span className="text-accent font-light">%</span>
+										</CardTitle>
+									</CardHeader>
+									<CardContent className="flex grow flex-col justify-between">
+										<p className="mb-4">
+											increase in conversion rates for products enhanced with
+											augmented reality features
+										</p>
+										<div className="text-muted-foreground/75 flex items-center text-sm">
+											<span>Harvard Business Review</span>
+											<Link
+												viewTransition
+												to="https://hbr.org/2020/10/how-ar-is-redefining-retail-in-the-pandemic"
+												className="ml-auto"
+												target="_blank"
+												rel="noreferrer"
+											>
+												Read more →
+											</Link>
+										</div>
+									</CardContent>
+								</BasicCard>
+							</div>
+						</div>
+					</Section>
+				</FadeInView>
+
+				<FadeInView>
+					<Section>
+						<div className="flex flex-col gap-4">
+							<div className="w-full">
+								<h2>Ready When You Are</h2>
+								<p>From Vision to Virtual in Minutes</p>
+								<p>Your 3D Vision Today - No barriers, no waiting</p>
+							</div>
+							<BasicCard>
+								<CardContent className="flex w-full flex-col gap-4 md:flex-row">
+									<p className="w-full text-xl">
+										Your creative journey is just 120 seconds away.
+									</p>
+									<div className="flex w-full flex-col gap-2 md:items-end">
+										<ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
+											<li className="flex items-center gap-2">
+												<Check size={16} className="text-primary" /> No
+												registration
+											</li>
+											<li className="flex items-center gap-2">
+												<Check size={16} className="text-primary" /> Instant
+												publishing
+											</li>
+											<li className="flex items-center gap-2">
+												<Check size={16} className="text-primary" /> Simple drag
+												& drop
+											</li>
+											<li className="flex items-center gap-2">
+												<Check size={16} className="text-primary" /> Share
+												immediately
+											</li>
+										</ul>
+										<Link to="/publisher">
+											<Button className="mt-2">
+												<Sparkle className="mr-2" />
+												Launch Your First Model
+											</Button>
+										</Link>
+									</div>
+								</CardContent>
+							</BasicCard>
+						</div>
+					</Section>
+				</FadeInView>
+
+				<FadeInView>
+					<FiletypeCarousel />
+				</FadeInView>
+
+				<FadeInView>
+					<Section border>
+						<div className="flex flex-col gap-4">
+							<span>
+								<h2>Powered by Community</h2>
+								<p>Vectreal is built by and for the 3D community.</p>
+							</span>
+							<div className="mt-4 flex w-full flex-col-reverse gap-4 md:grid md:grid-cols-2">
+								<ul className="flex flex-col gap-4">
+									<li className="bg-muted grid grid-cols-[16px_auto] gap-4 rounded-xl p-4">
+										<Check className="mt-1 inline" size={16} /> 100% open-source
+									</li>
+									<li className="bg-muted grid grid-cols-[16px_auto] gap-4 rounded-xl p-4">
+										<Wrench className="mt-1 inline" size={16} /> Built by
+										developers, artists, and dreamers
+									</li>
+									<li className="bg-muted grid grid-cols-[16px_auto] gap-4 rounded-xl p-4">
+										<Globe className="mt-1 inline" size={16} /> Global
+										contributors, shared knowledge, real collaboration
+									</li>
+									<li className="mt-auto flex flex-col gap-2">
+										<p>
+											Join the community that’s reimagining how 3D lives on the
+											web.
+										</p>
+										<Button className="mt-2">
+											<GithubLogo /> Meet the Community
+										</Button>
+									</li>
+								</ul>
+								<div className="h-full max-h-[400px] grow overflow-hidden rounded-lg max-md:max-h-[300px]">
+									<img
+										src={community}
+										alt="Studio display"
+										className="h-full w-full overflow-clip object-cover shadow-2xl"
+									/>
+								</div>
+							</div>
+						</div>
+					</Section>
+				</FadeInView>
+
+				<FadeInView>
+					<Section>
+						<div className="flex flex-col gap-4">
+							<div className="w-full">
+								<h2>Resources & Learning</h2>
+								<p>Want to dive deeper?</p>
+							</div>
+
+							<Card className="bg-muted/50 flex w-full flex-col gap-4 rounded-xl p-4 md:p-6">
+								<CardContent className="p-0">
+									<p className="mb-4">
+										We've got guides, best practices, case studies, and
+										tutorials to help you go from beginner to pro.
+									</p>
+									<Button className="w-fit">Explore our Knowledge Hub</Button>
+								</CardContent>
+							</Card>
+						</div>
+					</Section>
+				</FadeInView>
 			</main>
 		</>
 	)

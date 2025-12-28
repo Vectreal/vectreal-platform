@@ -3,27 +3,18 @@ import {
 	ContactShadows,
 	RandomizedLight
 } from '@react-three/drei'
-import { BaseShadowsProps, ShadowsProps } from '@vctrl/core'
+import {
+	AccumulativeShadowsProps,
+	ContactShadowProps,
+	ShadowsProps
+} from '@vctrl/core'
 import { memo } from 'react'
 
-export const defaultShadowsOptions: ShadowsProps | BaseShadowsProps = {
-	type: 'accumulative',
-	temporal: true,
-	frames: 100,
-	alphaTest: 0.8,
-	scale: 5,
-	colorBlend: 2,
+export const defaultShadowsOptions: ShadowsProps = {
+	type: 'contact',
 	color: 'black',
-	toneMapped: true,
 	opacity: 1,
-	light: {
-		intensity: Number(Math.PI.toFixed(2)),
-		amount: 10,
-		radius: 25,
-		ambient: 0.75,
-		position: [5, 5, 2.5],
-		bias: 0.001
-	}
+	blur: 2.5
 }
 
 /**
@@ -34,12 +25,12 @@ export const defaultShadowsOptions: ShadowsProps | BaseShadowsProps = {
 const SceneShadows = memo((props?: ShadowsProps | object) => {
 	const { ...shadowOptions } = { ...defaultShadowsOptions, ...props }
 
-	return shadowOptions.type === 'accumulative' ? (
-		<AccumulativeShadows {...shadowOptions}>
+	return shadowOptions.type === 'contact' ? (
+		<ContactShadows {...(shadowOptions as ContactShadowProps)} />
+	) : shadowOptions.type === 'accumulative' ? (
+		<AccumulativeShadows {...(shadowOptions as AccumulativeShadowsProps)}>
 			<RandomizedLight {...shadowOptions.light} />
 		</AccumulativeShadows>
-	) : shadowOptions.type === 'contact' ? (
-		<ContactShadows {...shadowOptions} />
 	) : null
 })
 

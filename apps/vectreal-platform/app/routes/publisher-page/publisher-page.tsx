@@ -7,7 +7,7 @@ import { AnimatePresence } from 'framer-motion'
 import { motion } from 'framer-motion'
 import { useAtom, useAtomValue } from 'jotai/react'
 import { RESET } from 'jotai/utils'
-import { Suspense, useCallback, useEffect, useState } from 'react'
+import { memo, Suspense, useCallback, useEffect, useState } from 'react'
 
 import { processAtom } from '../../lib/stores/publisher-config-store'
 import {
@@ -35,7 +35,7 @@ const LOADING_MESSAGES = [
 	'Calibrating the viewer...'
 ]
 
-const LoadingScreen = () => {
+const LoadingScreen = memo(() => {
 	const [loadingMessage, setLoadingMessage] = useState('Initializing...')
 
 	useEffect(() => {
@@ -73,7 +73,7 @@ const LoadingScreen = () => {
 			</AnimatePresence>
 		</SpinnerWrapper>
 	)
-}
+})
 
 const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 	const isMobile = useIsMobile(loaderData.isMobile)
@@ -121,8 +121,8 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 								envOptions={env}
 								controlsOptions={controls}
 								shadowsOptions={shadows}
-								onScreenshot={handleScreenshot}
 								loader={<LoadingScreen />}
+								onScreenshot={handleScreenshot}
 							/>
 						</motion.div>
 					) : (

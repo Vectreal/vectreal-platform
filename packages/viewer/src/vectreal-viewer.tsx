@@ -14,7 +14,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { Center } from '@react-three/drei'
+import { Bounds, Center } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
@@ -181,24 +181,25 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 				<Suspense fallback={null}>
 					{(model || children) && (
 						<>
+							<SceneGrid {...gridOptions} />
+							<SceneShadows {...shadowsOptions} />
+							<SceneEnvironment {...envOptions} />
 							{/* <Perf /> */}
 							{/* <ScenePostProcessing /> */}
 							<SceneControls {...controlsOptions} />
-							<SceneEnvironment {...envOptions} />
-							<SceneGrid {...gridOptions} />
-							<SceneShadows {...shadowsOptions} />
 							{/* <SceneToneMapping
 								mapping={toneMappingOptions?.mapping}
 								exposure={toneMappingOptions?.exposure}
 							/> */}
-
-							<Center top>
-								{model ? (
-									<SceneModel onScreenshot={onScreenshot} object={model} />
-								) : (
-									children
-								)}
-							</Center>
+							<Bounds clip fit margin={1.2} maxDuration={0}>
+								<Center top>
+									{model ? (
+										<SceneModel onScreenshot={onScreenshot} object={model} />
+									) : (
+										children
+									)}
+								</Center>
+							</Bounds>
 						</>
 					)}
 				</Suspense>

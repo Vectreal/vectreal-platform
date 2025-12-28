@@ -3,7 +3,7 @@ import { User } from '@supabase/supabase-js'
 import { ModelProvider, useModelContext } from '@vctrl/hooks/use-load-model'
 import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
 import { Provider, useAtom, useAtomValue } from 'jotai/react'
-import { PropsWithChildren, useCallback } from 'react'
+import { useCallback } from 'react'
 import { Outlet } from 'react-router'
 
 import { Navigation } from '../../components'
@@ -38,15 +38,14 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	return loaderData
 }
 
-interface AnimatedLayoutProps extends PropsWithChildren {
+interface OverlayControlsProps {
 	user: User | null
 	sceneId: string | null
 }
 
-const AnimatedLayout = ({ children, user, sceneId }: AnimatedLayoutProps) => {
+const OverlayControls = ({ user, sceneId }: OverlayControlsProps) => {
 	const { file } = useModelContext()
-	const processState = useAtomValue(processAtom)
-	const { step, hasUnsavedChanges } = processState
+	const { step, hasUnsavedChanges } = useAtomValue(processAtom)
 
 	// Centralized scene loader - single source of truth (must be inside ModelProvider)
 	// This hook manages scene loading/saving but doesn't return state available via atoms
@@ -57,25 +56,20 @@ const AnimatedLayout = ({ children, user, sceneId }: AnimatedLayoutProps) => {
 
 	const isUploadStep = !file?.model && step === 'uploading'
 
-	return (
-		<main className="flex h-screen w-full flex-col overflow-hidden">
-			{isUploadStep ? (
-				<Navigation user={user} />
-			) : (
-				<>
-					<Stepper />
-					<PublisherSidebar user={user} />
-					<SaveButton
-						sceneId={sceneId}
-						userId={user?.id}
-						saveSceneSettings={saveSceneSettings}
-						hasUnsavedChanges={hasUnsavedChanges}
-					/>
-					<PublisherButtons />
-				</>
-			)}
-			{children}
-		</main>
+	return isUploadStep ? (
+		<Navigation user={user} />
+	) : (
+		<>
+			<Stepper />
+			<PublisherSidebar user={user} />
+			<SaveButton
+				sceneId={sceneId}
+				userId={user?.id}
+				saveSceneSettings={saveSceneSettings}
+				hasUnsavedChanges={hasUnsavedChanges}
+			/>
+			<PublisherButtons />
+		</>
 	)
 }
 
@@ -99,9 +93,10 @@ const Layout = ({ loaderData }: Route.ComponentProps) => {
 			<SidebarProvider open={showSidebar} onOpenChange={handleOpenChange}>
 				<Provider store={publisherConfigStore}>
 					<Provider store={sceneSettingsStore}>
-						<AnimatedLayout user={user} sceneId={sceneId}>
+						<main className="flex h-screen w-full flex-col overflow-hidden">
+							<OverlayControls user={user} sceneId={sceneId} />
 							<Outlet />
-						</AnimatedLayout>
+						</main>
 					</Provider>
 				</Provider>
 			</SidebarProvider>

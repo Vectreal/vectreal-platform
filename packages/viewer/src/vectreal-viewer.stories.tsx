@@ -5,7 +5,6 @@ import type { TypeWithDeepControls } from 'storybook-addon-deep-controls'
 
 import { defaultInfoPopoverProps } from './components'
 import {
-	defaultCameraOptions,
 	defaultControlsOptions,
 	defaultEnvOptions,
 	defaultGridOptions
@@ -230,7 +229,6 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
 	args: {
-		cameraOptions: defaultCameraOptions,
 		controlsOptions: { ...defaultControlsOptions, autoRotate: false },
 		envOptions: defaultEnvOptions,
 		gridOptions: defaultGridOptions,

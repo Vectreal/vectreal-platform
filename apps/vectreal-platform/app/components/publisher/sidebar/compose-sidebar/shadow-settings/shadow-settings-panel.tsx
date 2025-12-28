@@ -7,7 +7,7 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
-import { BaseShadowsProps, ShadowsProps } from '@vctrl/core'
+import { ShadowTypePropBase, ShadowsProps } from '@vctrl/core'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom } from 'jotai'
 
@@ -37,7 +37,7 @@ const ShadowSettingsPanel = () => {
 				({
 					...prev,
 					type: value
-				}) as BaseShadowsProps
+				}) as ShadowTypePropBase
 		)
 	}
 
@@ -56,7 +56,7 @@ const ShadowSettingsPanel = () => {
 					...prev,
 					type: 'accumulative',
 					light: { [key]: value }
-				} as BaseShadowsProps
+				} as ShadowTypePropBase
 			}
 
 			return {
@@ -67,7 +67,7 @@ const ShadowSettingsPanel = () => {
 						: {}),
 					[key]: value
 				}
-			} as BaseShadowsProps
+			} as ShadowTypePropBase
 		})
 	}
 
