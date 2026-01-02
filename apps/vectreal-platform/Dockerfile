@@ -2,12 +2,15 @@
 
 # Base image with Node.js
 FROM node:22-alpine AS base
-RUN corepack enable && corepack prepare pnpm@latest --activate
+WORKDIR /app
 ENV PNPM_HOME=/usr/local/bin
 
 # Dependencies stage
 FROM base AS deps
 WORKDIR /app
+
+# Enable corepack and prepare pnpm
+RUN corepack enable
 
 # Copy package files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -19,7 +22,8 @@ COPY shared/components/package.json ./shared/components/
 COPY shared/utils/package.json ./shared/utils/
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile --prod=false
+RUN corepack prepare pnpm@10.27.0 --activate && \
+    pnpm install --frozen-lockfile --prod=false
 
 # Builder stage
 FROM base AS builder
