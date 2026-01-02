@@ -51,15 +51,21 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8080
 
-# Copy built application
-COPY --from=builder /app/apps/vectreal-platform/build ./build
-COPY --from=builder /app/apps/vectreal-platform/package.json ./package.json
+# Copy package files first
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=builder /app/apps/vectreal-platform/package.json ./apps/vectreal-platform/package.json
 
-# Install only production dependencies for the runner
-RUN pnpm install --prod --frozen-lockfile || \
-    (npm install --omit=dev @react-router/node@^7.6.3 @react-router/serve@^7.6.3 react@^19.0.0 react-dom@^19.0.0)
+# Copy built application
+COPY --from=builder /app/apps/vectreal-platform/build ./apps/vectreal-platform/build
+
+# Enable corepack and install production dependencies
+RUN corepack enable && \
+    corepack prepare pnpm@10.27.0 --activate && \
+    pnpm install --prod --frozen-lockfile
 
 EXPOSE 8080
 
 # Start the application
-CMD ["node", "--no-warnings", "./build/server/index.js"]
+CMD ["node", "--no-warnings", "./apps/vectreal-platform/build/server/index.js"]
