@@ -31,12 +31,15 @@ jobs:
       - name: ⎔ Setup node
         uses: actions/setup-node@v4
         with:
-          cache: npm
-          cache-dependency-path: ./package.json
-          node-version: 20
+          node-version: 22
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - name: 📥 Install deps
-        run: npm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build Storybook
         run: npx nx build-storybook vctrl/viewer

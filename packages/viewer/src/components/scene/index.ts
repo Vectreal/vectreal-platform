@@ -13,3 +13,7 @@ export {
 	default as SceneShadows,
 	defaultShadowsOptions as defaultShadowOptions
 } from './scene-shadows'
+export {
+	default as SceneCamera,
+	defaultCameraOptions
+} from './scene-camera'

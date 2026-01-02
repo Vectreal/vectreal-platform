@@ -40,6 +40,22 @@
 					"mode": "production"
 				}
 			}
+		},
+		"nx-release-publish": {
+			"dependsOn": ["copy-md"],
+			"options": {
+				"packageRoot": "dist/packages/core"
+			}
+		},
+		"copy-md": {
+			"dependsOn": ["build"],
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"commands": [
+					"rsync -rat packages/core/*.md dist/packages/core/"
+				]
+			}
 		}
 	}
 }

@@ -19,10 +19,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Lint
         run: npx nx affected --target=lint --base=origin/${{ github.event.pull_request.base.ref }} --head=origin/${{ github.event.pull_request.head.ref }}
+
+      - name: Build
+        run: npx nx affected --target=build --base=origin/${{ github.event.pull_request.base.ref }} --head=origin/${{ github.event.pull_request.head.ref }}
