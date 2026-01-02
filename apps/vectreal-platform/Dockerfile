@@ -2,11 +2,13 @@
 
 # Base image with Node.js
 FROM node:22-alpine AS base
+ARG PNPM_VERSION=10.27.0
 WORKDIR /app
 ENV PNPM_HOME=/usr/local/bin
 
 # Dependencies stage
 FROM base AS deps
+ARG PNPM_VERSION
 WORKDIR /app
 
 # Enable corepack and prepare pnpm
@@ -22,7 +24,7 @@ COPY shared/components/package.json ./shared/components/
 COPY shared/utils/package.json ./shared/utils/
 
 # Install dependencies
-RUN corepack prepare pnpm@10.27.0 --activate && \
+RUN corepack prepare pnpm@${PNPM_VERSION} --activate && \
     pnpm install --frozen-lockfile --prod=false
 
 # Builder stage
@@ -46,6 +48,7 @@ RUN npx nx build vectreal-platform --prod
 
 # Runner stage
 FROM base AS runner
+ARG PNPM_VERSION
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -62,7 +65,7 @@ COPY --from=builder /app/apps/vectreal-platform/build ./apps/vectreal-platform/b
 
 # Enable corepack and install production dependencies
 RUN corepack enable && \
-    corepack prepare pnpm@10.27.0 --activate && \
+    corepack prepare pnpm@${PNPM_VERSION} --activate && \
     pnpm install --prod --frozen-lockfile
 
 EXPOSE 8080
