@@ -12,6 +12,8 @@ on:
       - 'shared/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'nx.json'
+      - 'tsconfig.base.json'
       - '.github/workflows/deploy-platform.yaml'
 
 concurrency:
