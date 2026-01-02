@@ -53,7 +53,7 @@
 			"outputs": [],
 			"options": {
 				"commands": [
-					"cp packages/core/*.md dist/packages/core/ || true"
+					"rsync -rat packages/core/*.md dist/packages/core/"
 				]
 			}
 		}

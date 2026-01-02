@@ -6,7 +6,9 @@ on:
       - main
     paths:
       - 'apps/vectreal-platform/**'
-      - 'packages/**'
+      - 'packages/core/**'
+      - 'packages/hooks/**'
+      - 'packages/viewer/**'
       - 'shared/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
