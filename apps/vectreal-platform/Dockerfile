@@ -29,6 +29,7 @@ RUN corepack prepare pnpm@${PNPM_VERSION} --activate && \
 
 # Builder stage
 FROM base AS builder
+ARG PNPM_VERSION=10.27.0
 WORKDIR /app
 
 # Copy dependencies
