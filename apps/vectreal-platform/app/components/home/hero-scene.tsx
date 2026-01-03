@@ -1,5 +1,4 @@
-import { Stage, useGLTF } from '@react-three/drei'
-
+import { useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { EffectComposer, ToneMapping } from '@react-three/postprocessing'
 import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
@@ -17,9 +16,10 @@ type ReactState<T> = [T, React.Dispatch<React.SetStateAction<T>>]
 interface ModelProps {
 	url: string
 	loadedState: ReactState<boolean>
+	vertical?: boolean
 }
 
-const Model = ({ url, loadedState }: ModelProps) => {
+const Model = ({ url, loadedState, vertical }: ModelProps) => {
 	const [isLoaded, setIsLoaded] = loadedState
 	const { scene } = useGLTF(url)
 
@@ -39,18 +39,16 @@ const Model = ({ url, loadedState }: ModelProps) => {
 
 	return (
 		scene && (
-			<group rotation={[0, 0, -Math.PI / 4]}>
+			<group rotation={[0, 0, -Math.PI / (vertical ? 2 : 4)]}>
 				<group rotation={[0, -Math.PI / 2, 0]}>
-					<Stage adjustCamera={0.8} environment={null} shadows={false}>
-						<primitive object={scene} />
+					<primitive object={scene} />
 
-						<EffectComposer>
-							<ToneMapping
-								toneMapptinMode={ToneMappingMode.ACES_FILMIC}
-								adaptionRate={1}
-							/>
-						</EffectComposer>
-					</Stage>
+					<EffectComposer>
+						<ToneMapping
+							toneMapptinMode={ToneMappingMode.ACES_FILMIC}
+							adaptionRate={1}
+						/>
+					</EffectComposer>
 				</group>
 			</group>
 		)
@@ -80,7 +78,7 @@ const HeroScene = ({ vertical }: HeroSceneProps) => {
 		<div
 			className={cn(
 				'relative w-full overflow-hidden',
-				vertical && 'max-md:h-[50vh] max-md:min-h-[300px]'
+				vertical && 'h-full max-md:h-[50vh] max-md:min-h-[300px]'
 			)}
 		>
 			<motion.div
@@ -93,10 +91,11 @@ const HeroScene = ({ vertical }: HeroSceneProps) => {
 			>
 				<VectrealViewer
 					infoPopoverOptions={{ showInfo: false }}
-					envOptions={{ preset: 'night-city' }}
+					envOptions={{ preset: vertical ? 'studio-key' : 'night-city' }}
+					shadowsOptions={{ type: 'contact', opacity: 0 }}
 					className={cn(!isLodaded && 'invisible')}
 				>
-					<Model url={modelUrl} loadedState={loadedState} />
+					<Model url={modelUrl} loadedState={loadedState} vertical={vertical} />
 				</VectrealViewer>
 			</motion.div>
 			<motion.div

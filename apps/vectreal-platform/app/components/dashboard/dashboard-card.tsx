@@ -12,8 +12,8 @@ import { Link } from 'react-router'
 import { BasicCard } from '../layout-components'
 
 interface DashboardCardProps extends PropsWithChildren {
-	title: string
 	linkTo: string
+	title: string
 	description: string
 	icon: React.ReactNode
 	id: string

@@ -191,7 +191,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 								mapping={toneMappingOptions?.mapping}
 								exposure={toneMappingOptions?.exposure}
 							/> */}
-							<Bounds clip fit margin={1.2} maxDuration={0}>
+							<Bounds clip fit margin={0.8} maxDuration={0}>
 								<Center top>
 									{model ? (
 										<SceneModel onScreenshot={onScreenshot} object={model} />

@@ -13,7 +13,9 @@ const MockShopSection = () => {
 		<Section>
 			<span>
 				<h2>Real Store, Real Product, Real Impact</h2>
-				<p>See how Vectreal could power your e-commerce experiences</p>
+				<p className="text-foreground/90 mt-4 text-lg md:text-xl">
+					See how Vectreal could power your e-commerce experiences
+				</p>
 			</span>
 
 			<div className="mt-8 grid w-full grid-cols-1 gap-4 md:grid-cols-[3fr_2fr]">
@@ -23,7 +25,7 @@ const MockShopSection = () => {
 				>
 					<ProductScene />
 
-					<div className="absolute right-4 bottom-4 p-2 text-sm backdrop-blur-sm">
+					<div className="bg-muted/25 absolute right-4 bottom-4 overflow-hidden rounded-lg p-2 text-sm backdrop-blur-sm">
 						<Badge variant="secondary" className="mr-2">
 							3D View
 						</Badge>
@@ -91,7 +93,7 @@ const MockShopSection = () => {
 
 					<div className="space-y-2">
 						<CardTitle>Product Specifications</CardTitle>
-						<CardDescription>(High performance Kit)</CardDescription>
+						{/* <CardDescription>(High performance Kit)</CardDescription> */}
 					</div>
 
 					<dl className="text-muted-foreground grid grid-cols-1 gap-2 text-sm">

@@ -14,7 +14,7 @@ export const defaultShadowsOptions: ShadowsProps = {
 	type: 'contact',
 	color: 'black',
 	opacity: 1,
-	blur: 2.5
+	blur: 7.5
 }
 
 /**

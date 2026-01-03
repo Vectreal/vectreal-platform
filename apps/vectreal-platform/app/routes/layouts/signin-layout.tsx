@@ -10,12 +10,12 @@ import {
 	useNavigate
 } from 'react-router'
 
-import HeroScene from '../home-page/hero-scene'
+import { HeroScene } from '../../components'
 
 const SignupModel = () => {
 	return (
 		<div className="relative flex h-full w-full items-center justify-center md:block">
-			<HeroScene vertical limitHeight={false} />
+			<HeroScene vertical />
 			<div className="absolute right-0 bottom-0 z-10 max-w-1/2 px-8 pb-8">
 				<p className="text-primary/75! text-right text-xl! font-extralight!">
 					Join our community and start creating amazing{' '}

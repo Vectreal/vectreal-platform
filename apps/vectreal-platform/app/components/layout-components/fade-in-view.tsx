@@ -4,18 +4,24 @@ import { useRef } from 'react'
 interface FadeInViewProps {
 	children: React.ReactNode
 	className?: string
+	enabled?: boolean
 	delay?: number
 }
 
-const FadeInView = ({ children, className, delay = 0 }: FadeInViewProps) => {
+const FadeInView = ({
+	children,
+	className,
+	enabled = true,
+	delay = 0
+}: FadeInViewProps) => {
 	const ref = useRef<HTMLDivElement>(null)
 	const isInView = useInView(ref, {
 		once: true,
-		margin: '-100px 0px',
+		margin: '-75px 0px',
 		amount: 0.2
 	})
 
-	return (
+	return enabled ? (
 		<motion.div
 			ref={ref}
 			initial={{ opacity: 0, y: 40 }}
@@ -29,6 +35,10 @@ const FadeInView = ({ children, className, delay = 0 }: FadeInViewProps) => {
 		>
 			{children}
 		</motion.div>
+	) : (
+		<div ref={ref} className={className}>
+			{children}
+		</div>
 	)
 }
 
