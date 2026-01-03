@@ -14,5 +14,9 @@ vitest.config.*.timestamp*
 .env.development
 .env.production
 
+# Package manager lock files - only pnpm is used
+package-lock.json
+yarn.lock
+
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md

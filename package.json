@@ -1,6 +1,7 @@
 {
 	"name": "@vctrl/root",
 	"private": true,
+	"packageManager": "pnpm@10.27.0",
 	"repository": {
 		"url": "https://github.com/vectreal/vectreal-core",
 		"type": "https"

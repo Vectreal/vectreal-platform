@@ -1,4 +1,4 @@
-name: Deploy apps/official-website to Google Cloud Run
+name: Deploy apps/vectreal-platform to Google Cloud Run
 
 on:
   push:
@@ -6,9 +6,14 @@ on:
       - main
     paths:
       - 'apps/vectreal-platform/**'
+      - 'packages/core/**'
       - 'packages/hooks/**'
       - 'packages/viewer/**'
-      - 'package*.json'
+      - 'shared/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'nx.json'
+      - 'tsconfig.base.json'
       - '.github/workflows/deploy-platform.yaml'
 
 concurrency:
@@ -18,7 +23,7 @@ concurrency:
 env:
   GCR_HOSTNAME: gcr.io
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  IMAGE_NAME: official-website
+  IMAGE_NAME: vectreal-platform
 
 jobs:
   build-and-deploy:
