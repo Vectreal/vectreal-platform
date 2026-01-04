@@ -17,7 +17,7 @@ const loopedFileTypes = [...fileTypes, ...fileTypes]
 
 const FiletypeCarousel = () => {
 	return (
-		<section className="overflow-hidden py-16">
+		<section className="mt-4 overflow-hidden">
 			<div className="mx-auto w-full max-w-5xl px-4">
 				<h3 className="mb-8 text-center">
 					We offer a wide variety of file types and cloud integrations

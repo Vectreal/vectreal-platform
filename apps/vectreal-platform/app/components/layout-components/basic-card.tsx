@@ -28,7 +28,7 @@ const BasicCard = ({
 		<div className={cn('group relative', className)} {...props}>
 			<div
 				className={cn(
-					'bg-accent/50 absolute top-0 left-0 -z-0 m-3 mt-0! h-2 animate-pulse rounded-full blur-xl transition-all md:m-6',
+					'bg-accent/60 absolute top-0 left-0 -z-0 m-3 mt-0! h-2 animate-pulse rounded-full blur-xl transition-all md:m-6',
 					highlightClasses
 				)}
 			/>
@@ -40,7 +40,7 @@ const BasicCard = ({
 			/>
 			<Card
 				className={cn(
-					'bg-muted/50 border-t-accent/25 border-l-accent/10 relative h-full rounded-xl backdrop-blur-2xl',
+					'bg-muted/60 border-t-accent/25 border-l-accent/10 relative h-full overflow-hidden rounded-xl backdrop-blur-2xl',
 					cardClassNames
 				)}
 			>

@@ -11,10 +11,7 @@ import {
 import { memo } from 'react'
 
 export const defaultShadowsOptions: ShadowsProps = {
-	type: 'contact',
-	color: 'black',
-	opacity: 1,
-	blur: 7.5
+	type: 'contact'
 }
 
 /**

@@ -14,11 +14,13 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { Bounds, Center } from '@react-three/drei'
+import { Center } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
 import {
+	BoundsProps,
+	CameraProps,
 	ControlsProps,
 	EnvironmentProps,
 	GridProps,
@@ -32,10 +34,12 @@ import { InfoPopover, type InfoPopoverProps } from './components'
 import {
 	SceneControls,
 	SceneEnvironment,
-	SceneGrid,
 	SceneModel,
+	ScenePostProcessing,
 	SceneShadows
 } from './components/scene'
+
+import SceneBounds from './components/scene/scene-bounds'
 
 import styles from './styles.module.css'
 
@@ -49,6 +53,16 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * An optional className to apply to the outermost container of the viewer.
 	 */
 	className?: string
+
+	/**
+	 * Options for the scene bounds.
+	 */
+	boundsOptions?: BoundsProps
+
+	/**
+	 * Options for the scene camera.
+	 */
+	cameraOptions?: CameraProps
 
 	/**
 	 * Options for the OrbitControls.
@@ -123,11 +137,13 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	const {
 		className,
 		children,
+		cameraOptions,
+		boundsOptions,
 		envOptions,
-		gridOptions,
+		// gridOptions,
 		controlsOptions,
-		infoPopoverOptions,
 		shadowsOptions,
+		infoPopoverOptions,
 		onScreenshot,
 		loader = <DefaultSpinner />
 	} = props
@@ -167,31 +183,31 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		>
 			<Canvas
 				shadows
-				// gl={{
-				// 	preserveDrawingBuffer: true,
-				// 	powerPreference: 'high-performance'
-				// }}
-				// dpr={[1, 1.5]}
+				gl={{
+					powerPreference: 'high-performance',
+					antialias: true
+				}}
 				className={cn(
 					'vctrl-viewer-canvas',
 					styles['viewer-canvas'],
 					showCanvas && styles['fade-in']
 				)}
+				camera={cameraOptions}
 			>
 				<Suspense fallback={null}>
 					{(model || children) && (
 						<>
-							<SceneGrid {...gridOptions} />
+							{/* <SceneGrid {...gridOptions} /> */}
 							<SceneShadows {...shadowsOptions} />
 							<SceneEnvironment {...envOptions} />
 							{/* <Perf /> */}
-							{/* <ScenePostProcessing /> */}
+							<ScenePostProcessing />
 							<SceneControls {...controlsOptions} />
 							{/* <SceneToneMapping
 								mapping={toneMappingOptions?.mapping}
 								exposure={toneMappingOptions?.exposure}
 							/> */}
-							<Bounds clip fit margin={0.8} maxDuration={0}>
+							<SceneBounds {...boundsOptions}>
 								<Center top>
 									{model ? (
 										<SceneModel onScreenshot={onScreenshot} object={model} />
@@ -199,7 +215,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 										children
 									)}
 								</Center>
-							</Bounds>
+							</SceneBounds>
 						</>
 					)}
 				</Suspense>

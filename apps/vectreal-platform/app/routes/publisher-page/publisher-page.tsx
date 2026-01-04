@@ -11,6 +11,7 @@ import { memo, Suspense, useCallback, useEffect, useState } from 'react'
 
 import { processAtom } from '../../lib/stores/publisher-config-store'
 import {
+	boundsAtom,
 	controlsAtom,
 	environmentAtom,
 	shadowsAtom
@@ -82,8 +83,9 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 	const { file, isFileLoading, reset } = useModelContext()
 	const [{ isLoading: isDownloading, isInitializing }, setProcess] =
 		useAtom(processAtom)
-	const env = useAtomValue(environmentAtom)
+	const bounds = useAtomValue(boundsAtom)
 	const controls = useAtomValue(controlsAtom)
+	const env = useAtomValue(environmentAtom)
 	const shadows = useAtomValue(shadowsAtom)
 
 	const handleScreenshot = useCallback((url: string) => {
@@ -118,9 +120,10 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 								model={file?.model}
 								key="model-viewer"
 								infoPopoverOptions={{ showInfo: false }}
-								envOptions={env}
 								controlsOptions={controls}
+								envOptions={env}
 								shadowsOptions={shadows}
+								boundsOptions={bounds}
 								loader={<LoadingScreen />}
 								onScreenshot={handleScreenshot}
 							/>

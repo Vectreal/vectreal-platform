@@ -93,6 +93,7 @@ const HeroScene = ({ vertical }: HeroSceneProps) => {
 					infoPopoverOptions={{ showInfo: false }}
 					envOptions={{ preset: vertical ? 'studio-key' : 'night-city' }}
 					shadowsOptions={{ type: 'contact', opacity: 0 }}
+					boundsOptions={{ fit: true, clip: true, margin: 0.85 }}
 					className={cn(!isLodaded && 'invisible')}
 				>
 					<Model url={modelUrl} loadedState={loadedState} vertical={vertical} />

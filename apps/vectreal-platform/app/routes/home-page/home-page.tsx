@@ -16,8 +16,8 @@ import { Check, Globe, Sparkle, Wrench } from 'lucide-react'
 import { Link, redirect } from 'react-router'
 
 import community from '../../assets/images/community.webp'
-import studioDisplay from '../../assets/images/studio-display.jpg'
-import { BasicCard, Navigation, Section } from '../../components'
+import screenshotPublisher from '../../assets/images/publisher-optimize-2181px.webp'
+import { BasicCard, GridBg, Navigation, Section } from '../../components'
 import {
 	FiletypeCarousel,
 	HeroParallaxBg,
@@ -149,6 +149,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 				{/* gradient border effect */}
 				<div className="from-background via-muted-foreground/50 to-background h-[1px] w-full bg-gradient-to-r" />
 
+				{/* Additional information chip covering the fold */}
 				<div className="-mt-6 h-12">
 					<AnimatePresence>
 						<motion.div
@@ -193,32 +194,9 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 						</motion.div>
 					</AnimatePresence>
 				</div>
-				{/* <div className="to-muted/25 border-muted-foreground/20 -mb-24 overflow-clip border-b bg-linear-to-b from-transparent px-8 py-12 backdrop-blur-2xl" /> */}
 
-				<Section
-					// radial gradient from accent at the center to transparent at the top of the section - not circle at center but ellipse covering the whole section
-					className="relative my-32 h-128 w-full overflow-hidden"
-					fadeIn
-				>
-					<div className="absolute inset-0 z-0 h-full w-full">
-						<div className="from-accent/50 absolute inset-0 bg-radial-[ellipse_at_center] to-transparent transform-3d" />
-						<div className="absolute inset-0 grid grid-cols-16 grid-rows-4 gap-[1px] max-md:grid-cols-8 max-md:grid-rows-4">
-							{Array.from({ length: isMobile ? 32 : 64 }).map((_, index) => (
-								<div key={index} className="bg-background" />
-							))}
-						</div>
-
-						<div className="absolute inset-0 mix-blend-screen blur-xl">
-							<div className="from-accent/50 absolute inset-0 bg-radial-[ellipse_at_center] to-transparent transform-3d" />
-							<div className="absolute inset-0 grid grid-cols-16 grid-rows-4 gap-[1px] max-md:grid-cols-8 max-md:grid-rows-4">
-								{Array.from({ length: isMobile ? 32 : 64 }).map((_, index) => (
-									<div key={index} className="bg-black" />
-								))}
-							</div>
-						</div>
-
-						<div className="from-background/50 via-background/0 to-background/50 absolute inset-0 bg-gradient-to-b" />
-					</div>
+				<Section className="relative my-8 h-128 w-full overflow-hidden" fadeIn>
+					<GridBg isMobile={isMobile} />
 					<div className="z-10 flex flex-col gap-4 text-center">
 						<p className="text-foreground/90 mt-4 text-lg md:text-xl">
 							Whether you're testing concepts or powering an online store
@@ -231,8 +209,8 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 					</div>
 				</Section>
 
-				<Section fadeIn>
-					<div className="flex flex-col gap-4">
+				<Section className="mt-16" fadeIn>
+					<div className="flex flex-col gap-8">
 						<div className="w-full">
 							<h2>How It Works</h2>
 							<p className="text-foreground/90 mt-4 text-lg md:text-xl">
@@ -314,7 +292,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 				</Section>
 
 				<Section border fadeIn>
-					<div className="flex flex-col gap-8">
+					<div className="mb-16 flex flex-col gap-8">
 						<div className="flex flex-col gap-4 text-center">
 							<h3 className="w-full text-center">
 								Have a model? Dive in and show it off.
@@ -326,8 +304,15 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 						</div>
 
 						<div className="flex flex-col gap-4 md:gap-6">
-							<div className="flex flex-col-reverse justify-between gap-4 md:grid md:grid-cols-2">
-								<div className="flex flex-col justify-between gap-4 py-4">
+							<div className="flex flex-col-reverse justify-between gap-4 md:grid md:grid-rows-[auto_auto]">
+								<div className="mx-auto h-full max-w-6xl grow overflow-hidden shadow-2xl">
+									<img
+										src={screenshotPublisher}
+										alt="Screenshot of the Vectreal Publisher interface"
+										className="h-full w-full overflow-clip object-contain"
+									/>
+								</div>
+								<div className="flex flex-row justify-between gap-4 py-4">
 									<BasicCard>
 										<CardHeader>
 											<CardTitle className="text-xl font-medium">
@@ -367,13 +352,6 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 											</p>
 										</CardContent>
 									</BasicCard>
-								</div>
-								<div className="h-full grow overflow-hidden rounded-lg max-md:h-[400px]">
-									<img
-										src={studioDisplay}
-										alt="Studio display"
-										className="h-full w-full overflow-clip object-cover shadow-2xl"
-									/>
 								</div>
 							</div>
 
@@ -488,7 +466,8 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 				</Section>
 
 				<Section fadeIn>
-					<div className="flex flex-col gap-4">
+					<GridBg isMobile={isMobile} />
+					<div className="z-10 flex flex-col gap-4 py-24">
 						<div className="w-full">
 							<h2>Ready When You Are</h2>
 							<p className="text-foreground/90 mt-4 text-lg md:text-xl">

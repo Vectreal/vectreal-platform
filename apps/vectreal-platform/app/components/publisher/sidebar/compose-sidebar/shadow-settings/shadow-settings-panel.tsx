@@ -7,7 +7,7 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
-import { ShadowTypePropBase, ShadowsProps } from '@vctrl/core'
+import { ShadowsProps, ShadowTypePropBase } from '@vctrl/core'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom } from 'jotai'
 

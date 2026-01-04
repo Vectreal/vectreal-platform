@@ -18,8 +18,8 @@ const Section = ({
 	return (
 		<section
 			className={cn(
-				'relative my-48 flex w-full items-center first:mt-0 last:mb-0',
-				border && '-mb-32',
+				'bg-background relative my-32 flex w-full items-center first:mt-0 last:mb-0',
+				border && 'mb-0',
 				className
 			)}
 		>

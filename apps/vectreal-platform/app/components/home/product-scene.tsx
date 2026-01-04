@@ -3,8 +3,9 @@ import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { SpinnerWrapper } from '@shared/components/ui/spinner-wrapper'
 import { VectrealViewer } from '@vctrl/viewer'
 import { ExternalLink, Sparkles } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { Mesh } from 'three'
 
 const InfoContent = () => (
 	<div className="flex flex-col gap-2 font-[DM_Sans]">
@@ -38,20 +39,38 @@ const InfoContent = () => (
 const BikeModel = () => {
 	const { scene } = useGLTF('/assets/models/bike.glb')
 
+	useLayoutEffect(() => {
+		scene.traverse(
+			(obj) =>
+				obj instanceof Mesh &&
+				obj.isMesh &&
+				(obj.receiveShadow = obj.castShadow = true)
+		)
+	}, [scene])
+
 	return (
 		<VectrealViewer
 			key="preview-shop-bike-scene"
 			model={scene}
+			cameraOptions={{
+				position: [2, 1, 0]
+			}}
+			boundsOptions={{
+				fit: true,
+				margin: 0.75,
+				maxDuration: 2
+			}}
 			controlsOptions={{
-				autoRotate: true,
-				autoRotateSpeed: 0.25,
+				autoRotate: false,
 				rotateSpeed: 0.4,
 				dampingFactor: 0.25,
 				minDistance: 1,
 				maxDistance: 2.5
 			}}
 			envOptions={{
-				preset: 'nature-park'
+				preset: 'nature-park',
+				background: true,
+				backgroundBlurriness: 0.75
 			}}
 			infoPopoverOptions={{
 				content: <InfoContent />

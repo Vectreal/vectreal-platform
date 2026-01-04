@@ -17,10 +17,12 @@ import {
 	OrbitControlsProps,
 	RandomizedLightProps,
 	AccumulativeShadowsProps as ThreeAccumulativeShadowsProps,
+	BoundsProps as ThreeBoundsProps,
 	ContactShadowsProps as ThreeContactShadowsProps,
 	EnvironmentProps as ThreeEnvironmentProps,
 	GridProps as ThreeGridProps
 } from '@react-three/drei'
+import { CameraProps as ThreeCameraProps } from '@react-three/fiber'
 
 /**
  * Metadata for a 3D scene.
@@ -35,6 +37,19 @@ export interface SceneMeta {
 	[key: string]: string | null | undefined
 }
 
+/**
+ * Props for configuring the camera in a 3D scene.
+ */
+export type CameraProps = ThreeCameraProps
+
+/**
+ * Props for the SceneBounds component, extending ThreeBoundsProps from '@react-three/drei'.
+ */
+export type BoundsProps = ThreeBoundsProps
+
+/**
+ * Props for the SceneControls component, extending OrbitControlsProps from '@react-three/drei'.
+ */
 export interface ControlsProps extends OrbitControlsProps {
 	/**
 	 * The timeout duration in milliseconds before enabling the controls.
@@ -161,10 +176,14 @@ export type ShadowsProps = AccumulativeShadowsProps | ContactShadowProps
  * Used for persisting and restoring scene appearance and behavior.
  */
 export interface SceneSettings {
-	/** Environment/lighting configuration */
-	environment?: EnvironmentProps
+	/** Bounds settings */
+	bounds?: BoundsProps
+	/** Camera settings */
+	camera?: CameraProps
 	/** Camera controls configuration */
 	controls?: ControlsProps
+	/** Environment/lighting configuration */
+	environment?: EnvironmentProps
 	/** Shadow rendering settings */
 	shadows?: ShadowsProps
 	/** Scene metadata */
