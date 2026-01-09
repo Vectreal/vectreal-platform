@@ -529,17 +529,17 @@ class SceneSettingsService {
 		if (this.isGLTFExportResult(gltfJson)) {
 			// For GLTFExportResult, compare asset content hashes
 			const extractedAssets = this.extractGLTFAssets(gltfJson)
-			
+
 			if (extractedAssets.length > 0) {
 				// Compute hashes for current assets
 				const currentAssetHashes = this.computeAssetHashes(extractedAssets)
-				
+
 				// Get existing asset hashes from database
 				const existingAssetHashes = await this.getAssetHashes(
 					existingAssetIds,
 					tx
 				)
-				
+
 				// Compare asset hashes - returns true if changed
 				return this.compareAssetHashes(
 					currentAssetHashes,
@@ -553,7 +553,7 @@ class SceneSettingsService {
 			)
 			return this.compareAssetIds(currentAssetIds, existingAssetIds)
 		}
-		
+
 		return false
 	}
 
@@ -595,12 +595,12 @@ class SceneSettingsService {
 		assets: GLTFAssetData[]
 	): Map<string, string> {
 		const hashes = new Map<string, string>()
-		
+
 		for (const asset of assets) {
 			const hash = assetStorageService.computeAssetHash(asset.data)
 			hashes.set(asset.fileName, hash)
 		}
-		
+
 		return hashes
 	}
 
@@ -612,22 +612,22 @@ class SceneSettingsService {
 		tx: DbTransaction
 	): Promise<Map<string, string>> {
 		const hashes = new Map<string, string>()
-		
+
 		if (assetIds.length === 0) return hashes
-		
+
 		// Fetch asset metadata from database using IN clause for better performance
 		const assetRecords = await tx
 			.select()
 			.from(assets)
 			.where(inArray(assets.id, assetIds))
-		
+
 		for (const asset of assetRecords) {
 			const metadata = asset.metadata as { contentHash?: string } | null
 			if (metadata?.contentHash) {
 				hashes.set(asset.name, metadata.contentHash)
 			}
 		}
-		
+
 		return hashes
 	}
 
@@ -640,7 +640,7 @@ class SceneSettingsService {
 	): boolean {
 		// Different number of assets means something changed
 		if (currentHashes.size !== existingHashes.size) return true
-		
+
 		// Check if any hash differs
 		for (const [fileName, currentHash] of currentHashes) {
 			const existingHash = existingHashes.get(fileName)
@@ -648,7 +648,7 @@ class SceneSettingsService {
 				return true
 			}
 		}
-		
+
 		return false
 	}
 
