@@ -97,8 +97,9 @@ export class AssetStorageService {
 
 	/**
 	 * Compute SHA-256 hash of asset data for deduplication.
+	 * Made public for use in change detection.
 	 */
-	private computeAssetHash(data: Uint8Array): string {
+	computeAssetHash(data: Uint8Array): string {
 		return createHash('sha256').update(data).digest('hex')
 	}
 
