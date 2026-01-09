@@ -96,7 +96,7 @@ class SceneSettingsService {
 				sceneId
 			)) as typeof sceneSettings.$inferSelect
 
-			// Check if settings have changed
+			// Check if settings or assets have changed
 			if (latestSettings) {
 				const existingAssetIds = await this.getSceneAssetIds(
 					tx,
@@ -115,29 +115,15 @@ class SceneSettingsService {
 					return { ...latestSettings, unchanged: true }
 				}
 
-				// Determine if only settings changed (assets haven't changed)
-				const settingsChanged = this.compareSceneSettings(
-					settings,
-					latestSettings
+				// Determine if assets have changed
+				const assetsChanged = await this.detectAssetChanges(
+					gltfJson,
+					existingAssetIds,
+					tx
 				)
-				
-				let assetsChanged = false
-				if (this.isGLTFExportResult(gltfJson)) {
-					const extractedAssets = this.extractGLTFAssets(gltfJson)
-					if (extractedAssets.length > 0) {
-						const currentAssetHashes = this.computeAssetHashes(extractedAssets)
-						const existingAssetHashes = await this.getAssetHashes(
-							existingAssetIds,
-							tx
-						)
-						assetsChanged = this.compareAssetHashes(
-							currentAssetHashes,
-							existingAssetHashes
-						)
-					}
-				}
 
-				// Create new version with conditional asset processing
+				// Create new version, passing existingAssetIds if assets haven't changed
+				// This allows us to skip asset upload when only settings were modified
 				return await this.createNewSettingsVersion(tx, {
 					projectId,
 					sceneId: scene.id,
@@ -150,7 +136,7 @@ class SceneSettingsService {
 				})
 			}
 
-			// Create new version with processed GLTF JSON
+			// New scene - create new version with full asset processing
 			return await this.createNewSettingsVersion(tx, {
 				projectId,
 				sceneId: scene.id,
@@ -505,7 +491,8 @@ class SceneSettingsService {
 	}
 
 	/**
-	 * Checks if settings or assets have changed.
+	 * Checks if both settings and assets have changed.
+	 * Returns true only when BOTH settings AND assets are unchanged.
 	 */
 	private async hasNoChanges(
 		currentSettings: SceneSettingsData,
@@ -520,12 +507,25 @@ class SceneSettingsService {
 			existingSettings
 		)
 
-		// If settings changed, we need to create a new version regardless of assets
-		// But we can still skip asset re-upload if assets haven't changed
-		
-		// Extract asset info from the GLTF JSON
-		let assetsChanged = false
+		// Check if assets have changed
+		const assetsChanged = await this.detectAssetChanges(
+			gltfJson,
+			existingAssetIds,
+			tx
+		)
 
+		return !settingsChanged && !assetsChanged
+	}
+
+	/**
+	 * Detects whether assets have changed by comparing content hashes.
+	 * Returns true if assets have changed, false otherwise.
+	 */
+	private async detectAssetChanges(
+		gltfJson: JSONDocument | GLTFExportResult,
+		existingAssetIds: string[],
+		tx: DbTransaction
+	): Promise<boolean> {
 		if (this.isGLTFExportResult(gltfJson)) {
 			// For GLTFExportResult, compare asset content hashes
 			const extractedAssets = this.extractGLTFAssets(gltfJson)
@@ -540,8 +540,8 @@ class SceneSettingsService {
 					tx
 				)
 				
-				// Compare asset hashes
-				assetsChanged = this.compareAssetHashes(
+				// Compare asset hashes - returns true if changed
+				return this.compareAssetHashes(
 					currentAssetHashes,
 					existingAssetHashes
 				)
@@ -551,10 +551,10 @@ class SceneSettingsService {
 			const currentAssetIds = this.extractAssetIdsFromGltf(
 				gltfJson as ExtendedGLTFDocument
 			)
-			assetsChanged = this.compareAssetIds(currentAssetIds, existingAssetIds)
+			return this.compareAssetIds(currentAssetIds, existingAssetIds)
 		}
-
-		return !settingsChanged && !assetsChanged
+		
+		return false
 	}
 
 	/**
