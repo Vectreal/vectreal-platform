@@ -1,6 +1,6 @@
 import { JSONDocument } from '@gltf-transform/core'
 import type { OptimizationReport } from '@vctrl/core'
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, inArray } from 'drizzle-orm'
 import type { ExtractTablesWithRelations } from 'drizzle-orm'
 import type { PgTransaction } from 'drizzle-orm/pg-core'
 import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js'
@@ -615,30 +615,16 @@ class SceneSettingsService {
 		
 		if (assetIds.length === 0) return hashes
 		
-		// Fetch asset metadata from database
+		// Fetch asset metadata from database using IN clause for better performance
 		const assetRecords = await tx
 			.select()
 			.from(assets)
-			.where(
-				assetIds.length > 0
-					? eq(assets.id, assetIds[0])
-					: eq(assets.id, '')
-			)
+			.where(inArray(assets.id, assetIds))
 		
-		// If we have multiple asset IDs, we need to query them differently
-		// For now, query them one by one (can be optimized with an IN clause)
-		for (const assetId of assetIds) {
-			const [asset] = await tx
-				.select()
-				.from(assets)
-				.where(eq(assets.id, assetId))
-				.limit(1)
-			
-			if (asset) {
-				const metadata = asset.metadata as { contentHash?: string } | null
-				if (metadata?.contentHash) {
-					hashes.set(asset.name, metadata.contentHash)
-				}
+		for (const asset of assetRecords) {
+			const metadata = asset.metadata as { contentHash?: string } | null
+			if (metadata?.contentHash) {
+				hashes.set(asset.name, metadata.contentHash)
 			}
 		}
 		
