@@ -103,24 +103,21 @@ class SceneSettingsService {
 					latestSettings.id
 				)
 
-				const noChanges = await this.hasNoChanges(
+				// Check for changes in settings and assets
+				const settingsChanged = this.compareSceneSettings(
 					settings,
-					latestSettings,
-					gltfJson,
-					existingAssetIds,
-					tx
+					latestSettings
 				)
-
-				if (noChanges) {
-					return { ...latestSettings, unchanged: true }
-				}
-
-				// Determine if assets have changed
 				const assetsChanged = await this.detectAssetChanges(
 					gltfJson,
 					existingAssetIds,
 					tx
 				)
+
+				// If nothing changed, return early
+				if (!settingsChanged && !assetsChanged) {
+					return { ...latestSettings, unchanged: true }
+				}
 
 				// Create new version, passing existingAssetIds if assets haven't changed
 				// This allows us to skip asset upload when only settings were modified
@@ -491,35 +488,9 @@ class SceneSettingsService {
 	}
 
 	/**
-	 * Checks whether there are no changes in either settings or assets.
-	 * Returns true only when both settings and assets are unchanged.
-	 */
-	private async hasNoChanges(
-		currentSettings: SceneSettingsData,
-		existingSettings: typeof sceneSettings.$inferSelect,
-		gltfJson: JSONDocument | GLTFExportResult,
-		existingAssetIds: string[],
-		tx: DbTransaction
-	): Promise<boolean> {
-		// Check if settings have changed
-		const settingsChanged = this.compareSceneSettings(
-			currentSettings,
-			existingSettings
-		)
-
-		// Check if assets have changed
-		const assetsChanged = await this.detectAssetChanges(
-			gltfJson,
-			existingAssetIds,
-			tx
-		)
-
-		return !settingsChanged && !assetsChanged
-	}
-
-	/**
 	 * Detects whether assets have changed by comparing content hashes.
 	 * Returns true if assets have changed, false otherwise.
+	 * Handles cases where assets are added, removed, or modified.
 	 */
 	private async detectAssetChanges(
 		gltfJson: JSONDocument | GLTFExportResult,
@@ -529,6 +500,11 @@ class SceneSettingsService {
 		if (this.isGLTFExportResult(gltfJson)) {
 			// For GLTFExportResult, compare asset content hashes
 			const extractedAssets = this.extractGLTFAssets(gltfJson)
+
+			// Check if number of assets changed (assets added or removed)
+			if (extractedAssets.length !== existingAssetIds.length) {
+				return true
+			}
 
 			if (extractedAssets.length > 0) {
 				// Compute hashes for current assets
@@ -606,6 +582,7 @@ class SceneSettingsService {
 
 	/**
 	 * Retrieves asset hashes from database for existing assets.
+	 * If an asset lacks contentHash metadata, it's considered changed to trigger re-upload.
 	 */
 	private async getAssetHashes(
 		assetIds: string[],
@@ -626,6 +603,9 @@ class SceneSettingsService {
 			if (metadata?.contentHash) {
 				hashes.set(asset.name, metadata.contentHash)
 			}
+			// Note: Assets without contentHash are intentionally excluded from the map.
+			// This will cause compareAssetHashes to return true (changed),
+			// triggering a re-upload which will add the contentHash.
 		}
 
 		return hashes
