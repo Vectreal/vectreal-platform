@@ -491,8 +491,8 @@ class SceneSettingsService {
 	}
 
 	/**
-	 * Checks if both settings and assets have changed.
-	 * Returns true only when BOTH settings AND assets are unchanged.
+	 * Checks whether there are no changes in either settings or assets.
+	 * Returns true only when both settings and assets are unchanged.
 	 */
 	private async hasNoChanges(
 		currentSettings: SceneSettingsData,
