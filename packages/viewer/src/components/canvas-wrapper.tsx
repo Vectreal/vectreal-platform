@@ -1,7 +1,6 @@
 import { CanvasProps, Canvas as ThreeCanvas } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
 
-import { useViewerLoading } from '../hooks/use-viewer-loading'
 import { useViewportDetection } from '../hooks/use-viewport-detection'
 
 import styles from './canvas.module.css'
@@ -16,14 +15,11 @@ interface CanvasComponentProps extends CanvasProps {
 	 * Theme to apply to the viewer
 	 */
 	theme?: 'light' | 'dark' | 'system'
-	/**
-	 * Whether the viewer has content to display (model or children)
-	 */
-	hasContent: boolean
+
 	/**
 	 * JSX element to render while loading
 	 */
-	loader?: React.ReactNode
+	loadingState?: 'loading' | 'loaded' | 'ready'
 	/**
 	 * Additional UI overlays to render (e.g., InfoPopover)
 	 */
@@ -43,12 +39,11 @@ interface CanvasComponentProps extends CanvasProps {
  * - Prevents rendering when outside viewport (optional)
  * - Manages loading state and fade transitions internally
  */
-export const Canvas = ({
+const Canvas = ({
 	children,
 	containerClassName,
+	loadingState,
 	theme = 'system',
-	hasContent,
-	loader,
 	overlay,
 	enableViewportRendering = true,
 	...props
@@ -59,9 +54,6 @@ export const Canvas = ({
 	const [containerRef, isInViewport] = useViewportDetection(
 		enableViewportRendering
 	)
-
-	// Manage loading state internally
-	const loadingState = useViewerLoading(hasContent)
 
 	// Handle StrictMode double-mounting
 	useEffect(() => {
@@ -92,8 +84,6 @@ export const Canvas = ({
 		}
 	}, [shouldRenderCanvas, loadingState])
 
-	const showLoader = loadingState !== 'ready'
-
 	return (
 		<div ref={containerRef} className={containerClassName} data-theme={theme}>
 			{shouldRenderCanvas && (
@@ -106,16 +96,9 @@ export const Canvas = ({
 				</ThreeCanvas>
 			)}
 
-			{showLoader && loader && (
-				<div
-					className={styles['loader-container']}
-					data-loading-state={loadingState}
-				>
-					{loader}
-				</div>
-			)}
-
 			{overlay}
 		</div>
 	)
 }
+
+export default Canvas

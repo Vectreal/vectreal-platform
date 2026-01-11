@@ -64,7 +64,6 @@ const HeroScene = ({ vertical }: HeroSceneProps) => {
 					</div>
 				}
 				controlsOptions={{ enabled: false }}
-				infoPopoverOptions={{ showInfo: false }}
 				envOptions={{ preset: vertical ? 'studio-key' : 'night-city' }}
 				shadowsOptions={{ type: 'contact', opacity: 0 }}
 				boundsOptions={{ margin: 0.85 }}
