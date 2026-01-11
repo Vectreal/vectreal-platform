@@ -70,6 +70,15 @@
 			"options": {
 				"lintFilePatterns": ["apps/vectreal-platform/**/*.{ts,tsx,js,jsx}"]
 			}
+		},
+		"start": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": "apps/vectreal-platform/.env.production.local",
+				"command": "react-router-serve build/server/index.js"
+			},
+			"dependsOn": ["build"]
 		}
 	}
 }

@@ -32,7 +32,7 @@ import {
 } from '@gltf-transform/functions'
 import { MeshoptSimplifier } from 'meshoptimizer'
 import { Object3D } from 'three'
-import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter'
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
 import { OperationProgress } from '../types'
 

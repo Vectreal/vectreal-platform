@@ -1,0 +1,42 @@
+/* Canvas and loader styles */
+
+.canvas {
+	width: 100%;
+	height: 100%;
+	opacity: 0;
+	visibility: hidden;
+	transition:
+		opacity 0.5s ease-in-out,
+		visibility 0.5s;
+	transition-delay: 1s;
+}
+
+/* Canvas fade-in when visible */
+.canvas[data-canvas-visible='true'] {
+	opacity: 1;
+	visibility: visible;
+}
+
+.loader-container {
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	display: flex;
+	height: 100%;
+	width: 100%;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 1rem;
+	opacity: 1;
+	transition: opacity 0.5s ease-in-out;
+}
+
+/* Loader fade-out states */
+.loader-container[data-loading-state='loaded'],
+.loader-container[data-loading-state='ready'] {
+	opacity: 0;
+	pointer-events: none;
+}

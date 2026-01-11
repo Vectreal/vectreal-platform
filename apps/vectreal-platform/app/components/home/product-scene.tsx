@@ -3,9 +3,9 @@ import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { SpinnerWrapper } from '@shared/components/ui/spinner-wrapper'
 import { VectrealViewer } from '@vctrl/viewer'
 import { ExternalLink, Sparkles } from 'lucide-react'
-import { useEffect, useLayoutEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { Mesh } from 'three'
+
+import bike from '../../assets/models/bike.glb?url'
 
 const InfoContent = () => (
 	<div className="flex flex-col gap-2 font-[DM_Sans]">
@@ -36,29 +36,21 @@ const InfoContent = () => (
 	</div>
 )
 
-const BikeModel = () => {
-	const { scene } = useGLTF('/assets/models/bike.glb')
+const Model = ({ url }: { url: string }) => {
+	const { scene } = useGLTF(url)
+	return <primitive object={scene} />
+}
 
-	useLayoutEffect(() => {
-		scene.traverse(
-			(obj) =>
-				obj instanceof Mesh &&
-				obj.isMesh &&
-				(obj.receiveShadow = obj.castShadow = true)
-		)
-	}, [scene])
-
+const ProductScene = () => {
 	return (
 		<VectrealViewer
 			key="preview-shop-bike-scene"
-			model={scene}
 			cameraOptions={{
 				position: [2, 1, 0]
 			}}
 			boundsOptions={{
-				fit: true,
 				margin: 0.75,
-				maxDuration: 2
+				maxDuration: 1
 			}}
 			controlsOptions={{
 				autoRotate: false,
@@ -80,26 +72,10 @@ const BikeModel = () => {
 					<LoadingSpinner className="text-white" />
 				</SpinnerWrapper>
 			}
-		/>
+		>
+			<Model url={bike} />
+		</VectrealViewer>
 	)
-}
-
-const ProductScene = () => {
-	const [isClient, setIsClient] = useState(false)
-
-	useEffect(() => {
-		setIsClient(true)
-	}, [])
-
-	if (!isClient) {
-		return (
-			<SpinnerWrapper>
-				<LoadingSpinner className="text-white" />
-			</SpinnerWrapper>
-		)
-	}
-
-	return <BikeModel />
 }
 
 export default ProductScene

@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import CrossIcon from './assets/cross-icon'
 import InfoIcon from './assets/info-icon'
 
-import styles from '../styles.module.css'
+import styles from './info-popover.module.css'
 
 export interface InfoPopoverProps {
 	/**

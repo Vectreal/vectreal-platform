@@ -1,13 +1,7 @@
 import { GithubLogo } from '@shared/components/assets/icons/github-logo'
 import { useIsMobile } from '@shared/components/hooks/use-mobile'
 import { Button } from '@shared/components/ui/button'
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle
-} from '@shared/components/ui/card'
+import { CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
 import { User } from '@supabase/supabase-js'
 
@@ -15,9 +9,14 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Check, Globe, Sparkle, Wrench } from 'lucide-react'
 import { Link, redirect } from 'react-router'
 
-import community from '../../assets/images/community.webp'
 import screenshotPublisher from '../../assets/images/publisher-optimize-2181px.webp'
-import { BasicCard, GridBg, Navigation, Section } from '../../components'
+import {
+	BasicCard,
+	Footer,
+	GridBg,
+	Navigation,
+	Section
+} from '../../components'
 import {
 	FiletypeCarousel,
 	HeroParallaxBg,
@@ -226,7 +225,9 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 											<CardTitle className="text-4xl font-light">
 												0<span className="text-accent pl-1 font-bold">1</span>
 											</CardTitle>
-											<CardDescription>Upload</CardDescription>
+											<p className="text-foreground/90 mt-4 text-lg md:text-xl">
+												Upload
+											</p>
 										</CardHeader>
 										<CardContent>
 											<p>
@@ -243,7 +244,9 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 											<CardTitle className="text-4xl font-light">
 												0<span className="text-accent pl-1 font-bold">2</span>
 											</CardTitle>
-											<CardDescription>Optimize & Customize</CardDescription>
+											<p className="text-foreground/90 mt-4 text-lg md:text-xl">
+												Optimize & Customize
+											</p>
 										</CardHeader>
 										<CardContent>
 											<p>
@@ -260,7 +263,9 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 											<CardTitle className="text-4xl font-light">
 												0<span className="text-accent pl-1 font-bold">3</span>
 											</CardTitle>
-											<CardDescription>Manage</CardDescription>
+											<p className="text-foreground/90 mt-4 text-lg md:text-xl">
+												Manage
+											</p>
 										</CardHeader>
 										<CardContent>
 											<p>
@@ -276,7 +281,9 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 											<CardTitle className="text-4xl font-light">
 												0<span className="text-accent pl-1 font-bold">4</span>
 											</CardTitle>
-											<CardDescription>Publish</CardDescription>
+											<p className="text-foreground/90 mt-4 text-lg md:text-xl">
+												Publish
+											</p>
 										</CardHeader>
 										<CardContent>
 											<p>
@@ -506,6 +513,28 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 
 				<FiletypeCarousel />
 
+				<Section fadeIn className="my-8 h-128 w-full overflow-hidden">
+					<GridBg isMobile={isMobile} />
+					<div className="z-10 flex flex-col gap-4">
+						<div className="w-full">
+							<h2>Resources & Learning</h2>
+							<p className="text-foreground/90 mt-4 text-lg md:text-xl">
+								Want to dive deeper?
+							</p>
+						</div>
+
+						<BasicCard className="flex w-full flex-col gap-4">
+							<CardContent>
+								<p className="mb-4">
+									We've got guides, best practices, case studies, and tutorials
+									to help you go from beginner to pro.
+								</p>
+								<Button className="w-fit">Explore our Knowledge Hub</Button>
+							</CardContent>
+						</BasicCard>
+					</div>
+				</Section>
+
 				<Section border fadeIn>
 					<div className="flex flex-col gap-4">
 						<span>
@@ -514,61 +543,51 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 								Vectreal is built by and for the 3D community.
 							</p>
 						</span>
-						<div className="mt-4 flex w-full flex-col-reverse gap-4 md:grid md:grid-cols-2">
-							<ul className="flex flex-col gap-4">
-								<li className="bg-muted grid grid-cols-[16px_auto] gap-4 rounded-xl p-4">
-									<Check className="mt-1 inline" size={16} /> 100% open-source
-								</li>
-								<li className="bg-muted grid grid-cols-[16px_auto] gap-4 rounded-xl p-4">
-									<Wrench className="mt-1 inline" size={16} /> Built by
-									developers, artists, and dreamers
-								</li>
-								<li className="bg-muted grid grid-cols-[16px_auto] gap-4 rounded-xl p-4">
-									<Globe className="mt-1 inline" size={16} /> Global
-									contributors, shared knowledge, real collaboration
-								</li>
-								<li className="mt-auto flex flex-col gap-2">
-									<p>
-										Join the community that’s reimagining how 3D lives on the
-										web.
-									</p>
-									<Button className="mt-2">
-										<GithubLogo /> Meet the Community
-									</Button>
-								</li>
-							</ul>
-							<div className="h-full max-h-[400px] grow overflow-hidden rounded-lg max-md:max-h-[300px]">
-								<img
-									src={community}
-									alt="Studio display"
-									className="h-full w-full overflow-clip object-cover shadow-2xl"
-								/>
-							</div>
-						</div>
-					</div>
-				</Section>
 
-				<Section fadeIn>
-					<div className="flex flex-col gap-4">
-						<div className="w-full">
-							<h2>Resources & Learning</h2>
-							<p className="text-foreground/90 mt-4 text-lg md:text-xl">
-								Want to dive deeper?
-							</p>
-						</div>
+						<ul className="flex flex-row justify-between gap-4">
+							<li className="w-full grow flex-col">
+								<BasicCard className="h-full">
+									<CardContent>
+										<Check className="mt-1 inline" size={32} />
+										<p className="text-foreground/90 mt-4 text-lg md:text-xl">
+											100% open-source
+										</p>
+									</CardContent>
+								</BasicCard>
+							</li>
+							<li className="w-full grow flex-col">
+								<BasicCard className="h-full">
+									<CardContent>
+										<Wrench className="mt-1 inline" size={32} />
+										<p className="text-foreground/90 mt-4 text-lg md:text-xl">
+											Built by developers, artists, and dreamers
+										</p>
+									</CardContent>
+								</BasicCard>
+							</li>
+							<li className="w-full grow flex-col">
+								<BasicCard className="h-full">
+									<CardContent>
+										<Globe className="mt-1 inline" size={32} />
+										<p className="text-foreground/90 mt-4 text-lg md:text-xl">
+											Global contributors, shared knowledge, real collaboration
+										</p>
+									</CardContent>
+								</BasicCard>
+							</li>
+						</ul>
 
-						<Card className="bg-muted/50 flex w-full flex-col gap-4 rounded-xl p-4 md:p-6">
-							<CardContent className="p-0">
-								<p className="mb-4">
-									We've got guides, best practices, case studies, and tutorials
-									to help you go from beginner to pro.
-								</p>
-								<Button className="w-fit">Explore our Knowledge Hub</Button>
-							</CardContent>
-						</Card>
+						<p className="text-foreground/90 mt-4 text-lg md:text-xl">
+							Join the community that’s reimagining how 3D lives on the web.
+						</p>
+						<Button className="mt-2 w-fit px-8!">
+							<GithubLogo /> Meet the Community
+						</Button>
 					</div>
 				</Section>
 			</main>
+
+			<Footer />
 		</>
 	)
 }

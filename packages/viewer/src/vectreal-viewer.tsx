@@ -15,7 +15,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 import { Center } from '@react-three/drei'
-import { Canvas } from '@react-three/fiber'
 import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
 import {
@@ -27,10 +26,10 @@ import {
 	ShadowsProps
 } from '@vctrl/core'
 // import { Perf } from 'r3f-perf'
-import { memo, PropsWithChildren, Suspense, useEffect, useState } from 'react'
+import { memo, PropsWithChildren, Suspense } from 'react'
 import { Object3D } from 'three'
 
-import { InfoPopover, type InfoPopoverProps } from './components'
+import { Canvas, InfoPopover, type InfoPopoverProps } from './components'
 import {
 	SceneControls,
 	SceneEnvironment,
@@ -41,7 +40,7 @@ import {
 
 import SceneBounds from './components/scene/scene-bounds'
 
-import styles from './styles.module.css'
+import styles from './viewer.module.css'
 
 export interface VectrealViewerProps extends PropsWithChildren {
 	/**
@@ -53,6 +52,14 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * An optional className to apply to the outermost container of the viewer.
 	 */
 	className?: string
+
+	/**
+	 * Theme for the viewer.
+	 * - 'light': Force light theme
+	 * - 'dark': Force dark theme
+	 * - 'system': Use system preference (default)
+	 */
+	theme?: 'light' | 'dark' | 'system'
 
 	/**
 	 * Options for the scene bounds.
@@ -98,6 +105,13 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * Callback function to handle screenshot generation (accept data URL via param).
 	 */
 	onScreenshot?: (dataUrl: string) => void
+
+	/**
+	 * Whether to render the canvas only when visible in viewport.
+	 * Improves performance by not rendering off-screen scenes.
+	 * Default: true
+	 */
+	enableViewportRendering?: boolean
 }
 
 /**
@@ -137,6 +151,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	const {
 		className,
 		children,
+		theme = 'system',
 		cameraOptions,
 		boundsOptions,
 		envOptions,
@@ -145,96 +160,50 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		shadowsOptions,
 		infoPopoverOptions,
 		onScreenshot,
+		enableViewportRendering = true,
 		loader = <DefaultSpinner />
 	} = props
 
-	const [showLoader, setShowLoader] = useState(!model)
-	const [isLoaderFading, setIsLoaderFading] = useState(false)
-	const [showCanvas, setShowCanvas] = useState(!!model)
-
-	useEffect(() => {
-		if ((model && showLoader) || children) {
-			// Start canvas fade in and loader fade out simultaneously
-			setIsLoaderFading(true)
-			setShowCanvas(true)
-
-			setTimeout(() => {
-				// After fade out duration, hide loader
-				setShowLoader(false)
-				setIsLoaderFading(false)
-			}, 500) // Matching this duration with CSS transition duration
-		} else if (!model && !showLoader) {
-			setShowLoader(true)
-			setShowCanvas(false)
-		}
-	}, [model, showLoader, children])
-
-	// Check if the dark mode is manually enabled - This needs to be js because of CSS modules and minification
-	const isManualDarkModel = className?.split(' ').includes('dark')
+	const hasContent = !!(model || children)
 
 	return (
-		<div
-			className={cn(
-				className,
-				'vctrl-viewer',
-				styles['viewer'],
-				isManualDarkModel && styles.dark
-			)}
+		<Canvas
+			containerClassName={cn(styles.viewer, 'vctrl-viewer', className)}
+			theme={theme}
+			hasContent={hasContent}
+			loader={loader}
+			overlay={<InfoPopover {...infoPopoverOptions} />}
+			enableViewportRendering={enableViewportRendering}
+			shadows
+			gl={{ antialias: true }}
+			camera={cameraOptions}
 		>
-			<Canvas
-				shadows
-				gl={{
-					powerPreference: 'high-performance',
-					antialias: true
-				}}
-				className={cn(
-					'vctrl-viewer-canvas',
-					styles['viewer-canvas'],
-					showCanvas && styles['fade-in']
-				)}
-				camera={cameraOptions}
-			>
-				<Suspense fallback={null}>
-					{(model || children) && (
-						<>
-							{/* <SceneGrid {...gridOptions} /> */}
-							<SceneShadows {...shadowsOptions} />
-							<SceneEnvironment {...envOptions} />
-							{/* <Perf /> */}
-							<ScenePostProcessing />
-							<SceneControls {...controlsOptions} />
-							{/* <SceneToneMapping
+			<Suspense fallback={null}>
+				{hasContent && (
+					<>
+						{/* <SceneGrid {...gridOptions} /> */}
+						<SceneShadows {...shadowsOptions} />
+						<SceneEnvironment {...envOptions} />
+						{/* <Perf /> */}
+						<ScenePostProcessing />
+						<SceneControls {...controlsOptions} />
+						{/* <SceneToneMapping
 								mapping={toneMappingOptions?.mapping}
 								exposure={toneMappingOptions?.exposure}
 							/> */}
-							<SceneBounds {...boundsOptions}>
-								<Center top>
-									{model ? (
-										<SceneModel onScreenshot={onScreenshot} object={model} />
-									) : (
-										children
-									)}
-								</Center>
-							</SceneBounds>
-						</>
-					)}
-				</Suspense>
-			</Canvas>
-
-			{showLoader && !children && (
-				<div
-					className={cn(
-						'absolute inset-0 flex h-full w-full flex-col items-center justify-center gap-4',
-						styles['loader-container'],
-						isLoaderFading && styles['fade-out']
-					)}
-				>
-					{loader}
-				</div>
-			)}
-
-			<InfoPopover {...infoPopoverOptions} />
-		</div>
+						<SceneBounds {...boundsOptions}>
+							<Center top>
+								{model ? (
+									<SceneModel onScreenshot={onScreenshot} object={model} />
+								) : (
+									children
+								)}
+							</Center>
+						</SceneBounds>
+					</>
+				)}
+			</Suspense>
+		</Canvas>
 	)
 })
 export default VectrealViewer
