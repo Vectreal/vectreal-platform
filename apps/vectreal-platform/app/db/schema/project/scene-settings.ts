@@ -1,4 +1,10 @@
 import {
+	ControlsProps,
+	EnvironmentProps,
+	SceneMeta,
+	ShadowsProps
+} from '@vctrl/core'
+import {
 	boolean,
 	integer,
 	json,
@@ -19,11 +25,11 @@ export const sceneSettings = pgTable('scene_settings', {
 	version: integer('version').notNull().default(1),
 	isLatest: boolean('is_latest').default(true).notNull(),
 	// Scene configuration data from publisher store
-	environment: json('environment'), // environmentAtom data
-	toneMapping: json('tone_mapping'), // toneMappingAtom data
-	controls: json('controls'), // controlsAtom data
-	shadows: json('shadows'), // shadowsAtom data
-	meta: json('meta'), // metaAtom data (scene name, thumbnail, etc.)
+	environment: json('environment').$type<EnvironmentProps>(), // environmentAtom data
+	controls: json('controls').$type<ControlsProps>(), // controlsAtom data
+	shadows: json('shadows').$type<ShadowsProps>(), // shadowsAtom data
+	meta: json('meta').$type<SceneMeta>(), // metaAtom data (scene name, thumbnail, etc.)
+	// Audit fields
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	createdBy: uuid('created_by')
 		.references(() => users.id, { onDelete: 'cascade' })

@@ -594,9 +594,7 @@ class SceneSettingsService {
 	 */
 	private async createNewSettingsVersion(
 		tx: DbTransaction,
-		params: CreateSceneSettingsParams & {
-			optimizationReport?: OptimizationReport
-		}
+		params: CreateSceneSettingsParams
 	) {
 		const {
 			sceneId,
