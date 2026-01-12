@@ -91,6 +91,7 @@ export interface CreateSceneSettingsParams extends BaseSceneParams {
 	readonly settings: SceneSettingsData
 	readonly gltfJson?: JSONDocument
 	readonly optimizationReport?: OptimizationReport
+	readonly existingAssetIds?: string[]
 }
 
 /** Parameters for updating existing scene settings. */
