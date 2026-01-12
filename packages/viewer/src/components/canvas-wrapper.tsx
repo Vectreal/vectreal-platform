@@ -1,36 +1,104 @@
-import { Canvas, CanvasProps } from '@react-three/fiber'
+import { CanvasProps, Canvas as ThreeCanvas } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
 
-interface CanvasWrapperProps extends CanvasProps {
+import { useViewportDetection } from '../hooks/use-viewport-detection'
+
+import styles from './canvas.module.css'
+
+interface CanvasComponentProps extends CanvasProps {
 	children: React.ReactNode
+	/**
+	 * ClassName for the outermost container div
+	 */
+	containerClassName?: string
+	/**
+	 * Theme to apply to the viewer
+	 */
+	theme?: 'light' | 'dark' | 'system'
+
+	/**
+	 * JSX element to render while loading
+	 */
+	loadingState?: 'loading' | 'loaded' | 'ready'
+	/**
+	 * Additional UI overlays to render (e.g., InfoPopover)
+	 */
+	overlay?: React.ReactNode
+	/**
+	 * Whether to render the canvas only when visible in viewport.
+	 * When enabled, the canvas unmounts when out of viewport to save resources.
+	 * Default: true
+	 */
+	enableViewportRendering?: boolean
 }
 
 /**
- * A wrapper around react-three/fiber Canvas that handles StrictMode double-mounting
- * and WebGL context loss more gracefully.
+ * An enhanced wrapper around react-three/fiber Canvas that:
+ * - Wraps the entire viewer (container + canvas + loader + overlays)
+ * - Handles StrictMode double-mounting gracefully
+ * - Prevents rendering when outside viewport (optional)
+ * - Manages loading state and fade transitions internally
  */
-export const CanvasWrapper = ({ children, ...props }: CanvasWrapperProps) => {
+const Canvas = ({
+	children,
+	containerClassName,
+	loadingState,
+	theme = 'system',
+	overlay,
+	enableViewportRendering = true,
+	...props
+}: CanvasComponentProps) => {
 	const [isReady, setIsReady] = useState(false)
+	const [canvasVisible, setCanvasVisible] = useState(false)
 	const mountedRef = useRef(false)
+	const [containerRef, isInViewport] = useViewportDetection(
+		enableViewportRendering
+	)
 
+	// Handle StrictMode double-mounting
 	useEffect(() => {
-		// In StrictMode, this effect runs twice
-		// We only want to mark as ready on the final mount
-		const timer = setTimeout(() => {
-			if (!mountedRef.current) {
-				mountedRef.current = true
-				setIsReady(true)
-			}
-		}, 0)
+		if (!mountedRef.current) {
+			mountedRef.current = true
+			setIsReady(true)
+		}
 
 		return () => {
-			clearTimeout(timer)
+			mountedRef.current = false
 		}
 	}, [])
 
-	if (!isReady) {
-		return null
-	}
+	// Determine rendering and visibility states
+	const shouldRenderCanvas = isReady && isInViewport
 
-	return <Canvas {...props}>{children}</Canvas>
+	// Trigger fade-in when canvas remounts after viewport change
+	useEffect(() => {
+		if (shouldRenderCanvas && loadingState !== 'loading') {
+			// Trigger fade-in after a brief delay to ensure CSS transition runs
+			const timer = setTimeout(() => {
+				setCanvasVisible(true)
+			}, 10)
+
+			return () => clearTimeout(timer)
+		} else {
+			setCanvasVisible(false)
+		}
+	}, [shouldRenderCanvas, loadingState])
+
+	return (
+		<div ref={containerRef} className={containerClassName} data-theme={theme}>
+			{shouldRenderCanvas && (
+				<ThreeCanvas
+					{...props}
+					className={styles.canvas}
+					data-canvas-visible={canvasVisible}
+				>
+					{children}
+				</ThreeCanvas>
+			)}
+
+			{overlay}
+		</div>
+	)
 }
+
+export default Canvas

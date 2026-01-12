@@ -10,6 +10,13 @@ export default defineConfig(({ mode, isSsrBuild, command }) => {
 	return {
 		root: __dirname,
 		cacheDir: '../../node_modules/.vite/apps/vectreal-platform',
+		resolve: {
+			alias: {
+				'three/examples/jsm/exporters/GLTFExporter':
+					__dirname +
+					'/../../node_modules/three/examples/jsm/exporters/GLTFExporter.js'
+			}
+		},
 		server: {
 			port: 4200,
 			host: 'localhost'

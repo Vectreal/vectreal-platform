@@ -9,7 +9,7 @@ import ProductScene from './product-scene'
 
 const MockShopSection = () => {
 	return (
-		<section className="relative h-[80vh] min-h-[600px] w-full overflow-hidden">
+		<section className="relative h-[80vh] min-h-[600px] w-full space-y-4">
 			<div className="from-background to-background/0 absolute top-0 right-0 left-0 z-10 bg-gradient-to-b py-16">
 				<span className="mx-auto block max-w-7xl px-4">
 					<h2>Real Store, Real Product, Real Impact</h2>
@@ -121,8 +121,8 @@ const MockShopSection = () => {
 				</BasicCard>
 			</div>
 
-			<div className="absolute bottom-0 left-1/2 z-10 -translate-x-1/2 text-center">
-				<p className="text-sm text-gray-500">
+			<div className="absolute -bottom-8 left-1/2 z-10 -translate-x-1/2 text-center">
+				<p className="text-muted-foreground/75! text-sm">
 					A showcases how Vectreal enables interactive 3D product visualization
 					for e-commerce
 				</p>

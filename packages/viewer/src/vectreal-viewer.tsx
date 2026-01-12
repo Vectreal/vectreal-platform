@@ -15,7 +15,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 import { Center } from '@react-three/drei'
-import { Canvas } from '@react-three/fiber'
 import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
 import {
@@ -27,11 +26,12 @@ import {
 	ShadowsProps
 } from '@vctrl/core'
 // import { Perf } from 'r3f-perf'
-import { memo, PropsWithChildren, Suspense, useEffect, useState } from 'react'
+import { memo, PropsWithChildren, Suspense } from 'react'
 import { Object3D } from 'three'
 
-import { InfoPopover, type InfoPopoverProps } from './components'
+import { Canvas, Overlay } from './components'
 import {
+	SceneBounds,
 	SceneControls,
 	SceneEnvironment,
 	SceneModel,
@@ -39,9 +39,7 @@ import {
 	SceneShadows
 } from './components/scene'
 
-import SceneBounds from './components/scene/scene-bounds'
-
-import styles from './styles.module.css'
+import styles from './viewer.module.css'
 
 export interface VectrealViewerProps extends PropsWithChildren {
 	/**
@@ -53,6 +51,21 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * An optional className to apply to the outermost container of the viewer.
 	 */
 	className?: string
+
+	/**
+	 * Theme for the viewer.
+	 * - 'light': Force light theme
+	 * - 'dark': Force dark theme
+	 * - 'system': Use system preference (default)
+	 */
+	theme?: 'light' | 'dark' | 'system'
+
+	/**
+	 * Whether to render the canvas only when visible in viewport.
+	 * Improves performance by not rendering off-screen scenes.
+	 * Default: true
+	 */
+	enableViewportRendering?: boolean
 
 	/**
 	 * Options for the scene bounds.
@@ -85,9 +98,9 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	gridOptions?: GridProps
 
 	/**
-	 * Options for the info popover.
+	 * Slot for the info popover component.
 	 */
-	infoPopoverOptions?: InfoPopoverProps
+	popover?: React.ReactNode
 
 	/**
 	 * JSX element to render while the model is loading.
@@ -105,17 +118,6 @@ export interface VectrealViewerProps extends PropsWithChildren {
  *
  * This component is designed to be easily extensible and customizable. It uses the
  * `@react-three/drei` library to render the 3D scene.
- *
- * The component also accepts the following props:
- *
- * - `children`: Any React children to render inside the canvas.
- * - `model`: A 3D model to render as three `Object3D`.
- * - `className`: An optional className to apply to the outermost container element.
- * - `controlsOptions`: An optional object containing options for the OrbitControls.
- * - `envOptions`: An optional object containing options for the environment.
- * - `gridOptions`: An optional object containing options for the grid.
- * - `infoPopoverOptions`: An optional object containing options for the info popover.
- * - `loader`: An optional JSX element to render while the model is loading.
  *
  * The component will render any provided children inside the canvas.
  *
@@ -137,65 +139,36 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	const {
 		className,
 		children,
+		theme = 'system',
 		cameraOptions,
 		boundsOptions,
 		envOptions,
 		// gridOptions,
 		controlsOptions,
 		shadowsOptions,
-		infoPopoverOptions,
+		popover,
 		onScreenshot,
+		enableViewportRendering = true,
 		loader = <DefaultSpinner />
 	} = props
 
-	const [showLoader, setShowLoader] = useState(!model)
-	const [isLoaderFading, setIsLoaderFading] = useState(false)
-	const [showCanvas, setShowCanvas] = useState(!!model)
-
-	useEffect(() => {
-		if ((model && showLoader) || children) {
-			// Start canvas fade in and loader fade out simultaneously
-			setIsLoaderFading(true)
-			setShowCanvas(true)
-
-			setTimeout(() => {
-				// After fade out duration, hide loader
-				setShowLoader(false)
-				setIsLoaderFading(false)
-			}, 500) // Matching this duration with CSS transition duration
-		} else if (!model && !showLoader) {
-			setShowLoader(true)
-			setShowCanvas(false)
-		}
-	}, [model, showLoader, children])
-
-	// Check if the dark mode is manually enabled - This needs to be js because of CSS modules and minification
-	const isManualDarkModel = className?.split(' ').includes('dark')
+	const hasContent = !!(model || children)
 
 	return (
-		<div
-			className={cn(
-				className,
-				'vctrl-viewer',
-				styles['viewer'],
-				isManualDarkModel && styles.dark
-			)}
-		>
+		<Suspense fallback={loader}>
 			<Canvas
+				containerClassName={cn(styles.viewer, 'vctrl-viewer', className)}
+				theme={theme}
+				overlay={
+					<Overlay hasContent={hasContent} popover={popover} loader={loader} />
+				}
+				enableViewportRendering={enableViewportRendering}
 				shadows
-				gl={{
-					powerPreference: 'high-performance',
-					antialias: true
-				}}
-				className={cn(
-					'vctrl-viewer-canvas',
-					styles['viewer-canvas'],
-					showCanvas && styles['fade-in']
-				)}
+				gl={{ antialias: true }}
 				camera={cameraOptions}
 			>
 				<Suspense fallback={null}>
-					{(model || children) && (
+					{hasContent && (
 						<>
 							{/* <SceneGrid {...gridOptions} /> */}
 							<SceneShadows {...shadowsOptions} />
@@ -220,21 +193,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					)}
 				</Suspense>
 			</Canvas>
-
-			{showLoader && !children && (
-				<div
-					className={cn(
-						'absolute inset-0 flex h-full w-full flex-col items-center justify-center gap-4',
-						styles['loader-container'],
-						isLoaderFading && styles['fade-out']
-					)}
-				>
-					{loader}
-				</div>
-			)}
-
-			<InfoPopover {...infoPopoverOptions} />
-		</div>
+		</Suspense>
 	)
 })
 export default VectrealViewer

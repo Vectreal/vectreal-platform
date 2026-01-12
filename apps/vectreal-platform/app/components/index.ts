@@ -4,6 +4,7 @@ export * from './layout-components'
 export * from './publisher'
 export * from './radio-accordion'
 
+export * from './footer'
 export * from './info-tooltip'
 export * from './navigation'
 export * from './tooltip-button'
