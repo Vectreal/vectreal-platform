@@ -6,7 +6,6 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
-
 import { Switch } from '@shared/components/ui/switch'
 import {
 	Tooltip,
@@ -15,12 +14,12 @@ import {
 	TooltipTrigger
 } from '@shared/components/ui/tooltip'
 import { cn } from '@shared/utils'
+import { TextureOptimization } from '@vctrl/core'
 import { useAtom } from 'jotai'
 import { Info } from 'lucide-react'
 
 import { SettingSlider } from '../../../../../components'
 import { optimizationAtom } from '../../../../../lib/stores/publisher-config-store'
-import { TextureOptimization } from '../../../../../types/publisher-config'
 
 const textureSize = [
 	{ value: 256, label: '256×256' },
@@ -31,7 +30,8 @@ const textureSize = [
 ]
 
 export const TextureSettings: React.FC = () => {
-	const [{ plannedOptimizations }, setOptimization] = useAtom(optimizationAtom)
+	const [{ optimizations: plannedOptimizations }, setOptimization] =
+		useAtom(optimizationAtom)
 	const {
 		enabled,
 		resize: [resize] = [1024, 1024],
@@ -42,10 +42,10 @@ export const TextureSettings: React.FC = () => {
 	function setTexture(updates: Partial<TextureOptimization>) {
 		setOptimization((optimization) => ({
 			...optimization,
-			plannedOptimizations: {
-				...optimization.plannedOptimizations,
+			optimizations: {
+				...optimization.optimizations,
 				texture: {
-					...optimization.plannedOptimizations.texture,
+					...optimization.optimizations.texture,
 					...updates
 				}
 			}

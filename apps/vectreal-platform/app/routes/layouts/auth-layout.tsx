@@ -5,7 +5,7 @@ import { type AuthContextType } from '../../contexts/auth-context'
 import { FolderType, SceneType } from '../../hooks'
 import { PlatformApiService } from '../../lib/services/platform-api-service.server'
 import { projectService } from '../../lib/services/project-service.server'
-import { sceneService } from '../../lib/services/scene-service.server'
+import { sceneFolderService } from '../../lib/services/scene-folder-service.server'
 import { userService } from '../../lib/services/user-service.server'
 
 import { Route } from './+types/auth-layout'
@@ -54,8 +54,8 @@ const authMiddleware: Route.MiddlewareFunction = async ({
 		for (const { project } of userProjects) {
 			try {
 				const [projectScenes, projectFolders] = await Promise.all([
-					sceneService.getProjectScenes(project.id, user.id),
-					sceneService.getProjectSceneFolders(project.id, user.id)
+					sceneFolderService.getProjectScenes(project.id, user.id),
+					sceneFolderService.getProjectSceneFolders(project.id, user.id)
 				])
 
 				// Add scenes with project context

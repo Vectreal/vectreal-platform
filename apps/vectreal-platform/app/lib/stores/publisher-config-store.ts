@@ -22,7 +22,7 @@ const processAtom = atomWithStorage<ProcessState>(
 )
 
 const optimizationInitialState: OptimizationState = {
-	plannedOptimizations: mediumPreset,
+	optimizations: mediumPreset,
 	optimizationPreset: 'medium'
 }
 

@@ -1,3 +1,4 @@
+import { Optimizations } from '@vctrl/core'
 import {
 	bigint,
 	integer,
@@ -79,32 +80,7 @@ export const sceneStats = pgTable('scene_stats', {
 	appliedOptimizations: json('applied_optimizations').$type<string[]>(), // Array of optimization names applied
 
 	// Detailed optimization settings used
-	optimizationSettings: json('optimization_settings').$type<{
-		simplify?: {
-			ratio?: number
-			error?: number
-		}
-		dedup?: {
-			textures?: boolean
-			materials?: boolean
-			meshes?: boolean
-			accessors?: boolean
-		}
-		quantize?: {
-			quantizePosition?: number
-			quantizeNormal?: number
-			quantizeColor?: number
-			quantizeTexcoord?: number
-		}
-		normals?: {
-			overwrite?: boolean
-		}
-		textures?: {
-			resize?: [number, number]
-			targetFormat?: 'webp' | 'jpeg' | 'png'
-			quality?: number
-		}
-	}>(),
+	optimizationSettings: json('optimization_settings').$type<Optimizations>(),
 
 	// Additional metrics that might be useful
 	additionalMetrics: json('additional_metrics').$type<{

@@ -9,7 +9,7 @@ import { scenes } from '../../db/schema/project/scenes'
 /**
  * Service for scene-related database operations.
  */
-export class SceneService {
+export class SceneFolderService {
 	private readonly db = getDbClient()
 
 	/**
@@ -473,4 +473,4 @@ export class SceneService {
 	}
 }
 
-export const sceneService = new SceneService()
+export const sceneFolderService = new SceneFolderService()

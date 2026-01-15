@@ -46,7 +46,7 @@ const BasicPanel = () => {
 			setOptimizationConfig((prev) => ({
 				...prev,
 				optimizationPreset: presetOption.id,
-				plannedOptimizations: optimizationPresets[presetOption.id]
+				optimizations: optimizationPresets[presetOption.id]
 			}))
 		},
 		[optimizationPreset, setOptimizationConfig]

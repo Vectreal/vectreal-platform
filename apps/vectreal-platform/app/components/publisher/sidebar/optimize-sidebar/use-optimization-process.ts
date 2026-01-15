@@ -1,15 +1,15 @@
-import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtomValue } from 'jotai'
-import { useCallback, useEffect, useState } from 'react'
-
-import { optimizationAtom } from '../../../../lib/stores/publisher-config-store'
 import type {
 	DedupOptimization,
 	NormalsOptimization,
 	QuantizeOptimization,
 	SimplificationOptimization,
 	TextureOptimization
-} from '../../../../types/publisher-config'
+} from '@vctrl/core'
+import { useModelContext } from '@vctrl/hooks/use-load-model'
+import { useAtomValue } from 'jotai'
+import { useCallback, useEffect, useState } from 'react'
+
+import { optimizationAtom } from '../../../../lib/stores/publisher-config-store'
 
 type OptimizationOption =
 	| SimplificationOptimization
@@ -35,7 +35,7 @@ export const useOptimizationProcess = () => {
 		report
 	} = optimizer
 
-	const { plannedOptimizations } = useAtomValue(optimizationAtom)
+	const { optimizations: plannedOptimizations } = useAtomValue(optimizationAtom)
 	const [isPending, setIsPending] = useState<boolean>(false)
 
 	// Handle optimization process

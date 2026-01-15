@@ -22,18 +22,18 @@ const tooltips = {
 }
 
 const AdvancedPanel: React.FC = () => {
-	const [{ plannedOptimizations }, setOptimization] = useAtom(optimizationAtom)
+	const [{ optimizations }, setOptimizationState] = useAtom(optimizationAtom)
 
 	const setEnabled = (
 		checked: boolean,
 		type: 'quantize' | 'dedup' | 'normals'
 	) => {
-		setOptimization((optimization) => ({
-			...optimization,
-			plannedOptimizations: {
-				...optimization.plannedOptimizations,
+		setOptimizationState((previousOptimizationState) => ({
+			...previousOptimizationState,
+			optimizations: {
+				...previousOptimizationState.optimizations,
 				[type]: {
-					...optimization.plannedOptimizations[type],
+					...previousOptimizationState.optimizations[type],
 					enabled: checked
 				}
 			}
@@ -47,21 +47,21 @@ const AdvancedPanel: React.FC = () => {
 
 			<div className="space-y-6">
 				<SettingToggle
-					enabled={plannedOptimizations.quantize.enabled}
+					enabled={optimizations.quantize.enabled}
 					onToggle={(checked) => setEnabled(checked, 'quantize')}
 					title="Quantize Vertices"
 					description={descriptions.quantize}
 					info={tooltips.quantize}
 				/>
 				<SettingToggle
-					enabled={plannedOptimizations.dedup.enabled}
+					enabled={optimizations.dedup.enabled}
 					onToggle={(checked) => setEnabled(checked, 'dedup')}
 					title="Remove Duplicates"
 					description={descriptions.dedup}
 					info={tooltips.dedup}
 				/>
 				<SettingToggle
-					enabled={plannedOptimizations.normals.enabled}
+					enabled={optimizations.normals.enabled}
 					onToggle={(checked) => setEnabled(checked, 'normals')}
 					title="Optimize Normals"
 					description={descriptions.normals}

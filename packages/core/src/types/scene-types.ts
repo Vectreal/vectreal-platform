@@ -24,6 +24,14 @@ import {
 } from '@react-three/drei'
 import { CameraProps as ThreeCameraProps } from '@react-three/fiber'
 
+import type {
+	DedupOptions,
+	NormalsOptions,
+	QuantizeOptions,
+	SimplifyOptions,
+	TextureCompressOptions
+} from '../model-optimizer'
+
 /**
  * Metadata for a 3D scene.
  * Contains scene name, thumbnail, and extensible custom properties.
@@ -188,4 +196,43 @@ export interface SceneSettings {
 	shadows?: ShadowsProps
 	/** Scene metadata */
 	meta?: SceneMeta
+}
+export interface TextureOptimization
+	extends BaseOptimization<'texture'>,
+		TextureCompressOptions {}
+
+export type OptimizationNames =
+	| 'simplification'
+	| 'texture'
+	| 'quantize'
+	| 'dedup'
+	| 'normals'
+
+export interface BaseOptimization<Name = OptimizationNames> {
+	name: Name
+	enabled: boolean
+}
+
+export interface SimplificationOptimization
+	extends BaseOptimization<'simplification'>,
+		SimplifyOptions {}
+
+export interface QuantizeOptimization
+	extends BaseOptimization<'quantize'>,
+		QuantizeOptions {}
+
+export interface DedupOptimization
+	extends BaseOptimization<'dedup'>,
+		DedupOptions {}
+
+export interface NormalsOptimization
+	extends BaseOptimization<'normals'>,
+		NormalsOptions {}
+
+export type Optimizations = {
+	simplification: SimplificationOptimization
+	texture: TextureOptimization
+	quantize: QuantizeOptimization
+	dedup: DedupOptimization
+	normals: NormalsOptimization
 }

@@ -1,7 +1,7 @@
 // UI Components
-import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { Switch } from '@shared/components/ui/switch'
 import { cn } from '@shared/utils'
+import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom } from 'jotai'
 
 // Store
@@ -22,13 +22,13 @@ interface SimplificationSettings {
  */
 const useSimplificationSettings = () => {
 	const [state, setOptimization] = useAtom(optimizationAtom)
-	const { simplification } = state.plannedOptimizations
+	const { simplification } = state.optimizations
 
 	const updateSettings = (updates: Partial<SimplificationSettings>) => {
 		setOptimization((prev) => ({
 			...prev,
-			plannedOptimizations: {
-				...prev.plannedOptimizations,
+			optimizations: {
+				...prev.optimizations,
 				simplification: { ...simplification, ...updates }
 			}
 		}))

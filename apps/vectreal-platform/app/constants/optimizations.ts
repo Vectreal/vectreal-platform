@@ -1,9 +1,8 @@
-import type {
-	OptimizationPreset,
-	PossibleOptimizations
-} from '../types/publisher-config'
+import type { Optimizations } from 'packages/core/src/types/scene-types'
 
-export const lowPreset: PossibleOptimizations = {
+import type { OptimizationPreset } from '../types/publisher-config'
+
+export const lowPreset: Optimizations = {
 	simplification: {
 		name: 'simplification',
 		enabled: true,
@@ -34,7 +33,7 @@ export const lowPreset: PossibleOptimizations = {
 	}
 }
 
-export const mediumPreset: PossibleOptimizations = {
+export const mediumPreset: Optimizations = {
 	simplification: {
 		name: 'simplification',
 		enabled: true,
@@ -65,7 +64,7 @@ export const mediumPreset: PossibleOptimizations = {
 	}
 }
 
-export const highPreset: PossibleOptimizations = {
+export const highPreset: Optimizations = {
 	simplification: {
 		name: 'simplification',
 		enabled: true,
@@ -96,10 +95,7 @@ export const highPreset: PossibleOptimizations = {
 	}
 }
 
-export const optimizationPresets: Record<
-	OptimizationPreset,
-	PossibleOptimizations
-> = {
+export const optimizationPresets: Record<OptimizationPreset, Optimizations> = {
 	low: lowPreset,
 	medium: mediumPreset,
 	high: highPreset
