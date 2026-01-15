@@ -91,10 +91,10 @@ class SceneSettingsService {
 			})
 
 			// Get current latest version
-			const latestSettings = (await this.getLatestSceneSettingsInternal(
+			const latestSettings = await this.getLatestSceneSettingsInternal(
 				tx,
 				sceneId
-			)) as typeof sceneSettings.$inferSelect
+			)
 
 			// Check if settings or assets have changed
 			if (latestSettings) {
@@ -140,7 +140,7 @@ class SceneSettingsService {
 				userId,
 				settings,
 				gltfJson,
-				previousVersion: latestSettings?.version || 0,
+				previousVersion: 0,
 				optimizationReport,
 				existingAssetIds: []
 			})
@@ -517,10 +517,7 @@ class SceneSettingsService {
 				)
 
 				// Compare asset hashes - returns true if changed
-				return this.compareAssetHashes(
-					currentAssetHashes,
-					existingAssetHashes
-				)
+				return this.compareAssetHashes(currentAssetHashes, existingAssetHashes)
 			}
 		} else {
 			// For extended GLTF document, extract embedded asset IDs and compare
@@ -567,9 +564,7 @@ class SceneSettingsService {
 	/**
 	 * Computes content hashes for a list of assets.
 	 */
-	private computeAssetHashes(
-		assets: GLTFAssetData[]
-	): Map<string, string> {
+	private computeAssetHashes(assets: GLTFAssetData[]): Map<string, string> {
 		const hashes = new Map<string, string>()
 
 		for (const asset of assets) {
