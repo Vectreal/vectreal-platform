@@ -70,7 +70,7 @@ export interface SceneSettingsRequest extends Partial<BaseSceneParams> {
 	readonly settings?: SceneSettingsData
 	readonly assetIds?: string[]
 	readonly gltfJson?: JSONDocument
-	readonly optimizationReport?: unknown
+	readonly optimizationReport?: OptimizationReport
 }
 
 /** Parameters for retrieving scene settings. */

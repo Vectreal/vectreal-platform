@@ -1,7 +1,5 @@
 import { randomUUID } from 'crypto'
 
-import { OptimizationReport } from '@vctrl/core'
-
 import { UUID_REGEX } from '../../constants/utility-constants'
 import type { SceneSettingsRequest } from '../../types/api'
 import { sceneSettingsService } from '../services/scene-settings-service.server'
@@ -69,7 +67,7 @@ async function resolveSceneAndProject(
 }
 
 export async function saveSceneSettings(
-	request: SceneSettingsRequest & { optimizationReport?: OptimizationReport },
+	request: SceneSettingsRequest,
 	userId: string
 ): Promise<Response> {
 	try {

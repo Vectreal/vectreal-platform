@@ -1,5 +1,7 @@
 import { JSONDocument } from '@gltf-transform/core'
 
+import { OptimizationReport } from '@vctrl/core'
+
 import type { SceneSettingsRequest } from '../../types/api'
 
 import { PlatformApiService } from '../services/platform-api-service.server'
@@ -210,7 +212,7 @@ export class SceneSettingsParser {
 	 */
 	private static parseOptimizationReport(
 		requestData: Record<string, unknown>
-	): Record<string, unknown> | undefined | Response {
+	): OptimizationReport | undefined | Response {
 		if (!requestData.optimizationReport) {
 			return undefined
 		}
@@ -233,7 +235,7 @@ export class SceneSettingsParser {
 		}
 
 		if (typeof requestData.optimizationReport === 'object') {
-			return requestData.optimizationReport as Record<string, unknown>
+			return requestData.optimizationReport as OptimizationReport
 		}
 
 		return undefined
