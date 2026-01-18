@@ -31,7 +31,7 @@ export const Footer = () => {
 					</p>
 				</div>
 
-				<div className="grid grid-cols-4 flex-col justify-center gap-4 text-left text-sm md:flex-row md:gap-6">
+				<div className="grid grid-cols-2 flex-col justify-center gap-16 text-left text-sm md:grid-cols-4 md:flex-row md:gap-6">
 					<div>
 						<h3 className="text-foreground mb-4 text-lg font-semibold">
 							Product

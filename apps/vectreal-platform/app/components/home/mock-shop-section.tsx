@@ -9,7 +9,7 @@ import ProductScene from './product-scene'
 
 const MockShopSection = () => {
 	return (
-		<section className="relative h-[80vh] min-h-[600px] w-full space-y-4">
+		<section className="relative min-h-[600px] w-full space-y-4 md:h-[80vh]">
 			<div className="from-background to-background/0 absolute top-0 right-0 left-0 z-10 bg-gradient-to-b py-16">
 				<span className="mx-auto block max-w-7xl px-4">
 					<h2>Real Store, Real Product, Real Impact</h2>
@@ -19,19 +19,21 @@ const MockShopSection = () => {
 				</span>
 			</div>
 
-			<div className="absolute inset-0 h-full w-full">
-				<ProductScene />
+			<div className="grid h-full w-full grid-rows-2 md:absolute md:inset-0 md:flex">
+				<div className="relative w-full max-md:h-150">
+					<ProductScene />
 
-				<div className="from-background to-background/0 absolute bottom-0 left-0 z-10 flex w-full justify-end bg-gradient-to-t p-4 pt-24">
-					<div className="bg-muted/25 overflow-hidden rounded-lg p-2 text-sm backdrop-blur-sm">
-						<Badge variant="secondary" className="mr-2">
-							3D View
-						</Badge>
-						Drag to rotate • Pinch to zoom
+					<div className="from-background to-background/0 absolute bottom-0 left-0 z-10 flex w-full justify-end bg-gradient-to-t p-4 pt-24">
+						<div className="bg-muted/25 overflow-hidden rounded-lg p-2 text-sm backdrop-blur-sm">
+							<Badge variant="secondary" className="mr-2">
+								3D View
+							</Badge>
+							Drag to rotate • Pinch to zoom
+						</div>
 					</div>
 				</div>
 
-				<BasicCard className="absolute top-1/2 right-0 mx-4 flex max-w-md -translate-y-1/2">
+				<BasicCard className="mx-4 flex max-w-md md:absolute md:top-1/2 md:right-0 md:mx-4 md:-translate-y-1/2">
 					<CardContent className="space-y-4">
 						<div className="flex items-center gap-2">
 							<Badge>Limited Edition</Badge>
@@ -121,7 +123,7 @@ const MockShopSection = () => {
 				</BasicCard>
 			</div>
 
-			<div className="absolute -bottom-8 left-1/2 z-10 -translate-x-1/2 text-center">
+			<div className="z-10 p-4 text-center md:absolute md:-bottom-8 md:left-1/2 md:-translate-x-1/2">
 				<p className="text-muted-foreground/75! text-sm">
 					A showcases how Vectreal enables interactive 3D product visualization
 					for e-commerce

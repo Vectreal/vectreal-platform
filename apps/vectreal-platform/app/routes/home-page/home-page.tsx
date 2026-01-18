@@ -319,7 +319,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 										className="h-full w-full overflow-clip object-contain"
 									/>
 								</div>
-								<div className="flex flex-row justify-between gap-4 py-4">
+								<div className="flex flex-col justify-between gap-4 py-4 md:flex-row">
 									<BasicCard>
 										<CardHeader>
 											<CardTitle className="text-xl font-medium">
@@ -544,7 +544,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 							</p>
 						</span>
 
-						<ul className="flex flex-row justify-between gap-4">
+						<ul className="flex flex-col justify-between gap-4 md:flex-row">
 							<li className="w-full grow flex-col">
 								<BasicCard className="h-full">
 									<CardContent>
