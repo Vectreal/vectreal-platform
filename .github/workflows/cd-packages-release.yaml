@@ -6,7 +6,7 @@ on:
       - 'v*.*.*'
 
 permissions:
-  id-token: write  # Required for OIDC authentication with NPM
+  id-token: write # Required for OIDC authentication with NPM
   contents: read
 
 jobs:
@@ -32,8 +32,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Get pnpm store directory
         id: pnpm-cache

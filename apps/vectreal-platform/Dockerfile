@@ -2,7 +2,7 @@
 
 # Base image with Node.js
 FROM node:22-alpine AS base
-ARG PNPM_VERSION=10.27.0
+ARG PNPM_VERSION=10.28.0
 WORKDIR /app
 ENV PNPM_HOME=/usr/local/bin
 
@@ -29,7 +29,7 @@ RUN corepack prepare pnpm@${PNPM_VERSION} --activate && \
 
 # Builder stage
 FROM base AS builder
-ARG PNPM_VERSION=10.27.0
+ARG PNPM_VERSION=10.28.0
 WORKDIR /app
 
 # Copy dependencies
