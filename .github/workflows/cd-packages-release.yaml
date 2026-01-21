@@ -1,4 +1,4 @@
-name: Version and Release
+name: Release - Publish Packages
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   versioning:
-    name: Versioning and Publishing to NPM
+    name: Version and Publish to NPM
     environment: packages-releasing
     runs-on: ubuntu-22.04
     strategy:

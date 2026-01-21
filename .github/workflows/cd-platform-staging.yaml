@@ -1,0 +1,36 @@
+name: Deploy Platform to Staging
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'apps/vectreal-platform/**'
+      - 'packages/core/**'
+      - 'packages/hooks/**'
+      - 'packages/viewer/**'
+      - 'shared/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'nx.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/cd-platform-staging.yaml'
+      - '.github/workflows/shared-gcloud-deploy.yaml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging Environment
+    uses: ./.github/workflows/shared-gcloud-deploy.yaml
+    with:
+      environment: staging
+      service-name: vectreal-platform-staging
+      image-name: vectreal-platform-staging
+      region: us-central1
+      node-env: staging
+    secrets:
+      gcp-credentials: ${{ secrets.GCP_CREDENTIALS_STAGING }}
+      gcp-project-id: ${{ secrets.GCP_PROJECT_ID_STAGING }}

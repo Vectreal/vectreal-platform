@@ -1,12 +1,16 @@
-name: Publish vctrl/viewer Storybook to Chromatic
+name: Publish Viewer to Chromatic
 
-#exclude dependabot and renovate branches
 on:
   push:
-    branches-ignore:
-      - 'dependabot/**'
-      - 'renovate/**'
-      - 'chore/**'
+    branches:
+      - main
+      - develop
+    paths:
+      - 'packages/viewer/**'
+      - '.github/workflows/cd-chromatic-viewer.yaml'
+  pull_request:
+    paths:
+      - 'packages/viewer/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-chromatic
@@ -18,7 +22,7 @@ permissions:
 
 jobs:
   chromatic:
-    name: Chromatic
+    name: Publish to Chromatic
     runs-on: ubuntu-22.04
     environment: chromatic-publishing
 
@@ -54,17 +58,16 @@ jobs:
       - name: 📥 Install deps
         run: pnpm install --frozen-lockfile
 
-      - name: Build Storybook
+      - name: 🔨 Build Storybook
         run: npx nx build-storybook vctrl/viewer
 
-      - name: ⚡ Run chromatic
+      - name: ⚡ Publish to Chromatic
         uses: chromaui/action@latest
-        # Chromatic GitHub Action options
         with:
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN_1 }}
           workingDir: packages/viewer
           autoAcceptChanges: 'main'
-          exitZeroOnChanges: true
+          exitZeroOnChanges: ${{ github.event_name == 'pull_request' }}
           exitOnceUploaded: true
           onlyChanged: true
-          skip: '@(renovate/**|dependabot/**|chore/)'
+          skip: '@(renovate/**|dependabot/**|chore/**)'
