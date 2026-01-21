@@ -1,6 +1,6 @@
-import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { CardTitle } from '@shared/components/ui/card'
 import { cn, formatFileSize } from '@shared/utils'
+import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { motion } from 'framer-motion'
 
 interface OptimizationStatsHeaderProps {

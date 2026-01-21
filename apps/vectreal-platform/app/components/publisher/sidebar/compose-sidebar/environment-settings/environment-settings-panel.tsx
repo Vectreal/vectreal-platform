@@ -1,8 +1,3 @@
-import {
-	EnvironmentKey,
-	EnvironmentProps,
-	EnvironmentResolution
-} from '@vctrl/core'
 import { Label } from '@shared/components/ui/label'
 import {
 	Select,
@@ -14,6 +9,11 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
+import {
+	EnvironmentKey,
+	EnvironmentProps,
+	EnvironmentResolution
+} from '@vctrl/core'
 import { useAtom } from 'jotai/react'
 import { useCallback } from 'react'
 

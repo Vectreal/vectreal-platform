@@ -4,7 +4,7 @@
  * For more information, see https://reactrouter.com/explanation/special-files#entryclienttsx
  */
 
-import { startTransition, StrictMode } from 'react'
+import { startTransition } from 'react'
 import { hydrateRoot } from 'react-dom/client'
 import { HydratedRouter } from 'react-router/dom'
 

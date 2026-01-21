@@ -1,4 +1,3 @@
-import { User } from '@supabase/supabase-js'
 import { VectrealLogoSmall } from '@shared/components/assets/icons/vectreal-logo-small'
 import {
 	Tabs,
@@ -8,6 +7,7 @@ import {
 } from '@shared/components/ui/tabs'
 import { TooltipProvider } from '@shared/components/ui/tooltip'
 import { cn } from '@shared/utils'
+import { User } from '@supabase/supabase-js'
 import { motion } from 'framer-motion'
 import { AnimatePresence } from 'framer-motion'
 import { useAtom } from 'jotai/react'

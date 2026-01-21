@@ -1,29 +1,29 @@
-import { FileIcon, Settings2, Star } from  from '@shared/ui'
+import { FileIcon, Settings2, Star } from 'lucide-react'
 
 export const ACCORDION_ITEMS = [
 	{
-		value:  from '@shared/ui',
+		value: 'stats',
 		icon: null, // This one uses a custom header
 		title: 'Stats'
 	},
 	{
-		value:  from '@shared/ui',
+		value: 'optimization',
 		icon: Star,
 		title: 'Optimization',
 		size: 14
 	},
 	{
-		value:  from '@shared/ui',
+		value: 'advanced-optimization',
 		icon: Settings2,
 		title: 'Advanced Optimization',
 		size: 14
 	},
 	{
-		value:  from '@shared/ui',
+		value: 'scene-details',
 		icon: FileIcon,
 		title: 'Scene Details',
 		size: 14
 	}
 ] as const
 
-export type AccordionItemValue = (typeof ACCORDION_ITEMS)[number][ from '@shared/ui']
+export type AccordionItemValue = (typeof ACCORDION_ITEMS)[number]['value']

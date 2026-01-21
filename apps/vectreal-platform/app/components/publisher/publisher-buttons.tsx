@@ -1,13 +1,13 @@
-import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { TooltipProvider } from '@shared/components/ui/tooltip'
 import { cn } from '@shared/utils'
+import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom } from 'jotai'
 import { ArrowLeft, ArrowRight, Pen, Stars } from 'lucide-react'
 
 import { processAtom } from '../../lib/stores/publisher-config-store'
 
-import { TooltipButton } from '../tooltip-button'
 import { SidebarMode } from '../../types/publisher-config'
+import { TooltipButton } from '../tooltip-button'
 
 const PublisherButtons = () => {
 	const { file } = useModelContext()

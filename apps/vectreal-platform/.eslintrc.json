@@ -1,6 +1,6 @@
 {
 	"extends": ["plugin:@nx/react", "../../.eslintrc"],
-	"ignorePatterns": ["!**/*", "storybook-static", ".react-router"],
+	"ignorePatterns": ["!**/*", "storybook-static", ".react-router", "build"],
 	"overrides": [
 		{
 			"files": ["*.json"],

@@ -1,5 +1,5 @@
-import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { formatFileSize } from '@shared/utils'
+import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { Box, FileIcon, Grid, LayersIcon } from 'lucide-react'
 
 interface SceneDetailsProps {

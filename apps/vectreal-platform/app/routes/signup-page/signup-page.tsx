@@ -1,4 +1,3 @@
-import { User } from '@supabase/supabase-js'
 import {
 	AlertDescription,
 	AlertTitle,
@@ -13,6 +12,7 @@ import {
 	TooltipTrigger
 } from '@shared/components/ui/tooltip'
 import { ApiResponse } from '@shared/utils'
+import { User } from '@supabase/supabase-js'
 import { motion } from 'framer-motion'
 import { AnimatePresence } from 'framer-motion'
 import { AlertCircle, Eye, EyeClosed } from 'lucide-react'
