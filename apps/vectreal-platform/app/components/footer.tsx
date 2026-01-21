@@ -56,7 +56,9 @@ export const Footer = () => {
 								<Link to="/docs">Documentation</Link>
 							</li>
 							<li className="text-foreground list-item">
-								<Link to="/release-notes">Release Notes</Link>
+								<Link to="https://github.com/Vectreal/vectreal-platform/releases">
+									Release Notes
+								</Link>
 							</li>
 						</ul>
 					</div>
@@ -66,13 +68,20 @@ export const Footer = () => {
 						</h3>
 						<ul className="flex flex-col gap-4">
 							<li className="text-foreground list-item">
+								<Link to="/home">Home</Link>
+							</li>
+							<li className="text-foreground list-item">
 								<Link to="/about">About Us</Link>
 							</li>
-							<li className="text-foreground list-item">
-								<Link to="/careers">Careers</Link>
+							<li className="text-foreground list-item opacity-50">
+								{/* <Link to="/careers"> */}
+								Careers
+								{/* </Link> */}
 							</li>
-							<li className="text-foreground list-item">
-								<Link to="/blog">Blog</Link>
+							<li className="text-foreground list-item opacity-50">
+								{/* <Link to="/blog"> */}
+								Blog
+								{/* </Link> */}
 							</li>
 						</ul>
 					</div>
@@ -110,7 +119,7 @@ export const Footer = () => {
 								<Link to="https://reddit.com/r/vectreal/">Reddit</Link>
 							</li>
 							<li className="text-foreground list-item">
-								<Link to="/">Youtube</Link>
+								<Link to="https://youtube.com/vectreal/">Youtube</Link>
 							</li>
 						</ul>
 					</div>

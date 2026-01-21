@@ -1,4 +1,3 @@
-import { User } from '@supabase/supabase-js'
 import { VectrealLogoAnimated } from '@shared/components/assets/icons/vectreal-logo-animated'
 import {
 	Avatar,
@@ -14,8 +13,10 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger
 } from '@shared/components/ui/dropdown-menu'
+import { User } from '@supabase/supabase-js'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Sparkles } from 'lucide-react'
+import { PropsWithChildren } from 'react'
 import { Link, useFetcher, useLocation, useNavigate } from 'react-router'
 
 interface NavigationProps {
@@ -78,13 +79,24 @@ function UserMenu({ user, onLogout }: { user: User; onLogout: () => void }) {
 					Hey, {user.user_metadata?.full_name.split(' ').at(0) || user.email}!
 				</DropdownMenuLabel>
 				<DropdownMenuSeparator />
+				<DropdownMenuItem onClick={() => handleMenuItemClick('/profile')}>
+					Profile
+				</DropdownMenuItem>
 				<DropdownMenuItem onClick={() => handleMenuItemClick('/dashboard')}>
 					Dashboard
 				</DropdownMenuItem>
-				<DropdownMenuSeparator />
+
 				<DropdownMenuItem onClick={onLogout}>Log Out</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
+	)
+}
+
+const FloatPillContainer = ({ children }: PropsWithChildren) => {
+	return (
+		<div className="bg-background/50 flex w-fit items-center justify-between rounded-3xl p-2 shadow-2xl backdrop-blur-2xl">
+			{children}
+		</div>
 	)
 }
 
@@ -107,56 +119,54 @@ export const Navigation = ({ user }: NavigationProps) => {
 	}
 
 	return (
-		<>
-			<nav
-				className="bg-background/50 fixed top-0 right-0 left-0 z-50 shadow-2xl backdrop-blur-2xl"
-				aria-label="Main navigation"
-			>
-				<div className="flex w-full items-center justify-between p-2 px-8">
-					<Link
-						to="/"
-						className="flex h-full items-center"
-						viewTransition
-						aria-label="Home"
-					>
-						<VectrealLogoAnimated
-							className="text-muted-foreground h-5 md:h-7"
-							colored
-							// small
-						/>
-					</Link>
-					<div className="flex h-full items-center justify-center gap-2">
-						<AnimatePresence initial={false}>
-							{!isSigninPage && !user && (
-								<motion.div
-									initial={{ opacity: 0, width: 0 }}
-									animate={{ opacity: 1, width: 'auto' }}
-									exit={{ opacity: 0, width: 0 }}
-									transition={{ duration: 0.3, ease: 'easeInOut' }}
-									className="overflow-hidden"
-									key="sign-in-button"
-								>
-									<SignUpButton />
-								</motion.div>
-							)}
-							{!isPublisherPage && (
-								<motion.div
-									initial={{ opacity: 0, width: 0 }}
-									animate={{ opacity: 1, width: 'auto' }}
-									exit={{ opacity: 0, width: 0 }}
-									transition={{ duration: 0.3, ease: 'easeInOut' }}
-									className="overflow-hidden"
-									key="publisher-button"
-								>
-									<PublisherButton />
-								</motion.div>
-							)}
-							{user && <UserMenu user={user} onLogout={handleLogout} />}
-						</AnimatePresence>
-					</div>
-				</div>
-			</nav>
-			<div className="h-12" /> {/* Spacer for fixed nav */}
-		</>
+		<nav
+			className="fixed top-0 right-0 left-0 z-50 flex justify-between p-2"
+			aria-label="Main navigation"
+		>
+			<FloatPillContainer>
+				<Link
+					to="/"
+					className="flex h-full items-center px-4"
+					viewTransition
+					aria-label="Home"
+				>
+					<VectrealLogoAnimated
+						className="text-muted-foreground h-5 md:h-7"
+						colored
+						// small
+					/>
+				</Link>
+			</FloatPillContainer>
+
+			<FloatPillContainer>
+				<AnimatePresence initial={false}>
+					{!isSigninPage && !user && (
+						<motion.div
+							initial={{ opacity: 0, width: 0 }}
+							animate={{ opacity: 1, width: 'auto' }}
+							exit={{ opacity: 0, width: 0 }}
+							transition={{ duration: 0.3, ease: 'easeInOut' }}
+							className="mr-2 overflow-hidden"
+							key="sign-in-button"
+						>
+							<SignUpButton />
+						</motion.div>
+					)}
+					{!isPublisherPage && (
+						<motion.div
+							initial={{ opacity: 0, width: 0 }}
+							animate={{ opacity: 1, width: 'auto' }}
+							exit={{ opacity: 0, width: 0 }}
+							transition={{ duration: 0.3, ease: 'easeInOut' }}
+							className="mr-2 overflow-hidden"
+							key="publisher-button"
+						>
+							<PublisherButton />
+						</motion.div>
+					)}
+					{user && <UserMenu user={user} onLogout={handleLogout} />}
+				</AnimatePresence>
+			</FloatPillContainer>
+		</nav>
 	)
 }

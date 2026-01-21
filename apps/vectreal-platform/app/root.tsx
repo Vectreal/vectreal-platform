@@ -19,14 +19,14 @@ import ThemeProvider from './contexts/theme-provider'
 import { csrfSession } from './lib/sessions/csrf-session.server'
 import { getSession } from './lib/sessions/theme-session.server'
 
-import styles from './global.module.css'
+import styles from './styles/global.module.css'
 import '@shared/components/styles/globals.css'
 
 export const meta: MetaFunction = () => [
 	{
 		title: 'Vectreal Platform',
 		name: 'description',
-		content: 'Your platform for creating and sharing 3D scenes.'
+		content: 'Your platform for creating and sharing 3D content.'
 	}
 ]
 
@@ -55,6 +55,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	return loaderData
 }
+
+export type RootLoader = typeof loader
 
 export function Layout({ children }: { children: React.ReactNode }) {
 	const loaderData = useRouteLoaderData('root')

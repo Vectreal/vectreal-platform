@@ -27,15 +27,24 @@ export default [
 		route('sign-in', './routes/signin-page/signin-page.tsx')
 	]),
 
-	// home page - index route
-	// This is the default route that will be loaded when the app starts
-	index('./routes/home-page/home-page.tsx', {
-		id: 'home-index'
-	}),
-	// For users which are authenticated, the home page is available at "/home"
-	route('home', './routes/home-page/home-page.tsx', {
-		id: 'home-page'
-	}),
+	layout('./routes/layouts/nav-layout.tsx', [
+		// home page - index route
+		// This is the default route that will be loaded when the app starts
+		index('./routes/home-page/home-page.tsx', {
+			id: 'home-index'
+		}),
+		// For users which are authenticated, the home page is available at "/home"
+		route('home', './routes/home-page/home-page.tsx', {
+			id: 'home-page'
+		}),
+		layout('./routes/layouts/mdx-layout.tsx', [
+			route('about', './routes/about-page.mdx'),
+			route('contact', './routes/contact-page.mdx'),
+			route('privacy-policy', './routes/privacy-policy-page.mdx'),
+			route('terms-of-service', './routes/terms-of-service-page.mdx'),
+			route('imprint', './routes/imprint-page.mdx')
+		])
+	]),
 
 	// publisher
 	layout('./routes/layouts/publisher-layout.tsx', [

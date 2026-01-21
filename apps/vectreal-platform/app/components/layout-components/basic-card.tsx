@@ -40,7 +40,7 @@ const BasicCard = ({
 			/>
 			<Card
 				className={cn(
-					'bg-muted/60 border-t-accent/25 border-l-accent/10 relative h-full overflow-hidden rounded-xl backdrop-blur-2xl',
+					'bg-muted/60 border-t-accent/25 border-l-accent/10 relative h-full overflow-hidden rounded-3xl backdrop-blur-2xl',
 					cardClassNames
 				)}
 			>

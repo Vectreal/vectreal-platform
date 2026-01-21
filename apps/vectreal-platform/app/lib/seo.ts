@@ -17,28 +17,26 @@ export function buildMeta(
 ): NonNullable<MetaDescriptor>[] {
 	const baseMeta: MetaDescriptor[] = [
 		{
-			title:
-				'Enhance-Photo.com - AI Image Enhancer | Free Online Photo Upscaling & Restoration'
+			title: 'Vectreal - Your platform for creating and sharing 3D scenes.'
 		},
 		{
 			property: 'og:title',
-			content:
-				'Enhance-Photo.com - AI Image Enhancer | Free Online Photo Upscaling & Restoration'
+			content: 'Vectreal - Your platform for creating and sharing 3D scenes.'
 		},
 		{
 			name: 'description',
 			content:
-				'Instantly improve photo quality online for free with Enhance-Photo.com. Easily fix blurry WhatsApp images, pixelated screenshots, and restore clarity with powerful AI.'
+				'Vectreal is your go-to platform for creating, sharing, and exploring stunning 3D scenes. Join our community of creators and bring your virtual visions to life!'
 		},
 		{
 			property: 'og:description',
 			content:
-				'Instantly improve photo quality online for free with Enhance-Photo.com. Easily fix blurry WhatsApp images, pixelated screenshots, and restore clarity with powerful AI.'
+				'Vectreal is your go-to platform for creating, sharing, and exploring stunning 3D scenes. Join our community of creators and bring your virtual visions to life!'
 		},
 		{
 			name: 'keywords',
 			content:
-				'unblur image, photo enhancement, fix WhatsApp images, online photo upscaling, screenshot clarity, restore old photos, pixelation fix, enhance blurry photos'
+				'3D, scenes, platform, Vectreal, create, share, virtual reality, graphics, design'
 		}
 	]
 

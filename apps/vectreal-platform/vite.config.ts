@@ -1,4 +1,5 @@
 /// <reference types='vitest' />
+import mdx from '@mdx-js/rollup'
 import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin'
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin'
 import { reactRouter } from '@react-router/dev/vite'
@@ -30,6 +31,9 @@ export default defineConfig(({ mode, isSsrBuild, command }) => {
 			tailwindcss(),
 			nxViteTsPaths(),
 			nxCopyAssetsPlugin(['*.md']),
+			mdx({
+				format: 'mdx'
+			}),
 			devtoolsJson({
 				projectRoot: __dirname
 			}),

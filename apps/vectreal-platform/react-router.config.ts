@@ -4,7 +4,7 @@ export default {
 	ssr: true,
 
 	future: {
-		v8_viteEnvironmentApi: true,
+		unstable_viteEnvironmentApi: true,
 		v8_middleware: true
 	}
 } satisfies Config
