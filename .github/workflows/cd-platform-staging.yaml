@@ -34,3 +34,8 @@ jobs:
     secrets:
       gcp-credentials: ${{ secrets.GCP_CREDENTIALS_STAGING }}
       gcp-project-id: ${{ secrets.GCP_PROJECT_ID_STAGING }}
+      database-url: ${{ secrets.DATABASE_URL_STAGING }}
+      supabase-url: ${{ secrets.SUPABASE_URL_STAGING }}
+      supabase-anon-key: ${{ secrets.SUPABASE_PUB_KEY_STAGING }}
+      gcs-bucket-name: ${{ secrets.GCS_BUCKET_NAME_STAGING }}
+      application-url: ${{ secrets.APPLICATION_URL_STAGING }}

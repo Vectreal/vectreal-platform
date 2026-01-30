@@ -31,6 +31,7 @@ The monorepo is orchestrated using NX within an npm workspaces environment, prim
     - [Prerequisites](#prerequisites)
     - [Installation](#installation)
     - [Running Projects](#running-projects)
+  - [Deployment](#deployment)
   - [Contributing](#contributing)
   - [License](#license)
   - [Contact](#contact)
@@ -64,7 +65,6 @@ vectreal-core/
 ### React Packages
 
 - **[@vctrl/hooks](https://github.com/Vectreal/vectreal-core/tree/main/packages/hooks)**: A collection of useful React hooks for loading and interacting with 3D files.
-
   - **use-load-model**: File or directory loading hooks for various approaches (Event based, React Context, direct)
 
   - **use-optimize-model**: Utilizing the [gltf-transform](https://gltf-transform.dev/) js library to optimize models in the browser. May be used standaloe or in conjunction with the `use-load-model` hook for convenience.
@@ -76,7 +76,6 @@ vectreal-core/
   Built with the `@vctrl/hooks/use-load-model` hook to dynamically load various model file types.
 
   Supported file formats:
-
   - glTF (with .bin and textures)
   - GLB
   - OBJ
@@ -133,6 +132,52 @@ npx nx show project vctrl/official-website --web
 > The optional `--web` parameter opens a visual overview of all possible commands available for a project.
 
 For more information on working with NX, refer to the [official NX documentation](https://nx.dev/getting-started/tutorials/react-monorepo-tutorial#project-details-container).
+
+## Deployment
+
+The Vectreal Platform uses Infrastructure as Code (IaC) with Terraform for GCP deployment and GitHub Actions for CI/CD.
+
+### Quick Deploy
+
+```bash
+# 1. Set up infrastructure (one-time)
+cd terraform
+./scripts/apply-infrastructure.sh
+
+# 2. Configure GitHub secrets
+./scripts/setup-github-secrets.sh
+
+# 3. Deploy to staging
+git push origin develop
+
+# 4. Deploy to production
+git push origin main
+```
+
+### Infrastructure
+
+The infrastructure is managed with Terraform and includes:
+
+- **Google Cloud Run** for containerized application hosting
+- **Artifact Registry** for Docker image storage
+- **Service Accounts** with least-privilege IAM roles
+- **GitHub Secrets** for secure configuration management
+
+Two setup scripts handle the deployment configuration:
+
+- `scripts/apply-infrastructure.sh` - GCP authentication, Terraform initialization and deployment, service account key generation
+- `scripts/setup-github-secrets.sh` - GitHub secrets configuration from `.env.secrets.local`
+
+For detailed infrastructure setup, configuration options, and troubleshooting, see the [Terraform README](terraform/README.md).
+
+### CI/CD Workflows
+
+- **Staging Deployment**: Triggered on push to `develop` branch
+- **Production Deployment**: Triggered on push to `main` branch
+- **Package Release**: Triggered on version tags (`v*.*.*`)
+- **Storybook Publishing**: Automated via Chromatic integration
+
+All workflows use GitHub Actions and are configured to inject secrets at deployment time.
 
 ## Contributing
 

@@ -20,3 +20,10 @@ yarn.lock
 
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
+
+# Terraform and GCP credentials
+credentials/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform.tfvars.example
