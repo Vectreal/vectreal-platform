@@ -71,15 +71,6 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Run database migrations
-        run: |
-          echo "Running database migrations for ${{ inputs.environment }}..."
-          npm install -g pnpm@10.28.0
-          pnpm install --frozen-lockfile
-          pnpm exec drizzle-kit push --config=apps/vectreal-platform/drizzle.config.ts
-        env:
-          DATABASE_URL: ${{ secrets.database-url }}
-
       - name: Log in to Google Artifact Registry
         run: |
           gcloud auth configure-docker ${{ inputs.region }}-docker.pkg.dev
