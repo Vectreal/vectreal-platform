@@ -55,6 +55,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8080
 
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
 # Copy package files first
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
@@ -69,7 +73,15 @@ RUN corepack enable && \
     corepack prepare pnpm@${PNPM_VERSION} --activate && \
     pnpm install --prod --frozen-lockfile
 
+# Change ownership to non-root user
+RUN chown -R nodejs:nodejs /app
+
+USER nodejs
+
 EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:8080/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Start the application
 CMD ["node", "--no-warnings", "./apps/vectreal-platform/build/server/index.js"]

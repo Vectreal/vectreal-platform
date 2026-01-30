@@ -32,6 +32,21 @@ on:
       gcp-project-id:
         description: 'Google Cloud project ID'
         required: true
+      database-url:
+        description: 'Database URL for migrations and runtime'
+        required: true
+      supabase-url:
+        description: 'Supabase URL'
+        required: true
+      supabase-anon-key:
+        description: 'Supabase Anonymous Key'
+        required: true
+      gcs-bucket-name:
+        description: 'GCS Bucket Name'
+        required: true
+      application-url:
+        description: 'Application URL'
+        required: true
 
 jobs:
   deploy:
@@ -53,12 +68,21 @@ jobs:
         with:
           credentials_json: ${{ secrets.gcp-credentials }}
 
-      - name: Log in to Google Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: gcr.io
-          username: _json_key
-          password: ${{ secrets.gcp-credentials }}
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Run database migrations
+        run: |
+          echo "Running database migrations for ${{ inputs.environment }}..."
+          npm install -g pnpm@10.28.0
+          pnpm install --frozen-lockfile
+          pnpm exec drizzle-kit push --config=apps/vectreal-platform/drizzle.config.ts
+        env:
+          DATABASE_URL: ${{ secrets.database-url }}
+
+      - name: Log in to Google Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ inputs.region }}-docker.pkg.dev
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -68,26 +92,62 @@ jobs:
           target: runner
           push: true
           tags: |
-            gcr.io/${{ secrets.gcp-project-id }}/${{ inputs.image-name }}:${{ github.sha }}
-            ${{ inputs.environment == 'production' && format('gcr.io/{0}/{1}:latest', secrets.gcp-project-id, inputs.image-name) || '' }}
+            ${{ inputs.region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:${{ github.sha }}
+            ${{ inputs.environment == 'production' && format('{0}-docker.pkg.dev/{1}/vectreal-platform/{2}:latest', inputs.region, secrets.gcp-project-id, inputs.image-name) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
             NODE_ENV=${{ inputs.node-env }}
 
       - name: Deploy to Cloud Run
+        id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: ${{ inputs.service-name }}
-          image: gcr.io/${{ secrets.gcp-project-id }}/${{ inputs.image-name }}:${{ github.sha }}
+          image: ${{ inputs.region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:${{ github.sha }}
           region: ${{ inputs.region }}
+          flags: '--allow-unauthenticated'
           env_vars: |
             NODE_ENV=${{ inputs.node-env }}
             ENVIRONMENT=${{ inputs.environment }}
+            DATABASE_URL=${{ secrets.database-url }}
+            SUPABASE_URL=${{ secrets.supabase-url }}
+            SUPABASE_ANON_KEY=${{ secrets.supabase-anon-key }}
+            GCS_BUCKET_NAME=${{ secrets.gcs-bucket-name }}
+            APPLICATION_URL=${{ secrets.application-url }}
+
+      - name: Verify deployment health
+        run: |
+          echo "Waiting for service to become healthy..."
+          sleep 15
+          SERVICE_URL="${{ steps.deploy.outputs.url }}"
+
+          # Try health check endpoint
+          MAX_RETRIES=5
+          RETRY_COUNT=0
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Health check attempt $((RETRY_COUNT + 1))/$MAX_RETRIES..."
+            
+            if curl -f -s "${SERVICE_URL}/health" > /dev/null 2>&1; then
+              echo "✅ Service is healthy!"
+              exit 0
+            fi
+            
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              echo "⏳ Waiting 10 seconds before retry..."
+              sleep 10
+            fi
+          done
+
+          echo "❌ Service health check failed after $MAX_RETRIES attempts"
+          echo "::warning::Deployment completed but health check failed. Please verify manually."
+          exit 0  # Don't fail the workflow, but warn
 
       - name: Output deployment info
         run: |
           echo "::notice::✅ Deployed to ${{ inputs.environment }} environment"
           echo "::notice::Service: ${{ inputs.service-name }}"
           echo "::notice::Region: ${{ inputs.region }}"
-          echo "::notice::Image: gcr.io/${{ secrets.gcp-project-id }}/${{ inputs.image-name }}:${{ github.sha }}"
+          echo "::notice::Image: ${{ inputs.region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:${{ github.sha }}"
