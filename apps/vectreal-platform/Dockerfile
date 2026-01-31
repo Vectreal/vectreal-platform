@@ -43,13 +43,13 @@ COPY --from=deps /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=deps /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
 # Copy source files
-COPY nx.json tsconfig.base.json ./
+COPY nx.json tsconfig.base.json .eslintrc ./
 COPY apps ./apps
 COPY packages ./packages
 COPY shared ./shared
 
 # Build the application
-RUN pnpm exec nx build vectreal-platform --prod
+RUN pnpm exec nx build vectreal-platform
 
 # Runner stage
 FROM base AS runner
