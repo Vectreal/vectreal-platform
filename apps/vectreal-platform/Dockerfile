@@ -63,22 +63,10 @@ ENV PORT=8080
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Copy package files first
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
-COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
-COPY --from=builder /app/apps/vectreal-platform/package.json ./apps/vectreal-platform/package.json
-
-# Copy built application
-COPY --from=builder /app/apps/vectreal-platform/build ./apps/vectreal-platform/build
-
-# Enable corepack and install production dependencies
-RUN corepack enable && \
-    corepack prepare pnpm@${PNPM_VERSION} --activate && \
-    pnpm install --prod --frozen-lockfile
-
-# Change ownership to non-root user
-RUN chown -R nodejs:nodejs /app
+# Copy built application and all dependencies from builder
+COPY --from=builder --chown=nodejs:nodejs /app/apps/vectreal-platform/build ./apps/vectreal-platform/build
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/package.json ./package.json
 
 USER nodejs
 
