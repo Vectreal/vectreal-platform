@@ -7,6 +7,9 @@ import {
 } from '@react-router/dev/routes'
 
 export default [
+	// Health check endpoint for Docker and monitoring
+	route('health', './routes/health.tsx'),
+
 	// API
 	route('api/update-theme', './routes/api/update-theme.ts'),
 	route('api/scene-settings', './routes/api/scene-settings.ts'),

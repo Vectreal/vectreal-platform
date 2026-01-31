@@ -5,12 +5,19 @@ import {
 } from '@supabase/ssr'
 
 export async function createSupabaseClient(request: Request) {
+	// Validate required environment variables
+	if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
+		throw new Error(
+			'Missing required Supabase environment variables: SUPABASE_URL and SUPABASE_KEY must be set'
+		)
+	}
+
 	// Get the session from the request cookies
 	const headers = new Headers()
 
 	const client = createServerClient(
-		process.env.SUPABASE_URL || '',
-		process.env.SUPABASE_KEY || '',
+		process.env.SUPABASE_URL,
+		process.env.SUPABASE_KEY,
 		{
 			auth: { flowType: 'pkce' },
 			cookies: {

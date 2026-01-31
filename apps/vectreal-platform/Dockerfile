@@ -59,6 +59,16 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8080
 
+# =============================================================================
+# REQUIRED ENVIRONMENT VARIABLES (must be set at runtime):
+# =============================================================================
+# - DATABASE_URL: PostgreSQL connection string
+# - SUPABASE_URL: Supabase project URL (e.g., https://xxx.supabase.co)
+# - SUPABASE_KEY: Supabase anonymous/public key
+# - GCS_BUCKET_NAME: Google Cloud Storage bucket name (optional)
+# - APPLICATION_URL: Application URL for OAuth redirects (optional)
+# =============================================================================
+
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
@@ -75,5 +85,6 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
     CMD node -e "require('http').get('http://localhost:8080/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start the application
-CMD ["node", "--no-warnings", "./apps/vectreal-platform/build/server/index.js"]
+# Start the application using react-router-serve from the correct directory
+WORKDIR /app/apps/vectreal-platform
+CMD ["npx", "react-router-serve", "build/server/index.js"]
