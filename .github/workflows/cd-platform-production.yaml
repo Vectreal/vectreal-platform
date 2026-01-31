@@ -36,6 +36,6 @@ jobs:
       gcp-project-id: ${{ secrets.GCP_PROJECT_ID }}
       database-url: ${{ secrets.DATABASE_URL_PROD }}
       supabase-url: ${{ secrets.SUPABASE_URL_PROD }}
-      supabase-anon-key: ${{ secrets.SUPABASE_PUB_KEY_PROD }}
+      supabase-key: ${{ secrets.SUPABASE_KEY_PROD }}
       gcs-bucket-name: ${{ secrets.GCS_BUCKET_NAME_PROD }}
       application-url: ${{ secrets.APPLICATION_URL_PROD }}

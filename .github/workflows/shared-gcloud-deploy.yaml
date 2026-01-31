@@ -38,8 +38,8 @@ on:
       supabase-url:
         description: 'Supabase URL'
         required: true
-      supabase-anon-key:
-        description: 'Supabase Anonymous Key'
+      supabase-key:
+        description: 'Supabase Key'
         required: true
       gcs-bucket-name:
         description: 'GCS Bucket Name'
@@ -103,7 +103,7 @@ jobs:
             ENVIRONMENT=${{ inputs.environment }}
             DATABASE_URL=${{ secrets.database-url }}
             SUPABASE_URL=${{ secrets.supabase-url }}
-            SUPABASE_ANON_KEY=${{ secrets.supabase-anon-key }}
+            SUPABASE_KEY=${{ secrets.supabase-key }}
             GCS_BUCKET_NAME=${{ secrets.gcs-bucket-name }}
             APPLICATION_URL=${{ secrets.application-url }}
 
