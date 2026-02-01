@@ -39,6 +39,10 @@ const SigninLayout = () => {
 	async function handleSocialLogin(provider: 'google' | 'github') {
 		const formData = new FormData()
 		formData.append('provider', provider)
+		formData.append(
+			'backURL',
+			`${window.location.href}`.split('/sign').at(0) || ''
+		)
 		// Trigger the action to handle social login
 		await submit(formData, {
 			method: 'post',
