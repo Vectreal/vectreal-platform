@@ -30,7 +30,7 @@ function SignUpButton() {
 	return (
 		<Link viewTransition to="/sign-up" aria-label="Sign up">
 			<Button variant="ghost" size="sm">
-				Sign Up For Free
+				Sign In
 			</Button>
 		</Link>
 	)
@@ -43,7 +43,7 @@ function PublisherButton() {
 	return (
 		<Link viewTransition to="/publisher" aria-label="Go to Publisher">
 			<Button variant="ghost" size="sm">
-				Go to Publisher
+				Visit Publisher
 				<Sparkles />
 			</Button>
 		</Link>
