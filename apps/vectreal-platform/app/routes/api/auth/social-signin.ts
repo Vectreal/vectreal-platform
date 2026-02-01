@@ -10,9 +10,11 @@ export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData()
 	const provider = formData.get('provider')
 	const backURL = formData.get('backURL') || undefined
-	const redirectTo = backURL
+
+	const applicationUrl = backURL
 		? new URL(backURL.toString(), request.url).toString()
 		: process.env.APPLICATION_URL
+	const redirectTo = `${applicationUrl}/auth/callback`
 
 	if (typeof provider !== 'string') {
 		return ApiResponse.badRequest('Invalid provider')
