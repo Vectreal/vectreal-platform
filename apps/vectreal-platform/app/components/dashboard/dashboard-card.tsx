@@ -24,17 +24,16 @@ const DashboardCard: FC<DashboardCardProps> = (props) => {
 		<Link to={props.linkTo} className="block" viewTransition>
 			<BasicCard highlight={true}>
 				<CardHeader className="relative flex items-center gap-2">
-					<span className="grow">
+					<span className="grow space-y-1">
 						<CardTitle>{props.title}</CardTitle>
 						<CardDescription>{props.description}</CardDescription>
 					</span>
-					<ChevronRight className="h-4 w-4 text-gray-500" />
+					<ChevronRight className="text-primary/60 h-4 w-4" />
 				</CardHeader>
 				<CardContent>{props.children}</CardContent>
 				<CardFooter>
-					<div className="flex w-full items-center gap-4">
-						<span className="text-sm text-gray-600">ID</span>
-						<code className="grow text-xs">{props.id.slice(0, 24)}...</code>
+					<div className="flex w-full items-center justify-between gap-4">
+						<code className="text-primary/25 truncate text-xs">{props.id}</code>
 					</div>
 				</CardFooter>
 			</BasicCard>

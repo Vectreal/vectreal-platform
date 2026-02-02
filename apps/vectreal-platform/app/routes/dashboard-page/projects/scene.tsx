@@ -77,7 +77,6 @@ const PreviewModel = memo(({ file, sceneData }: PreviewModelProps) => {
 		<div className={cn('relative', height)}>
 			<div className="h-full">
 				<VectrealViewer
-					infoPopoverOptions={{ showInfo: false }}
 					model={file?.model}
 					envOptions={sceneData?.settings?.environment}
 					controlsOptions={sceneData?.settings?.controls}
@@ -85,7 +84,7 @@ const PreviewModel = memo(({ file, sceneData }: PreviewModelProps) => {
 					loader={
 						<div className="text-center">
 							<div className="mb-4 text-lg font-medium">Loading scene...</div>
-							<div className="text-sm text-gray-500">
+							<div className="text-primary/70 text-sm">
 								Please wait while we fetch your 3D model
 							</div>
 						</div>
@@ -166,8 +165,8 @@ const ScenePage = () => {
 		return (
 			<div className="p-6">
 				<div className="text-center">
-					<h1 className="text-2xl font-bold text-gray-900">Scene Not Found</h1>
-					<p className="mt-2 opacity-75">
+					<h1 className="text-primary text-2xl font-bold">Scene Not Found</h1>
+					<p className="text-primary/70 mt-2">
 						The scene you're looking for doesn't exist or you don't have access
 						to it.
 					</p>

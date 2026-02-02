@@ -139,10 +139,10 @@ export const DashboardHeader = memo(() => {
 
 	return (
 		<div className="space-y-8 p-6">
-			<div className="flex grow items-start justify-between">
-				<div>
+			<div className="flex grow flex-col items-start justify-between gap-4 md:flex-row">
+				<div className="space-y-1">
 					<h1 className="text-5xl font-normal">{title}</h1>
-					<p className="text-gray-600">{description}</p>
+					<p className="text-primary/50">{description}</p>
 				</div>
 
 				{actionVariant && <DashboardActions variant={actionVariant} />}

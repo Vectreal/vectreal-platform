@@ -77,12 +77,9 @@ const ProjectsPage = () => {
 									<span className="bg-muted/50 mr-2 rounded-xl p-1 px-3">
 										{organization.name}
 									</span>
-									projects:
-								</h3>
-								<Badge variant="outline">
-									{orgProjects.length} project
+									with {orgProjects.length} project
 									{orgProjects.length !== 1 ? 's' : ''}
-								</Badge>
+								</h3>
 							</div>
 							{orgProjects.length > 0 ? (
 								<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -96,7 +93,7 @@ const ProjectsPage = () => {
 											id={project.id}
 										>
 											<div className="space-y-2">
-												<div className="text-sm text-gray-600">
+												<div className="text-primary/60 text-sm">
 													{sceneStats.byProject[project.id] || 0} scenes
 												</div>
 											</div>

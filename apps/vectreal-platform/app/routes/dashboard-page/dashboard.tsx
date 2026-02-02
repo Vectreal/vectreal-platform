@@ -1,12 +1,14 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
-import { CheckCircle, File, Folder, FolderOpen, Plus } from 'lucide-react'
+import { CheckCircle, File, FolderOpen, Plus } from 'lucide-react'
 import { Link } from 'react-router'
 
 import DashboardCard from '../../components/dashboard/dashboard-card'
+import StatCard from '../../components/dashboard/stat-card'
 import {
 	useOrganizations,
 	useProjectStats,
+	useRecentProjects,
 	useRecentScenes,
 	useSceneStats
 } from '../../hooks'
@@ -22,66 +24,38 @@ const DashboardPage = () => {
 	const projectStats = useProjectStats()
 	const sceneStats = useSceneStats()
 	const recentScenes = useRecentScenes(6)
+	const recentProjects = useRecentProjects(6)
+
+	const stats = [
+		{
+			icon: FolderOpen,
+			value: projectStats.total,
+			label: 'Projects'
+		},
+		{
+			icon: File,
+			value: sceneStats.total,
+			label: 'Scenes'
+		},
+		{
+			icon: CheckCircle,
+			value: sceneStats.byStatus.published || 0,
+			label: 'Published'
+		}
+	]
 
 	return (
 		<div className="space-y-8 p-6">
-			<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-				{/* Statistics Overview */}
-				<div className="p-6">
-					<div className="flex items-center-safe">
-						<div className="flex-shrink-0">
-							<FolderOpen className="h-8 w-8 text-blue-500" />
-						</div>
-						<div className="ml-4">
-							<div className="text-primary text-2xl font-bold">
-								{projectStats.total}
-							</div>
-							<div className="text-muted-forground text-sm">Projects</div>
-						</div>
-					</div>
-				</div>
-
-				<div className="p-6">
-					<div className="flex items-center-safe">
-						<div className="flex-shrink-0">
-							<File className="h-8 w-8 text-green-500" />
-						</div>
-						<div className="ml-4">
-							<div className="text-primary text-2xl font-bold">
-								{sceneStats.total}
-							</div>
-							<div className="text-muted-forground text-sm">Scenes</div>
-						</div>
-					</div>
-				</div>
-
-				<div className="p-6">
-					<div className="flex items-center-safe">
-						<div className="flex-shrink-0">
-							<Folder className="h-8 w-8 text-purple-500" />
-						</div>
-						<div className="ml-4">
-							<div className="text-primary text-2xl font-bold">
-								{organizations.length}
-							</div>
-							<div className="text-muted-forground text-sm">Organizations</div>
-						</div>
-					</div>
-				</div>
-
-				<div className="p-6">
-					<div className="flex items-center-safe">
-						<div className="flex-shrink-0">
-							<CheckCircle className="h-8 w-8 text-orange-500" />
-						</div>
-						<div className="ml-4">
-							<div className="text-primary text-2xl font-bold">
-								{sceneStats.byStatus.published || 0}
-							</div>
-							<div className="text-muted-forground text-sm">Published</div>
-						</div>
-					</div>
-				</div>
+			{/* Statistics Overview */}
+			<div className="flex justify-between gap-4 sm:gap-6">
+				{stats.map((stat) => (
+					<StatCard
+						key={stat.label}
+						icon={stat.icon}
+						value={stat.value}
+						label={stat.label}
+					/>
+				))}
 			</div>
 
 			{/* Recent Scenes */}
@@ -102,7 +76,7 @@ const DashboardPage = () => {
 								title={scene.name}
 								description={scene.description || 'No description'}
 								linkTo={`/dashboard/projects/${scene.projectId}/${scene.id}`}
-								icon={<File className="h-5 w-5 text-green-500" />}
+								icon={<File className="text-primary h-5 w-5" />}
 								id={scene.id}
 							>
 								<div className="flex items-center gap-2">
@@ -117,14 +91,44 @@ const DashboardPage = () => {
 				</div>
 			)}
 
+			{/* Recent Projects */}
+			{recentProjects.length > 0 && (
+				<div>
+					<div className="mb-4 flex items-center justify-between">
+						<h2 className="text-xl font-semibold">Recent Projects</h2>
+						<Link viewTransition to="/dashboard/projects">
+							<Button variant="outline" size="sm">
+								View All
+							</Button>
+						</Link>
+					</div>
+					<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+						{recentProjects.map(({ project, organizationId }) => (
+							<DashboardCard
+								key={project.id}
+								title={project.name}
+								description={
+									organizations.find(
+										({ organization }) => organization.id === organizationId
+									)?.organization.name || 'Unknown Organization'
+								}
+								linkTo={`/dashboard/projects/${project.id}`}
+								icon={<FolderOpen className="text-primary h-5 w-5" />}
+								id={project.id}
+							></DashboardCard>
+						))}
+					</div>
+				</div>
+			)}
+
 			{/* Empty State */}
-			{projectStats.total === 0 && (
-				<div className="rounded-lg border border-gray-200 p-8 text-center">
-					<FolderOpen className="mx-auto h-12 w-12 text-gray-400" />
-					<h3 className="mt-2 text-lg font-medium text-gray-900">
+			{!projectStats.total && (
+				<div className="p-8 text-center">
+					<FolderOpen className="text-primary/60 mx-auto h-12 w-12" />
+					<h3 className="text-primary mt-2 text-lg font-medium">
 						Welcome to Vectreal
 					</h3>
-					<p className="mt-1 text-gray-500">
+					<p className="text-primary/70">
 						Get started by creating your first project.
 					</p>
 					<Link viewTransition to="/dashboard/projects/new">

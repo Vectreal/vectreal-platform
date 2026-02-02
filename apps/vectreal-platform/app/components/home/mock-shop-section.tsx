@@ -47,7 +47,9 @@ const MockShopSection = () => {
 										viewBox="0 0 24 24"
 										fill={star <= 4 ? 'currentColor' : 'none'}
 										stroke="currentColor"
-										className={star <= 4 ? 'text-yellow-500' : 'text-gray-300'}
+										className={
+											star <= 4 ? 'text-yellow-500' : 'text-priamary/30'
+										}
 									/>
 								))}
 							</div>
@@ -58,7 +60,7 @@ const MockShopSection = () => {
 
 						<p className="mt-2 text-lg font-[300]!">$1,299.99</p>
 
-						<p className="flex-1 text-gray-700">
+						<p className="text-primary/70 flex-1">
 							Lorem ipsum, dolor sit amet consectetur adipisicing elit.
 							Distinctio blanditiis eum ipsam sit ipsum quod et excepturi.
 						</p>

@@ -52,7 +52,7 @@ const LogoSidebar = ({ children, ...sidebarProps }: LogoSidebarProps) => {
 									<div className="flex items-center pl-2">
 										<VectrealLogoAnimated
 											small={!open}
-											className="h-5! w-fit!"
+											className="h-5!"
 											colored
 										/>
 									</div>

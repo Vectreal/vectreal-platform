@@ -19,8 +19,8 @@ const FolderPage = () => {
 		return (
 			<div className="p-6">
 				<div className="text-center">
-					<h1 className="text-2xl font-bold text-gray-900">Folder Not Found</h1>
-					<p className="mt-2 text-gray-600">
+					<h1 className="text-primary text-2xl font-bold">Folder Not Found</h1>
+					<p className="text-priamary/60 mt-2">
 						The folder you're looking for doesn't exist or you don't have access
 						to it.
 					</p>
@@ -74,12 +74,12 @@ const FolderPage = () => {
 					))}
 				</div>
 			) : (
-				<div className="rounded-lg border border-gray-200 p-8 text-center">
-					<Folder className="mx-auto h-12 w-12 text-gray-400" />
-					<h3 className="mt-2 text-lg font-medium text-gray-900">
+				<div className="p-8 text-center">
+					<Folder className="text-primary/60 mx-auto h-12 w-12" />
+					<h3 className="text-primary mt-2 text-lg font-medium">
 						Empty folder
 					</h3>
-					<p className="mt-1 text-gray-500">
+					<p className="text-primary/70 mt-1">
 						Add subfolders or scenes to organize your content.
 					</p>
 					<div className="mt-6 flex justify-center gap-3">

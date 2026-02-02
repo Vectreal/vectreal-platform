@@ -57,7 +57,7 @@ export const DynamicBreadcrumb = memo(() => {
 			<BreadcrumbSeparator />
 			<BreadcrumbItem>
 				{isLast ? (
-					<BreadcrumbPage className="text-white">{label}</BreadcrumbPage>
+					<BreadcrumbPage className="text-primary">{label}</BreadcrumbPage>
 				) : (
 					<BreadcrumbLink asChild>
 						<Link viewTransition to={to}>
@@ -131,7 +131,7 @@ export const DynamicBreadcrumb = memo(() => {
 
 	return (
 		<Breadcrumb className="grow">
-			<BreadcrumbList className="text-white/75">
+			<BreadcrumbList className="text-primary/75">
 				<BreadcrumbItem>
 					<BreadcrumbLink asChild>
 						<Link viewTransition to="/dashboard">
@@ -152,7 +152,5 @@ export const DynamicBreadcrumb = memo(() => {
 		</Breadcrumb>
 	)
 })
-
-DynamicBreadcrumb.displayName = 'DynamicBreadcrumb'
 
 DynamicBreadcrumb.displayName = 'DynamicBreadcrumb'

@@ -1,7 +1,8 @@
 import { Badge } from '@shared/components/ui/badge'
-import { Building2, Settings, Users } from 'lucide-react'
+import { Building, Building2, DogIcon, File } from 'lucide-react'
 
 import DashboardCard from '../../components/dashboard/dashboard-card'
+import StatCard from '../../components/dashboard/stat-card'
 import {
 	useOrganizations,
 	useOrganizationStats,
@@ -21,45 +22,42 @@ const OrganizationsPage = () => {
 	const primaryOrganization = usePrimaryOrganization()
 	const stats = useOrganizationStats()
 
+	const statCardsContent = [
+		{
+			icon: Building,
+			value: stats.total,
+			label: 'Organizations'
+		},
+		{
+			icon: File,
+			value: stats.owned,
+			label: 'Previously Owned'
+		},
+		{
+			icon: DogIcon,
+			value: stats.primaryRole,
+			label: 'Primary Role'
+		}
+	]
+
 	return (
-		<div className="p-6">
+		<div className="space-y-16 p-6">
 			{/* Stats Overview */}
-			<div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-				<div className="rounded-lg border p-4">
-					<div className="flex items-center">
-						<Building2 className="mr-2 h-5 w-5 text-blue-500" />
-						<div>
-							<p className="text-sm text-gray-600">Total Organizations</p>
-							<p className="text-2xl font-bold">{stats.total}</p>
-						</div>
-					</div>
-				</div>
-				<div className="rounded-lg border p-4">
-					<div className="flex items-center">
-						<Users className="mr-2 h-5 w-5 text-green-500" />
-						<div>
-							<p className="text-sm text-gray-600">Organizations Owned</p>
-							<p className="text-2xl font-bold">{stats.owned}</p>
-						</div>
-					</div>
-				</div>
-				<div className="rounded-lg border p-4">
-					<div className="flex items-center">
-						<Settings className="mr-2 h-5 w-5 text-purple-500" />
-						<div>
-							<p className="text-sm text-gray-600">Primary Role</p>
-							<p className="text-2xl font-bold capitalize">
-								{stats.primaryRole}
-							</p>
-						</div>
-					</div>
-				</div>
+			<div className="flex justify-between gap-4">
+				{statCardsContent.map((stat) => (
+					<StatCard
+						key={stat.label}
+						icon={stat.icon}
+						value={stat.value}
+						label={stat.label}
+					/>
+				))}
 			</div>
 
 			{/* Primary Organization */}
 			{primaryOrganization && (
-				<div className="mb-6">
-					<h2 className="mb-3 text-lg font-semibold">Primary Organization</h2>
+				<div className="space-y-2">
+					<h2 className="text-lg font-semibold">Primary Organization</h2>
 					<DashboardCard
 						title={primaryOrganization.organization.name}
 						description="Your primary workspace and default organization"
@@ -69,13 +67,13 @@ const OrganizationsPage = () => {
 					>
 						<div className="space-y-2">
 							<div className="flex items-center justify-between">
-								<span className="text-sm text-gray-600">Role</span>
+								<span className="text-primary/60 text-sm">Role</span>
 								<Badge variant="default">
 									{primaryOrganization.membership.role}
 								</Badge>
 							</div>
 							<div className="flex items-center justify-between">
-								<span className="text-sm text-gray-600">Created</span>
+								<span className="text-primary/60 text-sm">Created</span>
 								<span className="text-sm">
 									{new Date(
 										primaryOrganization.organization.createdAt
@@ -89,7 +87,7 @@ const OrganizationsPage = () => {
 
 			{/* All Organizations */}
 			<div>
-				<h2 className="mb-3 text-lg font-semibold">All Organizations</h2>
+				<h2 className="text-lg font-semibold">All Organizations</h2>
 				{organizations.length > 0 ? (
 					<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 						{sortedOrganizations.byRole.map(({ organization, membership }) => (
@@ -103,7 +101,7 @@ const OrganizationsPage = () => {
 							>
 								<div className="space-y-2">
 									<div className="flex items-center justify-between">
-										<span className="text-sm text-gray-600">Role</span>
+										<span className="text-primary/60 text-sm">Role</span>
 										<Badge
 											variant={
 												membership.role === 'owner'
@@ -117,7 +115,7 @@ const OrganizationsPage = () => {
 										</Badge>
 									</div>
 									<div className="flex items-center justify-between">
-										<span className="text-sm text-gray-600">Owner</span>
+										<span className="text-primary/60 text-sm">Owner</span>
 										<span className="text-sm">
 											{organization.ownerId === membership.userId
 												? 'You'
@@ -129,12 +127,12 @@ const OrganizationsPage = () => {
 						))}
 					</div>
 				) : (
-					<div className="rounded-lg border border-gray-200 p-8 text-center">
-						<Building2 className="mx-auto h-12 w-12 text-gray-400" />
-						<h3 className="mt-2 text-lg font-medium text-gray-900">
+					<div className="p-8 text-center">
+						<Building className="text-primary/60 mx-auto h-12 w-12" />
+						<h3 className="text-primary mt-2 text-lg font-medium">
 							No organizations found
 						</h3>
-						<p className="mt-1 text-gray-500">
+						<p className="text-primary/70 mt-1">
 							You don't have access to any organizations yet.
 						</p>
 					</div>

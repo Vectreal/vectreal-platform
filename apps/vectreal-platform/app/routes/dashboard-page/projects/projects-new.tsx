@@ -12,12 +12,12 @@ const ProjectsNewPage = () => {
 						Back to Projects
 					</Button>
 				</Link>
-				<h1 className="text-3xl font-bold text-gray-900">
+				<h1 className="text-primary text-3xl font-bold">
 					Create a New Project
 				</h1>
 			</div>
 			<div className="rounded-lg border bg-white p-6">
-				<p className="text-gray-600">
+				<p className="text-primary/70">
 					Project creation form will be implemented here.
 				</p>
 			</div>

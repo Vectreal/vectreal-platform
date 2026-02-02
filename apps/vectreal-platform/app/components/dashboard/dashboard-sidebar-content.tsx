@@ -125,47 +125,67 @@ export const DashboardSidebarContent = () => {
 			</SidebarContent>
 			<SidebarRail />
 			<SidebarFooter>
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button
-							variant="ghost"
-							className="flex h-fit w-full gap-2 p-2 text-left"
-						>
-							<Avatar className="h-10 w-10">
-								<AvatarImage src={userImageSrc} alt={userName} />
-								<AvatarFallback>{userInitial}</AvatarFallback>
-							</Avatar>
-
-							<div className="flex grow items-center">
-								<div className="flex flex-1 grow flex-col overflow-hidden">
-									<span className="truncate text-sm font-medium">
-										{userName}
-									</span>
-									<span className="text-muted-foreground truncate text-xs">
-										{accountTier} Plan
-									</span>
-								</div>
-
-								<ChevronsUpDown className="mr-2" />
-							</div>
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent side="top" align="end" className="w-56">
-						<DropdownMenuLabel>My Account</DropdownMenuLabel>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem asChild>
-							<Link to="/dashboard/settings" viewTransition>
-								<Settings className="mr-2 h-4 w-4" />
-								<span>Settings</span>
-							</Link>
-						</DropdownMenuItem>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem onClick={handleLogout}>
-							<LogOut className="mr-2 h-4 w-4" />
-							<span>Log Out</span>
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
+				<SidebarMenu>
+					<SidebarMenuItem>
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<SidebarMenuButton
+									size="lg"
+									className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+								>
+									<Avatar className="h-8 w-8 rounded-lg">
+										<AvatarImage src={userImageSrc} alt={userName} />
+										<AvatarFallback className="rounded-lg">
+											{userInitial}
+										</AvatarFallback>
+									</Avatar>
+									<div className="grid flex-1 text-left text-sm leading-tight">
+										<span className="truncate font-semibold">{userName}</span>
+										<span className="text-muted-foreground truncate text-xs">
+											{accountTier} Plan
+										</span>
+									</div>
+									<ChevronsUpDown className="ml-auto size-4" />
+								</SidebarMenuButton>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent
+								className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+								side="top"
+								align="end"
+								sideOffset={4}
+							>
+								<DropdownMenuLabel className="p-0 font-normal">
+									<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+										<Avatar className="h-8 w-8 rounded-lg">
+											<AvatarImage src={userImageSrc} alt={userName} />
+											<AvatarFallback className="rounded-lg">
+												{userInitial}
+											</AvatarFallback>
+										</Avatar>
+										<div className="grid flex-1 text-left text-sm leading-tight">
+											<span className="truncate font-semibold">{userName}</span>
+											<span className="text-muted-foreground truncate text-xs">
+												{accountTier} Plan
+											</span>
+										</div>
+									</div>
+								</DropdownMenuLabel>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem asChild>
+									<Link to="/dashboard/settings" viewTransition>
+										<Settings />
+										Settings
+									</Link>
+								</DropdownMenuItem>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem onClick={handleLogout}>
+									<LogOut />
+									Log Out
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</SidebarMenuItem>
+				</SidebarMenu>
 			</SidebarFooter>
 		</>
 	)

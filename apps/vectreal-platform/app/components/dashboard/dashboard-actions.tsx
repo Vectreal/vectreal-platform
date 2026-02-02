@@ -4,122 +4,223 @@
  */
 
 import { Button } from '@shared/components/ui/button'
-import { Edit, Folder, FolderOpen, Plus, Rocket } from 'lucide-react'
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger
+} from '@shared/components/ui/dropdown-menu'
+import {
+	Edit,
+	Folder,
+	FolderOpen,
+	MoreVertical,
+	Plus,
+	Rocket
+} from 'lucide-react'
 import { memo } from 'react'
 import { Link, useParams } from 'react-router'
 
 import { ACTION_VARIANT } from '../../types/dashboard'
 
+// Types
 interface DashboardActionsProps {
 	variant: ACTION_VARIANT
 	className?: string
 }
 
+interface ActionConfig {
+	label: string
+	icon: typeof Plus
+	to?: string
+	onClick?: () => void
+	variant?: 'default' | 'outline'
+}
+
+interface ActionGroupConfig {
+	primary: ActionConfig
+	secondary?: ActionConfig[]
+}
+
+// Action Configurations
+const ACTION_CONFIGS: Record<ACTION_VARIANT, ActionGroupConfig | null> = {
+	[ACTION_VARIANT.DASHBOARD]: {
+		primary: {
+			label: 'New Project',
+			icon: Plus,
+			to: '/dashboard/projects/new'
+		},
+		secondary: [
+			{
+				label: 'Browse Projects',
+				icon: FolderOpen,
+				to: '/dashboard/projects'
+			},
+			{
+				label: 'Manage Organizations',
+				icon: Folder,
+				to: '/dashboard/organizations'
+			}
+		]
+	},
+	[ACTION_VARIANT.PROJECT_LIST]: {
+		primary: {
+			label: 'New Project',
+			icon: Plus,
+			to: '/dashboard/projects/new'
+		}
+	},
+	[ACTION_VARIANT.CREATE_PROJECT]: {
+		primary: {
+			label: 'Create Project',
+			icon: Plus
+		}
+	},
+	[ACTION_VARIANT.PROJECT_DETAIL]: {
+		primary: {
+			label: 'New Scene',
+			icon: Rocket,
+			to: '/publisher'
+		},
+		secondary: [
+			{
+				label: 'New Folder',
+				icon: Plus,
+				variant: 'outline' as const
+			}
+		]
+	},
+	[ACTION_VARIANT.FOLDER_DETAIL]: {
+		primary: {
+			label: 'New Scene',
+			icon: Rocket,
+			to: '/publisher'
+		},
+		secondary: [
+			{
+				label: 'New Folder',
+				icon: Plus,
+				variant: 'outline' as const
+			}
+		]
+	},
+	[ACTION_VARIANT.SCENE_DETAIL]: {
+		primary: {
+			label: 'Edit Scene',
+			icon: Edit,
+			to: '/publisher/:sceneId'
+		}
+	}
+}
+
+// Components
+const ActionButton = memo<{
+	action: ActionConfig
+	replacements?: Record<string, string>
+}>(({ action, replacements }) => {
+	const { label, icon: Icon, to, onClick, variant = 'default' } = action
+
+	const resolvedTo =
+		to && replacements
+			? Object.entries(replacements).reduce(
+					(path, [key, value]) => path.replace(`:${key}`, value),
+					to
+				)
+			: to
+
+	const button = (
+		<Button variant={variant} onClick={onClick}>
+			<Icon className="mr-2 h-4 w-4" />
+			{label}
+		</Button>
+	)
+
+	return resolvedTo ? (
+		<Link viewTransition to={resolvedTo}>
+			{button}
+		</Link>
+	) : (
+		button
+	)
+})
+
+ActionButton.displayName = 'ActionButton'
+
+const SecondaryActionsMenu = memo<{
+	actions: ActionConfig[]
+	replacements?: Record<string, string>
+}>(({ actions, replacements }) => (
+	<DropdownMenu>
+		<DropdownMenuTrigger asChild>
+			<Button variant="outline" size="icon" aria-label="More actions">
+				<MoreVertical className="h-4 w-4" />
+			</Button>
+		</DropdownMenuTrigger>
+		<DropdownMenuContent align="end">
+			{actions.map((action) => {
+				const { label, icon: Icon, to, onClick } = action
+				const resolvedTo =
+					to && replacements
+						? Object.entries(replacements).reduce(
+								(path, [key, value]) => path.replace(`:${key}`, value),
+								to
+							)
+						: to
+
+				const content = (
+					<>
+						<Icon className="mr-2 h-4 w-4" />
+						{label}
+					</>
+				)
+
+				return resolvedTo ? (
+					<DropdownMenuItem key={label} asChild>
+						<Link viewTransition to={resolvedTo}>
+							{content}
+						</Link>
+					</DropdownMenuItem>
+				) : (
+					<DropdownMenuItem key={label} onClick={onClick}>
+						{content}
+					</DropdownMenuItem>
+				)
+			})}
+		</DropdownMenuContent>
+	</DropdownMenu>
+))
+
+SecondaryActionsMenu.displayName = 'SecondaryActionsMenu'
+
 /**
  * DashboardActions component renders contextual action buttons
- * Based on the current variant
+ * with a primary action and optional secondary actions in a dropdown menu
  * Memoized to prevent unnecessary re-renders
  */
 export const DashboardActions = memo<DashboardActionsProps>(
 	({ variant, className }) => {
 		const { sceneId } = useParams()
-		const getActions = () => {
-			switch (variant) {
-				case ACTION_VARIANT.DASHBOARD:
-					return (
-						<div className="flex gap-2">
-							<Link viewTransition to="/dashboard/projects/new">
-								<Button className="flex items-center">
-									<Plus className="mr-2 h-4 w-4" />
-									New Project
-								</Button>
-							</Link>
-							<Link viewTransition to="/dashboard/projects">
-								<Button variant="outline">
-									<FolderOpen className="mr-2 h-4 w-4" />
-									Browse Projects
-								</Button>
-							</Link>
-							<Link viewTransition to="/dashboard/organizations">
-								<Button variant="outline">
-									<Folder className="mr-2 h-4 w-4" />
-									Manage Organizations
-								</Button>
-							</Link>
-						</div>
-					)
-				case ACTION_VARIANT.PROJECT_LIST:
-					return (
-						<Link viewTransition to="/dashboard/projects/new">
-							<Button>
-								<Plus className="mr-2 h-4 w-4" />
-								New Project
-							</Button>
-						</Link>
-					)
+		const config = ACTION_CONFIGS[variant]
 
-				case ACTION_VARIANT.CREATE_PROJECT:
-					return (
-						<Button>
-							<Plus className="mr-2 h-4 w-4" />
-							Create Project
-						</Button>
-					)
-
-				case ACTION_VARIANT.PROJECT_DETAIL:
-					return (
-						<div className="flex gap-2">
-							<Button variant="outline">
-								<Plus className="mr-2 h-4 w-4" />
-								New Folder
-							</Button>
-							<Link viewTransition to="/publisher">
-								<Button>
-									<Rocket className="mr-2 h-4 w-4" />
-									New Scene
-								</Button>
-							</Link>
-						</div>
-					)
-
-				case ACTION_VARIANT.FOLDER_DETAIL:
-					return (
-						<div className="flex gap-2">
-							<Button variant="outline">
-								<Plus className="mr-2 h-4 w-4" />
-								New Folder
-							</Button>
-							<Link viewTransition to="/publisher">
-								<Button>
-									<Rocket className="mr-2 h-4 w-4" />
-									New Scene
-								</Button>
-							</Link>
-						</div>
-					)
-
-				case ACTION_VARIANT.SCENE_DETAIL:
-					return (
-						<Link viewTransition to={`/publisher/${sceneId}`}>
-							<Button>
-								<Edit className="mr-2 h-4 w-4" />
-								Edit Scene
-							</Button>
-						</Link>
-					)
-
-				default:
-					return null
-			}
-		}
-
-		const actions = getActions()
-
-		if (!actions) {
+		if (!config) {
 			return null
 		}
 
-		return <div className={className}>{actions}</div>
+		const replacements = sceneId ? { sceneId } : undefined
+
+		return (
+			<div className={className}>
+				<div className="flex gap-2">
+					<ActionButton action={config.primary} replacements={replacements} />
+					{config.secondary && config.secondary.length > 0 && (
+						<SecondaryActionsMenu
+							actions={config.secondary}
+							replacements={replacements}
+						/>
+					)}
+				</div>
+			</div>
+		)
 	}
 )
 
