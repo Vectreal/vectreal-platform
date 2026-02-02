@@ -11,10 +11,17 @@ export async function action({ request }: Route.ActionArgs) {
 	const provider = formData.get('provider')
 	const backURL = formData.get('backURL') || undefined
 
-	const applicationUrl = backURL
-		? new URL(backURL.toString(), request.url).toString()
-		: process.env.APPLICATION_URL
-	const redirectTo = `${applicationUrl}/auth/callback`
+	const applicationUrl = String(
+		backURL
+			? new URL(backURL.toString(), request.url).toString()
+			: process.env.APPLICATION_URL
+	)
+
+	const cleanAppUrl = applicationUrl.endsWith('/')
+		? applicationUrl.slice(0, -1)
+		: applicationUrl
+
+	const redirectTo = `${cleanAppUrl}/auth/callback`
 
 	if (typeof provider !== 'string') {
 		return ApiResponse.badRequest('Invalid provider')

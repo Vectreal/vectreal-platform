@@ -259,7 +259,7 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 					<label className="mb-2 block text-sm font-medium" htmlFor="password">
 						Password
 					</label>
-					<span className="relative w-full">
+					<span className="relative flex w-full items-center">
 						<Input
 							name="password"
 							placeholder="********"
@@ -274,7 +274,7 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 							<Tooltip>
 								<TooltipTrigger
 									type="button"
-									className="[&_svg]:text-muted-foreground absolute top-1/2 right-0 -translate-y-1/2 p-2 px-3 [&_svg]:h-4 [&_svg]:w-4"
+									className="[&_svg]:text-muted-foreground absolute top-0 right-0 p-2 px-3 [&_svg]:h-4 [&_svg]:w-4"
 									aria-label={showPassword ? 'Hide password' : 'Show password'}
 								>
 									<Button

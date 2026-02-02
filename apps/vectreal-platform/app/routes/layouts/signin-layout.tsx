@@ -57,7 +57,7 @@ const SigninLayout = () => {
 	return (
 		<main className="h-screen w-full overflow-hidden">
 			<section className="flex h-full w-full flex-col overflow-hidden">
-				<div className="grid grow grid-cols-[1fr_1fr] overflow-hidden">
+				<div className="grid grow overflow-hidden md:grid-cols-[1fr_1fr]">
 					<div className="bg-card relative flex flex-col justify-center border-r p-8 shadow-2xl">
 						<div className="mx-auto flex max-w-md flex-col gap-8">
 							<div className="flex grow flex-col justify-end">
@@ -66,7 +66,7 @@ const SigninLayout = () => {
 								</h1>
 							</div>
 
-							<div className="flex w-full gap-4">
+							<div className="flex w-full flex-col gap-4 md:flex-row">
 								<Button
 									className="grow"
 									onClick={() => handleSocialLogin('google')}
@@ -80,7 +80,7 @@ const SigninLayout = () => {
 									<GithubLogo className="h-4 w-4" /> Continue with GitHub
 								</Button>
 							</div>
-							<span>
+							<span className="relative">
 								<Separator />
 								<p className="bg-card text-muted-foreground absolute left-1/2 -translate-x-1/2 -translate-y-3 px-2">
 									or

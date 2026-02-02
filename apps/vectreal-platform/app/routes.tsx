@@ -10,7 +10,7 @@ export default [
 	// Health check endpoint for Docker and monitoring
 	route('health', './routes/health.tsx'),
 
-	// API
+	/// API
 	route('api/update-theme', './routes/api/update-theme.ts'),
 	route('api/scene-settings', './routes/api/scene-settings.ts'),
 	route('api/optimize-textures', './routes/api/optimize-textures.ts'),
@@ -18,19 +18,20 @@ export default [
 		'api/dashboard/scene-actions/:sceneId?',
 		'./routes/api/dashboard/scene-actions.ts'
 	),
-	// auth
+	// AUTH API
 	route('auth/logout', './routes/api/auth/logout.ts'),
 	route('auth/social-signin', './routes/api/auth/social-signin.ts'),
 	route('auth/callback', './routes/api/auth/callback.ts'),
 	route('auth/confirm', './routes/api/auth/confirm.ts'),
 
+	/// PAGES
 	// sign-in and sign-up
-	layout('./routes/layouts/signin-layout.tsx', [
-		route('sign-up', './routes/signup-page/signup-page.tsx'),
-		route('sign-in', './routes/signin-page/signin-page.tsx')
-	]),
-
 	layout('./routes/layouts/nav-layout.tsx', [
+		layout('./routes/layouts/signin-layout.tsx', [
+			route('sign-up', './routes/signup-page/signup-page.tsx'),
+			route('sign-in', './routes/signin-page/signin-page.tsx')
+		]),
+
 		// home page - index route
 		// This is the default route that will be loaded when the app starts
 		index('./routes/home-page/home-page.tsx', {

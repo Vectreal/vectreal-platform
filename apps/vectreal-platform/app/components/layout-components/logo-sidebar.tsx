@@ -45,11 +45,11 @@ const LogoSidebar = ({ children, ...sidebarProps }: LogoSidebarProps) => {
 						>
 							<Link to="/dashboard" viewTransition>
 								{smallLogo ? (
-									<div className="flex aspect-square size-8 items-center justify-center">
+									<div className="flex aspect-square size-8 items-center">
 										<VectrealLogoSmall className="text-accent fill-accent size-4" />
 									</div>
 								) : (
-									<div className="flex items-center justify-center pl-2">
+									<div className="flex items-center pl-2">
 										<VectrealLogoAnimated
 											small={!open}
 											className="h-5! w-fit!"
