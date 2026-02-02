@@ -43,7 +43,7 @@ const OrganizationsPage = () => {
 	return (
 		<div className="space-y-16 p-6">
 			{/* Stats Overview */}
-			<div className="flex justify-between gap-4">
+			<div className="flex max-w-lg justify-between gap-4">
 				{statCardsContent.map((stat) => (
 					<StatCard
 						key={stat.label}
@@ -54,43 +54,43 @@ const OrganizationsPage = () => {
 				))}
 			</div>
 
-			{/* Primary Organization */}
-			{primaryOrganization && (
-				<div className="space-y-2">
-					<h2 className="text-lg font-semibold">Primary Organization</h2>
-					<DashboardCard
-						title={primaryOrganization.organization.name}
-						description="Your primary workspace and default organization"
-						linkTo={`/dashboard/organizations/${primaryOrganization.organization.id}`}
-						icon={<Building2 className="h-5 w-5" />}
-						id={primaryOrganization.organization.id}
-					>
-						<div className="space-y-2">
-							<div className="flex items-center justify-between">
-								<span className="text-primary/60 text-sm">Role</span>
-								<Badge variant="default">
-									{primaryOrganization.membership.role}
-								</Badge>
+			<div className="grid gap-4 lg:grid-cols-2">
+				{/* Primary Organization */}
+				{primaryOrganization && (
+					<div className="space-y-2">
+						<h2 className="text-lg font-semibold">Primary Organization</h2>
+						<DashboardCard
+							title={primaryOrganization.organization.name}
+							description="Your primary workspace and default organization"
+							linkTo={`/dashboard/organizations/${primaryOrganization.organization.id}`}
+							icon={<Building2 className="h-5 w-5" />}
+							id={primaryOrganization.organization.id}
+						>
+							<div className="space-y-2">
+								<div className="flex items-center justify-between">
+									<span className="text-primary/60 text-sm">Role</span>
+									<Badge variant="default">
+										{primaryOrganization.membership.role}
+									</Badge>
+								</div>
+								<div className="flex items-center justify-between">
+									<span className="text-primary/60 text-sm">Created</span>
+									<span className="text-sm">
+										{new Date(
+											primaryOrganization.organization.createdAt
+										).toLocaleDateString()}
+									</span>
+								</div>
 							</div>
-							<div className="flex items-center justify-between">
-								<span className="text-primary/60 text-sm">Created</span>
-								<span className="text-sm">
-									{new Date(
-										primaryOrganization.organization.createdAt
-									).toLocaleDateString()}
-								</span>
-							</div>
-						</div>
-					</DashboardCard>
-				</div>
-			)}
+						</DashboardCard>
+					</div>
+				)}
 
-			{/* All Organizations */}
-			<div>
-				<h2 className="text-lg font-semibold">All Organizations</h2>
-				{organizations.length > 0 ? (
-					<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-						{sortedOrganizations.byRole.map(({ organization, membership }) => (
+				{/* All Organizations */}
+				<div>
+					<h2 className="text-lg font-semibold">All Organizations</h2>
+					{organizations.length > 0 ? (
+						sortedOrganizations.byRole.map(({ organization, membership }) => (
 							<DashboardCard
 								key={organization.id}
 								title={organization.name}
@@ -98,6 +98,7 @@ const OrganizationsPage = () => {
 								linkTo={`/dashboard/organizations/${organization.id}`}
 								icon={<Building2 className="h-5 w-5" />}
 								id={organization.id}
+								highlight={false}
 							>
 								<div className="space-y-2">
 									<div className="flex items-center justify-between">
@@ -124,19 +125,19 @@ const OrganizationsPage = () => {
 									</div>
 								</div>
 							</DashboardCard>
-						))}
-					</div>
-				) : (
-					<div className="p-8 text-center">
-						<Building className="text-primary/60 mx-auto h-12 w-12" />
-						<h3 className="text-primary mt-2 text-lg font-medium">
-							No organizations found
-						</h3>
-						<p className="text-primary/70 mt-1">
-							You don't have access to any organizations yet.
-						</p>
-					</div>
-				)}
+						))
+					) : (
+						<div className="p-8 text-center">
+							<Building className="text-primary/60 mx-auto h-12 w-12" />
+							<h3 className="text-primary mt-2 text-lg font-medium">
+								No organizations found
+							</h3>
+							<p className="text-primary/70 mt-1">
+								You don't have access to any organizations yet.
+							</p>
+						</div>
+					)}
+				</div>
 			</div>
 		</div>
 	)

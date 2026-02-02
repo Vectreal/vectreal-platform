@@ -97,6 +97,20 @@ export const useDynamicHeader = (): DynamicHeaderContent => {
 				description: titleContent.description,
 				actionVariant: ACTION_VARIANT.PROJECT_LIST
 			}
+		} else if (view === 'organizations') {
+			const titleContent = getTitleContent(view)
+			return {
+				title: titleContent.title,
+				description: titleContent.description,
+				actionVariant: ACTION_VARIANT.ORG_LIST
+			}
+		} else if (view === 'settings') {
+			const titleContent = getTitleContent(view)
+			return {
+				title: titleContent.title,
+				description: titleContent.description,
+				actionVariant: undefined
+			}
 		}
 
 		// Dashboard page

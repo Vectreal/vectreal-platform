@@ -9,7 +9,8 @@ export enum ACTION_VARIANT {
 	PROJECT_DETAIL = 'project-detail',
 	FOLDER_DETAIL = 'folder-detail',
 	SCENE_DETAIL = 'scene-detail',
-	DASHBOARD = 'dashboard'
+	DASHBOARD = 'dashboard',
+	ORG_LIST = 'organizations-list'
 }
 
 export type DashboardView =

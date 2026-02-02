@@ -17,12 +17,13 @@ interface DashboardCardProps extends PropsWithChildren {
 	description: string
 	icon: React.ReactNode
 	id: string
+	highlight?: boolean
 }
 
 const DashboardCard: FC<DashboardCardProps> = (props) => {
 	return (
 		<Link to={props.linkTo} className="block" viewTransition>
-			<BasicCard highlight={true}>
+			<BasicCard highlight={props.highlight ?? true}>
 				<CardHeader className="relative flex items-center gap-2">
 					<span className="grow space-y-1">
 						<CardTitle>{props.title}</CardTitle>

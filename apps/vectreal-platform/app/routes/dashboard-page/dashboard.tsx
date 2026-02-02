@@ -47,7 +47,7 @@ const DashboardPage = () => {
 	return (
 		<div className="space-y-8 p-6">
 			{/* Statistics Overview */}
-			<div className="flex justify-between gap-4 sm:gap-6">
+			<div className="flex max-w-lg justify-between gap-4">
 				{stats.map((stat) => (
 					<StatCard
 						key={stat.label}
