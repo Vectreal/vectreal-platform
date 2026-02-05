@@ -25,7 +25,7 @@ import type { UserWithDefaults } from '../lib/services/user-service.server'
  * - useUserSceneFolders() - Get all user's accessible scene folders
  */
 
-export interface AuthContextType {
+export interface IPlatformContext {
 	user: User | null
 	userWithDefaults: UserWithDefaults | null
 	organizations: Array<{
@@ -41,12 +41,12 @@ export interface AuthContextType {
 	error?: string
 }
 
-export const AuthContext = createContext<AuthContextType | null>(null)
+export const PlatformContext = createContext<IPlatformContext | null>(null)
 
-export const useAuth = () => {
-	const context = useContext(AuthContext)
+export const usePlatformContext = () => {
+	const context = useContext(PlatformContext)
 	if (!context) {
-		throw new Error('useAuth must be used within an AuthProvider')
+		throw new Error('usePlatformContext must be used within a PlatformProvider')
 	}
 	return context
 }

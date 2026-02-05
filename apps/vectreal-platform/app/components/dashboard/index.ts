@@ -1,4 +1,4 @@
-export { DashboardLayoutWrapper } from './dashboard-layout-wrapper'
+export { default as DashboardSidebarContent } from './dashboard-sidebar-content'
 export { DashboardHeader } from './dashboard-header'
 export { DynamicBreadcrumb } from './dynamic-breadcrumb'
 export { DashboardActions } from './dashboard-actions'

@@ -1,4 +1,4 @@
-import type { SceneMeta } from '@vctrl/core'
+import type { CameraProps, SceneMeta } from '@vctrl/core'
 import type { ControlsProps, EnvironmentProps, ShadowsProps } from '@vctrl/core'
 import type { InputFileOrDirectory } from '@vctrl/hooks/use-load-model'
 
@@ -13,6 +13,7 @@ export interface SceneData {
 		}
 	>
 	meta?: SceneMeta
+	camera?: CameraProps
 	environment?: EnvironmentProps
 	controls?: ControlsProps
 	shadows?: ShadowsProps

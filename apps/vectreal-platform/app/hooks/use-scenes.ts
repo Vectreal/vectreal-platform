@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 
-import { useAuth } from '../contexts/auth-context'
+import { usePlatformContext } from '../contexts/platform-context'
 import type { sceneFolders, scenes } from '../db/schema'
 
 /**
@@ -31,7 +31,7 @@ export interface FolderContent {
  * Hook to get all scenes accessible to the user
  */
 export const useScenes = (): SceneType[] => {
-	const { scenes } = useAuth()
+	const { scenes } = usePlatformContext()
 	return scenes
 }
 
@@ -39,7 +39,7 @@ export const useScenes = (): SceneType[] => {
  * Hook to get all scene folders accessible to the user
  */
 export const useSceneFolders = (): FolderType[] => {
-	const { sceneFolders } = useAuth()
+	const { sceneFolders } = usePlatformContext()
 	return sceneFolders
 }
 
@@ -47,7 +47,7 @@ export const useSceneFolders = (): FolderType[] => {
  * Hook to get all scenes for a specific project
  */
 export const useProjectScenes = (projectId: string): SceneType[] => {
-	const { scenes } = useAuth()
+	const { scenes } = usePlatformContext()
 
 	return useMemo(() => {
 		return scenes.filter(
@@ -60,7 +60,7 @@ export const useProjectScenes = (projectId: string): SceneType[] => {
  * Hook to get a specific scene by ID
  */
 export const useScene = (sceneId: string): SceneType | null => {
-	const { scenes } = useAuth()
+	const { scenes } = usePlatformContext()
 
 	return useMemo(() => {
 		return scenes.find(({ id }) => id === sceneId) || null
@@ -71,7 +71,7 @@ export const useScene = (sceneId: string): SceneType | null => {
  * Hook to get scenes in a specific folder
  */
 export const useFolderScenes = (folderId: string): SceneType[] => {
-	const { scenes } = useAuth()
+	const { scenes } = usePlatformContext()
 
 	return useMemo(() => {
 		return scenes.filter(
@@ -84,7 +84,7 @@ export const useFolderScenes = (folderId: string): SceneType[] => {
  * Hook to get root scenes (not in any folder) for a project
  */
 export const useRootScenes = (projectId: string): SceneType[] => {
-	const { scenes } = useAuth()
+	const { scenes } = usePlatformContext()
 
 	return useMemo(() => {
 		return scenes.filter(
@@ -97,7 +97,7 @@ export const useRootScenes = (projectId: string): SceneType[] => {
  * Hook to get all scene folders for a project
  */
 export const useProjectSceneFolders = (projectId: string): FolderType[] => {
-	const { sceneFolders } = useAuth()
+	const { sceneFolders } = usePlatformContext()
 
 	return useMemo(() => {
 		return sceneFolders.filter(
@@ -110,7 +110,7 @@ export const useProjectSceneFolders = (projectId: string): FolderType[] => {
  * Hook to get root scene folders (no parent) for a project
  */
 export const useRootSceneFolders = (projectId: string): FolderType[] => {
-	const { sceneFolders } = useAuth()
+	const { sceneFolders } = usePlatformContext()
 
 	return useMemo(() => {
 		return sceneFolders.filter(
@@ -124,7 +124,7 @@ export const useRootSceneFolders = (projectId: string): FolderType[] => {
  * Hook to get a specific scene folder by ID
  */
 export const useSceneFolder = (folderId: string): FolderType | null => {
-	const { sceneFolders } = useAuth()
+	const { sceneFolders } = usePlatformContext()
 
 	return useMemo(() => {
 		return sceneFolders.find(({ id }) => id === folderId) || null
@@ -135,7 +135,7 @@ export const useSceneFolder = (folderId: string): FolderType | null => {
  * Hook to get child folders of a parent folder
  */
 export const useChildSceneFolders = (parentFolderId: string): FolderType[] => {
-	const { sceneFolders } = useAuth()
+	const { sceneFolders } = usePlatformContext()
 
 	return useMemo(() => {
 		return sceneFolders.filter(
@@ -149,7 +149,7 @@ export const useChildSceneFolders = (parentFolderId: string): FolderType[] => {
  * Hook to get project content organized by hierarchy
  */
 export const useProjectContent = (projectId: string): ProjectContent => {
-	const { sceneFolders, scenes } = useAuth()
+	const { sceneFolders, scenes } = usePlatformContext()
 
 	return useMemo(() => {
 		const projectFolders = sceneFolders.filter(
@@ -175,7 +175,7 @@ export const useProjectContent = (projectId: string): ProjectContent => {
 export const useFolderContent = (
 	folderId: string
 ): Omit<FolderContent, 'folder'> | null => {
-	const { sceneFolders, scenes } = useAuth()
+	const { sceneFolders, scenes } = usePlatformContext()
 
 	return useMemo(() => {
 		const subfolders = sceneFolders.filter(
@@ -196,7 +196,7 @@ export const useFolderContent = (
  * Hook to get scene statistics
  */
 export const useSceneStats = () => {
-	const { scenes } = useAuth()
+	const { scenes } = usePlatformContext()
 
 	return useMemo(() => {
 		const total = scenes.length
@@ -230,7 +230,7 @@ export const useSceneStats = () => {
  * Hook to get scenes filtered by search term and status
  */
 export const useFilteredScenes = (searchTerm?: string, status?: string) => {
-	const { scenes } = useAuth()
+	const { scenes } = usePlatformContext()
 
 	return useMemo(() => {
 		let filtered = scenes
@@ -260,7 +260,7 @@ export const useFilteredScenes = (searchTerm?: string, status?: string) => {
  * Hook to get scenes sorted by various criteria
  */
 export const useSortedScenes = () => {
-	const { scenes } = useAuth()
+	const { scenes } = usePlatformContext()
 
 	return useMemo(() => {
 		const byName = [...scenes].sort((a, b) => a.name.localeCompare(b.name))
@@ -293,7 +293,7 @@ export const useSortedScenes = () => {
  * Hook to get scene folder statistics
  */
 export const useSceneFolderStats = () => {
-	const { sceneFolders } = useAuth()
+	const { sceneFolders } = usePlatformContext()
 
 	return useMemo(() => {
 		const total = sceneFolders.length
@@ -328,7 +328,7 @@ export const useSceneFolderStats = () => {
  * Hook to get recent scenes (by update time)
  */
 export const useRecentScenes = (limit = 5) => {
-	const { scenes } = useAuth()
+	const { scenes } = usePlatformContext()
 
 	return useMemo(() => {
 		return [...scenes]
@@ -346,7 +346,7 @@ export const useRecentScenes = (limit = 5) => {
 export const useFolderBreadcrumbs = (
 	folderId: string
 ): Array<{ id: string; name: string }> => {
-	const { sceneFolders } = useAuth()
+	const { sceneFolders } = usePlatformContext()
 
 	return useMemo(() => {
 		const breadcrumbs: Array<{ id: string; name: string }> = []
@@ -375,7 +375,7 @@ export const useFolderBreadcrumbs = (
  * Hook to check if user has access to a specific scene
  */
 export const useHasSceneAccess = (sceneId: string): boolean => {
-	const { scenes } = useAuth()
+	const { scenes } = usePlatformContext()
 
 	return useMemo(() => {
 		return scenes.some(({ id }) => id === sceneId)
@@ -386,7 +386,7 @@ export const useHasSceneAccess = (sceneId: string): boolean => {
  * Hook to check if user has access to a specific scene folder
  */
 export const useHasSceneFolderAccess = (folderId: string): boolean => {
-	const { sceneFolders } = useAuth()
+	const { sceneFolders } = usePlatformContext()
 
 	return useMemo(() => {
 		return sceneFolders.some((folder) => folder.id === folderId)
@@ -397,7 +397,7 @@ export const useHasSceneFolderAccess = (folderId: string): boolean => {
  * Hook to get scenes grouped by project
  */
 export const useScenesByProject = () => {
-	const { scenes, projects } = useAuth()
+	const { scenes, projects } = usePlatformContext()
 
 	return useMemo(() => {
 		const grouped = new Map<
@@ -432,7 +432,7 @@ export const useScenesByProject = () => {
  * Hook to get scene folders grouped by project
  */
 export const useSceneFoldersByProject = () => {
-	const { sceneFolders, projects } = useAuth()
+	const { sceneFolders, projects } = usePlatformContext()
 
 	return useMemo(() => {
 		const grouped = new Map<

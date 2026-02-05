@@ -11,7 +11,6 @@ export default [
 	route('health', './routes/health.tsx'),
 
 	/// API
-	route('api/update-theme', './routes/api/update-theme.ts'),
 	route('api/scene-settings', './routes/api/scene-settings.ts'),
 	route('api/optimize-textures', './routes/api/optimize-textures.ts'),
 	route(
@@ -55,8 +54,8 @@ export default [
 		route('publisher/:sceneId?', './routes/publisher-page/publisher-page.tsx')
 	]),
 
-	// Auth layout provides access to user context (user, orgs, default org/project)
-	layout('./routes/layouts/auth-layout.tsx', [
+	// Platform layout provides access to user context (user, orgs, default org/project)
+	layout('./routes/layouts/platform-data-layout.tsx', [
 		// dashboard
 		...prefix('dashboard', [
 			layout('./routes/layouts/dashboard-layout.tsx', [

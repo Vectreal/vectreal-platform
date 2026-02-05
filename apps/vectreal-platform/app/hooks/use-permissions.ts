@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 
-import { useAuth } from '../contexts/auth-context'
+import { usePlatformContext } from '../contexts/platform-context'
 
 /**
  * Permission types for better type safety
@@ -33,7 +33,7 @@ export const useHasOrganizationRole = (
 	organizationId: string,
 	requiredRole: OrganizationRole
 ): boolean => {
-	const { organizations } = useAuth()
+	const { organizations } = usePlatformContext()
 
 	return useMemo(() => {
 		const membership = organizations.find(
@@ -58,7 +58,7 @@ export const useHasOrganizationRole = (
 export const useOrganizationRole = (
 	organizationId: string
 ): OrganizationRole | null => {
-	const { organizations } = useAuth()
+	const { organizations } = usePlatformContext()
 
 	return useMemo(() => {
 		const membership = organizations.find(
@@ -75,7 +75,7 @@ export const useOrganizationRole = (
 export const useOrganizationPermissions = (
 	organizationId: string
 ): OrganizationPermissions => {
-	const { organizations } = useAuth()
+	const { organizations } = usePlatformContext()
 
 	return useMemo(() => {
 		const membership = organizations.find(
@@ -115,7 +115,7 @@ export const useOrganizationPermissions = (
 export const useProjectPermissions = (
 	organizationId: string
 ): PermissionResult => {
-	const { organizations } = useAuth()
+	const { organizations } = usePlatformContext()
 
 	return useMemo(() => {
 		const membership = organizations.find(
@@ -155,7 +155,7 @@ export const useProjectPermissions = (
  * Hook to get the user's default organization (primary owned organization)
  */
 export const useDefaultOrganization = () => {
-	const { organizations } = useAuth()
+	const { organizations } = usePlatformContext()
 
 	return useMemo(() => {
 		return (
@@ -172,7 +172,7 @@ export const useCanAccessProject = (
 	projectId: string,
 	organizationId: string
 ): boolean => {
-	const { organizations } = useAuth()
+	const { organizations } = usePlatformContext()
 
 	return useMemo(() => {
 		return organizations.some(
@@ -185,7 +185,7 @@ export const useCanAccessProject = (
  * Hook to get organizations where user can perform specific actions
  */
 export const useOrganizationsWithPermissions = () => {
-	const { organizations } = useAuth()
+	const { organizations } = usePlatformContext()
 
 	return useMemo(() => {
 		const owned = organizations.filter(
@@ -251,7 +251,7 @@ export const useBulkPermissions = () => {
  * Hook to get current project context
  */
 export const useCurrentProjectContext = () => {
-	const { userWithDefaults } = useAuth()
+	const { userWithDefaults } = usePlatformContext()
 	const defaultOrganization = useDefaultOrganization()
 
 	return useMemo(() => {

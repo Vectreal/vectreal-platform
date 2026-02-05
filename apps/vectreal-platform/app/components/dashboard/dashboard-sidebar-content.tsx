@@ -3,7 +3,6 @@ import {
 	AvatarFallback,
 	AvatarImage
 } from '@shared/components/ui/avatar'
-import { Button } from '@shared/components/ui/button'
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -34,7 +33,7 @@ import {
 } from 'lucide-react'
 import { Link, useFetcher } from 'react-router'
 
-import { useAuth } from '../../contexts/auth-context'
+import { usePlatformContext } from '../../contexts/platform-context'
 
 // Menu items
 const manageLinks = [
@@ -63,8 +62,8 @@ const quickLinks = [
 	}
 ]
 
-export const DashboardSidebarContent = () => {
-	const { user } = useAuth()
+const DashboardSidebarContent = () => {
+	const { user } = usePlatformContext()
 	const { submit } = useFetcher()
 
 	const userImageSrc = user?.user_metadata?.avatar_url || ''
@@ -190,3 +189,5 @@ export const DashboardSidebarContent = () => {
 		</>
 	)
 }
+
+export default DashboardSidebarContent

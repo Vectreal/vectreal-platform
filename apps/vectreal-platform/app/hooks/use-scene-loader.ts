@@ -2,6 +2,7 @@ import type { SceneSettings } from '@vctrl/core'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import type { EventHandler, ModelFile } from '@vctrl/hooks/use-load-model/types'
 import {
+	defaultCameraOptions,
 	defaultControlsOptions,
 	defaultEnvOptions,
 	defaultShadowOptions
@@ -12,6 +13,7 @@ import { toast } from 'sonner'
 
 import { processAtom } from '../lib/stores/publisher-config-store'
 import {
+	cameraAtom,
 	controlsAtom,
 	environmentAtom,
 	metaAtom,
@@ -161,6 +163,7 @@ export function useSceneLoader(
 
 	// Scene state atoms
 	const [env, setEnv] = useAtom(environmentAtom)
+	const [camera, setCamera] = useAtom(cameraAtom)
 	const [controls, setControls] = useAtom(controlsAtom)
 	const [shadows, setShadows] = useAtom(shadowsAtom)
 	const [meta, setMeta] = useAtom(metaAtom)
@@ -204,11 +207,12 @@ export function useSceneLoader(
 	const currentSettings: SceneSettings = useMemo(
 		() => ({
 			environment: env,
+			camera,
 			controls,
 			shadows,
 			meta
 		}),
-		[env, controls, shadows, meta]
+		[env, camera, controls, shadows, meta]
 	)
 
 	// Scene persistence operations
@@ -312,19 +316,21 @@ export function useSceneLoader(
 	const applySceneSettings = useCallback(
 		(data: SceneData) => {
 			if (data.environment) setEnv(data.environment)
+			if (data.camera) setCamera(data.camera)
 			if (data.controls) setControls(data.controls)
 			if (data.shadows) setShadows(data.shadows)
 			if (data.meta) setMeta(data.meta)
 
 			const loadedSettings: SceneSettings = {
 				environment: data.environment || defaultEnvOptions,
+				camera: data.camera || defaultCameraOptions,
 				controls: data.controls || defaultControlsOptions,
 				shadows: data.shadows || defaultShadowOptions,
 				meta: data.meta || { sceneName: '', thumbnailUrl: null }
 			}
 			setLastSavedSettings(loadedSettings)
 		},
-		[setEnv, setControls, setShadows, setMeta]
+		[setCamera, setControls, setEnv, setMeta, setShadows]
 	)
 
 	/**

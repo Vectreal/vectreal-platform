@@ -12,6 +12,7 @@ import { memo, Suspense, useCallback, useEffect, useState } from 'react'
 import { processAtom } from '../../lib/stores/publisher-config-store'
 import {
 	boundsAtom,
+	cameraAtom,
 	controlsAtom,
 	environmentAtom,
 	shadowsAtom
@@ -84,6 +85,7 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 	const [{ isLoading: isDownloading, isInitializing }, setProcess] =
 		useAtom(processAtom)
 	const bounds = useAtomValue(boundsAtom)
+	const camera = useAtomValue(cameraAtom)
 	const controls = useAtomValue(controlsAtom)
 	const env = useAtomValue(environmentAtom)
 	const shadows = useAtomValue(shadowsAtom)
@@ -119,6 +121,7 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 								className="z-10 after:absolute after:inset-0 after:-z-10 after:w-[50%] after:bg-linear-to-r after:from-black/20 after:to-transparent"
 								model={file?.model}
 								key="model-viewer"
+								cameraOptions={camera}
 								controlsOptions={controls}
 								envOptions={env}
 								shadowsOptions={shadows}

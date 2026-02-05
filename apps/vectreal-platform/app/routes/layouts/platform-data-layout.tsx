@@ -1,14 +1,14 @@
 import { createContext, Outlet, redirect } from 'react-router'
 
-import { AuthContext } from '../../contexts/auth-context'
-import { type AuthContextType } from '../../contexts/auth-context'
+import { PlatformContext } from '../../contexts/platform-context'
+import { type IPlatformContext } from '../../contexts/platform-context'
 import { FolderType, SceneType } from '../../hooks'
 import { PlatformApiService } from '../../lib/services/platform-api-service.server'
 import { projectService } from '../../lib/services/project-service.server'
 import { sceneFolderService } from '../../lib/services/scene-folder-service.server'
 import { userService } from '../../lib/services/user-service.server'
 
-import { Route } from './+types/auth-layout'
+import { Route } from './+types/platform-data-layout'
 
 const defaults = {
 	user: null,
@@ -20,7 +20,7 @@ const defaults = {
 	error: 'Failed to initialize user data'
 }
 
-const middlewareAuthContext = createContext<AuthContextType>(defaults)
+const middlewarePlatformContext = createContext<IPlatformContext>(defaults)
 
 const authMiddleware: Route.MiddlewareFunction = async ({
 	request,
@@ -76,7 +76,7 @@ const authMiddleware: Route.MiddlewareFunction = async ({
 			}
 		}
 
-		context.set(middlewareAuthContext, {
+		context.set(middlewarePlatformContext, {
 			user,
 			userWithDefaults,
 			organizations,
@@ -87,24 +87,23 @@ const authMiddleware: Route.MiddlewareFunction = async ({
 	} catch (error) {
 		console.error('Failed to initialize user:', error)
 		// If user initialization fails, still allow access but log the error
-		context.set(middlewareAuthContext, { ...defaults, user })
+		context.set(middlewarePlatformContext, { ...defaults, user })
 	}
 }
 
 export const middleware: Route.MiddlewareFunction[] = [authMiddleware]
 
 export const loader = async ({ request, context }: Route.ActionArgs) => {
-	const authContext = context.get(middlewareAuthContext)
-	return authContext
+	return context.get(middlewarePlatformContext)
 }
 
-const AuthLayout = ({ loaderData }: Route.ComponentProps) => {
+const PlatformDataLayout = ({ loaderData }: Route.ComponentProps) => {
 	// Provide auth context to all child routes
 	return (
-		<AuthContext.Provider value={loaderData}>
+		<PlatformContext.Provider value={loaderData || defaults}>
 			<Outlet />
-		</AuthContext.Provider>
+		</PlatformContext.Provider>
 	)
 }
 
-export default AuthLayout
+export default PlatformDataLayout

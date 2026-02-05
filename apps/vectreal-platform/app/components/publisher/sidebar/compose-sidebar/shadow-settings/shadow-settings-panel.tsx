@@ -8,12 +8,13 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 import { ShadowsProps, ShadowTypePropBase } from '@vctrl/core'
+import { defaultAccumulativeShadowsOptions } from '@vctrl/viewer'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom } from 'jotai'
 
 import { InfoTooltip } from '../../../../../components/info-tooltip'
 import { shadowsAtom } from '../../../../../lib/stores/scene-settings-store'
-import { SettingSlider } from '../../../settings-components'
+import { EnhancedSettingSlider } from '../../../settings-components'
 
 import {
 	ACCUMULATIVE_FIELDS,
@@ -32,13 +33,22 @@ const ShadowSettingsPanel = () => {
 	const { type } = shadows
 
 	const handleTypeChange = (value: ShadowsProps['type']) => {
-		setShadows(
-			(prev) =>
-				({
-					...prev,
-					type: value
-				}) as ShadowTypePropBase
-		)
+		setShadows((prev) => {
+			// When switching to accumulative, use the defaults
+			if (value === 'accumulative') {
+				return defaultAccumulativeShadowsOptions as ShadowTypePropBase
+			}
+
+			// When switching to contact, use contact defaults
+			return {
+				type: 'contact',
+				opacity: 0.4,
+				blur: 0.1,
+				scale: 5,
+				color: '#000000',
+				smooth: true
+			} as ShadowTypePropBase
+		})
 	}
 
 	const handleFieldChange = (key: string, value: number | string) => {
@@ -116,7 +126,7 @@ const ShadowSettingsPanel = () => {
 							<InfoTooltip content="Contact shadows are fast, simple, and ideal for performance-focused scenes." />
 						</div>
 						{CONTACT_FIELDS.map((field) => (
-							<SettingSlider
+							<EnhancedSettingSlider
 								key={field.key}
 								id={`contact-${field.key}`}
 								sliderProps={{
@@ -124,7 +134,8 @@ const ShadowSettingsPanel = () => {
 									max: field.max,
 									step: field.step,
 									value:
-										(shadows[field.key as keyof ShadowsProps] as number) ?? '',
+										(shadows[field.key as keyof ShadowsProps] as number) ??
+										field.min,
 									onChange: (value) => handleFieldChange(field.key, value)
 								}}
 								label={field.label}
@@ -133,7 +144,9 @@ const ShadowSettingsPanel = () => {
 									low: `${field.min}`,
 									high: `${field.max}`
 								}}
-								formatValue={(value) => value?.toString()}
+								formatValue={field.formatValue}
+								valueMapping={field.valueMapping}
+								allowDirectInput={true}
 							/>
 						))}
 					</motion.div>
@@ -155,58 +168,73 @@ const ShadowSettingsPanel = () => {
 								</p>
 								<InfoTooltip content="Accumulative shadows provide soft, realistic shadowing by blending multiple frames." />
 							</div>
-							{ACCUMULATIVE_FIELDS.map((field) => (
-								<SettingSlider
-									key={field.key}
-									id={`accumulative-${field.key}`}
-									sliderProps={{
-										min: field.min,
-										max: field.max,
-										step: field.step,
-										value:
-											(shadows[field.key as keyof ShadowsProps] as number) ??
-											'',
-										onChange: (value) => handleFieldChange(field.key, value)
-									}}
-									label={field.label}
-									tooltip={field.tooltip}
-									labelProps={{
-										low: `${field.min}`,
-										high: `${field.max}`
-									}}
-									formatValue={(value) => value?.toString()}
-								/>
-							))}
+							{ACCUMULATIVE_FIELDS.map((field) => {
+								return (
+									<EnhancedSettingSlider
+										key={field.key}
+										id={`accumulative-${field.key}`}
+										sliderProps={{
+											min: field.min,
+											max: field.max,
+											step: field.step,
+											value:
+												(shadows[field.key as keyof ShadowsProps] as number) ??
+												field.min,
+											onChange: (value) => handleFieldChange(field.key, value)
+										}}
+										label={field.label}
+										tooltip={field.tooltip}
+										labelProps={{
+											low: `${field.min}`,
+											high: `${field.max}`
+										}}
+										formatValue={field.formatValue}
+										valueMapping={field.valueMapping}
+										allowDirectInput={true}
+									/>
+								)
+							})}
 						</div>
 						<div className="bg-muted/50 space-y-4 rounded-xl p-4">
 							<div className="flex items-center gap-2">
 								<p className="text-lg font-medium">Randomized Light Settings</p>
 								<InfoTooltip content="Adjust the properties of the randomized light used for accumulative shadows." />
 							</div>
-							{ACCUMULATIVE_LIGHT_FIELDS.map((field) => (
-								<SettingSlider
-									key={field.key}
-									id={`light-${field.key}`}
-									sliderProps={{
-										min: field.min,
-										max: field.max,
-										step: field.step,
-										value:
-											(shadows.light?.[
-												field.key as keyof RandomizedLightProps
-											] as number) ?? '',
-										onChange: (value) =>
-											handleLightFieldChange(field.key, value)
-									}}
-									label={field.label}
-									tooltip={field.tooltip}
-									labelProps={{
-										low: `${field.min}`,
-										high: `${field.max}`
-									}}
-									formatValue={(value) => value?.toString()}
-								/>
-							))}
+							{ACCUMULATIVE_LIGHT_FIELDS.map((field) => {
+								const defaultLightValue =
+									defaultAccumulativeShadowsOptions.light?.[
+										field.key as keyof RandomizedLightProps
+									]
+								const currentValue =
+									shadows.light?.[field.key as keyof RandomizedLightProps]
+
+								return (
+									<EnhancedSettingSlider
+										key={field.key}
+										id={`light-${field.key}`}
+										sliderProps={{
+											min: field.min,
+											max: field.max,
+											step: field.step,
+											value:
+												(currentValue as number) ??
+												(defaultLightValue as number) ??
+												field.min,
+											onChange: (value) =>
+												handleLightFieldChange(field.key, value)
+										}}
+										label={field.label}
+										tooltip={field.tooltip}
+										labelProps={{
+											low: `${field.min}`,
+											high: `${field.max}`
+										}}
+										formatValue={field.formatValue}
+										valueMapping={field.valueMapping}
+										allowDirectInput={true}
+									/>
+								)
+							})}
 						</div>
 					</motion.div>
 				)}

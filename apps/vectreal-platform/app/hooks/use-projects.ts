@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 
-import { useAuth } from '../contexts/auth-context'
+import { usePlatformContext } from '../contexts/platform-context'
 import type { projects } from '../db/schema'
 
 export interface ProjectWithOrganization {
@@ -12,7 +12,7 @@ export interface ProjectWithOrganization {
  * Hook to get all projects the user has access to
  */
 export const useProjects = (): ProjectWithOrganization[] => {
-	const { projects } = useAuth()
+	const { projects } = usePlatformContext()
 	return projects
 }
 
@@ -22,7 +22,7 @@ export const useProjects = (): ProjectWithOrganization[] => {
 export const useProject = (
 	projectId: string
 ): ProjectWithOrganization | null => {
-	const { projects } = useAuth()
+	const { projects } = usePlatformContext()
 
 	return useMemo(() => {
 		return projects.find(({ project }) => project.id === projectId) || null
@@ -35,7 +35,7 @@ export const useProject = (
 export const useOrganizationProjects = (
 	organizationId: string
 ): ProjectWithOrganization[] => {
-	const { projects } = useAuth()
+	const { projects } = usePlatformContext()
 
 	return useMemo(() => {
 		return projects.filter(
@@ -48,7 +48,7 @@ export const useOrganizationProjects = (
  * Hook to get projects grouped by organization
  */
 export const useProjectsByOrganization = () => {
-	const { projects, organizations } = useAuth()
+	const { projects, organizations } = usePlatformContext()
 
 	return useMemo(() => {
 		const grouped = new Map<
@@ -83,7 +83,7 @@ export const useProjectsByOrganization = () => {
  * Hook to get project statistics
  */
 export const useProjectStats = () => {
-	const { projects } = useAuth()
+	const { projects } = usePlatformContext()
 
 	return useMemo(() => {
 		const total = projects.length
@@ -109,7 +109,7 @@ export const useProjectStats = () => {
  * Hook to get projects sorted by various criteria
  */
 export const useSortedProjects = () => {
-	const { projects } = useAuth()
+	const { projects } = usePlatformContext()
 
 	return useMemo(() => {
 		const byName = [...projects].sort((a, b) =>
@@ -135,7 +135,7 @@ export const useFilteredProjects = (
 	searchTerm?: string,
 	organizationId?: string
 ) => {
-	const { projects } = useAuth()
+	const { projects } = usePlatformContext()
 
 	return useMemo(() => {
 		let filtered = projects
@@ -165,7 +165,7 @@ export const useFilteredProjects = (
  * Hook to get the user's default/primary project
  */
 export const useDefaultProject = (): typeof projects.$inferSelect | null => {
-	const { userWithDefaults } = useAuth()
+	const { userWithDefaults } = usePlatformContext()
 
 	return useMemo(() => {
 		return userWithDefaults?.project || null
@@ -176,7 +176,7 @@ export const useDefaultProject = (): typeof projects.$inferSelect | null => {
  * Hook to check if user has access to a specific project
  */
 export const useHasProjectAccess = (projectId: string): boolean => {
-	const { projects } = useAuth()
+	const { projects } = usePlatformContext()
 
 	return useMemo(() => {
 		return projects.some(({ project }) => project.id === projectId)
@@ -187,7 +187,7 @@ export const useHasProjectAccess = (projectId: string): boolean => {
  * Hook to get recent projects (by name for now, since no timestamps)
  */
 export const useRecentProjects = (limit = 5): ProjectWithOrganization[] => {
-	const { projects } = useAuth()
+	const { projects } = usePlatformContext()
 
 	return useMemo(() => {
 		return [...projects]
@@ -200,7 +200,7 @@ export const useRecentProjects = (limit = 5): ProjectWithOrganization[] => {
  * Hook to get projects with additional organization context
  */
 export const useProjectsWithContext = () => {
-	const { projects, organizations } = useAuth()
+	const { projects, organizations } = usePlatformContext()
 
 	return useMemo(() => {
 		return projects.map((projectWithOrg) => {
@@ -221,7 +221,7 @@ export const useProjectsWithContext = () => {
  * Hook for project creation capabilities based on user's organizations
  */
 export const useProjectCreationCapabilities = () => {
-	const { organizations } = useAuth()
+	const { organizations } = usePlatformContext()
 
 	return useMemo(() => {
 		const organizationsForCreation = organizations.filter(({ membership }) =>

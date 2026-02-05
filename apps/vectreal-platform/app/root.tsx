@@ -9,15 +9,12 @@ import {
 	Outlet,
 	Scripts,
 	ScrollRestoration,
-	useRouteError,
-	useRouteLoaderData
+	useRouteError
 } from 'react-router'
 import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/root'
-import ThemeProvider from './contexts/theme-provider'
 import { csrfSession } from './lib/sessions/csrf-session.server'
-import { getSession } from './lib/sessions/theme-session.server'
 
 import styles from './styles/global.module.css'
 import '@shared/components/styles/globals.css'
@@ -45,9 +42,7 @@ export const links: LinksFunction = () => [
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const [csrf, cookieHeader] = await csrfSession.commitToken(request)
-	const session = await getSession(request.headers.get('Cookie'))
-	const theme = session.get('themeMode') || 'system'
-	const loaderData = { csrf, theme }
+	const loaderData = { csrf }
 
 	if (cookieHeader) {
 		return data(loaderData, { headers: { 'Set-Cookie': cookieHeader } })
@@ -59,7 +54,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 export type RootLoader = typeof loader
 
 export function Layout({ children }: { children: React.ReactNode }) {
-	const loaderData = useRouteLoaderData('root')
 	const error = useRouteError()
 
 	if (error) {
@@ -95,7 +89,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 	}
 
 	return (
-		<html lang="en" className={cn(styles.global, loaderData?.theme || 'dark')}>
+		<html lang="en" className={cn(styles.global, 'dark')}>
 			<head>
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -115,12 +109,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function App({ loaderData }: Route.ComponentProps) {
 	return (
 		<AuthenticityTokenProvider token={loaderData?.csrf}>
-			<ThemeProvider
-				defaultTheme={(loaderData?.theme as 'dark') || 'system'}
-				storageKey="theme-mode"
-			>
-				<Outlet />
-			</ThemeProvider>
+			<Outlet />
 		</AuthenticityTokenProvider>
 	)
 }

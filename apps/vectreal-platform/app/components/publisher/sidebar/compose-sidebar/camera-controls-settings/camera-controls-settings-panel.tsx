@@ -1,11 +1,155 @@
 import { useAtom } from 'jotai'
+import { memo, useCallback } from 'react'
 
 import { InfoTooltip } from '../../../../../components/info-tooltip'
-import { controlsAtom } from '../../../../../lib/stores/scene-settings-store'
-import { SettingSlider, SettingToggle } from '../../../settings-components'
+import {
+	cameraAtom,
+	controlsAtom
+} from '../../../../../lib/stores/scene-settings-store'
+import {
+	EnhancedSettingSlider,
+	SettingToggle
+} from '../../../settings-components'
 
-const CameraControlsSettingsPanel = () => {
+import {
+	CAMERA_CONTROLS_FIELDS,
+	CAMERA_FIELDS,
+	defaultCameraOptions,
+	defaultControlsOptions,
+	type FieldConfig
+} from './constants'
+
+/**
+ * Memoized component for rendering a single control field slider
+ * Following React best practices:
+ * - rerender-memo: Memoize individual field components
+ * - rerender-dependencies: Use primitive dependencies
+ */
+const ControlField = memo(
+	({
+		config,
+		value,
+		onUpdate,
+		enabled
+	}: {
+		config: FieldConfig
+		value: number
+		onUpdate: (key: string, value: number) => void
+		enabled?: boolean
+	}) => (
+		<EnhancedSettingSlider
+			enabled={enabled}
+			id={config.key}
+			sliderProps={{
+				min: config.min,
+				max: config.max,
+				step: config.step,
+				value:
+					value ??
+					defaultControlsOptions[
+						config.key as keyof typeof defaultControlsOptions
+					],
+				onChange: (newValue) => onUpdate(config.key, newValue)
+			}}
+			label={config.label}
+			tooltip={config.tooltip}
+			labelProps={{
+				low: `${config.min}${config.unit || ''} - ${config.label.includes('Speed') ? 'Slow' : 'Min'}`,
+				high: `${config.max}${config.unit || ''} - ${config.label.includes('Speed') ? 'Fast' : 'Max'}`
+			}}
+			formatValue={config.formatValue}
+			valueMapping={config.valueMapping}
+			allowDirectInput={true}
+		/>
+	)
+)
+ControlField.displayName = 'ControlField'
+
+/**
+ * Memoized component for rendering a single camera field slider
+ */
+const CameraField = memo(
+	({
+		config,
+		value,
+		onUpdate
+	}: {
+		config: FieldConfig
+		value: number
+		onUpdate: (key: string, value: number) => void
+	}) => (
+		<EnhancedSettingSlider
+			id={config.key}
+			sliderProps={{
+				min: config.min,
+				max: config.max,
+				step: config.step,
+				value:
+					value ??
+					defaultCameraOptions[config.key as keyof typeof defaultCameraOptions],
+				onChange: (newValue) => onUpdate(config.key, newValue)
+			}}
+			label={config.label}
+			tooltip={config.tooltip}
+			labelProps={{
+				low: `${config.min}${config.unit || ''}`,
+				high: `${config.max}${config.unit || ''}`
+			}}
+			formatValue={config.formatValue}
+			valueMapping={config.valueMapping}
+			allowDirectInput={true}
+		/>
+	)
+)
+CameraField.displayName = 'CameraField'
+
+/**
+ * Camera Controls Settings Panel
+ *
+ * Following React best practices:
+ * - rendering-hoist-jsx: Static field configs hoisted to constants.ts
+ * - rerender-memo: Memoized component to prevent unnecessary re-renders
+ * - rerender-functional-setstate: Using functional setState for stable callbacks
+ * - js-cache-property-access: Centralized field definitions in constants
+ */
+const CameraControlsSettingsPanel = memo(() => {
 	const [controls, setControls] = useAtom(controlsAtom)
+	const [camera, setCamera] = useAtom(cameraAtom)
+
+	// rerender-functional-setstate: Use functional setState for stable callbacks
+	const handleControlUpdate = useCallback(
+		(key: string, value: number) => {
+			setControls((prev) => ({
+				...prev,
+				[key]: value
+			}))
+		},
+		[setControls]
+	)
+
+	const handleCameraUpdate = useCallback(
+		(key: string, value: number) => {
+			// Use direct object assignment to work around complex CameraProps type
+			setCamera((prev) => {
+				const updated = Object.assign({}, prev)
+				if (key === 'fov' || key === 'near' || key === 'far') {
+					;(updated as Record<string, unknown>)[key] = value
+				}
+				return updated
+			})
+		},
+		[setCamera]
+	)
+
+	const handleToggle = useCallback(
+		(key: keyof typeof controls, enabled: boolean) => {
+			setControls((prev) => ({
+				...prev,
+				[key]: enabled
+			}))
+		},
+		[setControls]
+	)
 
 	return (
 		<div className="space-y-4">
@@ -17,6 +161,24 @@ const CameraControlsSettingsPanel = () => {
 				experience.
 			</small>
 
+			{/* Camera Settings Section */}
+			<div className="bg-muted/50 space-y-4 rounded-xl p-4">
+				<div className="flex items-center gap-2">
+					<p className="text-lg font-medium">Camera</p>
+					<InfoTooltip content="Configure camera properties like field of view and clipping planes." />
+				</div>
+
+				{CAMERA_FIELDS.map((config) => (
+					<CameraField
+						key={config.key}
+						config={config}
+						value={camera[config.key as keyof typeof camera] as number}
+						onUpdate={handleCameraUpdate}
+					/>
+				))}
+			</div>
+
+			{/* Camera Controls Section */}
 			<div className="bg-muted/50 space-y-4 rounded-xl p-4">
 				<div className="flex items-center gap-2">
 					<p className="text-lg font-medium">Camera Controls</p>
@@ -25,75 +187,43 @@ const CameraControlsSettingsPanel = () => {
 
 				<SettingToggle
 					enabled={!!controls.enableZoom}
-					onToggle={(enabled) =>
-						setControls((prev) => ({
-							...prev,
-							enableZoom: enabled
-						}))
-					}
+					onToggle={(enabled) => handleToggle('enableZoom', enabled)}
 					title="Enable Zoom"
 					description="Allow users to zoom in and out."
 				/>
 
 				<SettingToggle
 					enabled={!!controls.autoRotate}
-					onToggle={(enabled) =>
-						setControls((prev) => ({
-							...prev,
-							autoRotate: enabled
-						}))
-					}
+					onToggle={(enabled) => handleToggle('autoRotate', enabled)}
 					title="Auto Rotate"
 					description="Automatically rotate the camera around the model."
 				/>
 
-				<SettingSlider
-					enabled={!!controls.autoRotate}
-					id="auto-rotate-speed"
-					sliderProps={{
-						min: 0,
-						max: 2,
-						step: 0.01,
-						value: controls.autoRotateSpeed ?? 0.5,
-						onChange: (value) =>
-							setControls((prev) => ({
-								...prev,
-								autoRotateSpeed: value
-							}))
-					}}
-					label="Auto Rotate Speed"
-					tooltip="Speed at which the camera auto-rotates."
-					labelProps={{
-						low: '0 - Off',
-						high: '2 - Fast'
-					}}
-					formatValue={(value) => value.toFixed(2)}
-				/>
+				{/* Dynamically render all control fields from configuration */}
+				{CAMERA_CONTROLS_FIELDS.map((config) => {
+					// Determine if the field should be enabled based on dependencies
+					const isEnabled =
+						config.key === 'autoRotateSpeed'
+							? !!controls.autoRotate
+							: config.key === 'zoomSpeed'
+								? !!controls.enableZoom
+								: true
 
-				<SettingSlider
-					id="damping-factor"
-					sliderProps={{
-						min: 0,
-						max: 0.5,
-						step: 0.01,
-						value: controls.dampingFactor ?? 0.25,
-						onChange: (value) =>
-							setControls((prev) => ({
-								...prev,
-								dampingFactor: value
-							}))
-					}}
-					label="Damping Factor"
-					tooltip="Smoothness of camera movement."
-					labelProps={{
-						low: '0 - Fully Damped',
-						high: '0.5 - No Damping'
-					}}
-					formatValue={(value) => value.toFixed(2)}
-				/>
+					return (
+						<ControlField
+							key={config.key}
+							config={config}
+							value={controls[config.key as keyof typeof controls] as number}
+							onUpdate={handleControlUpdate}
+							enabled={isEnabled}
+						/>
+					)
+				})}
 			</div>
 		</div>
 	)
-}
+})
+
+CameraControlsSettingsPanel.displayName = 'CameraControlsSettingsPanel'
 
 export default CameraControlsSettingsPanel

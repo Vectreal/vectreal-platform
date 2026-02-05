@@ -1,4 +1,5 @@
 export { default as SceneBounds, defaultBoundsOptions } from './scene-bounds'
+export { defaultCameraOptions } from './scene-camera'
 export {
 	default as SceneControls,
 	defaultControlsOptions
@@ -12,5 +13,6 @@ export { default as SceneModel } from './scene-model'
 export { default as ScenePostProcessing } from './scene-postprocessing'
 export {
 	default as SceneShadows,
-	defaultShadowsOptions as defaultShadowOptions
+	defaultShadowsOptions as defaultShadowOptions,
+	defaultAccumulativeShadowsOptions
 } from './scene-shadows'

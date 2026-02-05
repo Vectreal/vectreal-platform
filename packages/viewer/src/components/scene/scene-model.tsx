@@ -1,5 +1,5 @@
 import { memo, useEffect } from 'react'
-import { Object3D } from 'three'
+import { Mesh, Object3D } from 'three'
 
 interface ModelProps {
 	/**
@@ -17,6 +17,16 @@ interface ModelProps {
  */
 const SceneModel = memo((props: ModelProps) => {
 	const { object } = props
+
+	useEffect(() => {
+		// Enable shadow casting for all meshes in the model
+		object.traverse((child) => {
+			if (child instanceof Mesh) {
+				child.castShadow = true
+				child.receiveShadow = true
+			}
+		})
+	}, [object])
 
 	useEffect(() => {
 		// Potentially add logic here to handle onScreenshot after model is loaded

@@ -79,13 +79,30 @@ function UserMenu({ user, onLogout }: { user: User; onLogout: () => void }) {
 					Hey, {user.user_metadata?.full_name.split(' ').at(0) || user.email}!
 				</DropdownMenuLabel>
 				<DropdownMenuSeparator />
-				<DropdownMenuItem onClick={() => handleMenuItemClick('/profile')}>
-					Profile
+				<DropdownMenuItem onClick={() => handleMenuItemClick('/publisher')}>
+					Publisher
 				</DropdownMenuItem>
+				<DropdownMenuSeparator />
+
 				<DropdownMenuItem onClick={() => handleMenuItemClick('/dashboard')}>
 					Dashboard
 				</DropdownMenuItem>
-
+				<DropdownMenuItem
+					onClick={() => handleMenuItemClick('/dashboard/projects')}
+				>
+					Projects
+				</DropdownMenuItem>
+				<DropdownMenuItem
+					onClick={() => handleMenuItemClick('/dashboard/organizations')}
+				>
+					Organizations
+				</DropdownMenuItem>
+				<DropdownMenuItem
+					onClick={() => handleMenuItemClick('/dashboard/settings')}
+				>
+					Settings
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
 				<DropdownMenuItem onClick={onLogout}>Log Out</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>

@@ -1,5 +1,6 @@
 import {
 	BoundsProps,
+	CameraProps,
 	ControlsProps,
 	EnvironmentProps,
 	SceneMeta,
@@ -7,6 +8,7 @@ import {
 } from '@vctrl/core'
 import {
 	defaultBoundsOptions,
+	defaultCameraOptions,
 	defaultControlsOptions,
 	defaultEnvOptions,
 	defaultShadowOptions
@@ -25,6 +27,7 @@ const metaInitialState: SceneMeta = {
 const metaAtom = atomWithReset<SceneMeta>(metaInitialState)
 
 const boundsAtom = atom<BoundsProps>(defaultBoundsOptions)
+const cameraAtom = atom<CameraProps>(defaultCameraOptions)
 const controlsAtom = atom<ControlsProps>(defaultControlsOptions)
 const environmentAtom = atom<EnvironmentProps>(defaultEnvOptions)
 const shadowsAtom = atom<ShadowsProps>(defaultShadowOptions)
@@ -32,6 +35,7 @@ const shadowsAtom = atom<ShadowsProps>(defaultShadowOptions)
 sceneSettingsStore.set(metaAtom, metaInitialState)
 
 sceneSettingsStore.set(boundsAtom, defaultBoundsOptions)
+sceneSettingsStore.set(cameraAtom, defaultCameraOptions)
 sceneSettingsStore.set(controlsAtom, defaultControlsOptions)
 sceneSettingsStore.set(environmentAtom, defaultEnvOptions)
 sceneSettingsStore.set(shadowsAtom, defaultShadowOptions)
@@ -42,6 +46,7 @@ export {
 
 	// Vectreal viewer settings atoms
 	boundsAtom,
+	cameraAtom,
 	controlsAtom,
 	environmentAtom,
 	shadowsAtom,

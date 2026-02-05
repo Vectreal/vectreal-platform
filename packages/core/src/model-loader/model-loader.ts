@@ -210,6 +210,10 @@ export class ModelLoader {
 				gltfJson.images.forEach((image, index: number) => {
 					// Check if image has a URI reference
 					if (image.uri) {
+						// Skip validation for data URLs - they are embedded in the GLTF itself
+						if (image.uri.startsWith('data:')) {
+							return
+						}
 						const imageName = decodeURIComponent(image.uri)
 						const basename = imageName.split('/').pop() || imageName
 
@@ -241,6 +245,11 @@ export class ModelLoader {
 				}
 			}
 
+			// Helper function to check if a URI is a data URL
+			const isDataUrl = (uri: string): boolean => {
+				return uri.startsWith('data:')
+			}
+
 			// Create resource map for glTF-Transform
 			const resources: { [key: string]: Uint8Array } = {}
 
@@ -251,10 +260,10 @@ export class ModelLoader {
 			// First, collect all URI references from the GLTF
 			const referencedUris = new Set<string>()
 
-			// Collect image URIs
+			// Collect image URIs (skip data URLs as they are embedded)
 			if (gltfJson.images) {
 				gltfJson.images.forEach((image) => {
-					if (image.uri) {
+					if (image.uri && !isDataUrl(image.uri)) {
 						referencedUris.add(image.uri)
 						// Also add decoded version
 						referencedUris.add(decodeURIComponent(image.uri))
@@ -262,10 +271,10 @@ export class ModelLoader {
 				})
 			}
 
-			// Collect buffer URIs (for .bin files)
+			// Collect buffer URIs (for .bin files, skip data URLs)
 			if (gltfJson.buffers) {
 				gltfJson.buffers.forEach((buffer) => {
-					if (buffer.uri) {
+					if (buffer.uri && !isDataUrl(buffer.uri)) {
 						referencedUris.add(buffer.uri)
 						referencedUris.add(decodeURIComponent(buffer.uri))
 					}

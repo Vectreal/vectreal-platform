@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 
-import { useAuth } from '../contexts/auth-context'
+import { usePlatformContext } from '../contexts/platform-context'
 import type { organizationMemberships, organizations } from '../db/schema'
 
 export interface OrganizationWithMembership {
@@ -12,7 +12,7 @@ export interface OrganizationWithMembership {
  * Hook to get all organizations the user has access to
  */
 export const useOrganizations = (): OrganizationWithMembership[] => {
-	const { organizations } = useAuth()
+	const { organizations } = usePlatformContext()
 	return organizations
 }
 
@@ -22,7 +22,7 @@ export const useOrganizations = (): OrganizationWithMembership[] => {
 export const useOrganization = (
 	organizationId: string
 ): OrganizationWithMembership | null => {
-	const { organizations } = useAuth()
+	const { organizations } = usePlatformContext()
 
 	return useMemo(() => {
 		return (
@@ -37,7 +37,7 @@ export const useOrganization = (
  * Hook to get organizations grouped by user role
  */
 export const useOrganizationsByRole = () => {
-	const { organizations } = useAuth()
+	const { organizations } = usePlatformContext()
 
 	return useMemo(() => {
 		const owned = organizations.filter(
@@ -63,7 +63,7 @@ export const useOrganizationsByRole = () => {
  * Hook to get organizations filtered by capabilities
  */
 export const useOrganizationsByCapability = () => {
-	const { organizations } = useAuth()
+	const { organizations } = usePlatformContext()
 
 	return useMemo(() => {
 		const canManageSettings = organizations.filter(({ membership }) =>
@@ -100,7 +100,7 @@ export const useOrganizationsByCapability = () => {
  * Hook to get organization statistics
  */
 export const useOrganizationStats = () => {
-	const { organizations } = useAuth()
+	const { organizations } = usePlatformContext()
 
 	return useMemo(() => {
 		const total = organizations.length
@@ -130,7 +130,7 @@ export const useOrganizationStats = () => {
  * Hook to get the first organization where user is owner (primary org)
  */
 export const usePrimaryOrganization = (): OrganizationWithMembership | null => {
-	const { organizations } = useAuth()
+	const { organizations } = usePlatformContext()
 
 	return useMemo(() => {
 		return (
@@ -144,7 +144,7 @@ export const usePrimaryOrganization = (): OrganizationWithMembership | null => {
  * Hook to check if user has access to a specific organization
  */
 export const useHasOrganizationAccess = (organizationId: string): boolean => {
-	const { organizations } = useAuth()
+	const { organizations } = usePlatformContext()
 
 	return useMemo(() => {
 		return organizations.some(
@@ -157,7 +157,7 @@ export const useHasOrganizationAccess = (organizationId: string): boolean => {
  * Hook to get organizations sorted by various criteria
  */
 export const useSortedOrganizations = () => {
-	const { organizations } = useAuth()
+	const { organizations } = usePlatformContext()
 
 	return useMemo(() => {
 		const byName = [...organizations].sort((a, b) =>
@@ -201,7 +201,7 @@ export const useFilteredOrganizations = (
 	searchTerm?: string,
 	role?: string
 ) => {
-	const { organizations } = useAuth()
+	const { organizations } = usePlatformContext()
 
 	return useMemo(() => {
 		let filtered = organizations

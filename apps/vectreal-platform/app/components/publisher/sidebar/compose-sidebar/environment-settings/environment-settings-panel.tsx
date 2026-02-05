@@ -19,7 +19,11 @@ import { useCallback } from 'react'
 
 import { InfoTooltip } from '../../../../'
 import { environmentAtom } from '../../../../../lib/stores/scene-settings-store'
-import { SettingSlider, SettingToggle } from '../../../settings-components'
+import { valueMappings } from '../../../../../lib/utils/value-mapping'
+import {
+	EnhancedSettingSlider,
+	SettingToggle
+} from '../../../settings-components'
 
 const ENVIRONMENT_PRESETS: EnvironmentKey[] = [
 	'nature-moonlit',
@@ -167,23 +171,25 @@ const EnvironmentSettings = () => {
 					</Select>
 				</div>
 
-				<SettingSlider
+				<EnhancedSettingSlider
 					id="environment-intensity"
 					sliderProps={{
 						min: 0,
-						max: 1,
+						max: 5,
 						step: 0.01,
 						value: environment.environmentIntensity || 1,
 						onChange: (value) =>
 							handleEnvironmentChange('environmentIntensity', value)
 					}}
 					label="Environment Intensity"
-					tooltip="This controls how bright the environment map appears in the scene, affecting lighting and reflections."
+					tooltip="Controls how bright the environment map appears, affecting lighting and reflections."
 					labelProps={{
 						low: '0 - Off',
-						high: '1 - Full Intensity'
+						high: '5 - Very Bright'
 					}}
 					formatValue={(value) => value.toFixed(2)}
+					valueMapping={valueMappings.quadratic}
+					allowDirectInput={true}
 				/>
 
 				<SettingToggle
@@ -199,7 +205,7 @@ const EnvironmentSettings = () => {
 					info="This will set the environment map as the background of the scene, allowing it to be visible behind the model."
 				/>
 
-				<SettingSlider
+				<EnhancedSettingSlider
 					enabled={!!environment.background}
 					id="environment-blur"
 					sliderProps={{
@@ -211,31 +217,34 @@ const EnvironmentSettings = () => {
 							handleEnvironmentChange('backgroundBlurriness', value)
 					}}
 					label="Background Blurriness"
-					tooltip="This controls the blurriness of the background when the environment map is set as the background."
+					tooltip="Controls the blurriness of the background when environment is visible."
 					labelProps={{
 						low: '0 - Sharp',
 						high: '1 - Fully Blurred'
 					}}
 					formatValue={(value) => value.toFixed(2)}
+					allowDirectInput={true}
 				/>
-				<SettingSlider
+				<EnhancedSettingSlider
 					enabled={!!environment.background}
 					id="background-intensity"
 					sliderProps={{
 						min: 0,
-						max: 1,
+						max: 3,
 						step: 0.01,
 						value: environment.backgroundIntensity || 1,
 						onChange: (value) =>
 							handleEnvironmentChange('backgroundIntensity', value)
 					}}
 					label="Background Intensity"
-					tooltip="This controls the brightness of the background when the environment map is set as the background."
+					tooltip="Controls the brightness of the background when environment is visible."
 					labelProps={{
 						low: '0 - Off',
-						high: '1 - Full Intensity'
+						high: '3 - Very Bright'
 					}}
 					formatValue={(value) => value.toFixed(2)}
+					valueMapping={valueMappings.quadratic}
+					allowDirectInput={true}
 				/>
 			</div>
 			<div className="bg-muted/50 space-y-4 rounded-xl p-4">
@@ -255,13 +264,13 @@ const EnvironmentSettings = () => {
 					title="Show Ground"
 					description="Display a ground plane in the scene."
 				/>
-				<SettingSlider
+				<EnhancedSettingSlider
 					enabled={!!environment.ground}
 					id="ground-radius"
 					sliderProps={{
-						min: 0,
-						max: 250,
-						step: 1,
+						min: 10,
+						max: 500,
+						step: 5,
 						value:
 							typeof environment.ground === 'object'
 								? (environment.ground.radius ?? DEFAULT_GROUND_VALUES.radius)
@@ -269,20 +278,22 @@ const EnvironmentSettings = () => {
 						onChange: (value) => handleGroundChange('radius', value)
 					}}
 					label="Ground Radius"
-					tooltip="This controls the radius of the ground plane in the scene."
+					tooltip="Controls the size of the ground plane in the scene."
 					labelProps={{
-						low: '0 - No Ground',
-						high: '250 - Max Size'
+						low: '10 - Small',
+						high: '500 - Very Large'
 					}}
-					formatValue={(value) => Number(value).toString()}
+					formatValue={(value) => value.toFixed(0)}
+					valueMapping={valueMappings.log}
+					allowDirectInput={true}
 				/>
-				<SettingSlider
+				<EnhancedSettingSlider
 					enabled={!!environment.ground}
 					id="ground-scale"
 					sliderProps={{
-						min: 0,
-						max: 50,
-						step: 0.5,
+						min: 1,
+						max: 100,
+						step: 1,
 						value:
 							typeof environment.ground === 'object'
 								? (environment.ground.scale ?? DEFAULT_GROUND_VALUES.scale)
@@ -290,19 +301,21 @@ const EnvironmentSettings = () => {
 						onChange: (value) => handleGroundChange('scale', value)
 					}}
 					label="Environment Scale"
-					tooltip="This controls the scale of the ground planes environment sphere."
+					tooltip="Controls the scale of the ground plane's environment sphere."
 					labelProps={{
-						low: '0 - No Scale',
-						high: '50 - Max Scale'
+						low: '1 - Small',
+						high: '100 - Large'
 					}}
-					formatValue={(value) => Number(value).toString()}
+					formatValue={(value) => value.toFixed(0)}
+					valueMapping={valueMappings.log}
+					allowDirectInput={true}
 				/>
-				<SettingSlider
+				<EnhancedSettingSlider
 					enabled={!!environment.ground}
 					id="ground-height"
 					sliderProps={{
-						min: 0,
-						max: 10,
+						min: 0.1,
+						max: 20,
 						step: 0.1,
 						value:
 							typeof environment.ground === 'object'
@@ -311,12 +324,14 @@ const EnvironmentSettings = () => {
 						onChange: (value) => handleGroundChange('height', value)
 					}}
 					label="Ground Height"
-					tooltip="This controls the height of the ground plane in the environment sphere."
+					tooltip="Controls the height of the ground plane in the environment sphere."
 					labelProps={{
-						low: '0 - No Height',
-						high: '10 - Full Height'
+						low: '0.1 - Very Low',
+						high: '20 - High'
 					}}
-					formatValue={(value) => Number(value).toString()}
+					formatValue={(value) => value.toFixed(1)}
+					valueMapping={valueMappings.quadratic}
+					allowDirectInput={true}
 				/>
 			</div>
 		</div>
