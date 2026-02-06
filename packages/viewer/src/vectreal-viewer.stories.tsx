@@ -3,7 +3,6 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import React, { ComponentProps } from 'react'
 import type { TypeWithDeepControls } from 'storybook-addon-deep-controls'
 
-import { defaultInfoPopoverProps } from './components'
 import {
 	defaultControlsOptions,
 	defaultEnvOptions,
@@ -205,20 +204,6 @@ const meta: TypeWithDeepControls<Meta<typeof VectrealViewer>> = {
 			},
 			control: 'boolean',
 			description: 'Infinite grid'
-		},
-		'infoPopoverOptions.showInfo': {
-			table: {
-				category: 'Info Popover Options'
-			},
-			control: 'boolean',
-			description: 'Show info popover'
-		},
-		'infoPopoverOptions.content': {
-			table: {
-				category: 'Info Popover Options'
-			},
-			control: 'text',
-			description: 'Content of the info popover'
 		}
 	}
 }
@@ -231,7 +216,6 @@ export const Default: Story = {
 	args: {
 		controlsOptions: { ...defaultControlsOptions, autoRotate: false },
 		envOptions: defaultEnvOptions,
-		gridOptions: defaultGridOptions,
-		infoPopoverOptions: defaultInfoPopoverProps
+		gridOptions: defaultGridOptions
 	}
 }

@@ -43,5 +43,8 @@ jobs:
       - name: Lint
         run: npx nx affected --target=lint --base=origin/${{ github.event.pull_request.base.ref }} --head=origin/${{ github.event.pull_request.head.ref }}
 
+      - name: Type Check
+        run: npx nx affected --target=type-check --base=origin/${{ github.event.pull_request.base.ref }} --head=origin/${{ github.event.pull_request.head.ref }}
+
       - name: Build
         run: npx nx affected --target=build --base=origin/${{ github.event.pull_request.base.ref }} --head=origin/${{ github.event.pull_request.head.ref }}

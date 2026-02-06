@@ -4,5 +4,15 @@
 		"source.fixAll.eslint": "always"
 	},
 	"nxConsole.generateAiAgentRules": true,
-	"typescript.tsdk": "node_modules/typescript/lib"
+	"typescript.tsdk": "node_modules/typescript/lib",
+	"typescript.enablePromptUseWorkspaceTsdk": true,
+	"typescript.preferences.includePackageJsonAutoImports": "on",
+	"typescript.validate.enable": true,
+	"javascript.validate.enable": true,
+	"files.watcherExclude": {
+		"**/node_modules/**": true,
+		"**/dist/**": true,
+		"**/build/**": true,
+		"**/.nx/**": true
+	}
 }
