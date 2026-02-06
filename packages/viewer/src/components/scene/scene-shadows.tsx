@@ -43,9 +43,13 @@ export const defaultAccumulativeShadowsOptions: AccumulativeShadowsProps = {
 /**
  * Configures shadows for the Three.js scene.
  *
- * @param {ShadowsProps} props - Shadow configuration options.
+ * Accepts partial shadow configuration options and merges them with defaults.
+ * Uses `Partial<ShadowsProps>` to allow optional properties, as defaults are
+ * applied internally for any missing fields including the shadow type.
+ *
+ * @param {Partial<ShadowsProps>} props - Shadow configuration options (all fields optional).
  */
-const SceneShadows = memo((props?: ShadowsProps) => {
+const SceneShadows = memo((props?: Partial<ShadowsProps>) => {
 	const { scene } = useThree()
 
 	// Calculate dynamic light position based on scene bounds
@@ -108,7 +112,7 @@ const SceneShadows = memo((props?: ShadowsProps) => {
 							?.position as Vector3Tuple) || lightPosition
 				}
 			})
-	}
+	} as ShadowsProps
 
 	// Generate key from critical props to force remount when they change
 	// This prevents shadow layering/accumulation issues
