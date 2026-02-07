@@ -1,42 +1,76 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import { File, Folder, Plus } from 'lucide-react'
-import { Link, useParams } from 'react-router'
+import { useLoaderData } from 'react-router'
 
-import DashboardCard from '../../../components/dashboard/dashboard-card'
-import { useFolderContent, useProject, useSceneFolder } from '../../../hooks'
+import DashboardCard from '../../../components/dashboard/dashboard-cards'
+import { FolderContentSkeleton } from '../../../components/skeletons'
+import { loadAuthenticatedUser } from '../../../lib/loaders/auth-loader.server'
+import { projectService } from '../../../lib/services/project-service.server'
+import { sceneFolderService } from '../../../lib/services/scene-folder-service.server'
 
-const FolderPage = () => {
-	const params = useParams()
+import { Route } from './+types/folder'
+
+export async function loader({ request, params }: Route.LoaderArgs) {
 	const projectId = params.projectId
 	const folderId = params.folderId
 
-	const project = useProject(projectId || '')
-	const folder = useSceneFolder(folderId || '')
-	const folderContent = useFolderContent(folderId || '')
+	if (!projectId || !folderId) {
+		throw new Response('Project ID and Folder ID are required', { status: 400 })
+	}
 
-	if (!folder || !project || !projectId || !folderId) {
-		return (
-			<div className="p-6">
-				<div className="text-center">
-					<h1 className="text-primary text-2xl font-bold">Folder Not Found</h1>
-					<p className="text-priamary/60 mt-2">
-						The folder you're looking for doesn't exist or you don't have access
-						to it.
-					</p>
-					<Link viewTransition to={`/dashboard/projects/${projectId}`}>
-						<Button className="mt-4">Back to Project</Button>
-					</Link>
-				</div>
-			</div>
-		)
+	// Auth check (reads from session, very cheap)
+	const { user, userWithDefaults } = await loadAuthenticatedUser(request)
+
+	// Fetch project and folder data
+	const [project, folder] = await Promise.all([
+		projectService.getProject(projectId, user.id),
+		sceneFolderService.getSceneFolder(folderId, user.id)
+	])
+
+	if (!project) {
+		throw new Response('Project not found', { status: 404 })
+	}
+
+	if (!folder) {
+		throw new Response('Folder not found', { status: 404 })
+	}
+
+	// Fetch subfolders and scenes in parallel
+	const [subfolders, scenes] = await Promise.all([
+		sceneFolderService.getChildFolders(folderId, user.id),
+		sceneFolderService.getFolderScenes(folderId, user.id)
+	])
+
+	return {
+		user,
+		userWithDefaults,
+		project,
+		folder,
+		subfolders,
+		scenes
+	}
+}
+
+export function HydrateFallback() {
+	return <FolderContentSkeleton />
+}
+
+export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
+
+const FolderPage = () => {
+	const { project, subfolders, scenes } = useLoaderData<typeof loader>()
+	const projectId = project.id
+
+	const folderContent = {
+		subfolders,
+		scenes
 	}
 
 	return (
 		<div className="space-y-6 p-6">
-			{folderContent &&
-			(folderContent.subfolders.length > 0 ||
-				folderContent.scenes.length > 0) ? (
+			{folderContent.subfolders.length > 0 ||
+			folderContent.scenes.length > 0 ? (
 				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 					{/* Subfolders */}
 					{folderContent.subfolders.map((subfolder) => (
@@ -45,8 +79,14 @@ const FolderPage = () => {
 							title={subfolder.name}
 							description={subfolder.description || 'No description'}
 							linkTo={`/dashboard/projects/${projectId}/folder/${subfolder.id}`}
-							icon={<Folder className="h-5 w-5 text-blue-500" />}
+							icon={<Folder className="h-5 w-5" />}
 							id={subfolder.id}
+							navigationState={{
+								name: subfolder.name,
+								description: subfolder.description || undefined,
+								projectName: project.name,
+								type: 'folder' as const
+							}}
 						>
 							<div className="flex items-center gap-2">
 								<Badge variant="secondary">Folder</Badge>
@@ -63,6 +103,12 @@ const FolderPage = () => {
 							linkTo={`/dashboard/projects/${projectId}/${scene.id}`}
 							icon={<File className="h-5 w-5 text-green-500" />}
 							id={scene.id}
+							navigationState={{
+								name: scene.name,
+								description: scene.description || undefined,
+								projectName: project.name,
+								type: 'scene' as const
+							}}
 						>
 							<div className="flex items-center gap-2">
 								<Badge variant="secondary">{scene.status}</Badge>

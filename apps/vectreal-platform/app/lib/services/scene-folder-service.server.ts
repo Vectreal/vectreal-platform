@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm'
 
 import { getDbClient } from '../../db/client'
 import { organizationMemberships } from '../../db/schema/core/organization-memberships'
@@ -30,6 +30,59 @@ export class SceneFolderService {
 			.from(scenes)
 			.where(eq(scenes.projectId, projectId))
 			.orderBy(desc(scenes.updatedAt))
+	}
+
+	/**
+	 * Gets all scenes for multiple projects in a single query (batch operation).
+	 * Eliminates N+1 query pattern when loading scenes for multiple projects.
+	 * @param projectIds - Array of project IDs
+	 * @param userId - The user ID (for permission check)
+	 * @returns Map of projectId -> array of scenes
+	 */
+	async getProjectsScenes(
+		projectIds: string[],
+		userId: string
+	): Promise<Map<string, Array<typeof scenes.$inferSelect>>> {
+		if (projectIds.length === 0) {
+			return new Map()
+		}
+
+		// Fetch all scenes for all projects in a single query with permission check
+		const allScenes = await this.db
+			.select({
+				scene: scenes
+			})
+			.from(scenes)
+			.innerJoin(projects, eq(projects.id, scenes.projectId))
+			.innerJoin(
+				organizationMemberships,
+				eq(organizationMemberships.organizationId, projects.organizationId)
+			)
+			.where(
+				and(
+					inArray(scenes.projectId, projectIds),
+					eq(organizationMemberships.userId, userId)
+				)
+			)
+			.orderBy(desc(scenes.updatedAt))
+
+		// Group scenes by project ID
+		const scenesByProject = new Map<string, Array<typeof scenes.$inferSelect>>()
+
+		// Initialize all projects with empty arrays
+		for (const projectId of projectIds) {
+			scenesByProject.set(projectId, [])
+		}
+
+		// Populate with actual scenes
+		for (const { scene } of allScenes) {
+			const projectScenes = scenesByProject.get(scene.projectId)
+			if (projectScenes) {
+				projectScenes.push(scene)
+			}
+		}
+
+		return scenesByProject
 	}
 
 	/**

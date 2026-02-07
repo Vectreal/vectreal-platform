@@ -22,6 +22,7 @@ import {
 	SidebarMenuItem,
 	SidebarRail
 } from '@shared/components/ui/sidebar'
+import type { User } from '@supabase/supabase-js'
 import {
 	ArrowRight,
 	Building,
@@ -32,8 +33,6 @@ import {
 	Settings
 } from 'lucide-react'
 import { Link, useFetcher } from 'react-router'
-
-import { usePlatformContext } from '../../contexts/platform-context'
 
 // Menu items
 const manageLinks = [
@@ -62,8 +61,11 @@ const quickLinks = [
 	}
 ]
 
-const DashboardSidebarContent = () => {
-	const { user } = usePlatformContext()
+interface DashboardSidebarContentProps {
+	user: User | null
+}
+
+const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
 	const { submit } = useFetcher()
 
 	const userImageSrc = user?.user_metadata?.avatar_url || ''

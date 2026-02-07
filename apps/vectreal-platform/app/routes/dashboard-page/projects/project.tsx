@@ -7,27 +7,53 @@ import {
 	EmptyHeader
 } from '@shared/components/ui/empty'
 import { File, Folder, Plus } from 'lucide-react'
-import { Link, Outlet, useLocation, useParams } from 'react-router'
+import { Link, Outlet, useLoaderData, useLocation } from 'react-router'
 
-import DashboardCard from '../../../components/dashboard/dashboard-card'
-import { useProject, useProjectContent } from '../../../hooks'
+import DashboardCard from '../../../components/dashboard/dashboard-cards'
+import { ProjectContentSkeleton } from '../../../components/skeletons'
+import { loadAuthenticatedUser } from '../../../lib/loaders/auth-loader.server'
+import { projectService } from '../../../lib/services/project-service.server'
+import { sceneFolderService } from '../../../lib/services/scene-folder-service.server'
 
-const ProjectNotFoundState = () => (
-	<div className="p-6">
-		<Empty>
-			<EmptyHeader>Project Not Found</EmptyHeader>
-			<EmptyDescription>
-				The project you're looking for doesn't exist or you don't have access to
-				it.
-			</EmptyDescription>
-			<EmptyContent>
-				<Link viewTransition to="/dashboard/projects">
-					<Button>Back to Projects</Button>
-				</Link>
-			</EmptyContent>
-		</Empty>
-	</div>
-)
+import { Route } from './+types/project'
+
+export async function loader({ request, params }: Route.LoaderArgs) {
+	const projectId = params.projectId
+
+	if (!projectId) {
+		throw new Response('Project ID is required', { status: 400 })
+	}
+
+	// Auth check (reads from session, very cheap)
+	const { user, userWithDefaults } = await loadAuthenticatedUser(request)
+
+	// Fetch project data
+	const project = await projectService.getProject(projectId, user.id)
+
+	if (!project) {
+		throw new Response('Project not found', { status: 404 })
+	}
+
+	// Fetch root folders and root scenes in parallel
+	const [folders, scenes] = await Promise.all([
+		sceneFolderService.getRootSceneFolders(projectId, user.id),
+		sceneFolderService.getRootScenes(projectId, user.id)
+	])
+
+	return {
+		user,
+		userWithDefaults,
+		project,
+		folders,
+		scenes
+	}
+}
+
+export function HydrateFallback() {
+	return <ProjectContentSkeleton />
+}
+
+export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
 
 const EmptyProjectContentState = () => (
 	<Empty>
@@ -54,16 +80,13 @@ const EmptyProjectContentState = () => (
 )
 
 const ProjectPage = () => {
-	const params = useParams()
 	const location = useLocation()
-	const projectId = params.projectId
+	const { project, folders, scenes } = useLoaderData<typeof loader>()
+	const projectId = project.id
 
-	const project = useProject(projectId || '')
-
-	const projectContent = useProjectContent(projectId || '')
-
-	if (!project || !projectId) {
-		return <ProjectNotFoundState />
+	const projectContent = {
+		folders,
+		scenes
 	}
 
 	// Check if we're at a child route (folder or scene)
@@ -84,18 +107,20 @@ const ProjectPage = () => {
 						<DashboardCard
 							key={folder.id}
 							title={folder.name}
+							icon={<Folder className="h-6 w-6" />}
 							description={folder.description || 'No description'}
 							linkTo={`/dashboard/projects/${projectId}/folder/${folder.id}`}
-							icon={<Folder className="h-5 w-5 text-blue-500" />}
 							id={folder.id}
-						>
-							<div className="flex items-center gap-2">
-								<Badge variant="secondary">Folder</Badge>
-							</div>
-						</DashboardCard>
+							navigationState={{
+								name: folder.name,
+								description: folder.description || undefined,
+								projectName: project.name,
+								type: 'folder' as const
+							}}
+						/>
 					))}
 
-					{/* Root Scenes */}
+					{/* Scenes */}
 					{projectContent.scenes.map((scene) => (
 						<DashboardCard
 							key={scene.id}
@@ -104,6 +129,12 @@ const ProjectPage = () => {
 							linkTo={`/dashboard/projects/${projectId}/${scene.id}`}
 							icon={<File className="h-5 w-5 text-green-500" />}
 							id={scene.id}
+							navigationState={{
+								name: scene.name,
+								description: scene.description || undefined,
+								projectName: project.name,
+								type: 'scene' as const
+							}}
 						>
 							<div className="flex items-center gap-2">
 								<Badge variant="secondary">{scene.status}</Badge>

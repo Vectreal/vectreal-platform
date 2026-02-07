@@ -54,27 +54,24 @@ export default [
 		route('publisher/:sceneId?', './routes/publisher-page/publisher-page.tsx')
 	]),
 
-	// Platform layout provides access to user context (user, orgs, default org/project)
-	layout('./routes/layouts/platform-data-layout.tsx', [
-		// dashboard
-		...prefix('dashboard', [
-			layout('./routes/layouts/dashboard-layout.tsx', [
-				index('./routes/dashboard-page/dashboard.tsx'),
-				...prefix('projects', [
-					route('/', './routes/dashboard-page/projects/projects.tsx', [
-						route('new', './routes/dashboard-page/projects/projects-new.tsx')
-					]),
-					route(':projectId?', './routes/dashboard-page/projects/project.tsx', [
-						route(
-							'folder/:folderId',
-							'./routes/dashboard-page/projects/folder.tsx'
-						),
-						route(':sceneId', './routes/dashboard-page/projects/scene.tsx')
-					])
+	// dashboard - each route handles its own data loading
+	...prefix('dashboard', [
+		layout('./routes/layouts/dashboard-layout.tsx', [
+			index('./routes/dashboard-page/dashboard.tsx'),
+			...prefix('projects', [
+				route('/', './routes/dashboard-page/projects/projects.tsx', [
+					route('new', './routes/dashboard-page/projects/projects-new.tsx')
 				]),
-				route('organizations', './routes/dashboard-page/organizations.tsx'),
-				route('settings', './routes/dashboard-page/settings.tsx')
-			])
+				route(':projectId?', './routes/dashboard-page/projects/project.tsx', [
+					route(
+						'folder/:folderId',
+						'./routes/dashboard-page/projects/folder.tsx'
+					),
+					route(':sceneId', './routes/dashboard-page/projects/scene.tsx')
+				])
+			]),
+			route('organizations', './routes/dashboard-page/organizations.tsx'),
+			route('settings', './routes/dashboard-page/settings.tsx')
 		])
 	])
 ] satisfies RouteConfig

@@ -19,10 +19,54 @@ import {
 import { VectrealViewer } from '@vctrl/viewer'
 import { Eye, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useState } from 'react'
-import { Link, useFetcher, useParams } from 'react-router'
+import { Link, useFetcher, useLoaderData } from 'react-router'
 
 import { BasicCard } from '../../../components'
-import { useProject, useScene } from '../../../hooks'
+import { SceneDetailSkeleton } from '../../../components/skeletons'
+import { loadAuthenticatedUser } from '../../../lib/loaders/auth-loader.server'
+import { projectService } from '../../../lib/services/project-service.server'
+import { sceneFolderService } from '../../../lib/services/scene-folder-service.server'
+
+import { Route } from './+types/scene'
+
+export async function loader({ request, params }: Route.LoaderArgs) {
+	const projectId = params.projectId
+	const sceneId = params.sceneId
+
+	if (!projectId || !sceneId) {
+		throw new Response('Project ID and Scene ID are required', { status: 400 })
+	}
+
+	// Auth check (reads from session, very cheap)
+	const { user, userWithDefaults } = await loadAuthenticatedUser(request)
+
+	// Fetch project and scene data
+	const [project, scene] = await Promise.all([
+		projectService.getProject(projectId, user.id),
+		sceneFolderService.getScene(sceneId, user.id)
+	])
+
+	if (!project) {
+		throw new Response('Project not found', { status: 404 })
+	}
+
+	if (!scene) {
+		throw new Response('Scene not found', { status: 404 })
+	}
+
+	return {
+		user,
+		userWithDefaults,
+		project,
+		scene
+	}
+}
+
+export function HydrateFallback() {
+	return <SceneDetailSkeleton />
+}
+
+export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
 
 interface ConfirmDeleteModalProps {
 	isOpen: boolean
@@ -98,16 +142,11 @@ const PreviewModel = memo(({ file, sceneData }: PreviewModelProps) => {
 
 const ScenePage = () => {
 	const { submit } = useFetcher()
-
-	const params = useParams()
-	const projectId = params.projectId
-	const sceneId = params.sceneId
+	const { scene } = useLoaderData<typeof loader>()
+	const sceneId = scene.id
 
 	// Use sceneId as key to create a new hook instance per scene
 	const { file, loadFromServer } = useLoadModel()
-
-	const project = useProject(projectId || '')
-	const scene = useScene(sceneId || '')
 
 	const [isLoadingScene, setIsLoadingScene] = useState(false)
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -160,23 +199,6 @@ const ScenePage = () => {
 			setIsLoadingScene(false)
 		}
 	}, [file, isLoadingScene])
-
-	if (!scene || !project || !projectId || !sceneId) {
-		return (
-			<div className="p-6">
-				<div className="text-center">
-					<h1 className="text-primary text-2xl font-bold">Scene Not Found</h1>
-					<p className="text-primary/70 mt-2">
-						The scene you're looking for doesn't exist or you don't have access
-						to it.
-					</p>
-					<Link viewTransition to={`/dashboard/projects/${projectId}`}>
-						<Button className="mt-4">Back to Project</Button>
-					</Link>
-				</div>
-			</div>
-		)
-	}
 
 	return (
 		<>

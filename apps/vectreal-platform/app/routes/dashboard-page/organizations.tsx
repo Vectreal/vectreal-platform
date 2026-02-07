@@ -1,59 +1,106 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Building, Building2, DogIcon, File } from 'lucide-react'
+import { useMemo } from 'react'
+import { useLoaderData } from 'react-router'
+import type { ShouldRevalidateFunction } from 'react-router'
 
-import DashboardCard from '../../components/dashboard/dashboard-card'
-import StatCard from '../../components/dashboard/stat-card'
-import {
-	useOrganizations,
-	useOrganizationStats,
-	usePrimaryOrganization,
-	useSortedOrganizations
-} from '../../hooks'
+import DashboardCard from '../../components/dashboard/dashboard-cards'
+import { OrganizationsSkeleton } from '../../components/skeletons'
+import { loadAuthenticatedUser } from '../../lib/loaders/auth-loader.server'
+import { computeOrganizationStats } from '../../lib/loaders/stats-helpers.server'
+import { userService } from '../../lib/services/user-service.server'
 
 import { Route } from './+types/organizations'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	return null
+	// Auth check (reads from session, very cheap)
+	const { user, userWithDefaults } = await loadAuthenticatedUser(request)
+
+	// Fetch organizations
+	const organizations = await userService.getUserOrganizations(user.id)
+
+	// Compute stats server-side
+	const organizationStats = computeOrganizationStats(organizations)
+
+	return {
+		user,
+		userWithDefaults,
+		organizations,
+		organizationStats
+	}
 }
 
+/**
+ * Prevent revalidation on navigation - data comes from parent layout
+ */
+export const shouldRevalidate: ShouldRevalidateFunction = ({
+	defaultShouldRevalidate,
+	formMethod
+}) => {
+	// Only revalidate on form submissions
+	if (formMethod && formMethod !== 'GET') {
+		return true
+	}
+
+	// Otherwise don't revalidate - data is cached
+	return false
+}
+
+export function HydrateFallback() {
+	return <OrganizationsSkeleton />
+}
+
+export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
+
 const OrganizationsPage = () => {
-	const organizations = useOrganizations()
-	const sortedOrganizations = useSortedOrganizations()
-	const primaryOrganization = usePrimaryOrganization()
-	const stats = useOrganizationStats()
+	const { organizations, organizationStats } = useLoaderData<typeof loader>()
+
+	// Sort organizations by role client-side
+	const sortedOrganizations = useMemo(() => {
+		const byRole = [...organizations].sort((a, b) => {
+			const roleOrder = { owner: 3, admin: 2, member: 1 }
+			return (
+				roleOrder[b.membership.role as keyof typeof roleOrder] -
+				roleOrder[a.membership.role as keyof typeof roleOrder]
+			)
+		})
+		return { byRole }
+	}, [organizations])
+
+	// Get primary organization (first owned org)
+	const primaryOrganization = useMemo(() => {
+		return (
+			organizations.find(({ membership }) => membership.role === 'owner') ||
+			null
+		)
+	}, [organizations])
+
+	// Compute primary role for display
+	const primaryRole = useMemo(() => {
+		const { owned, admin } = organizationStats
+		return owned > 0 ? 'owner' : admin > 0 ? 'admin' : 'member'
+	}, [organizationStats])
 
 	const statCardsContent = [
 		{
 			icon: Building,
-			value: stats.total,
+			value: organizationStats.total,
 			label: 'Organizations'
 		},
 		{
 			icon: File,
-			value: stats.owned,
+			value: organizationStats.owned,
 			label: 'Previously Owned'
 		},
 		{
 			icon: DogIcon,
-			value: stats.primaryRole,
+			value: primaryRole,
 			label: 'Primary Role'
 		}
 	]
 
 	return (
 		<div className="space-y-16 p-6">
-			{/* Stats Overview */}
-			<div className="flex max-w-lg justify-between gap-4">
-				{statCardsContent.map((stat) => (
-					<StatCard
-						key={stat.label}
-						icon={stat.icon}
-						value={stat.value}
-						label={stat.label}
-					/>
-				))}
-			</div>
-
 			<div className="grid gap-4 lg:grid-cols-2">
 				{/* Primary Organization */}
 				{primaryOrganization && (

@@ -11,16 +11,13 @@ import { memo } from 'react'
  */
 
 import { useMemo } from 'react'
-import { useLocation } from 'react-router'
+import { useLocation, useMatches, useNavigation } from 'react-router'
 
-import {
-	useFolderContent,
-	useProject,
-	useProjectContent,
-	useScene,
-	useSceneFolder
-} from '../../hooks'
-
+import type {
+	FolderLoaderData,
+	ProjectLoaderData,
+	SceneLoaderData
+} from '../../lib/loaders/types'
 import { ACTION_VARIANT } from '../../types/dashboard'
 import type { DynamicHeaderContent } from '../../types/dashboard'
 
@@ -33,57 +30,183 @@ import {
 } from './utils'
 
 /**
+ * Extract data from route matches
+ */
+function getRouteData(matches: ReturnType<typeof useMatches>) {
+	const routeData: {
+		project?: ProjectLoaderData
+		folder?: FolderLoaderData
+		scene?: SceneLoaderData
+	} = {}
+
+	for (const match of matches) {
+		const data = match.loaderData as
+			| ProjectLoaderData
+			| FolderLoaderData
+			| SceneLoaderData
+			| Record<string, unknown>
+			| undefined
+		if (data && 'project' in data && 'folders' in data) {
+			routeData.project = data as ProjectLoaderData
+		}
+		if (data && 'folder' in data) {
+			routeData.folder = data as FolderLoaderData
+		}
+		if (data && 'scene' in data) {
+			routeData.scene = data as SceneLoaderData
+		}
+	}
+
+	return routeData
+}
+
+/**
+ * Get optimistic title from URL pattern for static routes
+ * Returns null for dynamic routes that need data (scenes, folders, project details)
+ */
+function getOptimisticTitle(
+	pathname: string
+): { title: string; description: string } | null {
+	if (pathname === '/dashboard') {
+		return {
+			title: 'Recent Access',
+			description: 'Your recently accessed projects and scenes'
+		}
+	}
+	if (pathname === '/dashboard/projects') {
+		return {
+			title: 'Projects',
+			description: 'All your projects in one place'
+		}
+	}
+	if (pathname === '/dashboard/organizations') {
+		return {
+			title: 'Organizations',
+			description: 'Manage your organizations'
+		}
+	}
+	if (pathname === '/dashboard/settings') {
+		return {
+			title: 'Settings',
+			description: 'Manage your account settings'
+		}
+	}
+
+	// For dynamic routes (project detail, scene detail, folder detail),
+	// we can't provide optimistic title without data
+	return null
+}
+
+/**
  * Hook that generates dynamic header content based on the current route
  * Returns title, description, and action variant for rendering
+ * Provides optimistic updates during navigation for static routes
  */
 export const useDynamicHeader = (): DynamicHeaderContent => {
 	const location = useLocation()
+	const navigation = useNavigation()
+	const matches = useMatches()
 	const routeParams = parseRouteParams(location.pathname)
-	const { view, projectId, routeType, routeId } = routeParams
+	const { view, projectId } = routeParams
 
-	// Hooks for data fetching
-	const project = useProject(projectId || '')
-	const projectContent = useProjectContent(projectId || '')
-	const folderContent = useFolderContent(routeId || '')
-	const folder = useSceneFolder(routeId || '')
-	const scene = useScene(routeType || '')
+	// Get data from route loaders
+	const {
+		project: projectData,
+		folder: folderData,
+		scene: sceneData
+	} = getRouteData(matches)
 
 	// Route type checks
 	const isFolder = isFolderRoute(routeParams)
 	const isScene = isSceneRoute(routeParams)
 
 	const dynamicContent = useMemo(() => {
+		// During navigation, try to provide optimistic updates
+		if (navigation.state === 'loading' && navigation.location) {
+			// Check for navigation state data (passed from DashboardCard)
+			const navState = navigation.location.state as {
+				name?: string
+				description?: string
+				projectName?: string
+				type?: 'scene' | 'folder' | 'project'
+			} | null
+
+			// If navigation state contains item data, use it for instant header update
+			if (navState?.name) {
+				const itemDescription =
+					navState.description ||
+					(navState.projectName
+						? `${navState.type === 'scene' ? 'Scene' : 'Folder'} in ${navState.projectName}`
+						: '')
+
+				const actionVariant =
+					navState.type === 'scene'
+						? ACTION_VARIANT.SCENE_DETAIL
+						: navState.type === 'folder'
+							? ACTION_VARIANT.FOLDER_DETAIL
+							: navState.type === 'project'
+								? ACTION_VARIANT.PROJECT_DETAIL
+								: undefined
+
+				return {
+					title: navState.name,
+					description: itemDescription,
+					actionVariant
+				}
+			}
+
+			// For static routes, use URL-based optimistic title
+			const optimisticTitle = getOptimisticTitle(navigation.location.pathname)
+			if (optimisticTitle) {
+				const actionVariant =
+					navigation.location.pathname === '/dashboard'
+						? ACTION_VARIANT.DASHBOARD
+						: navigation.location.pathname === '/dashboard/projects'
+							? ACTION_VARIANT.PROJECT_LIST
+							: navigation.location.pathname === '/dashboard/organizations'
+								? ACTION_VARIANT.ORG_LIST
+								: undefined
+
+				return {
+					title: optimisticTitle.title,
+					description: optimisticTitle.description,
+					actionVariant
+				}
+			}
+		}
+
 		// Scene route - show scene name and stats
-		if (isScene && scene && project) {
+		if (isScene && sceneData?.scene && sceneData?.project) {
 			return {
-				title: scene.name,
-				description: scene.description || `Scene in ${project.project.name}`,
+				title: sceneData.scene.name,
+				description:
+					sceneData.scene.description || `Scene in ${sceneData.project.name}`,
 				actionVariant: 'scene-detail' as ACTION_VARIANT
 			}
 		}
 
 		// Folder route - show folder name and stats
-		if (isFolder && folder && folderContent && project) {
+		if (isFolder && folderData?.folder && folderData?.project) {
 			const totalItems =
-				folderContent.subfolders.length + folderContent.scenes.length
+				(folderData.subfolders?.length || 0) + (folderData.scenes?.length || 0)
 			return {
-				title: folder.name,
+				title: folderData.folder.name,
 				description:
-					folder.description ||
-					`${totalItems} items in ${project.project.name}`,
+					folderData.folder.description ||
+					`${totalItems} items in ${folderData.project.name}`,
 				actionVariant: ACTION_VARIANT.FOLDER_DETAIL
 			}
 		}
 
 		// Project route - show project name and stats
-		if (view === 'projects' && projectId && project && projectContent) {
+		if (view === 'projects' && projectId && projectData?.project) {
 			const totalItems =
-				projectContent.folders.length + projectContent.scenes.length
-			const folderCount = projectContent.folders.length
-			const sceneCount = projectContent.scenes.length
+				(projectData.folders?.length || 0) + (projectData.scenes?.length || 0)
+			const folderCount = projectData.folders?.length || 0
+			const sceneCount = projectData.scenes?.length || 0
 
 			return {
-				title: project.project.name,
+				title: projectData.project.name,
 				description: `${totalItems} items • ${folderCount} folders • ${sceneCount} scenes`,
 				actionVariant: ACTION_VARIANT.PROJECT_DETAIL
 			}
@@ -133,11 +256,11 @@ export const useDynamicHeader = (): DynamicHeaderContent => {
 		projectId,
 		isScene,
 		isFolder,
-		scene,
-		folder,
-		project,
-		projectContent,
-		folderContent
+		sceneData,
+		folderData,
+		projectData,
+		navigation.state,
+		navigation.location
 	])
 
 	return dynamicContent

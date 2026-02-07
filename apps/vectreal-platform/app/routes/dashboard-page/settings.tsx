@@ -1,8 +1,21 @@
-import { Route } from './+types/dashboard'
+import { loadAuthenticatedUser } from '../../lib/loaders/auth-loader.server'
+import type { SettingsLoaderData } from '../../lib/loaders/types'
+
+import { Route } from './+types/settings'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	return null
+	// Authenticate and initialize user
+	const { user, userWithDefaults } = await loadAuthenticatedUser(request)
+
+	const loaderData: SettingsLoaderData = {
+		user,
+		userWithDefaults
+	}
+
+	return loaderData
 }
+
+export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
 const SettingsPage = () => {
 	return null

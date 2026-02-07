@@ -14,6 +14,7 @@ import {
 import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/root'
+import { GlobalNavigationLoader } from './components/global-navigation-loader'
 import { csrfSession } from './lib/sessions/csrf-session.server'
 
 import styles from './styles/global.module.css'
@@ -97,6 +98,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				<Links />
 			</head>
 			<body>
+				<GlobalNavigationLoader />
 				{children}
 				<Toaster />
 				<ScrollRestoration />

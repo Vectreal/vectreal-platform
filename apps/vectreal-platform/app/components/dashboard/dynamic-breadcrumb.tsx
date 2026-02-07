@@ -12,9 +12,13 @@ import {
 	BreadcrumbSeparator
 } from '@shared/components/ui/breadcrumb'
 import React, { memo } from 'react'
-import { Link, useLocation } from 'react-router'
+import { Link, useLocation, useMatches } from 'react-router'
 
-import { useFolderBreadcrumbs, useProject, useScene } from '../../hooks'
+import type {
+	FolderLoaderData,
+	ProjectLoaderData,
+	SceneLoaderData
+} from '../../lib/loaders/types'
 
 import {
 	getTitleContent,
@@ -25,6 +29,37 @@ import {
 } from './utils'
 
 /**
+ * Extract data from route matches
+ */
+function getRouteData(matches: ReturnType<typeof useMatches>) {
+	const routeData: {
+		project?: ProjectLoaderData
+		folder?: FolderLoaderData
+		scene?: SceneLoaderData
+	} = {}
+
+	for (const match of matches) {
+		const data = match.loaderData as
+			| ProjectLoaderData
+			| FolderLoaderData
+			| SceneLoaderData
+			| Record<string, unknown>
+			| undefined
+		if (data && 'project' in data && 'folders' in data) {
+			routeData.project = data as ProjectLoaderData
+		}
+		if (data && 'folder' in data) {
+			routeData.folder = data as FolderLoaderData
+		}
+		if (data && 'scene' in data) {
+			routeData.scene = data as SceneLoaderData
+		}
+	}
+
+	return routeData
+}
+
+/**
  * DynamicBreadcrumb component renders context-aware breadcrumb navigation
  * Consolidates all breadcrumb logic in a single, maintainable component
  * Adapts to different route types: projects list, project detail, folder, scene
@@ -32,15 +67,16 @@ import {
  */
 export const DynamicBreadcrumb = memo(() => {
 	const location = useLocation()
+	const matches = useMatches()
 	const routeParams = parseRouteParams(location.pathname)
 	const { view, projectId, routeType, routeId } = routeParams
 
-	// Data hooks - only fetch what we need based on route
-	const project = useProject(projectId || '')
-	const scene = useScene(routeType || '')
-	const folderBreadcrumbs = useFolderBreadcrumbs(
-		routeId || scene?.folderId || ''
-	)
+	// Get data from route loaders
+	const {
+		project: projectData,
+		folder: folderData,
+		scene: sceneData
+	} = getRouteData(matches)
 
 	// Early return if view is invalid
 	if (!view || !isValidDashboardView(view)) {
@@ -73,57 +109,43 @@ export const DynamicBreadcrumb = memo(() => {
 	const renderDynamicBreadcrumbs = () => {
 		const items: React.ReactNode[] = []
 
-		// For folder routes: Dashboard > Projects > Project > Folder1 > Folder2 > ... > CurrentFolder
-		if (isFolder && projectId && routeId && project) {
-			const projectName = project.project.name || 'Project'
+		// For folder routes: Dashboard > Projects > Project > CurrentFolder
+		if (
+			isFolder &&
+			projectId &&
+			routeId &&
+			folderData?.folder &&
+			folderData?.project
+		) {
+			const projectName = folderData.project.name || 'Project'
+			const folderName = folderData.folder.name || 'Folder'
 			items.push(
 				renderBreadcrumbItem(`/dashboard/projects/${projectId}`, projectName)
 			)
-
-			folderBreadcrumbs.forEach((breadcrumb, index) => {
-				const isLast = index === folderBreadcrumbs.length - 1
-				items.push(
-					renderBreadcrumbItem(
-						`/dashboard/projects/${projectId}/folder/${breadcrumb.id}`,
-						breadcrumb.name,
-						isLast
-					)
-				)
-			})
+			items.push(renderBreadcrumbItem('', folderName, true))
 		}
 
-		// For scene routes: Dashboard > Projects > Project > [Folders...] > Scene
-		else if (isScene && projectId && routeType && scene && project) {
-			const projectName = project.project.name || 'Project'
-			const sceneName = scene.name || 'Scene'
+		// For scene routes: Dashboard > Projects > Project > Scene
+		else if (
+			isScene &&
+			projectId &&
+			routeType &&
+			sceneData?.scene &&
+			sceneData?.project
+		) {
+			const projectName = sceneData.project.name || 'Project'
+			const sceneName = sceneData.scene.name || 'Scene'
 
 			items.push(
 				renderBreadcrumbItem(`/dashboard/projects/${projectId}`, projectName)
 			)
-
-			// Add folder hierarchy if scene is in folders
-			if (scene.folderId && folderBreadcrumbs.length > 0) {
-				folderBreadcrumbs.forEach((breadcrumb) => {
-					items.push(
-						renderBreadcrumbItem(
-							`/dashboard/projects/${projectId}/folder/${breadcrumb.id}`,
-							breadcrumb.name
-						)
-					)
-				})
-			}
-
-			items.push(
-				renderBreadcrumbItem('', sceneName, true) // Scene is always the last item
-			)
+			items.push(renderBreadcrumbItem('', sceneName, true))
 		}
 
 		// For project routes: Dashboard > Projects > Project
-		else if (projectId && project) {
-			const projectName = project.project.name || 'Project'
-			items.push(
-				renderBreadcrumbItem('', projectName, true) // Project is the last item
-			)
+		else if (projectId && projectData?.project) {
+			const projectName = projectData.project.name || 'Project'
+			items.push(renderBreadcrumbItem('', projectName, true))
 		}
 
 		return items
