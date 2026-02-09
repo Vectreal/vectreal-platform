@@ -6,14 +6,8 @@ import {
 	EmptyHeader
 } from '@shared/components/ui/empty'
 import { FolderOpen, Plus } from 'lucide-react'
-import { useMemo } from 'react'
-import {
-	Link,
-	Outlet,
-	useLoaderData,
-	useLocation,
-	useRouteLoaderData
-} from 'react-router'
+import { memo, useMemo } from 'react'
+import { Link, Outlet, useLoaderData, useRouteLoaderData } from 'react-router'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 import DashboardCard from '../../../components/dashboard/dashboard-cards'
@@ -76,6 +70,7 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 		currentUrl.pathname.startsWith('/dashboard/projects') &&
 		nextUrl.pathname.startsWith('/dashboard/projects')
 	) {
+		console.log('Skipping revalidation for navigation within projects routes')
 		return false
 	}
 
@@ -100,7 +95,7 @@ const EmptyProjectsState = ({
 		</EmptyDescription>
 		<EmptyContent>
 			{showCreateLink ? (
-				<Link viewTransition to="/dashboard/projects/new">
+				<Link to="/dashboard/projects/new">
 					<Button>
 						<Plus className="mr-2 h-4 w-4" />
 						Create Your First Project
@@ -116,8 +111,7 @@ const EmptyProjectsState = ({
 	</Empty>
 )
 
-const ProjectsPage = () => {
-	const location = useLocation()
+const ProjectsList = memo(() => {
 	const { projects, projectCreationCapabilities, sceneStats } =
 		useLoaderData<typeof loader>()
 
@@ -161,14 +155,6 @@ const ProjectsPage = () => {
 		(cap) => cap.canCreate
 	)
 
-	// Check if we're at a child route like /new
-	const isChildRoute = location.pathname.includes('/new')
-
-	// If we're at a child route, only show the outlet
-	if (isChildRoute) {
-		return <Outlet />
-	}
-
 	return (
 		<div className="p-6">
 			{/* Projects by Organization */}
@@ -176,12 +162,10 @@ const ProjectsPage = () => {
 				<div className="space-y-6">
 					{projectsByOrg.map(({ organization, projects: orgProjects }) => (
 						<div key={organization.id}>
-							<div className="mb-3 flex items-center justify-between">
+							<div className="mb-6 ml-2 flex items-center justify-between">
 								<h3 className="text-md font-medium">
-									<span className="bg-muted/50 mr-2 rounded-xl p-1 px-3">
-										{organization.name}
-									</span>
-									with {orgProjects.length} project
+									<span className="text-accent">{organization.name}</span> with{' '}
+									{orgProjects.length} project
 									{orgProjects.length !== 1 ? 's' : ''}
 								</h3>
 							</div>
@@ -197,7 +181,6 @@ const ProjectsPage = () => {
 											id={project.id}
 											navigationState={{
 												name: project.name,
-												description: `Slug: ${project.slug}`,
 												type: 'project' as const
 											}}
 										>
@@ -219,6 +202,17 @@ const ProjectsPage = () => {
 				<EmptyProjectsState showCreateLink={canCreateProjects} />
 			)}
 		</div>
+	)
+})
+
+ProjectsList.displayName = 'ProjectsList'
+
+const ProjectsPage = () => {
+	return (
+		<>
+			<ProjectsList />
+			<Outlet />
+		</>
 	)
 }
 

@@ -110,7 +110,8 @@ const ACTION_CONFIGS: Record<ACTION_VARIANT, ActionGroupConfig | null> = {
 			icon: Edit,
 			to: '/publisher/:sceneId'
 		}
-	}
+	},
+	[ACTION_VARIANT.ORG_LIST]: null
 }
 
 // Components
@@ -135,8 +136,11 @@ const ActionButton = memo<{
 		</Button>
 	)
 
+	// Skip view transition for drawer routes to prevent header flickering
+	const useViewTransition = resolvedTo !== '/dashboard/projects/new'
+
 	return resolvedTo ? (
-		<Link viewTransition to={resolvedTo}>
+		<Link viewTransition={useViewTransition} to={resolvedTo}>
 			{button}
 		</Link>
 	) : (

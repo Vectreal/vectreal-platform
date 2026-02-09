@@ -1,7 +1,6 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
-import { File, Folder, Plus } from 'lucide-react'
-import { useLoaderData } from 'react-router'
+import { Box, Folder, Plus } from 'lucide-react'
 
 import DashboardCard from '../../../components/dashboard/dashboard-cards'
 import { FolderContentSkeleton } from '../../../components/skeletons'
@@ -58,8 +57,8 @@ export function HydrateFallback() {
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
 
-const FolderPage = () => {
-	const { project, subfolders, scenes } = useLoaderData<typeof loader>()
+const FolderPage = ({ loaderData }: Route.ComponentProps) => {
+	const { project, subfolders, scenes } = loaderData
 	const projectId = project.id
 
 	const folderContent = {
@@ -101,7 +100,7 @@ const FolderPage = () => {
 							title={scene.name}
 							description={scene.description || 'No description'}
 							linkTo={`/dashboard/projects/${projectId}/${scene.id}`}
-							icon={<File className="h-5 w-5 text-green-500" />}
+							icon={<Box className="h-5 w-5" />}
 							id={scene.id}
 							navigationState={{
 								name: scene.name,

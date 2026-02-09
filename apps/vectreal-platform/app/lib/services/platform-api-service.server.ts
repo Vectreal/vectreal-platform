@@ -151,11 +151,3 @@ export class PlatformApiService {
 		return 'other'
 	}
 }
-
-// Legacy exports for backward compatibility
-export const ensurePost = PlatformApiService.ensurePost
-export const getAuthUser = PlatformApiService.getAuthUser
-export const parseActionRequest = PlatformApiService.parseActionRequest
-export const buildStoragePath = PlatformApiService.buildStoragePath
-export const saveBase64File = PlatformApiService.saveBase64File
-export const determineAssetType = PlatformApiService.determineAssetType

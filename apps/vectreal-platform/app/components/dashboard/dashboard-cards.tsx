@@ -47,14 +47,6 @@ const cardHeaderVariants = cva('relative flex items-center', {
 	}
 })
 
-interface NavigationState {
-	name: string
-	description?: string
-	projectName?: string
-	type?: 'scene' | 'folder' | 'project'
-	[key: string]: unknown
-}
-
 interface DashboardCardProps
 	extends PropsWithChildren,
 		VariantProps<typeof dashboardCardVariants> {
@@ -67,7 +59,7 @@ interface DashboardCardProps
 	showId?: boolean
 	className?: string
 	/** Optional data to pass for optimistic header updates */
-	navigationState?: NavigationState
+	navigationState?: import('../../types/dashboard').NavigationState
 }
 
 const DashboardCard: FC<DashboardCardProps> = ({
