@@ -42,6 +42,27 @@
 				"parallel": false
 			}
 		},
+		"db-reset": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": "apps/vectreal-platform/.env.development.local",
+				"commands": [
+					"pnpm exec supabase db reset",
+					"pnpm exec drizzle-kit generate --config drizzle.config.ts",
+					"pnpm exec drizzle-kit migrate --config drizzle.config.ts"
+				],
+				"parallel": false
+			}
+		},
+		"drizzle-clean": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"commands": ["rm -rf drizzle"],
+				"parallel": false
+			}
+		},
 		"drizzle-generate": {
 			"executor": "nx:run-commands",
 			"options": {

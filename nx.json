@@ -64,7 +64,6 @@
 			"plugin": "@nx/vite/plugin",
 			"options": {
 				"buildTargetName": "build",
-				"testTargetName": "test",
 				"serveTargetName": "serve",
 				"previewTargetName": "preview",
 				"serveStaticTargetName": "serve-static"
@@ -94,6 +93,12 @@
 			"plugin": "@nx/playwright/plugin",
 			"options": {
 				"targetName": "e2e"
+			}
+		},
+		{
+			"plugin": "@nx/vitest",
+			"options": {
+				"testTargetName": "test"
 			}
 		}
 	],

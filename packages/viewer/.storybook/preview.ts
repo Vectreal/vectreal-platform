@@ -5,7 +5,8 @@ import { definePreview } from '@storybook/react-vite'
 const preview = definePreview({
 	// ...rest of preview
 	//👇 Enables auto-generated documentation for all stories
-	tags: ['autodocs']
+	tags: ['autodocs'],
+	addons: []
 })
 
 export default preview
