@@ -4,9 +4,13 @@ import { Box, Folder, Plus } from 'lucide-react'
 
 import DashboardCard from '../../../components/dashboard/dashboard-cards'
 import { FolderContentSkeleton } from '../../../components/skeletons'
-import { loadAuthenticatedUser } from '../../../lib/loaders/auth-loader.server'
-import { projectService } from '../../../lib/services/project-service.server'
-import { sceneFolderService } from '../../../lib/services/scene-folder-service.server'
+import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
+import { getProject } from '../../../lib/domain/project/project-repository.server'
+import {
+	getChildFolders,
+	getFolderScenes,
+	getSceneFolder
+} from '../../../lib/domain/scene/scene-folder-repository.server'
 
 import { Route } from './+types/folder'
 
@@ -23,8 +27,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	// Fetch project and folder data
 	const [project, folder] = await Promise.all([
-		projectService.getProject(projectId, user.id),
-		sceneFolderService.getSceneFolder(folderId, user.id)
+		getProject(projectId, user.id),
+		getSceneFolder(folderId, user.id)
 	])
 
 	if (!project) {
@@ -37,8 +41,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	// Fetch subfolders and scenes in parallel
 	const [subfolders, scenes] = await Promise.all([
-		sceneFolderService.getChildFolders(folderId, user.id),
-		sceneFolderService.getFolderScenes(folderId, user.id)
+		getChildFolders(folderId, user.id),
+		getFolderScenes(folderId, user.id)
 	])
 
 	return {

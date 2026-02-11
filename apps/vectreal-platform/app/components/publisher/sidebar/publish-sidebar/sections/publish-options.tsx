@@ -1,3 +1,4 @@
+import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
 import { Label } from '@shared/components/ui/label'
 import {
@@ -9,18 +10,83 @@ import {
 } from '@shared/components/ui/select'
 import { Switch } from '@shared/components/ui/switch'
 import { Textarea } from '@shared/components/ui/textarea'
+import { ModelExporter } from '@vctrl/core'
+import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { motion } from 'framer-motion'
 import { CheckCircle, EyeOff, Globe, Lock } from 'lucide-react'
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
 import { itemVariants } from '../../animation'
 
-export const PublishOptions: React.FC = () => {
+interface PublishOptionsProps {
+	sceneId?: string
+}
+
+export const PublishOptions: React.FC<PublishOptionsProps> = ({ sceneId }) => {
 	const [title, setTitle] = useState('My 3D Scene')
 	const [description, setDescription] = useState('')
 	const [visibility, setVisibility] = useState('private')
 	const [allowDownload, setAllowDownload] = useState(false)
 	const [allowComments, setAllowComments] = useState(true)
+	const [isPublishing, setIsPublishing] = useState(false)
+	const { optimizer, file } = useModelContext(true)
+	const exporterRef = useRef<ModelExporter>(new ModelExporter())
+
+	const handlePublish = useCallback(async () => {
+		if (!sceneId) {
+			toast.error('Save the scene before publishing.')
+			return
+		}
+
+		const document = optimizer?._getDocument?.()
+		if (!document) {
+			toast.error('Model not loaded or optimization failed.')
+			return
+		}
+
+		setIsPublishing(true)
+		try {
+			const result = await exporterRef.current.exportDocumentGLB(document)
+			const baseName = file?.name?.replace(/\.[^/.]+$/, '') || 'scene'
+			const payload = {
+				data: Array.from(result.data),
+				fileName: `${baseName}.glb`,
+				mimeType: 'model/gltf-binary'
+			}
+
+			const formData = new FormData()
+			formData.append('action', 'publish-scene')
+			formData.append('sceneId', sceneId)
+			formData.append('publishedGlb', JSON.stringify(payload))
+
+			const response = await fetch('/api/scene-settings', {
+				method: 'POST',
+				body: formData
+			})
+
+			const resultData = await response.json()
+			if (!response.ok || resultData.error) {
+				throw new Error(
+					resultData.error || `HTTP error! status: ${response.status}`
+				)
+			}
+
+			window.dispatchEvent(
+				new CustomEvent('scene-stats-updated', {
+					detail: { sceneId }
+				})
+			)
+			toast.success('Scene published successfully.')
+		} catch (error) {
+			console.error('Failed to publish scene:', error)
+			toast.error(
+				error instanceof Error ? error.message : 'Failed to publish scene'
+			)
+		} finally {
+			setIsPublishing(false)
+		}
+	}, [sceneId, optimizer, file])
 
 	return (
 		<motion.div variants={itemVariants} className="space-y-4 px-2 py-2">
@@ -131,6 +197,15 @@ export const PublishOptions: React.FC = () => {
 					Your scene is optimized and ready to be published.
 				</p>
 			</div>
+
+			<Button
+				variant="default"
+				className="w-full"
+				onClick={handlePublish}
+				disabled={isPublishing}
+			>
+				{isPublishing ? 'Publishing...' : 'Publish Scene'}
+			</Button>
 		</motion.div>
 	)
 }

@@ -118,7 +118,6 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 							className="bg-muted/50 flex h-full w-full"
 						>
 							<VectrealViewer
-								className="z-10 after:absolute after:inset-0 after:-z-10 after:w-[50%] after:bg-linear-to-r after:from-black/20 after:to-transparent"
 								model={file?.model}
 								key="model-viewer"
 								cameraOptions={camera}

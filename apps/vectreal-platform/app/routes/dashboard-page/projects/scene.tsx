@@ -23,9 +23,9 @@ import { Link, useFetcher, useLoaderData } from 'react-router'
 
 import { BasicCard } from '../../../components'
 import { SceneDetailSkeleton } from '../../../components/skeletons'
-import { loadAuthenticatedUser } from '../../../lib/loaders/auth-loader.server'
-import { projectService } from '../../../lib/services/project-service.server'
-import { sceneFolderService } from '../../../lib/services/scene-folder-service.server'
+import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
+import { getProject } from '../../../lib/domain/project/project-repository.server'
+import { getScene } from '../../../lib/domain/scene/scene-folder-repository.server'
 
 import { Route } from './+types/scene'
 
@@ -42,8 +42,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	// Fetch project and scene data
 	const [project, scene] = await Promise.all([
-		projectService.getProject(projectId, user.id),
-		sceneFolderService.getScene(sceneId, user.id)
+		getProject(projectId, user.id),
+		getScene(sceneId, user.id)
 	])
 
 	if (!project) {

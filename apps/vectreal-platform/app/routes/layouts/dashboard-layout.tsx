@@ -21,9 +21,9 @@ import {
 	ProjectsGridSkeleton,
 	SceneDetailSkeleton
 } from '../../components/skeletons'
-import { loadAuthenticatedUser } from '../../lib/loaders/auth-loader.server'
-import { projectService } from '../../lib/services/project-service.server'
-import { userService } from '../../lib/services/user-service.server'
+import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
+import { getUserProjects } from '../../lib/domain/project/project-repository.server'
+import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 
 import { Route } from './+types/dashboard-layout'
 
@@ -33,8 +33,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	// Fetch organizations and projects in parallel
 	const [organizations, projects] = await Promise.all([
-		userService.getUserOrganizations(user.id),
-		projectService.getUserProjects(user.id)
+		getUserOrganizations(user.id),
+		getUserProjects(user.id)
 	])
 
 	return { user, userWithDefaults, organizations, projects }

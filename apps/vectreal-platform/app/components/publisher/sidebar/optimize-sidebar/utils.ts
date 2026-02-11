@@ -1,6 +1,8 @@
 import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { Eye, Grid, Image, Layers, Settings2, Zap } from 'lucide-react'
 
+import type { SizeInfo } from './use-optimization-process'
+
 export type OptimizationStat = {
 	name: 'vertices' | 'primitives' | 'mesh' | 'texture' | 'scene'
 	unit: 'size' | 'count'
@@ -93,7 +95,8 @@ export const getOptimizationStatMapping = (
 }
 
 export const calculateOptimizationStats = (
-	info: OptimizationInfo
+	info: OptimizationInfo,
+	sizeInfo?: SizeInfo
 ): OptimizationStat[] => {
 	// Define all possible optimization metrics
 	const metrics: Array<{
@@ -103,17 +106,37 @@ export const calculateOptimizationStats = (
 	}> = [
 		{ key: 'verticesCount', name: 'vertices', unit: 'count' },
 		{ key: 'primitivesCount', name: 'primitives', unit: 'count' },
-		{ key: 'meshesSize', name: 'mesh', unit: 'size' },
-		{ key: 'texturesSize', name: 'texture', unit: 'size' },
-		{ key: 'sceneBytes', name: 'scene', unit: 'size' }
+		{ key: 'meshesCount', name: 'mesh', unit: 'count' },
+		{ key: 'texturesCount', name: 'texture', unit: 'count' }
 	]
 
 	// Filter metrics that show improvement and map them to stats
-	return metrics
+	const stats = metrics
 		.filter(({ key }) => info.improvement[key] > 0)
 		.map(({ key, name, unit }) => ({
 			name,
 			unit,
 			reduction: Math.round((info.improvement[key] / info.initial[key]) * 100)
 		}))
+
+	const initialDraftBytes = sizeInfo?.draftBytes ?? info.initial.sceneBytes
+	const optimizedDraftBytes =
+		sizeInfo?.draftAfterBytes ?? info.optimized.sceneBytes
+
+	if (
+		typeof initialDraftBytes === 'number' &&
+		typeof optimizedDraftBytes === 'number' &&
+		initialDraftBytes > 0 &&
+		optimizedDraftBytes < initialDraftBytes
+	) {
+		stats.push({
+			name: 'scene',
+			unit: 'size',
+			reduction: Math.round(
+				((initialDraftBytes - optimizedDraftBytes) / initialDraftBytes) * 100
+			)
+		})
+	}
+
+	return stats
 }

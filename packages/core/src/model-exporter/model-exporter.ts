@@ -85,7 +85,7 @@ export class ModelExporter {
 				exportTime
 			}
 		} catch (error) {
-			throw new Error(`Failed to export GLB: ${error}`)
+			throw new Error(`Failed to export GLB: ${error}`, { cause: error })
 		}
 	}
 
@@ -139,7 +139,7 @@ export class ModelExporter {
 				assets
 			}
 		} catch (error) {
-			throw new Error(`Failed to export GLTF: ${error}`)
+			throw new Error(`Failed to export GLTF: ${error}`, { cause: error })
 		}
 	}
 
@@ -196,7 +196,9 @@ export class ModelExporter {
 				await this.io.readBinary(new Uint8Array())
 			)
 		} catch (error) {
-			throw new Error(`Failed to export Three.js object: ${error}`)
+			throw new Error(`Failed to export Three.js object: ${error}`, {
+				cause: error
+			})
 		}
 	}
 
@@ -223,7 +225,9 @@ export class ModelExporter {
 				await this.io.readBinary(new Uint8Array(result as ArrayBuffer))
 			)
 		} catch (error) {
-			throw new Error(`Failed to export Three.js object: ${error}`)
+			throw new Error(`Failed to export Three.js object: ${error}`, {
+				cause: error
+			})
 		}
 	}
 
@@ -322,7 +326,7 @@ export class ModelExporter {
 
 			this.emitProgress('File saved successfully', 100)
 		} catch (error) {
-			throw new Error(`Failed to save file: ${error}`)
+			throw new Error(`Failed to save file: ${error}`, { cause: error })
 		}
 	}
 

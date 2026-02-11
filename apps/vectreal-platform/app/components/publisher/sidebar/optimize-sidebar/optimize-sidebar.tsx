@@ -12,12 +12,18 @@ import { useOptimizationProcess } from './use-optimization-process'
 import { calculateOptimizationStats } from './utils'
 
 const OptimizeSidebarContent: React.FC = () => {
-	const { info, report, isPending, hasImproved, handleOptimizeClick } =
-		useOptimizationProcess()
+	const {
+		info,
+		report,
+		isPending,
+		hasImproved,
+		handleOptimizeClick,
+		sizeInfo
+	} = useOptimizationProcess()
 
 	const optimizationStats = useMemo(
-		() => calculateOptimizationStats(info),
-		[info]
+		() => calculateOptimizationStats(info, sizeInfo),
+		[info, sizeInfo]
 	)
 
 	return (
@@ -26,12 +32,13 @@ const OptimizeSidebarContent: React.FC = () => {
 				<StatsAccordionItem
 					info={info}
 					hasImproved={hasImproved}
+					sizeInfo={sizeInfo}
 					optimizationStats={optimizationStats}
 					appliedOptimizations={report?.appliedOptimizations || []}
 				/>
 				<BasicOptimizationAccordionItem />
 				<AdvancedOptimizationAccordionItem />
-				<SceneDetailsAccordionItem info={info} />
+				<SceneDetailsAccordionItem info={info} report={report} />
 			</Accordion>
 			<OptimizeButton
 				onOptimize={handleOptimizeClick}

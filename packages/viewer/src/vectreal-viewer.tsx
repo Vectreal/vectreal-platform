@@ -196,4 +196,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		</Suspense>
 	)
 })
+
+VectrealViewer.displayName = 'VectrealViewer'
+
 export default VectrealViewer

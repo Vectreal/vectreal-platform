@@ -38,11 +38,11 @@ import {
 } from 'react-router'
 import { z } from 'zod'
 
-import { loadAuthenticatedUser } from '../../../lib/loaders/auth-loader.server'
-import { computeProjectCreationCapabilities } from '../../../lib/loaders/stats-helpers.server'
-import type { ProjectNewLoaderData } from '../../../lib/loaders/types'
-import { projectService } from '../../../lib/services/project-service.server'
-import { userService } from '../../../lib/services/user-service.server'
+import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
+import { computeProjectCreationCapabilities } from '../../../lib/domain/dashboard/dashboard-stats.server'
+import type { ProjectNewLoaderData } from '../../../lib/domain/dashboard/dashboard-types'
+import { createProject } from '../../../lib/domain/project/project-repository.server'
+import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
 
 import { Route } from './+types/projects-new'
 
@@ -72,7 +72,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const { user, userWithDefaults } = await loadAuthenticatedUser(request)
 
 	// Fetch organizations for project creation form
-	const organizations = await userService.getUserOrganizations(user.id)
+	const organizations = await getUserOrganizations(user.id)
 
 	// Compute project creation capabilities
 	const projectCreationCapabilities =
@@ -105,7 +105,7 @@ export async function action({ request }: Route.ActionArgs) {
 		})
 
 		// Create project
-		const project = await projectService.createProject(
+		const project = await createProject(
 			validatedData.organizationId,
 			validatedData.name,
 			validatedData.slug,

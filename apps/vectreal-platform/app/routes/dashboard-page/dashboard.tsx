@@ -18,15 +18,15 @@ import {
 	type SceneRow
 } from '../../components/dashboard/project-table-columns'
 import { DashboardSkeleton } from '../../components/skeletons'
-import { loadAuthenticatedUser } from '../../lib/loaders/auth-loader.server'
+import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import {
 	computeProjectStats,
 	computeSceneStats,
 	getRecentProjects,
 	getRecentScenes
-} from '../../lib/loaders/stats-helpers.server'
-import { projectService } from '../../lib/services/project-service.server'
-import { sceneFolderService } from '../../lib/services/scene-folder-service.server'
+} from '../../lib/domain/dashboard/dashboard-stats.server'
+import { getUserProjects } from '../../lib/domain/project/project-repository.server'
+import { getProjectsScenes } from '../../lib/domain/scene/scene-folder-repository.server'
 import type { loader as dashboardLayoutLoader } from '../layouts/dashboard-layout'
 
 import { Route } from './+types/dashboard'
@@ -36,14 +36,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const { user } = await loadAuthenticatedUser(request)
 
 	// Fetch user projects (parent already fetched this, but we need it for the batch query)
-	const userProjects = await projectService.getUserProjects(user.id)
+	const userProjects = await getUserProjects(user.id)
 
 	// Fetch scenes for all projects using batch query (eliminates N+1 problem)
 	const projectIds = userProjects.map(({ project }) => project.id)
-	const scenesByProject = await sceneFolderService.getProjectsScenes(
-		projectIds,
-		user.id
-	)
+	const scenesByProject = await getProjectsScenes(projectIds, user.id)
 
 	// Flatten scenes map to array
 	const scenes = Array.from(scenesByProject.values()).flat()

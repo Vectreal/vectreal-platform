@@ -12,14 +12,14 @@ import type { ShouldRevalidateFunction } from 'react-router'
 
 import DashboardCard from '../../../components/dashboard/dashboard-cards'
 import { ProjectsGridSkeleton } from '../../../components/skeletons'
-import { loadAuthenticatedUser } from '../../../lib/loaders/auth-loader.server'
+import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
 import {
 	computeProjectCreationCapabilities,
 	computeSceneStats
-} from '../../../lib/loaders/stats-helpers.server'
-import { projectService } from '../../../lib/services/project-service.server'
-import { sceneFolderService } from '../../../lib/services/scene-folder-service.server'
-import { userService } from '../../../lib/services/user-service.server'
+} from '../../../lib/domain/dashboard/dashboard-stats.server'
+import { getUserProjects } from '../../../lib/domain/project/project-repository.server'
+import { getProjectsScenes } from '../../../lib/domain/scene/scene-folder-repository.server'
+import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
 import type { loader as dashboardLayoutLoader } from '../../layouts/dashboard-layout'
 
 import { Route } from './+types/projects'
@@ -30,16 +30,13 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	// Fetch data needed for this specific route
 	const [organizations, userProjects] = await Promise.all([
-		userService.getUserOrganizations(user.id),
-		projectService.getUserProjects(user.id)
+		getUserOrganizations(user.id),
+		getUserProjects(user.id)
 	])
 
 	// Fetch scenes for all projects using batch query (eliminates N+1 problem)
 	const projectIds = userProjects.map(({ project }) => project.id)
-	const scenesByProject = await sceneFolderService.getProjectsScenes(
-		projectIds,
-		user.id
-	)
+	const scenesByProject = await getProjectsScenes(projectIds, user.id)
 
 	// Flatten scenes map to array
 	const scenes = Array.from(scenesByProject.values()).flat()

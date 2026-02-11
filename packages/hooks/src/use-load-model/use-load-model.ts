@@ -375,7 +375,6 @@ function useLoadModel<
 				throw error
 			}
 		},
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 		[optimizer, updateProgress, modelLoader]
 		// Note: processFiles removed, we load directly to avoid uploadCompleteRef trigger
 	)

@@ -9,7 +9,7 @@ import {
 	ContactShadowProps,
 	ShadowsProps
 } from '@vctrl/core'
-import { memo, useMemo } from 'react'
+import React, { memo, useMemo } from 'react'
 import { Box3, Mesh, Vector3, Vector3Tuple } from 'three'
 
 export const defaultShadowsOptions: ShadowsProps = {
@@ -142,5 +142,7 @@ const SceneShadows = memo((props?: Partial<ShadowsProps>) => {
 		</AccumulativeShadows>
 	) : null
 })
+
+SceneShadows.displayName = 'SceneShadows'
 
 export default SceneShadows

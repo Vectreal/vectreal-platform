@@ -91,7 +91,9 @@ export class ModelLoader {
 				loadTime
 			}
 		} catch (error) {
-			throw new Error(`Failed to load model from file ${filePath}: ${error}`)
+			throw new Error(`Failed to load model from file ${filePath}: ${error}`, {
+				cause: error
+			})
 		}
 	}
 
@@ -124,7 +126,9 @@ export class ModelLoader {
 				loadTime
 			}
 		} catch (error) {
-			throw new Error(`Failed to load model from File object: ${error}`)
+			throw new Error(`Failed to load model from File object: ${error}`, {
+				cause: error
+			})
 		}
 	}
 
@@ -160,7 +164,9 @@ export class ModelLoader {
 				loadTime
 			}
 		} catch (error) {
-			throw new Error(`Failed to load model from buffer: ${error}`)
+			throw new Error(`Failed to load model from buffer: ${error}`, {
+				cause: error
+			})
 		}
 	}
 
@@ -365,7 +371,9 @@ export class ModelLoader {
 				loadTime
 			}
 		} catch (error) {
-			throw new Error(`Failed to load GLTF with assets: ${error}`)
+			throw new Error(`Failed to load GLTF with assets: ${error}`, {
+				cause: error
+			})
 		}
 	}
 
@@ -410,7 +418,9 @@ export class ModelLoader {
 				true
 			)
 		} catch (error) {
-			throw new Error(`Failed to load GLTF with file assets: ${error}`)
+			throw new Error(`Failed to load GLTF with file assets: ${error}`, {
+				cause: error
+			})
 		}
 	}
 
@@ -491,7 +501,9 @@ export class ModelLoader {
 				)
 			})
 		} catch (error) {
-			throw new Error(`Failed to convert document to Three.js: ${error}`)
+			throw new Error(`Failed to convert document to Three.js: ${error}`, {
+				cause: error
+			})
 		}
 	}
 

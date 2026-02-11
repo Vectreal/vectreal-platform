@@ -11,9 +11,12 @@ import { Link, Outlet, useLoaderData, useLocation } from 'react-router'
 
 import DashboardCard from '../../../components/dashboard/dashboard-cards'
 import { ProjectContentSkeleton } from '../../../components/skeletons'
-import { loadAuthenticatedUser } from '../../../lib/loaders/auth-loader.server'
-import { projectService } from '../../../lib/services/project-service.server'
-import { sceneFolderService } from '../../../lib/services/scene-folder-service.server'
+import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
+import { getProject } from '../../../lib/domain/project/project-repository.server'
+import {
+	getRootSceneFolders,
+	getRootScenes
+} from '../../../lib/domain/scene/scene-folder-repository.server'
 
 import { Route } from './+types/project'
 
@@ -28,7 +31,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	const { user, userWithDefaults } = await loadAuthenticatedUser(request)
 
 	// Fetch project data
-	const project = await projectService.getProject(projectId, user.id)
+	const project = await getProject(projectId, user.id)
 
 	if (!project) {
 		throw new Response('Project not found', { status: 404 })
@@ -36,8 +39,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	// Fetch root folders and root scenes in parallel
 	const [folders, scenes] = await Promise.all([
-		sceneFolderService.getRootSceneFolders(projectId, user.id),
-		sceneFolderService.getRootScenes(projectId, user.id)
+		getRootSceneFolders(projectId, user.id),
+		getRootScenes(projectId, user.id)
 	])
 
 	return {

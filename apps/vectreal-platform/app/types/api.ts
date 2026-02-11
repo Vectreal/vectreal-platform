@@ -68,9 +68,13 @@ export interface SceneSettingsRequest extends Partial<BaseSceneParams> {
 	readonly action: string
 	readonly projectId?: string
 	readonly settings?: SceneSettingsData
-	readonly assetIds?: string[]
 	readonly gltfJson?: JSONDocument
 	readonly optimizationReport?: OptimizationReport
+	readonly publishedGlb?: {
+		readonly data: number[]
+		readonly fileName?: string
+		readonly mimeType?: string
+	}
 }
 
 /** Parameters for retrieving scene settings. */
@@ -80,18 +84,8 @@ export type GetSceneSettingsParams = BaseSceneParams
 export interface SaveSceneSettingsParams extends BaseSceneParams {
 	readonly projectId: string
 	readonly settings: SceneSettingsData
-	readonly gltfJson: JSONDocument
-	readonly optimizationReport?: OptimizationReport
-}
-
-/** Parameters for creating new scene settings. */
-export interface CreateSceneSettingsParams extends BaseSceneParams {
-	readonly projectId: string
-	readonly previousVersion: number
-	readonly settings: SceneSettingsData
 	readonly gltfJson?: JSONDocument
 	readonly optimizationReport?: OptimizationReport
-	readonly existingAssetIds?: string[]
 }
 
 /** Parameters for updating existing scene settings. */
@@ -100,11 +94,13 @@ export interface UpdateSceneSettingsParams {
 	readonly userId: string
 	readonly settings: SceneSettingsData
 	readonly gltfJson?: JSONDocument
-	readonly createNewVersion?: boolean
 }
 
 /** Valid scene settings actions. */
-export type SceneSettingsAction = 'save-scene-settings' | 'get-scene-settings'
+export type SceneSettingsAction =
+	| 'save-scene-settings'
+	| 'get-scene-settings'
+	| 'publish-scene'
 
 // ============================================================================
 // API Response Types
@@ -163,42 +159,37 @@ export enum ContentType {
 export interface SaveSceneStatsParams {
 	readonly sceneId: string
 	readonly userId: string
-	readonly version?: number
 	readonly label?: string
 	readonly description?: string
 	readonly optimizationReport?: OptimizationReport
-	readonly totalSceneSize?: number
-	readonly totalTextureSize?: number
 }
 
 /** Parameters for querying scene stats. */
 export interface GetSceneStatsParams {
 	readonly sceneId: string
-	readonly version?: number
-	readonly label?: string
-	readonly limit?: number
 }
 
 /** Scene stats response data. */
 export interface SceneStatsData {
 	readonly id: string
 	readonly sceneId: string
-	readonly version: number
 	readonly label?: string | null
 	readonly description?: string | null
-	readonly totalSceneSize?: number | null
-	readonly originalSize?: number | null
-	readonly optimizedSize?: number | null
-	readonly compressionRatio?: string | null
-	readonly totalTextureSize?: number | null
-	readonly textureCount?: number | null
-	readonly vertexCount?: number | null
-	readonly polygonCount?: number | null
-	readonly materialCount?: number | null
-	readonly meshCount?: number | null
-	readonly nodeCount?: number | null
+	readonly baseline?: SceneStatsSnapshot | null
+	readonly optimized?: SceneStatsSnapshot | null
+	readonly draftBytes?: number | null
+	readonly publishedBytes?: number | null
 	readonly appliedOptimizations?: string[] | null
 	readonly optimizationSettings?: Record<string, unknown> | null
 	readonly createdAt: Date
 	readonly createdBy: string
+}
+
+export interface SceneStatsSnapshot {
+	readonly verticesCount?: number | null
+	readonly primitivesCount?: number | null
+	readonly meshesCount?: number | null
+	readonly texturesCount?: number | null
+	readonly materialsCount?: number | null
+	readonly nodesCount?: number | null
 }

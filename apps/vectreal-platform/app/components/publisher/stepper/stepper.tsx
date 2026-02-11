@@ -3,10 +3,8 @@ import { useAtom, useAtomValue } from 'jotai/react'
 import { Info } from 'lucide-react'
 import { useCallback } from 'react'
 
-import {
-	processAtom,
-	ProcessState
-} from '../../../lib/stores/publisher-config-store'
+import { processAtom } from '../../../lib/stores/publisher-config-store'
+import type { ProcessState } from '../../../types/publisher-config'
 
 import PreparingStepInfo from './step-info/preparing'
 

@@ -1,5 +1,5 @@
-import { loadAuthenticatedUser } from '../../lib/loaders/auth-loader.server'
-import type { SettingsLoaderData } from '../../lib/loaders/types'
+import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
+import type { SettingsLoaderData } from '../../lib/domain/dashboard/dashboard-types'
 
 import { Route } from './+types/settings'
 

@@ -14,7 +14,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { createContext, useContext } from 'react'
+import React, { createContext, useContext } from 'react'
 
 import { useOptimizeModel } from '../use-optimize-model'
 
@@ -155,9 +155,8 @@ function useModelContext(requireOptimizer: true): UseLoadModelReturn<true>
  * @param requireOptimizer - Set to false to explicitly indicate no optimizer
  */
 function useModelContext(requireOptimizer: false): UseLoadModelReturn<false>
-function useModelContext(
-	_requireOptimizer?: boolean
-): UseLoadModelReturn<boolean> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function useModelContext(_?: boolean): UseLoadModelReturn<boolean> {
 	// Check both contexts - only one will have a value based on how ModelProvider was configured
 	const withOptimizer = useContext(ModelContextWithOptimizer)
 	const withoutOptimizer = useContext(ModelContextWithoutOptimizer)

@@ -5,11 +5,20 @@ import type {
 	SimplificationOptimization,
 	TextureOptimization
 } from '@vctrl/core'
+import { useExportModel } from '@vctrl/hooks/use-export-model'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtomValue } from 'jotai'
 import { useCallback, useEffect, useState } from 'react'
+import { useParams } from 'react-router'
 
+import { useLatestSceneStats } from '../../../../hooks/use-scene-stats'
 import { optimizationAtom } from '../../../../lib/stores/publisher-config-store'
+
+export type SizeInfo = {
+	draftBytes?: number | null
+	draftAfterBytes?: number | null
+	publishedBytes?: number | null
+}
 
 type OptimizationOption =
 	| SimplificationOptimization
@@ -22,7 +31,7 @@ type OptimizationOption =
  * Custom hook that encapsulates the optimization logic and state management
  */
 export const useOptimizationProcess = () => {
-	const { optimizer, on, off } = useModelContext(true)
+	const { optimizer, on, off, file } = useModelContext(true)
 	const {
 		reset: resetOptimize,
 		applyOptimization,
@@ -34,9 +43,24 @@ export const useOptimizationProcess = () => {
 		info,
 		report
 	} = optimizer
+	const params = useParams()
+	const sceneId = typeof params.sceneId === 'string' ? params.sceneId : ''
+	const { stats } = useLatestSceneStats(sceneId, Boolean(sceneId))
 
 	const { optimizations: plannedOptimizations } = useAtomValue(optimizationAtom)
 	const [isPending, setIsPending] = useState<boolean>(false)
+	const [draftAfterBytes, setDraftAfterBytes] = useState<number | null>(null)
+	const { handleDocumentGltfExport } = useExportModel()
+
+	const calculateDraftBytes = useCallback(async () => {
+		const document = optimizer?._getDocument?.()
+		if (!document) return null
+		const result = await handleDocumentGltfExport(document, file, false, false)
+		if (result && typeof result === 'object' && 'size' in result) {
+			return (result as { size?: number }).size ?? null
+		}
+		return null
+	}, [optimizer, handleDocumentGltfExport, file])
 
 	// Handle optimization process
 	const handleOptimizeClick = useCallback(async () => {
@@ -81,6 +105,10 @@ export const useOptimizationProcess = () => {
 
 			// Apply all optimizations
 			await applyOptimization()
+			const updatedDraftBytes = await calculateDraftBytes()
+			if (typeof updatedDraftBytes === 'number') {
+				setDraftAfterBytes(updatedDraftBytes)
+			}
 		} catch (error) {
 			console.error('Error during optimization:', error)
 		} finally {
@@ -88,6 +116,7 @@ export const useOptimizationProcess = () => {
 		}
 	}, [
 		isPending,
+		calculateDraftBytes,
 		plannedOptimizations,
 		applyOptimization,
 		simplifyOptimization,
@@ -99,17 +128,35 @@ export const useOptimizationProcess = () => {
 
 	// Reset on model load
 	useEffect(() => {
+		const handleReset = () => setDraftAfterBytes(null)
 		on('load-start', resetOptimize)
-		return () => off('load-start', resetOptimize)
+		on('load-start', handleReset)
+		return () => {
+			off('load-start', resetOptimize)
+			off('load-start', handleReset)
+		}
 	}, [off, on, resetOptimize])
 
-	const hasImproved = info.optimized.sceneBytes < info.initial.sceneBytes
+	const sizeInfo: SizeInfo = {
+		draftBytes: stats?.draftBytes ?? info.initial.sceneBytes,
+		draftAfterBytes: draftAfterBytes ?? null,
+		publishedBytes: stats?.publishedBytes ?? null
+	}
+	const initialDraftBytes = sizeInfo.draftBytes ?? info.initial.sceneBytes
+	const optimizedDraftBytes =
+		sizeInfo.draftAfterBytes ?? info.optimized.sceneBytes
+	const hasImproved =
+		typeof initialDraftBytes === 'number' &&
+		typeof optimizedDraftBytes === 'number'
+			? optimizedDraftBytes < initialDraftBytes
+			: false
 
 	return {
 		info,
 		report,
 		isPending,
 		hasImproved,
+		sizeInfo,
 		handleOptimizeClick
 	}
 }

@@ -1,5 +1,3 @@
-'use client'
-
 /* vectreal-core | vctrl/hooks
 Copyright (C) 2024 Moritz Becker
 
@@ -20,7 +18,6 @@ import {
 	type DedupOptions,
 	ModelOptimizer,
 	type NormalsOptions,
-	type OperationProgress,
 	type QuantizeOptions,
 	type SimplifyOptions,
 	type TextureCompressOptions
@@ -83,9 +80,9 @@ const useOptimizeModel = () => {
 
 		// Set up progress callback for optimization operations
 		// Can be extended to dispatch progress updates to state if needed
-		optimizer.onProgress((progress: OperationProgress) => {
-			// Future: dispatch({ type: 'UPDATE_PROGRESS', payload: progress })
-		})
+		// TODO: dispatch({ type: 'UPDATE_PROGRESS', payload: progress })
+		// optimizer.onProgress((progress: OperationProgress) => {
+		// })
 
 		// Cleanup: reset optimizer when component unmounts
 		return () => {
@@ -108,6 +105,12 @@ const useOptimizeModel = () => {
 
 			// Convert Three.js scene to glTF document for optimization
 			await optimizer.loadFromThreeJS(model)
+
+			const report = await optimizer.getReport()
+			dispatch({
+				type: 'LOAD_SUCCESS',
+				payload: { report }
+			})
 		} catch (err) {
 			dispatch({ type: 'LOAD_ERROR', payload: err as Error })
 			console.error('Error loading model:', err)

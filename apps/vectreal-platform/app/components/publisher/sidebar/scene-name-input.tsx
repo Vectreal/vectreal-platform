@@ -13,7 +13,7 @@ export function SceneNameInput() {
 	// const { setIsSaved } = useToolbarContext()
 	const [{ sceneName }, setInfo] = useAtom(metaAtom)
 	const [isEditing, setIsEditing] = useState(false)
-	const [localName, setLocalName] = useState(sceneName)
+	const [localName, setLocalName] = useState(sceneName ?? '')
 	const inputRef = useRef<HTMLInputElement>(null)
 
 	const saveChanges = useCallback(() => {
@@ -25,7 +25,7 @@ export function SceneNameInput() {
 			}))
 			setIsSaved(false)
 		} else if (!trimmedName) {
-			setLocalName(sceneName) // Revert to previous name if empty
+			setLocalName(sceneName ?? '') // Revert to previous name if empty
 		}
 
 		setIsEditing(false)
@@ -56,7 +56,7 @@ export function SceneNameInput() {
 		if (e.key === 'Enter') {
 			saveChanges()
 		} else if (e.key === 'Escape') {
-			setLocalName(sceneName)
+			setLocalName(sceneName ?? '')
 			setIsEditing(false)
 		}
 	}

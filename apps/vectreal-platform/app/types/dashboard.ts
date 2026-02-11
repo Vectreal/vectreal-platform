@@ -7,7 +7,7 @@ import type {
 	FolderLoaderData,
 	ProjectLoaderData,
 	SceneLoaderData
-} from '../lib/loaders/types'
+} from '../lib/domain/dashboard/dashboard-types'
 
 export enum ACTION_VARIANT {
 	CREATE_PROJECT = 'create-project',

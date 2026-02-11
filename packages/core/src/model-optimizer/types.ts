@@ -77,6 +77,11 @@ export interface OptimizationReport {
 		triangles: BeforeAfterMetric
 		materials: BeforeAfterMetric
 		textures: BeforeAfterMetric
+		texturesCount: BeforeAfterMetric
+		textureResolutions: {
+			before: string[]
+			after: string[]
+		}
 		meshes: BeforeAfterMetric
 		nodes: BeforeAfterMetric
 	}

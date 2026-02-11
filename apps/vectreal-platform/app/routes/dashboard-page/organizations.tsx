@@ -1,14 +1,14 @@
 import { Badge } from '@shared/components/ui/badge'
-import { Building, Building2, DogIcon, File } from 'lucide-react'
+import { Building, Building2 } from 'lucide-react'
 import { useMemo } from 'react'
 import { useLoaderData } from 'react-router'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 import DashboardCard from '../../components/dashboard/dashboard-cards'
 import { OrganizationsSkeleton } from '../../components/skeletons'
-import { loadAuthenticatedUser } from '../../lib/loaders/auth-loader.server'
-import { computeOrganizationStats } from '../../lib/loaders/stats-helpers.server'
-import { userService } from '../../lib/services/user-service.server'
+import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
+import { computeOrganizationStats } from '../../lib/domain/dashboard/dashboard-stats.server'
+import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 
 import { Route } from './+types/organizations'
 
@@ -17,7 +17,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const { user, userWithDefaults } = await loadAuthenticatedUser(request)
 
 	// Fetch organizations
-	const organizations = await userService.getUserOrganizations(user.id)
+	const organizations = await getUserOrganizations(user.id)
 
 	// Compute stats server-side
 	const organizationStats = computeOrganizationStats(organizations)
@@ -53,7 +53,7 @@ export function HydrateFallback() {
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
 const OrganizationsPage = () => {
-	const { organizations, organizationStats } = useLoaderData<typeof loader>()
+	const { organizations } = useLoaderData<typeof loader>()
 
 	// Sort organizations by role client-side
 	const sortedOrganizations = useMemo(() => {
@@ -74,30 +74,6 @@ const OrganizationsPage = () => {
 			null
 		)
 	}, [organizations])
-
-	// Compute primary role for display
-	const primaryRole = useMemo(() => {
-		const { owned, admin } = organizationStats
-		return owned > 0 ? 'owner' : admin > 0 ? 'admin' : 'member'
-	}, [organizationStats])
-
-	const statCardsContent = [
-		{
-			icon: Building,
-			value: organizationStats.total,
-			label: 'Organizations'
-		},
-		{
-			icon: File,
-			value: organizationStats.owned,
-			label: 'Previously Owned'
-		},
-		{
-			icon: DogIcon,
-			value: primaryRole,
-			label: 'Primary Role'
-		}
-	]
 
 	return (
 		<div className="space-y-16 p-6">
