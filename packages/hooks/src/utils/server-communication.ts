@@ -148,7 +148,7 @@ export class ServerCommunicationService {
 		)
 
 		if (options) {
-			 
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			const { serverOptions: _, ...restOptions } = options
 			requestData.append('options', JSON.stringify(restOptions))
 		}
