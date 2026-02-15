@@ -76,7 +76,8 @@ export default defineConfig(tseslint.configs.recommended, [
 			'**/node_modules/**',
 			'**/dist/**',
 			'**/build/**',
-			'**/public/**'
+			'**/public/**',
+			'**/styles/globals.css'
 		],
 		plugins: { css },
 		language: 'css/css',
