@@ -1,5 +1,6 @@
 import { Toaster } from '@shared/components/ui/sonner'
 import { cn } from '@shared/utils'
+import type { ReactNode } from 'react'
 import {
 	data,
 	Links,
@@ -54,7 +55,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export type RootLoader = typeof loader
 
-export function Layout({ children }: { children: React.ReactNode }) {
+export function Layout({ children }: { children: ReactNode }) {
 	const error = useRouteError()
 
 	if (error) {

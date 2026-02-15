@@ -1,4 +1,5 @@
 import { useAtom } from 'jotai'
+import type { FC } from 'react'
 
 import { optimizationAtom } from '../../../../../lib/stores/publisher-config-store'
 import { SettingToggle } from '../../../settings-components'
@@ -21,7 +22,7 @@ const tooltips = {
 		'Recalculates and optimizes normal vectors to improve lighting appearance while reducing file size.'
 }
 
-const AdvancedPanel: React.FC = () => {
+const AdvancedPanel: FC = () => {
 	const [{ optimizations }, setOptimizationState] = useAtom(optimizationAtom)
 
 	const setEnabled = (

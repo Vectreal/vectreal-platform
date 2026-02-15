@@ -1,11 +1,11 @@
 import { motion } from 'framer-motion'
 import { useAtom } from 'jotai'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FC } from 'react'
 
 import { BasicCard } from '../../../../../components/layout-components'
 import { metaAtom } from '../../../../../lib/stores/scene-settings-store'
 
-export const ScenePreview: React.FC = () => {
+export const ScenePreview: FC = () => {
 	const [isLoading, setIsLoading] = useState(true)
 	const [{ thumbnailUrl }] = useAtom(metaAtom)
 

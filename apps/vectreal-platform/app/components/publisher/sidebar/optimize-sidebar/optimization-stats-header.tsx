@@ -2,6 +2,7 @@ import { CardTitle } from '@shared/components/ui/card'
 import { cn, formatFileSize } from '@shared/utils'
 import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { motion } from 'framer-motion'
+import type { FC } from 'react'
 
 import type { SizeInfo } from './use-optimization-process'
 
@@ -11,9 +12,11 @@ interface OptimizationStatsHeaderProps {
 	sizeInfo: SizeInfo
 }
 
-export const OptimizationStatsHeader: React.FC<
-	OptimizationStatsHeaderProps
-> = ({ info, hasImproved, sizeInfo }) => {
+export const OptimizationStatsHeader: FC<OptimizationStatsHeaderProps> = ({
+	info,
+	hasImproved,
+	sizeInfo
+}) => {
 	const initialDraftBytes = sizeInfo.draftBytes ?? info.initial.sceneBytes
 	const optimizedDraftBytes =
 		sizeInfo.draftAfterBytes ?? info.optimized.sceneBytes

@@ -1,12 +1,18 @@
 import { Input } from '@shared/components/ui/input'
 import { useAtom } from 'jotai/react'
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import {
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+	type KeyboardEvent
+} from 'react'
 
 import { metaAtom } from '../../../lib/stores/scene-settings-store'
 
 export function SceneNameInput() {
 	const { setIsSaved } = {
-		setIsSaved: (bool: boolean) => {
+		setIsSaved: (_bool: boolean) => {
 			return null // Placeholder for context, replace with actual context if needed
 		}
 	} // Placeholder for context, replace with actual context if needed
@@ -52,7 +58,7 @@ export function SceneNameInput() {
 		}
 	}, [isEditing])
 
-	const handleKeyDown = (e: React.KeyboardEvent) => {
+	const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
 		if (e.key === 'Enter') {
 			saveChanges()
 		} else if (e.key === 'Escape') {

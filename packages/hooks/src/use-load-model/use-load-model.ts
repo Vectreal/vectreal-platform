@@ -392,14 +392,14 @@ function useLoadModel<
 
 			// If optimizer is available, load the model into it
 			if (optimizer && state.file.model) {
-				optimizer.load(state.file.model as Object3D)
+				optimizer.load(state.file.model)
 			}
 		}
 	}, [state.file, optimizer])
 
 	/**
 	 * Creates the optimizer integration object.
-	 * This provides additional methods for applying optimizations and
+	 * This provides additionvalueofMa∞¢¢[Make Mat]al methods for applying optimibjeScene[Obejkeyof Objecodel]unkknozations an.d
 	 * updating the loaded model with optimized versions.
 	 *
 	 * Returns null if no optimizer is provided, otherwise returns

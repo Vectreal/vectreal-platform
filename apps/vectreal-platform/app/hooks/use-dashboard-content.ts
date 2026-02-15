@@ -25,7 +25,7 @@ import type {
  * Handles both optimistic (loading) and loaded states
  * @returns Dashboard header content with title, description, action variant, and breadcrumbs
  */
-export const useDashboardContent = (): DynamicHeaderContent => {
+export const useDashboardHeaderData = (): DynamicHeaderContent => {
 	const location = useLocation()
 	const navigation = useNavigation()
 	const matches = useMatches()
@@ -76,7 +76,8 @@ export const useDashboardContent = (): DynamicHeaderContent => {
 				return {
 					title: navState.name,
 					description: itemDescription,
-					actionVariant
+					actionVariant,
+					isLoading: true
 				}
 			}
 
@@ -90,7 +91,8 @@ export const useDashboardContent = (): DynamicHeaderContent => {
 			return {
 				title: config.loadingTitle || config.title,
 				description: config.loadingDescription || config.description,
-				actionVariant: config.actionVariant
+				actionVariant: config.actionVariant,
+				isLoading: true
 			}
 		}
 

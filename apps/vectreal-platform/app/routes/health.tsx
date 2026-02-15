@@ -4,7 +4,7 @@ import { data, type LoaderFunctionArgs } from 'react-router'
  * Health check endpoint for Cloud Run and monitoring systems.
  * Returns 200 OK if the application is running and healthy.
  */
-export async function loader({ request }: LoaderFunctionArgs) {
+export async function loader({ request: _request }: LoaderFunctionArgs) {
 	try {
 		// Basic health check - can be extended to check database connectivity, etc.
 		const health = {

@@ -77,7 +77,7 @@ export async function upsertSceneSettings(
 	params: SceneSettingsUpsertInput
 ) {
 	const insertValues = buildSceneSettingsValues(params)
-	const { sceneId: _sceneId, ...updateValues } = insertValues
+	const { sceneId: _, ...updateValues } = insertValues
 
 	const [newSettings] = await tx
 		.insert(sceneSettings)

@@ -6,7 +6,7 @@
 
 import { memo } from 'react'
 
-import { useDashboardContent } from '../../hooks'
+import { useDashboardHeaderData } from '../../hooks'
 
 import { ACTION_VARIANT } from '../../types/dashboard'
 
@@ -18,7 +18,7 @@ import { DashboardActions } from './dashboard-actions'
  * Memoized to prevent unnecessary re-renders
  */
 export const DashboardHeader = memo(() => {
-	const { title, description, actionVariant } = useDashboardContent()
+	const { title, description, actionVariant } = useDashboardHeaderData()
 
 	return (
 		actionVariant !== ACTION_VARIANT.SCENE_DETAIL && (

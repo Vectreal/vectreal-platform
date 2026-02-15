@@ -1,4 +1,5 @@
 import type { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
+import type { FC } from 'react'
 
 import { FileSizeComparison } from './file-size-comparison'
 import { OptimizationSummary } from './optimization-summary'
@@ -12,7 +13,7 @@ interface OptimizationStatsProps {
 	appliedOptimizations: string[]
 }
 
-export const OptimizationStats: React.FC<OptimizationStatsProps> = ({
+export const OptimizationStats: FC<OptimizationStatsProps> = ({
 	info,
 	sizeInfo,
 	optimizationStats,

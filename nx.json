@@ -13,7 +13,7 @@
 	},
 	"targetDefaults": {
 		"lint": {
-			"executor": "@nx/linter:eslint",
+			"executor": "@nx/eslint:lint",
 			"cache": true
 		},
 		"typecheck": {
@@ -110,7 +110,6 @@
 				"unitTestRunner": "none"
 			},
 			"application": {
-				"babel": true,
 				"style": "css",
 				"linter": "eslint",
 				"bundler": "vite"

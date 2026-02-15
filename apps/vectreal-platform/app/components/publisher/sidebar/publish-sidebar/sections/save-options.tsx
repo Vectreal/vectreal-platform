@@ -4,7 +4,7 @@ import { useExportModel } from '@vctrl/hooks/use-export-model'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { motion } from 'framer-motion'
 import { Box, Download, FileAxis3d, Save, User } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type FC } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -53,7 +53,7 @@ interface SaveOptionsProps {
 	projectId?: string
 }
 
-export const SaveOptions: React.FC<SaveOptionsProps> = ({ userId }) => {
+export const SaveOptions: FC<SaveOptionsProps> = ({ userId }) => {
 	const [format, setFormat] = useState<ExportFormat>('gltf')
 	const { file, optimizer } = useModelContext()
 

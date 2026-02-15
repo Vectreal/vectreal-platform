@@ -1,5 +1,5 @@
 import { Accordion } from '@shared/components/ui/accordion'
-import { useMemo } from 'react'
+import { useMemo, type FC } from 'react'
 
 import {
 	AdvancedOptimizationAccordionItem,
@@ -11,7 +11,7 @@ import { OptimizeButton } from './optimize-button'
 import { useOptimizationProcess } from './use-optimization-process'
 import { calculateOptimizationStats } from './utils'
 
-const OptimizeSidebarContent: React.FC = () => {
+const OptimizeSidebarContent: FC = () => {
 	const {
 		info,
 		report,

@@ -1,8 +1,8 @@
 import { motion, useInView } from 'framer-motion'
-import { useRef } from 'react'
+import { useRef, type ReactNode } from 'react'
 
 interface FadeInViewProps {
-	children: React.ReactNode
+	children: ReactNode
 	className?: string
 	enabled?: boolean
 	delay?: number

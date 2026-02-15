@@ -1,5 +1,6 @@
 import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { Eye, Grid, Image, Layers, Settings2, Zap } from 'lucide-react'
+import type { ComponentType } from 'react'
 
 import type { SizeInfo } from './use-optimization-process'
 
@@ -22,7 +23,7 @@ export const formatOptimizationName = (optimization: string): string => {
 export const getOptimizationIcon = (optimization: string) => {
 	const iconMap: Record<
 		string,
-		React.ComponentType<{ className?: string; size?: number }>
+		ComponentType<{ className?: string; size?: number }>
 	> = {
 		simplification: Layers,
 		'texture compression': Image,

@@ -2,6 +2,7 @@ import { formatFileSize } from '@shared/utils'
 import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { motion } from 'framer-motion'
 import { ArrowRightIcon } from 'lucide-react'
+import type { FC } from 'react'
 
 import type { SizeInfo } from './use-optimization-process'
 
@@ -10,7 +11,7 @@ interface FileSizeComparisonProps {
 	sizeInfo: SizeInfo
 }
 
-export const FileSizeComparison: React.FC<FileSizeComparisonProps> = ({
+export const FileSizeComparison: FC<FileSizeComparisonProps> = ({
 	info,
 	sizeInfo
 }) => {

@@ -104,23 +104,6 @@ const DashboardLayout = () => {
 			return
 		}
 
-		// Check if this is a back/forward navigation
-		// When using browser back/forward, the navigation type is "pop"
-		const isBackForward =
-			navigation.location?.state?.__internal_pop__ === true ||
-			(typeof window !== 'undefined' &&
-				(
-					window.performance?.getEntriesByType?.(
-						'navigation'
-					)?.[0] as PerformanceNavigationTiming
-				)?.type === 'back_forward')
-
-		// Skip skeleton for back/forward navigation as cached data is likely available
-		if (isBackForward) {
-			setShowSkeleton(false)
-			return
-		}
-
 		// Delay skeleton display by 200ms to avoid flicker on fast navigations
 		const timer = setTimeout(() => {
 			if (navigation.state === 'loading') {
@@ -131,21 +114,23 @@ const DashboardLayout = () => {
 		return () => clearTimeout(timer)
 	}, [navigation.state, navigation.location])
 
+	const path = navigation.location?.pathname || ''
+	const isNewProjectCreation = path === '/dashboard/projects/new'
+
 	// Determine which skeleton to show based on navigation location
 	const getNavigationSkeleton = () => {
 		if (!showSkeleton) return null
 
-		const path = navigation.location?.pathname || ''
+		const isFolderDetail = path.match(/\/dashboard\/projects\/[^/]+\/folder\//)
+		const isSceneDetail = path.match(/\/dashboard\/projects\/[^/]+\/[^/]+$/)
+		const isProjectDetail = path.match(/\/dashboard\/projects\/[^/]+$/)
 
 		if (path === '/dashboard') return <DashboardSkeleton />
 		if (path === '/dashboard/organizations') return <OrganizationsSkeleton />
 		if (path === '/dashboard/projects') return <ProjectsGridSkeleton />
-		if (path.match(/\/dashboard\/projects\/[^/]+\/folder\//))
-			return <FolderContentSkeleton />
-		if (path.match(/\/dashboard\/projects\/[^/]+\/[^/]+$/))
-			return <SceneDetailSkeleton />
-		if (path.match(/\/dashboard\/projects\/[^/]+$/))
-			return <ProjectContentSkeleton />
+		if (isFolderDetail) return <FolderContentSkeleton />
+		if (isSceneDetail) return <SceneDetailSkeleton />
+		if (isProjectDetail) return <ProjectContentSkeleton />
 
 		// Default skeleton
 		return <DashboardSkeleton />
@@ -167,7 +152,11 @@ const DashboardLayout = () => {
 						<DashboardHeader />
 					</div>
 				)}
-				{navigation.state === 'loading' ? getNavigationSkeleton() : <Outlet />}
+				{navigation.state === 'loading' && !isNewProjectCreation ? (
+					getNavigationSkeleton()
+				) : (
+					<Outlet />
+				)}
 			</SidebarInset>
 		</SidebarProvider>
 	)

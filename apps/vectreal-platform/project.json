@@ -89,7 +89,12 @@
 			"executor": "@nx/eslint:lint",
 			"outputs": ["{options.outputFile}"],
 			"options": {
-				"lintFilePatterns": ["apps/vectreal-platform/**/*.{ts,tsx,js,jsx}"]
+				"lintFilePatterns": [
+					"apps/vectreal-platform/app/**/*.ts",
+					"apps/vectreal-platform/app/**/*.tsx",
+					"apps/vectreal-platform/app/**/*.js",
+					"apps/vectreal-platform/app/**/*.jsx"
+				]
 			}
 		},
 		"start": {

@@ -14,7 +14,7 @@ import { ModelExporter } from '@vctrl/core'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { motion } from 'framer-motion'
 import { CheckCircle, EyeOff, Globe, Lock } from 'lucide-react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, type FC } from 'react'
 import { toast } from 'sonner'
 
 import { itemVariants } from '../../animation'
@@ -23,7 +23,7 @@ interface PublishOptionsProps {
 	sceneId?: string
 }
 
-export const PublishOptions: React.FC<PublishOptionsProps> = ({ sceneId }) => {
+export const PublishOptions: FC<PublishOptionsProps> = ({ sceneId }) => {
 	const [title, setTitle] = useState('My 3D Scene')
 	const [description, setDescription] = useState('')
 	const [visibility, setVisibility] = useState('private')

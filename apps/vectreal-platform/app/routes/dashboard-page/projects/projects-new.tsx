@@ -27,23 +27,20 @@ import {
 } from '@shared/components/ui/select'
 import { Textarea } from '@shared/components/ui/textarea'
 import { AlertCircle, Plus, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import {
 	redirect,
 	Form as RemixForm,
-	useLoaderData,
 	useLocation,
 	useNavigate
 } from 'react-router'
-import { z } from 'zod'
-
+import { z, ZodError } from 'zod'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
 import { computeProjectCreationCapabilities } from '../../../lib/domain/dashboard/dashboard-stats.server'
 import type { ProjectNewLoaderData } from '../../../lib/domain/dashboard/dashboard-types'
 import { createProject } from '../../../lib/domain/project/project-repository.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
-
 import { Route } from './+types/projects-new'
 
 const projectFormSchema = z.object({
@@ -115,7 +112,23 @@ export async function action({ request }: Route.ActionArgs) {
 		// Redirect to the new project
 		return redirect(`/dashboard/projects/${project.id}`)
 	} catch (error) {
-		// Return error for display
+		// Handle Zod validation errors
+		if (error instanceof ZodError) {
+			const fieldErrors: Record<string, string> = {}
+			error.errors.forEach((err) => {
+				if (err.path.length > 0) {
+					const field = err.path[0] as string
+					fieldErrors[field] = err.message
+				}
+			})
+
+			return {
+				error: 'Validation failed',
+				fieldErrors
+			}
+		}
+
+		// Return general error for display
 		return {
 			error: error instanceof Error ? error.message : 'Failed to create project'
 		}
@@ -124,11 +137,11 @@ export async function action({ request }: Route.ActionArgs) {
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
 
-const ProjectsNewPage = () => {
+const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
+	const { organizations, projectCreationCapabilities } = loaderData
+
 	const location = useLocation()
 	const navigate = useNavigate()
-	const { organizations, projectCreationCapabilities } =
-		useLoaderData<typeof loader>()
 	const [isGeneratingSlug, setIsGeneratingSlug] = useState(false)
 
 	// Control drawer open state based on route
@@ -142,6 +155,8 @@ const ProjectsNewPage = () => {
 
 	const form = useForm<ProjectFormValues>({
 		resolver: zodResolver(projectFormSchema),
+		mode: 'onChange',
+		reValidateMode: 'onChange',
 		defaultValues: {
 			name: '',
 			slug: '',
@@ -150,6 +165,18 @@ const ProjectsNewPage = () => {
 			description: ''
 		}
 	})
+
+	// Set server-side validation errors
+	useEffect(() => {
+		if (actionData?.fieldErrors) {
+			Object.entries(actionData.fieldErrors).forEach(([field, message]) => {
+				form.setError(field as keyof ProjectFormValues, {
+					type: 'server',
+					message
+				})
+			})
+		}
+	}, [actionData, form])
 
 	// Generate slug from name
 	const generateSlug = (name: string) => {
@@ -162,10 +189,11 @@ const ProjectsNewPage = () => {
 
 	// Auto-generate slug when name changes
 	const handleNameChange = (value: string) => {
-		form.setValue('name', value)
+		form.clearErrors('name')
+		form.setValue('name', value, { shouldValidate: true })
 		if (!form.getValues('slug') || isGeneratingSlug) {
 			const generatedSlug = generateSlug(value)
-			form.setValue('slug', generatedSlug)
+			form.setValue('slug', generatedSlug, { shouldValidate: true })
 			setIsGeneratingSlug(true)
 		}
 	}
@@ -188,9 +216,9 @@ const ProjectsNewPage = () => {
 
 	return (
 		<Drawer open={isOpen} onOpenChange={handleOpenChange} direction="right">
-			<DrawerContent>
+			<DrawerContent className="max-w-lg!">
 				<DrawerHeader className="border-b">
-					<div className="flex items-center justify-between">
+					<div className="flex items-start justify-between">
 						<div>
 							<DrawerTitle>Create New Project</DrawerTitle>
 							<DrawerDescription>
@@ -247,11 +275,14 @@ const ProjectsNewPage = () => {
 							<FormField
 								control={form.control}
 								name="organizationId"
-								render={({ field }) => (
+								render={({ field, fieldState }) => (
 									<FormItem>
 										<FormLabel>Organization</FormLabel>
 										<Select
-											onValueChange={field.onChange}
+											onValueChange={(value) => {
+												form.clearErrors('organizationId')
+												field.onChange(value)
+											}}
 											defaultValue={field.value}
 											name="organizationId"
 										>
@@ -277,10 +308,13 @@ const ProjectsNewPage = () => {
 												)}
 											</SelectContent>
 										</Select>
-										<FormDescription>
-											Choose which organization this project belongs to
-										</FormDescription>
-										<FormMessage />
+										{fieldState.error ? (
+											<FormMessage />
+										) : (
+											<FormDescription>
+												Choose which organization this project belongs to
+											</FormDescription>
+										)}
 									</FormItem>
 								)}
 							/>
@@ -289,7 +323,7 @@ const ProjectsNewPage = () => {
 							<FormField
 								control={form.control}
 								name="name"
-								render={({ field }) => (
+								render={({ field, fieldState }) => (
 									<FormItem>
 										<FormLabel>Project Name</FormLabel>
 										<FormControl>
@@ -300,10 +334,13 @@ const ProjectsNewPage = () => {
 												placeholder="My Project"
 											/>
 										</FormControl>
-										<FormDescription>
-											A descriptive name for your project
-										</FormDescription>
-										<FormMessage />
+										{fieldState.error ? (
+											<FormMessage />
+										) : (
+											<FormDescription>
+												A descriptive name for your project
+											</FormDescription>
+										)}
 									</FormItem>
 								)}
 							/>
@@ -312,7 +349,7 @@ const ProjectsNewPage = () => {
 							<FormField
 								control={form.control}
 								name="slug"
-								render={({ field }) => (
+								render={({ field, fieldState }) => (
 									<FormItem>
 										<FormLabel>URL Slug</FormLabel>
 										<FormControl>
@@ -320,6 +357,7 @@ const ProjectsNewPage = () => {
 												{...field}
 												name="slug"
 												onChange={(e) => {
+													form.clearErrors('slug')
 													field.onChange(e)
 													setIsGeneratingSlug(false)
 												}}
@@ -327,10 +365,14 @@ const ProjectsNewPage = () => {
 												className="font-mono"
 											/>
 										</FormControl>
-										<FormDescription>
-											Used in URLs and must be unique. Auto-generated from name.
-										</FormDescription>
-										<FormMessage />
+										{fieldState.error ? (
+											<FormMessage />
+										) : (
+											<FormDescription>
+												Used in URLs and must be unique. Auto-generated from
+												name.
+											</FormDescription>
+										)}
 									</FormItem>
 								)}
 							/>
@@ -339,7 +381,7 @@ const ProjectsNewPage = () => {
 							<FormField
 								control={form.control}
 								name="description"
-								render={({ field }) => (
+								render={({ field, fieldState }) => (
 									<FormItem>
 										<FormLabel>
 											Description{' '}
@@ -350,14 +392,21 @@ const ProjectsNewPage = () => {
 										<FormControl>
 											<Textarea
 												{...field}
+												onChange={(e) => {
+													form.clearErrors('description')
+													field.onChange(e)
+												}}
 												placeholder="Describe your project..."
 												className="min-h-32"
 											/>
 										</FormControl>
-										<FormDescription>
-											Help your team understand the project's purpose
-										</FormDescription>
-										<FormMessage />
+										{fieldState.error ? (
+											<FormMessage />
+										) : (
+											<FormDescription>
+												Help your team understand the project's purpose
+											</FormDescription>
+										)}
 									</FormItem>
 								)}
 							/>
@@ -376,8 +425,12 @@ const ProjectsNewPage = () => {
 									disabled={
 										!canCreateInSelectedOrg ||
 										!hasAnyCreatePermission ||
-										form.formState.isSubmitting
+										form.formState.isSubmitting ||
+										!form.formState.isValid
 									}
+									className="flex items-center"
+									variant="default"
+									size="default"
 								>
 									{form.formState.isSubmitting ? (
 										<>

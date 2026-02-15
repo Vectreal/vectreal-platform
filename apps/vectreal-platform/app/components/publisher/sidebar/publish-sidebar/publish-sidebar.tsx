@@ -8,6 +8,7 @@ import {
 import { Separator } from '@shared/components/ui/separator'
 import { motion } from 'framer-motion'
 import { BookMarked, Code, Globe, Save } from 'lucide-react'
+import type { FC } from 'react'
 
 import { AccordionItem, AccordionTrigger } from '../accordion-components'
 
@@ -24,7 +25,7 @@ interface PublishSidebarProps {
 	projectId?: string
 }
 
-const PublishSidebarContent: React.FC<PublishSidebarProps> = ({
+const PublishSidebarContent: FC<PublishSidebarProps> = ({
 	userId,
 	sceneId,
 	projectId

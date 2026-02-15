@@ -34,7 +34,7 @@ export async function loader({ request }: Route.LoaderArgs) {
  * Prevent revalidation on navigation - data comes from parent layout
  */
 export const shouldRevalidate: ShouldRevalidateFunction = ({
-	defaultShouldRevalidate,
+	defaultShouldRevalidate: _defaultShouldRevalidate,
 	formMethod
 }) => {
 	// Only revalidate on form submissions

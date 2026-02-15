@@ -9,6 +9,8 @@ import type {
 	SceneLoaderData
 } from '../lib/domain/dashboard/dashboard-types'
 
+import type { ReactNode } from 'react'
+
 export enum ACTION_VARIANT {
 	CREATE_PROJECT = 'create-project',
 	PROJECT_LIST = 'projects-list',
@@ -59,15 +61,16 @@ export interface DashboardContentConfig {
 	title: string
 	description: string
 	actionVariant?: ACTION_VARIANT
-	loadingTitle?: string | React.ReactNode
-	loadingDescription?: string | React.ReactNode
+	loadingTitle?: string | ReactNode
+	loadingDescription?: string | ReactNode
 }
 
 export interface DynamicHeaderContent {
-	title: string | React.ReactNode
-	description: string | React.ReactNode
+	title: string | ReactNode
+	description: string | ReactNode
 	actionVariant?: ACTION_VARIANT
 	breadcrumbs?: BreadcrumbItem[]
+	isLoading?: boolean
 }
 
 export interface RouteParams {

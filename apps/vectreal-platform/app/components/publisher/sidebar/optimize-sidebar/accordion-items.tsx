@@ -2,6 +2,7 @@ import { AccordionContent } from '@shared/components/ui/accordion'
 import type { OptimizationReport } from '@vctrl/core'
 import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { FileIcon, Settings2, Star } from 'lucide-react'
+import type { FC } from 'react'
 
 import { AccordionItem, AccordionTrigger } from '../accordion-components'
 
@@ -21,7 +22,7 @@ interface AccordionItemsProps {
 	appliedOptimizations: string[]
 }
 
-export const StatsAccordionItem: React.FC<AccordionItemsProps> = ({
+export const StatsAccordionItem: FC<AccordionItemsProps> = ({
 	info,
 	hasImproved,
 	sizeInfo,
@@ -50,7 +51,7 @@ export const StatsAccordionItem: React.FC<AccordionItemsProps> = ({
 	</AccordionItem>
 )
 
-export const BasicOptimizationAccordionItem: React.FC = () => (
+export const BasicOptimizationAccordionItem: FC = () => (
 	<AccordionItem value="basic">
 		<AccordionTrigger>
 			<Star className="inline" size={14} />
@@ -62,7 +63,7 @@ export const BasicOptimizationAccordionItem: React.FC = () => (
 	</AccordionItem>
 )
 
-export const AdvancedOptimizationAccordionItem: React.FC = () => (
+export const AdvancedOptimizationAccordionItem: FC = () => (
 	<AccordionItem value="advanced">
 		<AccordionTrigger>
 			<Settings2 className="inline" size={14} />
@@ -79,9 +80,10 @@ interface SceneDetailsAccordionItemProps {
 	report?: OptimizationReport | null
 }
 
-export const SceneDetailsAccordionItem: React.FC<
-	SceneDetailsAccordionItemProps
-> = ({ info, report }) => (
+export const SceneDetailsAccordionItem: FC<SceneDetailsAccordionItemProps> = ({
+	info,
+	report
+}) => (
 	<AccordionItem value="details">
 		<AccordionTrigger>
 			<FileIcon className="inline" size={14} />
