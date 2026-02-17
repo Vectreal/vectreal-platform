@@ -4,11 +4,11 @@ import { Label } from '@shared/components/ui/label'
 import { Separator } from '@shared/components/ui/separator'
 import { motion } from 'framer-motion'
 import { ClipboardCopy } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type FC } from 'react'
 
 import { itemVariants } from '../../animation'
 
-export const EmbedOptions: React.FC = () => {
+export const EmbedOptions: FC = () => {
 	const [width, setWidth] = useState('100%')
 	const [height, setHeight] = useState('400px')
 	const [autoRotate] = useState(true)

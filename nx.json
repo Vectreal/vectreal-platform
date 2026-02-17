@@ -13,7 +13,7 @@
 	},
 	"targetDefaults": {
 		"lint": {
-			"executor": "@nx/linter:eslint",
+			"executor": "@nx/eslint:lint",
 			"cache": true
 		},
 		"typecheck": {
@@ -64,7 +64,6 @@
 			"plugin": "@nx/vite/plugin",
 			"options": {
 				"buildTargetName": "build",
-				"testTargetName": "test",
 				"serveTargetName": "serve",
 				"previewTargetName": "preview",
 				"serveStaticTargetName": "serve-static"
@@ -95,6 +94,12 @@
 			"options": {
 				"targetName": "e2e"
 			}
+		},
+		{
+			"plugin": "@nx/vitest",
+			"options": {
+				"testTargetName": "test"
+			}
 		}
 	],
 	"generators": {
@@ -105,7 +110,6 @@
 				"unitTestRunner": "none"
 			},
 			"application": {
-				"babel": true,
 				"style": "css",
 				"linter": "eslint",
 				"bundler": "vite"

@@ -17,6 +17,7 @@ import { cn } from '@shared/utils'
 import { TextureOptimization } from '@vctrl/core'
 import { useAtom } from 'jotai'
 import { Info } from 'lucide-react'
+import type { FC } from 'react'
 
 import { SettingSlider } from '../../../../../components'
 import { optimizationAtom } from '../../../../../lib/stores/publisher-config-store'
@@ -29,7 +30,7 @@ const textureSize = [
 	{ value: 2048, label: '2048×2048' }
 ]
 
-export const TextureSettings: React.FC = () => {
+export const TextureSettings: FC = () => {
 	const [{ optimizations: plannedOptimizations }, setOptimization] =
 		useAtom(optimizationAtom)
 	const {

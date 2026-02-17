@@ -1,27 +1,40 @@
 import { randomUUID } from 'crypto'
 
-import { UUID_REGEX } from '../../constants/utility-constants'
-import type { SceneSettingsRequest } from '../../types/api'
-import { sceneSettingsService } from '../services/scene-settings-service.server'
-import { userService } from '../services/user-service.server'
+import { ApiResponse } from '@shared/utils'
 
-import { ApiResponseBuilder } from './api-responses.server'
+import type {
+	SceneSettingsData,
+	SceneSettingsRequest
+} from '../../../types/api'
 
-type ValidatedSaveRequest = Required<
-	Pick<SceneSettingsRequest, 'settings' | 'gltfJson'>
-> &
-	Omit<SceneSettingsRequest, 'settings' | 'gltfJson'>
+import {
+	getOrCreateDefaultProject,
+	userExists
+} from '../user/user-repository.server'
 
-/**
- * Validates required fields for save operations and narrows types
- */
-function validateSaveRequest(
-	request: SceneSettingsRequest
-): Response | ValidatedSaveRequest {
-	if (!request.settings || !request.gltfJson) {
-		return ApiResponseBuilder.badRequest('Settings and GLTF data are required')
+import { sceneSettingsService } from './scene-settings-service.server'
+
+type SaveSceneSettingsRequest = SceneSettingsRequest & {
+	settings: SceneSettingsData
+}
+
+type GetSceneSettingsRequest = SceneSettingsRequest & {
+	sceneId: string
+}
+
+type PublishSceneRequest = SceneSettingsRequest & {
+	sceneId: string
+	publishedGlb: {
+		data: number[]
+		fileName?: string
+		mimeType?: string
 	}
-	return request as ValidatedSaveRequest
+}
+
+function assertParsed<T>(value: T, message: string): asserts value is T {
+	if (!value) {
+		throw new Error(message)
+	}
 }
 
 /**
@@ -42,7 +55,7 @@ async function createNewScene(
 	userId: string
 ): Promise<{ sceneId: string; projectId: string }> {
 	const newSceneId = randomUUID()
-	const project = await userService.getOrCreateDefaultProject(userId)
+	const project = await getOrCreateDefaultProject(userId)
 	return { sceneId: newSceneId, projectId: project.id }
 }
 
@@ -53,11 +66,7 @@ async function resolveSceneAndProject(
 	sceneId: string | undefined,
 	userId: string
 ): Promise<{ sceneId: string; projectId: string }> {
-	// Validate UUID format if provided
 	if (sceneId?.trim()) {
-		if (!UUID_REGEX.test(sceneId)) {
-			throw new Error('Scene ID must be a valid UUID format')
-		}
 		const projectId = await getSceneProjectId(sceneId)
 		return { sceneId, projectId }
 	}
@@ -71,12 +80,15 @@ export async function saveSceneSettings(
 	userId: string
 ): Promise<Response> {
 	try {
-		const validationResult = validateSaveRequest(request)
-		if (validationResult instanceof Response) return validationResult
+		const validationResult = request as SaveSceneSettingsRequest
+		assertParsed(
+			validationResult.settings,
+			'Scene settings request must be validated before calling operations'
+		)
 
 		// Ensure user exists in local database
-		const userExists = await userService.userExists(userId)
-		if (!userExists) {
+		const hasUser = await userExists(userId)
+		if (!hasUser) {
 			throw new Error(
 				'User not found in local database. Please sign out and sign back in.'
 			)
@@ -97,10 +109,10 @@ export async function saveSceneSettings(
 		})
 
 		const result = { ...saveResult, sceneId: finalSceneId }
-		return ApiResponseBuilder.success(result)
+		return ApiResponse.success(result)
 	} catch (error) {
 		console.error('Failed to save scene settings:', error)
-		return ApiResponseBuilder.serverError(
+		return ApiResponse.serverError(
 			error instanceof Error ? error.message : 'Failed to save scene settings'
 		)
 	}
@@ -110,24 +122,19 @@ export async function getSceneSettings(
 	request: SceneSettingsRequest
 ): Promise<Response> {
 	try {
-		const { sceneId } = request
-
-		if (!sceneId?.trim()) {
-			return ApiResponseBuilder.badRequest('Scene ID is required')
-		}
-
-		if (!UUID_REGEX.test(sceneId)) {
-			return ApiResponseBuilder.badRequest(
-				'Scene ID must be a valid UUID format'
-			)
-		}
+		const { sceneId } = request as GetSceneSettingsRequest
+		assertParsed(
+			sceneId,
+			'Scene settings request must be validated before calling operations'
+		)
 
 		const projectId = await sceneSettingsService.getProjectIdFromScene(sceneId)
 		if (!projectId) {
-			return ApiResponseBuilder.notFound(`Scene not found with ID: ${sceneId}`)
+			return ApiResponse.notFound(`Scene not found with ID: ${sceneId}`)
 		}
 
-		const result = await sceneSettingsService.getLatestSceneSettings(sceneId)
+		const result =
+			await sceneSettingsService.getSceneSettingsWithAssets(sceneId)
 		const serialized: Record<
 			string,
 			{
@@ -144,11 +151,52 @@ export async function getSceneSettings(
 			}
 		})
 
-		return ApiResponseBuilder.success({ ...result, assetData: serialized })
+		return ApiResponse.success({ ...result, assetData: serialized })
 	} catch (error) {
 		console.error('Failed to get scene settings:', error)
-		return ApiResponseBuilder.serverError(
+		return ApiResponse.serverError(
 			error instanceof Error ? error.message : 'Failed to get scene settings'
+		)
+	}
+}
+
+export async function publishScene(
+	request: SceneSettingsRequest,
+	userId: string
+): Promise<Response> {
+	try {
+		const { sceneId, publishedGlb } = request as PublishSceneRequest
+		assertParsed(
+			sceneId,
+			'Scene settings request must be validated before calling operations'
+		)
+		assertParsed(
+			publishedGlb,
+			'Scene publish request must be validated before calling operations'
+		)
+
+		// Ensure user exists in local database
+		const hasUser = await userExists(userId)
+		if (!hasUser) {
+			throw new Error(
+				'User not found in local database. Please sign out and sign back in.'
+			)
+		}
+
+		const projectId = await getSceneProjectId(sceneId)
+
+		const result = await sceneSettingsService.publishScene({
+			sceneId,
+			projectId,
+			userId,
+			publishedGlb
+		})
+
+		return ApiResponse.success(result)
+	} catch (error) {
+		console.error('Failed to publish scene:', error)
+		return ApiResponse.serverError(
+			error instanceof Error ? error.message : 'Failed to publish scene'
 		)
 	}
 }

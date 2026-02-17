@@ -7,13 +7,15 @@ import {
 } from '@shared/components/ui/card'
 import { Separator } from '@shared/components/ui/separator'
 import { motion } from 'framer-motion'
-import { BookMarked, Code, Save } from 'lucide-react'
+import { BookMarked, Code, Globe, Save } from 'lucide-react'
+import type { FC } from 'react'
 
 import { AccordionItem, AccordionTrigger } from '../accordion-components'
 
 import { sidebarContentVariants } from '../animation'
 
 import { EmbedOptions } from './sections/embed-options'
+import { PublishOptions } from './sections/publish-options'
 import { SaveOptions } from './sections/save-options'
 import { ScenePreview } from './sections/scene-preview'
 
@@ -23,7 +25,7 @@ interface PublishSidebarProps {
 	projectId?: string
 }
 
-const PublishSidebarContent: React.FC<PublishSidebarProps> = ({
+const PublishSidebarContent: FC<PublishSidebarProps> = ({
 	userId,
 	sceneId,
 	projectId
@@ -68,7 +70,7 @@ const PublishSidebarContent: React.FC<PublishSidebarProps> = ({
 						</AccordionContent>
 					</AccordionItem>
 
-					{/* <AccordionItem value="publish" className="px-4">
+					<AccordionItem value="publish" className="px-4">
 						<AccordionTrigger className="px-2">
 							<span className="flex items-center gap-3">
 								<Globe className="inline" size={14} />
@@ -76,9 +78,9 @@ const PublishSidebarContent: React.FC<PublishSidebarProps> = ({
 							</span>
 						</AccordionTrigger>
 						<AccordionContent>
-							<PublishOptions />
+							<PublishOptions sceneId={sceneId} />
 						</AccordionContent>
-					</AccordionItem> */}
+					</AccordionItem>
 
 					<AccordionItem value="embed" className="px-4">
 						<AccordionTrigger className="px-2">

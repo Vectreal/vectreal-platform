@@ -66,7 +66,7 @@ export async function action({ request }: Route.ActionArgs) {
 		const optimizer = new ModelOptimizer()
 
 		// Set up progress tracking (optional)
-		optimizer.onProgress((progress) => {
+		optimizer.onProgress((_progress) => {
 			// console.log(
 			// 	`Texture optimization: ${progress.operation} - ${progress.progress}%`
 			// )

@@ -74,6 +74,10 @@ export class ApiResponse {
 		return this.error(message, 400)
 	}
 
+	static methodNotAllowed(message = 'Method not allowed'): Response {
+		return this.error(message, 405)
+	}
+
 	static unauthorized(message = 'Unauthorized'): Response {
 		return this.error(message, 401)
 	}
@@ -88,5 +92,12 @@ export class ApiResponse {
 
 	static serverError(message = 'Internal server error'): Response {
 		return this.error(message, 500)
+	}
+
+	static created<T>(
+		data: T,
+		options?: { headers?: Headers | Record<string, string> }
+	): Response {
+		return this.success(data, 201, options)
 	}
 }

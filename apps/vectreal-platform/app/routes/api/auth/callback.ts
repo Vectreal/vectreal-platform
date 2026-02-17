@@ -2,7 +2,7 @@ import { ApiResponse } from '@shared/utils'
 
 import { redirect } from 'react-router'
 
-import { userService } from '../../../lib/services/user-service.server'
+import { initializeUserDefaults } from '../../../lib/domain/user/user-repository.server'
 import { createSupabaseClient } from '../../../lib/supabase.server'
 
 import { Route } from './+types/callback'
@@ -26,7 +26,7 @@ export async function loader({ request }: Route.ActionArgs) {
 		if (userData.user) {
 			try {
 				// Initialize user with defaults (user, organization, project) in local database
-				await userService.initializeUserDefaults(userData.user)
+				await initializeUserDefaults(userData.user)
 			} catch (dbError) {
 				console.error('Database error during user initialization:', {
 					error: dbError,

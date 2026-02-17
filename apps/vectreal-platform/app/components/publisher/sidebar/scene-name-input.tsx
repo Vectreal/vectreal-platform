@@ -1,19 +1,25 @@
 import { Input } from '@shared/components/ui/input'
 import { useAtom } from 'jotai/react'
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import {
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+	type KeyboardEvent
+} from 'react'
 
 import { metaAtom } from '../../../lib/stores/scene-settings-store'
 
 export function SceneNameInput() {
 	const { setIsSaved } = {
-		setIsSaved: (bool: boolean) => {
+		setIsSaved: (_bool: boolean) => {
 			return null // Placeholder for context, replace with actual context if needed
 		}
 	} // Placeholder for context, replace with actual context if needed
 	// const { setIsSaved } = useToolbarContext()
 	const [{ sceneName }, setInfo] = useAtom(metaAtom)
 	const [isEditing, setIsEditing] = useState(false)
-	const [localName, setLocalName] = useState(sceneName)
+	const [localName, setLocalName] = useState(sceneName ?? '')
 	const inputRef = useRef<HTMLInputElement>(null)
 
 	const saveChanges = useCallback(() => {
@@ -25,7 +31,7 @@ export function SceneNameInput() {
 			}))
 			setIsSaved(false)
 		} else if (!trimmedName) {
-			setLocalName(sceneName) // Revert to previous name if empty
+			setLocalName(sceneName ?? '') // Revert to previous name if empty
 		}
 
 		setIsEditing(false)
@@ -52,11 +58,11 @@ export function SceneNameInput() {
 		}
 	}, [isEditing])
 
-	const handleKeyDown = (e: React.KeyboardEvent) => {
+	const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
 		if (e.key === 'Enter') {
 			saveChanges()
 		} else if (e.key === 'Escape') {
-			setLocalName(sceneName)
+			setLocalName(sceneName ?? '')
 			setIsEditing(false)
 		}
 	}

@@ -33,7 +33,7 @@ const ShadowSettingsPanel = () => {
 	const { type } = shadows
 
 	const handleTypeChange = (value: ShadowsProps['type']) => {
-		setShadows((prev) => {
+		setShadows(() => {
 			// When switching to accumulative, use the defaults
 			if (value === 'accumulative') {
 				return defaultAccumulativeShadowsOptions as ShadowTypePropBase

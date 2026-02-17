@@ -8,7 +8,7 @@ import {
 import { cn } from '@shared/utils'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { ChevronRight } from 'lucide-react'
-import { FC, PropsWithChildren } from 'react'
+import { FC, PropsWithChildren, type ReactNode } from 'react'
 import { Link } from 'react-router'
 
 import { BasicCard } from '../layout-components'
@@ -47,27 +47,19 @@ const cardHeaderVariants = cva('relative flex items-center', {
 	}
 })
 
-interface NavigationState {
-	name: string
-	description?: string
-	projectName?: string
-	type?: 'scene' | 'folder' | 'project'
-	[key: string]: unknown
-}
-
 interface DashboardCardProps
 	extends PropsWithChildren,
 		VariantProps<typeof dashboardCardVariants> {
 	linkTo: string
 	title: string
 	description: string
-	icon: React.ReactNode
+	icon: ReactNode
 	id: string
 	highlight?: boolean
 	showId?: boolean
 	className?: string
 	/** Optional data to pass for optimistic header updates */
-	navigationState?: NavigationState
+	navigationState?: import('../../types/dashboard').NavigationState
 }
 
 const DashboardCard: FC<DashboardCardProps> = ({

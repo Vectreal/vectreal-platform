@@ -54,8 +54,8 @@
 		}
 	},
 	"peerDependencies": {
-		"@nx/vite": "21.3.0",
-		"vite": "^6.2.2",
+		"@nx/vite": "22.5.0",
+		"vite": "^7.3.1",
 		"vite-plugin-dts": "4.5.3",
 		"@react-three/drei": "^10.0.7",
 		"@react-three/fiber": "^9.4.2"

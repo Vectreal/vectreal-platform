@@ -1,5 +1,6 @@
 import { Button } from '@shared/components/ui/button'
 import { SparklesIcon } from 'lucide-react'
+import type { FC } from 'react'
 
 interface OptimizeButtonProps {
 	onOptimize: () => Promise<void>
@@ -7,7 +8,7 @@ interface OptimizeButtonProps {
 	hasOptimized: boolean
 }
 
-export const OptimizeButton: React.FC<OptimizeButtonProps> = ({
+export const OptimizeButton: FC<OptimizeButtonProps> = ({
 	hasOptimized,
 	isPending,
 	onOptimize

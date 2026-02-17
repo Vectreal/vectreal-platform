@@ -7,7 +7,14 @@ import { AnimatePresence } from 'framer-motion'
 import { motion } from 'framer-motion'
 import { useAtom, useAtomValue } from 'jotai/react'
 import { RESET } from 'jotai/utils'
-import { memo, Suspense, useCallback, useEffect, useState } from 'react'
+import {
+	memo,
+	Suspense,
+	useCallback,
+	useEffect,
+	useState,
+	type FC
+} from 'react'
 
 import { processAtom } from '../../lib/stores/publisher-config-store'
 import {
@@ -42,7 +49,7 @@ const LoadingScreen = memo(() => {
 
 	useEffect(() => {
 		let messageIndex = 0
-		let interval: NodeJS.Timeout
+		let interval: ReturnType<typeof setInterval> | undefined
 
 		const timeout = setTimeout(() => {
 			interval = setInterval(() => {
@@ -52,7 +59,7 @@ const LoadingScreen = memo(() => {
 		}, 3000)
 
 		return () => {
-			clearInterval(interval)
+			if (interval) clearInterval(interval)
 			clearTimeout(timeout)
 		}
 	}, [])
@@ -77,7 +84,7 @@ const LoadingScreen = memo(() => {
 	)
 })
 
-const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
+const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 	const isMobile = useIsMobile(loaderData.isMobile)
 
 	// Get model and settings from context/atoms
@@ -90,7 +97,7 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 	const env = useAtomValue(environmentAtom)
 	const shadows = useAtomValue(shadowsAtom)
 
-	const handleScreenshot = useCallback((url: string) => {
+	const handleScreenshot = useCallback((_url: string) => {
 		// Future: handle screenshot
 	}, [])
 
@@ -118,7 +125,6 @@ const PublisherPage: React.FC<Route.ComponentProps> = ({ loaderData }) => {
 							className="bg-muted/50 flex h-full w-full"
 						>
 							<VectrealViewer
-								className="z-10 after:absolute after:inset-0 after:-z-10 after:w-[50%] after:bg-linear-to-r after:from-black/20 after:to-transparent"
 								model={file?.model}
 								key="model-viewer"
 								cameraOptions={camera}

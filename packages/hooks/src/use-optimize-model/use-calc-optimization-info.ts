@@ -63,22 +63,22 @@ export const useCalcOptimizationInfo = (
 			initial: {
 				verticesCount: initial.vertices,
 				primitivesCount: initial.primitives,
-				meshesSize: initial.meshes,
-				texturesSize: initial.textures,
+				meshesCount: initial.meshes,
+				texturesCount: initial.textures,
 				sceneBytes: initial.totalSize
 			},
 			optimized: {
 				verticesCount: current.vertices,
 				primitivesCount: current.primitives,
-				meshesSize: current.meshes,
-				texturesSize: current.textures,
+				meshesCount: current.meshes,
+				texturesCount: current.textures,
 				sceneBytes: current.totalSize
 			},
 			improvement: {
 				verticesCount: initial.vertices - current.vertices,
 				primitivesCount: initial.primitives - current.primitives,
-				meshesSize: initial.meshes - current.meshes,
-				texturesSize: initial.textures - current.textures,
+				meshesCount: initial.meshes - current.meshes,
+				texturesCount: initial.textures - current.textures,
 				sceneBytes: initial.totalSize - current.totalSize
 			}
 		}

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { CheckIcon } from 'lucide-react'
+import type { FC } from 'react'
 
 import { InfoTooltip } from '../../../info-tooltip'
 
@@ -16,7 +17,7 @@ interface OptimizationSummaryProps {
 	appliedOptimizations: string[]
 }
 
-export const OptimizationSummary: React.FC<OptimizationSummaryProps> = ({
+export const OptimizationSummary: FC<OptimizationSummaryProps> = ({
 	optimizationStats,
 	appliedOptimizations
 }) => {

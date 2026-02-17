@@ -94,7 +94,9 @@ export class ModelOptimizer {
 			await this.loadFromBuffer(modelBuffer)
 			this.emitProgress('Model loaded successfully', 100)
 		} catch (error) {
-			throw new Error(`Failed to load Three.js model: ${error}`)
+			throw new Error(`Failed to load Three.js model: ${error}`, {
+				cause: error
+			})
 		}
 	}
 
@@ -133,7 +135,9 @@ export class ModelOptimizer {
 			this.originalReport = inspect(this._document)
 			this.emitProgress('Model loaded successfully', 100)
 		} catch (error) {
-			throw new Error(`Failed to load model from buffer: ${error}`)
+			throw new Error(`Failed to load model from buffer: ${error}`, {
+				cause: error
+			})
 		}
 	}
 
@@ -151,7 +155,9 @@ export class ModelOptimizer {
 			const buffer = await fs.readFile(filePath)
 			await this.loadFromBuffer(new Uint8Array(buffer))
 		} catch (error) {
-			throw new Error(`Failed to load model from file: ${error}`)
+			throw new Error(`Failed to load model from file: ${error}`, {
+				cause: error
+			})
 		}
 	}
 
@@ -168,7 +174,9 @@ export class ModelOptimizer {
 			const binary = await this.export()
 			this.originalSize = binary.byteLength
 		} catch (error) {
-			throw new Error(`Failed to load model from JSON document: ${error}`)
+			throw new Error(`Failed to load model from JSON document: ${error}`, {
+				cause: error
+			})
 		}
 	}
 
@@ -337,7 +345,8 @@ export class ModelOptimizer {
 	 * This provides fallback functionality when Sharp is not available.
 	 */
 	private async applyBasicTextureOptimization(
-		options: TextureCompressOptions
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		_options: TextureCompressOptions
 	): Promise<void> {
 		this.emitProgress('Applying basic texture optimization', 50)
 
@@ -437,6 +446,44 @@ export class ModelOptimizer {
 			return totalSize
 		}
 
+		const calculateTextureCount = (inspectReport: InspectReport) => {
+			if (!inspectReport.textures?.properties) {
+				return 0
+			}
+			return inspectReport.textures.properties.length
+		}
+
+		const calculateTextureResolutions = (inspectReport: InspectReport) => {
+			const resolutions = new Set<string>()
+			if (inspectReport.textures?.properties) {
+				inspectReport.textures.properties.forEach((texture) => {
+					const entry = texture as unknown as {
+						width?: number
+						height?: number
+						dimensions?: [number, number]
+					}
+
+					if (
+						typeof entry.width === 'number' &&
+						typeof entry.height === 'number'
+					) {
+						resolutions.add(`${entry.width}x${entry.height}`)
+						return
+					}
+
+					if (
+						Array.isArray(entry.dimensions) &&
+						entry.dimensions.length === 2 &&
+						typeof entry.dimensions[0] === 'number' &&
+						typeof entry.dimensions[1] === 'number'
+					) {
+						resolutions.add(`${entry.dimensions[0]}x${entry.dimensions[1]}`)
+					}
+				})
+			}
+			return Array.from(resolutions)
+		}
+
 		// Helper function to calculate mesh memory usage in bytes
 		const calculateMeshSize = (inspectReport: InspectReport) => {
 			let totalSize = 0
@@ -458,6 +505,17 @@ export class ModelOptimizer {
 			? calculateTextureSize(this.originalReport)
 			: 0
 		const currentTextureSize = calculateTextureSize(currentInspectReport)
+
+		const originalTextureCount = this.originalReport
+			? calculateTextureCount(this.originalReport)
+			: 0
+		const currentTextureCount = calculateTextureCount(currentInspectReport)
+
+		const originalTextureResolutions = this.originalReport
+			? calculateTextureResolutions(this.originalReport)
+			: []
+		const currentTextureResolutions =
+			calculateTextureResolutions(currentInspectReport)
 
 		const originalMeshSize = this.originalReport
 			? calculateMeshSize(this.originalReport)
@@ -489,6 +547,14 @@ export class ModelOptimizer {
 				textures: {
 					before: originalTextureSize,
 					after: currentTextureSize
+				},
+				texturesCount: {
+					before: originalTextureCount,
+					after: currentTextureCount
+				},
+				textureResolutions: {
+					before: originalTextureResolutions,
+					after: currentTextureResolutions
 				},
 				meshes: {
 					before: originalMeshSize,
@@ -601,7 +667,9 @@ export class ModelOptimizer {
 			this._document = workingDoc
 			this.appliedOptimizations.push(operationName)
 		} catch (error) {
-			throw new Error(`Failed to apply ${operationName}: ${error}`)
+			throw new Error(`Failed to apply ${operationName}: ${error}`, {
+				cause: error
+			})
 		}
 	}
 

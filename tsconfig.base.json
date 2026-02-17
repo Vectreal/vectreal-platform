@@ -15,14 +15,12 @@
 		"skipDefaultLibCheck": true,
 		"baseUrl": ".",
 		"paths": {
-			// Added paths for shared libraries - internal use only
 			"@shared/components": ["shared/components/src/index.ts"],
 			"@shared/components/assets/*": ["shared/components/src/assets/*"],
 			"@shared/components/hooks/*": ["shared/components/src/hooks/*"],
 			"@shared/components/styles/*": ["shared/components/src/styles/*"],
 			"@shared/components/ui/*": ["shared/components/src/ui/*"],
 			"@shared/utils": ["shared/utils/src/index.ts"],
-			// Added paths for packages and apps
 			"@vctrl/hooks/use-export-model": [
 				"packages/hooks/src/use-export-model/index.ts"
 			],
@@ -45,5 +43,5 @@
 			]
 		}
 	},
-	"exclude": ["node_modules", "tmp"]
+	"exclude": ["node_modules", "tmp", "**/public/**/*"]
 }

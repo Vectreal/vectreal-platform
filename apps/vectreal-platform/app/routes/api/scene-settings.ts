@@ -1,11 +1,11 @@
+import { ApiResponse } from '@shared/utils'
 import { OptimizationReport } from '@vctrl/core'
 import { ActionFunctionArgs } from 'react-router'
 
-import { ApiResponseBuilder } from '../../lib/api/api-responses.server'
-import * as sceneSettingsOps from '../../lib/api/scene-settings-operations.server'
-import { SceneSettingsParser } from '../../lib/api/scene-settings-parser.server'
-import { PlatformApiService } from '../../lib/services/platform-api-service.server'
-
+import * as sceneSettingsOps from '../../lib/domain/scene/scene-settings.operations.server'
+import { SceneSettingsParser } from '../../lib/domain/scene/scene-settings.parser.server'
+import { getAuthUser } from '../../lib/http/auth.server'
+import { ensurePost } from '../../lib/http/requests.server'
 import type { SceneSettingsAction } from '../../types/api'
 
 /**
@@ -15,11 +15,11 @@ import type { SceneSettingsAction } from '../../types/api'
  */
 export async function action({ request }: ActionFunctionArgs) {
 	// Ensure POST method
-	const methodCheck = PlatformApiService.ensurePost(request)
+	const methodCheck = ensurePost(request)
 	if (methodCheck) return methodCheck
 
 	// Get authenticated user
-	const authResult = await PlatformApiService.getAuthUser(request)
+	const authResult = await getAuthUser(request)
 	if (authResult instanceof Response) {
 		return authResult
 	}
@@ -55,12 +55,21 @@ export async function action({ request }: ActionFunctionArgs) {
 					action
 				})
 
+			case 'publish-scene':
+				return await sceneSettingsOps.publishScene(
+					{
+						...requestData,
+						action
+					},
+					user.id
+				)
+
 			default:
-				return ApiResponseBuilder.badRequest(`Unknown action: ${action}`)
+				return ApiResponse.badRequest(`Unknown action: ${action}`)
 		}
 	} catch (error) {
 		console.error('Scene settings operation failed:', error)
-		return ApiResponseBuilder.serverError(
+		return ApiResponse.serverError(
 			error instanceof Error ? error.message : 'Operation failed'
 		)
 	}

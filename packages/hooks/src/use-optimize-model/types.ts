@@ -3,8 +3,8 @@ import { OptimizationReport } from '@vctrl/core'
 interface ModelTotals {
 	verticesCount: number
 	primitivesCount: number
-	texturesSize: number
-	meshesSize: number
+	texturesCount: number
+	meshesCount: number
 	sceneBytes: number
 }
 

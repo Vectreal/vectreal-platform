@@ -33,7 +33,7 @@ import {
 	Search,
 	Trash2
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 
 interface DataTableProps<TData, TValue> {
 	columns: ColumnDef<TData, TValue>[]
@@ -217,7 +217,7 @@ export function SortableHeader({
 		toggleSorting: (descending?: boolean) => void
 		getIsSorted: () => false | 'asc' | 'desc'
 	}
-	children: React.ReactNode
+	children: ReactNode
 }) {
 	return (
 		<Button

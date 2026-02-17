@@ -32,6 +32,11 @@ export const projectColumns: ColumnDef<ProjectRow>[] = [
 		cell: ({ row }) => (
 			<Link
 				to={`/dashboard/projects/${row.original.id}`}
+				state={{
+					name: row.original.name,
+					description: `Slug: ${row.original.name}`,
+					type: 'project' as const
+				}}
 				viewTransition
 				className="group flex items-center gap-2 font-medium hover:underline"
 			>
@@ -81,7 +86,15 @@ export const projectColumns: ColumnDef<ProjectRow>[] = [
 	{
 		id: 'actions',
 		cell: ({ row }) => (
-			<Link to={`/dashboard/projects/${row.original.id}`} viewTransition>
+			<Link
+				to={`/dashboard/projects/${row.original.id}`}
+				state={{
+					name: row.original.name,
+					description: `Slug: ${row.original.name}`,
+					type: 'project' as const
+				}}
+				viewTransition
+			>
 				<Button variant="ghost" size="sm">
 					<ExternalLink className="h-4 w-4" />
 				</Button>
@@ -114,6 +127,12 @@ export const sceneColumns: ColumnDef<SceneRow>[] = [
 		cell: ({ row }) => (
 			<Link
 				to={`/dashboard/projects/${row.original.projectId}/${row.original.id}`}
+				state={{
+					name: row.original.name,
+					description: row.original.description || undefined,
+					projectName: row.original.projectName,
+					type: 'scene' as const
+				}}
 				viewTransition
 				className="group flex items-center gap-2 font-medium hover:underline"
 			>
@@ -179,6 +198,12 @@ export const sceneColumns: ColumnDef<SceneRow>[] = [
 		cell: ({ row }) => (
 			<Link
 				to={`/dashboard/projects/${row.original.projectId}/${row.original.id}`}
+				state={{
+					name: row.original.name,
+					description: row.original.description || undefined,
+					projectName: row.original.projectName,
+					type: 'scene' as const
+				}}
 				viewTransition
 			>
 				<Button variant="ghost" size="sm">

@@ -1,6 +1,10 @@
-import type { SceneSettings } from '@vctrl/core'
+import type { OptimizationReport, SceneSettings } from '@vctrl/core'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import type { EventHandler, ModelFile } from '@vctrl/hooks/use-load-model/types'
+import type {
+	EventHandler,
+	ModelFile,
+	SceneLoadResult
+} from '@vctrl/hooks/use-load-model/types'
 import {
 	defaultCameraOptions,
 	defaultControlsOptions,
@@ -19,18 +23,12 @@ import {
 	metaAtom,
 	shadowsAtom
 } from '../lib/stores/scene-settings-store'
-import type { SceneData } from '../lib/utils/scene-loader'
-import {
-	loadSceneFromServer,
-	reconstructGltfFiles
-} from '../lib/utils/scene-loader'
 
 import { useScenePersistence } from './use-scene-persistence'
 
 export interface UseSceneLoaderParams {
 	sceneId: null | string
 	userId?: string
-	assetIds?: string[]
 	autoLoad?: boolean // Control whether to auto-load scene on mount
 }
 
@@ -55,7 +53,7 @@ export interface SaveSceneResult {
  *   - Access via: `useAtomValue(environmentAtom)`, etc.
  * - **Process State**: `publisher-config-store.processAtom` (isInitializing, hasUnsavedChanges, isLoading, step, showSidebar, showInfo)
  *   - Access via: `useAtomValue(processAtom)` or `useAtom(processAtom)`
- * - **Model State**: `useModelContext()` (file, isFileLoading, reset, load, etc.)
+ * - **Model State**: `useModelContext()` (file, isFileLoading, reset, loadFromServer, etc.)
  *   - Access via: `const { file } = useModelContext()`
  * - **Hook-Local State** (NOT shared):
  *   - `currentSceneId` - Active scene ID tracking
@@ -65,10 +63,10 @@ export interface SaveSceneResult {
  * Only returns hook-specific state and actions that are NOT available elsewhere:
  * - `currentSceneId: string | null` - Current active scene ID (hook-managed)
  * - `lastSavedSettings: SceneSettingsData | null` - Saved state baseline for comparison
- * - `loadScene: (sceneId?: string) => Promise<SceneData | void>` - Load scene from server
+ * - `loadScene: (sceneId?: string) => Promise<SceneLoadResult | void>` - Load scene from server
  * - `saveSceneSettings: () => Promise<SaveSceneResult>` - Save current settings to server
  * - `loadSceneSettings: (sceneId: string) => Promise<void>` - Load settings only (from useScenePersistence)
- * - `createNewVersion: () => Promise<SaveSceneResult>` - Create new version (from useScenePersistence)
+ * - `saveSceneSettings: (options?) => Promise<SaveSceneResult | { unchanged: true } | undefined>`
  *
  * ### What This Hook Does NOT Return (access via atoms/context instead):
  * ❌ Do NOT return these - they create duplicate state and violate single source of truth:
@@ -128,7 +126,6 @@ export interface SaveSceneResult {
  * @param params - Configuration object or sceneId string
  * @param params.sceneId - Scene ID to load (null for new scene)
  * @param params.userId - User ID for saving operations
- * @param params.assetIds - Asset IDs associated with the scene
  * @param params.autoLoad - Whether to auto-load scene on mount (default: true)
  */
 export function useSceneLoader(
@@ -138,15 +135,17 @@ export function useSceneLoader(
 	const {
 		sceneId: paramSceneId,
 		userId,
-		assetIds: paramAssetIds,
 		autoLoad = true
 	} = typeof params === 'string' || params === null
-		? { sceneId: params, userId: undefined, assetIds: [], autoLoad: true }
+		? { sceneId: params, userId: undefined, autoLoad: true }
 		: params
 
 	const sceneLoadAttemptedRef = useRef(false)
 	const [lastSavedSettings, setLastSavedSettings] =
 		useState<SceneSettings | null>(null)
+	const [lastSavedReportSignature, setLastSavedReportSignature] = useState<
+		string | null
+	>(null)
 	const [currentSceneId, setCurrentSceneId] = useState<string | null>(
 		paramSceneId
 	)
@@ -156,7 +155,7 @@ export function useSceneLoader(
 		file,
 		on,
 		off,
-		load,
+		loadFromServer,
 		optimizer,
 		file: modelFile
 	} = useModelContext()
@@ -216,18 +215,14 @@ export function useSceneLoader(
 	)
 
 	// Scene persistence operations
-	const {
-		saveSceneSettings: saveToDB,
-		loadSceneSettings,
-		createNewVersion
-	} = useScenePersistence({
-		currentSceneId,
-		userId,
-		assetIds: paramAssetIds,
-		currentSettings,
-		optimizer,
-		modelFile
-	})
+	const { saveSceneSettings: saveToDB, loadSceneSettings } =
+		useScenePersistence({
+			currentSceneId,
+			userId,
+			currentSettings,
+			optimizer,
+			modelFile
+		})
 
 	// Model loading event handlers
 	const handleNotLoadedFiles = useCallback((files?: File[]) => {
@@ -246,9 +241,39 @@ export function useSceneLoader(
 				toast.success(`Loaded ${data.name}`)
 			}
 
+			const sceneName = data.name.split('.').at(0) || ''
 			setMeta((prev) => ({
 				...prev,
-				sceneName: data.name.split('.').at(0) || ''
+				sceneName
+			}))
+
+			if (!paramSceneId) {
+				setLastSavedSettings({
+					...currentSettings,
+					meta: {
+						...currentSettings.meta,
+						sceneName
+					}
+				})
+			}
+
+			setProcess((prev) => ({
+				...prev,
+				step: 'preparing',
+				showInfo: true,
+				showSidebar: false
+			}))
+		},
+		[paramSceneId, currentSettings, setMeta, setProcess]
+	) as EventHandler<'load-complete'>
+
+	const handleServerLoadComplete = useCallback(
+		(data?: SceneLoadResult) => {
+			if (!data) return
+
+			setMeta((prev) => ({
+				...prev,
+				sceneName: data.settings.meta?.sceneName || prev.sceneName
 			}))
 
 			setProcess((prev) => ({
@@ -258,8 +283,8 @@ export function useSceneLoader(
 				showSidebar: false
 			}))
 		},
-		[paramSceneId, setMeta, setProcess]
-	) as EventHandler<'load-complete'>
+		[setMeta, setProcess]
+	) as EventHandler<'server-load-complete'>
 
 	const handleLoadError = useCallback((error: unknown) => {
 		console.error('Load error:', error)
@@ -278,14 +303,23 @@ export function useSceneLoader(
 	useEffect(() => {
 		on('not-loaded-files', handleNotLoadedFiles)
 		on('load-complete', handleLoadComplete)
+		on('server-load-complete', handleServerLoadComplete)
 		on('load-error', handleLoadError)
 
 		return () => {
 			off('not-loaded-files', handleNotLoadedFiles)
 			off('load-complete', handleLoadComplete)
+			off('server-load-complete', handleServerLoadComplete)
 			off('load-error', handleLoadError)
 		}
-	}, [on, off, handleLoadComplete, handleLoadError, handleNotLoadedFiles])
+	}, [
+		on,
+		off,
+		handleLoadComplete,
+		handleServerLoadComplete,
+		handleLoadError,
+		handleNotLoadedFiles
+	])
 
 	// Update process step when file loads
 	useEffect(() => {
@@ -303,7 +337,33 @@ export function useSceneLoader(
 		setCurrentSceneId(paramSceneId)
 		// Only set initializing to true if we have a sceneId AND autoLoad is enabled
 		setIsInitializing(!!paramSceneId && autoLoad)
+		setLastSavedReportSignature(null)
 	}, [paramSceneId, autoLoad, setIsInitializing])
+	const getReportSignature = useCallback(
+		(report?: OptimizationReport | null) => {
+			if (!report) return null
+			return JSON.stringify({
+				originalSize: report.originalSize,
+				optimizedSize: report.optimizedSize,
+				stats: report.stats,
+				appliedOptimizations: report.appliedOptimizations
+			})
+		},
+		[]
+	)
+
+	const reportSignature = useMemo(
+		() => getReportSignature(optimizer?.report),
+		[getReportSignature, optimizer?.report]
+	)
+
+	useEffect(() => {
+		if (!reportSignature || lastSavedReportSignature) {
+			return
+		}
+
+		setLastSavedReportSignature(reportSignature)
+	}, [reportSignature, lastSavedReportSignature])
 
 	// Reset the scene load flag when sceneId changes
 	useEffect(() => {
@@ -314,19 +374,19 @@ export function useSceneLoader(
 	 * Apply scene settings to atoms and track as saved state
 	 */
 	const applySceneSettings = useCallback(
-		(data: SceneData) => {
-			if (data.environment) setEnv(data.environment)
-			if (data.camera) setCamera(data.camera)
-			if (data.controls) setControls(data.controls)
-			if (data.shadows) setShadows(data.shadows)
-			if (data.meta) setMeta(data.meta)
+		(settings: SceneSettings) => {
+			if (settings.environment) setEnv(settings.environment)
+			if (settings.camera) setCamera(settings.camera)
+			if (settings.controls) setControls(settings.controls)
+			if (settings.shadows) setShadows(settings.shadows)
+			if (settings.meta) setMeta(settings.meta)
 
 			const loadedSettings: SceneSettings = {
-				environment: data.environment || defaultEnvOptions,
-				camera: data.camera || defaultCameraOptions,
-				controls: data.controls || defaultControlsOptions,
-				shadows: data.shadows || defaultShadowOptions,
-				meta: data.meta || { sceneName: '', thumbnailUrl: null }
+				environment: settings.environment || defaultEnvOptions,
+				camera: settings.camera || defaultCameraOptions,
+				controls: settings.controls || defaultControlsOptions,
+				shadows: settings.shadows || defaultShadowOptions,
+				meta: settings.meta || { sceneName: '', thumbnailUrl: null }
 			}
 			setLastSavedSettings(loadedSettings)
 		},
@@ -334,7 +394,7 @@ export function useSceneLoader(
 	)
 
 	/**
-	 * Load scene from server and reconstruct GLTF model
+	 * Load scene from server via loadFromServer
 	 */
 	const loadScene = useCallback(
 		async (targetSceneId?: string) => {
@@ -352,17 +412,15 @@ export function useSceneLoader(
 			setIsDownloading(true)
 
 			try {
-				const data: SceneData = await loadSceneFromServer(idToLoad)
-				applySceneSettings(data)
+				const result: SceneLoadResult = await loadFromServer({
+					sceneId: idToLoad
+				})
+				applySceneSettings(result.settings)
+				toast.success(
+					`Loaded scene: ${result.settings.meta?.sceneName || idToLoad}`
+				)
 
-				// Reconstruct and load GLTF if available
-				if (data.gltfJson && data.assetData) {
-					const files = reconstructGltfFiles(data)
-					await load(files)
-					toast.success(`Loaded scene: ${data.meta?.sceneName || idToLoad}`)
-				}
-
-				return data
+				return result
 			} catch (error) {
 				console.error('Failed to load scene:', error)
 				toast.error(
@@ -375,7 +433,7 @@ export function useSceneLoader(
 		},
 		[
 			currentSceneId,
-			load,
+			loadFromServer,
 			applySceneSettings,
 			setIsDownloading,
 			setIsInitializing
@@ -388,7 +446,16 @@ export function useSceneLoader(
 	const saveSceneSettings = useCallback(async (): Promise<
 		SaveSceneResult | { unchanged: true } | undefined
 	> => {
-		const result = await saveToDB()
+		const hasOptimizationChanges =
+			reportSignature !== null &&
+			lastSavedReportSignature !== null &&
+			reportSignature !== lastSavedReportSignature
+		const shouldUploadModel = !currentSceneId || hasOptimizationChanges
+
+		const result = await saveToDB({
+			includeModel: shouldUploadModel,
+			includeOptimizationReport: hasOptimizationChanges
+		})
 
 		if (result && 'sceneId' in result && result.sceneId && !currentSceneId) {
 			setCurrentSceneId(result.sceneId)
@@ -396,10 +463,19 @@ export function useSceneLoader(
 
 		if (result && !result.unchanged) {
 			setLastSavedSettings(currentSettings)
+			if (reportSignature) {
+				setLastSavedReportSignature(reportSignature)
+			}
 		}
 
 		return result
-	}, [saveToDB, currentSceneId, currentSettings])
+	}, [
+		saveToDB,
+		currentSceneId,
+		currentSettings,
+		reportSignature,
+		lastSavedReportSignature
+	])
 
 	/**
 	 * Returns whether there are unsaved changes compared to last saved settings
@@ -409,23 +485,30 @@ export function useSceneLoader(
 			return false
 		}
 
-		// If no saved baseline exists, check if we have a loaded model
-		// A loaded model without saved settings means unsaved changes
-		if (!lastSavedSettings) {
-			return !!file?.model
-		}
-
-		return (
+		const settingsBaseline = lastSavedSettings || currentSettings
+		const settingsChanged =
 			JSON.stringify(currentSettings.environment) !==
-				JSON.stringify(lastSavedSettings.environment) ||
+				JSON.stringify(settingsBaseline.environment) ||
 			JSON.stringify(currentSettings.controls) !==
-				JSON.stringify(lastSavedSettings.controls) ||
+				JSON.stringify(settingsBaseline.controls) ||
 			JSON.stringify(currentSettings.shadows) !==
-				JSON.stringify(lastSavedSettings.shadows) ||
+				JSON.stringify(settingsBaseline.shadows) ||
 			JSON.stringify(currentSettings.meta) !==
-				JSON.stringify(lastSavedSettings.meta)
-		)
-	}, [currentSettings, lastSavedSettings, isInitializing, file])
+				JSON.stringify(settingsBaseline.meta)
+
+		const optimizationChanged =
+			reportSignature !== null &&
+			lastSavedReportSignature !== null &&
+			reportSignature !== lastSavedReportSignature
+
+		return settingsChanged || optimizationChanged
+	}, [
+		currentSettings,
+		lastSavedSettings,
+		isInitializing,
+		reportSignature,
+		lastSavedReportSignature
+	])
 
 	useEffect(() => {
 		if (isInitializing || !currentSettings) {
@@ -476,8 +559,7 @@ export function useSceneLoader(
 		// Actions - hook-specific functions
 		loadScene,
 		saveSceneSettings,
-		loadSceneSettings,
-		createNewVersion
+		loadSceneSettings
 
 		// Note: The following values are NOT returned as they're available via context/store:
 		// - env, toneMapping, controls, shadows, meta -> Use scene settings atoms directly

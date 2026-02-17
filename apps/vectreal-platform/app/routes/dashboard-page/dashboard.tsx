@@ -1,4 +1,3 @@
-import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import { Separator } from '@shared/components/ui/separator'
 import {
@@ -7,7 +6,7 @@ import {
 	TabsList,
 	TabsTrigger
 } from '@shared/components/ui/tabs'
-import { Clock, File, FolderOpen, Plus } from 'lucide-react'
+import { File, FolderOpen, Plus } from 'lucide-react'
 import { Link, useLoaderData, useRouteLoaderData } from 'react-router'
 
 import DashboardCard from '../../components/dashboard/dashboard-cards'
@@ -19,15 +18,15 @@ import {
 	type SceneRow
 } from '../../components/dashboard/project-table-columns'
 import { DashboardSkeleton } from '../../components/skeletons'
-import { loadAuthenticatedUser } from '../../lib/loaders/auth-loader.server'
+import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import {
 	computeProjectStats,
 	computeSceneStats,
 	getRecentProjects,
 	getRecentScenes
-} from '../../lib/loaders/stats-helpers.server'
-import { projectService } from '../../lib/services/project-service.server'
-import { sceneFolderService } from '../../lib/services/scene-folder-service.server'
+} from '../../lib/domain/dashboard/dashboard-stats.server'
+import { getUserProjects } from '../../lib/domain/project/project-repository.server'
+import { getProjectsScenes } from '../../lib/domain/scene/scene-folder-repository.server'
 import type { loader as dashboardLayoutLoader } from '../layouts/dashboard-layout'
 
 import { Route } from './+types/dashboard'
@@ -37,14 +36,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const { user } = await loadAuthenticatedUser(request)
 
 	// Fetch user projects (parent already fetched this, but we need it for the batch query)
-	const userProjects = await projectService.getUserProjects(user.id)
+	const userProjects = await getUserProjects(user.id)
 
 	// Fetch scenes for all projects using batch query (eliminates N+1 problem)
 	const projectIds = userProjects.map(({ project }) => project.id)
-	const scenesByProject = await sceneFolderService.getProjectsScenes(
-		projectIds,
-		user.id
-	)
+	const scenesByProject = await getProjectsScenes(projectIds, user.id)
 
 	// Flatten scenes map to array
 	const scenes = Array.from(scenesByProject.values()).flat()
@@ -72,14 +68,8 @@ export function HydrateFallback() {
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
 const DashboardPage = () => {
-	const {
-		projects,
-		scenes,
-		projectStats,
-		sceneStats,
-		recentProjects,
-		recentScenes
-	} = useLoaderData<typeof loader>()
+	const { projects, scenes, projectStats, sceneStats, recentScenes } =
+		useLoaderData<typeof loader>()
 
 	// Access parent layout data for organizations
 	const parentData = useRouteLoaderData<typeof dashboardLayoutLoader>(
@@ -121,22 +111,12 @@ const DashboardPage = () => {
 	return (
 		<div className="space-y-10 p-6">
 			{/* Recent Access Section */}
-			{(recentProjects.length > 0 || recentScenes.length > 0) && (
+			{recentScenes.length > 0 && (
 				<section className="space-y-6">
-					<Separator className="bg-border/50" />
-
 					{/* Recent Scenes */}
 					{recentScenes.length > 0 && (
-						<div className="space-y-4">
-							<div className="flex items-center justify-between">
-								<h3 className="text-lg font-medium">Scenes</h3>
-								<Link viewTransition to="/dashboard/projects">
-									<Button variant="ghost" size="sm">
-										View All
-									</Button>
-								</Link>
-							</div>
-							<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+						<div className="flex flex-col items-end gap-4">
+							<div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
 								{recentScenes.map((scene) => {
 									const sceneProject = projects.find(
 										({ project }) => project.id === scene.projectId
@@ -161,47 +141,11 @@ const DashboardPage = () => {
 									)
 								})}
 							</div>
-						</div>
-					)}
-
-					{/* Recent Projects */}
-					{recentProjects.length > 0 && (
-						<div className="space-y-4">
-							<div className="flex items-center justify-between">
-								<h3 className="text-lg font-medium">Projects</h3>
-								<Link viewTransition to="/dashboard/projects">
-									<Button variant="ghost" size="sm">
-										View All
-									</Button>
-								</Link>
-							</div>
-							<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-								{recentProjects.map(({ project, organizationId }) => (
-									<DashboardCard
-										key={project.id}
-										title={project.name}
-										description={
-											organizations.find(
-												({ organization }) => organization.id === organizationId
-											)?.organization.name || 'Unknown Organization'
-										}
-										linkTo={`/dashboard/projects/${project.id}`}
-										icon={<FolderOpen className="h-5 w-5" />}
-										id={project.id}
-										variant="compact"
-										showId={false}
-										navigationState={{
-											name: project.name,
-											description:
-												organizations.find(
-													({ organization }) =>
-														organization.id === organizationId
-												)?.organization.name || undefined,
-											type: 'project' as const
-										}}
-									/>
-								))}
-							</div>
+							<Link viewTransition to="/dashboard/projects">
+								<Button variant="ghost" size="sm">
+									View All
+								</Button>
+							</Link>
 						</div>
 					)}
 				</section>
@@ -212,13 +156,13 @@ const DashboardPage = () => {
 			<section className="space-y-6">
 				<Tabs defaultValue="projects" className="w-full">
 					<TabsList className="grid w-full max-w-md grid-cols-2">
-						<TabsTrigger value="projects" className="gap-2">
-							<FolderOpen className="h-4 w-4" />
-							Projects ({projectStats.total})
-						</TabsTrigger>
 						<TabsTrigger value="scenes" className="gap-2">
 							<File className="h-4 w-4" />
 							Scenes ({sceneStats.total})
+						</TabsTrigger>
+						<TabsTrigger value="projects" className="gap-2">
+							<FolderOpen className="h-4 w-4" />
+							Projects ({projectStats.total})
 						</TabsTrigger>
 					</TabsList>
 
@@ -244,7 +188,7 @@ const DashboardPage = () => {
 									Get started by creating your first project to organize your
 									scenes and assets.
 								</p>
-								<Link viewTransition to="/dashboard/projects/new">
+								<Link to="/dashboard/projects/new">
 									<Button>
 										<Plus className="mr-2 h-4 w-4" />
 										Create Your First Project
@@ -276,7 +220,7 @@ const DashboardPage = () => {
 									Create a project first, then add scenes to bring your ideas to
 									life.
 								</p>
-								<Link viewTransition to="/dashboard/projects/new">
+								<Link to="/dashboard/projects/new">
 									<Button>
 										<Plus className="mr-2 h-4 w-4" />
 										Create a Project

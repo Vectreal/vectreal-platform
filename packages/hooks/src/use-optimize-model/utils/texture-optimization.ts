@@ -116,7 +116,8 @@ export const performServerSideTextureOptimization = async (
 	} catch (err) {
 		console.error('Server-side texture compression failed:', err)
 		throw new Error(
-			`Server-side texture compression failed: ${err}. Client-side texture compression is not supported in browser environments.`
+			`Server-side texture compression failed: ${err}. Client-side texture compression is not supported in browser environments.`,
+			{ cause: err }
 		)
 	}
 }

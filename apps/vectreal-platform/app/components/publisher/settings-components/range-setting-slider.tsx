@@ -2,7 +2,13 @@ import { Input } from '@shared/components/ui/input'
 import { Label } from '@shared/components/ui/label'
 import { Slider } from '@shared/components/ui/slider'
 import { cn } from '@shared/utils'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+	type KeyboardEvent
+} from 'react'
 
 import {
 	mapSliderToValue,
@@ -154,7 +160,7 @@ const RangeSettingSlider = ({
 
 	const handleKeyDown = useCallback(
 		(
-			e: React.KeyboardEvent<HTMLInputElement>,
+			e: KeyboardEvent<HTMLInputElement>,
 			currentValue: number,
 			isMin: boolean
 		) => {

@@ -1,13 +1,16 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
-import { File, Folder, Plus } from 'lucide-react'
-import { useLoaderData } from 'react-router'
+import { Box, Folder, Plus } from 'lucide-react'
 
 import DashboardCard from '../../../components/dashboard/dashboard-cards'
 import { FolderContentSkeleton } from '../../../components/skeletons'
-import { loadAuthenticatedUser } from '../../../lib/loaders/auth-loader.server'
-import { projectService } from '../../../lib/services/project-service.server'
-import { sceneFolderService } from '../../../lib/services/scene-folder-service.server'
+import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
+import { getProject } from '../../../lib/domain/project/project-repository.server'
+import {
+	getChildFolders,
+	getFolderScenes,
+	getSceneFolder
+} from '../../../lib/domain/scene/scene-folder-repository.server'
 
 import { Route } from './+types/folder'
 
@@ -24,8 +27,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	// Fetch project and folder data
 	const [project, folder] = await Promise.all([
-		projectService.getProject(projectId, user.id),
-		sceneFolderService.getSceneFolder(folderId, user.id)
+		getProject(projectId, user.id),
+		getSceneFolder(folderId, user.id)
 	])
 
 	if (!project) {
@@ -38,8 +41,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	// Fetch subfolders and scenes in parallel
 	const [subfolders, scenes] = await Promise.all([
-		sceneFolderService.getChildFolders(folderId, user.id),
-		sceneFolderService.getFolderScenes(folderId, user.id)
+		getChildFolders(folderId, user.id),
+		getFolderScenes(folderId, user.id)
 	])
 
 	return {
@@ -58,8 +61,8 @@ export function HydrateFallback() {
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
 
-const FolderPage = () => {
-	const { project, subfolders, scenes } = useLoaderData<typeof loader>()
+const FolderPage = ({ loaderData }: Route.ComponentProps) => {
+	const { project, subfolders, scenes } = loaderData
 	const projectId = project.id
 
 	const folderContent = {
@@ -101,7 +104,7 @@ const FolderPage = () => {
 							title={scene.name}
 							description={scene.description || 'No description'}
 							linkTo={`/dashboard/projects/${projectId}/${scene.id}`}
-							icon={<File className="h-5 w-5 text-green-500" />}
+							icon={<Box className="h-5 w-5" />}
 							id={scene.id}
 							navigationState={{
 								name: scene.name,

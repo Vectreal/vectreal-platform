@@ -43,7 +43,7 @@ COPY --from=deps /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=deps /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
 # Copy source files
-COPY nx.json tsconfig.base.json .eslintrc ./
+COPY nx.json tsconfig.base.json eslint.config.mts ./
 COPY apps ./apps
 COPY packages ./packages
 COPY shared ./shared

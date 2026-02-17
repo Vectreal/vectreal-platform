@@ -8,6 +8,7 @@ import { folders } from './project/folders'
 import { projects } from './project/projects'
 import { sceneAssets } from './project/scene-assets'
 import { sceneFolders } from './project/scene-folders'
+import { scenePublished } from './project/scene-published'
 import { sceneSettings } from './project/scene-settings'
 import { sceneStats } from './project/scene-stats'
 import { scenes } from './project/scenes'
@@ -30,6 +31,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 	sceneFolders: many(sceneFolders),
 	sceneSettings: many(sceneSettings),
 	sceneStats: many(sceneStats),
+	scenePublished: many(scenePublished),
 	organizationMemberships: many(organizationMemberships)
 }))
 
@@ -73,7 +75,11 @@ export const scenesRelations = relations(scenes, ({ one, many }) => ({
 		references: [sceneFolders.id]
 	}),
 	sceneSettings: many(sceneSettings),
-	sceneStats: many(sceneStats)
+	sceneStats: many(sceneStats),
+	published: one(scenePublished, {
+		fields: [scenes.id],
+		references: [scenePublished.sceneId]
+	})
 }))
 
 // Scene folder relations
@@ -135,7 +141,8 @@ export const assetsRelations = relations(assets, ({ one, many }) => ({
 		fields: [assets.ownerId],
 		references: [users.id]
 	}),
-	sceneAssets: many(sceneAssets)
+	sceneAssets: many(sceneAssets),
+	publishedScenes: many(scenePublished)
 }))
 
 // Folder relations
@@ -160,6 +167,26 @@ export const sceneStatsRelations = relations(sceneStats, ({ one }) => ({
 	}),
 	createdByUser: one(users, {
 		fields: [sceneStats.createdBy],
+		references: [users.id]
+	})
+}))
+
+// Scene published relations
+export const scenePublishedRelations = relations(scenePublished, ({ one }) => ({
+	scene: one(scenes, {
+		fields: [scenePublished.sceneId],
+		references: [scenes.id]
+	}),
+	asset: one(assets, {
+		fields: [scenePublished.assetId],
+		references: [assets.id]
+	}),
+	sceneSettings: one(sceneSettings, {
+		fields: [scenePublished.sceneSettingsId],
+		references: [sceneSettings.id]
+	}),
+	publishedByUser: one(users, {
+		fields: [scenePublished.publishedBy],
 		references: [users.id]
 	})
 }))

@@ -6,15 +6,15 @@ import type {
 	projects,
 	sceneFolders,
 	scenes
-} from '../../db/schema'
+} from '../../../db/schema'
 
-import type { UserWithDefaults } from '../services/user-service.server'
+import type { UserWithDefaults } from '../user/user-repository.server'
 
 import type {
 	OrganizationStats,
 	ProjectStats,
 	SceneStats
-} from './stats-helpers.server'
+} from './dashboard-stats.server'
 
 /**
  * Organization with membership info

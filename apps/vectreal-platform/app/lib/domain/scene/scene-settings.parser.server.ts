@@ -1,12 +1,11 @@
 import { JSONDocument } from '@gltf-transform/core'
-
+import { ApiResponse } from '@shared/utils'
 import { OptimizationReport } from '@vctrl/core'
 
-import type { SceneSettingsRequest } from '../../types/api'
+import { UUID_REGEX } from '../../../constants/utility-constants'
+import type { SceneSettingsRequest } from '../../../types/api'
 
-import { PlatformApiService } from '../services/platform-api-service.server'
-
-import { ApiResponseBuilder } from './api-responses.server'
+import { parseActionRequest } from '../../http/requests.server'
 
 /**
  * Request parser for scene settings API operations.
@@ -22,15 +21,22 @@ export class SceneSettingsParser {
 		request: Request
 	): Promise<SceneSettingsRequest | Response> {
 		try {
-			const requestData = await PlatformApiService.parseActionRequest(request)
+			const requestData = await parseActionRequest(request)
 
 			// Extract required fields
 			const action = requestData.action as string
-			const sceneId = requestData.sceneId as string
+			const rawSceneId = requestData.sceneId as string
+			const sceneId =
+				typeof rawSceneId === 'string' ? rawSceneId.trim() : rawSceneId
 
 			// Validate required fields
 			if (!action) {
-				return ApiResponseBuilder.badRequest('Action is required')
+				return ApiResponse.badRequest('Action is required')
+			}
+
+			const sceneIdValidation = this.validateSceneId(action, sceneId)
+			if (sceneIdValidation instanceof Response) {
+				return sceneIdValidation
 			}
 
 			// For get-scene-settings, we don't need settings or gltfJson
@@ -39,8 +45,22 @@ export class SceneSettingsParser {
 					action,
 					sceneId,
 					settings: undefined,
-					assetIds: [],
 					gltfJson: undefined
+				}
+			}
+
+			if (action === 'publish-scene') {
+				const publishedGlb = this.parsePublishedGlb(requestData)
+				if (publishedGlb instanceof Response) {
+					return publishedGlb
+				}
+
+				return {
+					action,
+					sceneId,
+					settings: undefined,
+					gltfJson: undefined,
+					publishedGlb
 				}
 			}
 
@@ -55,43 +75,44 @@ export class SceneSettingsParser {
 				return gltfJsonData
 			}
 
-			const assetIds = this.parseAssetIds(requestData)
-			if (assetIds instanceof Response) {
-				return assetIds
-			}
-
 			const optimizationReport = this.parseOptimizationReport(requestData)
 			if (optimizationReport instanceof Response) {
 				return optimizationReport
+			}
+
+			if (!sceneId && !gltfJsonData) {
+				return ApiResponse.badRequest('GLTF data is required for new scenes')
 			}
 
 			return {
 				action,
 				sceneId,
 				settings,
-				assetIds: assetIds || [],
 				gltfJson: gltfJsonData || undefined,
 				optimizationReport: optimizationReport || undefined
 			}
 		} catch (error) {
 			console.error('Failed to parse scene settings request:', error)
-			return ApiResponseBuilder.badRequest('Invalid request format')
+			return ApiResponse.badRequest('Invalid request format')
 		}
 	}
 
-	/**
-	 * Gets authenticated user for scene settings operations.
-	 * @param request - The HTTP request
-	 * @returns User object or error response
-	 */
-	static async getSceneSettingsAuth(request: Request) {
-		const authResult = await PlatformApiService.getAuthUser(request)
+	private static validateSceneId(
+		action: string,
+		sceneId?: string
+	): Response | null {
+		const requiresSceneId =
+			action === 'get-scene-settings' || action === 'publish-scene'
 
-		if (authResult instanceof Response) {
-			return authResult
+		if (requiresSceneId && !sceneId) {
+			return ApiResponse.badRequest('Scene ID is required')
 		}
 
-		return authResult.user
+		if (sceneId && !UUID_REGEX.test(sceneId)) {
+			return ApiResponse.badRequest('Scene ID must be a valid UUID format')
+		}
+
+		return null
 	}
 
 	/**
@@ -109,7 +130,7 @@ export class SceneSettingsParser {
 					settings = JSON.parse(requestData.settings)
 				} catch (error) {
 					console.error('Failed to parse settings:', error)
-					return ApiResponseBuilder.badRequest('Invalid settings data format')
+					return ApiResponse.badRequest('Invalid settings data format')
 				}
 			} else if (
 				typeof requestData.settings === 'object' &&
@@ -126,7 +147,7 @@ export class SceneSettingsParser {
 					settings = JSON.parse(requestData.settingsData)
 				} catch (error) {
 					console.error('Failed to parse settingsData:', error)
-					return ApiResponseBuilder.badRequest('Invalid settings data format')
+					return ApiResponse.badRequest('Invalid settings data format')
 				}
 			} else if (
 				typeof requestData.settingsData === 'object' &&
@@ -139,45 +160,10 @@ export class SceneSettingsParser {
 		// Validate that we have a valid settings object
 		if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
 			console.error('Invalid settings format:', settings)
-			return ApiResponseBuilder.badRequest('Settings must be a valid object')
+			return ApiResponse.badRequest('Settings must be a valid object')
 		}
 
 		return settings
-	}
-
-	private static parseAssetIds(
-		requestData: Record<string, unknown>
-	): string[] | Response {
-		let assetIds: string[] = []
-
-		if (requestData.assetIds) {
-			if (typeof requestData.assetIds === 'string') {
-				try {
-					const parsed = JSON.parse(requestData.assetIds)
-					if (
-						Array.isArray(parsed) &&
-						parsed.every((id) => typeof id === 'string')
-					) {
-						assetIds = parsed
-					} else {
-						return ApiResponseBuilder.badRequest('Invalid asset IDs format')
-					}
-				} catch (error) {
-					console.error('Failed to parse assetIds:', error)
-					return ApiResponseBuilder.badRequest('Invalid asset IDs format')
-				}
-			} else if (Array.isArray(requestData.assetIds)) {
-				if (requestData.assetIds.every((id) => typeof id === 'string')) {
-					assetIds = requestData.assetIds as string[]
-				} else {
-					return ApiResponseBuilder.badRequest('Invalid asset IDs format')
-				}
-			} else {
-				return ApiResponseBuilder.badRequest('Invalid asset IDs format')
-			}
-		}
-
-		return assetIds
 	}
 
 	/**
@@ -194,11 +180,11 @@ export class SceneSettingsParser {
 					gltf = JSON.parse(requestData.gltfJson)
 
 					if (typeof gltf !== 'object' || gltf === null) {
-						return ApiResponseBuilder.badRequest('Invalid gltfJson format')
+						return ApiResponse.badRequest('Invalid gltfJson format')
 					}
 				} catch (error) {
 					console.error('Failed to parse gltfJson:', error)
-					return ApiResponseBuilder.badRequest('Invalid gltfJson format')
+					return ApiResponse.badRequest('Invalid gltfJson format')
 				}
 			}
 		}
@@ -221,16 +207,12 @@ export class SceneSettingsParser {
 			try {
 				const parsed = JSON.parse(requestData.optimizationReport)
 				if (typeof parsed !== 'object' || parsed === null) {
-					return ApiResponseBuilder.badRequest(
-						'Invalid optimization report format'
-					)
+					return ApiResponse.badRequest('Invalid optimization report format')
 				}
 				return parsed
 			} catch (error) {
 				console.error('Failed to parse optimizationReport:', error)
-				return ApiResponseBuilder.badRequest(
-					'Invalid optimization report format'
-				)
+				return ApiResponse.badRequest('Invalid optimization report format')
 			}
 		}
 
@@ -239,5 +221,48 @@ export class SceneSettingsParser {
 		}
 
 		return undefined
+	}
+
+	private static parsePublishedGlb(
+		requestData: Record<string, unknown>
+	): { data: number[]; fileName?: string; mimeType?: string } | Response {
+		if (!requestData.publishedGlb) {
+			return ApiResponse.badRequest('publishedGlb is required')
+		}
+
+		let payload: unknown = requestData.publishedGlb
+
+		if (typeof requestData.publishedGlb === 'string') {
+			try {
+				payload = JSON.parse(requestData.publishedGlb)
+			} catch (error) {
+				console.error('Failed to parse publishedGlb:', error)
+				return ApiResponse.badRequest('Invalid publishedGlb format')
+			}
+		}
+
+		if (!payload || typeof payload !== 'object') {
+			return ApiResponse.badRequest('Invalid publishedGlb format')
+		}
+
+		const record = payload as {
+			data?: number[]
+			fileName?: string
+			mimeType?: string
+		}
+
+		if (!Array.isArray(record.data)) {
+			return ApiResponse.badRequest('publishedGlb data is required')
+		}
+
+		if (!record.data.every((value) => typeof value === 'number')) {
+			return ApiResponse.badRequest('publishedGlb data is invalid')
+		}
+
+		return {
+			data: record.data,
+			fileName: record.fileName,
+			mimeType: record.mimeType
+		}
 	}
 }

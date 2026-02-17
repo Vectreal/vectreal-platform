@@ -1,8 +1,10 @@
+import type { ReactNode } from 'react'
+
 export interface Option<Identifiers> {
 	id: Identifiers
 	label: string
 	description: string
-	icon: React.ReactNode
+	icon: ReactNode
 }
 
 export interface RadioAccordionProps<Identifiers> {

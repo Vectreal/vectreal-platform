@@ -1,9 +1,11 @@
 import type { User } from '@supabase/supabase-js'
 import { redirect } from 'react-router'
 
-import { PlatformApiService } from '../services/platform-api-service.server'
-import { userService } from '../services/user-service.server'
-import type { UserWithDefaults } from '../services/user-service.server'
+import { getAuthUser } from '../../http/auth.server'
+import {
+	initializeUserDefaults,
+	type UserWithDefaults
+} from '../user/user-repository.server'
 
 export interface AuthLoaderResult {
 	user: User
@@ -21,7 +23,7 @@ export interface AuthLoaderResult {
 export async function loadAuthenticatedUser(
 	request: Request
 ): Promise<AuthLoaderResult> {
-	const authResponse = await PlatformApiService.getAuthUser(request)
+	const authResponse = await getAuthUser(request)
 
 	// Redirect to sign-up if not authenticated
 	if (authResponse instanceof Response) {
@@ -32,7 +34,7 @@ export async function loadAuthenticatedUser(
 
 	try {
 		// Initialize user defaults (creates user in local DB, default org, and project)
-		const userWithDefaults = await userService.initializeUserDefaults(user)
+		const userWithDefaults = await initializeUserDefaults(user)
 
 		return {
 			user,

@@ -1,6 +1,8 @@
 /**
  * Dynamic Breadcrumb Component
  * @description Smart breadcrumb navigation that adapts to current route
+ * Simplified using composable useDashboardContent hook
+ * Features skeleton loading states and smooth fade animations
  */
 
 import {
@@ -11,167 +13,93 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator
 } from '@shared/components/ui/breadcrumb'
-import React, { memo } from 'react'
-import { Link, useLocation, useMatches } from 'react-router'
+import { Skeleton } from '@shared/components/ui/skeleton'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Fragment, memo } from 'react'
+import { Link } from 'react-router'
 
-import type {
-	FolderLoaderData,
-	ProjectLoaderData,
-	SceneLoaderData
-} from '../../lib/loaders/types'
-
-import {
-	getTitleContent,
-	isFolderRoute,
-	isSceneRoute,
-	isValidDashboardView,
-	parseRouteParams
-} from './utils'
-
-/**
- * Extract data from route matches
- */
-function getRouteData(matches: ReturnType<typeof useMatches>) {
-	const routeData: {
-		project?: ProjectLoaderData
-		folder?: FolderLoaderData
-		scene?: SceneLoaderData
-	} = {}
-
-	for (const match of matches) {
-		const data = match.loaderData as
-			| ProjectLoaderData
-			| FolderLoaderData
-			| SceneLoaderData
-			| Record<string, unknown>
-			| undefined
-		if (data && 'project' in data && 'folders' in data) {
-			routeData.project = data as ProjectLoaderData
-		}
-		if (data && 'folder' in data) {
-			routeData.folder = data as FolderLoaderData
-		}
-		if (data && 'scene' in data) {
-			routeData.scene = data as SceneLoaderData
-		}
-	}
-
-	return routeData
-}
+import { useDashboardHeaderData } from '../../hooks'
 
 /**
  * DynamicBreadcrumb component renders context-aware breadcrumb navigation
- * Consolidates all breadcrumb logic in a single, maintainable component
- * Adapts to different route types: projects list, project detail, folder, scene
+ * Uses shared dashboard content hook for consistent state management
  * Memoized to prevent unnecessary re-renders
+ * Shows skeleton during loading and animates transitions
  */
 export const DynamicBreadcrumb = memo(() => {
-	const location = useLocation()
-	const matches = useMatches()
-	const routeParams = parseRouteParams(location.pathname)
-	const { view, projectId, routeType, routeId } = routeParams
+	const { breadcrumbs, isLoading } = useDashboardHeaderData()
 
-	// Get data from route loaders
-	const {
-		project: projectData,
-		folder: folderData,
-		scene: sceneData
-	} = getRouteData(matches)
-
-	// Early return if view is invalid
-	if (!view || !isValidDashboardView(view)) {
+	// No breadcrumbs to render (even when not loading)
+	if (!isLoading && (!breadcrumbs || breadcrumbs.length === 0)) {
 		return null
 	}
 
-	const titleContent = getTitleContent(view)
-	const isFolder = isFolderRoute(routeParams)
-	const isScene = isSceneRoute(routeParams)
-
-	// Helper function to render a breadcrumb item
-	const renderBreadcrumbItem = (to: string, label: string, isLast = false) => (
-		<React.Fragment key={to}>
-			<BreadcrumbSeparator />
-			<BreadcrumbItem>
-				{isLast ? (
-					<BreadcrumbPage className="text-primary">{label}</BreadcrumbPage>
-				) : (
-					<BreadcrumbLink asChild>
-						<Link viewTransition to={to}>
-							{label}
-						</Link>
-					</BreadcrumbLink>
-				)}
-			</BreadcrumbItem>
-		</React.Fragment>
-	)
-
-	// Render dynamic breadcrumbs based on route type
-	const renderDynamicBreadcrumbs = () => {
-		const items: React.ReactNode[] = []
-
-		// For folder routes: Dashboard > Projects > Project > CurrentFolder
-		if (
-			isFolder &&
-			projectId &&
-			routeId &&
-			folderData?.folder &&
-			folderData?.project
-		) {
-			const projectName = folderData.project.name || 'Project'
-			const folderName = folderData.folder.name || 'Folder'
-			items.push(
-				renderBreadcrumbItem(`/dashboard/projects/${projectId}`, projectName)
-			)
-			items.push(renderBreadcrumbItem('', folderName, true))
-		}
-
-		// For scene routes: Dashboard > Projects > Project > Scene
-		else if (
-			isScene &&
-			projectId &&
-			routeType &&
-			sceneData?.scene &&
-			sceneData?.project
-		) {
-			const projectName = sceneData.project.name || 'Project'
-			const sceneName = sceneData.scene.name || 'Scene'
-
-			items.push(
-				renderBreadcrumbItem(`/dashboard/projects/${projectId}`, projectName)
-			)
-			items.push(renderBreadcrumbItem('', sceneName, true))
-		}
-
-		// For project routes: Dashboard > Projects > Project
-		else if (projectId && projectData?.project) {
-			const projectName = projectData.project.name || 'Project'
-			items.push(renderBreadcrumbItem('', projectName, true))
-		}
-
-		return items
-	}
+	// Create a stable key that changes between loading and loaded states
+	const contentKey = isLoading
+		? 'breadcrumb-loading'
+		: breadcrumbs?.map((item) => item.to || item.label).join('-') || 'empty'
 
 	return (
-		<Breadcrumb className="grow">
-			<BreadcrumbList className="text-primary/75">
-				<BreadcrumbItem>
-					<BreadcrumbLink asChild>
-						<Link viewTransition to="/dashboard">
-							Dashboard
-						</Link>
-					</BreadcrumbLink>
-				</BreadcrumbItem>
-				<BreadcrumbSeparator />
-				<BreadcrumbItem>
-					<BreadcrumbLink asChild>
-						<Link viewTransition to={`/dashboard/${view}`}>
-							{titleContent.title}
-						</Link>
-					</BreadcrumbLink>
-				</BreadcrumbItem>
-				{renderDynamicBreadcrumbs()}
-			</BreadcrumbList>
-		</Breadcrumb>
+		<AnimatePresence mode="wait" initial={false}>
+			<motion.div
+				key={contentKey}
+				initial={{ opacity: 0, x: -4 }}
+				animate={{ opacity: 1, x: 0 }}
+				exit={{ opacity: 0, y: -12 }}
+				transition={{
+					duration: 0.25,
+					ease: 'easeOut'
+				}}
+			>
+				{isLoading ? (
+					<Breadcrumb className="grow">
+						<BreadcrumbList className="text-primary/75">
+							<BreadcrumbItem>
+								<Skeleton className="h-4 w-20" />
+							</BreadcrumbItem>
+							<BreadcrumbSeparator />
+							<BreadcrumbItem>
+								<Skeleton className="h-4 w-16" />
+							</BreadcrumbItem>
+							<BreadcrumbSeparator />
+							<BreadcrumbItem>
+								<Skeleton className="h-4 w-24" />
+							</BreadcrumbItem>
+						</BreadcrumbList>
+					</Breadcrumb>
+				) : (
+					<Breadcrumb className="grow">
+						<BreadcrumbList className="text-primary/75">
+							{breadcrumbs?.map((item, index) => {
+								const isFirst = index === 0
+								const showSeparator = !isFirst
+
+								return (
+									<Fragment key={item.to || item.label}>
+										{showSeparator && <BreadcrumbSeparator />}
+										<BreadcrumbItem>
+											{item.isLast ? (
+												<BreadcrumbPage className="text-primary">
+													{item.label}
+												</BreadcrumbPage>
+											) : item.to ? (
+												<BreadcrumbLink asChild>
+													<Link viewTransition to={item.to}>
+														{item.label}
+													</Link>
+												</BreadcrumbLink>
+											) : (
+												<BreadcrumbPage>{item.label}</BreadcrumbPage>
+											)}
+										</BreadcrumbItem>
+									</Fragment>
+								)
+							})}
+						</BreadcrumbList>
+					</Breadcrumb>
+				)}
+			</motion.div>
+		</AnimatePresence>
 	)
 })
 

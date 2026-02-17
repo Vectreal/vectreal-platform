@@ -5,12 +5,13 @@ import {
 	TooltipTrigger
 } from '@shared/components/ui/tooltip'
 import { Info } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 /**
  * Props for InfoTooltip component
  */
 interface InfoTooltipProps {
-	content: string | React.ReactNode
+	content: string | ReactNode
 }
 
 /**

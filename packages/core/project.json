@@ -1,5 +1,5 @@
 {
-	"name": "core",
+	"name": "vctrl/core",
 	"$schema": "../../node_modules/nx/schemas/project-schema.json",
 	"sourceRoot": "packages/core/src",
 	"projectType": "library",
@@ -52,9 +52,7 @@
 			"executor": "nx:run-commands",
 			"outputs": [],
 			"options": {
-				"commands": [
-					"rsync -rat packages/core/*.md dist/packages/core/"
-				]
+				"commands": ["rsync -rat packages/core/*.md dist/packages/core/"]
 			}
 		}
 	}

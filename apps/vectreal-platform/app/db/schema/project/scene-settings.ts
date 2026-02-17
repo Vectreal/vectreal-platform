@@ -4,14 +4,7 @@ import {
 	SceneMeta,
 	ShadowsProps
 } from '@vctrl/core'
-import {
-	boolean,
-	integer,
-	json,
-	pgTable,
-	timestamp,
-	uuid
-} from 'drizzle-orm/pg-core'
+import { json, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 import { users } from '../core/users'
 
@@ -21,9 +14,8 @@ export const sceneSettings = pgTable('scene_settings', {
 	id: uuid('id').primaryKey().defaultRandom(),
 	sceneId: uuid('scene_id')
 		.references(() => scenes.id, { onDelete: 'cascade' })
-		.notNull(),
-	version: integer('version').notNull().default(1),
-	isLatest: boolean('is_latest').default(true).notNull(),
+		.notNull()
+		.unique(),
 	// Scene configuration data from publisher store
 	environment: json('environment').$type<EnvironmentProps>(), // environmentAtom data
 	controls: json('controls').$type<ControlsProps>(), // controlsAtom data

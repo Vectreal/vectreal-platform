@@ -1,8 +1,8 @@
+import { ApiResponse } from '@shared/utils'
 import { LoaderFunctionArgs } from 'react-router'
 
-import { ApiResponseBuilder } from '../../lib/api/api-responses.server'
-import { PlatformApiService } from '../../lib/services/platform-api-service.server'
-import { sceneSettingsService } from '../../lib/services/scene-settings-service.server'
+import { sceneSettingsService } from '../../lib/domain/scene/scene-settings-service.server'
+import { getAuthUser } from '../../lib/http/auth.server'
 
 /**
  * Handles scene stats API requests (GET only).
@@ -10,7 +10,7 @@ import { sceneSettingsService } from '../../lib/services/scene-settings-service.
  */
 export async function loader({ request }: LoaderFunctionArgs) {
 	// Get authenticated user
-	const authResult = await PlatformApiService.getAuthUser(request)
+	const authResult = await getAuthUser(request)
 	if (authResult instanceof Response) {
 		return authResult
 	}
@@ -19,42 +19,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
 	const sceneId = url.searchParams.get('sceneId')
 
 	if (!sceneId) {
-		return ApiResponseBuilder.badRequest('sceneId is required')
+		return ApiResponse.badRequest('sceneId is required')
 	}
 
 	try {
-		// Parse optional query parameters
-		const version = url.searchParams.get('version')
-		const label = url.searchParams.get('label')
-		const limit = url.searchParams.get('limit')
+		const stats = await sceneSettingsService.getSceneStats(sceneId)
 
-		const options: { version?: number; label?: string; limit?: number } = {}
-
-		if (version) {
-			const parsedVersion = parseInt(version, 10)
-			if (!isNaN(parsedVersion)) {
-				options.version = parsedVersion
-			}
-		}
-
-		if (label) {
-			options.label = label
-		}
-
-		if (limit) {
-			const parsedLimit = parseInt(limit, 10)
-			if (!isNaN(parsedLimit)) {
-				options.limit = parsedLimit
-			}
-		}
-
-		// Fetch scene stats from database
-		const stats = await sceneSettingsService.getSceneStats(sceneId, options)
-
-		return ApiResponseBuilder.success(stats)
+		return ApiResponse.success(stats)
 	} catch (error) {
 		console.error('Failed to fetch scene stats:', error)
-		return ApiResponseBuilder.serverError(
+		return ApiResponse.serverError(
 			error instanceof Error ? error.message : 'Failed to fetch scene stats'
 		)
 	}

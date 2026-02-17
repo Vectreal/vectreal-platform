@@ -1,10 +1,12 @@
 // Replace your-renderer with the renderer you are using (e.g., react, vue3)
-import type { Preview } from '@storybook/react-vite';
 
-const preview: Preview = {
-  // ...rest of preview
-  //👇 Enables auto-generated documentation for all stories
-  tags: ['autodocs'],
-};
+import { definePreview } from '@storybook/react-vite'
 
-export default preview;
+const preview = definePreview({
+	// ...rest of preview
+	//👇 Enables auto-generated documentation for all stories
+	tags: ['autodocs'],
+	addons: []
+})
+
+export default preview

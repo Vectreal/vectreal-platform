@@ -12,11 +12,11 @@ import {
 	QrCode,
 	Twitter
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type FC } from 'react'
 
 import { itemVariants } from '../../animation'
 
-export const ShareOptions: React.FC = () => {
+export const ShareOptions: FC = () => {
 	const [shareLink, setShareLink] = useState(
 		'https://example.com/view/scene-id'
 	)

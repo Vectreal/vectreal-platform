@@ -3,7 +3,7 @@ import type {
 	organizations,
 	projects,
 	scenes
-} from '../../db/schema'
+} from '../../../db/schema'
 
 export interface ProjectStats {
 	total: number
@@ -55,7 +55,7 @@ export function computeSceneStats(
 	allScenes: Array<typeof scenes.$inferSelect>
 ): SceneStats {
 	const byProject: Record<string, number> = {}
-	const byStatus = {
+	const byStatus: Record<'draft' | 'published' | 'archived', number> = {
 		draft: 0,
 		published: 0,
 		archived: 0
@@ -63,7 +63,10 @@ export function computeSceneStats(
 
 	for (const scene of allScenes) {
 		byProject[scene.projectId] = (byProject[scene.projectId] || 0) + 1
-		byStatus[scene.status] = (byStatus[scene.status] || 0) + 1
+		const status = scene.status as keyof typeof byStatus
+		if (status in byStatus) {
+			byStatus[status] = (byStatus[status] || 0) + 1
+		}
 	}
 
 	return {
