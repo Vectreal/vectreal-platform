@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 
-import type { SceneStatsData } from '../types/api'
+import type {
+	SceneAggregateResponse,
+	SceneStatsData,
+	SceneStatsUpdatedDetail
+} from '../types/api'
 
 /**
  * Hook to fetch the latest scene statistics from the server.
@@ -18,7 +22,7 @@ export function useFetchSceneStats() {
 			setError(null)
 
 			try {
-				const response = await fetch(`/api/scene-stats?sceneId=${sceneId}`, {
+				const response = await fetch(`/api/scenes/${sceneId}`, {
 					method: 'GET',
 					headers: {
 						'Content-Type': 'application/json'
@@ -35,7 +39,8 @@ export function useFetchSceneStats() {
 					throw new Error(result.error)
 				}
 
-				return result.data || null
+				const aggregate = result.data as SceneAggregateResponse | undefined
+				return aggregate?.stats || null
 			} catch (err) {
 				const error =
 					err instanceof Error ? err : new Error('Failed to fetch scene stats')
@@ -74,7 +79,7 @@ export function useLatestSceneStats(sceneId: string, autoLoad = true) {
 		setError(null)
 
 		try {
-			const response = await fetch(`/api/scene-stats?sceneId=${sceneId}`, {
+			const response = await fetch(`/api/scenes/${sceneId}`, {
 				method: 'GET',
 				headers: {
 					'Content-Type': 'application/json'
@@ -91,7 +96,8 @@ export function useLatestSceneStats(sceneId: string, autoLoad = true) {
 				throw new Error(result.error)
 			}
 
-			setStats(result.data || null)
+			const aggregate = result.data as SceneAggregateResponse | undefined
+			setStats(aggregate?.stats || null)
 		} catch (err) {
 			const error =
 				err instanceof Error
@@ -114,7 +120,7 @@ export function useLatestSceneStats(sceneId: string, autoLoad = true) {
 		if (!sceneId) return
 
 		const handler = (event: Event) => {
-			const detail = (event as CustomEvent<{ sceneId?: string }>).detail
+			const detail = (event as CustomEvent<SceneStatsUpdatedDetail>).detail
 			if (detail?.sceneId && detail.sceneId !== sceneId) {
 				return
 			}

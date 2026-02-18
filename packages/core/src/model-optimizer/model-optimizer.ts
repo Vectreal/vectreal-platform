@@ -275,7 +275,7 @@ export class ModelOptimizer {
 			}
 
 			// Extract only the options that textureCompress expects
-			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			 
 			const { serverOptions, ...textureCompressOptions } = options
 
 			console.log('Texture compression options:', {
@@ -345,7 +345,7 @@ export class ModelOptimizer {
 	 * This provides fallback functionality when Sharp is not available.
 	 */
 	private async applyBasicTextureOptimization(
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		 
 		_options: TextureCompressOptions
 	): Promise<void> {
 		this.emitProgress('Applying basic texture optimization', 50)

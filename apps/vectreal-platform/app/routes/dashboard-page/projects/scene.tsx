@@ -165,7 +165,7 @@ const ScenePage = () => {
 			const sceneData = await loadFromServer({
 				sceneId,
 				serverOptions: {
-					endpoint: '/api/scene-settings'
+					endpoint: `/api/scenes/${sceneId}`
 				}
 			})
 
@@ -187,7 +187,7 @@ const ScenePage = () => {
 			{ action: 'delete' },
 			{
 				method: 'post',
-				action: `/api/dashboard/scene-actions/${sceneId}`
+				action: `/api/scenes/${sceneId}`
 			}
 		)
 		// Future: implement delete logic

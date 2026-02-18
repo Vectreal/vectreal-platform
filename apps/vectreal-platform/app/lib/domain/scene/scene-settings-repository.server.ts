@@ -5,11 +5,10 @@ import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js'
 
 import * as dbSchema from '../../../db/schema'
 import { assets, sceneAssets, sceneSettings } from '../../../db/schema'
-
-import type {
+import {
 	SceneSettingsUpsertInput,
 	SceneSettingsWithAssets
-} from './scene-settings.types.server'
+} from '../../../types/api'
 
 export type SceneSettingsTransaction = PgTransaction<
 	PostgresJsQueryResultHKT,

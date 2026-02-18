@@ -2,7 +2,7 @@ import { SceneSettings } from '@vctrl/core'
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import type { ModelFile } from '@vctrl/hooks/use-load-model'
 import { OptimizerIntegrationReturn } from '@vctrl/hooks/use-load-model/types'
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 
 import type { SaveSceneResult } from './use-scene-loader'
 
@@ -26,6 +26,17 @@ export function useScenePersistence({
 	modelFile
 }: UseScenePersistenceParams) {
 	const { handleDocumentGltfExport } = useExportModel()
+	const inFlightSaveRef = useRef<Promise<
+		SaveSceneResult | { unchanged: true } | undefined
+	> | null>(null)
+
+	const createRequestId = useCallback(() => {
+		if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+			return crypto.randomUUID()
+		}
+
+		return `save-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+	}, [])
 
 	/**
 	 * Serialize GLTF document with assets for transfer
@@ -82,68 +93,115 @@ export function useScenePersistence({
 			includeModel?: boolean
 			includeOptimizationReport?: boolean
 		}): Promise<SaveSceneResult | { unchanged: true } | undefined> => {
-			if (!userId) {
-				throw new Error('No user ID provided for saving settings')
+			if (inFlightSaveRef.current) {
+				return inFlightSaveRef.current
 			}
+
+			const savePromise = (async () => {
+				if (!userId) {
+					throw new Error('No user ID provided for saving settings')
+				}
+
+				let requestId: string | undefined
+
+				try {
+					requestId = createRequestId()
+					const shouldIncludeModel = options?.includeModel ?? true
+					const gltfJsonToSend = shouldIncludeModel
+						? await serializeGltfDocument()
+						: null
+
+					// Get optimization report if available
+					let optimizationReport = null
+					if (optimizer && optimizer.report) {
+						optimizationReport = optimizer.report
+					}
+
+					const formData = new FormData()
+					formData.append('action', 'save-scene-settings')
+					formData.append('requestId', requestId)
+					formData.append('sceneId', currentSceneId || '')
+					formData.append('userId', userId)
+					formData.append('settings', JSON.stringify(currentSettings))
+					if (shouldIncludeModel) {
+						formData.append('gltfJson', JSON.stringify(gltfJsonToSend))
+					}
+
+					// Include optimization report if available
+					if (
+						optimizationReport &&
+						options?.includeOptimizationReport !== false
+					) {
+						formData.append(
+							'optimizationReport',
+							JSON.stringify(optimizationReport)
+						)
+					}
+
+					console.info('[scene-settings] save request started', {
+						requestId,
+						sceneId: currentSceneId || null,
+						includeModel: shouldIncludeModel
+					})
+
+					const endpoint = currentSceneId
+						? `/api/scenes/${currentSceneId}`
+						: '/api/scenes'
+
+					const response = await fetch(endpoint, {
+						method: 'POST',
+						body: formData
+					})
+
+					const result = await response.json()
+
+					if (!response.ok || result.error) {
+						throw new Error(
+							result.error || `HTTP error! status: ${response.status}`
+						)
+					}
+
+					const data = result.data || result
+
+					console.info('[scene-settings] save request completed', {
+						requestId,
+						sceneId: data.sceneId || currentSceneId || null,
+						unchanged: Boolean(data.unchanged)
+					})
+
+					if (data.unchanged) {
+						return { unchanged: true }
+					}
+
+					return data
+				} catch (error) {
+					console.error('Failed to save scene settings:', {
+						requestId,
+						sceneId: currentSceneId || null,
+						error
+					})
+					throw error
+				}
+			})()
+
+			inFlightSaveRef.current = savePromise
 
 			try {
-				const shouldIncludeModel = options?.includeModel ?? true
-				const gltfJsonToSend = shouldIncludeModel
-					? await serializeGltfDocument()
-					: null
-
-				// Get optimization report if available
-				let optimizationReport = null
-				if (optimizer && optimizer.report) {
-					optimizationReport = optimizer.report
+				return await savePromise
+			} finally {
+				if (inFlightSaveRef.current === savePromise) {
+					inFlightSaveRef.current = null
 				}
-
-				const formData = new FormData()
-				formData.append('action', 'save-scene-settings')
-				formData.append('sceneId', currentSceneId || '')
-				formData.append('userId', userId)
-				formData.append('settings', JSON.stringify(currentSettings))
-				if (shouldIncludeModel) {
-					formData.append('gltfJson', JSON.stringify(gltfJsonToSend))
-				}
-
-				// Include optimization report if available
-				if (
-					optimizationReport &&
-					options?.includeOptimizationReport !== false
-				) {
-					formData.append(
-						'optimizationReport',
-						JSON.stringify(optimizationReport)
-					)
-				}
-
-				const response = await fetch('/api/scene-settings', {
-					method: 'POST',
-					body: formData
-				})
-
-				const result = await response.json()
-
-				if (!response.ok || result.error) {
-					throw new Error(
-						result.error || `HTTP error! status: ${response.status}`
-					)
-				}
-
-				const data = result.data || result
-
-				if (data.unchanged) {
-					return { unchanged: true }
-				}
-
-				return data
-			} catch (error) {
-				console.error('Failed to save scene settings:', error)
-				throw error
 			}
 		},
-		[currentSceneId, userId, currentSettings, serializeGltfDocument, optimizer]
+		[
+			currentSceneId,
+			userId,
+			currentSettings,
+			serializeGltfDocument,
+			optimizer,
+			createRequestId
+		]
 	)
 
 	/**
@@ -159,7 +217,7 @@ export function useScenePersistence({
 			formData.append('action', 'get-scene-settings')
 			formData.append('sceneId', targetSceneId)
 
-			const response = await fetch('/api/scene-settings', {
+			const response = await fetch(`/api/scenes/${targetSceneId}`, {
 				method: 'POST',
 				body: formData
 			})

@@ -85,6 +85,50 @@
 				"parallel": false
 			}
 		},
+		"drizzle-push-staging": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": "apps/vectreal-platform/.env.secrets.local",
+				"commands": [
+					"DATABASE_URL=$DATABASE_URL_STAGING pnpm exec drizzle-kit push --config drizzle.config.ts"
+				],
+				"parallel": false
+			}
+		},
+		"drizzle-push-prod": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": "apps/vectreal-platform/.env.secrets.local",
+				"commands": [
+					"DATABASE_URL=$DATABASE_URL_PROD pnpm exec drizzle-kit push --config drizzle.config.ts"
+				],
+				"parallel": false
+			}
+		},
+		"drizzle-migrate-staging": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": "apps/vectreal-platform/.env.secrets.local",
+				"commands": [
+					"DATABASE_URL=$DATABASE_URL_STAGING pnpm exec drizzle-kit migrate --config drizzle.config.ts"
+				],
+				"parallel": false
+			}
+		},
+		"drizzle-migrate-prod": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": "apps/vectreal-platform/.env.secrets.local",
+				"commands": [
+					"DATABASE_URL=$DATABASE_URL_PROD pnpm exec drizzle-kit migrate --config drizzle.config.ts"
+				],
+				"parallel": false
+			}
+		},
 		"lint": {
 			"executor": "@nx/eslint:lint",
 			"outputs": ["{options.outputFile}"],

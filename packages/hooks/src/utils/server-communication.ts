@@ -32,6 +32,11 @@ export interface ServerRequestConfig {
 	contentType?: string
 }
 
+export interface ApiEnvelope<T = unknown> {
+	data?: T
+	error?: string
+}
+
 /**
  * Unified server communication service for handling HTTP requests.
  * Provides a consistent interface for API calls with built-in error handling,
@@ -148,7 +153,6 @@ export class ServerCommunicationService {
 		)
 
 		if (options) {
-			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			const { serverOptions: _, ...restOptions } = options
 			requestData.append('options', JSON.stringify(restOptions))
 		}
@@ -290,7 +294,7 @@ export class ServerCommunicationService {
 	 * @example
 	 * ```typescript
 	 * const sceneData = await ServerCommunicationService.loadScene('abc-123', {
-	 *   endpoint: '/api/scene-settings',
+	 *   endpoint: '/api/scenes/abc-123',
 	 *   apiKey: 'optional-auth-token'
 	 * })
 	 * ```
@@ -303,10 +307,10 @@ export class ServerCommunicationService {
 		formData.append('action', 'get-scene-settings')
 		formData.append('sceneId', sceneId)
 
-		const endpoint = serverOptions?.endpoint || '/api/scene-settings'
+		const endpoint = serverOptions?.endpoint || `/api/scenes/${sceneId}`
 
 		const response = await ServerCommunicationService.request<
-			{ data?: T; error?: string } | T
+			ApiEnvelope<T> | T
 		>({
 			endpoint,
 			method: 'POST',

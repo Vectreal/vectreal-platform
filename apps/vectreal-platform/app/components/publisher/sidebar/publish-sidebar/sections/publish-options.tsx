@@ -60,7 +60,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({ sceneId }) => {
 			formData.append('sceneId', sceneId)
 			formData.append('publishedGlb', JSON.stringify(payload))
 
-			const response = await fetch('/api/scene-settings', {
+			const response = await fetch(`/api/scenes/${sceneId}`, {
 				method: 'POST',
 				body: formData
 			})

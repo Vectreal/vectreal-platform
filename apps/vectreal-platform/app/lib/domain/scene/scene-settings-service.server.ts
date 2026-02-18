@@ -18,6 +18,7 @@ import {
 	type ExtendedGLTFDocument,
 	type GLTFExportResult,
 	SaveSceneSettingsParams,
+	SceneAssetDataMap,
 	SceneSettingsData,
 	UpdateSceneSettingsParams
 } from '../../../types/api'
@@ -163,9 +164,7 @@ class SceneSettingsService {
 
 		// Download asset data from cloud storage
 		let gltfJson: ExtendedGLTFDocument | null = null
-		let assetDataMap:
-			| Map<string, { data: Uint8Array; mimeType: string; fileName: string }>
-			| undefined
+		let assetDataMap: SceneAssetDataMap | null = null
 
 		if (assetIds.length > 0) {
 			try {
@@ -192,7 +191,7 @@ class SceneSettingsService {
 		return {
 			...settings,
 			assets: sceneAssetsData,
-			assetData: assetDataMap, // Map of assetId -> asset data for reconstruction
+			assetDataMap, // Map of assetId -> asset data for reconstruction
 			gltfJson // The parsed GLTF JSON document
 		}
 	}
