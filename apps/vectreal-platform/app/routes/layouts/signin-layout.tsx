@@ -10,7 +10,7 @@ import {
 	useNavigate
 } from 'react-router'
 
-import { HeroScene } from '../../components'
+import HeroScene from '../../components/home/hero-scene'
 
 const SignupModel = () => {
 	return (

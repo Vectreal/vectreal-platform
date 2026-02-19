@@ -7,12 +7,12 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
-import { ShadowsProps, ShadowTypePropBase } from '@vctrl/core'
-import { defaultAccumulativeShadowsOptions } from '@vctrl/viewer'
+import type { ShadowsProps, ShadowTypePropBase } from '@vctrl/core'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom } from 'jotai'
 
 import { InfoTooltip } from '../../../../../components/info-tooltip'
+import { defaultAccumulativeShadowsOptions } from '../../../../../constants/viewer-defaults'
 import { shadowsAtom } from '../../../../../lib/stores/scene-settings-store'
 import { EnhancedSettingSlider } from '../../../settings-components'
 

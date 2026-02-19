@@ -13,7 +13,7 @@ import {
 import { ComponentProps, useEffect, useTransition } from 'react'
 import { useDropzone } from 'react-dropzone'
 
-import { BasicCard } from '../../components'
+import BasicCard from '../../components/layout-components/basic-card'
 
 declare module 'react' {
 	interface InputHTMLAttributes<T> extends HTMLAttributes<T> {

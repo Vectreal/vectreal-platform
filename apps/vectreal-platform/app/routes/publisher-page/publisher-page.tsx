@@ -2,7 +2,6 @@ import { useIsMobile } from '@shared/components/hooks/use-mobile'
 import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { SpinnerWrapper } from '@shared/components/ui/spinner-wrapper'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { VectrealViewer } from '@vctrl/viewer'
 import { AnimatePresence } from 'framer-motion'
 import { motion } from 'framer-motion'
 import { useAtom, useAtomValue } from 'jotai/react'
@@ -16,6 +15,7 @@ import {
 	type FC
 } from 'react'
 
+import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import { processAtom } from '../../lib/stores/publisher-config-store'
 import {
 	boundsAtom,
@@ -124,7 +124,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 							transition={{ duration: 0.75, delay: 1 }}
 							className="bg-muted/50 flex h-full w-full"
 						>
-							<VectrealViewer
+							<ClientVectrealViewer
 								model={file?.model}
 								key="model-viewer"
 								cameraOptions={camera}
@@ -134,6 +134,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 								boundsOptions={bounds}
 								loader={<LoadingScreen />}
 								onScreenshot={handleScreenshot}
+								fallback={<LoadingScreen />}
 							/>
 						</motion.div>
 					) : (

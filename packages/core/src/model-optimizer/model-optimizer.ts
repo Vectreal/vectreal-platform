@@ -26,6 +26,7 @@ import {
 	inspect,
 	InspectReport,
 	normals,
+	prune,
 	quantize,
 	simplify,
 	weld
@@ -345,13 +346,10 @@ export class ModelOptimizer {
 	 * This provides fallback functionality when Sharp is not available.
 	 */
 	private async applyBasicTextureOptimization(
-		 
+
 		_options: TextureCompressOptions
 	): Promise<void> {
 		this.emitProgress('Applying basic texture optimization', 50)
-
-		// Import basic texture optimization transforms that don't require Sharp
-		const { dedup, prune } = await import('@gltf-transform/functions')
 
 		const transforms = [
 			dedup(), // Remove duplicate resources including textures

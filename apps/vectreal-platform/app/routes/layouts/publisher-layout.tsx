@@ -6,7 +6,7 @@ import { Provider, useAtom, useAtomValue } from 'jotai/react'
 import { useCallback } from 'react'
 import { Outlet } from 'react-router'
 
-import { Navigation } from '../../components'
+import { Navigation } from '../../components/navigation'
 import {
 	PublisherButtons,
 	PublisherSidebar,

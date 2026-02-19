@@ -9,13 +9,13 @@ import { Check, Globe, Sparkle, Wrench } from 'lucide-react'
 import { Link } from 'react-router'
 
 import screenshotPublisher from '../../assets/images/publisher-optimize-2181px.webp'
-import { BasicCard, GridBg, Section } from '../../components'
-import {
-	FiletypeCarousel,
-	HeroParallaxBg,
-	HeroScene,
-	MockShopSection
-} from '../../components'
+import FiletypeCarousel from '../../components/home/filetype-carousel'
+import GridBg from '../../components/home/grid-bg'
+import HeroParallaxBg from '../../components/home/hero-parallax-bg'
+import HeroScene from '../../components/home/hero-scene'
+import MockShopSection from '../../components/home/mock-shop-section'
+import BasicCard from '../../components/layout-components/basic-card'
+import Section from '../../components/layout-components/section'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
 import { Route } from './+types/home-page'

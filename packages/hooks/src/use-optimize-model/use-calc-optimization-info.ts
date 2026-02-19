@@ -1,4 +1,4 @@
-import { OptimizationReport } from '@vctrl/core'
+import type { OptimizationReport } from '@vctrl/core/model-optimizer'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { OptimizationInfo, OptimizationState } from './types'

@@ -1,6 +1,7 @@
 import { Outlet, redirect } from 'react-router'
 
-import { Footer, Navigation } from '../../components'
+import { Footer } from '../../components/footer'
+import { Navigation } from '../../components/navigation'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'

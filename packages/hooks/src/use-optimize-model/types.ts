@@ -1,4 +1,4 @@
-import { OptimizationReport } from '@vctrl/core'
+import type { OptimizationReport } from '@vctrl/core/model-optimizer'
 
 interface ModelTotals {
 	verticesCount: number
