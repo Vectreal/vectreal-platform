@@ -25,19 +25,24 @@ export interface GLTFAssetData {
 
 const db = getDbClient()
 
-let bucketCache: { public: Bucket; private: Bucket } | null = null
-
+/**
+ * Returns fresh bucket handles for each operation.
+ *
+ * Avoiding long-lived cached instances helps prevent stream lifecycle issues
+ * observed in production during multi-file uploads.
+ */
 async function getBuckets() {
-	if (!bucketCache) {
-		const storage = await createStorage()
-		bucketCache = {
-			public: storage.public,
-			private: storage.private
-		}
+	const storage = await createStorage()
+	return {
+		public: storage.public,
+		private: storage.private
 	}
-	return bucketCache
 }
 
+/**
+ * Ensures the project has a dedicated folder record for scene assets and
+ * returns that folder. Reuses the existing row when present.
+ */
 async function ensureAssetFolder(projectId: string) {
 	const folderName = 'Scene Assets'
 	const existingFolder = await db
@@ -64,26 +69,88 @@ async function ensureAssetFolder(projectId: string) {
 	return folderResult[0]
 }
 
+/**
+ * Uploads raw bytes to Google Cloud Storage with retry/backoff for transient
+ * transport errors.
+ *
+ * - Small files use non-resumable uploads for lower overhead.
+ * - Larger files use resumable uploads for better reliability.
+ */
 async function uploadToGCS(
 	bucket: Bucket,
 	filePath: string,
 	data: Uint8Array,
 	mimeType: string
 ): Promise<void> {
-	const file = bucket.file(filePath)
+	const maxRetries = 3
+	const resumableThresholdBytes = 5 * 1024 * 1024 // 5MB is a common threshold for when to use resumable uploads
+	const shouldUseResumable = data.byteLength >= resumableThresholdBytes
 
-	await file.save(Buffer.from(data), {
-		metadata: {
-			contentType: mimeType
-		},
-		resumable: false
+	for (let attempt = 1; attempt <= maxRetries; attempt++) {
+		try {
+			const file = bucket.file(filePath)
+
+			await file.save(Buffer.from(data), {
+				metadata: {
+					contentType: mimeType
+				},
+				resumable: shouldUseResumable
+			})
+
+			return
+		} catch (error) {
+			if (!isRetryableUploadError(error) || attempt === maxRetries) {
+				throw error
+			}
+
+			const backoffMs = 1000 * 2 ** (attempt - 1)
+			console.warn(
+				`Retrying upload for ${filePath} after attempt ${attempt}/${maxRetries} due to transient error`
+			)
+			await delay(backoffMs)
+		}
+	}
+}
+
+/**
+ * Detects transient upload failures that are typically safe to retry.
+ */
+function isRetryableUploadError(error: unknown): boolean {
+	const message =
+		error instanceof Error
+			? error.message.toLowerCase()
+			: String(error).toLowerCase()
+
+	return (
+		message.includes('stream was destroyed') ||
+		message.includes('cannot call write after a stream was destroyed') ||
+		message.includes('econnreset') ||
+		message.includes('etimedout') ||
+		message.includes('socket hang up') ||
+		message.includes('timeout')
+	)
+}
+
+/**
+ * Simple async delay utility used by exponential backoff retries.
+ */
+function delay(ms: number): Promise<void> {
+	return new Promise((resolve) => {
+		setTimeout(resolve, ms)
 	})
 }
 
+/**
+ * Computes a deterministic content hash used for de-duplication.
+ */
 export function computeAssetHash(data: Uint8Array): string {
 	return createHash('sha256').update(data).digest('hex')
 }
 
+/**
+ * Finds an existing asset with the same project folder + filename and validates
+ * it against the content hash stored in metadata.
+ */
 async function findExistingAsset(
 	hash: string,
 	fileName: string,
@@ -108,6 +175,12 @@ async function findExistingAsset(
 	return null
 }
 
+/**
+ * Uploads extracted GLTF assets for a scene and persists asset metadata.
+ *
+ * Existing assets are reused when filename + content hash match, so repeated
+ * saves avoid unnecessary uploads.
+ */
 export async function uploadSceneAssets(
 	sceneId: string,
 	userId: string,
@@ -122,6 +195,7 @@ export async function uploadSceneAssets(
 		const contentHash = computeAssetHash(asset.data)
 		const fileName = asset.fileName
 
+		// Reuse already uploaded project asset when bytes are unchanged.
 		const existingAsset = await findExistingAsset(
 			contentHash,
 			fileName,
@@ -143,6 +217,7 @@ export async function uploadSceneAssets(
 		const filePath = `scenes/${sceneId}/assets/${assetId}/${fileName}`
 
 		try {
+			// Upload first, then persist DB row to avoid dangling records.
 			await uploadToGCS(privateBucket, filePath, asset.data, asset.mimeType)
 
 			await db.insert(assets).values({
@@ -178,6 +253,9 @@ export async function uploadSceneAssets(
 	return results
 }
 
+/**
+ * Downloads a single asset payload and returns bytes + metadata for response use.
+ */
 export async function downloadAsset(assetId: string): Promise<{
 	data: Uint8Array
 	mimeType: string
@@ -210,6 +288,12 @@ export async function downloadAsset(assetId: string): Promise<{
 	}
 }
 
+/**
+ * Best-effort bulk download helper.
+ *
+ * Failed items are logged and skipped so callers can continue with successful
+ * assets instead of failing the full batch.
+ */
 export async function downloadAssets(
 	assetIds: string[]
 ): Promise<
@@ -240,6 +324,11 @@ export async function downloadAssets(
 	return results
 }
 
+/**
+ * Deletes assets from both storage and database records.
+ *
+ * Missing assets are treated as non-fatal and logged as warnings.
+ */
 export async function deleteAssets(assetIds: string[]): Promise<void> {
 	const { private: privateBucket } = await getBuckets()
 

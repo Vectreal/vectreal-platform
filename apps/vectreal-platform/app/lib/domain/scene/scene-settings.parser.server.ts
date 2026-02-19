@@ -25,6 +25,9 @@ export class SceneSettingsParser {
 
 			// Extract required fields
 			const action = requestData.action as string
+			const rawRequestId = requestData.requestId as string
+			const requestId =
+				typeof rawRequestId === 'string' ? rawRequestId.trim() : undefined
 			const rawSceneId = requestData.sceneId as string
 			const sceneId =
 				typeof rawSceneId === 'string' ? rawSceneId.trim() : rawSceneId
@@ -43,6 +46,7 @@ export class SceneSettingsParser {
 			if (action === 'get-scene-settings') {
 				return {
 					action,
+					requestId,
 					sceneId,
 					settings: undefined,
 					gltfJson: undefined
@@ -57,6 +61,7 @@ export class SceneSettingsParser {
 
 				return {
 					action,
+					requestId,
 					sceneId,
 					settings: undefined,
 					gltfJson: undefined,
@@ -86,6 +91,7 @@ export class SceneSettingsParser {
 
 			return {
 				action,
+				requestId,
 				sceneId,
 				settings,
 				gltfJson: gltfJsonData || undefined,

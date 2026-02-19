@@ -11,12 +11,8 @@ export default [
 	route('health', './routes/health.tsx'),
 
 	/// API
-	route('api/scene-settings', './routes/api/scene-settings.ts'),
+	route('api/scenes/:sceneId?', './routes/api/scenes.$sceneId.ts'),
 	route('api/optimize-textures', './routes/api/optimize-textures.ts'),
-	route(
-		'api/dashboard/scene-actions/:sceneId?',
-		'./routes/api/dashboard/scene-actions.ts'
-	),
 	// AUTH API
 	route('auth/logout', './routes/api/auth/logout.ts'),
 	route('auth/social-signin', './routes/api/auth/social-signin.ts'),

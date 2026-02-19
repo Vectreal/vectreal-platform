@@ -80,6 +80,12 @@ export async function saveSceneSettings(
 	userId: string
 ): Promise<Response> {
 	try {
+		console.info('[scene-settings] save operation started', {
+			requestId: request.requestId,
+			userId,
+			sceneId: request.sceneId || null
+		})
+
 		const validationResult = request as SaveSceneSettingsRequest
 		assertParsed(
 			validationResult.settings,
@@ -108,10 +114,23 @@ export async function saveSceneSettings(
 			optimizationReport: request.optimizationReport
 		})
 
+		console.info('[scene-settings] save operation completed', {
+			requestId: request.requestId,
+			userId,
+			sceneId: finalSceneId,
+			projectId,
+			unchanged: Boolean((saveResult as { unchanged?: boolean }).unchanged)
+		})
+
 		const result = { ...saveResult, sceneId: finalSceneId }
 		return ApiResponse.success(result)
 	} catch (error) {
-		console.error('Failed to save scene settings:', error)
+		console.error('Failed to save scene settings:', {
+			requestId: request.requestId,
+			userId,
+			sceneId: request.sceneId || null,
+			error
+		})
 		return ApiResponse.serverError(
 			error instanceof Error ? error.message : 'Failed to save scene settings'
 		)
@@ -143,7 +162,7 @@ export async function getSceneSettings(
 				fileName: string
 			}
 		> = {}
-		result?.assetData?.forEach((value, key) => {
+		result?.assetDataMap?.forEach((value, key) => {
 			serialized[key] = {
 				data: Array.from(value.data), // Convert Uint8Array to number array
 				mimeType: value.mimeType,

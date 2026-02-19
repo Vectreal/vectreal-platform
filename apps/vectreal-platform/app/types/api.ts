@@ -12,6 +12,7 @@ import type {
 } from '@vctrl/core'
 
 import type { ProcessState } from './publisher-config'
+import { assets, sceneSettings } from '../db/schema'
 
 // Re-export core types for convenience
 export type { SceneMeta, SceneSettings, SerializedAsset }
@@ -34,6 +35,21 @@ export interface ExtendedGLTFDocument extends JSONDocument {
 		}
 	}
 }
+/* Database record type for assets associated with scenes. */
+export type SceneAssetRecord = typeof assets.$inferSelect
+
+/** Binary asset payload returned from scene aggregate endpoints before serialization. */
+export interface SceneAssetBinaryData {
+	readonly data: Uint8Array
+	readonly mimeType: string
+	readonly fileName: string
+}
+
+/** In-memory asset map keyed by asset id. */
+export type SceneAssetDataMap = Map<string, SceneAssetBinaryData>
+
+/** Serialized asset map for JSON responses keyed by asset id. */
+export type SerializedSceneAssetDataMap = Record<string, SerializedAsset>
 
 // ============================================================================
 // Scene Settings Types
@@ -53,6 +69,19 @@ export interface SceneConfigData extends SceneSettingsData {
 	readonly process?: ProcessState
 }
 
+export type SceneSettingsRecord = typeof sceneSettings.$inferSelect
+
+export type SceneSettingsWithAssets = {
+	settings: SceneSettingsRecord
+	assets: SceneAssetRecord[]
+}
+
+export type SceneSettingsUpsertInput = {
+	sceneId: string
+	createdBy: string
+	settings: SceneSettingsData
+}
+
 // ============================================================================
 // Scene Settings Operations
 // ============================================================================
@@ -66,6 +95,7 @@ interface BaseSceneParams {
 /** Parameters for scene settings requests. */
 export interface SceneSettingsRequest extends Partial<BaseSceneParams> {
 	readonly action: string
+	readonly requestId?: string
 	readonly projectId?: string
 	readonly settings?: SceneSettingsData
 	readonly gltfJson?: JSONDocument
@@ -101,6 +131,20 @@ export type SceneSettingsAction =
 	| 'save-scene-settings'
 	| 'get-scene-settings'
 	| 'publish-scene'
+
+/** Aggregate scene response returned by GET /api/scenes/:sceneId. */
+export interface SceneAggregateResponse {
+	readonly sceneId: string
+	readonly stats: SceneStatsData | null
+	readonly gltfJson: ExtendedGLTFDocument | null
+	readonly assetData: SerializedSceneAssetDataMap | null
+	readonly assets: SceneAssetRecord[] | null
+	readonly settings?: SceneSettings | null
+	readonly id?: string
+	readonly createdAt?: Date
+	readonly createdBy?: string
+	readonly updatedAt?: Date
+}
 
 // ============================================================================
 // API Response Types
@@ -192,4 +236,9 @@ export interface SceneStatsSnapshot {
 	readonly texturesCount?: number | null
 	readonly materialsCount?: number | null
 	readonly nodesCount?: number | null
+}
+
+/** Detail payload for scene stats refresh events. */
+export interface SceneStatsUpdatedDetail {
+	readonly sceneId?: string
 }
