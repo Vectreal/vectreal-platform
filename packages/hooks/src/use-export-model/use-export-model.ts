@@ -1,5 +1,5 @@
 import { Document } from '@gltf-transform/core'
-import { ModelExporter } from '@vctrl/core'
+import { ModelExporter } from '@vctrl/core/model-exporter'
 import fileSaver from 'file-saver'
 import { useCallback, useRef } from 'react'
 

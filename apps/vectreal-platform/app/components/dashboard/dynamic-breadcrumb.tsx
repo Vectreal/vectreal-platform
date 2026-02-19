@@ -18,7 +18,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Fragment, memo } from 'react'
 import { Link } from 'react-router'
 
-import { useDashboardHeaderData } from '../../hooks'
+import { useDashboardHeaderData } from '../../hooks/use-dashboard-content'
 
 /**
  * DynamicBreadcrumb component renders context-aware breadcrumb navigation

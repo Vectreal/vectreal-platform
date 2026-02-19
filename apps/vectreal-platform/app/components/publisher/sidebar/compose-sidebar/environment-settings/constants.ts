@@ -1,4 +1,4 @@
-import { defaultEnvOptions } from '@vctrl/viewer'
+import { defaultEnvOptions } from '../../../../../constants/viewer-defaults'
 
 import {
 	ValueMapping,

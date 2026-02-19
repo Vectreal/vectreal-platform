@@ -16,13 +16,13 @@ import {
 	SceneLoadResult,
 	useLoadModel
 } from '@vctrl/hooks/use-load-model'
-import { VectrealViewer } from '@vctrl/viewer'
 import { Eye, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useState } from 'react'
 import { Link, useFetcher, useLoaderData } from 'react-router'
 
-import { BasicCard } from '../../../components'
+import BasicCard from '../../../components/layout-components/basic-card'
 import { SceneDetailSkeleton } from '../../../components/skeletons'
+import { ClientVectrealViewer } from '../../../components/viewer/client-vectreal-viewer'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
 import { getScene } from '../../../lib/domain/scene/scene-folder-repository.server'
@@ -120,7 +120,7 @@ const PreviewModel = memo(({ file, sceneData }: PreviewModelProps) => {
 	return (
 		<div className={cn('relative', height)}>
 			<div className="h-full">
-				<VectrealViewer
+				<ClientVectrealViewer
 					model={file?.model}
 					envOptions={sceneData?.settings?.environment}
 					controlsOptions={sceneData?.settings?.controls}
@@ -133,6 +133,7 @@ const PreviewModel = memo(({ file, sceneData }: PreviewModelProps) => {
 							</div>
 						</div>
 					}
+					fallback={<SceneDetailSkeleton />}
 				/>
 			</div>
 			<div className="from-background absolute bottom-0 h-1/4 w-full bg-gradient-to-t to-transparent" />

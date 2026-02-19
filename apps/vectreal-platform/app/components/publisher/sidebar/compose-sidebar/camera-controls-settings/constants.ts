@@ -1,4 +1,7 @@
-import { defaultCameraOptions, defaultControlsOptions } from '@vctrl/viewer'
+import {
+	defaultCameraOptions,
+	defaultControlsOptions
+} from '../../../../../constants/viewer-defaults'
 
 import {
 	ValueMapping,

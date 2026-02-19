@@ -1,7 +1,7 @@
-import { SceneSettings } from '@vctrl/core'
+import type { SceneSettings } from '@vctrl/core'
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import type { ModelFile } from '@vctrl/hooks/use-load-model'
-import { OptimizerIntegrationReturn } from '@vctrl/hooks/use-load-model/types'
+import type { OptimizerIntegrationReturn } from '@vctrl/hooks/use-load-model/types'
 import { useCallback, useRef } from 'react'
 
 import type { SaveSceneResult } from './use-scene-loader'

@@ -15,7 +15,10 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import { JSONDocument } from '@gltf-transform/core'
-import { type ModelOptimizer, type TextureCompressOptions } from '@vctrl/core'
+import type {
+	ModelOptimizer,
+	TextureCompressOptions
+} from '@vctrl/core/model-optimizer'
 
 import { ServerCommunicationService } from '../../utils/server-communication'
 

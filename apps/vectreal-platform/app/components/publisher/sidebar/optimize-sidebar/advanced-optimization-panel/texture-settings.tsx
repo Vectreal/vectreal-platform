@@ -14,7 +14,7 @@ import {
 	TooltipTrigger
 } from '@shared/components/ui/tooltip'
 import { cn } from '@shared/utils'
-import { TextureOptimization } from '@vctrl/core'
+import type { TextureOptimization } from '@vctrl/core'
 import { useAtom } from 'jotai'
 import { Info } from 'lucide-react'
 import type { FC } from 'react'

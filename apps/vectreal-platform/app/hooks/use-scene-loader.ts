@@ -5,16 +5,16 @@ import type {
 	ModelFile,
 	SceneLoadResult
 } from '@vctrl/hooks/use-load-model/types'
+import { useAtom } from 'jotai'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
+
 import {
 	defaultCameraOptions,
 	defaultControlsOptions,
 	defaultEnvOptions,
 	defaultShadowOptions
-} from '@vctrl/viewer'
-import { useAtom } from 'jotai'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { toast } from 'sonner'
-
+} from '../constants/viewer-defaults'
 import { processAtom } from '../lib/stores/publisher-config-store'
 import {
 	cameraAtom,

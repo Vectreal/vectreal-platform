@@ -14,11 +14,8 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import {
-	ModelFileTypes,
-	type SceneSettings,
-	type ServerOptions
-} from '@vctrl/core'
+import type { SceneSettings, ServerOptions } from '@vctrl/core'
+import { ModelFileTypes } from '@vctrl/core/model-loader'
 import { Object3D } from 'three'
 
 import { useOptimizeModel } from '../use-optimize-model'

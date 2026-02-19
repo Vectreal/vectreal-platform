@@ -10,7 +10,7 @@ import {
 } from '@shared/components/ui/select'
 import { Switch } from '@shared/components/ui/switch'
 import { Textarea } from '@shared/components/ui/textarea'
-import { ModelExporter } from '@vctrl/core'
+import { ModelExporter } from '@vctrl/core/model-exporter'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { motion } from 'framer-motion'
 import { CheckCircle, EyeOff, Globe, Lock } from 'lucide-react'

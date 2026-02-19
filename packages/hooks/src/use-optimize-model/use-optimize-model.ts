@@ -21,7 +21,7 @@ import {
 	type QuantizeOptions,
 	type SimplifyOptions,
 	type TextureCompressOptions
-} from '@vctrl/core'
+} from '@vctrl/core/model-optimizer'
 import { useCallback, useEffect, useReducer, useRef } from 'react'
 import { Object3D } from 'three'
 

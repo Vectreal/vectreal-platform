@@ -7,15 +7,18 @@ import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
 
-export default defineConfig(({ mode, isSsrBuild, command }) => {
+export default defineConfig(() => {
+	const coreDistRoot = __dirname + '/../../dist/packages/core'
+
 	return {
 		root: __dirname,
 		cacheDir: '../../node_modules/.vite/apps/vectreal-platform',
 		resolve: {
 			alias: {
-				'three/examples/jsm/exporters/GLTFExporter':
-					__dirname +
-					'/../../node_modules/three/examples/jsm/exporters/GLTFExporter.js'
+				'@vctrl/core/model-loader': `${coreDistRoot}/model-loader.es.js`,
+				'@vctrl/core/model-optimizer': `${coreDistRoot}/model-optimizer.es.js`,
+				'@vctrl/core/model-exporter': `${coreDistRoot}/model-exporter.es.js`,
+				'@vctrl/core': `${coreDistRoot}/index.es.js`
 			}
 		},
 		server: {
@@ -49,6 +52,60 @@ export default defineConfig(({ mode, isSsrBuild, command }) => {
 			reportCompressedSize: true,
 			commonjsOptions: {
 				transformMixedEsModules: true
+			},
+			rollupOptions: {
+				onwarn(warning, warn) {
+					const message =
+						typeof warning === 'string' ? warning : (warning.message ?? '')
+
+					if (
+						message.includes(
+							"Error when using sourcemap for reporting an error: Can't resolve original location of error."
+						)
+					) {
+						return
+					}
+
+					if (
+						message.includes('is dynamically imported by') &&
+						message.includes('but also statically imported by')
+					) {
+						return
+					}
+
+					warn(warning)
+				},
+				output: {
+					manualChunks(id) {
+						if (id.includes('/node_modules/three/examples/jsm/')) {
+							return 'vendor-three-examples'
+						}
+
+						if (id.includes('/node_modules/three/')) {
+							return 'vendor-three-core'
+						}
+
+						if (id.includes('/node_modules/@react-three/fiber/')) {
+							return 'vendor-react-three-fiber'
+						}
+
+						if (id.includes('/node_modules/@react-three/drei/')) {
+							return 'vendor-react-three-drei'
+						}
+
+						if (id.includes('/node_modules/@react-three/')) {
+							return 'vendor-react-three'
+						}
+
+						if (id.includes('/node_modules/postprocessing/')) {
+							return 'vendor-postprocessing'
+						}
+
+						if (id.includes('/packages/viewer/')) {
+							return 'vendor-vectreal-viewer'
+						}
+					}
+				}
 			}
 		},
 		test: {

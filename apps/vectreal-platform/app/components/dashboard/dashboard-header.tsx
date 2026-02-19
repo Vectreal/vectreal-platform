@@ -6,7 +6,7 @@
 
 import { memo } from 'react'
 
-import { useDashboardHeaderData } from '../../hooks'
+import { useDashboardHeaderData } from '../../hooks/use-dashboard-content'
 
 import { ACTION_VARIANT } from '../../types/dashboard'
 
