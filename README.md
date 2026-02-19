@@ -30,6 +30,7 @@ The monorepo is orchestrated using NX within an npm workspaces environment, prim
   - [Getting Started](#getting-started)
     - [Prerequisites](#prerequisites)
     - [Installation](#installation)
+    - [Environment Setup](#environment-setup)
     - [Running Projects](#running-projects)
   - [Deployment](#deployment)
   - [Contributing](#contributing)
@@ -115,6 +116,16 @@ Visit our [free online editor toolkit](https://core.vectreal.com/editor) to see 
    npm install
    ```
 
+### Environment Setup
+
+Create a single local environment file at the repository root:
+
+```bash
+cp .env.development.example .env.development
+```
+
+Edit `.env.development` with your local development and deployment secret values.
+
 ### Running Projects
 
 To serve one of the app projects, use the following command:
@@ -166,7 +177,7 @@ The infrastructure is managed with Terraform and includes:
 Two setup scripts handle the deployment configuration:
 
 - `scripts/apply-infrastructure.sh` - GCP authentication, Terraform initialization and deployment, service account key generation
-- `scripts/setup-github-secrets.sh` - GitHub secrets configuration from `.env.secrets.local`
+- `scripts/setup-github-secrets.sh` - GitHub secrets configuration from `.env.development`
 
 For detailed infrastructure setup, configuration options, and troubleshooting, see the [Terraform README](terraform/README.md).
 

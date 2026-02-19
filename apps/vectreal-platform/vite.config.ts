@@ -8,19 +8,10 @@ import { defineConfig } from 'vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
 
 export default defineConfig(() => {
-	const coreDistRoot = __dirname + '/../../dist/packages/core'
-
 	return {
 		root: __dirname,
 		cacheDir: '../../node_modules/.vite/apps/vectreal-platform',
-		resolve: {
-			alias: {
-				'@vctrl/core/model-loader': `${coreDistRoot}/model-loader.es.js`,
-				'@vctrl/core/model-optimizer': `${coreDistRoot}/model-optimizer.es.js`,
-				'@vctrl/core/model-exporter': `${coreDistRoot}/model-exporter.es.js`,
-				'@vctrl/core': `${coreDistRoot}/index.es.js`
-			}
-		},
+
 		server: {
 			port: 4200,
 			host: 'localhost'
@@ -83,14 +74,6 @@ export default defineConfig(() => {
 
 						if (id.includes('/node_modules/three/')) {
 							return 'vendor-three-core'
-						}
-
-						if (id.includes('/node_modules/@react-three/fiber/')) {
-							return 'vendor-react-three-fiber'
-						}
-
-						if (id.includes('/node_modules/@react-three/drei/')) {
-							return 'vendor-react-three-drei'
 						}
 
 						if (id.includes('/node_modules/@react-three/')) {

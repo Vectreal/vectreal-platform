@@ -37,5 +37,5 @@ jobs:
       database-url: ${{ secrets.DATABASE_URL_STAGING }}
       supabase-url: ${{ secrets.SUPABASE_URL_STAGING }}
       supabase-key: ${{ secrets.SUPABASE_KEY_STAGING }}
-      gcs-bucket-name: ${{ secrets.GCS_BUCKET_NAME_STAGING }}
+      google-cloud-storage-private-bucket: ${{ secrets.GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING }}
       application-url: ${{ secrets.APPLICATION_URL_STAGING }}

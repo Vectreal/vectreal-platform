@@ -11,6 +11,11 @@ github_repo = "vectreal-platform"
 # production_service_name = "vectreal-platform"
 # staging_service_name    = "vectreal-platform-staging"
 
+# Optional: Customize private bucket names
+# production_private_bucket_name = "vectreal-private-bucket"
+# staging_private_bucket_name    = "vectreal-private-bucket-staging"
+# local_dev_private_bucket_name  = "vectreal-private-bucket-dev"
+
 # Optional: Customize scaling
 # production_min_instances = 1
 # production_max_instances = 50

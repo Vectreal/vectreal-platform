@@ -33,6 +33,24 @@ variable "staging_service_name" {
   default     = "vectreal-platform-staging"
 }
 
+variable "production_private_bucket_name" {
+  description = "Name of the production private Cloud Storage bucket"
+  type        = string
+  default     = "vectreal-private-bucket"
+}
+
+variable "staging_private_bucket_name" {
+  description = "Name of the staging private Cloud Storage bucket"
+  type        = string
+  default     = "vectreal-private-bucket-staging"
+}
+
+variable "local_dev_private_bucket_name" {
+  description = "Name of the local development private Cloud Storage bucket"
+  type        = string
+  default     = "vectreal-private-bucket-dev"
+}
+
 variable "production_min_instances" {
   description = "Minimum number of instances for production"
   type        = number

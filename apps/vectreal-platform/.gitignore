@@ -10,8 +10,6 @@ pnpm-debug.log*
 
 # Environment files
 .env*
-!.env.development.example
-!.env.production.example
 
 # IDE files
 .vscode

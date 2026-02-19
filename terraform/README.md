@@ -6,7 +6,7 @@ This directory contains Terraform configurations for provisioning and managing t
 
 The infrastructure follows a clean separation of concerns:
 
-- **Terraform** manages GCP foundation: APIs, Artifact Registry, Service Accounts, and IAM
+- **Terraform** manages GCP foundation: APIs, Artifact Registry, Cloud Storage buckets, Service Accounts, and IAM
 - **GitHub Actions** manages deployments: Docker builds, Cloud Run services, and secrets injection
 - **GitHub Secrets** stores all application secrets (no GCP Secret Manager needed)
 
@@ -47,7 +47,7 @@ This script will:
 This script will:
 
 1. ✅ Check GitHub CLI authentication
-2. ✅ Load secrets from `.env.secrets.local`
+2. ✅ Load secrets from `.env.development`
 3. ✅ Validate all required variables
 4. ✅ Set all 14 GitHub secrets automatically
 
@@ -84,9 +84,9 @@ terraform apply
 Create your secrets file:
 
 ```bash
-cd ../apps/vectreal-platform
-cp .env.secrets.local.example .env.secrets.local
-# Edit .env.secrets.local with your actual values
+cd ..
+cp .env.development.example .env.development
+# Edit .env.development with your actual values
 ```
 
 Then set the secrets (choose one method):
@@ -107,8 +107,8 @@ gh secret set GCP_CREDENTIALS_STAGING < terraform/credentials/gcp-staging-deploy
 gh secret set GCP_PROJECT_ID --body "your-project-id"
 gh secret set GCP_PROJECT_ID_STAGING --body "your-project-id"
 
-# Load from .env.secrets.local
-source apps/vectreal-platform/.env.secrets.local
+# Load from .env.development
+source .env.development
 gh secret set DATABASE_URL_PROD --body "$DATABASE_URL_PROD"
 gh secret set SUPABASE_URL_PROD --body "$SUPABASE_URL_PROD"
 # ... (repeat for all secrets)
@@ -125,13 +125,14 @@ git push origin main     # Deploy to production
 
 ### GCP Resources
 
-| Resource                 | Purpose                                                                            |
-| ------------------------ | ---------------------------------------------------------------------------------- |
-| **Artifact Registry**    | Docker image storage (`vectreal-platform` repository)                              |
-| **Service Accounts**     | `vectreal-prod-deployer`, `vectreal-staging-deployer`, `vectreal-platform-runtime` |
-| **IAM Roles**            | Cloud Run Admin, Artifact Registry Writer, Storage Object Admin/Viewer             |
-| **Enabled APIs**         | Cloud Run, IAM, Artifact Registry, Container Registry                              |
-| **Service Account Keys** | Saved to `credentials/` for GitHub Actions authentication                          |
+| Resource                 | Purpose                                                                                                          |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| **Artifact Registry**    | Docker image storage (`vectreal-platform` repository)                                                            |
+| **Private GCS Buckets**  | Environment-isolated buckets: production, staging, local development                                             |
+| **Service Accounts**     | `vectreal-prod-deployer`, `vectreal-staging-deployer`, `vectreal-platform-runtime`, `vectreal-local-dev-storage` |
+| **IAM Roles**            | Cloud Run Admin, Artifact Registry Writer, Storage Object Admin/Viewer                                           |
+| **Enabled APIs**         | Cloud Run, IAM, Artifact Registry, Container Registry, Cloud Storage                                             |
+| **Service Account Keys** | Saved to `credentials/`                                                                                          |
 
 ### What is NOT Created by Terraform
 
@@ -154,16 +155,16 @@ Set these via the setup script or manually:
 
 - `DATABASE_URL_PROD` - PostgreSQL connection string
 - `SUPABASE_URL_PROD` - Supabase project URL
-- `SUPABASE_PUB_KEY_PROD` - Supabase anonymous public key
-- `GCS_BUCKET_NAME_PROD` - Google Cloud Storage bucket name
+- `SUPABASE_KEY_PROD` - Supabase anonymous public key
+- `GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD` - Google Cloud Storage private bucket name
 - `APPLICATION_URL_PROD` - Your production domain
 
 ### Staging Secrets (5 secrets)
 
 - `DATABASE_URL_STAGING` - Staging PostgreSQL connection string
 - `SUPABASE_URL_STAGING` - Staging Supabase project URL
-- `SUPABASE_PUB_KEY_STAGING` - Staging Supabase anonymous key
-- `GCS_BUCKET_NAME_STAGING` - Staging GCS bucket name
+- `SUPABASE_KEY_STAGING` - Staging Supabase anonymous key
+- `GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING` - Staging private GCS bucket name
 - `APPLICATION_URL_STAGING` - Staging domain
 
 **Total: 14 GitHub Secrets**
@@ -176,6 +177,11 @@ Set these via the setup script or manually:
 project_id = "your-gcp-project-id"
 region     = "us-central1"
 github_org = "your-github-org"
+
+# Optional: customize bucket names
+# production_private_bucket_name = "vectreal-private-bucket"
+# staging_private_bucket_name    = "vectreal-private-bucket-staging"
+# local_dev_private_bucket_name  = "vectreal-private-bucket-dev"
 
 # Optional: Let Terraform manage Cloud Run services (not recommended)
 # manage_cloud_run_services = false  # default
@@ -245,7 +251,7 @@ terraform state list                # List all resources
 
 ### Update Secrets
 
-1. Edit `apps/vectreal-platform/.env.secrets.local`
+1. Edit `.env.development`
 2. Run: `./scripts/setup-github-secrets.sh`
 3. Or manually: `gh secret set SECRET_NAME --body "new-value"`
 4. Redeploy: `git push origin main`
@@ -308,6 +314,7 @@ terraform/
 ├── variables.tf                 # Input variables
 ├── outputs.tf                   # Output values
 ├── api-services.tf              # GCP API enablement
+├── storage.tf                   # Private GCS buckets (prod/staging/local-dev)
 ├── service-accounts.tf          # Service accounts and IAM
 ├── cloud-run.tf                 # Cloud Run (optional)
 ├── terraform.tfvars.example     # Configuration template
@@ -315,16 +322,18 @@ terraform/
 ├── scripts/                     # Setup automation scripts
 │   ├── apply-infrastructure.sh  # Infrastructure setup script
 │   └── setup-github-secrets.sh  # GitHub secrets configuration script
-└── credentials/                 # Service account keys (git-ignored)
+├── credentials/                 # Deployer service account keys (git-ignored)
     ├── gcp-prod-deployer-key.json
     └── gcp-staging-deployer-key.json
+└── ../credentials/
+    └── google-storage-local-dev-sa.json  # Local dev storage key generated by Terraform
 ```
 
 ## Security Best Practices
 
 1. ✅ Never commit `terraform.tfvars` or `credentials/` to git (already in `.gitignore`)
 2. ✅ Rotate service account keys quarterly
-3. ✅ Store `.env.secrets.local` backup in secure vault (1Password, etc.)
+3. ✅ Store `.env.development` backup in secure vault (1Password, etc.)
 4. ✅ Use least-privilege IAM roles
 5. ✅ Enable GCP audit logging
 6. ✅ Review GitHub Actions logs for security issues

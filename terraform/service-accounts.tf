@@ -19,6 +19,13 @@ resource "google_service_account" "runtime" {
   description  = "Service account for the Vectreal Platform application"
 }
 
+# Service Account for Local Development Storage Access
+resource "google_service_account" "local_dev_storage" {
+  account_id   = "vectreal-local-dev-storage"
+  display_name = "Vectreal Local Dev Storage"
+  description  = "Service account for local development storage access"
+}
+
 # IAM Bindings for Production Deployer
 resource "google_project_iam_member" "prod_deployer_run_admin" {
   project = var.project_id
@@ -76,6 +83,24 @@ resource "google_project_iam_member" "runtime_storage_viewer" {
   member  = "serviceAccount:${google_service_account.runtime.email}"
 }
 
+resource "google_storage_bucket_iam_member" "runtime_storage_admin_production" {
+  bucket = google_storage_bucket.private_production.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.runtime.email}"
+}
+
+resource "google_storage_bucket_iam_member" "runtime_storage_admin_staging" {
+  bucket = google_storage_bucket.private_staging.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.runtime.email}"
+}
+
+resource "google_storage_bucket_iam_member" "local_dev_storage_admin" {
+  bucket = google_storage_bucket.private_local_dev.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.local_dev_storage.email}"
+}
+
 # Create service account keys for GitHub Actions
 resource "google_service_account_key" "prod_deployer_key" {
   service_account_id = google_service_account.prod_deployer.name
@@ -83,6 +108,10 @@ resource "google_service_account_key" "prod_deployer_key" {
 
 resource "google_service_account_key" "staging_deployer_key" {
   service_account_id = google_service_account.staging_deployer.name
+}
+
+resource "google_service_account_key" "local_dev_storage_key" {
+  service_account_id = google_service_account.local_dev_storage.name
 }
 
 # Save keys to local files (be careful with these!)
@@ -94,4 +123,9 @@ resource "local_sensitive_file" "prod_key" {
 resource "local_sensitive_file" "staging_key" {
   content  = base64decode(google_service_account_key.staging_deployer_key.private_key)
   filename = "${path.module}/../credentials/gcp-staging-deployer-key.json"
+}
+
+resource "local_sensitive_file" "local_dev_storage_key" {
+  content  = base64decode(google_service_account_key.local_dev_storage_key.private_key)
+  filename = "${path.module}/../credentials/google-storage-local-dev-sa.json"
 }

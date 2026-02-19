@@ -13,6 +13,7 @@ vitest.config.*.timestamp*
 .env.local
 .env.development
 .env.production
+!.env.development.example
 
 # Package manager lock files - only pnpm is used
 package-lock.json

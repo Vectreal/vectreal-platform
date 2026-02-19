@@ -65,14 +65,35 @@ output "artifact_registry_location" {
   value       = google_artifact_registry_repository.vectreal.location
 }
 
+output "production_private_bucket_name" {
+  description = "Production private Cloud Storage bucket name"
+  value       = google_storage_bucket.private_production.name
+}
+
+output "staging_private_bucket_name" {
+  description = "Staging private Cloud Storage bucket name"
+  value       = google_storage_bucket.private_staging.name
+}
+
+output "local_dev_private_bucket_name" {
+  description = "Local development private Cloud Storage bucket name"
+  value       = google_storage_bucket.private_local_dev.name
+}
+
+output "local_dev_storage_key_path" {
+  description = "Path to the local development storage service account key"
+  value       = local_sensitive_file.local_dev_storage_key.filename
+  sensitive   = true
+}
+
 # GitHub Secrets Setup - Use the helper script
 output "github_secrets_setup_help" {
   description = "How to set up GitHub secrets"
-  value = <<-EOT
+  value       = <<-EOT
     See ./scripts/setup-github-secrets.sh for automated setup.
     
     The script will:
-    - Load secrets from apps/vectreal-platform/.env.secrets.local
+    - Load secrets from .env.development
     - Set all GitHub Secrets automatically
     - Verify configuration
     
@@ -83,13 +104,16 @@ output "github_secrets_setup_help" {
 
 output "next_steps" {
   description = "What to do next"
-  value = <<-EOT
+  value       = <<-EOT
     ✅ Terraform infrastructure created successfully!
     
     Next steps:
     1. Configure deployment secrets:
-       cp apps/vectreal-platform/.env.secrets.local.example apps/vectreal-platform/.env.secrets.local
+       cp .env.development.example .env.development
        # Edit with your actual production and staging secrets
+
+     1a. Local development storage credentials are generated automatically at:
+       credentials/google-storage-local-dev-sa.json
     
     2. Set up GitHub secrets:
        ./scripts/setup-github-secrets.sh

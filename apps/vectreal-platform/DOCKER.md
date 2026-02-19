@@ -37,9 +37,17 @@ The application requires the following environment variables to run properly:
 ### Optional Configuration
 
 - **`PORT`**: Application port (default: 8080)
-- **`GCS_BUCKET_NAME`**: Google Cloud Storage bucket name for asset storage
+- **`GOOGLE_CLOUD_PROJECT`**: Google Cloud project ID (`vectreal-platform`)
+- **`GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET`**: Google Cloud Storage private bucket name for asset storage
 - **`APPLICATION_URL`**: Application URL for OAuth redirects and callbacks
 - **`ENVIRONMENT`**: Environment name (e.g., production, staging, development)
+
+## Environment Behavior Matrix
+
+- **Local dev (`nx dev`)**: Uses `credentials/google-storage-local-dev-sa.json` with project `vectreal-platform` and bucket `vectreal-private-bucket-dev`.
+- **Local prod-mode (`nx run vectreal-platform:start`)**: Uses the same local credentials and bucket setup as local dev.
+- **Staging deploy (Cloud Run)**: Uses ADC (attached service account) with `GOOGLE_CLOUD_PROJECT=vectreal-platform` and `GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET` from staging secrets.
+- **Production deploy (Cloud Run)**: Uses ADC (attached service account) with `GOOGLE_CLOUD_PROJECT=vectreal-platform` and `GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET` from production secrets.
 
 ## Running the Container
 
@@ -72,7 +80,8 @@ SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 # Optional
-GCS_BUCKET_NAME=vectreal-storage-prod
+GOOGLE_CLOUD_PROJECT=vectreal-platform
+GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET=vectreal-private-bucket
 APPLICATION_URL=https://vectreal.com
 ENVIRONMENT=production
 PORT=8080

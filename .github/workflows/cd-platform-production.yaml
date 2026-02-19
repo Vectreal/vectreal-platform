@@ -37,5 +37,5 @@ jobs:
       database-url: ${{ secrets.DATABASE_URL_PROD }}
       supabase-url: ${{ secrets.SUPABASE_URL_PROD }}
       supabase-key: ${{ secrets.SUPABASE_KEY_PROD }}
-      gcs-bucket-name: ${{ secrets.GCS_BUCKET_NAME_PROD }}
+      google-cloud-storage-private-bucket: ${{ secrets.GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD }}
       application-url: ${{ secrets.APPLICATION_URL_PROD }}

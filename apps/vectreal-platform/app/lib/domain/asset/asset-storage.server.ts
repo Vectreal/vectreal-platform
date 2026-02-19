@@ -7,6 +7,7 @@ import { and, eq } from 'drizzle-orm'
 import { getDbClient } from '../../../db/client'
 import { assets, folders } from '../../../db/schema'
 import { createStorage } from '../../gcloud-storage.server'
+import { SceneAssetDataMap } from 'apps/vectreal-platform/app/types/api'
 
 export interface AssetUploadResult {
 	assetId: string
@@ -24,6 +25,8 @@ export interface GLTFAssetData {
 }
 
 const db = getDbClient()
+const ASSET_FOLDER_NAME = 'Scene Assets'
+const DEFAULT_MIME_TYPE = 'application/octet-stream'
 
 /**
  * Returns fresh bucket handles for each operation.
@@ -31,12 +34,9 @@ const db = getDbClient()
  * Avoiding long-lived cached instances helps prevent stream lifecycle issues
  * observed in production during multi-file uploads.
  */
-async function getBuckets() {
+async function getPrivateBucket() {
 	const storage = await createStorage()
-	return {
-		public: storage.public,
-		private: storage.private
-	}
+	return storage.private
 }
 
 /**
@@ -44,11 +44,12 @@ async function getBuckets() {
  * returns that folder. Reuses the existing row when present.
  */
 async function ensureAssetFolder(projectId: string) {
-	const folderName = 'Scene Assets'
 	const existingFolder = await db
 		.select()
 		.from(folders)
-		.where(eq(folders.projectId, projectId))
+		.where(
+			and(eq(folders.projectId, projectId), eq(folders.name, ASSET_FOLDER_NAME))
+		)
 		.limit(1)
 
 	if (existingFolder.length > 0) {
@@ -60,7 +61,7 @@ async function ensureAssetFolder(projectId: string) {
 		.insert(folders)
 		.values({
 			id: folderId,
-			name: folderName,
+			name: ASSET_FOLDER_NAME,
 			projectId,
 			parentFolderId: null
 		})
@@ -70,11 +71,10 @@ async function ensureAssetFolder(projectId: string) {
 }
 
 /**
- * Uploads raw bytes to Google Cloud Storage with retry/backoff for transient
- * transport errors.
+ * Uploads raw bytes to Google Cloud Storage.
  *
- * - Small files use non-resumable uploads for lower overhead.
- * - Larger files use resumable uploads for better reliability.
+ * Scene-save uploads use in-memory buffers. Keep this path non-resumable to
+ * avoid resumable stream/session lifecycle issues under retry conditions.
  */
 async function uploadToGCS(
 	bucket: Bucket,
@@ -82,61 +82,13 @@ async function uploadToGCS(
 	data: Uint8Array,
 	mimeType: string
 ): Promise<void> {
-	const maxRetries = 3
-	const resumableThresholdBytes = 5 * 1024 * 1024 // 5MB is a common threshold for when to use resumable uploads
-	const shouldUseResumable = data.byteLength >= resumableThresholdBytes
+	const file = bucket.file(filePath)
 
-	for (let attempt = 1; attempt <= maxRetries; attempt++) {
-		try {
-			const file = bucket.file(filePath)
-
-			await file.save(Buffer.from(data), {
-				metadata: {
-					contentType: mimeType
-				},
-				resumable: shouldUseResumable
-			})
-
-			return
-		} catch (error) {
-			if (!isRetryableUploadError(error) || attempt === maxRetries) {
-				throw error
-			}
-
-			const backoffMs = 1000 * 2 ** (attempt - 1)
-			console.warn(
-				`Retrying upload for ${filePath} after attempt ${attempt}/${maxRetries} due to transient error`
-			)
-			await delay(backoffMs)
-		}
-	}
-}
-
-/**
- * Detects transient upload failures that are typically safe to retry.
- */
-function isRetryableUploadError(error: unknown): boolean {
-	const message =
-		error instanceof Error
-			? error.message.toLowerCase()
-			: String(error).toLowerCase()
-
-	return (
-		message.includes('stream was destroyed') ||
-		message.includes('cannot call write after a stream was destroyed') ||
-		message.includes('econnreset') ||
-		message.includes('etimedout') ||
-		message.includes('socket hang up') ||
-		message.includes('timeout')
-	)
-}
-
-/**
- * Simple async delay utility used by exponential backoff retries.
- */
-function delay(ms: number): Promise<void> {
-	return new Promise((resolve) => {
-		setTimeout(resolve, ms)
+	await file.save(Buffer.from(data), {
+		metadata: {
+			contentType: mimeType
+		},
+		resumable: false
 	})
 }
 
@@ -154,14 +106,12 @@ export function computeAssetHash(data: Uint8Array): string {
 async function findExistingAsset(
 	hash: string,
 	fileName: string,
-	projectId: string
+	folderId: string
 ): Promise<typeof assets.$inferSelect | null> {
-	const folder = await ensureAssetFolder(projectId)
-
 	const existingAssets = await db
 		.select()
 		.from(assets)
-		.where(and(eq(assets.folderId, folder.id), eq(assets.name, fileName)))
+		.where(and(eq(assets.folderId, folderId), eq(assets.name, fileName)))
 		.limit(1)
 
 	if (existingAssets.length > 0) {
@@ -173,6 +123,14 @@ async function findExistingAsset(
 	}
 
 	return null
+}
+
+function getErrorMessage(error: unknown): string {
+	if (error instanceof Error) {
+		return error.message
+	}
+
+	return String(error)
 }
 
 /**
@@ -187,7 +145,7 @@ export async function uploadSceneAssets(
 	projectId: string,
 	gltfAssets: GLTFAssetData[]
 ): Promise<AssetUploadResult[]> {
-	const { private: privateBucket } = await getBuckets()
+	const privateBucket = await getPrivateBucket()
 	const folder = await ensureAssetFolder(projectId)
 	const results: AssetUploadResult[] = []
 
@@ -199,7 +157,7 @@ export async function uploadSceneAssets(
 		const existingAsset = await findExistingAsset(
 			contentHash,
 			fileName,
-			projectId
+			folder.id
 		)
 
 		if (existingAsset) {
@@ -246,7 +204,10 @@ export async function uploadSceneAssets(
 			})
 		} catch (error) {
 			console.error(`Failed to upload asset ${fileName}:`, error)
-			throw new Error(`Failed to upload asset ${fileName}: ${error}`)
+			throw new Error(
+				`Failed to upload asset ${fileName}: ${getErrorMessage(error)}`,
+				error instanceof Error ? { cause: error } : undefined
+			)
 		}
 	}
 
@@ -271,7 +232,7 @@ export async function downloadAsset(assetId: string): Promise<{
 		throw new Error(`Asset not found: ${assetId}`)
 	}
 
-	const { private: privateBucket } = await getBuckets()
+	const privateBucket = await getPrivateBucket()
 	const file = privateBucket.file(asset.filePath)
 
 	try {
@@ -279,12 +240,15 @@ export async function downloadAsset(assetId: string): Promise<{
 
 		return {
 			data: new Uint8Array(buffer),
-			mimeType: asset.mimeType || 'application/octet-stream',
+			mimeType: asset.mimeType || DEFAULT_MIME_TYPE,
 			fileName: asset.name
 		}
 	} catch (error) {
 		console.error(`Failed to download asset ${assetId}:`, error)
-		throw new Error(`Failed to download asset ${assetId}: ${error}`)
+		throw new Error(
+			`Failed to download asset ${assetId}: ${getErrorMessage(error)}`,
+			error instanceof Error ? { cause: error } : undefined
+		)
 	}
 }
 
@@ -299,26 +263,26 @@ export async function downloadAssets(
 ): Promise<
 	Map<string, { data: Uint8Array; mimeType: string; fileName: string }>
 > {
-	const results = new Map()
+	const results: SceneAssetDataMap = new Map()
 
 	const downloads = assetIds.map(async (assetId) => {
-		try {
-			const assetData = await downloadAsset(assetId)
-			return { assetId, assetData }
-		} catch (error) {
-			throw new Error(`Failed to download asset ${assetId}: ${error}`)
-		}
+		const assetData = await downloadAsset(assetId)
+		return { assetId, assetData }
 	})
 
 	const settled = await Promise.allSettled(downloads)
-	for (const outcome of settled) {
+	for (const [index, outcome] of settled.entries()) {
+		const assetId = assetIds[index]
+
 		if (outcome.status === 'fulfilled') {
 			results.set(outcome.value.assetId, outcome.value.assetData)
 			continue
 		}
-		const reason = outcome.reason as { assetId?: string; error?: unknown }
-		const assetId = reason?.assetId || 'unknown'
-		console.error(`Failed to download asset ${assetId}:`, reason?.error)
+
+		console.error(
+			`Failed to download asset ${assetId}:`,
+			getErrorMessage(outcome.reason)
+		)
 	}
 
 	return results
@@ -330,7 +294,7 @@ export async function downloadAssets(
  * Missing assets are treated as non-fatal and logged as warnings.
  */
 export async function deleteAssets(assetIds: string[]): Promise<void> {
-	const { private: privateBucket } = await getBuckets()
+	const privateBucket = await getPrivateBucket()
 
 	for (const assetId of assetIds) {
 		try {
@@ -346,11 +310,14 @@ export async function deleteAssets(assetIds: string[]): Promise<void> {
 			}
 
 			const file = privateBucket.file(asset.filePath)
-			await file.delete()
+			await file.delete({ ignoreNotFound: true })
 
 			await db.delete(assets).where(eq(assets.id, assetId))
 		} catch (error) {
-			console.error(`Failed to delete asset ${assetId}:`, error)
+			console.error(
+				`Failed to delete asset ${assetId}:`,
+				getErrorMessage(error)
+			)
 		}
 	}
 }

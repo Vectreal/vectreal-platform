@@ -43,9 +43,9 @@ fi
 echo ""
 
 # ============================================================================
-# Load Secrets from .env.secrets.local
+# Load Secrets from .env.development
 # ============================================================================
-ENV_FILE="../apps/vectreal-platform/.env.secrets.local"
+ENV_FILE="../.env.development"
 
 echo "📂 Checking for secrets file..."
 
@@ -53,7 +53,7 @@ if [ ! -f "$ENV_FILE" ]; then
     echo "❌ Error: $ENV_FILE not found!"
     echo ""
     echo "Create it from the example:"
-    echo "   cp apps/vectreal-platform/.env.secrets.local.example apps/vectreal-platform/.env.secrets.local"
+    echo "   cp .env.development.example .env.development"
     echo "   # Then edit with your actual values"
     echo ""
     echo "Required variables:"
@@ -61,14 +61,14 @@ if [ ! -f "$ENV_FILE" ]; then
     echo "  - DATABASE_URL_PROD / DATABASE_URL_STAGING"
     echo "  - SUPABASE_URL_PROD / SUPABASE_URL_STAGING"
     echo "  - SUPABASE_KEY_PROD / SUPABASE_KEY_STAGING"
-    echo "  - GCS_BUCKET_NAME_PROD / GCS_BUCKET_NAME_STAGING"
+    echo "  - GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD / GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING"
     echo "  - APPLICATION_URL_PROD / APPLICATION_URL_STAGING"
     exit 1
 fi
 
 echo "✅ Found secrets file"
 echo ""
-echo "📦 Loading secrets from .env.secrets.local..."
+echo "📦 Loading secrets from .env.development..."
 
 # Source the env file
 set -a
@@ -85,12 +85,12 @@ REQUIRED_VARS=(
     "DATABASE_URL_PROD"
     "SUPABASE_URL_PROD"
     "SUPABASE_KEY_PROD"
-    "GCS_BUCKET_NAME_PROD"
+    "GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD"
     "APPLICATION_URL_PROD"
     "DATABASE_URL_STAGING"
     "SUPABASE_URL_STAGING"
     "SUPABASE_KEY_STAGING"
-    "GCS_BUCKET_NAME_STAGING"
+    "GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING"
     "APPLICATION_URL_STAGING"
 )
 
@@ -103,12 +103,12 @@ done
 
 if [ ${#MISSING_VARS[@]} -gt 0 ]; then
     echo ""
-    echo "❌ Error: Missing required variables in .env.secrets.local:"
+    echo "❌ Error: Missing required variables in .env.development:"
     for var in "${MISSING_VARS[@]}"; do
         echo "  - $var"
     done
     echo ""
-    echo "Please edit apps/vectreal-platform/.env.secrets.local and add all required values"
+    echo "Please edit .env.development and add all required values"
     exit 1
 fi
 
@@ -146,7 +146,7 @@ echo "→ Setting production secrets..."
 gh secret set DATABASE_URL_PROD --body "$DATABASE_URL_PROD"
 gh secret set SUPABASE_URL_PROD --body "$SUPABASE_URL_PROD"
 gh secret set SUPABASE_KEY_PROD --body "$SUPABASE_KEY_PROD"
-gh secret set GCS_BUCKET_NAME_PROD --body "$GCS_BUCKET_NAME_PROD"
+gh secret set GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD --body "$GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD"
 gh secret set APPLICATION_URL_PROD --body "$APPLICATION_URL_PROD"
 echo "  ✅ Production secrets (5)"
 
@@ -155,7 +155,7 @@ echo "→ Setting staging secrets..."
 gh secret set DATABASE_URL_STAGING --body "$DATABASE_URL_STAGING"
 gh secret set SUPABASE_URL_STAGING --body "$SUPABASE_URL_STAGING"
 gh secret set SUPABASE_KEY_STAGING --body "$SUPABASE_KEY_STAGING"
-gh secret set GCS_BUCKET_NAME_STAGING --body "$GCS_BUCKET_NAME_STAGING"
+gh secret set GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING --body "$GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING"
 gh secret set APPLICATION_URL_STAGING --body "$APPLICATION_URL_STAGING"
 echo "  ✅ Staging secrets (5)"
 
@@ -171,7 +171,7 @@ echo "📋 Verify secrets:"
 echo "   gh secret list"
 echo ""
 echo "🔄 To rotate secrets:"
-echo "   1. Edit apps/vectreal-platform/.env.secrets.local"
+echo "   1. Edit .env.development"
 echo "   2. Run this script again: ./setup-github-secrets.sh"
 echo "   3. Redeploy: git commit --allow-empty -m 'Rotate secrets' && git push"
 echo ""

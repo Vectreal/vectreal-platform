@@ -41,8 +41,8 @@ on:
       supabase-key:
         description: 'Supabase Key'
         required: true
-      gcs-bucket-name:
-        description: 'GCS Bucket Name'
+      google-cloud-storage-private-bucket:
+        description: 'Google Cloud Storage private bucket name'
         required: true
       application-url:
         description: 'Application URL'
@@ -101,10 +101,11 @@ jobs:
           env_vars: |
             NODE_ENV=${{ inputs.node-env }}
             ENVIRONMENT=${{ inputs.environment }}
+            GOOGLE_CLOUD_PROJECT=${{ secrets.gcp-project-id }}
             DATABASE_URL=${{ secrets.database-url }}
             SUPABASE_URL=${{ secrets.supabase-url }}
             SUPABASE_KEY=${{ secrets.supabase-key }}
-            GCS_BUCKET_NAME=${{ secrets.gcs-bucket-name }}
+            GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET=${{ secrets.google-cloud-storage-private-bucket }}
             APPLICATION_URL=${{ secrets.application-url }}
 
       - name: Verify deployment health

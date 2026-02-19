@@ -10,7 +10,7 @@
 			"executor": "nx:run-commands",
 			"options": {
 				"cwd": "apps/vectreal-platform/supabase",
-				"envFile": "apps/vectreal-platform/.env.development.local",
+				"envFile": ".env.development",
 				"commands": ["pnpm exec supabase stop", "pnpm exec supabase start"],
 				"parallel": false
 			}
@@ -19,7 +19,7 @@
 			"executor": "nx:run-commands",
 			"options": {
 				"cwd": "apps/vectreal-platform/supabase",
-				"envFile": "apps/vectreal-platform/.env.development.local",
+				"envFile": ".env.development",
 				"commands": ["pnpm exec supabase start"],
 				"parallel": false
 			}
@@ -28,7 +28,7 @@
 			"executor": "nx:run-commands",
 			"options": {
 				"cwd": "apps/vectreal-platform/supabase",
-				"envFile": "apps/vectreal-platform/.env.development.local",
+				"envFile": ".env.development",
 				"commands": ["pnpm exec supabase stop"],
 				"parallel": false
 			}
@@ -37,7 +37,7 @@
 			"executor": "nx:run-commands",
 			"options": {
 				"cwd": "apps/vectreal-platform/supabase",
-				"envFile": "apps/vectreal-platform/.env.development.local",
+				"envFile": ".env.development",
 				"commands": ["pnpm exec supabase db reset"],
 				"parallel": false
 			}
@@ -46,7 +46,7 @@
 			"executor": "nx:run-commands",
 			"options": {
 				"cwd": "apps/vectreal-platform",
-				"envFile": "apps/vectreal-platform/.env.development.local",
+				"envFile": ".env.development",
 				"commands": [
 					"pnpm exec supabase db reset",
 					"pnpm exec drizzle-kit generate --config drizzle.config.ts",
@@ -67,7 +67,7 @@
 			"executor": "nx:run-commands",
 			"options": {
 				"cwd": "apps/vectreal-platform",
-				"envFile": "apps/vectreal-platform/.env.development.local",
+				"envFile": ".env.development",
 				"commands": [
 					"pnpm exec drizzle-kit generate --config drizzle.config.ts"
 				],
@@ -78,7 +78,7 @@
 			"executor": "nx:run-commands",
 			"options": {
 				"cwd": "apps/vectreal-platform",
-				"envFile": "apps/vectreal-platform/.env.development.local",
+				"envFile": ".env.development",
 				"commands": [
 					"pnpm exec drizzle-kit migrate --config drizzle.config.ts"
 				],
@@ -89,7 +89,7 @@
 			"executor": "nx:run-commands",
 			"options": {
 				"cwd": "apps/vectreal-platform",
-				"envFile": "apps/vectreal-platform/.env.secrets.local",
+				"envFile": ".env.development",
 				"commands": [
 					"DATABASE_URL=$DATABASE_URL_STAGING pnpm exec drizzle-kit push --config drizzle.config.ts"
 				],
@@ -100,7 +100,7 @@
 			"executor": "nx:run-commands",
 			"options": {
 				"cwd": "apps/vectreal-platform",
-				"envFile": "apps/vectreal-platform/.env.secrets.local",
+				"envFile": ".env.development",
 				"commands": [
 					"DATABASE_URL=$DATABASE_URL_PROD pnpm exec drizzle-kit push --config drizzle.config.ts"
 				],
@@ -111,7 +111,7 @@
 			"executor": "nx:run-commands",
 			"options": {
 				"cwd": "apps/vectreal-platform",
-				"envFile": "apps/vectreal-platform/.env.secrets.local",
+				"envFile": ".env.development",
 				"commands": [
 					"DATABASE_URL=$DATABASE_URL_STAGING pnpm exec drizzle-kit migrate --config drizzle.config.ts"
 				],
@@ -122,7 +122,7 @@
 			"executor": "nx:run-commands",
 			"options": {
 				"cwd": "apps/vectreal-platform",
-				"envFile": "apps/vectreal-platform/.env.secrets.local",
+				"envFile": ".env.development",
 				"commands": [
 					"DATABASE_URL=$DATABASE_URL_PROD pnpm exec drizzle-kit migrate --config drizzle.config.ts"
 				],
@@ -145,7 +145,7 @@
 			"executor": "nx:run-commands",
 			"options": {
 				"cwd": "apps/vectreal-platform",
-				"envFile": "apps/vectreal-platform/.env.production.local",
+				"envFile": ".env.development",
 				"command": "react-router-serve build/server/index.js"
 			},
 			"dependsOn": ["build"]

@@ -65,7 +65,8 @@ ENV PORT=8080
 # - DATABASE_URL: PostgreSQL connection string
 # - SUPABASE_URL: Supabase project URL (e.g., https://xxx.supabase.co)
 # - SUPABASE_KEY: Supabase anonymous/public key
-# - GCS_BUCKET_NAME: Google Cloud Storage bucket name (optional)
+# - GOOGLE_CLOUD_PROJECT: Google Cloud project ID (vectreal-platform)
+# - GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET: Google Cloud Storage private bucket name
 # - APPLICATION_URL: Application URL for OAuth redirects (optional)
 # =============================================================================
 
