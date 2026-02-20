@@ -6,7 +6,6 @@ import {
 import { useEffect, useState } from 'react'
 import { Outlet, useLoaderData, useNavigation, useParams } from 'react-router'
 import type { ShouldRevalidateFunction } from 'react-router'
-
 import {
 	DashboardHeader,
 	DashboardSidebarContent,
@@ -26,6 +25,7 @@ import { getUserProjects } from '../../lib/domain/project/project-repository.ser
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 
 import { Route } from './+types/dashboard-layout'
+import CenteredSpinner from '../../components/centered-spinner'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	// Fetch core dashboard data once - shared by all child routes
@@ -133,7 +133,7 @@ const DashboardLayout = () => {
 		if (isProjectDetail) return <ProjectContentSkeleton />
 
 		// Default skeleton
-		return <DashboardSkeleton />
+		return <CenteredSpinner />
 	}
 
 	return (

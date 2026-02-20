@@ -1,4 +1,4 @@
-import type { OptimizationReport } from '@vctrl/core'
+import type { OptimizationReport, Optimizations } from '@vctrl/core'
 
 import type { sceneStats, SceneStatsSnapshot } from '../../db/schema'
 
@@ -76,7 +76,9 @@ export function createSceneStatsFromReport(
 	options?: {
 		label?: string
 		description?: string
-		draftBytes?: number | null
+		initialSceneBytes?: number | null
+		currentSceneBytes?: number | null
+		optimizationSettings?: Optimizations
 	}
 ): Omit<InsertSceneStats, 'id' | 'createdAt' | 'updatedAt'> {
 	return {
@@ -86,10 +88,10 @@ export function createSceneStatsFromReport(
 		description: options?.description,
 		baseline: buildSceneStatsSnapshot(report, 'baseline'),
 		optimized: buildSceneStatsSnapshot(report, 'optimized'),
-		draftBytes: options?.draftBytes ?? null,
-		publishedBytes: null,
+		initialSceneBytes: options?.initialSceneBytes ?? null,
+		currentSceneBytes: options?.currentSceneBytes ?? null,
 		appliedOptimizations: report.appliedOptimizations,
-		optimizationSettings: null,
+		optimizationSettings: options?.optimizationSettings ?? null,
 		additionalMetrics: null
 	}
 }

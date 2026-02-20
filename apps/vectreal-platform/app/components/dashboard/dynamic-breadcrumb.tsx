@@ -18,7 +18,30 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Fragment, memo } from 'react'
 import { Link } from 'react-router'
 
+import {
+	getRouteContext,
+	parseRouteParams
+} from '../../components/dashboard/utils'
 import { useDashboardHeaderData } from '../../hooks/use-dashboard-content'
+import type { NavigationState } from '../../types/dashboard'
+
+const getBreadcrumbNavigationState = (
+	to: string,
+	label: string
+): NavigationState | undefined => {
+	const routeContext = getRouteContext(to, parseRouteParams(to))
+
+	switch (routeContext) {
+		case 'project-detail':
+			return { name: label, type: 'project' }
+		case 'folder-detail':
+			return { name: label, type: 'folder' }
+		case 'scene-detail':
+			return { name: label, type: 'scene' }
+		default:
+			return undefined
+	}
+}
 
 /**
  * DynamicBreadcrumb component renders context-aware breadcrumb navigation
@@ -45,9 +68,9 @@ export const DynamicBreadcrumb = memo(() => {
 				key={contentKey}
 				initial={{ opacity: 0, x: -4 }}
 				animate={{ opacity: 1, x: 0 }}
-				exit={{ opacity: 0, y: -12 }}
+				exit={{ opacity: 0, x: 12 }}
 				transition={{
-					duration: 0.25,
+					duration: 0.15,
 					ease: 'easeOut'
 				}}
 			>
@@ -84,7 +107,14 @@ export const DynamicBreadcrumb = memo(() => {
 												</BreadcrumbPage>
 											) : item.to ? (
 												<BreadcrumbLink asChild>
-													<Link viewTransition to={item.to}>
+													<Link
+														viewTransition
+														to={item.to}
+														state={getBreadcrumbNavigationState(
+															item.to,
+															item.label
+														)}
+													>
 														{item.label}
 													</Link>
 												</BreadcrumbLink>

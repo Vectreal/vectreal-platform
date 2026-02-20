@@ -1,14 +1,24 @@
-import type { OptimizationReport, SceneSettings } from '@vctrl/core'
-import { useModelContext } from '@vctrl/hooks/use-load-model'
+import type {
+	OptimizationReport,
+	Optimizations,
+	SceneSettings
+} from '@vctrl/core'
+import { useExportModel } from '@vctrl/hooks/use-export-model'
+import {
+	reconstructGltfFiles,
+	useModelContext
+} from '@vctrl/hooks/use-load-model'
 import type {
 	EventHandler,
 	ModelFile,
+	ServerSceneData,
 	SceneLoadResult
 } from '@vctrl/hooks/use-load-model/types'
-import { useAtom } from 'jotai'
+import { useAtom, useAtomValue } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
+import { optimizationPresets } from '../constants/optimizations'
 import {
 	defaultCameraOptions,
 	defaultControlsOptions,
@@ -17,23 +27,30 @@ import {
 } from '../constants/viewer-defaults'
 import { processAtom } from '../lib/stores/publisher-config-store'
 import {
+	optimizationAtom,
+	optimizationRuntimeAtom,
+	optimizationRuntimeInitialState
+} from '../lib/stores/scene-optimization-store'
+import {
 	cameraAtom,
 	controlsAtom,
 	environmentAtom,
 	metaAtom,
 	shadowsAtom
 } from '../lib/stores/scene-settings-store'
-
-import { useScenePersistence } from './use-scene-persistence'
+import type { SceneAggregateResponse, SceneStatsData } from '../types/api'
+import { OptimizationPreset } from '../types/scene-optimization'
 
 export interface UseSceneLoaderParams {
 	sceneId: null | string
 	userId?: string
 	autoLoad?: boolean // Control whether to auto-load scene on mount
+	initialSceneAggregate?: SceneAggregateResponse | null
 }
 
 export interface SaveSceneResult {
 	sceneId?: string
+	stats?: SceneStatsData | null
 	unchanged?: boolean
 	[key: string]: unknown
 }
@@ -46,34 +63,29 @@ export interface SaveSceneResult {
  * This hook follows a "single source of truth" pattern by:
  * 1. Managing scene-specific operations (load, save) as actions
  * 2. Reading/writing to shared Jotai atoms for ALL shared state
- * 3. NOT returning values already available via context/atoms (prevents duplication)
+ * 3. Returning only scene actions needed by consumers
  *
  * ### State Sources (Single Source of Truth):
- * - **Scene Settings**: `scene-settings-store` atoms (env, toneMapping, controls, shadows, meta)
+ * - **Scene Settings**: `scene-settings-store` atoms (environment, camera, controls, shadows, meta)
  *   - Access via: `useAtomValue(environmentAtom)`, etc.
  * - **Process State**: `publisher-config-store.processAtom` (isInitializing, hasUnsavedChanges, isLoading, step, showSidebar, showInfo)
  *   - Access via: `useAtomValue(processAtom)` or `useAtom(processAtom)`
  * - **Model State**: `useModelContext()` (file, isFileLoading, reset, loadFromServer, etc.)
  *   - Access via: `const { file } = useModelContext()`
- * - **Hook-Local State** (NOT shared):
+ * - **Hook-Local State** (NOT shared and not returned):
  *   - `currentSceneId` - Active scene ID tracking
  *   - `lastSavedSettings` - Baseline for change detection (internal comparison state)
  *
  * ### What This Hook Returns:
- * Only returns hook-specific state and actions that are NOT available elsewhere:
- * - `currentSceneId: string | null` - Current active scene ID (hook-managed)
- * - `lastSavedSettings: SceneSettingsData | null` - Saved state baseline for comparison
- * - `loadScene: (sceneId?: string) => Promise<SceneLoadResult | void>` - Load scene from server
+ * Returns only the action consumed by layout/publishing UI:
  * - `saveSceneSettings: () => Promise<SaveSceneResult>` - Save current settings to server
- * - `loadSceneSettings: (sceneId: string) => Promise<void>` - Load settings only (from useScenePersistence)
- * - `saveSceneSettings: (options?) => Promise<SaveSceneResult | { unchanged: true } | undefined>`
  *
  * ### What This Hook Does NOT Return (access via atoms/context instead):
  * ❌ Do NOT return these - they create duplicate state and violate single source of truth:
- * - `env`, `toneMapping`, `controls`, `shadows`, `meta` → Use `scene-settings-store` atoms
- * - `file`, `reset`, `isFileLoading` → Use `useModelContext()`
+ * - `environment`, `camera`, `controls`, `shadows`, `meta` → Use `scene-settings-store` atoms
+ * - `file`, `isFileLoading` → Use `useModelContext()`
  * - `isInitializing`, `hasUnsavedChanges`, `isLoading`, `step` → Use `processAtom`
- * - `currentSettings` → Derive from atoms where needed using `useMemo`
+ * - `currentSceneId`, `lastSavedSettings`, `currentSettings` → Internal hook state only
  *
  * ### Side Effects:
  * This hook automatically:
@@ -113,39 +125,43 @@ export interface SaveSceneResult {
  * ```tsx
  * // ❌ INCORRECT: Multiple hook instances
  * const Component1 = () => {
- *   const { hasUnsavedChanges } = useSceneLoader({ sceneId }) // Instance A
+ *   const { saveSceneSettings } = useSceneLoader({ sceneId, userId }) // Instance A
  *   // ...
  * }
  *
  * const Component2 = () => {
- *   const { hasUnsavedChanges } = useSceneLoader({ sceneId }) // Instance B ❌ Duplicate!
+ *   const { saveSceneSettings } = useSceneLoader({ sceneId, userId }) // Instance B ❌ Duplicate!
  *   // Each instance has separate lastSavedSettings state!
  * }
  * ```
  *
- * @param params - Configuration object or sceneId string
+ * @param params - Configuration object
  * @param params.sceneId - Scene ID to load (null for new scene)
  * @param params.userId - User ID for saving operations
  * @param params.autoLoad - Whether to auto-load scene on mount (default: true)
  */
-export function useSceneLoader(
-	params: UseSceneLoaderParams | string | null = null
-) {
-	// Handle both object params and simple sceneId string for backwards compatibility
+export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
+	// Handle nullable params by applying defaults
 	const {
 		sceneId: paramSceneId,
 		userId,
-		autoLoad = true
-	} = typeof params === 'string' || params === null
-		? { sceneId: params, userId: undefined, autoLoad: true }
+		autoLoad = true,
+		initialSceneAggregate = null
+	} = params === null
+		? {
+				sceneId: null,
+				userId: undefined,
+				autoLoad: true,
+				initialSceneAggregate: null
+			}
 		: params
 
 	const sceneLoadAttemptedRef = useRef(false)
+	const inFlightSaveRef = useRef<Promise<
+		SaveSceneResult | { unchanged: true } | undefined
+	> | null>(null)
 	const [lastSavedSettings, setLastSavedSettings] =
 		useState<SceneSettings | null>(null)
-	const [lastSavedReportSignature, setLastSavedReportSignature] = useState<
-		string | null
-	>(null)
 	const [currentSceneId, setCurrentSceneId] = useState<string | null>(
 		paramSceneId
 	)
@@ -155,10 +171,12 @@ export function useSceneLoader(
 		file,
 		on,
 		off,
+		load,
 		loadFromServer,
 		optimizer,
 		file: modelFile
 	} = useModelContext()
+	const { handleDocumentGltfExport } = useExportModel()
 
 	// Scene state atoms
 	const [env, setEnv] = useAtom(environmentAtom)
@@ -169,7 +187,41 @@ export function useSceneLoader(
 
 	// Process state atom - use full atom access for reading and writing
 	const [processState, setProcess] = useAtom(processAtom)
+	const [, setOptimizationState] = useAtom(optimizationAtom)
+	const { optimizations: optimizationSettings } = useAtomValue(optimizationAtom)
+	const [optimizationRuntime, setOptimizationRuntime] = useAtom(
+		optimizationRuntimeAtom
+	)
+	const {
+		lastSavedReportSignature,
+		latestSceneStats,
+		optimizedSceneBytes,
+		clientSceneBytes
+	} = optimizationRuntime
 	const { isInitializing } = processState
+
+	const calculateAggregateSceneBytes = useCallback(
+		(aggregate: SceneAggregateResponse | null) => {
+			if (!aggregate?.gltfJson && !aggregate?.assetData) {
+				return null
+			}
+
+			const gltfBytes = aggregate.gltfJson
+				? new TextEncoder().encode(JSON.stringify(aggregate.gltfJson))
+						.byteLength
+				: 0
+
+			const assetBytes = aggregate.assetData
+				? Object.values(aggregate.assetData).reduce(
+						(total, asset) => total + asset.data.length,
+						0
+					)
+				: 0
+
+			return gltfBytes + assetBytes
+		},
+		[]
+	)
 
 	// Helper functions to update specific process state fields
 	const setIsDownloading = useCallback(
@@ -214,15 +266,193 @@ export function useSceneLoader(
 		[env, camera, controls, shadows, meta]
 	)
 
-	// Scene persistence operations
-	const { saveSceneSettings: saveToDB, loadSceneSettings } =
-		useScenePersistence({
+	const createRequestId = useCallback(() => {
+		if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+			return crypto.randomUUID()
+		}
+
+		return `save-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+	}, [])
+
+	const serializeGltfDocument = useCallback(async () => {
+		if (!optimizer || !modelFile || !optimizer._getDocument()) {
+			return null
+		}
+
+		const gltfDocument = optimizer._getDocument()
+		const gltfJson = await handleDocumentGltfExport(
+			gltfDocument,
+			modelFile,
+			false,
+			false
+		)
+
+		if (!gltfJson || typeof gltfJson !== 'object' || !('assets' in gltfJson)) {
+			return gltfJson
+		}
+
+		const assets = gltfJson.assets
+		if (!(assets instanceof Map)) {
+			return gltfJson
+		}
+
+		const serializedAssets = Array.from(assets.entries()).map(
+			([fileName, data]) => ({
+				fileName,
+				data: Array.from(data),
+				mimeType: fileName.endsWith('.bin')
+					? 'application/octet-stream'
+					: fileName.endsWith('.png')
+						? 'image/png'
+						: fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')
+							? 'image/jpeg'
+							: fileName.endsWith('.webp')
+								? 'image/webp'
+								: 'application/octet-stream'
+			})
+		)
+
+		return {
+			...gltfJson,
+			assets: serializedAssets
+		}
+	}, [optimizer, modelFile, handleDocumentGltfExport])
+
+	const saveToDB = useCallback(
+		async (options?: {
+			includeModel?: boolean
+			includeOptimizationReport?: boolean
+			initialSceneBytes?: number
+			currentSceneBytes?: number
+		}): Promise<SaveSceneResult | { unchanged: true } | undefined> => {
+			if (inFlightSaveRef.current) {
+				return inFlightSaveRef.current
+			}
+
+			const savePromise = (async () => {
+				if (!userId) {
+					throw new Error('No user ID provided for saving settings')
+				}
+
+				let requestId: string | undefined
+
+				try {
+					requestId = createRequestId()
+					const shouldIncludeModel = options?.includeModel ?? true
+					const gltfJsonToSend = shouldIncludeModel
+						? await serializeGltfDocument()
+						: null
+
+					let optimizationReport = null
+					if (optimizer && optimizer.report) {
+						optimizationReport = optimizer.report
+					}
+
+					const formData = new FormData()
+					formData.append('action', 'save-scene-settings')
+					formData.append('requestId', requestId)
+					formData.append('sceneId', currentSceneId || '')
+					formData.append('userId', userId)
+					formData.append('settings', JSON.stringify(currentSettings))
+					formData.append(
+						'optimizationSettings',
+						JSON.stringify(optimizationSettings)
+					)
+
+					if (shouldIncludeModel) {
+						formData.append('gltfJson', JSON.stringify(gltfJsonToSend))
+					}
+
+					if (typeof options?.initialSceneBytes === 'number') {
+						formData.append(
+							'initialSceneBytes',
+							String(options.initialSceneBytes)
+						)
+					}
+
+					if (typeof options?.currentSceneBytes === 'number') {
+						formData.append(
+							'currentSceneBytes',
+							String(options.currentSceneBytes)
+						)
+					}
+
+					if (
+						optimizationReport &&
+						options?.includeOptimizationReport !== false
+					) {
+						formData.append(
+							'optimizationReport',
+							JSON.stringify(optimizationReport)
+						)
+					}
+
+					console.info('[scene-settings] save request started', {
+						requestId,
+						sceneId: currentSceneId || null,
+						includeModel: shouldIncludeModel
+					})
+
+					const endpoint = currentSceneId
+						? `/api/scenes/${currentSceneId}`
+						: '/api/scenes'
+
+					const response = await fetch(endpoint, {
+						method: 'POST',
+						body: formData
+					})
+
+					const result = await response.json()
+
+					if (!response.ok || result.error) {
+						throw new Error(
+							result.error || `HTTP error! status: ${response.status}`
+						)
+					}
+
+					const data = result.data || result
+
+					console.info('[scene-settings] save request completed', {
+						requestId,
+						sceneId: data.sceneId || currentSceneId || null,
+						unchanged: Boolean(data.unchanged)
+					})
+
+					if (data.unchanged) {
+						return { unchanged: true }
+					}
+
+					return data
+				} catch (error) {
+					console.error('Failed to save scene settings:', {
+						requestId,
+						sceneId: currentSceneId || null,
+						error
+					})
+					throw error
+				}
+			})()
+
+			inFlightSaveRef.current = savePromise
+
+			try {
+				return await savePromise
+			} finally {
+				if (inFlightSaveRef.current === savePromise) {
+					inFlightSaveRef.current = null
+				}
+			}
+		},
+		[
+			createRequestId,
 			currentSceneId,
-			userId,
 			currentSettings,
+			optimizationSettings,
 			optimizer,
-			modelFile
-		})
+			serializeGltfDocument,
+			userId
+		]
+	)
 
 	// Model loading event handlers
 	const handleNotLoadedFiles = useCallback((files?: File[]) => {
@@ -335,10 +565,20 @@ export function useSceneLoader(
 	// Update currentSceneId when sceneId prop changes
 	useEffect(() => {
 		setCurrentSceneId(paramSceneId)
-		// Only set initializing to true if we have a sceneId AND autoLoad is enabled
-		setIsInitializing(!!paramSceneId && autoLoad)
-		setLastSavedReportSignature(null)
-	}, [paramSceneId, autoLoad, setIsInitializing])
+		setIsInitializing(!!paramSceneId && (autoLoad || !!initialSceneAggregate))
+		setOptimizationRuntime({
+			...optimizationRuntimeInitialState,
+			lastSavedReportSignature: null
+		})
+		setHasUnsavedChanges(false)
+	}, [
+		paramSceneId,
+		autoLoad,
+		initialSceneAggregate,
+		setIsInitializing,
+		setHasUnsavedChanges,
+		setOptimizationRuntime
+	])
 	const getReportSignature = useCallback(
 		(report?: OptimizationReport | null) => {
 			if (!report) return null
@@ -358,12 +598,40 @@ export function useSceneLoader(
 	)
 
 	useEffect(() => {
-		if (!reportSignature || lastSavedReportSignature) {
+		if (!reportSignature || lastSavedReportSignature || !latestSceneStats) {
 			return
 		}
 
-		setLastSavedReportSignature(reportSignature)
-	}, [reportSignature, lastSavedReportSignature])
+		const persistedInitialSceneBytes = latestSceneStats.initialSceneBytes
+		const persistedCurrentSceneBytes = latestSceneStats.currentSceneBytes
+
+		if (
+			typeof persistedInitialSceneBytes !== 'number' ||
+			typeof persistedCurrentSceneBytes !== 'number' ||
+			!optimizer?.report
+		) {
+			return
+		}
+
+		const isPersistedReportSignature =
+			optimizer.report.originalSize === persistedInitialSceneBytes &&
+			optimizer.report.optimizedSize === persistedCurrentSceneBytes
+
+		if (!isPersistedReportSignature) {
+			return
+		}
+
+		setOptimizationRuntime((prev) => ({
+			...prev,
+			lastSavedReportSignature: reportSignature
+		}))
+	}, [
+		reportSignature,
+		lastSavedReportSignature,
+		latestSceneStats,
+		optimizer?.report,
+		setOptimizationRuntime
+	])
 
 	// Reset the scene load flag when sceneId changes
 	useEffect(() => {
@@ -393,6 +661,158 @@ export function useSceneLoader(
 		[setCamera, setControls, setEnv, setMeta, setShadows]
 	)
 
+	const inferOptimizationPreset = useCallback(
+		(optimizations: Optimizations) => {
+			const entries = Object.entries(optimizationPresets) as Array<
+				[keyof Optimizations, Optimizations]
+			>
+
+			const exactMatch = entries.find(([, presetValue]) => {
+				return JSON.stringify(presetValue) === JSON.stringify(optimizations)
+			})
+
+			return (exactMatch?.[0] ?? 'medium') as OptimizationPreset
+		},
+		[]
+	)
+
+	const hydrateOptimizationState = useCallback(
+		(aggregate: SceneAggregateResponse | null) => {
+			const persistedOptimizationSettings =
+				aggregate?.stats?.optimizationSettings
+			const latestSceneStats = aggregate?.stats ?? null
+			const aggregateSceneBytes = calculateAggregateSceneBytes(aggregate)
+
+			if (!persistedOptimizationSettings) {
+				setOptimizationState((prev) => ({
+					...prev,
+					optimizationPreset: 'medium',
+					optimizations: optimizationPresets.medium
+				}))
+
+				setOptimizationRuntime({
+					...optimizationRuntimeInitialState,
+					latestSceneStats,
+					clientSceneBytes: aggregateSceneBytes
+				})
+				return
+			}
+
+			const inferredPreset = inferOptimizationPreset(
+				persistedOptimizationSettings
+			)
+
+			setOptimizationState((prev) => ({
+				...prev,
+				optimizationPreset: inferredPreset,
+				optimizations: persistedOptimizationSettings
+			}))
+
+			setOptimizationRuntime((prev) => ({
+				...prev,
+				isPending: false,
+				optimizedSceneBytes: null,
+				clientSceneBytes: aggregateSceneBytes,
+				latestSceneStats
+			}))
+		},
+		[
+			calculateAggregateSceneBytes,
+			inferOptimizationPreset,
+			setOptimizationRuntime,
+			setOptimizationState
+		]
+	)
+
+	const getSettingsFromAggregate = useCallback(
+		(aggregate: SceneAggregateResponse | null): SceneSettings | null => {
+			if (!aggregate) {
+				return null
+			}
+
+			if (aggregate.settings) {
+				return aggregate.settings
+			}
+
+			const fallbackSettings = aggregate as SceneAggregateResponse & {
+				environment?: SceneSettings['environment']
+				controls?: SceneSettings['controls']
+				shadows?: SceneSettings['shadows']
+				meta?: SceneSettings['meta']
+			}
+
+			if (
+				fallbackSettings.environment ||
+				fallbackSettings.controls ||
+				fallbackSettings.shadows ||
+				fallbackSettings.meta
+			) {
+				return {
+					environment: fallbackSettings.environment,
+					controls: fallbackSettings.controls,
+					shadows: fallbackSettings.shadows,
+					meta: fallbackSettings.meta
+				}
+			}
+
+			return null
+		},
+		[]
+	)
+
+	const loadSceneFromAggregate = useCallback(
+		async (sceneId: string, aggregate: SceneAggregateResponse) => {
+			if (sceneLoadAttemptedRef.current) {
+				return
+			}
+
+			sceneLoadAttemptedRef.current = true
+			setIsDownloading(true)
+
+			try {
+				hydrateOptimizationState(aggregate)
+
+				const settings = getSettingsFromAggregate(aggregate)
+				if (settings) {
+					applySceneSettings(settings)
+				}
+
+				if (aggregate.gltfJson && aggregate.assetData) {
+					const sceneData: ServerSceneData = {
+						gltfJson: aggregate.gltfJson as unknown as Record<string, unknown>,
+						assetData: aggregate.assetData,
+						environment: settings?.environment,
+						controls: settings?.controls,
+						shadows: settings?.shadows,
+						meta: settings?.meta
+					}
+
+					const files = reconstructGltfFiles(sceneData)
+					await load(files)
+				}
+
+				const sceneName = settings?.meta?.sceneName || sceneId
+				toast.success(`Loaded scene: ${sceneName}`)
+			} catch (error) {
+				sceneLoadAttemptedRef.current = false
+				console.error('Failed to load scene from bootstrap data:', error)
+				toast.error(
+					`Failed to load scene: ${error instanceof Error ? error.message : 'Unknown error'}`
+				)
+				throw error
+			} finally {
+				setIsDownloading(false)
+			}
+		},
+		[
+			hydrateOptimizationState,
+			getSettingsFromAggregate,
+			applySceneSettings,
+			load,
+			setIsDownloading
+		]
+	)
+
 	/**
 	 * Load scene from server via loadFromServer
 	 */
@@ -416,12 +836,18 @@ export function useSceneLoader(
 					sceneId: idToLoad
 				})
 				applySceneSettings(result.settings)
+				hydrateOptimizationState(
+					initialSceneAggregate && idToLoad === paramSceneId
+						? initialSceneAggregate
+						: null
+				)
 				toast.success(
 					`Loaded scene: ${result.settings.meta?.sceneName || idToLoad}`
 				)
 
 				return result
 			} catch (error) {
+				sceneLoadAttemptedRef.current = false
 				console.error('Failed to load scene:', error)
 				toast.error(
 					`Failed to load scene: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -435,6 +861,9 @@ export function useSceneLoader(
 			currentSceneId,
 			loadFromServer,
 			applySceneSettings,
+			hydrateOptimizationState,
+			initialSceneAggregate,
+			paramSceneId,
 			setIsDownloading,
 			setIsInitializing
 		]
@@ -446,15 +875,29 @@ export function useSceneLoader(
 	const saveSceneSettings = useCallback(async (): Promise<
 		SaveSceneResult | { unchanged: true } | undefined
 	> => {
-		const hasOptimizationChanges =
+		const hasReportChanges =
 			reportSignature !== null &&
 			lastSavedReportSignature !== null &&
 			reportSignature !== lastSavedReportSignature
+		const hasSceneSizeChanges =
+			typeof optimizedSceneBytes === 'number' &&
+			optimizedSceneBytes !== (latestSceneStats?.currentSceneBytes ?? null)
+		const hasOptimizationChanges = hasReportChanges || hasSceneSizeChanges
 		const shouldUploadModel = !currentSceneId || hasOptimizationChanges
+		const sceneInitialBytes =
+			typeof clientSceneBytes === 'number' ? clientSceneBytes : undefined
+		const sceneCurrentBytes =
+			typeof optimizedSceneBytes === 'number'
+				? optimizedSceneBytes
+				: typeof clientSceneBytes === 'number'
+					? clientSceneBytes
+					: undefined
 
 		const result = await saveToDB({
 			includeModel: shouldUploadModel,
-			includeOptimizationReport: hasOptimizationChanges
+			includeOptimizationReport: hasOptimizationChanges,
+			initialSceneBytes: sceneInitialBytes,
+			currentSceneBytes: sceneCurrentBytes
 		})
 
 		if (result && 'sceneId' in result && result.sceneId && !currentSceneId) {
@@ -463,8 +906,18 @@ export function useSceneLoader(
 
 		if (result && !result.unchanged) {
 			setLastSavedSettings(currentSettings)
+			const latestStats = result.stats
+			if (latestStats) {
+				setOptimizationRuntime((prev) => ({
+					...prev,
+					latestSceneStats: latestStats
+				}))
+			}
 			if (reportSignature) {
-				setLastSavedReportSignature(reportSignature)
+				setOptimizationRuntime((prev) => ({
+					...prev,
+					lastSavedReportSignature: reportSignature
+				}))
 			}
 		}
 
@@ -474,7 +927,11 @@ export function useSceneLoader(
 		currentSceneId,
 		currentSettings,
 		reportSignature,
-		lastSavedReportSignature
+		lastSavedReportSignature,
+		optimizedSceneBytes,
+		clientSceneBytes,
+		latestSceneStats,
+		setOptimizationRuntime
 	])
 
 	/**
@@ -497,9 +954,11 @@ export function useSceneLoader(
 				JSON.stringify(settingsBaseline.meta)
 
 		const optimizationChanged =
-			reportSignature !== null &&
-			lastSavedReportSignature !== null &&
-			reportSignature !== lastSavedReportSignature
+			(reportSignature !== null &&
+				lastSavedReportSignature !== null &&
+				reportSignature !== lastSavedReportSignature) ||
+			(typeof optimizedSceneBytes === 'number' &&
+				optimizedSceneBytes !== (latestSceneStats?.currentSceneBytes ?? null))
 
 		return settingsChanged || optimizationChanged
 	}, [
@@ -507,7 +966,9 @@ export function useSceneLoader(
 		lastSavedSettings,
 		isInitializing,
 		reportSignature,
-		lastSavedReportSignature
+		lastSavedReportSignature,
+		optimizedSceneBytes,
+		latestSceneStats
 	])
 
 	useEffect(() => {
@@ -525,11 +986,35 @@ export function useSceneLoader(
 		setHasUnsavedChanges
 	])
 
+	useEffect(() => {
+		if (
+			!paramSceneId ||
+			!initialSceneAggregate ||
+			file?.model ||
+			isFileLoading ||
+			sceneLoadAttemptedRef.current
+		) {
+			return
+		}
+
+		loadSceneFromAggregate(paramSceneId, initialSceneAggregate).finally(() =>
+			setIsInitializing(false)
+		)
+	}, [
+		paramSceneId,
+		initialSceneAggregate,
+		file?.model,
+		isFileLoading,
+		loadSceneFromAggregate,
+		setIsInitializing
+	])
+
 	// Auto-load scene when component mounts with a sceneId
 	useEffect(() => {
 		if (
 			!autoLoad ||
 			!paramSceneId ||
+			initialSceneAggregate ||
 			file?.model ||
 			isFileLoading ||
 			sceneLoadAttemptedRef.current
@@ -545,26 +1030,12 @@ export function useSceneLoader(
 	}, [
 		autoLoad,
 		paramSceneId,
+		initialSceneAggregate,
 		file?.model,
 		isFileLoading,
 		loadScene,
 		setIsInitializing
 	])
 
-	return {
-		// Scene management - hook-specific state
-		currentSceneId,
-		lastSavedSettings,
-
-		// Actions - hook-specific functions
-		loadScene,
-		saveSceneSettings,
-		loadSceneSettings
-
-		// Note: The following values are NOT returned as they're available via context/store:
-		// - env, toneMapping, controls, shadows, meta -> Use scene settings atoms directly
-		// - file, reset -> Use useModelContext() directly
-		// - isInitializing, hasUnsavedChanges -> Use processAtom directly
-		// - currentSettings -> Derive from atoms where needed
-	}
+	return { saveSceneSettings }
 }

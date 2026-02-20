@@ -1,42 +1,38 @@
 import { CardTitle } from '@shared/components/ui/card'
 import { cn, formatFileSize } from '@shared/utils'
-import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { motion } from 'framer-motion'
 import type { FC } from 'react'
 
 import type { SizeInfo } from './use-optimization-process'
 
 interface OptimizationStatsHeaderProps {
-	info: OptimizationInfo
 	hasImproved: boolean
 	sizeInfo: SizeInfo
 }
 
 export const OptimizationStatsHeader: FC<OptimizationStatsHeaderProps> = ({
-	info,
 	hasImproved,
 	sizeInfo
 }) => {
-	const initialDraftBytes = sizeInfo.draftBytes ?? info.initial.sceneBytes
-	const optimizedDraftBytes =
-		sizeInfo.draftAfterBytes ?? info.optimized.sceneBytes
+	const initialSceneBytes = sizeInfo.initialSceneBytes ?? null
+	const currentSceneBytes = sizeInfo.currentSceneBytes ?? initialSceneBytes
 	const optimizationPercentage =
 		hasImproved &&
-		typeof initialDraftBytes === 'number' &&
-		typeof optimizedDraftBytes === 'number' &&
-		initialDraftBytes > 0
+		typeof initialSceneBytes === 'number' &&
+		typeof currentSceneBytes === 'number' &&
+		initialSceneBytes > 0
 			? Math.round(
-					((initialDraftBytes - optimizedDraftBytes) / initialDraftBytes) * 100
+					((initialSceneBytes - currentSceneBytes) / initialSceneBytes) * 100
 				)
 			: 0
 	const displayOptimized =
-		typeof optimizedDraftBytes === 'number'
-			? formatFileSize(optimizedDraftBytes)
+		typeof currentSceneBytes === 'number'
+			? formatFileSize(currentSceneBytes)
 			: '—'
 	const displayReduction =
-		typeof initialDraftBytes === 'number' &&
-		typeof optimizedDraftBytes === 'number'
-			? formatFileSize(initialDraftBytes - optimizedDraftBytes)
+		typeof initialSceneBytes === 'number' &&
+		typeof currentSceneBytes === 'number'
+			? formatFileSize(initialSceneBytes - currentSceneBytes)
 			: '—'
 
 	return (

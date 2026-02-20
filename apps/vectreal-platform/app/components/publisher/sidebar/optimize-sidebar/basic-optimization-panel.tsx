@@ -3,7 +3,7 @@ import { BatteryFull, BatteryLow, BatteryMedium } from 'lucide-react'
 import { useCallback, useEffect } from 'react'
 
 import { optimizationPresets } from '../../../../constants/optimizations'
-import { optimizationAtom } from '../../../../lib/stores/publisher-config-store'
+import { optimizationAtom } from '../../../../lib/stores/scene-optimization-store'
 import { RadioAccordion } from '../../../radio-accordion'
 import { Option } from '../../../radio-accordion/types'
 

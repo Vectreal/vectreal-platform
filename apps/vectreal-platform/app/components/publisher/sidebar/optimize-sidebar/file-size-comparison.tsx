@@ -1,5 +1,4 @@
 import { formatFileSize } from '@shared/utils'
-import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { motion } from 'framer-motion'
 import { ArrowRightIcon } from 'lucide-react'
 import type { FC } from 'react'
@@ -7,17 +6,14 @@ import type { FC } from 'react'
 import type { SizeInfo } from './use-optimization-process'
 
 interface FileSizeComparisonProps {
-	info: OptimizationInfo
 	sizeInfo: SizeInfo
 }
 
 export const FileSizeComparison: FC<FileSizeComparisonProps> = ({
-	info,
 	sizeInfo
 }) => {
-	const initialFileSize = sizeInfo.draftBytes ?? info.initial.sceneBytes
-	const currentFileSize = sizeInfo.draftAfterBytes ?? info.optimized.sceneBytes
-	const publishedFileSize = sizeInfo.publishedBytes ?? null
+	const initialFileSize = sizeInfo.initialSceneBytes ?? null
+	const currentFileSize = sizeInfo.currentSceneBytes ?? initialFileSize
 	const formatValue = (value: number | null) =>
 		value === null ? '—' : formatFileSize(value)
 
@@ -33,7 +29,7 @@ export const FileSizeComparison: FC<FileSizeComparisonProps> = ({
 					<div className="text-3xl font-bold">
 						{formatValue(initialFileSize)}
 					</div>
-					<div className="text-sm text-zinc-400">Before (draft)</div>
+					<div className="text-sm text-zinc-400">Before</div>
 				</motion.div>
 				<ArrowRightIcon className="text-accent h-8 w-8 transform" />
 				<motion.div
@@ -45,12 +41,9 @@ export const FileSizeComparison: FC<FileSizeComparisonProps> = ({
 					<div className="text-accent text-3xl font-bold">
 						{formatValue(currentFileSize)}
 					</div>
-					<div className="text-sm text-zinc-400">After (draft)</div>
+					<div className="text-sm text-zinc-400">After</div>
 				</motion.div>
 			</div>
-			<p className="mt-3 text-center text-xs text-zinc-400">
-				Published size (GLB): {formatValue(publishedFileSize)}
-			</p>
 		</div>
 	)
 }

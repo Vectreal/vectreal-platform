@@ -14,7 +14,7 @@ interface OptimizationStatsProps {
 }
 
 export const OptimizationStats: FC<OptimizationStatsProps> = ({
-	info,
+	info: _info,
 	sizeInfo,
 	optimizationStats,
 	appliedOptimizations
@@ -23,7 +23,7 @@ export const OptimizationStats: FC<OptimizationStatsProps> = ({
 
 	return (
 		<>
-			<FileSizeComparison info={info} sizeInfo={sizeInfo} />
+			<FileSizeComparison sizeInfo={sizeInfo} />
 			<OptimizationSummary
 				optimizationStats={optimizationStats}
 				appliedOptimizations={appliedOptimizations}

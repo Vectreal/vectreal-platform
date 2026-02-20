@@ -1,5 +1,5 @@
 import { JSONDocument } from '@gltf-transform/core'
-import type { OptimizationReport } from '@vctrl/core'
+import type { OptimizationReport, Optimizations } from '@vctrl/core'
 import { and, eq, inArray } from 'drizzle-orm'
 
 import { getDbClient } from '../../../db/client'
@@ -78,6 +78,9 @@ class SceneSettingsService {
 	async saveSceneSettings(
 		params: SaveSceneSettingsParams & {
 			optimizationReport?: OptimizationReport
+			optimizationSettings?: Optimizations
+			initialSceneBytes?: number
+			currentSceneBytes?: number
 		}
 	) {
 		const {
@@ -86,7 +89,10 @@ class SceneSettingsService {
 			userId,
 			settings,
 			gltfJson,
-			optimizationReport
+			optimizationReport,
+			optimizationSettings,
+			initialSceneBytes,
+			currentSceneBytes
 		} = params
 
 		return await this.db.transaction(async (tx) => {
@@ -130,11 +136,14 @@ class SceneSettingsService {
 				await replaceSceneAssets(tx, savedSettings.id, assetIds)
 			}
 
-			if (optimizationReport) {
+			if (optimizationReport || optimizationSettings) {
 				await this.upsertSceneStats(tx, {
 					report: optimizationReport,
+					optimizationSettings,
 					sceneId: scene.id,
 					userId,
+					initialSceneBytes,
+					currentSceneBytes,
 					label: 'latest',
 					description: 'Latest scene statistics'
 				})
@@ -206,8 +215,10 @@ class SceneSettingsService {
 		projectId: string
 		userId: string
 		publishedGlb: { data: number[]; fileName?: string; mimeType?: string }
+		currentSceneBytes?: number
 	}) {
-		const { sceneId, projectId, userId, publishedGlb } = params
+		const { sceneId, projectId, userId, publishedGlb, currentSceneBytes } =
+			params
 
 		return await this.db.transaction(async (tx) => {
 			const latestSettings = await getSceneSettingsBySceneId(tx, sceneId)
@@ -229,6 +240,12 @@ class SceneSettingsService {
 					publishedBy: userId
 				})
 				.returning()
+
+			await this.upsertSceneStats(tx, {
+				sceneId,
+				userId,
+				currentSceneBytes: currentSceneBytes ?? publishedGlb.data.length
+			})
 
 			return {
 				...publishedRecord,
@@ -575,39 +592,92 @@ class SceneSettingsService {
 	private async upsertSceneStats(
 		tx: SceneSettingsTransaction,
 		params: {
-			report: OptimizationReport
+			report?: OptimizationReport
+			optimizationSettings?: Optimizations
 			sceneId: string
 			userId: string
+			initialSceneBytes?: number | null
+			currentSceneBytes?: number | null
 			label?: string
 			description?: string
 		}
 	) {
-		const statsData = createSceneStatsFromReport(
-			params.report,
-			params.sceneId,
-			params.userId,
-			{
-				label: params.label,
-				description: params.description
-			}
-		)
+		const existingStats = await tx
+			.select({
+				initialSceneBytes: sceneStats.initialSceneBytes,
+				currentSceneBytes: sceneStats.currentSceneBytes
+			})
+			.from(sceneStats)
+			.where(eq(sceneStats.sceneId, params.sceneId))
+			.limit(1)
+
+		const persistedInitialSceneBytes =
+			params.initialSceneBytes ??
+			params.report?.originalSize ??
+			existingStats[0]?.initialSceneBytes ??
+			null
+		const persistedCurrentSceneBytes =
+			params.currentSceneBytes ??
+			params.report?.optimizedSize ??
+			existingStats[0]?.currentSceneBytes ??
+			null
+
+		if (params.report) {
+			const statsData = createSceneStatsFromReport(
+				params.report,
+				params.sceneId,
+				params.userId,
+				{
+					label: params.label,
+					description: params.description,
+					initialSceneBytes: persistedInitialSceneBytes,
+					currentSceneBytes: persistedCurrentSceneBytes,
+					optimizationSettings: params.optimizationSettings
+				}
+			)
+
+			await tx
+				.insert(sceneStats)
+				.values(statsData)
+				.onConflictDoUpdate({
+					target: sceneStats.sceneId,
+					set: {
+						label: statsData.label,
+						description: statsData.description,
+						baseline: statsData.baseline,
+						optimized: statsData.optimized,
+						initialSceneBytes: statsData.initialSceneBytes,
+						currentSceneBytes: statsData.currentSceneBytes,
+						appliedOptimizations: statsData.appliedOptimizations,
+						optimizationSettings: statsData.optimizationSettings,
+						additionalMetrics: statsData.additionalMetrics,
+						createdBy: params.userId,
+						updatedAt: new Date()
+					}
+				})
+
+			return
+		}
 
 		await tx
 			.insert(sceneStats)
-			.values(statsData)
+			.values({
+				sceneId: params.sceneId,
+				createdBy: params.userId,
+				label: params.label,
+				description: params.description,
+				initialSceneBytes: persistedInitialSceneBytes,
+				currentSceneBytes: persistedCurrentSceneBytes,
+				optimizationSettings: params.optimizationSettings ?? null
+			})
 			.onConflictDoUpdate({
 				target: sceneStats.sceneId,
 				set: {
-					label: statsData.label,
-					description: statsData.description,
-					baseline: statsData.baseline,
-					optimized: statsData.optimized,
-					draftBytes: statsData.draftBytes,
-					publishedBytes: statsData.publishedBytes,
-					appliedOptimizations: statsData.appliedOptimizations,
-					optimizationSettings: statsData.optimizationSettings,
-					additionalMetrics: statsData.additionalMetrics,
-					createdBy: params.userId,
+					label: params.label,
+					description: params.description,
+					initialSceneBytes: persistedInitialSceneBytes,
+					currentSceneBytes: persistedCurrentSceneBytes,
+					optimizationSettings: params.optimizationSettings ?? null,
 					updatedAt: new Date()
 				}
 			})

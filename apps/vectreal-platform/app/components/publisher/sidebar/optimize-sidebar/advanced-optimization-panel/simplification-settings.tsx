@@ -6,7 +6,7 @@ import { useAtom } from 'jotai'
 
 // Store
 import { InfoTooltip, SettingSlider } from '../../../../../components'
-import { optimizationAtom } from '../../../../../lib/stores/publisher-config-store'
+import { optimizationAtom } from '../../../../../lib/stores/scene-optimization-store'
 
 /**
  * Type definitions for optimization state structure

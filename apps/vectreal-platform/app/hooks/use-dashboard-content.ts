@@ -49,18 +49,25 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 			!isDrawerRoute(location.pathname) &&
 			!isDrawerRoute(navigation.location.pathname)
 		) {
+			const nextRouteContext = getRouteContext(
+				navigation.location.pathname,
+				parseRouteParams(navigation.location.pathname)
+			)
+			const nextConfig = DASHBOARD_CONTENT[nextRouteContext]
 			const navState = navigation.location.state as NavigationState | null
 
 			// Use navigation state for instant updates (passed from DashboardCards)
 			if (navState?.name) {
+				const fallbackDescription =
+					nextConfig.loadingDescription || nextConfig.description
 				const itemDescription =
 					navState.description ||
 					(navState.projectName
 						? `${navState.type === 'scene' ? 'Scene' : 'Folder'} in ${navState.projectName}`
-						: '')
+						: fallbackDescription)
 
 				// Determine action variant from navigation state
-				let actionVariant
+				let actionVariant = nextConfig.actionVariant
 				switch (navState.type) {
 					case 'scene':
 						actionVariant = DASHBOARD_CONTENT['scene-detail'].actionVariant
@@ -82,16 +89,10 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 			}
 
 			// Use optimistic route context for static routes
-			const nextRouteContext = getRouteContext(
-				navigation.location.pathname,
-				parseRouteParams(navigation.location.pathname)
-			)
-			const config = DASHBOARD_CONTENT[nextRouteContext]
-
 			return {
-				title: config.loadingTitle || config.title,
-				description: config.loadingDescription || config.description,
-				actionVariant: config.actionVariant,
+				title: nextConfig.loadingTitle || nextConfig.title,
+				description: nextConfig.loadingDescription || nextConfig.description,
+				actionVariant: nextConfig.actionVariant,
 				isLoading: true
 			}
 		}

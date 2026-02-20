@@ -13,9 +13,13 @@ import { Textarea } from '@shared/components/ui/textarea'
 import { ModelExporter } from '@vctrl/core/model-exporter'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { motion } from 'framer-motion'
+import { useSetAtom } from 'jotai'
 import { CheckCircle, EyeOff, Globe, Lock } from 'lucide-react'
 import { useCallback, useRef, useState, type FC } from 'react'
 import { toast } from 'sonner'
+
+import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
+import type { PublishSceneResponse } from '../../../../../types/api'
 
 import { itemVariants } from '../../animation'
 
@@ -31,6 +35,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({ sceneId }) => {
 	const [allowComments, setAllowComments] = useState(true)
 	const [isPublishing, setIsPublishing] = useState(false)
 	const { optimizer, file } = useModelContext(true)
+	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
 	const exporterRef = useRef<ModelExporter>(new ModelExporter())
 
 	const handlePublish = useCallback(async () => {
@@ -48,6 +53,11 @@ export const PublishOptions: FC<PublishOptionsProps> = ({ sceneId }) => {
 		setIsPublishing(true)
 		try {
 			const result = await exporterRef.current.exportDocumentGLB(document)
+			setOptimizationRuntime((prev) => ({
+				...prev,
+				optimizedSceneBytes: result.size,
+				clientSceneBytes: prev.clientSceneBytes ?? result.size
+			}))
 			const baseName = file?.name?.replace(/\.[^/.]+$/, '') || 'scene'
 			const payload = {
 				data: Array.from(result.data),
@@ -59,6 +69,9 @@ export const PublishOptions: FC<PublishOptionsProps> = ({ sceneId }) => {
 			formData.append('action', 'publish-scene')
 			formData.append('sceneId', sceneId)
 			formData.append('publishedGlb', JSON.stringify(payload))
+			if (Number.isFinite(result.size)) {
+				formData.append('currentSceneBytes', String(result.size))
+			}
 
 			const response = await fetch(`/api/scenes/${sceneId}`, {
 				method: 'POST',
@@ -72,11 +85,13 @@ export const PublishOptions: FC<PublishOptionsProps> = ({ sceneId }) => {
 				)
 			}
 
-			window.dispatchEvent(
-				new CustomEvent('scene-stats-updated', {
-					detail: { sceneId }
-				})
-			)
+			const data = (resultData.data || resultData) as PublishSceneResponse
+			if (data.stats) {
+				setOptimizationRuntime((prev) => ({
+					...prev,
+					latestSceneStats: data.stats
+				}))
+			}
 			toast.success('Scene published successfully.')
 		} catch (error) {
 			console.error('Failed to publish scene:', error)
@@ -86,7 +101,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({ sceneId }) => {
 		} finally {
 			setIsPublishing(false)
 		}
-	}, [sceneId, optimizer, file])
+	}, [sceneId, optimizer, file, setOptimizationRuntime])
 
 	return (
 		<motion.div variants={itemVariants} className="space-y-4 px-2 py-2">

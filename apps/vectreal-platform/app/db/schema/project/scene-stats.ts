@@ -41,9 +41,9 @@ export const sceneStats = pgTable('scene_stats', {
 	baseline: json('baseline').$type<SceneStatsSnapshot>(),
 	optimized: json('optimized').$type<SceneStatsSnapshot>(),
 
-	// Draft (GLTF+assets) and published (GLB) sizes
-	draftBytes: integer('draft_bytes'),
-	publishedBytes: integer('published_bytes'),
+	// Unified scene size snapshots (before and after optimization)
+	initialSceneBytes: integer('initial_scene_bytes'),
+	currentSceneBytes: integer('current_scene_bytes'),
 
 	// Applied optimizations tracking
 	appliedOptimizations: json('applied_optimizations').$type<string[]>(), // Array of optimization names applied

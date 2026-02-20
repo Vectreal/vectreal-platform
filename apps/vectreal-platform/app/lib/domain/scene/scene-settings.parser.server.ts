@@ -1,6 +1,6 @@
 import { JSONDocument } from '@gltf-transform/core'
 import { ApiResponse } from '@shared/utils'
-import { OptimizationReport } from '@vctrl/core'
+import { OptimizationReport, Optimizations } from '@vctrl/core'
 
 import { UUID_REGEX } from '../../../constants/utility-constants'
 import type { SceneSettingsRequest } from '../../../types/api'
@@ -58,6 +58,10 @@ export class SceneSettingsParser {
 				if (publishedGlb instanceof Response) {
 					return publishedGlb
 				}
+				const currentSceneBytes = this.parseCurrentSceneBytes(requestData)
+				if (currentSceneBytes instanceof Response) {
+					return currentSceneBytes
+				}
 
 				return {
 					action,
@@ -65,7 +69,8 @@ export class SceneSettingsParser {
 					sceneId,
 					settings: undefined,
 					gltfJson: undefined,
-					publishedGlb
+					publishedGlb,
+					currentSceneBytes
 				}
 			}
 
@@ -85,6 +90,21 @@ export class SceneSettingsParser {
 				return optimizationReport
 			}
 
+			const optimizationSettings = this.parseOptimizationSettings(requestData)
+			if (optimizationSettings instanceof Response) {
+				return optimizationSettings
+			}
+
+			const initialSceneBytes = this.parseInitialSceneBytes(requestData)
+			if (initialSceneBytes instanceof Response) {
+				return initialSceneBytes
+			}
+
+			const currentSceneBytes = this.parseCurrentSceneBytes(requestData)
+			if (currentSceneBytes instanceof Response) {
+				return currentSceneBytes
+			}
+
 			if (!sceneId && !gltfJsonData) {
 				return ApiResponse.badRequest('GLTF data is required for new scenes')
 			}
@@ -95,7 +115,10 @@ export class SceneSettingsParser {
 				sceneId,
 				settings,
 				gltfJson: gltfJsonData || undefined,
-				optimizationReport: optimizationReport || undefined
+				optimizationReport: optimizationReport || undefined,
+				optimizationSettings: optimizationSettings || undefined,
+				initialSceneBytes,
+				currentSceneBytes
 			}
 		} catch (error) {
 			console.error('Failed to parse scene settings request:', error)
@@ -229,6 +252,34 @@ export class SceneSettingsParser {
 		return undefined
 	}
 
+	private static parseOptimizationSettings(
+		requestData: Record<string, unknown>
+	): Optimizations | undefined | Response {
+		if (!requestData.optimizationSettings) {
+			return undefined
+		}
+
+		if (typeof requestData.optimizationSettings === 'string') {
+			try {
+				const parsed = JSON.parse(requestData.optimizationSettings)
+				if (typeof parsed !== 'object' || parsed === null) {
+					return ApiResponse.badRequest('Invalid optimization settings format')
+				}
+
+				return parsed as Optimizations
+			} catch (error) {
+				console.error('Failed to parse optimizationSettings:', error)
+				return ApiResponse.badRequest('Invalid optimization settings format')
+			}
+		}
+
+		if (typeof requestData.optimizationSettings === 'object') {
+			return requestData.optimizationSettings as Optimizations
+		}
+
+		return undefined
+	}
+
 	private static parsePublishedGlb(
 		requestData: Record<string, unknown>
 	): { data: number[]; fileName?: string; mimeType?: string } | Response {
@@ -270,5 +321,56 @@ export class SceneSettingsParser {
 			fileName: record.fileName,
 			mimeType: record.mimeType
 		}
+	}
+
+	private static parseCurrentSceneBytes(
+		requestData: Record<string, unknown>
+	): number | undefined | Response {
+		const rawCurrentSceneBytes =
+			requestData.currentSceneBytes ?? requestData.publishedBytes
+
+		if (rawCurrentSceneBytes == null) {
+			return undefined
+		}
+
+		const parsedValue =
+			typeof rawCurrentSceneBytes === 'number'
+				? rawCurrentSceneBytes
+				: typeof rawCurrentSceneBytes === 'string'
+					? Number(rawCurrentSceneBytes)
+					: NaN
+
+		if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+			return ApiResponse.badRequest(
+				'currentSceneBytes must be a non-negative number'
+			)
+		}
+
+		return Math.round(parsedValue)
+	}
+
+	private static parseInitialSceneBytes(
+		requestData: Record<string, unknown>
+	): number | undefined | Response {
+		const rawInitialSceneBytes = requestData.initialSceneBytes
+
+		if (rawInitialSceneBytes == null) {
+			return undefined
+		}
+
+		const parsedValue =
+			typeof rawInitialSceneBytes === 'number'
+				? rawInitialSceneBytes
+				: typeof rawInitialSceneBytes === 'string'
+					? Number(rawInitialSceneBytes)
+					: NaN
+
+		if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+			return ApiResponse.badRequest(
+				'initialSceneBytes must be a non-negative number'
+			)
+		}
+
+		return Math.round(parsedValue)
 	}
 }

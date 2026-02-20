@@ -38,7 +38,11 @@ const OptimizeSidebarContent: FC = () => {
 				/>
 				<BasicOptimizationAccordionItem />
 				<AdvancedOptimizationAccordionItem />
-				<SceneDetailsAccordionItem info={info} report={report} />
+				<SceneDetailsAccordionItem
+					info={info}
+					report={report}
+					sizeInfo={sizeInfo}
+				/>
 			</Accordion>
 			<OptimizeButton
 				onOptimize={handleOptimizeClick}

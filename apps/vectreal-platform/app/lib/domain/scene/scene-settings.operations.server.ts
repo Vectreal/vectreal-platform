@@ -29,6 +29,7 @@ type PublishSceneRequest = SceneSettingsRequest & {
 		fileName?: string
 		mimeType?: string
 	}
+	currentSceneBytes?: number
 }
 
 function assertParsed<T>(value: T, message: string): asserts value is T {
@@ -111,7 +112,10 @@ export async function saveSceneSettings(
 			userId,
 			settings: validationResult.settings,
 			gltfJson: validationResult.gltfJson,
-			optimizationReport: request.optimizationReport
+			optimizationReport: request.optimizationReport,
+			optimizationSettings: request.optimizationSettings,
+			initialSceneBytes: request.initialSceneBytes,
+			currentSceneBytes: request.currentSceneBytes
 		})
 
 		console.info('[scene-settings] save operation completed', {
@@ -122,7 +126,8 @@ export async function saveSceneSettings(
 			unchanged: Boolean((saveResult as { unchanged?: boolean }).unchanged)
 		})
 
-		const result = { ...saveResult, sceneId: finalSceneId }
+		const stats = await sceneSettingsService.getSceneStats(finalSceneId)
+		const result = { ...saveResult, sceneId: finalSceneId, stats }
 		return ApiResponse.success(result)
 	} catch (error) {
 		console.error('Failed to save scene settings:', {
@@ -184,7 +189,8 @@ export async function publishScene(
 	userId: string
 ): Promise<Response> {
 	try {
-		const { sceneId, publishedGlb } = request as PublishSceneRequest
+		const { sceneId, publishedGlb, currentSceneBytes } =
+			request as PublishSceneRequest
 		assertParsed(
 			sceneId,
 			'Scene settings request must be validated before calling operations'
@@ -208,10 +214,12 @@ export async function publishScene(
 			sceneId,
 			projectId,
 			userId,
-			publishedGlb
+			publishedGlb,
+			currentSceneBytes
 		})
+		const stats = await sceneSettingsService.getSceneStats(sceneId)
 
-		return ApiResponse.success(result)
+		return ApiResponse.success({ ...result, sceneId, stats })
 	} catch (error) {
 		console.error('Failed to publish scene:', error)
 		return ApiResponse.serverError(

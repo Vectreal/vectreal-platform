@@ -5,19 +5,18 @@ import type {
 	SimplificationOptimization,
 	TextureOptimization
 } from '@vctrl/core'
-import { useExportModel } from '@vctrl/hooks/use-export-model'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtomValue } from 'jotai'
-import { useCallback, useEffect, useState } from 'react'
-import { useParams } from 'react-router'
+import { useAtom, useAtomValue } from 'jotai'
+import { useCallback, useEffect, useRef } from 'react'
 
-import { useLatestSceneStats } from '../../../../hooks/use-scene-stats'
-import { optimizationAtom } from '../../../../lib/stores/publisher-config-store'
+import {
+	optimizationAtom,
+	optimizationRuntimeAtom
+} from '../../../../lib/stores/scene-optimization-store'
 
 export type SizeInfo = {
-	draftBytes?: number | null
-	draftAfterBytes?: number | null
-	publishedBytes?: number | null
+	initialSceneBytes?: number | null
+	currentSceneBytes?: number | null
 }
 
 type OptimizationOption =
@@ -43,32 +42,44 @@ export const useOptimizationProcess = () => {
 		info,
 		report
 	} = optimizer
-	const params = useParams()
-	const sceneId = typeof params.sceneId === 'string' ? params.sceneId : ''
-	const { stats } = useLatestSceneStats(sceneId, Boolean(sceneId))
 
 	const { optimizations: plannedOptimizations } = useAtomValue(optimizationAtom)
-	const [isPending, setIsPending] = useState<boolean>(false)
-	const [draftAfterBytes, setDraftAfterBytes] = useState<number | null>(null)
-	const { handleDocumentGltfExport } = useExportModel()
+	const [optimizationRuntime, setOptimizationRuntime] = useAtom(
+		optimizationRuntimeAtom
+	)
+	const { isPending, optimizedSceneBytes, clientSceneBytes, latestSceneStats } =
+		optimizationRuntime
+	const isSceneSizeCalculationInFlightRef = useRef(false)
 
-	const calculateDraftBytes = useCallback(async () => {
-		const document = optimizer?._getDocument?.()
-		if (!document) return null
-		const result = await handleDocumentGltfExport(document, file, false, false)
-		if (result && typeof result === 'object' && 'size' in result) {
-			return (result as { size?: number }).size ?? null
-		}
-		return null
-	}, [optimizer, handleDocumentGltfExport, file])
+	const calculateSceneBytes = useCallback(async () => {
+		const exportedGlb = await optimizer.getModel()
+		if (!exportedGlb) return null
+		return exportedGlb.byteLength
+	}, [optimizer])
 
 	// Handle optimization process
 	const handleOptimizeClick = useCallback(async () => {
 		if (isPending) return
 
-		setIsPending(true)
+		setOptimizationRuntime((prev) => ({
+			...prev,
+			isPending: true
+		}))
 
 		try {
+			if (typeof clientSceneBytes !== 'number') {
+				const baselineSceneBytes =
+					typeof latestSceneStats?.currentSceneBytes === 'number'
+						? latestSceneStats.currentSceneBytes
+						: await calculateSceneBytes()
+				if (typeof baselineSceneBytes === 'number') {
+					setOptimizationRuntime((prev) => ({
+						...prev,
+						clientSceneBytes: baselineSceneBytes
+					}))
+				}
+			}
+
 			const optimizationOptions = Object.values(plannedOptimizations).filter(
 				(option): option is OptimizationOption => !!option && option.enabled
 			)
@@ -105,18 +116,26 @@ export const useOptimizationProcess = () => {
 
 			// Apply all optimizations
 			await applyOptimization()
-			const updatedDraftBytes = await calculateDraftBytes()
-			if (typeof updatedDraftBytes === 'number') {
-				setDraftAfterBytes(updatedDraftBytes)
-			}
+			const updatedSceneBytes = await calculateSceneBytes()
+			setOptimizationRuntime((prev) => ({
+				...prev,
+				optimizedSceneBytes:
+					typeof updatedSceneBytes === 'number' ? updatedSceneBytes : null
+			}))
 		} catch (error) {
 			console.error('Error during optimization:', error)
 		} finally {
-			setIsPending(false)
+			setOptimizationRuntime((prev) => ({
+				...prev,
+				isPending: false
+			}))
 		}
 	}, [
 		isPending,
-		calculateDraftBytes,
+		clientSceneBytes,
+		latestSceneStats,
+		calculateSceneBytes,
+		setOptimizationRuntime,
 		plannedOptimizations,
 		applyOptimization,
 		simplifyOptimization,
@@ -128,28 +147,84 @@ export const useOptimizationProcess = () => {
 
 	// Reset on model load
 	useEffect(() => {
-		const handleReset = () => setDraftAfterBytes(null)
+		const handleReset = () => {
+			setOptimizationRuntime((prev) => ({
+				...prev,
+				isPending: false,
+				optimizedSceneBytes: null,
+				clientSceneBytes: null
+			}))
+		}
 		on('load-start', resetOptimize)
 		on('load-start', handleReset)
 		return () => {
 			off('load-start', resetOptimize)
 			off('load-start', handleReset)
 		}
-	}, [off, on, resetOptimize])
+	}, [off, on, resetOptimize, setOptimizationRuntime])
+
+	useEffect(() => {
+		if (
+			!file?.model ||
+			isPending ||
+			typeof latestSceneStats?.currentSceneBytes === 'number' ||
+			typeof clientSceneBytes === 'number' ||
+			isSceneSizeCalculationInFlightRef.current
+		) {
+			return
+		}
+
+		isSceneSizeCalculationInFlightRef.current = true
+
+		void calculateSceneBytes()
+			.then((computedSceneBytes) => {
+				if (typeof computedSceneBytes !== 'number') {
+					return
+				}
+
+				setOptimizationRuntime((prev) => ({
+					...prev,
+					clientSceneBytes: computedSceneBytes
+				}))
+			})
+			.catch((error) => {
+				console.error('Failed to calculate scene size:', error)
+			})
+			.finally(() => {
+				isSceneSizeCalculationInFlightRef.current = false
+			})
+	}, [
+		file?.model,
+		isPending,
+		latestSceneStats,
+		clientSceneBytes,
+		calculateSceneBytes,
+		setOptimizationRuntime
+	])
 
 	const sizeInfo: SizeInfo = {
-		draftBytes: stats?.draftBytes ?? info.initial.sceneBytes,
-		draftAfterBytes: draftAfterBytes ?? null,
-		publishedBytes: stats?.publishedBytes ?? null
+		initialSceneBytes:
+			clientSceneBytes ?? latestSceneStats?.initialSceneBytes ?? null,
+		currentSceneBytes:
+			optimizedSceneBytes ??
+			clientSceneBytes ??
+			latestSceneStats?.currentSceneBytes ??
+			null
 	}
-	const initialDraftBytes = sizeInfo.draftBytes ?? info.initial.sceneBytes
-	const optimizedDraftBytes =
-		sizeInfo.draftAfterBytes ?? info.optimized.sceneBytes
-	const hasImproved =
-		typeof initialDraftBytes === 'number' &&
-		typeof optimizedDraftBytes === 'number'
-			? optimizedDraftBytes < initialDraftBytes
+	const initialSceneBytes = sizeInfo.initialSceneBytes ?? null
+	const currentSceneBytes = sizeInfo.currentSceneBytes ?? initialSceneBytes
+	const hasSceneSizeImprovement =
+		typeof initialSceneBytes === 'number' &&
+		typeof currentSceneBytes === 'number'
+			? currentSceneBytes < initialSceneBytes
 			: false
+	const hasReportImprovement =
+		(report?.appliedOptimizations?.length ?? 0) > 0 ||
+		info.improvement.verticesCount > 0 ||
+		info.improvement.primitivesCount > 0 ||
+		info.improvement.meshesCount > 0 ||
+		info.improvement.texturesCount > 0
+	const hasImproved = hasReportImprovement || hasSceneSizeImprovement
 
 	return {
 		info,

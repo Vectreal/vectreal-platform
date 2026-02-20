@@ -1,5 +1,3 @@
-import { Optimizations } from 'packages/core/src/types/scene-types'
-
 //// Process state
 export type SidebarMode = 'optimize' | 'compose' | 'publish'
 export interface ProcessState {
@@ -10,11 +8,4 @@ export interface ProcessState {
 	isLoading: boolean
 	isInitializing: boolean
 	hasUnsavedChanges: boolean
-}
-
-export type OptimizationPreset = 'low' | 'medium' | 'high'
-
-export interface OptimizationState {
-	optimizations: Optimizations
-	optimizationPreset: OptimizationPreset
 }

@@ -29,10 +29,9 @@ import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 import { Route } from './+types/publisher-page'
 import { DropZone } from './drop-zone'
 
-export async function loader({ request, params }: Route.LoaderArgs) {
+export async function loader({ request }: Route.LoaderArgs) {
 	return {
-		isMobile: isMobileRequest(request),
-		sceneId: params.sceneId || null
+		isMobile: isMobileRequest(request)
 	}
 }
 

@@ -34,11 +34,7 @@ export const StatsAccordionItem: FC<AccordionItemsProps> = ({
 			disabled={!hasImproved}
 			className="px-2 hover:no-underline"
 		>
-			<OptimizationStatsHeader
-				info={info}
-				hasImproved={hasImproved}
-				sizeInfo={sizeInfo}
-			/>
+			<OptimizationStatsHeader hasImproved={hasImproved} sizeInfo={sizeInfo} />
 		</AccordionTrigger>
 		<AccordionContent>
 			<OptimizationStats
@@ -76,13 +72,15 @@ export const AdvancedOptimizationAccordionItem: FC = () => (
 )
 
 interface SceneDetailsAccordionItemProps {
-	info: OptimizationInfo
-	report?: OptimizationReport | null
+	info: OptimizationInfo // from the optimization hook package
+	report?: OptimizationReport | null // from the optimization core package
+	sizeInfo: SizeInfo
 }
 
 export const SceneDetailsAccordionItem: FC<SceneDetailsAccordionItemProps> = ({
 	info,
-	report
+	report,
+	sizeInfo
 }) => (
 	<AccordionItem value="details">
 		<AccordionTrigger>
@@ -90,7 +88,7 @@ export const SceneDetailsAccordionItem: FC<SceneDetailsAccordionItemProps> = ({
 			Scene Details
 		</AccordionTrigger>
 		<AccordionContent>
-			<SceneDetails info={info} report={report} />
+			<SceneDetails info={info} report={report} sizeInfo={sizeInfo} />
 		</AccordionContent>
 	</AccordionItem>
 )

@@ -1,7 +1,7 @@
 import { useAtom } from 'jotai'
 import type { FC } from 'react'
 
-import { optimizationAtom } from '../../../../../lib/stores/publisher-config-store'
+import { optimizationAtom } from '../../../../../lib/stores/scene-optimization-store'
 import { SettingToggle } from '../../../settings-components'
 
 import { SimplificationSettings } from './simplification-settings'

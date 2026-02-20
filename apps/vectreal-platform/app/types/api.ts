@@ -2,6 +2,7 @@ import type { JSONDocument } from '@gltf-transform/core'
 import type { User } from '@supabase/supabase-js'
 import type {
 	ControlsProps,
+	Optimizations,
 	EnvironmentProps,
 	OptimizationReport,
 	SceneMeta,
@@ -100,11 +101,14 @@ export interface SceneSettingsRequest extends Partial<BaseSceneParams> {
 	readonly settings?: SceneSettingsData
 	readonly gltfJson?: JSONDocument
 	readonly optimizationReport?: OptimizationReport
+	readonly optimizationSettings?: Optimizations
+	readonly initialSceneBytes?: number
 	readonly publishedGlb?: {
 		readonly data: number[]
 		readonly fileName?: string
 		readonly mimeType?: string
 	}
+	readonly currentSceneBytes?: number
 }
 
 /** Parameters for retrieving scene settings. */
@@ -116,6 +120,9 @@ export interface SaveSceneSettingsParams extends BaseSceneParams {
 	readonly settings: SceneSettingsData
 	readonly gltfJson?: JSONDocument
 	readonly optimizationReport?: OptimizationReport
+	readonly optimizationSettings?: Optimizations
+	readonly initialSceneBytes?: number
+	readonly currentSceneBytes?: number
 }
 
 /** Parameters for updating existing scene settings. */
@@ -144,6 +151,20 @@ export interface SceneAggregateResponse {
 	readonly createdAt?: Date
 	readonly createdBy?: string
 	readonly updatedAt?: Date
+}
+
+export interface SaveSceneSettingsResponse {
+	readonly sceneId: string
+	readonly stats: SceneStatsData | null
+	readonly unchanged?: boolean
+	readonly [key: string]: unknown
+}
+
+export interface PublishSceneResponse {
+	readonly sceneId: string
+	readonly stats: SceneStatsData | null
+	readonly asset?: unknown
+	readonly [key: string]: unknown
 }
 
 // ============================================================================
@@ -221,10 +242,10 @@ export interface SceneStatsData {
 	readonly description?: string | null
 	readonly baseline?: SceneStatsSnapshot | null
 	readonly optimized?: SceneStatsSnapshot | null
-	readonly draftBytes?: number | null
-	readonly publishedBytes?: number | null
+	readonly initialSceneBytes?: number | null
+	readonly currentSceneBytes?: number | null
 	readonly appliedOptimizations?: string[] | null
-	readonly optimizationSettings?: Record<string, unknown> | null
+	readonly optimizationSettings?: Optimizations | null
 	readonly createdAt: Date
 	readonly createdBy: string
 }

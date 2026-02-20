@@ -120,21 +120,20 @@ export const calculateOptimizationStats = (
 			reduction: Math.round((info.improvement[key] / info.initial[key]) * 100)
 		}))
 
-	const initialDraftBytes = sizeInfo?.draftBytes ?? info.initial.sceneBytes
-	const optimizedDraftBytes =
-		sizeInfo?.draftAfterBytes ?? info.optimized.sceneBytes
+	const initialSceneBytes = sizeInfo?.initialSceneBytes ?? null
+	const currentSceneBytes = sizeInfo?.currentSceneBytes ?? initialSceneBytes
 
 	if (
-		typeof initialDraftBytes === 'number' &&
-		typeof optimizedDraftBytes === 'number' &&
-		initialDraftBytes > 0 &&
-		optimizedDraftBytes < initialDraftBytes
+		typeof initialSceneBytes === 'number' &&
+		typeof currentSceneBytes === 'number' &&
+		initialSceneBytes > 0 &&
+		currentSceneBytes < initialSceneBytes
 	) {
 		stats.push({
 			name: 'scene',
 			unit: 'size',
 			reduction: Math.round(
-				((initialDraftBytes - optimizedDraftBytes) / initialDraftBytes) * 100
+				((initialSceneBytes - currentSceneBytes) / initialSceneBytes) * 100
 			)
 		})
 	}

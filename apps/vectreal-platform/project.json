@@ -6,6 +6,35 @@
 	"tags": [],
 
 	"targets": {
+		"dev": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"command": "react-router"
+			}
+		},
+		"start": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"command": "react-router-serve build/server/index.js"
+			},
+			"dependsOn": ["build"]
+		},
+		"lint": {
+			"executor": "@nx/eslint:lint",
+			"outputs": ["{options.outputFile}"],
+			"options": {
+				"lintFilePatterns": [
+					"apps/vectreal-platform/app/**/*.ts",
+					"apps/vectreal-platform/app/**/*.tsx",
+					"apps/vectreal-platform/app/**/*.js",
+					"apps/vectreal-platform/app/**/*.jsx"
+				]
+			}
+		},
 		"supabase-restart": {
 			"executor": "nx:run-commands",
 			"options": {
@@ -128,27 +157,6 @@
 				],
 				"parallel": false
 			}
-		},
-		"lint": {
-			"executor": "@nx/eslint:lint",
-			"outputs": ["{options.outputFile}"],
-			"options": {
-				"lintFilePatterns": [
-					"apps/vectreal-platform/app/**/*.ts",
-					"apps/vectreal-platform/app/**/*.tsx",
-					"apps/vectreal-platform/app/**/*.js",
-					"apps/vectreal-platform/app/**/*.jsx"
-				]
-			}
-		},
-		"start": {
-			"executor": "nx:run-commands",
-			"options": {
-				"cwd": "apps/vectreal-platform",
-				"envFile": ".env.development",
-				"command": "react-router-serve build/server/index.js"
-			},
-			"dependsOn": ["build"]
 		}
 	}
 }

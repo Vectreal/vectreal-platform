@@ -20,7 +20,7 @@ import { Info } from 'lucide-react'
 import type { FC } from 'react'
 
 import { SettingSlider } from '../../../../../components'
-import { optimizationAtom } from '../../../../../lib/stores/publisher-config-store'
+import { optimizationAtom } from '../../../../../lib/stores/scene-optimization-store'
 
 const textureSize = [
 	{ value: 256, label: '256×256' },

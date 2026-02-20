@@ -3,14 +3,18 @@ import type { OptimizationReport } from '@vctrl/core'
 import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { Box, Grid, LayersIcon, Shapes } from 'lucide-react'
 
+import type { SizeInfo } from './use-optimization-process'
+
 interface SceneDetailsProps {
 	info: OptimizationInfo
 	report?: OptimizationReport | null
+	sizeInfo: SizeInfo
 }
 
 const SceneDetails = ({
 	info: { initial, optimized },
-	report
+	report,
+	sizeInfo
 }: SceneDetailsProps) => {
 	const textureSizeInitial = initial.texturesCount
 	const textureSizeOptimized = optimized.texturesCount
@@ -26,7 +30,10 @@ const SceneDetails = ({
 	const formatCount = (value: number | null) =>
 		value === null ? '—' : value.toLocaleString()
 	const formatResolutions = (values: string[]) => values.join(', ')
-	const formatBytes = (value: number) => formatFileSize(value)
+	const formatBytes = (value: number | null) =>
+		value === null ? '—' : formatFileSize(value)
+	const initialSceneBytes = sizeInfo.initialSceneBytes ?? null
+	const currentSceneBytes = sizeInfo.currentSceneBytes ?? initialSceneBytes
 
 	return (
 		<div className="bg-muted/25 grid grid-cols-2 gap-4 rounded-xl p-4 text-sm">
@@ -69,6 +76,16 @@ const SceneDetails = ({
 					<p className="text-xs text-zinc-400">
 						{formatBytes(textureSizeInitial)} →{' '}
 						{formatBytes(textureSizeOptimized)}
+					</p>
+				</div>
+			</div>
+
+			<div className="flex items-center space-x-2">
+				<LayersIcon className="h-5 w-5 text-zinc-400" />
+				<div>
+					<p className="text-sm font-medium">Scene Size</p>
+					<p className="text-xs text-zinc-400">
+						{formatBytes(initialSceneBytes)} → {formatBytes(currentSceneBytes)}
 					</p>
 				</div>
 			</div>
