@@ -41,9 +41,7 @@ interface RunContentActionOptions {
 	skipToast?: boolean
 }
 
-type ActionResponsePayload =
-	| ContentActionResponse
-	| CreateFolderActionResponse
+type ActionResponsePayload = ContentActionResponse | CreateFolderActionResponse
 
 interface DashboardSceneActionsContextValue {
 	selectedRows: DashboardContentRowSelection[]

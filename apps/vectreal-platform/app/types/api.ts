@@ -142,7 +142,10 @@ export type SceneSettingsAction =
 export type ContentItemType = 'scene' | 'folder'
 
 export type ContentMutationAction = 'rename' | 'delete' | 'create-folder'
-export type SceneMutationAction = Exclude<ContentMutationAction, 'create-folder'>
+export type SceneMutationAction = Exclude<
+	ContentMutationAction,
+	'create-folder'
+>
 
 export interface ContentActionItem {
 	readonly type: ContentItemType

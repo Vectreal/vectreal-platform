@@ -87,11 +87,8 @@ export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/err
 const ProjectPage = () => {
 	const location = useLocation()
 	const { project, folders, scenes } = useLoaderData<typeof loader>()
-	const {
-		setSelectedRows,
-		runContentAction,
-		actionState
-	} = useDashboardSceneActions()
+	const { setSelectedRows, runContentAction, actionState } =
+		useDashboardSceneActions()
 	const projectId = project.id
 	const [renameRow, setRenameRow] = useState<ContentRow | null>(null)
 	const [renameValue, setRenameValue] = useState('')
