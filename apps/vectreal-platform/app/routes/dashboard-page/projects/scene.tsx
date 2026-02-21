@@ -20,8 +20,8 @@ import { Eye, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useState } from 'react'
 import { Link, useFetcher, useLoaderData } from 'react-router'
 
+import CenteredSpinner from '../../../components/centered-spinner'
 import BasicCard from '../../../components/layout-components/basic-card'
-import { SceneDetailSkeleton } from '../../../components/skeletons'
 import { ClientVectrealViewer } from '../../../components/viewer/client-vectreal-viewer'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
@@ -63,7 +63,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 }
 
 export function HydrateFallback() {
-	return <SceneDetailSkeleton />
+	return <CenteredSpinner text="Loading scene..." />
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
@@ -125,15 +125,8 @@ const PreviewModel = memo(({ file, sceneData }: PreviewModelProps) => {
 					envOptions={sceneData?.settings?.environment}
 					controlsOptions={sceneData?.settings?.controls}
 					shadowsOptions={sceneData?.settings?.shadows}
-					loader={
-						<div className="text-center">
-							<div className="mb-4 text-lg font-medium">Loading scene...</div>
-							<div className="text-primary/70 text-sm">
-								Please wait while we fetch your 3D model
-							</div>
-						</div>
-					}
-					fallback={<SceneDetailSkeleton />}
+					loader={<CenteredSpinner text="Preparing scene..." />}
+					fallback={<CenteredSpinner text="Loading scene..." />}
 				/>
 			</div>
 			<div className="from-background absolute bottom-0 h-1/4 w-full bg-gradient-to-t to-transparent" />

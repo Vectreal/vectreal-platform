@@ -13,6 +13,8 @@ export interface SceneOptimizationRuntimeState {
 	isPending: boolean
 	optimizedSceneBytes: null | number
 	clientSceneBytes: null | number
+	optimizedTextureBytes: null | number
+	clientTextureBytes: null | number
 	lastSavedReportSignature: null | string
 	latestSceneStats: null | SceneStatsData
 }

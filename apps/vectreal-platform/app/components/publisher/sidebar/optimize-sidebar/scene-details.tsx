@@ -16,8 +16,12 @@ const SceneDetails = ({
 	report,
 	sizeInfo
 }: SceneDetailsProps) => {
-	const textureSizeInitial = initial.texturesCount
-	const textureSizeOptimized = optimized.texturesCount
+	const textureSizeInitial =
+		sizeInfo.initialTextureBytes ?? report?.stats.textures.before ?? null
+	const textureSizeOptimized =
+		sizeInfo.currentTextureBytes ??
+		report?.stats.textures.after ??
+		textureSizeInitial
 	const textureCountInitial = report?.stats.texturesCount?.before ?? null
 	const textureCountOptimized = report?.stats.texturesCount?.after ?? null
 	const textureResolutionsInitial =

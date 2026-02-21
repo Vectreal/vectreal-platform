@@ -39,6 +39,10 @@ export interface ModelFile {
 	type: ModelFileTypes
 	/** The original filename of the model */
 	name: string
+	/** Byte size of referenced source package (gltf + referenced buffers/images) */
+	sourcePackageBytes?: number
+	/** Byte size of referenced texture assets from source package */
+	sourceTextureBytes?: number
 }
 
 /**

@@ -5,6 +5,7 @@ import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
 import { Provider, useAtom, useAtomValue } from 'jotai/react'
 import { useCallback } from 'react'
 import { Outlet } from 'react-router'
+import type { ShouldRevalidateFunction } from 'react-router'
 
 import { Navigation } from '../../components/navigation'
 import {
@@ -19,34 +20,14 @@ import {
 	publisherConfigStore
 } from '../../lib/stores/publisher-config-store'
 import { sceneOptimizationStore } from '../../lib/stores/scene-optimization-store'
+import { buildSceneAggregate } from '../../lib/domain/scene/scene-aggregate.server'
 import { getScene } from '../../lib/domain/scene/scene-folder-repository.server'
-import { sceneSettingsService } from '../../lib/domain/scene/scene-settings-service.server'
 
 import { sceneSettingsStore } from '../../lib/stores/scene-settings-store'
 import { createSupabaseClient } from '../../lib/supabase.server'
-import type {
-	SceneAggregateResponse,
-	SceneAssetDataMap,
-	SerializedSceneAssetDataMap
-} from '../../types/api'
+import type { SceneAggregateResponse } from '../../types/api'
 
 import { Route } from './+types/publisher-layout'
-
-function serializeAssetData(
-	assetData: SceneAssetDataMap | null
-): SerializedSceneAssetDataMap {
-	const serialized: SerializedSceneAssetDataMap = {}
-
-	assetData?.forEach((value, key) => {
-		serialized[key] = {
-			data: Array.from(value.data),
-			mimeType: value.mimeType,
-			fileName: value.fileName
-		}
-	})
-
-	return serialized
-}
 
 export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	const { client } = await createSupabaseClient(request)
@@ -63,28 +44,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 			throw new Response('Scene not found', { status: 404 })
 		}
 
-		const [settingsResult, stats] = await Promise.all([
-			sceneSettingsService.getSceneSettingsWithAssets(sceneId),
-			sceneSettingsService.getSceneStats(sceneId)
-		])
-
-		sceneAggregate = {
-			sceneId,
-			stats,
-			settings: settingsResult
-				? {
-						environment: settingsResult.environment ?? undefined,
-						controls: settingsResult.controls ?? undefined,
-						shadows: settingsResult.shadows ?? undefined,
-						meta: settingsResult.meta ?? undefined
-					}
-				: null,
-			gltfJson: settingsResult?.gltfJson ?? null,
-			assetData: settingsResult
-				? serializeAssetData(settingsResult.assetDataMap)
-				: null,
-			assets: settingsResult?.assets ?? null
-		}
+		sceneAggregate = await buildSceneAggregate(sceneId)
 	}
 
 	const loaderData = {
@@ -94,6 +54,28 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	}
 
 	return loaderData
+}
+
+export const shouldRevalidate: ShouldRevalidateFunction = ({
+	currentUrl,
+	nextUrl,
+	defaultShouldRevalidate,
+	actionResult,
+	formMethod
+}) => {
+	if (formMethod && formMethod !== 'GET') {
+		return true
+	}
+
+	if (actionResult) {
+		return true
+	}
+
+	if (currentUrl.pathname === nextUrl.pathname) {
+		return false
+	}
+
+	return defaultShouldRevalidate
 }
 
 interface OverlayControlsProps {
@@ -115,7 +97,6 @@ const OverlayControls = ({
 	const { saveSceneSettings } = useSceneLoader({
 		sceneId,
 		userId: user?.id,
-		autoLoad: !sceneAggregate,
 		initialSceneAggregate: sceneAggregate as SceneAggregateResponse | null
 	})
 

@@ -5,6 +5,7 @@ import type {
 	SimplificationOptimization,
 	TextureOptimization
 } from '@vctrl/core'
+import { useExportModel } from '@vctrl/hooks/use-export-model'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue } from 'jotai'
 import { useCallback, useEffect, useRef } from 'react'
@@ -17,6 +18,8 @@ import {
 export type SizeInfo = {
 	initialSceneBytes?: number | null
 	currentSceneBytes?: number | null
+	initialTextureBytes?: number | null
+	currentTextureBytes?: number | null
 }
 
 type OptimizationOption =
@@ -31,6 +34,7 @@ type OptimizationOption =
  */
 export const useOptimizationProcess = () => {
 	const { optimizer, on, off, file } = useModelContext(true)
+	const { handleDocumentGltfExport } = useExportModel()
 	const {
 		reset: resetOptimize,
 		applyOptimization,
@@ -47,8 +51,14 @@ export const useOptimizationProcess = () => {
 	const [optimizationRuntime, setOptimizationRuntime] = useAtom(
 		optimizationRuntimeAtom
 	)
-	const { isPending, optimizedSceneBytes, clientSceneBytes, latestSceneStats } =
-		optimizationRuntime
+	const {
+		isPending,
+		optimizedSceneBytes,
+		clientSceneBytes,
+		optimizedTextureBytes,
+		clientTextureBytes,
+		latestSceneStats
+	} = optimizationRuntime
 	const isSceneSizeCalculationInFlightRef = useRef(false)
 
 	const calculateSceneBytes = useCallback(async () => {
@@ -56,6 +66,38 @@ export const useOptimizationProcess = () => {
 		if (!exportedGlb) return null
 		return exportedGlb.byteLength
 	}, [optimizer])
+
+	const calculateOptimizedTextureBytes = useCallback(async () => {
+		if (!optimizer?._getDocument?.()) {
+			return null
+		}
+
+		const gltfDocument = optimizer._getDocument()
+		const exported = await handleDocumentGltfExport(
+			gltfDocument,
+			file ?? null,
+			false,
+			false
+		)
+
+		if (!exported || typeof exported !== 'object' || !('assets' in exported)) {
+			return null
+		}
+
+		const assets = exported.assets
+		if (!(assets instanceof Map)) {
+			return null
+		}
+
+		let textureBytes = 0
+		for (const [fileName, data] of assets.entries()) {
+			if (/\.(png|jpe?g|webp|ktx2?)$/i.test(fileName)) {
+				textureBytes += data.byteLength
+			}
+		}
+
+		return textureBytes
+	}, [optimizer, handleDocumentGltfExport, file])
 
 	// Handle optimization process
 	const handleOptimizeClick = useCallback(async () => {
@@ -69,13 +111,28 @@ export const useOptimizationProcess = () => {
 		try {
 			if (typeof clientSceneBytes !== 'number') {
 				const baselineSceneBytes =
-					typeof latestSceneStats?.currentSceneBytes === 'number'
-						? latestSceneStats.currentSceneBytes
-						: await calculateSceneBytes()
+					typeof file?.sourcePackageBytes === 'number'
+						? file.sourcePackageBytes
+						: typeof latestSceneStats?.currentSceneBytes === 'number'
+							? latestSceneStats.currentSceneBytes
+							: await calculateSceneBytes()
 				if (typeof baselineSceneBytes === 'number') {
 					setOptimizationRuntime((prev) => ({
 						...prev,
 						clientSceneBytes: baselineSceneBytes
+					}))
+				}
+			}
+
+			if (typeof clientTextureBytes !== 'number') {
+				const baselineTextureBytes =
+					typeof file?.sourceTextureBytes === 'number'
+						? file.sourceTextureBytes
+						: (report?.stats.textures.before ?? null)
+				if (typeof baselineTextureBytes === 'number') {
+					setOptimizationRuntime((prev) => ({
+						...prev,
+						clientTextureBytes: baselineTextureBytes
 					}))
 				}
 			}
@@ -116,11 +173,20 @@ export const useOptimizationProcess = () => {
 
 			// Apply all optimizations
 			await applyOptimization()
-			const updatedSceneBytes = await calculateSceneBytes()
+			const [updatedSceneBytes, updatedTextureBytes] = await Promise.all([
+				calculateSceneBytes(),
+				calculateOptimizedTextureBytes()
+			])
 			setOptimizationRuntime((prev) => ({
 				...prev,
 				optimizedSceneBytes:
-					typeof updatedSceneBytes === 'number' ? updatedSceneBytes : null
+					typeof updatedSceneBytes === 'number' ? updatedSceneBytes : null,
+				optimizedTextureBytes:
+					typeof updatedTextureBytes === 'number'
+						? updatedTextureBytes
+						: typeof report?.stats.textures.after === 'number'
+							? report.stats.textures.after
+							: null
 			}))
 		} catch (error) {
 			console.error('Error during optimization:', error)
@@ -133,8 +199,10 @@ export const useOptimizationProcess = () => {
 	}, [
 		isPending,
 		clientSceneBytes,
+		clientTextureBytes,
 		latestSceneStats,
 		calculateSceneBytes,
+		calculateOptimizedTextureBytes,
 		setOptimizationRuntime,
 		plannedOptimizations,
 		applyOptimization,
@@ -142,8 +210,27 @@ export const useOptimizationProcess = () => {
 		texturesOptimization,
 		quantizeOptimization,
 		dedupOptimization,
-		normalsOptimization
+		normalsOptimization,
+		file?.sourcePackageBytes,
+		file?.sourceTextureBytes,
+		report?.stats.textures.before,
+		report?.stats.textures.after
 	])
+
+	useEffect(() => {
+		if (typeof clientTextureBytes === 'number') {
+			return
+		}
+
+		if (typeof file?.sourceTextureBytes !== 'number') {
+			return
+		}
+
+		setOptimizationRuntime((prev) => ({
+			...prev,
+			clientTextureBytes: file.sourceTextureBytes ?? null
+		}))
+	}, [clientTextureBytes, file?.sourceTextureBytes, setOptimizationRuntime])
 
 	// Reset on model load
 	useEffect(() => {
@@ -152,7 +239,9 @@ export const useOptimizationProcess = () => {
 				...prev,
 				isPending: false,
 				optimizedSceneBytes: null,
-				clientSceneBytes: null
+				clientSceneBytes: null,
+				optimizedTextureBytes: null,
+				clientTextureBytes: null
 			}))
 		}
 		on('load-start', resetOptimize)
@@ -209,6 +298,13 @@ export const useOptimizationProcess = () => {
 			optimizedSceneBytes ??
 			clientSceneBytes ??
 			latestSceneStats?.currentSceneBytes ??
+			null,
+		initialTextureBytes:
+			clientTextureBytes ?? report?.stats.textures.before ?? null,
+		currentTextureBytes:
+			optimizedTextureBytes ??
+			report?.stats.textures.after ??
+			clientTextureBytes ??
 			null
 	}
 	const initialSceneBytes = sizeInfo.initialSceneBytes ?? null

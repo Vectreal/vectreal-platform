@@ -141,11 +141,6 @@ const DashboardPage = () => {
 									)
 								})}
 							</div>
-							<Link viewTransition to="/dashboard/projects">
-								<Button variant="ghost" size="sm">
-									View All
-								</Button>
-							</Link>
 						</div>
 					)}
 				</section>

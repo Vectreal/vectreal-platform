@@ -3,31 +3,46 @@ import { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router'
 
 import * as sceneSettingsOps from '../../lib/domain/scene/scene-settings.operations.server'
 import { SceneSettingsParser } from '../../lib/domain/scene/scene-settings.parser.server'
-import { getScene } from '../../lib/domain/scene/scene-folder-repository.server'
-import { sceneSettingsService } from '../../lib/domain/scene/scene-settings-service.server'
+import {
+	createSceneFolder,
+	deleteSceneFolder,
+	deleteScene,
+	getScene,
+	renameSceneFolder,
+	renameScene
+} from '../../lib/domain/scene/scene-folder-repository.server'
+import { buildSceneAggregate } from '../../lib/domain/scene/scene-aggregate.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 import { ensurePost, parseActionRequest } from '../../lib/http/requests.server'
 import type {
+	ContentActionResponse,
+	ContentActionResult,
+	ContentItemType,
 	SceneAggregateResponse,
-	SceneSettingsAction,
-	SceneAssetDataMap,
-	SerializedSceneAssetDataMap
+	SceneSettingsAction
 } from '../../types/api'
 
-function serializeAssetData(
-	assetData: SceneAssetDataMap | null
-): SerializedSceneAssetDataMap {
-	const serialized: SerializedSceneAssetDataMap = {}
+function parseActionItems(value: unknown): Array<{ type: string; id: string }> {
+	if (Array.isArray(value)) {
+		return value.filter(
+			(item): item is { type: string; id: string } =>
+				typeof item === 'object' &&
+				item !== null &&
+				typeof (item as { type?: unknown }).type === 'string' &&
+				typeof (item as { id?: unknown }).id === 'string'
+		)
+	}
 
-	assetData?.forEach((value, key) => {
-		serialized[key] = {
-			data: Array.from(value.data),
-			mimeType: value.mimeType,
-			fileName: value.fileName
+	if (typeof value === 'string') {
+		try {
+			const parsed = JSON.parse(value)
+			return parseActionItems(parsed)
+		} catch {
+			return []
 		}
-	})
+	}
 
-	return serialized
+	return []
 }
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -47,29 +62,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	}
 
 	try {
-		const [settingsResult, stats] = await Promise.all([
-			sceneSettingsService.getSceneSettingsWithAssets(sceneId),
-			sceneSettingsService.getSceneStats(sceneId)
-		])
-
-		if (!settingsResult) {
-			const aggregate: SceneAggregateResponse = {
-				sceneId,
-				stats,
-				settings: null,
-				gltfJson: null,
-				assetData: null,
-				assets: null
-			}
-
-			return ApiResponse.success(aggregate)
-		}
-
-		const aggregate: SceneAggregateResponse = {
-			...settingsResult,
-			assetData: serializeAssetData(settingsResult.assetDataMap),
-			stats
-		}
+		const aggregate: SceneAggregateResponse = await buildSceneAggregate(sceneId)
 
 		return ApiResponse.success(aggregate)
 	} catch (error) {
@@ -102,7 +95,160 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		return ApiResponse.badRequest('Action is required')
 	}
 
-	if (action === 'delete' || action === 'duplicate') {
+	if (action === 'create-folder') {
+		const projectIdRaw = actionRequest.projectId
+		const nameRaw = actionRequest.name
+		const descriptionRaw = actionRequest.description
+		const parentFolderIdRaw = actionRequest.parentFolderId
+
+		const projectId =
+			typeof projectIdRaw === 'string' ? projectIdRaw.trim() : ''
+		const name = typeof nameRaw === 'string' ? nameRaw.trim() : ''
+		const description =
+			typeof descriptionRaw === 'string' ? descriptionRaw.trim() : ''
+		const parentFolderId =
+			typeof parentFolderIdRaw === 'string' && parentFolderIdRaw.trim()
+				? parentFolderIdRaw.trim()
+				: null
+
+		if (!projectId) {
+			return ApiResponse.badRequest('Project ID is required')
+		}
+
+		if (!name) {
+			return ApiResponse.badRequest('Folder name is required')
+		}
+
+		try {
+			const folder = await createSceneFolder({
+				projectId,
+				userId: authResult.user.id,
+				name,
+				description,
+				parentFolderId
+			})
+
+			return ApiResponse.success({
+				success: true,
+				action,
+				folder
+			})
+		} catch (error) {
+			return ApiResponse.serverError(
+				error instanceof Error ? error.message : 'Failed to create folder'
+			)
+		}
+	}
+
+	if (action === 'delete' || action === 'rename') {
+		if (routeSceneId === 'bulk') {
+			const items = parseActionItems(actionRequest.items)
+			if (items.length === 0) {
+				return ApiResponse.badRequest('At least one item is required')
+			}
+
+			const results: ContentActionResult[] = []
+			const name =
+				typeof actionRequest.name === 'string' ? actionRequest.name : ''
+
+			for (const item of items) {
+				if (item.type !== 'scene' && item.type !== 'folder') {
+					results.push({
+						type: 'scene',
+						id: item.id,
+						success: false,
+						error: 'Unsupported item type'
+					})
+					continue
+				}
+
+				try {
+					if (action === 'delete') {
+						if (item.type === 'scene') {
+							await deleteScene(item.id, authResult.user.id)
+						} else {
+							await deleteSceneFolder(item.id, authResult.user.id)
+						}
+					}
+
+					if (action === 'rename') {
+						if (!name.trim()) {
+							throw new Error('Name is required for rename')
+						}
+
+						if (item.type === 'scene') {
+							await renameScene(item.id, authResult.user.id, name)
+						} else {
+							await renameSceneFolder(item.id, authResult.user.id, name)
+						}
+					}
+
+					results.push({
+						type: item.type as ContentItemType,
+						id: item.id,
+						success: true
+					})
+				} catch (error) {
+					results.push({
+						type: item.type as ContentItemType,
+						id: item.id,
+						success: false,
+						error: error instanceof Error ? error.message : 'Action failed'
+					})
+				}
+			}
+
+			const succeeded = results.filter((result) => result.success).length
+			const response: ContentActionResponse = {
+				success: succeeded > 0,
+				action,
+				results,
+				summary: {
+					total: results.length,
+					succeeded,
+					failed: results.length - succeeded
+				}
+			}
+
+			return ApiResponse.success(response)
+		}
+
+		if (!routeSceneId) {
+			return ApiResponse.badRequest('Scene ID is required')
+		}
+
+		const scene = await getScene(routeSceneId, authResult.user.id)
+		if (!scene) {
+			return ApiResponse.notFound(`Scene not found with ID: ${routeSceneId}`)
+		}
+
+		try {
+			if (action === 'delete') {
+				await deleteScene(routeSceneId, authResult.user.id)
+			}
+
+			if (action === 'rename') {
+				const name =
+					typeof actionRequest.name === 'string' ? actionRequest.name : ''
+				if (!name.trim()) {
+					return ApiResponse.badRequest('Name is required for rename')
+				}
+				await renameScene(routeSceneId, authResult.user.id, name)
+			}
+
+			return ApiResponse.success({
+				success: true,
+				action,
+				sceneId: routeSceneId
+			})
+		} catch (error) {
+			return ApiResponse.serverError(
+				error instanceof Error ? error.message : 'Action failed'
+			)
+		}
+	}
+
+	if (action === 'duplicate') {
 		if (!routeSceneId) {
 			return ApiResponse.badRequest('Scene ID is required')
 		}

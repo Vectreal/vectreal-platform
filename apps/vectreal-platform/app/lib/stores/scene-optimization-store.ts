@@ -16,6 +16,8 @@ const optimizationRuntimeInitialState: SceneOptimizationRuntimeState = {
 	isPending: false,
 	optimizedSceneBytes: null,
 	clientSceneBytes: null,
+	optimizedTextureBytes: null,
+	clientTextureBytes: null,
 	lastSavedReportSignature: null,
 	latestSceneStats: null
 }

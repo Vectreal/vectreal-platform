@@ -2,7 +2,11 @@ import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { SpinnerWrapper } from '@shared/components/ui/spinner-wrapper'
 import { motion } from 'framer-motion'
 
-const CenteredSpinner = () => {
+interface CenteredSpinnerProps {
+	text?: string
+}
+
+const CenteredSpinner = ({ text = 'Loading...' }: CenteredSpinnerProps) => {
 	return (
 		<SpinnerWrapper>
 			<LoadingSpinner />
@@ -13,7 +17,7 @@ const CenteredSpinner = () => {
 				exit={{ opacity: 0 }}
 				transition={{ duration: 0.5 }}
 			>
-				Loading...
+				{text}
 			</motion.p>
 		</SpinnerWrapper>
 	)

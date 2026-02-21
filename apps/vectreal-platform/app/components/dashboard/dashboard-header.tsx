@@ -19,6 +19,12 @@ import { DashboardActions } from './dashboard-actions'
  */
 export const DashboardHeader = memo(() => {
 	const { title, description, actionVariant } = useDashboardHeaderData()
+	console.log(
+		'DashboardHeader rendered with title:',
+		title,
+		'and actionVariant:',
+		actionVariant
+	)
 
 	return (
 		actionVariant !== ACTION_VARIANT.SCENE_DETAIL && (

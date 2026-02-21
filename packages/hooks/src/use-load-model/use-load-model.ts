@@ -34,7 +34,12 @@ import {
 	ServerSceneData,
 	UseLoadModelReturn
 } from './types'
-import { readDirectory, reconstructGltfFiles } from './utils'
+import {
+	calculateReferencedBytesFromFiles,
+	calculateReferencedBytesFromServerScene,
+	readDirectory,
+	reconstructGltfFiles
+} from './utils'
 
 /**
  * Custom hook to load and manage 3D models with optional optimization integration.
@@ -147,6 +152,9 @@ function useLoadModel<
 	const loadGltfModel = useCallback(
 		async (gltfFile: File, otherFiles: File[]) => {
 			try {
+				const { sourcePackageBytes, textureBytes } =
+					await calculateReferencedBytesFromFiles(gltfFile, otherFiles)
+
 				const result = await modelLoader.loadGLTFWithAssetsToThreeJS(
 					gltfFile,
 					otherFiles
@@ -155,7 +163,9 @@ function useLoadModel<
 				const loadedFile: ModelFile = {
 					model: result.scene,
 					type: ModelFileTypes.gltf,
-					name: gltfFile.name
+					name: gltfFile.name,
+					sourcePackageBytes,
+					sourceTextureBytes: textureBytes
 				}
 
 				dispatch({
@@ -311,6 +321,8 @@ function useLoadModel<
 
 				// Reconstruct GLTF and asset files from scene data
 				const files = reconstructGltfFiles(sceneData)
+				const { sourcePackageBytes, textureBytes } =
+					calculateReferencedBytesFromServerScene(sceneData)
 
 				// Update progress to 60% after reconstruction
 				updateProgress(60)
@@ -327,7 +339,9 @@ function useLoadModel<
 				const loadedFile: ModelFile = {
 					model: result.scene,
 					type: ModelFileTypes.gltf,
-					name: gltfFile.name
+					name: gltfFile.name,
+					sourcePackageBytes,
+					sourceTextureBytes: textureBytes
 				}
 
 				// Update state with the loaded model

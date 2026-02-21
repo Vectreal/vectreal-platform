@@ -11,11 +11,11 @@ import {
 import type {
 	EventHandler,
 	ModelFile,
-	ServerSceneData,
-	SceneLoadResult
+	ServerSceneData
 } from '@vctrl/hooks/use-load-model/types'
 import { useAtom, useAtomValue } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
 import { optimizationPresets } from '../constants/optimizations'
@@ -44,7 +44,6 @@ import { OptimizationPreset } from '../types/scene-optimization'
 export interface UseSceneLoaderParams {
 	sceneId: null | string
 	userId?: string
-	autoLoad?: boolean // Control whether to auto-load scene on mount
 	initialSceneAggregate?: SceneAggregateResponse | null
 }
 
@@ -56,102 +55,24 @@ export interface SaveSceneResult {
 }
 
 /**
- * Unified hook to handle scene loading and settings management.
+ * Manages scene load/save side effects and shared store synchronization.
  *
- * ## Architecture & State Management
+ * This hook keeps scene state in Jotai/model context as the source of truth,
+ * while exposing only `saveSceneSettings` for UI actions.
  *
- * This hook follows a "single source of truth" pattern by:
- * 1. Managing scene-specific operations (load, save) as actions
- * 2. Reading/writing to shared Jotai atoms for ALL shared state
- * 3. Returning only scene actions needed by consumers
- *
- * ### State Sources (Single Source of Truth):
- * - **Scene Settings**: `scene-settings-store` atoms (environment, camera, controls, shadows, meta)
- *   - Access via: `useAtomValue(environmentAtom)`, etc.
- * - **Process State**: `publisher-config-store.processAtom` (isInitializing, hasUnsavedChanges, isLoading, step, showSidebar, showInfo)
- *   - Access via: `useAtomValue(processAtom)` or `useAtom(processAtom)`
- * - **Model State**: `useModelContext()` (file, isFileLoading, reset, loadFromServer, etc.)
- *   - Access via: `const { file } = useModelContext()`
- * - **Hook-Local State** (NOT shared and not returned):
- *   - `currentSceneId` - Active scene ID tracking
- *   - `lastSavedSettings` - Baseline for change detection (internal comparison state)
- *
- * ### What This Hook Returns:
- * Returns only the action consumed by layout/publishing UI:
- * - `saveSceneSettings: () => Promise<SaveSceneResult>` - Save current settings to server
- *
- * ### What This Hook Does NOT Return (access via atoms/context instead):
- * ❌ Do NOT return these - they create duplicate state and violate single source of truth:
- * - `environment`, `camera`, `controls`, `shadows`, `meta` → Use `scene-settings-store` atoms
- * - `file`, `isFileLoading` → Use `useModelContext()`
- * - `isInitializing`, `hasUnsavedChanges`, `isLoading`, `step` → Use `processAtom`
- * - `currentSceneId`, `lastSavedSettings`, `currentSettings` → Internal hook state only
- *
- * ### Side Effects:
- * This hook automatically:
- * - Loads scene on mount when `sceneId` is provided and `autoLoad` is true
- * - Tracks unsaved changes by comparing current settings with `lastSavedSettings`
- * - Updates `processAtom.hasUnsavedChanges` when changes are detected
- * - Updates `processAtom.isInitializing` during scene load
- * - Updates `processAtom.isLoading` during downloads
- * - Subscribes to model load events and updates meta/process state
- *
- * @example
- * ```tsx
- * // ✅ CORRECT: In parent layout component
- * import { useAtomValue } from 'jotai'
- * import { processAtom } from '../stores/publisher-config-store'
- * import { environmentAtom } from '../stores/scene-settings-store'
- *
- * const Layout = ({ sceneId, userId }) => {
- *   // Call hook once in parent - it manages state via atoms
- *   const { saveSceneSettings } = useSceneLoader({ sceneId, userId })
- *
- *   // Access state directly from atoms
- *   const { hasUnsavedChanges, isInitializing } = useAtomValue(processAtom)
- *   const env = useAtomValue(environmentAtom)
- *
- *   // Pass only actions to children
- *   return (
- *     <SaveButton
- *       saveSceneSettings={saveSceneSettings}
- *       hasUnsavedChanges={hasUnsavedChanges}
- *     />
- *   )
- * }
- * ```
- *
- * @example
- * ```tsx
- * // ❌ INCORRECT: Multiple hook instances
- * const Component1 = () => {
- *   const { saveSceneSettings } = useSceneLoader({ sceneId, userId }) // Instance A
- *   // ...
- * }
- *
- * const Component2 = () => {
- *   const { saveSceneSettings } = useSceneLoader({ sceneId, userId }) // Instance B ❌ Duplicate!
- *   // Each instance has separate lastSavedSettings state!
- * }
- * ```
- *
- * @param params - Configuration object
- * @param params.sceneId - Scene ID to load (null for new scene)
- * @param params.userId - User ID for saving operations
- * @param params.autoLoad - Whether to auto-load scene on mount (default: true)
+ * Internal state (`currentSceneId`, `lastSavedSettings`) is used for
+ * orchestration/change tracking and is intentionally not returned.
  */
 export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	// Handle nullable params by applying defaults
 	const {
 		sceneId: paramSceneId,
 		userId,
-		autoLoad = true,
 		initialSceneAggregate = null
 	} = params === null
 		? {
 				sceneId: null,
 				userId: undefined,
-				autoLoad: true,
 				initialSceneAggregate: null
 			}
 		: params
@@ -172,10 +93,10 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		on,
 		off,
 		load,
-		loadFromServer,
 		optimizer,
 		file: modelFile
 	} = useModelContext()
+	const revalidator = useRevalidator()
 	const { handleDocumentGltfExport } = useExportModel()
 
 	// Scene state atoms
@@ -200,25 +121,139 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	} = optimizationRuntime
 	const { isInitializing } = processState
 
-	const calculateAggregateSceneBytes = useCallback(
+	const calculateAggregateReferencedBytes = useCallback(
 		(aggregate: SceneAggregateResponse | null) => {
 			if (!aggregate?.gltfJson && !aggregate?.assetData) {
+				return {
+					sourcePackageBytes: null,
+					textureBytes: null
+				}
+			}
+
+			const gltfJson = aggregate.gltfJson
+			const assets = Object.values(aggregate.assetData ?? {}).map((asset) => ({
+				fileName: asset.fileName,
+				size: asset.data.length
+			}))
+
+			const normalizeUri = (value: string) =>
+				decodeURIComponent(value).replace(/^\.\//, '')
+
+			const resolveAssetSize = (uri: string) => {
+				const normalizedUri = normalizeUri(uri)
+				const uriBasename = normalizedUri.split('/').pop() || normalizedUri
+
+				for (const asset of assets) {
+					const normalizedName = normalizeUri(asset.fileName)
+					const basename = normalizedName.split('/').pop() || normalizedName
+
+					if (
+						normalizedName === normalizedUri ||
+						basename === normalizedUri ||
+						normalizedName === uriBasename ||
+						basename === uriBasename
+					) {
+						return asset.size
+					}
+				}
+
+				return 0
+			}
+
+			const imageUris = new Set<string>()
+			const bufferUris = new Set<string>()
+
+			if (!gltfJson) {
+				return {
+					sourcePackageBytes: null,
+					textureBytes: null
+				}
+			}
+
+			const extractGltfDocument = (
+				value: unknown
+			):
+				| {
+						images?: Array<{ uri?: unknown }>
+						buffers?: Array<{ uri?: unknown }>
+				  }
+				| null => {
+				if (!value || typeof value !== 'object') {
+					return null
+				}
+
+				const candidate = value as {
+					images?: unknown
+					buffers?: unknown
+					json?: unknown
+				}
+
+				if (
+					Array.isArray(candidate.images) ||
+					Array.isArray(candidate.buffers)
+				) {
+					return candidate as {
+						images?: Array<{ uri?: unknown }>
+						buffers?: Array<{ uri?: unknown }>
+					}
+				}
+
+				if (candidate.json && typeof candidate.json === 'object') {
+					const nested = candidate.json as {
+						images?: unknown
+						buffers?: unknown
+					}
+
+					if (
+						Array.isArray(nested.images) ||
+						Array.isArray(nested.buffers)
+					) {
+						return nested as {
+							images?: Array<{ uri?: unknown }>
+							buffers?: Array<{ uri?: unknown }>
+						}
+					}
+				}
+
 				return null
 			}
 
-			const gltfBytes = aggregate.gltfJson
-				? new TextEncoder().encode(JSON.stringify(aggregate.gltfJson))
-						.byteLength
-				: 0
+			const gltfDocument = extractGltfDocument(gltfJson)
 
-			const assetBytes = aggregate.assetData
-				? Object.values(aggregate.assetData).reduce(
-						(total, asset) => total + asset.data.length,
-						0
-					)
-				: 0
+			const images = Array.isArray(gltfDocument?.images)
+				? gltfDocument.images
+				: []
+			for (const image of images) {
+				if (typeof image.uri === 'string' && !image.uri.startsWith('data:')) {
+					imageUris.add(image.uri)
+				}
+			}
 
-			return gltfBytes + assetBytes
+			const buffers = Array.isArray(gltfDocument?.buffers)
+				? gltfDocument.buffers
+				: []
+			for (const buffer of buffers) {
+				if (typeof buffer.uri === 'string' && !buffer.uri.startsWith('data:')) {
+					bufferUris.add(buffer.uri)
+				}
+			}
+
+			const textureBytes = Array.from(imageUris).reduce(
+				(total, uri) => total + resolveAssetSize(uri),
+				0
+			)
+			const bufferBytes = Array.from(bufferUris).reduce(
+				(total, uri) => total + resolveAssetSize(uri),
+				0
+			)
+			const gltfBytes = new TextEncoder().encode(
+				JSON.stringify(gltfDocument ?? gltfJson)
+			).byteLength
+
+			return {
+				sourcePackageBytes: gltfBytes + bufferBytes + textureBytes,
+				textureBytes
+			}
 		},
 		[]
 	)
@@ -497,25 +532,6 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		[paramSceneId, currentSettings, setMeta, setProcess]
 	) as EventHandler<'load-complete'>
 
-	const handleServerLoadComplete = useCallback(
-		(data?: SceneLoadResult) => {
-			if (!data) return
-
-			setMeta((prev) => ({
-				...prev,
-				sceneName: data.settings.meta?.sceneName || prev.sceneName
-			}))
-
-			setProcess((prev) => ({
-				...prev,
-				step: 'preparing',
-				showInfo: true,
-				showSidebar: false
-			}))
-		},
-		[setMeta, setProcess]
-	) as EventHandler<'server-load-complete'>
-
 	const handleLoadError = useCallback((error: unknown) => {
 		console.error('Load error:', error)
 
@@ -533,20 +549,17 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	useEffect(() => {
 		on('not-loaded-files', handleNotLoadedFiles)
 		on('load-complete', handleLoadComplete)
-		on('server-load-complete', handleServerLoadComplete)
 		on('load-error', handleLoadError)
 
 		return () => {
 			off('not-loaded-files', handleNotLoadedFiles)
 			off('load-complete', handleLoadComplete)
-			off('server-load-complete', handleServerLoadComplete)
 			off('load-error', handleLoadError)
 		}
 	}, [
 		on,
 		off,
 		handleLoadComplete,
-		handleServerLoadComplete,
 		handleLoadError,
 		handleNotLoadedFiles
 	])
@@ -565,7 +578,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	// Update currentSceneId when sceneId prop changes
 	useEffect(() => {
 		setCurrentSceneId(paramSceneId)
-		setIsInitializing(!!paramSceneId && (autoLoad || !!initialSceneAggregate))
+		setIsInitializing(!!paramSceneId && !!initialSceneAggregate)
 		setOptimizationRuntime({
 			...optimizationRuntimeInitialState,
 			lastSavedReportSignature: null
@@ -573,7 +586,6 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setHasUnsavedChanges(false)
 	}, [
 		paramSceneId,
-		autoLoad,
 		initialSceneAggregate,
 		setIsInitializing,
 		setHasUnsavedChanges,
@@ -681,7 +693,8 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			const persistedOptimizationSettings =
 				aggregate?.stats?.optimizationSettings
 			const latestSceneStats = aggregate?.stats ?? null
-			const aggregateSceneBytes = calculateAggregateSceneBytes(aggregate)
+			const { sourcePackageBytes, textureBytes } =
+				calculateAggregateReferencedBytes(aggregate)
 
 			if (!persistedOptimizationSettings) {
 				setOptimizationState((prev) => ({
@@ -693,7 +706,8 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				setOptimizationRuntime({
 					...optimizationRuntimeInitialState,
 					latestSceneStats,
-					clientSceneBytes: aggregateSceneBytes
+					clientSceneBytes: sourcePackageBytes,
+					clientTextureBytes: textureBytes
 				})
 				return
 			}
@@ -712,12 +726,14 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				...prev,
 				isPending: false,
 				optimizedSceneBytes: null,
-				clientSceneBytes: aggregateSceneBytes,
+				optimizedTextureBytes: null,
+				clientSceneBytes: sourcePackageBytes,
+				clientTextureBytes: textureBytes,
 				latestSceneStats
 			}))
 		},
 		[
-			calculateAggregateSceneBytes,
+			calculateAggregateReferencedBytes,
 			inferOptimizationPreset,
 			setOptimizationRuntime,
 			setOptimizationState
@@ -778,8 +794,21 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				}
 
 				if (aggregate.gltfJson && aggregate.assetData) {
+					const normalizedGltfJson =
+						typeof aggregate.gltfJson === 'object' &&
+						aggregate.gltfJson !== null &&
+						'json' in aggregate.gltfJson &&
+						typeof (aggregate.gltfJson as { json?: unknown }).json ===
+							'object' &&
+						(aggregate.gltfJson as { json?: unknown }).json !== null
+							? ((aggregate.gltfJson as { json: unknown }).json as Record<
+								string,
+								unknown
+							>)
+							: (aggregate.gltfJson as unknown as Record<string, unknown>)
+
 					const sceneData: ServerSceneData = {
-						gltfJson: aggregate.gltfJson as unknown as Record<string, unknown>,
+						gltfJson: normalizedGltfJson,
 						assetData: aggregate.assetData,
 						environment: settings?.environment,
 						controls: settings?.controls,
@@ -799,7 +828,6 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				toast.error(
 					`Failed to load scene: ${error instanceof Error ? error.message : 'Unknown error'}`
 				)
-				throw error
 			} finally {
 				setIsDownloading(false)
 			}
@@ -810,62 +838,6 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			applySceneSettings,
 			load,
 			setIsDownloading
-		]
-	)
-
-	/**
-	 * Load scene from server via loadFromServer
-	 */
-	const loadScene = useCallback(
-		async (targetSceneId?: string) => {
-			const idToLoad = targetSceneId || currentSceneId
-			if (!idToLoad) {
-				setIsInitializing(false)
-				return
-			}
-
-			if (sceneLoadAttemptedRef.current) {
-				return
-			}
-
-			sceneLoadAttemptedRef.current = true
-			setIsDownloading(true)
-
-			try {
-				const result: SceneLoadResult = await loadFromServer({
-					sceneId: idToLoad
-				})
-				applySceneSettings(result.settings)
-				hydrateOptimizationState(
-					initialSceneAggregate && idToLoad === paramSceneId
-						? initialSceneAggregate
-						: null
-				)
-				toast.success(
-					`Loaded scene: ${result.settings.meta?.sceneName || idToLoad}`
-				)
-
-				return result
-			} catch (error) {
-				sceneLoadAttemptedRef.current = false
-				console.error('Failed to load scene:', error)
-				toast.error(
-					`Failed to load scene: ${error instanceof Error ? error.message : 'Unknown error'}`
-				)
-				throw error
-			} finally {
-				setIsDownloading(false)
-			}
-		},
-		[
-			currentSceneId,
-			loadFromServer,
-			applySceneSettings,
-			hydrateOptimizationState,
-			initialSceneAggregate,
-			paramSceneId,
-			setIsDownloading,
-			setIsInitializing
 		]
 	)
 
@@ -919,6 +891,8 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 					lastSavedReportSignature: reportSignature
 				}))
 			}
+
+			revalidator.revalidate()
 		}
 
 		return result
@@ -931,7 +905,8 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		optimizedSceneBytes,
 		clientSceneBytes,
 		latestSceneStats,
-		setOptimizationRuntime
+		setOptimizationRuntime,
+		revalidator
 	])
 
 	/**
@@ -987,9 +962,17 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	])
 
 	useEffect(() => {
+		if (!paramSceneId) {
+			setIsInitializing(false)
+			return
+		}
+
+		if (!initialSceneAggregate) {
+			setIsInitializing(false)
+			return
+		}
+
 		if (
-			!paramSceneId ||
-			!initialSceneAggregate ||
 			file?.model ||
 			isFileLoading ||
 			sceneLoadAttemptedRef.current
@@ -1006,34 +989,6 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		file?.model,
 		isFileLoading,
 		loadSceneFromAggregate,
-		setIsInitializing
-	])
-
-	// Auto-load scene when component mounts with a sceneId
-	useEffect(() => {
-		if (
-			!autoLoad ||
-			!paramSceneId ||
-			initialSceneAggregate ||
-			file?.model ||
-			isFileLoading ||
-			sceneLoadAttemptedRef.current
-		) {
-			// If autoLoad is disabled but we have a sceneId, ensure we're not stuck initializing
-			if (!autoLoad && paramSceneId) {
-				setIsInitializing(false)
-			}
-			return
-		}
-
-		loadScene(paramSceneId).finally(() => setIsInitializing(false))
-	}, [
-		autoLoad,
-		paramSceneId,
-		initialSceneAggregate,
-		file?.model,
-		isFileLoading,
-		loadScene,
 		setIsInitializing
 	])
 

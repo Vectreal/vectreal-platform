@@ -192,3 +192,154 @@ export async function getChildFolders(
 		.where(eq(sceneFolders.parentFolderId, parentFolderId))
 		.orderBy(desc(sceneFolders.updatedAt))
 }
+
+export async function getAccessibleSceneFolders(
+	userId: string
+): Promise<Array<typeof sceneFolders.$inferSelect>> {
+	const rows = await db
+		.select({ folder: sceneFolders })
+		.from(sceneFolders)
+		.innerJoin(projects, eq(projects.id, sceneFolders.projectId))
+		.innerJoin(
+			organizationMemberships,
+			eq(organizationMemberships.organizationId, projects.organizationId)
+		)
+		.where(eq(organizationMemberships.userId, userId))
+		.orderBy(desc(sceneFolders.updatedAt))
+
+	return rows.map(({ folder }) => folder)
+}
+
+export async function createSceneFolder(params: {
+	projectId: string
+	userId: string
+	name: string
+	description?: string | null
+	parentFolderId?: string | null
+}): Promise<typeof sceneFolders.$inferSelect> {
+	const trimmedName = params.name.trim()
+	if (!trimmedName) {
+		throw new Error('Folder name is required')
+	}
+
+	await verifyProjectAccess(db, params.projectId, params.userId)
+
+	if (params.parentFolderId) {
+		const parentFolder = await getSceneFolder(
+			params.parentFolderId,
+			params.userId
+		)
+		if (!parentFolder) {
+			throw new Error('Parent folder not found or access denied')
+		}
+
+		if (parentFolder.projectId !== params.projectId) {
+			throw new Error('Parent folder must belong to the same project')
+		}
+	}
+
+	const [folder] = await db
+		.insert(sceneFolders)
+		.values({
+			projectId: params.projectId,
+			name: trimmedName,
+			description: params.description?.trim() || null,
+			ownerId: params.userId,
+			parentFolderId: params.parentFolderId || null,
+			updatedAt: new Date()
+		})
+		.returning()
+
+	if (!folder) {
+		throw new Error('Failed to create folder')
+	}
+
+	return folder
+}
+
+export async function renameScene(
+	sceneId: string,
+	userId: string,
+	name: string
+): Promise<typeof scenes.$inferSelect> {
+	const trimmedName = name.trim()
+	if (!trimmedName) {
+		throw new Error('Scene name is required')
+	}
+
+	const scene = await getScene(sceneId, userId)
+	if (!scene) {
+		throw new Error('Scene not found or access denied')
+	}
+
+	const [updatedScene] = await db
+		.update(scenes)
+		.set({ name: trimmedName, updatedAt: new Date() })
+		.where(eq(scenes.id, sceneId))
+		.returning()
+
+	if (!updatedScene) {
+		throw new Error('Failed to rename scene')
+	}
+
+	return updatedScene
+}
+
+export async function renameSceneFolder(
+	folderId: string,
+	userId: string,
+	name: string
+): Promise<typeof sceneFolders.$inferSelect> {
+	const trimmedName = name.trim()
+	if (!trimmedName) {
+		throw new Error('Folder name is required')
+	}
+
+	const folder = await getSceneFolder(folderId, userId)
+	if (!folder) {
+		throw new Error('Folder not found or access denied')
+	}
+
+	const [updatedFolder] = await db
+		.update(sceneFolders)
+		.set({ name: trimmedName, updatedAt: new Date() })
+		.where(eq(sceneFolders.id, folderId))
+		.returning()
+
+	if (!updatedFolder) {
+		throw new Error('Failed to rename folder')
+	}
+
+	return updatedFolder
+}
+
+export async function deleteScene(
+	sceneId: string,
+	userId: string
+): Promise<void> {
+	const scene = await getScene(sceneId, userId)
+	if (!scene) {
+		throw new Error('Scene not found or access denied')
+	}
+
+	await db.delete(scenes).where(eq(scenes.id, sceneId))
+}
+
+export async function deleteSceneFolder(
+	folderId: string,
+	userId: string
+): Promise<void> {
+	const folder = await getSceneFolder(folderId, userId)
+	if (!folder) {
+		throw new Error('Folder not found or access denied')
+	}
+
+	await db.transaction(async (tx) => {
+		await tx
+			.update(scenes)
+			.set({ folderId: null, updatedAt: new Date() })
+			.where(eq(scenes.folderId, folderId))
+
+		await tx.delete(sceneFolders).where(eq(sceneFolders.id, folderId))
+	})
+}

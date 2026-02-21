@@ -17,12 +17,12 @@ import {
 	FolderContentSkeleton,
 	OrganizationsSkeleton,
 	ProjectContentSkeleton,
-	ProjectsGridSkeleton,
-	SceneDetailSkeleton
+	ProjectsGridSkeleton
 } from '../../components/skeletons'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import { getUserProjects } from '../../lib/domain/project/project-repository.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
+import { DashboardSceneActionsProvider } from '../../hooks/use-dashboard-scene-actions'
 
 import { Route } from './+types/dashboard-layout'
 import CenteredSpinner from '../../components/centered-spinner'
@@ -128,37 +128,39 @@ const DashboardLayout = () => {
 		if (path === '/dashboard') return <DashboardSkeleton />
 		if (path === '/dashboard/organizations') return <OrganizationsSkeleton />
 		if (path === '/dashboard/projects') return <ProjectsGridSkeleton />
-		if (isFolderDetail) return <FolderContentSkeleton />
-		if (isSceneDetail) return <SceneDetailSkeleton />
 		if (isProjectDetail) return <ProjectContentSkeleton />
+		if (isFolderDetail) return <FolderContentSkeleton />
+		if (isSceneDetail) return <CenteredSpinner text="Loading scene..." /> // Scene details can be variable, so we show a spinner instead of a skeleton
 
 		// Default skeleton
-		return <CenteredSpinner />
+		return <CenteredSpinner text="Loading..." />
 	}
 
 	return (
-		<SidebarProvider open={sidebarOpen} onOpenChange={toggleSidebar}>
-			<LogoSidebar open={sidebarOpen}>
-				<DashboardSidebarContent user={user} />
-			</LogoSidebar>
-			<SidebarInset className="relative overflow-hidden">
-				<div className="from-background/75 absolute top-0 z-50 h-20 w-full bg-gradient-to-b to-transparent" />
-				<div className="absolute z-50 flex items-center gap-4 p-4 px-6 pl-4">
-					<SidebarTrigger />
-					<DynamicBreadcrumb />
-				</div>
-				{!sceneId && (
-					<div className="mt-16">
-						<DashboardHeader />
+		<DashboardSceneActionsProvider>
+			<SidebarProvider open={sidebarOpen} onOpenChange={toggleSidebar}>
+				<LogoSidebar open={sidebarOpen}>
+					<DashboardSidebarContent user={user} />
+				</LogoSidebar>
+				<SidebarInset className="relative overflow-hidden">
+					<div className="from-background/75 absolute top-0 z-50 h-20 w-full bg-gradient-to-b to-transparent" />
+					<div className="absolute z-50 flex items-center gap-4 p-4 px-6 pl-4">
+						<SidebarTrigger />
+						<DynamicBreadcrumb />
 					</div>
-				)}
-				{navigation.state === 'loading' && !isNewProjectCreation ? (
-					getNavigationSkeleton()
-				) : (
-					<Outlet />
-				)}
-			</SidebarInset>
-		</SidebarProvider>
+					{!sceneId && (
+						<div className="mt-16">
+							<DashboardHeader />
+						</div>
+					)}
+					{navigation.state === 'loading' && !isNewProjectCreation ? (
+						getNavigationSkeleton()
+					) : (
+						<Outlet />
+					)}
+				</SidebarInset>
+			</SidebarProvider>
+		</DashboardSceneActionsProvider>
 	)
 }
 

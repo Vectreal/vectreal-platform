@@ -5,6 +5,12 @@
 
 import { Button } from '@shared/components/ui/button'
 import { Checkbox } from '@shared/components/ui/checkbox'
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger
+} from '@shared/components/ui/dropdown-menu'
 import { Input } from '@shared/components/ui/input'
 import {
 	Table,
@@ -30,10 +36,17 @@ import {
 	ArrowUpDown,
 	ChevronLeft,
 	ChevronRight,
+	MoreVertical,
 	Search,
 	Trash2
 } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+
+export interface DataTableSelectionAction<TData> {
+	label: string
+	onClick: (selectedRows: TData[]) => void
+	disabled?: (selectedRows: TData[]) => boolean
+}
 
 interface DataTableProps<TData, TValue> {
 	columns: ColumnDef<TData, TValue>[]
@@ -41,6 +54,9 @@ interface DataTableProps<TData, TValue> {
 	searchKey?: string
 	searchPlaceholder?: string
 	onDelete?: (selectedRows: TData[]) => void
+	selectionActions?: DataTableSelectionAction<TData>[]
+	onSelectionChange?: (selectedRows: TData[]) => void
+	getRowCanSelect?: (row: TData) => boolean
 }
 
 export function DataTable<TData, TValue>({
@@ -48,7 +64,10 @@ export function DataTable<TData, TValue>({
 	data,
 	searchKey,
 	searchPlaceholder = 'Search...',
-	onDelete
+	onDelete,
+	selectionActions,
+	onSelectionChange,
+	getRowCanSelect
 }: DataTableProps<TData, TValue>) {
 	const [sorting, setSorting] = useState<SortingState>([])
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -58,6 +77,9 @@ export function DataTable<TData, TValue>({
 	const table = useReactTable({
 		data,
 		columns,
+		enableRowSelection: getRowCanSelect
+			? (row) => getRowCanSelect(row.original)
+			: true,
 		getCoreRowModel: getCoreRowModel(),
 		getPaginationRowModel: getPaginationRowModel(),
 		onSortingChange: setSorting,
@@ -78,6 +100,16 @@ export function DataTable<TData, TValue>({
 		.getFilteredSelectedRowModel()
 		.rows.map((row) => row.original)
 	const hasSelection = selectedRows.length > 0
+
+	useEffect(() => {
+		if (!onSelectionChange) {
+			return
+		}
+
+		onSelectionChange(
+			table.getFilteredSelectedRowModel().rows.map((row) => row.original)
+		)
+	}, [onSelectionChange, rowSelection])
 
 	return (
 		<div className="space-y-4">
@@ -101,16 +133,37 @@ export function DataTable<TData, TValue>({
 				)}
 
 				{/* Batch Actions */}
-				{hasSelection && onDelete && (
+				{hasSelection && (onDelete || (selectionActions?.length ?? 0) > 0) && (
 					<div className="flex items-center gap-2">
 						<span className="text-muted-foreground text-sm">
 							{selectedRows.length} selected
 						</span>
+						{selectionActions && selectionActions.length > 0 && (
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="outline" size="sm">
+										<MoreVertical className="mr-2 h-4 w-4" />
+										Actions
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end">
+									{selectionActions.map((action) => (
+										<DropdownMenuItem
+											key={action.label}
+											onClick={() => action.onClick(selectedRows)}
+											disabled={action.disabled?.(selectedRows)}
+										>
+											{action.label}
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuContent>
+							</DropdownMenu>
+						)}
 						<Button
 							variant="destructive"
 							size="sm"
 							onClick={() => {
-								onDelete(selectedRows)
+								onDelete?.(selectedRows)
 								setRowSelection({})
 							}}
 						>
@@ -252,6 +305,7 @@ export function createCheckboxColumn<TData>(): ColumnDef<TData> {
 			<Checkbox
 				checked={row.getIsSelected()}
 				onCheckedChange={(value) => row.toggleSelected(!!value)}
+				disabled={!row.getCanSelect()}
 				aria-label="Select row"
 			/>
 		),

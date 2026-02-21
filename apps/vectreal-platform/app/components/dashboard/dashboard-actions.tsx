@@ -5,23 +5,27 @@
 
 import { Button } from '@shared/components/ui/button'
 import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle
+} from '@shared/components/ui/dialog'
+import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger
 } from '@shared/components/ui/dropdown-menu'
-import {
-	Edit,
-	Folder,
-	FolderOpen,
-	MoreVertical,
-	Plus,
-	Rocket
-} from 'lucide-react'
-import { memo } from 'react'
+import { Input } from '@shared/components/ui/input'
+import { Textarea } from '@shared/components/ui/textarea'
+import { Edit, Folder, FolderOpen, MoreVertical, Plus } from 'lucide-react'
+import { memo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 
 import { ACTION_VARIANT } from '../../types/dashboard'
+import { useDashboardSceneActions } from '../../hooks/use-dashboard-scene-actions'
 
 // Types
 interface DashboardActionsProps {
@@ -39,7 +43,18 @@ interface ActionConfig {
 
 interface ActionGroupConfig {
 	primary: ActionConfig
-	secondary?: ActionConfig[]
+	secondary?: ActionConfig
+	menu?: ActionConfig[]
+}
+
+interface ActionButtonProps {
+	action: ActionConfig
+	replacements?: Record<string, string>
+}
+
+interface ActionsMenuProps {
+	actions: ActionConfig[]
+	replacements?: Record<string, string>
 }
 
 // Action Configurations
@@ -50,7 +65,7 @@ const ACTION_CONFIGS: Record<ACTION_VARIANT, ActionGroupConfig | null> = {
 			icon: Plus,
 			to: '/dashboard/projects/new'
 		},
-		secondary: [
+		menu: [
 			{
 				label: 'Browse Projects',
 				icon: FolderOpen,
@@ -78,31 +93,36 @@ const ACTION_CONFIGS: Record<ACTION_VARIANT, ActionGroupConfig | null> = {
 	},
 	[ACTION_VARIANT.PROJECT_DETAIL]: {
 		primary: {
-			label: 'New Scene',
-			icon: Rocket,
-			to: '/publisher'
+			label: 'New Folder',
+			icon: Plus,
+			variant: 'outline'
 		},
-		secondary: [
+		secondary: {
+			label: 'Open Publisher',
+			icon: Plus,
+			to: '/publisher',
+			variant: 'default'
+		},
+		menu: [
 			{
-				label: 'New Folder',
-				icon: Plus,
-				variant: 'outline' as const
+				label: 'Edit Project',
+				icon: Edit,
+				to: '/dashboard/projects/:projectId/edit'
 			}
 		]
 	},
 	[ACTION_VARIANT.FOLDER_DETAIL]: {
 		primary: {
-			label: 'New Scene',
-			icon: Rocket,
-			to: '/publisher'
+			label: 'New Folder',
+			icon: Plus,
+			variant: 'outline'
 		},
-		secondary: [
-			{
-				label: 'New Folder',
-				icon: Plus,
-				variant: 'outline' as const
-			}
-		]
+		secondary: {
+			label: 'OpenPublisher',
+			icon: Plus,
+			to: '/publisher',
+			variant: 'default'
+		}
 	},
 	[ACTION_VARIANT.SCENE_DETAIL]: {
 		primary: {
@@ -115,10 +135,7 @@ const ACTION_CONFIGS: Record<ACTION_VARIANT, ActionGroupConfig | null> = {
 }
 
 // Components
-const ActionButton = memo<{
-	action: ActionConfig
-	replacements?: Record<string, string>
-}>(({ action, replacements }) => {
+const ActionButton = memo<ActionButtonProps>(({ action, replacements }) => {
 	const { label, icon: Icon, to, onClick, variant = 'default' } = action
 
 	const resolvedTo =
@@ -150,10 +167,7 @@ const ActionButton = memo<{
 
 ActionButton.displayName = 'ActionButton'
 
-const SecondaryActionsMenu = memo<{
-	actions: ActionConfig[]
-	replacements?: Record<string, string>
-}>(({ actions, replacements }) => (
+const ActionsMenu = memo<ActionsMenuProps>(({ actions, replacements }) => (
 	<DropdownMenu>
 		<DropdownMenuTrigger asChild>
 			<Button variant="outline" size="icon" aria-label="More actions">
@@ -194,7 +208,7 @@ const SecondaryActionsMenu = memo<{
 	</DropdownMenu>
 ))
 
-SecondaryActionsMenu.displayName = 'SecondaryActionsMenu'
+ActionsMenu.displayName = 'SecondaryActionsMenu'
 
 /**
  * DashboardActions component renders contextual action buttons
@@ -203,8 +217,33 @@ SecondaryActionsMenu.displayName = 'SecondaryActionsMenu'
  */
 export const DashboardActions = memo<DashboardActionsProps>(
 	({ variant, className }) => {
-		const { sceneId } = useParams()
-		const config = ACTION_CONFIGS[variant]
+		const { sceneId, projectId, folderId } = useParams()
+		const { runContentAction, actionState } = useDashboardSceneActions()
+		const [createFolderDialogOpen, setCreateFolderDialogOpen] = useState(false)
+		const [newFolderName, setNewFolderName] = useState('')
+		const [newFolderDescription, setNewFolderDescription] = useState('')
+
+		let config = ACTION_CONFIGS[variant]
+
+		if (
+			config !== undefined &&
+			(variant === ACTION_VARIANT.PROJECT_DETAIL ||
+				variant === ACTION_VARIANT.FOLDER_DETAIL)
+		) {
+			config = {
+				...config,
+				primary: {
+					label: 'New Folder',
+					icon: Plus,
+					variant: 'outline',
+					onClick: () => {
+						setNewFolderName('')
+						setNewFolderDescription('')
+						setCreateFolderDialogOpen(true)
+					}
+				}
+			}
+		}
 
 		if (!config) {
 			return null
@@ -213,17 +252,72 @@ export const DashboardActions = memo<DashboardActionsProps>(
 		const replacements = sceneId ? { sceneId } : undefined
 
 		return (
-			<div className={className}>
-				<div className="flex gap-2">
-					<ActionButton action={config.primary} replacements={replacements} />
-					{config.secondary && config.secondary.length > 0 && (
-						<SecondaryActionsMenu
-							actions={config.secondary}
-							replacements={replacements}
+			<>
+				<Dialog
+					open={createFolderDialogOpen}
+					onOpenChange={setCreateFolderDialogOpen}
+				>
+					<DialogContent>
+						<DialogHeader>
+							<DialogTitle>New Folder</DialogTitle>
+							<DialogDescription>
+								Enter a name for the new folder.
+							</DialogDescription>
+						</DialogHeader>
+						<Input
+							value={newFolderName}
+							onChange={(event) => setNewFolderName(event.target.value)}
+							placeholder="Folder name"
 						/>
-					)}
+						<Textarea
+							value={newFolderDescription}
+							onChange={(event) => setNewFolderDescription(event.target.value)}
+							placeholder="Folder description (optional)"
+						/>
+						<DialogFooter>
+							<Button
+								variant="outline"
+								onClick={() => setCreateFolderDialogOpen(false)}
+							>
+								Cancel
+							</Button>
+							<Button
+								disabled={actionState !== 'idle'}
+								onClick={() => {
+									const folderName = newFolderName.trim()
+
+									runContentAction('create-folder', {
+										projectId: projectId || '',
+										parentFolderId: folderId || null,
+										name: folderName,
+										description: newFolderDescription
+									})
+									setCreateFolderDialogOpen(false)
+									setNewFolderName('')
+									setNewFolderDescription('')
+								}}
+							>
+								Create
+							</Button>
+						</DialogFooter>
+					</DialogContent>
+				</Dialog>
+
+				<div className={className}>
+					<div className="flex gap-2">
+						<ActionButton action={config.primary} replacements={replacements} />
+						{config.secondary && (
+							<ActionButton
+								action={config.secondary}
+								replacements={replacements}
+							/>
+						)}
+						{config.menu && config.menu.length > 0 && (
+							<ActionsMenu actions={config.menu} replacements={replacements} />
+						)}
+					</div>
 				</div>
-			</div>
+			</>
 		)
 	}
 )

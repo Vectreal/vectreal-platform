@@ -13,10 +13,11 @@ import {
 	parseRouteParams
 } from '../components/dashboard/utils'
 import { DASHBOARD_CONTENT, DASHBOARD_ROUTES } from '../constants/dashboard'
-import type {
-	BreadcrumbItem,
-	DynamicHeaderContent,
-	NavigationState
+import {
+	ACTION_VARIANT,
+	type BreadcrumbItem,
+	type DynamicHeaderContent,
+	type NavigationState
 } from '../types/dashboard'
 
 /**
@@ -70,13 +71,13 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 				let actionVariant = nextConfig.actionVariant
 				switch (navState.type) {
 					case 'scene':
-						actionVariant = DASHBOARD_CONTENT['scene-detail'].actionVariant
+						actionVariant = ACTION_VARIANT.SCENE_DETAIL
 						break
 					case 'folder':
-						actionVariant = DASHBOARD_CONTENT['folder-detail'].actionVariant
+						actionVariant = ACTION_VARIANT.FOLDER_DETAIL
 						break
 					case 'project':
-						actionVariant = DASHBOARD_CONTENT['project-detail'].actionVariant
+						actionVariant = ACTION_VARIANT.PROJECT_DETAIL
 						break
 				}
 
@@ -115,7 +116,7 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 						title: scene.scene.name,
 						description:
 							scene.scene.description || `Scene in ${scene.project.name}`,
-						actionVariant: DASHBOARD_CONTENT['scene-detail'].actionVariant,
+						actionVariant: ACTION_VARIANT.SCENE_DETAIL,
 						breadcrumbs
 					}
 				}
@@ -141,7 +142,7 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 						description:
 							folder.folder.description ||
 							`${totalItems} items in ${folder.project.name}`,
-						actionVariant: DASHBOARD_CONTENT['folder-detail'].actionVariant,
+						actionVariant: ACTION_VARIANT.FOLDER_DETAIL,
 						breadcrumbs
 					}
 				}
@@ -163,7 +164,7 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 					return {
 						title: project.project.name,
 						description: `${totalItems} items • ${folderCount} folders • ${sceneCount} scenes`,
-						actionVariant: DASHBOARD_CONTENT['project-detail'].actionVariant,
+						actionVariant: ACTION_VARIANT.PROJECT_DETAIL,
 						breadcrumbs
 					}
 				}
