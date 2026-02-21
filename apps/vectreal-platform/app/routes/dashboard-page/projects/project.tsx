@@ -1,32 +1,12 @@
-import { Button } from '@shared/components/ui/button'
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle
-} from '@shared/components/ui/alert-dialog'
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle
-} from '@shared/components/ui/dialog'
 import {
 	Empty,
 	EmptyDescription,
 	EmptyHeader,
 	EmptyMedia
 } from '@shared/components/ui/empty'
-import { Input } from '@shared/components/ui/input'
-import { Textarea } from '@shared/components/ui/textarea'
+import { useSetAtom } from 'jotai/react'
 import { FolderSearch } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Outlet, useLoaderData, useLocation } from 'react-router'
 import { toast } from 'sonner'
 
@@ -37,8 +17,13 @@ import {
 } from '../../../components/dashboard/project-table-columns'
 import { ProjectContentSkeleton } from '../../../components/skeletons'
 import { useDashboardSceneActions } from '../../../hooks/use-dashboard-scene-actions'
+import { useDashboardTableState } from '../../../hooks/use-dashboard-table-state'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
+import {
+	deleteDialogAtom,
+	renameDialogAtom
+} from '../../../lib/stores/dashboard-management-store'
 import {
 	getRootSceneFolders,
 	getRootScenes
@@ -87,15 +72,13 @@ export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/err
 const ProjectPage = () => {
 	const location = useLocation()
 	const { project, folders, scenes } = useLoaderData<typeof loader>()
-	const { setSelectedRows, runContentAction, actionState } =
-		useDashboardSceneActions()
+	const { setSelectedRows } = useDashboardSceneActions()
+	const setRenameDialog = useSetAtom(renameDialogAtom)
+	const setDeleteDialog = useSetAtom(deleteDialogAtom)
 	const projectId = project.id
-	const [renameRow, setRenameRow] = useState<ContentRow | null>(null)
-	const [renameValue, setRenameValue] = useState('')
-	const [deleteRow, setDeleteRow] = useState<ContentRow | null>(null)
-	const [createFolderDialogOpen, setCreateFolderDialogOpen] = useState(false)
-	const [newFolderName, setNewFolderName] = useState('')
-	const [newFolderDescription, setNewFolderDescription] = useState('')
+	const tableState = useDashboardTableState({
+		namespace: `project-${projectId}-content`
+	})
 
 	const projectContent = {
 		folders,
@@ -141,14 +124,34 @@ const ProjectPage = () => {
 		() =>
 			createContentColumns({
 				onRenameItem: (row) => {
-					setRenameRow(row)
-					setRenameValue(row.name)
+					setRenameDialog({
+						open: true,
+						item: {
+							id: row.id,
+							type: row.type,
+							name: row.name,
+							projectId: row.projectId,
+							folderId: row.folderId
+						},
+						name: row.name
+					})
 				},
 				onDeleteItem: (row) => {
-					setDeleteRow(row)
+					setDeleteDialog({
+						open: true,
+						items: [
+							{
+								id: row.id,
+								type: row.type,
+								name: row.name,
+								projectId: row.projectId,
+								folderId: row.folderId
+							}
+						]
+					})
 				}
 			}),
-		[]
+		[setDeleteDialog, setRenameDialog]
 	)
 
 	useEffect(() => {
@@ -160,139 +163,6 @@ const ProjectPage = () => {
 
 	return (
 		<>
-			<Dialog
-				open={Boolean(renameRow)}
-				onOpenChange={(isOpen) => {
-					if (!isOpen) {
-						setRenameRow(null)
-					}
-				}}
-			>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>
-							Rename {renameRow?.type === 'folder' ? 'Folder' : 'Scene'}
-						</DialogTitle>
-						<DialogDescription>
-							Update the {renameRow?.type === 'folder' ? 'folder' : 'scene'}{' '}
-							name.
-						</DialogDescription>
-					</DialogHeader>
-					<Input
-						value={renameValue}
-						onChange={(event) => setRenameValue(event.target.value)}
-						placeholder="Item name"
-					/>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setRenameRow(null)}>
-							Cancel
-						</Button>
-						<Button
-							onClick={() => {
-								if (!renameRow) {
-									return
-								}
-
-								const nextName = renameValue.trim()
-								if (!nextName) {
-									return
-								}
-
-								runContentAction('rename', {
-									items: [renameRow],
-									name: nextName
-								})
-								setRenameRow(null)
-							}}
-						>
-							Save
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
-
-			<AlertDialog
-				open={Boolean(deleteRow)}
-				onOpenChange={(isOpen) => {
-					if (!isOpen) {
-						setDeleteRow(null)
-					}
-				}}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>
-							Delete {deleteRow?.type === 'folder' ? 'Folder' : 'Scene'}
-						</AlertDialogTitle>
-						<AlertDialogDescription>
-							Delete "{deleteRow?.name}"? This action cannot be undone.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={() => {
-								if (!deleteRow) {
-									return
-								}
-								runContentAction('delete', { items: [deleteRow] })
-								setDeleteRow(null)
-							}}
-						>
-							Delete
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
-
-			<Dialog
-				open={createFolderDialogOpen}
-				onOpenChange={setCreateFolderDialogOpen}
-			>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Create Folder</DialogTitle>
-						<DialogDescription>
-							Enter a name for your new folder.
-						</DialogDescription>
-					</DialogHeader>
-					<Input
-						value={newFolderName}
-						onChange={(event) => setNewFolderName(event.target.value)}
-						placeholder="Folder name"
-					/>
-					<Textarea
-						value={newFolderDescription}
-						onChange={(event) => setNewFolderDescription(event.target.value)}
-						placeholder="Folder description (optional)"
-					/>
-					<DialogFooter>
-						<Button
-							variant="outline"
-							onClick={() => setCreateFolderDialogOpen(false)}
-						>
-							Cancel
-						</Button>
-						<Button
-							disabled={actionState !== 'idle'}
-							onClick={() => {
-								const folderName = newFolderName.trim()
-								runContentAction('create-folder', {
-									projectId,
-									name: folderName,
-									description: newFolderDescription
-								})
-								setCreateFolderDialogOpen(false)
-								setNewFolderName('')
-								setNewFolderDescription('')
-							}}
-						>
-							Create
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
-
 			<div className="space-y-6 p-6">
 				{projectContent.folders.length > 0 ||
 				projectContent.scenes.length > 0 ? (
@@ -301,6 +171,14 @@ const ProjectPage = () => {
 						data={contentRows}
 						searchKey="name"
 						searchPlaceholder="Search content..."
+						searchValue={tableState.searchValue}
+						onSearchValueChange={tableState.setSearchValue}
+						sorting={tableState.sorting}
+						onSortingChange={tableState.onSortingChange}
+						pagination={tableState.pagination}
+						onPaginationChange={tableState.onPaginationChange}
+						rowSelection={tableState.rowSelection}
+						onRowSelectionChange={tableState.onRowSelectionChange}
 						selectionActions={[
 							{
 								label: 'Rename Item',
@@ -310,8 +188,17 @@ const ProjectPage = () => {
 										return
 									}
 									const selectedRow = rows[0] as ContentRow
-									setRenameRow(selectedRow)
-									setRenameValue(selectedRow.name)
+									setRenameDialog({
+										open: true,
+										item: {
+											id: selectedRow.id,
+											type: selectedRow.type,
+											name: selectedRow.name,
+											projectId: selectedRow.projectId,
+											folderId: selectedRow.folderId
+										},
+										name: selectedRow.name
+									})
 								},
 								disabled: (rows) => rows.length !== 1
 							},
@@ -322,14 +209,30 @@ const ProjectPage = () => {
 										toast.error('Select at least one item to delete')
 										return
 									}
-									runContentAction('delete', { items: rows as ContentRow[] })
+									setDeleteDialog({
+										open: true,
+										items: (rows as ContentRow[]).map((row) => ({
+											id: row.id,
+											type: row.type,
+											name: row.name,
+											projectId: row.projectId,
+											folderId: row.folderId
+										}))
+									})
 								},
 								disabled: (rows) => rows.length === 0
 							}
 						]}
 						onDelete={(selectedRows) => {
-							void runContentAction('delete', {
-								items: selectedRows as ContentRow[]
+							setDeleteDialog({
+								open: true,
+								items: (selectedRows as ContentRow[]).map((row) => ({
+									id: row.id,
+									type: row.type,
+									name: row.name,
+									projectId: row.projectId,
+									folderId: row.folderId
+								}))
 							})
 						}}
 						onSelectionChange={(selectedRows) => {

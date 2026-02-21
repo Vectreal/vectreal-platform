@@ -5,27 +5,18 @@
 
 import { Button } from '@shared/components/ui/button'
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle
-} from '@shared/components/ui/dialog'
-import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger
 } from '@shared/components/ui/dropdown-menu'
-import { Input } from '@shared/components/ui/input'
-import { Textarea } from '@shared/components/ui/textarea'
+import { useSetAtom } from 'jotai/react'
 import { Edit, Folder, FolderOpen, MoreVertical, Plus } from 'lucide-react'
-import { memo, useState } from 'react'
+import { memo } from 'react'
 import { Link, useParams } from 'react-router'
 
 import { ACTION_VARIANT } from '../../types/dashboard'
-import { useDashboardSceneActions } from '../../hooks/use-dashboard-scene-actions'
+import { createFolderDialogAtom } from '../../lib/stores/dashboard-management-store'
 
 // Types
 interface DashboardActionsProps {
@@ -218,10 +209,7 @@ ActionsMenu.displayName = 'SecondaryActionsMenu'
 export const DashboardActions = memo<DashboardActionsProps>(
 	({ variant, className }) => {
 		const { sceneId, projectId, folderId } = useParams()
-		const { runContentAction, actionState } = useDashboardSceneActions()
-		const [createFolderDialogOpen, setCreateFolderDialogOpen] = useState(false)
-		const [newFolderName, setNewFolderName] = useState('')
-		const [newFolderDescription, setNewFolderDescription] = useState('')
+		const setCreateFolderDialog = useSetAtom(createFolderDialogAtom)
 
 		let config = ACTION_CONFIGS[variant]
 
@@ -237,9 +225,13 @@ export const DashboardActions = memo<DashboardActionsProps>(
 					icon: Plus,
 					variant: 'outline',
 					onClick: () => {
-						setNewFolderName('')
-						setNewFolderDescription('')
-						setCreateFolderDialogOpen(true)
+						setCreateFolderDialog({
+							open: true,
+							projectId: projectId || '',
+							parentFolderId: folderId || null,
+							name: '',
+							description: ''
+						})
 					}
 				}
 			}
@@ -253,56 +245,6 @@ export const DashboardActions = memo<DashboardActionsProps>(
 
 		return (
 			<>
-				<Dialog
-					open={createFolderDialogOpen}
-					onOpenChange={setCreateFolderDialogOpen}
-				>
-					<DialogContent>
-						<DialogHeader>
-							<DialogTitle>New Folder</DialogTitle>
-							<DialogDescription>
-								Enter a name for the new folder.
-							</DialogDescription>
-						</DialogHeader>
-						<Input
-							value={newFolderName}
-							onChange={(event) => setNewFolderName(event.target.value)}
-							placeholder="Folder name"
-						/>
-						<Textarea
-							value={newFolderDescription}
-							onChange={(event) => setNewFolderDescription(event.target.value)}
-							placeholder="Folder description (optional)"
-						/>
-						<DialogFooter>
-							<Button
-								variant="outline"
-								onClick={() => setCreateFolderDialogOpen(false)}
-							>
-								Cancel
-							</Button>
-							<Button
-								disabled={actionState !== 'idle'}
-								onClick={() => {
-									const folderName = newFolderName.trim()
-
-									runContentAction('create-folder', {
-										projectId: projectId || '',
-										parentFolderId: folderId || null,
-										name: folderName,
-										description: newFolderDescription
-									})
-									setCreateFolderDialogOpen(false)
-									setNewFolderName('')
-									setNewFolderDescription('')
-								}}
-							>
-								Create
-							</Button>
-						</DialogFooter>
-					</DialogContent>
-				</Dialog>
-
 				<div className={className}>
 					<div className="flex gap-2">
 						<ActionButton action={config.primary} replacements={replacements} />

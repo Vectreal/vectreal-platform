@@ -1,12 +1,5 @@
-import {
-	createContext,
-	useCallback,
-	useContext,
-	useEffect,
-	useMemo,
-	useRef,
-	useState
-} from 'react'
+import { useAtom } from 'jotai/react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useFetcher, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
@@ -17,14 +10,10 @@ import type {
 	CreateFolderActionResponse,
 	SceneMutationAction
 } from '../types/api'
-
-export interface DashboardContentRowSelection {
-	id: string
-	type: 'scene' | 'folder'
-	name: string
-	projectId: string
-	folderId?: string | null
-}
+import {
+	selectedRowsAtom,
+	type DashboardContentRowSelection
+} from '../lib/stores/dashboard-management-store'
 
 export interface SceneFolderOption {
 	id: string
@@ -59,12 +48,8 @@ interface DashboardSceneActionsContextValue {
 	actionData: ActionResponsePayload | null
 }
 
-interface DashboardSceneActionsProviderProps {
-	children: React.ReactNode
-}
-
-const DashboardSceneActionsContext =
-	createContext<DashboardSceneActionsContextValue | null>(null)
+let shouldToastForNextResponse = true
+let lastHandledResultSignature: string | null = null
 
 function isSameSelectedRows(
 	prev: DashboardContentRowSelection[],
@@ -86,34 +71,30 @@ function isSameSelectedRows(
 	})
 }
 
-export function DashboardSceneActionsProvider({
-	children
-}: DashboardSceneActionsProviderProps) {
-	const [selectedRows, setSelectedRows] = useState<
-		DashboardContentRowSelection[]
-	>([])
+export function useDashboardSceneActions(): DashboardSceneActionsContextValue {
+	const [selectedRows, setSelectedRowsState] = useAtom(selectedRowsAtom)
 	const actionFetcher = useFetcher<PlatformApiResponse<ActionResponsePayload>>({
 		key: 'dashboard-content-actions'
 	})
 	const revalidator = useRevalidator()
-	const shouldToastRef = useRef(true)
-	const lastHandledResultRef = useRef<string | null>(null)
 
 	const clearSelection = useCallback(() => {
-		setSelectedRows([])
-	}, [])
+		setSelectedRowsState([])
+	}, [setSelectedRowsState])
 
 	const setSelectedRowsSafe = useCallback(
 		(rows: DashboardContentRowSelection[]) => {
-			setSelectedRows((prev) => (isSameSelectedRows(prev, rows) ? prev : rows))
+			setSelectedRowsState((prev) =>
+				isSameSelectedRows(prev, rows) ? prev : rows
+			)
 		},
-		[]
+		[setSelectedRowsState]
 	)
 
 	const runContentAction = useCallback(
 		(action: ContentMutationAction, options: RunContentActionOptions = {}) => {
-			shouldToastRef.current = !options.skipToast
-			lastHandledResultRef.current = null
+			shouldToastForNextResponse = !options.skipToast
+			lastHandledResultSignature = null
 
 			if (action === 'create-folder') {
 				const projectId = options.projectId?.trim() || ''
@@ -199,12 +180,12 @@ export function DashboardSceneActionsProvider({
 		}
 
 		const responseSignature = JSON.stringify(actionFetcher.data)
-		if (lastHandledResultRef.current === responseSignature) {
+		if (lastHandledResultSignature === responseSignature) {
 			return
 		}
-		lastHandledResultRef.current = responseSignature
+		lastHandledResultSignature = responseSignature
 
-		const shouldToast = shouldToastRef.current
+		const shouldToast = shouldToastForNextResponse
 
 		if (!actionFetcher.data.success || !actionFetcher.data.data) {
 			if (shouldToast) {
@@ -259,19 +240,5 @@ export function DashboardSceneActionsProvider({
 		]
 	)
 
-	return (
-		<DashboardSceneActionsContext.Provider value={value}>
-			{children}
-		</DashboardSceneActionsContext.Provider>
-	)
-}
-
-export function useDashboardSceneActions() {
-	const context = useContext(DashboardSceneActionsContext)
-	if (!context) {
-		throw new Error(
-			'useDashboardSceneActions must be used within DashboardSceneActionsProvider'
-		)
-	}
-	return context
+	return value
 }

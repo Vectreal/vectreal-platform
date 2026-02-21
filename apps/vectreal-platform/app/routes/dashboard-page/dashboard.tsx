@@ -27,6 +27,7 @@ import {
 } from '../../lib/domain/dashboard/dashboard-stats.server'
 import { getUserProjects } from '../../lib/domain/project/project-repository.server'
 import { getProjectsScenes } from '../../lib/domain/scene/scene-folder-repository.server'
+import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
 import type { loader as dashboardLayoutLoader } from '../layouts/dashboard-layout'
 
 import { Route } from './+types/dashboard'
@@ -76,6 +77,12 @@ const DashboardPage = () => {
 		'routes/layouts/dashboard-layout'
 	)
 	const organizations = parentData?.organizations || []
+	const projectTableState = useDashboardTableState({
+		namespace: 'dashboard-projects'
+	})
+	const sceneTableState = useDashboardTableState({
+		namespace: 'dashboard-scenes'
+	})
 
 	// Transform data for tables
 	const projectTableData: ProjectRow[] = projects.map(
@@ -168,6 +175,14 @@ const DashboardPage = () => {
 								data={projectTableData}
 								searchKey="name"
 								searchPlaceholder="Search projects..."
+								searchValue={projectTableState.searchValue}
+								onSearchValueChange={projectTableState.setSearchValue}
+								sorting={projectTableState.sorting}
+								onSortingChange={projectTableState.onSortingChange}
+								pagination={projectTableState.pagination}
+								onPaginationChange={projectTableState.onPaginationChange}
+								rowSelection={projectTableState.rowSelection}
+								onRowSelectionChange={projectTableState.onRowSelectionChange}
 								onDelete={(selectedRows) => {
 									console.log('Delete projects:', selectedRows)
 									// TODO: Implement delete functionality
@@ -200,6 +215,14 @@ const DashboardPage = () => {
 								data={sceneTableData}
 								searchKey="name"
 								searchPlaceholder="Search scenes..."
+								searchValue={sceneTableState.searchValue}
+								onSearchValueChange={sceneTableState.setSearchValue}
+								sorting={sceneTableState.sorting}
+								onSortingChange={sceneTableState.onSortingChange}
+								pagination={sceneTableState.pagination}
+								onPaginationChange={sceneTableState.onPaginationChange}
+								rowSelection={sceneTableState.rowSelection}
+								onRowSelectionChange={sceneTableState.onRowSelectionChange}
 								onDelete={(selectedRows) => {
 									console.log('Delete scenes:', selectedRows)
 									// TODO: Implement delete functionality

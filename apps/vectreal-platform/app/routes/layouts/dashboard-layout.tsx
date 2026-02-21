@@ -3,11 +3,13 @@ import {
 	SidebarProvider,
 	SidebarTrigger
 } from '@shared/components/ui/sidebar'
+import { Provider } from 'jotai/react'
 import { useEffect, useState } from 'react'
 import { Outlet, useLoaderData, useNavigation, useParams } from 'react-router'
 import type { ShouldRevalidateFunction } from 'react-router'
 import {
 	DashboardHeader,
+	DashboardManagementDialogs,
 	DashboardSidebarContent,
 	DynamicBreadcrumb
 } from '../../components/dashboard'
@@ -22,7 +24,7 @@ import {
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import { getUserProjects } from '../../lib/domain/project/project-repository.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
-import { DashboardSceneActionsProvider } from '../../hooks/use-dashboard-scene-actions'
+import { dashboardManagementStore } from '../../lib/stores/dashboard-management-store'
 
 import { Route } from './+types/dashboard-layout'
 import CenteredSpinner from '../../components/centered-spinner'
@@ -137,12 +139,13 @@ const DashboardLayout = () => {
 	}
 
 	return (
-		<DashboardSceneActionsProvider>
+		<Provider store={dashboardManagementStore}>
 			<SidebarProvider open={sidebarOpen} onOpenChange={toggleSidebar}>
 				<LogoSidebar open={sidebarOpen}>
 					<DashboardSidebarContent user={user} />
 				</LogoSidebar>
 				<SidebarInset className="relative overflow-hidden">
+					<DashboardManagementDialogs />
 					<div className="from-background/75 absolute top-0 z-50 h-20 w-full bg-gradient-to-b to-transparent" />
 					<div className="absolute z-50 flex items-center gap-4 p-4 px-6 pl-4">
 						<SidebarTrigger />
@@ -160,7 +163,7 @@ const DashboardLayout = () => {
 					)}
 				</SidebarInset>
 			</SidebarProvider>
-		</DashboardSceneActionsProvider>
+		</Provider>
 	)
 }
 

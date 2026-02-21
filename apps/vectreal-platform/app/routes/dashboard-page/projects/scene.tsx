@@ -1,24 +1,16 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import { CardContent, CardFooter, CardHeader } from '@shared/components/ui/card'
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogOverlay,
-	DialogTitle
-} from '@shared/components/ui/dialog'
 import { cn } from '@shared/utils'
 import {
 	ModelFile,
 	SceneLoadResult,
 	useLoadModel
 } from '@vctrl/hooks/use-load-model'
+import { useSetAtom } from 'jotai/react'
 import { Eye, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useState } from 'react'
-import { Link, useFetcher, useLoaderData } from 'react-router'
+import { Link, useLoaderData } from 'react-router'
 
 import CenteredSpinner from '../../../components/centered-spinner'
 import BasicCard from '../../../components/layout-components/basic-card'
@@ -26,6 +18,7 @@ import { ClientVectrealViewer } from '../../../components/viewer/client-vectreal
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
 import { getScene } from '../../../lib/domain/scene/scene-folder-repository.server'
+import { deleteDialogAtom } from '../../../lib/stores/dashboard-management-store'
 
 import { Route } from './+types/scene'
 
@@ -68,47 +61,6 @@ export function HydrateFallback() {
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
 
-interface ConfirmDeleteModalProps {
-	isOpen: boolean
-	onClose: () => void
-	onConfirm: () => void
-}
-
-const ConfirmDeleteModal = ({
-	isOpen,
-	onClose,
-	onConfirm
-}: ConfirmDeleteModalProps) => {
-	return (
-		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogOverlay />
-			<DialogContent>
-				<DialogHeader>
-					<DialogTitle>Confirm Delete Scene</DialogTitle>
-					<DialogDescription>
-						Are you sure you want to delete this scene? This action cannot be
-						undone.
-					</DialogDescription>
-				</DialogHeader>
-				<DialogFooter>
-					<Button variant="outline" onClick={onClose}>
-						Cancel
-					</Button>
-					<Button
-						variant="destructive"
-						onClick={() => {
-							onConfirm()
-							onClose()
-						}}
-					>
-						Delete
-					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
-	)
-}
-
 interface PreviewModelProps {
 	file: ModelFile | null
 	sceneData?: SceneLoadResult
@@ -135,19 +87,29 @@ const PreviewModel = memo(({ file, sceneData }: PreviewModelProps) => {
 })
 
 const ScenePage = () => {
-	const { submit } = useFetcher()
 	const { scene } = useLoaderData<typeof loader>()
 	const sceneId = scene.id
+	const setDeleteDialog = useSetAtom(deleteDialogAtom)
 
 	// Use sceneId as key to create a new hook instance per scene
 	const { file, loadFromServer } = useLoadModel()
 
 	const [isLoadingScene, setIsLoadingScene] = useState(false)
-	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 	const [sceneData, setSceneData] = useState<SceneLoadResult>()
 
 	function handleDeleteClick() {
-		setShowDeleteConfirm(true)
+		setDeleteDialog({
+			open: true,
+			items: [
+				{
+					id: scene.id,
+					type: 'scene',
+					name: scene.name,
+					projectId: scene.projectId,
+					folderId: scene.folderId
+				}
+			]
+		})
 	}
 
 	const getSceneSettings = useCallback(async () => {
@@ -176,17 +138,6 @@ const ScenePage = () => {
 		}
 	}, [getSceneSettings, sceneData, sceneId])
 
-	async function handleConfirmDelete() {
-		await submit(
-			{ action: 'delete' },
-			{
-				method: 'post',
-				action: `/api/scenes/${sceneId}`
-			}
-		)
-		// Future: implement delete logic
-		setShowDeleteConfirm(false)
-	}
 	// Stop loading state once file is actually loaded
 	useEffect(() => {
 		if (file?.model && isLoadingScene) {
@@ -196,12 +147,6 @@ const ScenePage = () => {
 
 	return (
 		<>
-			<ConfirmDeleteModal
-				isOpen={showDeleteConfirm}
-				onClose={() => setShowDeleteConfirm(false)}
-				onConfirm={handleConfirmDelete}
-			/>
-
 			<div className="relative h-full">
 				<PreviewModel file={file} sceneData={sceneData} />
 

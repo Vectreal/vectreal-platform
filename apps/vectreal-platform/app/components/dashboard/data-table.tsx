@@ -22,15 +22,16 @@ import {
 } from '@shared/components/ui/table'
 import {
 	type ColumnDef,
-	type ColumnFiltersState,
 	flexRender,
 	getCoreRowModel,
 	getFilteredRowModel,
 	getPaginationRowModel,
 	getSortedRowModel,
+	type PaginationState,
+	type RowSelectionState,
 	type SortingState,
-	useReactTable,
-	type VisibilityState
+	type Updater,
+	useReactTable
 } from '@tanstack/react-table'
 import {
 	ArrowUpDown,
@@ -40,7 +41,7 @@ import {
 	Search,
 	Trash2
 } from 'lucide-react'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, type ReactNode } from 'react'
 
 export interface DataTableSelectionAction<TData> {
 	label: string
@@ -53,6 +54,14 @@ interface DataTableProps<TData, TValue> {
 	data: TData[]
 	searchKey?: string
 	searchPlaceholder?: string
+	searchValue: string
+	onSearchValueChange: (value: string) => void
+	sorting: SortingState
+	onSortingChange: (updater: Updater<SortingState>) => void
+	pagination: PaginationState
+	onPaginationChange: (updater: Updater<PaginationState>) => void
+	rowSelection: RowSelectionState
+	onRowSelectionChange: (updater: Updater<RowSelectionState>) => void
 	onDelete?: (selectedRows: TData[]) => void
 	selectionActions?: DataTableSelectionAction<TData>[]
 	onSelectionChange?: (selectedRows: TData[]) => void
@@ -64,35 +73,46 @@ export function DataTable<TData, TValue>({
 	data,
 	searchKey,
 	searchPlaceholder = 'Search...',
+	searchValue,
+	onSearchValueChange,
+	sorting,
+	onSortingChange,
+	pagination,
+	onPaginationChange,
+	rowSelection,
+	onRowSelectionChange,
 	onDelete,
 	selectionActions,
 	onSelectionChange,
 	getRowCanSelect
 }: DataTableProps<TData, TValue>) {
-	const [sorting, setSorting] = useState<SortingState>([])
-	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
-	const [rowSelection, setRowSelection] = useState({})
+	const columnFilters = useMemo(
+		() => (searchKey ? [{ id: searchKey, value: searchValue }] : []),
+		[searchKey, searchValue]
+	)
 
 	const table = useReactTable({
 		data,
 		columns,
+		getRowId: (row, index) => {
+			const candidate = (row as { id?: unknown }).id
+			return typeof candidate === 'string' ? candidate : String(index)
+		},
 		enableRowSelection: getRowCanSelect
-			? (row) => getRowCanSelect(row.original)
+			? (tableRow) => getRowCanSelect(tableRow.original)
 			: true,
 		getCoreRowModel: getCoreRowModel(),
 		getPaginationRowModel: getPaginationRowModel(),
-		onSortingChange: setSorting,
+		onSortingChange: onSortingChange,
+		onPaginationChange: onPaginationChange,
 		getSortedRowModel: getSortedRowModel(),
-		onColumnFiltersChange: setColumnFilters,
 		getFilteredRowModel: getFilteredRowModel(),
-		onColumnVisibilityChange: setColumnVisibility,
-		onRowSelectionChange: setRowSelection,
+		onRowSelectionChange: onRowSelectionChange,
 		state: {
 			sorting,
 			columnFilters,
-			columnVisibility,
-			rowSelection
+			rowSelection,
+			pagination
 		}
 	})
 
@@ -109,30 +129,23 @@ export function DataTable<TData, TValue>({
 		onSelectionChange(
 			table.getFilteredSelectedRowModel().rows.map((row) => row.original)
 		)
-	}, [onSelectionChange, rowSelection])
+	}, [onSelectionChange, rowSelection, table])
 
 	return (
 		<div className="space-y-4">
-			{/* Toolbar */}
 			<div className="flex items-center justify-between gap-4">
-				{/* Search */}
 				{searchKey && (
 					<div className="relative max-w-sm flex-1">
 						<Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
 						<Input
 							placeholder={searchPlaceholder}
-							value={
-								(table.getColumn(searchKey)?.getFilterValue() as string) ?? ''
-							}
-							onChange={(event) =>
-								table.getColumn(searchKey)?.setFilterValue(event.target.value)
-							}
+							value={searchValue}
+							onChange={(event) => onSearchValueChange(event.target.value)}
 							className="pl-9"
 						/>
 					</div>
 				)}
 
-				{/* Batch Actions */}
 				{hasSelection && (onDelete || (selectionActions?.length ?? 0) > 0) && (
 					<div className="flex items-center gap-2">
 						<span className="text-muted-foreground text-sm">
@@ -164,7 +177,7 @@ export function DataTable<TData, TValue>({
 							size="sm"
 							onClick={() => {
 								onDelete?.(selectedRows)
-								setRowSelection({})
+								onRowSelectionChange({})
 							}}
 						>
 							<Trash2 className="mr-2 h-4 w-4" />
@@ -174,7 +187,6 @@ export function DataTable<TData, TValue>({
 				)}
 			</div>
 
-			{/* Table */}
 			<div className="bg-card/50 rounded-xl border backdrop-blur-sm">
 				<Table>
 					<TableHeader>
@@ -224,7 +236,6 @@ export function DataTable<TData, TValue>({
 				</Table>
 			</div>
 
-			{/* Pagination */}
 			<div className="flex items-center justify-between">
 				<div className="text-muted-foreground text-sm">
 					{table.getFilteredSelectedRowModel().rows.length} of{' '}
