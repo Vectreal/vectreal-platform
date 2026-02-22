@@ -8,11 +8,11 @@ interface ClientVectrealViewerProps extends VectrealViewerProps {
 
 export const ClientVectrealViewer = ({
 	fallback = null,
+	theme = 'dark',
 	...props
 }: ClientVectrealViewerProps) => {
-	const [ViewerComponent, setViewerComponent] = useState<
-		ComponentType<VectrealViewerProps> | null
-	>(null)
+	const [ViewerComponent, setViewerComponent] =
+		useState<ComponentType<VectrealViewerProps> | null>(null)
 
 	useEffect(() => {
 		let active = true
@@ -32,5 +32,5 @@ export const ClientVectrealViewer = ({
 		return <>{fallback}</>
 	}
 
-	return <ViewerComponent {...props} />
+	return <ViewerComponent {...props} theme={theme} />
 }

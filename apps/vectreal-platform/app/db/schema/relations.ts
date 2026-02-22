@@ -1,5 +1,7 @@
 import { relations } from 'drizzle-orm'
 
+import { apiKeyProjects } from './auth/api-key-projects'
+import { apiKeys } from './auth/api-keys'
 import { organizationMemberships } from './core/organization-memberships'
 import { organizations } from './core/organizations'
 import { users } from './core/users'
@@ -28,11 +30,31 @@ export const organizationsRelations = relations(
 
 // User relations
 export const usersRelations = relations(users, ({ many }) => ({
+	apiKeys: many(apiKeys),
 	sceneFolders: many(sceneFolders),
 	sceneSettings: many(sceneSettings),
 	sceneStats: many(sceneStats),
 	scenePublished: many(scenePublished),
 	organizationMemberships: many(organizationMemberships)
+}))
+
+export const apiKeysRelations = relations(apiKeys, ({ one, many }) => ({
+	user: one(users, {
+		fields: [apiKeys.userId],
+		references: [users.id]
+	}),
+	projects: many(apiKeyProjects)
+}))
+
+export const apiKeyProjectsRelations = relations(apiKeyProjects, ({ one }) => ({
+	apiKey: one(apiKeys, {
+		fields: [apiKeyProjects.apiKeyId],
+		references: [apiKeys.id]
+	}),
+	project: one(projects, {
+		fields: [apiKeyProjects.projectId],
+		references: [projects.id]
+	})
 }))
 
 // Organization membership relations
@@ -60,6 +82,7 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
 		fields: [projects.organizationId],
 		references: [organizations.id]
 	}),
+	apiKeys: many(apiKeyProjects),
 	scenes: many(scenes),
 	sceneFolders: many(sceneFolders)
 }))

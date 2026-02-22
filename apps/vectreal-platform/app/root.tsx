@@ -124,7 +124,7 @@ export function Layout({ children }: { children: ReactNode }) {
 			<body>
 				<GlobalNavigationLoader />
 				{children}
-				<Toaster />
+				<Toaster toastOptions={{ className: 'rounded-2xl!' }} />
 				<ScrollRestoration />
 				<Scripts />
 			</body>

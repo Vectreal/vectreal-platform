@@ -5,18 +5,19 @@ import { PropsWithChildren } from 'react'
 
 interface CenteredSpinnerProps extends PropsWithChildren {
 	text?: string
+	className?: string
 }
 
 const CenteredSpinner = ({
 	children,
+	className,
 	text = 'Loading...'
 }: CenteredSpinnerProps) => {
 	return (
-		<SpinnerWrapper>
+		<SpinnerWrapper className={className}>
 			<LoadingSpinner />
 			<motion.span
-				key="centered-spinner-text"
-				layoutId="centered-spinner-container"
+				key="loading-text"
 				className="text-primary/75 text-center font-light"
 				initial={{ opacity: 0 }}
 				animate={{ opacity: 1 }}

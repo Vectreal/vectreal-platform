@@ -55,6 +55,7 @@ const HeroSceneClient = ({ vertical }: HeroSceneProps) => {
 			)}
 		>
 			<VectrealViewer
+				theme="dark"
 				loader={
 					<div className="text-muted! flex flex-col items-center justify-center gap-4 rounded-xl">
 						<p className="text-muted-foreground/50! font-light!">

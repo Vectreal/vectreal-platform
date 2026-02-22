@@ -60,6 +60,7 @@ const ProductSceneClient = () => {
 	return (
 		<VectrealViewer
 			key="preview-shop-bike-scene"
+			theme="dark"
 			cameraOptions={{
 				position: [2, 1, 0]
 			}}

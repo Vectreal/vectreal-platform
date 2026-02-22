@@ -47,13 +47,28 @@ export default [
 
 	// publisher
 	layout('./routes/layouts/publisher-layout.tsx', [
-		route('publisher/:sceneId?', './routes/publisher-page/publisher-page.tsx')
+		route(
+			'publisher/:sceneId?',
+			'./routes/publisher-page/publisher.$sceneId.tsx'
+		)
+	]),
+
+	// preview page for scenes
+	layout('./routes/layouts/preview-layout.tsx', [
+		route(
+			'preview/fullscreen/:projectId/:sceneId/',
+			'./routes/preview-page/preview-fullscreen.tsx'
+		),
+		route(
+			'preview/product-detail/:projectId/:sceneId/',
+			'./routes/preview-page/preview-product-detail.tsx'
+		)
 	]),
 
 	// dashboard - each route handles its own data loading
 	...prefix('dashboard', [
 		layout('./routes/layouts/dashboard-layout.tsx', [
-			index('./routes/dashboard-page/dashboard.tsx'),
+			index('./routes/dashboard-page/dashboard-page.tsx'),
 			...prefix('projects', [
 				route('/', './routes/dashboard-page/projects/projects.tsx', [
 					route('new', './routes/dashboard-page/projects/projects-new.tsx')

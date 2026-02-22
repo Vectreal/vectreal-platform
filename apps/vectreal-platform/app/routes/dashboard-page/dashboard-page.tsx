@@ -9,7 +9,7 @@ import {
 import { File, FolderOpen, Plus } from 'lucide-react'
 import { Link, useRouteLoaderData } from 'react-router'
 
-import { Route } from './+types/dashboard'
+import { Route } from './+types/dashboard-page'
 import DashboardCard from '../../components/dashboard/dashboard-cards'
 import { DataTable } from '../../components/dashboard/data-table'
 import {
