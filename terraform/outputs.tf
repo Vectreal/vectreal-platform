@@ -86,6 +86,34 @@ output "local_dev_storage_key_path" {
   sensitive   = true
 }
 
+output "staging_secondary_service_names" {
+  description = "Names of the staging secondary-region Cloud Run services"
+  value       = [for service in values(google_cloud_run_v2_service.staging_secondary) : service.name]
+}
+
+output "production_secondary_service_names" {
+  description = "Names of the production secondary-region Cloud Run services"
+  value       = [for service in values(google_cloud_run_v2_service.production_secondary) : service.name]
+}
+
+output "staging_edge_ip" {
+  description = "Global IP address for staging edge load balancer (only when enabled)"
+  value       = length(google_compute_global_address.staging_edge) > 0 ? google_compute_global_address.staging_edge[0].address : ""
+}
+
+output "staging_static_bucket_name" {
+  description = "Public staging static bucket name (only when staging edge is enabled)"
+  value       = length(google_storage_bucket.staging_static) > 0 ? google_storage_bucket.staging_static[0].name : ""
+}
+
+output "staging_edge_hosts" {
+  description = "Hostnames configured for staging edge"
+  value = {
+    app_host    = var.staging_edge_host
+    static_host = var.staging_static_host
+  }
+}
+
 # GitHub Secrets Setup - Use the helper script
 output "github_secrets_setup_help" {
   description = "How to set up GitHub secrets"

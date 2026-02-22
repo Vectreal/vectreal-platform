@@ -25,6 +25,16 @@ on:
         required: false
         type: string
         default: 'production'
+      static-bucket-name:
+        description: 'Optional public static bucket name for CDN asset upload'
+        required: false
+        type: string
+        default: ''
+      static-cache-control:
+        description: 'Cache-Control header to apply to uploaded static assets'
+        required: false
+        type: string
+        default: 'public, max-age=31536000, immutable'
     secrets:
       gcp-credentials:
         description: 'Google Cloud credentials JSON'
@@ -63,6 +73,17 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Set up pnpm
+        if: ${{ inputs.static-bucket-name != '' }}
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        if: ${{ inputs.static-bucket-name != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -70,6 +91,20 @@ jobs:
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install dependencies for static build
+        if: ${{ inputs.static-bucket-name != '' }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Build static client assets
+        if: ${{ inputs.static-bucket-name != '' }}
+        run: pnpx nx build vectreal-platform
+
+      - name: Upload static client assets to GCS
+        if: ${{ inputs.static-bucket-name != '' }}
+        run: |
+          gsutil -m rsync -r -d apps/vectreal-platform/build/client gs://${{ inputs.static-bucket-name }}
+          gsutil -m setmeta -h "Cache-Control:${{ inputs.static-cache-control }}" "gs://${{ inputs.static-bucket-name }}/**"
 
       - name: Log in to Google Artifact Registry
         run: |

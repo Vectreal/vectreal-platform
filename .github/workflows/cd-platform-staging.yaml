@@ -31,6 +31,8 @@ jobs:
       image-name: vectreal-platform-staging
       region: us-central1
       node-env: staging
+      static-bucket-name: 'vectreal-static-staging'
+      static-cache-control: 'public, max-age=31536000, immutable'
     secrets:
       gcp-credentials: ${{ secrets.GCP_CREDENTIALS_STAGING }}
       gcp-project-id: ${{ secrets.GCP_PROJECT_ID_STAGING }}

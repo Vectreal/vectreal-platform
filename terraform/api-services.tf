@@ -24,6 +24,11 @@ resource "google_project_service" "storage" {
   disable_on_destroy = false
 }
 
+resource "google_project_service" "compute" {
+  service            = "compute.googleapis.com"
+  disable_on_destroy = false
+}
+
 # Artifact Registry Repository
 resource "google_artifact_registry_repository" "vectreal" {
   location      = var.region

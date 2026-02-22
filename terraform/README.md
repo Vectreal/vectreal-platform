@@ -129,6 +129,7 @@ git push origin main     # Deploy to production
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
 | **Artifact Registry**    | Docker image storage (`vectreal-platform` repository)                                                            |
 | **Private GCS Buckets**  | Environment-isolated buckets: production, staging, local development                                             |
+| **Staging Edge (optional)** | Global HTTPS Load Balancer + Cloud CDN + public static assets bucket for low-latency staging rollout         |
 | **Service Accounts**     | `vectreal-prod-deployer`, `vectreal-staging-deployer`, `vectreal-platform-runtime`, `vectreal-local-dev-storage` |
 | **IAM Roles**            | Cloud Run Admin, Artifact Registry Writer, Storage Object Admin/Viewer                                           |
 | **Enabled APIs**         | Cloud Run, IAM, Artifact Registry, Container Registry, Cloud Storage                                             |
@@ -185,7 +186,30 @@ github_org = "your-github-org"
 
 # Optional: Let Terraform manage Cloud Run services (not recommended)
 # manage_cloud_run_services = false  # default
+
+# Optional: Staging-first latency quick wins
+# enable_staging_edge = true
+# staging_edge_host   = "staging.example.com"
+# staging_static_host = "static-staging.example.com"
+# staging_managed_certificate_domains = ["staging.example.com", "static-staging.example.com"]
+
+# Optional: Secondary Cloud Run regions
+# enable_multi_region_cloud_run = true
+# staging_secondary_regions     = ["us-east1"]
+# production_secondary_regions  = ["us-east1"]
 ```
+
+### Staging-first latency rollout
+
+1. Enable `enable_staging_edge` and set staging edge/static hosts and managed cert domains.
+2. Apply Terraform to create:
+  - Global HTTPS Load Balancer frontend
+  - Cloud CDN-enabled backend bucket for static assets
+  - Cloud Run serverless NEGs for primary and optional secondary staging regions
+3. Set GitHub Repository Variables (staging workflow):
+  - `STAGING_STATIC_BUCKET` (for example `vectreal-static-staging`)
+  - `STAGING_STATIC_CACHE_CONTROL` (optional, defaults to immutable assets)
+4. Deploy to staging and validate cache hits before rolling the same pattern to production.
 
 ### State Backend
 
@@ -315,8 +339,10 @@ terraform/
 ├── outputs.tf                   # Output values
 ├── api-services.tf              # GCP API enablement
 ├── storage.tf                   # Private GCS buckets (prod/staging/local-dev)
+├── static-assets.tf             # Public staging static bucket for CDN
 ├── service-accounts.tf          # Service accounts and IAM
 ├── cloud-run.tf                 # Cloud Run (optional)
+├── cdn-lb.tf                    # Staging edge Global HTTPS LB + Cloud CDN
 ├── terraform.tfvars.example     # Configuration template
 ├── terraform.tfvars             # Your configuration (git-ignored)
 ├── scripts/                     # Setup automation scripts
