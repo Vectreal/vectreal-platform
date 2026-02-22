@@ -1,6 +1,22 @@
 name: Deploy Platform to Staging
 
 on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'apps/vectreal-platform/**'
+      - 'packages/core/**'
+      - 'packages/hooks/**'
+      - 'packages/viewer/**'
+      - 'shared/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'nx.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/ci-lint-build.yaml'
+      - '.github/workflows/cd-platform-staging.yaml'
+      - '.github/workflows/shared-gcloud-deploy.yaml'
   workflow_run:
     workflows:
       - CI - Lint and Build
@@ -16,7 +32,7 @@ concurrency:
 jobs:
   deploy-staging:
     name: Deploy to Staging Environment
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
     uses: ./.github/workflows/shared-gcloud-deploy.yaml
     with:
       environment: staging
@@ -38,7 +54,7 @@ jobs:
 
   deploy-staging-secondary-us-east1:
     name: Deploy Staging Secondary (us-east1)
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
     needs: deploy-staging
     uses: ./.github/workflows/shared-gcloud-deploy.yaml
     with:
