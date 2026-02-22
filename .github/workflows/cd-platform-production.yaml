@@ -1,35 +1,29 @@
 name: Deploy Platform to Production
 
 on:
-  push:
+  workflow_run:
+    workflows:
+      - CI - Lint and Build
+    types:
+      - completed
     branches:
       - main
-    paths:
-      - 'apps/vectreal-platform/**'
-      - 'packages/core/**'
-      - 'packages/hooks/**'
-      - 'packages/viewer/**'
-      - 'shared/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'nx.json'
-      - 'tsconfig.base.json'
-      - '.github/workflows/cd-platform-production.yaml'
-      - '.github/workflows/shared-gcloud-deploy.yaml'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch || github.ref }}
   cancel-in-progress: true
 
 jobs:
   deploy-production:
     name: Deploy to Production Environment
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     uses: ./.github/workflows/shared-gcloud-deploy.yaml
     with:
       environment: production
       service-name: vectreal-platform
       image-name: vectreal-platform
       region: us-central1
+      artifact-region: us-central1
       node-env: production
     secrets:
       gcp-credentials: ${{ secrets.GCP_CREDENTIALS }}

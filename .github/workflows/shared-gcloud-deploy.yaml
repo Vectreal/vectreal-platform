@@ -20,6 +20,11 @@ on:
         required: false
         type: string
         default: 'us-central1'
+      artifact-region:
+        description: 'Google Artifact Registry region for image push/pull'
+        required: false
+        type: string
+        default: 'us-central1'
       node-env:
         description: 'NODE_ENV value'
         required: false
@@ -108,7 +113,7 @@ jobs:
 
       - name: Log in to Google Artifact Registry
         run: |
-          gcloud auth configure-docker ${{ inputs.region }}-docker.pkg.dev
+          gcloud auth configure-docker ${{ inputs.artifact-region }}-docker.pkg.dev
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -118,8 +123,8 @@ jobs:
           target: runner
           push: true
           tags: |
-            ${{ inputs.region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:${{ github.sha }}
-            ${{ inputs.environment == 'production' && format('{0}-docker.pkg.dev/{1}/vectreal-platform/{2}:latest', inputs.region, secrets.gcp-project-id, inputs.image-name) || '' }}
+            ${{ inputs.artifact-region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:${{ github.sha }}
+            ${{ inputs.environment == 'production' && format('{0}-docker.pkg.dev/{1}/vectreal-platform/{2}:latest', inputs.artifact-region, secrets.gcp-project-id, inputs.image-name) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -130,7 +135,7 @@ jobs:
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: ${{ inputs.service-name }}
-          image: ${{ inputs.region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:${{ github.sha }}
+          image: ${{ inputs.artifact-region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:${{ github.sha }}
           region: ${{ inputs.region }}
           flags: '--allow-unauthenticated'
           env_vars: |
@@ -177,4 +182,4 @@ jobs:
           echo "::notice::✅ Deployed to ${{ inputs.environment }} environment"
           echo "::notice::Service: ${{ inputs.service-name }}"
           echo "::notice::Region: ${{ inputs.region }}"
-          echo "::notice::Image: ${{ inputs.region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:${{ github.sha }}"
+          echo "::notice::Image: ${{ inputs.artifact-region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:${{ github.sha }}"

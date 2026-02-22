@@ -3,6 +3,24 @@ name: CI - Lint and Build
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'apps/vectreal-platform/**'
+      - 'packages/core/**'
+      - 'packages/hooks/**'
+      - 'packages/viewer/**'
+      - 'shared/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'nx.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/ci-lint-build.yaml'
+      - '.github/workflows/cd-platform-staging.yaml'
+      - '.github/workflows/cd-platform-production.yaml'
+      - '.github/workflows/shared-gcloud-deploy.yaml'
 
 jobs:
   lint-build:
@@ -41,10 +59,25 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Lint
+        if: ${{ github.event_name == 'pull_request' }}
         run: npx nx affected --target=lint --base=origin/${{ github.event.pull_request.base.ref }} --head=origin/${{ github.event.pull_request.head.ref }}
 
+      - name: Lint (push)
+        if: ${{ github.event_name == 'push' }}
+        run: npx nx affected --target=lint --base=${{ github.event.before }} --head=${{ github.sha }}
+
       - name: Type Check
+        if: ${{ github.event_name == 'pull_request' }}
         run: npx nx affected --target=type-check --base=origin/${{ github.event.pull_request.base.ref }} --head=origin/${{ github.event.pull_request.head.ref }}
 
+      - name: Type Check (push)
+        if: ${{ github.event_name == 'push' }}
+        run: npx nx affected --target=type-check --base=${{ github.event.before }} --head=${{ github.sha }}
+
       - name: Build
+        if: ${{ github.event_name == 'pull_request' }}
         run: npx nx affected --target=build --base=origin/${{ github.event.pull_request.base.ref }} --head=origin/${{ github.event.pull_request.head.ref }}
+
+      - name: Build (push)
+        if: ${{ github.event_name == 'push' }}
+        run: npx nx affected --target=build --base=${{ github.event.before }} --head=${{ github.sha }}
