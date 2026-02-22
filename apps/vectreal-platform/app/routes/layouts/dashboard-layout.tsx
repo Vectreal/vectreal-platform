@@ -4,7 +4,7 @@ import {
 	SidebarTrigger
 } from '@shared/components/ui/sidebar'
 import { Provider } from 'jotai/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
 	Outlet,
 	useLoaderData,
@@ -130,6 +130,7 @@ const DashboardLayout = () => {
 
 	const path = navigation.location?.pathname || location.pathname
 	const isNewProjectCreation = path === '/dashboard/projects/new'
+	const isPublisherRoute = path.startsWith('/publisher')
 
 	// Determine which skeleton to show based on navigation location
 	const getNavigationSkeleton = () => {
@@ -149,6 +150,8 @@ const DashboardLayout = () => {
 		// Default skeleton
 		// return <CenteredSpinner text="Loading..." />
 	}
+
+	const skeleton = useMemo(getNavigationSkeleton, [showSkeleton, path])
 
 	return (
 		<Provider store={dashboardManagementStore}>
@@ -171,8 +174,10 @@ const DashboardLayout = () => {
 							<DashboardHeader />
 						</div>
 					)}
-					{isContentNavigationLoading && !isNewProjectCreation ? (
-						getNavigationSkeleton() || <Outlet />
+					{isContentNavigationLoading &&
+					!isNewProjectCreation &&
+					!isPublisherRoute ? (
+						skeleton
 					) : (
 						<Outlet />
 					)}
