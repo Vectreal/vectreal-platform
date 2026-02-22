@@ -89,9 +89,9 @@ export function useDashboardTableState({
 			setSearchParams((prevParams) => {
 				const nextParams = new URLSearchParams(prevParams)
 				if (trimmedValue) {
-						nextParams.set(qKey, value)
-					} else {
-						nextParams.delete(qKey)
+					nextParams.set(qKey, value)
+				} else {
+					nextParams.delete(qKey)
 				}
 				nextParams.set(pageKey, '1')
 				return nextParams
@@ -128,7 +128,14 @@ export function useDashboardTableState({
 				return nextParams
 			})
 		},
-		[pagination.pageIndex, pageKey, setSearchParams, sortDirKey, sortKey, sorting]
+		[
+			pagination.pageIndex,
+			pageKey,
+			setSearchParams,
+			sortDirKey,
+			sortKey,
+			sorting
+		]
 	)
 
 	const onPaginationChange = useCallback(
