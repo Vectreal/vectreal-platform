@@ -1,6 +1,6 @@
 # Context extensions
 
-Look for agent skills that might be available and helpful for the task at hand
+Use agent skills available and helpful for the task at hand. When working on the platform app, use react router framework mode best practices
 
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->

@@ -15,6 +15,18 @@ const buildLookupKeys = (fileName: string) => {
 	return new Set([fileName, normalized, basename])
 }
 
+const getAssetByteSize = (assetData: number[] | string) => {
+	if (Array.isArray(assetData)) {
+		return assetData.length
+	}
+
+	const normalized = assetData.replace(/\s/g, '')
+	const paddingMatch = normalized.match(/=+$/)
+	const paddingLength = paddingMatch ? paddingMatch[0].length : 0
+
+	return Math.max(0, Math.floor((normalized.length * 3) / 4) - paddingLength)
+}
+
 const resolveSizeFromAssets = (
 	uri: string,
 	assets: Array<{ fileName: string; size: number }>
@@ -101,7 +113,7 @@ export function calculateReferencedBytesFromServerScene(
 	const gltfJson = data.gltfJson as Record<string, unknown>
 	const assets = Object.values(data.assetData || {}).map((asset) => ({
 		fileName: asset.fileName,
-		size: asset.data.length
+		size: getAssetByteSize(asset.data)
 	}))
 
 	const gltfSize = new TextEncoder().encode(JSON.stringify(gltfJson)).byteLength

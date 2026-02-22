@@ -108,7 +108,7 @@ variable "allowed_ingress" {
 variable "manage_cloud_run_services" {
   description = "Whether to manage Cloud Run services via Terraform. Set to false for initial setup, true after first GitHub Actions deployment."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "placeholder_image" {

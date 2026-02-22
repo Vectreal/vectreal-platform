@@ -13,9 +13,10 @@ function serializeAssetData(
 
 	assetData?.forEach((value, key) => {
 		serialized[key] = {
-			data: Array.from(value.data),
+			data: Buffer.from(value.data).toString('base64'),
 			mimeType: value.mimeType,
-			fileName: value.fileName
+			fileName: value.fileName,
+			encoding: 'base64'
 		}
 	})
 

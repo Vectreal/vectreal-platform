@@ -50,8 +50,18 @@ export interface SceneAssetBinaryData {
 /** In-memory asset map keyed by asset id. */
 export type SceneAssetDataMap = Map<string, SceneAssetBinaryData>
 
+export interface SerializedSceneAssetData {
+	readonly data: number[] | string
+	readonly mimeType: string
+	readonly fileName: string
+	readonly encoding?: 'base64'
+}
+
 /** Serialized asset map for JSON responses keyed by asset id. */
-export type SerializedSceneAssetDataMap = Record<string, SerializedAsset>
+export type SerializedSceneAssetDataMap = Record<
+	string,
+	SerializedSceneAssetData
+>
 
 // ============================================================================
 // Scene Settings Types

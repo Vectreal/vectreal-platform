@@ -16,6 +16,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 import type { InputFileOrDirectory, ServerSceneData } from '../types'
 
+function decodeBase64ToUint8Array(base64: string): Uint8Array {
+	if (typeof atob !== 'function') {
+		throw new Error('Base64 decoding is not supported in this environment')
+	}
+
+	const normalized = base64.replace(/\s/g, '')
+	const binaryString = atob(normalized)
+	const bytes = new Uint8Array(binaryString.length)
+
+	for (let index = 0; index < binaryString.length; index += 1) {
+		bytes[index] = binaryString.charCodeAt(index)
+	}
+
+	return bytes
+}
+
 /**
  * Reconstructs GLTF and asset files from scene data received from the server.
  *
@@ -51,10 +67,12 @@ export function reconstructGltfFiles(
 	// Convert asset data back to File objects
 	if (data.assetData && typeof data.assetData === 'object') {
 		for (const [, assetInfo] of Object.entries(data.assetData)) {
-			const { data: assetData, fileName, mimeType } = assetInfo
+			const { data: assetData, fileName, mimeType, encoding } = assetInfo
 
-			// Convert number array to Uint8Array
-			const uint8Array = new Uint8Array(assetData)
+			const uint8Array =
+				typeof assetData === 'string' && encoding === 'base64'
+					? decodeBase64ToUint8Array(assetData)
+					: new Uint8Array(assetData)
 
 			// Create a Blob from the binary data
 			const blob = new Blob([uint8Array], { type: mimeType })

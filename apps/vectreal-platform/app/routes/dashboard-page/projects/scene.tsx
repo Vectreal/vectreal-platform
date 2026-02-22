@@ -9,7 +9,7 @@ import {
 } from '@vctrl/hooks/use-load-model'
 import { useSetAtom } from 'jotai/react'
 import { Eye, Trash2 } from 'lucide-react'
-import { memo, useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLoaderData } from 'react-router'
 
 import { Route } from './+types/scene'
@@ -66,6 +66,8 @@ interface PreviewModelProps {
 	sceneData?: SceneLoadResult
 }
 
+const inFlightSceneSettingsRequests = new Map<string, Promise<SceneLoadResult>>()
+
 const PreviewModel = memo(({ file, sceneData }: PreviewModelProps) => {
 	const height = 'h-[80vh]'
 
@@ -96,6 +98,19 @@ const ScenePage = () => {
 
 	const [isLoadingScene, setIsLoadingScene] = useState(false)
 	const [sceneData, setSceneData] = useState<SceneLoadResult>()
+	const isMountedRef = useRef(true)
+	const activeSceneIdRef = useRef<string | null>(sceneId)
+
+	useEffect(() => {
+		isMountedRef.current = true
+		return () => {
+			isMountedRef.current = false
+		}
+	}, [])
+
+	useEffect(() => {
+		activeSceneIdRef.current = sceneId
+	}, [sceneId])
 
 	function handleDeleteClick() {
 		setDeleteDialog({
@@ -116,21 +131,45 @@ const ScenePage = () => {
 		try {
 			if (!sceneId) return
 
+			if (sceneData?.sceneId === sceneId) {
+				return
+			}
+
 			setIsLoadingScene(true)
 
-			const sceneData = await loadFromServer({
-				sceneId,
-				serverOptions: {
-					endpoint: `/api/scenes/${sceneId}`
-				}
-			})
+			const existingRequest = inFlightSceneSettingsRequests.get(sceneId)
+			const request =
+				existingRequest ??
+				loadFromServer({
+					sceneId,
+					serverOptions: {
+						endpoint: `/api/scenes/${sceneId}`
+					}
+				})
 
-			setSceneData(sceneData)
+			if (!existingRequest) {
+				inFlightSceneSettingsRequests.set(
+					sceneId,
+					request.finally(() => {
+						inFlightSceneSettingsRequests.delete(sceneId)
+					})
+				)
+			}
+
+			const loadedSceneData = await request
+
+			if (!isMountedRef.current || activeSceneIdRef.current !== sceneId) {
+				return
+			}
+
+			setSceneData(loadedSceneData)
 		} catch (error) {
 			console.error('Failed to load scene:', error)
-			setIsLoadingScene(false)
+			if (isMountedRef.current && activeSceneIdRef.current === sceneId) {
+				setIsLoadingScene(false)
+			}
 		}
-	}, [loadFromServer, sceneId])
+	}, [loadFromServer, sceneData?.sceneId, sceneId])
 
 	useEffect(() => {
 		if (sceneId && (!sceneData || sceneData.sceneId !== sceneId)) {

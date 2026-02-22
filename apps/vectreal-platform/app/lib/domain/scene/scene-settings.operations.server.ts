@@ -170,9 +170,10 @@ export async function getSceneSettings(
 		> = {}
 		result?.assetDataMap?.forEach((value, key) => {
 			serialized[key] = {
-				data: Array.from(value.data), // Convert Uint8Array to number array
+				data: Buffer.from(value.data).toString('base64'),
 				mimeType: value.mimeType,
-				fileName: value.fileName
+				fileName: value.fileName,
+				encoding: 'base64'
 			}
 		})
 

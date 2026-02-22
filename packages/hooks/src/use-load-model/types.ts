@@ -68,12 +68,14 @@ export interface ServerSceneData extends SceneSettings {
 	assetData: Record<
 		string,
 		{
-			/** Binary data as array of numbers */
-			data: number[]
+			/** Binary data as array of numbers or base64 string */
+			data: number[] | string
 			/** Original filename of the asset */
 			fileName: string
 			/** MIME type of the asset */
 			mimeType: string
+			/** Optional transfer encoding metadata */
+			encoding?: 'base64'
 		}
 	>
 }

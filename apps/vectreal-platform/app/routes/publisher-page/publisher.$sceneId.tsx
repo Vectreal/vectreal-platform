@@ -28,10 +28,34 @@ import {
 } from '../../lib/stores/scene-settings-store'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
+import type { ShouldRevalidateFunction } from 'react-router'
+
 export async function loader({ request }: Route.LoaderArgs) {
 	return {
 		isMobile: isMobileRequest(request)
 	}
+}
+
+export const shouldRevalidate: ShouldRevalidateFunction = ({
+	currentUrl,
+	nextUrl,
+	formMethod,
+	actionResult,
+	defaultShouldRevalidate
+}) => {
+	if (formMethod && formMethod !== 'GET') {
+		return true
+	}
+
+	if (actionResult) {
+		return true
+	}
+
+	if (currentUrl.pathname === nextUrl.pathname) {
+		return false
+	}
+
+	return defaultShouldRevalidate
 }
 
 const LOADING_MESSAGES = [

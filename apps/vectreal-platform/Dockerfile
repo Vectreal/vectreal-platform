@@ -58,6 +58,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=8080
+ENV NODE_OPTIONS="--enable-source-maps --heapsnapshot-near-heap-limit=2"
 
 # =============================================================================
 # REQUIRED ENVIRONMENT VARIABLES (must be set at runtime):

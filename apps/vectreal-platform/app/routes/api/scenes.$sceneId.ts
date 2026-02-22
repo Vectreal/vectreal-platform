@@ -58,6 +58,48 @@ function withNoStoreHeaders(response: Response): Response {
 	})
 }
 
+const MAX_IN_FLIGHT_HEAVY_SCENE_ACTIONS = 2
+let inFlightHeavySceneActions = 0
+const inFlightGetSceneSettingsRequests = new Map<string, Promise<Response>>()
+
+function getSceneSettingsRequestKey(scope: string, sceneId: string): string {
+	return `${scope}:${sceneId}`
+}
+
+async function runWithSceneSettingsCoalescing(
+	key: string,
+	operation: () => Promise<Response>
+): Promise<Response> {
+	const existingRequest = inFlightGetSceneSettingsRequests.get(key)
+	if (existingRequest) {
+		return existingRequest
+	}
+
+	const request = operation().finally(() => {
+		inFlightGetSceneSettingsRequests.delete(key)
+	})
+
+	inFlightGetSceneSettingsRequests.set(key, request)
+
+	return request
+}
+
+async function runWithHeavySceneActionLimit(
+	operation: () => Promise<Response>
+): Promise<Response> {
+	if (inFlightHeavySceneActions >= MAX_IN_FLIGHT_HEAVY_SCENE_ACTIONS) {
+		return ApiResponse.error('Server is busy, please retry in a moment', 503)
+	}
+
+	inFlightHeavySceneActions += 1
+
+	try {
+		return await operation()
+	} finally {
+		inFlightHeavySceneActions = Math.max(0, inFlightHeavySceneActions - 1)
+	}
+}
+
 async function authorizePreviewRequest(request: Request, projectId: string) {
 	const hasTokenCredential =
 		Boolean(new URL(request.url).searchParams.get('token')?.trim()) ||
@@ -185,7 +227,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 	const previewProjectId = url.searchParams.get('projectId')?.trim() || null
 
 	const routeSceneId = params.sceneId?.trim()
-	const actionRequest = await parseActionRequest(request.clone())
+	const actionRequest = await parseActionRequest(request)
 	const rawAction = actionRequest.action
 	const action = typeof rawAction === 'string' ? rawAction.trim() : ''
 
@@ -228,18 +270,29 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			}
 		}
 
-		const parsedRequest = await SceneSettingsParser.parseSceneSettingsRequest(
-			request.clone()
-		)
+		const parsedRequest =
+			SceneSettingsParser.parseSceneSettingsRequestData(actionRequest)
 		if (parsedRequest instanceof Response) {
 			return withNoStoreHeaders(parsedRequest)
 		}
 
-		const response = await sceneSettingsOps.getSceneSettings({
-			...parsedRequest,
-			action,
-			sceneId: parsedRequest.sceneId?.trim() || routeSceneId
-		})
+		const effectiveSceneId = parsedRequest.sceneId?.trim() || routeSceneId
+		const requestScope =
+			authContext.mode === 'apiKey'
+				? `preview-api-key-${previewProjectId}`
+				: `preview-session-${authContext.userId}`
+		const requestKey = getSceneSettingsRequestKey(
+			requestScope,
+			effectiveSceneId
+		)
+
+		const response = await runWithSceneSettingsCoalescing(requestKey, () =>
+			sceneSettingsOps.getSceneSettings({
+				...parsedRequest,
+				action,
+				sceneId: effectiveSceneId
+			})
+		)
 
 		return withNoStoreHeaders(response)
 	}
@@ -420,9 +473,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		})
 	}
 
-	const parsedRequest = await SceneSettingsParser.parseSceneSettingsRequest(
-		request.clone()
-	)
+	const parsedRequest =
+		SceneSettingsParser.parseSceneSettingsRequestData(actionRequest)
 	if (parsedRequest instanceof Response) {
 		return parsedRequest
 	}
@@ -458,27 +510,39 @@ export async function action({ request, params }: ActionFunctionArgs) {
 	try {
 		switch (action as SceneSettingsAction) {
 			case 'save-scene-settings':
-				return await sceneSettingsOps.saveSceneSettings(
-					{
-						...requestData,
-						action
-					},
-					authResult.user.id
+				return await runWithHeavySceneActionLimit(() =>
+					sceneSettingsOps.saveSceneSettings(
+						{
+							...requestData,
+							action
+						},
+						authResult.user.id
+					)
 				)
 
 			case 'get-scene-settings':
-				return await sceneSettingsOps.getSceneSettings({
-					...requestData,
-					action
-				})
+				if (!requestData.sceneId) {
+					return ApiResponse.badRequest('Scene ID is required')
+				}
+
+				return await runWithSceneSettingsCoalescing(
+					getSceneSettingsRequestKey(authResult.user.id, requestData.sceneId),
+					() =>
+						sceneSettingsOps.getSceneSettings({
+							...requestData,
+							action
+						})
+				)
 
 			case 'publish-scene':
-				return await sceneSettingsOps.publishScene(
-					{
-						...requestData,
-						action
-					},
-					authResult.user.id
+				return await runWithHeavySceneActionLimit(() =>
+					sceneSettingsOps.publishScene(
+						{
+							...requestData,
+							action
+						},
+						authResult.user.id
+					)
 				)
 
 			default:

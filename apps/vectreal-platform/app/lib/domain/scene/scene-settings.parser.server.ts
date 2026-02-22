@@ -23,7 +23,17 @@ export class SceneSettingsParser {
 	): Promise<SceneSettingsRequest | Response> {
 		try {
 			const requestData = await parseActionRequest(request)
+			return this.parseSceneSettingsRequestData(requestData)
+		} catch (error) {
+			console.error('Failed to parse scene settings request:', error)
+			return ApiResponse.badRequest('Invalid request format')
+		}
+	}
 
+	static parseSceneSettingsRequestData(
+		requestData: Record<string, unknown>
+	): SceneSettingsRequest | Response {
+		try {
 			// Extract required fields
 			const action = requestData.action as string
 			const rawRequestId = requestData.requestId as string
