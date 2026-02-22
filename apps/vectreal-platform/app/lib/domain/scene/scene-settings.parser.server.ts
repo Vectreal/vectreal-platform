@@ -7,7 +7,6 @@ import { parseActionRequest } from '../../http/requests.server'
 
 import type { SceneSettingsRequest } from '../../../types/api'
 
-
 /**
  * Request parser for scene settings API operations.
  * Handles validation and normalization of incoming requests.

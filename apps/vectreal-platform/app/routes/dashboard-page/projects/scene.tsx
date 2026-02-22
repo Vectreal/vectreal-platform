@@ -21,7 +21,6 @@ import { getProject } from '../../../lib/domain/project/project-repository.serve
 import { getScene } from '../../../lib/domain/scene/scene-folder-repository.server'
 import { deleteDialogAtom } from '../../../lib/stores/dashboard-management-store'
 
-
 export async function loader({ request, params }: Route.LoaderArgs) {
 	const projectId = params.projectId
 	const sceneId = params.sceneId
@@ -66,7 +65,10 @@ interface PreviewModelProps {
 	sceneData?: SceneLoadResult
 }
 
-const inFlightSceneSettingsRequests = new Map<string, Promise<SceneLoadResult>>()
+const inFlightSceneSettingsRequests = new Map<
+	string,
+	Promise<SceneLoadResult>
+>()
 
 const PreviewModel = memo(({ file, sceneData }: PreviewModelProps) => {
 	const height = 'h-[80vh]'

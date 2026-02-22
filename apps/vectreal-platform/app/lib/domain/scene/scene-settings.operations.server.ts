@@ -13,8 +13,6 @@ import type {
 	SceneSettingsRequest
 } from '../../../types/api'
 
-
-
 type SaveSceneSettingsRequest = SceneSettingsRequest & {
 	settings: SceneSettingsData
 }

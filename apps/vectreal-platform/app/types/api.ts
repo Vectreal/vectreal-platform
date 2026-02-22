@@ -15,7 +15,6 @@ import type {
 	ShadowsProps
 } from '@vctrl/core'
 
-
 // Re-export core types for convenience
 export type { SceneMeta, SceneSettings, SerializedAsset }
 
