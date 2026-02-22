@@ -20,14 +20,17 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 export const validateResponseContentType = (response: Response): void => {
 	const contentType = response.headers.get('content-type')
 
-	if (contentType?.includes('application/json')) {
-		// Server returned JSON error despite 200 status
-		throw new Error('Server returned JSON error response')
+	if (!contentType) {
+		throw new Error('Missing content type from server response')
+	}
+
+	if (contentType.includes('application/json')) {
+		throw new Error('Unexpected JSON success response from texture optimizer')
 	}
 
 	if (
-		!contentType?.includes('model/gltf-binary') &&
-		!contentType?.includes('application/octet-stream')
+		!contentType.startsWith('image/') &&
+		!contentType.includes('application/octet-stream')
 	) {
 		throw new Error(`Unexpected content type from server: ${contentType}`)
 	}

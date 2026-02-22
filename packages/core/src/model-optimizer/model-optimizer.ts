@@ -42,6 +42,8 @@ import {
 	OptimizationReport,
 	QuantizeOptions,
 	SimplifyOptions,
+	TextureBinaryPayload,
+	TextureDescriptor,
 	TextureCompressOptions
 } from './types'
 
@@ -596,6 +598,58 @@ export class ModelOptimizer {
 	 */
 	public hasModel(): boolean {
 		return this._document !== null
+	}
+
+	public listTextureDescriptors(): TextureDescriptor[] {
+		const document = this.ensureModelLoaded()
+		return document
+			.getRoot()
+			.listTextures()
+			.map((texture, index) => ({
+				index,
+				name: texture.getName() || `texture-${index}`,
+				mimeType: texture.getMimeType() || 'application/octet-stream',
+				byteLength: texture.getImage()?.byteLength ?? 0
+			}))
+	}
+
+	public getTexturePayload(index: number): TextureBinaryPayload {
+		const document = this.ensureModelLoaded()
+		const textures = document.getRoot().listTextures()
+		const texture = textures[index]
+
+		if (!texture) {
+			throw new Error(`Texture not found for index ${index}`)
+		}
+
+		const image = texture.getImage()
+		if (!image || image.byteLength === 0) {
+			throw new Error(`Texture at index ${index} has no image payload`)
+		}
+
+		return {
+			index,
+			name: texture.getName() || `texture-${index}`,
+			mimeType: texture.getMimeType() || 'application/octet-stream',
+			image
+		}
+	}
+
+	public replaceTexturePayload(
+		index: number,
+		image: Uint8Array,
+		mimeType: string
+	): void {
+		const document = this.ensureModelLoaded()
+		const textures = document.getRoot().listTextures()
+		const texture = textures[index]
+
+		if (!texture) {
+			throw new Error(`Texture not found for index ${index}`)
+		}
+
+		texture.setImage(image)
+		texture.setMimeType(mimeType)
 	}
 
 	/**

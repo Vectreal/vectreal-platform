@@ -14,7 +14,11 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-import type { ServerOptions, TextureCompressOptions } from '@vctrl/core'
+import type {
+	ServerOptions,
+	TextureBinaryPayload,
+	TextureCompressOptions
+} from '@vctrl/core'
 
 /**
  * Configuration for a server request.
@@ -135,22 +139,24 @@ export class ServerCommunicationService {
 	}
 
 	/**
-	 * Prepares FormData for texture optimization request.
-	 * Serializes options and appends model binary.
+	 * Prepares FormData for a single texture optimization request.
 	 */
-	static async prepareTextureOptimizationFormData(
-		modelBuffer: Uint8Array,
+	static prepareTextureOptimizationFormData(
+		texture: TextureBinaryPayload,
 		options?: TextureCompressOptions
-	): Promise<FormData> {
+	): FormData {
 		const requestData = new FormData()
 
 		requestData.append(
-			'model',
-			new Blob([new Uint8Array(modelBuffer)], {
-				type: 'model/gltf-binary'
+			'texture',
+			new Blob([new Uint8Array(texture.image)], {
+				type: texture.mimeType || 'application/octet-stream'
 			}),
-			'model.glb'
+			`${texture.name || `texture-${texture.index}`}`
 		)
+		requestData.append('textureIndex', String(texture.index))
+		requestData.append('textureName', texture.name)
+		requestData.append('textureMimeType', texture.mimeType)
 
 		if (options) {
 			const { serverOptions: _, ...restOptions } = options

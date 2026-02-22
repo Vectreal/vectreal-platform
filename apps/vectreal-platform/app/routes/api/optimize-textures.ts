@@ -14,10 +14,11 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-import { ModelOptimizer, TextureCompressOptions } from '@vctrl/core'
+import { TextureCompressOptions } from '@vctrl/core'
 import { data } from 'react-router'
 
 import { Route } from './+types/optimize-textures'
+import { ensurePost } from '../../lib/http/requests.server'
 
 /**
  * Server-side texture optimization API endpoint.
@@ -30,21 +31,46 @@ import { Route } from './+types/optimize-textures'
  * Content-Type: multipart/form-data
  *
  * Body:
- * - model: GLB model file (as sent by useOptimizeModel hook)
+ * - texture: image file blob
+ * - textureIndex: numeric texture index in source model
+ * - textureName: original texture name
  * - options: JSON string with TextureCompressOptions
  */
 export async function action({ request }: Route.ActionArgs) {
-	try {
-		// Parse multipart form data
-		const formData = await request.formData()
-		const modelFile = formData.get('model') as File
-		const optionsStr = formData.get('options') as string
+	const methodCheck = ensurePost(request)
+	if (methodCheck) {
+		return methodCheck
+	}
 
-		if (!modelFile) {
-			return data({ error: 'No model file provided' }, { status: 400 })
+	try {
+		const formData = await request.formData()
+		const textureFile = formData.get('texture')
+		const textureIndexRaw = formData.get('textureIndex')
+		const textureNameRaw = formData.get('textureName')
+		const optionsStr = formData.get('options') as string
+		const textureIndex =
+			typeof textureIndexRaw === 'string'
+				? Number.parseInt(textureIndexRaw, 10)
+				: Number.NaN
+		const textureName =
+			typeof textureNameRaw === 'string' && textureNameRaw.trim().length > 0
+				? textureNameRaw.trim()
+				: `texture-${Number.isFinite(textureIndex) ? textureIndex : 'unknown'}`
+
+		if (!(textureFile instanceof File)) {
+			return data(
+				{ error: 'No texture file provided' },
+				{ status: 400, headers: { 'Cache-Control': 'no-store' } }
+			)
 		}
 
-		// Parse texture compression options
+		if (!Number.isFinite(textureIndex) || textureIndex < 0) {
+			return data(
+				{ error: 'Invalid or missing textureIndex' },
+				{ status: 400, headers: { 'Cache-Control': 'no-store' } }
+			)
+		}
+
 		let options: TextureCompressOptions = {
 			resize: [2048, 2048],
 			quality: 80,
@@ -55,58 +81,68 @@ export async function action({ request }: Route.ActionArgs) {
 			try {
 				options = JSON.parse(optionsStr)
 			} catch {
-				return data({ error: 'Invalid options JSON format' }, { status: 400 })
+				return data(
+					{ error: 'Invalid options JSON format' },
+					{ status: 400, headers: { 'Cache-Control': 'no-store' } }
+				)
 			}
 		}
 
-		// Convert file to buffer
-		const buffer = new Uint8Array(await modelFile.arrayBuffer())
+		const inputBuffer = Buffer.from(await textureFile.arrayBuffer())
+		const sharpModule = await import('sharp')
+		const sharp = sharpModule.default || sharpModule
 
-		// Initialize the model optimizer
-		const optimizer = new ModelOptimizer()
+		if (typeof sharp !== 'function') {
+			throw new Error('Sharp image processing library is not available')
+		}
 
-		// Set up progress tracking (optional)
-		optimizer.onProgress((_progress) => {
-			// console.log(
-			// 	`Texture optimization: ${progress.operation} - ${progress.progress}%`
-			// )
-		})
+		let transform = sharp(inputBuffer, { animated: false })
 
-		// Load the model
-		await optimizer.loadFromBuffer(buffer)
-
-		// Apply texture compression with Sharp
-		await optimizer.compressTextures({
-			quality: options.quality || 80,
-			targetFormat: options.targetFormat || 'webp',
-			...options
-		})
-
-		// Export the optimized model
-		const optimizedBuffer = await optimizer.exportJSON()
-
-		// Get optimization report for the response header
-		const report = await optimizer.getReport()
-
-		// Return the optimized model as binary response
-		const headers = new Headers({
-			'Content-Type': 'model/gltf-binary',
-			'Content-Disposition': `attachment; filename="optimized_${modelFile.name}"`,
-			'X-Optimization-Report': JSON.stringify({
-				originalSize: report.originalSize,
-				optimizedSize: report.optimizedSize,
-				compressionRatio: report.compressionRatio,
-				textureOptimizations: report.appliedOptimizations.filter(
-					(opt: string) => opt.includes('texture')
-				)
+		if (Array.isArray(options.resize) && options.resize.length === 2) {
+			transform = transform.resize(options.resize[0], options.resize[1], {
+				fit: 'inside',
+				withoutEnlargement: true
 			})
-		})
+		}
 
-		return data(optimizedBuffer, { headers })
+		const quality = typeof options.quality === 'number' ? options.quality : 80
+		const targetFormat = options.targetFormat || 'webp'
+		let outputMimeType = 'image/webp'
+
+		switch (targetFormat) {
+			case 'jpeg':
+				transform = transform.jpeg({ quality })
+				outputMimeType = 'image/jpeg'
+				break
+			case 'png':
+				transform = transform.png({ quality })
+				outputMimeType = 'image/png'
+				break
+			case 'webp':
+			default:
+				transform = transform.webp({ quality })
+				outputMimeType = 'image/webp'
+				break
+		}
+
+		const optimizedTexture = await transform.toBuffer()
+
+		if (optimizedTexture.byteLength === 0) {
+			throw new Error('Texture optimization produced an empty output payload')
+		}
+
+		return new Response(optimizedTexture, {
+			status: 200,
+			headers: {
+				'Content-Type': outputMimeType,
+				'Cache-Control': 'no-store',
+				'X-Texture-Index': String(textureIndex),
+				'X-Texture-Name': textureName
+			}
+		})
 	} catch (error) {
 		console.error('Texture optimization failed:', error)
 
-		// Provide more specific error messages
 		let errorMessage = 'Texture optimization failed'
 		let statusCode = 500
 
@@ -127,7 +163,7 @@ export async function action({ request }: Route.ActionArgs) {
 				error: errorMessage,
 				details: error instanceof Error ? error.message : 'Unknown error'
 			},
-			{ status: statusCode }
+			{ status: statusCode, headers: { 'Cache-Control': 'no-store' } }
 		)
 	}
 }

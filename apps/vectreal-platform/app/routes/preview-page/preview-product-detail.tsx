@@ -50,7 +50,7 @@ const PreviewInfoPopover = () => (
 
 const ProductDetailModel = memo(({ file, sceneData }: PreviewModelProps) => {
 	return (
-		<div className="bg-background h-[60vh] min-h-[420px] w-full overflow-hidden rounded-xl border md:h-[68vh]">
+		<div className="bg-background relative h-[60vh] min-h-[420px] w-full overflow-hidden rounded-xl border md:h-[68vh]">
 			<ClientVectrealViewer
 				className="h-full w-full"
 				model={file?.model}

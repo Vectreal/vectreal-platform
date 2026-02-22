@@ -58,8 +58,29 @@ export interface TextureCompressOptions {
 	/** Compression quality (0-100) */
 	quality?: number
 
+	/** Request timeout in milliseconds for per-texture server calls */
+	requestTimeoutMs?: number
+	/** Maximum texture payload bytes to allow for upload */
+	maxTextureUploadBytes?: number
+	/** Maximum retry attempts for transient server errors */
+	maxRetries?: number
+
 	/** Whether to use server endpoint (if available) */
 	serverOptions?: ServerOptions
+}
+
+export interface TextureDescriptor {
+	index: number
+	name: string
+	mimeType: string
+	byteLength: number
+}
+
+export interface TextureBinaryPayload {
+	index: number
+	name: string
+	mimeType: string
+	image: Uint8Array
 }
 
 export interface OptimizationReport {
