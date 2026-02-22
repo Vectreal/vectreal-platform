@@ -16,7 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 import type { InputFileOrDirectory, ServerSceneData } from '../types'
 
-function decodeBase64ToUint8Array(base64: string): Uint8Array {
+function decodeBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
 	if (typeof atob !== 'function') {
 		throw new Error('Base64 decoding is not supported in this environment')
 	}
@@ -69,13 +69,20 @@ export function reconstructGltfFiles(
 		for (const [, assetInfo] of Object.entries(data.assetData)) {
 			const { data: assetData, fileName, mimeType, encoding } = assetInfo
 
-			const uint8Array =
-				typeof assetData === 'string' && encoding === 'base64'
-					? decodeBase64ToUint8Array(assetData)
-					: new Uint8Array(assetData)
+			let uint8Array: Uint8Array<ArrayBuffer>
+
+			if (typeof assetData === 'string') {
+				if (encoding === 'base64') {
+					uint8Array = decodeBase64ToUint8Array(assetData)
+				} else {
+					uint8Array = Uint8Array.from(new TextEncoder().encode(assetData))
+				}
+			} else {
+				uint8Array = Uint8Array.from(assetData)
+			}
 
 			// Create a Blob from the binary data
-			const blob = new Blob([uint8Array], { type: mimeType })
+			const blob = new Blob([uint8Array.buffer], { type: mimeType })
 
 			// Create a File object
 			const file = new File([blob], fileName, { type: mimeType })
