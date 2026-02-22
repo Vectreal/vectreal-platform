@@ -40,6 +40,16 @@ on:
         required: false
         type: string
         default: 'public, max-age=31536000, immutable'
+      build-and-push-image:
+        description: 'Whether this job should build and push the Docker image'
+        required: false
+        type: boolean
+        default: true
+      image-uri:
+        description: 'Optional full image URI to deploy (overrides computed image URI)'
+        required: false
+        type: string
+        default: ''
     secrets:
       gcp-credentials:
         description: 'Google Cloud credentials JSON'
@@ -79,11 +89,11 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Set up pnpm
-        if: ${{ inputs.static-bucket-name != '' }}
+        if: ${{ inputs.static-bucket-name != '' && inputs.build-and-push-image }}
         uses: pnpm/action-setup@v4
 
       - name: Set up Node.js
-        if: ${{ inputs.static-bucket-name != '' }}
+        if: ${{ inputs.static-bucket-name != '' && inputs.build-and-push-image }}
         uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -98,24 +108,26 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Install dependencies for static build
-        if: ${{ inputs.static-bucket-name != '' }}
+        if: ${{ inputs.static-bucket-name != '' && inputs.build-and-push-image }}
         run: pnpm install --frozen-lockfile
 
       - name: Build static client assets
-        if: ${{ inputs.static-bucket-name != '' }}
+        if: ${{ inputs.static-bucket-name != '' && inputs.build-and-push-image }}
         run: pnpx nx build vectreal-platform
 
       - name: Upload static client assets to GCS
-        if: ${{ inputs.static-bucket-name != '' }}
+        if: ${{ inputs.static-bucket-name != '' && inputs.build-and-push-image }}
         run: |
           gsutil -m rsync -r -d apps/vectreal-platform/build/client gs://${{ inputs.static-bucket-name }}
           gsutil -m setmeta -h "Cache-Control:${{ inputs.static-cache-control }}" "gs://${{ inputs.static-bucket-name }}/**"
 
       - name: Log in to Google Artifact Registry
+        if: ${{ inputs.build-and-push-image }}
         run: |
           gcloud auth configure-docker ${{ inputs.artifact-region }}-docker.pkg.dev
 
       - name: Build and push Docker image
+        if: ${{ inputs.build-and-push-image }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -130,12 +142,21 @@ jobs:
           build-args: |
             NODE_ENV=${{ inputs.node-env }}
 
+      - name: Resolve image URI
+        id: image
+        run: |
+          if [ -n "${{ inputs.image-uri }}" ]; then
+            echo "uri=${{ inputs.image-uri }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "uri=${{ inputs.artifact-region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Deploy to Cloud Run
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: ${{ inputs.service-name }}
-          image: ${{ inputs.artifact-region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:${{ github.sha }}
+          image: ${{ steps.image.outputs.uri }}
           region: ${{ inputs.region }}
           flags: '--allow-unauthenticated'
           env_vars: |
@@ -182,4 +203,4 @@ jobs:
           echo "::notice::✅ Deployed to ${{ inputs.environment }} environment"
           echo "::notice::Service: ${{ inputs.service-name }}"
           echo "::notice::Region: ${{ inputs.region }}"
-          echo "::notice::Image: ${{ inputs.artifact-region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:${{ github.sha }}"
+          echo "::notice::Image: ${{ steps.image.outputs.uri }}"

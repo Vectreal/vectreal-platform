@@ -64,6 +64,7 @@ jobs:
       region: us-east1
       artifact-region: us-central1
       node-env: staging
+      build-and-push-image: false
       static-bucket-name: ''
       static-cache-control: 'public, max-age=31536000, immutable'
     secrets:
