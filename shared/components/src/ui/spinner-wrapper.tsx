@@ -1,8 +1,21 @@
+import { cn } from '@shared/utils'
 import { PropsWithChildren } from 'react'
 
-export const SpinnerWrapper = ({ children }: PropsWithChildren) => {
+interface SpinnerWrapperProps extends PropsWithChildren {
+	className?: string
+}
+
+export const SpinnerWrapper = ({
+	children,
+	className
+}: SpinnerWrapperProps) => {
 	return (
-		<div className="flex h-full w-full flex-col items-center justify-center gap-4">
+		<div
+			className={cn(
+				'flex h-full w-full flex-col items-center justify-center gap-4',
+				className
+			)}
+		>
 			{children}
 		</div>
 	)

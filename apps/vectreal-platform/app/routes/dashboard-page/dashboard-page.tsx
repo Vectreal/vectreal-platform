@@ -33,7 +33,6 @@ import { getProjectsScenes } from '../../lib/domain/scene/scene-folder-repositor
 import type { loader as dashboardLayoutLoader } from '../layouts/dashboard-layout'
 import type { ShouldRevalidateFunction } from 'react-router'
 
-
 export async function loader({ request }: Route.LoaderArgs) {
 	// Auth check (reads from session, very cheap)
 	const { user } = await loadAuthenticatedUser(request)

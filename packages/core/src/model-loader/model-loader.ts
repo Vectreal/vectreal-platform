@@ -18,7 +18,6 @@ import { Document, GLTF, WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 
 import { OperationProgress } from '../types'
-
 import { ModelFileTypes, ModelLoadResult, ThreeJSModelResult } from './types'
 
 /**

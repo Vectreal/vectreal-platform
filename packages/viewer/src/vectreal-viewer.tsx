@@ -39,8 +39,6 @@ import {
 	SceneShadows
 } from './components/scene'
 
-import styles from './viewer.module.css'
-
 export interface VectrealViewerProps extends PropsWithChildren {
 	/**
 	 * The 3D model to render in the viewer. (three.js `Object3D`)
@@ -157,7 +155,10 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	return (
 		<Suspense fallback={loader}>
 			<Canvas
-				containerClassName={cn(styles.viewer, 'vctrl-viewer', className)}
+				containerClassName={cn(
+					'viewer vctrl-viewer h-full w-full overflow-clip font-[poppins,sans-serif] text-base [&_a]:text-inherit [&_a]:no-underline [&_button]:border-0 [&_p]:m-0',
+					className
+				)}
 				theme={theme}
 				overlay={
 					<Overlay hasContent={hasContent} popover={popover} loader={loader} />

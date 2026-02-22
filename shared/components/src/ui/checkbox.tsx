@@ -3,7 +3,6 @@
 import * as CheckboxPrimitive from '@radix-ui/react-checkbox'
 import { cn } from '@shared/utils'
 import { CheckIcon } from 'lucide-react'
-
 import * as React from 'react'
 
 function Checkbox({

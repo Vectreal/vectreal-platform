@@ -1,7 +1,6 @@
 'use client'
 
 import * as SliderPrimitive from '@radix-ui/react-slider'
-
 import { cn } from '@shared/utils'
 import * as React from 'react'
 

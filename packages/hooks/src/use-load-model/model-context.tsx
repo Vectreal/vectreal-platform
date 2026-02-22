@@ -17,7 +17,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 import React, { createContext, useContext } from 'react'
 
 import { useOptimizeModel } from '../use-optimize-model'
-
 import { UseLoadModelReturn } from './types'
 import useLoadModel from './use-load-model'
 

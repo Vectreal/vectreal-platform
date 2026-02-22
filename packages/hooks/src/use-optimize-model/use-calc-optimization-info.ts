@@ -1,7 +1,8 @@
-import type { OptimizationReport } from '@vctrl/core/model-optimizer'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { OptimizationInfo, OptimizationState } from './types'
+
+import type { OptimizationReport } from '@vctrl/core/model-optimizer'
 
 /**
  * Helper function to safely get stats from optimization report.

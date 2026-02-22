@@ -1,9 +1,8 @@
 import { CanvasProps, Canvas as ThreeCanvas } from '@react-three/fiber'
+import { cn } from '@shared/utils'
 import { useEffect, useRef, useState } from 'react'
 
 import { useViewportDetection } from '../hooks/use-viewport-detection'
-
-import styles from './canvas.module.css'
 
 interface CanvasComponentProps extends CanvasProps {
 	children: React.ReactNode
@@ -19,7 +18,6 @@ interface CanvasComponentProps extends CanvasProps {
 	/**
 	 * JSX element to render while loading
 	 */
-	loadingState?: 'loading' | 'loaded' | 'ready'
 	/**
 	 * Additional UI overlays to render (e.g., InfoPopover)
 	 */
@@ -42,7 +40,6 @@ interface CanvasComponentProps extends CanvasProps {
 const Canvas = ({
 	children,
 	containerClassName,
-	loadingState,
 	theme = 'system',
 	overlay,
 	enableViewportRendering = true,
@@ -72,7 +69,7 @@ const Canvas = ({
 
 	// Trigger fade-in when canvas remounts after viewport change
 	useEffect(() => {
-		if (shouldRenderCanvas && loadingState !== 'loading') {
+		if (shouldRenderCanvas) {
 			// Trigger fade-in after a brief delay to ensure CSS transition runs
 			const timer = setTimeout(() => {
 				setCanvasVisible(true)
@@ -82,14 +79,17 @@ const Canvas = ({
 		} else {
 			setCanvasVisible(false)
 		}
-	}, [shouldRenderCanvas, loadingState])
+	}, [shouldRenderCanvas])
 
 	return (
 		<div ref={containerRef} className={containerClassName} data-theme={theme}>
 			{shouldRenderCanvas && (
 				<ThreeCanvas
 					{...props}
-					className={styles.canvas}
+					className={cn(
+						'invisible h-full w-full opacity-0 transition-[opacity,visibility] delay-1000 duration-500 ease-in-out',
+						canvasVisible && 'visible opacity-100'
+					)}
 					data-canvas-visible={canvasVisible}
 				>
 					{children}

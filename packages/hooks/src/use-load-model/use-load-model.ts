@@ -14,13 +14,10 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import type { OperationProgress } from '@vctrl/core'
 import { ModelFileTypes, ModelLoader } from '@vctrl/core/model-loader'
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import { Object3D } from 'three'
 
-import type { useOptimizeModel } from '../use-optimize-model'
-import { ServerCommunicationService } from '../utils/server-communication'
 
 import eventSystem from './event-system'
 import reducer, { initialState } from './state'
@@ -40,6 +37,10 @@ import {
 	readDirectory,
 	reconstructGltfFiles
 } from './utils'
+import { ServerCommunicationService } from '../utils/server-communication'
+
+import type { useOptimizeModel } from '../use-optimize-model'
+import type { OperationProgress } from '@vctrl/core'
 
 /**
  * Custom hook to load and manage 3D models with optional optimization integration.

@@ -1,15 +1,16 @@
 import { useGLTF } from '@react-three/drei'
-import type { Meta, StoryObj } from '@storybook/react-vite'
 import React, { ComponentProps } from 'react'
-import type { TypeWithDeepControls } from 'storybook-addon-deep-controls'
+
 
 import {
 	defaultControlsOptions,
 	defaultEnvOptions,
 	defaultGridOptions
 } from './components/scene'
-
 import VectrealViewer from './vectreal-viewer'
+
+import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { TypeWithDeepControls } from 'storybook-addon-deep-controls'
 
 type ViewerProps = ComponentProps<typeof VectrealViewer>
 

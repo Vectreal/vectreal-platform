@@ -16,13 +16,11 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import { Document, GLTF, WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
-
 import JSZip from 'jszip'
 import { Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
 import { OperationProgress } from '../types'
-
 import {
 	ExportOptions,
 	ExportResult,
