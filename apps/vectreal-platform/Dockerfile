@@ -27,30 +27,6 @@ COPY shared/utils/package.json ./shared/utils/
 RUN corepack prepare pnpm@${PNPM_VERSION} --activate && \
     pnpm install --frozen-lockfile --prod=false
 
-# Builder stage
-FROM base AS builder
-ARG PNPM_VERSION=10.28.0
-WORKDIR /app
-
-# Enable corepack and prepare pnpm
-RUN corepack enable && \
-    corepack prepare pnpm@${PNPM_VERSION} --activate
-
-# Copy dependencies
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/package.json ./package.json
-COPY --from=deps /app/pnpm-lock.yaml ./pnpm-lock.yaml
-COPY --from=deps /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
-
-# Copy source files
-COPY nx.json tsconfig.base.json eslint.config.mts ./
-COPY apps ./apps
-COPY packages ./packages
-COPY shared ./shared
-
-# Build the application
-RUN pnpm exec nx build vectreal-platform
-
 # Runner stage
 FROM base AS runner
 ARG PNPM_VERSION
@@ -75,10 +51,12 @@ ENV NODE_OPTIONS="--enable-source-maps --heapsnapshot-near-heap-limit=2"
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Copy built application and all dependencies from builder
-COPY --from=builder --chown=nodejs:nodejs /app/apps/vectreal-platform/build ./apps/vectreal-platform/build
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nodejs:nodejs /app/package.json ./package.json
+# Copy runtime dependencies and prebuilt application artifacts.
+# Build artifacts are produced in CI before docker build using:
+#   pnpx nx build vectreal-platform
+COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=deps --chown=nodejs:nodejs /app/package.json ./package.json
+COPY --chown=nodejs:nodejs apps/vectreal-platform/build ./apps/vectreal-platform/build
 
 USER nodejs
 

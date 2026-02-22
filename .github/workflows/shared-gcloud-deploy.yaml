@@ -89,11 +89,11 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Set up pnpm
-        if: ${{ inputs.static-bucket-name != '' && inputs.build-and-push-image }}
+        if: ${{ inputs.build-and-push-image }}
         uses: pnpm/action-setup@v4
 
       - name: Set up Node.js
-        if: ${{ inputs.static-bucket-name != '' && inputs.build-and-push-image }}
+        if: ${{ inputs.build-and-push-image }}
         uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -108,11 +108,11 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Install dependencies for static build
-        if: ${{ inputs.static-bucket-name != '' && inputs.build-and-push-image }}
+        if: ${{ inputs.build-and-push-image }}
         run: pnpm install --frozen-lockfile
 
-      - name: Build static client assets
-        if: ${{ inputs.static-bucket-name != '' && inputs.build-and-push-image }}
+      - name: Build application artifacts
+        if: ${{ inputs.build-and-push-image }}
         run: pnpx nx build vectreal-platform
 
       - name: Upload static client assets to GCS
