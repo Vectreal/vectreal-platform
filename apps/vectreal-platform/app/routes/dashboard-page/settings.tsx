@@ -1,7 +1,8 @@
+import { Route } from './+types/settings'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
+
 import type { SettingsLoaderData } from '../../lib/domain/dashboard/dashboard-types'
 
-import { Route } from './+types/settings'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	// Authenticate and initialize user

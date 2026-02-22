@@ -1,5 +1,5 @@
-import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { existsSync } from 'node:fs'
+import { dirname, isAbsolute, join, resolve } from 'node:path'
 
 import { Storage } from '@google-cloud/storage'
 

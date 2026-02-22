@@ -1,8 +1,5 @@
 import { motion } from 'framer-motion'
 import { CheckIcon } from 'lucide-react'
-import type { FC } from 'react'
-
-import { InfoTooltip } from '../../../info-tooltip'
 
 import {
 	formatOptimizationName,
@@ -11,6 +8,11 @@ import {
 	getOptimizationStatMapping,
 	OptimizationStat
 } from './utils'
+import { InfoTooltip } from '../../../info-tooltip'
+
+import type { FC } from 'react'
+
+
 
 interface OptimizationSummaryProps {
 	optimizationStats: OptimizationStat[]

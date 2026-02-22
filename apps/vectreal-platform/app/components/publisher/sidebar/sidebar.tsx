@@ -15,14 +15,14 @@ import { BarChart4, Camera, SidebarIcon } from 'lucide-react'
 import { useCallback } from 'react'
 import { Link } from 'react-router'
 
-import { processAtom } from '../../../lib/stores/publisher-config-store'
-import { SidebarMode } from '../../../types/publisher-config'
-import { TooltipButton } from '../../tooltip-button'
 
 import { ComposeSidebar } from './compose-sidebar'
 import { OptimizeSidebar } from './optimize-sidebar'
 import { PublishSidebar } from './publish-sidebar'
 import { SceneNameInput } from './scene-name-input'
+import { processAtom } from '../../../lib/stores/publisher-config-store'
+import { SidebarMode } from '../../../types/publisher-config'
+import { TooltipButton } from '../../tooltip-button'
 
 const SidebarTabs = ({
 	mode,

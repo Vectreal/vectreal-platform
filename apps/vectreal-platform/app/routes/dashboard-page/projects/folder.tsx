@@ -1,8 +1,16 @@
+import {
+	Empty,
+	EmptyContent,
+	EmptyDescription,
+	EmptyHeader,
+	EmptyMedia,
+	EmptyTitle
+} from '@shared/components/ui/empty'
 import { useSetAtom } from 'jotai/react'
 import { FolderSearch } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
-import type { ShouldRevalidateFunction } from 'react-router'
 
+import { Route } from './+types/folder'
 import { DataTable } from '../../../components/dashboard/data-table'
 import {
 	createContentColumns,
@@ -14,24 +22,16 @@ import { useDashboardTableState } from '../../../hooks/use-dashboard-table-state
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
 import {
-	deleteDialogAtom,
-	renameDialogAtom
-} from '../../../lib/stores/dashboard-management-store'
-import {
 	getChildFolders,
 	getFolderScenes,
 	getSceneFolder
 } from '../../../lib/domain/scene/scene-folder-repository.server'
-
-import { Route } from './+types/folder'
 import {
-	Empty,
-	EmptyContent,
-	EmptyDescription,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle
-} from '@shared/components/ui/empty'
+	deleteDialogAtom,
+	renameDialogAtom
+} from '../../../lib/stores/dashboard-management-store'
+
+import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request, params }: Route.LoaderArgs) {
 	const projectId = params.projectId

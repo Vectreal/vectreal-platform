@@ -1,4 +1,5 @@
 import { Accordion } from '@shared/components/ui/accordion'
+import { useAtomValue } from 'jotai'
 import { useMemo, type FC } from 'react'
 
 import {
@@ -10,6 +11,7 @@ import {
 import { OptimizeButton } from './optimize-button'
 import { useOptimizationProcess } from './use-optimization-process'
 import { calculateOptimizationStats } from './utils'
+import { processAtom } from '../../../../lib/stores/publisher-config-store'
 
 const OptimizeSidebarContent: FC = () => {
 	const {
@@ -20,6 +22,8 @@ const OptimizeSidebarContent: FC = () => {
 		handleOptimizeClick,
 		sizeInfo
 	} = useOptimizationProcess()
+
+	const { isSaving } = useAtomValue(processAtom)
 
 	const optimizationStats = useMemo(
 		() => calculateOptimizationStats(info, sizeInfo),
@@ -47,6 +51,7 @@ const OptimizeSidebarContent: FC = () => {
 			</Accordion>
 			<OptimizeButton
 				onOptimize={handleOptimizeClick}
+				disabled={isSaving}
 				isPending={isPending}
 				hasOptimized={hasImproved}
 			/>

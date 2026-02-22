@@ -19,9 +19,10 @@ import { useCallback, useRef, useState, type FC } from 'react'
 import { toast } from 'sonner'
 
 import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
+import { itemVariants } from '../../animation'
+
 import type { PublishSceneResponse } from '../../../../../types/api'
 
-import { itemVariants } from '../../animation'
 
 interface PublishOptionsProps {
 	sceneId?: string

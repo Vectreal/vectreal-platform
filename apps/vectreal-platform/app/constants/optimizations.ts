@@ -1,6 +1,6 @@
+import type { OptimizationPreset } from '../types/scene-optimization'
 import type { Optimizations } from 'packages/core/src/types/scene-types'
 
-import type { OptimizationPreset } from '../types/scene-optimization'
 
 export const lowPreset: Optimizations = {
 	simplification: {

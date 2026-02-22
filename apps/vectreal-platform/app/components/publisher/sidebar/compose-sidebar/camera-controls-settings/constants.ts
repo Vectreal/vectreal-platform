@@ -2,7 +2,6 @@ import {
 	defaultCameraOptions,
 	defaultControlsOptions
 } from '../../../../../constants/viewer-defaults'
-
 import {
 	ValueMapping,
 	valueMappings

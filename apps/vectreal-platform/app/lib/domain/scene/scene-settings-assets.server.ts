@@ -1,14 +1,15 @@
-import type { JSONDocument } from '@gltf-transform/core'
+import {
+	computeAssetHash,
+	type GLTFAssetData
+} from '../asset/asset-storage.server'
 
 import type {
 	ExtendedGLTFDocument,
 	GLTFExportResult,
 	SerializedAsset
 } from '../../../types/api'
-import {
-	computeAssetHash,
-	type GLTFAssetData
-} from '../asset/asset-storage.server'
+import type { JSONDocument } from '@gltf-transform/core'
+
 
 type GltfAssetKind = 'buffer' | 'image'
 

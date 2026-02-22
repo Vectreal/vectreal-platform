@@ -3,6 +3,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useFetcher, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
+import {
+	selectedRowsAtom,
+	type DashboardContentRowSelection
+} from '../lib/stores/dashboard-management-store'
+
 import type {
 	ApiResponse as PlatformApiResponse,
 	ContentMutationAction,
@@ -10,10 +15,6 @@ import type {
 	CreateFolderActionResponse,
 	SceneMutationAction
 } from '../types/api'
-import {
-	selectedRowsAtom,
-	type DashboardContentRowSelection
-} from '../lib/stores/dashboard-management-store'
 
 export interface SceneFolderOption {
 	id: string

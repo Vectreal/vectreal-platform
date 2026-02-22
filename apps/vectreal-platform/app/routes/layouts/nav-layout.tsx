@@ -1,12 +1,11 @@
 import { Outlet, redirect } from 'react-router'
 
+import { Route } from './+types/nav-layout'
 import { Footer } from '../../components/footer'
 import { Navigation } from '../../components/navigation'
 import { createSupabaseClient } from '../../lib/supabase.server'
-
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
-import { Route } from './+types/nav-layout'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	/**

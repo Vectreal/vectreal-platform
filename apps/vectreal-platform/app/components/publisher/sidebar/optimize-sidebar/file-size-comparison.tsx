@@ -1,9 +1,10 @@
 import { formatFileSize } from '@shared/utils'
 import { motion } from 'framer-motion'
 import { ArrowRightIcon } from 'lucide-react'
-import type { FC } from 'react'
 
 import type { SizeInfo } from './use-optimization-process'
+import type { FC } from 'react'
+
 
 interface FileSizeComparisonProps {
 	sizeInfo: SizeInfo

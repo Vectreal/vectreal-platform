@@ -11,7 +11,6 @@ import {
 	DialogHeader,
 	DialogTitle
 } from '@shared/components/ui/dialog'
-
 import { useAtom } from 'jotai'
 import { FilePlus, Image } from 'lucide-react'
 

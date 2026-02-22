@@ -3,9 +3,10 @@ import { ApiResponse } from '@shared/utils'
 import { OptimizationReport, Optimizations } from '@vctrl/core'
 
 import { UUID_REGEX } from '../../../constants/utility-constants'
+import { parseActionRequest } from '../../http/requests.server'
+
 import type { SceneSettingsRequest } from '../../../types/api'
 
-import { parseActionRequest } from '../../http/requests.server'
 
 /**
  * Request parser for scene settings API operations.

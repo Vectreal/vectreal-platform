@@ -1,13 +1,16 @@
 import { randomUUID } from 'crypto'
 import { createHash } from 'node:crypto'
 
-import type { Bucket } from '@google-cloud/storage'
+import { SceneAssetDataMap } from 'apps/vectreal-platform/app/types/api'
 import { and, eq } from 'drizzle-orm'
+
 
 import { getDbClient } from '../../../db/client'
 import { assets, folders } from '../../../db/schema'
 import { createStorage } from '../../gcloud-storage.server'
-import { SceneAssetDataMap } from 'apps/vectreal-platform/app/types/api'
+
+import type { Bucket } from '@google-cloud/storage'
+
 
 export interface AssetUploadResult {
 	assetId: string

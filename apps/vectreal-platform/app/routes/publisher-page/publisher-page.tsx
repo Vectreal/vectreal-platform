@@ -15,6 +15,8 @@ import {
 	type FC
 } from 'react'
 
+import { Route } from './+types/publisher-page'
+import { DropZone } from './drop-zone'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import { processAtom } from '../../lib/stores/publisher-config-store'
 import {
@@ -26,8 +28,6 @@ import {
 } from '../../lib/stores/scene-settings-store'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
-import { Route } from './+types/publisher-page'
-import { DropZone } from './drop-zone'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	return {

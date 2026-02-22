@@ -2,15 +2,15 @@ import { Badge } from '@shared/components/ui/badge'
 import { Building, Building2 } from 'lucide-react'
 import { useMemo } from 'react'
 import { useLoaderData } from 'react-router'
-import type { ShouldRevalidateFunction } from 'react-router'
 
+import { Route } from './+types/organizations'
 import DashboardCard from '../../components/dashboard/dashboard-cards'
 import { OrganizationsSkeleton } from '../../components/skeletons'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import { computeOrganizationStats } from '../../lib/domain/dashboard/dashboard-stats.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 
-import { Route } from './+types/organizations'
+import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	// Auth check (reads from session, very cheap)

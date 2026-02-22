@@ -1,10 +1,10 @@
 import { pgTable, timestamp, uuid } from 'drizzle-orm/pg-core'
 
-import { users } from '../core/users'
 
 import { assets } from './assets'
 import { sceneSettings } from './scene-settings'
 import { scenes } from './scenes'
+import { users } from '../core/users'
 
 export const scenePublished = pgTable('scene_published', {
 	sceneId: uuid('scene_id')

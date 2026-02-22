@@ -12,6 +12,7 @@ import { Eye, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useState } from 'react'
 import { Link, useLoaderData } from 'react-router'
 
+import { Route } from './+types/scene'
 import CenteredSpinner from '../../../components/centered-spinner'
 import BasicCard from '../../../components/layout-components/basic-card'
 import { ClientVectrealViewer } from '../../../components/viewer/client-vectreal-viewer'
@@ -20,7 +21,6 @@ import { getProject } from '../../../lib/domain/project/project-repository.serve
 import { getScene } from '../../../lib/domain/scene/scene-folder-repository.server'
 import { deleteDialogAtom } from '../../../lib/stores/dashboard-management-store'
 
-import { Route } from './+types/scene'
 
 export async function loader({ request, params }: Route.LoaderArgs) {
 	const projectId = params.projectId

@@ -1,5 +1,8 @@
-import type { User } from '@supabase/supabase-js'
-
+import type {
+	OrganizationStats,
+	ProjectStats,
+	SceneStats
+} from './dashboard-stats.server'
 import type {
 	organizationMemberships,
 	organizations,
@@ -7,14 +10,10 @@ import type {
 	sceneFolders,
 	scenes
 } from '../../../db/schema'
-
 import type { UserWithDefaults } from '../user/user-repository.server'
+import type { User } from '@supabase/supabase-js'
 
-import type {
-	OrganizationStats,
-	ProjectStats,
-	SceneStats
-} from './dashboard-stats.server'
+
 
 /**
  * Organization with membership info

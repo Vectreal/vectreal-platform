@@ -8,8 +8,9 @@ const processInitialState: ProcessState = {
 	mode: 'optimize',
 	showSidebar: false,
 	showInfo: false,
-	isLoading: false,
 	isInitializing: false,
+	isLoading: false,
+	isSaving: false,
 	hasUnsavedChanges: false
 }
 const processAtom = atomWithStorage<ProcessState>(

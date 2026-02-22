@@ -1,5 +1,4 @@
 import { Accordion, AccordionContent } from '@shared/components/ui/accordion'
-
 import {
 	CardDescription,
 	CardHeader,
@@ -8,16 +7,16 @@ import {
 import { Separator } from '@shared/components/ui/separator'
 import { motion } from 'framer-motion'
 import { BookMarked, Code, Globe, Save } from 'lucide-react'
-import type { FC } from 'react'
+
 
 import { AccordionItem, AccordionTrigger } from '../accordion-components'
-
 import { sidebarContentVariants } from '../animation'
-
 import { EmbedOptions } from './sections/embed-options'
 import { PublishOptions } from './sections/publish-options'
 import { SaveOptions } from './sections/save-options'
 import { ScenePreview } from './sections/scene-preview'
+
+import type { FC } from 'react'
 
 interface PublishSidebarProps {
 	userId?: string

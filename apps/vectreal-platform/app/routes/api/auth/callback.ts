@@ -1,11 +1,10 @@
 import { ApiResponse } from '@shared/utils'
-
 import { redirect } from 'react-router'
 
+import { Route } from './+types/callback'
 import { initializeUserDefaults } from '../../../lib/domain/user/user-repository.server'
 import { createSupabaseClient } from '../../../lib/supabase.server'
 
-import { Route } from './+types/callback'
 
 export async function loader({ request }: Route.ActionArgs) {
 	const requestUrl = new URL(request.url)

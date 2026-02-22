@@ -36,12 +36,14 @@ import {
 	useNavigate
 } from 'react-router'
 import { z, ZodError } from 'zod'
+
+import { Route } from './+types/projects-new'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
 import { computeProjectCreationCapabilities } from '../../../lib/domain/dashboard/dashboard-stats.server'
-import type { ProjectNewLoaderData } from '../../../lib/domain/dashboard/dashboard-types'
 import { createProject } from '../../../lib/domain/project/project-repository.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
-import { Route } from './+types/projects-new'
+
+import type { ProjectNewLoaderData } from '../../../lib/domain/dashboard/dashboard-types'
 
 const projectFormSchema = z.object({
 	name: z

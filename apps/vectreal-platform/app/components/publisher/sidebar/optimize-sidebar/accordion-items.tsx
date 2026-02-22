@@ -1,20 +1,20 @@
 import { AccordionContent } from '@shared/components/ui/accordion'
-import type { OptimizationReport } from '@vctrl/core'
 import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
+import { AnimatePresence, motion } from 'framer-motion'
 import { FileIcon, Settings2, Star } from 'lucide-react'
-import type { FC } from 'react'
 
 import { AccordionItem, AccordionTrigger } from '../accordion-components'
-
 import { AdvancedPanel } from './advanced-optimization-panel'
 import BasicOptimizationPanel from './basic-optimization-panel'
 import { OptimizationStats } from './optimization-stats'
 import { OptimizationStatsHeader } from './optimization-stats-header'
 import SceneDetails from './scene-details'
-import type { SizeInfo } from './use-optimization-process'
 import { OptimizationStat } from './utils'
-import { AnimatePresence, motion } from 'framer-motion'
 import CenteredSpinner from '../../../centered-spinner'
+
+import type { SizeInfo } from './use-optimization-process'
+import type { OptimizationReport } from '@vctrl/core'
+import type { FC } from 'react'
 
 interface AccordionItemsProps {
 	info: OptimizationInfo

@@ -8,7 +8,6 @@ import type {
 	ProjectLoaderData,
 	SceneLoaderData
 } from '../lib/domain/dashboard/dashboard-types'
-
 import type { ReactNode } from 'react'
 
 export enum ACTION_VARIANT {

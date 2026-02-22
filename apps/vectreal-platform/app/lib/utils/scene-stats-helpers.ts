@@ -1,6 +1,6 @@
+import type { sceneStats, SceneStatsSnapshot } from '../../db/schema'
 import type { OptimizationReport, Optimizations } from '@vctrl/core'
 
-import type { sceneStats, SceneStatsSnapshot } from '../../db/schema'
 
 /**
  * Helper type for inserting scene statistics.

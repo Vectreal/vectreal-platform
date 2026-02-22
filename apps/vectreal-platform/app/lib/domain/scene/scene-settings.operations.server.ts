@@ -2,17 +2,18 @@ import { randomUUID } from 'crypto'
 
 import { ApiResponse } from '@shared/utils'
 
-import type {
-	SceneSettingsData,
-	SceneSettingsRequest
-} from '../../../types/api'
-
+import { sceneSettingsService } from './scene-settings-service.server'
 import {
 	getOrCreateDefaultProject,
 	userExists
 } from '../user/user-repository.server'
 
-import { sceneSettingsService } from './scene-settings-service.server'
+import type {
+	SceneSettingsData,
+	SceneSettingsRequest
+} from '../../../types/api'
+
+
 
 type SaveSceneSettingsRequest = SceneSettingsRequest & {
 	settings: SceneSettingsData

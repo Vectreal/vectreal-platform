@@ -1,10 +1,3 @@
-import type {
-	DedupOptimization,
-	NormalsOptimization,
-	QuantizeOptimization,
-	SimplificationOptimization,
-	TextureOptimization
-} from '@vctrl/core'
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue } from 'jotai'
@@ -14,6 +7,14 @@ import {
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../../../lib/stores/scene-optimization-store'
+
+import type {
+	DedupOptimization,
+	NormalsOptimization,
+	QuantizeOptimization,
+	SimplificationOptimization,
+	TextureOptimization
+} from '@vctrl/core'
 
 export type SizeInfo = {
 	initialSceneBytes?: number | null

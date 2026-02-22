@@ -7,20 +7,20 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
-import type { ShadowsProps, ShadowTypePropBase } from '@vctrl/core'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom } from 'jotai'
-
-import { InfoTooltip } from '../../../../../components/info-tooltip'
-import { defaultAccumulativeShadowsOptions } from '../../../../../constants/viewer-defaults'
-import { shadowsAtom } from '../../../../../lib/stores/scene-settings-store'
-import { EnhancedSettingSlider } from '../../../settings-components'
 
 import {
 	ACCUMULATIVE_FIELDS,
 	ACCUMULATIVE_LIGHT_FIELDS,
 	CONTACT_FIELDS
 } from './constants'
+import { InfoTooltip } from '../../../../../components/info-tooltip'
+import { defaultAccumulativeShadowsOptions } from '../../../../../constants/viewer-defaults'
+import { shadowsAtom } from '../../../../../lib/stores/scene-settings-store'
+import { EnhancedSettingSlider } from '../../../settings-components'
+
+import type { ShadowsProps, ShadowTypePropBase } from '@vctrl/core'
 
 const variants = {
 	initial: { opacity: 0, y: 24 },

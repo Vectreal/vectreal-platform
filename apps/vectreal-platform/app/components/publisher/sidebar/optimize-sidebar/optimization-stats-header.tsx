@@ -1,9 +1,10 @@
 import { CardTitle } from '@shared/components/ui/card'
 import { cn, formatFileSize } from '@shared/utils'
 import { motion } from 'framer-motion'
-import type { FC } from 'react'
 
 import type { SizeInfo } from './use-optimization-process'
+import type { FC } from 'react'
+
 
 interface OptimizationStatsHeaderProps {
 	hasImproved: boolean

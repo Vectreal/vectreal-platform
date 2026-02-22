@@ -11,9 +11,9 @@ import { Eye, EyeClosed } from 'lucide-react'
 import { useState } from 'react'
 import { Form, redirect } from 'react-router'
 
+import { Route } from './+types/signin-page'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
-import { Route } from './+types/signin-page'
 
 interface UserInput {
 	email: string

@@ -1,9 +1,9 @@
 import { type EmailOtpType } from '@supabase/supabase-js'
 import { redirect } from 'react-router'
 
+import { Route } from './+types/confirm'
 import { createSupabaseClient } from '../../../lib/supabase.server'
 
-import { Route } from './+types/confirm'
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
 	const { searchParams } = new URL(request.url)

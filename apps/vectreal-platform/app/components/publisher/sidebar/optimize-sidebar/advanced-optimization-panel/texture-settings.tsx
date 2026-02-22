@@ -14,13 +14,15 @@ import {
 	TooltipTrigger
 } from '@shared/components/ui/tooltip'
 import { cn } from '@shared/utils'
-import type { TextureOptimization } from '@vctrl/core'
 import { useAtom } from 'jotai'
 import { Info } from 'lucide-react'
-import type { FC } from 'react'
+
 
 import { SettingSlider } from '../../../../../components'
 import { optimizationAtom } from '../../../../../lib/stores/scene-optimization-store'
+
+import type { TextureOptimization } from '@vctrl/core'
+import type { FC } from 'react'
 
 const textureSize = [
 	{ value: 256, label: '256×256' },

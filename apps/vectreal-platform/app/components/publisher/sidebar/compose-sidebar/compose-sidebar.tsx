@@ -3,7 +3,6 @@ import { Camera, MountainSnow, Tornado } from 'lucide-react'
 import { memo, useMemo } from 'react'
 
 import { AccordionItem, AccordionTrigger } from '../accordion-components'
-
 import { CameraControlsSettings } from './camera-controls-settings'
 import { EnvironmentSettings } from './environment-settings'
 import { ShadowSettings } from './shadow-settings'

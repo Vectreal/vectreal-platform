@@ -5,7 +5,8 @@ export interface ProcessState {
 	mode: SidebarMode
 	showSidebar: boolean
 	showInfo: boolean
-	isLoading: boolean
 	isInitializing: boolean
+	isLoading: boolean
+	isSaving: boolean
 	hasUnsavedChanges: boolean
 }

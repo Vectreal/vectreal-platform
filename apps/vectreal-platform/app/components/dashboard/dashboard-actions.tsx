@@ -15,8 +15,8 @@ import { Edit, Folder, FolderOpen, MoreVertical, Plus } from 'lucide-react'
 import { memo } from 'react'
 import { Link, useParams } from 'react-router'
 
-import { ACTION_VARIANT } from '../../types/dashboard'
 import { createFolderDialogAtom } from '../../lib/stores/dashboard-management-store'
+import { ACTION_VARIANT } from '../../types/dashboard'
 
 // Types
 interface DashboardActionsProps {

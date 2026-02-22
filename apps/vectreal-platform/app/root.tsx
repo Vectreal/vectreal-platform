@@ -1,6 +1,5 @@
 import { Toaster } from '@shared/components/ui/sonner'
 import { cn } from '@shared/utils'
-import type { ReactNode } from 'react'
 import {
 	data,
 	Links,
@@ -12,14 +11,15 @@ import {
 	ScrollRestoration,
 	useRouteError
 } from 'react-router'
-import type { ShouldRevalidateFunction } from 'react-router'
 import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/root'
 import { GlobalNavigationLoader } from './components/global-navigation-loader'
 import { csrfSession } from './lib/sessions/csrf-session.server'
-
 import styles from './styles/global.module.css'
+
+import type { ReactNode } from 'react'
+import type { ShouldRevalidateFunction } from 'react-router'
 import '@shared/components/styles/globals.css'
 
 export const meta: MetaFunction = () => [

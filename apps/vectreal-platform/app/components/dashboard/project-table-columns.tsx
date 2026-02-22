@@ -10,11 +10,12 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger
 } from '@shared/components/ui/dropdown-menu'
-import type { ColumnDef } from '@tanstack/react-table'
 import { Ellipsis, File, FilePenLine, FolderOpen, Trash2 } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { createCheckboxColumn, SortableHeader } from './data-table'
+
+import type { ColumnDef } from '@tanstack/react-table'
 
 /**
  * Project table columns

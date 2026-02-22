@@ -1,9 +1,9 @@
 import { formatFileSize } from '@shared/utils'
-import type { OptimizationReport } from '@vctrl/core'
 import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { Box, Grid, LayersIcon, Shapes } from 'lucide-react'
 
 import type { SizeInfo } from './use-optimization-process'
+import type { OptimizationReport } from '@vctrl/core'
 
 interface SceneDetailsProps {
 	info: OptimizationInfo

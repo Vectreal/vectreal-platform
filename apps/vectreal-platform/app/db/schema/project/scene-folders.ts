@@ -6,9 +6,9 @@ import {
 	uuid
 } from 'drizzle-orm/pg-core'
 
+import { projects } from './projects'
 import { users } from '../core/users'
 
-import { projects } from './projects'
 
 export const sceneFolders = pgTable('scene_folders', {
 	id: uuid('id').primaryKey().defaultRandom(),

@@ -1,10 +1,9 @@
 import { ApiResponse } from '@shared/utils'
-
 import { redirect } from 'react-router'
 
+import { Route } from './+types/social-signin'
 import { createSupabaseClient } from '../../../lib/supabase.server'
 
-import { Route } from './+types/social-signin'
 
 export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData()

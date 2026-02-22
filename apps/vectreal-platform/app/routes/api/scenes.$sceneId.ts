@@ -1,8 +1,7 @@
 import { ApiResponse } from '@shared/utils'
 import { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router'
 
-import * as sceneSettingsOps from '../../lib/domain/scene/scene-settings.operations.server'
-import { SceneSettingsParser } from '../../lib/domain/scene/scene-settings.parser.server'
+import { buildSceneAggregate } from '../../lib/domain/scene/scene-aggregate.server'
 import {
 	createSceneFolder,
 	deleteSceneFolder,
@@ -11,9 +10,11 @@ import {
 	renameSceneFolder,
 	renameScene
 } from '../../lib/domain/scene/scene-folder-repository.server'
-import { buildSceneAggregate } from '../../lib/domain/scene/scene-aggregate.server'
+import * as sceneSettingsOps from '../../lib/domain/scene/scene-settings.operations.server'
+import { SceneSettingsParser } from '../../lib/domain/scene/scene-settings.parser.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 import { ensurePost, parseActionRequest } from '../../lib/http/requests.server'
+
 import type {
 	ContentActionResponse,
 	ContentActionResult,

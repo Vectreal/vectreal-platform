@@ -17,12 +17,11 @@ import { motion } from 'framer-motion'
 import { AnimatePresence } from 'framer-motion'
 import { AlertCircle, Eye, EyeClosed } from 'lucide-react'
 import { useState } from 'react'
-
 import { data, Form, redirect } from 'react-router'
 
+import { Route } from './+types/signup-page'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
-import { Route } from './+types/signup-page'
 
 /**
  * User input fields for signup form.

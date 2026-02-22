@@ -6,11 +6,10 @@
 
 import { memo } from 'react'
 
+import { DashboardActions } from './dashboard-actions'
 import { useDashboardHeaderData } from '../../hooks/use-dashboard-content'
-
 import { ACTION_VARIANT } from '../../types/dashboard'
 
-import { DashboardActions } from './dashboard-actions'
 
 /**
  * DashboardHeader component renders the main page header

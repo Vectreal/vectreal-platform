@@ -1,5 +1,4 @@
 import { defaultShadowOptions } from '../../../../../constants/viewer-defaults'
-
 import { ValueMapping } from '../../../../../lib/utils/value-mapping'
 import { valueMappings } from '../../../../../lib/utils/value-mapping'
 

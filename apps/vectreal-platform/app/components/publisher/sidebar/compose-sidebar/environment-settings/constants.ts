@@ -1,5 +1,4 @@
 import { defaultEnvOptions } from '../../../../../constants/viewer-defaults'
-
 import {
 	ValueMapping,
 	valueMappings

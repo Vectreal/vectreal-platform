@@ -1,18 +1,8 @@
-import type {
-	OptimizationReport,
-	Optimizations,
-	SceneSettings
-} from '@vctrl/core'
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import {
 	reconstructGltfFiles,
 	useModelContext
 } from '@vctrl/hooks/use-load-model'
-import type {
-	EventHandler,
-	ModelFile,
-	ServerSceneData
-} from '@vctrl/hooks/use-load-model/types'
 import { useAtom, useAtomValue } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRevalidator } from 'react-router'
@@ -38,8 +28,19 @@ import {
 	metaAtom,
 	shadowsAtom
 } from '../lib/stores/scene-settings-store'
-import type { SceneAggregateResponse, SceneStatsData } from '../types/api'
 import { OptimizationPreset } from '../types/scene-optimization'
+
+import type { SceneAggregateResponse, SceneStatsData } from '../types/api'
+import type {
+	OptimizationReport,
+	Optimizations,
+	SceneSettings
+} from '@vctrl/core'
+import type {
+	EventHandler,
+	ModelFile,
+	ServerSceneData
+} from '@vctrl/hooks/use-load-model/types'
 
 export interface UseSceneLoaderParams {
 	sceneId: null | string

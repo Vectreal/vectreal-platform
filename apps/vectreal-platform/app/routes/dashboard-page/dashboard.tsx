@@ -9,6 +9,7 @@ import {
 import { File, FolderOpen, Plus } from 'lucide-react'
 import { Link, useRouteLoaderData } from 'react-router'
 
+import { Route } from './+types/dashboard'
 import DashboardCard from '../../components/dashboard/dashboard-cards'
 import { DataTable } from '../../components/dashboard/data-table'
 import {
@@ -18,6 +19,7 @@ import {
 	type SceneRow
 } from '../../components/dashboard/project-table-columns'
 import { DashboardSkeleton } from '../../components/skeletons'
+import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import {
 	computeProjectStats,
@@ -27,11 +29,10 @@ import {
 } from '../../lib/domain/dashboard/dashboard-stats.server'
 import { getUserProjects } from '../../lib/domain/project/project-repository.server'
 import { getProjectsScenes } from '../../lib/domain/scene/scene-folder-repository.server'
-import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
+
 import type { loader as dashboardLayoutLoader } from '../layouts/dashboard-layout'
 import type { ShouldRevalidateFunction } from 'react-router'
 
-import { Route } from './+types/dashboard'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	// Auth check (reads from session, very cheap)

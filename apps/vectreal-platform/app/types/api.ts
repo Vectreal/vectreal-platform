@@ -1,3 +1,6 @@
+import { assets, sceneSettings } from '../db/schema'
+
+import type { ProcessState } from './publisher-config'
 import type { JSONDocument } from '@gltf-transform/core'
 import type { User } from '@supabase/supabase-js'
 import type {
@@ -12,8 +15,6 @@ import type {
 	ShadowsProps
 } from '@vctrl/core'
 
-import type { ProcessState } from './publisher-config'
-import { assets, sceneSettings } from '../db/schema'
 
 // Re-export core types for convenience
 export type { SceneMeta, SceneSettings, SerializedAsset }

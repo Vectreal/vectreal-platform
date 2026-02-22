@@ -215,6 +215,7 @@ export function DataTable<TData, TValue>({
 									{row.getVisibleCells().map((cell) => (
 										<TableCell
 											key={cell.id}
+											title={String(cell.getValue())}
 											className="[&>a,&>span]:max-w-sm [&>a,&>span]:truncate!"
 										>
 											{flexRender(

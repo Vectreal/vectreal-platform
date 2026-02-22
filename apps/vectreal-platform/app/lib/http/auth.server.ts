@@ -1,7 +1,8 @@
 import { ApiResponse } from '@shared/utils'
 
-import type { ApiUserContext } from '../../types/api'
 import { createSupabaseClient } from '../supabase.server'
+
+import type { ApiUserContext } from '../../types/api'
 
 export async function getAuthUser(
 	request: Request

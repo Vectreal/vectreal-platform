@@ -3,11 +3,11 @@ import { useIsMobile } from '@shared/components/hooks/use-mobile'
 import { Button } from '@shared/components/ui/button'
 import { CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
-
 import { AnimatePresence, motion } from 'framer-motion'
 import { Check, Globe, Sparkle, Wrench } from 'lucide-react'
 import { Link } from 'react-router'
 
+import { Route } from './+types/home-page'
 import screenshotPublisher from '../../assets/images/publisher-optimize-2181px.webp'
 import FiletypeCarousel from '../../components/home/filetype-carousel'
 import GridBg from '../../components/home/grid-bg'
@@ -18,7 +18,6 @@ import BasicCard from '../../components/layout-components/basic-card'
 import Section from '../../components/layout-components/section'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
-import { Route } from './+types/home-page'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const isMobile = isMobileRequest(request)

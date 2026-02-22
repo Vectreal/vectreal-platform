@@ -3,9 +3,9 @@ import { Button } from '@shared/components/ui/button'
 import { CardContent, CardTitle } from '@shared/components/ui/card'
 import { Star } from 'lucide-react'
 
+import ProductScene from './product-scene'
 import { BasicCard } from '../../components'
 
-import ProductScene from './product-scene'
 
 const MockShopSection = () => {
 	return (

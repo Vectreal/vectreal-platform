@@ -1,8 +1,9 @@
 import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { Eye, Grid, Image, Layers, Settings2, Zap } from 'lucide-react'
-import type { ComponentType } from 'react'
 
 import type { SizeInfo } from './use-optimization-process'
+import type { ComponentType } from 'react'
+
 
 export type OptimizationStat = {
 	name: 'vertices' | 'primitives' | 'mesh' | 'texture' | 'scene'

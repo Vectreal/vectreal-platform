@@ -1,11 +1,13 @@
 import { useAtom } from 'jotai'
-import type { FC } from 'react'
 
-import { optimizationAtom } from '../../../../../lib/stores/scene-optimization-store'
-import { SettingToggle } from '../../../settings-components'
 
 import { SimplificationSettings } from './simplification-settings'
 import { TextureSettings } from './texture-settings'
+import { optimizationAtom } from '../../../../../lib/stores/scene-optimization-store'
+import { SettingToggle } from '../../../settings-components'
+
+
+import type { FC } from 'react'
 
 const descriptions = {
 	quantize: 'Reduces color precision to lower file size',

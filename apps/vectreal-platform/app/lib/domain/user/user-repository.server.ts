@@ -1,4 +1,3 @@
-import type { User } from '@supabase/supabase-js'
 
 import { and, eq } from 'drizzle-orm'
 
@@ -7,6 +6,8 @@ import { organizationMemberships } from '../../../db/schema/core/organization-me
 import { organizations } from '../../../db/schema/core/organizations'
 import { users } from '../../../db/schema/core/users'
 import { projects } from '../../../db/schema/project/projects'
+
+import type { User } from '@supabase/supabase-js'
 
 export interface CreateUserParams {
 	readonly id: string

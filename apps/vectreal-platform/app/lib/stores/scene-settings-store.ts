@@ -1,11 +1,3 @@
-import type {
-	BoundsProps,
-	CameraProps,
-	ControlsProps,
-	EnvironmentProps,
-	SceneMeta,
-	ShadowsProps
-} from '@vctrl/core'
 import { atom, createStore } from 'jotai'
 import { atomWithReset } from 'jotai/utils'
 
@@ -16,6 +8,15 @@ import {
 	defaultEnvOptions,
 	defaultShadowOptions
 } from '../../constants/viewer-defaults'
+
+import type {
+	BoundsProps,
+	CameraProps,
+	ControlsProps,
+	EnvironmentProps,
+	SceneMeta,
+	ShadowsProps
+} from '@vctrl/core'
 
 const sceneSettingsStore = createStore()
 

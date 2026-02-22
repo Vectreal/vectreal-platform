@@ -8,8 +8,8 @@ import { useSetAtom } from 'jotai/react'
 import { FolderSearch } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
 import { Outlet, useLoaderData, useLocation } from 'react-router'
-import type { ShouldRevalidateFunction } from 'react-router'
 
+import { Route } from './+types/project'
 import { DataTable } from '../../../components/dashboard/data-table'
 import {
 	createContentColumns,
@@ -21,15 +21,15 @@ import { useDashboardTableState } from '../../../hooks/use-dashboard-table-state
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
 import {
-	deleteDialogAtom,
-	renameDialogAtom
-} from '../../../lib/stores/dashboard-management-store'
-import {
 	getRootSceneFolders,
 	getRootScenes
 } from '../../../lib/domain/scene/scene-folder-repository.server'
+import {
+	deleteDialogAtom,
+	renameDialogAtom
+} from '../../../lib/stores/dashboard-management-store'
 
-import { Route } from './+types/project'
+import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request, params }: Route.LoaderArgs) {
 	const projectId = params.projectId

@@ -8,9 +8,9 @@ import {
 	uuid
 } from 'drizzle-orm/pg-core'
 
+import { scenes } from './scenes'
 import { users } from '../core/users'
 
-import { scenes } from './scenes'
 
 export type SceneStatsSnapshot = {
 	verticesCount?: number

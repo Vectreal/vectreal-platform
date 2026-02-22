@@ -1,6 +1,6 @@
+import type { loader } from '../root'
 import type { MetaArgs, MetaDescriptor } from 'react-router'
 
-import type { loader } from '../root'
 
 export interface BuildMetaOptions {
 	private?: boolean

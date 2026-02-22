@@ -1,10 +1,11 @@
-import type { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
-import type { FC } from 'react'
 
 import { FileSizeComparison } from './file-size-comparison'
 import { OptimizationSummary } from './optimization-summary'
-import type { SizeInfo } from './use-optimization-process'
 import { OptimizationStat } from './utils'
+
+import type { SizeInfo } from './use-optimization-process'
+import type { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
+import type { FC } from 'react'
 
 interface OptimizationStatsProps {
 	info: OptimizationInfo

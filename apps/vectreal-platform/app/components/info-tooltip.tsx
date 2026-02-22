@@ -5,6 +5,7 @@ import {
 	TooltipTrigger
 } from '@shared/components/ui/tooltip'
 import { Info } from 'lucide-react'
+
 import type { ReactNode } from 'react'
 
 /**

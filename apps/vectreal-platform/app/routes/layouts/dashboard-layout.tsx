@@ -12,7 +12,9 @@ import {
 	useNavigation,
 	useParams
 } from 'react-router'
-import type { ShouldRevalidateFunction } from 'react-router'
+
+import { Route } from './+types/dashboard-layout'
+import CenteredSpinner from '../../components/centered-spinner'
 import {
 	DashboardHeader,
 	DashboardManagementDialogs,
@@ -32,8 +34,7 @@ import { getUserProjects } from '../../lib/domain/project/project-repository.ser
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 import { dashboardManagementStore } from '../../lib/stores/dashboard-management-store'
 
-import { Route } from './+types/dashboard-layout'
-import CenteredSpinner from '../../components/centered-spinner'
+import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	// Fetch core dashboard data once - shared by all child routes

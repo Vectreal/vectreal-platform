@@ -6,9 +6,9 @@ import {
 } from '@vctrl/core'
 import { json, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core'
 
+import { scenes } from './scenes'
 import { users } from '../core/users'
 
-import { scenes } from './scenes'
 
 export const sceneSettings = pgTable('scene_settings', {
 	id: uuid('id').primaryKey().defaultRandom(),

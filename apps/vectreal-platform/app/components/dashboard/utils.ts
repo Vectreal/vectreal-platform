@@ -3,7 +3,6 @@
  * @description Utility functions for parsing and validating dashboard routes
  */
 
-import type { UIMatch } from 'react-router'
 
 import { DASHBOARD_CONTENT } from '../../constants/dashboard'
 import { UUID_REGEX } from '../../constants/utility-constants'
@@ -15,6 +14,7 @@ import type {
 	RouteParams,
 	TitleContent
 } from '../../types/dashboard'
+import type { UIMatch } from 'react-router'
 
 /**
  * Parses the current location pathname into structured route parameters

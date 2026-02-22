@@ -1,4 +1,3 @@
-import type { User } from '@supabase/supabase-js'
 import { redirect } from 'react-router'
 
 import { getAuthUser } from '../../http/auth.server'
@@ -6,6 +5,8 @@ import {
 	initializeUserDefaults,
 	type UserWithDefaults
 } from '../user/user-repository.server'
+
+import type { User } from '@supabase/supabase-js'
 
 export interface AuthLoaderResult {
 	user: User

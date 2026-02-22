@@ -2,10 +2,10 @@ import { cn } from '@shared/utils'
 import { type MetaFunction, Outlet } from 'react-router'
 
 import { buildMeta, getRootMeta } from '../../lib/seo'
+import styles from '../../styles/mdx.module.css'
 
 import type { RootLoader } from '../../root'
 
-import styles from '../../styles/mdx.module.css'
 
 export const meta: MetaFunction<undefined, { root: RootLoader }> = (
 	rootLoaderData

@@ -2,6 +2,7 @@ import { atomWithReset } from 'jotai/utils'
 import { createStore } from 'jotai/vanilla'
 
 import { mediumPreset } from '../../constants/optimizations'
+
 import type {
 	OptimizationState,
 	SceneOptimizationRuntimeState

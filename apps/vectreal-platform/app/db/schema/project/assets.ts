@@ -9,9 +9,9 @@ import {
 	varchar
 } from 'drizzle-orm/pg-core'
 
+import { folders } from './folders'
 import { users } from '../core/users'
 
-import { folders } from './folders'
 
 export const assetTypeEnum = pgEnum('asset_type', [
 	'texture',

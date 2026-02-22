@@ -1,5 +1,6 @@
-import type { VectrealViewerProps } from '@vctrl/viewer'
 import { type ComponentType, useEffect, useState } from 'react'
+
+import type { VectrealViewerProps } from '@vctrl/viewer'
 
 interface ClientVectrealViewerProps extends VectrealViewerProps {
 	fallback?: React.ReactNode

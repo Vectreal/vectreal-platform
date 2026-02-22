@@ -1,7 +1,4 @@
 import { eq } from 'drizzle-orm'
-import type { ExtractTablesWithRelations } from 'drizzle-orm'
-import type { PgTransaction } from 'drizzle-orm/pg-core'
-import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js'
 
 import * as dbSchema from '../../../db/schema'
 import { assets, sceneAssets, sceneSettings } from '../../../db/schema'
@@ -9,6 +6,11 @@ import {
 	SceneSettingsUpsertInput,
 	SceneSettingsWithAssets
 } from '../../../types/api'
+
+import type { ExtractTablesWithRelations } from 'drizzle-orm'
+import type { PgTransaction } from 'drizzle-orm/pg-core'
+import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js'
+
 
 export type SceneSettingsTransaction = PgTransaction<
 	PostgresJsQueryResultHKT,

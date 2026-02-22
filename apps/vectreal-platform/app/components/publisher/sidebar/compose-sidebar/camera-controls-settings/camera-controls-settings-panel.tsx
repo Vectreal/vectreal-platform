@@ -1,6 +1,13 @@
 import { useAtom } from 'jotai'
 import { memo, useCallback } from 'react'
 
+import {
+	CAMERA_CONTROLS_FIELDS,
+	CAMERA_FIELDS,
+	defaultCameraOptions,
+	defaultControlsOptions,
+	type FieldConfig
+} from './constants'
 import { InfoTooltip } from '../../../../../components/info-tooltip'
 import {
 	cameraAtom,
@@ -11,13 +18,6 @@ import {
 	SettingToggle
 } from '../../../settings-components'
 
-import {
-	CAMERA_CONTROLS_FIELDS,
-	CAMERA_FIELDS,
-	defaultCameraOptions,
-	defaultControlsOptions,
-	type FieldConfig
-} from './constants'
 
 /**
  * Memoized component for rendering a single control field slider

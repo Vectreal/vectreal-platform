@@ -1,12 +1,16 @@
 // import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { cn } from '@shared/utils'
+import { useAtom, useAtomValue } from 'jotai'
 import { SaveIcon } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
-import type { SaveAvailabilityState } from '../../../hooks/use-scene-loader'
+import { processAtom } from '../../../lib/stores/publisher-config-store'
+import { optimizationRuntimeAtom } from '../../../lib/stores/scene-optimization-store'
 import { TooltipButton } from '../../tooltip-button'
+
+import type { SaveAvailabilityState } from '../../../hooks/use-scene-loader'
 
 interface SaveSceneResult {
 	sceneId?: string
@@ -33,12 +37,16 @@ const SaveButton = ({
 	hasUnsavedChanges,
 	saveAvailability
 }: SaveButtonProps) => {
-	const [isSaveLoading, setIsSaveLoading] = useState(false)
+	const [{ isSaving }, setProcessState] = useAtom(processAtom)
+	const { isPending: isOptimizationPending } = useAtomValue(
+		optimizationRuntimeAtom
+	)
 	const navigate = useNavigate()
 
-	const isDisabled = isSaveLoading || !saveAvailability.canSave
+	const isDisabled =
+		isSaving || isOptimizationPending || !saveAvailability.canSave
 
-	const statusText = isSaveLoading
+	const statusText = isSaving
 		? 'Saving scene...'
 		: saveAvailability.reason === 'requires-first-optimization'
 			? 'Apply at least one optimization to enable saving.'
@@ -48,7 +56,7 @@ const SaveButton = ({
 					? 'No changes to save'
 					: 'Click to save scene'
 
-	const displayStateText = isSaveLoading
+	const displayStateText = isSaving
 		? 'Saving...'
 		: saveAvailability.reason === 'requires-first-optimization'
 			? 'Not optimized yet'
@@ -56,7 +64,7 @@ const SaveButton = ({
 				? 'Saved'
 				: 'Unsaved'
 
-	const statusToneClass = isSaveLoading
+	const statusToneClass = isSaving
 		? 'text-orange-500'
 		: saveAvailability.reason === 'requires-first-optimization'
 			? 'text-yellow-500'
@@ -64,7 +72,7 @@ const SaveButton = ({
 				? 'text-green-300'
 				: 'text-yellow-500'
 
-	const statusDotClass = isSaveLoading
+	const statusDotClass = isSaving
 		? 'animate-pulse bg-orange-400 after:bg-orange-400'
 		: saveAvailability.reason === 'requires-first-optimization'
 			? 'bg-yellow-400 after:bg-yellow-500'
@@ -79,7 +87,7 @@ const SaveButton = ({
 			return
 		}
 
-		setIsSaveLoading(true)
+		setProcessState((prev) => ({ ...prev, isSaving: true }))
 
 		try {
 			const result = await saveSceneSettings() // Asset IDs are now handled automatically by the API
@@ -131,7 +139,7 @@ const SaveButton = ({
 				toast.error(`Failed to save: ${errorMessage}`)
 			}
 		} finally {
-			setIsSaveLoading(false)
+			setProcessState((prev) => ({ ...prev, isSaving: false }))
 		}
 	}, [saveSceneSettings, userId, sceneId, navigate])
 

@@ -5,7 +5,7 @@ import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
 import { Provider, useAtom, useAtomValue } from 'jotai/react'
 import { useCallback } from 'react'
 import { Outlet } from 'react-router'
-import type { ShouldRevalidateFunction } from 'react-router'
+
 
 import { Navigation } from '../../components/navigation'
 import {
@@ -15,19 +15,19 @@ import {
 	Stepper
 } from '../../components/publisher'
 import { useSceneLoader } from '../../hooks'
+import { Route } from './+types/publisher-layout'
+import { buildSceneAggregate } from '../../lib/domain/scene/scene-aggregate.server'
+import { getScene } from '../../lib/domain/scene/scene-folder-repository.server'
 import {
 	processAtom,
 	publisherConfigStore
 } from '../../lib/stores/publisher-config-store'
 import { sceneOptimizationStore } from '../../lib/stores/scene-optimization-store'
-import { buildSceneAggregate } from '../../lib/domain/scene/scene-aggregate.server'
-import { getScene } from '../../lib/domain/scene/scene-folder-repository.server'
-
 import { sceneSettingsStore } from '../../lib/stores/scene-settings-store'
 import { createSupabaseClient } from '../../lib/supabase.server'
-import type { SceneAggregateResponse } from '../../types/api'
 
-import { Route } from './+types/publisher-layout'
+import type { SceneAggregateResponse } from '../../types/api'
+import type { ShouldRevalidateFunction } from 'react-router'
 
 export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	const { client } = await createSupabaseClient(request)

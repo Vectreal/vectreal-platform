@@ -22,7 +22,6 @@ import {
 	SidebarMenuItem,
 	SidebarRail
 } from '@shared/components/ui/sidebar'
-import type { User } from '@supabase/supabase-js'
 import {
 	ArrowRight,
 	Building,
@@ -33,6 +32,8 @@ import {
 	Settings
 } from 'lucide-react'
 import { Link, useFetcher } from 'react-router'
+
+import type { User } from '@supabase/supabase-js'
 
 // Menu items
 const manageLinks = [

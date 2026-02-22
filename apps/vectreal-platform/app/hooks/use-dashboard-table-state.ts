@@ -1,11 +1,12 @@
+import { useCallback, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
+
 import type {
 	PaginationState,
 	RowSelectionState,
 	SortingState,
 	Updater
 } from '@tanstack/react-table'
-import { useCallback, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router'
 
 interface UseDashboardTableStateOptions {
 	namespace: string

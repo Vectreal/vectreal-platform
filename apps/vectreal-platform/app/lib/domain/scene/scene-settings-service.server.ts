@@ -1,7 +1,24 @@
 import { JSONDocument } from '@gltf-transform/core'
-import type { OptimizationReport, Optimizations } from '@vctrl/core'
 import { and, eq, inArray } from 'drizzle-orm'
 
+import {
+	buildExtendedGltfDocument,
+	buildGltfJsonAsset,
+	compareAssetHashes,
+	compareAssetIds,
+	computeAssetHashes,
+	extractAssetIdsFromGltf,
+	extractGltfAssets,
+	isGltfExportResult
+} from './scene-settings-assets.server'
+import {
+	getSceneAssetIds,
+	getSceneSettingsBySceneId,
+	getSceneSettingsWithAssetsRow,
+	replaceSceneAssets,
+	type SceneSettingsTransaction,
+	upsertSceneSettings
+} from './scene-settings-repository.server'
 import { getDbClient } from '../../../db/client'
 import {
 	assets,
@@ -22,31 +39,14 @@ import {
 	SceneSettingsData,
 	UpdateSceneSettingsParams
 } from '../../../types/api'
-
 import { createSceneStatsFromReport } from '../../utils/scene-stats-helpers'
 import {
 	downloadAssets,
 	uploadSceneAssets
 } from '../asset/asset-storage.server'
 
-import {
-	buildExtendedGltfDocument,
-	buildGltfJsonAsset,
-	compareAssetHashes,
-	compareAssetIds,
-	computeAssetHashes,
-	extractAssetIdsFromGltf,
-	extractGltfAssets,
-	isGltfExportResult
-} from './scene-settings-assets.server'
-import {
-	getSceneAssetIds,
-	getSceneSettingsBySceneId,
-	getSceneSettingsWithAssetsRow,
-	replaceSceneAssets,
-	type SceneSettingsTransaction,
-	upsertSceneSettings
-} from './scene-settings-repository.server'
+
+import type { OptimizationReport, Optimizations } from '@vctrl/core'
 
 /**
  * Data service for scene settings operations.
