@@ -8,7 +8,7 @@ import { useSetAtom } from 'jotai/react'
 import { FolderSearch } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
 import { Outlet, useLoaderData, useLocation } from 'react-router'
-import { toast } from 'sonner'
+import type { ShouldRevalidateFunction } from 'react-router'
 
 import { DataTable } from '../../../components/dashboard/data-table'
 import {
@@ -63,6 +63,28 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	}
 }
 
+export const shouldRevalidate: ShouldRevalidateFunction = ({
+	currentUrl,
+	nextUrl,
+	formMethod,
+	actionResult,
+	defaultShouldRevalidate
+}) => {
+	if (formMethod && formMethod !== 'GET') {
+		return true
+	}
+
+	if (actionResult) {
+		return true
+	}
+
+	if (currentUrl.pathname === nextUrl.pathname) {
+		return false
+	}
+
+	return defaultShouldRevalidate
+}
+
 export function HydrateFallback() {
 	return <ProjectContentSkeleton />
 }
@@ -72,18 +94,23 @@ export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/err
 const ProjectPage = () => {
 	const location = useLocation()
 	const { project, folders, scenes } = useLoaderData<typeof loader>()
-	const { setSelectedRows } = useDashboardSceneActions()
+	const { setSelectedRows, isTableBusy, pendingItemIds } =
+		useDashboardSceneActions()
 	const setRenameDialog = useSetAtom(renameDialogAtom)
 	const setDeleteDialog = useSetAtom(deleteDialogAtom)
 	const projectId = project.id
 	const tableState = useDashboardTableState({
-		namespace: `project-${projectId}-content`
+		namespace: 'project-content'
 	})
 
 	const projectContent = {
 		folders,
 		scenes
 	}
+	const pendingItemIdSet = useMemo(
+		() => new Set(pendingItemIds),
+		[pendingItemIds]
+	)
 
 	// Check if we're at a child route (folder or scene)
 	// If so, only show the outlet content
@@ -123,6 +150,8 @@ const ProjectPage = () => {
 	const contentColumns = useMemo(
 		() =>
 			createContentColumns({
+				pendingItemIds: pendingItemIdSet,
+				isActionsDisabled: isTableBusy,
 				onRenameItem: (row) => {
 					setRenameDialog({
 						open: true,
@@ -151,7 +180,7 @@ const ProjectPage = () => {
 					})
 				}
 			}),
-		[setDeleteDialog, setRenameDialog]
+		[isTableBusy, pendingItemIdSet, setDeleteDialog, setRenameDialog]
 	)
 
 	useEffect(() => {
@@ -169,6 +198,8 @@ const ProjectPage = () => {
 					<DataTable
 						columns={contentColumns}
 						data={contentRows}
+						isUpdating={isTableBusy}
+						disableSelectionActions={isTableBusy}
 						searchKey="name"
 						searchPlaceholder="Search content..."
 						searchValue={tableState.searchValue}
@@ -179,50 +210,19 @@ const ProjectPage = () => {
 						onPaginationChange={tableState.onPaginationChange}
 						rowSelection={tableState.rowSelection}
 						onRowSelectionChange={tableState.onRowSelectionChange}
-						selectionActions={[
-							{
-								label: 'Rename Item',
-								onClick: (rows) => {
-									if (rows.length !== 1) {
-										toast.error('Select exactly one item to rename')
-										return
-									}
-									const selectedRow = rows[0] as ContentRow
-									setRenameDialog({
-										open: true,
-										item: {
-											id: selectedRow.id,
-											type: selectedRow.type,
-											name: selectedRow.name,
-											projectId: selectedRow.projectId,
-											folderId: selectedRow.folderId
-										},
-										name: selectedRow.name
-									})
+						onRename={(selectedRow) => {
+							setRenameDialog({
+								open: true,
+								item: {
+									id: selectedRow.id,
+									type: selectedRow.type,
+									name: selectedRow.name,
+									projectId: selectedRow.projectId,
+									folderId: selectedRow.folderId
 								},
-								disabled: (rows) => rows.length !== 1
-							},
-							{
-								label: 'Delete Item',
-								onClick: (rows) => {
-									if (rows.length === 0) {
-										toast.error('Select at least one item to delete')
-										return
-									}
-									setDeleteDialog({
-										open: true,
-										items: (rows as ContentRow[]).map((row) => ({
-											id: row.id,
-											type: row.type,
-											name: row.name,
-											projectId: row.projectId,
-											folderId: row.folderId
-										}))
-									})
-								},
-								disabled: (rows) => rows.length === 0
-							}
-						]}
+								name: selectedRow.name
+							})
+						}}
 						onDelete={(selectedRows) => {
 							setDeleteDialog({
 								open: true,

@@ -4,7 +4,7 @@ import type {
 	SortingState,
 	Updater
 } from '@tanstack/react-table'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
 interface UseDashboardTableStateOptions {
@@ -42,7 +42,8 @@ export function useDashboardTableState({
 	const pageSizeKey = `${namespace}-pageSize`
 	const sortKey = `${namespace}-sort`
 	const sortDirKey = `${namespace}-sortDir`
-	const selectionKey = `${namespace}-selected`
+
+	const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 
 	const searchValue = searchParams.get(qKey) ?? ''
 
@@ -73,46 +74,48 @@ export function useDashboardTableState({
 		}
 	}, [defaultPageSize, pageKey, pageSizeKey, searchParams])
 
-	const rowSelection = useMemo<RowSelectionState>(() => {
-		const rawSelectedIds = searchParams.get(selectionKey)
-		if (!rawSelectedIds) {
-			return {}
-		}
-
-		return rawSelectedIds
-			.split(',')
-			.map((id) => id.trim())
-			.filter(Boolean)
-			.reduce<RowSelectionState>((acc, id) => {
-				acc[id] = true
-				return acc
-			}, {})
-	}, [searchParams, selectionKey])
-
 	const setSearchValue = useCallback(
 		(value: string) => {
+			const trimmedValue = value.trim()
+			const isSameSearchValue = trimmedValue
+				? searchValue === value
+				: searchValue === ''
+			const isAlreadyOnFirstPage = pagination.pageIndex === 0
+
+			if (isSameSearchValue && isAlreadyOnFirstPage) {
+				return
+			}
+
 			setSearchParams((prevParams) => {
 				const nextParams = new URLSearchParams(prevParams)
-				if (value.trim()) {
-					nextParams.set(qKey, value)
-				} else {
-					nextParams.delete(qKey)
+				if (trimmedValue) {
+						nextParams.set(qKey, value)
+					} else {
+						nextParams.delete(qKey)
 				}
 				nextParams.set(pageKey, '1')
 				return nextParams
 			})
 		},
-		[pageKey, qKey, setSearchParams]
+		[pagination.pageIndex, pageKey, qKey, searchValue, setSearchParams]
 	)
 
 	const onSortingChange = useCallback(
 		(updater: Updater<SortingState>) => {
 			const nextSorting = applyUpdater(updater, sorting)
+			const currentSort = sorting[0]
+			const nextSort = nextSorting[0]
+
+			const isSortingUnchanged =
+				currentSort?.id === nextSort?.id && currentSort?.desc === nextSort?.desc
+			const isAlreadyOnFirstPage = pagination.pageIndex === 0
+
+			if (isSortingUnchanged && isAlreadyOnFirstPage) {
+				return
+			}
 
 			setSearchParams((prevParams) => {
 				const nextParams = new URLSearchParams(prevParams)
-				const nextSort = nextSorting[0]
-
 				if (!nextSort) {
 					nextParams.delete(sortKey)
 					nextParams.delete(sortDirKey)
@@ -125,12 +128,19 @@ export function useDashboardTableState({
 				return nextParams
 			})
 		},
-		[pageKey, setSearchParams, sortDirKey, sortKey, sorting]
+		[pagination.pageIndex, pageKey, setSearchParams, sortDirKey, sortKey, sorting]
 	)
 
 	const onPaginationChange = useCallback(
 		(updater: Updater<PaginationState>) => {
 			const nextPagination = applyUpdater(updater, pagination)
+
+			if (
+				nextPagination.pageIndex === pagination.pageIndex &&
+				nextPagination.pageSize === pagination.pageSize
+			) {
+				return
+			}
 
 			setSearchParams((prevParams) => {
 				const nextParams = new URLSearchParams(prevParams)
@@ -144,24 +154,11 @@ export function useDashboardTableState({
 
 	const onRowSelectionChange = useCallback(
 		(updater: Updater<RowSelectionState>) => {
-			const nextSelection = applyUpdater(updater, rowSelection)
-
-			setSearchParams((prevParams) => {
-				const nextParams = new URLSearchParams(prevParams)
-				const selectedIds = Object.entries(nextSelection)
-					.filter(([, isSelected]) => Boolean(isSelected))
-					.map(([id]) => id)
-
-				if (selectedIds.length > 0) {
-					nextParams.set(selectionKey, selectedIds.join(','))
-				} else {
-					nextParams.delete(selectionKey)
-				}
-
-				return nextParams
-			})
+			setRowSelection((previousSelection) =>
+				applyUpdater(updater, previousSelection)
+			)
 		},
-		[rowSelection, selectionKey, setSearchParams]
+		[]
 	)
 
 	return {

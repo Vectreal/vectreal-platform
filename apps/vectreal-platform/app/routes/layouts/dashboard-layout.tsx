@@ -5,7 +5,13 @@ import {
 } from '@shared/components/ui/sidebar'
 import { Provider } from 'jotai/react'
 import { useEffect, useState } from 'react'
-import { Outlet, useLoaderData, useNavigation, useParams } from 'react-router'
+import {
+	Outlet,
+	useLoaderData,
+	useLocation,
+	useNavigation,
+	useParams
+} from 'react-router'
 import type { ShouldRevalidateFunction } from 'react-router'
 import {
 	DashboardHeader,
@@ -87,36 +93,42 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 
 const DashboardLayout = () => {
 	const { user } = useLoaderData<typeof loader>()
+	const location = useLocation()
 	const navigation = useNavigation()
 	const [sidebarOpen, setSidebarOpen] = useState(true)
 	const [showSkeleton, setShowSkeleton] = useState(false)
 
-	const toggleSidebar = () => {
-		setSidebarOpen((prev) => !prev)
+	const handleSidebarOpenChange = (open: boolean) => {
+		setSidebarOpen(open)
 	}
 
 	const { sceneId } = useParams()
+	const isSearchParamOnlyNavigation =
+		navigation.state === 'loading' &&
+		navigation.location?.pathname === location.pathname
+	const isContentNavigationLoading =
+		navigation.state === 'loading' && !isSearchParamOnlyNavigation
 
 	// Smart skeleton display logic:
 	// - Skip on back/forward navigation (browser buttons)
 	// - Only show after 200ms delay to avoid flicker on fast loads
 	useEffect(() => {
-		if (navigation.state !== 'loading') {
+		if (!isContentNavigationLoading) {
 			setShowSkeleton(false)
 			return
 		}
 
 		// Delay skeleton display by 200ms to avoid flicker on fast navigations
 		const timer = setTimeout(() => {
-			if (navigation.state === 'loading') {
+			if (isContentNavigationLoading) {
 				setShowSkeleton(true)
 			}
 		}, 200)
 
 		return () => clearTimeout(timer)
-	}, [navigation.state, navigation.location])
+	}, [isContentNavigationLoading])
 
-	const path = navigation.location?.pathname || ''
+	const path = navigation.location?.pathname || location.pathname
 	const isNewProjectCreation = path === '/dashboard/projects/new'
 
 	// Determine which skeleton to show based on navigation location
@@ -135,12 +147,15 @@ const DashboardLayout = () => {
 		if (isSceneDetail) return <CenteredSpinner text="Loading scene..." /> // Scene details can be variable, so we show a spinner instead of a skeleton
 
 		// Default skeleton
-		return <CenteredSpinner text="Loading..." />
+		// return <CenteredSpinner text="Loading..." />
 	}
 
 	return (
 		<Provider store={dashboardManagementStore}>
-			<SidebarProvider open={sidebarOpen} onOpenChange={toggleSidebar}>
+			<SidebarProvider
+				open={sidebarOpen}
+				onOpenChange={handleSidebarOpenChange}
+			>
 				<LogoSidebar open={sidebarOpen}>
 					<DashboardSidebarContent user={user} />
 				</LogoSidebar>
@@ -156,8 +171,8 @@ const DashboardLayout = () => {
 							<DashboardHeader />
 						</div>
 					)}
-					{navigation.state === 'loading' && !isNewProjectCreation ? (
-						getNavigationSkeleton()
+					{isContentNavigationLoading && !isNewProjectCreation ? (
+						getNavigationSkeleton() || <Outlet />
 					) : (
 						<Outlet />
 					)}

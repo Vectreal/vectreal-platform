@@ -42,11 +42,14 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 		// Skip optimistic updates for drawer routes to prevent flickering
 		const isDrawerRoute = (pathname: string) =>
 			pathname === '/dashboard/projects/new'
+		const isDashboardRootRoute = (pathname: string) => pathname === '/dashboard'
 
 		// Handle optimistic updates during navigation (skip for drawer routes)
 		if (
 			navigation.state === 'loading' &&
 			navigation.location &&
+			navigation.location.pathname !== location.pathname &&
+			!isDashboardRootRoute(location.pathname) &&
 			!isDrawerRoute(location.pathname) &&
 			!isDrawerRoute(navigation.location.pathname)
 		) {

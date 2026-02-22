@@ -7,7 +7,7 @@ import {
 	TabsTrigger
 } from '@shared/components/ui/tabs'
 import { File, FolderOpen, Plus } from 'lucide-react'
-import { Link, useLoaderData, useRouteLoaderData } from 'react-router'
+import { Link, useRouteLoaderData } from 'react-router'
 
 import DashboardCard from '../../components/dashboard/dashboard-cards'
 import { DataTable } from '../../components/dashboard/data-table'
@@ -29,6 +29,7 @@ import { getUserProjects } from '../../lib/domain/project/project-repository.ser
 import { getProjectsScenes } from '../../lib/domain/scene/scene-folder-repository.server'
 import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
 import type { loader as dashboardLayoutLoader } from '../layouts/dashboard-layout'
+import type { ShouldRevalidateFunction } from 'react-router'
 
 import { Route } from './+types/dashboard'
 
@@ -62,15 +63,37 @@ export async function loader({ request }: Route.LoaderArgs) {
 	}
 }
 
+export const shouldRevalidate: ShouldRevalidateFunction = ({
+	currentUrl,
+	nextUrl,
+	formMethod,
+	actionResult,
+	defaultShouldRevalidate
+}) => {
+	if (formMethod && formMethod !== 'GET') {
+		return true
+	}
+
+	if (actionResult) {
+		return true
+	}
+
+	if (currentUrl.pathname === nextUrl.pathname) {
+		return false
+	}
+
+	return defaultShouldRevalidate
+}
+
 export function HydrateFallback() {
 	return <DashboardSkeleton />
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
-const DashboardPage = () => {
+const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
 	const { projects, scenes, projectStats, sceneStats, recentScenes } =
-		useLoaderData<typeof loader>()
+		loaderData
 
 	// Access parent layout data for organizations
 	const parentData = useRouteLoaderData<typeof dashboardLayoutLoader>(

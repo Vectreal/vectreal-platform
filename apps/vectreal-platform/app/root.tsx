@@ -12,6 +12,7 @@ import {
 	ScrollRestoration,
 	useRouteError
 } from 'react-router'
+import type { ShouldRevalidateFunction } from 'react-router'
 import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/root'
@@ -51,6 +52,28 @@ export async function loader({ request }: Route.LoaderArgs) {
 	}
 
 	return loaderData
+}
+
+export const shouldRevalidate: ShouldRevalidateFunction = ({
+	currentUrl,
+	nextUrl,
+	formMethod,
+	actionResult,
+	defaultShouldRevalidate
+}) => {
+	if (formMethod && formMethod !== 'GET') {
+		return true
+	}
+
+	if (actionResult) {
+		return true
+	}
+
+	if (currentUrl.pathname === nextUrl.pathname) {
+		return false
+	}
+
+	return defaultShouldRevalidate
 }
 
 export type RootLoader = typeof loader

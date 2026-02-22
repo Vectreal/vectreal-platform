@@ -94,7 +94,7 @@ const OverlayControls = ({
 
 	// Centralized scene loader - single source of truth (must be inside ModelProvider)
 	// This hook manages scene loading/saving but doesn't return state available via atoms
-	const { saveSceneSettings } = useSceneLoader({
+	const { saveSceneSettings, saveAvailability } = useSceneLoader({
 		sceneId,
 		userId: user?.id,
 		initialSceneAggregate: sceneAggregate as SceneAggregateResponse | null
@@ -113,6 +113,7 @@ const OverlayControls = ({
 				userId={user?.id}
 				saveSceneSettings={saveSceneSettings}
 				hasUnsavedChanges={hasUnsavedChanges}
+				saveAvailability={saveAvailability}
 			/>
 			<PublisherButtons />
 		</>

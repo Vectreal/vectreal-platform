@@ -54,6 +54,18 @@ export interface SaveSceneResult {
 	[key: string]: unknown
 }
 
+export type SaveAvailabilityReason =
+	| 'ready'
+	| 'no-user'
+	| 'no-unsaved-changes'
+	| 'requires-first-optimization'
+
+export interface SaveAvailabilityState {
+	canSave: boolean
+	reason: SaveAvailabilityReason
+	isFirstSavePendingOptimization: boolean
+}
+
 /**
  * Manages scene load/save side effects and shared store synchronization.
  *
@@ -172,12 +184,10 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 
 			const extractGltfDocument = (
 				value: unknown
-			):
-				| {
-						images?: Array<{ uri?: unknown }>
-						buffers?: Array<{ uri?: unknown }>
-				  }
-				| null => {
+			): {
+				images?: Array<{ uri?: unknown }>
+				buffers?: Array<{ uri?: unknown }>
+			} | null => {
 				if (!value || typeof value !== 'object') {
 					return null
 				}
@@ -204,10 +214,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 						buffers?: unknown
 					}
 
-					if (
-						Array.isArray(nested.images) ||
-						Array.isArray(nested.buffers)
-					) {
+					if (Array.isArray(nested.images) || Array.isArray(nested.buffers)) {
 						return nested as {
 							images?: Array<{ uri?: unknown }>
 							buffers?: Array<{ uri?: unknown }>
@@ -556,13 +563,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			off('load-complete', handleLoadComplete)
 			off('load-error', handleLoadError)
 		}
-	}, [
-		on,
-		off,
-		handleLoadComplete,
-		handleLoadError,
-		handleNotLoadedFiles
-	])
+	}, [on, off, handleLoadComplete, handleLoadError, handleNotLoadedFiles])
 
 	// Update process step when file loads
 	useEffect(() => {
@@ -583,7 +584,9 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			...optimizationRuntimeInitialState,
 			lastSavedReportSignature: null
 		})
-		setHasUnsavedChanges(false)
+		if (initialSceneAggregate) {
+			setHasUnsavedChanges(false)
+		}
 	}, [
 		paramSceneId,
 		initialSceneAggregate,
@@ -607,6 +610,16 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	const reportSignature = useMemo(
 		() => getReportSignature(optimizer?.report),
 		[getReportSignature, optimizer?.report]
+	)
+
+	const hasAppliedOptimization = useMemo(
+		() => typeof optimizedSceneBytes === 'number',
+		[optimizedSceneBytes]
+	)
+
+	const isFirstSavePendingOptimization = useMemo(
+		() => !currentSceneId && !hasAppliedOptimization,
+		[currentSceneId, hasAppliedOptimization]
 	)
 
 	useEffect(() => {
@@ -802,9 +815,9 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 							'object' &&
 						(aggregate.gltfJson as { json?: unknown }).json !== null
 							? ((aggregate.gltfJson as { json: unknown }).json as Record<
-								string,
-								unknown
-							>)
+									string,
+									unknown
+								>)
 							: (aggregate.gltfJson as unknown as Record<string, unknown>)
 
 					const sceneData: ServerSceneData = {
@@ -961,6 +974,38 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setHasUnsavedChanges
 	])
 
+	const saveAvailability: SaveAvailabilityState = useMemo(() => {
+		if (!userId) {
+			return {
+				canSave: false,
+				reason: 'no-user',
+				isFirstSavePendingOptimization
+			}
+		}
+
+		if (isFirstSavePendingOptimization) {
+			return {
+				canSave: false,
+				reason: 'requires-first-optimization',
+				isFirstSavePendingOptimization: true
+			}
+		}
+
+		if (!processState.hasUnsavedChanges) {
+			return {
+				canSave: false,
+				reason: 'no-unsaved-changes',
+				isFirstSavePendingOptimization: false
+			}
+		}
+
+		return {
+			canSave: true,
+			reason: 'ready',
+			isFirstSavePendingOptimization: false
+		}
+	}, [userId, isFirstSavePendingOptimization, processState.hasUnsavedChanges])
+
 	useEffect(() => {
 		if (!paramSceneId) {
 			setIsInitializing(false)
@@ -972,11 +1017,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			return
 		}
 
-		if (
-			file?.model ||
-			isFileLoading ||
-			sceneLoadAttemptedRef.current
-		) {
+		if (file?.model || isFileLoading || sceneLoadAttemptedRef.current) {
 			return
 		}
 
@@ -992,5 +1033,5 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setIsInitializing
 	])
 
-	return { saveSceneSettings }
+	return { saveSceneSettings, saveAvailability }
 }

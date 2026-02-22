@@ -5,6 +5,7 @@ import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
+import type { SaveAvailabilityState } from '../../../hooks/use-scene-loader'
 import { TooltipButton } from '../../tooltip-button'
 
 interface SaveSceneResult {
@@ -22,24 +23,54 @@ interface SaveButtonProps {
 		SaveSceneResult | { unchanged: true } | undefined
 	>
 	hasUnsavedChanges: boolean
+	saveAvailability: SaveAvailabilityState
 }
 
 const SaveButton = ({
 	sceneId,
 	userId,
 	saveSceneSettings,
-	hasUnsavedChanges
+	hasUnsavedChanges,
+	saveAvailability
 }: SaveButtonProps) => {
 	const [isSaveLoading, setIsSaveLoading] = useState(false)
 	const navigate = useNavigate()
 
-	const isDisabled = isSaveLoading || !userId || !hasUnsavedChanges
+	const isDisabled = isSaveLoading || !saveAvailability.canSave
 
 	const statusText = isSaveLoading
 		? 'Saving scene...'
-		: !hasUnsavedChanges
-			? 'No changes to save'
-			: 'Click to save scene'
+		: saveAvailability.reason === 'requires-first-optimization'
+			? 'Apply at least one optimization to enable saving.'
+			: saveAvailability.reason === 'no-user'
+				? 'Sign in to save scene settings'
+				: saveAvailability.reason === 'no-unsaved-changes'
+					? 'No changes to save'
+					: 'Click to save scene'
+
+	const displayStateText = isSaveLoading
+		? 'Saving...'
+		: saveAvailability.reason === 'requires-first-optimization'
+			? 'Not optimized yet'
+			: !hasUnsavedChanges
+				? 'Saved'
+				: 'Unsaved'
+
+	const statusToneClass = isSaveLoading
+		? 'text-orange-500'
+		: saveAvailability.reason === 'requires-first-optimization'
+			? 'text-yellow-500'
+			: !hasUnsavedChanges
+				? 'text-green-300'
+				: 'text-yellow-500'
+
+	const statusDotClass = isSaveLoading
+		? 'animate-pulse bg-orange-400 after:bg-orange-400'
+		: saveAvailability.reason === 'requires-first-optimization'
+			? 'bg-yellow-400 after:bg-yellow-500'
+			: !hasUnsavedChanges
+				? 'bg-green-400 after:bg-green-400'
+				: 'bg-yellow-400 after:bg-yellow-500'
 
 	const handleSave = useCallback(async () => {
 		if (!userId) {
@@ -105,27 +136,19 @@ const SaveButton = ({
 	}, [saveSceneSettings, userId, sceneId, navigate])
 
 	return (
-		<div className="fixed top-0 right-0 z-20 m-4 flex items-center gap-6">
+		<div className="fixed top-0 right-0 z-20 m-4 flex items-center gap-2">
 			<div
 				className={cn(
-					'flex items-center gap-3 text-xs font-medium transition-all duration-300',
-					!hasUnsavedChanges
-						? 'text-green-300'
-						: isSaveLoading
-							? 'text-orange-500'
-							: 'text-yellow-500'
+					'bg-muted flex items-center gap-3 rounded-xl p-2 px-4 text-xs font-medium transition-all duration-300',
+					statusToneClass
 				)}
 			>
-				{!hasUnsavedChanges ? 'Saved' : isSaveLoading ? 'Saving...' : 'Unsaved'}
+				{displayStateText}
 				<div className="relative">
 					<span
 						className={cn(
 							'inline-block h-2 w-2 rounded-full after:absolute after:top-0 after:left-0 after:h-full after:w-full after:animate-pulse after:opacity-50 after:blur-md',
-							!hasUnsavedChanges
-								? 'bg-green-400 after:bg-green-400'
-								: isSaveLoading
-									? 'animate-pulse bg-orange-400 after:bg-orange-400'
-									: 'bg-yellow-400 after:bg-yellow-500'
+							statusDotClass
 						)}
 						aria-hidden="true"
 					/>

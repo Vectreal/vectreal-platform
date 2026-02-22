@@ -30,6 +30,7 @@ const OptimizeSidebarContent: FC = () => {
 		<>
 			<Accordion type="single" className="space-y-2" collapsible>
 				<StatsAccordionItem
+					isPending={isPending}
 					info={info}
 					hasImproved={hasImproved}
 					sizeInfo={sizeInfo}

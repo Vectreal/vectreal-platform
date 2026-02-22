@@ -22,22 +22,24 @@ const TooltipButton = ({
 }: ButtonProps) => {
 	return (
 		<Tooltip>
-			<TooltipTrigger
-				disabled={disabled}
-				className={cn({ 'opacity-50': disabled })}
-			>
-				<Button
-					asChild
-					variant="secondary"
-					className={cn('rounded-xl', className)}
-					size={size}
-					disabled={disabled}
-					{...buttonProps}
+			<TooltipTrigger asChild>
+				<span
+					className={cn('inline-flex', {
+						'cursor-not-allowed opacity-50': disabled
+					})}
 				>
-					<span>{children}</span>
-				</Button>
-				<TooltipContent>{info}</TooltipContent>
+					<Button
+						variant="secondary"
+						className={cn('rounded-xl', className)}
+						size={size}
+						disabled={disabled}
+						{...buttonProps}
+					>
+						{children}
+					</Button>
+				</span>
 			</TooltipTrigger>
+			<TooltipContent>{info}</TooltipContent>
 		</Tooltip>
 	)
 }

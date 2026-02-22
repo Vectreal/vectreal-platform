@@ -109,7 +109,7 @@ const ACTION_CONFIGS: Record<ACTION_VARIANT, ActionGroupConfig | null> = {
 			variant: 'outline'
 		},
 		secondary: {
-			label: 'OpenPublisher',
+			label: 'Open Publisher',
 			icon: Plus,
 			to: '/publisher',
 			variant: 'default'

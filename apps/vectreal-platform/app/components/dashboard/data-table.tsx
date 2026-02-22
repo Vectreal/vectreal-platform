@@ -5,12 +5,6 @@
 
 import { Button } from '@shared/components/ui/button'
 import { Checkbox } from '@shared/components/ui/checkbox'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger
-} from '@shared/components/ui/dropdown-menu'
 import { Input } from '@shared/components/ui/input'
 import {
 	Table,
@@ -37,8 +31,8 @@ import {
 	ArrowUpDown,
 	ChevronLeft,
 	ChevronRight,
-	MoreVertical,
 	Search,
+	TextCursor,
 	Trash2
 } from 'lucide-react'
 import { useEffect, useMemo, type ReactNode } from 'react'
@@ -63,9 +57,12 @@ interface DataTableProps<TData, TValue> {
 	rowSelection: RowSelectionState
 	onRowSelectionChange: (updater: Updater<RowSelectionState>) => void
 	onDelete?: (selectedRows: TData[]) => void
-	selectionActions?: DataTableSelectionAction<TData>[]
+	onRename?: (selectedRows: TData) => void
 	onSelectionChange?: (selectedRows: TData[]) => void
 	getRowCanSelect?: (row: TData) => boolean
+	isUpdating?: boolean
+	updatingLabel?: string
+	disableSelectionActions?: boolean
 }
 
 export function DataTable<TData, TValue>({
@@ -82,9 +79,12 @@ export function DataTable<TData, TValue>({
 	rowSelection,
 	onRowSelectionChange,
 	onDelete,
-	selectionActions,
+	onRename,
 	onSelectionChange,
-	getRowCanSelect
+	getRowCanSelect,
+	isUpdating = false,
+	updatingLabel = 'Updating content...',
+	disableSelectionActions = false
 }: DataTableProps<TData, TValue>) {
 	const columnFilters = useMemo(
 		() => (searchKey ? [{ id: searchKey, value: searchValue }] : []),
@@ -146,35 +146,35 @@ export function DataTable<TData, TValue>({
 					</div>
 				)}
 
-				{hasSelection && (onDelete || (selectionActions?.length ?? 0) > 0) && (
+				{isUpdating && (
+					<div className="text-muted-foreground flex items-center gap-2 text-sm">
+						<div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+						<span>{updatingLabel}</span>
+					</div>
+				)}
+
+				{hasSelection && (onDelete || onRename) && (
 					<div className="flex items-center gap-2">
 						<span className="text-muted-foreground text-sm">
 							{selectedRows.length} selected
 						</span>
-						{selectionActions && selectionActions.length > 0 && (
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button variant="outline" size="sm">
-										<MoreVertical className="mr-2 h-4 w-4" />
-										Actions
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent align="end">
-									{selectionActions.map((action) => (
-										<DropdownMenuItem
-											key={action.label}
-											onClick={() => action.onClick(selectedRows)}
-											disabled={action.disabled?.(selectedRows)}
-										>
-											{action.label}
-										</DropdownMenuItem>
-									))}
-								</DropdownMenuContent>
-							</DropdownMenu>
-						)}
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => {
+								if (onRename) {
+									onRename(selectedRows.at(0)!)
+									onRowSelectionChange({})
+								}
+							}}
+						>
+							<TextCursor className="mr-2 h-4 w-4" />
+							Rename
+						</Button>
 						<Button
 							variant="destructive"
 							size="sm"
+							disabled={disableSelectionActions}
 							onClick={() => {
 								onDelete?.(selectedRows)
 								onRowSelectionChange({})
@@ -213,7 +213,10 @@ export function DataTable<TData, TValue>({
 									data-state={row.getIsSelected() && 'selected'}
 								>
 									{row.getVisibleCells().map((cell) => (
-										<TableCell key={cell.id}>
+										<TableCell
+											key={cell.id}
+											className="[&>a,&>span]:max-w-sm [&>a,&>span]:truncate!"
+										>
 											{flexRender(
 												cell.column.columnDef.cell,
 												cell.getContext()

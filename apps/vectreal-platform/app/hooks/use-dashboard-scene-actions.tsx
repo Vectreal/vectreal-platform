@@ -1,5 +1,5 @@
 import { useAtom } from 'jotai/react'
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useFetcher, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
@@ -46,6 +46,9 @@ interface DashboardSceneActionsContextValue {
 	clearSelection: () => void
 	actionState: 'idle' | 'submitting' | 'loading'
 	actionData: ActionResponsePayload | null
+	isTableBusy: boolean
+	isRefetching: boolean
+	pendingItemIds: string[]
 }
 
 let shouldToastForNextResponse = true
@@ -73,10 +76,16 @@ function isSameSelectedRows(
 
 export function useDashboardSceneActions(): DashboardSceneActionsContextValue {
 	const [selectedRows, setSelectedRowsState] = useAtom(selectedRowsAtom)
+	const [pendingItemIds, setPendingItemIds] = useState<string[]>([])
+	const [isWaitingForRefetch, setIsWaitingForRefetch] = useState(false)
+	const didRefetchStartRef = useRef(false)
 	const actionFetcher = useFetcher<PlatformApiResponse<ActionResponsePayload>>({
 		key: 'dashboard-content-actions'
 	})
 	const revalidator = useRevalidator()
+	const isFetcherBusy = actionFetcher.state !== 'idle'
+	const isRefetching = revalidator.state !== 'idle'
+	const isTableBusy = isFetcherBusy || isWaitingForRefetch || isRefetching
 
 	const clearSelection = useCallback(() => {
 		setSelectedRowsState([])
@@ -130,6 +139,7 @@ export function useDashboardSceneActions(): DashboardSceneActionsContextValue {
 					method: 'post',
 					action: '/api/scenes/bulk'
 				})
+				setPendingItemIds([])
 				return
 			}
 
@@ -158,6 +168,8 @@ export function useDashboardSceneActions(): DashboardSceneActionsContextValue {
 			if (options.name) {
 				formData.append('name', options.name.trim())
 			}
+
+			setPendingItemIds(items.map((item) => item.id))
 
 			actionFetcher.submit(formData, {
 				method: 'post',
@@ -188,6 +200,9 @@ export function useDashboardSceneActions(): DashboardSceneActionsContextValue {
 		const shouldToast = shouldToastForNextResponse
 
 		if (!actionFetcher.data.success || !actionFetcher.data.data) {
+			setIsWaitingForRefetch(false)
+			didRefetchStartRef.current = false
+			setPendingItemIds([])
 			if (shouldToast) {
 				toast.error(actionFetcher.data.error || 'Action failed')
 			}
@@ -198,6 +213,8 @@ export function useDashboardSceneActions(): DashboardSceneActionsContextValue {
 			if (shouldToast) {
 				toast.success('Folder created')
 			}
+			didRefetchStartRef.current = false
+			setIsWaitingForRefetch(true)
 			revalidator.revalidate()
 			return
 		}
@@ -215,9 +232,35 @@ export function useDashboardSceneActions(): DashboardSceneActionsContextValue {
 
 		if (summary.succeeded > 0) {
 			clearSelection()
+			didRefetchStartRef.current = false
+			setIsWaitingForRefetch(true)
 			revalidator.revalidate()
+			return
 		}
+
+		setIsWaitingForRefetch(false)
+		didRefetchStartRef.current = false
+		setPendingItemIds([])
 	}, [actionFetcher.state, actionFetcher.data, clearSelection, revalidator])
+
+	useEffect(() => {
+		if (!isWaitingForRefetch) {
+			return
+		}
+
+		if (isRefetching) {
+			didRefetchStartRef.current = true
+			return
+		}
+
+		if (!didRefetchStartRef.current) {
+			return
+		}
+
+		setIsWaitingForRefetch(false)
+		setPendingItemIds([])
+		didRefetchStartRef.current = false
+	}, [isWaitingForRefetch, isRefetching])
 
 	const value = useMemo(
 		() => ({
@@ -227,7 +270,10 @@ export function useDashboardSceneActions(): DashboardSceneActionsContextValue {
 			runSceneAction,
 			clearSelection,
 			actionState: actionFetcher.state,
-			actionData: actionFetcher.data?.data ?? null
+			actionData: actionFetcher.data?.data ?? null,
+			isTableBusy,
+			isRefetching: isWaitingForRefetch || isRefetching,
+			pendingItemIds
 		}),
 		[
 			selectedRows,
@@ -236,7 +282,11 @@ export function useDashboardSceneActions(): DashboardSceneActionsContextValue {
 			runSceneAction,
 			clearSelection,
 			actionFetcher.state,
-			actionFetcher.data
+			actionFetcher.data,
+			isTableBusy,
+			isWaitingForRefetch,
+			isRefetching,
+			pendingItemIds
 		]
 	)
 

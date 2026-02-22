@@ -120,6 +120,8 @@ export interface ContentRow {
 interface ContentColumnsOptions {
 	onRenameItem?: (row: ContentRow) => void
 	onDeleteItem?: (row: ContentRow) => void
+	pendingItemIds?: ReadonlySet<string>
+	isActionsDisabled?: boolean
 }
 
 export const sceneColumns: ColumnDef<SceneRow>[] = [
@@ -212,6 +214,7 @@ export function createContentColumns(
 			),
 			cell: ({ row }) => {
 				const isFolder = row.original.type === 'folder'
+				const isUpdating = options.pendingItemIds?.has(row.original.id) ?? false
 				const to = isFolder
 					? `/dashboard/projects/${row.original.projectId}/folder/${row.original.id}`
 					: `/dashboard/projects/${row.original.projectId}/${row.original.id}`
@@ -234,6 +237,12 @@ export function createContentColumns(
 							<File className="text-primary/60 group-hover:text-primary h-4 w-4 transition-colors" />
 						)}
 						{row.getValue('name')}
+						{isUpdating && (
+							<span className="text-muted-foreground ml-2 inline-flex items-center gap-1 text-xs">
+								<span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+								Updating
+							</span>
+						)}
 					</Link>
 				)
 			}
@@ -285,18 +294,25 @@ export function createContentColumns(
 					<div className="flex items-center justify-end gap-1">
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
-								<Button variant="ghost" size="sm" aria-label="Item actions">
+								<Button
+									variant="ghost"
+									size="sm"
+									aria-label="Item actions"
+									disabled={options.isActionsDisabled}
+								>
 									<Ellipsis className="h-4 w-4" />
 								</Button>
 							</DropdownMenuTrigger>
 							<DropdownMenuContent align="end">
 								<DropdownMenuItem
+									disabled={options.isActionsDisabled}
 									onClick={() => options.onRenameItem?.(row.original)}
 								>
 									<FilePenLine className="mr-2 h-4 w-4" />
 									Rename
 								</DropdownMenuItem>
 								<DropdownMenuItem
+									disabled={options.isActionsDisabled}
 									onClick={() => options.onDeleteItem?.(row.original)}
 									className="text-destructive-foreground hover:bg-destructive/50 focus:bg-destructive/50"
 								>

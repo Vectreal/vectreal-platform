@@ -58,7 +58,7 @@ export default [
 				route('/', './routes/dashboard-page/projects/projects.tsx', [
 					route('new', './routes/dashboard-page/projects/projects-new.tsx')
 				]),
-				route(':projectId?', './routes/dashboard-page/projects/project.tsx', [
+				route(':projectId', './routes/dashboard-page/projects/project.tsx', [
 					route(
 						'folder/:folderId',
 						'./routes/dashboard-page/projects/folder.tsx'

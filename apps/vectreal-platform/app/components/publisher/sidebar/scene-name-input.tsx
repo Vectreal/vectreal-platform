@@ -68,7 +68,7 @@ export function SceneNameInput() {
 	}
 
 	return (
-		<div className="border-muted/50 relative grow border-b p-2 pb-0">
+		<div className="border-muted/50 relative grow border-b p-2">
 			{isEditing ? (
 				<div className="relative flex w-full items-center">
 					<Input
