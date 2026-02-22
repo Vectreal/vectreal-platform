@@ -277,7 +277,7 @@ export class ModelOptimizer {
 			}
 
 			// Extract only the options that textureCompress expects
-			 
+
 			const { serverOptions, ...textureCompressOptions } = options
 
 			console.log('Texture compression options:', {
@@ -347,7 +347,6 @@ export class ModelOptimizer {
 	 * This provides fallback functionality when Sharp is not available.
 	 */
 	private async applyBasicTextureOptimization(
-
 		_options: TextureCompressOptions
 	): Promise<void> {
 		this.emitProgress('Applying basic texture optimization', 50)

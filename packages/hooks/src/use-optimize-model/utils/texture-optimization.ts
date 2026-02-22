@@ -90,7 +90,9 @@ const optimizeTexture = async (
 	optimizer: ModelOptimizer,
 	texture: TextureDescriptor,
 	options: TextureCompressOptions,
-	serverOptions: ReturnType<typeof ServerCommunicationService.createDefaultServerOptions>
+	serverOptions: ReturnType<
+		typeof ServerCommunicationService.createDefaultServerOptions
+	>
 ): Promise<void> => {
 	const payload = optimizer.getTexturePayload(texture.index)
 	const maxTextureUploadBytes =
@@ -102,10 +104,11 @@ const optimizeTexture = async (
 		)
 	}
 
-	const formData = ServerCommunicationService.prepareTextureOptimizationFormData(
-		payload,
-		options
-	)
+	const formData =
+		ServerCommunicationService.prepareTextureOptimizationFormData(
+			payload,
+			options
+		)
 
 	const response = await requestSingleTextureOptimization(
 		serverOptions.endpoint,
