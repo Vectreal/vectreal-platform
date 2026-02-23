@@ -113,6 +113,7 @@
 		"@storybook/addon-docs": "10.2.8",
 		"@storybook/react-vite": "10.2.8",
 		"@storybook/test-runner": "0.24.2",
+		"@swc-node/register": "^1.11.1",
 		"@swc/core": "1.15.8",
 		"@tailwindcss/postcss": "^4.1.4",
 		"@tailwindcss/vite": "^4.1.4",
