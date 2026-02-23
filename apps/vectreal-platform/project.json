@@ -6,6 +6,14 @@
 	"tags": [],
 
 	"targets": {
+		"typecheck": {
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"command": "react-router typegen && tsc -p tsconfig.app.json --noEmit"
+			}
+		},
 		"build": {
 			"executor": "nx:run-commands",
 			"outputs": ["{workspaceRoot}/build/apps/vectreal-platform"],

@@ -58,22 +58,10 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         run: npx nx affected --target=lint --base=origin/${{ github.event.pull_request.base.ref }} --head=origin/${{ github.event.pull_request.head.ref }}
 
-      - name: Lint (push)
-        if: ${{ github.event_name == 'push' }}
-        run: npx nx affected --target=lint --base=${{ github.event.before }} --head=${{ github.sha }}
-
       - name: Type Check
         if: ${{ github.event_name == 'pull_request' }}
         run: npx nx affected --target=typecheck --base=origin/${{ github.event.pull_request.base.ref }} --head=origin/${{ github.event.pull_request.head.ref }}
 
-      - name: Type Check (push)
-        if: ${{ github.event_name == 'push' }}
-        run: npx nx affected --target=typecheck --base=${{ github.event.before }} --head=${{ github.sha }}
-
       - name: Build
         if: ${{ github.event_name == 'pull_request' }}
         run: npx nx affected --target=build --base=origin/${{ github.event.pull_request.base.ref }} --head=origin/${{ github.event.pull_request.head.ref }}
-
-      - name: Build (push)
-        if: ${{ github.event_name == 'push' }}
-        run: npx nx affected --target=build --base=${{ github.event.before }} --head=${{ github.sha }}
