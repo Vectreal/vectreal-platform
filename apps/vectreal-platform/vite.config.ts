@@ -1,6 +1,5 @@
 /// <reference types='vitest' />
 import mdx from '@mdx-js/rollup'
-import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin'
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin'
 import { reactRouter } from '@react-router/dev/vite'
 import tailwindcss from '@tailwindcss/vite'
@@ -24,7 +23,6 @@ export default defineConfig(() => {
 		plugins: [
 			tailwindcss(),
 			nxViteTsPaths(),
-			nxCopyAssetsPlugin(['*.md']),
 			mdx({
 				format: 'mdx'
 			}),
@@ -68,6 +66,34 @@ export default defineConfig(() => {
 				},
 				output: {
 					manualChunks(id) {
+						if (
+							id.includes('/shared/components/') ||
+							id.includes('/shared/utils/')
+						) {
+							return 'vendor-shared'
+						}
+
+						if (
+							id.includes('/node_modules/react/') ||
+							id.includes('/node_modules/react-dom/') ||
+							id.includes('/node_modules/react-router/')
+						) {
+							return 'vendor-react-runtime'
+						}
+
+						if (id.includes('/node_modules/@supabase/')) {
+							return 'vendor-supabase'
+						}
+
+						if (
+							id.includes('/node_modules/@radix-ui/') ||
+							id.includes('/node_modules/framer-motion/') ||
+							id.includes('/node_modules/lucide-react/') ||
+							id.includes('/node_modules/sonner/')
+						) {
+							return 'vendor-ui'
+						}
+
 						if (id.includes('/node_modules/three/examples/jsm/')) {
 							return 'vendor-three-examples'
 						}

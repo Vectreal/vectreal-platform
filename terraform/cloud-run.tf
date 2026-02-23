@@ -14,12 +14,22 @@
 # To manage services via Terraform later, set: manage_cloud_run_services = true
 # =============================================================================
 
+locals {
+  cloud_run_ingress_by_value = {
+    all                               = "INGRESS_TRAFFIC_ALL"
+    internal                          = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+    internal-and-cloud-load-balancing = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+  }
+
+  cloud_run_ingress = lookup(local.cloud_run_ingress_by_value, var.allowed_ingress, "INGRESS_TRAFFIC_ALL")
+}
+
 # Production Cloud Run Service (Optional - managed by GitHub Actions by default)
 resource "google_cloud_run_v2_service" "production" {
   count    = var.manage_cloud_run_services ? 1 : 0
   name     = var.production_service_name
   location = var.region
-  ingress  = upper("INGRESS_TRAFFIC_${replace(var.allowed_ingress, "-", "_")}")
+  ingress  = local.cloud_run_ingress
 
   template {
     service_account = google_service_account.runtime.email
@@ -82,7 +92,7 @@ resource "google_cloud_run_v2_service" "staging" {
   count    = var.manage_cloud_run_services ? 1 : 0
   name     = var.staging_service_name
   location = var.region
-  ingress  = upper("INGRESS_TRAFFIC_${replace(var.allowed_ingress, "-", "_")}")
+  ingress  = local.cloud_run_ingress
 
   template {
     service_account = google_service_account.runtime.email
@@ -142,7 +152,7 @@ resource "google_cloud_run_v2_service" "staging" {
 
 # Public access for production (only if managed by Terraform)
 resource "google_cloud_run_v2_service_iam_member" "production_public" {
-  count    = var.manage_cloud_run_services ? 1 : 0
+  count    = var.manage_cloud_run_services && var.allow_public_cloud_run_invoker ? 1 : 0
   location = google_cloud_run_v2_service.production[0].location
   name     = google_cloud_run_v2_service.production[0].name
   role     = "roles/run.invoker"
@@ -151,7 +161,7 @@ resource "google_cloud_run_v2_service_iam_member" "production_public" {
 
 # Public access for staging (only if managed by Terraform)
 resource "google_cloud_run_v2_service_iam_member" "staging_public" {
-  count    = var.manage_cloud_run_services ? 1 : 0
+  count    = var.manage_cloud_run_services && var.allow_public_cloud_run_invoker ? 1 : 0
   location = google_cloud_run_v2_service.staging[0].location
   name     = google_cloud_run_v2_service.staging[0].name
   role     = "roles/run.invoker"
@@ -162,7 +172,7 @@ resource "google_cloud_run_v2_service" "production_secondary" {
   for_each = var.enable_multi_region_cloud_run ? toset(var.production_secondary_regions) : toset([])
   name     = "${var.production_service_name}-${each.value}"
   location = each.value
-  ingress  = upper("INGRESS_TRAFFIC_${replace(var.allowed_ingress, "-", "_")}")
+  ingress  = local.cloud_run_ingress
 
   template {
     service_account = google_service_account.runtime.email
@@ -221,7 +231,7 @@ resource "google_cloud_run_v2_service" "staging_secondary" {
   for_each = var.enable_multi_region_cloud_run ? toset(var.staging_secondary_regions) : toset([])
   name     = "${var.staging_service_name}-${each.value}"
   location = each.value
-  ingress  = upper("INGRESS_TRAFFIC_${replace(var.allowed_ingress, "-", "_")}")
+  ingress  = local.cloud_run_ingress
 
   template {
     service_account = google_service_account.runtime.email
@@ -277,7 +287,7 @@ resource "google_cloud_run_v2_service" "staging_secondary" {
 }
 
 resource "google_cloud_run_v2_service_iam_member" "production_secondary_public" {
-  for_each = var.enable_multi_region_cloud_run ? google_cloud_run_v2_service.production_secondary : {}
+  for_each = var.enable_multi_region_cloud_run && var.allow_public_cloud_run_invoker ? google_cloud_run_v2_service.production_secondary : {}
   location = each.value.location
   name     = each.value.name
   role     = "roles/run.invoker"
@@ -285,7 +295,7 @@ resource "google_cloud_run_v2_service_iam_member" "production_secondary_public" 
 }
 
 resource "google_cloud_run_v2_service_iam_member" "staging_secondary_public" {
-  for_each = var.enable_multi_region_cloud_run ? google_cloud_run_v2_service.staging_secondary : {}
+  for_each = var.enable_multi_region_cloud_run && var.allow_public_cloud_run_invoker ? google_cloud_run_v2_service.staging_secondary : {}
   location = each.value.location
   name     = each.value.name
   role     = "roles/run.invoker"

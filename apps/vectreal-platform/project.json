@@ -6,6 +6,15 @@
 	"tags": [],
 
 	"targets": {
+		"build": {
+			"executor": "nx:run-commands",
+			"outputs": ["{workspaceRoot}/build/apps/vectreal-platform"],
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"command": "react-router build"
+			}
+		},
 		"dev": {
 			"executor": "nx:run-commands",
 			"options": {
@@ -19,7 +28,7 @@
 			"options": {
 				"cwd": "apps/vectreal-platform",
 				"envFile": ".env.development",
-				"command": "react-router-serve build/server/index.js"
+				"command": "react-router-serve ../../build/apps/vectreal-platform/server/index.js"
 			},
 			"dependsOn": ["build"]
 		},

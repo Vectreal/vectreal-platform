@@ -16,6 +16,54 @@ import type { AppLoadContext, EntryContext } from 'react-router'
 
 export const streamTimeout = 5_000
 
+const CACHEABLE_PUBLIC_PATHS = new Set([
+	'/',
+	'/about',
+	'/contact',
+	'/privacy-policy',
+	'/terms-of-service',
+	'/imprint'
+])
+
+function hasAuthSignals(request: Request): boolean {
+	if (request.headers.has('authorization')) {
+		return true
+	}
+
+	const cookieHeader = request.headers.get('cookie')
+	return Boolean(cookieHeader && cookieHeader.trim().length > 0)
+}
+
+function applyDefaultCacheHeaders(
+	request: Request,
+	responseHeaders: Headers,
+	responseStatusCode: number
+): void {
+	if (responseHeaders.has('Cache-Control')) {
+		return
+	}
+
+	if (request.method !== 'GET' || responseStatusCode !== 200) {
+		responseHeaders.set('Cache-Control', 'no-store')
+		return
+	}
+
+	const requestUrl = new URL(request.url)
+	const hasSearchParams = requestUrl.search.length > 0
+	const cacheablePublicPath = CACHEABLE_PUBLIC_PATHS.has(requestUrl.pathname)
+
+	if (!hasAuthSignals(request) && !hasSearchParams && cacheablePublicPath) {
+		responseHeaders.set(
+			'Cache-Control',
+			'public, max-age=0, s-maxage=60, stale-while-revalidate=300'
+		)
+		responseHeaders.set('Vary', 'Accept-Encoding')
+		return
+	}
+
+	responseHeaders.set('Cache-Control', 'no-store')
+}
+
 export default function handleRequest(
 	request: Request,
 	responseStatusCode: number,
@@ -43,6 +91,7 @@ export default function handleRequest(
 					const stream = createReadableStreamFromReadable(body)
 
 					responseHeaders.set('Content-Type', 'text/html')
+					applyDefaultCacheHeaders(request, responseHeaders, responseStatusCode)
 
 					resolve(
 						new Response(stream, {

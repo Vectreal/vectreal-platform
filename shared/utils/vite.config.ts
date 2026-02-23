@@ -24,7 +24,7 @@ export default defineConfig(() => ({
 	// Configuration for building your library.
 	// See: https://vitejs.dev/guide/build.html#library-mode
 	build: {
-		outDir: '../../dist/shared/utils',
+		outDir: '../../build/shared/utils',
 		emptyOutDir: true,
 		reportCompressedSize: true,
 		commonjsOptions: {

@@ -129,7 +129,7 @@
 		"@typescript-eslint/parser": "8.55.0",
 		"@vitejs/plugin-react": "^4.3.4",
 		"@vitejs/plugin-react-swc": "^3.8.0",
-		"chromatic": "^11.16.5",
+		"chromatic": "^15.1.1",
 		"drizzle-kit": "^0.31.4",
 		"eslint": "^9.7.0",
 		"eslint-config-prettier": "10.1.2",

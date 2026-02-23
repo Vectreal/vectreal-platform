@@ -1,5 +1,6 @@
 node_modules/
 dist/
+build/
 .nx/
 vite.config.mts.timestamp-*
 vite.config.ts.timestamp-*

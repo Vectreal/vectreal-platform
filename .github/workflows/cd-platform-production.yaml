@@ -17,6 +17,10 @@ jobs:
   deploy-production:
     name: Deploy to Production Environment
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    strategy:
+      matrix:
+        lb-only-origin:
+          - false
     uses: ./.github/workflows/shared-gcloud-deploy.yaml
     with:
       environment: production
@@ -25,6 +29,8 @@ jobs:
       region: us-central1
       artifact-region: us-central1
       node-env: production
+      allow-unauthenticated: ${{ !matrix.lb-only-origin }}
+      cloud-run-flags: ${{ matrix.lb-only-origin && '--ingress internal-and-cloud-load-balancing' || '' }}
     secrets:
       gcp-credentials: ${{ secrets.GCP_CREDENTIALS }}
       gcp-project-id: ${{ secrets.GCP_PROJECT_ID }}

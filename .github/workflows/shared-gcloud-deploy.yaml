@@ -45,6 +45,16 @@ on:
         required: false
         type: boolean
         default: true
+      allow-unauthenticated:
+        description: 'Whether Cloud Run service should allow unauthenticated direct invocations'
+        required: false
+        type: boolean
+        default: true
+      cloud-run-flags:
+        description: 'Additional flags passed to gcloud run deploy (for example --ingress internal-and-cloud-load-balancing)'
+        required: false
+        type: string
+        default: ''
       image-uri:
         description: 'Optional full image URI to deploy (overrides computed image URI)'
         required: false
@@ -118,7 +128,7 @@ jobs:
       - name: Upload static client assets to GCS
         if: ${{ inputs.static-bucket-name != '' && inputs.build-and-push-image }}
         run: |
-          gsutil -m rsync -r -d apps/vectreal-platform/build/client gs://${{ inputs.static-bucket-name }}
+          gsutil -m rsync -r -d build/apps/vectreal-platform/client gs://${{ inputs.static-bucket-name }}
           gsutil -m setmeta -h "Cache-Control:${{ inputs.static-cache-control }}" "gs://${{ inputs.static-bucket-name }}/**"
 
       - name: Log in to Google Artifact Registry
@@ -158,7 +168,7 @@ jobs:
           service: ${{ inputs.service-name }}
           image: ${{ steps.image.outputs.uri }}
           region: ${{ inputs.region }}
-          flags: '--allow-unauthenticated'
+          flags: ${{ format('{0} {1}', inputs.allow-unauthenticated && '--allow-unauthenticated' || '', inputs.cloud-run-flags) }}
           env_vars: |
             NODE_ENV=${{ inputs.node-env }}
             ENVIRONMENT=${{ inputs.environment }}
@@ -173,7 +183,11 @@ jobs:
         run: |
           echo "Waiting for service to become healthy..."
           sleep 15
-          SERVICE_URL="${{ steps.deploy.outputs.url }}"
+          if [ "${{ inputs.allow-unauthenticated }}" = "true" ]; then
+            SERVICE_URL="${{ steps.deploy.outputs.url }}"
+          else
+            SERVICE_URL="${{ secrets.application-url }}"
+          fi
 
           # Try health check endpoint
           MAX_RETRIES=5

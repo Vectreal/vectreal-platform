@@ -21,7 +21,7 @@
 			"outputs": ["{options.outputPath}"],
 			"options": {
 				"tsConfig": "packages/core/tsconfig.json",
-				"outputPath": "dist/packages/core/typecheck",
+				"outputPath": "build/packages/core/typecheck",
 				"main": "packages/core/src/index.ts"
 			}
 		},
@@ -30,7 +30,7 @@
 			"outputs": ["{options.outputPath}"],
 			"defaultConfiguration": "production",
 			"options": {
-				"outputPath": "dist/packages/core"
+				"outputPath": "build/packages/core"
 			},
 			"configurations": {
 				"development": {
@@ -44,7 +44,7 @@
 		"nx-release-publish": {
 			"dependsOn": ["copy-md"],
 			"options": {
-				"packageRoot": "dist/packages/core"
+				"packageRoot": "build/packages/core"
 			}
 		},
 		"copy-md": {
@@ -52,7 +52,7 @@
 			"executor": "nx:run-commands",
 			"outputs": [],
 			"options": {
-				"commands": ["rsync -rat packages/core/*.md dist/packages/core/"]
+				"commands": ["rsync -rat packages/core/*.md build/packages/core/"]
 			}
 		}
 	}

@@ -105,6 +105,12 @@ variable "allowed_ingress" {
   default     = "all" # Options: "all", "internal", "internal-and-cloud-load-balancing"
 }
 
+variable "allow_public_cloud_run_invoker" {
+  description = "Whether to grant allUsers invoker access to Cloud Run services. Disable when traffic should only come through the load balancer."
+  type        = bool
+  default     = true
+}
+
 variable "manage_cloud_run_services" {
   description = "Whether to manage Cloud Run services via Terraform. Set to false for initial setup, true after first GitHub Actions deployment."
   type        = bool

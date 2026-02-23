@@ -97,11 +97,14 @@ resource "google_compute_backend_service" "staging_app" {
     cache_mode  = "USE_ORIGIN_HEADERS"
     default_ttl = var.staging_app_default_ttl_seconds
     max_ttl     = var.staging_app_max_ttl_seconds
+    client_ttl  = 0
+
+    serve_while_stale = 60
 
     cache_key_policy {
       include_host         = true
       include_protocol     = true
-      include_query_string = true
+      include_query_string = false
     }
   }
 
@@ -137,7 +140,20 @@ resource "google_compute_url_map" "staging_edge" {
     default_service = google_compute_backend_service.staging_app[0].id
 
     path_rule {
-      paths   = ["/assets/*", "/build/*", "/favicon.ico", "/site.webmanifest", "/browserconfig.xml"]
+      paths = [
+        "/assets/*",
+        "/build/*",
+        "/draco/*",
+        "/.well-known/*",
+        "/favicon.ico",
+        "/favicon-*",
+        "/android-chrome-*",
+        "/apple-touch-icon*",
+        "/mstile-*",
+        "/safari-pinned-tab.svg",
+        "/site.webmanifest",
+        "/browserconfig.xml"
+      ]
       service = google_compute_backend_bucket.staging_static[0].id
     }
   }

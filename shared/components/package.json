@@ -1,6 +1,7 @@
 {
-	"name": "@shared/ui",
+	"name": "@shared/components",
 	"version": "0.0.1",
+	"private": true,
 	"main": "./index.js",
 	"types": "./index.d.ts",
 	"type": "module",

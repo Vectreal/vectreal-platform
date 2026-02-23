@@ -1,43 +1,44 @@
 {
-  "name": "vctrl/hooks",
-  "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "packages/hooks/src",
-  "projectType": "library",
-  "tags": [],
-  "targets": {
-    "lint": {
-      "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"],
-      "options": {
-        "fix": true,
-        "lintFilePatterns": [
-          "packages/hooks/**/*.{ts,tsx,js,jsx}",
-          "packages/hooks/package.json"
-        ]
-      }
-    },
-    "nx-release-publish": {
-      "dependsOn": ["copy-md"],
-      "options": {
-        "packageRoot": "dist/packages/vctrl/hooks"
-      }
-    },
-    "copy-md": {
-      "dependsOn": ["build"],
-      "executor": "nx:run-commands",
-      "outputs": [],
-      "options": {
-        "commands": [
-          "rsync -rat packages/hooks/*.md dist/packages/vctrl/hooks/"
-        ]
-      }
-    },
-    "build": {
-      "executor": "@nx/vite:build",
-      "options": {
-        "outputPath": "dist/packages/vctrl/hooks",
-        "configFile": "packages/hooks/vite.config.ts"
-      }
-    }
-  }
+	"name": "vctrl/hooks",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "packages/hooks/src",
+	"projectType": "library",
+	"tags": [],
+	"targets": {
+		"lint": {
+			"executor": "@nx/eslint:lint",
+			"outputs": ["{options.outputFile}"],
+			"options": {
+				"fix": true,
+				"lintFilePatterns": [
+					"packages/hooks/**/*.{ts,tsx,js,jsx}",
+					"packages/hooks/package.json"
+				]
+			}
+		},
+		"nx-release-publish": {
+			"dependsOn": ["copy-md"],
+			"options": {
+				"packageRoot": "build/packages/vctrl/hooks"
+			}
+		},
+		"copy-md": {
+			"dependsOn": ["build"],
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"commands": [
+					"rsync -rat packages/hooks/*.md build/packages/vctrl/hooks/"
+				]
+			}
+		},
+		"build": {
+			"executor": "@nx/vite:build",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "build/packages/vctrl/hooks",
+				"configFile": "packages/hooks/vite.config.ts"
+			}
+		}
+	}
 }

@@ -1,3 +1,44 @@
 {
-	"name": "shared/utils"
+	"name": "shared/utils",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "shared/utils/src",
+	"projectType": "library",
+	"tags": [],
+	"targets": {
+		"lint": {
+			"executor": "@nx/eslint:lint",
+			"outputs": ["{options.outputFile}"],
+			"options": {
+				"fix": true,
+				"lintFilePatterns": [
+					"shared/utils/**/*.{ts,tsx,js,jsx}",
+					"shared/utils/package.json"
+				]
+			}
+		},
+		"typecheck": {
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"command": "tsc --noEmit -p shared/utils/tsconfig.json"
+			}
+		},
+		"build": {
+			"executor": "@nx/vite:build",
+			"outputs": ["{options.outputPath}"],
+			"defaultConfiguration": "production",
+			"options": {
+				"outputPath": "build/shared/utils",
+				"configFile": "shared/utils/vite.config.ts"
+			},
+			"configurations": {
+				"development": {
+					"mode": "development"
+				},
+				"production": {
+					"mode": "production"
+				}
+			}
+		}
+	}
 }

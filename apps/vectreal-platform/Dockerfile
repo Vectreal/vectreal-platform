@@ -56,7 +56,7 @@ RUN addgroup -g 1001 -S nodejs && \
 #   pnpx nx build vectreal-platform
 COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=deps --chown=nodejs:nodejs /app/package.json ./package.json
-COPY --chown=nodejs:nodejs apps/vectreal-platform/build ./apps/vectreal-platform/build
+COPY --chown=nodejs:nodejs build/apps/vectreal-platform ./build/apps/vectreal-platform
 
 USER nodejs
 
@@ -66,5 +66,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
     CMD node -e "require('http').get('http://localhost:8080/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Start the application using react-router-serve from the correct directory
-WORKDIR /app/apps/vectreal-platform
-CMD ["npx", "react-router-serve", "build/server/index.js"]
+WORKDIR /app
+CMD ["npx", "react-router-serve", "build/apps/vectreal-platform/server/index.js"]
