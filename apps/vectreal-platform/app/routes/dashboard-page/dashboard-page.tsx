@@ -109,17 +109,37 @@ const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
 
 	// Transform data for tables
 	const projectTableData: ProjectRow[] = projects.map(
-		({ project, organizationId }) => ({
-			id: project.id,
-			name: project.name,
-			organizationName:
-				organizations.find(
-					({ organization }) => organization.id === organizationId
-				)?.organization.name || 'Unknown',
-			sceneCount: scenes.filter((s) => s.projectId === project.id).length,
-			createdAt: new Date(),
-			updatedAt: new Date()
-		})
+		({ project, organizationId }) => {
+			const projectScenes = scenes.filter(
+				(scene) => scene.projectId === project.id
+			)
+			const latestSceneUpdate = projectScenes.reduce<Date | null>(
+				(latest, scene) => {
+					const sceneUpdatedAt = new Date(scene.updatedAt)
+
+					if (!latest || sceneUpdatedAt > latest) {
+						return sceneUpdatedAt
+					}
+
+					return latest
+				},
+				null
+			)
+
+			const stableTimestamp = latestSceneUpdate ?? new Date(0)
+
+			return {
+				id: project.id,
+				name: project.name,
+				organizationName:
+					organizations.find(
+						({ organization }) => organization.id === organizationId
+					)?.organization.name || 'Unknown',
+				sceneCount: projectScenes.length,
+				createdAt: stableTimestamp,
+				updatedAt: stableTimestamp
+			}
+		}
 	)
 
 	const sceneTableData: SceneRow[] = scenes.map((scene) => {

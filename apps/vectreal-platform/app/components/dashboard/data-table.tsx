@@ -121,6 +121,18 @@ export function DataTable<TData, TValue>({
 		.rows.map((row) => row.original)
 	const hasSelection = selectedRows.length > 0
 
+	const getCellTitle = (value: unknown): string | undefined => {
+		if (
+			typeof value === 'string' ||
+			typeof value === 'number' ||
+			typeof value === 'boolean'
+		) {
+			return String(value)
+		}
+
+		return undefined
+	}
+
 	useEffect(() => {
 		if (!onSelectionChange) {
 			return
@@ -215,7 +227,7 @@ export function DataTable<TData, TValue>({
 									{row.getVisibleCells().map((cell) => (
 										<TableCell
 											key={cell.id}
-											title={String(cell.getValue())}
+											title={getCellTitle(cell.getValue())}
 											className="[&>a,&>span]:max-w-sm [&>a,&>span]:truncate!"
 										>
 											{flexRender(
