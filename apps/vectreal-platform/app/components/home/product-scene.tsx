@@ -1,10 +1,16 @@
 import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 
 const ProductSceneClient = lazy(() => import('./product-scene-client'))
 
 const ProductScene = () => {
-	if (import.meta.env.SSR) {
+	const [isMounted, setIsMounted] = useState(false)
+
+	useEffect(() => {
+		setIsMounted(true)
+	}, [])
+
+	if (!isMounted) {
 		return <div className="h-96 w-full" />
 	}
 

@@ -1,6 +1,6 @@
 import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 
 const HeroSceneClient = lazy(() => import('./hero-scene-client'))
 
@@ -9,7 +9,13 @@ interface HeroSceneProps {
 }
 
 const HeroScene = ({ vertical }: HeroSceneProps) => {
-	if (import.meta.env.SSR) {
+	const [isMounted, setIsMounted] = useState(false)
+
+	useEffect(() => {
+		setIsMounted(true)
+	}, [])
+
+	if (!isMounted) {
 		return (
 			<div
 				className={cn(

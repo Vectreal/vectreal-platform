@@ -22,7 +22,6 @@ import { data, Form, redirect } from 'react-router'
 import { Route } from './+types/signup-page'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
-
 /**
  * User input fields for signup form.
  */
@@ -212,6 +211,7 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 					</label>
 					<Input
 						name="username"
+						autoComplete="username"
 						placeholder="your-username"
 						type="text"
 						id="username"
@@ -236,6 +236,7 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 					</label>
 					<Input
 						name="email"
+						autoComplete="email"
 						placeholder="example@yay.com"
 						type="email"
 						id="email"
@@ -261,6 +262,7 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 					<span className="relative flex w-full items-center">
 						<Input
 							name="password"
+							autoComplete="current-password"
 							placeholder="********"
 							type={showPassword ? 'text' : 'password'}
 							id="password"

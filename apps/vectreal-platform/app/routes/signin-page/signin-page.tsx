@@ -14,7 +14,6 @@ import { Form, redirect } from 'react-router'
 import { Route } from './+types/signin-page'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
-
 interface UserInput {
 	email: string
 	password: string
@@ -123,6 +122,7 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 					<Input
 						name="email"
 						placeholder="example@yay.com"
+						autoComplete="email"
 						type="email"
 						id="email"
 						className="w-full p-2"
@@ -139,6 +139,7 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 					<span className="relative flex w-full items-center">
 						<Input
 							name="password"
+							autoComplete="current-password"
 							placeholder="********"
 							type={showPassword ? 'text' : 'password'}
 							id="password"
