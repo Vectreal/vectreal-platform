@@ -11,12 +11,14 @@
 			"options": {
 				"fix": true,
 				"lintFilePatterns": [
-					"packages/viewer/**/*.{ts,tsx,js,jsx}",
+					"packages/viewer/src/**/*.{ts,tsx,js,jsx}",
+					"packages/viewer/.storybook/**/*.{ts,tsx,js,jsx}",
+					"packages/viewer/vite.config.ts",
 					"packages/viewer/package.json"
 				]
 			}
 		},
-		"type-check": {
+		"typecheck": {
 			"executor": "nx:run-commands",
 			"outputs": [],
 			"options": {
@@ -26,7 +28,7 @@
 		"nx-release-publish": {
 			"dependsOn": ["copy-md"],
 			"options": {
-				"packageRoot": "dist/packages/vctrl/viewer"
+				"packageRoot": "build/packages/vctrl/viewer"
 			}
 		},
 		"copy-md": {
@@ -35,23 +37,32 @@
 			"outputs": [],
 			"options": {
 				"commands": [
-					"rsync -rat packages/viewer/*.md dist/packages/vctrl/viewer/"
+					"rsync -rat packages/viewer/*.md build/packages/vctrl/viewer/"
 				]
 			}
 		},
 		"build": {
 			"executor": "@nx/vite:build",
+			"outputs": ["{options.outputPath}"],
 			"options": {
-				"outputPath": "dist/packages/vctrl/viewer",
+				"outputPath": "build/packages/vctrl/viewer",
 				"configFile": "packages/viewer/vite.config.ts"
 			}
 		},
 		"build-storybook": {
 			"executor": "nx:run-commands",
-			"dependsOn": ["type-check"],
+			"dependsOn": ["typecheck"],
 			"outputs": ["{projectRoot}/storybook-static"],
 			"options": {
 				"command": "storybook build",
+				"cwd": "packages/viewer"
+			}
+		},
+		"storybook-dev": {
+			"executor": "nx:run-commands",
+			"continuous": true,
+			"options": {
+				"command": "storybook dev",
 				"cwd": "packages/viewer"
 			}
 		},

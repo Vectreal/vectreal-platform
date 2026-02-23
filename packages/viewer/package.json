@@ -53,8 +53,8 @@
 		"@react-three/postprocessing": "^3.0.4",
 		"postprocessing": "^6.37.3",
 		"@vctrl/core": "0.9.5",
-		"@shared/ui": "0.0.1",
-		"@shared/utils": "0.0.1"
+		"@shared/components": "workspace:*",
+		"@shared/utils": "workspace:*"
 	},
 	"peerDependencies": {
 		"three": "^0.177.0",
