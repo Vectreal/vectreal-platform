@@ -123,7 +123,7 @@ jobs:
 
       - name: Build application artifacts
         if: ${{ inputs.build-and-push-image }}
-        run: pnpx nx build vectreal-platform
+        run: pnpx nx build-ci vectreal-platform
 
       - name: Upload static client assets to GCS
         if: ${{ inputs.static-bucket-name != '' && inputs.build-and-push-image }}

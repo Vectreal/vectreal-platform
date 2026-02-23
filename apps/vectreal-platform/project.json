@@ -23,6 +23,14 @@
 				"command": "react-router build"
 			}
 		},
+		"build-ci": {
+			"executor": "nx:run-commands",
+			"outputs": ["{workspaceRoot}/build/apps/vectreal-platform"],
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"command": "react-router build"
+			}
+		},
 		"dev": {
 			"executor": "nx:run-commands",
 			"options": {
