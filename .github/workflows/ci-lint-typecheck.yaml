@@ -4,6 +4,9 @@ on:
   workflow_call:
   pull_request:
     types: [opened, synchronize, reopened]
+    branches:
+      - '!main'
+      - '!develop'
     paths:
       - 'apps/vectreal-platform/**'
       - 'packages/core/**'
@@ -20,7 +23,7 @@ on:
       - '.github/workflows/shared-gcloud-deploy.yaml'
   push:
     branches:
-      - main
+      - 'main'
     paths:
       - 'apps/vectreal-platform/**'
       - 'packages/core/**'
