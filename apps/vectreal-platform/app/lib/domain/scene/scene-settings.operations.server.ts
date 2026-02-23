@@ -9,6 +9,7 @@ import {
 } from '../user/user-repository.server'
 
 import type {
+	SerializedSceneAssetDataMap,
 	SceneSettingsData,
 	SceneSettingsRequest
 } from '../../../types/api'
@@ -158,14 +159,7 @@ export async function getSceneSettings(
 
 		const result =
 			await sceneSettingsService.getSceneSettingsWithAssets(sceneId)
-		const serialized: Record<
-			string,
-			{
-				data: number[]
-				mimeType: string
-				fileName: string
-			}
-		> = {}
+		const serialized: SerializedSceneAssetDataMap = {}
 		result?.assetDataMap?.forEach((value, key) => {
 			serialized[key] = {
 				data: Buffer.from(value.data).toString('base64'),

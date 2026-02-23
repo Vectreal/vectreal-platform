@@ -131,7 +131,9 @@ export async function action({ request }: Route.ActionArgs) {
 			throw new Error('Texture optimization produced an empty output payload')
 		}
 
-		return new Response(optimizedTexture, {
+		const responseBody = new Uint8Array(optimizedTexture)
+
+		return new Response(responseBody, {
 			status: 200,
 			headers: {
 				'Content-Type': outputMimeType,

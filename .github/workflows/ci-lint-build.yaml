@@ -3,10 +3,6 @@ name: CI - Lint and Build
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-  push:
-    branches:
-      - develop
-      - main
     paths:
       - 'apps/vectreal-platform/**'
       - 'packages/core/**'
