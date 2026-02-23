@@ -17,7 +17,7 @@ import type { AppLoadContext, EntryContext } from 'react-router'
 export const streamTimeout = 5_000
 
 const CACHEABLE_PUBLIC_PATHS = new Set([
-	'/',
+	'/home',
 	'/about',
 	'/contact',
 	'/privacy-policy',
