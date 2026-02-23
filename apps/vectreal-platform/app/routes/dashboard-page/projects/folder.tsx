@@ -24,7 +24,8 @@ import { getProject } from '../../../lib/domain/project/project-repository.serve
 import {
 	getChildFolders,
 	getFolderScenes,
-	getSceneFolder
+	getSceneFolder,
+	getSceneFolderAncestry
 } from '../../../lib/domain/scene/scene-folder-repository.server'
 import {
 	deleteDialogAtom,
@@ -58,10 +59,11 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Folder not found', { status: 404 })
 	}
 
-	// Fetch subfolders and scenes in parallel
-	const [subfolders, scenes] = await Promise.all([
+	// Fetch folder content and ancestry in parallel
+	const [subfolders, scenes, folderPath] = await Promise.all([
 		getChildFolders(folderId, user.id),
-		getFolderScenes(folderId, user.id)
+		getFolderScenes(folderId, user.id),
+		getSceneFolderAncestry(folderId, user.id)
 	])
 
 	return {
@@ -69,6 +71,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		userWithDefaults,
 		project,
 		folder,
+		folderPath,
 		subfolders,
 		scenes
 	}

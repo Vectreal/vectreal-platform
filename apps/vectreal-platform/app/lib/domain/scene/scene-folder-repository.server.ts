@@ -7,6 +7,7 @@ import { sceneFolders } from '../../../db/schema/project/scene-folders'
 import { scenes } from '../../../db/schema/project/scenes'
 
 const db = getDbClient()
+const MAX_FOLDER_ANCESTRY_DEPTH = 50
 
 type DbClient = typeof db
 
@@ -175,6 +176,40 @@ export async function getSceneFolder(
 	await verifyProjectAccess(db, folder.projectId, userId)
 
 	return folder
+}
+
+export async function getSceneFolderAncestry(
+	folderId: string,
+	userId: string
+): Promise<Array<typeof sceneFolders.$inferSelect>> {
+	const ancestry: Array<typeof sceneFolders.$inferSelect> = []
+	const visitedFolderIds = new Set<string>()
+
+	let currentFolderId: string | null = folderId
+	let depth = 0
+
+	while (currentFolderId) {
+		if (visitedFolderIds.has(currentFolderId)) {
+			throw new Error('Cycle detected in folder hierarchy')
+		}
+
+		visitedFolderIds.add(currentFolderId)
+
+		const folder = await getSceneFolder(currentFolderId, userId)
+		if (!folder) {
+			break
+		}
+
+		ancestry.push(folder)
+		currentFolderId = folder.parentFolderId
+		depth += 1
+
+		if (depth > MAX_FOLDER_ANCESTRY_DEPTH) {
+			throw new Error('Folder hierarchy exceeds supported depth')
+		}
+	}
+
+	return ancestry.reverse()
 }
 
 export async function getChildFolders(

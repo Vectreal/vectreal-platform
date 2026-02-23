@@ -13,8 +13,6 @@ import type {
 import type { UserWithDefaults } from '../user/user-repository.server'
 import type { User } from '@supabase/supabase-js'
 
-
-
 /**
  * Organization with membership info
  */
@@ -96,6 +94,7 @@ export interface FolderLoaderData {
 	userWithDefaults: UserWithDefaults
 	project: typeof projects.$inferSelect
 	folder: typeof sceneFolders.$inferSelect
+	folderPath: Array<typeof sceneFolders.$inferSelect>
 	subfolders: Array<typeof sceneFolders.$inferSelect>
 	scenes: Array<typeof scenes.$inferSelect>
 	organization: OrganizationWithMembership | null
@@ -109,6 +108,7 @@ export interface SceneLoaderData {
 	userWithDefaults: UserWithDefaults
 	project: typeof projects.$inferSelect
 	scene: typeof scenes.$inferSelect
+	folderPath: Array<typeof sceneFolders.$inferSelect>
 	organization: OrganizationWithMembership | null
 }
 

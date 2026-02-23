@@ -105,6 +105,17 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 		switch (routeContext) {
 			case 'scene-detail':
 				if (scene?.scene && scene?.project) {
+					const folderPath = scene.folderPath || []
+					const folderBreadcrumbs: BreadcrumbItem[] = folderPath.map(
+						(pathFolder) => ({
+							label: pathFolder.name || 'Folder',
+							to: DASHBOARD_ROUTES.FOLDER_DETAIL(
+								scene.project.id,
+								pathFolder.id
+							)
+						})
+					)
+
 					const breadcrumbs: BreadcrumbItem[] = [
 						{ label: 'Dashboard', to: DASHBOARD_ROUTES.DASHBOARD },
 						{ label: 'Projects', to: DASHBOARD_ROUTES.PROJECTS },
@@ -112,6 +123,7 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 							label: scene.project.name || 'Project',
 							to: DASHBOARD_ROUTES.PROJECT_DETAIL(scene.project.id)
 						},
+						...folderBreadcrumbs,
 						{ label: scene.scene.name || 'Scene', isLast: true }
 					]
 
@@ -129,6 +141,27 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 				if (folder?.folder && folder?.project) {
 					const totalItems =
 						(folder.subfolders?.length || 0) + (folder.scenes?.length || 0)
+					const folderPath =
+						folder.folderPath && folder.folderPath.length > 0
+							? folder.folderPath
+							: [folder.folder]
+
+					const folderBreadcrumbs: BreadcrumbItem[] = folderPath.map(
+						(pathFolder, index) => {
+							const isLastFolder = index === folderPath.length - 1
+
+							return {
+								label: pathFolder.name || 'Folder',
+								to: isLastFolder
+									? undefined
+									: DASHBOARD_ROUTES.FOLDER_DETAIL(
+											folder.project.id,
+											pathFolder.id
+										),
+								isLast: isLastFolder
+							}
+						}
+					)
 
 					const breadcrumbs: BreadcrumbItem[] = [
 						{ label: 'Dashboard', to: DASHBOARD_ROUTES.DASHBOARD },
@@ -137,7 +170,7 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 							label: folder.project.name || 'Project',
 							to: DASHBOARD_ROUTES.PROJECT_DETAIL(folder.project.id)
 						},
-						{ label: folder.folder.name || 'Folder', isLast: true }
+						...folderBreadcrumbs
 					]
 
 					return {

@@ -7,6 +7,7 @@
 
 import {
 	Breadcrumb,
+	BreadcrumbEllipsis,
 	BreadcrumbItem,
 	BreadcrumbLink,
 	BreadcrumbList,
@@ -15,7 +16,7 @@ import {
 } from '@shared/components/ui/breadcrumb'
 import { Skeleton } from '@shared/components/ui/skeleton'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Fragment, memo } from 'react'
+import { Fragment, memo, useMemo } from 'react'
 import { Link } from 'react-router'
 
 import {
@@ -24,7 +25,51 @@ import {
 } from '../../components/dashboard/utils'
 import { useDashboardHeaderData } from '../../hooks/use-dashboard-content'
 
-import type { NavigationState } from '../../types/dashboard'
+import type {
+	BreadcrumbItem as DashboardBreadcrumbItem,
+	NavigationState
+} from '../../types/dashboard'
+
+const DASHBOARD_BASE_BREADCRUMB_COUNT = 2
+const MAX_VISIBLE_LOGICAL_SEGMENTS = 3
+
+type RenderedBreadcrumbItem =
+	| DashboardBreadcrumbItem
+	| {
+			kind: 'ellipsis'
+			key: string
+	  }
+
+const collapseLogicalBreadcrumbs = (
+	breadcrumbs: DashboardBreadcrumbItem[]
+): RenderedBreadcrumbItem[] => {
+	if (breadcrumbs.length <= DASHBOARD_BASE_BREADCRUMB_COUNT) {
+		return breadcrumbs
+	}
+
+	const baseBreadcrumbs = breadcrumbs.slice(0, DASHBOARD_BASE_BREADCRUMB_COUNT)
+	const logicalBreadcrumbs = breadcrumbs.slice(DASHBOARD_BASE_BREADCRUMB_COUNT)
+
+	if (logicalBreadcrumbs.length <= MAX_VISIBLE_LOGICAL_SEGMENTS) {
+		return breadcrumbs
+	}
+
+	const firstLogical = logicalBreadcrumbs[0]
+	const parentLogical = logicalBreadcrumbs[logicalBreadcrumbs.length - 2]
+	const currentLogical = logicalBreadcrumbs[logicalBreadcrumbs.length - 1]
+
+	if (!firstLogical || !parentLogical || !currentLogical) {
+		return breadcrumbs
+	}
+
+	return [
+		...baseBreadcrumbs,
+		firstLogical,
+		{ kind: 'ellipsis', key: 'logical-breadcrumb-ellipsis' },
+		{ ...parentLogical, isLast: false },
+		{ ...currentLogical, isLast: true }
+	]
+}
 
 const getBreadcrumbNavigationState = (
 	to: string,
@@ -52,6 +97,10 @@ const getBreadcrumbNavigationState = (
  */
 export const DynamicBreadcrumb = memo(() => {
 	const { breadcrumbs, isLoading } = useDashboardHeaderData()
+	const renderedBreadcrumbs = useMemo(
+		() => (breadcrumbs ? collapseLogicalBreadcrumbs(breadcrumbs) : []),
+		[breadcrumbs]
+	)
 
 	// No breadcrumbs to render (even when not loading)
 	if (!isLoading && (!breadcrumbs || breadcrumbs.length === 0)) {
@@ -61,7 +110,9 @@ export const DynamicBreadcrumb = memo(() => {
 	// Create a stable key that changes between loading and loaded states
 	const contentKey = isLoading
 		? 'breadcrumb-loading'
-		: breadcrumbs?.map((item) => item.to || item.label).join('-') || 'empty'
+		: renderedBreadcrumbs
+				.map((item) => ('kind' in item ? item.key : item.to || item.label))
+				.join('-') || 'empty'
 
 	return (
 		<AnimatePresence mode="wait" initial={false}>
@@ -94,15 +145,21 @@ export const DynamicBreadcrumb = memo(() => {
 				) : (
 					<Breadcrumb className="grow">
 						<BreadcrumbList className="text-primary/75">
-							{breadcrumbs?.map((item, index) => {
+							{renderedBreadcrumbs.map((item, index) => {
 								const isFirst = index === 0
 								const showSeparator = !isFirst
+								const isEllipsis = 'kind' in item
+								const key = isEllipsis
+									? item.key
+									: `${item.to || item.label}-${index}`
 
 								return (
-									<Fragment key={item.to || item.label}>
+									<Fragment key={key}>
 										{showSeparator && <BreadcrumbSeparator />}
 										<BreadcrumbItem>
-											{item.isLast ? (
+											{isEllipsis ? (
+												<BreadcrumbEllipsis />
+											) : item.isLast ? (
 												<BreadcrumbPage className="text-primary">
 													{item.label}
 												</BreadcrumbPage>

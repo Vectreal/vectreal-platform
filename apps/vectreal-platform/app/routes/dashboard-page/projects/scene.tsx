@@ -18,7 +18,10 @@ import BasicCard from '../../../components/layout-components/basic-card'
 import { ClientVectrealViewer } from '../../../components/viewer/client-vectreal-viewer'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
-import { getScene } from '../../../lib/domain/scene/scene-folder-repository.server'
+import {
+	getScene,
+	getSceneFolderAncestry
+} from '../../../lib/domain/scene/scene-folder-repository.server'
 import { deleteDialogAtom } from '../../../lib/stores/dashboard-management-store'
 
 export async function loader({ request, params }: Route.LoaderArgs) {
@@ -46,11 +49,16 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Scene not found', { status: 404 })
 	}
 
+	const folderPath = scene.folderId
+		? await getSceneFolderAncestry(scene.folderId, user.id)
+		: []
+
 	return {
 		user,
 		userWithDefaults,
 		project,
-		scene
+		scene,
+		folderPath
 	}
 }
 
