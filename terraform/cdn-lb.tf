@@ -170,7 +170,25 @@ resource "google_compute_url_map" "staging_edge" {
     for_each = length(local.staging_static_hosts) > 0 ? [1] : []
     content {
       name            = "staging-static"
-      default_service = google_compute_backend_bucket.staging_static[0].id
+      default_service = google_compute_backend_service.staging_app[0].id
+
+      path_rule {
+        paths = [
+          "/assets/*",
+          "/build/*",
+          "/draco/*",
+          "/.well-known/*",
+          "/favicon.ico",
+          "/favicon-*",
+          "/android-chrome-*",
+          "/apple-touch-icon*",
+          "/mstile-*",
+          "/safari-pinned-tab.svg",
+          "/site.webmanifest",
+          "/browserconfig.xml"
+        ]
+        service = google_compute_backend_bucket.staging_static[0].id
+      }
     }
   }
 
