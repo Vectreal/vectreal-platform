@@ -1,4 +1,4 @@
-name: Deploy Platform to Staging
+name: CD - Deploy Platform to Staging
 
 on:
   push:
@@ -14,25 +14,23 @@ on:
       - 'pnpm-lock.yaml'
       - 'nx.json'
       - 'tsconfig.base.json'
-      - '.github/workflows/ci-lint-build.yaml'
+      - '.github/workflows/ci-lint-typecheck.yaml'
       - '.github/workflows/cd-platform-staging.yaml'
       - '.github/workflows/shared-gcloud-deploy.yaml'
-  workflow_run:
-    workflows:
-      - CI - Lint and Build
-    types:
-      - completed
-    branches:
-      - develop
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  lint-typecheck:
+    name: Lint and Typecheck Gate
+    uses: ./.github/workflows/ci-lint-typecheck.yaml
+
   deploy-staging:
     name: Deploy to Staging Environment
-    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
+    needs: lint-typecheck
+    if: ${{ needs.lint-typecheck.result == 'success' }}
     uses: ./.github/workflows/shared-gcloud-deploy.yaml
     with:
       environment: staging
@@ -56,7 +54,6 @@ jobs:
 
   deploy-staging-secondary-us-east1:
     name: Deploy Staging Secondary (us-east1)
-    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
     needs: deploy-staging
     uses: ./.github/workflows/shared-gcloud-deploy.yaml
     with:

@@ -1,4 +1,4 @@
-name: Shared Google Cloud Run Deployment
+name: Shared - Google Cloud Run Deployment
 
 on:
   workflow_call:

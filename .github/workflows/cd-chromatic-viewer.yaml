@@ -1,4 +1,4 @@
-name: Publish Viewer to Chromatic
+name: CD - Publish Viewer to Chromatic
 
 on:
   push:
