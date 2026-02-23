@@ -182,29 +182,45 @@ jobs:
       - name: Verify deployment health
         run: |
           echo "Waiting for service to become healthy..."
-          sleep 15
-          if [ "${{ inputs.allow-unauthenticated }}" = "true" ]; then
-            SERVICE_URL="${{ steps.deploy.outputs.url }}"
-          else
-            SERVICE_URL="${{ secrets.application-url }}"
+          sleep 20
+
+          # If Cloud Run is ingress-restricted to internal-and-cloud-load-balancing,
+          # GitHub runners cannot reach the direct *.run.app URL.
+          USE_APPLICATION_URL=false
+          if [[ "${{ inputs.cloud-run-flags }}" == *"internal-and-cloud-load-balancing"* ]]; then
+            USE_APPLICATION_URL=true
           fi
 
+          if [ "$USE_APPLICATION_URL" = "true" ]; then
+            SERVICE_URL="${{ secrets.application-url }}"
+            echo "Health check target: application URL (LB/edge)"
+          elif [ "${{ inputs.allow-unauthenticated }}" = "true" ]; then
+            SERVICE_URL="${{ steps.deploy.outputs.url }}"
+            echo "Health check target: Cloud Run service URL"
+          else
+            SERVICE_URL="${{ secrets.application-url }}"
+            echo "Health check target: application URL (authenticated service)"
+          fi
+
+          HEALTHCHECK_URL="${SERVICE_URL%/}/health"
+          echo "Health check URL: $HEALTHCHECK_URL"
+
           # Try health check endpoint
-          MAX_RETRIES=5
+          MAX_RETRIES=8
           RETRY_COUNT=0
 
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             echo "Health check attempt $((RETRY_COUNT + 1))/$MAX_RETRIES..."
             
-            if curl -f -s "${SERVICE_URL}/health" > /dev/null 2>&1; then
+            if curl -f -s "$HEALTHCHECK_URL" > /dev/null 2>&1; then
               echo "✅ Service is healthy!"
               exit 0
             fi
             
             RETRY_COUNT=$((RETRY_COUNT + 1))
             if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-              echo "⏳ Waiting 10 seconds before retry..."
-              sleep 10
+              echo "⏳ Waiting 15 seconds before retry..."
+              sleep 15
             fi
           done
 
