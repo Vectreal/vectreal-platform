@@ -14,6 +14,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
+import { JSONDocument } from '@gltf-transform/core'
 import { ModelFileTypes } from '@vctrl/core/model-loader'
 import { Object3D } from 'three'
 
@@ -69,13 +70,25 @@ export interface SceneDataLoadOptions {
 	applySettings?: boolean
 }
 
+/** Extended GLTF document with asset metadata for tracking uploaded assets. */
+export interface ExtendedGLTFDocument extends JSONDocument {
+	readonly assetIds?: string[]
+	readonly asset?: {
+		readonly extensions?: {
+			readonly VECTREAL_asset_metadata?: {
+				readonly assetIds: string[]
+			}
+		}
+	}
+}
+
 /**
  * Server response data structure for scene loading.
  * Contains the GLTF JSON, binary assets, and scene settings.
  */
 export interface ServerSceneData extends SceneSettings {
 	/** The GLTF JSON structure */
-	gltfJson: Record<string, unknown>
+	gltfJson: ExtendedGLTFDocument
 	/** Binary asset data keyed by asset identifier */
 	assetData: Record<
 		string,

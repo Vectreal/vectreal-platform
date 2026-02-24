@@ -808,18 +808,16 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				}
 
 				if (aggregate.gltfJson && aggregate.assetData) {
-					const normalizedGltfJson =
+					const normalizedGltfJson: ServerSceneData['gltfJson'] =
 						typeof aggregate.gltfJson === 'object' &&
 						aggregate.gltfJson !== null &&
 						'json' in aggregate.gltfJson &&
 						typeof (aggregate.gltfJson as { json?: unknown }).json ===
 							'object' &&
 						(aggregate.gltfJson as { json?: unknown }).json !== null
-							? ((aggregate.gltfJson as { json: unknown }).json as Record<
-									string,
-									unknown
-								>)
-							: (aggregate.gltfJson as unknown as Record<string, unknown>)
+							? ((aggregate.gltfJson as { json: unknown })
+									.json as ServerSceneData['gltfJson'])
+							: (aggregate.gltfJson as ServerSceneData['gltfJson'])
 
 					const sceneData: ServerSceneData = {
 						gltfJson: normalizedGltfJson,

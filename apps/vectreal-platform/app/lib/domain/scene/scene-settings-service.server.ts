@@ -45,7 +45,6 @@ import {
 	uploadSceneAssets
 } from '../asset/asset-storage.server'
 
-
 import type { OptimizationReport, Optimizations } from '@vctrl/core'
 
 /**
@@ -240,6 +239,14 @@ class SceneSettingsService {
 					publishedBy: userId
 				})
 				.returning()
+
+			await tx
+				.update(scenes)
+				.set({
+					status: 'published',
+					updatedAt: new Date()
+				})
+				.where(eq(scenes.id, sceneId))
 
 			await this.upsertSceneStats(tx, {
 				sceneId,

@@ -169,7 +169,9 @@ const DashboardLayout = () => {
 				</LogoSidebar>
 				<SidebarInset className="relative overflow-hidden">
 					<DashboardManagementDialogs />
-					<div className="from-background/75 absolute top-0 z-50 h-20 w-full bg-gradient-to-b to-transparent" />
+					{!sceneId && (
+						<div className="from-background/75 absolute top-0 z-50 h-20 w-full bg-gradient-to-b to-transparent" />
+					)}
 					<div className="absolute z-50 flex items-center gap-4 p-4 px-6 pl-4">
 						<SidebarTrigger />
 						<div className="flex items-center gap-2">

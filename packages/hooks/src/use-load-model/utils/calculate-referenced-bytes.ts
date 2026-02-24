@@ -44,12 +44,16 @@ const resolveSizeFromAssets = (
 	return 0
 }
 
-const collectReferencedUris = (gltfJson: Record<string, unknown>) => {
+const collectReferencedUris = (gltfJson: unknown) => {
 	const bufferUris = new Set<string>()
 	const imageUris = new Set<string>()
+	const document = gltfJson as {
+		images?: Array<{ uri?: string }>
+		buffers?: Array<{ uri?: string }>
+	}
 
-	const images = Array.isArray(gltfJson.images)
-		? (gltfJson.images as Array<{ uri?: string }>)
+	const images = Array.isArray(document.images)
+		? (document.images as Array<{ uri?: string }>)
 		: []
 	for (const image of images) {
 		if (typeof image.uri === 'string' && !image.uri.startsWith('data:')) {
@@ -57,8 +61,8 @@ const collectReferencedUris = (gltfJson: Record<string, unknown>) => {
 		}
 	}
 
-	const buffers = Array.isArray(gltfJson.buffers)
-		? (gltfJson.buffers as Array<{ uri?: string }>)
+	const buffers = Array.isArray(document.buffers)
+		? (document.buffers as Array<{ uri?: string }>)
 		: []
 	for (const buffer of buffers) {
 		if (typeof buffer.uri === 'string' && !buffer.uri.startsWith('data:')) {
@@ -110,7 +114,7 @@ export async function calculateReferencedBytesFromFiles(
 export function calculateReferencedBytesFromServerScene(
 	data: ServerSceneData
 ): ReferencedBytes {
-	const gltfJson = data.gltfJson as Record<string, unknown>
+	const gltfJson = data.gltfJson
 	const assets = Object.values(data.assetData || {}).map((asset) => ({
 		fileName: asset.fileName,
 		size: getAssetByteSize(asset.data)

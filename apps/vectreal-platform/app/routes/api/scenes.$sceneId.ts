@@ -10,7 +10,8 @@ import {
 	deleteScene,
 	getScene,
 	renameSceneFolder,
-	renameScene
+	renameScene,
+	updateSceneMetadata
 } from '../../lib/domain/scene/scene-folder-repository.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/scene-preview-repository.server'
 import * as sceneSettingsOps from '../../lib/domain/scene/scene-settings.operations.server'
@@ -471,6 +472,51 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			action,
 			sceneId: routeSceneId
 		})
+	}
+
+	if (action === 'update-scene-metadata') {
+		if (!routeSceneId) {
+			return ApiResponse.badRequest('Scene ID is required')
+		}
+
+		const scene = await getScene(routeSceneId, authResult.user.id)
+		if (!scene) {
+			return ApiResponse.notFound(`Scene not found with ID: ${routeSceneId}`)
+		}
+
+		const nameRaw = actionRequest.name
+		const descriptionRaw = actionRequest.description
+
+		const name = typeof nameRaw === 'string' ? nameRaw.trim() : ''
+		const description =
+			typeof descriptionRaw === 'string' ? descriptionRaw : null
+
+		if (!name) {
+			return ApiResponse.badRequest('Scene name is required')
+		}
+
+		try {
+			const updatedScene = await updateSceneMetadata(
+				routeSceneId,
+				authResult.user.id,
+				{
+					name,
+					description
+				}
+			)
+
+			return ApiResponse.success({
+				success: true,
+				action,
+				scene: updatedScene
+			})
+		} catch (error) {
+			return ApiResponse.serverError(
+				error instanceof Error
+					? error.message
+					: 'Failed to update scene metadata'
+			)
+		}
 	}
 
 	const parsedRequest =

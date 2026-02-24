@@ -1,3 +1,5 @@
+import { ExtendedGLTFDocument } from '@vctrl/hooks/use-load-model/types'
+
 import { assets, sceneSettings } from '../db/schema'
 
 import type { ProcessState } from './publisher-config'
@@ -17,6 +19,7 @@ import type {
 
 // Re-export core types for convenience
 export type { SceneMeta, SceneSettings, SerializedAsset }
+export type { ExtendedGLTFDocument }
 
 // ============================================================================
 // Asset Types
@@ -25,17 +28,6 @@ export type { SceneMeta, SceneSettings, SerializedAsset }
 /** GLTF export result for JSON transfer (uses SerializedGLTFExportResult from core). */
 export type GLTFExportResult = SerializedGLTFExportResult
 
-/** Extended GLTF document with asset metadata for tracking uploaded assets. */
-export interface ExtendedGLTFDocument extends JSONDocument {
-	readonly assetIds?: string[]
-	readonly asset?: {
-		readonly extensions?: {
-			readonly VECTREAL_asset_metadata?: {
-				readonly assetIds: string[]
-			}
-		}
-	}
-}
 /* Database record type for assets associated with scenes. */
 export type SceneAssetRecord = typeof assets.$inferSelect
 

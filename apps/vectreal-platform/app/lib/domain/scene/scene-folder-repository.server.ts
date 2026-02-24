@@ -339,6 +339,41 @@ export async function renameScene(
 	return updatedScene
 }
 
+export async function updateSceneMetadata(
+	sceneId: string,
+	userId: string,
+	params: {
+		name: string
+		description?: string | null
+	}
+): Promise<typeof scenes.$inferSelect> {
+	const trimmedName = params.name.trim()
+	if (!trimmedName) {
+		throw new Error('Scene name is required')
+	}
+
+	const scene = await getScene(sceneId, userId)
+	if (!scene) {
+		throw new Error('Scene not found or access denied')
+	}
+
+	const [updatedScene] = await db
+		.update(scenes)
+		.set({
+			name: trimmedName,
+			description: params.description?.trim() || null,
+			updatedAt: new Date()
+		})
+		.where(eq(scenes.id, sceneId))
+		.returning()
+
+	if (!updatedScene) {
+		throw new Error('Failed to update scene metadata')
+	}
+
+	return updatedScene
+}
+
 export async function renameSceneFolder(
 	folderId: string,
 	userId: string,
