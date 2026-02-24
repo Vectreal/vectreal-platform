@@ -69,8 +69,8 @@ type SceneAssetSummary = {
 type SceneDetailsSummary = {
 	fileSizeBytes: number | null
 	assetCount: number
-	textureCount: number | null
-	meshCount: number | null
+	textureBytes: number | null
+	meshBytes: number | null
 	verticesCount: number | null
 	assets: SceneAssetSummary[]
 }
@@ -167,11 +167,11 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 			(sceneAggregate?.assetData
 				? Object.keys(sceneAggregate.assetData).length
 				: 0),
-		textureCount:
+		textureBytes:
 			sceneAggregate?.stats?.optimized?.texturesCount ??
 			sceneAggregate?.stats?.baseline?.texturesCount ??
 			null,
-		meshCount:
+		meshBytes:
 			sceneAggregate?.stats?.optimized?.meshesCount ??
 			sceneAggregate?.stats?.baseline?.meshesCount ??
 			null,
@@ -596,7 +596,7 @@ const ScenePage = () => {
 							<p className="text-muted-foreground text-[11px] tracking-[0.2em] uppercase">
 								At a Glance
 							</p>
-							<h2 className="mt-1 text-base font-medium tracking-tight">
+							<h2 className="mt-1 text-base leading-tight font-medium tracking-tight">
 								Scene Metrics
 							</h2>
 						</div>
@@ -617,18 +617,18 @@ const ScenePage = () => {
 							</div>
 							<div className="bg-background/70 rounded-xl p-3">
 								<p className="text-muted-foreground text-[11px] uppercase">
-									Textures
+									Texture Size
 								</p>
 								<p className="mt-1 font-medium">
-									{sceneDetails.textureCount ?? '—'}
+									{formatBytes(sceneDetails.textureBytes)}
 								</p>
 							</div>
 							<div className="bg-background/70 rounded-xl p-3">
 								<p className="text-muted-foreground text-[11px] uppercase">
-									Meshes
+									Mesh Size
 								</p>
 								<p className="mt-1 font-medium">
-									{sceneDetails.meshCount ?? '—'}
+									{formatBytes(sceneDetails.meshBytes)}
 								</p>
 							</div>
 						</div>
@@ -644,24 +644,52 @@ const ScenePage = () => {
 							</p>
 						) : (
 							<div className="space-y-2">
-								{sceneDetails.assets.slice(0, 4).map((asset) => (
-									<div
-										key={asset.id}
-										className="bg-background/70 rounded-xl p-3"
-									>
-										<div className="flex min-w-0 items-center justify-between gap-2">
-											<p className="truncate text-sm font-medium">
-												{asset.name}
+								{sceneDetails.assets.slice(0, 4).map((asset) => {
+									const isTexture =
+										asset.type === 'texture' &&
+										asset.mimeType &&
+										asset.fileSize &&
+										asset.fileSize > 0
+									let textureUrl: string | undefined
+									if (
+										isTexture &&
+										initialSceneData?.assetData &&
+										initialSceneData.assetData[asset.id]
+									) {
+										const data = initialSceneData.assetData[asset.id].data
+										const mime = asset.mimeType
+										if (typeof data === 'string') {
+											textureUrl = `data:${mime};base64,${data}`
+										}
+									}
+									return (
+										<div
+											key={asset.id}
+											className="bg-background/70 rounded-xl p-3"
+										>
+											<div className="flex min-w-0 items-center justify-between gap-2">
+												<p className="truncate text-sm font-medium">
+													{asset.name}
+												</p>
+												<Badge variant="secondary" className="shrink-0">
+													{asset.type}
+												</Badge>
+											</div>
+											{isTexture && textureUrl && (
+												<div className="mt-2 flex justify-start">
+													<img
+														src={textureUrl}
+														alt={asset.name}
+														className="h-10 w-10 rounded-md object-cover transition-transform duration-200 ease-in-out hover:z-10 hover:scale-500 hover:shadow-xl"
+													/>
+												</div>
+											)}
+											<p className="text-muted-foreground mt-1 text-xs">
+												{formatBytes(asset.fileSize)}
 											</p>
-											<Badge variant="secondary" className="shrink-0">
-												{asset.type}
-											</Badge>
 										</div>
-										<p className="text-muted-foreground mt-1 text-xs">
-											{formatBytes(asset.fileSize)}
-										</p>
-									</div>
-								))}
+									)
+								})}
 							</div>
 						)}
 					</section>
@@ -745,17 +773,17 @@ const ScenePage = () => {
 									<p className="font-medium">{sceneDetails.assetCount}</p>
 								</div>
 								<div className="bg-muted/50 rounded-xl p-3">
-									<p className="text-muted-foreground text-xs">Textures</p>
+									<p className="text-muted-foreground text-xs">Texture Size</p>
 									<p className="font-medium">
-										{sceneDetails.textureCount ?? '—'}
+										{formatBytes(sceneDetails.textureBytes)}
 									</p>
 								</div>
 								<div className="bg-muted/50 rounded-xl p-3">
 									<p className="text-muted-foreground text-xs">
-										Meshes / Vertices
+										Mesh Size / Vertices
 									</p>
 									<p className="font-medium">
-										{sceneDetails.meshCount ?? '—'} /{' '}
+										{formatBytes(sceneDetails.meshBytes)} /{' '}
 										{sceneDetails.verticesCount ?? '—'}
 									</p>
 								</div>
