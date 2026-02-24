@@ -22,14 +22,16 @@ locals {
   }
 
   cloud_run_ingress = lookup(local.cloud_run_ingress_by_value, var.allowed_ingress, "INGRESS_TRAFFIC_ALL")
+  staging_region    = var.staging_region != "" ? var.staging_region : var.region
 }
 
 # Production Cloud Run Service (Optional - managed by GitHub Actions by default)
 resource "google_cloud_run_v2_service" "production" {
-  count    = var.manage_cloud_run_services ? 1 : 0
-  name     = var.production_service_name
-  location = var.region
-  ingress  = local.cloud_run_ingress
+  count               = var.manage_cloud_run_services ? 1 : 0
+  name                = var.production_service_name
+  location            = var.region
+  ingress             = local.cloud_run_ingress
+  deletion_protection = false
 
   template {
     service_account = google_service_account.runtime.email
@@ -89,10 +91,11 @@ resource "google_cloud_run_v2_service" "production" {
 
 # Staging Cloud Run Service (Optional - managed by GitHub Actions by default)
 resource "google_cloud_run_v2_service" "staging" {
-  count    = var.manage_cloud_run_services ? 1 : 0
-  name     = var.staging_service_name
-  location = var.region
-  ingress  = local.cloud_run_ingress
+  count               = var.manage_cloud_run_services ? 1 : 0
+  name                = var.staging_service_name
+  location            = local.staging_region
+  ingress             = local.cloud_run_ingress
+  deletion_protection = false
 
   template {
     service_account = google_service_account.runtime.email
@@ -169,10 +172,11 @@ resource "google_cloud_run_v2_service_iam_member" "staging_public" {
 }
 
 resource "google_cloud_run_v2_service" "production_secondary" {
-  for_each = var.enable_multi_region_cloud_run ? toset(var.production_secondary_regions) : toset([])
-  name     = "${var.production_service_name}-${each.value}"
-  location = each.value
-  ingress  = local.cloud_run_ingress
+  for_each            = var.enable_multi_region_cloud_run ? toset(var.production_secondary_regions) : toset([])
+  name                = "${var.production_service_name}-${each.value}"
+  location            = each.value
+  ingress             = local.cloud_run_ingress
+  deletion_protection = false
 
   template {
     service_account = google_service_account.runtime.email
@@ -228,10 +232,11 @@ resource "google_cloud_run_v2_service" "production_secondary" {
 }
 
 resource "google_cloud_run_v2_service" "staging_secondary" {
-  for_each = var.enable_multi_region_cloud_run ? toset(var.staging_secondary_regions) : toset([])
-  name     = "${var.staging_service_name}-${each.value}"
-  location = each.value
-  ingress  = local.cloud_run_ingress
+  for_each            = var.enable_multi_region_cloud_run ? toset(var.staging_secondary_regions) : toset([])
+  name                = "${var.staging_service_name}-${each.value}"
+  location            = each.value
+  ingress             = local.cloud_run_ingress
+  deletion_protection = false
 
   template {
     service_account = google_service_account.runtime.email

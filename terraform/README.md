@@ -125,15 +125,15 @@ git push origin main     # Deploy to production
 
 ### GCP Resources
 
-| Resource                 | Purpose                                                                                                          |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| **Artifact Registry**    | Docker image storage (`vectreal-platform` repository)                                                            |
-| **Private GCS Buckets**  | Environment-isolated buckets: production, staging, local development                                             |
-| **Staging Edge (optional)** | Global HTTPS Load Balancer + Cloud CDN + public static assets bucket for low-latency staging rollout         |
-| **Service Accounts**     | `vectreal-prod-deployer`, `vectreal-staging-deployer`, `vectreal-platform-runtime`, `vectreal-local-dev-storage` |
-| **IAM Roles**            | Cloud Run Admin, Artifact Registry Writer, Storage Object Admin/Viewer                                           |
-| **Enabled APIs**         | Cloud Run, IAM, Artifact Registry, Container Registry, Cloud Storage                                             |
-| **Service Account Keys** | Saved to `credentials/`                                                                                          |
+| Resource                    | Purpose                                                                                                          |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **Artifact Registry**       | Docker image storage (`vectreal-platform` repository)                                                            |
+| **Private GCS Buckets**     | Environment-isolated buckets: production, staging, local development                                             |
+| **Staging Edge (optional)** | Global HTTPS Load Balancer + Cloud CDN + public static assets bucket for low-latency staging rollout             |
+| **Service Accounts**        | `vectreal-prod-deployer`, `vectreal-staging-deployer`, `vectreal-platform-runtime`, `vectreal-local-dev-storage` |
+| **IAM Roles**               | Cloud Run Admin, Artifact Registry Writer, Storage Object Admin/Viewer                                           |
+| **Enabled APIs**            | Cloud Run, IAM, Artifact Registry, Container Registry, Cloud Storage                                             |
+| **Service Account Keys**    | Saved to `credentials/`                                                                                          |
 
 ### What is NOT Created by Terraform
 
@@ -177,6 +177,8 @@ Set these via the setup script or manually:
 ```hcl
 project_id = "your-gcp-project-id"
 region     = "us-central1"
+# Optional: keep staging in a dedicated region (for example Frankfurt)
+# staging_region = "europe-west3"
 github_org = "your-github-org"
 
 # Optional: customize bucket names
@@ -203,12 +205,16 @@ github_org = "your-github-org"
 
 1. Enable `enable_staging_edge` and set staging edge/static hosts and managed cert domains.
 2. Apply Terraform to create:
-  - Global HTTPS Load Balancer frontend
-  - Cloud CDN-enabled backend bucket for static assets
-  - Cloud Run serverless NEGs for primary and optional secondary staging regions
+
+- Global HTTPS Load Balancer frontend
+- Cloud CDN-enabled backend bucket for static assets
+- Cloud Run serverless NEGs for primary and optional secondary staging regions
+
 3. Set GitHub Repository Variables (staging workflow):
-  - `STAGING_STATIC_BUCKET` (for example `vectreal-static-staging`)
-  - `STAGING_STATIC_CACHE_CONTROL` (optional, defaults to immutable assets)
+
+- `STAGING_STATIC_BUCKET` (for example `vectreal-static-staging`)
+- `STAGING_STATIC_CACHE_CONTROL` (optional, defaults to immutable assets)
+
 4. Deploy to staging and validate cache hits before rolling the same pattern to production.
 
 ### State Backend

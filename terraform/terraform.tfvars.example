@@ -3,6 +3,8 @@
 
 project_id = "your-gcp-project-id"
 region     = "us-central1"
+# Optional: set dedicated staging Cloud Run primary region
+# staging_region = "europe-west3"
 
 github_org  = "your-github-org"
 github_repo = "vectreal-platform"

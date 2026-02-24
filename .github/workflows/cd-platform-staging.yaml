@@ -36,37 +36,12 @@ jobs:
       environment: staging
       service-name: vectreal-platform-staging
       image-name: vectreal-platform-staging
-      region: us-central1
+      region: europe-west3
       artifact-region: us-central1
       node-env: staging
       allow-unauthenticated: true
       cloud-run-flags: '--ingress internal-and-cloud-load-balancing'
       static-bucket-name: 'vectreal-static-staging'
-      static-cache-control: 'public, max-age=31536000, immutable'
-    secrets:
-      gcp-credentials: ${{ secrets.GCP_CREDENTIALS_STAGING }}
-      gcp-project-id: ${{ secrets.GCP_PROJECT_ID_STAGING }}
-      database-url: ${{ secrets.DATABASE_URL_STAGING }}
-      supabase-url: ${{ secrets.SUPABASE_URL_STAGING }}
-      supabase-key: ${{ secrets.SUPABASE_KEY_STAGING }}
-      google-cloud-storage-private-bucket: ${{ secrets.GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING }}
-      application-url: ${{ secrets.APPLICATION_URL_STAGING }}
-
-  deploy-staging-secondary-us-east1:
-    name: Deploy Staging Secondary (us-east1)
-    needs: deploy-staging
-    uses: ./.github/workflows/shared-gcloud-deploy.yaml
-    with:
-      environment: staging
-      service-name: vectreal-platform-staging-us-east1
-      image-name: vectreal-platform-staging
-      region: us-east1
-      artifact-region: us-central1
-      node-env: staging
-      allow-unauthenticated: true
-      cloud-run-flags: '--ingress internal-and-cloud-load-balancing'
-      build-and-push-image: false
-      static-bucket-name: ''
       static-cache-control: 'public, max-age=31536000, immutable'
     secrets:
       gcp-credentials: ${{ secrets.GCP_CREDENTIALS_STAGING }}

@@ -1,5 +1,6 @@
 locals {
   enable_staging_edge_ready = var.enable_staging_edge && var.staging_edge_host != "" && length(var.staging_managed_certificate_domains) > 0
+  staging_primary_region    = var.staging_region != "" ? var.staging_region : var.region
 
   staging_secondary_regions_enabled = local.enable_staging_edge_ready && var.enable_multi_region_cloud_run ? toset(var.staging_secondary_regions) : toset([])
 
@@ -37,8 +38,8 @@ resource "google_compute_managed_ssl_certificate" "staging_edge" {
 
 resource "google_compute_region_network_endpoint_group" "staging_app_primary" {
   count                 = local.enable_staging_edge_ready ? 1 : 0
-  name                  = "${var.staging_service_name}-${var.region}-neg"
-  region                = var.region
+  name                  = "${var.staging_service_name}-${local.staging_primary_region}-neg"
+  region                = local.staging_primary_region
   network_endpoint_type = "SERVERLESS"
 
   cloud_run {

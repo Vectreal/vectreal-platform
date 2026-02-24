@@ -9,6 +9,12 @@ variable "region" {
   default     = "us-central1"
 }
 
+variable "staging_region" {
+  description = "Primary GCP region for the staging Cloud Run service (defaults to region when empty)"
+  type        = string
+  default     = ""
+}
+
 variable "github_org" {
   description = "GitHub organization or user name"
   type        = string
