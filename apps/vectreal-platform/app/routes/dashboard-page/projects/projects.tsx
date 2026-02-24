@@ -7,12 +7,12 @@ import {
 } from '@shared/components/ui/empty'
 import { FolderOpen, Plus } from 'lucide-react'
 import { memo, useMemo } from 'react'
-import { Link, Outlet, useLoaderData, useRouteLoaderData } from 'react-router'
+import { Link, Outlet, useLoaderData } from 'react-router'
 
 import { Route } from './+types/projects'
 import DashboardCard from '../../../components/dashboard/dashboard-cards'
 import { ProjectsGridSkeleton } from '../../../components/skeletons'
-import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
+import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import {
 	computeProjectCreationCapabilities,
 	computeSceneStats
@@ -21,13 +21,10 @@ import { getUserProjects } from '../../../lib/domain/project/project-repository.
 import { getProjectsScenes } from '../../../lib/domain/scene/scene-folder-repository.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
 
-import type { loader as dashboardLayoutLoader } from '../../layouts/dashboard-layout'
 import type { ShouldRevalidateFunction } from 'react-router'
 
-
 export async function loader({ request }: Route.LoaderArgs) {
-	// Auth check (reads from session, very cheap)
-	const { user } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedSession(request)
 
 	// Fetch data needed for this specific route
 	const [organizations, userProjects] = await Promise.all([
@@ -48,6 +45,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const sceneStats = computeSceneStats(scenes)
 
 	return {
+		organizations,
 		projects: userProjects,
 		scenes,
 		projectCreationCapabilities,
@@ -61,14 +59,30 @@ export async function loader({ request }: Route.LoaderArgs) {
 export const shouldRevalidate: ShouldRevalidateFunction = ({
 	currentUrl,
 	nextUrl,
+	formMethod,
+	actionResult,
 	defaultShouldRevalidate
 }) => {
-	// Don't revalidate when navigating from /projects to /projects/new or similar
+	if (formMethod && formMethod !== 'GET') {
+		return true
+	}
+
+	if (actionResult) {
+		return true
+	}
+
+	if (defaultShouldRevalidate) {
+		return true
+	}
+
+	if (currentUrl.pathname === nextUrl.pathname) {
+		return false
+	}
+
 	if (
 		currentUrl.pathname.startsWith('/dashboard/projects') &&
 		nextUrl.pathname.startsWith('/dashboard/projects')
 	) {
-		console.log('Skipping revalidation for navigation within projects routes')
 		return false
 	}
 
@@ -110,17 +124,11 @@ const EmptyProjectsState = ({
 )
 
 const ProjectsList = memo(() => {
-	const { projects, projectCreationCapabilities, sceneStats } =
+	const { organizations, projects, projectCreationCapabilities, sceneStats } =
 		useLoaderData<typeof loader>()
-
-	// Access parent layout data for organizations
-	const parentData = useRouteLoaderData<typeof dashboardLayoutLoader>(
-		'routes/layouts/dashboard-layout'
-	)
 
 	// Group projects by organization client-side
 	const projectsByOrg = useMemo(() => {
-		const organizations = parentData?.organizations || []
 		const grouped = new Map<
 			string,
 			{
@@ -146,7 +154,7 @@ const ProjectsList = memo(() => {
 		})
 
 		return Array.from(grouped.values())
-	}, [projects, parentData])
+	}, [organizations, projects])
 
 	// Check if user can create projects
 	const canCreateProjects = Object.values(projectCreationCapabilities).some(

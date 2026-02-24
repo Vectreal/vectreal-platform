@@ -18,13 +18,13 @@ import { ModelFileTypes, ModelLoader } from '@vctrl/core/model-loader'
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import { Object3D } from 'three'
 
-
 import eventSystem from './event-system'
 import reducer, { initialState } from './state'
 import {
 	Action,
 	InputFileOrDirectory,
 	ModelFile,
+	SceneDataLoadOptions,
 	OptimizerIntegrationReturn,
 	SceneLoadOptions,
 	SceneLoadResult,
@@ -297,6 +297,61 @@ function useLoadModel<
 	 * @param options - Scene loading configuration
 	 * @returns Promise resolving to the loaded scene data with settings
 	 */
+	const loadFromData = useCallback(
+		async (options: SceneDataLoadOptions): Promise<SceneLoadResult> => {
+			const { sceneId, sceneData } = options
+
+			// Update progress to 40% after data resolution
+			updateProgress(40)
+
+			// Reconstruct GLTF and asset files from scene data
+			const files = reconstructGltfFiles(sceneData)
+			const { sourcePackageBytes, textureBytes } =
+				calculateReferencedBytesFromServerScene(sceneData)
+
+			// Update progress to 60% after reconstruction
+			updateProgress(60)
+
+			const gltfFile = files[0] as File
+			const otherFiles = files.slice(1) as File[]
+
+			const result = await modelLoader.loadGLTFWithAssetsToThreeJS(
+				gltfFile,
+				otherFiles
+			)
+
+			const loadedFile: ModelFile = {
+				model: result.scene,
+				type: ModelFileTypes.gltf,
+				name: gltfFile.name,
+				sourcePackageBytes,
+				sourceTextureBytes: textureBytes
+			}
+
+			dispatch({
+				type: 'set-file',
+				payload: loadedFile
+			})
+
+			dispatch({ type: 'set-file-loading', payload: false })
+			loadedFileRef.current = loadedFile
+
+			updateProgress(100)
+
+			return {
+				sceneId,
+				file: loadedFile,
+				settings: {
+					environment: sceneData.environment,
+					controls: sceneData.controls,
+					shadows: sceneData.shadows,
+					meta: sceneData.meta
+				}
+			} as SceneLoadResult
+		},
+		[modelLoader, updateProgress]
+	)
+
 	const loadFromServer = useCallback(
 		async (options: SceneLoadOptions): Promise<SceneLoadResult> => {
 			const { sceneId, serverOptions } = options
@@ -310,66 +365,16 @@ function useLoadModel<
 				dispatch({ type: 'set-file-loading', payload: true })
 				updateProgress(0)
 
-				// Fetch scene data from server using the new loadScene method
 				const sceneData =
 					await ServerCommunicationService.loadScene<ServerSceneData>(
 						sceneId,
 						serverOptions
 					)
 
-				// Update progress to 40% after successful fetch
-				updateProgress(40)
-
-				// Reconstruct GLTF and asset files from scene data
-				const files = reconstructGltfFiles(sceneData)
-				const { sourcePackageBytes, textureBytes } =
-					calculateReferencedBytesFromServerScene(sceneData)
-
-				// Update progress to 60% after reconstruction
-				updateProgress(60)
-
-				// Load the model directly (don't use processFiles to avoid uploadCompleteRef trigger)
-				const gltfFile = files[0] as File
-				const otherFiles = files.slice(1) as File[]
-
-				const result = await modelLoader.loadGLTFWithAssetsToThreeJS(
-					gltfFile,
-					otherFiles
-				)
-
-				const loadedFile: ModelFile = {
-					model: result.scene,
-					type: ModelFileTypes.gltf,
-					name: gltfFile.name,
-					sourcePackageBytes,
-					sourceTextureBytes: textureBytes
-				}
-
-				// Update state with the loaded model
-				dispatch({
-					type: 'set-file',
-					payload: loadedFile
-				})
-
-				dispatch({ type: 'set-file-loading', payload: false })
-
-				// Update the ref
-				loadedFileRef.current = loadedFile
-
-				// Update progress to 100%
-				updateProgress(100)
-
-				// Build the result object with settings
-				const sceneLoadResult = {
+				const sceneLoadResult = await loadFromData({
 					sceneId,
-					file: loadedFile,
-					settings: {
-						environment: sceneData.environment,
-						controls: sceneData.controls,
-						shadows: sceneData.shadows,
-						meta: sceneData.meta
-					}
-				} as SceneLoadResult
+					sceneData
+				})
 
 				// Emit server load complete event
 				eventSystem.emit('server-load-complete', sceneLoadResult)
@@ -391,7 +396,7 @@ function useLoadModel<
 				throw error
 			}
 		},
-		[optimizer, updateProgress, modelLoader]
+		[optimizer, loadFromData, updateProgress]
 		// Note: processFiles removed, we load directly to avoid uploadCompleteRef trigger
 	)
 
@@ -452,6 +457,11 @@ function useLoadModel<
 		 * Fetches both the model and scene settings, applies them automatically.
 		 */
 		loadFromServer,
+
+		/**
+		 * Load a scene from pre-resolved scene payload data.
+		 */
+		loadFromData,
 
 		/**
 		 * Reset the model and optimizer state to the initial state.

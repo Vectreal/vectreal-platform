@@ -13,6 +13,24 @@ export interface AuthLoaderResult {
 	userWithDefaults: UserWithDefaults
 }
 
+export interface AuthSessionResult {
+	user: User
+}
+
+export async function loadAuthenticatedSession(
+	request: Request
+): Promise<AuthSessionResult> {
+	const authResponse = await getAuthUser(request)
+
+	if (authResponse instanceof Response) {
+		throw redirect('/sign-up', { headers: authResponse.headers })
+	}
+
+	return {
+		user: authResponse.user
+	}
+}
+
 /**
  * Shared loader for authentication and user initialization.
  * Handles auth check, redirects if unauthorized, and initializes user defaults.
@@ -24,14 +42,7 @@ export interface AuthLoaderResult {
 export async function loadAuthenticatedUser(
 	request: Request
 ): Promise<AuthLoaderResult> {
-	const authResponse = await getAuthUser(request)
-
-	// Redirect to sign-up if not authenticated
-	if (authResponse instanceof Response) {
-		throw redirect('/sign-up', { headers: authResponse.headers })
-	}
-
-	const { user } = authResponse
+	const { user } = await loadAuthenticatedSession(request)
 
 	try {
 		// Initialize user defaults (creates user in local DB, default org, and project)

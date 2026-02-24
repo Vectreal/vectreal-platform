@@ -6,15 +6,14 @@ import { useLoaderData } from 'react-router'
 import { Route } from './+types/organizations'
 import DashboardCard from '../../components/dashboard/dashboard-cards'
 import { OrganizationsSkeleton } from '../../components/skeletons'
-import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
+import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
 import { computeOrganizationStats } from '../../lib/domain/dashboard/dashboard-stats.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	// Auth check (reads from session, very cheap)
-	const { user, userWithDefaults } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedSession(request)
 
 	// Fetch organizations
 	const organizations = await getUserOrganizations(user.id)
@@ -24,7 +23,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	return {
 		user,
-		userWithDefaults,
 		organizations,
 		organizationStats
 	}

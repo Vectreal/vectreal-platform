@@ -58,6 +58,18 @@ export interface SceneLoadOptions {
 }
 
 /**
+ * Configuration options for loading an already-resolved scene payload.
+ */
+export interface SceneDataLoadOptions {
+	/** The unique identifier of the scene to load */
+	sceneId: string
+	/** Resolved server scene payload */
+	sceneData: ServerSceneData
+	/** Whether to automatically apply scene settings (default: true) */
+	applySettings?: boolean
+}
+
+/**
  * Server response data structure for scene loading.
  * Contains the GLTF JSON, binary assets, and scene settings.
  */
@@ -214,6 +226,11 @@ export type UseLoadModelReturn<HasOptimizer extends boolean> =
 		 * ```
 		 */
 		loadFromServer: (options: SceneLoadOptions) => Promise<SceneLoadResult>
+		/**
+		 * Load a scene from already-resolved server data.
+		 * Useful when route loaders provide scene payloads for faster hydration.
+		 */
+		loadFromData: (options: SceneDataLoadOptions) => Promise<SceneLoadResult>
 		/**
 		 * Reset the model loading state and clear any loaded models.
 		 */

@@ -31,6 +31,7 @@ export type {
 	ModelFile,
 	LoadData,
 	UseLoadModelReturn,
+	SceneDataLoadOptions,
 	SceneLoadOptions,
 	ServerSceneData,
 	SceneLoadResult

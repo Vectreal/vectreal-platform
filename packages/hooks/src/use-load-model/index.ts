@@ -2,6 +2,7 @@ export { default as useLoadModel } from './use-load-model'
 export {
 	type InputFileOrDirectory,
 	type ModelFile,
+	type SceneDataLoadOptions,
 	type SceneLoadOptions,
 	type SceneLoadResult,
 	type ServerSceneData

@@ -18,7 +18,7 @@ import {
 import { ProjectContentSkeleton } from '../../../components/skeletons'
 import { useDashboardSceneActions } from '../../../hooks/use-dashboard-scene-actions'
 import { useDashboardTableState } from '../../../hooks/use-dashboard-table-state'
-import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
+import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
 import {
 	getRootSceneFolders,
@@ -38,8 +38,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Project ID is required', { status: 400 })
 	}
 
-	// Auth check (reads from session, very cheap)
-	const { user, userWithDefaults } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedSession(request)
 
 	// Fetch project data
 	const project = await getProject(projectId, user.id)
@@ -56,7 +55,6 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	return {
 		user,
-		userWithDefaults,
 		project,
 		folders,
 		scenes
@@ -64,8 +62,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({
-	currentUrl,
-	nextUrl,
+	currentParams,
+	nextParams,
 	formMethod,
 	actionResult,
 	defaultShouldRevalidate
@@ -78,7 +76,11 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 		return true
 	}
 
-	if (currentUrl.pathname === nextUrl.pathname) {
+	if (defaultShouldRevalidate) {
+		return true
+	}
+
+	if (currentParams.projectId === nextParams.projectId) {
 		return false
 	}
 

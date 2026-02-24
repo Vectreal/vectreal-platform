@@ -4,13 +4,16 @@ import {
 	SidebarTrigger
 } from '@shared/components/ui/sidebar'
 import { Provider } from 'jotai/react'
+import { Loader2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import {
 	Outlet,
+	useFetchers,
 	useLoaderData,
 	useLocation,
 	useNavigation,
-	useParams
+	useParams,
+	useRevalidator
 } from 'react-router'
 
 import { Route } from './+types/dashboard-layout'
@@ -29,24 +32,15 @@ import {
 	ProjectContentSkeleton,
 	ProjectsGridSkeleton
 } from '../../components/skeletons'
-import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
-import { getUserProjects } from '../../lib/domain/project/project-repository.server'
-import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
+import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
 import { dashboardManagementStore } from '../../lib/stores/dashboard-management-store'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	// Fetch core dashboard data once - shared by all child routes
-	const { user, userWithDefaults } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedSession(request)
 
-	// Fetch organizations and projects in parallel
-	const [organizations, projects] = await Promise.all([
-		getUserOrganizations(user.id),
-		getUserProjects(user.id)
-	])
-
-	return { user, userWithDefaults, organizations, projects }
+	return { user }
 }
 
 /**
@@ -67,6 +61,10 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 
 	// Always revalidate if there's an action result (explicit action submission)
 	if (actionResult) {
+		return true
+	}
+
+	if (defaultShouldRevalidate) {
 		return true
 	}
 
@@ -96,6 +94,8 @@ const DashboardLayout = () => {
 	const { user } = useLoaderData<typeof loader>()
 	const location = useLocation()
 	const navigation = useNavigation()
+	const revalidator = useRevalidator()
+	const fetchers = useFetchers()
 	const [sidebarOpen, setSidebarOpen] = useState(true)
 	const [showSkeleton, setShowSkeleton] = useState(false)
 
@@ -109,6 +109,10 @@ const DashboardLayout = () => {
 		navigation.location?.pathname === location.pathname
 	const isContentNavigationLoading =
 		navigation.state === 'loading' && !isSearchParamOnlyNavigation
+	const isBackgroundRefreshing =
+		!isContentNavigationLoading &&
+		(revalidator.state !== 'idle' ||
+			fetchers.some((fetcher) => fetcher.state !== 'idle'))
 
 	// Smart skeleton display logic:
 	// - Skip on back/forward navigation (browser buttons)
@@ -168,7 +172,12 @@ const DashboardLayout = () => {
 					<div className="from-background/75 absolute top-0 z-50 h-20 w-full bg-gradient-to-b to-transparent" />
 					<div className="absolute z-50 flex items-center gap-4 p-4 px-6 pl-4">
 						<SidebarTrigger />
-						<DynamicBreadcrumb />
+						<div className="flex items-center gap-2">
+							<DynamicBreadcrumb />
+							{isBackgroundRefreshing && (
+								<Loader2 className="text-muted-foreground h-3.5 w-3.5 animate-spin" />
+							)}
+						</div>
 					</div>
 					{!sceneId && (
 						<div className="mt-16">

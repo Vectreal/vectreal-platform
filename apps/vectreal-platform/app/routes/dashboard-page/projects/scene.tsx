@@ -5,6 +5,7 @@ import { cn } from '@shared/utils'
 import {
 	ModelFile,
 	SceneLoadResult,
+	type ServerSceneData,
 	useLoadModel
 } from '@vctrl/hooks/use-load-model'
 import { useSetAtom } from 'jotai/react'
@@ -16,13 +17,51 @@ import { Route } from './+types/scene'
 import CenteredSpinner from '../../../components/centered-spinner'
 import BasicCard from '../../../components/layout-components/basic-card'
 import { ClientVectrealViewer } from '../../../components/viewer/client-vectreal-viewer'
-import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
+import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
+import { buildSceneAggregate } from '../../../lib/domain/scene/scene-aggregate.server'
 import {
 	getScene,
 	getSceneFolderAncestry
 } from '../../../lib/domain/scene/scene-folder-repository.server'
 import { deleteDialogAtom } from '../../../lib/stores/dashboard-management-store'
+
+import type { SceneAggregateResponse } from '../../../types/api'
+import type { ShouldRevalidateFunction } from 'react-router'
+
+const MAX_PRELOADED_SCENE_ASSET_CHARS = 1_500_000
+
+function toInitialSceneData(
+	aggregate: SceneAggregateResponse | null
+): ServerSceneData | null {
+	if (!aggregate?.gltfJson || !aggregate.assetData) {
+		return null
+	}
+
+	const totalAssetChars = Object.values(aggregate.assetData).reduce(
+		(total, asset) => {
+			if (typeof asset.data === 'string') {
+				return total + asset.data.length
+			}
+
+			return total + asset.data.length
+		},
+		0
+	)
+
+	if (totalAssetChars > MAX_PRELOADED_SCENE_ASSET_CHARS) {
+		return null
+	}
+
+	return {
+		gltfJson: aggregate.gltfJson,
+		assetData: aggregate.assetData,
+		environment: aggregate.settings?.environment,
+		controls: aggregate.settings?.controls,
+		shadows: aggregate.settings?.shadows,
+		meta: aggregate.settings?.meta
+	}
+}
 
 export async function loader({ request, params }: Route.LoaderArgs) {
 	const projectId = params.projectId
@@ -32,8 +71,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Project ID and Scene ID are required', { status: 400 })
 	}
 
-	// Auth check (reads from session, very cheap)
-	const { user, userWithDefaults } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedSession(request)
 
 	// Fetch project and scene data
 	const [project, scene] = await Promise.all([
@@ -49,17 +87,51 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Scene not found', { status: 404 })
 	}
 
-	const folderPath = scene.folderId
-		? await getSceneFolderAncestry(scene.folderId, user.id)
-		: []
+	const [folderPath, sceneAggregate] = await Promise.all([
+		scene.folderId
+			? getSceneFolderAncestry(scene.folderId, user.id)
+			: Promise.resolve([]),
+		buildSceneAggregate(sceneId)
+	])
+
+	const initialSceneData = toInitialSceneData(sceneAggregate)
 
 	return {
 		user,
-		userWithDefaults,
 		project,
 		scene,
-		folderPath
+		folderPath,
+		initialSceneData
 	}
+}
+
+export const shouldRevalidate: ShouldRevalidateFunction = ({
+	currentParams,
+	nextParams,
+	formMethod,
+	actionResult,
+	defaultShouldRevalidate
+}) => {
+	if (formMethod && formMethod !== 'GET') {
+		return true
+	}
+
+	if (actionResult) {
+		return true
+	}
+
+	if (defaultShouldRevalidate) {
+		return true
+	}
+
+	if (
+		currentParams.projectId === nextParams.projectId &&
+		currentParams.sceneId === nextParams.sceneId
+	) {
+		return false
+	}
+
+	return defaultShouldRevalidate
 }
 
 export function HydrateFallback() {
@@ -99,12 +171,12 @@ const PreviewModel = memo(({ file, sceneData }: PreviewModelProps) => {
 })
 
 const ScenePage = () => {
-	const { scene } = useLoaderData<typeof loader>()
+	const { scene, initialSceneData } = useLoaderData<typeof loader>()
 	const sceneId = scene.id
 	const setDeleteDialog = useSetAtom(deleteDialogAtom)
 
 	// Use sceneId as key to create a new hook instance per scene
-	const { file, loadFromServer } = useLoadModel()
+	const { file, loadFromData, loadFromServer } = useLoadModel()
 
 	const [isLoadingScene, setIsLoadingScene] = useState(false)
 	const [sceneData, setSceneData] = useState<SceneLoadResult>()
@@ -150,12 +222,17 @@ const ScenePage = () => {
 			const existingRequest = inFlightSceneSettingsRequests.get(sceneId)
 			const request =
 				existingRequest ??
-				loadFromServer({
-					sceneId,
-					serverOptions: {
-						endpoint: `/api/scenes/${sceneId}`
-					}
-				})
+				(initialSceneData
+					? loadFromData({
+							sceneId,
+							sceneData: initialSceneData
+						})
+					: loadFromServer({
+							sceneId,
+							serverOptions: {
+								endpoint: `/api/scenes/${sceneId}`
+							}
+						}))
 
 			if (!existingRequest) {
 				inFlightSceneSettingsRequests.set(
@@ -179,7 +256,13 @@ const ScenePage = () => {
 				setIsLoadingScene(false)
 			}
 		}
-	}, [loadFromServer, sceneData?.sceneId, sceneId])
+	}, [
+		initialSceneData,
+		loadFromData,
+		loadFromServer,
+		sceneData?.sceneId,
+		sceneId
+	])
 
 	useEffect(() => {
 		if (sceneId && (!sceneData || sceneData.sceneId !== sceneId)) {

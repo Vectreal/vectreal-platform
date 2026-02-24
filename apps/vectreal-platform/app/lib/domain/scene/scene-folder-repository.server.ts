@@ -11,6 +11,18 @@ const MAX_FOLDER_ANCESTRY_DEPTH = 50
 
 type DbClient = typeof db
 
+async function getSceneFolderById(
+	folderId: string
+): Promise<typeof sceneFolders.$inferSelect | null> {
+	const [folder] = await db
+		.select()
+		.from(sceneFolders)
+		.where(eq(sceneFolders.id, folderId))
+		.limit(1)
+
+	return folder ?? null
+}
+
 async function verifyProjectAccess(
 	dbClient: DbClient,
 	projectId: string,
@@ -163,11 +175,7 @@ export async function getSceneFolder(
 	folderId: string,
 	userId: string
 ): Promise<typeof sceneFolders.$inferSelect | null> {
-	const [folder] = await db
-		.select()
-		.from(sceneFolders)
-		.where(eq(sceneFolders.id, folderId))
-		.limit(1)
+	const folder = await getSceneFolderById(folderId)
 
 	if (!folder) {
 		return null
@@ -185,7 +193,14 @@ export async function getSceneFolderAncestry(
 	const ancestry: Array<typeof sceneFolders.$inferSelect> = []
 	const visitedFolderIds = new Set<string>()
 
-	let currentFolderId: string | null = folderId
+	const initialFolder = await getSceneFolderById(folderId)
+	if (!initialFolder) {
+		return ancestry
+	}
+
+	await verifyProjectAccess(db, initialFolder.projectId, userId)
+
+	let currentFolderId: string | null = initialFolder.id
 	let depth = 0
 
 	while (currentFolderId) {
@@ -195,9 +210,13 @@ export async function getSceneFolderAncestry(
 
 		visitedFolderIds.add(currentFolderId)
 
-		const folder = await getSceneFolder(currentFolderId, userId)
+		const folder = await getSceneFolderById(currentFolderId)
 		if (!folder) {
 			break
+		}
+
+		if (folder.projectId !== initialFolder.projectId) {
+			throw new Error('Invalid folder ancestry across projects')
 		}
 
 		ancestry.push(folder)

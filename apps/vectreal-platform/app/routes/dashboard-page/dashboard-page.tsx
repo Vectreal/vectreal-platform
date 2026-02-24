@@ -7,7 +7,7 @@ import {
 	TabsTrigger
 } from '@shared/components/ui/tabs'
 import { File, FolderOpen, Plus } from 'lucide-react'
-import { Link, useRouteLoaderData } from 'react-router'
+import { Link } from 'react-router'
 
 import { Route } from './+types/dashboard-page'
 import DashboardCard from '../../components/dashboard/dashboard-cards'
@@ -20,7 +20,7 @@ import {
 } from '../../components/dashboard/project-table-columns'
 import { DashboardSkeleton } from '../../components/skeletons'
 import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
-import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
+import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
 import {
 	computeProjectStats,
 	computeSceneStats,
@@ -29,16 +29,17 @@ import {
 } from '../../lib/domain/dashboard/dashboard-stats.server'
 import { getUserProjects } from '../../lib/domain/project/project-repository.server'
 import { getProjectsScenes } from '../../lib/domain/scene/scene-folder-repository.server'
+import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 
-import type { loader as dashboardLayoutLoader } from '../layouts/dashboard-layout'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	// Auth check (reads from session, very cheap)
-	const { user } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedSession(request)
 
-	// Fetch user projects (parent already fetched this, but we need it for the batch query)
-	const userProjects = await getUserProjects(user.id)
+	const [userProjects, organizations] = await Promise.all([
+		getUserProjects(user.id),
+		getUserOrganizations(user.id)
+	])
 
 	// Fetch scenes for all projects using batch query (eliminates N+1 problem)
 	const projectIds = userProjects.map(({ project }) => project.id)
@@ -55,6 +56,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	return {
 		projects: userProjects,
+		organizations,
 		scenes,
 		projectStats,
 		sceneStats,
@@ -78,6 +80,10 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 		return true
 	}
 
+	if (defaultShouldRevalidate) {
+		return true
+	}
+
 	if (currentUrl.pathname === nextUrl.pathname) {
 		return false
 	}
@@ -92,14 +98,14 @@ export function HydrateFallback() {
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
 const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
-	const { projects, scenes, projectStats, sceneStats, recentScenes } =
-		loaderData
-
-	// Access parent layout data for organizations
-	const parentData = useRouteLoaderData<typeof dashboardLayoutLoader>(
-		'routes/layouts/dashboard-layout'
-	)
-	const organizations = parentData?.organizations || []
+	const {
+		projects,
+		organizations,
+		scenes,
+		projectStats,
+		sceneStats,
+		recentScenes
+	} = loaderData
 	const projectTableState = useDashboardTableState({
 		namespace: 'dashboard-projects'
 	})
