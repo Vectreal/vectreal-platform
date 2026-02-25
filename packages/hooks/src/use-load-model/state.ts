@@ -14,7 +14,9 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { Action, ModelFileTypes, State } from './types';
+import { ModelFileTypes } from '@vctrl/core/model-loader'
+
+import { Action, LoadData } from './types'
 
 /**
  * Initial state for the useReadModelFiles hook
@@ -24,25 +26,29 @@ import { Action, ModelFileTypes, State } from './types';
  * @property progress - Current loading progress (0-100)
  * @property supportedFileTypes - List of supported file types
  */
-export const initialState: State = {
-  /**
-   * Currently loaded file
-   */
-  file: null,
-  /**
-   * Flag indicating if a file is currently being loaded
-   */
-  isFileLoading: false,
-  /**
-   * Current loading progress (0-100)
-   */
-  progress: 0,
-  /**
-   * List of supported file types
-   * @type {ModelFileTypes[]}
-   */
-  supportedFileTypes: Object.values(ModelFileTypes),
-};
+export const initialState: LoadData = {
+	/**
+	 * Currently loaded file
+	 */
+	file: null,
+	/**
+	 * Flag indicating if a file is currently being loaded
+	 */
+	isFileLoading: false,
+	/**
+	 * Current loading progress (0-100)
+	 */
+	progress: 0,
+	/**
+	 * List of supported file types
+	 * @type {ModelFileTypes[]}
+	 */
+	supportedFileTypes: [
+		ModelFileTypes.gltf,
+		ModelFileTypes.glb,
+		ModelFileTypes.usdz
+	]
+}
 
 /**
  * Reducer function for the useReadModelFiles hook
@@ -51,19 +57,19 @@ export const initialState: State = {
  * @param action - The action to be performed
  * @returns The updated state
  */
-function reducer(state: State, action: Action): State {
-  switch (action.type) {
-    case 'set-file':
-      return { ...state, file: action.payload };
-    case 'set-file-loading':
-      return { ...state, isFileLoading: action.payload };
-    case 'set-progress':
-      return { ...state, progress: action.payload };
-    case 'reset-state':
-      return { ...initialState };
-    default:
-      return state;
-  }
+function reducer(state: LoadData, action: Action): LoadData {
+	switch (action.type) {
+		case 'set-file':
+			return { ...state, file: action.payload }
+		case 'set-file-loading':
+			return { ...state, isFileLoading: action.payload }
+		case 'set-progress':
+			return { ...state, progress: action.payload }
+		case 'reset-state':
+			return { ...initialState }
+		default:
+			return state
+	}
 }
 
-export default reducer;
+export default reducer

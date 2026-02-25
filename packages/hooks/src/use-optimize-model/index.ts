@@ -1,1 +1,2 @@
-export { default as useOptimizeModel } from './use-optimize-model';
+export { default as useOptimizeModel } from './use-optimize-model'
+export * from './types'

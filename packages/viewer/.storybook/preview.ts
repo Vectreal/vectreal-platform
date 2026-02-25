@@ -1,10 +1,26 @@
-// Replace your-renderer with the renderer you are using (e.g., react, vue3)
-import type { Preview } from '@storybook/react';
+import type { Preview } from '@storybook/react-vite'
+import '../src/styles.css'
 
 const preview: Preview = {
-  // ...rest of preview
-  //👇 Enables auto-generated documentation for all stories
-  tags: ['autodocs'],
-};
+	parameters: {
+		actions: { argTypesRegex: '^on[A-Z].*' },
+		controls: {
+			expanded: true,
+			sort: 'requiredFirst'
+		},
+		layout: 'centered',
+		docs: {
+			controls: {
+				sort: 'requiredFirst'
+			}
+		},
+		options: {
+			storySort: {
+				order: ['Viewer', 'Components']
+			}
+		}
+	},
+	tags: ['autodocs']
+}
 
-export default preview;
+export default preview

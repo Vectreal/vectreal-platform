@@ -1,57 +1,68 @@
 {
-  "version": "0.9.5",
-  "name": "@vctrl/hooks",
-  "description": "vctrl/hooks is a React hooks package designed to simplify 3D model loading and management within React applications. It's part of the vectreal-core ecosystem and is primarily used in the vctrl/viewer React component and the official website application.",
-  "bugs": {
-    "url": "https://github.com/vectreal/vectreal-core/issues"
-  },
-  "homepage": "https://core.vectreal.com",
-  "keywords": [
-    "vectreal",
-    "react",
-    "3d",
-    "model",
-    "viewer",
-    "react-component",
-    "react-three-fiber",
-    "react-three-drei",
-    "threejs",
-    "react-three-gltf",
-    "gltf",
-    "glb",
-    "usdz",
-    "three-model-loading",
-    "model-viewer"
-  ],
-  "repository": {
-    "url": "https://github.com/vectreal/vectreal-core",
-    "type": "https"
-  },
-  "license": "AGPL-3.0-only",
-  "main": "./index.cjs.js",
-  "module": "./index.es.js",
-  "types": "./index.d.ts",
-  "type": "module",
-  "publishConfig": {
-    "access": "public"
-  },
-  "exports": {
-    "./use-load-model": {
-      "import": "./use-load-model.es.js",
-      "require": "./use-load-model.cjs.js",
-      "types": "./use-load-model/index.d.ts"
-    }
-  },
-  "peerDependencies": {
-    "react": "^18.0.0 || ^19.0.0"
-  },
-  "dependencies": {
-    "@gltf-transform/core": "^4.0.8",
-    "@gltf-transform/extensions": "^4.0.10",
-    "@gltf-transform/functions": "^4.0.8",
-    "file-saver": "^2.0.5",
-    "jszip": "^3.10.1",
-    "meshoptimizer": "^0.21.0",
-    "three": "^0.168.0"
-  }
+	"version": "0.9.5",
+	"name": "@vctrl/hooks",
+	"description": "vctrl/hooks is a React hooks package designed to simplify 3D model loading and management within React applications. It's part of the vectreal-core ecosystem and is primarily used in the vctrl/viewer React component and the official website application.",
+	"bugs": {
+		"url": "https://github.com/vectreal/vectreal-core/issues"
+	},
+	"homepage": "https://core.vectreal.com",
+	"keywords": [
+		"vectreal",
+		"react",
+		"3d",
+		"model",
+		"viewer",
+		"react-component",
+		"react-three-fiber",
+		"react-three-drei",
+		"threejs",
+		"react-three-gltf",
+		"gltf",
+		"glb",
+		"usdz",
+		"three-model-loading",
+		"model-viewer"
+	],
+	"repository": {
+		"url": "https://github.com/vectreal/vectreal-core",
+		"type": "https"
+	},
+	"license": "AGPL-3.0-only",
+	"types": "./index.d.ts",
+	"main": "./index.cjs.js",
+	"module": "./index.es.js",
+	"type": "module",
+	"publishConfig": {
+		"access": "public"
+	},
+	"exports": {
+		"./use-load-model": {
+			"types": "./use-load-model/index.d.ts",
+			"import": "./use-load-model.es.js",
+			"require": "./use-load-model.cjs.js"
+		},
+		"./use-export-model": {
+			"types": "./use-export-model/index.d.ts",
+			"import": "./use-export-model.es.js",
+			"require": "./use-export-model.cjs.js"
+		},
+		"./use-optimize-model": {
+			"types": "./use-optimize-model/index.d.ts",
+			"import": "./use-optimize-model.es.js",
+			"require": "./use-optimize-model.cjs.js"
+		}
+	},
+	"peerDependencies": {
+		"react": "^18.0.0 || ^19.0.0",
+		"@gltf-transform/core": "^4.0.8",
+		"file-saver": "^2.0.5",
+		"@nx/vite": "22.5.0",
+		"@vitejs/plugin-react": "^4.3.4",
+		"vite": "^7.3.1",
+		"vite-plugin-dts": "4.5.3"
+	},
+	"dependencies": {
+		"@vctrl/core": "workspace:*",
+		"three": "^0.177.0"
+	}
 }

@@ -1,0 +1,45 @@
+@import 'tailwindcss/theme';
+@import 'tailwindcss/utilities';
+
+.viewer {
+	--vctrl-bg: #f3f4f6;
+	--vctrl-hover-bg: #e5e7eb;
+	--vctrl-active-bg: #d1d5db;
+	--vctrl-text: #1f2937;
+	--vctrl-border: #181818;
+	font-family: Poppins, sans-serif;
+}
+
+.viewer[data-theme='dark'] {
+	--vctrl-bg: #141414;
+	--vctrl-hover-bg: #363636;
+	--vctrl-active-bg: #585858;
+	--vctrl-text: #959595;
+	--vctrl-border: rgba(229, 231, 235, 0.5);
+}
+
+.viewer[data-theme='light'] {
+	--vctrl-bg: #f3f4f6;
+	--vctrl-hover-bg: #e5e7eb;
+	--vctrl-active-bg: #d1d5db;
+	--vctrl-text: #1f2937;
+	--vctrl-border: #181818;
+}
+
+.viewer[data-theme='system'] {
+	--vctrl-bg: #f3f4f6;
+	--vctrl-hover-bg: #e5e7eb;
+	--vctrl-active-bg: #d1d5db;
+	--vctrl-text: #1f2937;
+	--vctrl-border: #181818;
+}
+
+@media (prefers-color-scheme: dark) {
+	.viewer[data-theme='system'] {
+		--vctrl-bg: #141414;
+		--vctrl-hover-bg: #363636;
+		--vctrl-active-bg: #585858;
+		--vctrl-text: #959595;
+		--vctrl-border: rgba(229, 231, 235, 0.5);
+	}
+}

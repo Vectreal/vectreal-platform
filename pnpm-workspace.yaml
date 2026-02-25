@@ -1,0 +1,9 @@
+onlyBuiltDependencies:
+  - '@swc/core'
+  - '@tailwindcss/oxide'
+  - esbuild
+  - nx
+  - sharp
+  - supabase
+  - unrs-resolver
+  - workerd

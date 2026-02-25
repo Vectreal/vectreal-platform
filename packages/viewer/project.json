@@ -1,49 +1,76 @@
 {
-  "name": "vctrl/viewer",
-  "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "packages/viewer/src",
-  "projectType": "library",
-  "tags": [],
-  "targets": {
-    "lint": {
-      "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"],
-      "options": {
-        "fix": true,
-        "lintFilePatterns": [
-          "packages/viewer/**/*.{ts,tsx,js,jsx}",
-          "packages/viewer/package.json"
-        ]
-      }
-    },
-    "nx-release-publish": {
-      "dependsOn": ["copy-md"],
-      "options": {
-        "packageRoot": "dist/packages/vctrl/viewer"
-      }
-    },
-    "copy-md": {
-      "dependsOn": ["build"],
-      "executor": "nx:run-commands",
-      "outputs": [],
-      "options": {
-        "commands": [
-          "rsync -rat packages/viewer/*.md dist/packages/vctrl/viewer/"
-        ]
-      }
-    },
-    "build": {
-      "executor": "@nx/vite:build",
-      "options": {
-        "outputPath": "dist/packages/vctrl/viewer",
-        "configFile": "packages/viewer/vite.config.ts"
-      }
-    },
-    "chromatic": {
-      "executor": "nx:run-commands",
-      "options": {
-        "commands": ["npm --prefix packages/viewer run chromatic"]
-      }
-    }
-  }
+	"name": "vctrl/viewer",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "packages/viewer/src",
+	"projectType": "library",
+	"tags": [],
+	"targets": {
+		"lint": {
+			"executor": "@nx/eslint:lint",
+			"outputs": ["{options.outputFile}"],
+			"options": {
+				"fix": true,
+				"lintFilePatterns": [
+					"packages/viewer/src/**/*.{ts,tsx,js,jsx}",
+					"packages/viewer/.storybook/**/*.{ts,tsx,js,jsx}",
+					"packages/viewer/vite.config.ts",
+					"packages/viewer/package.json"
+				]
+			}
+		},
+		"typecheck": {
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"command": "tsc --noEmit -p packages/viewer/tsconfig.json"
+			}
+		},
+		"nx-release-publish": {
+			"dependsOn": ["copy-md"],
+			"options": {
+				"packageRoot": "build/packages/vctrl/viewer"
+			}
+		},
+		"copy-md": {
+			"dependsOn": ["build"],
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"commands": [
+					"rsync -rat packages/viewer/*.md build/packages/vctrl/viewer/"
+				]
+			}
+		},
+		"build": {
+			"executor": "@nx/vite:build",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "build/packages/vctrl/viewer",
+				"configFile": "packages/viewer/vite.config.ts"
+			}
+		},
+		"build-storybook": {
+			"executor": "nx:run-commands",
+			"dependsOn": ["typecheck"],
+			"outputs": ["{projectRoot}/storybook-static"],
+			"options": {
+				"command": "storybook build",
+				"cwd": "packages/viewer"
+			}
+		},
+		"storybook-dev": {
+			"executor": "nx:run-commands",
+			"continuous": true,
+			"options": {
+				"command": "storybook dev",
+				"cwd": "packages/viewer"
+			}
+		},
+		"chromatic": {
+			"executor": "nx:run-commands",
+			"options": {
+				"commands": ["npm --prefix packages/viewer run chromatic"]
+			}
+		}
+	}
 }

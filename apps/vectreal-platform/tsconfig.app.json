@@ -1,0 +1,40 @@
+{
+	"extends": "./tsconfig.json",
+	"include": [
+		".react-router/types/**/*.ts",
+		"app/**/*.ts",
+		"app/**/*.tsx",
+		"app/**/*.js",
+		"app/**/*.jsx",
+		"workers/**/*",
+		"worker-configuration.d.ts"
+	],
+	"exclude": [
+		"tests/**/*.spec.ts",
+		"tests/**/*.test.ts",
+		"tests/**/*.spec.tsx",
+		"tests/**/*.test.tsx",
+		"tests/**/*.spec.js",
+		"tests/**/*.test.js",
+		"tests/**/*.spec.jsx",
+		"tests/**/*.test.jsx",
+		"vite.config.ts",
+		"vite.config.mts",
+		"vitest.config.ts",
+		"vitest.config.mts",
+		"app/**/*.test.ts",
+		"app/**/*.spec.ts",
+		"app/**/*.test.tsx",
+		"app/**/*.spec.tsx",
+		"app/**/*.test.js",
+		"app/**/*.spec.js",
+		"app/**/*.test.jsx",
+		"app/**/*.spec.jsx"
+	],
+
+	"compilerOptions": {
+		"lib": ["dom", "dom.iterable", "esnext"],
+		"types": ["node", "vite/client", "@react-router/node"],
+		"rootDirs": [".", "./.react-router/types"]
+	}
+}

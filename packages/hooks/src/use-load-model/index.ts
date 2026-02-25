@@ -1,3 +1,11 @@
-export { default as useLoadModel } from './use-load-model';
-export { type ModelFile, ModelFileTypes } from './types';
-export * from './model-context';
+export { default as useLoadModel } from './use-load-model'
+export {
+	type InputFileOrDirectory,
+	type ModelFile,
+	type SceneDataLoadOptions,
+	type SceneLoadOptions,
+	type SceneLoadResult,
+	type ServerSceneData
+} from './types'
+export { reconstructGltfFiles } from './utils/reconstruct-files'
+export * from './model-context'

@@ -14,316 +14,527 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { useReducer, useCallback, useRef, useEffect } from 'react';
-import { Object3D } from 'three';
+import { ModelFileTypes, ModelLoader } from '@vctrl/core/model-loader'
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
+import { Object3D } from 'three'
 
-import { useOptimizeModel } from '../use-optimize-model';
-import eventSystem from './event-system';
-import reducer, { initialState } from './state';
+import eventSystem from './event-system'
+import reducer, { initialState } from './state'
 import {
-  ModelFileTypes,
-  InputFileOrDirectory,
-  Action,
-  ModelFile,
-} from './types';
-import { useLoadBinary, useLoadGltf } from './file-type-hooks';
-import { readDirectory } from './utils';
-import { createGltfLoader } from './loaders';
+	Action,
+	InputFileOrDirectory,
+	ModelFile,
+	SceneDataLoadOptions,
+	OptimizerIntegrationReturn,
+	SceneLoadOptions,
+	SceneLoadResult,
+	ServerSceneData,
+	UseLoadModelReturn
+} from './types'
+import {
+	calculateReferencedBytesFromFiles,
+	calculateReferencedBytesFromServerScene,
+	readDirectory,
+	reconstructGltfFiles
+} from './utils'
+import { ServerCommunicationService } from '../utils/server-communication'
+
+import type { useOptimizeModel } from '../use-optimize-model'
+import type { OperationProgress } from '@vctrl/core'
 
 /**
- * Custom hook to load and manage 3D models, integrating optimization functionalities.
+ * Custom hook to load and manage 3D models with optional optimization integration.
  *
- * @param optimizer - Optional optimizer hook returned from useOptimizeModel.
- * @returns An object containing the state, event handlers, and optimization functions.
+ * This hook provides a complete solution for loading 3D models (GLTF, GLB, USDZ) with
+ * optional integration of model optimization capabilities. The return type is conditionally
+ * typed based on whether an optimizer is provided.
+ *
+ * **Type Safety:**
+ * - When called with an optimizer: `optimizer` property is fully typed with optimization methods
+ * - When called without an optimizer: `optimizer` property is typed as `null`
+ *
+ * @example
+ * // With optimizer integration
+ * const optimizer = useOptimizeModel()
+ * const model = useLoadModel(optimizer)
+ * model.optimizer.applyOptimization() // ✅ Fully typed
+ *
+ * @example
+ * // Without optimizer
+ * const model = useLoadModel()
+ * model.optimizer // ✅ Typed as null
+ *
+ * @template T - The type of the optimizer parameter (inferred automatically)
+ * @param optimizer - Optional optimizer hook returned from useOptimizeModel
+ * @returns Model loading state and methods, with conditionally typed optimizer property
  */
-function useLoadModel(optimizer?: ReturnType<typeof useOptimizeModel>) {
-  const uploadCompleteRef = useRef(false);
-  const [state, dispatch] = useReducer(reducer, initialState);
+function useLoadModel<
+	T extends ReturnType<typeof useOptimizeModel> | undefined
+>(optimizer?: T): UseLoadModelReturn<T extends undefined ? false : true> {
+	const uploadCompleteRef = useRef(false)
+	const loadedFileRef = useRef<ModelFile | null>(null)
+	const [state, dispatch] = useReducer(reducer, initialState)
 
-  const { loadGltf } = useLoadGltf(dispatch);
-  const { loadBinary } = useLoadBinary(dispatch);
+	// Create ModelLoader instance with progress tracking
+	const modelLoader = useMemo(() => {
+		const loader = new ModelLoader()
 
-  const getFileOfType = useCallback(
-    (files: File[], fileType: ModelFileTypes) =>
-      files.find((file) => file.name.endsWith('.' + fileType)),
-    [],
-  );
+		// Set up progress callback to update state and emit events
+		loader.onProgress((progress: OperationProgress) => {
+			dispatch({ type: 'set-progress', payload: progress.progress })
+			// FInal load progress is set to 100% elsewhere
+			if (progress.progress === 100) return
+			eventSystem.emit('load-progress', progress.progress)
+		})
 
-  const updateProgress = useCallback((progress: number) => {
-    dispatch({ type: 'set-progress', payload: progress });
-    eventSystem.emit('load-progress', progress);
-  }, []);
+		return loader
+	}, [])
 
-  const reset = useCallback(() => {
-    dispatch({ type: 'reset-state' });
-    eventSystem.emit('load-reset');
-  }, []);
+	/**
+	 * Helper function to find a specific file type from an array of files.
+	 * Used to identify model files (GLTF, GLB, USDZ) from uploaded file lists.
+	 */
+	const getFileOfType = useCallback(
+		(files: File[], fileType: ModelFileTypes) =>
+			files.find((file) => file.name.endsWith('.' + fileType)),
+		[]
+	)
 
-  const processFiles = useCallback(
-    (files: File[]) => {
-      if (files.length === 0) return;
+	/**
+	 * Updates the loading progress state and emits a progress event.
+	 * Called during file upload and model loading operations.
+	 */
+	const updateProgress = useCallback((progress: number) => {
+		dispatch({ type: 'set-progress', payload: progress })
+		eventSystem.emit('load-progress', progress)
+	}, [])
 
-      const gltfFile = getFileOfType(files, ModelFileTypes.gltf);
-      const glbFile = getFileOfType(files, ModelFileTypes.glb);
-      const usdzFile = getFileOfType(files, ModelFileTypes.usdz);
+	/**
+	 * Resets the model loading state to initial values.
+	 * Clears any loaded models, progress, and emits a reset event.
+	 */
+	const reset = useCallback(() => {
+		dispatch({ type: 'reset-state' })
+		eventSystem.emit('load-reset')
+	}, [])
 
-      const supportedFiles = [gltfFile, glbFile, usdzFile].filter(
-        Boolean,
-      ) as File[];
+	/**
+	 * Loads binary model files (GLB, USDZ) into Three.js scene.
+	 * Handles errors and updates loading state.
+	 */
+	const loadBinaryModel = useCallback(
+		async (file: File, fileType: ModelFileTypes) => {
+			try {
+				const result = await modelLoader.loadToThreeJS(file)
 
-      if (supportedFiles.length > 1) {
-        eventSystem.emit('multiple-models', supportedFiles);
-        return;
-      }
+				dispatch({
+					type: 'set-file',
+					payload: {
+						model: result.scene,
+						type: fileType,
+						name: file.name
+					}
+				})
 
-      const otherFiles = files.filter(
-        (file) => file !== gltfFile && file !== glbFile && file !== usdzFile,
-      );
+				dispatch({ type: 'set-file-loading', payload: false })
+			} catch (error) {
+				console.error('Error loading binary model:', error)
+				dispatch({ type: 'set-file-loading', payload: false })
+				eventSystem.emit('load-error', error)
+			}
+		},
+		[modelLoader]
+	)
 
-      const updateFileProgress = (progress: number) => {
-        updateProgress(progress);
+	/**
+	 * Loads GLTF models with their associated assets (textures, bins, etc.).
+	 * Handles the more complex GLTF format with external resources.
+	 */
+	const loadGltfModel = useCallback(
+		async (gltfFile: File, otherFiles: File[]) => {
+			try {
+				const { sourcePackageBytes, textureBytes } =
+					await calculateReferencedBytesFromFiles(gltfFile, otherFiles)
 
-        if (progress === 100) {
-          uploadCompleteRef.current = true;
-        }
-      };
+				const result = await modelLoader.loadGLTFWithAssetsToThreeJS(
+					gltfFile,
+					otherFiles
+				)
 
-      if (gltfFile) {
-        loadGltf(gltfFile, otherFiles, updateFileProgress);
-      } else if (glbFile) {
-        loadBinary(glbFile, ModelFileTypes.glb, () => updateFileProgress(100));
-      } else if (usdzFile) {
-        loadBinary(usdzFile, ModelFileTypes.usdz, () =>
-          updateFileProgress(100),
-        );
-      } else {
-        eventSystem.emit('not-loaded-files', files);
-        dispatch({ type: 'set-file-loading', payload: false });
-        return;
-      }
-    },
-    [updateProgress, getFileOfType, loadGltf, loadBinary],
-  );
+				const loadedFile: ModelFile = {
+					model: result.scene,
+					type: ModelFileTypes.gltf,
+					name: gltfFile.name,
+					sourcePackageBytes,
+					sourceTextureBytes: textureBytes
+				}
 
-  const load = useCallback(
-    async (filesOrDirectories: InputFileOrDirectory) => {
-      const allFiles: File[] = [];
+				dispatch({
+					type: 'set-file',
+					payload: loadedFile
+				})
 
-      eventSystem.emit('load-start');
-      dispatch({ type: 'reset-state' });
-      dispatch({ type: 'set-file-loading', payload: true });
+				dispatch({ type: 'set-file-loading', payload: false })
 
-      updateProgress(0);
-      uploadCompleteRef.current = false;
+				// Update the ref so loadFromServer can access it
+				loadedFileRef.current = loadedFile
+			} catch (error) {
+				console.error('Error loading GLTF model:', error)
+				console.error('GLTF file:', gltfFile.name)
+				console.error(
+					'Asset files:',
+					otherFiles.map((f) => f.name)
+				)
+				dispatch({ type: 'set-file-loading', payload: false })
+				eventSystem.emit('load-error', error)
+			}
+		},
+		[modelLoader]
+	)
 
-      for (const item of filesOrDirectories) {
-        if (item instanceof File) {
-          allFiles.push(item);
-        } else if ('kind' in item && item.kind === 'directory') {
-          const directoryFiles = await readDirectory(item);
-          allFiles.push(...directoryFiles);
-        }
-      }
+	/**
+	 * Processes an array of files to identify and load supported 3D model formats.
+	 * Validates that only one model file is present and emits appropriate events.
+	 *
+	 * Supported formats: GLTF, GLB, USDZ
+	 * Emits events for: multiple models found, no supported files found
+	 */
+	const processFiles = useCallback(
+		async (files: File[]) => {
+			if (files.length === 0) return
 
-      processFiles(allFiles);
-    },
-    [processFiles, updateProgress],
-  );
+			// Identify model files by type
+			const gltfFile = getFileOfType(files, ModelFileTypes.gltf)
+			const glbFile = getFileOfType(files, ModelFileTypes.glb)
+			const usdzFile = getFileOfType(files, ModelFileTypes.usdz)
 
-  // Integration with optimizer
-  useEffect(() => {
-    if (uploadCompleteRef.current && state.file) {
-      eventSystem.emit('load-complete', state.file);
-      uploadCompleteRef.current = false;
+			const supportedFiles = [gltfFile, glbFile, usdzFile].filter(
+				Boolean
+			) as File[]
 
-      if (optimizer && state.file.model) {
-        // Load the model into the optimizer
-        optimizer.load(state.file.model as Object3D);
-      }
-    }
-  }, [state.file, optimizer]);
+			// Emit error if multiple model files are found
+			if (supportedFiles.length > 1) {
+				eventSystem.emit('multiple-models', supportedFiles)
+				return
+			}
 
-  const optimizerIntegration = useOptimizerIntegration(
-    optimizer,
-    dispatch,
-    state.file,
-  );
+			// Separate model file from asset files (textures, bins, etc.)
+			const otherFiles = files.filter(
+				(file) => file !== gltfFile && file !== glbFile && file !== usdzFile
+			)
 
-  return {
-    ...state,
+			// Mark upload as complete (progress is already emitted by ModelLoader)
+			const markUploadComplete = () => {
+				uploadCompleteRef.current = true
+			}
 
-    /**
-     * Add an event listener to the event system.
-     */
-    on: eventSystem.on,
+			// Load the appropriate model type
+			if (gltfFile) {
+				await loadGltfModel(gltfFile, otherFiles)
+				markUploadComplete()
+			} else if (glbFile) {
+				await loadBinaryModel(glbFile, ModelFileTypes.glb)
+				markUploadComplete()
+			} else if (usdzFile) {
+				await loadBinaryModel(usdzFile, ModelFileTypes.usdz)
+				markUploadComplete()
+			} else {
+				// No supported model files found
+				eventSystem.emit('not-loaded-files', files)
+				dispatch({ type: 'set-file-loading', payload: false })
+				return
+			}
+		},
+		[getFileOfType, loadGltfModel, loadBinaryModel]
+	)
 
-    /**
-     * Remove an event listener from the event system.
-     */
-    off: eventSystem.off,
+	/**
+	 * Main function to load 3D models from files or directories.
+	 * Accepts both File objects and FileSystemDirectoryHandle for folder uploads.
+	 * Resets state, processes all files, and integrates with optimizer if available.
+	 *
+	 * @param filesOrDirectories - Array of File objects or FileSystemDirectoryHandle objects
+	 */
+	const load = useCallback(
+		async (filesOrDirectories: InputFileOrDirectory): Promise<void> => {
+			const allFiles: File[] = []
 
-    /**
-     * Load a model and integrate it with the optimizer if available.
-     * This also makes the model available in the use-model-context hook.
-     */
-    load,
+			// Emit load start event and reset state
+			eventSystem.emit('load-start')
+			dispatch({ type: 'reset-state' })
+			dispatch({ type: 'set-file-loading', payload: true })
 
-    /**
-     * Reset the model and optimizer state to the initial state.
-     */
-    reset,
+			updateProgress(0)
+			uploadCompleteRef.current = false
 
-    /**
-     * Integration of the optimizer
-     * An object containing functions to interact with the optimizer.
-     *
-     * It exposes the following functions:
-     *
-     * - `simplifyOptimization(options?: SimplifyOptions)`: Runs the simplification optimization with the given options.
-     * - `dedupOptimization(options?: DedupOptions)`: Runs the deduplication optimization with the given options.
-     * - `quantizeOptimization(options?: QuantizeOptions)`: Runs the quantization optimization with the given options.
-     * - `texturesCompressionOptimization(options?: TextureCompressionOptions)`: Runs the texture compression optimization with the given options.
-     * - `getSize()`: Returns the size of the optimized model.
-     * - `reset()`: Resets the optimizer.
-     * - `report`: The report state of the optimizer.
-     * - `error`: The error state of the optimizer.
-     * - `loading`: The loading state of the optimizer.
-     */
-    optimize: optimizerIntegration,
-  };
+			// Process both files and directories
+			for (const item of filesOrDirectories) {
+				if (item instanceof File) {
+					allFiles.push(item)
+				} else if ('kind' in item && item.kind === 'directory') {
+					// Recursively read directory contents
+					const directoryFiles = await readDirectory(item)
+					allFiles.push(...directoryFiles)
+				}
+			}
+
+			await processFiles(allFiles)
+		},
+		[processFiles, updateProgress]
+	)
+
+	/**
+	 * Load a scene from the server by scene ID.
+	 * Fetches the GLTF JSON and asset data, reconstructs files, then loads them.
+	 *
+	 * This function:
+	 * 1. Emits 'server-load-start' event with the sceneId
+	 * 2. Fetches scene data from the configured endpoint
+	 * 3. Reconstructs GLTF and asset files from the server data
+	 * 4. Loads the files into Three.js directly (bypassing processFiles to avoid double-loading)
+	 * 5. Emits 'server-load-complete' event with the full result
+	 *
+	 * @param options - Scene loading configuration
+	 * @returns Promise resolving to the loaded scene data with settings
+	 */
+	const loadFromData = useCallback(
+		async (options: SceneDataLoadOptions): Promise<SceneLoadResult> => {
+			const { sceneData } = options
+
+			// Update progress to 40% after data resolution
+			updateProgress(40)
+
+			// Reconstruct GLTF and asset files from scene data
+			const files = reconstructGltfFiles(sceneData)
+			const { sourcePackageBytes, textureBytes } =
+				calculateReferencedBytesFromServerScene(sceneData)
+
+			// Update progress to 60% after reconstruction
+			updateProgress(60)
+
+			const gltfFile = files[0] as File
+			const otherFiles = files.slice(1) as File[]
+
+			const result = await modelLoader.loadGLTFWithAssetsToThreeJS(
+				gltfFile,
+				otherFiles
+			)
+
+			const loadedFile: ModelFile = {
+				model: result.scene,
+				type: ModelFileTypes.gltf,
+				name: gltfFile.name,
+				sourcePackageBytes,
+				sourceTextureBytes: textureBytes
+			}
+
+			dispatch({
+				type: 'set-file',
+				payload: loadedFile
+			})
+
+			dispatch({ type: 'set-file-loading', payload: false })
+			loadedFileRef.current = loadedFile
+
+			updateProgress(100)
+
+			return {
+				file: loadedFile,
+				...sceneData
+			}
+		},
+		[modelLoader, updateProgress]
+	)
+
+	const loadFromServer = useCallback(
+		async (options: SceneLoadOptions): Promise<SceneLoadResult> => {
+			const { sceneId, serverOptions } = options
+
+			try {
+				// Emit server load start event
+				eventSystem.emit('server-load-start', sceneId)
+
+				// Reset state and set loading
+				dispatch({ type: 'reset-state' })
+				dispatch({ type: 'set-file-loading', payload: true })
+				updateProgress(0)
+
+				const sceneData =
+					await ServerCommunicationService.loadScene<ServerSceneData>(
+						sceneId,
+						serverOptions
+					)
+
+				const sceneLoadResult = await loadFromData({
+					sceneData
+				})
+
+				// If optimizer is available, load the model into it
+				if (optimizer && sceneLoadResult.file?.model) {
+					await optimizer.load(sceneLoadResult.file.model as Object3D)
+				}
+
+				// Emit server load complete event
+				eventSystem.emit('server-load-complete', sceneLoadResult)
+
+				return sceneLoadResult
+			} catch (error) {
+				console.error('Server scene loading failed:', error)
+				dispatch({ type: 'set-file-loading', payload: false })
+
+				// Emit error event
+				eventSystem.emit('server-load-error', error)
+
+				// Re-throw for caller to handle
+				throw error
+			}
+		},
+		[optimizer, loadFromData, updateProgress]
+		// Note: processFiles removed, we load directly to avoid uploadCompleteRef trigger
+	)
+
+	/**
+	 * Effect to integrate loaded models with the optimizer (if provided).
+	 * When a model is successfully loaded and optimizer is available,
+	 * automatically loads the model into the optimizer for processing.
+	 */
+	useEffect(() => {
+		if (uploadCompleteRef.current && state.file) {
+			// Emit load complete event
+			eventSystem.emit('load-complete', state.file)
+			uploadCompleteRef.current = false
+
+			// If optimizer is available, load the model into it
+			if (optimizer && state.file.model) {
+				optimizer.load(state.file.model)
+			}
+		}
+	}, [state.file, optimizer])
+
+	/**
+	 * Creates the optimizer integration object.
+	 * This provides additional methods for applying optimizations and
+	 * updating the loaded model with optimized versions.
+	 *
+	 * Returns null if no optimizer is provided, otherwise returns
+	 * the full optimizer interface with applyOptimization method.
+	 */
+	const optimizerIntegration = useOptimizerIntegration(
+		optimizer,
+		dispatch,
+		state.file,
+		modelLoader
+	)
+
+	return {
+		...state,
+		on: eventSystem.on,
+		off: eventSystem.off,
+		load,
+		loadFromServer,
+		reset,
+		optimizer: optimizerIntegration
+	} as UseLoadModelReturn<T extends undefined ? false : true>
 }
 
 /**
  * Hook to integrate the optimizer into the model loading process.
  *
- * @param optimizer - The optimizer instance.
+ * @param instance - The optimizer instance.
  * @param dispatch - The dispatch function from useReducer.
  * @param file - The current model file.
+ * @param modelLoader - The ModelLoader instance.
  * @returns An object containing optimization functions and optimizer states.
  */
 function useOptimizerIntegration(
-  optimizer: ReturnType<typeof useOptimizeModel> | undefined,
-  dispatch: React.Dispatch<Action>,
-  file: ModelFile | null,
-) {
-  const dispatchNewModel = useCallback(
-    (modelBuffer: Uint8Array) => {
-      const gltfLoader = createGltfLoader();
+	instance: ReturnType<typeof useOptimizeModel> | undefined,
+	dispatch: React.Dispatch<Action>,
+	file: ModelFile | null,
+	modelLoader: ModelLoader
+): OptimizerIntegrationReturn<boolean> {
+	/**
+	 * Applies an optimization to the current model and loads the result.
+	 *
+	 * This function:
+	 * 1. Runs the provided optimization function (e.g., simplify, compress)
+	 * 2. Retrieves the optimized model as a binary file
+	 * 3. Loads the optimized binary into a Three.js scene
+	 * 4. Updates the model state with the optimized version
+	 *
+	 * @template TOptions - The type of options for the optimization function
+	 * @param optimizationFunction - Optional function to run optimization (e.g., instance.simplifyOptimization)
+	 * @param options - Optional configuration for the optimization function
+	 */
+	const applyOptimization = useCallback(
+		async <TOptions>(
+			optimizationFunction?:
+				| ((options?: TOptions) => Promise<void>)
+				| undefined,
+			options?: TOptions
+		) => {
+			if (!instance) {
+				console.warn('Optimizer is not available')
+				return
+			}
 
-      gltfLoader.parse(
-        modelBuffer.buffer as ArrayBuffer,
-        '',
-        (gltf) => {
-          dispatch({
-            type: 'set-file',
-            payload: {
-              model: gltf.scene,
-              type: ModelFileTypes.glb,
-              name: file?.name || 'optimized.glb',
-            },
-          });
-        },
-        (error) => {
-          console.error('Error loading new model:', error);
-        },
-      );
-    },
-    [dispatch, file],
-  );
+			try {
+				// Step 1: Apply the optimization with optional parameters
+				if (optimizationFunction) await optimizationFunction(options)
 
-  /**
-   * Runs the specified optimization function with optional parameters.
-   *
-   * @param optimizationFunction - The optimization function to run.
-   * @param options - Optional parameters for the optimization function.
-   */
-  const runOptimization = useCallback(
-    async <TOptions>(
-      optimizationFunction: ((options?: TOptions) => Promise<void>) | undefined,
-      options?: TOptions,
-    ) => {
-      if (!optimizer || !optimizationFunction) {
-        console.warn('Optimizer or optimization function is not available');
-        return;
-      }
+				// Step 2: Get the optimized model as a binary file
+				const optimizedModel = await instance.getModel()
+				if (!optimizedModel) {
+					console.warn('No optimized model available after optimization')
+					return
+				}
 
-      try {
-        // Apply the optimization with optional parameters
-        await optimizationFunction(options);
-        const optimizedModel = await optimizer.getModel();
+				// Step 3: Create a File object from the optimized binary data
+				// Ensure we pass an ArrayBufferView (Uint8Array) backed by a real ArrayBuffer
+				// to the File constructor to satisfy BlobPart typing and avoid SharedArrayBuffer issues.
+				// We create a copy using .slice() which returns a Uint8Array backed by a standard ArrayBuffer.
+				const optimizedBlobPart =
+					optimizedModel instanceof Uint8Array
+						? optimizedModel.slice()
+						: new Uint8Array(optimizedModel as ArrayBufferLike).slice()
 
-        if (optimizedModel) {
-          dispatchNewModel(optimizedModel);
-        }
-      } catch (error) {
-        console.error('Optimization failed:', error);
-        // Optionally dispatch an error action here
-      }
-    },
-    [optimizer, dispatchNewModel],
-  );
+				const optimizedFile = new File(
+					[optimizedBlobPart],
+					file?.name || 'optimized_model.glb',
+					{
+						type: 'model/gltf-binary'
+					}
+				)
 
-  // Define types for options using Parameters and ReturnType utility types
-  type SimplifyOptions = Parameters<
-    ReturnType<typeof useOptimizeModel>['simplifyOptimization']
-  >[0];
-  type DedupOptions = Parameters<
-    ReturnType<typeof useOptimizeModel>['dedupOptimization']
-  >[0];
-  type QuantizeOptions = Parameters<
-    ReturnType<typeof useOptimizeModel>['quantizeOptimization']
-  >[0];
-  type NormalsOptions = Parameters<
-    ReturnType<typeof useOptimizeModel>['normalsOptimization']
-  >[0];
-  type TexturesOptions = Parameters<
-    ReturnType<typeof useOptimizeModel>['texturesOptimization']
-  >[0];
+				// Step 4: Load the optimized file into Three.js
+				const result = await modelLoader.loadToThreeJS(optimizedFile)
 
-  const createUnavailableHandler = (message: string) => () => {
-    console.warn(message);
-  };
+				// Step 5: Update the state with the optimized model
+				dispatch({
+					type: 'set-file',
+					payload: {
+						model: result.scene,
+						type: ModelFileTypes.glb,
+						name: optimizedFile.name
+					}
+				})
+			} catch (error) {
+				console.error('Optimization failed:', error)
+				// Error is logged, state remains unchanged
+			}
+		},
+		[instance, modelLoader, file, dispatch]
+	)
 
-  const unavailableHandler = {
-    simplifyOptimization: createUnavailableHandler(
-      'Optimizer is not available',
-    ),
-    dedupOptimization: createUnavailableHandler('Optimizer is not available'),
-    quantizeOptimization: createUnavailableHandler(
-      'Optimizer is not available',
-    ),
-    normalsOptimization: createUnavailableHandler('Optimizer is not available'),
-    texturesCompressOptimization: createUnavailableHandler(
-      'Optimizer is not available',
-    ),
-    getSize: createUnavailableHandler('Optimizer is not available'),
-    reset: createUnavailableHandler('Optimizer is not available'),
-    report: null,
-    error: null,
-    loading: false,
-  };
+	// Return null if no optimizer instance is provided
+	if (!instance) return null as OptimizerIntegrationReturn<boolean>
 
-  if (!optimizer) {
-    return unavailableHandler;
-  }
-
-  return {
-    simplifyOptimization: (options?: SimplifyOptions) =>
-      runOptimization<SimplifyOptions>(optimizer.simplifyOptimization, options),
-    dedupOptimization: (options?: DedupOptions) =>
-      runOptimization(optimizer.dedupOptimization, options),
-    quantizeOptimization: (options?: QuantizeOptions) =>
-      runOptimization<QuantizeOptions>(optimizer.quantizeOptimization, options),
-    normalsOptimization: (options?: NormalsOptions) =>
-      runOptimization<NormalsOptions>(optimizer.normalsOptimization, options),
-    texturesCompressOptimization: (options?: TexturesOptions) =>
-      runOptimization<TexturesOptions>(optimizer.texturesOptimization, options),
-    getSize: optimizer.getSize,
-    reset: optimizer.reset,
-    report: optimizer.report, // Include the report state
-    error: optimizer.error, // Include the error state
-    loading: optimizer.loading, // Include the loading state
-  };
+	// Return the full optimizer interface with the applyOptimization method
+	return {
+		...instance,
+		applyOptimization,
+		reset: instance?.reset,
+		error: instance?.error,
+		loading: instance?.loading
+	} as OptimizerIntegrationReturn<boolean>
 }
-
-export default useLoadModel;
+export default useLoadModel

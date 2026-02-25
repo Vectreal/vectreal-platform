@@ -1,92 +1,113 @@
-import JSZip from 'jszip';
-import { saveAs } from 'file-saver';
+import { Document } from '@gltf-transform/core'
+import { ModelExporter } from '@vctrl/core/model-exporter'
+import fileSaver from 'file-saver'
+import { useCallback, useRef } from 'react'
 
-import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
-
-import { ModelFile } from '../use-load-model';
-import { ExportResult } from './types';
-import { getFileBasename, handleBuffers, handleImages } from './utils';
+import { ModelFile } from '../use-load-model'
 
 /**
- * Processes the result of a GLTF export and saves it as a ZIP file.
- *
- * @param {ExportResult} result The result of the GLTF export.
- * @param {string} baseFileName The base file name to use for the exported file.
- */
-const processGltfResult = (
-  result: ExportResult,
-  baseFileName: string,
-): void => {
-  const zip = new JSZip();
-  zip.file(`${baseFileName}.gltf`, JSON.stringify(result, null, 2));
-
-  if (result.buffers) {
-    handleBuffers(result.buffers, zip, baseFileName);
-  }
-
-  if (result.images && result.textures) {
-    handleImages(result.images, result.textures, zip);
-  }
-
-  zip.generateAsync({ type: 'blob' }).then((content) => {
-    saveAs(content, `${baseFileName}.zip`);
-  });
-};
-
-/**
- * A React hook for exporting a 3D model from a Three.js scene.
+ * A React hook for exporting a 3D model using the core ModelExporter.
  *
  * @param {Function} [onSaved] Called when the export is complete.
  * @param {Function} [onError] Called when an error occurs during exporting.
- * @returns An object with a single property, `handleGltfExport`. `handleGltfExport` is a function
- *   that takes a file object and a boolean indicating whether to export in binary format.
- *   It exports the scene in the format specified by the boolean parameter.
+ * @returns An object with export functions.
  */
 const useExportModel = (
-  onSaved?: () => void,
-  onError?: (error: ErrorEvent) => void,
+	onSaved?: () => void,
+	onError?: (error: Error) => void
 ) => {
-  // Main function to handle exporting the scene in GLTF or GLB format
-  const handleGltfExport = (file: ModelFile | null, binary: boolean): void => {
-    const scene = file?.model;
-    if (!scene) {
-      console.error('Scene not initialized');
-      return;
-    }
+	const exporterRef = useRef<ModelExporter>(new ModelExporter())
 
-    const exporter = new GLTFExporter();
-    const options = {
-      binary,
-      includeCustomExtensions: true,
-    };
+	const handleThreeGltfExport = useCallback(
+		async (file: ModelFile | null, binary: boolean): Promise<void> => {
+			const scene = file?.model
+			if (!scene) {
+				console.error('Scene not initialized')
+				return
+			}
 
-    exporter.parse(
-      scene,
-      (result: ArrayBuffer | ExportResult) => {
-        const baseFileName = getFileBasename(file.name);
+			try {
+				const exporter = exporterRef.current
+				const baseFileName = file.name.replace(/\.[^/.]+$/, '') // Remove extension
 
-        if (result instanceof ArrayBuffer) {
-          // GLB format
-          saveAs(new Blob([result]), `${baseFileName}.glb`);
-          if (onSaved) onSaved();
-        } else {
-          // GLTF format
-          processGltfResult(result, baseFileName);
-          if (onSaved) onSaved();
-        }
-      },
-      (error) => {
-        console.error(error);
+				if (binary) {
+					// Export as GLB
+					const result = await exporter.exportThreeJSGLB(scene, {})
+					if (!(result.data instanceof Uint8Array)) {
+						throw new Error('Expected GLB export to return Uint8Array')
+					}
+					fileSaver.saveAs(
+						new Blob([new Uint8Array(result.data)]),
+						`${baseFileName}.glb`
+					)
+				} else {
+					// Export as GLTF with ZIP
+					const result = await exporter.exportThreeJSGLTF(scene)
+					const zipBuffer = await exporter.createZIPArchive(
+						result,
+						baseFileName
+					)
+					fileSaver.saveAs(
+						new Blob([new Uint8Array(zipBuffer)]),
+						`${baseFileName}.zip`
+					)
+				}
 
-        if (onError) onError(error);
-      },
-      options,
-    );
-  };
+				if (onSaved) onSaved()
+			} catch (error) {
+				console.error('Export failed:', error)
+				if (onError) onError(error as Error)
+			}
+		},
+		[onSaved, onError]
+	)
 
-  return {
-    handleGltfExport,
-  };
-};
+	const handleDocumentGltfExport = useCallback(
+		async function (
+			jsonDocument: Document,
+			file: ModelFile | null,
+			binary = false,
+			download = true
+		) {
+			try {
+				const exporter = exporterRef.current
+				const baseFileName = file?.name.replace(/\.[^/.]+$/, '') || 'model'
 
-export default useExportModel;
+				if (binary) {
+					// Export as GLB
+					const result = await exporter.exportDocumentGLB(jsonDocument)
+					fileSaver.saveAs(
+						new Blob([new Uint8Array(result.data)]),
+						`${baseFileName}.glb`
+					)
+				} else {
+					const result = await exporter.exportDocumentGLTF(jsonDocument)
+
+					if (!download) return result
+
+					// Export as GLTF with ZIP
+					const zipBuffer = await exporter.createZIPArchive(
+						result,
+						baseFileName
+					)
+					fileSaver.saveAs(
+						new Blob([new Uint8Array(zipBuffer)]),
+						`${baseFileName}.zip`
+					)
+				}
+
+				if (onSaved) onSaved()
+			} catch (error) {
+				console.error('Export failed:', error)
+				if (onError) onError(error as Error)
+			}
+		},
+		[onError, onSaved]
+	)
+	return {
+		handleThreeGltfExport,
+		handleDocumentGltfExport
+	}
+}
+
+export default useExportModel

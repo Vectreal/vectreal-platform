@@ -1,36 +1,54 @@
-import { useEffect, useState } from 'react';
-import { OrbitControls, OrbitControlsProps } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei'
+import { ControlsProps } from '@vctrl/core'
+import { memo, useEffect, useRef, useState } from 'react'
 
-export interface ControlsProps extends OrbitControlsProps {
-  /**
-   * The timeout duration in milliseconds before enabling the controls.
-   */
-  controlsTimeout?: number;
-}
-
-export const defaultControlsOptions: ControlsProps = {
-  controlsTimeout: 1500,
-  maxPolarAngle: Math.PI / 2,
-  autoRotate: true,
-  makeDefault: true,
-};
+export const defaultControlsOptions = {
+	controlsTimeout: 0,
+	maxPolarAngle: Math.PI / 2,
+	autoRotate: false,
+	autoRotateSpeed: 0.25,
+	enableZoom: true,
+	zoomSpeed: 0.4,
+	panSpeed: 0.5,
+	rotateSpeed: 0.5,
+	enableDamping: true,
+	dampingFactor: 0.2,
+	makeDefault: true
+} satisfies ControlsProps
 
 /**
  * SceneControls component that enables orbit controls after a specified timeout.
  */
-const SceneControls = (props: ControlsProps) => {
-  const { controlsTimeout, ...rest } = { ...defaultControlsOptions, ...props };
-  const [isControlsEnabled, setIsControlsEnabled] = useState(false);
+const SceneControls = memo((props: ControlsProps) => {
+	const { controlsTimeout, ...rest } = {
+		...defaultControlsOptions,
+		...props
+	}
 
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setIsControlsEnabled(true);
-    }, controlsTimeout);
+	const mountedRef = useRef(false)
+	const [isControlsEnabled, setIsControlsEnabled] = useState(
+		controlsTimeout === 0
+	)
 
-    return () => clearTimeout(timeoutId);
-  }, [controlsTimeout]);
+	useEffect(() => {
+		if (mountedRef.current) return
+		mountedRef.current = true
 
-  return isControlsEnabled && <OrbitControls {...rest} />;
-};
+		return () => {
+			mountedRef.current = false
+		}
+	}, [mountedRef])
 
-export default SceneControls;
+	useEffect(() => {
+		if (!controlsTimeout) return
+
+		const timeoutId = setTimeout(() => {
+			setIsControlsEnabled(true)
+		}, controlsTimeout)
+
+		return () => clearTimeout(timeoutId)
+	}, [controlsTimeout])
+
+	return <OrbitControls enabled={isControlsEnabled} {...rest} />
+})
+export default SceneControls

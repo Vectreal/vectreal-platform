@@ -1,444 +1,1412 @@
-# vctrl/hooks
+# @vctrl/hooks
 
-[![Version and release packages to NPM](https://img.shields.io/github/actions/workflow/status/vectreal/vectreal-core/version-release.yaml?logo=github&logoColor=%23fc6c18&label=Version%20and%20release%20packages%20to%20NPM&color=%23fc6c18)
-](https://github.com/Vectreal/vectreal-core/actions/workflows/version-release.yaml)
-[![@vctrl/hooks | NPM Downloads](https://img.shields.io/npm/dm/%40vctrl%2Fhooks?logo=npm&logoColor=%23fc6c18&label=%40vctrl%2Fhooks%20%7C%20NPM%20Downloads&color=%23fc6c18)](https://www.npmjs.com/package/@vctrl/hooks)
+[![Version and release packages to NPM](https://img.shields.io/github/actions/workflow/status/vectreal/vectreal-core/version-release.yaml?logo=github&logoColor=%23fc6c18&label=CI/CD&color=%23fc6c18)](https://github.com/Vectreal/vectreal-core/actions/workflows/version-release.yaml)
+[![NPM Downloads](https://img.shields.io/npm/dm/%40vctrl%2Fhooks?logo=npm&logoColor=%23fc6c18&label=downloads&color=%23fc6c18)](https://www.npmjs.com/package/@vctrl/hooks)
+[![NPM Version](https://img.shields.io/npm/v/%40vctrl%2Fhooks?logo=npm&logoColor=%23fc6c18&label=version&color=%23fc6c18)](https://www.npmjs.com/package/@vctrl/hooks)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-> **Note**: This library is still undergoing heavy development until the first major version is released. This may lead to breaking changes in upcoming updates.
+**Powerful React hooks for 3D model loading, optimization, and export**
 
-## Overview
+> **⚠️ Development Notice**: This library is under active development. Breaking changes may occur before v1.0.0.
 
-`@vctrl/hooks` is a React hooks package designed to simplify 3D model loading, optimization, and exporting within React applications. It's part of the [vectreal-core](https://github.com/vectreal/vectreal-core) ecosystem and is fully integrated into the [official website application](https://core.vectreal.com).
+## 📖 Overview
 
-The package provides powerful hooks for:
+`@vctrl/hooks` is a comprehensive React hooks library for working with 3D models in web applications. Built on top of Three.js and glTF-Transform, it provides production-ready solutions for loading, optimizing, and exporting 3D assets. It's part of the [vectreal-core](https://github.com/vectreal/vectreal-core) ecosystem and powers the [official Vectreal platform](https://core.vectreal.com).
 
-- **Loading various 3D model file formats** (`useLoadModel`)
-- **Optimizing 3D models** (`useOptimizeModel`)
-- **Exporting 3D models from Three.js scenes** (`useExportModel`)
+### ✨ Key Features
 
-It also includes a React context (`ModelContext`) for easy state management and an event system for handling different stages of the model loading process.
+- 🎯 **Simple API** - Intuitive hooks that follow React best practices
+- 📦 **Multiple Formats** - Support for GLTF, GLB, and USDZ files
+- ⚡ **Advanced Optimization** - Mesh simplification, deduplication, and compression
+- 🔄 **Server Integration** - Load complete scenes from your backend with settings
+- 📤 **Export** - Export optimized models back to GLTF/GLB formats
+- 🎨 **Type-Safe** - Full TypeScript support with comprehensive types
+- 🔌 **Extensible** - Modular architecture for custom workflows
+- 📊 **Progress Tracking** - Real-time loading and optimization progress
+- 🎭 **Event System** - Subscribe to lifecycle events for fine-grained control
+- 🌐 **Server Communication** - Unified service for API interactions
 
-### Table of Contents
+### 🎯 Use Cases
 
-- [vctrl/hooks](#vctrlhooks)
-  - [Overview](#overview)
-    - [Table of Contents](#table-of-contents)
-  - [Installation](#installation)
-  - [Hooks](#hooks)
+- **3D Model Viewers** - Build interactive model viewers for e-commerce, real estate, or product showcases
+- **Asset Management** - Create tools for managing and optimizing 3D asset pipelines
+- **Content Creation** - Build editors and tools for 3D content workflows
+- **AR/VR Applications** - Prepare and optimize models for immersive experiences
+- **Game Development** - Manage and optimize game assets in React-based tools
+- **Digital Twins** - Load and manage complex 3D scenes with server-side state
+
+## 📚 Table of Contents
+
+- [@vctrl/hooks](#vctrlhooks)
+  - [📖 Overview](#-overview)
+    - [✨ Key Features](#-key-features)
+    - [🎯 Use Cases](#-use-cases)
+  - [📚 Table of Contents](#-table-of-contents)
+  - [📦 Installation](#-installation)
+    - [Peer Dependencies](#peer-dependencies)
+  - [🚀 Quick Start](#-quick-start)
+    - [Basic Model Loading](#basic-model-loading)
+    - [With Optimization](#with-optimization)
+    - [Load Scene from Server](#load-scene-from-server)
+  - [Core Hooks](#core-hooks)
     - [useLoadModel](#useloadmodel)
-      - [Overview](#overview-1)
-      - [Features](#features)
-      - [Usage](#usage)
-      - [API Reference](#api-reference)
-      - [Optimization Integration](#optimization-integration)
     - [useOptimizeModel](#useoptimizemodel)
-      - [Overview](#overview-2)
-      - [Features](#features-1)
-      - [Usage](#usage-1)
-      - [API Reference](#api-reference-1)
     - [useExportModel](#useexportmodel)
-      - [Overview](#overview-3)
-      - [Features](#features-2)
-      - [Usage](#usage-2)
-      - [API Reference](#api-reference-2)
-    - [ModelContext](#modelcontext)
-  - [Common Concepts](#common-concepts)
-    - [Supported File Types](#supported-file-types)
-    - [File Loading Process](#file-loading-process)
-    - [State Management](#state-management)
-    - [Integration with Three.js](#integration-with-threejs)
+  - [Advanced Features](#advanced-features)
+    - [Server Scene Loading](#server-scene-loading)
+    - [Event System](#event-system)
+    - [Model Context](#model-context)
+    - [Server Communication Service](#server-communication-service)
+  - [Supported File Types](#supported-file-types)
+  - [Integration Guides](#integration-guides)
+    - [With @vctrl/viewer](#with-vctrlviewer)
+    - [With React Three Fiber](#with-react-three-fiber)
+    - [With State Management Libraries](#with-state-management-libraries)
+  - [Real-World Examples](#real-world-examples)
+    - [E-Commerce Product Viewer](#e-commerce-product-viewer)
+    - [Asset Manager with Batch Optimization](#asset-manager-with-batch-optimization)
+    - [Progressive Loading with Quality Levels](#progressive-loading-with-quality-levels)
+  - [API Reference](#api-reference)
+    - [Types](#types)
+      - [ModelFile](#modelfile)
+      - [SceneLoadOptions](#sceneloadoptions)
+      - [ServerOptions](#serveroptions)
+      - [OptimizationReport](#optimizationreport)
+      - [SceneLoadResult](#sceneloadresult)
+    - [Hook Return Values](#hook-return-values)
   - [Development](#development)
-  - [License](#license)
+    - [Setup](#setup)
+    - [Project Structure](#project-structure)
+    - [Testing](#testing)
+    - [Building](#building)
   - [Contributing](#contributing)
+    - [Guidelines](#guidelines)
+    - [Code Style](#code-style)
+    - [Reporting Issues](#reporting-issues)
+  - [License](#license)
   - [Support](#support)
+    - [Documentation](#documentation)
+    - [Community](#community)
+    - [Getting Help](#getting-help)
+    - [Commercial Support](#commercial-support)
+  - [Acknowledgments](#acknowledgments)
 
-## Installation
-
-To install the package, use npm or yarn:
+## 📦 Installation
 
 ```bash
+# npm
 npm install @vctrl/hooks
-# or
+
+# yarn
 yarn add @vctrl/hooks
+
+# pnpm
+pnpm add @vctrl/hooks
 ```
 
-## Hooks
+### Peer Dependencies
+
+The package requires React and Three.js as peer dependencies:
+
+```bash
+npm install react react-dom three
+```
+
+## 🚀 Quick Start
+
+### Basic Model Loading
+
+```tsx
+import { useLoadModel } from '@vctrl/hooks'
+
+function ModelViewer() {
+	const { load, file, isFileLoading, progress } = useLoadModel()
+
+	const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+		const files = Array.from(event.target.files || [])
+		load(files)
+	}
+
+	return (
+		<div>
+			<input type="file" onChange={handleFileUpload} accept=".glb,.gltf" />
+			{isFileLoading && <p>Loading: {progress}%</p>}
+			{file && <p>✅ Model loaded: {file.name}</p>}
+		</div>
+	)
+}
+```
+
+### With Optimization
+
+```tsx
+import { useLoadModel, useOptimizeModel } from '@vctrl/hooks'
+
+function OptimizedModelViewer() {
+	const optimizer = useOptimizeModel()
+	const {
+		load,
+		file,
+		optimizer: optimizerIntegration
+	} = useLoadModel(optimizer)
+
+	const handleOptimize = async () => {
+		// Simplify to 50% of original triangles
+		await optimizerIntegration.applyOptimization(
+			optimizerIntegration.simplifyOptimization,
+			{ ratio: 0.5 }
+		)
+
+		// Compress textures
+		await optimizerIntegration.applyOptimization(
+			optimizerIntegration.texturesOptimization,
+			{ quality: 80, targetFormat: 'webp' }
+		)
+	}
+
+	return (
+		<div>
+			{file && (
+				<>
+					<button onClick={handleOptimize}>Optimize Model</button>
+					<p>Original: {optimizer.report?.originalSize} bytes</p>
+					<p>Optimized: {optimizer.report?.optimizedSize} bytes</p>
+				</>
+			)}
+		</div>
+	)
+}
+```
+
+### Load Scene from Server
+
+```tsx
+import { useLoadModel } from '@vctrl/hooks'
+import { useEffect } from 'react'
+
+function ServerSceneViewer({ sceneId }: { sceneId: string }) {
+	const model = useLoadModel()
+
+	useEffect(() => {
+		const loadScene = async () => {
+			try {
+				const scene = await model.loadFromServer({
+					sceneId,
+					serverOptions: {
+						endpoint: '/api/load-scene'
+					}
+				})
+				console.log('Loaded scene with settings:', scene.settings)
+			} catch (error) {
+				console.error('Failed to load scene:', error)
+			}
+		}
+
+		loadScene()
+	}, [sceneId])
+
+	return model.file?.model ? (
+		<VectrealViewer model={model.file.model} />
+	) : (
+		<LoadingSpinner />
+	)
+}
+```
+
+## Core Hooks
 
 ### useLoadModel
 
-#### Overview
+The primary hook for loading 3D models into your React application.
 
-`useLoadModel` is a React hook for loading and managing 3D model files in your application. It supports various file formats and integrates with Three.js for rendering.
+**Key Capabilities:**
 
-#### Features
+- ✅ Supports GLTF, GLB, and USDZ formats
+- ✅ Handles multi-file uploads (GLTF + textures + bins)
+- ✅ Drag-and-drop directory support
+- ✅ Progress tracking with events
+- ✅ Three.js integration
+- ✅ Server-side scene loading
+- ✅ Automatic optimizer integration
 
-- Supports direct 3D model file loading (GLTF, GLB, USDZ)
-- Provides loading progress updates
-- Emits events during the loading process
-- Integrates with Three.js
-- Supports multiple file uploads (e.g., `.gltf` with associated `.bin` and texture files)
-- Integrates with `useOptimizeModel` for model optimization
-- TypeScript support
+**Basic API:**
 
-#### Usage
+```tsx
+import { useLoadModel } from '@vctrl/hooks'
 
-Here's a basic example of how to use `useLoadModel`:
+const {
+	load, // Function to load files
+	loadFromServer, // Function to load from server
+	file, // Loaded model data
+	isFileLoading, // Loading state
+	progress, // Progress percentage (0-100)
+	reset, // Reset to initial state
+	on, // Subscribe to events
+	off // Unsubscribe from events
+} = useLoadModel()
+```
 
-```jsx
-import React from 'react';
-import { useLoadModel } from '@vctrl/hooks/use-load-model';
+**Loading Files:**
 
-function ModelLoader() {
-  const { load, file, progress, isLoading } = useLoadModel();
+```tsx
+// From file input
+const handleFiles = (event) => {
+	const files = Array.from(event.target.files)
+	load(files)
+}
 
-  const onFileChange = (event) => {
-    const files = Array.from(event.target.files);
-    load(files);
-  };
-
-  return (
-    <div>
-      <input type="file" onChange={onFileChange} multiple />
-      {isLoading && <p>Loading: {progress}%</p>}
-      {file && <p>Model loaded: {file.name}</p>}
-    </div>
-  );
+// From drag and drop
+const handleDrop = (event) => {
+	event.preventDefault()
+	const items = Array.from(event.dataTransfer.items)
+	const entries = items.map((item) => item.webkitGetAsEntry())
+	load(entries) // Supports directories
 }
 ```
 
-> **Note**: Multiple files can be handled, e.g., when uploading a `.gltf` model along with its `.bin` file and relevant texture files (e.g., `.jpeg`, `.png`).
+**Event Subscription:**
 
-You can also use the `ModelProvider` and `useModelContext` to access the model state across your application:
+```tsx
+useEffect(() => {
+	const handleLoadComplete = (file) => {
+		console.log('Model loaded:', file.name)
+	}
 
-```jsx
-// App.jsx
-import React from 'react';
-import { ModelProvider } from '@vctrl/hooks/use-load-model';
-import ModelConsumer from './ModelConsumer';
+	const handleLoadError = (error) => {
+		console.error('Load failed:', error)
+	}
 
-function App() {
-  return (
-    <ModelProvider>
-      <ModelConsumer />
-    </ModelProvider>
-  );
-}
+	model.on('load-complete', handleLoadComplete)
+	model.on('load-error', handleLoadError)
 
-// ModelConsumer.jsx
-import React from 'react';
-import { useModelContext } from '@vctrl/hooks/use-load-model';
+	return () => {
+		model.off('load-complete', handleLoadComplete)
+		model.off('load-error', handleLoadError)
+	}
+}, [])
+```
 
-function ModelConsumer() {
-  const { file, isLoading, progress, load } = useModelContext();
+**Available Events:**
 
-  // Use the context values
-  return (
-    // ... your component logic
-  );
+| Event                  | Data Type         | Description                            |
+| ---------------------- | ----------------- | -------------------------------------- |
+| `load-start`           | `null`            | File loading has started               |
+| `load-progress`        | `number`          | Loading progress (0-100)               |
+| `load-complete`        | `ModelFile`       | File loaded successfully               |
+| `load-error`           | `Error`           | Loading failed                         |
+| `load-reset`           | `null`            | State was reset                        |
+| `multiple-models`      | `File[]`          | Multiple model files detected          |
+| `not-loaded-files`     | `File[]`          | Unsupported files detected             |
+| `server-load-start`    | `string`          | Server scene loading started (sceneId) |
+| `server-load-complete` | `SceneLoadResult` | Server scene loaded                    |
+| `server-load-error`    | `Error`           | Server scene loading failed            |
+
+**Optimization Integration:**
+
+If you pass an instance of `useOptimizeModel` to `useLoadModel`, it integrates optimization functions:
+
+```tsx
+const optimizer = useOptimizeModel()
+const { load, file, optimizer: optimizerIntegration } = useLoadModel(optimizer)
+
+const handleSimplify = async () => {
+	await optimizerIntegration.applyOptimization(
+		optimizerIntegration.simplifyOptimization,
+		{ ratio: 0.5 }
+	)
+	// The optimized model is now in file.model
 }
 ```
 
-> **Note**: When using the React context, load models using the `useModelContext` hook.
+The `optimizer` object includes:
 
-#### API Reference
-
-The `useLoadModel` hook returns the following:
-
-- `file`: The loaded file object (`ModelFile | null`).
-- `isLoading`: A boolean indicating whether a file is currently being loaded.
-- `progress`: A number between 0 and 100 representing the loading progress.
-- `load(files)`: A function to handle file uploads. It accepts an array of `File` objects or a mixed array of `File` objects and directory entries.
-- `reset()`: A function to reset the internal state back to its initial values.
-- `on(event, handler)`: A function to subscribe to events.
-- `off(event, handler)`: A function to unsubscribe from events.
-- `optimize`: An object populated by the `useOptimizeModel` hook integration, providing optimization functions (see below).
-
-#### Optimization Integration
-
-If you pass an instance of `useOptimizeModel` to `useLoadModel`, it will integrate optimization functions into the `optimize` object:
-
-```jsx
-import React from 'react';
-import { useLoadModel } from '@vctrl/hooks/use-load-model';
-import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model';
-
-function ModelLoader() {
-  const optimizer = useOptimizeModel();
-  const { load, file, optimize } = useLoadModel(optimizer);
-
-  const handleSimplify = async () => {
-    await optimize.simplifyOptimization();
-    // The optimized model is now in file.model
-  };
-
-  return (
-    // ... your component logic
-  );
-}
-```
-
-The `optimize` object includes quick access optimization:
-
-- `simplifyOptimization(options)`: Simplifies the model using mesh simplification.
-- `dedupOptimization(options)`: Removes duplicate vertices and meshes.
-- `quantizeOptimization(options)`: Reduces the precision of vertex attributes.
-- `normalsOptimization(options)`: Overrides the normals of each object in the scene.
-- `texturesCompressionOptimization(options)`: Compresses the relevant textures in the model file using texture compression.
+- `simplifyOptimization(options)`: Simplifies the model using mesh simplification
+- `dedupOptimization(options)`: Removes duplicate vertices and meshes
+- `quantizeOptimization(options)`: Reduces the precision of vertex attributes
+- `normalsOptimization(options)`: Overrides the normals of each object
+- `texturesOptimization(options)`: Compresses textures (requires server endpoint)
+- `applyOptimization(fn, options)`: Applies optimization and updates the model
 
 ### useOptimizeModel
 
-#### Overview
+Hook for optimizing 3D models with various techniques.
 
-`useOptimizeModel` is a React hook used to optimize 3D models, particularly GLTF-based scenes. It can be used in conjunction with `useLoadModel` or independently.
+**Key Capabilities:**
 
-#### Features
+- 🔧 Mesh simplification using MeshoptSimplifier
+- 🔧 Geometry deduplication
+- 🔧 Vertex quantization
+- 🔧 Normal optimization
+- 🔧 Texture compression (server-side)
+- 📊 Before/after reports
+- 📈 Size reduction metrics
 
-- Simplifies 3D models using mesh optimization algorithms
-- Provides deduplication and quantization optimizations
-- Integrates with `useLoadModel` and `ModelContext`
-- TypeScript support
+**Basic API:**
 
-#### Usage
+```tsx
+import { useOptimizeModel } from '@vctrl/hooks'
 
-There are two ways to use the `useOptimizeModel` hook:
+const {
+	load, // Load a Three.js Object3D
+	getModel, // Get optimized model as Uint8Array
+	simplifyOptimization, // Reduce polygon count
+	dedupOptimization, // Remove duplicates
+	quantizeOptimization, // Reduce precision
+	normalsOptimization, // Optimize normals
+	texturesOptimization, // Compress textures
+	reset, // Reset optimizer
+	report, // Optimization report
+	error, // Error state
+	loading // Loading state
+} = useOptimizeModel()
+```
 
-1. **Directly with `useLoadModel`**
+**Optimization Techniques:**
 
-   ```jsx
-   import React from 'react';
-   import { useLoadModel } from '@vctrl/hooks/use-load-model';
-   import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model';
+**1. Mesh Simplification**
 
-   function ModelLoader() {
-     const optimizer = useOptimizeModel();
-     const { load, file, optimize } = useLoadModel(optimizer);
+Reduces triangle count while preserving visual quality.
 
-     const handleSimplify = async () => {
-       await optimize.simplifyOptimization();
-       // The optimized model is now in file.model
-     };
+```tsx
+await simplifyOptimization({
+	ratio: 0.5, // Keep 50% of triangles
+	error: 0.01 // Error threshold
+})
+```
 
-     const handleDedup = async () => {
-       await optimize.dedupOptimization();
-     };
+**2. Deduplication**
 
-     const handleQuantize = async () => {
-       await optimize.quantizeOptimization();
-     };
+Removes duplicate vertices, meshes, and materials.
 
-     return (
-       <div>
-         <input
-           type="file"
-           onChange={(e) => load(Array.from(e.target.files))}
-           multiple
-         />
-         <button onClick={handleSimplify}>Simplify Model</button>
-         <button onClick={handleDedup}>Deduplicate Model</button>
-         <button onClick={handleQuantize}>Quantize Model</button>
-       </div>
-     );
-   }
-   ```
+```tsx
+await dedupOptimization({
+	textures: true,
+	materials: true,
+	meshes: true,
+	accessors: true
+})
+```
 
-   > **Note**: Changes are applied to the `file.model` field from `useLoadModel` automatically when using optimizations.
+**3. Quantization**
 
-2. **With `ModelProvider` and `useModelContext`**
+Reduces precision of vertex attributes to save space.
 
-   ```jsx
-   // App.jsx
-   import React from 'react';
-   import { ModelProvider } from '@vctrl/hooks/use-load-model';
-   import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model';
-   import Scene from './Scene';
+```tsx
+await quantizeOptimization({
+	quantizePosition: 14, // Position bits
+	quantizeNormal: 10, // Normal bits
+	quantizeTexcoord: 12, // UV bits
+	quantizeColor: 8 // Color bits
+})
+```
 
-   function App() {
-     const optimizer = useOptimizeModel();
+**4. Texture Compression**
 
-     return (
-       <ModelProvider optimizer={optimizer}>
-         <Scene />
-       </ModelProvider>
-     );
-   }
+Compresses textures (requires server endpoint).
 
-   // Scene.jsx
-   import React from 'react';
-   import { useModelContext } from '@vctrl/hooks/use-load-model';
+```tsx
+await texturesOptimization({
+	targetFormat: 'webp',
+	quality: 80,
+	resize: [2048, 2048],
+	serverOptions: {
+		endpoint: '/api/optimize-textures',
+		apiKey: 'your-api-key'
+	}
+})
+```
 
-   function Scene() {
-     const { optimize } = useModelContext();
+**Optimization Report:**
 
-     const handleSimplify = async () => {
-       await optimize.simplifyOptimization();
-     };
+```tsx
+const { report } = useOptimizeModel()
 
-     const handleDedup = async () => {
-       await optimize.dedupOptimization();
-     };
+if (report) {
+	console.log({
+		originalSize: report.originalSize,
+		optimizedSize: report.optimizedSize,
+		compressionRatio: report.compressionRatio,
+		appliedOptimizations: report.appliedOptimizations,
+		stats: {
+			vertices: report.stats.vertices,
+			triangles: report.stats.triangles,
+			materials: report.stats.materials,
+			textures: report.stats.textures
+		}
+	})
+}
+```
 
-     const handleQuantize = async () => {
-       await optimize.quantizeOptimization();
-     };
+**Direct Usage:**
 
-     return (
-       <div>
-         <button onClick={handleSimplify}>Simplify Model</button>
-         <button onClick={handleDedup}>Deduplicate Model</button>
-         <button onClick={handleQuantize}>Quantize Model</button>
-       </div>
-     );
-   }
-   ```
+```tsx
+const optimizer = useOptimizeModel()
 
-#### API Reference
+// Load a Three.js model
+optimizer.load(threeJsModel)
 
-The `useOptimizeModel` hook returns the following:
+// Apply optimizations
+await optimizer.simplifyOptimization({ ratio: 0.5 })
+await optimizer.dedupOptimization()
+await optimizer.quantizeOptimization()
 
-- `load(model)`: Loads a Three.js `Object3D` model into the optimizer.
-- `getModel()`: Retrieves the optimized model as a binary array buffer.
-- `simplifyOptimization(options)`: Simplifies the current model using the `MeshoptSimplifier`.
-- `dedupOptimization(options)`: Removes duplicate vertices and meshes.
-- `quantizeOptimization(options)`: Reduces the precision of vertex attributes.
-- `normalsOptimization`: Overrides normals
-- `texturesOptimization(options)`: Compresses related textures.
-- `getSize()`: Object with byte size of gltf scene and a formatted megabyte string
-- `reset()`: Resets the current optimizer model and report state.
-- `report`: @gltf-transform gltf report object with relevant details about a gltf scene
-- `error`: Stores any possible optimization errors
-- `loading`: Boolean for when the model is being loaded
+// Get the optimized model
+const optimizedModel = await optimizer.getModel() // Uint8Array
+```
+
+**Integrated Usage with useLoadModel:**
+
+```tsx
+const optimizer = useOptimizeModel()
+const { file, optimizer: optimizerIntegration } = useLoadModel(optimizer)
+
+// Apply optimization and update loaded model
+await optimizerIntegration.applyOptimization(
+	optimizerIntegration.simplifyOptimization,
+	{ ratio: 0.5 }
+)
+
+// Model is automatically updated in file.model
+```
 
 ### useExportModel
 
-#### Overview
+Export Three.js scenes to GLTF or GLB format.
 
-`useExportModel` is a React hook for exporting 3D models from a Three.js scene.
+**Basic API:**
 
-#### Features
+```tsx
+import { useExportModel } from '@vctrl/hooks'
 
-- Exports models in GLTF or GLB format
-- Handles embedded resources and textures
-- Integrates with Three.js scenes
-- TypeScript support
+const { handleGltfExport } = useExportModel(
+	() => console.log('Export complete'),
+	(error) => console.error('Export error:', error)
+)
 
-#### Usage
+// Export as GLB (binary)
+handleGltfExport(file, true)
 
-```jsx
-import React from 'react';
-import { useExportModel } from '@vctrl/hooks/use-export-model';
+// Export as GLTF (JSON + separate resources)
+handleGltfExport(file, false)
+```
 
-function ExportButton({ file }) {
-  const { handleGltfExport } = useExportModel(
-    () => console.log('Export complete'),
-    (error) => console.error('Export error:', error),
-  );
+**Complete Example:**
 
-  const exportAsGlb = () => {
-    handleGltfExport(file, true); // Export as GLB (binary)
-  };
+```tsx
+function ExportButton({ file }: { file: ModelFile }) {
+	const { handleGltfExport } = useExportModel(
+		() => toast.success('Model exported successfully'),
+		(error) => toast.error(`Export failed: ${error.message}`)
+	)
 
-  const exportAsGltf = () => {
-    handleGltfExport(file, false); // Export as GLTF
-  };
-
-  return (
-    <div>
-      <button onClick={exportAsGlb}>Export as GLB</button>
-      <button onClick={exportAsGltf}>Export as GLTF</button>
-    </div>
-  );
+	return (
+		<div>
+			<button onClick={() => handleGltfExport(file, true)}>
+				Export as GLB
+			</button>
+			<button onClick={() => handleGltfExport(file, false)}>
+				Export as GLTF
+			</button>
+		</div>
+	)
 }
 ```
 
-#### API Reference
+## Advanced Features
 
-The `useExportModel` hook returns the following:
+### Server Scene Loading
 
-- `handleGltfExport(file, binary)`: Function to handle exporting the model.
-  - `file`: The `ModelFile` object to export.
-  - `binary`: A boolean indicating whether to export in binary format (`true` for GLB, `false` for GLTF).
-  - The function exports the model and triggers file download.
+Load complete scenes from your backend, including model and settings.
 
-### ModelContext
+**Server Response Format:**
 
-`ModelContext` is a React context that provides the state and functions from `useLoadModel` (and optionally `useOptimizeModel`) to child components.
+The hook expects a server endpoint that returns:
 
-```jsx
-import { ModelProvider, useModelContext } from '@vctrl/hooks/use-load-model';
+```typescript
+interface ServerSceneData {
+	model: Uint8Array // GLB binary as number array
+	settings: {
+		// Scene settings
+		environment: {}
+		toneMapping: {}
+		controls: {}
+		shadows: {}
+		meta: {}
+	}
+	sceneId: string
+	sceneName?: string
+	thumbnailUrl?: string | null
+}
+```
+
+**Client Usage:**
+
+```tsx
+const model = useLoadModel()
+
+const scene = await model.loadFromServer({
+	sceneId: 'abc-123',
+	serverOptions: {
+		endpoint: '/api/load-scene',
+		apiKey: 'optional-token',
+		headers: {
+			'X-Custom-Header': 'value'
+		}
+	}
+})
+
+// scene.file - Loaded Three.js model
+// scene.settings - Scene configuration
+// scene.sceneId - Scene identifier
+```
+
+**Complete Example:**
+
+```tsx
+function SceneLoader({ sceneId }: { sceneId: string }) {
+	const model = useLoadModel()
+	const [settings, setSettings] = useState(null)
+
+	useEffect(() => {
+		const loadScene = async () => {
+			try {
+				const result = await model.loadFromServer({
+					sceneId,
+					serverOptions: {
+						endpoint: '/api/load-scene',
+						apiKey: process.env.API_KEY
+					},
+					applySettings: true
+				})
+
+				setSettings(result.settings)
+				console.log('Scene loaded:', result.sceneName)
+			} catch (error) {
+				console.error('Failed to load scene:', error)
+			}
+		}
+
+		loadScene()
+	}, [sceneId])
+
+	return (
+		<div>
+			{model.file && settings && (
+				<VectrealViewer
+					model={model.file.model}
+					environment={settings.environment}
+					controls={settings.controls}
+				/>
+			)}
+		</div>
+	)
+}
+```
+
+For detailed server implementation guidance, see [SERVER_SCENE_LOADING.md](./SERVER_SCENE_LOADING.md).
+
+### Event System
+
+Subscribe to events for fine-grained control over the loading and optimization lifecycle.
+
+**Basic Event Subscription:**
+
+```tsx
+const model = useLoadModel()
+
+useEffect(() => {
+	const handleLoadComplete = (file) => {
+		console.log('Model loaded:', file.name)
+		toast.success(`Loaded ${file.name}`)
+	}
+
+	const handleLoadError = (error) => {
+		console.error('Load failed:', error)
+		toast.error(error.message)
+	}
+
+	model.on('load-complete', handleLoadComplete)
+	model.on('load-error', handleLoadError)
+
+	return () => {
+		model.off('load-complete', handleLoadComplete)
+		model.off('load-error', handleLoadError)
+	}
+}, [])
+```
+
+**Multiple Event Handlers:**
+
+```tsx
+const model = useLoadModel()
+
+useEffect(() => {
+	const handlers = {
+		'load-start': () => setLoading(true),
+		'load-progress': (progress) => setProgress(progress),
+		'load-complete': (file) => {
+			setLoading(false)
+			setModel(file.model)
+		},
+		'load-error': (error) => {
+			setLoading(false)
+			setError(error.message)
+		},
+		'server-load-start': (sceneId) => {
+			console.log('Loading scene:', sceneId)
+		},
+		'server-load-complete': (result) => {
+			console.log('Scene loaded with settings:', result.settings)
+		}
+	}
+
+	// Subscribe to all events
+	Object.entries(handlers).forEach(([event, handler]) => {
+		model.on(event, handler)
+	})
+
+	// Cleanup on unmount
+	return () => {
+		Object.entries(handlers).forEach(([event, handler]) => {
+			model.off(event, handler)
+		})
+	}
+}, [])
+```
+
+### Model Context
+
+Share model state across components using React Context.
+
+**Setup with ModelProvider:**
+
+```tsx
+import { ModelProvider } from '@vctrl/hooks/use-load-model'
+import { useOptimizeModel } from '@vctrl/hooks'
 
 function App() {
-  return (
-    <ModelProvider>
-      <ModelConsumer />
-    </ModelProvider>
-  );
-}
+	const optimizer = useOptimizeModel()
 
-function ModelConsumer() {
-  const { file, isLoading, progress, load, optimize } = useModelContext();
-  // Use the context values
+	return (
+		<ModelProvider optimizer={optimizer}>
+			<ModelUploader />
+			<ModelViewer />
+			<ModelTools />
+		</ModelProvider>
+	)
 }
 ```
 
-> **Note**: When using the React context, load models using the `useModelContext` hook.
+**Consume Context in Components:**
 
-## Common Concepts
+```tsx
+import { useModelContext } from '@vctrl/hooks/use-load-model'
 
-### Supported File Types
+function ModelUploader() {
+	const { load, isFileLoading, progress } = useModelContext()
+
+	return (
+		<div>
+			<input
+				type="file"
+				onChange={(e) => load(Array.from(e.target.files || []))}
+				accept=".glb,.gltf"
+			/>
+			{isFileLoading && (
+				<ProgressBar value={progress} label={`Loading: ${progress}%`} />
+			)}
+		</div>
+	)
+}
+
+function ModelViewer() {
+	const { file } = useModelContext()
+
+	return file?.model ? (
+		<VectrealViewer model={file.model} />
+	) : (
+		<EmptyState message="No model loaded" />
+	)
+}
+
+function ModelTools() {
+	const { file, optimizer } = useModelContext()
+
+	if (!file) return null
+
+	return (
+		<div>
+			<button onClick={() => optimizer.simplifyOptimization({ ratio: 0.5 })}>
+				Simplify (50%)
+			</button>
+			<button onClick={() => optimizer.dedupOptimization()}>Deduplicate</button>
+			<button onClick={() => optimizer.quantizeOptimization()}>Quantize</button>
+		</div>
+	)
+}
+```
+
+### Server Communication Service
+
+For custom API calls beyond scene loading, use the included `ServerCommunicationService`:
+
+**Import:**
+
+```tsx
+import { ServerCommunicationService } from '@vctrl/hooks'
+```
+
+**GET Request:**
+
+```tsx
+const data = await ServerCommunicationService.get<MyDataType>('/api/models', {
+	endpoint: '/api',
+	apiKey: 'your-token',
+	searchParams: {
+		category: '3d-models',
+		limit: '10'
+	}
+})
+```
+
+**POST with JSON:**
+
+```tsx
+const result = await ServerCommunicationService.post(
+	'/api/save-scene',
+	{
+		sceneId: '123',
+		settings: {
+			/* ... */
+		},
+		metadata: {
+			/* ... */
+		}
+	},
+	{
+		endpoint: '/api',
+		apiKey: 'your-token',
+		headers: {
+			'X-Custom-Header': 'value'
+		}
+	}
+)
+```
+
+**POST with FormData:**
+
+```tsx
+const formData = new FormData()
+formData.append('file', modelBlob, 'model.glb')
+formData.append('metadata', JSON.stringify({ name: 'My Model' }))
+
+const response = await ServerCommunicationService.postFormData(
+	'/api/upload-model',
+	formData,
+	{
+		endpoint: '/api',
+		apiKey: 'your-token'
+	}
+)
+```
+
+**Error Handling:**
+
+```tsx
+try {
+	const data = await ServerCommunicationService.get('/api/data', options)
+} catch (error) {
+	console.error('Request failed:', error.message)
+	// Error message is automatically extracted from response
+}
+```
+
+## Supported File Types
 
 The package currently supports the following 3D model file formats:
 
-- GLTF (`.gltf`)
-- GLB (`.glb`)
-- USDZ (`.usdz`)
+| Format   | Extension | Description                                        |
+| -------- | --------- | -------------------------------------------------- |
+| **GLTF** | `.gltf`   | JSON-based 3D model format with external resources |
+| **GLB**  | `.glb`    | Binary GLTF format with embedded resources         |
+| **USDZ** | `.usdz`   | Apple's Universal Scene Description (for AR/iOS)   |
 
-These are defined in the `ModelFileTypes` enum in `types.ts`.
+**Multi-File Support:**
 
-### File Loading Process
+When loading GLTF files, the hook automatically handles associated files:
 
-The file loading process, particularly for GLTF files, is handled internally by the hooks. The process includes:
+- `.bin` - Binary buffers
+- `.jpg`, `.jpeg`, `.png`, `.webp` - Texture images
+- Entire directories via drag-and-drop
 
-1. Parsing the GLTF file content.
-2. Embedding external resources (buffers and images) into the GLTF content.
-3. Using Three.js `GLTFLoader` to parse the modified GLTF content.
-4. Updating the state with the loaded model.
-5. Integrating with the optimizer if provided.
+**Example:**
 
-The loading process includes progress updates, which are communicated through the event system.
+```tsx
+// Single GLB file
+load([glbFile])
 
-### State Management
+// GLTF with external resources
+load([gltfFile, binFile, texture1, texture2])
 
-The package uses a reducer pattern for state management. The state includes:
+// Directory drop (automatically finds all related files)
+const handleDrop = (event) => {
+	const items = Array.from(event.dataTransfer.items)
+	const entries = items.map((item) => item.webkitGetAsEntry())
+	load(entries) // Handles nested directories
+}
+```
 
-- `file`: The currently loaded model file.
-- `isLoading`: A boolean indicating if a file is being loaded.
-- `progress`: The current loading progress.
-- `supportedFileTypes`: An array of supported file types.
+## Integration Guides
 
-Actions for updating the state are defined in the `Action` type in `types.ts`.
+### With @vctrl/viewer
 
-### Integration with Three.js
+Integrate with the official Vectreal viewer component:
 
-The package integrates with Three.js for handling 3D model rendering and manipulation. The loaded models are compatible with Three.js scenes, with the model stored as a Three.js `Object3D` in the `ModelFile` interface.
+```tsx
+import { useLoadModel, useOptimizeModel } from '@vctrl/hooks'
+import { VectrealViewer } from '@vctrl/viewer'
+
+function ModelViewerApp() {
+	const optimizer = useOptimizeModel()
+	const model = useLoadModel(optimizer)
+
+	return (
+		<div>
+			<FileUpload onLoad={(files) => model.load(files)} />
+
+			{model.file?.model && (
+				<VectrealViewer
+					model={model.file.model}
+					onReady={() => console.log('Viewer ready')}
+				/>
+			)}
+
+			{optimizer.report && <OptimizationStats report={optimizer.report} />}
+		</div>
+	)
+}
+```
+
+### With React Three Fiber
+
+Use the loaded models directly in R3F scenes:
+
+```tsx
+import { Canvas } from '@react-three/fiber'
+import { OrbitControls } from '@react-three/drei'
+import { useLoadModel } from '@vctrl/hooks'
+import { useEffect, useRef } from 'react'
+
+function Model() {
+	const model = useLoadModel()
+	const groupRef = useRef()
+
+	useEffect(() => {
+		if (model.file?.model && groupRef.current) {
+			groupRef.current.add(model.file.model.clone())
+		}
+	}, [model.file])
+
+	return <group ref={groupRef} />
+}
+
+function App() {
+	return (
+		<Canvas>
+			<ambientLight intensity={0.5} />
+			<Model />
+			<OrbitControls />
+		</Canvas>
+	)
+}
+```
+
+### With State Management Libraries
+
+**With Zustand:**
+
+```tsx
+import create from 'zustand'
+import { useLoadModel, useOptimizeModel } from '@vctrl/hooks'
+
+const useModelStore = create((set) => ({
+	model: null,
+	setModel: (model) => set({ model }),
+	reset: () => set({ model: null })
+}))
+
+function ModelManager() {
+	const optimizer = useOptimizeModel()
+	const loader = useLoadModel(optimizer)
+	const setModel = useModelStore((state) => state.setModel)
+
+	useEffect(() => {
+		if (loader.file) {
+			setModel(loader.file)
+		}
+	}, [loader.file])
+
+	return <FileUpload onLoad={loader.load} />
+}
+```
+
+## Real-World Examples
+
+### E-Commerce Product Viewer
+
+```tsx
+function ProductViewer({ productId }: { productId: string }) {
+	const optimizer = useOptimizeModel()
+	const model = useLoadModel(optimizer)
+	const [variant, setVariant] = useState('default')
+
+	useEffect(() => {
+		const loadProduct = async () => {
+			const scene = await model.loadFromServer({
+				sceneId: `${productId}-${variant}`,
+				serverOptions: { endpoint: '/api/products/load-scene' }
+			})
+
+			// Optimize for web viewing
+			await model.optimizer.applyOptimization(
+				model.optimizer.simplifyOptimization,
+				{ ratio: 0.7 }
+			)
+		}
+
+		loadProduct()
+	}, [productId, variant])
+
+	return (
+		<div className="product-viewer">
+			<VariantSelector value={variant} onChange={setVariant} />
+			{model.file && <VectrealViewer model={model.file.model} />}
+			{optimizer.report && (
+				<div className="stats">
+					<p>Size: {(optimizer.report.optimizedSize / 1024).toFixed(2)} KB</p>
+					<p>
+						Triangles: {optimizer.report.stats.triangles.after.toLocaleString()}
+					</p>
+				</div>
+			)}
+		</div>
+	)
+}
+```
+
+### Asset Manager with Batch Optimization
+
+```tsx
+function AssetManager() {
+	const optimizer = useOptimizeModel()
+	const model = useLoadModel(optimizer)
+	const [assets, setAssets] = useState<ModelFile[]>([])
+
+	const optimizeAll = async () => {
+		const pipeline = [
+			{ fn: optimizer.dedupOptimization, options: {} },
+			{ fn: optimizer.quantizeOptimization, options: { quantizePosition: 14 } },
+			{ fn: optimizer.simplifyOptimization, options: { ratio: 0.6 } }
+		]
+
+		for (const step of pipeline) {
+			await step.fn(step.options)
+		}
+
+		const optimized = await optimizer.getModel()
+		// Save or download optimized model
+		downloadModel(optimized, 'optimized.glb')
+	}
+
+	const downloadModel = (data: Uint8Array, filename: string) => {
+		const blob = new Blob([data], { type: 'model/gltf-binary' })
+		const url = URL.createObjectURL(blob)
+		const a = document.createElement('a')
+		a.href = url
+		a.download = filename
+		a.click()
+		URL.revokeObjectURL(url)
+	}
+
+	return (
+		<div className="asset-manager">
+			<FileUpload
+				onUpload={(files) => {
+					model.load(files)
+					if (model.file) setAssets([...assets, model.file])
+				}}
+			/>
+			<AssetList assets={assets} />
+			<button onClick={optimizeAll}>Optimize All</button>
+		</div>
+	)
+}
+```
+
+### Progressive Loading with Quality Levels
+
+```tsx
+function ProgressiveModelViewer({ sceneId }: { sceneId: string }) {
+	const optimizer = useOptimizeModel()
+	const model = useLoadModel(optimizer)
+	const [quality, setQuality] = useState<'low' | 'medium' | 'high'>('low')
+
+	useEffect(() => {
+		const loadWithQuality = async () => {
+			const scene = await model.loadFromServer({
+				sceneId,
+				serverOptions: { endpoint: '/api/load-scene' }
+			})
+
+			// Apply quality-based optimization
+			const qualitySettings = {
+				low: { ratio: 0.3, quantizePosition: 12 },
+				medium: { ratio: 0.6, quantizePosition: 14 },
+				high: { ratio: 1.0, quantizePosition: 16 }
+			}
+
+			const settings = qualitySettings[quality]
+
+			if (quality !== 'high') {
+				await model.optimizer.applyOptimization(
+					model.optimizer.simplifyOptimization,
+					{ ratio: settings.ratio }
+				)
+			}
+
+			await model.optimizer.applyOptimization(
+				model.optimizer.quantizeOptimization,
+				{ quantizePosition: settings.quantizePosition }
+			)
+		}
+
+		loadWithQuality()
+	}, [sceneId, quality])
+
+	return (
+		<div>
+			<QualitySelector value={quality} onChange={setQuality} />
+			{model.file && <VectrealViewer model={model.file.model} />}
+		</div>
+	)
+}
+```
+
+## API Reference
+
+### Types
+
+#### ModelFile
+
+```typescript
+interface ModelFile {
+	model: Object3D // Three.js scene
+	type: ModelFileTypes // 'gltf' | 'glb' | 'usdz'
+	name: string // Filename
+}
+```
+
+#### SceneLoadOptions
+
+```typescript
+interface SceneLoadOptions {
+	sceneId: string
+	serverOptions?: ServerOptions
+	applySettings?: boolean
+}
+```
+
+#### ServerOptions
+
+```typescript
+interface ServerOptions {
+	enabled?: boolean
+	endpoint?: string
+	apiKey?: string
+	searchParams?: Record<string, string>
+	headers?: Record<string, string>
+}
+```
+
+#### OptimizationReport
+
+```typescript
+interface OptimizationReport {
+	originalSize: number
+	optimizedSize: number
+	compressionRatio: number
+	appliedOptimizations: string[]
+	stats: {
+		vertices: { before: number; after: number }
+		triangles: { before: number; after: number }
+		materials: { before: number; after: number }
+		textures: { before: number; after: number }
+		meshes: { before: number; after: number }
+		nodes: { before: number; after: number }
+	}
+}
+```
+
+#### SceneLoadResult
+
+```typescript
+interface SceneLoadResult {
+	file: ModelFile
+	settings: SceneSettings
+	sceneId: string
+	sceneName?: string
+	thumbnailUrl?: string | null
+}
+```
+
+### Hook Return Values
+
+**useLoadModel:**
+
+```typescript
+{
+  file: ModelFile | null
+  isFileLoading: boolean
+  progress: number
+  load: (files: File[] | FileSystemEntry[]) => void
+  loadFromServer: (options: SceneLoadOptions) => Promise<SceneLoadResult>
+  reset: () => void
+  on: (event: string, handler: Function) => void
+  off: (event: string, handler: Function) => void
+  optimizer: {
+    simplifyOptimization: (options?) => Promise<void>
+    dedupOptimization: (options?) => Promise<void>
+    quantizeOptimization: (options?) => Promise<void>
+    normalsOptimization: (options?) => Promise<void>
+    texturesOptimization: (options?) => Promise<void>
+    applyOptimization: (fn, options) => Promise<void>
+  }
+}
+```
+
+**useOptimizeModel:**
+
+```typescript
+{
+  load: (model: Object3D) => void
+  getModel: () => Promise<Uint8Array>
+  simplifyOptimization: (options?) => Promise<void>
+  dedupOptimization: (options?) => Promise<void>
+  quantizeOptimization: (options?) => Promise<void>
+  normalsOptimization: (options?) => Promise<void>
+  texturesOptimization: (options?) => Promise<void>
+  getSize: () => { bytes: number; megabytes: string }
+  reset: () => void
+  report: OptimizationReport | null
+  error: Error | null
+  loading: boolean
+}
+```
+
+**useExportModel:**
+
+```typescript
+{
+  handleGltfExport: (file: ModelFile, binary: boolean) => void
+}
+```
 
 ## Development
 
-This package is part of a monorepo workspace managed with Nx. To contribute or modify the package:
+This package is part of an Nx monorepo workspace. To contribute or modify the package:
 
-1. Clone the monorepo from [vectreal-core](https://github.com/vectreal/vectreal-core).
-2. Install dependencies: `npm install` or `yarn install`.
-3. Make your changes.
-4. Build the package: `nx build vctrl/hooks`.
-5. Test your changes: `nx test vctrl/hooks`.
+### Setup
 
-## License
+```bash
+# Clone the repository
+git clone https://github.com/vectreal/vectreal-core.git
+cd vectreal-core
 
-This project is licensed under the **GNU Affero General Public License v3.0**. Please refer to the [LICENSE](https://github.com/vectreal/vectreal-core/blob/main/LICENSE) file in the package root for licensing information.
+# Install dependencies
+pnpm install
+
+# Build the package
+pnpm nx build vctrl/hooks
+
+# Run tests
+pnpm nx test vctrl/hooks
+
+# Type checking
+pnpm nx typecheck vctrl/hooks
+
+# Lint
+pnpm nx lint vctrl/hooks
+```
+
+### Project Structure
+
+```
+packages/hooks/
+├── src/
+│   ├── use-load-model/       # Model loading hook
+│   │   ├── use-load-model.ts
+│   │   ├── types.ts
+│   │   ├── reducer.ts
+│   │   └── utils/
+│   ├── use-optimize-model/   # Optimization hook
+│   │   ├── use-optimize-model.ts
+│   │   ├── types.ts
+│   │   └── utils/
+│   ├── use-export-model/     # Export hook
+│   │   └── use-export-model.ts
+│   ├── utils/                # Shared utilities
+│   │   └── server-communication.ts
+│   └── index.ts              # Public exports
+├── README.md
+├── package.json
+└── tsconfig.json
+```
+
+### Testing
+
+Write tests for new features:
+
+```tsx
+// use-load-model.spec.ts
+import { renderHook, act } from '@testing-library/react'
+import { useLoadModel } from './use-load-model'
+
+describe('useLoadModel', () => {
+	it('should load a GLB file', async () => {
+		const { result } = renderHook(() => useLoadModel())
+
+		await act(async () => {
+			await result.current.load([mockGlbFile])
+		})
+
+		expect(result.current.file).toBeDefined()
+		expect(result.current.file?.type).toBe('glb')
+	})
+})
+```
+
+### Building
+
+The package is built using Vite and outputs ESM modules:
+
+```bash
+# Development build
+pnpm nx build vctrl/hooks
+
+# Production build
+pnpm nx build vctrl/hooks --configuration=production
+```
 
 ## Contributing
 
-Contributions are welcome! Please read the contributing guidelines in the [vectreal-core](https://github.com/vectreal/vectreal-core) monorepo before submitting pull requests.
+We welcome contributions! Please follow these guidelines:
+
+### Guidelines
+
+1. **Fork the repository** and create a feature branch
+2. **Write meaningful commit messages** using conventional commits:
+   - `feat:` - New features
+   - `fix:` - Bug fixes
+   - `docs:` - Documentation changes
+   - `refactor:` - Code refactoring
+   - `test:` - Adding tests
+   - `chore:` - Maintenance tasks
+
+3. **Add tests** for new functionality
+4. **Update documentation** in README and code comments
+5. **Ensure all tests pass** before submitting:
+
+```bash
+pnpm nx test vctrl/hooks
+pnpm nx typecheck vctrl/hooks
+pnpm nx lint vctrl/hooks
+```
+
+6. **Submit a Pull Request** with:
+   - Clear description of changes
+   - Link to related issues
+   - Screenshots/videos if UI changes
+
+### Code Style
+
+- Use TypeScript for type safety
+- Follow existing code patterns
+- Add JSDoc comments for public APIs
+- Keep functions small and focused
+- Prefer composition over inheritance
+
+### Reporting Issues
+
+When reporting bugs, include:
+
+- Package version
+- Node.js version
+- Browser version (if applicable)
+- Minimal reproduction example
+- Expected vs actual behavior
+- Error messages and stack traces
+
+See our [Contributing Guide](https://github.com/vectreal/vectreal-core/blob/main/CONTRIBUTING.md) for more details.
+
+## License
+
+This project is licensed under the **GNU Affero General Public License v3.0** (AGPL-3.0).
+
+**Key Points:**
+
+- ✅ Free to use, modify, and distribute
+- ✅ Must disclose source code
+- ✅ Must license derivatives under AGPL-3.0
+- ✅ Network use is considered distribution
+- ❌ Cannot be used in proprietary software without releasing source
+
+See the [LICENSE](https://github.com/vectreal/vectreal-core/blob/main/LICENSE) file for full details.
+
+For commercial licensing options, please contact [Vectreal](https://vectreal.com).
 
 ## Support
 
-For issues, feature requests, or questions, please file an issue in the [GitHub repository](https://github.com/vectreal/vectreal-core/issues).
+### Documentation
+
+- 📖 [Full Documentation](https://core.vectreal.com/docs)
+- 📖 [Server Scene Loading Guide](./SERVER_SCENE_LOADING.md)
+- 📖 [API Reference](#api-reference)
+- 📖 [Examples](#real-world-examples)
+
+### Community
+
+- 💬 [GitHub Discussions](https://github.com/vectreal/vectreal-core/discussions) - Ask questions and share ideas
+- 🐛 [Issue Tracker](https://github.com/vectreal/vectreal-core/issues) - Report bugs and request features
+- 🌐 [Website](https://core.vectreal.com) - Official documentation and demos
+- 🐦 [Twitter](https://twitter.com/vectreal) - Updates and announcements
+
+### Getting Help
+
+1. **Check the documentation** - Most questions are answered here
+2. **Search existing issues** - Someone may have had the same problem
+3. **Create a discussion** - For questions and general help
+4. **File an issue** - For bugs and feature requests
+
+### Commercial Support
+
+For enterprise support, custom development, or consulting:
+
+- 📧 Email: support@vectreal.com
+- 🌐 Website: https://vectreal.com/enterprise
+
+---
+
+## Acknowledgments
+
+Built with and inspired by:
+
+- [Three.js](https://threejs.org/) - 3D library
+- [glTF-Transform](https://gltf-transform.dev/) - glTF optimization
+- [React](https://react.dev/) - UI library
+- [meshoptimizer](https://github.com/zeux/meshoptimizer) - Mesh optimization algorithms
+
+---
+
+**Made with ❤️ by the [Vectreal](https://github.com/Vectreal) team**
+
+[⬆ Back to Top](#vctrlhooks)

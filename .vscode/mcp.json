@@ -1,0 +1,21 @@
+{
+	"servers": {
+		"shadcn": {
+			"command": "npx",
+			"args": ["shadcn@latest", "mcp"]
+		},
+
+		"chrome-devtools": {
+			"command": "npx",
+			"args": ["chrome-devtools-mcp@latest", "--port", "9222"]
+		},
+
+		"context7": {
+			"type": "http",
+			"url": "https://mcp.context7.com/mcp",
+			"headers": {
+				"CONTEXT7_API_KEY": "ctx7sk-c7ecf8f1-eef6-474d-b1dc-e245c52417d5"
+			}
+		}
+	}
+}

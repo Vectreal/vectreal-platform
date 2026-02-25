@@ -1,0 +1,59 @@
+{
+	"name": "vctrl/core",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "packages/core/src",
+	"projectType": "library",
+	"tags": [],
+	"targets": {
+		"lint": {
+			"executor": "@nx/eslint:lint",
+			"outputs": ["{options.outputFile}"],
+			"options": {
+				"fix": true,
+				"lintFilePatterns": [
+					"packages/core/**/*.{ts,tsx,js,jsx}",
+					"packages/core/package.json"
+				]
+			}
+		},
+		"typecheck": {
+			"executor": "@nx/js:tsc",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"tsConfig": "packages/core/tsconfig.json",
+				"outputPath": "build/packages/core/typecheck",
+				"main": "packages/core/src/index.ts"
+			}
+		},
+		"build": {
+			"executor": "@nx/vite:build",
+			"outputs": ["{options.outputPath}"],
+			"defaultConfiguration": "production",
+			"options": {
+				"outputPath": "build/packages/core"
+			},
+			"configurations": {
+				"development": {
+					"mode": "development"
+				},
+				"production": {
+					"mode": "production"
+				}
+			}
+		},
+		"nx-release-publish": {
+			"dependsOn": ["copy-md"],
+			"options": {
+				"packageRoot": "build/packages/core"
+			}
+		},
+		"copy-md": {
+			"dependsOn": ["build"],
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"commands": ["rsync -rat packages/core/*.md build/packages/core/"]
+			}
+		}
+	}
+}
