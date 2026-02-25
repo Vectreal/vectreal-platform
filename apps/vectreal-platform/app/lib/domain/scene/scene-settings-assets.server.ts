@@ -1,15 +1,13 @@
+import { SerializedAsset } from '@vctrl/core'
+import { ExtendedGLTFDocument } from '@vctrl/hooks/use-load-model/types'
+
 import {
 	computeAssetHash,
 	type GLTFAssetData
 } from '../asset/asset-storage.server'
 
-import type {
-	ExtendedGLTFDocument,
-	GLTFExportResult,
-	SerializedAsset
-} from '../../../types/api'
+import type { GLTFExportResult } from '../../../types/api'
 import type { JSONDocument } from '@gltf-transform/core'
-
 
 type GltfAssetKind = 'buffer' | 'image'
 
