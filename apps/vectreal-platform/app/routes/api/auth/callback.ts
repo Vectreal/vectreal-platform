@@ -1,0 +1,45 @@
+import { ApiResponse } from '@shared/utils'
+import { redirect } from 'react-router'
+
+import { Route } from './+types/callback'
+import { initializeUserDefaults } from '../../../lib/domain/user/user-repository.server'
+import { createSupabaseClient } from '../../../lib/supabase.server'
+
+
+export async function loader({ request }: Route.ActionArgs) {
+	const requestUrl = new URL(request.url)
+	const code = requestUrl.searchParams.get('code')
+	const next = requestUrl.searchParams.get('next') || '/dashboard'
+
+	if (!code) return ApiResponse.badRequest('Missing code parameter')
+
+	const { client, headers } = await createSupabaseClient(request)
+	const { error } = await client.auth.exchangeCodeForSession(code)
+
+	if (error) {
+		return ApiResponse.serverError(error.message)
+	} else {
+		// Get the authenticated user
+		const { data: userData } = await client.auth.getUser()
+
+		if (userData.user) {
+			try {
+				// Initialize user with defaults (user, organization, project) in local database
+				await initializeUserDefaults(userData.user)
+			} catch (dbError) {
+				console.error('Database error during user initialization:', {
+					error: dbError,
+					userId: userData.user.id,
+					userEmail: userData.user.email
+				})
+				// Don't fail the auth flow, but log the error
+				// User will still be authenticated via Supabase
+			}
+		}
+
+		// Use the next parameter or default to dashboard
+		return redirect(next, {
+			headers: new Headers(headers)
+		})
+	}
+}

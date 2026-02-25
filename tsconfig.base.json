@@ -1,27 +1,47 @@
 {
-  "compileOnSave": false,
-  "compilerOptions": {
-    "rootDir": ".",
-    "sourceMap": true,
-    "declaration": false,
-    "moduleResolution": "node",
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "importHelpers": true,
-    "target": "es2015",
-    "module": "esnext",
-    "lib": ["es2020", "dom"],
-    "skipLibCheck": true,
-    "skipDefaultLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@vctrl/hooks": ["packages/hooks/src/index.ts"],
-      "@vctrl/hooks/*": ["packages/hooks/src/*"],
-      "@vctrl/official-website/*": ["apps/official-website/src/*"],
-      "@vctrl/shared/*": ["shared/src/*"],
-      "@vctrl/viewer": ["packages/viewer/src/index.ts"],
-      "@vctrl/viewer/*": ["packages/viewer/src/*"]
-    }
-  },
-  "exclude": ["node_modules", "tmp"]
+	"compileOnSave": false,
+	"compilerOptions": {
+		"rootDir": ".",
+		"sourceMap": true,
+		"declaration": false,
+		"moduleResolution": "node",
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"importHelpers": true,
+		"target": "es2015",
+		"module": "esnext",
+		"lib": ["es2020", "dom"],
+		"skipLibCheck": true,
+		"skipDefaultLibCheck": true,
+		"baseUrl": ".",
+		"paths": {
+			"@shared/components": ["shared/components/src/index.ts"],
+			"@shared/components/assets/*": ["shared/components/src/assets/*"],
+			"@shared/components/hooks/*": ["shared/components/src/hooks/*"],
+			"@shared/components/styles/*": ["shared/components/src/styles/*"],
+			"@shared/components/ui/*": ["shared/components/src/ui/*"],
+			"@shared/utils": ["shared/utils/src/index.ts"],
+			"@vctrl/hooks/use-export-model": [
+				"packages/hooks/src/use-export-model/index.ts"
+			],
+			"@vctrl/hooks/use-load-model": [
+				"packages/hooks/src/use-load-model/index.ts"
+			],
+			"@vctrl/hooks/use-load-model/*": ["packages/hooks/src/use-load-model/*"],
+			"@vctrl/hooks/use-optimize-model": [
+				"packages/hooks/src/use-optimize-model/index.ts"
+			],
+			"@vctrl/official-website/*": ["apps/official-website/src/*"],
+			"@vctrl/viewer": ["packages/viewer/src/index.ts"],
+			"@vctrl/core": ["packages/core/src/index.ts"],
+			"@vctrl/core/model-loader": ["packages/core/src/model-loader/index.ts"],
+			"@vctrl/core/model-optimizer": [
+				"packages/core/src/model-optimizer/index.ts"
+			],
+			"@vctrl/core/model-exporter": [
+				"packages/core/src/model-exporter/index.ts"
+			]
+		}
+	},
+	"exclude": ["node_modules", "tmp", "**/public/**/*"]
 }

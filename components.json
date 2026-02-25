@@ -1,0 +1,13 @@
+{
+	"$schema": "https://ui.shadcn.com/schema.json",
+	"style": "new-york",
+	"rsc": false,
+	"tsx": true,
+	"aliases": {
+		"components": "shared/components/src/",
+		"utils": "shared/utils/src/",
+		"hooks": "shared/components/src/hooks",
+		"types": "shared/components/src/types"
+	},
+	"iconLibrary": "lucide"
+}

@@ -1,0 +1,99 @@
+name: CI - Lint and Typecheck
+
+on:
+  workflow_call:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - '!main'
+      - '!develop'
+    paths:
+      - 'apps/vectreal-platform/**'
+      - 'packages/core/**'
+      - 'packages/hooks/**'
+      - 'packages/viewer/**'
+      - 'shared/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'nx.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/ci-lint-typecheck.yaml'
+      - '.github/workflows/cd-platform-staging.yaml'
+      - '.github/workflows/cd-platform-production.yaml'
+      - '.github/workflows/shared-gcloud-deploy.yaml'
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'apps/vectreal-platform/**'
+      - 'packages/core/**'
+      - 'packages/hooks/**'
+      - 'packages/viewer/**'
+      - 'shared/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'nx.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/ci-lint-typecheck.yaml'
+      - '.github/workflows/cd-platform-staging.yaml'
+      - '.github/workflows/cd-platform-production.yaml'
+      - '.github/workflows/shared-gcloud-deploy.yaml'
+
+jobs:
+  lint-typecheck:
+    name: Lint and Typecheck
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        node-version: [22]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            npx nx affected --target=lint --base=origin/${{ github.event.pull_request.base.ref }} --head=origin/${{ github.event.pull_request.head.ref }}
+          elif [[ "${{ github.event_name }}" == "push" && -n "${{ github.event.before }}" && "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]]; then
+            npx nx affected --target=lint --base=${{ github.event.before }} --head=${{ github.sha }}
+          else
+            npx nx run-many -t lint
+          fi
+
+      - name: Typecheck
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            npx nx affected --target=typecheck --base=origin/${{ github.event.pull_request.base.ref }} --head=origin/${{ github.event.pull_request.head.ref }}
+          elif [[ "${{ github.event_name }}" == "push" && -n "${{ github.event.before }}" && "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]]; then
+            npx nx affected --target=typecheck --base=${{ github.event.before }} --head=${{ github.sha }}
+          else
+            npx nx run-many -t typecheck
+          fi

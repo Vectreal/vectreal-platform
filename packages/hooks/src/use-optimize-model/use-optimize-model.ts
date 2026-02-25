@@ -14,236 +14,403 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-import { useRef, useCallback, useReducer } from 'react';
-import { Object3D } from 'three';
-import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
-import { WebIO, Transform } from '@gltf-transform/core';
 import {
-  dedup,
-  inspect,
-  quantize,
-  simplify,
-  normals,
-  textureCompress,
-  weld,
-} from '@gltf-transform/functions';
-import {
-  KHRMeshQuantization,
-  KHRMaterialsVolume,
-  KHRMaterialsTransmission,
-} from '@gltf-transform/extensions';
-import { MeshoptSimplifier } from 'meshoptimizer';
+	type DedupOptions,
+	ModelOptimizer,
+	type NormalsOptions,
+	type QuantizeOptions,
+	type SimplifyOptions,
+	type TextureCompressOptions
+} from '@vctrl/core/model-optimizer'
+import { useCallback, useEffect, useReducer, useRef } from 'react'
+import { Object3D } from 'three'
 
-import { ModelSize } from './types';
-import { initialState, reducer } from './state';
+import { initialState, reducer } from './state'
+import { useCalcOptimizationInfo } from './use-calc-optimization-info'
+import { optimizeTextures } from './utils'
 
 /**
- * Custom React hook for optimizing Three.js models using glTF-Transform.
+ * Custom React hook for optimizing 3D models using the ModelOptimizer from @vctrl/core.
  *
- * This hook provides functions to load, optimize, and retrieve Three.js models.
- * Optimizations include deduplication, quantization, and simplification of model meshes and textures.
+ * This hook provides a React-friendly interface to advanced model optimization capabilities,
+ * including mesh simplification, deduplication, quantization, normal optimization, and texture compression.
+ * It manages the optimization state and provides callbacks for each optimization operation.
  *
- * @returns An object containing functions to interact with the model optimizer.
+ * **Features:**
+ * - Mesh simplification using MeshoptSimplifier
+ * - Geometry deduplication to remove redundant data
+ * - Vertex attribute quantization to reduce file size
+ * - Normal vector optimization
+ * - Texture compression (server-side only)
+ * - Progress tracking and error handling
+ * - Optimization reports with before/after metrics
+ *
+ * @example
+ * const optimizer = useOptimizeModel()
+ *
+ * // Load a model
+ * await optimizer.load(threeJsScene)
+ *
+ * // Apply optimizations
+ * await optimizer.simplifyOptimization({ ratio: 0.5 })
+ * await optimizer.quantizeOptimization({ bits: 12 })
+ *
+ * // Get optimized model
+ * const optimizedBinary = await optimizer.getModel()
+ *
+ * @returns Object containing optimization methods, state, and report data
  */
 const useOptimizeModel = () => {
-  // Use useReducer to manage complex state transitions.
-  const [state, dispatch] = useReducer(reducer, initialState);
-  const { modelDoc, modelReport, error, loading } = state;
+	// Manage state with useReducer for complex state transitions
+	const [state, dispatch] = useReducer(reducer, initialState)
+	const { report, error, loading } = state
 
-  // Initialize the GLTFExporter and WebIO with required extensions.
-  const exporterRef = useRef<GLTFExporter>(new GLTFExporter());
-  const ioRef = useRef<WebIO>(
-    new WebIO().registerExtensions([
-      KHRMeshQuantization,
-      KHRMaterialsVolume,
-      KHRMaterialsTransmission,
-    ]),
-  );
+	// Calculate optimization statistics (file size reduction, etc.)
+	const { info, reset: resetInfo } = useCalcOptimizationInfo(state)
 
-  /**
-   * Loads a Three.js Object3D model into the optimizer.
-   *
-   * @param model - The Three.js Object3D model to load.
-   * @returns A promise that resolves when the model is loaded.
-   */
-  const load = useCallback(async (model: Object3D): Promise<void> => {
-    dispatch({ type: 'LOAD_START' });
+	// Store the ModelOptimizer instance in a ref to persist across renders
+	const optimizerRef = useRef<ModelOptimizer>(new ModelOptimizer())
 
-    try {
-      const parseOptions = { binary: true };
-      const binary = await exporterRef.current.parseAsync(model, parseOptions);
-      const modelBuffer = new Uint8Array(binary as ArrayBuffer);
-      const doc = await ioRef.current.readBinary(modelBuffer);
+	/**
+	 * Initialize the optimizer and set up progress tracking.
+	 * Cleanup function resets the optimizer when component unmounts.
+	 */
+	useEffect(() => {
+		const optimizer = optimizerRef.current
 
-      const report = inspect(doc);
+		// Set up progress callback for optimization operations
+		// Can be extended to dispatch progress updates to state if needed
+		// TODO: dispatch({ type: 'UPDATE_PROGRESS', payload: progress })
+		// optimizer.onProgress((progress: OperationProgress) => {
+		// })
 
-      dispatch({
-        type: 'LOAD_SUCCESS',
-        payload: { modelDoc: doc, modelReport: report },
-      });
-    } catch (err) {
-      dispatch({ type: 'LOAD_ERROR', payload: err as Error });
-      console.error('Error loading model:', err);
-    }
-  }, []);
+		// Cleanup: reset optimizer when component unmounts
+		return () => {
+			optimizer.reset()
+		}
+	}, [])
 
-  /**
-   * Helper function to apply transformations to the model document and update the state.
-   *
-   * @param transforms - Array of transforms to apply.
-   */
-  const applyTransforms = useCallback(
-    async (transforms: Transform[]): Promise<void> => {
-      if (!modelDoc) return;
+	/**
+	 * Loads a Three.js Object3D model into the optimizer for processing.
+	 * Converts the Three.js scene to glTF format and generates an initial optimization report.
+	 *
+	 * @param model - The Three.js Object3D scene to optimize
+	 * @returns Promise that resolves when the model is loaded and ready for optimization
+	 */
+	const load = useCallback(async (model: Object3D): Promise<void> => {
+		dispatch({ type: 'LOAD_START' })
 
-      try {
-        await modelDoc.transform(...transforms);
+		try {
+			const optimizer = optimizerRef.current
 
-        // Update the model report after transformations.
-        const report = inspect(modelDoc);
-        dispatch({
-          type: 'LOAD_SUCCESS',
-          payload: { modelDoc, modelReport: report },
-        });
-      } catch (err) {
-        console.error('Error applying transforms:', err);
-      }
-    },
-    [modelDoc],
-  );
+			// Convert Three.js scene to glTF document for optimization
+			await optimizer.loadFromThreeJS(model)
 
-  /**
-   * Simplifies the current model document using MeshoptSimplifier.
-   *
-   * @param options - Optional parameters to control simplification.
-   * @param options.ratio - The simplification ratio - default = 0.5.
-   * @param options.error - The simplification error value - default = 0.001.
-   * @returns A promise that resolves when the model has been simplified.
-   */
-  const simplifyOptimization = useCallback(
-    async (options?: { ratio?: number; error?: number }): Promise<void> => {
-      const { ratio = 0.5, error: simplifierError = 0.001 } = options || {};
+			const report = await optimizer.getReport()
+			dispatch({
+				type: 'LOAD_SUCCESS',
+				payload: { report }
+			})
+		} catch (err) {
+			dispatch({ type: 'LOAD_ERROR', payload: err as Error })
+			console.error('Error loading model:', err)
+		}
+	}, [])
 
-      await applyTransforms([
-        weld(),
-        simplify({
-          simplifier: MeshoptSimplifier,
-          ratio,
-          error: simplifierError,
-        }),
-      ]);
-    },
-    [applyTransforms],
-  );
+	/**
+	 * Simplifies the loaded model by reducing polygon count using MeshoptSimplifier.
+	 * This reduces file size and improves rendering performance while maintaining visual quality.
+	 *
+	 * @param options - Configuration options for simplification
+	 * @param options.ratio - Target ratio of triangles to keep (0.0-1.0). Default: 0.5
+	 * @param options.error - Maximum allowed error threshold. Default: 0.01
+	 * @returns Promise that resolves when simplification is complete
+	 */
+	const simplifyOptimization = useCallback(
+		async (options?: SimplifyOptions): Promise<void> => {
+			// Guard: ensure a model is loaded before attempting optimization
+			if (!optimizerRef.current.hasModel()) return
 
-  /**
-   * De-duplicates the current model document.
-   *
-   * @returns A promise that resolves when the model has been deduplicated.
-   */
-  const dedupOptimization = useCallback(
-    async (options?: Parameters<typeof dedup>[0]): Promise<void> => {
-      await applyTransforms([dedup(options)]);
-    },
-    [applyTransforms],
-  );
+			try {
+				// Apply mesh simplification
+				await optimizerRef.current.simplify(options)
 
-  /**
-   * Quantizes the current model document.
-   *
-   * @param options - Optional parameters to control quantization.
-   * @returns A promise that resolves when the model has been quantized.
-   */
-  const quantizeOptimization = useCallback(
-    async (options?: Parameters<typeof quantize>[0]): Promise<void> => {
-      await applyTransforms([quantize(options)]);
-    },
-    [applyTransforms],
-  );
+				// Generate updated report with new metrics
+				const report = await optimizerRef.current.getReport()
 
-  /**
-   * Optimizes the normals of a model by applying the specified transformations.
-   *
-   * @param options - Optional parameters for the normals transformation function.
-   * @returns A promise that resolves when the optimization is complete.
-   */
-  const normalsOptimization = useCallback(
-    async (options?: Parameters<typeof normals>[0]): Promise<void> => {
-      await applyTransforms([normals(options)]);
-    },
-    [applyTransforms],
-  );
+				// Update state with optimized model
+				dispatch({
+					type: 'LOAD_SUCCESS',
+					payload: {
+						report
+					}
+				})
+			} catch (err) {
+				console.error('Simplification failed:', err)
+			}
+		},
+		[]
+	)
 
-  /**
-   * Compresses the relevant texture data in the document using texture compression.
-   *
-   * @param options - Optional parameters to control texture compression.
-   * @returns A promise that resolves when the model has been compressed.
-   */
-  const texturesOptimization = useCallback(
-    async (options?: Parameters<typeof textureCompress>[0]): Promise<void> => {
-      options && (await applyTransforms([textureCompress(options)]));
-    },
-    [applyTransforms],
-  );
+	/**
+	 * De-duplicates geometry and material data in the model.
+	 * Removes redundant vertices, primitives, and other duplicate data to reduce file size.
+	 *
+	 * @param options - Configuration options for deduplication
+	 * @returns Promise that resolves when deduplication is complete
+	 */
+	const dedupOptimization = useCallback(
+		async (options?: DedupOptions): Promise<void> => {
+			// Guard: ensure a model is loaded before attempting optimization
+			if (!optimizerRef.current.hasModel()) return
 
-  /**
-   * Retrieves the current model document as a binary ArrayBuffer.
-   *
-   * @returns A promise that resolves with the model's ArrayBuffer or null if no model is loaded.
-   */
-  const getModel = useCallback(async (): Promise<Uint8Array | null> => {
-    if (!modelDoc) return null;
+			try {
+				// Remove duplicate geometry and material data
+				await optimizerRef.current.deduplicate(options)
 
-    try {
-      return await ioRef.current.writeBinary(modelDoc);
-    } catch (err) {
-      console.error('Error getting model binary:', err);
-      return null;
-    }
-  }, [modelDoc]);
+				// Generate updated report
+				const report = await optimizerRef.current.getReport()
 
-  /**
-   * Calculates and returns the size details of the current model document.
-   *
-   * @returns An object containing the file size in bytes and a human-readable string, or null if no report is available.
-   */
-  const getSize = useCallback((): ModelSize | null => {
-    if (!modelReport) return null;
+				// Update state with optimized model
+				dispatch({
+					type: 'LOAD_SUCCESS',
+					payload: { report }
+				})
+			} catch (err) {
+				console.error('Deduplication failed:', err)
+			}
+		},
+		[]
+	)
 
-    const sumSize = (properties: { size: number }[]) =>
-      properties.reduce((total, prop) => total + prop.size, 0);
+	/**
+	 * Quantizes vertex attributes (positions, normals, UVs) to use fewer bits.
+	 * Reduces file size with minimal visual quality loss by storing data with lower precision.
+	 *
+	 * @param options - Configuration options for quantization
+	 * @param options.bits - Number of bits to use for quantization. Default: 14
+	 * @returns Promise that resolves when quantization is complete
+	 */
+	const quantizeOptimization = useCallback(
+		async (options?: QuantizeOptions): Promise<void> => {
+			// Guard: ensure a model is loaded before attempting optimization
+			if (!optimizerRef.current.hasModel()) return
 
-    const meshesSize = sumSize(modelReport.meshes.properties);
-    const texturesSize = sumSize(modelReport.textures.properties);
+			try {
+				// Apply vertex attribute quantization
+				await optimizerRef.current.quantize(options)
 
-    const fileSize = meshesSize + texturesSize;
-    const displayFileSize = `${(fileSize / (1024 * 1024)).toFixed(2)} MB`;
+				// Generate updated report
+				const report = await optimizerRef.current.getReport()
 
-    return { fileSize, displayFileSize };
-  }, [modelReport]);
+				// Update state with optimized model
+				dispatch({
+					type: 'LOAD_SUCCESS',
+					payload: { report }
+				})
+			} catch (err) {
+				console.error('Quantization failed:', err)
+			}
+		},
+		[]
+	)
 
-  /**
-   * Resets the current model and report.
-   */
-  const reset = useCallback((): void => {
-    dispatch({ type: 'RESET' });
-  }, []);
+	/**
+	 * Optimizes normal vectors in the model.
+	 * Can remove, generate, or clean up normal data to improve rendering quality or reduce file size.
+	 *
+	 * @param options - Configuration options for normal optimization
+	 * @returns Promise that resolves when normal optimization is complete
+	 */
+	const normalsOptimization = useCallback(
+		async (options?: NormalsOptions): Promise<void> => {
+			// Guard: ensure a model is loaded before attempting optimization
+			if (!optimizerRef.current.hasModel()) return
 
-  return {
-    load,
-    getModel,
-    getSize,
-    report: modelReport,
-    simplifyOptimization,
-    dedupOptimization,
-    quantizeOptimization,
-    normalsOptimization,
-    texturesOptimization,
-    reset,
-    error,
-    loading,
-  };
-};
+			try {
+				// Apply normal vector optimizations
+				await optimizerRef.current.optimizeNormals(options)
 
-export default useOptimizeModel;
+				// Generate updated report
+				const report = await optimizerRef.current.getReport()
+
+				// Update state with optimized model
+				dispatch({
+					type: 'LOAD_SUCCESS',
+					payload: { report }
+				})
+			} catch (err) {
+				console.error('Normals optimization failed:', err)
+			}
+		},
+		[]
+	)
+
+	/**
+	 * Compresses textures in the model using advanced compression formats.
+	 * Significantly reduces file size while maintaining visual quality.
+	 *
+	 * **Note:** This optimization requires server-side processing (Sharp library)
+	 * and may not work in browser-only environments.
+	 *
+	 * @param options - Configuration options for texture compression
+	 * @param options.format - Target compression format (e.g.,  from '@shared/ui', 'ktx2')
+	 * @param options.quality - Compression quality (0-100)
+	 * @returns Promise that resolves when texture compression is complete
+	 * @throws Error if Sharp is not available or compression fails
+	 */
+	const texturesOptimization = useCallback(
+		async (options?: TextureCompressOptions): Promise<void> => {
+			try {
+				// Apply texture compression using utility function
+				// This handles Sharp availability checks and fallbacks
+				await optimizeTextures(optimizerRef.current, options)
+
+				// Generate updated report
+				const report = await optimizerRef.current.getReport()
+
+				// Update state with optimized model
+				dispatch({
+					type: 'LOAD_SUCCESS',
+					payload: { report }
+				})
+			} catch (err) {
+				console.error('Texture optimization failed:', err)
+				// Re-throw to allow caller to handle compression failures
+				throw err
+			}
+		},
+		[]
+	)
+
+	/**
+	 * Exports the current optimized model as a binary Uint8Array.
+	 * The model is exported in glTF binary (.glb) format.
+	 *
+	 * @returns Promise that resolves with the model binary, or null if no model is loaded
+	 */
+	const getModel = useCallback(async (): Promise<Uint8Array | null> => {
+		// Guard: return null if no model is currently loaded
+		if (!optimizerRef.current.hasModel()) return null
+
+		try {
+			// Export model as Uint8Array binary data
+			return await optimizerRef.current.export()
+		} catch (err) {
+			console.error('Error getting model binary:', err)
+			return null
+		}
+	}, [])
+
+	/**
+	 * Resets the optimizer to its initial state.
+	 * Clears the loaded model, all optimization data, reports, and calculated info.
+	 */
+	const reset = useCallback((): void => {
+		// Reset the core optimizer instance
+		optimizerRef.current.reset()
+
+		// Reset React state to initial values
+		dispatch({ type: 'RESET' })
+
+		// Reset calculated optimization info
+		resetInfo()
+	}, [resetInfo])
+
+	return {
+		/**
+		 * Loads a Three.js Object3D model into the optimizer.
+		 * Converts the scene to glTF format and generates an initial optimization report.
+		 *
+		 * @param model - The Three.js Object3D model to load
+		 * @returns Promise that resolves when the model is loaded
+		 */
+		load,
+
+		/**
+		 * Retrieves the current model as a binary Uint8Array in glTF (.glb) format.
+		 *
+		 * @returns Promise that resolves with the model binary or null if no model is loaded
+		 */
+		getModel,
+
+		/**
+		 * Exposes the underlying ModelOptimizer document instance for advanced use cases.
+		 */
+		_getDocument: () => optimizerRef.current.document, // Expose document for advanced use cases --- IGNORE ---
+
+		/**
+		 * Resets the optimizer, clearing all model data, reports, and state.
+		 */
+		reset,
+
+		/**
+		 * Error object if any optimization operation failed, otherwise null.
+		 */
+		error,
+
+		/**
+		 * Boolean indicating if an optimization operation is currently in progress.
+		 */
+		loading,
+
+		/**
+		 * Detailed optimization report containing metrics about the model
+		 * (vertex count, triangle count, file size, etc.) before and after optimizations.
+		 */
+		report, // Keep report in state for direct access --- IGNORE ---
+
+		/**
+		 * Calculated optimization information including file size reduction percentages
+		 * and comparative metrics.
+		 */
+		info,
+
+		/**
+		 * Simplifies the model by reducing polygon count using MeshoptSimplifier.
+		 * Maintains visual quality while improving performance.
+		 *
+		 * @param options - Simplification options (ratio, error threshold)
+		 * @returns Promise that resolves when simplification is complete
+		 */
+		simplifyOptimization,
+
+		/**
+		 * Removes duplicate vertices, primitives, and other redundant data.
+		 * Reduces file size without affecting visual appearance.
+		 *
+		 * @param options - Deduplication options
+		 * @returns Promise that resolves when deduplication is complete
+		 */
+		dedupOptimization,
+
+		/**
+		 * Quantizes vertex attributes to use fewer bits per value.
+		 * Reduces file size with minimal visual quality loss.
+		 *
+		 * @param options - Quantization options (bit depth)
+		 * @returns Promise that resolves when quantization is complete
+		 */
+		quantizeOptimization,
+
+		/**
+		 * Optimizes normal vectors by removing, generating, or cleaning up normal data.
+		 *
+		 * @param options - Normal optimization options
+		 * @returns Promise that resolves when optimization is complete
+		 */
+		normalsOptimization,
+
+		/**
+		 * Compresses textures using advanced formats (requires server-side processing).
+		 * Note: Only works in Node.js environments with Sharp library available.
+		 *
+		 * @param options - Texture compression options (format, quality)
+		 * @returns Promise that resolves when compression is complete
+		 * @throws Error if Sharp is not available
+		 */
+		texturesOptimization
+	}
+}
+
+export default useOptimizeModel

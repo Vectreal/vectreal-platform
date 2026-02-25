@@ -1,39 +1,39 @@
-import { ComponentProps, CSSProperties } from 'react';
-import { Environment, EnvironmentProps, Stage } from '@react-three/drei';
+import { Environment } from '@react-three/drei'
+import { EnvironmentMap, EnvironmentProps, EnvironmentType } from '@vctrl/core'
+import { memo } from 'react'
 
-export interface EnvProps {
-  /**
-   * Optional environment properties.
-   */
-  env?: EnvironmentProps;
+export const defaultEnvOptions = {
+	preset: 'studio-natural',
+	background: false,
+	backgroundIntensity: 1,
+	environmentIntensity: 1,
+	environmentResolution: '1k',
+	backgroundBlurriness: 0.5
+} satisfies EnvironmentProps
 
-  /**
-   * Optional properties for the Stage component.
-   */
-  stage?: ComponentProps<typeof Stage>;
-
-  /**
-   * Optional background color for the viewer.
-   */
-  backgroundColor?: CSSProperties['backgroundColor'];
+const buildEnvUrl = ({ id, type, resolution }: EnvironmentMap) => {
+	const urlId = id.replaceAll('-', '_')
+	const presetName = `${urlId}_${resolution}`
+	const baseUrl = `https://storage.googleapis.com/environment-maps/${type}/`
+	return `${baseUrl}${presetName}.hdr`
 }
-
-export const defaultEnvOptions: EnvProps = {
-  env: {
-    preset: 'apartment',
-  },
-  stage: {
-    intensity: 0.1,
-    adjustCamera: 1.5,
-    environment: null,
-  },
-};
 
 /**
  * SceneEnvironment component that sets up the environment for a scene.
  */
-const SceneEnvironment = (props: EnvProps['env']) => {
-  return <Environment {...defaultEnvOptions.env} {...props} />;
-};
+const SceneEnvironment = memo((props: EnvironmentProps) => {
+	const { preset, environmentResolution, ...rest } = {
+		...defaultEnvOptions,
+		...props
+	}
 
-export default SceneEnvironment;
+	const url = buildEnvUrl({
+		id: preset,
+		type: preset?.split('-')[0] as EnvironmentType,
+		resolution: environmentResolution ?? '1k'
+	})
+
+	return <Environment files={url} {...rest} />
+})
+
+export default SceneEnvironment

@@ -1,0 +1,64 @@
+name: CD - Publish Viewer to Chromatic
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'packages/viewer/**'
+      - '.github/workflows/cd-chromatic-viewer.yaml'
+  pull_request:
+    paths:
+      - 'packages/viewer/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-chromatic
+  cancel-in-progress: true
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  chromatic:
+    name: Publish to Chromatic
+    runs-on: ubuntu-22.04
+    environment: chromatic-publishing
+
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup pnpm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: 📥 Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔨 Build Storybook
+        run: npx nx build-storybook vctrl/viewer
+
+      - name: ⚡ Publish to Chromatic
+        uses: chromaui/action@latest
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN_1 }}
+          workingDir: packages/viewer
+          autoAcceptChanges: 'main'
+          exitZeroOnChanges: ${{ github.event_name == 'pull_request' }}
+          exitOnceUploaded: true
+          onlyChanged: true
+          skip: '@(renovate/**|dependabot/**|chore/**)'

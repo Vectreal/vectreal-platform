@@ -14,74 +14,102 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { PropsWithChildren, Suspense } from 'react';
-import { Object3D } from 'three';
-import { Canvas } from '@react-three/fiber';
-import { DefaultSpinner } from '@vctrl/shared/components';
-import { cn } from '@vctrl/shared/lib/utils';
-
+import { Center } from '@react-three/drei'
+import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
+import { cn } from '@shared/utils'
 import {
-  CameraProps,
-  ControlsProps,
-  EnvProps,
-  GridProps,
-  SceneCamera,
-  SceneControls,
-  SceneEnvironment,
-  SceneGrid,
-  SceneModel,
-} from './components/scene';
+	BoundsProps,
+	CameraProps,
+	ControlsProps,
+	EnvironmentProps,
+	GridProps,
+	ShadowsProps
+} from '@vctrl/core'
+// import { Perf } from 'r3f-perf'
+import { memo, PropsWithChildren, Suspense } from 'react'
+import { Object3D } from 'three'
 
+import { Canvas, Overlay } from './components'
 import {
-  InfoPopover,
-  SpinnerWrapper,
-  type InfoPopoverProps,
-} from './components';
+	SceneBounds,
+	SceneCamera,
+	SceneControls,
+	SceneEnvironment,
+	SceneModel,
+	ScenePostProcessing,
+	SceneShadows
+} from './components/scene'
 
-import styles from './styles.module.css';
+export interface VectrealViewerProps extends PropsWithChildren {
+	/**
+	 * The 3D model to render in the viewer. (three.js `Object3D`)
+	 */
+	model?: Object3D
 
-interface VectrealViewerProps extends PropsWithChildren {
-  /**
-   * The 3D model to render in the viewer. (three.js `Object3D`)
-   */
-  model?: Object3D;
+	/**
+	 * An optional className to apply to the outermost container of the viewer.
+	 */
+	className?: string
 
-  /**
-   * An optional className to apply to the outermost container of the viewer.
-   */
-  className?: string;
+	/**
+	 * Theme for the viewer.
+	 * - 'light': Force light theme
+	 * - 'dark': Force dark theme
+	 * - 'system': Use system preference (default)
+	 */
+	theme?: 'light' | 'dark' | 'system'
 
-  /**
-   * Options for the camera.
-   */
-  cameraOptions?: CameraProps;
+	/**
+	 * Whether to render the canvas only when visible in viewport.
+	 * Improves performance by not rendering off-screen scenes.
+	 * Default: true
+	 */
+	enableViewportRendering?: boolean
 
-  /**
-   * Options for the OrbitControls.
-   */
-  controlsOptions?: ControlsProps;
+	/**
+	 * Options for the scene bounds.
+	 */
+	boundsOptions?: BoundsProps
 
-  /**
-   * Options for the react-three environment and stage components.
-   */
-  envOptions?: EnvProps;
+	/**
+	 * Options for the scene cameras.
+	 */
+	cameraOptions?: CameraProps
 
-  /**
-   * Options for the grid.
-   *
-   * @see {@link https://drei.docs.pmnd.rs/gizmos/grid}
-   */
-  gridOptions?: GridProps;
+	/**
+	 * Options for the OrbitControls.
+	 */
+	controlsOptions?: ControlsProps
 
-  /**
-   * Options for the info popover.
-   */
-  infoPopoverOptions?: InfoPopoverProps;
+	/**
+	 * Options for the react-three environment components with custom hdr map presets.
+	 */
+	envOptions?: EnvironmentProps
 
-  /**
-   * JSX element to render while the model is loading.
-   */
-  loader?: JSX.Element;
+	/**
+	 * Options for the shadows.
+	 */
+	shadowsOptions?: ShadowsProps
+
+	/**
+	 * Options for the grid.
+	 */
+	gridOptions?: GridProps
+
+	/**
+	 * Slot for the info popover component.
+	 */
+	popover?: React.ReactNode
+
+	/**
+	 * JSX element to render while the model is loading.
+	 */
+	loader?: React.ReactNode
+
+	/**
+	 * Callback function to handle screenshot generation (accept data URL via param).
+	 */
+	onScreenshot?: (dataUrl: string) => void
 }
 
 /**
@@ -89,18 +117,6 @@ interface VectrealViewerProps extends PropsWithChildren {
  *
  * This component is designed to be easily extensible and customizable. It uses the
  * `@react-three/drei` library to render the 3D scene.
- *
- * The component also accepts the following props:
- *
- * - `children`: Any React children to render inside the canvas.
- * - `model`: A 3D model to render as three `Object3D`.
- * - `className`: An optional className to apply to the outermost container element.
- * - `cameraOptions`: An optional object containing options for the camera.
- * - `controlsOptions`: An optional object containing options for the OrbitControls.
- * - `envOptions`: An optional object containing options for the environment.
- * - `gridOptions`: An optional object containing options for the grid.
- * - `infoPopoverOptions`: An optional object containing options for the info popover.
- * - `loader`: An optional JSX element to render while the model is loading.
  *
  * The component will render any provided children inside the canvas.
  *
@@ -114,56 +130,75 @@ interface VectrealViewerProps extends PropsWithChildren {
  *     <VectrealViewer
  *       model={model}
  *       controlsOptions={{ maxPolarAngle: Math.PI / 2 }}
- *       envOptions={{ stage: { preset: 'sunset' } }}
  *     />
  *   );
  * };
  */
-const VectrealViewer = ({ model, ...props }: VectrealViewerProps) => {
-  const {
-    className,
-    children,
-    cameraOptions,
-    envOptions,
-    gridOptions,
-    controlsOptions,
-    infoPopoverOptions,
-    loader = <DefaultSpinner />,
-  } = props;
+const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
+	const {
+		className,
+		children,
+		theme = 'system',
+		cameraOptions,
+		boundsOptions,
+		envOptions,
+		// gridOptions,
+		controlsOptions,
+		shadowsOptions,
+		popover,
+		onScreenshot,
+		enableViewportRendering = true,
+		loader = <DefaultSpinner />
+	} = props
 
-  // Check if the dark mode is manually enabled - This needs to be js because of CSS modules and minification
-  const isManualDarkModel = className?.split(' ').includes('dark');
+	const hasContent = !!(model || children)
 
-  return (
-    <div
-      className={cn(
-        className,
-        'vctrl-viewer',
-        styles['viewer'],
-        isManualDarkModel && styles.dark,
-      )}
-    >
-      {model && (
-        <Suspense fallback={<SpinnerWrapper loader={loader} />}>
-          <Canvas
-            className={cn('vctrl-viewer-canvas', styles['viewer-canvas'])}
-            dpr={[1, 1.5]}
-            shadows
-            style={{ backgroundColor: envOptions?.backgroundColor }}
-          >
-            <SceneCamera {...cameraOptions} />
-            <SceneEnvironment {...envOptions?.env} />
-            <SceneGrid {...gridOptions} />
-            <SceneModel object={model || null} envOptions={envOptions?.stage} />
-            <SceneControls {...controlsOptions} />
-            {children}
-          </Canvas>
-        </Suspense>
-      )}
+	return (
+		<Suspense fallback={loader}>
+			<Canvas
+				containerClassName={cn(
+					'viewer vctrl-viewer h-full w-full overflow-clip font-[poppins,sans-serif] text-base [&_a]:text-inherit [&_a]:no-underline [&_button]:border-0 [&_p]:m-0',
+					className
+				)}
+				theme={theme}
+				overlay={
+					<Overlay hasContent={hasContent} popover={popover} loader={loader} />
+				}
+				enableViewportRendering={enableViewportRendering}
+				shadows
+				gl={{ antialias: true }}
+			>
+				<Suspense fallback={null}>
+					{hasContent && (
+						<>
+							{/* <SceneGrid {...gridOptions} /> */}
+							<SceneShadows {...shadowsOptions} />
+							<SceneEnvironment {...envOptions} />
+							{/* <Perf /> */}
+							<ScenePostProcessing />
+							<SceneControls {...controlsOptions} />
+							{/* <SceneToneMapping
+								mapping={toneMappingOptions?.mapping}
+								exposure={toneMappingOptions?.exposure}
+								/> */}
+							<SceneBounds {...boundsOptions}>
+								<SceneCamera {...cameraOptions} />
+								<Center top>
+									{model ? (
+										<SceneModel onScreenshot={onScreenshot} object={model} />
+									) : (
+										children
+									)}
+								</Center>
+							</SceneBounds>
+						</>
+					)}
+				</Suspense>
+			</Canvas>
+		</Suspense>
+	)
+})
 
-      <InfoPopover {...infoPopoverOptions} />
-    </div>
-  );
-};
+VectrealViewer.displayName = 'VectrealViewer'
 
-export default VectrealViewer;
+export default VectrealViewer

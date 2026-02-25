@@ -1,0 +1,187 @@
+{
+	"name": "vectreal-platform",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "apps/vectreal-platform/src",
+	"projectType": "application",
+	"tags": [],
+
+	"targets": {
+		"typecheck": {
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"command": "react-router typegen && tsc -p tsconfig.app.json --noEmit"
+			}
+		},
+		"build": {
+			"executor": "nx:run-commands",
+			"outputs": ["{workspaceRoot}/build/apps/vectreal-platform"],
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"command": "react-router build"
+			}
+		},
+		"build-ci": {
+			"executor": "nx:run-commands",
+			"outputs": ["{workspaceRoot}/build/apps/vectreal-platform"],
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"command": "react-router build"
+			}
+		},
+		"dev": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"command": "react-router"
+			}
+		},
+		"start": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"command": "react-router-serve ../../build/apps/vectreal-platform/server/index.js"
+			},
+			"dependsOn": ["build"]
+		},
+		"lint": {
+			"executor": "@nx/eslint:lint",
+			"outputs": ["{options.outputFile}"],
+			"options": {
+				"lintFilePatterns": [
+					"apps/vectreal-platform/app/**/*.ts",
+					"apps/vectreal-platform/app/**/*.tsx",
+					"apps/vectreal-platform/app/**/*.js",
+					"apps/vectreal-platform/app/**/*.jsx"
+				]
+			}
+		},
+		"supabase-restart": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform/supabase",
+				"envFile": ".env.development",
+				"commands": ["pnpm exec supabase stop", "pnpm exec supabase start"],
+				"parallel": false
+			}
+		},
+		"supabase-start": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform/supabase",
+				"envFile": ".env.development",
+				"commands": ["pnpm exec supabase start"],
+				"parallel": false
+			}
+		},
+		"supabase-stop": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform/supabase",
+				"envFile": ".env.development",
+				"commands": ["pnpm exec supabase stop"],
+				"parallel": false
+			}
+		},
+		"supabase-db-reset": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform/supabase",
+				"envFile": ".env.development",
+				"commands": ["pnpm exec supabase db reset"],
+				"parallel": false
+			}
+		},
+		"db-reset": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"commands": [
+					"pnpm exec supabase db reset",
+					"pnpm exec drizzle-kit generate --config drizzle.config.ts",
+					"pnpm exec drizzle-kit migrate --config drizzle.config.ts"
+				],
+				"parallel": false
+			}
+		},
+		"drizzle-clean": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"commands": ["rm -rf drizzle"],
+				"parallel": false
+			}
+		},
+		"drizzle-generate": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"commands": [
+					"pnpm exec drizzle-kit generate --config drizzle.config.ts"
+				],
+				"parallel": false
+			}
+		},
+		"drizzle-migrate": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"commands": [
+					"pnpm exec drizzle-kit migrate --config drizzle.config.ts"
+				],
+				"parallel": false
+			}
+		},
+		"drizzle-push-staging": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"commands": [
+					"DATABASE_URL=$DATABASE_URL_STAGING pnpm exec drizzle-kit push --config drizzle.config.ts"
+				],
+				"parallel": false
+			}
+		},
+		"drizzle-push-prod": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"commands": [
+					"DATABASE_URL=$DATABASE_URL_PROD pnpm exec drizzle-kit push --config drizzle.config.ts"
+				],
+				"parallel": false
+			}
+		},
+		"drizzle-migrate-staging": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"commands": [
+					"DATABASE_URL=$DATABASE_URL_STAGING pnpm exec drizzle-kit migrate --config drizzle.config.ts"
+				],
+				"parallel": false
+			}
+		},
+		"drizzle-migrate-prod": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"commands": [
+					"DATABASE_URL=$DATABASE_URL_PROD pnpm exec drizzle-kit migrate --config drizzle.config.ts"
+				],
+				"parallel": false
+			}
+		}
+	}
+}

@@ -1,5 +1,6 @@
 node_modules/
 dist/
+build/
 .nx/
 vite.config.mts.timestamp-*
 vite.config.ts.timestamp-*
@@ -7,3 +8,24 @@ vite.config.ts.timestamp-*
 **/vite.config.{js,ts,mjs,mts,cjs,cts}.timestamp*
 storybook-static
 *.log
+vite.config.*.timestamp*
+vitest.config.*.timestamp*
+.env
+.env.local
+.env.development
+.env.production
+!.env.development.example
+
+# Package manager lock files - only pnpm is used
+package-lock.json
+yarn.lock
+
+.cursor/rules/nx-rules.mdc
+.github/instructions/nx.instructions.md
+
+# Terraform and GCP credentials
+credentials/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform.tfvars.example
