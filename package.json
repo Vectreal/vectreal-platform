@@ -72,6 +72,7 @@
 		"postcss": "^8.5.3",
 		"postgres": "^3.4.7",
 		"postprocessing": "^6.37.3",
+		"radix-ui": "^1.4.3",
 		"react": "^19.0.0",
 		"react-day-picker": "^9.13.2",
 		"react-dom": "^19.0.0",

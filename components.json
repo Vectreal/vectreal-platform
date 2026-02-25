@@ -3,18 +3,11 @@
 	"style": "new-york",
 	"rsc": false,
 	"tsx": true,
-	"tailwind": {
-		"config": "",
-		"css": "@vctrl-ui/styles/globals.css",
-		"baseColor": "neutral",
-		"cssVariables": true,
-		"prefix": ""
-	},
 	"aliases": {
-		"components": "shared/ui/src/",
-		"utils": "@vctrl-ui/utils",
-		"hooks": "shared/ui/src/hooks",
-		"types": "shared/ui/src/types"
+		"components": "shared/components/src/",
+		"utils": "shared/utils/src/",
+		"hooks": "shared/components/src/hooks",
+		"types": "shared/components/src/types"
 	},
 	"iconLibrary": "lucide"
 }
