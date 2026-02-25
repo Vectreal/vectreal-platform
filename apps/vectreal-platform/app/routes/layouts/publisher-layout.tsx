@@ -6,7 +6,6 @@ import { Provider, useAtom, useAtomValue } from 'jotai/react'
 import { useCallback } from 'react'
 import { Outlet } from 'react-router'
 
-
 import { Navigation } from '../../components/navigation'
 import {
 	PublisherButtons,
@@ -25,6 +24,7 @@ import {
 import { sceneOptimizationStore } from '../../lib/stores/scene-optimization-store'
 import { sceneSettingsStore } from '../../lib/stores/scene-settings-store'
 import { createSupabaseClient } from '../../lib/supabase.server'
+import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
 import type { SceneAggregateResponse } from '../../types/api'
 import type { ShouldRevalidateFunction } from 'react-router'
@@ -34,6 +34,9 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	const {
 		data: { user }
 	} = await client.auth.getUser()
+
+	const isMobile = isMobileRequest(request)
+
 	const sceneId = params.sceneId?.trim() || null
 
 	let sceneAggregate: SceneAggregateResponse | null = null
@@ -48,6 +51,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	}
 
 	const loaderData = {
+		isMobile,
 		user: user || null,
 		sceneId,
 		sceneAggregate
@@ -79,12 +83,14 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 }
 
 interface OverlayControlsProps {
+	isMobile: boolean
 	user: User | null
 	sceneId: string | null
 	sceneAggregate: Route.ComponentProps['loaderData']['sceneAggregate']
 }
 
 const OverlayControls = ({
+	isMobile,
 	user,
 	sceneId,
 	sceneAggregate
@@ -103,7 +109,7 @@ const OverlayControls = ({
 	const isUploadStep = !file?.model && step === 'uploading'
 
 	return isUploadStep ? (
-		<Navigation user={user} />
+		<Navigation user={user} isMobile={isMobile} />
 	) : (
 		<>
 			<Stepper />
@@ -123,7 +129,7 @@ const OverlayControls = ({
 const Layout = ({ loaderData }: Route.ComponentProps) => {
 	const optimizer = useOptimizeModel()
 	const [{ showSidebar }, setProcessState] = useAtom(processAtom)
-	const { user, sceneId, sceneAggregate } = loaderData
+	const { user, sceneId, sceneAggregate, isMobile } = loaderData
 
 	const handleOpenChange = useCallback(
 		(isOpen: boolean) => {
@@ -143,6 +149,7 @@ const Layout = ({ loaderData }: Route.ComponentProps) => {
 						<Provider store={sceneSettingsStore}>
 							<main className="flex h-screen w-full flex-col overflow-hidden">
 								<OverlayControls
+									isMobile={isMobile}
 									user={user}
 									sceneId={sceneId}
 									sceneAggregate={sceneAggregate}
