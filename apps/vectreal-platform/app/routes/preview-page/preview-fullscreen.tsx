@@ -45,9 +45,9 @@ const PreviewModel = memo(({ file, sceneData }: PreviewModelProps) => {
 			<ClientVectrealViewer
 				className="h-full w-full"
 				model={file?.model}
-				envOptions={sceneData?.settings?.environment}
-				controlsOptions={sceneData?.settings?.controls}
-				shadowsOptions={sceneData?.settings?.shadows}
+				envOptions={sceneData?.environment}
+				controlsOptions={sceneData?.controls}
+				shadowsOptions={sceneData?.shadows}
 				popover={<PreviewInfoPopover />}
 				loader={<CenteredSpinner text="Preparing scene..." />}
 				fallback={<CenteredSpinner text="Loading scene..." />}
@@ -99,7 +99,7 @@ const PreviewFullscreenPage = ({ params }: Route.ComponentProps) => {
 	}, [loadFromServer, projectId, sceneId, searchParams])
 
 	useEffect(() => {
-		if (sceneId && projectId && (!sceneData || sceneData.sceneId !== sceneId)) {
+		if (sceneId && projectId && !sceneData) {
 			void getSceneSettings()
 		}
 	}, [getSceneSettings, projectId, sceneData, sceneId])

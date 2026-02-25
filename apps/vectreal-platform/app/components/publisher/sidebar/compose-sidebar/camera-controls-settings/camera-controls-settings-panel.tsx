@@ -18,7 +18,6 @@ import {
 	SettingToggle
 } from '../../../settings-components'
 
-
 /**
  * Memoized component for rendering a single control field slider
  * Following React best practices:
@@ -131,11 +130,15 @@ const CameraControlsSettingsPanel = memo(() => {
 		(key: string, value: number) => {
 			// Use direct object assignment to work around complex CameraProps type
 			setCamera((prev) => {
-				const updated = Object.assign({}, prev)
-				if (key === 'fov' || key === 'near' || key === 'far') {
-					;(updated as Record<string, unknown>)[key] = value
+				const updated = [...(prev.cameras || [])]
+				if (updated.length === 0) {
+					updated.push({ cameraId: 'default', name: 'Default Camera' })
 				}
-				return updated
+				updated[0] = {
+					...updated[0],
+					[key]: value
+				}
+				return { ...prev, cameras: updated }
 			})
 		},
 		[setCamera]
@@ -172,7 +175,11 @@ const CameraControlsSettingsPanel = memo(() => {
 					<CameraField
 						key={config.key}
 						config={config}
-						value={camera[config.key as keyof typeof camera] as number}
+						value={
+							camera.cameras?.[0][
+								config.key as keyof (typeof camera.cameras)[0]
+							] as number
+						}
 						onUpdate={handleCameraUpdate}
 					/>
 				))}

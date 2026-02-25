@@ -10,13 +10,8 @@ import type {
 	OptimizationReport,
 	SceneMeta,
 	SceneSettings,
-	SerializedAsset,
 	SerializedGLTFExportResult
 } from '@vctrl/core'
-
-// Re-export core types for convenience
-export type { SceneMeta, SceneSettings, SerializedAsset }
-export type { ExtendedGLTFDocument }
 
 // ============================================================================
 // Asset Types

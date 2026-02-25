@@ -16,12 +16,22 @@ export const defaultBoundsOptions: BoundsProps = {
 }
 
 export const defaultCameraOptions: CameraProps = {
-	fov: 50,
-	near: 0.1,
-	far: 1000,
-	position: [5, 5, 5]
+	cameras: [
+		{
+			cameraId: 'default',
+			name: 'Default Camera',
+			fov: 20,
+			near: 0.1,
+			far: 1000,
+			position: [5, 5, 5],
+			initial: true,
+			shouldAnimate: true,
+			animationConfig: {
+				duration: 1000
+			}
+		}
+	]
 }
-
 export const defaultControlsOptions: ControlsProps = {
 	controlsTimeout: 0,
 	maxPolarAngle: Math.PI / 2,

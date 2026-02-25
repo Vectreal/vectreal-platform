@@ -32,6 +32,7 @@ import { Object3D } from 'three'
 import { Canvas, Overlay } from './components'
 import {
 	SceneBounds,
+	SceneCamera,
 	SceneControls,
 	SceneEnvironment,
 	SceneModel,
@@ -71,7 +72,7 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	boundsOptions?: BoundsProps
 
 	/**
-	 * Options for the scene camera.
+	 * Options for the scene cameras.
 	 */
 	cameraOptions?: CameraProps
 
@@ -166,7 +167,6 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 				enableViewportRendering={enableViewportRendering}
 				shadows
 				gl={{ antialias: true }}
-				camera={cameraOptions}
 			>
 				<Suspense fallback={null}>
 					{hasContent && (
@@ -180,8 +180,9 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 							{/* <SceneToneMapping
 								mapping={toneMappingOptions?.mapping}
 								exposure={toneMappingOptions?.exposure}
-							/> */}
+								/> */}
 							<SceneBounds {...boundsOptions}>
+								<SceneCamera {...cameraOptions} />
 								<Center top>
 									{model ? (
 										<SceneModel onScreenshot={onScreenshot} object={model} />

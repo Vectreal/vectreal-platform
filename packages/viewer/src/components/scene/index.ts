@@ -1,5 +1,5 @@
 export { default as SceneBounds, defaultBoundsOptions } from './scene-bounds'
-export { defaultCameraOptions } from './scene-camera'
+export { default as SceneCamera, defaultCameraOptions } from './scene-camera'
 export {
 	default as SceneControls,
 	defaultControlsOptions

@@ -62,7 +62,14 @@ const ProductSceneClient = () => {
 			key="preview-shop-bike-scene"
 			theme="dark"
 			cameraOptions={{
-				position: [2, 1, 0]
+				cameras: [
+					{
+						position: [2, 1, 0],
+						initial: true,
+						cameraId: 'camera_1',
+						name: 'Camera 1'
+					}
+				]
 			}}
 			boundsOptions={{
 				margin: 0.75,

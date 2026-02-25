@@ -22,7 +22,7 @@ import {
 	EnvironmentProps as ThreeEnvironmentProps,
 	GridProps as ThreeGridProps
 } from '@react-three/drei'
-import { CameraProps as ThreeCameraProps } from '@react-three/fiber'
+import { PerspectiveCameraProps } from '@react-three/drei'
 
 import type {
 	DedupOptions,
@@ -46,9 +46,28 @@ export interface SceneMeta {
 }
 
 /**
+ * Configuration for animating camera transitions in the 3D scene.
+ */
+interface CameraAnimationConfig {
+	duration: number // Duration of the animation in milliseconds
+	easing?: (t: number) => number // Optional easing function for the animation
+}
+
+/**
+ * Configuration for a camera in the 3D scene.
+ */
+type CameraConfig = PerspectiveCameraProps & {
+	cameraId: string
+	name: string
+	initial?: boolean // Indicates if this camera should be the default view when the scene loads
+	shouldAnimate?: boolean // Indicates if the camera should animate to its position on activation
+	animationConfig?: CameraAnimationConfig // Optional configuration for camera animation
+}
+
+/**
  * Props for configuring the camera in a 3D scene.
  */
-export type CameraProps = ThreeCameraProps
+export type CameraProps = { cameras?: CameraConfig[] }
 
 /**
  * Props for the SceneBounds component, extending ThreeBoundsProps from '@react-three/drei'.
@@ -197,6 +216,7 @@ export interface SceneSettings {
 	/** Scene metadata */
 	meta?: SceneMeta
 }
+
 export interface TextureOptimization
 	extends BaseOptimization<'texture'>,
 		TextureCompressOptions {}
