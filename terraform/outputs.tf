@@ -86,28 +86,31 @@ output "local_dev_storage_key_path" {
   sensitive   = true
 }
 
-output "edge_ip" {
-  description = "Global IP address for shared edge load balancer (only when enabled)"
-  value       = length(google_compute_global_address.edge) > 0 ? google_compute_global_address.edge[0].address : ""
+output "staging_secondary_service_names" {
+  description = "Names of the staging secondary-region Cloud Run services"
+  value       = [for service in values(google_cloud_run_v2_service.staging_secondary) : service.name]
+}
+
+output "production_secondary_service_names" {
+  description = "Names of the production secondary-region Cloud Run services"
+  value       = [for service in values(google_cloud_run_v2_service.production_secondary) : service.name]
+}
+
+output "staging_edge_ip" {
+  description = "Global IP address for staging edge load balancer (only when enabled)"
+  value       = length(google_compute_global_address.staging_edge) > 0 ? google_compute_global_address.staging_edge[0].address : ""
 }
 
 output "staging_static_bucket_name" {
-  description = "Public staging static bucket name"
-  value       = google_storage_bucket.staging_static.name
+  description = "Public staging static bucket name (only when staging edge is enabled)"
+  value       = length(google_storage_bucket.staging_static) > 0 ? google_storage_bucket.staging_static[0].name : ""
 }
 
-output "production_static_bucket_name" {
-  description = "Public production static bucket name"
-  value       = google_storage_bucket.production_static.name
-}
-
-output "edge_hosts" {
-  description = "Hostnames configured for the shared edge"
+output "staging_edge_hosts" {
+  description = "Hostnames configured for staging edge"
   value = {
-    staging_app_host       = var.staging_edge_host
-    staging_static_host    = var.staging_static_host
-    production_app_host    = var.production_edge_host
-    production_static_host = var.production_static_host
+    app_host    = var.staging_edge_host
+    static_host = var.staging_static_host
   }
 }
 
@@ -147,10 +150,10 @@ output "next_steps" {
        gh secret list
     
      4. Deploy to staging:
-       git push origin develop
-    
-     5. Promote staging image digest to production:
-       GitHub Actions → CD - Deploy Platform to Production → Run workflow
+       git push origin main
+
+     5. Deploy to production:
+       gh workflow run "CD - Deploy Platform to Production"
 
      6. Monitor deployment:
        https://github.com/${var.github_org}/${var.github_repo}/actions
