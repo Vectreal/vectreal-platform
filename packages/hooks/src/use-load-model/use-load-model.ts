@@ -256,7 +256,7 @@ function useLoadModel<
 	 * @param filesOrDirectories - Array of File objects or FileSystemDirectoryHandle objects
 	 */
 	const load = useCallback(
-		async (filesOrDirectories: InputFileOrDirectory) => {
+		async (filesOrDirectories: InputFileOrDirectory): Promise<void> => {
 			const allFiles: File[] = []
 
 			// Emit load start event and reset state
@@ -278,7 +278,7 @@ function useLoadModel<
 				}
 			}
 
-			processFiles(allFiles)
+			await processFiles(allFiles)
 		},
 		[processFiles, updateProgress]
 	)
@@ -299,7 +299,7 @@ function useLoadModel<
 	 */
 	const loadFromData = useCallback(
 		async (options: SceneDataLoadOptions): Promise<SceneLoadResult> => {
-			const { sceneId, sceneData } = options
+			const { sceneData } = options
 
 			// Update progress to 40% after data resolution
 			updateProgress(40)
@@ -339,15 +339,9 @@ function useLoadModel<
 			updateProgress(100)
 
 			return {
-				sceneId,
 				file: loadedFile,
-				settings: {
-					environment: sceneData.environment,
-					controls: sceneData.controls,
-					shadows: sceneData.shadows,
-					meta: sceneData.meta
-				}
-			} as SceneLoadResult
+				...sceneData
+			}
 		},
 		[modelLoader, updateProgress]
 	)
@@ -372,17 +366,16 @@ function useLoadModel<
 					)
 
 				const sceneLoadResult = await loadFromData({
-					sceneId,
 					sceneData
 				})
 
-				// Emit server load complete event
-				eventSystem.emit('server-load-complete', sceneLoadResult)
-
 				// If optimizer is available, load the model into it
 				if (optimizer && sceneLoadResult.file?.model) {
-					optimizer.load(sceneLoadResult.file.model as Object3D)
+					await optimizer.load(sceneLoadResult.file.model as Object3D)
 				}
+
+				// Emit server load complete event
+				eventSystem.emit('server-load-complete', sceneLoadResult)
 
 				return sceneLoadResult
 			} catch (error) {
@@ -420,7 +413,7 @@ function useLoadModel<
 
 	/**
 	 * Creates the optimizer integration object.
-	 * This provides additionvalueofMa∞¢¢[Make Mat]al methods for applying optimibjeScene[Obejkeyof Objecodel]unkknozations an.d
+	 * This provides additional methods for applying optimizations and
 	 * updating the loaded model with optimized versions.
 	 *
 	 * Returns null if no optimizer is provided, otherwise returns
@@ -435,55 +428,11 @@ function useLoadModel<
 
 	return {
 		...state,
-
-		/**
-		 * Add an event listener to the event system.
-		 */
 		on: eventSystem.on,
-
-		/**
-		 * Remove an event listener from the event system.
-		 */
 		off: eventSystem.off,
-
-		/**
-		 * Load a model and integrate it with the optimizer if available.
-		 * This also makes the model available in the use-model-context hook.
-		 */
 		load,
-
-		/**
-		 * Load a scene from the server by scene ID.
-		 * Fetches both the model and scene settings, applies them automatically.
-		 */
 		loadFromServer,
-
-		/**
-		 * Load a scene from pre-resolved scene payload data.
-		 */
-		loadFromData,
-
-		/**
-		 * Reset the model and optimizer state to the initial state.
-		 */
 		reset,
-
-		/**
-		 * Integration of the optimizer
-		 * An object containing functions to interact with the optimizer.
-		 *
-		 * It exposes the following functions:
-		 *
-		 * - `simplifyOptimization(options?: SimplifyOptions)`: Runs the simplification optimization with the given options.
-		 * - `dedupOptimization(options?: DedupOptions)`: Runs the deduplication optimization with the given options.
-		 * - `quantizeOptimization(options?: QuantizeOptions)`: Runs the quantization optimization with the given options.
-		 * - `texturesCompressionOptimization(options?: TextureCompressionOptions)`: Runs the texture compression optimization with the given options.
-		 * - `getSize()`: Returns the size of the optimized model.
-		 * - `reset()`: Resets the optimizer.
-		 * - `report`: The report state of the optimizer.
-		 * - `error`: The error state of the optimizer.
-		 * - `loading`: The loading state of the optimizer.
-		 */
 		optimizer: optimizerIntegration
 	} as UseLoadModelReturn<T extends undefined ? false : true>
 }

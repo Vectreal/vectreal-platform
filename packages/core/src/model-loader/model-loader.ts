@@ -256,10 +256,10 @@ export class ModelLoader {
 			}
 
 			// Create resource map for glTF-Transform
-			const resources: { [key: string]: Uint8Array } = {}
+			const resources = new Map<string, Uint8Array>()
 
 			// Add main GLTF file
-			resources['model.gltf'] = gltfBuffer
+			resources.set('model.gltf', gltfBuffer)
 
 			// Build a comprehensive resource map based on what the GLTF actually references
 			// First, collect all URI references from the GLTF
@@ -324,20 +324,20 @@ export class ModelLoader {
 						decodedUriBasename === decodedBasename
 					) {
 						// Add under the exact URI used in the GLTF
-						resources[uri] = data
+						resources.set(uri, data)
 						// Also add under common variations
-						resources[decodedUri] = data
+						resources.set(decodedUri, data)
 					}
 				}
 
 				// Also add under the original name and common variations as fallback
-				resources[name] = data
-				resources[basename] = data
+				resources.set(name, data)
+				resources.set(basename, data)
 				if (decodedName !== name) {
-					resources[decodedName] = data
+					resources.set(decodedName, data)
 				}
 				if (decodedBasename !== basename) {
-					resources[decodedBasename] = data
+					resources.set(decodedBasename, data)
 				}
 			}
 
@@ -348,7 +348,13 @@ export class ModelLoader {
 
 			const document = await this.io.readJSON({
 				json: gltfJson,
-				resources
+				resources: resources.entries().reduce(
+					(acc, [key, value]) => {
+						acc[key] = value
+						return acc
+					},
+					{} as Record<string, Uint8Array>
+				)
 			})
 
 			const totalSize =

@@ -1,4 +1,5 @@
 import { JSONDocument } from '@gltf-transform/core'
+import { ExtendedGLTFDocument } from '@vctrl/hooks/use-load-model/types'
 import { and, eq, inArray } from 'drizzle-orm'
 
 import {
@@ -32,11 +33,9 @@ import {
 	sceneStats
 } from '../../../db/schema'
 import {
-	type ExtendedGLTFDocument,
 	type GLTFExportResult,
 	SaveSceneSettingsParams,
 	SceneAssetDataMap,
-	SceneSettingsData,
 	UpdateSceneSettingsParams
 } from '../../../types/api'
 import { createSceneStatsFromReport } from '../../utils/scene-stats-helpers'
@@ -45,7 +44,11 @@ import {
 	uploadSceneAssets
 } from '../asset/asset-storage.server'
 
-import type { OptimizationReport, Optimizations } from '@vctrl/core'
+import type {
+	OptimizationReport,
+	Optimizations,
+	SceneSettings
+} from '@vctrl/core'
 
 /**
  * Data service for scene settings operations.
@@ -457,7 +460,7 @@ class SceneSettingsService {
 	 * Compares two scene settings objects for changes.
 	 */
 	private compareSceneSettings(
-		current: SceneSettingsData,
+		current: SceneSettings,
 		existing: typeof sceneSettings.$inferSelect
 	): boolean {
 		return (

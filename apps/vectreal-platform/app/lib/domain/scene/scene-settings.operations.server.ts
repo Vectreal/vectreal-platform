@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
 
 import { ApiResponse } from '@shared/utils'
+import { SceneSettings } from '@vctrl/core'
 
 import { sceneSettingsService } from './scene-settings-service.server'
 import {
@@ -10,12 +11,11 @@ import {
 
 import type {
 	SerializedSceneAssetDataMap,
-	SceneSettingsData,
 	SceneSettingsRequest
 } from '../../../types/api'
 
 type SaveSceneSettingsRequest = SceneSettingsRequest & {
-	settings: SceneSettingsData
+	settings: SceneSettings
 }
 
 type GetSceneSettingsRequest = SceneSettingsRequest & {

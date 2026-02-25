@@ -5,6 +5,7 @@ import {
 } from '@shared/components/ui/avatar'
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
+import { ButtonGroup } from '@shared/components/ui/button-group'
 import {
 	Drawer,
 	DrawerClose,
@@ -29,6 +30,8 @@ import {
 } from '@vctrl/hooks/use-load-model'
 import { useSetAtom } from 'jotai/react'
 import {
+	ChevronDown,
+	ChevronRight,
 	Copy,
 	ExternalLink,
 	Info,
@@ -38,7 +41,7 @@ import {
 	X
 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useLoaderData } from 'react-router'
+import { Link } from 'react-router'
 
 import { Route } from './+types/scene'
 import CenteredSpinner from '../../../components/centered-spinner'
@@ -248,9 +251,9 @@ const PreviewModel = memo(({ file, sceneData }: PreviewModelProps) => {
 		<div className={cn('relative h-full')}>
 			<ClientVectrealViewer
 				model={file?.model}
-				envOptions={sceneData?.settings?.environment}
-				controlsOptions={sceneData?.settings?.controls}
-				shadowsOptions={sceneData?.settings?.shadows}
+				envOptions={sceneData?.environment}
+				controlsOptions={sceneData?.controls}
+				shadowsOptions={sceneData?.shadows}
 				loader={<CenteredSpinner text="Preparing scene..." />}
 				fallback={<CenteredSpinner text="Loading scene..." />}
 			/>
@@ -258,18 +261,18 @@ const PreviewModel = memo(({ file, sceneData }: PreviewModelProps) => {
 	)
 })
 
-const ScenePage = () => {
-	const { scene, project, user, initialSceneData, sceneDetails } =
-		useLoaderData<typeof loader>()
+const ScenePage = ({ loaderData }: Route.ComponentProps) => {
+	const { scene, project, user, sceneDetails } = loaderData
 	const sceneId = scene.id
 	const setDeleteDialog = useSetAtom(deleteDialogAtom)
 
 	// Use sceneId as key to create a new hook instance per scene
-	const { file, loadFromData, loadFromServer } = useLoadModel()
+	const { file, loadFromServer } = useLoadModel()
 
 	const [isLoadingScene, setIsLoadingScene] = useState(false)
 	const [sceneData, setSceneData] = useState<SceneLoadResult>()
 	const [sceneState, setSceneState] = useState(scene)
+
 	const [sceneNameDraft, setSceneNameDraft] = useState(scene.name)
 	const [sceneDescriptionDraft, setSceneDescriptionDraft] = useState(
 		scene.description || ''
@@ -281,6 +284,7 @@ const ScenePage = () => {
 	const [drawerOpen, setDrawerOpen] = useState(false)
 	const [copiedLink, setCopiedLink] = useState(false)
 	const [copiedEmbed, setCopiedEmbed] = useState(false)
+
 	const isMountedRef = useRef(true)
 	const activeSceneIdRef = useRef<string | null>(sceneId)
 	const metadataResetTimerRef = useRef<number | null>(null)
@@ -416,26 +420,17 @@ const ScenePage = () => {
 		try {
 			if (!sceneId) return
 
-			if (sceneData?.sceneId === sceneId) {
-				return
-			}
-
 			setIsLoadingScene(true)
 
 			const existingRequest = inFlightSceneSettingsRequests.get(sceneId)
 			const request =
 				existingRequest ??
-				(initialSceneData
-					? loadFromData({
-							sceneId,
-							sceneData: initialSceneData
-						})
-					: loadFromServer({
-							sceneId,
-							serverOptions: {
-								endpoint: `/api/scenes/${sceneId}`
-							}
-						}))
+				loadFromServer({
+					sceneId,
+					serverOptions: {
+						endpoint: `/api/scenes/${sceneId}`
+					}
+				})
 
 			if (!existingRequest) {
 				inFlightSceneSettingsRequests.set(
@@ -459,16 +454,10 @@ const ScenePage = () => {
 				setIsLoadingScene(false)
 			}
 		}
-	}, [
-		initialSceneData,
-		loadFromData,
-		loadFromServer,
-		sceneData?.sceneId,
-		sceneId
-	])
+	}, [loadFromServer, sceneData, sceneId])
 
 	useEffect(() => {
-		if (sceneId && (!sceneData || sceneData.sceneId !== sceneId)) {
+		if (sceneId && !sceneData) {
 			getSceneSettings()
 		}
 	}, [getSceneSettings, sceneData, sceneId])
@@ -486,15 +475,10 @@ const ScenePage = () => {
 				<main className="flex min-h-0 flex-col gap-4">
 					<section className="relative min-h-0 flex-1 overflow-hidden rounded-2xl bg-black/[0.02]">
 						<PreviewModel file={file} sceneData={sceneData} />
-						{isLoadingScene && (
-							<div className="bg-background/55 absolute inset-0 grid place-items-center backdrop-blur-[1px]">
-								<CenteredSpinner text="Loading scene…" />
-							</div>
-						)}
 					</section>
 					<section className="bg-muted/30 space-y-6 rounded-2xl px-4 py-4 sm:px-5">
-						<header className="flex items-start gap-4">
-							<div className="grow space-y-2">
+						<header className="flex flex-col items-start gap-6 md:flex-row">
+							<div className="grow space-y-2 max-md:w-full">
 								<InlineEditableMetadataField
 									ariaLabel="Scene title"
 									value={sceneNameDraft}
@@ -520,34 +504,44 @@ const ScenePage = () => {
 									isSaved={metadataStatus === 'saved' && !isDescriptionUnsaved}
 								/>
 							</div>
-							<div className="flex flex-col gap-2 xl:justify-end">
-								<DropdownMenu>
-									<DropdownMenuTrigger asChild>
-										<Button>Preview</Button>
-									</DropdownMenuTrigger>
-									<DropdownMenuContent>
+							<div className="flex flex-col gap-3 max-md:w-full xl:justify-end">
+								<ButtonGroup className="w-full">
+									<Button asChild className="w-full">
 										<Link viewTransition to={fullscreenPreviewPath}>
-											<DropdownMenuItem>
-												<LayoutDashboard className="mr-2 h-4 w-4" />
-												Fullscreen Preview
-											</DropdownMenuItem>
+											Preview
 										</Link>
+									</Button>
 
-										<Link viewTransition to={productPreviewPath}>
-											<DropdownMenuItem>
-												<ExternalLink className="mr-2 h-4 w-4" />
-												Product Preview
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button size="icon">
+												<ChevronDown className="h-4 w-4" />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent>
+											<DropdownMenuItem asChild>
+												<Link viewTransition to={fullscreenPreviewPath}>
+													<LayoutDashboard className="mr-2 h-4 w-4" />
+													Fullscreen Preview
+												</Link>
 											</DropdownMenuItem>
-										</Link>
-									</DropdownMenuContent>
-								</DropdownMenu>
 
-								<Link viewTransition to={`/publisher/${sceneState.id}`}>
-									<Button variant="secondary">
+											<DropdownMenuItem asChild>
+												<Link viewTransition to={productPreviewPath}>
+													<ExternalLink className="mr-2 h-4 w-4" />
+													Product Preview
+												</Link>
+											</DropdownMenuItem>
+										</DropdownMenuContent>
+									</DropdownMenu>
+								</ButtonGroup>
+
+								<Button variant="secondary" asChild>
+									<Link viewTransition to={`/publisher/${sceneState.id}`}>
 										<Rocket className="mr-2 h-4 w-4" />
 										Open Publisher
-									</Button>
-								</Link>
+									</Link>
+								</Button>
 							</div>
 						</header>
 
@@ -575,7 +569,7 @@ const ScenePage = () => {
 								</div>
 							</div>
 
-							<div className="text-muted-foreground flex items-center gap-4 text-xs">
+							<div className="text-muted-foreground flex flex-col gap-3 text-xs md:flex-row md:items-center">
 								<p>Updated {new Date(sceneState.updatedAt).toLocaleString()}</p>
 
 								<small className="font-mono">ID {sceneState.id}</small>
@@ -645,6 +639,11 @@ const ScenePage = () => {
 						) : (
 							<div className="space-y-2">
 								{sceneDetails.assets.slice(0, 4).map((asset) => {
+									console.log(
+										'Asset data for',
+										asset.name,
+										sceneData?.assetData?.[asset.id]
+									)
 									const isTexture =
 										asset.type === 'texture' &&
 										asset.mimeType &&
@@ -653,10 +652,10 @@ const ScenePage = () => {
 									let textureUrl: string | undefined
 									if (
 										isTexture &&
-										initialSceneData?.assetData &&
-										initialSceneData.assetData[asset.id]
+										sceneData?.assetData &&
+										sceneData.assetData[asset.id]
 									) {
-										const data = initialSceneData.assetData[asset.id].data
+										const data = sceneData.assetData[asset.id].data
 										const mime = asset.mimeType
 										if (typeof data === 'string') {
 											textureUrl = `data:${mime};base64,${data}`
@@ -665,18 +664,10 @@ const ScenePage = () => {
 									return (
 										<div
 											key={asset.id}
-											className="bg-background/70 rounded-xl p-3"
+											className="bg-background/70 flex items-center gap-3 rounded-xl p-3"
 										>
-											<div className="flex min-w-0 items-center justify-between gap-2">
-												<p className="truncate text-sm font-medium">
-													{asset.name}
-												</p>
-												<Badge variant="secondary" className="shrink-0">
-													{asset.type}
-												</Badge>
-											</div>
 											{isTexture && textureUrl && (
-												<div className="mt-2 flex justify-start">
+												<div className="flex flex-col justify-start gap-2">
 													<img
 														src={textureUrl}
 														alt={asset.name}
@@ -684,12 +675,32 @@ const ScenePage = () => {
 													/>
 												</div>
 											)}
-											<p className="text-muted-foreground mt-1 text-xs">
-												{formatBytes(asset.fileSize)}
-											</p>
+											<div className="flex flex-col gap-2">
+												<p className="truncate text-sm font-medium">
+													{asset.name}
+												</p>
+												<Badge variant="secondary" className="shrink-0">
+													{formatBytes(asset.fileSize)}
+													<span className="text-muted-foreground">
+														| {asset.type}
+													</span>
+												</Badge>
+											</div>
 										</div>
 									)
 								})}
+								{sceneDetails.assets.length > 4 && (
+									<button
+										type="button"
+										onClick={() => setDrawerOpen(true)}
+										className="hover:bg-muted/50 bg-background/70 flex w-full items-center justify-between gap-3 rounded-xl p-3 text-left transition-colors duration-300"
+									>
+										<p className="text-muted-foreground text-sm">
+											…and {sceneDetails.assets.length - 4} more.
+										</p>
+										<ChevronRight className="text-muted-foreground h-4 w-4" />
+									</button>
+								)}
 							</div>
 						)}
 					</section>

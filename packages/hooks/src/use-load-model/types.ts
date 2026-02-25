@@ -62,8 +62,6 @@ export interface SceneLoadOptions {
  * Configuration options for loading an already-resolved scene payload.
  */
 export interface SceneDataLoadOptions {
-	/** The unique identifier of the scene to load */
-	sceneId: string
 	/** Resolved server scene payload */
 	sceneData: ServerSceneData
 	/** Whether to automatically apply scene settings (default: true) */
@@ -106,16 +104,13 @@ export interface ServerSceneData extends SceneSettings {
 }
 
 /**
- * Result of a scene load operation.
+ * Result of a scene load operation based on server data.
  * Combines the loaded model with its settings.
  */
-export interface SceneLoadResult {
+export interface SceneLoadResult extends ServerSceneData {
 	/** The loaded model file */
 	file: ModelFile
 	/** Scene ID that was loaded */
-	sceneId: string
-	/** Scene settings */
-	settings: SceneSettings
 }
 
 /**
@@ -239,11 +234,6 @@ export type UseLoadModelReturn<HasOptimizer extends boolean> =
 		 * ```
 		 */
 		loadFromServer: (options: SceneLoadOptions) => Promise<SceneLoadResult>
-		/**
-		 * Load a scene from already-resolved server data.
-		 * Useful when route loaders provide scene payloads for faster hydration.
-		 */
-		loadFromData: (options: SceneDataLoadOptions) => Promise<SceneLoadResult>
 		/**
 		 * Reset the model loading state and clear any loaded models.
 		 */

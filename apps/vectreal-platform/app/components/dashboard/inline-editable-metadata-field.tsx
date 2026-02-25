@@ -84,7 +84,7 @@ export function InlineEditableMetadataField({
 				{isEditing ? (
 					multiline ? (
 						<MotionTextarea
-							layout="position"
+							layout
 							layoutId={`inline-edit-${id}`}
 							ref={textareaRef}
 							value={value}
@@ -104,7 +104,7 @@ export function InlineEditableMetadataField({
 						/>
 					) : (
 						<MotionInput
-							layout="position"
+							layout
 							layoutId={`inline-edit-${id}`}
 							ref={inputRef}
 							value={value}
@@ -150,9 +150,9 @@ export function InlineEditableMetadataField({
 					</motion.button>
 				)}
 			</div>
-			<div className="shrink-0 pt-2">
-				<AnimatePresence>
-					{(isSaving || isUnsaved) && (
+			<AnimatePresence>
+				{(isSaving || isUnsaved) && (
+					<div className="shrink-0 pt-2">
 						<motion.div
 							layout
 							aria-hidden="true"
@@ -169,12 +169,12 @@ export function InlineEditableMetadataField({
 								isSaving || isUnsaved ? 'opacity-100' : 'opacity-0'
 							)}
 						/>
-					)}
-				</AnimatePresence>
-				<span className="sr-only" aria-live="polite">
-					{ariaLabel} {indicatorStateText}
-				</span>
-			</div>
+						<span className="sr-only" aria-live="polite">
+							{ariaLabel} {indicatorStateText}
+						</span>
+					</div>
+				)}
+			</AnimatePresence>
 		</div>
 	)
 }

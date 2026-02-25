@@ -1,16 +1,14 @@
 import { randomUUID } from 'crypto'
 import { createHash } from 'node:crypto'
 
-import { SceneAssetDataMap } from 'apps/vectreal-platform/app/types/api'
 import { and, eq } from 'drizzle-orm'
-
 
 import { getDbClient } from '../../../db/client'
 import { assets, folders } from '../../../db/schema'
+import { SceneAssetDataMap } from '../../../types/api'
 import { createStorage } from '../../gcloud-storage.server'
 
 import type { Bucket } from '@google-cloud/storage'
-
 
 export interface AssetUploadResult {
 	assetId: string
@@ -263,9 +261,7 @@ export async function downloadAsset(assetId: string): Promise<{
  */
 export async function downloadAssets(
 	assetIds: string[]
-): Promise<
-	Map<string, { data: Uint8Array; mimeType: string; fileName: string }>
-> {
+): Promise<SceneAssetDataMap> {
 	const results: SceneAssetDataMap = new Map()
 
 	const downloads = assetIds.map(async (assetId) => {

@@ -6,15 +6,12 @@ import type { ProcessState } from './publisher-config'
 import type { JSONDocument } from '@gltf-transform/core'
 import type { User } from '@supabase/supabase-js'
 import type {
-	ControlsProps,
 	Optimizations,
-	EnvironmentProps,
 	OptimizationReport,
 	SceneMeta,
 	SceneSettings,
 	SerializedAsset,
-	SerializedGLTFExportResult,
-	ShadowsProps
+	SerializedGLTFExportResult
 } from '@vctrl/core'
 
 // Re-export core types for convenience
@@ -58,16 +55,8 @@ export type SerializedSceneAssetDataMap = Record<
 // Scene Settings Types
 // ============================================================================
 
-/** Scene settings for internal operations (uses core SceneSettings with readonly). */
-export interface SceneSettingsData {
-	readonly environment?: EnvironmentProps
-	readonly controls?: ControlsProps
-	readonly shadows?: ShadowsProps
-	readonly meta?: SceneMeta
-}
-
 /** Scene configuration for API operations (includes publisher metadata). */
-export interface SceneConfigData extends SceneSettingsData {
+export interface SceneConfigData extends SceneSettings {
 	readonly meta?: SceneMeta
 	readonly process?: ProcessState
 }
@@ -82,7 +71,7 @@ export type SceneSettingsWithAssets = {
 export type SceneSettingsUpsertInput = {
 	sceneId: string
 	createdBy: string
-	settings: SceneSettingsData
+	settings: SceneSettings
 }
 
 // ============================================================================
@@ -100,7 +89,7 @@ export interface SceneSettingsRequest extends Partial<BaseSceneParams> {
 	readonly action: string
 	readonly requestId?: string
 	readonly projectId?: string
-	readonly settings?: SceneSettingsData
+	readonly settings?: SceneSettings
 	readonly gltfJson?: JSONDocument
 	readonly optimizationReport?: OptimizationReport
 	readonly optimizationSettings?: Optimizations
@@ -119,7 +108,7 @@ export type GetSceneSettingsParams = BaseSceneParams
 /** Parameters for saving scene settings. */
 export interface SaveSceneSettingsParams extends BaseSceneParams {
 	readonly projectId: string
-	readonly settings: SceneSettingsData
+	readonly settings: SceneSettings
 	readonly gltfJson?: JSONDocument
 	readonly optimizationReport?: OptimizationReport
 	readonly optimizationSettings?: Optimizations
@@ -131,7 +120,7 @@ export interface SaveSceneSettingsParams extends BaseSceneParams {
 export interface UpdateSceneSettingsParams {
 	readonly sceneSettingsId: string
 	readonly userId: string
-	readonly settings: SceneSettingsData
+	readonly settings: SceneSettings
 	readonly gltfJson?: JSONDocument
 }
 
