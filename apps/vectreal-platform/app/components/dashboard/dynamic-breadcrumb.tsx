@@ -118,11 +118,11 @@ export const DynamicBreadcrumb = memo(() => {
 		<AnimatePresence mode="wait" initial={false}>
 			<motion.div
 				key={contentKey}
-				initial={{ opacity: 0, x: -4 }}
+				initial={{ opacity: 0, x: -8 }}
 				animate={{ opacity: 1, x: 0 }}
-				exit={{ opacity: 0, x: 12 }}
+				exit={{ opacity: 0, x: 8 }}
 				transition={{
-					duration: 0.15,
+					duration: 0.4,
 					ease: 'easeOut'
 				}}
 			>

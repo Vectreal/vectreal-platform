@@ -105,26 +105,6 @@ export const CAMERA_FIELDS: FieldConfig[] = [
 		step: 1,
 		tooltip: 'Camera field of view in degrees.',
 		formatValue: (value) => `${value.toFixed(0)}°`
-	},
-	{
-		key: 'near',
-		label: 'Near Plane',
-		min: 0.001,
-		max: 10,
-		step: 0.001,
-		tooltip: 'Near clipping plane distance.',
-		formatValue: (value) => value.toFixed(3),
-		valueMapping: valueMappings.log
-	},
-	{
-		key: 'far',
-		label: 'Far Plane',
-		min: 10,
-		max: 10000,
-		step: 10,
-		tooltip: 'Far clipping plane distance.',
-		formatValue: (value) => value.toFixed(0),
-		valueMapping: valueMappings.log
 	}
 ]
 

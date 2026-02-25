@@ -85,7 +85,7 @@ const DashboardCard: FC<DashboardCardProps> = ({
 		>
 			<BasicCard highlight={highlight}>
 				<CardHeader className={cardHeaderVariants({ variant })}>
-					<span className="grow space-y-1">
+					<span className="grow space-y-1 overflow-hidden">
 						<div className="flex items-center gap-2">
 							<span className="text-primary/60 group-hover/card:text-primary transition-colors">
 								{icon}
@@ -94,10 +94,12 @@ const DashboardCard: FC<DashboardCardProps> = ({
 								{title}
 							</CardTitle>
 						</div>
-						<CardDescription>{description}</CardDescription>
+						<CardDescription className="relative w-full truncate">
+							{description}
+						</CardDescription>
 					</span>
 					{variant !== 'detailed' && (
-						<ChevronRight className="text-primary/60 h-4 w-4 transition-transform group-hover/card:translate-x-1" />
+						<ChevronRight className="text-primary/60 h-4 w-4 shrink-0 transition-transform group-hover/card:translate-x-1" />
 					)}
 				</CardHeader>
 				{children && <CardContent>{children}</CardContent>}

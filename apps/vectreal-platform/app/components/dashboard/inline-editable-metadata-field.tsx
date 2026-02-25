@@ -136,7 +136,7 @@ export function InlineEditableMetadataField({
 						onClick={() => setIsEditing(true)}
 						aria-label={`Edit ${ariaLabel}`}
 						className={cn(
-							'focus-visible:ring-ring bg-muted/25 w-full rounded-xl px-2 py-1 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none',
+							'focus-visible:ring-ring bg-muted/25 w-full rounded-xl px-2 py-1 text-left leading-snug! whitespace-pre transition-colors focus-visible:ring-2 focus-visible:outline-none',
 							value.trim().length > 0
 								? multiline
 									? 'text-foreground text-sm leading-relaxed'
