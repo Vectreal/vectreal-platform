@@ -1,5 +1,8 @@
 name: Shared - Google Cloud Run Deployment
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:
@@ -40,6 +43,11 @@ on:
         required: false
         type: string
         default: 'public, max-age=31536000, immutable'
+      promote-static-from-bucket:
+        description: 'Optional source bucket used to copy static assets into static-bucket-name when not rebuilding'
+        required: false
+        type: string
+        default: ''
       build-and-push-image:
         description: 'Whether this job should build and push the Docker image'
         required: false
@@ -129,6 +137,12 @@ jobs:
         if: ${{ inputs.static-bucket-name != '' && inputs.build-and-push-image }}
         run: |
           gsutil -m rsync -r -d build/apps/vectreal-platform/client gs://${{ inputs.static-bucket-name }}
+          gsutil -m setmeta -h "Cache-Control:${{ inputs.static-cache-control }}" "gs://${{ inputs.static-bucket-name }}/**"
+
+      - name: Promote static assets between buckets
+        if: ${{ inputs.static-bucket-name != '' && !inputs.build-and-push-image && inputs.promote-static-from-bucket != '' }}
+        run: |
+          gsutil -m rsync -r -d gs://${{ inputs.promote-static-from-bucket }} gs://${{ inputs.static-bucket-name }}
           gsutil -m setmeta -h "Cache-Control:${{ inputs.static-cache-control }}" "gs://${{ inputs.static-bucket-name }}/**"
 
       - name: Log in to Google Artifact Registry

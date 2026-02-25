@@ -41,6 +41,8 @@ on:
 jobs:
   lint-typecheck:
     name: Lint and Typecheck
+    permissions:
+      contents: read
     runs-on: ubuntu-22.04
     strategy:
       matrix:

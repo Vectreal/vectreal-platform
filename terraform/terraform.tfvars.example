@@ -30,14 +30,18 @@ github_repo = "vectreal-platform"
 # memory            = "2Gi"
 # cpu               = "2"
 
-# Optional: Staging edge/CDN quick-win rollout (staging first)
-# enable_staging_edge = true
-# staging_edge_host   = "staging.example.com"
-# staging_static_host = "static-staging.example.com"
-# staging_managed_certificate_domains = ["staging.example.com", "static-staging.example.com"]
-# staging_static_bucket_name = "vectreal-static-staging"
+# Optional: Shared edge/CDN rollout for staging + production
+# enable_edge            = true
+# staging_edge_host      = "staging.example.com"
+# staging_static_host    = "static-staging.example.com"
+# production_edge_host   = "app.example.com"
+# production_static_host = "static.example.com"
+# managed_certificate_domains = [
+#   "staging.example.com",
+#   "static-staging.example.com",
+#   "app.example.com",
+#   "static.example.com"
+# ]
+# staging_static_bucket_name    = "vectreal-static-staging"
+# production_static_bucket_name = "vectreal-static-prod"
 
-# Optional: Multi-region Cloud Run replicas (used by edge routing)
-# enable_multi_region_cloud_run = true
-# staging_secondary_regions     = ["us-east1"]
-# production_secondary_regions  = ["us-east1"]
