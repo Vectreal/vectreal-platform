@@ -3,7 +3,7 @@ name: CD - Deploy Platform to Staging
 on:
   push:
     branches:
-      - develop
+      - main
     paths:
       - 'apps/vectreal-platform/**'
       - 'packages/core/**'
