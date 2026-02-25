@@ -5,8 +5,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
-      - '!main'
-      - '!develop'
+      - 'main'
     paths:
       - 'apps/vectreal-platform/**'
       - 'packages/core/**'

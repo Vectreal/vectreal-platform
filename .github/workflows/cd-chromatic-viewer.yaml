@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - develop
     paths:
       - 'packages/viewer/**'
       - '.github/workflows/cd-chromatic-viewer.yaml'
