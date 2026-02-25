@@ -117,8 +117,8 @@ gh secret set SUPABASE_URL_PROD --body "$SUPABASE_URL_PROD"
 #### 5. Deploy
 
 ```bash
-git push origin develop  # Deploy to staging
-git push origin main     # Deploy to production
+git push origin main                                 # Deploy to staging
+gh workflow run "CD - Deploy Platform to Production" # Deploy to production
 ```
 
 ## What Gets Created
@@ -264,8 +264,8 @@ Create/Update Cloud Run Service
 
 Configure these manually in GitHub:
 
-- **staging** - No protection rules, deploys from `develop` branch
-- **production** - Requires approvers, deploys from `main` branch
+- **staging** - No protection rules, deploys from `main` branch
+- **production** - Requires approvers, deploys via manual workflow dispatch
 - **chromatic-publishing** - For Storybook deployments
 - **packages-releasing** - For NPM package releases
 

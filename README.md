@@ -159,10 +159,10 @@ cd terraform
 ./scripts/setup-github-secrets.sh
 
 # 3. Deploy to staging
-git push origin develop
+git push origin main
 
 # 4. Deploy to production
-git push origin main
+gh workflow run "CD - Deploy Platform to Production"
 ```
 
 ### Infrastructure
@@ -183,10 +183,10 @@ For detailed infrastructure setup, configuration options, and troubleshooting, s
 
 ### CI/CD Workflows
 
-- **Staging Deployment**: Triggered on push to `develop` branch
-- **Production Deployment**: Triggered on push to `main` branch
+- **Staging Deployment**: Triggered on push to `main` branch
+- **Production Deployment**: Triggered manually via `workflow_dispatch`
 - **Package Release**: Triggered on version tags (`v*.*.*`)
-- **Storybook Publishing**: Automated via Chromatic integration
+- **Storybook Publishing**: Automated on `main` pushes and pull requests via Chromatic integration
 
 All workflows use GitHub Actions and are configured to inject secrets at deployment time.
 

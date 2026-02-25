@@ -149,10 +149,13 @@ output "next_steps" {
     3. Verify secrets are set:
        gh secret list
     
-    4. Deploy to staging:
-       git push origin develop
-    
-    5. Monitor deployment:
+     4. Deploy to staging:
+       git push origin main
+
+     5. Deploy to production:
+       gh workflow run "CD - Deploy Platform to Production"
+
+     6. Monitor deployment:
        https://github.com/${var.github_org}/${var.github_repo}/actions
     
     📚 Documentation:
