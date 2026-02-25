@@ -118,22 +118,22 @@ gh secret set SUPABASE_URL_PROD --body "$SUPABASE_URL_PROD"
 
 ```bash
 git push origin develop  # Deploy to staging
-git push origin main     # Deploy to production
+# Promote staging image to production (manual workflow dispatch)
 ```
 
 ## What Gets Created
 
 ### GCP Resources
 
-| Resource                    | Purpose                                                                                                          |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| **Artifact Registry**       | Docker image storage (`vectreal-platform` repository)                                                            |
-| **Private GCS Buckets**     | Environment-isolated buckets: production, staging, local development                                             |
-| **Staging Edge (optional)** | Global HTTPS Load Balancer + Cloud CDN + public static assets bucket for low-latency staging rollout             |
-| **Service Accounts**        | `vectreal-prod-deployer`, `vectreal-staging-deployer`, `vectreal-platform-runtime`, `vectreal-local-dev-storage` |
-| **IAM Roles**               | Cloud Run Admin, Artifact Registry Writer, Storage Object Admin/Viewer                                           |
-| **Enabled APIs**            | Cloud Run, IAM, Artifact Registry, Container Registry, Cloud Storage                                             |
-| **Service Account Keys**    | Saved to `credentials/`                                                                                          |
+| Resource | Purpose |
+| --- | --- |
+| **Artifact Registry** | Docker image storage (`vectreal-platform` repository) |
+| **Private GCS Buckets** | Environment-isolated buckets: production, staging, local development |
+| **Shared Edge (optional)** | Single Global HTTPS Load Balancer + Cloud CDN routing for staging and production app/static origins |
+| **Service Accounts** | `vectreal-prod-deployer`, `vectreal-staging-deployer`, `vectreal-platform-runtime`, `vectreal-local-dev-storage` |
+| **IAM Roles** | Cloud Run Admin, Artifact Registry Writer, Storage Object Admin/Viewer |
+| **Enabled APIs** | Cloud Run, IAM, Artifact Registry, Container Registry, Cloud Storage |
+| **Service Account Keys** | Saved to `credentials/` |
 
 ### What is NOT Created by Terraform
 
@@ -189,33 +189,30 @@ github_org = "your-github-org"
 # Optional: Let Terraform manage Cloud Run services (not recommended)
 # manage_cloud_run_services = false  # default
 
-# Optional: Staging-first latency quick wins
-# enable_staging_edge = true
-# staging_edge_host   = "staging.example.com"
-# staging_static_host = "static-staging.example.com"
-# staging_managed_certificate_domains = ["staging.example.com", "static-staging.example.com"]
-
-# Optional: Secondary Cloud Run regions
-# enable_multi_region_cloud_run = true
-# staging_secondary_regions     = ["us-east1"]
-# production_secondary_regions  = ["us-east1"]
+# Optional: Shared edge/CDN (single global LB)
+# enable_edge            = true
+# staging_edge_host      = "staging.example.com"
+# staging_static_host    = "static-staging.example.com"
+# production_edge_host   = "app.example.com"
+# production_static_host = "static.example.com"
+# managed_certificate_domains = [
+#   "staging.example.com",
+#   "static-staging.example.com",
+#   "app.example.com",
+#   "static.example.com"
+# ]
 ```
 
-### Staging-first latency rollout
+### Shared edge/CDN rollout
 
-1. Enable `enable_staging_edge` and set staging edge/static hosts and managed cert domains.
+1. Enable `enable_edge` and set staging/production app + static hosts and managed cert domains.
 2. Apply Terraform to create:
 
-- Global HTTPS Load Balancer frontend
-- Cloud CDN-enabled backend bucket for static assets
-- Cloud Run serverless NEGs for primary and optional secondary staging regions
+- Single Global HTTPS Load Balancer frontend
+- Cloud CDN-enabled backend buckets for staging + production static assets
+- Cloud Run serverless NEGs for staging and production single-region origins
 
-3. Set GitHub Repository Variables (staging workflow):
-
-- `STAGING_STATIC_BUCKET` (for example `vectreal-static-staging`)
-- `STAGING_STATIC_CACHE_CONTROL` (optional, defaults to immutable assets)
-
-4. Deploy to staging and validate cache hits before rolling the same pattern to production.
+1. Deploy staging (build + upload assets), then promote the tested image digest to production using `CD - Deploy Platform to Production`.
 
 ### State Backend
 
@@ -284,7 +281,8 @@ terraform state list                # List all resources
 1. Edit `.env.development`
 2. Run: `./scripts/setup-github-secrets.sh`
 3. Or manually: `gh secret set SECRET_NAME --body "new-value"`
-4. Redeploy: `git push origin main`
+4. Redeploy staging: `git push origin develop`
+5. Promote to production: GitHub Actions → `CD - Deploy Platform to Production` → Run workflow with `image-uri`
 
 ### Destroy Infrastructure
 

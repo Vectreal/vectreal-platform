@@ -24,12 +24,15 @@ import {
 } from '@shared/components/ui/sidebar'
 import {
 	ArrowRight,
+	BoxesIcon,
 	Building,
 	ChevronsUpDown,
+	KeyRound,
 	List,
 	LogOut,
 	Rocket,
-	Settings
+	Settings,
+	SquareStack
 } from 'lucide-react'
 import { Link, useFetcher } from 'react-router'
 
@@ -43,20 +46,27 @@ const manageLinks = [
 		icon: List
 	},
 	{
-		title: 'Organizations',
-		url: '/dashboard/organizations',
-		icon: Building
+		title: 'API Keys',
+		url: '/dashboard/api-keys/:projectId',
+		icon: KeyRound
 	},
 	{
-		title: 'Settings',
-		url: '/dashboard/settings',
-		icon: Settings
+		title: 'Assets',
+		url: '/dashboard/assets/:projectId',
+		icon: BoxesIcon,
+		disabled: true // TODO: Implement asset management
+	},
+	{
+		title: 'Presets',
+		url: '/dashboard/presets/:projectId',
+		icon: SquareStack,
+		disabled: true // TODO: Implement presets management
 	}
 ]
 
 const quickLinks = [
 	{
-		title: 'Publisher',
+		title: 'Upload Model',
 		url: '/publisher',
 		icon: Rocket
 	}
@@ -90,23 +100,6 @@ const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
 		<>
 			<SidebarContent>
 				<SidebarGroup>
-					<SidebarGroupLabel>Manage</SidebarGroupLabel>
-					<SidebarGroupContent>
-						<SidebarMenu>
-							{manageLinks.map((item) => (
-								<SidebarMenuItem key={item.title}>
-									<SidebarMenuButton asChild>
-										<Link viewTransition to={item.url}>
-											<item.icon />
-											<span>{item.title}</span>
-										</Link>
-									</SidebarMenuButton>
-								</SidebarMenuItem>
-							))}
-						</SidebarMenu>
-					</SidebarGroupContent>
-				</SidebarGroup>
-				<SidebarGroup>
 					<SidebarGroupLabel>Quick Links</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<SidebarMenu>
@@ -117,6 +110,31 @@ const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
 											<item.icon />
 											<span>{item.title}</span>
 											<ArrowRight className="ml-auto h-4 w-4" />
+										</Link>
+									</SidebarMenuButton>
+								</SidebarMenuItem>
+							))}
+						</SidebarMenu>
+					</SidebarGroupContent>
+				</SidebarGroup>
+				<SidebarGroup>
+					<SidebarGroupLabel>Manage</SidebarGroupLabel>
+					<SidebarGroupContent>
+						<SidebarMenu>
+							{manageLinks.map((item) => (
+								<SidebarMenuItem
+									key={item.title}
+									aria-disabled={item.disabled}
+									className={
+										item.disabled
+											? 'pointer-events-none cursor-not-allowed opacity-50'
+											: ''
+									}
+								>
+									<SidebarMenuButton disabled={item.disabled} asChild>
+										<Link viewTransition to={item.url}>
+											<item.icon />
+											<span>{item.title}</span>
 										</Link>
 									</SidebarMenuButton>
 								</SidebarMenuItem>
@@ -173,6 +191,12 @@ const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
 									</div>
 								</DropdownMenuLabel>
 								<DropdownMenuSeparator />
+								<DropdownMenuItem asChild>
+									<Link to="/dashboard/organizations" viewTransition>
+										<Building />
+										Organizations
+									</Link>
+								</DropdownMenuItem>
 								<DropdownMenuItem asChild>
 									<Link to="/dashboard/settings" viewTransition>
 										<Settings />

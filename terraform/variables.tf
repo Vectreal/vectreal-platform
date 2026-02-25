@@ -129,34 +129,46 @@ variable "placeholder_image" {
   default     = "us-docker.pkg.dev/cloudrun/container/hello"
 }
 
-variable "enable_staging_edge" {
-  description = "Whether to provision a staging Global HTTPS Load Balancer with Cloud CDN"
+variable "enable_edge" {
+  description = "Whether to provision a shared Global HTTPS Load Balancer with Cloud CDN for staging and production"
   type        = bool
   default     = false
 }
 
+variable "edge_enable_http_redirect" {
+  description = "Whether to create an HTTP forwarding rule that redirects to HTTPS for the shared edge"
+  type        = bool
+  default     = true
+}
+
+variable "managed_certificate_domains" {
+  description = "Domains to include in the Google-managed SSL certificate for the shared edge"
+  type        = list(string)
+  default     = []
+}
+
 variable "staging_edge_host" {
-  description = "Staging hostname served by the edge load balancer (for example, staging.example.com)"
+  description = "Staging app hostname served by the shared edge load balancer (for example, staging.example.com)"
   type        = string
   default     = ""
 }
 
 variable "staging_static_host" {
-  description = "Optional dedicated static hostname for staging assets (for example, static-staging.example.com)"
+  description = "Dedicated staging static hostname served by the shared edge (for example, static-staging.example.com)"
   type        = string
   default     = ""
 }
 
-variable "staging_managed_certificate_domains" {
-  description = "Domains to include in the Google-managed SSL certificate for staging edge"
-  type        = list(string)
-  default     = []
+variable "production_edge_host" {
+  description = "Production app hostname served by the shared edge load balancer (for example, app.example.com)"
+  type        = string
+  default     = ""
 }
 
-variable "staging_edge_enable_http_redirect" {
-  description = "Whether to create an HTTP forwarding rule that redirects to HTTPS for staging edge"
-  type        = bool
-  default     = true
+variable "production_static_host" {
+  description = "Dedicated production static hostname served by the shared edge (for example, static.example.com)"
+  type        = string
+  default     = ""
 }
 
 variable "staging_static_bucket_name" {
@@ -165,8 +177,20 @@ variable "staging_static_bucket_name" {
   default     = "vectreal-static-staging"
 }
 
+variable "production_static_bucket_name" {
+  description = "Name of the public production static assets bucket used by Cloud CDN"
+  type        = string
+  default     = "vectreal-static-prod"
+}
+
 variable "staging_static_cache_control" {
   description = "Default Cache-Control header applied to uploaded staging static assets"
+  type        = string
+  default     = "public, max-age=31536000, immutable"
+}
+
+variable "production_static_cache_control" {
+  description = "Default Cache-Control header applied to uploaded production static assets"
   type        = string
   default     = "public, max-age=31536000, immutable"
 }
@@ -195,20 +219,27 @@ variable "staging_static_max_ttl_seconds" {
   default     = 31536000
 }
 
-variable "enable_multi_region_cloud_run" {
-  description = "Whether to provision secondary-region Cloud Run services for latency optimization"
-  type        = bool
-  default     = false
+variable "production_app_default_ttl_seconds" {
+  description = "Default CDN TTL for production app backend responses when cacheable"
+  type        = number
+  default     = 0
 }
 
-variable "staging_secondary_regions" {
-  description = "Additional regions for staging Cloud Run service replicas"
-  type        = list(string)
-  default     = []
+variable "production_app_max_ttl_seconds" {
+  description = "Maximum CDN TTL for production app backend responses when cacheable"
+  type        = number
+  default     = 60
 }
 
-variable "production_secondary_regions" {
-  description = "Additional regions for production Cloud Run service replicas"
-  type        = list(string)
-  default     = []
+variable "production_static_default_ttl_seconds" {
+  description = "Default CDN TTL for production static backend bucket"
+  type        = number
+  default     = 3600
 }
+
+variable "production_static_max_ttl_seconds" {
+  description = "Maximum CDN TTL for production static backend bucket"
+  type        = number
+  default     = 31536000
+}
+

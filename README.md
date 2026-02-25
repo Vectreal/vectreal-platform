@@ -161,8 +161,9 @@ cd terraform
 # 3. Deploy to staging
 git push origin develop
 
-# 4. Deploy to production
-git push origin main
+# 4. Promote staging image to production
+# GitHub Actions → CD - Deploy Platform to Production → Run workflow
+# Provide the promoted image-uri input
 ```
 
 ### Infrastructure
@@ -184,7 +185,7 @@ For detailed infrastructure setup, configuration options, and troubleshooting, s
 ### CI/CD Workflows
 
 - **Staging Deployment**: Triggered on push to `develop` branch
-- **Production Deployment**: Triggered on push to `main` branch
+- **Production Deployment**: Manual workflow dispatch with promoted staging `image-uri`
 - **Package Release**: Triggered on version tags (`v*.*.*`)
 - **Storybook Publishing**: Automated via Chromatic integration
 
