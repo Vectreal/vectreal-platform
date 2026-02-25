@@ -6,7 +6,6 @@ import { Navigation } from '../../components/navigation'
 import { createSupabaseClient } from '../../lib/supabase.server'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
-
 export async function loader({ request }: Route.LoaderArgs) {
 	/**
 	 * Determine if the request comes from a mobile client by the headers in the request
@@ -49,7 +48,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 const Layout = ({ loaderData }: Route.ComponentProps) => {
 	return (
 		<>
-			<Navigation user={loaderData.user} />
+			<Navigation user={loaderData.user} isMobile={loaderData.isMobile} />
 			<Outlet />
 			<Footer />
 		</>

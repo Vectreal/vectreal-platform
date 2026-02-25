@@ -1,6 +1,7 @@
-import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
 import { lazy, Suspense, useEffect, useState } from 'react'
+
+import CenteredSpinner from '../centered-spinner'
 
 const HeroSceneClient = lazy(() => import('./hero-scene-client'))
 
@@ -35,9 +36,7 @@ const HeroScene = ({ vertical }: HeroSceneProps) => {
 						vertical && 'h-full max-md:h-[50vh] max-md:min-h-[300px]'
 					)}
 				>
-					<div className="flex h-full items-center justify-center">
-						<LoadingSpinner />
-					</div>
+					<CenteredSpinner />
 				</div>
 			}
 		>

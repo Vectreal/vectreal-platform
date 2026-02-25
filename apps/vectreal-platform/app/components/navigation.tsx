@@ -1,4 +1,5 @@
 import { VectrealLogoAnimated } from '@shared/components/assets/icons/vectreal-logo-animated'
+import { useIsMobile } from '@shared/components/hooks/use-mobile'
 import {
 	Avatar,
 	AvatarFallback,
@@ -15,39 +16,13 @@ import {
 } from '@shared/components/ui/dropdown-menu'
 import { User } from '@supabase/supabase-js'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Sparkles } from 'lucide-react'
+import { ListTreeIcon, Rocket } from 'lucide-react'
 import { PropsWithChildren } from 'react'
 import { Link, useFetcher, useLocation, useNavigate } from 'react-router'
 
 interface NavigationProps {
 	user: User | null
-}
-
-/**
- * SignUpButton renders the sign up call-to-action.
- */
-function SignUpButton() {
-	return (
-		<Link viewTransition to="/sign-up" aria-label="Sign up">
-			<Button variant="ghost" size="sm">
-				Sign In
-			</Button>
-		</Link>
-	)
-}
-
-/**
- * PublisherButton renders the publisher navigation button.
- */
-function PublisherButton() {
-	return (
-		<Link viewTransition to="/publisher" aria-label="Go to Publisher">
-			<Button variant="ghost" size="sm">
-				Visit Publisher
-				<Sparkles />
-			</Button>
-		</Link>
-	)
+	isMobile: boolean
 }
 
 /**
@@ -122,6 +97,7 @@ const FloatPillContainer = ({ children }: PropsWithChildren) => {
  */
 export const Navigation = ({ user }: NavigationProps) => {
 	const { pathname } = useLocation()
+	const isMobile = useIsMobile()
 	const isSigninPage =
 		pathname.startsWith('/sign-up') || pathname.startsWith('/sign-in')
 	const isPublisherPage = pathname.startsWith('/publisher')
@@ -166,7 +142,11 @@ export const Navigation = ({ user }: NavigationProps) => {
 							className="mr-2 overflow-hidden"
 							key="sign-in-button"
 						>
-							<SignUpButton />
+							<Button asChild variant="ghost" size="sm">
+								<Link viewTransition to="/sign-up" aria-label="Sign up">
+									Sign In
+								</Link>
+							</Button>
 						</motion.div>
 					)}
 					{!isPublisherPage && (
@@ -178,9 +158,40 @@ export const Navigation = ({ user }: NavigationProps) => {
 							className="mr-2 overflow-hidden"
 							key="publisher-button"
 						>
-							<PublisherButton />
+							<Button asChild variant="ghost" size="sm">
+								<Link
+									viewTransition
+									to="/publisher"
+									aria-label="Go to Publisher"
+								>
+									<Rocket />
+									Visit Publisher
+								</Link>
+							</Button>
 						</motion.div>
 					)}
+					{!isMobile && user && (
+						<motion.div
+							initial={{ opacity: 0, width: 0 }}
+							animate={{ opacity: 1, width: 'auto' }}
+							exit={{ opacity: 0, width: 0 }}
+							transition={{ duration: 0.3, ease: 'easeInOut' }}
+							className="mr-2 overflow-hidden"
+							key="dashboard-button"
+						>
+							<Button asChild variant="ghost" size="sm">
+								<Link
+									viewTransition
+									to="/dashboard"
+									aria-label="Go to Dashboard"
+								>
+									<ListTreeIcon />
+									Dashboard
+								</Link>
+							</Button>
+						</motion.div>
+					)}
+
 					{user && <UserMenu user={user} onLogout={handleLogout} />}
 				</AnimatePresence>
 			</FloatPillContainer>

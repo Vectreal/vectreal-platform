@@ -21,9 +21,6 @@ export const defaultCameraOptions: CameraProps = {
 			cameraId: 'default',
 			name: 'Default Camera',
 			fov: 60,
-			near: 0.0001,
-			far: 1000,
-			position: [5, 5, 5],
 			initial: true,
 			shouldAnimate: true,
 			animationConfig: {

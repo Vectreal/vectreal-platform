@@ -9,9 +9,6 @@ import { PerspectiveCamera, Vector3 } from 'three'
  *
  * These defaults provide sensible values for perspective camera properties:
  * - fov: Field of view in degrees (default: 50°)
- * - near: Near clipping plane (default: 0.1)
- * - far: Far clipping plane (default: 1000)
- * - position: Initial camera position (default: [5, 5, 5])
  */
 export const defaultCameraOptions: CameraProps = {
 	cameras: [
@@ -19,9 +16,6 @@ export const defaultCameraOptions: CameraProps = {
 			cameraId: 'default',
 			name: 'Default Camera',
 			fov: 60,
-			near: 0.0001,
-			far: 1000,
-			position: [5, 5, 5],
 			initial: true,
 			shouldAnimate: true,
 			animationConfig: {
@@ -45,7 +39,7 @@ export const SceneCamera: React.FC<CameraProps> = (props) => {
 		(sceneCamera: PerspectiveCamera) => {
 			if (!initialCamera) return
 
-			const { position, rotation, fov, near, far } = initialCamera
+			const { position, rotation, fov } = initialCamera
 
 			if (position) {
 				const serailizedPosition = Array.isArray(position)
@@ -74,15 +68,9 @@ export const SceneCamera: React.FC<CameraProps> = (props) => {
 			}
 			if (fov && sceneCamera.type === 'PerspectiveCamera') {
 				// Only PerspectiveCamera has 'fov'
-				;(sceneCamera as PerspectiveCamera).fov = fov
+				sceneCamera.fov = fov
 			}
-			if (near) {
-				sceneCamera.near = near
-			}
-			if (far) {
-				sceneCamera.far = far
-			}
-			sceneCamera.updateProjectionMatrix()
+
 			bounds.reset().fit()
 
 			initializedCameraPosition.current = true
@@ -93,7 +81,7 @@ export const SceneCamera: React.FC<CameraProps> = (props) => {
 	useEffect(() => {
 		if (initializedCameraPosition.current) return
 		setTimeout(() => initializeCamera(sceneCamera as PerspectiveCamera), 0)
-	}, [sceneCamera, initializeCamera])
+	}, [initializeCamera])
 
 	useEffect(() => {
 		// update camera properties if props change after initialization
@@ -101,9 +89,7 @@ export const SceneCamera: React.FC<CameraProps> = (props) => {
 		initializeCamera(sceneCamera as PerspectiveCamera)
 	}, [cameras, initializeCamera, sceneCamera])
 
-	return <></>
+	return null
 }
-
-SceneCamera.displayName = 'SceneCamera'
 
 export default SceneCamera

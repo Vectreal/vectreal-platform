@@ -1,12 +1,12 @@
 import { useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { EffectComposer, ToneMapping } from '@react-three/postprocessing'
-import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
 import { VectrealViewer } from '@vctrl/viewer'
 import { ToneMappingMode } from 'postprocessing'
 
 import rocket from '../../assets/models/rocket-v3.glb?url'
+import CenteredSpinner from '../centered-spinner'
 
 interface ModelProps {
 	url: string
@@ -32,7 +32,7 @@ const Model = ({ url, vertical }: ModelProps) => {
 
 					<EffectComposer>
 						<ToneMapping
-							toneMapptinMode={ToneMappingMode.ACES_FILMIC}
+							toneMappingMode={ToneMappingMode.ACES_FILMIC}
 							adaptionRate={1}
 						/>
 					</EffectComposer>
@@ -56,14 +56,7 @@ const HeroSceneClient = ({ vertical }: HeroSceneProps) => {
 		>
 			<VectrealViewer
 				theme="dark"
-				loader={
-					<div className="text-muted! flex flex-col items-center justify-center gap-4 rounded-xl">
-						<p className="text-muted-foreground/50! font-light!">
-							Loading model...
-						</p>
-						<LoadingSpinner />
-					</div>
-				}
+				loader={<CenteredSpinner text="Loading model..." />}
 				controlsOptions={{ enabled: false }}
 				envOptions={{ preset: vertical ? 'studio-key' : 'night-city' }}
 				shadowsOptions={{ type: 'contact', opacity: 0 }}
