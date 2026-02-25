@@ -1,0 +1,53 @@
+name: CD - Deploy Platform to Staging
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'apps/vectreal-platform/**'
+      - 'packages/core/**'
+      - 'packages/hooks/**'
+      - 'packages/viewer/**'
+      - 'shared/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'nx.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/ci-lint-typecheck.yaml'
+      - '.github/workflows/cd-platform-staging.yaml'
+      - '.github/workflows/shared-gcloud-deploy.yaml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-typecheck:
+    name: Lint and Typecheck Gate
+    uses: ./.github/workflows/ci-lint-typecheck.yaml
+
+  deploy-staging:
+    name: Deploy to Staging Environment
+    needs: lint-typecheck
+    if: ${{ needs.lint-typecheck.result == 'success' }}
+    uses: ./.github/workflows/shared-gcloud-deploy.yaml
+    with:
+      environment: staging
+      service-name: vectreal-platform-staging
+      image-name: vectreal-platform-staging
+      region: europe-west3
+      artifact-region: us-central1
+      node-env: staging
+      allow-unauthenticated: false
+      cloud-run-flags: '--ingress internal-and-cloud-load-balancing'
+      static-bucket-name: 'vectreal-static-staging'
+      static-cache-control: 'public, max-age=31536000, immutable'
+    secrets:
+      gcp-credentials: ${{ secrets.GCP_CREDENTIALS_STAGING }}
+      gcp-project-id: ${{ secrets.GCP_PROJECT_ID_STAGING }}
+      database-url: ${{ secrets.DATABASE_URL_STAGING }}
+      supabase-url: ${{ secrets.SUPABASE_URL_STAGING }}
+      supabase-key: ${{ secrets.SUPABASE_KEY_STAGING }}
+      google-cloud-storage-private-bucket: ${{ secrets.GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING }}
+      application-url: ${{ secrets.APPLICATION_URL_STAGING }}

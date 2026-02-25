@@ -1,0 +1,40 @@
+name: CD - Deploy Platform to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image-uri:
+        description: 'Full image URI to promote to production (for example us-central1-docker.pkg.dev/PROJECT/vectreal-platform/vectreal-platform-staging@sha256:...)'
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-production:
+    name: Deploy to Production Environment
+    uses: ./.github/workflows/shared-gcloud-deploy.yaml
+    with:
+      environment: production
+      service-name: vectreal-platform
+      image-name: vectreal-platform
+      region: us-central1
+      artifact-region: us-central1
+      node-env: production
+      build-and-push-image: false
+      image-uri: ${{ inputs.image-uri }}
+      allow-unauthenticated: false
+      cloud-run-flags: '--ingress internal-and-cloud-load-balancing'
+      static-bucket-name: 'vectreal-static-prod'
+      static-cache-control: 'public, max-age=31536000, immutable'
+      promote-static-from-bucket: 'vectreal-static-staging'
+    secrets:
+      gcp-credentials: ${{ secrets.GCP_CREDENTIALS }}
+      gcp-project-id: ${{ secrets.GCP_PROJECT_ID }}
+      database-url: ${{ secrets.DATABASE_URL_PROD }}
+      supabase-url: ${{ secrets.SUPABASE_URL_PROD }}
+      supabase-key: ${{ secrets.SUPABASE_KEY_PROD }}
+      google-cloud-storage-private-bucket: ${{ secrets.GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD }}
+      application-url: ${{ secrets.APPLICATION_URL_PROD }}

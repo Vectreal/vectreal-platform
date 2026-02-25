@@ -1,0 +1,47 @@
+# Copy this file to terraform.tfvars and fill in your values
+# DO NOT commit terraform.tfvars to version control!
+
+project_id = "your-gcp-project-id"
+region     = "us-central1"
+# Optional: set dedicated staging Cloud Run primary region
+# staging_region = "europe-west3"
+
+github_org  = "your-github-org"
+github_repo = "vectreal-platform"
+
+# Optional: Customize service names
+# production_service_name = "vectreal-platform"
+# staging_service_name    = "vectreal-platform-staging"
+
+# Optional: Customize private bucket names
+# production_private_bucket_name = "vectreal-private-bucket"
+# staging_private_bucket_name    = "vectreal-private-bucket-staging"
+# local_dev_private_bucket_name  = "vectreal-private-bucket-dev"
+
+# Optional: Customize scaling
+# production_min_instances = 1
+# production_max_instances = 50
+# staging_min_instances    = 0
+# staging_max_instances    = 10
+
+# Optional: Customize resources
+# production_memory = "4Gi"
+# production_cpu    = "4"
+# memory            = "2Gi"
+# cpu               = "2"
+
+# Optional: Shared edge/CDN rollout for staging + production
+# enable_edge            = true
+# staging_edge_host      = "staging.example.com"
+# staging_static_host    = "static-staging.example.com"
+# production_edge_host   = "app.example.com"
+# production_static_host = "static.example.com"
+# managed_certificate_domains = [
+#   "staging.example.com",
+#   "static-staging.example.com",
+#   "app.example.com",
+#   "static.example.com"
+# ]
+# staging_static_bucket_name    = "vectreal-static-staging"
+# production_static_bucket_name = "vectreal-static-prod"
+
