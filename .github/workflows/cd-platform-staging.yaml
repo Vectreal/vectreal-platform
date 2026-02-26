@@ -54,3 +54,4 @@ jobs:
       supabase-key: ${{ secrets.SUPABASE_KEY_STAGING }}
       google-cloud-storage-private-bucket: ${{ secrets.GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING }}
       application-url: ${{ secrets.APPLICATION_URL_STAGING }}
+      csrf-secret: ${{ secrets.CSRF_SECRET_STAGING }}

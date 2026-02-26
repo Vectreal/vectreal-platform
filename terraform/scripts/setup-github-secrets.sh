@@ -63,6 +63,7 @@ if [ ! -f "$ENV_FILE" ]; then
     echo "  - SUPABASE_KEY_PROD / SUPABASE_KEY_STAGING"
     echo "  - GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD / GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING"
     echo "  - APPLICATION_URL_PROD / APPLICATION_URL_STAGING"
+    echo "  - CSRF_SECRET_PROD / CSRF_SECRET_STAGING"
     exit 1
 fi
 
@@ -87,11 +88,13 @@ REQUIRED_VARS=(
     "SUPABASE_KEY_PROD"
     "GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD"
     "APPLICATION_URL_PROD"
+    "CSRF_SECRET_PROD"
     "DATABASE_URL_STAGING"
     "SUPABASE_URL_STAGING"
     "SUPABASE_KEY_STAGING"
     "GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING"
     "APPLICATION_URL_STAGING"
+    "CSRF_SECRET_STAGING"
 )
 
 MISSING_VARS=()
@@ -148,7 +151,8 @@ gh secret set SUPABASE_URL_PROD --body "$SUPABASE_URL_PROD"
 gh secret set SUPABASE_KEY_PROD --body "$SUPABASE_KEY_PROD"
 gh secret set GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD --body "$GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD"
 gh secret set APPLICATION_URL_PROD --body "$APPLICATION_URL_PROD"
-echo "  ✅ Production secrets (5)"
+gh secret set CSRF_SECRET_PROD --body "$CSRF_SECRET_PROD"
+echo "  ✅ Production secrets (6)"
 
 # Staging secrets
 echo "→ Setting staging secrets..."
@@ -157,7 +161,8 @@ gh secret set SUPABASE_URL_STAGING --body "$SUPABASE_URL_STAGING"
 gh secret set SUPABASE_KEY_STAGING --body "$SUPABASE_KEY_STAGING"
 gh secret set GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING --body "$GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING"
 gh secret set APPLICATION_URL_STAGING --body "$APPLICATION_URL_STAGING"
-echo "  ✅ Staging secrets (5)"
+gh secret set CSRF_SECRET_STAGING --body "$CSRF_SECRET_STAGING"
+echo "  ✅ Staging secrets (6)"
 
 # ============================================================================
 # Summary

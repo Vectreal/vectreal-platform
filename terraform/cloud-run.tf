@@ -2,16 +2,15 @@
 # Cloud Run Services
 # =============================================================================
 # 
-# IMPORTANT: By default, Cloud Run services are NOT managed by Terraform to
-# avoid circular dependencies during initial setup:
+# IMPORTANT: In this repository, Cloud Run services ARE managed by Terraform by
+# default (manage_cloud_run_services=true). GitHub Actions still deploys each
+# revision by updating image/env on the existing services.
 #
-# 1. Terraform creates: APIs, Artifact Registry, Secrets (empty), Service Accounts
-# 2. You populate secrets manually with actual values
-# 3. GitHub Actions creates Cloud Run services on first deployment with secret refs
-#
-# This approach eliminates dependencies between infrastructure and deployment.
-#
-# To manage services via Terraform later, set: manage_cloud_run_services = true
+# Optional bootstrap mode:
+# - Set manage_cloud_run_services=false when you want GitHub Actions to create
+#   Cloud Run services on first deployment.
+# - Use this only for initial setup patterns that intentionally avoid Terraform
+#   service resources.
 # =============================================================================
 
 locals {

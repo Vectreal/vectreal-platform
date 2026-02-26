@@ -90,6 +90,9 @@ on:
       application-url:
         description: 'Application URL'
         required: true
+      csrf-secret:
+        description: 'CSRF/session secret used for server-side cookie signing in production-like environments'
+        required: true
 
 jobs:
   deploy:
@@ -192,6 +195,7 @@ jobs:
             SUPABASE_KEY=${{ secrets.supabase-key }}
             GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET=${{ secrets.google-cloud-storage-private-bucket }}
             APPLICATION_URL=${{ secrets.application-url }}
+            CSRF_SECRET=${{ secrets.csrf-secret }}
 
       - name: Verify deployment health
         run: |
