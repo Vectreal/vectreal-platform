@@ -1,4 +1,4 @@
-// apps/api/drizzle.config.ts
+// apps/vectreal-platform/drizzle.config.ts
 import { defineConfig } from 'drizzle-kit'
 
 // Ensure the DATABASE_URL environment variable is set
@@ -11,7 +11,7 @@ export default defineConfig({
 	// Specify the database dialect
 	dialect: 'postgresql', // Explicitly set database dialect
 	schema: './app/db/schema/index.ts', // Point to the main schema file
-	out: 'drizzle', // Output directory for migrations
+	out: './supabase/migrations', // Output to Supabase migrations directory
 	dbCredentials: {
 		url: connectionUrl
 	}

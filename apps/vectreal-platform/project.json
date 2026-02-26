@@ -102,9 +102,8 @@
 				"cwd": "apps/vectreal-platform",
 				"envFile": ".env.development",
 				"commands": [
-					"pnpm exec supabase db reset",
 					"pnpm exec drizzle-kit generate --config drizzle.config.ts",
-					"pnpm exec drizzle-kit migrate --config drizzle.config.ts"
+					"pnpm exec supabase db reset"
 				],
 				"parallel": false
 			}
@@ -113,7 +112,7 @@
 			"executor": "nx:run-commands",
 			"options": {
 				"cwd": "apps/vectreal-platform",
-				"commands": ["rm -rf drizzle"],
+				"commands": ["rm -rf supabase/migrations"],
 				"parallel": false
 			}
 		},

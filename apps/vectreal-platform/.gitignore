@@ -61,6 +61,3 @@ temp/
 *.tmp
 *.backup
 .react-router
-
-# Db files
-drizzle
