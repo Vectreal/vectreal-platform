@@ -67,4 +67,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
 
 # Start the application using react-router-serve from the correct directory
 WORKDIR /app
-CMD ["npx", "react-router-serve", "build/apps/vectreal-platform/server/index.js"]
+CMD ["./node_modules/.bin/react-router-serve", "build/apps/vectreal-platform/server/index.js"]

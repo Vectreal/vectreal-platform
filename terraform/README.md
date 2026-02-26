@@ -49,7 +49,7 @@ This script will:
 1. ✅ Check GitHub CLI authentication
 2. ✅ Load secrets from `.env.development`
 3. ✅ Validate all required variables
-4. ✅ Set all 14 GitHub secrets automatically
+4. ✅ Set all 16 GitHub secrets automatically
 
 ### Manual Setup
 
@@ -137,9 +137,11 @@ gh workflow run "CD - Deploy Platform to Production" # Deploy to production
 
 ### What is NOT Created by Terraform
 
-- ❌ Cloud Run services (managed by GitHub Actions)
 - ❌ Secret Manager resources (using GitHub Secrets instead)
 - ❌ Application secrets (stored in GitHub Secrets)
+
+Cloud Run services are managed by Terraform in this repository by default (`manage_cloud_run_services = true`).
+GitHub Actions deploys new revisions by updating image and runtime env vars on those services.
 
 ## Required GitHub Secrets
 
@@ -152,23 +154,25 @@ Set these via the setup script or manually:
 - `GCP_CREDENTIALS_STAGING` - Staging deployer service account key
 - `GCP_PROJECT_ID_STAGING` - GCP project ID (typically same as prod)
 
-### Production Secrets (5 secrets)
+### Production Secrets (6 secrets)
 
 - `DATABASE_URL_PROD` - PostgreSQL connection string
 - `SUPABASE_URL_PROD` - Supabase project URL
 - `SUPABASE_KEY_PROD` - Supabase anonymous public key
 - `GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD` - Google Cloud Storage private bucket name
 - `APPLICATION_URL_PROD` - Your production domain
+- `CSRF_SECRET_PROD` - CSRF/session cookie signing secret
 
-### Staging Secrets (5 secrets)
+### Staging Secrets (6 secrets)
 
 - `DATABASE_URL_STAGING` - Staging PostgreSQL connection string
 - `SUPABASE_URL_STAGING` - Staging Supabase project URL
 - `SUPABASE_KEY_STAGING` - Staging Supabase anonymous key
 - `GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING` - Staging private GCS bucket name
 - `APPLICATION_URL_STAGING` - Staging domain
+- `CSRF_SECRET_STAGING` - CSRF/session cookie signing secret
 
-**Total: 14 GitHub Secrets**
+**Total: 16 GitHub Secrets**
 
 ## Configuration
 
@@ -186,8 +190,8 @@ github_org = "your-github-org"
 # staging_private_bucket_name    = "vectreal-private-bucket-staging"
 # local_dev_private_bucket_name  = "vectreal-private-bucket-dev"
 
-# Optional: Let Terraform manage Cloud Run services (not recommended)
-# manage_cloud_run_services = false  # default
+# Optional: Bootstrap mode where GitHub Actions creates Cloud Run services
+# manage_cloud_run_services = false  # default is true
 
 # Optional: Staging-first latency quick wins
 # enable_staging_edge = true

@@ -1,13 +1,3 @@
-output "production_service_url" {
-  description = "URL of the production Cloud Run service (only if managed by Terraform)"
-  value       = var.manage_cloud_run_services ? google_cloud_run_v2_service.production[0].uri : "Not managed by Terraform - created by GitHub Actions"
-}
-
-output "staging_service_url" {
-  description = "URL of the staging Cloud Run service (only if managed by Terraform)"
-  value       = var.manage_cloud_run_services ? google_cloud_run_v2_service.staging[0].uri : "Not managed by Terraform - created by GitHub Actions"
-}
-
 output "production_service_name" {
   description = "Name of the production Cloud Run service"
   value       = var.production_service_name
@@ -84,34 +74,6 @@ output "local_dev_storage_key_path" {
   description = "Path to the local development storage service account key"
   value       = local_sensitive_file.local_dev_storage_key.filename
   sensitive   = true
-}
-
-output "staging_secondary_service_names" {
-  description = "Names of the staging secondary-region Cloud Run services"
-  value       = [for service in values(google_cloud_run_v2_service.staging_secondary) : service.name]
-}
-
-output "production_secondary_service_names" {
-  description = "Names of the production secondary-region Cloud Run services"
-  value       = [for service in values(google_cloud_run_v2_service.production_secondary) : service.name]
-}
-
-output "staging_edge_ip" {
-  description = "Global IP address for staging edge load balancer (only when enabled)"
-  value       = length(google_compute_global_address.staging_edge) > 0 ? google_compute_global_address.staging_edge[0].address : ""
-}
-
-output "staging_static_bucket_name" {
-  description = "Public staging static bucket name (only when staging edge is enabled)"
-  value       = length(google_storage_bucket.staging_static) > 0 ? google_storage_bucket.staging_static[0].name : ""
-}
-
-output "staging_edge_hosts" {
-  description = "Hostnames configured for staging edge"
-  value = {
-    app_host    = var.staging_edge_host
-    static_host = var.staging_static_host
-  }
 }
 
 # GitHub Secrets Setup - Use the helper script
