@@ -190,6 +190,9 @@ docker inspect vectreal-platform
 
 For Google Cloud Run deployment, the Dockerfile is optimized with:
 
+- Single Docker-native build (dependencies + app build happen inside the image build)
+- Static client assets extracted from the built image and uploaded to GCS/CDN
+- The same built image promoted and deployed to Cloud Run (no second app build)
 - Multi-stage build for smaller image size
 - Non-root user for security
 - Health check endpoint at `/health`
