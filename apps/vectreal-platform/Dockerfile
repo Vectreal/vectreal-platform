@@ -27,12 +27,21 @@ COPY shared/utils/package.json ./shared/utils/
 RUN corepack prepare pnpm@${PNPM_VERSION} --activate && \
     pnpm install --frozen-lockfile --prod=false
 
+# Build stage
+FROM deps AS build
+WORKDIR /app
+
+# Copy source and build application artifacts inside Docker
+COPY . .
+RUN pnpx nx build-ci vectreal-platform
+
 # Runner stage
 FROM base AS runner
 ARG PNPM_VERSION
+ARG NODE_ENV=production
 WORKDIR /app
 
-ENV NODE_ENV=production
+ENV NODE_ENV=${NODE_ENV}
 ENV PORT=8080
 ENV NODE_OPTIONS="--enable-source-maps --heapsnapshot-near-heap-limit=2"
 
@@ -51,12 +60,10 @@ ENV NODE_OPTIONS="--enable-source-maps --heapsnapshot-near-heap-limit=2"
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Copy runtime dependencies and prebuilt application artifacts.
-# Build artifacts are produced in CI before docker build using:
-#   pnpx nx build vectreal-platform
+# Copy runtime dependencies and application artifacts from build stages.
 COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=deps --chown=nodejs:nodejs /app/package.json ./package.json
-COPY --chown=nodejs:nodejs build/apps/vectreal-platform ./build/apps/vectreal-platform
+COPY --from=build --chown=nodejs:nodejs /app/build/apps/vectreal-platform ./build/apps/vectreal-platform
 
 USER nodejs
 

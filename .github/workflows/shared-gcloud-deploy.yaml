@@ -109,17 +109,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Set up pnpm
-        if: ${{ inputs.build-and-push-image }}
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node.js
-        if: ${{ inputs.build-and-push-image }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -127,20 +116,6 @@ jobs:
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
-
-      - name: Install dependencies for static build
-        if: ${{ inputs.build-and-push-image }}
-        run: pnpm install --frozen-lockfile
-
-      - name: Build application artifacts
-        if: ${{ inputs.build-and-push-image }}
-        run: pnpx nx build-ci vectreal-platform
-
-      - name: Upload static client assets to GCS
-        if: ${{ inputs.static-bucket-name != '' && inputs.build-and-push-image }}
-        run: |
-          gsutil -m rsync -r -d build/apps/vectreal-platform/client gs://${{ inputs.static-bucket-name }}
-          gsutil -m setmeta -h "Cache-Control:${{ inputs.static-cache-control }}" "gs://${{ inputs.static-bucket-name }}/**"
 
       - name: Promote static assets between buckets
         if: ${{ inputs.static-bucket-name != '' && !inputs.build-and-push-image && inputs.promote-static-from-bucket != '' }}
@@ -153,21 +128,64 @@ jobs:
         run: |
           gcloud auth configure-docker ${{ inputs.artifact-region }}-docker.pkg.dev
 
-      - name: Build and push Docker image
+      - name: Compute image tags
         if: ${{ inputs.build-and-push-image }}
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./apps/vectreal-platform/Dockerfile
-          target: runner
-          push: true
-          tags: |
-            ${{ inputs.artifact-region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:${{ github.sha }}
-            ${{ inputs.environment == 'production' && format('{0}-docker.pkg.dev/{1}/vectreal-platform/{2}:latest', inputs.artifact-region, secrets.gcp-project-id, inputs.image-name) || '' }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            NODE_ENV=${{ inputs.node-env }}
+        id: image-tags
+        run: |
+          PRIMARY_TAG="${{ inputs.artifact-region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:${{ github.sha }}"
+          LATEST_TAG=""
+
+          if [ "${{ inputs.environment }}" = "production" ]; then
+            LATEST_TAG="${{ inputs.artifact-region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:latest"
+          fi
+
+          echo "primary=${PRIMARY_TAG}" >> "$GITHUB_OUTPUT"
+          echo "latest=${LATEST_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Build Docker image once
+        if: ${{ inputs.build-and-push-image }}
+        run: |
+          PRIMARY_TAG="${{ steps.image-tags.outputs.primary }}"
+          LATEST_TAG="${{ steps.image-tags.outputs.latest }}"
+
+          TAG_ARGS=(--tag "$PRIMARY_TAG")
+          if [ -n "$LATEST_TAG" ]; then
+            TAG_ARGS+=(--tag "$LATEST_TAG")
+          fi
+
+          docker buildx build \
+            --file ./apps/vectreal-platform/Dockerfile \
+            --target runner \
+            --build-arg NODE_ENV=${{ inputs.node-env }} \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            "${TAG_ARGS[@]}" \
+            --load \
+            .
+
+      - name: Extract static client assets from built image
+        if: ${{ inputs.static-bucket-name != '' && inputs.build-and-push-image }}
+        run: |
+          IMAGE_TAG="${{ steps.image-tags.outputs.primary }}"
+          CONTAINER_ID=$(docker create "$IMAGE_TAG")
+          mkdir -p build/apps/vectreal-platform/client
+          docker cp "$CONTAINER_ID":/app/build/apps/vectreal-platform/client/. build/apps/vectreal-platform/client
+          docker rm "$CONTAINER_ID"
+
+      - name: Upload static client assets to GCS
+        if: ${{ inputs.static-bucket-name != '' && inputs.build-and-push-image }}
+        run: |
+          gsutil -m rsync -r -d build/apps/vectreal-platform/client gs://${{ inputs.static-bucket-name }}
+          gsutil -m setmeta -h "Cache-Control:${{ inputs.static-cache-control }}" "gs://${{ inputs.static-bucket-name }}/**"
+
+      - name: Push Docker image tags
+        if: ${{ inputs.build-and-push-image }}
+        run: |
+          docker push "${{ steps.image-tags.outputs.primary }}"
+
+          if [ -n "${{ steps.image-tags.outputs.latest }}" ]; then
+            docker push "${{ steps.image-tags.outputs.latest }}"
+          fi
 
       - name: Resolve image URI
         id: image
