@@ -152,7 +152,7 @@
 		"prettier": "^3.5.3",
 		"prettier-plugin-tailwindcss": "^0.6.11",
 		"rollup": "^4.14.0",
-		"storybook": "10.2.8",
+		"storybook": "10.2.10",
 		"supabase": "^2.76.15",
 		"tailwindcss": "^4.1.4",
 		"tslib": "^2.8.1",
