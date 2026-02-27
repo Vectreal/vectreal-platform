@@ -1,7 +1,17 @@
-import { pgTable, primaryKey, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import {
+	index,
+	pgPolicy,
+	pgTable,
+	primaryKey,
+	timestamp,
+	uuid
+} from 'drizzle-orm/pg-core'
+import { authUid, authenticatedRole } from 'drizzle-orm/supabase'
 
 import { apiKeys } from './api-keys'
 import { projects } from '../project/projects'
+import { canAccessProject, ownsApiKey } from '../rls'
 
 export const apiKeyProjects = pgTable(
 	'api_key_projects',
@@ -16,7 +26,33 @@ export const apiKeyProjects = pgTable(
 			.defaultNow()
 			.notNull()
 	},
-	(table) => ({
-		pk: primaryKey({ columns: [table.apiKeyId, table.projectId] })
-	})
-)
+	(table) => [
+		primaryKey({ columns: [table.apiKeyId, table.projectId] }),
+		index('api_key_projects_api_key_id_idx').on(table.apiKeyId),
+		index('api_key_projects_project_id_idx').on(table.projectId),
+		pgPolicy('api_key_projects_select_owner_and_project_member', {
+			for: 'select',
+			to: authenticatedRole,
+			using: sql`${ownsApiKey(table.apiKeyId)} and ${canAccessProject(table.projectId)}`
+		}),
+		pgPolicy('api_key_projects_insert_owner_and_project_member', {
+			for: 'insert',
+			to: authenticatedRole,
+			withCheck: sql`
+				${ownsApiKey(table.apiKeyId)}
+				and ${canAccessProject(table.projectId)}
+				and exists (
+					select 1
+					from api_keys ak
+					where ak.id = ${table.apiKeyId}
+						and ak.user_id = ${authUid}
+				)
+			`
+		}),
+		pgPolicy('api_key_projects_delete_owner', {
+			for: 'delete',
+			to: authenticatedRole,
+			using: ownsApiKey(table.apiKeyId)
+		})
+	]
+).enableRLS()

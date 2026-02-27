@@ -4,7 +4,7 @@ import { ModelProvider, useModelContext } from '@vctrl/hooks/use-load-model'
 import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
 import { Provider, useAtom, useAtomValue } from 'jotai/react'
 import { useCallback } from 'react'
-import { Outlet } from 'react-router'
+import { data, Outlet } from 'react-router'
 
 import { Navigation } from '../../components/navigation'
 import {
@@ -30,7 +30,7 @@ import type { SceneAggregateResponse } from '../../types/api'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export const loader = async ({ request, params }: Route.LoaderArgs) => {
-	const { client } = await createSupabaseClient(request)
+	const { client, headers } = await createSupabaseClient(request)
 	const {
 		data: { user }
 	} = await client.auth.getUser()
@@ -57,7 +57,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		sceneAggregate
 	}
 
-	return loaderData
+	return data(loaderData, { headers })
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({

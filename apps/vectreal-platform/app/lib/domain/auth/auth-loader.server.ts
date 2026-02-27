@@ -15,6 +15,7 @@ export interface AuthLoaderResult {
 
 export interface AuthSessionResult {
 	user: User
+	headers: HeadersInit
 }
 
 export async function loadAuthenticatedSession(
@@ -27,7 +28,8 @@ export async function loadAuthenticatedSession(
 	}
 
 	return {
-		user: authResponse.user
+		user: authResponse.user,
+		headers: authResponse.headers ?? {}
 	}
 }
 

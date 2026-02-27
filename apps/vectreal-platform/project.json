@@ -63,57 +63,154 @@
 		"supabase-restart": {
 			"executor": "nx:run-commands",
 			"options": {
-				"cwd": "apps/vectreal-platform/supabase",
+				"cwd": "apps/vectreal-platform",
 				"envFile": ".env.development",
-				"commands": ["pnpm exec supabase stop", "pnpm exec supabase start"],
+				"commands": ["pnpm exec supabase stop ", "pnpm exec supabase start "],
 				"parallel": false
 			}
 		},
 		"supabase-start": {
 			"executor": "nx:run-commands",
 			"options": {
-				"cwd": "apps/vectreal-platform/supabase",
+				"cwd": "apps/vectreal-platform",
 				"envFile": ".env.development",
-				"commands": ["pnpm exec supabase start"],
+				"commands": ["pnpm exec supabase start "],
 				"parallel": false
 			}
 		},
 		"supabase-stop": {
 			"executor": "nx:run-commands",
 			"options": {
-				"cwd": "apps/vectreal-platform/supabase",
+				"cwd": "apps/vectreal-platform",
 				"envFile": ".env.development",
-				"commands": ["pnpm exec supabase stop"],
+				"commands": ["pnpm exec supabase stop "],
 				"parallel": false
 			}
 		},
 		"supabase-db-reset": {
 			"executor": "nx:run-commands",
 			"options": {
-				"cwd": "apps/vectreal-platform/supabase",
+				"cwd": "apps/vectreal-platform",
 				"envFile": ".env.development",
 				"commands": ["pnpm exec supabase db reset"],
 				"parallel": false
 			}
 		},
-		"db-reset": {
+		"supabase-db-push-local": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"commands": ["pnpm exec supabase db push --local"],
+				"parallel": false
+			}
+		},
+		"supabase-db-push-staging": {
 			"executor": "nx:run-commands",
 			"options": {
 				"cwd": "apps/vectreal-platform",
 				"envFile": ".env.development",
 				"commands": [
-					"pnpm exec supabase db reset",
-					"pnpm exec drizzle-kit generate --config drizzle.config.ts",
-					"pnpm exec drizzle-kit migrate --config drizzle.config.ts"
+					"SUPABASE_DB_PASSWORD=\"$SUPABASE_DB_PASSWORD_STAGING\" pnpm exec supabase link --project-ref \"$SUPABASE_PROJECT_REF_STAGING\" --skip-pooler",
+					"SUPABASE_DB_PASSWORD=\"$SUPABASE_DB_PASSWORD_STAGING\" pnpm exec supabase db push --linked"
 				],
 				"parallel": false
 			}
 		},
-		"drizzle-clean": {
+		"supabase-db-push-prod": {
 			"executor": "nx:run-commands",
 			"options": {
 				"cwd": "apps/vectreal-platform",
-				"commands": ["rm -rf drizzle"],
+				"envFile": ".env.development",
+				"commands": [
+					"SUPABASE_DB_PASSWORD=\"$SUPABASE_DB_PASSWORD_PROD\" pnpm exec supabase link --project-ref \"$SUPABASE_PROJECT_REF_PROD\" --skip-pooler",
+					"SUPABASE_DB_PASSWORD=\"$SUPABASE_DB_PASSWORD_PROD\" pnpm exec supabase db push --linked"
+				],
+				"parallel": false
+			}
+		},
+		"supabase-db-reset-staging": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"commands": [
+					"pnpm exec supabase db reset --db-url \"postgresql://postgres:${SUPABASE_DB_PASSWORD_STAGING}@db.${SUPABASE_PROJECT_REF_STAGING}.supabase.co:5432/postgres\" --yes",
+					"pnpm exec supabase db push --db-url \"postgresql://postgres:${SUPABASE_DB_PASSWORD_STAGING}@db.${SUPABASE_PROJECT_REF_STAGING}.supabase.co:5432/postgres\""
+				],
+				"parallel": false
+			}
+		},
+		"supabase-db-reset-prod": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"commands": [
+					"pnpm exec supabase db reset --db-url \"postgresql://postgres:${SUPABASE_DB_PASSWORD_PROD}@db.${SUPABASE_PROJECT_REF_PROD}.supabase.co:5432/postgres\" --yes",
+					"pnpm exec supabase db push --db-url \"postgresql://postgres:${SUPABASE_DB_PASSWORD_PROD}@db.${SUPABASE_PROJECT_REF_PROD}.supabase.co:5432/postgres\""
+				],
+				"parallel": false
+			}
+		},
+		"supabase-db-pull-staging": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"commands": [
+					"pnpm exec supabase db pull --db-url \"$DATABASE_URL_STAGING\" --schema public"
+				],
+				"parallel": false
+			}
+		},
+		"supabase-db-pull-prod": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"commands": [
+					"pnpm exec supabase db pull --db-url \"$DATABASE_URL_PROD\" --schema public"
+				],
+				"parallel": false
+			}
+		},
+		"supabase-db-dump-staging-public": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"commands": [
+					"pnpm exec supabase db dump --db-url \"$DATABASE_URL_STAGING\" --schema public --file ./sql/staging_public_schema.sql"
+				],
+				"parallel": false
+			}
+		},
+		"supabase-db-dump-prod-public": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"commands": [
+					"pnpm exec supabase db dump --db-url \"$DATABASE_URL_PROD\" --schema public --file ./sql/prod_public_schema.sql"
+				],
+				"parallel": false
+			}
+		},
+		"supabase-migration-repair-staging": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"command": "pnpm exec supabase migration repair --db-url \"$DATABASE_URL_STAGING\" --status applied --yes"
+			}
+		},
+		"supabase-db-lint": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"commands": ["pnpm exec supabase db lint "],
 				"parallel": false
 			}
 		},
@@ -124,61 +221,6 @@
 				"envFile": ".env.development",
 				"commands": [
 					"pnpm exec drizzle-kit generate --config drizzle.config.ts"
-				],
-				"parallel": false
-			}
-		},
-		"drizzle-migrate": {
-			"executor": "nx:run-commands",
-			"options": {
-				"cwd": "apps/vectreal-platform",
-				"envFile": ".env.development",
-				"commands": [
-					"pnpm exec drizzle-kit migrate --config drizzle.config.ts"
-				],
-				"parallel": false
-			}
-		},
-		"drizzle-push-staging": {
-			"executor": "nx:run-commands",
-			"options": {
-				"cwd": "apps/vectreal-platform",
-				"envFile": ".env.development",
-				"commands": [
-					"DATABASE_URL=$DATABASE_URL_STAGING pnpm exec drizzle-kit push --config drizzle.config.ts"
-				],
-				"parallel": false
-			}
-		},
-		"drizzle-push-prod": {
-			"executor": "nx:run-commands",
-			"options": {
-				"cwd": "apps/vectreal-platform",
-				"envFile": ".env.development",
-				"commands": [
-					"DATABASE_URL=$DATABASE_URL_PROD pnpm exec drizzle-kit push --config drizzle.config.ts"
-				],
-				"parallel": false
-			}
-		},
-		"drizzle-migrate-staging": {
-			"executor": "nx:run-commands",
-			"options": {
-				"cwd": "apps/vectreal-platform",
-				"envFile": ".env.development",
-				"commands": [
-					"DATABASE_URL=$DATABASE_URL_STAGING pnpm exec drizzle-kit migrate --config drizzle.config.ts"
-				],
-				"parallel": false
-			}
-		},
-		"drizzle-migrate-prod": {
-			"executor": "nx:run-commands",
-			"options": {
-				"cwd": "apps/vectreal-platform",
-				"envFile": ".env.development",
-				"commands": [
-					"DATABASE_URL=$DATABASE_URL_PROD pnpm exec drizzle-kit migrate --config drizzle.config.ts"
 				],
 				"parallel": false
 			}

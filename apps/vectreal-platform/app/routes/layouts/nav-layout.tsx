@@ -1,4 +1,4 @@
-import { Outlet, redirect } from 'react-router'
+import { data, Outlet, redirect } from 'react-router'
 
 import { Route } from './+types/nav-layout'
 import { Footer } from '../../components/footer'
@@ -22,7 +22,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 			data: { session }
 		} = await client.auth.getSession()
 
-		if (!session) return defaultResponse
+		if (!session) {
+			return data(defaultResponse, { headers })
+		}
 
 		const {
 			data: { user }
@@ -37,13 +39,13 @@ export async function loader({ request }: Route.LoaderArgs) {
 		if (user && isRootPage) {
 			return redirect('/dashboard', { headers })
 		} else {
-			return { user, isMobile: isMobileRequest(request) }
+			return data({ user, isMobile: isMobileRequest(request) }, { headers })
 		}
 	} catch (error) {
 		console.error('Error during loader authentication check:', error)
 	}
 
-	return defaultResponse
+	return data(defaultResponse)
 }
 const Layout = ({ loaderData }: Route.ComponentProps) => {
 	return (
