@@ -1,23 +1,47 @@
 import type { ApiResponseType } from '../types/api-core'
 
+function mergeHeaders(
+	defaultHeaders: Record<string, string>,
+	additionalHeaders?: Headers | Record<string, string>
+): Headers {
+	const headers = new Headers(defaultHeaders)
+
+	if (!additionalHeaders) {
+		return headers
+	}
+
+	if (additionalHeaders instanceof Headers) {
+		for (const [key, value] of additionalHeaders.entries()) {
+			if (key.toLowerCase() === 'set-cookie') {
+				headers.append(key, value)
+				continue
+			}
+
+			headers.set(key, value)
+		}
+		return headers
+	}
+
+	for (const [key, value] of Object.entries(additionalHeaders)) {
+		headers.set(key, value)
+	}
+
+	return headers
+}
+
 export class ApiResponse {
 	static success<T>(
 		data: T,
 		status = 200,
 		options?: { headers?: Headers | Record<string, string> }
 	): Response {
-		const headers: Record<string, string> = {
-			'Content-Type': 'application/json'
-		}
-		if (options?.headers) {
-			if (options.headers instanceof Headers) {
-				options.headers.forEach((value, key) => {
-					headers[key] = value
-				})
-			} else {
-				Object.assign(headers, options.headers)
-			}
-		}
+		const headers = mergeHeaders(
+			{
+				'Content-Type': 'application/json'
+			},
+			options?.headers
+		)
+
 		return new Response(
 			JSON.stringify({ success: true, data } as ApiResponseType<T>),
 			{
@@ -32,19 +56,14 @@ export class ApiResponse {
 		status = 400,
 		options?: { headers?: Headers | Record<string, string> }
 	): Response {
-		const headers: Record<string, string> = {
-			'Content-Type': 'application/json',
-			'Cache-Control': 'no-store'
-		}
-		if (options?.headers) {
-			if (options.headers instanceof Headers) {
-				options.headers.forEach((value, key) => {
-					headers[key] = value
-				})
-			} else {
-				Object.assign(headers, options.headers)
-			}
-		}
+		const headers = mergeHeaders(
+			{
+				'Content-Type': 'application/json',
+				'Cache-Control': 'no-store'
+			},
+			options?.headers
+		)
+
 		return new Response(
 			JSON.stringify({ success: false, error: message } as ApiResponseType),
 			{
@@ -78,16 +97,25 @@ export class ApiResponse {
 		return this.error(message, 405)
 	}
 
-	static unauthorized(message = 'Unauthorized'): Response {
-		return this.error(message, 401)
+	static unauthorized(
+		message = 'Unauthorized',
+		options?: { headers?: Headers | Record<string, string> }
+	): Response {
+		return this.error(message, 401, options)
 	}
 
-	static forbidden(message = 'Forbidden'): Response {
-		return this.error(message, 403)
+	static forbidden(
+		message = 'Forbidden',
+		options?: { headers?: Headers | Record<string, string> }
+	): Response {
+		return this.error(message, 403, options)
 	}
 
-	static notFound(message = 'Resource not found'): Response {
-		return this.error(message, 404)
+	static notFound(
+		message = 'Resource not found',
+		options?: { headers?: Headers | Record<string, string> }
+	): Response {
+		return this.error(message, 404, options)
 	}
 
 	static serverError(message = 'Internal server error'): Response {

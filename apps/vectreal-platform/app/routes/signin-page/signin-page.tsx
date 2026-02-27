@@ -9,7 +9,7 @@ import {
 import { ApiResponse } from '@shared/utils'
 import { Eye, EyeClosed } from 'lucide-react'
 import { useState } from 'react'
-import { Form, redirect } from 'react-router'
+import { data, Form, redirect } from 'react-router'
 
 import { Route } from './+types/signin-page'
 import { createSupabaseClient } from '../../lib/supabase.server'
@@ -67,26 +67,29 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
-	const { client } = await createSupabaseClient(request)
+	const { client, headers } = await createSupabaseClient(request)
 	const {
 		data: { user }
 	} = await client.auth.getUser()
 
 	if (user) {
 		// Default redirect
-		return redirect('/dashboard')
+		return redirect('/dashboard', { headers })
 	}
 
 	// Check if this is a scene preservation flow
 	const url = new URL(request.url)
 	const sceneSaved = url.searchParams.get('scene_saved') === 'true'
 
-	return {
-		sceneSaved,
-		user: user ?? null,
-		isAuthenticated: !!user,
-		message: user ? 'Already authenticated' : null
-	}
+	return data(
+		{
+			sceneSaved,
+			user: user ?? null,
+			isAuthenticated: !!user,
+			message: user ? 'Already authenticated' : null
+		},
+		{ headers }
+	)
 }
 
 const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {

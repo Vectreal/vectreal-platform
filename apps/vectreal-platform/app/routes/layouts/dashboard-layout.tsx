@@ -7,6 +7,7 @@ import { Provider } from 'jotai/react'
 import { Loader2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import {
+	data,
 	Outlet,
 	useFetchers,
 	useLoaderData,
@@ -38,9 +39,9 @@ import { dashboardManagementStore } from '../../lib/stores/dashboard-management-
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user } = await loadAuthenticatedSession(request)
+	const { user, headers } = await loadAuthenticatedSession(request)
 
-	return { user }
+	return data({ user }, { headers })
 }
 
 /**
