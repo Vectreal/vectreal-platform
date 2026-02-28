@@ -15,6 +15,13 @@
       "when": 1772190331895,
       "tag": "0001_complete_hex",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772263217071,
+      "tag": "0002_gifted_inhumans",
+      "breakpoints": true
     }
   ]
 }

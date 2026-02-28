@@ -1,0 +1,2701 @@
+{
+  "id": "40929fed-d7c3-40ab-b2bb-00231072d75f",
+  "prevId": "269a4434-bedd-42b2-809c-ac05ea10066c",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {
+        "users_select_self": {
+          "name": "users_select_self",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"users\".\"id\" = (select auth.uid())"
+        },
+        "users_insert_self": {
+          "name": "users_insert_self",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\"users\".\"id\" = (select auth.uid())"
+        },
+        "users_update_self": {
+          "name": "users_update_self",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"users\".\"id\" = (select auth.uid())",
+          "withCheck": "\"users\".\"id\" = (select auth.uid())"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.organizations": {
+      "name": "organizations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "organizations_owner_id_idx": {
+          "name": "organizations_owner_id_idx",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "organizations_owner_id_users_id_fk": {
+          "name": "organizations_owner_id_users_id_fk",
+          "tableFrom": "organizations",
+          "tableTo": "users",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "organizations_select_member": {
+          "name": "organizations_select_member",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\t\t\texists (\n\t\t\t\t\tselect 1\n\t\t\t\t\tfrom organization_memberships om\n\t\t\t\t\twhere om.organization_id = \"organizations\".\"id\"\n\t\t\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\t)\n\t\t\t"
+        },
+        "organizations_insert_owner": {
+          "name": "organizations_insert_owner",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\"organizations\".\"owner_id\" = (select auth.uid())"
+        },
+        "organizations_update_owner": {
+          "name": "organizations_update_owner",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\t\t\texists (\n\t\t\t\t\tselect 1\n\t\t\t\t\tfrom organization_memberships om\n\t\t\t\t\twhere om.organization_id = \"organizations\".\"id\"\n\t\t\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\t\t\tand om.role = 'owner'\n\t\t\t\t)\n\t\t\t",
+          "withCheck": "\n\t\t\t\texists (\n\t\t\t\t\tselect 1\n\t\t\t\t\tfrom organization_memberships om\n\t\t\t\t\twhere om.organization_id = \"organizations\".\"id\"\n\t\t\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\t\t\tand om.role = 'owner'\n\t\t\t\t)\n\t\t\t"
+        },
+        "organizations_delete_owner": {
+          "name": "organizations_delete_owner",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\t\t\texists (\n\t\t\t\t\tselect 1\n\t\t\t\t\tfrom organization_memberships om\n\t\t\t\t\twhere om.organization_id = \"organizations\".\"id\"\n\t\t\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\t\t\tand om.role = 'owner'\n\t\t\t\t)\n\t\t\t"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.organization_memberships": {
+      "name": "organization_memberships",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "membership_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'member'"
+        },
+        "joined_at": {
+          "name": "joined_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "invited_at": {
+          "name": "invited_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "invited_by": {
+          "name": "invited_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "organization_memberships_user_id_idx": {
+          "name": "organization_memberships_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "organization_memberships_organization_id_idx": {
+          "name": "organization_memberships_organization_id_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "organization_memberships_invited_by_idx": {
+          "name": "organization_memberships_invited_by_idx",
+          "columns": [
+            {
+              "expression": "invited_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "organization_memberships_user_id_users_id_fk": {
+          "name": "organization_memberships_user_id_users_id_fk",
+          "tableFrom": "organization_memberships",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "organization_memberships_organization_id_organizations_id_fk": {
+          "name": "organization_memberships_organization_id_organizations_id_fk",
+          "tableFrom": "organization_memberships",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "organization_memberships_invited_by_users_id_fk": {
+          "name": "organization_memberships_invited_by_users_id_fk",
+          "tableFrom": "organization_memberships",
+          "tableTo": "users",
+          "columnsFrom": [
+            "invited_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "org_memberships_select_org_member": {
+          "name": "org_memberships_select_org_member",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\t\t\texists (\n\t\t\t\t\tselect 1\n\t\t\t\t\tfrom organization_memberships om\n\t\t\t\t\twhere om.organization_id = \"organization_memberships\".\"organization_id\"\n\t\t\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\t)\n\t\t\t"
+        },
+        "org_memberships_insert_org_admin": {
+          "name": "org_memberships_insert_org_admin",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\n\t\t\t\texists (\n\t\t\t\t\tselect 1\n\t\t\t\t\tfrom organization_memberships om\n\t\t\t\t\twhere om.organization_id = \"organization_memberships\".\"organization_id\"\n\t\t\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\t\t\tand om.role in ('owner', 'admin')\n\t\t\t\t)\n\t\t\t"
+        },
+        "org_memberships_update_org_admin": {
+          "name": "org_memberships_update_org_admin",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\t\t\texists (\n\t\t\t\t\tselect 1\n\t\t\t\t\tfrom organization_memberships om\n\t\t\t\t\twhere om.organization_id = \"organization_memberships\".\"organization_id\"\n\t\t\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\t\t\tand om.role in ('owner', 'admin')\n\t\t\t\t)\n\t\t\t",
+          "withCheck": "\n\t\t\t\texists (\n\t\t\t\t\tselect 1\n\t\t\t\t\tfrom organization_memberships om\n\t\t\t\t\twhere om.organization_id = \"organization_memberships\".\"organization_id\"\n\t\t\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\t\t\tand om.role in ('owner', 'admin')\n\t\t\t\t)\n\t\t\t"
+        },
+        "org_memberships_delete_org_admin_or_self": {
+          "name": "org_memberships_delete_org_admin_or_self",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\t\t\t(\n\t\t\t\t\texists (\n\t\t\t\t\t\tselect 1\n\t\t\t\t\t\tfrom organization_memberships om\n\t\t\t\t\t\twhere om.organization_id = \"organization_memberships\".\"organization_id\"\n\t\t\t\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\t\t\t\tand om.role in ('owner', 'admin')\n\t\t\t\t\t)\n\t\t\t\t\tor \"organization_memberships\".\"user_id\" = (select auth.uid())\n\t\t\t\t)\n\t\t\t"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.projects": {
+      "name": "projects",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "projects_organization_id_idx": {
+          "name": "projects_organization_id_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "projects_organization_id_organizations_id_fk": {
+          "name": "projects_organization_id_organizations_id_fk",
+          "tableFrom": "projects",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "projects_slug_unique": {
+          "name": "projects_slug_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "slug"
+          ]
+        }
+      },
+      "policies": {
+        "projects_select_org_member": {
+          "name": "projects_select_org_member",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom projects p\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere p.id = \"projects\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t"
+        },
+        "projects_insert_org_admin": {
+          "name": "projects_insert_org_admin",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom organization_memberships om\n\t\t\twhere om.organization_id = \"projects\".\"organization_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\tand om.role in ('owner', 'admin')\n\t\t)\n\t"
+        },
+        "projects_update_org_admin": {
+          "name": "projects_update_org_admin",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom projects p\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere p.id = \"projects\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\tand om.role in ('owner', 'admin')\n\t\t)\n\t",
+          "withCheck": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom projects p\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere p.id = \"projects\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\tand om.role in ('owner', 'admin')\n\t\t)\n\t"
+        },
+        "projects_delete_org_admin": {
+          "name": "projects_delete_org_admin",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom projects p\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere p.id = \"projects\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\tand om.role in ('owner', 'admin')\n\t\t)\n\t"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.scene_folders": {
+      "name": "scene_folders",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parent_folder_id": {
+          "name": "parent_folder_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "scene_folders_project_id_idx": {
+          "name": "scene_folders_project_id_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "scene_folders_owner_id_idx": {
+          "name": "scene_folders_owner_id_idx",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "scene_folders_parent_folder_id_idx": {
+          "name": "scene_folders_parent_folder_id_idx",
+          "columns": [
+            {
+              "expression": "parent_folder_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "scene_folders_project_id_projects_id_fk": {
+          "name": "scene_folders_project_id_projects_id_fk",
+          "tableFrom": "scene_folders",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "scene_folders_owner_id_users_id_fk": {
+          "name": "scene_folders_owner_id_users_id_fk",
+          "tableFrom": "scene_folders",
+          "tableTo": "users",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "scene_folders_parent_folder_id_scene_folders_id_fk": {
+          "name": "scene_folders_parent_folder_id_scene_folders_id_fk",
+          "tableFrom": "scene_folders",
+          "tableTo": "scene_folders",
+          "columnsFrom": [
+            "parent_folder_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "scene_folders_select_project_member": {
+          "name": "scene_folders_select_project_member",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scene_folders sf\n\t\t\tjoin projects p on p.id = sf.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere sf.id = \"scene_folders\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t"
+        },
+        "scene_folders_insert_project_member_self_owner": {
+          "name": "scene_folders_insert_project_member_self_owner",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom projects p\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere p.id = \"scene_folders\".\"project_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t and \"scene_folders\".\"owner_id\" = (select auth.uid())"
+        },
+        "scene_folders_update_owner_or_admin": {
+          "name": "scene_folders_update_owner_or_admin",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scene_folders sf\n\t\t\tjoin projects p on p.id = sf.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere sf.id = \"scene_folders\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\tand om.role in ('owner', 'admin')\n\t\t)\n\t or \"scene_folders\".\"owner_id\" = (select auth.uid())",
+          "withCheck": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scene_folders sf\n\t\t\tjoin projects p on p.id = sf.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere sf.id = \"scene_folders\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\tand om.role in ('owner', 'admin')\n\t\t)\n\t or \"scene_folders\".\"owner_id\" = (select auth.uid())"
+        },
+        "scene_folders_delete_owner_or_admin": {
+          "name": "scene_folders_delete_owner_or_admin",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scene_folders sf\n\t\t\tjoin projects p on p.id = sf.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere sf.id = \"scene_folders\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\tand om.role in ('owner', 'admin')\n\t\t)\n\t or \"scene_folders\".\"owner_id\" = (select auth.uid())"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.folders": {
+      "name": "folders",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parent_folder_id": {
+          "name": "parent_folder_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "folders_project_id_idx": {
+          "name": "folders_project_id_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "folders_parent_folder_id_idx": {
+          "name": "folders_parent_folder_id_idx",
+          "columns": [
+            {
+              "expression": "parent_folder_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "folders_project_id_projects_id_fk": {
+          "name": "folders_project_id_projects_id_fk",
+          "tableFrom": "folders",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "folders_parent_folder_id_folders_id_fk": {
+          "name": "folders_parent_folder_id_folders_id_fk",
+          "tableFrom": "folders",
+          "tableTo": "folders",
+          "columnsFrom": [
+            "parent_folder_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "folders_select_project_member": {
+          "name": "folders_select_project_member",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom folders f\n\t\t\tjoin projects p on p.id = f.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere f.id = \"folders\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t"
+        },
+        "folders_insert_project_admin": {
+          "name": "folders_insert_project_admin",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom projects p\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere p.id = \"folders\".\"project_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\tand om.role in ('owner', 'admin')\n\t\t)\n\t"
+        },
+        "folders_update_project_admin": {
+          "name": "folders_update_project_admin",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom folders f\n\t\t\tjoin projects p on p.id = f.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere f.id = \"folders\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\tand om.role in ('owner', 'admin')\n\t\t)\n\t",
+          "withCheck": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom folders f\n\t\t\tjoin projects p on p.id = f.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere f.id = \"folders\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\tand om.role in ('owner', 'admin')\n\t\t)\n\t"
+        },
+        "folders_delete_project_admin": {
+          "name": "folders_delete_project_admin",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom folders f\n\t\t\tjoin projects p on p.id = f.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere f.id = \"folders\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\tand om.role in ('owner', 'admin')\n\t\t)\n\t"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.assets": {
+      "name": "assets",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "folder_id": {
+          "name": "folder_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "asset_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "file_path": {
+          "name": "file_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "file_size": {
+          "name": "file_size",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mime_type": {
+          "name": "mime_type",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "assets_folder_id_idx": {
+          "name": "assets_folder_id_idx",
+          "columns": [
+            {
+              "expression": "folder_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "assets_owner_id_idx": {
+          "name": "assets_owner_id_idx",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "assets_folder_id_folders_id_fk": {
+          "name": "assets_folder_id_folders_id_fk",
+          "tableFrom": "assets",
+          "tableTo": "folders",
+          "columnsFrom": [
+            "folder_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "assets_owner_id_users_id_fk": {
+          "name": "assets_owner_id_users_id_fk",
+          "tableFrom": "assets",
+          "tableTo": "users",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "assets_select_project_member": {
+          "name": "assets_select_project_member",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom assets a\n\t\t\tjoin folders f on f.id = a.folder_id\n\t\t\tjoin projects p on p.id = f.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere a.id = \"assets\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t"
+        },
+        "assets_insert_project_member_self_owner": {
+          "name": "assets_insert_project_member_self_owner",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom folders f\n\t\t\tjoin projects p on p.id = f.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere f.id = \"assets\".\"folder_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t and \"assets\".\"owner_id\" = (select auth.uid())"
+        },
+        "assets_update_project_member_owner": {
+          "name": "assets_update_project_member_owner",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom assets a\n\t\t\tjoin folders f on f.id = a.folder_id\n\t\t\tjoin projects p on p.id = f.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere a.id = \"assets\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t",
+          "withCheck": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom assets a\n\t\t\tjoin folders f on f.id = a.folder_id\n\t\t\tjoin projects p on p.id = f.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere a.id = \"assets\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\tand om.role in ('owner', 'admin')\n\t\t)\n\t and \"assets\".\"owner_id\" = (select auth.uid())"
+        },
+        "assets_delete_project_admin": {
+          "name": "assets_delete_project_admin",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom assets a\n\t\t\tjoin folders f on f.id = a.folder_id\n\t\t\tjoin projects p on p.id = f.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere a.id = \"assets\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\tand om.role in ('owner', 'admin')\n\t\t)\n\t"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.scenes": {
+      "name": "scenes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "folder_id": {
+          "name": "folder_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "scene_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "thumbnail_url": {
+          "name": "thumbnail_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "thumbnail_path": {
+          "name": "thumbnail_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "scenes_project_id_idx": {
+          "name": "scenes_project_id_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "scenes_folder_id_idx": {
+          "name": "scenes_folder_id_idx",
+          "columns": [
+            {
+              "expression": "folder_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "scenes_project_id_projects_id_fk": {
+          "name": "scenes_project_id_projects_id_fk",
+          "tableFrom": "scenes",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "scenes_folder_id_scene_folders_id_fk": {
+          "name": "scenes_folder_id_scene_folders_id_fk",
+          "tableFrom": "scenes",
+          "tableTo": "scene_folders",
+          "columnsFrom": [
+            "folder_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "scenes_select_project_member": {
+          "name": "scenes_select_project_member",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scenes\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t"
+        },
+        "scenes_insert_project_member": {
+          "name": "scenes_insert_project_member",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\n\t\t\t\t\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom projects p\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere p.id = \"scenes\".\"project_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t\n\t\t\t\tand (\"scenes\".\"folder_id\" is null or \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scene_folders sf\n\t\t\tjoin projects p on p.id = sf.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere sf.id = \"scenes\".\"folder_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t)\n\t\t\t"
+        },
+        "scenes_update_project_member": {
+          "name": "scenes_update_project_member",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scenes\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t",
+          "withCheck": "\n\t\t\t\t\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scenes\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t\n\t\t\t\tand (\"scenes\".\"folder_id\" is null or \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scene_folders sf\n\t\t\tjoin projects p on p.id = sf.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere sf.id = \"scenes\".\"folder_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t)\n\t\t\t"
+        },
+        "scenes_delete_project_admin": {
+          "name": "scenes_delete_project_admin",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scenes\".\"id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\tand om.role in ('owner', 'admin')\n\t\t)\n\t"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.scene_settings": {
+      "name": "scene_settings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "scene_id": {
+          "name": "scene_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bounds": {
+          "name": "bounds",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "camera": {
+          "name": "camera",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "controls": {
+          "name": "controls",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "environment": {
+          "name": "environment",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shadows": {
+          "name": "shadows",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "scene_settings_created_by_idx": {
+          "name": "scene_settings_created_by_idx",
+          "columns": [
+            {
+              "expression": "created_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "scene_settings_scene_id_scenes_id_fk": {
+          "name": "scene_settings_scene_id_scenes_id_fk",
+          "tableFrom": "scene_settings",
+          "tableTo": "scenes",
+          "columnsFrom": [
+            "scene_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "scene_settings_created_by_users_id_fk": {
+          "name": "scene_settings_created_by_users_id_fk",
+          "tableFrom": "scene_settings",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "scene_settings_scene_id_unique": {
+          "name": "scene_settings_scene_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "scene_id"
+          ]
+        }
+      },
+      "policies": {
+        "scene_settings_select_project_member": {
+          "name": "scene_settings_select_project_member",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scene_settings\".\"scene_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t"
+        },
+        "scene_settings_insert_project_member_self_creator": {
+          "name": "scene_settings_insert_project_member_self_creator",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scene_settings\".\"scene_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t and \"scene_settings\".\"created_by\" = (select auth.uid())"
+        },
+        "scene_settings_update_project_member": {
+          "name": "scene_settings_update_project_member",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scene_settings\".\"scene_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t",
+          "withCheck": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scene_settings\".\"scene_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t"
+        },
+        "scene_settings_delete_project_admin": {
+          "name": "scene_settings_delete_project_admin",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scene_settings\".\"scene_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\tand om.role in ('owner', 'admin')\n\t\t)\n\t"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.scene_stats": {
+      "name": "scene_stats",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "scene_id": {
+          "name": "scene_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "baseline": {
+          "name": "baseline",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "optimized": {
+          "name": "optimized",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "initial_scene_bytes": {
+          "name": "initial_scene_bytes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_scene_bytes": {
+          "name": "current_scene_bytes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "applied_optimizations": {
+          "name": "applied_optimizations",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "optimization_settings": {
+          "name": "optimization_settings",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "additional_metrics": {
+          "name": "additional_metrics",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "scene_stats_created_by_idx": {
+          "name": "scene_stats_created_by_idx",
+          "columns": [
+            {
+              "expression": "created_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "scene_stats_scene_id_scenes_id_fk": {
+          "name": "scene_stats_scene_id_scenes_id_fk",
+          "tableFrom": "scene_stats",
+          "tableTo": "scenes",
+          "columnsFrom": [
+            "scene_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "scene_stats_created_by_users_id_fk": {
+          "name": "scene_stats_created_by_users_id_fk",
+          "tableFrom": "scene_stats",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "scene_stats_scene_id_unique": {
+          "name": "scene_stats_scene_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "scene_id"
+          ]
+        }
+      },
+      "policies": {
+        "scene_stats_select_project_member": {
+          "name": "scene_stats_select_project_member",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scene_stats\".\"scene_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t"
+        },
+        "scene_stats_insert_project_member_self_creator": {
+          "name": "scene_stats_insert_project_member_self_creator",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scene_stats\".\"scene_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t and \"scene_stats\".\"created_by\" = (select auth.uid())"
+        },
+        "scene_stats_update_project_member": {
+          "name": "scene_stats_update_project_member",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scene_stats\".\"scene_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t",
+          "withCheck": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scene_stats\".\"scene_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t"
+        },
+        "scene_stats_delete_project_admin": {
+          "name": "scene_stats_delete_project_admin",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scene_stats\".\"scene_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\tand om.role in ('owner', 'admin')\n\t\t)\n\t"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.scene_assets": {
+      "name": "scene_assets",
+      "schema": "",
+      "columns": {
+        "scene_settings_id": {
+          "name": "scene_settings_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "asset_id": {
+          "name": "asset_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "usage_type": {
+          "name": "usage_type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "scene_assets_scene_settings_id_idx": {
+          "name": "scene_assets_scene_settings_id_idx",
+          "columns": [
+            {
+              "expression": "scene_settings_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "scene_assets_asset_id_idx": {
+          "name": "scene_assets_asset_id_idx",
+          "columns": [
+            {
+              "expression": "asset_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "scene_assets_scene_settings_id_scene_settings_id_fk": {
+          "name": "scene_assets_scene_settings_id_scene_settings_id_fk",
+          "tableFrom": "scene_assets",
+          "tableTo": "scene_settings",
+          "columnsFrom": [
+            "scene_settings_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "scene_assets_asset_id_assets_id_fk": {
+          "name": "scene_assets_asset_id_assets_id_fk",
+          "tableFrom": "scene_assets",
+          "tableTo": "assets",
+          "columnsFrom": [
+            "asset_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "scene_assets_scene_settings_id_asset_id_pk": {
+          "name": "scene_assets_scene_settings_id_asset_id_pk",
+          "columns": [
+            "scene_settings_id",
+            "asset_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "scene_assets_select_project_member": {
+          "name": "scene_assets_select_project_member",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\t\t\texists (\n\t\t\t\t\tselect 1\n\t\t\t\t\tfrom scene_settings ss\n\t\t\t\t\tjoin scenes s on s.id = ss.scene_id\n\t\t\t\t\tjoin projects p on p.id = s.project_id\n\t\t\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\t\t\twhere ss.id = \"scene_assets\".\"scene_settings_id\"\n\t\t\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\t)\n\t\t\t"
+        },
+        "scene_assets_insert_project_member": {
+          "name": "scene_assets_insert_project_member",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\n\t\t\t\t\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom assets a\n\t\t\tjoin folders f on f.id = a.folder_id\n\t\t\tjoin projects p on p.id = f.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere a.id = \"scene_assets\".\"asset_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t\n\t\t\t\tand exists (\n\t\t\t\t\tselect 1\n\t\t\t\t\tfrom scene_settings ss\n\t\t\t\t\tjoin scenes s on s.id = ss.scene_id\n\t\t\t\t\tjoin projects p on p.id = s.project_id\n\t\t\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\t\t\twhere ss.id = \"scene_assets\".\"scene_settings_id\"\n\t\t\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\t)\n\t\t\t"
+        },
+        "scene_assets_delete_project_member": {
+          "name": "scene_assets_delete_project_member",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\t\t\texists (\n\t\t\t\t\tselect 1\n\t\t\t\t\tfrom scene_settings ss\n\t\t\t\t\tjoin scenes s on s.id = ss.scene_id\n\t\t\t\t\tjoin projects p on p.id = s.project_id\n\t\t\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\t\t\twhere ss.id = \"scene_assets\".\"scene_settings_id\"\n\t\t\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\t)\n\t\t\t"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.scene_published": {
+      "name": "scene_published",
+      "schema": "",
+      "columns": {
+        "scene_id": {
+          "name": "scene_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "asset_id": {
+          "name": "asset_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scene_settings_id": {
+          "name": "scene_settings_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "published_by": {
+          "name": "published_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "scene_published_asset_id_idx": {
+          "name": "scene_published_asset_id_idx",
+          "columns": [
+            {
+              "expression": "asset_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "scene_published_scene_settings_id_idx": {
+          "name": "scene_published_scene_settings_id_idx",
+          "columns": [
+            {
+              "expression": "scene_settings_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "scene_published_published_by_idx": {
+          "name": "scene_published_published_by_idx",
+          "columns": [
+            {
+              "expression": "published_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "scene_published_scene_id_scenes_id_fk": {
+          "name": "scene_published_scene_id_scenes_id_fk",
+          "tableFrom": "scene_published",
+          "tableTo": "scenes",
+          "columnsFrom": [
+            "scene_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "scene_published_asset_id_assets_id_fk": {
+          "name": "scene_published_asset_id_assets_id_fk",
+          "tableFrom": "scene_published",
+          "tableTo": "assets",
+          "columnsFrom": [
+            "asset_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "scene_published_scene_settings_id_scene_settings_id_fk": {
+          "name": "scene_published_scene_settings_id_scene_settings_id_fk",
+          "tableFrom": "scene_published",
+          "tableTo": "scene_settings",
+          "columnsFrom": [
+            "scene_settings_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "scene_published_published_by_users_id_fk": {
+          "name": "scene_published_published_by_users_id_fk",
+          "tableFrom": "scene_published",
+          "tableTo": "users",
+          "columnsFrom": [
+            "published_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "scene_published_select_project_member": {
+          "name": "scene_published_select_project_member",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scene_published\".\"scene_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t"
+        },
+        "scene_published_insert_project_member_self_publisher": {
+          "name": "scene_published_insert_project_member_self_publisher",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\n\t\t\t\t\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scene_published\".\"scene_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t\n\t\t\t\tand \"scene_published\".\"published_by\" = (select auth.uid())\n\t\t\t\tand exists (\n\t\t\t\t\tselect 1\n\t\t\t\t\tfrom assets a\n\t\t\t\t\tjoin folders f on f.id = a.folder_id\n\t\t\t\t\tjoin projects p on p.id = f.project_id\n\t\t\t\t\tjoin scenes s on s.project_id = p.id\n\t\t\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\t\t\twhere s.id = \"scene_published\".\"scene_id\"\n\t\t\t\t\t\tand a.id = \"scene_published\".\"asset_id\"\n\t\t\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\t)\n\t\t\t"
+        },
+        "scene_published_update_project_member": {
+          "name": "scene_published_update_project_member",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scene_published\".\"scene_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t",
+          "withCheck": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scene_published\".\"scene_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t"
+        },
+        "scene_published_delete_project_admin": {
+          "name": "scene_published_delete_project_admin",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"scene_published\".\"scene_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t\t\tand om.role in ('owner', 'admin')\n\t\t)\n\t"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.permissions": {
+      "name": "permissions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "resource_type": {
+          "name": "resource_type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource_id": {
+          "name": "resource_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "permission_entity",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "permission": {
+          "name": "permission",
+          "type": "permission_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "granted_by": {
+          "name": "granted_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "permissions_granted_by_idx": {
+          "name": "permissions_granted_by_idx",
+          "columns": [
+            {
+              "expression": "granted_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "permissions_granted_by_users_id_fk": {
+          "name": "permissions_granted_by_users_id_fk",
+          "tableFrom": "permissions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "granted_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "permissions_select_recipient_or_granter": {
+          "name": "permissions_select_recipient_or_granter",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\t\t\t\"permissions\".\"granted_by\" = (select auth.uid())\n\t\t\t\tor (\"permissions\".\"entity_type\" = 'user' and \"permissions\".\"entity_id\" = (select auth.uid()))\n\t\t\t\tor (\"permissions\".\"entity_type\" = 'group' and \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom group_memberships gm\n\t\t\twhere gm.group_id = \"permissions\".\"entity_id\"\n\t\t\t\tand gm.user_id = (select auth.uid())\n\t\t)\n\t)\n\t\t\t"
+        },
+        "permissions_insert_self_or_group_owner": {
+          "name": "permissions_insert_self_or_group_owner",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\n\t\t\t\t\"permissions\".\"granted_by\" = (select auth.uid())\n\t\t\t\tand (\n\t\t\t\t\t(\"permissions\".\"entity_type\" = 'user' and \"permissions\".\"entity_id\" = (select auth.uid()))\n\t\t\t\t\tor (\"permissions\".\"entity_type\" = 'group' and \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom groups g\n\t\t\twhere g.id = \"permissions\".\"entity_id\"\n\t\t\t\tand g.owner_id = (select auth.uid())\n\t\t)\n\t)\n\t\t\t\t)\n\t\t\t"
+        },
+        "permissions_update_granter_or_group_owner": {
+          "name": "permissions_update_granter_or_group_owner",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"permissions\".\"granted_by\" = (select auth.uid()) or (\"permissions\".\"entity_type\" = 'group' and \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom groups g\n\t\t\twhere g.id = \"permissions\".\"entity_id\"\n\t\t\t\tand g.owner_id = (select auth.uid())\n\t\t)\n\t)",
+          "withCheck": "\"permissions\".\"granted_by\" = (select auth.uid()) or (\"permissions\".\"entity_type\" = 'group' and \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom groups g\n\t\t\twhere g.id = \"permissions\".\"entity_id\"\n\t\t\t\tand g.owner_id = (select auth.uid())\n\t\t)\n\t)"
+        },
+        "permissions_delete_granter_or_group_owner": {
+          "name": "permissions_delete_granter_or_group_owner",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"permissions\".\"granted_by\" = (select auth.uid()) or (\"permissions\".\"entity_type\" = 'group' and \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom groups g\n\t\t\twhere g.id = \"permissions\".\"entity_id\"\n\t\t\t\tand g.owner_id = (select auth.uid())\n\t\t)\n\t)"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.group_memberships": {
+      "name": "group_memberships",
+      "schema": "",
+      "columns": {
+        "group_id": {
+          "name": "group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "group_memberships_group_id_idx": {
+          "name": "group_memberships_group_id_idx",
+          "columns": [
+            {
+              "expression": "group_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "group_memberships_user_id_idx": {
+          "name": "group_memberships_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "group_memberships_group_id_groups_id_fk": {
+          "name": "group_memberships_group_id_groups_id_fk",
+          "tableFrom": "group_memberships",
+          "tableTo": "groups",
+          "columnsFrom": [
+            "group_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "group_memberships_user_id_users_id_fk": {
+          "name": "group_memberships_user_id_users_id_fk",
+          "tableFrom": "group_memberships",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "group_memberships_group_id_user_id_pk": {
+          "name": "group_memberships_group_id_user_id_pk",
+          "columns": [
+            "group_id",
+            "user_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "group_memberships_select_owner_or_member": {
+          "name": "group_memberships_select_owner_or_member",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom groups g\n\t\t\twhere g.id = \"group_memberships\".\"group_id\"\n\t\t\t\tand g.owner_id = (select auth.uid())\n\t\t)\n\t or \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom group_memberships gm\n\t\t\twhere gm.group_id = \"group_memberships\".\"group_id\"\n\t\t\t\tand gm.user_id = (select auth.uid())\n\t\t)\n\t"
+        },
+        "group_memberships_insert_owner_or_self_join": {
+          "name": "group_memberships_insert_owner_or_self_join",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom groups g\n\t\t\twhere g.id = \"group_memberships\".\"group_id\"\n\t\t\t\tand g.owner_id = (select auth.uid())\n\t\t)\n\t or \"group_memberships\".\"user_id\" = (select auth.uid())"
+        },
+        "group_memberships_update_owner": {
+          "name": "group_memberships_update_owner",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom groups g\n\t\t\twhere g.id = \"group_memberships\".\"group_id\"\n\t\t\t\tand g.owner_id = (select auth.uid())\n\t\t)\n\t",
+          "withCheck": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom groups g\n\t\t\twhere g.id = \"group_memberships\".\"group_id\"\n\t\t\t\tand g.owner_id = (select auth.uid())\n\t\t)\n\t"
+        },
+        "group_memberships_delete_owner_or_self": {
+          "name": "group_memberships_delete_owner_or_self",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom groups g\n\t\t\twhere g.id = \"group_memberships\".\"group_id\"\n\t\t\t\tand g.owner_id = (select auth.uid())\n\t\t)\n\t or \"group_memberships\".\"user_id\" = (select auth.uid())"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.groups": {
+      "name": "groups",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "groups_owner_id_idx": {
+          "name": "groups_owner_id_idx",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "groups_owner_id_users_id_fk": {
+          "name": "groups_owner_id_users_id_fk",
+          "tableFrom": "groups",
+          "tableTo": "users",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "groups_select_owner_or_member": {
+          "name": "groups_select_owner_or_member",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"groups\".\"owner_id\" = (select auth.uid()) or \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom group_memberships gm\n\t\t\twhere gm.group_id = \"groups\".\"id\"\n\t\t\t\tand gm.user_id = (select auth.uid())\n\t\t)\n\t"
+        },
+        "groups_insert_self_owner": {
+          "name": "groups_insert_self_owner",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\"groups\".\"owner_id\" = (select auth.uid())"
+        },
+        "groups_update_owner": {
+          "name": "groups_update_owner",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"groups\".\"owner_id\" = (select auth.uid())",
+          "withCheck": "\"groups\".\"owner_id\" = (select auth.uid())"
+        },
+        "groups_delete_owner": {
+          "name": "groups_delete_owner",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"groups\".\"owner_id\" = (select auth.uid())"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.tags": {
+      "name": "tags",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "tags_name_unique": {
+          "name": "tags_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        }
+      },
+      "policies": {
+        "tags_select_authenticated": {
+          "name": "tags_select_authenticated",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "(select (select auth.uid())) is not null"
+        },
+        "tags_insert_authenticated": {
+          "name": "tags_insert_authenticated",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "(select (select auth.uid())) is not null"
+        },
+        "tags_update_authenticated": {
+          "name": "tags_update_authenticated",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "(select (select auth.uid())) is not null",
+          "withCheck": "(select (select auth.uid())) is not null"
+        },
+        "tags_delete_authenticated": {
+          "name": "tags_delete_authenticated",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "(select (select auth.uid())) is not null"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.tag_assignments": {
+      "name": "tag_assignments",
+      "schema": "",
+      "columns": {
+        "tag_id": {
+          "name": "tag_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_type": {
+          "name": "target_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "tag_assignments_tag_id_idx": {
+          "name": "tag_assignments_tag_id_idx",
+          "columns": [
+            {
+              "expression": "tag_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "tag_assignments_tag_id_tags_id_fk": {
+          "name": "tag_assignments_tag_id_tags_id_fk",
+          "tableFrom": "tag_assignments",
+          "tableTo": "tags",
+          "columnsFrom": [
+            "tag_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "tag_assignments_tag_id_target_type_target_id_pk": {
+          "name": "tag_assignments_tag_id_target_type_target_id_pk",
+          "columns": [
+            "tag_id",
+            "target_type",
+            "target_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "tag_assignments_select_target_member": {
+          "name": "tag_assignments_select_target_member",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\t\t\t(\"tag_assignments\".\"target_type\" = 'asset' and \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom assets a\n\t\t\tjoin folders f on f.id = a.folder_id\n\t\t\tjoin projects p on p.id = f.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere a.id = \"tag_assignments\".\"target_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t)\n\t\t\t\tor (\"tag_assignments\".\"target_type\" = 'scene' and \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"tag_assignments\".\"target_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t)\n\t\t\t\tor (\"tag_assignments\".\"target_type\" = 'folder' and \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom folders f\n\t\t\tjoin projects p on p.id = f.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere f.id = \"tag_assignments\".\"target_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t)\n\t\t\t"
+        },
+        "tag_assignments_insert_target_member": {
+          "name": "tag_assignments_insert_target_member",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\n\t\t\t\t(select (select auth.uid())) is not null\n\t\t\t\tand (\n\t\t\t\t\t(\"tag_assignments\".\"target_type\" = 'asset' and \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom assets a\n\t\t\tjoin folders f on f.id = a.folder_id\n\t\t\tjoin projects p on p.id = f.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere a.id = \"tag_assignments\".\"target_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t)\n\t\t\t\t\tor (\"tag_assignments\".\"target_type\" = 'scene' and \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"tag_assignments\".\"target_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t)\n\t\t\t\t\tor (\"tag_assignments\".\"target_type\" = 'folder' and \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom folders f\n\t\t\tjoin projects p on p.id = f.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere f.id = \"tag_assignments\".\"target_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t)\n\t\t\t\t)\n\t\t\t"
+        },
+        "tag_assignments_delete_target_member": {
+          "name": "tag_assignments_delete_target_member",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\t\t\t(\"tag_assignments\".\"target_type\" = 'asset' and \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom assets a\n\t\t\tjoin folders f on f.id = a.folder_id\n\t\t\tjoin projects p on p.id = f.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere a.id = \"tag_assignments\".\"target_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t)\n\t\t\t\tor (\"tag_assignments\".\"target_type\" = 'scene' and \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom scenes s\n\t\t\tjoin projects p on p.id = s.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere s.id = \"tag_assignments\".\"target_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t)\n\t\t\t\tor (\"tag_assignments\".\"target_type\" = 'folder' and \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom folders f\n\t\t\tjoin projects p on p.id = f.project_id\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere f.id = \"tag_assignments\".\"target_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t)\n\t\t\t"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.api_keys": {
+      "name": "api_keys",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hashed_key": {
+          "name": "hashed_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "last_used_at": {
+          "name": "last_used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "api_keys_user_id_idx": {
+          "name": "api_keys_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "api_keys_user_id_users_id_fk": {
+          "name": "api_keys_user_id_users_id_fk",
+          "tableFrom": "api_keys",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "api_keys_select_self": {
+          "name": "api_keys_select_self",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"api_keys\".\"user_id\" = (select auth.uid())"
+        },
+        "api_keys_insert_self": {
+          "name": "api_keys_insert_self",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\"api_keys\".\"user_id\" = (select auth.uid())"
+        },
+        "api_keys_update_self": {
+          "name": "api_keys_update_self",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"api_keys\".\"user_id\" = (select auth.uid())",
+          "withCheck": "\"api_keys\".\"user_id\" = (select auth.uid())"
+        },
+        "api_keys_delete_self": {
+          "name": "api_keys_delete_self",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"api_keys\".\"user_id\" = (select auth.uid())"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.api_key_projects": {
+      "name": "api_key_projects",
+      "schema": "",
+      "columns": {
+        "api_key_id": {
+          "name": "api_key_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "api_key_projects_api_key_id_idx": {
+          "name": "api_key_projects_api_key_id_idx",
+          "columns": [
+            {
+              "expression": "api_key_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "api_key_projects_project_id_idx": {
+          "name": "api_key_projects_project_id_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "api_key_projects_api_key_id_api_keys_id_fk": {
+          "name": "api_key_projects_api_key_id_api_keys_id_fk",
+          "tableFrom": "api_key_projects",
+          "tableTo": "api_keys",
+          "columnsFrom": [
+            "api_key_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "api_key_projects_project_id_projects_id_fk": {
+          "name": "api_key_projects_project_id_projects_id_fk",
+          "tableFrom": "api_key_projects",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "api_key_projects_api_key_id_project_id_pk": {
+          "name": "api_key_projects_api_key_id_project_id_pk",
+          "columns": [
+            "api_key_id",
+            "project_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "api_key_projects_select_owner_and_project_member": {
+          "name": "api_key_projects_select_owner_and_project_member",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom api_keys ak\n\t\t\twhere ak.id = \"api_key_projects\".\"api_key_id\"\n\t\t\t\tand ak.user_id = (select auth.uid())\n\t\t)\n\t and \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom projects p\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere p.id = \"api_key_projects\".\"project_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t"
+        },
+        "api_key_projects_insert_owner_and_project_member": {
+          "name": "api_key_projects_insert_owner_and_project_member",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\n\t\t\t\t\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom api_keys ak\n\t\t\twhere ak.id = \"api_key_projects\".\"api_key_id\"\n\t\t\t\tand ak.user_id = (select auth.uid())\n\t\t)\n\t\n\t\t\t\tand \n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom projects p\n\t\t\tjoin organization_memberships om on om.organization_id = p.organization_id\n\t\t\twhere p.id = \"api_key_projects\".\"project_id\"\n\t\t\t\tand om.user_id = (select auth.uid())\n\t\t)\n\t\n\t\t\t\tand exists (\n\t\t\t\t\tselect 1\n\t\t\t\t\tfrom api_keys ak\n\t\t\t\t\twhere ak.id = \"api_key_projects\".\"api_key_id\"\n\t\t\t\t\t\tand ak.user_id = (select auth.uid())\n\t\t\t\t)\n\t\t\t"
+        },
+        "api_key_projects_delete_owner": {
+          "name": "api_key_projects_delete_owner",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\n\t\texists (\n\t\t\tselect 1\n\t\t\tfrom api_keys ak\n\t\t\twhere ak.id = \"api_key_projects\".\"api_key_id\"\n\t\t\t\tand ak.user_id = (select auth.uid())\n\t\t)\n\t"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    }
+  },
+  "enums": {
+    "public.membership_role": {
+      "name": "membership_role",
+      "schema": "public",
+      "values": [
+        "owner",
+        "admin",
+        "member"
+      ]
+    },
+    "public.asset_type": {
+      "name": "asset_type",
+      "schema": "public",
+      "values": [
+        "texture",
+        "material",
+        "model",
+        "environment",
+        "other"
+      ]
+    },
+    "public.scene_status": {
+      "name": "scene_status",
+      "schema": "public",
+      "values": [
+        "draft",
+        "published",
+        "archived"
+      ]
+    },
+    "public.permission_entity": {
+      "name": "permission_entity",
+      "schema": "public",
+      "values": [
+        "user",
+        "group"
+      ]
+    },
+    "public.permission_type": {
+      "name": "permission_type",
+      "schema": "public",
+      "values": [
+        "read",
+        "write",
+        "admin",
+        "delete"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
