@@ -63,6 +63,7 @@ export const SaveOptions: FC<SaveOptionsProps> = ({ userId }) => {
 	)
 
 	const isLoggedIn = Boolean(userId)
+	const canSaveToCloud = Boolean(userId)
 
 	function handleFormatChange(value: Option<ExportFormat>) {
 		if (value.id === format) {
@@ -119,6 +120,7 @@ export const SaveOptions: FC<SaveOptionsProps> = ({ userId }) => {
 					onClick={handleSaveToCloud}
 					variant={isLoggedIn ? 'default' : 'outline'}
 					className="w-full"
+					disabled={!canSaveToCloud}
 				>
 					{isLoggedIn ? (
 						<Save className="h-4 w-4" />
@@ -127,6 +129,11 @@ export const SaveOptions: FC<SaveOptionsProps> = ({ userId }) => {
 					)}
 					{isLoggedIn ? 'Save Scene' : 'Sign In to Save'}
 				</Button>
+				{!canSaveToCloud && (
+					<p className="text-muted-foreground text-xs">
+						Sign in to enable cloud save actions.
+					</p>
+				)}
 			</div>
 
 			<Separator />

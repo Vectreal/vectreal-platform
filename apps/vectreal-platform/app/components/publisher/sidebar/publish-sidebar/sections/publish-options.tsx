@@ -38,6 +38,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({ sceneId }) => {
 	const { optimizer, file } = useModelContext(true)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
 	const exporterRef = useRef<ModelExporter>(new ModelExporter())
+	const canPublish = Boolean(sceneId)
 
 	const handlePublish = useCallback(async () => {
 		if (!sceneId) {
@@ -109,6 +110,11 @@ export const PublishOptions: FC<PublishOptionsProps> = ({ sceneId }) => {
 			<div className="text-muted-foreground text-sm">
 				Configure how your scene will be published to the platform
 			</div>
+			{!canPublish && (
+				<div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+					Publishing is disabled until this scene has a valid scene ID.
+				</div>
+			)}
 
 			<div className="space-y-4">
 				<div className="space-y-2">
@@ -218,7 +224,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({ sceneId }) => {
 				variant="default"
 				className="w-full"
 				onClick={handlePublish}
-				disabled={isPublishing}
+				disabled={isPublishing || !canPublish}
 			>
 				{isPublishing ? 'Publishing...' : 'Publish Scene'}
 			</Button>

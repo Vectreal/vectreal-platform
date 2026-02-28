@@ -89,7 +89,7 @@ const PublishSidebarContent: FC<PublishSidebarProps> = ({
 							</span>
 						</AccordionTrigger>
 						<AccordionContent>
-							<EmbedOptions />
+							<EmbedOptions sceneId={sceneId} projectId={projectId} />
 						</AccordionContent>
 					</AccordionItem>
 

@@ -299,7 +299,7 @@ function useLoadModel<
 	 */
 	const loadFromData = useCallback(
 		async (options: SceneDataLoadOptions): Promise<SceneLoadResult> => {
-			const { sceneData } = options
+			const { sceneData, sceneId } = options
 
 			// Update progress to 40% after data resolution
 			updateProgress(40)
@@ -340,6 +340,7 @@ function useLoadModel<
 
 			return {
 				file: loadedFile,
+				sceneId,
 				...sceneData
 			}
 		},
@@ -368,6 +369,7 @@ function useLoadModel<
 				const sceneData = resolveServerSceneDataContract(scenePayload)
 
 				const sceneLoadResult = await loadFromData({
+					sceneId,
 					sceneData
 				})
 

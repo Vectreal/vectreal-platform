@@ -37,6 +37,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	const isMobile = isMobileRequest(request)
 
 	const sceneId = params.sceneId?.trim() || null
+	let projectId: string | null = null
 
 	let sceneAggregate: SceneAggregateResponse | null = null
 
@@ -46,6 +47,8 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 			throw new Response('Scene not found', { status: 404 })
 		}
 
+		projectId = scene.projectId
+
 		sceneAggregate = await buildSceneAggregate(sceneId)
 	}
 
@@ -53,6 +56,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		isMobile,
 		user: user || null,
 		sceneId,
+		projectId,
 		sceneAggregate,
 		sceneMeta: sceneAggregate?.meta ?? null
 	}
@@ -86,6 +90,7 @@ const OverlayControls = ({
 	isMobile,
 	user,
 	sceneId,
+	projectId,
 	sceneAggregate
 }: Route.ComponentProps['loaderData']) => {
 	const { file } = useModelContext()
@@ -107,7 +112,11 @@ const OverlayControls = ({
 	) : (
 		<>
 			<Stepper />
-			<PublisherSidebar user={user} />
+			<PublisherSidebar
+				user={user}
+				sceneId={sceneId ?? undefined}
+				projectId={projectId ?? undefined}
+			/>
 			<SaveButton
 				sceneId={sceneId}
 				userId={user?.id}
