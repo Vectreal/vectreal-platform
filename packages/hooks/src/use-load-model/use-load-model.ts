@@ -28,19 +28,19 @@ import {
 	OptimizerIntegrationReturn,
 	SceneLoadOptions,
 	SceneLoadResult,
-	ServerSceneData,
 	UseLoadModelReturn
 } from './types'
 import {
 	calculateReferencedBytesFromFiles,
 	calculateReferencedBytesFromServerScene,
 	readDirectory,
+	resolveServerSceneDataContract,
 	reconstructGltfFiles
 } from './utils'
 import { ServerCommunicationService } from '../utils/server-communication'
 
 import type { useOptimizeModel } from '../use-optimize-model'
-import type { OperationProgress } from '@vctrl/core'
+import type { OperationProgress, ServerScenePayload } from '@vctrl/core'
 
 /**
  * Custom hook to load and manage 3D models with optional optimization integration.
@@ -359,11 +359,13 @@ function useLoadModel<
 				dispatch({ type: 'set-file-loading', payload: true })
 				updateProgress(0)
 
-				const sceneData =
-					await ServerCommunicationService.loadScene<ServerSceneData>(
+				const scenePayload =
+					await ServerCommunicationService.loadScene<ServerScenePayload>(
 						sceneId,
 						serverOptions
 					)
+
+				const sceneData = resolveServerSceneDataContract(scenePayload)
 
 				const sceneLoadResult = await loadFromData({
 					sceneData

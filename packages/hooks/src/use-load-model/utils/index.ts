@@ -4,3 +4,4 @@ export {
 	calculateReferencedBytesFromFiles,
 	calculateReferencedBytesFromServerScene
 } from './calculate-referenced-bytes'
+export { resolveServerSceneDataContract } from './resolve-scene-payload'

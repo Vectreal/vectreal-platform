@@ -1,5 +1,4 @@
 import { JSONDocument } from '@gltf-transform/core'
-import { ExtendedGLTFDocument } from '@vctrl/hooks/use-load-model/types'
 import { and, eq, inArray } from 'drizzle-orm'
 
 import { updateSceneMetadata } from './scene-folder-repository.server'
@@ -35,8 +34,8 @@ import {
 } from '../../../db/schema'
 import {
 	type GLTFExportResult,
+	SceneAssetBinaryDataMap,
 	SaveSceneSettingsParams,
-	SceneAssetDataMap,
 	UpdateSceneSettingsParams
 } from '../../../types/api'
 import { createSceneStatsFromReport } from '../../utils/scene-stats-helpers'
@@ -47,6 +46,7 @@ import {
 
 import type { SceneMetaState } from '../../../types/publisher-config'
 import type {
+	ExtendedGLTFDocument,
 	OptimizationReport,
 	Optimizations,
 	SceneSettings
@@ -257,7 +257,7 @@ class SceneSettingsService {
 
 		// Download asset data from cloud storage
 		let gltfJson: ExtendedGLTFDocument | null = null
-		let assetDataMap: SceneAssetDataMap | null = null
+		let assetDataMap: SceneAssetBinaryDataMap | null = null
 
 		if (assetIds.length > 0) {
 			try {

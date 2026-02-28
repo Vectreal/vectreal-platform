@@ -14,7 +14,6 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { JSONDocument } from '@gltf-transform/core'
 import { ModelFileTypes } from '@vctrl/core/model-loader'
 import { Object3D } from 'three'
 
@@ -22,7 +21,15 @@ import { useOptimizeModel } from '../use-optimize-model'
 import eventSystem from './event-system'
 import { initialState } from './state'
 
-import type { SceneSettings, ServerOptions } from '@vctrl/core'
+import type { ServerOptions, ServerSceneData } from '@vctrl/core'
+
+export type {
+	ExtendedGLTFDocument,
+	SceneAssetDataEntry,
+	SerializedSceneAssetDataMap as SceneAssetDataMap,
+	ServerSceneData,
+	ServerScenePayload
+} from '@vctrl/core'
 
 /**
  * Type representing the input for file/folder uploads.
@@ -66,47 +73,6 @@ export interface SceneDataLoadOptions {
 	sceneData: ServerSceneData
 	/** Whether to automatically apply scene settings (default: true) */
 	applySettings?: boolean
-}
-
-/** Extended GLTF document with asset metadata for tracking uploaded assets. */
-export interface ExtendedGLTFDocument extends JSONDocument {
-	readonly assetIds?: string[]
-	readonly asset?: {
-		readonly extensions?: {
-			readonly VECTREAL_asset_metadata?: {
-				readonly assetIds: string[]
-			}
-		}
-	}
-}
-
-/**
- * Server response data structure for scene loading.
- * Contains the GLTF JSON, binary assets, and scene settings.
- */
-export interface ServerSceneData extends SceneSettings {
-	/** Optional scene metadata payload. */
-	meta?: {
-		name?: string
-		description?: string
-		thumbnailUrl?: string
-	}
-	/** The GLTF JSON structure */
-	gltfJson: ExtendedGLTFDocument
-	/** Binary asset data keyed by asset identifier */
-	assetData: Record<
-		string,
-		{
-			/** Binary data as array of numbers or base64 string */
-			data: number[] | string
-			/** Original filename of the asset */
-			fileName: string
-			/** MIME type of the asset */
-			mimeType: string
-			/** Optional transfer encoding metadata */
-			encoding?: 'base64'
-		}
-	>
 }
 
 /**

@@ -2,12 +2,12 @@ import { sceneSettingsService } from './scene-settings-service.server'
 
 import type {
 	SceneAggregateResponse,
-	SceneAssetDataMap,
+	SceneAssetBinaryDataMap,
 	SerializedSceneAssetDataMap
 } from '../../../types/api'
 
 function serializeAssetData(
-	assetData: SceneAssetDataMap | null
+	assetData: SceneAssetBinaryDataMap | null
 ): SerializedSceneAssetDataMap {
 	const serialized: SerializedSceneAssetDataMap = {}
 

@@ -1,5 +1,4 @@
 import { SerializedAsset } from '@vctrl/core'
-import { ExtendedGLTFDocument } from '@vctrl/hooks/use-load-model/types'
 
 import {
 	computeAssetHash,
@@ -8,6 +7,7 @@ import {
 
 import type { GLTFExportResult } from '../../../types/api'
 import type { JSONDocument } from '@gltf-transform/core'
+import type { ExtendedGLTFDocument } from '@vctrl/core'
 
 type GltfAssetKind = 'buffer' | 'image'
 

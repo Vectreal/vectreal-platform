@@ -15,6 +15,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import type {
+	ApiEnvelope,
 	ServerOptions,
 	TextureBinaryPayload,
 	TextureCompressOptions
@@ -34,42 +35,6 @@ export interface ServerRequestConfig {
 	serverOptions?: ServerOptions
 	/** Content type for JSON bodies (default: 'application/json') */
 	contentType?: string
-}
-
-export interface ApiEnvelope<T = unknown> {
-	data?: T
-	error?: string
-}
-
-type SceneSettingsLike = {
-	bounds?: unknown
-	camera?: unknown
-	controls?: unknown
-	environment?: unknown
-	shadows?: unknown
-}
-
-function normalizeScenePayload<T>(payload: T): T {
-	if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-		return payload
-	}
-
-	const candidate = payload as T & {
-		settings?: SceneSettingsLike
-	} & SceneSettingsLike
-
-	if (!candidate.settings || typeof candidate.settings !== 'object') {
-		return payload
-	}
-
-	return {
-		...candidate,
-		bounds: candidate.bounds ?? candidate.settings.bounds,
-		camera: candidate.camera ?? candidate.settings.camera,
-		controls: candidate.controls ?? candidate.settings.controls,
-		environment: candidate.environment ?? candidate.settings.environment,
-		shadows: candidate.shadows ?? candidate.settings.shadows
-	} as T
 }
 
 /**
@@ -105,6 +70,32 @@ function normalizeScenePayload<T>(payload: T): T {
  * ```
  */
 export class ServerCommunicationService {
+	private static extractApiData<T>(response: ApiEnvelope<T> | T): T {
+		if (!response || typeof response !== 'object') {
+			return response as T
+		}
+
+		const envelope = response as ApiEnvelope<T>
+
+		if (envelope.error) {
+			throw new Error(envelope.error)
+		}
+
+		if (envelope.success === false) {
+			throw new Error('Request failed')
+		}
+
+		if ('data' in envelope) {
+			if (typeof envelope.data === 'undefined') {
+				throw new Error('Server response did not include data payload')
+			}
+
+			return envelope.data
+		}
+
+		return response as T
+	}
+
 	/**
 	 * Creates default server options with required endpoint.
 	 * Merges provided options with defaults.
@@ -355,25 +346,6 @@ export class ServerCommunicationService {
 			serverOptions
 		})
 
-		// Handle both wrapped and unwrapped response formats
-		if (
-			response &&
-			typeof response === 'object' &&
-			'data' in response &&
-			response.data
-		) {
-			return normalizeScenePayload(response.data as T)
-		}
-
-		if (
-			response &&
-			typeof response === 'object' &&
-			'error' in response &&
-			response.error
-		) {
-			throw new Error(response.error)
-		}
-
-		return normalizeScenePayload(response as T)
+		return ServerCommunicationService.extractApiData(response)
 	}
 }

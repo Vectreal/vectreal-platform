@@ -5,9 +5,9 @@ import { and, eq } from 'drizzle-orm'
 
 import { getDbClient } from '../../../db/client'
 import { assets, folders } from '../../../db/schema'
-import { SceneAssetDataMap } from '../../../types/api'
 import { createStorage } from '../../gcloud-storage.server'
 
+import type { SceneAssetBinaryDataMap } from '../../../types/api'
 import type { Bucket } from '@google-cloud/storage'
 
 export interface AssetUploadResult {
@@ -261,8 +261,8 @@ export async function downloadAsset(assetId: string): Promise<{
  */
 export async function downloadAssets(
 	assetIds: string[]
-): Promise<SceneAssetDataMap> {
-	const results: SceneAssetDataMap = new Map()
+): Promise<SceneAssetBinaryDataMap> {
+	const results: SceneAssetBinaryDataMap = new Map()
 
 	const downloads = assetIds.map(async (assetId) => {
 		const assetData = await downloadAsset(assetId)

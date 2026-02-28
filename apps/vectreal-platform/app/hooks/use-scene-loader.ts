@@ -1,5 +1,7 @@
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import {
+	type EventHandler,
+	type ModelFile,
 	reconstructGltfFiles,
 	useModelContext
 } from '@vctrl/hooks/use-load-model'
@@ -35,16 +37,11 @@ import { OptimizationPreset } from '../types/scene-optimization'
 
 import type { SceneAggregateResponse, SceneStatsData } from '../types/api'
 import type {
+	ServerSceneData,
 	OptimizationReport,
 	Optimizations,
 	SceneSettings
 } from '@vctrl/core'
-import type {
-	EventHandler,
-	ModelFile,
-	ServerSceneData
-} from '@vctrl/hooks/use-load-model/types'
-
 export interface UseSceneLoaderParams {
 	sceneId: null | string
 	userId?: string
