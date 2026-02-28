@@ -158,8 +158,6 @@ export class ModelExporter {
 				binary: false
 			})) as unknown as GLTF.IGLTF
 
-			console.log('GLB export result:', result)
-
 			const textureReplacement = options.modifiedTextureResources || {
 				images: [],
 				textures: []
@@ -214,10 +212,6 @@ export class ModelExporter {
 			const result = await this.threeExporter.parseAsync(object, {
 				binary: true
 			})
-
-			console.log('GLB export result:', result)
-
-			// const textures =
 
 			return await this.exportDocumentGLTF(
 				await this.io.readBinary(new Uint8Array(result as ArrayBuffer))

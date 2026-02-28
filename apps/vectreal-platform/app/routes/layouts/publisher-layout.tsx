@@ -1,5 +1,4 @@
 import { SidebarProvider } from '@shared/components/ui/sidebar'
-import { User } from '@supabase/supabase-js'
 import { ModelProvider, useModelContext } from '@vctrl/hooks/use-load-model'
 import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
 import { Provider, useAtom, useAtomValue } from 'jotai/react'
@@ -54,7 +53,8 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		isMobile,
 		user: user || null,
 		sceneId,
-		sceneAggregate
+		sceneAggregate,
+		sceneMeta: sceneAggregate?.meta ?? null
 	}
 
 	return data(loaderData, { headers })
@@ -82,19 +82,12 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 	return defaultShouldRevalidate
 }
 
-interface OverlayControlsProps {
-	isMobile: boolean
-	user: User | null
-	sceneId: string | null
-	sceneAggregate: Route.ComponentProps['loaderData']['sceneAggregate']
-}
-
 const OverlayControls = ({
 	isMobile,
 	user,
 	sceneId,
 	sceneAggregate
-}: OverlayControlsProps) => {
+}: Route.ComponentProps['loaderData']) => {
 	const { file } = useModelContext()
 	const { step, hasUnsavedChanges } = useAtomValue(processAtom)
 
@@ -103,7 +96,8 @@ const OverlayControls = ({
 	const { saveSceneSettings, saveAvailability } = useSceneLoader({
 		sceneId,
 		userId: user?.id,
-		initialSceneAggregate: sceneAggregate as SceneAggregateResponse | null
+		initialSceneAggregate: sceneAggregate as SceneAggregateResponse | null,
+		sceneMeta: sceneAggregate?.meta ?? null
 	})
 
 	const isUploadStep = !file?.model && step === 'uploading'
@@ -129,7 +123,6 @@ const OverlayControls = ({
 const Layout = ({ loaderData }: Route.ComponentProps) => {
 	const optimizer = useOptimizeModel()
 	const [{ showSidebar }, setProcessState] = useAtom(processAtom)
-	const { user, sceneId, sceneAggregate, isMobile } = loaderData
 
 	const handleOpenChange = useCallback(
 		(isOpen: boolean) => {
@@ -148,12 +141,7 @@ const Layout = ({ loaderData }: Route.ComponentProps) => {
 					<Provider store={sceneOptimizationStore}>
 						<Provider store={sceneSettingsStore}>
 							<main className="flex h-screen w-full flex-col overflow-hidden">
-								<OverlayControls
-									isMobile={isMobile}
-									user={user}
-									sceneId={sceneId}
-									sceneAggregate={sceneAggregate}
-								/>
+								<OverlayControls {...loaderData} />
 								<Outlet />
 							</main>
 						</Provider>

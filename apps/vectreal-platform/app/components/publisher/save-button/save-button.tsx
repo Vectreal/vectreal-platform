@@ -166,6 +166,7 @@ const SaveButton = ({
 				disabled={isDisabled}
 				onClick={handleSave}
 				info={statusText}
+				size="icon"
 			>
 				<SaveIcon
 					className={cn(

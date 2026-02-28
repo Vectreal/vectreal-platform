@@ -6,6 +6,8 @@ import { projects } from '../../../db/schema/project/projects'
 import { sceneFolders } from '../../../db/schema/project/scene-folders'
 import { scenes } from '../../../db/schema/project/scenes'
 
+import type { SceneMetadataUpdateInput } from '../../../types/api'
+
 const db = getDbClient()
 const MAX_FOLDER_ANCESTRY_DEPTH = 50
 
@@ -342,10 +344,7 @@ export async function renameScene(
 export async function updateSceneMetadata(
 	sceneId: string,
 	userId: string,
-	params: {
-		name: string
-		description?: string | null
-	}
+	params: SceneMetadataUpdateInput
 ): Promise<typeof scenes.$inferSelect> {
 	const trimmedName = params.name.trim()
 	if (!trimmedName) {
@@ -362,6 +361,7 @@ export async function updateSceneMetadata(
 		.set({
 			name: trimmedName,
 			description: params.description?.trim() || null,
+			thumbnailUrl: params.thumbnailUrl?.trim() || null,
 			updatedAt: new Date()
 		})
 		.where(eq(scenes.id, sceneId))

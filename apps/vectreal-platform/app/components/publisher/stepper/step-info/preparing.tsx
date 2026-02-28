@@ -28,7 +28,7 @@ const PreparingStepInfo = () => {
 
 	return (
 		<Dialog open={showInfo} onOpenChange={closeInfo}>
-			<DialogContent className="max-w-2xl">
+			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>Prepare Your 3D Scene</DialogTitle>
 					<DialogDescription>

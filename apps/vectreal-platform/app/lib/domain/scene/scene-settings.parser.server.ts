@@ -6,6 +6,7 @@ import { UUID_REGEX } from '../../../constants/utility-constants'
 import { parseActionRequest } from '../../http/requests.server'
 
 import type { SceneSettingsRequest } from '../../../types/api'
+import type { SceneMetaState } from '../../../types/publisher-config'
 
 /**
  * Request parser for scene settings API operations.
@@ -115,6 +116,11 @@ export class SceneSettingsParser {
 				return currentSceneBytes
 			}
 
+			const meta = this.parseSceneMeta(requestData)
+			if (meta instanceof Response) {
+				return meta
+			}
+
 			if (!sceneId && !gltfJsonData) {
 				return ApiResponse.badRequest('GLTF data is required for new scenes')
 			}
@@ -123,6 +129,7 @@ export class SceneSettingsParser {
 				action,
 				requestId,
 				sceneId,
+				meta,
 				settings,
 				gltfJson: gltfJsonData || undefined,
 				optimizationReport: optimizationReport || undefined,
@@ -230,6 +237,49 @@ export class SceneSettingsParser {
 
 		// Return undefined if no gltfJson provided (it's optional for some operations)
 		return gltf || undefined
+	}
+
+	private static parseSceneMeta(
+		requestData: Record<string, unknown>
+	): SceneMetaState | Response {
+		const fallbackMeta: SceneMetaState = {
+			name: '',
+			description: '',
+			thumbnailUrl: ''
+		}
+
+		if (!requestData.meta) {
+			return fallbackMeta
+		}
+
+		let payload: unknown = requestData.meta
+
+		if (typeof payload === 'string') {
+			try {
+				payload = JSON.parse(payload)
+			} catch (error) {
+				console.error('Failed to parse scene meta:', error)
+				return ApiResponse.badRequest('Invalid scene metadata format')
+			}
+		}
+
+		if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+			return ApiResponse.badRequest('Invalid scene metadata format')
+		}
+
+		const candidate = payload as {
+			name?: unknown
+			description?: unknown
+			thumbnailUrl?: unknown
+		}
+
+		return {
+			name: typeof candidate.name === 'string' ? candidate.name : '',
+			description:
+				typeof candidate.description === 'string' ? candidate.description : '',
+			thumbnailUrl:
+				typeof candidate.thumbnailUrl === 'string' ? candidate.thumbnailUrl : ''
+		}
 	}
 
 	/**

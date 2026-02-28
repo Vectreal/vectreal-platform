@@ -25,7 +25,6 @@ import { cn } from '@shared/utils'
 import {
 	ModelFile,
 	SceneLoadResult,
-	type ServerSceneData,
 	useLoadModel
 } from '@vctrl/hooks/use-load-model'
 import { useSetAtom } from 'jotai/react'
@@ -57,6 +56,7 @@ import {
 import { deleteDialogAtom } from '../../../lib/stores/dashboard-management-store'
 
 import type { SceneAggregateResponse } from '../../../types/api'
+import type { ServerSceneData } from '@vctrl/core'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 const MAX_PRELOADED_SCENE_ASSET_CHARS = 1_500_000
@@ -121,10 +121,7 @@ function toInitialSceneData(
 	return {
 		gltfJson: aggregate.gltfJson,
 		assetData: aggregate.assetData,
-		environment: aggregate.settings?.environment,
-		controls: aggregate.settings?.controls,
-		shadows: aggregate.settings?.shadows,
-		meta: aggregate.settings?.meta
+		...aggregate.settings
 	}
 }
 
@@ -639,11 +636,6 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						) : (
 							<div className="space-y-2">
 								{sceneDetails.assets.slice(0, 4).map((asset) => {
-									console.log(
-										'Asset data for',
-										asset.name,
-										sceneData?.assetData?.[asset.id]
-									)
 									const isTexture =
 										asset.type === 'texture' &&
 										asset.mimeType &&

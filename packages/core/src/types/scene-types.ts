@@ -13,6 +13,7 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
+import { JSONDocument } from '@gltf-transform/core'
 import {
 	OrbitControlsProps,
 	RandomizedLightProps,
@@ -31,19 +32,6 @@ import type {
 	SimplifyOptions,
 	TextureCompressOptions
 } from '../model-optimizer'
-
-/**
- * Metadata for a 3D scene.
- * Contains scene name, thumbnail, and extensible custom properties.
- */
-export interface SceneMeta {
-	/** Name of the scene */
-	sceneName?: string
-	/** URL to the scene thumbnail image */
-	thumbnailUrl?: string | null
-	/** Additional custom metadata properties */
-	[key: string]: string | null | undefined
-}
 
 /**
  * Configuration for animating camera transitions in the 3D scene.
@@ -67,12 +55,15 @@ type CameraConfig = PerspectiveCameraProps & {
 /**
  * Props for configuring the camera in a 3D scene.
  */
-export type CameraProps = { cameras?: CameraConfig[] }
+export interface CameraProps {
+	cameras?: CameraConfig[]
+}
 
 /**
  * Props for the SceneBounds component, extending ThreeBoundsProps from '@react-three/drei'.
  */
-export type BoundsProps = ThreeBoundsProps
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface BoundsProps extends ThreeBoundsProps {}
 
 /**
  * Props for the SceneControls component, extending OrbitControlsProps from '@react-three/drei'.
@@ -213,8 +204,68 @@ export interface SceneSettings {
 	environment?: EnvironmentProps
 	/** Shadow rendering settings */
 	shadows?: ShadowsProps
-	/** Scene metadata */
-	meta?: SceneMeta
+}
+
+/** Extended GLTF document including optional persisted asset metadata. */
+export interface ExtendedGLTFDocument extends JSONDocument {
+	readonly assetIds?: string[]
+	readonly asset?: {
+		readonly extensions?: {
+			readonly VECTREAL_asset_metadata?: {
+				readonly assetIds: string[]
+			}
+		}
+	}
+}
+
+/** Serialized scene asset payload used in API transport. */
+export interface SceneAssetDataEntry {
+	/** Binary data as array of numbers or base64 string */
+	data: number[] | string
+	/** Original filename of the asset */
+	fileName: string
+	/** MIME type of the asset */
+	mimeType: string
+	/** Optional transfer encoding metadata */
+	encoding?: 'base64'
+}
+
+/** Serialized scene asset map keyed by asset identifier. */
+export type SerializedSceneAssetDataMap = Record<string, SceneAssetDataEntry>
+
+/** Optional scene metadata payload persisted with scene settings. */
+export interface SceneMetaData {
+	name?: string
+	description?: string
+	thumbnailUrl?: string
+}
+
+/** Raw API payload contract for scene loading. */
+export interface ServerScenePayload {
+	/** Optional scene metadata payload. */
+	meta?: SceneMetaData
+	/** Optional nested scene settings payload. */
+	settings?: SceneSettings | null
+	/** Legacy flattened settings fields. */
+	bounds?: SceneSettings['bounds']
+	camera?: SceneSettings['camera']
+	controls?: SceneSettings['controls']
+	environment?: SceneSettings['environment']
+	shadows?: SceneSettings['shadows']
+	/** The GLTF JSON structure. */
+	gltfJson: ExtendedGLTFDocument | null
+	/** Binary asset data keyed by asset identifier. */
+	assetData: SerializedSceneAssetDataMap | null
+}
+
+/** Resolved scene data contract consumed by loaders and viewer clients. */
+export interface ServerSceneData extends SceneSettings {
+	/** Optional scene metadata payload. */
+	meta?: SceneMetaData
+	/** The GLTF JSON structure. */
+	gltfJson: ExtendedGLTFDocument
+	/** Binary asset data keyed by asset identifier. */
+	assetData: SerializedSceneAssetDataMap
 }
 
 export interface TextureOptimization

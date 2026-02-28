@@ -96,9 +96,8 @@ export function reconstructGltfFiles(
 	const gltfBlob = new Blob([gltfJsonString], { type: 'model/gltf+json' })
 
 	// Determine filename from metadata or use default
-	const gltfFileName = data.meta?.sceneName
-		? `${data.meta.sceneName}.gltf`
-		: 'scene.gltf'
+	const sceneName = data.meta?.name
+	const gltfFileName = sceneName ? `${sceneName}.gltf` : 'scene.gltf'
 
 	const gltfFile = new File([gltfBlob], gltfFileName, {
 		type: 'model/gltf+json'
