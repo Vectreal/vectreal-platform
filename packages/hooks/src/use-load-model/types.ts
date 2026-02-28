@@ -85,6 +85,12 @@ export interface ExtendedGLTFDocument extends JSONDocument {
  * Contains the GLTF JSON, binary assets, and scene settings.
  */
 export interface ServerSceneData extends SceneSettings {
+	/** Optional scene metadata payload. */
+	meta?: {
+		name?: string
+		description?: string
+		thumbnailUrl?: string
+	}
 	/** The GLTF JSON structure */
 	gltfJson: ExtendedGLTFDocument
 	/** Binary asset data keyed by asset identifier */

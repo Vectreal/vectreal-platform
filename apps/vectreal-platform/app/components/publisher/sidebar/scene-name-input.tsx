@@ -1,5 +1,5 @@
 import { Input } from '@shared/components/ui/input'
-import { useAtom } from 'jotai/react'
+import { useAtom } from 'jotai'
 import {
 	useCallback,
 	useEffect,
@@ -8,16 +8,11 @@ import {
 	type KeyboardEvent
 } from 'react'
 
-import { metaAtom } from '../../../lib/stores/scene-settings-store'
+import { sceneMetaAtom } from '../../../lib/stores/publisher-config-store'
 
 export function SceneNameInput() {
-	const { setIsSaved } = {
-		setIsSaved: (_bool: boolean) => {
-			return null // Placeholder for context, replace with actual context if needed
-		}
-	} // Placeholder for context, replace with actual context if needed
-	// const { setIsSaved } = useToolbarContext()
-	const [{ sceneName }, setInfo] = useAtom(metaAtom)
+	const [sceneMeta, setSceneMeta] = useAtom(sceneMetaAtom)
+	const sceneName = sceneMeta.name
 	const [isEditing, setIsEditing] = useState(false)
 	const [localName, setLocalName] = useState(sceneName ?? '')
 	const inputRef = useRef<HTMLInputElement>(null)
@@ -25,17 +20,16 @@ export function SceneNameInput() {
 	const saveChanges = useCallback(() => {
 		const trimmedName = localName.trim()
 		if (trimmedName && trimmedName !== sceneName) {
-			setInfo((prev) => ({
+			setSceneMeta((prev) => ({
 				...prev,
-				sceneName: trimmedName
+				name: trimmedName
 			}))
-			setIsSaved(false)
 		} else if (!trimmedName) {
 			setLocalName(sceneName ?? '') // Revert to previous name if empty
 		}
 
 		setIsEditing(false)
-	}, [localName, sceneName, setInfo, setIsSaved])
+	}, [localName, sceneName, setSceneMeta])
 
 	// Handle clicking outside to save
 	useEffect(() => {

@@ -11,7 +11,6 @@ import type { ExtractTablesWithRelations } from 'drizzle-orm'
 import type { PgTransaction } from 'drizzle-orm/pg-core'
 import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js'
 
-
 export type SceneSettingsTransaction = PgTransaction<
 	PostgresJsQueryResultHKT,
 	typeof dbSchema,
@@ -54,10 +53,11 @@ function buildSceneSettingsValues(params: SceneSettingsUpsertInput) {
 	return {
 		sceneId: params.sceneId,
 		createdBy: params.createdBy,
-		environment: params.settings.environment,
+		bounds: params.settings.bounds,
+		camera: params.settings.camera,
 		controls: params.settings.controls,
-		shadows: params.settings.shadows,
-		meta: params.settings.meta
+		environment: params.settings.environment,
+		shadows: params.settings.shadows
 	}
 }
 

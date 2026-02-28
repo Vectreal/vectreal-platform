@@ -13,8 +13,10 @@ import type {
 	SerializedSceneAssetDataMap,
 	SceneSettingsRequest
 } from '../../../types/api'
+import type { SceneMetaState } from '../../../types/publisher-config'
 
 type SaveSceneSettingsRequest = SceneSettingsRequest & {
+	meta: SceneMetaState
 	settings: SceneSettings
 }
 
@@ -110,6 +112,7 @@ export async function saveSceneSettings(
 			sceneId: finalSceneId,
 			projectId,
 			userId,
+			meta: validationResult.meta,
 			settings: validationResult.settings,
 			gltfJson: validationResult.gltfJson,
 			optimizationReport: request.optimizationReport,
@@ -157,8 +160,10 @@ export async function getSceneSettings(
 			return ApiResponse.notFound(`Scene not found with ID: ${sceneId}`)
 		}
 
-		const result =
-			await sceneSettingsService.getSceneSettingsWithAssets(sceneId)
+		const [result, meta] = await Promise.all([
+			sceneSettingsService.getSceneSettingsWithAssets(sceneId),
+			sceneSettingsService.getSceneMetadata(sceneId)
+		])
 		const serialized: SerializedSceneAssetDataMap = {}
 		result?.assetDataMap?.forEach((value, key) => {
 			serialized[key] = {
@@ -169,7 +174,17 @@ export async function getSceneSettings(
 			}
 		})
 
-		return ApiResponse.success({ ...result, assetData: serialized })
+		if (!result) {
+			return ApiResponse.success({
+				meta,
+				settings: null,
+				assets: null,
+				assetData: serialized,
+				gltfJson: null
+			})
+		}
+
+		return ApiResponse.success({ ...result, meta, assetData: serialized })
 	} catch (error) {
 		console.error('Failed to get scene settings:', error)
 		return ApiResponse.serverError(

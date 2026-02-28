@@ -2,6 +2,7 @@ import { JSONDocument } from '@gltf-transform/core'
 import { ExtendedGLTFDocument } from '@vctrl/hooks/use-load-model/types'
 import { and, eq, inArray } from 'drizzle-orm'
 
+import { updateSceneMetadata } from './scene-folder-repository.server'
 import {
 	buildExtendedGltfDocument,
 	buildGltfJsonAsset,
@@ -44,6 +45,7 @@ import {
 	uploadSceneAssets
 } from '../asset/asset-storage.server'
 
+import type { SceneMetaState } from '../../../types/publisher-config'
 import type {
 	OptimizationReport,
 	Optimizations,
@@ -77,18 +79,12 @@ class SceneSettingsService {
 	 * @param params - Scene settings creation parameters
 	 * @returns Created or updated scene settings
 	 */
-	async saveSceneSettings(
-		params: SaveSceneSettingsParams & {
-			optimizationReport?: OptimizationReport
-			optimizationSettings?: Optimizations
-			initialSceneBytes?: number
-			currentSceneBytes?: number
-		}
-	) {
+	async saveSceneSettings(params: SaveSceneSettingsParams) {
 		const {
 			sceneId,
 			projectId,
 			userId,
+			meta,
 			settings,
 			gltfJson,
 			optimizationReport,
@@ -97,12 +93,12 @@ class SceneSettingsService {
 			currentSceneBytes
 		} = params
 
-		return await this.db.transaction(async (tx) => {
+		const saveResult = await this.db.transaction(async (tx) => {
 			const scene = await this.ensureSceneExists(tx, {
 				sceneId,
 				projectId,
 				userId,
-				sceneName: settings.meta?.sceneName
+				sceneMeta: meta
 			})
 
 			const existingSettings = await getSceneSettingsBySceneId(tx, sceneId)
@@ -151,8 +147,84 @@ class SceneSettingsService {
 				})
 			}
 
-			return savedSettings
+			return { savedSettings, unchanged: false as const }
 		})
+
+		await this.updateSceneAggregateMetadata(sceneId, userId, meta)
+
+		if ('unchanged' in saveResult && saveResult.unchanged) {
+			return saveResult
+		}
+
+		const savedSettings = saveResult.savedSettings
+
+		return savedSettings
+	}
+
+	/**
+	 * Updates existing scene settings in place.
+	 * @param params - Update parameters
+	 * @returns Updated scene settings
+	 */
+	async updateSceneSettings(params: UpdateSceneSettingsParams) {
+		const { sceneSettingsId, settings, meta, gltfJson, userId } = params
+
+		const updatedSettings = await this.db.transaction(async (tx) => {
+			// Get scene info for processing assets
+			const [currentSettings] = await tx
+				.select()
+				.from(sceneSettings)
+				.where(eq(sceneSettings.id, sceneSettingsId))
+				.limit(1)
+
+			if (!currentSettings) {
+				throw new Error('Scene settings not found')
+			}
+
+			const [scene] = await tx
+				.select()
+				.from(scenes)
+				.where(eq(scenes.id, currentSettings.sceneId))
+				.limit(1)
+
+			if (!scene) {
+				throw new Error('Scene not found')
+			}
+
+			// Process GLTF if provided
+			let processedGltf: ExtendedGLTFDocument | undefined
+			if (gltfJson !== undefined) {
+				const result = await this.processGLTFExport(
+					scene.id,
+					currentSettings.createdBy,
+					scene.projectId,
+					gltfJson
+				)
+				processedGltf = result.gltfDocument
+			}
+
+			// Update settings
+			const [updatedSettings] = await tx
+				.update(sceneSettings)
+				.set({ ...settings })
+				.where(eq(sceneSettings.id, sceneSettingsId))
+				.returning()
+
+			// Update assets if GLTF was processed
+			if (processedGltf !== undefined) {
+				await this.updateSceneAssets(tx, sceneSettingsId, processedGltf)
+			}
+
+			return updatedSettings
+		})
+
+		await this.updateSceneAggregateMetadata(
+			updatedSettings.sceneId,
+			userId,
+			meta
+		)
+
+		return updatedSettings
 	}
 
 	/**
@@ -162,9 +234,19 @@ class SceneSettingsService {
 	 * @returns Latest scene settings with associated assets and asset data
 	 */
 	async getSceneSettingsWithAssets(sceneId: string) {
-		const result = await this.db.transaction(async (tx) => {
-			return await getSceneSettingsWithAssetsRow(tx, sceneId)
-		})
+		let result: Awaited<ReturnType<typeof getSceneSettingsWithAssetsRow>>
+
+		try {
+			result = await this.db.transaction(async (tx) => {
+				return await getSceneSettingsWithAssetsRow(tx, sceneId)
+			})
+		} catch (error) {
+			console.error('Failed to query scene settings with assets:', {
+				sceneId,
+				error
+			})
+			return null
+		}
 
 		if (!result) return null
 
@@ -200,10 +282,39 @@ class SceneSettingsService {
 		}
 
 		return {
-			...settings,
+			meta: await this.getSceneMetadata(sceneId),
+			settings: {
+				bounds: settings.bounds ?? undefined,
+				camera: settings.camera ?? undefined,
+				controls: settings.controls ?? undefined,
+				environment: settings.environment ?? undefined,
+				shadows: settings.shadows ?? undefined
+			},
 			assets: sceneAssetsData,
 			assetDataMap, // Map of assetId -> asset data for reconstruction
 			gltfJson // The parsed GLTF JSON document
+		}
+	}
+
+	async getSceneMetadata(sceneId: string) {
+		const [scene] = await this.db
+			.select({
+				name: scenes.name,
+				description: scenes.description,
+				thumbnailUrl: scenes.thumbnailUrl
+			})
+			.from(scenes)
+			.where(eq(scenes.id, sceneId))
+			.limit(1)
+
+		if (!scene) {
+			return null
+		}
+
+		return {
+			name: scene.name,
+			description: scene.description ?? '',
+			thumbnailUrl: scene.thumbnailUrl ?? ''
 		}
 	}
 
@@ -261,69 +372,6 @@ class SceneSettingsService {
 				...publishedRecord,
 				asset: uploadResult
 			}
-		})
-	}
-
-	/**
-	 * Updates existing scene settings in place.
-	 * @param params - Update parameters
-	 * @returns Updated scene settings
-	 */
-	async updateSceneSettings(params: Omit<UpdateSceneSettingsParams, 'userId'>) {
-		const { sceneSettingsId, settings, gltfJson } = params
-
-		return await this.db.transaction(async (tx) => {
-			// Get scene info for processing assets
-			const [currentSettings] = await tx
-				.select()
-				.from(sceneSettings)
-				.where(eq(sceneSettings.id, sceneSettingsId))
-				.limit(1)
-
-			if (!currentSettings) {
-				throw new Error('Scene settings not found')
-			}
-
-			const [scene] = await tx
-				.select()
-				.from(scenes)
-				.where(eq(scenes.id, currentSettings.sceneId))
-				.limit(1)
-
-			if (!scene) {
-				throw new Error('Scene not found')
-			}
-
-			// Process GLTF if provided
-			let processedGltf: ExtendedGLTFDocument | undefined
-			if (gltfJson !== undefined) {
-				const result = await this.processGLTFExport(
-					scene.id,
-					currentSettings.createdBy,
-					scene.projectId,
-					gltfJson
-				)
-				processedGltf = result.gltfDocument
-			}
-
-			// Update settings
-			const [updatedSettings] = await tx
-				.update(sceneSettings)
-				.set({
-					environment: settings.environment,
-					controls: settings.controls,
-					shadows: settings.shadows,
-					meta: settings.meta
-				})
-				.where(eq(sceneSettings.id, sceneSettingsId))
-				.returning()
-
-			// Update assets if GLTF was processed
-			if (processedGltf !== undefined) {
-				await this.updateSceneAssets(tx, sceneSettingsId, processedGltf)
-			}
-
-			return updatedSettings
 		})
 	}
 
@@ -464,11 +512,12 @@ class SceneSettingsService {
 		existing: typeof sceneSettings.$inferSelect
 	): boolean {
 		return (
+			JSON.stringify(current.bounds) !== JSON.stringify(existing.bounds) ||
+			JSON.stringify(current.camera) !== JSON.stringify(existing.camera) ||
+			JSON.stringify(current.controls) !== JSON.stringify(existing.controls) ||
 			JSON.stringify(current.environment) !==
 				JSON.stringify(existing.environment) ||
-			JSON.stringify(current.controls) !== JSON.stringify(existing.controls) ||
-			JSON.stringify(current.shadows) !== JSON.stringify(existing.shadows) ||
-			JSON.stringify(current.meta) !== JSON.stringify(existing.meta)
+			JSON.stringify(current.shadows) !== JSON.stringify(existing.shadows)
 		)
 	}
 
@@ -527,7 +576,7 @@ class SceneSettingsService {
 			sceneId: string
 			projectId: string
 			userId: string
-			sceneName?: string
+			sceneMeta?: SceneMetaState
 		}
 	) {
 		const existingScene = await tx
@@ -558,8 +607,11 @@ class SceneSettingsService {
 			.insert(scenes)
 			.values({
 				id: params.sceneId,
-				name: params.sceneName || 'Untitled Scene',
-				description: 'Scene created from publisher',
+				name: params.sceneMeta?.name?.trim() || 'Untitled Scene',
+				description:
+					params.sceneMeta?.description?.trim() ||
+					'Scene created from publisher',
+				thumbnailUrl: params.sceneMeta?.thumbnailUrl?.trim() || null,
 				projectId: params.projectId,
 				folderId: userFolder[0]?.id,
 				status: 'draft'
@@ -567,6 +619,23 @@ class SceneSettingsService {
 			.returning()
 
 		return newScene
+	}
+
+	private async updateSceneAggregateMetadata(
+		sceneId: string,
+		userId: string,
+		meta: SaveSceneSettingsParams['meta'] | UpdateSceneSettingsParams['meta']
+	) {
+		const trimmedName = meta.name?.trim()
+		if (!trimmedName) {
+			return
+		}
+
+		await updateSceneMetadata(sceneId, userId, {
+			name: trimmedName,
+			description: meta.description,
+			thumbnailUrl: meta.thumbnailUrl
+		})
 	}
 
 	/**

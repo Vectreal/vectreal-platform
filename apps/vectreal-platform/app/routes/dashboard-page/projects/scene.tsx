@@ -121,10 +121,7 @@ function toInitialSceneData(
 	return {
 		gltfJson: aggregate.gltfJson,
 		assetData: aggregate.assetData,
-		environment: aggregate.settings?.environment,
-		controls: aggregate.settings?.controls,
-		shadows: aggregate.settings?.shadows,
-		meta: aggregate.settings?.meta
+		...aggregate.settings
 	}
 }
 
@@ -639,11 +636,6 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						) : (
 							<div className="space-y-2">
 								{sceneDetails.assets.slice(0, 4).map((asset) => {
-									console.log(
-										'Asset data for',
-										asset.name,
-										sceneData?.assetData?.[asset.id]
-									)
 									const isTexture =
 										asset.type === 'texture' &&
 										asset.mimeType &&

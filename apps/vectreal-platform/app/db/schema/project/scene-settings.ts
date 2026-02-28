@@ -1,7 +1,8 @@
 import {
+	BoundsProps,
+	CameraProps,
 	ControlsProps,
 	EnvironmentProps,
-	SceneMeta,
 	ShadowsProps
 } from '@vctrl/core'
 import { sql } from 'drizzle-orm'
@@ -27,11 +28,14 @@ export const sceneSettings = pgTable(
 			.references(() => scenes.id, { onDelete: 'cascade' })
 			.notNull()
 			.unique(),
+
 		// Scene configuration data from publisher store
-		environment: json('environment').$type<EnvironmentProps>(), // environmentAtom data
+		bounds: json('bounds').$type<BoundsProps>(), // boundsAtom data
+		camera: json('camera').$type<CameraProps>(), // cameraAtom data
 		controls: json('controls').$type<ControlsProps>(), // controlsAtom data
+		environment: json('environment').$type<EnvironmentProps>(), // environmentAtom data
 		shadows: json('shadows').$type<ShadowsProps>(), // shadowsAtom data
-		meta: json('meta').$type<SceneMeta>(), // metaAtom data (scene name, thumbnail, etc.)
+
 		// Audit fields
 		createdAt: timestamp('created_at').defaultNow().notNull(),
 		createdBy: uuid('created_by')

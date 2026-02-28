@@ -33,19 +33,6 @@ import type {
 } from '../model-optimizer'
 
 /**
- * Metadata for a 3D scene.
- * Contains scene name, thumbnail, and extensible custom properties.
- */
-export interface SceneMeta {
-	/** Name of the scene */
-	sceneName?: string
-	/** URL to the scene thumbnail image */
-	thumbnailUrl?: string | null
-	/** Additional custom metadata properties */
-	[key: string]: string | null | undefined
-}
-
-/**
  * Configuration for animating camera transitions in the 3D scene.
  */
 interface CameraAnimationConfig {
@@ -67,12 +54,15 @@ type CameraConfig = PerspectiveCameraProps & {
 /**
  * Props for configuring the camera in a 3D scene.
  */
-export type CameraProps = { cameras?: CameraConfig[] }
+export interface CameraProps {
+	cameras?: CameraConfig[]
+}
 
 /**
  * Props for the SceneBounds component, extending ThreeBoundsProps from '@react-three/drei'.
  */
-export type BoundsProps = ThreeBoundsProps
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface BoundsProps extends ThreeBoundsProps {}
 
 /**
  * Props for the SceneControls component, extending OrbitControlsProps from '@react-three/drei'.
@@ -213,8 +203,6 @@ export interface SceneSettings {
 	environment?: EnvironmentProps
 	/** Shadow rendering settings */
 	shadows?: ShadowsProps
-	/** Scene metadata */
-	meta?: SceneMeta
 }
 
 export interface TextureOptimization

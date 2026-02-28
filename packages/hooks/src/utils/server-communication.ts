@@ -41,6 +41,37 @@ export interface ApiEnvelope<T = unknown> {
 	error?: string
 }
 
+type SceneSettingsLike = {
+	bounds?: unknown
+	camera?: unknown
+	controls?: unknown
+	environment?: unknown
+	shadows?: unknown
+}
+
+function normalizeScenePayload<T>(payload: T): T {
+	if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+		return payload
+	}
+
+	const candidate = payload as T & {
+		settings?: SceneSettingsLike
+	} & SceneSettingsLike
+
+	if (!candidate.settings || typeof candidate.settings !== 'object') {
+		return payload
+	}
+
+	return {
+		...candidate,
+		bounds: candidate.bounds ?? candidate.settings.bounds,
+		camera: candidate.camera ?? candidate.settings.camera,
+		controls: candidate.controls ?? candidate.settings.controls,
+		environment: candidate.environment ?? candidate.settings.environment,
+		shadows: candidate.shadows ?? candidate.settings.shadows
+	} as T
+}
+
 /**
  * Unified server communication service for handling HTTP requests.
  * Provides a consistent interface for API calls with built-in error handling,
@@ -331,7 +362,7 @@ export class ServerCommunicationService {
 			'data' in response &&
 			response.data
 		) {
-			return response.data as T
+			return normalizeScenePayload(response.data as T)
 		}
 
 		if (
@@ -343,6 +374,6 @@ export class ServerCommunicationService {
 			throw new Error(response.error)
 		}
 
-		return response as T
+		return normalizeScenePayload(response as T)
 	}
 }

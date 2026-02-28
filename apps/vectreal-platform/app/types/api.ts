@@ -2,13 +2,12 @@ import { ExtendedGLTFDocument } from '@vctrl/hooks/use-load-model/types'
 
 import { assets, sceneSettings } from '../db/schema'
 
-import type { ProcessState } from './publisher-config'
+import type { ProcessState, SceneMetaState } from './publisher-config'
 import type { JSONDocument } from '@gltf-transform/core'
 import type { User } from '@supabase/supabase-js'
 import type {
 	Optimizations,
 	OptimizationReport,
-	SceneMeta,
 	SceneSettings,
 	SerializedGLTFExportResult
 } from '@vctrl/core'
@@ -52,7 +51,6 @@ export type SerializedSceneAssetDataMap = Record<
 
 /** Scene configuration for API operations (includes publisher metadata). */
 export interface SceneConfigData extends SceneSettings {
-	readonly meta?: SceneMeta
 	readonly process?: ProcessState
 }
 
@@ -84,6 +82,7 @@ export interface SceneSettingsRequest extends Partial<BaseSceneParams> {
 	readonly action: string
 	readonly requestId?: string
 	readonly projectId?: string
+	readonly meta?: SceneMetaState
 	readonly settings?: SceneSettings
 	readonly gltfJson?: JSONDocument
 	readonly optimizationReport?: OptimizationReport
@@ -103,6 +102,7 @@ export type GetSceneSettingsParams = BaseSceneParams
 /** Parameters for saving scene settings. */
 export interface SaveSceneSettingsParams extends BaseSceneParams {
 	readonly projectId: string
+	readonly meta: SceneMetaState
 	readonly settings: SceneSettings
 	readonly gltfJson?: JSONDocument
 	readonly optimizationReport?: OptimizationReport
@@ -115,8 +115,15 @@ export interface SaveSceneSettingsParams extends BaseSceneParams {
 export interface UpdateSceneSettingsParams {
 	readonly sceneSettingsId: string
 	readonly userId: string
+	readonly meta: SceneMetaState
 	readonly settings: SceneSettings
 	readonly gltfJson?: JSONDocument
+}
+
+export interface SceneMetadataUpdateInput {
+	readonly name: string
+	readonly description?: string | null
+	readonly thumbnailUrl?: string | null
 }
 
 /** Valid scene settings actions. */
@@ -176,6 +183,7 @@ export interface CreateFolderActionResponse {
 /** Aggregate scene response returned by GET /api/scenes/:sceneId. */
 export interface SceneAggregateResponse {
 	readonly sceneId: string
+	readonly meta: SceneMetaState | null
 	readonly stats: SceneStatsData | null
 	readonly gltfJson: ExtendedGLTFDocument | null
 	readonly assetData: SerializedSceneAssetDataMap | null

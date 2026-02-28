@@ -3,11 +3,12 @@ import { useAtom } from 'jotai'
 import { useEffect, useState, type FC } from 'react'
 
 import { BasicCard } from '../../../../../components/layout-components'
-import { metaAtom } from '../../../../../lib/stores/scene-settings-store'
+import { sceneMetaAtom } from '../../../../../lib/stores/publisher-config-store'
 
 export const ScenePreview: FC = () => {
 	const [isLoading, setIsLoading] = useState(true)
-	const [{ thumbnailUrl }] = useAtom(metaAtom)
+	const [sceneMeta] = useAtom(sceneMetaAtom)
+	const thumbnailUrl = sceneMeta.thumbnailUrl
 
 	useEffect(() => {
 		// Simulate loading of preview
