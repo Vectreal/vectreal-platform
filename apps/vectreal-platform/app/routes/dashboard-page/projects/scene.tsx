@@ -451,10 +451,10 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 				setIsLoadingScene(false)
 			}
 		}
-	}, [loadFromServer, sceneData, sceneId])
+	}, [loadFromServer, sceneId])
 
 	useEffect(() => {
-		if (sceneId && !sceneData) {
+		if (sceneId && sceneData?.sceneId !== sceneId) {
 			getSceneSettings()
 		}
 	}, [getSceneSettings, sceneData, sceneId])

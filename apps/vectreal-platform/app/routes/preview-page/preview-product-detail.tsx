@@ -108,7 +108,7 @@ const PreviewProductDetailPage = ({ params }: Route.ComponentProps) => {
 	}, [loadFromServer, projectId, sceneId, searchParams])
 
 	useEffect(() => {
-		if (sceneId && projectId && !sceneData) {
+		if (sceneId && projectId && sceneData?.sceneId !== sceneId) {
 			void getSceneSettings()
 		}
 	}, [getSceneSettings, projectId, sceneData, sceneId])

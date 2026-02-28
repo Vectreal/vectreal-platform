@@ -5,19 +5,34 @@ import { Separator } from '@shared/components/ui/separator'
 import { motion } from 'framer-motion'
 import { ClipboardCopy } from 'lucide-react'
 import { useState, type FC } from 'react'
+import { toast } from 'sonner'
 
 import { itemVariants } from '../../animation'
 
-export const EmbedOptions: FC = () => {
+interface EmbedOptionsProps {
+	sceneId?: string
+	projectId?: string
+}
+
+export const EmbedOptions: FC<EmbedOptionsProps> = ({ sceneId, projectId }) => {
 	const [width, setWidth] = useState('100%')
 	const [height, setHeight] = useState('400px')
 	const [autoRotate] = useState(true)
 	const [showControls] = useState(true)
 	const [showUI] = useState(true)
+	const canEmbed = Boolean(sceneId && projectId)
+
+	const embedUrl = canEmbed
+		? `https://example.com/projects/${projectId}/scene/${sceneId}/preview?autoRotate=${autoRotate}&controls=${showControls}&ui=${showUI}`
+		: ''
 
 	const generateEmbedCode = () => {
+		if (!embedUrl) {
+			return '<!-- Save this scene before generating an embed snippet -->'
+		}
+
 		return `<iframe
-  src="https://example.com/embed/scene-id?autoRotate=${autoRotate}&controls=${showControls}&ui=${showUI}"
+  src="${embedUrl}"
   width="${width}"
   height="${height}"
   allow="autoplay; xr-spatial-tracking"
@@ -27,6 +42,11 @@ export const EmbedOptions: FC = () => {
 	}
 
 	const handleCopyCode = () => {
+		if (!canEmbed) {
+			toast.error('Save this scene first to generate an embed snippet.')
+			return
+		}
+
 		navigator.clipboard
 			.writeText(generateEmbedCode())
 			.then(() => {
@@ -42,6 +62,12 @@ export const EmbedOptions: FC = () => {
 			<div className="text-muted-foreground text-sm">
 				Generate code to embed your 3D scene on websites or apps
 			</div>
+			{!canEmbed && (
+				<div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+					Embedding is unavailable until this scene is saved and linked to a
+					project.
+				</div>
+			)}
 
 			<div className="grid grid-cols-2 gap-4">
 				<div className="space-y-2">
@@ -81,6 +107,7 @@ export const EmbedOptions: FC = () => {
 						className="absolute top-2 right-2 z-10"
 						size="sm"
 						onClick={handleCopyCode}
+						disabled={!canEmbed}
 					>
 						<ClipboardCopy className="mr-1 h-3 w-3" />
 						Copy

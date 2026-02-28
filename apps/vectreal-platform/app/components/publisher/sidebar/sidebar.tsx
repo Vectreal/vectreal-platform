@@ -13,7 +13,7 @@ import { AnimatePresence } from 'framer-motion'
 import { useAtom } from 'jotai/react'
 import { BarChart4, Camera, SidebarIcon } from 'lucide-react'
 import { useCallback } from 'react'
-import { Link } from 'react-router'
+import { Link, useParams } from 'react-router'
 
 
 import { ComposeSidebar } from './compose-sidebar'
@@ -68,10 +68,19 @@ const variants = {
 
 interface PublisherSidebarProps {
 	user: User | null
+	sceneId?: string
+	projectId?: string
 }
 
-const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
+const PublisherSidebar = ({
+	user,
+	sceneId,
+	projectId
+}: PublisherSidebarProps) => {
 	const [{ mode, step, showSidebar }, setProcessState] = useAtom(processAtom)
+	const params = useParams()
+	const resolvedSceneId = params.sceneId?.trim() || sceneId
+	const resolvedProjectId = projectId
 
 	const handleTabChange = useCallback(
 		(value: string) => {
@@ -116,8 +125,8 @@ const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
 						{step === 'publishing' && (
 							<PublishSidebar
 								userId={user?.id}
-								sceneId={undefined} // TODO: Get from scene context
-								projectId={undefined} // TODO: Get from project context
+								sceneId={resolvedSceneId}
+								projectId={resolvedProjectId}
 							/>
 						)}
 					</motion.div>
