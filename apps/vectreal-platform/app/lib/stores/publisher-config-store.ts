@@ -7,7 +7,7 @@ const processInitialState: ProcessState = {
 	step: 'uploading',
 	mode: 'optimize',
 	showSidebar: false,
-	showInfo: false,
+	showPublishPanel: false,
 	isInitializing: false,
 	isLoading: false,
 	isSaving: false,
@@ -37,6 +37,8 @@ export {
 	// atoms
 	processAtom,
 	sceneMetaAtom,
+	processInitialState,
+	sceneMetaInitialState,
 
 	// store
 	publisherConfigStore

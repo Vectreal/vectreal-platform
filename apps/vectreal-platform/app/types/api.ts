@@ -201,6 +201,23 @@ export interface PublishSceneResponse {
 	readonly [key: string]: unknown
 }
 
+export interface PublishedSceneMetaResponse {
+	readonly sceneId: string
+	readonly projectId: string
+	readonly status: string
+	readonly publishedAssetId: string
+	readonly publishedAt: Date | string
+}
+
+export interface PublisherLoaderData {
+	readonly isMobile: boolean
+	readonly user: User | null
+	readonly sceneId: string | null
+	readonly projectId: string | null
+	readonly sceneAggregate: SceneAggregateResponse | null
+	readonly publishedMeta: PublishedSceneMetaResponse | null
+}
+
 // ============================================================================
 // API Response Types
 // ============================================================================

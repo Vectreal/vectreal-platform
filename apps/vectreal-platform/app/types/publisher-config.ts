@@ -1,15 +1,15 @@
 //// Process state
-export type SidebarMode = 'optimize' | 'compose' | 'publish'
+export type SidebarMode = 'optimize' | 'compose'
 export interface SceneMetaState {
 	name: string
 	description: string
 	thumbnailUrl: string
 }
 export interface ProcessState {
-	step: 'uploading' | 'preparing' | 'publishing'
+	step: 'uploading' | 'preparing'
 	mode: SidebarMode
 	showSidebar: boolean
-	showInfo: boolean
+	showPublishPanel: boolean
 	isInitializing: boolean
 	isLoading: boolean
 	isSaving: boolean

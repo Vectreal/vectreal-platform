@@ -1,21 +1,15 @@
 import { SidebarProvider } from '@shared/components/ui/sidebar'
-import { ModelProvider, useModelContext } from '@vctrl/hooks/use-load-model'
+import { ModelProvider } from '@vctrl/hooks/use-load-model'
 import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
-import { Provider, useAtom, useAtomValue } from 'jotai/react'
+import { Provider, useAtom } from 'jotai/react'
 import { useCallback } from 'react'
 import { data, Outlet } from 'react-router'
 
-import { Navigation } from '../../components/navigation'
-import {
-	PublisherButtons,
-	PublisherSidebar,
-	SaveButton,
-	Stepper
-} from '../../components/publisher'
-import { useSceneLoader } from '../../hooks'
 import { Route } from './+types/publisher-layout'
+import { ControlsOverlay } from '../../components'
 import { buildSceneAggregate } from '../../lib/domain/scene/scene-aggregate.server'
 import { getScene } from '../../lib/domain/scene/scene-folder-repository.server'
+import { getPublishedScenePreview } from '../../lib/domain/scene/scene-preview-repository.server'
 import {
 	processAtom,
 	publisherConfigStore
@@ -25,7 +19,11 @@ import { sceneSettingsStore } from '../../lib/stores/scene-settings-store'
 import { createSupabaseClient } from '../../lib/supabase.server'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
-import type { SceneAggregateResponse } from '../../types/api'
+import type {
+	PublishedSceneMetaResponse,
+	PublisherLoaderData,
+	SceneAggregateResponse
+} from '../../types/api'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export const loader = async ({ request, params }: Route.LoaderArgs) => {
@@ -40,6 +38,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	let projectId: string | null = null
 
 	let sceneAggregate: SceneAggregateResponse | null = null
+	let publishedMeta: PublishedSceneMetaResponse | null = null
 
 	if (sceneId && user?.id) {
 		const scene = await getScene(sceneId, user.id)
@@ -50,6 +49,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		projectId = scene.projectId
 
 		sceneAggregate = await buildSceneAggregate(sceneId)
+		publishedMeta = await getPublishedScenePreview(projectId, sceneId)
 	}
 
 	const loaderData = {
@@ -58,10 +58,10 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		sceneId,
 		projectId,
 		sceneAggregate,
-		sceneMeta: sceneAggregate?.meta ?? null
+		publishedMeta
 	}
 
-	return data(loaderData, { headers })
+	return data(loaderData as PublisherLoaderData, { headers })
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({
@@ -86,49 +86,6 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 	return defaultShouldRevalidate
 }
 
-const OverlayControls = ({
-	isMobile,
-	user,
-	sceneId,
-	projectId,
-	sceneAggregate
-}: Route.ComponentProps['loaderData']) => {
-	const { file } = useModelContext()
-	const { step, hasUnsavedChanges } = useAtomValue(processAtom)
-
-	// Centralized scene loader - single source of truth (must be inside ModelProvider)
-	// This hook manages scene loading/saving but doesn't return state available via atoms
-	const { saveSceneSettings, saveAvailability } = useSceneLoader({
-		sceneId,
-		userId: user?.id,
-		initialSceneAggregate: sceneAggregate as SceneAggregateResponse | null,
-		sceneMeta: sceneAggregate?.meta ?? null
-	})
-
-	const isUploadStep = !file?.model && step === 'uploading'
-
-	return isUploadStep ? (
-		<Navigation user={user} isMobile={isMobile} />
-	) : (
-		<>
-			<Stepper />
-			<PublisherSidebar
-				user={user}
-				sceneId={sceneId ?? undefined}
-				projectId={projectId ?? undefined}
-			/>
-			<SaveButton
-				sceneId={sceneId}
-				userId={user?.id}
-				saveSceneSettings={saveSceneSettings}
-				hasUnsavedChanges={hasUnsavedChanges}
-				saveAvailability={saveAvailability}
-			/>
-			<PublisherButtons />
-		</>
-	)
-}
-
 const Layout = ({ loaderData }: Route.ComponentProps) => {
 	const optimizer = useOptimizeModel()
 	const [{ showSidebar }, setProcessState] = useAtom(processAtom)
@@ -150,7 +107,7 @@ const Layout = ({ loaderData }: Route.ComponentProps) => {
 					<Provider store={sceneOptimizationStore}>
 						<Provider store={sceneSettingsStore}>
 							<main className="flex h-screen w-full flex-col overflow-hidden">
-								<OverlayControls {...loaderData} />
+								<ControlsOverlay {...(loaderData as PublisherLoaderData)} />
 								<Outlet />
 							</main>
 						</Provider>
