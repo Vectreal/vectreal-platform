@@ -15,9 +15,9 @@ import {
 	ACCUMULATIVE_LIGHT_FIELDS,
 	CONTACT_FIELDS
 } from './constants'
-import { InfoTooltip } from '../../../../info-tooltip'
 import { defaultAccumulativeShadowsOptions } from '../../../../../constants/viewer-defaults'
 import { shadowsAtom } from '../../../../../lib/stores/scene-settings-store'
+import { InfoTooltip } from '../../../../info-tooltip'
 import { EnhancedSettingSlider } from '../../../settings-components'
 
 import type { ShadowsProps, ShadowTypePropBase } from '@vctrl/core'

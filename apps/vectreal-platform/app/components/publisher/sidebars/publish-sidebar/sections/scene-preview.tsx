@@ -2,8 +2,8 @@ import { motion } from 'framer-motion'
 import { useAtom } from 'jotai'
 import { useEffect, useState, type FC } from 'react'
 
-import { BasicCard } from '../../../../layout-components'
 import { sceneMetaAtom } from '../../../../../lib/stores/publisher-config-store'
+import { BasicCard } from '../../../../layout-components'
 
 export const ScenePreview: FC = () => {
 	const [isLoading, setIsLoading] = useState(true)

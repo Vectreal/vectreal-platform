@@ -8,11 +8,11 @@ import {
 	defaultControlsOptions,
 	type FieldConfig
 } from './constants'
-import { InfoTooltip } from '../../../../info-tooltip'
 import {
 	cameraAtom,
 	controlsAtom
 } from '../../../../../lib/stores/scene-settings-store'
+import { InfoTooltip } from '../../../../info-tooltip'
 import {
 	EnhancedSettingSlider,
 	SettingToggle
