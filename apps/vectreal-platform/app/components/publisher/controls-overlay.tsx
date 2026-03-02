@@ -201,7 +201,6 @@ const OverlayControls = ({
 			<PublishDrawer
 				open={showPublishPanel}
 				onOpenChange={handlePublishPanelChange}
-				userId={user?.id}
 				sceneId={sceneId ?? undefined}
 				projectId={projectId ?? undefined}
 				saveSceneSettings={saveSceneSettings}

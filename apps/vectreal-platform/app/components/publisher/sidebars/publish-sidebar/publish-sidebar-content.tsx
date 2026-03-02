@@ -27,7 +27,6 @@ import type { OptimizationReport } from '@vctrl/core'
 import type { FC } from 'react'
 
 interface PublishSidebarProps {
-	userId?: string
 	sceneId?: string
 	projectId?: string
 	hideHeader?: boolean
@@ -66,7 +65,6 @@ const metricValue = (value?: number | null) =>
 	typeof value === 'number' ? value.toLocaleString() : '—'
 
 const PublishSidebarContent: FC<PublishSidebarProps> = ({
-	userId,
 	sceneId,
 	projectId,
 	hideHeader = false,
@@ -165,11 +163,7 @@ const PublishSidebarContent: FC<PublishSidebarProps> = ({
 							</span>
 						</AccordionTrigger>
 						<AccordionContent>
-							<SaveOptions
-								userId={userId}
-								sceneId={sceneId}
-								projectId={projectId}
-							/>
+							<SaveOptions />
 						</AccordionContent>
 					</AccordionItem>
 

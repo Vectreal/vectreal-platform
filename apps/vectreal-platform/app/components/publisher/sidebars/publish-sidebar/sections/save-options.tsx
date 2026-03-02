@@ -1,9 +1,8 @@
 import { Button } from '@shared/components/ui/button'
-import { Separator } from '@shared/components/ui/separator'
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { motion } from 'framer-motion'
-import { Box, Download, FileAxis3d, Save, User } from 'lucide-react'
+import { Box, Download, FileAxis3d } from 'lucide-react'
 import { useState, type FC } from 'react'
 import { toast } from 'sonner'
 
@@ -44,13 +43,7 @@ function handleExportError(error: Error) {
 	toast.error(error.message)
 }
 
-interface SaveOptionsProps {
-	userId?: string
-	sceneId?: string
-	projectId?: string
-}
-
-export const SaveOptions: FC<SaveOptionsProps> = ({ userId }) => {
+export const SaveOptions: FC = () => {
 	const [format, setFormat] = useState<ExportFormat>('gltf')
 	const { file, optimizer } = useModelContext()
 
@@ -58,9 +51,6 @@ export const SaveOptions: FC<SaveOptionsProps> = ({ userId }) => {
 		handleExportSuccess,
 		handleExportError
 	)
-
-	const isLoggedIn = Boolean(userId)
-	const canSaveToCloud = Boolean(userId)
 
 	function handleFormatChange(value: Option<ExportFormat>) {
 		if (value.id === format) {
@@ -94,47 +84,11 @@ export const SaveOptions: FC<SaveOptionsProps> = ({ userId }) => {
 		}
 	}
 
-	const handleSaveToCloud = () => {
-		// TODO: Implement cloud save functionality
-		toast.info('Cloud save functionality coming soon!')
-	}
-
 	return (
 		<motion.div
 			variants={itemVariants}
 			className="flex flex-col gap-4 px-2 py-2"
 		>
-			{/* Scene Save Section */}
-			<div className="space-y-3">
-				<div>
-					<h4 className="text-sm font-medium">Save to Cloud</h4>
-					<p className="text-muted-foreground text-xs">
-						Save your scene configuration and share it with others
-					</p>
-				</div>
-
-				<Button
-					onClick={handleSaveToCloud}
-					variant={isLoggedIn ? 'default' : 'outline'}
-					className="w-full"
-					disabled={!canSaveToCloud}
-				>
-					{isLoggedIn ? (
-						<Save className="h-4 w-4" />
-					) : (
-						<User className="h-4 w-4" />
-					)}
-					{isLoggedIn ? 'Save Scene' : 'Sign In to Save'}
-				</Button>
-				{!canSaveToCloud && (
-					<p className="text-muted-foreground text-xs">
-						Sign in to enable cloud save actions.
-					</p>
-				)}
-			</div>
-
-			<Separator />
-
 			{/* Export Section */}
 			<div className="space-y-3">
 				<div>

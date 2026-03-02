@@ -19,7 +19,6 @@ import type { OptimizationReport } from '@vctrl/core'
 interface PublishDrawerProps {
 	open: boolean
 	onOpenChange: (nextOpen: boolean) => void
-	userId?: string
 	sceneId?: string
 	projectId?: string
 	saveSceneSettings: () => Promise<
@@ -42,7 +41,6 @@ interface PublishDrawerProps {
 export const PublishDrawer: FC<PublishDrawerProps> = ({
 	open,
 	onOpenChange,
-	userId,
 	sceneId,
 	projectId,
 	saveSceneSettings,
@@ -74,7 +72,6 @@ export const PublishDrawer: FC<PublishDrawerProps> = ({
 				<PublishSidebarContent
 					hideHeader
 					showSceneInfo
-					userId={userId}
 					sceneId={sceneId}
 					projectId={projectId}
 					saveSceneSettings={saveSceneSettings}
