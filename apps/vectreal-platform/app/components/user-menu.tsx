@@ -46,18 +46,24 @@ export function UserMenu({
 					className={cn(
 						'rounded-xl',
 						{
-							'h-7 w-7': size === 'sm',
+							'h-7 w-7 rounded-lg': size === 'sm',
 							'h-8 w-8': size === 'md' || !size
 						},
 						className
 					)}
 				>
 					<AvatarImage
-						className="rounded-xl"
+						className={cn('rounded-xl', {
+							'rounded-lg': size === 'sm'
+						})}
 						src={userImageSrc}
 						alt={user.user_metadata?.full_name || 'User Avatar'}
 					/>
-					<AvatarFallback className="rounded-xl">{userInitial}</AvatarFallback>
+					<AvatarFallback
+						className={cn('rounded-xl', { 'rounded-lg': size === 'sm' })}
+					>
+						{userInitial}
+					</AvatarFallback>
 				</Avatar>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side="bottom" className="mr-4 min-w-64 capitalize">

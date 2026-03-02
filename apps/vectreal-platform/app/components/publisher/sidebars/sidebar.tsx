@@ -1,4 +1,3 @@
-import { VectrealLogoSmall } from '@shared/components/assets/icons/vectreal-logo-small'
 import {
 	Tabs,
 	TabsContent,
@@ -7,12 +6,13 @@ import {
 } from '@shared/components/ui/tabs'
 import { TooltipProvider } from '@shared/components/ui/tooltip'
 import { cn } from '@shared/utils'
+import { User } from '@supabase/supabase-js'
 import { motion } from 'framer-motion'
 import { AnimatePresence } from 'framer-motion'
 import { useAtom } from 'jotai/react'
 import { BarChart4, Camera, SidebarIcon } from 'lucide-react'
 import { useCallback } from 'react'
-import { Link } from 'react-router'
+import { useFetcher } from 'react-router'
 
 import { ComposeSidebar } from './compose-sidebar'
 import { OptimizeSidebar } from './optimize-sidebar'
@@ -20,6 +20,7 @@ import { SceneNameInput } from './scene-name-input'
 import { processAtom } from '../../../lib/stores/publisher-config-store'
 import { SidebarMode } from '../../../types/publisher-config'
 import { TooltipButton } from '../../tooltip-button'
+import { UserMenu } from '../../user-menu'
 
 const SidebarTabs = ({
 	mode,
@@ -63,8 +64,13 @@ const variants = {
 	exit: { opacity: 0, x: '-100%', dislay: 'none' }
 }
 
-const PublisherSidebar = () => {
+interface PublisherSidebarProps {
+	user: User | null
+}
+
+const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
 	const [{ mode, showSidebar }, setProcessState] = useAtom(processAtom)
+	const { submit } = useFetcher()
 
 	const handleTabChange = useCallback(
 		(value: string) => {
@@ -82,7 +88,12 @@ const PublisherSidebar = () => {
 			showSidebar: !prev.showSidebar
 		}))
 	}, [setProcessState])
-
+	async function handleLogout() {
+		await submit(null, {
+			method: 'get',
+			action: '/auth/logout'
+		})
+	}
 	return (
 		<TooltipProvider>
 			<div className="fixed left-0 z-30 flex h-full flex-col justify-end">
@@ -94,12 +105,15 @@ const PublisherSidebar = () => {
 						exit="exit"
 						variants={variants}
 						transition={{ type: 'ease', duration: 0.3 }}
-						className="bg-muted/50 relative m-4 h-full w-92 flex-col overflow-hidden rounded-xl backdrop-blur-2xl"
+						className="bg-muted/50 border- relative z-20 m-4 h-full w-92 flex-col overflow-hidden rounded-xl border shadow-xl backdrop-blur-2xl"
 					>
 						<div className="flex w-full items-center gap-2 pl-4">
-							<Link viewTransition to="/dashboard" className="group">
-								<VectrealLogoSmall className="h-5 w-5 transition-opacity group-hover:opacity-70" />
-							</Link>
+							{user && (
+								<TooltipButton className="group" size="icon" info="Open Menu">
+									<UserMenu size="sm" user={user} onLogout={handleLogout} />
+								</TooltipButton>
+							)}
+
 							<SceneNameInput />
 						</div>
 
@@ -114,16 +128,10 @@ const PublisherSidebar = () => {
 					showSidebar ? 'left-94' : 'left-0'
 				)}
 			>
-				{!showSidebar && (
-					<Link viewTransition to="/dashboard">
-						<TooltipButton
-							className="group"
-							info="Go to your dashboard"
-							size="icon"
-						>
-							<VectrealLogoSmall className="text-muted-foreground ml-[2px] h-5 w-5 transition-opacity group-hover:opacity-70" />
-						</TooltipButton>
-					</Link>
+				{!showSidebar && user && (
+					<TooltipButton className="group" size="icon" info="Open Menu">
+						<UserMenu size="sm" user={user} onLogout={handleLogout} />
+					</TooltipButton>
 				)}
 
 				<TooltipButton
