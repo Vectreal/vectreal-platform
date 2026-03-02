@@ -14,5 +14,10 @@
 		"**/dist/**": true,
 		"**/build/**": true,
 		"**/.nx/**": true
+	},
+	"chat.tools.terminal.autoApprove": {
+		"pnpm dlx nx": true,
+		"pnpx nx": true,
+		"pnpm exec nx": true
 	}
 }

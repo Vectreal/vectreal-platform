@@ -69,8 +69,8 @@ export interface SceneLoadOptions {
  * Configuration options for loading an already-resolved scene payload.
  */
 export interface SceneDataLoadOptions {
-	/** The unique identifier of the scene to load */
-	sceneId: string
+	/** Optional scene identifier for resolved payloads. */
+	sceneId?: string
 	/** Resolved server scene payload */
 	sceneData: ServerSceneData
 	/** Whether to automatically apply scene settings (default: true) */
@@ -85,7 +85,7 @@ export interface SceneLoadResult extends ServerSceneData {
 	/** The loaded model file */
 	file: ModelFile
 	/** Scene ID that was loaded */
-	sceneId: string
+	sceneId?: string
 }
 
 /**

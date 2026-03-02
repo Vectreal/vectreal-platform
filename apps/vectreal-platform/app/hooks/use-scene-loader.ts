@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 
 import { optimizationPresets } from '../constants/optimizations'
 import {
+	defaultBoundsOptions,
 	defaultCameraOptions,
 	defaultControlsOptions,
 	defaultEnvOptions,
@@ -19,7 +20,8 @@ import {
 } from '../constants/viewer-defaults'
 import {
 	processAtom,
-	sceneMetaAtom
+	sceneMetaAtom,
+	sceneMetaInitialState
 } from '../lib/stores/publisher-config-store'
 import {
 	optimizationAtom,
@@ -27,6 +29,7 @@ import {
 	optimizationRuntimeInitialState
 } from '../lib/stores/scene-optimization-store'
 import {
+	boundsAtom,
 	cameraAtom,
 	controlsAtom,
 	environmentAtom,
@@ -42,13 +45,6 @@ import type {
 	Optimizations,
 	SceneSettings
 } from '@vctrl/core'
-
-type ResolvedSceneSettings = {
-	environment: typeof defaultEnvOptions
-	camera: typeof defaultCameraOptions
-	controls: typeof defaultControlsOptions
-	shadows: typeof defaultShadowOptions
-}
 export interface UseSceneLoaderParams {
 	sceneId: null | string
 	userId?: string
@@ -111,7 +107,6 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	const [currentSceneId, setCurrentSceneId] = useState<string | null>(
 		paramSceneId
 	)
-	const previousParamSceneIdRef = useRef<string | null>(paramSceneId)
 
 	const revalidator = useRevalidator()
 
@@ -128,6 +123,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	const { handleDocumentGltfExport } = useExportModel()
 
 	// Scene state atoms
+	const [bounds, setBounds] = useAtom(boundsAtom)
 	const [environment, setEnv] = useAtom(environmentAtom)
 	const [camera, setCamera] = useAtom(cameraAtom)
 	const [controls, setControls] = useAtom(controlsAtom)
@@ -180,37 +176,28 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		[setProcess]
 	)
 
-	const getDefaultSceneSettings = useCallback(
-		(): ResolvedSceneSettings => ({
-			environment: defaultEnvOptions,
-			camera: defaultCameraOptions,
-			controls: defaultControlsOptions,
-			shadows: defaultShadowOptions
-		}),
-		[]
-	)
-
-	const resetSceneSettingsToDefaults = useCallback(() => {
-		const defaultSettings = getDefaultSceneSettings()
-		setEnv(defaultSettings.environment)
-		setCamera(defaultSettings.camera)
-		setControls(defaultSettings.controls)
-		setShadows(defaultSettings.shadows)
-		setLastSavedSettings(defaultSettings)
-	}, [
-		getDefaultSceneSettings,
-		setCamera,
-		setControls,
-		setEnv,
-		setShadows
-	])
-
 	const createRequestId = useCallback(() => {
 		if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
 			return crypto.randomUUID()
 		}
 
 		return `save-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+	}, [])
+
+	const getSceneNameFromFileName = useCallback((fileName: string) => {
+		const trimmedFileName = fileName.trim()
+		if (!trimmedFileName) {
+			return ''
+		}
+
+		const withoutPath = trimmedFileName.split(/[/\\]/).pop() ?? trimmedFileName
+		const extensionIndex = withoutPath.lastIndexOf('.')
+
+		if (extensionIndex <= 0) {
+			return withoutPath
+		}
+
+		return withoutPath.slice(0, extensionIndex)
 	}, [])
 
 	const serializeGltfDocument = useCallback(async () => {
@@ -260,13 +247,39 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	// Get current settings from atoms
 	const currentSettings: SceneSettings = useMemo(
 		() => ({
+			bounds,
 			environment,
 			camera,
 			controls,
 			shadows
 		}),
-		[environment, camera, controls, shadows]
+		[bounds, environment, camera, controls, shadows]
 	)
+
+	const resetSceneState = useCallback(() => {
+		setBounds(defaultBoundsOptions)
+		setEnv(defaultEnvOptions)
+		setCamera(defaultCameraOptions)
+		setControls(defaultControlsOptions)
+		setShadows(defaultShadowOptions)
+		setSceneMetaState(sceneMetaInitialState)
+		setLastSavedSettings(null)
+		setLastSavedSceneMeta(null)
+		setHasUnsavedChanges(false)
+		setOptimizationRuntime({
+			...optimizationRuntimeInitialState,
+			lastSavedReportSignature: null
+		})
+	}, [
+		setBounds,
+		setEnv,
+		setCamera,
+		setControls,
+		setShadows,
+		setSceneMetaState,
+		setHasUnsavedChanges,
+		setOptimizationRuntime
+	])
 
 	const saveToDB = useCallback(
 		async (options?: {
@@ -424,10 +437,15 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			}
 
 			if (!paramSceneId) {
-				resetSceneSettingsToDefaults()
 				setLastSavedSettings({
-					...getDefaultSceneSettings()
+					...currentSettings
 				})
+
+				const initialSceneName = getSceneNameFromFileName(data.name)
+				setSceneMetaState((prev) => ({
+					...prev,
+					name: initialSceneName
+				}))
 			}
 
 			setProcess((prev) => ({
@@ -437,7 +455,13 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				showSidebar: false
 			}))
 		},
-		[paramSceneId, getDefaultSceneSettings, resetSceneSettingsToDefaults, setProcess]
+		[
+			paramSceneId,
+			currentSettings,
+			setProcess,
+			getSceneNameFromFileName,
+			setSceneMetaState
+		]
 	) as EventHandler<'load-complete'>
 
 	const handleLoadError = useCallback((error: unknown) => {
@@ -479,20 +503,16 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 
 	// Update currentSceneId when sceneId prop changes
 	useEffect(() => {
-		const previousSceneId = previousParamSceneIdRef.current
-		const hasSceneContextChanged = previousSceneId !== paramSceneId
+		const isNewUploadFlow = !paramSceneId && !initialSceneAggregate
 
-		if (hasSceneContextChanged) {
-			resetSceneSettingsToDefaults()
+		if (isNewUploadFlow) {
+			resetSceneState()
 		}
-
-		previousParamSceneIdRef.current = paramSceneId
 
 		setCurrentSceneId(paramSceneId)
-		if (sceneMeta) {
-			setSceneMetaState(sceneMeta)
-			setLastSavedSceneMeta(sceneMeta)
-		}
+		const nextMeta = sceneMeta ?? sceneMetaInitialState
+		setSceneMetaState(nextMeta)
+		setLastSavedSceneMeta(sceneMeta ?? null)
 		setIsInitializing(!!paramSceneId && !!initialSceneAggregate)
 		setOptimizationRuntime({
 			...optimizationRuntimeInitialState,
@@ -505,9 +525,9 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		paramSceneId,
 		sceneMeta,
 		initialSceneAggregate,
-		resetSceneSettingsToDefaults,
 		setSceneMetaState,
 		setLastSavedSceneMeta,
+		resetSceneState,
 		setIsInitializing,
 		setHasUnsavedChanges,
 		setOptimizationRuntime
@@ -586,21 +606,22 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	 */
 	const applySceneSettings = useCallback(
 		(settings: SceneSettings) => {
-			const loadedSettings: ResolvedSceneSettings = {
-				environment: settings.environment ?? defaultEnvOptions,
-				camera: settings.camera ?? defaultCameraOptions,
-				controls: settings.controls ?? defaultControlsOptions,
-				shadows: settings.shadows ?? defaultShadowOptions
+			setBounds(settings.bounds || defaultBoundsOptions)
+			setEnv(settings.environment || defaultEnvOptions)
+			setCamera(settings.camera || defaultCameraOptions)
+			setControls(settings.controls || defaultControlsOptions)
+			setShadows(settings.shadows || defaultShadowOptions)
+
+			const loadedSettings: SceneSettings = {
+				bounds: settings.bounds || defaultBoundsOptions,
+				environment: settings.environment || defaultEnvOptions,
+				camera: settings.camera || defaultCameraOptions,
+				controls: settings.controls || defaultControlsOptions,
+				shadows: settings.shadows || defaultShadowOptions
 			}
-
-			setEnv(loadedSettings.environment)
-			setCamera(loadedSettings.camera)
-			setControls(loadedSettings.controls)
-			setShadows(loadedSettings.shadows)
-
 			setLastSavedSettings(loadedSettings)
 		},
-		[setCamera, setControls, setEnv, setShadows]
+		[setBounds, setCamera, setControls, setEnv, setShadows]
 	)
 
 	const inferOptimizationPreset = useCallback(
@@ -848,12 +869,6 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				hydrateOptimizationState(aggregate)
 
 				const settings = getSettingsFromAggregate(aggregate)
-				const shouldResetSettings = currentSceneId !== sceneId || !settings
-
-				if (shouldResetSettings) {
-					resetSceneSettingsToDefaults()
-				}
-
 				if (settings) {
 					applySceneSettings(settings)
 				}
@@ -906,9 +921,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		[
 			hydrateOptimizationState,
 			getSettingsFromAggregate,
-			currentSceneId,
 			applySceneSettings,
-			resetSceneSettingsToDefaults,
 			setSceneMetaState,
 			setLastSavedSceneMeta,
 			load,
@@ -998,6 +1011,10 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		const settingsBaseline = lastSavedSettings || currentSettings
 		const sceneMetaBaseline = lastSavedSceneMeta || sceneMetaState
 		const settingsChanged =
+			JSON.stringify(currentSettings.bounds) !==
+				JSON.stringify(settingsBaseline.bounds) ||
+			JSON.stringify(currentSettings.camera) !==
+				JSON.stringify(settingsBaseline.camera) ||
 			JSON.stringify(currentSettings.environment) !==
 				JSON.stringify(settingsBaseline.environment) ||
 			JSON.stringify(currentSettings.controls) !==
