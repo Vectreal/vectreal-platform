@@ -1,10 +1,23 @@
 import { Button } from '@shared/components/ui/button'
+import { ButtonGroup } from '@shared/components/ui/button-group'
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuTrigger
+} from '@shared/components/ui/dropdown-menu'
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue
+} from '@shared/components/ui/select'
 import { Separator } from '@shared/components/ui/separator'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue } from 'jotai/react'
-import { Cloud, CloudUpload, Sparkles } from 'lucide-react'
+import { Cloud, CloudUpload, MoreVertical, Sparkles } from 'lucide-react'
 import { useCallback } from 'react'
-import { useFetcher, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
 import {
@@ -21,7 +34,6 @@ import { PublisherLoaderData, SceneAggregateResponse } from '../../types/api'
 import { InfoTooltip } from '../info-tooltip'
 import { FloatingPillWrapper } from '../layout-components'
 import { Navigation } from '../navigation'
-import { UserMenu } from '../user-menu'
 
 const OverlayControls = ({
 	isMobile,
@@ -42,7 +54,6 @@ const OverlayControls = ({
 		clientTextureBytes
 	} = useAtomValue(optimizationRuntimeAtom)
 	const navigate = useNavigate()
-	const { submit } = useFetcher()
 
 	// Centralized scene loader - single source of truth (must be inside ModelProvider)
 	// This hook manages scene loading/saving but doesn't return state available via atoms
@@ -68,13 +79,6 @@ const OverlayControls = ({
 			: saveAvailability.reason === 'no-unsaved-changes'
 				? 'Saved'
 				: 'Save'
-
-	async function handleLogout() {
-		await submit(null, {
-			method: 'get',
-			action: '/auth/logout'
-		})
-	}
 
 	const handleSaveScene = useCallback(async () => {
 		if (!user?.id) {
@@ -158,23 +162,48 @@ const OverlayControls = ({
 	) : (
 		<>
 			{user && (
-				<FloatingPillWrapper className="bg-muted/50 fixed top-0 right-0 z-20 m-4 rounded-2xl p-2 py-1 backdrop-blur-2xl">
-					<Button
-						variant="ghost"
-						size="sm"
-						className="rounded-xl"
-						disabled={isSaveDisabled}
-						onClick={handleSaveScene}
-					>
-						{saveActionLabel}
-						{saveAvailability.reason === 'requires-first-optimization' ? (
-							<Sparkles size={16} className="inline animate-pulse" />
-						) : saveAvailability.reason === 'no-unsaved-changes' ? (
-							<Cloud size={16} className="inline" />
-						) : (
-							<CloudUpload size={16} className="inline" />
-						)}
-					</Button>
+				<FloatingPillWrapper className="bg-muted/50 fixed top-0 right-0 z-20 m-4 rounded-2xl p-1 pr-3 backdrop-blur-2xl">
+					<ButtonGroup className="items-center">
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="ghost" size="icon">
+									<MoreVertical />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent>
+								<Select>
+									<SelectTrigger className="w-full">
+										<SelectValue placeholder="Select an action" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem
+											value="publish"
+											onSelect={handleOpenPublishPanel}
+										>
+											Publish Scene
+										</SelectItem>
+									</SelectContent>
+								</Select>
+							</DropdownMenuContent>
+						</DropdownMenu>
+						<Button
+							variant="ghost"
+							size="sm"
+							className="flex items-center gap-2 rounded-xl"
+							disabled={isSaveDisabled}
+							onClick={handleSaveScene}
+						>
+							{saveActionLabel}
+							{saveAvailability.reason === 'requires-first-optimization' ? (
+								<Sparkles size={16} className="inline animate-pulse" />
+							) : saveAvailability.reason === 'no-unsaved-changes' ? (
+								<Cloud size={16} className="inline" />
+							) : (
+								<CloudUpload size={16} className="inline" />
+							)}
+						</Button>
+					</ButtonGroup>
+
 					{isPublished && (
 						<>
 							<Separator
@@ -193,7 +222,6 @@ const OverlayControls = ({
 							</span>
 						</>
 					)}
-					<UserMenu size="sm" user={user} onLogout={handleLogout} />
 				</FloatingPillWrapper>
 			)}
 			<SceneInfoTrigger onClick={handleOpenPublishPanel} />
@@ -221,7 +249,7 @@ const OverlayControls = ({
 				stats={latestSceneStats}
 			/>
 			<ToolSidebarTriggers />
-			<PublisherSidebar />
+			<PublisherSidebar user={user} />
 		</>
 	)
 }
