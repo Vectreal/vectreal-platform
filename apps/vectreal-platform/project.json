@@ -111,7 +111,7 @@
 				"cwd": "apps/vectreal-platform",
 				"envFile": ".env.development",
 				"commands": [
-					"SUPABASE_DB_PASSWORD=\"$SUPABASE_DB_PASSWORD_STAGING\" pnpm exec supabase link --project-ref \"$SUPABASE_PROJECT_REF_STAGING\" --skip-pooler",
+					"SUPABASE_DB_PASSWORD=\"$SUPABASE_DB_PASSWORD_STAGING\" pnpm exec supabase link --project-ref \"$SUPABASE_PROJECT_REF_STAGING\"",
 					"SUPABASE_DB_PASSWORD=\"$SUPABASE_DB_PASSWORD_STAGING\" pnpm exec supabase db push --linked"
 				],
 				"parallel": false
@@ -123,7 +123,7 @@
 				"cwd": "apps/vectreal-platform",
 				"envFile": ".env.development",
 				"commands": [
-					"SUPABASE_DB_PASSWORD=\"$SUPABASE_DB_PASSWORD_PROD\" pnpm exec supabase link --project-ref \"$SUPABASE_PROJECT_REF_PROD\" --skip-pooler",
+					"SUPABASE_DB_PASSWORD=\"$SUPABASE_DB_PASSWORD_PROD\" pnpm exec supabase link --project-ref \"$SUPABASE_PROJECT_REF_PROD\"",
 					"SUPABASE_DB_PASSWORD=\"$SUPABASE_DB_PASSWORD_PROD\" pnpm exec supabase db push --linked"
 				],
 				"parallel": false
