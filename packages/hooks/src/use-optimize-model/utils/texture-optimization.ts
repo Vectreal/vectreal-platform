@@ -26,6 +26,7 @@ import type {
 const DEFAULT_TIMEOUT_MS = 20_000
 const DEFAULT_MAX_RETRIES = 2
 const DEFAULT_MAX_TEXTURE_UPLOAD_BYTES = 20 * 1024 * 1024
+const DEFAULT_MAX_CONCURRENT_REQUESTS = 4
 const TRANSIENT_STATUS_CODES = new Set([408, 425, 429, 500, 502, 503, 504])
 
 const wait = async (ms: number): Promise<void> => {
@@ -172,16 +173,35 @@ export const performServerSideTextureOptimization = async (
 	const textures = optimizer.listTextureDescriptors()
 	const failures: Array<{ index: number; reason: string }> = []
 	let successCount = 0
+	const maxConcurrentRequests =
+		options.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS
 
 	try {
-		for (const texture of textures) {
-			try {
-				await optimizeTexture(optimizer, texture, options, serverOptions)
-				successCount += 1
-			} catch (error) {
+		for (
+			let start = 0;
+			start < textures.length;
+			start += maxConcurrentRequests
+		) {
+			const chunk = textures.slice(start, start + maxConcurrentRequests)
+			const settled = await Promise.allSettled(
+				chunk.map(async (texture) => {
+					await optimizeTexture(optimizer, texture, options, serverOptions)
+					return texture.index
+				})
+			)
+
+			for (const [index, outcome] of settled.entries()) {
+				if (outcome.status === 'fulfilled') {
+					successCount += 1
+					continue
+				}
+
 				failures.push({
-					index: texture.index,
-					reason: error instanceof Error ? error.message : String(error)
+					index: chunk[index].index,
+					reason:
+						outcome.reason instanceof Error
+							? outcome.reason.message
+							: String(outcome.reason)
 				})
 			}
 		}

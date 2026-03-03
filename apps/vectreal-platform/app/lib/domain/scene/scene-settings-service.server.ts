@@ -295,11 +295,20 @@ class SceneSettingsService {
 			}
 
 			const existingSettings = await getSceneSettingsBySceneId(tx, sceneId)
+			const existingAssetIds = existingSettings
+				? await getSceneAssetIds(tx, existingSettings.id)
+				: []
 			const settingsChanged = existingSettings
 				? this.compareSceneSettings(settings, existingSettings)
 				: true
+			const assetsChanged = compareAssetIds(sceneAssetIds, existingAssetIds)
 
-			if (existingSettings && !settingsChanged && !hasLocationChange) {
+			if (
+				existingSettings &&
+				!settingsChanged &&
+				!assetsChanged &&
+				!hasLocationChange
+			) {
 				return { ...existingSettings, unchanged: true }
 			}
 
@@ -309,7 +318,9 @@ class SceneSettingsService {
 				settings
 			})
 
-			await replaceSceneAssets(tx, savedSettings.id, sceneAssetIds)
+			if (!existingSettings || assetsChanged) {
+				await replaceSceneAssets(tx, savedSettings.id, sceneAssetIds)
+			}
 
 			if (optimizationReport || optimizationSettings) {
 				await this.upsertSceneStats(tx, {

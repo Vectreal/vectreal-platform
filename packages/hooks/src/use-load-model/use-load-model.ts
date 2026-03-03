@@ -16,7 +16,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 import { ModelFileTypes, ModelLoader } from '@vctrl/core/model-loader'
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
-import { Object3D } from 'three'
 
 import eventSystem from './event-system'
 import reducer, { initialState } from './state'
@@ -336,6 +335,10 @@ function useLoadModel<
 			dispatch({ type: 'set-file-loading', payload: false })
 			loadedFileRef.current = loadedFile
 
+			if (optimizer) {
+				await optimizer.loadFromServerSceneData(sceneData)
+			}
+
 			updateProgress(100)
 
 			return {
@@ -344,7 +347,7 @@ function useLoadModel<
 				...sceneData
 			}
 		},
-		[modelLoader, updateProgress]
+		[modelLoader, optimizer, updateProgress]
 	)
 
 	const loadFromServer = useCallback(
@@ -373,11 +376,6 @@ function useLoadModel<
 					sceneData
 				})
 
-				// If optimizer is available, load the model into it
-				if (optimizer && sceneLoadResult.file?.model) {
-					await optimizer.load(sceneLoadResult.file.model as Object3D)
-				}
-
 				// Emit server load complete event
 				eventSystem.emit('server-load-complete', sceneLoadResult)
 
@@ -393,7 +391,7 @@ function useLoadModel<
 				throw error
 			}
 		},
-		[optimizer, loadFromData, updateProgress]
+		[loadFromData, updateProgress]
 		// Note: processFiles removed, we load directly to avoid uploadCompleteRef trigger
 	)
 
@@ -435,6 +433,7 @@ function useLoadModel<
 		on: eventSystem.on,
 		off: eventSystem.off,
 		load,
+		loadFromData,
 		loadFromServer,
 		reset,
 		optimizer: optimizerIntegration

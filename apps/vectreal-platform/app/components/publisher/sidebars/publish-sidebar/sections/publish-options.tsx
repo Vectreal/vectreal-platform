@@ -8,6 +8,7 @@ import { useCallback, useRef, useState, type FC } from 'react'
 import { useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
+import { buildSceneUploadFileDescriptor } from '../../../../../lib/domain/scene/scene-upload-manifest'
 import { processAtom } from '../../../../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
 import { itemVariants } from '../../animation'
@@ -59,18 +60,24 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		setPublishStatus('saving')
 		setPublishError(null)
 		try {
-			const saveResult = await saveSceneSettings()
-			const targetSceneId =
-				typeof saveResult === 'object' && saveResult && 'sceneId' in saveResult
-					? (saveResult.sceneId ?? sceneId)
-					: sceneId
+			const requiresSaveBeforePublish = !sceneId || hasUnsavedChanges
+			let targetSceneId = sceneId
+
+			if (requiresSaveBeforePublish) {
+				setPublishStatus('saving')
+				const saveResult = await saveSceneSettings()
+				targetSceneId =
+					typeof saveResult === 'object' && saveResult && 'sceneId' in saveResult
+						? (saveResult.sceneId ?? sceneId)
+						: sceneId
+
+				if (!sceneId && targetSceneId) {
+					navigate(`/publisher/${targetSceneId}`, { replace: true })
+				}
+			}
 
 			if (!targetSceneId) {
 				throw new Error('Save succeeded but scene ID is missing. Please retry.')
-			}
-
-			if (!sceneId && targetSceneId) {
-				navigate(`/publisher/${targetSceneId}`, { replace: true })
 			}
 
 			setPublishStatus('publishing')
@@ -85,14 +92,11 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 			const uploadFormData = new FormData()
 			uploadFormData.append('action', 'upload-published-glb')
 			uploadFormData.append('sceneId', targetSceneId)
-			const glbBytes = new Uint8Array(result.data.byteLength)
-			glbBytes.set(result.data)
-			uploadFormData.append(
-				'file',
-				new File([glbBytes], `${baseName}.glb`, {
-					type: 'model/gltf-binary'
-				})
+			const uploadDescriptor = buildSceneUploadFileDescriptor(
+				`${baseName}.glb`,
+				result.data
 			)
+			uploadFormData.append('file', uploadDescriptor.file)
 
 			const uploadResponse = await fetch(`/api/scenes/${targetSceneId}`, {
 				method: 'POST',
@@ -152,6 +156,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		canPublish,
 		optimizer,
 		saveSceneSettings,
+		hasUnsavedChanges,
 		sceneId,
 		navigate,
 		revalidator,
@@ -175,7 +180,8 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	return (
 		<motion.div variants={itemVariants} className="space-y-4 px-2 py-2">
 			<div className="text-muted-foreground text-sm">
-				Publish your current optimized scene. This action always saves first.
+				Publish your current optimized scene. This saves first only when there
+				are unsaved changes.
 			</div>
 			{!sceneId && (
 				<div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">

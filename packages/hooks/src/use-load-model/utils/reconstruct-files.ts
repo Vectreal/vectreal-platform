@@ -14,23 +14,9 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
+import { toSerializedAssetBytes } from '@vctrl/core'
+
 import type { InputFileOrDirectory, ServerSceneData } from '../types'
-
-function decodeBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
-	if (typeof atob !== 'function') {
-		throw new Error('Base64 decoding is not supported in this environment')
-	}
-
-	const normalized = base64.replace(/\s/g, '')
-	const binaryString = atob(normalized)
-	const bytes = new Uint8Array(binaryString.length)
-
-	for (let index = 0; index < binaryString.length; index += 1) {
-		bytes[index] = binaryString.charCodeAt(index)
-	}
-
-	return bytes
-}
 
 /**
  * Reconstructs GLTF and asset files from scene data received from the server.
@@ -67,22 +53,13 @@ export function reconstructGltfFiles(
 	// Convert asset data back to File objects
 	if (data.assetData && typeof data.assetData === 'object') {
 		for (const [, assetInfo] of Object.entries(data.assetData)) {
-			const { data: assetData, fileName, mimeType, encoding } = assetInfo
-
-			let uint8Array: Uint8Array<ArrayBuffer>
-
-			if (typeof assetData === 'string') {
-				if (encoding === 'base64') {
-					uint8Array = decodeBase64ToUint8Array(assetData)
-				} else {
-					uint8Array = Uint8Array.from(new TextEncoder().encode(assetData))
-				}
-			} else {
-				uint8Array = Uint8Array.from(assetData)
-			}
+			const { fileName, mimeType } = assetInfo
+			const uint8Array = toSerializedAssetBytes(assetInfo)
 
 			// Create a Blob from the binary data
-			const blob = new Blob([uint8Array.buffer], { type: mimeType })
+			const blobBytes = new Uint8Array(uint8Array.byteLength)
+			blobBytes.set(uint8Array)
+			const blob = new Blob([blobBytes], { type: mimeType })
 
 			// Create a File object
 			const file = new File([blob], fileName, { type: mimeType })

@@ -1,8 +1,15 @@
+import {
+	buildAssetLookupKeys,
+	getSerializedAssetByteSize,
+	type OptimizationReport,
+	type Optimizations,
+	type SceneSettings,
+	type ServerSceneData
+} from '@vctrl/core'
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import {
 	type EventHandler,
 	type ModelFile,
-	reconstructGltfFiles,
 	useModelContext
 } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue } from 'jotai'
@@ -18,6 +25,10 @@ import {
 	defaultEnvOptions,
 	defaultShadowOptions
 } from '../constants/viewer-defaults'
+import {
+	buildImageMimeLookup,
+	buildSceneUploadFileDescriptor
+} from '../lib/domain/scene/scene-upload-manifest'
 import {
 	processAtom,
 	sceneMetaAtom,
@@ -39,12 +50,6 @@ import { SceneMetaState } from '../types/publisher-config'
 import { OptimizationPreset } from '../types/scene-optimization'
 
 import type { SceneAggregateResponse, SceneStatsData } from '../types/api'
-import type {
-	ServerSceneData,
-	OptimizationReport,
-	Optimizations,
-	SceneSettings
-} from '@vctrl/core'
 export interface UseSceneLoaderParams {
 	sceneId: null | string
 	userId?: string
@@ -75,6 +80,8 @@ export interface SaveAvailabilityState {
 	reason: SaveAvailabilityReason
 	isFirstSavePendingOptimization: boolean
 }
+
+const DEFAULT_MAX_CONCURRENT_SCENE_ASSET_UPLOADS = 4
 
 /**
  * Manages scene load/save side effects and shared store synchronization.
@@ -121,7 +128,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		file,
 		on,
 		off,
-		load,
+		loadFromData,
 		optimizer,
 		file: modelFile
 	} = useModelContext()
@@ -269,6 +276,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			currentSceneBytes?: number
 			targetProjectId?: string
 			targetFolderId?: string | null
+			maxConcurrentAssetUploads?: number
 		}): Promise<SaveSceneResult | { unchanged: true } | undefined> => {
 			if (inFlightSaveRef.current) {
 				return inFlightSaveRef.current
@@ -283,6 +291,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 
 				try {
 					requestId = createRequestId()
+					const activeRequestId = requestId
 					const gltfJsonToSend = await prepareGltfDocumentForUpload()
 					if (!gltfJsonToSend) {
 						throw new Error('Failed to prepare glTF payload for upload')
@@ -299,7 +308,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 
 					const prepareFormData = new FormData()
 					prepareFormData.append('action', 'prepare-scene-upload')
-					prepareFormData.append('requestId', requestId)
+					prepareFormData.append('requestId', activeRequestId)
 					prepareFormData.append('sceneId', currentSceneId || '')
 
 					if (options?.targetProjectId) {
@@ -328,34 +337,34 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 					const prepared = prepareResult.data || prepareResult
 					const preparedSceneId = prepared.sceneId as string
 					const preparedProjectId = prepared.projectId as string | undefined
+					const maxConcurrentAssetUploads =
+						options?.maxConcurrentAssetUploads ??
+						DEFAULT_MAX_CONCURRENT_SCENE_ASSET_UPLOADS
 
 					const sceneAssetIds: string[] = []
+					const gltfData =
+						(gltfJsonToSend as { data?: unknown }).data ?? gltfJsonToSend
+					const imageMimeLookup = buildImageMimeLookup(gltfData)
 
 					const gltfAssets = (gltfJsonToSend as { assets?: unknown }).assets
 					if (gltfAssets instanceof Map) {
-						for (const [fileName, data] of gltfAssets.entries()) {
-							const mimeType = fileName.endsWith('.bin')
-								? 'application/octet-stream'
-								: fileName.endsWith('.png')
-									? 'image/png'
-									: fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')
-										? 'image/jpeg'
-										: fileName.endsWith('.webp')
-											? 'image/webp'
-											: 'application/octet-stream'
-							const kind = mimeType.startsWith('image/') ? 'image' : 'buffer'
+						const gltfAssetEntries = Array.from(gltfAssets.entries())
+
+						const uploadAsset = async ([fileName, data]: [string, unknown]) => {
+							const descriptor = buildSceneUploadFileDescriptor(
+								fileName,
+								data,
+								imageMimeLookup
+							)
 							const uploadAssetFormData = new FormData()
 							uploadAssetFormData.append('action', 'upload-scene-asset')
-							uploadAssetFormData.append('requestId', requestId)
+							uploadAssetFormData.append('requestId', activeRequestId)
 							uploadAssetFormData.append('sceneId', preparedSceneId)
 							if (preparedProjectId) {
 								uploadAssetFormData.append('projectId', preparedProjectId)
 							}
-							uploadAssetFormData.append('kind', kind)
-							uploadAssetFormData.append(
-								'file',
-								new File([data], fileName, { type: mimeType })
-							)
+							uploadAssetFormData.append('kind', descriptor.kind)
+							uploadAssetFormData.append('file', descriptor.file)
 
 							const uploadAssetResponse = await fetch(
 								`/api/scenes/${preparedSceneId}`,
@@ -373,18 +382,29 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 							}
 
 							const uploadedAsset = uploadAssetResult.data || uploadAssetResult
-							sceneAssetIds.push(uploadedAsset.assetId)
+							return uploadedAsset.assetId as string
+						}
+
+						for (
+							let start = 0;
+							start < gltfAssetEntries.length;
+							start += maxConcurrentAssetUploads
+						) {
+							const chunk = gltfAssetEntries.slice(
+								start,
+								start + maxConcurrentAssetUploads
+							)
+							const chunkAssetIds = await Promise.all(chunk.map(uploadAsset))
+							sceneAssetIds.push(...chunkAssetIds)
 						}
 					}
 
-					const gltfData =
-						(gltfJsonToSend as { data?: unknown }).data ?? gltfJsonToSend
 					const gltfBlob = new Blob([JSON.stringify(gltfData)], {
 						type: 'model/gltf+json'
 					})
 					const uploadGltfFormData = new FormData()
 					uploadGltfFormData.append('action', 'upload-scene-gltf')
-					uploadGltfFormData.append('requestId', requestId)
+					uploadGltfFormData.append('requestId', activeRequestId)
 					uploadGltfFormData.append('sceneId', preparedSceneId)
 					if (preparedProjectId) {
 						uploadGltfFormData.append('projectId', preparedProjectId)
@@ -413,7 +433,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 
 					const formData = new FormData()
 					formData.append('action', 'commit-scene-save')
-					formData.append('requestId', requestId)
+					formData.append('requestId', activeRequestId)
 					formData.append('sceneId', preparedSceneId)
 					if (preparedProjectId) {
 						formData.append('projectId', preparedProjectId)
@@ -452,8 +472,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 
 					console.info('[scene-settings] save request started', {
 						requestId,
-						sceneId: currentSceneId || null,
-						includeModel: true
+						sceneId: currentSceneId || null
 					})
 
 					const response = await fetch(endpoint, {
@@ -746,27 +765,18 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			const gltfJson = aggregate.gltfJson
 			const assets = Object.values(aggregate.assetData ?? {}).map((asset) => ({
 				fileName: asset.fileName,
-				size: asset.data.length
+				size: getSerializedAssetByteSize(asset.data)
 			}))
 
-			const normalizeUri = (value: string) =>
-				decodeURIComponent(value).replace(/^\.\//, '')
-
 			const resolveAssetSize = (uri: string) => {
-				const normalizedUri = normalizeUri(uri)
-				const uriBasename = normalizedUri.split('/').pop() || normalizedUri
+				const uriKeys = buildAssetLookupKeys(uri)
 
 				for (const asset of assets) {
-					const normalizedName = normalizeUri(asset.fileName)
-					const basename = normalizedName.split('/').pop() || normalizedName
-
-					if (
-						normalizedName === normalizedUri ||
-						basename === normalizedUri ||
-						normalizedName === uriBasename ||
-						basename === uriBasename
-					) {
-						return asset.size
+					const assetKeys = buildAssetLookupKeys(asset.fileName)
+					for (const key of uriKeys) {
+						if (assetKeys.has(key)) {
+							return asset.size
+						}
 					}
 				}
 
@@ -998,8 +1008,10 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 						...settings
 					}
 
-					const files = reconstructGltfFiles(sceneData)
-					await load(files)
+					await loadFromData({
+						sceneId,
+						sceneData
+					})
 				}
 				const sceneName = aggregate.meta?.name || sceneId
 				toast.success(`Loaded scene: ${sceneName}`)
@@ -1019,7 +1031,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			applySceneSettings,
 			setSceneMetaState,
 			setLastSavedSceneMeta,
-			load,
+			loadFromData,
 			setIsDownloading
 		]
 	)

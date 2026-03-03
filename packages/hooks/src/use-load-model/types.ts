@@ -188,6 +188,11 @@ export type UseLoadModelReturn<HasOptimizer extends boolean> =
 		 */
 		load: (filesOrDirectories: InputFileOrDirectory) => Promise<void>
 		/**
+		 * Load a scene from already-resolved scene data.
+		 * Preserves original asset payload semantics and bypasses upload-style file processing.
+		 */
+		loadFromData: (options: SceneDataLoadOptions) => Promise<SceneLoadResult>
+		/**
 		 * Load a scene from the server by scene ID.
 		 * Fetches both the model and scene settings, applies them automatically.
 		 *

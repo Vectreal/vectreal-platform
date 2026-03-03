@@ -1,4 +1,9 @@
-import { SerializedAsset } from '@vctrl/core'
+import {
+	detectMimeTypeFromBytes,
+	getAssetKindFromMimeType,
+	resolveMimeTypeFromFileName,
+	SerializedAsset
+} from '@vctrl/core'
 
 import {
 	computeAssetHash,
@@ -28,25 +33,26 @@ export function isGltfExportResult(
 }
 
 function resolveGltfAssetMeta(fileName: string): GltfAssetMeta {
-	const extension = fileName.split('.').pop()?.toLowerCase()
+	const mimeType = resolveMimeTypeFromFileName(fileName)
+	return {
+		mimeType,
+		type: getAssetKindFromMimeType(mimeType)
+	}
+}
 
-	if (extension === 'bin') {
-		return { mimeType: 'application/octet-stream', type: 'buffer' }
+function resolveAssetMetaFromPayload(
+	fileName: string,
+	data: Uint8Array
+): GltfAssetMeta {
+	const detectedMimeType = detectMimeTypeFromBytes(data)
+	if (detectedMimeType) {
+		return {
+			mimeType: detectedMimeType,
+			type: getAssetKindFromMimeType(detectedMimeType)
+		}
 	}
 
-	if (extension === 'png') {
-		return { mimeType: 'image/png', type: 'image' }
-	}
-
-	if (extension === 'jpg' || extension === 'jpeg') {
-		return { mimeType: 'image/jpeg', type: 'image' }
-	}
-
-	if (extension === 'webp') {
-		return { mimeType: 'image/webp', type: 'image' }
-	}
-
-	return { mimeType: 'application/octet-stream', type: 'buffer' }
+	return resolveGltfAssetMeta(fileName)
 }
 
 export function extractGltfAssets(
@@ -61,7 +67,7 @@ export function extractGltfAssets(
 
 	if (gltfExportResult.assets instanceof Map) {
 		gltfExportResult.assets.forEach((data: Uint8Array, fileName: string) => {
-			const meta = resolveGltfAssetMeta(fileName)
+			const meta = resolveAssetMetaFromPayload(fileName, data)
 
 			extractedAssets.push({
 				fileName,
@@ -72,8 +78,8 @@ export function extractGltfAssets(
 		})
 	} else if (Array.isArray(gltfExportResult.assets)) {
 		gltfExportResult.assets.forEach((asset: SerializedAsset) => {
-			const meta = resolveGltfAssetMeta(asset.fileName)
 			const data = new Uint8Array(asset.data)
+			const meta = resolveAssetMetaFromPayload(asset.fileName, data)
 
 			extractedAssets.push({
 				fileName: asset.fileName,

@@ -47,6 +47,43 @@ import {
 	TextureCompressOptions
 } from './types'
 
+const mimeTypeToExtension = (mimeType: string): string | null => {
+	switch (mimeType.toLowerCase()) {
+		case 'image/webp':
+			return 'webp'
+		case 'image/jpeg':
+			return 'jpg'
+		case 'image/png':
+			return 'png'
+		default:
+			return null
+	}
+}
+
+const replaceUriExtension = (uri: string, extension: string): string => {
+	if (!uri || uri.startsWith('data:')) {
+		return uri
+	}
+
+	const queryIndex = uri.indexOf('?')
+	const hashIndex = uri.indexOf('#')
+	const suffixStart = [queryIndex, hashIndex]
+		.filter((index) => index >= 0)
+		.reduce((min, index) => Math.min(min, index), Number.POSITIVE_INFINITY)
+	const hasSuffix = Number.isFinite(suffixStart)
+	const base = hasSuffix ? uri.slice(0, suffixStart) : uri
+	const suffix = hasSuffix ? uri.slice(suffixStart) : ''
+
+	const lastSlash = base.lastIndexOf('/')
+	const lastDot = base.lastIndexOf('.')
+	const hasExtension = lastDot > lastSlash
+	const nextBase = hasExtension
+		? `${base.slice(0, lastDot)}.${extension}`
+		: `${base}.${extension}`
+
+	return `${nextBase}${suffix}`
+}
+
 /**
  * Server-side 3D model optimization service using glTF-Transform.
  *
@@ -649,6 +686,17 @@ export class ModelOptimizer {
 
 		texture.setImage(image)
 		texture.setMimeType(mimeType)
+
+		const textureWithUri = texture as unknown as {
+			getURI?: () => string | null
+			setURI?: (value: string) => void
+		}
+		const extension = mimeTypeToExtension(mimeType)
+		const currentUri = textureWithUri.getURI?.() ?? null
+
+		if (extension && currentUri && textureWithUri.setURI) {
+			textureWithUri.setURI(replaceUriExtension(currentUri, extension))
+		}
 	}
 
 	/**

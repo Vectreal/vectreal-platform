@@ -14,6 +14,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
+import { toSerializedAssetBytes } from '@vctrl/core'
 import {
 	type DedupOptions,
 	ModelOptimizer,
@@ -28,6 +29,9 @@ import { Object3D } from 'three'
 import { initialState, reducer } from './state'
 import { useCalcOptimizationInfo } from './use-calc-optimization-info'
 import { optimizeTextures } from './utils'
+
+import type { JSONDocument } from '@gltf-transform/core'
+import type { ServerSceneData } from '@vctrl/core'
 
 /**
  * Custom React hook for optimizing 3D models using the ModelOptimizer from @vctrl/core.
@@ -116,6 +120,39 @@ const useOptimizeModel = () => {
 			console.error('Error loading model:', err)
 		}
 	}, [])
+
+	const loadFromServerSceneData = useCallback(
+		async (sceneData: ServerSceneData): Promise<void> => {
+			dispatch({ type: 'LOAD_START' })
+
+			try {
+				const optimizer = optimizerRef.current
+				const resources: Record<string, Uint8Array> = {}
+
+				for (const asset of Object.values(sceneData.assetData ?? {})) {
+					resources[asset.fileName] = toSerializedAssetBytes(asset)
+				}
+
+				const jsonDocument = {
+					json: sceneData.gltfJson as unknown as JSONDocument['json'],
+					resources
+				}
+
+				await optimizer.loadFromJSON(jsonDocument)
+
+				const report = await optimizer.getReport()
+				dispatch({
+					type: 'LOAD_SUCCESS',
+					payload: { report }
+				})
+			} catch (err) {
+				dispatch({ type: 'LOAD_ERROR', payload: err as Error })
+				console.error('Error loading server scene into optimizer:', err)
+				throw err
+			}
+		},
+		[]
+	)
 
 	/**
 	 * Simplifies the loaded model by reducing polygon count using MeshoptSimplifier.
@@ -326,6 +363,8 @@ const useOptimizeModel = () => {
 		 * @returns Promise that resolves when the model is loaded
 		 */
 		load,
+
+		loadFromServerSceneData,
 
 		/**
 		 * Retrieves the current model as a binary Uint8Array in glTF (.glb) format.
