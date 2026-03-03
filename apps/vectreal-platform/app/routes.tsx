@@ -76,6 +76,10 @@ export default [
 				]),
 				route(':projectId', './routes/dashboard-page/projects/project.tsx', [
 					route(
+						'edit',
+						'./routes/dashboard-page/projects/projects-edit.tsx'
+					),
+					route(
 						'folder/:folderId',
 						'./routes/dashboard-page/projects/folder.tsx'
 					),

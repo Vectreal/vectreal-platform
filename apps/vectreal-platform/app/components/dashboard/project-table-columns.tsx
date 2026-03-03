@@ -16,6 +16,7 @@ import {
 	File,
 	FilePenLine,
 	FolderOpen,
+	Pencil,
 	Trash2
 } from 'lucide-react'
 import { Link } from 'react-router'
@@ -96,6 +97,18 @@ export const projectColumns: ColumnDef<ProjectRow>[] = [
 				</span>
 			)
 		}
+	},
+	{
+		id: 'actions',
+		cell: ({ row }) => (
+			<div className="flex items-center justify-end gap-1">
+				<Link to={`/dashboard/projects/${row.original.id}/edit`}>
+					<Button variant="ghost" size="sm" aria-label="Edit project">
+						<Pencil className="h-4 w-4" />
+					</Button>
+				</Link>
+			</div>
+		)
 	}
 ]
 

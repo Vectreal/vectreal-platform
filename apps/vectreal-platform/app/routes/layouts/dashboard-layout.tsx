@@ -136,6 +136,7 @@ const DashboardLayout = () => {
 
 	const path = navigation.location?.pathname || location.pathname
 	const isNewProjectCreation = path === '/dashboard/projects/new'
+	const isProjectEditRoute = /\/dashboard\/projects\/[^/]+\/edit$/.test(path)
 	const isPublisherRoute = path.startsWith('/publisher')
 
 	// Determine which skeleton to show based on navigation location
@@ -189,6 +190,7 @@ const DashboardLayout = () => {
 					)}
 					{isContentNavigationLoading &&
 					!isNewProjectCreation &&
+					!isProjectEditRoute &&
 					!isPublisherRoute ? (
 						skeleton
 					) : (

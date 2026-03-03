@@ -5,7 +5,7 @@ import {
 	EmptyDescription,
 	EmptyHeader
 } from '@shared/components/ui/empty'
-import { FolderOpen, Plus } from 'lucide-react'
+import { FolderOpen, Pencil, Plus } from 'lucide-react'
 import { memo, useMemo } from 'react'
 import { Link, Outlet, useLoaderData } from 'react-router'
 
@@ -178,24 +178,42 @@ const ProjectsList = memo(() => {
 							{orgProjects.length > 0 ? (
 								<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 									{orgProjects.map(({ project }) => (
-										<DashboardCard
+										<div
 											key={project.id}
-											title={project.name}
-											description={`Slug: ${project.slug}`}
-											linkTo={`/dashboard/projects/${project.id}`}
-											icon={<FolderOpen className="h-5 w-5" />}
-											id={project.id}
-											navigationState={{
-												name: project.name,
-												type: 'project' as const
-											}}
+											className="group/project-card relative"
 										>
-											<div className="space-y-2">
-												<div className="text-primary/60 text-sm">
-													{sceneStats.byProject[project.id] || 0} scenes
+											<DashboardCard
+												title={project.name}
+												description={`Slug: ${project.slug}`}
+												linkTo={`/dashboard/projects/${project.id}`}
+												icon={<FolderOpen className="h-5 w-5" />}
+												id={project.id}
+												navigationState={{
+													name: project.name,
+													type: 'project' as const
+												}}
+											>
+												<div className="space-y-2">
+													<div className="text-primary/60 text-sm">
+														{sceneStats.byProject[project.id] || 0} scenes
+													</div>
 												</div>
+											</DashboardCard>
+											<div className="absolute right-3 top-3 z-10 opacity-0 transition-opacity group-hover/project-card:opacity-100">
+												<Link
+													to={`/dashboard/projects/${project.id}/edit`}
+												>
+													<Button
+														variant="ghost"
+														size="icon"
+														className="h-8 w-8"
+														title="Edit project"
+													>
+														<Pencil className="h-4 w-4" />
+													</Button>
+												</Link>
 											</div>
-										</DashboardCard>
+										</div>
 									))}
 								</div>
 							) : (
