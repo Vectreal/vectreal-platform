@@ -59,6 +59,11 @@ export interface SaveSceneResult {
 	[key: string]: unknown
 }
 
+export interface SaveLocationTarget {
+	targetProjectId?: string
+	targetFolderId?: string | null
+}
+
 export type SaveAvailabilityReason =
 	| 'ready'
 	| 'no-user'
@@ -287,6 +292,8 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			includeOptimizationReport?: boolean
 			initialSceneBytes?: number
 			currentSceneBytes?: number
+			targetProjectId?: string
+			targetFolderId?: string | null
 		}): Promise<SaveSceneResult | { unchanged: true } | undefined> => {
 			if (inFlightSaveRef.current) {
 				return inFlightSaveRef.current
@@ -322,6 +329,14 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 						'optimizationSettings',
 						JSON.stringify(optimizationSettings)
 					)
+
+					if (options?.targetProjectId) {
+						formData.append('targetProjectId', options.targetProjectId)
+					}
+
+					if (typeof options?.targetFolderId !== 'undefined') {
+						formData.append('targetFolderId', options.targetFolderId ?? '')
+					}
 
 					if (shouldIncludeModel) {
 						formData.append('gltfJson', JSON.stringify(gltfJsonToSend))
@@ -932,73 +947,78 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	/**
 	 * Save scene settings and update local state on success
 	 */
-	const saveSceneSettings = useCallback(async (): Promise<
-		SaveSceneResult | { unchanged: true } | undefined
-	> => {
-		const hasReportChanges =
-			reportSignature !== null &&
-			lastSavedReportSignature !== null &&
-			reportSignature !== lastSavedReportSignature
-		const hasSceneSizeChanges =
-			typeof optimizedSceneBytes === 'number' &&
-			optimizedSceneBytes !== (latestSceneStats?.currentSceneBytes ?? null)
-		const hasOptimizationChanges = hasReportChanges || hasSceneSizeChanges
-		const shouldUploadModel = !currentSceneId || hasOptimizationChanges
-		const sceneInitialBytes =
-			typeof clientSceneBytes === 'number' ? clientSceneBytes : undefined
-		const sceneCurrentBytes =
-			typeof optimizedSceneBytes === 'number'
-				? optimizedSceneBytes
-				: typeof clientSceneBytes === 'number'
-					? clientSceneBytes
-					: undefined
+	const saveSceneSettings = useCallback(
+		async (
+			target?: SaveLocationTarget
+		): Promise<SaveSceneResult | { unchanged: true } | undefined> => {
+			const hasReportChanges =
+				reportSignature !== null &&
+				lastSavedReportSignature !== null &&
+				reportSignature !== lastSavedReportSignature
+			const hasSceneSizeChanges =
+				typeof optimizedSceneBytes === 'number' &&
+				optimizedSceneBytes !== (latestSceneStats?.currentSceneBytes ?? null)
+			const hasOptimizationChanges = hasReportChanges || hasSceneSizeChanges
+			const shouldUploadModel = !currentSceneId || hasOptimizationChanges
+			const sceneInitialBytes =
+				typeof clientSceneBytes === 'number' ? clientSceneBytes : undefined
+			const sceneCurrentBytes =
+				typeof optimizedSceneBytes === 'number'
+					? optimizedSceneBytes
+					: typeof clientSceneBytes === 'number'
+						? clientSceneBytes
+						: undefined
 
-		const result = await saveToDB({
-			includeModel: shouldUploadModel,
-			includeOptimizationReport: hasOptimizationChanges,
-			initialSceneBytes: sceneInitialBytes,
-			currentSceneBytes: sceneCurrentBytes
-		})
+			const result = await saveToDB({
+				includeModel: shouldUploadModel,
+				includeOptimizationReport: hasOptimizationChanges,
+				initialSceneBytes: sceneInitialBytes,
+				currentSceneBytes: sceneCurrentBytes,
+				targetProjectId: target?.targetProjectId,
+				targetFolderId: target?.targetFolderId
+			})
 
-		if (result && 'sceneId' in result && result.sceneId && !currentSceneId) {
-			setCurrentSceneId(result.sceneId)
-		}
-
-		if (result && !result.unchanged) {
-			setLastSavedSettings(currentSettings)
-			setLastSavedSceneMeta(sceneMetaState)
-			const latestStats = result.stats
-			if (latestStats) {
-				setOptimizationRuntime((prev) => ({
-					...prev,
-					latestSceneStats: latestStats
-				}))
-			}
-			if (reportSignature) {
-				setOptimizationRuntime((prev) => ({
-					...prev,
-					lastSavedReportSignature: reportSignature
-				}))
+			if (result && 'sceneId' in result && result.sceneId && !currentSceneId) {
+				setCurrentSceneId(result.sceneId)
 			}
 
-			revalidator.revalidate()
-		}
+			if (result && !result.unchanged) {
+				setLastSavedSettings(currentSettings)
+				setLastSavedSceneMeta(sceneMetaState)
+				const latestStats = result.stats
+				if (latestStats) {
+					setOptimizationRuntime((prev) => ({
+						...prev,
+						latestSceneStats: latestStats
+					}))
+				}
+				if (reportSignature) {
+					setOptimizationRuntime((prev) => ({
+						...prev,
+						lastSavedReportSignature: reportSignature
+					}))
+				}
 
-		return result
-	}, [
-		saveToDB,
-		currentSceneId,
-		currentSettings,
-		sceneMetaState,
-		reportSignature,
-		lastSavedReportSignature,
-		optimizedSceneBytes,
-		clientSceneBytes,
-		latestSceneStats,
-		setLastSavedSceneMeta,
-		setOptimizationRuntime,
-		revalidator
-	])
+				revalidator.revalidate()
+			}
+
+			return result
+		},
+		[
+			saveToDB,
+			currentSceneId,
+			currentSettings,
+			sceneMetaState,
+			reportSignature,
+			lastSavedReportSignature,
+			optimizedSceneBytes,
+			clientSceneBytes,
+			latestSceneStats,
+			setLastSavedSceneMeta,
+			setOptimizationRuntime,
+			revalidator
+		]
+	)
 
 	/**
 	 * Returns whether there are unsaved changes compared to last saved settings

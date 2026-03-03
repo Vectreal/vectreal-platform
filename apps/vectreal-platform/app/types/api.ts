@@ -74,6 +74,8 @@ export interface SceneSettingsRequest extends Partial<BaseSceneParams> {
 	readonly action: string
 	readonly requestId?: string
 	readonly projectId?: string
+	readonly targetProjectId?: string
+	readonly targetFolderId?: string | null
 	readonly meta?: SceneMetaState
 	readonly settings?: SceneSettings
 	readonly gltfJson?: JSONDocument
@@ -94,6 +96,8 @@ export type GetSceneSettingsParams = BaseSceneParams
 /** Parameters for saving scene settings. */
 export interface SaveSceneSettingsParams extends BaseSceneParams {
 	readonly projectId: string
+	readonly targetProjectId?: string
+	readonly targetFolderId?: string | null
 	readonly meta: SceneMetaState
 	readonly settings: SceneSettings
 	readonly gltfJson?: JSONDocument
@@ -209,11 +213,30 @@ export interface PublishedSceneMetaResponse {
 	readonly publishedAt: Date | string
 }
 
+export interface SceneCurrentLocation {
+	readonly projectId: string | null
+	readonly projectName: string | null
+	readonly folderId: string | null
+	readonly folderName: string | null
+}
+
+export interface SceneLocationOption {
+	readonly id: string
+	readonly name: string
+}
+
+export interface SceneLocationOptionsResponse {
+	readonly projects: SceneLocationOption[]
+	readonly folders: SceneLocationOption[]
+	readonly selectedProjectId: string | null
+}
+
 export interface PublisherLoaderData {
 	readonly isMobile: boolean
 	readonly user: User | null
 	readonly sceneId: string | null
 	readonly projectId: string | null
+	readonly currentLocation: SceneCurrentLocation
 	readonly sceneAggregate: SceneAggregateResponse | null
 	readonly publishedMeta: PublishedSceneMetaResponse | null
 }

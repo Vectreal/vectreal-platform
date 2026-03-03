@@ -12,6 +12,7 @@ export default [
 
 	/// API
 	route('api/scenes/:sceneId?', './routes/api/scenes.$sceneId.ts'),
+	route('api/scene-location-options', './routes/api/scene-location-options.ts'),
 	route('api/optimize-textures', './routes/api/optimize-textures.ts'),
 	// AUTH API
 	route('auth/logout', './routes/api/auth/logout.ts'),
