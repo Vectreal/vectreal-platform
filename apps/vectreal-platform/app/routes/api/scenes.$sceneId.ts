@@ -519,8 +519,38 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		}
 	}
 
-	const parsedRequest =
-		SceneSettingsParser.parseSceneSettingsRequestData(actionRequest)
+	const uploadOrPrepareAction =
+		action === 'prepare-scene-upload' ||
+		action === 'upload-scene-asset' ||
+		action === 'upload-scene-gltf' ||
+		action === 'upload-published-glb'
+
+	const parsedRequest = uploadOrPrepareAction
+		? {
+			action,
+			requestId:
+				typeof actionRequest.requestId === 'string'
+					? actionRequest.requestId.trim()
+					: undefined,
+			projectId:
+				typeof actionRequest.projectId === 'string'
+					? actionRequest.projectId.trim() || undefined
+					: undefined,
+			sceneId:
+				typeof actionRequest.sceneId === 'string'
+					? actionRequest.sceneId.trim() || undefined
+					: routeSceneId,
+			targetProjectId:
+				typeof actionRequest.targetProjectId === 'string'
+					? actionRequest.targetProjectId.trim() || undefined
+					: undefined,
+			targetFolderId:
+				typeof actionRequest.targetFolderId === 'string'
+					? actionRequest.targetFolderId.trim() || null
+					: undefined
+		}
+		: SceneSettingsParser.parseSceneSettingsRequestData(actionRequest)
+
 	if (parsedRequest instanceof Response) {
 		return parsedRequest
 	}
@@ -533,9 +563,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	if (
 		effectiveSceneId &&
-		(action === 'save-scene-settings' ||
-			action === 'get-scene-settings' ||
-			action === 'publish-scene')
+		(action === 'get-scene-settings' ||
+			action === 'commit-scene-publish')
 	) {
 		const scene = await getScene(effectiveSceneId, authResult.user.id)
 		if (!scene) {
@@ -545,7 +574,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		}
 	}
 
-	if (action === 'save-scene-settings') {
+	if (action === 'commit-scene-save') {
 		console.info('[scenes] save request received', {
 			requestId: requestData.requestId,
 			userId: authResult.user.id,
@@ -555,7 +584,61 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	try {
 		switch (action as SceneSettingsAction) {
-			case 'save-scene-settings':
+			case 'prepare-scene-upload':
+				return ApiResponse.success(
+					await sceneSettingsOps.prepareSceneUpload(
+						{
+							...requestData,
+							action
+						},
+						authResult.user.id
+					)
+				)
+
+			case 'upload-scene-asset': {
+				const file = actionRequest.file
+				const kindRaw = actionRequest.kind
+				const kind = kindRaw === 'image' ? 'image' : 'buffer'
+
+				if (!(file instanceof File)) {
+					return ApiResponse.badRequest('file is required for upload-scene-asset')
+				}
+
+				return await sceneSettingsOps.uploadSceneAsset(
+					{ ...requestData, action },
+					authResult.user.id,
+					file,
+					kind
+				)
+			}
+
+			case 'upload-scene-gltf': {
+				const file = actionRequest.file
+				if (!(file instanceof File)) {
+					return ApiResponse.badRequest('file is required for upload-scene-gltf')
+				}
+
+				return await sceneSettingsOps.uploadSceneGltf(
+					{ ...requestData, action },
+					authResult.user.id,
+					file
+				)
+			}
+
+			case 'upload-published-glb': {
+				const file = actionRequest.file
+				if (!(file instanceof File)) {
+					return ApiResponse.badRequest('file is required for upload-published-glb')
+				}
+
+				return await sceneSettingsOps.uploadPublishedGlb(
+					{ ...requestData, action },
+					authResult.user.id,
+					file
+				)
+			}
+
+			case 'commit-scene-save':
 				return await runWithHeavySceneActionLimit(() =>
 					sceneSettingsOps.saveSceneSettings(
 						{
@@ -580,7 +663,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 						})
 				)
 
-			case 'publish-scene':
+			case 'commit-scene-publish':
 				return await runWithHeavySceneActionLimit(() =>
 					sceneSettingsOps.publishScene(
 						{

@@ -205,7 +205,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		return withoutPath.slice(0, extensionIndex)
 	}, [])
 
-	const serializeGltfDocument = useCallback(async () => {
+	const prepareGltfDocumentForUpload = useCallback(async () => {
 		if (!optimizer || !modelFile || !optimizer._getDocument()) {
 			return null
 		}
@@ -222,31 +222,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			return gltfJson
 		}
 
-		const assets = gltfJson.assets
-		if (!(assets instanceof Map)) {
-			return gltfJson
-		}
-
-		const serializedAssets = Array.from(assets.entries()).map(
-			([fileName, data]) => ({
-				fileName,
-				data: Array.from(data),
-				mimeType: fileName.endsWith('.bin')
-					? 'application/octet-stream'
-					: fileName.endsWith('.png')
-						? 'image/png'
-						: fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')
-							? 'image/jpeg'
-							: fileName.endsWith('.webp')
-								? 'image/webp'
-								: 'application/octet-stream'
-			})
-		)
-
-		return {
-			...gltfJson,
-			assets: serializedAssets
-		}
+		return gltfJson
 	}, [optimizer, modelFile, handleDocumentGltfExport])
 
 	// Get current settings from atoms
@@ -288,7 +264,6 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 
 	const saveToDB = useCallback(
 		async (options?: {
-			includeModel?: boolean
 			includeOptimizationReport?: boolean
 			initialSceneBytes?: number
 			currentSceneBytes?: number
@@ -308,39 +283,146 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 
 				try {
 					requestId = createRequestId()
-					const shouldIncludeModel = options?.includeModel ?? true
-					const gltfJsonToSend = shouldIncludeModel
-						? await serializeGltfDocument()
-						: null
+					const gltfJsonToSend = await prepareGltfDocumentForUpload()
+					if (!gltfJsonToSend) {
+						throw new Error('Failed to prepare glTF payload for upload')
+					}
 
 					let optimizationReport = null
 					if (optimizer && optimizer.report) {
 						optimizationReport = optimizer.report
 					}
 
+					const endpoint = currentSceneId
+						? `/api/scenes/${currentSceneId}`
+						: '/api/scenes'
+
+					const prepareFormData = new FormData()
+					prepareFormData.append('action', 'prepare-scene-upload')
+					prepareFormData.append('requestId', requestId)
+					prepareFormData.append('sceneId', currentSceneId || '')
+
+					if (options?.targetProjectId) {
+						prepareFormData.append('targetProjectId', options.targetProjectId)
+					}
+
+					if (typeof options?.targetFolderId !== 'undefined') {
+						prepareFormData.append('targetFolderId', options.targetFolderId ?? '')
+					}
+
+					const prepareResponse = await fetch(endpoint, {
+						method: 'POST',
+						body: prepareFormData
+					})
+					const prepareResult = await prepareResponse.json()
+					if (!prepareResponse.ok || prepareResult.error) {
+						throw new Error(
+							prepareResult.error ||
+								`HTTP error! status: ${prepareResponse.status}`
+						)
+					}
+
+					const prepared = prepareResult.data || prepareResult
+					const preparedSceneId = prepared.sceneId as string
+					const preparedProjectId = prepared.projectId as string | undefined
+
+					const sceneAssetIds: string[] = []
+
+					const gltfAssets = (gltfJsonToSend as { assets?: unknown }).assets
+					if (gltfAssets instanceof Map) {
+						for (const [fileName, data] of gltfAssets.entries()) {
+							const mimeType = fileName.endsWith('.bin')
+								? 'application/octet-stream'
+								: fileName.endsWith('.png')
+									? 'image/png'
+									: fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')
+										? 'image/jpeg'
+										: fileName.endsWith('.webp')
+											? 'image/webp'
+											: 'application/octet-stream'
+							const kind = mimeType.startsWith('image/') ? 'image' : 'buffer'
+							const uploadAssetFormData = new FormData()
+							uploadAssetFormData.append('action', 'upload-scene-asset')
+							uploadAssetFormData.append('requestId', requestId)
+							uploadAssetFormData.append('sceneId', preparedSceneId)
+							if (preparedProjectId) {
+								uploadAssetFormData.append('projectId', preparedProjectId)
+							}
+							uploadAssetFormData.append('kind', kind)
+							uploadAssetFormData.append(
+								'file',
+								new File([data], fileName, { type: mimeType })
+							)
+
+							const uploadAssetResponse = await fetch(
+								`/api/scenes/${preparedSceneId}`,
+								{
+									method: 'POST',
+									body: uploadAssetFormData
+								}
+							)
+							const uploadAssetResult = await uploadAssetResponse.json()
+							if (!uploadAssetResponse.ok || uploadAssetResult.error) {
+								throw new Error(
+									uploadAssetResult.error ||
+										`HTTP error! status: ${uploadAssetResponse.status}`
+								)
+							}
+
+							const uploadedAsset =
+								uploadAssetResult.data || uploadAssetResult
+							sceneAssetIds.push(uploadedAsset.assetId)
+						}
+					}
+
+					const gltfData =
+						(gltfJsonToSend as { data?: unknown }).data ?? gltfJsonToSend
+					const gltfBlob = new Blob([JSON.stringify(gltfData)], {
+						type: 'model/gltf+json'
+					})
+					const uploadGltfFormData = new FormData()
+					uploadGltfFormData.append('action', 'upload-scene-gltf')
+					uploadGltfFormData.append('requestId', requestId)
+					uploadGltfFormData.append('sceneId', preparedSceneId)
+					if (preparedProjectId) {
+						uploadGltfFormData.append('projectId', preparedProjectId)
+					}
+					uploadGltfFormData.append(
+						'file',
+						new File([gltfBlob], 'scene.gltf', { type: 'model/gltf+json' })
+					)
+
+					const uploadGltfResponse = await fetch(
+						`/api/scenes/${preparedSceneId}`,
+						{
+							method: 'POST',
+							body: uploadGltfFormData
+						}
+					)
+					const uploadGltfResult = await uploadGltfResponse.json()
+					if (!uploadGltfResponse.ok || uploadGltfResult.error) {
+						throw new Error(
+							uploadGltfResult.error ||
+								`HTTP error! status: ${uploadGltfResponse.status}`
+						)
+					}
+					const uploadedGltf = uploadGltfResult.data || uploadGltfResult
+					sceneAssetIds.push(uploadedGltf.assetId)
+
 					const formData = new FormData()
-					formData.append('action', 'save-scene-settings')
+					formData.append('action', 'commit-scene-save')
 					formData.append('requestId', requestId)
-					formData.append('sceneId', currentSceneId || '')
-					formData.append('userId', userId)
+					formData.append('sceneId', preparedSceneId)
+					if (preparedProjectId) {
+						formData.append('projectId', preparedProjectId)
+					}
 					formData.append('settings', JSON.stringify(currentSettings))
 					formData.append('meta', JSON.stringify(sceneMetaState))
+					formData.append('sceneAssetIds', JSON.stringify(sceneAssetIds))
 					formData.append(
 						'optimizationSettings',
 						JSON.stringify(optimizationSettings)
 					)
-
-					if (options?.targetProjectId) {
-						formData.append('targetProjectId', options.targetProjectId)
-					}
-
-					if (typeof options?.targetFolderId !== 'undefined') {
-						formData.append('targetFolderId', options.targetFolderId ?? '')
-					}
-
-					if (shouldIncludeModel) {
-						formData.append('gltfJson', JSON.stringify(gltfJsonToSend))
-					}
 
 					if (typeof options?.initialSceneBytes === 'number') {
 						formData.append(
@@ -369,12 +451,8 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 					console.info('[scene-settings] save request started', {
 						requestId,
 						sceneId: currentSceneId || null,
-						includeModel: shouldIncludeModel
+						includeModel: true
 					})
-
-					const endpoint = currentSceneId
-						? `/api/scenes/${currentSceneId}`
-						: '/api/scenes'
 
 					const response = await fetch(endpoint, {
 						method: 'POST',
@@ -393,7 +471,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 
 					console.info('[scene-settings] save request completed', {
 						requestId,
-						sceneId: data.sceneId || currentSceneId || null,
+						sceneId: data.sceneId || preparedSceneId || null,
 						unchanged: Boolean(data.unchanged)
 					})
 
@@ -429,7 +507,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			sceneMetaState,
 			optimizationSettings,
 			optimizer,
-			serializeGltfDocument,
+			prepareGltfDocumentForUpload,
 			userId
 		]
 	)
@@ -959,7 +1037,6 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				typeof optimizedSceneBytes === 'number' &&
 				optimizedSceneBytes !== (latestSceneStats?.currentSceneBytes ?? null)
 			const hasOptimizationChanges = hasReportChanges || hasSceneSizeChanges
-			const shouldUploadModel = !currentSceneId || hasOptimizationChanges
 			const sceneInitialBytes =
 				typeof clientSceneBytes === 'number' ? clientSceneBytes : undefined
 			const sceneCurrentBytes =
@@ -970,7 +1047,6 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 						: undefined
 
 			const result = await saveToDB({
-				includeModel: shouldUploadModel,
 				includeOptimizationReport: hasOptimizationChanges,
 				initialSceneBytes: sceneInitialBytes,
 				currentSceneBytes: sceneCurrentBytes,

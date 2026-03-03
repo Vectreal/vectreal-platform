@@ -80,16 +80,36 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 				clientSceneBytes: prev.clientSceneBytes ?? result.size
 			}))
 			const baseName = file?.name?.replace(/\.[^/.]+$/, '') || 'scene'
-			const payload = {
-				data: Array.from(result.data),
-				fileName: `${baseName}.glb`,
-				mimeType: 'model/gltf-binary'
+			const uploadFormData = new FormData()
+			uploadFormData.append('action', 'upload-published-glb')
+			uploadFormData.append('sceneId', targetSceneId)
+			const glbBytes = new Uint8Array(result.data.byteLength)
+			glbBytes.set(result.data)
+			uploadFormData.append(
+				'file',
+				new File([glbBytes], `${baseName}.glb`, {
+					type: 'model/gltf-binary'
+				})
+			)
+
+			const uploadResponse = await fetch(`/api/scenes/${targetSceneId}`, {
+				method: 'POST',
+				body: uploadFormData
+			})
+
+			const uploadResult = await uploadResponse.json()
+			if (!uploadResponse.ok || uploadResult.error) {
+				throw new Error(
+					uploadResult.error || `HTTP error! status: ${uploadResponse.status}`
+				)
 			}
 
+			const uploadedAsset = uploadResult.data || uploadResult
+
 			const formData = new FormData()
-			formData.append('action', 'publish-scene')
+			formData.append('action', 'commit-scene-publish')
 			formData.append('sceneId', targetSceneId)
-			formData.append('publishedGlb', JSON.stringify(payload))
+			formData.append('publishedAssetId', uploadedAsset.assetId)
 			if (Number.isFinite(result.size)) {
 				formData.append('currentSceneBytes', String(result.size))
 			}

@@ -42,6 +42,10 @@ export class SceneSettingsParser {
 			const rawSceneId = requestData.sceneId as string
 			const sceneId =
 				typeof rawSceneId === 'string' ? rawSceneId.trim() : rawSceneId
+			const projectId = this.parseProjectId(requestData)
+			if (projectId instanceof Response) {
+				return projectId
+			}
 			const targetProjectId = this.parseTargetProjectId(requestData)
 			if (targetProjectId instanceof Response) {
 				return targetProjectId
@@ -66,6 +70,7 @@ export class SceneSettingsParser {
 				return {
 					action,
 					requestId,
+					projectId,
 					sceneId,
 					targetProjectId: undefined,
 					targetFolderId: undefined,
@@ -75,9 +80,15 @@ export class SceneSettingsParser {
 			}
 
 			if (action === 'publish-scene') {
-				const publishedGlb = this.parsePublishedGlb(requestData)
-				if (publishedGlb instanceof Response) {
-					return publishedGlb
+				return ApiResponse.badRequest(
+					'publish-scene is no longer supported. Use upload-published-glb + commit-scene-publish.'
+				)
+			}
+
+			if (action === 'commit-scene-publish') {
+				const publishedAssetId = this.parsePublishedAssetId(requestData)
+				if (publishedAssetId instanceof Response) {
+					return publishedAssetId
 				}
 				const currentSceneBytes = this.parseCurrentSceneBytes(requestData)
 				if (currentSceneBytes instanceof Response) {
@@ -87,14 +98,21 @@ export class SceneSettingsParser {
 				return {
 					action,
 					requestId,
+					projectId,
 					sceneId,
 					targetProjectId: undefined,
 					targetFolderId: undefined,
 					settings: undefined,
 					gltfJson: undefined,
-					publishedGlb,
+					publishedAssetId,
 					currentSceneBytes
 				}
+			}
+
+			if (action === 'save-scene-settings') {
+				return ApiResponse.badRequest(
+					'save-scene-settings is no longer supported. Use upload-scene-asset/upload-scene-gltf + commit-scene-save.'
+				)
 			}
 
 			// Parse settings data (required for save operations)
@@ -133,13 +151,38 @@ export class SceneSettingsParser {
 				return meta
 			}
 
+			if (action === 'commit-scene-save') {
+				const sceneAssetIds = this.parseSceneAssetIds(requestData)
+				if (sceneAssetIds instanceof Response) {
+					return sceneAssetIds
+				}
+
+				return {
+					action,
+					requestId,
+					projectId,
+					sceneId,
+					targetProjectId,
+					targetFolderId,
+					meta,
+					settings,
+					sceneAssetIds,
+					gltfJson: undefined,
+					optimizationReport: optimizationReport || undefined,
+					optimizationSettings: optimizationSettings || undefined,
+					initialSceneBytes,
+					currentSceneBytes
+				}
+			}
+
 			if (!sceneId && !gltfJsonData) {
-				return ApiResponse.badRequest('GLTF data is required for new scenes')
+				return ApiResponse.badRequest('Scene ID is required for this action')
 			}
 
 			return {
 				action,
 				requestId,
+				projectId,
 				sceneId,
 				targetProjectId,
 				targetFolderId,
@@ -162,7 +205,7 @@ export class SceneSettingsParser {
 		sceneId?: string
 	): Response | null {
 		const requiresSceneId =
-			action === 'get-scene-settings' || action === 'publish-scene'
+			action === 'get-scene-settings' || action === 'commit-scene-publish'
 
 		if (requiresSceneId && !sceneId) {
 			return ApiResponse.badRequest('Scene ID is required')
@@ -354,47 +397,62 @@ export class SceneSettingsParser {
 		return undefined
 	}
 
-	private static parsePublishedGlb(
+	private static parseSceneAssetIds(
 		requestData: Record<string, unknown>
-	): { data: number[]; fileName?: string; mimeType?: string } | Response {
-		if (!requestData.publishedGlb) {
-			return ApiResponse.badRequest('publishedGlb is required')
+	): string[] | Response {
+		const rawSceneAssetIds = requestData.sceneAssetIds
+
+		if (!rawSceneAssetIds) {
+			return ApiResponse.badRequest('sceneAssetIds is required')
 		}
 
-		let payload: unknown = requestData.publishedGlb
-
-		if (typeof requestData.publishedGlb === 'string') {
+		let sceneAssetIds: unknown = rawSceneAssetIds
+		if (typeof rawSceneAssetIds === 'string') {
 			try {
-				payload = JSON.parse(requestData.publishedGlb)
-			} catch (error) {
-				console.error('Failed to parse publishedGlb:', error)
-				return ApiResponse.badRequest('Invalid publishedGlb format')
+				sceneAssetIds = JSON.parse(rawSceneAssetIds)
+			} catch {
+				return ApiResponse.badRequest('sceneAssetIds must be a valid JSON array')
 			}
 		}
 
-		if (!payload || typeof payload !== 'object') {
-			return ApiResponse.badRequest('Invalid publishedGlb format')
+		if (!Array.isArray(sceneAssetIds) || sceneAssetIds.length === 0) {
+			return ApiResponse.badRequest('sceneAssetIds must be a non-empty array')
 		}
 
-		const record = payload as {
-			data?: number[]
-			fileName?: string
-			mimeType?: string
+		const normalizedIds = sceneAssetIds
+			.filter((value): value is string => typeof value === 'string')
+			.map((value) => value.trim())
+			.filter(Boolean)
+
+		if (normalizedIds.length !== sceneAssetIds.length) {
+			return ApiResponse.badRequest('sceneAssetIds contains invalid values')
 		}
 
-		if (!Array.isArray(record.data)) {
-			return ApiResponse.badRequest('publishedGlb data is required')
+		if (!normalizedIds.every((assetId) => UUID_REGEX.test(assetId))) {
+			return ApiResponse.badRequest('sceneAssetIds must contain valid UUIDs')
 		}
 
-		if (!record.data.every((value) => typeof value === 'number')) {
-			return ApiResponse.badRequest('publishedGlb data is invalid')
+		return normalizedIds
+	}
+
+	private static parsePublishedAssetId(
+		requestData: Record<string, unknown>
+	): string | Response {
+		const rawPublishedAssetId = requestData.publishedAssetId
+		if (typeof rawPublishedAssetId !== 'string') {
+			return ApiResponse.badRequest('publishedAssetId is required')
 		}
 
-		return {
-			data: record.data,
-			fileName: record.fileName,
-			mimeType: record.mimeType
+		const publishedAssetId = rawPublishedAssetId.trim()
+		if (!publishedAssetId) {
+			return ApiResponse.badRequest('publishedAssetId is required')
 		}
+
+		if (!UUID_REGEX.test(publishedAssetId)) {
+			return ApiResponse.badRequest('publishedAssetId must be a valid UUID')
+		}
+
+		return publishedAssetId
 	}
 
 	private static parseCurrentSceneBytes(
@@ -470,6 +528,30 @@ export class SceneSettingsParser {
 		}
 
 		return targetProjectId
+	}
+
+	private static parseProjectId(
+		requestData: Record<string, unknown>
+	): string | undefined | Response {
+		const rawProjectId = requestData.projectId
+		if (typeof rawProjectId === 'undefined') {
+			return undefined
+		}
+
+		if (typeof rawProjectId !== 'string') {
+			return ApiResponse.badRequest('projectId must be a valid UUID')
+		}
+
+		const projectId = rawProjectId.trim()
+		if (!projectId) {
+			return undefined
+		}
+
+		if (!UUID_REGEX.test(projectId)) {
+			return ApiResponse.badRequest('projectId must be a valid UUID')
+		}
+
+		return projectId
 	}
 
 	private static parseTargetFolderId(

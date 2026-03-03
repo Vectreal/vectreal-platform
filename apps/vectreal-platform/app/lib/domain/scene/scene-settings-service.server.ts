@@ -23,6 +23,7 @@ import {
 import { getDbClient } from '../../../db/client'
 import {
 	assets,
+	folders,
 	organizations,
 	permissions,
 	projects,
@@ -58,6 +59,29 @@ import type {
  */
 class SceneSettingsService {
 	private readonly db = getDbClient()
+
+	async assertAssetsBelongToProject(
+		assetIds: string[],
+		projectId: string
+	): Promise<void> {
+		if (assetIds.length === 0) {
+			throw new Error('At least one asset ID is required')
+		}
+
+		const records = await this.db
+			.select({ assetId: assets.id, projectId: folders.projectId })
+			.from(assets)
+			.innerJoin(folders, eq(assets.folderId, folders.id))
+			.where(inArray(assets.id, assetIds))
+
+		if (records.length !== assetIds.length) {
+			throw new Error('One or more uploaded assets are missing')
+		}
+
+		if (records.some((record) => record.projectId !== projectId)) {
+			throw new Error('Uploaded assets do not belong to the target project')
+		}
+	}
 
 	/**
 	 * Retrieves project ID associated with a scene.
@@ -202,6 +226,114 @@ class SceneSettingsService {
 		const savedSettings = saveResult.savedSettings
 
 		return savedSettings
+	}
+
+	async saveSceneSettingsFromAssetIds(
+		params: Omit<SaveSceneSettingsParams, 'gltfJson'> & {
+			sceneAssetIds: string[]
+		}
+	) {
+		const {
+			sceneId,
+			projectId,
+			targetProjectId,
+			targetFolderId,
+			userId,
+			meta,
+			settings,
+			sceneAssetIds,
+			optimizationReport,
+			optimizationSettings,
+			initialSceneBytes,
+			currentSceneBytes
+		} = params
+
+		await this.assertAssetsBelongToProject(sceneAssetIds, projectId)
+
+		const saveResult = await this.db.transaction(async (tx) => {
+			let scene = await this.ensureSceneExists(tx, {
+				sceneId,
+				projectId,
+				userId,
+				sceneMeta: meta,
+				preferredFolderId: targetFolderId
+			})
+
+			const shouldApplyTargetLocation =
+				typeof targetProjectId !== 'undefined' ||
+				typeof targetFolderId !== 'undefined'
+
+			const resolvedTargetProjectId = targetProjectId ?? scene.projectId
+			const resolvedTargetFolderId =
+				typeof targetFolderId !== 'undefined'
+					? targetFolderId
+					: targetProjectId && targetProjectId !== scene.projectId
+						? null
+						: scene.folderId
+
+			const hasLocationChange =
+				shouldApplyTargetLocation &&
+				(scene.projectId !== resolvedTargetProjectId ||
+					scene.folderId !== resolvedTargetFolderId)
+
+			if (hasLocationChange) {
+				const [updatedScene] = await tx
+					.update(scenes)
+					.set({
+						projectId: resolvedTargetProjectId,
+						folderId: resolvedTargetFolderId,
+						updatedAt: new Date()
+					})
+					.where(eq(scenes.id, scene.id))
+					.returning()
+
+				if (!updatedScene) {
+					throw new Error('Failed to update scene location')
+				}
+
+				scene = updatedScene
+			}
+
+			const existingSettings = await getSceneSettingsBySceneId(tx, sceneId)
+			const settingsChanged = existingSettings
+				? this.compareSceneSettings(settings, existingSettings)
+				: true
+
+			if (existingSettings && !settingsChanged && !hasLocationChange) {
+				return { ...existingSettings, unchanged: true }
+			}
+
+			const savedSettings = await upsertSceneSettings(tx, {
+				sceneId: scene.id,
+				createdBy: userId,
+				settings
+			})
+
+			await replaceSceneAssets(tx, savedSettings.id, sceneAssetIds)
+
+			if (optimizationReport || optimizationSettings) {
+				await this.upsertSceneStats(tx, {
+					report: optimizationReport,
+					optimizationSettings,
+					sceneId: scene.id,
+					userId,
+					initialSceneBytes,
+					currentSceneBytes,
+					label: 'latest',
+					description: 'Latest scene statistics'
+				})
+			}
+
+			return { savedSettings, unchanged: false as const }
+		})
+
+		await this.updateSceneAggregateMetadata(sceneId, userId, meta)
+
+		if ('unchanged' in saveResult && saveResult.unchanged) {
+			return saveResult
+		}
+
+		return saveResult.savedSettings
 	}
 
 	/**
@@ -414,6 +546,60 @@ class SceneSettingsService {
 			return {
 				...publishedRecord,
 				asset: uploadResult
+			}
+		})
+	}
+
+	async publishSceneFromAssetId(params: {
+		sceneId: string
+		projectId: string
+		userId: string
+		publishedAssetId: string
+		currentSceneBytes?: number
+	}) {
+		const { sceneId, projectId, userId, publishedAssetId, currentSceneBytes } =
+			params
+
+		await this.assertAssetsBelongToProject([publishedAssetId], projectId)
+
+		return await this.db.transaction(async (tx) => {
+			const latestSettings = await getSceneSettingsBySceneId(tx, sceneId)
+
+			await tx.delete(scenePublished).where(eq(scenePublished.sceneId, sceneId))
+
+			const [publishedRecord] = await tx
+				.insert(scenePublished)
+				.values({
+					sceneId,
+					assetId: publishedAssetId,
+					sceneSettingsId: latestSettings?.id,
+					publishedBy: userId
+				})
+				.returning()
+
+			await tx
+				.update(scenes)
+				.set({
+					status: 'published',
+					updatedAt: new Date()
+				})
+				.where(eq(scenes.id, sceneId))
+
+			await this.upsertSceneStats(tx, {
+				sceneId,
+				userId,
+				currentSceneBytes
+			})
+
+			const [assetRecord] = await tx
+				.select()
+				.from(assets)
+				.where(eq(assets.id, publishedAssetId))
+				.limit(1)
+
+			return {
+				...publishedRecord,
+				asset: assetRecord ?? null
 			}
 		})
 	}

@@ -5,6 +5,7 @@ import { SerializedSceneAssetDataMap, SceneSettings } from '@vctrl/core'
 
 import { getSceneFolder } from './scene-folder-repository.server'
 import { sceneSettingsService } from './scene-settings-service.server'
+import { uploadSceneAssets } from '../asset/asset-storage.server'
 import { getProject } from '../project/project-repository.server'
 import {
 	getOrCreateDefaultProject,
@@ -17,6 +18,7 @@ import type { SceneMetaState } from '../../../types/publisher-config'
 type SaveSceneSettingsRequest = SceneSettingsRequest & {
 	meta: SceneMetaState
 	settings: SceneSettings
+	sceneAssetIds: string[]
 }
 
 type GetSceneSettingsRequest = SceneSettingsRequest & {
@@ -25,12 +27,13 @@ type GetSceneSettingsRequest = SceneSettingsRequest & {
 
 type PublishSceneRequest = SceneSettingsRequest & {
 	sceneId: string
-	publishedGlb: {
-		data: number[]
-		fileName?: string
-		mimeType?: string
-	}
+	publishedAssetId: string
 	currentSceneBytes?: number
+}
+
+type UploadPreparedScene = {
+	sceneId: string
+	projectId: string
 }
 
 function assertParsed<T>(value: T, message: string): asserts value is T {
@@ -67,12 +70,30 @@ async function createNewScene(
 async function resolveSceneAndProject(
 	sceneId: string | undefined,
 	userId: string,
-	targetProjectId?: string
+	targetProjectId?: string,
+	projectId?: string
 ): Promise<{ sceneId: string; projectId: string }> {
 	if (sceneId?.trim()) {
-		const existingProjectId = await getSceneProjectId(sceneId)
-		const projectId = targetProjectId ?? existingProjectId
-		return { sceneId, projectId }
+		const existingProjectId = await sceneSettingsService.getProjectIdFromScene(
+			sceneId
+		)
+
+		if (existingProjectId) {
+			const resolvedProjectId = targetProjectId ?? existingProjectId
+			return { sceneId, projectId: resolvedProjectId }
+		}
+
+		const fallbackProjectId = targetProjectId ?? projectId
+		if (fallbackProjectId) {
+			const project = await getProject(fallbackProjectId, userId)
+			if (!project) {
+				throw new Error('Target project not found or access denied')
+			}
+
+			return { sceneId, projectId: fallbackProjectId }
+		}
+
+		throw new Error(`Scene not found with ID: ${sceneId}`)
 	}
 
 	// Create new scene if no ID provided
@@ -122,6 +143,122 @@ async function validateSaveLocationTarget(
 	}
 }
 
+export async function prepareSceneUpload(
+	request: SceneSettingsRequest,
+	userId: string
+): Promise<UploadPreparedScene> {
+	const hasUser = await userExists(userId)
+	if (!hasUser) {
+		throw new Error(
+			'User not found in local database. Please sign out and sign back in.'
+		)
+	}
+
+	return resolveSceneAndProject(
+		request.sceneId,
+		userId,
+		request.targetProjectId,
+		request.projectId
+	)
+}
+
+export async function uploadSceneAsset(
+	request: SceneSettingsRequest,
+	userId: string,
+	file: File,
+	kind: 'buffer' | 'image'
+): Promise<Response> {
+	try {
+		const { sceneId, projectId } = await prepareSceneUpload(request, userId)
+		const bytes = new Uint8Array(await file.arrayBuffer())
+
+		const [uploadResult] = await uploadSceneAssets(sceneId, userId, projectId, [
+			{
+				fileName: file.name,
+				data: bytes,
+				mimeType: file.type || 'application/octet-stream',
+				type: kind
+			}
+		])
+
+		return ApiResponse.success({
+			sceneId,
+			projectId,
+			assetId: uploadResult.assetId,
+			fileName: uploadResult.fileName,
+			mimeType: uploadResult.mimeType
+		})
+	} catch (error) {
+		return ApiResponse.serverError(
+			error instanceof Error ? error.message : 'Failed to upload scene asset'
+		)
+	}
+}
+
+export async function uploadSceneGltf(
+	request: SceneSettingsRequest,
+	userId: string,
+	file: File
+): Promise<Response> {
+	try {
+		const { sceneId, projectId } = await prepareSceneUpload(request, userId)
+		const bytes = new Uint8Array(await file.arrayBuffer())
+
+		const [uploadResult] = await uploadSceneAssets(sceneId, userId, projectId, [
+			{
+				fileName: file.name || 'scene.gltf',
+				data: bytes,
+				mimeType: file.type || 'model/gltf+json',
+				type: 'buffer'
+			}
+		])
+
+		return ApiResponse.success({
+			sceneId,
+			projectId,
+			assetId: uploadResult.assetId,
+			fileName: uploadResult.fileName,
+			mimeType: uploadResult.mimeType
+		})
+	} catch (error) {
+		return ApiResponse.serverError(
+			error instanceof Error ? error.message : 'Failed to upload scene glTF'
+		)
+	}
+}
+
+export async function uploadPublishedGlb(
+	request: SceneSettingsRequest,
+	userId: string,
+	file: File
+): Promise<Response> {
+	try {
+		const { sceneId, projectId } = await prepareSceneUpload(request, userId)
+		const bytes = new Uint8Array(await file.arrayBuffer())
+
+		const [uploadResult] = await uploadSceneAssets(sceneId, userId, projectId, [
+			{
+				fileName: file.name || 'scene.glb',
+				data: bytes,
+				mimeType: file.type || 'model/gltf-binary',
+				type: 'buffer'
+			}
+		])
+
+		return ApiResponse.success({
+			sceneId,
+			projectId,
+			assetId: uploadResult.assetId,
+			fileName: uploadResult.fileName,
+			mimeType: uploadResult.mimeType
+		})
+	} catch (error) {
+		return ApiResponse.serverError(
+			error instanceof Error ? error.message : 'Failed to upload published GLB'
+		)
+	}
+}
+
 export async function saveSceneSettings(
 	request: SceneSettingsRequest,
 	userId: string
@@ -138,8 +275,11 @@ export async function saveSceneSettings(
 			validationResult.settings,
 			'Scene settings request must be validated before calling operations'
 		)
+		assertParsed(
+			validationResult.sceneAssetIds,
+			'commit-scene-save requires sceneAssetIds'
+		)
 
-		// Ensure user exists in local database
 		const hasUser = await userExists(userId)
 		if (!hasUser) {
 			throw new Error(
@@ -150,25 +290,28 @@ export async function saveSceneSettings(
 		const { sceneId: finalSceneId, projectId } = await resolveSceneAndProject(
 			request.sceneId,
 			userId,
-			request.targetProjectId
+			request.targetProjectId,
+			request.projectId
 		)
 
 		await validateSaveLocationTarget(request, userId, projectId)
 
-		const saveResult = await sceneSettingsService.saveSceneSettings({
-			sceneId: finalSceneId,
-			projectId,
-			targetProjectId: request.targetProjectId,
-			targetFolderId: request.targetFolderId,
-			userId,
-			meta: validationResult.meta,
-			settings: validationResult.settings,
-			gltfJson: validationResult.gltfJson,
-			optimizationReport: request.optimizationReport,
-			optimizationSettings: request.optimizationSettings,
-			initialSceneBytes: request.initialSceneBytes,
-			currentSceneBytes: request.currentSceneBytes
-		})
+		const saveResult = await sceneSettingsService.saveSceneSettingsFromAssetIds(
+			{
+				sceneId: finalSceneId,
+				projectId,
+				targetProjectId: request.targetProjectId,
+				targetFolderId: request.targetFolderId,
+				userId,
+				meta: validationResult.meta,
+				settings: validationResult.settings,
+				sceneAssetIds: validationResult.sceneAssetIds,
+				optimizationReport: request.optimizationReport,
+				optimizationSettings: request.optimizationSettings,
+				initialSceneBytes: request.initialSceneBytes,
+				currentSceneBytes: request.currentSceneBytes
+			}
+		)
 
 		console.info('[scene-settings] save operation completed', {
 			requestId: request.requestId,
@@ -247,15 +390,15 @@ export async function publishScene(
 	userId: string
 ): Promise<Response> {
 	try {
-		const { sceneId, publishedGlb, currentSceneBytes } =
+		const { sceneId, publishedAssetId, currentSceneBytes } =
 			request as PublishSceneRequest
 		assertParsed(
 			sceneId,
 			'Scene settings request must be validated before calling operations'
 		)
 		assertParsed(
-			publishedGlb,
-			'Scene publish request must be validated before calling operations'
+			publishedAssetId,
+			'commit-scene-publish requires publishedAssetId'
 		)
 
 		// Ensure user exists in local database
@@ -268,11 +411,11 @@ export async function publishScene(
 
 		const projectId = await getSceneProjectId(sceneId)
 
-		const result = await sceneSettingsService.publishScene({
+		const result = await sceneSettingsService.publishSceneFromAssetId({
 			sceneId,
 			projectId,
 			userId,
-			publishedGlb,
+			publishedAssetId,
 			currentSceneBytes
 		})
 		const stats = await sceneSettingsService.getSceneStats(sceneId)

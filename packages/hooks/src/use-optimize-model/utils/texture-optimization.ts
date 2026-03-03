@@ -44,7 +44,7 @@ const resolveTextureMimeType = (response: Response): string => {
 const requestSingleTextureOptimization = async (
 	endpoint: string,
 	headers: HeadersInit,
-	formData: FormData,
+	body: ArrayBuffer,
 	requestTimeoutMs: number,
 	maxRetries: number
 ): Promise<Response> => {
@@ -58,7 +58,7 @@ const requestSingleTextureOptimization = async (
 			const response = await fetch(endpoint, {
 				method: 'POST',
 				headers,
-				body: formData,
+				body,
 				signal: controller.signal
 			})
 
@@ -104,16 +104,22 @@ const optimizeTexture = async (
 		)
 	}
 
-	const formData =
-		ServerCommunicationService.prepareTextureOptimizationFormData(
-			payload,
-			options
-		)
+	const requestBytes = new Uint8Array(payload.image.byteLength)
+	requestBytes.set(payload.image)
+	const requestBody = requestBytes.buffer
+	const { serverOptions: _, ...restOptions } = options
+	const headers = ServerCommunicationService.createRequestHeaders(serverOptions, {
+		'Content-Type': 'application/octet-stream',
+		'X-Texture-Index': String(texture.index),
+		'X-Texture-Name': texture.name,
+		'X-Texture-Mime-Type': payload.mimeType,
+		'X-Optimize-Options': JSON.stringify(restOptions)
+	})
 
 	const response = await requestSingleTextureOptimization(
 		serverOptions.endpoint,
-		ServerCommunicationService.createRequestHeaders(serverOptions),
-		formData,
+		headers,
+		requestBody,
 		options.requestTimeoutMs ?? DEFAULT_TIMEOUT_MS,
 		options.maxRetries ?? DEFAULT_MAX_RETRIES
 	)
