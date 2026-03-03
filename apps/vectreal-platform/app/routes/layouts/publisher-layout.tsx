@@ -7,8 +7,12 @@ import { data, Outlet } from 'react-router'
 
 import { Route } from './+types/publisher-layout'
 import { ControlsOverlay } from '../../components'
+import { getProject } from '../../lib/domain/project/project-repository.server'
 import { buildSceneAggregate } from '../../lib/domain/scene/scene-aggregate.server'
-import { getScene } from '../../lib/domain/scene/scene-folder-repository.server'
+import {
+	getScene,
+	getSceneFolder
+} from '../../lib/domain/scene/scene-folder-repository.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/scene-preview-repository.server'
 import {
 	processAtom,
@@ -36,6 +40,9 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 
 	const sceneId = params.sceneId?.trim() || null
 	let projectId: string | null = null
+	let currentProjectName: string | null = null
+	let currentFolderId: string | null = null
+	let currentFolderName: string | null = null
 
 	let sceneAggregate: SceneAggregateResponse | null = null
 	let publishedMeta: PublishedSceneMetaResponse | null = null
@@ -47,6 +54,17 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		}
 
 		projectId = scene.projectId
+		currentFolderId = scene.folderId
+
+		const [project, folder] = await Promise.all([
+			getProject(scene.projectId, user.id),
+			scene.folderId
+				? getSceneFolder(scene.folderId, user.id)
+				: Promise.resolve(null)
+		])
+
+		currentProjectName = project?.name ?? null
+		currentFolderName = folder?.name ?? null
 
 		sceneAggregate = await buildSceneAggregate(sceneId)
 		publishedMeta = await getPublishedScenePreview(projectId, sceneId)
@@ -57,6 +75,12 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		user: user || null,
 		sceneId,
 		projectId,
+		currentLocation: {
+			projectId,
+			projectName: currentProjectName,
+			folderId: currentFolderId,
+			folderName: currentFolderName
+		},
 		sceneAggregate,
 		publishedMeta
 	}

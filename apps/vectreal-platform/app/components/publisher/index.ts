@@ -1,4 +1,5 @@
 export { default as ControlsOverlay } from './controls-overlay'
+export { default as SaveLocationConfig } from './save-location-config'
 export { default as ToolSidebarTriggers } from './tool-sidebar-triggers'
 export * from './settings-components'
 export * from './sidebars'

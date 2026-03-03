@@ -5,18 +5,11 @@ import {
 	DropdownMenuContent,
 	DropdownMenuTrigger
 } from '@shared/components/ui/dropdown-menu'
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue
-} from '@shared/components/ui/select'
 import { Separator } from '@shared/components/ui/separator'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue } from 'jotai/react'
 import { Cloud, CloudUpload, MoreVertical, Sparkles } from 'lucide-react'
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
@@ -24,6 +17,7 @@ import {
 	InfoBanner,
 	PublishDrawer,
 	PublisherSidebar,
+	SaveLocationConfig,
 	SceneInfoTrigger,
 	ToolSidebarTriggers
 } from '.'
@@ -40,6 +34,7 @@ const OverlayControls = ({
 	user,
 	sceneId,
 	projectId,
+	currentLocation,
 	sceneAggregate,
 	publishedMeta
 }: PublisherLoaderData) => {
@@ -54,6 +49,13 @@ const OverlayControls = ({
 		clientTextureBytes
 	} = useAtomValue(optimizationRuntimeAtom)
 	const navigate = useNavigate()
+	const [saveLocationTarget, setSaveLocationTarget] = useState<{
+		targetProjectId?: string
+		targetFolderId?: string | null
+	}>({
+		targetProjectId: currentLocation.projectId ?? projectId ?? undefined,
+		targetFolderId: currentLocation.folderId ?? null
+	})
 
 	// Centralized scene loader - single source of truth (must be inside ModelProvider)
 	// This hook manages scene loading/saving but doesn't return state available via atoms
@@ -89,7 +91,7 @@ const OverlayControls = ({
 		setProcessState((prev) => ({ ...prev, isSaving: true }))
 
 		try {
-			const result = (await saveSceneSettings()) as
+			const result = (await saveSceneSettings(saveLocationTarget)) as
 				| SaveSceneResult
 				| { unchanged: true }
 				| undefined
@@ -136,7 +138,14 @@ const OverlayControls = ({
 		} finally {
 			setProcessState((prev) => ({ ...prev, isSaving: false }))
 		}
-	}, [navigate, saveSceneSettings, sceneId, setProcessState, user?.id])
+	}, [
+		navigate,
+		saveLocationTarget,
+		saveSceneSettings,
+		sceneId,
+		setProcessState,
+		user?.id
+	])
 
 	const handleOpenPublishPanel = useCallback(() => {
 		setProcessState((prev) => ({
@@ -162,7 +171,7 @@ const OverlayControls = ({
 	) : (
 		<>
 			{user && (
-				<FloatingPillWrapper className="bg-muted/50 fixed top-0 right-0 z-20 m-4 rounded-2xl p-1 pr-3 backdrop-blur-2xl">
+				<FloatingPillWrapper className="bg-muted/50 fixed top-0 right-0 z-20 m-4 rounded-2xl p-1 backdrop-blur-2xl">
 					<ButtonGroup className="items-center">
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
@@ -170,25 +179,16 @@ const OverlayControls = ({
 									<MoreVertical />
 								</Button>
 							</DropdownMenuTrigger>
-							<DropdownMenuContent>
-								<Select>
-									<SelectTrigger className="w-full">
-										<SelectValue placeholder="Select an action" />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem
-											value="publish"
-											onSelect={handleOpenPublishPanel}
-										>
-											Publish Scene
-										</SelectItem>
-									</SelectContent>
-								</Select>
+							<DropdownMenuContent align="end" className="w-80">
+								<SaveLocationConfig
+									currentLocation={currentLocation}
+									fallbackProjectId={projectId}
+									onChange={setSaveLocationTarget}
+								/>
 							</DropdownMenuContent>
 						</DropdownMenu>
 						<Button
 							variant="ghost"
-							size="sm"
 							className="flex items-center gap-2 rounded-xl"
 							disabled={isSaveDisabled}
 							onClick={handleSaveScene}
@@ -210,7 +210,7 @@ const OverlayControls = ({
 								orientation="vertical"
 								className="bg-muted-foreground/50 h-4"
 							/>
-							<span className="mx-1 flex items-center">
+							<span className="mx-1 mr-3 flex items-center">
 								<p className="text-muted-foreground mx-2 text-xs font-medium tracking-wide">
 									{isPublished ? 'Published' : 'Draft'}
 								</p>

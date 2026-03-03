@@ -42,6 +42,14 @@ export class SceneSettingsParser {
 			const rawSceneId = requestData.sceneId as string
 			const sceneId =
 				typeof rawSceneId === 'string' ? rawSceneId.trim() : rawSceneId
+			const targetProjectId = this.parseTargetProjectId(requestData)
+			if (targetProjectId instanceof Response) {
+				return targetProjectId
+			}
+			const targetFolderId = this.parseTargetFolderId(requestData)
+			if (targetFolderId instanceof Response) {
+				return targetFolderId
+			}
 
 			// Validate required fields
 			if (!action) {
@@ -59,6 +67,8 @@ export class SceneSettingsParser {
 					action,
 					requestId,
 					sceneId,
+					targetProjectId: undefined,
+					targetFolderId: undefined,
 					settings: undefined,
 					gltfJson: undefined
 				}
@@ -78,6 +88,8 @@ export class SceneSettingsParser {
 					action,
 					requestId,
 					sceneId,
+					targetProjectId: undefined,
+					targetFolderId: undefined,
 					settings: undefined,
 					gltfJson: undefined,
 					publishedGlb,
@@ -129,6 +141,8 @@ export class SceneSettingsParser {
 				action,
 				requestId,
 				sceneId,
+				targetProjectId,
+				targetFolderId,
 				meta,
 				settings,
 				gltfJson: gltfJsonData || undefined,
@@ -432,5 +446,53 @@ export class SceneSettingsParser {
 		}
 
 		return Math.round(parsedValue)
+	}
+
+	private static parseTargetProjectId(
+		requestData: Record<string, unknown>
+	): string | undefined | Response {
+		const rawTargetProjectId = requestData.targetProjectId
+		if (typeof rawTargetProjectId === 'undefined') {
+			return undefined
+		}
+
+		if (typeof rawTargetProjectId !== 'string') {
+			return ApiResponse.badRequest('targetProjectId must be a valid UUID')
+		}
+
+		const targetProjectId = rawTargetProjectId.trim()
+		if (!targetProjectId) {
+			return undefined
+		}
+
+		if (!UUID_REGEX.test(targetProjectId)) {
+			return ApiResponse.badRequest('targetProjectId must be a valid UUID')
+		}
+
+		return targetProjectId
+	}
+
+	private static parseTargetFolderId(
+		requestData: Record<string, unknown>
+	): string | null | undefined | Response {
+		const rawTargetFolderId = requestData.targetFolderId
+		if (typeof rawTargetFolderId === 'undefined') {
+			return undefined
+		}
+
+		if (typeof rawTargetFolderId !== 'string') {
+			return ApiResponse.badRequest('targetFolderId must be a valid UUID')
+		}
+
+		const targetFolderId = rawTargetFolderId.trim()
+		if (!targetFolderId) {
+			return null
+		}
+
+		if (!UUID_REGEX.test(targetFolderId)) {
+			return ApiResponse.badRequest('targetFolderId must be a valid UUID')
+		}
+
+		return targetFolderId
 	}
 }

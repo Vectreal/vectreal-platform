@@ -4,6 +4,8 @@ import { ApiResponse } from '@shared/utils'
 import { SerializedSceneAssetDataMap, SceneSettings } from '@vctrl/core'
 
 import { sceneSettingsService } from './scene-settings-service.server'
+import { getProject } from '../project/project-repository.server'
+import { getSceneFolder } from './scene-folder-repository.server'
 import {
 	getOrCreateDefaultProject,
 	userExists
@@ -64,15 +66,60 @@ async function createNewScene(
  */
 async function resolveSceneAndProject(
 	sceneId: string | undefined,
-	userId: string
+	userId: string,
+	targetProjectId?: string
 ): Promise<{ sceneId: string; projectId: string }> {
 	if (sceneId?.trim()) {
-		const projectId = await getSceneProjectId(sceneId)
+		const existingProjectId = await getSceneProjectId(sceneId)
+		const projectId = targetProjectId ?? existingProjectId
 		return { sceneId, projectId }
 	}
 
 	// Create new scene if no ID provided
+	if (targetProjectId) {
+		const project = await getProject(targetProjectId, userId)
+		if (!project) {
+			throw new Error('Target project not found or access denied')
+		}
+
+		return { sceneId: randomUUID(), projectId: targetProjectId }
+	}
+
 	return await createNewScene(userId)
+}
+
+async function validateSaveLocationTarget(
+	request: SceneSettingsRequest,
+	userId: string,
+	resolvedProjectId: string
+): Promise<void> {
+	if (request.targetProjectId) {
+		const project = await getProject(request.targetProjectId, userId)
+		if (!project) {
+			throw new Error('Target project not found or access denied')
+		}
+	}
+
+	if (typeof request.targetFolderId === 'undefined') {
+		return
+	}
+
+	if (request.targetFolderId === null) {
+		return
+	}
+
+	const folder = await getSceneFolder(request.targetFolderId, userId)
+	if (!folder) {
+		throw new Error('Target folder not found or access denied')
+	}
+
+	if (folder.projectId !== resolvedProjectId) {
+		throw new Error('Target folder must belong to the selected project')
+	}
+
+	if (folder.parentFolderId !== null) {
+		throw new Error('Only root-level folders are allowed')
+	}
 }
 
 export async function saveSceneSettings(
@@ -102,12 +149,17 @@ export async function saveSceneSettings(
 
 		const { sceneId: finalSceneId, projectId } = await resolveSceneAndProject(
 			request.sceneId,
-			userId
+			userId,
+			request.targetProjectId
 		)
+
+		await validateSaveLocationTarget(request, userId, projectId)
 
 		const saveResult = await sceneSettingsService.saveSceneSettings({
 			sceneId: finalSceneId,
 			projectId,
+			targetProjectId: request.targetProjectId,
+			targetFolderId: request.targetFolderId,
 			userId,
 			meta: validationResult.meta,
 			settings: validationResult.settings,

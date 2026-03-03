@@ -10,7 +10,14 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger
 } from '@shared/components/ui/dropdown-menu'
-import { Ellipsis, File, FilePenLine, FolderOpen, Trash2 } from 'lucide-react'
+import {
+	Box,
+	Ellipsis,
+	File,
+	FilePenLine,
+	FolderOpen,
+	Trash2
+} from 'lucide-react'
 import { Link } from 'react-router'
 
 import { createCheckboxColumn, SortableHeader } from './data-table'
@@ -235,7 +242,7 @@ export function createContentColumns(
 						{isFolder ? (
 							<FolderOpen className="text-primary/60 group-hover:text-primary h-4 w-4 transition-colors" />
 						) : (
-							<File className="text-primary/60 group-hover:text-primary h-4 w-4 transition-colors" />
+							<Box className="text-primary/60 group-hover:text-primary h-4 w-4 transition-colors" />
 						)}
 						{row.getValue('name')}
 						{isUpdating && (

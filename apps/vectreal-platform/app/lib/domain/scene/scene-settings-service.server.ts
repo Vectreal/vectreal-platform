@@ -83,6 +83,8 @@ class SceneSettingsService {
 		const {
 			sceneId,
 			projectId,
+			targetProjectId,
+			targetFolderId,
 			userId,
 			meta,
 			settings,
@@ -94,12 +96,48 @@ class SceneSettingsService {
 		} = params
 
 		const saveResult = await this.db.transaction(async (tx) => {
-			const scene = await this.ensureSceneExists(tx, {
+			let scene = await this.ensureSceneExists(tx, {
 				sceneId,
 				projectId,
 				userId,
-				sceneMeta: meta
+				sceneMeta: meta,
+				preferredFolderId: targetFolderId
 			})
+
+			const shouldApplyTargetLocation =
+				typeof targetProjectId !== 'undefined' ||
+				typeof targetFolderId !== 'undefined'
+
+			const resolvedTargetProjectId = targetProjectId ?? scene.projectId
+			const resolvedTargetFolderId =
+				typeof targetFolderId !== 'undefined'
+					? targetFolderId
+					: targetProjectId && targetProjectId !== scene.projectId
+						? null
+						: scene.folderId
+
+			const hasLocationChange =
+				shouldApplyTargetLocation &&
+				(scene.projectId !== resolvedTargetProjectId ||
+					scene.folderId !== resolvedTargetFolderId)
+
+			if (hasLocationChange) {
+				const [updatedScene] = await tx
+					.update(scenes)
+					.set({
+						projectId: resolvedTargetProjectId,
+						folderId: resolvedTargetFolderId,
+						updatedAt: new Date()
+					})
+					.where(eq(scenes.id, scene.id))
+					.returning()
+
+				if (!updatedScene) {
+					throw new Error('Failed to update scene location')
+				}
+
+				scene = updatedScene
+			}
 
 			const existingSettings = await getSceneSettingsBySceneId(tx, sceneId)
 			const existingAssetIds = existingSettings
@@ -112,14 +150,19 @@ class SceneSettingsService {
 			const { assetsChanged, reusableAssetIds } =
 				await this.determineAssetReuse(gltfJson, existingAssetIds, tx)
 
-			if (existingSettings && !settingsChanged && !assetsChanged) {
+			if (
+				existingSettings &&
+				!settingsChanged &&
+				!assetsChanged &&
+				!hasLocationChange
+			) {
 				return { ...existingSettings, unchanged: true }
 			}
 
 			const assetIds = await this.resolveAssetIds({
 				sceneId: scene.id,
 				userId,
-				projectId,
+				projectId: scene.projectId,
 				gltfJson,
 				reusableAssetIds
 			})
@@ -577,6 +620,7 @@ class SceneSettingsService {
 			projectId: string
 			userId: string
 			sceneMeta?: SceneMetaState
+			preferredFolderId?: string | null
 		}
 	) {
 		const existingScene = await tx
@@ -613,7 +657,7 @@ class SceneSettingsService {
 					'Scene created from publisher',
 				thumbnailUrl: params.sceneMeta?.thumbnailUrl?.trim() || null,
 				projectId: params.projectId,
-				folderId: userFolder[0]?.id,
+				folderId: params.preferredFolderId ?? userFolder[0]?.id,
 				status: 'draft'
 			})
 			.returning()
