@@ -1,4 +1,8 @@
-import { buildAssetLookupKeys, isValidBase64, normalizeAssetUri } from '@vctrl/core'
+import {
+	buildAssetLookupKeys,
+	isValidBase64,
+	normalizeAssetUri
+} from '@vctrl/core'
 
 import type {
 	SceneSettings,
@@ -57,16 +61,24 @@ function collectReferencedUris(gltfJson: unknown): Set<string> {
 function validateAssetDataMap(assetData: SerializedSceneAssetDataMap): void {
 	for (const [assetId, asset] of Object.entries(assetData)) {
 		if (!asset || typeof asset !== 'object') {
-			throw new Error(`Scene payload contains invalid asset entry for ${assetId}`)
+			throw new Error(
+				`Scene payload contains invalid asset entry for ${assetId}`
+			)
 		}
 
-		if (typeof asset.fileName !== 'string' || asset.fileName.trim().length === 0) {
+		if (
+			typeof asset.fileName !== 'string' ||
+			asset.fileName.trim().length === 0
+		) {
 			throw new Error(
 				`Scene payload asset ${assetId} is missing a valid fileName`
 			)
 		}
 
-		if (typeof asset.mimeType !== 'string' || asset.mimeType.trim().length === 0) {
+		if (
+			typeof asset.mimeType !== 'string' ||
+			asset.mimeType.trim().length === 0
+		) {
 			throw new Error(
 				`Scene payload asset ${assetId} is missing a valid mimeType`
 			)

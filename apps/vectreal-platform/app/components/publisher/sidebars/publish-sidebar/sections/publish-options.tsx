@@ -67,7 +67,9 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 				setPublishStatus('saving')
 				const saveResult = await saveSceneSettings()
 				targetSceneId =
-					typeof saveResult === 'object' && saveResult && 'sceneId' in saveResult
+					typeof saveResult === 'object' &&
+					saveResult &&
+					'sceneId' in saveResult
 						? (saveResult.sceneId ?? sceneId)
 						: sceneId
 

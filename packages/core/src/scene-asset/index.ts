@@ -53,10 +53,11 @@ export const detectMimeTypeFromBytes = (bytes: Uint8Array): string | null => {
 
 export const getAssetKindFromMimeType = (
 	mimeType: string
-): 'buffer' | 'image' =>
-	mimeType.startsWith('image/') ? 'image' : 'buffer'
+): 'buffer' | 'image' => (mimeType.startsWith('image/') ? 'image' : 'buffer')
 
-export function getSerializedAssetByteSize(assetData: number[] | string): number {
+export function getSerializedAssetByteSize(
+	assetData: number[] | string
+): number {
 	if (Array.isArray(assetData)) {
 		return assetData.length
 	}

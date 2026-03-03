@@ -31,7 +31,9 @@ const toUint8Array = (value: unknown): Uint8Array | null => {
 	return null
 }
 
-export const buildImageMimeLookup = (gltfData: unknown): Map<string, string> => {
+export const buildImageMimeLookup = (
+	gltfData: unknown
+): Map<string, string> => {
 	const lookup = new Map<string, string>()
 
 	if (!gltfData || typeof gltfData !== 'object') {
@@ -73,7 +75,7 @@ export const buildSceneUploadFileDescriptor = (
 	const normalizedName = normalizeAssetUri(fileName)
 	const basename = normalizedName.split('/').pop() || normalizedName
 	const mimeFromDocument = imageMimeLookup
-		? imageMimeLookup.get(normalizedName) ?? imageMimeLookup.get(basename)
+		? (imageMimeLookup.get(normalizedName) ?? imageMimeLookup.get(basename))
 		: undefined
 	const mimeFromBytes = normalizedBytes
 		? detectMimeTypeFromBytes(normalizedBytes)
