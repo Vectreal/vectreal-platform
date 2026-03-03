@@ -527,28 +527,28 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	const parsedRequest = uploadOrPrepareAction
 		? {
-			action,
-			requestId:
-				typeof actionRequest.requestId === 'string'
-					? actionRequest.requestId.trim()
-					: undefined,
-			projectId:
-				typeof actionRequest.projectId === 'string'
-					? actionRequest.projectId.trim() || undefined
-					: undefined,
-			sceneId:
-				typeof actionRequest.sceneId === 'string'
-					? actionRequest.sceneId.trim() || undefined
-					: routeSceneId,
-			targetProjectId:
-				typeof actionRequest.targetProjectId === 'string'
-					? actionRequest.targetProjectId.trim() || undefined
-					: undefined,
-			targetFolderId:
-				typeof actionRequest.targetFolderId === 'string'
-					? actionRequest.targetFolderId.trim() || null
-					: undefined
-		}
+				action,
+				requestId:
+					typeof actionRequest.requestId === 'string'
+						? actionRequest.requestId.trim()
+						: undefined,
+				projectId:
+					typeof actionRequest.projectId === 'string'
+						? actionRequest.projectId.trim() || undefined
+						: undefined,
+				sceneId:
+					typeof actionRequest.sceneId === 'string'
+						? actionRequest.sceneId.trim() || undefined
+						: routeSceneId,
+				targetProjectId:
+					typeof actionRequest.targetProjectId === 'string'
+						? actionRequest.targetProjectId.trim() || undefined
+						: undefined,
+				targetFolderId:
+					typeof actionRequest.targetFolderId === 'string'
+						? actionRequest.targetFolderId.trim() || null
+						: undefined
+			}
 		: SceneSettingsParser.parseSceneSettingsRequestData(actionRequest)
 
 	if (parsedRequest instanceof Response) {
@@ -563,8 +563,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	if (
 		effectiveSceneId &&
-		(action === 'get-scene-settings' ||
-			action === 'commit-scene-publish')
+		(action === 'get-scene-settings' || action === 'commit-scene-publish')
 	) {
 		const scene = await getScene(effectiveSceneId, authResult.user.id)
 		if (!scene) {
@@ -601,7 +600,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				const kind = kindRaw === 'image' ? 'image' : 'buffer'
 
 				if (!(file instanceof File)) {
-					return ApiResponse.badRequest('file is required for upload-scene-asset')
+					return ApiResponse.badRequest(
+						'file is required for upload-scene-asset'
+					)
 				}
 
 				return await sceneSettingsOps.uploadSceneAsset(
@@ -615,7 +616,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			case 'upload-scene-gltf': {
 				const file = actionRequest.file
 				if (!(file instanceof File)) {
-					return ApiResponse.badRequest('file is required for upload-scene-gltf')
+					return ApiResponse.badRequest(
+						'file is required for upload-scene-gltf'
+					)
 				}
 
 				return await sceneSettingsOps.uploadSceneGltf(
@@ -628,7 +631,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			case 'upload-published-glb': {
 				const file = actionRequest.file
 				if (!(file instanceof File)) {
-					return ApiResponse.badRequest('file is required for upload-published-glb')
+					return ApiResponse.badRequest(
+						'file is required for upload-published-glb'
+					)
 				}
 
 				return await sceneSettingsOps.uploadPublishedGlb(

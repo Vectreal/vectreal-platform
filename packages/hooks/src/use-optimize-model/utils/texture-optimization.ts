@@ -108,13 +108,16 @@ const optimizeTexture = async (
 	requestBytes.set(payload.image)
 	const requestBody = requestBytes.buffer
 	const { serverOptions: _, ...restOptions } = options
-	const headers = ServerCommunicationService.createRequestHeaders(serverOptions, {
-		'Content-Type': 'application/octet-stream',
-		'X-Texture-Index': String(texture.index),
-		'X-Texture-Name': texture.name,
-		'X-Texture-Mime-Type': payload.mimeType,
-		'X-Optimize-Options': JSON.stringify(restOptions)
-	})
+	const headers = ServerCommunicationService.createRequestHeaders(
+		serverOptions,
+		{
+			'Content-Type': 'application/octet-stream',
+			'X-Texture-Index': String(texture.index),
+			'X-Texture-Name': texture.name,
+			'X-Texture-Mime-Type': payload.mimeType,
+			'X-Optimize-Options': JSON.stringify(restOptions)
+		}
+	)
 
 	const response = await requestSingleTextureOptimization(
 		serverOptions.endpoint,

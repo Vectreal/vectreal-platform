@@ -307,7 +307,10 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 					}
 
 					if (typeof options?.targetFolderId !== 'undefined') {
-						prepareFormData.append('targetFolderId', options.targetFolderId ?? '')
+						prepareFormData.append(
+							'targetFolderId',
+							options.targetFolderId ?? ''
+						)
 					}
 
 					const prepareResponse = await fetch(endpoint, {
@@ -369,8 +372,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 								)
 							}
 
-							const uploadedAsset =
-								uploadAssetResult.data || uploadAssetResult
+							const uploadedAsset = uploadAssetResult.data || uploadAssetResult
 							sceneAssetIds.push(uploadedAsset.assetId)
 						}
 					}

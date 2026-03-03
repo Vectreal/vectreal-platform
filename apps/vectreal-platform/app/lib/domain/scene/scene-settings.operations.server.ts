@@ -74,9 +74,8 @@ async function resolveSceneAndProject(
 	projectId?: string
 ): Promise<{ sceneId: string; projectId: string }> {
 	if (sceneId?.trim()) {
-		const existingProjectId = await sceneSettingsService.getProjectIdFromScene(
-			sceneId
-		)
+		const existingProjectId =
+			await sceneSettingsService.getProjectIdFromScene(sceneId)
 
 		if (existingProjectId) {
 			const resolvedProjectId = targetProjectId ?? existingProjectId

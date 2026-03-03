@@ -411,7 +411,9 @@ export class SceneSettingsParser {
 			try {
 				sceneAssetIds = JSON.parse(rawSceneAssetIds)
 			} catch {
-				return ApiResponse.badRequest('sceneAssetIds must be a valid JSON array')
+				return ApiResponse.badRequest(
+					'sceneAssetIds must be a valid JSON array'
+				)
 			}
 		}
 

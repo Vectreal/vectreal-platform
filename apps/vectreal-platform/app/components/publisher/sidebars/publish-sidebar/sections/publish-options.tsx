@@ -19,9 +19,9 @@ type PublishStatus = 'idle' | 'saving' | 'publishing' | 'success' | 'error'
 interface PublishOptionsProps {
 	sceneId?: string
 	saveSceneSettings: () => Promise<
-		{ sceneId?: string; unchanged?: boolean; [key: string]: unknown } |
-			{ unchanged: true } |
-			undefined
+		| { sceneId?: string; unchanged?: boolean; [key: string]: unknown }
+		| { unchanged: true }
+		| undefined
 	>
 }
 
@@ -43,7 +43,9 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const handlePublish = useCallback(async () => {
 		if (!canPublish) {
 			setPublishStatus('error')
-			setPublishError('Model is not ready yet. Load and optimize your scene first.')
+			setPublishError(
+				'Model is not ready yet. Load and optimize your scene first.'
+			)
 			return
 		}
 
@@ -192,7 +194,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 					<span>{statusText}</span>
 				</div>
 			) : (
-				<div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+				<div className="border-border/60 bg-muted/30 text-muted-foreground rounded-md border px-3 py-2 text-xs">
 					{statusText}
 				</div>
 			)}
