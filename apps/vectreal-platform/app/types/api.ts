@@ -79,14 +79,11 @@ export interface SceneSettingsRequest extends Partial<BaseSceneParams> {
 	readonly meta?: SceneMetaState
 	readonly settings?: SceneSettings
 	readonly gltfJson?: JSONDocument
+	readonly sceneAssetIds?: string[]
+	readonly publishedAssetId?: string
 	readonly optimizationReport?: OptimizationReport
 	readonly optimizationSettings?: Optimizations
 	readonly initialSceneBytes?: number
-	readonly publishedGlb?: {
-		readonly data: number[]
-		readonly fileName?: string
-		readonly mimeType?: string
-	}
 	readonly currentSceneBytes?: number
 }
 
@@ -124,9 +121,13 @@ export interface SceneMetadataUpdateInput {
 
 /** Valid scene settings actions. */
 export type SceneSettingsAction =
-	| 'save-scene-settings'
+	| 'prepare-scene-upload'
+	| 'commit-scene-save'
+	| 'commit-scene-publish'
 	| 'get-scene-settings'
-	| 'publish-scene'
+	| 'upload-scene-asset'
+	| 'upload-scene-gltf'
+	| 'upload-published-glb'
 
 export type ContentItemType = 'scene' | 'folder'
 

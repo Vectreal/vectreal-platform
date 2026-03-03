@@ -22,6 +22,7 @@ import {
 } from '@shared/components/ui/dropdown-menu'
 import { Textarea } from '@shared/components/ui/textarea'
 import { cn } from '@shared/utils'
+import { getSerializedAssetByteSize, type ServerSceneData } from '@vctrl/core'
 import {
 	ModelFile,
 	SceneLoadResult,
@@ -56,10 +57,9 @@ import {
 import { deleteDialogAtom } from '../../../lib/stores/dashboard-management-store'
 
 import type { SceneAggregateResponse } from '../../../types/api'
-import type { ServerSceneData } from '@vctrl/core'
 import type { ShouldRevalidateFunction } from 'react-router'
 
-const MAX_PRELOADED_SCENE_ASSET_CHARS = 1_500_000
+const MAX_PRELOADED_SCENE_ASSET_BYTES = 1_500_000
 
 type SceneAssetSummary = {
 	id: string
@@ -103,18 +103,14 @@ function toInitialSceneData(
 		return null
 	}
 
-	const totalAssetChars = Object.values(aggregate.assetData).reduce(
+	const totalAssetBytes = Object.values(aggregate.assetData).reduce(
 		(total, asset) => {
-			if (typeof asset.data === 'string') {
-				return total + asset.data.length
-			}
-
-			return total + asset.data.length
+			return total + getSerializedAssetByteSize(asset.data)
 		},
 		0
 	)
 
-	if (totalAssetChars > MAX_PRELOADED_SCENE_ASSET_CHARS) {
+	if (totalAssetBytes > MAX_PRELOADED_SCENE_ASSET_BYTES) {
 		return null
 	}
 

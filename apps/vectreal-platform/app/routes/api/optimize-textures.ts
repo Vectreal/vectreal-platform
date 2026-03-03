@@ -43,11 +43,20 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	try {
-		const formData = await request.formData()
-		const textureFile = formData.get('texture')
-		const textureIndexRaw = formData.get('textureIndex')
-		const textureNameRaw = formData.get('textureName')
-		const optionsStr = formData.get('options') as string
+		const contentType = request.headers.get('content-type') || ''
+		if (!contentType.includes('application/octet-stream')) {
+			return data(
+				{
+					error:
+						'Unsupported content type. optimize-textures requires application/octet-stream payloads.'
+				},
+				{ status: 415, headers: { 'Cache-Control': 'no-store' } }
+			)
+		}
+
+		const textureIndexRaw = request.headers.get('x-texture-index')
+		const textureNameRaw = request.headers.get('x-texture-name')
+		const optionsStr = request.headers.get('x-optimize-options') || ''
 		const textureIndex =
 			typeof textureIndexRaw === 'string'
 				? Number.parseInt(textureIndexRaw, 10)
@@ -56,13 +65,6 @@ export async function action({ request }: Route.ActionArgs) {
 			typeof textureNameRaw === 'string' && textureNameRaw.trim().length > 0
 				? textureNameRaw.trim()
 				: `texture-${Number.isFinite(textureIndex) ? textureIndex : 'unknown'}`
-
-		if (!(textureFile instanceof File)) {
-			return data(
-				{ error: 'No texture file provided' },
-				{ status: 400, headers: { 'Cache-Control': 'no-store' } }
-			)
-		}
 
 		if (!Number.isFinite(textureIndex) || textureIndex < 0) {
 			return data(
@@ -88,7 +90,15 @@ export async function action({ request }: Route.ActionArgs) {
 			}
 		}
 
-		const inputBuffer = Buffer.from(await textureFile.arrayBuffer())
+		const requestBuffer = await request.arrayBuffer()
+		if (!requestBuffer.byteLength) {
+			return data(
+				{ error: 'Texture payload is empty' },
+				{ status: 400, headers: { 'Cache-Control': 'no-store' } }
+			)
+		}
+
+		const inputBuffer = Buffer.from(requestBuffer)
 		const sharpModule = await import('sharp')
 		const sharp = sharpModule.default || sharpModule
 

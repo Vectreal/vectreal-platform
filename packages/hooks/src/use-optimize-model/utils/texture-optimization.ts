@@ -26,6 +26,7 @@ import type {
 const DEFAULT_TIMEOUT_MS = 20_000
 const DEFAULT_MAX_RETRIES = 2
 const DEFAULT_MAX_TEXTURE_UPLOAD_BYTES = 20 * 1024 * 1024
+const DEFAULT_MAX_CONCURRENT_REQUESTS = 4
 const TRANSIENT_STATUS_CODES = new Set([408, 425, 429, 500, 502, 503, 504])
 
 const wait = async (ms: number): Promise<void> => {
@@ -44,7 +45,7 @@ const resolveTextureMimeType = (response: Response): string => {
 const requestSingleTextureOptimization = async (
 	endpoint: string,
 	headers: HeadersInit,
-	formData: FormData,
+	body: ArrayBuffer,
 	requestTimeoutMs: number,
 	maxRetries: number
 ): Promise<Response> => {
@@ -58,7 +59,7 @@ const requestSingleTextureOptimization = async (
 			const response = await fetch(endpoint, {
 				method: 'POST',
 				headers,
-				body: formData,
+				body,
 				signal: controller.signal
 			})
 
@@ -104,16 +105,25 @@ const optimizeTexture = async (
 		)
 	}
 
-	const formData =
-		ServerCommunicationService.prepareTextureOptimizationFormData(
-			payload,
-			options
-		)
+	const requestBytes = new Uint8Array(payload.image.byteLength)
+	requestBytes.set(payload.image)
+	const requestBody = requestBytes.buffer
+	const { serverOptions: _, ...restOptions } = options
+	const headers = ServerCommunicationService.createRequestHeaders(
+		serverOptions,
+		{
+			'Content-Type': 'application/octet-stream',
+			'X-Texture-Index': String(texture.index),
+			'X-Texture-Name': texture.name,
+			'X-Texture-Mime-Type': payload.mimeType,
+			'X-Optimize-Options': JSON.stringify(restOptions)
+		}
+	)
 
 	const response = await requestSingleTextureOptimization(
 		serverOptions.endpoint,
-		ServerCommunicationService.createRequestHeaders(serverOptions),
-		formData,
+		headers,
+		requestBody,
 		options.requestTimeoutMs ?? DEFAULT_TIMEOUT_MS,
 		options.maxRetries ?? DEFAULT_MAX_RETRIES
 	)
@@ -163,16 +173,35 @@ export const performServerSideTextureOptimization = async (
 	const textures = optimizer.listTextureDescriptors()
 	const failures: Array<{ index: number; reason: string }> = []
 	let successCount = 0
+	const maxConcurrentRequests =
+		options.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS
 
 	try {
-		for (const texture of textures) {
-			try {
-				await optimizeTexture(optimizer, texture, options, serverOptions)
-				successCount += 1
-			} catch (error) {
+		for (
+			let start = 0;
+			start < textures.length;
+			start += maxConcurrentRequests
+		) {
+			const chunk = textures.slice(start, start + maxConcurrentRequests)
+			const settled = await Promise.allSettled(
+				chunk.map(async (texture) => {
+					await optimizeTexture(optimizer, texture, options, serverOptions)
+					return texture.index
+				})
+			)
+
+			for (const [index, outcome] of settled.entries()) {
+				if (outcome.status === 'fulfilled') {
+					successCount += 1
+					continue
+				}
+
 				failures.push({
-					index: texture.index,
-					reason: error instanceof Error ? error.message : String(error)
+					index: chunk[index].index,
+					reason:
+						outcome.reason instanceof Error
+							? outcome.reason.message
+							: String(outcome.reason)
 				})
 			}
 		}

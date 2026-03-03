@@ -8,6 +8,7 @@ import { useCallback, useRef, useState, type FC } from 'react'
 import { useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
+import { buildSceneUploadFileDescriptor } from '../../../../../lib/domain/scene/scene-upload-manifest'
 import { processAtom } from '../../../../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
 import { itemVariants } from '../../animation'
@@ -19,9 +20,9 @@ type PublishStatus = 'idle' | 'saving' | 'publishing' | 'success' | 'error'
 interface PublishOptionsProps {
 	sceneId?: string
 	saveSceneSettings: () => Promise<
-		{ sceneId?: string; unchanged?: boolean; [key: string]: unknown } |
-			{ unchanged: true } |
-			undefined
+		| { sceneId?: string; unchanged?: boolean; [key: string]: unknown }
+		| { unchanged: true }
+		| undefined
 	>
 }
 
@@ -43,7 +44,9 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const handlePublish = useCallback(async () => {
 		if (!canPublish) {
 			setPublishStatus('error')
-			setPublishError('Model is not ready yet. Load and optimize your scene first.')
+			setPublishError(
+				'Model is not ready yet. Load and optimize your scene first.'
+			)
 			return
 		}
 
@@ -57,18 +60,26 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		setPublishStatus('saving')
 		setPublishError(null)
 		try {
-			const saveResult = await saveSceneSettings()
-			const targetSceneId =
-				typeof saveResult === 'object' && saveResult && 'sceneId' in saveResult
-					? (saveResult.sceneId ?? sceneId)
-					: sceneId
+			const requiresSaveBeforePublish = !sceneId || hasUnsavedChanges
+			let targetSceneId = sceneId
+
+			if (requiresSaveBeforePublish) {
+				setPublishStatus('saving')
+				const saveResult = await saveSceneSettings()
+				targetSceneId =
+					typeof saveResult === 'object' &&
+					saveResult &&
+					'sceneId' in saveResult
+						? (saveResult.sceneId ?? sceneId)
+						: sceneId
+
+				if (!sceneId && targetSceneId) {
+					navigate(`/publisher/${targetSceneId}`, { replace: true })
+				}
+			}
 
 			if (!targetSceneId) {
 				throw new Error('Save succeeded but scene ID is missing. Please retry.')
-			}
-
-			if (!sceneId && targetSceneId) {
-				navigate(`/publisher/${targetSceneId}`, { replace: true })
 			}
 
 			setPublishStatus('publishing')
@@ -80,16 +91,33 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 				clientSceneBytes: prev.clientSceneBytes ?? result.size
 			}))
 			const baseName = file?.name?.replace(/\.[^/.]+$/, '') || 'scene'
-			const payload = {
-				data: Array.from(result.data),
-				fileName: `${baseName}.glb`,
-				mimeType: 'model/gltf-binary'
+			const uploadFormData = new FormData()
+			uploadFormData.append('action', 'upload-published-glb')
+			uploadFormData.append('sceneId', targetSceneId)
+			const uploadDescriptor = buildSceneUploadFileDescriptor(
+				`${baseName}.glb`,
+				result.data
+			)
+			uploadFormData.append('file', uploadDescriptor.file)
+
+			const uploadResponse = await fetch(`/api/scenes/${targetSceneId}`, {
+				method: 'POST',
+				body: uploadFormData
+			})
+
+			const uploadResult = await uploadResponse.json()
+			if (!uploadResponse.ok || uploadResult.error) {
+				throw new Error(
+					uploadResult.error || `HTTP error! status: ${uploadResponse.status}`
+				)
 			}
 
+			const uploadedAsset = uploadResult.data || uploadResult
+
 			const formData = new FormData()
-			formData.append('action', 'publish-scene')
+			formData.append('action', 'commit-scene-publish')
 			formData.append('sceneId', targetSceneId)
-			formData.append('publishedGlb', JSON.stringify(payload))
+			formData.append('publishedAssetId', uploadedAsset.assetId)
 			if (Number.isFinite(result.size)) {
 				formData.append('currentSceneBytes', String(result.size))
 			}
@@ -130,6 +158,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		canPublish,
 		optimizer,
 		saveSceneSettings,
+		hasUnsavedChanges,
 		sceneId,
 		navigate,
 		revalidator,
@@ -153,7 +182,8 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	return (
 		<motion.div variants={itemVariants} className="space-y-4 px-2 py-2">
 			<div className="text-muted-foreground text-sm">
-				Publish your current optimized scene. This action always saves first.
+				Publish your current optimized scene. This saves first only when there
+				are unsaved changes.
 			</div>
 			{!sceneId && (
 				<div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
@@ -172,7 +202,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 					<span>{statusText}</span>
 				</div>
 			) : (
-				<div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+				<div className="border-border/60 bg-muted/30 text-muted-foreground rounded-md border px-3 py-2 text-xs">
 					{statusText}
 				</div>
 			)}

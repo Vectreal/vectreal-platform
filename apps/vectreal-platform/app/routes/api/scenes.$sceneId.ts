@@ -3,6 +3,16 @@ import { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router'
 
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
 import { getProject } from '../../lib/domain/project/project-repository.server'
+import {
+	acquireHeavySceneActionToken,
+	acquireSceneWriteLock,
+	buildSceneRequestKey,
+	completeIdempotentSceneRequest,
+	failIdempotentSceneRequest,
+	releaseHeavySceneActionToken,
+	releaseSceneWriteLock,
+	reserveIdempotentSceneRequest
+} from '../../lib/domain/scene/scene-action-guard.server'
 import { buildSceneAggregate } from '../../lib/domain/scene/scene-aggregate.server'
 import {
 	createSceneFolder,
@@ -60,7 +70,6 @@ function withNoStoreHeaders(response: Response): Response {
 }
 
 const MAX_IN_FLIGHT_HEAVY_SCENE_ACTIONS = 2
-let inFlightHeavySceneActions = 0
 const inFlightGetSceneSettingsRequests = new Map<string, Promise<Response>>()
 
 function getSceneSettingsRequestKey(scope: string, sceneId: string): string {
@@ -88,17 +97,126 @@ async function runWithSceneSettingsCoalescing(
 async function runWithHeavySceneActionLimit(
 	operation: () => Promise<Response>
 ): Promise<Response> {
-	if (inFlightHeavySceneActions >= MAX_IN_FLIGHT_HEAVY_SCENE_ACTIONS) {
+	const acquiredToken = await acquireHeavySceneActionToken(
+		MAX_IN_FLIGHT_HEAVY_SCENE_ACTIONS
+	)
+
+	if (!acquiredToken) {
 		return ApiResponse.error('Server is busy, please retry in a moment', 503)
 	}
-
-	inFlightHeavySceneActions += 1
 
 	try {
 		return await operation()
 	} finally {
-		inFlightHeavySceneActions = Math.max(0, inFlightHeavySceneActions - 1)
+		await releaseHeavySceneActionToken()
 	}
+}
+
+async function runWithSceneWriteLock(
+	sceneId: string,
+	holderKey: string,
+	operation: () => Promise<Response>
+): Promise<Response> {
+	const acquiredLock = await acquireSceneWriteLock({ sceneId, holderKey })
+	if (!acquiredLock) {
+		return ApiResponse.error(
+			'Scene is currently being processed. Retry shortly.',
+			409
+		)
+	}
+
+	try {
+		return await operation()
+	} finally {
+		await releaseSceneWriteLock({ sceneId, holderKey })
+	}
+}
+
+async function runWithIdempotentSceneRequest(params: {
+	requestId?: string
+	userId: string
+	action: string
+	sceneId?: string
+	operation: () => Promise<Response>
+}): Promise<Response> {
+	if (!params.requestId) {
+		return params.operation()
+	}
+
+	const requestKey = buildSceneRequestKey({
+		requestId: params.requestId,
+		userId: params.userId,
+		action: params.action,
+		sceneId: params.sceneId
+	})
+
+	const reservation = await reserveIdempotentSceneRequest({
+		requestKey,
+		requestId: params.requestId,
+		userId: params.userId,
+		action: params.action,
+		sceneId: params.sceneId
+	})
+
+	if (!reservation) {
+		return ApiResponse.serverError('Failed to reserve request state')
+	}
+
+	const existing = reservation.record
+
+	if (existing.status === 'completed') {
+		const body = existing.responseBody
+		const status = existing.responseStatus ?? 200
+		if (body && typeof body === 'object') {
+			return new Response(JSON.stringify(body), {
+				status,
+				headers: { 'Content-Type': 'application/json' }
+			})
+		}
+	}
+
+	if (existing.status === 'pending' && reservation.created) {
+		const response = await params.operation()
+
+		try {
+			const body = await response.clone().json()
+			if (response.ok) {
+				await completeIdempotentSceneRequest({
+					requestKey,
+					responseStatus: response.status,
+					responseBody: body
+				})
+			} else {
+				await failIdempotentSceneRequest({
+					requestKey,
+					errorMessage:
+						typeof body?.error === 'string'
+							? body.error
+							: `Request failed with status ${response.status}`
+				})
+			}
+		} catch {
+			if (response.ok) {
+				await completeIdempotentSceneRequest({
+					requestKey,
+					responseStatus: response.status,
+					responseBody: {}
+				})
+			} else {
+				await failIdempotentSceneRequest({
+					requestKey,
+					errorMessage: `Request failed with status ${response.status}`
+				})
+			}
+		}
+
+		return response
+	}
+
+	return ApiResponse.error(
+		'A request with the same idempotency key is in progress',
+		409
+	)
 }
 
 async function authorizePreviewRequest(request: Request, projectId: string) {
@@ -519,8 +637,38 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		}
 	}
 
-	const parsedRequest =
-		SceneSettingsParser.parseSceneSettingsRequestData(actionRequest)
+	const uploadOrPrepareAction =
+		action === 'prepare-scene-upload' ||
+		action === 'upload-scene-asset' ||
+		action === 'upload-scene-gltf' ||
+		action === 'upload-published-glb'
+
+	const parsedRequest = uploadOrPrepareAction
+		? {
+				action,
+				requestId:
+					typeof actionRequest.requestId === 'string'
+						? actionRequest.requestId.trim()
+						: undefined,
+				projectId:
+					typeof actionRequest.projectId === 'string'
+						? actionRequest.projectId.trim() || undefined
+						: undefined,
+				sceneId:
+					typeof actionRequest.sceneId === 'string'
+						? actionRequest.sceneId.trim() || undefined
+						: routeSceneId,
+				targetProjectId:
+					typeof actionRequest.targetProjectId === 'string'
+						? actionRequest.targetProjectId.trim() || undefined
+						: undefined,
+				targetFolderId:
+					typeof actionRequest.targetFolderId === 'string'
+						? actionRequest.targetFolderId.trim() || null
+						: undefined
+			}
+		: SceneSettingsParser.parseSceneSettingsRequestData(actionRequest)
+
 	if (parsedRequest instanceof Response) {
 		return parsedRequest
 	}
@@ -533,9 +681,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	if (
 		effectiveSceneId &&
-		(action === 'save-scene-settings' ||
-			action === 'get-scene-settings' ||
-			action === 'publish-scene')
+		(action === 'get-scene-settings' || action === 'commit-scene-publish')
 	) {
 		const scene = await getScene(effectiveSceneId, authResult.user.id)
 		if (!scene) {
@@ -545,7 +691,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		}
 	}
 
-	if (action === 'save-scene-settings') {
+	if (action === 'commit-scene-save') {
 		console.info('[scenes] save request received', {
 			requestId: requestData.requestId,
 			userId: authResult.user.id,
@@ -555,9 +701,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	try {
 		switch (action as SceneSettingsAction) {
-			case 'save-scene-settings':
-				return await runWithHeavySceneActionLimit(() =>
-					sceneSettingsOps.saveSceneSettings(
+			case 'prepare-scene-upload':
+				return ApiResponse.success(
+					await sceneSettingsOps.prepareSceneUpload(
 						{
 							...requestData,
 							action
@@ -565,6 +711,78 @@ export async function action({ request, params }: ActionFunctionArgs) {
 						authResult.user.id
 					)
 				)
+
+			case 'upload-scene-asset': {
+				const file = actionRequest.file
+				const kindRaw = actionRequest.kind
+				const kind = kindRaw === 'image' ? 'image' : 'buffer'
+
+				if (!(file instanceof File)) {
+					return ApiResponse.badRequest(
+						'file is required for upload-scene-asset'
+					)
+				}
+
+				return await sceneSettingsOps.uploadSceneAsset(
+					{ ...requestData, action },
+					authResult.user.id,
+					file,
+					kind
+				)
+			}
+
+			case 'upload-scene-gltf': {
+				const file = actionRequest.file
+				if (!(file instanceof File)) {
+					return ApiResponse.badRequest(
+						'file is required for upload-scene-gltf'
+					)
+				}
+
+				return await sceneSettingsOps.uploadSceneGltf(
+					{ ...requestData, action },
+					authResult.user.id,
+					file
+				)
+			}
+
+			case 'upload-published-glb': {
+				const file = actionRequest.file
+				if (!(file instanceof File)) {
+					return ApiResponse.badRequest(
+						'file is required for upload-published-glb'
+					)
+				}
+
+				return await sceneSettingsOps.uploadPublishedGlb(
+					{ ...requestData, action },
+					authResult.user.id,
+					file
+				)
+			}
+
+			case 'commit-scene-save':
+				return await runWithIdempotentSceneRequest({
+					requestId: requestData.requestId,
+					userId: authResult.user.id,
+					action,
+					sceneId: requestData.sceneId,
+					operation: () =>
+						runWithHeavySceneActionLimit(() =>
+							runWithSceneWriteLock(
+								requestData.sceneId as string,
+								`${authResult.user.id}:${requestData.requestId ?? 'no-request-id'}`,
+								() =>
+									sceneSettingsOps.saveSceneSettings(
+										{
+											...requestData,
+											action
+										},
+										authResult.user.id
+									)
+							)
+						)
+				})
 
 			case 'get-scene-settings':
 				if (!requestData.sceneId) {
@@ -580,16 +798,28 @@ export async function action({ request, params }: ActionFunctionArgs) {
 						})
 				)
 
-			case 'publish-scene':
-				return await runWithHeavySceneActionLimit(() =>
-					sceneSettingsOps.publishScene(
-						{
-							...requestData,
-							action
-						},
-						authResult.user.id
-					)
-				)
+			case 'commit-scene-publish':
+				return await runWithIdempotentSceneRequest({
+					requestId: requestData.requestId,
+					userId: authResult.user.id,
+					action,
+					sceneId: requestData.sceneId,
+					operation: () =>
+						runWithHeavySceneActionLimit(() =>
+							runWithSceneWriteLock(
+								requestData.sceneId as string,
+								`${authResult.user.id}:${requestData.requestId ?? 'no-request-id'}`,
+								() =>
+									sceneSettingsOps.publishScene(
+										{
+											...requestData,
+											action
+										},
+										authResult.user.id
+									)
+							)
+						)
+				})
 
 			default:
 				return ApiResponse.badRequest(`Unknown action: ${action}`)

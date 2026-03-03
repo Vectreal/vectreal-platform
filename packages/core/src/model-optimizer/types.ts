@@ -64,6 +64,8 @@ export interface TextureCompressOptions {
 	maxTextureUploadBytes?: number
 	/** Maximum retry attempts for transient server errors */
 	maxRetries?: number
+	/** Maximum parallel per-texture server requests */
+	maxConcurrentRequests?: number
 
 	/** Whether to use server endpoint (if available) */
 	serverOptions?: ServerOptions

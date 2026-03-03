@@ -1,3 +1,9 @@
+import {
+	buildAssetLookupKeys,
+	getSerializedAssetByteSize,
+	normalizeAssetUri
+} from '@vctrl/core'
+
 import type { ServerSceneData } from '../types'
 
 type ReferencedBytes = {
@@ -5,37 +11,15 @@ type ReferencedBytes = {
 	textureBytes: number
 }
 
-const normalizeUri = (value: string) =>
-	decodeURIComponent(value).replace(/^\.\//, '')
-
-const buildLookupKeys = (fileName: string) => {
-	const normalized = normalizeUri(fileName)
-	const basename = normalized.split('/').pop() || normalized
-
-	return new Set([fileName, normalized, basename])
-}
-
-const getAssetByteSize = (assetData: number[] | string) => {
-	if (Array.isArray(assetData)) {
-		return assetData.length
-	}
-
-	const normalized = assetData.replace(/\s/g, '')
-	const paddingMatch = normalized.match(/=+$/)
-	const paddingLength = paddingMatch ? paddingMatch[0].length : 0
-
-	return Math.max(0, Math.floor((normalized.length * 3) / 4) - paddingLength)
-}
-
 const resolveSizeFromAssets = (
 	uri: string,
 	assets: Array<{ fileName: string; size: number }>
 ) => {
-	const normalizedUri = normalizeUri(uri)
+	const normalizedUri = normalizeAssetUri(uri)
 	const uriBasename = normalizedUri.split('/').pop() || normalizedUri
 
 	for (const asset of assets) {
-		const assetKeys = buildLookupKeys(asset.fileName)
+		const assetKeys = buildAssetLookupKeys(asset.fileName)
 		if (assetKeys.has(normalizedUri) || assetKeys.has(uriBasename)) {
 			return asset.size
 		}
@@ -117,7 +101,7 @@ export function calculateReferencedBytesFromServerScene(
 	const gltfJson = data.gltfJson
 	const assets = Object.values(data.assetData || {}).map((asset) => ({
 		fileName: asset.fileName,
-		size: getAssetByteSize(asset.data)
+		size: getSerializedAssetByteSize(asset.data)
 	}))
 
 	const gltfSize = new TextEncoder().encode(JSON.stringify(gltfJson)).byteLength
