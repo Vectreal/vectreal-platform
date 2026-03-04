@@ -114,14 +114,10 @@ const ProjectPage = () => {
 		[pendingItemIds]
 	)
 
-	// Check if we're at a child route (folder or scene)
-	// If so, only show the outlet content
-	const isProjectDetailRoute =
-		location.pathname === `/dashboard/projects/${projectId}`
-
-	if (!isProjectDetailRoute) {
-		return <Outlet />
-	}
+	const projectBasePath = `/dashboard/projects/${projectId}`
+	const isProjectRootRoute = location.pathname === projectBasePath
+	const isProjectEditRoute = location.pathname === `${projectBasePath}/edit`
+	const shouldRenderProjectTable = isProjectRootRoute || isProjectEditRoute
 
 	const contentRows = useMemo<ContentRow[]>(() => {
 		const folderRows: ContentRow[] = folders.map((folder) => ({
@@ -191,6 +187,10 @@ const ProjectPage = () => {
 			setSelectedRows([])
 		}
 	}, [setSelectedRows])
+
+	if (!shouldRenderProjectTable) {
+		return <Outlet />
+	}
 
 	return (
 		<>
@@ -262,6 +262,7 @@ const ProjectPage = () => {
 					</Empty>
 				)}
 			</div>
+			<Outlet />
 		</>
 	)
 }

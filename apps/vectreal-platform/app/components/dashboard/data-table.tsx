@@ -46,6 +46,7 @@ export interface DataTableSelectionAction<TData> {
 interface DataTableProps<TData, TValue> {
 	columns: ColumnDef<TData, TValue>[]
 	data: TData[]
+	appearance?: 'default' | 'minimal'
 	searchKey?: string
 	searchPlaceholder?: string
 	searchValue: string
@@ -68,6 +69,7 @@ interface DataTableProps<TData, TValue> {
 export function DataTable<TData, TValue>({
 	columns,
 	data,
+	appearance = 'default',
 	searchKey,
 	searchPlaceholder = 'Search...',
 	searchValue,
@@ -120,6 +122,7 @@ export function DataTable<TData, TValue>({
 		.getFilteredSelectedRowModel()
 		.rows.map((row) => row.original)
 	const hasSelection = selectedRows.length > 0
+	const isMinimal = appearance === 'minimal'
 
 	const getCellTitle = (value: unknown): string | undefined => {
 		if (
@@ -153,7 +156,11 @@ export function DataTable<TData, TValue>({
 							placeholder={searchPlaceholder}
 							value={searchValue}
 							onChange={(event) => onSearchValueChange(event.target.value)}
-							className="pl-9"
+							className={
+								isMinimal
+									? 'bg-muted/30 h-10 rounded-xl border-0 pl-9 shadow-none focus-visible:ring-2'
+									: 'pl-9'
+							}
 						/>
 					</div>
 				)}
@@ -199,13 +206,31 @@ export function DataTable<TData, TValue>({
 				)}
 			</div>
 
-			<div className="bg-card/50 rounded-xl border backdrop-blur-sm">
+			<div
+				className={
+					isMinimal
+						? 'bg-muted/20 rounded-2xl p-2'
+						: 'bg-card/50 rounded-xl border backdrop-blur-sm'
+				}
+			>
 				<Table>
-					<TableHeader>
+					<TableHeader className={isMinimal ? '[&_tr]:border-0' : undefined}>
 						{table.getHeaderGroups().map((headerGroup) => (
-							<TableRow key={headerGroup.id}>
+							<TableRow
+								key={headerGroup.id}
+								className={
+									isMinimal ? 'border-0 hover:bg-transparent' : undefined
+								}
+							>
 								{headerGroup.headers.map((header) => (
-									<TableHead key={header.id}>
+									<TableHead
+										key={header.id}
+										className={
+											isMinimal
+												? 'text-muted-foreground h-11 px-3 text-xs font-medium tracking-wide'
+												: undefined
+										}
+									>
 										{header.isPlaceholder
 											? null
 											: flexRender(
@@ -223,12 +248,21 @@ export function DataTable<TData, TValue>({
 								<TableRow
 									key={row.id}
 									data-state={row.getIsSelected() && 'selected'}
+									className={
+										isMinimal
+											? 'hover:bg-muted/45 data-[state=selected]:bg-muted/50 rounded-xl border-0 transition-colors duration-150'
+											: undefined
+									}
 								>
 									{row.getVisibleCells().map((cell) => (
 										<TableCell
 											key={cell.id}
 											title={getCellTitle(cell.getValue())}
-											className="[&>a,&>span]:max-w-sm [&>a,&>span]:truncate!"
+											className={
+												isMinimal
+													? 'px-3 py-3 [&>a,&>span]:max-w-sm [&>a,&>span]:truncate!'
+													: '[&>a,&>span]:max-w-sm [&>a,&>span]:truncate!'
+											}
 										>
 											{flexRender(
 												cell.column.columnDef.cell,
@@ -239,10 +273,14 @@ export function DataTable<TData, TValue>({
 								</TableRow>
 							))
 						) : (
-							<TableRow>
+							<TableRow className={isMinimal ? 'border-0' : undefined}>
 								<TableCell
 									colSpan={columns.length}
-									className="h-24 text-center"
+									className={
+										isMinimal
+											? 'text-muted-foreground h-24 text-center'
+											: 'h-24 text-center'
+									}
 								>
 									No results found.
 								</TableCell>

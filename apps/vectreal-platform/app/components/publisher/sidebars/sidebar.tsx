@@ -109,9 +109,7 @@ const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
 					>
 						<div className="flex w-full items-center gap-2 pl-4">
 							{user && (
-								<TooltipButton className="group" size="icon" info="Open Menu">
-									<UserMenu size="sm" user={user} onLogout={handleLogout} />
-								</TooltipButton>
+								<UserMenu size="sm" user={user} onLogout={handleLogout} />
 							)}
 
 							<SceneNameInput />
@@ -129,9 +127,7 @@ const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
 				)}
 			>
 				{!showSidebar && user && (
-					<TooltipButton className="group" size="icon" info="Open Menu">
-						<UserMenu size="sm" user={user} onLogout={handleLogout} />
-					</TooltipButton>
+					<UserMenu size="sm" user={user} onLogout={handleLogout} />
 				)}
 
 				<TooltipButton

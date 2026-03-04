@@ -5,18 +5,19 @@ import {
 	EmptyDescription,
 	EmptyHeader
 } from '@shared/components/ui/empty'
-import { FolderOpen, Pencil, Plus } from 'lucide-react'
-import { memo, useMemo } from 'react'
-import { Link, Outlet, useLoaderData } from 'react-router'
+import { Plus } from 'lucide-react'
+import { Link, Outlet } from 'react-router'
 
 import { Route } from './+types/projects'
-import DashboardCard from '../../../components/dashboard/dashboard-cards'
-import { ProjectsGridSkeleton } from '../../../components/skeletons'
-import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
+import { DataTable } from '../../../components/dashboard/data-table'
 import {
-	computeProjectCreationCapabilities,
-	computeSceneStats
-} from '../../../lib/domain/dashboard/dashboard-stats.server'
+	projectColumns,
+	type ProjectRow
+} from '../../../components/dashboard/project-table-columns'
+import { ProjectsGridSkeleton } from '../../../components/skeletons'
+import { useDashboardTableState } from '../../../hooks/use-dashboard-table-state'
+import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
+import { computeProjectCreationCapabilities } from '../../../lib/domain/dashboard/dashboard-stats.server'
 import { getUserProjects } from '../../../lib/domain/project/project-repository.server'
 import { getProjectsScenes } from '../../../lib/domain/scene/scene-folder-repository.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
@@ -42,14 +43,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 	// Compute server-side
 	const projectCreationCapabilities =
 		computeProjectCreationCapabilities(organizations)
-	const sceneStats = computeSceneStats(scenes)
-
 	return {
 		organizations,
 		projects: userProjects,
 		scenes,
-		projectCreationCapabilities,
-		sceneStats
+		projectCreationCapabilities
 	}
 }
 
@@ -123,118 +121,78 @@ const EmptyProjectsState = ({
 	</Empty>
 )
 
-const ProjectsList = memo(() => {
-	const { organizations, projects, projectCreationCapabilities, sceneStats } =
-		useLoaderData<typeof loader>()
 
-	// Group projects by organization client-side
-	const projectsByOrg = useMemo(() => {
-		const grouped = new Map<
-			string,
-			{
-				organization: (typeof organizations)[0]['organization']
-				projects: (typeof projects)[0][]
+const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
+	const { organizations, projects, projectCreationCapabilities, scenes } =
+		loaderData
+	const tableState = useDashboardTableState({
+		namespace: 'projects-list'
+	})
+
+	const projectTableData: ProjectRow[] = projects.map(
+		({ project, organizationId }) => {
+			const projectScenes = scenes.filter(
+				(scene) => scene.projectId === project.id
+			)
+			const latestSceneUpdate = projectScenes.reduce<Date | null>(
+				(latest, scene) => {
+					const sceneUpdatedAt = new Date(scene.updatedAt)
+
+					if (!latest || sceneUpdatedAt > latest) {
+						return sceneUpdatedAt
+					}
+
+					return latest
+				},
+				null
+			)
+
+			const stableTimestamp = latestSceneUpdate ?? new Date(0)
+
+			return {
+				id: project.id,
+				name: project.name,
+				organizationName:
+					organizations.find(
+						({ organization }) => organization.id === organizationId
+					)?.organization.name || 'Unknown',
+				sceneCount: projectScenes.length,
+				createdAt: stableTimestamp,
+				updatedAt: stableTimestamp
 			}
-		>()
+		}
+	)
 
-		// Initialize with all organizations
-		organizations.forEach(({ organization }) => {
-			grouped.set(organization.id, {
-				organization,
-				projects: []
-			})
-		})
-
-		// Group projects by organization
-		projects.forEach((projectWithOrg) => {
-			const existing = grouped.get(projectWithOrg.organizationId)
-			if (existing) {
-				existing.projects.push(projectWithOrg)
-			}
-		})
-
-		return Array.from(grouped.values())
-	}, [organizations, projects])
-
-	// Check if user can create projects
 	const canCreateProjects = Object.values(projectCreationCapabilities).some(
 		(cap) => cap.canCreate
 	)
 
 	return (
-		<div className="p-6">
-			{/* Projects by Organization */}
-			{projectsByOrg.length > 0 ? (
-				<div className="space-y-6">
-					{projectsByOrg.map(({ organization, projects: orgProjects }) => (
-						<div key={organization.id}>
-							<div className="mb-6 ml-2 flex items-center justify-between">
-								<h3 className="text-md font-medium">
-									<span className="text-accent">{organization.name}</span> with{' '}
-									{orgProjects.length} project
-									{orgProjects.length !== 1 ? 's' : ''}
-								</h3>
-							</div>
-							{orgProjects.length > 0 ? (
-								<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-									{orgProjects.map(({ project }) => (
-										<div
-											key={project.id}
-											className="group/project-card relative"
-										>
-											<DashboardCard
-												title={project.name}
-												description={`Slug: ${project.slug}`}
-												linkTo={`/dashboard/projects/${project.id}`}
-												icon={<FolderOpen className="h-5 w-5" />}
-												id={project.id}
-												navigationState={{
-													name: project.name,
-													type: 'project' as const
-												}}
-											>
-												<div className="space-y-2">
-													<div className="text-primary/60 text-sm">
-														{sceneStats.byProject[project.id] || 0} scenes
-													</div>
-												</div>
-											</DashboardCard>
-											<div className="absolute right-3 top-3 z-10 opacity-0 transition-opacity group-hover/project-card:opacity-100">
-												<Link
-													to={`/dashboard/projects/${project.id}/edit`}
-												>
-													<Button
-														variant="ghost"
-														size="icon"
-														className="h-8 w-8"
-														title="Edit project"
-													>
-														<Pencil className="h-4 w-4" />
-													</Button>
-												</Link>
-											</div>
-										</div>
-									))}
-								</div>
-							) : (
-								<EmptyProjectsState />
-							)}
-						</div>
-					))}
-				</div>
-			) : (
-				<EmptyProjectsState showCreateLink={canCreateProjects} />
-			)}
-		</div>
-	)
-})
-
-ProjectsList.displayName = 'ProjectsList'
-
-const ProjectsPage = () => {
-	return (
 		<>
-			<ProjectsList />
+			<div className="p-6">
+				{projectTableData.length > 0 ? (
+					<DataTable
+						columns={projectColumns}
+						data={projectTableData}
+						searchKey="name"
+						searchPlaceholder="Search projects..."
+						searchValue={tableState.searchValue}
+						onSearchValueChange={tableState.setSearchValue}
+						sorting={tableState.sorting}
+						onSortingChange={tableState.onSortingChange}
+						pagination={tableState.pagination}
+						onPaginationChange={tableState.onPaginationChange}
+						rowSelection={tableState.rowSelection}
+						onRowSelectionChange={tableState.onRowSelectionChange}
+						onDelete={(selectedRows) => {
+							console.log('Delete projects:', selectedRows)
+							// TODO: Implement delete functionality
+						}}
+					/>
+				) : (
+					<EmptyProjectsState showCreateLink={canCreateProjects} />
+				)}
+			</div>
 			<Outlet />
 		</>
 	)

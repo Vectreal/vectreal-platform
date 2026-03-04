@@ -13,7 +13,7 @@ import {
 import { useSetAtom } from 'jotai/react'
 import { Edit, Folder, FolderOpen, MoreVertical, Plus } from 'lucide-react'
 import { memo } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useMatches, useParams } from 'react-router'
 
 import { createFolderDialogAtom } from '../../lib/stores/dashboard-management-store'
 import { ACTION_VARIANT } from '../../types/dashboard'
@@ -52,9 +52,9 @@ interface ActionsMenuProps {
 const ACTION_CONFIGS: Record<ACTION_VARIANT, ActionGroupConfig | null> = {
 	[ACTION_VARIANT.DASHBOARD]: {
 		primary: {
-			label: 'New Project',
+			label: 'Open Publisher',
 			icon: Plus,
-			to: '/dashboard/projects/new'
+			to: '/publisher'
 		},
 		menu: [
 			{
@@ -146,8 +146,7 @@ const ActionButton = memo<ActionButtonProps>(({ action, replacements }) => {
 
 	// Skip view transition for drawer routes to prevent header flickering
 	const useViewTransition =
-		resolvedTo !== '/dashboard/projects/new' &&
-		!resolvedTo?.endsWith('/edit')
+		resolvedTo !== '/dashboard/projects/new' && !resolvedTo?.endsWith('/edit')
 
 	return resolvedTo ? (
 		<Link viewTransition={useViewTransition} to={resolvedTo}>
@@ -211,7 +210,22 @@ ActionsMenu.displayName = 'SecondaryActionsMenu'
 export const DashboardActions = memo<DashboardActionsProps>(
 	({ variant, className }) => {
 		const { sceneId, projectId, folderId } = useParams()
+		const matches = useMatches()
 		const setCreateFolderDialog = useSetAtom(createFolderDialogAtom)
+
+		const dashboardMostRecentSceneId = matches
+			.map((match) => {
+				if (!match.loaderData || typeof match.loaderData !== 'object') {
+					return undefined
+				}
+
+				const loaderData = match.loaderData as {
+					overview?: { mostRecentSceneId?: string }
+				}
+
+				return loaderData.overview?.mostRecentSceneId
+			})
+			.find((sceneIdCandidate) => Boolean(sceneIdCandidate))
 
 		let config = ACTION_CONFIGS[variant]
 
@@ -235,6 +249,19 @@ export const DashboardActions = memo<DashboardActionsProps>(
 							description: ''
 						})
 					}
+				}
+			}
+		}
+
+		if (config !== undefined && variant === ACTION_VARIANT.DASHBOARD) {
+			config = {
+				...config,
+				primary: {
+					label: 'Open Publisher',
+					icon: Plus,
+					to: dashboardMostRecentSceneId
+						? `/publisher/${dashboardMostRecentSceneId}`
+						: '/publisher'
 				}
 			}
 		}

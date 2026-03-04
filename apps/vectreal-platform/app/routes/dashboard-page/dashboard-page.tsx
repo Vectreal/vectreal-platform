@@ -1,20 +1,9 @@
-import { Button } from '@shared/components/ui/button'
-import { Separator } from '@shared/components/ui/separator'
-import {
-	Tabs,
-	TabsContent,
-	TabsList,
-	TabsTrigger
-} from '@shared/components/ui/tabs'
-import { File, FolderOpen, Plus } from 'lucide-react'
-import { Link } from 'react-router'
+import { File } from 'lucide-react'
 
 import { Route } from './+types/dashboard-page'
-import DashboardCard from '../../components/dashboard/dashboard-cards'
+import { DashboardOverview } from '../../components/dashboard/dashboard-overview'
 import { DataTable } from '../../components/dashboard/data-table'
 import {
-	projectColumns,
-	type ProjectRow,
 	sceneColumns,
 	type SceneRow
 } from '../../components/dashboard/project-table-columns'
@@ -24,22 +13,17 @@ import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.serv
 import {
 	computeProjectStats,
 	computeSceneStats,
-	getRecentProjects,
 	getRecentScenes
 } from '../../lib/domain/dashboard/dashboard-stats.server'
 import { getUserProjects } from '../../lib/domain/project/project-repository.server'
 import { getProjectsScenes } from '../../lib/domain/scene/scene-folder-repository.server'
-import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const { user } = await loadAuthenticatedSession(request)
 
-	const [userProjects, organizations] = await Promise.all([
-		getUserProjects(user.id),
-		getUserOrganizations(user.id)
-	])
+	const userProjects = await getUserProjects(user.id)
 
 	// Fetch scenes for all projects using batch query (eliminates N+1 problem)
 	const projectIds = userProjects.map(({ project }) => project.id)
@@ -48,20 +32,23 @@ export async function loader({ request }: Route.LoaderArgs) {
 	// Flatten scenes map to array
 	const scenes = Array.from(scenesByProject.values()).flat()
 
-	// Compute stats server-side
+	const recentScenes = getRecentScenes(scenes, 10)
 	const projectStats = computeProjectStats(userProjects)
 	const sceneStats = computeSceneStats(scenes)
-	const recentProjects = getRecentProjects(userProjects, 3)
-	const recentScenes = getRecentScenes(scenes, 3)
+	const mostRecentScene = recentScenes[0]
 
 	return {
 		projects: userProjects,
-		organizations,
-		scenes,
-		projectStats,
-		sceneStats,
-		recentProjects,
-		recentScenes
+		recentScenes,
+		overview: {
+			kpis: {
+				totalProjects: projectStats.total,
+				totalScenes: sceneStats.total,
+				publishedScenes: sceneStats.byStatus.published,
+				draftScenes: sceneStats.byStatus.draft
+			},
+			mostRecentSceneId: mostRecentScene?.id
+		}
 	}
 }
 
@@ -98,57 +85,12 @@ export function HydrateFallback() {
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
 const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
-	const {
-		projects,
-		organizations,
-		scenes,
-		projectStats,
-		sceneStats,
-		recentScenes
-	} = loaderData
-	const projectTableState = useDashboardTableState({
-		namespace: 'dashboard-projects'
-	})
+	const { projects, recentScenes, overview } = loaderData
 	const sceneTableState = useDashboardTableState({
 		namespace: 'dashboard-scenes'
 	})
 
-	// Transform data for tables
-	const projectTableData: ProjectRow[] = projects.map(
-		({ project, organizationId }) => {
-			const projectScenes = scenes.filter(
-				(scene) => scene.projectId === project.id
-			)
-			const latestSceneUpdate = projectScenes.reduce<Date | null>(
-				(latest, scene) => {
-					const sceneUpdatedAt = new Date(scene.updatedAt)
-
-					if (!latest || sceneUpdatedAt > latest) {
-						return sceneUpdatedAt
-					}
-
-					return latest
-				},
-				null
-			)
-
-			const stableTimestamp = latestSceneUpdate ?? new Date(0)
-
-			return {
-				id: project.id,
-				name: project.name,
-				organizationName:
-					organizations.find(
-						({ organization }) => organization.id === organizationId
-					)?.organization.name || 'Unknown',
-				sceneCount: projectScenes.length,
-				createdAt: stableTimestamp,
-				updatedAt: stableTimestamp
-			}
-		}
-	)
-
-	const sceneTableData: SceneRow[] = scenes.map((scene) => {
+	const sceneTableData: SceneRow[] = recentScenes.map((scene) => {
 		const sceneProject = projects.find(
 			({ project }) => project.id === scene.projectId
 		)
@@ -165,139 +107,52 @@ const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
 	})
 
 	return (
-		<div className="space-y-10 p-6">
-			{/* Recent Access Section */}
-			{recentScenes.length > 0 && (
-				<section className="space-y-6">
-					{/* Recent Scenes */}
-					{recentScenes.length > 0 && (
-						<div className="flex flex-col items-end gap-4">
-							<div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
-								{recentScenes.map((scene) => {
-									const sceneProject = projects.find(
-										({ project }) => project.id === scene.projectId
-									)
-									return (
-										<DashboardCard
-											key={scene.id}
-											title={scene.name}
-											description={scene.description || 'No description'}
-											linkTo={`/dashboard/projects/${scene.projectId}/${scene.id}`}
-											icon={<File className="h-5 w-5" />}
-											id={scene.id}
-											variant="compact"
-											showId={false}
-											navigationState={{
-												name: scene.name,
-												description: scene.description || undefined,
-												projectName: sceneProject?.project.name,
-												type: 'scene' as const
-											}}
-										/>
-									)
-								})}
-							</div>
-						</div>
-					)}
+		<div className="space-y-8 p-6">
+			<DashboardOverview kpis={overview.kpis} />
+
+			{sceneTableData.length > 0 ? (
+				<section className="space-y-4">
+					<div className="flex flex-col gap-1">
+						<p className="text-muted-foreground text-sm tracking-tight">
+							Recent scenes
+						</p>
+						<h3 className="text-xl font-semibold tracking-tight">
+							Continue from your latest work
+						</h3>
+					</div>
+					<DataTable
+						columns={sceneColumns}
+						data={sceneTableData}
+						searchKey="name"
+						searchPlaceholder="Search recent scenes..."
+						searchValue={sceneTableState.searchValue}
+						onSearchValueChange={sceneTableState.setSearchValue}
+						sorting={sceneTableState.sorting}
+						onSortingChange={sceneTableState.onSortingChange}
+						pagination={sceneTableState.pagination}
+						onPaginationChange={sceneTableState.onPaginationChange}
+						rowSelection={sceneTableState.rowSelection}
+						onRowSelectionChange={sceneTableState.onRowSelectionChange}
+						onDelete={(selectedRows) => {
+							console.log('Delete scenes:', selectedRows)
+							// TODO: Implement delete functionality
+						}}
+						appearance="minimal"
+					/>
 				</section>
+			) : (
+				<div className="bg-muted/20 flex flex-col items-center justify-center rounded-3xl p-14 text-center">
+					<div className="bg-muted/35 mb-5 flex h-16 w-16 items-center justify-center rounded-full">
+						<File className="text-muted-foreground h-8 w-8" />
+					</div>
+					<h3 className="mb-2 text-xl font-semibold tracking-tight">
+						No recent scenes yet
+					</h3>
+					<p className="text-muted-foreground max-w-sm text-sm sm:text-base">
+						Create or update a scene to see it listed here.
+					</p>
+				</div>
 			)}
-
-			{/* All Items with Filtering and Batch Operations */}
-			<Separator className="bg-border/50" />
-			<section className="space-y-6">
-				<Tabs defaultValue="projects" className="w-full">
-					<TabsList className="grid w-full max-w-md grid-cols-2">
-						<TabsTrigger value="scenes" className="gap-2">
-							<File className="h-4 w-4" />
-							Scenes ({sceneStats.total})
-						</TabsTrigger>
-						<TabsTrigger value="projects" className="gap-2">
-							<FolderOpen className="h-4 w-4" />
-							Projects ({projectStats.total})
-						</TabsTrigger>
-					</TabsList>
-
-					<TabsContent value="projects" className="mt-6">
-						{projectTableData.length > 0 ? (
-							<DataTable
-								columns={projectColumns}
-								data={projectTableData}
-								searchKey="name"
-								searchPlaceholder="Search projects..."
-								searchValue={projectTableState.searchValue}
-								onSearchValueChange={projectTableState.setSearchValue}
-								sorting={projectTableState.sorting}
-								onSortingChange={projectTableState.onSortingChange}
-								pagination={projectTableState.pagination}
-								onPaginationChange={projectTableState.onPaginationChange}
-								rowSelection={projectTableState.rowSelection}
-								onRowSelectionChange={projectTableState.onRowSelectionChange}
-								onDelete={(selectedRows) => {
-									console.log('Delete projects:', selectedRows)
-									// TODO: Implement delete functionality
-								}}
-							/>
-						) : (
-							<div className="bg-muted/5 flex flex-col items-center justify-center rounded-xl border p-12 text-center backdrop-blur-sm">
-								<div className="bg-primary/10 mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-									<FolderOpen className="text-primary/60 h-8 w-8" />
-								</div>
-								<h3 className="mb-2 text-lg font-semibold">No projects yet</h3>
-								<p className="text-muted-foreground mb-4 max-w-sm">
-									Get started by creating your first project to organize your
-									scenes and assets.
-								</p>
-								<Link to="/dashboard/projects/new">
-									<Button>
-										<Plus className="mr-2 h-4 w-4" />
-										Create Your First Project
-									</Button>
-								</Link>
-							</div>
-						)}
-					</TabsContent>
-
-					<TabsContent value="scenes" className="mt-6">
-						{sceneTableData.length > 0 ? (
-							<DataTable
-								columns={sceneColumns}
-								data={sceneTableData}
-								searchKey="name"
-								searchPlaceholder="Search scenes..."
-								searchValue={sceneTableState.searchValue}
-								onSearchValueChange={sceneTableState.setSearchValue}
-								sorting={sceneTableState.sorting}
-								onSortingChange={sceneTableState.onSortingChange}
-								pagination={sceneTableState.pagination}
-								onPaginationChange={sceneTableState.onPaginationChange}
-								rowSelection={sceneTableState.rowSelection}
-								onRowSelectionChange={sceneTableState.onRowSelectionChange}
-								onDelete={(selectedRows) => {
-									console.log('Delete scenes:', selectedRows)
-									// TODO: Implement delete functionality
-								}}
-							/>
-						) : (
-							<div className="bg-muted/5 flex flex-col items-center justify-center rounded-xl border p-12 text-center backdrop-blur-sm">
-								<div className="bg-primary/10 mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-									<File className="text-primary/60 h-8 w-8" />
-								</div>
-								<h3 className="mb-2 text-lg font-semibold">No scenes yet</h3>
-								<p className="text-muted-foreground mb-4 max-w-sm">
-									Create a project first, then add scenes to bring your ideas to
-									life.
-								</p>
-								<Link to="/dashboard/projects/new">
-									<Button>
-										<Plus className="mr-2 h-4 w-4" />
-										Create a Project
-									</Button>
-								</Link>
-							</div>
-						)}
-					</TabsContent>
-				</Tabs>
-			</section>
 		</div>
 	)
 }

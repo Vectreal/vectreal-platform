@@ -28,7 +28,8 @@ export const DASHBOARD_ROUTES = {
 export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 	dashboard: {
 		title: 'Recent Activity',
-		description: 'Welcome to your dashboard',
+		description:
+			'Monitor scene progress, stay aligned with organizations, and move directly from recent work into publish-ready flows.',
 		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: ACTION_VARIANT.DASHBOARD
 	},
