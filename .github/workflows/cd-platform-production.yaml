@@ -1,5 +1,8 @@
 name: CD - Deploy Platform to Production
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
 
