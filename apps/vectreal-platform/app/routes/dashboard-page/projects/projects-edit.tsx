@@ -18,6 +18,14 @@ import {
 	FormMessage
 } from '@shared/components/ui/form'
 import { Input } from '@shared/components/ui/input'
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue
+} from '@shared/components/ui/select'
+import { Textarea } from '@shared/components/ui/textarea'
 import { Save, X } from 'lucide-react'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
@@ -35,6 +43,7 @@ import {
 	getProject,
 	updateProject
 } from '../../../lib/domain/project/project-repository.server'
+import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
 
 const projectEditSchema = z.object({
 	name: z
@@ -50,7 +59,8 @@ const projectEditSchema = z.object({
 		.regex(
 			/^[a-z0-9]+(?:-[a-z0-9]+)*$/,
 			'Slug must be lowercase letters, numbers, and hyphens only'
-		)
+		),
+	description: z.string().optional()
 })
 
 type ProjectEditFormValues = z.infer<typeof projectEditSchema>
@@ -64,13 +74,16 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	const { user } = await loadAuthenticatedUser(request)
 
-	const project = await getProject(projectId, user.id)
+	const [project, organizations] = await Promise.all([
+		getProject(projectId, user.id),
+		getUserOrganizations(user.id)
+	])
 
 	if (!project) {
 		throw new Response('Project not found', { status: 404 })
 	}
 
-	return { project }
+	return { project, organizations }
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -121,7 +134,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
 
 const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
-	const { project } = loaderData
+	const { project, organizations } = loaderData
 
 	const location = useLocation()
 	const navigate = useNavigate()
@@ -140,7 +153,8 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 		reValidateMode: 'onChange',
 		defaultValues: {
 			name: project.name,
-			slug: project.slug
+			slug: project.slug,
+			description: ''
 		}
 	})
 
@@ -159,6 +173,10 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 		form.clearErrors('name')
 		form.setValue('name', value, { shouldValidate: true })
 	}
+
+	const projectOrg = organizations.find(
+		({ organization }) => organization.id === project.organizationId
+	)
 
 	return (
 		<Drawer open={isOpen} onOpenChange={handleOpenChange} direction="right">
@@ -182,6 +200,32 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 				<div className="overflow-y-auto p-6">
 					<Form {...form}>
 						<RemixForm method="post" className="space-y-6">
+							{/* Organization (read-only) */}
+							<FormItem>
+								<FormLabel>Organization</FormLabel>
+								<Select
+									disabled
+									value={project.organizationId}
+									name="organizationId"
+								>
+									<FormControl>
+										<SelectTrigger>
+											<SelectValue>
+												{projectOrg?.organization.name ?? project.organizationId}
+											</SelectValue>
+										</SelectTrigger>
+									</FormControl>
+									<SelectContent>
+										<SelectItem value={project.organizationId}>
+											{projectOrg?.organization.name ?? project.organizationId}
+										</SelectItem>
+									</SelectContent>
+								</Select>
+								<FormDescription>
+									Organization cannot be changed after creation
+								</FormDescription>
+							</FormItem>
+
 							{/* Project name */}
 							<FormField
 								control={form.control}
@@ -233,6 +277,40 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 											<FormDescription>
 												Used in URLs and must be unique. Changing this may break
 												existing links.
+											</FormDescription>
+										)}
+									</FormItem>
+								)}
+							/>
+
+							{/* Description (optional) */}
+							<FormField
+								control={form.control}
+								name="description"
+								render={({ field, fieldState }) => (
+									<FormItem>
+										<FormLabel>
+											Description{' '}
+											<span className="text-muted-foreground font-normal">
+												(Optional)
+											</span>
+										</FormLabel>
+										<FormControl>
+											<Textarea
+												{...field}
+												onChange={(e) => {
+													form.clearErrors('description')
+													field.onChange(e)
+												}}
+												placeholder="Describe your project..."
+												className="min-h-32"
+											/>
+										</FormControl>
+										{fieldState.error ? (
+											<FormMessage />
+										) : (
+											<FormDescription>
+												Help your team understand the project&apos;s purpose
 											</FormDescription>
 										)}
 									</FormItem>

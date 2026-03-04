@@ -145,7 +145,9 @@ const ActionButton = memo<ActionButtonProps>(({ action, replacements }) => {
 	)
 
 	// Skip view transition for drawer routes to prevent header flickering
-	const useViewTransition = resolvedTo !== '/dashboard/projects/new'
+	const useViewTransition =
+		resolvedTo !== '/dashboard/projects/new' &&
+		!resolvedTo?.endsWith('/edit')
 
 	return resolvedTo ? (
 		<Link viewTransition={useViewTransition} to={resolvedTo}>
@@ -241,7 +243,10 @@ export const DashboardActions = memo<DashboardActionsProps>(
 			return null
 		}
 
-		const replacements = sceneId ? { sceneId } : undefined
+		const replacements: Record<string, string> = {}
+		if (projectId) replacements.projectId = projectId
+		if (folderId) replacements.folderId = folderId
+		if (sceneId) replacements.sceneId = sceneId
 
 		return (
 			<>
