@@ -121,7 +121,6 @@ const EmptyProjectsState = ({
 	</Empty>
 )
 
-
 const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 	const { organizations, projects, projectCreationCapabilities, scenes } =
 		loaderData
