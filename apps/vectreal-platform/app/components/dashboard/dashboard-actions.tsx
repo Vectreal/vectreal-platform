@@ -15,6 +15,7 @@ import { Edit, Folder, FolderOpen, MoreVertical, Plus } from 'lucide-react'
 import { memo } from 'react'
 import { Link, useMatches, useParams } from 'react-router'
 
+import { identifyDrawerRoute } from './utils'
 import { createFolderDialogAtom } from '../../lib/stores/dashboard-management-store'
 import { ACTION_VARIANT } from '../../types/dashboard'
 
@@ -74,6 +75,13 @@ const ACTION_CONFIGS: Record<ACTION_VARIANT, ActionGroupConfig | null> = {
 			label: 'New Project',
 			icon: Plus,
 			to: '/dashboard/projects/new'
+		}
+	},
+	[ACTION_VARIANT.API_KEYS_LIST]: {
+		primary: {
+			label: 'New API Key',
+			icon: Plus,
+			to: '/dashboard/api-keys/new'
 		}
 	},
 	[ACTION_VARIANT.CREATE_PROJECT]: {
@@ -145,8 +153,8 @@ const ActionButton = memo<ActionButtonProps>(({ action, replacements }) => {
 	)
 
 	// Skip view transition for drawer routes to prevent header flickering
-	const useViewTransition =
-		resolvedTo !== '/dashboard/projects/new' && !resolvedTo?.endsWith('/edit')
+	const isDrawerRoute = identifyDrawerRoute(resolvedTo || '')
+	const useViewTransition = !isDrawerRoute
 
 	return resolvedTo ? (
 		<Link viewTransition={useViewTransition} to={resolvedTo}>

@@ -164,3 +164,13 @@ export const ownsApiKey = (apiKeyIdColumn: SQLWrapper) => sql`
 				and ak.user_id = ${authUid}
 		)
 	`
+
+export const canManageOrgApiKeys = (organizationIdColumn: SQLWrapper) => sql`
+		exists (
+			select 1
+			from organization_memberships om
+			where om.organization_id = ${organizationIdColumn}
+				and om.user_id = ${authUid}
+				and om.role in ('owner', 'admin')
+		)
+	`

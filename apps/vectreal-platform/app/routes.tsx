@@ -87,6 +87,10 @@ export default [
 					route(':sceneId', './routes/dashboard-page/projects/scene.tsx')
 				])
 			]),
+			route('api-keys', './routes/dashboard-page/api-keys.tsx', [
+				route('new', './routes/dashboard-page/api-keys-new.tsx'),
+				route(':keyId/edit', './routes/dashboard-page/api-keys-edit.tsx')
+			]),
 			route('organizations', './routes/dashboard-page/organizations.tsx'),
 			route('settings', './routes/dashboard-page/settings.tsx')
 		])

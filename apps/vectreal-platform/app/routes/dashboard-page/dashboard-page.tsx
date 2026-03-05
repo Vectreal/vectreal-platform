@@ -6,7 +6,7 @@ import { DataTable } from '../../components/dashboard/data-table'
 import {
 	sceneColumns,
 	type SceneRow
-} from '../../components/dashboard/project-table-columns'
+} from '../../components/dashboard/table-columns'
 import { DashboardSkeleton } from '../../components/skeletons'
 import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'

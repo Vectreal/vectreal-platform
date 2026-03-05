@@ -72,8 +72,7 @@ const ProductSceneClient = () => {
 				]
 			}}
 			boundsOptions={{
-				margin: 0.75,
-				maxDuration: 1
+				margin: 0.75
 			}}
 			controlsOptions={{
 				autoRotate: false,

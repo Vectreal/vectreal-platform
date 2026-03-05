@@ -5,6 +5,7 @@ import { and, eq, gt, isNull, or } from 'drizzle-orm'
 import { getDbClient } from '../../../db/client'
 import { apiKeyProjects } from '../../../db/schema/auth/api-key-projects'
 import { apiKeys } from '../../../db/schema/auth/api-keys'
+import { projects } from '../../../db/schema/project/projects'
 
 const db = getDbClient()
 
@@ -116,14 +117,18 @@ export async function validatePreviewApiKeyForProject(params: {
 	const hashedToken = hashApiToken(token)
 	const now = new Date()
 
+	// Validate API key and ensure organization matches
 	const matches = await db
 		.select({
 			apiKeyId: apiKeys.id,
 			projectId: apiKeyProjects.projectId,
-			userId: apiKeys.userId
+			userId: apiKeys.userId,
+			apiKeyOrgId: apiKeys.organizationId,
+			projectOrgId: projects.organizationId
 		})
 		.from(apiKeys)
 		.innerJoin(apiKeyProjects, eq(apiKeyProjects.apiKeyId, apiKeys.id))
+		.innerJoin(projects, eq(projects.id, apiKeyProjects.projectId))
 		.where(
 			and(
 				eq(apiKeys.hashedKey, hashedToken),
@@ -138,6 +143,12 @@ export async function validatePreviewApiKeyForProject(params: {
 	if (matches.length === 0) {
 		trackFailedAttempt(clientIdentifier)
 		return { ok: false, error: 'invalid_token' }
+
+		// Extra security: Verify API key's org matches project's org
+		if (matches[0].apiKeyOrgId !== matches[0].projectOrgId) {
+			trackFailedAttempt(clientIdentifier)
+			return { ok: false, error: 'invalid_token' }
+		}
 	}
 
 	await db

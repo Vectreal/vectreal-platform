@@ -10,6 +10,7 @@ import { useLocation, useMatches, useNavigation } from 'react-router'
 import {
 	extractRouteData,
 	getRouteContext,
+	identifyDrawerRoute,
 	parseRouteParams
 } from '../components/dashboard/utils'
 import { DASHBOARD_CONTENT, DASHBOARD_ROUTES } from '../constants/dashboard'
@@ -40,8 +41,7 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 
 	const content = useMemo(() => {
 		// Skip optimistic updates for drawer routes to prevent flickering
-		const isDrawerRoute = (pathname: string) =>
-			pathname === '/dashboard/projects/new'
+
 		const isDashboardRootRoute = (pathname: string) => pathname === '/dashboard'
 
 		// Handle optimistic updates during navigation (skip for drawer routes)
@@ -50,8 +50,8 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 			navigation.location &&
 			navigation.location.pathname !== location.pathname &&
 			!isDashboardRootRoute(location.pathname) &&
-			!isDrawerRoute(location.pathname) &&
-			!isDrawerRoute(navigation.location.pathname)
+			!identifyDrawerRoute(location.pathname) &&
+			!identifyDrawerRoute(navigation.location.pathname)
 		) {
 			const nextRouteContext = getRouteContext(
 				navigation.location.pathname,
@@ -208,6 +208,21 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 
 			case 'project-list': {
 				const config = DASHBOARD_CONTENT['project-list']
+				const breadcrumbs: BreadcrumbItem[] = [
+					{ label: 'Dashboard', to: DASHBOARD_ROUTES.DASHBOARD },
+					{ label: config.title, isLast: true }
+				]
+
+				return {
+					title: config.title,
+					description: config.description,
+					actionVariant: config.actionVariant,
+					breadcrumbs
+				}
+			}
+
+			case 'api-keys': {
+				const config = DASHBOARD_CONTENT['api-keys']
 				const breadcrumbs: BreadcrumbItem[] = [
 					{ label: 'Dashboard', to: DASHBOARD_ROUTES.DASHBOARD },
 					{ label: config.title, isLast: true }

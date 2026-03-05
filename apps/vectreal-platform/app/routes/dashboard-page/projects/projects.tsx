@@ -13,7 +13,7 @@ import { DataTable } from '../../../components/dashboard/data-table'
 import {
 	projectColumns,
 	type ProjectRow
-} from '../../../components/dashboard/project-table-columns'
+} from '../../../components/dashboard/table-columns'
 import { ProjectsGridSkeleton } from '../../../components/skeletons'
 import { useDashboardTableState } from '../../../hooks/use-dashboard-table-state'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'

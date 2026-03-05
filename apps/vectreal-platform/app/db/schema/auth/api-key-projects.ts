@@ -7,11 +7,11 @@ import {
 	timestamp,
 	uuid
 } from 'drizzle-orm/pg-core'
-import { authUid, authenticatedRole } from 'drizzle-orm/supabase'
+import { authenticatedRole } from 'drizzle-orm/supabase'
 
 import { apiKeys } from './api-keys'
 import { projects } from '../project/projects'
-import { canAccessProject, ownsApiKey } from '../rls'
+import { canAccessProject, canManageOrgApiKeys } from '../rls'
 
 export const apiKeyProjects = pgTable(
 	'api_key_projects',
@@ -30,29 +30,43 @@ export const apiKeyProjects = pgTable(
 		primaryKey({ columns: [table.apiKeyId, table.projectId] }),
 		index('api_key_projects_api_key_id_idx').on(table.apiKeyId),
 		index('api_key_projects_project_id_idx').on(table.projectId),
-		pgPolicy('api_key_projects_select_owner_and_project_member', {
+		pgPolicy('api_key_projects_select_org_admin_and_project_member', {
 			for: 'select',
 			to: authenticatedRole,
-			using: sql`${ownsApiKey(table.apiKeyId)} and ${canAccessProject(table.projectId)}`
-		}),
-		pgPolicy('api_key_projects_insert_owner_and_project_member', {
-			for: 'insert',
-			to: authenticatedRole,
-			withCheck: sql`
-				${ownsApiKey(table.apiKeyId)}
-				and ${canAccessProject(table.projectId)}
+			using: sql`
+				${canAccessProject(table.projectId)}
 				and exists (
 					select 1
 					from api_keys ak
 					where ak.id = ${table.apiKeyId}
-						and ak.user_id = ${authUid}
+						and ${canManageOrgApiKeys(sql`ak.organization_id`)}
 				)
 			`
 		}),
-		pgPolicy('api_key_projects_delete_owner', {
+		pgPolicy('api_key_projects_insert_org_admin_and_project_member', {
+			for: 'insert',
+			to: authenticatedRole,
+			withCheck: sql`
+				${canAccessProject(table.projectId)}
+				and exists (
+					select 1
+					from api_keys ak
+					where ak.id = ${table.apiKeyId}
+						and ${canManageOrgApiKeys(sql`ak.organization_id`)}
+				)
+			`
+		}),
+		pgPolicy('api_key_projects_delete_org_admin', {
 			for: 'delete',
 			to: authenticatedRole,
-			using: ownsApiKey(table.apiKeyId)
+			using: sql`
+				exists (
+					select 1
+					from api_keys ak
+					where ak.id = ${table.apiKeyId}
+						and ${canManageOrgApiKeys(sql`ak.organization_id`)}
+				)
+			`
 		})
 	]
 ).enableRLS()
