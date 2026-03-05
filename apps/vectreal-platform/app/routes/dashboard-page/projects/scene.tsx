@@ -55,6 +55,7 @@ import {
 	getSceneFolderAncestry
 } from '../../../lib/domain/scene/scene-folder-repository.server'
 import { deleteDialogAtom } from '../../../lib/stores/dashboard-management-store'
+import { toViewerLoadingThumbnail } from '../../../lib/viewer/viewer-loading-thumbnail'
 
 import type { SceneAggregateResponse } from '../../../types/api'
 import type { ShouldRevalidateFunction } from 'react-router'
@@ -232,6 +233,7 @@ export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/err
 interface PreviewModelProps {
 	file: ModelFile | null
 	sceneData?: SceneLoadResult
+	thumbnailUrl?: string | null
 }
 
 const inFlightSceneSettingsRequests = new Map<
@@ -239,20 +241,28 @@ const inFlightSceneSettingsRequests = new Map<
 	Promise<SceneLoadResult>
 >()
 
-const PreviewModel = memo(({ file, sceneData }: PreviewModelProps) => {
-	return (
-		<div className={cn('relative h-full')}>
-			<ClientVectrealViewer
-				model={file?.model}
-				envOptions={sceneData?.environment}
-				controlsOptions={sceneData?.controls}
-				shadowsOptions={sceneData?.shadows}
-				loader={<CenteredSpinner text="Preparing scene..." />}
-				fallback={<CenteredSpinner text="Loading scene..." />}
-			/>
-		</div>
-	)
-})
+const PreviewModel = memo(
+	({ file, sceneData, thumbnailUrl }: PreviewModelProps) => {
+		const loadingThumbnail = toViewerLoadingThumbnail(
+			thumbnailUrl,
+			'Scene thumbnail preview'
+		)
+
+		return (
+			<div className={cn('relative h-full')}>
+				<ClientVectrealViewer
+					model={file?.model}
+					envOptions={sceneData?.environment}
+					controlsOptions={sceneData?.controls}
+					shadowsOptions={sceneData?.shadows}
+					loadingThumbnail={loadingThumbnail}
+					loader={<CenteredSpinner text="Preparing scene..." />}
+					fallback={<CenteredSpinner text="Loading scene..." />}
+				/>
+			</div>
+		)
+	}
+)
 
 const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 	const { scene, project, user, sceneDetails } = loaderData
@@ -467,7 +477,11 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 			<div className="grid h-full min-h-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
 				<main className="flex min-h-0 flex-col gap-4">
 					<section className="relative min-h-0 flex-1 overflow-hidden rounded-2xl bg-black/[0.02]">
-						<PreviewModel file={file} sceneData={sceneData} />
+						<PreviewModel
+							file={file}
+							sceneData={sceneData}
+							thumbnailUrl={sceneState.thumbnailUrl}
+						/>
 					</section>
 					<section className="bg-muted/30 space-y-6 rounded-2xl px-4 py-4 sm:px-5">
 						<header className="flex flex-col items-start gap-6 md:flex-row">

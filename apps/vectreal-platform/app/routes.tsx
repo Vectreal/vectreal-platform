@@ -11,6 +11,10 @@ export default [
 	route('health', './routes/health.tsx'),
 
 	/// API
+	route(
+		'api/scenes/:sceneId/thumbnail/:assetId',
+		'./routes/api/scenes.$sceneId.thumbnail.$assetId.ts'
+	),
 	route('api/scenes/:sceneId?', './routes/api/scenes.$sceneId.ts'),
 	route('api/scene-location-options', './routes/api/scene-location-options.ts'),
 	route('api/optimize-textures', './routes/api/optimize-textures.ts'),
@@ -75,10 +79,7 @@ export default [
 					route('new', './routes/dashboard-page/projects/projects-new.tsx')
 				]),
 				route(':projectId', './routes/dashboard-page/projects/project.tsx', [
-					route(
-						'edit',
-						'./routes/dashboard-page/projects/projects-edit.tsx'
-					),
+					route('edit', './routes/dashboard-page/projects/projects-edit.tsx'),
 					route(
 						'folder/:folderId',
 						'./routes/dashboard-page/projects/folder.tsx'

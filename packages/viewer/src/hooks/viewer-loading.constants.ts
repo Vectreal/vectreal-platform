@@ -1,0 +1,1 @@
+export const VIEWER_LOADING_FADE_DURATION_MS = 700

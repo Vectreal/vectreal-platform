@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 
+import { VIEWER_LOADING_FADE_DURATION_MS } from './viewer-loading.constants'
+
 type LoadingState = 'loading' | 'loaded' | 'ready'
 
 /**
@@ -21,7 +23,7 @@ export function useViewerLoading(hasContent: boolean): LoadingState {
 			// After loader fade-out completes, mark as ready
 			const timer = setTimeout(() => {
 				setLoadingState('ready')
-			}, 500)
+			}, VIEWER_LOADING_FADE_DURATION_MS)
 
 			return () => clearTimeout(timer)
 		} else if (!hasContent && loadingState !== 'loading') {

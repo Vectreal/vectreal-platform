@@ -46,6 +46,7 @@ import {
 	environmentAtom,
 	shadowsAtom
 } from '../lib/stores/scene-settings-store'
+import { requestSceneScreenshot } from '../lib/viewer/scene-screenshot-bus'
 import { SceneMetaState } from '../types/publisher-config'
 import { OptimizationPreset } from '../types/scene-optimization'
 
@@ -60,6 +61,7 @@ export interface UseSceneLoaderParams {
 export interface SaveSceneResult {
 	sceneId?: string
 	stats?: SceneStatsData | null
+	sceneMeta?: SceneMetaState
 	unchanged?: boolean
 	[key: string]: unknown
 }
@@ -82,6 +84,38 @@ export interface SaveAvailabilityState {
 }
 
 const DEFAULT_MAX_CONCURRENT_SCENE_ASSET_UPLOADS = 4
+const DEFAULT_THUMBNAIL_CAPTURE_OPTIONS = {
+	width: 1280,
+	height: 720,
+	mimeType: 'image/webp' as const,
+	quality: 0.86,
+	mode: 'auto-fit' as const
+}
+
+const createFileFromDataUrl = (
+	dataUrl: string,
+	fileName: string
+): File | null => {
+	const [meta, encoded] = dataUrl.split(',')
+	if (!meta || !encoded) {
+		return null
+	}
+
+	const mimeMatch = meta.match(/^data:(.*?);base64$/)
+	const mimeType = mimeMatch?.[1] || 'image/webp'
+
+	try {
+		const binary = atob(encoded)
+		const bytes = new Uint8Array(binary.length)
+		for (let index = 0; index < binary.length; index += 1) {
+			bytes[index] = binary.charCodeAt(index)
+		}
+
+		return new File([bytes], fileName, { type: mimeType })
+	} catch {
+		return null
+	}
+}
 
 /**
  * Manages scene load/save side effects and shared store synchronization.
@@ -232,6 +266,20 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		return gltfJson
 	}, [optimizer, modelFile, handleDocumentGltfExport])
 
+	const captureSceneThumbnail = useCallback(async (): Promise<
+		null | string
+	> => {
+		try {
+			return await requestSceneScreenshot(DEFAULT_THUMBNAIL_CAPTURE_OPTIONS)
+		} catch (error) {
+			console.warn('[scene-settings] thumbnail capture failed', {
+				sceneId: currentSceneId || null,
+				error
+			})
+			return null
+		}
+	}, [currentSceneId])
+
 	// Get current settings from atoms
 	const currentSettings: SceneSettings = useMemo(
 		() => ({
@@ -337,6 +385,54 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 					const prepared = prepareResult.data || prepareResult
 					const preparedSceneId = prepared.sceneId as string
 					const preparedProjectId = prepared.projectId as string | undefined
+
+					const thumbnailDataUrl = await captureSceneThumbnail()
+					let sceneMetaForSave = sceneMetaState
+
+					if (thumbnailDataUrl) {
+						const thumbnailFile = createFileFromDataUrl(
+							thumbnailDataUrl,
+							'scene-thumbnail.webp'
+						)
+
+						if (thumbnailFile) {
+							const uploadThumbnailFormData = new FormData()
+							uploadThumbnailFormData.append('action', 'upload-scene-asset')
+							uploadThumbnailFormData.append('requestId', activeRequestId)
+							uploadThumbnailFormData.append('sceneId', preparedSceneId)
+							if (preparedProjectId) {
+								uploadThumbnailFormData.append('projectId', preparedProjectId)
+							}
+							uploadThumbnailFormData.append('kind', 'image')
+							uploadThumbnailFormData.append('file', thumbnailFile)
+
+							const uploadThumbnailResponse = await fetch(
+								`/api/scenes/${preparedSceneId}`,
+								{
+									method: 'POST',
+									body: uploadThumbnailFormData
+								}
+							)
+							const uploadThumbnailResult = await uploadThumbnailResponse.json()
+
+							if (!uploadThumbnailResponse.ok || uploadThumbnailResult.error) {
+								console.warn('[scene-settings] thumbnail upload failed', {
+									sceneId: preparedSceneId,
+									error:
+										uploadThumbnailResult.error ||
+										`HTTP error! status: ${uploadThumbnailResponse.status}`
+								})
+							} else {
+								const uploadedThumbnail =
+									uploadThumbnailResult.data || uploadThumbnailResult
+								sceneMetaForSave = {
+									...sceneMetaState,
+									thumbnailUrl: `/api/scenes/${preparedSceneId}/thumbnail/${uploadedThumbnail.assetId}`
+								}
+							}
+						}
+					}
+
 					const maxConcurrentAssetUploads =
 						options?.maxConcurrentAssetUploads ??
 						DEFAULT_MAX_CONCURRENT_SCENE_ASSET_UPLOADS
@@ -439,7 +535,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 						formData.append('projectId', preparedProjectId)
 					}
 					formData.append('settings', JSON.stringify(currentSettings))
-					formData.append('meta', JSON.stringify(sceneMetaState))
+					formData.append('meta', JSON.stringify(sceneMetaForSave))
 					formData.append('sceneAssetIds', JSON.stringify(sceneAssetIds))
 					formData.append(
 						'optimizationSettings',
@@ -500,7 +596,10 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 						return { unchanged: true }
 					}
 
-					return data
+					return {
+						...data,
+						sceneMeta: sceneMetaForSave
+					}
 				} catch (error) {
 					console.error('Failed to save scene settings:', {
 						requestId,
@@ -522,6 +621,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			}
 		},
 		[
+			captureSceneThumbnail,
 			createRequestId,
 			currentSceneId,
 			currentSettings,
@@ -1073,8 +1173,14 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			}
 
 			if (result && !result.unchanged) {
+				const savedSceneMeta =
+					typeof result.sceneMeta === 'object' && result.sceneMeta
+						? (result.sceneMeta as SceneMetaState)
+						: sceneMetaState
+
+				setSceneMetaState(savedSceneMeta)
 				setLastSavedSettings(currentSettings)
-				setLastSavedSceneMeta(sceneMetaState)
+				setLastSavedSceneMeta(savedSceneMeta)
 				const latestStats = result.stats
 				if (latestStats) {
 					setOptimizationRuntime((prev) => ({
@@ -1104,6 +1210,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			optimizedSceneBytes,
 			clientSceneBytes,
 			latestSceneStats,
+			setSceneMetaState,
 			setLastSavedSceneMeta,
 			setOptimizationRuntime,
 			revalidator

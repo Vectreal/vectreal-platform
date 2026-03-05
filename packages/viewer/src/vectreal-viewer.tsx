@@ -40,6 +40,17 @@ import {
 	SceneShadows
 } from './components/scene'
 
+import type {
+	SceneScreenshotCapture,
+	ViewerLoadingThumbnail
+} from './types/viewer-types'
+
+export type {
+	SceneScreenshotCapture,
+	SceneScreenshotOptions,
+	ViewerLoadingThumbnail
+} from './types/viewer-types'
+
 export interface VectrealViewerProps extends PropsWithChildren {
 	/**
 	 * The 3D model to render in the viewer. (three.js `Object3D`)
@@ -107,9 +118,19 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	loader?: React.ReactNode
 
 	/**
+	 * Optional thumbnail rendered as a blurred backdrop under the loader.
+	 */
+	loadingThumbnail?: ViewerLoadingThumbnail
+
+	/**
 	 * Callback function to handle screenshot generation (accept data URL via param).
 	 */
 	onScreenshot?: (dataUrl: string) => void
+
+	/**
+	 * Callback that receives a capture function capable of producing scene screenshots on demand.
+	 */
+	onScreenshotCaptureReady?: (capture: null | SceneScreenshotCapture) => void
 }
 
 /**
@@ -146,7 +167,9 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		controlsOptions,
 		shadowsOptions,
 		popover,
+		loadingThumbnail,
 		onScreenshot,
+		onScreenshotCaptureReady,
 		enableViewportRendering = true,
 		loader = <DefaultSpinner />
 	} = props
@@ -162,7 +185,12 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 				)}
 				theme={theme}
 				overlay={
-					<Overlay hasContent={hasContent} popover={popover} loader={loader} />
+					<Overlay
+						hasContent={hasContent}
+						popover={popover}
+						loader={loader}
+						loadingThumbnail={loadingThumbnail}
+					/>
 				}
 				enableViewportRendering={enableViewportRendering}
 				shadows
@@ -185,7 +213,11 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 								<SceneCamera {...cameraOptions} />
 								<Center top>
 									{model ? (
-										<SceneModel onScreenshot={onScreenshot} object={model} />
+										<SceneModel
+											onScreenshot={onScreenshot}
+											onScreenshotCaptureReady={onScreenshotCaptureReady}
+											object={model}
+										/>
 									) : (
 										children
 									)}
