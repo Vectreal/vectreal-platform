@@ -22,6 +22,10 @@ const meta = {
 	args: {
 		hasContent: false,
 		loader: <LoadingSpinner />,
+		loadingThumbnail: {
+			src: 'https://images.unsplash.com/photo-1673951284213-2a3550681b7d?ixlib=rb-4.1.0&q=85&fm=jpg&cs=srgb&w=1920&h=1080&fit=crop',
+			alt: 'Preview thumbnail backdrop'
+		},
 		popover: (
 			<div className="rounded bg-zinc-900/80 px-2 py-1 text-xs text-white">
 				Overlay popover slot
@@ -52,5 +56,11 @@ export const Loading: Story = {
 export const Loaded: Story = {
 	args: {
 		hasContent: true
+	}
+}
+
+export const LoadingWithThumbnail: Story = {
+	args: {
+		hasContent: false
 	}
 }

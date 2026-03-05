@@ -11,14 +11,19 @@ import {
 	Suspense,
 	useCallback,
 	useEffect,
+	useRef,
 	useState,
 	type FC
 } from 'react'
+import { useParams } from 'react-router'
 
 import { Route } from './+types/publisher.$sceneId'
 import { DropZone } from './drop-zone'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
-import { processAtom } from '../../lib/stores/publisher-config-store'
+import {
+	processAtom,
+	sceneMetaAtom
+} from '../../lib/stores/publisher-config-store'
 import {
 	boundsAtom,
 	cameraAtom,
@@ -27,7 +32,10 @@ import {
 	shadowsAtom
 } from '../../lib/stores/scene-settings-store'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
+import { registerSceneScreenshotCaptureHandler } from '../../lib/viewer/scene-screenshot-bus'
+import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbnail'
 
+import type { SceneScreenshotCapture } from '@vctrl/viewer'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -108,6 +116,8 @@ const LoadingScreen = memo(() => {
 
 const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 	const isMobile = useIsMobile(loaderData.isMobile)
+	const params = useParams()
+	const routeSceneId = params.sceneId ?? null
 
 	// Get model and settings from context/atoms
 	const { file, isFileLoading, reset } = useModelContext()
@@ -118,14 +128,38 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 	const controls = useAtomValue(controlsAtom)
 	const env = useAtomValue(environmentAtom)
 	const shadows = useAtomValue(shadowsAtom)
+	const sceneMeta = useAtomValue(sceneMetaAtom)
+	const loadingThumbnail = toViewerLoadingThumbnail(
+		sceneMeta.thumbnailUrl,
+		'Scene thumbnail preview'
+	)
+	const previousRouteSceneIdRef = useRef<null | string>(routeSceneId)
 
-	const handleScreenshot = useCallback((_url: string) => {
-		// Future: handle screenshot
-	}, [])
+	const handleScreenshotCaptureReady = useCallback(
+		(capture: null | SceneScreenshotCapture) => {
+			registerSceneScreenshotCaptureHandler(capture)
+		},
+		[]
+	)
 
 	// Cleanup on unmount
 	useEffect(() => {
+		const previousRouteSceneId = previousRouteSceneIdRef.current
+		const navigatedFromSceneToBase =
+			Boolean(previousRouteSceneId) && !routeSceneId
+
+		if (navigatedFromSceneToBase) {
+			registerSceneScreenshotCaptureHandler(null)
+			reset()
+			setProcess(RESET)
+		}
+
+		previousRouteSceneIdRef.current = routeSceneId
+	}, [routeSceneId, reset, setProcess])
+
+	useEffect(() => {
 		return () => {
+			registerSceneScreenshotCaptureHandler(null)
 			reset()
 			setProcess(RESET)
 		}
@@ -142,7 +176,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 							key="model-viewer"
 							initial={{ opacity: 0 }}
 							animate={{ opacity: 1 }}
-							exit={{ opacity: 0 }}
+							exit={{ opacity: 0, transition: { duration: 0.4 } }}
 							transition={{ duration: 0.75, delay: 1 }}
 							className="bg-muted/50 flex h-full w-full"
 						>
@@ -154,8 +188,9 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 								envOptions={env}
 								shadowsOptions={shadows}
 								boundsOptions={bounds}
+								loadingThumbnail={loadingThumbnail}
 								loader={<LoadingScreen />}
-								onScreenshot={handleScreenshot}
+								onScreenshotCaptureReady={handleScreenshotCaptureReady}
 								fallback={<LoadingScreen />}
 							/>
 						</motion.div>

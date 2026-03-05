@@ -77,7 +77,7 @@ export const Navigation = ({ user }: NavigationProps) => {
 							animate={{ opacity: 1, width: 'auto' }}
 							exit={{ opacity: 0, width: 0 }}
 							transition={{ duration: 0.3, ease: 'easeInOut' }}
-							className="mr-2 overflow-hidden"
+							className="overflow-hidden"
 							key="publisher-button"
 						>
 							<Button asChild variant="ghost" size="sm">

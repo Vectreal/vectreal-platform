@@ -55,11 +55,11 @@ const SigninLayout = () => {
 	}
 
 	return (
-		<main className="h-screen w-full overflow-hidden">
-			<section className="flex h-full w-full flex-col overflow-hidden">
+		<main className="h-full min-h-screen w-full overflow-hidden">
+			<section className="flex min-h-screen w-full flex-col overflow-hidden">
 				<div className="grid grow overflow-hidden md:grid-cols-[1fr_1fr]">
 					<div className="bg-card relative flex flex-col justify-center border-r p-8 shadow-2xl">
-						<div className="mx-auto flex max-w-md flex-col gap-8">
+						<div className="mx-auto flex max-w-md flex-col gap-8 py-16">
 							<div className="flex grow flex-col justify-end">
 								<h1 className="mb-6 text-2xl leading-tight font-medium sm:text-3xl md:text-4xl lg:text-5xl">
 									{isSignUp ? 'Sign Up' : 'Sign In'}
