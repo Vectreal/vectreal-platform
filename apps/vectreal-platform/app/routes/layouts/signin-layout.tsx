@@ -33,16 +33,15 @@ const SigninLayout = () => {
 	const { submit } = useFetcher()
 	const location = useLocation()
 	const navigate = useNavigate()
+	const nextPath =
+		new URLSearchParams(location.search).get('next') || '/dashboard'
 
 	const isSignUp = location.pathname.endsWith('/sign-up')
 
 	async function handleSocialLogin(provider: 'google' | 'github') {
 		const formData = new FormData()
 		formData.append('provider', provider)
-		formData.append(
-			'backURL',
-			`${window.location.href}`.split('/sign').at(0) || ''
-		)
+		formData.append('backURL', nextPath)
 		// Trigger the action to handle social login
 		await submit(formData, {
 			method: 'post',
@@ -51,7 +50,9 @@ const SigninLayout = () => {
 	}
 
 	const handleSwitch = () => {
-		navigate(isSignUp ? '/sign-in' : '/sign-up', { viewTransition: true })
+		navigate(`${isSignUp ? '/sign-in' : '/sign-up'}${location.search}`, {
+			viewTransition: true
+		})
 	}
 
 	return (

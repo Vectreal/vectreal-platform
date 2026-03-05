@@ -36,6 +36,17 @@ function validateSignin(formData: FormData) {
 	return { errors, data }
 }
 
+const getSafeNext = (request: Request) => {
+	const requestUrl = new URL(request.url)
+	const next = requestUrl.searchParams.get('next')
+
+	if (!next || !next.startsWith('/')) {
+		return '/dashboard'
+	}
+
+	return next
+}
+
 export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData()
 	const {
@@ -54,9 +65,9 @@ export async function action({ request }: Route.ActionArgs) {
 
 	if (data?.user && data.session) {
 		const additionalHeaders = new Headers(headers)
+		const next = getSafeNext(request)
 
-		// Default redirect to dashboard
-		return redirect('/dashboard', {
+		return redirect(next, {
 			headers: additionalHeaders
 		})
 	}
@@ -73,8 +84,7 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 	} = await client.auth.getUser()
 
 	if (user) {
-		// Default redirect
-		return redirect('/dashboard', { headers })
+		return redirect(getSafeNext(request), { headers })
 	}
 
 	// Check if this is a scene preservation flow

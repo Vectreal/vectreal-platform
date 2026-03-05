@@ -21,6 +21,8 @@ interface PublishDrawerProps {
 	onOpenChange: (nextOpen: boolean) => void
 	sceneId?: string
 	projectId?: string
+	userId?: string
+	onRequireAuth?: () => Promise<void> | void
 	saveSceneSettings: () => Promise<
 		| { sceneId?: string; unchanged?: boolean; [key: string]: unknown }
 		| { unchanged: true }
@@ -43,6 +45,8 @@ export const PublishDrawer: FC<PublishDrawerProps> = ({
 	onOpenChange,
 	sceneId,
 	projectId,
+	userId,
+	onRequireAuth,
 	saveSceneSettings,
 	info,
 	report,
@@ -74,6 +78,8 @@ export const PublishDrawer: FC<PublishDrawerProps> = ({
 					showSceneInfo
 					sceneId={sceneId}
 					projectId={projectId}
+					userId={userId}
+					onRequireAuth={onRequireAuth}
 					saveSceneSettings={saveSceneSettings}
 					info={info}
 					report={report}

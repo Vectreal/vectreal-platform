@@ -1,4 +1,5 @@
 import { Accordion, AccordionContent } from '@shared/components/ui/accordion'
+import { Button } from '@shared/components/ui/button'
 import {
 	CardDescription,
 	CardHeader,
@@ -29,6 +30,7 @@ import type { FC } from 'react'
 interface PublishSidebarProps {
 	sceneId?: string
 	projectId?: string
+	userId?: string
 	hideHeader?: boolean
 	showSceneInfo?: boolean
 	info?: OptimizationInfo
@@ -41,6 +43,7 @@ interface PublishSidebarProps {
 		currentTextureBytes?: number | null
 	}
 	stats?: SceneStatsData | null
+	onRequireAuth?: () => Promise<void> | void
 	saveSceneSettings: () => Promise<
 		| { sceneId?: string; unchanged?: boolean; [key: string]: unknown }
 		| { unchanged: true }
@@ -67,6 +70,7 @@ const metricValue = (value?: number | null) =>
 const PublishSidebarContent: FC<PublishSidebarProps> = ({
 	sceneId,
 	projectId,
+	userId,
 	hideHeader = false,
 	showSceneInfo = false,
 	info,
@@ -74,6 +78,7 @@ const PublishSidebarContent: FC<PublishSidebarProps> = ({
 	publishedAt,
 	sizeInfo,
 	stats,
+	onRequireAuth,
 	saveSceneSettings
 }) => {
 	const metrics =
@@ -85,6 +90,8 @@ const PublishSidebarContent: FC<PublishSidebarProps> = ({
 					stats
 				})
 			: null
+	const hasSavedScene = typeof sceneId === 'string' && sceneId.length > 0
+	const canAccessPublishFeatures = Boolean(userId && hasSavedScene)
 
 	return (
 		<div className="no-scrollbar grow overflow-auto pb-2">
@@ -152,9 +159,9 @@ const PublishSidebarContent: FC<PublishSidebarProps> = ({
 					</div>
 				)}
 
-				<ScenePreview />
+				{canAccessPublishFeatures && <ScenePreview />}
 
-				<Accordion type="single" collapsible className="space-y-2 px-2">
+				<Accordion type="single" collapsible className="space-y-2 px-4 pt-4">
 					<AccordionItem value="save" className="px-4">
 						<AccordionTrigger className="px-2">
 							<span className="flex items-center gap-3">
@@ -167,32 +174,52 @@ const PublishSidebarContent: FC<PublishSidebarProps> = ({
 						</AccordionContent>
 					</AccordionItem>
 
-					<AccordionItem value="publish" className="px-4">
-						<AccordionTrigger className="px-2">
-							<span className="flex items-center gap-3">
-								<Globe className="inline" size={14} />
-								Publish
-							</span>
-						</AccordionTrigger>
-						<AccordionContent>
-							<PublishOptions
-								sceneId={sceneId}
-								saveSceneSettings={saveSceneSettings}
-							/>
-						</AccordionContent>
-					</AccordionItem>
+					{!canAccessPublishFeatures && (
+						<div className="px-6 pb-2">
+							<p className="text-muted-foreground mb-2 text-xs">
+								Sign up and save this scene once to unlock Publish and Embed.
+							</p>
+							<Button
+								type="button"
+								size="sm"
+								className="w-full"
+								onClick={() => void onRequireAuth?.()}
+							>
+								Sign In or Sign Up to Save
+							</Button>
+						</div>
+					)}
 
-					<AccordionItem value="embed" className="px-4">
-						<AccordionTrigger className="px-2">
-							<span className="flex items-center gap-3">
-								<Code className="inline" size={14} />
-								Embed
-							</span>
-						</AccordionTrigger>
-						<AccordionContent>
-							<EmbedOptions sceneId={sceneId} projectId={projectId} />
-						</AccordionContent>
-					</AccordionItem>
+					{canAccessPublishFeatures && (
+						<>
+							<AccordionItem value="publish" className="px-4">
+								<AccordionTrigger className="px-2">
+									<span className="flex items-center gap-3">
+										<Globe className="inline" size={14} />
+										Publish
+									</span>
+								</AccordionTrigger>
+								<AccordionContent>
+									<PublishOptions
+										sceneId={sceneId}
+										saveSceneSettings={saveSceneSettings}
+									/>
+								</AccordionContent>
+							</AccordionItem>
+
+							<AccordionItem value="embed" className="px-4">
+								<AccordionTrigger className="px-2">
+									<span className="flex items-center gap-3">
+										<Code className="inline" size={14} />
+										Embed
+									</span>
+								</AccordionTrigger>
+								<AccordionContent>
+									<EmbedOptions sceneId={sceneId} projectId={projectId} />
+								</AccordionContent>
+							</AccordionItem>
+						</>
+					)}
 
 					{/* <AccordionItem value="share" className="px-4">
 						<AccordionTrigger className="px-2">

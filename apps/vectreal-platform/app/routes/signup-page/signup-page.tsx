@@ -64,6 +64,17 @@ function validateSignup(formData: FormData) {
 	return { errors, data }
 }
 
+const getSafeNext = (request: Request) => {
+	const requestUrl = new URL(request.url)
+	const next = requestUrl.searchParams.get('next')
+
+	if (!next || !next.startsWith('/')) {
+		return '/dashboard'
+	}
+
+	return next
+}
+
 /**
  * Action handler for signup form submission.
  * Handles user registration via Supabase.
@@ -109,8 +120,7 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 	} = await client.auth.getUser()
 
 	if (user) {
-		// Default redirect
-		return redirect('/dashboard', { headers })
+		return redirect(getSafeNext(request), { headers })
 	}
 
 	// Check if this is a scene preservation flow

@@ -3,6 +3,7 @@ import {
 	getSerializedAssetByteSize,
 	type OptimizationReport,
 	type Optimizations,
+	type SerializedSceneAssetDataMap,
 	type SceneSettings,
 	type ServerSceneData
 } from '@vctrl/core'
@@ -14,7 +15,7 @@ import {
 } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useRevalidator } from 'react-router'
+import { useLocation, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
 import { optimizationPresets } from '../constants/optimizations'
@@ -29,6 +30,11 @@ import {
 	buildImageMimeLookup,
 	buildSceneUploadFileDescriptor
 } from '../lib/domain/scene/scene-upload-manifest'
+import {
+	clearPendingSceneDraft,
+	loadPendingSceneDraft,
+	savePendingSceneDraft
+} from '../lib/persistence/pending-scene-idb'
 import {
 	processAtom,
 	sceneMetaAtom,
@@ -118,6 +124,42 @@ const createFileFromDataUrl = (
 }
 
 /**
+ * Converts in-memory glTF asset map payloads to a JSON-serializable shape
+ * that can be persisted in IndexedDB and later passed back to `loadFromData`.
+ */
+const serializeSceneAssetData = async (
+	gltfData: unknown,
+	gltfAssets: unknown
+): Promise<SerializedSceneAssetDataMap> => {
+	if (!(gltfAssets instanceof Map)) {
+		return {}
+	}
+
+	const imageMimeLookup = buildImageMimeLookup(gltfData)
+	const serializedEntries = await Promise.all(
+		Array.from(gltfAssets.entries()).map(async ([assetId, data]) => {
+			const descriptor = buildSceneUploadFileDescriptor(
+				assetId,
+				data,
+				imageMimeLookup
+			)
+			const bytes = new Uint8Array(await descriptor.file.arrayBuffer())
+
+			return [
+				assetId,
+				{
+					data: Array.from(bytes),
+					fileName: descriptor.file.name,
+					mimeType: descriptor.file.type || 'application/octet-stream'
+				}
+			] as const
+		})
+	)
+
+	return Object.fromEntries(serializedEntries)
+}
+
+/**
  * Manages scene load/save side effects and shared store synchronization.
  *
  * This hook keeps scene state in Jotai/model context as the source of truth,
@@ -143,6 +185,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		: params
 
 	const sceneLoadAttemptedRef = useRef(false)
+	const pendingSceneHydratedRef = useRef(false)
 	const inFlightSaveRef = useRef<Promise<
 		SaveSceneResult | { unchanged: true } | undefined
 	> | null>(null)
@@ -155,6 +198,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	)
 
 	const revalidator = useRevalidator()
+	const location = useLocation()
 
 	// Model context and loading
 	const {
@@ -1137,6 +1181,54 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	)
 
 	/**
+	 * Stores the current scene in IndexedDB before redirecting to auth.
+	 *
+	 * This preserves local publisher progress across OAuth/email auth navigations.
+	 */
+	const persistPendingSceneDraft = useCallback(async () => {
+		if (!modelFile) {
+			return false
+		}
+
+		const gltfJsonToSend = await prepareGltfDocumentForUpload()
+		if (!gltfJsonToSend) {
+			return false
+		}
+
+		const gltfData =
+			(gltfJsonToSend as { data?: unknown }).data ?? gltfJsonToSend
+		const gltfAssets = (gltfJsonToSend as { assets?: unknown }).assets
+		const assetData = await serializeSceneAssetData(gltfData, gltfAssets)
+
+		const sceneData: ServerSceneData = {
+			meta: {
+				name: sceneMetaState.name,
+				description: sceneMetaState.description,
+				thumbnailUrl: sceneMetaState.thumbnailUrl
+			},
+			gltfJson: gltfData as ServerSceneData['gltfJson'],
+			assetData,
+			bounds: currentSettings.bounds,
+			environment: currentSettings.environment,
+			camera: currentSettings.camera,
+			controls: currentSettings.controls,
+			shadows: currentSettings.shadows
+		}
+
+		return savePendingSceneDraft({
+			sceneMeta: sceneMetaState,
+			sceneData,
+			optimizationSettings: optimizationSettings ?? null
+		})
+	}, [
+		modelFile,
+		prepareGltfDocumentForUpload,
+		sceneMetaState,
+		currentSettings,
+		optimizationSettings
+	])
+
+	/**
 	 * Save scene settings and update local state on success
 	 */
 	const saveSceneSettings = useCallback(
@@ -1196,6 +1288,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				}
 
 				revalidator.revalidate()
+				void clearPendingSceneDraft()
 			}
 
 			return result
@@ -1309,6 +1402,78 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		}
 	}, [userId, isFirstSavePendingOptimization, processState.hasUnsavedChanges])
 
+	/**
+	 * Rehydrates a pending IndexedDB draft once when entering the base publisher route
+	 * (no `sceneId`), which is the post-auth return path for unsaved scenes.
+	 */
+	useEffect(() => {
+		if (pendingSceneHydratedRef.current) {
+			return
+		}
+
+		if (paramSceneId || initialSceneAggregate || file?.model || isFileLoading) {
+			return
+		}
+
+		pendingSceneHydratedRef.current = true
+
+		void (async () => {
+			const draft = await loadPendingSceneDraft()
+			if (!draft) {
+				return
+			}
+
+			setIsDownloading(true)
+
+			try {
+				const draftOptimizationSettings = draft.optimizationSettings
+
+				if (draftOptimizationSettings) {
+					const inferredPreset = inferOptimizationPreset(
+						draftOptimizationSettings
+					)
+
+					setOptimizationState((prev) => ({
+						...prev,
+						optimizationPreset: inferredPreset,
+						optimizations: draftOptimizationSettings
+					}))
+				}
+
+				await loadFromData({
+					sceneData: draft.sceneData
+				})
+
+				setSceneMetaState(draft.sceneMeta)
+				setLastSavedSceneMeta(draft.sceneMeta)
+				toast.success('Restored your unsaved scene from this browser')
+			} catch (error) {
+				console.error('Failed to restore pending scene draft:', error)
+				toast.error('Failed to restore your saved draft')
+			}
+
+			setIsDownloading(false)
+		})()
+	}, [
+		paramSceneId,
+		initialSceneAggregate,
+		file?.model,
+		isFileLoading,
+		setIsDownloading,
+		inferOptimizationPreset,
+		setOptimizationState,
+		loadFromData,
+		setSceneMetaState,
+		setLastSavedSceneMeta
+	])
+
+	/** Reset rehydration guard when leaving publisher so future returns can rehydrate. */
+	useEffect(() => {
+		if (!location.pathname.startsWith('/publisher')) {
+			pendingSceneHydratedRef.current = false
+		}
+	}, [location.pathname])
+
 	useEffect(() => {
 		if (!paramSceneId) {
 			setIsInitializing(false)
@@ -1336,5 +1501,5 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setIsInitializing
 	])
 
-	return { saveSceneSettings, saveAvailability }
+	return { saveSceneSettings, saveAvailability, persistPendingSceneDraft }
 }
