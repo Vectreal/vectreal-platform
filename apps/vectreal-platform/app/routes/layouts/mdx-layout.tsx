@@ -6,7 +6,6 @@ import styles from '../../styles/mdx.module.css'
 
 import type { RootLoader } from '../../root'
 
-
 export const meta: MetaFunction<undefined, { root: RootLoader }> = (
 	rootLoaderData
 ) => buildMeta([], getRootMeta(rootLoaderData), { private: false })

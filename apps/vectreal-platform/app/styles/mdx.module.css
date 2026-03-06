@@ -94,7 +94,8 @@
 	}
 
 	blockquote {
-		border-left: 2px solid color-mix(in oklch, var(--color-accent) 50%, transparent);
+		border-left: 2px solid
+			color-mix(in oklch, var(--color-accent) 50%, transparent);
 		padding-left: 1rem;
 		font-style: italic;
 		opacity: 0.6;
@@ -108,7 +109,7 @@
 	}
 
 	pre {
-		@apply rounded-lg font-mono text-sm overflow-x-auto;
+		@apply overflow-x-auto rounded-lg font-mono text-sm;
 		background: var(--color-muted);
 		padding: 1rem;
 	}
