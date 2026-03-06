@@ -94,8 +94,8 @@ const OverlayControls = ({
 	)
 
 	const handleRequireAuthForSave = useCallback(async () => {
-		const draftSaved = await persistPendingSceneDraft()
-		if (!draftSaved) {
+		const draftId = await persistPendingSceneDraft()
+		if (!draftId) {
 			toast.error(
 				'We could not preserve your unsaved scene in this browser before sign-in.'
 			)
@@ -103,7 +103,7 @@ const OverlayControls = ({
 		}
 
 		const nextPathBase = sceneId ? `/publisher/${sceneId}` : '/publisher'
-		const nextPath = `${nextPathBase}?restore_draft=1`
+		const nextPath = `${nextPathBase}?restore_draft=1&draft_id=${encodeURIComponent(draftId)}`
 		const authPath = `/sign-in?next=${encodeURIComponent(nextPath)}&scene_saved=true`
 		navigate(authPath)
 	}, [persistPendingSceneDraft, sceneId, navigate])

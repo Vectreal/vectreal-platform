@@ -35,8 +35,12 @@ const createId = () => {
  * Returns the current tab draft id, creating one if missing.
  *
  * Uses sessionStorage so ids are isolated per tab lifetime.
+ *
+ * Exported so callers can embed the id in auth-redirect URLs, allowing a
+ * newly opened tab (after OAuth) to locate the correct draft in IDB even
+ * though its own sessionStorage is fresh.
  */
-const getTabDraftId = () => {
+export const getTabDraftId = () => {
 	if (!isClient()) {
 		return 'pending-scene-default'
 	}
@@ -94,11 +98,13 @@ const deleteExpiredDrafts = async () => {
 /**
  * Persists the current in-browser scene draft before auth redirects.
  *
- * Returns `true` when successfully persisted, `false` when persistence fails.
+ * Returns the draft id string when successfully persisted so callers can
+ * embed it in auth-redirect URLs (enabling cross-tab draft restoration).
+ * Returns `false` when persistence fails.
  */
 export const savePendingSceneDraft = async (
 	input: SavePendingSceneDraftInput
-): Promise<boolean> => {
+): Promise<string | false> => {
 	if (!isClient()) {
 		return false
 	}
@@ -107,17 +113,20 @@ export const savePendingSceneDraft = async (
 		const db = await getPendingSceneDB()
 		await deleteExpiredDrafts()
 		const now = Date.now()
+		const draftId = getTabDraftId()
 		const draft: PendingSceneDraft = {
-			id: getTabDraftId(),
+			id: draftId,
 			createdAt: now,
 			expiresAt: now + PENDING_SCENE_TTL_MS,
 			sceneMeta: input.sceneMeta,
 			sceneData: input.sceneData,
-			optimizationSettings: input.optimizationSettings
+			optimizationSettings: input.optimizationSettings,
+			optimizedSceneBytes: input.optimizedSceneBytes ?? null,
+			clientSceneBytes: input.clientSceneBytes ?? null
 		}
 
 		await db.put(PENDING_SCENE_STORE_NAME, draft)
-		return true
+		return draftId
 	} catch (error) {
 		console.warn('[pending-scene-idb] failed to persist draft', error)
 		return false
@@ -125,11 +134,17 @@ export const savePendingSceneDraft = async (
 }
 
 /**
- * Loads the active tab's pending scene draft.
+ * Loads a pending scene draft from IndexedDB.
+ *
+ * When `draftId` is provided the lookup uses that id directly, which enables
+ * a newly opened tab (after OAuth) to restore the draft saved by the
+ * originating tab whose id was embedded in the redirect URL.
  *
  * Returns `null` when no valid draft is available.
  */
-export const loadPendingSceneDraft = async (): Promise<PendingSceneDraft | null> => {
+export const loadPendingSceneDraft = async (
+	draftId?: string | null
+): Promise<PendingSceneDraft | null> => {
 	if (!isClient()) {
 		return null
 	}
@@ -137,10 +152,10 @@ export const loadPendingSceneDraft = async (): Promise<PendingSceneDraft | null>
 	try {
 		await deleteExpiredDrafts()
 		const db = await getPendingSceneDB()
-		const draft = (await db.get(
-			PENDING_SCENE_STORE_NAME,
-			getTabDraftId()
-		)) as PendingSceneDraft | undefined
+		const resolvedId = draftId ?? getTabDraftId()
+		const draft = (await db.get(PENDING_SCENE_STORE_NAME, resolvedId)) as
+			| PendingSceneDraft
+			| undefined
 
 		if (!draft) {
 			return null

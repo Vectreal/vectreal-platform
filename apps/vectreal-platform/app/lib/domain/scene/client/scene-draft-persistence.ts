@@ -4,14 +4,16 @@ import { savePendingSceneDraft } from '../../../persistence/pending-scene-idb'
 import type { SceneMetaState } from '../../../../types/publisher-config'
 import type { Optimizations, SceneSettings, ServerSceneData } from '@vctrl/core'
 
-
-
 interface PersistPendingSceneDraftParams {
 	modelAvailable: boolean
 	prepareGltfDocumentForUpload: () => Promise<unknown>
 	sceneMetaState: SceneMetaState
 	currentSettings: SceneSettings
 	optimizationSettings: Optimizations | null
+	/** Byte size of the optimized scene, used to restore save-availability on hydration. */
+	optimizedSceneBytes?: number | null
+	/** Byte size of the raw client scene, used to restore save-availability on hydration. */
+	clientSceneBytes?: number | null
 }
 
 export const persistPendingSceneDraftOrchestrator = async ({
@@ -19,8 +21,10 @@ export const persistPendingSceneDraftOrchestrator = async ({
 	prepareGltfDocumentForUpload,
 	sceneMetaState,
 	currentSettings,
-	optimizationSettings
-}: PersistPendingSceneDraftParams): Promise<boolean> => {
+	optimizationSettings,
+	optimizedSceneBytes,
+	clientSceneBytes
+}: PersistPendingSceneDraftParams): Promise<string | false> => {
 	if (!modelAvailable) {
 		return false
 	}
@@ -52,6 +56,8 @@ export const persistPendingSceneDraftOrchestrator = async ({
 	return savePendingSceneDraft({
 		sceneMeta: sceneMetaState,
 		sceneData,
-		optimizationSettings
+		optimizationSettings,
+		optimizedSceneBytes,
+		clientSceneBytes
 	})
 }

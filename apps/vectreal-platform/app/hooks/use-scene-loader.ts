@@ -110,6 +110,8 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	const navigate = useNavigate()
 	const shouldRestorePendingDraft =
 		new URLSearchParams(location.search).get('restore_draft') === '1'
+	const pendingDraftId =
+		new URLSearchParams(location.search).get('draft_id') || null
 
 	const handleRestoreHandled = useCallback(() => {
 		if (!shouldRestorePendingDraft) {
@@ -122,6 +124,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		}
 
 		searchParams.delete('restore_draft')
+		searchParams.delete('draft_id')
 		const nextSearch = searchParams.toString()
 
 		navigate(
@@ -456,6 +459,8 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	 * Stores the current scene in IndexedDB before redirecting to auth.
 	 *
 	 * This preserves local publisher progress across OAuth/email auth navigations.
+	 * Returns the draft id string on success (to embed in the redirect URL for
+	 * cross-tab restoration) or false on failure.
 	 */
 	const persistPendingSceneDraft = useCallback(async () => {
 		return persistPendingSceneDraftOrchestrator({
@@ -463,14 +468,18 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			prepareGltfDocumentForUpload,
 			sceneMetaState,
 			currentSettings,
-			optimizationSettings: optimizationSettings ?? null
+			optimizationSettings: optimizationSettings ?? null,
+			optimizedSceneBytes: optimizedSceneBytes ?? null,
+			clientSceneBytes: clientSceneBytes ?? null
 		})
 	}, [
 		modelFile,
 		prepareGltfDocumentForUpload,
 		sceneMetaState,
 		currentSettings,
-		optimizationSettings
+		optimizationSettings,
+		optimizedSceneBytes,
+		clientSceneBytes
 	])
 
 	const { saveSceneSettings, saveAvailability } = useSceneSaveFlow({
@@ -505,6 +514,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	useSceneDraftRehydration({
 		pendingSceneHydratedRef,
 		shouldRestorePendingDraft,
+		draftId: pendingDraftId,
 		paramSceneId,
 		initialSceneAggregate,
 		fileModel: file?.model,
@@ -514,6 +524,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setIsDownloading,
 		inferOptimizationPreset,
 		setOptimizationState,
+		setOptimizationRuntime,
 		loadFromData,
 		setSceneMetaState,
 		setLastSavedSceneMeta
