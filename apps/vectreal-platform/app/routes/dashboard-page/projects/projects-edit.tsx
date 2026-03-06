@@ -39,6 +39,7 @@ import { z, ZodError } from 'zod'
 
 import { Route } from './+types/projects-edit'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
+import { validateAllowedDomainInput } from '../../../lib/domain/embed/embed-domain-policy'
 import {
 	getProject,
 	updateProject
@@ -60,7 +61,8 @@ const projectEditSchema = z.object({
 			/^[a-z0-9]+(?:-[a-z0-9]+)*$/,
 			'Slug must be lowercase letters, numbers, and hyphens only'
 		),
-	description: z.string().optional()
+	description: z.string().optional(),
+	allowedEmbedDomains: z.string().optional()
 })
 
 type ProjectEditFormValues = z.infer<typeof projectEditSchema>
@@ -98,13 +100,31 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 	const name = formData.get('name') as string
 	const slug = formData.get('slug') as string
+	const allowedEmbedDomainsRaw =
+		(formData.get('allowedEmbedDomains') as string | null) ?? ''
 
 	try {
 		const validatedData = projectEditSchema.parse({ name, slug })
+		const domainValidation = validateAllowedDomainInput(allowedEmbedDomainsRaw)
+		if (!domainValidation.ok) {
+			return {
+				error: 'Validation failed',
+				fieldErrors: {
+					allowedEmbedDomains: domainValidation.message
+				}
+			}
+		}
 
 		await updateProject(
 			projectId,
-			{ name: validatedData.name, slug: validatedData.slug },
+			{
+				name: validatedData.name,
+				slug: validatedData.slug,
+				allowedEmbedDomains:
+					domainValidation.patterns.length > 0
+						? domainValidation.patterns.join('\n')
+						: null
+			},
 			user.id
 		)
 
@@ -154,7 +174,8 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 		defaultValues: {
 			name: project.name,
 			slug: project.slug,
-			description: ''
+			description: '',
+			allowedEmbedDomains: project.allowedEmbedDomains ?? ''
 		}
 	})
 
@@ -211,7 +232,8 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 									<FormControl>
 										<SelectTrigger>
 											<SelectValue>
-												{projectOrg?.organization.name ?? project.organizationId}
+												{projectOrg?.organization.name ??
+													project.organizationId}
 											</SelectValue>
 										</SelectTrigger>
 									</FormControl>
@@ -311,6 +333,37 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 										) : (
 											<FormDescription>
 												Help your team understand the project&apos;s purpose
+											</FormDescription>
+										)}
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="allowedEmbedDomains"
+								render={({ field, fieldState }) => (
+									<FormItem>
+										<FormLabel>Allowed Embed Domains</FormLabel>
+										<FormControl>
+											<Textarea
+												{...field}
+												name="allowedEmbedDomains"
+												onChange={(e) => {
+													form.clearErrors('allowedEmbedDomains')
+													field.onChange(e)
+												}}
+												placeholder={'example.com\n*.example.com'}
+												className="min-h-28 font-mono"
+											/>
+										</FormControl>
+										{fieldState.error ? (
+											<FormMessage />
+										) : (
+											<FormDescription>
+												One domain pattern per line. Allowed formats are exact
+												hosts (example.com) or leading wildcard subdomains
+												(*.example.com).
 											</FormDescription>
 										)}
 									</FormItem>

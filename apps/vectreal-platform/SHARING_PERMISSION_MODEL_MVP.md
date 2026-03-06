@@ -7,6 +7,7 @@ This document locks the MVP authorization model for sharing across scene, folder
 Primary requirements:
 
 - External iframe preview must render only when provided valid identifiers and a valid preview API key.
+- External iframe preview must come from an allowed domain pattern configured on the project.
 - External iframe preview must return not found for draft scenes.
 - Draft scenes remain viewable by authenticated collaborators.
 - MVP collaborator source is existing organization membership.
@@ -17,6 +18,7 @@ Primary requirements:
 - **Authenticated collaborator principal**: Signed-in user with project access via organization membership.
 - **Draft scene**: Scene whose status is not `published`.
 - **Published scene**: Scene with status `published` and a published preview asset.
+- **Allowed embed domain pattern**: Exact host (`example.com`) or leading wildcard subdomain (`*.example.com`).
 
 ## Scope Matrix (MVP)
 
@@ -68,8 +70,23 @@ File: [app/lib/domain/auth/preview-api-key-auth.server.ts](app/lib/domain/auth/p
 - Key must be active, not revoked, not expired.
 - Key must be scoped to requested project.
 - API key organization must match project organization.
+- Request host policy in API-key mode:
+  - Request host is derived from `Referer` first, then `Origin`.
+  - Host is allowed if it matches configured project domain pattern.
+  - Internal same-host calls (preview page to preview API) are allowed.
+  - Missing headers are blocked except localhost-like development hosts.
 
 ## Data Access Rules (Repository Layer)
+
+### Project domain policy storage
+
+Files:
+
+- [app/db/schema/project/projects.ts](app/db/schema/project/projects.ts)
+- [app/routes/dashboard-page/projects/projects-edit.tsx](app/routes/dashboard-page/projects/projects-edit.tsx)
+
+- Allowed embed domains are stored on the project as newline-separated patterns.
+- Project settings validates input to exact host or leading wildcard host only.
 
 ### Published-only preview data
 
@@ -94,8 +111,15 @@ Files:
 
 ### Embed UX constraints
 
-File: [app/components/publisher/sidebars/publish-sidebar/sections/embed-options.tsx](app/components/publisher/sidebars/publish-sidebar/sections/embed-options.tsx)
+Files:
 
+- [app/components/publisher/sidebars/publish-sidebar/sections/embed-options.tsx](app/components/publisher/sidebars/publish-sidebar/sections/embed-options.tsx)
+- [app/routes/dashboard-page/projects/scene.tsx](app/routes/dashboard-page/projects/scene.tsx)
+- [app/lib/domain/embed/embed-snippet.ts](app/lib/domain/embed/embed-snippet.ts)
+
+- Publisher and dashboard embed surfaces use one shared snippet builder.
+- Canonical embed URL is `/preview/fullscreen/:projectId/:sceneId?token=YOUR_PREVIEW_API_KEY`.
+- Canonical embed format is responsive wrapper markup containing an iframe.
 - Embed snippets must communicate that external iframe access requires a preview API key.
 - Embed snippets must communicate that draft scenes are not externally embeddable.
 
@@ -109,6 +133,7 @@ File: [app/components/publisher/sidebars/publish-sidebar/sections/publish-option
 
 - Missing required identifiers: `400`.
 - Rate limited token validation: `429`.
+- Disallowed embed domain in API-key flow: `403`.
 - Draft or non-existent scene in external/API-key preview flow: `404`.
 - Session-authenticated collaborator without access: conceal with not found where applicable in scene-level reads.
 
@@ -119,3 +144,7 @@ File: [app/components/publisher/sidebars/publish-sidebar/sections/publish-option
 - Draft scenes are not externally embeddable and must return not found in API-key flow.
 - Draft scenes remain viewable by authenticated collaborators.
 - Collaborator set in MVP = existing organization members with project access.
+- Allowed domains are configured per project.
+- Allowed domain grammar is exact host + leading wildcard subdomain only.
+- Missing `Referer`/`Origin` is blocked except localhost-like development hosts.
+- Share deliverables are out of scope for MVP; embed deliverables are in scope.

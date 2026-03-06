@@ -20,7 +20,6 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger
 } from '@shared/components/ui/dropdown-menu'
-import { Textarea } from '@shared/components/ui/textarea'
 import { cn } from '@shared/utils'
 import { getSerializedAssetByteSize, type ServerSceneData } from '@vctrl/core'
 import {
@@ -32,7 +31,6 @@ import { useSetAtom } from 'jotai/react'
 import {
 	ChevronDown,
 	ChevronRight,
-	Copy,
 	ExternalLink,
 	Info,
 	LayoutDashboard,
@@ -40,14 +38,16 @@ import {
 	Trash2,
 	X
 } from 'lucide-react'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 
 import { Route } from './+types/scene'
 import CenteredSpinner from '../../../components/centered-spinner'
 import { InlineEditableMetadataField } from '../../../components/dashboard/inline-editable-metadata-field'
+import { EmbedOptionsPanel } from '../../../components/embed/embed-options-panel'
 import { ClientVectrealViewer } from '../../../components/viewer/client-vectreal-viewer'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
+import { buildFullscreenPreviewPath } from '../../../lib/domain/embed/embed-snippet'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
 import { buildSceneAggregate } from '../../../lib/domain/scene/server/scene-aggregate.server'
 import {
@@ -286,13 +286,15 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 	>('idle')
 	const [drawerOpen, setDrawerOpen] = useState(false)
 	const [copiedLink, setCopiedLink] = useState(false)
-	const [copiedEmbed, setCopiedEmbed] = useState(false)
 
 	const isMountedRef = useRef(true)
 	const activeSceneIdRef = useRef<string | null>(sceneId)
 	const metadataResetTimerRef = useRef<number | null>(null)
 
-	const fullscreenPreviewPath = `/preview/fullscreen/${project.id}/${sceneState.id}`
+	const fullscreenPreviewPath = buildFullscreenPreviewPath({
+		projectId: project.id,
+		sceneId: sceneState.id
+	})
 	const productPreviewPath = `/preview/product-detail/${project.id}/${sceneState.id}`
 	const dashboardPath = `/dashboard/projects/${project.id}/${sceneState.id}`
 	const sceneNameTrimmed = sceneNameDraft.trim()
@@ -301,11 +303,6 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		sceneNameTrimmed.length > 0 && sceneNameTrimmed !== sceneState.name
 	const isDescriptionUnsaved = sceneDescriptionDraft !== sceneDescriptionCurrent
 	const isMetadataUnsaved = isTitleUnsaved || isDescriptionUnsaved
-	const embedSnippet = useMemo(
-		() =>
-			`<iframe\n  src="${fullscreenPreviewPath}"\n  width="100%"\n  height="640"\n  allow="autoplay; xr-spatial-tracking"\n  allowfullscreen\n  frameborder="0"\n></iframe>`,
-		[fullscreenPreviewPath]
-	)
 
 	useEffect(() => {
 		isMountedRef.current = true
@@ -407,16 +404,6 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		await navigator.clipboard.writeText(absoluteLink)
 		setCopiedLink(true)
 		window.setTimeout(() => setCopiedLink(false), 1500)
-	}
-
-	async function handleCopyEmbedSnippet() {
-		if (!navigator?.clipboard) {
-			return
-		}
-
-		await navigator.clipboard.writeText(embedSnippet)
-		setCopiedEmbed(true)
-		window.setTimeout(() => setCopiedEmbed(false), 1500)
 	}
 
 	const getSceneSettings = useCallback(async () => {
@@ -873,24 +860,10 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 
 						<section className="space-y-3">
 							<h3 className="text-sm font-semibold tracking-tight">Embed</h3>
-							<p className="text-muted-foreground text-xs">
-								Use this iframe snippet to embed the fullscreen preview.
-							</p>
-							<Textarea
-								value={embedSnippet}
-								readOnly
-								className="h-36 font-mono text-xs"
+							<EmbedOptionsPanel
+								sceneId={sceneState.id}
+								projectId={project.id}
 							/>
-							<div className="flex items-center justify-end">
-								<Button
-									variant="secondary"
-									size="sm"
-									onClick={handleCopyEmbedSnippet}
-								>
-									<Copy className="mr-2 h-3.5 w-3.5" />
-									{copiedEmbed ? 'Copied' : 'Copy Embed'}
-								</Button>
-							</div>
 						</section>
 
 						<section className="space-y-3 border-t pt-3">

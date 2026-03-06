@@ -234,6 +234,9 @@ async function authorizePreviewRequest(request: Request, projectId: string) {
 			if (validation.error === 'rate_limited') {
 				return withNoStoreHeaders(ApiResponse.error('Too many requests', 429))
 			}
+			if (validation.error === 'domain_not_allowed') {
+				return withNoStoreHeaders(ApiResponse.forbidden('Forbidden'))
+			}
 
 			return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 		}

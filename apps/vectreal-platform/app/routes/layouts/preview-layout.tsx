@@ -45,6 +45,9 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 			if (authResult.error === 'rate_limited') {
 				return withNoStoreHeaders(ApiResponse.error('Too many requests', 429))
 			}
+			if (authResult.error === 'domain_not_allowed') {
+				return withNoStoreHeaders(ApiResponse.forbidden('Forbidden'))
+			}
 
 			return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 		}

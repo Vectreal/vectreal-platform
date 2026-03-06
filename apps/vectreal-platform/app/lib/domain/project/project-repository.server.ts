@@ -118,7 +118,9 @@ export async function createProject(
 
 export async function updateProject(
 	projectId: string,
-	updates: Partial<Pick<typeof projects.$inferSelect, 'name' | 'slug'>>,
+	updates: Partial<
+		Pick<typeof projects.$inferSelect, 'name' | 'slug' | 'allowedEmbedDomains'>
+	>,
 	userId: string
 ): Promise<typeof projects.$inferSelect> {
 	const result = await getProjectWithMembership(db, projectId, userId)
