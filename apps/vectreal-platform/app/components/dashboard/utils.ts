@@ -3,7 +3,6 @@
  * @description Utility functions for parsing and validating dashboard routes
  */
 
-
 import { DASHBOARD_CONTENT } from '../../constants/dashboard'
 import { UUID_REGEX } from '../../constants/utility-constants'
 
@@ -45,6 +44,7 @@ export const isValidDashboardView = (view: string): view is DashboardView => {
 	const validViews: DashboardView[] = [
 		'dashboard',
 		'projects',
+		'api-keys',
 		'organizations',
 		'settings'
 	]
@@ -90,6 +90,7 @@ export const getTitleContent = (view: DashboardView): TitleContent | null => {
 	> = {
 		dashboard: 'dashboard',
 		projects: 'project-list',
+		'api-keys': 'api-keys',
 		organizations: 'organizations',
 		settings: 'settings'
 	}
@@ -179,6 +180,11 @@ export const getRouteContext = (
 		return 'project-list'
 	}
 
+	// API keys route
+	if (view === 'api-keys') {
+		return 'api-keys'
+	}
+
 	// Organizations route
 	if (view === 'organizations') {
 		return 'organizations'
@@ -192,3 +198,9 @@ export const getRouteContext = (
 	// Dashboard home
 	return 'dashboard'
 }
+
+export const identifyDrawerRoute = (pathname: string) =>
+	pathname === '/dashboard/projects/new' ||
+	pathname === '/dashboard/api-keys/new' ||
+	/^\/dashboard\/projects\/[^/]+\/edit$/.test(pathname) ||
+	/^\/dashboard\/api-keys\/[^/]+\/edit$/.test(pathname)

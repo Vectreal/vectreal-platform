@@ -47,7 +47,7 @@ const manageLinks = [
 	},
 	{
 		title: 'API Keys',
-		url: '/dashboard/api-keys/:projectId',
+		url: '/dashboard/api-keys',
 		icon: KeyRound
 	},
 	{

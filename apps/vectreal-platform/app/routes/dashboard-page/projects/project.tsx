@@ -14,7 +14,7 @@ import { DataTable } from '../../../components/dashboard/data-table'
 import {
 	createContentColumns,
 	type ContentRow
-} from '../../../components/dashboard/project-table-columns'
+} from '../../../components/dashboard/table-columns'
 import { ProjectContentSkeleton } from '../../../components/skeletons'
 import { useDashboardSceneActions } from '../../../hooks/use-dashboard-scene-actions'
 import { useDashboardTableState } from '../../../hooks/use-dashboard-table-state'

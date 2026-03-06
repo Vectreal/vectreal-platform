@@ -12,6 +12,7 @@ import {
 export const DASHBOARD_ROUTES = {
 	DASHBOARD: '/dashboard',
 	PROJECTS: '/dashboard/projects',
+	API_KEYS: '/dashboard/api-keys',
 	ORGANIZATIONS: '/dashboard/organizations',
 	SETTINGS: '/dashboard/settings',
 	PROJECT_DETAIL: (projectId: string) => `/dashboard/projects/${projectId}`,
@@ -39,6 +40,13 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 		loadingTitle: <Skeleton className="h-6 w-1/3" />,
 		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: ACTION_VARIANT.PROJECT_LIST
+	},
+	'api-keys': {
+		title: 'API Keys',
+		description: 'Manage project-scoped API keys for preview and embed access',
+		loadingTitle: <Skeleton className="h-6 w-1/3" />,
+		loadingDescription: <Skeleton className="h-4 w-1/3" />,
+		actionVariant: ACTION_VARIANT.API_KEYS_LIST
 	},
 	'project-detail': {
 		title: 'Project',

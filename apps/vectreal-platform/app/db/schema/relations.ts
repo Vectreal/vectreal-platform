@@ -24,7 +24,8 @@ export const organizationsRelations = relations(
 			references: [users.id]
 		}),
 		projects: many(projects),
-		memberships: many(organizationMemberships)
+		memberships: many(organizationMemberships),
+		apiKeys: many(apiKeys)
 	})
 )
 
@@ -42,6 +43,10 @@ export const apiKeysRelations = relations(apiKeys, ({ one, many }) => ({
 	user: one(users, {
 		fields: [apiKeys.userId],
 		references: [users.id]
+	}),
+	organization: one(organizations, {
+		fields: [apiKeys.organizationId],
+		references: [organizations.id]
 	}),
 	projects: many(apiKeyProjects)
 }))

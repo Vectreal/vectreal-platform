@@ -13,6 +13,7 @@ import type { ReactNode } from 'react'
 export enum ACTION_VARIANT {
 	CREATE_PROJECT = 'create-project',
 	PROJECT_LIST = 'projects-list',
+	API_KEYS_LIST = 'api-keys-list',
 	PROJECT_DETAIL = 'project-detail',
 	FOLDER_DETAIL = 'folder-detail',
 	SCENE_DETAIL = 'scene-detail',
@@ -22,6 +23,7 @@ export enum ACTION_VARIANT {
 
 export type DashboardView =
 	| 'projects'
+	| 'api-keys'
 	| 'organizations'
 	| 'settings'
 	| 'dashboard'
@@ -32,6 +34,7 @@ export type DashboardView =
 export type RouteContext =
 	| 'dashboard'
 	| 'project-list'
+	| 'api-keys'
 	| 'project-detail'
 	| 'folder-detail'
 	| 'scene-detail'
