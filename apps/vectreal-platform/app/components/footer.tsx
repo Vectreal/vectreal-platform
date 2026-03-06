@@ -38,22 +38,13 @@ export const Footer = () => {
 						</h3>
 						<ul className="flex flex-col gap-4">
 							<li className="text-foreground list-item">
-								<Link to="/viewer-library">Viewer Library</Link>
+								<Link to="/publisher">Publisher</Link>
 							</li>
 							<li className="text-foreground list-item">
-								<Link to="/react-hooks-library">React Hooks Library</Link>
+								<Link to="/dashboard">Dashboard</Link>
 							</li>
 							<li className="text-foreground list-item">
-								<Link to="/core-library">Core Library</Link>
-							</li>
-							<li className="text-foreground list-item">
-								<Link to="/features">Features</Link>
-							</li>
-							<li className="text-foreground list-item">
-								<Link to="/pricing">Pricing</Link>
-							</li>
-							<li className="text-foreground list-item">
-								<Link to="/docs">Documentation</Link>
+								<Link to="/home">Home</Link>
 							</li>
 							<li className="text-foreground list-item">
 								<Link to="https://github.com/Vectreal/vectreal-platform/releases">

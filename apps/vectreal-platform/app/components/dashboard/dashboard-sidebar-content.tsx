@@ -38,8 +38,15 @@ import { Link, useFetcher } from 'react-router'
 
 import type { User } from '@supabase/supabase-js'
 
+interface SidebarLinkItem {
+	title: string
+	url?: string
+	icon: typeof List
+	disabled?: boolean
+}
+
 // Menu items
-const manageLinks = [
+const manageLinks: SidebarLinkItem[] = [
 	{
 		title: 'Projects',
 		url: '/dashboard/projects',
@@ -52,19 +59,17 @@ const manageLinks = [
 	},
 	{
 		title: 'Assets',
-		url: '/dashboard/assets/:projectId',
 		icon: BoxesIcon,
 		disabled: true // TODO: Implement asset management
 	},
 	{
 		title: 'Presets',
-		url: '/dashboard/presets/:projectId',
 		icon: SquareStack,
 		disabled: true // TODO: Implement presets management
 	}
 ]
 
-const quickLinks = [
+const quickLinks: SidebarLinkItem[] = [
 	{
 		title: 'Upload Model',
 		url: '/publisher',
@@ -132,10 +137,20 @@ const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
 									}
 								>
 									<SidebarMenuButton disabled={item.disabled} asChild>
-										<Link viewTransition to={item.url}>
-											<item.icon />
-											<span>{item.title}</span>
-										</Link>
+										{item.disabled || !item.url ? (
+											<div>
+												<item.icon />
+												<span>{item.title}</span>
+												<span className="text-muted-foreground ml-auto text-xs">
+													Coming soon
+												</span>
+											</div>
+										) : (
+											<Link viewTransition to={item.url}>
+												<item.icon />
+												<span>{item.title}</span>
+											</Link>
+										)}
 									</SidebarMenuButton>
 								</SidebarMenuItem>
 							))}
