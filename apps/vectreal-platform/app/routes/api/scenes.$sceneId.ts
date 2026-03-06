@@ -234,8 +234,11 @@ async function authorizePreviewRequest(request: Request, projectId: string) {
 			if (validation.error === 'rate_limited') {
 				return withNoStoreHeaders(ApiResponse.error('Too many requests', 429))
 			}
+			if (validation.error === 'domain_not_allowed') {
+				return withNoStoreHeaders(ApiResponse.forbidden('Forbidden'))
+			}
 
-			return withNoStoreHeaders(ApiResponse.unauthorized('Unauthorized'))
+			return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 		}
 
 		return { mode: 'apiKey' as const, userId: null }
@@ -243,12 +246,12 @@ async function authorizePreviewRequest(request: Request, projectId: string) {
 
 	const sessionAuth = await getAuthUser(request)
 	if (sessionAuth instanceof Response) {
-		return withNoStoreHeaders(ApiResponse.unauthorized('Unauthorized'))
+		return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 	}
 
 	const project = await getProject(projectId, sessionAuth.user.id)
 	if (!project) {
-		return withNoStoreHeaders(ApiResponse.forbidden('Forbidden'))
+		return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 	}
 
 	return { mode: 'session' as const, userId: sessionAuth.user.id }

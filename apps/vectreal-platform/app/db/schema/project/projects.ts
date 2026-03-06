@@ -12,7 +12,8 @@ export const projects = pgTable(
 			.notNull()
 			.references(() => organizations.id, { onDelete: 'cascade' }),
 		name: text('name').notNull(),
-		slug: text('slug').notNull().unique()
+		slug: text('slug').notNull().unique(),
+		allowedEmbedDomains: text('allowed_embed_domains')
 	},
 	(table) => [
 		index('projects_organization_id_idx').on(table.organizationId),

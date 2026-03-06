@@ -36,6 +36,13 @@
       "when": 1772672711115,
       "tag": "0004_smiling_domino",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1772761296361,
+      "tag": "0005_slow_kinsey_walden",
+      "breakpoints": true
     }
   ]
 }

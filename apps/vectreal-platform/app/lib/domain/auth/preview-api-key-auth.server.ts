@@ -6,6 +6,12 @@ import { getDbClient } from '../../../db/client'
 import { apiKeyProjects } from '../../../db/schema/auth/api-key-projects'
 import { apiKeys } from '../../../db/schema/auth/api-keys'
 import { projects } from '../../../db/schema/project/projects'
+import {
+	extractHostFromHeader,
+	isAllowedEmbedHost,
+	isLocalhostLike,
+	parseAllowedDomainPatterns
+} from '../embed/embed-domain-policy'
 
 const db = getDbClient()
 
@@ -94,8 +100,35 @@ export type PreviewApiKeyValidationResult =
 	  }
 	| {
 			ok: false
-			error: 'missing_token' | 'invalid_token' | 'rate_limited'
+			error:
+				| 'missing_token'
+				| 'invalid_token'
+				| 'rate_limited'
+				| 'domain_not_allowed'
 	  }
+
+type RequestHostContext = {
+	host: string | null
+	source: 'referer' | 'origin' | 'missing'
+}
+
+function normalizeHost(host: string): string {
+	return host.toLowerCase().trim().replace(/\.+$/, '')
+}
+
+function getRequestHostContext(request: Request): RequestHostContext {
+	const refererHost = extractHostFromHeader(request.headers.get('referer'))
+	if (refererHost) {
+		return { host: refererHost, source: 'referer' }
+	}
+
+	const originHost = extractHostFromHeader(request.headers.get('origin'))
+	if (originHost) {
+		return { host: originHost, source: 'origin' }
+	}
+
+	return { host: null, source: 'missing' }
+}
 
 export async function validatePreviewApiKeyForProject(params: {
 	request: Request
@@ -124,7 +157,8 @@ export async function validatePreviewApiKeyForProject(params: {
 			projectId: apiKeyProjects.projectId,
 			userId: apiKeys.userId,
 			apiKeyOrgId: apiKeys.organizationId,
-			projectOrgId: projects.organizationId
+			projectOrgId: projects.organizationId,
+			allowedEmbedDomains: projects.allowedEmbedDomains
 		})
 		.from(apiKeys)
 		.innerJoin(apiKeyProjects, eq(apiKeyProjects.apiKeyId, apiKeys.id))
@@ -149,6 +183,29 @@ export async function validatePreviewApiKeyForProject(params: {
 	if (matches[0].apiKeyOrgId !== matches[0].projectOrgId) {
 		trackFailedAttempt(clientIdentifier)
 		return { ok: false, error: 'invalid_token' }
+	}
+
+	const allowedDomains = parseAllowedDomainPatterns(
+		matches[0].allowedEmbedDomains
+	)
+	const { host: requesterHost, source: requesterHostSource } =
+		getRequestHostContext(request)
+	const applicationHost = normalizeHost(new URL(request.url).hostname)
+
+	const allowByLocalhostFallback =
+		requesterHostSource === 'missing' && isLocalhostLike(applicationHost)
+
+	const allowByInternalHost =
+		requesterHost !== null && requesterHost === applicationHost
+
+	const allowByAllowedDomain =
+		requesterHost !== null && isAllowedEmbedHost(requesterHost, allowedDomains)
+
+	if (
+		!(allowByLocalhostFallback || allowByInternalHost || allowByAllowedDomain)
+	) {
+		trackFailedAttempt(clientIdentifier)
+		return { ok: false, error: 'domain_not_allowed' }
 	}
 
 	await db

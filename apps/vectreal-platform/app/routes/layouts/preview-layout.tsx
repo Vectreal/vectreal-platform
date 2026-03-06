@@ -45,8 +45,11 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 			if (authResult.error === 'rate_limited') {
 				return withNoStoreHeaders(ApiResponse.error('Too many requests', 429))
 			}
+			if (authResult.error === 'domain_not_allowed') {
+				return withNoStoreHeaders(ApiResponse.forbidden('Forbidden'))
+			}
 
-			return withNoStoreHeaders(ApiResponse.unauthorized('Unauthorized'))
+			return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 		}
 
 		authMode = 'apiKey'
@@ -54,12 +57,12 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	} else {
 		const sessionAuth = await getAuthUser(request)
 		if (sessionAuth instanceof Response) {
-			return withNoStoreHeaders(ApiResponse.unauthorized('Unauthorized'))
+			return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 		}
 
 		const project = await getProject(projectId, sessionAuth.user.id)
 		if (!project) {
-			return withNoStoreHeaders(ApiResponse.forbidden('Forbidden'))
+			return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 		}
 
 		authMode = 'session'
@@ -73,7 +76,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		}
 	} else {
 		if (!sessionUserId) {
-			return withNoStoreHeaders(ApiResponse.unauthorized('Unauthorized'))
+			return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 		}
 
 		const scene = await getScene(sceneId, sessionUserId)
