@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ADD COLUMN "allowed_embed_domains" text;
