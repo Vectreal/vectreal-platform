@@ -10,6 +10,7 @@ import { ComponentProps } from 'react'
 interface ButtonProps extends ComponentProps<'button'> {
 	info: string
 	size?: 'icon' | 'sm'
+	variant?: ComponentProps<typeof Button>['variant']
 }
 
 const TooltipButton = ({

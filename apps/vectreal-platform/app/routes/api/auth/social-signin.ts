@@ -8,19 +8,18 @@ import { createSupabaseClient } from '../../../lib/supabase.server'
 export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData()
 	const provider = formData.get('provider')
-	const backURL = formData.get('backURL') || undefined
-
-	const applicationUrl = String(
-		backURL
-			? new URL(backURL.toString(), request.url).toString()
-			: process.env.APPLICATION_URL
-	)
+	const backURL = formData.get('backURL')
+	const requestUrl = new URL(request.url)
+	const applicationUrl = String(process.env.APPLICATION_URL || requestUrl.origin)
 
 	const cleanAppUrl = applicationUrl.endsWith('/')
 		? applicationUrl.slice(0, -1)
 		: applicationUrl
 
-	const redirectTo = `${cleanAppUrl}/auth/callback`
+	const backUrlValue = typeof backURL === 'string' ? backURL : '/dashboard'
+	const resolvedBackUrl = new URL(backUrlValue, requestUrl)
+	const next = `${resolvedBackUrl.pathname}${resolvedBackUrl.search}${resolvedBackUrl.hash}`
+	const redirectTo = `${cleanAppUrl}/auth/callback?next=${encodeURIComponent(next)}`
 
 	if (typeof provider !== 'string') {
 		return ApiResponse.badRequest('Invalid provider')

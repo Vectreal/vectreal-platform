@@ -34,5 +34,7 @@
 	button,
 	a {
 		cursor: pointer;
+		text-decoration: none;
+		transition: color 0.2s ease;
 	}
 }

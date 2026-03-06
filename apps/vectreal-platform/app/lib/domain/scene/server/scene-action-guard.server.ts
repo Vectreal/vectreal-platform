@@ -1,11 +1,11 @@
 import { and, eq, lt, sql } from 'drizzle-orm'
 
-import { getDbClient } from '../../../db/client'
+import { getDbClient } from '../../../../db/client'
 import {
 	sceneActionLocks,
 	sceneActionRequests,
 	sceneRuntimeLimits
-} from '../../../db/schema'
+} from '../../../../db/schema'
 
 const HEAVY_SCENE_ACTION_LIMIT_KEY = 'heavy_scene_actions'
 const DEFAULT_IDEMPOTENCY_TTL_HOURS = 24

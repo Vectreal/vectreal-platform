@@ -19,6 +19,7 @@ import { useParams } from 'react-router'
 
 import { Route } from './+types/publisher.$sceneId'
 import { DropZone } from './drop-zone'
+import CenteredSpinner from '../../components/centered-spinner'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import {
 	processAtom,
@@ -171,7 +172,18 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 		<div className="-z-0 grow overflow-clip">
 			<Suspense fallback={null}>
 				<AnimatePresence mode="wait">
-					{file?.model || isLoading ? (
+					{!file?.model && isDownloading ? (
+						<motion.div
+							key="idb-rehydration-spinner"
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							transition={{ duration: 0.25 }}
+							className="relative flex h-full w-full items-center justify-center"
+						>
+							<CenteredSpinner text="Restoring saved draft..." />
+						</motion.div>
+					) : file?.model || isLoading ? (
 						<motion.div
 							key="model-viewer"
 							initial={{ opacity: 0 }}

@@ -11,6 +11,7 @@ import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { X } from 'lucide-react'
 import { type FC } from 'react'
 
+import { SaveAvailabilityState } from '../../../hooks'
 import { PublishSidebarContent } from '../sidebars/publish-sidebar'
 
 import type { SceneStatsData } from '../../../types/api'
@@ -21,11 +22,14 @@ interface PublishDrawerProps {
 	onOpenChange: (nextOpen: boolean) => void
 	sceneId?: string
 	projectId?: string
+	userId?: string
+	onRequireAuth?: () => Promise<void> | void
 	saveSceneSettings: () => Promise<
 		| { sceneId?: string; unchanged?: boolean; [key: string]: unknown }
 		| { unchanged: true }
 		| undefined
 	>
+	saveAvailability: SaveAvailabilityState
 	info: OptimizationInfo
 	report?: OptimizationReport | null
 	publishedAt?: string | null
@@ -43,7 +47,10 @@ export const PublishDrawer: FC<PublishDrawerProps> = ({
 	onOpenChange,
 	sceneId,
 	projectId,
+	userId,
+	onRequireAuth,
 	saveSceneSettings,
+	saveAvailability,
 	info,
 	report,
 	publishedAt,
@@ -74,12 +81,15 @@ export const PublishDrawer: FC<PublishDrawerProps> = ({
 					showSceneInfo
 					sceneId={sceneId}
 					projectId={projectId}
+					userId={userId}
+					onRequireAuth={onRequireAuth}
 					saveSceneSettings={saveSceneSettings}
 					info={info}
 					report={report}
 					publishedAt={publishedAt}
 					sizeInfo={sizeInfo}
 					stats={stats}
+					saveAvailability={saveAvailability}
 				/>
 			</DrawerContent>
 		</Drawer>

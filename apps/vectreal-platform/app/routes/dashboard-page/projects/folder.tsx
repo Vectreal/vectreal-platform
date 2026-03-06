@@ -26,7 +26,7 @@ import {
 	getFolderScenes,
 	getSceneFolder,
 	getSceneFolderAncestry
-} from '../../../lib/domain/scene/scene-folder-repository.server'
+} from '../../../lib/domain/scene/server/scene-folder-repository.server'
 import {
 	deleteDialogAtom,
 	renameDialogAtom

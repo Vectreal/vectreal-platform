@@ -16,7 +16,7 @@ import {
 	getRecentScenes
 } from '../../lib/domain/dashboard/dashboard-stats.server'
 import { getUserProjects } from '../../lib/domain/project/project-repository.server'
-import { getProjectsScenes } from '../../lib/domain/scene/scene-folder-repository.server'
+import { getProjectsScenes } from '../../lib/domain/scene/server/scene-folder-repository.server'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 

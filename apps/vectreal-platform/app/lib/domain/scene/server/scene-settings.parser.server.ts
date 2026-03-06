@@ -2,11 +2,11 @@ import { JSONDocument } from '@gltf-transform/core'
 import { ApiResponse } from '@shared/utils'
 import { OptimizationReport, Optimizations } from '@vctrl/core'
 
-import { UUID_REGEX } from '../../../constants/utility-constants'
-import { parseActionRequest } from '../../http/requests.server'
+import { UUID_REGEX } from '../../../../constants/utility-constants'
+import { parseActionRequest } from '../../../http/requests.server'
 
-import type { SceneSettingsRequest } from '../../../types/api'
-import type { SceneMetaState } from '../../../types/publisher-config'
+import type { SceneSettingsRequest } from '../../../../types/api'
+import type { SceneMetaState } from '../../../../types/publisher-config'
 
 /**
  * Request parser for scene settings API operations.

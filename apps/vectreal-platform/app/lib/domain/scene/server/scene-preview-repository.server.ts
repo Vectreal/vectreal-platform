@@ -1,8 +1,8 @@
 import { and, eq } from 'drizzle-orm'
 
-import { getDbClient } from '../../../db/client'
-import { scenePublished } from '../../../db/schema/project/scene-published'
-import { scenes } from '../../../db/schema/project/scenes'
+import { getDbClient } from '../../../../db/client'
+import { scenePublished } from '../../../../db/schema/project/scene-published'
+import { scenes } from '../../../../db/schema/project/scenes'
 
 const db = getDbClient()
 

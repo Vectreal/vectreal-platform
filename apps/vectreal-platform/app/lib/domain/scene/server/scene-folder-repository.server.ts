@@ -1,12 +1,12 @@
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm'
 
-import { getDbClient } from '../../../db/client'
-import { organizationMemberships } from '../../../db/schema/core/organization-memberships'
-import { projects } from '../../../db/schema/project/projects'
-import { sceneFolders } from '../../../db/schema/project/scene-folders'
-import { scenes } from '../../../db/schema/project/scenes'
+import { getDbClient } from '../../../../db/client'
+import { organizationMemberships } from '../../../../db/schema/core/organization-memberships'
+import { projects } from '../../../../db/schema/project/projects'
+import { sceneFolders } from '../../../../db/schema/project/scene-folders'
+import { scenes } from '../../../../db/schema/project/scenes'
 
-import type { SceneMetadataUpdateInput } from '../../../types/api'
+import type { SceneMetadataUpdateInput } from '../../../../types/api'
 
 const db = getDbClient()
 const MAX_FOLDER_ANCESTRY_DEPTH = 50

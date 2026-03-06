@@ -12,8 +12,8 @@ import {
 	releaseHeavySceneActionToken,
 	releaseSceneWriteLock,
 	reserveIdempotentSceneRequest
-} from '../../lib/domain/scene/scene-action-guard.server'
-import { buildSceneAggregate } from '../../lib/domain/scene/scene-aggregate.server'
+} from '../../lib/domain/scene/server/scene-action-guard.server'
+import { buildSceneAggregate } from '../../lib/domain/scene/server/scene-aggregate.server'
 import {
 	createSceneFolder,
 	deleteSceneFolder,
@@ -22,10 +22,10 @@ import {
 	renameSceneFolder,
 	renameScene,
 	updateSceneMetadata
-} from '../../lib/domain/scene/scene-folder-repository.server'
-import { getPublishedScenePreview } from '../../lib/domain/scene/scene-preview-repository.server'
-import * as sceneSettingsOps from '../../lib/domain/scene/scene-settings.operations.server'
-import { SceneSettingsParser } from '../../lib/domain/scene/scene-settings.parser.server'
+} from '../../lib/domain/scene/server/scene-folder-repository.server'
+import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
+import * as sceneSettingsOps from '../../lib/domain/scene/server/scene-settings.operations.server'
+import { SceneSettingsParser } from '../../lib/domain/scene/server/scene-settings.parser.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 import { ensurePost, parseActionRequest } from '../../lib/http/requests.server'
 

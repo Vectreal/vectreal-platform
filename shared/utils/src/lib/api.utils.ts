@@ -11,14 +11,14 @@ function mergeHeaders(
 	}
 
 	if (additionalHeaders instanceof Headers) {
-		for (const [key, value] of additionalHeaders.entries()) {
+		additionalHeaders.forEach((value, key) => {
 			if (key.toLowerCase() === 'set-cookie') {
 				headers.append(key, value)
-				continue
+				return
 			}
 
 			headers.set(key, value)
-		}
+		})
 		return headers
 	}
 

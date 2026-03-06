@@ -1,3 +1,4 @@
+import { VectrealLogoSmall } from '@shared/components/assets/icons/vectreal-logo-small'
 import {
 	Tabs,
 	TabsContent,
@@ -107,9 +108,13 @@ const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
 						transition={{ type: 'ease', duration: 0.3 }}
 						className="bg-muted/50 border- relative z-20 m-4 h-full w-92 flex-col overflow-hidden rounded-xl border shadow-xl backdrop-blur-2xl"
 					>
-						<div className="flex w-full items-center gap-2 pl-4">
-							{user && (
+						<div className="flex w-full items-center gap-2 p-2 pb-0">
+							{user ? (
 								<UserMenu size="sm" user={user} onLogout={handleLogout} />
+							) : (
+								<TooltipButton size="icon" info="Go to dashboard">
+									<VectrealLogoSmall className="text-muted-foreground h-5 w-5" />
+								</TooltipButton>
 							)}
 
 							<SceneNameInput />

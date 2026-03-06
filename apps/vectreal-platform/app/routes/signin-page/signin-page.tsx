@@ -7,7 +7,7 @@ import {
 	TooltipTrigger
 } from '@shared/components/ui/tooltip'
 import { ApiResponse } from '@shared/utils'
-import { Eye, EyeClosed } from 'lucide-react'
+import { Eye, EyeClosed, Save } from 'lucide-react'
 import { useState } from 'react'
 import { data, Form, redirect } from 'react-router'
 
@@ -36,6 +36,17 @@ function validateSignin(formData: FormData) {
 	return { errors, data }
 }
 
+const getSafeNext = (request: Request) => {
+	const requestUrl = new URL(request.url)
+	const next = requestUrl.searchParams.get('next')
+
+	if (!next || !next.startsWith('/')) {
+		return '/dashboard'
+	}
+
+	return next
+}
+
 export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData()
 	const {
@@ -54,9 +65,9 @@ export async function action({ request }: Route.ActionArgs) {
 
 	if (data?.user && data.session) {
 		const additionalHeaders = new Headers(headers)
+		const next = getSafeNext(request)
 
-		// Default redirect to dashboard
-		return redirect('/dashboard', {
+		return redirect(next, {
 			headers: additionalHeaders
 		})
 	}
@@ -73,8 +84,7 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 	} = await client.auth.getUser()
 
 	if (user) {
-		// Default redirect
-		return redirect('/dashboard', { headers })
+		return redirect(getSafeNext(request), { headers })
 	}
 
 	// Check if this is a scene preservation flow
@@ -103,15 +113,15 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	return (
 		<div className="w-full max-w-md">
 			{loaderData?.sceneSaved && (
-				<div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-					<p className="font-medium">
-						<span role="img" aria-label="celebration">
-							🎉
-						</span>{' '}
-						Scene Saved Temporarily!
-					</p>
-					<p>
-						Your scene configuration has been saved. Sign in with Google or
+				<div className="mb-6 space-y-2 rounded-lg border border-green-300/50 bg-green-300/25 p-4 text-sm text-green-200/80">
+					<span className="flex gap-2">
+						<Save className="h-4 w-4 text-inherit" aria-hidden="true" />
+						<p className="font-medium! text-inherit!">
+							Scene Saved Temporarily!
+						</p>
+					</span>
+					<p className="text-green-200/60!">
+						Your scene configuration has been saved. Sign up with Google or
 						GitHub to convert to a permanent account and access your scene.
 					</p>
 				</div>
