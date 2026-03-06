@@ -13,7 +13,7 @@ import { AnimatePresence } from 'framer-motion'
 import { useAtom } from 'jotai/react'
 import { BarChart4, Camera, SidebarIcon } from 'lucide-react'
 import { useCallback } from 'react'
-import { useFetcher } from 'react-router'
+import { Link, useFetcher } from 'react-router'
 
 import { ComposeSidebar } from './compose-sidebar'
 import { OptimizeSidebar } from './optimize-sidebar'
@@ -112,8 +112,10 @@ const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
 							{user ? (
 								<UserMenu size="sm" user={user} onLogout={handleLogout} />
 							) : (
-								<TooltipButton size="icon" info="Go to dashboard">
-									<VectrealLogoSmall className="text-muted-foreground h-5 w-5" />
+								<TooltipButton asChild size="icon" info="Go to dashboard">
+									<Link to="/dashboard">
+										<VectrealLogoSmall className="text-muted-foreground h-5 w-5" />
+									</Link>
 								</TooltipButton>
 							)}
 
