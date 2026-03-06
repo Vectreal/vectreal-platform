@@ -68,7 +68,7 @@ export const usePublisherSaveAction = ({
 						action: {
 							label: 'Sign Out',
 							onClick: () => {
-								window.location.href = '/auth/signout'
+								window.location.href = '/auth/logout'
 							}
 						}
 					}
