@@ -7,9 +7,9 @@ import {
 	TooltipTrigger
 } from '@shared/components/ui/tooltip'
 import { ApiResponse } from '@shared/utils'
-import { Eye, EyeClosed, Save } from 'lucide-react'
+import { Eye, EyeClosed, ExternalLink, Save } from 'lucide-react'
 import { useState } from 'react'
-import { data, Form, redirect } from 'react-router'
+import { data, Form, Link, redirect } from 'react-router'
 
 import { Route } from './+types/signin-page'
 import { createSupabaseClient } from '../../lib/supabase.server'
@@ -90,10 +90,13 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 	// Check if this is a scene preservation flow
 	const url = new URL(request.url)
 	const sceneSaved = url.searchParams.get('scene_saved') === 'true'
+	/** The publisher restore URL embedded in `next`, forwarded to the component for the 'Open Publisher' button. */
+	const nextPath = url.searchParams.get('next') ?? null
 
 	return data(
 		{
 			sceneSaved,
+			nextPath,
 			user: user ?? null,
 			isAuthenticated: !!user,
 			message: user ? 'Already authenticated' : null
@@ -124,6 +127,19 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 						Your scene configuration has been saved. Sign up with Google or
 						GitHub to convert to a permanent account and access your scene.
 					</p>
+					{loaderData.nextPath && (
+						<Button
+							asChild
+							size="sm"
+							variant="outline"
+							className="mt-1 w-full border-green-300/50 text-green-200/80 hover:bg-green-300/20 hover:text-green-100"
+						>
+							<Link to={loaderData.nextPath}>
+								<ExternalLink className="mr-1 h-3 w-3" />
+								Open Publisher to restore draft
+							</Link>
+						</Button>
+					)}
 				</div>
 			)}
 

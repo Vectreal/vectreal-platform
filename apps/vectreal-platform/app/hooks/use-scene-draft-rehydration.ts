@@ -8,7 +8,8 @@ import type { SceneAggregateResponse } from '../types/api'
 import type { SceneMetaState } from '../types/publisher-config'
 import type {
 	OptimizationPreset,
-	OptimizationState
+	OptimizationState,
+	SceneOptimizationRuntimeState
 } from '../types/scene-optimization'
 import type { Optimizations } from '@vctrl/core'
 import type {
@@ -19,6 +20,8 @@ import type {
 interface UseSceneDraftRehydrationParams {
 	pendingSceneHydratedRef: MutableRefObject<boolean>
 	shouldRestorePendingDraft: boolean
+	/** Optional draft ID embedded in the URL, enables cross-tab restoration after OAuth. */
+	draftId?: string | null
 	paramSceneId: null | string
 	initialSceneAggregate: null | SceneAggregateResponse
 	fileModel: unknown
@@ -30,6 +33,11 @@ interface UseSceneDraftRehydrationParams {
 	setOptimizationState: (
 		updater: (prev: OptimizationState) => OptimizationState
 	) => void
+	setOptimizationRuntime: (
+		updater: (
+			prev: SceneOptimizationRuntimeState
+		) => SceneOptimizationRuntimeState
+	) => void
 	loadFromData: (params: SceneDataLoadOptions) => Promise<SceneLoadResult>
 	setSceneMetaState: (sceneMeta: SceneMetaState) => void
 	setLastSavedSceneMeta: (sceneMeta: SceneMetaState) => void
@@ -38,6 +46,7 @@ interface UseSceneDraftRehydrationParams {
 export const useSceneDraftRehydration = ({
 	pendingSceneHydratedRef,
 	shouldRestorePendingDraft,
+	draftId,
 	paramSceneId,
 	initialSceneAggregate,
 	fileModel,
@@ -47,6 +56,7 @@ export const useSceneDraftRehydration = ({
 	setIsDownloading,
 	inferOptimizationPreset,
 	setOptimizationState,
+	setOptimizationRuntime,
 	loadFromData,
 	setSceneMetaState,
 	setLastSavedSceneMeta
@@ -70,7 +80,7 @@ export const useSceneDraftRehydration = ({
 			setIsDownloading(true)
 
 			try {
-				const draft = await loadPendingSceneDraft()
+				const draft = await loadPendingSceneDraft(draftId)
 				if (!draft) {
 					return
 				}
@@ -79,6 +89,7 @@ export const useSceneDraftRehydration = ({
 					draft,
 					inferOptimizationPreset,
 					setOptimizationState,
+					setOptimizationRuntime,
 					loadFromData,
 					setSceneMetaState,
 					setLastSavedSceneMeta
@@ -94,6 +105,7 @@ export const useSceneDraftRehydration = ({
 		})()
 	}, [
 		shouldRestorePendingDraft,
+		draftId,
 		paramSceneId,
 		initialSceneAggregate,
 		fileModel,
@@ -102,6 +114,7 @@ export const useSceneDraftRehydration = ({
 		setIsDownloading,
 		inferOptimizationPreset,
 		setOptimizationState,
+		setOptimizationRuntime,
 		loadFromData,
 		setSceneMetaState,
 		setLastSavedSceneMeta,

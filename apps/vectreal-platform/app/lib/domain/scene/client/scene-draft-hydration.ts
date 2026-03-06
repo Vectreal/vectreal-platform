@@ -2,7 +2,8 @@ import type { PendingSceneDraft } from '../../../../types/pending-scene'
 import type { SceneMetaState } from '../../../../types/publisher-config'
 import type {
 	OptimizationPreset,
-	OptimizationState
+	OptimizationState,
+	SceneOptimizationRuntimeState
 } from '../../../../types/scene-optimization'
 import type { Optimizations } from '@vctrl/core'
 import type {
@@ -16,6 +17,11 @@ interface ExecutePendingSceneDraftHydrationParams {
 	setOptimizationState: (
 		updater: (prev: OptimizationState) => OptimizationState
 	) => void
+	setOptimizationRuntime: (
+		updater: (
+			prev: SceneOptimizationRuntimeState
+		) => SceneOptimizationRuntimeState
+	) => void
 	loadFromData: (params: SceneDataLoadOptions) => Promise<SceneLoadResult>
 	setSceneMetaState: (sceneMeta: SceneMetaState) => void
 	setLastSavedSceneMeta: (sceneMeta: SceneMetaState) => void
@@ -25,6 +31,7 @@ export const executePendingSceneDraftHydration = async ({
 	draft,
 	inferOptimizationPreset,
 	setOptimizationState,
+	setOptimizationRuntime,
 	loadFromData,
 	setSceneMetaState,
 	setLastSavedSceneMeta
@@ -38,6 +45,20 @@ export const executePendingSceneDraftHydration = async ({
 			...prev,
 			optimizationPreset: inferredPreset,
 			optimizations: draftOptimizationSettings
+		}))
+	}
+
+	// Restore byte-size snapshot so the save-availability check can determine
+	// that optimization was already applied before the auth redirect.
+	if (draft.optimizedSceneBytes != null || draft.clientSceneBytes != null) {
+		setOptimizationRuntime((prev) => ({
+			...prev,
+			...(draft.optimizedSceneBytes != null
+				? { optimizedSceneBytes: draft.optimizedSceneBytes }
+				: {}),
+			...(draft.clientSceneBytes != null
+				? { clientSceneBytes: draft.clientSceneBytes }
+				: {})
 		}))
 	}
 

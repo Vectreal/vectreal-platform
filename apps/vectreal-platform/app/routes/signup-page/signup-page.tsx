@@ -15,9 +15,9 @@ import { ApiResponse } from '@shared/utils'
 import { User } from '@supabase/supabase-js'
 import { motion } from 'framer-motion'
 import { AnimatePresence } from 'framer-motion'
-import { AlertCircle, Eye, EyeClosed, Save } from 'lucide-react'
+import { AlertCircle, Eye, EyeClosed, ExternalLink, Save } from 'lucide-react'
 import { useState } from 'react'
-import { data, Form, redirect } from 'react-router'
+import { data, Form, Link, redirect } from 'react-router'
 
 import { Route } from './+types/signup-page'
 import { createSupabaseClient } from '../../lib/supabase.server'
@@ -126,10 +126,13 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 	// Check if this is a scene preservation flow
 	const url = new URL(request.url)
 	const sceneSaved = url.searchParams.get('scene_saved') === 'true'
+	/** The publisher restore URL embedded in `next`, forwarded to the component for the 'Open Publisher' button. */
+	const nextPath = url.searchParams.get('next') ?? null
 
 	return data(
 		{
 			sceneSaved,
+			nextPath,
 			user: user ?? null,
 			isAuthenticated: !!user,
 			message: user ? 'Already authenticated' : null
@@ -197,13 +200,30 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 
 			{/* Scene preservation notice */}
 			{loaderData?.sceneSaved && (
-				<div className="mb-6 rounded-lg border border-green-300/50 bg-green-300/25 p-4 text-sm text-green-800">
-					<Save className="h-4 w-4" aria-hidden="true" />
-					<p className="font-medium">Scene Saved Temporarily!</p>
-					<p>
+				<div className="mb-6 space-y-2 rounded-lg border border-green-300/50 bg-green-300/25 p-4 text-sm text-green-200/80">
+					<span className="flex gap-2">
+						<Save className="h-4 w-4 text-inherit" aria-hidden="true" />
+						<p className="font-medium! text-inherit!">
+							Scene Saved Temporarily!
+						</p>
+					</span>
+					<p className="text-green-200/60!">
 						Your scene configuration has been saved. Sign up with Google or
 						GitHub to convert to a permanent account and access your scene.
 					</p>
+					{loaderData.nextPath && (
+						<Button
+							asChild
+							size="sm"
+							variant="outline"
+							className="mt-1 w-full border-green-300/50 text-green-200/80 hover:bg-green-300/20 hover:text-green-100"
+						>
+							<Link to={loaderData.nextPath}>
+								<ExternalLink className="mr-1 h-3 w-3" />
+								Open Publisher to restore draft
+							</Link>
+						</Button>
+					)}
 				</div>
 			)}
 

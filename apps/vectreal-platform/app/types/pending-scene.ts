@@ -13,6 +13,10 @@ export interface PendingSceneDraft {
 	sceneMeta: SceneMetaState
 	sceneData: ServerSceneData
 	optimizationSettings: Optimizations | null
+	/** Byte size of the optimized scene at the time of persisting. Restored on draft hydration to re-enable saving without re-optimizing. */
+	optimizedSceneBytes?: number | null
+	/** Byte size of the raw client scene at the time of persisting. */
+	clientSceneBytes?: number | null
 }
 
 /**
@@ -22,4 +26,8 @@ export interface SavePendingSceneDraftInput {
 	sceneMeta: SceneMetaState
 	sceneData: ServerSceneData
 	optimizationSettings: Optimizations | null
+	/** Byte size of the optimized scene at the time of persisting. */
+	optimizedSceneBytes?: number | null
+	/** Byte size of the raw client scene at the time of persisting. */
+	clientSceneBytes?: number | null
 }
