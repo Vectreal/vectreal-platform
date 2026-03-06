@@ -7,10 +7,9 @@ import {
 import { cn } from '@shared/utils'
 import { ComponentProps } from 'react'
 
-interface ButtonProps extends ComponentProps<'button'> {
+interface ButtonProps extends ComponentProps<typeof Button> {
 	info: string
 	size?: 'icon' | 'sm'
-	variant?: ComponentProps<typeof Button>['variant']
 }
 
 const TooltipButton = ({
