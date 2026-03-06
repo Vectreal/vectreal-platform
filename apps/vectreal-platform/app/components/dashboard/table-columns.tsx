@@ -43,6 +43,7 @@ export interface ProjectRow {
 	id: string
 	name: string
 	organizationName: string
+	canDelete: boolean
 	sceneCount: number
 	createdAt: Date
 	updatedAt: Date

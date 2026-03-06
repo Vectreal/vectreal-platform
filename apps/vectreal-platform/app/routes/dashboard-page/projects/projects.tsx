@@ -1,3 +1,13 @@
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle
+} from '@shared/components/ui/alert-dialog'
 import { Button } from '@shared/components/ui/button'
 import {
 	Empty,
@@ -6,7 +16,9 @@ import {
 	EmptyHeader
 } from '@shared/components/ui/empty'
 import { Plus } from 'lucide-react'
-import { Link, Outlet } from 'react-router'
+import { useEffect, useRef, useState } from 'react'
+import { Link, Outlet, useFetcher, useRevalidator } from 'react-router'
+import { toast } from 'sonner'
 
 import { Route } from './+types/projects'
 import { DataTable } from '../../../components/dashboard/data-table'
@@ -16,9 +28,15 @@ import {
 } from '../../../components/dashboard/table-columns'
 import { ProjectsGridSkeleton } from '../../../components/skeletons'
 import { useDashboardTableState } from '../../../hooks/use-dashboard-table-state'
-import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
+import {
+	loadAuthenticatedSession,
+	loadAuthenticatedUser
+} from '../../../lib/domain/auth/auth-loader.server'
 import { computeProjectCreationCapabilities } from '../../../lib/domain/dashboard/dashboard-stats.server'
-import { getUserProjects } from '../../../lib/domain/project/project-repository.server'
+import {
+	deleteProject,
+	getUserProjects
+} from '../../../lib/domain/project/project-repository.server'
 import { getProjectsScenes } from '../../../lib/domain/scene/server/scene-folder-repository.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
 
@@ -49,6 +67,120 @@ export async function loader({ request }: Route.LoaderArgs) {
 		scenes,
 		projectCreationCapabilities
 	}
+}
+
+interface ProjectDeleteResult {
+	id: string
+	success: boolean
+	error?: string
+}
+
+interface ProjectDeleteActionResponse {
+	success: boolean
+	summary: {
+		total: number
+		succeeded: number
+		failed: number
+	}
+	results: ProjectDeleteResult[]
+	error?: string
+}
+
+export async function action({ request }: Route.ActionArgs) {
+	const { user } = await loadAuthenticatedUser(request)
+	const formData = await request.formData()
+	const intent = formData.get('intent')
+
+	if (intent !== 'bulk-delete') {
+		return {
+			success: false,
+			error: 'Invalid intent',
+			summary: {
+				total: 0,
+				succeeded: 0,
+				failed: 0
+			},
+			results: []
+		} satisfies ProjectDeleteActionResponse
+	}
+
+	const projectIdsRaw = formData.get('projectIds')
+	if (typeof projectIdsRaw !== 'string' || !projectIdsRaw.trim()) {
+		return {
+			success: false,
+			error: 'Project IDs are required',
+			summary: {
+				total: 0,
+				succeeded: 0,
+				failed: 0
+			},
+			results: []
+		} satisfies ProjectDeleteActionResponse
+	}
+
+	let projectIds: string[]
+	try {
+		const parsed = JSON.parse(projectIdsRaw)
+		if (
+			!Array.isArray(parsed) ||
+			!parsed.every((id) => typeof id === 'string')
+		) {
+			throw new Error('Invalid project IDs payload')
+		}
+		projectIds = parsed
+	} catch {
+		return {
+			success: false,
+			error: 'Invalid project IDs payload',
+			summary: {
+				total: 0,
+				succeeded: 0,
+				failed: 0
+			},
+			results: []
+		} satisfies ProjectDeleteActionResponse
+	}
+
+	if (projectIds.length === 0) {
+		return {
+			success: false,
+			error: 'At least one project must be selected',
+			summary: {
+				total: 0,
+				succeeded: 0,
+				failed: 0
+			},
+			results: []
+		} satisfies ProjectDeleteActionResponse
+	}
+
+	const results: ProjectDeleteResult[] = []
+
+	for (const projectId of projectIds) {
+		try {
+			await deleteProject(projectId, user.id)
+			results.push({ id: projectId, success: true })
+		} catch (error) {
+			results.push({
+				id: projectId,
+				success: false,
+				error:
+					error instanceof Error ? error.message : 'Failed to delete project'
+			})
+		}
+	}
+
+	const succeeded = results.filter((result) => result.success).length
+
+	return {
+		success: succeeded > 0,
+		summary: {
+			total: results.length,
+			succeeded,
+			failed: results.length - succeeded
+		},
+		results
+	} satisfies ProjectDeleteActionResponse
 }
 
 /**
@@ -124,9 +256,60 @@ const EmptyProjectsState = ({
 const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 	const { organizations, projects, projectCreationCapabilities, scenes } =
 		loaderData
+	const fetcher = useFetcher<typeof action>()
+	const revalidator = useRevalidator()
+	const lastHandledResponseRef = useRef<string | null>(null)
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+	const [projectIdsToDelete, setProjectIdsToDelete] = useState<string[]>([])
 	const tableState = useDashboardTableState({
 		namespace: 'projects-list'
 	})
+	const isDeletingProjects = fetcher.state !== 'idle'
+
+	useEffect(() => {
+		if (fetcher.state !== 'idle' || !fetcher.data) {
+			return
+		}
+
+		const signature = JSON.stringify(fetcher.data)
+		if (lastHandledResponseRef.current === signature) {
+			return
+		}
+		lastHandledResponseRef.current = signature
+
+		if (!fetcher.data.success) {
+			toast.error(fetcher.data.error || 'Failed to delete projects')
+			return
+		}
+
+		if (fetcher.data.summary.failed > 0) {
+			toast.warning(
+				`${fetcher.data.summary.succeeded}/${fetcher.data.summary.total} projects deleted, ${fetcher.data.summary.failed} failed`
+			)
+		} else {
+			toast.success(`${fetcher.data.summary.succeeded} project(s) deleted`)
+		}
+
+		if (fetcher.data.summary.succeeded > 0) {
+			setDeleteDialogOpen(false)
+			setProjectIdsToDelete([])
+			revalidator.revalidate()
+		}
+	}, [fetcher.state, fetcher.data, revalidator])
+
+	const confirmDeleteProjects = () => {
+		if (projectIdsToDelete.length === 0 || isDeletingProjects) {
+			return
+		}
+
+		fetcher.submit(
+			{
+				intent: 'bulk-delete',
+				projectIds: JSON.stringify(projectIdsToDelete)
+			},
+			{ method: 'post' }
+		)
+	}
 
 	const projectTableData: ProjectRow[] = projects.map(
 		({ project, organizationId }) => {
@@ -155,6 +338,8 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 					organizations.find(
 						({ organization }) => organization.id === organizationId
 					)?.organization.name || 'Unknown',
+				canDelete:
+					projectCreationCapabilities[organizationId]?.canDelete ?? false,
 				sceneCount: projectScenes.length,
 				createdAt: stableTimestamp,
 				updatedAt: stableTimestamp
@@ -173,6 +358,8 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 					<DataTable
 						columns={projectColumns}
 						data={projectTableData}
+						isUpdating={isDeletingProjects}
+						disableSelectionActions={isDeletingProjects}
 						searchKey="name"
 						searchPlaceholder="Search projects..."
 						searchValue={tableState.searchValue}
@@ -183,15 +370,56 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 						onPaginationChange={tableState.onPaginationChange}
 						rowSelection={tableState.rowSelection}
 						onRowSelectionChange={tableState.onRowSelectionChange}
+						getRowCanSelect={(row) => row.canDelete}
 						onDelete={(selectedRows) => {
-							console.log('Delete projects:', selectedRows)
-							// TODO: Implement delete functionality
+							const projectIds = (selectedRows as ProjectRow[]).map(
+								(row) => row.id
+							)
+
+							if (projectIds.length === 0) {
+								toast.error('Select at least one project first')
+								return
+							}
+
+							setProjectIdsToDelete(projectIds)
+							setDeleteDialogOpen(true)
 						}}
 					/>
 				) : (
 					<EmptyProjectsState showCreateLink={canCreateProjects} />
 				)}
 			</div>
+			<AlertDialog
+				open={deleteDialogOpen}
+				onOpenChange={(open) => {
+					setDeleteDialogOpen(open)
+					if (!open && !isDeletingProjects) {
+						setProjectIdsToDelete([])
+					}
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete Projects</AlertDialogTitle>
+						<AlertDialogDescription>
+							{projectIdsToDelete.length === 1
+								? 'Delete this project? This action cannot be undone.'
+								: `Delete ${projectIdsToDelete.length} selected projects? This action cannot be undone.`}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={isDeletingProjects}>
+							Cancel
+						</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={confirmDeleteProjects}
+							disabled={isDeletingProjects}
+						>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 			<Outlet />
 		</>
 	)
