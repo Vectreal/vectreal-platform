@@ -4,8 +4,8 @@ import { Outlet } from 'react-router'
 import { Route } from './+types/preview-layout'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
 import { getProject } from '../../lib/domain/project/project-repository.server'
-import { getScene } from '../../lib/domain/scene/scene-folder-repository.server'
-import { getPublishedScenePreview } from '../../lib/domain/scene/scene-preview-repository.server'
+import { getScene } from '../../lib/domain/scene/server/scene-folder-repository.server'
+import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 
 function withNoStoreHeaders(response: Response): Response {

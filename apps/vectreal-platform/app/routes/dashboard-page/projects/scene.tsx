@@ -49,11 +49,11 @@ import { InlineEditableMetadataField } from '../../../components/dashboard/inlin
 import { ClientVectrealViewer } from '../../../components/viewer/client-vectreal-viewer'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
-import { buildSceneAggregate } from '../../../lib/domain/scene/scene-aggregate.server'
+import { buildSceneAggregate } from '../../../lib/domain/scene/server/scene-aggregate.server'
 import {
 	getScene,
 	getSceneFolderAncestry
-} from '../../../lib/domain/scene/scene-folder-repository.server'
+} from '../../../lib/domain/scene/server/scene-folder-repository.server'
 import { deleteDialogAtom } from '../../../lib/stores/dashboard-management-store'
 import { toViewerLoadingThumbnail } from '../../../lib/viewer/viewer-loading-thumbnail'
 

@@ -15,7 +15,7 @@ import { ApiResponse } from '@shared/utils'
 import { User } from '@supabase/supabase-js'
 import { motion } from 'framer-motion'
 import { AnimatePresence } from 'framer-motion'
-import { AlertCircle, Eye, EyeClosed } from 'lucide-react'
+import { AlertCircle, Eye, EyeClosed, Save } from 'lucide-react'
 import { useState } from 'react'
 import { data, Form, redirect } from 'react-router'
 
@@ -187,7 +187,7 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 				>
 					<AlertCircle className="h-4 w-4" aria-hidden="true" />
 					<AlertTitle className="font-medium">
-						Email Verification Required
+						We've sent you a confirmation email!
 					</AlertTitle>
 					<AlertDescription className="text-accent! font-light">
 						Please verify your email before signing in.
@@ -197,13 +197,9 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 
 			{/* Scene preservation notice */}
 			{loaderData?.sceneSaved && (
-				<div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-					<p className="font-medium">
-						<span role="img" aria-label="celebration">
-							🎉
-						</span>{' '}
-						Scene Saved Temporarily!
-					</p>
+				<div className="mb-6 rounded-lg border border-green-300/50 bg-green-300/25 p-4 text-sm text-green-800">
+					<Save className="h-4 w-4" aria-hidden="true" />
+					<p className="font-medium">Scene Saved Temporarily!</p>
 					<p>
 						Your scene configuration has been saved. Sign up with Google or
 						GitHub to convert to a permanent account and access your scene.

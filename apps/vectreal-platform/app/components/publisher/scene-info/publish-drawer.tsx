@@ -11,6 +11,7 @@ import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { X } from 'lucide-react'
 import { type FC } from 'react'
 
+import { SaveAvailabilityState } from '../../../hooks'
 import { PublishSidebarContent } from '../sidebars/publish-sidebar'
 
 import type { SceneStatsData } from '../../../types/api'
@@ -28,6 +29,7 @@ interface PublishDrawerProps {
 		| { unchanged: true }
 		| undefined
 	>
+	saveAvailability: SaveAvailabilityState
 	info: OptimizationInfo
 	report?: OptimizationReport | null
 	publishedAt?: string | null
@@ -48,6 +50,7 @@ export const PublishDrawer: FC<PublishDrawerProps> = ({
 	userId,
 	onRequireAuth,
 	saveSceneSettings,
+	saveAvailability,
 	info,
 	report,
 	publishedAt,
@@ -86,6 +89,7 @@ export const PublishDrawer: FC<PublishDrawerProps> = ({
 					publishedAt={publishedAt}
 					sizeInfo={sizeInfo}
 					stats={stats}
+					saveAvailability={saveAvailability}
 				/>
 			</DrawerContent>
 		</Drawer>

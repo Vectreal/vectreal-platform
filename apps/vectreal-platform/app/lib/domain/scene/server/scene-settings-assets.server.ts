@@ -8,9 +8,9 @@ import {
 import {
 	computeAssetHash,
 	type GLTFAssetData
-} from '../asset/asset-storage.server'
+} from '../../asset/asset-storage.server'
 
-import type { GLTFExportResult } from '../../../types/api'
+import type { GLTFExportResult } from '../../../../types/api'
 import type { JSONDocument } from '@gltf-transform/core'
 import type { ExtendedGLTFDocument } from '@vctrl/core'
 

@@ -5,15 +5,15 @@ import { SerializedSceneAssetDataMap, SceneSettings } from '@vctrl/core'
 
 import { getSceneFolder } from './scene-folder-repository.server'
 import { sceneSettingsService } from './scene-settings-service.server'
-import { uploadSceneAssets } from '../asset/asset-storage.server'
-import { getProject } from '../project/project-repository.server'
+import { uploadSceneAssets } from '../../asset/asset-storage.server'
+import { getProject } from '../../project/project-repository.server'
 import {
 	getOrCreateDefaultProject,
 	userExists
-} from '../user/user-repository.server'
+} from '../../user/user-repository.server'
 
-import type { SceneSettingsRequest } from '../../../types/api'
-import type { SceneMetaState } from '../../../types/publisher-config'
+import type { SceneSettingsRequest } from '../../../../types/api'
+import type { SceneMetaState } from '../../../../types/publisher-config'
 
 type SaveSceneSettingsRequest = SceneSettingsRequest & {
 	meta: SceneMetaState

@@ -1,12 +1,4 @@
-import {
-	buildAssetLookupKeys,
-	getSerializedAssetByteSize,
-	type OptimizationReport,
-	type Optimizations,
-	type SerializedSceneAssetDataMap,
-	type SceneSettings,
-	type ServerSceneData
-} from '@vctrl/core'
+import { type SceneSettings } from '@vctrl/core'
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import {
 	type EventHandler,
@@ -15,9 +7,14 @@ import {
 } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation, useRevalidator } from 'react-router'
+import { useLocation, useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
+import { useSceneAggregateBootstrap } from './use-scene-aggregate-bootstrap'
+import { useSceneDraftRehydration } from './use-scene-draft-rehydration'
+import { useSceneModelEvents } from './use-scene-model-events'
+import { useSceneParamsSync } from './use-scene-params-sync'
+import { useSceneSaveFlow } from './use-scene-save-flow'
 import { optimizationPresets } from '../constants/optimizations'
 import {
 	defaultBoundsOptions,
@@ -27,14 +24,14 @@ import {
 	defaultShadowOptions
 } from '../constants/viewer-defaults'
 import {
-	buildImageMimeLookup,
-	buildSceneUploadFileDescriptor
-} from '../lib/domain/scene/scene-upload-manifest'
-import {
-	clearPendingSceneDraft,
-	loadPendingSceneDraft,
-	savePendingSceneDraft
-} from '../lib/persistence/pending-scene-idb'
+	calculateAggregateReferencedBytes,
+	executeAggregateSceneHydration,
+	executeOptimizationStateHydration,
+	inferOptimizationPreset,
+	persistPendingSceneDraftOrchestrator,
+	getSceneNameFromFileName
+} from '../lib/domain/scene'
+import { clearPendingSceneDraft } from '../lib/persistence/pending-scene-idb'
 import {
 	processAtom,
 	sceneMetaAtom,
@@ -54,40 +51,16 @@ import {
 } from '../lib/stores/scene-settings-store'
 import { requestSceneScreenshot } from '../lib/viewer/scene-screenshot-bus'
 import { SceneMetaState } from '../types/publisher-config'
-import { OptimizationPreset } from '../types/scene-optimization'
 
-import type { SceneAggregateResponse, SceneStatsData } from '../types/api'
-export interface UseSceneLoaderParams {
-	sceneId: null | string
-	userId?: string
-	initialSceneAggregate?: SceneAggregateResponse | null
-	sceneMeta?: SceneMetaState | null
-}
+import type { UseSceneLoaderParams } from './scene-loader.types'
+import type { SceneAggregateResponse } from '../types/api'
 
-export interface SaveSceneResult {
-	sceneId?: string
-	stats?: SceneStatsData | null
-	sceneMeta?: SceneMetaState
-	unchanged?: boolean
-	[key: string]: unknown
-}
-
-export interface SaveLocationTarget {
-	targetProjectId?: string
-	targetFolderId?: string | null
-}
-
-export type SaveAvailabilityReason =
-	| 'ready'
-	| 'no-user'
-	| 'no-unsaved-changes'
-	| 'requires-first-optimization'
-
-export interface SaveAvailabilityState {
-	canSave: boolean
-	reason: SaveAvailabilityReason
-	isFirstSavePendingOptimization: boolean
-}
+export type {
+	SaveAvailabilityState,
+	SaveLocationTarget,
+	SaveSceneResult,
+	UseSceneLoaderParams
+} from './scene-loader.types'
 
 const DEFAULT_MAX_CONCURRENT_SCENE_ASSET_UPLOADS = 4
 const DEFAULT_THUMBNAIL_CAPTURE_OPTIONS = {
@@ -96,67 +69,6 @@ const DEFAULT_THUMBNAIL_CAPTURE_OPTIONS = {
 	mimeType: 'image/webp' as const,
 	quality: 0.86,
 	mode: 'auto-fit' as const
-}
-
-const createFileFromDataUrl = (
-	dataUrl: string,
-	fileName: string
-): File | null => {
-	const [meta, encoded] = dataUrl.split(',')
-	if (!meta || !encoded) {
-		return null
-	}
-
-	const mimeMatch = meta.match(/^data:(.*?);base64$/)
-	const mimeType = mimeMatch?.[1] || 'image/webp'
-
-	try {
-		const binary = atob(encoded)
-		const bytes = new Uint8Array(binary.length)
-		for (let index = 0; index < binary.length; index += 1) {
-			bytes[index] = binary.charCodeAt(index)
-		}
-
-		return new File([bytes], fileName, { type: mimeType })
-	} catch {
-		return null
-	}
-}
-
-/**
- * Converts in-memory glTF asset map payloads to a JSON-serializable shape
- * that can be persisted in IndexedDB and later passed back to `loadFromData`.
- */
-const serializeSceneAssetData = async (
-	gltfData: unknown,
-	gltfAssets: unknown
-): Promise<SerializedSceneAssetDataMap> => {
-	if (!(gltfAssets instanceof Map)) {
-		return {}
-	}
-
-	const imageMimeLookup = buildImageMimeLookup(gltfData)
-	const serializedEntries = await Promise.all(
-		Array.from(gltfAssets.entries()).map(async ([assetId, data]) => {
-			const descriptor = buildSceneUploadFileDescriptor(
-				assetId,
-				data,
-				imageMimeLookup
-			)
-			const bytes = new Uint8Array(await descriptor.file.arrayBuffer())
-
-			return [
-				assetId,
-				{
-					data: Array.from(bytes),
-					fileName: descriptor.file.name,
-					mimeType: descriptor.file.type || 'application/octet-stream'
-				}
-			] as const
-		})
-	)
-
-	return Object.fromEntries(serializedEntries)
 }
 
 /**
@@ -186,9 +98,6 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 
 	const sceneLoadAttemptedRef = useRef(false)
 	const pendingSceneHydratedRef = useRef(false)
-	const inFlightSaveRef = useRef<Promise<
-		SaveSceneResult | { unchanged: true } | undefined
-	> | null>(null)
 	const [lastSavedSettings, setLastSavedSettings] =
 		useState<SceneSettings | null>(null)
 	const [lastSavedSceneMeta, setLastSavedSceneMeta] =
@@ -196,9 +105,33 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	const [currentSceneId, setCurrentSceneId] = useState<string | null>(
 		paramSceneId
 	)
-
 	const revalidator = useRevalidator()
 	const location = useLocation()
+	const navigate = useNavigate()
+	const shouldRestorePendingDraft =
+		new URLSearchParams(location.search).get('restore_draft') === '1'
+
+	const handleRestoreHandled = useCallback(() => {
+		if (!shouldRestorePendingDraft) {
+			return
+		}
+
+		const searchParams = new URLSearchParams(location.search)
+		if (!searchParams.has('restore_draft')) {
+			return
+		}
+
+		searchParams.delete('restore_draft')
+		const nextSearch = searchParams.toString()
+
+		navigate(
+			{
+				pathname: location.pathname,
+				search: nextSearch ? `?${nextSearch}` : ''
+			},
+			{ replace: true }
+		)
+	}, [location.pathname, location.search, navigate, shouldRestorePendingDraft])
 
 	// Model context and loading
 	const {
@@ -274,22 +207,6 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		return `save-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 	}, [])
 
-	const getSceneNameFromFileName = useCallback((fileName: string) => {
-		const trimmedFileName = fileName.trim()
-		if (!trimmedFileName) {
-			return ''
-		}
-
-		const withoutPath = trimmedFileName.split(/[/\\]/).pop() ?? trimmedFileName
-		const extensionIndex = withoutPath.lastIndexOf('.')
-
-		if (extensionIndex <= 0) {
-			return withoutPath
-		}
-
-		return withoutPath.slice(0, extensionIndex)
-	}, [])
-
 	const prepareGltfDocumentForUpload = useCallback(async () => {
 		if (!optimizer || !modelFile || !optimizer._getDocument()) {
 			return null
@@ -361,322 +278,6 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setOptimizationRuntime
 	])
 
-	const saveToDB = useCallback(
-		async (options?: {
-			includeOptimizationReport?: boolean
-			initialSceneBytes?: number
-			currentSceneBytes?: number
-			targetProjectId?: string
-			targetFolderId?: string | null
-			maxConcurrentAssetUploads?: number
-		}): Promise<SaveSceneResult | { unchanged: true } | undefined> => {
-			if (inFlightSaveRef.current) {
-				return inFlightSaveRef.current
-			}
-
-			const savePromise = (async () => {
-				if (!userId) {
-					throw new Error('No user ID provided for saving settings')
-				}
-
-				let requestId: string | undefined
-
-				try {
-					requestId = createRequestId()
-					const activeRequestId = requestId
-					const gltfJsonToSend = await prepareGltfDocumentForUpload()
-					if (!gltfJsonToSend) {
-						throw new Error('Failed to prepare glTF payload for upload')
-					}
-
-					let optimizationReport = null
-					if (optimizer && optimizer.report) {
-						optimizationReport = optimizer.report
-					}
-
-					const endpoint = currentSceneId
-						? `/api/scenes/${currentSceneId}`
-						: '/api/scenes'
-
-					const prepareFormData = new FormData()
-					prepareFormData.append('action', 'prepare-scene-upload')
-					prepareFormData.append('requestId', activeRequestId)
-					prepareFormData.append('sceneId', currentSceneId || '')
-
-					if (options?.targetProjectId) {
-						prepareFormData.append('targetProjectId', options.targetProjectId)
-					}
-
-					if (typeof options?.targetFolderId !== 'undefined') {
-						prepareFormData.append(
-							'targetFolderId',
-							options.targetFolderId ?? ''
-						)
-					}
-
-					const prepareResponse = await fetch(endpoint, {
-						method: 'POST',
-						body: prepareFormData
-					})
-					const prepareResult = await prepareResponse.json()
-					if (!prepareResponse.ok || prepareResult.error) {
-						throw new Error(
-							prepareResult.error ||
-								`HTTP error! status: ${prepareResponse.status}`
-						)
-					}
-
-					const prepared = prepareResult.data || prepareResult
-					const preparedSceneId = prepared.sceneId as string
-					const preparedProjectId = prepared.projectId as string | undefined
-
-					const thumbnailDataUrl = await captureSceneThumbnail()
-					let sceneMetaForSave = sceneMetaState
-
-					if (thumbnailDataUrl) {
-						const thumbnailFile = createFileFromDataUrl(
-							thumbnailDataUrl,
-							'scene-thumbnail.webp'
-						)
-
-						if (thumbnailFile) {
-							const uploadThumbnailFormData = new FormData()
-							uploadThumbnailFormData.append('action', 'upload-scene-asset')
-							uploadThumbnailFormData.append('requestId', activeRequestId)
-							uploadThumbnailFormData.append('sceneId', preparedSceneId)
-							if (preparedProjectId) {
-								uploadThumbnailFormData.append('projectId', preparedProjectId)
-							}
-							uploadThumbnailFormData.append('kind', 'image')
-							uploadThumbnailFormData.append('file', thumbnailFile)
-
-							const uploadThumbnailResponse = await fetch(
-								`/api/scenes/${preparedSceneId}`,
-								{
-									method: 'POST',
-									body: uploadThumbnailFormData
-								}
-							)
-							const uploadThumbnailResult = await uploadThumbnailResponse.json()
-
-							if (!uploadThumbnailResponse.ok || uploadThumbnailResult.error) {
-								console.warn('[scene-settings] thumbnail upload failed', {
-									sceneId: preparedSceneId,
-									error:
-										uploadThumbnailResult.error ||
-										`HTTP error! status: ${uploadThumbnailResponse.status}`
-								})
-							} else {
-								const uploadedThumbnail =
-									uploadThumbnailResult.data || uploadThumbnailResult
-								sceneMetaForSave = {
-									...sceneMetaState,
-									thumbnailUrl: `/api/scenes/${preparedSceneId}/thumbnail/${uploadedThumbnail.assetId}`
-								}
-							}
-						}
-					}
-
-					const maxConcurrentAssetUploads =
-						options?.maxConcurrentAssetUploads ??
-						DEFAULT_MAX_CONCURRENT_SCENE_ASSET_UPLOADS
-
-					const sceneAssetIds: string[] = []
-					const gltfData =
-						(gltfJsonToSend as { data?: unknown }).data ?? gltfJsonToSend
-					const imageMimeLookup = buildImageMimeLookup(gltfData)
-
-					const gltfAssets = (gltfJsonToSend as { assets?: unknown }).assets
-					if (gltfAssets instanceof Map) {
-						const gltfAssetEntries = Array.from(gltfAssets.entries())
-
-						const uploadAsset = async ([fileName, data]: [string, unknown]) => {
-							const descriptor = buildSceneUploadFileDescriptor(
-								fileName,
-								data,
-								imageMimeLookup
-							)
-							const uploadAssetFormData = new FormData()
-							uploadAssetFormData.append('action', 'upload-scene-asset')
-							uploadAssetFormData.append('requestId', activeRequestId)
-							uploadAssetFormData.append('sceneId', preparedSceneId)
-							if (preparedProjectId) {
-								uploadAssetFormData.append('projectId', preparedProjectId)
-							}
-							uploadAssetFormData.append('kind', descriptor.kind)
-							uploadAssetFormData.append('file', descriptor.file)
-
-							const uploadAssetResponse = await fetch(
-								`/api/scenes/${preparedSceneId}`,
-								{
-									method: 'POST',
-									body: uploadAssetFormData
-								}
-							)
-							const uploadAssetResult = await uploadAssetResponse.json()
-							if (!uploadAssetResponse.ok || uploadAssetResult.error) {
-								throw new Error(
-									uploadAssetResult.error ||
-										`HTTP error! status: ${uploadAssetResponse.status}`
-								)
-							}
-
-							const uploadedAsset = uploadAssetResult.data || uploadAssetResult
-							return uploadedAsset.assetId as string
-						}
-
-						for (
-							let start = 0;
-							start < gltfAssetEntries.length;
-							start += maxConcurrentAssetUploads
-						) {
-							const chunk = gltfAssetEntries.slice(
-								start,
-								start + maxConcurrentAssetUploads
-							)
-							const chunkAssetIds = await Promise.all(chunk.map(uploadAsset))
-							sceneAssetIds.push(...chunkAssetIds)
-						}
-					}
-
-					const gltfBlob = new Blob([JSON.stringify(gltfData)], {
-						type: 'model/gltf+json'
-					})
-					const uploadGltfFormData = new FormData()
-					uploadGltfFormData.append('action', 'upload-scene-gltf')
-					uploadGltfFormData.append('requestId', activeRequestId)
-					uploadGltfFormData.append('sceneId', preparedSceneId)
-					if (preparedProjectId) {
-						uploadGltfFormData.append('projectId', preparedProjectId)
-					}
-					uploadGltfFormData.append(
-						'file',
-						new File([gltfBlob], 'scene.gltf', { type: 'model/gltf+json' })
-					)
-
-					const uploadGltfResponse = await fetch(
-						`/api/scenes/${preparedSceneId}`,
-						{
-							method: 'POST',
-							body: uploadGltfFormData
-						}
-					)
-					const uploadGltfResult = await uploadGltfResponse.json()
-					if (!uploadGltfResponse.ok || uploadGltfResult.error) {
-						throw new Error(
-							uploadGltfResult.error ||
-								`HTTP error! status: ${uploadGltfResponse.status}`
-						)
-					}
-					const uploadedGltf = uploadGltfResult.data || uploadGltfResult
-					sceneAssetIds.push(uploadedGltf.assetId)
-
-					const formData = new FormData()
-					formData.append('action', 'commit-scene-save')
-					formData.append('requestId', activeRequestId)
-					formData.append('sceneId', preparedSceneId)
-					if (preparedProjectId) {
-						formData.append('projectId', preparedProjectId)
-					}
-					formData.append('settings', JSON.stringify(currentSettings))
-					formData.append('meta', JSON.stringify(sceneMetaForSave))
-					formData.append('sceneAssetIds', JSON.stringify(sceneAssetIds))
-					formData.append(
-						'optimizationSettings',
-						JSON.stringify(optimizationSettings)
-					)
-
-					if (typeof options?.initialSceneBytes === 'number') {
-						formData.append(
-							'initialSceneBytes',
-							String(options.initialSceneBytes)
-						)
-					}
-
-					if (typeof options?.currentSceneBytes === 'number') {
-						formData.append(
-							'currentSceneBytes',
-							String(options.currentSceneBytes)
-						)
-					}
-
-					if (
-						optimizationReport &&
-						options?.includeOptimizationReport !== false
-					) {
-						formData.append(
-							'optimizationReport',
-							JSON.stringify(optimizationReport)
-						)
-					}
-
-					console.info('[scene-settings] save request started', {
-						requestId,
-						sceneId: currentSceneId || null
-					})
-
-					const response = await fetch(endpoint, {
-						method: 'POST',
-						body: formData
-					})
-
-					const result = await response.json()
-
-					if (!response.ok || result.error) {
-						throw new Error(
-							result.error || `HTTP error! status: ${response.status}`
-						)
-					}
-
-					const data = result.data || result
-
-					console.info('[scene-settings] save request completed', {
-						requestId,
-						sceneId: data.sceneId || preparedSceneId || null,
-						unchanged: Boolean(data.unchanged)
-					})
-
-					if (data.unchanged) {
-						return { unchanged: true }
-					}
-
-					return {
-						...data,
-						sceneMeta: sceneMetaForSave
-					}
-				} catch (error) {
-					console.error('Failed to save scene settings:', {
-						requestId,
-						sceneId: currentSceneId || null,
-						error
-					})
-					throw error
-				}
-			})()
-
-			inFlightSaveRef.current = savePromise
-
-			try {
-				return await savePromise
-			} finally {
-				if (inFlightSaveRef.current === savePromise) {
-					inFlightSaveRef.current = null
-				}
-			}
-		},
-		[
-			captureSceneThumbnail,
-			createRequestId,
-			currentSceneId,
-			currentSettings,
-			sceneMetaState,
-			optimizationSettings,
-			optimizer,
-			prepareGltfDocumentForUpload,
-			userId
-		]
-	)
-
 	// Model loading event handlers
 	const handleNotLoadedFiles = useCallback((files?: File[]) => {
 		toast.error(`Not loaded files: ${files?.map((f) => f.name).join(', ')}`)
@@ -735,18 +336,13 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		toast.error(errorMessage)
 	}, [])
 
-	// Subscribe to model loading events
-	useEffect(() => {
-		on('not-loaded-files', handleNotLoadedFiles)
-		on('load-complete', handleLoadComplete)
-		on('load-error', handleLoadError)
-
-		return () => {
-			off('not-loaded-files', handleNotLoadedFiles)
-			off('load-complete', handleLoadComplete)
-			off('load-error', handleLoadError)
-		}
-	}, [on, off, handleLoadComplete, handleLoadError, handleNotLoadedFiles])
+	useSceneModelEvents({
+		on,
+		off,
+		handleNotLoadedFiles,
+		handleLoadComplete,
+		handleLoadError
+	})
 
 	// Update process step when file loads
 	useEffect(() => {
@@ -759,105 +355,18 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		}
 	}, [file, setProcess])
 
-	// Update currentSceneId when sceneId prop changes
-	useEffect(() => {
-		const isNewUploadFlow = !paramSceneId && !initialSceneAggregate
-
-		if (isNewUploadFlow) {
-			resetSceneState()
-		}
-
-		setCurrentSceneId(paramSceneId)
-		const nextMeta = sceneMeta ?? sceneMetaInitialState
-		setSceneMetaState(nextMeta)
-		setLastSavedSceneMeta(sceneMeta ?? null)
-		setIsInitializing(!!paramSceneId && !!initialSceneAggregate)
-		setOptimizationRuntime({
-			...optimizationRuntimeInitialState,
-			lastSavedReportSignature: null
-		})
-		if (initialSceneAggregate) {
-			setHasUnsavedChanges(false)
-		}
-	}, [
+	useSceneParamsSync({
 		paramSceneId,
 		sceneMeta,
 		initialSceneAggregate,
+		resetSceneState,
+		setCurrentSceneId,
 		setSceneMetaState,
 		setLastSavedSceneMeta,
-		resetSceneState,
 		setIsInitializing,
 		setHasUnsavedChanges,
 		setOptimizationRuntime
-	])
-	const getReportSignature = useCallback(
-		(report?: OptimizationReport | null) => {
-			if (!report) return null
-			return JSON.stringify({
-				originalSize: report.originalSize,
-				optimizedSize: report.optimizedSize,
-				stats: report.stats,
-				appliedOptimizations: report.appliedOptimizations
-			})
-		},
-		[]
-	)
-
-	const reportSignature = useMemo(
-		() => getReportSignature(optimizer?.report),
-		[getReportSignature, optimizer?.report]
-	)
-
-	const hasAppliedOptimization = useMemo(
-		() => typeof optimizedSceneBytes === 'number',
-		[optimizedSceneBytes]
-	)
-
-	const isFirstSavePendingOptimization = useMemo(
-		() => !currentSceneId && !hasAppliedOptimization,
-		[currentSceneId, hasAppliedOptimization]
-	)
-
-	useEffect(() => {
-		if (!reportSignature || lastSavedReportSignature || !latestSceneStats) {
-			return
-		}
-
-		const persistedInitialSceneBytes = latestSceneStats.initialSceneBytes
-		const persistedCurrentSceneBytes = latestSceneStats.currentSceneBytes
-
-		if (
-			typeof persistedInitialSceneBytes !== 'number' ||
-			typeof persistedCurrentSceneBytes !== 'number' ||
-			!optimizer?.report
-		) {
-			return
-		}
-
-		const isPersistedReportSignature =
-			optimizer.report.originalSize === persistedInitialSceneBytes &&
-			optimizer.report.optimizedSize === persistedCurrentSceneBytes
-
-		if (!isPersistedReportSignature) {
-			return
-		}
-
-		setOptimizationRuntime((prev) => ({
-			...prev,
-			lastSavedReportSignature: reportSignature
-		}))
-	}, [
-		reportSignature,
-		lastSavedReportSignature,
-		latestSceneStats,
-		optimizer?.report,
-		setOptimizationRuntime
-	])
-
-	// Reset the scene load flag when sceneId changes
-	useEffect(() => {
-		sceneLoadAttemptedRef.current = false
-	}, [paramSceneId])
+	})
 
 	/**
 	 * Apply scene settings to atoms and track as saved state
@@ -882,227 +391,25 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		[setBounds, setCamera, setControls, setEnv, setShadows]
 	)
 
-	const inferOptimizationPreset = useCallback(
-		(optimizations: Optimizations) => {
-			const entries = Object.entries(optimizationPresets) as Array<
-				[keyof Optimizations, Optimizations]
-			>
-
-			const exactMatch = entries.find(([, presetValue]) => {
-				return JSON.stringify(presetValue) === JSON.stringify(optimizations)
-			})
-
-			return (exactMatch?.[0] ?? 'medium') as OptimizationPreset
-		},
-		[]
-	)
-
-	const calculateAggregateReferencedBytes = useCallback(
-		(aggregate: SceneAggregateResponse | null) => {
-			if (!aggregate?.gltfJson && !aggregate?.assetData) {
-				return {
-					sourcePackageBytes: null,
-					textureBytes: null
-				}
-			}
-
-			const gltfJson = aggregate.gltfJson
-			const assets = Object.values(aggregate.assetData ?? {}).map((asset) => ({
-				fileName: asset.fileName,
-				size: getSerializedAssetByteSize(asset.data)
-			}))
-
-			const resolveAssetSize = (uri: string) => {
-				const uriKeys = buildAssetLookupKeys(uri)
-
-				for (const asset of assets) {
-					const assetKeys = buildAssetLookupKeys(asset.fileName)
-					for (const key of uriKeys) {
-						if (assetKeys.has(key)) {
-							return asset.size
-						}
-					}
-				}
-
-				return 0
-			}
-
-			const imageUris = new Set<string>()
-			const bufferUris = new Set<string>()
-
-			if (!gltfJson) {
-				return {
-					sourcePackageBytes: null,
-					textureBytes: null
-				}
-			}
-
-			const extractGltfDocument = (
-				value: unknown
-			): {
-				images?: Array<{ uri?: unknown }>
-				buffers?: Array<{ uri?: unknown }>
-			} | null => {
-				if (!value || typeof value !== 'object') {
-					return null
-				}
-
-				const candidate = value as {
-					images?: unknown
-					buffers?: unknown
-					json?: unknown
-				}
-
-				if (
-					Array.isArray(candidate.images) ||
-					Array.isArray(candidate.buffers)
-				) {
-					return candidate as {
-						images?: Array<{ uri?: unknown }>
-						buffers?: Array<{ uri?: unknown }>
-					}
-				}
-
-				if (candidate.json && typeof candidate.json === 'object') {
-					const nested = candidate.json as {
-						images?: unknown
-						buffers?: unknown
-					}
-
-					if (Array.isArray(nested.images) || Array.isArray(nested.buffers)) {
-						return nested as {
-							images?: Array<{ uri?: unknown }>
-							buffers?: Array<{ uri?: unknown }>
-						}
-					}
-				}
-
-				return null
-			}
-
-			const gltfDocument = extractGltfDocument(gltfJson)
-
-			const images = Array.isArray(gltfDocument?.images)
-				? gltfDocument.images
-				: []
-			for (const image of images) {
-				if (typeof image.uri === 'string' && !image.uri.startsWith('data:')) {
-					imageUris.add(image.uri)
-				}
-			}
-
-			const buffers = Array.isArray(gltfDocument?.buffers)
-				? gltfDocument.buffers
-				: []
-			for (const buffer of buffers) {
-				if (typeof buffer.uri === 'string' && !buffer.uri.startsWith('data:')) {
-					bufferUris.add(buffer.uri)
-				}
-			}
-
-			const textureBytes = Array.from(imageUris).reduce(
-				(total, uri) => total + resolveAssetSize(uri),
-				0
-			)
-			const bufferBytes = Array.from(bufferUris).reduce(
-				(total, uri) => total + resolveAssetSize(uri),
-				0
-			)
-			const gltfBytes = new TextEncoder().encode(
-				JSON.stringify(gltfDocument ?? gltfJson)
-			).byteLength
-
-			return {
-				sourcePackageBytes: gltfBytes + bufferBytes + textureBytes,
-				textureBytes
-			}
-		},
-		[]
-	)
-
 	const hydrateOptimizationState = useCallback(
 		(aggregate: SceneAggregateResponse | null) => {
-			const persistedOptimizationSettings =
-				aggregate?.stats?.optimizationSettings
-			const latestSceneStats = aggregate?.stats ?? null
-			const { sourcePackageBytes, textureBytes } =
-				calculateAggregateReferencedBytes(aggregate)
-
-			if (!persistedOptimizationSettings) {
-				setOptimizationState((prev) => ({
-					...prev,
-					optimizationPreset: 'medium',
-					optimizations: optimizationPresets.medium
-				}))
-
-				setOptimizationRuntime({
-					...optimizationRuntimeInitialState,
-					latestSceneStats,
-					clientSceneBytes: sourcePackageBytes,
-					clientTextureBytes: textureBytes
-				})
-				return
-			}
-
-			const inferredPreset = inferOptimizationPreset(
-				persistedOptimizationSettings
-			)
-
-			setOptimizationState((prev) => ({
-				...prev,
-				optimizationPreset: inferredPreset,
-				optimizations: persistedOptimizationSettings
-			}))
-
-			setOptimizationRuntime((prev) => ({
-				...prev,
-				isPending: false,
-				optimizedSceneBytes: null,
-				optimizedTextureBytes: null,
-				clientSceneBytes: sourcePackageBytes,
-				clientTextureBytes: textureBytes,
-				latestSceneStats
-			}))
+			executeOptimizationStateHydration({
+				aggregate,
+				calculateAggregateReferencedBytes,
+				inferOptimizationPreset,
+				setOptimizationState,
+				setOptimizationRuntime,
+				optimizationRuntimeInitialState,
+				mediumOptimizations: optimizationPresets.medium
+			})
 		},
 		[
 			calculateAggregateReferencedBytes,
 			inferOptimizationPreset,
+			optimizationRuntimeInitialState,
 			setOptimizationRuntime,
 			setOptimizationState
 		]
-	)
-
-	const getSettingsFromAggregate = useCallback(
-		(aggregate: SceneAggregateResponse | null): SceneSettings | null => {
-			if (!aggregate) {
-				return null
-			}
-
-			if (aggregate.settings) {
-				return aggregate.settings
-			}
-
-			const fallbackSettings = aggregate as SceneAggregateResponse & {
-				environment?: SceneSettings['environment']
-				controls?: SceneSettings['controls']
-				shadows?: SceneSettings['shadows']
-			}
-
-			if (
-				fallbackSettings.environment ||
-				fallbackSettings.controls ||
-				fallbackSettings.shadows
-			) {
-				return {
-					environment: fallbackSettings.environment,
-					controls: fallbackSettings.controls,
-					shadows: fallbackSettings.shadows
-				}
-			}
-
-			return null
-		},
-		[]
 	)
 
 	const loadSceneFromAggregate = useCallback(
@@ -1115,49 +422,15 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			setIsDownloading(true)
 
 			try {
-				hydrateOptimizationState(aggregate)
-
-				const settings = getSettingsFromAggregate(aggregate)
-				if (settings) {
-					applySceneSettings(settings)
-				}
-
-				if (aggregate.meta) {
-					setSceneMetaState(aggregate.meta)
-					setLastSavedSceneMeta(aggregate.meta)
-				}
-
-				if (aggregate.gltfJson && aggregate.assetData) {
-					const normalizedGltfJson: ServerSceneData['gltfJson'] =
-						typeof aggregate.gltfJson === 'object' &&
-						aggregate.gltfJson !== null &&
-						'json' in aggregate.gltfJson &&
-						typeof (aggregate.gltfJson as { json?: unknown }).json ===
-							'object' &&
-						(aggregate.gltfJson as { json?: unknown }).json !== null
-							? ((aggregate.gltfJson as { json: unknown })
-									.json as ServerSceneData['gltfJson'])
-							: (aggregate.gltfJson as ServerSceneData['gltfJson'])
-
-					const sceneData: ServerSceneData = {
-						meta: aggregate.meta
-							? {
-									name: aggregate.meta.name,
-									description: aggregate.meta.description,
-									thumbnailUrl: aggregate.meta.thumbnailUrl
-								}
-							: undefined,
-						gltfJson: normalizedGltfJson,
-						assetData: aggregate.assetData,
-						...settings
-					}
-
-					await loadFromData({
-						sceneId,
-						sceneData
-					})
-				}
-				const sceneName = aggregate.meta?.name || sceneId
+				const sceneName = await executeAggregateSceneHydration({
+					sceneId,
+					aggregate,
+					hydrateOptimizationState,
+					applySceneSettings,
+					setSceneMetaState,
+					setLastSavedSceneMeta,
+					loadFromData
+				})
 				toast.success(`Loaded scene: ${sceneName}`)
 			} catch (error) {
 				sceneLoadAttemptedRef.current = false
@@ -1171,7 +444,6 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		},
 		[
 			hydrateOptimizationState,
-			getSettingsFromAggregate,
 			applySceneSettings,
 			setSceneMetaState,
 			setLastSavedSceneMeta,
@@ -1186,38 +458,11 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	 * This preserves local publisher progress across OAuth/email auth navigations.
 	 */
 	const persistPendingSceneDraft = useCallback(async () => {
-		if (!modelFile) {
-			return false
-		}
-
-		const gltfJsonToSend = await prepareGltfDocumentForUpload()
-		if (!gltfJsonToSend) {
-			return false
-		}
-
-		const gltfData =
-			(gltfJsonToSend as { data?: unknown }).data ?? gltfJsonToSend
-		const gltfAssets = (gltfJsonToSend as { assets?: unknown }).assets
-		const assetData = await serializeSceneAssetData(gltfData, gltfAssets)
-
-		const sceneData: ServerSceneData = {
-			meta: {
-				name: sceneMetaState.name,
-				description: sceneMetaState.description,
-				thumbnailUrl: sceneMetaState.thumbnailUrl
-			},
-			gltfJson: gltfData as ServerSceneData['gltfJson'],
-			assetData,
-			bounds: currentSettings.bounds,
-			environment: currentSettings.environment,
-			camera: currentSettings.camera,
-			controls: currentSettings.controls,
-			shadows: currentSettings.shadows
-		}
-
-		return savePendingSceneDraft({
-			sceneMeta: sceneMetaState,
-			sceneData,
+		return persistPendingSceneDraftOrchestrator({
+			modelAvailable: Boolean(modelFile),
+			prepareGltfDocumentForUpload,
+			sceneMetaState,
+			currentSettings,
 			optimizationSettings: optimizationSettings ?? null
 		})
 	}, [
@@ -1228,278 +473,61 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		optimizationSettings
 	])
 
-	/**
-	 * Save scene settings and update local state on success
-	 */
-	const saveSceneSettings = useCallback(
-		async (
-			target?: SaveLocationTarget
-		): Promise<SaveSceneResult | { unchanged: true } | undefined> => {
-			const hasReportChanges =
-				reportSignature !== null &&
-				lastSavedReportSignature !== null &&
-				reportSignature !== lastSavedReportSignature
-			const hasSceneSizeChanges =
-				typeof optimizedSceneBytes === 'number' &&
-				optimizedSceneBytes !== (latestSceneStats?.currentSceneBytes ?? null)
-			const hasOptimizationChanges = hasReportChanges || hasSceneSizeChanges
-			const sceneInitialBytes =
-				typeof clientSceneBytes === 'number' ? clientSceneBytes : undefined
-			const sceneCurrentBytes =
-				typeof optimizedSceneBytes === 'number'
-					? optimizedSceneBytes
-					: typeof clientSceneBytes === 'number'
-						? clientSceneBytes
-						: undefined
-
-			const result = await saveToDB({
-				includeOptimizationReport: hasOptimizationChanges,
-				initialSceneBytes: sceneInitialBytes,
-				currentSceneBytes: sceneCurrentBytes,
-				targetProjectId: target?.targetProjectId,
-				targetFolderId: target?.targetFolderId
-			})
-
-			if (result && 'sceneId' in result && result.sceneId && !currentSceneId) {
-				setCurrentSceneId(result.sceneId)
-			}
-
-			if (result && !result.unchanged) {
-				const savedSceneMeta =
-					typeof result.sceneMeta === 'object' && result.sceneMeta
-						? (result.sceneMeta as SceneMetaState)
-						: sceneMetaState
-
-				setSceneMetaState(savedSceneMeta)
-				setLastSavedSettings(currentSettings)
-				setLastSavedSceneMeta(savedSceneMeta)
-				const latestStats = result.stats
-				if (latestStats) {
-					setOptimizationRuntime((prev) => ({
-						...prev,
-						latestSceneStats: latestStats
-					}))
-				}
-				if (reportSignature) {
-					setOptimizationRuntime((prev) => ({
-						...prev,
-						lastSavedReportSignature: reportSignature
-					}))
-				}
-
-				revalidator.revalidate()
-				void clearPendingSceneDraft()
-			}
-
-			return result
-		},
-		[
-			saveToDB,
-			currentSceneId,
-			currentSettings,
-			sceneMetaState,
-			reportSignature,
-			lastSavedReportSignature,
-			optimizedSceneBytes,
-			clientSceneBytes,
-			latestSceneStats,
-			setSceneMetaState,
-			setLastSavedSceneMeta,
-			setOptimizationRuntime,
-			revalidator
-		]
-	)
-
-	/**
-	 * Returns whether there are unsaved changes compared to last saved settings
-	 */
-	const calHasChanges = useCallback(() => {
-		if (isInitializing) {
-			return false
-		}
-
-		const settingsBaseline = lastSavedSettings || currentSettings
-		const sceneMetaBaseline = lastSavedSceneMeta || sceneMetaState
-		const settingsChanged =
-			JSON.stringify(currentSettings.bounds) !==
-				JSON.stringify(settingsBaseline.bounds) ||
-			JSON.stringify(currentSettings.camera) !==
-				JSON.stringify(settingsBaseline.camera) ||
-			JSON.stringify(currentSettings.environment) !==
-				JSON.stringify(settingsBaseline.environment) ||
-			JSON.stringify(currentSettings.controls) !==
-				JSON.stringify(settingsBaseline.controls) ||
-			JSON.stringify(currentSettings.shadows) !==
-				JSON.stringify(settingsBaseline.shadows)
-
-		const sceneMetaChanged =
-			JSON.stringify(sceneMetaState) !== JSON.stringify(sceneMetaBaseline)
-
-		const optimizationChanged =
-			(reportSignature !== null &&
-				lastSavedReportSignature !== null &&
-				reportSignature !== lastSavedReportSignature) ||
-			(typeof optimizedSceneBytes === 'number' &&
-				optimizedSceneBytes !== (latestSceneStats?.currentSceneBytes ?? null))
-
-		return settingsChanged || sceneMetaChanged || optimizationChanged
-	}, [
+	const { saveSceneSettings, saveAvailability } = useSceneSaveFlow({
+		userId,
+		currentSceneId,
+		setCurrentSceneId,
 		currentSettings,
 		sceneMetaState,
+		setSceneMetaState,
 		lastSavedSettings,
+		setLastSavedSettings: (settings) => setLastSavedSettings(settings),
 		lastSavedSceneMeta,
+		setLastSavedSceneMeta,
 		isInitializing,
-		reportSignature,
-		lastSavedReportSignature,
+		processHasUnsavedChanges: processState.hasUnsavedChanges,
+		setHasUnsavedChanges,
+		latestSceneStats,
 		optimizedSceneBytes,
-		latestSceneStats
-	])
+		clientSceneBytes,
+		lastSavedReportSignature,
+		setOptimizationRuntime,
+		revalidate: () => revalidator.revalidate(),
+		clearPendingDraft: clearPendingSceneDraft,
+		optimizationSettings,
+		optimizationReport: optimizer?.report,
+		createRequestId,
+		prepareGltfDocumentForUpload,
+		captureSceneThumbnail,
+		maxConcurrentAssetUploadsDefault: DEFAULT_MAX_CONCURRENT_SCENE_ASSET_UPLOADS
+	})
 
-	useEffect(() => {
-		if (isInitializing || !currentSettings) {
-			return
-		}
-
-		const hasChanges = calHasChanges()
-		setHasUnsavedChanges(hasChanges)
-	}, [
-		calHasChanges,
-		lastSavedSettings,
-		currentSettings,
-		isInitializing,
-		setHasUnsavedChanges
-	])
-
-	const saveAvailability: SaveAvailabilityState = useMemo(() => {
-		if (!userId) {
-			return {
-				canSave: false,
-				reason: 'no-user',
-				isFirstSavePendingOptimization
-			}
-		}
-
-		if (isFirstSavePendingOptimization) {
-			return {
-				canSave: false,
-				reason: 'requires-first-optimization',
-				isFirstSavePendingOptimization: true
-			}
-		}
-
-		if (!processState.hasUnsavedChanges) {
-			return {
-				canSave: false,
-				reason: 'no-unsaved-changes',
-				isFirstSavePendingOptimization: false
-			}
-		}
-
-		return {
-			canSave: true,
-			reason: 'ready',
-			isFirstSavePendingOptimization: false
-		}
-	}, [userId, isFirstSavePendingOptimization, processState.hasUnsavedChanges])
-
-	/**
-	 * Rehydrates a pending IndexedDB draft once when entering the base publisher route
-	 * (no `sceneId`), which is the post-auth return path for unsaved scenes.
-	 */
-	useEffect(() => {
-		if (pendingSceneHydratedRef.current) {
-			return
-		}
-
-		if (paramSceneId || initialSceneAggregate || file?.model || isFileLoading) {
-			return
-		}
-
-		pendingSceneHydratedRef.current = true
-
-		void (async () => {
-			const draft = await loadPendingSceneDraft()
-			if (!draft) {
-				return
-			}
-
-			setIsDownloading(true)
-
-			try {
-				const draftOptimizationSettings = draft.optimizationSettings
-
-				if (draftOptimizationSettings) {
-					const inferredPreset = inferOptimizationPreset(
-						draftOptimizationSettings
-					)
-
-					setOptimizationState((prev) => ({
-						...prev,
-						optimizationPreset: inferredPreset,
-						optimizations: draftOptimizationSettings
-					}))
-				}
-
-				await loadFromData({
-					sceneData: draft.sceneData
-				})
-
-				setSceneMetaState(draft.sceneMeta)
-				setLastSavedSceneMeta(draft.sceneMeta)
-				toast.success('Restored your unsaved scene from this browser')
-			} catch (error) {
-				console.error('Failed to restore pending scene draft:', error)
-				toast.error('Failed to restore your saved draft')
-			}
-
-			setIsDownloading(false)
-		})()
-	}, [
+	useSceneDraftRehydration({
+		pendingSceneHydratedRef,
+		shouldRestorePendingDraft,
 		paramSceneId,
 		initialSceneAggregate,
-		file?.model,
+		fileModel: file?.model,
 		isFileLoading,
+		locationPathname: location.pathname,
+		onRestoreHandled: handleRestoreHandled,
 		setIsDownloading,
 		inferOptimizationPreset,
 		setOptimizationState,
 		loadFromData,
 		setSceneMetaState,
 		setLastSavedSceneMeta
-	])
+	})
 
-	/** Reset rehydration guard when leaving publisher so future returns can rehydrate. */
-	useEffect(() => {
-		if (!location.pathname.startsWith('/publisher')) {
-			pendingSceneHydratedRef.current = false
-		}
-	}, [location.pathname])
-
-	useEffect(() => {
-		if (!paramSceneId) {
-			setIsInitializing(false)
-			return
-		}
-
-		if (!initialSceneAggregate) {
-			setIsInitializing(false)
-			return
-		}
-
-		if (file?.model || isFileLoading || sceneLoadAttemptedRef.current) {
-			return
-		}
-
-		loadSceneFromAggregate(paramSceneId, initialSceneAggregate).finally(() =>
-			setIsInitializing(false)
-		)
-	}, [
+	useSceneAggregateBootstrap({
+		sceneLoadAttemptedRef,
 		paramSceneId,
 		initialSceneAggregate,
-		file?.model,
+		fileModel: file?.model,
 		isFileLoading,
-		loadSceneFromAggregate,
-		setIsInitializing
-	])
+		setIsInitializing,
+		loadSceneFromAggregate
+	})
 
 	return { saveSceneSettings, saveAvailability, persistPendingSceneDraft }
 }

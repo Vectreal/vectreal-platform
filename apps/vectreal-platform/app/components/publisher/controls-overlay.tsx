@@ -61,10 +61,10 @@ const OverlayControls = ({
 	// This hook manages scene loading/saving but doesn't return state available via atoms
 	const { saveSceneSettings, saveAvailability, persistPendingSceneDraft } =
 		useSceneLoader({
-		sceneId,
-		userId: user?.id,
-		initialSceneAggregate: sceneAggregate as SceneAggregateResponse | null,
-		sceneMeta: sceneAggregate?.meta ?? null
+			sceneId,
+			userId: user?.id,
+			initialSceneAggregate: sceneAggregate as SceneAggregateResponse | null,
+			sceneMeta: sceneAggregate?.meta ?? null
 		})
 
 	const isUploadStep = !file?.model && step === 'uploading'
@@ -102,7 +102,8 @@ const OverlayControls = ({
 			return
 		}
 
-		const nextPath = sceneId ? `/publisher/${sceneId}` : '/publisher'
+		const nextPathBase = sceneId ? `/publisher/${sceneId}` : '/publisher'
+		const nextPath = `${nextPathBase}?restore_draft=1`
 		const authPath = `/sign-in?next=${encodeURIComponent(nextPath)}&scene_saved=true`
 		navigate(authPath)
 	}, [persistPendingSceneDraft, sceneId, navigate])
@@ -167,6 +168,7 @@ const OverlayControls = ({
 				projectId={projectId ?? undefined}
 				userId={user?.id}
 				saveSceneSettings={saveSceneSettings}
+				saveAvailability={saveAvailability}
 				info={optimizer.info}
 				report={optimizer.report}
 				publishedAt={

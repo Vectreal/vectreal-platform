@@ -8,12 +8,12 @@ import { data, Outlet } from 'react-router'
 import { Route } from './+types/publisher-layout'
 import { ControlsOverlay } from '../../components'
 import { getProject } from '../../lib/domain/project/project-repository.server'
-import { buildSceneAggregate } from '../../lib/domain/scene/scene-aggregate.server'
+import { buildSceneAggregate } from '../../lib/domain/scene/server/scene-aggregate.server'
 import {
 	getScene,
 	getSceneFolder
-} from '../../lib/domain/scene/scene-folder-repository.server'
-import { getPublishedScenePreview } from '../../lib/domain/scene/scene-preview-repository.server'
+} from '../../lib/domain/scene/server/scene-folder-repository.server'
+import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import {
 	processAtom,
 	publisherConfigStore

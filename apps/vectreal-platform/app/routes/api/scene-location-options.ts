@@ -2,7 +2,7 @@ import { ApiResponse } from '@shared/utils'
 import { LoaderFunctionArgs } from 'react-router'
 
 import { getUserProjects } from '../../lib/domain/project/project-repository.server'
-import { getRootSceneFolders } from '../../lib/domain/scene/scene-folder-repository.server'
+import { getRootSceneFolders } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 
 export async function loader({ request }: LoaderFunctionArgs) {

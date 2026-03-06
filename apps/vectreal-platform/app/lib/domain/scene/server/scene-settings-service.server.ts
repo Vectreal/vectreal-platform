@@ -20,7 +20,7 @@ import {
 	type SceneSettingsTransaction,
 	upsertSceneSettings
 } from './scene-settings-repository.server'
-import { getDbClient } from '../../../db/client'
+import { getDbClient } from '../../../../db/client'
 import {
 	assets,
 	folders,
@@ -32,20 +32,20 @@ import {
 	scenes,
 	sceneSettings,
 	sceneStats
-} from '../../../db/schema'
+} from '../../../../db/schema'
 import {
 	type GLTFExportResult,
 	SceneAssetBinaryDataMap,
 	SaveSceneSettingsParams,
 	UpdateSceneSettingsParams
-} from '../../../types/api'
-import { createSceneStatsFromReport } from '../../utils/scene-stats-helpers'
+} from '../../../../types/api'
+import { createSceneStatsFromReport } from '../../../utils/scene-stats-helpers'
 import {
 	downloadAssets,
 	uploadSceneAssets
-} from '../asset/asset-storage.server'
+} from '../../asset/asset-storage.server'
 
-import type { SceneMetaState } from '../../../types/publisher-config'
+import type { SceneMetaState } from '../../../../types/publisher-config'
 import type {
 	ExtendedGLTFDocument,
 	OptimizationReport,

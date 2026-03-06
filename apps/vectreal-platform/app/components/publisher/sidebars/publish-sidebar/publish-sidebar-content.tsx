@@ -5,12 +5,17 @@ import {
 	CardHeader,
 	CardTitle
 } from '@shared/components/ui/card'
+import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { Separator } from '@shared/components/ui/separator'
 import { formatFileSize } from '@shared/utils'
 import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { motion } from 'framer-motion'
+import { useAtomValue } from 'jotai'
 import { Code, Globe, Save } from 'lucide-react'
 
+import { SaveAvailabilityState, SaveSceneResult } from '../../../../hooks'
+import { usePublisherSaveAction } from '../../../../hooks/use-publisher-save-action'
+import { processAtom } from '../../../../lib/stores/publisher-config-store'
 import { AccordionItem, AccordionTrigger } from '../accordion-components'
 import { sidebarContentVariants } from '../animation'
 import {
@@ -43,9 +48,10 @@ interface PublishSidebarProps {
 		currentTextureBytes?: number | null
 	}
 	stats?: SceneStatsData | null
+	saveAvailability?: SaveAvailabilityState
 	onRequireAuth?: () => Promise<void> | void
 	saveSceneSettings: () => Promise<
-		| { sceneId?: string; unchanged?: boolean; [key: string]: unknown }
+		| SaveSceneResult
 		| { unchanged: true }
 		| undefined
 	>
@@ -78,9 +84,21 @@ const PublishSidebarContent: FC<PublishSidebarProps> = ({
 	publishedAt,
 	sizeInfo,
 	stats,
+	saveAvailability,
 	onRequireAuth,
 	saveSceneSettings
 }) => {
+	const { isSaving } = useAtomValue(processAtom)
+	const { handleSaveScene } = usePublisherSaveAction({
+		sceneId: sceneId ?? null,
+		userId,
+		onRequireAuth,
+		saveSceneSettings
+	})
+	const isSaveDisabled = userId
+		? isSaving || !saveAvailability?.canSave
+		: isSaving
+
 	const metrics =
 		showSceneInfo && info && sizeInfo
 			? buildSceneMetrics({
@@ -90,8 +108,11 @@ const PublishSidebarContent: FC<PublishSidebarProps> = ({
 					stats
 				})
 			: null
-	const hasSavedScene = typeof sceneId === 'string' && sceneId.length > 0
-	const canAccessPublishFeatures = Boolean(userId && hasSavedScene)
+	const isAuthenticated = Boolean(userId)
+	const hasSavedScene = Boolean(
+		typeof sceneId === 'string' && sceneId.length > 0
+	)
+	const canAccessPublishFeatures = isAuthenticated && hasSavedScene
 
 	return (
 		<div className="no-scrollbar grow overflow-auto pb-2">
@@ -166,7 +187,7 @@ const PublishSidebarContent: FC<PublishSidebarProps> = ({
 						<AccordionTrigger className="px-2">
 							<span className="flex items-center gap-3">
 								<Save className="inline" size={14} />
-								Save & Export
+								Download
 							</span>
 						</AccordionTrigger>
 						<AccordionContent>
@@ -174,7 +195,7 @@ const PublishSidebarContent: FC<PublishSidebarProps> = ({
 						</AccordionContent>
 					</AccordionItem>
 
-					{!canAccessPublishFeatures && (
+					{!isAuthenticated && (
 						<div className="px-6 pb-2">
 							<p className="text-muted-foreground mb-2 text-xs">
 								Sign up and save this scene once to unlock Publish and Embed.
@@ -189,6 +210,40 @@ const PublishSidebarContent: FC<PublishSidebarProps> = ({
 							</Button>
 						</div>
 					)}
+
+					{!hasSavedScene && isAuthenticated && (
+						<div className="my-4 pb-2">
+							<p className="text-muted-foreground mb-2 text-xs">
+								Save this scene once to unlock Publish and Embed.
+							</p>
+							<Button
+								type="button"
+								size="sm"
+								className="w-full"
+								disabled={isSaveDisabled}
+								onClick={() => void handleSaveScene()}
+							>
+								{isSaving ? (
+									<>
+										<LoadingSpinner />
+										Saving...
+									</>
+								) : (
+									'Save Scene'
+								)}
+							</Button>
+						</div>
+					)}
+
+					{isSaveDisabled &&
+						saveAvailability?.reason === 'requires-first-optimization' && (
+							<div className="my-4 pb-2">
+								<p className="text-muted-foreground mb-2 text-xs">
+									Optimize your scene first to enable saving and publishing
+									features.
+								</p>
+							</div>
+						)}
 
 					{canAccessPublishFeatures && (
 						<>

@@ -4,7 +4,7 @@ import type {
 	SceneAggregateResponse,
 	SceneAssetBinaryDataMap,
 	SerializedSceneAssetDataMap
-} from '../../../types/api'
+} from '../../../../types/api'
 
 function serializeAssetData(
 	assetData: SceneAssetBinaryDataMap | null

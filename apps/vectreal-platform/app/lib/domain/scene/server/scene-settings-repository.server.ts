@@ -1,11 +1,11 @@
 import { eq } from 'drizzle-orm'
 
-import * as dbSchema from '../../../db/schema'
-import { assets, sceneAssets, sceneSettings } from '../../../db/schema'
+import * as dbSchema from '../../../../db/schema'
+import { assets, sceneAssets, sceneSettings } from '../../../../db/schema'
 import {
 	SceneSettingsUpsertInput,
 	SceneSettingsWithAssets
-} from '../../../types/api'
+} from '../../../../types/api'
 
 import type { ExtractTablesWithRelations } from 'drizzle-orm'
 import type { PgTransaction } from 'drizzle-orm/pg-core'

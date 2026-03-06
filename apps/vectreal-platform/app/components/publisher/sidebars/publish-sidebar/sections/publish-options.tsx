@@ -8,7 +8,7 @@ import { useCallback, useRef, useState, type FC } from 'react'
 import { useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
-import { buildSceneUploadFileDescriptor } from '../../../../../lib/domain/scene/scene-upload-manifest'
+import { buildSceneUploadFileDescriptor } from '../../../../../lib/domain/scene/client/scene-upload-manifest'
 import { processAtom } from '../../../../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
 import { itemVariants } from '../../animation'
