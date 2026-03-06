@@ -39,13 +39,14 @@ import {
 	X
 } from 'lucide-react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 
 import { Route } from './+types/scene'
 import CenteredSpinner from '../../../components/centered-spinner'
 import { InlineEditableMetadataField } from '../../../components/dashboard/inline-editable-metadata-field'
 import { EmbedOptionsPanel } from '../../../components/embed/embed-options-panel'
 import { ClientVectrealViewer } from '../../../components/viewer/client-vectreal-viewer'
+import { useDashboardSceneActions } from '../../../hooks/use-dashboard-scene-actions'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import { buildFullscreenPreviewPath } from '../../../lib/domain/embed/embed-snippet'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
@@ -267,7 +268,9 @@ const PreviewModel = memo(
 const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 	const { scene, project, user, sceneDetails } = loaderData
 	const sceneId = scene.id
+	const navigate = useNavigate()
 	const setDeleteDialog = useSetAtom(deleteDialogAtom)
+	const { actionData, actionState } = useDashboardSceneActions()
 
 	// Use sceneId as key to create a new hook instance per scene
 	const { file, loadFromServer } = useLoadModel()
@@ -324,6 +327,27 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 	useEffect(() => {
 		activeSceneIdRef.current = sceneId
 	}, [sceneId])
+
+	useEffect(() => {
+		if (
+			actionState !== 'idle' ||
+			!actionData ||
+			actionData.action !== 'delete'
+		) {
+			return
+		}
+
+		const deletedCurrentScene = actionData.results.some(
+			(result) =>
+				result.type === 'scene' && result.id === sceneId && result.success
+		)
+
+		if (!deletedCurrentScene) {
+			return
+		}
+
+		navigate(`/dashboard/projects/${project.id}`, { replace: true })
+	}, [actionData, actionState, navigate, project.id, sceneId])
 
 	function handleDeleteClick() {
 		setDeleteDialog({

@@ -30,8 +30,8 @@ import {
 	TabsTrigger
 } from '@shared/components/ui/tabs'
 import { KeyRound } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { Outlet, useFetcher, useNavigate } from 'react-router'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Outlet, useFetcher, useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
 import { Route } from './+types/api-keys'
@@ -174,15 +174,15 @@ function OrgApiKeysTable({
 	)
 }
 
-export default function ApiKeysPage({
-	loaderData,
-	actionData
-}: Route.ComponentProps) {
+export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 	const { organizations, keysByOrg } = loaderData
 	const navigate = useNavigate()
-	const fetcher = useFetcher()
+	const fetcher = useFetcher<typeof action>()
+	const revalidator = useRevalidator()
+	const lastHandledResponseRef = useRef<string | null>(null)
 	const [revokeDialogOpen, setRevokeDialogOpen] = useState(false)
 	const [keyToRevokeId, setKeyToRevokeId] = useState<string | null>(null)
+	const isRevoking = fetcher.state !== 'idle'
 
 	const allKeys = useMemo(
 		() => Object.values(keysByOrg).flatMap((items) => items),
@@ -195,12 +195,26 @@ export default function ApiKeysPage({
 	)
 
 	useEffect(() => {
-		if (actionData?.success) {
-			toast.success(actionData.message || 'Operation successful')
-		} else if (actionData?.error) {
-			toast.error(actionData.error)
+		if (fetcher.state !== 'idle' || !fetcher.data) {
+			return
 		}
-	}, [actionData])
+
+		const signature = JSON.stringify(fetcher.data)
+		if (lastHandledResponseRef.current === signature) {
+			return
+		}
+		lastHandledResponseRef.current = signature
+
+		if (fetcher.data.success) {
+			toast.success(fetcher.data.message || 'API key revoked successfully')
+			revalidator.revalidate()
+			return
+		}
+
+		if (fetcher.data.error) {
+			toast.error(fetcher.data.error)
+		}
+	}, [fetcher.state, fetcher.data, revalidator])
 
 	const handleEdit = (keyId: string) => {
 		navigate(`/dashboard/api-keys/${keyId}/edit`)
@@ -212,7 +226,7 @@ export default function ApiKeysPage({
 	}
 
 	const confirmRevoke = () => {
-		if (!keyToRevokeId) return
+		if (!keyToRevokeId || isRevoking) return
 
 		fetcher.submit(
 			{
@@ -329,6 +343,7 @@ export default function ApiKeysPage({
 							<AlertDialogCancel>Cancel</AlertDialogCancel>
 							<AlertDialogAction
 								onClick={confirmRevoke}
+								disabled={isRevoking}
 								className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 							>
 								Revoke Key

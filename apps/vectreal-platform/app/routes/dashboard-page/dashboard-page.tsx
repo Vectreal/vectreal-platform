@@ -1,3 +1,4 @@
+import { useSetAtom } from 'jotai/react'
 import { File } from 'lucide-react'
 
 import { Route } from './+types/dashboard-page'
@@ -17,6 +18,7 @@ import {
 } from '../../lib/domain/dashboard/dashboard-stats.server'
 import { getUserProjects } from '../../lib/domain/project/project-repository.server'
 import { getProjectsScenes } from '../../lib/domain/scene/server/scene-folder-repository.server'
+import { deleteDialogAtom } from '../../lib/stores/dashboard-management-store'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 
@@ -86,6 +88,7 @@ export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors
 
 const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
 	const { projects, recentScenes, overview } = loaderData
+	const setDeleteDialog = useSetAtom(deleteDialogAtom)
 	const sceneTableState = useDashboardTableState({
 		namespace: 'dashboard-scenes'
 	})
@@ -134,8 +137,16 @@ const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
 						rowSelection={sceneTableState.rowSelection}
 						onRowSelectionChange={sceneTableState.onRowSelectionChange}
 						onDelete={(selectedRows) => {
-							console.log('Delete scenes:', selectedRows)
-							// TODO: Implement delete functionality
+							setDeleteDialog({
+								open: true,
+								items: (selectedRows as SceneRow[]).map((row) => ({
+									id: row.id,
+									type: 'scene',
+									name: row.name,
+									projectId: row.projectId,
+									folderId: null
+								}))
+							})
 						}}
 						appearance="minimal"
 					/>
