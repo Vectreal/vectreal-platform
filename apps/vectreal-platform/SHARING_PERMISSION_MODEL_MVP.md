@@ -20,13 +20,13 @@ Primary requirements:
 
 ## Scope Matrix (MVP)
 
-| Scope | Action | External embed principal (API key) | Authenticated collaborator principal |
-| --- | --- | --- | --- |
-| Scene | View preview aggregate | Allowed only if scene is published and key is valid for project | Allowed for draft and published when user has project access |
-| Scene | Read scene settings in preview mode | Allowed only if scene is published and key is valid for project | Allowed for draft and published when user has project access |
-| Scene | Save / edit / publish / delete | Not allowed | Allowed when user has project access (current repository enforcement) |
-| Folder | View/list/manage | Not allowed in embed flow | Allowed when user has project access |
-| Project | View/list/manage | Limited to project bound to API key for preview-only reads | Allowed when user has org membership; role restrictions apply to some actions |
+| Scope   | Action                              | External embed principal (API key)                              | Authenticated collaborator principal                                          |
+| ------- | ----------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Scene   | View preview aggregate              | Allowed only if scene is published and key is valid for project | Allowed for draft and published when user has project access                  |
+| Scene   | Read scene settings in preview mode | Allowed only if scene is published and key is valid for project | Allowed for draft and published when user has project access                  |
+| Scene   | Save / edit / publish / delete      | Not allowed                                                     | Allowed when user has project access (current repository enforcement)         |
+| Folder  | View/list/manage                    | Not allowed in embed flow                                       | Allowed when user has project access                                          |
+| Project | View/list/manage                    | Limited to project bound to API key for preview-only reads      | Allowed when user has org membership; role restrictions apply to some actions |
 
 ## Endpoint Enforcement (Cross-API)
 

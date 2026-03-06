@@ -33,7 +33,10 @@ export const EmbedOptions: FC<EmbedOptionsProps> = ({ sceneId, projectId }) => {
 			return previewPathWithTokenPlaceholder
 		}
 
-		return new URL(previewPathWithTokenPlaceholder, window.location.origin).toString()
+		return new URL(
+			previewPathWithTokenPlaceholder,
+			window.location.origin
+		).toString()
 	}, [previewPathWithTokenPlaceholder])
 
 	const generateEmbedCode = () => {
@@ -97,8 +100,7 @@ export const EmbedOptions: FC<EmbedOptionsProps> = ({ sceneId, projectId }) => {
 		<motion.div variants={itemVariants} className="space-y-4 px-2 py-2">
 			<div className="text-muted-foreground text-sm">
 				Generate code to embed your 3D scene on websites or apps. External
-				embeds require a preview API key and only published scenes are
-				rendered.
+				embeds require a preview API key and only published scenes are rendered.
 			</div>
 			{!canEmbed && (
 				<div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
@@ -108,9 +110,10 @@ export const EmbedOptions: FC<EmbedOptionsProps> = ({ sceneId, projectId }) => {
 			)}
 			{canEmbed && (
 				<div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
-					Draft scenes are not externally embeddable. Publish first, then replace
-					<code className="mx-1">YOUR_PREVIEW_API_KEY</code> with a valid preview
-					key.
+					Draft scenes are not externally embeddable. Publish first, then
+					replace
+					<code className="mx-1">YOUR_PREVIEW_API_KEY</code> with a valid
+					preview key.
 				</div>
 			)}
 
@@ -143,7 +146,11 @@ export const EmbedOptions: FC<EmbedOptionsProps> = ({ sceneId, projectId }) => {
 
 			<div className="space-y-2">
 				<Label className="text-sm">Embed Preview URL</Label>
-				<Input readOnly value={absolutePreviewUrl} placeholder="Save scene to generate URL" />
+				<Input
+					readOnly
+					value={absolutePreviewUrl}
+					placeholder="Save scene to generate URL"
+				/>
 				<div className="flex justify-end">
 					<Button
 						variant="secondary"
