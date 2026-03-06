@@ -13,7 +13,7 @@ export const meta: MetaFunction<undefined, { root: RootLoader }> = (
 
 export default function MdxLayout() {
 	return (
-		<div className={cn(styles.root, 'px-4 py-16')}>
+		<div className={cn(styles.root, 'px-6 py-20 md:px-8')}>
 			<Outlet />
 		</div>
 	)
