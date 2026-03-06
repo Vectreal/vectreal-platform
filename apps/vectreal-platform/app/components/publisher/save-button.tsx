@@ -46,11 +46,11 @@ const SaveButton = ({
 		? 'Saving...'
 		: !userId
 			? 'Sign In to Save'
-		: saveAvailability.reason === 'requires-first-optimization'
-			? 'Optimize First'
-			: saveAvailability.reason === 'no-unsaved-changes'
-				? 'Saved'
-				: 'Save'
+			: saveAvailability.reason === 'requires-first-optimization'
+				? 'Optimize First'
+				: saveAvailability.reason === 'no-unsaved-changes'
+					? 'Saved'
+					: 'Save'
 
 	return (
 		<Button
