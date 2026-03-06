@@ -111,7 +111,7 @@ const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
 							{quickLinks.map((item) => (
 								<SidebarMenuItem key={item.title}>
 									<SidebarMenuButton asChild>
-										<Link viewTransition to={item.url}>
+										<Link viewTransition to={item.url ?? ''}>
 											<item.icon />
 											<span>{item.title}</span>
 											<ArrowRight className="ml-auto h-4 w-4" />
