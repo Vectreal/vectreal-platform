@@ -6,14 +6,13 @@ import styles from '../../styles/mdx.module.css'
 
 import type { RootLoader } from '../../root'
 
-
 export const meta: MetaFunction<undefined, { root: RootLoader }> = (
 	rootLoaderData
 ) => buildMeta([], getRootMeta(rootLoaderData), { private: false })
 
 export default function MdxLayout() {
 	return (
-		<div className={cn(styles.root, 'px-4 py-16')}>
+		<div className={cn(styles.root, 'px-6 py-20 md:px-8')}>
 			<Outlet />
 		</div>
 	)

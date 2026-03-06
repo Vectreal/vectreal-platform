@@ -1,35 +1,116 @@
 @reference './global.module.css';
 
 .root {
-	@apply mx-auto flex max-w-lg flex-col gap-6 md:max-w-4xl;
+	@apply mx-auto flex max-w-lg flex-col gap-8 md:max-w-4xl;
 
 	ul {
 		@apply list-disc pl-6;
+		opacity: 0.75;
+
+		li {
+			line-height: 1.7;
+		}
 	}
 
 	ol {
 		@apply list-decimal pl-6;
+		opacity: 0.75;
+
+		li {
+			line-height: 1.7;
+		}
 	}
 
 	h1 {
-		@apply text-3xl font-bold;
+		font-size: clamp(2rem, 5vw, 3.5rem);
+		font-weight: 900;
+		line-height: 1;
+		background: linear-gradient(
+			to bottom right,
+			var(--color-primary),
+			color-mix(in oklch, var(--color-primary) 50%, transparent)
+		);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
 	}
+
 	h2 {
-		@apply text-2xl font-bold;
+		@apply text-xl font-bold tracking-wide uppercase;
+		border-left: 2px solid var(--color-accent);
+		padding-left: 1rem;
+		margin-top: 1rem;
 	}
+
 	h3 {
-		@apply text-xl font-bold;
+		@apply text-lg font-semibold;
 	}
+
 	h4 {
-		@apply text-lg font-bold;
+		@apply text-base font-semibold;
 	}
+
 	h5 {
-		@apply text-base font-bold;
+		@apply text-sm font-semibold;
 	}
+
 	h6 {
-		@apply text-sm font-bold;
+		@apply text-xs font-semibold;
 	}
+
 	p {
-		@apply text-base opacity-75;
+		@apply text-base;
+		line-height: 1.7;
+		opacity: 0.75;
+	}
+
+	a {
+		color: var(--color-accent);
+		text-underline-offset: 4px;
+		opacity: 0.85;
+		transition: opacity 0.15s ease;
+
+		&:hover {
+			opacity: 1;
+			text-decoration: underline;
+		}
+	}
+
+	strong {
+		@apply font-semibold;
+		color: var(--color-foreground);
+		opacity: 1;
+	}
+
+	hr {
+		border: none;
+		height: 1px;
+		background: linear-gradient(
+			to right,
+			transparent,
+			color-mix(in oklch, var(--color-foreground) 30%, transparent),
+			transparent
+		);
+	}
+
+	blockquote {
+		border-left: 2px solid
+			color-mix(in oklch, var(--color-accent) 50%, transparent);
+		padding-left: 1rem;
+		font-style: italic;
+		opacity: 0.6;
+	}
+
+	code {
+		@apply rounded font-mono text-sm;
+		background: var(--color-muted);
+		color: var(--color-accent);
+		padding: 0.125rem 0.375rem;
+	}
+
+	pre {
+		@apply overflow-x-auto rounded-lg font-mono text-sm;
+		background: var(--color-muted);
+		padding: 1rem;
 	}
 }
