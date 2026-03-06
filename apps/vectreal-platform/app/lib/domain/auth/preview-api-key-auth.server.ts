@@ -143,12 +143,12 @@ export async function validatePreviewApiKeyForProject(params: {
 	if (matches.length === 0) {
 		trackFailedAttempt(clientIdentifier)
 		return { ok: false, error: 'invalid_token' }
+	}
 
-		// Extra security: Verify API key's org matches project's org
-		if (matches[0].apiKeyOrgId !== matches[0].projectOrgId) {
-			trackFailedAttempt(clientIdentifier)
-			return { ok: false, error: 'invalid_token' }
-		}
+	// Extra security: Verify API key's org matches project's org
+	if (matches[0].apiKeyOrgId !== matches[0].projectOrgId) {
+		trackFailedAttempt(clientIdentifier)
+		return { ok: false, error: 'invalid_token' }
 	}
 
 	await db
