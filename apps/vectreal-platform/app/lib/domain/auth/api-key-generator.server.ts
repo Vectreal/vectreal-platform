@@ -10,11 +10,28 @@ const BASE62_CHARS =
  * Generate a random base62 string from secure random bytes
  */
 function generateBase62String(byteLength: number): string {
-	const bytes = randomBytes(byteLength)
+	const base = BASE62_CHARS.length
+	const limit = Math.floor(256 / base) * base // largest multiple of base <= 256
 	let result = ''
 
-	for (const byte of bytes) {
-		result += BASE62_CHARS[byte % BASE62_CHARS.length]
+	let bytes = randomBytes(byteLength)
+	let index = 0
+
+	while (result.length < byteLength) {
+		if (index >= bytes.length) {
+			// Need more random data; generate another batch
+			bytes = randomBytes(byteLength)
+			index = 0
+		}
+
+		const byte = bytes[index++]
+
+		// Rejection sampling to avoid modulo bias
+		if (byte >= limit) {
+			continue
+		}
+
+		result += BASE62_CHARS[byte % base]
 	}
 
 	return result
