@@ -27,8 +27,20 @@ export async function loader({ request }: Route.LoaderArgs) {
 		}
 
 		const {
-			data: { user }
+			data: { user },
+			error: userError
 		} = await client.auth.getUser()
+
+		// Stale refresh token – clear the cookie so the browser doesn't keep
+		// sending it, then fall through as unauthenticated (no error log needed).
+		if (userError?.code === 'refresh_token_not_found') {
+			try {
+				await client.auth.signOut({ scope: 'local' })
+			} catch {
+				// Ignore cleanup errors
+			}
+			return data(defaultResponse, { headers })
+		}
 
 		// Create a new URL object to parse the request URL
 		const url = new URL(request.url)
