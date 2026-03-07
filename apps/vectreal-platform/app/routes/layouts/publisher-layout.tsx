@@ -33,8 +33,18 @@ import type { ShouldRevalidateFunction } from 'react-router'
 export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	const { client, headers } = await createSupabaseClient(request)
 	const {
-		data: { user }
+		data: { user },
+		error: userError
 	} = await client.auth.getUser()
+
+	// Stale refresh token – clear the cookie and continue as unauthenticated.
+	if (userError?.code === 'refresh_token_not_found') {
+		try {
+			await client.auth.signOut({ scope: 'local' })
+		} catch {
+			// Ignore cleanup errors
+		}
+	}
 
 	const isMobile = isMobileRequest(request)
 
