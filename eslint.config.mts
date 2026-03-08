@@ -1,4 +1,3 @@
-import css from '@eslint/css'
 import js from '@eslint/js'
 import json from '@eslint/json'
 import markdown from '@eslint/markdown'
@@ -111,18 +110,5 @@ export default defineConfig(tseslint.configs.recommended, [
 		plugins: { markdown },
 		language: 'markdown/gfm',
 		extends: ['markdown/recommended']
-	},
-	{
-		files: ['**/*.css'],
-		ignores: [
-			'**/node_modules/**',
-			'**/dist/**',
-			'**/build/**',
-			'**/public/**',
-			'**/styles/globals.css'
-		],
-		plugins: { css },
-		language: 'css/css',
-		extends: ['css/recommended']
 	}
 ])
