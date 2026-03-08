@@ -6,7 +6,6 @@ import { Star } from 'lucide-react'
 import ProductScene from './product-scene'
 import { BasicCard } from '../../components'
 
-
 const MockShopSection = () => {
 	return (
 		<section className="relative min-h-[600px] w-full space-y-4 md:h-[80vh]">

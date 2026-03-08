@@ -13,6 +13,7 @@
 		"publish-release": "npx nx release --skip-publish"
 	},
 	"dependencies": {
+		"@fontsource-variable/dm-sans": "^5.2.8",
 		"@gltf-transform/core": "^4.0.8",
 		"@gltf-transform/extensions": "^4.0.10",
 		"@gltf-transform/functions": "^4.0.8",

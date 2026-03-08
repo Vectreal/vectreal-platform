@@ -1,9 +1,4 @@
-@import 'tailwindcss';
-
 .global {
-	font-family: 'DM Sans', sans-serif;
-	font-optical-sizing: auto;
-
 	h2 {
 		font-size: 2.5rem;
 		font-weight: 400;
@@ -35,6 +30,5 @@
 	a {
 		cursor: pointer;
 		text-decoration: none;
-		transition: color 0.2s ease;
 	}
 }

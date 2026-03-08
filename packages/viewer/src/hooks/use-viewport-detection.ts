@@ -27,7 +27,7 @@ export function useViewportDetection(
 			},
 			{
 				root: null,
-				rootMargin: '50px',
+				rootMargin: '50% 0px',
 				threshold: 0,
 				...options
 			}

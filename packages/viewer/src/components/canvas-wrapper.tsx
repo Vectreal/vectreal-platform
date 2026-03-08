@@ -87,7 +87,7 @@ const Canvas = ({
 				<ThreeCanvas
 					{...props}
 					className={cn(
-						'invisible h-full w-full opacity-0 transition-[opacity,visibility] delay-1000 duration-500 ease-in-out',
+						'invisible h-full w-full opacity-0 transition-[opacity,visibility] delay-500 duration-300 ease-in-out',
 						canvasVisible && 'visible opacity-100'
 					)}
 					data-canvas-visible={canvasVisible}

@@ -17,7 +17,7 @@ const FadeInView = ({
 	const ref = useRef<HTMLDivElement>(null)
 	const isInView = useInView(ref, {
 		once: true,
-		margin: '-75px 0px',
+		margin: '10% 0px',
 		amount: 0.2
 	})
 
