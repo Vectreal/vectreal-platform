@@ -1,4 +1,4 @@
-@reference './global.module.css';
+@reference '../../../../shared/components/src/styles/globals.css';
 
 .root {
 	@apply mx-auto flex max-w-lg flex-col gap-8 md:max-w-4xl;
