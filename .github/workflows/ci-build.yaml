@@ -1,11 +1,11 @@
-name: CI - Lint and Typecheck
+name: CI - Build
 
 on:
   workflow_call:
 
 jobs:
-  lint-typecheck:
-    name: Lint and Typecheck
+  build:
+    name: Build
     permissions:
       contents: read
     runs-on: ubuntu-22.04
@@ -42,24 +42,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint
+      - name: Build
         shell: bash
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            npx nx affected --target=lint --base=origin/${{ github.event.pull_request.base.ref }} --head=origin/${{ github.event.pull_request.head.ref }}
+            npx nx affected --target=build-ci --base=origin/${{ github.event.pull_request.base.ref }} --head=origin/${{ github.event.pull_request.head.ref }}
           elif [[ "${{ github.event_name }}" == "push" && -n "${{ github.event.before }}" && "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]]; then
-            npx nx affected --target=lint --base=${{ github.event.before }} --head=${{ github.sha }}
+            npx nx affected --target=build-ci --base=${{ github.event.before }} --head=${{ github.sha }}
           else
-            npx nx run-many -t lint
-          fi
-
-      - name: Typecheck
-        shell: bash
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            npx nx affected --target=typecheck --base=origin/${{ github.event.pull_request.base.ref }} --head=origin/${{ github.event.pull_request.head.ref }}
-          elif [[ "${{ github.event_name }}" == "push" && -n "${{ github.event.before }}" && "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]]; then
-            npx nx affected --target=typecheck --base=${{ github.event.before }} --head=${{ github.sha }}
-          else
-            npx nx run-many -t typecheck
+            npx nx run-many -t build-ci
           fi

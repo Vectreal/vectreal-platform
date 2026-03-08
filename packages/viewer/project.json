@@ -49,6 +49,14 @@
 				"configFile": "packages/viewer/vite.config.ts"
 			}
 		},
+		"build-ci": {
+			"executor": "@nx/vite:build",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "build/packages/vctrl/viewer",
+				"configFile": "packages/viewer/vite.config.ts"
+			}
+		},
 		"build-storybook": {
 			"executor": "nx:run-commands",
 			"dependsOn": ["typecheck"],

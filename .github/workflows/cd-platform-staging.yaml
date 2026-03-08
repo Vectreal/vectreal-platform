@@ -15,7 +15,10 @@ on:
       - 'nx.json'
       - 'tsconfig.base.json'
       - '.github/workflows/ci-lint-typecheck.yaml'
+      - '.github/workflows/ci-build.yaml'
+      - '.github/workflows/ci-quality.yaml'
       - '.github/workflows/cd-platform-staging.yaml'
+      - '.github/workflows/cd-platform-production.yaml'
       - '.github/workflows/shared-gcloud-deploy.yaml'
 
 permissions:
@@ -26,14 +29,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint-typecheck:
-    name: Lint and Typecheck Gate
-    uses: ./.github/workflows/ci-lint-typecheck.yaml
+  quality-gate:
+    name: CI Quality Gate
+    uses: ./.github/workflows/ci-quality.yaml
 
   deploy-staging:
     name: Deploy to Staging Environment
-    needs: lint-typecheck
-    if: ${{ needs.lint-typecheck.result == 'success' }}
+    needs: quality-gate
+    if: ${{ needs.quality-gate.result == 'success' }}
     uses: ./.github/workflows/shared-gcloud-deploy.yaml
     with:
       environment: staging

@@ -39,6 +39,23 @@
 					"mode": "production"
 				}
 			}
+		},
+		"build-ci": {
+			"executor": "@nx/vite:build",
+			"outputs": ["{options.outputPath}"],
+			"defaultConfiguration": "production",
+			"options": {
+				"outputPath": "build/shared/utils",
+				"configFile": "shared/utils/vite.config.ts"
+			},
+			"configurations": {
+				"development": {
+					"mode": "development"
+				},
+				"production": {
+					"mode": "production"
+				}
+			}
 		}
 	}
 }

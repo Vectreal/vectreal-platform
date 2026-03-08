@@ -39,6 +39,14 @@
 				"outputPath": "build/packages/vctrl/hooks",
 				"configFile": "packages/hooks/vite.config.ts"
 			}
+		},
+		"build-ci": {
+			"executor": "@nx/vite:build",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "build/packages/vctrl/hooks",
+				"configFile": "packages/hooks/vite.config.ts"
+			}
 		}
 	}
 }

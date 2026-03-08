@@ -11,8 +11,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  quality-gate:
+    name: CI Quality Gate
+    uses: ./.github/workflows/ci-quality.yaml
+
   deploy-production:
     name: Deploy to Production Environment
+    needs: quality-gate
+    if: ${{ needs.quality-gate.result == 'success' }}
     strategy:
       matrix:
         lb-only-origin:
