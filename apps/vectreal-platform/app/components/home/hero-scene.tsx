@@ -20,7 +20,7 @@ const HeroScene = ({ vertical }: HeroSceneProps) => {
 		return (
 			<div
 				className={cn(
-					'relative w-full overflow-hidden',
+					'relative w-full overflow-hidden max-sm:h-100',
 					vertical && 'h-full max-md:h-[50vh] max-md:min-h-[300px]'
 				)}
 			/>
@@ -32,7 +32,7 @@ const HeroScene = ({ vertical }: HeroSceneProps) => {
 			fallback={
 				<div
 					className={cn(
-						'relative w-full overflow-hidden',
+						'relative w-full overflow-hidden max-sm:h-100',
 						vertical && 'h-full max-md:h-[50vh] max-md:min-h-[300px]'
 					)}
 				>

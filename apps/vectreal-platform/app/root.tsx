@@ -3,7 +3,6 @@ import { cn } from '@shared/utils'
 import {
 	data,
 	Links,
-	type LinksFunction,
 	Meta,
 	type MetaFunction,
 	Outlet,
@@ -27,19 +26,6 @@ export const meta: MetaFunction = () => [
 		title: 'Vectreal Platform',
 		name: 'description',
 		content: 'Your platform for creating and sharing 3D content.'
-	}
-]
-
-export const links: LinksFunction = () => [
-	{ rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-	{
-		rel: 'preconnect',
-		href: 'https://fonts.gstatic.com',
-		crossOrigin: 'anonymous'
-	},
-	{
-		rel: 'stylesheet',
-		href: 'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap'
 	}
 ]
 
@@ -78,6 +64,20 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 
 export type RootLoader = typeof loader
 
+const CriticalStyles = () => (
+	<style>
+		{`/* Critical CSS for initial render */
+			body {
+				font-family: 'Inter', sans-serif;
+			}
+			
+			button, a {
+				cursor: pointer;
+			}
+	`}
+	</style>
+)
+
 export function Layout({ children }: { children: ReactNode }) {
 	const error = useRouteError()
 
@@ -95,10 +95,11 @@ export function Layout({ children }: { children: ReactNode }) {
 		}
 
 		return (
-			<html lang="en">
+			<html lang="en" className="dark" style={{ colorScheme: 'dark' }}>
 				<head>
 					<Meta />
 					<Links />
+					<CriticalStyles />
 				</head>
 				<body>
 					<div className="error">
@@ -114,12 +115,17 @@ export function Layout({ children }: { children: ReactNode }) {
 	}
 
 	return (
-		<html lang="en" className={cn(styles.global, 'dark')}>
+		<html
+			lang="en"
+			className={cn(styles.global, 'dark')}
+			style={{ colorScheme: 'dark' }}
+		>
 			<head>
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
 				<Meta />
 				<Links />
+				<CriticalStyles />
 			</head>
 			<body>
 				<GlobalNavigationLoader />

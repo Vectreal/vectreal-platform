@@ -18,7 +18,6 @@ import BasicCard from '../../components/layout-components/basic-card'
 import Section from '../../components/layout-components/section'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
-
 export async function loader({ request }: Route.LoaderArgs) {
 	const isMobile = isMobileRequest(request)
 
@@ -95,7 +94,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 					</div>
 				</div>
 
-				<HeroScene vertical={isMobile} />
+				<HeroScene />
 			</section>
 
 			{/* gradient border effect */}
