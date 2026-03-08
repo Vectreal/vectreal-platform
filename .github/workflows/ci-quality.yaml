@@ -1,0 +1,61 @@
+name: CI - Quality
+
+on:
+  workflow_call:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - 'main'
+    paths:
+      - 'apps/vectreal-platform/**'
+      - 'packages/core/**'
+      - 'packages/hooks/**'
+      - 'packages/viewer/**'
+      - 'shared/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'nx.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/ci-lint-typecheck.yaml'
+      - '.github/workflows/ci-build.yaml'
+      - '.github/workflows/ci-quality.yaml'
+      - '.github/workflows/cd-platform-staging.yaml'
+      - '.github/workflows/cd-platform-production.yaml'
+      - '.github/workflows/shared-gcloud-deploy.yaml'
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'apps/vectreal-platform/**'
+      - 'packages/core/**'
+      - 'packages/hooks/**'
+      - 'packages/viewer/**'
+      - 'shared/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'nx.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/ci-lint-typecheck.yaml'
+      - '.github/workflows/ci-build.yaml'
+      - '.github/workflows/ci-quality.yaml'
+      - '.github/workflows/cd-platform-staging.yaml'
+      - '.github/workflows/cd-platform-production.yaml'
+      - '.github/workflows/shared-gcloud-deploy.yaml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-typecheck:
+    name: Lint and Typecheck Gate
+    uses: ./.github/workflows/ci-lint-typecheck.yaml
+
+  build:
+    name: Build Gate
+    needs: lint-typecheck
+    if: ${{ needs.lint-typecheck.result == 'success' }}
+    uses: ./.github/workflows/ci-build.yaml
