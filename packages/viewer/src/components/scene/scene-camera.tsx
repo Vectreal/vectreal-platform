@@ -1,8 +1,8 @@
 import { useBounds } from '@react-three/drei'
-import { useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { CameraProps } from '@vctrl/core'
 import { useCallback, useEffect, useRef } from 'react'
-import { PerspectiveCamera, Vector3 } from 'three'
+import { PerspectiveCamera, Quaternion, Vector3 } from 'three'
 
 /**
  * Default camera options for the VectrealViewer.
@@ -25,15 +25,31 @@ export const defaultCameraOptions: CameraProps = {
 	]
 }
 
-export const SceneCamera: React.FC<CameraProps> = (props) => {
+interface SceneCameraProps extends CameraProps {
+	onInitialFramingComplete?: () => void
+}
+
+export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
+	const { onInitialFramingComplete } = props
 	const { cameras } = { ...defaultCameraOptions, ...props }
 	const initialCamera =
 		cameras?.find((cam) => cam.initial) || defaultCameraOptions.cameras?.at(0)
 
 	const { camera: sceneCamera } = useThree()
+	const controls = useThree((state) => state.controls) as
+		| {
+				target?: Vector3
+		  }
+		| undefined
 	const bounds = useBounds()
 
 	const initializedCameraPosition = useRef(false)
+	const hasInitialFramingCompleted = useRef(false)
+	const isWaitingForStableFrame = useRef(false)
+	const stableFrameCount = useRef(0)
+	const previousCameraPosition = useRef<Vector3 | null>(null)
+	const previousCameraQuaternion = useRef<Quaternion | null>(null)
+	const previousControlsTarget = useRef<Vector3 | null>(null)
 
 	const initializeCamera = useCallback(
 		(sceneCamera: PerspectiveCamera) => {
@@ -73,9 +89,17 @@ export const SceneCamera: React.FC<CameraProps> = (props) => {
 
 			bounds.reset().fit()
 
+			if (!hasInitialFramingCompleted.current) {
+				isWaitingForStableFrame.current = true
+				stableFrameCount.current = 0
+				previousCameraPosition.current = null
+				previousCameraQuaternion.current = null
+				previousControlsTarget.current = null
+			}
+
 			initializedCameraPosition.current = true
 		},
-		[cameras]
+		[bounds, initialCamera]
 	)
 
 	useEffect(() => {
@@ -88,6 +112,69 @@ export const SceneCamera: React.FC<CameraProps> = (props) => {
 		if (!initializedCameraPosition.current) return
 		initializeCamera(sceneCamera as PerspectiveCamera)
 	}, [cameras, initializeCamera, sceneCamera])
+
+	useFrame(() => {
+		if (
+			!isWaitingForStableFrame.current ||
+			hasInitialFramingCompleted.current
+		) {
+			return
+		}
+
+		const cameraPosition = (sceneCamera as PerspectiveCamera).position
+		const cameraQuaternion = (sceneCamera as PerspectiveCamera).quaternion
+		const controlsTarget = controls?.target
+
+		if (
+			!previousCameraPosition.current ||
+			!previousCameraQuaternion.current ||
+			(controlsTarget && !previousControlsTarget.current)
+		) {
+			previousCameraPosition.current = cameraPosition.clone()
+			previousCameraQuaternion.current = cameraQuaternion.clone()
+			previousControlsTarget.current = controlsTarget
+				? controlsTarget.clone()
+				: null
+			return
+		}
+
+		const hasStableCameraPosition =
+			cameraPosition.distanceTo(previousCameraPosition.current) < 0.0001
+		const hasStableCameraRotation =
+			1 - Math.abs(cameraQuaternion.dot(previousCameraQuaternion.current)) <
+			0.0001
+		const hasStableControlsTarget = controlsTarget
+			? controlsTarget.distanceTo(
+					previousControlsTarget.current ?? controlsTarget
+				) < 0.0001
+			: true
+
+		if (
+			hasStableCameraPosition &&
+			hasStableCameraRotation &&
+			hasStableControlsTarget
+		) {
+			stableFrameCount.current += 1
+		} else {
+			stableFrameCount.current = 0
+		}
+
+		previousCameraPosition.current.copy(cameraPosition)
+		previousCameraQuaternion.current.copy(cameraQuaternion)
+		if (controlsTarget) {
+			if (!previousControlsTarget.current) {
+				previousControlsTarget.current = controlsTarget.clone()
+			} else {
+				previousControlsTarget.current.copy(controlsTarget)
+			}
+		}
+
+		if (stableFrameCount.current >= 2) {
+			hasInitialFramingCompleted.current = true
+			isWaitingForStableFrame.current = false
+			onInitialFramingComplete?.()
+		}
+	})
 
 	return null
 }

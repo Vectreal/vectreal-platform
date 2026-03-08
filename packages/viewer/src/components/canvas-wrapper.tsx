@@ -3,6 +3,9 @@ import { cn } from '@shared/utils'
 import { useEffect, useRef, useState } from 'react'
 
 import { useViewportDetection } from '../hooks/use-viewport-detection'
+import { VIEWER_MODEL_FADE_DURATION_MS } from '../hooks/viewer-loading.constants'
+
+import type { LoadingState } from '../hooks/use-viewer-loading'
 
 interface CanvasComponentProps extends CanvasProps {
 	children: React.ReactNode
@@ -28,6 +31,10 @@ interface CanvasComponentProps extends CanvasProps {
 	 * Default: true
 	 */
 	enableViewportRendering?: boolean
+	/**
+	 * Viewer loading lifecycle state used to synchronize loader/model cross-fade.
+	 */
+	loadingState?: LoadingState
 }
 
 /**
@@ -43,13 +50,17 @@ const Canvas = ({
 	theme = 'system',
 	overlay,
 	enableViewportRendering = true,
+	loadingState = 'loading',
 	...props
 }: CanvasComponentProps) => {
 	const [isReady, setIsReady] = useState(false)
 	const [canvasVisible, setCanvasVisible] = useState(false)
 	const mountedRef = useRef(false)
+	const fadeFrameRef = useRef<number | null>(null)
+	const fadeFrameNestedRef = useRef<number | null>(null)
 	const [containerRef, isInViewport] = useViewportDetection(
-		enableViewportRendering
+		enableViewportRendering,
+		{ rootMargin: '100% 0px' }
 	)
 
 	// Handle StrictMode double-mounting
@@ -66,18 +77,40 @@ const Canvas = ({
 
 	// Determine rendering and visibility states
 	const shouldRenderCanvas = isReady && isInViewport
+	const shouldShowCanvasContent = loadingState !== 'loading'
+
+	const clearFadeFrames = () => {
+		if (fadeFrameRef.current) {
+			cancelAnimationFrame(fadeFrameRef.current)
+			fadeFrameRef.current = null
+		}
+
+		if (fadeFrameNestedRef.current) {
+			cancelAnimationFrame(fadeFrameNestedRef.current)
+			fadeFrameNestedRef.current = null
+		}
+	}
+
+	const scheduleCanvasFadeIn = () => {
+		fadeFrameRef.current = requestAnimationFrame(() => {
+			fadeFrameNestedRef.current = requestAnimationFrame(() => {
+				setCanvasVisible(true)
+			})
+		})
+	}
 
 	// Trigger fade-in when canvas remounts after viewport change
 	useEffect(() => {
 		if (shouldRenderCanvas) {
-			// Trigger fade-in after a brief delay to ensure CSS transition runs
-			const timer = setTimeout(() => {
-				setCanvasVisible(true)
-			}, 10)
+			setCanvasVisible(false)
+			scheduleCanvasFadeIn()
 
-			return () => clearTimeout(timer)
+			return () => {
+				clearFadeFrames()
+			}
 		} else {
 			setCanvasVisible(false)
+			clearFadeFrames()
 		}
 	}, [shouldRenderCanvas])
 
@@ -87,10 +120,14 @@ const Canvas = ({
 				<ThreeCanvas
 					{...props}
 					className={cn(
-						'invisible h-full w-full opacity-0 transition-[opacity,visibility] delay-500 duration-300 ease-in-out',
-						canvasVisible && 'visible opacity-100'
+						'h-full w-full opacity-0 transition-opacity ease-out',
+						canvasVisible && shouldShowCanvasContent && 'opacity-100'
 					)}
+					style={{
+						transitionDuration: `${VIEWER_MODEL_FADE_DURATION_MS}ms`
+					}}
 					data-canvas-visible={canvasVisible}
+					data-loading-state={loadingState}
 				>
 					{children}
 				</ThreeCanvas>
