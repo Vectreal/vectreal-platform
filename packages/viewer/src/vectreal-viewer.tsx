@@ -26,7 +26,14 @@ import {
 	ShadowsProps
 } from '@vctrl/core'
 // import { Perf } from 'r3f-perf'
-import { memo, PropsWithChildren, Suspense } from 'react'
+import {
+	memo,
+	PropsWithChildren,
+	Suspense,
+	useCallback,
+	useEffect,
+	useState
+} from 'react'
 import { Object3D } from 'three'
 
 import { Canvas, Overlay } from './components'
@@ -39,6 +46,7 @@ import {
 	ScenePostProcessing,
 	SceneShadows
 } from './components/scene'
+import { useViewerLoading } from './hooks/use-viewer-loading'
 
 import type {
 	SceneScreenshotCapture,
@@ -175,6 +183,23 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	} = props
 
 	const hasContent = !!(model || children)
+	const [isInitialFramingComplete, setIsInitialFramingComplete] =
+		useState(false)
+
+	useEffect(() => {
+		if (!hasContent) {
+			setIsInitialFramingComplete(false)
+		}
+	}, [hasContent])
+
+	const handleInitialFramingComplete = useCallback(() => {
+		setIsInitialFramingComplete(true)
+	}, [])
+
+	const { loadingState, completeLoadingTransition } = useViewerLoading(
+		hasContent,
+		isInitialFramingComplete
+	)
 
 	return (
 		<Suspense fallback={loader}>
@@ -184,9 +209,11 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					className
 				)}
 				theme={theme}
+				loadingState={loadingState}
 				overlay={
 					<Overlay
-						hasContent={hasContent}
+						loadingState={loadingState}
+						onLoaderFadeOutComplete={completeLoadingTransition}
 						popover={popover}
 						loader={loader}
 						loadingThumbnail={loadingThumbnail}
@@ -210,7 +237,10 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 								exposure={toneMappingOptions?.exposure}
 								/> */}
 							<SceneBounds {...boundsOptions}>
-								<SceneCamera {...cameraOptions} />
+								<SceneCamera
+									{...cameraOptions}
+									onInitialFramingComplete={handleInitialFramingComplete}
+								/>
 								<Center top>
 									{model ? (
 										<SceneModel

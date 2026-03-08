@@ -1,38 +1,46 @@
-import { useEffect, useState } from 'react'
-
-import { VIEWER_LOADING_FADE_DURATION_MS } from './viewer-loading.constants'
+import { useCallback, useEffect, useState } from 'react'
 
 type LoadingState = 'loading' | 'loaded' | 'ready'
+
+interface UseViewerLoadingResult {
+	loadingState: LoadingState
+	completeLoadingTransition: () => void
+}
 
 /**
  * Hook to manage the loading state of the viewer.
  * Handles transitions between loading, loaded, and ready states.
  *
  * @param hasContent - Whether the viewer has content to display (model or children)
- * @returns The current loading state
+ * @param isInitialFramingComplete - Whether initial camera framing via bounds has stabilized
+ * @returns The loading state and transition completion callback
  */
-export function useViewerLoading(hasContent: boolean): LoadingState {
+export function useViewerLoading(
+	hasContent: boolean,
+	isInitialFramingComplete: boolean
+): UseViewerLoadingResult {
 	const [loadingState, setLoadingState] = useState<LoadingState>('loading')
+	const canTransitionToLoaded = hasContent && isInitialFramingComplete
+	const completeLoadingTransition = useCallback(() => {
+		setLoadingState((currentState) =>
+			currentState === 'loaded' ? 'ready' : currentState
+		)
+	}, [])
 
 	useEffect(() => {
-		if (hasContent && loadingState === 'loading') {
-			// Content just became available, start fade transition
+		if (canTransitionToLoaded && loadingState === 'loading') {
+			// Content is framed and visible, begin cross-fade transition.
 			setLoadingState('loaded')
-
-			// TODO: Replace setTimeout with transitionend event listener for more robust animation handling
-			// After loader fade-out completes, mark as ready
-			const timer = setTimeout(() => {
-				setLoadingState('ready')
-			}, VIEWER_LOADING_FADE_DURATION_MS)
-
-			return () => clearTimeout(timer)
-		} else if (!hasContent && loadingState !== 'loading') {
-			// Content was removed, go back to loading
+		} else if (!canTransitionToLoaded && loadingState !== 'loading') {
+			// Content was removed or no longer framed, go back to loading.
 			setLoadingState('loading')
 		}
-	}, [hasContent, loadingState])
+	}, [canTransitionToLoaded, loadingState])
 
-	return loadingState
+	return {
+		loadingState,
+		completeLoadingTransition
+	}
 }
 
 export type { LoadingState }
