@@ -147,7 +147,7 @@
 		"jest": "30.0.4",
 		"jest-environment-jsdom": "30.0.4",
 		"jiti": "^2.6.1",
-		"jsdom": "~22.1.0",
+		"jsdom": "~28.1.0",
 		"jsonc-eslint-parser": "^2.1.0",
 		"lerna": "^8.1.6",
 		"nx": "22.5.0",
