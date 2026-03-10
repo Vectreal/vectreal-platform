@@ -427,3 +427,39 @@ export async function publishScene(
 		)
 	}
 }
+
+export async function revokeScenePublish(
+	request: SceneSettingsRequest,
+	userId: string
+): Promise<Response> {
+	try {
+		const { sceneId } = request as GetSceneSettingsRequest
+		assertParsed(
+			sceneId,
+			'Scene settings request must be validated before calling operations'
+		)
+
+		const hasUser = await userExists(userId)
+		if (!hasUser) {
+			throw new Error(
+				'User not found in local database. Please sign out and sign back in.'
+			)
+		}
+
+		await getSceneProjectId(sceneId)
+
+		const result = await sceneSettingsService.revokeScenePublication({
+			sceneId,
+			userId
+		})
+
+		return ApiResponse.success(result)
+	} catch (error) {
+		console.error('Failed to revoke scene publish state:', error)
+		return ApiResponse.serverError(
+			error instanceof Error
+				? error.message
+				: 'Failed to revoke scene publication'
+		)
+	}
+}

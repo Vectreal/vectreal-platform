@@ -65,8 +65,21 @@ export class SceneSettingsParser {
 				return sceneIdValidation
 			}
 
-			// For get-scene-settings, we don't need settings or gltfJson
+			// For lightweight read actions, we don't need settings payload
 			if (action === 'get-scene-settings') {
+				return {
+					action,
+					requestId,
+					projectId,
+					sceneId,
+					targetProjectId: undefined,
+					targetFolderId: undefined,
+					settings: undefined,
+					gltfJson: undefined
+				}
+			}
+
+			if (action === 'revoke-scene-publish') {
 				return {
 					action,
 					requestId,
@@ -205,7 +218,9 @@ export class SceneSettingsParser {
 		sceneId?: string
 	): Response | null {
 		const requiresSceneId =
-			action === 'get-scene-settings' || action === 'commit-scene-publish'
+			action === 'get-scene-settings' ||
+			action === 'commit-scene-publish' ||
+			action === 'revoke-scene-publish'
 
 		if (requiresSceneId && !sceneId) {
 			return ApiResponse.badRequest('Scene ID is required')

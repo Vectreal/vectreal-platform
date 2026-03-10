@@ -1,3 +1,4 @@
+import { Separator } from '@shared/components'
 import {
 	Avatar,
 	AvatarFallback,
@@ -31,9 +32,11 @@ import { useSetAtom } from 'jotai/react'
 import {
 	ChevronDown,
 	ChevronRight,
+	Cloud,
 	ExternalLink,
 	Info,
 	LayoutDashboard,
+	Radio,
 	Rocket,
 	Trash2,
 	X
@@ -45,6 +48,7 @@ import { Route } from './+types/scene'
 import CenteredSpinner from '../../../components/centered-spinner'
 import { InlineEditableMetadataField } from '../../../components/dashboard/inline-editable-metadata-field'
 import { EmbedOptionsPanel } from '../../../components/embed/embed-options-panel'
+import { ScenePublishStateControl } from '../../../components/publishing/scene-publish-state-control'
 import { ClientVectrealViewer } from '../../../components/viewer/client-vectreal-viewer'
 import { useDashboardSceneActions } from '../../../hooks/use-dashboard-scene-actions'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
@@ -55,6 +59,7 @@ import {
 	getScene,
 	getSceneFolderAncestry
 } from '../../../lib/domain/scene/server/scene-folder-repository.server'
+import { getPublishedScenePreview } from '../../../lib/domain/scene/server/scene-preview-repository.server'
 import { deleteDialogAtom } from '../../../lib/stores/dashboard-management-store'
 import { toViewerLoadingThumbnail } from '../../../lib/viewer/viewer-loading-thumbnail'
 
@@ -154,6 +159,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		buildSceneAggregate(sceneId)
 	])
 
+	const publishedMeta = await getPublishedScenePreview(projectId, sceneId)
+
 	const initialSceneData = toInitialSceneData(sceneAggregate)
 	const sceneDetails: SceneDetailsSummary = {
 		fileSizeBytes:
@@ -191,6 +198,13 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 			user,
 			project,
 			scene,
+			publishState: {
+				sceneId: scene.id,
+				status: publishedMeta ? ('published' as const) : ('draft' as const),
+				publishedAt: publishedMeta?.publishedAt?.toISOString() ?? null,
+				publishedAssetId: publishedMeta?.publishedAssetId ?? null,
+				publishedAssetSizeBytes: publishedMeta?.publishedAssetSizeBytes ?? null
+			},
 			folderPath,
 			initialSceneData,
 			sceneDetails
@@ -269,7 +283,7 @@ const PreviewModel = memo(
 )
 
 const ScenePage = ({ loaderData }: Route.ComponentProps) => {
-	const { scene, project, user, sceneDetails } = loaderData
+	const { scene, project, user, sceneDetails, publishState } = loaderData
 	const sceneId = scene.id
 	const navigate = useNavigate()
 	const setDeleteDialog = useSetAtom(deleteDialogAtom)
@@ -473,6 +487,10 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		}
 	}, [loadFromServer, sceneId])
 
+	const openPublisherForPublishing = useCallback(() => {
+		navigate(`/publisher/${sceneState.id}`)
+	}, [navigate, sceneState.id])
+
 	useEffect(() => {
 		if (sceneId && sceneData?.sceneId !== sceneId) {
 			getSceneSettings()
@@ -580,7 +598,20 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 								</p>
 
 								<div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
-									<Badge variant="secondary">{sceneState.status}</Badge>
+									<Badge
+										variant={
+											sceneState.status === 'published'
+												? 'default'
+												: 'secondary'
+										}
+									>
+										{sceneState.status === 'published' ? (
+											<Radio className="mr-1 h-3 w-3" />
+										) : (
+											<Cloud className="mr-1 h-3 w-3" />
+										)}
+										<span className="capitalize">{sceneState.status}</span>
+									</Badge>
 									<Badge variant="secondary">
 										Size {formatBytes(sceneDetails.fileSizeBytes)}
 									</Badge>
@@ -605,7 +636,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 					</section>
 				</main>
 
-				<aside className="bg-muted/30 hidden min-h-0 flex-col gap-3 rounded-2xl p-4 xl:flex">
+				<aside className="bg-muted/30 hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-4 xl:flex">
 					<section className="space-y-3">
 						<div>
 							<p className="text-muted-foreground text-[11px] tracking-[0.2em] uppercase">
@@ -649,7 +680,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						</div>
 					</section>
 
-					<section className="space-y-2">
+					<section className="space-y-2 overflow-y-auto">
 						<p className="text-muted-foreground text-[11px] tracking-[0.2em] uppercase">
 							Assets Preview
 						</p>
@@ -687,7 +718,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 													<img
 														src={textureUrl}
 														alt={asset.name}
-														className="h-10 w-10 rounded-md object-cover transition-transform duration-200 ease-in-out hover:z-10 hover:scale-500 hover:shadow-xl"
+														className="h-10 w-10 rounded-lg object-cover"
 													/>
 												</div>
 											)}
@@ -846,6 +877,25 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							)}
 						</section>
 
+						<Separator />
+
+						<section className="space-y-3">
+							<h3 className="text-sm font-semibold tracking-tight">
+								Publishing
+							</h3>
+							<ScenePublishStateControl
+								publishState={publishState}
+								onPublish={openPublisherForPublishing}
+								draftActionMode="immediate"
+								publishButtonText="Open Publisher to Publish"
+								publishDisabledReason="Publishing is managed in the Publisher workflow to ensure optimized output and texture consistency."
+								revokeDialogTitle="Revoke scene publication?"
+								revokeDialogDescription="This deletes the published GLB asset and returns this scene to draft state."
+							/>
+						</section>
+
+						<Separator />
+
 						<section className="space-y-3">
 							<h3 className="text-sm font-semibold tracking-tight">
 								Collaboration
@@ -885,6 +935,8 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							</div>
 						</section>
 
+						<Separator />
+
 						<section className="space-y-3">
 							<h3 className="text-sm font-semibold tracking-tight">Embed</h3>
 							<EmbedOptionsPanel
@@ -893,8 +945,12 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							/>
 						</section>
 
-						<section className="space-y-3 border-t pt-3">
-							<p className="text-muted-foreground text-sm">Danger Zone</p>
+						<Separator />
+
+						<section className="space-y-3">
+							<h3 className="text-sm font-semibold tracking-tight">
+								Danger Zone
+							</h3>
 							<Button
 								variant="destructive"
 								size="sm"

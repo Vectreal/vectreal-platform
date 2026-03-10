@@ -176,6 +176,11 @@ const OverlayControls = ({
 						? publishedMeta.publishedAt
 						: (publishedMeta?.publishedAt?.toISOString() ?? null)
 				}
+				publishedAssetSizeBytes={
+					typeof publishedMeta?.publishedAssetSizeBytes === 'number'
+						? publishedMeta.publishedAssetSizeBytes
+						: null
+				}
 				sizeInfo={{
 					initialSceneBytes: latestSceneStats?.initialSceneBytes,
 					currentSceneBytes:

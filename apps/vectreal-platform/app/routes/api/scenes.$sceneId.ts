@@ -791,7 +791,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	if (
 		effectiveSceneId &&
-		(action === 'get-scene-settings' || action === 'commit-scene-publish')
+		(action === 'get-scene-settings' ||
+			action === 'commit-scene-publish' ||
+			action === 'revoke-scene-publish')
 	) {
 		const scene = await getScene(effectiveSceneId, authResult.user.id)
 		if (!scene) {
@@ -833,9 +835,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 				if (!(file instanceof File)) {
 					return withAdditionalHeaders(
-						ApiResponse.badRequest(
-							'file is required for upload-scene-asset'
-						),
+						ApiResponse.badRequest('file is required for upload-scene-asset'),
 						authHeaders
 					)
 				}
@@ -855,9 +855,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				const file = actionRequest.file
 				if (!(file instanceof File)) {
 					return withAdditionalHeaders(
-						ApiResponse.badRequest(
-							'file is required for upload-scene-gltf'
-						),
+						ApiResponse.badRequest('file is required for upload-scene-gltf'),
 						authHeaders
 					)
 				}
@@ -876,9 +874,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				const file = actionRequest.file
 				if (!(file instanceof File)) {
 					return withAdditionalHeaders(
-						ApiResponse.badRequest(
-							'file is required for upload-published-glb'
-						),
+						ApiResponse.badRequest('file is required for upload-published-glb'),
 						authHeaders
 					)
 				}
@@ -953,6 +949,32 @@ export async function action({ request, params }: ActionFunctionArgs) {
 									`${authResult.user.id}:${requestData.requestId ?? 'no-request-id'}`,
 									() =>
 										sceneSettingsOps.publishScene(
+											{
+												...requestData,
+												action
+											},
+											authResult.user.id
+										)
+								)
+							)
+					}),
+					authHeaders
+				)
+
+			case 'revoke-scene-publish':
+				return withAdditionalHeaders(
+					await runWithIdempotentSceneRequest({
+						requestId: requestData.requestId,
+						userId: authResult.user.id,
+						action,
+						sceneId: requestData.sceneId,
+						operation: () =>
+							runWithHeavySceneActionLimit(() =>
+								runWithSceneWriteLock(
+									requestData.sceneId as string,
+									`${authResult.user.id}:${requestData.requestId ?? 'no-request-id'}`,
+									() =>
+										sceneSettingsOps.revokeScenePublish(
 											{
 												...requestData,
 												action

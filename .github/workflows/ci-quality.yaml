@@ -3,9 +3,7 @@ name: CI - Quality
 on:
   workflow_call:
   pull_request:
-    types: [opened, synchronize, reopened]
-    branches:
-      - 'main'
+    types: [opened, synchronize, reopened, ready_for_review, edited]
     paths:
       - 'apps/vectreal-platform/**'
       - 'packages/core/**'
@@ -14,14 +12,18 @@ on:
       - 'shared/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - 'nx.json'
+      - 'eslint.config.mts'
+      - 'jest.config.ts'
       - 'tsconfig.base.json'
-      - '.github/workflows/ci-lint-typecheck.yaml'
-      - '.github/workflows/ci-build.yaml'
       - '.github/workflows/ci-quality.yaml'
       - '.github/workflows/cd-platform-staging.yaml'
       - '.github/workflows/cd-platform-production.yaml'
       - '.github/workflows/shared-gcloud-deploy.yaml'
+  merge_group:
+    branches:
+      - 'main'
   push:
     branches:
       - 'main'
@@ -33,10 +35,11 @@ on:
       - 'shared/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - 'nx.json'
+      - 'eslint.config.mts'
+      - 'jest.config.ts'
       - 'tsconfig.base.json'
-      - '.github/workflows/ci-lint-typecheck.yaml'
-      - '.github/workflows/ci-build.yaml'
       - '.github/workflows/ci-quality.yaml'
       - '.github/workflows/cd-platform-staging.yaml'
       - '.github/workflows/cd-platform-production.yaml'
@@ -46,16 +49,73 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.event_name == 'workflow_call' && format('ci-quality-called-{0}', github.run_id) || format('{0}-{1}', github.workflow, github.ref) }}
+  group: ${{ github.event_name == 'workflow_call' && format('ci-quality-called-{0}', github.run_id) || format('ci-quality-{0}', github.event.pull_request.number || github.ref) }}
   cancel-in-progress: true
 
 jobs:
-  lint-typecheck:
-    name: Lint and Typecheck Gate
-    uses: ./.github/workflows/ci-lint-typecheck.yaml
+  quality:
+    name: Quality Gate
+    permissions:
+      contents: read
+    runs-on: ubuntu-22.04
+    env:
+      NX_DAEMON: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-  build:
-    name: Build Gate
-    needs: lint-typecheck
-    if: ${{ needs.lint-typecheck.result == 'success' }}
-    uses: ./.github/workflows/ci-build.yaml
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Restore Nx local cache
+        uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: ${{ runner.os }}-nx-${{ github.ref_name }}-${{ hashFiles('pnpm-lock.yaml', 'nx.json', '**/project.json', 'tsconfig.base.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nx-${{ github.ref_name }}-
+            ${{ runner.os }}-nx-main-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve affected range
+        id: affected-range
+        shell: bash
+        run: |
+          BASE_SHA=""
+          HEAD_SHA=""
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+          elif [[ "${{ github.event_name }}" == "merge_group" ]]; then
+            BASE_SHA="${{ github.event.merge_group.base_sha }}"
+            HEAD_SHA="${{ github.event.merge_group.head_sha }}"
+          fi
+
+          if [[ -n "$BASE_SHA" && "$BASE_SHA" != "0000000000000000000000000000000000000000" ]]; then
+            echo "has_range=true" >> "$GITHUB_OUTPUT"
+            echo "base=$BASE_SHA" >> "$GITHUB_OUTPUT"
+            echo "head=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_range=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run affected quality targets
+        if: ${{ steps.affected-range.outputs.has_range == 'true' }}
+        run: npx nx affected -t lint,typecheck,build-ci --base=${{ steps.affected-range.outputs.base }} --head=${{ steps.affected-range.outputs.head }}
+
+      - name: Run full quality targets
+        if: ${{ steps.affected-range.outputs.has_range != 'true' }}
+        run: npx nx run-many -t lint,typecheck,build-ci

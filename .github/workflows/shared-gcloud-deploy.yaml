@@ -68,6 +68,11 @@ on:
         required: false
         type: string
         default: ''
+      fail-on-health-check:
+        description: 'Whether to fail the workflow when post-deploy health check fails'
+        required: false
+        type: boolean
+        default: false
     secrets:
       gcp-credentials:
         description: 'Google Cloud credentials JSON'
@@ -261,8 +266,14 @@ jobs:
           done
 
           echo "❌ Service health check failed after $MAX_RETRIES attempts"
+
+          if [ "${{ inputs.fail-on-health-check }}" = "true" ]; then
+            echo "::error::Deployment health check failed. Failing workflow as configured."
+            exit 1
+          fi
+
           echo "::warning::Deployment completed but health check failed. Please verify manually."
-          exit 0  # Don't fail the workflow, but warn
+          exit 0
 
       - name: Output deployment info
         run: |

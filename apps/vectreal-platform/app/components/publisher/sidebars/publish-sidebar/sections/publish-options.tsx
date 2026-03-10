@@ -1,24 +1,28 @@
-import { Button } from '@shared/components/ui/button'
 import { ModelExporter } from '@vctrl/core/model-exporter'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { motion } from 'framer-motion'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { AlertCircle, CheckCircle, Loader2, RefreshCcw } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { useCallback, useRef, useState, type FC } from 'react'
 import { useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
-import { buildSceneUploadFileDescriptor } from '../../../../../lib/domain/scene/client/scene-upload-manifest'
+import { publishSceneFromGlb } from '../../../../../lib/domain/scene/client/scene-publish'
 import { processAtom } from '../../../../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
+import { ScenePublishStateControl } from '../../../../publishing/scene-publish-state-control'
 import { itemVariants } from '../../animation'
 
-import type { PublishSceneResponse } from '../../../../../types/api'
+import type {
+	PublishSceneResponse,
+	ScenePublishStateResponse
+} from '../../../../../types/api'
 
 type PublishStatus = 'idle' | 'saving' | 'publishing' | 'success' | 'error'
 
 interface PublishOptionsProps {
 	sceneId?: string
+	publishState: ScenePublishStateResponse
 	saveSceneSettings: () => Promise<
 		| { sceneId?: string; unchanged?: boolean; [key: string]: unknown }
 		| { unchanged: true }
@@ -28,6 +32,7 @@ interface PublishOptionsProps {
 
 export const PublishOptions: FC<PublishOptionsProps> = ({
 	sceneId,
+	publishState,
 	saveSceneSettings
 }) => {
 	const [publishStatus, setPublishStatus] = useState<PublishStatus>('idle')
@@ -91,59 +96,33 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 				clientSceneBytes: prev.clientSceneBytes ?? result.size
 			}))
 			const baseName = file?.name?.replace(/\.[^/.]+$/, '') || 'scene'
-			const uploadFormData = new FormData()
-			uploadFormData.append('action', 'upload-published-glb')
-			uploadFormData.append('sceneId', targetSceneId)
-			const uploadDescriptor = buildSceneUploadFileDescriptor(
-				`${baseName}.glb`,
-				result.data
-			)
-			uploadFormData.append('file', uploadDescriptor.file)
-
-			const uploadResponse = await fetch(`/api/scenes/${targetSceneId}`, {
-				method: 'POST',
-				body: uploadFormData
+			const publishResult = await publishSceneFromGlb({
+				sceneId: targetSceneId,
+				baseFileName: baseName,
+				glbData:
+					result.data instanceof Uint8Array
+						? result.data
+						: new Uint8Array(result.data),
+				currentSceneBytes: Number.isFinite(result.size)
+					? result.size
+					: undefined
 			})
 
-			const uploadResult = await uploadResponse.json()
-			if (!uploadResponse.ok || uploadResult.error) {
-				throw new Error(
-					uploadResult.error || `HTTP error! status: ${uploadResponse.status}`
-				)
-			}
-
-			const uploadedAsset = uploadResult.data || uploadResult
-
-			const formData = new FormData()
-			formData.append('action', 'commit-scene-publish')
-			formData.append('sceneId', targetSceneId)
-			formData.append('publishedAssetId', uploadedAsset.assetId)
-			if (Number.isFinite(result.size)) {
-				formData.append('currentSceneBytes', String(result.size))
-			}
-
-			const response = await fetch(`/api/scenes/${targetSceneId}`, {
-				method: 'POST',
-				body: formData
-			})
-
-			const resultData = await response.json()
-			if (!response.ok || resultData.error) {
-				throw new Error(
-					resultData.error || `HTTP error! status: ${response.status}`
-				)
-			}
-
-			const data = (resultData.data || resultData) as PublishSceneResponse
+			const data = publishResult.response as PublishSceneResponse
 			if (data.stats) {
 				setOptimizationRuntime((prev) => ({
 					...prev,
 					latestSceneStats: data.stats
 				}))
 			}
+
+			const publishStateUpdate: ScenePublishStateResponse =
+				publishResult.publishState
+
 			setPublishStatus('success')
 			revalidator.revalidate()
 			toast.success('Scene published successfully.')
+			return publishStateUpdate
 		} catch (error) {
 			console.error('Failed to publish scene:', error)
 			setPublishStatus('error')
@@ -153,6 +132,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 			toast.error(
 				error instanceof Error ? error.message : 'Failed to publish scene'
 			)
+			return
 		}
 	}, [
 		canPublish,
@@ -171,13 +151,11 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 			? 'Saving latest scene changes before publishing...'
 			: publishStatus === 'publishing'
 				? 'Publishing optimized scene...'
-				: publishStatus === 'success'
-					? 'Scene published successfully.'
-					: publishStatus === 'error'
-						? publishError || 'Publishing failed. Retry to continue.'
-						: hasUnsavedChanges
-							? 'Publish will save your latest changes first.'
-							: 'Scene is ready to publish.'
+				: publishStatus === 'error'
+					? publishError || 'Publishing failed. Retry to continue.'
+					: hasUnsavedChanges
+						? 'Publish will save your latest changes first.'
+						: 'Scene is ready to publish.'
 
 	return (
 		<motion.div variants={itemVariants} className="space-y-4 px-2 py-2">
@@ -191,62 +169,34 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 				</div>
 			)}
 
-			{publishStatus === 'error' ? (
-				<div className="flex items-start gap-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-900 dark:text-red-200">
-					<AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-					<span>{statusText}</span>
-				</div>
-			) : publishStatus === 'success' ? (
-				<div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700 dark:border-green-900 dark:bg-green-950/30 dark:text-green-400">
-					<CheckCircle className="h-4 w-4 shrink-0" />
-					<span>{statusText}</span>
-				</div>
-			) : (
-				<div className="border-border/60 bg-muted/30 text-muted-foreground rounded-md border px-3 py-2 text-xs">
-					{statusText}
+			<div className="border-border/60 bg-muted/30 text-muted-foreground rounded-md border px-3 py-2 text-xs">
+				{statusText}
+			</div>
+
+			<ScenePublishStateControl
+				publishState={publishState}
+				onPublish={handlePublish}
+				isPublishActionPending={isWorking}
+				isPublishActionDisabled={!canPublish}
+				publishDisabledReason={
+					!canPublish
+						? 'Model is not ready yet. Load and optimize your scene first.'
+						: undefined
+				}
+				publishDialogTitle="Publish Scene?"
+				publishDialogDescription="This creates or updates the published GLB for this scene and makes it available as your current published version."
+				revokeDialogTitle="Revoke publication?"
+				revokeDialogDescription="This removes the published GLB asset and sets this scene back to draft."
+			/>
+
+			{isWorking && (
+				<div className="text-muted-foreground flex items-center gap-2 text-xs">
+					<Loader2 className="h-3.5 w-3.5 animate-spin" />
+					{publishStatus === 'saving'
+						? 'Saving scene...'
+						: 'Publishing scene...'}
 				</div>
 			)}
-
-			<div className="flex items-center rounded-md border border-green-200 bg-green-50 p-3 dark:border-green-900 dark:bg-green-950/30">
-				<CheckCircle className="mr-2 h-4 w-4 flex-shrink-0 text-green-500" />
-				<p className="text-xs text-green-700 dark:text-green-400">
-					Current scene is ready for publication.
-				</p>
-			</div>
-
-			<div className="flex gap-2">
-				<Button
-					variant="default"
-					className="w-full"
-					onClick={handlePublish}
-					disabled={isWorking || !canPublish}
-				>
-					{publishStatus === 'saving' && (
-						<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-					)}
-					{publishStatus === 'publishing' && (
-						<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-					)}
-					{publishStatus === 'saving'
-						? 'Saving...'
-						: publishStatus === 'publishing'
-							? 'Publishing...'
-							: publishStatus === 'success'
-								? 'Published'
-								: 'Publish Scene'}
-				</Button>
-
-				{publishStatus === 'error' && (
-					<Button
-						variant="outline"
-						onClick={handlePublish}
-						disabled={isWorking || !canPublish}
-					>
-						<RefreshCcw className="mr-2 h-4 w-4" />
-						Retry
-					</Button>
-				)}
-			</div>
 		</motion.div>
 	)
 }

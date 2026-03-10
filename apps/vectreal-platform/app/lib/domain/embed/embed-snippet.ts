@@ -1,8 +1,6 @@
 export const PREVIEW_API_KEY_PLACEHOLDER = 'YOUR_PREVIEW_API_KEY'
 
 export const EMBED_COPY = {
-	description:
-		'Generate code to embed your 3D scene on websites or apps. External embeds require a preview API key and only published scenes are rendered.',
 	unavailableUntilSaved:
 		'Embedding is unavailable until this scene is saved and linked to a project.',
 	draftWarningPrefix:

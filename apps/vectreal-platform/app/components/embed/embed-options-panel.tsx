@@ -1,7 +1,6 @@
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
 import { Label } from '@shared/components/ui/label'
-import { Separator } from '@shared/components/ui/separator'
 import { cn } from '@shared/utils'
 import { Copy, Link2 } from 'lucide-react'
 import { useMemo, useState, type FC } from 'react'
@@ -15,6 +14,7 @@ import {
 	PREVIEW_API_KEY_PLACEHOLDER,
 	toAbsoluteEmbedUrl
 } from '../../lib/domain/embed/embed-snippet'
+import { InfoTooltip } from '../info-tooltip'
 
 interface EmbedOptionsPanelProps {
 	sceneId?: string
@@ -109,17 +109,14 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 	}
 
 	return (
-		<div className={cn('space-y-4', className)}>
-			<div className="text-muted-foreground text-sm">
-				{EMBED_COPY.description}
-			</div>
+		<div className={cn('space-y-3', className)}>
 			{!canEmbed && (
-				<div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+				<div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
 					{EMBED_COPY.unavailableUntilSaved}
 				</div>
 			)}
 			{canEmbed && (
-				<div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+				<div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
 					{EMBED_COPY.draftWarningPrefix}
 					<code className="mx-1">{PREVIEW_API_KEY_PLACEHOLDER}</code>
 					{EMBED_COPY.draftWarningSuffix}
@@ -151,16 +148,14 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 				</div>
 			</div>
 
-			<Separator />
-
 			<div className="space-y-2">
 				<Label className="text-sm">{EMBED_COPY.previewUrlLabel}</Label>
-				<Input
-					readOnly
-					value={absolutePreviewUrl}
-					placeholder={EMBED_COPY.previewUrlPlaceholder}
-				/>
-				<div className="flex justify-end">
+				<div className="flex items-center gap-2">
+					<Input
+						readOnly
+						value={absolutePreviewUrl}
+						placeholder={EMBED_COPY.previewUrlPlaceholder}
+					/>
 					<Button
 						variant="secondary"
 						size="sm"
@@ -173,13 +168,13 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 				</div>
 			</div>
 
-			<Separator />
-
 			<div className="space-y-2">
-				<div className="flex items-center justify-between">
-					<Label className="text-sm">{EMBED_COPY.embedCodeLabel}</Label>
+				<div className="flex items-center gap-2">
+					<Label className="w-fit max-w-full truncate text-sm">
+						{EMBED_COPY.embedCodeLabel}
+					</Label>{' '}
+					<InfoTooltip content={EMBED_COPY.embedCodeHelp} />
 				</div>
-				<p>{EMBED_COPY.embedCodeHelp}</p>
 				<div className="relative">
 					<Button
 						variant="secondary"
@@ -191,7 +186,7 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 						<Copy className="mr-1 h-3 w-3" />
 						{copiedCode ? EMBED_COPY.copied : EMBED_COPY.copyEmbed}
 					</Button>
-					<div className="bg-muted no-scrollbar relative overflow-x-auto rounded-md p-3 font-mono text-xs">
+					<div className="bg-muted no-scrollbar relative overflow-x-auto rounded-2xl p-3 font-mono text-xs">
 						<pre>{generateEmbedCode()}</pre>
 					</div>
 				</div>
