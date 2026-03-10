@@ -39,7 +39,7 @@ import {
 	X
 } from 'lucide-react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { data, Link, useNavigate } from 'react-router'
 
 import { Route } from './+types/scene'
 import CenteredSpinner from '../../../components/centered-spinner'
@@ -131,7 +131,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Project ID and Scene ID are required', { status: 400 })
 	}
 
-	const { user } = await loadAuthenticatedSession(request)
+	const { user, headers } = await loadAuthenticatedSession(request)
 
 	// Fetch project and scene data
 	const [project, scene] = await Promise.all([
@@ -186,14 +186,17 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		}))
 	}
 
-	return {
-		user,
-		project,
-		scene,
-		folderPath,
-		initialSceneData,
-		sceneDetails
-	}
+	return data(
+		{
+			user,
+			project,
+			scene,
+			folderPath,
+			initialSceneData,
+			sceneDetails
+		},
+		{ headers }
+	)
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({

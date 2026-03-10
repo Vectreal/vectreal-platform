@@ -9,6 +9,7 @@ import {
 import { useSetAtom } from 'jotai/react'
 import { FolderSearch } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
+import { data } from 'react-router'
 
 import { Route } from './+types/folder'
 import { DataTable } from '../../../components/dashboard/data-table'
@@ -42,7 +43,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Project ID and Folder ID are required', { status: 400 })
 	}
 
-	const { user } = await loadAuthenticatedSession(request)
+	const { user, headers } = await loadAuthenticatedSession(request)
 
 	// Fetch project and folder data
 	const [project, folder] = await Promise.all([
@@ -65,14 +66,17 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		getSceneFolderAncestry(folderId, user.id)
 	])
 
-	return {
-		user,
-		project,
-		folder,
-		folderPath,
-		subfolders,
-		scenes
-	}
+	return data(
+		{
+			user,
+			project,
+			folder,
+			folderPath,
+			subfolders,
+			scenes
+		},
+		{ headers }
+	)
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({

@@ -11,6 +11,7 @@ import type { User } from '@supabase/supabase-js'
 export interface AuthLoaderResult {
 	user: User
 	userWithDefaults: UserWithDefaults
+	headers: HeadersInit
 }
 
 export interface AuthSessionResult {
@@ -44,7 +45,7 @@ export async function loadAuthenticatedSession(
 export async function loadAuthenticatedUser(
 	request: Request
 ): Promise<AuthLoaderResult> {
-	const { user } = await loadAuthenticatedSession(request)
+	const { user, headers } = await loadAuthenticatedSession(request)
 
 	try {
 		// Initialize user defaults (creates user in local DB, default org, and project)
@@ -52,7 +53,8 @@ export async function loadAuthenticatedUser(
 
 		return {
 			user,
-			userWithDefaults
+			userWithDefaults,
+			headers
 		}
 	} catch (error) {
 		console.error('Failed to initialize user:', error)

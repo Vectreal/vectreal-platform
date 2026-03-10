@@ -17,7 +17,7 @@ import {
 } from '@shared/components/ui/empty'
 import { Plus } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { Link, Outlet, useFetcher, useRevalidator } from 'react-router'
+import { data, Link, Outlet, useFetcher, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
 import { Route } from './+types/projects'
@@ -43,7 +43,7 @@ import { getUserOrganizations } from '../../../lib/domain/user/user-repository.s
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user } = await loadAuthenticatedSession(request)
+	const { user, headers } = await loadAuthenticatedSession(request)
 
 	// Fetch data needed for this specific route
 	const [organizations, userProjects] = await Promise.all([
@@ -61,12 +61,15 @@ export async function loader({ request }: Route.LoaderArgs) {
 	// Compute server-side
 	const projectCreationCapabilities =
 		computeProjectCreationCapabilities(organizations)
-	return {
-		organizations,
-		projects: userProjects,
-		scenes,
-		projectCreationCapabilities
-	}
+	return data(
+		{
+			organizations,
+			projects: userProjects,
+			scenes,
+			projectCreationCapabilities
+		},
+		{ headers }
+	)
 }
 
 interface ProjectDeleteResult {
@@ -87,12 +90,12 @@ interface ProjectDeleteActionResponse {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	const { user } = await loadAuthenticatedUser(request)
+	const { user, headers } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
 	const intent = formData.get('intent')
 
 	if (intent !== 'bulk-delete') {
-		return {
+		return data({
 			success: false,
 			error: 'Invalid intent',
 			summary: {
@@ -101,12 +104,12 @@ export async function action({ request }: Route.ActionArgs) {
 				failed: 0
 			},
 			results: []
-		} satisfies ProjectDeleteActionResponse
+		} satisfies ProjectDeleteActionResponse, { headers })
 	}
 
 	const projectIdsRaw = formData.get('projectIds')
 	if (typeof projectIdsRaw !== 'string' || !projectIdsRaw.trim()) {
-		return {
+		return data({
 			success: false,
 			error: 'Project IDs are required',
 			summary: {
@@ -115,7 +118,7 @@ export async function action({ request }: Route.ActionArgs) {
 				failed: 0
 			},
 			results: []
-		} satisfies ProjectDeleteActionResponse
+		} satisfies ProjectDeleteActionResponse, { headers })
 	}
 
 	let projectIds: string[]
@@ -129,7 +132,7 @@ export async function action({ request }: Route.ActionArgs) {
 		}
 		projectIds = parsed
 	} catch {
-		return {
+		return data({
 			success: false,
 			error: 'Invalid project IDs payload',
 			summary: {
@@ -138,11 +141,11 @@ export async function action({ request }: Route.ActionArgs) {
 				failed: 0
 			},
 			results: []
-		} satisfies ProjectDeleteActionResponse
+		} satisfies ProjectDeleteActionResponse, { headers })
 	}
 
 	if (projectIds.length === 0) {
-		return {
+		return data({
 			success: false,
 			error: 'At least one project must be selected',
 			summary: {
@@ -151,7 +154,7 @@ export async function action({ request }: Route.ActionArgs) {
 				failed: 0
 			},
 			results: []
-		} satisfies ProjectDeleteActionResponse
+		} satisfies ProjectDeleteActionResponse, { headers })
 	}
 
 	const results: ProjectDeleteResult[] = []
@@ -172,7 +175,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 	const succeeded = results.filter((result) => result.success).length
 
-	return {
+	return data({
 		success: succeeded > 0,
 		summary: {
 			total: results.length,
@@ -180,7 +183,7 @@ export async function action({ request }: Route.ActionArgs) {
 			failed: results.length - succeeded
 		},
 		results
-	} satisfies ProjectDeleteActionResponse
+	} satisfies ProjectDeleteActionResponse, { headers })
 }
 
 /**
@@ -278,7 +281,11 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 		lastHandledResponseRef.current = signature
 
 		if (!fetcher.data.success) {
-			toast.error(fetcher.data.error || 'Failed to delete projects')
+			const errorMessage =
+				'error' in fetcher.data && typeof fetcher.data.error === 'string'
+					? fetcher.data.error
+					: 'Failed to delete projects'
+			toast.error(errorMessage)
 			return
 		}
 

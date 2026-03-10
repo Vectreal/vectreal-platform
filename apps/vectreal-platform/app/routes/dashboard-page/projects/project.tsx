@@ -7,7 +7,7 @@ import {
 import { useSetAtom } from 'jotai/react'
 import { FolderSearch } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
-import { Outlet, useLoaderData, useLocation } from 'react-router'
+import { data, Outlet, useLoaderData, useLocation } from 'react-router'
 
 import { Route } from './+types/project'
 import { DataTable } from '../../../components/dashboard/data-table'
@@ -38,7 +38,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Project ID is required', { status: 400 })
 	}
 
-	const { user } = await loadAuthenticatedSession(request)
+	const { user, headers } = await loadAuthenticatedSession(request)
 
 	// Fetch project data
 	const project = await getProject(projectId, user.id)
@@ -53,12 +53,15 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		getRootScenes(projectId, user.id)
 	])
 
-	return {
-		user,
-		project,
-		folders,
-		scenes
-	}
+	return data(
+		{
+			user,
+			project,
+			folders,
+			scenes
+		},
+		{ headers }
+	)
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({

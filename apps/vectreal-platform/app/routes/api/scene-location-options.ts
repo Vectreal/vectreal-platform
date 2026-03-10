@@ -41,5 +41,5 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		projects,
 		folders,
 		selectedProjectId
-	})
+	}, 200, { headers: new Headers(authResult.headers) })
 }

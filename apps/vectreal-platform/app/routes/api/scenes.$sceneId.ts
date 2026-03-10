@@ -69,6 +69,30 @@ function withNoStoreHeaders(response: Response): Response {
 	})
 }
 
+function withAdditionalHeaders(
+	response: Response,
+	additionalHeaders?: HeadersInit
+): Response {
+	if (!additionalHeaders) {
+		return response
+	}
+
+	const headers = new Headers(response.headers)
+	new Headers(additionalHeaders).forEach((value, key) => {
+		if (key.toLowerCase() === 'set-cookie') {
+			headers.append(key, value)
+			return
+		}
+
+		headers.set(key, value)
+	})
+
+	return new Response(response.body, {
+		status: response.status,
+		headers
+	})
+}
+
 const MAX_IN_FLIGHT_HEAVY_SCENE_ACTIONS = 2
 const inFlightGetSceneSettingsRequests = new Map<string, Promise<Response>>()
 
@@ -254,7 +278,11 @@ async function authorizePreviewRequest(request: Request, projectId: string) {
 		return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 	}
 
-	return { mode: 'session' as const, userId: sessionAuth.user.id }
+	return {
+		mode: 'session' as const,
+		userId: sessionAuth.user.id,
+		headers: sessionAuth.headers
+	}
 }
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -298,6 +326,14 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			const aggregate: SceneAggregateResponse =
 				await buildSceneAggregate(sceneId)
 
+			if (authContext.mode === 'session') {
+				return withNoStoreHeaders(
+					ApiResponse.success(aggregate, 200, {
+						headers: new Headers(authContext.headers)
+					})
+				)
+			}
+
 			return withNoStoreHeaders(ApiResponse.success(aggregate))
 		} catch (error) {
 			console.error('Failed to load preview scene aggregate:', {
@@ -316,26 +352,34 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
 	const sceneId = params.sceneId?.trim()
 	if (!sceneId) {
-		return ApiResponse.badRequest('Scene ID is required')
+		return ApiResponse.error('Scene ID is required', 400, {
+			headers: new Headers(authResult.headers)
+		})
 	}
 
 	const scene = await getScene(sceneId, authResult.user.id)
 	if (!scene) {
-		return ApiResponse.notFound(`Scene not found with ID: ${sceneId}`)
+		return ApiResponse.notFound(`Scene not found with ID: ${sceneId}`, {
+			headers: new Headers(authResult.headers)
+		})
 	}
 
 	try {
 		const aggregate: SceneAggregateResponse = await buildSceneAggregate(sceneId)
 
-		return ApiResponse.success(aggregate)
+		return ApiResponse.success(aggregate, 200, {
+			headers: new Headers(authResult.headers)
+		})
 	} catch (error) {
 		console.error('Failed to load scene aggregate:', {
 			sceneId,
 			userId: authResult.user.id,
 			error
 		})
-		return ApiResponse.serverError(
-			error instanceof Error ? error.message : 'Failed to load scene'
+		return ApiResponse.error(
+			error instanceof Error ? error.message : 'Failed to load scene',
+			500,
+			{ headers: new Headers(authResult.headers) }
 		)
 	}
 }
@@ -377,6 +421,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			return authContext
 		}
 
+		const previewSessionHeaders =
+			authContext.mode === 'session' ? authContext.headers : undefined
+
 		if (authContext.mode === 'apiKey') {
 			const previewScene = await getPublishedScenePreview(
 				previewProjectId,
@@ -395,7 +442,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		const parsedRequest =
 			SceneSettingsParser.parseSceneSettingsRequestData(actionRequest)
 		if (parsedRequest instanceof Response) {
-			return withNoStoreHeaders(parsedRequest)
+			return withNoStoreHeaders(
+				withAdditionalHeaders(parsedRequest, previewSessionHeaders)
+			)
 		}
 
 		const effectiveSceneId = parsedRequest.sceneId?.trim() || routeSceneId
@@ -416,13 +465,17 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			})
 		)
 
-		return withNoStoreHeaders(response)
+		return withNoStoreHeaders(
+			withAdditionalHeaders(response, previewSessionHeaders)
+		)
 	}
 
 	const authResult = await getAuthUser(request)
 	if (authResult instanceof Response) {
 		return authResult
 	}
+
+	const authHeaders = authResult.headers
 
 	if (action === 'create-folder') {
 		const projectIdRaw = actionRequest.projectId
@@ -441,11 +494,17 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				: null
 
 		if (!projectId) {
-			return ApiResponse.badRequest('Project ID is required')
+			return withAdditionalHeaders(
+				ApiResponse.badRequest('Project ID is required'),
+				authHeaders
+			)
 		}
 
 		if (!name) {
-			return ApiResponse.badRequest('Folder name is required')
+			return withAdditionalHeaders(
+				ApiResponse.badRequest('Folder name is required'),
+				authHeaders
+			)
 		}
 
 		try {
@@ -457,14 +516,20 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				parentFolderId
 			})
 
-			return ApiResponse.success({
-				success: true,
-				action,
-				folder
-			})
+			return withAdditionalHeaders(
+				ApiResponse.success({
+					success: true,
+					action,
+					folder
+				}),
+				authHeaders
+			)
 		} catch (error) {
-			return ApiResponse.serverError(
-				error instanceof Error ? error.message : 'Failed to create folder'
+			return withAdditionalHeaders(
+				ApiResponse.serverError(
+					error instanceof Error ? error.message : 'Failed to create folder'
+				),
+				authHeaders
 			)
 		}
 	}
@@ -473,7 +538,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		if (routeSceneId === 'bulk') {
 			const items = parseActionItems(actionRequest.items)
 			if (items.length === 0) {
-				return ApiResponse.badRequest('At least one item is required')
+				return withAdditionalHeaders(
+					ApiResponse.badRequest('At least one item is required'),
+					authHeaders
+				)
 			}
 
 			const results: ContentActionResult[] = []
@@ -539,16 +607,22 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				}
 			}
 
-			return ApiResponse.success(response)
+			return withAdditionalHeaders(ApiResponse.success(response), authHeaders)
 		}
 
 		if (!routeSceneId) {
-			return ApiResponse.badRequest('Scene ID is required')
+			return withAdditionalHeaders(
+				ApiResponse.badRequest('Scene ID is required'),
+				authHeaders
+			)
 		}
 
 		const scene = await getScene(routeSceneId, authResult.user.id)
 		if (!scene) {
-			return ApiResponse.notFound(`Scene not found with ID: ${routeSceneId}`)
+			return withAdditionalHeaders(
+				ApiResponse.notFound(`Scene not found with ID: ${routeSceneId}`),
+				authHeaders
+			)
 		}
 
 		try {
@@ -560,49 +634,73 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				const name =
 					typeof actionRequest.name === 'string' ? actionRequest.name : ''
 				if (!name.trim()) {
-					return ApiResponse.badRequest('Name is required for rename')
+					return withAdditionalHeaders(
+						ApiResponse.badRequest('Name is required for rename'),
+						authHeaders
+					)
 				}
 				await renameScene(routeSceneId, authResult.user.id, name)
 			}
 
-			return ApiResponse.success({
-				success: true,
-				action,
-				sceneId: routeSceneId
-			})
+			return withAdditionalHeaders(
+				ApiResponse.success({
+					success: true,
+					action,
+					sceneId: routeSceneId
+				}),
+				authHeaders
+			)
 		} catch (error) {
-			return ApiResponse.serverError(
-				error instanceof Error ? error.message : 'Action failed'
+			return withAdditionalHeaders(
+				ApiResponse.serverError(
+					error instanceof Error ? error.message : 'Action failed'
+				),
+				authHeaders
 			)
 		}
 	}
 
 	if (action === 'duplicate') {
 		if (!routeSceneId) {
-			return ApiResponse.badRequest('Scene ID is required')
+			return withAdditionalHeaders(
+				ApiResponse.badRequest('Scene ID is required'),
+				authHeaders
+			)
 		}
 
 		const scene = await getScene(routeSceneId, authResult.user.id)
 		if (!scene) {
-			return ApiResponse.notFound(`Scene not found with ID: ${routeSceneId}`)
+			return withAdditionalHeaders(
+				ApiResponse.notFound(`Scene not found with ID: ${routeSceneId}`),
+				authHeaders
+			)
 		}
 
-		return ApiResponse.success({
-			success: true,
-			message: `${action} action accepted`,
-			action,
-			sceneId: routeSceneId
-		})
+		return withAdditionalHeaders(
+			ApiResponse.success({
+				success: true,
+				message: `${action} action accepted`,
+				action,
+				sceneId: routeSceneId
+			}),
+			authHeaders
+		)
 	}
 
 	if (action === 'update-scene-metadata') {
 		if (!routeSceneId) {
-			return ApiResponse.badRequest('Scene ID is required')
+			return withAdditionalHeaders(
+				ApiResponse.badRequest('Scene ID is required'),
+				authHeaders
+			)
 		}
 
 		const scene = await getScene(routeSceneId, authResult.user.id)
 		if (!scene) {
-			return ApiResponse.notFound(`Scene not found with ID: ${routeSceneId}`)
+			return withAdditionalHeaders(
+				ApiResponse.notFound(`Scene not found with ID: ${routeSceneId}`),
+				authHeaders
+			)
 		}
 
 		const nameRaw = actionRequest.name
@@ -613,7 +711,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			typeof descriptionRaw === 'string' ? descriptionRaw : null
 
 		if (!name) {
-			return ApiResponse.badRequest('Scene name is required')
+			return withAdditionalHeaders(
+				ApiResponse.badRequest('Scene name is required'),
+				authHeaders
+			)
 		}
 
 		try {
@@ -626,16 +727,22 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				}
 			)
 
-			return ApiResponse.success({
-				success: true,
-				action,
-				scene: updatedScene
-			})
+			return withAdditionalHeaders(
+				ApiResponse.success({
+					success: true,
+					action,
+					scene: updatedScene
+				}),
+				authHeaders
+			)
 		} catch (error) {
-			return ApiResponse.serverError(
-				error instanceof Error
-					? error.message
-					: 'Failed to update scene metadata'
+			return withAdditionalHeaders(
+				ApiResponse.serverError(
+					error instanceof Error
+						? error.message
+						: 'Failed to update scene metadata'
+				),
+				authHeaders
 			)
 		}
 	}
@@ -673,7 +780,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		: SceneSettingsParser.parseSceneSettingsRequestData(actionRequest)
 
 	if (parsedRequest instanceof Response) {
-		return parsedRequest
+		return withAdditionalHeaders(parsedRequest, authHeaders)
 	}
 
 	const effectiveSceneId = parsedRequest.sceneId?.trim() || routeSceneId
@@ -688,8 +795,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
 	) {
 		const scene = await getScene(effectiveSceneId, authResult.user.id)
 		if (!scene) {
-			return ApiResponse.notFound(
-				`Scene not found with ID: ${effectiveSceneId}`
+			return withAdditionalHeaders(
+				ApiResponse.notFound(`Scene not found with ID: ${effectiveSceneId}`),
+				authHeaders
 			)
 		}
 	}
@@ -705,14 +813,17 @@ export async function action({ request, params }: ActionFunctionArgs) {
 	try {
 		switch (action as SceneSettingsAction) {
 			case 'prepare-scene-upload':
-				return ApiResponse.success(
-					await sceneSettingsOps.prepareSceneUpload(
-						{
-							...requestData,
-							action
-						},
-						authResult.user.id
-					)
+				return withAdditionalHeaders(
+					ApiResponse.success(
+						await sceneSettingsOps.prepareSceneUpload(
+							{
+								...requestData,
+								action
+							},
+							authResult.user.id
+						)
+					),
+					authHeaders
 				)
 
 			case 'upload-scene-asset': {
@@ -721,111 +832,144 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				const kind = kindRaw === 'image' ? 'image' : 'buffer'
 
 				if (!(file instanceof File)) {
-					return ApiResponse.badRequest(
-						'file is required for upload-scene-asset'
+					return withAdditionalHeaders(
+						ApiResponse.badRequest(
+							'file is required for upload-scene-asset'
+						),
+						authHeaders
 					)
 				}
 
-				return await sceneSettingsOps.uploadSceneAsset(
-					{ ...requestData, action },
-					authResult.user.id,
-					file,
-					kind
+				return withAdditionalHeaders(
+					await sceneSettingsOps.uploadSceneAsset(
+						{ ...requestData, action },
+						authResult.user.id,
+						file,
+						kind
+					),
+					authHeaders
 				)
 			}
 
 			case 'upload-scene-gltf': {
 				const file = actionRequest.file
 				if (!(file instanceof File)) {
-					return ApiResponse.badRequest(
-						'file is required for upload-scene-gltf'
+					return withAdditionalHeaders(
+						ApiResponse.badRequest(
+							'file is required for upload-scene-gltf'
+						),
+						authHeaders
 					)
 				}
 
-				return await sceneSettingsOps.uploadSceneGltf(
-					{ ...requestData, action },
-					authResult.user.id,
-					file
+				return withAdditionalHeaders(
+					await sceneSettingsOps.uploadSceneGltf(
+						{ ...requestData, action },
+						authResult.user.id,
+						file
+					),
+					authHeaders
 				)
 			}
 
 			case 'upload-published-glb': {
 				const file = actionRequest.file
 				if (!(file instanceof File)) {
-					return ApiResponse.badRequest(
-						'file is required for upload-published-glb'
+					return withAdditionalHeaders(
+						ApiResponse.badRequest(
+							'file is required for upload-published-glb'
+						),
+						authHeaders
 					)
 				}
 
-				return await sceneSettingsOps.uploadPublishedGlb(
-					{ ...requestData, action },
-					authResult.user.id,
-					file
+				return withAdditionalHeaders(
+					await sceneSettingsOps.uploadPublishedGlb(
+						{ ...requestData, action },
+						authResult.user.id,
+						file
+					),
+					authHeaders
 				)
 			}
 
 			case 'commit-scene-save':
-				return await runWithIdempotentSceneRequest({
-					requestId: requestData.requestId,
-					userId: authResult.user.id,
-					action,
-					sceneId: requestData.sceneId,
-					operation: () =>
-						runWithHeavySceneActionLimit(() =>
-							runWithSceneWriteLock(
-								requestData.sceneId as string,
-								`${authResult.user.id}:${requestData.requestId ?? 'no-request-id'}`,
-								() =>
-									sceneSettingsOps.saveSceneSettings(
-										{
-											...requestData,
-											action
-										},
-										authResult.user.id
-									)
+				return withAdditionalHeaders(
+					await runWithIdempotentSceneRequest({
+						requestId: requestData.requestId,
+						userId: authResult.user.id,
+						action,
+						sceneId: requestData.sceneId,
+						operation: () =>
+							runWithHeavySceneActionLimit(() =>
+								runWithSceneWriteLock(
+									requestData.sceneId as string,
+									`${authResult.user.id}:${requestData.requestId ?? 'no-request-id'}`,
+									() =>
+										sceneSettingsOps.saveSceneSettings(
+											{
+												...requestData,
+												action
+											},
+											authResult.user.id
+										)
+								)
 							)
-						)
-				})
+					}),
+					authHeaders
+				)
 
 			case 'get-scene-settings':
 				if (!requestData.sceneId) {
-					return ApiResponse.badRequest('Scene ID is required')
+					return withAdditionalHeaders(
+						ApiResponse.badRequest('Scene ID is required'),
+						authHeaders
+					)
 				}
 
-				return await runWithSceneSettingsCoalescing(
-					getSceneSettingsRequestKey(authResult.user.id, requestData.sceneId),
-					() =>
-						sceneSettingsOps.getSceneSettings({
-							...requestData,
-							action
-						})
+				return withAdditionalHeaders(
+					await runWithSceneSettingsCoalescing(
+						getSceneSettingsRequestKey(authResult.user.id, requestData.sceneId),
+						() =>
+							sceneSettingsOps.getSceneSettings({
+								...requestData,
+								action
+							})
+					),
+					authHeaders
 				)
 
 			case 'commit-scene-publish':
-				return await runWithIdempotentSceneRequest({
-					requestId: requestData.requestId,
-					userId: authResult.user.id,
-					action,
-					sceneId: requestData.sceneId,
-					operation: () =>
-						runWithHeavySceneActionLimit(() =>
-							runWithSceneWriteLock(
-								requestData.sceneId as string,
-								`${authResult.user.id}:${requestData.requestId ?? 'no-request-id'}`,
-								() =>
-									sceneSettingsOps.publishScene(
-										{
-											...requestData,
-											action
-										},
-										authResult.user.id
-									)
+				return withAdditionalHeaders(
+					await runWithIdempotentSceneRequest({
+						requestId: requestData.requestId,
+						userId: authResult.user.id,
+						action,
+						sceneId: requestData.sceneId,
+						operation: () =>
+							runWithHeavySceneActionLimit(() =>
+								runWithSceneWriteLock(
+									requestData.sceneId as string,
+									`${authResult.user.id}:${requestData.requestId ?? 'no-request-id'}`,
+									() =>
+										sceneSettingsOps.publishScene(
+											{
+												...requestData,
+												action
+											},
+											authResult.user.id
+										)
+								)
 							)
-						)
-				})
+					}),
+					authHeaders
+				)
 
 			default:
-				return ApiResponse.badRequest(`Unknown action: ${action}`)
+				return withAdditionalHeaders(
+					ApiResponse.badRequest(`Unknown action: ${action}`),
+					authHeaders
+				)
 		}
 	} catch (error) {
 		console.error('Scene operation failed:', {
@@ -835,8 +979,11 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			sceneId: requestData.sceneId || null,
 			error
 		})
-		return ApiResponse.serverError(
-			error instanceof Error ? error.message : 'Operation failed'
+		return withAdditionalHeaders(
+			ApiResponse.serverError(
+				error instanceof Error ? error.message : 'Operation failed'
+			),
+			authHeaders
 		)
 	}
 }

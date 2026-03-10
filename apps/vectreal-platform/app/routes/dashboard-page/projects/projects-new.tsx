@@ -30,6 +30,7 @@ import { AlertCircle, Plus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import {
+	data,
 	redirect,
 	Form as RemixForm,
 	useLocation,
@@ -68,7 +69,7 @@ type ProjectFormValues = z.infer<typeof projectFormSchema>
 
 export async function loader({ request }: Route.LoaderArgs) {
 	// Authenticate and initialize user
-	const { user, userWithDefaults } = await loadAuthenticatedUser(request)
+	const { user, userWithDefaults, headers } = await loadAuthenticatedUser(request)
 
 	// Fetch organizations for project creation form
 	const organizations = await getUserOrganizations(user.id)
@@ -84,11 +85,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 		projectCreationCapabilities
 	}
 
-	return loaderData
+	return data(loaderData, { headers })
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	const { user } = await loadAuthenticatedUser(request)
+	const { user, headers } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
 
 	const name = formData.get('name') as string
@@ -112,7 +113,7 @@ export async function action({ request }: Route.ActionArgs) {
 		)
 
 		// Redirect to the new project
-		return redirect(`/dashboard/projects/${project.id}`)
+		return redirect(`/dashboard/projects/${project.id}`, { headers })
 	} catch (error) {
 		// Handle Zod validation errors
 		if (error instanceof ZodError) {
@@ -124,16 +125,23 @@ export async function action({ request }: Route.ActionArgs) {
 				}
 			})
 
-			return {
-				error: 'Validation failed',
-				fieldErrors
-			}
+			return data(
+				{
+					error: 'Validation failed',
+					fieldErrors
+				},
+				{ headers }
+			)
 		}
 
 		// Return general error for display
-		return {
-			error: error instanceof Error ? error.message : 'Failed to create project'
-		}
+		return data(
+			{
+				error:
+					error instanceof Error ? error.message : 'Failed to create project'
+			},
+			{ headers }
+		)
 	}
 }
 
@@ -170,11 +178,11 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 
 	// Set server-side validation errors
 	useEffect(() => {
-		if (actionData?.fieldErrors) {
+		if (actionData && 'fieldErrors' in actionData && actionData.fieldErrors) {
 			Object.entries(actionData.fieldErrors).forEach(([field, message]) => {
 				form.setError(field as keyof ProjectFormValues, {
 					type: 'server',
-					message
+					message: String(message)
 				})
 			})
 		}

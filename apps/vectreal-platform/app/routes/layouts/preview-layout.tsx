@@ -1,5 +1,5 @@
 import { ApiResponse } from '@shared/utils'
-import { Outlet } from 'react-router'
+import { data, Outlet } from 'react-router'
 
 import { Route } from './+types/preview-layout'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
@@ -34,6 +34,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	let authMode: 'apiKey' | 'session' | null = null
 	let authenticatedByApiKeyId: string | null = null
 	let sessionUserId: string | null = null
+	let sessionHeaders: HeadersInit = {}
 
 	if (hasTokenCredential) {
 		const authResult = await validatePreviewApiKeyForProject({
@@ -59,6 +60,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		if (sessionAuth instanceof Response) {
 			return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 		}
+
+		sessionHeaders = sessionAuth.headers ?? {}
 
 		const project = await getProject(projectId, sessionAuth.user.id)
 		if (!project) {
@@ -88,13 +91,16 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	const url = new URL(request.url)
 	const tokenFromQuery = url.searchParams.get('token')?.trim() || null
 
-	return {
-		projectId,
-		sceneId,
-		authMode,
-		tokenFromQuery,
-		authenticatedByApiKeyId
-	}
+	return data(
+		{
+			projectId,
+			sceneId,
+			authMode,
+			tokenFromQuery,
+			authenticatedByApiKeyId
+		},
+		{ headers: authMode === 'session' ? sessionHeaders : undefined }
+	)
 }
 
 const PreviewLayout = () => {

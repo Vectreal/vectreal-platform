@@ -39,7 +39,12 @@ import { Textarea } from '@shared/components/ui/textarea'
 import { AlertCircle, CheckCircle2, Copy, KeyRound, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Form as RemixForm, useLocation, useNavigate } from 'react-router'
+import {
+	data,
+	Form as RemixForm,
+	useLocation,
+	useNavigate
+} from 'react-router'
 import { toast } from 'sonner'
 import { z, ZodError } from 'zod'
 
@@ -72,7 +77,7 @@ const apiKeyFormSchema = z.object({
 type ApiKeyFormValues = z.infer<typeof apiKeyFormSchema>
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user } = await loadAuthenticatedUser(request)
+	const { user, headers } = await loadAuthenticatedUser(request)
 
 	const [organizations, userProjects] = await Promise.all([
 		getUserOrganizations(user.id),
@@ -90,15 +95,18 @@ export async function loader({ request }: Route.LoaderArgs) {
 		})
 	}
 
-	return {
-		user,
-		organizations: adminOrgs,
-		userProjects
-	}
+	return data(
+		{
+			user,
+			organizations: adminOrgs,
+			userProjects
+		},
+		{ headers }
+	)
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	const { user } = await loadAuthenticatedUser(request)
+	const { user, headers } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
 
 	const name = formData.get('name') as string
@@ -139,14 +147,17 @@ export async function action({ request }: Route.ActionArgs) {
 		})
 
 		// Return the plaintext key (only time it will be accessible)
-		return {
-			success: true,
-			apiKey: {
-				plaintext: result.plaintext,
-				preview: result.apiKey.keyPreview,
-				name: result.apiKey.name
-			}
-		}
+		return data(
+			{
+				success: true,
+				apiKey: {
+					plaintext: result.plaintext,
+					preview: result.apiKey.keyPreview,
+					name: result.apiKey.name
+				}
+			},
+			{ headers }
+		)
 	} catch (error) {
 		// Handle Zod validation errors
 		if (error instanceof ZodError) {
@@ -158,16 +169,23 @@ export async function action({ request }: Route.ActionArgs) {
 				}
 			})
 
-			return {
-				error: 'Validation failed',
-				fieldErrors
-			}
+			return data(
+				{
+					error: 'Validation failed',
+					fieldErrors
+				},
+				{ headers }
+			)
 		}
 
 		// Return general error for display
-		return {
-			error: error instanceof Error ? error.message : 'Failed to create API key'
-		}
+		return data(
+			{
+				error:
+					error instanceof Error ? error.message : 'Failed to create API key'
+			},
+			{ headers }
+		)
 	}
 }
 
@@ -320,11 +338,11 @@ export default function ApiKeysNewPage({
 	})
 
 	useEffect(() => {
-		if (actionData?.fieldErrors) {
+		if (actionData && 'fieldErrors' in actionData && actionData.fieldErrors) {
 			Object.entries(actionData.fieldErrors).forEach(([field, message]) => {
 				form.setError(field as keyof ApiKeyFormValues, {
 					type: 'server',
-					message
+					message: String(message)
 				})
 			})
 		}
@@ -347,11 +365,16 @@ export default function ApiKeysNewPage({
 
 	// Handle successful creation
 	useEffect(() => {
-		if (actionData?.success && actionData?.apiKey) {
+		if (
+			actionData &&
+			'success' in actionData &&
+			actionData.success &&
+			'apiKey' in actionData
+		) {
 			setCreatedKey(actionData.apiKey)
 			setShowKeyDialog(true)
 			form.reset()
-		} else if (actionData?.error) {
+		} else if (actionData && 'error' in actionData && actionData.error) {
 			toast.error(actionData.error)
 		}
 	}, [actionData, form])
@@ -536,7 +559,10 @@ export default function ApiKeysNewPage({
 									)}
 								/>
 
-								{actionData?.error && !actionData?.fieldErrors && (
+								{actionData &&
+									'error' in actionData &&
+									actionData.error &&
+									!('fieldErrors' in actionData && actionData.fieldErrors) && (
 									<Alert variant="destructive">
 										<AlertCircle className="size-4" />
 										<AlertDescription>{actionData.error}</AlertDescription>
