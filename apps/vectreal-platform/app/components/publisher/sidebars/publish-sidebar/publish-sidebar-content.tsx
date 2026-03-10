@@ -28,7 +28,10 @@ import { PublishOptions } from './sections/publish-options'
 import { SaveOptions } from './sections/save-options'
 import { ScenePreview } from './sections/scene-preview'
 
-import type { SceneStatsData } from '../../../../types/api'
+import type {
+	ScenePublishStateResponse,
+	SceneStatsData
+} from '../../../../types/api'
 import type { OptimizationReport } from '@vctrl/core'
 import type { FC } from 'react'
 
@@ -41,6 +44,7 @@ interface PublishSidebarProps {
 	info?: OptimizationInfo
 	report?: OptimizationReport | null
 	publishedAt?: string | null
+	publishedAssetSizeBytes?: number | null
 	sizeInfo?: {
 		initialSceneBytes?: number | null
 		currentSceneBytes?: number | null
@@ -51,9 +55,7 @@ interface PublishSidebarProps {
 	saveAvailability?: SaveAvailabilityState
 	onRequireAuth?: () => Promise<void> | void
 	saveSceneSettings: () => Promise<
-		| SaveSceneResult
-		| { unchanged: true }
-		| undefined
+		SaveSceneResult | { unchanged: true } | undefined
 	>
 }
 
@@ -82,6 +84,7 @@ const PublishSidebarContent: FC<PublishSidebarProps> = ({
 	info,
 	report,
 	publishedAt,
+	publishedAssetSizeBytes,
 	sizeInfo,
 	stats,
 	saveAvailability,
@@ -113,6 +116,13 @@ const PublishSidebarContent: FC<PublishSidebarProps> = ({
 		typeof sceneId === 'string' && sceneId.length > 0
 	)
 	const canAccessPublishFeatures = isAuthenticated && hasSavedScene
+	const publishState: ScenePublishStateResponse = {
+		sceneId: sceneId ?? '',
+		status: publishedAt ? 'published' : 'draft',
+		publishedAt: publishedAt ?? null,
+		publishedAssetId: null,
+		publishedAssetSizeBytes: publishedAssetSizeBytes ?? null
+	}
 
 	return (
 		<div className="no-scrollbar grow overflow-auto pb-2">
@@ -257,6 +267,7 @@ const PublishSidebarContent: FC<PublishSidebarProps> = ({
 								<AccordionContent>
 									<PublishOptions
 										sceneId={sceneId}
+										publishState={publishState}
 										saveSceneSettings={saveSceneSettings}
 									/>
 								</AccordionContent>

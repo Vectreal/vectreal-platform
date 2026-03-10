@@ -124,6 +124,7 @@ export type SceneSettingsAction =
 	| 'prepare-scene-upload'
 	| 'commit-scene-save'
 	| 'commit-scene-publish'
+	| 'revoke-scene-publish'
 	| 'get-scene-settings'
 	| 'upload-scene-asset'
 	| 'upload-scene-gltf'
@@ -206,12 +207,27 @@ export interface PublishSceneResponse {
 	readonly [key: string]: unknown
 }
 
+export interface ScenePublishStateResponse {
+	readonly sceneId: string
+	readonly status: 'draft' | 'published'
+	readonly publishedAt: string | null
+	readonly publishedAssetId: string | null
+	readonly publishedAssetSizeBytes: number | null
+}
+
+export interface RevokeScenePublishResponse {
+	readonly sceneId: string
+	readonly status: 'draft'
+	readonly revoked: true
+}
+
 export interface PublishedSceneMetaResponse {
 	readonly sceneId: string
 	readonly projectId: string
 	readonly status: string
 	readonly publishedAssetId: string
 	readonly publishedAt: Date | string
+	readonly publishedAssetSizeBytes?: number | null
 }
 
 export interface SceneCurrentLocation {

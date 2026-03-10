@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm'
 
 import { getDbClient } from '../../../../db/client'
+import { assets } from '../../../../db/schema/project/assets'
 import { scenePublished } from '../../../../db/schema/project/scene-published'
 import { scenes } from '../../../../db/schema/project/scenes'
 
@@ -16,10 +17,12 @@ export async function getPublishedScenePreview(
 			projectId: scenes.projectId,
 			status: scenes.status,
 			publishedAssetId: scenePublished.assetId,
-			publishedAt: scenePublished.publishedAt
+			publishedAt: scenePublished.publishedAt,
+			publishedAssetSizeBytes: assets.fileSize
 		})
 		.from(scenes)
 		.innerJoin(scenePublished, eq(scenePublished.sceneId, scenes.id))
+		.leftJoin(assets, eq(assets.id, scenePublished.assetId))
 		.where(and(eq(scenes.id, sceneId), eq(scenes.projectId, projectId)))
 		.limit(1)
 

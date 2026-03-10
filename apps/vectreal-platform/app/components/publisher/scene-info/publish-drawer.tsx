@@ -33,6 +33,7 @@ interface PublishDrawerProps {
 	info: OptimizationInfo
 	report?: OptimizationReport | null
 	publishedAt?: string | null
+	publishedAssetSizeBytes?: number | null
 	sizeInfo: {
 		initialSceneBytes?: number | null
 		currentSceneBytes?: number | null
@@ -54,6 +55,7 @@ export const PublishDrawer: FC<PublishDrawerProps> = ({
 	info,
 	report,
 	publishedAt,
+	publishedAssetSizeBytes,
 	sizeInfo,
 	stats
 }) => {
@@ -87,6 +89,7 @@ export const PublishDrawer: FC<PublishDrawerProps> = ({
 					info={info}
 					report={report}
 					publishedAt={publishedAt}
+					publishedAssetSizeBytes={publishedAssetSizeBytes}
 					sizeInfo={sizeInfo}
 					stats={stats}
 					saveAvailability={saveAvailability}

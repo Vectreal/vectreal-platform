@@ -14,7 +14,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-import { Document, GLTF, WebIO } from '@gltf-transform/core'
+import { Document, WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 import JSZip from 'jszip'
 import { Object3D } from 'three'
@@ -152,45 +152,36 @@ export class ModelExporter {
 		object: Object3D,
 		options: ExportOptions
 	): Promise<GLBExportResult> {
+		const startTime = Date.now()
 		this.emitProgress('Exporting Three.js object to GLB', 0)
 		try {
-			const result = (await this.threeExporter.parseAsync(object, {
-				binary: false
-			})) as unknown as GLTF.IGLTF
-
-			const textureReplacement = options.modifiedTextureResources || {
-				images: [],
-				textures: []
-			}
-
-			// Replace image URIs with optimized base64 data URLs
-			Object.entries(textureReplacement).forEach(([key, items]) => {
-				if (key === 'images') {
-					const images = items as GLTF.IImage[]
-
-					result.images = images
-				}
-
-				if (key === 'textures') {
-					const textures = items as GLTF.ITexture[]
-					textures.forEach((item, index) => {
-						const image = textureReplacement.images.find(
-							(img) => img.name === item.name
-						)
-						if (image) {
-							textureReplacement.textures[index] = {
-								...item,
-								source: textureReplacement.images.indexOf(image)
-							}
-						}
-					})
-				}
+			this.emitProgress('Serializing Three.js scene', 40)
+			const result = await this.threeExporter.parseAsync(object, {
+				binary: true
 			})
 
-			// Re-export document (placeholder - adjust as needed to inject modified images)
-			return await this.exportDocumentGLB(
-				await this.io.readBinary(new Uint8Array())
-			)
+			if (!(result instanceof ArrayBuffer)) {
+				throw new Error('Expected binary GLB output from GLTFExporter')
+			}
+
+			this.emitProgress('Finalizing GLB binary', 90)
+			const binary = new Uint8Array(result)
+			const exportTime = Date.now() - startTime
+
+			this.emitProgress('Export completed', 100)
+
+			if (options.modifiedTextureResources) {
+				console.warn(
+					'modifiedTextureResources is ignored for direct Three.js GLB export'
+				)
+			}
+
+			return {
+				data: binary,
+				format: 'glb',
+				size: binary.byteLength,
+				exportTime
+			}
 		} catch (error) {
 			throw new Error(`Failed to export Three.js object: ${error}`, {
 				cause: error

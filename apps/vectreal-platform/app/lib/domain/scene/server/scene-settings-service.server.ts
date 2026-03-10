@@ -41,6 +41,7 @@ import {
 } from '../../../../types/api'
 import { createSceneStatsFromReport } from '../../../utils/scene-stats-helpers'
 import {
+	deleteAssets,
 	downloadAssets,
 	uploadSceneAssets
 } from '../../asset/asset-storage.server'
@@ -613,6 +614,40 @@ class SceneSettingsService {
 				asset: assetRecord ?? null
 			}
 		})
+	}
+
+	async revokeScenePublication(params: { sceneId: string; userId: string }) {
+		const { sceneId } = params
+
+		const publishedAssetId = await this.db.transaction(async (tx) => {
+			const [publishedRecord] = await tx
+				.select({ assetId: scenePublished.assetId })
+				.from(scenePublished)
+				.where(eq(scenePublished.sceneId, sceneId))
+				.limit(1)
+
+			await tx.delete(scenePublished).where(eq(scenePublished.sceneId, sceneId))
+
+			await tx
+				.update(scenes)
+				.set({
+					status: 'draft',
+					updatedAt: new Date()
+				})
+				.where(eq(scenes.id, sceneId))
+
+			return publishedRecord?.assetId ?? null
+		})
+
+		if (publishedAssetId) {
+			await deleteAssets([publishedAssetId])
+		}
+
+		return {
+			sceneId,
+			status: 'draft' as const,
+			revoked: true as const
+		}
 	}
 
 	/**
