@@ -25,6 +25,7 @@ import { AlertCircle, Save, X } from 'lucide-react'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import {
+	data,
 	Form as RemixForm,
 	redirect,
 	useLocation,
@@ -63,7 +64,7 @@ const apiKeyEditSchema = z.object({
 type ApiKeyEditValues = z.infer<typeof apiKeyEditSchema>
 
 export async function loader({ request, params }: Route.LoaderArgs) {
-	const { user } = await loadAuthenticatedUser(request)
+	const { user, headers } = await loadAuthenticatedUser(request)
 	const { keyId } = params
 
 	if (!keyId) {
@@ -79,15 +80,18 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('API key not found', { status: 404 })
 	}
 
-	return {
-		user,
-		apiKeyData,
-		userProjects
-	}
+	return data(
+		{
+			user,
+			apiKeyData,
+			userProjects
+		},
+		{ headers }
+	)
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
-	const { user } = await loadAuthenticatedUser(request)
+	const { user, headers } = await loadAuthenticatedUser(request)
 	const { keyId } = params
 	const formData = await request.formData()
 
@@ -119,7 +123,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			projectIds: validatedData.projectIds
 		})
 
-		return redirect('/dashboard/api-keys')
+		return redirect('/dashboard/api-keys', { headers })
 	} catch (error) {
 		// Handle Zod validation errors
 		if (error instanceof ZodError) {
@@ -131,16 +135,23 @@ export async function action({ request, params }: Route.ActionArgs) {
 				}
 			})
 
-			return {
-				error: 'Validation failed',
-				fieldErrors
-			}
+			return data(
+				{
+					error: 'Validation failed',
+					fieldErrors
+				},
+				{ headers }
+			)
 		}
 
 		// Return general error for display
-		return {
-			error: error instanceof Error ? error.message : 'Failed to update API key'
-		}
+		return data(
+			{
+				error:
+					error instanceof Error ? error.message : 'Failed to update API key'
+			},
+			{ headers }
+		)
 	}
 }
 
@@ -171,11 +182,11 @@ export default function ApiKeysEditPage({
 	})
 
 	useEffect(() => {
-		if (actionData?.fieldErrors) {
+		if (actionData && 'fieldErrors' in actionData && actionData.fieldErrors) {
 			Object.entries(actionData.fieldErrors).forEach(([field, message]) => {
 				form.setError(field as keyof ApiKeyEditValues, {
 					type: 'server',
-					message
+					message: String(message)
 				})
 			})
 		}
@@ -192,7 +203,7 @@ export default function ApiKeysEditPage({
 
 	// Show error toast
 	useEffect(() => {
-		if (actionData?.error) {
+		if (actionData && 'error' in actionData && actionData.error) {
 			toast.error(actionData.error)
 		}
 	}, [actionData])
@@ -311,12 +322,15 @@ export default function ApiKeysEditPage({
 								</AlertDescription>
 							</Alert>
 
-							{actionData?.error && !actionData?.fieldErrors && (
-								<Alert variant="destructive">
-									<AlertCircle className="size-4" />
-									<AlertDescription>{actionData.error}</AlertDescription>
-								</Alert>
-							)}
+							{actionData &&
+								'error' in actionData &&
+								actionData.error &&
+								!('fieldErrors' in actionData && actionData.fieldErrors) && (
+									<Alert variant="destructive">
+										<AlertCircle className="size-4" />
+										<AlertDescription>{actionData.error}</AlertDescription>
+									</Alert>
+								)}
 
 							<DrawerFooter className="px-0 pt-2">
 								<Button

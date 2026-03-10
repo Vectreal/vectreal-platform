@@ -1,7 +1,7 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Building, Building2 } from 'lucide-react'
 import { useMemo } from 'react'
-import { useLoaderData } from 'react-router'
+import { data, useLoaderData } from 'react-router'
 
 import { Route } from './+types/organizations'
 import DashboardCard from '../../components/dashboard/dashboard-cards'
@@ -13,7 +13,7 @@ import { getUserOrganizations } from '../../lib/domain/user/user-repository.serv
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user } = await loadAuthenticatedSession(request)
+	const { user, headers } = await loadAuthenticatedSession(request)
 
 	// Fetch organizations
 	const organizations = await getUserOrganizations(user.id)
@@ -21,11 +21,14 @@ export async function loader({ request }: Route.LoaderArgs) {
 	// Compute stats server-side
 	const organizationStats = computeOrganizationStats(organizations)
 
-	return {
-		user,
-		organizations,
-		organizationStats
-	}
+	return data(
+		{
+			user,
+			organizations,
+			organizationStats
+		},
+		{ headers }
+	)
 }
 
 /**

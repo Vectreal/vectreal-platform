@@ -31,7 +31,13 @@ import {
 } from '@shared/components/ui/tabs'
 import { KeyRound } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Outlet, useFetcher, useNavigate, useRevalidator } from 'react-router'
+import {
+	data,
+	Outlet,
+	useFetcher,
+	useNavigate,
+	useRevalidator
+} from 'react-router'
 import { toast } from 'sonner'
 
 import { Route } from './+types/api-keys'
@@ -50,7 +56,7 @@ import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user } = await loadAuthenticatedUser(request)
+	const { user, headers } = await loadAuthenticatedUser(request)
 
 	const [apiKeys, organizations] = await Promise.all([
 		getAllUserApiKeys(user.id),
@@ -70,14 +76,17 @@ export async function loader({ request }: Route.LoaderArgs) {
 		['admin', 'owner'].includes(o.membership.role)
 	)
 
-	return {
-		keysByOrg: Object.fromEntries(keysByOrg),
-		organizations: adminOrgs
-	}
+	return data(
+		{
+			keysByOrg: Object.fromEntries(keysByOrg),
+			organizations: adminOrgs
+		},
+		{ headers }
+	)
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	const { user } = await loadAuthenticatedUser(request)
+	const { user, headers } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
 	const intent = formData.get('intent') as string
 
@@ -86,18 +95,22 @@ export async function action({ request }: Route.ActionArgs) {
 			const apiKeyId = formData.get('apiKeyId') as string
 
 			if (!apiKeyId) {
-				return { error: 'API key ID is required' }
+				return data({ error: 'API key ID is required' }, { headers })
 			}
 
 			await revokeApiKey(apiKeyId, user.id)
-			return { success: true, message: 'API key revoked successfully' }
+			return data(
+				{ success: true, message: 'API key revoked successfully' },
+				{ headers }
+			)
 		}
 
-		return { error: 'Invalid intent' }
+		return data({ error: 'Invalid intent' }, { headers })
 	} catch (error) {
-		return {
-			error: error instanceof Error ? error.message : 'An error occurred'
-		}
+		return data(
+			{ error: error instanceof Error ? error.message : 'An error occurred' },
+			{ headers }
+		)
 	}
 }
 
@@ -205,13 +218,13 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 		}
 		lastHandledResponseRef.current = signature
 
-		if (fetcher.data.success) {
+		if ('success' in fetcher.data && fetcher.data.success) {
 			toast.success(fetcher.data.message || 'API key revoked successfully')
 			revalidator.revalidate()
 			return
 		}
 
-		if (fetcher.data.error) {
+		if ('error' in fetcher.data && fetcher.data.error) {
 			toast.error(fetcher.data.error)
 		}
 	}, [fetcher.state, fetcher.data, revalidator])

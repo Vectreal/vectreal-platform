@@ -16,9 +16,13 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
 	const sceneId = params.sceneId?.trim()
 	const assetId = params.assetId?.trim()
+	const headers = auth.headers ?? {}
 
 	if (!sceneId || !assetId) {
-		return new Response('Missing scene or asset ID', { status: 400 })
+		return new Response('Missing scene or asset ID', {
+			status: 400,
+			headers
+		})
 	}
 
 	const [asset] = await db
@@ -33,12 +37,12 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		.limit(1)
 
 	if (!asset) {
-		return new Response('Thumbnail not found', { status: 404 })
+		return new Response('Thumbnail not found', { status: 404, headers })
 	}
 
 	const metadata = asset.metadata as { sceneId?: unknown } | null
 	if (metadata?.sceneId !== sceneId) {
-		return new Response('Thumbnail not found', { status: 404 })
+		return new Response('Thumbnail not found', { status: 404, headers })
 	}
 
 	try {
@@ -49,11 +53,13 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
 		return new Response(body, {
 			status: 200,
-			headers: {
-				'Content-Type': assetData.mimeType,
-				'Cache-Control': 'private, max-age=60',
-				'Last-Modified': asset.updatedAt.toUTCString()
-			}
+			headers: (() => {
+				const responseHeaders = new Headers(headers)
+				responseHeaders.set('Content-Type', assetData.mimeType)
+				responseHeaders.set('Cache-Control', 'private, max-age=60')
+				responseHeaders.set('Last-Modified', asset.updatedAt.toUTCString())
+				return responseHeaders
+			})(),
 		})
 	} catch (error) {
 		console.error('Failed to stream thumbnail asset', {
@@ -62,6 +68,6 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			userId: auth.user.id,
 			error
 		})
-		return new Response('Failed to load thumbnail', { status: 500 })
+		return new Response('Failed to load thumbnail', { status: 500, headers })
 	}
 }

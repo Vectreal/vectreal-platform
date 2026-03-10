@@ -30,6 +30,7 @@ import { Save, X } from 'lucide-react'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import {
+	data,
 	redirect,
 	Form as RemixForm,
 	useLocation,
@@ -74,7 +75,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Project ID is required', { status: 400 })
 	}
 
-	const { user } = await loadAuthenticatedUser(request)
+	const { user, headers } = await loadAuthenticatedUser(request)
 
 	const [project, organizations] = await Promise.all([
 		getProject(projectId, user.id),
@@ -85,7 +86,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Project not found', { status: 404 })
 	}
 
-	return { project, organizations }
+	return data({ project, organizations }, { headers })
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -95,7 +96,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 		throw new Response('Project ID is required', { status: 400 })
 	}
 
-	const { user } = await loadAuthenticatedUser(request)
+	const { user, headers } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
 
 	const name = formData.get('name') as string
@@ -107,12 +108,15 @@ export async function action({ request, params }: Route.ActionArgs) {
 		const validatedData = projectEditSchema.parse({ name, slug })
 		const domainValidation = validateAllowedDomainInput(allowedEmbedDomainsRaw)
 		if (!domainValidation.ok) {
-			return {
-				error: 'Validation failed',
-				fieldErrors: {
-					allowedEmbedDomains: domainValidation.message
-				}
-			}
+			return data(
+				{
+					error: 'Validation failed',
+					fieldErrors: {
+						allowedEmbedDomains: domainValidation.message
+					}
+				},
+				{ headers }
+			)
 		}
 
 		await updateProject(
@@ -128,7 +132,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			user.id
 		)
 
-		return redirect(`/dashboard/projects/${projectId}`)
+		return redirect(`/dashboard/projects/${projectId}`, { headers })
 	} catch (error) {
 		if (error instanceof ZodError) {
 			const fieldErrors: Record<string, string> = {}
@@ -139,15 +143,22 @@ export async function action({ request, params }: Route.ActionArgs) {
 				}
 			})
 
-			return {
-				error: 'Validation failed',
-				fieldErrors
-			}
+			return data(
+				{
+					error: 'Validation failed',
+					fieldErrors
+				},
+				{ headers }
+			)
 		}
 
-		return {
-			error: error instanceof Error ? error.message : 'Failed to update project'
-		}
+		return data(
+			{
+				error:
+					error instanceof Error ? error.message : 'Failed to update project'
+			},
+			{ headers }
+		)
 	}
 }
 
@@ -180,11 +191,11 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	})
 
 	useEffect(() => {
-		if (actionData?.fieldErrors) {
+		if (actionData && 'fieldErrors' in actionData && actionData.fieldErrors) {
 			Object.entries(actionData.fieldErrors).forEach(([field, message]) => {
 				form.setError(field as keyof ProjectEditFormValues, {
 					type: 'server',
-					message
+					message: String(message)
 				})
 			})
 		}

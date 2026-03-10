@@ -1,5 +1,6 @@
 import { useSetAtom } from 'jotai/react'
 import { File } from 'lucide-react'
+import { data } from 'react-router'
 
 import { Route } from './+types/dashboard-page'
 import { DashboardOverview } from '../../components/dashboard/dashboard-overview'
@@ -23,7 +24,7 @@ import { deleteDialogAtom } from '../../lib/stores/dashboard-management-store'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user } = await loadAuthenticatedSession(request)
+	const { user, headers } = await loadAuthenticatedSession(request)
 
 	const userProjects = await getUserProjects(user.id)
 
@@ -39,7 +40,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const sceneStats = computeSceneStats(scenes)
 	const mostRecentScene = recentScenes[0]
 
-	return {
+	return data(
+		{
 		projects: userProjects,
 		recentScenes,
 		overview: {
@@ -51,7 +53,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 			},
 			mostRecentSceneId: mostRecentScene?.id
 		}
-	}
+		},
+		{ headers }
+	)
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({
