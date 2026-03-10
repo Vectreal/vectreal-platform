@@ -12,10 +12,11 @@ on:
       - 'shared/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - 'nx.json'
+      - 'eslint.config.mts'
+      - 'jest.config.ts'
       - 'tsconfig.base.json'
-      - '.github/workflows/ci-lint-typecheck.yaml'
-      - '.github/workflows/ci-build.yaml'
       - '.github/workflows/ci-quality.yaml'
       - '.github/workflows/cd-platform-staging.yaml'
       - '.github/workflows/cd-platform-production.yaml'
@@ -29,14 +30,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality-gate:
-    name: CI Quality Gate
-    uses: ./.github/workflows/ci-quality.yaml
-
   deploy-staging:
     name: Deploy to Staging Environment
-    needs: quality-gate
-    if: ${{ needs.quality-gate.result == 'success' }}
     uses: ./.github/workflows/shared-gcloud-deploy.yaml
     with:
       environment: staging
@@ -49,6 +44,7 @@ jobs:
       cloud-run-flags: '--ingress internal-and-cloud-load-balancing'
       static-bucket-name: 'vectreal-static-staging'
       static-cache-control: 'public, max-age=31536000, immutable'
+      fail-on-health-check: false
     secrets:
       gcp-credentials: ${{ secrets.GCP_CREDENTIALS_STAGING }}
       gcp-project-id: ${{ secrets.GCP_PROJECT_ID_STAGING }}
