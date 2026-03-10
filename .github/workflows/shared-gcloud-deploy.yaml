@@ -115,7 +115,7 @@ jobs:
           credentials_json: ${{ secrets.gcp-credentials }}
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
 
       - name: Promote static assets between buckets
         if: ${{ inputs.static-bucket-name != '' && !inputs.build-and-push-image && inputs.promote-static-from-bucket != '' }}
