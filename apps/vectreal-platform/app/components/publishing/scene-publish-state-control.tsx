@@ -236,7 +236,10 @@ export function ScenePublishStateControl({
 			</div>
 
 			{draftActionMode === 'confirm' && (
-				<AlertDialog open={publishDialogOpen} onOpenChange={setPublishDialogOpen}>
+				<AlertDialog
+					open={publishDialogOpen}
+					onOpenChange={setPublishDialogOpen}
+				>
 					<AlertDialogContent>
 						<AlertDialogHeader>
 							<AlertDialogTitle>{publishDialogTitle}</AlertDialogTitle>

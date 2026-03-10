@@ -636,7 +636,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 					</section>
 				</main>
 
-				<aside className="bg-muted/30 hidden min-h-0 flex-col gap-3 rounded-2xl p-4 xl:flex">
+				<aside className="bg-muted/30 hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-4 xl:flex">
 					<section className="space-y-3">
 						<div>
 							<p className="text-muted-foreground text-[11px] tracking-[0.2em] uppercase">
@@ -680,7 +680,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						</div>
 					</section>
 
-					<section className="space-y-2">
+					<section className="space-y-2 overflow-y-auto">
 						<p className="text-muted-foreground text-[11px] tracking-[0.2em] uppercase">
 							Assets Preview
 						</p>
@@ -718,7 +718,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 													<img
 														src={textureUrl}
 														alt={asset.name}
-														className="h-10 w-10 rounded-md object-cover transition-transform duration-200 ease-in-out hover:z-10 hover:scale-500 hover:shadow-xl"
+														className="h-10 w-10 rounded-lg object-cover"
 													/>
 												</div>
 											)}
