@@ -131,7 +131,9 @@ export function Layout({ children }: { children: ReactNode }) {
 				<GlobalNavigationLoader />
 				{children}
 				<Toaster toastOptions={{ className: 'rounded-2xl!' }} />
-				<ScrollRestoration />
+				<ScrollRestoration
+					getKey={(location) => `${location.pathname}${location.search}`}
+				/>
 				<Scripts />
 			</body>
 		</html>

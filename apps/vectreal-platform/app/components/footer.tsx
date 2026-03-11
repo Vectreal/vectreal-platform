@@ -1,6 +1,8 @@
 import { VectrealLogoAnimated } from '@shared/components/assets/icons/vectreal-logo-animated'
 import { Link } from 'react-router'
 
+import { ShimmerRotatingText } from './shimmer-rotating-text'
+
 export const SlimFooter = () => {
 	return (
 		<footer className="border-border/50 bg-background/80 w-full border-t px-6 py-4 backdrop-blur-sm">
@@ -18,6 +20,14 @@ export const SlimFooter = () => {
 }
 
 export const Footer = () => {
+	const whispers = [
+		'latency low. fidelity high.',
+		'optimize once, ship everywhere.',
+		'clean meshes. predictable renders.',
+		'profiles first, polish second.',
+		'build pipelines, not bottlenecks.'
+	]
+
 	return (
 		<footer className="border-border/50 bg-background w-full border-t px-6 pb-8 inset-shadow-[0rem_1rem_2rem_-1rem] inset-shadow-black/50 backdrop-blur-sm">
 			<div className="mx-auto flex max-w-7xl flex-col gap-16 py-32">
@@ -31,7 +41,7 @@ export const Footer = () => {
 					</p>
 				</div>
 
-				<div className="grid grid-cols-2 flex-col justify-center gap-16 text-left text-sm md:grid-cols-4 md:flex-row md:gap-6">
+				<div className="grid grid-cols-2 flex-col justify-center gap-16 text-left text-sm md:grid-cols-5 md:flex-row md:gap-6">
 					<div>
 						<h3 className="text-foreground mb-4 text-lg font-semibold">
 							Product
@@ -50,6 +60,28 @@ export const Footer = () => {
 								<Link to="https://github.com/Vectreal/vectreal-platform/releases">
 									Release Notes
 								</Link>
+							</li>
+						</ul>
+					</div>
+					<div>
+						<h3 className="text-foreground mb-4 text-lg font-semibold">
+							Documentation
+						</h3>
+						<ul className="flex flex-col gap-4">
+							<li className="text-foreground list-item">
+								<Link to="/docs">Docs Home</Link>
+							</li>
+							<li className="text-foreground list-item">
+								<Link to="/docs/getting-started">Getting Started</Link>
+							</li>
+							<li className="text-foreground list-item">
+								<Link to="/docs/guides/upload">Guides</Link>
+							</li>
+							<li className="text-foreground list-item">
+								<Link to="/docs/packages/viewer">Package Reference</Link>
+							</li>
+							<li className="text-foreground list-item">
+								<Link to="/docs/contributing">Contributing</Link>
 							</li>
 						</ul>
 					</div>
@@ -114,6 +146,13 @@ export const Footer = () => {
 							</li>
 						</ul>
 					</div>
+				</div>
+				<div className="flex justify-center">
+					<ShimmerRotatingText
+						phrases={whispers}
+						className="text-muted-foreground/80 hover:text-foreground/95 focus-visible:ring-ring/60 relative isolate overflow-hidden rounded-full border border-transparent px-4 py-1.5 text-xs tracking-[0.18em] transition-colors focus-visible:ring-1 focus-visible:outline-none"
+						ariaLabel="cycle footer note"
+					/>
 				</div>
 			</div>
 			<small className="text-muted-foreground/70 mx-auto block text-center text-sm">

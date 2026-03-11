@@ -1,0 +1,70 @@
+# Documentation
+
+Vectreal is an open platform for preparing, managing, and publishing 3D content for the web. This documentation covers the full platform — from running the local dev stack to integrating the open-source React packages in your own project.
+
+---
+
+## What's in this docs
+
+| Section | What you'll find |
+|---|---|
+| [Getting Started](/docs/getting-started) | Local setup, prerequisites, first model walkthrough |
+| [Guides](/docs/guides/upload) | Upload, optimize, publish, and embed workflows |
+| [Package Reference](/docs/packages/viewer) | API docs for `@vctrl/viewer`, `@vctrl/hooks`, `@vctrl/core` |
+| [Operations](/docs/operations/deployment) | GCP deployment, Terraform, CI/CD |
+| [Contributing](/docs/contributing) | Branching, commits, PR process |
+
+---
+
+## Quick links
+
+- [GitHub repository](https://github.com/Vectreal/vectreal-platform)
+- [Open Publisher](https://vectreal.com/publisher) — upload a model without an account
+- [Discord community](https://discord.gg/A9a3nPkZw7)
+- [Changelog](/changelog)
+
+---
+
+## App Workflows and Package Reference
+
+Use these cross-links to move between user-facing workflows and underlying package APIs.
+
+| Workflow guide | Package reference | Source README |
+|---|---|---|
+| [Uploading Models](/docs/guides/upload) | [@vctrl/hooks](/docs/packages/hooks) | [packages/hooks/README.md](https://github.com/Vectreal/vectreal-platform/blob/main/packages/hooks/README.md) |
+| [Optimizing & Configuring](/docs/guides/optimize) | [@vctrl/hooks](/docs/packages/hooks), [@vctrl/viewer](/docs/packages/viewer) | [packages/hooks/README.md](https://github.com/Vectreal/vectreal-platform/blob/main/packages/hooks/README.md), [packages/viewer/README.md](https://github.com/Vectreal/vectreal-platform/blob/main/packages/viewer/README.md) |
+| [Publishing & Embedding](/docs/guides/publish-embed) | [@vctrl/viewer](/docs/packages/viewer), [@vctrl/core](/docs/packages/core) | [packages/viewer/README.md](https://github.com/Vectreal/vectreal-platform/blob/main/packages/viewer/README.md), [packages/core/README.md](https://github.com/Vectreal/vectreal-platform/blob/main/packages/core/README.md) |
+| [Deployment](/docs/operations/deployment) | [@vctrl/core](/docs/packages/core) | [packages/core/README.md](https://github.com/Vectreal/vectreal-platform/blob/main/packages/core/README.md) |
+
+---
+
+## Architecture overview
+
+The monorepo is organised into three layers:
+
+```
+vectreal-platform/
+├── apps/vectreal-platform/   # Full-stack React Router v7 app (this site)
+├── packages/
+│   ├── viewer/               # @vctrl/viewer — React 3D viewer component
+│   ├── hooks/                # @vctrl/hooks  — browser-side loading/optimisation hooks
+│   └── core/                 # @vctrl/core   — server-side model processing
+├── shared/
+│   ├── components/           # Shared Radix UI component library
+│   └── utils/                # Shared utility functions
+└── terraform/                # GCP infrastructure as code
+```
+
+The platform app (`apps/vectreal-platform`) uses:
+
+- **React Router v7** (framework mode with SSR) for routing and data loading
+- **Supabase** for authentication and database
+- **Drizzle ORM** for type-safe SQL queries
+- **Google Cloud Storage** for 3D asset storage
+- **@vctrl/viewer + @vctrl/hooks** as the in-browser 3D pipeline
+
+---
+
+## Editing these docs
+
+Every page in this documentation is an MDX file living inside the repository. Click **Edit on GitHub** at the top of any page to jump straight to the source file and open a PR.

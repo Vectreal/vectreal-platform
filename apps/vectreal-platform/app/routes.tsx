@@ -43,12 +43,53 @@ export default [
 		}),
 		layout('./routes/layouts/mdx-layout.tsx', [
 			route('about', './routes/about-page.mdx'),
+			route('changelog', './routes/changelog-page.mdx'),
 			route('contact', './routes/contact-page.mdx'),
+			route('code-of-conduct', './routes/code-of-conduct-page.mdx'),
 			route('privacy-policy', './routes/privacy-policy-page.mdx'),
 			route('terms-of-service', './routes/terms-of-service-page.mdx'),
 			route('imprint', './routes/imprint-page.mdx')
+		]),
+
+		// Docs — platform-first open-source documentation
+		...prefix('docs', [
+			layout('./routes/layouts/docs-layout.tsx', [
+				index('./routes/docs/index.mdx'),
+				// Getting Started
+				...prefix('getting-started', [
+					index('./routes/docs/getting-started/index.mdx', {
+						id: 'docs-getting-started-index'
+					}),
+					route(
+						'installation',
+						'./routes/docs/getting-started/installation.mdx'
+					),
+					route('first-model', './routes/docs/getting-started/first-model.mdx')
+				]),
+				// Guides
+				...prefix('guides', [
+					route('upload', './routes/docs/guides/upload.mdx'),
+					route('optimize', './routes/docs/guides/optimize.mdx'),
+					route('publish-embed', './routes/docs/guides/publish-embed.mdx')
+				]),
+				// Package Reference
+				...prefix('packages', [
+					route('viewer', './routes/docs/packages/viewer.mdx'),
+					route('hooks', './routes/docs/packages/hooks.mdx'),
+					route('core', './routes/docs/packages/core.mdx')
+				]),
+				// Operations
+				...prefix('operations', [
+					route('deployment', './routes/docs/operations/deployment.mdx')
+				]),
+				// Contributing
+				route('contributing', './routes/docs/contributing.mdx')
+			])
 		])
 	]),
+
+	// First-run onboarding (standalone page, no nav layout)
+	route('onboarding', './routes/onboarding-page/onboarding-page.tsx'),
 
 	// publisher
 	layout('./routes/layouts/publisher-layout.tsx', [

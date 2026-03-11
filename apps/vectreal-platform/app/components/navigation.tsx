@@ -3,7 +3,7 @@ import { useIsMobile } from '@shared/components/hooks/use-mobile'
 import { Button } from '@shared/components/ui/button'
 import { User } from '@supabase/supabase-js'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ListTreeIcon, Rocket } from 'lucide-react'
+import { BookOpen, ListTreeIcon, Rocket } from 'lucide-react'
 import { Link, useFetcher, useLocation } from 'react-router'
 
 import { FloatingPillWrapper } from './layout-components'
@@ -23,6 +23,7 @@ export const Navigation = ({ user }: NavigationProps) => {
 	const isSigninPage =
 		pathname.startsWith('/sign-up') || pathname.startsWith('/sign-in')
 	const isPublisherPage = pathname.startsWith('/publisher')
+	const isDocsPage = pathname.startsWith('/docs')
 
 	const { submit } = useFetcher()
 
@@ -67,6 +68,27 @@ export const Navigation = ({ user }: NavigationProps) => {
 							<Button asChild variant="ghost" size="sm">
 								<Link viewTransition to="/sign-up" aria-label="Sign up">
 									Sign In
+								</Link>
+							</Button>
+						</motion.div>
+					)}
+					{!isMobile && !isDocsPage && (
+						<motion.div
+							initial={{ opacity: 0, width: 0 }}
+							animate={{ opacity: 1, width: 'auto' }}
+							exit={{ opacity: 0, width: 0 }}
+							transition={{ duration: 0.3, ease: 'easeInOut' }}
+							className="mr-1 overflow-hidden"
+							key="docs-button"
+						>
+							<Button asChild variant="ghost" size="sm">
+								<Link
+									viewTransition
+									to="/docs"
+									aria-label="Read the documentation"
+								>
+									<BookOpen />
+									Docs
 								</Link>
 							</Button>
 						</motion.div>

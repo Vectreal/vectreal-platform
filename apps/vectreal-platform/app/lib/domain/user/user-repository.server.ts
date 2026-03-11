@@ -19,6 +19,8 @@ export interface UserWithDefaults {
 	readonly user: typeof users.$inferSelect
 	readonly organization: typeof organizations.$inferSelect
 	readonly project: typeof projects.$inferSelect
+	/** True when the user record was created during this call (first-time sign-in). */
+	readonly isNewUser: boolean
 }
 
 const db = getDbClient()
@@ -28,7 +30,7 @@ type DbClient = typeof db
 async function ensureUserExistsDb(
 	dbClient: DbClient,
 	supabaseUser: User
-): Promise<typeof users.$inferSelect> {
+): Promise<{ user: typeof users.$inferSelect; isNewUser: boolean }> {
 	const existingUser = await dbClient
 		.select()
 		.from(users)
@@ -36,7 +38,7 @@ async function ensureUserExistsDb(
 		.limit(1)
 
 	if (existingUser.length > 0) {
-		return existingUser[0]
+		return { user: existingUser[0], isNewUser: false }
 	}
 
 	const [newUser] = await dbClient
@@ -48,7 +50,7 @@ async function ensureUserExistsDb(
 		})
 		.returning()
 
-	return newUser
+	return { user: newUser, isNewUser: true }
 }
 
 async function createOrganizationDb(
@@ -166,7 +168,8 @@ export async function ensureUserExists(
 	supabaseUser: User
 ): Promise<typeof users.$inferSelect> {
 	try {
-		return await ensureUserExistsDb(db, supabaseUser)
+		const { user } = await ensureUserExistsDb(db, supabaseUser)
+		return user
 	} catch (error) {
 		console.error('Database error in ensureUserExists:', {
 			error,
@@ -259,7 +262,7 @@ export async function initializeUserDefaults(
 	supabaseUser: User
 ): Promise<UserWithDefaults> {
 	return await db.transaction(async (tx) => {
-		const user = await ensureUserExistsDb(tx as DbClient, supabaseUser)
+		const { user, isNewUser } = await ensureUserExistsDb(tx as DbClient, supabaseUser)
 		const organization = await getOrCreateDefaultOrganizationDb(
 			tx as DbClient,
 			user.id
@@ -273,7 +276,8 @@ export async function initializeUserDefaults(
 		return {
 			user,
 			organization,
-			project
+			project,
+			isNewUser
 		}
 	})
 }

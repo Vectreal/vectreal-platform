@@ -1,0 +1,93 @@
+# Optimizing & Configuring
+
+The Publisher sidebar gives you full control over how your model looks and performs. This guide explains every setting.
+
+---
+
+## Quality presets
+
+Quality presets apply a combination of mesh simplification and texture compression to reduce file size. Choose the preset that matches your use case:
+
+| Preset | Mesh ratio | Texture quality | Use when |
+|---|---|---|---|
+| **Raw** | 100% | Lossless | Archival or downstream processing |
+| **High** | 90% | 90% | High-fidelity product display |
+| **Medium** | 70% | 75% | Balanced web experience |
+| **Low** | 50% | 60% | Maximum performance, lightweight pages |
+
+Presets are applied non-destructively — switching presets re-processes from the original uploaded file.
+
+---
+
+## Mesh simplification
+
+Under the hood, mesh simplification uses the [glTF-Transform](https://gltf-transform.dev) `simplify` function. The **ratio** controls the fraction of triangles retained (1.0 = no simplification, 0.5 = 50% reduction).
+
+You can override the preset ratio manually in the advanced settings panel.
+
+---
+
+## Texture compression
+
+Textures are compressed using the browser-side [KTX2 / Basis Universal](https://github.com/KhronosGroup/KTX-Software) pipeline. The **quality** slider maps to the Basis `quality` parameter (1–255).
+
+> Texture compression happens asynchronously in a Web Worker — the viewport preview uses the uncompressed original while compression runs.
+
+---
+
+## Lighting & environment
+
+### Environment preset
+
+Choose from a set of HDR environment presets (e.g. **studio**, **sunset**, **warehouse**) that determine ambient lighting, reflections, and image-based lighting (IBL).
+
+### Stage settings
+
+The `Stage` component from [@react-three/drei](https://github.com/pmndrs/drei) automatically positions the model and adjusts the camera to fit. Use **adjustCamera** to control how tightly the camera frames the model (higher = tighter crop).
+
+### Background color
+
+Override the transparent background with a solid color using the background color picker in the environment section.
+
+---
+
+## Camera
+
+### Initial position
+
+Set the camera's starting world-space position (`x, y, z`). The camera will animate to this position when the scene loads.
+
+### Field of view (FoV)
+
+Adjust the perspective camera's FoV in degrees. Wider FoV (e.g. 90°) exaggerates depth; narrower (e.g. 30°) produces a more orthographic feel.
+
+### Auto-rotate
+
+Enable auto-rotate to continuously orbit the model. Configure the speed and the pause delay after user interaction (`controlsTimeout` in milliseconds).
+
+---
+
+## Grid
+
+Grid controls are currently not active in the viewer render flow. If enabled in a future release, this section will include supported options and examples.
+
+---
+
+## Saving settings
+
+Settings are saved with the scene when you click **Save**. They are restored every time you or a viewer loads the scene embed.
+
+---
+
+## Next steps
+
+- [Publishing & Embedding](/docs/guides/publish-embed) — publish and generate an embed snippet
+- [@vctrl/viewer API](/docs/packages/viewer) — all viewer component props
+
+---
+
+## Related package references
+
+- [@vctrl/hooks](/docs/packages/hooks)
+- [@vctrl/viewer](/docs/packages/viewer)
+- [@vctrl/core](/docs/packages/core)
