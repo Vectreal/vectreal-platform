@@ -32,21 +32,21 @@ From the package root (`@vctrl/hooks`), utility exports are available:
 import { useLoadModel } from '@vctrl/hooks/use-load-model'
 
 function Uploader() {
-  const { load, file, isFileLoading, progress } = useLoadModel()
+	const { load, file, isFileLoading, progress } = useLoadModel()
 
-  return (
-    <>
-      <input
-        type="file"
-        onChange={(e) => {
-          const files = Array.from(e.currentTarget.files ?? [])
-          void load(files)
-        }}
-      />
-      {isFileLoading ? <p>Loading: {progress}%</p> : null}
-      {file?.model ? <p>Loaded: {file.name}</p> : null}
-    </>
-  )
+	return (
+		<>
+			<input
+				type="file"
+				onChange={(e) => {
+					const files = Array.from(e.currentTarget.files ?? [])
+					void load(files)
+				}}
+			/>
+			{isFileLoading ? <p>Loading: {progress}%</p> : null}
+			{file?.model ? <p>Loaded: {file.name}</p> : null}
+		</>
+	)
 }
 ```
 
@@ -83,22 +83,19 @@ Scene loading option types:
 `ModelProvider` and `useModelContext` are exported from `@vctrl/hooks/use-load-model`.
 
 ```tsx
-import {
-  ModelProvider,
-  useModelContext
-} from '@vctrl/hooks/use-load-model'
+import { ModelProvider, useModelContext } from '@vctrl/hooks/use-load-model'
 
 function Toolbar() {
-  const { reset } = useModelContext()
-  return <button onClick={reset}>Reset</button>
+	const { reset } = useModelContext()
+	return <button onClick={reset}>Reset</button>
 }
 
 function App() {
-  return (
-    <ModelProvider>
-      <Toolbar />
-    </ModelProvider>
-  )
+	return (
+		<ModelProvider>
+			<Toolbar />
+		</ModelProvider>
+	)
 }
 ```
 
@@ -137,18 +134,18 @@ import { useExportModel } from '@vctrl/hooks/use-export-model'
 import type { ModelFile } from '@vctrl/hooks/use-load-model'
 
 function ExportActions({ file }: { file: ModelFile | null }) {
-  const { handleThreeGltfExport } = useExportModel()
+	const { handleThreeGltfExport } = useExportModel()
 
-  return (
-    <>
-      <button onClick={() => void handleThreeGltfExport(file, true)}>
-        Export GLB
-      </button>
-      <button onClick={() => void handleThreeGltfExport(file, false)}>
-        Export GLTF ZIP
-      </button>
-    </>
-  )
+	return (
+		<>
+			<button onClick={() => void handleThreeGltfExport(file, true)}>
+				Export GLB
+			</button>
+			<button onClick={() => void handleThreeGltfExport(file, false)}>
+				Export GLTF ZIP
+			</button>
+		</>
+	)
 }
 ```
 

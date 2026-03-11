@@ -25,7 +25,12 @@ The package re-exports UI modules from `shared/components/src/ui/*`, including:
 ## Usage
 
 ```tsx
-import { Button, Dialog, DialogContent, DialogTrigger } from '@shared/components'
+import {
+	Button,
+	Dialog,
+	DialogContent,
+	DialogTrigger
+} from '@shared/components'
 
 export function Example() {
 	return (

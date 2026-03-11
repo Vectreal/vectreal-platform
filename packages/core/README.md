@@ -29,11 +29,11 @@ pnpm add @vctrl/core
 
 ## Public modules
 
-| Module | Import path |
-|---|---|
-| Model loader | `@vctrl/core/model-loader` |
+| Module          | Import path                   |
+| --------------- | ----------------------------- |
+| Model loader    | `@vctrl/core/model-loader`    |
 | Model optimizer | `@vctrl/core/model-optimizer` |
-| Model exporter | `@vctrl/core/model-exporter` |
+| Model exporter  | `@vctrl/core/model-exporter`  |
 
 The package root (`@vctrl/core`) also re-exports all modules and shared types.
 

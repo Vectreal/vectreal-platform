@@ -8,15 +8,15 @@ The main Vectreal Platform application — a full-stack React Router v7 app with
 
 ## Tech stack
 
-| Layer | Technology |
-|---|---|
-| Framework | React Router v7 (framework mode, SSR) |
-| Auth | Supabase Auth (email/password + Google/GitHub OAuth) |
-| Database | PostgreSQL via Supabase + Drizzle ORM |
-| Storage | Google Cloud Storage (private buckets) |
-| 3D pipeline | `@vctrl/hooks` (browser) + `@vctrl/core` (server) |
-| UI | Radix UI + Tailwind CSS v4 (`@shared/components`) |
-| Build | Vite + Nx |
+| Layer       | Technology                                           |
+| ----------- | ---------------------------------------------------- |
+| Framework   | React Router v7 (framework mode, SSR)                |
+| Auth        | Supabase Auth (email/password + Google/GitHub OAuth) |
+| Database    | PostgreSQL via Supabase + Drizzle ORM                |
+| Storage     | Google Cloud Storage (private buckets)               |
+| 3D pipeline | `@vctrl/hooks` (browser) + `@vctrl/core` (server)    |
+| UI          | Radix UI + Tailwind CSS v4 (`@shared/components`)    |
+| Build       | Vite + Nx                                            |
 
 ---
 
@@ -54,14 +54,14 @@ See [`../../.env.development.example`](../../.env.development.example) for the f
 
 **Required for core functionality:**
 
-| Variable | Description |
-|---|---|
-| `SUPABASE_URL` | Supabase API URL (local: `http://localhost:54321`) |
-| `SUPABASE_KEY` | Supabase anon key (from `supabase status`) |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `CSRF_SECRET` | Long random string for CSRF token signing |
-| `GOOGLE_CLOUD_STORAGE_CREDENTIALS_FILE` | Path to GCS service account JSON key |
-| `GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET` | GCS bucket name for model assets |
+| Variable                                | Description                                        |
+| --------------------------------------- | -------------------------------------------------- |
+| `SUPABASE_URL`                          | Supabase API URL (local: `http://localhost:54321`) |
+| `SUPABASE_KEY`                          | Supabase anon key (from `supabase status`)         |
+| `DATABASE_URL`                          | PostgreSQL connection string                       |
+| `CSRF_SECRET`                           | Long random string for CSRF token signing          |
+| `GOOGLE_CLOUD_STORAGE_CREDENTIALS_FILE` | Path to GCS service account JSON key               |
+| `GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET`   | GCS bucket name for model assets                   |
 
 ---
 
@@ -136,9 +136,9 @@ See [`DOCKER.md`](DOCKER.md) for building and running the app in a container, en
 
 Deployed to **Google Cloud Run** via Terraform and GitHub Actions.
 
-| Workflow | Trigger |
-|---|---|
-| Staging | Push to `main` |
+| Workflow   | Trigger                    |
+| ---------- | -------------------------- |
+| Staging    | Push to `main`             |
 | Production | Manual `workflow_dispatch` |
 
 See the [Deployment docs](https://vectreal.com/docs/operations/deployment) or [`../../terraform/README.md`](../../terraform/README.md) for the full infrastructure reference.
