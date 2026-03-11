@@ -3,7 +3,7 @@ import { useIsMobile } from '@shared/components/hooks/use-mobile'
 import { Button } from '@shared/components/ui/button'
 import { User } from '@supabase/supabase-js'
 import { AnimatePresence, motion } from 'framer-motion'
-import { BookOpen, ListTreeIcon, Rocket } from 'lucide-react'
+import { BookOpen, ListTreeIcon, LogIn, Rocket } from 'lucide-react'
 import { Link, useFetcher, useLocation } from 'react-router'
 
 import { FloatingPillWrapper } from './layout-components'
@@ -67,6 +67,7 @@ export const Navigation = ({ user }: NavigationProps) => {
 						>
 							<Button asChild variant="ghost" size="sm">
 								<Link viewTransition to="/sign-up" aria-label="Sign up">
+									<LogIn />
 									Sign In
 								</Link>
 							</Button>
@@ -78,7 +79,7 @@ export const Navigation = ({ user }: NavigationProps) => {
 							animate={{ opacity: 1, width: 'auto' }}
 							exit={{ opacity: 0, width: 0 }}
 							transition={{ duration: 0.3, ease: 'easeInOut' }}
-							className="mr-1 overflow-hidden"
+							className="mr-2 overflow-hidden"
 							key="docs-button"
 						>
 							<Button asChild variant="ghost" size="sm">
@@ -99,7 +100,7 @@ export const Navigation = ({ user }: NavigationProps) => {
 							animate={{ opacity: 1, width: 'auto' }}
 							exit={{ opacity: 0, width: 0 }}
 							transition={{ duration: 0.3, ease: 'easeInOut' }}
-							className="overflow-hidden"
+							className="mr-2 overflow-hidden"
 							key="publisher-button"
 						>
 							<Button asChild variant="ghost" size="sm">
