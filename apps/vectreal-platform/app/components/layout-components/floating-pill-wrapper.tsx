@@ -14,7 +14,7 @@ const FloatingPillWrapper = ({
 		<div
 			{...rest}
 			className={cn(
-				'bg-background/50 flex w-fit items-center justify-between gap-3 rounded-3xl p-2 shadow-2xl backdrop-blur-2xl',
+				'bg-background/50 flex w-fit items-center justify-between rounded-3xl p-2 shadow-2xl backdrop-blur-2xl',
 				className
 			)}
 		/>
