@@ -3,8 +3,17 @@ import mdx from '@mdx-js/rollup'
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin'
 import { reactRouter } from '@react-router/dev/vite'
 import tailwindcss from '@tailwindcss/vite'
+import rehypeAutolinkHeadings from 'rehype-autolink-headings'
+import rehypePrettyCode from 'rehype-pretty-code'
+import rehypeSlug from 'rehype-slug'
+import remarkGfm from 'remark-gfm'
 import { defineConfig } from 'vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
+
+const prettyCodeOptions = {
+	theme: 'github-dark',
+	keepBackground: true
+}
 
 export default defineConfig(() => {
 	return {
@@ -24,7 +33,27 @@ export default defineConfig(() => {
 			tailwindcss(),
 			nxViteTsPaths(),
 			mdx({
-				format: 'mdx'
+				format: 'mdx',
+				remarkPlugins: [remarkGfm],
+				rehypePlugins: [
+					[rehypePrettyCode, prettyCodeOptions],
+					rehypeSlug,
+					[
+						rehypeAutolinkHeadings,
+						{
+							behavior: 'append',
+							properties: {
+								ariaHidden: 'true',
+								tabIndex: -1,
+								className: ['heading-anchor']
+							},
+							content: {
+								type: 'text',
+								value: '#'
+							}
+						}
+					]
+				]
 			}),
 			devtoolsJson({
 				projectRoot: __dirname

@@ -37,7 +37,6 @@ The key variables you must configure for local development:
 |---|---|
 | `SUPABASE_URL` | Local Supabase API URL (default `http://localhost:54321`) |
 | `SUPABASE_KEY` | Supabase anon key (from `supabase status`) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (from `supabase status`) |
 | `DATABASE_URL` | PostgreSQL connection string (default uses local Supabase port) |
 | `GOOGLE_CLOUD_STORAGE_CREDENTIALS_FILE` | Path to a GCS service account key JSON file |
 | `GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET` | GCS bucket name for model assets |
@@ -69,7 +68,7 @@ You can view the local Supabase Studio at [http://localhost:54323](http://localh
 ## 5. Start the platform app
 
 ```bash
-pnpm nx serve vectreal-platform
+pnpm nx dev vectreal-platform
 ```
 
 The app will be available at [http://localhost:4200](http://localhost:4200).
@@ -90,8 +89,9 @@ The app will be available at [http://localhost:4200](http://localhost:4200).
 The monorepo uses Nx. To run any project:
 
 ```bash
-pnpm nx serve <project-name>
-# e.g. pnpm nx serve vctrl/viewer  (Storybook)
+pnpm nx run <project-name>:<target>
+# e.g. pnpm nx run vectreal-platform:build
+# e.g. pnpm nx run vctrl/viewer:storybook
 ```
 
 To list all available targets for a project:
@@ -116,3 +116,4 @@ pnpm nx show project vectreal-platform --web
 
 - [Your First Model](/docs/getting-started/first-model) — upload, optimize, and publish a 3D model
 - [Guides](/docs/guides/upload) — deep-dive into individual platform features
+- [Package Reference](/docs/packages/viewer) — jump to `@vctrl/viewer`, `@vctrl/hooks`, and `@vctrl/core` APIs

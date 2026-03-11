@@ -67,11 +67,16 @@ Workflows live in `.github/workflows/`.
 
 | Secret | Description |
 |---|---|
-| `GCP_SA_KEY` | Service account JSON key for Cloud Run deployments |
-| `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_KEY` | Supabase anon key |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET` | GCS bucket name |
+| `GCP_CREDENTIALS` / `GCP_CREDENTIALS_STAGING` | Service account JSON key for Cloud Run deployments |
+| `GCP_PROJECT_ID` / `GCP_PROJECT_ID_STAGING` | Google Cloud project ID |
+| `DATABASE_URL_PROD` / `DATABASE_URL_STAGING` | PostgreSQL connection string |
+| `SUPABASE_URL_PROD` / `SUPABASE_URL_STAGING` | Supabase project URL |
+| `SUPABASE_KEY_PROD` / `SUPABASE_KEY_STAGING` | Supabase anon key |
+| `GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD` / `GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING` | GCS bucket name |
+| `APPLICATION_URL_PROD` / `APPLICATION_URL_STAGING` | Public app URL used for health checks and runtime config |
+| `CSRF_SECRET_PROD` / `CSRF_SECRET_STAGING` | Server-side CSRF/session secret |
+
+> If you use the helper script (`terraform/scripts/setup-github-secrets.sh`), these names are configured automatically.
 
 ---
 
@@ -119,3 +124,11 @@ Key cost levers for Cloud Run:
 - Cloud CDN caches static assets from the staging GCS bucket — cache hit ratio is visible in Cloud Monitoring.
 
 Full cost guidance in the [Terraform README](https://github.com/Vectreal/vectreal-platform/blob/main/terraform/README.md#cost-optimization).
+
+---
+
+## Related docs
+
+- [Installation](/docs/getting-started/installation) — local setup and environment basics
+- [Publishing & Embedding](/docs/guides/publish-embed) — runtime preview and token usage
+- [@vctrl/core](/docs/packages/core) — server-side model pipeline used by API routes/jobs

@@ -80,12 +80,12 @@ vectreal-platform/
 
 ### Prerequisites
 
-| Tool | Version |
-|---|---|
-| Node.js | 18 or later |
-| pnpm | 9 or later |
-| Docker | Latest (for local Supabase) |
-| Supabase CLI | Latest |
+| Tool         | Version                     |
+| ------------ | --------------------------- |
+| Node.js      | 18 or later                 |
+| pnpm         | 9 or later                  |
+| Docker       | Latest (for local Supabase) |
+| Supabase CLI | Latest                      |
 
 ### Installation
 
@@ -158,8 +158,6 @@ Full documentation is available at **[vectreal.com/docs](https://vectreal.com/do
 - [Operations / Deployment](https://vectreal.com/docs/operations/deployment)
 - [Contributing](https://vectreal.com/docs/contributing)
 
-Every docs page has an **Edit on GitHub** link pointing directly to its source file.
-
 ## Contributing
 
 We welcome contributions of all kinds. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR.
@@ -181,4 +179,3 @@ Website: [vectreal.com](https://vectreal.com)
 Discord: [discord.gg/A9a3nPkZw7](https://discord.gg/A9a3nPkZw7)  
 X/Twitter: [@Vectreal](https://x.com/vectreal)  
 Email: [info@vectreal.com](mailto:info@vectreal.com)
-

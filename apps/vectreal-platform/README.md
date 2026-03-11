@@ -44,7 +44,7 @@ pnpm supabase start
 pnpm nx run vectreal-platform:supabase-db-reset
 
 # 5. Start dev server
-pnpm nx serve vectreal-platform
+pnpm nx dev vectreal-platform
 # → http://localhost:4200
 ```
 
@@ -58,7 +58,6 @@ See [`../../.env.development.example`](../../.env.development.example) for the f
 |---|---|
 | `SUPABASE_URL` | Supabase API URL (local: `http://localhost:54321`) |
 | `SUPABASE_KEY` | Supabase anon key (from `supabase status`) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
 | `DATABASE_URL` | PostgreSQL connection string |
 | `CSRF_SECRET` | Long random string for CSRF token signing |
 | `GOOGLE_CLOUD_STORAGE_CREDENTIALS_FILE` | Path to GCS service account JSON key |
@@ -117,12 +116,12 @@ See [`DB_MIGRATIONS.md`](DB_MIGRATIONS.md) for the full workflow.
 ## Available Nx targets
 
 ```bash
-pnpm nx serve vectreal-platform          # Dev server (http://localhost:4200)
-pnpm nx build vectreal-platform          # Production build
-pnpm nx test vectreal-platform           # Unit tests
-pnpm nx lint vectreal-platform           # ESLint
-pnpm nx drizzle-generate vectreal-platform  # Generate DB migration SQL
-pnpm nx supabase-db-reset vectreal-platform # Reset local DB
+pnpm nx dev vectreal-platform                # Dev server (http://localhost:4200)
+pnpm nx build vectreal-platform              # Production build
+pnpm nx test vectreal-platform               # Unit tests
+pnpm nx lint vectreal-platform               # ESLint
+pnpm nx run vectreal-platform:drizzle-generate  # Generate DB migration SQL
+pnpm nx run vectreal-platform:supabase-db-reset # Reset local DB
 ```
 
 ---
@@ -161,6 +160,12 @@ New users are redirected to `/onboarding` after their first sign-in. The onboard
 ## Docs
 
 The `/docs` section of the app is built from MDX files in `app/routes/docs/`. Every page has an **Edit on GitHub** link generated from the docs manifest at `app/lib/docs/docs-manifest.ts`.
+
+Cross-links between app guides and package references:
+
+- [Uploading Models](https://vectreal.com/docs/guides/upload) <-> [@vctrl/hooks](https://vectreal.com/docs/packages/hooks)
+- [Optimizing & Configuring](https://vectreal.com/docs/guides/optimize) <-> [@vctrl/hooks](https://vectreal.com/docs/packages/hooks), [@vctrl/viewer](https://vectreal.com/docs/packages/viewer)
+- [Publishing & Embedding](https://vectreal.com/docs/guides/publish-embed) <-> [@vctrl/viewer](https://vectreal.com/docs/packages/viewer), [@vctrl/core](https://vectreal.com/docs/packages/core)
 
 To add a new docs page:
 

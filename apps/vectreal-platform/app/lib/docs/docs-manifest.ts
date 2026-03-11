@@ -15,8 +15,7 @@
  * to include the version prefix (e.g. "v2/getting-started/installation").
  */
 
-export const GITHUB_REPO =
-	'https://github.com/Vectreal/vectreal-platform'
+export const GITHUB_REPO = 'https://github.com/Vectreal/vectreal-platform'
 
 export const GITHUB_DEFAULT_BRANCH = 'main'
 
@@ -86,8 +85,7 @@ export const docsPages: DocPage[] = [
 		title: 'Documentation',
 		description:
 			'Everything you need to build with the Vectreal Platform and its open-source packages.',
-		sourcePath:
-			'apps/vectreal-platform/app/routes/docs/index.mdx',
+		sourcePath: 'apps/vectreal-platform/app/routes/docs/index.mdx',
 		category: 'overview',
 		order: 0,
 		version: 'latest'
@@ -138,8 +136,7 @@ export const docsPages: DocPage[] = [
 		title: 'Uploading Models',
 		description:
 			'Supported file formats, drag-and-drop behaviour, and multi-file glTF bundles.',
-		sourcePath:
-			'apps/vectreal-platform/app/routes/docs/guides/upload.mdx',
+		sourcePath: 'apps/vectreal-platform/app/routes/docs/guides/upload.mdx',
 		category: 'guides',
 		order: 0,
 		version: 'latest'
@@ -149,8 +146,7 @@ export const docsPages: DocPage[] = [
 		title: 'Optimizing & Configuring',
 		description:
 			'Quality presets, texture compression, mesh simplification, lighting, and camera settings.',
-		sourcePath:
-			'apps/vectreal-platform/app/routes/docs/guides/optimize.mdx',
+		sourcePath: 'apps/vectreal-platform/app/routes/docs/guides/optimize.mdx',
 		category: 'guides',
 		order: 1,
 		version: 'latest'
@@ -175,8 +171,7 @@ export const docsPages: DocPage[] = [
 		title: '@vctrl/viewer',
 		description:
 			'React component for rendering and interacting with 3D models in the browser.',
-		sourcePath:
-			'apps/vectreal-platform/app/routes/docs/packages/viewer.mdx',
+		sourcePath: 'apps/vectreal-platform/app/routes/docs/packages/viewer.mdx',
 		category: 'packages',
 		order: 0,
 		version: 'latest'
@@ -186,8 +181,7 @@ export const docsPages: DocPage[] = [
 		title: '@vctrl/hooks',
 		description:
 			'React hooks for loading, optimising, and exporting 3D models in the browser.',
-		sourcePath:
-			'apps/vectreal-platform/app/routes/docs/packages/hooks.mdx',
+		sourcePath: 'apps/vectreal-platform/app/routes/docs/packages/hooks.mdx',
 		category: 'packages',
 		order: 1,
 		version: 'latest'
@@ -197,8 +191,7 @@ export const docsPages: DocPage[] = [
 		title: '@vctrl/core',
 		description:
 			'Server-side 3D model processing — loader, optimizer, and exporter for Node.js.',
-		sourcePath:
-			'apps/vectreal-platform/app/routes/docs/packages/core.mdx',
+		sourcePath: 'apps/vectreal-platform/app/routes/docs/packages/core.mdx',
 		category: 'packages',
 		order: 2,
 		version: 'latest'
@@ -227,8 +220,7 @@ export const docsPages: DocPage[] = [
 		title: 'Contributing',
 		description:
 			'How to fork, branch, commit, and open a pull request against the Vectreal monorepo.',
-		sourcePath:
-			'apps/vectreal-platform/app/routes/docs/contributing.mdx',
+		sourcePath: 'apps/vectreal-platform/app/routes/docs/contributing.mdx',
 		category: 'contributing',
 		order: 0,
 		version: 'latest'
@@ -254,4 +246,37 @@ export function getDocsByCategory(): Map<DocCategory, DocPage[]> {
 	}
 
 	return map
+}
+
+/** Flat, ordered docs list based on category order and per-category page order. */
+export function getOrderedDocsPages(): DocPage[] {
+	const ordered: DocPage[] = []
+
+	for (const category of DOC_CATEGORY_ORDER) {
+		ordered.push(
+			...docsPages
+				.filter((page) => page.category === category)
+				.sort((a, b) => a.order - b.order)
+		)
+	}
+
+	return ordered
+}
+
+/** Previous/next page for linear reading flows. */
+export function getAdjacentDocPages(slug: string): {
+	previous?: DocPage
+	next?: DocPage
+} {
+	const ordered = getOrderedDocsPages()
+	const currentIndex = ordered.findIndex((page) => page.slug === slug)
+
+	if (currentIndex === -1) {
+		return {}
+	}
+
+	return {
+		previous: ordered[currentIndex - 1],
+		next: ordered[currentIndex + 1]
+	}
 }

@@ -1,6 +1,6 @@
 # @vctrl/core
 
-Server-side 3D model processing for Node.js. Extracts the business logic from `@vctrl/hooks` so the same pipeline can run on the server — in API routes, background jobs, or CI workflows.
+Server-side 3D model processing for Node.js. This package provides the shared loading, optimization, and export pipeline used by other Vectreal packages.
 
 ---
 
@@ -16,13 +16,14 @@ pnpm add @vctrl/core
 
 ---
 
-## Classes overview
+## Module overview
 
-| Class | Import path | Description |
+| Module | Import path | Description |
 |---|---|---|
-| `ModelLoader` | `@vctrl/core/model-loader` | Load and parse 3D model files from disk or buffer |
-| `ModelOptimizer` | `@vctrl/core/model-optimizer` | Run glTF-Transform optimisations server-side |
-| `ModelExporter` | `@vctrl/core/model-exporter` | Export processed scenes to GLB or glTF |
+| `ModelLoader` | `@vctrl/core/model-loader` | Load model files into glTF-Transform `Document` or Three.js scenes |
+| `ModelOptimizer` | `@vctrl/core/model-optimizer` | Run optimization passes and export optimized output |
+| `ModelExporter` | `@vctrl/core/model-exporter` | Export `Document` or Three.js objects to GLB/GLTF |
+| `SceneAsset` | `@vctrl/core` | Scene asset serialization helpers and shared server payload types |
 
 ---
 
@@ -30,6 +31,7 @@ pnpm add @vctrl/core
 
 ```typescript
 import { ModelLoader } from '@vctrl/core/model-loader'
+import { readFile } from 'node:fs/promises'
 
 const loader = new ModelLoader()
 
@@ -37,22 +39,28 @@ const loader = new ModelLoader()
 const result = await loader.loadFromFile('model.glb')
 
 // From a Node.js Buffer
-const buffer = await fs.promises.readFile('model.glb')
-const resultFromBuffer = await loader.loadFromBuffer(buffer, 'model.glb')
+const buffer = await readFile('model.glb')
+const resultFromBuffer = await loader.loadFromBuffer(
+  new Uint8Array(buffer),
+  'model.glb'
+)
+
+// Convert directly to Three.js scene
+const sceneResult = await loader.loadToThreeJS('model.glb')
 ```
 
-### Return value
+### Primary methods
 
-```typescript
-{
-  scene: THREE.Group     // Parsed Three.js scene
-  animations: THREE.AnimationClip[]
-  metadata: {
-    format: 'glb' | 'gltf' | 'obj'
-    fileSize: number    // bytes
-  }
-}
-```
+| Method | Description |
+|---|---|
+| `loadFromFile(input)` | Load from file path (Node) or browser `File` |
+| `loadFromBuffer(buffer, fileName)` | Load from `Uint8Array` data |
+| `loadGLTFWithAssets(...)` / `loadGLTFWithFileAssets(...)` | Load GLTF with external resources |
+| `documentToThreeJS(document)` | Convert glTF-Transform `Document` to Three.js scene |
+| `loadToThreeJS(input)` | Load and convert to Three.js scene |
+| `loadGLTFWithAssetsToThreeJS(...)` | GLTF + assets directly to Three.js |
+| `isSupportedFormat(fileName)` | Validate extension support |
+| `getSupportedExtensions()` | Return supported extensions |
 
 ---
 
@@ -66,9 +74,10 @@ const optimizer = new ModelOptimizer()
 // Load a model into the optimizer
 await optimizer.loadFromBuffer(modelBuffer)
 
-// Run optimisations (chainable)
+// Run optimizations
 await optimizer.simplify({ ratio: 0.5 })
 await optimizer.deduplicate()
+await optimizer.quantize({ quantizePosition: 14 })
 await optimizer.compressTextures({ quality: 80 })
 
 // Export the result
@@ -79,12 +88,19 @@ const optimizedBuffer = await optimizer.export()
 
 | Method | Options | Description |
 |---|---|---|
-| `loadFromBuffer(buf)` | — | Load a model buffer into the optimizer |
-| `loadFromFile(path)` | — | Load a model from disk |
+| `loadFromThreeJS(model)` | — | Load a Three.js scene into optimizer |
+| `loadFromBuffer(buf)` | — | Load GLB binary data |
+| `loadFromFile(path)` | — | Load from file path |
+| `loadFromJSON(json)` | — | Load serialized glTF JSON/resources |
 | `simplify(opts)` | `{ ratio: number }` | Mesh simplification (0.0–1.0) |
-| `deduplicate()` | — | Remove duplicate geometry and materials |
-| `compressTextures(opts)` | `{ quality: number }` | Server-side KTX2 texture compression via Sharp |
-| `export()` | — | Returns the optimised model as a `Buffer` |
+| `deduplicate(opts)` | `DedupOptions` | Remove duplicate geometry/material data |
+| `quantize(opts)` | `QuantizeOptions` | Reduce precision to reduce size |
+| `optimizeNormals(opts)` | `NormalsOptions` | Recompute/normalize normal data |
+| `compressTextures(opts)` | `TextureCompressOptions` | Server-side texture compression |
+| `optimizeAll(opts)` | `{ simplify?, dedup?, quantize?, normals?, textures? }` | Run batch optimization passes |
+| `getReport()` | — | Return before/after optimization metrics |
+| `export()` / `exportJSON()` | — | Export optimized GLB or JSON glTF document |
+| `hasModel()` / `reset()` | — | Model state utilities |
 
 ---
 
@@ -95,15 +111,26 @@ import { ModelExporter } from '@vctrl/core/model-exporter'
 
 const exporter = new ModelExporter()
 
-// Export as binary GLB
-const glbBuffer = await exporter.exportGLB(scene)
+// Export Three.js scene as binary GLB
+const glb = await exporter.exportThreeJSGLB(scene, {})
 
-// Export as separate glTF + assets
-const { gltf, binaries, textures } = await exporter.exportGLTF(scene, {
-  binary: false,
-  embedImages: false,
-})
+// Export Three.js scene as glTF + assets map
+const gltf = await exporter.exportThreeJSGLTF(scene)
+
+// Package glTF + assets into zip
+const zip = await exporter.createZIPArchive(gltf, 'model')
 ```
+
+### Primary methods
+
+| Method | Description |
+|---|---|
+| `exportDocumentGLB(document)` | Export glTF-Transform `Document` to GLB |
+| `exportDocumentGLTF(document)` | Export `Document` to GLTF JSON + assets |
+| `exportThreeJSGLB(object, options)` | Export Three.js object to GLB |
+| `exportThreeJSGLTF(object)` | Export Three.js object to GLTF JSON + assets |
+| `createZIPArchive(result, baseName?)` | Bundle GLTF + assets into zip |
+| `saveToFile(result, filePath)` | Persist export result on Node filesystem |
 
 ---
 
@@ -121,7 +148,7 @@ export async function POST(request: Request) {
   const buffer = Buffer.from(await file.arrayBuffer())
 
   const optimizer = new ModelOptimizer()
-  await optimizer.loadFromBuffer(buffer)
+  await optimizer.loadFromBuffer(new Uint8Array(buffer))
   await optimizer.simplify({ ratio: 0.7 })
   await optimizer.compressTextures({ quality: 80 })
 
@@ -140,10 +167,18 @@ export async function POST(request: Request) {
 | Requirement | Version |
 |---|---|
 | Node.js | 18 or later |
-| `sharp` (peer dep) | `^0.33` |
+| `sharp` | `^0.34` |
 
 ---
 
 ## Source
 
 Full source and README in [`packages/core/`](https://github.com/Vectreal/vectreal-platform/tree/main/packages/core).
+
+---
+
+## Related docs
+
+- [Deployment](/docs/operations/deployment) — where `@vctrl/core` powers server-side build/runtime flows
+- [Publishing & Embedding](/docs/guides/publish-embed) — preview and serving model output
+- [@vctrl/hooks](/docs/packages/hooks) — browser/runtime companion API

@@ -23,6 +23,7 @@ export const Navigation = ({ user }: NavigationProps) => {
 	const isSigninPage =
 		pathname.startsWith('/sign-up') || pathname.startsWith('/sign-in')
 	const isPublisherPage = pathname.startsWith('/publisher')
+	const isDocsPage = pathname.startsWith('/docs')
 
 	const { submit } = useFetcher()
 
@@ -71,7 +72,7 @@ export const Navigation = ({ user }: NavigationProps) => {
 							</Button>
 						</motion.div>
 					)}
-					{!isMobile && (
+					{!isMobile && !isDocsPage && (
 						<motion.div
 							initial={{ opacity: 0, width: 0 }}
 							animate={{ opacity: 1, width: 'auto' }}

@@ -1,235 +1,232 @@
-# vctrl/viewer
+# @vctrl/viewer
 
-[![Version and release packages to NPM](https://img.shields.io/github/actions/workflow/status/vectreal/vectreal-core/version-release.yaml?logo=github&logoColor=%23fc6c18&label=Version%20and%20release%20packages%20to%20NPM&color=%23fc6c18)
-](https://github.com/Vectreal/vectreal-core/actions/workflows/version-release.yaml)
-[![@vctrl/viewer | NPM Downloads](https://img.shields.io/npm/dm/%40vctrl%2Fviewer?logo=npm&logoColor=%23fc6c18&label=%40vctrl%2Fviewer%20%7C%20NPM%20Downloads&color=%23fc6c18)](https://npmjs.com/package/@vctrl/viewer)
-[![Code sandbox](https://img.shields.io/badge/Code_Sandbox_example-Open-fc6c18?logo=codesandbox&logoColor=%23fc6c18)](https://codesandbox.io/p/sandbox/vectreal-core-viewer-vctrl-viewer-example-kwncm2)
-[![Storybook vctrl/viewer](https://img.shields.io/badge/Storybook_vctrl/viewer-Docs-fc6c18?logo=storybook&logoColor=%23fc6c18)](https://main--672b9522ee5bda25942a731c.chromatic.com/?path=/docs/vectrealviewer--docs)
-
-> This library is still undergoing heavy development until the first major version is released. This may lead to breaking changes in upcoming updates.
-
-## Overview
-
-vctrl/viewer is a React component library for rendering and interacting with 3D models. It's part of the [vectreal-core](https://github.com/vectreal/vectreal-core) ecosystem and is designed to work seamlessly with the [`@vctrl/hooks`](https://www.npmjs.com/package/@vctrl/hooks?activeTab=readme) package for model loading and management.
-
-## Table of Contents
-
-- [vctrl/viewer](#vctrlviewer)
-  - [Overview](#overview)
-  - [Table of Contents](#table-of-contents)
-  - [Features](#features)
-  - [Installation](#installation)
-  - [Usage](#usage)
-  - [API Reference](#api-reference)
-    - [`VectrealViewer` Component](#vectrealviewer-component)
-    - [Props](#props)
-  - [Customization](#customization)
-    - [Camera Options](#camera-options)
-    - [Controls Options](#controls-options)
-    - [Environment/Stage Options](#environmentstage-options)
-    - [Grid Options](#grid-options)
-  - [Development](#development)
-  - [License](#license)
-  - [Contributing](#contributing)
-  - [Support](#support)
-
-## Features
-
-- Easy-to-use React component for 3D model visualization
-- Integration with Three.js and React Three Fiber
-- Customizable camera, controls, and grid options
-- Support for various 3D model formats (via vctrl/hooks)
-- Responsive design with automatic resizing
-- Custom loading component support
+React component package for rendering and interacting with 3D scenes.
 
 ## Installation
-
-To install the package, use npm or yarn:
 
 ```bash
 npm install @vctrl/viewer
 # or
-yarn add @vctrl/viewer
+pnpm add @vctrl/viewer
 ```
 
-## Usage
-
-Here's a basic example of how to use the VectrealViewer component:
+## Quick start
 
 ```tsx
-import React from 'react';
-
-// Use vctrl/hooks for loading a local model
-import { useLoadModel } from '@vctrl/hooks/useLoadModel';
-
-// You could also use the `useGLTF` hook from `@react-three/drei`
-// import { useGLTF } from '@react-three/drei'
-
-import { VectrealViewer } from '@vctrl/viewer';
-import '@vctrl/viewer/css';
+import { useLoadModel } from '@vctrl/hooks/use-load-model'
+import { VectrealViewer } from '@vctrl/viewer'
+import '@vctrl/viewer/css'
 
 function App() {
-  const { file } = useLoadModel();
-  // const { scene: model } = useGLTF('/model.glb');
-
-  return <VectrealViewer model={file.model} />;
+  const { file } = useLoadModel()
+  return <VectrealViewer model={file?.model} />
 }
-
-export default App;
 ```
 
-> You must also import the CSS bundle for the viewer to work as expected. See the full example [here](https://codesandbox.io/p/sandbox/vectreal-core-viewer-vctrl-viewer-example-kwncm2).
+You must import `@vctrl/viewer/css`.
 
-> You can also load any model supported by the [react-three-drei](https://github.com/pmndrs/react-three-drei) loading hooks and pass it into the `VectrealViewer` using the `model` prop.
+## VectrealViewer props
 
-## API Reference
+| Prop | Type | Required | Description |
+| --- | --- | --- | --- |
+| `model` | `Object3D` | No | Model to render. Optional when using children/context-driven scene content. |
+| `className` | `string` | No | Additional classes on viewer container |
+| `theme` | `'light' \| 'dark' \| 'system'` | No | Viewer theme, default is `system` |
+| `enableViewportRendering` | `boolean` | No | Render only when visible in viewport, default `true` |
+| `boundsOptions` | `BoundsProps` | No | Scene bounds and framing options |
+| `cameraOptions` | `CameraProps` | No | Camera behavior options |
+| `controlsOptions` | `ControlsProps` | No | Orbit controls options |
+| `envOptions` | `EnvironmentProps` | No | Stage/environment options |
+| `shadowsOptions` | `ShadowsProps` | No | Shadow options |
+| `popover` | `React.ReactNode` | No | Optional popover slot |
+| `loader` | `React.ReactNode` | No | Optional loader UI |
+| `loadingThumbnail` | `ViewerLoadingThumbnail` | No | Optional loading thumbnail |
+| `onScreenshot` | `(dataUrl: string) => void` | No | Called when screenshot is captured |
+| `onScreenshotCaptureReady` | `(capture: SceneScreenshotCapture \| null) => void` | No | Called with a capture function for programmatic screenshots |
 
-### `VectrealViewer` Component
+## Option details
 
-The main component exported by this package.
+### cameraOptions
 
-### Props
+`cameraOptions` uses `CameraProps` from `@vctrl/core`:
 
-<table>
-  <thead>
-    <tr>
-      <th>Prop</th>
-      <th>Type</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>model</td>
-      <td>Object3D</td>
-      <td>(Optional when using `use-load-model` context) The 3D model to display</td>
-    </tr>
-    <tr>
-      <td>className</td>
-      <td>string</td>
-      <td>(Optional) Additional CSS classes for the viewer container</td>
-    </tr>
-    <tr>
-      <td>cameraOptions</td>
-      <td>CameraProps</td>
-      <td>(Optional) Configuration for the camera</td>
-    </tr>
-    <tr>
-      <td>controlsOptions</td>
-      <td>ControlsProps</td>
-      <td>(Optional) Configuration for the OrbitControls</td>
-    </tr>
-    <tr>
-      <td>envOptions</td>
-      <td>EnvProps</td>
-      <td>(Optional) Configuration for the Stage and Environment Component</td>
-    </tr>
-    <tr>
-      <td>gridOptions</td>
-      <td>GridProps</td>
-      <td>(Optional) Configuration for the grid</td>
-    </tr>
-    <tr>
-      <td>loader</td>
-      <td>() => JSX.Element</td>
-      <td>(Optional) Custom loading component</td>
-    </tr>
-  </tbody>
-</table>
+```ts
+type CameraProps = {
+  cameras?: Array<PerspectiveCameraProps & {
+    cameraId: string
+    name: string
+    initial?: boolean
+    shouldAnimate?: boolean
+    animationConfig?: {
+      duration: number
+      easing?: (t: number) => number
+    }
+  }>
+}
+```
 
-## Customization
-
-### Camera Options
-
-- [Perspective Camera docs](https://threejs.org/docs/index.html#api/en/cameras/PerspectiveCamera)
-
-You can customize the camera by passing a `cameraOptions` prop:
-
-```jsx
+```tsx
 <VectrealViewer
   cameraOptions={{
-    initialCameraPosition: new Vector3(0, 5, 5),
-    fov: 75,
-    aspect: 1,
-    near: 0.1,
-    far: 1000,
+    cameras: [
+      {
+        cameraId: 'default',
+        name: 'Default',
+        initial: true,
+        shouldAnimate: true,
+        animationConfig: { duration: 900 },
+        position: [0, 5, 8],
+        fov: 55,
+        near: 0.1,
+        far: 1000
+      }
+    ]
   }}
 />
 ```
 
-### Controls Options
+### controlsOptions
 
-- [`Orbit-controls` props interface](https://github.com/pmndrs/drei/blob/c5862585174f0eabfa92485d0ceaae862071a332/src/core/OrbitControls.tsx#L11)
+`controlsOptions` extends Drei `OrbitControlsProps` and adds:
 
-Customize the controls based on OrbitControls with the `controlsOptions` prop:
+- `controlsTimeout?: number`
 
-```jsx
-<VectrealViewer
-  controlsOptions={{
-    maxPolarAngle: Math.PI / 2,
-    autoRotate: true,
-    controlsTimeout: 2000,
-  }}
-/>
-```
+### envOptions
 
-### Environment/Stage Options
+`envOptions` supports the following fields:
 
-- [`Stage` props interface](https://github.com/pmndrs/drei/blob/c5862585174f0eabfa92485d0ceaae862071a332/src/core/Stage.tsx#L47)
-- [`Environment` props interface](https://github.com/pmndrs/drei/blob/c5862585174f0eabfa92485d0ceaae862071a332/src/core/Environment.tsx#L8)
+| Option | Type | Description |
+| --- | --- | --- |
+| `preset` | `EnvironmentKey` | Preset key such as `studio-key`, `outdoor-noon`, `night-city` |
+| `environmentResolution` | `'1k' \| '4k'` | Environment asset resolution |
+| `background` | `boolean` | Enable background rendering |
+| `backgroundBlurriness` | `number` | Background blur amount |
+| `backgroundIntensity` | `number` | Background brightness |
+| `environmentIntensity` | `number` | Light intensity |
+| `ground` | `EnvironmentProps['ground']` | Ground-projection settings |
+| `files` | `string \| string[]` | Custom environment map files |
 
-Customize the @react-three/drei `Stage` and `Environment` components with the `controlsOptions` prop:
-
-```jsx
+```tsx
 <VectrealViewer
   envOptions={{
-    env: {
-      preset: 'studio',
-    },
-    stage: {
-      adjustCamera: 1.5,
-    },
-    backgroundColor: 'maroon',
+    preset: 'studio-key',
+    environmentResolution: '1k',
+    background: true,
+    backgroundBlurriness: 0.2,
+    environmentIntensity: 1,
+    backgroundIntensity: 1,
   }}
 />
 ```
 
-### Grid Options
+### shadowsOptions
 
-- [`Grid` props interface](https://github.com/pmndrs/drei/blob/c5862585174f0eabfa92485d0ceaae862071a332/src/core/Grid.tsx#L14)
+`shadowsOptions` supports two modes:
 
-Configure the grid display with the `gridOptions` prop:
+- `type: 'contact'` (contact shadows)
+- `type: 'accumulative'` (accumulative shadows with optional randomized light)
 
-```jsx
+#### boundsOptions (`BoundsProps`)
+
+`BoundsProps` is forwarded to Drei `Bounds`. Viewer defaults:
+
+| Option | Default |
+| --- | --- |
+| `fit` | `true` |
+| `clip` | `true` |
+| `margin` | `1.5` |
+| `maxDuration` | `0` |
+
+```tsx
 <VectrealViewer
-  gridOptions={{
-    showGrid: true,
-    cellSize: 0.5,
-    sectionSize: 5,
-    sectionColor: 'rgb(134, 73, 33)',
-    cellColor: 'rgb(100, 100, 100)',
+  boundsOptions={{
+    fit: true,
+    clip: true,
+    margin: 1.25,
+    maxDuration: 300,
   }}
 />
 ```
 
-## Development
+#### contact shadow options (`type: 'contact'`)
 
-This package is part of a monorepo workspace managed with Nx. To contribute or modify the package:
+Viewer defaults:
 
-1. Clone the monorepo
-2. Install dependencies: `npm install` or `yarn install`
-3. Make your changes
-4. Build the package: `nx build vctrl/viewer`
-5. Test your changes: `nx test vctrl/viewer`
+| Option | Default |
+| --- | --- |
+| `type` | `'contact'` |
+| `opacity` | `0.4` |
+| `blur` | `0.1` |
+| `scale` | `5` |
+| `color` | `'#000000'` |
+| `smooth` | `true` |
+
+Common fields:
+
+| Option | Type |
+| --- | --- |
+| `opacity` | `number` |
+| `blur` | `number` |
+| `scale` | `number \| [number, number]` |
+| `far` | `number` |
+| `resolution` | `number` |
+| `color` | `string` |
+| `frames` | `number` |
+
+#### accumulative shadow options (`type: 'accumulative'`)
+
+Viewer defaults:
+
+| Option | Default |
+| --- | --- |
+| `type` | `'accumulative'` |
+| `temporal` | `false` |
+| `frames` | `30` |
+| `alphaTest` | `0.35` |
+| `opacity` | `1` |
+| `scale` | `10` |
+| `resolution` | `1024` |
+| `colorBlend` | `2` |
+| `color` | `'#000000'` |
+
+`light` defaults:
+
+| Option | Default |
+| --- | --- |
+| `intensity` | `1` |
+| `amount` | `5` |
+| `radius` | `7.5` |
+| `ambient` | `0.5` |
+| `position` | `[5, 10, 5]` (or auto-calculated from scene bounds) |
+
+### screenshot options
+
+`SceneScreenshotOptions` fields:
+
+- `width?: number`
+- `height?: number`
+- `mimeType?: 'image/jpeg' | 'image/webp'`
+- `quality?: number`
+- `mode?: 'auto-fit' | 'viewport'`
+
+## Exported types
+
+- `VectrealViewerProps`
+- `SceneScreenshotCapture`
+- `SceneScreenshotOptions`
+- `ViewerLoadingThumbnail`
+
+## Notes
+
+- Grid configuration is not currently active in `VectrealViewer` render flow.
+- For model loading state, pair this package with `@vctrl/hooks/use-load-model`.
+
+## Related app docs
+
+- [Package reference page](https://vectreal.com/docs/packages/viewer)
+- [Optimize and configure guide](https://vectreal.com/docs/guides/optimize)
+- [Publishing and embedding guide](https://vectreal.com/docs/guides/publish-embed)
 
 ## License
 
-Please refer to the LICENSE file in the package root for licensing information.
-
-## Contributing
-
-Contributions are welcome! Please read the contributing guidelines in the [vectreal-core](https://github.com/vectreal/vectreal-core) monorepo before submitting pull requests.
-
-## Support
-
-For issues, feature requests, or questions, please file an issue in the [GitHub repository](https://github.com/vectreal/vectreal-core).
+AGPL-3.0-only - See LICENSE.md for details.
