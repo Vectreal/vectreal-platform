@@ -43,7 +43,9 @@ export default [
 		}),
 		layout('./routes/layouts/mdx-layout.tsx', [
 			route('about', './routes/about-page.mdx'),
+			route('changelog', './routes/changelog-page.mdx'),
 			route('contact', './routes/contact-page.mdx'),
+			route('code-of-conduct', './routes/code-of-conduct-page.mdx'),
 			route('privacy-policy', './routes/privacy-policy-page.mdx'),
 			route('terms-of-service', './routes/terms-of-service-page.mdx'),
 			route('imprint', './routes/imprint-page.mdx')

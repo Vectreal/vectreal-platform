@@ -27,6 +27,7 @@ import {
 	BoxesIcon,
 	Building,
 	ChevronsUpDown,
+	HelpCircle,
 	KeyRound,
 	List,
 	LogOut,
@@ -205,7 +206,9 @@ const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
 										</div>
 									</div>
 								</DropdownMenuLabel>
+
 								<DropdownMenuSeparator />
+
 								<DropdownMenuItem asChild>
 									<Link to="/dashboard/organizations" viewTransition>
 										<Building />
@@ -216,6 +219,13 @@ const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
 									<Link to="/dashboard/settings" viewTransition>
 										<Settings />
 										Settings
+									</Link>
+								</DropdownMenuItem>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem asChild>
+									<Link to="/docs" viewTransition>
+										<HelpCircle />
+										Documentation
 									</Link>
 								</DropdownMenuItem>
 								<DropdownMenuSeparator />

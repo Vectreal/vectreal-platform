@@ -39,7 +39,7 @@ The package root (`@vctrl/core`) also re-exports all modules and shared types.
 
 ## Usage
 
-### ModelOptimizer
+### ModelOptimizer example
 
 ```typescript
 import { ModelOptimizer } from '@vctrl/core/model-optimizer'
@@ -57,7 +57,7 @@ await optimizer.compressTextures({ quality: 80 })
 const optimizedBuffer = await optimizer.export()
 ```
 
-### ModelLoader
+### ModelLoader example
 
 ```typescript
 import { ModelLoader } from '@vctrl/core/model-loader'
@@ -69,7 +69,7 @@ const result = await loader.loadFromFile('model.glb')
 const sceneResult = await loader.documentToThreeJS(result.data)
 ```
 
-### ModelExporter
+### ModelExporter example
 
 ```typescript
 import { ModelExporter } from '@vctrl/core/model-exporter'
@@ -89,9 +89,16 @@ const zip = await exporter.createZIPArchive(gltf, 'model')
 - `loadFromBuffer(buffer: Uint8Array, fileName: string)`
 - `loadGLTFWithAssets(...)`
 - `loadGLTFWithFileAssets(...)`
-- `documentToThreeJS(document)`
+- `documentToThreeJS(document, modelResult)`
 - `loadToThreeJS(input)`
 - `loadGLTFWithAssetsToThreeJS(...)`
+
+`documentToThreeJS` requires both the `Document` and original `ModelLoadResult`:
+
+```typescript
+const loaded = await loader.loadFromFile('model.glb')
+const threeResult = await loader.documentToThreeJS(loaded.data, loaded)
+```
 
 ### ModelOptimizer
 
@@ -108,6 +115,75 @@ const zip = await exporter.createZIPArchive(gltf, 'model')
 - `getReport()`
 - `export()` / `exportJSON()`
 
+#### Option details
+
+##### `simplify(options?: SimplifyOptions)`
+
+| Option  | Type     | Default | Notes                                  |
+| ------- | -------- | ------- | -------------------------------------- |
+| `ratio` | `number` | `0.5`   | Target simplification ratio            |
+| `error` | `number` | `0.001` | Allowed simplification error threshold |
+
+##### `deduplicate(options?: DedupOptions)`
+
+| Option      | Type      | Notes                                 |
+| ----------- | --------- | ------------------------------------- |
+| `textures`  | `boolean` | Forwarded to glTF-Transform `dedup()` |
+| `materials` | `boolean` | Forwarded to glTF-Transform `dedup()` |
+| `meshes`    | `boolean` | Forwarded to glTF-Transform `dedup()` |
+| `accessors` | `boolean` | Forwarded to glTF-Transform `dedup()` |
+
+##### `quantize(options?: QuantizeOptions)`
+
+| Option             | Type     | Notes                                    |
+| ------------------ | -------- | ---------------------------------------- |
+| `quantizePosition` | `number` | Forwarded to glTF-Transform `quantize()` |
+| `quantizeNormal`   | `number` | Forwarded to glTF-Transform `quantize()` |
+| `quantizeColor`    | `number` | Forwarded to glTF-Transform `quantize()` |
+| `quantizeTexcoord` | `number` | Forwarded to glTF-Transform `quantize()` |
+
+##### `optimizeNormals(options?: NormalsOptions)`
+
+| Option      | Type      | Notes                                       |
+| ----------- | --------- | ------------------------------------------- |
+| `overwrite` | `boolean` | Recompute normals even when already present |
+
+##### `compressTextures(options?: TextureCompressOptions)`
+
+| Option                  | Type                        | Current behavior                                             |
+| ----------------------- | --------------------------- | ------------------------------------------------------------ |
+| `resize`                | `[number, number]`          | Passed to `compressTexture()`                                |
+| `targetFormat`          | `'webp' \| 'jpeg' \| 'png'` | Passed to `compressTexture()`                                |
+| `quality`               | `number`                    | Passed to `compressTexture()`                                |
+| `requestTimeoutMs`      | `number`                    | Present in type but not consumed by current `ModelOptimizer` |
+| `maxTextureUploadBytes` | `number`                    | Present in type but not consumed by current `ModelOptimizer` |
+| `maxRetries`            | `number`                    | Present in type but not consumed by current `ModelOptimizer` |
+| `maxConcurrentRequests` | `number`                    | Present in type but not consumed by current `ModelOptimizer` |
+| `serverOptions`         | `ServerOptions`             | Accepted in type but stripped before local Sharp compression |
+
+When Sharp is unavailable, texture compression falls back to a basic texture optimization path (`dedup` + `prune`).
+
+##### `optimizeAll(options?)`
+
+Execution order:
+
+1. `simplify` (unless `false`)
+2. `deduplicate` (unless `false`)
+3. `quantize` (unless `false`)
+4. `optimizeNormals` (unless `false`)
+5. `compressTextures` (only if `textures` is provided)
+
+Calling `optimizeAll()` with no arguments runs simplify, dedup, quantize, and normals. Texture compression is opt-in.
+
+##### `getReport()`
+
+Returns:
+
+- `originalSize`, `optimizedSize`
+- `compressionRatio` (`originalSize / optimizedSize`)
+- `appliedOptimizations`
+- `stats` with before/after metrics for vertices, triangles, materials, textures (size), `texturesCount`, `textureResolutions`, meshes, and nodes
+
 ### ModelExporter
 
 - `exportDocumentGLB(document)`
@@ -116,6 +192,8 @@ const zip = await exporter.createZIPArchive(gltf, 'model')
 - `exportThreeJSGLTF(object)`
 - `createZIPArchive(result, baseName?)`
 - `saveToFile(result, filePath)`
+
+`exportThreeJSGLB(object, options)` accepts `modifiedTextureResources` in its options type, but this field is currently ignored for direct Three.js GLB export.
 
 ## Requirements
 

@@ -1,5 +1,11 @@
 import { GithubLogo } from '@shared/components/assets/icons/github-logo'
 import { useIsMobile } from '@shared/components/hooks/use-mobile'
+import {
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger
+} from '@shared/components/ui/accordion'
 import { Button } from '@shared/components/ui/button'
 import { CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
@@ -534,6 +540,64 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 					<Button className="mt-2 w-fit px-8!">
 						<GithubLogo /> Meet the Community
 					</Button>
+				</div>
+			</Section>
+
+			<Section fadeIn className="my-8 h-full w-full overflow-hidden">
+				<GridBg isMobile={isMobile} />
+				<div className="z-10 flex flex-col gap-6 py-12 md:min-w-2xl">
+					<div className="w-full">
+						<h2>Frequently Asked Questions</h2>
+						<p className="text-foreground/90 mt-4 text-lg md:text-xl">
+							Quick answers for setup, uploads, and publishing
+						</p>
+					</div>
+					<BasicCard className="max-w-3xl">
+						<CardContent className="pt-6">
+							<Accordion type="single" collapsible className="w-full">
+								<AccordionItem value="faq-account">
+									<AccordionTrigger>
+										Do I need an account to test Vectreal?
+									</AccordionTrigger>
+									<AccordionContent>
+										No account is required to upload and test in Publisher.
+										Create an account only when you want persistent management
+										and publishing workflows.
+									</AccordionContent>
+								</AccordionItem>
+								<AccordionItem value="faq-formats">
+									<AccordionTrigger>
+										Which 3D formats are supported?
+									</AccordionTrigger>
+									<AccordionContent>
+										You can upload common formats like glTF/GLB and related
+										assets. For multi-file models, upload the full bundle
+										together to preserve references.
+									</AccordionContent>
+								</AccordionItem>
+								<AccordionItem value="faq-files">
+									<AccordionTrigger>
+										What happens to my files before publish?
+									</AccordionTrigger>
+									<AccordionContent>
+										Files remain local while you test and optimize in the
+										browser. Cloud storage and hosted sharing flows start only
+										when you explicitly publish.
+									</AccordionContent>
+								</AccordionItem>
+								<AccordionItem value="faq-embed">
+									<AccordionTrigger>
+										Can I embed scenes in my own site?
+									</AccordionTrigger>
+									<AccordionContent>
+										Yes. Once published, you can generate embed snippets and
+										configure domain/API constraints for controlled integration
+										into product pages and apps.
+									</AccordionContent>
+								</AccordionItem>
+							</Accordion>
+						</CardContent>
+					</BasicCard>
 				</div>
 			</Section>
 		</main>

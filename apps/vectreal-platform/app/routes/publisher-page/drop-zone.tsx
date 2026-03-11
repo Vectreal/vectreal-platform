@@ -10,8 +10,9 @@ import {
 	FolderUp,
 	Upload
 } from 'lucide-react'
-import { ComponentProps, useEffect, useTransition } from 'react'
+import { ComponentProps, SyntheticEvent, useEffect, useTransition } from 'react'
 import { useDropzone } from 'react-dropzone'
+import { Link } from 'react-router'
 
 import BasicCard from '../../components/layout-components/basic-card'
 
@@ -45,6 +46,10 @@ export const DropZone = ({ isMobile }: Props) => {
 	}, [acceptedFiles, load])
 
 	const { onClick, ...containerProps } = getRootProps<ComponentProps<'div'>>()
+
+	const stopDropzoneTrigger = (event: SyntheticEvent) => {
+		event.stopPropagation()
+	}
 
 	return (
 		<div className="h-full w-full">
@@ -110,56 +115,63 @@ export const DropZone = ({ isMobile }: Props) => {
 									</div>
 								</BasicCard>
 							)}
-							<div className="flex flex-row items-center justify-center gap-2">
+							<div
+								className="flex flex-col items-stretch justify-center gap-2 sm:flex-row sm:items-center"
+								onClick={stopDropzoneTrigger}
+								onPointerDown={stopDropzoneTrigger}
+							>
 								<Button
 									variant="ghost"
-									className="hover:bg-accent/50 flex h-auto grow items-center justify-center gap-3 rounded-xl p-3 md:justify-start"
-									onClick={() => window.open('#', '_blank')}
+									asChild
+									className="hover:bg-accent/50 flex h-auto w-full grow items-center justify-start gap-3 rounded-xl p-3"
 								>
-									<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md max-md:w-full">
-										<Book className="h-4 w-4" />
-									</div>
-									{!isMobile && (
+									<Link to="/docs/getting-started/first-model" viewTransition>
+										<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md">
+											<Book className="h-4 w-4" />
+										</div>
 										<div className="text-left">
-											<div className="font-medium">Quick Start Guide</div>
+											<div className="font-medium">Your First Model Guide</div>
 											<div className="text-muted-foreground text-xs">
-												Learn the basics in 5 minutes
+												Step-by-step upload to publish walkthrough
 											</div>
 										</div>
-									)}
+									</Link>
 								</Button>
 
 								<Button
 									variant="ghost"
-									className="hover:bg-accent/50 flex h-auto grow items-center justify-center gap-3 rounded-xl p-3 md:justify-start"
-									onClick={() => window.open('#', '_blank')}
+									asChild
+									className="hover:bg-accent/50 flex h-auto w-full grow items-center justify-start gap-3 rounded-xl p-3"
 								>
-									<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md max-md:w-full">
-										<FileQuestion className="h-4 w-4" />
-									</div>
-									{!isMobile && (
+									<Link to="/docs/guides/upload" viewTransition>
+										<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md">
+											<FileQuestion className="h-4 w-4" />
+										</div>
 										<div className="text-left">
-											<div className="font-medium">Common Questions</div>
+											<div className="font-medium">Upload Format Guide</div>
 											<div className="text-muted-foreground text-xs">
-												Get instant answers
+												Supported file types, bundles, and tips
 											</div>
 										</div>
-									)}
+									</Link>
 								</Button>
 
 								<Button
 									variant="ghost"
-									className="hover:bg-accent/50 flex h-auto grow items-center justify-center gap-3 rounded-xl p-3 md:justify-start"
-									onClick={() => window.open('#', '_blank')}
+									asChild
+									className="hover:bg-accent/50 flex h-auto w-full grow items-center justify-start gap-3 rounded-xl p-3"
 								>
-									<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md max-md:w-full">
-										<ExternalLink className="h-4 w-4" />{' '}
-									</div>
-									{!isMobile && (
-										<div className="text-left">
-											<div className="font-medium"> Visit Help Center</div>
+									<Link to="/docs" viewTransition>
+										<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md">
+											<ExternalLink className="h-4 w-4" />{' '}
 										</div>
-									)}
+										<div className="text-left">
+											<div className="font-medium">Documentation Hub</div>
+											<div className="text-muted-foreground text-xs">
+												Full guides, package references, and deployment docs
+											</div>
+										</div>
+									</Link>
 								</Button>
 							</div>
 						</div>
