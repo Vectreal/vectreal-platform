@@ -1,223 +1,184 @@
-[![Vectreal Core Banner](https://storage.googleapis.com/documentation-assets/vectreal-core-banner.png)](https://core.vectreal.com)
+[![Vectreal Platform Banner](https://storage.googleapis.com/documentation-assets/vectreal-core-banner.png)](https://vectreal.com)
 
-[![Deploy apps/official-website to Google Cloud Run](https://img.shields.io/github/actions/workflow/status/vectreal/vectreal-core/deploy-official-website.yaml?logo=github&logoColor=%23fc6c18&label=Deploy%20apps%2Fofficial-website%20to%20Google%20Cloud%20Run&color=%23fc6c18)
-](https://github.com/Vectreal/vectreal-core/actions/workflows/deploy-official-website.yaml)
-[![Version and release packages to NPM](https://img.shields.io/github/actions/workflow/status/vectreal/vectreal-core/version-release.yaml?logo=github&logoColor=%23fc6c18&label=Version%20and%20release%20packages%20to%20NPM&color=%23fc6c18)
-](https://github.com/Vectreal/vectreal-core/actions/workflows/version-release.yaml)
+[![Deploy Platform to Cloud Run](https://img.shields.io/github/actions/workflow/status/vectreal/vectreal-platform/deploy-platform.yaml?logo=github&logoColor=%23fc6c18&label=Deploy%20Platform%20to%20Cloud%20Run&color=%23fc6c18)](https://github.com/Vectreal/vectreal-platform/actions)
+[![Version and release packages to NPM](https://img.shields.io/github/actions/workflow/status/vectreal/vectreal-platform/version-release.yaml?logo=github&logoColor=%23fc6c18&label=Version%20and%20release%20packages%20to%20NPM&color=%23fc6c18)](https://github.com/Vectreal/vectreal-platform/actions)
 [![Storybook vctrl/viewer](https://img.shields.io/badge/Storybook_vctrl/viewer-Docs-fc6c18?logo=storybook&logoColor=%23fc6c18)](https://main--672b9522ee5bda25942a731c.chromatic.com/?path=/docs/vectrealviewer--docs)
 [![@vctrl/viewer | NPM Downloads](https://img.shields.io/npm/dm/%40vctrl%2Fviewer?logo=npm&logoColor=%23fc6c18&label=%40vctrl%2Fviewer%20%7C%20NPM%20Downloads&color=%23fc6c18)](https://npmjs.com/package/@vctrl/viewer)
 [![@vctrl/hooks | NPM Downloads](https://img.shields.io/npm/dm/%40vctrl%2Fhooks?logo=npm&logoColor=%23fc6c18&label=%40vctrl%2Fhooks%20%7C%20NPM%20Downloads&color=%23fc6c18)](https://www.npmjs.com/package/@vctrl/hooks)
 
-# Vectreal Core
+# Vectreal Platform
 
-Vectreal Core is a robust, community-driven, open-source toolkit designed to seamlessly integrate high-performance 3D content into React-based projects. Our mission is to empower developers, designers, and creators with comprehensive resources to build stunning, interactive 3D experiences.
+Vectreal is an open platform for preparing, managing, and publishing 3D content on the web. Upload a model, optimize it, and embed it — all from the browser.
 
-The monorepo is orchestrated using NX within an npm workspaces environment, primarily consisting of React.js projects.
+This monorepo contains the full platform application, the open-source React packages that power it, and the Terraform infrastructure that runs it.
 
-> This project provides easy-to-use, fully configured components, hooks, and additional tools built on top of [Three.js](https://github.com/mrdoob/three.js) and [React Three Fiber](https://github.com/pmndrs/react-three-fiber).
+> Built on top of [Three.js](https://github.com/mrdoob/three.js), [React Three Fiber](https://github.com/pmndrs/react-three-fiber), and [glTF-Transform](https://gltf-transform.dev). Orchestrated with [Nx](https://nx.dev) and [pnpm workspaces](https://pnpm.io/workspaces).
 
 ## Table of Contents
 
-- [Vectreal Core](#vectreal-core)
+- [Vectreal Platform](#vectreal-platform)
   - [Table of Contents](#table-of-contents)
   - [Features](#features)
   - [Project Structure](#project-structure)
-  - [Packages](#packages)
-    - [React Packages](#react-packages)
-    - [Docker](#docker)
   - [Applications](#applications)
-  - [Examples](#examples)
+  - [Packages](#packages)
+  - [Shared Libraries](#shared-libraries)
   - [Getting Started](#getting-started)
     - [Prerequisites](#prerequisites)
     - [Installation](#installation)
     - [Environment Setup](#environment-setup)
-    - [Running Projects](#running-projects)
+    - [Running the Platform](#running-the-platform)
   - [Deployment](#deployment)
+  - [Documentation](#documentation)
   - [Contributing](#contributing)
   - [License](#license)
   - [Contact](#contact)
 
 ## Features
 
-- Fully typed components for seamless integration with TypeScript projects
-- Optimized performance for smooth 3D rendering
-- Support for multiple 3D file formats (glTF, GLB, OBJ, USDZ, and more)
-- Extensible architecture for custom implementations
-- Comprehensive documentation and examples
+- **Publisher** — drag-and-drop 3D model upload with live preview, quality presets, and scene configuration
+- **Dashboard** — project and scene management, versioning, and organization support
+- **Embed** — publish scenes and generate responsive iframe snippets with preview API key gating
+- **Open packages** — `@vctrl/viewer`, `@vctrl/hooks`, and `@vctrl/core` usable in any React or Node.js project
+- Full TypeScript across every package and application
+- SSR-ready with React Router v7 framework mode
 
 ## Project Structure
 
-This monorepo is organized as follows:
-
 ```
-vectreal-core/
-├── packages/
-│ ├── hooks/
-│ └── viewer/
+vectreal-platform/
 ├── apps/
-│ └── official-website/
-├── docker/
-├── examples/
-└── docs/
+│   └── vectreal-platform/   # Full-stack React Router v7 platform app
+├── packages/
+│   ├── hooks/                # @vctrl/hooks  — browser-side 3D loading/optimisation hooks
+│   ├── viewer/               # @vctrl/viewer — React 3D viewer component
+│   └── core/                 # @vctrl/core   — server-side model processing (Node.js)
+├── shared/
+│   ├── components/           # Shared Radix UI + Tailwind component library
+│   └── utils/                # Shared utility functions
+└── terraform/                # GCP infrastructure as code (Cloud Run, CDN, IAM)
 ```
-
-## Packages
-
-### React Packages
-
-- **[@vctrl/hooks](https://github.com/Vectreal/vectreal-core/tree/main/packages/hooks)**: A collection of useful React hooks for loading and interacting with 3D files.
-  - **use-load-model**: File or directory loading hooks for various approaches (Event based, React Context, direct)
-
-  - **use-optimize-model**: Utilizing the [gltf-transform](https://gltf-transform.dev/) js library to optimize models in the browser. May be used standaloe or in conjunction with the `use-load-model` hook for convenience.
-
-  - **use-export-model**: Export the scene in multiple formats using a minimal API
-
-- **[@vctrl/viewer](https://github.com/Vectreal/vectreal-core/tree/main/packages/viewer)**: A fully type-safe and ready-to-use viewer component for React.
-
-  Built with the `@vctrl/hooks/use-load-model` hook to dynamically load various model file types.
-
-  Supported file formats:
-  - glTF (with .bin and textures)
-  - GLB
-  - OBJ
-  - USDZ (limited support, work in progress)
-
-### Docker
-
-- **[Docker images](https://github.com/Vectreal/vectreal-core/tree/main/packages/docker)**: (Work in Progress) Easily deploy convenient Vectreal tools like file converters in your Docker environment.
 
 ## Applications
 
-- **[Official Website](https://github.com/Vectreal/vectreal-core/tree/main/apps/official-website)**: A showcase application built using the components and software provided in this monorepo. Deployed using GitHub Actions and Google Cloud.
+- **[vectreal-platform](apps/vectreal-platform/)** — The Vectreal Platform web app. React Router v7, Supabase auth, Drizzle ORM, Google Cloud Storage.
 
-## Examples
+## Packages
 
-Visit our [free online editor toolkit](https://core.vectreal.com/editor) to see Vectreal Core in action. This interactive playground demonstrates the capabilities of our components and provides a hands-on experience for developers.
+- **[@vctrl/hooks](packages/hooks/)** — React hooks for loading (`use-load-model`), optimising (`use-optimize-model`), and exporting (`use-export-model`) 3D models in the browser.
+
+- **[@vctrl/viewer](packages/viewer/)** — Ready-to-use React viewer component built on React Three Fiber. Accepts any Three.js `Object3D` and provides camera, controls, lighting, and grid configuration.
+
+- **[@vctrl/core](packages/core/)** — Server-side 3D model processing with `ModelLoader`, `ModelOptimizer`, and `ModelExporter`. Designed for Node.js API routes and background jobs.
+
+## Shared Libraries
+
+- **[@shared/components](shared/components/)** — Radix UI + Tailwind component library shared across apps.
+- **[@shared/utils](shared/utils/)** — Shared TypeScript utilities.
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (v18 or later)
-- npm (v9 or later)
+| Tool | Version |
+|---|---|
+| Node.js | 18 or later |
+| pnpm | 9 or later |
+| Docker | Latest (for local Supabase) |
+| Supabase CLI | Latest |
 
 ### Installation
 
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/Vectreal/vectreal-core.git
-   cd vectreal-core
-   ```
-
-   Install dependencies:
-
-   ```bash
-   npm install
-   ```
+```bash
+git clone https://github.com/Vectreal/vectreal-platform.git
+cd vectreal-platform
+pnpm install
+```
 
 ### Environment Setup
-
-Create a single local environment file at the repository root:
 
 ```bash
 cp .env.development.example .env.development
 ```
 
-Edit `.env.development` with your local development and deployment secret values.
+Edit `.env.development` with your Supabase and Google Cloud Storage credentials.  
+See [`apps/vectreal-platform/README.md`](apps/vectreal-platform/README.md) for all required variables.
 
-### Running Projects
-
-To serve one of the app projects, use the following command:
-
-```bash
-npx nx serve vctrl/official-website
-```
-
-To see all available targets for a project:
+### Running the Platform
 
 ```bash
-npx nx show project vctrl/official-website --web
+# Start local Supabase stack (requires Docker)
+pnpm supabase start
+
+# Apply database migrations
+pnpm nx run vectreal-platform:supabase-db-reset
+
+# Start the app
+pnpm nx serve vectreal-platform
 ```
 
-> The optional `--web` parameter opens a visual overview of all possible commands available for a project.
+The app runs at [http://localhost:4200](http://localhost:4200).
 
-For more information on working with NX, refer to the [official NX documentation](https://nx.dev/getting-started/tutorials/react-monorepo-tutorial#project-details-container).
+To run or build any other project:
+
+```bash
+pnpm nx serve vctrl/viewer         # Storybook
+pnpm nx build vctrl/hooks          # Build the hooks package
+pnpm nx show project vectreal-platform --web   # Show all available tasks
+```
 
 ## Deployment
 
-The Vectreal Platform uses Infrastructure as Code (IaC) with Terraform for GCP deployment and GitHub Actions for CI/CD.
-
-### Quick Deploy
+The platform deploys to **Google Cloud Run** via Terraform and GitHub Actions.
 
 ```bash
-# 1. Set up infrastructure (one-time)
+# 1. Provision infrastructure (one-time)
 cd terraform
 ./scripts/apply-infrastructure.sh
 
-# 2. Configure GitHub secrets
+# 2. Push GitHub secrets
 ./scripts/setup-github-secrets.sh
 
-# 3. Deploy to staging
+# 3. Deploy to staging (automatic on push to main)
 git push origin main
 
-# 4. Deploy to production
+# 4. Deploy to production (manual)
 gh workflow run "CD - Deploy Platform to Production"
 ```
 
-### Infrastructure
+See [`terraform/README.md`](terraform/README.md) for the full infrastructure reference.
 
-The infrastructure is managed with Terraform and includes:
+## Documentation
 
-- **Google Cloud Run** for containerized application hosting
-- **Artifact Registry** for Docker image storage
-- **Service Accounts** with least-privilege IAM roles
-- **GitHub Secrets** for secure configuration management
+Full documentation is available at **[vectreal.com/docs](https://vectreal.com/docs)**:
 
-Two setup scripts handle the deployment configuration:
+- [Getting Started](https://vectreal.com/docs/getting-started)
+- [Guides](https://vectreal.com/docs/guides/upload)
+- [Package Reference](https://vectreal.com/docs/packages/viewer)
+- [Operations / Deployment](https://vectreal.com/docs/operations/deployment)
+- [Contributing](https://vectreal.com/docs/contributing)
 
-- `scripts/apply-infrastructure.sh` - GCP authentication, Terraform initialization and deployment, service account key generation
-- `scripts/setup-github-secrets.sh` - GitHub secrets configuration from `.env.development`
-
-For detailed infrastructure setup, configuration options, and troubleshooting, see the [Terraform README](terraform/README.md).
-
-### CI/CD Workflows
-
-- **Staging Deployment**: Triggered on push to `main` branch
-- **Production Deployment**: Triggered manually via `workflow_dispatch`
-- **Package Release**: Triggered on version tags (`v*.*.*`)
-- **Storybook Publishing**: Automated on `main` pushes and pull requests via Chromatic integration
-
-All workflows use GitHub Actions and are configured to inject secrets at deployment time.
+Every docs page has an **Edit on GitHub** link pointing directly to its source file.
 
 ## Contributing
 
-We welcome contributions from developers passionate about React and Three.js.
+We welcome contributions of all kinds. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR.
 
-To contribute:
+1. Fork and branch from `main`
+2. Make your changes and write tests where applicable
+3. Follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
+4. Open a pull request
 
-> Please read our Contributing Guidelines for more details.
-
-1. Fork the repository
-2. Create a new branch for your feature or bug fix
-3. Make your changes and commit them following the commit message format described [here by NX](https://nx.dev/recipes/nx-release/get-started-with-nx-release)
-4. Push your changes to your fork
-5. Submit a pull request to the main repository
-
-[Join our Discord community](https://discord.gg/A9a3nPkZw7) for support, announcements, and discussions about the future of 3D web content.
+[Join our Discord](https://discord.gg/A9a3nPkZw7) to discuss ideas or get help.
 
 ## License
 
-GNU Affero General Public License
-
-Please refer to the LICENSE file in the package root for licensing information.
+GNU Affero General Public License v3.0 — see [LICENSE.md](LICENSE.md) for details.
 
 ## Contact
 
-Website: [Vectreal Core](https://core.vectreal.com) | [Vectreal Platform](https://vectreal.com)
+Website: [vectreal.com](https://vectreal.com)  
+Discord: [discord.gg/A9a3nPkZw7](https://discord.gg/A9a3nPkZw7)  
+X/Twitter: [@Vectreal](https://x.com/vectreal)  
+Email: [info@vectreal.com](mailto:info@vectreal.com)
 
-Discord: [Join our server](https://discord.gg/A9a3nPkZw7)
-
-X/Twitter: [@Vectreal](https://x.com/vectreal)
-
-Email: info@vectreal.com

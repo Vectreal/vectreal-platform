@@ -1,0 +1,149 @@
+# @vctrl/core
+
+Server-side 3D model processing for Node.js. Extracts the business logic from `@vctrl/hooks` so the same pipeline can run on the server — in API routes, background jobs, or CI workflows.
+
+---
+
+## Installation
+
+```bash
+npm install @vctrl/core
+# or
+pnpm add @vctrl/core
+```
+
+> `@vctrl/core` targets Node.js only. It uses [Sharp](https://sharp.pixelplumbing.com) for server-side texture compression, which requires a native build.
+
+---
+
+## Classes overview
+
+| Class | Import path | Description |
+|---|---|---|
+| `ModelLoader` | `@vctrl/core/model-loader` | Load and parse 3D model files from disk or buffer |
+| `ModelOptimizer` | `@vctrl/core/model-optimizer` | Run glTF-Transform optimisations server-side |
+| `ModelExporter` | `@vctrl/core/model-exporter` | Export processed scenes to GLB or glTF |
+
+---
+
+## `ModelLoader`
+
+```typescript
+import { ModelLoader } from '@vctrl/core/model-loader'
+
+const loader = new ModelLoader()
+
+// From a file path
+const result = await loader.loadFromFile('model.glb')
+
+// From a Node.js Buffer
+const buffer = await fs.promises.readFile('model.glb')
+const resultFromBuffer = await loader.loadFromBuffer(buffer, 'model.glb')
+```
+
+### Return value
+
+```typescript
+{
+  scene: THREE.Group     // Parsed Three.js scene
+  animations: THREE.AnimationClip[]
+  metadata: {
+    format: 'glb' | 'gltf' | 'obj'
+    fileSize: number    // bytes
+  }
+}
+```
+
+---
+
+## `ModelOptimizer`
+
+```typescript
+import { ModelOptimizer } from '@vctrl/core/model-optimizer'
+
+const optimizer = new ModelOptimizer()
+
+// Load a model into the optimizer
+await optimizer.loadFromBuffer(modelBuffer)
+
+// Run optimisations (chainable)
+await optimizer.simplify({ ratio: 0.5 })
+await optimizer.deduplicate()
+await optimizer.compressTextures({ quality: 80 })
+
+// Export the result
+const optimizedBuffer = await optimizer.export()
+```
+
+### Methods
+
+| Method | Options | Description |
+|---|---|---|
+| `loadFromBuffer(buf)` | — | Load a model buffer into the optimizer |
+| `loadFromFile(path)` | — | Load a model from disk |
+| `simplify(opts)` | `{ ratio: number }` | Mesh simplification (0.0–1.0) |
+| `deduplicate()` | — | Remove duplicate geometry and materials |
+| `compressTextures(opts)` | `{ quality: number }` | Server-side KTX2 texture compression via Sharp |
+| `export()` | — | Returns the optimised model as a `Buffer` |
+
+---
+
+## `ModelExporter`
+
+```typescript
+import { ModelExporter } from '@vctrl/core/model-exporter'
+
+const exporter = new ModelExporter()
+
+// Export as binary GLB
+const glbBuffer = await exporter.exportGLB(scene)
+
+// Export as separate glTF + assets
+const { gltf, binaries, textures } = await exporter.exportGLTF(scene, {
+  binary: false,
+  embedImages: false,
+})
+```
+
+---
+
+## Use in API routes
+
+`@vctrl/core` is used by the Vectreal Platform's server-side optimization endpoint. Here's a minimal example of using it in a Node.js API route:
+
+```typescript
+import { ModelOptimizer } from '@vctrl/core/model-optimizer'
+
+export async function POST(request: Request) {
+  const formData = await request.formData()
+  const file = formData.get('file') as File
+
+  const buffer = Buffer.from(await file.arrayBuffer())
+
+  const optimizer = new ModelOptimizer()
+  await optimizer.loadFromBuffer(buffer)
+  await optimizer.simplify({ ratio: 0.7 })
+  await optimizer.compressTextures({ quality: 80 })
+
+  const optimized = await optimizer.export()
+
+  return new Response(optimized, {
+    headers: { 'Content-Type': 'model/gltf-binary' },
+  })
+}
+```
+
+---
+
+## Requirements
+
+| Requirement | Version |
+|---|---|
+| Node.js | 18 or later |
+| `sharp` (peer dep) | `^0.33` |
+
+---
+
+## Source
+
+Full source and README in [`packages/core/`](https://github.com/Vectreal/vectreal-platform/tree/main/packages/core).

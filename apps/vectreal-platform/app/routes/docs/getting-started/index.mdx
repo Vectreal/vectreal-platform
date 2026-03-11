@@ -1,0 +1,38 @@
+# Getting Started
+
+This section walks you through setting up the Vectreal Platform monorepo locally and running the full dev stack for the first time.
+
+---
+
+## Prerequisites
+
+| Tool | Version | Notes |
+|---|---|---|
+| Node.js | 18 or later | LTS recommended |
+| pnpm | 9 or later | Used as the workspace package manager |
+| Docker | Latest | Required for the local Supabase stack |
+| Supabase CLI | Latest | `npm i -g supabase` |
+
+---
+
+## Repository structure
+
+```
+vectreal-platform/
+├── apps/vectreal-platform/   # Main platform app
+├── packages/
+│   ├── viewer/               # @vctrl/viewer
+│   ├── hooks/                # @vctrl/hooks
+│   └── core/                 # @vctrl/core
+├── shared/
+│   ├── components/           # Shared UI component library
+│   └── utils/                # Shared utilities
+└── terraform/                # Infrastructure as code (GCP)
+```
+
+---
+
+## Next steps
+
+- [Installation](/docs/getting-started/installation) — clone, install, and configure environment variables
+- [Your First Model](/docs/getting-started/first-model) — upload and publish a 3D model end-to-end

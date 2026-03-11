@@ -29,7 +29,15 @@ export async function loader({ request }: Route.ActionArgs) {
 		if (userData.user) {
 			try {
 				// Initialize user with defaults (user, organization, project) in local database
-				await initializeUserDefaults(userData.user)
+				const userWithDefaults = await initializeUserDefaults(userData.user)
+
+				// Redirect first-time users to the onboarding page so they learn the
+				// core platform flow before landing on the dashboard.
+				if (userWithDefaults.isNewUser && next === '/dashboard') {
+					return redirect('/onboarding', {
+						headers: new Headers(headers)
+					})
+				}
 			} catch (dbError) {
 				console.error('Database error during user initialization:', {
 					error: dbError,

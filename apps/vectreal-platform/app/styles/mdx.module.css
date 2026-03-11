@@ -1,8 +1,8 @@
 @reference '../../../../shared/components/src/styles/globals.css';
 
-.root {
-	@apply mx-auto flex max-w-lg flex-col gap-8 md:max-w-4xl;
-
+/* Shared prose rules applied to both MDX contexts ────────────────────────── */
+.root,
+.docsContent {
 	ul {
 		@apply list-disc pl-6;
 		opacity: 0.75;
@@ -113,4 +113,35 @@
 		background: var(--color-muted);
 		padding: 1rem;
 	}
+
+	table {
+		@apply w-full border-collapse text-sm;
+
+		th {
+			@apply px-3 py-2 text-left font-semibold;
+			border-bottom: 1px solid
+				color-mix(in oklch, var(--color-foreground) 15%, transparent);
+		}
+
+		td {
+			@apply px-3 py-2;
+			border-bottom: 1px solid
+				color-mix(in oklch, var(--color-foreground) 8%, transparent);
+			opacity: 0.8;
+		}
+
+		tr:last-child td {
+			border-bottom: none;
+		}
+	}
+}
+
+/* Full-page centred MDX (about, contact, legal pages) ───────────────────── */
+.root {
+	@apply mx-auto flex max-w-lg flex-col gap-8 md:max-w-4xl;
+}
+
+/* Docs layout MDX (fills the flex content column, no max-width) ─────────── */
+.docsContent {
+	@apply flex flex-col gap-8;
 }

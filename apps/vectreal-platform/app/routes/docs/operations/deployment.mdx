@@ -1,0 +1,121 @@
+# Deployment
+
+The Vectreal Platform is deployed on **Google Cloud Run** behind a **Global HTTPS Load Balancer** with CDN, managed by Terraform and automated through GitHub Actions.
+
+> The canonical source of truth for infrastructure configuration is [`terraform/README.md`](https://github.com/Vectreal/vectreal-platform/blob/main/terraform/README.md). This page provides a high-level overview and links to the detailed Terraform docs rather than duplicating them.
+
+---
+
+## Architecture
+
+```
+GitHub Actions CI/CD
+       │
+       ▼
+Artifact Registry (Docker images)
+       │
+       ▼
+Cloud Run (container instances)
+  ├── production   (vectreal.com)
+  └── staging      (staging.vectreal.com)
+       │
+       ▼
+Global HTTPS Load Balancer + Cloud CDN
+       │
+       ▼
+Supabase (Auth + Database)
+Google Cloud Storage (3D assets)
+```
+
+---
+
+## First-time infrastructure setup
+
+### Prerequisites
+
+- A GCP project with billing enabled
+- `gcloud` CLI authenticated with Owner or Editor role
+- Terraform ≥ 1.5
+- GitHub CLI (`gh`) authenticated
+
+### Two-step setup
+
+```bash
+# 1. Provision GCP infrastructure (Cloud Run, Artifact Registry, IAM, GCS)
+cd terraform
+./scripts/apply-infrastructure.sh
+
+# 2. Configure GitHub secrets from your .env.development
+./scripts/setup-github-secrets.sh
+```
+
+See the [full Terraform README](https://github.com/Vectreal/vectreal-platform/blob/main/terraform/README.md) for all configuration options, Terraform variable reference, and troubleshooting.
+
+---
+
+## CI/CD workflows
+
+Workflows live in `.github/workflows/`.
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| **Staging deploy** | Push to `main` | Builds Docker image, pushes to Artifact Registry, deploys to Cloud Run staging |
+| **Production deploy** | Manual `workflow_dispatch` | Promotes staging image to production Cloud Run |
+| **Package release** | Version tag `v*.*.*` | Builds and publishes npm packages to npmjs.com |
+
+### Required GitHub secrets
+
+| Secret | Description |
+|---|---|
+| `GCP_SA_KEY` | Service account JSON key for Cloud Run deployments |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_KEY` | Supabase anon key |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET` | GCS bucket name |
+
+---
+
+## Database migrations
+
+Migrations follow a Supabase-first flow — Drizzle generates SQL, Supabase CLI applies it.
+
+```bash
+# Generate SQL from schema changes
+pnpm nx run vectreal-platform:drizzle-generate
+
+# Apply to staging
+pnpm nx run vectreal-platform:supabase-db-push-staging
+
+# Apply to production
+pnpm nx run vectreal-platform:supabase-db-push-prod
+```
+
+See [`DB_MIGRATIONS.md`](https://github.com/Vectreal/vectreal-platform/blob/main/apps/vectreal-platform/DB_MIGRATIONS.md) for the full migration workflow.
+
+---
+
+## Docker
+
+The platform app is containerised with Docker. See [`DOCKER.md`](https://github.com/Vectreal/vectreal-platform/blob/main/apps/vectreal-platform/DOCKER.md) for local Docker usage, multi-stage build details, and health check configuration.
+
+---
+
+## Staging-first latency rollout
+
+Before promoting any change to production:
+
+1. Push to `main` → staging deployment runs automatically.
+2. Validate on `staging.vectreal.com` (auth flows, 3D pipeline, embed preview).
+3. Run the production deploy workflow manually once staging is green.
+
+---
+
+## Cost optimisation
+
+Key cost levers for Cloud Run:
+
+- Set `--min-instances=0` for staging to scale to zero when idle.
+- Use committed-use discounts for production if traffic is predictable.
+- Cloud CDN caches static assets from the staging GCS bucket — cache hit ratio is visible in Cloud Monitoring.
+
+Full cost guidance in the [Terraform README](https://github.com/Vectreal/vectreal-platform/blob/main/terraform/README.md#cost-optimization).

@@ -1,0 +1,129 @@
+# Publishing & Embedding
+
+Turn a saved scene into a publicly embeddable iframe.
+
+---
+
+## Publishing a scene
+
+Publishing transitions a scene from **draft** to **published** status. Only published scenes can be accessed by external iframe embeds.
+
+1. Open the scene in the Publisher or from the Dashboard scene detail page.
+2. In the **Publish** sidebar section, click **Publish**.
+3. The scene status changes to `published` and a stable embed URL is generated.
+
+To revert to draft, click **Unpublish**.
+
+> **Draft scenes are never accessible to external embed principals.** They remain viewable only by authenticated collaborators with project access.
+
+---
+
+## Preview API keys
+
+External iframe embeds require a **preview API key** scoped to the project that owns the scene.
+
+### Creating a key
+
+1. Go to [Dashboard → API Keys](/dashboard/api-keys).
+2. Click **New API Key**.
+3. Select the project(s) the key should have access to.
+4. Copy the key — it is shown only once.
+
+### Using the key
+
+Pass the key as the `token` query parameter in the embed URL:
+
+```
+/preview/fullscreen/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY
+```
+
+Or as a `Bearer` token in the `Authorization` header for API requests:
+
+```http
+Authorization: Bearer YOUR_PREVIEW_API_KEY
+```
+
+---
+
+## Allowed embed domains
+
+To prevent hotlinking, you can restrict which domains are allowed to embed a scene.
+
+1. Open [Dashboard → Projects](/dashboard/projects) and select the project.
+2. Click **Edit** and add entries to **Allowed embed domains**.
+
+Supported domain patterns:
+
+| Pattern | Matches |
+|---|---|
+| `example.com` | Exact host only |
+| `*.example.com` | All subdomains of `example.com` |
+
+Requests from unlisted domains receive a `403 Forbidden` response.
+
+> **Local development** — `localhost` and `127.0.0.1` are always allowed regardless of the domain list.
+
+---
+
+## Embed snippet
+
+After publishing, copy the embed snippet from the **Embed** section in the publish sidebar or from the scene detail page in the dashboard.
+
+**Responsive 16:9 snippet:**
+
+```html
+<div style="position:relative;padding-top:56.25%;width:100%">
+  <iframe
+    src="https://vectreal.com/preview/fullscreen/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
+    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
+    allow="autoplay"
+    loading="lazy"
+  ></iframe>
+</div>
+```
+
+**Fixed size snippet:**
+
+```html
+<iframe
+  src="https://vectreal.com/preview/fullscreen/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
+  width="800"
+  height="450"
+  style="border:0"
+  allow="autoplay"
+  loading="lazy"
+></iframe>
+```
+
+---
+
+## Preview modes
+
+Two preview layout variants are available:
+
+| Mode | URL | Description |
+|---|---|---|
+| **Fullscreen** | `/preview/fullscreen/:projectId/:sceneId` | Full viewport, immersive experience |
+| **Product detail** | `/preview/product-detail/:projectId/:sceneId` | Compact viewer for e-commerce product pages |
+
+Both modes support `token` query param and `Authorization: Bearer` authentication.
+
+---
+
+## Status code reference
+
+| Scenario | Status |
+|---|---|
+| Missing `projectId` or `sceneId` | `400 Bad Request` |
+| Rate limited token validation | `429 Too Many Requests` |
+| Disallowed embed domain | `403 Forbidden` |
+| Draft or non-existent scene (external access) | `404 Not Found` |
+| Invalid or revoked API key | `403 Forbidden` |
+
+---
+
+## Next steps
+
+- [Dashboard → API Keys](/dashboard/api-keys) — create and manage preview API keys
+- [Dashboard → Projects → Edit](/dashboard/projects) — configure allowed embed domains
+- [@vctrl/viewer](/docs/packages/viewer) — use the viewer component directly in your React app

@@ -1,0 +1,130 @@
+# Contributing
+
+We welcome contributions of all kinds — bug reports, documentation improvements, new features, and performance work.
+
+---
+
+## Code of conduct
+
+Please read our [Code of Conduct](/code-of-conduct) before participating. Be kind and constructive.
+
+---
+
+## Before you start
+
+1. Search [existing issues](https://github.com/Vectreal/vectreal-platform/issues) to avoid duplicates.
+2. For large features, open an issue first to discuss the approach before writing code.
+3. For documentation-only changes, you can skip the issue step and go straight to a PR.
+
+---
+
+## Development setup
+
+See [Installation](/docs/getting-started/installation) to get a fully working local dev environment.
+
+---
+
+## Branching
+
+Branch from `main`:
+
+```bash
+git checkout main
+git pull
+git checkout -b feat/your-feature-name
+# or
+git checkout -b fix/issue-123-short-description
+```
+
+---
+
+## Commit conventions
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+[optional footer]
+```
+
+**Types**
+
+| Type | When to use |
+|---|---|
+| `feat` | New feature |
+| `fix` | Bug fix |
+| `docs` | Documentation only |
+| `refactor` | Code change that isn't a fix or feature |
+| `test` | Adding or fixing tests |
+| `chore` | Build scripts, dependency updates, CI changes |
+| `perf` | Performance improvement |
+
+**Scopes** (optional but helpful)
+
+- `viewer`, `hooks`, `core` — for package changes
+- `app`, `platform` — for the platform app
+- `docs` — for documentation
+- `terraform`, `ci` — for ops changes
+
+**Examples**
+
+```
+feat(viewer): add auto-rotate pause on user interaction
+fix(hooks): resolve glTF bundle parsing for nested directories
+docs: add publishing and embedding guide
+chore(ci): update staging deploy workflow timeout
+```
+
+---
+
+## Running tests
+
+```bash
+# All affected tests
+pnpm nx affected --target=test
+
+# Single project
+pnpm nx test vctrl/viewer
+pnpm nx test vectreal-platform
+
+# Linting
+pnpm nx affected --target=lint
+```
+
+---
+
+## Pull requests
+
+1. Keep PRs focused — one feature or fix per PR.
+2. Write a clear PR description explaining the **what** and **why**.
+3. Link the relevant issue with `Closes #123` in the description.
+4. Ensure `lint` and `test` pass before requesting review.
+5. Update documentation if you change any public API, route, or env variable.
+
+---
+
+## Editing documentation
+
+Every docs page on this site is an MDX file in the repository. Click **Edit on GitHub** at the top of any page to jump to the source file.
+
+To add a new docs page:
+
+1. Create the MDX file in `apps/vectreal-platform/app/routes/docs/`.
+2. Add an entry to `apps/vectreal-platform/app/lib/docs/docs-manifest.ts`.
+3. Register the route in `apps/vectreal-platform/app/routes.tsx`.
+
+---
+
+## Releasing packages
+
+Package versions are managed with [Nx Release](https://nx.dev/recipes/nx-release/get-started-with-nx-release). Maintainers handle releases — contributors don't need to worry about versioning.
+
+---
+
+## Getting help
+
+- [Discord](https://discord.gg/A9a3nPkZw7) — `#contributors` channel for development questions
+- [GitHub Discussions](https://github.com/Vectreal/vectreal-platform/discussions) — for design proposals and broader questions
+- [GitHub Issues](https://github.com/Vectreal/vectreal-platform/issues) — for bugs and concrete feature requests

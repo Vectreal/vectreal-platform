@@ -1,0 +1,152 @@
+# @vctrl/hooks
+
+[![NPM Downloads](https://img.shields.io/npm/dm/%40vctrl%2Fhooks?logo=npm&logoColor=%23fc6c18&label=%40vctrl%2Fhooks%20%7C%20NPM%20Downloads&color=%23fc6c18)](https://www.npmjs.com/package/@vctrl/hooks)
+
+Browser-side React hooks for loading, optimising, and exporting 3D models. The runtime counterpart to [`@vctrl/core`](/docs/packages/core) — built for React apps that need to handle 3D files directly in the browser.
+
+---
+
+## Installation
+
+```bash
+npm install @vctrl/hooks
+# or
+pnpm add @vctrl/hooks
+```
+
+---
+
+## Hooks overview
+
+| Hook | Import path | Description |
+|---|---|---|
+| `useLoadModel` | `@vctrl/hooks/use-load-model` | Load and parse 3D files from File objects, URLs, or drag-and-drop events |
+| `useOptimizeModel` | `@vctrl/hooks/use-optimize-model` | Run glTF-Transform optimisations in a Web Worker |
+| `useExportModel` | `@vctrl/hooks/use-export-model` | Export the current scene to GLB or glTF |
+
+---
+
+## `useLoadModel`
+
+Loads 3D files and exposes the parsed Three.js `Object3D` scene.
+
+```tsx
+import { ModelProvider, useLoadModel } from '@vctrl/hooks/use-load-model'
+
+function Uploader() {
+  const { loadFromFile, file, loading, error } = useLoadModel()
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    const files = Array.from(e.dataTransfer.files)
+    loadFromFile(files)
+  }
+
+  if (loading) return <p>Loading…</p>
+  if (error) return <p>Error: {error.message}</p>
+  if (file.model) return <p>Model loaded: {file.name}</p>
+
+  return <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>Drop a file</div>
+}
+
+export default function App() {
+  return (
+    <ModelProvider>
+      <Uploader />
+    </ModelProvider>
+  )
+}
+```
+
+### Context vs direct usage
+
+`useLoadModel` can be used in two ways:
+
+1. **Context mode** (recommended) — wrap your app with `ModelProvider` so any component can access the loaded model via `useLoadModel()`.
+2. **Direct mode** — call `useLoadModel()` outside a provider to manage a local model state.
+
+### Return values
+
+| Value | Type | Description |
+|---|---|---|
+| `file.model` | `Object3D \| null` | The parsed Three.js scene |
+| `file.name` | `string \| null` | Original file name |
+| `loading` | `boolean` | True while parsing |
+| `error` | `Error \| null` | Parse error, if any |
+| `loadFromFile` | `(files: File[]) => void` | Load from File objects |
+| `loadFromUrl` | `(url: string) => void` | Load from a URL |
+| `reset` | `() => void` | Clear the current model |
+
+---
+
+## `useOptimizeModel`
+
+Runs mesh simplification and texture compression using [glTF-Transform](https://gltf-transform.dev) in a Web Worker.
+
+```tsx
+import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
+import { useLoadModel } from '@vctrl/hooks/use-load-model'
+
+function Optimizer() {
+  const { file } = useLoadModel()
+  const { optimize, optimizing } = useOptimizeModel()
+
+  const handleOptimize = async () => {
+    if (!file.model) return
+    await optimize({ ratio: 0.5, textureQuality: 75 })
+  }
+
+  return (
+    <button onClick={handleOptimize} disabled={optimizing}>
+      {optimizing ? 'Optimising…' : 'Optimise model'}
+    </button>
+  )
+}
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `ratio` | `number` | `1.0` | Mesh simplification ratio (0.0–1.0) |
+| `textureQuality` | `number` | `75` | KTX2/Basis texture quality (1–100) |
+| `deduplicate` | `boolean` | `true` | Remove duplicate meshes and materials |
+
+---
+
+## `useExportModel`
+
+Exports the current scene (from `ModelProvider` context) to a downloadable file.
+
+```tsx
+import { useExportModel } from '@vctrl/hooks/use-export-model'
+
+function ExportButton() {
+  const { exportGLB } = useExportModel()
+
+  return <button onClick={exportGLB}>Download GLB</button>
+}
+```
+
+### Methods
+
+| Method | Description |
+|---|---|
+| `exportGLB()` | Download the scene as a self-contained `.glb` file |
+| `exportGLTF()` | Download the scene as a `.gltf` + assets bundle |
+
+---
+
+## Peer dependencies
+
+| Package | Version |
+|---|---|
+| `react` | `^18 \|\| ^19` |
+| `three` | `^0.170` |
+| `@react-three/fiber` | `^9` |
+
+---
+
+## Source
+
+Full source and detailed README in [`packages/hooks/`](https://github.com/Vectreal/vectreal-platform/tree/main/packages/hooks).

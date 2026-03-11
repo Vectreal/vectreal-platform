@@ -1,4 +1,4 @@
-# Contributing to vectreal-core
+# Contributing to Vectreal Platform
 
 We love your input! We want to make contributing to this project as easy and transparent as possible, whether it's:
 
@@ -8,39 +8,44 @@ We love your input! We want to make contributing to this project as easy and tra
 - Proposing new features
 - Becoming a maintainer
 
-## We Develop with Github
+> For a complete contribution guide, see **[vectreal.com/docs/contributing](https://vectreal.com/docs/contributing)**.
 
-We use github to host code, to track issues and feature requests, as well as accept pull requests.
+## We Develop with GitHub
 
-## We Use [Github Flow](https://guides.github.com/introduction/flow/index.html), So All Code Changes Happen Through Pull Requests
+We use GitHub to host code, track issues and feature requests, and accept pull requests.
+
+## All Code Changes Happen Through Pull Requests
 
 Pull requests are the best way to propose changes to the codebase. We actively welcome your pull requests:
 
 1. Fork the repo and create your branch from `main`.
 2. If you've added code that should be tested, add tests.
-3. If you've changed APIs, update the documentation.
-4. Ensure the test suite passes.
-5. Make sure your code lints.
-6. Use [Convetional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for your commit messages - here's a [cheet-sheet](https://kapeli.com/cheat_sheets/Conventional_Commits.docset/Contents/Resources/Documents/index).
+3. If you've changed APIs or added routes/env vars, update the documentation.
+4. Ensure the test suite passes: `pnpm nx affected --target=test`
+5. Make sure your code lints: `pnpm nx affected --target=lint`
+6. Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for your commit messages.
 7. Issue that pull request and link relevant issues and labels!
 
-## Working with NX
+## Working with Nx
 
-When working with this repo and therefore [NX](https://https://nx.dev/getting-started/intro), there is a certain ways to do things.
+1. Always run commands from the repository root.
+2. To run packages/apps: `pnpm nx run <project-name>:<target>` (e.g. `pnpm nx serve vectreal-platform`)
+3. To see all targets for a project: `pnpm nx show project <project-name> --web`
+4. Install the [Nx Console](https://marketplace.visualstudio.com/items?itemName=nrwl.angular-console) extension for VS Code for a visual interface.
 
-1. Always stay inside the root of the project when installing packages or running scripts.
-2. To run packages/apps use: `npx nx run <project-name>:<the command e.g. build>`
-3. To create a new tag and update package versions globally run: `npm run publish-release`
-4. When using VSCode the
-   [Nx Console extension](https://marketplace.visualstudio.com/items?itemName=nrwl.angular-console) may be helpful.
+## Editing documentation
+
+Every docs page on [vectreal.com/docs](https://vectreal.com/docs) is an MDX file in `apps/vectreal-platform/app/routes/docs/`. Click **Edit on GitHub** on any page to jump directly to the source file.
+
+To add a new docs page, see the instructions in [`apps/vectreal-platform/README.md`](apps/vectreal-platform/README.md#docs).
 
 ## Any contributions you make will be under the License
 
 In short, when you submit code changes, your submissions are understood to be under the same [GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3.0.en.html) that covers the project. Feel free to contact the maintainers if that's a concern.
 
-## Report bugs using Github's [issues](https://github.com/vectreal/vectreal-core/issues)
+## Report bugs using GitHub Issues
 
-We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/vectreal/vectreal-core/issues/new); it's that easy!
+We use [GitHub Issues](https://github.com/Vectreal/vectreal-platform/issues) to track public bugs. Report a bug by [opening a new issue](https://github.com/Vectreal/vectreal-platform/issues/new).
 
 ## Write bug reports with detail, background, and sample code
 
@@ -54,12 +59,11 @@ We use GitHub issues to track public bugs. Report a bug by [opening a new issue]
 - What actually happens
 - Notes (possibly including why you think this might be happening, or stuff you tried that didn't work)
 
-People _love_ thorough bug reports. I'm not even kidding.
+## Coding Style
 
-## Use a Consistent Coding Style
-
-- You can try running `npm run lint` for style unification.
+Run `pnpm nx affected --target=lint` to check for lint errors before opening a PR.
 
 ## GNU Affero General Public License
 
 By contributing, you agree that your contributions will be licensed under the [GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3.0.en.html).
+

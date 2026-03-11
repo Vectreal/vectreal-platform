@@ -1,0 +1,162 @@
+# @vctrl/viewer
+
+[![NPM Downloads](https://img.shields.io/npm/dm/%40vctrl%2Fviewer?logo=npm&logoColor=%23fc6c18&label=%40vctrl%2Fviewer%20%7C%20NPM%20Downloads&color=%23fc6c18)](https://npmjs.com/package/@vctrl/viewer)
+[![Storybook](https://img.shields.io/badge/Storybook-Docs-fc6c18?logo=storybook&logoColor=%23fc6c18)](https://main--672b9522ee5bda25942a731c.chromatic.com/?path=/docs/vectrealviewer--docs)
+
+A ready-to-use React component for rendering and interacting with 3D models. Built on top of [Three.js](https://threejs.org) and [React Three Fiber](https://docs.pmnd.rs/react-three-fiber/getting-started/introduction).
+
+> This package is still in active development. Breaking changes may occur before the first major release.
+
+---
+
+## Installation
+
+```bash
+npm install @vctrl/viewer
+# or
+pnpm add @vctrl/viewer
+```
+
+---
+
+## Quick start
+
+```tsx
+import { useLoadModel } from '@vctrl/hooks/use-load-model'
+import { VectrealViewer } from '@vctrl/viewer'
+import '@vctrl/viewer/css'
+
+function App() {
+  const { file } = useLoadModel()
+  return <VectrealViewer model={file.model} />
+}
+```
+
+> You **must** import the CSS bundle (`@vctrl/viewer/css`) for the viewer to render correctly.
+
+---
+
+## `VectrealViewer` props
+
+| Prop | Type | Required | Description |
+|---|---|---|---|
+| `model` | `Object3D` | No* | The Three.js scene to display. *Optional when using the `use-load-model` context. |
+| `className` | `string` | No | Additional CSS classes for the viewer container |
+| `cameraOptions` | `CameraProps` | No | Perspective camera configuration |
+| `controlsOptions` | `ControlsProps` | No | OrbitControls configuration |
+| `envOptions` | `EnvProps` | No | Stage and Environment component configuration |
+| `gridOptions` | `GridProps` | No | Floor grid configuration |
+| `loader` | `() => JSX.Element` | No | Custom loading component |
+
+---
+
+## Camera options (`CameraProps`)
+
+Based on [Three.js PerspectiveCamera](https://threejs.org/docs/#api/en/cameras/PerspectiveCamera).
+
+```jsx
+<VectrealViewer
+  cameraOptions={{
+    initialCameraPosition: new Vector3(0, 5, 5),
+    fov: 75,
+    near: 0.1,
+    far: 1000,
+  }}
+/>
+```
+
+---
+
+## Controls options (`ControlsProps`)
+
+Based on [@react-three/drei OrbitControls](https://github.com/pmndrs/drei#orbitcontrols).
+
+```jsx
+<VectrealViewer
+  controlsOptions={{
+    maxPolarAngle: Math.PI / 2,
+    autoRotate: true,
+    controlsTimeout: 2000,   // ms before auto-rotate resumes
+  }}
+/>
+```
+
+---
+
+## Environment options (`EnvProps`)
+
+Configures the [@react-three/drei `Stage`](https://github.com/pmndrs/drei#stage) and [`Environment`](https://github.com/pmndrs/drei#environment) components.
+
+```jsx
+<VectrealViewer
+  envOptions={{
+    env: { preset: 'studio' },
+    stage: { adjustCamera: 1.5 },
+    backgroundColor: 'maroon',
+  }}
+/>
+```
+
+---
+
+## Grid options (`GridProps`)
+
+Based on [@react-three/drei `Grid`](https://github.com/pmndrs/drei#grid).
+
+```jsx
+<VectrealViewer
+  gridOptions={{
+    showGrid: true,
+    cellSize: 0.5,
+    sectionSize: 5,
+    sectionColor: 'rgb(134, 73, 33)',
+    cellColor: 'rgb(100, 100, 100)',
+  }}
+/>
+```
+
+---
+
+## Integration with `@vctrl/hooks`
+
+The viewer is designed to be used alongside [`@vctrl/hooks`](/docs/packages/hooks). When you wrap your app with the `ModelProvider` context from `@vctrl/hooks`, the viewer automatically picks up the loaded model:
+
+```tsx
+import { ModelProvider, useLoadModel } from '@vctrl/hooks/use-load-model'
+import { VectrealViewer } from '@vctrl/viewer'
+import '@vctrl/viewer/css'
+
+function Scene() {
+  // No `model` prop needed — viewer reads from context
+  return <VectrealViewer />
+}
+
+export default function App() {
+  return (
+    <ModelProvider>
+      <Scene />
+    </ModelProvider>
+  )
+}
+```
+
+---
+
+## Development
+
+```bash
+# Build
+pnpm nx build vctrl/viewer
+
+# Test
+pnpm nx test vctrl/viewer
+
+# Storybook
+pnpm nx storybook vctrl/viewer
+```
+
+---
+
+## Source
+
+The full source and README live in [`packages/viewer/`](https://github.com/Vectreal/vectreal-platform/tree/main/packages/viewer).
