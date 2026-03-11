@@ -31,6 +31,16 @@ RUN corepack prepare pnpm@${PNPM_VERSION} --activate && \
 FROM deps AS build
 WORKDIR /app
 
+ARG BUILD_CSRF_SECRET=build-only-csrf-secret
+ARG BUILD_DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build
+ARG BUILD_SUPABASE_URL=https://build.invalid
+ARG BUILD_SUPABASE_KEY=build-only-supabase-key
+
+ENV CSRF_SECRET=${BUILD_CSRF_SECRET}
+ENV DATABASE_URL=${BUILD_DATABASE_URL}
+ENV SUPABASE_URL=${BUILD_SUPABASE_URL}
+ENV SUPABASE_KEY=${BUILD_SUPABASE_KEY}
+
 # Copy source and build application artifacts inside Docker
 COPY . .
 RUN pnpx nx build-ci vectreal-platform

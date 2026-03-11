@@ -162,6 +162,10 @@ jobs:
             --file ./apps/vectreal-platform/Dockerfile \
             --target runner \
             --build-arg NODE_ENV=${{ inputs.node-env }} \
+            --build-arg BUILD_CSRF_SECRET=${{ secrets.csrf-secret }} \
+            --build-arg BUILD_DATABASE_URL=${{ secrets.database-url }} \
+            --build-arg BUILD_SUPABASE_URL=${{ secrets.supabase-url }} \
+            --build-arg BUILD_SUPABASE_KEY=${{ secrets.supabase-key }} \
             --cache-from type=gha \
             --cache-to type=gha,mode=max \
             "${TAG_ARGS[@]}" \

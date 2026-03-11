@@ -60,6 +60,10 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       NX_DAEMON: 'false'
+      CSRF_SECRET: build-only-csrf-secret
+      DATABASE_URL: postgresql://build:build@127.0.0.1:5432/build
+      SUPABASE_URL: https://build.invalid
+      SUPABASE_KEY: build-only-supabase-key
     steps:
       - uses: actions/checkout@v4
         with:
