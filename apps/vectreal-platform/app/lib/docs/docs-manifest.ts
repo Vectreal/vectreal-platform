@@ -175,7 +175,8 @@ export const docsPages: DocPage[] = [
 		title: '@vctrl/viewer',
 		description:
 			'React component for rendering and interacting with 3D models in the browser.',
-		sourcePath: 'packages/viewer/README.md',
+		sourcePath:
+			'apps/vectreal-platform/app/routes/docs/packages/viewer.mdx',
 		category: 'packages',
 		order: 0,
 		version: 'latest'
@@ -185,7 +186,8 @@ export const docsPages: DocPage[] = [
 		title: '@vctrl/hooks',
 		description:
 			'React hooks for loading, optimising, and exporting 3D models in the browser.',
-		sourcePath: 'packages/hooks/README.md',
+		sourcePath:
+			'apps/vectreal-platform/app/routes/docs/packages/hooks.mdx',
 		category: 'packages',
 		order: 1,
 		version: 'latest'
@@ -195,7 +197,8 @@ export const docsPages: DocPage[] = [
 		title: '@vctrl/core',
 		description:
 			'Server-side 3D model processing — loader, optimizer, and exporter for Node.js.',
-		sourcePath: 'packages/core/README.md',
+		sourcePath:
+			'apps/vectreal-platform/app/routes/docs/packages/core.mdx',
 		category: 'packages',
 		order: 2,
 		version: 'latest'

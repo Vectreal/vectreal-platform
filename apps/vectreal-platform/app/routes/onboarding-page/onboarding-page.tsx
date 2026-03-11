@@ -13,15 +13,15 @@ import {
 	Zap
 } from 'lucide-react'
 import { useState } from 'react'
-import { Link, redirect } from 'react-router'
+import { Link } from 'react-router'
 
 import { Route } from './+types/onboarding-page'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	// Only authenticated users should reach this page
-	await loadAuthenticatedSession(request)
-	return {}
+	// Only authenticated users should reach this page; expose user data for personalisation
+	const { user, headers } = await loadAuthenticatedSession(request)
+	return Response.json({ user }, { headers: new Headers(headers) })
 }
 
 interface OnboardingStep {
@@ -145,9 +145,16 @@ const STEPS: OnboardingStep[] = [
 	}
 ]
 
-const OnboardingPage = () => {
+const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 	const [currentStep, setCurrentStep] = useState(0)
 	const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
+
+	// Extract display name for personalised welcome
+	const userName =
+		(loaderData as { user?: { user_metadata?: { name?: string }; email?: string } })
+			?.user?.user_metadata?.name ??
+		(loaderData as { user?: { email?: string } })?.user?.email?.split('@')[0] ??
+		null
 
 	const step = STEPS[currentStep]
 	const isFirst = currentStep === 0
@@ -230,7 +237,10 @@ const OnboardingPage = () => {
 
 					{/* Content */}
 					<h1 className="mb-3 text-2xl font-bold tracking-tight sm:text-3xl">
-						{step.title}
+						{/* Personalise the first step's title if we have a username */}
+						{step.id === 'welcome' && userName
+							? `Welcome, ${userName}!`
+							: step.title}
 					</h1>
 					<p className="text-muted-foreground mb-4 text-base leading-relaxed">
 						{step.description}
@@ -260,6 +270,7 @@ const OnboardingPage = () => {
 					{step.cta && (
 						<div className="mb-6">
 							{step.cta.external ? (
+								// External URL — open in new tab with ExternalLink icon
 								<Button variant="outline" size="sm" asChild>
 									<a
 										href={step.cta.to}
@@ -272,10 +283,11 @@ const OnboardingPage = () => {
 									</a>
 								</Button>
 							) : (
+								// Internal route — same-tab navigation with ArrowRight icon
 								<Button variant="outline" size="sm" asChild>
 									<Link to={step.cta.to} className="gap-2">
 										{step.cta.label}
-										<ExternalLink className="h-3.5 w-3.5" />
+										<ArrowRight className="h-3.5 w-3.5" />
 									</Link>
 								</Button>
 							)}
