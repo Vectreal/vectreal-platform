@@ -110,7 +110,7 @@ export const Navigation = ({ user }: NavigationProps) => {
 									aria-label="Go to Publisher"
 								>
 									<Rocket />
-									Visit Publisher
+									Start Publishing
 								</Link>
 							</Button>
 						</motion.div>

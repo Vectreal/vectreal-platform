@@ -22,7 +22,7 @@ import {
 	buildSceneMetrics,
 	formatMetricBytes,
 	formatMetricCount
-} from '../optimize-sidebar/scene-metrics'
+} from './scene-metrics'
 import { EmbedOptions } from './sections/embed-options'
 import { PublishOptions } from './sections/publish-options'
 import { SaveOptions } from './sections/save-options'
