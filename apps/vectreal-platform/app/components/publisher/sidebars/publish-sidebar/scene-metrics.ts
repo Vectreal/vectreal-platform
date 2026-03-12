@@ -1,8 +1,8 @@
 import { formatFileSize } from '@shared/utils'
 import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 
-import type { SizeInfo } from './use-optimization-process'
 import type { SceneStatsData } from '../../../../types/api'
+import type { SizeInfo } from '../optimize-sidebar/use-optimization-process'
 import type { OptimizationReport } from '@vctrl/core'
 
 interface BuildSceneMetricsParams {
@@ -45,19 +45,24 @@ export function buildSceneMetrics({
 		report?.stats.textures.after ??
 		textureSizeInitial
 	const textureCountInitial =
-		stats?.baseline?.texturesCount ?? report?.stats.texturesCount?.before ?? null
+		stats?.baseline?.texturesCount ??
+		report?.stats.texturesCount?.before ??
+		null
 	const textureCountOptimized =
 		stats?.optimized?.texturesCount ??
 		report?.stats.texturesCount?.after ??
 		textureCountInitial
-	const textureResolutionsInitial = report?.stats.textureResolutions?.before ?? []
+	const textureResolutionsInitial =
+		report?.stats.textureResolutions?.before ?? []
 	const textureResolutionsOptimized =
 		report?.stats.textureResolutions?.after ?? []
 
 	const sceneBytesInitial =
 		sizeInfo.initialSceneBytes ?? persistedInitialSceneBytes
 	const sceneBytesCurrent =
-		sizeInfo.currentSceneBytes ?? persistedCurrentSceneBytes ?? sceneBytesInitial
+		sizeInfo.currentSceneBytes ??
+		persistedCurrentSceneBytes ??
+		sceneBytesInitial
 
 	return {
 		vertexInitial: stats?.baseline?.verticesCount ?? info.initial.verticesCount,
