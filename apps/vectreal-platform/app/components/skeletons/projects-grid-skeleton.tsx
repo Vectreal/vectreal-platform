@@ -12,38 +12,17 @@ export function ProjectsGridSkeleton() {
 				{[1, 2, 3, 4, 5, 6].map((i) => (
 					<div key={i} className="bg-card rounded-3xl border p-4">
 						<div className="mb-3 flex items-start justify-between">
-							<Skeleton
-								className="h-5 w-5"
-								style={{ animationDelay: `${i * 50}ms` }}
-							/>
-							<Skeleton
-								className="h-5 w-5"
-								style={{ animationDelay: `${i * 50 + 25}ms` }}
-							/>
+							<Skeleton className="h-5 w-5" />
+							<Skeleton className="h-5 w-5" />
 						</div>
-						<Skeleton
-							className="mb-2 h-6 w-3/4"
-							style={{ animationDelay: `${i * 50 + 50}ms` }}
-						/>
-						<Skeleton
-							className="mb-3 h-4 w-full"
-							style={{ animationDelay: `${i * 50 + 75}ms` }}
-						/>
+						<Skeleton className="mb-2 h-6 w-3/4" />
+						<Skeleton className="mb-3 h-4 w-full" />
 						<div className="flex items-center justify-between">
 							<div className="flex gap-2">
-								<Skeleton
-									className="h-5 w-16"
-									style={{ animationDelay: `${i * 50 + 100}ms` }}
-								/>
-								<Skeleton
-									className="h-5 w-20"
-									style={{ animationDelay: `${i * 50 + 125}ms` }}
-								/>
+								<Skeleton className="h-5 w-16" />
+								<Skeleton className="h-5 w-20" />
 							</div>
-							<Skeleton
-								className="h-4 w-24"
-								style={{ animationDelay: `${i * 50 + 150}ms` }}
-							/>
+							<Skeleton className="h-4 w-24" />
 						</div>
 					</div>
 				))}

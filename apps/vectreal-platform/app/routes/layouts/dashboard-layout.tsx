@@ -13,12 +13,10 @@ import {
 	useLoaderData,
 	useLocation,
 	useNavigation,
-	useParams,
 	useRevalidator
 } from 'react-router'
 
 import { Route } from './+types/dashboard-layout'
-import CenteredSpinner from '../../components/centered-spinner'
 import {
 	DashboardHeader,
 	DashboardManagementDialogs,
@@ -31,7 +29,8 @@ import {
 	FolderContentSkeleton,
 	OrganizationsSkeleton,
 	ProjectContentSkeleton,
-	ProjectsGridSkeleton
+	ProjectsGridSkeleton,
+	SceneDetailsSkeleton
 } from '../../components/skeletons'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
 import { dashboardManagementStore } from '../../lib/stores/dashboard-management-store'
@@ -104,7 +103,6 @@ const DashboardLayout = () => {
 		setSidebarOpen(open)
 	}
 
-	const { sceneId } = useParams()
 	const isSearchParamOnlyNavigation =
 		navigation.state === 'loading' &&
 		navigation.location?.pathname === location.pathname
@@ -139,20 +137,20 @@ const DashboardLayout = () => {
 	const isProjectEditRoute = /\/dashboard\/projects\/[^/]+\/edit$/.test(path)
 	const isPublisherRoute = path.startsWith('/publisher')
 
+	const isFolderDetail = path.match(/\/dashboard\/projects\/[^/]+\/folder\//)
+	const isSceneDetail = path.match(/\/dashboard\/projects\/[^/]+\/[^/]+$/)
+	const isProjectDetail = path.match(/\/dashboard\/projects\/[^/]+$/)
+
 	// Determine which skeleton to show based on navigation location
 	const getNavigationSkeleton = () => {
 		if (!showSkeleton) return null
-
-		const isFolderDetail = path.match(/\/dashboard\/projects\/[^/]+\/folder\//)
-		const isSceneDetail = path.match(/\/dashboard\/projects\/[^/]+\/[^/]+$/)
-		const isProjectDetail = path.match(/\/dashboard\/projects\/[^/]+$/)
 
 		if (path === '/dashboard') return <DashboardSkeleton />
 		if (path === '/dashboard/organizations') return <OrganizationsSkeleton />
 		if (path === '/dashboard/projects') return <ProjectsGridSkeleton />
 		if (isProjectDetail) return <ProjectContentSkeleton />
 		if (isFolderDetail) return <FolderContentSkeleton />
-		if (isSceneDetail) return <CenteredSpinner text="Loading scene..." /> // Scene details can be variable, so we show a spinner instead of a skeleton
+		if (isSceneDetail) return <SceneDetailsSkeleton /> // Scene details can be variable, so we show a spinner instead of a skeleton
 
 		// Default skeleton
 		// return <CenteredSpinner text="Loading..." />
@@ -171,9 +169,9 @@ const DashboardLayout = () => {
 				</LogoSidebar>
 				<SidebarInset className="relative overflow-hidden">
 					<DashboardManagementDialogs />
-					{!sceneId && (
-						<div className="from-background/75 absolute top-0 z-50 h-20 w-full bg-gradient-to-b to-transparent" />
-					)}
+
+					<div className="from-muted/25 absolute top-0 z-50 h-20 w-full bg-gradient-to-b to-transparent" />
+
 					<div className="absolute z-50 flex items-center gap-4 p-4 px-6 pl-4">
 						<SidebarTrigger />
 						<div className="flex items-center gap-2">
@@ -183,7 +181,7 @@ const DashboardLayout = () => {
 							)}
 						</div>
 					</div>
-					{!sceneId && (
+					{!isSceneDetail && (
 						<div className="mt-16">
 							<DashboardHeader />
 						</div>

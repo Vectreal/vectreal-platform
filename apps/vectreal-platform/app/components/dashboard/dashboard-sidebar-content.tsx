@@ -20,7 +20,8 @@ import {
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
-	SidebarRail
+	SidebarRail,
+	useSidebar
 } from '@shared/components/ui/sidebar'
 import {
 	ArrowRight,
@@ -84,6 +85,11 @@ interface DashboardSidebarContentProps {
 
 const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
 	const { submit } = useFetcher()
+	const { toggleSidebar } = useSidebar()
+
+	const handleSidebarClose = () => {
+		toggleSidebar()
+	}
 
 	const userImageSrc = user?.user_metadata?.avatar_url || ''
 	const userName =
@@ -112,7 +118,12 @@ const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
 							{quickLinks.map((item) => (
 								<SidebarMenuItem key={item.title}>
 									<SidebarMenuButton asChild>
-										<Link viewTransition to={item.url ?? ''}>
+										<Link
+											viewTransition
+											to={item.url ?? ''}
+											onClick={handleSidebarClose}
+											aria-label={`Go to ${item.title}`}
+										>
 											<item.icon />
 											<span>{item.title}</span>
 											<ArrowRight className="ml-auto h-4 w-4" />
@@ -137,7 +148,11 @@ const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
 											: ''
 									}
 								>
-									<SidebarMenuButton disabled={item.disabled} asChild>
+									<SidebarMenuButton
+										disabled={item.disabled}
+										onClick={handleSidebarClose}
+										asChild
+									>
 										{item.disabled || !item.url ? (
 											<div>
 												<item.icon />
@@ -147,7 +162,11 @@ const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
 												</span>
 											</div>
 										) : (
-											<Link viewTransition to={item.url}>
+											<Link
+												viewTransition
+												to={item.url}
+												aria-label={`Go to ${item.title}`}
+											>
 												<item.icon />
 												<span>{item.title}</span>
 											</Link>
@@ -209,21 +228,33 @@ const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
 
 								<DropdownMenuSeparator />
 
-								<DropdownMenuItem asChild>
-									<Link to="/dashboard/organizations" viewTransition>
+								<DropdownMenuItem onClick={handleSidebarClose} asChild>
+									<Link
+										to="/dashboard/organizations"
+										viewTransition
+										aria-label="Go to Organizations"
+									>
 										<Building />
 										Organizations
 									</Link>
 								</DropdownMenuItem>
-								<DropdownMenuItem asChild>
-									<Link to="/dashboard/settings" viewTransition>
+								<DropdownMenuItem onClick={handleSidebarClose} asChild>
+									<Link
+										to="/dashboard/settings"
+										viewTransition
+										aria-label="Go to Settings"
+									>
 										<Settings />
 										Settings
 									</Link>
 								</DropdownMenuItem>
 								<DropdownMenuSeparator />
-								<DropdownMenuItem asChild>
-									<Link to="/docs" viewTransition>
+								<DropdownMenuItem onClick={handleSidebarClose} asChild>
+									<Link
+										to="/docs"
+										viewTransition
+										aria-label="Go to Documentation"
+									>
 										<HelpCircle />
 										Documentation
 									</Link>
