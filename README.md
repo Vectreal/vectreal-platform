@@ -7,7 +7,7 @@ _Deployment Actions_
 [![Production Deployment](https://img.shields.io/github/actions/workflow/status/vectreal/vectreal-platform/cd-platform-production.yaml?logo=github&label=Production%20Deployment&color=fc6c18)](https://github.com/Vectreal/vectreal-platform/actions)
 
 _See the viewer_  
-[![Storybook](https://img.shields.io/badge/Storybook-viewer-fc6c18?logo=storybook)](https://main--672b9522ee5bda25942a731c.chromatic.com/?path=/docs/vectrealviewer--docs)
+[![Storybook](https://img.shields.io/badge/Storybook-viewer-fc6c18?logo=storybook)](https://672b9522ee5bda25942a731c-cpdbatfvlf.chromatic.com)
 
 _NPM packages_  
 [![NPM Viewer](https://img.shields.io/npm/dm/%40vctrl%2Fviewer?logo=npm&label=%40vctrl/viewer)](https://npmjs.com/package/@vctrl/viewer)
