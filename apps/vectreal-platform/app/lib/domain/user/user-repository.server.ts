@@ -90,28 +90,30 @@ async function getOrCreateDefaultOrganizationDb(
 	dbClient: DbClient,
 	userId: string
 ): Promise<typeof organizations.$inferSelect> {
-	const existingOrg = await dbClient
-		.select({ organization: organizations })
-		.from(organizations)
-		.innerJoin(
-			organizationMemberships,
-			eq(organizationMemberships.organizationId, organizations.id)
-		)
-		.where(
-			and(
-				eq(organizationMemberships.userId, userId),
-				eq(organizationMemberships.role, 'owner'),
-				eq(organizations.name, 'My Organization')
+	return dbClient.transaction(async (tx) => {
+		const existingOrg = await tx
+			.select({ organization: organizations })
+			.from(organizations)
+			.innerJoin(
+				organizationMemberships,
+				eq(organizationMemberships.organizationId, organizations.id)
 			)
-		)
-		.limit(1)
-		.then((rows) => rows[0]?.organization)
+			.where(
+				and(
+					eq(organizationMemberships.userId, userId),
+					eq(organizationMemberships.role, 'owner'),
+					eq(organizations.name, 'My Organization')
+				)
+			)
+			.limit(1)
+			.then((rows) => rows[0]?.organization)
 
-	if (existingOrg) {
-		return existingOrg
-	}
+		if (existingOrg) {
+			return existingOrg
+		}
 
-	return await createOrganizationDb(dbClient, userId, 'My Organization')
+		return await createOrganizationDb(tx, userId, 'My Organization')
+	})
 }
 
 async function getUserOrganizationMembershipDb(
