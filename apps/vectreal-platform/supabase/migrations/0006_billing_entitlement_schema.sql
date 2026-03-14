@@ -91,16 +91,16 @@ CREATE INDEX "org_subscriptions_stripe_customer_id_idx" ON "org_subscriptions" U
 CREATE INDEX "org_subscriptions_billing_state_idx" ON "org_subscriptions" USING btree ("billing_state");--> statement-breakpoint
 
 -- Indexes for org_limit_overrides
-CREATE INDEX "org_limit_overrides_org_key_idx" ON "org_limit_overrides" USING btree ("organization_id", "limit_key");--> statement-breakpoint
+CREATE UNIQUE INDEX "org_limit_overrides_org_key_uidx" ON "org_limit_overrides" USING btree ("organization_id", "limit_key");--> statement-breakpoint
 
 -- Indexes for org_entitlement_overrides
-CREATE INDEX "org_entitlement_overrides_org_key_idx" ON "org_entitlement_overrides" USING btree ("organization_id", "entitlement_key");--> statement-breakpoint
+CREATE UNIQUE INDEX "org_entitlement_overrides_org_key_uidx" ON "org_entitlement_overrides" USING btree ("organization_id", "entitlement_key");--> statement-breakpoint
 
 -- Indexes for org_usage_counters
-CREATE INDEX "org_usage_counters_org_key_window_idx" ON "org_usage_counters" USING btree ("organization_id", "counter_key", "window_start");--> statement-breakpoint
+CREATE UNIQUE INDEX "org_usage_counters_org_key_window_uidx" ON "org_usage_counters" USING btree ("organization_id", "counter_key", "window_start");--> statement-breakpoint
 CREATE INDEX "org_usage_counters_window_end_idx" ON "org_usage_counters" USING btree ("window_end");--> statement-breakpoint
 
 -- Indexes for billing_webhook_events
-CREATE INDEX "billing_webhook_events_provider_event_id_idx" ON "billing_webhook_events" USING btree ("provider", "provider_event_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "billing_webhook_events_provider_event_id_uidx" ON "billing_webhook_events" USING btree ("provider", "provider_event_id");--> statement-breakpoint
 CREATE INDEX "billing_webhook_events_status_idx" ON "billing_webhook_events" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "billing_webhook_events_created_at_idx" ON "billing_webhook_events" USING btree ("created_at");

@@ -5,7 +5,7 @@
  *
  *   hasEntitlement(orgId, entitlementKey):
  *     1. Resolve org's current plan (considering billing state)
- *     2. If billing state blocks access → return false
+ *     2. If billing state is read-only and entitlement is mutating → return false
  *     3. Look up entitlement key in plan_entitlements map
  *     4. Check for org-level overrides (enterprise add-ons) → merge
  *     5. Return resolved boolean
@@ -16,11 +16,12 @@
 import { and, eq } from 'drizzle-orm'
 
 import {
-	BLOCKING_BILLING_STATES,
 	type BillingState,
 	type EntitlementKey,
 	type LimitKey,
 	type Plan,
+	isBillingStateDowngradedToFree,
+	isBillingStateReadOnly,
 	PLAN_ENTITLEMENTS,
 	PLAN_LIMITS
 } from '../../../constants/plan-config'
@@ -67,14 +68,19 @@ export interface QuotaDecision {
 
 /**
  * Resolves the effective plan considering the billing state.
- * If the billing state blocks access the org is treated as `free`.
+ * Billing states that downgrade to free are treated as `free`.
  */
 function resolveEffectivePlan(plan: Plan, billingState: BillingState): Plan {
-	if (BLOCKING_BILLING_STATES.has(billingState)) {
+	if (isBillingStateDowngradedToFree(billingState)) {
 		return 'free'
 	}
 	return plan
 }
+
+const READ_ONLY_BLOCKED_ENTITLEMENTS: ReadonlySet<EntitlementKey> = new Set([
+	'scene_upload',
+	'scene_publish'
+])
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -109,7 +115,7 @@ export async function getOrgSubscription(
  * Resolves whether an organisation has a specific entitlement.
  *
  * Resolution order:
- *   1. Determine effective plan (blocking billing states → free)
+ *   1. Determine effective plan (free-downgrade states → free)
  *   2. Look up plan baseline
  *   3. Merge org-level overrides
  */
@@ -121,6 +127,18 @@ export async function hasEntitlement(
 
 	const { plan, billingState } = await getOrgSubscription(organizationId)
 	const effectivePlan = resolveEffectivePlan(plan, billingState)
+
+	if (
+		isBillingStateReadOnly(billingState) &&
+		READ_ONLY_BLOCKED_ENTITLEMENTS.has(entitlementKey)
+	) {
+		return {
+			granted: false,
+			effectivePlan,
+			billingState,
+			overridden: false
+		}
+	}
 
 	// Baseline from plan matrix
 	const baseline = PLAN_ENTITLEMENTS[effectivePlan][entitlementKey]
@@ -195,4 +213,3 @@ export function getRecommendedUpgrade(currentPlan: Plan): Plan | null {
 	}
 	return upgradePath[currentPlan]
 }
-

@@ -1,9 +1,9 @@
 import {
 	boolean,
-	index,
 	pgTable,
 	text,
 	timestamp,
+	uniqueIndex,
 	uuid
 } from 'drizzle-orm/pg-core'
 
@@ -34,7 +34,7 @@ export const orgEntitlementOverrides = pgTable(
 			.defaultNow()
 	},
 	(table) => [
-		index('org_entitlement_overrides_org_key_idx').on(
+		uniqueIndex('org_entitlement_overrides_org_key_uidx').on(
 			table.organizationId,
 			table.entitlementKey
 		)

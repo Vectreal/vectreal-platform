@@ -70,10 +70,11 @@ export interface UsageCheckResult {
  */
 async function getOrCreateCounter(
 	organizationId: string,
-	counterKey: LimitKey
+	counterKey: LimitKey,
+	windowStart: Date,
+	windowEnd: Date
 ): Promise<{ id: string; value: number }> {
 	const db = getDbClient()
-	const { windowStart, windowEnd } = currentMonthWindow()
 
 	// Upsert the counter row for the current window
 	const [row] = await db
@@ -85,7 +86,13 @@ async function getOrCreateCounter(
 			windowStart,
 			windowEnd
 		})
-		.onConflictDoNothing()
+		.onConflictDoNothing({
+			target: [
+				orgUsageCounters.organizationId,
+				orgUsageCounters.counterKey,
+				orgUsageCounters.windowStart
+			]
+		})
 		.returning({ id: orgUsageCounters.id, value: orgUsageCounters.value })
 
 	if (row) {
@@ -113,25 +120,29 @@ async function getOrCreateCounter(
 	return existing
 }
 
+function ensurePositiveInteger(value: number, fieldName: string): void {
+	if (!Number.isInteger(value) || value <= 0) {
+		throw new Error(`${fieldName} must be a positive integer`)
+	}
+}
+
 /**
  * Atomically increments a usage counter by `delta` and returns the new value.
- * A `delta` of 0 is a no-op read.
+ * `delta` must be a positive integer.
  */
 export async function incrementUsage(
 	organizationId: string,
 	counterKey: LimitKey,
 	delta: number = 1
 ): Promise<number> {
-	if (delta === 0) {
-		const counter = await getOrCreateCounter(organizationId, counterKey)
-		return counter.value
-	}
+	ensurePositiveInteger(delta, 'delta')
+
+	const { windowStart, windowEnd } = currentMonthWindow()
 
 	const db = getDbClient()
-	const { windowStart } = currentMonthWindow()
 
 	// Ensure the row exists before updating
-	await getOrCreateCounter(organizationId, counterKey)
+	await getOrCreateCounter(organizationId, counterKey, windowStart, windowEnd)
 
 	const [updated] = await db
 		.update(orgUsageCounters)
@@ -158,16 +169,19 @@ export async function incrementUsage(
 
 /**
  * Atomically decrements a usage counter by `delta` (floors at 0).
+ * `delta` must be a positive integer.
  */
 export async function decrementUsage(
 	organizationId: string,
 	counterKey: LimitKey,
 	delta: number = 1
 ): Promise<number> {
-	const db = getDbClient()
-	const { windowStart } = currentMonthWindow()
+	ensurePositiveInteger(delta, 'delta')
 
-	await getOrCreateCounter(organizationId, counterKey)
+	const db = getDbClient()
+	const { windowStart, windowEnd } = currentMonthWindow()
+
+	await getOrCreateCounter(organizationId, counterKey, windowStart, windowEnd)
 
 	const [updated] = await db
 		.update(orgUsageCounters)
@@ -199,7 +213,14 @@ export async function getCurrentUsage(
 	organizationId: string,
 	counterKey: LimitKey
 ): Promise<number> {
-	return incrementUsage(organizationId, counterKey, 0)
+	const { windowStart, windowEnd } = currentMonthWindow()
+	const counter = await getOrCreateCounter(
+		organizationId,
+		counterKey,
+		windowStart,
+		windowEnd
+	)
+	return counter.value
 }
 
 // ---------------------------------------------------------------------------
@@ -223,6 +244,8 @@ export async function checkQuota(
 	counterKey: LimitKey,
 	delta: number = 1
 ): Promise<UsageCheckResult> {
+	ensurePositiveInteger(delta, 'delta')
+
 	const [{ limit }, currentValue] = await Promise.all([
 		getQuotaLimit(organizationId, counterKey),
 		getCurrentUsage(organizationId, counterKey)
@@ -264,10 +287,14 @@ export async function reconcileUsageCounter(
 	counterKey: LimitKey,
 	correctedValue: number
 ): Promise<void> {
-	const db = getDbClient()
-	const { windowStart } = currentMonthWindow()
+	if (!Number.isInteger(correctedValue) || correctedValue < 0) {
+		throw new Error('correctedValue must be a non-negative integer')
+	}
 
-	await getOrCreateCounter(organizationId, counterKey)
+	const db = getDbClient()
+	const { windowStart, windowEnd } = currentMonthWindow()
+
+	await getOrCreateCounter(organizationId, counterKey, windowStart, windowEnd)
 
 	await db
 		.update(orgUsageCounters)

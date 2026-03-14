@@ -5,15 +5,13 @@ import {
 	pgTable,
 	text,
 	timestamp,
+	uniqueIndex,
 	uuid
 } from 'drizzle-orm/pg-core'
 
 /**
  * Idempotency key registry for billing webhook events.
  * Prevents double-processing of provider webhook payloads.
- *
- * Keys are scoped to a provider + event ID pair and expire after a
- * retention window to keep the table small.
  */
 export const billingWebhookEventStatusEnum = pgEnum(
 	'billing_webhook_event_status',
@@ -42,7 +40,7 @@ export const billingWebhookEvents = pgTable(
 			.defaultNow()
 	},
 	(table) => [
-		index('billing_webhook_events_provider_event_id_idx').on(
+		uniqueIndex('billing_webhook_events_provider_event_id_uidx').on(
 			table.provider,
 			table.providerEventId
 		),

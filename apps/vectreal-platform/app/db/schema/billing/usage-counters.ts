@@ -4,6 +4,7 @@ import {
 	pgTable,
 	text,
 	timestamp,
+	uniqueIndex,
 	uuid
 } from 'drizzle-orm/pg-core'
 
@@ -43,7 +44,7 @@ export const orgUsageCounters = pgTable(
 			.defaultNow()
 	},
 	(table) => [
-		index('org_usage_counters_org_key_window_idx').on(
+		uniqueIndex('org_usage_counters_org_key_window_uidx').on(
 			table.organizationId,
 			table.counterKey,
 			table.windowStart

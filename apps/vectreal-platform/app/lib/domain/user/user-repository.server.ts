@@ -204,7 +204,9 @@ export async function createOrganization(
 export async function getOrCreateDefaultOrganization(
 	userId: string
 ): Promise<typeof organizations.$inferSelect> {
-	return await getOrCreateDefaultOrganizationDb(db, userId)
+	return await db.transaction(async (tx) => {
+		return await getOrCreateDefaultOrganizationDb(tx as DbClient, userId)
+	})
 }
 
 export async function getUserOrganizations(userId: string): Promise<

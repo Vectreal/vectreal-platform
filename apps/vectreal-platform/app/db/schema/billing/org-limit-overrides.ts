@@ -1,9 +1,9 @@
 import {
 	bigint,
-	index,
 	pgTable,
 	text,
 	timestamp,
+	uniqueIndex,
 	uuid
 } from 'drizzle-orm/pg-core'
 
@@ -38,7 +38,7 @@ export const orgLimitOverrides = pgTable(
 			.defaultNow()
 	},
 	(table) => [
-		index('org_limit_overrides_org_key_idx').on(
+		uniqueIndex('org_limit_overrides_org_key_uidx').on(
 			table.organizationId,
 			table.limitKey
 		)

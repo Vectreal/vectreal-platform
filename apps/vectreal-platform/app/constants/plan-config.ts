@@ -300,17 +300,23 @@ export const PLAN_LIMITS: Record<Plan, Record<LimitKey, number | null>> = {
 	}
 }
 
+/** Billing states that downgrade effective access to free-tier plan baselines. */
+export const BILLING_STATES_DOWNGRADED_TO_FREE: ReadonlySet<BillingState> =
+	new Set(['canceled', 'incomplete', 'incomplete_expired'])
+
 /**
- * Billing states that restrict access to plan entitlements.
- * When an org is in one of these states, all entitlements are downgraded
- * to the `free` plan baseline regardless of the subscribed plan.
+ * Billing states with read-only access semantics.
+ * These states keep the subscribed plan context but block mutation actions.
  */
-export const BLOCKING_BILLING_STATES: ReadonlySet<BillingState> = new Set([
+export const READ_ONLY_BILLING_STATES: ReadonlySet<BillingState> = new Set([
 	'unpaid',
-	'canceled',
-	'paused',
-	'incomplete',
-	'incomplete_expired'
+	'paused'
+])
+
+/** Billing states that do not grant full plan access. */
+export const BLOCKING_BILLING_STATES: ReadonlySet<BillingState> = new Set([
+	...BILLING_STATES_DOWNGRADED_TO_FREE,
+	...READ_ONLY_BILLING_STATES
 ])
 
 /**
@@ -319,4 +325,14 @@ export const BLOCKING_BILLING_STATES: ReadonlySet<BillingState> = new Set([
  */
 export function isBillingStateActive(state: BillingState): boolean {
 	return !BLOCKING_BILLING_STATES.has(state)
+}
+
+/** Returns true when the billing state should be treated as free-tier. */
+export function isBillingStateDowngradedToFree(state: BillingState): boolean {
+	return BILLING_STATES_DOWNGRADED_TO_FREE.has(state)
+}
+
+/** Returns true when the billing state should be treated as read-only. */
+export function isBillingStateReadOnly(state: BillingState): boolean {
+	return READ_ONLY_BILLING_STATES.has(state)
 }
