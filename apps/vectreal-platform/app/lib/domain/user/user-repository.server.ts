@@ -2,6 +2,7 @@
 import { and, eq } from 'drizzle-orm'
 
 import { getDbClient } from '../../../db/client'
+import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { organizationMemberships } from '../../../db/schema/core/organization-memberships'
 import { organizations } from '../../../db/schema/core/organizations'
 import { users } from '../../../db/schema/core/users'
@@ -71,6 +72,16 @@ async function createOrganizationDb(
 		organizationId: organization.id,
 		role: 'owner'
 	})
+
+	// Initialize billing subscription with free-plan defaults
+	await dbClient
+		.insert(orgSubscriptions)
+		.values({
+			organizationId: organization.id,
+			plan: 'free',
+			billingState: 'none'
+		})
+		.onConflictDoNothing()
 
 	return organization
 }

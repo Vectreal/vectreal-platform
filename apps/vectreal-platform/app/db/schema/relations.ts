@@ -2,6 +2,10 @@ import { relations } from 'drizzle-orm'
 
 import { apiKeyProjects } from './auth/api-key-projects'
 import { apiKeys } from './auth/api-keys'
+import { orgEntitlementOverrides } from './billing/org-entitlement-overrides'
+import { orgLimitOverrides } from './billing/org-limit-overrides'
+import { orgSubscriptions } from './billing/subscriptions'
+import { orgUsageCounters } from './billing/usage-counters'
 import { organizationMemberships } from './core/organization-memberships'
 import { organizations } from './core/organizations'
 import { users } from './core/users'
@@ -25,7 +29,14 @@ export const organizationsRelations = relations(
 		}),
 		projects: many(projects),
 		memberships: many(organizationMemberships),
-		apiKeys: many(apiKeys)
+		apiKeys: many(apiKeys),
+		subscription: one(orgSubscriptions, {
+			fields: [organizations.id],
+			references: [orgSubscriptions.organizationId]
+		}),
+		limitOverrides: many(orgLimitOverrides),
+		entitlementOverrides: many(orgEntitlementOverrides),
+		usageCounters: many(orgUsageCounters)
 	})
 )
 
@@ -218,3 +229,44 @@ export const scenePublishedRelations = relations(scenePublished, ({ one }) => ({
 		references: [users.id]
 	})
 }))
+
+// Billing relations
+export const orgSubscriptionsRelations = relations(
+	orgSubscriptions,
+	({ one }) => ({
+		organization: one(organizations, {
+			fields: [orgSubscriptions.organizationId],
+			references: [organizations.id]
+		})
+	})
+)
+
+export const orgLimitOverridesRelations = relations(
+	orgLimitOverrides,
+	({ one }) => ({
+		organization: one(organizations, {
+			fields: [orgLimitOverrides.organizationId],
+			references: [organizations.id]
+		})
+	})
+)
+
+export const orgEntitlementOverridesRelations = relations(
+	orgEntitlementOverrides,
+	({ one }) => ({
+		organization: one(organizations, {
+			fields: [orgEntitlementOverrides.organizationId],
+			references: [organizations.id]
+		})
+	})
+)
+
+export const orgUsageCountersRelations = relations(
+	orgUsageCounters,
+	({ one }) => ({
+		organization: one(organizations, {
+			fields: [orgUsageCounters.organizationId],
+			references: [organizations.id]
+		})
+	})
+)

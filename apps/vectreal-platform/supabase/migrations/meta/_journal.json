@@ -43,6 +43,20 @@
       "when": 1772761296361,
       "tag": "0005_slow_kinsey_walden",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1773496044536,
+      "tag": "0006_billing_entitlement_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1773496044537,
+      "tag": "0007_backfill_org_subscriptions",
+      "breakpoints": true
     }
   ]
 }
