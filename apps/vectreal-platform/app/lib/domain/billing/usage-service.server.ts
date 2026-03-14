@@ -129,6 +129,7 @@ function ensurePositiveInteger(value: number, fieldName: string): void {
 /**
  * Atomically increments a usage counter by `delta` and returns the new value.
  * `delta` must be a positive integer.
+ * @throws {Error} When `delta` is not a positive integer.
  */
 export async function incrementUsage(
 	organizationId: string,
@@ -170,6 +171,7 @@ export async function incrementUsage(
 /**
  * Atomically decrements a usage counter by `delta` (floors at 0).
  * `delta` must be a positive integer.
+ * @throws {Error} When `delta` is not a positive integer.
  */
 export async function decrementUsage(
 	organizationId: string,
@@ -281,6 +283,7 @@ export async function checkQuota(
 /**
  * Resets a specific counter to a given absolute value for the current window.
  * Intended for use in reconciliation / correction runbooks.
+ * @throws {Error} When `correctedValue` is negative or non-integer.
  */
 export async function reconcileUsageCounter(
 	organizationId: string,
