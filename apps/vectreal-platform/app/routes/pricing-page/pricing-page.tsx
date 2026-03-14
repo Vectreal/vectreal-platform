@@ -11,6 +11,7 @@ import {
 import { Separator } from '@shared/components/ui/separator'
 import { cn } from '@shared/utils'
 import { Check, Minus, Zap } from 'lucide-react'
+import React from 'react'
 import { Link } from 'react-router'
 
 import {
@@ -366,8 +367,8 @@ export default function PricingPage() {
 						</thead>
 						<tbody>
 							{FEATURE_GROUPS.map(({ label, features }) => (
-								<>
-									<tr key={label} className="bg-muted/30">
+								<React.Fragment key={label}>
+									<tr className="bg-muted/30">
 										<td
 											colSpan={PLANS.length + 1}
 											className="py-2 pr-4 text-xs font-semibold tracking-wider uppercase"
@@ -385,7 +386,7 @@ export default function PricingPage() {
 											}))}
 										/>
 									))}
-								</>
+								</React.Fragment>
 							))}
 						</tbody>
 					</table>

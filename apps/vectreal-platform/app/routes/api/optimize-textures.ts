@@ -19,7 +19,10 @@ import { TextureCompressOptions } from '@vctrl/core'
 import { data } from 'react-router'
 
 import { Route } from './+types/optimize-textures'
-import { getRecommendedUpgrade } from '../../lib/domain/billing/entitlement-service.server'
+import {
+	getOrgSubscription,
+	getRecommendedUpgrade
+} from '../../lib/domain/billing/entitlement-service.server'
 import {
 	checkQuota,
 	incrementUsage
@@ -134,16 +137,15 @@ export async function action({ request }: Route.ActionArgs) {
 	)
 
 	if (quotaCheck.outcome === 'hard_limit_exceeded') {
-		const upgradeTo = getRecommendedUpgrade(
-			quotaCheck.limit === null ? 'enterprise' : 'free'
-		)
+		const { plan } = await getOrgSubscription(organizationId)
+		const upgradeTo = getRecommendedUpgrade(plan)
 		return ApiResponse.quotaExceeded(
 			'Monthly optimization limit reached. Upgrade your plan to continue optimizing.',
 			{
 				limitKey: 'optimization_runs_per_month',
 				currentValue: quotaCheck.currentValue,
 				limit: quotaCheck.limit,
-				plan: 'free',
+				plan,
 				upgradeTo
 			}
 		)

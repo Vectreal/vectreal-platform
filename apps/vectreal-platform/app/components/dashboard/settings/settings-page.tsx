@@ -7,7 +7,9 @@ import type { loader } from '../../../routes/dashboard-page/settings'
 export default function SettingsPage() {
 	const { billing } = useLoaderData<typeof loader>()
 	const [searchParams] = useSearchParams()
-	const upgradeTarget = searchParams.get('upgrade')
+	const upgradeParam = searchParams.get('upgrade')
+	const upgradeTarget =
+		upgradeParam === 'pro' || upgradeParam === 'business' ? upgradeParam : null
 
 	return (
 		<div className="space-y-10 p-6">
@@ -22,9 +24,7 @@ export default function SettingsPage() {
 				<h2 className="text-lg font-semibold">Billing &amp; Plan</h2>
 				<BillingSettingsSection
 					billing={billing}
-					defaultUpgradeTarget={
-						upgradeTarget as 'pro' | 'business' | null ?? null
-					}
+					defaultUpgradeTarget={upgradeTarget}
 				/>
 			</section>
 		</div>

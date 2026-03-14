@@ -295,26 +295,27 @@ export function BillingSettingsSection({
 			{/* Usage summary */}
 			<Card>
 				<CardHeader>
-					<CardTitle className="text-base">Usage this month</CardTitle>
+					<CardTitle className="text-base">Usage &amp; limits</CardTitle>
 					<CardDescription>
-						Counters reset at the start of each calendar month (UTC).
+						Cumulative totals for your organisation. Monthly counters (e.g.
+						optimization runs) reset at the start of each calendar month (UTC).
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-4">
 					<UsageRow
-						label="Scenes"
+						label="Scenes (total)"
 						current={usage.scenesTotal}
 						limit={usage.sceneLimit}
 					/>
 					<Separator />
 					<UsageRow
-						label="Optimization runs"
+						label="Optimization runs (this month)"
 						current={usage.optimizationRuns}
 						limit={usage.optimizationLimit}
 					/>
 					<Separator />
 					<UsageRow
-						label="Projects"
+						label="Projects (total)"
 						current={usage.projectsTotal}
 						limit={usage.projectsLimit}
 					/>
