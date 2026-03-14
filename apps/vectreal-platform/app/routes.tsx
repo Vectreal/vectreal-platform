@@ -18,20 +18,22 @@ export default [
 	route('api/scenes/:sceneId?', './routes/api/scenes.$sceneId.ts'),
 	route('api/scene-location-options', './routes/api/scene-location-options.ts'),
 	route('api/optimize-textures', './routes/api/optimize-textures.ts'),
-	// AUTH API
+
+	// Auth api
 	route('auth/logout', './routes/api/auth/logout.ts'),
 	route('auth/social-signin', './routes/api/auth/social-signin.ts'),
 	route('auth/callback', './routes/api/auth/callback.ts'),
 	route('auth/confirm', './routes/api/auth/confirm.ts'),
-	// BILLING API
+
+	// Billing api
 	route('api/billing/checkout', './routes/api/billing/checkout.ts'),
 	route('api/billing/portal', './routes/api/billing/portal.ts'),
 	route('api/billing/webhook', './routes/api/billing/webhook.ts'),
 	route('api/billing/reconcile', './routes/api/billing/reconcile.ts'),
 
 	/// PAGES
-	// sign-in and sign-up
 	layout('./routes/layouts/nav-layout.tsx', [
+		// sign-in and sign-up
 		layout('./routes/layouts/signin-layout.tsx', [
 			route('sign-up', './routes/signup-page/signup-page.tsx'),
 			route('sign-in', './routes/signin-page/signin-page.tsx')
@@ -96,7 +98,7 @@ export default [
 	// First-run onboarding (standalone page, no nav layout)
 	route('onboarding', './routes/onboarding-page/onboarding-page.tsx'),
 
-	// publisher
+	// Publisher
 	layout('./routes/layouts/publisher-layout.tsx', [
 		route(
 			'publisher/:sceneId?',
@@ -104,7 +106,7 @@ export default [
 		)
 	]),
 
-	// preview page for scenes
+	// Preview page for scenes
 	layout('./routes/layouts/preview-layout.tsx', [
 		route(
 			'preview/fullscreen/:projectId/:sceneId/',
@@ -116,7 +118,7 @@ export default [
 		)
 	]),
 
-	// dashboard - each route handles its own data loading
+	// Dashboard - each route handles its own data loading
 	...prefix('dashboard', [
 		layout('./routes/layouts/dashboard-layout.tsx', [
 			index('./routes/dashboard-page/dashboard-page.tsx'),
