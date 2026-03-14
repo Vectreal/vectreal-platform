@@ -6,8 +6,15 @@ import { SerializedSceneAssetDataMap, SceneSettings } from '@vctrl/core'
 import { getSceneFolder } from './scene-folder-repository.server'
 import { sceneSettingsService } from './scene-settings-service.server'
 import { uploadSceneAssets } from '../../asset/asset-storage.server'
+import {
+	getRecommendedUpgrade,
+	getOrgSubscription
+} from '../../billing/entitlement-service.server'
+import { QuotaExceededError } from '../../billing/quota-exceeded-error'
+import { checkQuota } from '../../billing/usage-service.server'
 import { getProject } from '../../project/project-repository.server'
 import {
+	getOrCreateDefaultOrganization,
 	getOrCreateDefaultProject,
 	userExists
 } from '../../user/user-repository.server'
@@ -151,6 +158,26 @@ export async function prepareSceneUpload(
 		throw new Error(
 			'User not found in local database. Please sign out and sign back in.'
 		)
+	}
+
+	// Enforce scenes_total quota when a new scene is being created (no existing sceneId)
+	const isNewScene = !request.sceneId?.trim()
+	if (isNewScene) {
+		const organization = await getOrCreateDefaultOrganization(userId)
+		const quotaCheck = await checkQuota(organization.id, 'scenes_total')
+		if (quotaCheck.outcome === 'hard_limit_exceeded') {
+			const { plan } = await getOrgSubscription(organization.id)
+			const upgradeTo = getRecommendedUpgrade(plan)
+			throw new QuotaExceededError({
+				limitKey: 'scenes_total',
+				currentValue: quotaCheck.currentValue,
+				limit: quotaCheck.limit,
+				plan,
+				upgradeTo,
+				message:
+					'Scene limit reached for your plan. Upgrade to create more scenes.'
+			})
+		}
 	}
 
 	return resolveSceneAndProject(

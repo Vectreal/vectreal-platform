@@ -48,6 +48,8 @@ export default [
 		route('home', './routes/home-page/home-page.tsx', {
 			id: 'home-page'
 		}),
+		// Pricing page
+		route('pricing', './routes/pricing-page/pricing-page.tsx'),
 		layout('./routes/layouts/mdx-layout.tsx', [
 			route('about', './routes/about-page.mdx'),
 			route('changelog', './routes/changelog-page.mdx'),
