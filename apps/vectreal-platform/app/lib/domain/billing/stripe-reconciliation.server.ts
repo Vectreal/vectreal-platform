@@ -20,17 +20,18 @@
  */
 
 import { isNotNull } from 'drizzle-orm'
-import type Stripe from 'stripe'
 
-import { type BillingState, type Plan } from '../../../constants/plan-config'
-import { getDbClient } from '../../../db/client'
-import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
-import { getStripeClient } from '../../stripe.server'
 import {
 	mapStripeStatusToBillingState,
 	resolvePlanFromSubscription,
 	syncSubscriptionFromStripe
 } from './stripe-subscription-sync.server'
+import { type BillingState, type Plan } from '../../../constants/plan-config'
+import { getDbClient } from '../../../db/client'
+import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
+import { getStripeClient } from '../../stripe.server'
+
+import type Stripe from 'stripe'
 
 // ---------------------------------------------------------------------------
 // Types

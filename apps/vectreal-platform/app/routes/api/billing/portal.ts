@@ -30,9 +30,9 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 		return ApiResponse.methodNotAllowed()
 	}
 
-	const { user, userWithDefaults, headers } = await loadAuthenticatedUser(
-		request
-	)
+	const { user, userWithDefaults, headers } =
+		await loadAuthenticatedUser(request)
+	const responseHeaders = new Headers(headers)
 
 	const organizationId = userWithDefaults.organization.id
 
@@ -45,7 +45,7 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 	if (!membership || !['owner', 'admin'].includes(membership.membership.role)) {
 		return ApiResponse.forbidden(
 			'Only organization owners and admins can access the billing portal',
-			{ headers }
+			{ headers: responseHeaders }
 		)
 	}
 
@@ -61,7 +61,7 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 		return ApiResponse.error(
 			'No billing account found for this organization. Please complete a checkout first.',
 			400,
-			{ headers }
+			{ headers: responseHeaders }
 		)
 	}
 
@@ -82,6 +82,6 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 
 	return ApiResponse.created(
 		{ portalUrl: portalSession.url },
-		{ headers }
+		{ headers: responseHeaders }
 	)
 }

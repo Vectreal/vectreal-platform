@@ -127,10 +127,12 @@ export async function syncSubscriptionFromStripe(
 	)
 
 	const billingState = mapStripeStatusToBillingState(subscription.status)
+	const firstSubscriptionItem = subscription.items.data[0]
 
 	const currentPeriodEnd =
-		typeof subscription.current_period_end === 'number'
-			? new Date(subscription.current_period_end * 1000)
+		firstSubscriptionItem &&
+		typeof firstSubscriptionItem.current_period_end === 'number'
+			? new Date(firstSubscriptionItem.current_period_end * 1000)
 			: null
 
 	const trialEnd =

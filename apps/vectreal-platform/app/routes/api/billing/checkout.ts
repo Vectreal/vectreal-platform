@@ -31,9 +31,7 @@ import { Route } from './+types/checkout'
 import { getDbClient } from '../../../db/client'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
-import {
-	getUserOrganizations
-} from '../../../lib/domain/user/user-repository.server'
+import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
 import { getStripeClient } from '../../../lib/stripe.server'
 
 // ---------------------------------------------------------------------------
@@ -55,9 +53,9 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 		return ApiResponse.methodNotAllowed()
 	}
 
-	const { user, userWithDefaults, headers } = await loadAuthenticatedUser(
-		request
-	)
+	const { user, userWithDefaults, headers } =
+		await loadAuthenticatedUser(request)
+	const responseHeaders = new Headers(headers)
 
 	let body: { planId?: unknown; priceId?: unknown; billingPeriod?: unknown }
 
@@ -103,7 +101,7 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 	if (!membership || !['owner', 'admin'].includes(membership.membership.role)) {
 		return ApiResponse.forbidden(
 			'Only organization owners and admins can manage billing',
-			{ headers }
+			{ headers: responseHeaders }
 		)
 	}
 
@@ -128,7 +126,7 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 		customer: existingSub?.stripeCustomerId ?? undefined,
 		customer_email: existingSub?.stripeCustomerId
 			? undefined
-			: user.email ?? undefined,
+			: (user.email ?? undefined),
 		line_items: [{ price: priceId, quantity: 1 }],
 		success_url: `${baseUrl}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
 		cancel_url: `${baseUrl}/dashboard?checkout=canceled`,
@@ -158,6 +156,6 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 
 	return ApiResponse.created(
 		{ checkoutUrl: session.url },
-		{ headers }
+		{ headers: responseHeaders }
 	)
 }

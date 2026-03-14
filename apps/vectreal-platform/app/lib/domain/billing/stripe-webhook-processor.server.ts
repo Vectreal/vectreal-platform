@@ -27,16 +27,19 @@
 import { eq } from 'drizzle-orm'
 import Stripe from 'stripe'
 
-import { getDbClient } from '../../../db/client'
-import { billingWebhookEvents } from '../../../db/schema/billing/webhook-events'
-import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
-import { getStripeClient, resolveStripeWebhookSecret } from '../../stripe.server'
 import {
 	cancelSubscription,
 	findOrganizationByCustomerId,
 	findOrganizationBySubscriptionId,
 	syncSubscriptionFromStripe
 } from './stripe-subscription-sync.server'
+import { getDbClient } from '../../../db/client'
+import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
+import { billingWebhookEvents } from '../../../db/schema/billing/webhook-events'
+import {
+	getStripeClient,
+	resolveStripeWebhookSecret
+} from '../../stripe.server'
 
 // ---------------------------------------------------------------------------
 // Signature verification
@@ -197,14 +200,20 @@ async function handleSubscriptionDeleted(
 	await cancelSubscription(subscription.id)
 }
 
+function getSubscriptionIdFromInvoice(invoice: Stripe.Invoice): string | null {
+	const subscription = invoice.parent?.subscription_details?.subscription
+	if (!subscription) {
+		return null
+	}
+
+	return typeof subscription === 'string' ? subscription : subscription.id
+}
+
 async function handleInvoicePaymentSucceeded(
 	invoice: Stripe.Invoice
 ): Promise<void> {
 	const db = getDbClient()
-	const subscriptionId =
-		typeof invoice.subscription === 'string'
-			? invoice.subscription
-			: invoice.subscription?.id
+	const subscriptionId = getSubscriptionIdFromInvoice(invoice)
 
 	if (!subscriptionId) return
 
@@ -225,10 +234,7 @@ async function handleInvoicePaymentFailed(
 	invoice: Stripe.Invoice
 ): Promise<void> {
 	const db = getDbClient()
-	const subscriptionId =
-		typeof invoice.subscription === 'string'
-			? invoice.subscription
-			: invoice.subscription?.id
+	const subscriptionId = getSubscriptionIdFromInvoice(invoice)
 
 	if (!subscriptionId) return
 
@@ -307,33 +313,23 @@ async function dispatchEvent(event: Stripe.Event): Promise<void> {
 
 		case 'customer.subscription.created':
 		case 'customer.subscription.updated':
-			await handleSubscriptionUpdated(
-				event.data.object as Stripe.Subscription
-			)
+			await handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
 			break
 
 		case 'customer.subscription.deleted':
-			await handleSubscriptionDeleted(
-				event.data.object as Stripe.Subscription
-			)
+			await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
 			break
 
 		case 'customer.subscription.paused':
-			await handleSubscriptionPaused(
-				event.data.object as Stripe.Subscription
-			)
+			await handleSubscriptionPaused(event.data.object as Stripe.Subscription)
 			break
 
 		case 'customer.subscription.resumed':
-			await handleSubscriptionResumed(
-				event.data.object as Stripe.Subscription
-			)
+			await handleSubscriptionResumed(event.data.object as Stripe.Subscription)
 			break
 
 		case 'invoice.payment_succeeded':
-			await handleInvoicePaymentSucceeded(
-				event.data.object as Stripe.Invoice
-			)
+			await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice)
 			break
 
 		case 'invoice.payment_failed':
