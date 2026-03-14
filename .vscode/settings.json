@@ -21,5 +21,34 @@
 		"pnpm dlx nx": true,
 		"pnpx nx": true,
 		"pnpm exec nx": true
-	}
+	},
+	"github.copilot.chat.codeGeneration.instructions": [
+		{
+			"text": "This is a pnpm + Nx monorepo. Always run tasks via `nx` (e.g. `nx run <project>:<task>`). Never call tsc, vite, jest, or other tools directly."
+		},
+		{
+			"text": "The platform app uses React Router v7 framework mode with SSR. Use loaders, actions, Route.LoaderArgs, and Route.ActionArgs. Follow framework-mode conventions — not SPA patterns."
+		},
+		{
+			"text": "Use Drizzle ORM for all database access. Schemas are under apps/vectreal-platform/app/db/schema/. Use RLS helpers from apps/vectreal-platform/app/db/schema/rls.ts."
+		},
+		{
+			"file": "prd/01-plans-and-tiers.md"
+		},
+		{
+			"file": "prd/02-limits-and-quotas.md"
+		},
+		{
+			"file": "prd/03-entitlements.md"
+		},
+		{
+			"file": "prd/04-billing-states.md"
+		},
+		{
+			"file": "prd/05-consent-categories.md"
+		},
+		{
+			"file": "prd/06-analytics-event-taxonomy.md"
+		}
+	]
 }
