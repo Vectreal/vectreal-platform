@@ -20,13 +20,11 @@ interface SidebarComponentProps {
 interface LogoSidebarProps extends PropsWithChildren, SidebarComponentProps {
 	smallLogo?: boolean
 	className?: string
-	open?: boolean
 }
 
 const LogoSidebar = ({ children, ...sidebarProps }: LogoSidebarProps) => {
-	const { smallLogo, open, ...rest } = sidebarProps
-
-	const { openMobile, toggleSidebar } = useSidebar()
+	const { smallLogo, ...rest } = sidebarProps
+	const { open, openMobile, toggleSidebar } = useSidebar()
 
 	const sidebarDefaultProps = {
 		collapsible: 'icon',
@@ -54,7 +52,7 @@ const LogoSidebar = ({ children, ...sidebarProps }: LogoSidebarProps) => {
 							className="overflow-clip md:h-8 md:p-0"
 						>
 							<Link to="/dashboard" viewTransition>
-								{smallLogo ? (
+								{smallLogo || !open ? (
 									<div className="flex aspect-square size-8 items-center">
 										<VectrealLogoSmall className="text-accent fill-accent size-4" />
 									</div>
