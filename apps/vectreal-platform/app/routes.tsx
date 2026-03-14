@@ -23,6 +23,11 @@ export default [
 	route('auth/social-signin', './routes/api/auth/social-signin.ts'),
 	route('auth/callback', './routes/api/auth/callback.ts'),
 	route('auth/confirm', './routes/api/auth/confirm.ts'),
+	// BILLING API
+	route('api/billing/checkout', './routes/api/billing/checkout.ts'),
+	route('api/billing/portal', './routes/api/billing/portal.ts'),
+	route('api/billing/webhook', './routes/api/billing/webhook.ts'),
+	route('api/billing/reconcile', './routes/api/billing/reconcile.ts'),
 
 	/// PAGES
 	// sign-in and sign-up
