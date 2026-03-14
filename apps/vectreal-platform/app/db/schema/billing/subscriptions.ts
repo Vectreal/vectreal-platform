@@ -62,7 +62,6 @@ export const orgSubscriptions = pgTable(
 			.defaultNow()
 	},
 	(table) => [
-		index('org_subscriptions_organization_id_idx').on(table.organizationId),
 		index('org_subscriptions_stripe_subscription_id_idx').on(
 			table.stripeSubscriptionId
 		),

@@ -34,7 +34,7 @@ export const orgUsageCounters = pgTable(
 		 * For byte-based counters this is in bytes; for count-based counters it is
 		 * an integer count.
 		 */
-		value: bigint('value', { mode: 'number' }).notNull().default(0),
+		value: bigint('value', { mode: 'bigint' }).notNull().default(BigInt(0)),
 		/** Start of the current measurement window (UTC). */
 		windowStart: timestamp('window_start', { withTimezone: true }).notNull(),
 		/** End of the current measurement window (UTC). */

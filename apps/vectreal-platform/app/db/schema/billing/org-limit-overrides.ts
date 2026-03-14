@@ -29,7 +29,7 @@ export const orgLimitOverrides = pgTable(
 		 * Override value in the limit's native unit.
 		 * NULL means unlimited (used for enterprise "Custom" entries).
 		 */
-		limitValue: bigint('limit_value', { mode: 'number' }),
+		limitValue: bigint('limit_value', { mode: 'bigint' }),
 		createdAt: timestamp('created_at', { withTimezone: true })
 			.notNull()
 			.defaultNow(),

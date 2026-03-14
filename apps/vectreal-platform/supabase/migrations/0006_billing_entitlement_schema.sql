@@ -85,7 +85,6 @@ ALTER TABLE "org_usage_counters" ADD CONSTRAINT "org_usage_counters_organization
 	FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 
 -- Indexes for org_subscriptions
-CREATE INDEX "org_subscriptions_organization_id_idx" ON "org_subscriptions" USING btree ("organization_id");--> statement-breakpoint
 CREATE INDEX "org_subscriptions_stripe_subscription_id_idx" ON "org_subscriptions" USING btree ("stripe_subscription_id");--> statement-breakpoint
 CREATE INDEX "org_subscriptions_stripe_customer_id_idx" ON "org_subscriptions" USING btree ("stripe_customer_id");--> statement-breakpoint
 CREATE INDEX "org_subscriptions_billing_state_idx" ON "org_subscriptions" USING btree ("billing_state");--> statement-breakpoint

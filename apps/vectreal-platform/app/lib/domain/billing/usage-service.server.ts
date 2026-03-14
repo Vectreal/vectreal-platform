@@ -17,6 +17,7 @@
 import { and, eq, lt, sql } from 'drizzle-orm'
 
 import { getQuotaLimit } from './entitlement-service.server'
+import { toSafeNumberFromBigInt } from './number-utils.server'
 import { type LimitKey } from '../../../constants/plan-config'
 import { getDbClient } from '../../../db/client'
 import { orgUsageCounters } from '../../../db/schema/billing/usage-counters'
@@ -82,7 +83,7 @@ async function getOrCreateCounter(
 		.values({
 			organizationId,
 			counterKey,
-			value: 0,
+			value: BigInt(0),
 			windowStart,
 			windowEnd
 		})
@@ -96,7 +97,7 @@ async function getOrCreateCounter(
 		.returning({ id: orgUsageCounters.id, value: orgUsageCounters.value })
 
 	if (row) {
-		return row
+		return { id: row.id, value: toSafeNumberFromBigInt(row.value, 'counterValue') }
 	}
 
 	// Row already exists — fetch it
@@ -117,7 +118,10 @@ async function getOrCreateCounter(
 			`Failed to get or create usage counter for org=${organizationId} key=${counterKey}`
 		)
 	}
-	return existing
+	return {
+		id: existing.id,
+		value: toSafeNumberFromBigInt(existing.value, 'counterValue')
+	}
 }
 
 function ensurePositiveInteger(value: number, fieldName: string): void {
@@ -137,6 +141,7 @@ export async function incrementUsage(
 	delta: number = 1
 ): Promise<number> {
 	ensurePositiveInteger(delta, 'delta')
+	const deltaBigInt = BigInt(delta)
 
 	const { windowStart, windowEnd } = currentMonthWindow()
 
@@ -148,7 +153,7 @@ export async function incrementUsage(
 	const [updated] = await db
 		.update(orgUsageCounters)
 		.set({
-			value: sql`${orgUsageCounters.value} + ${delta}`,
+			value: sql`${orgUsageCounters.value} + ${deltaBigInt}`,
 			updatedAt: new Date()
 		})
 		.where(
@@ -165,7 +170,7 @@ export async function incrementUsage(
 			`Failed to increment usage counter for org=${organizationId} key=${counterKey}`
 		)
 	}
-	return updated.value
+	return toSafeNumberFromBigInt(updated.value, 'counterValue')
 }
 
 /**
@@ -179,6 +184,7 @@ export async function decrementUsage(
 	delta: number = 1
 ): Promise<number> {
 	ensurePositiveInteger(delta, 'delta')
+	const deltaBigInt = BigInt(delta)
 
 	const db = getDbClient()
 	const { windowStart, windowEnd } = currentMonthWindow()
@@ -188,7 +194,7 @@ export async function decrementUsage(
 	const [updated] = await db
 		.update(orgUsageCounters)
 		.set({
-			value: sql`greatest(${orgUsageCounters.value} - ${delta}, 0)`,
+			value: sql`greatest(${orgUsageCounters.value} - ${deltaBigInt}, 0)`,
 			updatedAt: new Date()
 		})
 		.where(
@@ -205,7 +211,7 @@ export async function decrementUsage(
 			`Failed to decrement usage counter for org=${organizationId} key=${counterKey}`
 		)
 	}
-	return updated.value
+	return toSafeNumberFromBigInt(updated.value, 'counterValue')
 }
 
 /**
@@ -301,7 +307,7 @@ export async function reconcileUsageCounter(
 
 	await db
 		.update(orgUsageCounters)
-		.set({ value: correctedValue, updatedAt: new Date() })
+		.set({ value: BigInt(correctedValue), updatedAt: new Date() })
 		.where(
 			and(
 				eq(orgUsageCounters.organizationId, organizationId),

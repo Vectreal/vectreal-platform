@@ -5,7 +5,8 @@
  *
  *   hasEntitlement(orgId, entitlementKey):
  *     1. Resolve org's current plan (considering billing state)
- *     2. If billing state is read-only and entitlement is mutating → return false
+ *     2. If billing state is read-only and entitlement is `scene_upload` or
+ *        `scene_publish` → return false
  *     3. Look up entitlement key in plan_entitlements map
  *     4. Check for org-level overrides (enterprise add-ons) → merge
  *     5. Return resolved boolean
@@ -15,6 +16,7 @@
 
 import { and, eq } from 'drizzle-orm'
 
+import { toSafeNumberFromBigInt } from './number-utils.server'
 import {
 	type BillingState,
 	type EntitlementKey,
@@ -194,7 +196,11 @@ export async function getQuotaLimit(
 		.limit(1)
 
 	if (override !== undefined) {
-		return { limit: override.limitValue, overridden: true, effectivePlan }
+		const limit =
+			override.limitValue === null
+				? null
+				: toSafeNumberFromBigInt(override.limitValue, 'limitValue')
+		return { limit, overridden: true, effectivePlan }
 	}
 
 	return { limit: baseline, overridden: false, effectivePlan }

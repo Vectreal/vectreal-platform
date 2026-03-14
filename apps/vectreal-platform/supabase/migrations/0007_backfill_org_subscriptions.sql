@@ -29,4 +29,5 @@ WHERE NOT EXISTS (
   SELECT 1
   FROM org_subscriptions s
   WHERE s.organization_id = o.id
-);
+)
+ON CONFLICT (organization_id) DO NOTHING;
