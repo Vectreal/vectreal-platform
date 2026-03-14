@@ -20,7 +20,7 @@ const InfoContent = () => (
 		<InfoPopoverTrigger />
 		<InfoPopoverContent>
 			<InfoPopoverCloseButton />
-			<InfoPopoverText className="flex flex-col gap-2 font-[DM_Sans]">
+			<InfoPopoverText className="flex flex-col gap-2">
 				<small className="text-muted-foreground">
 					<Sparkles size={12} className="mr-2 inline" /> Optimized with Vectreal
 				</small>

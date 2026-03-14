@@ -25,7 +25,7 @@ import type {
 
 const DEFAULT_TIMEOUT_MS = 20_000
 const DEFAULT_MAX_RETRIES = 2
-const DEFAULT_MAX_TEXTURE_UPLOAD_BYTES = 20 * 1024 * 1024
+const DEFAULT_MAX_TEXTURE_UPLOAD_BYTES = 50 * 1024 * 1024
 const DEFAULT_MAX_CONCURRENT_REQUESTS = 4
 const TRANSIENT_STATUS_CODES = new Set([408, 425, 429, 500, 502, 503, 504])
 
@@ -40,6 +40,20 @@ const resolveTextureMimeType = (response: Response): string => {
 	}
 
 	return contentType.split(';')[0]?.trim() || 'application/octet-stream'
+}
+
+const resolveCanonicalTextureFileName = (response: Response): string => {
+	const responseFileName =
+		response.headers.get('X-Texture-File-Name') ||
+		response.headers.get('X-Texture-Name')
+
+	if (!responseFileName || responseFileName.trim().length === 0) {
+		throw new Error(
+			'Optimized texture response is missing a canonical file name'
+		)
+	}
+
+	return responseFileName.trim()
 }
 
 const requestSingleTextureOptimization = async (
@@ -101,7 +115,7 @@ const optimizeTexture = async (
 
 	if (payload.image.byteLength > maxTextureUploadBytes) {
 		throw new Error(
-			`Texture ${texture.index} payload (${payload.image.byteLength} bytes) exceeds maxTextureUploadBytes (${maxTextureUploadBytes} bytes)`
+			`Texture ${texture.index} payload (${payload.image.byteLength} bytes) exceeds maxTextureUploadBytes (${maxTextureUploadBytes} bytes). Increase maxTextureUploadBytes to allow optimizing larger source textures.`
 		)
 	}
 
@@ -114,7 +128,8 @@ const optimizeTexture = async (
 		{
 			'Content-Type': 'application/octet-stream',
 			'X-Texture-Index': String(texture.index),
-			'X-Texture-Name': texture.name,
+			'X-Texture-Name': payload.fileName,
+			'X-Texture-File-Name': payload.fileName,
 			'X-Texture-Mime-Type': payload.mimeType,
 			'X-Optimize-Options': JSON.stringify(restOptions)
 		}
@@ -153,10 +168,13 @@ const optimizeTexture = async (
 		throw new Error(`Empty optimized payload for texture ${texture.index}`)
 	}
 
+	const canonicalFileName = resolveCanonicalTextureFileName(response)
+
 	optimizer.replaceTexturePayload(
 		texture.index,
 		optimizedTextureBytes,
-		resolveTextureMimeType(response)
+		resolveTextureMimeType(response),
+		canonicalFileName
 	)
 }
 
@@ -210,17 +228,16 @@ export const performServerSideTextureOptimization = async (
 			optimizer.addAppliedOptimization('texture compression')
 		}
 
-		if (successCount === 0 && failures.length > 0) {
+		if (failures.length > 0) {
 			const failureSummary = failures
 				.map((failure) => `#${failure.index}: ${failure.reason}`)
 				.join('; ')
-			throw new Error(
-				`Texture optimization failed for all textures. ${failureSummary}`
-			)
-		}
+			const prefix =
+				successCount === 0
+					? 'Texture optimization failed for all textures.'
+					: `Texture optimization failed for ${failures.length} of ${textures.length} textures.`
 
-		if (failures.length > 0) {
-			console.warn('Some textures failed to optimize:', failures)
+			throw new Error(`${prefix} ${failureSummary}`)
 		}
 	} catch (err) {
 		console.error('Server-side texture compression failed:', err)

@@ -42,10 +42,11 @@ const OverlayControls = ({
 	publishedMeta
 }: PublisherLoaderData) => {
 	const navigate = useNavigate()
-	const { file, optimizer } = useModelContext(true)
+	const { file, isFileLoading, optimizer } = useModelContext(true)
 	const [{ step, showPublishPanel }, setProcessState] = useAtom(processAtom)
 	const {
 		latestSceneStats,
+		isSceneSizeLoading,
 		optimizedSceneBytes,
 		clientSceneBytes,
 		optimizedTextureBytes,
@@ -69,10 +70,16 @@ const OverlayControls = ({
 
 	const isUploadStep = !file?.model && step === 'uploading'
 	const isPublished = Boolean(publishedMeta?.publishedAt)
+	const isOptimizerPreparing = optimizer.isPreparing
+	const optimizerStatusText = isFileLoading
+		? 'Reading model in the background...'
+		: isOptimizerPreparing
+			? 'Preparing optimizer...'
+			: null
 	const currentSceneBytes =
 		optimizedSceneBytes ??
-		latestSceneStats?.currentSceneBytes ??
-		clientSceneBytes
+		clientSceneBytes ??
+		latestSceneStats?.currentSceneBytes
 
 	const handleOpenPublishPanel = useCallback(() => {
 		setProcessState((prev) => ({
@@ -160,7 +167,11 @@ const OverlayControls = ({
 				)}
 			</FloatingPillWrapper>
 			<SceneInfoTrigger onClick={handleOpenPublishPanel} />
-			<InfoBanner sceneBytes={currentSceneBytes} />
+			<InfoBanner
+				sceneBytes={currentSceneBytes}
+				isLoading={isSceneSizeLoading}
+				statusText={optimizerStatusText}
+			/>
 			<PublishDrawer
 				open={showPublishPanel}
 				onOpenChange={handlePublishPanelChange}
@@ -182,9 +193,12 @@ const OverlayControls = ({
 						: null
 				}
 				sizeInfo={{
-					initialSceneBytes: latestSceneStats?.initialSceneBytes,
+					initialSceneBytes:
+						clientSceneBytes ?? latestSceneStats?.initialSceneBytes,
 					currentSceneBytes:
-						optimizedSceneBytes ?? latestSceneStats?.currentSceneBytes,
+						optimizedSceneBytes ??
+						clientSceneBytes ??
+						latestSceneStats?.currentSceneBytes,
 					initialTextureBytes: clientTextureBytes,
 					currentTextureBytes: optimizedTextureBytes
 				}}

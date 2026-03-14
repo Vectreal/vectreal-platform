@@ -26,7 +26,7 @@ interface LogoSidebarProps extends PropsWithChildren, SidebarComponentProps {
 const LogoSidebar = ({ children, ...sidebarProps }: LogoSidebarProps) => {
 	const { smallLogo, open, ...rest } = sidebarProps
 
-	const { toggleSidebar } = useSidebar()
+	const { openMobile, toggleSidebar } = useSidebar()
 
 	const sidebarDefaultProps = {
 		collapsible: 'icon',
@@ -34,6 +34,12 @@ const LogoSidebar = ({ children, ...sidebarProps }: LogoSidebarProps) => {
 		side: 'left',
 		...rest
 	} satisfies SidebarComponentProps
+
+	const handleCloseMobile = () => {
+		if (openMobile) {
+			toggleSidebar()
+		}
+	}
 
 	return (
 		<Sidebar {...sidebarDefaultProps}>
@@ -44,7 +50,7 @@ const LogoSidebar = ({ children, ...sidebarProps }: LogoSidebarProps) => {
 						<SidebarMenuButton
 							asChild
 							size="lg"
-							onClick={toggleSidebar}
+							onClick={handleCloseMobile}
 							className="overflow-clip md:h-8 md:p-0"
 						>
 							<Link to="/dashboard" viewTransition>

@@ -1,5 +1,10 @@
 import { Button } from '@shared/components/ui/button'
 import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger
+} from '@shared/components/ui/tooltip'
 import { AnimatePresence, motion } from 'framer-motion'
 import { SparklesIcon } from 'lucide-react'
 
@@ -9,22 +14,25 @@ interface OptimizeButtonProps {
 	onOptimize: () => Promise<void>
 	isPending: boolean
 	hasOptimized: boolean
+	isPreparing?: boolean
 	disabled?: boolean
 }
+
+const OPTIMIZER_PREPARING_TOOLTIP =
+	'Preparing optimizer. Once ready, you can apply optimizations to improve performance and file size. If you ever want to return to the original source after applying them, simply re-upload the model.'
 
 export const OptimizeButton: FC<OptimizeButtonProps> = ({
 	hasOptimized,
 	isPending,
+	isPreparing = false,
 	disabled,
 	onOptimize
-}) => (
-	<>
-		<div className="h-9" />
-
-		<div className="bg-muted/50 fixed bottom-0 left-0 z-10 flex w-full shadow-2xl backdrop-blur-xl">
+}) => {
+	const button = (
+		<span className="m-2 flex grow">
 			<Button
 				variant="secondary"
-				className="m-2 grow rounded-lg"
+				className="grow rounded-lg"
 				onClick={onOptimize}
 				disabled={isPending || disabled}
 			>
@@ -58,6 +66,25 @@ export const OptimizeButton: FC<OptimizeButtonProps> = ({
 					)}
 				</AnimatePresence>
 			</Button>
-		</div>
-	</>
-)
+		</span>
+	)
+
+	return (
+		<>
+			<div className="h-9" />
+
+			<div className="bg-muted/50 fixed bottom-0 left-0 z-10 flex w-full shadow-2xl backdrop-blur-xl">
+				{isPreparing ? (
+					<Tooltip>
+						<TooltipTrigger asChild>{button}</TooltipTrigger>
+						<TooltipContent className="max-w-80" sideOffset={6}>
+							{OPTIMIZER_PREPARING_TOOLTIP}
+						</TooltipContent>
+					</Tooltip>
+				) : (
+					button
+				)}
+			</div>
+		</>
+	)
+}

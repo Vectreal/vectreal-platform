@@ -38,6 +38,8 @@ export const useOptimizationProcess = () => {
 	const { handleDocumentGltfExport } = useExportModel()
 	const {
 		reset: resetOptimize,
+		isReady,
+		isPreparing,
 		applyOptimization,
 		simplifyOptimization,
 		texturesOptimization,
@@ -54,6 +56,7 @@ export const useOptimizationProcess = () => {
 	)
 	const {
 		isPending,
+		isSceneSizeLoading,
 		optimizedSceneBytes,
 		clientSceneBytes,
 		optimizedTextureBytes,
@@ -63,17 +66,25 @@ export const useOptimizationProcess = () => {
 	const isSceneSizeCalculationInFlightRef = useRef(false)
 
 	const calculateSceneBytes = useCallback(async () => {
+		if (!isReady) {
+			return null
+		}
+
 		const exportedGlb = await optimizer.getModel()
 		if (!exportedGlb) return null
 		return exportedGlb.byteLength
-	}, [optimizer])
+	}, [isReady, optimizer])
 
 	const calculateOptimizedTextureBytes = useCallback(async () => {
-		if (!optimizer?._getDocument?.()) {
+		if (!isReady) {
 			return null
 		}
 
 		const gltfDocument = optimizer._getDocument()
+		if (!gltfDocument) {
+			return null
+		}
+
 		const exported = await handleDocumentGltfExport(
 			gltfDocument,
 			file ?? null,
@@ -98,11 +109,11 @@ export const useOptimizationProcess = () => {
 		}
 
 		return textureBytes
-	}, [optimizer, handleDocumentGltfExport, file])
+	}, [isReady, optimizer, handleDocumentGltfExport, file])
 
 	// Handle optimization process
 	const handleOptimizeClick = useCallback(async () => {
-		if (isPending) return
+		if (isPending || isPreparing || !isReady) return
 
 		setOptimizationRuntime((prev) => ({
 			...prev,
@@ -120,6 +131,7 @@ export const useOptimizationProcess = () => {
 				if (typeof baselineSceneBytes === 'number') {
 					setOptimizationRuntime((prev) => ({
 						...prev,
+						isSceneSizeLoading: false,
 						clientSceneBytes: baselineSceneBytes
 					}))
 				}
@@ -199,6 +211,8 @@ export const useOptimizationProcess = () => {
 		}
 	}, [
 		isPending,
+		isPreparing,
+		isReady,
 		clientSceneBytes,
 		clientTextureBytes,
 		latestSceneStats,
@@ -216,6 +230,35 @@ export const useOptimizationProcess = () => {
 		file?.sourceTextureBytes,
 		report?.stats.textures.before,
 		report?.stats.textures.after
+	])
+
+	useEffect(() => {
+		if (typeof clientSceneBytes === 'number') {
+			if (!isSceneSizeLoading) {
+				return
+			}
+
+			setOptimizationRuntime((prev) => ({
+				...prev,
+				isSceneSizeLoading: false
+			}))
+			return
+		}
+
+		if (typeof file?.sourcePackageBytes !== 'number') {
+			return
+		}
+
+		setOptimizationRuntime((prev) => ({
+			...prev,
+			isSceneSizeLoading: false,
+			clientSceneBytes: file.sourcePackageBytes ?? null
+		}))
+	}, [
+		clientSceneBytes,
+		file?.sourcePackageBytes,
+		isSceneSizeLoading,
+		setOptimizationRuntime
 	])
 
 	useEffect(() => {
@@ -239,10 +282,12 @@ export const useOptimizationProcess = () => {
 			setOptimizationRuntime((prev) => ({
 				...prev,
 				isPending: false,
+				isSceneSizeLoading: true,
 				optimizedSceneBytes: null,
 				clientSceneBytes: null,
 				optimizedTextureBytes: null,
-				clientTextureBytes: null
+				clientTextureBytes: null,
+				latestSceneStats: null
 			}))
 		}
 		on('load-start', resetOptimize)
@@ -257,7 +302,6 @@ export const useOptimizationProcess = () => {
 		if (
 			!file?.model ||
 			isPending ||
-			typeof latestSceneStats?.currentSceneBytes === 'number' ||
 			typeof clientSceneBytes === 'number' ||
 			isSceneSizeCalculationInFlightRef.current
 		) {
@@ -265,20 +309,33 @@ export const useOptimizationProcess = () => {
 		}
 
 		isSceneSizeCalculationInFlightRef.current = true
+		setOptimizationRuntime((prev) => ({
+			...prev,
+			isSceneSizeLoading: true
+		}))
 
 		void calculateSceneBytes()
 			.then((computedSceneBytes) => {
 				if (typeof computedSceneBytes !== 'number') {
+					setOptimizationRuntime((prev) => ({
+						...prev,
+						isSceneSizeLoading: false
+					}))
 					return
 				}
 
 				setOptimizationRuntime((prev) => ({
 					...prev,
+					isSceneSizeLoading: false,
 					clientSceneBytes: computedSceneBytes
 				}))
 			})
 			.catch((error) => {
 				console.error('Failed to calculate scene size:', error)
+				setOptimizationRuntime((prev) => ({
+					...prev,
+					isSceneSizeLoading: false
+				}))
 			})
 			.finally(() => {
 				isSceneSizeCalculationInFlightRef.current = false
@@ -286,7 +343,6 @@ export const useOptimizationProcess = () => {
 	}, [
 		file?.model,
 		isPending,
-		latestSceneStats,
 		clientSceneBytes,
 		calculateSceneBytes,
 		setOptimizationRuntime
@@ -327,6 +383,8 @@ export const useOptimizationProcess = () => {
 		info,
 		report,
 		isPending,
+		isOptimizerPreparing: isPreparing,
+		isOptimizerReady: isReady,
 		hasImproved,
 		sizeInfo,
 		handleOptimizeClick

@@ -73,6 +73,7 @@ export interface TextureCompressOptions {
 
 export interface TextureDescriptor {
 	index: number
+	fileName: string
 	name: string
 	mimeType: string
 	byteLength: number
@@ -80,6 +81,7 @@ export interface TextureDescriptor {
 
 export interface TextureBinaryPayload {
 	index: number
+	fileName: string
 	name: string
 	mimeType: string
 	image: Uint8Array

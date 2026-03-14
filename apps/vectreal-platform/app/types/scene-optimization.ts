@@ -11,6 +11,7 @@ export interface OptimizationState {
 
 export interface SceneOptimizationRuntimeState {
 	isPending: boolean
+	isSceneSizeLoading: boolean
 	optimizedSceneBytes: null | number
 	clientSceneBytes: null | number
 	optimizedTextureBytes: null | number

@@ -20,6 +20,70 @@ import { data } from 'react-router'
 import { Route } from './+types/optimize-textures'
 import { ensurePost } from '../../lib/http/requests.server'
 
+const mimeTypeToExtension = (mimeType: string): string | null => {
+	switch (mimeType.toLowerCase()) {
+		case 'image/webp':
+			return 'webp'
+		case 'image/jpeg':
+			return 'jpg'
+		case 'image/png':
+			return 'png'
+		default:
+			return null
+	}
+}
+
+const replaceFileExtension = (fileName: string, extension: string): string => {
+	const queryIndex = fileName.indexOf('?')
+	const hashIndex = fileName.indexOf('#')
+	const suffixStart = [queryIndex, hashIndex]
+		.filter((index) => index >= 0)
+		.reduce((min, index) => Math.min(min, index), Number.POSITIVE_INFINITY)
+	const hasSuffix = Number.isFinite(suffixStart)
+	const base = hasSuffix ? fileName.slice(0, suffixStart) : fileName
+	const suffix = hasSuffix ? fileName.slice(suffixStart) : ''
+	const lastSlash = base.lastIndexOf('/')
+	const lastDot = base.lastIndexOf('.')
+	const hasExtension = lastDot > lastSlash
+	const nextBase = hasExtension
+		? `${base.slice(0, lastDot)}.${extension}`
+		: `${base}.${extension}`
+
+	return `${nextBase}${suffix}`
+}
+
+const resolveCanonicalTextureFileName = (
+	fileName: string,
+	mimeType: string
+): string => {
+	const fileNameOnly = extractTextureFileName(fileName)
+	const extension = mimeTypeToExtension(mimeType)
+	if (!extension) {
+		return fileNameOnly
+	}
+
+	return replaceFileExtension(fileNameOnly, extension)
+}
+
+const extractTextureFileName = (value: string): string => {
+	const withoutQuery = value.split('?')[0] || value
+	const withoutHash = withoutQuery.split('#')[0] || withoutQuery
+	const normalized = withoutHash.replace(/\\/g, '/').trim()
+	return normalized.split('/').pop() || normalized
+}
+
+const GENERIC_TEXTURE_FILE_NAME_PATTERN =
+	/^(?:text{1,2}ure|image|img)[-_ ]?\d+(?:\.[a-z0-9]+)?$/i
+
+const isGenericTextureFileName = (value: string): boolean => {
+	const trimmed = value.trim()
+	if (trimmed.length === 0) {
+		return false
+	}
+
+	return GENERIC_TEXTURE_FILE_NAME_PATTERN.test(extractTextureFileName(trimmed))
+}
+
 /**
  * Server-side texture optimization API endpoint.
  *
@@ -55,22 +119,36 @@ export async function action({ request }: Route.ActionArgs) {
 		}
 
 		const textureIndexRaw = request.headers.get('x-texture-index')
-		const textureNameRaw = request.headers.get('x-texture-name')
+		const textureNameRaw =
+			request.headers.get('x-texture-file-name') ||
+			request.headers.get('x-texture-name')
 		const optionsStr = request.headers.get('x-optimize-options') || ''
 		const textureIndex =
 			typeof textureIndexRaw === 'string'
 				? Number.parseInt(textureIndexRaw, 10)
 				: Number.NaN
 		const textureName =
-			typeof textureNameRaw === 'string' && textureNameRaw.trim().length > 0
-				? textureNameRaw.trim()
-				: `texture-${Number.isFinite(textureIndex) ? textureIndex : 'unknown'}`
+			typeof textureNameRaw === 'string' ? textureNameRaw.trim() : ''
 
 		if (!Number.isFinite(textureIndex) || textureIndex < 0) {
 			return data(
 				{ error: 'Invalid or missing textureIndex' },
 				{ status: 400, headers: { 'Cache-Control': 'no-store' } }
 			)
+		}
+
+		if (textureName.length === 0) {
+			return data(
+				{ error: 'Missing canonical texture file name' },
+				{ status: 400, headers: { 'Cache-Control': 'no-store' } }
+			)
+		}
+
+		if (isGenericTextureFileName(textureName)) {
+			console.warn('[optimize-textures] Received generic texture file name', {
+				textureIndex,
+				textureName
+			})
 		}
 
 		let options: TextureCompressOptions = {
@@ -142,6 +220,10 @@ export async function action({ request }: Route.ActionArgs) {
 		}
 
 		const responseBody = new Uint8Array(optimizedTexture)
+		const outputFileName = resolveCanonicalTextureFileName(
+			textureName,
+			outputMimeType
+		)
 
 		return new Response(responseBody, {
 			status: 200,
@@ -149,7 +231,8 @@ export async function action({ request }: Route.ActionArgs) {
 				'Content-Type': outputMimeType,
 				'Cache-Control': 'no-store',
 				'X-Texture-Index': String(textureIndex),
-				'X-Texture-Name': textureName
+				'X-Texture-Name': outputFileName,
+				'X-Texture-File-Name': outputFileName
 			}
 		})
 	} catch (error) {

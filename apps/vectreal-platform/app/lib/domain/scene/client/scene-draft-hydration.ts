@@ -53,6 +53,7 @@ export const executePendingSceneDraftHydration = async ({
 	if (draft.optimizedSceneBytes != null || draft.clientSceneBytes != null) {
 		setOptimizationRuntime((prev) => ({
 			...prev,
+			isSceneSizeLoading: false,
 			...(draft.optimizedSceneBytes != null
 				? { optimizedSceneBytes: draft.optimizedSceneBytes }
 				: {}),

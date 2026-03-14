@@ -73,22 +73,32 @@ export const buildSceneUploadFileDescriptor = (
 	const bytes = toUint8Array(data)
 	const normalizedBytes = bytes ? new Uint8Array(bytes) : null
 	const normalizedName = normalizeAssetUri(fileName)
-	const basename = normalizedName.split('/').pop() || normalizedName
+	const baseFileName = normalizedName.split('/').pop() || normalizedName
 	const mimeFromDocument = imageMimeLookup
-		? (imageMimeLookup.get(normalizedName) ?? imageMimeLookup.get(basename))
+		? Array.from(buildAssetLookupKeys(normalizedName)).reduce<
+				string | undefined
+			>(
+				(foundMimeType, key) => foundMimeType ?? imageMimeLookup.get(key),
+				undefined
+			)
 		: undefined
 	const mimeFromBytes = normalizedBytes
 		? detectMimeTypeFromBytes(normalizedBytes)
 		: null
+	const mimeFromFileName = resolveMimeTypeFromFileName(fileName)
 	const mimeType =
-		mimeFromDocument ?? mimeFromBytes ?? resolveMimeTypeFromFileName(fileName)
+		mimeFromBytes ??
+		(mimeFromFileName !== 'application/octet-stream'
+			? mimeFromFileName
+			: mimeFromDocument) ??
+		mimeFromFileName
 	const kind =
 		getAssetKindFromMimeType(mimeType) === 'image' ? 'image' : 'buffer'
 	const fileData: BlobPart = normalizedBytes ?? (data as BlobPart)
 
 	return {
-		file: new File([fileData], fileName, { type: mimeType }),
-		fileName,
+		file: new File([fileData], baseFileName, { type: mimeType }),
+		fileName: baseFileName,
 		kind,
 		mimeType
 	}

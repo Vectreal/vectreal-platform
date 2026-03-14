@@ -25,6 +25,7 @@ import {
 	processAtom,
 	sceneMetaAtom
 } from '../../lib/stores/publisher-config-store'
+import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
 import {
 	boundsAtom,
 	cameraAtom,
@@ -124,6 +125,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 	const { file, isFileLoading, reset } = useModelContext()
 	const [{ isLoading: isDownloading, isInitializing }, setProcess] =
 		useAtom(processAtom)
+	const [, setOptimizationRuntime] = useAtom(optimizationRuntimeAtom)
 	const bounds = useAtomValue(boundsAtom)
 	const camera = useAtomValue(cameraAtom)
 	const controls = useAtomValue(controlsAtom)
@@ -153,18 +155,20 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 			registerSceneScreenshotCaptureHandler(null)
 			reset()
 			setProcess(RESET)
+			setOptimizationRuntime(RESET)
 		}
 
 		previousRouteSceneIdRef.current = routeSceneId
-	}, [routeSceneId, reset, setProcess])
+	}, [routeSceneId, reset, setOptimizationRuntime, setProcess])
 
 	useEffect(() => {
 		return () => {
 			registerSceneScreenshotCaptureHandler(null)
 			reset()
 			setProcess(RESET)
+			setOptimizationRuntime(RESET)
 		}
-	}, [setProcess, reset])
+	}, [setOptimizationRuntime, setProcess, reset])
 
 	const isLoading = isInitializing || isDownloading || isFileLoading
 
@@ -181,7 +185,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 							transition={{ duration: 0.25 }}
 							className="relative flex h-full w-full items-center justify-center"
 						>
-							<CenteredSpinner text="Restoring saved draft..." />
+							<CenteredSpinner text="Loading Scene..." />
 						</motion.div>
 					) : file?.model || isLoading ? (
 						<motion.div

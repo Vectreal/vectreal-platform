@@ -85,10 +85,12 @@ interface DashboardSidebarContentProps {
 
 const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
 	const { submit } = useFetcher()
-	const { toggleSidebar } = useSidebar()
+	const { toggleSidebar, openMobile } = useSidebar()
 
 	const handleSidebarClose = () => {
-		toggleSidebar()
+		if (openMobile) {
+			toggleSidebar()
+		}
 	}
 
 	const userImageSrc = user?.user_metadata?.avatar_url || ''

@@ -339,6 +339,16 @@ const useOptimizeModel = () => {
 		}
 	}, [])
 
+	const getDocument = useCallback(() => {
+		if (!optimizerRef.current.hasModel()) {
+			return null
+		}
+
+		return optimizerRef.current.document
+	}, [])
+
+	const isReady = Boolean(getDocument()) && !loading
+
 	/**
 	 * Resets the optimizer to its initial state.
 	 * Clears the loaded model, all optimization data, reports, and calculated info.
@@ -373,10 +383,12 @@ const useOptimizeModel = () => {
 		 */
 		getModel,
 
+		isReady,
+
 		/**
 		 * Exposes the underlying ModelOptimizer document instance for advanced use cases.
 		 */
-		_getDocument: () => optimizerRef.current.document, // Expose document for advanced use cases --- IGNORE ---
+		_getDocument: getDocument, // Expose document for advanced use cases --- IGNORE ---
 
 		/**
 		 * Resets the optimizer, clearing all model data, reports, and state.

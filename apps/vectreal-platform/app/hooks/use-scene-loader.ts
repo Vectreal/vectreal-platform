@@ -211,11 +211,15 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	}, [])
 
 	const prepareGltfDocumentForUpload = useCallback(async () => {
-		if (!optimizer || !modelFile || !optimizer._getDocument()) {
+		if (!optimizer || !modelFile || !optimizer.isReady) {
 			return null
 		}
 
 		const gltfDocument = optimizer._getDocument()
+		if (!gltfDocument) {
+			return null
+		}
+
 		const gltfJson = await handleDocumentGltfExport(
 			gltfDocument,
 			modelFile,
