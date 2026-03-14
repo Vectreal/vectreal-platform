@@ -68,7 +68,7 @@ const CriticalStyles = () => (
 	<style>
 		{`/* Critical CSS for initial render */
 			body {
-				font-family: 'Inter', sans-serif;
+				font-family: 'DM Sans Variable', sans-serif;
 			}
 			
 			button, a {
