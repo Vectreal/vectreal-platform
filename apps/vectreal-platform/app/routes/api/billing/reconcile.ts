@@ -22,6 +22,7 @@
  */
 
 import { ApiResponse } from '@shared/utils'
+import { timingSafeEqual } from 'node:crypto'
 
 import { Route } from './+types/reconcile'
 import { reconcileStripeSubscriptions } from '../../../lib/domain/billing/stripe-reconciliation.server'
@@ -40,7 +41,23 @@ function isAuthorized(request: Request): boolean {
 	const authHeader = request.headers.get('authorization') ?? ''
 	const [scheme, token] = authHeader.split(' ', 2)
 
-	return scheme === 'Bearer' && token === secret
+	if (scheme !== 'Bearer' || !token) {
+		return false
+	}
+
+	// Use timing-safe comparison to prevent timing attacks
+	try {
+		const secretBuf = Buffer.from(secret, 'utf8')
+		const tokenBuf = Buffer.from(token, 'utf8')
+		// Buffers must be the same length for timingSafeEqual; short-circuit
+		// on length mismatch without revealing which is longer.
+		return (
+			secretBuf.length === tokenBuf.length &&
+			timingSafeEqual(secretBuf, tokenBuf)
+		)
+	} catch {
+		return false
+	}
 }
 
 // ---------------------------------------------------------------------------

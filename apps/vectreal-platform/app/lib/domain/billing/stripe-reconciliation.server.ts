@@ -11,7 +11,7 @@
  *
  * Algorithm:
  *   For each local row that has a `stripe_subscription_id`:
- *     1. Fetch the current subscription from Stripe.
+ *     1. Fetch the current subscription from Stripe (in parallel batches).
  *     2. Compare `billing_state` and `plan`.
  *     3. If they differ, record a drift entry and (optionally) repair.
  *
@@ -78,6 +78,118 @@ export interface ReconcileOptions {
 	 * Stripe API call.
 	 */
 	limit?: number
+	/**
+	 * Number of Stripe API calls to make in parallel.
+	 * Defaults to 10.  Respects Stripe's rate limits (~100 req/s in test mode,
+	 * higher in live mode).
+	 */
+	concurrency?: number
+}
+
+// ---------------------------------------------------------------------------
+// Concurrency helpers
+// ---------------------------------------------------------------------------
+
+type RowInput = Pick<
+	typeof orgSubscriptions.$inferSelect,
+	| 'organizationId'
+	| 'stripeSubscriptionId'
+	| 'stripeCustomerId'
+	| 'billingState'
+	| 'plan'
+>
+
+/**
+ * Processes a single subscription row: fetches from Stripe, compares state,
+ * and optionally repairs drift.  Returns a partial report fragment.
+ */
+async function processRow(
+	row: RowInput,
+	repair: boolean
+): Promise<{
+	inSync: boolean
+	entry: DriftEntry | null
+	error: { organizationId: string; message: string } | null
+}> {
+	const { organizationId, stripeSubscriptionId, stripeCustomerId } = row
+	const stripe = getStripeClient()
+
+	if (!stripeSubscriptionId) {
+		return { inSync: true, entry: null, error: null }
+	}
+
+	let stripeSub: Stripe.Subscription
+
+	try {
+		stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId, {
+			expand: ['items.data.price.product']
+		})
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err)
+		return { inSync: false, entry: null, error: { organizationId, message } }
+	}
+
+	const stripeBillingState = mapStripeStatusToBillingState(stripeSub.status)
+	const stripePlan = resolvePlanFromSubscription(stripeSub, row.plan)
+
+	const hasDrift =
+		row.billingState !== stripeBillingState ||
+		row.plan !== stripePlan
+
+	if (!hasDrift) {
+		return { inSync: true, entry: null, error: null }
+	}
+
+	const entry: DriftEntry = {
+		organizationId,
+		stripeSubscriptionId,
+		localBillingState: row.billingState,
+		stripeBillingState,
+		localPlan: row.plan,
+		stripePlan,
+		repaired: false
+	}
+
+	if (repair) {
+		try {
+			const resolvedCustomerId =
+				stripeCustomerId ??
+				(typeof stripeSub.customer === 'string'
+					? stripeSub.customer
+					: stripeSub.customer.id)
+
+			await syncSubscriptionFromStripe({
+				organizationId,
+				stripeCustomerId: resolvedCustomerId,
+				subscription: stripeSub
+			})
+			entry.repaired = true
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err)
+			return { inSync: false, entry, error: { organizationId, message } }
+		}
+	}
+
+	return { inSync: false, entry, error: null }
+}
+
+/**
+ * Executes `tasks` in parallel chunks of `concurrency` at a time.
+ * Each chunk runs fully before the next starts, keeping Stripe API load bounded.
+ */
+async function runWithConcurrencyLimit<T>(
+	tasks: Array<() => Promise<T>>,
+	concurrency: number
+): Promise<T[]> {
+	const results: T[] = []
+
+	for (let i = 0; i < tasks.length; i += concurrency) {
+		const chunk = tasks.slice(i, i + concurrency)
+		const chunkResults = await Promise.all(chunk.map((task) => task()))
+		results.push(...chunkResults)
+	}
+
+	return results
 }
 
 // ---------------------------------------------------------------------------
@@ -88,6 +200,10 @@ export interface ReconcileOptions {
  * Runs the drift reconciliation against all local subscription rows that have
  * a Stripe subscription ID.
  *
+ * Rows are processed in parallel batches (default concurrency: 10) to keep
+ * runtime reasonable for large organisations while staying within Stripe's
+ * rate limits.
+ *
  * @param options - See `ReconcileOptions`.
  * @returns A `ReconciliationReport` describing what was found and repaired.
  */
@@ -95,7 +211,13 @@ export async function reconcileStripeSubscriptions(
 	options: ReconcileOptions = {}
 ): Promise<ReconciliationReport> {
 	const { repair = false, limit = 500 } = options
-	const stripe = getStripeClient()
+	const concurrency = Math.max(
+		1,
+		Math.min(
+			Number.isInteger(options.concurrency) ? (options.concurrency ?? 10) : 10,
+			50
+		)
+	)
 	const db = getDbClient()
 
 	const report: ReconciliationReport = {
@@ -113,8 +235,8 @@ export async function reconcileStripeSubscriptions(
 			organizationId: orgSubscriptions.organizationId,
 			stripeSubscriptionId: orgSubscriptions.stripeSubscriptionId,
 			stripeCustomerId: orgSubscriptions.stripeCustomerId,
-			localBillingState: orgSubscriptions.billingState,
-			localPlan: orgSubscriptions.plan
+			billingState: orgSubscriptions.billingState,
+			plan: orgSubscriptions.plan
 		})
 		.from(orgSubscriptions)
 		.where(isNotNull(orgSubscriptions.stripeSubscriptionId))
@@ -122,70 +244,30 @@ export async function reconcileStripeSubscriptions(
 
 	report.totalExamined = rows.length
 
-	for (const row of rows) {
-		const { organizationId, stripeSubscriptionId, stripeCustomerId } = row
+	// Build task list and process in parallel with concurrency limit
+	const tasks = rows.map((row) => () => processRow(row, repair))
 
-		if (!stripeSubscriptionId) continue
+	const results = await runWithConcurrencyLimit(tasks, concurrency)
 
-		let stripeSub: Stripe.Subscription
-
-		try {
-			stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId, {
-				expand: ['items.data.price.product']
-			})
-		} catch (err) {
-			const message = err instanceof Error ? err.message : String(err)
-			report.errors.push({ organizationId, message })
-			continue
+	for (const result of results) {
+		if (result.error) {
+			report.errors.push(result.error)
 		}
 
-		const stripeBillingState = mapStripeStatusToBillingState(stripeSub.status)
-		const stripePlan = resolvePlanFromSubscription(stripeSub, row.localPlan)
-
-		const hasDrift =
-			row.localBillingState !== stripeBillingState ||
-			row.localPlan !== stripePlan
-
-		if (!hasDrift) {
+		if (result.inSync) {
 			report.inSync++
 			continue
 		}
 
-		report.driftDetected++
-
-		const entry: DriftEntry = {
-			organizationId,
-			stripeSubscriptionId,
-			localBillingState: row.localBillingState,
-			stripeBillingState,
-			localPlan: row.localPlan,
-			stripePlan,
-			repaired: false
-		}
-
-		if (repair) {
-			try {
-				const resolvedCustomerId =
-					stripeCustomerId ??
-					(typeof stripeSub.customer === 'string'
-						? stripeSub.customer
-						: stripeSub.customer.id)
-
-				await syncSubscriptionFromStripe({
-					organizationId,
-					stripeCustomerId: resolvedCustomerId,
-					subscription: stripeSub
-				})
-				entry.repaired = true
+		if (result.entry) {
+			report.driftDetected++
+			if (result.entry.repaired) {
 				report.repaired++
-			} catch (err) {
-				const message = err instanceof Error ? err.message : String(err)
-				report.errors.push({ organizationId, message })
 			}
+			report.driftEntries.push(result.entry)
 		}
-
-		report.driftEntries.push(entry)
 	}
 
 	return report
 }
+
