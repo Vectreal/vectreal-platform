@@ -23,7 +23,7 @@ import {
 	type Plan,
 	PLAN_ENTITLEMENTS,
 	PLAN_LIMITS
-} from './plan-config'
+} from '../../../constants/plan-config'
 import { getDbClient } from '../../../db/client'
 import { orgEntitlementOverrides } from '../../../db/schema/billing/org-entitlement-overrides'
 import { orgLimitOverrides } from '../../../db/schema/billing/org-limit-overrides'

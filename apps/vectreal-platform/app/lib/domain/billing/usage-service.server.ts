@@ -17,7 +17,7 @@
 import { and, eq, lt, sql } from 'drizzle-orm'
 
 import { getQuotaLimit } from './entitlement-service.server'
-import { type LimitKey } from './plan-config'
+import { type LimitKey } from '../../../constants/plan-config'
 import { getDbClient } from '../../../db/client'
 import { orgUsageCounters } from '../../../db/schema/billing/usage-counters'
 
