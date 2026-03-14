@@ -17,6 +17,7 @@ const OptimizeSidebarContent: FC = () => {
 		info,
 		report,
 		isPending,
+		isOptimizerPreparing,
 		hasImproved,
 		handleOptimizeClick,
 		sizeInfo
@@ -50,7 +51,8 @@ const OptimizeSidebarContent: FC = () => {
 			</Accordion>
 			<OptimizeButton
 				onOptimize={handleOptimizeClick}
-				disabled={isSaving}
+				disabled={isSaving || isOptimizerPreparing}
+				isPreparing={isOptimizerPreparing}
 				isPending={isPending}
 				hasOptimized={hasImproved}
 			/>

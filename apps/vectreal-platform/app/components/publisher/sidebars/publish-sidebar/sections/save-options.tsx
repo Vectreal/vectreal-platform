@@ -70,6 +70,13 @@ export const SaveOptions: FC = () => {
 			return
 		}
 
+		if (!optimizer?.isReady) {
+			toast.error(
+				'Model is still preparing. Try downloading again in a moment.'
+			)
+			return
+		}
+
 		const document = optimizer?._getDocument()
 
 		if (!document) {

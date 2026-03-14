@@ -178,6 +178,7 @@ export function DataTable<TData, TValue>({
 							{selectedRows.length} selected
 						</span>
 						<Button
+							disabled={disableSelectionActions || selectedRows.length !== 1}
 							variant="outline"
 							size="sm"
 							onClick={() => {

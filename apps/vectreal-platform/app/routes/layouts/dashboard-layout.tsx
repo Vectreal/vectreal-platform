@@ -132,14 +132,40 @@ const DashboardLayout = () => {
 		return () => clearTimeout(timer)
 	}, [isContentNavigationLoading])
 
-	const path = navigation.location?.pathname || location.pathname
-	const isNewProjectCreation = path === '/dashboard/projects/new'
-	const isProjectEditRoute = /\/dashboard\/projects\/[^/]+\/edit$/.test(path)
-	const isPublisherRoute = path.startsWith('/publisher')
+	const path = navigation.location?.pathname || ''
 
-	const isFolderDetail = path.match(/\/dashboard\/projects\/[^/]+\/folder\//)
-	const isSceneDetail = path.match(/\/dashboard\/projects\/[^/]+\/[^/]+$/)
-	const isProjectDetail = path.match(/\/dashboard\/projects\/[^/]+$/)
+	// Helper to extract dashboard project subroutes
+	const projectDetailRegex = /^\/dashboard\/projects\/([^/]+)$/
+	const projectEditRegex = /^\/dashboard\/projects\/([^/]+)\/edit$/
+	const folderDetailRegex = /^\/dashboard\/projects\/([^/]+)\/folder\/([^/]+)$/
+	const sceneDetailRegex = /^\/dashboard\/projects\/([^/]+)\/([^/]+)$/
+	const newProjectRegex = /^\/dashboard\/projects\/new$/
+	const publisherRegex = /\/publisher/
+
+	const isSceneDetailRoute =
+		sceneDetailRegex.test(location.pathname) &&
+		!projectEditRegex.test(location.pathname) &&
+		!folderDetailRegex.test(location.pathname)
+
+	const willBeNewProjectCreation = newProjectRegex.test(path)
+	const willBeProjectEditRoute = projectEditRegex.test(path)
+	const willBePublisherRoute = publisherRegex.test(path)
+
+	const willBeFolderDetail =
+		folderDetailRegex.test(path) &&
+		!willBeProjectEditRoute &&
+		!willBeNewProjectCreation
+	const willBeSceneDetail =
+		sceneDetailRegex.test(path) &&
+		!willBeProjectEditRoute &&
+		!willBeFolderDetail &&
+		!willBeNewProjectCreation
+	const willBeProjectDetail =
+		projectDetailRegex.test(path) &&
+		!willBeProjectEditRoute &&
+		!willBeFolderDetail &&
+		!willBeSceneDetail &&
+		!willBeNewProjectCreation
 
 	// Determine which skeleton to show based on navigation location
 	const getNavigationSkeleton = () => {
@@ -148,9 +174,9 @@ const DashboardLayout = () => {
 		if (path === '/dashboard') return <DashboardSkeleton />
 		if (path === '/dashboard/organizations') return <OrganizationsSkeleton />
 		if (path === '/dashboard/projects') return <ProjectsGridSkeleton />
-		if (isProjectDetail) return <ProjectContentSkeleton />
-		if (isFolderDetail) return <FolderContentSkeleton />
-		if (isSceneDetail) return <SceneDetailsSkeleton /> // Scene details can be variable, so we show a spinner instead of a skeleton
+		if (willBeProjectDetail) return <ProjectContentSkeleton />
+		if (willBeFolderDetail) return <FolderContentSkeleton />
+		if (willBeSceneDetail) return <SceneDetailsSkeleton /> // Scene details can be variable, so we show a spinner instead of a skeleton
 
 		// Default skeleton
 		// return <CenteredSpinner text="Loading..." />
@@ -164,7 +190,7 @@ const DashboardLayout = () => {
 				open={sidebarOpen}
 				onOpenChange={handleSidebarOpenChange}
 			>
-				<LogoSidebar open={sidebarOpen}>
+				<LogoSidebar>
 					<DashboardSidebarContent user={user} />
 				</LogoSidebar>
 				<SidebarInset className="relative overflow-hidden">
@@ -181,15 +207,16 @@ const DashboardLayout = () => {
 							)}
 						</div>
 					</div>
-					{!isSceneDetail && !isPublisherRoute && (
-						<div className="mt-16">
-							<DashboardHeader />
-						</div>
-					)}
+					{!(isSceneDetailRoute && willBePublisherRoute) &&
+						!(isSceneDetailRoute || willBeSceneDetail) && (
+							<div className="mt-16">
+								<DashboardHeader />
+							</div>
+						)}
 					{isContentNavigationLoading &&
-					!isNewProjectCreation &&
-					!isProjectEditRoute &&
-					!isPublisherRoute ? (
+					!willBeNewProjectCreation &&
+					!willBeProjectEditRoute &&
+					!willBePublisherRoute ? (
 						skeleton
 					) : (
 						<Outlet />

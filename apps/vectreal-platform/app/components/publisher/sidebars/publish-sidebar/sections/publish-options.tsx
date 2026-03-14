@@ -43,7 +43,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const { hasUnsavedChanges } = useAtomValue(processAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
 	const exporterRef = useRef<ModelExporter>(new ModelExporter())
-	const canPublish = Boolean(optimizer?._getDocument?.())
+	const canPublish = Boolean(optimizer?.isReady)
 	const isWorking = publishStatus === 'saving' || publishStatus === 'publishing'
 
 	const handlePublish = useCallback(async () => {

@@ -52,6 +52,7 @@ export const executeOptimizationStateHydration = ({
 
 		setOptimizationRuntime({
 			...optimizationRuntimeInitialState,
+			isSceneSizeLoading: false,
 			latestSceneStats,
 			clientSceneBytes: sourcePackageBytes,
 			clientTextureBytes: textureBytes
@@ -70,6 +71,7 @@ export const executeOptimizationStateHydration = ({
 	setOptimizationRuntime((prev) => ({
 		...prev,
 		isPending: false,
+		isSceneSizeLoading: false,
 		optimizedSceneBytes: null,
 		optimizedTextureBytes: null,
 		clientSceneBytes: sourcePackageBytes,

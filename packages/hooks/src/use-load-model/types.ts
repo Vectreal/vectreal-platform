@@ -244,6 +244,11 @@ export type OptimizerIntegrationReturn<HasOptimizer extends boolean = false> =
 	HasOptimizer extends true
 		? OptimizerReturnType & {
 				/**
+				 * Whether the optimizer is still preparing the currently visible model.
+				 */
+				isPreparing: boolean
+
+				/**
 				 * Applies an optimization and updates the loaded model with the result.
 				 *
 				 * This method:

@@ -41,6 +41,76 @@ import { ServerCommunicationService } from '../utils/server-communication'
 import type { useOptimizeModel } from '../use-optimize-model'
 import type { OperationProgress, ServerScenePayload } from '@vctrl/core'
 
+type GltfImageDefinition = {
+	uri?: string
+}
+
+type GltfJsonLike = {
+	images?: GltfImageDefinition[]
+}
+
+const safeDecodeUri = (value: string): string => {
+	try {
+		return decodeURIComponent(value)
+	} catch {
+		return value
+	}
+}
+
+const normalizeAssetUri = (value: string): string => {
+	return value.replace(/\\/g, '/').replace(/^\.\//, '').trim()
+}
+
+const resolveCanonicalTextureUri = (uri: string): string => {
+	const decoded = safeDecodeUri(uri)
+	const normalized = normalizeAssetUri(decoded)
+	return normalized.length > 0 ? normalized : uri
+}
+
+const applyCanonicalTextureNamesFromSource = async (
+	optimizer: NonNullable<ReturnType<typeof useOptimizeModel>>,
+	gltfFile: File
+): Promise<void> => {
+	const gltfJson = JSON.parse(await gltfFile.text()) as GltfJsonLike
+	if (!Array.isArray(gltfJson.images) || gltfJson.images.length === 0) {
+		return
+	}
+
+	const document = optimizer._getDocument()
+	if (!document) {
+		return
+	}
+
+	const textures = document.getRoot().listTextures()
+	if (textures.length === 0) {
+		return
+	}
+
+	for (const [index, imageDef] of gltfJson.images.entries()) {
+		if (!imageDef?.uri || imageDef.uri.startsWith('data:')) {
+			continue
+		}
+
+		const texture = textures[index]
+		if (!texture) {
+			continue
+		}
+
+		const canonicalUri = resolveCanonicalTextureUri(imageDef.uri)
+		if (!canonicalUri) {
+			continue
+		}
+
+		const textureWithIdentity = texture as unknown as {
+			setURI?: (value: string) => void
+			setName?: (value: string) => void
+		}
+
+		textureWithIdentity.setURI?.(canonicalUri)
+		textureWithIdentity.setName?.(canonicalUri)
+	}
+}
+
 /**
  * Custom hook to load and manage 3D models with optional optimization integration.
  *
@@ -125,24 +195,30 @@ function useLoadModel<
 		async (file: File, fileType: ModelFileTypes) => {
 			try {
 				const result = await modelLoader.loadToThreeJS(file)
+				const loadedFile: ModelFile = {
+					model: result.scene,
+					type: fileType,
+					name: file.name
+				}
 
 				dispatch({
 					type: 'set-file',
-					payload: {
-						model: result.scene,
-						type: fileType,
-						name: file.name
-					}
+					payload: loadedFile
 				})
+				loadedFileRef.current = loadedFile
 
 				dispatch({ type: 'set-file-loading', payload: false })
+
+				if (optimizer) {
+					await optimizer.load(result.scene)
+				}
 			} catch (error) {
 				console.error('Error loading binary model:', error)
 				dispatch({ type: 'set-file-loading', payload: false })
 				eventSystem.emit('load-error', error)
 			}
 		},
-		[modelLoader]
+		[modelLoader, optimizer]
 	)
 
 	/**
@@ -177,6 +253,18 @@ function useLoadModel<
 
 				// Update the ref so loadFromServer can access it
 				loadedFileRef.current = loadedFile
+
+				if (optimizer) {
+					try {
+						await optimizer.load(result.scene)
+						await applyCanonicalTextureNamesFromSource(optimizer, gltfFile)
+					} catch (optimizerError) {
+						console.warn(
+							'Failed to apply canonical texture names from source GLTF.',
+							optimizerError
+						)
+					}
+				}
 			} catch (error) {
 				console.error('Error loading GLTF model:', error)
 				console.error('GLTF file:', gltfFile.name)
@@ -188,7 +276,7 @@ function useLoadModel<
 				eventSystem.emit('load-error', error)
 			}
 		},
-		[modelLoader]
+		[modelLoader, optimizer]
 	)
 
 	/**
@@ -225,6 +313,10 @@ function useLoadModel<
 			// Mark upload as complete (progress is already emitted by ModelLoader)
 			const markUploadComplete = () => {
 				uploadCompleteRef.current = true
+				if (loadedFileRef.current) {
+					eventSystem.emit('load-complete', loadedFileRef.current)
+					uploadCompleteRef.current = false
+				}
 			}
 
 			// Load the appropriate model type
@@ -396,24 +488,6 @@ function useLoadModel<
 	)
 
 	/**
-	 * Effect to integrate loaded models with the optimizer (if provided).
-	 * When a model is successfully loaded and optimizer is available,
-	 * automatically loads the model into the optimizer for processing.
-	 */
-	useEffect(() => {
-		if (uploadCompleteRef.current && state.file) {
-			// Emit load complete event
-			eventSystem.emit('load-complete', state.file)
-			uploadCompleteRef.current = false
-
-			// If optimizer is available, load the model into it
-			if (optimizer && state.file.model) {
-				optimizer.load(state.file.model)
-			}
-		}
-	}, [state.file, optimizer])
-
-	/**
 	 * Creates the optimizer integration object.
 	 * This provides additional methods for applying optimizations and
 	 * updating the loaded model with optimized versions.
@@ -531,9 +605,14 @@ function useOptimizerIntegration(
 	// Return null if no optimizer instance is provided
 	if (!instance) return null as OptimizerIntegrationReturn<boolean>
 
+	const isReady = instance.isReady
+	const isPreparing = Boolean(file?.model) && !isReady
+
 	// Return the full optimizer interface with the applyOptimization method
 	return {
 		...instance,
+		isReady,
+		isPreparing,
 		applyOptimization,
 		reset: instance?.reset,
 		error: instance?.error,

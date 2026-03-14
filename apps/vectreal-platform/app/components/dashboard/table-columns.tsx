@@ -28,7 +28,10 @@ import {
 	KeyRound,
 	Pencil,
 	Trash2,
-	XCircle
+	XCircle,
+	Eye,
+	Rocket,
+	ArrowRight
 } from 'lucide-react'
 import { Link } from 'react-router'
 
@@ -232,6 +235,70 @@ export const sceneColumns: ColumnDef<SceneRow>[] = [
 				</span>
 			)
 		}
+	},
+	{
+		id: 'actions',
+		cell: ({ row }) => (
+			<div className="flex items-center justify-end gap-1">
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button variant="ghost" size="sm" aria-label="Scene actions">
+							<Ellipsis className="h-4 w-4" />
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">
+						<DropdownMenuItem asChild>
+							<Link
+								to={`/dashboard/projects/${row.original.projectId}/${row.original.id}`}
+								state={{
+									name: row.original.name,
+									description: row.original.description || undefined,
+									projectName: row.original.projectName,
+									type: 'scene' as const
+								}}
+								viewTransition
+								className="flex w-full items-center gap-2"
+							>
+								<ArrowRight className="mr-2 h-4 w-4" />
+								Go to Scene Details
+							</Link>
+						</DropdownMenuItem>
+						<DropdownMenuItem asChild>
+							<Link
+								to={`/dashboard/publisher/${row.original.projectId}/${row.original.id}`}
+								state={{
+									name: row.original.name,
+									description: row.original.description || undefined,
+									projectName: row.original.projectName,
+									type: 'scene' as const
+								}}
+								viewTransition
+								className="flex w-full items-center gap-2"
+							>
+								<Rocket className="mr-2 h-4 w-4" />
+								Edit in Publisher
+							</Link>
+						</DropdownMenuItem>
+						<DropdownMenuItem asChild>
+							<Link
+								to={`/preview/fullscreen/${row.original.projectId}/${row.original.id}/`}
+								state={{
+									name: row.original.name,
+									description: row.original.description || undefined,
+									projectName: row.original.projectName,
+									type: 'scene' as const
+								}}
+								viewTransition
+								className="flex w-full items-center gap-2"
+							>
+								<Eye className="mr-2 h-4 w-4" />
+								Preview Scene
+							</Link>
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+			</div>
+		)
 	}
 ]
 

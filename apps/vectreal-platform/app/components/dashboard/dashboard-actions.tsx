@@ -13,7 +13,7 @@ import {
 import { useSetAtom } from 'jotai/react'
 import { Edit, Folder, FolderOpen, MoreVertical, Plus } from 'lucide-react'
 import { memo } from 'react'
-import { Link, useMatches, useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 
 import { identifyDrawerRoute } from './utils'
 import { createFolderDialogAtom } from '../../lib/stores/dashboard-management-store'
@@ -218,22 +218,7 @@ ActionsMenu.displayName = 'SecondaryActionsMenu'
 export const DashboardActions = memo<DashboardActionsProps>(
 	({ variant, className }) => {
 		const { sceneId, projectId, folderId } = useParams()
-		const matches = useMatches()
 		const setCreateFolderDialog = useSetAtom(createFolderDialogAtom)
-
-		const dashboardMostRecentSceneId = matches
-			.map((match) => {
-				if (!match.loaderData || typeof match.loaderData !== 'object') {
-					return undefined
-				}
-
-				const loaderData = match.loaderData as {
-					overview?: { mostRecentSceneId?: string }
-				}
-
-				return loaderData.overview?.mostRecentSceneId
-			})
-			.find((sceneIdCandidate) => Boolean(sceneIdCandidate))
 
 		let config = ACTION_CONFIGS[variant]
 
@@ -267,9 +252,7 @@ export const DashboardActions = memo<DashboardActionsProps>(
 				primary: {
 					label: 'Open Publisher',
 					icon: Plus,
-					to: dashboardMostRecentSceneId
-						? `/publisher/${dashboardMostRecentSceneId}`
-						: '/publisher'
+					to: '/publisher'
 				}
 			}
 		}

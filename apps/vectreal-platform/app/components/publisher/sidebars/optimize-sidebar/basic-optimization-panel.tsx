@@ -12,23 +12,23 @@ export type OptimizationPreset = 'low' | 'medium' | 'high'
 export const presetOptions: Option<OptimizationPreset>[] = [
 	{
 		id: 'low',
-		label: 'Low Optimization',
+		label: 'Base Optimization',
 		description:
-			'Preserves most details with greater file size. Best for high-fidelity previews and final renders.',
+			'2K WebP Texture Resolution - 90% Quality. Preserves most details with greater file size. Best for high-fidelity previews and final renders.',
 		icon: <BatteryLow className="h-4 w-4" />
 	},
 	{
 		id: 'medium',
-		label: 'Balanced',
+		label: 'Balanced Optimization',
 		description:
-			'Well balanced between quality and performance. Recommended for most use cases and development.',
+			'1K WebP Texture Resolution - 80% Quality. Well balanced between quality and performance. Recommended for most use cases and development.',
 		icon: <BatteryMedium className="h-4 w-4" />
 	},
 	{
 		id: 'high',
-		label: 'High Optimization',
+		label: 'Performance Optimization',
 		description:
-			'Optimized for performance and small file sizes. Best for mobile devices and low-end hardware.',
+			'512px WebP Texture Resolution - 70% Quality. Optimized for performance and small file sizes. Best for mobile devices and low-end hardware.',
 		icon: <BatteryFull className="h-4 w-4" />
 	}
 ]

@@ -60,6 +60,21 @@ const mimeTypeToExtension = (mimeType: string): string | null => {
 	}
 }
 
+const targetFormatToMimeType = (
+	targetFormat?: 'webp' | 'jpeg' | 'png'
+): string | null => {
+	switch (targetFormat) {
+		case 'webp':
+			return 'image/webp'
+		case 'jpeg':
+			return 'image/jpeg'
+		case 'png':
+			return 'image/png'
+		default:
+			return null
+	}
+}
+
 const replaceUriExtension = (uri: string, extension: string): string => {
 	if (!uri || uri.startsWith('data:')) {
 		return uri
@@ -83,6 +98,38 @@ const replaceUriExtension = (uri: string, extension: string): string => {
 
 	return `${nextBase}${suffix}`
 }
+
+const buildTextureFallbackFileName = (
+	index: number,
+	mimeType: string | null
+): string => {
+	const extension = mimeType ? mimeTypeToExtension(mimeType) : null
+	return extension ? `texture-${index}.${extension}` : `texture-${index}`
+}
+
+const extractFileNameSegment = (value: string): string => {
+	const withoutQuery = value.split('?')[0] || value
+	const withoutHash = withoutQuery.split('#')[0] || withoutQuery
+	const normalized = withoutHash.replace(/\\/g, '/').trim()
+	return normalized.split('/').pop() || normalized
+}
+
+const GENERIC_TEXTURE_FILE_NAME_PATTERN =
+	/^(?:text{1,2}ure|image|img)[-_ ]?\d+(?:\.[a-z0-9]+)?$/i
+
+const isGenericTextureFileName = (value: string): boolean => {
+	const trimmed = value.trim()
+	if (trimmed.length === 0) {
+		return false
+	}
+
+	const fileName = extractFileNameSegment(trimmed)
+	return GENERIC_TEXTURE_FILE_NAME_PATTERN.test(fileName)
+}
+
+type TextureCompressionEncoder = NonNullable<
+	Parameters<typeof compressTexture>[1]
+>['encoder']
 
 /**
  * Server-side 3D model optimization service using glTF-Transform.
@@ -304,79 +351,108 @@ export class ModelOptimizer {
 
 		this.emitProgress('Compressing textures', 0)
 
+		let sharp: TextureCompressionEncoder
+
 		try {
-			// Import Sharp for server-side texture processing
 			const sharpModule = await import('sharp')
-			const sharp = sharpModule.default || sharpModule
+			sharp = sharpModule.default || sharpModule
 
 			if (typeof sharp !== 'function') {
 				throw new Error('Sharp is not available or not properly installed')
 			}
-
-			// Extract only the options that textureCompress expects
-
-			const { serverOptions, ...textureCompressOptions } = options
-
-			console.log('Texture compression options:', {
-				targetFormat: textureCompressOptions.targetFormat,
-				quality: textureCompressOptions.quality,
-				resize: textureCompressOptions.resize,
-				sharpAvailable: typeof sharp === 'function'
-			})
-
-			// Log texture info before compression
-			console.log('Before texture compression:')
-			if (!this._document) {
-				throw new Error('Document is not loaded')
-			}
-			const textures = this._document.getRoot().listTextures()
-			textures.forEach((texture, i) => {
-				console.log(
-					`Texture ${i}: ${texture.getMimeType() || 'unknown mime type'}`
-				)
-			})
-
-			// Apply compression to each texture individually
-			console.log('Compressing textures individually...')
-			for (let i = 0; i < textures?.length; i++) {
-				const texture = textures[i]
-				console.log(`Processing texture ${i}/${textures.length}`)
-
-				try {
-					await compressTexture(texture, {
-						encoder: sharp,
-						targetFormat: textureCompressOptions.targetFormat,
-						quality: textureCompressOptions.quality,
-						resize: textureCompressOptions.resize
-					})
-					console.log(
-						`Texture ${i} compressed successfully to ${texture.getMimeType()}`
-					)
-				} catch (error) {
-					console.warn(`Failed to compress texture ${i}:`, error)
-				}
-			}
-
-			console.log('All textures processed')
-			this.appliedOptimizations.push('texture compression')
-
-			// Log texture info after compression
-			console.log('After texture compression:')
-			textures.forEach((texture, i) => {
-				console.log(
-					`Texture ${i}: ${texture.getMimeType() || 'unknown mime type'}`
-				)
-			})
-
-			this.emitProgress('Texture compression complete', 100)
 		} catch (error) {
-			// If Sharp fails, try basic texture optimization
 			console.warn(
 				'Sharp-based compression failed, applying basic optimization:',
 				error
 			)
 			await this.applyBasicTextureOptimization(options)
+			return
 		}
+
+		const { serverOptions, ...textureCompressOptions } = options
+		const expectedMimeType = targetFormatToMimeType(
+			textureCompressOptions.targetFormat
+		)
+
+		console.log('Texture compression options:', {
+			targetFormat: textureCompressOptions.targetFormat,
+			quality: textureCompressOptions.quality,
+			resize: textureCompressOptions.resize,
+			sharpAvailable: typeof sharp === 'function'
+		})
+
+		if (!this._document) {
+			throw new Error('Document is not loaded')
+		}
+
+		const textures = this._document.getRoot().listTextures()
+		console.log('Before texture compression:')
+		textures.forEach((texture, i) => {
+			console.log(
+				`Texture ${i}: ${texture.getMimeType() || 'unknown mime type'}`
+			)
+		})
+
+		const failures: Array<{ index: number; reason: string }> = []
+
+		console.log('Compressing textures individually...')
+		for (let i = 0; i < textures.length; i++) {
+			const texture = textures[i]
+			console.log(`Processing texture ${i}/${textures.length}`)
+
+			try {
+				await compressTexture(texture, {
+					encoder: sharp,
+					targetFormat: textureCompressOptions.targetFormat,
+					quality: textureCompressOptions.quality,
+					resize: textureCompressOptions.resize
+				})
+
+				this.syncTextureIdentity(texture, i)
+
+				if (expectedMimeType && texture.getMimeType() !== expectedMimeType) {
+					throw new Error(
+						`expected ${expectedMimeType}, received ${texture.getMimeType() || 'unknown mime type'}`
+					)
+				}
+
+				console.log(
+					`Texture ${i} compressed successfully to ${texture.getMimeType()}`
+				)
+			} catch (error) {
+				failures.push({
+					index: i,
+					reason: error instanceof Error ? error.message : String(error)
+				})
+				console.warn(`Failed to compress texture ${i}:`, error)
+			}
+
+			this.emitProgress(
+				'Compressing textures',
+				Math.round(((i + 1) / textures.length) * 100)
+			)
+		}
+
+		if (failures.length > 0) {
+			const failureSummary = failures
+				.map((failure) => `#${failure.index}: ${failure.reason}`)
+				.join('; ')
+			throw new Error(
+				`Texture compression failed for ${failures.length} of ${textures.length} textures. ${failureSummary}`
+			)
+		}
+
+		console.log('All textures processed')
+		this.appliedOptimizations.push('texture compression')
+
+		console.log('After texture compression:')
+		textures.forEach((texture, i) => {
+			console.log(
+				`Texture ${i}: ${texture.getMimeType() || 'unknown mime type'}`
+			)
+		})
+
+		this.emitProgress('Texture compression complete', 100)
 	}
 
 	/**
@@ -641,12 +717,17 @@ export class ModelOptimizer {
 		return document
 			.getRoot()
 			.listTextures()
-			.map((texture, index) => ({
-				index,
-				name: texture.getName() || `texture-${index}`,
-				mimeType: texture.getMimeType() || 'application/octet-stream',
-				byteLength: texture.getImage()?.byteLength ?? 0
-			}))
+			.map((texture, index) => {
+				const fileName = this.resolveTextureCanonicalFileName(texture, index)
+
+				return {
+					index,
+					fileName,
+					name: fileName,
+					mimeType: texture.getMimeType() || 'application/octet-stream',
+					byteLength: texture.getImage()?.byteLength ?? 0
+				}
+			})
 	}
 
 	public getTexturePayload(index: number): TextureBinaryPayload {
@@ -665,7 +746,8 @@ export class ModelOptimizer {
 
 		return {
 			index,
-			name: texture.getName() || `texture-${index}`,
+			fileName: this.resolveTextureCanonicalFileName(texture, index),
+			name: this.resolveTextureCanonicalFileName(texture, index),
 			mimeType: texture.getMimeType() || 'application/octet-stream',
 			image
 		}
@@ -674,7 +756,8 @@ export class ModelOptimizer {
 	public replaceTexturePayload(
 		index: number,
 		image: Uint8Array,
-		mimeType: string
+		mimeType: string,
+		fileName?: string
 	): void {
 		const document = this.ensureModelLoaded()
 		const textures = document.getRoot().listTextures()
@@ -686,16 +769,86 @@ export class ModelOptimizer {
 
 		texture.setImage(image)
 		texture.setMimeType(mimeType)
+		this.syncTextureIdentity(texture, index, fileName)
+	}
 
+	private resolveTextureCanonicalFileName(
+		texture: {
+			getMimeType: () => string | null
+		},
+		index: number
+	): string {
+		const textureWithUri = texture as unknown as {
+			getURI?: () => string | null
+			getName?: () => string | null
+		}
+		const currentUri = textureWithUri.getURI?.()?.trim() ?? ''
+		const currentName = textureWithUri.getName?.()?.trim() ?? ''
+		const stableUri =
+			currentUri &&
+			!currentUri.startsWith('data:') &&
+			!isGenericTextureFileName(currentUri)
+				? currentUri
+				: ''
+		const stableName =
+			currentName && !isGenericTextureFileName(currentName) ? currentName : ''
+		const fallbackFileName = buildTextureFallbackFileName(
+			index,
+			texture.getMimeType()
+		)
+		const rawBaseFileName = stableUri || stableName || fallbackFileName
+		const baseFileName = extractFileNameSegment(rawBaseFileName)
+		const extension = mimeTypeToExtension(texture.getMimeType() || '')
+
+		if (!extension) {
+			return baseFileName
+		}
+
+		return replaceUriExtension(baseFileName, extension)
+	}
+
+	private syncTextureIdentity(
+		texture: {
+			getMimeType: () => string | null
+		},
+		index: number,
+		fileName?: string
+	): void {
 		const textureWithUri = texture as unknown as {
 			getURI?: () => string | null
 			setURI?: (value: string) => void
+			getName?: () => string | null
+			setName?: (value: string) => void
 		}
-		const extension = mimeTypeToExtension(mimeType)
-		const currentUri = textureWithUri.getURI?.() ?? null
+		const currentName = textureWithUri.getName?.()?.trim() ?? ''
+		const currentUri = textureWithUri.getURI?.()?.trim() ?? ''
+		const preferredFileName = fileName?.trim()
+		const preferredIsStable =
+			typeof preferredFileName === 'string' &&
+			preferredFileName.length > 0 &&
+			!isGenericTextureFileName(preferredFileName)
 
-		if (extension && currentUri && textureWithUri.setURI) {
-			textureWithUri.setURI(replaceUriExtension(currentUri, extension))
+		if (preferredIsStable) {
+			const preferredBaseName = extractFileNameSegment(preferredFileName)
+			if (textureWithUri.setURI && currentUri !== preferredBaseName) {
+				textureWithUri.setURI(preferredBaseName)
+			}
+			if (textureWithUri.setName && currentName !== preferredBaseName) {
+				textureWithUri.setName(preferredBaseName)
+			}
+		}
+
+		const canonicalFileName = this.resolveTextureCanonicalFileName(
+			texture,
+			index
+		)
+
+		if (textureWithUri.setURI && currentUri !== canonicalFileName) {
+			textureWithUri.setURI(canonicalFileName)
+		}
+
+		if (textureWithUri.setName && currentName !== canonicalFileName) {
+			textureWithUri.setName(canonicalFileName)
 		}
 	}
 
