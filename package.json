@@ -79,7 +79,6 @@
 		"react-day-picker": "^9.14.0",
 		"react-dom": "^19.0.0",
 		"react-dropzone": "^14.2.3",
-		"react-ga4": "^2.1.0",
 		"react-hook-form": "^7.56.4",
 		"react-resizable-panels": "^2.1.9",
 		"react-router": "7.12.0",
