@@ -2,6 +2,7 @@
 import { and, eq } from 'drizzle-orm'
 
 import { getDbClient } from '../../../db/client'
+import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { organizationMemberships } from '../../../db/schema/core/organization-memberships'
 import { organizations } from '../../../db/schema/core/organizations'
 import { users } from '../../../db/schema/core/users'
@@ -72,6 +73,16 @@ async function createOrganizationDb(
 		role: 'owner'
 	})
 
+	// Initialize billing subscription with free-plan defaults
+	await dbClient
+		.insert(orgSubscriptions)
+		.values({
+			organizationId: organization.id,
+			plan: 'free',
+			billingState: 'none'
+		})
+		.onConflictDoNothing()
+
 	return organization
 }
 
@@ -79,28 +90,30 @@ async function getOrCreateDefaultOrganizationDb(
 	dbClient: DbClient,
 	userId: string
 ): Promise<typeof organizations.$inferSelect> {
-	const existingOrg = await dbClient
-		.select({ organization: organizations })
-		.from(organizations)
-		.innerJoin(
-			organizationMemberships,
-			eq(organizationMemberships.organizationId, organizations.id)
-		)
-		.where(
-			and(
-				eq(organizationMemberships.userId, userId),
-				eq(organizationMemberships.role, 'owner'),
-				eq(organizations.name, 'My Organization')
+	return dbClient.transaction(async (tx) => {
+		const existingOrg = await tx
+			.select({ organization: organizations })
+			.from(organizations)
+			.innerJoin(
+				organizationMemberships,
+				eq(organizationMemberships.organizationId, organizations.id)
 			)
-		)
-		.limit(1)
-		.then((rows) => rows[0]?.organization)
+			.where(
+				and(
+					eq(organizationMemberships.userId, userId),
+					eq(organizationMemberships.role, 'owner'),
+					eq(organizations.name, 'My Organization')
+				)
+			)
+			.limit(1)
+			.then((rows) => rows[0]?.organization)
 
-	if (existingOrg) {
-		return existingOrg
-	}
+		if (existingOrg) {
+			return existingOrg
+		}
 
-	return await createOrganizationDb(dbClient, userId, 'My Organization')
+		return await createOrganizationDb(tx, userId, 'My Organization')
+	})
 }
 
 async function getUserOrganizationMembershipDb(
@@ -193,7 +206,9 @@ export async function createOrganization(
 export async function getOrCreateDefaultOrganization(
 	userId: string
 ): Promise<typeof organizations.$inferSelect> {
-	return await getOrCreateDefaultOrganizationDb(db, userId)
+	return await db.transaction(async (tx) => {
+		return await getOrCreateDefaultOrganizationDb(tx as DbClient, userId)
+	})
 }
 
 export async function getUserOrganizations(userId: string): Promise<
