@@ -32,6 +32,7 @@ import {
 	ProjectsGridSkeleton,
 	SceneDetailsSkeleton
 } from '../../components/skeletons'
+import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
 import { dashboardManagementStore } from '../../lib/stores/dashboard-management-store'
 
@@ -195,6 +196,7 @@ const DashboardLayout = () => {
 				</LogoSidebar>
 				<SidebarInset className="relative overflow-hidden">
 					<DashboardManagementDialogs />
+					<UpgradeModal />
 
 					<div className="from-muted/25 absolute top-0 z-50 h-20 w-full bg-gradient-to-b to-transparent" />
 

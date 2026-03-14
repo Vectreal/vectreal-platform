@@ -128,4 +128,59 @@ export class ApiResponse {
 	): Response {
 		return this.success(data, 201, options)
 	}
+
+	/**
+	 * 402 Payment Required — the organisation's plan is inactive (e.g. canceled,
+	 * unpaid).  Carries a machine-readable `quota` envelope so clients can show
+	 * the appropriate upgrade prompt.
+	 */
+	static paymentRequired(
+		message: string,
+		quota?: {
+			limitKey: string
+			currentValue?: number
+			limit?: number | null
+			plan?: string
+			upgradeTo?: string | null
+		}
+	): Response {
+		const body: { success: false; error: string; quota?: typeof quota } = {
+			success: false,
+			error: message
+		}
+		if (quota) {
+			body.quota = quota
+		}
+		return new Response(JSON.stringify(body), {
+			status: 402,
+			headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
+		})
+	}
+
+	/**
+	 * 403 Quota Exceeded — the organisation has consumed the hard quota for the
+	 * requested resource.  Carries a machine-readable `quota` envelope so
+	 * clients can show the appropriate upgrade prompt.
+	 */
+	static quotaExceeded(
+		message: string,
+		quota: {
+			limitKey: string
+			currentValue: number
+			limit: number | null
+			plan: string
+			upgradeTo?: string | null
+		}
+	): Response {
+		return new Response(
+			JSON.stringify({ success: false, error: message, quota }),
+			{
+				status: 403,
+				headers: {
+					'Content-Type': 'application/json',
+					'Cache-Control': 'no-store'
+				}
+			}
+		)
+	}
 }

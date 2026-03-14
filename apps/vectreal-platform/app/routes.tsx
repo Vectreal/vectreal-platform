@@ -44,10 +44,16 @@ export default [
 		index('./routes/home-page/home-page.tsx', {
 			id: 'home-index'
 		}),
+
 		// For users which are authenticated, the home page is available at "/home"
 		route('home', './routes/home-page/home-page.tsx', {
 			id: 'home-page'
 		}),
+
+		// Pricing page
+		route('pricing', './routes/pricing-page/pricing-page.tsx'),
+
+		// Legal pages
 		layout('./routes/layouts/mdx-layout.tsx', [
 			route('about', './routes/about-page.mdx'),
 			route('changelog', './routes/changelog-page.mdx'),

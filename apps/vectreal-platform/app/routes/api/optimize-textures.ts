@@ -14,10 +14,21 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
+import { ApiResponse } from '@shared/utils'
 import { TextureCompressOptions } from '@vctrl/core'
 import { data } from 'react-router'
 
 import { Route } from './+types/optimize-textures'
+import {
+	getOrgSubscription,
+	getRecommendedUpgrade
+} from '../../lib/domain/billing/entitlement-service.server'
+import {
+	checkQuota,
+	incrementUsage
+} from '../../lib/domain/billing/usage-service.server'
+import { initializeUserDefaults } from '../../lib/domain/user/user-repository.server'
+import { getAuthUser } from '../../lib/http/auth.server'
 import { ensurePost } from '../../lib/http/requests.server'
 
 const mimeTypeToExtension = (mimeType: string): string | null => {
@@ -104,6 +115,40 @@ export async function action({ request }: Route.ActionArgs) {
 	const methodCheck = ensurePost(request)
 	if (methodCheck) {
 		return methodCheck
+	}
+
+	// Authenticate the request and enforce the monthly optimization quota
+	const authResult = await getAuthUser(request)
+	if (authResult instanceof Response) {
+		return authResult
+	}
+
+	let organizationId: string
+	try {
+		const userDefaults = await initializeUserDefaults(authResult.user)
+		organizationId = userDefaults.organization.id
+	} catch {
+		return ApiResponse.serverError('Failed to resolve organization')
+	}
+
+	const quotaCheck = await checkQuota(
+		organizationId,
+		'optimization_runs_per_month'
+	)
+
+	if (quotaCheck.outcome === 'hard_limit_exceeded') {
+		const { plan } = await getOrgSubscription(organizationId)
+		const upgradeTo = getRecommendedUpgrade(plan)
+		return ApiResponse.quotaExceeded(
+			'Monthly optimization limit reached. Upgrade your plan to continue optimizing.',
+			{
+				limitKey: 'optimization_runs_per_month',
+				currentValue: quotaCheck.currentValue,
+				limit: quotaCheck.limit,
+				plan,
+				upgradeTo
+			}
+		)
 	}
 
 	try {
@@ -223,6 +268,12 @@ export async function action({ request }: Route.ActionArgs) {
 		const outputFileName = resolveCanonicalTextureFileName(
 			textureName,
 			outputMimeType
+		)
+
+		// Increment the monthly optimization counter after a successful run
+		await incrementUsage(organizationId, 'optimization_runs_per_month').catch(
+			(err) =>
+				console.error('[optimize-textures] Failed to increment usage counter', err)
 		)
 
 		return new Response(responseBody, {

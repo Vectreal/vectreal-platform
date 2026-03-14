@@ -3,6 +3,7 @@ import type {
 	ProjectStats,
 	SceneStats
 } from './dashboard-stats.server'
+import type { Plan, BillingState } from '../../../constants/plan-config'
 import type {
 	organizationMemberships,
 	organizations,
@@ -118,6 +119,26 @@ export interface SceneLoaderData {
 export interface SettingsLoaderData {
 	user: User
 	userWithDefaults: UserWithDefaults
+	billing: BillingSettingsData
+}
+
+/**
+ * Billing data surfaced on the settings page
+ */
+export interface BillingSettingsData {
+	plan: Plan
+	billingState: BillingState
+	currentPeriodEnd: string | null
+	trialEnd: string | null
+	hasStripeCustomer: boolean
+	usage: {
+		scenesTotal: number
+		sceneLimit: number | null
+		optimizationRuns: number
+		optimizationLimit: number | null
+		projectsTotal: number
+		projectsLimit: number | null
+	}
 }
 
 /**
