@@ -7,11 +7,11 @@ import { useCallback, useRef, useState, type FC } from 'react'
 import { useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
-import { publishSceneFromGlb } from '../../../../../lib/domain/scene/client/scene-publish'
 import {
 	isBillingLimitError,
 	toUpgradeModalPayload
 } from '../../../../../lib/domain/billing/client/billing-limit-error'
+import { publishSceneFromGlb } from '../../../../../lib/domain/scene/client/scene-publish'
 import { processAtom } from '../../../../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
 import {

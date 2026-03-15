@@ -1,11 +1,15 @@
 import { randomUUID } from 'crypto'
 
 import { ApiResponse } from '@shared/utils'
-import { count, eq } from 'drizzle-orm'
 import { SerializedSceneAssetDataMap, SceneSettings } from '@vctrl/core'
+import { count, eq } from 'drizzle-orm'
 
 import { getSceneFolder } from './scene-folder-repository.server'
 import { sceneSettingsService } from './scene-settings-service.server'
+import { getDbClient } from '../../../../db/client'
+import { projects } from '../../../../db/schema/project/projects'
+import { scenePublished } from '../../../../db/schema/project/scene-published'
+import { scenes } from '../../../../db/schema/project/scenes'
 import { uploadSceneAssets } from '../../asset/asset-storage.server'
 import {
 	getRecommendedUpgrade,
@@ -13,10 +17,6 @@ import {
 } from '../../billing/entitlement-service.server'
 import { QuotaExceededError } from '../../billing/quota-exceeded-error'
 import { checkQuota } from '../../billing/usage-service.server'
-import { getDbClient } from '../../../../db/client'
-import { scenePublished } from '../../../../db/schema/project/scene-published'
-import { projects } from '../../../../db/schema/project/projects'
-import { scenes } from '../../../../db/schema/project/scenes'
 import { getProject } from '../../project/project-repository.server'
 import {
 	getOrCreateDefaultOrganization,

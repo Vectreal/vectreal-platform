@@ -1,10 +1,10 @@
+import type { Plan } from '../../../constants/plan-config'
 import type {
 	organizationMemberships,
 	organizations,
 	projects,
 	scenes
 } from '../../../db/schema'
-import type { Plan } from '../../../constants/plan-config'
 
 export interface ProjectStats {
 	total: number

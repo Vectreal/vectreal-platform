@@ -1,5 +1,5 @@
-import { createBillingLimitErrorFromResponse } from '../../billing/client/billing-limit-error'
 import { buildSceneUploadFileDescriptor } from './scene-upload-manifest'
+import { createBillingLimitErrorFromResponse } from '../../billing/client/billing-limit-error'
 
 import type {
 	PublishSceneResponse,

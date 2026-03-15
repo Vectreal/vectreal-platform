@@ -10,13 +10,13 @@ import {
 	toUpgradeModalPayload
 } from '../../../../lib/domain/billing/client/billing-limit-error'
 import {
-	buildUpgradeModalState,
-	upgradeModalAtom
-} from '../../../../lib/stores/upgrade-modal-store'
-import {
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../../../lib/stores/scene-optimization-store'
+import {
+	buildUpgradeModalState,
+	upgradeModalAtom
+} from '../../../../lib/stores/upgrade-modal-store'
 
 import type {
 	DedupOptimization,
