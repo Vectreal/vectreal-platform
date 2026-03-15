@@ -26,6 +26,7 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 import { Textarea } from '@shared/components/ui/textarea'
+import { useSetAtom } from 'jotai'
 import { AlertCircle, Plus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -40,9 +41,21 @@ import { z, ZodError } from 'zod'
 
 import { Route } from './+types/projects-new'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
+import {
+	getOrgSubscription,
+	getQuotaLimit,
+	getRecommendedUpgrade
+} from '../../../lib/domain/billing/entitlement-service.server'
 import { computeProjectCreationCapabilities } from '../../../lib/domain/dashboard/dashboard-stats.server'
-import { createProject } from '../../../lib/domain/project/project-repository.server'
+import {
+	createProject,
+	getUserProjects
+} from '../../../lib/domain/project/project-repository.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
+import {
+	buildUpgradeModalState,
+	upgradeModalAtom
+} from '../../../lib/stores/upgrade-modal-store'
 
 import type { ProjectNewLoaderData } from '../../../lib/domain/dashboard/dashboard-types'
 
@@ -69,14 +82,56 @@ type ProjectFormValues = z.infer<typeof projectFormSchema>
 
 export async function loader({ request }: Route.LoaderArgs) {
 	// Authenticate and initialize user
-	const { user, userWithDefaults, headers } = await loadAuthenticatedUser(request)
+	const { user, userWithDefaults, headers } =
+		await loadAuthenticatedUser(request)
 
 	// Fetch organizations for project creation form
-	const organizations = await getUserOrganizations(user.id)
+	const [organizations, userProjects] = await Promise.all([
+		getUserOrganizations(user.id),
+		getUserProjects(user.id)
+	])
+
+	const projectsTotalByOrganization = userProjects.reduce<
+		Record<string, number>
+	>((acc, { organizationId }) => {
+		acc[organizationId] = (acc[organizationId] || 0) + 1
+		return acc
+	}, {})
+
+	const quotaEntries = await Promise.all(
+		organizations.map(async ({ organization }) => {
+			const [quota, subscription] = await Promise.all([
+				getQuotaLimit(organization.id, 'projects_total'),
+				getOrgSubscription(organization.id)
+			])
+			return [
+				organization.id,
+				{
+					projectsLimit: quota.limit,
+					plan: subscription.plan,
+					upgradeTo: getRecommendedUpgrade(subscription.plan)
+				}
+			] as const
+		})
+	)
+
+	const projectQuotaByOrganization = Object.fromEntries(
+		quotaEntries.map(([organizationId, quota]) => [
+			organizationId,
+			{
+				projectsTotal: projectsTotalByOrganization[organizationId] || 0,
+				projectsLimit: quota.projectsLimit,
+				plan: quota.plan,
+				upgradeTo: quota.upgradeTo
+			}
+		])
+	)
 
 	// Compute project creation capabilities
-	const projectCreationCapabilities =
-		computeProjectCreationCapabilities(organizations)
+	const projectCreationCapabilities = computeProjectCreationCapabilities(
+		organizations,
+		projectQuotaByOrganization
+	)
 
 	const loaderData: ProjectNewLoaderData = {
 		user,
@@ -149,6 +204,7 @@ export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/err
 
 const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	const { organizations, projectCreationCapabilities } = loaderData
+	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 
 	const location = useLocation()
 	const navigate = useNavigate()
@@ -171,7 +227,9 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 			name: '',
 			slug: '',
 			organizationId:
-				organizations.length === 1 ? organizations[0].organization.id : '',
+				organizations.length === 1
+					? organizations[0].organization.id
+					: organizations[0]?.organization.id || '',
 			description: ''
 		}
 	})
@@ -212,16 +270,50 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	const selectedOrgId = form.watch('organizationId')
 	const canCreateInSelectedOrg =
 		selectedOrgId && projectCreationCapabilities[selectedOrgId]?.canCreate
+	const selectedOrgQuota = selectedOrgId
+		? projectCreationCapabilities[selectedOrgId]
+		: null
+	const quotaExceededCapabilities = Object.values(
+		projectCreationCapabilities
+	).filter((capability) => capability.quotaExceeded)
+	const hasAnyQuotaExceeded = quotaExceededCapabilities.length > 0
 
 	// Check if user has any organization where they can create projects
 	const hasAnyCreatePermission = Object.values(
 		projectCreationCapabilities
 	).some((cap) => cap.canCreate)
+	const hasAnyRolePermission = organizations.some(({ membership }) =>
+		['owner', 'admin', 'member'].includes(membership.role)
+	)
 
-	// Filter organizations to only show those where user can create projects
-	const creatableOrganizations = organizations.filter(
-		({ organization }) =>
-			projectCreationCapabilities[organization.id]?.canCreate
+	const openProjectQuotaUpgradeModal = () => {
+		const targetOrgCapability =
+			(selectedOrgQuota?.quotaExceeded && selectedOrgQuota) ||
+			quotaExceededCapabilities[0]
+
+		if (!targetOrgCapability) {
+			return
+		}
+
+		setUpgradeModal(
+			buildUpgradeModalState({
+				reason: 'quota_exceeded',
+				message:
+					targetOrgCapability.projectsLimit === null
+						? 'Project creation is currently unavailable for this organization. Upgrade to continue creating projects.'
+						: `Project quota reached (${targetOrgCapability.projectsTotal}/${targetOrgCapability.projectsLimit}). Upgrade to create more projects.`,
+				limitKey: 'projects_total',
+				currentValue: targetOrgCapability.projectsTotal,
+				limit: targetOrgCapability.projectsLimit,
+				plan: targetOrgCapability.plan ?? undefined,
+				upgradeTo: targetOrgCapability.upgradeTo,
+				actionAttempted: 'project_create'
+			})
+		)
+	}
+
+	const organizationsById = Object.fromEntries(
+		organizations.map(({ organization }) => [organization.id, organization])
 	)
 
 	return (
@@ -244,18 +336,26 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 				</DrawerHeader>
 
 				<div className="overflow-y-auto p-6">
-					{/* No permission warning */}
+					{/* No permission / quota warning */}
 					{!hasAnyCreatePermission && (
 						<div className="mb-6 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
 							<AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-500" />
-							<div className="space-y-1">
+							<div className="space-y-2">
 								<p className="font-semibold text-amber-900 dark:text-amber-100">
-									No permission to create projects
+									{hasAnyQuotaExceeded && hasAnyRolePermission
+										? 'Project quota exceeded'
+										: 'No permission to create projects'}
 								</p>
 								<p className="text-sm text-amber-700 dark:text-amber-300">
-									You don't have permission to create projects in any of your
-									organizations. Contact an organization owner or admin.
+									{hasAnyQuotaExceeded && hasAnyRolePermission
+										? 'Every organization you can access has reached its project quota. Upgrade to continue creating projects.'
+										: "You don't have permission to create projects in any of your organizations. Contact an organization owner or admin."}
 								</p>
+								{hasAnyQuotaExceeded && hasAnyRolePermission && (
+									<Button type="button" onClick={openProjectQuotaUpgradeModal}>
+										Upgrade plan
+									</Button>
+								)}
 							</div>
 						</div>
 					)}
@@ -266,14 +366,27 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 						hasAnyCreatePermission && (
 							<div className="mb-6 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
 								<AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-500" />
-								<div className="space-y-1">
+								<div className="space-y-2">
 									<p className="font-semibold text-amber-900 dark:text-amber-100">
-										Insufficient permissions
+										{selectedOrgQuota?.quotaExceeded
+											? 'Project quota exceeded'
+											: 'Insufficient permissions'}
 									</p>
 									<p className="text-sm text-amber-700 dark:text-amber-300">
-										You don't have permission to create projects in this
-										organization. Please select a different organization.
+										{selectedOrgQuota?.quotaExceeded
+											? selectedOrgQuota.projectsLimit === null
+												? 'Project creation is temporarily unavailable for this organization.'
+												: `This organization reached its project quota (${selectedOrgQuota.projectsTotal}/${selectedOrgQuota.projectsLimit}). Upgrade to create more projects.`
+											: "You don't have permission to create projects in this organization. Please select a different organization."}
 									</p>
+									{selectedOrgQuota?.quotaExceeded && (
+										<Button
+											type="button"
+											onClick={openProjectQuotaUpgradeModal}
+										>
+											Upgrade plan
+										</Button>
+									)}
 								</div>
 							</div>
 						)}
@@ -302,18 +415,26 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 												</SelectTrigger>
 											</FormControl>
 											<SelectContent>
-												{creatableOrganizations.length > 0 ? (
-													creatableOrganizations.map(({ organization }) => (
-														<SelectItem
-															key={organization.id}
-															value={organization.id}
-														>
-															{organization.name}
-														</SelectItem>
-													))
+												{organizations.length > 0 ? (
+													organizations.map(({ organization }) => {
+														const capability =
+															projectCreationCapabilities[organization.id]
+														const label = capability?.quotaExceeded
+															? `${organization.name} (quota reached)`
+															: organization.name
+
+														return (
+															<SelectItem
+																key={organization.id}
+																value={organization.id}
+															>
+																{label}
+															</SelectItem>
+														)
+													})
 												) : (
-													<SelectItem value="" disabled>
-														No organizations with create permission
+													<SelectItem value="__no-creatable-orgs__" disabled>
+														No organizations available
 													</SelectItem>
 												)}
 											</SelectContent>
@@ -322,7 +443,9 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 											<FormMessage />
 										) : (
 											<FormDescription>
-												Choose which organization this project belongs to
+												{selectedOrgId && organizationsById[selectedOrgId]
+													? `Creating in ${organizationsById[selectedOrgId].name}`
+													: 'Choose which organization this project belongs to'}
 											</FormDescription>
 										)}
 									</FormItem>

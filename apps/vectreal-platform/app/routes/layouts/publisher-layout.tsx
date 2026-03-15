@@ -7,6 +7,7 @@ import { data, Outlet } from 'react-router'
 
 import { Route } from './+types/publisher-layout'
 import { ControlsOverlay } from '../../components'
+import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { getProject } from '../../lib/domain/project/project-repository.server'
 import { buildSceneAggregate } from '../../lib/domain/scene/server/scene-aggregate.server'
 import {
@@ -20,6 +21,7 @@ import {
 } from '../../lib/stores/publisher-config-store'
 import { sceneOptimizationStore } from '../../lib/stores/scene-optimization-store'
 import { sceneSettingsStore } from '../../lib/stores/scene-settings-store'
+import { upgradeModalStore } from '../../lib/stores/upgrade-modal-store'
 import { createSupabaseClient } from '../../lib/supabase.server'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
@@ -137,13 +139,16 @@ const Layout = ({ loaderData }: Route.ComponentProps) => {
 	return (
 		<ModelProvider optimizer={optimizer}>
 			<SidebarProvider open={showSidebar} onOpenChange={handleOpenChange}>
-				<Provider store={publisherConfigStore}>
-					<Provider store={sceneOptimizationStore}>
-						<Provider store={sceneSettingsStore}>
-							<main className="flex h-screen w-full flex-col overflow-hidden">
-								<ControlsOverlay {...(loaderData as PublisherLoaderData)} />
-								<Outlet />
-							</main>
+				<Provider store={upgradeModalStore}>
+					<Provider store={publisherConfigStore}>
+						<Provider store={sceneOptimizationStore}>
+							<Provider store={sceneSettingsStore}>
+								<main className="flex h-screen w-full flex-col overflow-hidden">
+									<UpgradeModal />
+									<ControlsOverlay {...(loaderData as PublisherLoaderData)} />
+									<Outlet />
+								</main>
+							</Provider>
 						</Provider>
 					</Provider>
 				</Provider>

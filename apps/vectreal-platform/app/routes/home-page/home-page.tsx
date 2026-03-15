@@ -486,7 +486,9 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 								We've got guides, best practices, case studies, and tutorials to
 								help you go from beginner to pro.
 							</p>
-							<Button className="w-fit">Explore our Knowledge Hub</Button>
+							<Button asChild className="w-fit">
+								<Link to="/docs">Explore the Documentation</Link>
+							</Button>
 						</CardContent>
 					</BasicCard>
 				</div>
@@ -537,8 +539,14 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 					<p className="text-foreground/90 mt-4 text-lg md:text-xl">
 						Join the community that’s reimagining how 3D lives on the web.
 					</p>
-					<Button className="mt-2 w-fit px-8!">
-						<GithubLogo /> Meet the Community
+					<Button asChild className="mt-2 w-fit px-8!">
+						<Link
+							to="https://github.com/vectreal"
+							target="_blank"
+							rel="noreferrer"
+						>
+							<GithubLogo /> Meet the Community
+						</Link>
 					</Button>
 				</div>
 			</Section>

@@ -1,10 +1,9 @@
-
-
 import { createFileFromDataUrl } from './scene-draft-serialization'
 import {
 	buildImageMimeLookup,
 	buildSceneUploadFileDescriptor
 } from './scene-upload-manifest'
+import { createBillingLimitErrorFromResponse } from '../../billing/client/billing-limit-error'
 
 import type { SceneMetaState } from '../../../../types/publisher-config'
 import type { SceneSettings } from '@vctrl/core'
@@ -41,6 +40,15 @@ interface ExecuteSceneSaveOrchestratorParams {
 
 const toJsonOrThrow = async (response: Response) => {
 	const payload = await response.json()
+	const billingLimitError = createBillingLimitErrorFromResponse(
+		response.status,
+		payload,
+		`HTTP error! status: ${response.status}`
+	)
+
+	if (billingLimitError) {
+		throw billingLimitError
+	}
 
 	if (!response.ok || payload.error) {
 		throw new Error(payload.error || `HTTP error! status: ${response.status}`)
@@ -75,7 +83,9 @@ export const executeSceneSaveOrchestrator = async ({
 		throw new Error('Failed to prepare glTF payload for upload')
 	}
 
-	const endpoint = currentSceneId ? `/api/scenes/${currentSceneId}` : '/api/scenes'
+	const endpoint = currentSceneId
+		? `/api/scenes/${currentSceneId}`
+		: '/api/scenes'
 
 	const prepareFormData = new FormData()
 	prepareFormData.append('action', 'prepare-scene-upload')
@@ -136,7 +146,9 @@ export const executeSceneSaveOrchestrator = async ({
 				console.warn('[scene-settings] thumbnail upload failed', {
 					sceneId: preparedSceneId,
 					error:
-						error instanceof Error ? error.message : 'Unknown thumbnail upload error'
+						error instanceof Error
+							? error.message
+							: 'Unknown thumbnail upload error'
 				})
 			}
 		}

@@ -27,6 +27,10 @@ export default [
 
 	// Billing api
 	route('api/billing/checkout', './routes/api/billing/checkout.ts'),
+	route(
+		'api/billing/optimization-runs',
+		'./routes/api/billing/optimization-runs.ts'
+	),
 	route('api/billing/portal', './routes/api/billing/portal.ts'),
 	route('api/billing/webhook', './routes/api/billing/webhook.ts'),
 	route('api/billing/reconcile', './routes/api/billing/reconcile.ts'),
@@ -44,10 +48,16 @@ export default [
 		index('./routes/home-page/home-page.tsx', {
 			id: 'home-index'
 		}),
+
 		// For users which are authenticated, the home page is available at "/home"
 		route('home', './routes/home-page/home-page.tsx', {
 			id: 'home-page'
 		}),
+
+		// Pricing page
+		route('pricing', './routes/pricing-page/pricing-page.tsx'),
+
+		// Legal pages
 		layout('./routes/layouts/mdx-layout.tsx', [
 			route('about', './routes/about-page.mdx'),
 			route('changelog', './routes/changelog-page.mdx'),
@@ -140,6 +150,16 @@ export default [
 				route(':keyId/edit', './routes/dashboard-page/api-keys-edit.tsx')
 			]),
 			route('organizations', './routes/dashboard-page/organizations.tsx'),
+			route('billing', './routes/dashboard-page/billing.tsx'),
+			route('billing/checkout', './routes/dashboard-page/billing-checkout.tsx'),
+			route(
+				'billing/checkout-success',
+				'./routes/dashboard-page/billing-checkout-success.tsx'
+			),
+			route(
+				'billing/checkout-canceled',
+				'./routes/dashboard-page/billing-checkout-canceled.tsx'
+			),
 			route('settings', './routes/dashboard-page/settings.tsx')
 		])
 	])

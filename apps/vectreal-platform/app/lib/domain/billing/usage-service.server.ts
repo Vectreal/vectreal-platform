@@ -8,8 +8,10 @@
  * Design notes:
  *   - All mutations use database-level atomic updates to prevent double-
  *     counting under concurrent request load.
- *   - Monthly counters use calendar-month windows anchored at UTC midnight
- *     on the first day of the month.
+ *   - Counter windows are key-aware:
+ *       - Monthly counters use calendar-month windows in UTC.
+ *       - Per-minute counters use UTC minute windows.
+ *       - Cumulative counters use a non-expiring window.
  *   - Soft-limit warnings fire at 80 % of the hard limit.
  *   - When a quota is `null` (unlimited) the action is always allowed.
  */
@@ -29,11 +31,27 @@ import { orgUsageCounters } from '../../../db/schema/billing/usage-counters'
 /** Soft-limit warning threshold (80 % of the hard limit). */
 const SOFT_LIMIT_THRESHOLD = 0.8
 
+const NON_EXPIRING_WINDOW_START = new Date('1970-01-01T00:00:00.000Z')
+const NON_EXPIRING_WINDOW_END = new Date('9999-12-31T23:59:59.999Z')
+
+const MONTHLY_COUNTER_KEYS: ReadonlySet<LimitKey> = new Set([
+	'optimization_runs_per_month',
+	'api_requests_per_month',
+	'embed_bandwidth_gb_per_month',
+	'preview_loads_per_month'
+])
+
+const MINUTE_COUNTER_KEYS: ReadonlySet<LimitKey> = new Set([
+	'api_requests_per_minute'
+])
+
 /**
  * Returns the UTC start and end of the current calendar month window.
  */
-export function currentMonthWindow(): { windowStart: Date; windowEnd: Date } {
-	const now = new Date()
+export function currentMonthWindow(now: Date = new Date()): {
+	windowStart: Date
+	windowEnd: Date
+} {
 	const windowStart = new Date(
 		Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
 	)
@@ -41,6 +59,43 @@ export function currentMonthWindow(): { windowStart: Date; windowEnd: Date } {
 		Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)
 	)
 	return { windowStart, windowEnd }
+}
+
+export function currentMinuteWindow(now: Date = new Date()): {
+	windowStart: Date
+	windowEnd: Date
+} {
+	const windowStart = new Date(
+		Date.UTC(
+			now.getUTCFullYear(),
+			now.getUTCMonth(),
+			now.getUTCDate(),
+			now.getUTCHours(),
+			now.getUTCMinutes(),
+			0,
+			0
+		)
+	)
+	const windowEnd = new Date(windowStart.getTime() + 60 * 1000)
+	return { windowStart, windowEnd }
+}
+
+function getCounterWindow(
+	counterKey: LimitKey,
+	now: Date = new Date()
+): { windowStart: Date; windowEnd: Date } {
+	if (MONTHLY_COUNTER_KEYS.has(counterKey)) {
+		return currentMonthWindow(now)
+	}
+
+	if (MINUTE_COUNTER_KEYS.has(counterKey)) {
+		return currentMinuteWindow(now)
+	}
+
+	return {
+		windowStart: NON_EXPIRING_WINDOW_START,
+		windowEnd: NON_EXPIRING_WINDOW_END
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -97,7 +152,10 @@ async function getOrCreateCounter(
 		.returning({ id: orgUsageCounters.id, value: orgUsageCounters.value })
 
 	if (row) {
-		return { id: row.id, value: toSafeNumberFromBigInt(row.value, 'counterValue') }
+		return {
+			id: row.id,
+			value: toSafeNumberFromBigInt(row.value, 'counterValue')
+		}
 	}
 
 	// Row already exists — fetch it
@@ -142,8 +200,7 @@ export async function incrementUsage(
 ): Promise<number> {
 	ensurePositiveInteger(delta, 'delta')
 	const deltaBigInt = BigInt(delta)
-
-	const { windowStart, windowEnd } = currentMonthWindow()
+	const { windowStart, windowEnd } = getCounterWindow(counterKey)
 
 	const db = getDbClient()
 
@@ -187,7 +244,7 @@ export async function decrementUsage(
 	const deltaBigInt = BigInt(delta)
 
 	const db = getDbClient()
-	const { windowStart, windowEnd } = currentMonthWindow()
+	const { windowStart, windowEnd } = getCounterWindow(counterKey)
 
 	await getOrCreateCounter(organizationId, counterKey, windowStart, windowEnd)
 
@@ -221,7 +278,7 @@ export async function getCurrentUsage(
 	organizationId: string,
 	counterKey: LimitKey
 ): Promise<number> {
-	const { windowStart, windowEnd } = currentMonthWindow()
+	const { windowStart, windowEnd } = getCounterWindow(counterKey)
 	const counter = await getOrCreateCounter(
 		organizationId,
 		counterKey,
@@ -272,7 +329,12 @@ export async function checkQuota(
 	const usageFraction = projected / limit
 
 	if (projected > limit) {
-		return { outcome: 'hard_limit_exceeded', currentValue, limit, usageFraction }
+		return {
+			outcome: 'hard_limit_exceeded',
+			currentValue,
+			limit,
+			usageFraction
+		}
 	}
 
 	if (usageFraction >= SOFT_LIMIT_THRESHOLD) {
@@ -301,7 +363,7 @@ export async function reconcileUsageCounter(
 	}
 
 	const db = getDbClient()
-	const { windowStart, windowEnd } = currentMonthWindow()
+	const { windowStart, windowEnd } = getCounterWindow(counterKey)
 
 	await getOrCreateCounter(organizationId, counterKey, windowStart, windowEnd)
 

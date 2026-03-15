@@ -8,6 +8,12 @@ import { organizationMemberships } from '../../../db/schema/core/organization-me
 import { organizations } from '../../../db/schema/core/organizations'
 import { users } from '../../../db/schema/core/users'
 import { projects } from '../../../db/schema/project/projects'
+import {
+	getOrgSubscription,
+	getRecommendedUpgrade
+} from '../billing/entitlement-service.server'
+import { QuotaExceededError } from '../billing/quota-exceeded-error'
+import { checkQuota } from '../billing/usage-service.server'
 
 const db = getDbClient()
 
@@ -246,6 +252,21 @@ export async function createApiKey(
 
 	// Verify user is admin/owner of organization
 	await verifyOrganizationAdminAccess(db, organizationId, userId)
+
+	const quotaCheck = await checkQuota(organizationId, 'api_keys_per_org')
+	if (quotaCheck.outcome === 'hard_limit_exceeded') {
+		const { plan } = await getOrgSubscription(organizationId)
+		const upgradeTo = getRecommendedUpgrade(plan)
+		throw new QuotaExceededError({
+			limitKey: 'api_keys_per_org',
+			currentValue: quotaCheck.currentValue,
+			limit: quotaCheck.limit,
+			plan,
+			upgradeTo,
+			message:
+				'API key limit reached for your plan. Upgrade to create more API keys.'
+		})
+	}
 
 	// Verify all projects belong to organization
 	await verifyProjectsInOrganization(db, projectIds, organizationId)

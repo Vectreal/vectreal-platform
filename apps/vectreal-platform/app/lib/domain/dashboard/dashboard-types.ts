@@ -3,6 +3,7 @@ import type {
 	ProjectStats,
 	SceneStats
 } from './dashboard-stats.server'
+import type { Plan, BillingState } from '../../../constants/plan-config'
 import type {
 	organizationMemberships,
 	organizations,
@@ -69,6 +70,11 @@ export interface ProjectsLoaderData {
 			canCreate: boolean
 			canEdit: boolean
 			canDelete: boolean
+			projectsTotal: number
+			projectsLimit: number | null
+			quotaExceeded: boolean
+			plan: Plan | null
+			upgradeTo: Plan | null
 		}
 	>
 	sceneStats: SceneStats
@@ -121,6 +127,51 @@ export interface SettingsLoaderData {
 }
 
 /**
+ * Billing data surfaced on the settings page
+ */
+export interface BillingSettingsData {
+	plan: Plan
+	billingState: BillingState
+	currentPeriodEnd: string | null
+	trialEnd: string | null
+	hasStripeCustomer: boolean
+	usage: {
+		scenesTotal: number
+		sceneLimit: number | null
+		optimizationRuns: number
+		optimizationLimit: number | null
+		projectsTotal: number
+		projectsLimit: number | null
+	}
+}
+
+export interface BillingCheckoutOptions {
+	pro: BillingCheckoutPeriods
+	business: BillingCheckoutPeriods
+}
+
+export interface BillingCheckoutOption {
+	priceId: string
+	amountCents: number
+	currency: string
+	interval: 'month' | 'year'
+	intervalCount: number
+	productName: string | null
+}
+
+export interface BillingCheckoutPeriods {
+	monthly: BillingCheckoutOption | null
+	annual: BillingCheckoutOption | null
+}
+
+export interface BillingLoaderData {
+	user: User
+	userWithDefaults: UserWithDefaults
+	billing: BillingSettingsData
+	checkoutOptions: BillingCheckoutOptions
+}
+
+/**
  * Loader data for new project page
  */
 export interface ProjectNewLoaderData {
@@ -133,6 +184,11 @@ export interface ProjectNewLoaderData {
 			canCreate: boolean
 			canEdit: boolean
 			canDelete: boolean
+			projectsTotal: number
+			projectsLimit: number | null
+			quotaExceeded: boolean
+			plan: Plan | null
+			upgradeTo: Plan | null
 		}
 	>
 }

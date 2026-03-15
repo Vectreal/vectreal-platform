@@ -1,3 +1,4 @@
+import type { Plan } from '../../../constants/plan-config'
 import type {
 	organizationMemberships,
 	organizations,
@@ -177,13 +178,27 @@ export function computeProjectCreationCapabilities(
 	userOrganizations: Array<{
 		organization: typeof organizations.$inferSelect
 		membership: typeof organizationMemberships.$inferSelect
-	}>
+	}>,
+	quotaByOrganization: Record<
+		string,
+		{
+			projectsTotal: number
+			projectsLimit: number | null
+			plan?: Plan
+			upgradeTo?: Plan | null
+		}
+	> = {}
 ): Record<
 	string,
 	{
 		canCreate: boolean
 		canEdit: boolean
 		canDelete: boolean
+		projectsTotal: number
+		projectsLimit: number | null
+		quotaExceeded: boolean
+		plan: Plan | null
+		upgradeTo: Plan | null
 	}
 > {
 	const capabilities: Record<
@@ -192,14 +207,32 @@ export function computeProjectCreationCapabilities(
 			canCreate: boolean
 			canEdit: boolean
 			canDelete: boolean
+			projectsTotal: number
+			projectsLimit: number | null
+			quotaExceeded: boolean
+			plan: Plan | null
+			upgradeTo: Plan | null
 		}
 	> = {}
 
 	for (const { organization, membership } of userOrganizations) {
+		const quota = quotaByOrganization[organization.id] ?? {
+			projectsTotal: 0,
+			projectsLimit: null
+		}
+		const quotaExceeded =
+			quota.projectsLimit !== null && quota.projectsTotal >= quota.projectsLimit
+
 		capabilities[organization.id] = {
-			canCreate: canCreateProjectsInOrganization(membership.role),
+			canCreate:
+				canCreateProjectsInOrganization(membership.role) && !quotaExceeded,
 			canEdit: canEditProjectsInOrganization(membership.role),
-			canDelete: canDeleteProjectsInOrganization(membership.role)
+			canDelete: canDeleteProjectsInOrganization(membership.role),
+			projectsTotal: quota.projectsTotal,
+			projectsLimit: quota.projectsLimit,
+			quotaExceeded,
+			plan: quota.plan ?? null,
+			upgradeTo: quota.upgradeTo ?? null
 		}
 	}
 

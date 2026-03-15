@@ -32,8 +32,10 @@ import {
 	ProjectsGridSkeleton,
 	SceneDetailsSkeleton
 } from '../../components/skeletons'
+import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
 import { dashboardManagementStore } from '../../lib/stores/dashboard-management-store'
+import { upgradeModalStore } from '../../lib/stores/upgrade-modal-store'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 
@@ -186,43 +188,46 @@ const DashboardLayout = () => {
 
 	return (
 		<Provider store={dashboardManagementStore}>
-			<SidebarProvider
-				open={sidebarOpen}
-				onOpenChange={handleSidebarOpenChange}
-			>
-				<LogoSidebar>
-					<DashboardSidebarContent user={user} />
-				</LogoSidebar>
-				<SidebarInset className="relative overflow-hidden">
-					<DashboardManagementDialogs />
+			<Provider store={upgradeModalStore}>
+				<SidebarProvider
+					open={sidebarOpen}
+					onOpenChange={handleSidebarOpenChange}
+				>
+					<LogoSidebar>
+						<DashboardSidebarContent user={user} />
+					</LogoSidebar>
+					<SidebarInset className="relative overflow-hidden">
+						<DashboardManagementDialogs />
+						<UpgradeModal />
 
-					<div className="from-muted/25 absolute top-0 z-50 h-20 w-full bg-gradient-to-b to-transparent" />
+						<div className="from-muted/25 absolute top-0 z-50 h-20 w-full bg-gradient-to-b to-transparent" />
 
-					<div className="absolute z-50 flex items-center gap-4 p-4 px-6 pl-4">
-						<SidebarTrigger />
-						<div className="flex items-center gap-2">
-							<DynamicBreadcrumb />
-							{isBackgroundRefreshing && (
-								<Loader2 className="text-muted-foreground h-3.5 w-3.5 animate-spin" />
-							)}
-						</div>
-					</div>
-					{!(isSceneDetailRoute && willBePublisherRoute) &&
-						!(isSceneDetailRoute || willBeSceneDetail) && (
-							<div className="mt-16">
-								<DashboardHeader />
+						<div className="absolute z-50 flex items-center gap-4 p-4 px-6 pl-4">
+							<SidebarTrigger />
+							<div className="flex items-center gap-2">
+								<DynamicBreadcrumb />
+								{isBackgroundRefreshing && (
+									<Loader2 className="text-muted-foreground h-3.5 w-3.5 animate-spin" />
+								)}
 							</div>
+						</div>
+						{!(isSceneDetailRoute && willBePublisherRoute) &&
+							!(isSceneDetailRoute || willBeSceneDetail) && (
+								<div className="mt-16">
+									<DashboardHeader />
+								</div>
+							)}
+						{isContentNavigationLoading &&
+						!willBeNewProjectCreation &&
+						!willBeProjectEditRoute &&
+						!willBePublisherRoute ? (
+							skeleton
+						) : (
+							<Outlet />
 						)}
-					{isContentNavigationLoading &&
-					!willBeNewProjectCreation &&
-					!willBeProjectEditRoute &&
-					!willBePublisherRoute ? (
-						skeleton
-					) : (
-						<Outlet />
-					)}
-				</SidebarInset>
-			</SidebarProvider>
+					</SidebarInset>
+				</SidebarProvider>
+			</Provider>
 		</Provider>
 	)
 }

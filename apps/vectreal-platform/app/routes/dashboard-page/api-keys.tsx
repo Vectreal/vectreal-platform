@@ -46,6 +46,7 @@ import {
 	createApiKeyColumns,
 	type ApiKeyRow
 } from '../../components/dashboard/table-columns'
+import { FeatureUnavailablePanel } from '../../components/upgrade/feature-unavailable-panel'
 import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
 import {
 	getAllUserApiKeys,
@@ -53,6 +54,11 @@ import {
 	type ApiKeyWithDetails
 } from '../../lib/domain/auth/api-key-repository.server'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
+import {
+	getOrgSubscription,
+	hasEntitlement,
+	getRecommendedUpgrade
+} from '../../lib/domain/billing/entitlement-service.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -76,10 +82,31 @@ export async function loader({ request }: Route.LoaderArgs) {
 		['admin', 'owner'].includes(o.membership.role)
 	)
 
+	const apiKeyEntitlementEntries = await Promise.all(
+		adminOrgs.map(async ({ organization }) => {
+			const [entitlement, subscription] = await Promise.all([
+				hasEntitlement(organization.id, 'org_api_keys'),
+				getOrgSubscription(organization.id)
+			])
+
+			return [
+				organization.id,
+				{
+					granted: entitlement.granted,
+					plan: subscription.plan,
+					upgradeTo: getRecommendedUpgrade(subscription.plan)
+				}
+			] as const
+		})
+	)
+
+	const apiKeysAccessByOrg = Object.fromEntries(apiKeyEntitlementEntries)
+
 	return data(
 		{
 			keysByOrg: Object.fromEntries(keysByOrg),
-			organizations: adminOrgs
+			organizations: adminOrgs,
+			apiKeysAccessByOrg
 		},
 		{ headers }
 	)
@@ -188,7 +215,7 @@ function OrgApiKeysTable({
 }
 
 export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
-	const { organizations, keysByOrg } = loaderData
+	const { organizations, keysByOrg, apiKeysAccessByOrg } = loaderData
 	const navigate = useNavigate()
 	const fetcher = useFetcher<typeof action>()
 	const revalidator = useRevalidator()
@@ -287,14 +314,29 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
-							<OrgApiKeysTable
-								namespace={`api-keys-${organizations[0].organization.id}`}
-								rows={buildApiKeyRows(
-									keysByOrg[organizations[0].organization.id] || []
-								)}
-								onEdit={handleEdit}
-								onRevoke={handleRevoke}
-							/>
+							{apiKeysAccessByOrg[organizations[0].organization.id]?.granted ? (
+								<OrgApiKeysTable
+									namespace={`api-keys-${organizations[0].organization.id}`}
+									rows={buildApiKeyRows(
+										keysByOrg[organizations[0].organization.id] || []
+									)}
+									onEdit={handleEdit}
+									onRevoke={handleRevoke}
+								/>
+							) : (
+								<FeatureUnavailablePanel
+									title="API keys unavailable for this organization"
+									description="Upgrade this organization to Pro or higher to manage API keys."
+									plan={
+										apiKeysAccessByOrg[organizations[0].organization.id]?.plan
+									}
+									upgradeTo={
+										apiKeysAccessByOrg[organizations[0].organization.id]
+											?.upgradeTo ?? null
+									}
+									actionAttempted="api_keys_view"
+								/>
+							)}
 						</CardContent>
 					</Card>
 				) : (
@@ -325,14 +367,27 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 										</CardDescription>
 									</CardHeader>
 									<CardContent>
-										<OrgApiKeysTable
-											namespace={`api-keys-${org.organization.id}`}
-											rows={buildApiKeyRows(
-												keysByOrg[org.organization.id] || []
-											)}
-											onEdit={handleEdit}
-											onRevoke={handleRevoke}
-										/>
+										{apiKeysAccessByOrg[org.organization.id]?.granted ? (
+											<OrgApiKeysTable
+												namespace={`api-keys-${org.organization.id}`}
+												rows={buildApiKeyRows(
+													keysByOrg[org.organization.id] || []
+												)}
+												onEdit={handleEdit}
+												onRevoke={handleRevoke}
+											/>
+										) : (
+											<FeatureUnavailablePanel
+												title="API keys unavailable for this organization"
+												description="Upgrade this organization to Pro or higher to manage API keys."
+												plan={apiKeysAccessByOrg[org.organization.id]?.plan}
+												upgradeTo={
+													apiKeysAccessByOrg[org.organization.id]?.upgradeTo ??
+													null
+												}
+												actionAttempted="api_keys_view"
+											/>
+										)}
 									</CardContent>
 								</Card>
 							</TabsContent>

@@ -2,6 +2,7 @@ import { ApiResponse } from '@shared/utils'
 import { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router'
 
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
+import { QuotaExceededError } from '../../lib/domain/billing/quota-exceeded-error'
 import { getProject } from '../../lib/domain/project/project-repository.server'
 import {
 	acquireHeavySceneActionToken,
@@ -814,19 +815,36 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	try {
 		switch (action as SceneSettingsAction) {
-			case 'prepare-scene-upload':
-				return withAdditionalHeaders(
-					ApiResponse.success(
-						await sceneSettingsOps.prepareSceneUpload(
-							{
-								...requestData,
-								action
-							},
-							authResult.user.id
+			case 'prepare-scene-upload': {
+				try {
+					return withAdditionalHeaders(
+						ApiResponse.success(
+							await sceneSettingsOps.prepareSceneUpload(
+								{
+									...requestData,
+									action
+								},
+								authResult.user.id
+							)
+						),
+						authHeaders
+					)
+				} catch (err) {
+					if (err instanceof QuotaExceededError) {
+						return withAdditionalHeaders(
+							ApiResponse.quotaExceeded(err.message, {
+								limitKey: err.limitKey,
+								currentValue: err.currentValue,
+								limit: err.limit,
+								plan: err.plan,
+								upgradeTo: err.upgradeTo
+							}),
+							authHeaders
 						)
-					),
-					authHeaders
-				)
+					}
+					throw err
+				}
+			}
 
 			case 'upload-scene-asset': {
 				const file = actionRequest.file
@@ -994,6 +1012,19 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				)
 		}
 	} catch (error) {
+		if (error instanceof QuotaExceededError) {
+			return withAdditionalHeaders(
+				ApiResponse.quotaExceeded(error.message, {
+					limitKey: error.limitKey,
+					currentValue: error.currentValue,
+					limit: error.limit,
+					plan: error.plan,
+					upgradeTo: error.upgradeTo
+				}),
+				authHeaders
+			)
+		}
+
 		console.error('Scene operation failed:', {
 			action,
 			requestId: requestData.requestId,

@@ -1,4 +1,5 @@
 import { buildSceneUploadFileDescriptor } from './scene-upload-manifest'
+import { createBillingLimitErrorFromResponse } from '../../billing/client/billing-limit-error'
 
 import type {
 	PublishSceneResponse,
@@ -51,6 +52,15 @@ export async function publishSceneFromGlb({
 	})
 
 	const uploadPayload = await uploadResponse.json()
+	const uploadBillingLimitError = createBillingLimitErrorFromResponse(
+		uploadResponse.status,
+		uploadPayload,
+		'Failed to upload GLB'
+	)
+	if (uploadBillingLimitError) {
+		throw uploadBillingLimitError
+	}
+
 	if (!uploadResponse.ok) {
 		throw new Error(
 			normalizeError(
@@ -86,6 +96,15 @@ export async function publishSceneFromGlb({
 	})
 
 	const publishPayload = await publishResponse.json()
+	const publishBillingLimitError = createBillingLimitErrorFromResponse(
+		publishResponse.status,
+		publishPayload,
+		'Failed to publish scene'
+	)
+	if (publishBillingLimitError) {
+		throw publishBillingLimitError
+	}
+
 	if (!publishResponse.ok) {
 		throw new Error(
 			normalizeError(

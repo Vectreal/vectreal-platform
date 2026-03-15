@@ -21,6 +21,7 @@ import {
 } from '@shared/components/ui/form'
 import { Input } from '@shared/components/ui/input'
 import { Textarea } from '@shared/components/ui/textarea'
+import { useSetAtom } from 'jotai'
 import { AlertCircle, Save, X } from 'lucide-react'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
@@ -37,12 +38,22 @@ import { z, ZodError } from 'zod'
 
 import { Route } from './+types/api-keys-edit'
 import { ProjectMultiSelect } from '../../components/dashboard/project-multi-select'
+import { FeatureUnavailablePanel } from '../../components/upgrade/feature-unavailable-panel'
 import {
 	getApiKeyById,
 	updateApiKey
 } from '../../lib/domain/auth/api-key-repository.server'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
+import {
+	getOrgSubscription,
+	hasEntitlement,
+	getRecommendedUpgrade
+} from '../../lib/domain/billing/entitlement-service.server'
 import { getUserProjects } from '../../lib/domain/project/project-repository.server'
+import {
+	buildUpgradeModalState,
+	upgradeModalAtom
+} from '../../lib/stores/upgrade-modal-store'
 
 import type { ProjectOption } from '../../components/dashboard/project-multi-select'
 
@@ -80,11 +91,21 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('API key not found', { status: 404 })
 	}
 
+	const [entitlement, subscription] = await Promise.all([
+		hasEntitlement(apiKeyData.organization.id, 'org_api_keys'),
+		getOrgSubscription(apiKeyData.organization.id)
+	])
+
 	return data(
 		{
 			user,
 			apiKeyData,
-			userProjects
+			userProjects,
+			apiKeyAccess: {
+				granted: entitlement.granted,
+				plan: subscription.plan,
+				upgradeTo: getRecommendedUpgrade(subscription.plan)
+			}
 		},
 		{ headers }
 	)
@@ -104,6 +125,34 @@ export async function action({ request, params }: Route.ActionArgs) {
 	const projectIdsStr = formData.get('projectIds') as string
 
 	try {
+		const apiKeyData = await getApiKeyById(keyId, user.id)
+		if (!apiKeyData) {
+			throw new Response('API key not found', { status: 404 })
+		}
+
+		const entitlementDecision = await hasEntitlement(
+			apiKeyData.organization.id,
+			'org_api_keys'
+		)
+
+		if (!entitlementDecision.granted) {
+			return data(
+				{
+					error:
+						'API keys are not available on your current plan. Upgrade to continue.',
+					upgrade: {
+						reason: 'feature_not_available' as const,
+						message:
+							'API keys are not available on your current plan. Upgrade to continue.',
+						plan: entitlementDecision.effectivePlan,
+						upgradeTo: getRecommendedUpgrade(entitlementDecision.effectivePlan),
+						actionAttempted: 'api_key_edit'
+					}
+				},
+				{ status: 403, headers }
+			)
+		}
+
 		// Parse project IDs
 		const projectIds = projectIdsStr ? JSON.parse(projectIdsStr) : []
 
@@ -161,7 +210,8 @@ export default function ApiKeysEditPage({
 	actionData,
 	loaderData
 }: Route.ComponentProps) {
-	const { apiKeyData, userProjects } = loaderData
+	const { apiKeyData, userProjects, apiKeyAccess } = loaderData
+	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 	const location = useLocation()
 	const navigate = useNavigate()
 	const params = useParams()
@@ -203,10 +253,25 @@ export default function ApiKeysEditPage({
 
 	// Show error toast
 	useEffect(() => {
-		if (actionData && 'error' in actionData && actionData.error) {
+		if (
+			actionData &&
+			typeof actionData === 'object' &&
+			'upgrade' in actionData &&
+			actionData.upgrade &&
+			typeof actionData.upgrade === 'object'
+		) {
+			setUpgradeModal(
+				buildUpgradeModalState(
+					actionData.upgrade as Parameters<typeof buildUpgradeModalState>[0]
+				)
+			)
+			if ('error' in actionData && actionData.error) {
+				toast.error(String(actionData.error))
+			}
+		} else if (actionData && 'error' in actionData && actionData.error) {
 			toast.error(actionData.error)
 		}
-	}, [actionData])
+	}, [actionData, setUpgradeModal])
 
 	const handleClose = () => {
 		navigate('/dashboard/api-keys')
@@ -244,6 +309,16 @@ export default function ApiKeysEditPage({
 				</DrawerHeader>
 
 				<div className="overflow-y-auto p-6">
+					{!apiKeyAccess.granted && (
+						<FeatureUnavailablePanel
+							title="API keys are not available on your current plan"
+							description="Upgrade to Pro or higher to edit and manage API keys."
+							plan={apiKeyAccess.plan}
+							upgradeTo={apiKeyAccess.upgradeTo}
+							actionAttempted="api_key_edit"
+						/>
+					)}
+
 					<Form {...form}>
 						<RemixForm method="post" className="space-y-6">
 							<FormField
@@ -335,7 +410,9 @@ export default function ApiKeysEditPage({
 							<DrawerFooter className="px-0 pt-2">
 								<Button
 									type="submit"
-									disabled={form.formState.isSubmitting}
+									disabled={
+										form.formState.isSubmitting || !apiKeyAccess.granted
+									}
 									className="w-full"
 								>
 									{form.formState.isSubmitting ? (

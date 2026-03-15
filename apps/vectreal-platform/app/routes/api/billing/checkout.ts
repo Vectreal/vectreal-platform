@@ -26,6 +26,7 @@
 
 import { ApiResponse } from '@shared/utils'
 import { eq } from 'drizzle-orm'
+import Stripe from 'stripe'
 
 import { Route } from './+types/checkout'
 import { getDbClient } from '../../../db/client'
@@ -43,6 +44,55 @@ const ALLOWED_BILLING_PERIODS: ReadonlySet<string> = new Set([
 	'monthly',
 	'annual'
 ])
+
+function isStripeProduct(
+	product: Stripe.Price['product']
+): product is Stripe.Product {
+	return (
+		typeof product === 'object' &&
+		product !== null &&
+		!('deleted' in product && product.deleted === true)
+	)
+}
+
+function getBillingPeriod(price: Stripe.Price): 'monthly' | 'annual' | null {
+	if (!price.recurring) {
+		return null
+	}
+
+	if (
+		price.recurring.interval === 'month' &&
+		price.recurring.interval_count === 1
+	) {
+		return 'monthly'
+	}
+
+	if (
+		price.recurring.interval === 'year' &&
+		price.recurring.interval_count === 1
+	) {
+		return 'annual'
+	}
+
+	return null
+}
+
+function resolvePlanFromPrice(price: Stripe.Price): string | null {
+	const metadataPlan = price.metadata?.vectreal_plan
+	if (typeof metadataPlan === 'string' && ALLOWED_PLANS.has(metadataPlan)) {
+		return metadataPlan
+	}
+
+	if (
+		isStripeProduct(price.product) &&
+		typeof price.product.metadata.vectreal_plan === 'string' &&
+		ALLOWED_PLANS.has(price.product.metadata.vectreal_plan)
+	) {
+		return price.product.metadata.vectreal_plan
+	}
+
+	return null
+}
 
 // ---------------------------------------------------------------------------
 // Action
@@ -116,6 +166,27 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 		.limit(1)
 
 	const stripe = getStripeClient()
+	const selectedPrice = await stripe.prices.retrieve(priceId, {
+		expand: ['product']
+	})
+
+	if (!selectedPrice.active) {
+		return ApiResponse.badRequest('Selected Stripe price is not active')
+	}
+
+	const resolvedPlan = resolvePlanFromPrice(selectedPrice)
+	if (resolvedPlan !== planId) {
+		return ApiResponse.badRequest(
+			'Selected Stripe price does not match the requested plan'
+		)
+	}
+
+	const resolvedBillingPeriod = getBillingPeriod(selectedPrice)
+	if (resolvedBillingPeriod !== billingPeriod) {
+		return ApiResponse.badRequest(
+			'Selected Stripe price does not match the requested billing period'
+		)
+	}
 
 	// Build the absolute base URL from the incoming request
 	const requestUrl = new URL(request.url)
@@ -128,8 +199,8 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 			? undefined
 			: (user.email ?? undefined),
 		line_items: [{ price: priceId, quantity: 1 }],
-		success_url: `${baseUrl}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-		cancel_url: `${baseUrl}/dashboard?checkout=canceled`,
+		success_url: `${baseUrl}/dashboard/billing/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
+		cancel_url: `${baseUrl}/dashboard/billing/checkout-canceled`,
 		metadata: {
 			organization_id: organizationId,
 			plan_id: planId,

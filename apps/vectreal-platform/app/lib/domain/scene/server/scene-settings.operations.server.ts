@@ -2,12 +2,24 @@ import { randomUUID } from 'crypto'
 
 import { ApiResponse } from '@shared/utils'
 import { SerializedSceneAssetDataMap, SceneSettings } from '@vctrl/core'
+import { count, eq } from 'drizzle-orm'
 
 import { getSceneFolder } from './scene-folder-repository.server'
 import { sceneSettingsService } from './scene-settings-service.server'
+import { getDbClient } from '../../../../db/client'
+import { projects } from '../../../../db/schema/project/projects'
+import { scenePublished } from '../../../../db/schema/project/scene-published'
+import { scenes } from '../../../../db/schema/project/scenes'
 import { uploadSceneAssets } from '../../asset/asset-storage.server'
+import {
+	getRecommendedUpgrade,
+	getOrgSubscription
+} from '../../billing/entitlement-service.server'
+import { QuotaExceededError } from '../../billing/quota-exceeded-error'
+import { checkQuota } from '../../billing/usage-service.server'
 import { getProject } from '../../project/project-repository.server'
 import {
+	getOrCreateDefaultOrganization,
 	getOrCreateDefaultProject,
 	userExists
 } from '../../user/user-repository.server'
@@ -151,6 +163,26 @@ export async function prepareSceneUpload(
 		throw new Error(
 			'User not found in local database. Please sign out and sign back in.'
 		)
+	}
+
+	// Enforce scenes_total quota when a new scene is being created (no existing sceneId)
+	const isNewScene = !request.sceneId?.trim()
+	if (isNewScene) {
+		const organization = await getOrCreateDefaultOrganization(userId)
+		const quotaCheck = await checkQuota(organization.id, 'scenes_total')
+		if (quotaCheck.outcome === 'hard_limit_exceeded') {
+			const { plan } = await getOrgSubscription(organization.id)
+			const upgradeTo = getRecommendedUpgrade(plan)
+			throw new QuotaExceededError({
+				limitKey: 'scenes_total',
+				currentValue: quotaCheck.currentValue,
+				limit: quotaCheck.limit,
+				plan,
+				upgradeTo,
+				message:
+					'Scene limit reached for your plan. Upgrade to create more scenes.'
+			})
+		}
 	}
 
 	return resolveSceneAndProject(
@@ -409,6 +441,49 @@ export async function publishScene(
 		}
 
 		const projectId = await getSceneProjectId(sceneId)
+		const project = await getProject(projectId, userId)
+		if (!project) {
+			throw new Error('Project not found or access denied')
+		}
+
+		const db = getDbClient()
+		const [existingPublish] = await db
+			.select({ sceneId: scenePublished.sceneId })
+			.from(scenePublished)
+			.where(eq(scenePublished.sceneId, sceneId))
+			.limit(1)
+
+		// Enforce concurrent publish quota only when this scene is not already published.
+		if (!existingPublish) {
+			const [{ totalPublished }] = await db
+				.select({ totalPublished: count(scenePublished.sceneId) })
+				.from(scenePublished)
+				.innerJoin(scenes, eq(scenes.id, scenePublished.sceneId))
+				.innerJoin(projects, eq(projects.id, scenes.projectId))
+				.where(eq(projects.organizationId, project.organizationId))
+
+			const quotaCheck = await checkQuota(
+				project.organizationId,
+				'scenes_published_concurrent',
+				1
+			)
+			const wouldExceedLimit =
+				quotaCheck.limit !== null && totalPublished >= quotaCheck.limit
+
+			if (quotaCheck.outcome === 'hard_limit_exceeded' || wouldExceedLimit) {
+				const { plan } = await getOrgSubscription(project.organizationId)
+				const upgradeTo = getRecommendedUpgrade(plan)
+				throw new QuotaExceededError({
+					limitKey: 'scenes_published_concurrent',
+					currentValue: totalPublished,
+					limit: quotaCheck.limit,
+					plan,
+					upgradeTo,
+					message:
+						'Published scene limit reached for your plan. Upgrade to publish more scenes concurrently.'
+				})
+			}
+		}
 
 		const result = await sceneSettingsService.publishSceneFromAssetId({
 			sceneId,

@@ -32,6 +32,11 @@ import {
 	loadAuthenticatedSession,
 	loadAuthenticatedUser
 } from '../../../lib/domain/auth/auth-loader.server'
+import {
+	getOrgSubscription,
+	getQuotaLimit,
+	getRecommendedUpgrade
+} from '../../../lib/domain/billing/entitlement-service.server'
 import { computeProjectCreationCapabilities } from '../../../lib/domain/dashboard/dashboard-stats.server'
 import {
 	deleteProject,
@@ -58,9 +63,47 @@ export async function loader({ request }: Route.LoaderArgs) {
 	// Flatten scenes map to array
 	const scenes = Array.from(scenesByProject.values()).flat()
 
+	const projectsTotalByOrganization = userProjects.reduce<
+		Record<string, number>
+	>((acc, { organizationId }) => {
+		acc[organizationId] = (acc[organizationId] || 0) + 1
+		return acc
+	}, {})
+
+	const quotaEntries = await Promise.all(
+		organizations.map(async ({ organization }) => {
+			const [quota, subscription] = await Promise.all([
+				getQuotaLimit(organization.id, 'projects_total'),
+				getOrgSubscription(organization.id)
+			])
+			return [
+				organization.id,
+				{
+					projectsLimit: quota.limit,
+					plan: subscription.plan,
+					upgradeTo: getRecommendedUpgrade(subscription.plan)
+				}
+			] as const
+		})
+	)
+
+	const projectQuotaByOrganization = Object.fromEntries(
+		quotaEntries.map(([organizationId, quota]) => [
+			organizationId,
+			{
+				projectsTotal: projectsTotalByOrganization[organizationId] || 0,
+				projectsLimit: quota.projectsLimit,
+				plan: quota.plan,
+				upgradeTo: quota.upgradeTo
+			}
+		])
+	)
+
 	// Compute server-side
-	const projectCreationCapabilities =
-		computeProjectCreationCapabilities(organizations)
+	const projectCreationCapabilities = computeProjectCreationCapabilities(
+		organizations,
+		projectQuotaByOrganization
+	)
 	return data(
 		{
 			organizations,
@@ -95,30 +138,36 @@ export async function action({ request }: Route.ActionArgs) {
 	const intent = formData.get('intent')
 
 	if (intent !== 'bulk-delete') {
-		return data({
-			success: false,
-			error: 'Invalid intent',
-			summary: {
-				total: 0,
-				succeeded: 0,
-				failed: 0
-			},
-			results: []
-		} satisfies ProjectDeleteActionResponse, { headers })
+		return data(
+			{
+				success: false,
+				error: 'Invalid intent',
+				summary: {
+					total: 0,
+					succeeded: 0,
+					failed: 0
+				},
+				results: []
+			} satisfies ProjectDeleteActionResponse,
+			{ headers }
+		)
 	}
 
 	const projectIdsRaw = formData.get('projectIds')
 	if (typeof projectIdsRaw !== 'string' || !projectIdsRaw.trim()) {
-		return data({
-			success: false,
-			error: 'Project IDs are required',
-			summary: {
-				total: 0,
-				succeeded: 0,
-				failed: 0
-			},
-			results: []
-		} satisfies ProjectDeleteActionResponse, { headers })
+		return data(
+			{
+				success: false,
+				error: 'Project IDs are required',
+				summary: {
+					total: 0,
+					succeeded: 0,
+					failed: 0
+				},
+				results: []
+			} satisfies ProjectDeleteActionResponse,
+			{ headers }
+		)
 	}
 
 	let projectIds: string[]
@@ -132,29 +181,35 @@ export async function action({ request }: Route.ActionArgs) {
 		}
 		projectIds = parsed
 	} catch {
-		return data({
-			success: false,
-			error: 'Invalid project IDs payload',
-			summary: {
-				total: 0,
-				succeeded: 0,
-				failed: 0
-			},
-			results: []
-		} satisfies ProjectDeleteActionResponse, { headers })
+		return data(
+			{
+				success: false,
+				error: 'Invalid project IDs payload',
+				summary: {
+					total: 0,
+					succeeded: 0,
+					failed: 0
+				},
+				results: []
+			} satisfies ProjectDeleteActionResponse,
+			{ headers }
+		)
 	}
 
 	if (projectIds.length === 0) {
-		return data({
-			success: false,
-			error: 'At least one project must be selected',
-			summary: {
-				total: 0,
-				succeeded: 0,
-				failed: 0
-			},
-			results: []
-		} satisfies ProjectDeleteActionResponse, { headers })
+		return data(
+			{
+				success: false,
+				error: 'At least one project must be selected',
+				summary: {
+					total: 0,
+					succeeded: 0,
+					failed: 0
+				},
+				results: []
+			} satisfies ProjectDeleteActionResponse,
+			{ headers }
+		)
 	}
 
 	const results: ProjectDeleteResult[] = []
@@ -175,15 +230,18 @@ export async function action({ request }: Route.ActionArgs) {
 
 	const succeeded = results.filter((result) => result.success).length
 
-	return data({
-		success: succeeded > 0,
-		summary: {
-			total: results.length,
-			succeeded,
-			failed: results.length - succeeded
-		},
-		results
-	} satisfies ProjectDeleteActionResponse, { headers })
+	return data(
+		{
+			success: succeeded > 0,
+			summary: {
+				total: results.length,
+				succeeded,
+				failed: results.length - succeeded
+			},
+			results
+		} satisfies ProjectDeleteActionResponse,
+		{ headers }
+	)
 }
 
 /**

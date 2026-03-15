@@ -251,6 +251,86 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 				}
 			}
 
+			case 'billing': {
+				const config = DASHBOARD_CONTENT.billing
+				const breadcrumbs: BreadcrumbItem[] = [
+					{ label: 'Dashboard', to: DASHBOARD_ROUTES.DASHBOARD },
+					{ label: config.title, isLast: true }
+				]
+
+				return {
+					title: config.title,
+					description: config.description,
+					actionVariant: config.actionVariant,
+					breadcrumbs
+				}
+			}
+
+			case 'billing-checkout': {
+				const config = DASHBOARD_CONTENT['billing-checkout']
+				const breadcrumbs: BreadcrumbItem[] = [
+					{ label: 'Dashboard', to: DASHBOARD_ROUTES.DASHBOARD },
+					{
+						label: DASHBOARD_CONTENT.billing.title,
+						to: DASHBOARD_ROUTES.BILLING
+					},
+					{ label: config.title, isLast: true }
+				]
+
+				return {
+					title: config.title,
+					description: config.description,
+					actionVariant: config.actionVariant,
+					breadcrumbs
+				}
+			}
+
+			case 'billing-checkout-success': {
+				const config = DASHBOARD_CONTENT['billing-checkout-success']
+				const breadcrumbs: BreadcrumbItem[] = [
+					{ label: 'Dashboard', to: DASHBOARD_ROUTES.DASHBOARD },
+					{
+						label: DASHBOARD_CONTENT.billing.title,
+						to: DASHBOARD_ROUTES.BILLING
+					},
+					{
+						label: DASHBOARD_CONTENT['billing-checkout'].title,
+						to: DASHBOARD_ROUTES.BILLING_CHECKOUT
+					},
+					{ label: config.title, isLast: true }
+				]
+
+				return {
+					title: config.title,
+					description: config.description,
+					actionVariant: config.actionVariant,
+					breadcrumbs
+				}
+			}
+
+			case 'billing-checkout-canceled': {
+				const config = DASHBOARD_CONTENT['billing-checkout-canceled']
+				const breadcrumbs: BreadcrumbItem[] = [
+					{ label: 'Dashboard', to: DASHBOARD_ROUTES.DASHBOARD },
+					{
+						label: DASHBOARD_CONTENT.billing.title,
+						to: DASHBOARD_ROUTES.BILLING
+					},
+					{
+						label: DASHBOARD_CONTENT['billing-checkout'].title,
+						to: DASHBOARD_ROUTES.BILLING_CHECKOUT
+					},
+					{ label: config.title, isLast: true }
+				]
+
+				return {
+					title: config.title,
+					description: config.description,
+					actionVariant: config.actionVariant,
+					breadcrumbs
+				}
+			}
+
 			case 'settings': {
 				const config = DASHBOARD_CONTENT.settings
 				const breadcrumbs: BreadcrumbItem[] = [

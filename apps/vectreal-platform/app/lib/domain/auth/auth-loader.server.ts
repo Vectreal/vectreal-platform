@@ -19,13 +19,21 @@ export interface AuthSessionResult {
 	headers: HeadersInit
 }
 
+function getSignUpRedirectPath(request: Request): string {
+	const requestUrl = new URL(request.url)
+	const next = `${requestUrl.pathname}${requestUrl.search}${requestUrl.hash}`
+	return `/sign-up?next=${encodeURIComponent(next)}`
+}
+
 export async function loadAuthenticatedSession(
 	request: Request
 ): Promise<AuthSessionResult> {
 	const authResponse = await getAuthUser(request)
 
 	if (authResponse instanceof Response) {
-		throw redirect('/sign-up', { headers: authResponse.headers })
+		throw redirect(getSignUpRedirectPath(request), {
+			headers: authResponse.headers
+		})
 	}
 
 	return {

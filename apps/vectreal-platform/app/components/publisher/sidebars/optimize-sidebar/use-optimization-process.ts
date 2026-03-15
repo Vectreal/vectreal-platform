@@ -1,12 +1,22 @@
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtom, useAtomValue } from 'jotai'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { useCallback, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 
+import {
+	createBillingLimitErrorFromResponse,
+	isBillingLimitError,
+	toUpgradeModalPayload
+} from '../../../../lib/domain/billing/client/billing-limit-error'
 import {
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../../../lib/stores/scene-optimization-store'
+import {
+	buildUpgradeModalState,
+	upgradeModalAtom
+} from '../../../../lib/stores/upgrade-modal-store'
 
 import type {
 	DedupOptimization,
@@ -29,6 +39,70 @@ type OptimizationOption =
 	| QuantizeOptimization
 	| DedupOptimization
 	| NormalsOptimization
+
+type OptimizationRunIntent = 'check' | 'consume'
+
+async function requestOptimizationRunQuota(
+	intent: OptimizationRunIntent
+): Promise<{ outcome?: string; currentValue?: number; limit?: null | number }> {
+	const response = await fetch('/api/billing/optimization-runs', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({ intent })
+	})
+
+	let payload: {
+		error?: string
+		success?: boolean
+		quota?: unknown
+		data?: {
+			outcome?: string
+			currentValue?: number
+			limit?: null | number
+		}
+	} | null = null
+	try {
+		payload = (await response.json()) as {
+			error?: string
+			success?: boolean
+			quota?: unknown
+			data?: {
+				outcome?: string
+				currentValue?: number
+				limit?: null | number
+			}
+		}
+	} catch {
+		payload = null
+	}
+
+	if (!response.ok || payload?.success === false) {
+		const billingLimitError = createBillingLimitErrorFromResponse(
+			response.status,
+			payload,
+			intent === 'check'
+				? 'Unable to validate optimization quota before starting.'
+				: 'Unable to record optimization run usage.'
+		)
+		if (billingLimitError) {
+			throw billingLimitError
+		}
+
+		const fallbackMessage =
+			intent === 'check'
+				? 'Unable to validate optimization quota before starting.'
+				: 'Unable to record optimization run usage.'
+		throw new Error(payload?.error || fallbackMessage)
+	}
+
+	return {
+		outcome: payload?.data?.outcome,
+		currentValue: payload?.data?.currentValue,
+		limit: payload?.data?.limit
+	}
+}
 
 /**
  * Custom hook that encapsulates the optimization logic and state management
@@ -54,6 +128,7 @@ export const useOptimizationProcess = () => {
 	const [optimizationRuntime, setOptimizationRuntime] = useAtom(
 		optimizationRuntimeAtom
 	)
+	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 	const {
 		isPending,
 		isSceneSizeLoading,
@@ -121,6 +196,24 @@ export const useOptimizationProcess = () => {
 		}))
 
 		try {
+			const optimizationOptions = Object.values(plannedOptimizations).filter(
+				(option): option is OptimizationOption => !!option && option.enabled
+			)
+			let shouldConsumeOptimizationRun = false
+
+			if (optimizationOptions.length > 0) {
+				const checkResult = await requestOptimizationRunQuota('check')
+				if (
+					checkResult.outcome === 'soft_limit_warning' &&
+					typeof checkResult.currentValue === 'number' &&
+					typeof checkResult.limit === 'number'
+				) {
+					toast.warning(
+						`Optimization usage is high (${checkResult.currentValue}/${checkResult.limit}). Consider upgrading to avoid interruptions.`
+					)
+				}
+			}
+
 			if (typeof clientSceneBytes !== 'number') {
 				const baselineSceneBytes =
 					typeof file?.sourcePackageBytes === 'number'
@@ -150,10 +243,6 @@ export const useOptimizationProcess = () => {
 				}
 			}
 
-			const optimizationOptions = Object.values(plannedOptimizations).filter(
-				(option): option is OptimizationOption => !!option && option.enabled
-			)
-
 			for (let i = 0; i < optimizationOptions.length; i++) {
 				const option = optimizationOptions[i]
 
@@ -161,14 +250,19 @@ export const useOptimizationProcess = () => {
 					// Apply single optimization based on option type
 					if (option.name === 'simplification') {
 						await simplifyOptimization(option)
+						shouldConsumeOptimizationRun = true
 					} else if (option.name === 'texture') {
 						await texturesOptimization(option)
+						shouldConsumeOptimizationRun = true
 					} else if (option.name === 'quantize') {
 						await quantizeOptimization()
+						shouldConsumeOptimizationRun = true
 					} else if (option.name === 'dedup') {
 						await dedupOptimization()
+						shouldConsumeOptimizationRun = true
 					} else if (option.name === 'normals') {
 						await normalsOptimization()
+						shouldConsumeOptimizationRun = true
 					} else {
 						// Use explicit type casting for exhaustiveness check
 						const unknownOption = option as OptimizationOption
@@ -181,11 +275,25 @@ export const useOptimizationProcess = () => {
 					)
 				} catch (error) {
 					console.error(`Error processing ${option.name}:`, error)
+
+					if (
+						option.name === 'texture' &&
+						error instanceof Error &&
+						error.message.includes('failed for ') &&
+						!error.message.includes('failed for all textures')
+					) {
+						shouldConsumeOptimizationRun = true
+					}
 				}
 			}
 
 			// Apply all optimizations
 			await applyOptimization()
+
+			if (optimizationOptions.length > 0 && shouldConsumeOptimizationRun) {
+				await requestOptimizationRunQuota('consume')
+			}
+
 			const [updatedSceneBytes, updatedTextureBytes] = await Promise.all([
 				calculateSceneBytes(),
 				calculateOptimizedTextureBytes()
@@ -203,6 +311,23 @@ export const useOptimizationProcess = () => {
 			}))
 		} catch (error) {
 			console.error('Error during optimization:', error)
+			if (isBillingLimitError(error)) {
+				const modalPayload = toUpgradeModalPayload(error)
+				setUpgradeModal(
+					buildUpgradeModalState({
+						...modalPayload,
+						actionAttempted: 'optimization_run'
+					})
+				)
+				toast.error(error.message)
+				return
+			}
+
+			toast.error(
+				error instanceof Error
+					? error.message
+					: 'Optimization failed. Please retry.'
+			)
 		} finally {
 			setOptimizationRuntime((prev) => ({
 				...prev,
@@ -219,6 +344,7 @@ export const useOptimizationProcess = () => {
 		calculateSceneBytes,
 		calculateOptimizedTextureBytes,
 		setOptimizationRuntime,
+		setUpgradeModal,
 		plannedOptimizations,
 		applyOptimization,
 		simplifyOptimization,

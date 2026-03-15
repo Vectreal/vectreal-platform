@@ -1,9 +1,17 @@
-import { useAtom } from 'jotai/react'
+import { useAtom, useSetAtom } from 'jotai/react'
 import { useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
+import {
+	isBillingLimitError,
+	toUpgradeModalPayload
+} from '../lib/domain/billing/client/billing-limit-error'
 import { processAtom } from '../lib/stores/publisher-config-store'
+import {
+	buildUpgradeModalState,
+	upgradeModalAtom
+} from '../lib/stores/upgrade-modal-store'
 
 import type { SaveLocationTarget, SaveSceneResult } from './scene-loader.types'
 
@@ -26,6 +34,7 @@ export const usePublisherSaveAction = ({
 }: UsePublisherSaveActionParams) => {
 	const navigate = useNavigate()
 	const [, setProcessState] = useAtom(processAtom)
+	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 
 	const handleSaveScene = useCallback(async () => {
 		if (!userId) {
@@ -55,6 +64,19 @@ export const usePublisherSaveAction = ({
 			}
 		} catch (error) {
 			console.error('Error saving scene settings:', error)
+
+			if (isBillingLimitError(error)) {
+				const modalPayload = toUpgradeModalPayload(error)
+				setUpgradeModal(
+					buildUpgradeModalState({
+						...modalPayload,
+						actionAttempted: 'scene_save'
+					})
+				)
+				toast.error(error.message)
+				return
+			}
+
 			const errorMessage =
 				error instanceof Error
 					? error.message
@@ -90,6 +112,7 @@ export const usePublisherSaveAction = ({
 		saveSceneSettings,
 		sceneId,
 		setProcessState,
+		setUpgradeModal,
 		userId
 	])
 
