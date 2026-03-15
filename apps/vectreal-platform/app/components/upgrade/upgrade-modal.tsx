@@ -11,8 +11,8 @@ import {
 import { Progress } from '@shared/components/ui/progress'
 import { useAtom } from 'jotai/react'
 import { AlertTriangle, Lock, TrendingUp, Zap } from 'lucide-react'
-import { useCallback } from 'react'
-import { Link } from 'react-router'
+import { useCallback, useEffect } from 'react'
+import { Link, useLocation } from 'react-router'
 
 import { upgradeModalAtom } from '../../lib/stores/upgrade-modal-store'
 
@@ -60,6 +60,7 @@ const PLAN_LABELS: Record<string, string> = {
 
 export function UpgradeModal() {
 	const [state, setState] = useAtom(upgradeModalAtom)
+	const location = useLocation()
 
 	const handleOpenChange = useCallback(
 		(open: boolean) => {
@@ -67,6 +68,20 @@ export function UpgradeModal() {
 		},
 		[setState]
 	)
+
+	const closeModal = useCallback(() => {
+		setState((prev) => ({ ...prev, open: false }))
+	}, [setState])
+
+	useEffect(() => {
+		if (
+			state.open &&
+			(location.pathname.startsWith('/dashboard/billing') ||
+				location.pathname === '/pricing')
+		) {
+			setState((prev) => ({ ...prev, open: false }))
+		}
+	}, [location.pathname, setState, state.open])
 
 	const config = REASON_CONFIG[state.reason]
 	const Icon = config.icon
@@ -82,7 +97,7 @@ export function UpgradeModal() {
 	// Build the upgrade destination: settings page with plan pre-selected, or pricing
 	const upgradeHref =
 		state.upgradeTo && state.upgradeTo !== 'enterprise'
-			? `/dashboard/settings?upgrade=${state.upgradeTo}`
+			? `/dashboard/billing/checkout?plan=${state.upgradeTo}`
 			: '/pricing'
 
 	return (
@@ -122,21 +137,17 @@ export function UpgradeModal() {
 				)}
 
 				<DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
-					<Button
-						variant="ghost"
-						onClick={() => handleOpenChange(false)}
-						className="sm:mr-auto"
-					>
+					<Button variant="ghost" onClick={closeModal} className="sm:mr-auto">
 						Maybe later
 					</Button>
 					<div className="flex gap-2">
-						<Link to="/pricing">
+						<Link to="/pricing" onClick={closeModal}>
 							<Button variant="outline" size="sm">
 								View all plans
 							</Button>
 						</Link>
 						{upgradeToLabel && (
-							<Link to={upgradeHref}>
+							<Link to={upgradeHref} onClick={closeModal}>
 								<Button size="sm" className="gap-1.5">
 									<Zap className="h-3.5 w-3.5" />
 									Upgrade to {upgradeToLabel}

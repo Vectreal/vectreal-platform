@@ -1,6 +1,12 @@
 import { and, eq, inArray } from 'drizzle-orm'
 
 import { generateApiKey } from './api-key-generator.server'
+import {
+	getOrgSubscription,
+	getRecommendedUpgrade
+} from '../billing/entitlement-service.server'
+import { QuotaExceededError } from '../billing/quota-exceeded-error'
+import { checkQuota } from '../billing/usage-service.server'
 import { getDbClient } from '../../../db/client'
 import { apiKeyProjects } from '../../../db/schema/auth/api-key-projects'
 import { apiKeys } from '../../../db/schema/auth/api-keys'
@@ -246,6 +252,21 @@ export async function createApiKey(
 
 	// Verify user is admin/owner of organization
 	await verifyOrganizationAdminAccess(db, organizationId, userId)
+
+	const quotaCheck = await checkQuota(organizationId, 'api_keys_per_org')
+	if (quotaCheck.outcome === 'hard_limit_exceeded') {
+		const { plan } = await getOrgSubscription(organizationId)
+		const upgradeTo = getRecommendedUpgrade(plan)
+		throw new QuotaExceededError({
+			limitKey: 'api_keys_per_org',
+			currentValue: quotaCheck.currentValue,
+			limit: quotaCheck.limit,
+			plan,
+			upgradeTo,
+			message:
+				'API key limit reached for your plan. Upgrade to create more API keys.'
+		})
+	}
 
 	// Verify all projects belong to organization
 	await verifyProjectsInOrganization(db, projectIds, organizationId)

@@ -14,6 +14,10 @@ export const DASHBOARD_ROUTES = {
 	PROJECTS: '/dashboard/projects',
 	API_KEYS: '/dashboard/api-keys',
 	ORGANIZATIONS: '/dashboard/organizations',
+	BILLING: '/dashboard/billing',
+	BILLING_CHECKOUT: '/dashboard/billing/checkout',
+	BILLING_CHECKOUT_SUCCESS: '/dashboard/billing/checkout-success',
+	BILLING_CHECKOUT_CANCELED: '/dashboard/billing/checkout-canceled',
 	SETTINGS: '/dashboard/settings',
 	PROJECT_DETAIL: (projectId: string) => `/dashboard/projects/${projectId}`,
 	FOLDER_DETAIL: (projectId: string, folderId: string) =>
@@ -69,6 +73,34 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 		loadingTitle: 'Organizations',
 		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: ACTION_VARIANT.ORG_LIST
+	},
+	billing: {
+		title: 'Billing & Plans',
+		description: 'Manage subscriptions, usage, and plan upgrades',
+		loadingTitle: 'Billing & Plans',
+		loadingDescription: <Skeleton className="h-4 w-1/3" />,
+		actionVariant: undefined
+	},
+	'billing-checkout': {
+		title: 'Checkout',
+		description: 'Review pricing and benefits before secure checkout',
+		loadingTitle: 'Checkout',
+		loadingDescription: <Skeleton className="h-4 w-1/3" />,
+		actionVariant: undefined
+	},
+	'billing-checkout-success': {
+		title: 'Payment Confirmed',
+		description: 'Your upgrade is on the way and syncing now',
+		loadingTitle: 'Payment Confirmed',
+		loadingDescription: <Skeleton className="h-4 w-1/3" />,
+		actionVariant: undefined
+	},
+	'billing-checkout-canceled': {
+		title: 'Checkout Paused',
+		description: 'No charge was made and your plan is unchanged',
+		loadingTitle: 'Checkout Paused',
+		loadingDescription: <Skeleton className="h-4 w-1/3" />,
+		actionVariant: undefined
 	},
 	settings: {
 		title: 'Settings',

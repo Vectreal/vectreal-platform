@@ -25,7 +25,7 @@ import {
 } from '../../lib/domain/billing/entitlement-service.server'
 import {
 	checkQuota,
-	incrementUsage
+	type UsageCheckResult
 } from '../../lib/domain/billing/usage-service.server'
 import { initializeUserDefaults } from '../../lib/domain/user/user-repository.server'
 import { getAuthUser } from '../../lib/http/auth.server'
@@ -131,7 +131,7 @@ export async function action({ request }: Route.ActionArgs) {
 		return ApiResponse.serverError('Failed to resolve organization')
 	}
 
-	const quotaCheck = await checkQuota(
+	const quotaCheck: UsageCheckResult = await checkQuota(
 		organizationId,
 		'optimization_runs_per_month'
 	)
@@ -268,12 +268,6 @@ export async function action({ request }: Route.ActionArgs) {
 		const outputFileName = resolveCanonicalTextureFileName(
 			textureName,
 			outputMimeType
-		)
-
-		// Increment the monthly optimization counter after a successful run
-		await incrementUsage(organizationId, 'optimization_runs_per_month').catch(
-			(err) =>
-				console.error('[optimize-textures] Failed to increment usage counter', err)
 		)
 
 		return new Response(responseBody, {

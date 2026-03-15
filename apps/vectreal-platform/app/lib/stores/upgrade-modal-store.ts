@@ -1,4 +1,5 @@
 import { atom } from 'jotai'
+import { createStore } from 'jotai/vanilla'
 
 import type { Plan } from '../../constants/plan-config'
 
@@ -27,16 +28,28 @@ export interface UpgradeModalState {
 	actionAttempted?: string
 }
 
-const DEFAULT_STATE: UpgradeModalState = {
+export const DEFAULT_UPGRADE_MODAL_STATE: UpgradeModalState = {
 	open: false,
 	reason: 'quota_exceeded',
 	message: 'You have reached your plan limit.'
 }
 
-export const upgradeModalAtom = atom<UpgradeModalState>(DEFAULT_STATE)
+export const upgradeModalAtom = atom<UpgradeModalState>(
+	DEFAULT_UPGRADE_MODAL_STATE
+)
+
+export const upgradeModalStore = createStore()
+
+upgradeModalStore.set(upgradeModalAtom, DEFAULT_UPGRADE_MODAL_STATE)
 
 export function buildUpgradeModalState(
 	overrides: Partial<Omit<UpgradeModalState, 'open'>>
 ): UpgradeModalState {
-	return { ...DEFAULT_STATE, open: true, ...overrides }
+	return { ...DEFAULT_UPGRADE_MODAL_STATE, open: true, ...overrides }
+}
+
+export function closeUpgradeModalState(
+	state: UpgradeModalState
+): UpgradeModalState {
+	return { ...state, open: false }
 }

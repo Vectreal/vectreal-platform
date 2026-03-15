@@ -1,5 +1,11 @@
 import { and, eq } from 'drizzle-orm'
 
+import {
+	getOrgSubscription,
+	getRecommendedUpgrade
+} from '../billing/entitlement-service.server'
+import { QuotaExceededError } from '../billing/quota-exceeded-error'
+import { checkQuota } from '../billing/usage-service.server'
 import { getDbClient } from '../../../db/client'
 import { organizationMemberships } from '../../../db/schema/core/organization-memberships'
 import { projects } from '../../../db/schema/project/projects'
@@ -103,6 +109,21 @@ export async function createProject(
 	userId: string
 ): Promise<typeof projects.$inferSelect> {
 	await verifyOrganizationAccess(db, organizationId, userId)
+
+	const quotaCheck = await checkQuota(organizationId, 'projects_total')
+	if (quotaCheck.outcome === 'hard_limit_exceeded') {
+		const { plan } = await getOrgSubscription(organizationId)
+		const upgradeTo = getRecommendedUpgrade(plan)
+		throw new QuotaExceededError({
+			limitKey: 'projects_total',
+			currentValue: quotaCheck.currentValue,
+			limit: quotaCheck.limit,
+			plan,
+			upgradeTo,
+			message:
+				'Project limit reached for your plan. Upgrade to create more projects.'
+		})
+	}
 
 	const [newProject] = await db
 		.insert(projects)

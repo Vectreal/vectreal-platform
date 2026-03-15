@@ -147,7 +147,10 @@ const HIGHLIGHTED_LIMITS: Array<{
 // Feature groups to show in the comparison matrix
 const FEATURE_GROUPS: Array<{
 	label: string
-	features: Array<{ key: keyof (typeof PLAN_ENTITLEMENTS)['free']; label: string }>
+	features: Array<{
+		key: keyof (typeof PLAN_ENTITLEMENTS)['free']
+		label: string
+	}>
 }> = [
 	{
 		label: 'Publishing',
@@ -281,7 +284,10 @@ function PlanCard({ plan }: { plan: Plan }) {
 						</Button>
 					</Link>
 				) : (
-					<Link to={`/dashboard/settings?upgrade=${plan}`} className="w-full">
+					<Link
+						to={`/dashboard/billing/checkout?plan=${plan}`}
+						className="w-full"
+					>
 						<Button
 							className="w-full"
 							variant={display.highlighted ? 'default' : 'outline'}
@@ -351,7 +357,7 @@ export default function PricingPage() {
 					<table className="w-full min-w-[640px] table-auto text-left">
 						<thead>
 							<tr className="border-border border-b">
-								<th className="pb-4 pr-4 text-sm font-medium" />
+								<th className="pr-4 pb-4 text-sm font-medium" />
 								{PLANS.map((plan) => (
 									<th
 										key={plan}

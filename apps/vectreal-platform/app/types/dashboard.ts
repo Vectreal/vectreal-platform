@@ -25,6 +25,7 @@ export type DashboardView =
 	| 'projects'
 	| 'api-keys'
 	| 'organizations'
+	| 'billing'
 	| 'settings'
 	| 'dashboard'
 
@@ -39,6 +40,10 @@ export type RouteContext =
 	| 'folder-detail'
 	| 'scene-detail'
 	| 'organizations'
+	| 'billing'
+	| 'billing-checkout'
+	| 'billing-checkout-success'
+	| 'billing-checkout-canceled'
 	| 'settings'
 
 /**

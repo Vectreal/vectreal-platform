@@ -70,6 +70,11 @@ export interface ProjectsLoaderData {
 			canCreate: boolean
 			canEdit: boolean
 			canDelete: boolean
+			projectsTotal: number
+			projectsLimit: number | null
+			quotaExceeded: boolean
+			plan: Plan | null
+			upgradeTo: Plan | null
 		}
 	>
 	sceneStats: SceneStats
@@ -119,7 +124,6 @@ export interface SceneLoaderData {
 export interface SettingsLoaderData {
 	user: User
 	userWithDefaults: UserWithDefaults
-	billing: BillingSettingsData
 }
 
 /**
@@ -141,6 +145,32 @@ export interface BillingSettingsData {
 	}
 }
 
+export interface BillingCheckoutOptions {
+	pro: BillingCheckoutPeriods
+	business: BillingCheckoutPeriods
+}
+
+export interface BillingCheckoutOption {
+	priceId: string
+	amountCents: number
+	currency: string
+	interval: 'month' | 'year'
+	intervalCount: number
+	productName: string | null
+}
+
+export interface BillingCheckoutPeriods {
+	monthly: BillingCheckoutOption | null
+	annual: BillingCheckoutOption | null
+}
+
+export interface BillingLoaderData {
+	user: User
+	userWithDefaults: UserWithDefaults
+	billing: BillingSettingsData
+	checkoutOptions: BillingCheckoutOptions
+}
+
 /**
  * Loader data for new project page
  */
@@ -154,6 +184,11 @@ export interface ProjectNewLoaderData {
 			canCreate: boolean
 			canEdit: boolean
 			canDelete: boolean
+			projectsTotal: number
+			projectsLimit: number | null
+			quotaExceeded: boolean
+			plan: Plan | null
+			upgradeTo: Plan | null
 		}
 	>
 }

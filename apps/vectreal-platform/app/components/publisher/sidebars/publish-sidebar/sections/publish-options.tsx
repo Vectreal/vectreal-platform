@@ -8,8 +8,16 @@ import { useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
 import { publishSceneFromGlb } from '../../../../../lib/domain/scene/client/scene-publish'
+import {
+	isBillingLimitError,
+	toUpgradeModalPayload
+} from '../../../../../lib/domain/billing/client/billing-limit-error'
 import { processAtom } from '../../../../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
+import {
+	buildUpgradeModalState,
+	upgradeModalAtom
+} from '../../../../../lib/stores/upgrade-modal-store'
 import { ScenePublishStateControl } from '../../../../publishing/scene-publish-state-control'
 import { itemVariants } from '../../animation'
 
@@ -42,6 +50,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const revalidator = useRevalidator()
 	const { hasUnsavedChanges } = useAtomValue(processAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
+	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 	const exporterRef = useRef<ModelExporter>(new ModelExporter())
 	const canPublish = Boolean(optimizer?.isReady)
 	const isWorking = publishStatus === 'saving' || publishStatus === 'publishing'
@@ -125,6 +134,17 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 			return publishStateUpdate
 		} catch (error) {
 			console.error('Failed to publish scene:', error)
+
+			if (isBillingLimitError(error)) {
+				const modalPayload = toUpgradeModalPayload(error)
+				setUpgradeModal(
+					buildUpgradeModalState({
+						...modalPayload,
+						actionAttempted: 'scene_publish'
+					})
+				)
+			}
+
 			setPublishStatus('error')
 			setPublishError(
 				error instanceof Error ? error.message : 'Failed to publish scene'
@@ -143,6 +163,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		navigate,
 		revalidator,
 		setOptimizationRuntime,
+		setUpgradeModal,
 		file
 	])
 

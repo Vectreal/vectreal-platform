@@ -36,24 +36,31 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 import { Textarea } from '@shared/components/ui/textarea'
+import { useSetAtom } from 'jotai'
 import { AlertCircle, CheckCircle2, Copy, KeyRound, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import {
-	data,
-	Form as RemixForm,
-	useLocation,
-	useNavigate
-} from 'react-router'
+import { data, Form as RemixForm, useLocation, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { z, ZodError } from 'zod'
 
 import { Route } from './+types/api-keys-new'
 import { ProjectMultiSelect } from '../../components/dashboard/project-multi-select'
+import { FeatureUnavailablePanel } from '../../components/upgrade/feature-unavailable-panel'
 import { createApiKey } from '../../lib/domain/auth/api-key-repository.server'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
+import {
+	getOrgSubscription,
+	hasEntitlement,
+	getRecommendedUpgrade
+} from '../../lib/domain/billing/entitlement-service.server'
+import { QuotaExceededError } from '../../lib/domain/billing/quota-exceeded-error'
 import { getUserProjects } from '../../lib/domain/project/project-repository.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
+import {
+	buildUpgradeModalState,
+	upgradeModalAtom
+} from '../../lib/stores/upgrade-modal-store'
 
 import type { ProjectOption } from '../../components/dashboard/project-multi-select'
 
@@ -95,11 +102,32 @@ export async function loader({ request }: Route.LoaderArgs) {
 		})
 	}
 
+	const apiKeyEntitlementEntries = await Promise.all(
+		adminOrgs.map(async ({ organization }) => {
+			const [entitlement, subscription] = await Promise.all([
+				hasEntitlement(organization.id, 'org_api_keys'),
+				getOrgSubscription(organization.id)
+			])
+
+			return [
+				organization.id,
+				{
+					granted: entitlement.granted,
+					plan: subscription.plan,
+					upgradeTo: getRecommendedUpgrade(subscription.plan)
+				}
+			] as const
+		})
+	)
+
+	const apiKeysAccessByOrg = Object.fromEntries(apiKeyEntitlementEntries)
+
 	return data(
 		{
 			user,
 			organizations: adminOrgs,
-			userProjects
+			userProjects,
+			apiKeysAccessByOrg
 		},
 		{ headers }
 	)
@@ -127,6 +155,29 @@ export async function action({ request }: Route.ActionArgs) {
 			projectIds,
 			expiration
 		})
+
+		const entitlementDecision = await hasEntitlement(
+			validatedData.organizationId,
+			'org_api_keys'
+		)
+
+		if (!entitlementDecision.granted) {
+			return data(
+				{
+					error:
+						'API keys are not available on your current plan. Upgrade to continue.',
+					upgrade: {
+						reason: 'feature_not_available' as const,
+						message:
+							'API keys are not available on your current plan. Upgrade to continue.',
+						plan: entitlementDecision.effectivePlan,
+						upgradeTo: getRecommendedUpgrade(entitlementDecision.effectivePlan),
+						actionAttempted: 'api_key_create'
+					}
+				},
+				{ status: 403, headers }
+			)
+		}
 
 		// Calculate expiration date
 		let expiresAt: Date | null = null
@@ -159,6 +210,25 @@ export async function action({ request }: Route.ActionArgs) {
 			{ headers }
 		)
 	} catch (error) {
+		if (error instanceof QuotaExceededError) {
+			return data(
+				{
+					error: error.message,
+					upgrade: {
+						reason: 'quota_exceeded' as const,
+						message: error.message,
+						limitKey: error.limitKey,
+						currentValue: error.currentValue,
+						limit: error.limit,
+						plan: error.plan,
+						upgradeTo: error.upgradeTo,
+						actionAttempted: 'api_key_create'
+					}
+				},
+				{ status: 403, headers }
+			)
+		}
+
 		// Handle Zod validation errors
 		if (error instanceof ZodError) {
 			const fieldErrors: Record<string, string> = {}
@@ -310,7 +380,8 @@ export default function ApiKeysNewPage({
 	actionData,
 	loaderData
 }: Route.ComponentProps) {
-	const { organizations, userProjects } = loaderData
+	const { organizations, userProjects, apiKeysAccessByOrg } = loaderData
+	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 	const location = useLocation()
 	const navigate = useNavigate()
 
@@ -350,6 +421,12 @@ export default function ApiKeysNewPage({
 
 	// Get selected organization's projects
 	const selectedOrgId = form.watch('organizationId')
+	const selectedOrgAccess = selectedOrgId
+		? apiKeysAccessByOrg[selectedOrgId]
+		: null
+	const hasAnyApiKeyAccess = organizations.some(
+		(org) => apiKeysAccessByOrg[org.organization.id]?.granted
+	)
 	const selectedOrgProjects: ProjectOption[] = userProjects
 		.filter((p) => p.organizationId === selectedOrgId)
 		.map((p) => ({
@@ -374,10 +451,25 @@ export default function ApiKeysNewPage({
 			setCreatedKey(actionData.apiKey)
 			setShowKeyDialog(true)
 			form.reset()
+		} else if (
+			actionData &&
+			typeof actionData === 'object' &&
+			'upgrade' in actionData &&
+			actionData.upgrade &&
+			typeof actionData.upgrade === 'object'
+		) {
+			setUpgradeModal(
+				buildUpgradeModalState(
+					actionData.upgrade as Parameters<typeof buildUpgradeModalState>[0]
+				)
+			)
+			if ('error' in actionData && actionData.error) {
+				toast.error(String(actionData.error))
+			}
 		} else if (actionData && 'error' in actionData && actionData.error) {
 			toast.error(actionData.error)
 		}
-	}, [actionData, form])
+	}, [actionData, form, setUpgradeModal])
 
 	const handleClose = () => {
 		navigate('/dashboard/api-keys')
@@ -417,6 +509,34 @@ export default function ApiKeysNewPage({
 					</DrawerHeader>
 
 					<div className="overflow-y-auto p-6">
+						{!hasAnyApiKeyAccess && organizations[0] && (
+							<FeatureUnavailablePanel
+								title="API keys are not available on your current plan"
+								description="Upgrade to Pro or higher to create API keys for embeds and preview access."
+								plan={
+									apiKeysAccessByOrg[organizations[0].organization.id]?.plan
+								}
+								upgradeTo={
+									apiKeysAccessByOrg[organizations[0].organization.id]
+										?.upgradeTo ?? null
+								}
+								actionAttempted="api_key_create"
+							/>
+						)}
+
+						{hasAnyApiKeyAccess &&
+							selectedOrgId &&
+							selectedOrgAccess &&
+							!selectedOrgAccess.granted && (
+								<FeatureUnavailablePanel
+									title="API keys unavailable for selected organization"
+									description="Upgrade this organization to Pro or higher to create API keys."
+									plan={selectedOrgAccess.plan}
+									upgradeTo={selectedOrgAccess.upgradeTo}
+									actionAttempted="api_key_create"
+								/>
+							)}
+
 						<Form {...form}>
 							<RemixForm method="post" className="space-y-6">
 								<FormField
@@ -563,16 +683,20 @@ export default function ApiKeysNewPage({
 									'error' in actionData &&
 									actionData.error &&
 									!('fieldErrors' in actionData && actionData.fieldErrors) && (
-									<Alert variant="destructive">
-										<AlertCircle className="size-4" />
-										<AlertDescription>{actionData.error}</AlertDescription>
-									</Alert>
-								)}
+										<Alert variant="destructive">
+											<AlertCircle className="size-4" />
+											<AlertDescription>{actionData.error}</AlertDescription>
+										</Alert>
+									)}
 
 								<DrawerFooter className="px-0 pt-2">
 									<Button
 										type="submit"
-										disabled={form.formState.isSubmitting}
+										disabled={
+											form.formState.isSubmitting ||
+											!hasAnyApiKeyAccess ||
+											!selectedOrgAccess?.granted
+										}
 										className="w-full"
 									>
 										{form.formState.isSubmitting ? (

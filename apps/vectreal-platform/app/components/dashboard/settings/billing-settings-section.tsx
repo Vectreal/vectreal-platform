@@ -102,8 +102,7 @@ const BILLING_STATE_CONFIG: Record<
 		label: 'Expired',
 		variant: 'destructive',
 		icon: AlertTriangle,
-		description:
-			'Checkout expired. Access has reverted to the Free tier.'
+		description: 'Checkout expired. Access has reverted to the Free tier.'
 	}
 }
 
@@ -117,14 +116,21 @@ function UsageRow({
 	limit: number | null
 }) {
 	const unlimited = limit === null
-	const percent = unlimited ? 0 : Math.min(Math.round((current / limit) * 100), 100)
+	const percent = unlimited
+		? 0
+		: Math.min(Math.round((current / limit) * 100), 100)
 	const nearLimit = !unlimited && percent >= 80
 
 	return (
 		<div className="space-y-1.5">
 			<div className="flex items-center justify-between text-sm">
 				<span>{label}</span>
-				<span className={cn('font-medium tabular-nums', nearLimit && 'text-destructive')}>
+				<span
+					className={cn(
+						'font-medium tabular-nums',
+						nearLimit && 'text-destructive'
+					)}
+				>
 					{current.toLocaleString()}
 					{!unlimited && ` / ${limit.toLocaleString()}`}
 					{unlimited && ' / ∞'}
@@ -146,12 +152,10 @@ function UsageRow({
 
 interface BillingSettingsSectionProps {
 	billing: BillingSettingsData
-	defaultUpgradeTarget?: 'pro' | 'business' | null
 }
 
 export function BillingSettingsSection({
-	billing,
-	defaultUpgradeTarget
+	billing
 }: BillingSettingsSectionProps) {
 	const { plan, billingState, currentPeriodEnd, trialEnd, usage } = billing
 	const portalFetcher = useFetcher()
@@ -161,6 +165,7 @@ export function BillingSettingsSection({
 	const planLabel = PLAN_LABELS[plan]
 	const isPaid = plan !== 'free'
 	const isEnterprise = plan === 'enterprise'
+	const checkoutPath = '/dashboard/billing/checkout?plan=pro'
 
 	const renewalDate =
 		billingState === 'trialing' && trialEnd
@@ -170,10 +175,7 @@ export function BillingSettingsSection({
 				: null
 
 	const handleOpenPortal = () => {
-		portalFetcher.submit(
-			{},
-			{ method: 'POST', action: '/api/billing/portal' }
-		)
+		portalFetcher.submit({}, { method: 'POST', action: '/api/billing/portal' })
 	}
 
 	// Redirect to Stripe portal when the fetcher resolves
@@ -195,15 +197,6 @@ export function BillingSettingsSection({
 
 	return (
 		<div className="space-y-6">
-			{/* Upgrade banner when user navigated here with ?upgrade=... */}
-			{defaultUpgradeTarget && !isPaid && (
-				<div className="bg-primary/10 border-primary/20 rounded-lg border p-4">
-					<p className="text-primary text-sm font-medium">
-						Ready to upgrade to {PLAN_LABELS[defaultUpgradeTarget]}? Complete your
-						checkout below.
-					</p>
-				</div>
-			)}
 			<Card>
 				<CardHeader>
 					<div className="flex items-start justify-between">
@@ -250,9 +243,12 @@ export function BillingSettingsSection({
 					<div
 						className={cn(
 							'rounded-lg p-3 text-sm',
-							['past_due', 'unpaid', 'incomplete', 'incomplete_expired'].includes(
-								billingState
-							)
+							[
+								'past_due',
+								'unpaid',
+								'incomplete',
+								'incomplete_expired'
+							].includes(billingState)
 								? 'bg-destructive/10 text-destructive'
 								: 'bg-muted/50'
 						)}
@@ -274,7 +270,7 @@ export function BillingSettingsSection({
 					)}
 
 					{!isEnterprise && (
-						<Link to="/pricing">
+						<Link to={isPaid ? '/pricing' : checkoutPath}>
 							<Button size="sm" variant={isPaid ? 'ghost' : 'default'}>
 								<ArrowUpRight className="mr-1.5 h-3.5 w-3.5" />
 								{isPaid ? 'View all plans' : 'Upgrade plan'}
@@ -289,6 +285,12 @@ export function BillingSettingsSection({
 							</Button>
 						</Link>
 					)}
+
+					{!isPaid && (
+						<p className="text-muted-foreground text-xs">
+							Ready to upgrade? Continue with a secure checkout flow.
+						</p>
+					)}
 				</CardFooter>
 			</Card>
 
@@ -297,8 +299,10 @@ export function BillingSettingsSection({
 				<CardHeader>
 					<CardTitle className="text-base">Usage &amp; limits</CardTitle>
 					<CardDescription>
-						Cumulative totals for your organisation. Monthly counters (e.g.
-						optimization runs) reset at the start of each calendar month (UTC).
+						Usage metrics for your organisation. Only monthly counters (for
+						example, optimization runs) reset at the start of each calendar
+						month (UTC). Total counters (for example, scenes and projects) do
+						not reset.
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-4">
@@ -323,13 +327,20 @@ export function BillingSettingsSection({
 				<CardFooter>
 					<p className="text-muted-foreground text-xs">
 						Need more? &nbsp;
-						<Link to="/pricing" className="text-primary underline-offset-4 hover:underline">
+						<Link
+							to="/pricing"
+							className="text-primary underline-offset-4 hover:underline"
+						>
 							Compare plans
 						</Link>
 						&nbsp;or&nbsp;
-						<Link to="/contact" className="text-primary underline-offset-4 hover:underline">
+						<Link
+							to="/contact"
+							className="text-primary underline-offset-4 hover:underline"
+						>
 							contact us
-						</Link>.
+						</Link>
+						.
 					</p>
 				</CardFooter>
 			</Card>

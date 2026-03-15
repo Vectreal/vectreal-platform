@@ -28,6 +28,7 @@ import {
 	BoxesIcon,
 	Building,
 	ChevronsUpDown,
+	CreditCard,
 	HelpCircle,
 	KeyRound,
 	List,
@@ -238,6 +239,16 @@ const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
 									>
 										<Building />
 										Organizations
+									</Link>
+								</DropdownMenuItem>
+								<DropdownMenuItem onClick={handleSidebarClose} asChild>
+									<Link
+										to="/dashboard/billing"
+										viewTransition
+										aria-label="Go to Billing"
+									>
+										<CreditCard />
+										Billing
 									</Link>
 								</DropdownMenuItem>
 								<DropdownMenuItem onClick={handleSidebarClose} asChild>

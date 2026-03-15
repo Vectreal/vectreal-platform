@@ -1012,6 +1012,19 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				)
 		}
 	} catch (error) {
+		if (error instanceof QuotaExceededError) {
+			return withAdditionalHeaders(
+				ApiResponse.quotaExceeded(error.message, {
+					limitKey: error.limitKey,
+					currentValue: error.currentValue,
+					limit: error.limit,
+					plan: error.plan,
+					upgradeTo: error.upgradeTo
+				}),
+				authHeaders
+			)
+		}
+
 		console.error('Scene operation failed:', {
 			action,
 			requestId: requestData.requestId,
