@@ -14,6 +14,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
+import { buildAssetLookupKeys, normalizeAssetUri } from '@vctrl/core'
 import { ModelFileTypes, ModelLoader } from '@vctrl/core/model-loader'
 import { useCallback, useMemo, useReducer, useRef } from 'react'
 
@@ -39,75 +40,130 @@ import {
 import { ServerCommunicationService } from '../utils/server-communication'
 
 import type { useOptimizeModel } from '../use-optimize-model'
-import type { OperationProgress, ServerScenePayload } from '@vctrl/core'
+import type {
+	OperationProgress,
+	SerializedSceneAssetDataMap,
+	ServerSceneData,
+	ServerScenePayload
+} from '@vctrl/core'
 
-type GltfImageDefinition = {
-	uri?: string
-}
-
-type GltfJsonLike = {
-	images?: GltfImageDefinition[]
-}
-
-const safeDecodeUri = (value: string): string => {
+const safeNormalizeAssetUri = (value: string): string => {
 	try {
-		return decodeURIComponent(value)
+		return normalizeAssetUri(value)
 	} catch {
 		return value
 	}
 }
 
-const normalizeAssetUri = (value: string): string => {
-	return value.replace(/\\/g, '/').replace(/^\.\//, '').trim()
+const collectReferencedUris = (gltfJson: unknown): Set<string> => {
+	const referencedUris = new Set<string>()
+	const document = gltfJson as {
+		images?: Array<{ uri?: string }>
+		buffers?: Array<{ uri?: string }>
+	}
+
+	const images = Array.isArray(document.images) ? document.images : []
+	for (const image of images) {
+		if (typeof image.uri === 'string' && !image.uri.startsWith('data:')) {
+			referencedUris.add(image.uri)
+		}
+	}
+
+	const buffers = Array.isArray(document.buffers) ? document.buffers : []
+	for (const buffer of buffers) {
+		if (typeof buffer.uri === 'string' && !buffer.uri.startsWith('data:')) {
+			referencedUris.add(buffer.uri)
+		}
+	}
+
+	return referencedUris
 }
 
-const resolveCanonicalTextureUri = (uri: string): string => {
-	const decoded = safeDecodeUri(uri)
-	const normalized = normalizeAssetUri(decoded)
-	return normalized.length > 0 ? normalized : uri
-}
+const buildSceneDataFromLocalFiles = async (
+	gltfFile: File,
+	assetFiles: File[]
+): Promise<ServerSceneData> => {
+	const gltfJson = JSON.parse(
+		await gltfFile.text()
+	) as ServerSceneData['gltfJson']
+	const referencedUris = collectReferencedUris(gltfJson)
+	const assetData: SerializedSceneAssetDataMap = {}
+	const fileLookup = new Map<string, File>()
+	const fileBytesCache = new Map<File, Uint8Array>()
+	const matchedFiles = new Set<File>()
 
-const applyCanonicalTextureNamesFromSource = async (
-	optimizer: NonNullable<ReturnType<typeof useOptimizeModel>>,
-	gltfFile: File
-): Promise<void> => {
-	const gltfJson = JSON.parse(await gltfFile.text()) as GltfJsonLike
-	if (!Array.isArray(gltfJson.images) || gltfJson.images.length === 0) {
-		return
+	const getFileBytes = async (file: File): Promise<Uint8Array> => {
+		const cached = fileBytesCache.get(file)
+		if (cached) {
+			return cached
+		}
+
+		const bytes = new Uint8Array(await file.arrayBuffer())
+		fileBytesCache.set(file, bytes)
+		return bytes
 	}
 
-	const document = optimizer._getDocument()
-	if (!document) {
-		return
+	for (const assetFile of assetFiles) {
+		for (const key of buildAssetLookupKeys(assetFile.name)) {
+			fileLookup.set(key, assetFile)
+		}
+
+		if (assetFile.webkitRelativePath) {
+			for (const key of buildAssetLookupKeys(assetFile.webkitRelativePath)) {
+				fileLookup.set(key, assetFile)
+			}
+		}
 	}
 
-	const textures = document.getRoot().listTextures()
-	if (textures.length === 0) {
-		return
-	}
+	const missingUris: string[] = []
 
-	for (const [index, imageDef] of gltfJson.images.entries()) {
-		if (!imageDef?.uri || imageDef.uri.startsWith('data:')) {
+	for (const uri of referencedUris) {
+		const normalizedUri = safeNormalizeAssetUri(uri)
+		const basename = normalizedUri.split('/').pop() || normalizedUri
+
+		const matchedFile =
+			fileLookup.get(uri) ||
+			fileLookup.get(normalizedUri) ||
+			fileLookup.get(basename)
+
+		if (!matchedFile) {
+			missingUris.push(uri)
 			continue
 		}
 
-		const texture = textures[index]
-		if (!texture) {
+		matchedFiles.add(matchedFile)
+		const bytes = await getFileBytes(matchedFile)
+		assetData[normalizedUri] = {
+			data: Array.from(bytes),
+			fileName: normalizedUri,
+			mimeType: matchedFile.type || 'application/octet-stream'
+		}
+	}
+
+	if (missingUris.length > 0) {
+		throw new Error(
+			`Scene payload is missing required referenced assets: ${missingUris.slice(0, 5).join(', ')}`
+		)
+	}
+
+	for (const [index, assetFile] of assetFiles.entries()) {
+		if (matchedFiles.has(assetFile)) {
 			continue
 		}
 
-		const canonicalUri = resolveCanonicalTextureUri(imageDef.uri)
-		if (!canonicalUri) {
-			continue
+		const normalizedName = safeNormalizeAssetUri(assetFile.name)
+		const basename = normalizedName.split('/').pop() || normalizedName
+		const bytes = await getFileBytes(assetFile)
+		assetData[`extra-${index}-${basename}`] = {
+			data: Array.from(bytes),
+			fileName: basename,
+			mimeType: assetFile.type || 'application/octet-stream'
 		}
+	}
 
-		const textureWithIdentity = texture as unknown as {
-			setURI?: (value: string) => void
-			setName?: (value: string) => void
-		}
-
-		textureWithIdentity.setURI?.(canonicalUri)
-		textureWithIdentity.setName?.(canonicalUri)
+	return {
+		gltfJson,
+		assetData
 	}
 }
 
@@ -256,13 +312,17 @@ function useLoadModel<
 
 				if (optimizer) {
 					try {
-						await optimizer.load(result.scene)
-						await applyCanonicalTextureNamesFromSource(optimizer, gltfFile)
+						const localSceneData = await buildSceneDataFromLocalFiles(
+							gltfFile,
+							otherFiles
+						)
+						await optimizer.loadFromServerSceneData(localSceneData)
 					} catch (optimizerError) {
 						console.warn(
-							'Failed to apply canonical texture names from source GLTF.',
+							'Failed to initialize optimizer from source GLTF payload; falling back to scene import.',
 							optimizerError
 						)
+						await optimizer.load(result.scene)
 					}
 				}
 			} catch (error) {
