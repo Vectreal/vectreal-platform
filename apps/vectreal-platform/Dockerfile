@@ -35,11 +35,13 @@ ARG BUILD_CSRF_SECRET=build-only-csrf-secret
 ARG BUILD_DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build
 ARG BUILD_SUPABASE_URL=https://build.invalid
 ARG BUILD_SUPABASE_KEY=build-only-supabase-key
+ARG BUILD_STRIPE_SECRET_KEY=sk_test_build_only
 
 ENV CSRF_SECRET=${BUILD_CSRF_SECRET}
 ENV DATABASE_URL=${BUILD_DATABASE_URL}
 ENV SUPABASE_URL=${BUILD_SUPABASE_URL}
 ENV SUPABASE_KEY=${BUILD_SUPABASE_KEY}
+ENV STRIPE_SECRET_KEY=${BUILD_STRIPE_SECRET_KEY}
 
 # Copy source and build application artifacts inside Docker
 COPY . .
@@ -61,6 +63,7 @@ ENV NODE_OPTIONS="--enable-source-maps --heapsnapshot-near-heap-limit=2"
 # - DATABASE_URL: PostgreSQL connection string
 # - SUPABASE_URL: Supabase project URL (e.g., https://xxx.supabase.co)
 # - SUPABASE_KEY: Supabase anonymous/public key
+# - STRIPE_SECRET_KEY: Stripe API secret key (sk_test_* or sk_live_*)
 # - GOOGLE_CLOUD_PROJECT: Google Cloud project ID (vectreal-platform)
 # - GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET: Google Cloud Storage private bucket name
 # - APPLICATION_URL: Application URL for OAuth redirects (optional)

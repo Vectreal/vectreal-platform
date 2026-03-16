@@ -98,6 +98,9 @@ on:
       csrf-secret:
         description: 'CSRF/session secret used for server-side cookie signing in production-like environments'
         required: true
+      stripe-secret-key:
+        description: 'Stripe secret API key used for billing operations'
+        required: true
 
 jobs:
   deploy:
@@ -166,6 +169,7 @@ jobs:
             --build-arg BUILD_DATABASE_URL=${{ secrets.database-url }} \
             --build-arg BUILD_SUPABASE_URL=${{ secrets.supabase-url }} \
             --build-arg BUILD_SUPABASE_KEY=${{ secrets.supabase-key }} \
+            --build-arg BUILD_STRIPE_SECRET_KEY=${{ secrets.stripe-secret-key }} \
             --cache-from type=gha \
             --cache-to type=gha,mode=max \
             "${TAG_ARGS[@]}" \
@@ -223,6 +227,7 @@ jobs:
             GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET=${{ secrets.google-cloud-storage-private-bucket }}
             APPLICATION_URL=${{ secrets.application-url }}
             CSRF_SECRET=${{ secrets.csrf-secret }}
+            STRIPE_SECRET_KEY=${{ secrets.stripe-secret-key }}
 
       - name: Verify deployment health
         run: |

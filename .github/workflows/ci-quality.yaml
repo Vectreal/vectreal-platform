@@ -64,6 +64,7 @@ jobs:
       DATABASE_URL: postgresql://build:build@127.0.0.1:5432/build
       SUPABASE_URL: https://build.invalid
       SUPABASE_KEY: build-only-supabase-key
+      STRIPE_SECRET_KEY: sk_test_build_only
     steps:
       - uses: actions/checkout@v4
         with:
