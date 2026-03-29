@@ -42,7 +42,7 @@ export const Footer = () => {
 				)}
 			>
 				<div className="mx-auto flex max-w-7xl flex-col gap-16 py-32">
-					<div className="grid grid-cols-2 flex-col justify-center gap-16 text-left text-sm md:grid-cols-5 md:flex-row md:gap-6">
+					<div className="grid grid-cols-2 flex-col justify-center gap-16 text-left text-sm md:grid-cols-3 md:flex-row md:gap-6 lg:grid-cols-4 xl:grid-cols-5">
 						<div>
 							<h3 className="text-foreground mb-4 text-lg font-semibold">
 								Product

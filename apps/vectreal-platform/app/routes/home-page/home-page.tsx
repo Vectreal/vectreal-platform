@@ -44,9 +44,9 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 				{/* Stars background */}
 				<HeroParallaxBg />
 				{/* Raidal gradient over the whole image from bottom left to top right in the accent color */}
-				<div className="from-accent/20 to-accent/0 absolute inset-0 -z-5 bg-radial-[at_bottom_left]" />
+				<div className="from-accent/20 to-accent/0 absolute inset-0 -z-0 bg-radial-[at_bottom_left]" />
 				{/* side to side vignette gradient */}
-				<div className="from-background to-background absolute inset-0 -z-5 bg-gradient-to-r via-transparent" />
+				<div className="from-background to-background absolute inset-0 -z-0 bg-gradient-to-r via-transparent" />
 
 				<div
 					className={cn(
@@ -54,7 +54,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 						isMobile && '-mt-32 w-[unset] px-6'
 					)}
 				>
-					<h1 className="from-primary to-primary/50 bg-gradient-to-br bg-clip-text text-3xl leading-[.9] font-black text-transparent uppercase sm:text-4xl md:text-6xl lg:text-9xl">
+					<h1 className="from-primary to-primary/25 relative bg-gradient-to-br bg-clip-text text-3xl leading-[.9] font-black text-transparent uppercase sm:text-4xl md:text-6xl lg:text-9xl">
 						<div>Upload</div>
 						<div>Prepare</div>
 						<div>Publish</div>
@@ -430,7 +430,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 				</div>
 			</Section>
 
-			<Section fadeIn>
+			<Section fadeIn contentClassName="max-w-2xl w-full">
 				<GridBg isMobile={isMobile} />
 				<div className="z-10 flex flex-col gap-4 py-24">
 					<div className="w-full">
@@ -440,7 +440,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 						</p>
 					</div>
 					<BasicCard>
-						<CardContent className="flex w-full flex-col gap-4 md:flex-row">
+						<CardContent className="flex w-full flex-col justify-between gap-4 md:flex-row">
 							<ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
 								<li className="flex items-center gap-2">
 									<Check size={16} className="text-primary" /> No registration
@@ -457,12 +457,12 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 									<Check size={16} className="text-primary" /> Share immediately
 								</li>
 							</ul>
-							<Link to="/publisher">
-								<Button className="mt-2">
+							<Button asChild>
+								<Link to="/publisher" className="mt-2">
 									<Sparkle className="mr-2" />
 									Launch Your First Model
-								</Button>
-							</Link>
+								</Link>
+							</Button>
 						</CardContent>
 					</BasicCard>
 				</div>
@@ -470,7 +470,11 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 
 			<FiletypeCarousel />
 
-			<Section fadeIn className="my-8 h-128 w-full overflow-hidden">
+			<Section
+				fadeIn
+				contentClassName="max-w-2xl"
+				className="my-8 h-128 w-full overflow-hidden"
+			>
 				<GridBg isMobile={isMobile} />
 				<div className="z-10 flex flex-col gap-4">
 					<div className="w-full">
@@ -551,16 +555,20 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 				</div>
 			</Section>
 
-			<Section fadeIn className="my-8 h-full w-full overflow-hidden">
+			<Section
+				fadeIn
+				contentClassName="max-w-2xl w-full"
+				className="my-8 h-full w-full overflow-hidden"
+			>
 				<GridBg isMobile={isMobile} />
-				<div className="z-10 flex flex-col gap-6 py-12 md:min-w-2xl">
+				<div className="z-10 flex flex-col gap-6 py-12">
 					<div className="w-full">
 						<h2>Frequently Asked Questions</h2>
 						<p className="text-foreground/90 mt-4 text-lg md:text-xl">
 							Quick answers for setup, uploads, and publishing
 						</p>
 					</div>
-					<BasicCard className="max-w-3xl">
+					<BasicCard className="max-w-2xl">
 						<CardContent className="pt-6">
 							<Accordion type="single" collapsible className="w-full">
 								<AccordionItem value="faq-account">
