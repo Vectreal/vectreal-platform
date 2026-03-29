@@ -41,6 +41,7 @@ export function ShimmerRotatingText({
 
 	return (
 		<motion.button
+			layout
 			type="button"
 			onClick={advancePhrase}
 			onMouseEnter={advancePhrase}
@@ -49,7 +50,7 @@ export function ShimmerRotatingText({
 			onFocus={advancePhrase}
 			className={
 				className ||
-				'text-muted-foreground/80 hover:text-foreground/95 focus-visible:ring-ring/60 relative isolate overflow-hidden rounded-full border border-transparent px-4 py-1.5 text-xs tracking-[0.18em] transition-colors focus-visible:ring-1 focus-visible:outline-none'
+				'text-muted-foreground/80 hover:text-foreground/95 focus-visible:ring-ring/60 relative isolate overflow-hidden rounded-full border border-transparent px-4 py-1.5 text-xs transition-colors focus-visible:ring-1 focus-visible:outline-none'
 			}
 			aria-label={ariaLabel}
 			whileHover={

@@ -1,5 +1,7 @@
 import { VectrealLogoAnimated } from '@shared/components/assets/icons/vectreal-logo-animated'
-import { Link } from 'react-router'
+import { cn } from '@shared/utils'
+import { motion } from 'framer-motion'
+import { Link, useLocation } from 'react-router'
 
 import { ShimmerRotatingText } from './shimmer-rotating-text'
 
@@ -20,6 +22,9 @@ export const SlimFooter = () => {
 }
 
 export const Footer = () => {
+	const { pathname } = useLocation()
+	const isHomePage = pathname === '/' || pathname === '/home'
+
 	const whispers = [
 		'latency low. fidelity high.',
 		'optimize once, ship everywhere.',
@@ -29,135 +34,134 @@ export const Footer = () => {
 	]
 
 	return (
-		<footer className="border-border/50 bg-background w-full border-t px-6 pb-8 inset-shadow-[0rem_1rem_2rem_-1rem] inset-shadow-black/50 backdrop-blur-sm">
-			<div className="mx-auto flex max-w-7xl flex-col gap-16 py-32">
-				<div className="space-y-8">
-					<Link to="/" className="inline-block">
-						<VectrealLogoAnimated className="text-foreground h-8 w-auto" />
-					</Link>
-					<p className="text-muted-foreground max-w-2xl text-lg">
-						Vectreal is the ultimate 3D visualization platform, empowering
-						developers to create stunning, interactive 3D experiences with ease.
-					</p>
-				</div>
-
-				<div className="grid grid-cols-2 flex-col justify-center gap-16 text-left text-sm md:grid-cols-5 md:flex-row md:gap-6">
-					<div>
-						<h3 className="text-foreground mb-4 text-lg font-semibold">
-							Product
-						</h3>
-						<ul className="flex flex-col gap-4">
-							<li className="text-foreground list-item">
-								<Link to="/publisher">Publisher</Link>
-							</li>
-							<li className="text-foreground list-item">
-								<Link to="/dashboard">Dashboard</Link>
-							</li>
-							<li className="text-foreground list-item">
-								<Link to="/home">Home</Link>
-							</li>
-							<li className="text-foreground list-item">
-								<Link to="https://github.com/Vectreal/vectreal-platform/releases">
-									Release Notes
-								</Link>
-							</li>
-						</ul>
-					</div>
-					<div>
-						<h3 className="text-foreground mb-4 text-lg font-semibold">
-							Documentation
-						</h3>
-						<ul className="flex flex-col gap-4">
-							<li className="text-foreground list-item">
-								<Link to="/docs">Docs Home</Link>
-							</li>
-							<li className="text-foreground list-item">
-								<Link to="/docs/getting-started">Getting Started</Link>
-							</li>
-							<li className="text-foreground list-item">
-								<Link to="/docs/guides/upload">Guides</Link>
-							</li>
-							<li className="text-foreground list-item">
-								<Link to="/docs/packages/viewer">Package Reference</Link>
-							</li>
-							<li className="text-foreground list-item">
-								<Link to="/docs/contributing">Contributing</Link>
-							</li>
-						</ul>
-					</div>
-					<div>
-						<h3 className="text-foreground mb-4 text-lg font-semibold">
-							Company
-						</h3>
-						<ul className="flex flex-col gap-4">
-							<li className="text-foreground list-item">
-								<Link to="/home">Home</Link>
-							</li>
-							<li className="text-foreground list-item">
-								<Link to="/about">About Us</Link>
-							</li>
-							<li className="text-foreground list-item opacity-50">
-								{/* <Link to="/careers"> */}
-								Careers
-								{/* </Link> */}
-							</li>
-							<li className="text-foreground list-item opacity-50">
-								{/* <Link to="/blog"> */}
-								Blog
-								{/* </Link> */}
-							</li>
-						</ul>
-					</div>
-					<div>
-						<h3 className="text-foreground mb-4 text-lg font-semibold">
-							Legal
-						</h3>
-						<ul className="flex flex-col gap-4">
-							<li className="text-foreground list-item">
-								<Link to="/privacy-policy">Privacy Policy</Link>
-							</li>
-							<li className="text-foreground list-item">
-								<Link to="/terms-of-service">Terms of Service</Link>
-							</li>
-							<li className="text-foreground list-item">
-								<Link to="/contact">Contact Us</Link>
-							</li>
-							<li className="text-foreground list-item">
-								<Link to="/imprint">Imprint</Link>
-							</li>
-						</ul>
-					</div>
-					<div>
-						<h3 className="text-foreground mb-4 text-lg font-semibold">
-							Community
-						</h3>
-						<ul className="flex flex-col gap-4">
-							<li className="text-foreground list-item">
-								<Link to="https://github.com/vectreal/">GitHub</Link>
-							</li>
-							<li className="text-foreground list-item">
-								<Link to="https://discord.gg/A9a3nPkZw7">Discord</Link>
-							</li>
-							<li className="text-foreground list-item">
-								<Link to="https://reddit.com/r/vectreal/">Reddit</Link>
-							</li>
-							<li className="text-foreground list-item">
-								<Link to="https://youtube.com/vectreal/">Youtube</Link>
-							</li>
-						</ul>
+		<>
+			<footer
+				className={cn(
+					'border-border/50 bg-background w-full overflow-hidden border-t border-b px-6 pb-8 inset-shadow-[0rem_1rem_2rem_-1rem] inset-shadow-black/50 backdrop-blur-sm',
+					isHomePage ? 'mb-48 sm:mb-64 md:mb-96 xl:mb-128' : ''
+				)}
+			>
+				<div className="mx-auto flex max-w-7xl flex-col gap-16 py-32">
+					<div className="grid grid-cols-2 flex-col justify-center gap-16 text-left text-sm md:grid-cols-5 md:flex-row md:gap-6">
+						<div>
+							<h3 className="text-foreground mb-4 text-lg font-semibold">
+								Product
+							</h3>
+							<ul className="flex flex-col gap-4">
+								<li className="text-foreground list-item">
+									<Link to="/publisher">Publisher</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="/dashboard">Dashboard</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="/home">Home</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="https://github.com/Vectreal/vectreal-platform/releases">
+										Release Notes
+									</Link>
+								</li>
+							</ul>
+						</div>
+						<div>
+							<h3 className="text-foreground mb-4 text-lg font-semibold">
+								Documentation
+							</h3>
+							<ul className="flex flex-col gap-4">
+								<li className="text-foreground list-item">
+									<Link to="/docs">Docs Home</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="/docs/getting-started">Getting Started</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="/docs/guides/upload">Guides</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="/docs/packages/viewer">Package Reference</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="/docs/contributing">Contributing</Link>
+								</li>
+							</ul>
+						</div>
+						<div>
+							<h3 className="text-foreground mb-4 text-lg font-semibold">
+								Company
+							</h3>
+							<ul className="flex flex-col gap-4">
+								<li className="text-foreground list-item">
+									<Link to="/home">Home</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="/about">About Us</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="/news-room">News Room</Link>
+								</li>
+							</ul>
+						</div>
+						<div>
+							<h3 className="text-foreground mb-4 text-lg font-semibold">
+								Legal
+							</h3>
+							<ul className="flex flex-col gap-4">
+								<li className="text-foreground list-item">
+									<Link to="/privacy-policy">Privacy Policy</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="/terms-of-service">Terms of Service</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="/contact">Contact Us</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="/imprint">Imprint</Link>
+								</li>
+							</ul>
+						</div>
+						<div>
+							<h3 className="text-foreground mb-4 text-lg font-semibold">
+								Community
+							</h3>
+							<ul className="flex flex-col gap-4">
+								<li className="text-foreground list-item">
+									<Link to="https://github.com/vectreal/">GitHub</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="https://discord.gg/A9a3nPkZw7">Discord</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="https://reddit.com/r/vectreal/">Reddit</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="https://youtube.com/vectreal/">Youtube</Link>
+								</li>
+							</ul>
+						</div>
 					</div>
 				</div>
-				<div className="flex justify-center">
+				<div className="relative flex w-full items-center justify-end p-4 max-sm:flex-col">
 					<ShimmerRotatingText
 						phrases={whispers}
-						className="text-muted-foreground/80 hover:text-foreground/95 focus-visible:ring-ring/60 relative isolate overflow-hidden rounded-full border border-transparent px-4 py-1.5 text-xs tracking-[0.18em] transition-colors focus-visible:ring-1 focus-visible:outline-none"
+						className="text-muted-foreground/80 hover:text-foreground/95 focus-visible:ring-ring/60 relative isolate overflow-hidden rounded-full border border-transparent px-4 py-1.5 text-xs transition-colors focus-visible:ring-1 focus-visible:outline-none"
 						ariaLabel="cycle footer note"
 					/>
+					<motion.small className="text-muted-foreground/70 block text-center text-sm">
+						© {new Date().getFullYear()} Vectreal. All rights reserved.
+					</motion.small>
 				</div>
-			</div>
-			<small className="text-muted-foreground/70 mx-auto block text-center text-sm">
-				© {new Date().getFullYear()} Vectreal. All rights reserved.
-			</small>
-		</footer>
+			</footer>
+			{isHomePage && (
+				<div className="relative w-full">
+					<div className="from-background absolute bottom-0 h-48 w-full bg-gradient-to-b to-transparent sm:h-64 md:h-96 xl:h-128" />
+					<VectrealLogoAnimated
+						animated={false}
+						className="text-muted-foreground fixed bottom-0 -z-10 h-fit w-full"
+					/>
+				</div>
+			)}
+		</>
 	)
 }

@@ -34,7 +34,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 	const isMobile = useIsMobile(loaderData.isMobile)
 
 	return (
-		<main>
+		<main className="bg-background">
 			<section
 				className={cn(
 					'relative mx-auto flex overflow-hidden xl:max-w-7xl',
