@@ -1,4 +1,5 @@
 import { docsPages } from './app/lib/docs/docs-manifest'
+import { getNewsPrerenderPaths } from './app/lib/news/news-prerender-paths'
 
 import type { Config } from '@react-router/dev/config'
 
@@ -6,6 +7,8 @@ const DOCS_PRERENDER_PATHS = [
 	'/docs',
 	...docsPages.map((page) => (page.slug ? `/docs/${page.slug}` : '/docs'))
 ]
+
+const NEWS_PRERENDER_PATHS = getNewsPrerenderPaths()
 
 const STATIC_PRERENDER_PATHS = [
 	'/',
@@ -16,6 +19,7 @@ const STATIC_PRERENDER_PATHS = [
 	'/privacy-policy',
 	'/terms-of-service',
 	'/imprint',
+	...NEWS_PRERENDER_PATHS,
 	...DOCS_PRERENDER_PATHS
 ]
 

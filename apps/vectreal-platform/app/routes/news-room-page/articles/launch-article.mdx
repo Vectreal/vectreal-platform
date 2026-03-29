@@ -1,0 +1,111 @@
+---
+title: "Introducing Vectreal: Open 3D Publishing for the Web"
+slug: "launch-article"
+excerpt: "Why we built Vectreal, what ships first, and how teams can publish fast 3D scenes without lock-in."
+publishedAt: "2026-03-25"
+updatedAt: "2026-03-28"
+category: "launch"
+tags:
+- "platform"
+- "open-source"
+- "3d-web"
+- "product"
+author:
+    name: "Vectreal Team"
+    role: "Founding Contributors"
+    bio: "Building open infrastructure for practical 3D on the web."
+    avatar: "/images/newsroom/authors/vectreal-team.jpg"
+    xUrl: "https://x.com/vectreal"
+    linkedinUrl: "https://www.linkedin.com/company/vectreal"
+coverImage: "/images/newsroom/launch-cover.jpg"
+draft: true
+---
+
+## The Problem No One Wanted to Name
+
+Ask any frontend developer who has tried to ship a 3D model on a website and they will describe the same arc: excitement, then friction, then a compromise that ends in a static screenshot.
+
+The barriers are real. Raw 3D files are enormous. Formats are fragmented — glTF, GLB, OBJ, USDZ — each with its own quirks. Optimization pipelines require specialist knowledge or expensive SaaS subscriptions. And once you finally have something that renders, distributing it means either proprietary lock-in or rolling your own embedding infrastructure from scratch.
+
+The result? Interactive 3D stays stuck in industries that can afford the overhead. Everyone else settles for less. Vectreal exists to close that gap. We make 3D available for everyone. Finally.
+
+---
+
+## What Is Vectreal?
+
+Vectreal is an open platform for preparing, managing, and publishing 3D content for the web. It combines a browser-based Publisher — where you upload, optimize, and configure a scene — with a set of open-source React packages that developers can integrate directly into their own applications.
+
+The value proposition is precise: **accessible and scalable 3D web visualization and publishing, for everyone.**
+
+That word *everyone* carries real weight here. Vectreal is not only aimed at studios with dedicated 3D pipelines. It is also built for the developer who wants to drop a product viewer into an e-commerce page. For the 3D artist who wants to share work publicly without a proprietary account wall. For the team that needs to embed a configurable scene in a client portal without maintaining infrastructure.
+
+---
+
+## How Vectreal Came to Be
+
+Vectreal grew out of a frustration with the existing landscape. The tools that handled 3D well —mostly AR-first platforms — were either closed, expensive, or optimized for a narrow use case. So the idea was born. And Vectreal was developed \- built upon powerful Open-Source Primitives and backed by a community that could extend and improve it over time.
+
+The idea behind Vectreal was to build a complete, open workflow from file upload to embeddable iframe. The core of that workflow is now live.
+
+---
+
+## What Makes Vectreal Different
+
+Three things separate Vectreal from the alternatives:
+
+**Open source at the core.** The packages that power Vectreal — `@vctrl/viewer`, `@vctrl/hooks`, and `@vctrl/core` — are published on npm and available on GitHub. You can use them in your own React application without ever touching the Vectreal platform UI. The community can read the code, contribute to it, and build on top of it.
+
+**A complete pipeline, not a component.** Most open-source 3D tooling gives you a renderer or a loader. Vectreal gives you the full path: upload → optimize (mesh simplification, texture compression, format normalization) → configure (lighting, camera, shadows) → publish → embed. Each step is covered, and each step produces a result you own.
+
+**Community as a design principle.** Vectreal is not free-tier-with-paywalls. The free tier is the product. The expectation is that users who find value will contribute back — through code, through feedback, through community discussions on Discord and GitHub. Premium tiers exist for teams that need scale, not to gate the core experience.
+
+---
+
+## Who Is Vectreal For?
+
+**E-commerce teams** — embed product viewers without managing 3D infrastructure. Set up once, maintain via the Dashboard, embed anywhere.
+
+**3D artists and creators** — publish work directly from the Publisher. Share a link or embed on a portfolio without a proprietary viewer account.
+
+**Frontend developers** — drop `@vctrl/viewer` into an existing React app and get a production-grade 3D viewer in minutes. Use `@vctrl/hooks` to build custom loading and optimization flows.
+
+**Open-source contributors** — the monorepo is public. The roadmap is shaped by the community. If you have found a gap, you can fill it.
+
+---
+
+## The Community at the Center
+
+Vectreal's strategy is not to extract value from users — it is to build with them. The free tier exists because onboarding barriers are the enemy of community. The open-source packages exist because a platform that locks developers out of its own internals is not a platform worth trusting.
+
+The community lives on Discord (`#contributors` channel for development questions, general channels for support and feature discussion) and GitHub (issues, discussions, pull requests). Both are the real product roadmap.
+
+There are plans for coding challenges, 3D design competitions, and community-voted features. But those start with people showing up and contributing — and that starts with the invitation being genuine.
+
+You are invited. Join us\!
+
+---
+
+## What Comes Next
+
+Vectreal is in active development. The packages carry a pre-1.0 notice: breaking changes may occur before the first major release. That is not a disclaimer — it is an invitation to shape what 1.0 looks like.
+
+The roadmap priorities come from the community. USDZ support is a work in progress. Grid rendering is planned. Server-side optimization pipelines are live for early API users.
+
+The place to follow all of it: [Discord](https://discord.gg/A9a3nPkZw7), [GitHub](https://github.com/Vectreal/vectreal-platform), and this blog.
+
+---
+
+## Start Publishing
+
+The Publisher is live at [vectreal.com/publisher](https://vectreal.com/publisher). No account required to upload and configure a model.
+
+When you are ready to save and embed:
+
+1. Create a free account at [vectreal.com](https://vectreal.com).  
+2. Upload your model, apply a quality preset, configure the scene.  
+3. Publish and copy the embed snippet.  
+4. Drop the iframe into any HTML page.
+
+That is the whole workflow. Shape your vision. Publish it. Share it. It´s that easy.
+
+*Connect with the community: [vectreal.com](https://vectreal.com) · [Discord](https://discord.gg/A9a3nPkZw7) · [GitHub](https://github.com/Vectreal/vectreal-platform) · [npm](https://www.npmjs.com/package/@vctrl/viewer) · [Reddit](https://reddit.com) · [Stack Overflow](https://stackoverflow.com) · [X](https://x.com) · Product Hunt*

@@ -58,7 +58,7 @@ export default [
 		route('pricing', './routes/pricing-page/pricing-page.tsx'),
 
 		// Legal pages
-		layout('./routes/layouts/mdx-layout.tsx', [
+		layout('./routes/layouts/mdx-layout.tsx', { id: 'legal-mdx-layout' }, [
 			route('about', './routes/about-page.mdx'),
 			route('changelog', './routes/changelog-page.mdx'),
 			route('contact', './routes/contact-page.mdx'),
@@ -66,6 +66,15 @@ export default [
 			route('privacy-policy', './routes/privacy-policy-page.mdx'),
 			route('terms-of-service', './routes/terms-of-service-page.mdx'),
 			route('imprint', './routes/imprint-page.mdx')
+		]),
+
+		// News room page
+		layout('./routes/layouts/news-room-layout.tsx', [
+			route('news-room', './routes/news-room-page/news-room-page.tsx'),
+			route(
+				'news-room/:slug',
+				'./routes/news-room-page/news-room-article-page.tsx'
+			)
 		]),
 
 		// Docs — platform-first open-source documentation

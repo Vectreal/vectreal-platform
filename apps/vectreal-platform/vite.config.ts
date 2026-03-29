@@ -6,7 +6,9 @@ import tailwindcss from '@tailwindcss/vite'
 import rehypeAutolinkHeadings from 'rehype-autolink-headings'
 import rehypePrettyCode from 'rehype-pretty-code'
 import rehypeSlug from 'rehype-slug'
+import remarkFrontmatter from 'remark-frontmatter'
 import remarkGfm from 'remark-gfm'
+import remarkMdxFrontmatter from 'remark-mdx-frontmatter'
 import { defineConfig } from 'vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
 
@@ -34,7 +36,7 @@ export default defineConfig(() => {
 			nxViteTsPaths(),
 			mdx({
 				format: 'mdx',
-				remarkPlugins: [remarkGfm],
+				remarkPlugins: [remarkGfm, remarkFrontmatter, remarkMdxFrontmatter],
 				rehypePlugins: [
 					[rehypePrettyCode, prettyCodeOptions],
 					rehypeSlug,
