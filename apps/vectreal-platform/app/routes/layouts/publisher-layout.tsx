@@ -8,6 +8,7 @@ import { data, Outlet } from 'react-router'
 import { Route } from './+types/publisher-layout'
 import { ControlsOverlay } from '../../components'
 import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
+import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
 import { getProject } from '../../lib/domain/project/project-repository.server'
 import { buildSceneAggregate } from '../../lib/domain/scene/server/scene-aggregate.server'
 import {
@@ -125,6 +126,8 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 const Layout = ({ loaderData }: Route.ComponentProps) => {
 	const optimizer = useOptimizeModel()
 	const [{ showSidebar }, setProcessState] = useAtom(processAtom)
+	const resolvedLoaderData = loaderData as PublisherLoaderData
+	useAuthResumeRevalidation({ enabled: Boolean(resolvedLoaderData.user) })
 
 	const handleOpenChange = useCallback(
 		(isOpen: boolean) => {
@@ -145,7 +148,7 @@ const Layout = ({ loaderData }: Route.ComponentProps) => {
 							<Provider store={sceneSettingsStore}>
 								<main className="flex h-screen w-full flex-col overflow-hidden">
 									<UpgradeModal />
-									<ControlsOverlay {...(loaderData as PublisherLoaderData)} />
+									<ControlsOverlay {...resolvedLoaderData} />
 									<Outlet />
 								</main>
 							</Provider>

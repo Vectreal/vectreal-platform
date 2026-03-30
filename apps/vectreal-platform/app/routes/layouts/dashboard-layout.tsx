@@ -33,6 +33,7 @@ import {
 	SceneDetailsSkeleton
 } from '../../components/skeletons'
 import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
+import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
 import { dashboardManagementStore } from '../../lib/stores/dashboard-management-store'
 import { upgradeModalStore } from '../../lib/stores/upgrade-modal-store'
@@ -97,6 +98,7 @@ const DashboardLayout = () => {
 	const location = useLocation()
 	const navigation = useNavigation()
 	const revalidator = useRevalidator()
+	useAuthResumeRevalidation({ enabled: Boolean(user) })
 	const fetchers = useFetchers()
 	const [sidebarOpen, setSidebarOpen] = useState(true)
 	const [showSkeleton, setShowSkeleton] = useState(false)

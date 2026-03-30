@@ -3,6 +3,7 @@ import { data, Outlet, redirect } from 'react-router'
 import { Route } from './+types/nav-layout'
 import { Footer } from '../../components/footer'
 import { Navigation } from '../../components/navigation'
+import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
 import { createSupabaseClient } from '../../lib/supabase.server'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
@@ -60,6 +61,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 	return data(defaultResponse)
 }
 const Layout = ({ loaderData }: Route.ComponentProps) => {
+	useAuthResumeRevalidation({ enabled: Boolean(loaderData.user) })
+
 	return (
 		<>
 			<Navigation user={loaderData.user} isMobile={loaderData.isMobile} />
