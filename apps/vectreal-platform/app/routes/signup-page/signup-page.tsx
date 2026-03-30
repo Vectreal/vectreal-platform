@@ -18,8 +18,10 @@ import { AnimatePresence } from 'framer-motion'
 import { AlertCircle, Eye, EyeClosed, ExternalLink, Save } from 'lucide-react'
 import { useState } from 'react'
 import { data, Form, Link, redirect } from 'react-router'
+import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signup-page'
+import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
 /**
@@ -83,6 +85,11 @@ export async function action({
 	request
 }: Route.ActionArgs): Promise<ApiResponse> {
 	const formData = await request.formData()
+	const csrfCheck = await ensureValidCsrfFormData(request, formData)
+	if (csrfCheck) {
+		return csrfCheck as unknown as ApiResponse
+	}
+
 	const {
 		errors,
 		data: { email, password, username }
@@ -234,6 +241,7 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 				aria-label="Sign up form"
 				noValidate
 			>
+				<AuthenticityTokenInput />
 				<div className="mb-4">
 					<label className="mb-2 block text-sm font-medium" htmlFor="username">
 						Username

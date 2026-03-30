@@ -33,6 +33,7 @@ import {
 	useNavigate,
 	useParams
 } from 'react-router'
+import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { toast } from 'sonner'
 import { z, ZodError } from 'zod'
 
@@ -50,6 +51,7 @@ import {
 	getRecommendedUpgrade
 } from '../../lib/domain/billing/entitlement-service.server'
 import { getUserProjects } from '../../lib/domain/project/project-repository.server'
+import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import {
 	buildUpgradeModalState,
 	upgradeModalAtom
@@ -115,6 +117,10 @@ export async function action({ request, params }: Route.ActionArgs) {
 	const { user, headers } = await loadAuthenticatedUser(request)
 	const { keyId } = params
 	const formData = await request.formData()
+	const csrfCheck = await ensureValidCsrfFormData(request, formData)
+	if (csrfCheck) {
+		return csrfCheck
+	}
 
 	if (!keyId) {
 		throw new Response('API key ID is required', { status: 400 })
@@ -321,6 +327,7 @@ export default function ApiKeysEditPage({
 
 					<Form {...form}>
 						<RemixForm method="post" className="space-y-6">
+							<AuthenticityTokenInput />
 							<FormField
 								control={form.control}
 								name="name"

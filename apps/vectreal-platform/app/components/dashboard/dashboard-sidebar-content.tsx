@@ -106,7 +106,7 @@ const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
 
 	const handleLogout = () => {
 		submit(null, {
-			method: 'get',
+			method: 'post',
 			action: '/auth/logout'
 		})
 	}

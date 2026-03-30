@@ -10,7 +10,12 @@ import {
 	FolderUp,
 	Upload
 } from 'lucide-react'
-import { ComponentProps, SyntheticEvent, useEffect, useTransition } from 'react'
+import {
+	ComponentProps,
+	SyntheticEvent,
+	useCallback,
+	useTransition
+} from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Link } from 'react-router'
 
@@ -30,20 +35,26 @@ interface Props {
 
 export const DropZone = ({ isMobile }: Props) => {
 	const acceptPattern = useAcceptPattern(isMobile)
-	const { getRootProps, getInputProps, isDragActive, acceptedFiles } =
-		useDropzone()
 	const { load } = useModelContext()
 
 	const [, startTransition] = useTransition()
 
-	useEffect(() => {
-		if (acceptedFiles.length > 0) {
+	const handleDrop = useCallback(
+		(files: File[]) => {
+			if (files.length === 0) {
+				return
+			}
+
 			startTransition(async () => {
-				// load the files
-				await load(acceptedFiles as InputFileOrDirectory)
+				await load(files as InputFileOrDirectory)
 			})
-		}
-	}, [acceptedFiles, load])
+		},
+		[load, startTransition]
+	)
+
+	const { getRootProps, getInputProps, isDragActive } = useDropzone({
+		onDrop: handleDrop
+	})
 
 	const { onClick, ...containerProps } = getRootProps<ComponentProps<'div'>>()
 

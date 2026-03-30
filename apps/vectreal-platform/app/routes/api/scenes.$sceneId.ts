@@ -28,6 +28,7 @@ import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-pr
 import * as sceneSettingsOps from '../../lib/domain/scene/server/scene-settings.operations.server'
 import { SceneSettingsParser } from '../../lib/domain/scene/server/scene-settings.parser.server'
 import { getAuthUser } from '../../lib/http/auth.server'
+import { ensureSameOriginMutation } from '../../lib/http/csrf.server'
 import { ensurePost, parseActionRequest } from '../../lib/http/requests.server'
 
 import type {
@@ -388,6 +389,11 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 export async function action({ request, params }: ActionFunctionArgs) {
 	const methodCheck = ensurePost(request)
 	if (methodCheck) return methodCheck
+
+	const csrfCheck = ensureSameOriginMutation(request)
+	if (csrfCheck) {
+		return csrfCheck
+	}
 
 	const url = new URL(request.url)
 	const isPreviewRequest = url.searchParams.get('preview') === '1'

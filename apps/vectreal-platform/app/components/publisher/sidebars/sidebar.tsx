@@ -25,9 +25,11 @@ import { UserMenu } from '../../user-menu'
 
 const SidebarTabs = ({
 	mode,
+	userId,
 	onTabChange
 }: {
 	mode: SidebarMode
+	userId?: string
 	onTabChange: (value: string) => void
 }) => (
 	<Tabs
@@ -48,7 +50,7 @@ const SidebarTabs = ({
 			value="optimize"
 			className="no-scrollbar space-y-2 overflow-auto rounded-xl"
 		>
-			<OptimizeSidebar />
+			<OptimizeSidebar userId={userId} />
 		</TabsContent>
 		<TabsContent
 			value="compose"
@@ -91,7 +93,7 @@ const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
 	}, [setProcessState])
 	async function handleLogout() {
 		await submit(null, {
-			method: 'get',
+			method: 'post',
 			action: '/auth/logout'
 		})
 	}
@@ -122,7 +124,11 @@ const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
 							<SceneNameInput />
 						</div>
 
-						<SidebarTabs mode={mode} onTabChange={handleTabChange} />
+						<SidebarTabs
+							mode={mode}
+							userId={user?.id}
+							onTabChange={handleTabChange}
+						/>
 					</motion.div>
 				</AnimatePresence>
 			</div>

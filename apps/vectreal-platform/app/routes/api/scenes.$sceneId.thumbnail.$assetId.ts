@@ -4,6 +4,7 @@ import { LoaderFunctionArgs } from 'react-router'
 import { getDbClient } from '../../db/client'
 import { assets } from '../../db/schema'
 import { downloadAsset } from '../../lib/domain/asset/asset-storage.server'
+import { getScene } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 
 const db = getDbClient()
@@ -45,6 +46,11 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		return new Response('Thumbnail not found', { status: 404, headers })
 	}
 
+	const scene = await getScene(sceneId, auth.user.id)
+	if (!scene) {
+		return new Response('Thumbnail not found', { status: 404, headers })
+	}
+
 	try {
 		const assetData = await downloadAsset(assetId)
 		const body = new Blob([Buffer.from(assetData.data)], {
@@ -59,7 +65,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 				responseHeaders.set('Cache-Control', 'private, max-age=60')
 				responseHeaders.set('Last-Modified', asset.updatedAt.toUTCString())
 				return responseHeaders
-			})(),
+			})()
 		})
 	} catch (error) {
 		console.error('Failed to stream thumbnail asset', {

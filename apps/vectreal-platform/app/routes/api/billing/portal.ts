@@ -19,6 +19,7 @@ import { getDbClient } from '../../../db/client'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
+import { ensureSameOriginMutation } from '../../../lib/http/csrf.server'
 import { getStripeClient } from '../../../lib/stripe.server'
 
 // ---------------------------------------------------------------------------
@@ -28,6 +29,11 @@ import { getStripeClient } from '../../../lib/stripe.server'
 export async function action({ request }: Route.ActionArgs): Promise<Response> {
 	if (request.method !== 'POST') {
 		return ApiResponse.methodNotAllowed()
+	}
+
+	const csrfCheck = ensureSameOriginMutation(request)
+	if (csrfCheck) {
+		return csrfCheck
 	}
 
 	const { user, userWithDefaults, headers } =
