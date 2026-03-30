@@ -5,6 +5,7 @@ import FadeInView from './fade-in-view'
 
 interface SectionProps extends PropsWithChildren {
 	className?: string
+	contentClassName?: string
 	border?: boolean
 	fadeIn?: boolean
 }
@@ -12,6 +13,7 @@ interface SectionProps extends PropsWithChildren {
 const Section = ({
 	children,
 	className,
+	contentClassName,
 	border,
 	fadeIn = true
 }: SectionProps) => {
@@ -30,7 +32,14 @@ const Section = ({
 					border && 'border-b-muted/50 border-b pb-16'
 				)}
 			>
-				<div className="mx-auto flex max-w-7xl flex-col px-4">{children}</div>
+				<div
+					className={cn(
+						'mx-auto flex max-w-7xl flex-col px-4',
+						contentClassName
+					)}
+				>
+					{children}
+				</div>
 			</FadeInView>
 		</section>
 	)

@@ -42,17 +42,17 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	return data(
 		{
-		projects: userProjects,
-		recentScenes,
-		overview: {
-			kpis: {
-				totalProjects: projectStats.total,
-				totalScenes: sceneStats.total,
-				publishedScenes: sceneStats.byStatus.published,
-				draftScenes: sceneStats.byStatus.draft
-			},
-			mostRecentSceneId: mostRecentScene?.id
-		}
+			projects: userProjects,
+			recentScenes,
+			overview: {
+				kpis: {
+					totalProjects: projectStats.total,
+					totalScenes: sceneStats.total,
+					publishedScenes: sceneStats.byStatus.published,
+					draftScenes: sceneStats.byStatus.draft
+				},
+				mostRecentSceneId: mostRecentScene?.id
+			}
 		},
 		{ headers }
 	)

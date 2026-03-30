@@ -5,6 +5,7 @@ interface Props {
 	className?: string
 	small?: boolean
 	colored?: boolean
+	animated?: boolean
 }
 
 const parentVariants = {
@@ -29,14 +30,19 @@ const childVariants = {
 	}
 }
 
-export const VectrealLogoAnimated = ({ small, colored, className }: Props) => {
+export const VectrealLogoAnimated = ({
+	animated = true,
+	small,
+	colored,
+	className
+}: Props) => {
 	return (
 		<motion.svg
 			role="img"
 			className={className}
 			height="100%"
-			viewBox="0 0 420 120"
-			initial="hidden"
+			viewBox="0 0 400 120"
+			initial={animated ? 'hidden' : 'visible'}
 			variants={parentVariants}
 			animate={!small ? 'visible' : 'hidden'}
 		>

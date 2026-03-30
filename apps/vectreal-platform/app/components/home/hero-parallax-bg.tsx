@@ -59,7 +59,7 @@ const HeroParallaxBg = () => {
 		<motion.img
 			src={starsBackground}
 			alt="Stars background"
-			className="absolute inset-0 -z-10 h-full w-full object-cover opacity-75 mix-blend-lighten"
+			className="absolute inset-0 -z-0 h-full w-full object-cover opacity-75 mix-blend-lighten"
 			style={isMobile ? { y: scrollParallax } : { x, y }}
 		/>
 	)

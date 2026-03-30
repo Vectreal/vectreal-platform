@@ -2,13 +2,7 @@ import { GithubLogo } from '@shared/components/assets/icons/github-logo'
 import GoogleLogo from '@shared/components/assets/icons/google-logo'
 import { Button } from '@shared/components/ui/button'
 import { Separator } from '@shared/components/ui/separator'
-import {
-	Link,
-	Outlet,
-	useFetcher,
-	useLocation,
-	useNavigate
-} from 'react-router'
+import { Link, Outlet, useLocation, useNavigate, useSubmit } from 'react-router'
 
 import HeroScene from '../../components/home/hero-scene'
 
@@ -30,7 +24,7 @@ const SignupModel = () => {
 }
 
 const SigninLayout = () => {
-	const { submit } = useFetcher()
+	const submit = useSubmit()
 	const location = useLocation()
 	const navigate = useNavigate()
 	const nextPath =
@@ -38,12 +32,13 @@ const SigninLayout = () => {
 
 	const isSignUp = location.pathname.endsWith('/sign-up')
 
-	async function handleSocialLogin(provider: 'google' | 'github') {
+	function handleSocialLogin(provider: 'google' | 'github') {
 		const formData = new FormData()
 		formData.append('provider', provider)
 		formData.append('backURL', nextPath)
-		// Trigger the action to handle social login
-		await submit(formData, {
+		// Use a full navigation submit so external OAuth redirects happen in the
+		// top-level browsing context instead of a background fetch request.
+		submit(formData, {
 			method: 'post',
 			action: '/auth/social-signin'
 		})

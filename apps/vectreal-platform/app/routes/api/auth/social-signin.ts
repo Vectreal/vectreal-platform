@@ -4,13 +4,14 @@ import { redirect } from 'react-router'
 import { Route } from './+types/social-signin'
 import { createSupabaseClient } from '../../../lib/supabase.server'
 
-
 export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData()
 	const provider = formData.get('provider')
 	const backURL = formData.get('backURL')
 	const requestUrl = new URL(request.url)
-	const applicationUrl = String(process.env.APPLICATION_URL || requestUrl.origin)
+	const appOrigin =
+		process.env.APPLICATION_URL || process.env.VECTREAL_URL || requestUrl.origin
+	const applicationUrl = String(appOrigin)
 
 	const cleanAppUrl = applicationUrl.endsWith('/')
 		? applicationUrl.slice(0, -1)
