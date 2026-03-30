@@ -8,12 +8,13 @@ const GUEST_OPTIMIZE_QUOTA_LIMIT = 5
 const GUEST_OPTIMIZE_WINDOW_STARTED_AT_KEY = 'windowStartedAt'
 const GUEST_OPTIMIZE_CONSUMED_COUNT_KEY = 'consumedCount'
 
-const sessionSecret = process.env.SESSION_SECRET
-if (!sessionSecret && process.env.NODE_ENV === 'production') {
-	throw new Error('SESSION_SECRET is required in production')
+const guestQuotaSecret = process.env.CSRF_SECRET ?? process.env.SESSION_SECRET
+if (!guestQuotaSecret && process.env.NODE_ENV === 'production') {
+	throw new Error('Cookie session secret is required in production')
 }
 
-const resolvedSessionSecret = sessionSecret || 'dev-only-guest-optimize-secret'
+const resolvedSessionSecret =
+	guestQuotaSecret || 'dev-only-guest-optimize-secret'
 
 type GuestOptimizeQuotaSessionData = {
 	windowStartedAt?: number
