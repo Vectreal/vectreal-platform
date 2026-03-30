@@ -10,8 +10,10 @@ import { ApiResponse } from '@shared/utils'
 import { Eye, EyeClosed, ExternalLink, Save } from 'lucide-react'
 import { useState } from 'react'
 import { data, Form, Link, redirect } from 'react-router'
+import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signin-page'
+import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
 interface UserInput {
@@ -49,6 +51,11 @@ const getSafeNext = (request: Request) => {
 
 export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData()
+	const csrfCheck = await ensureValidCsrfFormData(request, formData)
+	if (csrfCheck) {
+		return csrfCheck
+	}
+
 	const {
 		errors,
 		data: { email, password }
@@ -144,6 +151,7 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 			)}
 
 			<Form className="w-full" method="post" action="/sign-in">
+				<AuthenticityTokenInput />
 				<div className="mb-4">
 					<label className="mb-2 block text-sm font-medium" htmlFor="email">
 						Email

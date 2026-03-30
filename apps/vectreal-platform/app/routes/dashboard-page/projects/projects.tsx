@@ -18,6 +18,7 @@ import {
 import { Plus } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { data, Link, Outlet, useFetcher, useRevalidator } from 'react-router'
+import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { toast } from 'sonner'
 
 import { Route } from './+types/projects'
@@ -44,6 +45,7 @@ import {
 } from '../../../lib/domain/project/project-repository.server'
 import { getProjectsScenes } from '../../../lib/domain/scene/server/scene-folder-repository.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
+import { ensureValidCsrfFormData } from '../../../lib/http/csrf.server'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 
@@ -135,6 +137,10 @@ interface ProjectDeleteActionResponse {
 export async function action({ request }: Route.ActionArgs) {
 	const { user, headers } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
+	const csrfCheck = await ensureValidCsrfFormData(request, formData)
+	if (csrfCheck) {
+		return csrfCheck
+	}
 	const intent = formData.get('intent')
 
 	if (intent !== 'bulk-delete') {
@@ -318,6 +324,7 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 	const { organizations, projects, projectCreationCapabilities, scenes } =
 		loaderData
 	const fetcher = useFetcher<typeof action>()
+	const csrfToken = useAuthenticityToken()
 	const revalidator = useRevalidator()
 	const lastHandledResponseRef = useRef<string | null>(null)
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -370,7 +377,8 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 		fetcher.submit(
 			{
 				intent: 'bulk-delete',
-				projectIds: JSON.stringify(projectIdsToDelete)
+				projectIds: JSON.stringify(projectIdsToDelete),
+				csrf: csrfToken
 			},
 			{ method: 'post' }
 		)

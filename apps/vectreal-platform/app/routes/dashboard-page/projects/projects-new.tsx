@@ -37,6 +37,7 @@ import {
 	useLocation,
 	useNavigate
 } from 'react-router'
+import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { z, ZodError } from 'zod'
 
 import { Route } from './+types/projects-new'
@@ -52,6 +53,7 @@ import {
 	getUserProjects
 } from '../../../lib/domain/project/project-repository.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
+import { ensureValidCsrfFormData } from '../../../lib/http/csrf.server'
 import {
 	buildUpgradeModalState,
 	upgradeModalAtom
@@ -146,6 +148,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 export async function action({ request }: Route.ActionArgs) {
 	const { user, headers } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
+	const csrfCheck = await ensureValidCsrfFormData(request, formData)
+	if (csrfCheck) {
+		return csrfCheck
+	}
 
 	const name = formData.get('name') as string
 	const slug = formData.get('slug') as string
@@ -205,6 +211,7 @@ export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/err
 const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	const { organizations, projectCreationCapabilities } = loaderData
 	const setUpgradeModal = useSetAtom(upgradeModalAtom)
+	const csrfToken = useAuthenticityToken()
 
 	const location = useLocation()
 	const navigate = useNavigate()
@@ -394,6 +401,7 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 					{/* Form */}
 					<Form {...form}>
 						<RemixForm method="post" className="space-y-6">
+							<input type="hidden" name="csrf" value={csrfToken} />
 							{/* Organization selection */}
 							<FormField
 								control={form.control}

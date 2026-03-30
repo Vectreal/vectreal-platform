@@ -28,18 +28,29 @@ export async function loader({ request }: LoaderFunctionArgs) {
 			? requestedProjectId
 			: (projects[0]?.id ?? null)
 
-	const folders = selectedProjectId
-		? (await getRootSceneFolders(selectedProjectId, authResult.user.id))
+	let folders: Array<{ id: string; name: string }> = []
+	if (selectedProjectId) {
+		try {
+			folders = (
+				await getRootSceneFolders(selectedProjectId, authResult.user.id)
+			)
 				.map((folder) => ({
 					id: folder.id,
 					name: folder.name
 				}))
 				.sort((left, right) => left.name.localeCompare(right.name))
-		: []
+		} catch {
+			folders = []
+		}
+	}
 
-	return ApiResponse.success({
-		projects,
-		folders,
-		selectedProjectId
-	}, 200, { headers: new Headers(authResult.headers) })
+	return ApiResponse.success(
+		{
+			projects,
+			folders,
+			selectedProjectId
+		},
+		200,
+		{ headers: new Headers(authResult.headers) }
+	)
 }

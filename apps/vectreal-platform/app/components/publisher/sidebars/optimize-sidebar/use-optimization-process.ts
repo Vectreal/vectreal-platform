@@ -1,7 +1,7 @@
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -42,9 +42,43 @@ type OptimizationOption =
 
 type OptimizationRunIntent = 'check' | 'consume'
 
+type OptimizationQuotaResult = {
+	outcome?: string
+	currentValue?: number
+	limit?: null | number
+	remaining?: null | number
+	isGuest?: boolean
+	windowExpiresAt?: number
+}
+
+type GuestQuotaState = {
+	currentValue: number
+	limit: number
+	remaining: number
+}
+
+const DEFAULT_GUEST_QUOTA_LIMIT = 5
+
+function toGuestQuotaState(result: OptimizationQuotaResult): GuestQuotaState {
+	const limit =
+		typeof result.limit === 'number' ? result.limit : DEFAULT_GUEST_QUOTA_LIMIT
+	const currentValue =
+		typeof result.currentValue === 'number' ? result.currentValue : 0
+	const remaining =
+		typeof result.remaining === 'number'
+			? result.remaining
+			: Math.max(0, limit - currentValue)
+
+	return {
+		currentValue,
+		limit,
+		remaining
+	}
+}
+
 async function requestOptimizationRunQuota(
 	intent: OptimizationRunIntent
-): Promise<{ outcome?: string; currentValue?: number; limit?: null | number }> {
+): Promise<OptimizationQuotaResult> {
 	const response = await fetch('/api/billing/optimization-runs', {
 		method: 'POST',
 		headers: {
@@ -61,6 +95,9 @@ async function requestOptimizationRunQuota(
 			outcome?: string
 			currentValue?: number
 			limit?: null | number
+			remaining?: null | number
+			isGuest?: boolean
+			windowExpiresAt?: number
 		}
 	} | null = null
 	try {
@@ -72,6 +109,9 @@ async function requestOptimizationRunQuota(
 				outcome?: string
 				currentValue?: number
 				limit?: null | number
+				remaining?: null | number
+				isGuest?: boolean
+				windowExpiresAt?: number
 			}
 		}
 	} catch {
@@ -100,14 +140,21 @@ async function requestOptimizationRunQuota(
 	return {
 		outcome: payload?.data?.outcome,
 		currentValue: payload?.data?.currentValue,
-		limit: payload?.data?.limit
+		limit: payload?.data?.limit,
+		remaining: payload?.data?.remaining,
+		isGuest: payload?.data?.isGuest,
+		windowExpiresAt: payload?.data?.windowExpiresAt
 	}
 }
 
 /**
  * Custom hook that encapsulates the optimization logic and state management
  */
-export const useOptimizationProcess = () => {
+export const useOptimizationProcess = ({
+	isAuthenticated
+}: {
+	isAuthenticated: boolean
+}) => {
 	const { optimizer, on, off, file } = useModelContext(true)
 	const { handleDocumentGltfExport } = useExportModel()
 	const {
@@ -138,6 +185,15 @@ export const useOptimizationProcess = () => {
 		clientTextureBytes,
 		latestSceneStats
 	} = optimizationRuntime
+	const [guestQuota, setGuestQuota] = useState<GuestQuotaState | null>(
+		isAuthenticated
+			? null
+			: {
+					currentValue: 0,
+					limit: DEFAULT_GUEST_QUOTA_LIMIT,
+					remaining: DEFAULT_GUEST_QUOTA_LIMIT
+				}
+	)
 	const isSceneSizeCalculationInFlightRef = useRef(false)
 
 	const calculateSceneBytes = useCallback(async () => {
@@ -203,6 +259,14 @@ export const useOptimizationProcess = () => {
 
 			if (optimizationOptions.length > 0) {
 				const checkResult = await requestOptimizationRunQuota('check')
+				if (checkResult.isGuest) {
+					setGuestQuota(toGuestQuotaState(checkResult))
+					if (typeof checkResult.remaining === 'number') {
+						toast.message(
+							`Guest optimizations left today: ${checkResult.remaining}/${typeof checkResult.limit === 'number' ? checkResult.limit : DEFAULT_GUEST_QUOTA_LIMIT}`
+						)
+					}
+				}
 				if (
 					checkResult.outcome === 'soft_limit_warning' &&
 					typeof checkResult.currentValue === 'number' &&
@@ -291,7 +355,10 @@ export const useOptimizationProcess = () => {
 			await applyOptimization()
 
 			if (optimizationOptions.length > 0 && shouldConsumeOptimizationRun) {
-				await requestOptimizationRunQuota('consume')
+				const consumeResult = await requestOptimizationRunQuota('consume')
+				if (consumeResult.isGuest) {
+					setGuestQuota(toGuestQuotaState(consumeResult))
+				}
 			}
 
 			const [updatedSceneBytes, updatedTextureBytes] = await Promise.all([
@@ -324,9 +391,11 @@ export const useOptimizationProcess = () => {
 			}
 
 			toast.error(
-				error instanceof Error
-					? error.message
-					: 'Optimization failed. Please retry.'
+				error instanceof Error && error.message.includes('Unauthorized')
+					? 'Sign in to sync optimization quotas across browsers.'
+					: error instanceof Error
+						? error.message
+						: 'Optimization failed. Please retry.'
 			)
 		} finally {
 			setOptimizationRuntime((prev) => ({
@@ -357,6 +426,30 @@ export const useOptimizationProcess = () => {
 		report?.stats.textures.before,
 		report?.stats.textures.after
 	])
+
+	useEffect(() => {
+		if (isAuthenticated) {
+			setGuestQuota(null)
+			return
+		}
+
+		let cancelled = false
+		void requestOptimizationRunQuota('check')
+			.then((result) => {
+				if (cancelled || !result.isGuest) {
+					return
+				}
+
+				setGuestQuota(toGuestQuotaState(result))
+			})
+			.catch((error) => {
+				console.warn('Failed to fetch guest optimization quota:', error)
+			})
+
+		return () => {
+			cancelled = true
+		}
+	}, [isAuthenticated])
 
 	useEffect(() => {
 		if (typeof clientSceneBytes === 'number') {
@@ -513,6 +606,7 @@ export const useOptimizationProcess = () => {
 		isOptimizerReady: isReady,
 		hasImproved,
 		sizeInfo,
+		guestQuota,
 		handleOptimizeClick
 	}
 }

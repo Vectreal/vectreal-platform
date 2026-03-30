@@ -3,6 +3,7 @@ import GoogleLogo from '@shared/components/assets/icons/google-logo'
 import { Button } from '@shared/components/ui/button'
 import { Separator } from '@shared/components/ui/separator'
 import { Link, Outlet, useLocation, useNavigate, useSubmit } from 'react-router'
+import { useAuthenticityToken } from 'remix-utils/csrf/react'
 
 import HeroScene from '../../components/home/hero-scene'
 
@@ -25,6 +26,7 @@ const SignupModel = () => {
 
 const SigninLayout = () => {
 	const submit = useSubmit()
+	const csrfToken = useAuthenticityToken()
 	const location = useLocation()
 	const navigate = useNavigate()
 	const nextPath =
@@ -36,6 +38,7 @@ const SigninLayout = () => {
 		const formData = new FormData()
 		formData.append('provider', provider)
 		formData.append('backURL', nextPath)
+		formData.append('csrf', csrfToken)
 		// Use a full navigation submit so external OAuth redirects happen in the
 		// top-level browsing context instead of a background fetch request.
 		submit(formData, {

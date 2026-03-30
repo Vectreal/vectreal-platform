@@ -29,7 +29,7 @@ export const Navigation = ({ user }: NavigationProps) => {
 
 	async function handleLogout() {
 		await submit(null, {
-			method: 'get',
+			method: 'post',
 			action: '/auth/logout'
 		})
 	}

@@ -90,7 +90,11 @@ export const usePublisherSaveAction = ({
 						action: {
 							label: 'Sign Out',
 							onClick: () => {
-								window.location.href = '/auth/logout'
+								void fetch('/auth/logout', {
+									method: 'POST'
+								}).then(() => {
+									window.location.href = '/'
+								})
 							}
 						}
 					}

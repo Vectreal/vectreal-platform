@@ -2,10 +2,16 @@ import { ApiResponse } from '@shared/utils'
 import { redirect } from 'react-router'
 
 import { Route } from './+types/social-signin'
+import { ensureValidCsrfFormData } from '../../../lib/http/csrf.server'
 import { createSupabaseClient } from '../../../lib/supabase.server'
 
 export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData()
+	const csrfCheck = await ensureValidCsrfFormData(request, formData)
+	if (csrfCheck) {
+		return csrfCheck
+	}
+
 	const provider = formData.get('provider')
 	const backURL = formData.get('backURL')
 	const requestUrl = new URL(request.url)

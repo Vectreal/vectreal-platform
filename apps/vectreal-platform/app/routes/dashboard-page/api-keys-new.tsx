@@ -41,6 +41,7 @@ import { AlertCircle, CheckCircle2, Copy, KeyRound, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { data, Form as RemixForm, useLocation, useNavigate } from 'react-router'
+import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { toast } from 'sonner'
 import { z, ZodError } from 'zod'
 
@@ -57,6 +58,7 @@ import {
 import { QuotaExceededError } from '../../lib/domain/billing/quota-exceeded-error'
 import { getUserProjects } from '../../lib/domain/project/project-repository.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
+import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import {
 	buildUpgradeModalState,
 	upgradeModalAtom
@@ -136,6 +138,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 export async function action({ request }: Route.ActionArgs) {
 	const { user, headers } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
+	const csrfCheck = await ensureValidCsrfFormData(request, formData)
+	if (csrfCheck) {
+		return csrfCheck
+	}
 
 	const name = formData.get('name') as string
 	const description = (formData.get('description') as string) || undefined
@@ -539,6 +545,7 @@ export default function ApiKeysNewPage({
 
 						<Form {...form}>
 							<RemixForm method="post" className="space-y-6">
+								<AuthenticityTokenInput />
 								<FormField
 									control={form.control}
 									name="name"

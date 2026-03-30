@@ -38,6 +38,7 @@ import {
 	useNavigate,
 	useRevalidator
 } from 'react-router'
+import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { toast } from 'sonner'
 
 import { Route } from './+types/api-keys'
@@ -60,6 +61,7 @@ import {
 	getRecommendedUpgrade
 } from '../../lib/domain/billing/entitlement-service.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
+import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const { user, headers } = await loadAuthenticatedUser(request)
@@ -115,6 +117,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 export async function action({ request }: Route.ActionArgs) {
 	const { user, headers } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
+	const csrfCheck = await ensureValidCsrfFormData(request, formData)
+	if (csrfCheck) {
+		return csrfCheck
+	}
+
 	const intent = formData.get('intent') as string
 
 	try {
@@ -216,6 +223,7 @@ function OrgApiKeysTable({
 
 export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 	const { organizations, keysByOrg, apiKeysAccessByOrg } = loaderData
+	const csrfToken = useAuthenticityToken()
 	const navigate = useNavigate()
 	const fetcher = useFetcher<typeof action>()
 	const revalidator = useRevalidator()
@@ -271,7 +279,8 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 		fetcher.submit(
 			{
 				intent: 'revoke',
-				apiKeyId: keyToRevokeId
+				apiKeyId: keyToRevokeId,
+				csrf: csrfToken
 			},
 			{ method: 'post' }
 		)

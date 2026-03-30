@@ -29,7 +29,12 @@ import {
 } from '../../lib/domain/billing/usage-service.server'
 import { initializeUserDefaults } from '../../lib/domain/user/user-repository.server'
 import { getAuthUser } from '../../lib/http/auth.server'
+import { ensureSameOriginMutation } from '../../lib/http/csrf.server'
 import { ensurePost } from '../../lib/http/requests.server'
+import {
+	getGuestOptimizeQuotaSession,
+	readGuestOptimizeQuotaSnapshot
+} from '../../lib/sessions/guest-optimize-quota-session.server'
 
 const mimeTypeToExtension = (mimeType: string): string | null => {
 	switch (mimeType.toLowerCase()) {
@@ -117,38 +122,58 @@ export async function action({ request }: Route.ActionArgs) {
 		return methodCheck
 	}
 
-	// Authenticate the request and enforce the monthly optimization quota
+	const csrfCheck = ensureSameOriginMutation(request)
+	if (csrfCheck) {
+		return csrfCheck
+	}
+
+	// Authenticate the request and enforce plan quota for authenticated users.
+	// For guests, allow texture optimization while their daily guest optimization
+	// quota window still has remaining capacity (tracked in cookie session).
 	const authResult = await getAuthUser(request)
 	if (authResult instanceof Response) {
-		return authResult
-	}
+		const guestSession = await getGuestOptimizeQuotaSession(request)
+		const guestQuota = readGuestOptimizeQuotaSnapshot(guestSession)
+		if (guestQuota.outcome === 'hard_limit_exceeded') {
+			return ApiResponse.quotaExceeded(
+				'You have reached the free guest optimization limit for today. Sign in to continue with plan-based quotas.',
+				{
+					limitKey: 'optimization_runs_per_month',
+					currentValue: guestQuota.currentValue,
+					limit: guestQuota.limit,
+					plan: 'free',
+					upgradeTo: 'pro'
+				}
+			)
+		}
+	} else {
+		let organizationId: string
+		try {
+			const userDefaults = await initializeUserDefaults(authResult.user)
+			organizationId = userDefaults.organization.id
+		} catch {
+			return ApiResponse.serverError('Failed to resolve organization')
+		}
 
-	let organizationId: string
-	try {
-		const userDefaults = await initializeUserDefaults(authResult.user)
-		organizationId = userDefaults.organization.id
-	} catch {
-		return ApiResponse.serverError('Failed to resolve organization')
-	}
-
-	const quotaCheck: UsageCheckResult = await checkQuota(
-		organizationId,
-		'optimization_runs_per_month'
-	)
-
-	if (quotaCheck.outcome === 'hard_limit_exceeded') {
-		const { plan } = await getOrgSubscription(organizationId)
-		const upgradeTo = getRecommendedUpgrade(plan)
-		return ApiResponse.quotaExceeded(
-			'Monthly optimization limit reached. Upgrade your plan to continue optimizing.',
-			{
-				limitKey: 'optimization_runs_per_month',
-				currentValue: quotaCheck.currentValue,
-				limit: quotaCheck.limit,
-				plan,
-				upgradeTo
-			}
+		const quotaCheck: UsageCheckResult = await checkQuota(
+			organizationId,
+			'optimization_runs_per_month'
 		)
+
+		if (quotaCheck.outcome === 'hard_limit_exceeded') {
+			const { plan } = await getOrgSubscription(organizationId)
+			const upgradeTo = getRecommendedUpgrade(plan)
+			return ApiResponse.quotaExceeded(
+				'Monthly optimization limit reached. Upgrade your plan to continue optimizing.',
+				{
+					limitKey: 'optimization_runs_per_month',
+					currentValue: quotaCheck.currentValue,
+					limit: quotaCheck.limit,
+					plan,
+					upgradeTo
+				}
+			)
+		}
 	}
 
 	try {

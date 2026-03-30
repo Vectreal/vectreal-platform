@@ -36,6 +36,7 @@ import {
 	useLocation,
 	useNavigate
 } from 'react-router'
+import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { z, ZodError } from 'zod'
 
 import { Route } from './+types/projects-edit'
@@ -46,6 +47,7 @@ import {
 	updateProject
 } from '../../../lib/domain/project/project-repository.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
+import { ensureValidCsrfFormData } from '../../../lib/http/csrf.server'
 
 const projectEditSchema = z.object({
 	name: z
@@ -98,6 +100,10 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 	const { user, headers } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
+	const csrfCheck = await ensureValidCsrfFormData(request, formData)
+	if (csrfCheck) {
+		return csrfCheck
+	}
 
 	const name = formData.get('name') as string
 	const slug = formData.get('slug') as string
@@ -166,6 +172,7 @@ export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/err
 
 const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	const { project, organizations } = loaderData
+	const csrfToken = useAuthenticityToken()
 
 	const location = useLocation()
 	const navigate = useNavigate()
@@ -232,6 +239,7 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 				<div className="overflow-y-auto p-6">
 					<Form {...form}>
 						<RemixForm method="post" className="space-y-6">
+							<input type="hidden" name="csrf" value={csrfToken} />
 							{/* Organization (read-only) */}
 							<FormItem>
 								<FormLabel>Organization</FormLabel>
