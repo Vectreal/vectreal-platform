@@ -65,6 +65,9 @@ if [ ! -f "$ENV_FILE" ]; then
     echo "  - APPLICATION_URL_PROD / APPLICATION_URL_STAGING"
     echo "  - CSRF_SECRET_PROD / CSRF_SECRET_STAGING"
     echo "  - STRIPE_SECRET_KEY_PROD / STRIPE_SECRET_KEY_STAGING"
+    echo "Optional variables:"
+    echo "  - RELEASE_APP_ID"
+    echo "  - RELEASE_APP_PRIVATE_KEY"
     exit 1
 fi
 
@@ -121,6 +124,11 @@ fi
 echo "✅ All required variables present"
 echo ""
 
+RELEASE_APP_SECRETS_READY=true
+if [ -z "$RELEASE_APP_ID" ] || [ -z "$RELEASE_APP_PRIVATE_KEY" ]; then
+    RELEASE_APP_SECRETS_READY=false
+fi
+
 # ============================================================================
 # Set GitHub Secrets
 # ============================================================================
@@ -146,6 +154,17 @@ echo "→ Setting GCP project IDs..."
 gh secret set GCP_PROJECT_ID --body "$GCP_PROJECT_ID"
 gh secret set GCP_PROJECT_ID_STAGING --body "$GCP_PROJECT_ID"
 echo "  ✅ GCP project IDs"
+
+# Release workflow GitHub App secrets (optional)
+if [ "$RELEASE_APP_SECRETS_READY" = true ]; then
+    echo "→ Setting release workflow app secrets..."
+    gh secret set RELEASE_APP_ID --body "$RELEASE_APP_ID"
+    gh secret set RELEASE_APP_PRIVATE_KEY --body "$RELEASE_APP_PRIVATE_KEY"
+    echo "  ✅ Release app secrets (2)"
+else
+    echo "⚠️  Skipping release app secrets"
+    echo "   Set RELEASE_APP_ID and RELEASE_APP_PRIVATE_KEY in .env.development to enable app-based release automation"
+fi
 
 # Production secrets
 echo "→ Setting production secrets..."
