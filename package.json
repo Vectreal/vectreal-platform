@@ -97,7 +97,7 @@
 		"@eslint/css": "^0.14.1",
 		"@eslint/js": "^10.0.1",
 		"@eslint/json": "^1.0.0",
-		"@eslint/markdown": "^7.5.1",
+		"@eslint/markdown": "^8.0.0",
 		"@nx/devkit": "22.5.4",
 		"@nx/eslint": "22.5.4",
 		"@nx/eslint-plugin": "22.5.4",
