@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.10.1](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.10.0...viewer-v0.10.1) (2026-04-02)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped from 0.10.0 to 0.10.1
+
 ## [0.10.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.9.5...viewer-v0.10.0) (2026-04-02)
 
 

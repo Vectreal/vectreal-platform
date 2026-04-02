@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/Vectreal/vectreal-platform/compare/core-v0.10.0...core-v0.10.1) (2026-04-02)
+
+
+### Bug Fixes
+
+* Update output paths in project.json to use 'vctrl' prefix ([9737edb](https://github.com/Vectreal/vectreal-platform/commit/9737edb73174db26ee788660fd1bf2d22aaf8d03))
+
 ## [0.10.0](https://github.com/Vectreal/vectreal-platform/compare/core-v0.9.5...core-v0.10.0) (2026-04-02)
 
 
