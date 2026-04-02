@@ -24,13 +24,23 @@ jobs:
       core_release_created: ${{ steps.release.outputs['packages/core--release_created'] }}
       hooks_release_created: ${{ steps.release.outputs['packages/hooks--release_created'] }}
       viewer_release_created: ${{ steps.release.outputs['packages/viewer--release_created'] }}
+      root_release_created: ${{ steps.release.outputs['.--release_created'] }}
 
     steps:
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
       - name: Run release-please
         id: release
         uses: googleapis/release-please-action@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           target-branch: main
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
