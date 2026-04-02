@@ -2,6 +2,9 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
 echo "🔐 Vectreal Platform - GitHub Secrets Setup"
 echo "============================================"
 echo ""
@@ -45,7 +48,7 @@ echo ""
 # ============================================================================
 # Load Secrets from .env.development
 # ============================================================================
-ENV_FILE="../.env.development"
+ENV_FILE="$REPO_ROOT/.env.development"
 
 echo "📂 Checking for secrets file..."
 
@@ -67,7 +70,7 @@ if [ ! -f "$ENV_FILE" ]; then
     echo "  - STRIPE_SECRET_KEY_PROD / STRIPE_SECRET_KEY_STAGING"
     echo "Optional variables:"
     echo "  - RELEASE_APP_ID"
-    echo "  - RELEASE_APP_PRIVATE_KEY"
+    echo "  - RELEASE_APP_PRIVATE_KEY_FILE (recommended)"
     exit 1
 fi
 
@@ -125,7 +128,7 @@ echo "✅ All required variables present"
 echo ""
 
 RELEASE_APP_SECRETS_READY=true
-if [ -z "$RELEASE_APP_ID" ] || [ -z "$RELEASE_APP_PRIVATE_KEY" ]; then
+if [ -z "$RELEASE_APP_ID" ] || [ -z "$RELEASE_APP_PRIVATE_KEY_FILE" ]; then
     RELEASE_APP_SECRETS_READY=false
 fi
 
@@ -136,8 +139,8 @@ echo "🔑 Setting GitHub Secrets..."
 echo ""
 
 # GCP credentials (if they exist)
-PROD_KEY="../credentials/gcp-prod-deployer-key.json"
-STAGING_KEY="../credentials/gcp-staging-deployer-key.json"
+PROD_KEY="$REPO_ROOT/credentials/gcp-prod-deployer-key.json"
+STAGING_KEY="$REPO_ROOT/credentials/gcp-staging-deployer-key.json"
 
 if [ -f "$PROD_KEY" ] && [ -f "$STAGING_KEY" ]; then
     echo "→ Setting GCP credentials..."
@@ -159,11 +162,29 @@ echo "  ✅ GCP project IDs"
 if [ "$RELEASE_APP_SECRETS_READY" = true ]; then
     echo "→ Setting release workflow app secrets..."
     gh secret set RELEASE_APP_ID --body "$RELEASE_APP_ID"
-    gh secret set RELEASE_APP_PRIVATE_KEY --body "$RELEASE_APP_PRIVATE_KEY"
+
+    if [ -n "$RELEASE_APP_PRIVATE_KEY_FILE" ]; then
+        KEY_FILE_PATH="$RELEASE_APP_PRIVATE_KEY_FILE"
+        if [[ "$KEY_FILE_PATH" != /* ]]; then
+            KEY_FILE_PATH="$REPO_ROOT/$KEY_FILE_PATH"
+        fi
+
+        if [ ! -f "$KEY_FILE_PATH" ]; then
+            echo "❌ RELEASE_APP_PRIVATE_KEY_FILE not found: $KEY_FILE_PATH"
+            exit 1
+        fi
+
+        gh secret set RELEASE_APP_PRIVATE_KEY < "$KEY_FILE_PATH"
+    else
+        # Support escaped multiline PEM in env var by translating '\n' to real newlines.
+        printf '%b' "$RELEASE_APP_PRIVATE_KEY" | gh secret set RELEASE_APP_PRIVATE_KEY
+    fi
+
     echo "  ✅ Release app secrets (2)"
 else
     echo "⚠️  Skipping release app secrets"
-    echo "   Set RELEASE_APP_ID and RELEASE_APP_PRIVATE_KEY in .env.development to enable app-based release automation"
+    echo "   Set RELEASE_APP_ID and either RELEASE_APP_PRIVATE_KEY_FILE or RELEASE_APP_PRIVATE_KEY in .env.development"
+    echo "   to enable app-based release automation"
 fi
 
 # Production secrets
