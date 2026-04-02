@@ -23,7 +23,7 @@
 		"model-viewer"
 	],
 	"repository": {
-		"url": "git+https://github.com/vectreal/vectreal-core.git",
+		"url": "https://github.com/vectreal/vectreal-platform",
 		"type": "https"
 	},
 	"license": "AGPL-3.0-only",
