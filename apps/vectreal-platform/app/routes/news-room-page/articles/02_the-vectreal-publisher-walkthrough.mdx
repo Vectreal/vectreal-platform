@@ -1,0 +1,248 @@
+---
+title: "From Upload to Embed — The Vectreal Publisher Walkthrough"
+slug: "the-vectreal-publisher-walkthrough"
+excerpt: "A practical step-by-step guide to the Vectreal Publisher workflow, from first upload to production embed."
+publishedAt: "2026-04-07"
+updatedAt: "2026-04-07"
+category: "guides"
+tags:
+- "platform"
+- "open-source"
+- "3d-web"
+- "product"
+- "guides"
+author:
+    name: "Vectreal Team"
+    role: "Founding Contributors"
+    bio: "Building open infrastructure for practical 3D on the web."
+    avatar: "/images/newsroom/authors/vectreal-team.jpg"
+    xUrl: "https://x.com/vectreal"
+    linkedinUrl: "https://www.linkedin.com/company/vectreal"
+coverImage: "https://storage.googleapis.com/documentation-assets/vectreal-core-banner.png"
+draft: true
+---
+
+{/* ## Blog Summary (80–120 words)
+
+You have a 3D file. You want it on the web, interactive, embeddable anywhere, without maintaining your own infrastructure. This post walks through the complete Vectreal Publisher workflow — step by step, from the first drag-and-drop to the iframe snippet you paste into a page. Along the way: supported formats, the four non-destructive quality presets, mesh simplification and texture compression under the hood, scene configuration, preview API key setup, embed domain restrictions, and the two layout variants available at publish time. No account required to start. Bring your GLB. */}
+
+### Before You Begin
+
+The Vectreal Publisher is available at [vectreal.com/publisher](https://vectreal.com/publisher). No account is required to upload and configure a model — you will only be prompted to sign in when you want to save a scene to your account and publish it.
+
+If you want to follow along, grab any GLB or glTF file you have on hand. If you do not have one, the [three.js editor](https://threejs.org/editor/) can export examples, or you can pull a model from [Khronos glTF samples](https://github.com/KhronosGroup/glTF-Sample-Assets).
+
+---
+
+### Step 1 — Upload
+
+Drag your 3D file onto the Publisher canvas. The parser identifies the format, resolves any external references, and loads the model into the viewport.
+
+**Supported formats:**
+
+| Format | Extension(s) | Notes |
+|---|---|---|
+| GLB | `.glb` | Self-contained binary glTF — easiest to share, single file |
+| glTF | `.gltf` + `.bin` + textures | Full material and animation support; preferred format |
+| OBJ | `.obj` (+ `.mtl`) | Legacy format — MTL file and textures resolved automatically if in the same directory |
+| USDZ | `.usdz` | Limited support — textures and some material types may not render correctly. Work in progress. |
+
+**glTF bundles:** glTF separates geometry, binaries, and textures into multiple files. To upload a full bundle, drag the **entire folder** onto the upload area, or select all files at once in the file picker. The parser identifies the `.gltf` root and resolves all referenced `.bin` and texture files automatically.
+
+There are no hard file size limits enforced in the Publisher UI, though very large files (above 500 MB) may slow browser-side parsing. For production-grade assets, the optimization step in the next section helps significantly.
+
+**Common upload errors:**
+
+| Error | Likely cause | Fix |
+|---|---|---|
+| "Unsupported file format" | Extension not in the supported list | Convert to GLB or glTF |
+| "Failed to parse file" | Corrupt file or missing references | Verify the file opens in a local viewer |
+| "Missing binary or texture" | Uploaded `.gltf` without `.bin`/textures | Upload the full folder as a bundle |
+
+---
+
+### Step 2 — Optimize
+
+Once your model is in the viewport, the right sidebar shows the quality presets. These are the fastest way to reduce file size for web delivery.
+
+**Quality presets:**
+
+| Preset | Mesh ratio | Texture quality | Use when |
+|---|---|---|---|
+| Raw | 100% | Lossless | Archival or downstream processing |
+| High | 90% | 90% | High-fidelity product display |
+| Medium | 70% | 75% | Balanced web experience |
+| Low | 50% | 60% | Maximum performance, lightweight pages |
+
+Presets are **non-destructive**: switching between them re-processes from the original uploaded file. Nothing is lost. Advanced users can override the preset ratio and texture quality values manually in the settings panel.
+
+**What is happening under the hood:**
+
+*Mesh simplification* uses the [glTF-Transform](https://gltf-transform.dev) `simplify` function. The ratio controls the fraction of triangles retained — 1.0 means no simplification, 0.5 means 50% of triangles are kept.
+
+*Texture compression* uses the KTX2 / Basis Universal pipeline, running **asynchronously in a Web Worker**. The viewport preview uses the uncompressed original while compression runs in the background, so you can keep working without waiting.
+
+For server-side optimization (via `@vctrl/core`), Sharp is used for texture compression. When Sharp is unavailable, the pipeline falls back to deduplication and pruning rather than failing.
+
+---
+
+### Step 3 — Configure
+
+Beyond file size, the Publisher gives you full control over how the scene looks and behaves.
+
+#### Lighting and Environment
+
+Choose from a set of HDR environment presets — including studio, sunset, and warehouse options — that determine ambient lighting, reflections, and image-based lighting (IBL). You can adjust environment intensity and background blurriness, and optionally override the transparent background with a solid color using the background color picker.
+
+The `Stage` component from React Three Fiber's Drei library positions the model automatically and adjusts the camera to fit. The **adjustCamera** setting controls how tightly the camera frames the model.
+
+#### Camera
+
+Set the camera's starting world-space position (`x, y, z`). The camera will animate to this position when the scene loads. Adjust field of view in degrees: wider (e.g. 90°) exaggerates depth; narrower (e.g. 30°) produces a flatter, more orthographic feel.
+
+**Auto-rotate:** enable continuous orbit around the model. Configure the rotation speed and the pause delay after user interaction (in milliseconds) — so the model stops rotating when a visitor interacts with it, and resumes after they stop.
+
+#### Shadows
+
+Two shadow types are available:
+
+- **Contact shadows** — lightweight and sharp, good for most use cases. Configurable opacity, blur, scale, and color.
+- **Accumulative shadows** — physically richer, with configurable temporal sampling, frame count, and a nested light configuration for softness and intensity.
+
+#### Grid
+
+Grid controls are currently not active in the viewer render flow. This section will be updated when grid rendering is available.
+
+---
+
+### Step 4 — Save the Scene
+
+Click **Save** in the Publisher header.
+
+- If you are signed in, the scene saves to your account immediately and appears in the Dashboard.
+- If you are in an anonymous session, you will be prompted to sign in or create a free account. Your configuration is preserved — nothing is lost.
+
+After saving, the scene appears in your [Dashboard](https://vectreal.com/dashboard). From the Dashboard, you can also replace the model (drag a new file onto the canvas in an open scene — camera, lighting, and publish settings are preserved) and manage multiple scenes across projects.
+
+---
+
+### Step 5 — Publish
+
+From the Dashboard, open the scene. In the **Publish** sidebar section, click **Publish**.
+
+Publishing transitions the scene from **draft** to **published** status and generates a stable embed URL.
+
+> **Draft scenes are never accessible to external iframe embeds.** They remain viewable only by authenticated collaborators with project access.
+
+To revert, click **Unpublish**. The embed URL becomes inaccessible to external principals immediately.
+
+---
+
+### Step 6 — Set Up a Preview API Key
+
+External iframe embeds require a **preview API key** scoped to the project that owns the scene. This is how Vectreal ensures scenes can only be embedded by authorized principals — not hotlinked by arbitrary sites.
+
+To create a key:
+
+1. Go to **Dashboard → API Keys**.
+2. Click **New API Key**.
+3. Select the project(s) the key should have access to.
+4. Copy the key — it is shown only once.
+
+Pass the key as the `token` query parameter in the embed URL, or as a `Bearer` token in the `Authorization` header for API requests.
+
+**Restricting embed domains (optional):**
+
+To prevent hotlinking from unauthorized domains, open **Dashboard → Projects**, select your project, click **Edit**, and add entries to **Allowed embed domains**. Supported patterns:
+
+| Pattern | What it matches |
+|---|---|
+| `example.com` | Exact host only |
+| `*.example.com` | All subdomains of `example.com` |
+
+Requests from unlisted domains receive a `403 Forbidden` response. Note: `localhost` and `127.0.0.1` are always allowed regardless of the domain allowlist, so local development always works.
+
+---
+
+### Step 7 — Embed
+
+Copy the embed snippet from the **Embed** section in the publish sidebar or from the scene detail page in the Dashboard.
+
+**Responsive 16:9 snippet:**
+
+```html
+<div style="position:relative;padding-top:56.25%;width:100%">
+  <iframe
+    src="https://vectreal.com/preview/fullscreen/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
+    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
+    allow="autoplay"
+    loading="lazy"
+  ></iframe>
+</div>
+```
+
+**Fixed size snippet:**
+
+```html
+<iframe
+  src="https://vectreal.com/preview/fullscreen/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
+  width="800"
+  height="450"
+  style="border:0"
+  allow="autoplay"
+  loading="lazy"
+></iframe>
+```
+
+Paste either snippet into any HTML page. The embedded viewer loads your published scene.
+
+**Two preview layout variants are available:**
+
+| Mode | URL pattern | Best for |
+|---|---|---|
+| Fullscreen | `/preview/fullscreen/:projectId/:sceneId` | Full viewport, immersive presentation |
+| Product detail | `/preview/product-detail/:projectId/:sceneId` | Compact viewer for e-commerce product pages |
+
+Both modes support the `token` query parameter and `Authorization: Bearer` authentication.
+
+---
+
+### Status Code Reference
+
+Worth bookmarking for debugging:
+
+| Scenario | Status code |
+|---|---|
+| Missing `projectId` or `sceneId` | `400 Bad Request` |
+| Rate limited token validation | `429 Too Many Requests` |
+| Disallowed embed domain | `403 Forbidden` |
+| Draft or non-existent scene (external access) | `404 Not Found` |
+| Invalid or revoked API key | `403 Forbidden` |
+
+---
+
+### The Whole Workflow in One Place
+
+| Step | What you do | Account required? |
+|---|---|---|
+| Upload | Drag file onto Publisher canvas | No |
+| Optimize | Select quality preset | No |
+| Configure | Adjust lighting, camera, shadows | No |
+| Save | Click Save | Yes (free) |
+| Publish | Click Publish in sidebar | Yes |
+| API Key | Create in Dashboard → API Keys | Yes |
+| Embed | Paste iframe snippet | — |
+
+---
+
+### What to Do Next
+
+- **Try it now:** [vectreal.com/publisher](https://vectreal.com/publisher) — no account required.
+- **Create a free account** to save scenes, manage projects, and publish embeds.
+- **Use the packages directly** in your React app: install `@vctrl/viewer` and `@vctrl/hooks` from npm to build a custom 3D loading and rendering flow without the Publisher UI.
+- **Contribute:** the full source is on [GitHub](https://github.com/Vectreal/vectreal-platform). Issues, PRs, and discussions are open.
+- **Join the community:** [discord.gg/A9a3nPkZw7](https://discord.gg/A9a3nPkZw7) for support, feature requests, and direct conversation with the team.
+
+---
+
+*Connect with the community: [vectreal.com](https://vectreal.com) · [Discord](https://discord.gg/A9a3nPkZw7) · [GitHub](https://github.com/Vectreal/vectreal-platform) · [npm](https://www.npmjs.com/package/@vctrl/viewer) · [Reddit](https://reddit.com) · [Stack Overflow](https://stackoverflow.com) · [X](https://x.com/vectreal) · Product Hunt*
