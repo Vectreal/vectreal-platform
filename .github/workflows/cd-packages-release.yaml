@@ -99,23 +99,47 @@ jobs:
         run: npx nx report
         shell: bash
 
+      - name: Preflight pack @vctrl/core
+        if: ${{ needs.release-please.outputs.core_release_created == 'true' }}
+        run: |
+          npx nx run vctrl/core:copy-md
+          cd build/packages/vctrl/core
+          npm pack --dry-run
+        shell: bash
+
       - name: Publish @vctrl/core
         if: ${{ needs.release-please.outputs.core_release_created == 'true' }}
-        run: npx nx run vctrl/core:nx-release-publish
+        run: npx nx run vctrl/core:publish
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Preflight pack @vctrl/hooks
+        if: ${{ needs.release-please.outputs.hooks_release_created == 'true' }}
+        run: |
+          npx nx run vctrl/hooks:copy-md
+          cd build/packages/vctrl/hooks
+          npm pack --dry-run
+        shell: bash
 
       - name: Publish @vctrl/hooks
         if: ${{ needs.release-please.outputs.hooks_release_created == 'true' }}
-        run: npx nx run vctrl/hooks:nx-release-publish
+        run: npx nx run vctrl/hooks:publish
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Preflight pack @vctrl/viewer
+        if: ${{ needs.release-please.outputs.viewer_release_created == 'true' }}
+        run: |
+          npx nx run vctrl/viewer:copy-md
+          cd build/packages/vctrl/viewer
+          npm pack --dry-run
+        shell: bash
+
       - name: Publish @vctrl/viewer
         if: ${{ needs.release-please.outputs.viewer_release_created == 'true' }}
-        run: npx nx run vctrl/viewer:nx-release-publish
+        run: npx nx run vctrl/viewer:publish
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -25,10 +25,13 @@
 				"command": "tsc --noEmit -p packages/viewer/tsconfig.json"
 			}
 		},
-		"nx-release-publish": {
+		"publish": {
 			"dependsOn": ["copy-md"],
+			"executor": "nx:run-commands",
+			"outputs": [],
 			"options": {
-				"packageRoot": "build/packages/vctrl/viewer"
+				"command": "npm publish --access public",
+				"cwd": "build/packages/vctrl/viewer"
 			}
 		},
 		"copy-md": {

@@ -16,10 +16,13 @@
 				]
 			}
 		},
-		"nx-release-publish": {
+		"publish": {
 			"dependsOn": ["copy-md"],
+			"executor": "nx:run-commands",
+			"outputs": [],
 			"options": {
-				"packageRoot": "build/packages/vctrl/hooks"
+				"command": "npm publish --access public",
+				"cwd": "build/packages/vctrl/hooks"
 			}
 		},
 		"copy-md": {
