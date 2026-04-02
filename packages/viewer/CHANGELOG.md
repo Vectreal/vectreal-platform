@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.11.1](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.11.0...viewer-v0.11.1) (2026-04-02)
+
+
+### Bug Fixes
+
+* Update repository URLs in package.json files to point to vectreal-platform ([07e2864](https://github.com/Vectreal/vectreal-platform/commit/07e28644fd331a3c85ce2bbde2dd8bac446546bf))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped from 0.11.0 to 0.11.1
+
 ## [0.11.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.10.1...viewer-v0.11.0) (2026-04-02)
 
 
