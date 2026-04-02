@@ -11,6 +11,13 @@
 - Mo
 - Schlomoh
 
+## [0.11.1](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.11.0...workspace-v0.11.1) (2026-04-02)
+
+
+### Bug Fixes
+
+* Update repository URLs in package.json files to point to vectreal-platform ([07e2864](https://github.com/Vectreal/vectreal-platform/commit/07e28644fd331a3c85ce2bbde2dd8bac446546bf))
+
 ## [0.11.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.10.1...workspace-v0.11.0) (2026-04-02)
 
 
