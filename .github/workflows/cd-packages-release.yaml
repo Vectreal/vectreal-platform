@@ -1,19 +1,49 @@
 name: CD - Release Packages
 
 on:
+  workflow_dispatch:
   push:
-    tags:
-      - 'v*.*.*'
+    branches:
+      - main
 
 permissions:
-  id-token: write # Required for OIDC authentication with NPM
-  contents: read
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: packages-release
+  cancel-in-progress: false
 
 jobs:
-  versioning:
-    name: Version and Publish to NPM
+  release-please:
+    name: Create Release PR / GitHub Release
+    runs-on: ubuntu-22.04
+    outputs:
+      releases_created: ${{ steps.release.outputs.releases_created }}
+      core_release_created: ${{ steps.release.outputs['packages/core--release_created'] }}
+      hooks_release_created: ${{ steps.release.outputs['packages/hooks--release_created'] }}
+      viewer_release_created: ${{ steps.release.outputs['packages/viewer--release_created'] }}
+
+    steps:
+      - name: Run release-please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target-branch: main
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  publish:
+    name: Publish Released Packages to NPM
+    needs: release-please
+    if: ${{ needs.release-please.outputs.core_release_created == 'true' || needs.release-please.outputs.hooks_release_created == 'true' || needs.release-please.outputs.viewer_release_created == 'true' }}
     environment: packages-releasing
     runs-on: ubuntu-22.04
+    permissions:
+      id-token: write # Required for OIDC authentication with NPM
+      contents: read
     strategy:
       matrix:
         node-version: [22]
@@ -59,8 +89,23 @@ jobs:
         run: npx nx report
         shell: bash
 
-      - name: Publish packages
-        run: npx nx release publish
+      - name: Publish @vctrl/core
+        if: ${{ needs.release-please.outputs.core_release_created == 'true' }}
+        run: npx nx run vctrl/core:nx-release-publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish @vctrl/hooks
+        if: ${{ needs.release-please.outputs.hooks_release_created == 'true' }}
+        run: npx nx run vctrl/hooks:nx-release-publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish @vctrl/viewer
+        if: ${{ needs.release-please.outputs.viewer_release_created == 'true' }}
+        run: npx nx run vctrl/viewer:nx-release-publish
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
