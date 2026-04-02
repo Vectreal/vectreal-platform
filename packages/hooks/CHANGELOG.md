@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.10.1](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.10.0...hooks-v0.10.1) (2026-04-02)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.10.1
+
 ## [0.10.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.9.5...hooks-v0.10.0) (2026-04-02)
 
 
