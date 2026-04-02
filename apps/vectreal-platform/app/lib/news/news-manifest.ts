@@ -1,6 +1,8 @@
+import { isValidElement } from 'react'
+
 import { normalizeSlug } from '../content/slug'
 
-import type { ComponentType } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 
 export interface NewsAuthor {
 	name: string
@@ -60,7 +62,8 @@ const rawArticleModules = import.meta.glob<unknown>(
 	'../../routes/news-room-page/articles/*.mdx',
 	{
 		eager: true,
-		query: '?raw'
+		query: '?raw',
+		import: 'default'
 	}
 )
 
@@ -85,14 +88,17 @@ function parseDateValue(value: string | undefined): number {
 
 function calculateReadingTimeMinutes(content: string): number {
 	const stripped = content
-		.replace(/^---[\s\S]*?---\s*/m, '')
+		.replace(/^---[\s\S]*?---\s*/m, ' ')
+		.replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+		.replace(/^import\s.+$/gm, ' ')
+		.replace(/^export\s.+$/gm, ' ')
 		.replace(/```[\s\S]*?```/g, ' ')
 		.replace(/`[^`]*`/g, ' ')
 		.replace(/<[^>]+>/g, ' ')
 		.replace(/[#_*~\-\[\]()]/g, ' ')
 
 	const words = stripped.split(/\s+/).filter(Boolean).length
-	return Math.max(1, Math.ceil(words / 220))
+	return Math.max(1, Math.ceil(words / 100))
 }
 
 function getRawArticleSource(moduleEntry: unknown): string {
@@ -114,8 +120,47 @@ function getRawArticleSource(moduleEntry: unknown): string {
 	return ''
 }
 
+function getComponentTextSource(
+	component: ComponentType<Record<string, unknown>> | undefined
+): string {
+	if (typeof component !== 'function') {
+		return ''
+	}
+
+	// Class components are not directly callable in TypeScript.
+	if ('prototype' in component && component.prototype?.isReactComponent) {
+		return ''
+	}
+
+	try {
+		const rendered = (
+			component as (props: Record<string, unknown>) => ReactNode
+		)({})
+		return extractTextFromReactNode(rendered)
+	} catch {
+		return ''
+	}
+}
+
+function extractTextFromReactNode(node: ReactNode): string {
+	if (typeof node === 'string' || typeof node === 'number') {
+		return String(node)
+	}
+
+	if (Array.isArray(node)) {
+		return node.map((child) => extractTextFromReactNode(child)).join(' ')
+	}
+
+	if (!isValidElement(node)) {
+		return ''
+	}
+
+	const children = (node.props as { children?: ReactNode }).children
+	return extractTextFromReactNode(children)
+}
+
 function getFileName(moduleKey: string): string {
-	const parts = moduleKey.split('/')
+	const parts = moduleKey.split('?')[0].split('/')
 	return parts[parts.length - 1] ?? ''
 }
 
@@ -127,6 +172,20 @@ function toSourcePath(moduleKey: string): string {
 function toEditUrl(sourcePath: string): string {
 	return `${GITHUB_REPO}/blob/${GITHUB_DEFAULT_BRANCH}/${sourcePath}`
 }
+
+const rawArticleModulesByNormalizedKey = new Map<string, unknown>(
+	Object.entries(rawArticleModules).map(([moduleKey, moduleEntry]) => [
+		moduleKey.split('?')[0],
+		moduleEntry
+	])
+)
+
+const rawArticleModulesByFileName = new Map<string, unknown>(
+	Object.entries(rawArticleModules).map(([moduleKey, moduleEntry]) => [
+		getFileName(moduleKey),
+		moduleEntry
+	])
+)
 
 function validateFrontmatter(
 	moduleKey: string,
@@ -202,12 +261,27 @@ const allArticles: NewsArticle[] = Object.entries(articleModules)
 		}
 
 		const fileName = getFileName(moduleKey)
+		const rawModuleEntry =
+			rawArticleModules[moduleKey] ??
+			rawArticleModules[`${moduleKey}?raw`] ??
+			rawArticleModulesByNormalizedKey.get(moduleKey) ??
+			rawArticleModulesByFileName.get(fileName)
 		const slug =
 			normalizeSlug(module.frontmatter?.slug ?? '') ||
 			normalizeSlug(fileName.replace(/\.mdx$/i, ''))
 
 		const sourcePath = toSourcePath(moduleKey)
-		const rawContent = getRawArticleSource(rawArticleModules[moduleKey])
+		const rawContent = getRawArticleSource(rawModuleEntry)
+		const componentTextSource = getComponentTextSource(module.default)
+		if (DEV && !rawContent && !componentTextSource) {
+			console.warn(
+				`Newsroom reading time fallback used (${moduleKey}): raw and component sources unavailable, using title+excerpt.`
+			)
+		}
+		const readingTimeSource =
+			rawContent ||
+			componentTextSource ||
+			`${module.frontmatter?.title ?? ''}\n${module.frontmatter?.excerpt ?? ''}`
 
 		const article: NewsArticle = {
 			slug,
@@ -231,7 +305,7 @@ const allArticles: NewsArticle[] = Object.entries(articleModules)
 			},
 			coverImage: module.frontmatter?.coverImage,
 			draft: Boolean(module.frontmatter?.draft),
-			readingTimeMinutes: calculateReadingTimeMinutes(rawContent),
+			readingTimeMinutes: calculateReadingTimeMinutes(readingTimeSource),
 			sourcePath,
 			editUrl: toEditUrl(sourcePath),
 			Component: module.default

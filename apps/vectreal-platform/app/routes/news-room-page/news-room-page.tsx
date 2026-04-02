@@ -103,7 +103,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 					Newsroom
 				</p>
 				<h1 className="max-w-3xl text-4xl leading-[1.08] font-black tracking-tight md:text-6xl">
-					Simple updates for teams building with Vectreal.
+					Learn about what's new and what's next at Vectreal.
 				</h1>
 				<p className="text-muted-foreground max-w-2xl text-sm leading-relaxed md:text-base">
 					Launches, engineering notes, and product decisions. Cleanly published
@@ -178,67 +178,78 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 					</div>
 				) : (
 					articles.map((article) => (
-						<article
+						<Link
 							key={article.slug}
-							className="border-border/70 bg-card/15 group hover:border-border rounded-2xl border p-5 transition-colors md:p-6"
+							to={`/news-room/${article.slug}`}
+							viewTransition
+							className="text-foreground/75 hover:text-foreground block font-medium"
 						>
-							<div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
-								<Badge variant="outline" className="capitalize">
-									{article.category}
-								</Badge>
-								{article.draft ? (
-									<Badge variant="secondary" className="uppercase">
-										Draft
-									</Badge>
-								) : null}
-								<span className="text-muted-foreground">
-									{formatNewsDate(article.publishedAt)}
-								</span>
-								<span className="text-muted-foreground">•</span>
-								<span className="text-muted-foreground">
-									{article.readingTimeMinutes} min read
-								</span>
-							</div>
+							<article className="border-border/70 bg-card/15 group hover:border-border grid grid-rows-[auto_1fr] gap-3 rounded-2xl border p-5 transition-colors md:p-6 md:py-4">
+								<div className="relative -mx-2 overflow-hidden rounded-md">
+									<img
+										src={article.coverImage}
+										alt=""
+										className="aspect-video max-h-64 w-full object-cover"
+									/>
+									<div className="from-background/80 absolute inset-0 bg-gradient-to-t" />
 
-							<h2 className="mb-2 text-2xl leading-tight font-bold tracking-tight md:text-3xl">
-								<Link
-									to={`/news-room/${article.slug}`}
-									viewTransition
-									className="group-hover:text-foreground/85 transition-colors"
-								>
-									{article.title}
-								</Link>
-							</h2>
-
-							<p className="text-muted-foreground mb-4 max-w-3xl text-sm leading-relaxed md:text-base">
-								{article.excerpt}
-							</p>
-
-							<div className="mb-4 flex flex-wrap gap-2">
-								{article.tags.map((item) => (
-									<Badge key={item} variant="secondary" className="font-normal">
-										{item}
-									</Badge>
-								))}
-							</div>
-
-							<footer className="text-muted-foreground flex items-center justify-between text-sm">
-								<div>
-									<span className="text-foreground font-medium">
-										{article.author.name}
-									</span>
-									<span className="mx-2">•</span>
-									<span>{article.author.role}</span>
+									<div className="absolute bottom-0 flex flex-wrap items-center gap-2 p-2 text-xs">
+										<Badge
+											variant="outline"
+											className="capitalize backdrop-blur-xl"
+										>
+											{article.category}
+										</Badge>
+										{article.draft ? (
+											<Badge variant="secondary" className="uppercase">
+												Draft
+											</Badge>
+										) : null}
+										<span className="text-muted-foreground">
+											{formatNewsDate(article.publishedAt)}
+										</span>
+										<span className="text-muted-foreground">•</span>
+										<span className="text-muted-foreground">
+											{article.readingTimeMinutes} min read
+										</span>
+									</div>
 								</div>
-								<Link
-									to={`/news-room/${article.slug}`}
-									viewTransition
-									className="text-foreground/80 hover:text-foreground font-medium"
-								>
-									Read
-								</Link>
-							</footer>
-						</article>
+
+								<div>
+									<h2 className="mb-2 text-2xl leading-tight font-bold tracking-tight md:text-3xl">
+										<span className="group-hover:text-foreground/85 transition-colors">
+											{article.title}
+										</span>
+									</h2>
+
+									<p className="text-muted-foreground mb-4 max-w-3xl text-sm leading-relaxed md:text-base">
+										{article.excerpt}
+									</p>
+
+									<div className="mb-4 flex flex-wrap gap-2">
+										{article.tags.map((item) => (
+											<Badge
+												key={item}
+												variant="secondary"
+												className="font-normal"
+											>
+												{item}
+											</Badge>
+										))}
+									</div>
+
+									<footer className="text-muted-foreground flex items-center justify-between text-sm">
+										<div>
+											<span className="text-foreground font-medium">
+												{article.author.name}
+											</span>
+											<span className="mx-2">•</span>
+											<span>{article.author.role}</span>
+										</div>
+									</footer>
+								</div>
+							</article>
+						</Link>
 					))
 				)}
 			</section>

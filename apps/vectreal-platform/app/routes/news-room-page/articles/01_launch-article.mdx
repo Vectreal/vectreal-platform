@@ -1,0 +1,170 @@
+---
+title: "The Problem With 3D on the Web — And Why We Built Vectreal"
+slug: "launch-article"
+excerpt: "Why publishing 3D on the web is still too hard, and the open workflow Vectreal is building to fix it."
+publishedAt: "2026-04-03"
+updatedAt: "2026-04-03"
+category: "launch"
+tags:
+- "platform"
+- "open-source"
+- "3d-web"
+- "product"
+- "launch"
+author:
+    name: "Vectreal Team"
+    role: "Founding Contributors"
+    bio: "Building open infrastructure for practical 3D on the web."
+    avatar: "/assets/images/calvin.webp"
+    xUrl: "https://x.com/vectreal"
+    linkedinUrl: "https://www.linkedin.com/company/vectreal"
+coverImage: "https://storage.googleapis.com/documentation-assets/vectreal-core-banner.png"
+draft: true
+---
+
+
+{/* ## Blog Summary (80–120 words)
+
+Publishing interactive 3D content to the web has always demanded more than it should: oversized files, fragmented formats, specialist optimization knowledge, and proprietary platforms that lock you into their ecosystem. Vectreal exists to dismantle every one of those barriers. In this first post, we introduce what Vectreal is, where it came from, and what makes its approach genuinely different — a complete open-source pipeline, three developer-native npm packages, and a community-first ethos that treats the free experience as the real product, not the hook. This is the problem we are solving and the philosophy we are building it around. */}
+
+### The Problem No One Wanted to Name
+
+Ask any frontend developer who has tried to ship a 3D model on a website and they will describe the same arc: excitement, then friction, then a compromise that ends in a static screenshot.
+
+The barriers are real and they stack quickly.
+
+Raw 3D files are enormous. A single GLB pulled from a modelling workflow can weigh tens of megabytes before any optimization — long before it reaches the browser. Formats are fragmented: glTF, GLB, OBJ, USDZ each come with their own authoring tools, quirks, and varying degrees of web support. Optimization pipelines — mesh simplification, texture compression, deduplication — require either specialist knowledge or expensive SaaS subscriptions that exist to solve exactly this problem, at scale, for enterprise budgets.
+
+And once you finally have something that renders, distributing it means either accepting proprietary lock-in, or rolling your own embedding infrastructure: preview routes, authentication, domain allowlists, embed snippets, all maintained in perpetuity.
+
+The result is predictable. Interactive 3D stays in the hands of studios and e-commerce platforms that can absorb the overhead. Everyone else settles for a flat image, a screen recording, or a link to Sketchfab.
+
+This is the gap Vectreal was built to close.
+
+---
+
+### What Is Vectreal?
+
+Vectreal is an open platform for preparing, managing, and publishing 3D content for the web.
+
+It combines a browser-based Publisher — where you can upload, optimize, and configure a scene without writing a line of code — with a set of open-source packages that give developers direct access to the same pipeline inside their own applications.
+
+The value proposition, stated plainly: **accessible and scalable 3D web visualization and publishing, for everyone.**
+
+That word *everyone* carries real weight here. Vectreal is not aimed at studios with dedicated 3D pipelines. It is designed for:
+
+- The frontend developer who wants to drop a 3D product viewer into a page without managing infrastructure.
+- The 3D artist who wants to share work publicly without creating an account on a proprietary platform.
+- The small team that needs an embeddable scene in a client portal — managed through a dashboard, not a hand-rolled CDN.
+- The open-source contributor who wants to extend a 3D toolchain that does not belong to a single company.
+
+---
+
+### Where Vectreal Came From
+
+Vectreal grew out of a genuine frustration with the existing landscape.
+
+The commercial platforms that handle 3D publishing well — Vectary, Spline, and a range of AR-first SaaS tools — are either closed, expensive, or tightly optimized for narrow use cases. Open-source primitives like [Three.js](https://threejs.org) and [React Three Fiber](https://docs.pmnd.rs/react-three-fiber/getting-started/introduction) are powerful, but they hand you an engine without the vehicle. [glTF-Transform](https://gltf-transform.dev) gives you excellent mesh optimization tools, but wiring them into a full upload-to-embed workflow is a project of its own.
+
+The idea behind Vectreal was to build the vehicle: a complete, open workflow from file upload to embeddable iframe, maintained as a public good, backed by a community that can extend and improve it over time.
+
+The monorepo is live on GitHub. The packages are published to npm. The Publisher is running at [vectreal.com/publisher](https://vectreal.com/publisher). The invitation to contribute is genuine.
+
+---
+
+### Three Things That Actually Make It Different
+
+**1. Open source at the core — all the way down.**
+
+The packages that power Vectreal are published on npm and available in full on GitHub:
+
+- `@vctrl/viewer` — a React component for rendering 3D scenes, built on Three.js and React Three Fiber.
+- `@vctrl/hooks` — browser-side hooks for loading, optimizing, and exporting 3D models.
+- `@vctrl/core` — server-side model processing for Node.js: loading, optimization, and export.
+
+All three are licensed under AGPL-3.0. You can read the code, use it in your projects, fork it, and send pull requests. The platform app that runs vectreal.com is in the same repository — there is no private proprietary layer doing the important work behind the scenes.
+
+**2. A complete pipeline, not a component.**
+
+Most open-source 3D tooling hands you one piece of the puzzle. Vectreal covers the full path:
+
+**Upload** → **Optimize** (mesh simplification, texture compression) → **Configure** (lighting, camera, shadows, environment) → **Save** → **Publish** → **Embed**
+
+Each step produces a result you own. Scenes are stored under your account. Published scenes generate stable embed URLs. Embed authentication is handled by scoped preview API keys — not by platform lock-in.
+
+**3. Community as a design principle, not a marketing position.**
+
+Vectreal's strategy is not to extract value from users through artificial feature gates — it is to build with them. The free tier is the actual product. The expectation is that people who find value will contribute back: through code, through bug reports, through feature discussions on Discord and GitHub.
+
+Premium tiers exist for teams that need scale. They do not exist to hold the core experience hostage.
+
+---
+
+### The Open-Source Packages: What They Are and What They Do
+
+For developers who want to go deeper than the Publisher, here is a precise look at each package.
+
+#### `@vctrl/viewer`
+
+A ready-to-use React component for rendering and interacting with 3D models. Built on Three.js and React Three Fiber.
+
+```tsx
+import { useLoadModel } from '@vctrl/hooks/use-load-model'
+import { VectrealViewer } from '@vctrl/viewer'
+import '@vctrl/viewer/css'
+
+function App() {
+  const { file } = useLoadModel()
+  return <VectrealViewer model={file?.model} />
+}
+```
+
+> You must import the CSS bundle (`@vctrl/viewer/css`) for the viewer to render correctly.
+
+Props cover camera configuration (multi-camera with animated transitions), OrbitControls, HDR environment presets, contact and accumulative shadow behavior, screenshot capture callbacks, and viewport-aware rendering. The package is still in active development — breaking changes may occur before the first major release.
+
+One current limitation worth noting explicitly: grid configuration is typed but not yet active in the render output.
+
+#### `@vctrl/hooks`
+
+Browser-side React hooks for the 3D pipeline — the runtime counterpart to `@vctrl/core`.
+
+Three primary hooks:
+
+- **`useLoadModel`** — parse glTF, GLB, OBJ, and USDZ files from file lists, dropped directories, or server endpoints. Supports both context mode (via `ModelProvider`) and direct mode.
+- **`useOptimizeModel`** — run glTF-Transform optimization passes in a Web Worker: mesh simplification, deduplication, quantization, normals normalization, and texture compression.
+- **`useExportModel`** — export the current scene to `.glb` or a zipped glTF bundle.
+
+Peer dependencies: React `^18 || ^19`, Three.js `^0.170`, React Three Fiber `^9`.
+
+#### `@vctrl/core`
+
+Server-side 3D model processing for Node.js. Requires Node.js 18 or later. Uses [Sharp](https://sharp.pixelplumbing.com) (`^0.34`) for server-side texture compression — Sharp requires a native build, so it is not browser-compatible.
+
+When Sharp is unavailable, `compressTextures` falls back to basic texture optimization using deduplication and pruning rather than throwing an error.
+
+Three modules:
+
+- **`ModelLoader`** — load from file path, buffer, or GLTF bundle with external assets.
+- **`ModelOptimizer`** — run simplification, deduplication, quantization, normals optimization, and texture compression. Supports batch optimization via `optimizeAll()`. Returns before/after metrics via `getReport()`.
+- **`ModelExporter`** — export to GLB, GLTF JSON, or zipped GLTF bundle.
+
+---
+
+### What Comes Next
+
+Vectreal is in active development. The packages carry a pre-1.0 status: breaking changes may occur before the first major release. That is not a disclaimer to be buried in fine print — it is an honest acknowledgment that the platform is being built in the open, and that the people using it now are shaping what version 1.0 looks like.
+
+The roadmap priorities are shaped by the community. USDZ support is a work in progress — textures and some material types may not render correctly. Grid rendering is planned but not yet active. Server-side optimization via `@vctrl/core` is live for early API users.
+
+The place to follow development: [Discord](https://discord.gg/A9a3nPkZw7), [GitHub](https://github.com/Vectreal/vectreal-platform), and this blog.
+
+---
+
+**Coming in Part 2:** a step-by-step walkthrough of the Publisher — from drag-and-drop upload through quality presets, scene configuration, publish, and embed — with the exact snippet you will paste into your page.
+
+---
+
+*Connect with the community: [vectreal.com](https://vectreal.com) · [Discord](https://discord.gg/A9a3nPkZw7) · [GitHub](https://github.com/Vectreal/vectreal-platform) · [npm](https://www.npmjs.com/package/@vctrl/viewer) · [Reddit](https://reddit.com) · [Stack Overflow](https://stackoverflow.com) · [X](https://x.com/vectreal) · Product Hunt*
+
+---
