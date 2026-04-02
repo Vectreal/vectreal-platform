@@ -1,0 +1,28 @@
+{
+	"$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+	"separate-pull-requests": false,
+	"include-component-in-tag": true,
+	"plugins": [
+		{
+			"type": "node-workspace",
+			"updatePeerDependencies": true
+		}
+	],
+	"packages": {
+		"packages/core": {
+			"release-type": "node",
+			"component": "core",
+			"package-name": "@vctrl/core"
+		},
+		"packages/hooks": {
+			"release-type": "node",
+			"component": "hooks",
+			"package-name": "@vctrl/hooks"
+		},
+		"packages/viewer": {
+			"release-type": "node",
+			"component": "viewer",
+			"package-name": "@vctrl/viewer"
+		}
+	}
+}
