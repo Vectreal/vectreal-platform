@@ -11,6 +11,13 @@
 - Mo
 - Schlomoh
 
+## [0.11.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.10.1...workspace-v0.11.0) (2026-04-02)
+
+
+### Features
+
+* Update package publishing process to use 'publish' target and add preflight checks ([ccfe373](https://github.com/Vectreal/vectreal-platform/commit/ccfe3736521555e3fd6f23334248dbc3251cbf98))
+
 ## [0.10.1](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.10.0...workspace-v0.10.1) (2026-04-02)
 
 

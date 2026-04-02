@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.11.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.10.1...viewer-v0.11.0) (2026-04-02)
+
+
+### Features
+
+* Update package publishing process to use 'publish' target and add preflight checks ([ccfe373](https://github.com/Vectreal/vectreal-platform/commit/ccfe3736521555e3fd6f23334248dbc3251cbf98))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped from 0.10.1 to 0.11.0
+
 ## [0.10.1](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.10.0...viewer-v0.10.1) (2026-04-02)
 
 
