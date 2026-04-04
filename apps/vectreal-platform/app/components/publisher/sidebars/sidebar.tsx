@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { VectrealLogoSmall } from '@shared/components/assets/icons/vectreal-logo-small'
 import {
 	Tabs,
@@ -74,6 +75,7 @@ interface PublisherSidebarProps {
 const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
 	const [{ mode, showSidebar }, setProcessState] = useAtom(processAtom)
 	const { submit } = useFetcher()
+	const posthog = usePostHog()
 
 	const handleTabChange = useCallback(
 		(value: string) => {
@@ -92,6 +94,7 @@ const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
 		}))
 	}, [setProcessState])
 	async function handleLogout() {
+		posthog?.reset()
 		await submit(null, {
 			method: 'post',
 			action: '/auth/logout'

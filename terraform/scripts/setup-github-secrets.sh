@@ -69,6 +69,8 @@ if [ ! -f "$ENV_FILE" ]; then
     echo "  - CSRF_SECRET_PROD / CSRF_SECRET_STAGING"
     echo "  - STRIPE_SECRET_KEY_PROD / STRIPE_SECRET_KEY_STAGING"
     echo "Optional variables:"
+    echo "  - VITE_PUBLIC_POSTHOG_TOKEN"
+    echo "  - VITE_PUBLIC_POSTHOG_HOST"
     echo "  - RELEASE_APP_ID"
     echo "  - RELEASE_APP_PRIVATE_KEY_FILE (recommended)"
     exit 1
@@ -209,6 +211,16 @@ gh secret set CSRF_SECRET_STAGING --body "$CSRF_SECRET_STAGING"
 gh secret set STRIPE_SECRET_KEY_STAGING --body "$STRIPE_SECRET_KEY_STAGING"
 echo "  ✅ Staging secrets (7)"
 
+# PostHog secrets (shared across environments — same project, same token)
+if [ -n "$VITE_PUBLIC_POSTHOG_TOKEN" ]; then
+    echo "→ Setting PostHog secrets..."
+    gh secret set VITE_PUBLIC_POSTHOG_TOKEN --body "$VITE_PUBLIC_POSTHOG_TOKEN"
+    POSTHOG_HOST="${VITE_PUBLIC_POSTHOG_HOST:-https://us.i.posthog.com}"
+    gh secret set VITE_PUBLIC_POSTHOG_HOST --body "$POSTHOG_HOST"
+    echo "  ✅ PostHog secrets (2)"
+else
+    echo "⚠️  Skipping PostHog secrets (VITE_PUBLIC_POSTHOG_TOKEN not set in .env.development)"
+fi
 # ============================================================================
 # Summary
 # ============================================================================

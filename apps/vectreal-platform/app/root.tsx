@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { Toaster } from '@shared/components/ui/sonner'
 import { cn } from '@shared/utils'
 import { useEffect, type ReactNode } from 'react'
@@ -16,12 +17,22 @@ import {
 import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/root'
+import { ConsentBanner } from './components/consent/consent-banner'
+import {
+	ConsentProvider,
+	type ConsentChoices
+} from './components/consent/consent-context'
+import { ConsentPreferencesDialog } from './components/consent/consent-preferences-dialog'
 import { GlobalNavigationLoader } from './components/global-navigation-loader'
+import { getConsent } from './lib/domain/consent/consent-repository.server'
+import { posthogMiddleware } from './lib/posthog/posthog-middleware'
+import { getSession as getConsentSession } from './lib/sessions/consent-session.server'
 import { csrfSession } from './lib/sessions/csrf-session.server'
 import {
 	getThemeModeFromRequest,
 	type ThemeMode
 } from './lib/sessions/theme-session.server'
+import { createSupabaseClient } from './lib/supabase.server'
 import styles from './styles/global.module.css'
 
 import type { ShouldRevalidateFunction } from 'react-router'
@@ -35,12 +46,41 @@ export const meta: MetaFunction = () => [
 	}
 ]
 
+export const middleware: Route.MiddlewareFunction[] = [posthogMiddleware]
+
 export async function loader({ request }: Route.LoaderArgs) {
 	const [csrf, cookieHeader] = await csrfSession.commitToken(request)
 	const pathname = new URL(request.url).pathname
 	const forceDarkTheme = pathname === '/' || pathname === '/home'
 	const themeMode = await getThemeModeFromRequest(request)
-	const loaderData = { csrf, themeMode, forceDarkTheme }
+
+	// Resolve consent state for the current visitor
+	const { client } = await createSupabaseClient(request)
+	const {
+		data: { user }
+	} = await client.auth.getUser()
+	const consentSession = await getConsentSession(request.headers.get('Cookie'))
+	const anonymousId = consentSession.get('anonymousId') ?? null
+	const consentRecord = await getConsent(user?.id ?? null, anonymousId).catch(
+		() => null
+	)
+
+	const consentState: ConsentChoices | null = consentRecord
+		? {
+				necessary: true,
+				functional: consentRecord.functional,
+				analytics: consentRecord.analytics,
+				marketing: consentRecord.marketing
+			}
+		: null
+
+	const loaderData = {
+		csrf,
+		themeMode,
+		forceDarkTheme,
+		consentState,
+		consentVersion: consentRecord?.version ?? null
+	}
 
 	if (cookieHeader) {
 		return data(loaderData, { headers: { 'Set-Cookie': cookieHeader } })
@@ -231,10 +271,41 @@ export function Layout({ children }: { children: ReactNode }) {
 	)
 }
 
+export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+	const posthog = usePostHog()
+	posthog?.captureException(error as Error)
+
+	let errorMessage = 'An unexpected error occurred'
+	if (error instanceof Error) {
+		errorMessage = error.message
+	} else if (typeof error === 'string') {
+		errorMessage = error
+	}
+
+	return (
+		<div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
+			<h1 className="text-2xl font-semibold">Something went wrong</h1>
+			<pre className="text-muted-foreground max-w-lg text-sm break-words whitespace-pre-wrap">
+				{errorMessage}
+			</pre>
+		</div>
+	)
+}
+
 export default function App({ loaderData }: Route.ComponentProps) {
+	const consentState = loaderData?.consentState ?? null
+	const consentVersion = loaderData?.consentVersion ?? null
+
 	return (
 		<AuthenticityTokenProvider token={loaderData?.csrf}>
-			<Outlet />
+			<ConsentProvider
+				initialConsent={consentState}
+				initialVersion={consentVersion}
+			>
+				<Outlet />
+				<ConsentBanner />
+				<ConsentPreferencesDialog />
+			</ConsentProvider>
 		</AuthenticityTokenProvider>
 	)
 }

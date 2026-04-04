@@ -3,9 +3,12 @@ import { cn } from '@shared/utils'
 import { motion } from 'framer-motion'
 import { Link, useLocation } from 'react-router'
 
+import { useConsent } from './consent/consent-context'
 import { ShimmerRotatingText } from './shimmer-rotating-text'
 
 export const SlimFooter = () => {
+	const { setPreferencesOpen } = useConsent()
+
 	return (
 		<footer className="border-border/50 bg-background/80 w-full border-t px-6 py-4 backdrop-blur-sm">
 			<div className="text-foreground/70 mx-auto flex max-w-7xl flex-col items-center justify-center gap-2 text-center text-sm md:flex-row md:gap-4">
@@ -16,6 +19,14 @@ export const SlimFooter = () => {
 				<Link to="/privacy-policy">Privacy Policy</Link>
 				<span>·</span>
 				<Link to="/terms-of-service">Terms of Service</Link>
+				<span>·</span>
+				<button
+					type="button"
+					className="hover:text-foreground transition-colors"
+					onClick={() => setPreferencesOpen(true)}
+				>
+					Cookie Preferences
+				</button>
 			</div>
 		</footer>
 	)
@@ -23,6 +34,7 @@ export const SlimFooter = () => {
 
 export const Footer = () => {
 	const { pathname } = useLocation()
+	const { setPreferencesOpen } = useConsent()
 	const isHomePage = pathname === '/' || pathname === '/home'
 
 	const whispers = [

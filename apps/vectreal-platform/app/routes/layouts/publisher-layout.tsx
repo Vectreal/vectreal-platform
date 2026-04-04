@@ -2,7 +2,7 @@ import { SidebarProvider } from '@shared/components/ui/sidebar'
 import { ModelProvider } from '@vctrl/hooks/use-load-model'
 import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
 import { Provider, useAtom } from 'jotai/react'
-import { useCallback } from 'react'
+import { useCallback, useLayoutEffect } from 'react'
 import { data, Outlet } from 'react-router'
 
 import { Route } from './+types/publisher-layout'
@@ -156,16 +156,19 @@ const Layout = ({ loaderData }: Route.ComponentProps) => {
 	const resolvedLoaderData = loaderData as PublisherLoaderData
 	useAuthResumeRevalidation({ enabled: Boolean(resolvedLoaderData.user) })
 
-	// Sync location atoms into the innermost store (sceneSettingsStore) before
-	// the Provider children render, so they see correct values on first paint.
+	// Sync location atoms into the innermost store (sceneSettingsStore).
 	// All atom consumers live inside <Provider store={sceneSettingsStore}>, so
 	// writing to publisherConfigStore would be silently ignored by them.
+	// useLayoutEffect runs synchronously after render, avoiding the "setState
+	// during render" warning that a bare store.set() call causes.
 	const { currentLocation, projectId } = resolvedLoaderData
-	sceneSettingsStore.set(currentLocationAtom, currentLocation)
-	sceneSettingsStore.set(saveLocationAtom, {
-		targetProjectId: currentLocation.projectId ?? projectId ?? undefined,
-		targetFolderId: currentLocation.folderId ?? null
-	})
+	useLayoutEffect(() => {
+		sceneSettingsStore.set(currentLocationAtom, currentLocation)
+		sceneSettingsStore.set(saveLocationAtom, {
+			targetProjectId: currentLocation.projectId ?? projectId ?? undefined,
+			targetFolderId: currentLocation.folderId ?? null
+		})
+	}, [currentLocation, projectId])
 
 	const handleOpenChange = useCallback(
 		(isOpen: boolean) => {

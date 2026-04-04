@@ -17,6 +17,7 @@ import {
 } from 'react-router'
 
 import { Route } from './+types/dashboard-layout'
+import { PostHogIdentify } from '../../components/consent/posthog-identify'
 import {
 	DashboardHeader,
 	DashboardManagementDialogs,
@@ -193,6 +194,11 @@ const DashboardLayout = () => {
 	return (
 		<Provider store={dashboardManagementStore}>
 			<Provider store={upgradeModalStore}>
+				<PostHogIdentify
+					userId={user.id}
+					email={user.email}
+					name={user.user_metadata?.full_name as string | undefined}
+				/>
 				<SidebarProvider
 					open={sidebarOpen}
 					onOpenChange={handleSidebarOpenChange}

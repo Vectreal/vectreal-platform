@@ -35,6 +35,7 @@ import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.serv
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
 import { ensureSameOriginMutation } from '../../../lib/http/csrf.server'
 import { getStripeClient } from '../../../lib/stripe.server'
+import type { PostHogContext } from '../../../lib/posthog/posthog-middleware'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -99,7 +100,10 @@ function resolvePlanFromPrice(price: Stripe.Price): string | null {
 // Action
 // ---------------------------------------------------------------------------
 
-export async function action({ request }: Route.ActionArgs): Promise<Response> {
+export async function action({
+	request,
+	context
+}: Route.ActionArgs): Promise<Response> {
 	if (request.method !== 'POST') {
 		return ApiResponse.methodNotAllowed()
 	}
@@ -112,6 +116,20 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 	const { user, userWithDefaults, headers } =
 		await loadAuthenticatedUser(request)
 	const responseHeaders = new Headers(headers)
+
+	// Feature flag guard — block checkout when billing-checkout is disabled
+	const posthog = (context as PostHogContext).posthog
+	if (posthog) {
+		const checkoutEnabled = await posthog.isFeatureEnabled(
+			'billing-checkout',
+			user.id
+		)
+		if (!checkoutEnabled) {
+			return ApiResponse.forbidden('Billing checkout is currently disabled', {
+				headers: responseHeaders
+			})
+		}
+	}
 
 	let body: { planId?: unknown; priceId?: unknown; billingPeriod?: unknown }
 
