@@ -10,63 +10,63 @@ Each row defines a canonical **entitlement key** used in feature-flag checks, AP
 
 ### Core Publishing
 
-| Entitlement key | Description | `free` | `pro` | `business` | `enterprise` |
-| ---------------- | ----------- | ------ | ----- | ---------- | ----------- |
-| `scene_upload` | Upload 3D scenes | ✓ | ✓ | ✓ | ✓ |
-| `scene_optimize` | Run optimization pipeline | ✓ | ✓ | ✓ | ✓ |
-| `scene_publish` | Publish scene to CDN | ✓ | ✓ | ✓ | ✓ |
-| `scene_embed` | Generate embed snippet | ✓ | ✓ | ✓ | ✓ |
-| `scene_preview_private` | Share private preview link | ✗ | ✓ | ✓ | ✓ |
-| `scene_version_history` | Access version history | ✗ | ✓ | ✓ | ✓ |
+| Entitlement key         | Description                | `free` | `pro` | `business` | `enterprise` |
+| ----------------------- | -------------------------- | ------ | ----- | ---------- | ------------ |
+| `scene_upload`          | Upload 3D scenes           | ✓      | ✓     | ✓          | ✓            |
+| `scene_optimize`        | Run optimization pipeline  | ✓      | ✓     | ✓          | ✓            |
+| `scene_publish`         | Publish scene to CDN       | ✓      | ✓     | ✓          | ✓            |
+| `scene_embed`           | Generate embed snippet     | ✓      | ✓     | ✓          | ✓            |
+| `scene_preview_private` | Share private preview link | ✗      | ✓     | ✓          | ✓            |
+| `scene_version_history` | Access version history     | ✗      | ✓     | ✓          | ✓            |
 
 `scene_embed` remains guarded at runtime: external embeds require a valid API key token, while internal preview access requires authenticated session access.
 
 ### Optimization
 
-| Entitlement key | Description | `free` | `pro` | `business` | `enterprise` |
-| ---------------- | ----------- | ------ | ----- | ---------- | ----------- |
-| `optimization_preset_low` | Apply low-quality optimization preset | ✓ | ✓ | ✓ | ✓ |
-| `optimization_preset_medium` | Apply medium-quality preset | ✓ | ✓ | ✓ | ✓ |
-| `optimization_preset_high` | Apply high-quality preset | ✗ | ✓ | ✓ | ✓ |
-| `optimization_custom_params` | Override individual optimization parameters | ✗ | ✓ | ✓ | ✓ |
-| `optimization_priority_queue` | Skip to front of optimization queue | ✗ | ✗ | ✓ | ✓ |
+| Entitlement key               | Description                                 | `free` | `pro` | `business` | `enterprise` |
+| ----------------------------- | ------------------------------------------- | ------ | ----- | ---------- | ------------ |
+| `optimization_preset_low`     | Apply low-quality optimization preset       | ✓      | ✓     | ✓          | ✓            |
+| `optimization_preset_medium`  | Apply medium-quality preset                 | ✓      | ✓     | ✓          | ✓            |
+| `optimization_preset_high`    | Apply high-quality preset                   | ✗      | ✓     | ✓          | ✓            |
+| `optimization_custom_params`  | Override individual optimization parameters | ✗      | ✓     | ✓          | ✓            |
+| `optimization_priority_queue` | Skip to front of optimization queue         | ✗      | ✗     | ✓          | ✓            |
 
 ### Embed & Viewer
 
-| Entitlement key | Description | `free` | `pro` | `business` | `enterprise` |
-| ---------------- | ----------- | ------ | ----- | ---------- | ----------- |
-| `embed_domain_allowlist` | Restrict embed to specific domains | ✓ | ✓ | ✓ | ✓ |
-| `embed_branding_removal` | Remove Vectreal watermark from embed | ✗ | ✓ | ✓ | ✓ |
-| `embed_viewer_customisation` | Customise viewer colours and UI | ✗ | ✓ | ✓ | ✓ |
-| `embed_analytics` | View per-embed analytics | ✗ | ✓ | ✓ | ✓ |
-| `embed_ar_mode` | Enable AR / WebXR mode in embed | ✗ | ✓ | ✓ | ✓ |
+| Entitlement key              | Description                          | `free` | `pro` | `business` | `enterprise` |
+| ---------------------------- | ------------------------------------ | ------ | ----- | ---------- | ------------ |
+| `embed_domain_allowlist`     | Restrict embed to specific domains   | ✓      | ✓     | ✓          | ✓            |
+| `embed_branding_removal`     | Remove Vectreal watermark from embed | ✗      | ✓     | ✓          | ✓            |
+| `embed_viewer_customisation` | Customise viewer colours and UI      | ✗      | ✓     | ✓          | ✓            |
+| `embed_analytics`            | View per-embed analytics             | ✗      | ✓     | ✓          | ✓            |
+| `embed_ar_mode`              | Enable AR / WebXR mode in embed      | ✗      | ✓     | ✓          | ✓            |
 
 ### Organisation & Collaboration
 
-| Entitlement key | Description | `free` | `pro` | `business` | `enterprise` |
-| ---------------- | ----------- | ------ | ----- | ---------- | ----------- |
-| `org_multi_member` | Invite team members to organisation | ✗ | ✗ | ✓ | ✓ |
-| `org_roles` | Assign member roles (admin / editor / viewer) | ✗ | ✗ | ✓ | ✓ |
-| `org_api_keys` | Create organisation-scoped API keys | ✓ | ✓ | ✓ | ✓ |
-| `org_sso` | SAML/OIDC single sign-on | ✗ | ✗ | ✗ | ✓ |
-| `org_audit_log` | Export audit log | ✗ | ✗ | ✗ | ✓ |
+| Entitlement key    | Description                                   | `free` | `pro` | `business` | `enterprise` |
+| ------------------ | --------------------------------------------- | ------ | ----- | ---------- | ------------ |
+| `org_multi_member` | Invite team members to organisation           | ✗      | ✗     | ✓          | ✓            |
+| `org_roles`        | Assign member roles (admin / editor / viewer) | ✗      | ✗     | ✓          | ✓            |
+| `org_api_keys`     | Create organisation-scoped API keys           | ✓      | ✓     | ✓          | ✓            |
+| `org_sso`          | SAML/OIDC single sign-on                      | ✗      | ✗     | ✗          | ✓            |
+| `org_audit_log`    | Export audit log                              | ✗      | ✗     | ✗          | ✓            |
 
 ### Data & Compliance
 
-| Entitlement key | Description | `free` | `pro` | `business` | `enterprise` |
-| ---------------- | ----------- | ------ | ----- | ---------- | ----------- |
-| `data_export` | Bulk export all scenes and metadata | ✗ | ✓ | ✓ | ✓ |
-| `data_residency_eu` | Pin data storage to EU region | ✗ | ✗ | ✓ | ✓ |
-| `data_residency_custom` | Custom data-residency region | ✗ | ✗ | ✗ | ✓ |
+| Entitlement key         | Description                         | `free` | `pro` | `business` | `enterprise` |
+| ----------------------- | ----------------------------------- | ------ | ----- | ---------- | ------------ |
+| `data_export`           | Bulk export all scenes and metadata | ✗      | ✓     | ✓          | ✓            |
+| `data_residency_eu`     | Pin data storage to EU region       | ✗      | ✗     | ✓          | ✓            |
+| `data_residency_custom` | Custom data-residency region        | ✗      | ✗     | ✗          | ✓            |
 
 ### Support
 
-| Entitlement key | Description | `free` | `pro` | `business` | `enterprise` |
-| ---------------- | ----------- | ------ | ----- | ---------- | ----------- |
-| `support_community` | Community forum and Discord | ✓ | ✓ | ✓ | ✓ |
-| `support_email` | Email support (48 h SLA) | ✗ | ✓ | ✓ | ✓ |
-| `support_priority` | Priority support (8 h SLA) | ✗ | ✗ | ✓ | ✓ |
-| `support_dedicated` | Dedicated support channel (custom SLA) | ✗ | ✗ | ✗ | ✓ |
+| Entitlement key     | Description                            | `free` | `pro` | `business` | `enterprise` |
+| ------------------- | -------------------------------------- | ------ | ----- | ---------- | ------------ |
+| `support_community` | Community forum and Discord            | ✓      | ✓     | ✓          | ✓            |
+| `support_email`     | Email support (48 h SLA)               | ✗      | ✓     | ✓          | ✓            |
+| `support_priority`  | Priority support (8 h SLA)             | ✗      | ✗     | ✓          | ✓            |
+| `support_dedicated` | Dedicated support channel (custom SLA) | ✗      | ✗     | ✗          | ✓            |
 
 ---
 

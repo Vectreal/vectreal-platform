@@ -402,7 +402,7 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 				null
 			)
 
-			const stableTimestamp = latestSceneUpdate ?? new Date(0)
+			const stableTimestamp = latestSceneUpdate ?? new Date()
 
 			return {
 				id: project.id,

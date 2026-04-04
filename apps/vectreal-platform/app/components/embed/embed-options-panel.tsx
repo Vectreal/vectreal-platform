@@ -121,8 +121,8 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 					<code className="mx-1">{PREVIEW_API_KEY_PLACEHOLDER}</code>
 					{EMBED_COPY.draftWarningSuffix}
 					<div className="mt-1 text-[11px] text-amber-100/90">
-						Tip: create separate keys per environment and restrict keys to only the
-						projects each embed needs.
+						Tip: create separate keys per environment and restrict keys to only
+						the projects each embed needs.
 					</div>
 				</div>
 			)}

@@ -1,4 +1,3 @@
-
 import { and, eq } from 'drizzle-orm'
 
 import { getDbClient } from '../../../db/client'
@@ -293,15 +292,16 @@ export async function initializeUserDefaults(
 			.limit(1)
 			.then((rows) => rows[0] ?? null)
 
-		// Avoid unnecessary writes when defaults already exist, but ensure
-		// the resolved default organization always has a default project.
+		// Avoid write-on-read side effects for existing users when navigating.
 		const project =
 			existingProject ??
-			(await getOrCreateDefaultProjectDb(
-				tx as DbClient,
-				user.id,
-				organization.id
-			))
+			(isNewUser
+				? await getOrCreateDefaultProjectDb(
+						tx as DbClient,
+						user.id,
+						organization.id
+					)
+				: null)
 
 		return {
 			user,

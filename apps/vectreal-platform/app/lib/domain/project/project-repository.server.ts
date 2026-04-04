@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 
 import { getDbClient } from '../../../db/client'
 import { organizationMemberships } from '../../../db/schema/core/organization-memberships'
@@ -81,6 +81,26 @@ export async function getUserProjects(userId: string): Promise<
 			eq(organizationMemberships.organizationId, projects.organizationId)
 		)
 		.where(eq(organizationMemberships.userId, userId))
+}
+
+export async function getSidebarProjects(
+	userId: string,
+	limit = 3
+): Promise<Array<{ id: string; name: string; organizationId: string }>> {
+	return await db
+		.select({
+			id: projects.id,
+			name: projects.name,
+			organizationId: projects.organizationId
+		})
+		.from(projects)
+		.innerJoin(
+			organizationMemberships,
+			eq(organizationMemberships.organizationId, projects.organizationId)
+		)
+		.where(eq(organizationMemberships.userId, userId))
+		.orderBy(asc(projects.name))
+		.limit(limit)
 }
 
 export async function getOrganizationProjects(

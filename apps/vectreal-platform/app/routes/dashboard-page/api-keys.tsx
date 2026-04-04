@@ -319,7 +319,8 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 								{keysByOrg[organizations[0].organization.id]?.length || 0} API{' '}
 								{keysByOrg[organizations[0].organization.id]?.length === 1
 									? 'key'
-									: 'keys'} configured for secure embed and preview access
+									: 'keys'}{' '}
+								configured for secure embed and preview access
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
