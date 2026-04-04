@@ -2,8 +2,10 @@ import { ApiResponse } from '@shared/utils'
 import { LoaderFunctionArgs } from 'react-router'
 
 import { getUserProjects } from '../../lib/domain/project/project-repository.server'
-import { getRootSceneFolders } from '../../lib/domain/scene/server/scene-folder-repository.server'
+import { getSceneFolderTree } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import { getAuthUser } from '../../lib/http/auth.server'
+
+import type { SceneLocationFolderOption } from '../../types/api'
 
 export async function loader({ request }: LoaderFunctionArgs) {
 	const authResult = await getAuthUser(request)
@@ -26,19 +28,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		requestedProjectId &&
 		projects.some((project) => project.id === requestedProjectId)
 			? requestedProjectId
-			: (projects[0]?.id ?? null)
+			: null
 
-	let folders: Array<{ id: string; name: string }> = []
+	let folders: SceneLocationFolderOption[] = []
 	if (selectedProjectId) {
 		try {
-			folders = (
-				await getRootSceneFolders(selectedProjectId, authResult.user.id)
-			)
-				.map((folder) => ({
-					id: folder.id,
-					name: folder.name
-				}))
-				.sort((left, right) => left.name.localeCompare(right.name))
+			folders = await getSceneFolderTree(selectedProjectId, authResult.user.id)
 		} catch {
 			folders = []
 		}

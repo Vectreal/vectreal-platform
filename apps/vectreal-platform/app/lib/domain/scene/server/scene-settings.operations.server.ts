@@ -4,7 +4,7 @@ import { ApiResponse } from '@shared/utils'
 import { SerializedSceneAssetDataMap, SceneSettings } from '@vctrl/core'
 import { count, eq } from 'drizzle-orm'
 
-import { getSceneFolder } from './scene-folder-repository.server'
+import { getScene, getSceneFolder } from './scene-folder-repository.server'
 import { sceneSettingsService } from './scene-settings-service.server'
 import { isBillingStateReadOnly } from '../../../../constants/plan-config'
 import { getDbClient } from '../../../../db/client'
@@ -354,8 +354,32 @@ export async function saveSceneSettings(
 			unchanged: Boolean((saveResult as { unchanged?: boolean }).unchanged)
 		})
 
-		const stats = await sceneSettingsService.getSceneStats(finalSceneId)
-		const result = { ...saveResult, sceneId: finalSceneId, stats }
+		const [stats, savedScene] = await Promise.all([
+			sceneSettingsService.getSceneStats(finalSceneId),
+			getScene(finalSceneId, userId)
+		])
+		if (!savedScene) {
+			throw new Error(`Scene not found with ID: ${finalSceneId}`)
+		}
+
+		const [project, folder] = await Promise.all([
+			getProject(savedScene.projectId, userId),
+			savedScene.folderId
+				? getSceneFolder(savedScene.folderId, userId)
+				: Promise.resolve(null)
+		])
+
+		const result = {
+			...saveResult,
+			sceneId: finalSceneId,
+			stats,
+			currentLocation: {
+				projectId: savedScene.projectId,
+				projectName: project?.name ?? null,
+				folderId: savedScene.folderId,
+				folderName: folder?.name ?? null
+			}
+		}
 		return ApiResponse.success(result)
 	} catch (error) {
 		console.error('Failed to save scene settings:', {

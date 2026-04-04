@@ -196,6 +196,7 @@ export interface SceneAggregateResponse {
 export interface SaveSceneSettingsResponse {
 	readonly sceneId: string
 	readonly stats: SceneStatsData | null
+	readonly currentLocation?: SceneCurrentLocation
 	readonly unchanged?: boolean
 	readonly [key: string]: unknown
 }
@@ -237,14 +238,43 @@ export interface SceneCurrentLocation {
 	readonly folderName: string | null
 }
 
+export function isSceneCurrentLocation(
+	value: unknown
+): value is SceneCurrentLocation {
+	if (!value || typeof value !== 'object') {
+		return false
+	}
+
+	const candidate = value as Record<string, unknown>
+
+	return (
+		'projectId' in candidate &&
+		(typeof candidate.projectId === 'string' || candidate.projectId === null) &&
+		'projectName' in candidate &&
+		(typeof candidate.projectName === 'string' ||
+			candidate.projectName === null) &&
+		'folderId' in candidate &&
+		(typeof candidate.folderId === 'string' || candidate.folderId === null) &&
+		'folderName' in candidate &&
+		(typeof candidate.folderName === 'string' || candidate.folderName === null)
+	)
+}
+
 export interface SceneLocationOption {
 	readonly id: string
 	readonly name: string
 }
 
+export interface SceneLocationFolderOption {
+	readonly id: string
+	readonly name: string
+	readonly parentFolderId: string | null
+	readonly depth: number
+}
+
 export interface SceneLocationOptionsResponse {
 	readonly projects: SceneLocationOption[]
-	readonly folders: SceneLocationOption[]
+	readonly folders: SceneLocationFolderOption[]
 	readonly selectedProjectId: string | null
 }
 

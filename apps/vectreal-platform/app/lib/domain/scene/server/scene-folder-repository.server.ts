@@ -6,7 +6,10 @@ import { projects } from '../../../../db/schema/project/projects'
 import { sceneFolders } from '../../../../db/schema/project/scene-folders'
 import { scenes } from '../../../../db/schema/project/scenes'
 
-import type { SceneMetadataUpdateInput } from '../../../../types/api'
+import type {
+	SceneLocationFolderOption,
+	SceneMetadataUpdateInput
+} from '../../../../types/api'
 
 const db = getDbClient()
 const MAX_FOLDER_ANCESTRY_DEPTH = 50
@@ -153,6 +156,63 @@ export async function getRootScenes(
 		.from(scenes)
 		.where(and(eq(scenes.projectId, projectId), isNull(scenes.folderId)))
 		.orderBy(desc(scenes.updatedAt))
+}
+
+/**
+ * Resolves the depth of a folder by walking its parentFolderId chain.
+ * Memoises results in depthMap to avoid redundant traversal.
+ * Guards against cycles with a visited set.
+ */
+function resolveFolderDepth(
+	id: string,
+	parentMap: Map<string, string | null>,
+	depthMap: Map<string, number>,
+	visited = new Set<string>()
+): number {
+	if (depthMap.has(id)) return depthMap.get(id)!
+	if (visited.has(id)) return 0 // cycle guard
+	visited.add(id)
+	const parentId = parentMap.get(id) ?? null
+	const depth =
+		parentId === null
+			? 0
+			: resolveFolderDepth(parentId, parentMap, depthMap, visited) + 1
+	depthMap.set(id, depth)
+	return depth
+}
+
+export async function getSceneFolderTree(
+	projectId: string,
+	userId: string
+): Promise<SceneLocationFolderOption[]> {
+	await verifyProjectAccess(db, projectId, userId)
+
+	const rows = await db
+		.select({
+			id: sceneFolders.id,
+			name: sceneFolders.name,
+			parentFolderId: sceneFolders.parentFolderId
+		})
+		.from(sceneFolders)
+		.where(eq(sceneFolders.projectId, projectId))
+		.orderBy(sceneFolders.name)
+
+	// Compute depth by walking parentFolderId references in memory (single query)
+	const depthMap = new Map<string, number>()
+	const parentMap = new Map<string, string | null>(
+		rows.map((r) => [r.id, r.parentFolderId])
+	)
+
+	for (const row of rows) {
+		resolveFolderDepth(row.id, parentMap, depthMap)
+	}
+
+	return rows.map((r) => ({
+		id: r.id,
+		name: r.name,
+		parentFolderId: r.parentFolderId,
+		depth: depthMap.get(r.id) ?? 0
+	}))
 }
 
 export async function getRootSceneFolders(

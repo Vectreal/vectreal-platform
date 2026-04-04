@@ -1,3 +1,4 @@
+import { Button } from '@shared/components'
 import {
 	Avatar,
 	AvatarFallback,
@@ -41,32 +42,34 @@ export function UserMenu({
 
 	return (
 		<DropdownMenu modal={false}>
-			<DropdownMenuTrigger aria-label="Open user menu">
-				<Avatar
-					className={cn(
-						'rounded-xl',
-						{
-							'h-7 w-7 rounded-lg': size === 'sm',
-							'h-8 w-8': size === 'md' || !size
-						},
-						className
-					)}
-				>
-					<AvatarImage
-						className={cn('rounded-xl', {
-							'rounded-lg': size === 'sm'
-						})}
-						src={userImageSrc}
-						alt={user.user_metadata?.full_name || 'User Avatar'}
-					/>
-					<AvatarFallback
-						className={cn('rounded-xl', { 'rounded-lg': size === 'sm' })}
+			<DropdownMenuTrigger asChild aria-label="Open user menu">
+				<Button size="icon" variant="secondary">
+					<Avatar
+						className={cn(
+							'rounded-lg',
+							{
+								'h-7 w-7 rounded-lg': size === 'sm',
+								'h-8 w-8': size === 'md' || !size
+							},
+							className
+						)}
 					>
-						{userInitial}
-					</AvatarFallback>
-				</Avatar>
+						<AvatarImage
+							className={cn('rounded-lg', {
+								'rounded-lg': size === 'sm'
+							})}
+							src={userImageSrc}
+							alt={user.user_metadata?.full_name || 'User Avatar'}
+						/>
+						<AvatarFallback
+							className={cn('rounded-lg', { 'rounded-lg': size === 'sm' })}
+						>
+							{userInitial}
+						</AvatarFallback>
+					</Avatar>
+				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent side="bottom" className="mr-4 min-w-64 capitalize">
+			<DropdownMenuContent side="bottom" className="ml-4 min-w-64 capitalize">
 				<DropdownMenuLabel>
 					Hey, {user.user_metadata?.full_name.split(' ').at(0) || user.email}!
 				</DropdownMenuLabel>

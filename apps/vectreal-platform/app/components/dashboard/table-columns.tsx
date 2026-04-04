@@ -265,13 +265,7 @@ export const sceneColumns: ColumnDef<SceneRow>[] = [
 						</DropdownMenuItem>
 						<DropdownMenuItem asChild>
 							<Link
-								to={`/dashboard/publisher/${row.original.projectId}/${row.original.id}`}
-								state={{
-									name: row.original.name,
-									description: row.original.description || undefined,
-									projectName: row.original.projectName,
-									type: 'scene' as const
-								}}
+								to={`/publisher/${row.original.id}`}
 								viewTransition
 								className="flex w-full items-center gap-2"
 							>

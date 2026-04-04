@@ -9,6 +9,21 @@ import {
 /**
  * Route path constants - single source of truth for dashboard routes
  */
+/**
+ * Publisher route helpers
+ */
+export const PUBLISHER_ROUTES = {
+	NEW: '/publisher',
+	SCENE: (sceneId: string) => `/publisher/${sceneId}`,
+	withContext: (projectId?: string | null, folderId?: string | null) => {
+		const params = new URLSearchParams()
+		if (projectId) params.set('projectId', projectId)
+		if (folderId) params.set('folderId', folderId)
+		const qs = params.toString()
+		return qs ? `/publisher?${qs}` : '/publisher'
+	}
+} as const
+
 export const DASHBOARD_ROUTES = {
 	DASHBOARD: '/dashboard',
 	PROJECTS: '/dashboard/projects',
