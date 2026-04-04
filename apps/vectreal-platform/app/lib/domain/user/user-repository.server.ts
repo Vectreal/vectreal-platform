@@ -19,7 +19,7 @@ export interface CreateUserParams {
 export interface UserWithDefaults {
 	readonly user: typeof users.$inferSelect
 	readonly organization: typeof organizations.$inferSelect
-	readonly project: typeof projects.$inferSelect
+	readonly project: typeof projects.$inferSelect | null
 	/** True when the user record was created during this call (first-time sign-in). */
 	readonly isNewUser: boolean
 }
@@ -277,16 +277,28 @@ export async function initializeUserDefaults(
 	supabaseUser: User
 ): Promise<UserWithDefaults> {
 	return await db.transaction(async (tx) => {
-		const { user, isNewUser } = await ensureUserExistsDb(tx as DbClient, supabaseUser)
+		const { user, isNewUser } = await ensureUserExistsDb(
+			tx as DbClient,
+			supabaseUser
+		)
 		const organization = await getOrCreateDefaultOrganizationDb(
 			tx as DbClient,
 			user.id
 		)
-		const project = await getOrCreateDefaultProjectDb(
-			tx as DbClient,
-			user.id,
-			organization.id
-		)
+
+		const existingProject = await (tx as DbClient)
+			.select()
+			.from(projects)
+			.where(eq(projects.organizationId, organization.id))
+			.limit(1)
+			.then((rows) => rows[0] ?? null)
+
+		// Avoid write-on-read side effects for existing users when navigating.
+		const project =
+			existingProject ??
+			(isNewUser
+				? await getOrCreateDefaultProjectDb(tx as DbClient, user.id, organization.id)
+				: null)
 
 		return {
 			user,

@@ -12,6 +12,7 @@ import { scenePublished } from '../../../../db/schema/project/scene-published'
 import { scenes } from '../../../../db/schema/project/scenes'
 import { uploadSceneAssets } from '../../asset/asset-storage.server'
 import {
+	hasEntitlement,
 	getRecommendedUpgrade,
 	getOrgSubscription
 } from '../../billing/entitlement-service.server'
@@ -446,6 +447,15 @@ export async function publishScene(
 			throw new Error('Project not found or access denied')
 		}
 
+		const [subscription, publishEntitlement] = await Promise.all([
+			getOrgSubscription(project.organizationId),
+			hasEntitlement(project.organizationId, 'scene_publish')
+		])
+
+		if (!publishEntitlement.granted) {
+			throw new Error('Publishing is unavailable for this organization.')
+		}
+
 		const db = getDbClient()
 		const [existingPublish] = await db
 			.select({ sceneId: scenePublished.sceneId })
@@ -455,12 +465,19 @@ export async function publishScene(
 
 		// Enforce concurrent publish quota only when this scene is not already published.
 		if (!existingPublish) {
-			const [{ totalPublished }] = await db
-				.select({ totalPublished: count(scenePublished.sceneId) })
-				.from(scenePublished)
-				.innerJoin(scenes, eq(scenes.id, scenePublished.sceneId))
-				.innerJoin(projects, eq(projects.id, scenes.projectId))
-				.where(eq(projects.organizationId, project.organizationId))
+			const useProjectScopedLimit = subscription.plan === 'free'
+			const [{ totalPublished }] = useProjectScopedLimit
+				? await db
+						.select({ totalPublished: count(scenePublished.sceneId) })
+						.from(scenePublished)
+						.innerJoin(scenes, eq(scenes.id, scenePublished.sceneId))
+						.where(eq(scenes.projectId, projectId))
+				: await db
+						.select({ totalPublished: count(scenePublished.sceneId) })
+						.from(scenePublished)
+						.innerJoin(scenes, eq(scenes.id, scenePublished.sceneId))
+						.innerJoin(projects, eq(projects.id, scenes.projectId))
+						.where(eq(projects.organizationId, project.organizationId))
 
 			const quotaCheck = await checkQuota(
 				project.organizationId,
@@ -471,16 +488,16 @@ export async function publishScene(
 				quotaCheck.limit !== null && totalPublished >= quotaCheck.limit
 
 			if (quotaCheck.outcome === 'hard_limit_exceeded' || wouldExceedLimit) {
-				const { plan } = await getOrgSubscription(project.organizationId)
-				const upgradeTo = getRecommendedUpgrade(plan)
+				const upgradeTo = getRecommendedUpgrade(subscription.plan)
 				throw new QuotaExceededError({
 					limitKey: 'scenes_published_concurrent',
 					currentValue: totalPublished,
 					limit: quotaCheck.limit,
-					plan,
+					plan: subscription.plan,
 					upgradeTo,
-					message:
-						'Published scene limit reached for your plan. Upgrade to publish more scenes concurrently.'
+					message: useProjectScopedLimit
+						? 'Free plan limit reached: you can publish up to 3 scenes concurrently in this project.'
+						: 'Published scene limit reached for your plan. Upgrade to publish more scenes concurrently.'
 				})
 			}
 		}

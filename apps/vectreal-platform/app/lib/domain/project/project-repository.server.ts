@@ -114,14 +114,17 @@ export async function createProject(
 	if (quotaCheck.outcome === 'hard_limit_exceeded') {
 		const { plan } = await getOrgSubscription(organizationId)
 		const upgradeTo = getRecommendedUpgrade(plan)
+		const message =
+			plan === 'free'
+				? 'Free plan limit reached: you can have one project. Delete an existing project or upgrade to create another.'
+				: 'Project limit reached for your plan. Upgrade to create more projects.'
 		throw new QuotaExceededError({
 			limitKey: 'projects_total',
 			currentValue: quotaCheck.currentValue,
 			limit: quotaCheck.limit,
 			plan,
 			upgradeTo,
-			message:
-				'Project limit reached for your plan. Upgrade to create more projects.'
+			message
 		})
 	}
 

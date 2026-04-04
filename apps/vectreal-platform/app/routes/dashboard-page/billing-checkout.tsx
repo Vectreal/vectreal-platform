@@ -71,7 +71,7 @@ const PLAN_BENEFITS: Record<'pro' | 'business', string[]> = {
 	pro: [
 		'Private preview links and version history',
 		'Custom optimization parameters and high-quality preset',
-		'Domain allowlist, viewer customization, and embed analytics',
+		'Viewer customization and embed analytics',
 		'Email support with faster response times'
 	],
 	business: [

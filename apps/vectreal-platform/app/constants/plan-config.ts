@@ -83,7 +83,7 @@ export const PLAN_ENTITLEMENTS: Record<Plan, Record<EntitlementKey, boolean>> =
 			optimization_custom_params: false,
 			optimization_priority_queue: false,
 			// Embed & Viewer
-			embed_domain_allowlist: false,
+			embed_domain_allowlist: true,
 			embed_branding_removal: false,
 			embed_viewer_customisation: false,
 			embed_analytics: false,
@@ -91,7 +91,7 @@ export const PLAN_ENTITLEMENTS: Record<Plan, Record<EntitlementKey, boolean>> =
 			// Organisation & Collaboration
 			org_multi_member: false,
 			org_roles: false,
-			org_api_keys: false,
+			org_api_keys: true,
 			org_sso: false,
 			org_audit_log: false,
 			// Data & Compliance
@@ -243,7 +243,7 @@ export const PLAN_LIMITS: Record<Plan, Record<LimitKey, number | null>> = {
 		storage_bytes_per_scene: 50 * 1024 * 1024, // 50 MB
 		scenes_total: 10,
 		scenes_published_concurrent: 3,
-		projects_total: 2,
+		projects_total: 1,
 		org_seats: 1,
 		optimization_runs_per_month: 20,
 		optimization_concurrent: 1,

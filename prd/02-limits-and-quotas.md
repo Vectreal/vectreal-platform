@@ -24,7 +24,7 @@ _Enforcement: hard limit. Upload is blocked when the org total would be exceeded
 | `scenes_total`                | count | 10     | 200   | 2,000      | Unlimited    |
 | `scenes_published_concurrent` | count | 3      | 50    | 500        | Unlimited    |
 
-_Enforcement: `scenes_total` is a hard limit. `scenes_published_concurrent` is a hard limit._
+_Enforcement: `scenes_total` is a hard limit. `scenes_published_concurrent` is a hard limit. For `free`, this limit is enforced per project and `free` is limited to one project._
 
 ---
 
@@ -32,7 +32,7 @@ _Enforcement: `scenes_total` is a hard limit. `scenes_published_concurrent` is a
 
 | Limit key        | Unit  | `free` | `pro` | `business` | `enterprise` |
 | ---------------- | ----- | ------ | ----- | ---------- | ------------ |
-| `projects_total` | count | 2      | 20    | 200        | Unlimited    |
+| `projects_total` | count | 1      | 20    | 200        | Unlimited    |
 
 _Enforcement: hard limit._
 
@@ -84,7 +84,7 @@ _Enforcement: `embed_bandwidth_gb_per_month` is a soft limit. `preview_loads_per
 
 ## Limit Enforcement Model
 
-```
+```text
 Request arrives
   │
   ▼

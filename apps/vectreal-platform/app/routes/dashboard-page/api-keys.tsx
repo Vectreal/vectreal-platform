@@ -319,7 +319,7 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 								{keysByOrg[organizations[0].organization.id]?.length || 0} API{' '}
 								{keysByOrg[organizations[0].organization.id]?.length === 1
 									? 'key'
-									: 'keys'}
+									: 'keys'} configured for secure embed and preview access
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
@@ -334,8 +334,8 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 								/>
 							) : (
 								<FeatureUnavailablePanel
-									title="API keys unavailable for this organization"
-									description="Upgrade this organization to Pro or higher to manage API keys."
+									title="API key management is temporarily unavailable"
+									description="This organization currently cannot manage API keys. Check billing state or organization access and try again."
 									plan={
 										apiKeysAccessByOrg[organizations[0].organization.id]?.plan
 									}
@@ -387,8 +387,8 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 											/>
 										) : (
 											<FeatureUnavailablePanel
-												title="API keys unavailable for this organization"
-												description="Upgrade this organization to Pro or higher to manage API keys."
+												title="API key management is temporarily unavailable"
+												description="This organization currently cannot manage API keys. Check billing state or organization access and try again."
 												plan={apiKeysAccessByOrg[org.organization.id]?.plan}
 												upgradeTo={
 													apiKeysAccessByOrg[org.organization.id]?.upgradeTo ??
