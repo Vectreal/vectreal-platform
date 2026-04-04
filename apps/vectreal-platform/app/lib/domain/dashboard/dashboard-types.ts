@@ -163,10 +163,14 @@ export interface BillingSettingsData {
 	usage: {
 		scenesTotal: number
 		sceneLimit: number | null
+		publishedScenes: number
+		publishedSceneLimit: number | null
 		optimizationRuns: number
 		optimizationLimit: number | null
 		projectsTotal: number
 		projectsLimit: number | null
+		apiRequestsMonth: number
+		apiRequestsMonthLimit: number | null
 	}
 }
 

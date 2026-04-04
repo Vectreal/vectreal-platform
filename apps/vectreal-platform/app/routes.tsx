@@ -165,14 +165,14 @@ export default [
 				)
 			]),
 			route('billing', './routes/dashboard-page/billing.tsx'),
-			route('billing/checkout', './routes/dashboard-page/billing-checkout.tsx'),
+			route('billing/upgrade', './routes/dashboard-page/billing-upgrade.tsx'),
 			route(
-				'billing/checkout-success',
-				'./routes/dashboard-page/billing-checkout-success.tsx'
+				'billing/upgrade-success',
+				'./routes/dashboard-page/billing-upgrade-success.tsx'
 			),
 			route(
-				'billing/checkout-canceled',
-				'./routes/dashboard-page/billing-checkout-canceled.tsx'
+				'billing/upgrade-canceled',
+				'./routes/dashboard-page/billing-upgrade-canceled.tsx'
 			),
 			route('settings', './routes/dashboard-page/settings.tsx')
 		])
