@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/Vectreal/vectreal-platform/compare/core-v0.11.1...core-v0.12.0) (2026-04-04)
+
+
+### Bug Fixes
+
+* update homepage URLs and repository type in package.json files ([#343](https://github.com/Vectreal/vectreal-platform/issues/343)) ([b8d8c69](https://github.com/Vectreal/vectreal-platform/commit/b8d8c691cd632ee95e54708b76630d6194f4a06f))
+
 ## [0.11.1](https://github.com/Vectreal/vectreal-platform/compare/core-v0.11.0...core-v0.11.1) (2026-04-02)
 
 

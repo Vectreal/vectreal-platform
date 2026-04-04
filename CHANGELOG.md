@@ -11,6 +11,21 @@
 - Mo
 - Schlomoh
 
+## [0.12.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.11.1...workspace-v0.12.0) (2026-04-04)
+
+
+### Features
+
+* add organization management features and written confirmation modal ([#341](https://github.com/Vectreal/vectreal-platform/issues/341)) ([15366a6](https://github.com/Vectreal/vectreal-platform/commit/15366a61cae778d5821ed6e39aec96ae36f4d004))
+* Enhance dashboard sidebar with recent projects and new links ([#338](https://github.com/Vectreal/vectreal-platform/issues/338)) ([5d7ac6b](https://github.com/Vectreal/vectreal-platform/commit/5d7ac6b2a8642be29d6774e49ed737c2eecab1d1))
+* update release-please configuration to include merge option for node-workspace plugin ([#342](https://github.com/Vectreal/vectreal-platform/issues/342)) ([50ced1e](https://github.com/Vectreal/vectreal-platform/commit/50ced1e2de57df804e4a9d1ef295160fc483ab1f))
+
+
+### Bug Fixes
+
+* Update API key management messages and adjust plan limits in doc… ([#337](https://github.com/Vectreal/vectreal-platform/issues/337)) ([22e6a4b](https://github.com/Vectreal/vectreal-platform/commit/22e6a4bde82e60d8932faeef3a8155faaa321ea5))
+* update homepage URLs and repository type in package.json files ([#343](https://github.com/Vectreal/vectreal-platform/issues/343)) ([b8d8c69](https://github.com/Vectreal/vectreal-platform/commit/b8d8c691cd632ee95e54708b76630d6194f4a06f))
+
 ## [0.11.1](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.11.0...workspace-v0.11.1) (2026-04-02)
 
 
