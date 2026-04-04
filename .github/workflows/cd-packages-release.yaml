@@ -21,10 +21,10 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
-      core_release_created: ${{ steps.release.outputs['packages/core--release_created'] }}
-      hooks_release_created: ${{ steps.release.outputs['packages/hooks--release_created'] }}
-      viewer_release_created: ${{ steps.release.outputs['packages/viewer--release_created'] }}
       root_release_created: ${{ steps.release.outputs['.--release_created'] }}
+      core_version: ${{ steps.release.outputs['packages/core--version'] }}
+      hooks_version: ${{ steps.release.outputs['packages/hooks--version'] }}
+      viewer_version: ${{ steps.release.outputs['packages/viewer--version'] }}
 
     steps:
       - name: Create GitHub App token
@@ -45,10 +45,65 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
+      - name: Checkout repository
+        if: ${{ steps.release.outputs['.--release_created'] == 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Build package-grouped root release notes
+        if: ${{ steps.release.outputs['.--release_created'] == 'true' }}
+        env:
+          TAG_NAME: ${{ steps.release.outputs.tag_name }}
+          ROOT_VERSION: ${{ steps.release.outputs.version }}
+          CORE_VERSION: ${{ steps.release.outputs['packages/core--version'] }}
+          HOOKS_VERSION: ${{ steps.release.outputs['packages/hooks--version'] }}
+          VIEWER_VERSION: ${{ steps.release.outputs['packages/viewer--version'] }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          extract_section() {
+            local file="$1"
+            local version="$2"
+
+            if [[ -z "$version" || ! -f "$file" ]]; then
+              echo "No changes recorded for this package in this release."
+              return
+            fi
+
+            local section
+            section=$(awk -v version="$version" '
+              $0 ~ "^## \\[" version "\\]" {capture=1; next}
+              capture && $0 ~ /^## \[/ {exit}
+              capture {print}
+            ' "$file")
+
+            if [[ -z "${section//[[:space:]]/}" ]]; then
+              echo "No changes recorded for this package in this release."
+            else
+              printf "%s\n" "$section"
+            fi
+          }
+
+          {
+            echo "## Release v${ROOT_VERSION}"
+            echo
+            echo "### @vctrl/core (${CORE_VERSION:-unchanged})"
+            extract_section "packages/core/CHANGELOG.md" "$CORE_VERSION"
+            echo
+            echo "### @vctrl/hooks (${HOOKS_VERSION:-unchanged})"
+            extract_section "packages/hooks/CHANGELOG.md" "$HOOKS_VERSION"
+            echo
+            echo "### @vctrl/viewer (${VIEWER_VERSION:-unchanged})"
+            extract_section "packages/viewer/CHANGELOG.md" "$VIEWER_VERSION"
+          } > release-notes.md
+
+          gh release edit "$TAG_NAME" --notes-file release-notes.md
+
   publish:
     name: Publish Released Packages to NPM
     needs: release-please
-    if: ${{ needs.release-please.outputs.core_release_created == 'true' || needs.release-please.outputs.hooks_release_created == 'true' || needs.release-please.outputs.viewer_release_created == 'true' }}
+    if: ${{ needs.release-please.outputs.root_release_created == 'true' }}
     environment: packages-releasing
     runs-on: ubuntu-22.04
     permissions:
@@ -68,7 +123,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          registry-url: 'https://registry.npmjs.org'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
@@ -99,8 +153,59 @@ jobs:
         run: npx nx report
         shell: bash
 
+      - name: Diagnostics - npm trusted publishing context
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "GitHub context"
+          echo "  repository: ${GITHUB_REPOSITORY}"
+          echo "  ref: ${GITHUB_REF}"
+          echo "  workflow: ${GITHUB_WORKFLOW}"
+          echo "  actor: ${GITHUB_ACTOR}"
+
+          echo "Node/npm context"
+          node --version
+          npm --version
+          echo "  npm registry: $(npm config get registry)"
+          if [[ -n "${NODE_AUTH_TOKEN:-}" ]]; then
+            echo "  NODE_AUTH_TOKEN is set (trusted publishing should not require this)"
+          else
+            echo "  NODE_AUTH_TOKEN is not set"
+          fi
+
+          if [[ -f "$HOME/.npmrc" ]]; then
+            echo "Sanitized ~/.npmrc"
+            sed -E 's#(//registry\.npmjs\.org/:_authToken=).*#\1***REDACTED***#' "$HOME/.npmrc"
+          else
+            echo "No ~/.npmrc present"
+          fi
+
+          if [[ -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" && -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]]; then
+            echo "Requesting OIDC token for npm audience..."
+            oidc_response=$(curl -sS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=npm:registry.npmjs.org")
+            oidc_token=$(node -e 'let d=""; process.stdin.on("data", c => d += c); process.stdin.on("end", () => { try { const j = JSON.parse(d); process.stdout.write(j.value || ""); } catch {} });' <<< "$oidc_response")
+
+            if [[ -z "$oidc_token" ]]; then
+              echo "Failed to mint OIDC token for npm audience"
+              echo "$oidc_response"
+              exit 1
+            fi
+
+            oidc_payload=$(node -e 'const t = process.argv[1]; const p = (t.split(".")[1] || ""); const b = p.replace(/-/g, "+").replace(/_/g, "/"); const pad = "=".repeat((4 - (b.length % 4)) % 4); process.stdout.write(Buffer.from(b + pad, "base64").toString("utf8"));' "$oidc_token")
+            echo "OIDC payload (selected claims)"
+            node -e 'const c = JSON.parse(process.argv[1]); const out = {iss: c.iss, aud: c.aud, sub: c.sub, repository: c.repository, repository_owner: c.repository_owner, ref: c.ref, job_workflow_ref: c.job_workflow_ref, environment: c.environment}; console.log(JSON.stringify(out, null, 2));' "$oidc_payload"
+          else
+            echo "ACTIONS_ID_TOKEN_REQUEST_URL/TOKEN not present; id-token: write permission may be missing"
+            exit 1
+          fi
+
+          echo "Package visibility check (informational)"
+          npm view @vctrl/core name --json || true
+          npm view @vctrl/hooks name --json || true
+          npm view @vctrl/viewer name --json || true
+
       - name: Preflight pack @vctrl/core
-        if: ${{ needs.release-please.outputs.core_release_created == 'true' }}
         run: |
           npx nx run vctrl/core:copy-md
           cd build/packages/vctrl/core
@@ -108,14 +213,14 @@ jobs:
         shell: bash
 
       - name: Publish @vctrl/core
-        if: ${{ needs.release-please.outputs.core_release_created == 'true' }}
         run: npx nx run vctrl/core:publish
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ''
+          NPM_CONFIG_PROVENANCE: 'true'
 
       - name: Preflight pack @vctrl/hooks
-        if: ${{ needs.release-please.outputs.hooks_release_created == 'true' }}
         run: |
           npx nx run vctrl/hooks:copy-md
           cd build/packages/vctrl/hooks
@@ -123,14 +228,14 @@ jobs:
         shell: bash
 
       - name: Publish @vctrl/hooks
-        if: ${{ needs.release-please.outputs.hooks_release_created == 'true' }}
         run: npx nx run vctrl/hooks:publish
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ''
+          NPM_CONFIG_PROVENANCE: 'true'
 
       - name: Preflight pack @vctrl/viewer
-        if: ${{ needs.release-please.outputs.viewer_release_created == 'true' }}
         run: |
           npx nx run vctrl/viewer:copy-md
           cd build/packages/vctrl/viewer
@@ -138,8 +243,9 @@ jobs:
         shell: bash
 
       - name: Publish @vctrl/viewer
-        if: ${{ needs.release-please.outputs.viewer_release_created == 'true' }}
         run: npx nx run vctrl/viewer:publish
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ''
+          NPM_CONFIG_PROVENANCE: 'true'
