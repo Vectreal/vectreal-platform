@@ -43,7 +43,6 @@ import {
 } from 'lucide-react'
 import { Link, useFetcher } from 'react-router'
 
-import type { projects } from '../../db/schema'
 import type { User } from '@supabase/supabase-js'
 
 interface SidebarLinkItem {
@@ -97,15 +96,12 @@ const quickLinks: SidebarLinkItem[] = [
 
 interface DashboardSidebarContentProps {
 	user: User | null
-	recentProjects: Array<{
-		project: typeof projects.$inferSelect
-		organizationId: string
-	}>
+	sidebarProjects: Array<{ id: string; name: string; organizationId: string }>
 }
 
 const DashboardSidebarContent = ({
 	user,
-	recentProjects
+	sidebarProjects
 }: DashboardSidebarContentProps) => {
 	const { submit } = useFetcher()
 	const { toggleSidebar, openMobile } = useSidebar()
@@ -161,11 +157,11 @@ const DashboardSidebarContent = ({
 				</SidebarGroup>
 
 				<SidebarGroup>
-					<SidebarGroupLabel>Recent Projects</SidebarGroupLabel>
+					<SidebarGroupLabel>Projects</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<SidebarMenu>
-							{recentProjects.length > 0 ? (
-								recentProjects.map(({ project }) => (
+							{sidebarProjects.length > 0 ? (
+								sidebarProjects.map((project) => (
 									<SidebarMenuItem key={project.id}>
 										<SidebarMenuButton asChild>
 											<Link
@@ -187,7 +183,7 @@ const DashboardSidebarContent = ({
 										className="pointer-events-none opacity-60"
 									>
 										<Folder />
-										<span>No recent projects</span>
+										<span>No projects</span>
 									</SidebarMenuButton>
 								</SidebarMenuItem>
 							)}

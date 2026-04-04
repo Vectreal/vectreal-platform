@@ -35,8 +35,7 @@ import {
 import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
-import { getRecentProjects } from '../../lib/domain/dashboard/dashboard-stats.server'
-import { getUserProjects } from '../../lib/domain/project/project-repository.server'
+import { getSidebarProjects } from '../../lib/domain/project/project-repository.server'
 import { dashboardManagementStore } from '../../lib/stores/dashboard-management-store'
 import { upgradeModalStore } from '../../lib/stores/upgrade-modal-store'
 
@@ -44,10 +43,9 @@ import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const { user, headers } = await loadAuthenticatedSession(request)
-	const projects = await getUserProjects(user.id)
-	const recentProjects = getRecentProjects(projects, 3)
+	const sidebarProjects = await getSidebarProjects(user.id, 3)
 
-	return data({ user, recentProjects }, { headers })
+	return data({ user, sidebarProjects }, { headers })
 }
 
 /**
@@ -98,7 +96,7 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
  */
 
 const DashboardLayout = () => {
-	const { user, recentProjects } = useLoaderData<typeof loader>()
+	const { user, sidebarProjects } = useLoaderData<typeof loader>()
 	const location = useLocation()
 	const navigation = useNavigation()
 	const revalidator = useRevalidator()
@@ -202,7 +200,7 @@ const DashboardLayout = () => {
 					<LogoSidebar>
 						<DashboardSidebarContent
 							user={user}
-							recentProjects={recentProjects}
+							sidebarProjects={sidebarProjects}
 						/>
 					</LogoSidebar>
 					<SidebarInset className="relative overflow-hidden">
