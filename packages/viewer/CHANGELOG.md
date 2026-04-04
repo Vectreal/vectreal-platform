@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.12.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.11.1...viewer-v0.12.0) (2026-04-04)
+
+
+### Features
+
+* add organization management features and written confirmation modal ([#341](https://github.com/Vectreal/vectreal-platform/issues/341)) ([15366a6](https://github.com/Vectreal/vectreal-platform/commit/15366a61cae778d5821ed6e39aec96ae36f4d004))
+
+
+### Bug Fixes
+
+* update homepage URLs and repository type in package.json files ([#343](https://github.com/Vectreal/vectreal-platform/issues/343)) ([b8d8c69](https://github.com/Vectreal/vectreal-platform/commit/b8d8c691cd632ee95e54708b76630d6194f4a06f))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.12.0
+
 ## [0.11.1](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.11.0...viewer-v0.11.1) (2026-04-02)
 
 
