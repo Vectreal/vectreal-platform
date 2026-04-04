@@ -52,7 +52,7 @@
 		"@react-three/fiber": "^9.1.2",
 		"@react-three/postprocessing": "^3.0.4",
 		"postprocessing": "^6.37.3",
-		"@vctrl/core": "0.11.1",
+		"@vctrl/core": "workspace:*",
 		"@shared/components": "workspace:*",
 		"@shared/utils": "workspace:*"
 	},

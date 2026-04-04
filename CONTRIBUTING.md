@@ -33,6 +33,15 @@ Pull requests are the best way to propose changes to the codebase. We actively w
 3. To see all targets for a project: `pnpm nx show project <project-name> --web`
 4. Install the [Nx Console](https://marketplace.visualstudio.com/items?itemName=nrwl.angular-console) extension for VS Code for a visual interface.
 
+## Release ownership and version policy
+
+1. Release Please is the single source of truth for package versions, changelog entries, tags, and GitHub releases.
+2. The canonical package version state is stored in `.release-please-manifest.json` and configured by `release-please-config.json`.
+3. Nx is used to run build and publish targets only. Do not use `nx release` in this repository.
+4. Internal dependencies between co-developed packages must use `workspace:*` unless there is a documented exception.
+5. The app at `apps/vectreal-platform` uses `workspace:*` for `@vctrl/*` dependencies to stay lockstep with local package development.
+6. Published package install compatibility should be validated in a dedicated internal consumer test app/pipeline that installs `@vctrl/*` from the registry.
+
 ## Editing documentation
 
 Every docs page on [vectreal.com/docs](https://vectreal.com/docs) is an MDX file in `apps/vectreal-platform/app/routes/docs/`. Click **Edit on GitHub** on any page to jump directly to the source file.
@@ -66,4 +75,3 @@ Run `pnpm nx affected --target=lint` to check for lint errors before opening a P
 ## GNU Affero General Public License
 
 By contributing, you agree that your contributions will be licensed under the [GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3.0.en.html).
-
