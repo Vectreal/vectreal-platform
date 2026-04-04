@@ -66,153 +66,155 @@ export type EntitlementKey =
 	| 'support_dedicated'
 
 /** Boolean entitlement matrix keyed by plan. */
-export const PLAN_ENTITLEMENTS: Record<Plan, Record<EntitlementKey, boolean>> =
-	{
-		free: {
-			// Core Publishing
-			scene_upload: true,
-			scene_optimize: true,
-			scene_publish: true,
-			scene_embed: true,
-			scene_preview_private: false,
-			scene_version_history: false,
-			// Optimization
-			optimization_preset_low: true,
-			optimization_preset_medium: true,
-			optimization_preset_high: false,
-			optimization_custom_params: false,
-			optimization_priority_queue: false,
-			// Embed & Viewer
-			embed_domain_allowlist: true,
-			embed_branding_removal: false,
-			embed_viewer_customisation: false,
-			embed_analytics: false,
-			embed_ar_mode: false,
-			// Organisation & Collaboration
-			org_multi_member: false,
-			org_roles: false,
-			org_api_keys: true,
-			org_sso: false,
-			org_audit_log: false,
-			// Data & Compliance
-			data_export: false,
-			data_residency_eu: false,
-			data_residency_custom: false,
-			// Support
-			support_community: true,
-			support_email: false,
-			support_priority: false,
-			support_dedicated: false
-		},
-		pro: {
-			// Core Publishing
-			scene_upload: true,
-			scene_optimize: true,
-			scene_publish: true,
-			scene_embed: true,
-			scene_preview_private: true,
-			scene_version_history: true,
-			// Optimization
-			optimization_preset_low: true,
-			optimization_preset_medium: true,
-			optimization_preset_high: true,
-			optimization_custom_params: true,
-			optimization_priority_queue: false,
-			// Embed & Viewer
-			embed_domain_allowlist: true,
-			embed_branding_removal: true,
-			embed_viewer_customisation: true,
-			embed_analytics: true,
-			embed_ar_mode: true,
-			// Organisation & Collaboration
-			org_multi_member: false,
-			org_roles: false,
-			org_api_keys: true,
-			org_sso: false,
-			org_audit_log: false,
-			// Data & Compliance
-			data_export: true,
-			data_residency_eu: false,
-			data_residency_custom: false,
-			// Support
-			support_community: true,
-			support_email: true,
-			support_priority: false,
-			support_dedicated: false
-		},
-		business: {
-			// Core Publishing
-			scene_upload: true,
-			scene_optimize: true,
-			scene_publish: true,
-			scene_embed: true,
-			scene_preview_private: true,
-			scene_version_history: true,
-			// Optimization
-			optimization_preset_low: true,
-			optimization_preset_medium: true,
-			optimization_preset_high: true,
-			optimization_custom_params: true,
-			optimization_priority_queue: true,
-			// Embed & Viewer
-			embed_domain_allowlist: true,
-			embed_branding_removal: true,
-			embed_viewer_customisation: true,
-			embed_analytics: true,
-			embed_ar_mode: true,
-			// Organisation & Collaboration
-			org_multi_member: true,
-			org_roles: true,
-			org_api_keys: true,
-			org_sso: false,
-			org_audit_log: false,
-			// Data & Compliance
-			data_export: true,
-			data_residency_eu: true,
-			data_residency_custom: false,
-			// Support
-			support_community: true,
-			support_email: true,
-			support_priority: true,
-			support_dedicated: false
-		},
-		enterprise: {
-			// Core Publishing
-			scene_upload: true,
-			scene_optimize: true,
-			scene_publish: true,
-			scene_embed: true,
-			scene_preview_private: true,
-			scene_version_history: true,
-			// Optimization
-			optimization_preset_low: true,
-			optimization_preset_medium: true,
-			optimization_preset_high: true,
-			optimization_custom_params: true,
-			optimization_priority_queue: true,
-			// Embed & Viewer
-			embed_domain_allowlist: true,
-			embed_branding_removal: true,
-			embed_viewer_customisation: true,
-			embed_analytics: true,
-			embed_ar_mode: true,
-			// Organisation & Collaboration
-			org_multi_member: true,
-			org_roles: true,
-			org_api_keys: true,
-			org_sso: true,
-			org_audit_log: true,
-			// Data & Compliance
-			data_export: true,
-			data_residency_eu: true,
-			data_residency_custom: true,
-			// Support
-			support_community: true,
-			support_email: true,
-			support_priority: true,
-			support_dedicated: true
-		}
+export const PLAN_ENTITLEMENTS: Record<
+	Plan,
+	Record<EntitlementKey, boolean>
+> = {
+	free: {
+		// Core Publishing
+		scene_upload: true,
+		scene_optimize: true,
+		scene_publish: true,
+		scene_embed: true,
+		scene_preview_private: false,
+		scene_version_history: false,
+		// Optimization
+		optimization_preset_low: true,
+		optimization_preset_medium: true,
+		optimization_preset_high: false,
+		optimization_custom_params: false,
+		optimization_priority_queue: false,
+		// Embed & Viewer
+		embed_domain_allowlist: true,
+		embed_branding_removal: false,
+		embed_viewer_customisation: false,
+		embed_analytics: false,
+		embed_ar_mode: false,
+		// Organisation & Collaboration
+		org_multi_member: false,
+		org_roles: false,
+		org_api_keys: true,
+		org_sso: false,
+		org_audit_log: false,
+		// Data & Compliance
+		data_export: false,
+		data_residency_eu: false,
+		data_residency_custom: false,
+		// Support
+		support_community: true,
+		support_email: false,
+		support_priority: false,
+		support_dedicated: false
+	},
+	pro: {
+		// Core Publishing
+		scene_upload: true,
+		scene_optimize: true,
+		scene_publish: true,
+		scene_embed: true,
+		scene_preview_private: true,
+		scene_version_history: true,
+		// Optimization
+		optimization_preset_low: true,
+		optimization_preset_medium: true,
+		optimization_preset_high: true,
+		optimization_custom_params: true,
+		optimization_priority_queue: false,
+		// Embed & Viewer
+		embed_domain_allowlist: true,
+		embed_branding_removal: true,
+		embed_viewer_customisation: true,
+		embed_analytics: true,
+		embed_ar_mode: true,
+		// Organisation & Collaboration
+		org_multi_member: false,
+		org_roles: false,
+		org_api_keys: true,
+		org_sso: false,
+		org_audit_log: false,
+		// Data & Compliance
+		data_export: true,
+		data_residency_eu: false,
+		data_residency_custom: false,
+		// Support
+		support_community: true,
+		support_email: true,
+		support_priority: false,
+		support_dedicated: false
+	},
+	business: {
+		// Core Publishing
+		scene_upload: true,
+		scene_optimize: true,
+		scene_publish: true,
+		scene_embed: true,
+		scene_preview_private: true,
+		scene_version_history: true,
+		// Optimization
+		optimization_preset_low: true,
+		optimization_preset_medium: true,
+		optimization_preset_high: true,
+		optimization_custom_params: true,
+		optimization_priority_queue: true,
+		// Embed & Viewer
+		embed_domain_allowlist: true,
+		embed_branding_removal: true,
+		embed_viewer_customisation: true,
+		embed_analytics: true,
+		embed_ar_mode: true,
+		// Organisation & Collaboration
+		org_multi_member: true,
+		org_roles: true,
+		org_api_keys: true,
+		org_sso: false,
+		org_audit_log: false,
+		// Data & Compliance
+		data_export: true,
+		data_residency_eu: true,
+		data_residency_custom: false,
+		// Support
+		support_community: true,
+		support_email: true,
+		support_priority: true,
+		support_dedicated: false
+	},
+	enterprise: {
+		// Core Publishing
+		scene_upload: true,
+		scene_optimize: true,
+		scene_publish: true,
+		scene_embed: true,
+		scene_preview_private: true,
+		scene_version_history: true,
+		// Optimization
+		optimization_preset_low: true,
+		optimization_preset_medium: true,
+		optimization_preset_high: true,
+		optimization_custom_params: true,
+		optimization_priority_queue: true,
+		// Embed & Viewer
+		embed_domain_allowlist: true,
+		embed_branding_removal: true,
+		embed_viewer_customisation: true,
+		embed_analytics: true,
+		embed_ar_mode: true,
+		// Organisation & Collaboration
+		org_multi_member: true,
+		org_roles: true,
+		org_api_keys: true,
+		org_sso: true,
+		org_audit_log: true,
+		// Data & Compliance
+		data_export: true,
+		data_residency_eu: true,
+		data_residency_custom: true,
+		// Support
+		support_community: true,
+		support_email: true,
+		support_priority: true,
+		support_dedicated: true
 	}
+}
 
 // ---------------------------------------------------------------------------
 // Quota limits

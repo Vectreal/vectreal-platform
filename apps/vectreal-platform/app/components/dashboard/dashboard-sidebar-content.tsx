@@ -27,18 +27,23 @@ import {
 	ArrowRight,
 	BoxesIcon,
 	Building,
+	ChartColumn,
 	ChevronsUpDown,
 	CreditCard,
+	House,
 	HelpCircle,
 	KeyRound,
 	List,
 	LogOut,
 	Rocket,
 	Settings,
-	SquareStack
+	SquareStack,
+	Folder,
+	FolderOpen
 } from 'lucide-react'
 import { Link, useFetcher } from 'react-router'
 
+import type { projects } from '../../db/schema'
 import type { User } from '@supabase/supabase-js'
 
 interface SidebarLinkItem {
@@ -53,7 +58,7 @@ const manageLinks: SidebarLinkItem[] = [
 	{
 		title: 'Projects',
 		url: '/dashboard/projects',
-		icon: List
+		icon: FolderOpen
 	},
 	{
 		title: 'API Keys',
@@ -69,10 +74,20 @@ const manageLinks: SidebarLinkItem[] = [
 		title: 'Presets',
 		icon: SquareStack,
 		disabled: true // TODO: Implement presets management
+	},
+	{
+		title: 'Analytics',
+		icon: ChartColumn,
+		disabled: true
 	}
 ]
 
 const quickLinks: SidebarLinkItem[] = [
+	{
+		title: 'Dashboard',
+		url: '/dashboard',
+		icon: House
+	},
 	{
 		title: 'Upload Model',
 		url: '/publisher',
@@ -82,9 +97,16 @@ const quickLinks: SidebarLinkItem[] = [
 
 interface DashboardSidebarContentProps {
 	user: User | null
+	recentProjects: Array<{
+		project: typeof projects.$inferSelect
+		organizationId: string
+	}>
 }
 
-const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
+const DashboardSidebarContent = ({
+	user,
+	recentProjects
+}: DashboardSidebarContentProps) => {
 	const { submit } = useFetcher()
 	const { toggleSidebar, openMobile } = useSidebar()
 
@@ -137,6 +159,42 @@ const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>
+
+				<SidebarGroup>
+					<SidebarGroupLabel>Recent Projects</SidebarGroupLabel>
+					<SidebarGroupContent>
+						<SidebarMenu>
+							{recentProjects.length > 0 ? (
+								recentProjects.map(({ project }) => (
+									<SidebarMenuItem key={project.id}>
+										<SidebarMenuButton asChild>
+											<Link
+												viewTransition
+												to={`/dashboard/projects/${project.id}`}
+												onClick={handleSidebarClose}
+												aria-label={`Go to project ${project.name}`}
+											>
+												<Folder />
+												<span className="truncate">{project.name}</span>
+											</Link>
+										</SidebarMenuButton>
+									</SidebarMenuItem>
+								))
+							) : (
+								<SidebarMenuItem aria-disabled>
+									<SidebarMenuButton
+										disabled
+										className="pointer-events-none opacity-60"
+									>
+										<Folder />
+										<span>No recent projects</span>
+									</SidebarMenuButton>
+								</SidebarMenuItem>
+							)}
+						</SidebarMenu>
+					</SidebarGroupContent>
+				</SidebarGroup>
+
 				<SidebarGroup>
 					<SidebarGroupLabel>Manage</SidebarGroupLabel>
 					<SidebarGroupContent>
@@ -213,19 +271,10 @@ const DashboardSidebarContent = ({ user }: DashboardSidebarContentProps) => {
 								sideOffset={4}
 							>
 								<DropdownMenuLabel className="p-0 font-normal">
-									<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-										<Avatar className="h-8 w-8 rounded-lg">
-											<AvatarImage src={userImageSrc} alt={userName} />
-											<AvatarFallback className="rounded-lg">
-												{userInitial}
-											</AvatarFallback>
-										</Avatar>
-										<div className="grid flex-1 text-left text-sm leading-tight">
-											<span className="truncate font-semibold">{userName}</span>
-											<span className="text-muted-foreground truncate text-xs">
-												{accountTier} Plan
-											</span>
-										</div>
+									<div className="flex items-center gap-2 px-2 py-1.5 text-left text-sm">
+										<span className="text-foreground text-sm font-medium">
+											More settings
+										</span>
 									</div>
 								</DropdownMenuLabel>
 

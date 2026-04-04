@@ -35,6 +35,8 @@ import {
 import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
+import { getRecentProjects } from '../../lib/domain/dashboard/dashboard-stats.server'
+import { getUserProjects } from '../../lib/domain/project/project-repository.server'
 import { dashboardManagementStore } from '../../lib/stores/dashboard-management-store'
 import { upgradeModalStore } from '../../lib/stores/upgrade-modal-store'
 
@@ -42,8 +44,10 @@ import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const { user, headers } = await loadAuthenticatedSession(request)
+	const projects = await getUserProjects(user.id)
+	const recentProjects = getRecentProjects(projects, 3)
 
-	return data({ user }, { headers })
+	return data({ user, recentProjects }, { headers })
 }
 
 /**
@@ -94,7 +98,7 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
  */
 
 const DashboardLayout = () => {
-	const { user } = useLoaderData<typeof loader>()
+	const { user, recentProjects } = useLoaderData<typeof loader>()
 	const location = useLocation()
 	const navigation = useNavigation()
 	const revalidator = useRevalidator()
@@ -196,7 +200,10 @@ const DashboardLayout = () => {
 					onOpenChange={handleSidebarOpenChange}
 				>
 					<LogoSidebar>
-						<DashboardSidebarContent user={user} />
+						<DashboardSidebarContent
+							user={user}
+							recentProjects={recentProjects}
+						/>
 					</LogoSidebar>
 					<SidebarInset className="relative overflow-hidden">
 						<DashboardManagementDialogs />
