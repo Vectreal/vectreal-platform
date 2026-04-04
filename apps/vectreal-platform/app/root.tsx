@@ -1,5 +1,6 @@
 import { Toaster } from '@shared/components/ui/sonner'
 import { cn } from '@shared/utils'
+import { useEffect, type ReactNode } from 'react'
 import {
 	data,
 	Links,
@@ -8,6 +9,8 @@ import {
 	Outlet,
 	Scripts,
 	ScrollRestoration,
+	useLoaderData,
+	useLocation,
 	useRouteError
 } from 'react-router'
 import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
@@ -15,9 +18,12 @@ import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
 import { Route } from './+types/root'
 import { GlobalNavigationLoader } from './components/global-navigation-loader'
 import { csrfSession } from './lib/sessions/csrf-session.server'
+import {
+	getThemeModeFromRequest,
+	type ThemeMode
+} from './lib/sessions/theme-session.server'
 import styles from './styles/global.module.css'
 
-import type { ReactNode } from 'react'
 import type { ShouldRevalidateFunction } from 'react-router'
 import '@shared/components/styles/globals.css'
 
@@ -31,7 +37,10 @@ export const meta: MetaFunction = () => [
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const [csrf, cookieHeader] = await csrfSession.commitToken(request)
-	const loaderData = { csrf }
+	const pathname = new URL(request.url).pathname
+	const forceDarkTheme = pathname === '/' || pathname === '/home'
+	const themeMode = await getThemeModeFromRequest(request)
+	const loaderData = { csrf, themeMode, forceDarkTheme }
 
 	if (cookieHeader) {
 		return data(loaderData, { headers: { 'Set-Cookie': cookieHeader } })
@@ -64,6 +73,74 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 
 export type RootLoader = typeof loader
 
+function applyResolvedTheme(
+	themeMode: ThemeMode,
+	forceDarkTheme: boolean
+): void {
+	if (typeof document === 'undefined') {
+		return
+	}
+
+	const root = document.documentElement
+	const prefersDark =
+		typeof window !== 'undefined' &&
+		window.matchMedia('(prefers-color-scheme: dark)').matches
+	const shouldUseDark =
+		forceDarkTheme ||
+		themeMode === 'dark' ||
+		(themeMode === 'system' && prefersDark)
+
+	root.classList.toggle('dark', shouldUseDark)
+	root.style.colorScheme = shouldUseDark ? 'dark' : 'light'
+}
+
+function ThemeManager({ themeMode }: { themeMode: ThemeMode }) {
+	const location = useLocation()
+
+	useEffect(() => {
+		const forceDarkTheme =
+			location.pathname === '/' || location.pathname === '/home'
+		applyResolvedTheme(themeMode, forceDarkTheme)
+
+		if (forceDarkTheme || themeMode !== 'system') {
+			return
+		}
+
+		const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+		const handleChange = () => {
+			applyResolvedTheme('system', false)
+		}
+
+		mediaQuery.addEventListener('change', handleChange)
+
+		return () => {
+			mediaQuery.removeEventListener('change', handleChange)
+		}
+	}, [location.pathname, themeMode])
+
+	return null
+}
+
+function ThemeInitScript({
+	themeMode,
+	forceDarkTheme
+}: {
+	themeMode: ThemeMode
+	forceDarkTheme: boolean
+}) {
+	const script = `(() => {
+  const root = document.documentElement;
+  const forceDarkTheme = ${JSON.stringify(forceDarkTheme)};
+  const themeMode = ${JSON.stringify(themeMode)};
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const shouldUseDark = forceDarkTheme || themeMode === 'dark' || (themeMode === 'system' && prefersDark);
+  root.classList.toggle('dark', shouldUseDark);
+  root.style.colorScheme = shouldUseDark ? 'dark' : 'light';
+})();`
+
+	return <script dangerouslySetInnerHTML={{ __html: script }} />
+}
+
 const CriticalStyles = () => (
 	<style>
 		{`/* Critical CSS for initial render */
@@ -80,6 +157,10 @@ const CriticalStyles = () => (
 
 export function Layout({ children }: { children: ReactNode }) {
 	const error = useRouteError()
+	const rootLoaderData = useLoaderData<RootLoader>()
+	const themeMode: ThemeMode = rootLoaderData?.themeMode ?? 'system'
+	const forceDarkTheme = Boolean(rootLoaderData?.forceDarkTheme)
+	const initialShouldUseDark = forceDarkTheme || themeMode === 'dark'
 
 	if (error) {
 		console.error('Error in root layout:', error)
@@ -100,6 +181,10 @@ export function Layout({ children }: { children: ReactNode }) {
 					<Meta />
 					<Links />
 					<CriticalStyles />
+					<ThemeInitScript
+						themeMode={themeMode}
+						forceDarkTheme={forceDarkTheme}
+					/>
 				</head>
 				<body>
 					<div className="error">
@@ -117,8 +202,9 @@ export function Layout({ children }: { children: ReactNode }) {
 	return (
 		<html
 			lang="en"
-			className={cn(styles.global, 'dark')}
-			style={{ colorScheme: 'dark' }}
+			suppressHydrationWarning
+			className={cn(styles.global, initialShouldUseDark && 'dark')}
+			style={{ colorScheme: initialShouldUseDark ? 'dark' : 'light' }}
 		>
 			<head>
 				<meta charSet="utf-8" />
@@ -126,8 +212,13 @@ export function Layout({ children }: { children: ReactNode }) {
 				<Meta />
 				<Links />
 				<CriticalStyles />
+				<ThemeInitScript
+					themeMode={themeMode}
+					forceDarkTheme={forceDarkTheme}
+				/>
 			</head>
 			<body>
+				<ThemeManager themeMode={themeMode} />
 				<GlobalNavigationLoader />
 				{children}
 				<Toaster toastOptions={{ className: 'rounded-2xl!' }} />

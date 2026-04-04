@@ -341,3 +341,47 @@ export async function userExists(userId: string): Promise<boolean> {
 
 	return user.length > 0
 }
+
+export async function getUserByEmail(
+	email: string
+): Promise<typeof users.$inferSelect | null> {
+	const user = await db
+		.select()
+		.from(users)
+		.where(eq(users.email, email.trim().toLowerCase()))
+		.limit(1)
+
+	return user[0] ?? null
+}
+
+export async function updateUserProfile(
+	userId: string,
+	updates: {
+		name: string
+	}
+): Promise<typeof users.$inferSelect> {
+	const [updatedUser] = await db
+		.update(users)
+		.set({
+			name: updates.name
+		})
+		.where(eq(users.id, userId))
+		.returning()
+
+	if (!updatedUser) {
+		throw new Error('User not found')
+	}
+
+	return updatedUser
+}
+
+export async function deleteUserAndRelatedData(userId: string): Promise<void> {
+	const deletedUsers = await db
+		.delete(users)
+		.where(eq(users.id, userId))
+		.returning({ id: users.id })
+
+	if (deletedUsers.length === 0) {
+		throw new Error('User account not found')
+	}
+}

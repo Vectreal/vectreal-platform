@@ -5,6 +5,7 @@
 
 import type {
 	FolderLoaderData,
+	OrganizationDetailLoaderData,
 	ProjectLoaderData,
 	SceneLoaderData
 } from '../lib/domain/dashboard/dashboard-types'
@@ -40,6 +41,7 @@ export type RouteContext =
 	| 'folder-detail'
 	| 'scene-detail'
 	| 'organizations'
+	| 'organization-detail'
 	| 'billing'
 	| 'billing-checkout'
 	| 'billing-checkout-success'
@@ -94,6 +96,7 @@ export interface RouteDataResult {
 	project?: ProjectLoaderData
 	folder?: FolderLoaderData
 	scene?: SceneLoaderData
+	organizationDetail?: OrganizationDetailLoaderData
 }
 
 /**

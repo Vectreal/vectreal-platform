@@ -6,6 +6,7 @@
 import { DASHBOARD_CONTENT } from '../../constants/dashboard'
 import { UUID_REGEX } from '../../constants/utility-constants'
 
+import type { OrganizationDetailLoaderData } from '../../lib/domain/dashboard/dashboard-types'
 import type {
 	DashboardView,
 	RouteContext,
@@ -87,7 +88,7 @@ export const isSceneRoute = (params: RouteParams): boolean => {
 export const getTitleContent = (view: DashboardView): TitleContent | null => {
 	const routeContextMap: Record<
 		DashboardView,
-		Exclude<RouteContext, 'scene-detail'>
+		Exclude<RouteContext, 'scene-detail' | 'organization-detail'>
 	> = {
 		dashboard: 'dashboard',
 		projects: 'project-list',
@@ -132,6 +133,10 @@ export const extractRouteData = (
 		// Check for scene data
 		if ('scene' in loaderData) {
 			routeData.scene = loaderData as RouteDataResult['scene']
+		}
+		// Check for organization detail data
+		if ('organization' in loaderData && 'members' in loaderData) {
+			routeData.organizationDetail = loaderData as OrganizationDetailLoaderData
 		}
 	}
 
@@ -185,6 +190,11 @@ export const getRouteContext = (
 	// API keys route
 	if (view === 'api-keys') {
 		return 'api-keys'
+	}
+
+	// Organizations route
+	if (view === 'organizations' && projectId) {
+		return 'organization-detail'
 	}
 
 	// Organizations route

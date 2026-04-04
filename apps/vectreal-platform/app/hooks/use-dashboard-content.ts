@@ -37,7 +37,8 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 	const routeContext = getRouteContext(location.pathname, routeParams)
 
 	// Extract typed data from route loaders
-	const { project, folder, scene } = extractRouteData(matches)
+	const { project, folder, scene, organizationDetail } =
+		extractRouteData(matches)
 
 	const content = useMemo(() => {
 		// Skip optimistic updates for drawer routes to prevent flickering
@@ -103,6 +104,26 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 
 		// Generate content based on loaded route context
 		switch (routeContext) {
+			case 'organization-detail':
+				if (organizationDetail) {
+					const breadcrumbs: BreadcrumbItem[] = [
+						{ label: 'Dashboard', to: DASHBOARD_ROUTES.DASHBOARD },
+						{
+							label: DASHBOARD_CONTENT.organizations.title,
+							to: DASHBOARD_ROUTES.ORGANIZATIONS
+						},
+						{ label: organizationDetail.organization.name, isLast: true }
+					]
+
+					return {
+						title: organizationDetail.organization.name,
+						description: `${organizationDetail.members.length} members • ${organizationDetail.projectsTotal} projects`,
+						actionVariant: undefined,
+						breadcrumbs
+					}
+				}
+				break
+
 			case 'scene-detail':
 				if (scene?.scene && scene?.project) {
 					const folderPath = scene.folderPath || []
@@ -375,6 +396,7 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 		project,
 		folder,
 		scene,
+		organizationDetail,
 		navigation.state,
 		navigation.location
 	])
