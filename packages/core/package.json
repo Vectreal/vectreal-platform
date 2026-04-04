@@ -5,7 +5,7 @@
 	"bugs": {
 		"url": "https://github.com/vectreal/vectreal-platform/issues"
 	},
-	"homepage": "https://core.vectreal.com",
+	"homepage": "https://vectreal.com",
 	"keywords": [
 		"vectreal",
 		"3d",
@@ -20,8 +20,8 @@
 		"gltf-transform"
 	],
 	"repository": {
-		"url": "https://github.com/vectreal/vectreal-platform",
-		"type": "https"
+		"type": "git",
+		"url": "git+https://github.com/vectreal/vectreal-platform.git"
 	},
 	"license": "AGPL-3.0-only",
 	"types": "./index.d.ts",
