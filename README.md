@@ -7,11 +7,12 @@ _Deployment Actions_
 [![Production Deployment](https://img.shields.io/github/actions/workflow/status/vectreal/vectreal-platform/cd-platform-production.yaml?logo=github&label=Production%20Deployment&color=fc6c18)](https://github.com/Vectreal/vectreal-platform/actions)
 
 _See the viewer_  
-[![Storybook](https://img.shields.io/badge/Storybook-viewer-fc6c18?logo=storybook)](https://672b9522ee5bda25942a731c-cpdbatfvlf.chromatic.com)
+[![Storybook](https://img.shields.io/badge/Storybook-viewer-fc6c18?logo=storybook)](https://www.chromatic.com/library?appId=672b9522ee5bda25942a731c)
 
 _NPM packages_  
-[![NPM Viewer](https://img.shields.io/npm/dm/%40vctrl%2Fviewer?logo=npm&label=%40vctrl/viewer)](https://npmjs.com/package/@vctrl/viewer)
+[![NPM CORE](https://img.shields.io/npm/dm/%40vctrl%2Fcore?logo=npm&label=%40vctrl/core)](https://npmjs.com/package/@vctrl/core)
 [![NPM Hooks](https://img.shields.io/npm/dm/%40vctrl%2Fhooks?logo=npm&label=%40vctrl/hooks)](https://npmjs.com/package/@vctrl/hooks)
+[![NPM Viewer](https://img.shields.io/npm/dm/%40vctrl%2Fviewer?logo=npm&label=%40vctrl/viewer)](https://npmjs.com/package/@vctrl/viewer)
 
 ---
 
@@ -26,7 +27,7 @@ Built on [Three.js](https://github.com/mrdoob/three.js), [React Three Fiber](htt
 - [Documentation](https://vectreal.com/docs)
 - [Getting Started](https://vectreal.com/docs/getting-started)
 - [Open Publisher](https://vectreal.com/publisher)
-- [Storybook](https://672b9522ee5bda25942a731c-cpdbatfvlf.chromatic.com)
+- [Storybook](https://www.chromatic.com/library?appId=672b9522ee5bda25942a731c)
 - [Discord community](https://discord.gg/A9a3nPkZw7)
 - [Changelog](https://github.com/Vectreal/vectreal-platform/blob/main/CHANGELOG.md)
 
