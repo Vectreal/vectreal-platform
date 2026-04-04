@@ -11,6 +11,13 @@
 - Mo
 - Schlomoh
 
+## [0.12.1](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.12.0...workspace-v0.12.1) (2026-04-04)
+
+
+### Bug Fixes
+
+* update release-please configuration to skip GitHub releases for core, hooks, and viewer packages ([#344](https://github.com/Vectreal/vectreal-platform/issues/344)) ([61dd7d7](https://github.com/Vectreal/vectreal-platform/commit/61dd7d76f27c8b6b351970abcc48928be70179da))
+
 ## [0.12.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.11.1...workspace-v0.12.0) (2026-04-04)
 
 
