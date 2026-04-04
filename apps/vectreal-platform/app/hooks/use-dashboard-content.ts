@@ -316,7 +316,7 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 					},
 					{
 						label: DASHBOARD_CONTENT['billing-checkout'].title,
-						to: DASHBOARD_ROUTES.BILLING_CHECKOUT
+						to: DASHBOARD_ROUTES.BILLING_UPGRADE
 					},
 					{ label: config.title, isLast: true }
 				]
@@ -339,7 +339,7 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 					},
 					{
 						label: DASHBOARD_CONTENT['billing-checkout'].title,
-						to: DASHBOARD_ROUTES.BILLING_CHECKOUT
+						to: DASHBOARD_ROUTES.BILLING_UPGRADE
 					},
 					{ label: config.title, isLast: true }
 				]

@@ -1,6 +1,7 @@
-import { data } from 'react-router'
+import { data, useLoaderData } from 'react-router'
 
 import { Route } from './+types/billing'
+import { BillingSettingsSection } from '../../components/dashboard/billing/billing-settings-section'
 import { loadBillingDashboardData } from '../../lib/domain/billing/billing-dashboard-loader.server'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -10,4 +11,14 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
-export { default } from '../../components/dashboard/billing/billing-page'
+const BillingUpgradePage = () => {
+	const { billing } = useLoaderData<typeof loader>()
+
+	return (
+		<div className="p-6">
+			<BillingSettingsSection billing={billing} />
+		</div>
+	)
+}
+
+export default BillingUpgradePage

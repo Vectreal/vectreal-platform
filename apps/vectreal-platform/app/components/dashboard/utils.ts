@@ -202,18 +202,27 @@ export const getRouteContext = (
 		return 'organizations'
 	}
 
-	// Billing checkout route
-	if (view === 'billing' && projectId === 'checkout') {
+	// Billing upgrade route (support legacy "checkout" slug for compatibility)
+	if (
+		view === 'billing' &&
+		(projectId === 'upgrade' || projectId === 'checkout')
+	) {
 		return 'billing-checkout'
 	}
 
-	// Billing checkout success route
-	if (view === 'billing' && projectId === 'checkout-success') {
+	// Billing upgrade success route (support legacy "checkout-success" slug)
+	if (
+		view === 'billing' &&
+		(projectId === 'upgrade-success' || projectId === 'checkout-success')
+	) {
 		return 'billing-checkout-success'
 	}
 
-	// Billing checkout canceled route
-	if (view === 'billing' && projectId === 'checkout-canceled') {
+	// Billing upgrade canceled route (support legacy "checkout-canceled" slug)
+	if (
+		view === 'billing' &&
+		(projectId === 'upgrade-canceled' || projectId === 'checkout-canceled')
+	) {
 		return 'billing-checkout-canceled'
 	}
 

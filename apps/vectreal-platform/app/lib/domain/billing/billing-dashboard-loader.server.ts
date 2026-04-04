@@ -1,9 +1,10 @@
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import Stripe from 'stripe'
 
 import { getOrgSubscription, getQuotaLimit } from './entitlement-service.server'
 import { getCurrentUsage } from './usage-service.server'
 import { getDbClient } from '../../../db/client'
+import { scenePublished } from '../../../db/schema'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { getStripeClient } from '../../stripe.server'
 import { loadAuthenticatedUser } from '../auth/auth-loader.server'
@@ -70,7 +71,7 @@ function resolvePlanFromPrice(price: Stripe.Price): 'pro' | 'business' | null {
 	return null
 }
 
-async function getCheckoutOptions(): Promise<BillingCheckoutOptions> {
+export async function getCheckoutOptions(): Promise<BillingCheckoutOptions> {
 	const stripe = getStripeClient()
 	const options: BillingCheckoutOptions = {
 		pro: { monthly: null, annual: null },
@@ -140,20 +141,38 @@ export async function loadBillingDashboardData(
 		sceneQuota,
 		optimizationQuota,
 		projectsQuota,
+		publishedSceneQuota,
+		apiRequestsMonthQuota,
 		optimizationUsage,
+		apiRequestsMonthUsage,
 		checkoutOptions
 	] = await Promise.all([
 		getQuotaLimit(organizationId, 'scenes_total'),
 		getQuotaLimit(organizationId, 'optimization_runs_per_month'),
 		getQuotaLimit(organizationId, 'projects_total'),
+		getQuotaLimit(organizationId, 'scenes_published_concurrent'),
+		getQuotaLimit(organizationId, 'api_requests_per_month'),
 		getCurrentUsage(organizationId, 'optimization_runs_per_month'),
+		getCurrentUsage(organizationId, 'api_requests_per_month'),
 		getCheckoutOptions()
 	])
 
 	const userProjects = await getUserProjects(user.id)
 	const projectIds = userProjects.map(({ project }) => project.id)
 	const scenesByProject = await getProjectsScenes(projectIds, user.id)
-	const totalScenes = Array.from(scenesByProject.values()).flat().length
+	const allScenes = Array.from(scenesByProject.values()).flat()
+	const totalScenes = allScenes.length
+
+	// Count published scenes via the scene_published table
+	const allSceneIds = allScenes.map((s) => s.id)
+	let publishedCount = 0
+	if (allSceneIds.length > 0) {
+		const publishedRows = await db
+			.select({ sceneId: scenePublished.sceneId })
+			.from(scenePublished)
+			.where(inArray(scenePublished.sceneId, allSceneIds))
+		publishedCount = publishedRows.length
+	}
 
 	const billing: BillingSettingsData = {
 		plan,
@@ -164,10 +183,14 @@ export async function loadBillingDashboardData(
 		usage: {
 			scenesTotal: totalScenes,
 			sceneLimit: sceneQuota.limit,
+			publishedScenes: publishedCount,
+			publishedSceneLimit: publishedSceneQuota.limit,
 			optimizationRuns: optimizationUsage,
 			optimizationLimit: optimizationQuota.limit,
 			projectsTotal: userProjects.length,
-			projectsLimit: projectsQuota.limit
+			projectsLimit: projectsQuota.limit,
+			apiRequestsMonth: apiRequestsMonthUsage,
+			apiRequestsMonthLimit: apiRequestsMonthQuota.limit
 		}
 	}
 

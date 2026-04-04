@@ -205,8 +205,8 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 			? undefined
 			: (user.email ?? undefined),
 		line_items: [{ price: priceId, quantity: 1 }],
-		success_url: `${baseUrl}/dashboard/billing/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
-		cancel_url: `${baseUrl}/dashboard/billing/checkout-canceled`,
+		success_url: `${baseUrl}/dashboard/billing/upgrade-success?session_id={CHECKOUT_SESSION_ID}`,
+		cancel_url: `${baseUrl}/dashboard/billing/upgrade-canceled?plan=${planId}`,
 		metadata: {
 			organization_id: organizationId,
 			plan_id: planId,

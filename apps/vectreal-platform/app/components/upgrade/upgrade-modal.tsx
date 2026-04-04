@@ -97,7 +97,7 @@ export function UpgradeModal() {
 	// Build the upgrade destination: settings page with plan pre-selected, or pricing
 	const upgradeHref =
 		state.upgradeTo && state.upgradeTo !== 'enterprise'
-			? `/dashboard/billing/checkout?plan=${state.upgradeTo}`
+			? `/dashboard/billing/upgrade?plan=${state.upgradeTo}`
 			: '/pricing'
 
 	return (

@@ -60,6 +60,19 @@
 				]
 			}
 		},
+		"lint:fix": {
+			"executor": "@nx/eslint:lint",
+			"outputs": ["{options.outputFile}"],
+			"options": {
+				"fix": true,
+				"lintFilePatterns": [
+					"apps/vectreal-platform/app/**/*.ts",
+					"apps/vectreal-platform/app/**/*.tsx",
+					"apps/vectreal-platform/app/**/*.js",
+					"apps/vectreal-platform/app/**/*.jsx"
+				]
+			}
+		},
 		"supabase-restart": {
 			"executor": "nx:run-commands",
 			"options": {
