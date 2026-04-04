@@ -293,12 +293,15 @@ export async function initializeUserDefaults(
 			.limit(1)
 			.then((rows) => rows[0] ?? null)
 
-		// Avoid write-on-read side effects for existing users when navigating.
+		// Avoid unnecessary writes when defaults already exist, but ensure
+		// the resolved default organization always has a default project.
 		const project =
 			existingProject ??
-			(isNewUser
-				? await getOrCreateDefaultProjectDb(tx as DbClient, user.id, organization.id)
-				: null)
+			(await getOrCreateDefaultProjectDb(
+				tx as DbClient,
+				user.id,
+				organization.id
+			))
 
 		return {
 			user,

@@ -6,6 +6,7 @@ import { count, eq } from 'drizzle-orm'
 
 import { getSceneFolder } from './scene-folder-repository.server'
 import { sceneSettingsService } from './scene-settings-service.server'
+import { isBillingStateReadOnly } from '../../../../constants/plan-config'
 import { getDbClient } from '../../../../db/client'
 import { projects } from '../../../../db/schema/project/projects'
 import { scenePublished } from '../../../../db/schema/project/scene-published'
@@ -447,13 +448,20 @@ export async function publishScene(
 			throw new Error('Project not found or access denied')
 		}
 
-		const [subscription, publishEntitlement] = await Promise.all([
-			getOrgSubscription(project.organizationId),
-			hasEntitlement(project.organizationId, 'scene_publish')
-		])
+		const publishEntitlement = await hasEntitlement(
+			project.organizationId,
+			'scene_publish'
+		)
 
 		if (!publishEntitlement.granted) {
-			throw new Error('Publishing is unavailable for this organization.')
+			if (isBillingStateReadOnly(publishEntitlement.billingState)) {
+				return ApiResponse.paymentRequired(
+					'Publishing is unavailable: payment required to restore access.'
+				)
+			}
+			return ApiResponse.forbidden(
+				'Publishing is not available on your current plan.'
+			)
 		}
 
 		const db = getDbClient()
@@ -465,7 +473,8 @@ export async function publishScene(
 
 		// Enforce concurrent publish quota only when this scene is not already published.
 		if (!existingPublish) {
-			const useProjectScopedLimit = subscription.plan === 'free'
+			const effectivePlan = publishEntitlement.effectivePlan
+			const useProjectScopedLimit = effectivePlan === 'free'
 			const [{ totalPublished }] = useProjectScopedLimit
 				? await db
 						.select({ totalPublished: count(scenePublished.sceneId) })
@@ -488,12 +497,12 @@ export async function publishScene(
 				quotaCheck.limit !== null && totalPublished >= quotaCheck.limit
 
 			if (quotaCheck.outcome === 'hard_limit_exceeded' || wouldExceedLimit) {
-				const upgradeTo = getRecommendedUpgrade(subscription.plan)
+				const upgradeTo = getRecommendedUpgrade(effectivePlan)
 				throw new QuotaExceededError({
 					limitKey: 'scenes_published_concurrent',
 					currentValue: totalPublished,
 					limit: quotaCheck.limit,
-					plan: subscription.plan,
+					plan: effectivePlan,
 					upgradeTo,
 					message: useProjectScopedLimit
 						? 'Free plan limit reached: you can publish up to 3 scenes concurrently in this project.'
