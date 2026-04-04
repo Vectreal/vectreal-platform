@@ -171,11 +171,11 @@ export async function action({ request }: Route.ActionArgs) {
 			return data(
 				{
 					error:
-						'API keys are not available on your current plan. Upgrade to continue.',
+						'API keys are not available for this organization right now. Please check organization access or billing state.',
 					upgrade: {
 						reason: 'feature_not_available' as const,
 						message:
-							'API keys are not available on your current plan. Upgrade to continue.',
+							'API keys are not available for this organization right now. Please check organization access or billing state.',
 						plan: entitlementDecision.effectivePlan,
 						upgradeTo: getRecommendedUpgrade(entitlementDecision.effectivePlan),
 						actionAttempted: 'api_key_create'
@@ -502,7 +502,7 @@ export default function ApiKeysNewPage({
 							<div>
 								<DrawerTitle>Create API Key</DrawerTitle>
 								<DrawerDescription>
-									Create a new API key for preview and embed access to your
+									Create a key for secure embed token access across selected
 									projects
 								</DrawerDescription>
 							</div>
@@ -514,11 +514,11 @@ export default function ApiKeysNewPage({
 						</div>
 					</DrawerHeader>
 
-					<div className="overflow-y-auto p-6">
+					<div className="space-y-3 overflow-y-auto p-6">
 						{!hasAnyApiKeyAccess && organizations[0] && (
 							<FeatureUnavailablePanel
-								title="API keys are not available on your current plan"
-								description="Upgrade to Pro or higher to create API keys for embeds and preview access."
+								title="API key creation is temporarily unavailable"
+								description="This organization currently cannot create API keys. Check billing state or organization access and try again."
 								plan={
 									apiKeysAccessByOrg[organizations[0].organization.id]?.plan
 								}
@@ -535,13 +535,21 @@ export default function ApiKeysNewPage({
 							selectedOrgAccess &&
 							!selectedOrgAccess.granted && (
 								<FeatureUnavailablePanel
-									title="API keys unavailable for selected organization"
-									description="Upgrade this organization to Pro or higher to create API keys."
+									title="API key creation is unavailable for this organization"
+									description="Check billing state or organization access and try again."
 									plan={selectedOrgAccess.plan}
 									upgradeTo={selectedOrgAccess.upgradeTo}
 									actionAttempted="api_key_create"
 								/>
 							)}
+
+						<Alert>
+							<AlertCircle className="size-4" />
+							<AlertDescription>
+								Create separate keys by environment, scope each key to the
+								smallest project set possible, and rotate keys regularly.
+							</AlertDescription>
+						</Alert>
 
 						<Form {...form}>
 							<RemixForm method="post" className="space-y-6">
@@ -700,9 +708,7 @@ export default function ApiKeysNewPage({
 									<Button
 										type="submit"
 										disabled={
-											form.formState.isSubmitting ||
-											!hasAnyApiKeyAccess ||
-											!selectedOrgAccess?.granted
+											form.formState.isSubmitting || !selectedOrgAccess?.granted
 										}
 										className="w-full"
 									>

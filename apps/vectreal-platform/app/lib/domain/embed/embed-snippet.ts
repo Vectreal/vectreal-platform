@@ -4,13 +4,14 @@ export const EMBED_COPY = {
 	unavailableUntilSaved:
 		'Embedding is unavailable until this scene is saved and linked to a project.',
 	draftWarningPrefix:
-		'Draft scenes are not externally embeddable. Publish first, then replace',
-	draftWarningSuffix: 'with a valid preview key.',
+		'External embeds stay protected. Publish first, then replace',
+	draftWarningSuffix:
+		'with a valid preview API key token. Signed-in dashboard users can preview via session auth.',
 	previewUrlLabel: 'Embed Preview URL',
 	previewUrlPlaceholder: 'Save scene to generate URL',
 	embedCodeLabel: 'Embed Code',
 	embedCodeHelp:
-		'Use the code below to embed your scene into your website or app.',
+		'Use the code below to embed your scene. Keep token access private and rotate keys when needed.',
 	copyUrl: 'Copy URL',
 	copyEmbed: 'Copy Embed',
 	copied: 'Copied',

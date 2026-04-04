@@ -41,7 +41,7 @@ import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { z, ZodError } from 'zod'
 
 import { Route } from './+types/projects-new'
-import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
+import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import {
 	getOrgSubscription,
 	getQuotaLimit,
@@ -58,8 +58,6 @@ import {
 	buildUpgradeModalState,
 	upgradeModalAtom
 } from '../../../lib/stores/upgrade-modal-store'
-
-import type { ProjectNewLoaderData } from '../../../lib/domain/dashboard/dashboard-types'
 
 const projectFormSchema = z.object({
 	name: z
@@ -83,9 +81,8 @@ const projectFormSchema = z.object({
 type ProjectFormValues = z.infer<typeof projectFormSchema>
 
 export async function loader({ request }: Route.LoaderArgs) {
-	// Authenticate and initialize user
-	const { user, userWithDefaults, headers } =
-		await loadAuthenticatedUser(request)
+	// Authenticate without creating default resources as a side effect.
+	const { user, headers } = await loadAuthenticatedSession(request)
 
 	// Fetch organizations for project creation form
 	const [organizations, userProjects] = await Promise.all([
@@ -135,9 +132,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 		projectQuotaByOrganization
 	)
 
-	const loaderData: ProjectNewLoaderData = {
+	const loaderData = {
 		user,
-		userWithDefaults,
 		organizations,
 		projectCreationCapabilities
 	}
@@ -146,7 +142,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	const { user, headers } = await loadAuthenticatedUser(request)
+	const { user, headers } = await loadAuthenticatedSession(request)
 	const formData = await request.formData()
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
 	if (csrfCheck) {
@@ -308,7 +304,9 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 				message:
 					targetOrgCapability.projectsLimit === null
 						? 'Project creation is currently unavailable for this organization. Upgrade to continue creating projects.'
-						: `Project quota reached (${targetOrgCapability.projectsTotal}/${targetOrgCapability.projectsLimit}). Upgrade to create more projects.`,
+						: targetOrgCapability.projectsLimit === 1
+							? `Project quota reached (${targetOrgCapability.projectsTotal}/${targetOrgCapability.projectsLimit}). Free includes one project. Delete an existing project or upgrade to continue.`
+							: `Project quota reached (${targetOrgCapability.projectsTotal}/${targetOrgCapability.projectsLimit}). Upgrade to create more projects.`,
 				limitKey: 'projects_total',
 				currentValue: targetOrgCapability.projectsTotal,
 				limit: targetOrgCapability.projectsLimit,
@@ -383,7 +381,9 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 										{selectedOrgQuota?.quotaExceeded
 											? selectedOrgQuota.projectsLimit === null
 												? 'Project creation is temporarily unavailable for this organization.'
-												: `This organization reached its project quota (${selectedOrgQuota.projectsTotal}/${selectedOrgQuota.projectsLimit}). Upgrade to create more projects.`
+												: selectedOrgQuota.projectsLimit === 1
+													? `This organization reached its project quota (${selectedOrgQuota.projectsTotal}/${selectedOrgQuota.projectsLimit}). Free includes one project. Delete an existing project or upgrade to continue.`
+													: `This organization reached its project quota (${selectedOrgQuota.projectsTotal}/${selectedOrgQuota.projectsLimit}). Upgrade to create more projects.`
 											: "You don't have permission to create projects in this organization. Please select a different organization."}
 									</p>
 									{selectedOrgQuota?.quotaExceeded && (

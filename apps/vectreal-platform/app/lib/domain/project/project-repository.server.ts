@@ -5,6 +5,7 @@ import { organizationMemberships } from '../../../db/schema/core/organization-me
 import { projects } from '../../../db/schema/project/projects'
 import {
 	getOrgSubscription,
+	getQuotaLimit,
 	getRecommendedUpgrade
 } from '../billing/entitlement-service.server'
 import { QuotaExceededError } from '../billing/quota-exceeded-error'
@@ -112,16 +113,24 @@ export async function createProject(
 
 	const quotaCheck = await checkQuota(organizationId, 'projects_total')
 	if (quotaCheck.outcome === 'hard_limit_exceeded') {
-		const { plan } = await getOrgSubscription(organizationId)
-		const upgradeTo = getRecommendedUpgrade(plan)
+		const [{ plan: subscriptionPlan }, { effectivePlan }] = await Promise.all([
+			getOrgSubscription(organizationId),
+			getQuotaLimit(organizationId, 'projects_total')
+		])
+		const upgradeTo = getRecommendedUpgrade(effectivePlan)
+		const message =
+			effectivePlan === 'free'
+				? subscriptionPlan === 'free'
+					? 'Free plan limit reached: you can have one project. Delete an existing project or upgrade to create another.'
+					: 'Project creation is currently limited to free-tier quotas. Delete an existing project or restore full access to create another.'
+				: 'Project limit reached for your plan. Upgrade to create more projects.'
 		throw new QuotaExceededError({
 			limitKey: 'projects_total',
 			currentValue: quotaCheck.currentValue,
 			limit: quotaCheck.limit,
-			plan,
+			plan: effectivePlan,
 			upgradeTo,
-			message:
-				'Project limit reached for your plan. Upgrade to create more projects.'
+			message
 		})
 	}
 

@@ -145,11 +145,11 @@ export async function action({ request, params }: Route.ActionArgs) {
 			return data(
 				{
 					error:
-						'API keys are not available on your current plan. Upgrade to continue.',
+						'API key editing is not available for this organization right now. Please check organization access or billing state.',
 					upgrade: {
 						reason: 'feature_not_available' as const,
 						message:
-							'API keys are not available on your current plan. Upgrade to continue.',
+							'API key editing is not available for this organization right now. Please check organization access or billing state.',
 						plan: entitlementDecision.effectivePlan,
 						upgradeTo: getRecommendedUpgrade(entitlementDecision.effectivePlan),
 						actionAttempted: 'api_key_edit'
@@ -317,8 +317,8 @@ export default function ApiKeysEditPage({
 				<div className="overflow-y-auto p-6">
 					{!apiKeyAccess.granted && (
 						<FeatureUnavailablePanel
-							title="API keys are not available on your current plan"
-							description="Upgrade to Pro or higher to edit and manage API keys."
+							title="API key editing is temporarily unavailable"
+							description="This organization currently cannot edit API keys. Check billing state or organization access and try again."
 							plan={apiKeyAccess.plan}
 							upgradeTo={apiKeyAccess.upgradeTo}
 							actionAttempted="api_key_edit"
