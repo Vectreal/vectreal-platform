@@ -17,7 +17,7 @@ import { Link, useFetcher } from 'react-router'
 
 import { ComposeSidebar } from './compose-sidebar'
 import { OptimizeSidebar } from './optimize-sidebar'
-import { SceneNameInput } from './scene-name-input'
+import { SceneNameAndLocation } from './scene-name-and-location'
 import { processAtom } from '../../../lib/stores/publisher-config-store'
 import { SidebarMode } from '../../../types/publisher-config'
 import { TooltipButton } from '../../tooltip-button'
@@ -37,7 +37,7 @@ const SidebarTabs = ({
 		onValueChange={onTabChange}
 		className="m-2 h-full overflow-hidden"
 	>
-		<TabsList className="bg-background/25 w-full shadow-2xl">
+		<TabsList className="w-full shadow-2xl">
 			<TabsTrigger value="optimize">
 				<BarChart4 /> Optimize
 			</TabsTrigger>
@@ -110,18 +110,23 @@ const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
 						transition={{ type: 'ease', duration: 0.3 }}
 						className="bg-muted/50 border- relative z-20 m-4 h-full w-92 flex-col overflow-hidden rounded-xl border shadow-xl backdrop-blur-2xl"
 					>
-						<div className="flex w-full items-center gap-2 p-2 pb-0">
+						<div className="flex w-full items-start gap-2 p-2 pb-0">
 							{user ? (
 								<UserMenu size="sm" user={user} onLogout={handleLogout} />
 							) : (
-								<TooltipButton asChild size="icon" info="Go to dashboard">
+								<TooltipButton
+									// asChild
+									// size="sm"
+									className="p-1"
+									info="Go to dashboard"
+								>
 									<Link to="/dashboard">
 										<VectrealLogoSmall className="text-muted-foreground h-5 w-5" />
 									</Link>
 								</TooltipButton>
 							)}
 
-							<SceneNameInput />
+							<SceneNameAndLocation authenticated={!!user} />
 						</div>
 
 						<SidebarTabs

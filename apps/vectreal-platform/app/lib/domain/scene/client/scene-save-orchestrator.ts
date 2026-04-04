@@ -77,7 +77,6 @@ export const executeSceneSaveOrchestrator = async ({
 	}
 
 	const requestId = createRequestId()
-	const activeRequestId = requestId
 	const gltfJsonToSend = await prepareGltfDocumentForUpload()
 	if (!gltfJsonToSend) {
 		throw new Error('Failed to prepare glTF payload for upload')
@@ -89,7 +88,7 @@ export const executeSceneSaveOrchestrator = async ({
 
 	const prepareFormData = new FormData()
 	prepareFormData.append('action', 'prepare-scene-upload')
-	prepareFormData.append('requestId', activeRequestId)
+	prepareFormData.append('requestId', requestId)
 	prepareFormData.append('sceneId', currentSceneId || '')
 
 	if (options?.targetProjectId) {
@@ -122,7 +121,7 @@ export const executeSceneSaveOrchestrator = async ({
 		if (thumbnailFile) {
 			const uploadThumbnailFormData = new FormData()
 			uploadThumbnailFormData.append('action', 'upload-scene-asset')
-			uploadThumbnailFormData.append('requestId', activeRequestId)
+			uploadThumbnailFormData.append('requestId', requestId)
 			uploadThumbnailFormData.append('sceneId', preparedSceneId)
 			if (preparedProjectId) {
 				uploadThumbnailFormData.append('projectId', preparedProjectId)
@@ -173,7 +172,7 @@ export const executeSceneSaveOrchestrator = async ({
 			)
 			const uploadAssetFormData = new FormData()
 			uploadAssetFormData.append('action', 'upload-scene-asset')
-			uploadAssetFormData.append('requestId', activeRequestId)
+			uploadAssetFormData.append('requestId', requestId)
 			uploadAssetFormData.append('sceneId', preparedSceneId)
 			if (preparedProjectId) {
 				uploadAssetFormData.append('projectId', preparedProjectId)
@@ -210,7 +209,7 @@ export const executeSceneSaveOrchestrator = async ({
 	})
 	const uploadGltfFormData = new FormData()
 	uploadGltfFormData.append('action', 'upload-scene-gltf')
-	uploadGltfFormData.append('requestId', activeRequestId)
+	uploadGltfFormData.append('requestId', requestId)
 	uploadGltfFormData.append('sceneId', preparedSceneId)
 	if (preparedProjectId) {
 		uploadGltfFormData.append('projectId', preparedProjectId)
@@ -230,10 +229,17 @@ export const executeSceneSaveOrchestrator = async ({
 
 	const formData = new FormData()
 	formData.append('action', 'commit-scene-save')
-	formData.append('requestId', activeRequestId)
+	formData.append('requestId', requestId)
 	formData.append('sceneId', preparedSceneId)
 	if (preparedProjectId) {
 		formData.append('projectId', preparedProjectId)
+	}
+	if (options?.targetProjectId) {
+		formData.append('targetProjectId', options.targetProjectId)
+	}
+
+	if (typeof options?.targetFolderId !== 'undefined') {
+		formData.append('targetFolderId', options.targetFolderId ?? '')
 	}
 	formData.append('settings', JSON.stringify(currentSettings))
 	formData.append('meta', JSON.stringify(sceneMetaForSave))

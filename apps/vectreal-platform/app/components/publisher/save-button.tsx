@@ -1,6 +1,6 @@
 import { Button } from '@shared/components/ui/button'
 import { useAtom } from 'jotai/react'
-import { Cloud, CloudUpload, Sparkles } from 'lucide-react'
+import { CircleFadingArrowUp, Cloud, Sparkles } from 'lucide-react'
 
 import {
 	SaveAvailabilityState,
@@ -65,7 +65,7 @@ const SaveButton = ({
 			) : saveAvailability.reason === 'no-unsaved-changes' ? (
 				<Cloud size={16} className="inline" />
 			) : (
-				<CloudUpload size={16} className="inline" />
+				<CircleFadingArrowUp size={16} className="inline" />
 			)}
 		</Button>
 	)

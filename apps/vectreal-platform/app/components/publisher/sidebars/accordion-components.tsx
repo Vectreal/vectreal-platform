@@ -12,10 +12,7 @@ export const AccordionItem = ({ className, ...props }: AccordionItemProps) => {
 	return (
 		<BaseAccordionItem
 			{...props}
-			className={cn(
-				'bg-muted/50 rounded-xl border px-4 backdrop-blur-2xl',
-				className
-			)}
+			className={cn('rounded-xl px-4', className)}
 		/>
 	)
 }

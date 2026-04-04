@@ -16,6 +16,7 @@ import { memo } from 'react'
 import { Link, useParams } from 'react-router'
 
 import { identifyDrawerRoute } from './utils'
+import { PUBLISHER_ROUTES } from '../../constants/dashboard'
 import { createFolderDialogAtom } from '../../lib/stores/dashboard-management-store'
 import { ACTION_VARIANT } from '../../types/dashboard'
 
@@ -25,10 +26,20 @@ interface DashboardActionsProps {
 	className?: string
 }
 
+/** Context supplied to dynamic route resolver functions. */
+interface RouteContext {
+	projectId?: string
+	folderId?: string
+	sceneId?: string
+}
+
+/** A route can be a static path string or a resolver that receives URL context. */
+type RouteValue = string | ((ctx: RouteContext) => string)
+
 interface ActionConfig {
 	label: string
 	icon: typeof Plus
-	to?: string
+	to?: RouteValue
 	onClick?: () => void
 	variant?: 'default' | 'outline'
 }
@@ -41,12 +52,12 @@ interface ActionGroupConfig {
 
 interface ActionButtonProps {
 	action: ActionConfig
-	replacements?: Record<string, string>
+	routeContext: RouteContext
 }
 
 interface ActionsMenuProps {
 	actions: ActionConfig[]
-	replacements?: Record<string, string>
+	routeContext: RouteContext
 }
 
 // Action Configurations
@@ -99,7 +110,8 @@ const ACTION_CONFIGS: Record<ACTION_VARIANT, ActionGroupConfig | null> = {
 		secondary: {
 			label: 'Open Publisher',
 			icon: Plus,
-			to: '/publisher',
+			to: ({ projectId }: RouteContext) =>
+				PUBLISHER_ROUTES.withContext(projectId),
 			variant: 'default'
 		},
 		menu: [
@@ -119,7 +131,8 @@ const ACTION_CONFIGS: Record<ACTION_VARIANT, ActionGroupConfig | null> = {
 		secondary: {
 			label: 'Open Publisher',
 			icon: Plus,
-			to: '/publisher',
+			to: ({ projectId, folderId }: RouteContext) =>
+				PUBLISHER_ROUTES.withContext(projectId, folderId),
 			variant: 'default'
 		}
 	},
@@ -134,16 +147,18 @@ const ACTION_CONFIGS: Record<ACTION_VARIANT, ActionGroupConfig | null> = {
 }
 
 // Components
-const ActionButton = memo<ActionButtonProps>(({ action, replacements }) => {
+const ActionButton = memo<ActionButtonProps>(({ action, routeContext }) => {
 	const { label, icon: Icon, to, onClick, variant = 'default' } = action
 
-	const resolvedTo =
-		to && replacements
-			? Object.entries(replacements).reduce(
-					(path, [key, value]) => path.replace(`:${key}`, value),
+	const resolvedTo = to
+		? typeof to === 'function'
+			? to(routeContext)
+			: Object.entries(routeContext).reduce(
+					(path, [key, value]) =>
+						value ? path.replace(`:${key}`, value) : path,
 					to
 				)
-			: to
+		: undefined
 
 	const button = (
 		<Button variant={variant} onClick={onClick}>
@@ -167,7 +182,7 @@ const ActionButton = memo<ActionButtonProps>(({ action, replacements }) => {
 
 ActionButton.displayName = 'ActionButton'
 
-const ActionsMenu = memo<ActionsMenuProps>(({ actions, replacements }) => (
+const ActionsMenu = memo<ActionsMenuProps>(({ actions, routeContext }) => (
 	<DropdownMenu>
 		<DropdownMenuTrigger asChild>
 			<Button variant="outline" size="icon" aria-label="More actions">
@@ -177,13 +192,15 @@ const ActionsMenu = memo<ActionsMenuProps>(({ actions, replacements }) => (
 		<DropdownMenuContent align="end">
 			{actions.map((action) => {
 				const { label, icon: Icon, to, onClick } = action
-				const resolvedTo =
-					to && replacements
-						? Object.entries(replacements).reduce(
-								(path, [key, value]) => path.replace(`:${key}`, value),
+				const resolvedTo = to
+					? typeof to === 'function'
+						? to(routeContext)
+						: Object.entries(routeContext).reduce(
+								(path, [key, value]) =>
+									value ? path.replace(`:${key}`, value) : path,
 								to
 							)
-						: to
+					: undefined
 
 				const content = (
 					<>
@@ -261,24 +278,21 @@ export const DashboardActions = memo<DashboardActionsProps>(
 			return null
 		}
 
-		const replacements: Record<string, string> = {}
-		if (projectId) replacements.projectId = projectId
-		if (folderId) replacements.folderId = folderId
-		if (sceneId) replacements.sceneId = sceneId
+		const routeContext: RouteContext = { projectId, folderId, sceneId }
 
 		return (
 			<>
 				<div className={className}>
 					<div className="flex gap-2">
-						<ActionButton action={config.primary} replacements={replacements} />
+						<ActionButton action={config.primary} routeContext={routeContext} />
 						{config.secondary && (
 							<ActionButton
 								action={config.secondary}
-								replacements={replacements}
+								routeContext={routeContext}
 							/>
 						)}
 						{config.menu && config.menu.length > 0 && (
-							<ActionsMenu actions={config.menu} replacements={replacements} />
+							<ActionsMenu actions={config.menu} routeContext={routeContext} />
 						)}
 					</div>
 				</div>

@@ -17,8 +17,10 @@ import {
 } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import {
+	currentLocationAtom,
 	processAtom,
-	publisherConfigStore
+	publisherConfigStore,
+	saveLocationAtom
 } from '../../lib/stores/publisher-config-store'
 import { sceneOptimizationStore } from '../../lib/stores/scene-optimization-store'
 import { sceneSettingsStore } from '../../lib/stores/scene-settings-store'
@@ -81,6 +83,30 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 
 		sceneAggregate = await buildSceneAggregate(sceneId)
 		publishedMeta = await getPublishedScenePreview(projectId, sceneId)
+	} else if (!sceneId && user?.id) {
+		// New scene — read project/folder context from URL search params
+		const url = new URL(request.url)
+		const contextProjectId = url.searchParams.get('projectId')?.trim() || null
+		const contextFolderId = url.searchParams.get('folderId')?.trim() || null
+
+		if (contextProjectId) {
+			try {
+				const [project, folder] = await Promise.all([
+					getProject(contextProjectId, user.id),
+					contextFolderId
+						? getSceneFolder(contextFolderId, user.id)
+						: Promise.resolve(null)
+				])
+				if (project) {
+					projectId = contextProjectId
+					currentProjectName = project.name
+					currentFolderId = folder?.id ?? null
+					currentFolderName = folder?.name ?? null
+				}
+			} catch {
+				// Invalid project/folder params — silently ignore, user picks in UI
+			}
+		}
 	}
 
 	const loaderData = {
@@ -102,8 +128,6 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({
-	currentUrl,
-	nextUrl,
 	defaultShouldRevalidate,
 	actionResult,
 	formMethod
@@ -116,18 +140,32 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 		return true
 	}
 
-	if (currentUrl.pathname === nextUrl.pathname) {
-		return false
-	}
-
 	return defaultShouldRevalidate
 }
+
+/**
+ * Must be rendered inside the innermost <Provider> that all atom consumers share
+ * (sceneSettingsStore). Each Jotai Provider is an isolated store — placing this
+ * component at the wrong nesting level causes it to write to a different store
+ * instance than the one ControlsOverlay and SceneNameAndLocation read from.
+ */
 
 const Layout = ({ loaderData }: Route.ComponentProps) => {
 	const optimizer = useOptimizeModel()
 	const [{ showSidebar }, setProcessState] = useAtom(processAtom)
 	const resolvedLoaderData = loaderData as PublisherLoaderData
 	useAuthResumeRevalidation({ enabled: Boolean(resolvedLoaderData.user) })
+
+	// Sync location atoms into the innermost store (sceneSettingsStore) before
+	// the Provider children render, so they see correct values on first paint.
+	// All atom consumers live inside <Provider store={sceneSettingsStore}>, so
+	// writing to publisherConfigStore would be silently ignored by them.
+	const { currentLocation, projectId } = resolvedLoaderData
+	sceneSettingsStore.set(currentLocationAtom, currentLocation)
+	sceneSettingsStore.set(saveLocationAtom, {
+		targetProjectId: currentLocation.projectId ?? projectId ?? undefined,
+		targetFolderId: currentLocation.folderId ?? null
+	})
 
 	const handleOpenChange = useCallback(
 		(isOpen: boolean) => {

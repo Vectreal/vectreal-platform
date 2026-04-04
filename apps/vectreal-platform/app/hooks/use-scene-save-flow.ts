@@ -1,3 +1,4 @@
+import { useSetAtom } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import {
@@ -7,6 +8,11 @@ import {
 	type SaveSceneOrchestratorOptions,
 	hasUnsavedSceneChanges
 } from '../lib/domain/scene'
+import {
+	currentLocationAtom,
+	saveLocationAtom
+} from '../lib/stores/publisher-config-store'
+import { isSceneCurrentLocation } from '../types/api'
 
 import type {
 	SaveAvailabilityState,
@@ -43,6 +49,8 @@ export const useSceneSaveFlow = ({
 	captureSceneThumbnail,
 	maxConcurrentAssetUploadsDefault
 }: SceneSaveFlowArgs) => {
+	const setCurrentLocation = useSetAtom(currentLocationAtom)
+	const setSaveLocation = useSetAtom(saveLocationAtom)
 	const inFlightSaveRef = useRef<Promise<
 		SaveSceneResult | { unchanged: true } | undefined
 	> | null>(null)
@@ -197,6 +205,15 @@ export const useSceneSaveFlow = ({
 						? result.sceneMeta
 						: sceneMetaState
 
+				const locationCandidate = result.currentLocation
+				if (isSceneCurrentLocation(locationCandidate)) {
+					setCurrentLocation(locationCandidate)
+					setSaveLocation({
+						targetProjectId: locationCandidate.projectId ?? undefined,
+						targetFolderId: locationCandidate.folderId ?? null
+					})
+				}
+
 				setSceneMetaState(savedSceneMeta)
 				setLastSavedSettings(currentSettings)
 				setLastSavedSceneMeta(savedSceneMeta)
@@ -238,6 +255,8 @@ export const useSceneSaveFlow = ({
 			clientSceneBytes,
 			latestSceneStats,
 			setOptimizationRuntime,
+			setCurrentLocation,
+			setSaveLocation,
 			revalidate,
 			clearPendingDraft
 		]

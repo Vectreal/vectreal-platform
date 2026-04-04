@@ -121,7 +121,7 @@ class SceneSettingsService {
 		} = params
 
 		const saveResult = await this.db.transaction(async (tx) => {
-			let scene = await this.ensureSceneExists(tx, {
+			const scene = await this.ensureSceneExists(tx, {
 				sceneId,
 				projectId,
 				userId,
@@ -129,40 +129,13 @@ class SceneSettingsService {
 				preferredFolderId: targetFolderId
 			})
 
-			const shouldApplyTargetLocation =
-				typeof targetProjectId !== 'undefined' ||
-				typeof targetFolderId !== 'undefined'
-
-			const resolvedTargetProjectId = targetProjectId ?? scene.projectId
-			const resolvedTargetFolderId =
-				typeof targetFolderId !== 'undefined'
-					? targetFolderId
-					: targetProjectId && targetProjectId !== scene.projectId
-						? null
-						: scene.folderId
-
-			const hasLocationChange =
-				shouldApplyTargetLocation &&
-				(scene.projectId !== resolvedTargetProjectId ||
-					scene.folderId !== resolvedTargetFolderId)
-
-			if (hasLocationChange) {
-				const [updatedScene] = await tx
-					.update(scenes)
-					.set({
-						projectId: resolvedTargetProjectId,
-						folderId: resolvedTargetFolderId,
-						updatedAt: new Date()
-					})
-					.where(eq(scenes.id, scene.id))
-					.returning()
-
-				if (!updatedScene) {
-					throw new Error('Failed to update scene location')
-				}
-
-				scene = updatedScene
-			}
+			const { updatedScene, hasLocationChange } =
+				await this.applyTargetLocation(
+					tx,
+					scene,
+					targetProjectId,
+					targetFolderId
+				)
 
 			const existingSettings = await getSceneSettingsBySceneId(tx, sceneId)
 			const existingAssetIds = existingSettings
@@ -185,15 +158,15 @@ class SceneSettingsService {
 			}
 
 			const assetIds = await this.resolveAssetIds({
-				sceneId: scene.id,
+				sceneId: updatedScene.id,
 				userId,
-				projectId: scene.projectId,
+				projectId: updatedScene.projectId,
 				gltfJson,
 				reusableAssetIds
 			})
 
 			const savedSettings = await upsertSceneSettings(tx, {
-				sceneId: scene.id,
+				sceneId: updatedScene.id,
 				createdBy: userId,
 				settings
 			})
@@ -206,7 +179,7 @@ class SceneSettingsService {
 				await this.upsertSceneStats(tx, {
 					report: optimizationReport,
 					optimizationSettings,
-					sceneId: scene.id,
+					sceneId: updatedScene.id,
 					userId,
 					initialSceneBytes,
 					currentSceneBytes,
@@ -252,7 +225,7 @@ class SceneSettingsService {
 		await this.assertAssetsBelongToProject(sceneAssetIds, projectId)
 
 		const saveResult = await this.db.transaction(async (tx) => {
-			let scene = await this.ensureSceneExists(tx, {
+			const scene = await this.ensureSceneExists(tx, {
 				sceneId,
 				projectId,
 				userId,
@@ -260,40 +233,13 @@ class SceneSettingsService {
 				preferredFolderId: targetFolderId
 			})
 
-			const shouldApplyTargetLocation =
-				typeof targetProjectId !== 'undefined' ||
-				typeof targetFolderId !== 'undefined'
-
-			const resolvedTargetProjectId = targetProjectId ?? scene.projectId
-			const resolvedTargetFolderId =
-				typeof targetFolderId !== 'undefined'
-					? targetFolderId
-					: targetProjectId && targetProjectId !== scene.projectId
-						? null
-						: scene.folderId
-
-			const hasLocationChange =
-				shouldApplyTargetLocation &&
-				(scene.projectId !== resolvedTargetProjectId ||
-					scene.folderId !== resolvedTargetFolderId)
-
-			if (hasLocationChange) {
-				const [updatedScene] = await tx
-					.update(scenes)
-					.set({
-						projectId: resolvedTargetProjectId,
-						folderId: resolvedTargetFolderId,
-						updatedAt: new Date()
-					})
-					.where(eq(scenes.id, scene.id))
-					.returning()
-
-				if (!updatedScene) {
-					throw new Error('Failed to update scene location')
-				}
-
-				scene = updatedScene
-			}
+			const { updatedScene, hasLocationChange } =
+				await this.applyTargetLocation(
+					tx,
+					scene,
+					targetProjectId,
+					targetFolderId
+				)
 
 			const existingSettings = await getSceneSettingsBySceneId(tx, sceneId)
 			const existingAssetIds = existingSettings
@@ -314,7 +260,7 @@ class SceneSettingsService {
 			}
 
 			const savedSettings = await upsertSceneSettings(tx, {
-				sceneId: scene.id,
+				sceneId: updatedScene.id,
 				createdBy: userId,
 				settings
 			})
@@ -327,7 +273,7 @@ class SceneSettingsService {
 				await this.upsertSceneStats(tx, {
 					report: optimizationReport,
 					optimizationSettings,
-					sceneId: scene.id,
+					sceneId: updatedScene.id,
 					userId,
 					initialSceneBytes,
 					currentSceneBytes,
@@ -895,6 +841,60 @@ class SceneSettingsService {
 			.returning()
 
 		return newScene
+	}
+
+	/**
+	 * Applies a target project/folder location to an existing scene row.
+	 * If no location fields are provided, or the effective location matches the
+	 * current one, the original scene row is returned unchanged.
+	 *
+	 * @returns The (possibly updated) scene row and whether a DB write occurred.
+	 */
+	private async applyTargetLocation(
+		tx: SceneSettingsTransaction,
+		scene: typeof scenes.$inferSelect,
+		targetProjectId: string | undefined,
+		targetFolderId: string | null | undefined
+	): Promise<{
+		updatedScene: typeof scenes.$inferSelect
+		hasLocationChange: boolean
+	}> {
+		const shouldApplyTargetLocation =
+			typeof targetProjectId !== 'undefined' ||
+			typeof targetFolderId !== 'undefined'
+
+		const resolvedTargetProjectId = targetProjectId ?? scene.projectId
+		const resolvedTargetFolderId =
+			typeof targetFolderId !== 'undefined'
+				? targetFolderId
+				: targetProjectId && targetProjectId !== scene.projectId
+					? null
+					: scene.folderId
+
+		const hasLocationChange =
+			shouldApplyTargetLocation &&
+			(scene.projectId !== resolvedTargetProjectId ||
+				scene.folderId !== resolvedTargetFolderId)
+
+		if (!hasLocationChange) {
+			return { updatedScene: scene, hasLocationChange: false }
+		}
+
+		const [updatedScene] = await tx
+			.update(scenes)
+			.set({
+				projectId: resolvedTargetProjectId,
+				folderId: resolvedTargetFolderId,
+				updatedAt: new Date()
+			})
+			.where(eq(scenes.id, scene.id))
+			.returning()
+
+		if (!updatedScene) {
+			throw new Error('Failed to update scene location')
+		}
+
+		return { updatedScene, hasLocationChange: true }
 	}
 
 	private async updateSceneAggregateMetadata(

@@ -1,15 +1,8 @@
-import { Button } from '@shared/components/ui/button'
 import { ButtonGroup } from '@shared/components/ui/button-group'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuTrigger
-} from '@shared/components/ui/dropdown-menu'
 import { Separator } from '@shared/components/ui/separator'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue } from 'jotai/react'
-import { MoreVertical } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
@@ -18,26 +11,26 @@ import {
 	PublishDrawer,
 	PublisherSidebar,
 	SaveButton,
-	SaveLocationConfig,
 	SceneInfoTrigger,
 	ToolSidebarTriggers
 } from '.'
 import { useSceneLoader } from '../../hooks'
-import { processAtom } from '../../lib/stores/publisher-config-store'
+import { useLocationChangeState } from '../../hooks/use-location-change-state'
+import {
+	processAtom,
+	saveLocationAtom
+} from '../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
 import { PublisherLoaderData, SceneAggregateResponse } from '../../types/api'
 import { InfoTooltip } from '../info-tooltip'
 import { FloatingPillWrapper } from '../layout-components'
 import { Navigation } from '../navigation'
 
-import type { SaveLocationTarget } from '../../hooks'
-
 const OverlayControls = ({
 	isMobile,
 	user,
 	sceneId,
 	projectId,
-	currentLocation,
 	sceneAggregate,
 	publishedMeta
 }: PublisherLoaderData) => {
@@ -52,14 +45,13 @@ const OverlayControls = ({
 		optimizedTextureBytes,
 		clientTextureBytes
 	} = useAtomValue(optimizationRuntimeAtom)
-	const [saveLocationTarget, setSaveLocationTarget] =
-		useState<SaveLocationTarget>({
-			targetProjectId: currentLocation.projectId ?? projectId ?? undefined,
-			targetFolderId: currentLocation.folderId ?? null
-		})
 
-	// Centralized scene loader - single source of truth (must be inside ModelProvider)
-	// This hook manages scene loading/saving but doesn't return state available via atoms
+	// Save location comes from the Jotai atom — initialized in publisher-layout
+	// and updated by SceneNameAndLocation picker in the sidebar
+	const saveLocationTarget = useAtomValue(saveLocationAtom)
+	const { hasUnsavedLocationChange } = useLocationChangeState()
+
+	// Centralized scene loader — single source of truth (must be inside ModelProvider)
 	const { saveSceneSettings, saveAvailability, persistPendingSceneDraft } =
 		useSceneLoader({
 			sceneId,
@@ -67,6 +59,15 @@ const OverlayControls = ({
 			initialSceneAggregate: sceneAggregate as SceneAggregateResponse | null,
 			sceneMeta: sceneAggregate?.meta ?? null
 		})
+
+	const effectiveSaveAvailability =
+		saveAvailability.reason === 'no-unsaved-changes' && hasUnsavedLocationChange
+			? {
+					...saveAvailability,
+					canSave: true,
+					reason: 'ready' as const
+				}
+			: saveAvailability
 
 	const isUploadStep = !file?.model && step === 'uploading'
 	const isPublished = Boolean(publishedMeta?.publishedAt)
@@ -121,27 +122,11 @@ const OverlayControls = ({
 		<>
 			<FloatingPillWrapper className="bg-muted/50 fixed top-0 right-0 z-20 m-4 rounded-2xl p-1 backdrop-blur-2xl">
 				<ButtonGroup className="items-center">
-					{user && (
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="ghost" size="icon">
-									<MoreVertical />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end" className="w-80">
-								<SaveLocationConfig
-									currentLocation={currentLocation}
-									fallbackProjectId={projectId}
-									onChange={setSaveLocationTarget}
-								/>
-							</DropdownMenuContent>
-						</DropdownMenu>
-					)}
 					<SaveButton
 						sceneId={sceneId}
 						userId={user?.id}
 						saveLocationTarget={saveLocationTarget}
-						saveAvailability={saveAvailability}
+						saveAvailability={effectiveSaveAvailability}
 						onRequireAuth={handleRequireAuthForSave}
 						saveSceneSettings={saveSceneSettings}
 					/>
@@ -155,7 +140,7 @@ const OverlayControls = ({
 						/>
 						<span className="mx-1 mr-3 flex items-center">
 							<p className="text-muted-foreground mx-2 text-xs font-medium tracking-wide">
-								{isPublished ? 'Published' : 'Draft'}
+								Published
 							</p>
 							<InfoTooltip
 								content={`Published at: ${new Date(
@@ -179,7 +164,7 @@ const OverlayControls = ({
 				projectId={projectId ?? undefined}
 				userId={user?.id}
 				saveSceneSettings={saveSceneSettings}
-				saveAvailability={saveAvailability}
+				saveAvailability={effectiveSaveAvailability}
 				info={optimizer.info}
 				report={optimizer.report}
 				publishedAt={
