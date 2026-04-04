@@ -80,13 +80,14 @@ function getUnlockedFeatures(
 		support_dedicated: 'Dedicated support channel'
 	}
 
+	const seen = new Set<string>()
 	const unlocked = Object.keys(selectedEntitlements)
 		.filter((key) => {
 			const typedKey = key as keyof typeof selectedEntitlements
 			return selectedEntitlements[typedKey] && !currentEntitlements[typedKey]
 		})
 		.map((key) => labels[key as keyof typeof labels])
-		.filter((label, index, all) => all.indexOf(label) === index)
+		.filter((label) => label && !seen.has(label) && !!seen.add(label))
 
 	return unlocked.slice(0, 6)
 }
@@ -137,20 +138,35 @@ export default function BillingUpgradePage() {
 		[billing.plan, plan]
 	)
 
+	type CheckoutFetcherResponse = {
+		data: {
+			checkoutUrl: string
+		}
+	}
+
+	const hasCheckoutUrl = (value: unknown): value is CheckoutFetcherResponse => {
+		if (!value || typeof value !== 'object' || !('data' in value)) {
+			return false
+		}
+
+		const { data } = value as { data: unknown }
+
+		if (!data || typeof data !== 'object' || !('checkoutUrl' in data)) {
+			return false
+		}
+
+		return typeof (data as { checkoutUrl: unknown }).checkoutUrl === 'string'
+	}
+
 	useEffect(() => {
 		if (
-			checkoutFetcher.state === 'idle' &&
-			checkoutFetcher.data &&
-			typeof checkoutFetcher.data === 'object' &&
-			'data' in checkoutFetcher.data &&
-			checkoutFetcher.data.data &&
-			typeof checkoutFetcher.data.data === 'object' &&
-			'checkoutUrl' in (checkoutFetcher.data.data as object)
+			checkoutFetcher.state !== 'idle' ||
+			!hasCheckoutUrl(checkoutFetcher.data)
 		) {
-			const checkoutUrl = (checkoutFetcher.data.data as { checkoutUrl: string })
-				.checkoutUrl
-			window.location.href = checkoutUrl
+			return
 		}
+
+		window.location.href = checkoutFetcher.data.data.checkoutUrl
 	}, [checkoutFetcher.state, checkoutFetcher.data])
 
 	const handleStartCheckout = () => {

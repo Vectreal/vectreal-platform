@@ -190,7 +190,9 @@ function PlanCard({
 				: null
 
 	const savingsPct =
-		liveMonthlyAmountCents && liveAnnualAmountCents
+		liveMonthlyAmountCents !== null &&
+		liveAnnualAmountCents !== null &&
+		liveMonthlyAmountCents !== 0
 			? Math.round(
 					(1 - liveAnnualAmountCents / 12 / liveMonthlyAmountCents) * 100
 				)

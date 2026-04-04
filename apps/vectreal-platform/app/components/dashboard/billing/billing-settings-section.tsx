@@ -251,20 +251,32 @@ export function BillingSettingsSection({
 		portalFetcher.submit({}, { method: 'POST', action: '/api/billing/portal' })
 	}
 
-	useEffect(() => {
-		if (
-			portalFetcher.state === 'idle' &&
-			portalFetcher.data &&
-			typeof portalFetcher.data === 'object' &&
-			'data' in portalFetcher.data &&
-			portalFetcher.data.data &&
-			typeof portalFetcher.data.data === 'object' &&
-			'portalUrl' in (portalFetcher.data.data as object)
-		) {
-			const portalUrl = (portalFetcher.data.data as { portalUrl: string })
-				.portalUrl
-			window.location.href = portalUrl
+	type PortalFetcherResponse = {
+		data: {
+			portalUrl: string
 		}
+	}
+
+	const hasPortalUrl = (value: unknown): value is PortalFetcherResponse => {
+		if (!value || typeof value !== 'object' || !('data' in value)) {
+			return false
+		}
+
+		const { data } = value as { data: unknown }
+
+		if (!data || typeof data !== 'object' || !('portalUrl' in data)) {
+			return false
+		}
+
+		return typeof (data as { portalUrl: unknown }).portalUrl === 'string'
+	}
+
+	useEffect(() => {
+		if (portalFetcher.state !== 'idle' || !hasPortalUrl(portalFetcher.data)) {
+			return
+		}
+
+		window.location.href = portalFetcher.data.data.portalUrl
 	}, [portalFetcher.state, portalFetcher.data])
 
 	return (

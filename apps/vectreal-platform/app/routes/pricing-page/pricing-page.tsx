@@ -13,8 +13,9 @@ export async function loader(_: Route.LoaderArgs) {
 	try {
 		const prices = await getCheckoutOptions()
 		return data({ prices })
-	} catch {
+	} catch (error) {
 		// Stripe may not be configured in all environments — graceful fallback
+		console.error('Failed to load checkout options for pricing page.', error)
 		return data({ prices: null })
 	}
 }

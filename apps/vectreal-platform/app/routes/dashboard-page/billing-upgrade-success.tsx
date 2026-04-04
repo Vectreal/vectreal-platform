@@ -67,13 +67,12 @@ export async function loader({ request }: Route.LoaderArgs) {
 	if (sessionId) {
 		try {
 			const stripe = getStripeClient()
-			const session = await stripe.checkout.sessions.retrieve(sessionId, {
-				expand: []
-			})
+			const session = await stripe.checkout.sessions.retrieve(sessionId)
 			planId = session.metadata?.plan_id ?? null
 			planLabel = planId ? (PLAN_LABELS[planId] ?? null) : null
-		} catch {
+		} catch (error) {
 			// Non-critical — Stripe unavailable, continue gracefully
+			console.error('Failed to retrieve Stripe checkout session.', error)
 		}
 	}
 
