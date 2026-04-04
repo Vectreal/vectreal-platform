@@ -24,17 +24,20 @@
 		"packages/core": {
 			"release-type": "node",
 			"component": "core",
-			"package-name": "@vctrl/core"
+			"package-name": "@vctrl/core",
+			"skip-github-release": true
 		},
 		"packages/hooks": {
 			"release-type": "node",
 			"component": "hooks",
-			"package-name": "@vctrl/hooks"
+			"package-name": "@vctrl/hooks",
+			"skip-github-release": true
 		},
 		"packages/viewer": {
 			"release-type": "node",
 			"component": "viewer",
-			"package-name": "@vctrl/viewer"
+			"package-name": "@vctrl/viewer",
+			"skip-github-release": true
 		}
 	}
 }
