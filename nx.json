@@ -29,24 +29,6 @@
 		}
 	},
 	"defaultBase": "main",
-	"release": {
-		"projects": ["packages/*"],
-		"version": {
-			"conventionalCommits": true
-		},
-		"changelog": {
-			"workspaceChangelog": {
-				"createRelease": "github"
-			}
-		},
-		"conventionalCommits": {
-			"types": {
-				"docs": {
-					"semverBump": "patch"
-				}
-			}
-		}
-	},
 	"plugins": [
 		{
 			"plugin": "@nx/rollup/plugin",
