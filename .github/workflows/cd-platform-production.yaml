@@ -42,3 +42,5 @@ jobs:
       application-url: ${{ secrets.APPLICATION_URL_PROD }}
       csrf-secret: ${{ secrets.CSRF_SECRET_PROD }}
       stripe-secret-key: ${{ secrets.STRIPE_SECRET_KEY_PROD }}
+      posthog-token: ${{ secrets.VITE_PUBLIC_POSTHOG_TOKEN }}
+      posthog-host: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}

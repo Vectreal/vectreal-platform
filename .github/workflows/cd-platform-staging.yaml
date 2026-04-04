@@ -55,3 +55,5 @@ jobs:
       application-url: ${{ secrets.APPLICATION_URL_STAGING }}
       csrf-secret: ${{ secrets.CSRF_SECRET_STAGING }}
       stripe-secret-key: ${{ secrets.STRIPE_SECRET_KEY_STAGING }}
+      posthog-token: ${{ secrets.VITE_PUBLIC_POSTHOG_TOKEN }}
+      posthog-host: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
