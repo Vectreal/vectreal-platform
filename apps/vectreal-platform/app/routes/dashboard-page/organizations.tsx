@@ -1,11 +1,25 @@
 import { Badge } from '@shared/components/ui/badge'
+import {
+	Card,
+	CardDescription,
+	CardHeader,
+	CardTitle
+} from '@shared/components/ui/card'
+import {
+	Empty,
+	EmptyDescription,
+	EmptyHeader,
+	EmptyMedia,
+	EmptyTitle
+} from '@shared/components/ui/empty'
 import { Building, Building2 } from 'lucide-react'
 import { useMemo } from 'react'
-import { data, useLoaderData } from 'react-router'
+import { data, Outlet, useLoaderData, useLocation } from 'react-router'
 
 import { Route } from './+types/organizations'
 import DashboardCard from '../../components/dashboard/dashboard-cards'
 import { OrganizationsSkeleton } from '../../components/skeletons'
+import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
 import { computeOrganizationStats } from '../../lib/domain/dashboard/dashboard-stats.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
@@ -54,7 +68,11 @@ export function HydrateFallback() {
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
 const OrganizationsPage = () => {
-	const { organizations } = useLoaderData<typeof loader>()
+	const location = useLocation()
+	const { organizations, organizationStats } = useLoaderData<typeof loader>()
+	const isOrganizationsRootRoute = /^\/dashboard\/organizations\/?$/.test(
+		location.pathname
+	)
 
 	// Sort organizations by role client-side
 	const sortedOrganizations = useMemo(() => {
@@ -76,53 +94,98 @@ const OrganizationsPage = () => {
 		)
 	}, [organizations])
 
-	return (
-		<div className="space-y-16 p-6">
-			<div className="grid gap-4 lg:grid-cols-2">
-				{/* Primary Organization */}
-				{primaryOrganization && (
-					<div className="space-y-2">
-						<h2 className="text-lg font-semibold">Primary Organization</h2>
-						<DashboardCard
-							title={primaryOrganization.organization.name}
-							description="Your primary workspace and default organization"
-							linkTo={`/dashboard/organizations/${primaryOrganization.organization.id}`}
-							icon={<Building2 className="h-5 w-5" />}
-							id={primaryOrganization.organization.id}
-						>
-							<div className="space-y-2">
-								<div className="flex items-center justify-between">
-									<span className="text-primary/60 text-sm">Role</span>
-									<Badge variant="default">
-										{primaryOrganization.membership.role}
-									</Badge>
-								</div>
-								<div className="flex items-center justify-between">
-									<span className="text-primary/60 text-sm">Created</span>
-									<span className="text-sm">
-										{new Date(
-											primaryOrganization.organization.createdAt
-										).toLocaleDateString()}
-									</span>
-								</div>
-							</div>
-						</DashboardCard>
-					</div>
-				)}
+	if (!isOrganizationsRootRoute) {
+		return <Outlet />
+	}
 
-				{/* All Organizations */}
-				<div>
-					<h2 className="text-lg font-semibold">All Organizations</h2>
-					{organizations.length > 0 ? (
-						sortedOrganizations.byRole.map(({ organization, membership }) => (
+	return (
+		<div className="space-y-6 p-6">
+			<div className="grid gap-4 md:grid-cols-3">
+				<Card>
+					<CardHeader className="pb-2">
+						<CardDescription>Total organizations</CardDescription>
+						<CardTitle>{organizationStats.total}</CardTitle>
+					</CardHeader>
+				</Card>
+				<Card>
+					<CardHeader className="pb-2">
+						<CardDescription>Owner memberships</CardDescription>
+						<CardTitle>{organizationStats.owned}</CardTitle>
+					</CardHeader>
+				</Card>
+				<Card>
+					<CardHeader className="pb-2">
+						<CardDescription>Admin memberships</CardDescription>
+						<CardTitle>{organizationStats.admin}</CardTitle>
+					</CardHeader>
+				</Card>
+			</div>
+
+			{primaryOrganization && (
+				<section className="space-y-3">
+					<h2 className="text-lg font-semibold">Primary organization</h2>
+					<DashboardCard
+						title={primaryOrganization.organization.name}
+						description="Your default workspace and ownership context"
+						linkTo={DASHBOARD_ROUTES.ORGANIZATION_DETAIL(
+							primaryOrganization.organization.id
+						)}
+						icon={<Building2 className="h-5 w-5" />}
+						id={primaryOrganization.organization.id}
+						navigationState={{
+							name: primaryOrganization.organization.name,
+							description: 'Organization details'
+						}}
+					>
+						<div className="space-y-2">
+							<div className="flex items-center justify-between">
+								<span className="text-primary/60 text-sm">Role</span>
+								<Badge variant="default">
+									{primaryOrganization.membership.role}
+								</Badge>
+							</div>
+							<div className="flex items-center justify-between">
+								<span className="text-primary/60 text-sm">Created</span>
+								<span className="text-sm">
+									{new Date(
+										primaryOrganization.organization.createdAt
+									).toLocaleDateString()}
+								</span>
+							</div>
+						</div>
+					</DashboardCard>
+				</section>
+			)}
+
+			<section className="space-y-3">
+				<h2 className="text-lg font-semibold">All organizations</h2>
+				{organizations.length === 0 ? (
+					<Empty>
+						<EmptyHeader>
+							<EmptyMedia variant="icon">
+								<Building />
+							</EmptyMedia>
+							<EmptyTitle>No organizations found</EmptyTitle>
+							<EmptyDescription>
+								You do not have access to any organizations yet.
+							</EmptyDescription>
+						</EmptyHeader>
+					</Empty>
+				) : (
+					<div className="grid gap-4 lg:grid-cols-2">
+						{sortedOrganizations.byRole.map(({ organization, membership }) => (
 							<DashboardCard
 								key={organization.id}
 								title={organization.name}
 								description={`${membership.role} • Joined ${new Date(membership.joinedAt).toLocaleDateString()}`}
-								linkTo={`/dashboard/organizations/${organization.id}`}
+								linkTo={DASHBOARD_ROUTES.ORGANIZATION_DETAIL(organization.id)}
 								icon={<Building2 className="h-5 w-5" />}
 								id={organization.id}
-								highlight={false}
+								highlight={membership.role === 'owner'}
+								navigationState={{
+									name: organization.name,
+									description: 'Organization details'
+								}}
 							>
 								<div className="space-y-2">
 									<div className="flex items-center justify-between">
@@ -149,20 +212,10 @@ const OrganizationsPage = () => {
 									</div>
 								</div>
 							</DashboardCard>
-						))
-					) : (
-						<div className="p-8 text-center">
-							<Building className="text-primary/60 mx-auto h-12 w-12" />
-							<h3 className="text-primary mt-2 text-lg font-medium">
-								No organizations found
-							</h3>
-							<p className="text-primary/70 mt-1">
-								You don't have access to any organizations yet.
-							</p>
-						</div>
-					)}
-				</div>
-			</div>
+						))}
+					</div>
+				)}
+			</section>
 		</div>
 	)
 }

@@ -14,6 +14,8 @@ export const DASHBOARD_ROUTES = {
 	PROJECTS: '/dashboard/projects',
 	API_KEYS: '/dashboard/api-keys',
 	ORGANIZATIONS: '/dashboard/organizations',
+	ORGANIZATION_DETAIL: (organizationId: string) =>
+		`/dashboard/organizations/${organizationId}`,
 	BILLING: '/dashboard/billing',
 	BILLING_CHECKOUT: '/dashboard/billing/checkout',
 	BILLING_CHECKOUT_SUCCESS: '/dashboard/billing/checkout-success',
@@ -73,6 +75,13 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 		loadingTitle: 'Organizations',
 		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: ACTION_VARIANT.ORG_LIST
+	},
+	'organization-detail': {
+		title: 'Organization',
+		description: 'Organization details and member access',
+		loadingTitle: 'Organization',
+		loadingDescription: <Skeleton className="h-4 w-1/3" />,
+		actionVariant: undefined
 	},
 	billing: {
 		title: 'Billing & Plans',

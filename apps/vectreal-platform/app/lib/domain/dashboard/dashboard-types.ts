@@ -9,7 +9,8 @@ import type {
 	organizations,
 	projects,
 	sceneFolders,
-	scenes
+	scenes,
+	users
 } from '../../../db/schema'
 import type { UserWithDefaults } from '../user/user-repository.server'
 import type { User } from '@supabase/supabase-js'
@@ -53,6 +54,29 @@ export interface OrganizationsLoaderData {
 	userWithDefaults: UserWithDefaults
 	organizations: OrganizationWithMembership[]
 	organizationStats: OrganizationStats
+}
+
+export interface OrganizationMemberWithUser {
+	membership: typeof organizationMemberships.$inferSelect
+	user: Pick<typeof users.$inferSelect, 'id' | 'email' | 'name'>
+}
+
+export interface OrganizationDetailLoaderData {
+	user: User
+	userWithDefaults: UserWithDefaults
+	organization: typeof organizations.$inferSelect
+	membership: typeof organizationMemberships.$inferSelect
+	members: OrganizationMemberWithUser[]
+	projectsTotal: number
+	billing: {
+		plan: Plan
+		billingState: BillingState
+	}
+	entitlements: {
+		orgMultiMember: boolean
+		orgRoles: boolean
+	}
+	isReadOnlyBillingState: boolean
 }
 
 /**
@@ -124,6 +148,7 @@ export interface SceneLoaderData {
 export interface SettingsLoaderData {
 	user: User
 	userWithDefaults: UserWithDefaults
+	themeMode: 'system' | 'light' | 'dark'
 }
 
 /**

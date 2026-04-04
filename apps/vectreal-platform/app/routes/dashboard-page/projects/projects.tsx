@@ -1,13 +1,3 @@
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle
-} from '@shared/components/ui/alert-dialog'
 import { Button } from '@shared/components/ui/button'
 import {
 	Empty,
@@ -27,6 +17,7 @@ import {
 	projectColumns,
 	type ProjectRow
 } from '../../../components/dashboard/table-columns'
+import { WrittenConfirmationModal } from '../../../components/shared/written-confirmation-modal'
 import { ProjectsGridSkeleton } from '../../../components/skeletons'
 import { useDashboardTableState } from '../../../hooks/use-dashboard-table-state'
 import {
@@ -462,7 +453,7 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 					<EmptyProjectsState showCreateLink={canCreateProjects} />
 				)}
 			</div>
-			<AlertDialog
+			<WrittenConfirmationModal
 				open={deleteDialogOpen}
 				onOpenChange={(open) => {
 					setDeleteDialogOpen(open)
@@ -470,29 +461,19 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 						setProjectIdsToDelete([])
 					}
 				}}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Delete Projects</AlertDialogTitle>
-						<AlertDialogDescription>
-							{projectIdsToDelete.length === 1
-								? 'Delete this project? This action cannot be undone.'
-								: `Delete ${projectIdsToDelete.length} selected projects? This action cannot be undone.`}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel disabled={isDeletingProjects}>
-							Cancel
-						</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={confirmDeleteProjects}
-							disabled={isDeletingProjects}
-						>
-							Delete
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+				title="Delete Projects"
+				description={
+					projectIdsToDelete.length === 1
+						? 'Delete this project and all nested data? This action cannot be undone.'
+						: `Delete ${projectIdsToDelete.length} selected projects and all nested data? This action cannot be undone.`
+				}
+				confirmationText="DELETE"
+				confirmLabel="Delete"
+				isPending={isDeletingProjects}
+				onConfirm={() => {
+					confirmDeleteProjects()
+				}}
+			/>
 			<Outlet />
 		</>
 	)

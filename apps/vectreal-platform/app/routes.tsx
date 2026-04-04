@@ -158,7 +158,12 @@ export default [
 				route('new', './routes/dashboard-page/api-keys-new.tsx'),
 				route(':keyId/edit', './routes/dashboard-page/api-keys-edit.tsx')
 			]),
-			route('organizations', './routes/dashboard-page/organizations.tsx'),
+			route('organizations', './routes/dashboard-page/organizations.tsx', [
+				route(
+					':organizationId',
+					'./routes/dashboard-page/organizations.$organizationId.tsx'
+				)
+			]),
 			route('billing', './routes/dashboard-page/billing.tsx'),
 			route('billing/checkout', './routes/dashboard-page/billing-checkout.tsx'),
 			route(
