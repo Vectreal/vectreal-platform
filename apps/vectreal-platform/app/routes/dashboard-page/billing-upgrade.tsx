@@ -1,6 +1,6 @@
+import { useFeatureFlagEnabled, usePostHog } from '@posthog/react'
 import { Button } from '@shared/components/ui/button'
 import { Card, CardContent } from '@shared/components/ui/card'
-import { useFeatureFlagEnabled } from '@posthog/react'
 import {
 	AlertTriangle,
 	ArrowRight,
@@ -22,9 +22,10 @@ import { FeatureCompareGrid } from '../../components/dashboard/billing/feature-c
 import { PricingCardsSection } from '../../components/dashboard/billing/pricing-cards-section'
 import { PLAN_ENTITLEMENTS, type Plan } from '../../constants/plan-config'
 import { loadBillingDashboardData } from '../../lib/domain/billing/billing-dashboard-loader.server'
-import type { PostHogContext } from '../../lib/posthog/posthog-middleware'
 
 import type { BillingCheckoutPeriods } from '../../lib/domain/dashboard/dashboard-types'
+import type { PostHogContext } from '../../lib/posthog/posthog-middleware'
+
 
 const PLAN_LABELS = {
 	free: 'Free',
@@ -127,6 +128,7 @@ export default function BillingUpgradePage() {
 	} = useLoaderData<typeof loader>()
 	const [searchParams] = useSearchParams()
 	const checkoutFetcher = useFetcher()
+	const posthog = usePostHog()
 
 	// Client-side flag evaluation — undefined while PostHog is loading; fall back
 	// to the server-resolved value so the button state is correct on first render.
@@ -156,6 +158,10 @@ export default function BillingUpgradePage() {
 		() => getUnlockedFeatures(billing.plan, plan),
 		[billing.plan, plan]
 	)
+
+	useEffect(() => {
+		posthog?.capture('view_pricing', { source: 'settings', plan: billing.plan })
+	}, [posthog, billing.plan])
 
 	type CheckoutFetcherResponse = {
 		data: {
@@ -190,6 +196,12 @@ export default function BillingUpgradePage() {
 
 	const handleStartCheckout = () => {
 		if (!selectedPrice) return
+		posthog?.capture('plan_upgrade_started', {
+			from_plan: billing.plan,
+			to_plan: plan,
+			billing_period: billingPeriod,
+			trigger: searchParams.get('trigger') ?? 'settings'
+		})
 		checkoutFetcher.submit(
 			JSON.stringify({
 				planId: plan,

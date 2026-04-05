@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import {
@@ -11,7 +12,7 @@ import {
 import { Progress } from '@shared/components/ui/progress'
 import { useAtom } from 'jotai/react'
 import { AlertTriangle, Lock, TrendingUp, Zap } from 'lucide-react'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router'
 
 import { upgradeModalAtom } from '../../lib/stores/upgrade-modal-store'
@@ -61,6 +62,8 @@ const PLAN_LABELS: Record<string, string> = {
 export function UpgradeModal() {
 	const [state, setState] = useAtom(upgradeModalAtom)
 	const location = useLocation()
+	const posthog = usePostHog()
+	const wasOpenRef = useRef(false)
 
 	const handleOpenChange = useCallback(
 		(open: boolean) => {
@@ -72,6 +75,34 @@ export function UpgradeModal() {
 	const closeModal = useCallback(() => {
 		setState((prev) => ({ ...prev, open: false }))
 	}, [setState])
+
+	// Fire analytics events when the modal transitions from closed to open
+	useEffect(() => {
+		if (state.open && !wasOpenRef.current) {
+			posthog?.capture('upgrade_modal_open', {
+				reason: state.reason,
+				plan: state.plan,
+				limit_key: state.limitKey,
+				action_attempted: state.actionAttempted
+			})
+
+			if (state.reason === 'quota_exceeded') {
+				posthog?.capture('limit_gate_shown', {
+					limit_key: state.limitKey ?? 'unknown',
+					plan: state.plan,
+					action_attempted: state.actionAttempted
+				})
+			}
+		}
+		wasOpenRef.current = state.open
+	}, [
+		state.open,
+		state.reason,
+		state.plan,
+		state.limitKey,
+		state.actionAttempted,
+		posthog
+	])
 
 	useEffect(() => {
 		if (

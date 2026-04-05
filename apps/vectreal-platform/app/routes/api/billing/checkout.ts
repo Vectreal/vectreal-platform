@@ -32,9 +32,11 @@ import { Route } from './+types/checkout'
 import { getDbClient } from '../../../db/client'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
+import { getOrgSubscription } from '../../../lib/domain/billing/entitlement-service.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
 import { ensureSameOriginMutation } from '../../../lib/http/csrf.server'
 import { getStripeClient } from '../../../lib/stripe.server'
+
 import type { PostHogContext } from '../../../lib/posthog/posthog-middleware'
 
 // ---------------------------------------------------------------------------
@@ -179,7 +181,7 @@ export async function action({
 		)
 	}
 
-	// Fetch existing subscription to determine the current Stripe customer ID
+	// Fetch existing subscription to determine the current Stripe customer ID and current plan
 	const db = getDbClient()
 	const [existingSub] = await db
 		.select({
@@ -188,6 +190,8 @@ export async function action({
 		.from(orgSubscriptions)
 		.where(eq(orgSubscriptions.organizationId, organizationId))
 		.limit(1)
+
+	const { plan: currentPlan } = await getOrgSubscription(organizationId)
 
 	const stripe = getStripeClient()
 	const selectedPrice = await stripe.prices.retrieve(priceId, {
@@ -228,7 +232,8 @@ export async function action({
 		metadata: {
 			organization_id: organizationId,
 			plan_id: planId,
-			billing_period: billingPeriod
+			billing_period: billingPeriod,
+			from_plan: currentPlan
 		},
 		subscription_data: {
 			metadata: {

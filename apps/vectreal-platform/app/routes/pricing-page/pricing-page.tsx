@@ -1,6 +1,7 @@
+import { usePostHog } from '@posthog/react'
 import { Button } from '@shared/components/ui/button'
 import { Separator } from '@shared/components/ui/separator'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { data, Link, useLoaderData } from 'react-router'
 
 import { FeatureCompareGrid } from '../../components/dashboard/billing/feature-compare-grid'
@@ -44,6 +45,11 @@ export function meta(_: Route.MetaArgs) {
 export default function PricingPage() {
 	const { prices } = useLoaderData<typeof loader>()
 	const [period, setPeriod] = useState<'monthly' | 'annual'>('monthly')
+	const posthog = usePostHog()
+
+	useEffect(() => {
+		posthog?.capture('view_pricing', { source: 'direct' })
+	}, [posthog])
 
 	return (
 		<main className="mx-auto max-w-7xl space-y-20 px-6 py-16">

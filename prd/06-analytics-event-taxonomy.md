@@ -89,6 +89,7 @@ Every event automatically includes the following properties:
 
 | Event name | Trigger | Required properties | Optional properties | Consent required |
 |------------|---------|---------------------|---------------------|-----------------|
+| `view_pricing` | Pricing page or upgrade page viewed | — | `plan`, `source` (direct\|upgrade_modal\|limit_gate\|settings) | `analytics` |
 | `plan_upgrade_started` | User initiates checkout | `from_plan`, `to_plan`, `billing_period` (monthly\|annual) | `trigger` (in_app_prompt\|settings\|limit_gate) | `analytics` |
 | `plan_upgrade_completed` | Checkout session succeeds | `from_plan`, `to_plan`, `billing_period` | — | `analytics` |
 | `plan_downgrade_scheduled` | Downgrade confirmed by user | `from_plan`, `to_plan` | — | `analytics` |
@@ -97,6 +98,7 @@ Every event automatically includes the following properties:
 | `trial_converted` | Trial converted to paid | `plan`, `billing_period` | — | `analytics` |
 | `trial_expired` | Trial ended without conversion | `plan` | — | `analytics` |
 | `limit_gate_shown` | User hits a quota wall | `limit_key`, `plan` | `action_attempted` | `analytics` |
+| `upgrade_modal_open` | Upgrade / upsell modal displayed | `reason` (quota_exceeded\|feature_not_available\|plan_inactive), `plan` | `limit_key`, `action_attempted` | `analytics` |
 
 ---
 
