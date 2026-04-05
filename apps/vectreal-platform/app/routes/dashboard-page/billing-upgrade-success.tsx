@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import {
@@ -9,6 +10,7 @@ import {
 } from '@shared/components/ui/card'
 import { Separator } from '@shared/components/ui/separator'
 import { Check, CheckCircle2, ExternalLink } from 'lucide-react'
+import { useEffect } from 'react'
 import { data, Link, useLoaderData } from 'react-router'
 
 import { PLAN_ENTITLEMENTS } from '../../constants/plan-config'
@@ -63,6 +65,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	let planId: string | null = null
 	let planLabel: string | null = null
+	let billingPeriod: string | null = null
+	let fromPlan: string | null = null
 
 	if (sessionId) {
 		try {
@@ -70,18 +74,31 @@ export async function loader({ request }: Route.LoaderArgs) {
 			const session = await stripe.checkout.sessions.retrieve(sessionId)
 			planId = session.metadata?.plan_id ?? null
 			planLabel = planId ? (PLAN_LABELS[planId] ?? null) : null
+			billingPeriod = session.metadata?.billing_period ?? null
+			fromPlan = session.metadata?.from_plan ?? null
 		} catch (error) {
 			// Non-critical — Stripe unavailable, continue gracefully
 			console.error('Failed to retrieve Stripe checkout session.', error)
 		}
 	}
 
-	return data({ planId, planLabel })
+	return data({ planId, planLabel, billingPeriod, fromPlan })
 }
 
 export default function BillingUpgradeSuccessPage() {
-	const { planId, planLabel } = useLoaderData<typeof loader>()
+	const { planId, planLabel, billingPeriod, fromPlan } =
+		useLoaderData<typeof loader>()
 	const unlockedFeatures = planId ? getUnlockedHighlights(planId) : []
+	const posthog = usePostHog()
+
+	useEffect(() => {
+		if (!planId) return
+		posthog?.capture('plan_upgrade_completed', {
+			from_plan: fromPlan ?? 'free',
+			to_plan: planId,
+			billing_period: billingPeriod ?? 'monthly'
+		})
+	}, [planId, fromPlan, billingPeriod, posthog])
 
 	return (
 		<div className="mx-auto w-full max-w-xl p-6">

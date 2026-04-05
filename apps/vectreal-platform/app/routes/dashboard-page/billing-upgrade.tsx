@@ -1,3 +1,4 @@
+import { useFeatureFlagEnabled, usePostHog } from '@posthog/react'
 import { Button } from '@shared/components/ui/button'
 import { Card, CardContent } from '@shared/components/ui/card'
 import {
@@ -23,6 +24,8 @@ import { PLAN_ENTITLEMENTS, type Plan } from '../../constants/plan-config'
 import { loadBillingDashboardData } from '../../lib/domain/billing/billing-dashboard-loader.server'
 
 import type { BillingCheckoutPeriods } from '../../lib/domain/dashboard/dashboard-types'
+import type { PostHogContext } from '../../lib/posthog/posthog-middleware'
+
 
 const PLAN_LABELS = {
 	free: 'Free',
@@ -103,17 +106,35 @@ function computeAnnualSavings(pricing: BillingCheckoutPeriods) {
 	}
 }
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request, context }: Route.LoaderArgs) {
 	const { loaderData, headers } = await loadBillingDashboardData(request)
-	return data(loaderData, { headers })
+	const posthog = (context as PostHogContext).posthog
+	const checkoutEnabled = posthog
+		? ((await posthog.isFeatureEnabled(
+				'billing-checkout',
+				loaderData.user.id
+			)) ?? false)
+		: true // default to enabled when PostHog is not configured (e.g. local dev)
+	return data({ ...loaderData, checkoutEnabled }, { headers })
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
 export default function BillingUpgradePage() {
-	const { checkoutOptions, billing } = useLoaderData<typeof loader>()
+	const {
+		checkoutOptions,
+		billing,
+		checkoutEnabled: serverCheckoutEnabled
+	} = useLoaderData<typeof loader>()
 	const [searchParams] = useSearchParams()
 	const checkoutFetcher = useFetcher()
+	const posthog = usePostHog()
+
+	// Client-side flag evaluation — undefined while PostHog is loading; fall back
+	// to the server-resolved value so the button state is correct on first render.
+	const clientFlagEnabled = useFeatureFlagEnabled('billing-checkout')
+	const checkoutEnabled =
+		clientFlagEnabled !== undefined ? clientFlagEnabled : serverCheckoutEnabled
 
 	const requestedPlan = searchParams.get('plan')
 	const initialPlan = requestedPlan === 'business' ? 'business' : 'pro'
@@ -137,6 +158,10 @@ export default function BillingUpgradePage() {
 		() => getUnlockedFeatures(billing.plan, plan),
 		[billing.plan, plan]
 	)
+
+	useEffect(() => {
+		posthog?.capture('view_pricing', { source: 'settings', plan: billing.plan })
+	}, [posthog, billing.plan])
 
 	type CheckoutFetcherResponse = {
 		data: {
@@ -171,6 +196,12 @@ export default function BillingUpgradePage() {
 
 	const handleStartCheckout = () => {
 		if (!selectedPrice) return
+		posthog?.capture('plan_upgrade_started', {
+			from_plan: billing.plan,
+			to_plan: plan,
+			billing_period: billingPeriod,
+			trigger: searchParams.get('trigger') ?? 'settings'
+		})
 		checkoutFetcher.submit(
 			JSON.stringify({
 				planId: plan,
@@ -240,6 +271,22 @@ export default function BillingUpgradePage() {
 							</div>
 						)}
 
+						{!checkoutEnabled && (
+							<div className="bg-muted border-border flex items-start gap-2 rounded-lg border p-3">
+								<AlertTriangle className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+								<p className="text-muted-foreground text-sm">
+									Checkout is temporarily unavailable. Please try again later or{' '}
+									<a
+										href="mailto:support@vectreal.com"
+										className="underline underline-offset-2"
+									>
+										contact support
+									</a>
+									.
+								</p>
+							</div>
+						)}
+
 						<div className="flex justify-between gap-4 max-md:flex-col">
 							<div className="flex flex-col gap-1">
 								<span className="flex grow flex-col">
@@ -282,7 +329,7 @@ export default function BillingUpgradePage() {
 									size="lg"
 									className="w-full gap-2"
 									onClick={handleStartCheckout}
-									disabled={!selectedPrice || isSubmitting}
+									disabled={!selectedPrice || isSubmitting || !checkoutEnabled}
 								>
 									{isSubmitting ? (
 										<>

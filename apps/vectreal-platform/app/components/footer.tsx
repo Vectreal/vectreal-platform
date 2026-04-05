@@ -3,9 +3,12 @@ import { cn } from '@shared/utils'
 import { motion } from 'framer-motion'
 import { Link, useLocation } from 'react-router'
 
+import { useConsent } from './consent/consent-context'
 import { ShimmerRotatingText } from './shimmer-rotating-text'
 
 export const SlimFooter = () => {
+	const { setPreferencesOpen } = useConsent()
+
 	return (
 		<footer className="border-border/50 bg-background/80 w-full border-t px-6 py-4 backdrop-blur-sm">
 			<div className="text-foreground/70 mx-auto flex max-w-7xl flex-col items-center justify-center gap-2 text-center text-sm md:flex-row md:gap-4">
@@ -16,6 +19,14 @@ export const SlimFooter = () => {
 				<Link to="/privacy-policy">Privacy Policy</Link>
 				<span>·</span>
 				<Link to="/terms-of-service">Terms of Service</Link>
+				<span>·</span>
+				<button
+					type="button"
+					className="hover:text-foreground transition-colors"
+					onClick={() => setPreferencesOpen(true)}
+				>
+					Cookie Preferences
+				</button>
 			</div>
 		</footer>
 	)
@@ -23,6 +34,7 @@ export const SlimFooter = () => {
 
 export const Footer = () => {
 	const { pathname } = useLocation()
+	const { setPreferencesOpen } = useConsent()
 	const isHomePage = pathname === '/' || pathname === '/home'
 
 	const whispers = [
@@ -61,6 +73,9 @@ export const Footer = () => {
 									<Link to="https://github.com/Vectreal/vectreal-platform/releases">
 										Release Notes
 									</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="/changelog">Changelog</Link>
 								</li>
 							</ul>
 						</div>
@@ -109,6 +124,18 @@ export const Footer = () => {
 							<ul className="flex flex-col gap-4">
 								<li className="text-foreground list-item">
 									<Link to="/privacy-policy">Privacy Policy</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="/code-of-conduct">Code of Conduct</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<button
+										type="button"
+										className="hover:text-foreground transition-colors"
+										onClick={() => setPreferencesOpen(true)}
+									>
+										Cookie Preferences
+									</button>
 								</li>
 								<li className="text-foreground list-item">
 									<Link to="/terms-of-service">Terms of Service</Link>

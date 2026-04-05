@@ -6,6 +6,7 @@ import { orgEntitlementOverrides } from './billing/org-entitlement-overrides'
 import { orgLimitOverrides } from './billing/org-limit-overrides'
 import { orgSubscriptions } from './billing/subscriptions'
 import { orgUsageCounters } from './billing/usage-counters'
+import { consentRecords } from './consent/consent-records'
 import { organizationMemberships } from './core/organization-memberships'
 import { organizations } from './core/organizations'
 import { users } from './core/users'
@@ -47,7 +48,15 @@ export const usersRelations = relations(users, ({ many }) => ({
 	sceneSettings: many(sceneSettings),
 	sceneStats: many(sceneStats),
 	scenePublished: many(scenePublished),
-	organizationMemberships: many(organizationMemberships)
+	organizationMemberships: many(organizationMemberships),
+	consentRecords: many(consentRecords)
+}))
+
+export const consentRecordsRelations = relations(consentRecords, ({ one }) => ({
+	user: one(users, {
+		fields: [consentRecords.userId],
+		references: [users.id]
+	})
 }))
 
 export const apiKeysRelations = relations(apiKeys, ({ one, many }) => ({

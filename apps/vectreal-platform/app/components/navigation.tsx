@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { VectrealLogoAnimated } from '@shared/components/assets/icons/vectreal-logo-animated'
 import { useIsMobile } from '@shared/components/hooks/use-mobile'
 import { Button } from '@shared/components/ui/button'
@@ -26,8 +27,10 @@ export const Navigation = ({ user }: NavigationProps) => {
 	const isDocsPage = pathname.startsWith('/docs')
 
 	const { submit } = useFetcher()
+	const posthog = usePostHog()
 
 	async function handleLogout() {
+		posthog?.reset()
 		await submit(null, {
 			method: 'post',
 			action: '/auth/logout'

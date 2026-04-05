@@ -42,6 +42,14 @@ The application requires the following environment variables to run properly:
 - **`APPLICATION_URL`**: Application URL for OAuth redirects and callbacks
 - **`ENVIRONMENT`**: Environment name (e.g., production, staging, development)
 
+### Analytics Configuration
+
+- **`VITE_PUBLIC_POSTHOG_TOKEN`** _(optional)_: PostHog project API key. When omitted, analytics are disabled. Obtain from your PostHog project settings.
+  ```
+  phc_your-posthog-project-api-key
+  ```
+- **`VITE_PUBLIC_POSTHOG_HOST`** _(optional, default: `https://us.i.posthog.com`)_: PostHog ingestion endpoint. Set to your self-hosted instance URL if applicable.
+
 ### Security Configuration
 
 - **`CSRF_SECRET`** _(required in production)_: Secret used to sign CSRF/session cookies. In this app, production boot fails if neither `CSRF_SECRET` nor `SESSION_SECRET` is set.

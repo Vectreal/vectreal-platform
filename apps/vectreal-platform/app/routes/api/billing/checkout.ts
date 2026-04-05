@@ -32,9 +32,12 @@ import { Route } from './+types/checkout'
 import { getDbClient } from '../../../db/client'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
+import { getOrgSubscription } from '../../../lib/domain/billing/entitlement-service.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
 import { ensureSameOriginMutation } from '../../../lib/http/csrf.server'
 import { getStripeClient } from '../../../lib/stripe.server'
+
+import type { PostHogContext } from '../../../lib/posthog/posthog-middleware'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -99,7 +102,10 @@ function resolvePlanFromPrice(price: Stripe.Price): string | null {
 // Action
 // ---------------------------------------------------------------------------
 
-export async function action({ request }: Route.ActionArgs): Promise<Response> {
+export async function action({
+	request,
+	context
+}: Route.ActionArgs): Promise<Response> {
 	if (request.method !== 'POST') {
 		return ApiResponse.methodNotAllowed()
 	}
@@ -112,6 +118,20 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 	const { user, userWithDefaults, headers } =
 		await loadAuthenticatedUser(request)
 	const responseHeaders = new Headers(headers)
+
+	// Feature flag guard — block checkout when billing-checkout is disabled
+	const posthog = (context as PostHogContext).posthog
+	if (posthog) {
+		const checkoutEnabled = await posthog.isFeatureEnabled(
+			'billing-checkout',
+			user.id
+		)
+		if (!checkoutEnabled) {
+			return ApiResponse.forbidden('Billing checkout is currently disabled', {
+				headers: responseHeaders
+			})
+		}
+	}
 
 	let body: { planId?: unknown; priceId?: unknown; billingPeriod?: unknown }
 
@@ -161,7 +181,7 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 		)
 	}
 
-	// Fetch existing subscription to determine the current Stripe customer ID
+	// Fetch existing subscription to determine the current Stripe customer ID and current plan
 	const db = getDbClient()
 	const [existingSub] = await db
 		.select({
@@ -170,6 +190,8 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 		.from(orgSubscriptions)
 		.where(eq(orgSubscriptions.organizationId, organizationId))
 		.limit(1)
+
+	const { plan: currentPlan } = await getOrgSubscription(organizationId)
 
 	const stripe = getStripeClient()
 	const selectedPrice = await stripe.prices.retrieve(priceId, {
@@ -210,7 +232,8 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 		metadata: {
 			organization_id: organizationId,
 			plan_id: planId,
-			billing_period: billingPeriod
+			billing_period: billingPeriod,
+			from_plan: currentPlan
 		},
 		subscription_data: {
 			metadata: {

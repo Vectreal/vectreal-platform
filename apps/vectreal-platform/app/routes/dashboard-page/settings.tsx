@@ -25,7 +25,7 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
-import { AlertTriangle, Save, Settings2, UserRound } from 'lucide-react'
+import { AlertTriangle, Save, Settings2, Shield, UserRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { data, Form as RemixForm, redirect, useSubmit } from 'react-router'
@@ -37,6 +37,7 @@ import { toast } from 'sonner'
 import { z, ZodError } from 'zod'
 
 import { Route } from './+types/settings'
+import { useConsent } from '../../components/consent/consent-context'
 import { WrittenConfirmationModal } from '../../components/shared/written-confirmation-modal'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import {
@@ -234,6 +235,7 @@ export default function SettingsPage({
 }: Route.ComponentProps) {
 	const [deleteModalOpen, setDeleteModalOpen] = useState(false)
 	const [themeMode, setThemeMode] = useState(loaderData.themeMode)
+	const { setPreferencesOpen } = useConsent()
 
 	const handleThemeModeChange = (value: string) => {
 		if (value === 'system' || value === 'light' || value === 'dark') {
@@ -410,6 +412,31 @@ export default function SettingsPage({
 				</CardContent>
 				<CardFooter className="text-muted-foreground justify-between text-xs">
 					<span>Theme is persisted with a secure cookie.</span>
+					<Badge variant="secondary">Personal</Badge>
+				</CardFooter>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle className="flex items-center gap-2">
+						<Shield className="h-5 w-5" />
+						Privacy &amp; cookies
+					</CardTitle>
+					<CardDescription>
+						Review and update your cookie and tracking preferences.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<Button
+						type="button"
+						variant="outline"
+						onClick={() => setPreferencesOpen(true)}
+					>
+						Manage cookie preferences
+					</Button>
+				</CardContent>
+				<CardFooter className="text-muted-foreground justify-between text-xs">
+					<span>Changes apply immediately across all sessions.</span>
 					<Badge variant="secondary">Personal</Badge>
 				</CardFooter>
 			</Card>
