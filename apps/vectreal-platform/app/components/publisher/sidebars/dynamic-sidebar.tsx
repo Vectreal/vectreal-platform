@@ -103,39 +103,41 @@ export const DynamicSidebar = ({
 	return (
 		<div className={cn('fixed top-0 z-30 h-full', positionClass)}>
 			<AnimatePresence mode="wait">
-				<motion.div
-					key="panel"
-					initial="hidden"
-					animate={open ? 'visible' : 'hidden'}
-					exit="exit"
-					variants={variants}
-					transition={{ type: 'ease', duration: 0.3 }}
-					className={cn(
-						'bg-muted/50 relative z-20 m-4 h-full w-92 flex-col overflow-hidden rounded-xl border shadow-xl backdrop-blur-2xl',
-						className
-					)}
-				>
-					{showDesktopHeader && (
-						<div className="flex shrink-0 items-start justify-between border-b px-3 py-3">
-							<div>
-								<p className="text-sm font-semibold">{title}</p>
-								{description && (
-									<p className="text-muted-foreground text-xs">{description}</p>
-								)}
+				{open && (
+					<motion.div
+						key="panel"
+						initial="hidden"
+						animate="visible"
+						exit="exit"
+						variants={variants}
+						transition={{ type: 'tween', ease: 'easeInOut', duration: 0.3 }}
+						className={cn(
+							'bg-muted/50 relative z-20 m-4 h-full w-[23rem] flex-col overflow-hidden rounded-xl border shadow-xl backdrop-blur-2xl',
+							className
+						)}
+					>
+						{showDesktopHeader && (
+							<div className="flex shrink-0 items-start justify-between border-b px-3 py-3">
+								<div>
+									<p className="text-sm font-semibold">{title}</p>
+									{description && (
+										<p className="text-muted-foreground text-xs">{description}</p>
+									)}
+								</div>
+								<Button
+									variant="ghost"
+									size="icon"
+									className="shrink-0"
+									onClick={handleClose}
+								>
+									<X className="h-4 w-4" />
+								</Button>
 							</div>
-							<Button
-								variant="ghost"
-								size="icon"
-								className="shrink-0"
-								onClick={handleClose}
-							>
-								<X className="h-4 w-4" />
-							</Button>
-						</div>
-					)}
+						)}
 
-					<div className="flex min-h-0 flex-1 flex-col">{children}</div>
-				</motion.div>
+						<div className="flex min-h-0 flex-1 flex-col">{children}</div>
+					</motion.div>
+				)}
 			</AnimatePresence>
 		</div>
 	)

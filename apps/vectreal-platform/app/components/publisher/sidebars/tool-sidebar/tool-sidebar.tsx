@@ -148,10 +148,10 @@ export const ToolSidebar = ({ user, isMobile = false }: ToolSidebarProps) => {
 			<div
 				className={cn(
 					'fixed top-0 z-20 m-4 flex gap-2 transition-all',
-					showSidebar && !isMobile ? 'left-94' : 'left-0'
+					showSidebar && !isMobile ? 'left-[23.5rem]' : 'left-0'
 				)}
 			>
-				{!isMobile && user && (
+				{!isMobile && !showSidebar && user && (
 					<UserMenu size="sm" user={user} onLogout={handleLogout} />
 				)}
 				<TooltipButton
