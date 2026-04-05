@@ -21,6 +21,7 @@ import {
 import { ScenePublishStateControl } from '../../../../publishing/scene-publish-state-control'
 import { itemVariants } from '../../animation'
 
+import type { SaveSceneFn } from '../../../../../hooks'
 import type {
 	PublishSceneResponse,
 	ScenePublishStateResponse
@@ -31,11 +32,7 @@ type PublishStatus = 'idle' | 'saving' | 'publishing' | 'success' | 'error'
 interface PublishOptionsProps {
 	sceneId?: string
 	publishState: ScenePublishStateResponse
-	saveSceneSettings: () => Promise<
-		| { sceneId?: string; unchanged?: boolean; [key: string]: unknown }
-		| { unchanged: true }
-		| undefined
-	>
+	saveSceneSettings: SaveSceneFn
 }
 
 export const PublishOptions: FC<PublishOptionsProps> = ({

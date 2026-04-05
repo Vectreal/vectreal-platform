@@ -1,6 +1,5 @@
 export { default as ControlsOverlay } from './controls-overlay'
 export { default as SaveButton } from './save-button'
-export { default as ToolSidebarTriggers } from './tool-sidebar-triggers'
 export * from './settings-components'
 export * from './sidebars'
 export * from './scene-info'

@@ -8,11 +8,11 @@ import { toast } from 'sonner'
 
 import {
 	InfoBanner,
-	PublishDrawer,
-	PublisherSidebar,
+	PublishSidebar,
 	SaveButton,
 	SceneInfoTrigger,
-	ToolSidebarTriggers
+	ToolSidebarTriggers,
+	ToolSidebar
 } from '.'
 import { useSceneLoader } from '../../hooks'
 import { useLocationChangeState } from '../../hooks/use-location-change-state'
@@ -157,9 +157,10 @@ const OverlayControls = ({
 				isLoading={isSceneSizeLoading}
 				statusText={optimizerStatusText}
 			/>
-			<PublishDrawer
+			<PublishSidebar
 				open={showPublishPanel}
 				onOpenChange={handlePublishPanelChange}
+				isMobile={isMobile}
 				sceneId={sceneId ?? undefined}
 				projectId={projectId ?? undefined}
 				userId={user?.id}
@@ -190,8 +191,8 @@ const OverlayControls = ({
 				stats={latestSceneStats}
 				onRequireAuth={handleRequireAuthForSave}
 			/>
-			<ToolSidebarTriggers />
-			<PublisherSidebar user={user} />
+			<ToolSidebarTriggers isMobile={isMobile} />
+			<ToolSidebar user={user} isMobile={isMobile} />
 		</>
 	)
 }

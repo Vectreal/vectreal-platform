@@ -1,5 +1,14 @@
 import { usePostHog } from '@posthog/react'
 import { VectrealLogoSmall } from '@shared/components/assets/icons/vectreal-logo-small'
+import { Button } from '@shared/components/ui/button'
+import {
+	Drawer,
+	DrawerClose,
+	DrawerContent,
+	DrawerDescription,
+	DrawerHeader,
+	DrawerTitle
+} from '@shared/components/ui/drawer'
 import {
 	Tabs,
 	TabsContent,
@@ -12,7 +21,7 @@ import { User } from '@supabase/supabase-js'
 import { motion } from 'framer-motion'
 import { AnimatePresence } from 'framer-motion'
 import { useAtom } from 'jotai/react'
-import { BarChart4, Camera, SidebarIcon } from 'lucide-react'
+import { BarChart4, Camera, SidebarIcon, X } from 'lucide-react'
 import { useCallback } from 'react'
 import { Link, useFetcher } from 'react-router'
 
@@ -62,6 +71,46 @@ const SidebarTabs = ({
 	</Tabs>
 )
 
+const MobileSidebarTabs = ({
+	mode,
+	userId,
+	onTabChange
+}: {
+	mode: SidebarMode
+	userId?: string
+	onTabChange: (value: string) => void
+}) => (
+	<Tabs
+		value={mode}
+		onValueChange={onTabChange}
+		className="flex flex-col overflow-hidden"
+	>
+		<div className="px-3 pt-3">
+			<TabsList className="w-full shadow-2xl">
+				<TabsTrigger value="optimize">
+					<BarChart4 /> Optimize
+				</TabsTrigger>
+				<TabsTrigger value="compose">
+					<Camera />
+					Compose
+				</TabsTrigger>
+			</TabsList>
+		</div>
+		<TabsContent
+			value="optimize"
+			className="no-scrollbar space-y-2 overflow-auto rounded-xl px-3 pb-8"
+		>
+			<OptimizeSidebar userId={userId} />
+		</TabsContent>
+		<TabsContent
+			value="compose"
+			className="no-scrollbar space-y-2 overflow-auto rounded-xl px-3 pb-8"
+		>
+			<ComposeSidebar />
+		</TabsContent>
+	</Tabs>
+)
+
 const variants = {
 	hidden: { opacity: 0, x: '-100%', display: 'none' },
 	visible: { opacity: 1, x: 0, display: 'flex' },
@@ -70,9 +119,10 @@ const variants = {
 
 interface PublisherSidebarProps {
 	user: User | null
+	isMobile?: boolean
 }
 
-const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
+const PublisherSidebar = ({ user, isMobile }: PublisherSidebarProps) => {
 	const [{ mode, showSidebar }, setProcessState] = useAtom(processAtom)
 	const { submit } = useFetcher()
 	const posthog = usePostHog()
@@ -93,6 +143,17 @@ const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
 			showSidebar: !prev.showSidebar
 		}))
 	}, [setProcessState])
+
+	const handleDrawerOpenChange = useCallback(
+		(open: boolean) => {
+			setProcessState((prev) => ({
+				...prev,
+				showSidebar: open
+			}))
+		},
+		[setProcessState]
+	)
+
 	async function handleLogout() {
 		posthog?.reset()
 		await submit(null, {
@@ -100,6 +161,36 @@ const PublisherSidebar = ({ user }: PublisherSidebarProps) => {
 			action: '/auth/logout'
 		})
 	}
+
+	if (isMobile) {
+		return (
+			<Drawer open={showSidebar} onOpenChange={handleDrawerOpenChange}>
+				<DrawerContent className="max-h-[85svh]">
+					<DrawerHeader className="border-b pb-3">
+						<div className="flex items-start justify-between gap-2">
+							<div>
+								<DrawerTitle>Scene Tools</DrawerTitle>
+								<DrawerDescription>
+									Optimize and compose your 3D scene
+								</DrawerDescription>
+							</div>
+							<DrawerClose asChild>
+								<Button variant="ghost" size="icon" className="shrink-0">
+									<X className="h-4 w-4" />
+								</Button>
+							</DrawerClose>
+						</div>
+					</DrawerHeader>
+					<MobileSidebarTabs
+						mode={mode}
+						userId={user?.id}
+						onTabChange={handleTabChange}
+					/>
+				</DrawerContent>
+			</Drawer>
+		)
+	}
+
 	return (
 		<TooltipProvider>
 			<div className="fixed left-0 z-30 flex h-full flex-col justify-end">
