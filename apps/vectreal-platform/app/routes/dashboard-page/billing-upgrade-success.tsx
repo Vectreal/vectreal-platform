@@ -81,7 +81,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 	if (!membership || !['owner', 'admin'].includes(membership.membership.role)) {
 		throw redirect('/dashboard/billing', { headers })
 	}
-
 	let planId: string | null = null
 	let planLabel: string | null = null
 	let billingPeriod: string | null = null
@@ -136,7 +135,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 			}
 		} catch (error) {
 			// Non-critical — Stripe unavailable, continue gracefully
-			console.error('Failed to retrieve or sync Stripe checkout session.', error)
+			console.error(
+				'Failed to retrieve or sync Stripe checkout session.',
+				error
+			)
 		}
 	}
 
