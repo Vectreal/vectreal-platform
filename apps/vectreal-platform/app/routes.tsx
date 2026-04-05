@@ -10,6 +10,10 @@ export default [
 	// Health check endpoint for Docker and monitoring
 	route('health', './routes/health.tsx'),
 
+	// Crawl endpoints
+	route('robots.txt', './routes/robots[.]txt.ts'),
+	route('sitemap.xml', './routes/sitemap[.]xml.ts'),
+
 	/// API
 	route(
 		'api/scenes/:sceneId/thumbnail/:assetId',

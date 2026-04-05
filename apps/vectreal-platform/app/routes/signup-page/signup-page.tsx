@@ -17,12 +17,28 @@ import { motion } from 'framer-motion'
 import { AnimatePresence } from 'framer-motion'
 import { AlertCircle, Eye, EyeClosed, ExternalLink, Save } from 'lucide-react'
 import { useState } from 'react'
-import { data, Form, Link, redirect } from 'react-router'
+import { data, Form, Link, redirect, type MetaFunction } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signup-page'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
+import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
+
+export const meta: MetaFunction = () =>
+	buildMeta(
+		[
+			{ title: 'Sign Up — Vectreal' },
+			{ property: 'og:title', content: 'Sign Up — Vectreal' },
+			{
+				name: 'description',
+				content:
+					'Create your free Vectreal account and start publishing 3D content today.'
+			}
+		],
+		undefined,
+		{ private: true }
+	)
 
 /**
  * User input fields for signup form.

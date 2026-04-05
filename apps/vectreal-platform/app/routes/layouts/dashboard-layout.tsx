@@ -13,7 +13,8 @@ import {
 	useLoaderData,
 	useLocation,
 	useNavigation,
-	useRevalidator
+	useRevalidator,
+	type MetaFunction
 } from 'react-router'
 
 import { Route } from './+types/dashboard-layout'
@@ -39,10 +40,21 @@ import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.serv
 import { getOrgSubscription } from '../../lib/domain/billing/entitlement-service.server'
 import { getSidebarProjects } from '../../lib/domain/project/project-repository.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
+import { buildMeta } from '../../lib/seo'
 import { dashboardManagementStore } from '../../lib/stores/dashboard-management-store'
 import { upgradeModalStore } from '../../lib/stores/upgrade-modal-store'
 
 import type { ShouldRevalidateFunction } from 'react-router'
+
+export const meta: MetaFunction = () =>
+	buildMeta(
+		[
+			{ title: 'Dashboard — Vectreal' },
+			{ property: 'og:title', content: 'Dashboard — Vectreal' }
+		],
+		undefined,
+		{ private: true }
+	)
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const { user, headers } = await loadAuthenticatedSession(request)

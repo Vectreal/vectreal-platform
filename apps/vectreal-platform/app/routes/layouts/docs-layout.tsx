@@ -29,13 +29,24 @@ import styles from '../../styles/mdx.module.css'
 
 import type { RootLoader } from '../../root'
 
-export const meta: MetaFunction<undefined, { root: RootLoader }> = (
-	rootLoaderData
-) =>
+export const meta: MetaFunction<undefined, { root: RootLoader }> = (args) =>
 	buildMeta(
-		[{ title: 'Docs — Vectreal Platform' }],
-		getRootMeta(rootLoaderData),
-		{ private: false }
+		[
+			{ title: 'Docs — Vectreal Platform' },
+			{ property: 'og:title', content: 'Docs — Vectreal Platform' },
+			{
+				name: 'description',
+				content:
+					'Everything you need to build with the Vectreal Platform and its open-source packages.'
+			},
+			{
+				property: 'og:description',
+				content:
+					'Everything you need to build with the Vectreal Platform and its open-source packages.'
+			}
+		],
+		getRootMeta(args),
+		{ canonical: args.location.pathname }
 	)
 
 /**

@@ -19,6 +19,8 @@ const STATIC_PRERENDER_PATHS = [
 	'/privacy-policy',
 	'/terms-of-service',
 	'/imprint',
+	'/robots.txt',
+	'/sitemap.xml',
 	...NEWS_PRERENDER_PATHS,
 	...DOCS_PRERENDER_PATHS
 ]
