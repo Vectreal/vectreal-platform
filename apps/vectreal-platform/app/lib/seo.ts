@@ -78,6 +78,8 @@ export function buildMeta(
 
 	// Helper function to generate a consistent key for each meta descriptor
 	const getMetaKey = (meta: MetaDescriptor): string => {
+		// tagName: 'link' is React Router v7's official MetaDescriptor variant for
+		// emitting <link> elements (e.g. canonical) from the meta() export.
 		if ('tagName' in meta && meta.tagName === 'link') {
 			return `link:${(meta as { rel?: string }).rel ?? 'unknown'}`
 		}

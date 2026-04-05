@@ -17,7 +17,7 @@ interface SitemapEntry {
 	priority: string
 }
 
-function toIsoDate(dateStr: string): string {
+function toDateOnly(dateStr: string): string {
 	return dateStr.split('T')[0]
 }
 
@@ -77,9 +77,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
 	// ── 2. News Room articles ───────────────────────────────────────────────
 	const newsEntries: SitemapEntry[] = getNewsArticles()
 		.filter((article) => !article.draft)
+		.filter((article) => Boolean(article.publishedAt))
 		.map((article) => ({
 			path: `/news-room/${article.slug}`,
-			lastmod: toIsoDate(article.updatedAt ?? article.publishedAt),
+			lastmod: toDateOnly(article.updatedAt ?? article.publishedAt),
 			changefreq: 'never' as const,
 			priority: '0.7'
 		}))
