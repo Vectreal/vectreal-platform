@@ -74,6 +74,9 @@ export const Footer = () => {
 										Release Notes
 									</Link>
 								</li>
+								<li className="text-foreground list-item">
+									<Link to="/changelog">Changelog</Link>
+								</li>
 							</ul>
 						</div>
 						<div>
@@ -121,6 +124,18 @@ export const Footer = () => {
 							<ul className="flex flex-col gap-4">
 								<li className="text-foreground list-item">
 									<Link to="/privacy-policy">Privacy Policy</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="/code-of-conduct">Code of Conduct</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<button
+										type="button"
+										className="hover:text-foreground transition-colors"
+										onClick={() => setPreferencesOpen(true)}
+									>
+										Cookie Preferences
+									</button>
 								</li>
 								<li className="text-foreground list-item">
 									<Link to="/terms-of-service">Terms of Service</Link>

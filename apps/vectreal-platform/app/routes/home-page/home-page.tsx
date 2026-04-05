@@ -571,7 +571,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 					<BasicCard className="max-w-2xl">
 						<CardContent className="pt-6">
 							<Accordion type="single" collapsible className="w-full">
-								<AccordionItem value="faq-account">
+								<AccordionItem className="bg-transparent!" value="faq-account">
 									<AccordionTrigger>
 										Do I need an account to test Vectreal?
 									</AccordionTrigger>
@@ -581,7 +581,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 										and publishing workflows.
 									</AccordionContent>
 								</AccordionItem>
-								<AccordionItem value="faq-formats">
+								<AccordionItem className="bg-transparent!" value="faq-formats">
 									<AccordionTrigger>
 										Which 3D formats are supported?
 									</AccordionTrigger>
@@ -591,7 +591,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 										together to preserve references.
 									</AccordionContent>
 								</AccordionItem>
-								<AccordionItem value="faq-files">
+								<AccordionItem className="bg-transparent!" value="faq-files">
 									<AccordionTrigger>
 										What happens to my files before publish?
 									</AccordionTrigger>
@@ -601,7 +601,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 										when you explicitly publish.
 									</AccordionContent>
 								</AccordionItem>
-								<AccordionItem value="faq-embed">
+								<AccordionItem className="bg-transparent!" value="faq-embed">
 									<AccordionTrigger>
 										Can I embed scenes in my own site?
 									</AccordionTrigger>

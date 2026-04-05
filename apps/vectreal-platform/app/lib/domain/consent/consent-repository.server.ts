@@ -43,9 +43,7 @@ export async function upsertConsent(
 	const resolvedVersion = version ?? CONSENT_POLICY_VERSION
 	const now = new Date()
 
-	const values = {
-		userId,
-		anonymousId,
+	const sharedValues = {
 		version: resolvedVersion,
 		necessary: true as const,
 		functional: choices.functional,
@@ -57,19 +55,21 @@ export async function upsertConsent(
 	}
 
 	if (userId) {
-		// Authenticated path: upsert on userId
+		// Authenticated path: upsert on userId only.
+		// Never store anonymousId on authenticated rows — it may already belong
+		// to a prior anonymous consent record, causing a unique-constraint clash.
 		const [row] = await db
 			.insert(consentRecords)
-			.values({ ...values, recordedAt: now })
+			.values({ ...sharedValues, userId, anonymousId: null, recordedAt: now })
 			.onConflictDoUpdate({
 				target: consentRecords.userId,
 				set: {
-					functional: values.functional,
-					analytics: values.analytics,
-					marketing: values.marketing,
-					version: values.version,
-					ipCountry: values.ipCountry,
-					userAgent: values.userAgent,
+					functional: sharedValues.functional,
+					analytics: sharedValues.analytics,
+					marketing: sharedValues.marketing,
+					version: sharedValues.version,
+					ipCountry: sharedValues.ipCountry,
+					userAgent: sharedValues.userAgent,
 					updatedAt: now
 				}
 			})
@@ -81,16 +81,21 @@ export async function upsertConsent(
 		const resolvedAnonymousId = anonymousId ?? randomUUID()
 		const [row] = await db
 			.insert(consentRecords)
-			.values({ ...values, anonymousId: resolvedAnonymousId, recordedAt: now })
+			.values({
+				...sharedValues,
+				userId: null,
+				anonymousId: resolvedAnonymousId,
+				recordedAt: now
+			})
 			.onConflictDoUpdate({
 				target: consentRecords.anonymousId,
 				set: {
-					functional: values.functional,
-					analytics: values.analytics,
-					marketing: values.marketing,
-					version: values.version,
-					ipCountry: values.ipCountry,
-					userAgent: values.userAgent,
+					functional: sharedValues.functional,
+					analytics: sharedValues.analytics,
+					marketing: sharedValues.marketing,
+					version: sharedValues.version,
+					ipCountry: sharedValues.ipCountry,
+					userAgent: sharedValues.userAgent,
 					updatedAt: now
 				}
 			})

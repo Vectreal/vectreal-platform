@@ -41,7 +41,6 @@ export function ShimmerRotatingText({
 
 	return (
 		<motion.button
-			layout
 			type="button"
 			onClick={advancePhrase}
 			onMouseEnter={advancePhrase}
