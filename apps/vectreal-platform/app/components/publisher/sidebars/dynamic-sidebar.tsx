@@ -101,7 +101,7 @@ export const DynamicSidebar = ({
 	const positionClass = direction === 'left' ? 'left-0' : 'right-0'
 
 	return (
-		<div className={cn('fixed top-0 z-30 h-full', positionClass)}>
+		<div className={cn('fixed top-0 z-30 h-full p-4', positionClass)}>
 			<AnimatePresence mode="wait">
 				{open && (
 					<motion.div
@@ -112,7 +112,7 @@ export const DynamicSidebar = ({
 						variants={variants}
 						transition={{ type: 'tween', ease: 'easeInOut', duration: 0.3 }}
 						className={cn(
-							'bg-muted/50 relative z-20 m-4 h-full w-[23rem] flex-col overflow-hidden rounded-xl border shadow-xl backdrop-blur-2xl',
+							'bg-muted/50 relative z-20 h-full w-[23rem] flex-col overflow-hidden rounded-xl border shadow-xl backdrop-blur-2xl',
 							className
 						)}
 					>
@@ -121,7 +121,9 @@ export const DynamicSidebar = ({
 								<div>
 									<p className="text-sm font-semibold">{title}</p>
 									{description && (
-										<p className="text-muted-foreground text-xs">{description}</p>
+										<p className="text-muted-foreground text-xs">
+											{description}
+										</p>
 									)}
 								</div>
 								<Button

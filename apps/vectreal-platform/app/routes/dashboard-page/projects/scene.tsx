@@ -45,6 +45,10 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { data, Link, useNavigate } from 'react-router'
 
 import { Route } from './+types/scene'
+import {
+	buildAssetListItemProps,
+	SceneAssetListItem
+} from './scene-asset-list-item'
 import CenteredSpinner from '../../../components/centered-spinner'
 import { InlineEditableMetadataField } from '../../../components/dashboard/inline-editable-metadata-field'
 import { EmbedOptionsPanel } from '../../../components/embed/embed-options-panel'
@@ -68,7 +72,7 @@ import type { ShouldRevalidateFunction } from 'react-router'
 
 const MAX_PRELOADED_SCENE_ASSET_BYTES = 1_500_000
 
-type SceneAssetSummary = {
+export type SceneAssetSummary = {
 	id: string
 	name: string
 	type: string
@@ -690,52 +694,13 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							</p>
 						) : (
 							<div className="space-y-2">
-								{sceneDetails.assets.slice(0, 4).map((asset) => {
-									const isTexture =
-										asset.type === 'texture' &&
-										asset.mimeType &&
-										asset.fileSize &&
-										asset.fileSize > 0
-									let textureUrl: string | undefined
-									if (
-										isTexture &&
-										sceneData?.assetData &&
-										sceneData.assetData[asset.id]
-									) {
-										const data = sceneData.assetData[asset.id].data
-										const mime = asset.mimeType
-										if (typeof data === 'string') {
-											textureUrl = `data:${mime};base64,${data}`
-										}
-									}
-									return (
-										<div
-											key={asset.id}
-											className="bg-background/70 flex items-center gap-3 rounded-xl p-3"
-										>
-											{isTexture && textureUrl && (
-												<div className="flex flex-col justify-start gap-2">
-													<img
-														src={textureUrl}
-														alt={asset.name}
-														className="h-10 w-10 rounded-lg object-cover"
-													/>
-												</div>
-											)}
-											<div className="flex flex-col gap-2">
-												<p className="truncate text-sm font-medium">
-													{asset.name}
-												</p>
-												<Badge variant="secondary" className="shrink-0">
-													{formatBytes(asset.fileSize)}
-													<span className="text-muted-foreground">
-														| {asset.type}
-													</span>
-												</Badge>
-											</div>
-										</div>
-									)
-								})}
+								{sceneDetails.assets.slice(0, 4).map((asset) => (
+									<SceneAssetListItem
+										key={asset.id}
+										{...buildAssetListItemProps(asset, sceneData?.assetData)}
+										className="bg-background/70"
+									/>
+								))}
 								{sceneDetails.assets.length > 4 && (
 									<button
 										type="button"
@@ -857,21 +822,11 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							) : (
 								<div className="space-y-2">
 									{sceneDetails.assets.map((asset) => (
-										<div
+										<SceneAssetListItem
 											key={asset.id}
-											className="bg-muted/40 rounded-xl p-3 text-sm"
-										>
-											<div className="flex items-center justify-between gap-2">
-												<p className="truncate font-medium">{asset.name}</p>
-												<Badge variant="secondary" className="shrink-0">
-													{asset.type}
-												</Badge>
-											</div>
-											<p className="text-muted-foreground mt-1 text-xs">
-												{formatBytes(asset.fileSize)}
-												{asset.mimeType ? ` • ${asset.mimeType}` : ''}
-											</p>
-										</div>
+											className="bg-muted/40"
+											{...buildAssetListItemProps(asset, sceneData?.assetData)}
+										/>
 									))}
 								</div>
 							)}
