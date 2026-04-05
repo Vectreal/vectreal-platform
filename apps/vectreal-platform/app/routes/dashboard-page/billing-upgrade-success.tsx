@@ -14,6 +14,8 @@ import { useEffect } from 'react'
 import { data, Link, useLoaderData } from 'react-router'
 
 import { PLAN_ENTITLEMENTS } from '../../constants/plan-config'
+import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
+import { syncSubscriptionFromStripe } from '../../lib/domain/billing/stripe-subscription-sync.server'
 import { getStripeClient } from '../../lib/stripe.server'
 
 import type { Route } from './+types/billing-upgrade-success'
@@ -63,6 +65,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url)
 	const sessionId = url.searchParams.get('session_id')
 
+	// Authenticate so we can sync the subscription immediately, ensuring the
+	// plan is active in the DB before the user navigates to the dashboard.
+	const { userWithDefaults, headers } = await loadAuthenticatedUser(request)
+	const organizationId = userWithDefaults.organization.id
+
 	let planId: string | null = null
 	let planLabel: string | null = null
 	let billingPeriod: string | null = null
@@ -71,18 +78,44 @@ export async function loader({ request }: Route.LoaderArgs) {
 	if (sessionId) {
 		try {
 			const stripe = getStripeClient()
-			const session = await stripe.checkout.sessions.retrieve(sessionId)
+			// Expand the subscription with price/product so plan metadata is
+			// available for both display and the immediate DB sync below.
+			const session = await stripe.checkout.sessions.retrieve(sessionId, {
+				expand: ['subscription.items.data.price.product']
+			})
+
 			planId = session.metadata?.plan_id ?? null
 			planLabel = planId ? (PLAN_LABELS[planId] ?? null) : null
 			billingPeriod = session.metadata?.billing_period ?? null
 			fromPlan = session.metadata?.from_plan ?? null
+
+			// Immediately sync the subscription to activate the plan in the database.
+			// This ensures the plan is active regardless of webhook delivery timing.
+			if (
+				session.mode === 'subscription' &&
+				session.subscription &&
+				typeof session.subscription !== 'string'
+			) {
+				const customerId =
+					typeof session.customer === 'string'
+						? session.customer
+						: (session.customer?.id ?? null)
+
+				if (customerId) {
+					await syncSubscriptionFromStripe({
+						organizationId,
+						stripeCustomerId: customerId,
+						subscription: session.subscription
+					})
+				}
+			}
 		} catch (error) {
 			// Non-critical — Stripe unavailable, continue gracefully
-			console.error('Failed to retrieve Stripe checkout session.', error)
+			console.error('Failed to retrieve or sync Stripe checkout session.', error)
 		}
 	}
 
-	return data({ planId, planLabel, billingPeriod, fromPlan })
+	return data({ planId, planLabel, billingPeriod, fromPlan }, { headers })
 }
 
 export default function BillingUpgradeSuccessPage() {

@@ -179,7 +179,12 @@ async function handleSubscriptionUpdated(
 			? expanded.customer
 			: expanded.customer.id
 
-	const organizationId = await findOrganizationByCustomerId(customerId)
+	// Try customer ID lookup first; fall back to subscription metadata for new
+	// customers where checkout.session.completed may not yet have created the
+	// DB record (race condition on first-time purchases).
+	const organizationId =
+		(await findOrganizationByCustomerId(customerId)) ??
+		(expanded.metadata?.organization_id ?? null)
 
 	if (!organizationId) {
 		throw new Error(
