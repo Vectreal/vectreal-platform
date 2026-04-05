@@ -9,12 +9,27 @@ import {
 import { ApiResponse } from '@shared/utils'
 import { Eye, EyeClosed, ExternalLink, Save } from 'lucide-react'
 import { useState } from 'react'
-import { data, Form, Link, redirect } from 'react-router'
+import { data, Form, Link, redirect, type MetaFunction } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signin-page'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
+import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
+
+export const meta: MetaFunction = () =>
+	buildMeta(
+		[
+			{ title: 'Sign In — Vectreal' },
+			{ property: 'og:title', content: 'Sign In — Vectreal' },
+			{
+				name: 'description',
+				content: 'Sign in to your Vectreal account to manage your 3D content.'
+			}
+		],
+		undefined,
+		{ private: true }
+	)
 
 interface UserInput {
 	email: string

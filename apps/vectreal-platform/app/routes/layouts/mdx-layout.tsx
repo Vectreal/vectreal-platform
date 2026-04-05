@@ -6,9 +6,10 @@ import styles from '../../styles/mdx.module.css'
 
 import type { RootLoader } from '../../root'
 
-export const meta: MetaFunction<undefined, { root: RootLoader }> = (
-	rootLoaderData
-) => buildMeta([], getRootMeta(rootLoaderData), { private: false })
+export const meta: MetaFunction<undefined, { root: RootLoader }> = (args) =>
+	buildMeta([], getRootMeta(args), {
+		canonical: args.location.pathname
+	})
 
 export default function MdxLayout() {
 	return (

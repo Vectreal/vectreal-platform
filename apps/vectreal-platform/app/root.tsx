@@ -39,10 +39,11 @@ import type { ShouldRevalidateFunction } from 'react-router'
 import '@shared/components/styles/globals.css'
 
 export const meta: MetaFunction = () => [
+	{ title: 'Vectreal - Your platform for creating and sharing 3D scenes.' },
 	{
-		title: 'Vectreal Platform',
 		name: 'description',
-		content: 'Your platform for creating and sharing 3D content.'
+		content:
+			'Vectreal is your go-to platform for creating, sharing, and exploring stunning 3D scenes. Join our community of creators and bring your virtual visions to life!'
 	}
 ]
 

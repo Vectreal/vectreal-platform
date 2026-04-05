@@ -19,6 +19,7 @@ import {
 	getNewsArticle,
 	getRelatedNewsArticles
 } from '../../lib/news/news-manifest'
+import { buildMeta } from '../../lib/seo'
 import styles from '../../styles/mdx.module.css'
 
 import type { Route } from './+types/news-room-article-page'
@@ -62,18 +63,31 @@ export async function loader({ params }: Route.LoaderArgs) {
 
 export function meta({ data }: Route.MetaArgs) {
 	if (!data) {
-		return [{ title: 'Article not found — Vectreal' }]
+		return buildMeta([{ title: 'Article not found — Vectreal' }])
 	}
 
 	const title = `${data.article.title} — Vectreal News Room`
 	const description = data.article.excerpt
+	const canonical = `/news-room/${data.article.slug}`
 
-	return [
-		{ title },
-		{ name: 'description', content: description },
-		{ property: 'og:title', content: title },
-		{ property: 'og:description', content: description }
-	]
+	return buildMeta(
+		[
+			{ title },
+			{ property: 'og:title', content: title },
+			{ name: 'description', content: description },
+			{ property: 'og:description', content: description },
+			...(data.article.coverImage
+				? [
+						{
+							property: 'og:image',
+							content: data.article.coverImage
+						}
+					]
+				: [])
+		],
+		undefined,
+		{ canonical }
+	)
 }
 
 export default function NewsRoomArticlePage({

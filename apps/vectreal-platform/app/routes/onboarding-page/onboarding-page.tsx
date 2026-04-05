@@ -13,10 +13,21 @@ import {
 	Zap
 } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, type MetaFunction } from 'react-router'
 
 import { Route } from './+types/onboarding-page'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
+import { buildMeta } from '../../lib/seo'
+
+export const meta: MetaFunction = () =>
+	buildMeta(
+		[
+			{ title: 'Get Started — Vectreal' },
+			{ property: 'og:title', content: 'Get Started — Vectreal' }
+		],
+		undefined,
+		{ private: true }
+	)
 
 export async function loader({ request }: Route.LoaderArgs) {
 	// Only authenticated users should reach this page; expose user data for personalisation

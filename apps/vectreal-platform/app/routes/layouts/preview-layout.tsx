@@ -1,5 +1,5 @@
 import { ApiResponse } from '@shared/utils'
-import { data, Outlet } from 'react-router'
+import { data, Outlet, type MetaFunction } from 'react-router'
 
 import { Route } from './+types/preview-layout'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
@@ -7,6 +7,17 @@ import { getProject } from '../../lib/domain/project/project-repository.server'
 import { getScene } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import { getAuthUser } from '../../lib/http/auth.server'
+import { buildMeta } from '../../lib/seo'
+
+export const meta: MetaFunction = () =>
+	buildMeta(
+		[
+			{ title: 'Preview — Vectreal' },
+			{ property: 'og:title', content: 'Preview — Vectreal' }
+		],
+		undefined,
+		{ private: true }
+	)
 
 function withNoStoreHeaders(response: Response): Response {
 	const headers = new Headers(response.headers)

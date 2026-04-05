@@ -9,6 +9,7 @@ import {
 	getNewsCategories,
 	getNewsTags
 } from '../../lib/news/news-manifest'
+import { buildMeta } from '../../lib/seo'
 
 import type { Route } from './+types/news-room-page'
 
@@ -79,18 +80,22 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export function meta(_: Route.MetaArgs) {
-	return [
-		{ title: 'News Room — Vectreal' },
-		{
-			name: 'description',
-			content: 'News and product notes from the Vectreal team.'
-		},
-		{ property: 'og:title', content: 'News Room — Vectreal' },
-		{
-			property: 'og:description',
-			content: 'News and product notes from the Vectreal team.'
-		}
-	]
+	return buildMeta(
+		[
+			{ title: 'News Room — Vectreal' },
+			{ property: 'og:title', content: 'News Room — Vectreal' },
+			{
+				name: 'description',
+				content: 'News and product notes from the Vectreal team.'
+			},
+			{
+				property: 'og:description',
+				content: 'News and product notes from the Vectreal team.'
+			}
+		],
+		undefined,
+		{ canonical: '/news-room' }
+	)
 }
 
 export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
