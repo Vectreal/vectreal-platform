@@ -102,7 +102,7 @@
 		"@nx/eslint": "22.5.4",
 		"@nx/eslint-plugin": "22.5.4",
 		"@nx/jest": "22.5.4",
-		"@nx/js": "22.5.4",
+		"@nx/js": "22.6.4",
 		"@nx/playwright": "22.5.4",
 		"@nx/react": "22.5.4",
 		"@nx/rollup": "22.5.4",
