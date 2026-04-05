@@ -155,10 +155,9 @@ export const useOptimizationProcess = ({
 }: {
 	isAuthenticated: boolean
 }) => {
-	const { optimizer, on, off, file } = useModelContext(true)
+	const { optimizer, file } = useModelContext(true)
 	const { handleDocumentGltfExport } = useExportModel()
 	const {
-		reset: resetOptimize,
 		isReady,
 		isPreparing,
 		applyOptimization,
@@ -178,7 +177,6 @@ export const useOptimizationProcess = ({
 	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 	const {
 		isPending,
-		isSceneSizeLoading,
 		optimizedSceneBytes,
 		clientSceneBytes,
 		optimizedTextureBytes,
