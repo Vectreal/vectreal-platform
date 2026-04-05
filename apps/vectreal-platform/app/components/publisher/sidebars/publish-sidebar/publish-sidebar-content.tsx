@@ -271,6 +271,7 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 								</AccordionContent>
 							</AccordionItem>
 
+						{publishedAt && (
 							<AccordionItem value="embed" className="px-4">
 								<AccordionTrigger className="px-2">
 									<span className="flex items-center gap-3">
@@ -282,6 +283,7 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 									<EmbedOptions sceneId={sceneId} projectId={projectId} />
 								</AccordionContent>
 							</AccordionItem>
+						)}
 						</>
 					)}
 				</Accordion>

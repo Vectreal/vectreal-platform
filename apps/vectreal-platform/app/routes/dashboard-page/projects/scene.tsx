@@ -28,6 +28,7 @@ import {
 	SceneLoadResult,
 	useLoadModel
 } from '@vctrl/hooks/use-load-model'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useSetAtom } from 'jotai/react'
 import {
 	ChevronDown,
@@ -67,7 +68,10 @@ import { getPublishedScenePreview } from '../../../lib/domain/scene/server/scene
 import { deleteDialogAtom } from '../../../lib/stores/dashboard-management-store'
 import { toViewerLoadingThumbnail } from '../../../lib/viewer/viewer-loading-thumbnail'
 
-import type { SceneAggregateResponse } from '../../../types/api'
+import type {
+	SceneAggregateResponse,
+	SerializedSceneAssetDataMap
+} from '../../../types/api'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 const MAX_PRELOADED_SCENE_ASSET_BYTES = 1_500_000
@@ -285,6 +289,80 @@ const PreviewModel = memo(
 		)
 	}
 )
+
+const ASSETS_COLLAPSED_LIMIT = 6
+
+function DrawerAssetsSection({
+	assets,
+	assetData
+}: {
+	assets: SceneAssetSummary[]
+	assetData?: SerializedSceneAssetDataMap | null
+}) {
+	const [expanded, setExpanded] = useState(false)
+	const hasMore = assets.length > ASSETS_COLLAPSED_LIMIT
+	const initial = assets.slice(0, ASSETS_COLLAPSED_LIMIT)
+	const extra = assets.slice(ASSETS_COLLAPSED_LIMIT)
+
+	return (
+		<section className="space-y-3">
+			<h3 className="text-sm font-semibold tracking-tight">Assets</h3>
+			{assets.length === 0 ? (
+				<p className="text-muted-foreground text-sm">No linked assets found.</p>
+			) : (
+				<div className="space-y-2">
+					{initial.map((asset) => (
+						<SceneAssetListItem
+							key={asset.id}
+							className="bg-muted/40"
+							{...buildAssetListItemProps(asset, assetData)}
+						/>
+					))}
+
+					<AnimatePresence initial={false}>
+						{expanded && (
+							<motion.div
+								key="extra-assets"
+								initial={{ opacity: 0, height: 0 }}
+								animate={{ opacity: 1, height: 'auto' }}
+								exit={{ opacity: 0, height: 0 }}
+								transition={{ duration: 0.3, ease: 'easeInOut' }}
+								className="space-y-2 overflow-hidden"
+							>
+								{extra.map((asset) => (
+									<SceneAssetListItem
+										key={asset.id}
+										className="bg-muted/40"
+										{...buildAssetListItemProps(asset, assetData)}
+									/>
+								))}
+							</motion.div>
+						)}
+					</AnimatePresence>
+
+					{hasMore && (
+						<button
+							type="button"
+							onClick={() => setExpanded((prev) => !prev)}
+							className="text-muted-foreground hover:text-foreground flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-xs transition-colors duration-200"
+						>
+							<motion.span
+								animate={{ rotate: expanded ? 180 : 0 }}
+								transition={{ duration: 0.25, ease: 'easeInOut' }}
+								className="inline-flex"
+							>
+								<ChevronDown className="h-3.5 w-3.5" />
+							</motion.span>
+							{expanded
+								? 'Show fewer'
+								: `Show ${assets.length - ASSETS_COLLAPSED_LIMIT} more`}
+						</button>
+					)}
+				</div>
+			)}
+		</section>
+	)
+}
 
 const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 	const { scene, project, user, sceneDetails, publishState } = loaderData
@@ -813,24 +891,10 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							</div>
 						</section>
 
-						<section className="space-y-3">
-							<h3 className="text-sm font-semibold tracking-tight">Assets</h3>
-							{sceneDetails.assets.length === 0 ? (
-								<p className="text-muted-foreground text-sm">
-									No linked assets found.
-								</p>
-							) : (
-								<div className="space-y-2">
-									{sceneDetails.assets.map((asset) => (
-										<SceneAssetListItem
-											key={asset.id}
-											className="bg-muted/40"
-											{...buildAssetListItemProps(asset, sceneData?.assetData)}
-										/>
-									))}
-								</div>
-							)}
-						</section>
+						<DrawerAssetsSection
+							assets={sceneDetails.assets}
+							assetData={sceneData?.assetData}
+						/>
 
 						<Separator />
 
@@ -847,6 +911,17 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 								revokeDialogTitle="Revoke scene publication?"
 								revokeDialogDescription="This deletes the published GLB asset and returns this scene to draft state."
 							/>
+							{publishState.status === 'published' && (
+								<div className="space-y-3 pt-1">
+									<h4 className="text-sm font-semibold tracking-tight">
+										Embed
+									</h4>
+									<EmbedOptionsPanel
+										sceneId={sceneState.id}
+										projectId={project.id}
+									/>
+								</div>
+							)}
 						</section>
 
 						<Separator />
@@ -888,16 +963,6 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 									{copiedLink ? 'Copied' : 'Copy Link'}
 								</Button>
 							</div>
-						</section>
-
-						<Separator />
-
-						<section className="space-y-3">
-							<h3 className="text-sm font-semibold tracking-tight">Embed</h3>
-							<EmbedOptionsPanel
-								sceneId={sceneState.id}
-								projectId={project.id}
-							/>
 						</section>
 
 						<Separator />
