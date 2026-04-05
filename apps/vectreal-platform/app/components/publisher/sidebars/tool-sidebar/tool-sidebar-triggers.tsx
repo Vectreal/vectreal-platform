@@ -1,11 +1,15 @@
 import { useSetAtom } from 'jotai'
 import { Pen, Stars } from 'lucide-react'
 
-import { processAtom } from '../../lib/stores/publisher-config-store'
-import { SidebarMode } from '../../types/publisher-config'
-import { TooltipButton } from '../tooltip-button'
+import { processAtom } from '../../../../lib/stores/publisher-config-store'
+import { SidebarMode } from '../../../../types/publisher-config'
+import { TooltipButton } from '../../../tooltip-button'
 
-const ToolSidebarButtons = () => {
+interface ToolSidebarTriggersProps {
+	isMobile?: boolean
+}
+
+const ToolSidebarTriggers = ({ isMobile }: ToolSidebarTriggersProps) => {
 	const setProcessState = useSetAtom(processAtom)
 	const handleOpenSidebar = (sidebar: SidebarMode) => {
 		setProcessState((prev) => ({
@@ -15,6 +19,11 @@ const ToolSidebarButtons = () => {
 			showInfo: false
 		}))
 	}
+
+	if (isMobile) {
+		return null
+	}
+
 	return (
 		<div className="fixed bottom-6 left-0 z-20 m-4 flex gap-4">
 			<TooltipButton
@@ -34,4 +43,4 @@ const ToolSidebarButtons = () => {
 	)
 }
 
-export default ToolSidebarButtons
+export default ToolSidebarTriggers

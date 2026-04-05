@@ -508,7 +508,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		<div className="mt-16 h-[calc(100dvh-5rem)] overflow-hidden px-5 pt-1 pb-5 xl:px-6">
 			<div className="grid h-full min-h-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
 				<main className="flex min-h-0 flex-col gap-4">
-					<section className="relative min-h-0 flex-1 overflow-hidden rounded-2xl bg-black/[0.02]">
+					<section className="relative min-h-64 flex-1 overflow-hidden rounded-2xl bg-black/[0.02]">
 						<PreviewModel
 							file={file}
 							sceneData={sceneData}

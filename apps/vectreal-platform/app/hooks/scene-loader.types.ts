@@ -44,6 +44,11 @@ export interface SaveAvailabilityState {
 	isFirstSavePendingOptimization: boolean
 }
 
+/** Canonical type for the scene-settings save function passed throughout the publisher. */
+export type SaveSceneFn = () => Promise<
+	SaveSceneResult | { unchanged: true } | undefined
+>
+
 export interface SceneSaveFlowArgs {
 	userId?: string
 	currentSceneId: null | string

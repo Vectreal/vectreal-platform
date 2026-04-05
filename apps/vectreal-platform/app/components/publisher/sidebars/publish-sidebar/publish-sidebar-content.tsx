@@ -13,7 +13,7 @@ import { motion } from 'framer-motion'
 import { useAtomValue } from 'jotai'
 import { Code, Globe, Save } from 'lucide-react'
 
-import { SaveAvailabilityState, SaveSceneResult } from '../../../../hooks'
+import { SaveAvailabilityState, SaveSceneFn } from '../../../../hooks'
 import { usePublisherSaveAction } from '../../../../hooks/use-publisher-save-action'
 import { processAtom } from '../../../../lib/stores/publisher-config-store'
 import { AccordionItem, AccordionTrigger } from '../accordion-components'
@@ -35,7 +35,7 @@ import type {
 import type { OptimizationReport } from '@vctrl/core'
 import type { FC } from 'react'
 
-interface PublishSidebarProps {
+interface PublishSidebarContentProps {
 	sceneId?: string
 	projectId?: string
 	userId?: string
@@ -54,9 +54,7 @@ interface PublishSidebarProps {
 	stats?: SceneStatsData | null
 	saveAvailability?: SaveAvailabilityState
 	onRequireAuth?: () => Promise<void> | void
-	saveSceneSettings: () => Promise<
-		SaveSceneResult | { unchanged: true } | undefined
-	>
+	saveSceneSettings: SaveSceneFn
 }
 
 const formatPublishedAt = (value?: string | null) => {
@@ -75,7 +73,7 @@ const formatPublishedAt = (value?: string | null) => {
 const metricValue = (value?: number | null) =>
 	typeof value === 'number' ? value.toLocaleString() : '—'
 
-const PublishSidebarContent: FC<PublishSidebarProps> = ({
+const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 	sceneId,
 	projectId,
 	userId,
@@ -286,18 +284,6 @@ const PublishSidebarContent: FC<PublishSidebarProps> = ({
 							</AccordionItem>
 						</>
 					)}
-
-					{/* <AccordionItem value="share" className="px-4">
-						<AccordionTrigger className="px-2">
-							<span className="flex items-center gap-3">
-								<Share2 className="inline" size={14} />
-								Share
-							</span>
-						</AccordionTrigger>
-						<AccordionContent>
-							<ShareOptions />
-						</AccordionContent>
-					</AccordionItem> */}
 				</Accordion>
 			</motion.div>
 		</div>
