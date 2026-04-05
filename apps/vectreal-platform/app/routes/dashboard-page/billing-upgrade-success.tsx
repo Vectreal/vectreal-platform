@@ -79,7 +79,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		(m) => m.organization.id === organizationId
 	)
 	if (!membership || !['owner', 'admin'].includes(membership.membership.role)) {
-		throw redirect('/dashboard/billing')
+		throw redirect('/dashboard/billing', { headers })
 	}
 
 	let planId: string | null = null
