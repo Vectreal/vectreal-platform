@@ -16,6 +16,7 @@ import {
 } from '.'
 import { useSceneLoader } from '../../hooks'
 import { useLocationChangeState } from '../../hooks/use-location-change-state'
+import { useSceneSizeInitializer } from './sidebars/optimize-sidebar/use-scene-size-initializer'
 import {
 	processAtom,
 	saveLocationAtom
@@ -45,6 +46,10 @@ const OverlayControls = ({
 		optimizedTextureBytes,
 		clientTextureBytes
 	} = useAtomValue(optimizationRuntimeAtom)
+
+	// Ensure scene size is calculated and bottom bar is populated before the tool
+	// sidebar is opened for the first time.
+	useSceneSizeInitializer()
 
 	// Save location comes from the Jotai atom — initialized in publisher-layout
 	// and updated by SceneNameAndLocation picker in the sidebar

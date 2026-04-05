@@ -1,7 +1,7 @@
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -194,8 +194,6 @@ export const useOptimizationProcess = ({
 					remaining: DEFAULT_GUEST_QUOTA_LIMIT
 				}
 	)
-	const isSceneSizeCalculationInFlightRef = useRef(false)
-
 	const calculateSceneBytes = useCallback(async () => {
 		if (!isReady) {
 			return null
@@ -450,122 +448,6 @@ export const useOptimizationProcess = ({
 			cancelled = true
 		}
 	}, [isAuthenticated])
-
-	useEffect(() => {
-		if (typeof clientSceneBytes === 'number') {
-			if (!isSceneSizeLoading) {
-				return
-			}
-
-			setOptimizationRuntime((prev) => ({
-				...prev,
-				isSceneSizeLoading: false
-			}))
-			return
-		}
-
-		if (typeof file?.sourcePackageBytes !== 'number') {
-			return
-		}
-
-		setOptimizationRuntime((prev) => ({
-			...prev,
-			isSceneSizeLoading: false,
-			clientSceneBytes: file.sourcePackageBytes ?? null
-		}))
-	}, [
-		clientSceneBytes,
-		file?.sourcePackageBytes,
-		isSceneSizeLoading,
-		setOptimizationRuntime
-	])
-
-	useEffect(() => {
-		if (typeof clientTextureBytes === 'number') {
-			return
-		}
-
-		if (typeof file?.sourceTextureBytes !== 'number') {
-			return
-		}
-
-		setOptimizationRuntime((prev) => ({
-			...prev,
-			clientTextureBytes: file.sourceTextureBytes ?? null
-		}))
-	}, [clientTextureBytes, file?.sourceTextureBytes, setOptimizationRuntime])
-
-	// Reset on model load
-	useEffect(() => {
-		const handleReset = () => {
-			setOptimizationRuntime((prev) => ({
-				...prev,
-				isPending: false,
-				isSceneSizeLoading: true,
-				optimizedSceneBytes: null,
-				clientSceneBytes: null,
-				optimizedTextureBytes: null,
-				clientTextureBytes: null,
-				latestSceneStats: null
-			}))
-		}
-		on('load-start', resetOptimize)
-		on('load-start', handleReset)
-		return () => {
-			off('load-start', resetOptimize)
-			off('load-start', handleReset)
-		}
-	}, [off, on, resetOptimize, setOptimizationRuntime])
-
-	useEffect(() => {
-		if (
-			!file?.model ||
-			isPending ||
-			typeof clientSceneBytes === 'number' ||
-			isSceneSizeCalculationInFlightRef.current
-		) {
-			return
-		}
-
-		isSceneSizeCalculationInFlightRef.current = true
-		setOptimizationRuntime((prev) => ({
-			...prev,
-			isSceneSizeLoading: true
-		}))
-
-		void calculateSceneBytes()
-			.then((computedSceneBytes) => {
-				if (typeof computedSceneBytes !== 'number') {
-					setOptimizationRuntime((prev) => ({
-						...prev,
-						isSceneSizeLoading: false
-					}))
-					return
-				}
-
-				setOptimizationRuntime((prev) => ({
-					...prev,
-					isSceneSizeLoading: false,
-					clientSceneBytes: computedSceneBytes
-				}))
-			})
-			.catch((error) => {
-				console.error('Failed to calculate scene size:', error)
-				setOptimizationRuntime((prev) => ({
-					...prev,
-					isSceneSizeLoading: false
-				}))
-			})
-			.finally(() => {
-				isSceneSizeCalculationInFlightRef.current = false
-			})
-	}, [
-		file?.model,
-		isPending,
-		clientSceneBytes,
-		calculateSceneBytes,
-		setOptimizationRuntime
-	])
 
 	const sizeInfo: SizeInfo = {
 		initialSceneBytes:

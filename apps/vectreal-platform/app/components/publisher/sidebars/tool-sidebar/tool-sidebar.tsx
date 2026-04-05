@@ -144,7 +144,7 @@ export const ToolSidebar = ({ user, isMobile = false }: ToolSidebarProps) => {
 				/>
 			</DynamicSidebar>
 
-			{/* Desktop-only toggle button (floats at top-left, shifts right when open) */}
+			{/* Toggle button (floats at top-left, shifts right when open) */}
 			<div
 				className={cn(
 					'fixed top-0 z-20 m-4 flex gap-2 transition-all',
