@@ -11,11 +11,12 @@ import {
 import { Separator } from '@shared/components/ui/separator'
 import { Check, CheckCircle2, ExternalLink } from 'lucide-react'
 import { useEffect } from 'react'
-import { data, Link, useLoaderData } from 'react-router'
+import { data, Link, redirect, useLoaderData } from 'react-router'
 
 import { PLAN_ENTITLEMENTS } from '../../constants/plan-config'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import { syncSubscriptionFromStripe } from '../../lib/domain/billing/stripe-subscription-sync.server'
+import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 import { getStripeClient } from '../../lib/stripe.server'
 
 import type { Route } from './+types/billing-upgrade-success'
@@ -67,8 +68,19 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	// Authenticate so we can sync the subscription immediately, ensuring the
 	// plan is active in the DB before the user navigates to the dashboard.
-	const { userWithDefaults, headers } = await loadAuthenticatedUser(request)
+	const { user, userWithDefaults, headers } =
+		await loadAuthenticatedUser(request)
 	const organizationId = userWithDefaults.organization.id
+
+	// Enforce owner/admin role — billing writes are restricted to billing admins,
+	// consistent with /api/billing/checkout and /api/billing/portal.
+	const memberships = await getUserOrganizations(user.id)
+	const membership = memberships.find(
+		(m) => m.organization.id === organizationId
+	)
+	if (!membership || !['owner', 'admin'].includes(membership.membership.role)) {
+		throw redirect('/dashboard/billing')
+	}
 
 	let planId: string | null = null
 	let planLabel: string | null = null
@@ -89,9 +101,22 @@ export async function loader({ request }: Route.LoaderArgs) {
 			billingPeriod = session.metadata?.billing_period ?? null
 			fromPlan = session.metadata?.from_plan ?? null
 
-			// Immediately sync the subscription to activate the plan in the database.
-			// This ensures the plan is active regardless of webhook delivery timing.
+			// Verify the session belongs to this org to prevent session-ID hijacking
+			// (an attacker holding another org's session_id must not be able to
+			// attach that subscription/customer to their own org record).
+			// Sessions created by our checkout always carry organization_id in metadata.
+			const sessionOrgId = session.metadata?.organization_id
+			const isOwnerSession = sessionOrgId === organizationId
+
+			// Only sync when:
+			//   1. The session is confirmed complete/paid.
+			//   2. The session belongs to the authenticated org.
+			//   3. The session is a subscription checkout with an expanded object.
 			if (
+				isOwnerSession &&
+				session.status === 'complete' &&
+				(session.payment_status === 'paid' ||
+					session.payment_status === 'no_payment_required') &&
 				session.mode === 'subscription' &&
 				session.subscription &&
 				typeof session.subscription !== 'string'
