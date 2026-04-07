@@ -4,8 +4,10 @@ import { Separator } from '@shared/components/ui/separator'
 import { useEffect, useState } from 'react'
 import { data, Link, useLoaderData } from 'react-router'
 
-import { FeatureCompareGrid } from '../../components/dashboard/billing/feature-compare-grid'
-import { PricingCardsSection } from '../../components/dashboard/billing/pricing-cards-section'
+import {
+	FeatureCompareGrid,
+	PricingCardsSection
+} from '../../components/dashboard'
 import { getCheckoutOptions } from '../../lib/domain/billing/billing-dashboard-loader.server'
 import { buildPageMeta } from '../../lib/seo'
 import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'

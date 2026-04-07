@@ -42,11 +42,11 @@ import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { toast } from 'sonner'
 
 import { Route } from './+types/api-keys'
-import { DataTable } from '../../components/dashboard/data-table'
 import {
+	DataTable,
 	createApiKeyColumns,
 	type ApiKeyRow
-} from '../../components/dashboard/table-columns'
+} from '../../components/dashboard'
 import { FeatureUnavailablePanel } from '../../components/upgrade/feature-unavailable-panel'
 import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
 import {

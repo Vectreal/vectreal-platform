@@ -10,11 +10,11 @@ import { useEffect, useMemo } from 'react'
 import { data, Outlet, useLoaderData, useLocation } from 'react-router'
 
 import { Route } from './+types/project'
-import { DataTable } from '../../../components/dashboard/data-table'
 import {
+	DataTable,
 	createContentColumns,
 	type ContentRow
-} from '../../../components/dashboard/table-columns'
+} from '../../../components/dashboard'
 import { ProjectContentSkeleton } from '../../../components/skeletons'
 import { useDashboardSceneActions } from '../../../hooks/use-dashboard-scene-actions'
 import { useDashboardTableState } from '../../../hooks/use-dashboard-table-state'

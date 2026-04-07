@@ -17,7 +17,7 @@ import { useMemo } from 'react'
 import { data, Outlet, useLoaderData, useLocation } from 'react-router'
 
 import { Route } from './+types/organizations'
-import DashboardCard from '../../components/dashboard/dashboard-cards'
+import { DashboardCard } from '../../components/dashboard'
 import { OrganizationsSkeleton } from '../../components/skeletons'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'

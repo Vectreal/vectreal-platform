@@ -38,7 +38,10 @@ import { toast } from 'sonner'
 import { z, ZodError } from 'zod'
 
 import { Route } from './+types/api-keys-edit'
-import { ProjectMultiSelect } from '../../components/dashboard/project-multi-select'
+import {
+	ProjectMultiSelect,
+	type ProjectOption
+} from '../../components/dashboard'
 import { FeatureUnavailablePanel } from '../../components/upgrade/feature-unavailable-panel'
 import {
 	getApiKeyById,
@@ -56,8 +59,6 @@ import {
 	buildUpgradeModalState,
 	upgradeModalAtom
 } from '../../lib/stores/upgrade-modal-store'
-
-import type { ProjectOption } from '../../components/dashboard/project-multi-select'
 
 const apiKeyEditSchema = z.object({
 	name: z

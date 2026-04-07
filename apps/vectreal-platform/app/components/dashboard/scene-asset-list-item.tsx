@@ -1,8 +1,8 @@
 import { Badge } from '@shared/components/ui/badge'
 import { cn } from '@shared/utils'
 
-import type { SceneAssetSummary } from './scene'
-import type { SerializedSceneAssetDataMap } from '../../../types/api'
+import type { SceneAssetSummary } from '../../routes/dashboard-page/projects/scene'
+import type { SerializedSceneAssetDataMap } from '../../types/api'
 
 function formatBytes(bytes: number | null | undefined): string {
 	if (bytes == null || Number.isNaN(bytes)) return '—'

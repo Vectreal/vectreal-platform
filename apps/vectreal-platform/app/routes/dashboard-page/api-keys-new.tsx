@@ -46,7 +46,10 @@ import { toast } from 'sonner'
 import { z, ZodError } from 'zod'
 
 import { Route } from './+types/api-keys-new'
-import { ProjectMultiSelect } from '../../components/dashboard/project-multi-select'
+import {
+	ProjectMultiSelect,
+	type ProjectOption
+} from '../../components/dashboard'
 import { FeatureUnavailablePanel } from '../../components/upgrade/feature-unavailable-panel'
 import { createApiKey } from '../../lib/domain/auth/api-key-repository.server'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
@@ -63,8 +66,6 @@ import {
 	buildUpgradeModalState,
 	upgradeModalAtom
 } from '../../lib/stores/upgrade-modal-store'
-
-import type { ProjectOption } from '../../components/dashboard/project-multi-select'
 
 const apiKeyFormSchema = z.object({
 	name: z

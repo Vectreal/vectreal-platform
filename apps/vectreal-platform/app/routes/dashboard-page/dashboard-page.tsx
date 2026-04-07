@@ -3,12 +3,12 @@ import { File } from 'lucide-react'
 import { data } from 'react-router'
 
 import { Route } from './+types/dashboard-page'
-import { DashboardOverview } from '../../components/dashboard/dashboard-overview'
-import { DataTable } from '../../components/dashboard/data-table'
 import {
+	DashboardOverview,
+	DataTable,
 	sceneColumns,
 	type SceneRow
-} from '../../components/dashboard/table-columns'
+} from '../../components/dashboard'
 import { DashboardSkeleton } from '../../components/skeletons'
 import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'

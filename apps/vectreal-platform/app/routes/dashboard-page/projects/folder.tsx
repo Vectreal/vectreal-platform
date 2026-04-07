@@ -12,11 +12,11 @@ import { useEffect, useMemo } from 'react'
 import { data } from 'react-router'
 
 import { Route } from './+types/folder'
-import { DataTable } from '../../../components/dashboard/data-table'
 import {
+	DataTable,
 	createContentColumns,
 	type ContentRow
-} from '../../../components/dashboard/table-columns'
+} from '../../../components/dashboard'
 import { FolderContentSkeleton } from '../../../components/skeletons'
 import { useDashboardSceneActions } from '../../../hooks/use-dashboard-scene-actions'
 import { useDashboardTableState } from '../../../hooks/use-dashboard-table-state'
