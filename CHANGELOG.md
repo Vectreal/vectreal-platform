@@ -4,6 +4,19 @@
 
 - update release-please configuration to skip GitHub releases for core, hooks, and viewer packages ([#344](https://github.com/Vectreal/vectreal-platform/issues/344)) ([61dd7d7](https://github.com/Vectreal/vectreal-platform/commit/61dd7d76f27c8b6b351970abcc48928be70179da))
 
+## [0.13.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.12.1...workspace-v0.13.0) (2026-04-07)
+
+
+### Features
+
+* add billing upgrade and success pages, enhance pricing page with new components ([#349](https://github.com/Vectreal/vectreal-platform/issues/349)) ([71e1ab2](https://github.com/Vectreal/vectreal-platform/commit/71e1ab2f8cd24c2bcee29c9e043a864240e8b40c))
+* **dashboard:** refactor component imports and enhance dashboard layout with new features ([#364](https://github.com/Vectreal/vectreal-platform/issues/364)) ([f3c782b](https://github.com/Vectreal/vectreal-platform/commit/f3c782bf1f9c2fb84b63e6e9566c3ffe1d1e1150))
+* enhance asset display in scene page with collapsible section and embed options ([#353](https://github.com/Vectreal/vectreal-platform/issues/353)) ([64e9af4](https://github.com/Vectreal/vectreal-platform/commit/64e9af44f2f760c62ac7bd1644b64745ce32ea5b))
+* implement scene size initialization and optimize asset list ren… ([#352](https://github.com/Vectreal/vectreal-platform/issues/352)) ([3c7f3ae](https://github.com/Vectreal/vectreal-platform/commit/3c7f3ae5e6fcbdf1cd2a8b91b06f7d8e420fd85d))
+* **onboarding:** enhance onboarding experience with new visuals and steps ([#362](https://github.com/Vectreal/vectreal-platform/issues/362)) ([ca0fdca](https://github.com/Vectreal/vectreal-platform/commit/ca0fdcac10d97293b64a9c80bbb4640e4af92145))
+* refactor publisher sidebar components; replace PublishDrawer with PublishSidebar, add DynamicSidebar, and update related imports ([#351](https://github.com/Vectreal/vectreal-platform/issues/351)) ([1c5a679](https://github.com/Vectreal/vectreal-platform/commit/1c5a679cd810de166c07046bcd1c4a2611bea8f7))
+* replace SceneNameInput with SceneNameAndLocation component; implement location state management ([#347](https://github.com/Vectreal/vectreal-platform/issues/347)) ([8d3a11a](https://github.com/Vectreal/vectreal-platform/commit/8d3a11a229308403f7ce50bee8b65a3a31bb8292))
+
 ## [0.12.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.11.1...workspace-v0.12.0) (2026-04-04)
 
 ### Features
