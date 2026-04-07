@@ -15,7 +15,8 @@
  *
  * Supported events and resulting state transitions:
  *   checkout.session.completed        → sync full subscription (active/trialing)
- *   customer.subscription.updated     → sync full subscription
+ *   customer.subscription.created     → sync full subscription (safety net for new subs)
+ *   customer.subscription.updated     → sync full subscription; detects scheduled downgrade
  *   invoice.payment_succeeded         → billingState = active
  *   invoice.payment_failed            → billingState = past_due
  *   customer.subscription.deleted     → billingState = canceled
@@ -25,6 +26,7 @@
  */
 
 import { eq } from 'drizzle-orm'
+import { PostHog } from 'posthog-node'
 import Stripe from 'stripe'
 
 import {
@@ -40,6 +42,32 @@ import {
 	getStripeClient,
 	resolveStripeWebhookSecret
 } from '../../stripe.server'
+
+// ---------------------------------------------------------------------------
+// Analytics helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Fires a single server-side PostHog event from within webhook processing.
+ * Non-critical — analytics failure is swallowed so it never blocks billing logic.
+ */
+async function captureWebhookAnalyticsEvent(
+	distinctId: string,
+	eventName: string,
+	properties: Record<string, unknown>
+): Promise<void> {
+	const token = process.env.VITE_PUBLIC_POSTHOG_TOKEN
+	const host = process.env.VITE_PUBLIC_POSTHOG_HOST
+	if (!token || !host) return
+
+	const client = new PostHog(token, { host, flushAt: 1, flushInterval: 0 })
+	try {
+		client.capture({ distinctId, event: eventName, properties })
+		await client.shutdown()
+	} catch {
+		// Non-critical
+	}
+}
 
 // ---------------------------------------------------------------------------
 // Signature verification
@@ -157,15 +185,44 @@ async function handleCheckoutSessionCompleted(
 		)
 	}
 
+	// Capture existing subscription ID before the sync overwrites it.
+	// Prevents double-billing when a trialing or previous subscription was not
+	// explicitly ended before checkout created a new subscription.
+	const db = getDbClient()
+	const [existingRow] = await db
+		.select({ stripeSubscriptionId: orgSubscriptions.stripeSubscriptionId })
+		.from(orgSubscriptions)
+		.where(eq(orgSubscriptions.organizationId, organizationId))
+		.limit(1)
+	const oldSubscriptionId = existingRow?.stripeSubscriptionId ?? null
+
 	await syncSubscriptionFromStripe({
 		organizationId,
 		stripeCustomerId: customerId,
 		subscription
 	})
+
+	// Cancel the replaced subscription to prevent double-billing.
+	if (oldSubscriptionId && oldSubscriptionId !== subscriptionId) {
+		try {
+			await stripe.subscriptions.cancel(oldSubscriptionId)
+			console.info(
+				'[stripe-webhook] cancelled replaced subscription after checkout',
+				{ oldSubscriptionId, newSubscriptionId: subscriptionId, organizationId }
+			)
+		} catch (err) {
+			console.error('[stripe-webhook] Failed to cancel replaced subscription', {
+				oldSubscriptionId,
+				newSubscriptionId: subscriptionId,
+				err
+			})
+		}
+	}
 }
 
 async function handleSubscriptionUpdated(
-	subscription: Stripe.Subscription
+	subscription: Stripe.Subscription,
+	previousAttributes?: Record<string, unknown>
 ): Promise<void> {
 	const stripe = getStripeClient()
 
@@ -184,7 +241,8 @@ async function handleSubscriptionUpdated(
 	// DB record (race condition on first-time purchases).
 	const organizationId =
 		(await findOrganizationByCustomerId(customerId)) ??
-		(expanded.metadata?.organization_id ?? null)
+		expanded.metadata?.organization_id ??
+		null
 
 	if (!organizationId) {
 		throw new Error(
@@ -197,6 +255,28 @@ async function handleSubscriptionUpdated(
 		stripeCustomerId: customerId,
 		subscription: expanded
 	})
+
+	// Detect a scheduled downgrade: cancel_at_period_end just transitioned
+	// false → true (user canceled via Stripe Portal).
+	const wasScheduled = previousAttributes?.cancel_at_period_end === false
+	const isNowScheduled = expanded.cancel_at_period_end === true
+	if (wasScheduled && isNowScheduled) {
+		const db = getDbClient()
+		const [row] = await db
+			.select({ plan: orgSubscriptions.plan })
+			.from(orgSubscriptions)
+			.where(eq(orgSubscriptions.organizationId, organizationId))
+			.limit(1)
+		const fromPlan = row?.plan ?? 'unknown'
+		await captureWebhookAnalyticsEvent(
+			organizationId,
+			'plan_downgrade_scheduled',
+			{
+				from_plan: fromPlan,
+				to_plan: 'free'
+			}
+		)
+	}
 }
 
 async function handleSubscriptionDeleted(
@@ -317,9 +397,19 @@ async function dispatchEvent(event: Stripe.Event): Promise<void> {
 			break
 
 		case 'customer.subscription.created':
-		case 'customer.subscription.updated':
-			await handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
+		case 'customer.subscription.updated': {
+			const prevAttrs =
+				event.type === 'customer.subscription.updated'
+					? (event.data.previous_attributes as
+							| Record<string, unknown>
+							| undefined)
+					: undefined
+			await handleSubscriptionUpdated(
+				event.data.object as Stripe.Subscription,
+				prevAttrs
+			)
 			break
+		}
 
 		case 'customer.subscription.deleted':
 			await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)

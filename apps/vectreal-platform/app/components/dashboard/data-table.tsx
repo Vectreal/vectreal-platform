@@ -291,12 +291,12 @@ export function DataTable<TData, TValue>({
 				</Table>
 			</div>
 
-			<div className="flex items-center justify-between">
+			<div className="flex flex-col-reverse items-center justify-between gap-4 md:flex-row">
 				<div className="text-muted-foreground text-sm">
 					{table.getFilteredSelectedRowModel().rows.length} of{' '}
 					{table.getFilteredRowModel().rows.length} row(s) selected
 				</div>
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-2 max-md:w-full max-md:justify-between">
 					<Button
 						variant="outline"
 						size="sm"

@@ -97,11 +97,13 @@ const quickLinks: SidebarLinkItem[] = [
 interface DashboardSidebarContentProps {
 	user: User | null
 	sidebarProjects: Array<{ id: string; name: string; organizationId: string }>
+	plan: string
 }
 
 const DashboardSidebarContent = ({
 	user,
-	sidebarProjects
+	sidebarProjects,
+	plan
 }: DashboardSidebarContentProps) => {
 	const { submit } = useFetcher()
 	const { toggleSidebar, openMobile } = useSidebar()
@@ -119,8 +121,7 @@ const DashboardSidebarContent = ({
 		user?.email ||
 		'User'
 	const userInitial = userName.charAt(0).toUpperCase()
-	// TODO: Replace with actual tier from user data when implemented
-	const accountTier = 'Free'
+	const accountTier = plan.charAt(0).toUpperCase() + plan.slice(1)
 
 	const handleLogout = () => {
 		submit(null, {

@@ -63,7 +63,7 @@ const BILLING_STATE_CONFIG: Record<
 		variant: 'destructive',
 		icon: AlertTriangle,
 		description:
-			'Payment failed. Please update your payment method to restore full access.'
+			'Payment failed. Please update your payment method within 7 days — after that, your account will be locked to read-only.'
 	},
 	unpaid: {
 		label: 'Unpaid',
@@ -74,9 +74,10 @@ const BILLING_STATE_CONFIG: Record<
 	},
 	canceled: {
 		label: 'Canceled',
-		variant: 'outline',
-		icon: HelpCircle,
-		description: 'Subscription canceled. Access has reverted to the Free tier.'
+		variant: 'destructive',
+		icon: AlertTriangle,
+		description:
+			'Subscription canceled. Access has reverted to the Free tier. Scenes and assets exceeding Free limits will be retained for 90 days before deletion.'
 	},
 	paused: {
 		label: 'Paused',
@@ -102,6 +103,7 @@ const BILLING_STATE_CONFIG: Record<
 const WARNING_STATES = new Set<BillingState>([
 	'past_due',
 	'unpaid',
+	'canceled',
 	'incomplete',
 	'incomplete_expired',
 	'paused'
@@ -238,7 +240,10 @@ export function BillingSettingsSection({
 	const isPaid = plan !== 'free'
 	const isEnterprise = plan === 'enterprise'
 	const showWarning = WARNING_STATES.has(billingState)
-	const checkoutPath = '/dashboard/billing/upgrade?plan=pro'
+	// Point upgrade CTA at the next logical plan so the user isn't pre-selecting
+	// their current plan on arrival.
+	const upgradeToPlan = plan === 'pro' ? 'business' : 'pro'
+	const checkoutPath = `/dashboard/billing/upgrade?plan=${upgradeToPlan}`
 
 	const renewalDate =
 		billingState === 'trialing' && trialEnd
@@ -319,7 +324,7 @@ export function BillingSettingsSection({
 							</Button>
 						)}
 						{!isEnterprise && (
-							<Link to={isPaid ? '/pricing' : checkoutPath}>
+							<Link to={checkoutPath}>
 								<Button size="sm" variant={isPaid ? 'ghost' : 'default'}>
 									<ArrowUpRight className="mr-1.5 h-3 w-3" />
 									{isPaid ? 'View plans' : 'Upgrade'}
@@ -425,6 +430,34 @@ export function BillingSettingsSection({
 							label="API requests"
 							current={usage.apiRequestsMonth}
 							limit={usage.apiRequestsMonthLimit}
+							monthly
+						/>
+					</div>
+				</div>
+				<div className="space-y-4">
+					<p className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
+						Storage &amp; bandwidth
+					</p>
+					<div className="space-y-3">
+						<MeterRow
+							label="Storage used (MB)"
+							current={Math.round(usage.storageBytesTotal / (1024 * 1024))}
+							limit={
+								usage.storageLimit !== null
+									? Math.round(usage.storageLimit / (1024 * 1024))
+									: null
+							}
+						/>
+						<MeterRow
+							label="Embed bandwidth (GB)"
+							current={usage.embedBandwidthMonth}
+							limit={usage.embedBandwidthLimit}
+							monthly
+						/>
+						<MeterRow
+							label="Preview loads"
+							current={usage.previewLoadsMonth}
+							limit={usage.previewLoadsMonthLimit}
 							monthly
 						/>
 					</div>
