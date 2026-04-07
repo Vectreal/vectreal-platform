@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.12.2](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.12.1...hooks-v0.12.2) (2026-04-07)
+
+
+### Reverts
+
+* remove release-please generated v0.14.0 changelog entry ([#366](https://github.com/Vectreal/vectreal-platform/issues/366)) ([4ef3b61](https://github.com/Vectreal/vectreal-platform/commit/4ef3b617e7b0a14fe5001b5371f67f2d65cdf819))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.12.2
+
 ## [0.12.1](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.12.0...hooks-v0.12.1) (2026-04-07)
 
 
