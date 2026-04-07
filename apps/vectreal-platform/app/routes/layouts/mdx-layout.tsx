@@ -1,15 +1,24 @@
 import { cn } from '@shared/utils'
 import { type MetaFunction, Outlet } from 'react-router'
 
-import { buildMeta, getRootMeta } from '../../lib/seo'
+import { getLegalPageSeo } from '../../lib/seo-registry'
+import { buildMeta, buildPageMeta, getRootMeta } from '../../lib/seo'
 import styles from '../../styles/mdx.module.css'
 
 import type { RootLoader } from '../../root'
 
 export const meta: MetaFunction<undefined, { root: RootLoader }> = (args) =>
-	buildMeta([], getRootMeta(args), {
-		canonical: args.location.pathname
-	})
+	(() => {
+		const legalPageSeo = getLegalPageSeo(args.location.pathname)
+
+		if (legalPageSeo) {
+			return buildPageMeta(legalPageSeo, getRootMeta(args))
+		}
+
+		return buildMeta([], getRootMeta(args), {
+			canonical: args.location.pathname
+		})
+	})()
 
 export default function MdxLayout() {
 	return (

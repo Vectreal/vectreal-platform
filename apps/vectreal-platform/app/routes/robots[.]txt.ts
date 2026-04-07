@@ -16,6 +16,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 	const robotsTxt = [
 		'User-agent: *',
 		'Allow: /',
+		'Allow: /llms.txt',
 		'',
 		'# Authenticated / private pages',
 		'Disallow: /dashboard',
@@ -34,6 +35,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		'# Authenticated home alias',
 		'Disallow: /home',
 		'',
+		'# LLM-readable index',
+		`# ${origin}/llms.txt`,
 		`Sitemap: ${origin}/sitemap.xml`
 	].join('\n')
 

@@ -7,7 +7,8 @@ import { data, Link, useLoaderData } from 'react-router'
 import { FeatureCompareGrid } from '../../components/dashboard/billing/feature-compare-grid'
 import { PricingCardsSection } from '../../components/dashboard/billing/pricing-cards-section'
 import { getCheckoutOptions } from '../../lib/domain/billing/billing-dashboard-loader.server'
-import { buildMeta } from '../../lib/seo'
+import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
+import { buildPageMeta } from '../../lib/seo'
 
 import type { Route } from './+types/pricing-page'
 
@@ -23,24 +24,7 @@ export async function loader(_: Route.LoaderArgs) {
 }
 
 export function meta(_: Route.MetaArgs) {
-	return buildMeta(
-		[
-			{ title: 'Pricing — Vectreal' },
-			{ property: 'og:title', content: 'Pricing — Vectreal' },
-			{
-				name: 'description',
-				content:
-					'Simple, transparent pricing for every team. From hobbyists to enterprise studios — find the plan that fits your 3D publishing workflow.'
-			},
-			{
-				property: 'og:description',
-				content:
-					'Simple, transparent pricing for every team. From hobbyists to enterprise studios — find the plan that fits your 3D publishing workflow.'
-			}
-		],
-		undefined,
-		{ canonical: '/pricing' }
-	)
+	return buildPageMeta(PUBLIC_SEO_PAGES.pricing)
 }
 
 // ---------------------------------------------------------------------------

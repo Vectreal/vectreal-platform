@@ -10,6 +10,20 @@ export const SITE_URL =
 	(typeof process !== 'undefined' && process.env?.APPLICATION_URL) ||
 	'https://vectreal.com'
 
+const DEFAULT_SITE_NAME = 'Vectreal'
+const DEFAULT_TITLE =
+	'Vectreal - Your platform for creating and sharing 3D scenes.'
+const DEFAULT_DESCRIPTION =
+	'Vectreal is your go-to platform for creating, sharing, and exploring stunning 3D scenes. Join our community of creators and bring your virtual visions to life!'
+const DEFAULT_KEYWORDS =
+	'3D, scenes, platform, Vectreal, create, share, virtual reality, graphics, design'
+const DEFAULT_OG_IMAGE = '/android-chrome-512x512.png'
+const DEFAULT_OG_IMAGE_ALT = 'Vectreal platform'
+const DEFAULT_LOCALE = 'en_US'
+const DEFAULT_TWITTER_CARD = 'summary_large_image'
+
+type JsonLd = Record<string, unknown>
+
 export interface BuildMetaOptions {
 	/**
 	 * When true, injects `noindex, nofollow` robots meta — use for all
@@ -22,6 +36,30 @@ export interface BuildMetaOptions {
 	 * Example: `/pricing` or `https://vectreal.com/pricing`
 	 */
 	canonical?: string
+	/** Open Graph + Twitter image URL (absolute or root-relative). */
+	image?: string
+	/** Accessible alt text for social cards. */
+	imageAlt?: string
+	/** Open Graph content type, defaults to website. */
+	type?: 'website' | 'article'
+	/** Twitter card type, defaults to summary_large_image. */
+	twitterCard?: 'summary' | 'summary_large_image'
+	/** Locale for Open Graph tags. */
+	locale?: string
+	/** Site name in social metadata. */
+	siteName?: string
+	/** Optional JSON-LD payload(s) rendered as script tags. */
+	structuredData?: JsonLd | JsonLd[]
+}
+
+export interface SeoPageDefinition {
+	title: string
+	description: string
+	canonical: string
+	image?: string
+	imageAlt?: string
+	type?: 'website' | 'article'
+	structuredData?: JsonLd | JsonLd[]
 }
 
 /** Build an absolute canonical URL from a path or full URL. */
@@ -47,28 +85,72 @@ export function buildMeta(
 	rootMeta?: MetaDescriptor[],
 	options: BuildMetaOptions = {}
 ): NonNullable<MetaDescriptor>[] {
+	const siteName = options.siteName ?? DEFAULT_SITE_NAME
+	const locale = options.locale ?? DEFAULT_LOCALE
+	const ogType = options.type ?? 'website'
+	const twitterCard = options.twitterCard ?? DEFAULT_TWITTER_CARD
+	const socialImage = toAbsoluteUrl(options.image ?? DEFAULT_OG_IMAGE)
+	const socialImageAlt = options.imageAlt ?? DEFAULT_OG_IMAGE_ALT
+
 	const baseMeta: MetaDescriptor[] = [
 		{
-			title: 'Vectreal - Your platform for creating and sharing 3D scenes.'
+			title: DEFAULT_TITLE
 		},
 		{
 			property: 'og:title',
-			content: 'Vectreal - Your platform for creating and sharing 3D scenes.'
+			content: DEFAULT_TITLE
 		},
 		{
 			name: 'description',
-			content:
-				'Vectreal is your go-to platform for creating, sharing, and exploring stunning 3D scenes. Join our community of creators and bring your virtual visions to life!'
+			content: DEFAULT_DESCRIPTION
 		},
 		{
 			property: 'og:description',
-			content:
-				'Vectreal is your go-to platform for creating, sharing, and exploring stunning 3D scenes. Join our community of creators and bring your virtual visions to life!'
+			content: DEFAULT_DESCRIPTION
+		},
+		{
+			property: 'og:site_name',
+			content: siteName
+		},
+		{
+			property: 'og:type',
+			content: ogType
+		},
+		{
+			property: 'og:locale',
+			content: locale
+		},
+		{
+			property: 'og:image',
+			content: socialImage
+		},
+		{
+			property: 'og:image:alt',
+			content: socialImageAlt
+		},
+		{
+			name: 'twitter:card',
+			content: twitterCard
+		},
+		{
+			name: 'twitter:title',
+			content: DEFAULT_TITLE
+		},
+		{
+			name: 'twitter:description',
+			content: DEFAULT_DESCRIPTION
+		},
+		{
+			name: 'twitter:image',
+			content: socialImage
+		},
+		{
+			name: 'twitter:image:alt',
+			content: socialImageAlt
 		},
 		{
 			name: 'keywords',
-			content:
-				'3D, scenes, platform, Vectreal, create, share, virtual reality, graphics, design'
+			content: DEFAULT_KEYWORDS
 		}
 	]
 
@@ -85,6 +167,7 @@ export function buildMeta(
 		}
 		if ('property' in meta) return `property:${meta.property}`
 		if ('name' in meta) return `name:${meta.name}`
+		if ('script:ld+json' in meta) return 'script:ld+json'
 		if ('title' in meta) return 'title'
 		return `raw:${JSON.stringify(meta)}`
 	}
@@ -125,9 +208,54 @@ export function buildMeta(
 		})
 	}
 
+	if (options.structuredData) {
+		const structuredDataItems = Array.isArray(options.structuredData)
+			? options.structuredData
+			: [options.structuredData]
+
+		for (const item of structuredDataItems) {
+			metaItems.push({
+				'script:ld+json': item
+			})
+		}
+	}
+
 	return metaItems.filter(
 		(item): item is NonNullable<MetaDescriptor> =>
 			item !== null && item !== undefined
+	)
+}
+
+export function buildRootMeta(): MetaDescriptor[] {
+	return buildMeta([], undefined, { canonical: SITE_URL })
+}
+
+export function buildPageMeta(
+	page: SeoPageDefinition,
+	rootMeta?: MetaDescriptor[],
+	options: Omit<
+		BuildMetaOptions,
+		'canonical' | 'image' | 'imageAlt' | 'type'
+	> = {}
+): NonNullable<MetaDescriptor>[] {
+	return buildMeta(
+		[
+			{ title: page.title },
+			{ property: 'og:title', content: page.title },
+			{ name: 'description', content: page.description },
+			{ property: 'og:description', content: page.description },
+			{ name: 'twitter:title', content: page.title },
+			{ name: 'twitter:description', content: page.description }
+		],
+		rootMeta,
+		{
+			...options,
+			canonical: page.canonical,
+			image: page.image,
+			imageAlt: page.imageAlt,
+			type: page.type,
+			structuredData: page.structuredData
+		}
 	)
 }
 

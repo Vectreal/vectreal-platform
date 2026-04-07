@@ -13,6 +13,7 @@ export default [
 	// Crawl endpoints
 	route('robots.txt', './routes/robots[.]txt.ts'),
 	route('sitemap.xml', './routes/sitemap[.]xml.ts'),
+	route('llms.txt', './routes/llms[.]txt.ts'),
 
 	/// API
 	route(

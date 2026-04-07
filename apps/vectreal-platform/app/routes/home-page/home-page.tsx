@@ -22,7 +22,11 @@ import HeroScene from '../../components/home/hero-scene'
 import MockShopSection from '../../components/home/mock-shop-section'
 import BasicCard from '../../components/layout-components/basic-card'
 import Section from '../../components/layout-components/section'
-import { buildMeta } from '../../lib/seo'
+import { buildPageMeta } from '../../lib/seo'
+import {
+	buildOrganizationJsonLd,
+	PUBLIC_SEO_PAGES
+} from '../../lib/seo-registry'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -32,29 +36,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export function meta(_: Route.MetaArgs) {
-	return buildMeta(
-		[
-			{
-				title: 'Vectreal — Your platform for creating and sharing 3D scenes.'
-			},
-			{
-				property: 'og:title',
-				content: 'Vectreal — Your platform for creating and sharing 3D scenes.'
-			},
-			{
-				name: 'description',
-				content:
-					'Vectreal is your go-to platform for creating, sharing, and exploring stunning 3D scenes. Upload, optimize, and publish 3D content in seconds.'
-			},
-			{
-				property: 'og:description',
-				content:
-					'Vectreal is your go-to platform for creating, sharing, and exploring stunning 3D scenes. Upload, optimize, and publish 3D content in seconds.'
-			}
-		],
-		undefined,
-		{ canonical: '/' }
-	)
+	return buildPageMeta(PUBLIC_SEO_PAGES.home, undefined, {
+		structuredData: buildOrganizationJsonLd()
+	})
 }
 
 const HomePage = ({ loaderData }: Route.ComponentProps) => {
