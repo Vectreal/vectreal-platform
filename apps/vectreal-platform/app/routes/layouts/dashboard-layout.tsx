@@ -235,9 +235,7 @@ const DashboardLayout = () => {
 						<DashboardManagementDialogs />
 						<UpgradeModal />
 
-						<div className="from-muted/25 absolute top-0 z-50 h-20 w-full bg-gradient-to-b to-transparent" />
-
-						<div className="absolute z-50 flex items-center gap-4 p-4 px-6 pl-4">
+						<div className="z-50 flex items-center gap-4 p-4 px-6 pl-4">
 							<SidebarTrigger />
 							<div className="flex items-center gap-2">
 								<DynamicBreadcrumb />
@@ -247,11 +245,7 @@ const DashboardLayout = () => {
 							</div>
 						</div>
 						{!(isSceneDetailRoute && willBePublisherRoute) &&
-							!(isSceneDetailRoute || willBeSceneDetail) && (
-								<div className="mt-16">
-									<DashboardHeader />
-								</div>
-							)}
+							!(isSceneDetailRoute || willBeSceneDetail) && <DashboardHeader />}
 						{isContentNavigationLoading &&
 						!willBeNewProjectCreation &&
 						!willBeProjectEditRoute &&
