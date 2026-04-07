@@ -7,8 +7,8 @@ import { data, Link, useLoaderData } from 'react-router'
 import { FeatureCompareGrid } from '../../components/dashboard/billing/feature-compare-grid'
 import { PricingCardsSection } from '../../components/dashboard/billing/pricing-cards-section'
 import { getCheckoutOptions } from '../../lib/domain/billing/billing-dashboard-loader.server'
-import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
 import { buildPageMeta } from '../../lib/seo'
+import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
 
 import type { Route } from './+types/pricing-page'
 

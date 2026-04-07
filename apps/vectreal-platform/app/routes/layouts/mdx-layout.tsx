@@ -1,8 +1,8 @@
 import { cn } from '@shared/utils'
 import { type MetaFunction, Outlet } from 'react-router'
 
-import { getLegalPageSeo } from '../../lib/seo-registry'
 import { buildMeta, buildPageMeta, getRootMeta } from '../../lib/seo'
+import { getLegalPageSeo } from '../../lib/seo-registry'
 import styles from '../../styles/mdx.module.css'
 
 import type { RootLoader } from '../../root'

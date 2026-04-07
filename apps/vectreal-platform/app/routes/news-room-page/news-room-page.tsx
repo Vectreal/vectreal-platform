@@ -9,8 +9,8 @@ import {
 	getNewsCategories,
 	getNewsTags
 } from '../../lib/news/news-manifest'
-import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
 import { buildPageMeta } from '../../lib/seo'
+import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
 
 import type { Route } from './+types/news-room-page'
 
