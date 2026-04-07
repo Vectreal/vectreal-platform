@@ -14,7 +14,7 @@
 		"@gltf-transform/core": "^4.0.8",
 		"@gltf-transform/extensions": "^4.0.10",
 		"@gltf-transform/functions": "^4.0.8",
-		"@google-cloud/storage": "^7.16.0",
+		"@google-cloud/storage": "^7.19.0",
 		"@hookform/resolvers": "^5.0.1",
 		"@mdx-js/rollup": "^3.1.1",
 		"@oslojs/crypto": "^1.0.1",
