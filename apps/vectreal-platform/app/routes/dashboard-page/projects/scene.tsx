@@ -46,12 +46,12 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { data, Link, useNavigate } from 'react-router'
 
 import { Route } from './+types/scene'
+import CenteredSpinner from '../../../components/centered-spinner'
 import {
 	buildAssetListItemProps,
+	InlineEditableMetadataField,
 	SceneAssetListItem
-} from './scene-asset-list-item'
-import CenteredSpinner from '../../../components/centered-spinner'
-import { InlineEditableMetadataField } from '../../../components/dashboard/inline-editable-metadata-field'
+} from '../../../components/dashboard'
 import { EmbedOptionsPanel } from '../../../components/embed/embed-options-panel'
 import { ScenePublishStateControl } from '../../../components/publishing/scene-publish-state-control'
 import { ClientVectrealViewer } from '../../../components/viewer/client-vectreal-viewer'

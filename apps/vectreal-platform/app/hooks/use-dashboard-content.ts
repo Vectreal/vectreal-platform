@@ -12,7 +12,7 @@ import {
 	getRouteContext,
 	identifyDrawerRoute,
 	parseRouteParams
-} from '../components/dashboard/utils'
+} from '../components/dashboard'
 import { DASHBOARD_CONTENT, DASHBOARD_ROUTES } from '../constants/dashboard'
 import {
 	ACTION_VARIANT,

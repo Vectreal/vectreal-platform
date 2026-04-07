@@ -1,7 +1,7 @@
 import { data, useLoaderData } from 'react-router'
 
 import { Route } from './+types/billing'
-import { BillingSettingsSection } from '../../components/dashboard/billing/billing-settings-section'
+import { BillingSettingsSection } from '../../components/dashboard'
 import { loadBillingDashboardData } from '../../lib/domain/billing/billing-dashboard-loader.server'
 
 export async function loader({ request }: Route.LoaderArgs) {

@@ -26,8 +26,10 @@ import {
 } from 'react-router'
 
 import { Route } from './+types/billing-upgrade'
-import { FeatureCompareGrid } from '../../components/dashboard/billing/feature-compare-grid'
-import { PricingCardsSection } from '../../components/dashboard/billing/pricing-cards-section'
+import {
+	FeatureCompareGrid,
+	PricingCardsSection
+} from '../../components/dashboard'
 import { PLAN_ENTITLEMENTS, type Plan } from '../../constants/plan-config'
 import { loadBillingDashboardData } from '../../lib/domain/billing/billing-dashboard-loader.server'
 
@@ -346,7 +348,9 @@ export default function BillingUpgradePage() {
 								<Button
 									size="lg"
 									className="w-full gap-2"
-									onClick={isDirectUpdate ? () => setConfirmOpen(true) : submitCheckout}
+									onClick={
+										isDirectUpdate ? () => setConfirmOpen(true) : submitCheckout
+									}
 									disabled={!selectedPrice || isSubmitting || !checkoutEnabled}
 								>
 									{isSubmitting ? (
@@ -382,7 +386,7 @@ export default function BillingUpgradePage() {
 			</div>
 
 			{/* Confirmation dialog — only shown for direct subscription updates (active plan) */}
-		<Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+			<Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
 				<DialogContent className="max-w-sm">
 					<DialogHeader>
 						<DialogTitle>Confirm plan change</DialogTitle>
@@ -393,7 +397,7 @@ export default function BillingUpgradePage() {
 					</DialogHeader>
 
 					{/* Change summary */}
-					<div className="bg-muted rounded-lg space-y-2 p-4 text-sm">
+					<div className="bg-muted space-y-2 rounded-lg p-4 text-sm">
 						{billing.plan !== plan && (
 							<div className="flex items-center gap-2">
 								<span className="text-muted-foreground">
@@ -409,8 +413,10 @@ export default function BillingUpgradePage() {
 						</div>
 						{selectedPrice && displayPriceCents !== null && (
 							<div className="text-muted-foreground">
-								{formatCurrency(displayPriceCents, selectedPrice.currency)}/month
-								{billingPeriod === 'annual' && annualSavings &&
+								{formatCurrency(displayPriceCents, selectedPrice.currency)}
+								/month
+								{billingPeriod === 'annual' &&
+									annualSavings &&
 									` · ${formatCurrency(selectedPrice.amountCents, selectedPrice.currency)} billed annually`}
 							</div>
 						)}
@@ -427,10 +433,7 @@ export default function BillingUpgradePage() {
 					</div>
 
 					<DialogFooter>
-						<Button
-							variant="outline"
-							onClick={() => setConfirmOpen(false)}
-						>
+						<Button variant="outline" onClick={() => setConfirmOpen(false)}>
 							Cancel
 						</Button>
 						<Button onClick={submitCheckout} disabled={!selectedPrice}>

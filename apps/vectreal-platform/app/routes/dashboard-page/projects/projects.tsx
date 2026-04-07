@@ -12,11 +12,11 @@ import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { toast } from 'sonner'
 
 import { Route } from './+types/projects'
-import { DataTable } from '../../../components/dashboard/data-table'
 import {
+	DataTable,
 	projectColumns,
 	type ProjectRow
-} from '../../../components/dashboard/table-columns'
+} from '../../../components/dashboard'
 import { WrittenConfirmationModal } from '../../../components/shared/written-confirmation-modal'
 import { ProjectsGridSkeleton } from '../../../components/skeletons'
 import { useDashboardTableState } from '../../../hooks/use-dashboard-table-state'

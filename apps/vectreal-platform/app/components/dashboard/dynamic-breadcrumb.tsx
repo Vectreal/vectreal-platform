@@ -19,10 +19,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Fragment, memo, useMemo } from 'react'
 import { Link } from 'react-router'
 
-import {
-	getRouteContext,
-	parseRouteParams
-} from '../../components/dashboard/utils'
+import { getRouteContext, parseRouteParams } from './utils'
 import { useDashboardHeaderData } from '../../hooks/use-dashboard-content'
 
 import type {
