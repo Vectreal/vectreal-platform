@@ -26,6 +26,8 @@ import { ConsentPreferencesDialog } from './components/consent/consent-preferenc
 import { GlobalNavigationLoader } from './components/global-navigation-loader'
 import { getConsent } from './lib/domain/consent/consent-repository.server'
 import { posthogMiddleware } from './lib/posthog/posthog-middleware'
+import { buildMeta } from './lib/seo'
+import { buildOrganizationJsonLd } from './lib/seo-registry'
 import { getSession as getConsentSession } from './lib/sessions/consent-session.server'
 import { csrfSession } from './lib/sessions/csrf-session.server'
 import {
@@ -39,11 +41,10 @@ import type { ShouldRevalidateFunction } from 'react-router'
 import '@shared/components/styles/globals.css'
 
 export const meta: MetaFunction = () => [
-	{
-		title: 'Vectreal Platform',
-		name: 'description',
-		content: 'Your platform for creating and sharing 3D content.'
-	}
+	...buildMeta([], undefined, {
+		canonical: '/',
+		structuredData: buildOrganizationJsonLd()
+	})
 ]
 
 export const middleware: Route.MiddlewareFunction[] = [posthogMiddleware]

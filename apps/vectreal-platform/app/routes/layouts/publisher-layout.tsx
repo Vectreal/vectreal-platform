@@ -3,7 +3,7 @@ import { ModelProvider } from '@vctrl/hooks/use-load-model'
 import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
 import { Provider, useAtom } from 'jotai/react'
 import { useCallback, useLayoutEffect } from 'react'
-import { data, Outlet } from 'react-router'
+import { data, Outlet, type MetaFunction } from 'react-router'
 
 import { Route } from './+types/publisher-layout'
 import { ControlsOverlay } from '../../components'
@@ -16,6 +16,7 @@ import {
 	getSceneFolder
 } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
+import { buildMeta } from '../../lib/seo'
 import {
 	currentLocationAtom,
 	processAtom,
@@ -34,6 +35,16 @@ import type {
 	SceneAggregateResponse
 } from '../../types/api'
 import type { ShouldRevalidateFunction } from 'react-router'
+
+export const meta: MetaFunction = () =>
+	buildMeta(
+		[
+			{ title: 'Publisher — Vectreal' },
+			{ property: 'og:title', content: 'Publisher — Vectreal' }
+		],
+		undefined,
+		{ private: true }
+	)
 
 export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	const { client, headers } = await createSupabaseClient(request)

@@ -19,6 +19,8 @@ import {
 	getNewsArticle,
 	getRelatedNewsArticles
 } from '../../lib/news/news-manifest'
+import { buildPageMeta } from '../../lib/seo'
+import { buildNewsArticleJsonLd } from '../../lib/seo-registry'
 import styles from '../../styles/mdx.module.css'
 
 import type { Route } from './+types/news-room-article-page'
@@ -62,18 +64,34 @@ export async function loader({ params }: Route.LoaderArgs) {
 
 export function meta({ data }: Route.MetaArgs) {
 	if (!data) {
-		return [{ title: 'Article not found — Vectreal' }]
+		return buildPageMeta({
+			title: 'Article not found - Vectreal',
+			description: 'This news article is no longer available.',
+			canonical: '/news-room'
+		})
 	}
 
-	const title = `${data.article.title} — Vectreal News Room`
+	const title = `${data.article.title} - Vectreal News Room`
 	const description = data.article.excerpt
+	const canonical = `/news-room/${data.article.slug}`
 
-	return [
-		{ title },
-		{ name: 'description', content: description },
-		{ property: 'og:title', content: title },
-		{ property: 'og:description', content: description }
-	]
+	return buildPageMeta({
+		title,
+		description,
+		canonical,
+		type: 'article',
+		image: data.article.coverImage,
+		imageAlt: data.article.title,
+		structuredData: buildNewsArticleJsonLd({
+			title: data.article.title,
+			description,
+			canonicalPath: canonical,
+			publishedAt: data.article.publishedAt,
+			updatedAt: data.article.updatedAt,
+			image: data.article.coverImage,
+			authorName: data.article.author.name
+		})
+	})
 }
 
 export default function NewsRoomArticlePage({

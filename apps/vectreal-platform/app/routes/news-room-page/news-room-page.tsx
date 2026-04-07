@@ -9,6 +9,8 @@ import {
 	getNewsCategories,
 	getNewsTags
 } from '../../lib/news/news-manifest'
+import { buildPageMeta } from '../../lib/seo'
+import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
 
 import type { Route } from './+types/news-room-page'
 
@@ -79,18 +81,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export function meta(_: Route.MetaArgs) {
-	return [
-		{ title: 'News Room — Vectreal' },
-		{
-			name: 'description',
-			content: 'News and product notes from the Vectreal team.'
-		},
-		{ property: 'og:title', content: 'News Room — Vectreal' },
-		{
-			property: 'og:description',
-			content: 'News and product notes from the Vectreal team.'
-		}
-	]
+	return buildPageMeta(PUBLIC_SEO_PAGES.newsroom)
 }
 
 export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {

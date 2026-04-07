@@ -4,7 +4,7 @@ import { cn } from '@shared/utils'
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion'
 import { ArrowRight, LayoutDashboard } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, type MetaFunction } from 'react-router'
 
 import { Route } from './+types/onboarding-page'
 import {
@@ -14,6 +14,17 @@ import {
 	VISUAL_VARIANTS
 } from './onboarding-steps'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
+import { buildMeta } from '../../lib/seo'
+
+export const meta: MetaFunction = () =>
+	buildMeta(
+		[
+			{ title: 'Get Started — Vectreal' },
+			{ property: 'og:title', content: 'Get Started — Vectreal' }
+		],
+		undefined,
+		{ private: true }
+	)
 
 // ─── Loader ───────────────────────────────────────────────────────────────────
 

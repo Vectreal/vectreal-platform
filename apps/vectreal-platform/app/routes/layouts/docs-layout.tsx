@@ -24,19 +24,38 @@ import {
 	getAdjacentDocPages,
 	getDocPage
 } from '../../lib/docs/docs-manifest'
-import { buildMeta, getRootMeta } from '../../lib/seo'
+import { buildPageMeta, getRootMeta } from '../../lib/seo'
+import { buildDocsPageSeo, PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
 import styles from '../../styles/mdx.module.css'
 
 import type { RootLoader } from '../../root'
 
-export const meta: MetaFunction<undefined, { root: RootLoader }> = (
-	rootLoaderData
-) =>
-	buildMeta(
-		[{ title: 'Docs — Vectreal Platform' }],
-		getRootMeta(rootLoaderData),
-		{ private: false }
-	)
+export const meta: MetaFunction<undefined, { root: RootLoader }> = (args) =>
+	(() => {
+		const slug = args.location.pathname
+			.replace(/^\/docs\/?/, '')
+			.replace(/\/$/, '')
+		const page = getDocPage(slug)
+
+		if (!page) {
+			return buildPageMeta(
+				{
+					...PUBLIC_SEO_PAGES.docs,
+					canonical: args.location.pathname
+				},
+				getRootMeta(args)
+			)
+		}
+
+		return buildPageMeta(
+			buildDocsPageSeo({
+				pathname: args.location.pathname,
+				title: page.title,
+				description: page.description
+			}),
+			getRootMeta(args)
+		)
+	})()
 
 /**
  * DocsLayout — wraps all /docs/* routes.

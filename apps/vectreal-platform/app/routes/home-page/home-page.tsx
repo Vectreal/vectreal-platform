@@ -22,12 +22,23 @@ import HeroScene from '../../components/home/hero-scene'
 import MockShopSection from '../../components/home/mock-shop-section'
 import BasicCard from '../../components/layout-components/basic-card'
 import Section from '../../components/layout-components/section'
+import { buildPageMeta } from '../../lib/seo'
+import {
+	buildOrganizationJsonLd,
+	PUBLIC_SEO_PAGES
+} from '../../lib/seo-registry'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const isMobile = isMobileRequest(request)
 
 	return { isMobile }
+}
+
+export function meta(_: Route.MetaArgs) {
+	return buildPageMeta(PUBLIC_SEO_PAGES.home, undefined, {
+		structuredData: buildOrganizationJsonLd()
+	})
 }
 
 const HomePage = ({ loaderData }: Route.ComponentProps) => {
