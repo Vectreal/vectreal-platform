@@ -76,6 +76,14 @@ const FEATURE_GROUPS: Array<{
 		]
 	},
 	{
+		label: 'Data & Compliance',
+		features: [
+			{ key: 'data_export', label: 'Bulk data export' },
+			{ key: 'data_residency_eu', label: 'EU data residency' },
+			{ key: 'data_residency_custom', label: 'Custom data residency' }
+		]
+	},
+	{
 		label: 'Support',
 		features: [
 			{ key: 'support_community', label: 'Community & Discord' },
