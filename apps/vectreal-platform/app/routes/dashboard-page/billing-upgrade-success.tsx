@@ -11,9 +11,12 @@ import {
 import { Separator } from '@shared/components/ui/separator'
 import { Check, CheckCircle2, ExternalLink } from 'lucide-react'
 import { useEffect } from 'react'
-import { data, Link, useLoaderData } from 'react-router'
+import { data, Link, redirect, useLoaderData } from 'react-router'
 
 import { PLAN_ENTITLEMENTS } from '../../constants/plan-config'
+import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
+import { syncSubscriptionFromStripe } from '../../lib/domain/billing/stripe-subscription-sync.server'
+import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 import { getStripeClient } from '../../lib/stripe.server'
 
 import type { Route } from './+types/billing-upgrade-success'
@@ -63,6 +66,22 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url)
 	const sessionId = url.searchParams.get('session_id')
 
+	// Authenticate so we can sync the subscription immediately, ensuring the
+	// plan is active in the DB before the user navigates to the dashboard.
+	const { user, userWithDefaults, headers } =
+		await loadAuthenticatedUser(request)
+	const organizationId = userWithDefaults.organization.id
+
+	// Enforce owner/admin role — billing writes are restricted to billing admins,
+	// consistent with /api/billing/checkout and /api/billing/portal.
+	const memberships = await getUserOrganizations(user.id)
+	const membership = memberships.find(
+		(m) => m.organization.id === organizationId
+	)
+	if (!membership || !['owner', 'admin'].includes(membership.membership.role)) {
+		throw redirect('/dashboard/billing', { headers })
+	}
+
 	let planId: string | null = null
 	let planLabel: string | null = null
 	let billingPeriod: string | null = null
@@ -71,18 +90,57 @@ export async function loader({ request }: Route.LoaderArgs) {
 	if (sessionId) {
 		try {
 			const stripe = getStripeClient()
-			const session = await stripe.checkout.sessions.retrieve(sessionId)
+			// Expand the subscription with price/product so plan metadata is
+			// available for both display and the immediate DB sync below.
+			const session = await stripe.checkout.sessions.retrieve(sessionId, {
+				expand: ['subscription.items.data.price.product']
+			})
+
 			planId = session.metadata?.plan_id ?? null
 			planLabel = planId ? (PLAN_LABELS[planId] ?? null) : null
 			billingPeriod = session.metadata?.billing_period ?? null
 			fromPlan = session.metadata?.from_plan ?? null
+
+			// Verify the session belongs to this org to prevent session-ID hijacking
+			// (an attacker holding another org's session_id must not be able to
+			// attach that subscription/customer to their own org record).
+			// Sessions created by our checkout always carry organization_id in metadata.
+			const sessionOrgId = session.metadata?.organization_id
+			const isOwnerSession = sessionOrgId === organizationId
+
+			// Only sync when:
+			//   1. The session is confirmed complete/paid.
+			//   2. The session belongs to the authenticated org.
+			//   3. The session is a subscription checkout with an expanded object.
+			if (
+				isOwnerSession &&
+				session.status === 'complete' &&
+				(session.payment_status === 'paid' ||
+					session.payment_status === 'no_payment_required') &&
+				session.mode === 'subscription' &&
+				session.subscription &&
+				typeof session.subscription !== 'string'
+			) {
+				const customerId =
+					typeof session.customer === 'string'
+						? session.customer
+						: (session.customer?.id ?? null)
+
+				if (customerId) {
+					await syncSubscriptionFromStripe({
+						organizationId,
+						stripeCustomerId: customerId,
+						subscription: session.subscription
+					})
+				}
+			}
 		} catch (error) {
 			// Non-critical — Stripe unavailable, continue gracefully
-			console.error('Failed to retrieve Stripe checkout session.', error)
+			console.error('Failed to retrieve or sync Stripe checkout session.', error)
 		}
 	}
 
-	return data({ planId, planLabel, billingPeriod, fromPlan })
+	return data({ planId, planLabel, billingPeriod, fromPlan }, { headers })
 }
 
 export default function BillingUpgradeSuccessPage() {
