@@ -100,5 +100,6 @@
 				"style": "css"
 			}
 		}
-	}
+	},
+	"analytics": true
 }

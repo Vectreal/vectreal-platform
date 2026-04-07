@@ -30,3 +30,6 @@ credentials/
 *.tfstate.*
 *.tfvars
 !terraform.tfvars.example
+
+.claude/worktrees
+.claude/settings.local.json
