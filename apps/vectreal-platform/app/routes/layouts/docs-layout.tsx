@@ -69,6 +69,7 @@ export default function DocsLayout() {
 	const categoryLabel = categorySlug
 		? DOC_CATEGORY_LABELS[categorySlug]
 		: undefined
+	const categoryPage = categorySlug ? getDocPage(categorySlug) : undefined
 
 	return (
 		<div className="mx-auto flex w-full max-w-7xl gap-0 px-4 pt-22 pb-16">
@@ -102,11 +103,15 @@ export default function DocsLayout() {
 								<>
 									<BreadcrumbSeparator />
 									<BreadcrumbItem>
-										<BreadcrumbLink asChild>
-											<Link to={`/docs/${categorySlug}`} viewTransition>
-												{categoryLabel}
-											</Link>
-										</BreadcrumbLink>
+										{categoryPage ? (
+											<BreadcrumbLink asChild>
+												<Link to={`/docs/${categorySlug}`} viewTransition>
+													{categoryLabel}
+												</Link>
+											</BreadcrumbLink>
+										) : (
+											<BreadcrumbPage>{categoryLabel}</BreadcrumbPage>
+										)}
 									</BreadcrumbItem>
 								</>
 							)}
