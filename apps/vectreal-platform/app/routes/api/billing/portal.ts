@@ -74,7 +74,7 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 	const stripe = getStripeClient()
 
 	const requestUrl = new URL(request.url)
-	const returnUrl = `${requestUrl.protocol}//${requestUrl.host}/dashboard`
+	const returnUrl = `${requestUrl.protocol}//${requestUrl.host}/dashboard/billing`
 
 	const portalSession = await stripe.billingPortal.sessions.create({
 		customer: sub.stripeCustomerId,

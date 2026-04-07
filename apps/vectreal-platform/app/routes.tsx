@@ -110,7 +110,9 @@ export default [
 					route('deployment', './routes/docs/operations/deployment.mdx')
 				]),
 				// Contributing
-				route('contributing', './routes/docs/contributing.mdx')
+				route('contributing', './routes/docs/contributing.mdx'),
+				// Docs fallback for unknown nested pages
+				route('*', './routes/docs/docs-not-found.tsx')
 			])
 		])
 	]),

@@ -23,7 +23,7 @@
 
 	h1 {
 		font-size: clamp(2rem, 5vw, 3.5rem);
-		font-weight: 900;
+		font-weight: medium;
 		line-height: 1.2;
 		background: linear-gradient(
 			to bottom right,
@@ -36,7 +36,7 @@
 	}
 
 	h2 {
-		@apply text-xl font-bold tracking-wide uppercase;
+		@apply text-xl font-medium tracking-wide capitalize;
 		border-left: 2px solid var(--color-accent);
 		padding-left: 1rem;
 		margin-top: 1rem;
@@ -44,17 +44,17 @@
 	}
 
 	h3 {
-		@apply text-lg font-semibold;
+		@apply text-lg font-normal tracking-wide;
 		scroll-margin-top: 6.5rem;
 	}
 
 	h4 {
-		@apply text-base font-semibold;
+		@apply text-base font-normal tracking-wide;
 		scroll-margin-top: 6.5rem;
 	}
 
 	h5 {
-		@apply text-sm font-semibold;
+		@apply text-sm font-normal tracking-wide;
 		scroll-margin-top: 6.5rem;
 	}
 

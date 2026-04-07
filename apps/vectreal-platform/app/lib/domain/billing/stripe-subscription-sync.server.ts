@@ -22,6 +22,7 @@ import Stripe from 'stripe'
 import { type BillingState, type Plan } from '../../../constants/plan-config'
 import { getDbClient } from '../../../db/client'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
+import { getStripeClient } from '../../stripe.server'
 
 // ---------------------------------------------------------------------------
 // Stripe status → local BillingState mapping
@@ -222,4 +223,54 @@ export async function findOrganizationBySubscriptionId(
 		.limit(1)
 
 	return row?.organizationId ?? null
+}
+
+// ---------------------------------------------------------------------------
+// Account deletion helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Cancels the active Stripe subscription for an organisation as part of
+ * account deletion.
+ *
+ * This must be called **before** the user / organisation DB row is deleted,
+ * because the cascade will wipe `org_subscriptions` (losing the Stripe IDs)
+ * without ever instructing Stripe to stop billing the customer's card.
+ *
+ * Error handling: Stripe errors are caught and logged but do NOT propagate —
+ * account deletion must not be blocked by a transient Stripe outage.
+ * Orphaned subscriptions can be identified and cleaned up via the
+ * `/api/billing/reconcile` endpoint.
+ */
+export async function cancelStripeSubscriptionsForOrganization(
+	organizationId: string
+): Promise<void> {
+	const db = getDbClient()
+
+	const [row] = await db
+		.select({ stripeSubscriptionId: orgSubscriptions.stripeSubscriptionId })
+		.from(orgSubscriptions)
+		.where(eq(orgSubscriptions.organizationId, organizationId))
+		.limit(1)
+
+	if (!row?.stripeSubscriptionId) {
+		// No paid subscription recorded — nothing to cancel in Stripe.
+		return
+	}
+
+	const stripe = getStripeClient()
+
+	try {
+		await stripe.subscriptions.cancel(row.stripeSubscriptionId)
+		console.info(
+			'[billing] Stripe subscription cancelled on account deletion',
+			{ organizationId, stripeSubscriptionId: row.stripeSubscriptionId }
+		)
+	} catch (err) {
+		// Non-blocking: log the failure so operators can reconcile manually.
+		console.error(
+			'[billing] Failed to cancel Stripe subscription during account deletion — subscription may require manual cleanup',
+			{ organizationId, stripeSubscriptionId: row.stripeSubscriptionId, err }
+		)
+	}
 }

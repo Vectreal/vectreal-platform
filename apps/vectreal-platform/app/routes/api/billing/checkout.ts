@@ -12,7 +12,9 @@
  *
  * Response (201):
  *   {
- *     checkoutUrl: string   // Stripe-hosted checkout URL; redirect the client here
+ *     redirectUrl: string   // Redirect the client here.
+ *                           // For new subscribers: Stripe-hosted checkout page.
+ *                           // For existing subscribers: success page (subscription updated in-place).
  *   }
  *
  * Security:
@@ -33,6 +35,7 @@ import { getDbClient } from '../../../db/client'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
 import { getOrgSubscription } from '../../../lib/domain/billing/entitlement-service.server'
+import { syncSubscriptionFromStripe } from '../../../lib/domain/billing/stripe-subscription-sync.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
 import { ensureSameOriginMutation } from '../../../lib/http/csrf.server'
 import { getStripeClient } from '../../../lib/stripe.server'
@@ -185,13 +188,15 @@ export async function action({
 	const db = getDbClient()
 	const [existingSub] = await db
 		.select({
-			stripeCustomerId: orgSubscriptions.stripeCustomerId
+			stripeCustomerId: orgSubscriptions.stripeCustomerId,
+			stripeSubscriptionId: orgSubscriptions.stripeSubscriptionId
 		})
 		.from(orgSubscriptions)
 		.where(eq(orgSubscriptions.organizationId, organizationId))
 		.limit(1)
 
-	const { plan: currentPlan } = await getOrgSubscription(organizationId)
+	const { plan: currentPlan, billingState } =
+		await getOrgSubscription(organizationId)
 
 	const stripe = getStripeClient()
 	const selectedPrice = await stripe.prices.retrieve(priceId, {
@@ -220,6 +225,59 @@ export async function action({
 	const requestUrl = new URL(request.url)
 	const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`
 
+	// Route decision: update the existing subscription in-place when the org
+	// already has an active subscription. This avoids creating a second Stripe
+	// subscription (which would cause double-billing) and enables proration.
+	// Only `active` qualifies — past_due / trialing / etc. fall through to
+	// the hosted Checkout flow where payment details can be re-entered.
+	const isActiveSub =
+		existingSub?.stripeSubscriptionId != null &&
+		existingSub?.stripeCustomerId != null &&
+		billingState === 'active'
+
+	if (isActiveSub) {
+		// Retrieve the existing subscription — needed only for the item ID.
+		const existingSubscription = await stripe.subscriptions.retrieve(
+			existingSub.stripeSubscriptionId!
+		)
+		const itemId = existingSubscription.items.data[0]?.id
+		if (!itemId) {
+			return ApiResponse.serverError('Existing subscription has no items')
+		}
+
+		// Swap price in-place. Expand price+product so syncSubscriptionFromStripe
+		// can resolve the plan via metadata without a second round-trip.
+		const updatedSubscription = await stripe.subscriptions.update(
+			existingSub.stripeSubscriptionId!,
+			{
+				items: [{ id: itemId, price: priceId }],
+				proration_behavior: 'create_prorations',
+				expand: ['items.data.price.product']
+			}
+		)
+
+		// Sync DB immediately — the success page needs no further Stripe call.
+		await syncSubscriptionFromStripe({
+			organizationId,
+			stripeCustomerId: existingSub.stripeCustomerId!,
+			subscription: updatedSubscription
+		})
+
+		const redirectUrl =
+			`${baseUrl}/dashboard/billing/upgrade-success` +
+			`?plan_id=${planId}&billing_period=${billingPeriod}&from_plan=${currentPlan}`
+
+		console.info('[billing/checkout] updated existing subscription', {
+			subscriptionId: existingSub.stripeSubscriptionId,
+			organizationId,
+			planId,
+			billingPeriod
+		})
+
+		return ApiResponse.created({ redirectUrl }, { headers: responseHeaders })
+	}
+
+	// New subscription — use Stripe-hosted Checkout.
 	const session = await stripe.checkout.sessions.create({
 		mode: 'subscription',
 		customer: existingSub?.stripeCustomerId ?? undefined,
@@ -255,7 +313,7 @@ export async function action({
 	})
 
 	return ApiResponse.created(
-		{ checkoutUrl: session.url },
+		{ redirectUrl: session.url },
 		{ headers: responseHeaders }
 	)
 }

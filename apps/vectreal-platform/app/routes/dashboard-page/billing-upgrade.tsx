@@ -2,6 +2,14 @@ import { useFeatureFlagEnabled, usePostHog } from '@posthog/react'
 import { Button } from '@shared/components/ui/button'
 import { Card, CardContent } from '@shared/components/ui/card'
 import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle
+} from '@shared/components/ui/dialog'
+import {
 	AlertTriangle,
 	ArrowRight,
 	ChevronLeft,
@@ -25,7 +33,6 @@ import { loadBillingDashboardData } from '../../lib/domain/billing/billing-dashb
 
 import type { BillingCheckoutPeriods } from '../../lib/domain/dashboard/dashboard-types'
 import type { PostHogContext } from '../../lib/posthog/posthog-middleware'
-
 
 const PLAN_LABELS = {
 	free: 'Free',
@@ -144,6 +151,7 @@ export default function BillingUpgradePage() {
 	const [plan, setPlan] = useState<'pro' | 'business'>(initialPlan)
 	const [billingPeriod, setBillingPeriod] =
 		useState<BillingPeriod>(initialPeriod)
+	const [confirmOpen, setConfirmOpen] = useState(false)
 
 	const planPricing = checkoutOptions[plan]
 	const selectedPrice = useMemo(
@@ -159,13 +167,17 @@ export default function BillingUpgradePage() {
 		[billing.plan, plan]
 	)
 
+	// Whether this selection will skip Stripe's hosted checkout and update
+	// the subscription in-place — mirrors the server-side route decision.
+	const isDirectUpdate = billing.billingState === 'active'
+
 	useEffect(() => {
 		posthog?.capture('view_pricing', { source: 'settings', plan: billing.plan })
 	}, [posthog, billing.plan])
 
 	type CheckoutFetcherResponse = {
 		data: {
-			checkoutUrl: string
+			redirectUrl: string
 		}
 	}
 
@@ -176,11 +188,11 @@ export default function BillingUpgradePage() {
 
 		const { data } = value as { data: unknown }
 
-		if (!data || typeof data !== 'object' || !('checkoutUrl' in data)) {
+		if (!data || typeof data !== 'object' || !('redirectUrl' in data)) {
 			return false
 		}
 
-		return typeof (data as { checkoutUrl: unknown }).checkoutUrl === 'string'
+		return typeof (data as { redirectUrl: unknown }).redirectUrl === 'string'
 	}
 
 	useEffect(() => {
@@ -191,11 +203,27 @@ export default function BillingUpgradePage() {
 			return
 		}
 
-		window.location.href = checkoutFetcher.data.data.checkoutUrl
+		window.location.href = checkoutFetcher.data.data.redirectUrl
 	}, [checkoutFetcher.state, checkoutFetcher.data])
 
-	const handleStartCheckout = () => {
+	const checkoutError =
+		checkoutFetcher.state === 'idle' &&
+		checkoutFetcher.data &&
+		typeof checkoutFetcher.data === 'object' &&
+		'success' in checkoutFetcher.data &&
+		checkoutFetcher.data.success === false &&
+		'error' in checkoutFetcher.data
+			? String(checkoutFetcher.data.error)
+			: null
+
+	// Close confirmation dialog when an error comes back
+	useEffect(() => {
+		if (checkoutError) setConfirmOpen(false)
+	}, [checkoutError])
+
+	const submitCheckout = () => {
 		if (!selectedPrice) return
+		setConfirmOpen(false)
 		posthog?.capture('plan_upgrade_started', {
 			from_plan: billing.plan,
 			to_plan: plan,
@@ -215,16 +243,6 @@ export default function BillingUpgradePage() {
 			}
 		)
 	}
-
-	const checkoutError =
-		checkoutFetcher.state === 'idle' &&
-		checkoutFetcher.data &&
-		typeof checkoutFetcher.data === 'object' &&
-		'success' in checkoutFetcher.data &&
-		checkoutFetcher.data.success === false &&
-		'error' in checkoutFetcher.data
-			? String(checkoutFetcher.data.error)
-			: null
 
 	const isSubmitting = checkoutFetcher.state !== 'idle'
 
@@ -328,13 +346,18 @@ export default function BillingUpgradePage() {
 								<Button
 									size="lg"
 									className="w-full gap-2"
-									onClick={handleStartCheckout}
+									onClick={isDirectUpdate ? () => setConfirmOpen(true) : submitCheckout}
 									disabled={!selectedPrice || isSubmitting || !checkoutEnabled}
 								>
 									{isSubmitting ? (
 										<>
 											<Loader2 className="h-4 w-4 animate-spin" />
-											Redirecting…
+											{isDirectUpdate ? 'Updating…' : 'Opening Stripe…'}
+										</>
+									) : isDirectUpdate ? (
+										<>
+											Update plan
+											<ArrowRight className="h-4 w-4" />
 										</>
 									) : (
 										<>
@@ -357,6 +380,65 @@ export default function BillingUpgradePage() {
 
 				<FeatureCompareGrid />
 			</div>
+
+			{/* Confirmation dialog — only shown for direct subscription updates (active plan) */}
+		<Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+				<DialogContent className="max-w-sm">
+					<DialogHeader>
+						<DialogTitle>Confirm plan change</DialogTitle>
+						<DialogDescription>
+							Your subscription will be updated immediately. Any unused time on
+							your current billing period will be prorated to your next invoice.
+						</DialogDescription>
+					</DialogHeader>
+
+					{/* Change summary */}
+					<div className="bg-muted rounded-lg space-y-2 p-4 text-sm">
+						{billing.plan !== plan && (
+							<div className="flex items-center gap-2">
+								<span className="text-muted-foreground">
+									{PLAN_LABELS[billing.plan]}
+								</span>
+								<ArrowRight className="text-muted-foreground h-3.5 w-3.5" />
+								<span className="font-medium">{PLAN_LABELS[plan]}</span>
+							</div>
+						)}
+						<div className="font-medium">
+							{PLAN_LABELS[plan]} ·{' '}
+							{billingPeriod === 'annual' ? 'Annual' : 'Monthly'}
+						</div>
+						{selectedPrice && displayPriceCents !== null && (
+							<div className="text-muted-foreground">
+								{formatCurrency(displayPriceCents, selectedPrice.currency)}/month
+								{billingPeriod === 'annual' && annualSavings &&
+									` · ${formatCurrency(selectedPrice.amountCents, selectedPrice.currency)} billed annually`}
+							</div>
+						)}
+						{billingPeriod === 'annual' && annualSavings && selectedPrice && (
+							<div className="text-primary font-medium">
+								Save{' '}
+								{formatCurrency(
+									annualSavings.yearlySavingsCents,
+									selectedPrice.currency
+								)}{' '}
+								/ year vs monthly
+							</div>
+						)}
+					</div>
+
+					<DialogFooter>
+						<Button
+							variant="outline"
+							onClick={() => setConfirmOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button onClick={submitCheckout} disabled={!selectedPrice}>
+							Confirm change
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</>
 	)
 }
