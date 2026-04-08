@@ -297,7 +297,7 @@ export default function BillingUpgradePage() {
 								<p className="text-muted-foreground text-sm">
 									Checkout is temporarily unavailable. Please try again later or{' '}
 									<a
-										href="mailto:support@vectreal.com"
+										href="mailto:info@vectreal.com"
 										className="underline underline-offset-2"
 									>
 										contact support

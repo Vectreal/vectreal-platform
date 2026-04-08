@@ -107,6 +107,21 @@ on:
       posthog-host:
         description: 'PostHog ingestion endpoint (VITE_PUBLIC_POSTHOG_HOST)'
         required: false
+      contact-data-encryption-key:
+        description: 'PII encryption key for contact form submissions'
+        required: false
+      resend-api-key:
+        description: 'Resend API key for outbound contact emails'
+        required: false
+      resend-webhook-secret:
+        description: 'Resend webhook signature secret'
+        required: false
+      contact-inbox-email:
+        description: 'Inbox address for contact submissions'
+        required: false
+      contact-from-email:
+        description: 'Verified sender for contact emails'
+        required: false
 
 jobs:
   deploy:
@@ -238,6 +253,11 @@ jobs:
             STRIPE_SECRET_KEY=${{ secrets.stripe-secret-key }}
             VITE_PUBLIC_POSTHOG_TOKEN=${{ secrets.posthog-token }}
             VITE_PUBLIC_POSTHOG_HOST=${{ secrets.posthog-host }}
+            CONTACT_DATA_ENCRYPTION_KEY=${{ secrets.contact-data-encryption-key }}
+            RESEND_API_KEY=${{ secrets.resend-api-key }}
+            RESEND_WEBHOOK_SECRET=${{ secrets.resend-webhook-secret }}
+            CONTACT_INBOX_EMAIL=${{ secrets.contact-inbox-email }}
+            CONTACT_FROM_EMAIL=${{ secrets.contact-from-email }}
 
       - name: Verify deployment health
         run: |
