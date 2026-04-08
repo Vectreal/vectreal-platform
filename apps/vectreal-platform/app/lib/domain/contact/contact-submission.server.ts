@@ -1,9 +1,12 @@
 import { eq } from 'drizzle-orm'
+import { randomBytes } from 'node:crypto'
 
 import {
 	CONTACT_HONEYPOT_FIELD,
+	CONTACT_SOURCE_VALUES,
 	type ContactActionData,
-	type ContactInquiryType
+	type ContactInquiryType,
+	type ContactSource
 } from './contact-shared'
 import { getDbClient } from '../../../db/client'
 import { contactSubmissions } from '../../../db/schema'
@@ -22,6 +25,8 @@ const validInquiryTypes: ContactInquiryType[] = [
 ]
 
 const rateLimiter = new Map<string, number[]>()
+let rateLimiterEvictCounter = 0
+const RATE_LIMITER_EVICT_EVERY = 50
 
 export interface ContactSubmitResult {
 	status: number
@@ -79,12 +84,30 @@ function isRateLimited(key: string): boolean {
 	recentAttempts.push(now)
 	rateLimiter.set(key, recentAttempts)
 
+	// Periodically evict expired entries to prevent unbounded Map growth.
+	rateLimiterEvictCounter += 1
+	if (rateLimiterEvictCounter >= RATE_LIMITER_EVICT_EVERY) {
+		rateLimiterEvictCounter = 0
+		for (const [k, timestamps] of rateLimiter) {
+			const fresh = timestamps.filter((t) => t > windowStart)
+			if (fresh.length === 0) {
+				rateLimiter.delete(k)
+			} else {
+				rateLimiter.set(k, fresh)
+			}
+		}
+	}
+
 	return recentAttempts.length > RATE_LIMIT_MAX_REQUESTS
 }
 
-export function buildContactSource(
-	request: Request
-): 'direct' | 'pricing_cta' | 'footer' | 'other' {
+export function buildContactSource(request: Request): ContactSource {
+	const url = new URL(request.url)
+	const explicitSource = url.searchParams.get('source')
+	if (CONTACT_SOURCE_VALUES.includes(explicitSource as ContactSource)) {
+		return explicitSource as ContactSource
+	}
+
 	const referer = request.headers.get('referer')
 	if (!referer) {
 		return 'direct'
@@ -94,9 +117,6 @@ export function buildContactSource(
 		const refererUrl = new URL(referer)
 		if (refererUrl.pathname.startsWith('/pricing')) {
 			return 'pricing_cta'
-		}
-		if (refererUrl.pathname.includes('footer')) {
-			return 'footer'
 		}
 		return 'other'
 	} catch {
@@ -155,7 +175,7 @@ async function sendContactNotification(args: {
 }
 
 function buildReferenceCode() {
-	const suffix = Math.random().toString(36).slice(2, 8).toUpperCase()
+	const suffix = randomBytes(4).toString('hex').toUpperCase()
 	return `VCTR-${suffix}`
 }
 
@@ -234,7 +254,7 @@ export async function submitContactForm(args: {
 	formData: FormData
 	userId: string | null
 	isAuthenticated: boolean
-	source: 'direct' | 'pricing_cta' | 'footer' | 'other'
+	source: ContactSource
 }): Promise<ContactSubmitResult> {
 	const requestStart = Date.now()
 

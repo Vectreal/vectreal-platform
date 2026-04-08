@@ -15,9 +15,12 @@ function getRawKeyMaterial(): string {
 	if (process.env.NODE_ENV === 'production') {
 		const fallbackProductionKey = process.env[FALLBACK_PRODUCTION_KEY_ENV]
 		if (fallbackProductionKey && fallbackProductionKey.trim().length > 0) {
-			console.warn(
-				`[security] ${ENCRYPTION_KEY_ENV} is not set. Falling back to ${FALLBACK_PRODUCTION_KEY_ENV} for backward-compatible contact encryption key derivation.`
-			)
+			if (!warnedAboutFallbackKey) {
+				warnedAboutFallbackKey = true
+				console.warn(
+					`[security] ${ENCRYPTION_KEY_ENV} is not set. Falling back to ${FALLBACK_PRODUCTION_KEY_ENV} for backward-compatible contact encryption key derivation.`
+				)
+			}
 			return fallbackProductionKey.trim()
 		}
 

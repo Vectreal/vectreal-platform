@@ -45,10 +45,38 @@
 			"breakpoints": true
 		},
 		{
+			"idx": 6,
+			"version": "7",
+			"when": 1773496044536,
+			"tag": "0006_billing_entitlement_schema",
+			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "7",
+			"when": 1773496044537,
+			"tag": "0007_backfill_org_subscriptions",
+			"breakpoints": true
+		},
+		{
+			"idx": 8,
+			"version": "7",
+			"when": 1743897600000,
+			"tag": "0008_consent_records",
+			"breakpoints": true
+		},
+		{
 			"idx": 9,
 			"version": "7",
 			"when": 1775607529158,
 			"tag": "0009_huge_rocket_racer",
+			"breakpoints": true
+		},
+		{
+			"idx": 10,
+			"version": "7",
+			"when": 1775607530000,
+			"tag": "0010_security_tightening",
 			"breakpoints": true
 		}
 	]

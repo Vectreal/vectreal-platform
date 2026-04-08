@@ -24,6 +24,7 @@ import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import {
 	CONTACT_HONEYPOT_FIELD,
+	CONTACT_SOURCE_VALUES,
 	type ContactActionData,
 	type ContactInquiryType
 } from '../lib/domain/contact/contact-shared'
@@ -60,13 +61,20 @@ export async function action({ request, context }: Route.ActionArgs) {
 	const {
 		data: { user }
 	} = await client.auth.getUser()
-	const source = buildContactSource(request)
 
 	const formData = await request.formData()
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
 	if (csrfCheck) {
 		return csrfCheck
 	}
+
+	const rawSource = formData.get('source')
+	const source = CONTACT_SOURCE_VALUES.includes(
+		rawSource as (typeof CONTACT_SOURCE_VALUES)[number]
+	)
+		? (rawSource as (typeof CONTACT_SOURCE_VALUES)[number])
+		: ('other' as const)
+
 	const result = await submitContactForm({
 		request,
 		context,
@@ -183,6 +191,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 								}}
 							>
 								<AuthenticityTokenInput />
+								<input type="hidden" name="source" value={source} />
 								<input
 									type="text"
 									name={HONEYPOT_FIELD}

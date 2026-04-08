@@ -1,5 +1,14 @@
 export const CONTACT_HONEYPOT_FIELD = 'website'
 
+export const CONTACT_SOURCE_VALUES = [
+	'direct',
+	'pricing_cta',
+	'footer',
+	'other'
+] as const
+
+export type ContactSource = (typeof CONTACT_SOURCE_VALUES)[number]
+
 export type ContactInquiryType = 'support' | 'sales' | 'partnership' | 'other'
 
 export interface ContactActionData {
