@@ -10,4 +10,4 @@ export const sceneActionLocks = pgTable(
 		updatedAt: timestamp('updated_at').defaultNow().notNull()
 	},
 	(table) => [index('scene_action_locks_expires_at_idx').on(table.expiresAt)]
-)
+).enableRLS()

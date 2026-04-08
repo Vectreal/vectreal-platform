@@ -1,18 +1,26 @@
 import {
 	index,
 	pgEnum,
+	pgPolicy,
 	pgTable,
 	text,
 	timestamp,
 	uuid
 } from 'drizzle-orm/pg-core'
+import { authenticatedRole } from 'drizzle-orm/supabase'
 
 import { organizations } from '../core/organizations'
+import { isOrganizationAdmin, isOrganizationMember } from '../rls'
 
 /**
  * Canonical plan identifiers — kept in sync with prd/01-plans-and-tiers.md
  */
-export const planEnum = pgEnum('plan', ['free', 'pro', 'business', 'enterprise'])
+export const planEnum = pgEnum('plan', [
+	'free',
+	'pro',
+	'business',
+	'enterprise'
+])
 
 /**
  * Subscription lifecycle states — kept in sync with prd/04-billing-states.md
@@ -68,6 +76,27 @@ export const orgSubscriptions = pgTable(
 		index('org_subscriptions_stripe_customer_id_idx').on(
 			table.stripeCustomerId
 		),
-		index('org_subscriptions_billing_state_idx').on(table.billingState)
+		index('org_subscriptions_billing_state_idx').on(table.billingState),
+		pgPolicy('org_subscriptions_select_org_member', {
+			for: 'select',
+			to: authenticatedRole,
+			using: isOrganizationMember(table.organizationId)
+		}),
+		pgPolicy('org_subscriptions_insert_org_admin', {
+			for: 'insert',
+			to: authenticatedRole,
+			withCheck: isOrganizationAdmin(table.organizationId)
+		}),
+		pgPolicy('org_subscriptions_update_org_admin', {
+			for: 'update',
+			to: authenticatedRole,
+			using: isOrganizationAdmin(table.organizationId),
+			withCheck: isOrganizationAdmin(table.organizationId)
+		}),
+		pgPolicy('org_subscriptions_delete_org_admin', {
+			for: 'delete',
+			to: authenticatedRole,
+			using: isOrganizationAdmin(table.organizationId)
+		})
 	]
-)
+).enableRLS()

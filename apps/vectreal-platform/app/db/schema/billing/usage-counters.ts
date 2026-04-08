@@ -1,14 +1,18 @@
+import { sql } from 'drizzle-orm'
 import {
 	bigint,
 	index,
+	pgPolicy,
 	pgTable,
 	text,
 	timestamp,
 	uniqueIndex,
 	uuid
 } from 'drizzle-orm/pg-core'
+import { authenticatedRole } from 'drizzle-orm/supabase'
 
 import { organizations } from '../core/organizations'
+import { isOrganizationAdmin, isOrganizationMember } from '../rls'
 
 /**
  * Tracks rolling usage per organisation for quota-enforced capabilities.
@@ -34,7 +38,9 @@ export const orgUsageCounters = pgTable(
 		 * For byte-based counters this is in bytes; for count-based counters it is
 		 * an integer count.
 		 */
-		value: bigint('value', { mode: 'bigint' }).notNull().default(BigInt(0)),
+		value: bigint('value', { mode: 'bigint' })
+			.notNull()
+			.default(sql`0`),
 		/** Start of the current measurement window (UTC). */
 		windowStart: timestamp('window_start', { withTimezone: true }).notNull(),
 		/** End of the current measurement window (UTC). */
@@ -49,6 +55,27 @@ export const orgUsageCounters = pgTable(
 			table.counterKey,
 			table.windowStart
 		),
-		index('org_usage_counters_window_end_idx').on(table.windowEnd)
+		index('org_usage_counters_window_end_idx').on(table.windowEnd),
+		pgPolicy('org_usage_counters_select_org_member', {
+			for: 'select',
+			to: authenticatedRole,
+			using: isOrganizationMember(table.organizationId)
+		}),
+		pgPolicy('org_usage_counters_insert_org_admin', {
+			for: 'insert',
+			to: authenticatedRole,
+			withCheck: isOrganizationAdmin(table.organizationId)
+		}),
+		pgPolicy('org_usage_counters_update_org_admin', {
+			for: 'update',
+			to: authenticatedRole,
+			using: isOrganizationAdmin(table.organizationId),
+			withCheck: isOrganizationAdmin(table.organizationId)
+		}),
+		pgPolicy('org_usage_counters_delete_org_admin', {
+			for: 'delete',
+			to: authenticatedRole,
+			using: isOrganizationAdmin(table.organizationId)
+		})
 	]
-)
+).enableRLS()

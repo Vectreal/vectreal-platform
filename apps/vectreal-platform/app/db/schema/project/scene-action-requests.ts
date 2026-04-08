@@ -36,4 +36,4 @@ export const sceneActionRequests = pgTable(
 		index('scene_action_requests_scene_id_idx').on(table.sceneId),
 		index('scene_action_requests_expires_at_idx').on(table.expiresAt)
 	]
-)
+).enableRLS()
