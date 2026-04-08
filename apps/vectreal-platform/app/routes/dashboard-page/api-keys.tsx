@@ -62,6 +62,9 @@ import {
 } from '../../lib/domain/billing/entitlement-service.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
+import { shouldRevalidateWithinScope } from '../../lib/navigation/dashboard-route-behavior'
+
+import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const { user, headers } = await loadAuthenticatedUser(request)
@@ -146,6 +149,23 @@ export async function action({ request }: Route.ActionArgs) {
 			{ headers }
 		)
 	}
+}
+
+export const shouldRevalidate: ShouldRevalidateFunction = ({
+	currentUrl,
+	nextUrl,
+	formMethod,
+	actionResult,
+	defaultShouldRevalidate
+}) => {
+	return shouldRevalidateWithinScope({
+		currentPathname: currentUrl.pathname,
+		nextPathname: nextUrl.pathname,
+		formMethod,
+		actionResult,
+		defaultShouldRevalidate,
+		scopePrefix: '/dashboard/api-keys'
+	})
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'

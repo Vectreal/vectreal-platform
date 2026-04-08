@@ -73,10 +73,6 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 		return true
 	}
 
-	if (defaultShouldRevalidate) {
-		return true
-	}
-
 	if (currentUrl.pathname === nextUrl.pathname) {
 		return false
 	}

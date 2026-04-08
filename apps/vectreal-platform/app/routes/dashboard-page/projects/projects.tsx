@@ -37,6 +37,7 @@ import {
 import { getProjectsScenes } from '../../../lib/domain/scene/server/scene-folder-repository.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
 import { ensureValidCsrfFormData } from '../../../lib/http/csrf.server'
+import { shouldRevalidateWithinScope } from '../../../lib/navigation/dashboard-route-behavior'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 
@@ -251,30 +252,14 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 	actionResult,
 	defaultShouldRevalidate
 }) => {
-	if (formMethod && formMethod !== 'GET') {
-		return true
-	}
-
-	if (actionResult) {
-		return true
-	}
-
-	if (defaultShouldRevalidate) {
-		return true
-	}
-
-	if (currentUrl.pathname === nextUrl.pathname) {
-		return false
-	}
-
-	if (
-		currentUrl.pathname.startsWith('/dashboard/projects') &&
-		nextUrl.pathname.startsWith('/dashboard/projects')
-	) {
-		return false
-	}
-
-	return defaultShouldRevalidate
+	return shouldRevalidateWithinScope({
+		currentPathname: currentUrl.pathname,
+		nextPathname: nextUrl.pathname,
+		formMethod,
+		actionResult,
+		defaultShouldRevalidate,
+		scopePrefix: '/dashboard/projects'
+	})
 }
 
 export function HydrateFallback() {

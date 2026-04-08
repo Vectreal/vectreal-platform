@@ -31,11 +31,13 @@ function KpiTile({
 	helpText: string
 }) {
 	return (
-		<div className="bg-muted/30 hover:bg-muted/40 flex items-baseline gap-3 rounded-2xl p-5 pb-4 transition-colors duration-200">
-			<p className="text-accent! text-3xl leading-6! font-semibold">{value}</p>
-			<div className="flex items-center gap-3">
+		<div className="bg-muted/30 hover:bg-muted/40 flex items-end gap-3 rounded-2xl p-5 pb-4 transition-colors duration-200">
+			<p className="text-accent! mb-1 min-w-6 text-right text-3xl leading-6! font-semibold">
+				{value}
+			</p>
+			<div className="flex items-baseline gap-3">
+				<p className="text-muted-foreground text-md tracking-tight">{label}</p>
 				<p className="text-muted-foreground text-xs">{helpText}</p>
-				<p className="text-muted-foreground text-sm tracking-tight">{label}</p>
 			</div>
 		</div>
 	)
