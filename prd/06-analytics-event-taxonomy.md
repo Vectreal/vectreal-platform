@@ -108,8 +108,8 @@ Every event automatically includes the following properties:
 | ----------------------------- | ---------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------- | ---------------- |
 | `contact_page_viewed`         | Contact page rendered                          | `source` (direct\|pricing_cta\|footer\|other)                | `is_authenticated`                            | `analytics`      |
 | `contact_form_submit_started` | User submits contact form                      | `inquiry_type` (support\|sales\|partnership\|other)          | `is_authenticated`                            | `analytics`      |
-| `contact_form_submitted`      | Contact form accepted and forwarded            | `inquiry_type`                                               | `delivery_channel`, `response_time_bucket_ms` | `analytics`      |
-| `contact_form_submit_failed`  | Contact form submission failed                 | `failure_stage` (validation\|anti_bot\|rate_limit\|provider) | `inquiry_type`, `error_code`                  | `analytics`      |
+| `contact_form_submitted`      | Contact form accepted and forwarded            | `inquiry_type`                                               | `delivery_channel`, `response_time_bucket_ms`, `anti_bot_mode` (csrf_honeypot_rate_limit) | `analytics`      |
+| `contact_form_submit_failed`  | Contact form submission failed                 | `failure_stage` (validation\|anti_bot\|rate_limit\|provider\|db) | `inquiry_type`, `error_code`                  | `analytics`      |
 | `contact_form_blocked`        | Contact request blocked by anti-abuse controls | `block_reason` (honeypot\|rate_limit\|captcha_invalid)       | `inquiry_type`                                | `analytics`      |
 
 ---

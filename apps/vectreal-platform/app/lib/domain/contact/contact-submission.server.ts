@@ -147,31 +147,41 @@ async function sendContactNotification(args: {
 		return { ok: true }
 	}
 
-	const response = await fetch('https://api.resend.com/emails', {
-		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${resendApiKey}`,
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify({
-			from: fromEmail,
-			to: args.to,
-			subject: args.subject,
-			text: args.text
+	try {
+		const response = await fetch('https://api.resend.com/emails', {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${resendApiKey}`,
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				from: fromEmail,
+				to: args.to,
+				subject: args.subject,
+				text: args.text
+			})
 		})
-	})
 
-	if (!response.ok) {
-		const body = await response.text()
+		if (!response.ok) {
+			const body = await response.text()
+			return {
+				ok: false,
+				error: `Email provider error (${response.status}): ${body}`
+			}
+		}
+
+		const payload = (await response.json()) as { id?: string }
+
+		return { ok: true, messageId: payload.id }
+	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : 'Unknown email provider error'
+
 		return {
 			ok: false,
-			error: `Email provider error (${response.status}): ${body}`
+			error: `Failed to send contact notification: ${message}`
 		}
 	}
-
-	const payload = (await response.json()) as { id?: string }
-
-	return { ok: true, messageId: payload.id }
 }
 
 function buildReferenceCode() {
@@ -357,25 +367,72 @@ export async function submitContactForm(args: {
 	}
 
 	const db = getDbClient()
-	const referenceCode = buildReferenceCode()
 
-	const [submission] = await db
-		.insert(contactSubmissions)
-		.values({
-			referenceCode,
-			userId: args.userId,
-			source: args.source,
-			isAuthenticated: args.isAuthenticated,
-			name: encryptSensitiveValue(name),
-			email: encryptSensitiveValue(email),
-			inquiryType,
-			message: encryptSensitiveValue(message),
-			status: 'queued'
-		})
-		.returning({
-			id: contactSubmissions.id,
-			referenceCode: contactSubmissions.referenceCode
-		})
+	let submission: { id: string; referenceCode: string } | undefined
+	const MAX_INSERT_ATTEMPTS = 3
+	for (let attempt = 1; attempt <= MAX_INSERT_ATTEMPTS; attempt++) {
+		const referenceCode = buildReferenceCode()
+		try {
+			const [row] = await db
+				.insert(contactSubmissions)
+				.values({
+					referenceCode,
+					userId: args.userId,
+					source: args.source,
+					isAuthenticated: args.isAuthenticated,
+					name: encryptSensitiveValue(name),
+					email: encryptSensitiveValue(email),
+					inquiryType,
+					message: encryptSensitiveValue(message),
+					status: 'queued'
+				})
+				.returning({
+					id: contactSubmissions.id,
+					referenceCode: contactSubmissions.referenceCode
+				})
+			submission = row
+			break
+		} catch (insertError) {
+			const isUniqueViolation =
+				insertError instanceof Error &&
+				insertError.message.includes('unique constraint')
+			if (!isUniqueViolation || attempt === MAX_INSERT_ATTEMPTS) {
+				captureServerEvent({
+					context: args.context,
+					request: args.request,
+					event: 'contact_form_submit_failed',
+					properties: {
+						failure_stage: 'db',
+						inquiry_type: inquiryType,
+						client_type: 'web'
+					}
+				})
+				return {
+					status: 500,
+					body: {
+						status: 'error',
+						formError:
+							'We could not record your message right now. Please email info@vectreal.com directly.',
+						fields
+					}
+				}
+			}
+		}
+	}
+
+	if (!submission) {
+		// This should not be reached: the loop above always either assigns
+		// submission on break or returns early. Guard for type-safety.
+		return {
+			status: 500,
+			body: {
+				status: 'error',
+				formError:
+					'We could not record your message right now. Please email info@vectreal.com directly.',
+				fields
+			}
+		}
+	}
 
 	const sendResult = await sendInternalContactNotification({
 		name,
