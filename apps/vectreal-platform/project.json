@@ -233,6 +233,7 @@
 				"cwd": "apps/vectreal-platform",
 				"envFile": ".env.development",
 				"commands": [
+					"node ./sql/validate-drizzle-meta.mjs",
 					"pnpm exec drizzle-kit generate --config drizzle.config.ts"
 				],
 				"parallel": false
