@@ -107,6 +107,9 @@ on:
       posthog-host:
         description: 'PostHog ingestion endpoint (VITE_PUBLIC_POSTHOG_HOST)'
         required: false
+      posthog-ui-host:
+        description: 'PostHog UI host (VITE_PUBLIC_POSTHOG_UI_HOST)'
+        required: false
       contact-data-encryption-key:
         description: 'PII encryption key for contact form submissions'
         required: false
@@ -193,6 +196,7 @@ jobs:
             --build-arg BUILD_STRIPE_SECRET_KEY=${{ secrets.stripe-secret-key }} \
             --build-arg BUILD_VITE_PUBLIC_POSTHOG_TOKEN=${{ secrets.posthog-token }} \
             --build-arg BUILD_VITE_PUBLIC_POSTHOG_HOST=${{ secrets.posthog-host }} \
+            --build-arg BUILD_VITE_PUBLIC_POSTHOG_UI_HOST=${{ secrets.posthog-ui-host || 'https://eu.posthog.com' }} \
             --cache-from type=gha \
             --cache-to type=gha,mode=max \
             "${TAG_ARGS[@]}" \
@@ -253,6 +257,7 @@ jobs:
             STRIPE_SECRET_KEY=${{ secrets.stripe-secret-key }}
             VITE_PUBLIC_POSTHOG_TOKEN=${{ secrets.posthog-token }}
             VITE_PUBLIC_POSTHOG_HOST=${{ secrets.posthog-host }}
+            VITE_PUBLIC_POSTHOG_UI_HOST=${{ secrets.posthog-ui-host || 'https://eu.posthog.com' }}
             CONTACT_DATA_ENCRYPTION_KEY=${{ secrets.contact-data-encryption-key }}
             RESEND_API_KEY=${{ secrets.resend-api-key }}
             RESEND_WEBHOOK_SECRET=${{ secrets.resend-webhook-secret }}

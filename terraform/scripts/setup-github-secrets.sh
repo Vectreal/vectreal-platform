@@ -71,6 +71,7 @@ if [ ! -f "$ENV_FILE" ]; then
     echo "Optional variables:"
     echo "  - VITE_PUBLIC_POSTHOG_TOKEN"
     echo "  - VITE_PUBLIC_POSTHOG_HOST"
+    echo "  - VITE_PUBLIC_POSTHOG_UI_HOST"
     echo "  - CONTACT_DATA_ENCRYPTION_KEY_PROD / CONTACT_DATA_ENCRYPTION_KEY_STAGING"
     echo "  - RESEND_API_KEY_PROD / RESEND_API_KEY_STAGING"
     echo "  - RESEND_WEBHOOK_SECRET_PROD / RESEND_WEBHOOK_SECRET_STAGING"
@@ -265,8 +266,10 @@ if [ -n "$VITE_PUBLIC_POSTHOG_TOKEN" ]; then
     echo "→ Setting PostHog secrets..."
     gh secret set VITE_PUBLIC_POSTHOG_TOKEN --body "$VITE_PUBLIC_POSTHOG_TOKEN"
     POSTHOG_HOST="${VITE_PUBLIC_POSTHOG_HOST:-https://us.i.posthog.com}"
+    POSTHOG_UI_HOST="${VITE_PUBLIC_POSTHOG_UI_HOST:-https://eu.posthog.com}"
     gh secret set VITE_PUBLIC_POSTHOG_HOST --body "$POSTHOG_HOST"
-    echo "  ✅ PostHog secrets (2)"
+    gh secret set VITE_PUBLIC_POSTHOG_UI_HOST --body "$POSTHOG_UI_HOST"
+    echo "  ✅ PostHog secrets (3)"
 else
     echo "⚠️  Skipping PostHog secrets (VITE_PUBLIC_POSTHOG_TOKEN not set in .env.development)"
 fi
