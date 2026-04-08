@@ -149,7 +149,6 @@ async function sendContactNotification(args: {
 		return { ok: true }
 	}
 
-<<<<<<< HEAD
 	const response = await fetch('https://api.resend.com/emails', {
 		method: 'POST',
 		headers: {
@@ -360,7 +359,6 @@ export async function submitContactForm(args: {
 	}
 
 	const db = getDbClient()
-<<<<<<< HEAD
 
 	let submission: { id: string; referenceCode: string } | undefined
 	const MAX_INSERT_ATTEMPTS = 3
@@ -427,27 +425,6 @@ export async function submitContactForm(args: {
 			}
 		}
 	}
-=======
-	const referenceCode = buildReferenceCode()
-
-	const [submission] = await db
-		.insert(contactSubmissions)
-		.values({
-			referenceCode,
-			userId: args.userId,
-			source: args.source,
-			isAuthenticated: args.isAuthenticated,
-			name: encryptSensitiveValue(name),
-			email: encryptSensitiveValue(email),
-			inquiryType,
-			message: encryptSensitiveValue(message),
-			status: 'queued'
-		})
-		.returning({
-			id: contactSubmissions.id,
-			referenceCode: contactSubmissions.referenceCode
-		})
->>>>>>> 935681c (feat(contact): implement contact form submission and webhook processing)
 
 	const sendResult = await sendInternalContactNotification({
 		name,
