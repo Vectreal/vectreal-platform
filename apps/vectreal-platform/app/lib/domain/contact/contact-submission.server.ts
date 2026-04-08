@@ -149,31 +149,41 @@ async function sendContactNotification(args: {
 		return { ok: true }
 	}
 
-	const response = await fetch('https://api.resend.com/emails', {
-		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${resendApiKey}`,
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify({
-			from: fromEmail,
-			to: args.to,
-			subject: args.subject,
-			text: args.text
+	try {
+		const response = await fetch('https://api.resend.com/emails', {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${resendApiKey}`,
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				from: fromEmail,
+				to: args.to,
+				subject: args.subject,
+				text: args.text
+			})
 		})
-	})
 
-	if (!response.ok) {
-		const body = await response.text()
+		if (!response.ok) {
+			const body = await response.text()
+			return {
+				ok: false,
+				error: `Email provider error (${response.status}): ${body}`
+			}
+		}
+
+		const payload = (await response.json()) as { id?: string }
+
+		return { ok: true, messageId: payload.id }
+	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : 'Unknown email provider error'
+
 		return {
 			ok: false,
-			error: `Email provider error (${response.status}): ${body}`
+			error: `Failed to send contact notification: ${message}`
 		}
 	}
-
-	const payload = (await response.json()) as { id?: string }
-
-	return { ok: true, messageId: payload.id }
 }
 
 function buildReferenceCode() {
