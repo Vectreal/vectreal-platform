@@ -3,10 +3,13 @@ import {
 	useCallback,
 	useContext,
 	useEffect,
+	useRef,
 	useState,
 	type ReactNode
 } from 'react'
 import { useFetcher } from 'react-router'
+
+import { CONSENT_POLICY_VERSION } from '../../lib/consent/consent-policy'
 
 export interface ConsentChoices {
 	necessary: true
@@ -50,6 +53,10 @@ export function ConsentProvider({
 		initialVersion
 	)
 	const [preferencesOpen, setPreferencesOpen] = useState(false)
+	const optimisticPreviousRef = useRef<{
+		consent: ConsentChoices | null
+		version: string | null
+	} | null>(null)
 
 	// When the fetcher returns new data after saving, update local state
 	useEffect(() => {
@@ -69,6 +76,11 @@ export function ConsentProvider({
 				if (typeof d.version === 'string') {
 					setConsentVersion(d.version)
 				}
+				optimisticPreviousRef.current = null
+			} else if (typeof d.error === 'string' && optimisticPreviousRef.current) {
+				setConsent(optimisticPreviousRef.current.consent)
+				setConsentVersion(optimisticPreviousRef.current.version)
+				optimisticPreviousRef.current = null
 			}
 		}
 	}, [fetcher.state, fetcher.data])
@@ -94,6 +106,19 @@ export function ConsentProvider({
 
 	const saveConsent = useCallback(
 		(choices: Omit<ConsentChoices, 'necessary'>) => {
+			optimisticPreviousRef.current = {
+				consent,
+				version: consentVersion
+			}
+
+			setConsent({
+				necessary: true,
+				functional: choices.functional,
+				analytics: choices.analytics,
+				marketing: choices.marketing
+			})
+			setConsentVersion(CONSENT_POLICY_VERSION)
+
 			fetcher.submit(
 				{ ...choices, necessary: true },
 				{
@@ -103,7 +128,7 @@ export function ConsentProvider({
 				}
 			)
 		},
-		[fetcher]
+		[consent, consentVersion, fetcher]
 	)
 
 	return (

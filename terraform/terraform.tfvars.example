@@ -31,6 +31,9 @@ github_repo = "vectreal-platform"
 # cpu               = "2"
 
 # Optional: Shared edge/CDN rollout for staging + production
+# allowed_ingress                 = "internal-and-cloud-load-balancing"
+# allow_public_cloud_run_invoker = false
+# create_service_account_keys    = false
 # enable_edge            = true
 # staging_edge_host      = "staging.example.com"
 # staging_static_host    = "static-staging.example.com"

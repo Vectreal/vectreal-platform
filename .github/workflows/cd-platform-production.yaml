@@ -44,3 +44,8 @@ jobs:
       stripe-secret-key: ${{ secrets.STRIPE_SECRET_KEY_PROD }}
       posthog-token: ${{ secrets.VITE_PUBLIC_POSTHOG_TOKEN }}
       posthog-host: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
+      contact-data-encryption-key: ${{ secrets.CONTACT_DATA_ENCRYPTION_KEY_PROD }}
+      resend-api-key: ${{ secrets.RESEND_API_KEY_PROD }}
+      resend-webhook-secret: ${{ secrets.RESEND_WEBHOOK_SECRET_PROD }}
+      contact-inbox-email: ${{ secrets.CONTACT_INBOX_EMAIL_PROD }}
+      contact-from-email: ${{ secrets.CONTACT_FROM_EMAIL_PROD }}

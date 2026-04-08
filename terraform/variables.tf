@@ -106,7 +106,7 @@ variable "production_cpu" {
 }
 
 variable "allowed_ingress" {
-  description = "Ingress settings for Cloud Run services"
+  description = "Ingress settings for Cloud Run services. Defaults to 'all' so services are publicly reachable when edge/load-balancer is not enabled. Set to 'internal-and-cloud-load-balancing' when enable_edge=true."
   type        = string
   default     = "all" # Options: "all", "internal", "internal-and-cloud-load-balancing"
 }
@@ -114,13 +114,31 @@ variable "allowed_ingress" {
 variable "allow_public_cloud_run_invoker" {
   description = "Whether to grant allUsers invoker access to Cloud Run services. Disable when traffic should only come through the load balancer."
   type        = bool
+  default     = false
+}
+
+variable "production_deletion_protection" {
+  description = "Whether to enable deletion protection for the production Cloud Run service"
+  type        = bool
   default     = true
+}
+
+variable "staging_deletion_protection" {
+  description = "Whether to enable deletion protection for the staging Cloud Run service"
+  type        = bool
+  default     = false
 }
 
 variable "manage_cloud_run_services" {
   description = "Whether to manage Cloud Run services via Terraform. Set to false for initial setup, true after first GitHub Actions deployment."
   type        = bool
   default     = true
+}
+
+variable "create_service_account_keys" {
+  description = "Whether Terraform should create long-lived service account keys and write them to local files. Prefer workload identity federation and keep this disabled unless strictly required."
+  type        = bool
+  default     = false
 }
 
 variable "placeholder_image" {

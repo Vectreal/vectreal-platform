@@ -39,6 +39,7 @@ export default [
 	route('api/billing/portal', './routes/api/billing/portal.ts'),
 	route('api/billing/webhook', './routes/api/billing/webhook.ts'),
 	route('api/billing/reconcile', './routes/api/billing/reconcile.ts'),
+	route('api/contact/webhook', './routes/api/contact/webhook.ts'),
 	route('api/consent', './routes/api/consent.ts'),
 
 	/// PAGES
@@ -62,12 +63,12 @@ export default [
 
 		// Pricing page
 		route('pricing', './routes/pricing-page/pricing-page.tsx'),
+		route('contact', './routes/contact-page.tsx'),
 
 		// Legal pages
 		layout('./routes/layouts/mdx-layout.tsx', { id: 'legal-mdx-layout' }, [
 			route('about', './routes/about-page.mdx'),
 			route('changelog', './routes/changelog-page.mdx'),
-			route('contact', './routes/contact-page.mdx'),
 			route('code-of-conduct', './routes/code-of-conduct-page.mdx'),
 			route('privacy-policy', './routes/privacy-policy-page.mdx'),
 			route('terms-of-service', './routes/terms-of-service-page.mdx'),

@@ -45,10 +45,10 @@ resource "google_project_iam_member" "prod_deployer_artifact_registry_writer" {
   member  = "serviceAccount:${google_service_account.prod_deployer.email}"
 }
 
-resource "google_project_iam_member" "prod_deployer_storage_object_admin" {
-  project = var.project_id
-  role    = "roles/storage.objectAdmin"
-  member  = "serviceAccount:${google_service_account.prod_deployer.email}"
+resource "google_storage_bucket_iam_member" "prod_deployer_static_bucket_admin" {
+  bucket = google_storage_bucket.production_static.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.prod_deployer.email}"
 }
 
 # IAM Bindings for Staging Deployer
@@ -70,10 +70,10 @@ resource "google_project_iam_member" "staging_deployer_artifact_registry_writer"
   member  = "serviceAccount:${google_service_account.staging_deployer.email}"
 }
 
-resource "google_project_iam_member" "staging_deployer_storage_object_admin" {
-  project = var.project_id
-  role    = "roles/storage.objectAdmin"
-  member  = "serviceAccount:${google_service_account.staging_deployer.email}"
+resource "google_storage_bucket_iam_member" "staging_deployer_static_bucket_admin" {
+  bucket = google_storage_bucket.staging_static.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.staging_deployer.email}"
 }
 
 # IAM Bindings for Runtime Service Account (for the app to access GCS, etc.)
@@ -83,49 +83,55 @@ resource "google_project_iam_member" "runtime_storage_viewer" {
   member  = "serviceAccount:${google_service_account.runtime.email}"
 }
 
-resource "google_storage_bucket_iam_member" "runtime_storage_admin_production" {
+resource "google_storage_bucket_iam_member" "runtime_storage_user_production" {
   bucket = google_storage_bucket.private_production.name
-  role   = "roles/storage.objectAdmin"
+  role   = "roles/storage.objectUser"
   member = "serviceAccount:${google_service_account.runtime.email}"
 }
 
-resource "google_storage_bucket_iam_member" "runtime_storage_admin_staging" {
+resource "google_storage_bucket_iam_member" "runtime_storage_user_staging" {
   bucket = google_storage_bucket.private_staging.name
-  role   = "roles/storage.objectAdmin"
+  role   = "roles/storage.objectUser"
   member = "serviceAccount:${google_service_account.runtime.email}"
 }
 
-resource "google_storage_bucket_iam_member" "local_dev_storage_admin" {
+resource "google_storage_bucket_iam_member" "local_dev_storage_user" {
   bucket = google_storage_bucket.private_local_dev.name
-  role   = "roles/storage.objectAdmin"
+  role   = "roles/storage.objectUser"
   member = "serviceAccount:${google_service_account.local_dev_storage.email}"
 }
 
 # Create service account keys for GitHub Actions
 resource "google_service_account_key" "prod_deployer_key" {
+  count              = var.create_service_account_keys ? 1 : 0
   service_account_id = google_service_account.prod_deployer.name
 }
 
 resource "google_service_account_key" "staging_deployer_key" {
+  count              = var.create_service_account_keys ? 1 : 0
   service_account_id = google_service_account.staging_deployer.name
 }
 
 resource "google_service_account_key" "local_dev_storage_key" {
+  count              = var.create_service_account_keys ? 1 : 0
   service_account_id = google_service_account.local_dev_storage.name
 }
 
 # Save keys to local files (be careful with these!)
 resource "local_sensitive_file" "prod_key" {
-  content  = base64decode(google_service_account_key.prod_deployer_key.private_key)
+  count    = var.create_service_account_keys ? 1 : 0
+  content  = base64decode(google_service_account_key.prod_deployer_key[0].private_key)
   filename = "${path.module}/../credentials/gcp-prod-deployer-key.json"
 }
 
 resource "local_sensitive_file" "staging_key" {
-  content  = base64decode(google_service_account_key.staging_deployer_key.private_key)
+  count    = var.create_service_account_keys ? 1 : 0
+  content  = base64decode(google_service_account_key.staging_deployer_key[0].private_key)
   filename = "${path.module}/../credentials/gcp-staging-deployer-key.json"
 }
 
 resource "local_sensitive_file" "local_dev_storage_key" {
-  content  = base64decode(google_service_account_key.local_dev_storage_key.private_key)
+  count    = var.create_service_account_keys ? 1 : 0
+  content  = base64decode(google_service_account_key.local_dev_storage_key[0].private_key)
   filename = "${path.module}/../credentials/google-storage-local-dev-sa.json"
 }

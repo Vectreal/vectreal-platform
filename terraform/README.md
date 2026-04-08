@@ -133,7 +133,7 @@ gh workflow run "CD - Deploy Platform to Production" # Deploy to production
 | **Service Accounts**        | `vectreal-prod-deployer`, `vectreal-staging-deployer`, `vectreal-platform-runtime`, `vectreal-local-dev-storage` |
 | **IAM Roles**               | Cloud Run Admin, Artifact Registry Writer, Storage Object Admin/Viewer                                           |
 | **Enabled APIs**            | Cloud Run, IAM, Artifact Registry, Container Registry, Cloud Storage                                             |
-| **Service Account Keys**    | Saved to `credentials/`                                                                                          |
+| **Service Account Keys**    | Optional only (`create_service_account_keys=true`); disabled by default                                          |
 
 ### What is NOT Created by Terraform
 
@@ -142,6 +142,8 @@ gh workflow run "CD - Deploy Platform to Production" # Deploy to production
 
 Cloud Run services are managed by Terraform in this repository by default (`manage_cloud_run_services = true`).
 GitHub Actions deploys new revisions by updating image and runtime env vars on those services.
+
+For secure CI authentication, prefer GitHub OIDC workload identity federation. Keep long-lived key generation disabled (`create_service_account_keys = false`) unless you explicitly need a bootstrap-only exception.
 
 ## Required GitHub Secrets
 

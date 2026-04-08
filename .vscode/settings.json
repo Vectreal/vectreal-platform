@@ -20,7 +20,15 @@
 	"chat.tools.terminal.autoApprove": {
 		"pnpm dlx nx": true,
 		"pnpx nx": true,
-		"pnpm exec nx": true
+		"pnpm exec nx": true,
+		"/^nx run vectreal-platform:typecheck$/": {
+			"approve": true,
+			"matchCommandLine": true
+		},
+		"/^nx run vectreal-platform:lint$/": {
+			"approve": true,
+			"matchCommandLine": true
+		}
 	},
 	"github.copilot.chat.codeGeneration.instructions": [
 		{

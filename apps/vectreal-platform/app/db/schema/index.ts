@@ -1,4 +1,5 @@
 export * from './core/users'
+export * from './core/contact-submissions'
 export * from './core/organizations'
 export * from './core/organization-memberships'
 export * from './project/projects'

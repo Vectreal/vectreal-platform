@@ -47,4 +47,4 @@ export const billingWebhookEvents = pgTable(
 		index('billing_webhook_events_status_idx').on(table.status),
 		index('billing_webhook_events_created_at_idx').on(table.createdAt)
 	]
-)
+).enableRLS()
