@@ -108,7 +108,7 @@ variable "production_cpu" {
 variable "allowed_ingress" {
   description = "Ingress settings for Cloud Run services. Defaults to 'all' so services are publicly reachable when edge/load-balancer is not enabled. Set to 'internal-and-cloud-load-balancing' when enable_edge=true."
   type        = string
-  default     = "all" # Options: "all", "internal", "internal-and-cloud-load-balancing"
+  default     = "internal-and-cloud-load-balancing" # Options: "all", "internal", "internal-and-cloud-load-balancing"
 }
 
 variable "allow_public_cloud_run_invoker" {
