@@ -74,7 +74,6 @@ export async function action({ request, context }: Route.ActionArgs) {
 	)
 		? (rawSource as (typeof CONTACT_SOURCE_VALUES)[number])
 		: ('other' as const)
-
 	const result = await submitContactForm({
 		request,
 		context,

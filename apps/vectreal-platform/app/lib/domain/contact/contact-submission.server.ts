@@ -1,5 +1,4 @@
 import { randomBytes } from 'node:crypto'
-
 import { eq } from 'drizzle-orm'
 
 import {
@@ -108,7 +107,6 @@ export function buildContactSource(request: Request): ContactSource {
 	if (CONTACT_SOURCE_VALUES.includes(explicitSource as ContactSource)) {
 		return explicitSource as ContactSource
 	}
-
 	const referer = request.headers.get('referer')
 	if (!referer) {
 		return 'direct'
@@ -118,6 +116,9 @@ export function buildContactSource(request: Request): ContactSource {
 		const refererUrl = new URL(referer)
 		if (refererUrl.pathname.startsWith('/pricing')) {
 			return 'pricing_cta'
+		}
+		if (refererUrl.pathname.includes('footer')) {
+			return 'footer'
 		}
 		return 'other'
 	} catch {
@@ -148,41 +149,32 @@ async function sendContactNotification(args: {
 		return { ok: true }
 	}
 
-	try {
-		const response = await fetch('https://api.resend.com/emails', {
-			method: 'POST',
-			headers: {
-				Authorization: `Bearer ${resendApiKey}`,
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				from: fromEmail,
-				to: args.to,
-				subject: args.subject,
-				text: args.text
-			})
+<<<<<<< HEAD
+	const response = await fetch('https://api.resend.com/emails', {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${resendApiKey}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			from: fromEmail,
+			to: args.to,
+			subject: args.subject,
+			text: args.text
 		})
+	})
 
-		if (!response.ok) {
-			const body = await response.text()
-			return {
-				ok: false,
-				error: `Email provider error (${response.status}): ${body}`
-			}
-		}
-
-		const payload = (await response.json()) as { id?: string }
-
-		return { ok: true, messageId: payload.id }
-	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : 'Unknown email provider error'
-
+	if (!response.ok) {
+		const body = await response.text()
 		return {
 			ok: false,
-			error: `Failed to send contact notification: ${message}`
+			error: `Email provider error (${response.status}): ${body}`
 		}
 	}
+
+	const payload = (await response.json()) as { id?: string }
+
+	return { ok: true, messageId: payload.id }
 }
 
 function buildReferenceCode() {
@@ -368,6 +360,7 @@ export async function submitContactForm(args: {
 	}
 
 	const db = getDbClient()
+<<<<<<< HEAD
 
 	let submission: { id: string; referenceCode: string } | undefined
 	const MAX_INSERT_ATTEMPTS = 3
@@ -434,6 +427,27 @@ export async function submitContactForm(args: {
 			}
 		}
 	}
+=======
+	const referenceCode = buildReferenceCode()
+
+	const [submission] = await db
+		.insert(contactSubmissions)
+		.values({
+			referenceCode,
+			userId: args.userId,
+			source: args.source,
+			isAuthenticated: args.isAuthenticated,
+			name: encryptSensitiveValue(name),
+			email: encryptSensitiveValue(email),
+			inquiryType,
+			message: encryptSensitiveValue(message),
+			status: 'queued'
+		})
+		.returning({
+			id: contactSubmissions.id,
+			referenceCode: contactSubmissions.referenceCode
+		})
+>>>>>>> 935681c (feat(contact): implement contact form submission and webhook processing)
 
 	const sendResult = await sendInternalContactNotification({
 		name,

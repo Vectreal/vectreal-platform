@@ -8,7 +8,6 @@ export const CONTACT_SOURCE_VALUES = [
 ] as const
 
 export type ContactSource = (typeof CONTACT_SOURCE_VALUES)[number]
-
 export type ContactInquiryType = 'support' | 'sales' | 'partnership' | 'other'
 
 export interface ContactActionData {
