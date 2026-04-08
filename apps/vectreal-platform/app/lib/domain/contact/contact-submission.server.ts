@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto'
+import { eq } from 'drizzle-orm'
 
 import { eq } from 'drizzle-orm'
 
@@ -108,7 +109,6 @@ export function buildContactSource(request: Request): ContactSource {
 	if (CONTACT_SOURCE_VALUES.includes(explicitSource as ContactSource)) {
 		return explicitSource as ContactSource
 	}
-
 	const referer = request.headers.get('referer')
 	if (!referer) {
 		return 'direct'
@@ -118,6 +118,9 @@ export function buildContactSource(request: Request): ContactSource {
 		const refererUrl = new URL(referer)
 		if (refererUrl.pathname.startsWith('/pricing')) {
 			return 'pricing_cta'
+		}
+		if (refererUrl.pathname.includes('footer')) {
+			return 'footer'
 		}
 		return 'other'
 	} catch {
