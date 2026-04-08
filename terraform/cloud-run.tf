@@ -20,7 +20,7 @@ locals {
     internal-and-cloud-load-balancing = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
   }
 
-  cloud_run_ingress              = lookup(local.cloud_run_ingress_by_value, var.allowed_ingress, "INGRESS_TRAFFIC_ALL")
+  cloud_run_ingress              = lookup(local.cloud_run_ingress_by_value, var.allowed_ingress, "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER")
   staging_region                 = var.staging_region != "" ? var.staging_region : var.region
   allow_public_invoker_effective = var.allow_public_cloud_run_invoker && !var.enable_edge
 }
@@ -31,7 +31,7 @@ resource "google_cloud_run_v2_service" "production" {
   name                = var.production_service_name
   location            = var.region
   ingress             = local.cloud_run_ingress
-  deletion_protection = false
+  deletion_protection = var.production_deletion_protection
 
   template {
     service_account = google_service_account.runtime.email
@@ -95,7 +95,7 @@ resource "google_cloud_run_v2_service" "staging" {
   name                = var.staging_service_name
   location            = local.staging_region
   ingress             = local.cloud_run_ingress
-  deletion_protection = false
+  deletion_protection = var.staging_deletion_protection
 
   template {
     service_account = google_service_account.runtime.email
