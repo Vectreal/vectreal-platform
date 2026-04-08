@@ -28,6 +28,7 @@ import {
 	getSceneFolder,
 	getSceneFolderAncestry
 } from '../../../lib/domain/scene/server/scene-folder-repository.server'
+import { shouldRevalidateForRouteParams } from '../../../lib/navigation/dashboard-route-behavior'
 import {
 	deleteDialogAtom,
 	renameDialogAtom
@@ -86,22 +87,14 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 	actionResult,
 	defaultShouldRevalidate
 }) => {
-	if (formMethod && formMethod !== 'GET') {
-		return true
-	}
-
-	if (actionResult) {
-		return true
-	}
-
-	if (
-		currentParams.projectId === nextParams.projectId &&
-		currentParams.folderId === nextParams.folderId
-	) {
-		return false
-	}
-
-	return defaultShouldRevalidate
+	return shouldRevalidateForRouteParams({
+		currentParams,
+		nextParams,
+		paramKeys: ['projectId', 'folderId'],
+		formMethod,
+		actionResult,
+		defaultShouldRevalidate
+	})
 }
 
 export function HydrateFallback() {
