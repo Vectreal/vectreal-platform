@@ -49,6 +49,7 @@ The application requires the following environment variables to run properly:
   phc_your-posthog-project-api-key
   ```
 - **`VITE_PUBLIC_POSTHOG_HOST`** _(optional, default: `https://us.i.posthog.com`)_: PostHog ingestion endpoint. Set to your self-hosted instance URL if applicable.
+- **`VITE_PUBLIC_POSTHOG_UI_HOST`** _(optional, default: `https://eu.posthog.com`)_: PostHog UI host used for dashboard/session links in the client.
 
 ### Security Configuration
 

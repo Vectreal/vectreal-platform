@@ -49,7 +49,7 @@ export const Footer = () => {
 		<>
 			<footer
 				className={cn(
-					'border-border/50 bg-background w-full overflow-hidden border-t border-b px-6 pb-8 inset-shadow-[0rem_1rem_2rem_-1rem] inset-shadow-black/50 backdrop-blur-sm',
+					'border-border/50 bg-background w-full overflow-hidden border-t border-b px-6 pb-8 backdrop-blur-sm',
 					isHomePage ? 'mb-48 sm:mb-64 md:mb-96 xl:mb-128' : ''
 				)}
 			>

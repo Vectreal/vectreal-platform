@@ -12,6 +12,7 @@ import { HydratedRouter } from 'react-router/dom'
 
 posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_TOKEN, {
 	api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+	ui_host: import.meta.env.VITE_PUBLIC_POSTHOG_UI_HOST || 'https://eu.posthog.com',
 	defaults: '2026-01-30',
 	// Add tracing headers so the server-side middleware can correlate events
 	__add_tracing_headers: [window.location.host, 'localhost']
