@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.15.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.14.0...workspace-v0.15.0) (2026-04-08)
+
+
+### Features
+
+* **auth:** implement rate limiting for sign-in and sign-up actions ([#376](https://github.com/Vectreal/vectreal-platform/issues/376)) ([b4b1eba](https://github.com/Vectreal/vectreal-platform/commit/b4b1eba20a2ed36ee5e5ee12fa4cf540439e14c1))
+* **contact:** implement contact form, webhook processing, and security hardening ([#370](https://github.com/Vectreal/vectreal-platform/issues/370)) ([4c92039](https://github.com/Vectreal/vectreal-platform/commit/4c920399f7531bd1c196407076403bcb8e5809e3))
+
+
+### Bug Fixes
+
+* **dashboard:** simplify layout structure by removing unnecessary divs ([#369](https://github.com/Vectreal/vectreal-platform/issues/369)) ([64ba8f8](https://github.com/Vectreal/vectreal-platform/commit/64ba8f8a18e9f436e514553f20c14ff9a3fb4116))
+* **dashboard:** simplify layout structure by removing unnecessary divs ([#371](https://github.com/Vectreal/vectreal-platform/issues/371)) ([655395f](https://github.com/Vectreal/vectreal-platform/commit/655395fdb06dbfd06035bda83e9c40c6c7cc9019))
+
 ## [0.14.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.13.0...workspace-v0.14.0) (2026-04-07)
 
 
