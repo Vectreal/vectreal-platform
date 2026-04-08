@@ -5,6 +5,7 @@ import { Separator } from '@shared/components/ui/separator'
 import { Link, Outlet, useLocation, useNavigate, useSubmit } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 
+import { AuthErrorBoundary } from '../../components/errors'
 import HeroScene from '../../components/home/hero-scene'
 
 const SignupModel = () => {
@@ -130,3 +131,5 @@ const SigninLayout = () => {
 }
 
 export default SigninLayout
+
+export { AuthErrorBoundary as ErrorBoundary }

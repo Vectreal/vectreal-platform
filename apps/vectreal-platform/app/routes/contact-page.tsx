@@ -22,6 +22,7 @@ import { useEffect, useRef, useState } from 'react'
 import { data, Form, Link, useLoaderData, useNavigation } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
+import { PublicErrorBoundary } from '../components/errors'
 import {
 	CONTACT_HONEYPOT_FIELD,
 	CONTACT_SOURCE_VALUES,
@@ -74,14 +75,33 @@ export async function action({ request, context }: Route.ActionArgs) {
 	)
 		? (rawSource as (typeof CONTACT_SOURCE_VALUES)[number])
 		: ('other' as const)
-	const result = await submitContactForm({
-		request,
-		context,
-		formData,
-		userId: user?.id ?? null,
-		isAuthenticated: Boolean(user),
-		source
-	})
+	let result: { status: number; body: ActionData }
+
+	try {
+		result = await submitContactForm({
+			request,
+			context,
+			formData,
+			userId: user?.id ?? null,
+			isAuthenticated: Boolean(user),
+			source
+		})
+	} catch (error) {
+		console.error('[contact/action] failed to process contact submission', {
+			error,
+			source,
+			isAuthenticated: Boolean(user)
+		})
+
+		result = {
+			status: 500,
+			body: {
+				status: 'error',
+				formError:
+					'We could not send your message right now. Please try again shortly.'
+			}
+		}
+	}
 
 	return data<ActionData>(result.body, {
 		status: result.status,
@@ -368,3 +388,5 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 		</main>
 	)
 }
+
+export { PublicErrorBoundary as ErrorBoundary }

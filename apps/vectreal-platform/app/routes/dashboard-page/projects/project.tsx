@@ -79,10 +79,6 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 		return true
 	}
 
-	if (defaultShouldRevalidate) {
-		return true
-	}
-
 	if (currentParams.projectId === nextParams.projectId) {
 		return false
 	}

@@ -12,6 +12,7 @@ import { useMemo, useRef, useState } from 'react'
 import { data, Link } from 'react-router'
 
 import { DocsPageToc } from '../../components/docs/docs-page-toc'
+import { PublicErrorBoundary } from '../../components/errors'
 import { useDocToc } from '../../hooks/use-doc-toc'
 import {
 	formatNewsDate,
@@ -310,3 +311,5 @@ export default function NewsRoomArticlePage({
 		</div>
 	)
 }
+
+export { PublicErrorBoundary as ErrorBoundary }

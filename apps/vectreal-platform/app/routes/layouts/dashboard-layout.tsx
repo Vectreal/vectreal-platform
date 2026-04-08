@@ -40,6 +40,10 @@ import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.serv
 import { getOrgSubscription } from '../../lib/domain/billing/entitlement-service.server'
 import { getSidebarProjects } from '../../lib/domain/project/project-repository.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
+import {
+	isDashboardOverlayPath,
+	shouldRevalidateWithinScope
+} from '../../lib/navigation/dashboard-route-behavior'
 import { buildMeta } from '../../lib/seo'
 import { dashboardManagementStore } from '../../lib/stores/dashboard-management-store'
 import { upgradeModalStore } from '../../lib/stores/upgrade-modal-store'
@@ -81,35 +85,14 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 	actionResult,
 	formMethod
 }) => {
-	// Always revalidate on form submissions
-	if (formMethod && formMethod !== 'GET') {
-		return true
-	}
-
-	// Always revalidate if there's an action result (explicit action submission)
-	if (actionResult) {
-		return true
-	}
-
-	if (defaultShouldRevalidate) {
-		return true
-	}
-
-	// Same URL: don't revalidate (e.g., submitting fetcher without navigation)
-	if (currentUrl.pathname === nextUrl.pathname) {
-		return false
-	}
-
-	// Navigating within dashboard: don't revalidate shared parent data
-	if (
-		currentUrl.pathname.startsWith('/dashboard') &&
-		nextUrl.pathname.startsWith('/dashboard')
-	) {
-		return false
-	}
-
-	// Default behavior for all other cases (initial load, navigation from outside dashboard)
-	return defaultShouldRevalidate
+	return shouldRevalidateWithinScope({
+		currentPathname: currentUrl.pathname,
+		nextPathname: nextUrl.pathname,
+		formMethod,
+		actionResult,
+		defaultShouldRevalidate,
+		scopePrefix: '/dashboard'
+	})
 }
 
 /**
@@ -177,7 +160,13 @@ const DashboardLayout = () => {
 
 	const willBeNewProjectCreation = newProjectRegex.test(path)
 	const willBeProjectEditRoute = projectEditRegex.test(path)
+	const willBeDashboardOverlayRoute = isDashboardOverlayPath(path)
 	const willBePublisherRoute = publisherRegex.test(path)
+	const willBeOverlayRoute =
+		willBeNewProjectCreation ||
+		willBeProjectEditRoute ||
+		willBeDashboardOverlayRoute ||
+		willBePublisherRoute
 
 	const willBeFolderDetail =
 		folderDetailRegex.test(path) &&
@@ -246,10 +235,7 @@ const DashboardLayout = () => {
 						</div>
 						{!(isSceneDetailRoute && willBePublisherRoute) &&
 							!(isSceneDetailRoute || willBeSceneDetail) && <DashboardHeader />}
-						{isContentNavigationLoading &&
-						!willBeNewProjectCreation &&
-						!willBeProjectEditRoute &&
-						!willBePublisherRoute ? (
+						{isContentNavigationLoading && !willBeOverlayRoute ? (
 							skeleton
 						) : (
 							<Outlet />

@@ -6,16 +6,47 @@ import {
 	TooltipProvider,
 	TooltipTrigger
 } from '@shared/components/ui/tooltip'
-import { ApiResponse } from '@shared/utils'
 import { Eye, EyeClosed, ExternalLink, Save } from 'lucide-react'
 import { useState } from 'react'
 import { data, Form, Link, redirect, type MetaFunction } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signin-page'
+import { checkAuthRateLimit } from '../../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
+
+type AuthErrorCode =
+	| 'verification_failed'
+	| 'provider_exchange_failed'
+	| 'user_init_failed'
+	| 'missing_code'
+	| 'session_missing'
+	| 'rate_limited'
+	| 'invalid_credentials'
+	| 'unknown'
+
+const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
+	verification_failed:
+		'We could not verify your email link. Please request a new one and try again.',
+	provider_exchange_failed:
+		'Authentication provider sign-in failed. Please try again.',
+	user_init_failed:
+		'Your account was authenticated, but setup could not be completed. Please try signing in again.',
+	missing_code:
+		'Missing authentication code. Please restart the sign-in flow and try again.',
+	session_missing: 'Session creation failed. Please sign in again.',
+	rate_limited: 'Too many sign-in attempts. Please try again shortly.',
+	invalid_credentials: 'Invalid email or password.',
+	unknown: 'Unable to sign in right now. Please try again.'
+}
+
+interface SigninActionData {
+	errors?: Record<string, string>
+	formError?: string
+	errorCode?: AuthErrorCode
+}
 
 export const meta: MetaFunction = () =>
 	buildMeta(
@@ -77,15 +108,62 @@ export async function action({ request }: Route.ActionArgs) {
 	} = validateSignin(formData)
 
 	const hasErrors = Object.keys(errors).length > 0
-	if (hasErrors) return { errors }
+	if (hasErrors) {
+		return data<SigninActionData>({ errors }, { status: 400 })
+	}
 
-	const { client, headers } = await createSupabaseClient(request)
-	const { data, error } = await client.auth.signInWithPassword({
-		email,
-		password
+	const normalizedEmail = email.trim().toLowerCase()
+	const rateLimitResult = checkAuthRateLimit(request, {
+		bucket: 'auth-signin',
+		maxRequests: 10,
+		keyParts: [normalizedEmail]
 	})
 
-	if (data?.user && data.session) {
+	if (rateLimitResult.limited) {
+		return data<SigninActionData>(
+			{
+				formError: AUTH_ERROR_MESSAGES.rate_limited,
+				errorCode: 'rate_limited'
+			},
+			{
+				status: 429,
+				headers: {
+					'Retry-After': String(rateLimitResult.retryAfterSeconds)
+				}
+			}
+		)
+	}
+
+	const { client, headers } = await createSupabaseClient(request)
+	let authData: Awaited<
+		ReturnType<typeof client.auth.signInWithPassword>
+	>['data']
+	let authError: Awaited<
+		ReturnType<typeof client.auth.signInWithPassword>
+	>['error']
+
+	try {
+		const response = await client.auth.signInWithPassword({
+			email,
+			password
+		})
+		authData = response.data
+		authError = response.error
+	} catch (error) {
+		console.error('[auth/sign-in] unexpected sign-in error', {
+			error,
+			email: normalizedEmail
+		})
+		return data<SigninActionData>(
+			{
+				formError: AUTH_ERROR_MESSAGES.unknown,
+				errorCode: 'unknown'
+			},
+			{ status: 500, headers }
+		)
+	}
+
+	if (authData?.user && authData.session) {
 		const additionalHeaders = new Headers(headers)
 		const next = getSafeNext(request)
 
@@ -94,9 +172,38 @@ export async function action({ request }: Route.ActionArgs) {
 		})
 	}
 
-	if (error) {
-		return ApiResponse.serverError(error.message)
+	if (authError) {
+		const invalidCredentials = authError.message
+			.toLowerCase()
+			.includes('invalid login credentials')
+
+		const errorCode: AuthErrorCode = invalidCredentials
+			? 'invalid_credentials'
+			: 'unknown'
+
+		if (!invalidCredentials) {
+			console.error('[auth/sign-in] sign-in failed', {
+				message: authError.message,
+				email: normalizedEmail
+			})
+		}
+
+		return data<SigninActionData>(
+			{
+				formError: AUTH_ERROR_MESSAGES[errorCode],
+				errorCode
+			},
+			{ status: invalidCredentials ? 401 : 500, headers }
+		)
 	}
+
+	return data<SigninActionData>(
+		{
+			formError: AUTH_ERROR_MESSAGES.unknown,
+			errorCode: 'unknown'
+		},
+		{ status: 500, headers }
+	)
 }
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
@@ -112,12 +219,21 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 	// Check if this is a scene preservation flow
 	const url = new URL(request.url)
 	const sceneSaved = url.searchParams.get('scene_saved') === 'true'
+	const rawAuthError = url.searchParams.get('error')
+	const authErrorCode =
+		rawAuthError && rawAuthError in AUTH_ERROR_MESSAGES
+			? (rawAuthError as AuthErrorCode)
+			: null
 	/** The publisher restore URL embedded in `next`, forwarded to the component for the 'Open Publisher' button. */
 	const nextPath = url.searchParams.get('next') ?? null
 
 	return data(
 		{
 			sceneSaved,
+			authErrorCode,
+			authErrorMessage: authErrorCode
+				? AUTH_ERROR_MESSAGES[authErrorCode]
+				: null,
 			nextPath,
 			user: user ?? null,
 			isAuthenticated: !!user,
@@ -133,10 +249,23 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 		setShowPassword((prev) => !prev)
 	}
 
-	const errors = actionData?.errors
+	const typedActionData = actionData as SigninActionData | undefined
+	const errors = typedActionData?.errors
 
 	return (
 		<div className="w-full max-w-md">
+			{loaderData?.authErrorMessage && (
+				<div className="mb-6 rounded-lg border border-red-300/50 bg-red-300/20 p-4 text-sm text-red-100/90">
+					{loaderData.authErrorMessage}
+				</div>
+			)}
+
+			{typedActionData?.formError && (
+				<div className="mb-6 rounded-lg border border-red-300/50 bg-red-300/20 p-4 text-sm text-red-100/90">
+					{typedActionData.formError}
+				</div>
+			)}
+
 			{loaderData?.sceneSaved && (
 				<div className="mb-6 space-y-2 rounded-lg border border-green-300/50 bg-green-300/25 p-4 text-sm text-green-200/80">
 					<span className="flex gap-2">

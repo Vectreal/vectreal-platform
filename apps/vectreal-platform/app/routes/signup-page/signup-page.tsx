@@ -21,9 +21,12 @@ import { data, Form, Link, redirect, type MetaFunction } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signup-page'
+import { checkAuthRateLimit } from '../../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
+
+import type { PostHogContext } from '../../lib/posthog/posthog-middleware'
 
 export const meta: MetaFunction = () =>
 	buildMeta(
@@ -47,6 +50,12 @@ interface UserInput {
 	username: string
 	email: string
 	password: string
+}
+
+interface SignupActionData {
+	errors?: Record<string, string>
+	formError?: string
+	errorCode?: 'rate_limited' | 'signup_failed' | 'unknown'
 }
 
 const Alert = motion.create(BaseAlert)
@@ -97,13 +106,11 @@ const getSafeNext = (request: Request) => {
  * Action handler for signup form submission.
  * Handles user registration via Supabase.
  */
-export async function action({
-	request
-}: Route.ActionArgs): Promise<ApiResponse> {
+export async function action({ request, context }: Route.ActionArgs) {
 	const formData = await request.formData()
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
 	if (csrfCheck) {
-		return csrfCheck as unknown as ApiResponse
+		return csrfCheck
 	}
 
 	const {
@@ -112,24 +119,107 @@ export async function action({
 	} = validateSignup(formData)
 
 	const hasErrors = Object.keys(errors).length > 0
-	if (hasErrors) return data({ errors })
+	if (hasErrors) {
+		return data<SignupActionData>({ errors }, { status: 400 })
+	}
+
+	const normalizedEmail = email.trim().toLowerCase()
+	const rateLimitResult = checkAuthRateLimit(request, {
+		bucket: 'auth-signup',
+		maxRequests: 5,
+		keyParts: [normalizedEmail]
+	})
+
+	if (rateLimitResult.limited) {
+		return data<SignupActionData>(
+			{
+				formError: 'Too many sign-up attempts. Please try again shortly.',
+				errorCode: 'rate_limited'
+			},
+			{
+				status: 429,
+				headers: {
+					'Retry-After': String(rateLimitResult.retryAfterSeconds)
+				}
+			}
+		)
+	}
 
 	const { client, headers } = await createSupabaseClient(request)
-	const { data: signupData, error } = await client.auth.signUp({
-		email,
-		password,
-		options: { data: { username } }
-	})
+	let signupData: Awaited<ReturnType<typeof client.auth.signUp>>['data']
+	let signupError: Awaited<ReturnType<typeof client.auth.signUp>>['error']
+
+	try {
+		const response = await client.auth.signUp({
+			email,
+			password,
+			options: { data: { username } }
+		})
+		signupData = response.data
+		signupError = response.error
+	} catch (error) {
+		console.error('[auth/sign-up] unexpected signup error', {
+			error,
+			email: normalizedEmail
+		})
+
+		return data<SignupActionData>(
+			{
+				formError: 'Unable to create your account right now. Please try again.',
+				errorCode: 'unknown'
+			},
+			{ status: 500, headers }
+		)
+	}
 
 	if (signupData?.user) {
 		const additionalHeaders = new Headers(headers)
+		const posthog = (context as PostHogContext).posthog
+		posthog?.capture({
+			distinctId: signupData.user.id,
+			event: 'user_signed_up',
+			properties: {
+				method: 'email',
+				client_type: 'web'
+			}
+		})
+
 		return ApiResponse.success({ user: signupData.user }, 200, {
 			headers: additionalHeaders
 		})
 	}
 
-	return ApiResponse.serverError(
-		error?.message || 'An error occurred during signup'
+	if (signupError) {
+		const message = signupError.message.toLowerCase()
+		const isKnownClientError =
+			message.includes('already registered') ||
+			message.includes('invalid') ||
+			message.includes('password')
+
+		if (!isKnownClientError) {
+			console.error('[auth/sign-up] signup failed', {
+				message: signupError.message,
+				email: normalizedEmail
+			})
+		}
+
+		return data<SignupActionData>(
+			{
+				formError: isKnownClientError
+					? 'Unable to create account with the provided details.'
+					: 'Unable to create your account right now. Please try again.',
+				errorCode: 'signup_failed'
+			},
+			{ status: isKnownClientError ? 400 : 500, headers }
+		)
+	}
+
+	return data<SignupActionData>(
+		{
+			formError: 'Unable to create your account right now. Please try again.',
+			errorCode: 'unknown'
+		},
+		{ status: 500, headers }
 	)
 }
 
@@ -178,7 +268,7 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 	// Extract errors from actionData (now { errors } or undefined)
 	const actionData = props.actionData as
 		| { user: User }
-		| { errors?: Record<string, string> }
+		| { errors?: Record<string, string>; formError?: string }
 
 	const errors: Record<string, string> =
 		typeof actionData === 'object' &&
@@ -186,6 +276,13 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 		'errors' in actionData
 			? (actionData.errors ?? {})
 			: {}
+
+	const formError =
+		typeof actionData === 'object' &&
+		actionData !== null &&
+		'formError' in actionData
+			? actionData.formError
+			: null
 
 	const actionResultData =
 		typeof actionData === 'object' &&
@@ -247,6 +344,12 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 							</Link>
 						</Button>
 					)}
+				</div>
+			)}
+
+			{formError && (
+				<div className="mb-4 rounded-lg border border-red-300/50 bg-red-300/20 p-4 text-sm text-red-100/90">
+					{formError}
 				</div>
 			)}
 
