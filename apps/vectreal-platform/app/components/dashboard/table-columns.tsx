@@ -33,6 +33,7 @@ import {
 	Rocket,
 	ArrowRight
 } from 'lucide-react'
+import { memo, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 
 import { createCheckboxColumn, SortableHeader } from './data-table'
@@ -238,22 +239,33 @@ export const sceneColumns: ColumnDef<SceneRow>[] = [
 	},
 	{
 		id: 'actions',
-		cell: ({ row }) => (
-			<div className="flex items-center justify-end gap-1">
+		cell: ({ row }) => <SceneActionsCell row={row.original} />
+	}
+]
+
+const SceneActionsCell = memo(({ row }: { row: SceneRow }) => {
+	const [isClientMounted, setIsClientMounted] = useState(false)
+	useEffect(() => setIsClientMounted(true), [])
+
+	const trigger = (
+		<Button variant="ghost" size="sm" aria-label="Scene actions" disabled={!isClientMounted}>
+			<Ellipsis className="h-4 w-4" />
+		</Button>
+	)
+
+	return (
+		<div className="flex items-center justify-end gap-1">
+			{isClientMounted ? (
 				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button variant="ghost" size="sm" aria-label="Scene actions">
-							<Ellipsis className="h-4 w-4" />
-						</Button>
-					</DropdownMenuTrigger>
+					<DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
 					<DropdownMenuContent align="end">
 						<DropdownMenuItem asChild>
 							<Link
-								to={`/dashboard/projects/${row.original.projectId}/${row.original.id}`}
+								to={`/dashboard/projects/${row.projectId}/${row.id}`}
 								state={{
-									name: row.original.name,
-									description: row.original.description || undefined,
-									projectName: row.original.projectName,
+									name: row.name,
+									description: row.description || undefined,
+									projectName: row.projectName,
 									type: 'scene' as const
 								}}
 								viewTransition
@@ -265,7 +277,7 @@ export const sceneColumns: ColumnDef<SceneRow>[] = [
 						</DropdownMenuItem>
 						<DropdownMenuItem asChild>
 							<Link
-								to={`/publisher/${row.original.id}`}
+								to={`/publisher/${row.id}`}
 								viewTransition
 								className="flex w-full items-center gap-2"
 							>
@@ -275,11 +287,11 @@ export const sceneColumns: ColumnDef<SceneRow>[] = [
 						</DropdownMenuItem>
 						<DropdownMenuItem asChild>
 							<Link
-								to={`/preview/fullscreen/${row.original.projectId}/${row.original.id}/`}
+								to={`/preview/fullscreen/${row.projectId}/${row.id}/`}
 								state={{
-									name: row.original.name,
-									description: row.original.description || undefined,
-									projectName: row.original.projectName,
+									name: row.name,
+									description: row.description || undefined,
+									projectName: row.projectName,
 									type: 'scene' as const
 								}}
 								viewTransition
@@ -291,10 +303,117 @@ export const sceneColumns: ColumnDef<SceneRow>[] = [
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
-			</div>
-		)
-	}
-]
+			) : (
+				trigger
+			)}
+		</div>
+	)
+})
+
+interface ContentActionsCellProps {
+	row: ContentRow
+	onRenameItem?: (row: ContentRow) => void
+	onDeleteItem?: (row: ContentRow) => void
+	isActionsDisabled?: boolean
+}
+
+const ContentActionsCell = memo(function ContentActionsCell({
+	row,
+	onRenameItem,
+	onDeleteItem,
+	isActionsDisabled
+}: ContentActionsCellProps) {
+	const [isClientMounted, setIsClientMounted] = useState(false)
+	useEffect(() => setIsClientMounted(true), [])
+	const trigger = (
+		<Button
+			variant="ghost"
+			size="sm"
+			aria-label="Item actions"
+			disabled={!isClientMounted || isActionsDisabled}
+		>
+			<Ellipsis className="h-4 w-4" />
+		</Button>
+	)
+	return (
+		<div className="flex items-center justify-end gap-1">
+			{isClientMounted ? (
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">
+						<DropdownMenuItem
+							disabled={isActionsDisabled}
+							onClick={() => onRenameItem?.(row)}
+						>
+							<FilePenLine className="mr-2 h-4 w-4" />
+							Rename
+						</DropdownMenuItem>
+						<DropdownMenuItem
+							disabled={isActionsDisabled}
+							onClick={() => onDeleteItem?.(row)}
+							className="text-destructive-foreground hover:bg-destructive/50 focus:bg-destructive/50"
+						>
+							<Trash2 className="mr-2 h-4 w-4 text-inherit" />
+							Delete
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+			) : (
+				trigger
+			)}
+		</div>
+	)
+})
+
+interface ApiKeyActionsCellProps {
+	row: ApiKeyRow
+	onEdit: (keyId: string) => void
+	onRevoke: (keyId: string) => void
+}
+
+const ApiKeyActionsCell = memo(function ApiKeyActionsCell({
+	row,
+	onEdit,
+	onRevoke
+}: ApiKeyActionsCellProps) {
+	const [isClientMounted, setIsClientMounted] = useState(false)
+	useEffect(() => setIsClientMounted(true), [])
+	const trigger = (
+		<Button
+			variant="ghost"
+			size="sm"
+			aria-label="API key actions"
+			disabled={!isClientMounted}
+		>
+			<Ellipsis className="h-4 w-4" />
+		</Button>
+	)
+	return (
+		<div className="flex items-center justify-end gap-1">
+			{isClientMounted ? (
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">
+						<DropdownMenuItem onClick={() => onEdit(row.id)}>
+							<Pencil className="mr-2 h-4 w-4" />
+							Edit
+						</DropdownMenuItem>
+						<DropdownMenuItem
+							disabled={Boolean(row.revokedAt)}
+							onClick={() => onRevoke(row.id)}
+							className="text-destructive-foreground hover:bg-destructive/50 focus:bg-destructive/50"
+						>
+							<KeyRound className="mr-2 h-4 w-4 text-inherit" />
+							Revoke
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+			) : (
+				trigger
+			)}
+		</div>
+	)
+})
 
 export function createContentColumns(
 	options: ContentColumnsOptions = {}
@@ -383,41 +502,14 @@ export function createContentColumns(
 		},
 		{
 			id: 'actions',
-			cell: ({ row }) => {
-				return (
-					<div className="flex items-center justify-end gap-1">
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button
-									variant="ghost"
-									size="sm"
-									aria-label="Item actions"
-									disabled={options.isActionsDisabled}
-								>
-									<Ellipsis className="h-4 w-4" />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end">
-								<DropdownMenuItem
-									disabled={options.isActionsDisabled}
-									onClick={() => options.onRenameItem?.(row.original)}
-								>
-									<FilePenLine className="mr-2 h-4 w-4" />
-									Rename
-								</DropdownMenuItem>
-								<DropdownMenuItem
-									disabled={options.isActionsDisabled}
-									onClick={() => options.onDeleteItem?.(row.original)}
-									className="text-destructive-foreground hover:bg-destructive/50 focus:bg-destructive/50"
-								>
-									<Trash2 className="mr-2 h-4 w-4 text-inherit" />
-									Delete
-								</DropdownMenuItem>
-							</DropdownMenuContent>
-						</DropdownMenu>
-					</div>
-				)
-			}
+			cell: ({ row }) => (
+				<ContentActionsCell
+					row={row.original}
+					onRenameItem={options.onRenameItem}
+					onDeleteItem={options.onDeleteItem}
+					isActionsDisabled={options.isActionsDisabled}
+				/>
+			)
 		}
 	]
 }
@@ -602,29 +694,11 @@ export function createApiKeyColumns(
 		{
 			id: 'actions',
 			cell: ({ row }) => (
-				<div className="flex items-center justify-end gap-1">
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button variant="ghost" size="sm" aria-label="API key actions">
-								<Ellipsis className="h-4 w-4" />
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end">
-							<DropdownMenuItem onClick={() => options.onEdit(row.original.id)}>
-								<Pencil className="mr-2 h-4 w-4" />
-								Edit
-							</DropdownMenuItem>
-							<DropdownMenuItem
-								disabled={Boolean(row.original.revokedAt)}
-								onClick={() => options.onRevoke(row.original.id)}
-								className="text-destructive-foreground hover:bg-destructive/50 focus:bg-destructive/50"
-							>
-								<KeyRound className="mr-2 h-4 w-4 text-inherit" />
-								Revoke
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</div>
+				<ApiKeyActionsCell
+					row={row.original}
+					onEdit={options.onEdit}
+					onRevoke={options.onRevoke}
+				/>
 			)
 		}
 	]

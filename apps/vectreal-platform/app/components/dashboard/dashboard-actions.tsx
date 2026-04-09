@@ -12,7 +12,7 @@ import {
 } from '@shared/components/ui/dropdown-menu'
 import { useSetAtom } from 'jotai/react'
 import { Edit, Folder, FolderOpen, MoreVertical, Plus } from 'lucide-react'
-import { memo } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 
 import { identifyDrawerRoute } from './utils'
@@ -182,48 +182,62 @@ const ActionButton = memo<ActionButtonProps>(({ action, routeContext }) => {
 
 ActionButton.displayName = 'ActionButton'
 
-const ActionsMenu = memo<ActionsMenuProps>(({ actions, routeContext }) => (
-	<DropdownMenu>
-		<DropdownMenuTrigger asChild>
-			<Button variant="outline" size="icon" aria-label="More actions">
-				<MoreVertical className="h-4 w-4" />
-			</Button>
-		</DropdownMenuTrigger>
-		<DropdownMenuContent align="end">
-			{actions.map((action) => {
-				const { label, icon: Icon, to, onClick } = action
-				const resolvedTo = to
-					? typeof to === 'function'
-						? to(routeContext)
-						: Object.entries(routeContext).reduce(
-								(path, [key, value]) =>
-									value ? path.replace(`:${key}`, value) : path,
-								to
-							)
-					: undefined
+const ActionsMenu = memo<ActionsMenuProps>(({ actions, routeContext }) => {
+	const [isClientMounted, setIsClientMounted] = useState(false)
+	useEffect(() => setIsClientMounted(true), [])
 
-				const content = (
-					<>
-						<Icon className="mr-2 h-4 w-4" />
-						{label}
-					</>
-				)
+	const trigger = (
+		<Button
+			variant="outline"
+			size="icon"
+			aria-label="More actions"
+			disabled={!isClientMounted}
+		>
+			<MoreVertical className="h-4 w-4" />
+		</Button>
+	)
 
-				return resolvedTo ? (
-					<DropdownMenuItem key={label} asChild>
-						<Link viewTransition to={resolvedTo}>
+	if (!isClientMounted) return trigger
+
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+			<DropdownMenuContent align="end">
+				{actions.map((action) => {
+					const { label, icon: Icon, to, onClick } = action
+					const resolvedTo = to
+						? typeof to === 'function'
+							? to(routeContext)
+							: Object.entries(routeContext).reduce(
+									(path, [key, value]) =>
+										value ? path.replace(`:${key}`, value) : path,
+									to
+								)
+						: undefined
+
+					const content = (
+						<>
+							<Icon className="mr-2 h-4 w-4" />
+							{label}
+						</>
+					)
+
+					return resolvedTo ? (
+						<DropdownMenuItem key={label} asChild>
+							<Link viewTransition to={resolvedTo}>
+								{content}
+							</Link>
+						</DropdownMenuItem>
+					) : (
+						<DropdownMenuItem key={label} onClick={onClick}>
 							{content}
-						</Link>
-					</DropdownMenuItem>
-				) : (
-					<DropdownMenuItem key={label} onClick={onClick}>
-						{content}
-					</DropdownMenuItem>
-				)
-			})}
-		</DropdownMenuContent>
-	</DropdownMenu>
-))
+						</DropdownMenuItem>
+					)
+				})}
+			</DropdownMenuContent>
+		</DropdownMenu>
+	)
+})
 
 ActionsMenu.displayName = 'SecondaryActionsMenu'
 
