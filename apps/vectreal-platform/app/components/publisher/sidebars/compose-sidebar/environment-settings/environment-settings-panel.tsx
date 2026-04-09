@@ -1,3 +1,10 @@
+import {
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger
+} from '@shared/components/ui/accordion'
+import { Badge } from '@shared/components/ui/badge'
 import { Label } from '@shared/components/ui/label'
 import {
 	Select,
@@ -247,93 +254,111 @@ const EnvironmentSettings = () => {
 					allowDirectInput={true}
 				/>
 			</div>
-			<div className="bg-muted/50 space-y-4 rounded-xl p-4">
-				<div className="flex items-center gap-2">
-					<p className="text-lg font-medium">Ground</p>
-					<InfoTooltip content="Adds a ground plane that creates a sense of placement." />
-				</div>
+			<Accordion type="single" collapsible className="space-y-1">
+				<AccordionItem
+					value="ground-experimental"
+					className="bg-muted/30 border-muted-foreground/20 rounded-xl border px-3"
+				>
+					<AccordionTrigger className="py-2.5 hover:no-underline">
+						<span className="flex items-center gap-2 text-sm font-medium">
+							Ground
+							<Badge
+								variant="outline"
+								className="border-amber-500/40 bg-amber-500/10 text-[10px] tracking-wide text-amber-700 uppercase"
+							>
+								Beta
+							</Badge>
+						</span>
+					</AccordionTrigger>
+					<AccordionContent className="space-y-4 pb-3">
+						<p className="text-muted-foreground bg-amber-500/10 border-amber-500/30 rounded-lg border px-3 py-2 text-xs leading-relaxed">
+							Ground is experimental and can produce unexpected visuals. Its
+							behavior is fully driven by the currently selected environment map.
+						</p>
 
-				<SettingToggle
-					enabled={!!environment.ground}
-					onToggle={(enabled) =>
-						setEnvironment((prev) => ({
-							...prev,
-							ground: enabled ? DEFAULT_GROUND_VALUES : false
-						}))
-					}
-					title="Show Ground"
-					description="Display a ground plane in the scene."
-				/>
-				<EnhancedSettingSlider
-					enabled={!!environment.ground}
-					id="ground-radius"
-					sliderProps={{
-						min: 10,
-						max: 500,
-						step: 5,
-						value:
-							typeof environment.ground === 'object'
-								? (environment.ground.radius ?? DEFAULT_GROUND_VALUES.radius)
-								: DEFAULT_GROUND_VALUES.radius,
-						onChange: (value) => handleGroundChange('radius', value)
-					}}
-					label="Ground Radius"
-					tooltip="Controls the size of the ground plane in the scene."
-					labelProps={{
-						low: '10 - Small',
-						high: '500 - Very Large'
-					}}
-					formatValue={(value) => value.toFixed(0)}
-					valueMapping={valueMappings.log}
-					allowDirectInput={true}
-				/>
-				<EnhancedSettingSlider
-					enabled={!!environment.ground}
-					id="ground-scale"
-					sliderProps={{
-						min: 1,
-						max: 100,
-						step: 1,
-						value:
-							typeof environment.ground === 'object'
-								? (environment.ground.scale ?? DEFAULT_GROUND_VALUES.scale)
-								: DEFAULT_GROUND_VALUES.scale,
-						onChange: (value) => handleGroundChange('scale', value)
-					}}
-					label="Environment Scale"
-					tooltip="Controls the scale of the ground plane's environment sphere."
-					labelProps={{
-						low: '1 - Small',
-						high: '100 - Large'
-					}}
-					formatValue={(value) => value.toFixed(0)}
-					valueMapping={valueMappings.log}
-					allowDirectInput={true}
-				/>
-				<EnhancedSettingSlider
-					enabled={!!environment.ground}
-					id="ground-height"
-					sliderProps={{
-						min: 0.1,
-						max: 20,
-						step: 0.1,
-						value:
-							typeof environment.ground === 'object'
-								? (environment.ground.height ?? DEFAULT_GROUND_VALUES.height)
-								: DEFAULT_GROUND_VALUES.height,
-						onChange: (value) => handleGroundChange('height', value)
-					}}
-					label="Ground Height"
-					tooltip="Controls the height of the ground plane in the environment sphere."
-					labelProps={{
-						low: '0.1 - Very Low',
-						high: '20 - High'
-					}}
-					formatValue={(value) => value.toFixed(1)}
-					valueMapping={valueMappings.quadratic}
-					allowDirectInput={true}
-				/>
-			</div>
+						<SettingToggle
+							enabled={!!environment.ground}
+							onToggle={(enabled) =>
+								setEnvironment((prev) => ({
+									...prev,
+									ground: enabled ? DEFAULT_GROUND_VALUES : false
+								}))
+							}
+							title="Show Ground"
+							description="Display a ground plane in the scene."
+						/>
+						<EnhancedSettingSlider
+							enabled={!!environment.ground}
+							id="ground-radius"
+							sliderProps={{
+								min: 10,
+								max: 500,
+								step: 5,
+								value:
+									typeof environment.ground === 'object'
+										? (environment.ground.radius ?? DEFAULT_GROUND_VALUES.radius)
+										: DEFAULT_GROUND_VALUES.radius,
+								onChange: (value) => handleGroundChange('radius', value)
+							}}
+							label="Ground Radius"
+							tooltip="Controls the size of the ground plane in the scene."
+							labelProps={{
+								low: '10 - Small',
+								high: '500 - Very Large'
+							}}
+							formatValue={(value) => value.toFixed(0)}
+							valueMapping={valueMappings.log}
+							allowDirectInput={true}
+						/>
+						<EnhancedSettingSlider
+							enabled={!!environment.ground}
+							id="ground-scale"
+							sliderProps={{
+								min: 1,
+								max: 100,
+								step: 1,
+								value:
+									typeof environment.ground === 'object'
+										? (environment.ground.scale ?? DEFAULT_GROUND_VALUES.scale)
+										: DEFAULT_GROUND_VALUES.scale,
+								onChange: (value) => handleGroundChange('scale', value)
+							}}
+							label="Environment Scale"
+							tooltip="Controls the scale of the ground plane's environment sphere."
+							labelProps={{
+								low: '1 - Small',
+								high: '100 - Large'
+							}}
+							formatValue={(value) => value.toFixed(0)}
+							valueMapping={valueMappings.log}
+							allowDirectInput={true}
+						/>
+						<EnhancedSettingSlider
+							enabled={!!environment.ground}
+							id="ground-height"
+							sliderProps={{
+								min: 0.1,
+								max: 20,
+								step: 0.1,
+								value:
+									typeof environment.ground === 'object'
+										? (environment.ground.height ?? DEFAULT_GROUND_VALUES.height)
+										: DEFAULT_GROUND_VALUES.height,
+								onChange: (value) => handleGroundChange('height', value)
+							}}
+							label="Ground Height"
+							tooltip="Controls the height of the ground plane in the environment sphere."
+							labelProps={{
+								low: '0.1 - Very Low',
+								high: '20 - High'
+							}}
+							formatValue={(value) => value.toFixed(1)}
+							valueMapping={valueMappings.quadratic}
+							allowDirectInput={true}
+						/>
+					</AccordionContent>
+				</AccordionItem>
+			</Accordion>
 		</div>
 	)
 }

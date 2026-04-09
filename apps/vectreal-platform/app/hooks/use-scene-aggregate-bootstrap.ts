@@ -39,7 +39,15 @@ export const useSceneAggregateBootstrap = ({
 			return
 		}
 
-		if (fileModel || isFileLoading || sceneLoadAttemptedRef.current) {
+		// When a model is already present (e.g. right after first-save navigation
+		// from /publisher -> /publisher/:sceneId), bootstrap loading is skipped.
+		// Ensure initialization still completes so unsaved-change detection can run.
+		if (fileModel) {
+			setIsInitializing(false)
+			return
+		}
+
+		if (isFileLoading || sceneLoadAttemptedRef.current) {
 			return
 		}
 
