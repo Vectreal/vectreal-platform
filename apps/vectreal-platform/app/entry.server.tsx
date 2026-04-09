@@ -11,19 +11,12 @@ import { isbot } from 'isbot'
 import { renderToPipeableStream } from 'react-dom/server'
 import { ServerRouter } from 'react-router'
 
+import { isCacheablePublicPath } from './lib/http/cacheable-public-paths.server'
+
 import type { RenderToPipeableStreamOptions } from 'react-dom/server'
 import type { AppLoadContext, EntryContext } from 'react-router'
 
 export const streamTimeout = 5_000
-
-const CACHEABLE_PUBLIC_PATHS = new Set([
-	'/home',
-	'/about',
-	'/contact',
-	'/privacy-policy',
-	'/terms-of-service',
-	'/imprint'
-])
 
 function hasAuthSignals(request: Request): boolean {
 	if (request.headers.has('authorization')) {
@@ -50,7 +43,7 @@ function applyDefaultCacheHeaders(
 
 	const requestUrl = new URL(request.url)
 	const hasSearchParams = requestUrl.search.length > 0
-	const cacheablePublicPath = CACHEABLE_PUBLIC_PATHS.has(requestUrl.pathname)
+	const cacheablePublicPath = isCacheablePublicPath(requestUrl.pathname)
 
 	if (!hasAuthSignals(request) && !hasSearchParams && cacheablePublicPath) {
 		responseHeaders.set(

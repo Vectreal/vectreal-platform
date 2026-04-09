@@ -1,6 +1,6 @@
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -76,16 +76,56 @@ function toGuestQuotaState(result: OptimizationQuotaResult): GuestQuotaState {
 	}
 }
 
+/** Race a promise against a timeout. Rejects with a descriptive error on timeout. */
+function withTimeout<T>(
+	promise: Promise<T>,
+	ms: number,
+	label: string
+): Promise<T> {
+	return new Promise<T>((resolve, reject) => {
+		const timer = setTimeout(
+			() => reject(new Error(`${label} timed out after ${ms}ms`)),
+			ms
+		)
+		promise.then(
+			(val) => {
+				clearTimeout(timer)
+				resolve(val)
+			},
+			(err) => {
+				clearTimeout(timer)
+				reject(err)
+			}
+		)
+	})
+}
+
+const QUOTA_CHECK_TIMEOUT_MS = 10_000
+const OPTIMIZATION_STEP_TIMEOUT_MS = 90_000
+const MODEL_SYNC_TIMEOUT_MS = 60_000
+
 async function requestOptimizationRunQuota(
 	intent: OptimizationRunIntent
 ): Promise<OptimizationQuotaResult> {
-	const response = await fetch('/api/billing/optimization-runs', {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify({ intent })
-	})
+	const controller = new AbortController()
+	const timeoutId = setTimeout(
+		() => controller.abort(),
+		QUOTA_CHECK_TIMEOUT_MS
+	)
+
+	let response: Response
+	try {
+		response = await fetch('/api/billing/optimization-runs', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ intent }),
+			signal: controller.signal
+		})
+	} finally {
+		clearTimeout(timeoutId)
+	}
 
 	let payload: {
 		error?: string
@@ -160,12 +200,12 @@ export const useOptimizationProcess = ({
 	const {
 		isReady,
 		isPreparing,
-		applyOptimization,
 		simplifyOptimization,
 		texturesOptimization,
 		quantizeOptimization,
 		dedupOptimization,
 		normalsOptimization,
+		applyOptimization,
 		info,
 		report
 	} = optimizer
@@ -238,9 +278,40 @@ export const useOptimizationProcess = ({
 		return textureBytes
 	}, [isReady, optimizer, handleDocumentGltfExport, file])
 
+	const refreshOptimizedSizeInfo = useCallback(async () => {
+		const [sceneResult, textureResult] = await Promise.allSettled([
+			calculateSceneBytes(),
+			calculateOptimizedTextureBytes()
+		])
+
+		const updatedSceneBytes =
+			sceneResult.status === 'fulfilled' ? sceneResult.value : null
+		const updatedTextureBytes =
+			textureResult.status === 'fulfilled' ? textureResult.value : null
+
+		setOptimizationRuntime((prev) => ({
+			...prev,
+			optimizedSceneBytes:
+				typeof updatedSceneBytes === 'number' ? updatedSceneBytes : null,
+			optimizedTextureBytes:
+				typeof updatedTextureBytes === 'number'
+					? updatedTextureBytes
+					: typeof report?.stats.textures.after === 'number'
+						? report.stats.textures.after
+						: null
+		}))
+	}, [
+		calculateOptimizedTextureBytes,
+		calculateSceneBytes,
+		report?.stats.textures.after,
+		setOptimizationRuntime
+	])
+
 	// Handle optimization process
 	const handleOptimizeClick = useCallback(async () => {
 		if (isPending || isPreparing || !isReady) return
+
+		let didApplyOptimization = false
 
 		setOptimizationRuntime((prev) => ({
 			...prev,
@@ -280,7 +351,11 @@ export const useOptimizationProcess = ({
 						? file.sourcePackageBytes
 						: typeof latestSceneStats?.currentSceneBytes === 'number'
 							? latestSceneStats.currentSceneBytes
-							: await calculateSceneBytes()
+							: await withTimeout(
+									calculateSceneBytes(),
+									MODEL_SYNC_TIMEOUT_MS,
+									'Baseline scene size calculation'
+								)
 				if (typeof baselineSceneBytes === 'number') {
 					setOptimizationRuntime((prev) => ({
 						...prev,
@@ -307,24 +382,42 @@ export const useOptimizationProcess = ({
 				const option = optimizationOptions[i]
 
 				try {
-					// Apply single optimization based on option type
 					if (option.name === 'simplification') {
-						await simplifyOptimization(option)
+						await withTimeout(
+							simplifyOptimization(option),
+							OPTIMIZATION_STEP_TIMEOUT_MS,
+							'Simplification'
+						)
 						shouldConsumeOptimizationRun = true
 					} else if (option.name === 'texture') {
-						await texturesOptimization(option)
+						await withTimeout(
+							texturesOptimization(option),
+							OPTIMIZATION_STEP_TIMEOUT_MS,
+							'Texture optimization'
+						)
 						shouldConsumeOptimizationRun = true
 					} else if (option.name === 'quantize') {
-						await quantizeOptimization()
+						await withTimeout(
+							quantizeOptimization(),
+							OPTIMIZATION_STEP_TIMEOUT_MS,
+							'Quantization'
+						)
 						shouldConsumeOptimizationRun = true
 					} else if (option.name === 'dedup') {
-						await dedupOptimization()
+						await withTimeout(
+							dedupOptimization(),
+							OPTIMIZATION_STEP_TIMEOUT_MS,
+							'Deduplication'
+						)
 						shouldConsumeOptimizationRun = true
 					} else if (option.name === 'normals') {
-						await normalsOptimization()
+						await withTimeout(
+							normalsOptimization(),
+							OPTIMIZATION_STEP_TIMEOUT_MS,
+							'Normals optimization'
+						)
 						shouldConsumeOptimizationRun = true
 					} else {
-						// Use explicit type casting for exhaustiveness check
 						const unknownOption = option as OptimizationOption
 						console.warn(`Unknown optimization type: ${unknownOption.name}`)
 					}
@@ -347,31 +440,32 @@ export const useOptimizationProcess = ({
 				}
 			}
 
-			// Apply all optimizations
-			await applyOptimization()
-
-			if (optimizationOptions.length > 0 && shouldConsumeOptimizationRun) {
-				const consumeResult = await requestOptimizationRunQuota('consume')
-				if (consumeResult.isGuest) {
-					setGuestQuota(toGuestQuotaState(consumeResult))
+			// Sync the optimized model back to the Three.js viewer
+			if (shouldConsumeOptimizationRun) {
+				try {
+					await withTimeout(
+						applyOptimization(),
+						MODEL_SYNC_TIMEOUT_MS,
+						'Model sync'
+					)
+				} catch (syncError) {
+					console.warn('Model sync after optimization failed:', syncError)
 				}
 			}
 
-			const [updatedSceneBytes, updatedTextureBytes] = await Promise.all([
-				calculateSceneBytes(),
-				calculateOptimizedTextureBytes()
-			])
-			setOptimizationRuntime((prev) => ({
-				...prev,
-				optimizedSceneBytes:
-					typeof updatedSceneBytes === 'number' ? updatedSceneBytes : null,
-				optimizedTextureBytes:
-					typeof updatedTextureBytes === 'number'
-						? updatedTextureBytes
-						: typeof report?.stats.textures.after === 'number'
-							? report.stats.textures.after
-							: null
-			}))
+			didApplyOptimization = shouldConsumeOptimizationRun
+
+			if (optimizationOptions.length > 0 && shouldConsumeOptimizationRun) {
+				void requestOptimizationRunQuota('consume')
+					.then((consumeResult) => {
+						if (consumeResult.isGuest) {
+							setGuestQuota(toGuestQuotaState(consumeResult))
+						}
+					})
+					.catch((error) => {
+						console.warn('Failed to record optimization run usage:', error)
+					})
+			}
 		} catch (error) {
 			console.error('Error during optimization:', error)
 			if (isBillingLimitError(error)) {
@@ -399,6 +493,10 @@ export const useOptimizationProcess = ({
 				isPending: false
 			}))
 		}
+
+		if (didApplyOptimization) {
+			void refreshOptimizedSizeInfo()
+		}
 	}, [
 		isPending,
 		isPreparing,
@@ -406,21 +504,20 @@ export const useOptimizationProcess = ({
 		clientSceneBytes,
 		clientTextureBytes,
 		latestSceneStats,
-		calculateSceneBytes,
-		calculateOptimizedTextureBytes,
+		refreshOptimizedSizeInfo,
 		setOptimizationRuntime,
 		setUpgradeModal,
 		plannedOptimizations,
-		applyOptimization,
 		simplifyOptimization,
 		texturesOptimization,
 		quantizeOptimization,
 		dedupOptimization,
 		normalsOptimization,
+		applyOptimization,
+		calculateSceneBytes,
 		file?.sourcePackageBytes,
 		file?.sourceTextureBytes,
-		report?.stats.textures.before,
-		report?.stats.textures.after
+		report?.stats.textures.before
 	])
 
 	useEffect(() => {

@@ -26,7 +26,7 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 import { Textarea } from '@shared/components/ui/textarea'
-import { useSetAtom } from 'jotai'
+import { useSetAtom } from 'jotai/react'
 import { AlertCircle, Plus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'

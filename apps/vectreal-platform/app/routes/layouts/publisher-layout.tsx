@@ -1,8 +1,8 @@
 import { SidebarProvider } from '@shared/components/ui/sidebar'
 import { ModelProvider } from '@vctrl/hooks/use-load-model'
 import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
-import { Provider, useAtom } from 'jotai/react'
-import { useCallback, useLayoutEffect } from 'react'
+import { Provider, useAtomValue, useSetAtom } from 'jotai/react'
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import { data, Outlet, type MetaFunction } from 'react-router'
 
 import { Route } from './+types/publisher-layout'
@@ -17,11 +17,13 @@ import {
 } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import { buildMeta } from '../../lib/seo'
+import { hasSupabaseAuthCookie } from '../../lib/sessions/supabase-auth-cookie.server'
 import {
 	currentLocationAtom,
 	processAtom,
 	publisherConfigStore,
-	saveLocationAtom
+	saveLocationAtom,
+	showSidebarAtom
 } from '../../lib/stores/publisher-config-store'
 import { sceneOptimizationStore } from '../../lib/stores/scene-optimization-store'
 import { sceneSettingsStore } from '../../lib/stores/scene-settings-store'
@@ -34,7 +36,12 @@ import type {
 	PublisherLoaderData,
 	SceneAggregateResponse
 } from '../../types/api'
+import type { User } from '@supabase/supabase-js'
 import type { ShouldRevalidateFunction } from 'react-router'
+
+type PublisherLayoutLoaderData = PublisherLoaderData & {
+	publishedMetaPromise?: Promise<null | PublishedSceneMetaResponse> | null
+}
 
 export const meta: MetaFunction = () =>
 	buildMeta(
@@ -47,18 +54,29 @@ export const meta: MetaFunction = () =>
 	)
 
 export const loader = async ({ request, params }: Route.LoaderArgs) => {
-	const { client, headers } = await createSupabaseClient(request)
-	const {
-		data: { user },
-		error: userError
-	} = await client.auth.getUser()
+	const requestCookieHeader = request.headers.get('Cookie') ?? ''
+	const hasAuthCookie = hasSupabaseAuthCookie(requestCookieHeader)
 
-	// Stale refresh token – clear the cookie and continue as unauthenticated.
-	if (userError?.code === 'refresh_token_not_found') {
-		try {
-			await client.auth.signOut({ scope: 'local' })
-		} catch {
-			// Ignore cleanup errors
+	let user: null | User = null
+	let headers = new Headers()
+
+	if (hasAuthCookie) {
+		const supabase = await createSupabaseClient(request)
+		headers = supabase.headers
+		const {
+			data: { user: authUser },
+			error: userError
+		} = await supabase.client.auth.getUser()
+
+		// Stale refresh token – clear the cookie and continue as unauthenticated.
+		if (userError?.code === 'refresh_token_not_found') {
+			try {
+				await supabase.client.auth.signOut({ scope: 'local' })
+			} catch {
+				// Ignore cleanup errors
+			}
+		} else if (authUser) {
+			user = authUser
 		}
 	}
 
@@ -71,7 +89,8 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	let currentFolderName: string | null = null
 
 	let sceneAggregate: SceneAggregateResponse | null = null
-	let publishedMeta: PublishedSceneMetaResponse | null = null
+	let publishedMetaPromise: Promise<null | PublishedSceneMetaResponse> | null =
+		null
 
 	if (sceneId && user?.id) {
 		const scene = await getScene(sceneId, user.id)
@@ -82,18 +101,21 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		projectId = scene.projectId
 		currentFolderId = scene.folderId
 
-		const [project, folder] = await Promise.all([
+		publishedMetaPromise = getPublishedScenePreview(scene.projectId, sceneId).catch(
+			() => null
+		)
+
+		const [project, folder, aggregate] = await Promise.all([
 			getProject(scene.projectId, user.id),
 			scene.folderId
 				? getSceneFolder(scene.folderId, user.id)
-				: Promise.resolve(null)
+				: Promise.resolve(null),
+			buildSceneAggregate(sceneId)
 		])
 
 		currentProjectName = project?.name ?? null
 		currentFolderName = folder?.name ?? null
-
-		sceneAggregate = await buildSceneAggregate(sceneId)
-		publishedMeta = await getPublishedScenePreview(projectId, sceneId)
+		sceneAggregate = aggregate
 	} else if (!sceneId && user?.id) {
 		// New scene — read project/folder context from URL search params
 		const url = new URL(request.url)
@@ -132,10 +154,11 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 			folderName: currentFolderName
 		},
 		sceneAggregate,
-		publishedMeta
+		publishedMeta: null,
+		publishedMetaPromise
 	}
 
-	return data(loaderData as PublisherLoaderData, { headers })
+	return data(loaderData as PublisherLayoutLoaderData, { headers })
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({
@@ -154,32 +177,25 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 	return defaultShouldRevalidate
 }
 
-/**
- * Must be rendered inside the innermost <Provider> that all atom consumers share
- * (sceneSettingsStore). Each Jotai Provider is an isolated store — placing this
- * component at the wrong nesting level causes it to write to a different store
- * instance than the one ControlsOverlay and SceneNameAndLocation read from.
- */
+const PublisherLayoutContent = ({
+	loaderData
+}: {
+	loaderData: PublisherLayoutLoaderData
+}) => {
+	const showSidebar = useAtomValue(showSidebarAtom)
+	const setProcessState = useSetAtom(processAtom)
+	const setCurrentLocation = useSetAtom(currentLocationAtom)
+	const setSaveLocation = useSetAtom(saveLocationAtom)
+	useAuthResumeRevalidation({ enabled: Boolean(loaderData.user) })
 
-const Layout = ({ loaderData }: Route.ComponentProps) => {
-	const optimizer = useOptimizeModel()
-	const [{ showSidebar }, setProcessState] = useAtom(processAtom)
-	const resolvedLoaderData = loaderData as PublisherLoaderData
-	useAuthResumeRevalidation({ enabled: Boolean(resolvedLoaderData.user) })
-
-	// Sync location atoms into the innermost store (sceneSettingsStore).
-	// All atom consumers live inside <Provider store={sceneSettingsStore}>, so
-	// writing to publisherConfigStore would be silently ignored by them.
-	// useLayoutEffect runs synchronously after render, avoiding the "setState
-	// during render" warning that a bare store.set() call causes.
-	const { currentLocation, projectId } = resolvedLoaderData
+	const { currentLocation, projectId } = loaderData
 	useLayoutEffect(() => {
-		sceneSettingsStore.set(currentLocationAtom, currentLocation)
-		sceneSettingsStore.set(saveLocationAtom, {
+		setCurrentLocation(currentLocation)
+		setSaveLocation({
 			targetProjectId: currentLocation.projectId ?? projectId ?? undefined,
 			targetFolderId: currentLocation.folderId ?? null
 		})
-	}, [currentLocation, projectId])
+	}, [currentLocation, projectId, setCurrentLocation, setSaveLocation])
 
 	const handleOpenChange = useCallback(
 		(isOpen: boolean) => {
@@ -191,23 +207,59 @@ const Layout = ({ loaderData }: Route.ComponentProps) => {
 		[setProcessState]
 	)
 
+	// Resolve publishedMetaPromise via state instead of Suspense/Await.
+	// Using Suspense/Await would remount ControlsOverlay (and all sidebars)
+	// when the promise resolves, retriggering animations.
+	const { publishedMetaPromise, ...overlayBaseData } = loaderData
+	const [resolvedPublishedMeta, setResolvedPublishedMeta] =
+		useState<PublishedSceneMetaResponse | null>(null)
+
+	useEffect(() => {
+		const promise = publishedMetaPromise
+		if (!promise) return
+
+		let cancelled = false
+		promise
+			.then((result) => {
+				if (!cancelled) setResolvedPublishedMeta(result)
+			})
+			.catch(() => {
+				// Already defaults to null
+			})
+		return () => {
+			cancelled = true
+		}
+	}, [publishedMetaPromise])
+
+	return (
+		<SidebarProvider open={showSidebar} onOpenChange={handleOpenChange}>
+			<main className="flex h-screen w-full flex-col overflow-hidden">
+				<UpgradeModal />
+				<ControlsOverlay
+					{...overlayBaseData}
+					publishedMeta={resolvedPublishedMeta}
+				/>
+				<Outlet />
+			</main>
+		</SidebarProvider>
+	)
+}
+
+const Layout = ({ loaderData }: Route.ComponentProps) => {
+	const optimizer = useOptimizeModel()
+	const resolvedLoaderData = loaderData as PublisherLayoutLoaderData
+
 	return (
 		<ModelProvider optimizer={optimizer}>
-			<SidebarProvider open={showSidebar} onOpenChange={handleOpenChange}>
-				<Provider store={upgradeModalStore}>
-					<Provider store={publisherConfigStore}>
-						<Provider store={sceneOptimizationStore}>
-							<Provider store={sceneSettingsStore}>
-								<main className="flex h-screen w-full flex-col overflow-hidden">
-									<UpgradeModal />
-									<ControlsOverlay {...resolvedLoaderData} />
-									<Outlet />
-								</main>
-							</Provider>
+			<Provider store={upgradeModalStore}>
+				<Provider store={publisherConfigStore}>
+					<Provider store={sceneOptimizationStore}>
+						<Provider store={sceneSettingsStore}>
+							<PublisherLayoutContent loaderData={resolvedLoaderData} />
 						</Provider>
 					</Provider>
 				</Provider>
-			</SidebarProvider>
+			</Provider>
 		</ModelProvider>
 	)
 }

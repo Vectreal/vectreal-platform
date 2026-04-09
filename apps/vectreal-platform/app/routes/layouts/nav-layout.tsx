@@ -4,8 +4,37 @@ import { Route } from './+types/nav-layout'
 import { Footer } from '../../components/footer'
 import { Navigation } from '../../components/navigation'
 import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
+import { isCacheablePublicPath } from '../../lib/http/cacheable-public-paths.server'
+import { hasSupabaseAuthCookie } from '../../lib/sessions/supabase-auth-cookie.server'
 import { createSupabaseClient } from '../../lib/supabase.server'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
+
+const PUBLIC_CACHE_CONTROL =
+	'public, max-age=0, s-maxage=300, stale-while-revalidate=600'
+
+function isPublicCacheCandidate(request: Request): boolean {
+	if (request.method !== 'GET') {
+		return false
+	}
+
+	if (request.headers.has('authorization')) {
+		return false
+	}
+
+	const url = new URL(request.url)
+	if (url.search.length > 0) {
+		return false
+	}
+
+	return isCacheablePublicPath(url.pathname)
+}
+
+function withPublicCacheHeaders(initialHeaders?: Headers): Headers {
+	const headers = new Headers(initialHeaders)
+	headers.set('Cache-Control', PUBLIC_CACHE_CONTROL)
+	headers.set('Vary', 'Accept-Encoding')
+	return headers
+}
 
 export async function loader({ request }: Route.LoaderArgs) {
 	/**
@@ -15,22 +44,27 @@ export async function loader({ request }: Route.LoaderArgs) {
 		isMobile: isMobileRequest(request),
 		user: null
 	}
+	const cookieHeader = request.headers.get('Cookie') ?? ''
+	const hasAuthCookie = hasSupabaseAuthCookie(cookieHeader)
+	const canUsePublicCache = !hasAuthCookie && isPublicCacheCandidate(request)
+
+	if (!hasAuthCookie) {
+		return canUsePublicCache
+			? data(defaultResponse, { headers: withPublicCacheHeaders() })
+			: data(defaultResponse)
+	}
 
 	try {
 		const { client, headers } = await createSupabaseClient(request)
 
 		const {
-			data: { session }
-		} = await client.auth.getSession()
-
-		if (!session) {
-			return data(defaultResponse, { headers })
-		}
-
-		const {
 			data: { user },
 			error: userError
 		} = await client.auth.getUser()
+
+		if (!user) {
+			return data(defaultResponse, { headers })
+		}
 
 		// Stale refresh token – clear the cookie so the browser doesn't keep
 		// sending it, then fall through as unauthenticated (no error log needed).

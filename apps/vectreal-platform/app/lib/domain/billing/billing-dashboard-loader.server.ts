@@ -118,8 +118,10 @@ export async function getCheckoutOptions(): Promise<BillingCheckoutOptions> {
 }
 
 export async function loadBillingDashboardData(
-	request: Request
+	request: Request,
+	options: { includeCheckoutOptions?: boolean } = {}
 ): Promise<{ loaderData: BillingLoaderData; headers: HeadersInit }> {
+	const { includeCheckoutOptions = true } = options
 	const { user, userWithDefaults, headers } =
 		await loadAuthenticatedUser(request)
 
@@ -166,7 +168,7 @@ export async function loadBillingDashboardData(
 		getCurrentUsage(organizationId, 'storage_bytes_total'),
 		getCurrentUsage(organizationId, 'embed_bandwidth_gb_per_month'),
 		getCurrentUsage(organizationId, 'preview_loads_per_month'),
-		getCheckoutOptions()
+		includeCheckoutOptions ? getCheckoutOptions() : Promise.resolve(undefined)
 	])
 
 	const userProjects = await getUserProjects(user.id)
@@ -212,13 +214,18 @@ export async function loadBillingDashboardData(
 		}
 	}
 
+	const loaderData: BillingLoaderData = {
+		user,
+		userWithDefaults,
+		billing
+	}
+
+	if (checkoutOptions) {
+		loaderData.checkoutOptions = checkoutOptions
+	}
+
 	return {
-		loaderData: {
-			user,
-			userWithDefaults,
-			billing,
-			checkoutOptions
-		},
+		loaderData,
 		headers
 	}
 }

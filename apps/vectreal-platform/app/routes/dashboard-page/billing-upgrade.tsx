@@ -16,8 +16,9 @@ import {
 	Loader2,
 	Lock
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import {
+	Await,
 	data,
 	Link,
 	useFetcher,
@@ -31,9 +32,15 @@ import {
 	PricingCardsSection
 } from '../../components/dashboard'
 import { PLAN_ENTITLEMENTS, type Plan } from '../../constants/plan-config'
-import { loadBillingDashboardData } from '../../lib/domain/billing/billing-dashboard-loader.server'
+import {
+	getCheckoutOptions,
+	loadBillingDashboardData
+} from '../../lib/domain/billing/billing-dashboard-loader.server'
 
-import type { BillingCheckoutPeriods } from '../../lib/domain/dashboard/dashboard-types'
+import type {
+	BillingCheckoutOptions,
+	BillingCheckoutPeriods
+} from '../../lib/domain/dashboard/dashboard-types'
 import type { PostHogContext } from '../../lib/posthog/posthog-middleware'
 
 const PLAN_LABELS = {
@@ -116,25 +123,48 @@ function computeAnnualSavings(pricing: BillingCheckoutPeriods) {
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
-	const { loaderData, headers } = await loadBillingDashboardData(request)
+	const checkoutOptionsPromise = getCheckoutOptions().catch(
+		(): BillingCheckoutOptions => ({
+			pro: { monthly: null, annual: null },
+			business: { monthly: null, annual: null }
+		})
+	)
+
+	const { loaderData, headers } = await loadBillingDashboardData(request, {
+		includeCheckoutOptions: false
+	})
+
 	const posthog = (context as PostHogContext).posthog
-	const checkoutEnabled = posthog
-		? ((await posthog.isFeatureEnabled(
-				'billing-checkout',
-				loaderData.user.id
-			)) ?? false)
-		: true // default to enabled when PostHog is not configured (e.g. local dev)
-	return data({ ...loaderData, checkoutEnabled }, { headers })
+	const checkoutEnabledPromise = posthog
+		? posthog
+				.isFeatureEnabled('billing-checkout', loaderData.user.id)
+				.then((enabled) => enabled ?? false)
+				.catch(() => true)
+		: Promise.resolve(true) // default to enabled when PostHog is not configured (e.g. local dev)
+
+	return data(
+		{
+			...loaderData,
+			checkoutOptions: checkoutOptionsPromise,
+			checkoutEnabled: checkoutEnabledPromise
+		},
+		{ headers }
+	)
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
-export default function BillingUpgradePage() {
-	const {
-		checkoutOptions,
-		billing,
-		checkoutEnabled: serverCheckoutEnabled
-	} = useLoaderData<typeof loader>()
+function BillingUpgradeContent({
+	checkoutOptions,
+	billing,
+	serverCheckoutEnabled
+}: {
+	checkoutOptions: BillingCheckoutOptions
+	billing: NonNullable<
+		Awaited<ReturnType<typeof loadBillingDashboardData>>['loaderData']
+	>['billing']
+	serverCheckoutEnabled: boolean
+}) {
 	const [searchParams] = useSearchParams()
 	const checkoutFetcher = useFetcher()
 	const posthog = usePostHog()
@@ -443,5 +473,32 @@ export default function BillingUpgradePage() {
 				</DialogContent>
 			</Dialog>
 		</>
+	)
+}
+
+const BillingUpgradeSkeleton = () => (
+	<div className="relative mx-auto max-h-screen w-full max-w-7xl space-y-6 overflow-auto px-6 py-6 pb-44 md:max-h-[80vh]">
+		<div className="bg-muted h-28 animate-pulse rounded-xl" />
+		<div className="bg-muted h-44 animate-pulse rounded-xl" />
+		<div className="bg-muted h-96 animate-pulse rounded-xl" />
+	</div>
+)
+
+export default function BillingUpgradePage() {
+	const { checkoutOptions, billing, checkoutEnabled } =
+		useLoaderData<typeof loader>()
+
+	return (
+		<Suspense fallback={<BillingUpgradeSkeleton />}>
+			<Await resolve={Promise.all([checkoutOptions, checkoutEnabled])}>
+				{([resolvedCheckoutOptions, resolvedCheckoutEnabled]) => (
+					<BillingUpgradeContent
+						checkoutOptions={resolvedCheckoutOptions}
+						billing={billing}
+						serverCheckoutEnabled={resolvedCheckoutEnabled}
+					/>
+				)}
+			</Await>
+		</Suspense>
 	)
 }
