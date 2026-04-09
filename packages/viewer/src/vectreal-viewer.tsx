@@ -200,6 +200,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		hasContent,
 		isInitialFramingComplete
 	)
+	const shadowsEnabled = shadowsOptions?.enabled ?? false
 
 	return (
 		<Suspense fallback={loader}>
@@ -220,7 +221,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					/>
 				}
 				enableViewportRendering={enableViewportRendering}
-				shadows
+				shadows={shadowsEnabled}
 				gl={{ antialias: true }}
 			>
 				<Suspense fallback={null}>

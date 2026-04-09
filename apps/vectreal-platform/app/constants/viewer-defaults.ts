@@ -54,6 +54,7 @@ export const defaultEnvOptions: EnvironmentProps = {
 
 export const defaultShadowOptions: ShadowsProps = {
 	type: 'contact',
+	enabled: false,
 	opacity: 0.4,
 	blur: 0.1,
 	scale: 5,
@@ -63,6 +64,7 @@ export const defaultShadowOptions: ShadowsProps = {
 
 export const defaultAccumulativeShadowsOptions: AccumulativeShadowsProps = {
 	type: 'accumulative',
+	enabled: false,
 	temporal: false,
 	frames: 30,
 	alphaTest: 0.35,

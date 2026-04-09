@@ -163,6 +163,7 @@ export interface EnvironmentProps extends InheritedEnvProps {
  */
 export interface ShadowTypePropBase {
 	type: 'accumulative' | 'contact'
+	enabled?: boolean
 }
 
 /**
