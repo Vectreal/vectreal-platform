@@ -1,4 +1,3 @@
-import { RandomizedLightProps } from '@react-three/drei'
 import { Label } from '@shared/components/ui/label'
 import {
 	Select,
@@ -7,6 +6,7 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
+import { Switch } from '@shared/components/ui/switch'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom } from 'jotai'
 
@@ -15,12 +15,16 @@ import {
 	ACCUMULATIVE_LIGHT_FIELDS,
 	CONTACT_FIELDS
 } from './constants'
-import { defaultAccumulativeShadowsOptions } from '../../../../../constants/viewer-defaults'
+import {
+	defaultAccumulativeShadowsOptions,
+	defaultShadowOptions
+} from '../../../../../constants/viewer-defaults'
 import { shadowsAtom } from '../../../../../lib/stores/scene-settings-store'
 import { InfoTooltip } from '../../../../info-tooltip'
 import { EnhancedSettingSlider } from '../../../settings-components'
 
-import type { ShadowsProps, ShadowTypePropBase } from '@vctrl/core'
+import type { RandomizedLightProps } from '@react-three/drei'
+import type { ShadowsProps } from '@vctrl/core'
 
 const variants = {
 	initial: { opacity: 0, y: 24 },
@@ -31,23 +35,32 @@ const variants = {
 const ShadowSettingsPanel = () => {
 	const [shadows, setShadows] = useAtom(shadowsAtom)
 	const { type } = shadows
+	const shadowsEnabled = shadows.enabled ?? false
+
+	const handleToggleShadows = (enabled: boolean) => {
+		setShadows((prev) => ({
+			...prev,
+			enabled
+		}))
+	}
 
 	const handleTypeChange = (value: ShadowsProps['type']) => {
-		setShadows(() => {
+		setShadows((prev) => {
+			const enabled = prev.enabled ?? false
+
 			// When switching to accumulative, use the defaults
 			if (value === 'accumulative') {
-				return defaultAccumulativeShadowsOptions as ShadowTypePropBase
+				return {
+					...defaultAccumulativeShadowsOptions,
+					enabled
+				}
 			}
 
 			// When switching to contact, use contact defaults
 			return {
-				type: 'contact',
-				opacity: 0.4,
-				blur: 0.1,
-				scale: 5,
-				color: '#000000',
-				smooth: true
-			} as ShadowTypePropBase
+				...defaultShadowOptions,
+				enabled
+			}
 		})
 	}
 
@@ -60,24 +73,27 @@ const ShadowSettingsPanel = () => {
 
 	const handleLightFieldChange = (key: string, value: number | string) => {
 		setShadows((prev) => {
+			const enabled = prev.enabled ?? false
+
 			// Only accumulative shadows have light property
 			if (prev.type !== 'accumulative') {
 				return {
-					...prev,
-					type: 'accumulative',
-					light: { [key]: value }
-				} as ShadowTypePropBase
+					...defaultAccumulativeShadowsOptions,
+					enabled,
+					light: {
+						...defaultAccumulativeShadowsOptions.light,
+						[key]: value
+					}
+				}
 			}
 
 			return {
 				...prev,
 				light: {
-					...(prev.type === 'accumulative' && 'light' in prev
-						? prev.light
-						: {}),
+					...(prev.light || defaultAccumulativeShadowsOptions.light),
 					[key]: value
 				}
-			} as ShadowTypePropBase
+			}
 		})
 	}
 
@@ -93,26 +109,41 @@ const ShadowSettingsPanel = () => {
 			</small>
 
 			<div className="bg-muted/50 space-y-4 rounded-xl p-4">
-				<div className="flex items-center gap-2">
-					<p className="text-lg font-medium">Shadows</p>
-					<InfoTooltip content="Configure the type and quality of shadows in your scene." />
+				<div className="flex items-center justify-between gap-3">
+					<div className="flex items-center gap-2">
+						<p className="text-lg font-medium">Shadows</p>
+						<InfoTooltip content="Configure the type and quality of shadows in your scene." />
+					</div>
+					<div className="flex items-center gap-2">
+						<Label htmlFor="shadows-enabled-toggle" className="text-sm">
+							Enabled
+						</Label>
+						<Switch
+							id="shadows-enabled-toggle"
+							checked={shadowsEnabled}
+							onCheckedChange={handleToggleShadows}
+						/>
+					</div>
 				</div>
 
-				<Label>Shadow Type</Label>
-				<Select value={type} onValueChange={handleTypeChange}>
-					<SelectTrigger className="w-full capitalize">
-						<SelectValue placeholder="Select Shadow Type" />
-					</SelectTrigger>
-					<SelectContent>
-						{' '}
-						<SelectItem value="accumulative">Accumulative</SelectItem>
-						<SelectItem value="contact">Contact</SelectItem>
-					</SelectContent>
-				</Select>
+				{shadowsEnabled && (
+					<>
+						<Label>Shadow Type</Label>
+						<Select value={type} onValueChange={handleTypeChange}>
+							<SelectTrigger className="w-full capitalize">
+								<SelectValue placeholder="Select Shadow Type" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="accumulative">Accumulative</SelectItem>
+								<SelectItem value="contact">Contact</SelectItem>
+							</SelectContent>
+						</Select>
+					</>
+				)}
 			</div>
 
 			<AnimatePresence mode="wait" initial={false}>
-				{type === 'contact' && (
+				{shadowsEnabled && type === 'contact' && (
 					<motion.div
 						key="contact"
 						variants={variants}
@@ -152,7 +183,7 @@ const ShadowSettingsPanel = () => {
 					</motion.div>
 				)}
 
-				{type === 'accumulative' && (
+				{shadowsEnabled && type === 'accumulative' && (
 					<motion.div
 						key="accumulative"
 						variants={variants}
@@ -206,7 +237,9 @@ const ShadowSettingsPanel = () => {
 										field.key as keyof RandomizedLightProps
 									]
 								const currentValue =
-									shadows.light?.[field.key as keyof RandomizedLightProps]
+									shadows.type === 'accumulative'
+										? shadows.light?.[field.key as keyof RandomizedLightProps]
+										: undefined
 
 								return (
 									<EnhancedSettingSlider

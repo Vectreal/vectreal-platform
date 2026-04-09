@@ -42,7 +42,7 @@ export default function OnboardingWelcomeScene() {
 				theme="dark"
 				controlsOptions={{ enabled: false }}
 				envOptions={{ preset: 'night-city' }}
-				shadowsOptions={{ type: 'contact', opacity: 0 }}
+				shadowsOptions={{ type: 'contact', enabled: false, opacity: 0 }}
 				boundsOptions={{ margin: 0.9 }}
 			>
 				<RocketModel />

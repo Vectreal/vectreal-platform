@@ -193,6 +193,7 @@ Example:
 ### shadowsOptions (`ShadowsProps`)
 
 `ShadowsProps` is a discriminated union using `type`.
+Set `enabled: false` to disable shadow rendering entirely.
 
 #### Contact shadows (`type: 'contact'`)
 
@@ -201,6 +202,7 @@ Viewer defaults:
 | Option | Default |
 |---|---|
 | `type` | `'contact'` |
+| `enabled` | `false` |
 | `opacity` | `0.4` |
 | `blur` | `0.1` |
 | `scale` | `5` |
@@ -225,6 +227,7 @@ Example:
 <VectrealViewer
   shadowsOptions={{
     type: 'contact',
+    enabled: true,
     opacity: 0.45,
     blur: 1.8,
     scale: 6,
@@ -242,6 +245,7 @@ Viewer defaults:
 | Option | Default |
 |---|---|
 | `type` | `'accumulative'` |
+| `enabled` | `false` |
 | `temporal` | `false` |
 | `frames` | `30` |
 | `alphaTest` | `0.35` |
@@ -267,6 +271,7 @@ Example:
 <VectrealViewer
   shadowsOptions={{
     type: 'accumulative',
+    enabled: true,
     temporal: true,
     frames: 40,
     alphaTest: 0.4,

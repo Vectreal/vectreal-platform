@@ -9,11 +9,12 @@ import {
 	ContactShadowProps,
 	ShadowsProps
 } from '@vctrl/core'
-import React, { memo, useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import { Box3, Mesh, Vector3, Vector3Tuple } from 'three'
 
 export const defaultShadowsOptions: ShadowsProps = {
 	type: 'contact',
+	enabled: false,
 	opacity: 0.4,
 	blur: 0.1,
 	scale: 5,
@@ -23,6 +24,7 @@ export const defaultShadowsOptions: ShadowsProps = {
 
 export const defaultAccumulativeShadowsOptions: AccumulativeShadowsProps = {
 	type: 'accumulative',
+	enabled: false,
 	temporal: false,
 	frames: 30,
 	alphaTest: 0.35,
@@ -114,33 +116,44 @@ const SceneShadows = memo((props?: Partial<ShadowsProps>) => {
 			})
 	} as ShadowsProps
 
-	// Generate key from critical props to force remount when they change
-	// This prevents shadow layering/accumulation issues
+	if (!shadowOptions.enabled) {
+		return null
+	}
 
-	return shadowOptions.type === 'contact' ? (
-		<ContactShadows {...(shadowOptions as ContactShadowProps)} />
-	) : shadowOptions.type === 'accumulative' ? (
+	if (shadowOptions.type === 'contact') {
+		const {
+			type: _contactType,
+			enabled: _contactEnabled,
+			...contactProps
+		} = shadowOptions as ContactShadowProps
+
+		return <ContactShadows {...contactProps} />
+	}
+
+	const accumulativeOptions = shadowOptions as AccumulativeShadowsProps
+
+	return (
 		<AccumulativeShadows
-			temporal={(shadowOptions as AccumulativeShadowsProps).temporal ?? false}
-			frames={(shadowOptions as AccumulativeShadowsProps).frames}
-			alphaTest={(shadowOptions as AccumulativeShadowsProps).alphaTest}
-			opacity={(shadowOptions as AccumulativeShadowsProps).opacity}
-			scale={(shadowOptions as AccumulativeShadowsProps).scale}
-			resolution={(shadowOptions as AccumulativeShadowsProps).resolution}
-			colorBlend={(shadowOptions as AccumulativeShadowsProps).colorBlend}
-			color={(shadowOptions as AccumulativeShadowsProps).color}
+			temporal={accumulativeOptions.temporal ?? false}
+			frames={accumulativeOptions.frames}
+			alphaTest={accumulativeOptions.alphaTest}
+			opacity={accumulativeOptions.opacity}
+			scale={accumulativeOptions.scale}
+			resolution={accumulativeOptions.resolution}
+			colorBlend={accumulativeOptions.colorBlend}
+			color={accumulativeOptions.color}
 		>
 			<RandomizedLight
 				castShadow
-				amount={(shadowOptions as AccumulativeShadowsProps).light?.amount}
-				radius={(shadowOptions as AccumulativeShadowsProps).light?.radius}
-				ambient={(shadowOptions as AccumulativeShadowsProps).light?.ambient}
-				intensity={(shadowOptions as AccumulativeShadowsProps).light?.intensity}
-				position={(shadowOptions as AccumulativeShadowsProps).light?.position}
-				bias={(shadowOptions as AccumulativeShadowsProps).light?.bias}
+				amount={accumulativeOptions.light?.amount}
+				radius={accumulativeOptions.light?.radius}
+				ambient={accumulativeOptions.light?.ambient}
+				intensity={accumulativeOptions.light?.intensity}
+				position={accumulativeOptions.light?.position}
+				bias={accumulativeOptions.light?.bias}
 			/>
 		</AccumulativeShadows>
-	) : null
+	)
 })
 
 SceneShadows.displayName = 'SceneShadows'
