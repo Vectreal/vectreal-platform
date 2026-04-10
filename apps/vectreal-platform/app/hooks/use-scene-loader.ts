@@ -5,7 +5,7 @@ import {
 	type ModelFile,
 	useModelContext
 } from '@vctrl/hooks/use-load-model'
-import { useAtom, useAtomValue } from 'jotai'
+import { useAtom, useAtomValue } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'

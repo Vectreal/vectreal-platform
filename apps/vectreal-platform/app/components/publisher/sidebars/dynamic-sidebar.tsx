@@ -101,7 +101,11 @@ export const DynamicSidebar = ({
 	const positionClass = direction === 'left' ? 'left-0' : 'right-0'
 
 	return (
-		<div className={cn('fixed top-0 z-30 h-full p-4', positionClass)}>
+		<div
+			className={cn('fixed top-0 z-30 h-full p-4', positionClass, {
+				'px-0': !open
+			})}
+		>
 			<AnimatePresence mode="wait">
 				{open && (
 					<motion.div

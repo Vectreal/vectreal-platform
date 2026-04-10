@@ -203,7 +203,7 @@ export interface BillingLoaderData {
 	user: User
 	userWithDefaults: UserWithDefaults
 	billing: BillingSettingsData
-	checkoutOptions: BillingCheckoutOptions
+	checkoutOptions?: BillingCheckoutOptions
 }
 
 /**

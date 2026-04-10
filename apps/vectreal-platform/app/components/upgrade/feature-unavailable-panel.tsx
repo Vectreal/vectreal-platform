@@ -1,5 +1,5 @@
 import { Button } from '@shared/components/ui/button'
-import { useSetAtom } from 'jotai'
+import { useSetAtom } from 'jotai/react'
 import { Lock } from 'lucide-react'
 
 import {

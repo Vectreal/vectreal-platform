@@ -2,7 +2,7 @@
 import { Switch } from '@shared/components/ui/switch'
 import { cn } from '@shared/utils'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtom } from 'jotai'
+import { useAtom } from 'jotai/react'
 
 // Store
 import { InfoTooltip, SettingSlider } from '../../../..'

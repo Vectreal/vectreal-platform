@@ -87,8 +87,11 @@ const EnvironmentSettings = () => {
 
 	const handleGroundChange = useCallback(
 		(key: 'radius' | 'scale' | 'height', value: number) => {
-			// Validate the input value based on constraints
-			const validatedValue = Math.max(0, value) // Ensures value is never negative
+			if (!Number.isFinite(value)) {
+				return
+			}
+
+			const validatedValue = Math.max(0, value)
 
 			setEnvironment((prev) => {
 				// Safely handle the ground property regardless of its current type
@@ -278,12 +281,16 @@ const EnvironmentSettings = () => {
 
 						<SettingToggle
 							enabled={!!environment.ground}
-							onToggle={(enabled) =>
+							onToggle={(enabled) => {
 								setEnvironment((prev) => ({
 									...prev,
+									environmentIntensity:
+										enabled && (prev.environmentIntensity ?? 1) <= 0
+											? 1
+											: prev.environmentIntensity,
 									ground: enabled ? DEFAULT_GROUND_VALUES : false
 								}))
-							}
+							}}
 							title="Show Ground"
 							description="Display a ground plane in the scene."
 						/>

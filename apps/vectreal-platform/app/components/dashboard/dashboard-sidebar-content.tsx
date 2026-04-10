@@ -41,6 +41,7 @@ import {
 	Folder,
 	FolderOpen
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link, useFetcher } from 'react-router'
 
 import type { User } from '@supabase/supabase-js'
@@ -107,6 +108,8 @@ const DashboardSidebarContent = ({
 }: DashboardSidebarContentProps) => {
 	const { submit } = useFetcher()
 	const { toggleSidebar, openMobile } = useSidebar()
+	const [isClientMounted, setIsClientMounted] = useState(false)
+	useEffect(() => setIsClientMounted(true), [])
 
 	const handleSidebarClose = () => {
 		if (openMobile) {
@@ -240,91 +243,113 @@ const DashboardSidebarContent = ({
 			<SidebarFooter>
 				<SidebarMenu>
 					<SidebarMenuItem>
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<SidebarMenuButton
-									size="lg"
-									className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+						{isClientMounted ? (
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<SidebarMenuButton
+										size="lg"
+										className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+									>
+										<Avatar className="h-8 w-8 rounded-lg">
+											<AvatarImage src={userImageSrc} alt={userName} />
+											<AvatarFallback className="rounded-lg">
+												{userInitial}
+											</AvatarFallback>
+										</Avatar>
+										<div className="grid flex-1 text-left text-sm leading-tight">
+											<span className="truncate font-semibold">{userName}</span>
+											<span className="text-muted-foreground truncate text-xs">
+												{accountTier} Plan
+											</span>
+										</div>
+										<ChevronsUpDown className="ml-auto size-4" />
+									</SidebarMenuButton>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent
+									className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+									side="top"
+									align="end"
+									sideOffset={4}
 								>
-									<Avatar className="h-8 w-8 rounded-lg">
-										<AvatarImage src={userImageSrc} alt={userName} />
-										<AvatarFallback className="rounded-lg">
-											{userInitial}
-										</AvatarFallback>
-									</Avatar>
-									<div className="grid flex-1 text-left text-sm leading-tight">
-										<span className="truncate font-semibold">{userName}</span>
-										<span className="text-muted-foreground truncate text-xs">
-											{accountTier} Plan
-										</span>
-									</div>
-									<ChevronsUpDown className="ml-auto size-4" />
-								</SidebarMenuButton>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent
-								className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-								side="top"
-								align="end"
-								sideOffset={4}
+									<DropdownMenuLabel className="p-0 font-normal">
+										<div className="flex items-center gap-2 px-2 py-1.5 text-left text-sm">
+											<span className="text-foreground text-sm font-medium">
+												More settings
+											</span>
+										</div>
+									</DropdownMenuLabel>
+
+									<DropdownMenuSeparator />
+
+									<DropdownMenuItem onClick={handleSidebarClose} asChild>
+										<Link
+											to="/dashboard/organizations"
+											viewTransition
+											aria-label="Go to Organizations"
+										>
+											<Building />
+											Organizations
+										</Link>
+									</DropdownMenuItem>
+									<DropdownMenuItem onClick={handleSidebarClose} asChild>
+										<Link
+											to="/dashboard/billing"
+											viewTransition
+											aria-label="Go to Billing"
+										>
+											<CreditCard />
+											Billing
+										</Link>
+									</DropdownMenuItem>
+									<DropdownMenuItem onClick={handleSidebarClose} asChild>
+										<Link
+											to="/dashboard/settings"
+											viewTransition
+											aria-label="Go to Settings"
+										>
+											<Settings />
+											Settings
+										</Link>
+									</DropdownMenuItem>
+									<DropdownMenuSeparator />
+									<DropdownMenuItem onClick={handleSidebarClose} asChild>
+										<Link
+											to="/docs"
+											viewTransition
+											aria-label="Go to Documentation"
+										>
+											<HelpCircle />
+											Documentation
+										</Link>
+									</DropdownMenuItem>
+									<DropdownMenuSeparator />
+									<DropdownMenuItem onClick={handleLogout}>
+										<LogOut />
+										Log Out
+									</DropdownMenuItem>
+								</DropdownMenuContent>
+							</DropdownMenu>
+						) : (
+							<SidebarMenuButton
+								size="lg"
+								className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+								disabled
 							>
-								<DropdownMenuLabel className="p-0 font-normal">
-									<div className="flex items-center gap-2 px-2 py-1.5 text-left text-sm">
-										<span className="text-foreground text-sm font-medium">
-											More settings
-										</span>
-									</div>
-								</DropdownMenuLabel>
-
-								<DropdownMenuSeparator />
-
-								<DropdownMenuItem onClick={handleSidebarClose} asChild>
-									<Link
-										to="/dashboard/organizations"
-										viewTransition
-										aria-label="Go to Organizations"
-									>
-										<Building />
-										Organizations
-									</Link>
-								</DropdownMenuItem>
-								<DropdownMenuItem onClick={handleSidebarClose} asChild>
-									<Link
-										to="/dashboard/billing"
-										viewTransition
-										aria-label="Go to Billing"
-									>
-										<CreditCard />
-										Billing
-									</Link>
-								</DropdownMenuItem>
-								<DropdownMenuItem onClick={handleSidebarClose} asChild>
-									<Link
-										to="/dashboard/settings"
-										viewTransition
-										aria-label="Go to Settings"
-									>
-										<Settings />
-										Settings
-									</Link>
-								</DropdownMenuItem>
-								<DropdownMenuSeparator />
-								<DropdownMenuItem onClick={handleSidebarClose} asChild>
-									<Link
-										to="/docs"
-										viewTransition
-										aria-label="Go to Documentation"
-									>
-										<HelpCircle />
-										Documentation
-									</Link>
-								</DropdownMenuItem>
-								<DropdownMenuSeparator />
-								<DropdownMenuItem onClick={handleLogout}>
-									<LogOut />
-									Log Out
-								</DropdownMenuItem>
-							</DropdownMenuContent>
-						</DropdownMenu>
+								<Avatar className="h-8 w-8 rounded-lg">
+									<AvatarImage src={userImageSrc} alt={userName} />
+									<AvatarFallback className="rounded-lg">
+										{userInitial}
+									</AvatarFallback>
+								</Avatar>
+								<div className="grid flex-1 text-left text-sm leading-tight">
+									<span className="truncate font-semibold">{userName}</span>
+									<span className="text-muted-foreground truncate text-xs">
+										{accountTier} Plan
+									</span>
+								</div>
+								<ChevronsUpDown className="ml-auto size-4" />
+							</SidebarMenuButton>
+						)}
 					</SidebarMenuItem>
 				</SidebarMenu>
 			</SidebarFooter>

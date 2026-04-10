@@ -8,7 +8,7 @@ import {
 } from '@shared/components/ui/select'
 import { Switch } from '@shared/components/ui/switch'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useAtom } from 'jotai'
+import { useAtom } from 'jotai/react'
 
 import {
 	ACCUMULATIVE_FIELDS,

@@ -1,7 +1,7 @@
 import { ModelExporter } from '@vctrl/core/model-exporter'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { motion } from 'framer-motion'
-import { useAtomValue, useSetAtom } from 'jotai'
+import { useAtomValue, useSetAtom } from 'jotai/react'
 import { Loader2 } from 'lucide-react'
 import { useCallback, useRef, useState, type FC } from 'react'
 import { useNavigate, useRevalidator } from 'react-router'
@@ -12,7 +12,7 @@ import {
 	toUpgradeModalPayload
 } from '../../../../../lib/domain/billing/client/billing-limit-error'
 import { publishSceneFromGlb } from '../../../../../lib/domain/scene/client/scene-publish'
-import { processAtom } from '../../../../../lib/stores/publisher-config-store'
+import { hasUnsavedChangesAtom } from '../../../../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
 import {
 	buildUpgradeModalState,
@@ -45,7 +45,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const { optimizer, file } = useModelContext(true)
 	const navigate = useNavigate()
 	const revalidator = useRevalidator()
-	const { hasUnsavedChanges } = useAtomValue(processAtom)
+	const hasUnsavedChanges = useAtomValue(hasUnsavedChangesAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
 	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 	const exporterRef = useRef<ModelExporter>(new ModelExporter())

@@ -4,7 +4,7 @@ import { SpinnerWrapper } from '@shared/components/ui/spinner-wrapper'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { AnimatePresence } from 'framer-motion'
 import { motion } from 'framer-motion'
-import { useAtom, useAtomValue } from 'jotai/react'
+import { useAtomValue, useSetAtom } from 'jotai/react'
 import { RESET } from 'jotai/utils'
 import {
 	memo,
@@ -22,6 +22,8 @@ import { DropZone } from './drop-zone'
 import CenteredSpinner from '../../components/centered-spinner'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import {
+	processInitialState,
+	publisherLoadingStateAtom,
 	processAtom,
 	sceneMetaAtom
 } from '../../lib/stores/publisher-config-store'
@@ -123,9 +125,11 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 
 	// Get model and settings from context/atoms
 	const { file, isFileLoading, reset } = useModelContext()
-	const [{ isLoading: isDownloading, isInitializing }, setProcess] =
-		useAtom(processAtom)
-	const [, setOptimizationRuntime] = useAtom(optimizationRuntimeAtom)
+	const { isDownloading, isInitializing } = useAtomValue(
+		publisherLoadingStateAtom
+	)
+	const setProcess = useSetAtom(processAtom)
+	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
 	const bounds = useAtomValue(boundsAtom)
 	const camera = useAtomValue(cameraAtom)
 	const controls = useAtomValue(controlsAtom)
@@ -154,7 +158,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 		if (navigatedFromSceneToBase) {
 			registerSceneScreenshotCaptureHandler(null)
 			reset()
-			setProcess(RESET)
+			setProcess(processInitialState)
 			setOptimizationRuntime(RESET)
 		}
 
@@ -165,7 +169,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 		return () => {
 			registerSceneScreenshotCaptureHandler(null)
 			reset()
-			setProcess(RESET)
+			setProcess(processInitialState)
 			setOptimizationRuntime(RESET)
 		}
 	}, [setOptimizationRuntime, setProcess, reset])

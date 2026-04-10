@@ -7,6 +7,36 @@ export interface PostHogContext extends RouterContextProvider {
 	posthog?: PostHog
 }
 
+let sharedPosthogClient: null | PostHog = null
+let shutdownHookRegistered = false
+
+function getPosthogClient(): null | PostHog {
+	const token = process.env.VITE_PUBLIC_POSTHOG_TOKEN
+	const host = process.env.VITE_PUBLIC_POSTHOG_HOST
+
+	if (!token || !host) {
+		return null
+	}
+
+	if (!sharedPosthogClient) {
+		sharedPosthogClient = new PostHog(token, {
+			host,
+			// Batch events and flush on interval to keep requests non-blocking.
+			flushAt: 20,
+			flushInterval: 10_000
+		})
+	}
+
+	if (!shutdownHookRegistered) {
+		shutdownHookRegistered = true
+		process.once('beforeExit', () => {
+			sharedPosthogClient?.shutdown().catch(() => {})
+		})
+	}
+
+	return sharedPosthogClient
+}
+
 /**
  * Server-side PostHog middleware for React Router v7 framework mode.
  *
@@ -22,28 +52,17 @@ export const posthogMiddleware: Route.MiddlewareFunction = async (
 	{ request, context },
 	next
 ) => {
-	const token = process.env.VITE_PUBLIC_POSTHOG_TOKEN
-	const host = process.env.VITE_PUBLIC_POSTHOG_HOST
+	const posthog = getPosthogClient()
 
-	// Skip if not configured (e.g. local dev without env vars)
-	if (!token || !host) {
+	// Skip if not configured (for example local dev without env vars)
+	if (!posthog) {
 		return next()
 	}
-
-	const posthog = new PostHog(token, {
-		host,
-		flushAt: 1,
-		flushInterval: 0
-	})
 
 	const sessionId = request.headers.get('X-POSTHOG-SESSION-ID') ?? undefined
 	const distinctId = request.headers.get('X-POSTHOG-DISTINCT-ID') ?? undefined
 
 	;(context as PostHogContext).posthog = posthog
 
-	const response = await posthog.withContext({ sessionId, distinctId }, next)
-
-	await posthog.shutdown().catch(() => {})
-
-	return response
+	return posthog.withContext({ sessionId, distinctId }, next)
 }

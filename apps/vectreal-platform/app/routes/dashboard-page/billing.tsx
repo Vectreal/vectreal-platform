@@ -5,7 +5,9 @@ import { BillingSettingsSection } from '../../components/dashboard'
 import { loadBillingDashboardData } from '../../lib/domain/billing/billing-dashboard-loader.server'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { loaderData, headers } = await loadBillingDashboardData(request)
+	const { loaderData, headers } = await loadBillingDashboardData(request, {
+		includeCheckoutOptions: false
+	})
 	return data(loaderData, { headers })
 }
 

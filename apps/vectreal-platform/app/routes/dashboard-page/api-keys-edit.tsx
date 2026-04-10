@@ -21,7 +21,7 @@ import {
 } from '@shared/components/ui/form'
 import { Input } from '@shared/components/ui/input'
 import { Textarea } from '@shared/components/ui/textarea'
-import { useSetAtom } from 'jotai'
+import { useSetAtom } from 'jotai/react'
 import { AlertCircle, Save, X } from 'lucide-react'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'

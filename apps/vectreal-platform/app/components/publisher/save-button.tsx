@@ -1,5 +1,5 @@
 import { Button } from '@shared/components/ui/button'
-import { useAtom } from 'jotai/react'
+import { useAtomValue } from 'jotai/react'
 import { CircleFadingArrowUp, Cloud, Sparkles } from 'lucide-react'
 
 import {
@@ -8,7 +8,7 @@ import {
 	SaveSceneResult
 } from '../../hooks'
 import { usePublisherSaveAction } from '../../hooks/use-publisher-save-action'
-import { processAtom } from '../../lib/stores/publisher-config-store'
+import { isSavingAtom } from '../../lib/stores/publisher-config-store'
 
 interface SaveButtonProps {
 	sceneId: null | string
@@ -29,7 +29,7 @@ const SaveButton = ({
 	onRequireAuth,
 	saveSceneSettings
 }: SaveButtonProps) => {
-	const [{ isSaving }] = useAtom(processAtom)
+	const isSaving = useAtomValue(isSavingAtom)
 	const { handleSaveScene } = usePublisherSaveAction({
 		sceneId,
 		userId,

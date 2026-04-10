@@ -1,7 +1,7 @@
 import { ButtonGroup } from '@shared/components/ui/button-group'
 import { Separator } from '@shared/components/ui/separator'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtom, useAtomValue } from 'jotai/react'
+import { useAtomValue, useSetAtom } from 'jotai/react'
 import { useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
@@ -18,6 +18,7 @@ import { useSceneLoader } from '../../hooks'
 import { useLocationChangeState } from '../../hooks/use-location-change-state'
 import { useSceneSizeInitializer } from './sidebars/optimize-sidebar/use-scene-size-initializer'
 import {
+	controlsOverlayStateAtom,
 	processAtom,
 	saveLocationAtom
 } from '../../lib/stores/publisher-config-store'
@@ -37,7 +38,8 @@ const OverlayControls = ({
 }: PublisherLoaderData) => {
 	const navigate = useNavigate()
 	const { file, isFileLoading, optimizer } = useModelContext(true)
-	const [{ step, showPublishPanel }, setProcessState] = useAtom(processAtom)
+	const { step, showPublishPanel } = useAtomValue(controlsOverlayStateAtom)
+	const setProcessState = useSetAtom(processAtom)
 	const {
 		latestSceneStats,
 		isSceneSizeLoading,
@@ -88,20 +90,36 @@ const OverlayControls = ({
 		latestSceneStats?.currentSceneBytes
 
 	const handleOpenPublishPanel = useCallback(() => {
-		setProcessState((prev) => ({
-			...prev,
-			showPublishPanel: true,
-			showSidebar: false
-		}))
+		setProcessState((prev) => {
+			if (prev.showPublishPanel && !prev.showSidebar) {
+				return prev
+			}
+
+			return {
+				...prev,
+				showPublishPanel: true,
+				showSidebar: false
+			}
+		})
 	}, [setProcessState])
 
 	const handlePublishPanelChange = useCallback(
 		(isOpen: boolean) => {
-			setProcessState((prev) => ({
-				...prev,
-				showPublishPanel: isOpen,
-				showSidebar: isOpen ? false : prev.showSidebar
-			}))
+			setProcessState((prev) => {
+				const nextShowSidebar = isOpen ? false : prev.showSidebar
+				if (
+					prev.showPublishPanel === isOpen &&
+					prev.showSidebar === nextShowSidebar
+				) {
+					return prev
+				}
+
+				return {
+					...prev,
+					showPublishPanel: isOpen,
+					showSidebar: nextShowSidebar
+				}
+			})
 		},
 		[setProcessState]
 	)

@@ -30,6 +30,7 @@ import { buildMeta } from './lib/seo'
 import { buildOrganizationJsonLd } from './lib/seo-registry'
 import { getSession as getConsentSession } from './lib/sessions/consent-session.server'
 import { csrfSession } from './lib/sessions/csrf-session.server'
+import { hasSupabaseAuthCookie } from './lib/sessions/supabase-auth-cookie.server'
 import {
 	getThemeModeFromRequest,
 	type ThemeMode
@@ -54,17 +55,21 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const pathname = new URL(request.url).pathname
 	const forceDarkTheme = pathname === '/' || pathname === '/home'
 	const themeMode = await getThemeModeFromRequest(request)
+	const requestCookieHeader = request.headers.get('Cookie') ?? ''
+	const hasAuthCookie = hasSupabaseAuthCookie(requestCookieHeader)
 
 	// Resolve consent state for the current visitor
-	const { client } = await createSupabaseClient(request)
-	const {
-		data: { user }
-	} = await client.auth.getUser()
+	let userId: null | string = null
+	if (hasAuthCookie) {
+		const { client } = await createSupabaseClient(request)
+		const {
+			data: { user }
+		} = await client.auth.getUser()
+		userId = user?.id ?? null
+	}
 	const consentSession = await getConsentSession(request.headers.get('Cookie'))
 	const anonymousId = consentSession.get('anonymousId') ?? null
-	const consentRecord = await getConsent(user?.id ?? null, anonymousId).catch(
-		() => null
-	)
+	const consentRecord = await getConsent(userId, anonymousId).catch(() => null)
 
 	const consentState: ConsentChoices | null = consentRecord
 		? {
