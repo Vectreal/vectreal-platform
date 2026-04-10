@@ -1,77 +1,160 @@
 # Contributing to Vectreal Platform
 
-We love your input! We want to make contributing to this project as easy and transparent as possible, whether it's:
+Thank you for your interest in contributing! This guide will get you from zero to an open PR in under 30 minutes.
 
-- Reporting a bug
-- Discussing the current state of the code
-- Submitting a fix
-- Proposing new features
-- Becoming a maintainer
+***
 
-> For a complete contribution guide, see **[vectreal.com/docs/contributing](https://vectreal.com/docs/contributing)**.
+## Prerequisites
 
-## We Develop with GitHub
+| Tool         | Minimum version | Install                            |
+| ------------ | --------------- | ---------------------------------- |
+| Node.js      | >= 22.x (LTS)  | [nodejs.org](https://nodejs.org)   |
+| pnpm         | >= 10.x        | `npm i -g pnpm`                    |
+| Docker       | any recent      | [docker.com](https://docker.com)   |
+| Supabase CLI | latest          | `npm i -g supabase`                |
+| Git          | any recent      | [git-scm.com](https://git-scm.com) |
 
-We use GitHub to host code, track issues and feature requests, and accept pull requests.
+Optional but recommended: [Nx Console](https://marketplace.visualstudio.com/items?itemName=nrwl.angular-console) extension for VS Code.
 
-## All Code Changes Happen Through Pull Requests
+***
 
-Pull requests are the best way to propose changes to the codebase. We actively welcome your pull requests:
+## Quick Start (30 minutes or less)
 
-1. Fork the repo and create your branch from `main`.
-2. If you've added code that should be tested, add tests.
-3. If you've changed APIs or added routes/env vars, update the documentation.
-4. Ensure the test suite passes: `pnpm nx affected --target=test`
-5. Make sure your code lints: `pnpm nx affected --target=lint`
-6. Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for your commit messages.
-7. Issue that pull request and link relevant issues and labels!
+```bash
+# 1. Fork then clone your fork
+git clone https://github.com/<your-username>/vectreal-platform.git
+cd vectreal-platform
 
-## Working with Nx
+# 2. Install all workspace dependencies
+pnpm install
 
-1. Always run commands from the repository root.
-2. To run packages/apps: `pnpm nx run <project-name>:<target>` (e.g. `pnpm nx serve vectreal-platform`)
-3. To see all targets for a project: `pnpm nx show project <project-name> --web`
-4. Install the [Nx Console](https://marketplace.visualstudio.com/items?itemName=nrwl.angular-console) extension for VS Code for a visual interface.
+# 3. Copy the environment template
+cp .env.development.example .env.development
+# Set at minimum: CSRF_SECRET (any long random string)
+# SUPABASE_URL and SUPABASE_KEY will be filled after step 4
 
-## Release ownership and version policy
+# 4. Start local Supabase (requires Docker)
+pnpm supabase start
+# Copy the printed anon key and API URL into .env.development
+
+# 5. Apply DB migrations
+pnpm nx run vectreal-platform:supabase-db-reset
+
+# 6. Start the dev server
+pnpm nx dev vectreal-platform
+# Open http://localhost:4200
+```
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for deeper setup, package workflows, and troubleshooting.
+
+***
+
+## Branching Strategy
+
+| Branch                | Purpose                        |
+| --------------------- | ------------------------------ |
+| `main`                | Production-ready; auto-deploys |
+| `feat/<description>`  | New features                   |
+| `fix/<description>`   | Bug fixes                      |
+| `chore/<description>` | Tooling/config                 |
+| `docs/<description>`  | Docs only                      |
+
+Branch from `main` and open your PR back to `main`.
+
+***
+
+## Commit Messages
+
+We use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). Release Please reads these to auto-generate changelogs.
+
+```
+<type>(<scope>): <short summary>
+```
+
+**Types:** `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `perf`, `ci`
+
+**Scopes:** `viewer`, `hooks`, `core`, `platform`, `infra`, `docs`
+
+Examples:
+
+```
+feat(viewer): add USDZ drag-and-drop support
+fix(core): handle missing normals in OBJ exporter
+docs: expand local setup guide
+```
+
+Breaking changes: add `!` after the type, e.g. `feat(hooks)!: rename useLoadModel return shape`.
+
+***
+
+## Making Changes
+
+1. Create a branch from `main`.
+2. Write code following existing patterns (Tailwind, Radix/Shadcn, Jotai).
+3. Add or update tests:
+   ```bash
+   pnpm nx affected --target=test
+   ```
+4. Lint and type-check:
+   ```bash
+   pnpm nx affected --target=lint
+   pnpm nx affected --target=typecheck
+   ```
+5. Update docs if you changed a public API, added env vars, or changed a route.
+
+***
+
+## Pull Requests
+
+* Fill in the PR template completely.
+* Link issues with `Closes #<number>` or `Fixes #<number>`.
+* Keep PRs focused: one feature or fix per PR.
+* All CI checks must pass before merge.
+
+***
+
+## Monorepo Commands
+
+```bash
+# Run a target on a specific project
+pnpm nx run <project>:<target>
+
+# Run on all affected projects
+pnpm nx affected --target=<target>
+
+# Explore available targets
+pnpm nx show project <project-name> --web
+
+# Clear Nx cache
+pnpm nx reset
+```
+
+***
+
+## Release Ownership and Version Policy
 
 1. Release Please is the single source of truth for package versions, changelog entries, tags, and GitHub releases.
 2. The canonical package version state is stored in `.release-please-manifest.json` and configured by `release-please-config.json`.
 3. Nx is used to run build and publish targets only. Do not use `nx release` in this repository.
 4. Internal dependencies between co-developed packages must use `workspace:*` unless there is a documented exception.
 5. The app at `apps/vectreal-platform` uses `workspace:*` for `@vctrl/*` dependencies to stay lockstep with local package development.
-6. Published package install compatibility should be validated in a dedicated internal consumer test app/pipeline that installs `@vctrl/*` from the registry.
 
-## Editing documentation
+***
 
-Every docs page on [vectreal.com/docs](https://vectreal.com/docs) is an MDX file in `apps/vectreal-platform/app/routes/docs/`. Click **Edit on GitHub** on any page to jump directly to the source file.
+## Editing Docs
+
+Every page on [vectreal.com/docs](https://vectreal.com/docs) is an MDX file in `apps/vectreal-platform/app/routes/docs/`. Click **Edit on GitHub** on any docs page to jump directly to the source file.
 
 To add a new docs page, see the instructions in [`apps/vectreal-platform/README.md`](apps/vectreal-platform/README.md#docs).
 
-## Any contributions you make will be under the License
+***
 
-In short, when you submit code changes, your submissions are understood to be under the same [GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3.0.en.html) that covers the project. Feel free to contact the maintainers if that's a concern.
+## Reporting Bugs
 
-## Report bugs using GitHub Issues
+Use [GitHub Issues](https://github.com/Vectreal/vectreal-platform/issues/new/choose) and select the Bug Report template. Include: steps to reproduce, expected vs actual behavior, environment details, and any console output.
 
-We use [GitHub Issues](https://github.com/Vectreal/vectreal-platform/issues) to track public bugs. Report a bug by [opening a new issue](https://github.com/Vectreal/vectreal-platform/issues/new).
+***
 
-## Write bug reports with detail, background, and sample code
+## License
 
-**Great Bug Reports** tend to have:
-
-- A quick summary and/or background
-- Steps to reproduce
-  - Be specific!
-  - Give sample code if you can.
-- What you expected would happen
-- What actually happens
-- Notes (possibly including why you think this might be happening, or stuff you tried that didn't work)
-
-## Coding Style
-
-Run `pnpm nx affected --target=lint` to check for lint errors before opening a PR.
-
-## GNU Affero General Public License
-
-By contributing, you agree that your contributions will be licensed under the [GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3.0.en.html).
+By contributing, you agree your contributions are licensed under [AGPL-3.0](LICENSE.md). Open an issue before contributing if you have concerns about AGPL requirements.
