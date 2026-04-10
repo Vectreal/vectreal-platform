@@ -12,9 +12,10 @@ import { HydratedRouter } from 'react-router/dom'
 
 posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_TOKEN, {
 	api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
-	ui_host: import.meta.env.VITE_PUBLIC_POSTHOG_UI_HOST || 'https://eu.posthog.com',
+	ui_host:
+		import.meta.env.VITE_PUBLIC_POSTHOG_UI_HOST || 'https://eu.posthog.com',
 	defaults: '2026-01-30',
-	// Add tracing headers so the server-side middleware can correlate events
+	// Add tracing headers so server-side middleware can correlate events.
 	__add_tracing_headers: [window.location.host, 'localhost']
 	// PostHog starts opted-in by default. ConsentProvider will call
 	// opt_out_capturing() for users who have explicitly rejected analytics.

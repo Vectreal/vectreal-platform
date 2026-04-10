@@ -14,6 +14,7 @@ import {
 } from '@shared/components/ui/dropdown-menu'
 import { cn } from '@shared/utils'
 import { User } from '@supabase/supabase-js'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 
 interface UserMenuProps {
@@ -33,40 +34,63 @@ export function UserMenu({
 	onLogout
 }: UserMenuProps) {
 	const navigate = useNavigate()
+	const [isClientMounted, setIsClientMounted] = useState(false)
 	const userImageSrc = user?.user_metadata?.avatar_url || ''
 	const userInitial = user.user_metadata?.full_name?.charAt(0) || 'U'
+
+	useEffect(() => {
+		setIsClientMounted(true)
+	}, [])
 
 	async function handleMenuItemClick(to = '/dashboard') {
 		await navigate(to, { viewTransition: true })
 	}
 
+	const avatar = (
+		<Avatar
+			className={cn(
+				'rounded-lg',
+				{
+					'h-7 w-7 rounded-lg': size === 'sm',
+					'h-8 w-8': size === 'md' || !size
+				},
+				className
+			)}
+		>
+			<AvatarImage
+				className={cn('rounded-lg', {
+					'rounded-lg': size === 'sm'
+				})}
+				src={userImageSrc}
+				alt={user.user_metadata?.full_name || 'User Avatar'}
+			/>
+			<AvatarFallback
+				className={cn('rounded-lg', { 'rounded-lg': size === 'sm' })}
+			>
+				{userInitial}
+			</AvatarFallback>
+		</Avatar>
+	)
+
+	if (!isClientMounted) {
+		return (
+			<Button
+				size="icon"
+				variant="secondary"
+				type="button"
+				aria-label="Open user menu"
+				disabled
+			>
+				{avatar}
+			</Button>
+		)
+	}
+
 	return (
 		<DropdownMenu modal={false}>
 			<DropdownMenuTrigger asChild aria-label="Open user menu">
-				<Button size="icon" variant="secondary">
-					<Avatar
-						className={cn(
-							'rounded-lg',
-							{
-								'h-7 w-7 rounded-lg': size === 'sm',
-								'h-8 w-8': size === 'md' || !size
-							},
-							className
-						)}
-					>
-						<AvatarImage
-							className={cn('rounded-lg', {
-								'rounded-lg': size === 'sm'
-							})}
-							src={userImageSrc}
-							alt={user.user_metadata?.full_name || 'User Avatar'}
-						/>
-						<AvatarFallback
-							className={cn('rounded-lg', { 'rounded-lg': size === 'sm' })}
-						>
-							{userInitial}
-						</AvatarFallback>
-					</Avatar>
+				<Button size="icon" variant="secondary" type="button">
+					{avatar}
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side="bottom" className="ml-4 min-w-64 capitalize">

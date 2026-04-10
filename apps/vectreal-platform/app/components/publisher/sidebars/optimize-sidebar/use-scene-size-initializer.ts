@@ -1,5 +1,5 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtom } from 'jotai'
+import { useAtom } from 'jotai/react'
 import { useCallback, useEffect, useRef } from 'react'
 
 import { optimizationRuntimeAtom } from '../../../../lib/stores/scene-optimization-store'
@@ -12,7 +12,7 @@ import { optimizationRuntimeAtom } from '../../../../lib/stores/scene-optimizati
  * scene view is active (e.g. OverlayControls).
  */
 export function useSceneSizeInitializer() {
-	const { optimizer, on, off, file } = useModelContext(true)
+	const { optimizer, file, on, off } = useModelContext(true)
 	const [optimizationRuntime, setOptimizationRuntime] = useAtom(
 		optimizationRuntimeAtom
 	)
@@ -25,7 +25,7 @@ export function useSceneSizeInitializer() {
 
 	const isSceneSizeCalculationInFlightRef = useRef(false)
 
-	const { reset: resetOptimize, isReady } = optimizer
+	const { isReady } = optimizer
 
 	const calculateSceneBytes = useCallback(async () => {
 		if (!isReady) {
@@ -83,9 +83,12 @@ export function useSceneSizeInitializer() {
 		}))
 	}, [clientTextureBytes, file?.sourceTextureBytes, setOptimizationRuntime])
 
-	// Reset all size state when a new model starts loading.
+	// Reset optimization/runtime state for real source-load flows.
+	// `load-start` is emitted by useLoadModel.load() before user/server model
+	// loading, and is not emitted by applyOptimization() internal model swaps.
 	useEffect(() => {
-		const handleReset = () => {
+		const handleLoadStart = () => {
+			isSceneSizeCalculationInFlightRef.current = false
 			setOptimizationRuntime((prev) => ({
 				...prev,
 				isPending: false,
@@ -97,13 +100,25 @@ export function useSceneSizeInitializer() {
 				latestSceneStats: null
 			}))
 		}
-		on('load-start', resetOptimize)
-		on('load-start', handleReset)
+
+		on('load-start', handleLoadStart)
 		return () => {
-			off('load-start', resetOptimize)
-			off('load-start', handleReset)
+			off('load-start', handleLoadStart)
 		}
-	}, [off, on, resetOptimize, setOptimizationRuntime])
+	}, [off, on, setOptimizationRuntime])
+
+	useEffect(() => {
+		const handleLoadComplete = () => {
+			setOptimizationRuntime((prev) =>
+				prev.isPending ? { ...prev, isPending: false } : prev
+			)
+		}
+
+		on('load-complete', handleLoadComplete)
+		return () => {
+			off('load-complete', handleLoadComplete)
+		}
+	}, [off, on, setOptimizationRuntime])
 
 	// Fall back to calculating the size via the optimizer export when no
 	// pre-computed byte count is available.

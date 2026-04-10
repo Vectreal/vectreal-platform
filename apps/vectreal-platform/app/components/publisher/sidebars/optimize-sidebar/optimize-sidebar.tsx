@@ -1,6 +1,6 @@
 import { Accordion } from '@shared/components/ui/accordion'
 import { Progress } from '@shared/components/ui/progress'
-import { useAtomValue } from 'jotai'
+import { useAtomValue } from 'jotai/react'
 import { useMemo, type FC } from 'react'
 
 import {
@@ -11,7 +11,7 @@ import {
 import { OptimizeButton } from './optimize-button'
 import { useOptimizationProcess } from './use-optimization-process'
 import { calculateOptimizationStats } from './utils'
-import { processAtom } from '../../../../lib/stores/publisher-config-store'
+import { isSavingAtom } from '../../../../lib/stores/publisher-config-store'
 
 interface OptimizeSidebarContentProps {
 	userId?: string
@@ -32,7 +32,7 @@ const OptimizeSidebarContent: FC<OptimizeSidebarContentProps> = ({
 		guestQuota
 	} = useOptimizationProcess({ isAuthenticated })
 
-	const { isSaving } = useAtomValue(processAtom)
+	const isSaving = useAtomValue(isSavingAtom)
 
 	const optimizationStats = useMemo(
 		() => calculateOptimizationStats(info, sizeInfo),

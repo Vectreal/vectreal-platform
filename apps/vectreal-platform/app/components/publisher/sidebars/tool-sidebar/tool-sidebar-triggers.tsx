@@ -1,5 +1,6 @@
-import { useSetAtom } from 'jotai'
+import { useSetAtom } from 'jotai/react'
 import { Pen, Stars } from 'lucide-react'
+import { memo } from 'react'
 
 import { processAtom } from '../../../../lib/stores/publisher-config-store'
 import { SidebarMode } from '../../../../types/publisher-config'
@@ -9,7 +10,7 @@ interface ToolSidebarTriggersProps {
 	isMobile?: boolean
 }
 
-const ToolSidebarTriggers = ({ isMobile }: ToolSidebarTriggersProps) => {
+const ToolSidebarTriggers = memo(({ isMobile }: ToolSidebarTriggersProps) => {
 	const setProcessState = useSetAtom(processAtom)
 	const handleOpenSidebar = (sidebar: SidebarMode) => {
 		setProcessState((prev) => ({
@@ -41,6 +42,6 @@ const ToolSidebarTriggers = ({ isMobile }: ToolSidebarTriggersProps) => {
 			</TooltipButton>
 		</div>
 	)
-}
+})
 
 export default ToolSidebarTriggers

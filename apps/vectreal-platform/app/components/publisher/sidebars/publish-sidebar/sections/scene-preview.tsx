@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useAtom } from 'jotai'
+import { useAtom } from 'jotai/react'
 import { useEffect, useState, type FC } from 'react'
 
 import { sceneMetaAtom } from '../../../../../lib/stores/publisher-config-store'

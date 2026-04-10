@@ -14,7 +14,7 @@ import {
 	TooltipTrigger
 } from '@shared/components/ui/tooltip'
 import { cn } from '@shared/utils'
-import { useAtom } from 'jotai'
+import { useAtom } from 'jotai/react'
 import { Info } from 'lucide-react'
 
 import { SettingSlider } from '../../../..'

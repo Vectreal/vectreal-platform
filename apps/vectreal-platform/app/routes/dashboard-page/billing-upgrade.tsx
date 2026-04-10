@@ -31,9 +31,15 @@ import {
 	PricingCardsSection
 } from '../../components/dashboard'
 import { PLAN_ENTITLEMENTS, type Plan } from '../../constants/plan-config'
-import { loadBillingDashboardData } from '../../lib/domain/billing/billing-dashboard-loader.server'
+import {
+	getCheckoutOptions,
+	loadBillingDashboardData
+} from '../../lib/domain/billing/billing-dashboard-loader.server'
 
-import type { BillingCheckoutPeriods } from '../../lib/domain/dashboard/dashboard-types'
+import type {
+	BillingCheckoutOptions,
+	BillingCheckoutPeriods
+} from '../../lib/domain/dashboard/dashboard-types'
 import type { PostHogContext } from '../../lib/posthog/posthog-middleware'
 
 const PLAN_LABELS = {
@@ -116,25 +122,53 @@ function computeAnnualSavings(pricing: BillingCheckoutPeriods) {
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
-	const { loaderData, headers } = await loadBillingDashboardData(request)
+	const checkoutOptionsPromise = getCheckoutOptions().catch(
+		(): BillingCheckoutOptions => ({
+			pro: { monthly: null, annual: null },
+			business: { monthly: null, annual: null }
+		})
+	)
+
+	const { loaderData, headers } = await loadBillingDashboardData(request, {
+		includeCheckoutOptions: false
+	})
+
 	const posthog = (context as PostHogContext).posthog
-	const checkoutEnabled = posthog
-		? ((await posthog.isFeatureEnabled(
-				'billing-checkout',
-				loaderData.user.id
-			)) ?? false)
-		: true // default to enabled when PostHog is not configured (e.g. local dev)
-	return data({ ...loaderData, checkoutEnabled }, { headers })
+	const checkoutEnabledPromise = posthog
+		? posthog
+				.isFeatureEnabled('billing-checkout', loaderData.user.id)
+				.then((enabled) => enabled ?? false)
+				.catch(() => true)
+		: Promise.resolve(true) // default to enabled when PostHog is not configured (e.g. local dev)
+
+	const [checkoutOptions, checkoutEnabled] = await Promise.all([
+		checkoutOptionsPromise,
+		checkoutEnabledPromise
+	])
+
+	return data(
+		{
+			...loaderData,
+			checkoutOptions,
+			checkoutEnabled
+		},
+		{ headers }
+	)
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
-export default function BillingUpgradePage() {
-	const {
-		checkoutOptions,
-		billing,
-		checkoutEnabled: serverCheckoutEnabled
-	} = useLoaderData<typeof loader>()
+function BillingUpgradeContent({
+	checkoutOptions,
+	billing,
+	serverCheckoutEnabled
+}: {
+	checkoutOptions: BillingCheckoutOptions
+	billing: NonNullable<
+		Awaited<ReturnType<typeof loadBillingDashboardData>>['loaderData']
+	>['billing']
+	serverCheckoutEnabled: boolean
+}) {
 	const [searchParams] = useSearchParams()
 	const checkoutFetcher = useFetcher()
 	const posthog = usePostHog()
@@ -443,5 +477,18 @@ export default function BillingUpgradePage() {
 				</DialogContent>
 			</Dialog>
 		</>
+	)
+}
+
+export default function BillingUpgradePage() {
+	const { checkoutOptions, billing, checkoutEnabled } =
+		useLoaderData<typeof loader>()
+
+	return (
+		<BillingUpgradeContent
+			checkoutOptions={checkoutOptions}
+			billing={billing}
+			serverCheckoutEnabled={checkoutEnabled}
+		/>
 	)
 }

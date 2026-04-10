@@ -10,12 +10,12 @@ import { Separator } from '@shared/components/ui/separator'
 import { formatFileSize } from '@shared/utils'
 import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { motion } from 'framer-motion'
-import { useAtomValue } from 'jotai'
+import { useAtomValue } from 'jotai/react'
 import { Code, Globe, Save } from 'lucide-react'
 
 import { SaveAvailabilityState, SaveSceneFn } from '../../../../hooks'
 import { usePublisherSaveAction } from '../../../../hooks/use-publisher-save-action'
-import { processAtom } from '../../../../lib/stores/publisher-config-store'
+import { isSavingAtom } from '../../../../lib/stores/publisher-config-store'
 import { AccordionItem, AccordionTrigger } from '../accordion-components'
 import { sidebarContentVariants } from '../animation'
 import {
@@ -89,7 +89,7 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 	onRequireAuth,
 	saveSceneSettings
 }) => {
-	const { isSaving } = useAtomValue(processAtom)
+	const isSaving = useAtomValue(isSavingAtom)
 	const { handleSaveScene } = usePublisherSaveAction({
 		sceneId: sceneId ?? null,
 		userId,
@@ -271,19 +271,19 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 								</AccordionContent>
 							</AccordionItem>
 
-						{publishedAt && (
-							<AccordionItem value="embed" className="px-4">
-								<AccordionTrigger className="px-2">
-									<span className="flex items-center gap-3">
-										<Code className="inline" size={14} />
-										Embed
-									</span>
-								</AccordionTrigger>
-								<AccordionContent>
-									<EmbedOptions sceneId={sceneId} projectId={projectId} />
-								</AccordionContent>
-							</AccordionItem>
-						)}
+							{publishedAt && (
+								<AccordionItem value="embed" className="px-4">
+									<AccordionTrigger className="px-2">
+										<span className="flex items-center gap-3">
+											<Code className="inline" size={14} />
+											Embed
+										</span>
+									</AccordionTrigger>
+									<AccordionContent>
+										<EmbedOptions sceneId={sceneId} projectId={projectId} />
+									</AccordionContent>
+								</AccordionItem>
+							)}
 						</>
 					)}
 				</Accordion>

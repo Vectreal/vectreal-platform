@@ -1,5 +1,6 @@
 import { atom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
+import { selectAtom } from 'jotai/utils'
 import { createStore } from 'jotai/vanilla'
 
 import type { SaveLocationTarget } from '../../hooks/scene-loader.types'
@@ -21,10 +22,7 @@ const sceneMetaInitialState: SceneMetaState = {
 	description: '',
 	thumbnailUrl: ''
 }
-const processAtom = atomWithStorage<ProcessState>(
-	'publisher-process',
-	processInitialState
-)
+const processAtom = atom<ProcessState>(processInitialState)
 const sceneMetaAtom = atomWithStorage<SceneMetaState>(
 	'publisher-scene-meta',
 	sceneMetaInitialState
@@ -49,12 +47,54 @@ const currentLocationAtom = atom<SceneCurrentLocation>({
 	folderName: null
 })
 
+const publisherLoadingStateAtom = selectAtom(
+	processAtom,
+	(state) => ({
+		isDownloading: state.isLoading,
+		isInitializing: state.isInitializing
+	}),
+	(a, b) =>
+		a.isDownloading === b.isDownloading && b.isInitializing === a.isInitializing
+)
+
+const showSidebarAtom = selectAtom(processAtom, (state) => state.showSidebar)
+
+const toolSidebarStateAtom = selectAtom(
+	processAtom,
+	(state) => ({
+		mode: state.mode,
+		showSidebar: state.showSidebar
+	}),
+	(a, b) => a.mode === b.mode && a.showSidebar === b.showSidebar
+)
+
+const controlsOverlayStateAtom = selectAtom(
+	processAtom,
+	(state) => ({
+		step: state.step,
+		showPublishPanel: state.showPublishPanel
+	}),
+	(a, b) => a.step === b.step && a.showPublishPanel === b.showPublishPanel
+)
+
+const isSavingAtom = selectAtom(processAtom, (state) => state.isSaving)
+const hasUnsavedChangesAtom = selectAtom(
+	processAtom,
+	(state) => state.hasUnsavedChanges
+)
+
 export {
 	// atoms
 	processAtom,
 	sceneMetaAtom,
 	saveLocationAtom,
 	currentLocationAtom,
+	publisherLoadingStateAtom,
+	showSidebarAtom,
+	toolSidebarStateAtom,
+	controlsOverlayStateAtom,
+	isSavingAtom,
+	hasUnsavedChangesAtom,
 	processInitialState,
 	sceneMetaInitialState,
 
