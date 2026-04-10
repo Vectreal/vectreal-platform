@@ -16,9 +16,8 @@ import {
 	Loader2,
 	Lock
 } from 'lucide-react'
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
-	Await,
 	data,
 	Link,
 	useFetcher,
@@ -142,11 +141,16 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 				.catch(() => true)
 		: Promise.resolve(true) // default to enabled when PostHog is not configured (e.g. local dev)
 
+	const [checkoutOptions, checkoutEnabled] = await Promise.all([
+		checkoutOptionsPromise,
+		checkoutEnabledPromise
+	])
+
 	return data(
 		{
 			...loaderData,
-			checkoutOptions: checkoutOptionsPromise,
-			checkoutEnabled: checkoutEnabledPromise
+			checkoutOptions,
+			checkoutEnabled
 		},
 		{ headers }
 	)
@@ -476,29 +480,15 @@ function BillingUpgradeContent({
 	)
 }
 
-const BillingUpgradeSkeleton = () => (
-	<div className="relative mx-auto max-h-screen w-full max-w-7xl space-y-6 overflow-auto px-6 py-6 pb-44 md:max-h-[80vh]">
-		<div className="bg-muted h-28 animate-pulse rounded-xl" />
-		<div className="bg-muted h-44 animate-pulse rounded-xl" />
-		<div className="bg-muted h-96 animate-pulse rounded-xl" />
-	</div>
-)
-
 export default function BillingUpgradePage() {
 	const { checkoutOptions, billing, checkoutEnabled } =
 		useLoaderData<typeof loader>()
 
 	return (
-		<Suspense fallback={<BillingUpgradeSkeleton />}>
-			<Await resolve={Promise.all([checkoutOptions, checkoutEnabled])}>
-				{([resolvedCheckoutOptions, resolvedCheckoutEnabled]) => (
-					<BillingUpgradeContent
-						checkoutOptions={resolvedCheckoutOptions}
-						billing={billing}
-						serverCheckoutEnabled={resolvedCheckoutEnabled}
-					/>
-				)}
-			</Await>
-		</Suspense>
+		<BillingUpgradeContent
+			checkoutOptions={checkoutOptions}
+			billing={billing}
+			serverCheckoutEnabled={checkoutEnabled}
+		/>
 	)
 }

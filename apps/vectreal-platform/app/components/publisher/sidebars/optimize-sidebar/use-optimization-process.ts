@@ -107,6 +107,11 @@ const MODEL_SYNC_TIMEOUT_MS = 60_000
 async function requestOptimizationRunQuota(
 	intent: OptimizationRunIntent
 ): Promise<OptimizationQuotaResult> {
+	const fallbackMessage =
+		intent === 'check'
+			? 'Unable to validate optimization quota before starting.'
+			: 'Unable to record optimization run usage.'
+
 	const controller = new AbortController()
 	const timeoutId = setTimeout(
 		() => controller.abort(),
@@ -123,6 +128,18 @@ async function requestOptimizationRunQuota(
 			body: JSON.stringify({ intent }),
 			signal: controller.signal
 		})
+	} catch (error) {
+		if (error instanceof Error && error.name === 'AbortError') {
+			throw new Error(
+				`Quota request timed out after ${QUOTA_CHECK_TIMEOUT_MS}ms.`
+			)
+		}
+
+		throw new Error(
+			error instanceof Error && error.message
+				? `${fallbackMessage} ${error.message}`
+				: fallbackMessage
+		)
 	} finally {
 		clearTimeout(timeoutId)
 	}
@@ -162,18 +179,12 @@ async function requestOptimizationRunQuota(
 		const billingLimitError = createBillingLimitErrorFromResponse(
 			response.status,
 			payload,
-			intent === 'check'
-				? 'Unable to validate optimization quota before starting.'
-				: 'Unable to record optimization run usage.'
+			fallbackMessage
 		)
 		if (billingLimitError) {
 			throw billingLimitError
 		}
 
-		const fallbackMessage =
-			intent === 'check'
-				? 'Unable to validate optimization quota before starting.'
-				: 'Unable to record optimization run usage.'
 		throw new Error(payload?.error || fallbackMessage)
 	}
 
@@ -456,15 +467,15 @@ export const useOptimizationProcess = ({
 			didApplyOptimization = shouldConsumeOptimizationRun
 
 			if (optimizationOptions.length > 0 && shouldConsumeOptimizationRun) {
-				void requestOptimizationRunQuota('consume')
-					.then((consumeResult) => {
-						if (consumeResult.isGuest) {
-							setGuestQuota(toGuestQuotaState(consumeResult))
-						}
-					})
-					.catch((error) => {
-						console.warn('Failed to record optimization run usage:', error)
-					})
+				try {
+					const consumeResult = await requestOptimizationRunQuota('consume')
+
+					if (consumeResult.isGuest) {
+						setGuestQuota(toGuestQuotaState(consumeResult))
+					}
+				} catch (error) {
+					console.warn('Failed to record optimization run usage:', error)
+				}
 			}
 		} catch (error) {
 			console.error('Error during optimization:', error)

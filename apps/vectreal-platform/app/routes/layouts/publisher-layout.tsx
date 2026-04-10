@@ -2,7 +2,7 @@ import { SidebarProvider } from '@shared/components/ui/sidebar'
 import { ModelProvider } from '@vctrl/hooks/use-load-model'
 import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
 import { Provider, useAtomValue, useSetAtom } from 'jotai/react'
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
+import { useCallback, useLayoutEffect } from 'react'
 import { data, Outlet, type MetaFunction } from 'react-router'
 
 import { Route } from './+types/publisher-layout'
@@ -38,10 +38,6 @@ import type {
 } from '../../types/api'
 import type { User } from '@supabase/supabase-js'
 import type { ShouldRevalidateFunction } from 'react-router'
-
-type PublisherLayoutLoaderData = PublisherLoaderData & {
-	publishedMetaPromise?: Promise<null | PublishedSceneMetaResponse> | null
-}
 
 export const meta: MetaFunction = () =>
 	buildMeta(
@@ -89,8 +85,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	let currentFolderName: string | null = null
 
 	let sceneAggregate: SceneAggregateResponse | null = null
-	let publishedMetaPromise: Promise<null | PublishedSceneMetaResponse> | null =
-		null
+	let publishedMeta: PublishedSceneMetaResponse | null = null
 
 	if (sceneId && user?.id) {
 		const scene = await getScene(sceneId, user.id)
@@ -101,21 +96,19 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		projectId = scene.projectId
 		currentFolderId = scene.folderId
 
-		publishedMetaPromise = getPublishedScenePreview(scene.projectId, sceneId).catch(
-			() => null
-		)
-
-		const [project, folder, aggregate] = await Promise.all([
+		const [project, folder, aggregate, scenePublishedMeta] = await Promise.all([
 			getProject(scene.projectId, user.id),
 			scene.folderId
 				? getSceneFolder(scene.folderId, user.id)
 				: Promise.resolve(null),
-			buildSceneAggregate(sceneId)
+			buildSceneAggregate(sceneId),
+			getPublishedScenePreview(scene.projectId, sceneId).catch(() => null)
 		])
 
 		currentProjectName = project?.name ?? null
 		currentFolderName = folder?.name ?? null
 		sceneAggregate = aggregate
+		publishedMeta = scenePublishedMeta
 	} else if (!sceneId && user?.id) {
 		// New scene — read project/folder context from URL search params
 		const url = new URL(request.url)
@@ -154,11 +147,10 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 			folderName: currentFolderName
 		},
 		sceneAggregate,
-		publishedMeta: null,
-		publishedMetaPromise
+		publishedMeta
 	}
 
-	return data(loaderData as PublisherLayoutLoaderData, { headers })
+	return data(loaderData as PublisherLoaderData, { headers })
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({
@@ -180,7 +172,7 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 const PublisherLayoutContent = ({
 	loaderData
 }: {
-	loaderData: PublisherLayoutLoaderData
+	loaderData: PublisherLoaderData
 }) => {
 	const showSidebar = useAtomValue(showSidebarAtom)
 	const setProcessState = useSetAtom(processAtom)
@@ -207,38 +199,11 @@ const PublisherLayoutContent = ({
 		[setProcessState]
 	)
 
-	// Resolve publishedMetaPromise via state instead of Suspense/Await.
-	// Using Suspense/Await would remount ControlsOverlay (and all sidebars)
-	// when the promise resolves, retriggering animations.
-	const { publishedMetaPromise, ...overlayBaseData } = loaderData
-	const [resolvedPublishedMeta, setResolvedPublishedMeta] =
-		useState<PublishedSceneMetaResponse | null>(null)
-
-	useEffect(() => {
-		const promise = publishedMetaPromise
-		if (!promise) return
-
-		let cancelled = false
-		promise
-			.then((result) => {
-				if (!cancelled) setResolvedPublishedMeta(result)
-			})
-			.catch(() => {
-				// Already defaults to null
-			})
-		return () => {
-			cancelled = true
-		}
-	}, [publishedMetaPromise])
-
 	return (
 		<SidebarProvider open={showSidebar} onOpenChange={handleOpenChange}>
 			<main className="flex h-screen w-full flex-col overflow-hidden">
 				<UpgradeModal />
-				<ControlsOverlay
-					{...overlayBaseData}
-					publishedMeta={resolvedPublishedMeta}
-				/>
+				<ControlsOverlay {...loaderData} />
 				<Outlet />
 			</main>
 		</SidebarProvider>
@@ -247,7 +212,7 @@ const PublisherLayoutContent = ({
 
 const Layout = ({ loaderData }: Route.ComponentProps) => {
 	const optimizer = useOptimizeModel()
-	const resolvedLoaderData = loaderData as PublisherLayoutLoaderData
+	const resolvedLoaderData = loaderData as PublisherLoaderData
 
 	return (
 		<ModelProvider optimizer={optimizer}>
