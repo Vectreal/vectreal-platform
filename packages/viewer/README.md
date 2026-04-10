@@ -135,16 +135,15 @@ Configures the [@react-three/drei `Stage`](https://github.com/pmndrs/drei#stage)
 
 `envOptions` supports a typed preset system from `@vctrl/core`:
 
-| Option                  | Type                         | Description                                                   |
-| ----------------------- | ---------------------------- | ------------------------------------------------------------- |
-| `preset`                | `EnvironmentKey`             | Preset key such as `studio-key`, `outdoor-noon`, `night-city` |
-| `environmentResolution` | `'1k' \| '4k'`               | Resolution variant for environment assets                     |
-| `background`            | `boolean`                    | Render environment as scene background                        |
-| `backgroundBlurriness`  | `number`                     | Blur strength when background is enabled                      |
-| `backgroundIntensity`   | `number`                     | Background intensity multiplier                               |
-| `environmentIntensity`  | `number`                     | Lighting intensity multiplier                                 |
-| `ground`                | `EnvironmentProps['ground']` | Ground-projected environment options                          |
-| `files`                 | `string \| string[]`         | Custom environment files                                      |
+| Option                  | Type                 | Description                                                   |
+| ----------------------- | -------------------- | ------------------------------------------------------------- |
+| `preset`                | `EnvironmentKey`     | Preset key such as `studio-key`, `outdoor-noon`, `night-city` |
+| `environmentResolution` | `'1k' \| '4k'`       | Resolution variant for environment assets                     |
+| `background`            | `boolean`            | Render environment as scene background                        |
+| `backgroundBlurriness`  | `number`             | Blur strength when background is enabled                      |
+| `backgroundIntensity`   | `number`             | Background intensity multiplier                               |
+| `environmentIntensity`  | `number`             | Lighting intensity multiplier                                 |
+| `files`                 | `string \| string[]` | Custom environment files                                      |
 
 ```tsx
 <VectrealViewer
