@@ -8,16 +8,15 @@ import {
 import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { Separator } from '@shared/components/ui/separator'
 import { formatFileSize } from '@shared/utils'
-import { OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import { motion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
 import { Code, Globe, Save } from 'lucide-react'
 
-import { SaveAvailabilityState, SaveSceneFn } from '../../../../hooks'
 import { usePublisherSaveAction } from '../../../../hooks/use-publisher-save-action'
 import { isSavingAtom } from '../../../../lib/stores/publisher-config-store'
 import { AccordionItem, AccordionTrigger } from '../accordion-components'
 import { sidebarContentVariants } from '../animation'
+import { usePublishSidebarContext } from './publish-sidebar-context'
 import {
 	buildSceneMetrics,
 	formatMetricBytes,
@@ -28,33 +27,12 @@ import { PublishOptions } from './sections/publish-options'
 import { SaveOptions } from './sections/save-options'
 import { ScenePreview } from './sections/scene-preview'
 
-import type {
-	ScenePublishStateResponse,
-	SceneStatsData
-} from '../../../../types/api'
-import type { OptimizationReport } from '@vctrl/core'
+import type { ScenePublishStateResponse } from '../../../../types/api'
 import type { FC } from 'react'
 
 interface PublishSidebarContentProps {
-	sceneId?: string
-	projectId?: string
-	userId?: string
 	hideHeader?: boolean
 	showSceneInfo?: boolean
-	info?: OptimizationInfo
-	report?: OptimizationReport | null
-	publishedAt?: string | null
-	publishedAssetSizeBytes?: number | null
-	sizeInfo?: {
-		initialSceneBytes?: number | null
-		currentSceneBytes?: number | null
-		initialTextureBytes?: number | null
-		currentTextureBytes?: number | null
-	}
-	stats?: SceneStatsData | null
-	saveAvailability?: SaveAvailabilityState
-	onRequireAuth?: () => Promise<void> | void
-	saveSceneSettings: SaveSceneFn
 }
 
 const formatPublishedAt = (value?: string | null) => {
@@ -74,21 +52,23 @@ const metricValue = (value?: number | null) =>
 	typeof value === 'number' ? value.toLocaleString() : '—'
 
 const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
-	sceneId,
-	projectId,
-	userId,
 	hideHeader = false,
-	showSceneInfo = false,
-	info,
-	report,
-	publishedAt,
-	publishedAssetSizeBytes,
-	sizeInfo,
-	stats,
-	saveAvailability,
-	onRequireAuth,
-	saveSceneSettings
+	showSceneInfo = false
 }) => {
+	const {
+		sceneId,
+		projectId,
+		userId,
+		info,
+		report,
+		publishedAt,
+		publishedAssetSizeBytes,
+		sizeInfo,
+		stats,
+		saveAvailability,
+		onRequireAuth,
+		saveSceneSettings
+	} = usePublishSidebarContext()
 	const isSaving = useAtomValue(isSavingAtom)
 	const { handleSaveScene } = usePublisherSaveAction({
 		sceneId: sceneId ?? null,

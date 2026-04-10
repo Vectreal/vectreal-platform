@@ -31,7 +31,7 @@ export const OptimizeButton: FC<OptimizeButtonProps> = ({
 	const button = (
 		<span className="m-2 flex grow">
 			<Button
-				variant="secondary"
+				variant="default"
 				className="grow rounded-lg"
 				onClick={onOptimize}
 				disabled={isPending || disabled}
@@ -41,7 +41,7 @@ export const OptimizeButton: FC<OptimizeButtonProps> = ({
 						<motion.div
 							key="optimize-button-loading"
 							layout-id="optimize-button"
-							className="bg-muted flex items-center justify-center gap-2 rounded-md p-4 text-center"
+							className="flex items-center justify-center gap-2 text-center"
 							initial={{ opacity: 0, y: -10 }}
 							animate={{ opacity: 1, y: 0 }}
 							exit={{ opacity: 0, y: 10 }}

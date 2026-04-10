@@ -86,6 +86,13 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	enableViewportRendering?: boolean
 
 	/**
+	 * Whether to enable postprocessing effects.
+	 * Disabling this can significantly reduce GPU usage.
+	 * Default: true
+	 */
+	enablePostProcessing?: boolean
+
+	/**
 	 * Options for the scene bounds.
 	 */
 	boundsOptions?: BoundsProps
@@ -179,6 +186,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		onScreenshot,
 		onScreenshotCaptureReady,
 		enableViewportRendering = true,
+		enablePostProcessing = true,
 		loader = <DefaultSpinner />
 	} = props
 
@@ -231,7 +239,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 							<SceneShadows {...shadowsOptions} />
 							<SceneEnvironment {...envOptions} />
 							{/* <Perf /> */}
-							<ScenePostProcessing />
+							{enablePostProcessing ? <ScenePostProcessing /> : null}
 							<SceneControls {...controlsOptions} />
 							{/* <SceneToneMapping
 								mapping={toneMappingOptions?.mapping}

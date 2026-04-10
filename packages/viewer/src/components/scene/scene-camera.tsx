@@ -36,6 +36,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		cameras?.find((cam) => cam.initial) || defaultCameraOptions.cameras?.at(0)
 
 	const { camera: sceneCamera } = useThree()
+	const invalidate = useThree((state) => state.invalidate)
 	const controls = useThree((state) => state.controls) as
 		| {
 				target?: Vector3
@@ -173,7 +174,10 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			hasInitialFramingCompleted.current = true
 			isWaitingForStableFrame.current = false
 			onInitialFramingComplete?.()
+			return
 		}
+
+		invalidate()
 	})
 
 	return null

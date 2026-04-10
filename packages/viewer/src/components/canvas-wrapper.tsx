@@ -119,6 +119,8 @@ const Canvas = ({
 			{shouldRenderCanvas && (
 				<ThreeCanvas
 					{...props}
+					dpr={props.dpr ?? [1, 1.5]}
+					frameloop={props.frameloop ?? 'demand'}
 					className={cn(
 						'h-full w-full opacity-0 transition-opacity ease-out',
 						canvasVisible && shouldShowCanvasContent && 'opacity-100'
