@@ -1,4 +1,3 @@
-
 import type { SceneAggregateResponse } from '../../../../types/api'
 import type { SceneMetaState } from '../../../../types/publisher-config'
 import type { SceneSettings, ServerSceneData } from '@vctrl/core'

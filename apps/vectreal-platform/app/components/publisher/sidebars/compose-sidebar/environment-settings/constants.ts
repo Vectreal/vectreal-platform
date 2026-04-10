@@ -5,7 +5,7 @@ import {
 } from '../../../../../lib/utils/value-mapping'
 
 /**
- * Environment and ground field configurations
+ * Environment field configurations
  * Based on defaults from @vctrl/viewer package
  *
  * Following React best practices:
@@ -62,52 +62,6 @@ export const ENVIRONMENT_FIELDS: FieldConfig[] = [
 		valueMapping: valueMappings.quadratic
 	}
 ]
-
-/**
- * Ground field configurations
- */
-export const GROUND_FIELDS: FieldConfig[] = [
-	{
-		key: 'radius',
-		label: 'Ground Radius',
-		min: 10,
-		max: 500,
-		step: 5,
-		tooltip: 'Controls the size of the ground plane in the scene.',
-		formatValue: (value) => value.toFixed(0),
-		valueMapping: valueMappings.log
-	},
-	{
-		key: 'scale',
-		label: 'Environment Scale',
-		min: 1,
-		max: 100,
-		step: 1,
-		tooltip: "Controls the scale of the ground plane's environment sphere.",
-		formatValue: (value) => value.toFixed(0),
-		valueMapping: valueMappings.log
-	},
-	{
-		key: 'height',
-		label: 'Ground Height',
-		min: 0.1,
-		max: 20,
-		step: 0.1,
-		tooltip:
-			'Controls the height of the ground plane in the environment sphere.',
-		formatValue: (value) => value.toFixed(1),
-		valueMapping: valueMappings.quadratic
-	}
-]
-
-/**
- * Default ground values
- */
-export const DEFAULT_GROUND_VALUES = {
-	radius: 125,
-	scale: 25,
-	height: 5
-}
 
 /**
  * Default values from viewer package

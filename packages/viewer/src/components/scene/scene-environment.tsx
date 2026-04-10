@@ -22,7 +22,16 @@ const buildEnvUrl = ({ id, type, resolution }: EnvironmentMap) => {
  * SceneEnvironment component that sets up the environment for a scene.
  */
 const SceneEnvironment = memo((props: EnvironmentProps) => {
-	const { preset, environmentResolution, ...rest } = {
+	const {
+		preset,
+		environmentResolution,
+		background,
+		backgroundBlurriness,
+		backgroundIntensity,
+		environmentIntensity,
+		scene,
+		files
+	} = {
 		...defaultEnvOptions,
 		...props
 	}
@@ -33,7 +42,16 @@ const SceneEnvironment = memo((props: EnvironmentProps) => {
 		resolution: environmentResolution ?? '1k'
 	})
 
-	return <Environment files={url} {...rest} />
+	return (
+		<Environment
+			files={files ?? url}
+			background={background}
+			backgroundBlurriness={backgroundBlurriness}
+			backgroundIntensity={backgroundIntensity}
+			environmentIntensity={environmentIntensity}
+			scene={scene}
+		/>
+	)
 })
 
 export default SceneEnvironment

@@ -144,7 +144,6 @@ type InheritedEnvProps = Pick<
 	| 'background'
 	| 'backgroundBlurriness'
 	| 'environmentIntensity'
-	| 'ground'
 	| 'scene'
 	| 'files'
 	| 'backgroundIntensity'
