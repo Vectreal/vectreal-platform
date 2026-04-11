@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.1](https://github.com/Vectreal/vectreal-platform/compare/core-v0.16.0...core-v0.16.1) (2026-04-11)
+
+
+### Miscellaneous Chores
+
+* **core:** Synchronize vectreal-monorepo versions
+
 ## [0.16.0](https://github.com/Vectreal/vectreal-platform/compare/core-v0.15.0...core-v0.16.0) (2026-04-11)
 
 

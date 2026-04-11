@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.1](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.16.0...workspace-v0.16.1) (2026-04-11)
+
+
+### Bug Fixes
+
+* correct output reference for root release creation in CI workflow ([#390](https://github.com/Vectreal/vectreal-platform/issues/390)) ([22b9179](https://github.com/Vectreal/vectreal-platform/commit/22b91796a710b744affbf1aa9f0ab8138652a2eb))
+
 ## [0.16.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.15.0...workspace-v0.16.0) (2026-04-11)
 
 
