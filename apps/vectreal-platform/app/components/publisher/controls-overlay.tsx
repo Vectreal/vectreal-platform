@@ -1,9 +1,9 @@
 import { ButtonGroup } from '@shared/components/ui/button-group'
 import { Separator } from '@shared/components/ui/separator'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtomValue, useSetAtom } from 'jotai/react'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import posthog from 'posthog-js'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useNavigate, useSubmit } from 'react-router'
 import { toast } from 'sonner'
 
@@ -22,12 +22,16 @@ import {
 	processAtom,
 	saveLocationAtom
 } from '../../lib/stores/publisher-config-store'
-import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
+import {
+	optimizationModalAtom,
+	optimizationRuntimeAtom
+} from '../../lib/stores/scene-optimization-store'
 import { PublisherLoaderData, SceneAggregateResponse } from '../../types/api'
 import { InfoTooltip } from '../info-tooltip'
 import { FloatingPillWrapper } from '../layout-components'
 import { Navigation } from '../navigation'
 import { UserMenu } from '../user-menu'
+import OptimizationModal from './optimization-modal'
 import PublishSidebarContent from './sidebars/publish-sidebar/publish-sidebar-content'
 import { PublishSidebarProvider } from './sidebars/publish-sidebar/publish-sidebar-context'
 
@@ -44,6 +48,7 @@ const OverlayControls = ({
 	const { file, isFileLoading, optimizer } = useModelContext(true)
 	const { step, showPublishPanel } = useAtomValue(controlsOverlayStateAtom)
 	const setProcessState = useSetAtom(processAtom)
+	const [optimizationModal, setOptimizationModal] = useAtom(optimizationModalAtom)
 	const {
 		latestSceneStats,
 		isSceneSizeLoading,
@@ -79,6 +84,23 @@ const OverlayControls = ({
 					reason: 'ready' as const
 				}
 			: saveAvailability
+	const isInitialOptimizationRequired =
+		effectiveSaveAvailability.reason === 'requires-first-optimization'
+
+	useEffect(() => {
+		if (!isInitialOptimizationRequired || optimizationModal.isOpen) {
+			return
+		}
+
+		setOptimizationModal({
+			isOpen: true,
+			source: 'initial'
+		})
+	}, [
+		isInitialOptimizationRequired,
+		optimizationModal.isOpen,
+		setOptimizationModal
+	])
 
 	const isUploadStep = !file?.model && step === 'uploading'
 	const isPublished = Boolean(publishedMeta?.publishedAt)
@@ -137,7 +159,10 @@ const OverlayControls = ({
 				initialTextureBytes: clientTextureBytes,
 				currentTextureBytes: optimizedTextureBytes
 			},
-			stats: latestSceneStats
+			stats: latestSceneStats,
+			onOpenOptimizationModal: () =>
+				setOptimizationModal({ isOpen: true, source: 'reoptimize' }),
+			canReoptimize: Boolean(sceneId)
 		}),
 		[
 			sceneId,
@@ -154,9 +179,32 @@ const OverlayControls = ({
 			latestSceneStats,
 			optimizedSceneBytes,
 			clientTextureBytes,
-			optimizedTextureBytes
+			optimizedTextureBytes,
+			setOptimizationModal
 		]
 	)
+
+	const handleOptimizationModalChange = useCallback(
+		(open: boolean) => {
+			if (!open && isInitialOptimizationRequired) {
+				return
+			}
+
+			setOptimizationModal((prev) => ({
+				...prev,
+				isOpen: open,
+				source: open ? prev.source : null
+			}))
+		},
+		[isInitialOptimizationRequired, setOptimizationModal]
+	)
+
+	const handleOpenOptimizationModal = useCallback(() => {
+		setOptimizationModal((prev) => ({
+			isOpen: true,
+			source: prev.source ?? 'reoptimize'
+		}))
+	}, [setOptimizationModal])
 
 	const handleOpenPublishPanel = useCallback(() => {
 		setProcessState((prev) => {
@@ -248,11 +296,18 @@ const OverlayControls = ({
 					<PublishSidebarContent hideHeader showSceneInfo />
 				</PublishSidebarProvider>
 			</DynamicSidebar>
+			<OptimizationModal
+				open={optimizationModal.isOpen}
+				onOpenChange={handleOptimizationModalChange}
+				userId={user?.id}
+				isInitialRequired={isInitialOptimizationRequired}
+			/>
 			<ToolSidebar user={user} isMobile={isMobile} />
 			<InfoBanner
 				sceneBytes={currentSceneBytes}
 				isLoading={isSceneSizeLoading}
 				statusText={optimizerStatusText}
+				onOpenOptimization={handleOpenOptimizationModal}
 			/>
 		</>
 	)

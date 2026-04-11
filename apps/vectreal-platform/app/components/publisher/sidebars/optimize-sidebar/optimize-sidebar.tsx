@@ -15,10 +15,14 @@ import { isSavingAtom } from '../../../../lib/stores/publisher-config-store'
 
 interface OptimizeSidebarContentProps {
 	userId?: string
+	fixedButton?: boolean
+	onOptimizationComplete?: () => void
 }
 
 const OptimizeSidebarContent: FC<OptimizeSidebarContentProps> = ({
-	userId
+	userId,
+	fixedButton = true,
+	onOptimizationComplete
 }) => {
 	const isAuthenticated = Boolean(userId)
 	const {
@@ -38,6 +42,13 @@ const OptimizeSidebarContent: FC<OptimizeSidebarContentProps> = ({
 		() => calculateOptimizationStats(info, sizeInfo),
 		[info, sizeInfo]
 	)
+
+	const handleOptimize = async () => {
+		const didApply = await handleOptimizeClick()
+		if (didApply) {
+			onOptimizationComplete?.()
+		}
+	}
 
 	const quotaPercent = useMemo(() => {
 		if (!guestQuota || guestQuota.limit <= 0) {
@@ -79,14 +90,17 @@ const OptimizeSidebarContent: FC<OptimizeSidebarContentProps> = ({
 				<AdvancedOptimizationAccordionItem />
 			</Accordion>
 			<OptimizeButton
-				onOptimize={handleOptimizeClick}
+				onOptimize={handleOptimize}
 				disabled={isSaving || isOptimizerPreparing}
 				isPreparing={isOptimizerPreparing}
 				isPending={isPending}
 				hasOptimized={hasImproved}
+				fixedBottom={fixedButton}
 			/>
 		</>
 	)
 }
+
+export { OptimizeSidebarContent }
 
 export default OptimizeSidebarContent
