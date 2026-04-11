@@ -11,8 +11,8 @@ export const defaultControlsOptions = {
 	zoomSpeed: 0.4,
 	panSpeed: 0.5,
 	rotateSpeed: 0.5,
-	enableDamping: true,
-	dampingFactor: 0.2,
+	enableDamping: false,
+	dampingFactor: 0.12,
 	makeDefault: true
 } satisfies ControlsProps
 

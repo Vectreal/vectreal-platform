@@ -320,7 +320,7 @@ export const useOptimizationProcess = ({
 
 	// Handle optimization process
 	const handleOptimizeClick = useCallback(async () => {
-		if (isPending || isPreparing || !isReady) return
+		if (isPending || isPreparing || !isReady) return false
 
 		let didApplyOptimization = false
 
@@ -488,7 +488,7 @@ export const useOptimizationProcess = ({
 					})
 				)
 				toast.error(error.message)
-				return
+				return false
 			}
 
 			toast.error(
@@ -498,6 +498,7 @@ export const useOptimizationProcess = ({
 						? error.message
 						: 'Optimization failed. Please retry.'
 			)
+			return false
 		} finally {
 			setOptimizationRuntime((prev) => ({
 				...prev,
@@ -508,6 +509,8 @@ export const useOptimizationProcess = ({
 		if (didApplyOptimization) {
 			void refreshOptimizedSizeInfo()
 		}
+
+		return didApplyOptimization
 	}, [
 		isPending,
 		isPreparing,

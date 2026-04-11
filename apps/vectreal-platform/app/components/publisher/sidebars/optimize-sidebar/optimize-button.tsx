@@ -11,11 +11,12 @@ import { SparklesIcon } from 'lucide-react'
 import type { FC } from 'react'
 
 interface OptimizeButtonProps {
-	onOptimize: () => Promise<void>
+	onOptimize: () => Promise<boolean | void>
 	isPending: boolean
 	hasOptimized: boolean
 	isPreparing?: boolean
 	disabled?: boolean
+	fixedBottom?: boolean
 }
 
 const OPTIMIZER_PREPARING_TOOLTIP =
@@ -26,10 +27,11 @@ export const OptimizeButton: FC<OptimizeButtonProps> = ({
 	isPending,
 	isPreparing = false,
 	disabled,
+	fixedBottom = true,
 	onOptimize
 }) => {
 	const button = (
-		<span className="m-2 flex grow">
+		<span className={fixedBottom ? 'm-2 flex grow' : 'flex grow'}>
 			<Button
 				variant="default"
 				className="grow rounded-lg"
@@ -71,9 +73,15 @@ export const OptimizeButton: FC<OptimizeButtonProps> = ({
 
 	return (
 		<>
-			<div className="h-9" />
+			{fixedBottom && <div className="h-9" />}
 
-			<div className="bg-muted/50 fixed bottom-0 left-0 z-10 flex w-full shadow-2xl backdrop-blur-xl">
+			<div
+				className={
+					fixedBottom
+						? 'bg-muted/50 fixed bottom-0 left-0 z-10 flex w-full shadow-2xl backdrop-blur-xl'
+						: 'flex w-full'
+				}
+			>
 				{isPreparing ? (
 					<Tooltip>
 						<TooltipTrigger asChild>{button}</TooltipTrigger>

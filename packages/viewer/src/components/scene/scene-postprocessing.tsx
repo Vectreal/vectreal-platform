@@ -1,13 +1,12 @@
-import { EffectComposer, SMAA, ToneMapping } from '@react-three/postprocessing'
+import { EffectComposer, ToneMapping } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 
 const ScenePostProcessing = () => {
 	return (
-		<EffectComposer enableNormalPass={true} multisampling={0}>
-			<SMAA />
+		<EffectComposer enableNormalPass={false} multisampling={4}>
 			<ToneMapping
 				blendFunction={BlendFunction.AVERAGE} // blend mode
-				adaptive={false} // toggle adaptive luminance map usage
+				adaptive={true} // toggle adaptive luminance map usage
 				resolution={256} // texture resolution of the luminance map
 				middleGrey={0.5} // middle grey factor
 				maxLuminance={20.0} // maximum luminance

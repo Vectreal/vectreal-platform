@@ -32,6 +32,8 @@ interface SceneCameraProps extends CameraProps {
 export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const { onInitialFramingComplete } = props
 	const { cameras } = { ...defaultCameraOptions, ...props }
+	const MAX_STABILIZATION_FRAMES = 24
+	const MAX_STABILIZATION_DURATION_MS = 500
 	const initialCamera =
 		cameras?.find((cam) => cam.initial) || defaultCameraOptions.cameras?.at(0)
 
@@ -51,6 +53,8 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const previousCameraPosition = useRef<Vector3 | null>(null)
 	const previousCameraQuaternion = useRef<Quaternion | null>(null)
 	const previousControlsTarget = useRef<Vector3 | null>(null)
+	const stabilizationFrameCount = useRef(0)
+	const stabilizationStartedAt = useRef<number | null>(null)
 
 	const initializeCamera = useCallback(
 		(sceneCamera: PerspectiveCamera) => {
@@ -93,6 +97,9 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			if (!hasInitialFramingCompleted.current) {
 				isWaitingForStableFrame.current = true
 				stableFrameCount.current = 0
+				stabilizationFrameCount.current = 0
+				stabilizationStartedAt.current =
+					typeof performance !== 'undefined' ? performance.now() : Date.now()
 				previousCameraPosition.current = null
 				previousCameraQuaternion.current = null
 				previousControlsTarget.current = null
@@ -125,6 +132,22 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		const cameraPosition = (sceneCamera as PerspectiveCamera).position
 		const cameraQuaternion = (sceneCamera as PerspectiveCamera).quaternion
 		const controlsTarget = controls?.target
+		stabilizationFrameCount.current += 1
+
+		const now =
+			typeof performance !== 'undefined' ? performance.now() : Date.now()
+		const startedAt = stabilizationStartedAt.current ?? now
+		const stabilizationTimedOut =
+			now - startedAt >= MAX_STABILIZATION_DURATION_MS
+		const stabilizationFrameLimitReached =
+			stabilizationFrameCount.current >= MAX_STABILIZATION_FRAMES
+
+		if (stabilizationTimedOut || stabilizationFrameLimitReached) {
+			hasInitialFramingCompleted.current = true
+			isWaitingForStableFrame.current = false
+			onInitialFramingComplete?.()
+			return
+		}
 
 		if (
 			!previousCameraPosition.current ||

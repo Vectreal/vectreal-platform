@@ -13,12 +13,12 @@ interface BuildSceneMetricsParams {
 }
 
 export interface SceneMetrics {
-	vertexInitial: number
-	vertexOptimized: number
-	triangleInitial: number
-	triangleOptimized: number
-	meshInitial: number
-	meshOptimized: number
+	vertexInitial: number | null
+	vertexOptimized: number | null
+	triangleInitial: number | null
+	triangleOptimized: number | null
+	meshInitial: number | null
+	meshOptimized: number | null
 	textureSizeInitial: number | null
 	textureSizeOptimized: number | null
 	textureCountInitial: number | null
@@ -35,6 +35,47 @@ export function buildSceneMetrics({
 	sizeInfo,
 	stats
 }: BuildSceneMetricsParams): SceneMetrics {
+	const resolveCountMetric = ({
+		persisted,
+		reportValue,
+		infoValue,
+		relatedPersisted
+	}: {
+		persisted?: number | null
+		reportValue?: number
+		infoValue?: number
+		relatedPersisted?: number | null
+	}): number | null => {
+		const reportCandidate =
+			typeof reportValue === 'number' && reportValue >= 0 ? reportValue : null
+		const infoCandidate =
+			typeof infoValue === 'number' && infoValue >= 0 ? infoValue : null
+
+		if (typeof persisted === 'number') {
+			if (persisted > 0) {
+				return persisted
+			}
+
+			if (persisted === 0) {
+				if (reportCandidate !== null && reportCandidate > 0) {
+					return reportCandidate
+				}
+
+				if (infoCandidate !== null && infoCandidate > 0) {
+					return infoCandidate
+				}
+
+				if (typeof relatedPersisted === 'number' && relatedPersisted > 0) {
+					return null
+				}
+
+				return 0
+			}
+		}
+
+		return reportCandidate ?? infoCandidate ?? null
+	}
+
 	const persistedInitialSceneBytes = stats?.initialSceneBytes ?? null
 	const persistedCurrentSceneBytes = stats?.currentSceneBytes ?? null
 
@@ -58,22 +99,57 @@ export function buildSceneMetrics({
 		report?.stats.textureResolutions?.after ?? []
 
 	const sceneBytesInitial =
-		sizeInfo.initialSceneBytes ?? persistedInitialSceneBytes
+		persistedInitialSceneBytes ?? sizeInfo.initialSceneBytes ?? null
 	const sceneBytesCurrent =
-		sizeInfo.currentSceneBytes ??
 		persistedCurrentSceneBytes ??
-		sceneBytesInitial
+		sizeInfo.currentSceneBytes ??
+		sceneBytesInitial ??
+		null
+
+	const vertexInitial = resolveCountMetric({
+		persisted: stats?.baseline?.verticesCount,
+		reportValue: report?.stats.vertices.before,
+		infoValue: info.initial.verticesCount,
+		relatedPersisted: stats?.optimized?.verticesCount
+	})
+	const vertexOptimized = resolveCountMetric({
+		persisted: stats?.optimized?.verticesCount,
+		reportValue: report?.stats.vertices.after,
+		infoValue: info.optimized.verticesCount,
+		relatedPersisted: stats?.baseline?.verticesCount
+	})
+	const triangleInitial = resolveCountMetric({
+		persisted: stats?.baseline?.primitivesCount,
+		reportValue: report?.stats.triangles.before,
+		infoValue: info.initial.primitivesCount,
+		relatedPersisted: stats?.optimized?.primitivesCount
+	})
+	const triangleOptimized = resolveCountMetric({
+		persisted: stats?.optimized?.primitivesCount,
+		reportValue: report?.stats.triangles.after,
+		infoValue: info.optimized.primitivesCount,
+		relatedPersisted: stats?.baseline?.primitivesCount
+	})
+	const meshInitial = resolveCountMetric({
+		persisted: stats?.baseline?.meshesCount,
+		reportValue: report?.stats.meshes.before,
+		infoValue: info.initial.meshesCount,
+		relatedPersisted: stats?.optimized?.meshesCount
+	})
+	const meshOptimized = resolveCountMetric({
+		persisted: stats?.optimized?.meshesCount,
+		reportValue: report?.stats.meshes.after,
+		infoValue: info.optimized.meshesCount,
+		relatedPersisted: stats?.baseline?.meshesCount
+	})
 
 	return {
-		vertexInitial: stats?.baseline?.verticesCount ?? info.initial.verticesCount,
-		vertexOptimized:
-			stats?.optimized?.verticesCount ?? info.optimized.verticesCount,
-		triangleInitial:
-			stats?.baseline?.primitivesCount ?? info.initial.primitivesCount,
-		triangleOptimized:
-			stats?.optimized?.primitivesCount ?? info.optimized.primitivesCount,
-		meshInitial: stats?.baseline?.meshesCount ?? info.initial.meshesCount,
-		meshOptimized: stats?.optimized?.meshesCount ?? info.optimized.meshesCount,
+		vertexInitial,
+		vertexOptimized,
+		triangleInitial,
+		triangleOptimized,
+		meshInitial,
+		meshOptimized,
 		textureSizeInitial,
 		textureSizeOptimized,
 		textureCountInitial,

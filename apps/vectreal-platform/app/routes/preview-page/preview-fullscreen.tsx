@@ -23,6 +23,11 @@ interface PreviewModelProps {
 	sceneData?: SceneLoadResult
 }
 
+const inFlightPreviewSceneSettingsRequests = new Map<
+	string,
+	Promise<SceneLoadResult>
+>()
+
 const PreviewInfoPopover = () => (
 	<InfoPopover>
 		<InfoPopoverTrigger />
@@ -70,6 +75,7 @@ const PreviewFullscreenPage = ({ params }: Route.ComponentProps) => {
 		if (!sceneId || !projectId) return
 
 		setIsLoadingScene(true)
+		const requestKey = `${sceneId}:${projectId}:${searchParams.get('token')?.trim() || ''}`
 
 		const token = searchParams.get('token')?.trim() || undefined
 		const endpointParams = new URLSearchParams({
@@ -82,13 +88,28 @@ const PreviewFullscreenPage = ({ params }: Route.ComponentProps) => {
 		}
 
 		try {
-			const loadedSceneData = await loadFromServer({
-				sceneId,
-				serverOptions: {
-					endpoint: `/api/scenes/${sceneId}?${endpointParams.toString()}`,
-					apiKey: token
-				}
-			})
+			const existingRequest =
+				inFlightPreviewSceneSettingsRequests.get(requestKey)
+			const request =
+				existingRequest ??
+				loadFromServer({
+					sceneId,
+					serverOptions: {
+						endpoint: `/api/scenes/${sceneId}?${endpointParams.toString()}`,
+						apiKey: token
+					}
+				})
+
+			if (!existingRequest) {
+				inFlightPreviewSceneSettingsRequests.set(
+					requestKey,
+					request.finally(() => {
+						inFlightPreviewSceneSettingsRequests.delete(requestKey)
+					})
+				)
+			}
+
+			const loadedSceneData = await request
 
 			setSceneData(loadedSceneData)
 		} catch (error) {

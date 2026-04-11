@@ -19,3 +19,10 @@ export interface SceneOptimizationRuntimeState {
 	lastSavedReportSignature: null | string
 	latestSceneStats: null | SceneStatsData
 }
+
+export type OptimizationModalSource = 'initial' | 'reoptimize' | null
+
+export interface SceneOptimizationModalState {
+	isOpen: boolean
+	source: OptimizationModalSource
+}

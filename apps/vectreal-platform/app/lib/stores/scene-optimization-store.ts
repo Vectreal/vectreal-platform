@@ -4,6 +4,7 @@ import { createStore } from 'jotai/vanilla'
 import { mediumPreset } from '../../constants/optimizations'
 
 import type {
+	SceneOptimizationModalState,
 	OptimizationState,
 	SceneOptimizationRuntimeState
 } from '../../types/scene-optimization'
@@ -24,12 +25,21 @@ const optimizationRuntimeInitialState: SceneOptimizationRuntimeState = {
 	latestSceneStats: null
 }
 
+const optimizationModalInitialState: SceneOptimizationModalState = {
+	isOpen: false,
+	source: null
+}
+
 const optimizationAtom = atomWithReset<OptimizationState>(
 	optimizationInitialState
 )
 
 const optimizationRuntimeAtom = atomWithReset<SceneOptimizationRuntimeState>(
 	optimizationRuntimeInitialState
+)
+
+const optimizationModalAtom = atomWithReset<SceneOptimizationModalState>(
+	optimizationModalInitialState
 )
 
 const sceneOptimizationStore = createStore()
@@ -39,8 +49,11 @@ sceneOptimizationStore.set(
 	optimizationRuntimeAtom,
 	optimizationRuntimeInitialState
 )
+sceneOptimizationStore.set(optimizationModalAtom, optimizationModalInitialState)
 
 export {
+	optimizationModalAtom,
+	optimizationModalInitialState,
 	optimizationAtom,
 	optimizationInitialState,
 	optimizationRuntimeAtom,

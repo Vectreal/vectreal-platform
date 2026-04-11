@@ -1,7 +1,6 @@
 import type { sceneStats, SceneStatsSnapshot } from '../../db/schema'
 import type { OptimizationReport, Optimizations } from '@vctrl/core'
 
-
 /**
  * Helper type for inserting scene statistics.
  * Omits auto-generated fields like id, createdAt, and updatedAt.
@@ -58,8 +57,8 @@ function buildSceneStatsSnapshot(
 			? report.stats.meshes.before
 			: report.stats.meshes.after,
 		texturesCount: isBaseline
-			? report.stats.textures.before
-			: report.stats.textures.after,
+			? report.stats.texturesCount.before
+			: report.stats.texturesCount.after,
 		materialsCount: isBaseline
 			? report.stats.materials.before
 			: report.stats.materials.after,
