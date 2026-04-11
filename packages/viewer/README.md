@@ -44,6 +44,7 @@ function App() {
 | `className`                | `string`                                            | No       | Additional CSS classes for the viewer container                                  |
 | `theme`                    | `'light' \| 'dark' \| 'system'`                     | No       | Viewer theme, default is `system`                                                |
 | `enableViewportRendering`  | `boolean`                                           | No       | Render only while in viewport, default `true`                                    |
+| `enablePostProcessing`     | `boolean`                                           | No       | Toggle postprocessing effects, default `true`                                    |
 | `boundsOptions`            | `BoundsProps`                                       | No       | Scene bounds and framing behavior                                                |
 | `cameraOptions`            | `CameraProps`                                       | No       | Perspective camera configuration                                                 |
 | `controlsOptions`          | `ControlsProps`                                     | No       | OrbitControls configuration                                                      |

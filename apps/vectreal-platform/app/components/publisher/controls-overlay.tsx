@@ -2,16 +2,16 @@ import { ButtonGroup } from '@shared/components/ui/button-group'
 import { Separator } from '@shared/components/ui/separator'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtomValue, useSetAtom } from 'jotai/react'
-import { useCallback } from 'react'
-import { useNavigate } from 'react-router'
+import posthog from 'posthog-js'
+import { useCallback, useMemo } from 'react'
+import { useNavigate, useSubmit } from 'react-router'
 import { toast } from 'sonner'
 
 import {
+	DynamicSidebar,
 	InfoBanner,
-	PublishSidebar,
 	SaveButton,
 	SceneInfoTrigger,
-	ToolSidebarTriggers,
 	ToolSidebar
 } from '.'
 import { useSceneLoader } from '../../hooks'
@@ -27,6 +27,9 @@ import { PublisherLoaderData, SceneAggregateResponse } from '../../types/api'
 import { InfoTooltip } from '../info-tooltip'
 import { FloatingPillWrapper } from '../layout-components'
 import { Navigation } from '../navigation'
+import { UserMenu } from '../user-menu'
+import PublishSidebarContent from './sidebars/publish-sidebar/publish-sidebar-content'
+import { PublishSidebarProvider } from './sidebars/publish-sidebar/publish-sidebar-context'
 
 const OverlayControls = ({
 	isMobile,
@@ -37,6 +40,7 @@ const OverlayControls = ({
 	publishedMeta
 }: PublisherLoaderData) => {
 	const navigate = useNavigate()
+	const submit = useSubmit()
 	const { file, isFileLoading, optimizer } = useModelContext(true)
 	const { step, showPublishPanel } = useAtomValue(controlsOverlayStateAtom)
 	const setProcessState = useSetAtom(processAtom)
@@ -88,6 +92,71 @@ const OverlayControls = ({
 		optimizedSceneBytes ??
 		clientSceneBytes ??
 		latestSceneStats?.currentSceneBytes
+	const publishedAt =
+		typeof publishedMeta?.publishedAt === 'string'
+			? publishedMeta.publishedAt
+			: (publishedMeta?.publishedAt?.toISOString() ?? null)
+
+	const handleRequireAuthForSave = useCallback(async () => {
+		const draftId = await persistPendingSceneDraft()
+		if (!draftId) {
+			toast.error(
+				'We could not preserve your unsaved scene in this browser before sign-in.'
+			)
+			return
+		}
+
+		const nextPathBase = sceneId ? `/publisher/${sceneId}` : '/publisher'
+		const nextPath = `${nextPathBase}?restore_draft=1&draft_id=${encodeURIComponent(draftId)}`
+		const authPath = `/sign-in?next=${encodeURIComponent(nextPath)}&scene_saved=true`
+		navigate(authPath)
+	}, [persistPendingSceneDraft, sceneId, navigate])
+
+	const publishSidebarValue = useMemo(
+		() => ({
+			sceneId: sceneId ?? undefined,
+			projectId: projectId ?? undefined,
+			userId: user?.id,
+			onRequireAuth: handleRequireAuthForSave,
+			saveSceneSettings,
+			saveAvailability: effectiveSaveAvailability,
+			info: optimizer.info,
+			report: optimizer.report,
+			publishedAt,
+			publishedAssetSizeBytes:
+				typeof publishedMeta?.publishedAssetSizeBytes === 'number'
+					? publishedMeta.publishedAssetSizeBytes
+					: null,
+			sizeInfo: {
+				initialSceneBytes:
+					clientSceneBytes ?? latestSceneStats?.initialSceneBytes,
+				currentSceneBytes:
+					optimizedSceneBytes ??
+					clientSceneBytes ??
+					latestSceneStats?.currentSceneBytes,
+				initialTextureBytes: clientTextureBytes,
+				currentTextureBytes: optimizedTextureBytes
+			},
+			stats: latestSceneStats
+		}),
+		[
+			sceneId,
+			projectId,
+			user?.id,
+			handleRequireAuthForSave,
+			saveSceneSettings,
+			effectiveSaveAvailability,
+			optimizer.info,
+			optimizer.report,
+			publishedAt,
+			publishedMeta?.publishedAssetSizeBytes,
+			clientSceneBytes,
+			latestSceneStats,
+			optimizedSceneBytes,
+			clientTextureBytes,
+			optimizedTextureBytes
+		]
+	)
 
 	const handleOpenPublishPanel = useCallback(() => {
 		setProcessState((prev) => {
@@ -102,6 +171,11 @@ const OverlayControls = ({
 			}
 		})
 	}, [setProcessState])
+
+	const handleLogout = useCallback(async () => {
+		posthog?.reset()
+		await submit(null, { method: 'post', action: '/auth/logout' })
+	}, [posthog, submit])
 
 	const handlePublishPanelChange = useCallback(
 		(isOpen: boolean) => {
@@ -124,21 +198,6 @@ const OverlayControls = ({
 		[setProcessState]
 	)
 
-	const handleRequireAuthForSave = useCallback(async () => {
-		const draftId = await persistPendingSceneDraft()
-		if (!draftId) {
-			toast.error(
-				'We could not preserve your unsaved scene in this browser before sign-in.'
-			)
-			return
-		}
-
-		const nextPathBase = sceneId ? `/publisher/${sceneId}` : '/publisher'
-		const nextPath = `${nextPathBase}?restore_draft=1&draft_id=${encodeURIComponent(draftId)}`
-		const authPath = `/sign-in?next=${encodeURIComponent(nextPath)}&scene_saved=true`
-		navigate(authPath)
-	}, [persistPendingSceneDraft, sceneId, navigate])
-
 	return isUploadStep ? (
 		<Navigation user={user} isMobile={isMobile} />
 	) : (
@@ -154,6 +213,7 @@ const OverlayControls = ({
 						saveSceneSettings={saveSceneSettings}
 					/>
 				</ButtonGroup>
+				{user && <UserMenu size="sm" user={user} onLogout={handleLogout} />}
 
 				{isPublished && (
 					<>
@@ -175,47 +235,25 @@ const OverlayControls = ({
 				)}
 			</FloatingPillWrapper>
 			<SceneInfoTrigger onClick={handleOpenPublishPanel} />
+			<DynamicSidebar
+				open={showPublishPanel}
+				onOpenChange={handlePublishPanelChange}
+				isMobile={isMobile}
+				direction="right"
+				title="Scene Info & Publish"
+				description="Save, publish, and embed your latest scene."
+				showDesktopHeader
+			>
+				<PublishSidebarProvider value={publishSidebarValue}>
+					<PublishSidebarContent hideHeader showSceneInfo />
+				</PublishSidebarProvider>
+			</DynamicSidebar>
+			<ToolSidebar user={user} isMobile={isMobile} />
 			<InfoBanner
 				sceneBytes={currentSceneBytes}
 				isLoading={isSceneSizeLoading}
 				statusText={optimizerStatusText}
 			/>
-			<PublishSidebar
-				open={showPublishPanel}
-				onOpenChange={handlePublishPanelChange}
-				isMobile={isMobile}
-				sceneId={sceneId ?? undefined}
-				projectId={projectId ?? undefined}
-				userId={user?.id}
-				saveSceneSettings={saveSceneSettings}
-				saveAvailability={effectiveSaveAvailability}
-				info={optimizer.info}
-				report={optimizer.report}
-				publishedAt={
-					typeof publishedMeta?.publishedAt === 'string'
-						? publishedMeta.publishedAt
-						: (publishedMeta?.publishedAt?.toISOString() ?? null)
-				}
-				publishedAssetSizeBytes={
-					typeof publishedMeta?.publishedAssetSizeBytes === 'number'
-						? publishedMeta.publishedAssetSizeBytes
-						: null
-				}
-				sizeInfo={{
-					initialSceneBytes:
-						clientSceneBytes ?? latestSceneStats?.initialSceneBytes,
-					currentSceneBytes:
-						optimizedSceneBytes ??
-						clientSceneBytes ??
-						latestSceneStats?.currentSceneBytes,
-					initialTextureBytes: clientTextureBytes,
-					currentTextureBytes: optimizedTextureBytes
-				}}
-				stats={latestSceneStats}
-				onRequireAuth={handleRequireAuthForSave}
-			/>
-			<ToolSidebarTriggers isMobile={isMobile} />
-			<ToolSidebar user={user} isMobile={isMobile} />
 		</>
 	)
 }
