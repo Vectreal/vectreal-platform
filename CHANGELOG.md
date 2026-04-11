@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.16.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.15.0...workspace-v0.16.0) (2026-04-11)
+
+
+### Features
+
+* **posthog:** add support for PostHog UI host in environment configuration and deployment scripts ([#379](https://github.com/Vectreal/vectreal-platform/issues/379)) ([83ca6e6](https://github.com/Vectreal/vectreal-platform/commit/83ca6e6fde42b169b1bf9cf5beef46251eda26db))
+* refactor publisher sidebar components and enhance post-processing options ([#387](https://github.com/Vectreal/vectreal-platform/issues/387)) ([d79a062](https://github.com/Vectreal/vectreal-platform/commit/d79a062f7fd83b3cd34ec579415eb3484438f331))
+* refactor publisher sidebar components and enhance post-processing options ([#388](https://github.com/Vectreal/vectreal-platform/issues/388)) ([620e17a](https://github.com/Vectreal/vectreal-platform/commit/620e17a53281721afcbf913c0604471abc317435))
+* remove ground configuration and related components from environ… ([#386](https://github.com/Vectreal/vectreal-platform/issues/386)) ([55f65ad](https://github.com/Vectreal/vectreal-platform/commit/55f65ad9230be108e85fc3c3b717821674f3f16b))
+
+
+### Bug Fixes
+
+* enhance scene bootstrap logic to handle file model presence and ensure initialization completion ([#383](https://github.com/Vectreal/vectreal-platform/issues/383)) ([ff4a7c8](https://github.com/Vectreal/vectreal-platform/commit/ff4a7c8e7933d8c86baa83c278462d29fe359aa5))
+
 ## [0.15.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.14.0...workspace-v0.15.0) (2026-04-08)
 
 

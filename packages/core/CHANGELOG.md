@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/Vectreal/vectreal-platform/compare/core-v0.15.0...core-v0.16.0) (2026-04-11)
+
+
+### Features
+
+* remove ground configuration and related components from environ… ([#386](https://github.com/Vectreal/vectreal-platform/issues/386)) ([55f65ad](https://github.com/Vectreal/vectreal-platform/commit/55f65ad9230be108e85fc3c3b717821674f3f16b))
+
 ## [0.15.0](https://github.com/Vectreal/vectreal-platform/compare/core-v0.14.0...core-v0.15.0) (2026-04-08)
 
 
