@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.16.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.15.0...viewer-v0.16.0) (2026-04-11)
+
+
+### Features
+
+* refactor publisher sidebar components and enhance post-processing options ([#387](https://github.com/Vectreal/vectreal-platform/issues/387)) ([d79a062](https://github.com/Vectreal/vectreal-platform/commit/d79a062f7fd83b3cd34ec579415eb3484438f331))
+* refactor publisher sidebar components and enhance post-processing options ([#388](https://github.com/Vectreal/vectreal-platform/issues/388)) ([620e17a](https://github.com/Vectreal/vectreal-platform/commit/620e17a53281721afcbf913c0604471abc317435))
+* remove ground configuration and related components from environ… ([#386](https://github.com/Vectreal/vectreal-platform/issues/386)) ([55f65ad](https://github.com/Vectreal/vectreal-platform/commit/55f65ad9230be108e85fc3c3b717821674f3f16b))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.16.0
+
 ## [0.15.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.14.0...viewer-v0.15.0) (2026-04-08)
 
 
