@@ -53,8 +53,12 @@ const Canvas = ({
 	loadingState = 'loading',
 	...props
 }: CanvasComponentProps) => {
+	const getInitialPageVisibility = () =>
+		typeof document === 'undefined' ? true : !document.hidden
+
 	const [isReady, setIsReady] = useState(false)
 	const [canvasVisible, setCanvasVisible] = useState(false)
+	const [isPageVisible, setIsPageVisible] = useState(getInitialPageVisibility)
 	const mountedRef = useRef(false)
 	const fadeFrameRef = useRef<number | null>(null)
 	const fadeFrameNestedRef = useRef<number | null>(null)
@@ -76,8 +80,21 @@ const Canvas = ({
 	}, [])
 
 	// Determine rendering and visibility states
-	const shouldRenderCanvas = isReady && isInViewport
+	const shouldRenderCanvas = isReady && isInViewport && isPageVisible
 	const shouldShowCanvasContent = loadingState !== 'loading'
+
+	useEffect(() => {
+		if (typeof document === 'undefined') return
+
+		const handleVisibilityChange = () => {
+			setIsPageVisible(!document.hidden)
+		}
+
+		document.addEventListener('visibilitychange', handleVisibilityChange)
+		return () => {
+			document.removeEventListener('visibilitychange', handleVisibilityChange)
+		}
+	}, [])
 
 	const clearFadeFrames = () => {
 		if (fadeFrameRef.current) {

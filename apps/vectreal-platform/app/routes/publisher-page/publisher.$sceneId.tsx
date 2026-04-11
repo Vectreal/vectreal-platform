@@ -28,13 +28,7 @@ import {
 	sceneMetaAtom
 } from '../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
-import {
-	boundsAtom,
-	cameraAtom,
-	controlsAtom,
-	environmentAtom,
-	shadowsAtom
-} from '../../lib/stores/scene-settings-store'
+import { sceneViewerSettingsAtom } from '../../lib/stores/scene-settings-store'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 import { registerSceneScreenshotCaptureHandler } from '../../lib/viewer/scene-screenshot-bus'
 import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbnail'
@@ -130,11 +124,9 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 	)
 	const setProcess = useSetAtom(processAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
-	const bounds = useAtomValue(boundsAtom)
-	const camera = useAtomValue(cameraAtom)
-	const controls = useAtomValue(controlsAtom)
-	const env = useAtomValue(environmentAtom)
-	const shadows = useAtomValue(shadowsAtom)
+	const { bounds, camera, controls, env, shadows } = useAtomValue(
+		sceneViewerSettingsAtom
+	)
 	const sceneMeta = useAtomValue(sceneMetaAtom)
 	const loadingThumbnail = toViewerLoadingThumbnail(
 		sceneMeta.thumbnailUrl,

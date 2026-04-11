@@ -97,7 +97,7 @@ export function useSceneSizeInitializer() {
 				clientSceneBytes: null,
 				optimizedTextureBytes: null,
 				clientTextureBytes: null,
-				latestSceneStats: null
+				latestSceneStats: prev.latestSceneStats
 			}))
 		}
 

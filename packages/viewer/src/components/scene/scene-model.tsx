@@ -18,6 +18,7 @@ interface ModelProps {
 	 */
 	onScreenshot?: (dataUrl: string) => void
 	onScreenshotCaptureReady?: (capture: null | SceneScreenshotCapture) => void
+	enableShadows?: boolean
 }
 
 type OrbitControlsLike = {
@@ -87,7 +88,12 @@ const buildScreenshotDataUrl = async (
  * SceneModel component that renders a 3D model in a `Stage`.
  */
 const SceneModel = memo((props: ModelProps) => {
-	const { object, onScreenshot, onScreenshotCaptureReady } = props
+	const {
+		object,
+		onScreenshot,
+		onScreenshotCaptureReady,
+		enableShadows = false
+	} = props
 	const bounds = useBounds()
 	const { camera, controls, gl, invalidate, scene } = useThree((state) => ({
 		camera: state.camera,
@@ -172,6 +178,10 @@ const SceneModel = memo((props: ModelProps) => {
 	)
 
 	useEffect(() => {
+		if (!enableShadows) {
+			return
+		}
+
 		// Enable shadow casting for all meshes in the model
 		object.traverse((child) => {
 			if (child instanceof Mesh) {
@@ -179,7 +189,7 @@ const SceneModel = memo((props: ModelProps) => {
 				child.receiveShadow = true
 			}
 		})
-	}, [object])
+	}, [enableShadows, object])
 
 	useEffect(() => {
 		onScreenshotCaptureReady?.(captureScreenshot)

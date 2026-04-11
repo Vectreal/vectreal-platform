@@ -17,11 +17,7 @@ import { isSavingAtom } from '../../../../lib/stores/publisher-config-store'
 import { AccordionItem, AccordionTrigger } from '../accordion-components'
 import { sidebarContentVariants } from '../animation'
 import { usePublishSidebarContext } from './publish-sidebar-context'
-import {
-	buildSceneMetrics,
-	formatMetricBytes,
-	formatMetricCount
-} from './scene-metrics'
+import { buildSceneMetrics, formatMetricBytes } from './scene-metrics'
 import { EmbedOptions } from './sections/embed-options'
 import { PublishOptions } from './sections/publish-options'
 import { SaveOptions } from './sections/save-options'
@@ -206,10 +202,10 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 									</p>
 								</div>
 								<div>
-									<p className="text-muted-foreground">Texture Count</p>
+									<p className="text-muted-foreground">Texture Size</p>
 									<p className="font-medium">
-										{formatMetricCount(metrics.textureCountInitial)} →{' '}
-										{formatMetricCount(metrics.textureCountOptimized)}
+										{formatMetricBytes(metrics.textureSizeInitial)} →{' '}
+										{formatMetricBytes(metrics.textureSizeOptimized)}
 									</p>
 								</div>
 								<div>

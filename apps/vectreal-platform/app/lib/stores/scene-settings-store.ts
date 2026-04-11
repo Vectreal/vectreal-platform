@@ -23,6 +23,13 @@ const cameraAtom = atom<CameraProps>(defaultCameraOptions)
 const controlsAtom = atom<ControlsProps>(defaultControlsOptions)
 const environmentAtom = atom<EnvironmentProps>(defaultEnvOptions)
 const shadowsAtom = atom<ShadowsProps>(defaultShadowOptions)
+const sceneViewerSettingsAtom = atom((get) => ({
+	bounds: get(boundsAtom),
+	camera: get(cameraAtom),
+	controls: get(controlsAtom),
+	env: get(environmentAtom),
+	shadows: get(shadowsAtom)
+}))
 
 sceneSettingsStore.set(boundsAtom, defaultBoundsOptions)
 sceneSettingsStore.set(cameraAtom, defaultCameraOptions)
@@ -36,6 +43,7 @@ export {
 	cameraAtom,
 	controlsAtom,
 	environmentAtom,
+	sceneViewerSettingsAtom,
 	shadowsAtom,
 
 	// store

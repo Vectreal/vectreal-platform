@@ -48,7 +48,9 @@ const OverlayControls = ({
 	const { file, isFileLoading, optimizer } = useModelContext(true)
 	const { step, showPublishPanel } = useAtomValue(controlsOverlayStateAtom)
 	const setProcessState = useSetAtom(processAtom)
-	const [optimizationModal, setOptimizationModal] = useAtom(optimizationModalAtom)
+	const [optimizationModal, setOptimizationModal] = useAtom(
+		optimizationModalAtom
+	)
 	const {
 		latestSceneStats,
 		isSceneSizeLoading,
@@ -112,8 +114,8 @@ const OverlayControls = ({
 			: null
 	const currentSceneBytes =
 		optimizedSceneBytes ??
-		clientSceneBytes ??
-		latestSceneStats?.currentSceneBytes
+		latestSceneStats?.currentSceneBytes ??
+		clientSceneBytes
 	const publishedAt =
 		typeof publishedMeta?.publishedAt === 'string'
 			? publishedMeta.publishedAt
@@ -151,11 +153,11 @@ const OverlayControls = ({
 					: null,
 			sizeInfo: {
 				initialSceneBytes:
-					clientSceneBytes ?? latestSceneStats?.initialSceneBytes,
+					latestSceneStats?.initialSceneBytes ?? clientSceneBytes,
 				currentSceneBytes:
 					optimizedSceneBytes ??
-					clientSceneBytes ??
-					latestSceneStats?.currentSceneBytes,
+					latestSceneStats?.currentSceneBytes ??
+					clientSceneBytes,
 				initialTextureBytes: clientTextureBytes,
 				currentTextureBytes: optimizedTextureBytes
 			},

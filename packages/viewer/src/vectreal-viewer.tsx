@@ -230,7 +230,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 				}
 				enableViewportRendering={enableViewportRendering}
 				shadows={shadowsEnabled}
-				gl={{ antialias: true }}
+				gl={{ antialias: false, powerPreference: 'low-power' }}
 			>
 				<Suspense fallback={null}>
 					{hasContent && (
@@ -253,6 +253,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 								<Center top>
 									{model ? (
 										<SceneModel
+											enableShadows={shadowsEnabled}
 											onScreenshot={onScreenshot}
 											onScreenshotCaptureReady={onScreenshotCaptureReady}
 											object={model}

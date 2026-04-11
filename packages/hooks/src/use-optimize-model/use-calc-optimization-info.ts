@@ -30,7 +30,7 @@ function getStatsFromReport(report: OptimizationReport | null): {
 		vertices: report.stats.vertices.after || 0,
 		primitives: report.stats.triangles.after || 0,
 		meshes: report.stats.meshes.after || 0,
-		textures: report.stats.textures.after || 0,
+		textures: report.stats.texturesCount.after || 0,
 		materials: report.stats.materials.after || 0,
 		totalSize: report.optimizedSize || 0
 	}
