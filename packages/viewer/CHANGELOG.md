@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.16.1](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.16.0...viewer-v0.16.1) (2026-04-11)
+
+
+### Bug Fixes
+
+* correct output reference for root release creation in CI workflow ([#390](https://github.com/Vectreal/vectreal-platform/issues/390)) ([22b9179](https://github.com/Vectreal/vectreal-platform/commit/22b91796a710b744affbf1aa9f0ab8138652a2eb))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.16.1
+
 ## [0.16.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.15.0...viewer-v0.16.0) (2026-04-11)
 
 
