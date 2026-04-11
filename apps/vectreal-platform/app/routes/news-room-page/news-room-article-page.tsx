@@ -7,7 +7,7 @@ import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import { ScrollArea } from '@shared/components/ui/scroll-area'
 import { cn } from '@shared/utils'
-import { ChevronLeft, ChevronRight, Copy, Share2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Copy } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { data, Link } from 'react-router'
 
@@ -176,7 +176,7 @@ export default function NewsRoomArticlePage({
 						</span>
 					</div>
 
-					<h1 className="mb-3 max-w-4xl text-4xl leading-[1.08] font-black tracking-tight md:text-6xl">
+					<h1 className="mb-3 max-w-4xl text-4xl leading-[1.08] font-medium tracking-tight md:text-6xl">
 						{article.title}
 					</h1>
 					<p className="text-muted-foreground max-w-3xl text-sm leading-relaxed md:text-base">
@@ -203,16 +203,6 @@ export default function NewsRoomArticlePage({
 							<Button variant="outline" size="sm" onClick={copyArticleLink}>
 								<Copy className="mr-2 h-3.5 w-3.5" />
 								{copied ? 'Copied' : 'Copy link'}
-							</Button>
-							<Button variant="outline" size="sm" asChild>
-								<a
-									href={`https://x.com/intent/tweet?url=${encodeURIComponent(`https://vectreal.com/news-room/${article.slug}`)}&text=${encodeURIComponent(article.title)}`}
-									target="_blank"
-									rel="noreferrer"
-								>
-									<Share2 className="mr-2 h-3.5 w-3.5" />
-									Post
-								</a>
 							</Button>
 						</div>
 					</div>

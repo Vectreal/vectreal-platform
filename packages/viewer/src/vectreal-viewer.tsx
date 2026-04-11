@@ -156,7 +156,7 @@ export interface VectrealViewerProps extends PropsWithChildren {
  *
  * The component will render any provided children inside the canvas.
  *
- * See [The official website]({@link https://core.vectreal.com}) or the [vctrl/viewer README]({@link https://github.com/vectreal/vectreal-core/blob/main/packages/viewer/README.md}) for more information.
+ * See [The official docs]({@link https://vectreal.com/docs}) or the [vctrl/viewer README]({@link https://github.com/vectreal/vectreal-platform/blob/main/packages/viewer/README.md}) for more information.
  *
  * @example
  * import { VectrealViewer } from '@vctrl/viewer';
