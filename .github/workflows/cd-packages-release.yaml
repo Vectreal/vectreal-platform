@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
-      root_release_created: ${{ steps.release.outputs['.--release_created'] }}
+      root_release_created: ${{ steps.release.outputs.release_created }}
       core_version: ${{ steps.release.outputs['packages/core--version'] }}
       hooks_version: ${{ steps.release.outputs['packages/hooks--version'] }}
       viewer_version: ${{ steps.release.outputs['packages/viewer--version'] }}
@@ -46,11 +46,11 @@ jobs:
           manifest-file: .release-please-manifest.json
 
       - name: Checkout repository
-        if: ${{ steps.release.outputs['.--release_created'] == 'true' }}
+        if: ${{ steps.release.outputs.release_created == 'true' }}
         uses: actions/checkout@v6
 
       - name: Build package-grouped root release notes
-        if: ${{ steps.release.outputs['.--release_created'] == 'true' }}
+        if: ${{ steps.release.outputs.release_created == 'true' }}
         env:
           TAG_NAME: ${{ steps.release.outputs.tag_name }}
           ROOT_VERSION: ${{ steps.release.outputs.version }}
