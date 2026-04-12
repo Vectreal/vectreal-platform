@@ -2,6 +2,11 @@
 
 Use agent skills available and helpful for the task at hand. When working on the platform app, use react router framework mode best practices
 
+## Project Skills
+
+- Architecture extensions: use [vectreal-extension-architecture](.agents/skills/vectreal-extension-architecture/SKILL.md) for route/layout semantics, modularization, client/server boundaries, Drizzle access patterns, and React Router framework-mode conventions.
+- Design and branding: use [vectreal-brand-ux-design](.agents/skills/vectreal-brand-ux-design/SKILL.md) for token-based styling, brand alignment, intentional UX flows, accessibility, responsive behavior, and high-polish UI execution.
+
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->
 
