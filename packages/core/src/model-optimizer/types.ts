@@ -87,27 +87,39 @@ export interface TextureBinaryPayload {
 	image: Uint8Array
 }
 
+/**
+ * Canonical optimization metrics payload used by OptimizationReport.
+ *
+ * Conventions:
+ * - `textures` holds texture payload bytes.
+ * - `texturesCount` holds the number of texture assets.
+ * - `vertices`, `triangles`, `meshes`, `materials`, `nodes` are all counts.
+ */
+export interface OptimizationStats {
+	vertices: BeforeAfterMetric
+	triangles: BeforeAfterMetric
+	materials: BeforeAfterMetric
+	/** Texture payload size in bytes (before/after). */
+	textures: BeforeAfterMetric
+	/** Number of texture assets (before/after). */
+	texturesCount: BeforeAfterMetric
+	textureResolutions: {
+		before: string[]
+		after: string[]
+	}
+	meshes: BeforeAfterMetric
+	nodes: BeforeAfterMetric
+}
+
 export interface OptimizationReport {
-	/** File size before optimization */
+	/** Total scene payload size in bytes before optimization. */
 	originalSize: number
-	/** File size after optimization */
+	/** Total scene payload size in bytes after optimization. */
 	optimizedSize: number
 	/** Compression ratio */
 	compressionRatio: number
 	/** Applied optimizations */
 	appliedOptimizations: string[]
 	/** Optimization statistics */
-	stats: {
-		vertices: BeforeAfterMetric
-		triangles: BeforeAfterMetric
-		materials: BeforeAfterMetric
-		textures: BeforeAfterMetric
-		texturesCount: BeforeAfterMetric
-		textureResolutions: {
-			before: string[]
-			after: string[]
-		}
-		meshes: BeforeAfterMetric
-		nodes: BeforeAfterMetric
-	}
+	stats: OptimizationStats
 }

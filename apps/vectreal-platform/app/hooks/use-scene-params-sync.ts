@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { sceneMetaInitialState } from '../lib/stores/publisher-config-store'
 import { optimizationRuntimeInitialState } from '../lib/stores/scene-optimization-store'
@@ -32,8 +32,11 @@ export const useSceneParamsSync = ({
 	setHasUnsavedChanges,
 	setOptimizationRuntime
 }: UseSceneParamsSyncParams) => {
+	const previousParamSceneIdRef = useRef<null | string>(null)
+
 	useEffect(() => {
 		const isNewUploadFlow = !paramSceneId && !initialSceneAggregate
+		const hasSceneChanged = previousParamSceneIdRef.current !== paramSceneId
 
 		if (isNewUploadFlow) {
 			resetSceneState()
@@ -44,13 +47,20 @@ export const useSceneParamsSync = ({
 		setSceneMetaState(nextMeta)
 		setLastSavedSceneMeta(sceneMeta ?? null)
 		setIsInitializing(!!paramSceneId && !!initialSceneAggregate)
-		setOptimizationRuntime({
-			...optimizationRuntimeInitialState,
-			lastSavedReportSignature: null
-		})
+
+		if (hasSceneChanged || isNewUploadFlow) {
+			setOptimizationRuntime({
+				...optimizationRuntimeInitialState,
+				lastSavedReportSignature: null,
+				latestSceneStats: initialSceneAggregate?.stats ?? null
+			})
+		}
+
 		if (initialSceneAggregate) {
 			setHasUnsavedChanges(false)
 		}
+
+		previousParamSceneIdRef.current = paramSceneId
 	}, [
 		paramSceneId,
 		sceneMeta,

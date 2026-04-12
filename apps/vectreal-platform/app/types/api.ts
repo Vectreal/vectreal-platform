@@ -349,14 +349,25 @@ export interface SceneStatsData {
 	readonly currentSceneBytes?: number | null
 	readonly appliedOptimizations?: string[] | null
 	readonly optimizationSettings?: Optimizations | null
+	// Extended persisted metrics that do not fit the snapshot count schema.
+	readonly additionalMetrics?: SceneAdditionalMetrics | null
 	readonly createdAt: Date
 	readonly createdBy: string
+}
+
+export interface SceneAdditionalMetrics {
+	// Texture payload size in bytes before optimization.
+	readonly initialTextureBytes?: number | null
+	// Texture payload size in bytes after optimization.
+	readonly currentTextureBytes?: number | null
+	readonly [key: string]: unknown
 }
 
 export interface SceneStatsSnapshot {
 	readonly verticesCount?: number | null
 	readonly primitivesCount?: number | null
 	readonly meshesCount?: number | null
+	// Texture asset count, not texture bytes.
 	readonly texturesCount?: number | null
 	readonly materialsCount?: number | null
 	readonly nodesCount?: number | null

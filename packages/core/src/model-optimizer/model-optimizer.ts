@@ -257,6 +257,9 @@ export class ModelOptimizer {
 
 		try {
 			this._document = await this.io.readJSON(json)
+			// Keep baseline inspect data consistent across load paths
+			// (buffer and JSON) so report.before metrics are reliable.
+			this.originalReport = inspect(this._document)
 			const binary = await this.export()
 			this.originalSize = binary.byteLength
 		} catch (error) {

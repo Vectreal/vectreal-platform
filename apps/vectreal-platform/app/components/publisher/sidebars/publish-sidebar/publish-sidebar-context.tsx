@@ -1,5 +1,3 @@
-import { type OptimizationReport } from '@vctrl/core'
-import { type OptimizationInfo } from '@vctrl/hooks/use-optimize-model'
 import {
 	createContext,
 	type FC,
@@ -7,8 +5,8 @@ import {
 	useContext
 } from 'react'
 
+import { type PublishSidebarViewModel } from './publish-sidebar-view-model'
 import { type SaveAvailabilityState, type SaveSceneFn } from '../../../../hooks'
-import { type SceneStatsData } from '../../../../types/api'
 
 export interface PublishSidebarContextValue {
 	sceneId?: string
@@ -19,17 +17,7 @@ export interface PublishSidebarContextValue {
 	onRequireAuth?: () => Promise<void> | void
 	saveSceneSettings: SaveSceneFn
 	saveAvailability: SaveAvailabilityState
-	info: OptimizationInfo
-	report?: OptimizationReport | null
-	publishedAt?: string | null
-	publishedAssetSizeBytes?: number | null
-	sizeInfo: {
-		initialSceneBytes?: number | null
-		currentSceneBytes?: number | null
-		initialTextureBytes?: number | null
-		currentTextureBytes?: number | null
-	}
-	stats?: SceneStatsData | null
+	viewModel: PublishSidebarViewModel
 }
 
 const PublishSidebarContext = createContext<PublishSidebarContextValue | null>(

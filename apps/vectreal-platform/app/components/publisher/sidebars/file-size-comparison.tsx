@@ -2,12 +2,16 @@ import { formatFileSize } from '@shared/utils'
 import { motion } from 'framer-motion'
 import { ArrowRightIcon } from 'lucide-react'
 
-import type { SizeInfo } from './use-optimization-process'
 import type { FC } from 'react'
 
+export interface FileSizeComparisonSizeInfo {
+	initialSceneBytes?: number | null
+	currentSceneBytes?: number | null
+	isInitialMetricsHydrating?: boolean
+}
 
 interface FileSizeComparisonProps {
-	sizeInfo: SizeInfo
+	sizeInfo: FileSizeComparisonSizeInfo
 }
 
 export const FileSizeComparison: FC<FileSizeComparisonProps> = ({
@@ -15,8 +19,14 @@ export const FileSizeComparison: FC<FileSizeComparisonProps> = ({
 }) => {
 	const initialFileSize = sizeInfo.initialSceneBytes ?? null
 	const currentFileSize = sizeInfo.currentSceneBytes ?? initialFileSize
+	const isHydratingInitialMetrics =
+		Boolean(sizeInfo.isInitialMetricsHydrating) && initialFileSize === null
 	const formatValue = (value: number | null) =>
-		value === null ? '—' : formatFileSize(value)
+		value === null
+			? isHydratingInitialMetrics
+				? 'Loading...'
+				: '—'
+			: formatFileSize(value)
 
 	return (
 		<div className="py-4">
@@ -27,7 +37,7 @@ export const FileSizeComparison: FC<FileSizeComparisonProps> = ({
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.5 }}
 				>
-					<div className="text-3xl font-bold">
+					<div className="text-accent text-3xl font-medium tracking-tight">
 						{formatValue(initialFileSize)}
 					</div>
 					<div className="text-sm text-zinc-400">Before</div>
@@ -39,7 +49,7 @@ export const FileSizeComparison: FC<FileSizeComparisonProps> = ({
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.5, delay: 0.2 }}
 				>
-					<div className="text-accent text-3xl font-bold">
+					<div className="text-primary text-3xl font-medium tracking-tight">
 						{formatValue(currentFileSize)}
 					</div>
 					<div className="text-sm text-zinc-400">After</div>

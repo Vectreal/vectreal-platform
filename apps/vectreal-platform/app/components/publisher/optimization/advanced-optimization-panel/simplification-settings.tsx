@@ -5,8 +5,9 @@ import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom } from 'jotai/react'
 
 // Store
-import { InfoTooltip, SettingSlider } from '../../../..'
-import { optimizationAtom } from '../../../../../lib/stores/scene-optimization-store'
+import { optimizationAtom } from '../../../../lib/stores/scene-optimization-store'
+import { InfoTooltip } from '../../../info-tooltip'
+import { SettingSlider } from '../../settings-components'
 
 /**
  * Type definitions for optimization state structure

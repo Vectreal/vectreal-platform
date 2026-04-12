@@ -93,7 +93,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 				<p className="text-muted-foreground text-xs font-semibold tracking-[0.22em] uppercase">
 					Newsroom
 				</p>
-				<h1 className="max-w-3xl text-4xl leading-[1.08] font-black tracking-tight md:text-6xl">
+				<h1 className="max-w-3xl text-4xl leading-[1.08] font-medium tracking-tight md:text-6xl">
 					Learn about what's new and what's next at Vectreal.
 				</h1>
 				<p className="text-muted-foreground max-w-2xl text-sm leading-relaxed md:text-base">
