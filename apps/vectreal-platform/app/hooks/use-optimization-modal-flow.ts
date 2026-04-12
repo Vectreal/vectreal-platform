@@ -20,17 +20,19 @@ export function useOptimizationModalFlow({
 	saveAvailability,
 	hasUnsavedLocationChange
 }: UseOptimizationModalFlowArgs) {
-	const [optimizationModal, setOptimizationModal] = useAtom(optimizationModalAtom)
+	const [optimizationModal, setOptimizationModal] = useAtom(
+		optimizationModalAtom
+	)
 
 	const effectiveSaveAvailability = useMemo(
 		() =>
 			saveAvailability.reason === 'no-unsaved-changes' &&
 			hasUnsavedLocationChange
 				? {
-					...saveAvailability,
-					canSave: true,
-					reason: 'ready' as const
-				}
+						...saveAvailability,
+						canSave: true,
+						reason: 'ready' as const
+					}
 				: saveAvailability,
 		[saveAvailability, hasUnsavedLocationChange]
 	)
@@ -47,7 +49,11 @@ export function useOptimizationModalFlow({
 			isOpen: true,
 			source: 'initial'
 		})
-	}, [isInitialOptimizationRequired, optimizationModal.isOpen, setOptimizationModal])
+	}, [
+		isInitialOptimizationRequired,
+		optimizationModal.isOpen,
+		setOptimizationModal
+	])
 
 	const handleOptimizationModalChange = useCallback(
 		(open: boolean) => {

@@ -1,6 +1,73 @@
 import type { sceneStats, SceneStatsSnapshot } from '../../db/schema'
 import type { OptimizationReport, Optimizations } from '@vctrl/core'
 
+type TextureByteMetrics = {
+	initialTextureBytes?: number | null
+	currentTextureBytes?: number | null
+}
+
+type ResolveSceneByteMetricsScopeInput = {
+	existingInitialSceneBytes?: number | null
+	existingCurrentSceneBytes?: number | null
+	requestInitialSceneBytes?: number | null
+	requestCurrentSceneBytes?: number | null
+	report?: OptimizationReport
+}
+
+const asNonNegativeNumber = (value: unknown): number | null =>
+	typeof value === 'number' && Number.isFinite(value) && value >= 0
+		? value
+		: null
+
+export function resolveSceneByteMetricsScope({
+	existingInitialSceneBytes,
+	existingCurrentSceneBytes,
+	requestInitialSceneBytes,
+	requestCurrentSceneBytes,
+	report
+}: ResolveSceneByteMetricsScopeInput): {
+	initialSceneBytes: number | null
+	currentSceneBytes: number | null
+} {
+	const initialSceneBytes =
+		asNonNegativeNumber(existingInitialSceneBytes) ??
+		asNonNegativeNumber(requestInitialSceneBytes) ??
+		asNonNegativeNumber(report?.originalSize) ??
+		null
+
+	const currentSceneBytes =
+		asNonNegativeNumber(requestCurrentSceneBytes) ??
+		asNonNegativeNumber(report?.optimizedSize) ??
+		asNonNegativeNumber(existingCurrentSceneBytes) ??
+		null
+
+	return {
+		initialSceneBytes,
+		currentSceneBytes
+	}
+}
+
+export function resolveTextureByteMetricsScope(
+	report?: OptimizationReport,
+	existingAdditionalMetrics?: TextureByteMetrics | null
+): TextureByteMetrics | null {
+	const initialTextureBytes =
+		asNonNegativeNumber(report?.stats.textures.before) ??
+		asNonNegativeNumber(existingAdditionalMetrics?.initialTextureBytes)
+	const currentTextureBytes =
+		asNonNegativeNumber(report?.stats.textures.after) ??
+		asNonNegativeNumber(existingAdditionalMetrics?.currentTextureBytes)
+
+	if (initialTextureBytes == null && currentTextureBytes == null) {
+		return null
+	}
+
+	return {
+		initialTextureBytes,
+		currentTextureBytes
+	}
+}
+
 /**
  * Helper type for inserting scene statistics.
  * Omits auto-generated fields like id, createdAt, and updatedAt.
@@ -79,8 +146,14 @@ export function createSceneStatsFromReport(
 		initialSceneBytes?: number | null
 		currentSceneBytes?: number | null
 		optimizationSettings?: Optimizations
+		existingAdditionalMetrics?: TextureByteMetrics | null
 	}
 ): Omit<InsertSceneStats, 'id' | 'createdAt' | 'updatedAt'> {
+	const textureByteMetrics = resolveTextureByteMetricsScope(
+		report,
+		options?.existingAdditionalMetrics
+	)
+
 	return {
 		sceneId,
 		createdBy: userId,
@@ -88,15 +161,12 @@ export function createSceneStatsFromReport(
 		description: options?.description,
 		baseline: buildSceneStatsSnapshot(report, 'baseline'),
 		optimized: buildSceneStatsSnapshot(report, 'optimized'),
-		initialSceneBytes: options?.initialSceneBytes ?? null,
-		currentSceneBytes: options?.currentSceneBytes ?? null,
+		initialSceneBytes: asNonNegativeNumber(options?.initialSceneBytes) ?? null,
+		currentSceneBytes: asNonNegativeNumber(options?.currentSceneBytes) ?? null,
 		appliedOptimizations: report.appliedOptimizations,
 		optimizationSettings: options?.optimizationSettings ?? null,
 		// Persist texture byte metrics separately from texture counts.
-		additionalMetrics: {
-			initialTextureBytes: report.stats.textures.before,
-			currentTextureBytes: report.stats.textures.after
-		}
+		additionalMetrics: textureByteMetrics
 	}
 }
 

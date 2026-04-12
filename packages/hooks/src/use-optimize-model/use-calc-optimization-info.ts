@@ -4,35 +4,39 @@ import { OptimizationInfo, OptimizationState } from './types'
 
 import type { OptimizationReport } from '@vctrl/core/model-optimizer'
 
+interface OptimizationMetricsSnapshot {
+	verticesCount: number
+	primitivesCount: number
+	meshesCount: number
+	textureAssetCount: number
+	materialsCount: number
+	sceneBytes: number
+}
+
 /**
  * Helper function to safely get stats from optimization report.
  */
-function getStatsFromReport(report: OptimizationReport | null): {
-	vertices: number
-	primitives: number
-	meshes: number
-	textureCount: number
-	materials: number
-	totalSize: number
-} {
+function getSnapshotFromReport(
+	report: OptimizationReport | null
+): OptimizationMetricsSnapshot {
 	if (!report) {
 		return {
-			vertices: 0,
-			primitives: 0,
-			meshes: 0,
-			textureCount: 0,
-			materials: 0,
-			totalSize: 0
+			verticesCount: 0,
+			primitivesCount: 0,
+			meshesCount: 0,
+			textureAssetCount: 0,
+			materialsCount: 0,
+			sceneBytes: 0
 		}
 	}
 
 	return {
-		vertices: report.stats.vertices.after || 0,
-		primitives: report.stats.triangles.after || 0,
-		meshes: report.stats.meshes.after || 0,
-		textureCount: report.stats.texturesCount.after || 0,
-		materials: report.stats.materials.after || 0,
-		totalSize: report.optimizedSize || 0
+		verticesCount: report.stats.vertices.after ?? 0,
+		primitivesCount: report.stats.triangles.after ?? 0,
+		meshesCount: report.stats.meshes.after ?? 0,
+		textureAssetCount: report.stats.texturesCount.after ?? 0,
+		materialsCount: report.stats.materials.after ?? 0,
+		sceneBytes: report.optimizedSize ?? 0
 	}
 }
 
@@ -57,30 +61,31 @@ export const useCalcOptimizationInfo = (
 	}, [initialCaptured, report])
 
 	const info = useMemo(() => {
-		const initial = getStatsFromReport(initialReport.current)
-		const current = getStatsFromReport(report)
+		const initial = getSnapshotFromReport(initialReport.current)
+		const current = getSnapshotFromReport(report)
 
 		return {
 			initial: {
-				verticesCount: initial.vertices,
-				primitivesCount: initial.primitives,
-				meshesCount: initial.meshes,
-				texturesCount: initial.textureCount,
-				sceneBytes: initial.totalSize
+				verticesCount: initial.verticesCount,
+				primitivesCount: initial.primitivesCount,
+				meshesCount: initial.meshesCount,
+				texturesCount: initial.textureAssetCount,
+				sceneBytes: initial.sceneBytes
 			},
 			optimized: {
-				verticesCount: current.vertices,
-				primitivesCount: current.primitives,
-				meshesCount: current.meshes,
-				texturesCount: current.textureCount,
-				sceneBytes: current.totalSize
+				verticesCount: current.verticesCount,
+				primitivesCount: current.primitivesCount,
+				meshesCount: current.meshesCount,
+				texturesCount: current.textureAssetCount,
+				sceneBytes: current.sceneBytes
 			},
 			improvement: {
-				verticesCount: initial.vertices - current.vertices,
-				primitivesCount: initial.primitives - current.primitives,
-				meshesCount: initial.meshes - current.meshes,
-				texturesCount: initial.textureCount - current.textureCount,
-				sceneBytes: initial.totalSize - current.totalSize
+				verticesCount: initial.verticesCount - current.verticesCount,
+				primitivesCount: initial.primitivesCount - current.primitivesCount,
+				meshesCount: initial.meshesCount - current.meshesCount,
+				texturesCount:
+					initial.textureAssetCount - current.textureAssetCount,
+				sceneBytes: initial.sceneBytes - current.sceneBytes
 			}
 		}
 	}, [report])

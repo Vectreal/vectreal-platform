@@ -33,21 +33,22 @@ interface NormalizedSceneMetricsRuntimeInput {
 export interface ResolvedSceneMetrics {
 	vertices: SceneMetricPair
 	primitives: SceneMetricPair
-	meshes: SceneMetricPair
-	textureCount: SceneMetricPair
 	textureBytes: SceneMetricPair
 	sceneBytes: SceneMetricPair
-	textureResolutions: {
-		initial: string[]
-		current: string[]
-	}
 	hasImproved: boolean
-	hasSceneSizeImprovement: boolean
 	isInitialMetricsHydrating: boolean
 	isSceneSizeComputing: boolean
 }
 
-export const buildSceneMetricsRuntimeInput = (
+type NormalizedSceneMetricsSources = {
+	normalizedRuntime: NormalizedSceneMetricsRuntimeInput
+	hasAppliedOptimizations: boolean
+	allowInfo: boolean
+	allowReportBaseline: boolean
+	allowReportCurrent: boolean
+}
+
+const buildSceneMetricsRuntimeInput = (
 	runtime?: SceneMetricsRuntimeInput
 ): NormalizedSceneMetricsRuntimeInput => ({
 	initialSceneBytes: runtime?.initialSceneBytes ?? null,
@@ -93,6 +94,8 @@ const resolvePair = ({
 	infoCurrent?: null | number
 	allowInfo: boolean
 }): SceneMetricPair => {
+	// Resolution precedence (highest -> lowest): persisted -> runtime -> report -> info.
+	// `info` is treated as least authoritative and can be disabled by caller.
 	const initial = selectFirstNumber(
 		asNumber(persistedInitial),
 		asNumber(runtimeInitial),
@@ -114,18 +117,40 @@ const resolvePair = ({
 	}
 }
 
+const normalizeSceneMetricsSources = ({
+	report,
+	runtime
+}: Pick<ResolveSceneMetricsInput, 'report' | 'runtime'>):
+	NormalizedSceneMetricsSources => {
+	const normalizedRuntime = buildSceneMetricsRuntimeInput(runtime)
+	const hasAppliedOptimizations =
+		(report?.appliedOptimizations?.length ?? 0) > 0
+
+	return {
+		normalizedRuntime,
+		hasAppliedOptimizations,
+		allowInfo: hasAppliedOptimizations,
+		allowReportBaseline: hasAppliedOptimizations,
+		allowReportCurrent: hasAppliedOptimizations
+	}
+}
+
 export const resolveSceneMetrics = ({
 	stats,
 	report,
 	info,
 	runtime
 }: ResolveSceneMetricsInput): ResolvedSceneMetrics => {
-	const normalizedRuntime = buildSceneMetricsRuntimeInput(runtime)
-	const hasAppliedOptimizations =
-		(report?.appliedOptimizations?.length ?? 0) > 0
-	const allowInfo = true
-	const allowReportBaseline = hasAppliedOptimizations
-	const allowReportCurrent = hasAppliedOptimizations
+	const {
+		normalizedRuntime,
+		hasAppliedOptimizations,
+		allowInfo,
+		allowReportBaseline,
+		allowReportCurrent
+	} = normalizeSceneMetricsSources({
+		report,
+		runtime
+	})
 
 	const vertices = resolvePair({
 		persistedInitial: stats?.baseline?.verticesCount,
@@ -227,17 +252,10 @@ export const resolveSceneMetrics = ({
 	return {
 		vertices,
 		primitives,
-		meshes,
-		textureCount,
 		textureBytes,
 		sceneBytes,
-		textureResolutions: {
-			initial: report?.stats.textureResolutions?.before ?? [],
-			current: report?.stats.textureResolutions?.after ?? []
-		},
 		hasImproved:
 			hasSceneSizeImprovement || hasCountImprovement || hasAppliedOptimizations,
-		hasSceneSizeImprovement,
 		isInitialMetricsHydrating:
 			!hasPersistedInitialMetrics &&
 			!hasInitialFromRuntimeOrReport &&

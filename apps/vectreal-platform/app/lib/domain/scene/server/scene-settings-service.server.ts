@@ -39,7 +39,11 @@ import {
 	SaveSceneSettingsParams,
 	UpdateSceneSettingsParams
 } from '../../../../types/api'
-import { createSceneStatsFromReport } from '../../../utils/scene-stats-helpers'
+import {
+	createSceneStatsFromReport,
+	resolveSceneByteMetricsScope,
+	resolveTextureByteMetricsScope
+} from '../../../utils/scene-stats-helpers'
 import {
 	deleteAssets,
 	downloadAssets,
@@ -961,24 +965,33 @@ class SceneSettingsService {
 			.select({
 				baseline: sceneStats.baseline,
 				initialSceneBytes: sceneStats.initialSceneBytes,
-				currentSceneBytes: sceneStats.currentSceneBytes
+				currentSceneBytes: sceneStats.currentSceneBytes,
+				additionalMetrics: sceneStats.additionalMetrics
 			})
 			.from(sceneStats)
 			.where(eq(sceneStats.sceneId, params.sceneId))
 			.limit(1)
 
 		const existingBaseline = existingStats[0]?.baseline ?? null
+		const existingAdditionalMetrics =
+			(existingStats[0]?.additionalMetrics as {
+				initialTextureBytes?: number | null
+				currentTextureBytes?: number | null
+			} | null | undefined) ?? null
 
-		const persistedInitialSceneBytes =
-			existingStats[0]?.initialSceneBytes ??
-			params.initialSceneBytes ??
-			params.report?.originalSize ??
-			null
-		const persistedCurrentSceneBytes =
-			params.currentSceneBytes ??
-			params.report?.optimizedSize ??
-			existingStats[0]?.currentSceneBytes ??
-			null
+		const { initialSceneBytes, currentSceneBytes } =
+			resolveSceneByteMetricsScope({
+				existingInitialSceneBytes: existingStats[0]?.initialSceneBytes,
+				existingCurrentSceneBytes: existingStats[0]?.currentSceneBytes,
+				requestInitialSceneBytes: params.initialSceneBytes,
+				requestCurrentSceneBytes: params.currentSceneBytes,
+				report: params.report
+			})
+
+		const textureByteMetrics = resolveTextureByteMetricsScope(
+			params.report,
+			existingAdditionalMetrics
+		)
 
 		if (params.report) {
 			const statsData = createSceneStatsFromReport(
@@ -988,9 +1001,10 @@ class SceneSettingsService {
 				{
 					label: params.label,
 					description: params.description,
-					initialSceneBytes: persistedInitialSceneBytes,
-					currentSceneBytes: persistedCurrentSceneBytes,
-					optimizationSettings: params.optimizationSettings
+					initialSceneBytes,
+					currentSceneBytes,
+					optimizationSettings: params.optimizationSettings,
+					existingAdditionalMetrics
 				}
 			)
 
@@ -1004,11 +1018,11 @@ class SceneSettingsService {
 						description: statsData.description,
 						baseline: existingBaseline ?? statsData.baseline,
 						optimized: statsData.optimized,
-						initialSceneBytes: statsData.initialSceneBytes,
-						currentSceneBytes: statsData.currentSceneBytes,
+						initialSceneBytes,
+						currentSceneBytes,
 						appliedOptimizations: statsData.appliedOptimizations,
 						optimizationSettings: statsData.optimizationSettings,
-						additionalMetrics: statsData.additionalMetrics,
+						additionalMetrics: textureByteMetrics,
 						createdBy: params.userId,
 						updatedAt: new Date()
 					}
@@ -1024,8 +1038,9 @@ class SceneSettingsService {
 				createdBy: params.userId,
 				label: params.label,
 				description: params.description,
-				initialSceneBytes: persistedInitialSceneBytes,
-				currentSceneBytes: persistedCurrentSceneBytes,
+				initialSceneBytes,
+				currentSceneBytes,
+				additionalMetrics: textureByteMetrics,
 				optimizationSettings: params.optimizationSettings ?? null
 			})
 			.onConflictDoUpdate({
@@ -1033,8 +1048,9 @@ class SceneSettingsService {
 				set: {
 					label: params.label,
 					description: params.description,
-					initialSceneBytes: persistedInitialSceneBytes,
-					currentSceneBytes: persistedCurrentSceneBytes,
+					initialSceneBytes,
+					currentSceneBytes,
+					additionalMetrics: textureByteMetrics,
 					optimizationSettings: params.optimizationSettings ?? null,
 					updatedAt: new Date()
 				}

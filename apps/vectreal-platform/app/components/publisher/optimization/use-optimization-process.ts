@@ -1,7 +1,7 @@
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -558,18 +558,31 @@ export const useOptimizationProcess = ({
 		}
 	}, [isAuthenticated])
 
-	const resolvedMetrics = resolveSceneMetrics({
-		stats: latestSceneStats,
-		report,
-		info,
-		runtime: {
-			initialSceneBytes: clientSceneBytes,
-			currentSceneBytes: optimizedSceneBytes,
-			initialTextureBytes: clientTextureBytes,
-			currentTextureBytes: optimizedTextureBytes,
-			isSceneSizeComputing: optimizationRuntime.isSceneSizeLoading
-		}
-	})
+	const resolvedMetrics = useMemo(
+		() =>
+			resolveSceneMetrics({
+				stats: latestSceneStats,
+				report,
+				info,
+				runtime: {
+					initialSceneBytes: clientSceneBytes,
+					currentSceneBytes: optimizedSceneBytes,
+					initialTextureBytes: clientTextureBytes,
+					currentTextureBytes: optimizedTextureBytes,
+					isSceneSizeComputing: optimizationRuntime.isSceneSizeLoading
+				}
+			}),
+		[
+			latestSceneStats,
+			report,
+			info,
+			clientSceneBytes,
+			optimizedSceneBytes,
+			clientTextureBytes,
+			optimizedTextureBytes,
+			optimizationRuntime.isSceneSizeLoading
+		]
+	)
 
 	const sizeInfo: SizeInfo = {
 		initialSceneBytes: resolvedMetrics.sceneBytes.initial,

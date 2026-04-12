@@ -13,10 +13,6 @@ import { useAtomValue } from 'jotai/react'
 import { ArrowRight, Code, Globe, Save, Sparkles } from 'lucide-react'
 
 import { usePublisherSaveAction } from '../../../../hooks/use-publisher-save-action'
-import {
-	buildSceneMetricsRuntimeInput,
-	resolveSceneMetrics
-} from '../../../../lib/domain/scene'
 import { isSavingAtom } from '../../../../lib/stores/publisher-config-store'
 import { AccordionItem, AccordionTrigger } from '../accordion-components'
 import { sidebarContentVariants } from '../animation'
@@ -27,7 +23,6 @@ import { PublishOptions } from './sections/publish-options'
 import { SaveOptions } from './sections/save-options'
 import { ScenePreview } from './sections/scene-preview'
 
-import type { ScenePublishStateResponse } from '../../../../types/api'
 import type { FC } from 'react'
 
 interface PublishSidebarContentProps {
@@ -64,30 +59,6 @@ const metricBytesValue = (value?: number | null, isLoading = false) => {
 	return isLoading ? 'Loading...' : '—'
 }
 
-const getSizeReductionPercent = (
-	before?: number | null,
-	after?: number | null
-) => {
-	if (
-		typeof before !== 'number' ||
-		typeof after !== 'number' ||
-		before <= 0 ||
-		after > before
-	) {
-		return null
-	}
-
-	return Math.round(((before - after) / before) * 100)
-}
-
-const getSizeDeltaBytes = (before?: number | null, after?: number | null) => {
-	if (typeof before !== 'number' || typeof after !== 'number') {
-		return null
-	}
-
-	return before - after
-}
-
 const getSizeDeltaLabel = (deltaBytes?: number | null) => {
 	if (typeof deltaBytes !== 'number') {
 		return null
@@ -114,12 +85,7 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 		userId,
 		onOpenOptimizationModal,
 		canReoptimize,
-		info,
-		report,
-		publishedAt,
-		publishedAssetSizeBytes,
-		sizeInfo,
-		stats,
+		viewModel,
 		saveAvailability,
 		onRequireAuth,
 		saveSceneSettings
@@ -135,48 +101,20 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 		? isSaving || !saveAvailability?.canSave
 		: isSaving
 
-	const metrics =
-		showSceneInfo && info && sizeInfo
-			? resolveSceneMetrics({
-					stats,
-					report,
-					info,
-					runtime: buildSceneMetricsRuntimeInput({
-						initialSceneBytes: sizeInfo.initialSceneBytes,
-						currentSceneBytes: sizeInfo.currentSceneBytes,
-						initialTextureBytes: sizeInfo.initialTextureBytes,
-						currentTextureBytes: sizeInfo.currentTextureBytes,
-						isSceneSizeComputing: sizeInfo.isSceneSizeComputing
-					})
-				})
-			: null
-	const sizeReductionPercent = getSizeReductionPercent(
-		metrics?.sceneBytes.initial,
-		metrics?.sceneBytes.current
-	)
-	const sizeDeltaBytes = getSizeDeltaBytes(
-		metrics?.sceneBytes.initial,
-		metrics?.sceneBytes.current
-	)
+	const metrics = showSceneInfo ? viewModel.metrics : null
+	const sizeReductionPercent = showSceneInfo
+		? viewModel.sizeReductionPercent
+		: null
+	const sizeDeltaBytes = showSceneInfo ? viewModel.sizeDeltaBytes : null
 	const sizeDeltaLabel = getSizeDeltaLabel(sizeDeltaBytes)
-	const isHydratingInitialMetrics = Boolean(metrics?.isInitialMetricsHydrating)
-	const publishMetricSizeInfo = {
-		initialSceneBytes: metrics?.sceneBytes.initial,
-		currentSceneBytes: metrics?.sceneBytes.current,
-		isInitialMetricsHydrating: isHydratingInitialMetrics
-	}
-	const isAuthenticated = Boolean(userId)
-	const hasSavedScene = Boolean(
-		typeof sceneId === 'string' && sceneId.length > 0
-	)
-	const canAccessPublishFeatures = isAuthenticated && hasSavedScene
-	const publishState: ScenePublishStateResponse = {
-		sceneId: sceneId ?? '',
-		status: publishedAt ? 'published' : 'draft',
-		publishedAt: publishedAt ?? null,
-		publishedAssetId: null,
-		publishedAssetSizeBytes: publishedAssetSizeBytes ?? null
-	}
+	const isHydratingInitialMetrics = viewModel.isHydratingInitialMetrics
+	const publishMetricSizeInfo = viewModel.publishMetricSizeInfo
+	const isAuthenticated = viewModel.isAuthenticated
+	const hasSavedScene = viewModel.hasSavedScene
+	const canAccessPublishFeatures = viewModel.canAccessPublishFeatures
+	const publishState = viewModel.publishState
+	const publishedAt = publishState.publishedAt
+	const publishedAssetSizeBytes = publishState.publishedAssetSizeBytes
 
 	return (
 		<div className="no-scrollbar grow overflow-auto pb-2">
@@ -338,7 +276,7 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 								</AccordionContent>
 							</AccordionItem>
 
-							{publishedAt && (
+							{publishState.status === 'published' && (
 								<AccordionItem value="embed" className="px-4">
 									<AccordionTrigger className="px-2">
 										<span className="flex items-center gap-3">

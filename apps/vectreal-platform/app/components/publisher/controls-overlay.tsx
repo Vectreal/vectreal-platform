@@ -32,6 +32,7 @@ import { Navigation } from '../navigation'
 import { UserMenu } from '../user-menu'
 import PublishSidebarContent from './sidebars/publish-sidebar/publish-sidebar-content'
 import { PublishSidebarProvider } from './sidebars/publish-sidebar/publish-sidebar-context'
+import { buildPublishSidebarViewModel } from './sidebars/publish-sidebar/publish-sidebar-view-model'
 
 const OverlayControls = ({
 	isMobile,
@@ -139,6 +140,27 @@ const OverlayControls = ({
 		navigate(authPath)
 	}, [persistPendingSceneDraft, sceneId, navigate])
 
+	const publishSidebarViewModel = useMemo(
+		() =>
+			buildPublishSidebarViewModel({
+				sceneId: sceneId ?? undefined,
+				userId: user?.id,
+				publishedAt,
+				publishedAssetSizeBytes:
+					typeof publishedMeta?.publishedAssetSizeBytes === 'number'
+						? publishedMeta.publishedAssetSizeBytes
+						: null,
+				resolvedMetrics: resolvedSceneMetrics
+			}),
+		[
+			sceneId,
+			user?.id,
+			publishedAt,
+			publishedMeta?.publishedAssetSizeBytes,
+			resolvedSceneMetrics
+		]
+	)
+
 	const publishSidebarValue = useMemo(
 		() => ({
 			sceneId: sceneId ?? undefined,
@@ -147,23 +169,7 @@ const OverlayControls = ({
 			onRequireAuth: handleRequireAuthForSave,
 			saveSceneSettings,
 			saveAvailability: effectiveSaveAvailability,
-			info: optimizer.info,
-			report: optimizer.report,
-			publishedAt,
-			publishedAssetSizeBytes:
-				typeof publishedMeta?.publishedAssetSizeBytes === 'number'
-					? publishedMeta.publishedAssetSizeBytes
-					: null,
-			sizeInfo: {
-				initialSceneBytes: resolvedSceneMetrics.sceneBytes.initial,
-				currentSceneBytes: resolvedSceneMetrics.sceneBytes.current,
-				initialTextureBytes: resolvedSceneMetrics.textureBytes.initial,
-				currentTextureBytes: resolvedSceneMetrics.textureBytes.current,
-				isSceneSizeComputing: resolvedSceneMetrics.isSceneSizeComputing,
-				isInitialMetricsHydrating:
-					resolvedSceneMetrics.isInitialMetricsHydrating
-			},
-			stats: latestSceneStats,
+			viewModel: publishSidebarViewModel,
 			onOpenOptimizationModal: openReoptimizeModal,
 			canReoptimize: Boolean(sceneId)
 		}),
@@ -174,12 +180,7 @@ const OverlayControls = ({
 			handleRequireAuthForSave,
 			saveSceneSettings,
 			effectiveSaveAvailability,
-			optimizer.info,
-			optimizer.report,
-			publishedAt,
-			publishedMeta?.publishedAssetSizeBytes,
-			latestSceneStats,
-			resolvedSceneMetrics,
+			publishSidebarViewModel,
 			openReoptimizeModal
 		]
 	)
