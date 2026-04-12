@@ -123,7 +123,17 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
-          registry-url: 'https://registry.npmjs.org'
+
+      - name: Enforce trusted publishing auth mode
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Ensure token-based npm auth is not inherited by downstream steps.
+          {
+            echo "NODE_AUTH_TOKEN="
+            echo "NPM_TOKEN="
+          } >> "$GITHUB_ENV"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
@@ -169,8 +179,10 @@ jobs:
           node --version
           npm --version
           echo "  npm registry: $(npm config get registry)"
-          if [[ -n "${NODE_AUTH_TOKEN:-}" ]]; then
-            echo "  NODE_AUTH_TOKEN is set (trusted publishing should not require this)"
+          if [[ "${NODE_AUTH_TOKEN:-}" == "XXXXX-XXXXX-XXXXX-XXXXX" ]]; then
+            echo "  NODE_AUTH_TOKEN is setup-node placeholder (no real token configured)"
+          elif [[ -n "${NODE_AUTH_TOKEN:-}" ]]; then
+            echo "  NODE_AUTH_TOKEN is set (real value present)"
           else
             echo "  NODE_AUTH_TOKEN is not set"
           fi
