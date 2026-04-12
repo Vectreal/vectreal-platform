@@ -120,8 +120,10 @@ const resolvePair = ({
 const normalizeSceneMetricsSources = ({
 	report,
 	runtime
-}: Pick<ResolveSceneMetricsInput, 'report' | 'runtime'>):
-	NormalizedSceneMetricsSources => {
+}: Pick<
+	ResolveSceneMetricsInput,
+	'report' | 'runtime'
+>): NormalizedSceneMetricsSources => {
 	const normalizedRuntime = buildSceneMetricsRuntimeInput(runtime)
 	const hasAppliedOptimizations =
 		(report?.appliedOptimizations?.length ?? 0) > 0

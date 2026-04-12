@@ -974,10 +974,13 @@ class SceneSettingsService {
 
 		const existingBaseline = existingStats[0]?.baseline ?? null
 		const existingAdditionalMetrics =
-			(existingStats[0]?.additionalMetrics as {
-				initialTextureBytes?: number | null
-				currentTextureBytes?: number | null
-			} | null | undefined) ?? null
+			(existingStats[0]?.additionalMetrics as
+				| {
+						initialTextureBytes?: number | null
+						currentTextureBytes?: number | null
+				  }
+				| null
+				| undefined) ?? null
 
 		const { initialSceneBytes, currentSceneBytes } =
 			resolveSceneByteMetricsScope({

@@ -83,8 +83,7 @@ export const useCalcOptimizationInfo = (
 				verticesCount: initial.verticesCount - current.verticesCount,
 				primitivesCount: initial.primitivesCount - current.primitivesCount,
 				meshesCount: initial.meshesCount - current.meshesCount,
-				texturesCount:
-					initial.textureAssetCount - current.textureAssetCount,
+				texturesCount: initial.textureAssetCount - current.textureAssetCount,
 				sceneBytes: initial.sceneBytes - current.sceneBytes
 			}
 		}

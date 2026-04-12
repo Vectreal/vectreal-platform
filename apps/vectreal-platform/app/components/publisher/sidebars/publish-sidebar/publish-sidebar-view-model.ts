@@ -70,7 +70,9 @@ export const buildPublishSidebarViewModel = ({
 	)
 	const isHydratingInitialMetrics = Boolean(metrics?.isInitialMetricsHydrating)
 	const isAuthenticated = Boolean(userId)
-	const hasSavedScene = Boolean(typeof sceneId === 'string' && sceneId.length > 0)
+	const hasSavedScene = Boolean(
+		typeof sceneId === 'string' && sceneId.length > 0
+	)
 
 	return {
 		metrics,
