@@ -959,6 +959,7 @@ class SceneSettingsService {
 	) {
 		const existingStats = await tx
 			.select({
+				baseline: sceneStats.baseline,
 				initialSceneBytes: sceneStats.initialSceneBytes,
 				currentSceneBytes: sceneStats.currentSceneBytes
 			})
@@ -966,10 +967,12 @@ class SceneSettingsService {
 			.where(eq(sceneStats.sceneId, params.sceneId))
 			.limit(1)
 
+		const existingBaseline = existingStats[0]?.baseline ?? null
+
 		const persistedInitialSceneBytes =
+			existingStats[0]?.initialSceneBytes ??
 			params.initialSceneBytes ??
 			params.report?.originalSize ??
-			existingStats[0]?.initialSceneBytes ??
 			null
 		const persistedCurrentSceneBytes =
 			params.currentSceneBytes ??
@@ -999,7 +1002,7 @@ class SceneSettingsService {
 					set: {
 						label: statsData.label,
 						description: statsData.description,
-						baseline: statsData.baseline,
+						baseline: existingBaseline ?? statsData.baseline,
 						optimized: statsData.optimized,
 						initialSceneBytes: statsData.initialSceneBytes,
 						currentSceneBytes: statsData.currentSceneBytes,

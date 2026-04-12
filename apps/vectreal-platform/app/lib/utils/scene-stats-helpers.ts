@@ -56,6 +56,7 @@ function buildSceneStatsSnapshot(
 		meshesCount: isBaseline
 			? report.stats.meshes.before
 			: report.stats.meshes.after,
+		// Texture asset count, not byte size.
 		texturesCount: isBaseline
 			? report.stats.texturesCount.before
 			: report.stats.texturesCount.after,
@@ -91,7 +92,11 @@ export function createSceneStatsFromReport(
 		currentSceneBytes: options?.currentSceneBytes ?? null,
 		appliedOptimizations: report.appliedOptimizations,
 		optimizationSettings: options?.optimizationSettings ?? null,
-		additionalMetrics: null
+		// Persist texture byte metrics separately from texture counts.
+		additionalMetrics: {
+			initialTextureBytes: report.stats.textures.before,
+			currentTextureBytes: report.stats.textures.after
+		}
 	}
 }
 

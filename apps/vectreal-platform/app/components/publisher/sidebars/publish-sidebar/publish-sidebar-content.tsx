@@ -13,11 +13,15 @@ import { useAtomValue } from 'jotai/react'
 import { ArrowRight, Code, Globe, Save, Sparkles } from 'lucide-react'
 
 import { usePublisherSaveAction } from '../../../../hooks/use-publisher-save-action'
+import {
+	buildSceneMetricsRuntimeInput,
+	resolveSceneMetrics
+} from '../../../../lib/domain/scene'
 import { isSavingAtom } from '../../../../lib/stores/publisher-config-store'
 import { AccordionItem, AccordionTrigger } from '../accordion-components'
 import { sidebarContentVariants } from '../animation'
 import { usePublishSidebarContext } from './publish-sidebar-context'
-import { buildSceneMetrics, formatMetricBytes } from './scene-metrics'
+import { FileSizeComparison } from '../file-size-comparison'
 import { EmbedOptions } from './sections/embed-options'
 import { PublishOptions } from './sections/publish-options'
 import { SaveOptions } from './sections/save-options'
@@ -44,8 +48,21 @@ const formatPublishedAt = (value?: string | null) => {
 	return date.toLocaleString()
 }
 
-const metricValue = (value?: number | null) =>
-	typeof value === 'number' ? value.toLocaleString() : '—'
+const metricValue = (value?: number | null, isLoading = false) => {
+	if (typeof value === 'number') {
+		return value.toLocaleString()
+	}
+
+	return isLoading ? 'Loading...' : '—'
+}
+
+const metricBytesValue = (value?: number | null, isLoading = false) => {
+	if (typeof value === 'number') {
+		return formatFileSize(value)
+	}
+
+	return isLoading ? 'Loading...' : '—'
+}
 
 const getSizeReductionPercent = (
 	before?: number | null,
@@ -69,6 +86,22 @@ const getSizeDeltaBytes = (before?: number | null, after?: number | null) => {
 	}
 
 	return before - after
+}
+
+const getSizeDeltaLabel = (deltaBytes?: number | null) => {
+	if (typeof deltaBytes !== 'number') {
+		return null
+	}
+
+	if (deltaBytes > 0) {
+		return `${formatFileSize(deltaBytes)} smaller`
+	}
+
+	if (deltaBytes < 0) {
+		return `${formatFileSize(Math.abs(deltaBytes))} larger`
+	}
+
+	return 'No size change'
 }
 
 const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
@@ -104,21 +137,34 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 
 	const metrics =
 		showSceneInfo && info && sizeInfo
-			? buildSceneMetrics({
-					info,
+			? resolveSceneMetrics({
+					stats,
 					report,
-					sizeInfo,
-					stats
+					info,
+					runtime: buildSceneMetricsRuntimeInput({
+						initialSceneBytes: sizeInfo.initialSceneBytes,
+						currentSceneBytes: sizeInfo.currentSceneBytes,
+						initialTextureBytes: sizeInfo.initialTextureBytes,
+						currentTextureBytes: sizeInfo.currentTextureBytes,
+						isSceneSizeComputing: sizeInfo.isSceneSizeComputing
+					})
 				})
 			: null
 	const sizeReductionPercent = getSizeReductionPercent(
-		metrics?.sceneBytesInitial,
-		metrics?.sceneBytesCurrent
+		metrics?.sceneBytes.initial,
+		metrics?.sceneBytes.current
 	)
 	const sizeDeltaBytes = getSizeDeltaBytes(
-		metrics?.sceneBytesInitial,
-		metrics?.sceneBytesCurrent
+		metrics?.sceneBytes.initial,
+		metrics?.sceneBytes.current
 	)
+	const sizeDeltaLabel = getSizeDeltaLabel(sizeDeltaBytes)
+	const isHydratingInitialMetrics = Boolean(metrics?.isInitialMetricsHydrating)
+	const publishMetricSizeInfo = {
+		initialSceneBytes: metrics?.sceneBytes.initial,
+		currentSceneBytes: metrics?.sceneBytes.current,
+		isInitialMetricsHydrating: isHydratingInitialMetrics
+	}
 	const isAuthenticated = Boolean(userId)
 	const hasSavedScene = Boolean(
 		typeof sceneId === 'string' && sceneId.length > 0
@@ -156,72 +202,54 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 				)}
 
 				{metrics && (
-					<div className="px-4 pt-4">
-						<div className="rounded-xl border p-4">
-							<div className="mb-3 flex items-center justify-between">
-								<p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
-									Optimization Metrics
-								</p>
-								{sizeReductionPercent !== null ? (
-									<span className="text-primary bg-primary/15 rounded-full px-2 py-0.5 text-xs font-semibold">
-										-{sizeReductionPercent}%
-									</span>
-								) : null}
-							</div>
+					<div className="p-4">
+						<div className="mb-3 flex items-center justify-between">
+							<p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+								Optimization Metrics
+							</p>
+							{sizeReductionPercent !== null && sizeDeltaLabel ? (
+								<span className="text-primary bg-primary/15 rounded-full px-2 py-0.5 text-xs font-semibold">
+									-{sizeReductionPercent}% • {sizeDeltaLabel}
+								</span>
+							) : null}
+						</div>
 
-							<div className="mb-4 rounded-lg border bg-white/40 p-3 dark:bg-black/10">
-								<p className="text-muted-foreground mb-2 text-[11px] tracking-wide uppercase">
-									Scene Size
-								</p>
-								<div className="flex items-center justify-between gap-2">
-									<p className="text-sm font-semibold">
-										{formatMetricBytes(metrics.sceneBytesInitial)}
-									</p>
-									<ArrowRight className="text-muted-foreground h-3.5 w-3.5" />
-									<p className="text-primary text-sm font-semibold">
-										{formatMetricBytes(metrics.sceneBytesCurrent)}
-									</p>
-								</div>
-								<p className="text-muted-foreground mt-2 text-xs">
-									{sizeDeltaBytes === null
-										? 'Size data updates after optimization and save.'
-										: sizeDeltaBytes > 0
-											? `${formatFileSize(sizeDeltaBytes)} smaller`
-											: sizeDeltaBytes < 0
-												? `${formatFileSize(Math.abs(sizeDeltaBytes))} larger`
-												: 'No size change'}
+						<FileSizeComparison sizeInfo={publishMetricSizeInfo} />
+
+						<div className="bg-muted/50 space-y-3 rounded-lg p-4 text-xs">
+							<div className="flex items-center justify-between gap-3">
+								<p className="text-muted-foreground">Triangles</p>
+								<p className="font-medium">
+									{metricValue(
+										metrics.primitives.initial,
+										isHydratingInitialMetrics
+									)}{' '}
+									<ArrowRight className="text-muted-foreground mx-1 inline h-3 w-3" />
+									{metricValue(metrics.primitives.current)}
 								</p>
 							</div>
-
-							<div className="grid grid-cols-2 gap-3 text-xs">
-								<div>
-									<p className="text-muted-foreground">Triangles</p>
-									<p className="font-medium">
-										{metricValue(metrics.triangleInitial)} →{' '}
-										{metricValue(metrics.triangleOptimized)}
-									</p>
-								</div>
-								<div>
-									<p className="text-muted-foreground">Texture Size</p>
-									<p className="font-medium">
-										{formatMetricBytes(metrics.textureSizeInitial)} →{' '}
-										{formatMetricBytes(metrics.textureSizeOptimized)}
-									</p>
-								</div>
-								<div>
-									<p className="text-muted-foreground">Published Asset</p>
-									<p className="font-medium">
-										{publishedAssetSizeBytes
-											? formatFileSize(publishedAssetSizeBytes)
-											: '—'}
-									</p>
-								</div>
-								<div>
-									<p className="text-muted-foreground">Published At</p>
-									<p className="font-medium">
-										{formatPublishedAt(publishedAt)}
-									</p>
-								</div>
+							<div className="flex items-center justify-between gap-3">
+								<p className="text-muted-foreground">Texture Size</p>
+								<p className="font-medium">
+									{metricBytesValue(
+										metrics.textureBytes.initial,
+										isHydratingInitialMetrics
+									)}{' '}
+									<ArrowRight className="text-muted-foreground mx-1 inline h-3 w-3" />
+									{metricBytesValue(metrics.textureBytes.current)}
+								</p>
+							</div>
+							<div className="flex items-center justify-between gap-3">
+								<p className="text-muted-foreground">Published At</p>
+								<p className="font-medium">{formatPublishedAt(publishedAt)}</p>
+							</div>
+							<div className="flex items-center justify-between gap-3">
+								<p className="text-muted-foreground">Published Asset</p>
+								<p className="font-medium">
+									{publishedAssetSizeBytes
+										? formatFileSize(publishedAssetSizeBytes)
+										: '—'}
+								</p>
 							</div>
 						</div>
 					</div>
@@ -229,7 +257,7 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 
 				{canAccessPublishFeatures && <ScenePreview />}
 
-				<Accordion type="single" collapsible className="space-y-2 px-4 pt-4">
+				<Accordion type="single" collapsible className="space-y-2 p-4">
 					<AccordionItem value="save" className="px-4">
 						<AccordionTrigger className="px-2">
 							<span className="flex items-center gap-3">
@@ -292,25 +320,6 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 							</div>
 						)}
 
-					{canAccessPublishFeatures && canReoptimize && (
-						<div className="px-6 pb-2">
-							<p className="text-muted-foreground mb-2 text-xs">
-								Need another pass? Re-optimize your saved scene before
-								publishing.
-							</p>
-							<Button
-								type="button"
-								size="sm"
-								variant="secondary"
-								className="w-full"
-								onClick={() => onOpenOptimizationModal?.()}
-							>
-								<Sparkles size={14} className="mr-2" />
-								Re-optimize Scene
-							</Button>
-						</div>
-					)}
-
 					{canAccessPublishFeatures && (
 						<>
 							<AccordionItem value="publish" className="px-4">
@@ -345,6 +354,24 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 						</>
 					)}
 				</Accordion>
+
+				{canAccessPublishFeatures && canReoptimize && (
+					<div className="space-y-3 p-4">
+						<p className="text-muted-foreground text-xs">
+							Need another pass? Re-optimize your saved scene before publishing.
+						</p>
+						<Button
+							type="button"
+							size="sm"
+							variant="secondary"
+							className="w-full"
+							onClick={() => onOpenOptimizationModal?.()}
+						>
+							<Sparkles size={14} className="mr-2" />
+							Re-optimize Scene
+						</Button>
+					</div>
+				)}
 			</motion.div>
 		</div>
 	)

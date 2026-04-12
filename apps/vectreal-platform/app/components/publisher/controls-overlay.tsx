@@ -1,9 +1,9 @@
 import { ButtonGroup } from '@shared/components/ui/button-group'
 import { Separator } from '@shared/components/ui/separator'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
+import { useAtomValue, useSetAtom } from 'jotai/react'
 import posthog from 'posthog-js'
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useNavigate, useSubmit } from 'react-router'
 import { toast } from 'sonner'
 
@@ -14,24 +14,22 @@ import {
 	SceneInfoTrigger,
 	ToolSidebar
 } from '.'
-import { useSceneLoader } from '../../hooks'
+import OptimizationModal from './optimization-modal'
+import { useOptimizationModalFlow, useSceneLoader } from '../../hooks'
+import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
 import { useLocationChangeState } from '../../hooks/use-location-change-state'
-import { useSceneSizeInitializer } from './sidebars/optimize-sidebar/use-scene-size-initializer'
+import { resolveSceneMetrics } from '../../lib/domain/scene'
 import {
 	controlsOverlayStateAtom,
 	processAtom,
 	saveLocationAtom
 } from '../../lib/stores/publisher-config-store'
-import {
-	optimizationModalAtom,
-	optimizationRuntimeAtom
-} from '../../lib/stores/scene-optimization-store'
+import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
 import { PublisherLoaderData, SceneAggregateResponse } from '../../types/api'
 import { InfoTooltip } from '../info-tooltip'
 import { FloatingPillWrapper } from '../layout-components'
 import { Navigation } from '../navigation'
 import { UserMenu } from '../user-menu'
-import OptimizationModal from './optimization-modal'
 import PublishSidebarContent from './sidebars/publish-sidebar/publish-sidebar-content'
 import { PublishSidebarProvider } from './sidebars/publish-sidebar/publish-sidebar-context'
 
@@ -48,9 +46,6 @@ const OverlayControls = ({
 	const { file, isFileLoading, optimizer } = useModelContext(true)
 	const { step, showPublishPanel } = useAtomValue(controlsOverlayStateAtom)
 	const setProcessState = useSetAtom(processAtom)
-	const [optimizationModal, setOptimizationModal] = useAtom(
-		optimizationModalAtom
-	)
 	const {
 		latestSceneStats,
 		isSceneSizeLoading,
@@ -78,31 +73,17 @@ const OverlayControls = ({
 			sceneMeta: sceneAggregate?.meta ?? null
 		})
 
-	const effectiveSaveAvailability =
-		saveAvailability.reason === 'no-unsaved-changes' && hasUnsavedLocationChange
-			? {
-					...saveAvailability,
-					canSave: true,
-					reason: 'ready' as const
-				}
-			: saveAvailability
-	const isInitialOptimizationRequired =
-		effectiveSaveAvailability.reason === 'requires-first-optimization'
-
-	useEffect(() => {
-		if (!isInitialOptimizationRequired || optimizationModal.isOpen) {
-			return
-		}
-
-		setOptimizationModal({
-			isOpen: true,
-			source: 'initial'
-		})
-	}, [
+	const {
+		effectiveSaveAvailability,
 		isInitialOptimizationRequired,
-		optimizationModal.isOpen,
-		setOptimizationModal
-	])
+		isOptimizationModalOpen,
+		handleOptimizationModalChange,
+		handleOpenOptimizationModal,
+		openReoptimizeModal
+	} = useOptimizationModalFlow({
+		saveAvailability,
+		hasUnsavedLocationChange
+	})
 
 	const isUploadStep = !file?.model && step === 'uploading'
 	const isPublished = Boolean(publishedMeta?.publishedAt)
@@ -112,10 +93,32 @@ const OverlayControls = ({
 		: isOptimizerPreparing
 			? 'Preparing optimizer...'
 			: null
-	const currentSceneBytes =
-		optimizedSceneBytes ??
-		latestSceneStats?.currentSceneBytes ??
-		clientSceneBytes
+	const resolvedSceneMetrics = useMemo(
+		() =>
+			resolveSceneMetrics({
+				stats: latestSceneStats,
+				report: optimizer.report,
+				info: optimizer.info,
+				runtime: {
+					initialSceneBytes: clientSceneBytes,
+					currentSceneBytes: optimizedSceneBytes,
+					initialTextureBytes: clientTextureBytes,
+					currentTextureBytes: optimizedTextureBytes,
+					isSceneSizeComputing: isSceneSizeLoading
+				}
+			}),
+		[
+			latestSceneStats,
+			optimizer.report,
+			optimizer.info,
+			clientSceneBytes,
+			optimizedSceneBytes,
+			clientTextureBytes,
+			optimizedTextureBytes,
+			isSceneSizeLoading
+		]
+	)
+	const currentSceneBytes = resolvedSceneMetrics.sceneBytes.current
 	const publishedAt =
 		typeof publishedMeta?.publishedAt === 'string'
 			? publishedMeta.publishedAt
@@ -152,18 +155,16 @@ const OverlayControls = ({
 					? publishedMeta.publishedAssetSizeBytes
 					: null,
 			sizeInfo: {
-				initialSceneBytes:
-					latestSceneStats?.initialSceneBytes ?? clientSceneBytes,
-				currentSceneBytes:
-					optimizedSceneBytes ??
-					latestSceneStats?.currentSceneBytes ??
-					clientSceneBytes,
-				initialTextureBytes: clientTextureBytes,
-				currentTextureBytes: optimizedTextureBytes
+				initialSceneBytes: resolvedSceneMetrics.sceneBytes.initial,
+				currentSceneBytes: resolvedSceneMetrics.sceneBytes.current,
+				initialTextureBytes: resolvedSceneMetrics.textureBytes.initial,
+				currentTextureBytes: resolvedSceneMetrics.textureBytes.current,
+				isSceneSizeComputing: resolvedSceneMetrics.isSceneSizeComputing,
+				isInitialMetricsHydrating:
+					resolvedSceneMetrics.isInitialMetricsHydrating
 			},
 			stats: latestSceneStats,
-			onOpenOptimizationModal: () =>
-				setOptimizationModal({ isOpen: true, source: 'reoptimize' }),
+			onOpenOptimizationModal: openReoptimizeModal,
 			canReoptimize: Boolean(sceneId)
 		}),
 		[
@@ -177,36 +178,11 @@ const OverlayControls = ({
 			optimizer.report,
 			publishedAt,
 			publishedMeta?.publishedAssetSizeBytes,
-			clientSceneBytes,
 			latestSceneStats,
-			optimizedSceneBytes,
-			clientTextureBytes,
-			optimizedTextureBytes,
-			setOptimizationModal
+			resolvedSceneMetrics,
+			openReoptimizeModal
 		]
 	)
-
-	const handleOptimizationModalChange = useCallback(
-		(open: boolean) => {
-			if (!open && isInitialOptimizationRequired) {
-				return
-			}
-
-			setOptimizationModal((prev) => ({
-				...prev,
-				isOpen: open,
-				source: open ? prev.source : null
-			}))
-		},
-		[isInitialOptimizationRequired, setOptimizationModal]
-	)
-
-	const handleOpenOptimizationModal = useCallback(() => {
-		setOptimizationModal((prev) => ({
-			isOpen: true,
-			source: prev.source ?? 'reoptimize'
-		}))
-	}, [setOptimizationModal])
 
 	const handleOpenPublishPanel = useCallback(() => {
 		setProcessState((prev) => {
@@ -263,8 +239,6 @@ const OverlayControls = ({
 						saveSceneSettings={saveSceneSettings}
 					/>
 				</ButtonGroup>
-				{user && <UserMenu size="sm" user={user} onLogout={handleLogout} />}
-
 				{isPublished && (
 					<>
 						<Separator
@@ -283,6 +257,8 @@ const OverlayControls = ({
 						</span>
 					</>
 				)}
+
+				{user && <UserMenu size="sm" user={user} onLogout={handleLogout} />}
 			</FloatingPillWrapper>
 			<SceneInfoTrigger onClick={handleOpenPublishPanel} />
 			<DynamicSidebar
@@ -299,7 +275,7 @@ const OverlayControls = ({
 				</PublishSidebarProvider>
 			</DynamicSidebar>
 			<OptimizationModal
-				open={optimizationModal.isOpen}
+				open={isOptimizationModalOpen}
 				onOpenChange={handleOptimizationModalChange}
 				userId={user?.id}
 				isInitialRequired={isInitialOptimizationRequired}

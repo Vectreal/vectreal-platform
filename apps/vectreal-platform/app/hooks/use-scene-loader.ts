@@ -303,6 +303,11 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			}
 
 			if (!paramSceneId) {
+				// A newly dropped model in upload flow must always start as a new
+				// unsaved scene. Clearing the id keeps first-optimization gating
+				// deterministic even after saving a previous upload.
+				setCurrentSceneId(null)
+
 				setLastSavedSettings({
 					...currentSettings
 				})
@@ -324,6 +329,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		[
 			paramSceneId,
 			currentSettings,
+			setCurrentSceneId,
 			setProcess,
 			getSceneNameFromFileName,
 			setSceneMetaState

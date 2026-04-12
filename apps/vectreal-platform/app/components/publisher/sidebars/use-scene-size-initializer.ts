@@ -2,7 +2,7 @@ import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom } from 'jotai/react'
 import { useCallback, useEffect, useRef } from 'react'
 
-import { optimizationRuntimeAtom } from '../../../../lib/stores/scene-optimization-store'
+import { optimizationRuntimeAtom } from '../../../lib/stores/scene-optimization-store'
 
 /**
  * Runs scene-size calculation effects unconditionally so the bottom bar can
@@ -97,7 +97,8 @@ export function useSceneSizeInitializer() {
 				clientSceneBytes: null,
 				optimizedTextureBytes: null,
 				clientTextureBytes: null,
-				latestSceneStats: prev.latestSceneStats
+				lastSavedReportSignature: null,
+				latestSceneStats: null
 			}))
 		}
 

@@ -19,11 +19,10 @@ import { useAtomValue } from 'jotai/react'
 import { Sparkles } from 'lucide-react'
 import { useEffect, useMemo, type FC } from 'react'
 
-import { AdvancedPanel } from './sidebars/optimize-sidebar/advanced-optimization-panel'
-import BasicOptimizationPanel from './sidebars/optimize-sidebar/basic-optimization-panel'
-import { OptimizeButton } from './sidebars/optimize-sidebar/optimize-button'
-import { useOptimizationProcess } from './sidebars/optimize-sidebar/use-optimization-process'
-import { calculateOptimizationStats } from './sidebars/optimize-sidebar/utils'
+import { AdvancedPanel } from './optimization/advanced-optimization-panel'
+import BasicOptimizationPanel from './optimization/basic-optimization-panel'
+import { OptimizeButton } from './optimization/optimize-button'
+import { useOptimizationProcess } from './optimization/use-optimization-process'
 import {
 	optimizationAtom,
 	optimizationRuntimeAtom
@@ -44,20 +43,9 @@ const OptimizationModal: FC<OptimizationModalProps> = ({
 }) => {
 	const { optimizationPreset, optimizations } = useAtomValue(optimizationAtom)
 	const { isPending } = useAtomValue(optimizationRuntimeAtom)
-	const {
-		info,
-		hasImproved,
-		handleOptimizeClick,
-		sizeInfo,
-		guestQuota,
-		isOptimizerPreparing
-	} = useOptimizationProcess({ isAuthenticated: Boolean(userId) })
+	const { hasImproved, handleOptimizeClick, guestQuota, isOptimizerPreparing } =
+		useOptimizationProcess({ isAuthenticated: Boolean(userId) })
 	const isBlockingClose = isPending || isInitialRequired
-
-	const optimizationStats = useMemo(
-		() => calculateOptimizationStats(info, sizeInfo),
-		[info, sizeInfo]
-	)
 
 	const enabledOptimizations = useMemo(() => {
 		const labelMap: Record<string, string> = {
@@ -128,7 +116,7 @@ const OptimizationModal: FC<OptimizationModalProps> = ({
 			}}
 		>
 			<DialogContent
-				className="h-[min(88svh,52rem)] w-[min(52rem,calc(100%-2rem))] max-w-none overflow-hidden border-0 p-0"
+				className="h-[min(88svh,52rem)] overflow-hidden border-0 p-0 md:max-w-3xl"
 				showCloseButton={!isBlockingClose}
 				onEscapeKeyDown={(event) => {
 					if (isBlockingClose) {
@@ -150,7 +138,7 @@ const OptimizationModal: FC<OptimizationModalProps> = ({
 							className="space-y-1"
 						>
 							<div className="flex items-center gap-2">
-								<span className="text-muted-foreground inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide">
+								<span className="text-muted-foreground inline-flex items-center gap-1 text-xs font-medium tracking-wide uppercase">
 									<Sparkles className="h-3.5 w-3.5" />
 									Optimize
 								</span>
@@ -195,7 +183,7 @@ const OptimizationModal: FC<OptimizationModalProps> = ({
 								transition={{ duration: 0.2, delay: 0.06 }}
 								className="bg-muted/30 mt-4 rounded-xl border px-4 py-3"
 							>
-								<div className="text-muted-foreground mb-2 flex items-center justify-between text-xs uppercase tracking-wide">
+								<div className="text-muted-foreground mb-2 flex items-center justify-between text-xs tracking-wide uppercase">
 									<span>Guest optimization quota</span>
 									<span>{guestQuota.remaining} left today</span>
 								</div>
@@ -227,44 +215,10 @@ const OptimizationModal: FC<OptimizationModalProps> = ({
 							className="pt-4"
 						>
 							<Accordion type="single" collapsible className="space-y-3">
-								<AccordionItem value="summary" className="rounded-2xl border px-4">
-									<AccordionTrigger className="py-3">
-										<div className="flex items-center gap-2 text-left">
-											<Sparkles className="h-4 w-4" />
-											<div>
-												<p className="text-sm font-semibold">Expected effects</p>
-												<p className="text-muted-foreground text-xs">
-													{enabledOptimizations.length} optimizations selected
-												</p>
-											</div>
-										</div>
-									</AccordionTrigger>
-									<AccordionContent>
-										<div className="space-y-3 pb-2">
-											<div className="grid gap-2 sm:grid-cols-2">
-												{optimizationStats.length > 0 ? (
-													optimizationStats.map((stat) => (
-														<div
-															key={stat.name}
-															className="bg-muted/35 rounded-lg border px-3 py-2"
-														>
-															<p className="text-muted-foreground text-xs capitalize">
-																{stat.name} reduction
-															</p>
-															<p className="text-sm font-semibold">-{stat.reduction}%</p>
-														</div>
-													))
-												) : (
-													<p className="text-muted-foreground col-span-full text-xs">
-														Run your first pass to view measured impact here.
-													</p>
-												)}
-											</div>
-										</div>
-									</AccordionContent>
-								</AccordionItem>
-
-								<AccordionItem value="advanced" className="rounded-2xl border px-4">
+								<AccordionItem
+									value="advanced"
+									className="rounded-2xl border px-4"
+								>
 									<AccordionTrigger className="py-3">
 										<div className="text-left">
 											<p className="text-sm font-semibold">Advanced controls</p>

@@ -17,8 +17,8 @@ import { cn } from '@shared/utils'
 import { useAtom } from 'jotai/react'
 import { Info } from 'lucide-react'
 
-import { SettingSlider } from '../../../..'
-import { optimizationAtom } from '../../../../../lib/stores/scene-optimization-store'
+import { SettingSlider } from '../../settings-components'
+import { optimizationAtom } from '../../../../lib/stores/scene-optimization-store'
 
 import type { TextureOptimization } from '@vctrl/core'
 import type { FC } from 'react'

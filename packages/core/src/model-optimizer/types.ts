@@ -101,7 +101,9 @@ export interface OptimizationReport {
 		vertices: BeforeAfterMetric
 		triangles: BeforeAfterMetric
 		materials: BeforeAfterMetric
+		/** Texture payload size in bytes (before/after). */
 		textures: BeforeAfterMetric
+		/** Number of texture assets (before/after). */
 		texturesCount: BeforeAfterMetric
 		textureResolutions: {
 			before: string[]

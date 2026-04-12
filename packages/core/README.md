@@ -179,7 +179,7 @@ Calling `optimizeAll()` with no arguments runs simplify, dedup, quantize, and no
 - `originalSize`, `optimizedSize`
 - `compressionRatio` as `originalSize / optimizedSize`
 - `appliedOptimizations`
-- `stats` before and after metrics for vertices, triangles, materials, textures size, `texturesCount`, `textureResolutions`, meshes, and nodes
+- `stats` before and after metrics for vertices, triangles, materials, texture size in bytes (`textures`), texture asset count (`texturesCount`), `textureResolutions`, meshes, and nodes
 
 ```ts
 const report = await optimizer.getReport()

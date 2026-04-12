@@ -8,15 +8,16 @@ import {
 	createBillingLimitErrorFromResponse,
 	isBillingLimitError,
 	toUpgradeModalPayload
-} from '../../../../lib/domain/billing/client/billing-limit-error'
+} from '../../../lib/domain/billing/client/billing-limit-error'
+import { resolveSceneMetrics } from '../../../lib/domain/scene'
 import {
 	optimizationAtom,
 	optimizationRuntimeAtom
-} from '../../../../lib/stores/scene-optimization-store'
+} from '../../../lib/stores/scene-optimization-store'
 import {
 	buildUpgradeModalState,
 	upgradeModalAtom
-} from '../../../../lib/stores/upgrade-modal-store'
+} from '../../../lib/stores/upgrade-modal-store'
 
 import type {
 	DedupOptimization,
@@ -31,6 +32,8 @@ export type SizeInfo = {
 	currentSceneBytes?: number | null
 	initialTextureBytes?: number | null
 	currentTextureBytes?: number | null
+	isSceneSizeComputing?: boolean
+	isInitialMetricsHydrating?: boolean
 }
 
 type OptimizationOption =
@@ -113,10 +116,7 @@ async function requestOptimizationRunQuota(
 			: 'Unable to record optimization run usage.'
 
 	const controller = new AbortController()
-	const timeoutId = setTimeout(
-		() => controller.abort(),
-		QUOTA_CHECK_TIMEOUT_MS
-	)
+	const timeoutId = setTimeout(() => controller.abort(), QUOTA_CHECK_TIMEOUT_MS)
 
 	let response: Response
 	try {
@@ -558,40 +558,34 @@ export const useOptimizationProcess = ({
 		}
 	}, [isAuthenticated])
 
+	const resolvedMetrics = resolveSceneMetrics({
+		stats: latestSceneStats,
+		report,
+		info,
+		runtime: {
+			initialSceneBytes: clientSceneBytes,
+			currentSceneBytes: optimizedSceneBytes,
+			initialTextureBytes: clientTextureBytes,
+			currentTextureBytes: optimizedTextureBytes,
+			isSceneSizeComputing: optimizationRuntime.isSceneSizeLoading
+		}
+	})
+
 	const sizeInfo: SizeInfo = {
-		initialSceneBytes:
-			clientSceneBytes ?? latestSceneStats?.initialSceneBytes ?? null,
-		currentSceneBytes:
-			optimizedSceneBytes ??
-			clientSceneBytes ??
-			latestSceneStats?.currentSceneBytes ??
-			null,
-		initialTextureBytes:
-			clientTextureBytes ?? report?.stats.textures.before ?? null,
-		currentTextureBytes:
-			optimizedTextureBytes ??
-			report?.stats.textures.after ??
-			clientTextureBytes ??
-			null
+		initialSceneBytes: resolvedMetrics.sceneBytes.initial,
+		currentSceneBytes: resolvedMetrics.sceneBytes.current,
+		initialTextureBytes: resolvedMetrics.textureBytes.initial,
+		currentTextureBytes: resolvedMetrics.textureBytes.current,
+		isSceneSizeComputing: resolvedMetrics.isSceneSizeComputing,
+		isInitialMetricsHydrating: resolvedMetrics.isInitialMetricsHydrating
 	}
-	const initialSceneBytes = sizeInfo.initialSceneBytes ?? null
-	const currentSceneBytes = sizeInfo.currentSceneBytes ?? initialSceneBytes
-	const hasSceneSizeImprovement =
-		typeof initialSceneBytes === 'number' &&
-		typeof currentSceneBytes === 'number'
-			? currentSceneBytes < initialSceneBytes
-			: false
-	const hasReportImprovement =
-		(report?.appliedOptimizations?.length ?? 0) > 0 ||
-		info.improvement.verticesCount > 0 ||
-		info.improvement.primitivesCount > 0 ||
-		info.improvement.meshesCount > 0 ||
-		info.improvement.texturesCount > 0
-	const hasImproved = hasReportImprovement || hasSceneSizeImprovement
+
+	const hasImproved = resolvedMetrics.hasImproved
 
 	return {
 		info,
 		report,
+		resolvedMetrics,
 		isPending,
 		isOptimizerPreparing: isPreparing,
 		isOptimizerReady: isReady,

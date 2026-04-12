@@ -28,6 +28,8 @@ export interface PublishSidebarContextValue {
 		currentSceneBytes?: number | null
 		initialTextureBytes?: number | null
 		currentTextureBytes?: number | null
+		isSceneSizeComputing?: boolean
+		isInitialMetricsHydrating?: boolean
 	}
 	stats?: SceneStatsData | null
 }

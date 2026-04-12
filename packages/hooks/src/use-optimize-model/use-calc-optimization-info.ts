@@ -11,7 +11,7 @@ function getStatsFromReport(report: OptimizationReport | null): {
 	vertices: number
 	primitives: number
 	meshes: number
-	textures: number
+	textureCount: number
 	materials: number
 	totalSize: number
 } {
@@ -20,7 +20,7 @@ function getStatsFromReport(report: OptimizationReport | null): {
 			vertices: 0,
 			primitives: 0,
 			meshes: 0,
-			textures: 0,
+			textureCount: 0,
 			materials: 0,
 			totalSize: 0
 		}
@@ -30,7 +30,7 @@ function getStatsFromReport(report: OptimizationReport | null): {
 		vertices: report.stats.vertices.after || 0,
 		primitives: report.stats.triangles.after || 0,
 		meshes: report.stats.meshes.after || 0,
-		textures: report.stats.texturesCount.after || 0,
+		textureCount: report.stats.texturesCount.after || 0,
 		materials: report.stats.materials.after || 0,
 		totalSize: report.optimizedSize || 0
 	}
@@ -65,21 +65,21 @@ export const useCalcOptimizationInfo = (
 				verticesCount: initial.vertices,
 				primitivesCount: initial.primitives,
 				meshesCount: initial.meshes,
-				texturesCount: initial.textures,
+				texturesCount: initial.textureCount,
 				sceneBytes: initial.totalSize
 			},
 			optimized: {
 				verticesCount: current.vertices,
 				primitivesCount: current.primitives,
 				meshesCount: current.meshes,
-				texturesCount: current.textures,
+				texturesCount: current.textureCount,
 				sceneBytes: current.totalSize
 			},
 			improvement: {
 				verticesCount: initial.vertices - current.vertices,
 				primitivesCount: initial.primitives - current.primitives,
 				meshesCount: initial.meshes - current.meshes,
-				texturesCount: initial.textures - current.textures,
+				texturesCount: initial.textureCount - current.textureCount,
 				sceneBytes: initial.totalSize - current.totalSize
 			}
 		}
