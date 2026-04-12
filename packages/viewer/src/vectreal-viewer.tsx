@@ -213,6 +213,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	return (
 		<Suspense fallback={loader}>
 			<Canvas
+				frameloop="always"
 				containerClassName={cn(
 					'viewer vctrl-viewer h-full w-full overflow-clip font-[DM_Sans_Variable,sans-serif] text-base [&_a]:text-inherit [&_a]:no-underline [&_button]:border-0 [&_p]:m-0',
 					className
