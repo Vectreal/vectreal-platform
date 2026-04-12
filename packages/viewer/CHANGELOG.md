@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.16.2](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.16.1...viewer-v0.16.2) (2026-04-12)
+
+
+### Bug Fixes
+
+* set frameloop to always for consistent rendering in VectrealViewer ([#396](https://github.com/Vectreal/vectreal-platform/issues/396)) ([53475a4](https://github.com/Vectreal/vectreal-platform/commit/53475a4263706d80db8a3b75957f56d7342f8052))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.16.2
+
 ## [0.16.1](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.16.0...viewer-v0.16.1) (2026-04-11)
 
 
