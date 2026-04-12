@@ -9,14 +9,14 @@
 Vectreal Platform is an open platform for preparing, managing, and publishing 3D content for the web.
 It is a **pnpm + Nx monorepo** containing:
 
-| Area | Path | Purpose |
-|------|------|---------|
-| Platform app | `apps/vectreal-platform/` | Full-stack React Router v7 app (SSR, auth, dashboard, publisher, preview) |
-| Viewer package | `packages/viewer/` | `@vctrl/viewer` React 3D viewer component |
-| Hooks package | `packages/hooks/` | `@vctrl/hooks` browser-side loading, optimisation, and export hooks |
-| Core package | `packages/core/` | `@vctrl/core` server-side model processing pipeline |
-| Shared libraries | `shared/` | Shared UI components and utilities |
-| Infrastructure | `terraform/` | Google Cloud Run, CDN, IAM, and storage Terraform config |
+| Area             | Path                      | Purpose                                                                   |
+| ---------------- | ------------------------- | ------------------------------------------------------------------------- |
+| Platform app     | `apps/vectreal-platform/` | Full-stack React Router v7 app (SSR, auth, dashboard, publisher, preview) |
+| Viewer package   | `packages/viewer/`        | `@vctrl/viewer` React 3D viewer component                                 |
+| Hooks package    | `packages/hooks/`         | `@vctrl/hooks` browser-side loading, optimisation, and export hooks       |
+| Core package     | `packages/core/`          | `@vctrl/core` server-side model processing pipeline                       |
+| Shared libraries | `shared/`                 | Shared UI components and utilities                                        |
+| Infrastructure   | `terraform/`              | Google Cloud Run, CDN, IAM, and storage Terraform config                  |
 
 ---
 
@@ -39,19 +39,23 @@ Read the relevant document before implementing any feature that touches:
 ## Key Conventions
 
 ### Framework
+
 - The platform app uses **React Router v7 framework mode** (not client-side SPA). Follow framework-mode conventions: loaders, actions, `Route.LoaderArgs`, `Route.ActionArgs`.
 - Use **Drizzle ORM** for all database access. Schemas live in `apps/vectreal-platform/app/db/schema/`.
 
 ### Nx Tasks
+
 - Run tasks via `nx` (e.g., `nx run vectreal-platform:build`) — never call underlying tools (tsc, vite, jest) directly.
 - `nx affected` for CI-scoped runs.
 
 ### Code Style
+
 - TypeScript strict mode everywhere.
 - Format on save via Prettier. ESLint with auto-fix on save.
 - Imports use path aliases from `tsconfig.base.json`.
 
 ### Testing
+
 - Unit tests: Jest (`nx run <project>:test`).
 - E2E tests: Playwright (`nx run <project>:e2e`).
 
@@ -64,5 +68,10 @@ The following Nx-aware MCP tools are available in this workspace:
 - `nx_workspace` — workspace architecture overview and error detection
 - `nx_project_details` — per-project structure and dependencies
 - `nx_docs` — up-to-date Nx documentation
+
+The following repository skills are also available:
+
+- [vectreal-extension-architecture](.agents/skills/vectreal-extension-architecture/SKILL.md) — use for architecture and extension work (route trees, loaders/actions, domain boundaries, client/server separation, Drizzle/RLS, Nx workflow discipline).
+- [vectreal-brand-ux-design](.agents/skills/vectreal-brand-ux-design/SKILL.md) — use for UI/UX and branding work (token-first styling, typography, motion, accessibility, responsive behavior, intentional and high-polish design execution).
 
 Use these tools when answering questions about project configuration, graph errors, or Nx best practices.
