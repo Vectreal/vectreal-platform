@@ -1,5 +1,5 @@
 {
-	"version": "0.16.1",
+	"version": "0.16.2",
 	"name": "@vctrl/core",
 	"description": "vctrl/core is the foundational package providing server-side 3D model processing capabilities. It contains the core classes for loading, optimizing, and exporting 3D models using glTF-Transform and Three.js, designed for Node.js environments.",
 	"bugs": {

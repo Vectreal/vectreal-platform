@@ -1,6 +1,6 @@
 {
-	".": "0.16.1",
-	"packages/core": "0.16.1",
-	"packages/hooks": "0.16.1",
-	"packages/viewer": "0.16.1"
+	".": "0.16.2",
+	"packages/core": "0.16.2",
+	"packages/hooks": "0.16.2",
+	"packages/viewer": "0.16.2"
 }

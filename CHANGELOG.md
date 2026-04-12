@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.16.2](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.16.1...workspace-v0.16.2) (2026-04-12)
+
+
+### Bug Fixes
+
+* set frameloop to always for consistent rendering in VectrealViewer ([#396](https://github.com/Vectreal/vectreal-platform/issues/396)) ([53475a4](https://github.com/Vectreal/vectreal-platform/commit/53475a4263706d80db8a3b75957f56d7342f8052))
+* update npm registry URL and add missing built dependencies in workspace configuration ([#394](https://github.com/Vectreal/vectreal-platform/issues/394)) ([575620c](https://github.com/Vectreal/vectreal-platform/commit/575620c65dac8a9e408c735116df2c622e3ee3a1))
+
 ## [0.16.1](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.16.0...workspace-v0.16.1) (2026-04-11)
 
 
