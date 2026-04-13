@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import {
 	Avatar,
 	AvatarFallback,
@@ -8,9 +9,10 @@ import { Button } from '@shared/components/ui/button'
 import { ScrollArea } from '@shared/components/ui/scroll-area'
 import { cn } from '@shared/utils'
 import { ChevronLeft, ChevronRight, Copy } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { data, Link } from 'react-router'
 
+import { useConsent } from '../../components/consent/consent-context'
 import { DocsPageToc } from '../../components/docs/docs-page-toc'
 import { PublicErrorBoundary } from '../../components/errors'
 import { useDocToc } from '../../hooks/use-doc-toc'
@@ -99,14 +101,99 @@ export default function NewsRoomArticlePage({
 	loaderData
 }: Route.ComponentProps) {
 	const { article, adjacent, related } = loaderData
+	const posthog = usePostHog()
+	const { consent } = useConsent()
 	const fullArticle = useMemo(
 		() => getNewsArticle(article.slug),
 		[article.slug]
 	)
 	const ArticleComponent = fullArticle?.Component
 	const contentRef = useRef<HTMLDivElement | null>(null)
+	const viewTrackedRef = useRef(false)
+	const scrollTrackedMilestones = useRef(new Set<number>())
+	const maxScrollPercentRef = useRef(0)
+	const startedAtRef = useRef(Date.now())
 	const { headings, activeId } = useDocToc(contentRef, article.slug)
 	const [copied, setCopied] = useState(false)
+
+	useEffect(() => {
+		if (!consent?.analytics || viewTrackedRef.current) {
+			return
+		}
+
+		viewTrackedRef.current = true
+		posthog?.capture('newsroom_article_viewed', {
+			slug: article.slug,
+			category: article.category,
+			reading_time_minutes: article.readingTimeMinutes,
+			client_type: 'web'
+		})
+	}, [
+		article.category,
+		article.readingTimeMinutes,
+		article.slug,
+		consent?.analytics,
+		posthog
+	])
+
+	useEffect(() => {
+		if (!consent?.analytics) {
+			return
+		}
+
+		const milestones = [25, 50, 75, 100]
+
+		const updateScrollMilestones = () => {
+			const doc = document.documentElement
+			const scrollable = Math.max(1, doc.scrollHeight - window.innerHeight)
+			const percent = Math.min(
+				100,
+				Math.round((window.scrollY / scrollable) * 100)
+			)
+
+			maxScrollPercentRef.current = Math.max(
+				maxScrollPercentRef.current,
+				percent
+			)
+
+			for (const milestone of milestones) {
+				if (
+					percent >= milestone &&
+					!scrollTrackedMilestones.current.has(milestone)
+				) {
+					scrollTrackedMilestones.current.add(milestone)
+					posthog?.capture('newsroom_article_scroll_milestone', {
+						slug: article.slug,
+						milestone_percent: milestone,
+						client_type: 'web'
+					})
+				}
+			}
+		}
+
+		window.addEventListener('scroll', updateScrollMilestones, { passive: true })
+		updateScrollMilestones()
+
+		return () => {
+			window.removeEventListener('scroll', updateScrollMilestones)
+		}
+	}, [article.slug, consent?.analytics, posthog])
+
+	useEffect(() => {
+		return () => {
+			if (!consent?.analytics) {
+				return
+			}
+
+			const durationMs = Date.now() - startedAtRef.current
+			posthog?.capture('newsroom_article_read_completed', {
+				slug: article.slug,
+				duration_ms: durationMs,
+				max_scroll_percent: maxScrollPercentRef.current,
+				client_type: 'web'
+			})
+		}
+	}, [article.slug, consent?.analytics, posthog])
 
 	function copyArticleLink() {
 		if (typeof navigator === 'undefined') {
@@ -140,50 +227,48 @@ export default function NewsRoomArticlePage({
 	}
 
 	return (
-		<div className="mx-auto flex w-full max-w-7xl gap-0 px-4 pt-22 pb-16">
+		<div className="mx-auto flex w-full max-w-7xl gap-0 px-4 pt-22 pb-18">
 			<main className="min-w-0 flex-1 lg:px-8">
-				<Button variant="ghost" asChild className="mb-5 -ml-2">
+				<Button variant="ghost" asChild className="mb-6 -ml-2">
 					<Link to="/news-room" viewTransition>
 						<ChevronLeft className="mr-1 h-4 w-4" />
-						Newsroom
+						Back to Newsroom
 					</Link>
 				</Button>
 
-				<header className="bg-card/15 mb-8 rounded-2xl border border-[var(--color-border)]/60 p-6 md:p-7">
-					<div className="mb-4 flex flex-wrap items-center gap-2">
+				<header className="from-card/45 to-muted/10 mb-10 rounded-2xl border border-[var(--color-border)]/60 bg-gradient-to-br p-6 md:p-8">
+					<div className="mb-5 flex flex-wrap items-center gap-2">
 						<Badge variant="outline" className="capitalize">
 							{article.category}
+						</Badge>
+						<Badge variant="outline">
+							{article.readingTimeMinutes} min read
 						</Badge>
 						{article.draft ? (
 							<Badge variant="secondary" className="uppercase">
 								Draft
 							</Badge>
 						) : null}
-						<span className="text-muted-foreground text-xs">
-							{formatNewsDate(article.publishedAt)}
-						</span>
-						{article.updatedAt && (
-							<>
-								<span className="text-muted-foreground text-xs">•</span>
-								<span className="text-muted-foreground text-xs">
-									Updated {formatNewsDate(article.updatedAt)}
-								</span>
-							</>
-						)}
-						<span className="text-muted-foreground text-xs">•</span>
-						<span className="text-muted-foreground text-xs">
-							{article.readingTimeMinutes} min read
-						</span>
 					</div>
 
-					<h1 className="mb-3 max-w-4xl text-4xl leading-[1.08] font-medium tracking-tight md:text-6xl">
+					<h1 className="mb-4 max-w-4xl text-4xl leading-[1.03] font-medium tracking-tight text-balance md:text-6xl">
 						{article.title}
 					</h1>
-					<p className="text-muted-foreground max-w-3xl text-sm leading-relaxed md:text-base">
+					<p className="text-muted-foreground max-w-3xl text-base leading-relaxed md:text-lg">
 						{article.excerpt}
 					</p>
 
-					<div className="mt-6 flex flex-wrap items-center gap-3">
+					<div className="text-muted-foreground mt-6 flex flex-wrap items-center gap-2 text-sm">
+						<span>{formatNewsDate(article.publishedAt)}</span>
+						{article.updatedAt ? (
+							<>
+								<span>•</span>
+								<span>Updated {formatNewsDate(article.updatedAt)}</span>
+							</>
+						) : null}
+					</div>
+
+					<div className="mt-6 flex flex-wrap items-center gap-3 border-t border-[var(--color-border)]/50 pt-5">
 						<Avatar className="h-11 w-11 border border-[var(--color-border)]/70">
 							{article.author.avatar ? (
 								<AvatarImage
@@ -194,7 +279,9 @@ export default function NewsRoomArticlePage({
 							<AvatarFallback>{initials(article.author.name)}</AvatarFallback>
 						</Avatar>
 						<div>
-							<p className="text-sm font-semibold">{article.author.name}</p>
+							<p className="text-sm font-semibold tracking-tight">
+								{article.author.name}
+							</p>
 							<p className="text-muted-foreground text-xs">
 								{article.author.role}
 							</p>
@@ -202,80 +289,100 @@ export default function NewsRoomArticlePage({
 						<div className="ml-auto flex items-center gap-2">
 							<Button variant="outline" size="sm" onClick={copyArticleLink}>
 								<Copy className="mr-2 h-3.5 w-3.5" />
-								{copied ? 'Copied' : 'Copy link'}
+								{copied ? 'Copied' : 'Copy Link'}
 							</Button>
 						</div>
 					</div>
 
 					{article.author.bio && (
-						<p className="text-muted-foreground mt-4 border-t border-[var(--color-border)]/50 pt-4 text-sm leading-relaxed">
+						<p className="text-muted-foreground mt-4 text-sm leading-relaxed md:text-base">
 							{article.author.bio}
 						</p>
 					)}
 				</header>
 
-				<article ref={contentRef} className={cn(styles.docsContent, 'mb-10')}>
+				<article
+					ref={contentRef}
+					className={cn(styles.docsContent, styles.newsroomContent, 'mb-10')}
+				>
 					<ArticleComponent />
 				</article>
 
-				<div className="border-border/60 mt-12 flex flex-col gap-5 border-t pt-6">
-					<div className="flex items-center justify-between gap-3">
+				<div className="border-border/60 mt-12 flex flex-col gap-6 border-t pt-6">
+					<p className="text-muted-foreground text-xs font-semibold tracking-[0.18em] uppercase">
+						Continue Reading
+					</p>
+					<div className="grid gap-3 md:grid-cols-2">
 						{adjacent.previous ? (
-							<Button variant="ghost" asChild className="h-10 px-3 py-2">
+							<Button
+								variant="ghost"
+								asChild
+								className="h-auto justify-start px-0 py-0"
+							>
 								<Link
 									to={`/news-room/${adjacent.previous.slug}`}
 									viewTransition
-									className="group"
+									className="border-border/70 bg-card/20 hover:border-border group rounded-xl border p-4"
 								>
-									<span className="text-muted-foreground group-hover:text-foreground inline-flex items-center gap-2 text-sm transition-colors">
+									<p className="text-muted-foreground mb-2 inline-flex items-center gap-2 text-xs tracking-wide uppercase">
 										<ChevronLeft className="h-4 w-4" aria-hidden="true" />
+										Previous Article
+									</p>
+									<p className="group-hover:text-foreground text-sm leading-snug font-semibold transition-colors">
 										{adjacent.previous.title}
-									</span>
+									</p>
 								</Link>
 							</Button>
 						) : (
-							<span className="h-10 w-10" />
+							<span />
 						)}
 
 						{adjacent.next ? (
-							<Button variant="ghost" asChild className="h-10 px-3 py-2">
+							<Button
+								variant="ghost"
+								asChild
+								className="h-auto justify-end px-0 py-0"
+							>
 								<Link
 									to={`/news-room/${adjacent.next.slug}`}
 									viewTransition
-									className="group"
+									className="border-border/70 bg-card/20 hover:border-border group rounded-xl border p-4 text-right"
 								>
-									<span className="text-muted-foreground group-hover:text-foreground inline-flex items-center gap-2 text-sm transition-colors">
-										{adjacent.next.title}
+									<p className="text-muted-foreground mb-2 inline-flex items-center gap-2 text-xs tracking-wide uppercase">
+										Next Article
 										<ChevronRight className="h-4 w-4" aria-hidden="true" />
-									</span>
+									</p>
+									<p className="group-hover:text-foreground text-sm leading-snug font-semibold transition-colors">
+										{adjacent.next.title}
+									</p>
 								</Link>
 							</Button>
 						) : (
-							<span className="h-10 w-10" />
+							<span />
 						)}
 					</div>
 				</div>
 
 				{related.length > 0 && (
-					<section className="mt-12">
-						<h2 className="mb-4 text-lg font-semibold tracking-tight">
+					<section className="mt-14">
+						<h2 className="mb-5 text-xl font-semibold tracking-tight">
 							More from the newsroom
 						</h2>
-						<div className="grid gap-4 md:grid-cols-3">
+						<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 							{related.map((item) => (
 								<Link
 									key={item.slug}
 									to={`/news-room/${item.slug}`}
-									className="border-border/70 bg-card/15 hover:border-border block rounded-xl border p-4 transition-colors"
+									className="border-border/70 bg-card/15 hover:border-border block rounded-xl border p-5 transition-colors"
 								>
-									<p className="text-muted-foreground mb-2 text-xs">
+									<p className="text-muted-foreground mb-2 text-xs tracking-wide uppercase">
 										{formatNewsDate(item.publishedAt)} •{' '}
 										{item.readingTimeMinutes} min
 									</p>
-									<h3 className="mb-2 text-sm leading-snug font-semibold">
+									<h3 className="mb-2 text-base leading-snug font-semibold">
 										{item.title}
 									</h3>
-									<p className="text-muted-foreground line-clamp-3 text-xs">
+									<p className="text-muted-foreground line-clamp-3 text-sm">
 										{item.excerpt}
 									</p>
 								</Link>

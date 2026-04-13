@@ -320,14 +320,14 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 
 			{/* Scene preservation notice */}
 			{loaderData?.sceneSaved && (
-				<div className="mb-6 space-y-2 rounded-lg border border-green-300/50 bg-green-300/25 p-4 text-sm text-green-200/80">
+				<div className="border-success/50 bg-success/25 text-success-foreground/80 mb-6 space-y-2 rounded-lg border p-4 text-sm">
 					<span className="flex gap-2">
 						<Save className="h-4 w-4 text-inherit" aria-hidden="true" />
 						<p className="font-medium! text-inherit!">
 							Scene Saved Temporarily!
 						</p>
 					</span>
-					<p className="text-green-200/60!">
+					<p className="text-success-foreground/60!">
 						Your scene configuration has been saved. Sign up with Google or
 						GitHub to convert to a permanent account and access your scene.
 					</p>
@@ -336,7 +336,7 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 							asChild
 							size="sm"
 							variant="outline"
-							className="mt-1 w-full border-green-300/50 text-green-200/80 hover:bg-green-300/20 hover:text-green-100"
+							className="border-success/50 text-success-foreground/80 hover:bg-success/20 hover:text-success-foreground mt-1 w-full"
 						>
 							<Link to={loaderData.nextPath}>
 								<ExternalLink className="mr-1 h-3 w-3" />
@@ -348,7 +348,7 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 			)}
 
 			{formError && (
-				<div className="mb-4 rounded-lg border border-red-300/50 bg-red-300/20 p-4 text-sm text-red-100/90">
+				<div className="border-error-border bg-error-bg text-error-foreground mb-4 rounded-lg border p-4 text-sm">
 					{formError}
 				</div>
 			)}

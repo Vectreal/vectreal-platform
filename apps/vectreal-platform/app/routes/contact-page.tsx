@@ -184,7 +184,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 										</p>
 									) : null}
 									{typedActionData.notice ? (
-										<p className="mt-2 text-sm text-amber-700">
+										<p className="text-warning-muted-foreground mt-2 text-sm">
 											{typedActionData.notice}
 										</p>
 									) : null}
@@ -193,7 +193,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 
 							{typedActionData?.status === 'error' &&
 							typedActionData.formError ? (
-								<div className="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+								<div className="border-error-border bg-error-bg text-error-foreground mb-4 rounded-2xl border p-4 text-sm">
 									{typedActionData.formError}
 								</div>
 							) : null}
@@ -232,7 +232,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 											placeholder="Jane Doe"
 										/>
 										{typedActionData?.fieldErrors?.name ? (
-											<p className="text-sm text-red-600">
+											<p className="text-destructive text-sm">
 												{typedActionData.fieldErrors.name}
 											</p>
 										) : null}
@@ -250,7 +250,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 											placeholder="you@company.com"
 										/>
 										{typedActionData?.fieldErrors?.email ? (
-											<p className="text-sm text-red-600">
+											<p className="text-destructive text-sm">
 												{typedActionData.fieldErrors.email}
 											</p>
 										) : null}
@@ -277,7 +277,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 									</Select>
 									<input type="hidden" name="inquiryType" value={inquiryType} />
 									{typedActionData?.fieldErrors?.inquiryType ? (
-										<p className="text-sm text-red-600">
+										<p className="text-destructive text-sm">
 											{typedActionData.fieldErrors.inquiryType}
 										</p>
 									) : null}
@@ -294,7 +294,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 										placeholder="Tell us about your use case, current blockers, and timeline."
 									/>
 									{typedActionData?.fieldErrors?.message ? (
-										<p className="text-sm text-red-600">
+										<p className="text-destructive text-sm">
 											{typedActionData.fieldErrors.message}
 										</p>
 									) : (

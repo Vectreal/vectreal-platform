@@ -182,7 +182,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 				are unsaved changes.
 			</div>
 			{!sceneId && (
-				<div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+				<div className="border-warning/40 bg-warning/10 text-warning-foreground rounded-md border px-3 py-2 text-xs">
 					First publish will save and assign a scene ID automatically.
 				</div>
 			)}

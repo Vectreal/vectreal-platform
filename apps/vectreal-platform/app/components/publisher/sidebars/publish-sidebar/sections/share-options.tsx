@@ -73,7 +73,7 @@ export const ShareOptions: FC = () => {
 					/>
 					<Button variant="outline" size="icon" onClick={handleCopyLink}>
 						{copied ? (
-							<Clipboard className="h-4 w-4 text-green-500" />
+							<Clipboard className="text-success h-4 w-4" />
 						) : (
 							<Link2 className="h-4 w-4" />
 						)}
@@ -83,7 +83,7 @@ export const ShareOptions: FC = () => {
 					<motion.p
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
-						className="mt-1 text-xs text-green-500"
+						className="text-success mt-1 text-xs"
 					>
 						Link copied to clipboard!
 					</motion.p>

@@ -104,13 +104,24 @@ Every event automatically includes the following properties:
 
 ### Contact
 
-| Event name                    | Trigger                                        | Required properties                                          | Optional properties                           | Consent required |
-| ----------------------------- | ---------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------- | ---------------- |
-| `contact_page_viewed`         | Contact page rendered                          | `source` (direct\|pricing_cta\|footer\|other)                | `is_authenticated`                            | `analytics`      |
-| `contact_form_submit_started` | User submits contact form                      | `inquiry_type` (support\|sales\|partnership\|other)          | `is_authenticated`                            | `analytics`      |
-| `contact_form_submitted`      | Contact form accepted and forwarded            | `inquiry_type`                                               | `delivery_channel`, `response_time_bucket_ms`, `anti_bot_mode` (csrf_honeypot_rate_limit) | `analytics`      |
-| `contact_form_submit_failed`  | Contact form submission failed                 | `failure_stage` (validation\|anti_bot\|rate_limit\|provider\|db) | `inquiry_type`, `error_code`                  | `analytics`      |
-| `contact_form_blocked`        | Contact request blocked by anti-abuse controls | `block_reason` (honeypot\|rate_limit\|captcha_invalid)       | `inquiry_type`                                | `analytics`      |
+| Event name                    | Trigger                                        | Required properties                                              | Optional properties                                                                       | Consent required |
+| ----------------------------- | ---------------------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------- |
+| `contact_page_viewed`         | Contact page rendered                          | `source` (direct\|pricing_cta\|footer\|other)                    | `is_authenticated`                                                                        | `analytics`      |
+| `contact_form_submit_started` | User submits contact form                      | `inquiry_type` (support\|sales\|partnership\|other)              | `is_authenticated`                                                                        | `analytics`      |
+| `contact_form_submitted`      | Contact form accepted and forwarded            | `inquiry_type`                                                   | `delivery_channel`, `response_time_bucket_ms`, `anti_bot_mode` (csrf_honeypot_rate_limit) | `analytics`      |
+| `contact_form_submit_failed`  | Contact form submission failed                 | `failure_stage` (validation\|anti_bot\|rate_limit\|provider\|db) | `inquiry_type`, `error_code`                                                              | `analytics`      |
+| `contact_form_blocked`        | Contact request blocked by anti-abuse controls | `block_reason` (honeypot\|rate_limit\|captcha_invalid)           | `inquiry_type`                                                                            | `analytics`      |
+
+---
+
+### Content & Newsroom
+
+| Event name                          | Trigger                                    | Required properties                           | Optional properties                                  | Consent required |
+| ----------------------------------- | ------------------------------------------ | --------------------------------------------- | ---------------------------------------------------- | ---------------- |
+| `newsroom_listing_viewed`           | Newsroom listing page rendered             | `result_count`, `sort_mode` (newest\|oldest)  | `has_query`, `has_category_filter`, `has_tag_filter` | `analytics`      |
+| `newsroom_article_viewed`           | Newsroom article page rendered             | `slug`, `category`, `reading_time_minutes`    | —                                                    | `analytics`      |
+| `newsroom_article_scroll_milestone` | Reader crosses scroll milestone            | `slug`, `milestone_percent` (25\|50\|75\|100) | —                                                    | `analytics`      |
+| `newsroom_article_read_completed`   | Reader leaves article after active reading | `slug`, `duration_ms`, `max_scroll_percent`   | —                                                    | `analytics`      |
 
 ---
 
