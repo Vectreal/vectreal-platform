@@ -30,8 +30,8 @@ import {
 	type ContactInquiryType
 } from '../lib/domain/contact/contact-shared'
 import {
-	buildContactSource,
-	submitContactForm
+	buildContactSource
+	// submitContactForm
 } from '../lib/domain/contact/contact-submission.server'
 import { ensureValidCsrfFormData } from '../lib/http/csrf.server'
 import { buildPageMeta } from '../lib/seo'
@@ -56,9 +56,15 @@ export async function loader({ request }: Route.LoaderArgs) {
 	)
 }
 
-export async function action({ request, context }: Route.ActionArgs) {
-	const { client, headers } = await createSupabaseClient(request)
-	const responseHeaders = new Headers(headers)
+export async function action({
+	request
+	// context
+}: Route.ActionArgs) {
+	const {
+		client
+		// headers
+	} = await createSupabaseClient(request)
+	// const responseHeaders = new Headers(headers)
 	const {
 		data: { user }
 	} = await client.auth.getUser()
@@ -75,17 +81,17 @@ export async function action({ request, context }: Route.ActionArgs) {
 	)
 		? (rawSource as (typeof CONTACT_SOURCE_VALUES)[number])
 		: ('other' as const)
-	let result: { status: number; body: ActionData }
+	// let result: { status: number; body: ActionData }
 
 	try {
-		result = await submitContactForm({
-			request,
-			context,
-			formData,
-			userId: user?.id ?? null,
-			isAuthenticated: Boolean(user),
-			source
-		})
+		// result = await submitContactForm({
+		// 	request,
+		// 	context,
+		// 	formData,
+		// 	userId: user?.id ?? null,
+		// 	isAuthenticated: Boolean(user),
+		// 	source
+		// })
 	} catch (error) {
 		console.error('[contact/action] failed to process contact submission', {
 			error,
@@ -93,20 +99,20 @@ export async function action({ request, context }: Route.ActionArgs) {
 			isAuthenticated: Boolean(user)
 		})
 
-		result = {
-			status: 500,
-			body: {
-				status: 'error',
-				formError:
-					'We could not send your message right now. Please try again shortly.'
-			}
-		}
+		// result = {
+		// 	status: 500,
+		// 	body: {
+		// 		status: 'error',
+		// 		formError:
+		// 			'We could not send your message right now. Please try again shortly.'
+		// 	}
+		// }
 	}
 
-	return data<ActionData>(result.body, {
-		status: result.status,
-		headers: responseHeaders
-	})
+	// return data<ActionData>(result.body, {
+	// 	status: result.status,
+	// 	headers: responseHeaders
+	// })
 }
 
 export function meta(_: Route.MetaArgs) {
