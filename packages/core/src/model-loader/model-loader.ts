@@ -350,10 +350,10 @@ export class ModelLoader {
 				json: gltfJson,
 				resources: resources.entries().reduce(
 					(acc, [key, value]) => {
-						acc[key] = value
+						acc[key] = value as Uint8Array<ArrayBuffer>
 						return acc
 					},
-					{} as Record<string, Uint8Array>
+					{} as Record<string, Uint8Array<ArrayBuffer>>
 				)
 			})
 
