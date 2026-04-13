@@ -18,11 +18,13 @@ import { motion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
 import { Sparkles } from 'lucide-react'
 import { useEffect, useMemo, type FC } from 'react'
+import { Link } from 'react-router'
 
 import { AdvancedPanel } from './optimization/advanced-optimization-panel'
 import BasicOptimizationPanel from './optimization/basic-optimization-panel'
 import { OptimizeButton } from './optimization/optimize-button'
 import { useOptimizationProcess } from './optimization/use-optimization-process'
+import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import {
 	optimizationAtom,
 	optimizationRuntimeAtom
@@ -33,13 +35,15 @@ interface OptimizationModalProps {
 	onOpenChange: (open: boolean) => void
 	userId?: string
 	isInitialRequired: boolean
+	dashboardHref?: string
 }
 
 const OptimizationModal: FC<OptimizationModalProps> = ({
 	open,
 	onOpenChange,
 	userId,
-	isInitialRequired
+	isInitialRequired,
+	dashboardHref
 }) => {
 	const { optimizationPreset, optimizations } = useAtomValue(optimizationAtom)
 	const { isPending } = useAtomValue(optimizationRuntimeAtom)
@@ -104,6 +108,8 @@ const OptimizationModal: FC<OptimizationModalProps> = ({
 	const runOptimization = async () => {
 		await handleOptimizeClick()
 	}
+
+	const resolvedDashboardHref = dashboardHref ?? DASHBOARD_ROUTES.DASHBOARD
 
 	return (
 		<Dialog
@@ -238,6 +244,11 @@ const OptimizationModal: FC<OptimizationModalProps> = ({
 					</div>
 
 					<DialogFooter className="bg-background shrink-0 border-t px-6 py-4">
+						{isInitialRequired && !isPending ? (
+							<Button type="button" variant="ghost" asChild>
+								<Link to={resolvedDashboardHref}>Back to Dashboard</Link>
+							</Button>
+						) : null}
 						{!isBlockingClose && (
 							<Button
 								type="button"

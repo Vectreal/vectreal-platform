@@ -1,4 +1,5 @@
 import { cn } from '@shared/utils'
+import { motion } from 'framer-motion'
 import { PropsWithChildren } from 'react'
 
 interface FloatingPillWrapperProps extends PropsWithChildren {
@@ -11,7 +12,8 @@ const FloatingPillWrapper = ({
 	...rest
 }: FloatingPillWrapperProps) => {
 	return (
-		<div
+		<motion.div
+			layout="size"
 			{...rest}
 			className={cn(
 				'bg-background/50 flex w-fit items-center justify-between rounded-2xl p-2 shadow-2xl backdrop-blur-2xl',

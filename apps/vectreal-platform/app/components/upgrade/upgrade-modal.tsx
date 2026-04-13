@@ -124,6 +124,10 @@ export function UpgradeModal() {
 		state.limit != null && state.currentValue != null
 			? Math.min(Math.round((state.currentValue / state.limit) * 100), 100)
 			: null
+	const isPublisherFlow =
+		location.pathname.startsWith('/publisher') &&
+		(state.actionAttempted === 'optimization_run' ||
+			state.actionAttempted === 'scene_publish')
 
 	// Build the upgrade destination: settings page with plan pre-selected, or pricing
 	const upgradeHref =
@@ -168,9 +172,15 @@ export function UpgradeModal() {
 				)}
 
 				<DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
-					<Button variant="ghost" onClick={closeModal} className="sm:mr-auto">
-						Maybe later
-					</Button>
+					{isPublisherFlow ? (
+						<Link to="/dashboard" onClick={closeModal} className="sm:mr-auto">
+							<Button variant="ghost">Back to Dashboard</Button>
+						</Link>
+					) : (
+						<Button variant="ghost" onClick={closeModal} className="sm:mr-auto">
+							Maybe later
+						</Button>
+					)}
 					<div className="flex gap-2">
 						<Link to="/pricing" onClick={closeModal}>
 							<Button variant="outline" size="sm">
