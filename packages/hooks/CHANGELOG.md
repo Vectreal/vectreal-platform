@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.17.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.16.2...hooks-v0.17.0) (2026-04-13)
+
+
+### Features
+
+* update dashboard action buttons and sidebar links ([#403](https://github.com/Vectreal/vectreal-platform/issues/403)) ([c144470](https://github.com/Vectreal/vectreal-platform/commit/c1444705dce5bd9a625880d0a8d9535f240aa353))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.17.0
+
 ## [0.16.2](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.16.1...hooks-v0.16.2) (2026-04-12)
 
 

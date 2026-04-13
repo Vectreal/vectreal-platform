@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/Vectreal/vectreal-platform/compare/core-v0.16.2...core-v0.17.0) (2026-04-13)
+
+
+### Features
+
+* update dashboard action buttons and sidebar links ([#403](https://github.com/Vectreal/vectreal-platform/issues/403)) ([c144470](https://github.com/Vectreal/vectreal-platform/commit/c1444705dce5bd9a625880d0a8d9535f240aa353))
+
 ## [0.16.2](https://github.com/Vectreal/vectreal-platform/compare/core-v0.16.1...core-v0.16.2) (2026-04-12)
 
 

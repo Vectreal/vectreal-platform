@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.17.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.16.2...workspace-v0.17.0) (2026-04-13)
+
+
+### Features
+
+* add vectreal-brand-ux-design and vectreal-extension-architecture skills documentation ([#400](https://github.com/Vectreal/vectreal-platform/issues/400)) ([a891cec](https://github.com/Vectreal/vectreal-platform/commit/a891cec048427c8c9c17b97cbddaebd1b8858f7b))
+* update dashboard action buttons and sidebar links ([#403](https://github.com/Vectreal/vectreal-platform/issues/403)) ([c144470](https://github.com/Vectreal/vectreal-platform/commit/c1444705dce5bd9a625880d0a8d9535f240aa353))
+
 ## [0.16.2](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.16.1...workspace-v0.16.2) (2026-04-12)
 
 
