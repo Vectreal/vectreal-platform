@@ -11,7 +11,14 @@ import {
 	DropdownMenuTrigger
 } from '@shared/components/ui/dropdown-menu'
 import { useSetAtom } from 'jotai/react'
-import { Edit, Folder, FolderOpen, MoreVertical, Plus } from 'lucide-react'
+import {
+	ArrowUp,
+	Edit,
+	Folder,
+	FolderOpen,
+	MoreVertical,
+	Plus
+} from 'lucide-react'
 import { memo, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 
@@ -64,8 +71,8 @@ interface ActionsMenuProps {
 const ACTION_CONFIGS: Record<ACTION_VARIANT, ActionGroupConfig | null> = {
 	[ACTION_VARIANT.DASHBOARD]: {
 		primary: {
-			label: 'Open Publisher',
-			icon: Plus,
+			label: 'Upload Model',
+			icon: ArrowUp,
 			to: '/publisher'
 		},
 		menu: [
@@ -108,8 +115,8 @@ const ACTION_CONFIGS: Record<ACTION_VARIANT, ActionGroupConfig | null> = {
 			variant: 'outline'
 		},
 		secondary: {
-			label: 'Open Publisher',
-			icon: Plus,
+			label: 'Upload Model',
+			icon: ArrowUp,
 			to: ({ projectId }: RouteContext) =>
 				PUBLISHER_ROUTES.withContext(projectId),
 			variant: 'default'
@@ -129,8 +136,8 @@ const ACTION_CONFIGS: Record<ACTION_VARIANT, ActionGroupConfig | null> = {
 			variant: 'outline'
 		},
 		secondary: {
-			label: 'Open Publisher',
-			icon: Plus,
+			label: 'Upload Model',
+			icon: ArrowUp,
 			to: ({ projectId, folderId }: RouteContext) =>
 				PUBLISHER_ROUTES.withContext(projectId, folderId),
 			variant: 'default'
@@ -273,17 +280,6 @@ export const DashboardActions = memo<DashboardActionsProps>(
 							description: ''
 						})
 					}
-				}
-			}
-		}
-
-		if (config !== undefined && variant === ACTION_VARIANT.DASHBOARD) {
-			config = {
-				...config,
-				primary: {
-					label: 'Open Publisher',
-					icon: Plus,
-					to: '/publisher'
 				}
 			}
 		}
