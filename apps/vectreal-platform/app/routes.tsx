@@ -41,6 +41,7 @@ export default [
 	route('api/billing/reconcile', './routes/api/billing/reconcile.ts'),
 	route('api/contact/webhook', './routes/api/contact/webhook.ts'),
 	route('api/consent', './routes/api/consent.ts'),
+	route('api/theme', './routes/api/theme.ts'),
 
 	/// PAGES
 	layout('./routes/layouts/nav-layout.tsx', [

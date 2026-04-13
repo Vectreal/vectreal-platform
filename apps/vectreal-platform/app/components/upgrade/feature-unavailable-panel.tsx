@@ -39,15 +39,11 @@ export function FeatureUnavailablePanel({
 	}
 
 	return (
-		<div className="mb-6 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
-			<Lock className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-500" />
+		<div className="border-warning-border bg-warning-bg mb-6 flex items-start gap-3 rounded-lg border p-4">
+			<Lock className="text-warning mt-0.5 h-5 w-5 shrink-0" />
 			<div className="space-y-2">
-				<p className="font-semibold text-amber-900 dark:text-amber-100">
-					{title}
-				</p>
-				<p className="text-sm text-amber-700 dark:text-amber-300">
-					{description}
-				</p>
+				<p className="text-warning-foreground font-semibold">{title}</p>
+				<p className="text-warning-muted-foreground text-sm">{description}</p>
 				<Button type="button" onClick={openUpgradeModal}>
 					Upgrade plan
 				</Button>

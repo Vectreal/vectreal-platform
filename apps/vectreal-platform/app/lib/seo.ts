@@ -7,7 +7,8 @@ import type { MetaArgs, MetaDescriptor } from 'react-router'
  * Falls back to the production URL when no env var is set.
  */
 export const SITE_URL =
-	(typeof process !== 'undefined' && process.env?.APPLICATION_URL) ||
+	import.meta.env.VITE_PUBLIC_SITE_URL ||
+	import.meta.env.VITE_APPLICATION_URL ||
 	'https://vectreal.com'
 
 const DEFAULT_SITE_NAME = 'Vectreal'

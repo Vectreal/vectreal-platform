@@ -17,6 +17,7 @@ import {
 import OptimizationModal from './optimization-modal'
 import { useOptimizationModalFlow, useSceneLoader } from '../../hooks'
 import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
+import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import { useLocationChangeState } from '../../hooks/use-location-change-state'
 import { resolveSceneMetrics } from '../../lib/domain/scene'
 import {
@@ -87,6 +88,10 @@ const OverlayControls = ({
 	})
 
 	const isUploadStep = !file?.model && step === 'uploading'
+	const sceneDetailsHref =
+		sceneId && projectId
+			? DASHBOARD_ROUTES.SCENE_DETAIL(projectId, sceneId)
+			: undefined
 	const isPublished = Boolean(publishedMeta?.publishedAt)
 	const isOptimizerPreparing = optimizer.isPreparing
 	const optimizerStatusText = isFileLoading
@@ -259,7 +264,14 @@ const OverlayControls = ({
 					</>
 				)}
 
-				{user && <UserMenu size="sm" user={user} onLogout={handleLogout} />}
+				{user && (
+					<UserMenu
+						size="sm"
+						user={user}
+						onLogout={handleLogout}
+						sceneDetailsHref={sceneDetailsHref}
+					/>
+				)}
 			</FloatingPillWrapper>
 			<SceneInfoTrigger onClick={handleOpenPublishPanel} />
 			<DynamicSidebar
@@ -280,6 +292,7 @@ const OverlayControls = ({
 				onOpenChange={handleOptimizationModalChange}
 				userId={user?.id}
 				isInitialRequired={isInitialOptimizationRequired}
+				dashboardHref={sceneDetailsHref ?? '/dashboard'}
 			/>
 			<ToolSidebar user={user} isMobile={isMobile} />
 			<InfoBanner

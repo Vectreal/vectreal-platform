@@ -111,16 +111,16 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 	return (
 		<div className={cn('space-y-3', className)}>
 			{!canEmbed && (
-				<div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+				<div className="border-warning/40 bg-warning/10 text-warning-muted-foreground rounded-2xl border px-3 py-2 text-xs">
 					{EMBED_COPY.unavailableUntilSaved}
 				</div>
 			)}
 			{canEmbed && (
-				<div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+				<div className="border-warning/40 bg-warning/10 text-warning-muted-foreground rounded-2xl border px-3 py-2 text-xs">
 					{EMBED_COPY.draftWarningPrefix}
 					<code className="mx-1">{PREVIEW_API_KEY_PLACEHOLDER}</code>
 					{EMBED_COPY.draftWarningSuffix}
-					<div className="mt-1 text-[11px] text-amber-100/90">
+					<div className="text-warning-foreground/90 mt-1 text-[11px]">
 						Tip: create separate keys per environment and restrict keys to only
 						the projects each embed needs.
 					</div>

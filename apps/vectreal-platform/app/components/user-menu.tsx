@@ -22,6 +22,7 @@ interface UserMenuProps {
 	className?: string
 	size?: 'sm' | 'md'
 	onLogout: () => void
+	sceneDetailsHref?: string
 }
 
 /**
@@ -31,7 +32,8 @@ export function UserMenu({
 	user,
 	size = 'md',
 	className,
-	onLogout
+	onLogout,
+	sceneDetailsHref
 }: UserMenuProps) {
 	const navigate = useNavigate()
 	const [isClientMounted, setIsClientMounted] = useState(false)
@@ -106,6 +108,13 @@ export function UserMenu({
 				<DropdownMenuItem onClick={() => handleMenuItemClick('/dashboard')}>
 					Dashboard
 				</DropdownMenuItem>
+				{sceneDetailsHref ? (
+					<DropdownMenuItem
+						onClick={() => handleMenuItemClick(sceneDetailsHref)}
+					>
+						Scene Details
+					</DropdownMenuItem>
+				) : null}
 				<DropdownMenuItem
 					onClick={() => handleMenuItemClick('/dashboard/projects')}
 				>

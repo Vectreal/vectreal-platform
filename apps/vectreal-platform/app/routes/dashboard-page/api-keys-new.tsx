@@ -313,7 +313,7 @@ function OneTimeKeyDialog({
 			>
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2">
-						<CheckCircle2 className="size-5 text-green-600" />
+						<CheckCircle2 className="text-success size-5" />
 						API Key Created Successfully
 					</DialogTitle>
 					<DialogDescription>
@@ -324,10 +324,10 @@ function OneTimeKeyDialog({
 				<div className="space-y-4">
 					<Alert
 						variant="default"
-						className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950"
+						className="border-warning-border bg-warning-bg"
 					>
-						<AlertCircle className="size-4 text-yellow-600 dark:text-yellow-500" />
-						<AlertDescription className="text-yellow-800 dark:text-yellow-200">
+						<AlertCircle className="text-warning size-4" />
+						<AlertDescription className="text-warning-muted-foreground">
 							<strong>Important:</strong> Copy this key now. Once you close this
 							dialog, the full key will no longer be accessible. You'll only see
 							the preview (...{apiKey.preview}).

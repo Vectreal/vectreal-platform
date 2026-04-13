@@ -2,10 +2,11 @@
 
 /* Shared prose rules applied to both MDX contexts ────────────────────────── */
 .root,
-.docsContent {
+.docsContent,
+.newsroomContent {
 	ul {
 		@apply list-disc pl-6;
-		opacity: 0.75;
+		opacity: 0.85;
 
 		li {
 			line-height: 1.7;
@@ -14,7 +15,7 @@
 
 	ol {
 		@apply list-decimal pl-6;
-		opacity: 0.75;
+		opacity: 0.85;
 
 		li {
 			line-height: 1.7;
@@ -85,8 +86,8 @@
 
 	p {
 		@apply text-base;
-		line-height: 1.7;
-		opacity: 0.75;
+		line-height: 1.8;
+		opacity: 0.82;
 	}
 
 	a {
@@ -123,7 +124,7 @@
 			color-mix(in oklch, var(--color-accent) 50%, transparent);
 		padding-left: 1rem;
 		font-style: italic;
-		opacity: 0.6;
+		opacity: 0.75;
 	}
 
 	:not(pre) > code {
@@ -136,7 +137,7 @@
 	pre {
 		@apply overflow-x-auto rounded-lg font-mono text-sm;
 		background: #0d1117;
-		padding: 1rem;
+		padding: 1.125rem;
 	}
 
 	pre code {
@@ -162,7 +163,7 @@
 			@apply px-3 py-2;
 			border-bottom: 1px solid
 				color-mix(in oklch, var(--color-foreground) 8%, transparent);
-			opacity: 0.8;
+			opacity: 0.9;
 		}
 
 		tr:last-child td {
@@ -179,4 +180,27 @@
 /* Docs layout MDX (fills the flex content column, no max-width) ─────────── */
 .docsContent {
 	@apply flex flex-col gap-8;
+}
+
+.newsroomContent {
+	@apply mx-auto flex max-w-3xl flex-col gap-8;
+
+	p {
+		font-size: clamp(1.03rem, 0.97rem + 0.2vw, 1.12rem);
+		line-height: 1.9;
+		opacity: 0.9;
+	}
+
+	h2 {
+		margin-top: 1.5rem;
+		font-size: clamp(1.25rem, 1.1rem + 0.4vw, 1.7rem);
+	}
+
+	h3 {
+		font-size: clamp(1.05rem, 1rem + 0.24vw, 1.3rem);
+	}
+
+	pre {
+		font-size: 0.9rem;
+	}
 }

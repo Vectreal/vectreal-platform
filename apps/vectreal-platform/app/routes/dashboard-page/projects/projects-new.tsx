@@ -343,15 +343,15 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 				<div className="overflow-y-auto p-6">
 					{/* No permission / quota warning */}
 					{!hasAnyCreatePermission && (
-						<div className="mb-6 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
-							<AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-500" />
+						<div className="border-warning-border bg-warning-bg mb-6 flex items-start gap-3 rounded-lg border p-4">
+							<AlertCircle className="text-warning mt-0.5 h-5 w-5 shrink-0" />
 							<div className="space-y-2">
-								<p className="font-semibold text-amber-900 dark:text-amber-100">
+								<p className="text-warning-foreground font-semibold">
 									{hasAnyQuotaExceeded && hasAnyRolePermission
 										? 'Project quota exceeded'
 										: 'No permission to create projects'}
 								</p>
-								<p className="text-sm text-amber-700 dark:text-amber-300">
+								<p className="text-warning-muted-foreground text-sm">
 									{hasAnyQuotaExceeded && hasAnyRolePermission
 										? 'Every organization you can access has reached its project quota. Upgrade to continue creating projects.'
 										: "You don't have permission to create projects in any of your organizations. Contact an organization owner or admin."}
@@ -369,15 +369,15 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 					{selectedOrgId &&
 						!canCreateInSelectedOrg &&
 						hasAnyCreatePermission && (
-							<div className="mb-6 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
-								<AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-500" />
+							<div className="border-warning-border bg-warning-bg mb-6 flex items-start gap-3 rounded-lg border p-4">
+								<AlertCircle className="text-warning mt-0.5 h-5 w-5 shrink-0" />
 								<div className="space-y-2">
-									<p className="font-semibold text-amber-900 dark:text-amber-100">
+									<p className="text-warning-foreground font-semibold">
 										{selectedOrgQuota?.quotaExceeded
 											? 'Project quota exceeded'
 											: 'Insufficient permissions'}
 									</p>
-									<p className="text-sm text-amber-700 dark:text-amber-300">
+									<p className="text-warning-muted-foreground text-sm">
 										{selectedOrgQuota?.quotaExceeded
 											? selectedOrgQuota.projectsLimit === null
 												? 'Project creation is temporarily unavailable for this organization.'

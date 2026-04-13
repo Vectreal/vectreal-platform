@@ -2,6 +2,9 @@ import { GithubLogo } from '@shared/components/assets/icons/github-logo'
 import GoogleLogo from '@shared/components/assets/icons/google-logo'
 import { Button } from '@shared/components/ui/button'
 import { Separator } from '@shared/components/ui/separator'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Loader2 } from 'lucide-react'
+import { useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate, useSubmit } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 
@@ -35,7 +38,13 @@ const SigninLayout = () => {
 
 	const isSignUp = location.pathname.endsWith('/sign-up')
 
+	const [loadingProvider, setLoadingProvider] = useState<
+		null | 'google' | 'github'
+	>(null)
+
 	function handleSocialLogin(provider: 'google' | 'github') {
+		if (loadingProvider) return
+		setLoadingProvider(provider)
 		const formData = new FormData()
 		formData.append('provider', provider)
 		formData.append('backURL', nextPath)
@@ -70,16 +79,72 @@ const SigninLayout = () => {
 								<Button
 									className="grow"
 									onClick={() => handleSocialLogin('google')}
+									disabled={loadingProvider !== null}
+									style={{
+										opacity: loadingProvider === 'github' ? 0.45 : 1,
+										transition: 'opacity 0.2s ease'
+									}}
 								>
-									<GoogleLogo className="h-4 w-4" /> Continue with Google
+									<span className="relative flex items-center justify-center gap-2">
+										{/* Idle label — defines the button width */}
+										<span
+											className="flex items-center gap-2 transition-opacity duration-150"
+											style={{ opacity: loadingProvider === 'google' ? 0 : 1 }}
+										>
+											<GoogleLogo className="h-4 w-4" /> Continue with Google
+										</span>
+										{/* Loading overlay — absolutely positioned, same space */}
+										<span
+											className="absolute inset-0 flex items-center justify-center gap-2 transition-opacity duration-150"
+											style={{ opacity: loadingProvider === 'google' ? 1 : 0 }}
+											aria-hidden={loadingProvider !== 'google'}
+										>
+											<Loader2 className="h-4 w-4 animate-spin" />
+											Connecting…
+										</span>
+									</span>
 								</Button>
 								<Button
 									className="grow"
 									onClick={() => handleSocialLogin('github')}
+									disabled={loadingProvider !== null}
+									style={{
+										opacity: loadingProvider === 'google' ? 0.45 : 1,
+										transition: 'opacity 0.2s ease'
+									}}
 								>
-									<GithubLogo className="h-4 w-4" /> Continue with GitHub
+									<span className="relative flex items-center justify-center gap-2">
+										<span
+											className="flex items-center gap-2 transition-opacity duration-150"
+											style={{ opacity: loadingProvider === 'github' ? 0 : 1 }}
+										>
+											<GithubLogo className="h-4 w-4" /> Continue with GitHub
+										</span>
+										<span
+											className="absolute inset-0 flex items-center justify-center gap-2 transition-opacity duration-150"
+											style={{ opacity: loadingProvider === 'github' ? 1 : 0 }}
+											aria-hidden={loadingProvider !== 'github'}
+										>
+											<Loader2 className="h-4 w-4 animate-spin" />
+											Connecting…
+										</span>
+									</span>
 								</Button>
 							</div>
+							<AnimatePresence>
+								{loadingProvider && (
+									<motion.p
+										initial={{ opacity: 0, y: -6 }}
+										animate={{ opacity: 1, y: 0 }}
+										exit={{ opacity: 0, y: -6 }}
+										transition={{ duration: 0.2, ease: 'easeOut' }}
+										className="text-muted-foreground -mt-4 text-center text-sm"
+									>
+										Redirecting to{' '}
+										{loadingProvider === 'google' ? 'Google' : 'GitHub'}…
+									</motion.p>
+								)}
+							</AnimatePresence>
 							<span className="relative">
 								<Separator />
 								<p className="bg-card text-muted-foreground absolute left-1/2 -translate-x-1/2 -translate-y-3 px-2">
