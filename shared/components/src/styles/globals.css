@@ -13,10 +13,6 @@
 
 	/* Brand palette */
 	--orange: #fc6c18;
-	--acid-green: #affc41;
-	--lime-yellow: hsl(61, 91%, 55%);
-	--racing-blue: #006eff;
-	--turquoise: #2883d8;
 	--dark-orange: #f54703;
 
 	/* Semantic tokens — light theme */
@@ -33,12 +29,29 @@
 	--muted: oklch(0.97 0 0);
 	--muted-foreground: oklch(0.556 0 0);
 	--accent: var(--orange);
-	--accent-foreground: oklch(1 0 0);
+	--accent-foreground: oklch(20.463% 0.00002 271.152 / 0.5);
 	--destructive: oklch(0.637 0.237 25.331);
 	--destructive-foreground: oklch(0.985 0 0);
 	--border: oklch(0.922 0 0);
 	--input: oklch(0.922 0 0);
 	--ring: oklch(0.708 0 0);
+
+	/* Success (green) — light theme */
+	--success: oklch(0.627 0.17 145);
+	--success-foreground: oklch(0.215 0.06 145);
+
+	/* Warning (amber) — light theme */
+	--warning: oklch(0.769 0.185 75);
+	--warning-foreground: oklch(0.277 0.065 70);
+	--warning-muted-foreground: oklch(0.445 0.14 75);
+	--warning-bg: oklch(0.986 0.012 82);
+	--warning-border: oklch(0.88 0.065 80);
+
+	/* Error banner (red) — light theme */
+	--error-bg: oklch(0.97 0.018 25);
+	--error-border: oklch(0.86 0.08 25);
+	--error-foreground: oklch(0.42 0.18 25);
+
 	--chart-1: var(--orange);
 	--chart-2: oklch(0.696 0.17 162.48);
 	--chart-3: oklch(0.769 0.188 70.08);
@@ -74,12 +87,29 @@
 	--muted: oklch(0.269 0 0);
 	--muted-foreground: oklch(0.708 0 0);
 	--accent: var(--orange);
-	--accent-foreground: oklch(0.985 0 0);
+	--accent-foreground: oklch(0.269 0 0);
 	--destructive: oklch(0.637 0.237 25.331);
 	--destructive-foreground: oklch(0.985 0 0);
 	--border: oklch(0.269 0 0);
 	--input: oklch(0.269 0 0);
 	--ring: oklch(0.439 0 0);
+
+	/* Success (green) — dark theme */
+	--success: oklch(0.871 0.15 145);
+	--success-foreground: oklch(0.94 0.04 145);
+
+	/* Warning (amber) — dark theme */
+	--warning: oklch(0.769 0.185 75);
+	--warning-foreground: oklch(0.978 0.026 80);
+	--warning-muted-foreground: oklch(0.88 0.12 80);
+	--warning-bg: oklch(0.175 0.018 82);
+	--warning-border: oklch(0.295 0.04 80);
+
+	/* Error banner (red) — dark theme */
+	--error-bg: oklch(0.19 0.03 25);
+	--error-border: oklch(0.38 0.1 25);
+	--error-foreground: oklch(0.88 0.06 25);
+
 	--chart-1: var(--orange);
 	--chart-2: oklch(0.696 0.17 162.48);
 	--chart-3: oklch(0.769 0.188 70.08);
@@ -124,10 +154,6 @@
 	--color-chart-5: var(--chart-5);
 	--color-orange: var(--orange);
 	--color-dark-orange: var(--dark-orange);
-	--color-acid-green: var(--acid-green);
-	--color-lime-yellow: var(--lime-yellow);
-	--color-racing-blue: var(--racing-blue);
-	--color-turquoise: var(--turquoise);
 
 	--radius-sm: calc(var(--radius) - 4px);
 	--radius-md: calc(var(--radius) - 2px);
@@ -141,6 +167,17 @@
 	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-ring: var(--sidebar-ring);
+
+	--color-success: var(--success);
+	--color-success-foreground: var(--success-foreground);
+	--color-warning: var(--warning);
+	--color-warning-foreground: var(--warning-foreground);
+	--color-warning-muted-foreground: var(--warning-muted-foreground);
+	--color-warning-bg: var(--warning-bg);
+	--color-warning-border: var(--warning-border);
+	--color-error-bg: var(--error-bg);
+	--color-error-border: var(--error-border);
+	--color-error-foreground: var(--error-foreground);
 }
 
 @layer base {
