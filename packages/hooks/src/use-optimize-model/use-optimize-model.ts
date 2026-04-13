@@ -127,10 +127,12 @@ const useOptimizeModel = () => {
 
 			try {
 				const optimizer = optimizerRef.current
-				const resources: Record<string, Uint8Array> = {}
+				const resources: Record<string, Uint8Array<ArrayBuffer>> = {}
 
 				for (const asset of Object.values(sceneData.assetData ?? {})) {
-					resources[asset.fileName] = toSerializedAssetBytes(asset)
+					resources[asset.fileName] = toSerializedAssetBytes(
+						asset
+					) as Uint8Array<ArrayBuffer>
 				}
 
 				const jsonDocument = {

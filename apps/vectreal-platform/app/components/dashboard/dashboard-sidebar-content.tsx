@@ -30,16 +30,16 @@ import {
 	ChartColumn,
 	ChevronsUpDown,
 	CreditCard,
-	House,
 	HelpCircle,
 	KeyRound,
 	List,
 	LogOut,
-	Rocket,
 	Settings,
 	SquareStack,
 	Folder,
-	FolderOpen
+	FolderOpen,
+	LayoutDashboard,
+	ArrowUp
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useFetcher } from 'react-router'
@@ -86,12 +86,12 @@ const quickLinks: SidebarLinkItem[] = [
 	{
 		title: 'Dashboard',
 		url: '/dashboard',
-		icon: House
+		icon: LayoutDashboard
 	},
 	{
 		title: 'Upload Model',
 		url: '/publisher',
-		icon: Rocket
+		icon: ArrowUp
 	}
 ]
 

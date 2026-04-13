@@ -649,7 +649,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 								<Button variant="secondary" asChild>
 									<Link viewTransition to={`/publisher/${sceneState.id}`}>
 										<Rocket className="mr-2 h-4 w-4" />
-										Open Publisher
+										Open in Publisher
 									</Link>
 								</Button>
 							</div>

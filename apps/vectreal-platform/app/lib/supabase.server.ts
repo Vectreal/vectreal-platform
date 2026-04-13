@@ -1,7 +1,8 @@
 import {
 	createServerClient,
 	parseCookieHeader,
-	serializeCookieHeader
+	serializeCookieHeader,
+	type CookieOptions
 } from '@supabase/ssr'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -51,7 +52,13 @@ export async function createSupabaseClient(request: Request) {
 							value: value as string
 						}))
 				},
-				async setAll(cookiesToSet) {
+				async setAll(
+					cookiesToSet: {
+						name: string
+						value: string
+						options: CookieOptions
+					}[]
+				) {
 					// Update the session with the new JWT if present
 					for (const { name, value, options } of cookiesToSet) {
 						headers.append(
