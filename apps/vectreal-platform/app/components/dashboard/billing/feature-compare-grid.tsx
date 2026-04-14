@@ -133,7 +133,7 @@ function FeatureMatrixRow({
 export function FeatureCompareGrid() {
 	return (
 		<section className="space-y-4">
-			<h2 className="text-2xl font-bold">Full feature comparison</h2>
+			<h2 className="text-2xl font-medium">Full feature comparison</h2>
 			<div className="overflow-x-auto">
 				<table className="w-full min-w-[640px] table-auto text-left">
 					<thead>

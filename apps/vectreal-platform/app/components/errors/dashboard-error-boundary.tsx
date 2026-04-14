@@ -56,7 +56,7 @@ export function DashboardErrorBoundary() {
 							Error {statusCode}
 						</p>
 					)}
-					<h1 className="text-2xl font-bold">{errorMessage}</h1>
+					<h1 className="text-2xl font-medium">{errorMessage}</h1>
 					{errorDetails && (
 						<p className="text-muted-foreground text-sm">{errorDetails}</p>
 					)}

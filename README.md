@@ -14,6 +14,9 @@ _NPM packages_
 [![NPM Hooks](https://img.shields.io/npm/dm/%40vctrl%2Fhooks?logo=npm&label=%40vctrl/hooks)](https://npmjs.com/package/@vctrl/hooks)
 [![NPM Viewer](https://img.shields.io/npm/dm/%40vctrl%2Fviewer?logo=npm&label=%40vctrl/viewer)](https://npmjs.com/package/@vctrl/viewer)
 
+_Product Hunt_  
+[![Featured on Product Hunt](https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1119194&theme=light&t=1776193236739)](https://www.producthunt.com/products/vectreal?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-vectreal-platform)
+
 ---
 
 Vectreal is an open platform for preparing, managing, and publishing 3D content for the web.

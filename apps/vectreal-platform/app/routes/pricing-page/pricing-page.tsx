@@ -1,4 +1,5 @@
 import { usePostHog } from '@posthog/react'
+import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import { Separator } from '@shared/components/ui/separator'
 import { useEffect, useState } from 'react'
@@ -43,17 +44,24 @@ export default function PricingPage() {
 	}, [posthog])
 
 	return (
-		<main className="mx-auto max-w-7xl space-y-20 px-6 py-16">
-			{/* Hero */}
-			<section className="space-y-4 text-center">
-				<h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
-					Simple, transparent pricing
+		<main className="mx-auto max-w-7xl space-y-20 px-6 py-16 pt-24">
+			<header className="space-y-4">
+				<p className="text-muted-foreground text-xs font-semibold tracking-[0.22em] uppercase">
+					Pricing
+				</p>
+				<h1 className="max-w-4xl text-4xl leading-[1.02] font-medium tracking-tight text-balance md:text-6xl">
+					Simple, transparent pricing for every workflow.
 				</h1>
-				<p className="text-muted-foreground mx-auto max-w-xl text-lg">
+				<p className="text-muted-foreground max-w-3xl text-base leading-relaxed md:text-lg">
 					Start for free. Upgrade when you need more. Every plan includes the
 					core 3D publishing workflow — no hidden fees.
 				</p>
-			</section>
+				<div className="flex flex-wrap gap-2 pt-2 text-xs">
+					<Badge variant="outline">4 Plans</Badge>
+					<Badge variant="outline">Free to start</Badge>
+					<Badge variant="outline">Cancel anytime</Badge>
+				</div>
+			</header>
 
 			<PricingCardsSection
 				period={period}
@@ -66,13 +74,13 @@ export default function PricingPage() {
 			<FeatureCompareGrid />
 
 			{/* Enterprise CTA */}
-			<section className="bg-muted/30 rounded-2xl p-10 text-center">
-				<h2 className="text-2xl font-bold">Need a custom setup?</h2>
-				<p className="text-muted-foreground mx-auto mt-2 max-w-lg">
+			<section className="bg-muted/30 rounded-2xl p-10 text-left">
+				<h2 className="text-2xl font-medium">Need a custom setup?</h2>
+				<p className="text-muted-foreground mt-2 max-w-lg">
 					Enterprise plans include custom data residency, dedicated support,
 					audit log export, and bespoke SLA agreements. Talk to us.
 				</p>
-				<div className="mt-6 flex justify-center gap-4">
+				<div className="mt-6 flex justify-start gap-4">
 					<Link to="/contact">
 						<Button size="lg">Contact sales</Button>
 					</Link>

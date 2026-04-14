@@ -215,7 +215,7 @@ export default function NewsRoomArticlePage({
 	if (!ArticleComponent) {
 		return (
 			<div className="mx-auto w-full max-w-4xl px-6 pt-28 pb-20 text-center">
-				<h1 className="mb-2 text-2xl font-bold">Article unavailable</h1>
+				<h1 className="mb-2 text-2xl font-medium">Article unavailable</h1>
 				<p className="text-muted-foreground mb-6">
 					This article could not be rendered right now.
 				</p>
