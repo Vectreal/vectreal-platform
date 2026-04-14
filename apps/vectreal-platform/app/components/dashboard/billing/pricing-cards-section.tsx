@@ -251,17 +251,17 @@ function PlanCard({
 				<CardDescription>{display.tagline}</CardDescription>
 				<div className="pt-2">
 					{isEnterprise ? (
-						<p className="text-2xl font-bold">Custom</p>
+						<p className="text-2xl font-medium">Custom</p>
 					) : isFree ? (
 						<div>
-							<span className="text-4xl font-extrabold">$0</span>
+							<span className="text-4xl">$0</span>
 							<span className="text-muted-foreground ml-1 text-sm">/month</span>
 						</div>
 					) : (
 						<div>
 							{displayAmountCents !== null ? (
 								<div className="flex items-end gap-2">
-									<span className="text-4xl font-extrabold">
+									<span className="text-4xl font-medium">
 										{formatCurrency(displayAmountCents, liveCurrency)}
 									</span>
 									<span className="text-muted-foreground mb-1 text-sm">
@@ -275,7 +275,7 @@ function PlanCard({
 								</div>
 							) : (
 								<div className="flex items-end gap-2">
-									<span className="text-4xl font-extrabold">
+									<span className="text-4xl font-medium">
 										$
 										{period === 'annual'
 											? (staticAnnualMonthlyPrice ?? staticMonthlyPrice)

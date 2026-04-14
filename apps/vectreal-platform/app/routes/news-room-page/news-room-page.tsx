@@ -119,7 +119,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 	])
 
 	return (
-		<div className="mx-auto w-full max-w-6xl px-5 pt-24 pb-20 md:px-8">
+		<div className="mx-auto w-full max-w-7xl px-6 pt-24 pb-20">
 			<header className="mb-12 space-y-4">
 				<p className="text-muted-foreground text-xs font-semibold tracking-[0.22em] uppercase">
 					Newsroom
