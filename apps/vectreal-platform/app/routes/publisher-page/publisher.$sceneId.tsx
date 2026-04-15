@@ -15,7 +15,7 @@ import {
 	useState,
 	type FC
 } from 'react'
-import { useParams } from 'react-router'
+import { useNavigation, useParams } from 'react-router'
 
 import { Route } from './+types/publisher.$sceneId'
 import { DropZone } from './drop-zone'
@@ -122,6 +122,13 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 	const { isDownloading, isInitializing } = useAtomValue(
 		publisherLoadingStateAtom
 	)
+	const navigation = useNavigation()
+	// True when React Router is loading a publisher route — covers navigating
+	// between scene IDs within the publisher layout (e.g. after a new scene
+	// is saved and the URL moves from /publisher to /publisher/<id>).
+	const isNavigationLoading =
+		navigation.state === 'loading' &&
+		Boolean(navigation.location?.pathname?.startsWith('/publisher'))
 	const setProcess = useSetAtom(processAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
 	const { bounds, camera, controls, env, shadows } = useAtomValue(
@@ -170,9 +177,9 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 
 	return (
 		<div className="-z-0 grow overflow-clip">
-			<Suspense fallback={null}>
+			<Suspense fallback={<CenteredSpinner text="Loading Publisher..." />}>
 				<AnimatePresence mode="wait">
-					{!file?.model && isDownloading ? (
+					{!file?.model && (isDownloading || isNavigationLoading) ? (
 						<motion.div
 							key="idb-rehydration-spinner"
 							initial={{ opacity: 0 }}
@@ -181,7 +188,13 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 							transition={{ duration: 0.25 }}
 							className="relative flex h-full w-full items-center justify-center"
 						>
-							<CenteredSpinner text="Loading Scene..." />
+							<CenteredSpinner
+								text={
+									isNavigationLoading
+										? 'Preparing Publisher...'
+										: 'Loading Scene...'
+								}
+							/>
 						</motion.div>
 					) : file?.model || isLoading ? (
 						<motion.div

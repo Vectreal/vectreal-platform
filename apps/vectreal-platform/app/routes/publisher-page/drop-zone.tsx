@@ -1,5 +1,6 @@
 import { useAcceptPattern } from '@shared/components/hooks/use-accept-pattern'
 import { Button } from '@shared/components/ui/button'
+import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
 import { InputFileOrDirectory } from '@vctrl/hooks/use-load-model'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
@@ -17,7 +18,7 @@ import {
 	useTransition
 } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Link } from 'react-router'
+import { Link, useNavigation } from 'react-router'
 
 import BasicCard from '../../components/layout-components/basic-card'
 
@@ -37,7 +38,16 @@ export const DropZone = ({ isMobile }: Props) => {
 	const acceptPattern = useAcceptPattern(isMobile)
 	const { load } = useModelContext()
 
-	const [, startTransition] = useTransition()
+	const [isPending, startTransition] = useTransition()
+	const navigation = useNavigation()
+
+	// Show a loading state when files are being processed or when navigating
+	// within the publisher (e.g. to a newly created scene route).
+	const isNavigationLoading =
+		navigation.state === 'loading' &&
+		Boolean(navigation.location?.pathname?.startsWith('/publisher'))
+
+	const isLoading = isPending || isNavigationLoading
 
 	const handleDrop = useCallback(
 		(files: File[]) => {
@@ -81,48 +91,71 @@ export const DropZone = ({ isMobile }: Props) => {
 						{/* <div className="flex flex-col gap-4 md:flex-row lg:grid lg:grid-cols-[2fr_1fr]"> */}
 						<div className="flex h-full flex-col gap-4" onClick={onClick}>
 							{isMobile ? (
-								<Button className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 transition-all duration-300">
-									<Upload className="h-4 w-4" />
-									Choose Files
+								<Button
+									className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 transition-all duration-300"
+									disabled={isLoading}
+								>
+									{isLoading ? (
+										<LoadingSpinner className="h-4 w-4" />
+									) : (
+										<Upload className="h-4 w-4" />
+									)}
+									{isLoading ? 'Processing...' : 'Choose Files'}
 								</Button>
 							) : (
 								<BasicCard highlight>
 									<div
 										className={cn(
-											'flex h-full flex-col items-center justify-center rounded-lg p-4 transition-all duration-300',
-											isDragActive ? 'scale-[0.98] opacity-90' : 'scale-100'
+											'relative flex h-full flex-col items-center justify-center rounded-lg p-4 transition-all duration-300',
+											isDragActive && !isLoading
+												? 'scale-[0.98] opacity-90'
+												: 'scale-100'
 										)}
 									>
-										<div
-											className={cn(
-												'bg-muted/50 mb-6 flex h-20 w-20 items-center justify-center rounded-full transition-all duration-300',
-												isDragActive ? 'bg-accent' : ''
-											)}
-										>
-											<FolderUp
-												className={cn(
-													'h-10 w-10 transition-all duration-300',
-													isDragActive
-														? 'text-primary'
-														: 'text-muted-foreground'
-												)}
-											/>
-										</div>
+										{isLoading ? (
+											<div className="flex flex-col items-center justify-center gap-3">
+												<LoadingSpinner className="h-10 w-10" />
+												<p className="text-muted-foreground text-sm">
+													{isPending
+														? 'Processing files...'
+														: 'Loading...'}
+												</p>
+											</div>
+										) : (
+											<>
+												<div
+													className={cn(
+														'bg-muted/50 mb-6 flex h-20 w-20 items-center justify-center rounded-full transition-all duration-300',
+														isDragActive ? 'bg-accent' : ''
+													)}
+												>
+													<FolderUp
+														className={cn(
+															'h-10 w-10 transition-all duration-300',
+															isDragActive
+																? 'text-primary'
+																: 'text-muted-foreground'
+														)}
+													/>
+												</div>
 
-										<h2 className="mb-2 text-xl! font-semibold md:text-2xl!">
-											{isDragActive
-												? 'Drop to Start Processing'
-												: 'Drop Your 3D Files Anywhere'}
-										</h2>
+												<h2 className="mb-2 text-xl! font-semibold md:text-2xl!">
+													{isDragActive
+														? 'Drop to Start Processing'
+														: 'Drop Your 3D Files Anywhere'}
+												</h2>
 
-										<p className="text-muted-foreground mb-6 max-w-md text-center">
-											Your files stay on your device until you choose to publish
-										</p>
+												<p className="text-muted-foreground mb-6 max-w-md text-center">
+													Your files stay on your device until you choose to
+													publish
+												</p>
 
-										<Button className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 transition-all duration-300">
-											<Upload className="h-4 w-4" />
-											Choose Files
-										</Button>
+												<Button className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 transition-all duration-300">
+													<Upload className="h-4 w-4" />
+													Choose Files
+												</Button>
+											</>
+										)}
 									</div>
 								</BasicCard>
 							)}
