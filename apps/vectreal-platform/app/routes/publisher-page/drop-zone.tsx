@@ -118,7 +118,7 @@ export const DropZone = ({ isMobile }: Props) => {
 												<p className="text-muted-foreground text-sm">
 													{isPending
 														? 'Processing files...'
-														: 'Loading...'}
+														: 'Preparing Publisher...'}
 												</p>
 											</div>
 										) : (
