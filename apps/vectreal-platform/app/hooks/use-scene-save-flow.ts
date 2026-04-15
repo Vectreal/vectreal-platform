@@ -172,8 +172,15 @@ export const useSceneSaveFlow = ({
 		async (
 			target?: SaveLocationTarget
 		): Promise<SaveSceneResult | { unchanged: true } | undefined> => {
+			// Snapshot all state that determines the new baseline BEFORE the async
+			// save. Any mutations the user makes after this point (mid-flight) must
+			// remain visible as unsaved diffs once the request completes.
+			const settingsSnapshot = currentSettings
+			const sceneMetaSnapshot = sceneMetaState
+			const reportSignatureSnapshot = reportSignature
+
 			const hasOptimizationReportChanges = hasOptimizationChanges({
-				reportSignature,
+				reportSignature: reportSignatureSnapshot,
 				lastSavedReportSignature,
 				optimizedSceneBytes,
 				latestSceneStats
@@ -200,10 +207,12 @@ export const useSceneSaveFlow = ({
 			}
 
 			if (result && !result.unchanged) {
+				// Prefer the server-returned meta; fall back to the pre-save snapshot
+				// (never the live state) so we don't absorb mid-flight edits.
 				const savedSceneMeta =
 					typeof result.sceneMeta === 'object' && result.sceneMeta
 						? result.sceneMeta
-						: sceneMetaState
+						: sceneMetaSnapshot
 
 				const locationCandidate = result.currentLocation
 				if (isSceneCurrentLocation(locationCandidate)) {
@@ -214,9 +223,18 @@ export const useSceneSaveFlow = ({
 					})
 				}
 
-				setSceneMetaState(savedSceneMeta)
-				setLastSavedSettings(currentSettings)
+				// Only patch server-generated fields (thumbnail URL) in the live state
+				// so that any user edits made during the in-flight save are preserved.
+				setSceneMetaState((prev) => ({
+					...prev,
+					thumbnailUrl: savedSceneMeta.thumbnailUrl
+				}))
+
+				// Set baselines to the pre-save snapshots so that mid-flight mutations
+				// remain detectable as diffs against the new baseline.
+				setLastSavedSettings(settingsSnapshot)
 				setLastSavedSceneMeta(savedSceneMeta)
+
 				const latestStats = result.stats
 				if (latestStats) {
 					setOptimizationRuntime((prev) => ({
@@ -224,10 +242,10 @@ export const useSceneSaveFlow = ({
 						latestSceneStats: latestStats
 					}))
 				}
-				if (reportSignature) {
+				if (reportSignatureSnapshot) {
 					setOptimizationRuntime((prev) => ({
 						...prev,
-						lastSavedReportSignature: reportSignature
+						lastSavedReportSignature: reportSignatureSnapshot
 					}))
 				}
 

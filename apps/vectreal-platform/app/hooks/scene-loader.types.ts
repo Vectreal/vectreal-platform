@@ -55,7 +55,9 @@ export interface SceneSaveFlowArgs {
 	setCurrentSceneId: (sceneId: null | string) => void
 	currentSettings: SceneSettings
 	sceneMetaState: SceneMetaState
-	setSceneMetaState: (sceneMetaState: SceneMetaState) => void
+	setSceneMetaState: (
+		next: SceneMetaState | ((prev: SceneMetaState) => SceneMetaState)
+	) => void
 	lastSavedSettings: SceneSettings | null
 	setLastSavedSettings: (settings: SceneSettings) => void
 	lastSavedSceneMeta: SceneMetaState | null
