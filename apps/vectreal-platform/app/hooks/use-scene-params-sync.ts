@@ -19,7 +19,15 @@ interface UseSceneParamsSyncParams {
 	setLastSavedSceneMeta: (sceneMetaState: null | SceneMetaState) => void
 	setIsInitializing: (initializing: boolean) => void
 	setHasUnsavedChanges: (hasChanges: boolean) => void
-	setOptimizationRuntime: (next: SceneOptimizationRuntimeState) => void
+	setOptimizationRuntime: (
+		next:
+			| SceneOptimizationRuntimeState
+			| ((prev: SceneOptimizationRuntimeState) => SceneOptimizationRuntimeState)
+	) => void
+	/** The scene ID of the most recent successfully-persisted save. Used to
+	 *  detect post-save navigation so we can skip destructive resets. */
+	lastSavedSceneId: string | null
+	setLastSavedSceneId: (sceneId: string | null) => void
 }
 
 export const useSceneParamsSync = ({
@@ -32,7 +40,9 @@ export const useSceneParamsSync = ({
 	setLastSavedSceneMeta,
 	setIsInitializing,
 	setHasUnsavedChanges,
-	setOptimizationRuntime
+	setOptimizationRuntime,
+	lastSavedSceneId,
+	setLastSavedSceneId
 }: UseSceneParamsSyncParams) => {
 	const previousParamSceneIdRef = useRef<null | string>(null)
 
@@ -40,32 +50,45 @@ export const useSceneParamsSync = ({
 		const isNewUploadFlow = !paramSceneId && !initialSceneAggregate
 		const hasSceneChanged = previousParamSceneIdRef.current !== paramSceneId
 
+		// Detect navigation to the scene that was just saved (null → newId after
+		// first save). In this case the save flow already established correct
+		// baselines, so we must NOT overwrite them with the initialised/reset values.
+		const isPostSaveNavigation =
+			hasSceneChanged && !!paramSceneId && paramSceneId === lastSavedSceneId
+
 		if (isNewUploadFlow) {
 			resetSceneState()
 		}
 
 		setCurrentSceneId(paramSceneId)
 
-		// Only reset live scene meta when the scene itself changes (new scene or
-		// navigation to a different scene). On same-scene revalidations (e.g. after
-		// a save) we must NOT overwrite the live state because the user may have
-		// made edits during the in-flight save that would be silently discarded.
 		if (hasSceneChanged || isNewUploadFlow) {
-			const nextMeta = sceneMeta ?? sceneMetaInitialState
-			setSceneMetaState(nextMeta)
-			setHasUnsavedChanges(false)
+			if (isPostSaveNavigation) {
+				// Post-save navigation: baselines are already correct. Only sync the
+				// server-returned stats and clear the marker so subsequent navigation
+				// is treated as a genuine scene change.
+				setOptimizationRuntime((prev) => ({
+					...prev,
+					latestSceneStats:
+						initialSceneAggregate?.stats ?? prev.latestSceneStats
+				}))
+				setLastSavedSceneId(null)
+			} else {
+				// Genuine scene change: reset meta, unsaved-changes flag, and
+				// optimization runtime to the server's ground-truth values.
+				const nextMeta = sceneMeta ?? sceneMetaInitialState
+				setSceneMetaState(nextMeta)
+				setHasUnsavedChanges(false)
+				setOptimizationRuntime({
+					...optimizationRuntimeInitialState,
+					lastSavedReportSignature: null,
+					latestSceneStats: initialSceneAggregate?.stats ?? null
+				})
+			}
 		}
 
 		setLastSavedSceneMeta(sceneMeta ?? null)
 		setIsInitializing(!!paramSceneId && !!initialSceneAggregate)
-
-		if (hasSceneChanged || isNewUploadFlow) {
-			setOptimizationRuntime({
-				...optimizationRuntimeInitialState,
-				lastSavedReportSignature: null,
-				latestSceneStats: initialSceneAggregate?.stats ?? null
-			})
-		}
 
 		previousParamSceneIdRef.current = paramSceneId
 	}, [
@@ -78,6 +101,8 @@ export const useSceneParamsSync = ({
 		setIsInitializing,
 		setHasUnsavedChanges,
 		setOptimizationRuntime,
-		setCurrentSceneId
+		setCurrentSceneId,
+		lastSavedSceneId,
+		setLastSavedSceneId
 	])
 }

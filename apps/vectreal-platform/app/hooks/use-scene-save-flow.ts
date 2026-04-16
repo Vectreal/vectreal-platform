@@ -32,6 +32,7 @@ export const useSceneSaveFlow = ({
 	setLastSavedSettings,
 	lastSavedSceneMeta,
 	setLastSavedSceneMeta,
+	setLastSavedSceneId,
 	isInitializing,
 	processHasUnsavedChanges,
 	setHasUnsavedChanges,
@@ -235,6 +236,12 @@ export const useSceneSaveFlow = ({
 				setLastSavedSettings(settingsSnapshot)
 				setLastSavedSceneMeta(savedSceneMeta)
 
+				// Mark which scene was just saved. useSceneParamsSync reads this to
+				// distinguish "navigated to new scene after save" from a genuine user
+				// scene change, and skips destructive resets in that case.
+				const persistedSceneId = result.sceneId || currentSceneId
+				setLastSavedSceneId(persistedSceneId ?? null)
+
 				const latestStats = result.stats
 				if (latestStats) {
 					setOptimizationRuntime((prev) => ({
@@ -267,6 +274,7 @@ export const useSceneSaveFlow = ({
 			setSceneMetaState,
 			setLastSavedSettings,
 			setLastSavedSceneMeta,
+			setLastSavedSceneId,
 			reportSignature,
 			lastSavedReportSignature,
 			optimizedSceneBytes,

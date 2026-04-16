@@ -35,7 +35,10 @@ import { clearPendingSceneDraft } from '../lib/persistence/pending-scene-idb'
 import {
 	processAtom,
 	sceneMetaAtom,
-	sceneMetaInitialState
+	sceneMetaInitialState,
+	lastSavedSettingsAtom,
+	lastSavedSceneMetaAtom,
+	lastSavedSceneIdAtom
 } from '../lib/stores/publisher-config-store'
 import {
 	optimizationAtom,
@@ -50,7 +53,6 @@ import {
 	shadowsAtom
 } from '../lib/stores/scene-settings-store'
 import { requestSceneScreenshot } from '../lib/viewer/scene-screenshot-bus'
-import { SceneMetaState } from '../types/publisher-config'
 
 import type { UseSceneLoaderParams } from './scene-loader.types'
 import type { SceneAggregateResponse } from '../types/api'
@@ -98,10 +100,15 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 
 	const sceneLoadAttemptedRef = useRef(false)
 	const pendingSceneHydratedRef = useRef(false)
-	const [lastSavedSettings, setLastSavedSettings] =
-		useState<SceneSettings | null>(null)
-	const [lastSavedSceneMeta, setLastSavedSceneMeta] =
-		useState<SceneMetaState | null>(null)
+	// Last-saved baselines live in atoms (not useState) so they survive route
+	// transitions without being reset by component remounting.
+	const [lastSavedSettings, setLastSavedSettings] = useAtom(lastSavedSettingsAtom)
+	const [lastSavedSceneMeta, setLastSavedSceneMeta] = useAtom(
+		lastSavedSceneMetaAtom
+	)
+	// Tracks the scene ID of the last completed save, used to detect post-save
+	// navigation so useSceneParamsSync can skip destructive resets.
+	const [lastSavedSceneId, setLastSavedSceneId] = useAtom(lastSavedSceneIdAtom)
 	const [currentSceneId, setCurrentSceneId] = useState<string | null>(
 		paramSceneId
 	)
@@ -269,6 +276,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setSceneMetaState(sceneMetaInitialState)
 		setLastSavedSettings(null)
 		setLastSavedSceneMeta(null)
+		setLastSavedSceneId(null)
 		setHasUnsavedChanges(false)
 		setOptimizationRuntime({
 			...optimizationRuntimeInitialState,
@@ -281,6 +289,9 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setControls,
 		setShadows,
 		setSceneMetaState,
+		setLastSavedSettings,
+		setLastSavedSceneMeta,
+		setLastSavedSceneId,
 		setHasUnsavedChanges,
 		setOptimizationRuntime
 	])
@@ -378,7 +389,9 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setLastSavedSceneMeta,
 		setIsInitializing,
 		setHasUnsavedChanges,
-		setOptimizationRuntime
+		setOptimizationRuntime,
+		lastSavedSceneId,
+		setLastSavedSceneId
 	})
 
 	/**
@@ -503,6 +516,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setLastSavedSettings: (settings) => setLastSavedSettings(settings),
 		lastSavedSceneMeta,
 		setLastSavedSceneMeta,
+		setLastSavedSceneId,
 		isInitializing,
 		processHasUnsavedChanges: processState.hasUnsavedChanges,
 		setHasUnsavedChanges,

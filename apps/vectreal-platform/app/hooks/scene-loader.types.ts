@@ -62,6 +62,8 @@ export interface SceneSaveFlowArgs {
 	setLastSavedSettings: (settings: SceneSettings) => void
 	lastSavedSceneMeta: SceneMetaState | null
 	setLastSavedSceneMeta: (sceneMetaState: SceneMetaState | null) => void
+	/** Marks the scene ID that was most recently persisted; cleared by useSceneParamsSync after post-save navigation. */
+	setLastSavedSceneId: (sceneId: string | null) => void
 	isInitializing: boolean
 	processHasUnsavedChanges: boolean
 	setHasUnsavedChanges: (hasChanges: boolean) => void
