@@ -69,6 +69,7 @@ export const useSceneSaveFlow = ({
 	const inFlightSaveRef = useRef<Promise<
 		SaveSceneResult | { unchanged: true } | undefined
 	> | null>(null)
+	const inFlightSaveTokenRef = useRef<null | symbol>(null)
 	const [optimisticSaveBaseline, setOptimisticSaveBaseline] = useState<null | {
 		sceneId: null | string
 		settings: typeof currentSettings
@@ -199,6 +200,7 @@ export const useSceneSaveFlow = ({
 				return inFlightSaveRef.current
 			}
 
+			const saveToken = Symbol('scene-save')
 			const savePromise = (async () => {
 				try {
 					return await executeSceneSaveOrchestrator({
@@ -224,12 +226,14 @@ export const useSceneSaveFlow = ({
 			})()
 
 			inFlightSaveRef.current = savePromise
+			inFlightSaveTokenRef.current = saveToken
 
 			try {
 				return await savePromise
 			} finally {
-				if (inFlightSaveRef.current === savePromise) {
+				if (inFlightSaveTokenRef.current === saveToken) {
 					inFlightSaveRef.current = null
+					inFlightSaveTokenRef.current = null
 				}
 			}
 		},
