@@ -39,6 +39,14 @@
 				"command": "react-router"
 			}
 		},
+		"dev-react-compiler": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"envFile": ".env.development",
+				"command": "VITE_EXPERIMENTAL_REACT_COMPILER=true react-router"
+			}
+		},
 		"start": {
 			"executor": "nx:run-commands",
 			"options": {

@@ -1,4 +1,5 @@
 /// <reference types='vitest' />
+import { transformAsync } from '@babel/core'
 import mdx from '@mdx-js/rollup'
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin'
 import { reactRouter } from '@react-router/dev/vite'
@@ -9,7 +10,7 @@ import rehypeSlug from 'rehype-slug'
 import remarkFrontmatter from 'remark-frontmatter'
 import remarkGfm from 'remark-gfm'
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter'
-import { defineConfig } from 'vite'
+import { defineConfig, type PluginOption } from 'vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
 
 const prettyCodeOptions = {
@@ -17,7 +18,75 @@ const prettyCodeOptions = {
 	keepBackground: true
 }
 
-export default defineConfig(() => {
+const reactCompilerEnvVar = 'VITE_EXPERIMENTAL_REACT_COMPILER'
+
+const reactCompilerOptions = {
+	target: '19',
+	panicThreshold: 'none'
+} as const
+
+const reactCompilerPlugin = (enabled: boolean): PluginOption => {
+	if (!enabled) {
+		return false
+	}
+
+	return {
+		name: 'vectreal-react-compiler',
+		enforce: 'pre',
+		async transform(code, id) {
+			if (id.includes('/node_modules/')) {
+				return null
+			}
+
+			const [filepath] = id.split('?')
+
+			if (!/\.[jt]sx?$/.test(filepath)) {
+				return null
+			}
+
+			const result = await transformAsync(code, {
+				babelrc: false,
+				configFile: false,
+				filename: id,
+				sourceFileName: filepath,
+				sourceMaps: true,
+				parserOpts: {
+					sourceType: 'module',
+					allowAwaitOutsideFunction: true,
+					plugins: ['jsx', 'typescript']
+				},
+				plugins: [['babel-plugin-react-compiler', reactCompilerOptions]]
+			})
+
+			if (result === null) {
+				return null
+			}
+
+			return {
+				code: result.code ?? code,
+				map: result.map
+			}
+		}
+	}
+}
+
+const shouldEnableReactCompiler = (command: 'build' | 'serve') => {
+	const explicitValue = process.env[reactCompilerEnvVar]
+
+	if (explicitValue === 'true') {
+		return true
+	}
+
+	if (explicitValue === 'false') {
+		return false
+	}
+
+	return command === 'build'
+}
+
+export default defineConfig(({ command }) => {
+	const reactCompilerEnabled = shouldEnableReactCompiler(command)
+
 	return {
 		root: __dirname,
 		cacheDir: '../../node_modules/.vite/apps/vectreal-platform',
@@ -60,7 +129,8 @@ export default defineConfig(() => {
 			devtoolsJson({
 				projectRoot: __dirname
 			}),
-			!process.env.VITEST && reactRouter()
+			!process.env.VITEST && reactRouter(),
+			reactCompilerPlugin(reactCompilerEnabled)
 		],
 		// worker: {
 		//  plugins: [ nxViteTsPaths() ],
