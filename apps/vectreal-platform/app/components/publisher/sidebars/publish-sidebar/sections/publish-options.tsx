@@ -21,11 +21,11 @@ import {
 import { ScenePublishStateControl } from '../../../../publishing/scene-publish-state-control'
 import { itemVariants } from '../../animation'
 
-import type { SaveSceneFn } from '../../../../../hooks'
 import type {
 	PublishSceneResponse,
 	ScenePublishStateResponse
 } from '../../../../../types/api'
+import type { SaveSceneFn } from '../../../../../types/publisher-scene'
 
 type PublishStatus = 'idle' | 'saving' | 'publishing' | 'success' | 'error'
 

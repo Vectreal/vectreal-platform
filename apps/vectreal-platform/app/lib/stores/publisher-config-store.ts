@@ -3,9 +3,10 @@ import { atomWithStorage } from 'jotai/utils'
 import { selectAtom } from 'jotai/utils'
 import { createStore } from 'jotai/vanilla'
 
-import type { SaveLocationTarget } from '../../hooks/scene-loader.types'
 import type { SceneCurrentLocation } from '../../types/api'
 import type { ProcessState, SceneMetaState } from '../../types/publisher-config'
+import type { SaveLocationTarget } from '../../types/publisher-scene'
+import type { SceneSettings } from '@vctrl/core'
 
 const processInitialState: ProcessState = {
 	step: 'uploading',
@@ -28,11 +29,25 @@ const sceneMetaAtom = atomWithStorage<SceneMetaState>(
 	sceneMetaInitialState
 )
 
+// Last-saved baselines — persisted in Jotai atoms (not React state) so they
+// survive route transitions within the same publisher session without remounting.
+// Cleared explicitly on full scene reset or on post-save navigation.
+const lastSavedSettingsAtom = atom<SceneSettings | null>(null)
+const lastSavedSceneMetaAtom = atom<SceneMetaState | null>(null)
+
+// Tracks the scene ID that was most recently committed to the DB. Used by
+// useSceneParamsSync to distinguish "post-save navigation to newId" from a
+// genuine user-initiated scene change, so it can skip destructive resets.
+const lastSavedSceneIdAtom = atom<string | null>(null)
+
 // Create a store to manage the state of the atoms
 const publisherConfigStore = createStore()
 
 publisherConfigStore.set(processAtom, processInitialState)
 publisherConfigStore.set(sceneMetaAtom, sceneMetaInitialState)
+publisherConfigStore.set(lastSavedSettingsAtom, null)
+publisherConfigStore.set(lastSavedSceneMetaAtom, null)
+publisherConfigStore.set(lastSavedSceneIdAtom, null)
 
 // Save location atoms — not persisted to storage, initialized from loader data each session
 const saveLocationAtom = atom<SaveLocationTarget>({
@@ -95,6 +110,9 @@ export {
 	controlsOverlayStateAtom,
 	isSavingAtom,
 	hasUnsavedChangesAtom,
+	lastSavedSettingsAtom,
+	lastSavedSceneMetaAtom,
+	lastSavedSceneIdAtom,
 	processInitialState,
 	sceneMetaInitialState,
 

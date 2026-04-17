@@ -10,11 +10,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
-import { useSceneAggregateBootstrap } from './use-scene-aggregate-bootstrap'
-import { useSceneDraftRehydration } from './use-scene-draft-rehydration'
-import { useSceneModelEvents } from './use-scene-model-events'
-import { useSceneParamsSync } from './use-scene-params-sync'
-import { useSceneSaveFlow } from './use-scene-save-flow'
+import { useSceneAggregateBootstrap } from './scene-loader/use-scene-aggregate-bootstrap'
+import { useSceneDraftRehydration } from './scene-loader/use-scene-draft-rehydration'
+import { useSceneModelEvents } from './scene-loader/use-scene-model-events'
+import { useSceneParamsSync } from './scene-loader/use-scene-params-sync'
+import { useSceneSaveFlow } from './scene-loader/use-scene-save-flow'
 import { optimizationPresets } from '../constants/optimizations'
 import {
 	defaultBoundsOptions,
@@ -35,7 +35,10 @@ import { clearPendingSceneDraft } from '../lib/persistence/pending-scene-idb'
 import {
 	processAtom,
 	sceneMetaAtom,
-	sceneMetaInitialState
+	sceneMetaInitialState,
+	lastSavedSettingsAtom,
+	lastSavedSceneMetaAtom,
+	lastSavedSceneIdAtom
 } from '../lib/stores/publisher-config-store'
 import {
 	optimizationAtom,
@@ -50,17 +53,26 @@ import {
 	shadowsAtom
 } from '../lib/stores/scene-settings-store'
 import { requestSceneScreenshot } from '../lib/viewer/scene-screenshot-bus'
-import { SceneMetaState } from '../types/publisher-config'
 
-import type { UseSceneLoaderParams } from './scene-loader.types'
 import type { SceneAggregateResponse } from '../types/api'
+import type { SceneMetaState } from '../types/publisher-config'
 
 export type {
-	SaveAvailabilityState,
 	SaveLocationTarget,
 	SaveSceneResult,
-	UseSceneLoaderParams
-} from './scene-loader.types'
+	SaveSceneFn
+} from '../types/publisher-scene'
+export type {
+	SaveAvailabilityReason,
+	SaveAvailabilityState
+} from '../lib/domain/scene'
+
+export interface UseSceneLoaderParams {
+	sceneId: null | string
+	userId?: string
+	initialSceneAggregate?: SceneAggregateResponse | null
+	sceneMeta?: SceneMetaState | null
+}
 
 const DEFAULT_MAX_CONCURRENT_SCENE_ASSET_UPLOADS = 4
 const DEFAULT_THUMBNAIL_CAPTURE_OPTIONS = {
@@ -98,10 +110,17 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 
 	const sceneLoadAttemptedRef = useRef(false)
 	const pendingSceneHydratedRef = useRef(false)
-	const [lastSavedSettings, setLastSavedSettings] =
-		useState<SceneSettings | null>(null)
-	const [lastSavedSceneMeta, setLastSavedSceneMeta] =
-		useState<SceneMetaState | null>(null)
+	// Last-saved baselines live in atoms (not useState) so they survive route
+	// transitions without being reset by component remounting.
+	const [lastSavedSettings, setLastSavedSettings] = useAtom(
+		lastSavedSettingsAtom
+	)
+	const [lastSavedSceneMeta, setLastSavedSceneMeta] = useAtom(
+		lastSavedSceneMetaAtom
+	)
+	// Tracks the scene ID of the last completed save, used to detect post-save
+	// navigation so useSceneParamsSync can skip destructive resets.
+	const [lastSavedSceneId, setLastSavedSceneId] = useAtom(lastSavedSceneIdAtom)
 	const [currentSceneId, setCurrentSceneId] = useState<string | null>(
 		paramSceneId
 	)
@@ -269,6 +288,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setSceneMetaState(sceneMetaInitialState)
 		setLastSavedSettings(null)
 		setLastSavedSceneMeta(null)
+		setLastSavedSceneId(null)
 		setHasUnsavedChanges(false)
 		setOptimizationRuntime({
 			...optimizationRuntimeInitialState,
@@ -281,6 +301,9 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setControls,
 		setShadows,
 		setSceneMetaState,
+		setLastSavedSettings,
+		setLastSavedSceneMeta,
+		setLastSavedSceneId,
 		setHasUnsavedChanges,
 		setOptimizationRuntime
 	])
@@ -368,17 +391,28 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		}
 	}, [file, setProcess])
 
-	useSceneParamsSync({
+	const routeSyncState = {
 		paramSceneId,
 		sceneMeta,
 		initialSceneAggregate,
+		lastSavedSceneId
+	}
+
+	const routeSyncActions = {
 		resetSceneState,
 		setCurrentSceneId,
 		setSceneMetaState,
+		setLastSavedSettings,
 		setLastSavedSceneMeta,
 		setIsInitializing,
 		setHasUnsavedChanges,
-		setOptimizationRuntime
+		setOptimizationRuntime,
+		setLastSavedSceneId
+	}
+
+	useSceneParamsSync({
+		routeState: routeSyncState,
+		actions: routeSyncActions
 	})
 
 	/**
@@ -492,7 +526,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		clientSceneBytes
 	])
 
-	const { saveSceneSettings, saveAvailability } = useSceneSaveFlow({
+	const scenePersistence = {
 		userId,
 		currentSceneId,
 		setCurrentSceneId,
@@ -500,28 +534,41 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		sceneMetaState,
 		setSceneMetaState,
 		lastSavedSettings,
-		setLastSavedSettings: (settings) => setLastSavedSettings(settings),
+		setLastSavedSettings,
 		lastSavedSceneMeta,
 		setLastSavedSceneMeta,
-		isInitializing,
-		processHasUnsavedChanges: processState.hasUnsavedChanges,
-		setHasUnsavedChanges,
+		lastSavedSceneId,
+		setLastSavedSceneId,
+		isInitializing
+	}
+
+	const optimizationSaveState = {
+		optimizationSettings,
+		optimizationReport: optimizer?.report,
 		latestSceneStats,
 		optimizedSceneBytes,
 		clientSceneBytes,
 		lastSavedReportSignature,
-		setOptimizationRuntime,
+		setOptimizationRuntime
+	}
+
+	const saveFlowActions = {
+		setHasUnsavedChanges,
 		revalidate: () => revalidator.revalidate(),
 		clearPendingDraft: clearPendingSceneDraft,
-		optimizationSettings,
-		optimizationReport: optimizer?.report,
 		createRequestId,
 		prepareGltfDocumentForUpload,
 		captureSceneThumbnail,
 		maxConcurrentAssetUploadsDefault: DEFAULT_MAX_CONCURRENT_SCENE_ASSET_UPLOADS
+	}
+
+	const { saveSceneSettings, saveAvailability } = useSceneSaveFlow({
+		scenePersistence,
+		optimizationState: optimizationSaveState,
+		actions: saveFlowActions
 	})
 
-	useSceneDraftRehydration({
+	const draftRestoreRequest = {
 		pendingSceneHydratedRef,
 		shouldRestorePendingDraft,
 		draftId: pendingDraftId,
@@ -530,24 +577,44 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		fileModel: file?.model,
 		isFileLoading,
 		locationPathname: location.pathname,
-		onRestoreHandled: handleRestoreHandled,
+		onRestoreHandled: handleRestoreHandled
+	}
+
+	const draftHydrationActions = {
 		setIsDownloading,
-		inferOptimizationPreset,
-		setOptimizationState,
-		setOptimizationRuntime,
 		loadFromData,
 		setSceneMetaState,
 		setLastSavedSceneMeta
+	}
+
+	const draftOptimizationActions = {
+		inferOptimizationPreset,
+		setOptimizationState,
+		setOptimizationRuntime
+	}
+
+	useSceneDraftRehydration({
+		restoreRequest: draftRestoreRequest,
+		hydrationActions: draftHydrationActions,
+		optimizationActions: draftOptimizationActions
 	})
 
-	useSceneAggregateBootstrap({
+	const aggregateBootstrapState = {
 		sceneLoadAttemptedRef,
 		paramSceneId,
 		initialSceneAggregate,
 		fileModel: file?.model,
-		isFileLoading,
+		isFileLoading
+	}
+
+	const aggregateBootstrapActions = {
 		setIsInitializing,
 		loadSceneFromAggregate
+	}
+
+	useSceneAggregateBootstrap({
+		bootstrapState: aggregateBootstrapState,
+		actions: aggregateBootstrapActions
 	})
 
 	return { saveSceneSettings, saveAvailability, persistPendingSceneDraft }

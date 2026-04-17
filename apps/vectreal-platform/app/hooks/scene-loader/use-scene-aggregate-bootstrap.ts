@@ -1,29 +1,20 @@
-import { useEffect, type MutableRefObject } from 'react'
+import { useEffect } from 'react'
 
-import type { SceneAggregateResponse } from '../types/api'
-
-interface UseSceneAggregateBootstrapParams {
-	sceneLoadAttemptedRef: MutableRefObject<boolean>
-	paramSceneId: null | string
-	initialSceneAggregate: null | SceneAggregateResponse
-	fileModel: unknown
-	isFileLoading: boolean
-	setIsInitializing: (initializing: boolean) => void
-	loadSceneFromAggregate: (
-		sceneId: string,
-		aggregate: SceneAggregateResponse
-	) => Promise<void>
-}
+import type { UseSceneAggregateBootstrapArgs } from './contracts'
 
 export const useSceneAggregateBootstrap = ({
-	sceneLoadAttemptedRef,
-	paramSceneId,
-	initialSceneAggregate,
-	fileModel,
-	isFileLoading,
-	setIsInitializing,
-	loadSceneFromAggregate
-}: UseSceneAggregateBootstrapParams) => {
+	bootstrapState,
+	actions
+}: UseSceneAggregateBootstrapArgs) => {
+	const {
+		sceneLoadAttemptedRef,
+		paramSceneId,
+		initialSceneAggregate,
+		fileModel,
+		isFileLoading
+	} = bootstrapState
+	const { setIsInitializing, loadSceneFromAggregate } = actions
+
 	useEffect(() => {
 		sceneLoadAttemptedRef.current = false
 	}, [paramSceneId, sceneLoadAttemptedRef])

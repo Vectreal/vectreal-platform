@@ -1,102 +1,82 @@
 import { useSetAtom } from 'jotai/react'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
 	buildOptimizationReportSignature,
 	executeSceneSaveOrchestrator,
+	hasSceneMetaChanged,
+	hasSceneSettingsChanged,
 	hasOptimizationChanges,
+	hasUnsavedSceneChanges,
 	resolveSaveAvailability,
 	shouldRequireFirstSaveOptimization,
 	type SaveSceneOrchestratorOptions,
-	hasUnsavedSceneChanges
-} from '../lib/domain/scene'
+	type SaveAvailabilityState
+} from '../../lib/domain/scene'
 import {
 	currentLocationAtom,
 	saveLocationAtom
-} from '../lib/stores/publisher-config-store'
-import { isSceneCurrentLocation } from '../types/api'
+} from '../../lib/stores/publisher-config-store'
+import { isSceneCurrentLocation } from '../../types/api'
 
-import type { SaveAvailabilityState } from '../lib/domain/scene'
-import type { SceneStatsData } from '../types/api'
-import type { SceneMetaState } from '../types/publisher-config'
+import type { UseSceneSaveFlowArgs } from './contracts'
 import type {
 	SaveLocationTarget,
 	SaveSceneResult
-} from '../types/publisher-scene'
-import type { SceneOptimizationRuntimeState } from '../types/scene-optimization'
-import type { OptimizationReport, Optimizations } from '@vctrl/core'
-import type { SceneSettings } from '@vctrl/core'
-
-interface SceneSaveFlowArgs {
-	userId?: string
-	currentSceneId: null | string
-	setCurrentSceneId: (sceneId: null | string) => void
-	currentSettings: SceneSettings
-	sceneMetaState: SceneMetaState
-	setSceneMetaState: (
-		next: SceneMetaState | ((prev: SceneMetaState) => SceneMetaState)
-	) => void
-	lastSavedSettings: SceneSettings | null
-	setLastSavedSettings: (settings: SceneSettings) => void
-	lastSavedSceneMeta: SceneMetaState | null
-	setLastSavedSceneMeta: (sceneMetaState: SceneMetaState | null) => void
-	lastSavedSceneId: string | null
-	setLastSavedSceneId: (sceneId: string | null) => void
-	isInitializing: boolean
-	setHasUnsavedChanges: (hasChanges: boolean) => void
-	latestSceneStats: SceneStatsData | null
-	optimizedSceneBytes: null | number
-	clientSceneBytes: null | number
-	lastSavedReportSignature: null | string
-	setOptimizationRuntime: (
-		next:
-			| SceneOptimizationRuntimeState
-			| ((prev: SceneOptimizationRuntimeState) => SceneOptimizationRuntimeState)
-	) => void
-	revalidate: () => void
-	clearPendingDraft: () => Promise<void>
-	optimizationSettings: Optimizations
-	optimizationReport: OptimizationReport | null | undefined
-	createRequestId: () => string
-	prepareGltfDocumentForUpload: () => Promise<unknown>
-	captureSceneThumbnail: () => Promise<null | string>
-	maxConcurrentAssetUploadsDefault: number
-}
+} from '../../types/publisher-scene'
 
 export const useSceneSaveFlow = ({
-	userId,
-	currentSceneId,
-	setCurrentSceneId,
-	currentSettings,
-	sceneMetaState,
-	setSceneMetaState,
-	lastSavedSettings,
-	setLastSavedSettings,
-	lastSavedSceneMeta,
-	setLastSavedSceneMeta,
-	lastSavedSceneId,
-	setLastSavedSceneId,
-	isInitializing,
-	setHasUnsavedChanges,
-	latestSceneStats,
-	optimizedSceneBytes,
-	clientSceneBytes,
-	lastSavedReportSignature,
-	setOptimizationRuntime,
-	revalidate,
-	clearPendingDraft,
-	optimizationSettings,
-	optimizationReport,
-	createRequestId,
-	prepareGltfDocumentForUpload,
-	captureSceneThumbnail,
-	maxConcurrentAssetUploadsDefault
-}: SceneSaveFlowArgs) => {
+	scenePersistence,
+	optimizationState,
+	actions
+}: UseSceneSaveFlowArgs) => {
+	const {
+		userId,
+		currentSceneId,
+		setCurrentSceneId,
+		currentSettings,
+		sceneMetaState,
+		setSceneMetaState,
+		lastSavedSettings,
+		setLastSavedSettings,
+		lastSavedSceneMeta,
+		setLastSavedSceneMeta,
+		lastSavedSceneId,
+		setLastSavedSceneId,
+		isInitializing
+	} = scenePersistence
+	const {
+		optimizationSettings,
+		optimizationReport,
+		latestSceneStats,
+		optimizedSceneBytes,
+		clientSceneBytes,
+		lastSavedReportSignature,
+		setOptimizationRuntime
+	} = optimizationState
+	const {
+		setHasUnsavedChanges,
+		revalidate,
+		clearPendingDraft,
+		createRequestId,
+		prepareGltfDocumentForUpload,
+		captureSceneThumbnail,
+		maxConcurrentAssetUploadsDefault
+	} = actions
+
 	const setCurrentLocation = useSetAtom(currentLocationAtom)
 	const setSaveLocation = useSetAtom(saveLocationAtom)
 	const inFlightSaveRef = useRef<Promise<
 		SaveSceneResult | { unchanged: true } | undefined
 	> | null>(null)
+	const inFlightSaveTokenRef = useRef<null | symbol>(null)
+	const [optimisticSaveBaseline, setOptimisticSaveBaseline] = useState<null | {
+		sceneId: null | string
+		settings: typeof currentSettings
+		sceneMeta: typeof sceneMetaState
+		reportSignature: null | string
+		sceneBytes: null | number
+	}>(null)
 
 	const reportSignature = useMemo(
 		() => buildOptimizationReportSignature(optimizationReport),
@@ -117,6 +97,58 @@ export const useSceneSaveFlow = ({
 			}),
 		[currentSceneId, lastSavedSceneId, hasAppliedOptimization]
 	)
+
+	useEffect(() => {
+		if (!optimisticSaveBaseline || inFlightSaveRef.current) {
+			return
+		}
+
+		const isOptimisticSceneTransitionSettling =
+			optimisticSaveBaseline.sceneId === null &&
+			currentSceneId !== null &&
+			currentSceneId === lastSavedSceneId
+
+		if (
+			currentSceneId !== optimisticSaveBaseline.sceneId &&
+			!isOptimisticSceneTransitionSettling
+		) {
+			setOptimisticSaveBaseline(null)
+			return
+		}
+
+		const settingsSettled =
+			lastSavedSettings !== null &&
+			!hasSceneSettingsChanged(
+				lastSavedSettings,
+				optimisticSaveBaseline.settings
+			)
+		const sceneMetaSettled =
+			lastSavedSceneMeta !== null &&
+			!hasSceneMetaChanged(lastSavedSceneMeta, optimisticSaveBaseline.sceneMeta)
+		const reportSettled =
+			lastSavedReportSignature === optimisticSaveBaseline.reportSignature
+		const sceneBytesSettled =
+			optimisticSaveBaseline.sceneBytes === null ||
+			(latestSceneStats?.currentSceneBytes ?? null) ===
+				optimisticSaveBaseline.sceneBytes
+
+		if (
+			settingsSettled &&
+			sceneMetaSettled &&
+			reportSettled &&
+			sceneBytesSettled
+		) {
+			setOptimisticSaveBaseline(null)
+		}
+	}, [
+		currentSceneId,
+		lastSavedSceneId,
+		lastSavedReportSignature,
+		lastSavedSceneMeta,
+		lastSavedSettings,
+		latestSceneStats,
+		optimisticSaveBaseline
+	])
 
 	useEffect(() => {
 		if (!reportSignature || lastSavedReportSignature || !latestSceneStats) {
@@ -168,6 +200,7 @@ export const useSceneSaveFlow = ({
 				return inFlightSaveRef.current
 			}
 
+			const saveToken = Symbol('scene-save')
 			const savePromise = (async () => {
 				try {
 					return await executeSceneSaveOrchestrator({
@@ -193,12 +226,14 @@ export const useSceneSaveFlow = ({
 			})()
 
 			inFlightSaveRef.current = savePromise
+			inFlightSaveTokenRef.current = saveToken
 
 			try {
 				return await savePromise
 			} finally {
-				if (inFlightSaveRef.current === savePromise) {
+				if (inFlightSaveTokenRef.current === saveToken) {
 					inFlightSaveRef.current = null
+					inFlightSaveTokenRef.current = null
 				}
 			}
 		},
@@ -246,13 +281,29 @@ export const useSceneSaveFlow = ({
 						? clientSceneBytes
 						: undefined
 
-			const result = await saveToDB({
-				includeOptimizationReport: hasOptimizationReportChanges,
-				initialSceneBytes: sceneInitialBytes,
-				currentSceneBytes: sceneCurrentBytes,
-				targetProjectId: target?.targetProjectId,
-				targetFolderId: target?.targetFolderId
+			setOptimisticSaveBaseline({
+				sceneId: currentSceneId,
+				settings: settingsSnapshot,
+				sceneMeta: sceneMetaSnapshot,
+				reportSignature: reportSignatureSnapshot,
+				sceneBytes: sceneCurrentBytes ?? null
 			})
+			setHasUnsavedChanges(false)
+
+			let result: SaveSceneResult | { unchanged: true } | undefined
+
+			try {
+				result = await saveToDB({
+					includeOptimizationReport: hasOptimizationReportChanges,
+					initialSceneBytes: sceneInitialBytes,
+					currentSceneBytes: sceneCurrentBytes,
+					targetProjectId: target?.targetProjectId,
+					targetFolderId: target?.targetFolderId
+				})
+			} catch (error) {
+				setOptimisticSaveBaseline(null)
+				throw error
+			}
 
 			if (result && 'sceneId' in result && result.sceneId && !currentSceneId) {
 				setCurrentSceneId(result.sceneId)
@@ -303,6 +354,14 @@ export const useSceneSaveFlow = ({
 				// scene change, and skips destructive resets in that case.
 				const persistedSceneId = result.sceneId || currentSceneId
 				setLastSavedSceneId(persistedSceneId ?? null)
+				setOptimisticSaveBaseline({
+					sceneId: persistedSceneId ?? null,
+					settings: settingsSnapshot,
+					sceneMeta: savedSceneMeta,
+					reportSignature: reportSignatureSnapshot,
+					sceneBytes:
+						result.stats?.currentSceneBytes ?? sceneCurrentBytes ?? null
+				})
 
 				const latestStats = result.stats
 				if (latestStats) {
@@ -319,6 +378,10 @@ export const useSceneSaveFlow = ({
 				}
 
 				revalidate()
+			}
+
+			if (!result || result.unchanged) {
+				setOptimisticSaveBaseline(null)
 			}
 
 			if (result) {
@@ -345,32 +408,44 @@ export const useSceneSaveFlow = ({
 			setOptimizationRuntime,
 			setCurrentLocation,
 			setSaveLocation,
+			setHasUnsavedChanges,
 			revalidate,
 			clearPendingDraft
 		]
 	)
+
+	const effectiveLastSavedSettings =
+		optimisticSaveBaseline?.settings ?? lastSavedSettings
+	const effectiveLastSavedSceneMeta =
+		optimisticSaveBaseline?.sceneMeta ?? lastSavedSceneMeta
+	const effectiveLastSavedReportSignature =
+		optimisticSaveBaseline?.reportSignature ?? lastSavedReportSignature
+	const effectiveLastSavedSceneBytes =
+		optimisticSaveBaseline?.sceneBytes ?? null
 
 	const hasChanges = useMemo(
 		() =>
 			hasUnsavedSceneChanges({
 				isInitializing,
 				currentSettings,
-				lastSavedSettings,
+				lastSavedSettings: effectiveLastSavedSettings,
 				sceneMetaState,
-				lastSavedSceneMeta,
+				lastSavedSceneMeta: effectiveLastSavedSceneMeta,
 				reportSignature,
-				lastSavedReportSignature,
+				lastSavedReportSignature: effectiveLastSavedReportSignature,
+				lastSavedSceneBytes: effectiveLastSavedSceneBytes,
 				optimizedSceneBytes,
 				latestSceneStats
 			}),
 		[
 			isInitializing,
 			currentSettings,
-			lastSavedSettings,
+			effectiveLastSavedSettings,
 			sceneMetaState,
-			lastSavedSceneMeta,
+			effectiveLastSavedSceneMeta,
 			reportSignature,
-			lastSavedReportSignature,
+			effectiveLastSavedReportSignature,
+			effectiveLastSavedSceneBytes,
 			optimizedSceneBytes,
 			latestSceneStats
 		]
