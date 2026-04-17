@@ -67,7 +67,7 @@ See [`../../.env.development.example`](../../.env.development.example) for the f
 
 ## Key directories
 
-```
+```text
 app/
 ├── routes/                  # React Router routes (file-based config in routes.tsx)
 │   ├── docs/                # MDX documentation pages
@@ -117,12 +117,16 @@ See [`DB_MIGRATIONS.md`](DB_MIGRATIONS.md) for the full workflow.
 
 ```bash
 pnpm nx dev vectreal-platform                # Dev server (http://localhost:4200)
+pnpm nx run vectreal-platform:dev-react-compiler # Experimental dev server with React Compiler enabled
 pnpm nx build vectreal-platform              # Production build
 pnpm nx test vectreal-platform               # Unit tests
 pnpm nx lint vectreal-platform               # ESLint
 pnpm nx run vectreal-platform:drizzle-generate  # Generate DB migration SQL
 pnpm nx run vectreal-platform:supabase-db-reset # Reset local DB
 ```
+
+React Compiler is enabled by default for app builds, including the CI `build-ci` target and Docker-based deploy builds.
+The standard `dev` target remains unchanged; use `dev-react-compiler` when you want to validate compiler behavior locally.
 
 ---
 

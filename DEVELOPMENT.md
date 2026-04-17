@@ -2,18 +2,18 @@
 
 This guide covers everything you need to develop, test, and build the Vectreal Platform locally.
 
-***
+---
 
 ## Prerequisites
 
 | Tool         | Version    | Notes                             |
 | ------------ | ---------- | --------------------------------- |
-| Node.js      | >= 22.x   | Use nvm or fnm to manage versions |
-| pnpm         | >= 10.x   | `npm i -g pnpm`                   |
+| Node.js      | >= 22.x    | Use nvm or fnm to manage versions |
+| pnpm         | >= 10.x    | `npm i -g pnpm`                   |
 | Docker       | any recent | Required for local Supabase       |
 | Supabase CLI | latest     | `npm i -g supabase`               |
 
-***
+---
 
 ## First-Time Setup
 
@@ -77,7 +77,7 @@ pnpm nx dev vectreal-platform
 
 App is available at `http://localhost:4200` with HMR enabled.
 
-***
+---
 
 ## Common Commands
 
@@ -85,9 +85,13 @@ App is available at `http://localhost:4200` with HMR enabled.
 
 ```bash
 pnpm nx dev vectreal-platform           # Start app with HMR
+pnpm nx run vectreal-platform:dev-react-compiler  # Experimental dev server with React Compiler enabled
 pnpm nx build vectreal-platform         # Production build
 pnpm nx typecheck vectreal-platform     # Type-check app only
 ```
+
+`pnpm nx build vectreal-platform` and CI `build-ci` runs now enable React Compiler by default.
+Use `pnpm nx run vectreal-platform:dev-react-compiler` to exercise compiler output locally without changing the default dev loop.
 
 ### Packages
 
@@ -137,11 +141,11 @@ pnpm nx reset                           # Clear Nx cache
 pnpm nx affected --target=build --dry-run  # Preview what would run
 ```
 
-***
+---
 
 ## Repo Structure
 
-```
+```text
 vectreal-platform/
 ├── apps/
 │   └── vectreal-platform/    # Full-stack React Router v7 app
@@ -162,17 +166,17 @@ vectreal-platform/
 └── prd/                      # Product requirements docs
 ```
 
-***
+---
 
 ## Working with Packages vs the App
 
 The three `packages/` projects (`@vctrl/core`, `@vctrl/hooks`, `@vctrl/viewer`) are publishable npm packages. They are also consumed by the platform app.
 
-* Changes to packages are picked up by the app automatically via pnpm workspace linking — no need to rebuild packages during local development.
-* When building for release, Nx runs packages through Rollup before the app build.
-* Run `pnpm nx storybook @vctrl/viewer` to develop viewer components in isolation.
+- Changes to packages are picked up by the app automatically via pnpm workspace linking — no need to rebuild packages during local development.
+- When building for release, Nx runs packages through Rollup before the app build.
+- Run `pnpm nx storybook @vctrl/viewer` to develop viewer components in isolation.
 
-***
+---
 
 ## CI/CD Pipelines
 
@@ -186,29 +190,29 @@ The three `packages/` projects (`@vctrl/core`, `@vctrl/hooks`, `@vctrl/viewer`) 
 
 All PRs must pass `ci-quality.yaml` before merge.
 
-***
+---
 
 ## Troubleshooting
 
 **`pnpm supabase start` hangs or fails**
 
-* Ensure Docker Desktop is running.
-* Try `pnpm supabase stop --no-backup` then restart.
+- Ensure Docker Desktop is running.
+- Try `pnpm supabase stop --no-backup` then restart.
 
 **Port 4200 already in use**
 
-* Change `VITE_DEV_PORT` in `.env.development`.
+- Change `VITE_DEV_PORT` in `.env.development`.
 
 **`supabase-db-reset` fails with connection error**
 
-* Confirm Supabase is running: `pnpm supabase status`.
-* Check `DATABASE_URL` in `.env.development` matches the port printed by `supabase status`.
+- Confirm Supabase is running: `pnpm supabase status`.
+- Check `DATABASE_URL` in `.env.development` matches the port printed by `supabase status`.
 
 **Nx cache gives stale results**
 
-* Run `pnpm nx reset` to clear the cache.
+- Run `pnpm nx reset` to clear the cache.
 
 **TypeScript errors after pulling latest changes**
 
-* Run `pnpm install` — a new package may have been added.
-* Then `pnpm nx reset` if errors persist.
+- Run `pnpm install` — a new package may have been added.
+- Then `pnpm nx reset` if errors persist.
