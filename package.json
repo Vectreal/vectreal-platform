@@ -123,6 +123,7 @@
 		"@tailwindcss/vite": "^4.2.2",
 		"@testing-library/dom": "10.4.0",
 		"@testing-library/react": "16.3.2",
+		"@types/babel__core": "^7.20.5",
 		"@types/file-saver": "^2.0.7",
 		"@types/jest": "30.0.0",
 		"@types/node": "^22.19.17",
