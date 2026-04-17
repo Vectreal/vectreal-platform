@@ -1,9 +1,11 @@
 import { useSetAtom } from 'jotai/react'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
 	buildOptimizationReportSignature,
 	executeSceneSaveOrchestrator,
+	hasSceneMetaChanged,
+	hasSceneSettingsChanged,
 	hasOptimizationChanges,
 	hasUnsavedSceneChanges,
 	resolveSaveAvailability,
@@ -67,6 +69,13 @@ export const useSceneSaveFlow = ({
 	const inFlightSaveRef = useRef<Promise<
 		SaveSceneResult | { unchanged: true } | undefined
 	> | null>(null)
+	const [optimisticSaveBaseline, setOptimisticSaveBaseline] = useState<null | {
+		sceneId: null | string
+		settings: typeof currentSettings
+		sceneMeta: typeof sceneMetaState
+		reportSignature: null | string
+		sceneBytes: null | number
+	}>(null)
 
 	const reportSignature = useMemo(
 		() => buildOptimizationReportSignature(optimizationReport),
@@ -87,6 +96,58 @@ export const useSceneSaveFlow = ({
 			}),
 		[currentSceneId, lastSavedSceneId, hasAppliedOptimization]
 	)
+
+	useEffect(() => {
+		if (!optimisticSaveBaseline || inFlightSaveRef.current) {
+			return
+		}
+
+		const isOptimisticSceneTransitionSettling =
+			optimisticSaveBaseline.sceneId === null &&
+			currentSceneId !== null &&
+			currentSceneId === lastSavedSceneId
+
+		if (
+			currentSceneId !== optimisticSaveBaseline.sceneId &&
+			!isOptimisticSceneTransitionSettling
+		) {
+			setOptimisticSaveBaseline(null)
+			return
+		}
+
+		const settingsSettled =
+			lastSavedSettings !== null &&
+			!hasSceneSettingsChanged(
+				lastSavedSettings,
+				optimisticSaveBaseline.settings
+			)
+		const sceneMetaSettled =
+			lastSavedSceneMeta !== null &&
+			!hasSceneMetaChanged(lastSavedSceneMeta, optimisticSaveBaseline.sceneMeta)
+		const reportSettled =
+			lastSavedReportSignature === optimisticSaveBaseline.reportSignature
+		const sceneBytesSettled =
+			optimisticSaveBaseline.sceneBytes === null ||
+			(latestSceneStats?.currentSceneBytes ?? null) ===
+				optimisticSaveBaseline.sceneBytes
+
+		if (
+			settingsSettled &&
+			sceneMetaSettled &&
+			reportSettled &&
+			sceneBytesSettled
+		) {
+			setOptimisticSaveBaseline(null)
+		}
+	}, [
+		currentSceneId,
+		lastSavedSceneId,
+		lastSavedReportSignature,
+		lastSavedSceneMeta,
+		lastSavedSettings,
+		latestSceneStats,
+		optimisticSaveBaseline
+	])
 
 	useEffect(() => {
 		if (!reportSignature || lastSavedReportSignature || !latestSceneStats) {
@@ -216,13 +277,29 @@ export const useSceneSaveFlow = ({
 						? clientSceneBytes
 						: undefined
 
-			const result = await saveToDB({
-				includeOptimizationReport: hasOptimizationReportChanges,
-				initialSceneBytes: sceneInitialBytes,
-				currentSceneBytes: sceneCurrentBytes,
-				targetProjectId: target?.targetProjectId,
-				targetFolderId: target?.targetFolderId
+			setOptimisticSaveBaseline({
+				sceneId: currentSceneId,
+				settings: settingsSnapshot,
+				sceneMeta: sceneMetaSnapshot,
+				reportSignature: reportSignatureSnapshot,
+				sceneBytes: sceneCurrentBytes ?? null
 			})
+			setHasUnsavedChanges(false)
+
+			let result: SaveSceneResult | { unchanged: true } | undefined
+
+			try {
+				result = await saveToDB({
+					includeOptimizationReport: hasOptimizationReportChanges,
+					initialSceneBytes: sceneInitialBytes,
+					currentSceneBytes: sceneCurrentBytes,
+					targetProjectId: target?.targetProjectId,
+					targetFolderId: target?.targetFolderId
+				})
+			} catch (error) {
+				setOptimisticSaveBaseline(null)
+				throw error
+			}
 
 			if (result && 'sceneId' in result && result.sceneId && !currentSceneId) {
 				setCurrentSceneId(result.sceneId)
@@ -273,6 +350,14 @@ export const useSceneSaveFlow = ({
 				// scene change, and skips destructive resets in that case.
 				const persistedSceneId = result.sceneId || currentSceneId
 				setLastSavedSceneId(persistedSceneId ?? null)
+				setOptimisticSaveBaseline({
+					sceneId: persistedSceneId ?? null,
+					settings: settingsSnapshot,
+					sceneMeta: savedSceneMeta,
+					reportSignature: reportSignatureSnapshot,
+					sceneBytes:
+						result.stats?.currentSceneBytes ?? sceneCurrentBytes ?? null
+				})
 
 				const latestStats = result.stats
 				if (latestStats) {
@@ -289,6 +374,10 @@ export const useSceneSaveFlow = ({
 				}
 
 				revalidate()
+			}
+
+			if (!result || result.unchanged) {
+				setOptimisticSaveBaseline(null)
 			}
 
 			if (result) {
@@ -315,32 +404,44 @@ export const useSceneSaveFlow = ({
 			setOptimizationRuntime,
 			setCurrentLocation,
 			setSaveLocation,
+			setHasUnsavedChanges,
 			revalidate,
 			clearPendingDraft
 		]
 	)
+
+	const effectiveLastSavedSettings =
+		optimisticSaveBaseline?.settings ?? lastSavedSettings
+	const effectiveLastSavedSceneMeta =
+		optimisticSaveBaseline?.sceneMeta ?? lastSavedSceneMeta
+	const effectiveLastSavedReportSignature =
+		optimisticSaveBaseline?.reportSignature ?? lastSavedReportSignature
+	const effectiveLastSavedSceneBytes =
+		optimisticSaveBaseline?.sceneBytes ?? null
 
 	const hasChanges = useMemo(
 		() =>
 			hasUnsavedSceneChanges({
 				isInitializing,
 				currentSettings,
-				lastSavedSettings,
+				lastSavedSettings: effectiveLastSavedSettings,
 				sceneMetaState,
-				lastSavedSceneMeta,
+				lastSavedSceneMeta: effectiveLastSavedSceneMeta,
 				reportSignature,
-				lastSavedReportSignature,
+				lastSavedReportSignature: effectiveLastSavedReportSignature,
+				lastSavedSceneBytes: effectiveLastSavedSceneBytes,
 				optimizedSceneBytes,
 				latestSceneStats
 			}),
 		[
 			isInitializing,
 			currentSettings,
-			lastSavedSettings,
+			effectiveLastSavedSettings,
 			sceneMetaState,
-			lastSavedSceneMeta,
+			effectiveLastSavedSceneMeta,
 			reportSignature,
-			lastSavedReportSignature,
+			effectiveLastSavedReportSignature,
+			effectiveLastSavedSceneBytes,
 			optimizedSceneBytes,
 			latestSceneStats
 		]

@@ -1,7 +1,14 @@
-
 import type { SceneStatsData } from '../../../../types/api'
 import type { SceneMetaState } from '../../../../types/publisher-config'
 import type { OptimizationReport, SceneSettings } from '@vctrl/core'
+
+const toComparableSceneMeta = ({
+	name,
+	description
+}: SceneMetaState): Pick<SceneMetaState, 'description' | 'name'> => ({
+	name,
+	description
+})
 
 export const buildOptimizationReportSignature = (
 	report?: OptimizationReport | null
@@ -35,11 +42,14 @@ export const hasSceneSettingsChanged = (
 export const hasSceneMetaChanged = (
 	current: SceneMetaState,
 	baseline: SceneMetaState
-): boolean => JSON.stringify(current) !== JSON.stringify(baseline)
+): boolean =>
+	JSON.stringify(toComparableSceneMeta(current)) !==
+	JSON.stringify(toComparableSceneMeta(baseline))
 
 interface OptimizationChangeArgs {
 	reportSignature: null | string
 	lastSavedReportSignature: null | string
+	lastSavedSceneBytes?: null | number
 	optimizedSceneBytes: null | number
 	latestSceneStats: SceneStatsData | null
 }
@@ -47,6 +57,7 @@ interface OptimizationChangeArgs {
 export const hasOptimizationChanges = ({
 	reportSignature,
 	lastSavedReportSignature,
+	lastSavedSceneBytes,
 	optimizedSceneBytes,
 	latestSceneStats
 }: OptimizationChangeArgs): boolean => {
@@ -55,9 +66,14 @@ export const hasOptimizationChanges = ({
 		lastSavedReportSignature !== null &&
 		reportSignature !== lastSavedReportSignature
 
+	const savedSceneBytes =
+		typeof lastSavedSceneBytes === 'number'
+			? lastSavedSceneBytes
+			: (latestSceneStats?.currentSceneBytes ?? null)
+
 	const hasSceneSizeChanges =
 		typeof optimizedSceneBytes === 'number' &&
-		optimizedSceneBytes !== (latestSceneStats?.currentSceneBytes ?? null)
+		optimizedSceneBytes !== savedSceneBytes
 
 	return hasReportChanges || hasSceneSizeChanges
 }
@@ -70,6 +86,7 @@ interface UnsavedChangesArgs {
 	lastSavedSceneMeta: SceneMetaState | null
 	reportSignature: null | string
 	lastSavedReportSignature: null | string
+	lastSavedSceneBytes?: null | number
 	optimizedSceneBytes: null | number
 	latestSceneStats: SceneStatsData | null
 }
@@ -82,6 +99,7 @@ export const hasUnsavedSceneChanges = ({
 	lastSavedSceneMeta,
 	reportSignature,
 	lastSavedReportSignature,
+	lastSavedSceneBytes,
 	optimizedSceneBytes,
 	latestSceneStats
 }: UnsavedChangesArgs): boolean => {
@@ -92,11 +110,18 @@ export const hasUnsavedSceneChanges = ({
 	const settingsBaseline = lastSavedSettings || currentSettings
 	const sceneMetaBaseline = lastSavedSceneMeta || sceneMetaState
 
-	const settingsChanged = hasSceneSettingsChanged(currentSettings, settingsBaseline)
-	const sceneMetaChanged = hasSceneMetaChanged(sceneMetaState, sceneMetaBaseline)
+	const settingsChanged = hasSceneSettingsChanged(
+		currentSettings,
+		settingsBaseline
+	)
+	const sceneMetaChanged = hasSceneMetaChanged(
+		sceneMetaState,
+		sceneMetaBaseline
+	)
 	const optimizationChanged = hasOptimizationChanges({
 		reportSignature,
 		lastSavedReportSignature,
+		lastSavedSceneBytes,
 		optimizedSceneBytes,
 		latestSceneStats
 	})

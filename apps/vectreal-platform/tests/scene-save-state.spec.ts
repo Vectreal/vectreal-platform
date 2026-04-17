@@ -1,4 +1,5 @@
 import {
+	hasSceneMetaChanged,
 	resolveSaveAvailability,
 	shouldInitializeScene,
 	shouldRequireFirstSaveOptimization
@@ -70,5 +71,39 @@ describe('scene save state', () => {
 			reason: 'ready',
 			isFirstSavePendingOptimization: false
 		})
+	})
+
+	it('ignores thumbnail-only scene meta changes for dirty tracking', () => {
+		expect(
+			hasSceneMetaChanged(
+				{
+					name: 'Scene A',
+					description: 'Primary scene',
+					thumbnailUrl: '/api/scenes/1/thumbnail/new'
+				},
+				{
+					name: 'Scene A',
+					description: 'Primary scene',
+					thumbnailUrl: '/api/scenes/1/thumbnail/old'
+				}
+			)
+		).toBe(false)
+	})
+
+	it('still detects editable scene meta changes', () => {
+		expect(
+			hasSceneMetaChanged(
+				{
+					name: 'Scene B',
+					description: 'Updated',
+					thumbnailUrl: '/api/scenes/1/thumbnail/current'
+				},
+				{
+					name: 'Scene A',
+					description: 'Updated',
+					thumbnailUrl: '/api/scenes/1/thumbnail/current'
+				}
+			)
+		).toBe(true)
 	})
 })
