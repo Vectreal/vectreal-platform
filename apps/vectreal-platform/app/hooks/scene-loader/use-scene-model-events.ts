@@ -1,20 +1,6 @@
 import { useEffect } from 'react'
 
-import type { EventHandler, EventTypes } from '@vctrl/hooks/use-load-model'
-
-interface SceneModelEventBindings {
-	on: <TEventName extends EventTypes>(
-		eventName: TEventName,
-		handler: EventHandler<TEventName>
-	) => void
-	off: <TEventName extends EventTypes>(
-		eventName: TEventName,
-		handler: EventHandler<TEventName>
-	) => void
-	handleNotLoadedFiles: EventHandler<'not-loaded-files'>
-	handleLoadComplete: EventHandler<'load-complete'>
-	handleLoadError: EventHandler<'load-error'>
-}
+import type { SceneModelEventBindings } from './contracts'
 
 export const useSceneModelEvents = ({
 	on,

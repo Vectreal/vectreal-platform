@@ -5,93 +5,63 @@ import {
 	buildOptimizationReportSignature,
 	executeSceneSaveOrchestrator,
 	hasOptimizationChanges,
+	hasUnsavedSceneChanges,
 	resolveSaveAvailability,
 	shouldRequireFirstSaveOptimization,
 	type SaveSceneOrchestratorOptions,
-	hasUnsavedSceneChanges
-} from '../lib/domain/scene'
+	type SaveAvailabilityState
+} from '../../lib/domain/scene'
 import {
 	currentLocationAtom,
 	saveLocationAtom
-} from '../lib/stores/publisher-config-store'
-import { isSceneCurrentLocation } from '../types/api'
+} from '../../lib/stores/publisher-config-store'
+import { isSceneCurrentLocation } from '../../types/api'
 
-import type { SaveAvailabilityState } from '../lib/domain/scene'
-import type { SceneStatsData } from '../types/api'
-import type { SceneMetaState } from '../types/publisher-config'
+import type { UseSceneSaveFlowArgs } from './contracts'
 import type {
 	SaveLocationTarget,
 	SaveSceneResult
-} from '../types/publisher-scene'
-import type { SceneOptimizationRuntimeState } from '../types/scene-optimization'
-import type { OptimizationReport, Optimizations } from '@vctrl/core'
-import type { SceneSettings } from '@vctrl/core'
-
-interface SceneSaveFlowArgs {
-	userId?: string
-	currentSceneId: null | string
-	setCurrentSceneId: (sceneId: null | string) => void
-	currentSettings: SceneSettings
-	sceneMetaState: SceneMetaState
-	setSceneMetaState: (
-		next: SceneMetaState | ((prev: SceneMetaState) => SceneMetaState)
-	) => void
-	lastSavedSettings: SceneSettings | null
-	setLastSavedSettings: (settings: SceneSettings) => void
-	lastSavedSceneMeta: SceneMetaState | null
-	setLastSavedSceneMeta: (sceneMetaState: SceneMetaState | null) => void
-	lastSavedSceneId: string | null
-	setLastSavedSceneId: (sceneId: string | null) => void
-	isInitializing: boolean
-	setHasUnsavedChanges: (hasChanges: boolean) => void
-	latestSceneStats: SceneStatsData | null
-	optimizedSceneBytes: null | number
-	clientSceneBytes: null | number
-	lastSavedReportSignature: null | string
-	setOptimizationRuntime: (
-		next:
-			| SceneOptimizationRuntimeState
-			| ((prev: SceneOptimizationRuntimeState) => SceneOptimizationRuntimeState)
-	) => void
-	revalidate: () => void
-	clearPendingDraft: () => Promise<void>
-	optimizationSettings: Optimizations
-	optimizationReport: OptimizationReport | null | undefined
-	createRequestId: () => string
-	prepareGltfDocumentForUpload: () => Promise<unknown>
-	captureSceneThumbnail: () => Promise<null | string>
-	maxConcurrentAssetUploadsDefault: number
-}
+} from '../../types/publisher-scene'
 
 export const useSceneSaveFlow = ({
-	userId,
-	currentSceneId,
-	setCurrentSceneId,
-	currentSettings,
-	sceneMetaState,
-	setSceneMetaState,
-	lastSavedSettings,
-	setLastSavedSettings,
-	lastSavedSceneMeta,
-	setLastSavedSceneMeta,
-	lastSavedSceneId,
-	setLastSavedSceneId,
-	isInitializing,
-	setHasUnsavedChanges,
-	latestSceneStats,
-	optimizedSceneBytes,
-	clientSceneBytes,
-	lastSavedReportSignature,
-	setOptimizationRuntime,
-	revalidate,
-	clearPendingDraft,
-	optimizationSettings,
-	optimizationReport,
-	createRequestId,
-	prepareGltfDocumentForUpload,
-	captureSceneThumbnail,
-	maxConcurrentAssetUploadsDefault
-}: SceneSaveFlowArgs) => {
+	scenePersistence,
+	optimizationState,
+	actions
+}: UseSceneSaveFlowArgs) => {
+	const {
+		userId,
+		currentSceneId,
+		setCurrentSceneId,
+		currentSettings,
+		sceneMetaState,
+		setSceneMetaState,
+		lastSavedSettings,
+		setLastSavedSettings,
+		lastSavedSceneMeta,
+		setLastSavedSceneMeta,
+		lastSavedSceneId,
+		setLastSavedSceneId,
+		isInitializing
+	} = scenePersistence
+	const {
+		optimizationSettings,
+		optimizationReport,
+		latestSceneStats,
+		optimizedSceneBytes,
+		clientSceneBytes,
+		lastSavedReportSignature,
+		setOptimizationRuntime
+	} = optimizationState
+	const {
+		setHasUnsavedChanges,
+		revalidate,
+		clearPendingDraft,
+		createRequestId,
+		prepareGltfDocumentForUpload,
+		captureSceneThumbnail,
+		maxConcurrentAssetUploadsDefault
+	} = actions
+
 	const setCurrentLocation = useSetAtom(currentLocationAtom)
 	const setSaveLocation = useSetAtom(saveLocationAtom)
 	const inFlightSaveRef = useRef<Promise<

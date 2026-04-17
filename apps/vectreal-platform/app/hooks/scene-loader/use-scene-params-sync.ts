@@ -3,54 +3,30 @@ import { useEffect, useRef } from 'react'
 import {
 	getSettingsFromAggregate,
 	shouldInitializeScene
-} from '../lib/domain/scene'
-import { sceneMetaInitialState } from '../lib/stores/publisher-config-store'
-import { optimizationRuntimeInitialState } from '../lib/stores/scene-optimization-store'
+} from '../../lib/domain/scene'
+import { sceneMetaInitialState } from '../../lib/stores/publisher-config-store'
+import { optimizationRuntimeInitialState } from '../../lib/stores/scene-optimization-store'
 
-import type { SceneAggregateResponse } from '../types/api'
-import type { SceneMetaState } from '../types/publisher-config'
-import type { SceneOptimizationRuntimeState } from '../types/scene-optimization'
-import type { SceneSettings } from '@vctrl/core'
-
-interface UseSceneParamsSyncParams {
-	paramSceneId: null | string
-	sceneMeta: null | SceneMetaState
-	initialSceneAggregate: null | SceneAggregateResponse
-	resetSceneState: () => void
-	setCurrentSceneId: (sceneId: null | string) => void
-	setSceneMetaState: (
-		next: SceneMetaState | ((prev: SceneMetaState) => SceneMetaState)
-	) => void
-	setLastSavedSettings: (settings: SceneSettings | null) => void
-	setLastSavedSceneMeta: (sceneMetaState: null | SceneMetaState) => void
-	setIsInitializing: (initializing: boolean) => void
-	setHasUnsavedChanges: (hasChanges: boolean) => void
-	setOptimizationRuntime: (
-		next:
-			| SceneOptimizationRuntimeState
-			| ((prev: SceneOptimizationRuntimeState) => SceneOptimizationRuntimeState)
-	) => void
-	/** The scene ID of the most recent successfully-persisted save. Used to
-	 *  detect post-save navigation so we can skip destructive resets. */
-	lastSavedSceneId: string | null
-	setLastSavedSceneId: (sceneId: string | null) => void
-}
+import type { UseSceneParamsSyncArgs } from './contracts'
 
 export const useSceneParamsSync = ({
-	paramSceneId,
-	sceneMeta,
-	initialSceneAggregate,
-	resetSceneState,
-	setCurrentSceneId,
-	setSceneMetaState,
-	setLastSavedSettings,
-	setLastSavedSceneMeta,
-	setIsInitializing,
-	setHasUnsavedChanges,
-	setOptimizationRuntime,
-	lastSavedSceneId,
-	setLastSavedSceneId
-}: UseSceneParamsSyncParams) => {
+	routeState,
+	actions
+}: UseSceneParamsSyncArgs) => {
+	const { paramSceneId, sceneMeta, initialSceneAggregate, lastSavedSceneId } =
+		routeState
+	const {
+		resetSceneState,
+		setCurrentSceneId,
+		setSceneMetaState,
+		setLastSavedSettings,
+		setLastSavedSceneMeta,
+		setIsInitializing,
+		setHasUnsavedChanges,
+		setOptimizationRuntime,
+		setLastSavedSceneId
+	} = actions
+
 	const previousParamSceneIdRef = useRef<null | string>(null)
 
 	useEffect(() => {

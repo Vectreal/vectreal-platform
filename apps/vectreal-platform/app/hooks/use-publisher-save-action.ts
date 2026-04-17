@@ -13,7 +13,10 @@ import {
 	upgradeModalAtom
 } from '../lib/stores/upgrade-modal-store'
 
-import type { SaveLocationTarget, SaveSceneResult } from './scene-loader.types'
+import type {
+	SaveLocationTarget,
+	SaveSceneResult
+} from '../types/publisher-scene'
 
 interface UsePublisherSaveActionParams {
 	sceneId: null | string

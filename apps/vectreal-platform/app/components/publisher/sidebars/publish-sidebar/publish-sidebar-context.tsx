@@ -6,7 +6,9 @@ import {
 } from 'react'
 
 import { type PublishSidebarViewModel } from './publish-sidebar-view-model'
-import { type SaveAvailabilityState, type SaveSceneFn } from '../../../../hooks'
+
+import type { SaveAvailabilityState } from '../../../../lib/domain/scene'
+import type { SaveSceneFn } from '../../../../types/publisher-scene'
 
 export interface PublishSidebarContextValue {
 	sceneId?: string

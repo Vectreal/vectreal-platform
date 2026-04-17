@@ -3,9 +3,9 @@ import { atomWithStorage } from 'jotai/utils'
 import { selectAtom } from 'jotai/utils'
 import { createStore } from 'jotai/vanilla'
 
-import type { SaveLocationTarget } from '../../hooks/scene-loader.types'
 import type { SceneCurrentLocation } from '../../types/api'
 import type { ProcessState, SceneMetaState } from '../../types/publisher-config'
+import type { SaveLocationTarget } from '../../types/publisher-scene'
 import type { SceneSettings } from '@vctrl/core'
 
 const processInitialState: ProcessState = {

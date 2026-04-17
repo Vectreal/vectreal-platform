@@ -2,13 +2,14 @@ import { Button } from '@shared/components/ui/button'
 import { useAtomValue } from 'jotai/react'
 import { CircleFadingArrowUp, Cloud, Sparkles } from 'lucide-react'
 
-import {
-	SaveAvailabilityState,
-	SaveLocationTarget,
-	SaveSceneResult
-} from '../../hooks'
 import { usePublisherSaveAction } from '../../hooks/use-publisher-save-action'
 import { isSavingAtom } from '../../lib/stores/publisher-config-store'
+
+import type { SaveAvailabilityState } from '../../lib/domain/scene'
+import type {
+	SaveLocationTarget,
+	SaveSceneResult
+} from '../../types/publisher-scene'
 
 interface SaveButtonProps {
 	sceneId: null | string

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo } from 'react'
 
 import { optimizationModalAtom } from '../lib/stores/scene-optimization-store'
 
-import type { SaveAvailabilityState } from './scene-loader.types'
+import type { SaveAvailabilityState } from '../lib/domain/scene'
 
 interface UseOptimizationModalFlowArgs {
 	saveAvailability: SaveAvailabilityState
