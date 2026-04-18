@@ -123,7 +123,7 @@ const OptimizationModal: FC<OptimizationModalProps> = ({
 			}}
 		>
 			<DialogContent
-				className="max-h-[min(88svh,52rem)] overflow-hidden border-0 p-0 md:max-w-3xl"
+				className="flex max-h-[min(88svh,52rem)] flex-col overflow-hidden border-0 p-0 md:max-w-3xl"
 				showCloseButton={!isBlockingClose}
 				onEscapeKeyDown={(event) => {
 					if (isBlockingClose) {
@@ -136,7 +136,7 @@ const OptimizationModal: FC<OptimizationModalProps> = ({
 					}
 				}}
 			>
-				<div className="bg-background flex min-h-0 flex-col">
+				<div className="bg-background flex min-h-0 flex-1 flex-col">
 					{/* Compact header */}
 					<DialogHeader className="shrink-0 border-b px-6 pt-5 pb-4 text-left">
 						<motion.div
@@ -177,11 +177,11 @@ const OptimizationModal: FC<OptimizationModalProps> = ({
 									<div className="mb-6 flex flex-col items-center gap-3 text-center">
 										<div className="relative flex h-16 w-16 items-center justify-center">
 											<div
-												className="absolute inset-0 animate-ping rounded-full bg-primary/10"
+												className="bg-primary/10 absolute inset-0 animate-ping rounded-full"
 												style={{ animationDuration: '2s' }}
 											/>
 											<div
-												className="absolute inset-2 animate-ping rounded-full bg-primary/15"
+												className="bg-primary/15 absolute inset-2 animate-ping rounded-full"
 												style={{
 													animationDuration: '2s',
 													animationDelay: '0.4s'
@@ -276,7 +276,7 @@ const OptimizationModal: FC<OptimizationModalProps> = ({
 											transition={{ duration: 0.2, delay: 0.06 }}
 											className="bg-muted/30 rounded-xl border px-4 py-3"
 										>
-											<div className="text-muted-foreground mb-2 flex items-center justify-between text-xs uppercase tracking-wide">
+											<div className="text-muted-foreground mb-2 flex items-center justify-between text-xs tracking-wide uppercase">
 												<span>Guest optimization quota</span>
 												<span>{guestQuota.remaining} left today</span>
 											</div>
