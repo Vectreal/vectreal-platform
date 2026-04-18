@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.18.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.17.0...hooks-v0.18.0) (2026-04-18)
+
+
+### Miscellaneous Chores
+
+* **hooks:** Synchronize vectreal-monorepo versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.18.0
+
 ## [0.17.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.16.2...hooks-v0.17.0) (2026-04-13)
 
 
