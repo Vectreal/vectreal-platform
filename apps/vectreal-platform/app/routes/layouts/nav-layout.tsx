@@ -99,7 +99,7 @@ const Layout = ({ loaderData }: Route.ComponentProps) => {
 
 	return (
 		<>
-			<Navigation user={loaderData.user} isMobile={loaderData.isMobile} />
+			<Navigation user={loaderData.user} />
 			<Outlet />
 			<Footer />
 		</>

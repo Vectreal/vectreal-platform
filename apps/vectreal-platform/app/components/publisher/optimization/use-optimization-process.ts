@@ -243,6 +243,11 @@ export const useOptimizationProcess = ({
 					remaining: DEFAULT_GUEST_QUOTA_LIMIT
 				}
 	)
+	const [optimizingStep, setOptimizingStep] = useState<{
+		current: string | null
+		completed: string[]
+		allSteps: string[]
+	}>({ current: null, completed: [], allSteps: [] })
 	const calculateSceneBytes = useCallback(async () => {
 		if (!isReady) {
 			return null
@@ -329,11 +334,29 @@ export const useOptimizationProcess = ({
 			isPending: true
 		}))
 
+		const STEP_LABELS: Record<string, string> = {
+			simplification: 'Mesh simplification',
+			texture: 'Texture optimization',
+			quantize: 'Vertex quantization',
+			dedup: 'Duplicate removal',
+			normals: 'Normal refinement'
+		}
+		const SYNC_STEP = 'Syncing to viewer'
+
 		try {
 			const optimizationOptions = Object.values(plannedOptimizations).filter(
 				(option): option is OptimizationOption => !!option && option.enabled
 			)
 			let shouldConsumeOptimizationRun = false
+
+			const stepNames = optimizationOptions.map(
+				(o) => STEP_LABELS[o.name] ?? o.name
+			)
+			setOptimizingStep({
+				current: null,
+				completed: [],
+				allSteps: [...stepNames, SYNC_STEP]
+			})
 
 			if (optimizationOptions.length > 0) {
 				const checkResult = await requestOptimizationRunQuota('check')
@@ -391,6 +414,9 @@ export const useOptimizationProcess = ({
 
 			for (let i = 0; i < optimizationOptions.length; i++) {
 				const option = optimizationOptions[i]
+				const stepLabel = STEP_LABELS[option.name] ?? option.name
+
+				setOptimizingStep((prev) => ({ ...prev, current: stepLabel }))
 
 				try {
 					if (option.name === 'simplification') {
@@ -433,6 +459,11 @@ export const useOptimizationProcess = ({
 						console.warn(`Unknown optimization type: ${unknownOption.name}`)
 					}
 
+					setOptimizingStep((prev) => ({
+						...prev,
+						completed: [...prev.completed, stepLabel]
+					}))
+
 					// Let UI update between optimizations
 					await new Promise<void>((resolve) =>
 						requestAnimationFrame(() => setTimeout(() => resolve(), 0))
@@ -447,18 +478,27 @@ export const useOptimizationProcess = ({
 						!error.message.includes('failed for all textures')
 					) {
 						shouldConsumeOptimizationRun = true
+						setOptimizingStep((prev) => ({
+							...prev,
+							completed: [...prev.completed, stepLabel]
+						}))
 					}
 				}
 			}
 
 			// Sync the optimized model back to the Three.js viewer
 			if (shouldConsumeOptimizationRun) {
+				setOptimizingStep((prev) => ({ ...prev, current: SYNC_STEP }))
 				try {
 					await withTimeout(
 						applyOptimization(),
 						MODEL_SYNC_TIMEOUT_MS,
 						'Model sync'
 					)
+					setOptimizingStep((prev) => ({
+						...prev,
+						completed: [...prev.completed, SYNC_STEP]
+					}))
 				} catch (syncError) {
 					console.warn('Model sync after optimization failed:', syncError)
 				}
@@ -504,6 +544,7 @@ export const useOptimizationProcess = ({
 				...prev,
 				isPending: false
 			}))
+			setOptimizingStep({ current: null, completed: [], allSteps: [] })
 		}
 
 		if (didApplyOptimization) {
@@ -605,6 +646,7 @@ export const useOptimizationProcess = ({
 		hasImproved,
 		sizeInfo,
 		guestQuota,
+		optimizingStep,
 		handleOptimizeClick
 	}
 }

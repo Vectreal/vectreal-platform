@@ -47,7 +47,6 @@ interface NavItem {
 
 interface NavigationProps {
 	user: User | null
-	isMobile: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -342,6 +341,7 @@ function BurgerIcon({ open }: { open: boolean }) {
 				y1="6"
 				x2="21"
 				y2="6"
+				initial={{ x1: 3, y1: 6, x2: 21, y2: 6 }}
 				animate={
 					open
 						? { x1: 5, y1: 5, x2: 19, y2: 19 }
@@ -354,6 +354,7 @@ function BurgerIcon({ open }: { open: boolean }) {
 				y1="12"
 				x2="21"
 				y2="12"
+				initial={{ opacity: 1 }}
 				animate={open ? { opacity: 0 } : { opacity: 1 }}
 				transition={{ duration: 0.15 }}
 			/>
@@ -362,6 +363,7 @@ function BurgerIcon({ open }: { open: boolean }) {
 				y1="18"
 				x2="21"
 				y2="18"
+				initial={{ x1: 3, y1: 18, x2: 21, y2: 18 }}
 				animate={
 					open
 						? { x1: 5, y1: 19, x2: 19, y2: 5 }

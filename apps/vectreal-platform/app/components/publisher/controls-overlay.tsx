@@ -231,7 +231,7 @@ const OverlayControls = ({
 	)
 
 	return isUploadStep ? (
-		<Navigation user={user} isMobile={isMobile} />
+		<Navigation user={user} />
 	) : (
 		<>
 			<FloatingPillWrapper className="bg-muted/50 fixed top-0 right-0 z-20 m-4 rounded-2xl p-1 backdrop-blur-2xl">
