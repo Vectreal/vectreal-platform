@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.18.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.17.0...workspace-v0.18.0) (2026-04-18)
+
+
+### Features
+
+* enhance UI components with improved animations and accessibility features ([#420](https://github.com/Vectreal/vectreal-platform/issues/420)) ([291bb74](https://github.com/Vectreal/vectreal-platform/commit/291bb744b356090ccc35bc6e0d649f71a5d36e83))
+* publisher dropzone loading indicators via useNavigation and useTransition ([#417](https://github.com/Vectreal/vectreal-platform/issues/417)) ([e9a4ef7](https://github.com/Vectreal/vectreal-platform/commit/e9a4ef79dfa1d9bd348d2650eb1ef590c04f82ed))
+
+
+### Bug Fixes
+
+* improve layout and styling of OptimizationModal component ([#421](https://github.com/Vectreal/vectreal-platform/issues/421)) ([dd16ede](https://github.com/Vectreal/vectreal-platform/commit/dd16ede1eb7360de90bfa7287629ed728746ab6d))
+* preserve dirty state during concurrent saves and post-save navigation ([#416](https://github.com/Vectreal/vectreal-platform/issues/416)) ([f9a9721](https://github.com/Vectreal/vectreal-platform/commit/f9a972168f97086746c4ca97f64ce2f8ffab3301))
+
 ## [0.17.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.16.2...workspace-v0.17.0) (2026-04-13)
 
 
