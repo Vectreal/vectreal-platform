@@ -72,8 +72,35 @@ export const DynamicSidebar = ({
 	// ---- Mobile: bottom-sheet Drawer ----------------------------------------
 	if (isMobile) {
 		return (
-			<Drawer open={open} onOpenChange={onOpenChange}>
-				<DrawerContent className="flex max-h-[95svh] flex-col">
+			<Drawer
+				open={open}
+				onOpenChange={(next) => {
+					if (next) {
+						// Blur the triggering element before the drawer opens. Vaul sets
+						// aria-hidden on the rest of the page synchronously; if a button
+						// that triggered the open still has focus, it ends up inside an
+						// aria-hidden region, which is an accessibility violation.
+						;(document.activeElement as HTMLElement | null)?.blur()
+					}
+					onOpenChange(next)
+				}}
+			>
+				<DrawerContent
+					className="flex max-h-[95svh] flex-col"
+					onOpenAutoFocus={(e) => {
+						// Explicitly move focus into the first interactive element inside
+						// the drawer so screen readers announce the new context.
+						e.preventDefault()
+						const container = e.currentTarget
+						if (!(container instanceof HTMLElement)) {
+							return
+						}
+						const first = container.querySelector<HTMLElement>(
+							'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+						)
+						first?.focus()
+					}}
+				>
 					<DrawerHeader className="shrink-0 border-b pb-3">
 						<div className="flex items-start justify-between gap-2">
 							<div>

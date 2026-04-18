@@ -10,6 +10,7 @@ interface Props {
 
 const parentVariants = {
 	hidden: {
+		opacity: 0,
 		transition: { ease: 'easeInOut' }
 	},
 	visible: {
@@ -20,13 +21,11 @@ const parentVariants = {
 
 const childVariants = {
 	hidden: {
-		opacity: 0,
-		display: 'none'
+		opacity: 0
 	},
 	visible: {
-		transition: { ease: 'easeInOut' },
 		opacity: 1,
-		display: 'block'
+		transition: { ease: 'easeInOut' }
 	}
 }
 
@@ -45,6 +44,7 @@ export const VectrealLogoAnimated = ({
 			initial={animated ? 'hidden' : 'visible'}
 			variants={parentVariants}
 			animate={!small ? 'visible' : 'hidden'}
+			style={{ opacity: animated ? 0 : 1 }}
 		>
 			<g id="Full_logos_dark_bg" data-name="Full logos dark bg">
 				<path
