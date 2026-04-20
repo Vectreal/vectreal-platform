@@ -469,8 +469,8 @@ importers:
         specifier: 10.2.10
         version: 10.2.10(@testing-library/dom@10.4.0)(prettier@3.8.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       supabase:
-        specifier: ^2.89.1
-        version: 2.89.1
+        specifier: ^2.92.1
+        version: 2.92.1
       tailwindcss:
         specifier: ^4.2.2
         version: 4.2.2
@@ -10993,8 +10993,8 @@ packages:
   style-to-object@1.0.14:
     resolution: {integrity: sha512-LIN7rULI0jBscWQYaSswptyderlarFkjQ+t79nzty8tcIAceVomEVlLzH5VP4Cmsv6MtKhs7qaAiwlcp+Mgaxw==}
 
-  supabase@2.89.1:
-    resolution: {integrity: sha512-OsT1kIC2YutgSj4iy+CD0jRkfxlULB5K48uCxGTMNXcnX4IEQ9gVrQ05QQDuBkX1uVEH6E6itrs3HjQs5u/uVw==}
+  supabase@2.92.1:
+    resolution: {integrity: sha512-BB3olR2glhrE0YGDhq0vknJdrwjROaIHgiC/OZc94eLbBHnsJ3szKeRZkcF9dxRgxuq6QWdxCrn5m14lfu9tug==}
     engines: {npm: '>=8'}
     hasBin: true
 
@@ -24932,7 +24932,7 @@ snapshots:
     dependencies:
       inline-style-parser: 0.2.7
 
-  supabase@2.89.1:
+  supabase@2.92.1:
     dependencies:
       bin-links: 6.0.0
       https-proxy-agent: 9.0.0
