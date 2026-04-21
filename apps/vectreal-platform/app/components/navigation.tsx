@@ -66,21 +66,21 @@ function getNavContext(pathname: string): NavContext {
 }
 
 const MARKETING_ITEMS: NavItem[] = [
-	{ label: 'Docs', to: '/docs', icon: <BookOpen className="size-4" /> },
+	{
+		label: 'Publisher',
+		to: '/publisher',
+		icon: <Rocket className="size-4" />
+	},
 	{
 		label: 'Pricing',
 		to: '/pricing',
 		icon: <DollarSign className="size-4" />
 	},
+	{ label: 'Docs', to: '/docs', icon: <BookOpen className="size-4" /> },
 	{
-		label: 'News Room',
+		label: 'Newsroom',
 		to: '/news-room',
 		icon: <Newspaper className="size-4" />
-	},
-	{
-		label: 'Publisher',
-		to: '/publisher',
-		icon: <Rocket className="size-4" />
 	}
 ]
 
