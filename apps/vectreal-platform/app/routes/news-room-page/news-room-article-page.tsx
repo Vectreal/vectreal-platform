@@ -236,7 +236,7 @@ export default function NewsRoomArticlePage({
 					</Link>
 				</Button>
 
-				<header className="from-card/45 to-muted/10 mb-10 rounded-2xl border border-[var(--color-border)]/60 bg-gradient-to-br p-6 md:p-8">
+				<header className="from-card/45 to-muted/10 border-border/60 mb-10 rounded-2xl border bg-linear-to-br p-6 md:p-8">
 					<div className="mb-5 flex flex-wrap items-center gap-2">
 						<Badge variant="outline" className="capitalize">
 							{article.category}
@@ -268,10 +268,11 @@ export default function NewsRoomArticlePage({
 						) : null}
 					</div>
 
-					<div className="mt-6 flex flex-wrap items-center gap-3 border-t border-[var(--color-border)]/50 pt-5">
-						<Avatar className="h-11 w-11 border border-[var(--color-border)]/70">
+					<div className="border-border/50 mt-6 flex flex-wrap items-center gap-3 border-t pt-5">
+						<Avatar className="border-border/70 h-11 w-11 border">
 							{article.author.avatar ? (
 								<AvatarImage
+									className="p-2"
 									src={article.author.avatar}
 									alt={article.author.name}
 								/>

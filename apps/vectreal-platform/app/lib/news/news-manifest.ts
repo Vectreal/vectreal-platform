@@ -22,7 +22,10 @@ export interface NewsArticleFrontmatter {
 	category: string
 	tags: string[]
 	author: NewsAuthor
+	/** WebP used as the og:image / SEO social card (mosaic + text panel). */
 	coverImage?: string
+	/** WebP used as the visual card image on the listing page (pure mosaic). */
+	thumbnailImage?: string
 	draft?: boolean
 }
 
@@ -40,7 +43,10 @@ export interface NewsArticle {
 	category: string
 	tags: string[]
 	author: NewsAuthor
+	/** WebP used as the og:image / SEO social card (mosaic + text panel). */
 	coverImage?: string
+	/** WebP used as the visual card image on the listing page (pure mosaic). */
+	thumbnailImage?: string
 	draft: boolean
 	readingTimeMinutes: number
 	sourcePath: string
@@ -304,6 +310,7 @@ const allArticles: NewsArticle[] = Object.entries(articleModules)
 				linkedinUrl: module.frontmatter?.author?.linkedinUrl
 			},
 			coverImage: module.frontmatter?.coverImage,
+			thumbnailImage: module.frontmatter?.thumbnailImage,
 			draft: Boolean(module.frontmatter?.draft),
 			readingTimeMinutes: calculateReadingTimeMinutes(readingTimeSource),
 			sourcePath,
