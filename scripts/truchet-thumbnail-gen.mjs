@@ -423,7 +423,7 @@ if (!firstArg) {
 	// Outputs both variants to the public images dir; no MDX file is updated.
 	// Example: SEED=42 node scripts/truchet-thumbnail-gen.mjs "My Title" "Engineering"
 	const seed = Number(process.env.SEED) || Math.floor(Math.random() * 1e9)
-	const title = firstArg || 'The Problem With 3D on the Web'
+	const title = firstArg
 	const category = (secondArg || 'Engineering').toUpperCase()
 	const slug = title
 		.toLowerCase()
