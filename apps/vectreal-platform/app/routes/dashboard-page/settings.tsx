@@ -69,7 +69,7 @@ const preferencesSchema = z.object({
 
 const accountDeletionSchema = z.object({
 	confirmationText: z.literal('DELETE MY ACCOUNT', {
-		errorMap: () => ({
+		error: () => ({
 			message: 'Type DELETE MY ACCOUNT to confirm account deletion.'
 		})
 	})
@@ -208,7 +208,7 @@ export async function action({ request }: Route.ActionArgs) {
 	} catch (error) {
 		if (error instanceof ZodError) {
 			const fieldErrors: Record<string, string> = {}
-			error.errors.forEach((err) => {
+			error.issues.forEach((err) => {
 				if (err.path.length > 0) {
 					fieldErrors[err.path[0] as string] = err.message
 				}

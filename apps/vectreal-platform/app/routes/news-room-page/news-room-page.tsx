@@ -205,7 +205,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 				</Form>
 			</section>
 
-			<section className="space-y-6">
+			<section className="space-y-4">
 				{articles.length === 0 ? (
 					<div className="border-border/50 bg-muted/10 rounded-2xl border p-10 text-center">
 						<h2 className="mb-1 text-lg font-semibold">No matching posts</h2>
@@ -221,54 +221,79 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 								viewTransition
 								className="group block"
 							>
-								<article className="border-border/70 bg-card/15 hover:border-border grid gap-5 overflow-hidden rounded-2xl border p-3 transition-colors md:grid-cols-[1.15fr_1fr] md:p-4">
-									<div className="relative overflow-hidden rounded-xl">
-										<img
-											src={featuredArticle.coverImage}
-											alt=""
-											width={1280}
-											height={720}
-											fetchPriority="high"
-											className="aspect-video h-full w-full object-cover"
-										/>
-										<div className="from-background/85 absolute inset-0 bg-gradient-to-t via-transparent to-transparent" />
-										<div className="absolute right-3 bottom-3 left-3 flex flex-wrap gap-2 text-xs">
-											<Badge
-												variant="outline"
-												className="capitalize backdrop-blur-xl"
-											>
-												Featured
-											</Badge>
-											<Badge
-												variant="outline"
-												className="capitalize backdrop-blur-xl"
-											>
-												{featuredArticle.category}
-											</Badge>
+								{/*
+								 * Featured card — typography-first layout.
+								 * On mobile: narrow mosaic strip spans the top as a brand
+								 * signature, text fills below. On desktop: mosaic column
+								 * sits on the right (~30% width), text dominates the left.
+								 */}
+								<article className="border-border/70 bg-card/15 hover:border-border overflow-hidden rounded-2xl border transition-all duration-200 hover:-translate-y-0.5">
+									{/* Mobile-only pattern strip */}
+									{featuredArticle.thumbnailImage ? (
+										<div className="h-20 overflow-hidden md:hidden">
+											<img
+												src={featuredArticle.thumbnailImage}
+												alt=""
+												width={1200}
+												height={160}
+												fetchPriority="high"
+												className="h-full w-full object-cover object-center"
+											/>
 										</div>
-									</div>
+									) : null}
 
-									<div className="flex min-w-0 flex-col justify-between p-1 md:p-3">
-										<div>
-											<p className="text-muted-foreground mb-3 text-xs tracking-wide uppercase">
-												{formatNewsDate(featuredArticle.publishedAt)} •{' '}
-												{featuredArticle.readingTimeMinutes} min read
-											</p>
-											<h2 className="mb-3 text-3xl leading-tight font-semibold tracking-tight text-balance md:text-4xl">
-												{featuredArticle.title}
-											</h2>
-											<p className="text-muted-foreground max-w-xl text-base leading-relaxed md:text-lg">
-												{featuredArticle.excerpt}
-											</p>
+									<div className="grid md:grid-cols-[1fr_280px]">
+										{/* Text column */}
+										<div className="flex flex-col justify-between p-7 md:p-10">
+											<div>
+												{/* Meta row: Featured badge + category + reading time */}
+												<div className="mb-5 flex flex-wrap items-center gap-2.5">
+													<span className="bg-primary/10 text-primary rounded px-2 py-0.5 text-[11px] font-semibold tracking-[0.12em] uppercase">
+														Featured
+													</span>
+													<span className="text-muted-foreground text-[11px] font-medium tracking-[0.12em] uppercase">
+														{featuredArticle.category}
+													</span>
+													<span className="text-border">·</span>
+													<span className="text-muted-foreground text-[11px]">
+														{featuredArticle.readingTimeMinutes} min read
+													</span>
+												</div>
+
+												<h2 className="group-hover:text-foreground/85 mb-4 text-3xl leading-[1.06] font-semibold tracking-tight text-balance transition-colors md:text-5xl">
+													{featuredArticle.title}
+												</h2>
+												<p className="text-muted-foreground max-w-xl text-base leading-relaxed md:text-lg">
+													{featuredArticle.excerpt}
+												</p>
+											</div>
+
+											<footer className="border-border/40 mt-8 flex flex-wrap items-center gap-3 border-t pt-5">
+												<div>
+													<p className="text-sm leading-tight font-semibold">
+														{featuredArticle.author.name}
+													</p>
+													<p className="text-muted-foreground text-xs">
+														{featuredArticle.author.role} ·{' '}
+														{formatNewsDate(featuredArticle.publishedAt)}
+													</p>
+												</div>
+											</footer>
 										</div>
 
-										<footer className="text-muted-foreground mt-6 flex flex-wrap items-center gap-2 text-sm">
-											<span className="text-foreground font-semibold">
-												{featuredArticle.author.name}
-											</span>
-											<span>•</span>
-											<span>{featuredArticle.author.role}</span>
-										</footer>
+										{/* Desktop-only mosaic accent column */}
+										{featuredArticle.thumbnailImage ? (
+											<div className="border-border/40 relative hidden overflow-hidden border-l md:block">
+												<img
+													src={featuredArticle.thumbnailImage}
+													alt=""
+													width={280}
+													height={520}
+													fetchPriority="high"
+													className="h-full w-full object-cover object-center"
+												/>
+											</div>
+										) : null}
 									</div>
 								</article>
 							</Link>
@@ -283,40 +308,58 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 										viewTransition
 										className="group block"
 									>
-										<article className="border-border/70 bg-card/15 hover:border-border rounded-2xl border p-4 transition-colors md:p-5">
-											<p className="text-muted-foreground mb-2 text-xs">
-												{formatNewsDate(article.publishedAt)} •{' '}
-												{article.readingTimeMinutes} min read
-											</p>
-											<h3 className="mb-2 text-xl leading-tight font-semibold tracking-tight text-balance md:text-2xl">
-												<span className="group-hover:text-foreground/85 transition-colors">
-													{article.title}
-												</span>
-											</h3>
-											<p className="text-muted-foreground mb-4 text-sm leading-relaxed md:text-base">
-												{article.excerpt}
-											</p>
-											<div className="mb-4 flex flex-wrap gap-2">
-												<Badge variant="outline" className="capitalize">
-													{article.category}
-												</Badge>
-												{article.tags.slice(0, 2).map((item) => (
-													<Badge
-														key={item}
-														variant="secondary"
-														className="font-normal"
-													>
-														{item}
-													</Badge>
-												))}
+										{/*
+										 * Grid card — horizontal split.
+										 * Text takes the left ~¾, mosaic is a narrow
+										 * accent strip on the right — always visible,
+										 * never the focus.
+										 */}
+										<article className="border-border/70 bg-card/15 hover:border-border grid grid-cols-[1fr_auto] overflow-hidden rounded-2xl border transition-all duration-200 hover:-translate-y-0.5">
+											{/* Text column */}
+											<div className="flex flex-col justify-between p-5 md:p-6">
+												<div>
+													{/* Category + date meta */}
+													<div className="mb-3 flex flex-wrap items-center gap-1.5">
+														<span className="text-primary text-[11px] font-semibold tracking-[0.12em] uppercase">
+															{article.category}
+														</span>
+														<span className="text-border text-[11px]">·</span>
+														<span className="text-muted-foreground text-[11px]">
+															{formatNewsDate(article.publishedAt)}
+														</span>
+													</div>
+
+													<h3 className="group-hover:text-foreground/85 mb-2.5 text-xl leading-snug font-semibold tracking-tight text-balance transition-colors md:text-2xl">
+														{article.title}
+													</h3>
+													<p className="text-muted-foreground line-clamp-2 text-sm leading-relaxed md:text-base">
+														{article.excerpt}
+													</p>
+												</div>
+
+												<footer className="border-border/40 mt-5 flex items-center gap-1.5 border-t pt-4">
+													<span className="text-foreground text-xs font-semibold">
+														{article.author.name}
+													</span>
+													<span className="text-border text-xs">·</span>
+													<span className="text-muted-foreground text-xs">
+														{article.readingTimeMinutes} min read
+													</span>
+												</footer>
 											</div>
-											<footer className="text-muted-foreground text-sm">
-												<span className="text-foreground font-medium">
-													{article.author.name}
-												</span>
-												<span className="mx-2">•</span>
-												<span>{article.author.role}</span>
-											</footer>
+
+											{/* Mosaic accent strip */}
+											{article.thumbnailImage ? (
+												<div className="border-border/40 relative w-20 overflow-hidden border-l md:w-28">
+													<img
+														src={article.thumbnailImage}
+														alt=""
+														width={112}
+														height={300}
+														className="h-full w-full object-cover object-center"
+													/>
+												</div>
+											) : null}
 										</article>
 									</Link>
 								))}

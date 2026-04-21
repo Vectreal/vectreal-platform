@@ -184,7 +184,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 		// Handle Zod validation errors
 		if (error instanceof ZodError) {
 			const fieldErrors: Record<string, string> = {}
-			error.errors.forEach((err) => {
+			error.issues.forEach((err) => {
 				if (err.path.length > 0) {
 					const field = err.path[0] as string
 					fieldErrors[field] = err.message

@@ -245,6 +245,16 @@
 				],
 				"parallel": false
 			}
+		},
+		"gen-thumbnails": {
+			"executor": "nx:run-commands",
+			"outputs": [
+				"{workspaceRoot}/apps/vectreal-platform/public/assets/images/newsroom"
+			],
+			"options": {
+				"cwd": "{workspaceRoot}",
+				"command": "node scripts/truchet-thumbnail-gen.mjs"
+			}
 		}
 	}
 }
