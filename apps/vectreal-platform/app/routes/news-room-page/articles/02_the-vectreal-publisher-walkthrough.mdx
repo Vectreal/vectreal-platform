@@ -18,9 +18,9 @@ author:
     avatar: "/assets/images/logo-192.png"
     xUrl: "https://x.com/vectreal"
     linkedinUrl: "https://www.linkedin.com/company/vectreal"
-coverImage: "/assets/images/newsroom/og-the-vectreal-publisher-walkthrough.webp"
+coverImage: "/assets/images/newsroom/02/og-the-vectreal-publisher-walkthrough.webp"
 draft: false
-thumbnailImage: "/assets/images/newsroom/thumbnail-the-vectreal-publisher-walkthrough.webp"
+thumbnailImage: "/assets/images/newsroom/02/thumbnail-the-vectreal-publisher-walkthrough.webp"
 ---
 
 {/* ## Blog Summary (80–120 words)
@@ -36,6 +36,8 @@ If you want to follow along, grab any GLB or glTF file you have on hand. If you 
 ---
 
 ### Step 1 — Upload
+
+![Publisher Upload](/assets/images/newsroom/02/01-publisher-upload.jpeg)
 
 Drag your 3D file onto the Publisher canvas. The parser identifies the format, resolves any external references, and loads the model into the viewport.
 
@@ -64,6 +66,8 @@ There are no hard file size limits enforced in the Publisher UI, though very lar
 
 ### Step 2 — Optimize
 
+![Publisher Optimize](/assets/images/newsroom/02/02-publisher-optimize.jpeg)
+
 Once your model is in the viewport, the right sidebar shows the quality presets. These are the fastest way to reduce file size for web delivery.
 
 **Quality presets:**
@@ -88,6 +92,8 @@ For server-side optimization (via `@vctrl/core`), Sharp is used for texture comp
 ---
 
 ### Step 3 — Configure
+
+![Publisher Compose](/assets/images/newsroom/02/03-publisher-compose.jpeg)
 
 Beyond file size, the Publisher gives you full control over how the scene looks and behaves.
 
@@ -118,6 +124,8 @@ Grid controls are currently not active in the viewer render flow. This section w
 
 ### Step 4 — Save the Scene
 
+![Dashboard Recent](/assets/images/newsroom/02/04-dashboard-recent.jpeg)
+
 Click **Save** in the Publisher header.
 
 - If you are signed in, the scene saves to your account immediately and appears in the Dashboard.
@@ -129,7 +137,9 @@ After saving, the scene appears in your [Dashboard](https://vectreal.com/dashboa
 
 ### Step 5 — Publish
 
-From the Dashboard, open the scene. In the **Publish** sidebar section, click **Publish**.
+![Publisher Publish](/assets/images/newsroom/02/05-publisher-publish.jpeg)
+
+In the **Publish** sidebar section, click **Publish**.
 
 Publishing transitions the scene from **draft** to **published** status and generates a stable embed URL.
 
@@ -140,6 +150,8 @@ To revert, click **Unpublish**. The embed URL becomes inaccessible to external p
 ---
 
 ### Step 6 — Set Up a Preview API Key
+
+![Dashboard API Keys](/assets/images/newsroom/02/06-dashboard-api-keys.jpeg)
 
 External iframe embeds require a **preview API key** scoped to the project that owns the scene. This is how Vectreal ensures scenes can only be embedded by authorized principals — not hotlinked by arbitrary sites.
 
@@ -166,6 +178,8 @@ Requests from unlisted domains receive a `403 Forbidden` response. Note: `localh
 ---
 
 ### Step 7 — Embed
+
+![Publisher Embed](/assets/images/newsroom/02/07-publisher-embed.jpeg)
 
 Copy the embed snippet from the **Embed** section in the publish sidebar or from the scene detail page in the Dashboard.
 
