@@ -170,6 +170,11 @@
 			border-bottom: none;
 		}
 	}
+
+	img {
+		@apply rounded-xl;
+		max-width: 100%;
+	}
 }
 
 /* Full-page centred MDX (about, contact, legal pages) ───────────────────── */
