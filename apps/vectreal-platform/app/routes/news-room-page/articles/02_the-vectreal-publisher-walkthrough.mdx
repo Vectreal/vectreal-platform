@@ -95,7 +95,7 @@ Beyond file size, the Publisher gives you full control over how the scene looks 
 
 Choose from a set of HDR environment presets — including studio, sunset, and warehouse options — that determine ambient lighting, reflections, and image-based lighting (IBL). You can adjust environment intensity and background blurriness, and optionally override the transparent background with a solid color using the background color picker.
 
-The `Stage` component from React Three Fiber's Drei library positions the model automatically and adjusts the camera to fit. The **adjustCamera** setting controls how tightly the camera frames the model.
+The viewer uses Drei's `Bounds` component to automatically fit the camera to the loaded model. The **Bounds margin** setting controls how tightly the camera frames the model — a smaller margin crops tighter, a larger value leaves more space around it.
 
 #### Camera
 
