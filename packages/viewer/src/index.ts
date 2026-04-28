@@ -3,6 +3,8 @@ import './styles.css'
 export {
 	default as VectrealViewer,
 	type SceneScreenshotCapture,
+	type SceneCameraSnapshot,
+	type SceneCameraSnapshotCapture,
 	type SceneScreenshotOptions,
 	type ViewerLoadingThumbnail,
 	type VectrealViewerProps

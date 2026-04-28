@@ -6,6 +6,17 @@ export interface SceneScreenshotOptions {
 	mode?: 'auto-fit' | 'viewport'
 }
 
+export interface SceneCameraSnapshot {
+	position: [number, number, number]
+	rotation: [number, number, number]
+	target: [number, number, number]
+	fov: number
+}
+
+export type SceneCameraSnapshotCapture = () => Promise<
+	null | SceneCameraSnapshot
+>
+
 export type SceneScreenshotCapture = (
 	options?: SceneScreenshotOptions
 ) => Promise<null | string>

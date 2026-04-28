@@ -20,6 +20,11 @@ const sceneSettingsStore = createStore()
 
 const boundsAtom = atom<BoundsProps>(defaultBoundsOptions)
 const cameraAtom = atom<CameraProps>(defaultCameraOptions)
+const selectedCameraIdAtom = atom<string>(
+	defaultCameraOptions.activeCameraId ??
+		defaultCameraOptions.cameras?.[0]?.cameraId ??
+		'default'
+)
 const controlsAtom = atom<ControlsProps>(defaultControlsOptions)
 const environmentAtom = atom<EnvironmentProps>(defaultEnvOptions)
 const shadowsAtom = atom<ShadowsProps>(defaultShadowOptions)
@@ -33,6 +38,12 @@ const sceneViewerSettingsAtom = atom((get) => ({
 
 sceneSettingsStore.set(boundsAtom, defaultBoundsOptions)
 sceneSettingsStore.set(cameraAtom, defaultCameraOptions)
+sceneSettingsStore.set(
+	selectedCameraIdAtom,
+	defaultCameraOptions.activeCameraId ??
+		defaultCameraOptions.cameras?.[0]?.cameraId ??
+		'default'
+)
 sceneSettingsStore.set(controlsAtom, defaultControlsOptions)
 sceneSettingsStore.set(environmentAtom, defaultEnvOptions)
 sceneSettingsStore.set(shadowsAtom, defaultShadowOptions)
@@ -43,6 +54,7 @@ export {
 	cameraAtom,
 	controlsAtom,
 	environmentAtom,
+	selectedCameraIdAtom,
 	sceneViewerSettingsAtom,
 	shadowsAtom,
 

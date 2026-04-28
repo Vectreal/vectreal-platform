@@ -49,11 +49,14 @@ import {
 import { useViewerLoading } from './hooks/use-viewer-loading'
 
 import type {
+	SceneCameraSnapshotCapture,
 	SceneScreenshotCapture,
 	ViewerLoadingThumbnail
 } from './types/viewer-types'
 
 export type {
+	SceneCameraSnapshot,
+	SceneCameraSnapshotCapture,
 	SceneScreenshotCapture,
 	SceneScreenshotOptions,
 	ViewerLoadingThumbnail
@@ -146,6 +149,13 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * Callback that receives a capture function capable of producing scene screenshots on demand.
 	 */
 	onScreenshotCaptureReady?: (capture: null | SceneScreenshotCapture) => void
+
+	/**
+	 * Callback that receives a function for capturing the current camera pose.
+	 */
+	onCameraSnapshotCaptureReady?: (
+		capture: null | SceneCameraSnapshotCapture
+	) => void
 }
 
 /**
@@ -185,6 +195,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		loadingThumbnail,
 		onScreenshot,
 		onScreenshotCaptureReady,
+		onCameraSnapshotCaptureReady,
 		enableViewportRendering = true,
 		enablePostProcessing = true,
 		loader = <DefaultSpinner />
@@ -249,6 +260,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 							<SceneBounds {...boundsOptions}>
 								<SceneCamera
 									{...cameraOptions}
+									onCameraSnapshotCaptureReady={onCameraSnapshotCaptureReady}
 									onInitialFramingComplete={handleInitialFramingComplete}
 								/>
 								<Center top>

@@ -28,12 +28,19 @@ import {
 	sceneMetaAtom
 } from '../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
-import { sceneViewerSettingsAtom } from '../../lib/stores/scene-settings-store'
+import {
+	sceneViewerSettingsAtom,
+	selectedCameraIdAtom
+} from '../../lib/stores/scene-settings-store'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 import { registerSceneScreenshotCaptureHandler } from '../../lib/viewer/scene-screenshot-bus'
+import { registerSceneCameraSnapshotCaptureHandler } from '../../lib/viewer/scene-camera-snapshot-bus'
 import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbnail'
 
-import type { SceneScreenshotCapture } from '@vctrl/viewer'
+import type {
+	SceneCameraSnapshotCapture,
+	SceneScreenshotCapture
+} from '@vctrl/viewer'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -134,6 +141,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 	const { bounds, camera, controls, env, shadows } = useAtomValue(
 		sceneViewerSettingsAtom
 	)
+	const selectedCameraId = useAtomValue(selectedCameraIdAtom)
 	const sceneMeta = useAtomValue(sceneMetaAtom)
 	const loadingThumbnail = toViewerLoadingThumbnail(
 		sceneMeta.thumbnailUrl,
@@ -148,6 +156,13 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 		[]
 	)
 
+	const handleCameraSnapshotCaptureReady = useCallback(
+		(capture: null | SceneCameraSnapshotCapture) => {
+			registerSceneCameraSnapshotCaptureHandler(capture)
+		},
+		[]
+	)
+
 	// Cleanup on unmount
 	useEffect(() => {
 		const previousRouteSceneId = previousRouteSceneIdRef.current
@@ -156,6 +171,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 
 		if (navigatedFromSceneToBase) {
 			registerSceneScreenshotCaptureHandler(null)
+			registerSceneCameraSnapshotCaptureHandler(null)
 			reset()
 			setProcess(processInitialState)
 			setOptimizationRuntime(RESET)
@@ -167,6 +183,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 	useEffect(() => {
 		return () => {
 			registerSceneScreenshotCaptureHandler(null)
+			registerSceneCameraSnapshotCaptureHandler(null)
 			reset()
 			setProcess(processInitialState)
 			setOptimizationRuntime(RESET)
@@ -176,7 +193,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 	const isLoading = isInitializing || isDownloading || isFileLoading
 
 	return (
-		<div className="-z-0 grow overflow-clip">
+		<div className="z-0 grow overflow-clip">
 			<Suspense fallback={<CenteredSpinner text="Loading Publisher..." />}>
 				<AnimatePresence mode="wait">
 					{!file?.model && (isDownloading || isNavigationLoading) ? (
@@ -208,7 +225,10 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 							<ClientVectrealViewer
 								model={file?.model}
 								key="model-viewer"
-								cameraOptions={camera}
+								cameraOptions={{
+									...camera,
+									activeCameraId: camera.activeCameraId || selectedCameraId
+								}}
 								controlsOptions={controls}
 								envOptions={env}
 								shadowsOptions={shadows}
@@ -216,6 +236,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 								loadingThumbnail={loadingThumbnail}
 								loader={<LoadingScreen />}
 								onScreenshotCaptureReady={handleScreenshotCaptureReady}
+								onCameraSnapshotCaptureReady={handleCameraSnapshotCaptureReady}
 								fallback={<LoadingScreen />}
 							/>
 						</motion.div>
