@@ -2,13 +2,14 @@ import type { SceneAggregateResponse } from '../../../../types/api'
 import type { SceneMetaState } from '../../../../types/publisher-config'
 import type {
 	CameraProps,
-	CameraStateConfig,
 	CameraTransitionConfig,
 	SceneSettings,
 	ServerSceneData
 } from '@vctrl/core'
 
-function normalizeCameraSettings(camera?: CameraProps): CameraProps | undefined {
+function normalizeCameraSettings(
+	camera?: CameraProps
+): CameraProps | undefined {
 	if (!camera?.cameras || camera.cameras.length === 0) {
 		return camera
 	}
@@ -37,10 +38,10 @@ function normalizeCameraSettings(camera?: CameraProps): CameraProps | undefined 
 					(entry.shouldAnimate === false
 						? { type: 'none' }
 						: {
-							type: 'linear',
-							duration: entry.animationConfig?.duration ?? 1000,
-							easing: 'ease_in_out'
-						})
+								type: 'linear',
+								duration: entry.animationConfig?.duration ?? 1000,
+								easing: 'ease_in_out'
+							})
 
 				return {
 					...entry,
@@ -49,7 +50,7 @@ function normalizeCameraSettings(camera?: CameraProps): CameraProps | undefined 
 					name: stateName,
 					initial: Boolean(
 						_legacyInitial ||
-							(entry.activeStateId && entry.activeStateId === stateId)
+						(entry.activeStateId && entry.activeStateId === stateId)
 					),
 					transition
 				}
@@ -61,10 +62,10 @@ function normalizeCameraSettings(camera?: CameraProps): CameraProps | undefined 
 			(entry.shouldAnimate === false
 				? { type: 'none' }
 				: {
-					type: 'linear',
-					duration: entry.animationConfig?.duration ?? 1000,
-					easing: 'ease_in_out'
-				})
+						type: 'linear',
+						duration: entry.animationConfig?.duration ?? 1000,
+						easing: 'ease_in_out'
+					})
 
 		return [
 			{
@@ -102,13 +103,11 @@ function normalizeCameraSettings(camera?: CameraProps): CameraProps | undefined 
 
 	const resolvedActiveCameraId =
 		(camera.activeCameraId &&
-		normalizedCameras.some(
-			(entry) => entry.cameraId === camera.activeCameraId
-		)
+		normalizedCameras.some((entry) => entry.cameraId === camera.activeCameraId)
 			? camera.activeCameraId
 			: undefined) ??
-		(normalizedCameras.find((entry) => entry.initial)?.cameraId ??
-			normalizedCameras[0]?.cameraId)
+		normalizedCameras.find((entry) => entry.initial)?.cameraId ??
+		normalizedCameras[0]?.cameraId
 
 	if (!resolvedActiveCameraId) {
 		return camera

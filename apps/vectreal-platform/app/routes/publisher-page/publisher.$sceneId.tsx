@@ -33,8 +33,8 @@ import {
 	selectedCameraIdAtom
 } from '../../lib/stores/scene-settings-store'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
-import { registerSceneScreenshotCaptureHandler } from '../../lib/viewer/scene-screenshot-bus'
 import { registerSceneCameraSnapshotCaptureHandler } from '../../lib/viewer/scene-camera-snapshot-bus'
+import { registerSceneScreenshotCaptureHandler } from '../../lib/viewer/scene-screenshot-bus'
 import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbnail'
 
 import type {

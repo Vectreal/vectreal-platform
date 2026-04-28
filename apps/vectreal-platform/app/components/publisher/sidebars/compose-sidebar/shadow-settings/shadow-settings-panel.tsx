@@ -1,16 +1,16 @@
-import { Label } from '@shared/components/ui/label'
-import { Separator } from '@shared/components/ui/separator'
-import { Switch } from '@shared/components/ui/switch'
-import { ToggleGroup, ToggleGroupItem } from '@shared/components/ui/toggle-group'
+import { Button } from '@shared/components/ui/button'
 import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger
 } from '@shared/components/ui/collapsible'
-import { Button } from '@shared/components/ui/button'
+import { Label } from '@shared/components/ui/label'
+import { Separator } from '@shared/components/ui/separator'
+import { Switch } from '@shared/components/ui/switch'
+import { ToggleGroup, ToggleGroupItem } from '@shared/components/ui/toggle-group'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown } from 'lucide-react'
 import { useAtom } from 'jotai/react'
+import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 
 import {

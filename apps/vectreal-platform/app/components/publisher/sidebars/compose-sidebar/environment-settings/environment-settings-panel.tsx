@@ -10,7 +10,10 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 import { Separator } from '@shared/components/ui/separator'
-import { ToggleGroup, ToggleGroupItem } from '@shared/components/ui/toggle-group'
+import {
+	ToggleGroup,
+	ToggleGroupItem
+} from '@shared/components/ui/toggle-group'
 import {
 	EnvironmentKey,
 	EnvironmentProps,
@@ -57,7 +60,7 @@ const GROUPED_ENVIRONMENT_PRESETS = ENVIRONMENT_PRESETS.reduce(
 	{} as Record<string, EnvironmentKey[]>
 )
 
-const ENVIRONMENT_RESOLUTIONS: EnvironmentResolution[] = ['1k', '4k']
+// const ENVIRONMENT_RESOLUTIONS: EnvironmentResolution[] = ['1k', '4k']
 
 const EnvironmentSettings = () => {
 	const [environment, setEnvironment] = useAtom(environmentAtom)
@@ -77,7 +80,9 @@ const EnvironmentSettings = () => {
 	return (
 		<div className="space-y-4">
 			<div className="flex items-center justify-between gap-2">
-				<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">HDR Environment</p>
+				<p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+					HDR Environment
+				</p>
 				<InfoTooltip content="Controls scene lighting and background, affecting reflections and model appearance." />
 			</div>
 			<Separator />
@@ -117,13 +122,21 @@ const EnvironmentSettings = () => {
 					type="single"
 					value={environment.environmentResolution ?? '1k'}
 					onValueChange={(value) => {
-						if (value) handleEnvironmentChange('environmentResolution', value as EnvironmentResolution)
+						if (value)
+							handleEnvironmentChange(
+								'environmentResolution',
+								value as EnvironmentResolution
+							)
 					}}
 					variant="outline"
 					className="h-9"
 				>
-					<ToggleGroupItem value="1k" className="px-3 text-xs">1k</ToggleGroupItem>
-					<ToggleGroupItem value="4k" className="px-3 text-xs">4k</ToggleGroupItem>
+					<ToggleGroupItem value="1k" className="px-3 text-xs">
+						1k
+					</ToggleGroupItem>
+					<ToggleGroupItem value="4k" className="px-3 text-xs">
+						4k
+					</ToggleGroupItem>
 				</ToggleGroup>
 			</div>
 
@@ -148,7 +161,9 @@ const EnvironmentSettings = () => {
 				allowDirectInput={true}
 			/>
 
-			<p className="text-xs font-medium text-muted-foreground pt-1">Background</p>
+			<p className="text-muted-foreground pt-1 text-xs font-medium">
+				Background
+			</p>
 
 			<SettingToggle
 				enabled={!!environment.background}
