@@ -1,5 +1,4 @@
 import { Input } from '@shared/components/ui/input'
-import { Separator } from '@shared/components/ui/separator'
 import {
 	Select,
 	SelectContent,
@@ -7,6 +6,7 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
+import { Separator } from '@shared/components/ui/separator'
 import { Skeleton } from '@shared/components/ui/skeleton'
 import { cn } from '@shared/utils'
 import { motion } from 'framer-motion'
@@ -124,7 +124,7 @@ const SceneNameField = () => {
 						onChange={(e) => setLocalName(e.target.value)}
 						onKeyDown={handleKeyDown}
 						onBlur={saveChanges}
-						className="focus: w-full rounded-sm bg-transparent px-2! py-1! text-sm transition-all duration-300 not-[:focus]:border-0"
+						className="focus: w-full rounded-sm bg-transparent px-2! py-1! text-sm transition-all duration-300 not-focus:border-0"
 						aria-label="Scene name"
 					/>
 					<span

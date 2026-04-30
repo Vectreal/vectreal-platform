@@ -143,7 +143,7 @@ export const DynamicSidebar = ({
 						variants={variants}
 						transition={{ type: 'tween', ease: 'easeInOut', duration: 0.3 }}
 						className={cn(
-							'bg-muted/50 relative z-20 h-full w-[23rem] flex-col overflow-hidden rounded-xl border shadow-xl backdrop-blur-2xl',
+							'bg-muted/50 relative z-20 flex h-full w-[23rem] flex-col overflow-hidden rounded-xl border shadow-xl backdrop-blur-2xl',
 							className
 						)}
 					>

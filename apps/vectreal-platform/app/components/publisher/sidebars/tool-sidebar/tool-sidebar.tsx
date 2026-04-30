@@ -32,7 +32,7 @@ interface ToolSidebarProps {
 }
 
 export const ToolSidebar = memo(
-	({ user, isMobile = false }: ToolSidebarProps) => {
+	({ user: _user, isMobile = false }: ToolSidebarProps) => {
 		const { activeComposeTool, showSidebar } =
 			useAtomValue(toolSidebarStateAtom)
 		const setProcessState = useSetAtom(processAtom)

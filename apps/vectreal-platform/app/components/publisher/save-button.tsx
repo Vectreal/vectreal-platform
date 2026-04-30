@@ -1,5 +1,5 @@
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Button } from '@shared/components/ui/button'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
 import {
 	CircleFadingArrowUp,
