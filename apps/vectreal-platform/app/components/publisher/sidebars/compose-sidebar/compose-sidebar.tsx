@@ -22,7 +22,6 @@ const ComposeSidebarContent = memo(
 			() => getComposeToolDefinition(activeTool),
 			[activeTool]
 		)
-		const ToolIcon = toolDefinition.icon
 		const ToolComponent = toolDefinition.component
 
 		return (
