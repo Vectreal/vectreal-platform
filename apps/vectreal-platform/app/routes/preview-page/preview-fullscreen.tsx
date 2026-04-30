@@ -1,8 +1,4 @@
-import {
-	ModelFile,
-	SceneLoadResult,
-	useLoadModel
-} from '@vctrl/hooks/use-load-model'
+import { ModelFile, SceneLoadResult } from '@vctrl/hooks/use-load-model'
 import {
 	InfoPopover,
 	InfoPopoverCloseButton,
@@ -11,125 +7,111 @@ import {
 	InfoPopoverTrigger,
 	InfoPopoverVectrealFooter
 } from '@vctrl/viewer'
-import { memo, useCallback, useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { memo } from 'react'
 
 import { Route } from './+types/preview-fullscreen'
+import { usePreviewScene } from './use-preview-scene'
 import CenteredSpinner from '../../components/centered-spinner'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
+import { useHostedPreviewBridge } from '../../lib/domain/embed/hosted-preview-bridge'
 
-interface PreviewModelProps {
+interface PreviewInfoPopoverProps {
+	title?: string
+	description?: string
+}
+
+interface PreviewModelProps extends PreviewInfoPopoverProps {
 	file: ModelFile | null
+	onCommandExecutorReady: ReturnType<
+		typeof useHostedPreviewBridge
+	>['onCommandExecutorReady']
+	onInteractionEvent: ReturnType<
+		typeof useHostedPreviewBridge
+	>['onInteractionEvent']
 	sceneData?: SceneLoadResult
 }
 
-const inFlightPreviewSceneSettingsRequests = new Map<
-	string,
-	Promise<SceneLoadResult>
->()
-
-const PreviewInfoPopover = () => (
+const PreviewInfoPopover = ({
+	title,
+	description
+}: PreviewInfoPopoverProps) => (
 	<InfoPopover>
 		<InfoPopoverTrigger />
 		<InfoPopoverContent>
 			<InfoPopoverCloseButton />
 			<InfoPopoverText>
-				<p>
-					This is a preview of your scene as it will appear when published. Test
-					on various devices and network conditions for the best experience.
-				</p>
+				{title ? <p className="mb-3 font-medium">{title}</p> : null}
+				{description ? (
+					<p>{description}</p>
+				) : (
+					<p className="opacity-50">No description provided for this scene.</p>
+				)}
 			</InfoPopoverText>
 			<InfoPopoverVectrealFooter />
 		</InfoPopoverContent>
 	</InfoPopover>
 )
 
-const PreviewModel = memo(({ file, sceneData }: PreviewModelProps) => {
-	return (
-		<div className="h-screen w-full">
-			<ClientVectrealViewer
-				className="h-full w-full"
-				model={file?.model}
-				envOptions={sceneData?.environment}
-				controlsOptions={sceneData?.controls}
-				shadowsOptions={sceneData?.shadows}
-				popover={<PreviewInfoPopover />}
-				loader={<CenteredSpinner text="Preparing scene..." />}
-				fallback={<CenteredSpinner text="Loading scene..." />}
-			/>
-		</div>
-	)
-})
+const PreviewModel = memo(
+	({
+		file,
+		sceneData,
+		title,
+		description,
+		onInteractionEvent,
+		onCommandExecutorReady
+	}: PreviewModelProps) => {
+		return (
+			<div className="h-screen w-full">
+				<ClientVectrealViewer
+					boundsOptions={sceneData?.bounds}
+					cameraOptions={sceneData?.camera}
+					className="h-full w-full"
+					model={file?.model}
+					envOptions={sceneData?.environment}
+					controlsOptions={sceneData?.controls}
+					onCommandExecutorReady={onCommandExecutorReady}
+					onInteractionEvent={onInteractionEvent}
+					shadowsOptions={sceneData?.shadows}
+					popover={
+						<PreviewInfoPopover title={title} description={description} />
+					}
+					loader={<CenteredSpinner text="Preparing scene..." />}
+					fallback={<CenteredSpinner text="Loading scene..." />}
+				/>
+			</div>
+		)
+	}
+)
 
 const PreviewFullscreenPage = ({ params }: Route.ComponentProps) => {
-	const [searchParams] = useSearchParams()
-
-	const { file, loadFromServer } = useLoadModel()
-	const [isLoadingScene, setIsLoadingScene] = useState(false)
-	const [sceneData, setSceneData] = useState<SceneLoadResult>()
-
 	const sceneId = params.sceneId
 	const projectId = params.projectId
-
-	const getSceneSettings = useCallback(async () => {
-		if (!sceneId || !projectId) return
-
-		setIsLoadingScene(true)
-		const requestKey = `${sceneId}:${projectId}:${searchParams.get('token')?.trim() || ''}`
-
-		const token = searchParams.get('token')?.trim() || undefined
-		const endpointParams = new URLSearchParams({
-			projectId,
-			preview: '1'
-		})
-
-		if (token) {
-			endpointParams.set('token', token)
+	const { file, isLoadingScene, sceneData } = usePreviewScene({
+		sceneId,
+		projectId
+	})
+	const { onCommandExecutorReady, onInteractionEvent } = useHostedPreviewBridge(
+		{
+			sceneId,
+			interactions: sceneData?.interactions
 		}
-
-		try {
-			const existingRequest =
-				inFlightPreviewSceneSettingsRequests.get(requestKey)
-			const request =
-				existingRequest ??
-				loadFromServer({
-					sceneId,
-					serverOptions: {
-						endpoint: `/api/scenes/${sceneId}?${endpointParams.toString()}`,
-						apiKey: token
-					}
-				})
-
-			if (!existingRequest) {
-				inFlightPreviewSceneSettingsRequests.set(
-					requestKey,
-					request.finally(() => {
-						inFlightPreviewSceneSettingsRequests.delete(requestKey)
-					})
-				)
-			}
-
-			const loadedSceneData = await request
-
-			setSceneData(loadedSceneData)
-		} catch (error) {
-			console.error('Failed to load preview scene:', error)
-		} finally {
-			setIsLoadingScene(false)
-		}
-	}, [loadFromServer, projectId, sceneId, searchParams])
-
-	useEffect(() => {
-		if (sceneId && projectId && sceneData?.sceneId !== sceneId) {
-			void getSceneSettings()
-		}
-	}, [getSceneSettings, projectId, sceneData, sceneId])
+	)
 
 	if (isLoadingScene && !file?.model) {
 		return <CenteredSpinner className="h-screen" text="Loading scene..." />
 	}
 
-	return <PreviewModel file={file} sceneData={sceneData} />
+	return (
+		<PreviewModel
+			file={file}
+			onCommandExecutorReady={onCommandExecutorReady}
+			onInteractionEvent={onInteractionEvent}
+			sceneData={sceneData}
+			title={sceneData?.meta?.name?.trim() || undefined}
+			description={sceneData?.meta?.description?.trim() || undefined}
+		/>
+	)
 }
 
 export default PreviewFullscreenPage

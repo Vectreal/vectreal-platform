@@ -1,14 +1,17 @@
-import { Label } from '@shared/components/ui/label'
+import { Button } from '@shared/components/ui/button'
 import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue
-} from '@shared/components/ui/select'
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger
+} from '@shared/components/ui/collapsible'
+import { Label } from '@shared/components/ui/label'
+import { Separator } from '@shared/components/ui/separator'
 import { Switch } from '@shared/components/ui/switch'
+import { ToggleGroup, ToggleGroupItem } from '@shared/components/ui/toggle-group'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom } from 'jotai/react'
+import { ChevronDown } from 'lucide-react'
+import { useState } from 'react'
 
 import {
 	ACCUMULATIVE_FIELDS,
@@ -34,6 +37,7 @@ const variants = {
 
 const ShadowSettingsPanel = () => {
 	const [shadows, setShadows] = useAtom(shadowsAtom)
+	const [lightAdvancedOpen, setLightAdvancedOpen] = useState(false)
 	const { type } = shadows
 	const shadowsEnabled = shadows.enabled ?? false
 
@@ -48,7 +52,6 @@ const ShadowSettingsPanel = () => {
 		setShadows((prev) => {
 			const enabled = prev.enabled ?? false
 
-			// When switching to accumulative, use the defaults
 			if (value === 'accumulative') {
 				return {
 					...defaultAccumulativeShadowsOptions,
@@ -56,7 +59,6 @@ const ShadowSettingsPanel = () => {
 				}
 			}
 
-			// When switching to contact, use contact defaults
 			return {
 				...defaultShadowOptions,
 				enabled
@@ -75,7 +77,6 @@ const ShadowSettingsPanel = () => {
 		setShadows((prev) => {
 			const enabled = prev.enabled ?? false
 
-			// Only accumulative shadows have light property
 			if (prev.type !== 'accumulative') {
 				return {
 					...defaultAccumulativeShadowsOptions,
@@ -99,48 +100,37 @@ const ShadowSettingsPanel = () => {
 
 	return (
 		<div className="space-y-4">
-			<p className="px-2">
-				Customize how shadows are rendered in your scene for optimal realism or
-				performance.
-			</p>
-			<small className="text-muted-foreground/75 mt-2 mb-6 block px-2">
-				Choose a shadow type and fine-tune its appearance to match your model
-				and environment.
-			</small>
-
-			<div className="bg-muted/50 space-y-4 rounded-xl p-4">
-				<div className="flex items-center justify-between gap-3">
-					<div className="flex items-center gap-2">
-						<p className="text-lg font-medium">Shadows</p>
-						<InfoTooltip content="Configure the type and quality of shadows in your scene." />
-					</div>
-					<div className="flex items-center gap-2">
-						<Label htmlFor="shadows-enabled-toggle" className="text-sm">
-							Enabled
-						</Label>
-						<Switch
-							id="shadows-enabled-toggle"
-							checked={shadowsEnabled}
-							onCheckedChange={handleToggleShadows}
-						/>
-					</div>
+			<div className="flex items-center justify-between gap-2">
+				<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Shadows</p>
+				<div className="flex items-center gap-2">
+					<InfoTooltip content="Configure the type and quality of shadows in your scene." />
+					<Label htmlFor="shadows-enabled-toggle" className="text-sm">Enabled</Label>
+					<Switch
+						id="shadows-enabled-toggle"
+						checked={shadowsEnabled}
+						onCheckedChange={handleToggleShadows}
+					/>
 				</div>
-
-				{shadowsEnabled && (
-					<>
-						<Label>Shadow Type</Label>
-						<Select value={type} onValueChange={handleTypeChange}>
-							<SelectTrigger className="w-full capitalize">
-								<SelectValue placeholder="Select Shadow Type" />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="accumulative">Accumulative</SelectItem>
-								<SelectItem value="contact">Contact</SelectItem>
-							</SelectContent>
-						</Select>
-					</>
-				)}
 			</div>
+			<Separator />
+
+			{shadowsEnabled && (
+				<div className="space-y-1.5">
+					<p className="text-xs text-muted-foreground">Shadow Type</p>
+					<ToggleGroup
+						type="single"
+						value={type}
+						onValueChange={(value) => {
+							if (value) handleTypeChange(value as ShadowsProps['type'])
+						}}
+						variant="outline"
+						className="w-full"
+					>
+						<ToggleGroupItem value="contact" className="flex-1 text-sm">Contact</ToggleGroupItem>
+						<ToggleGroupItem value="accumulative" className="flex-1 text-sm">Soft</ToggleGroupItem>
+					</ToggleGroup>
+				</div>
+			)}
 
 			<AnimatePresence mode="wait" initial={false}>
 				{shadowsEnabled && type === 'contact' && (
@@ -150,12 +140,13 @@ const ShadowSettingsPanel = () => {
 						initial="initial"
 						animate="animate"
 						exit="exit"
-						className="bg-muted/50 space-y-4 rounded-xl p-4"
+						className="space-y-4"
 					>
 						<div className="flex items-center gap-2">
-							<p className="text-lg font-medium">Contact Shadow Settings</p>
+							<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Contact Shadow</p>
 							<InfoTooltip content="Contact shadows are fast, simple, and ideal for performance-focused scenes." />
 						</div>
+						<Separator />
 						{CONTACT_FIELDS.map((field) => (
 							<EnhancedSettingSlider
 								key={field.key}
@@ -192,83 +183,85 @@ const ShadowSettingsPanel = () => {
 						exit="exit"
 						className="space-y-4"
 					>
-						<div className="bg-muted/50 space-y-4 rounded-xl p-4">
-							<div className="flex items-center gap-2">
-								<p className="text-lg font-medium">
-									Accumulative Shadow Settings
-								</p>
-								<InfoTooltip content="Accumulative shadows provide soft, realistic shadowing by blending multiple frames." />
-							</div>
-							{ACCUMULATIVE_FIELDS.map((field) => {
-								return (
-									<EnhancedSettingSlider
-										key={field.key}
-										id={`accumulative-${field.key}`}
-										sliderProps={{
-											min: field.min,
-											max: field.max,
-											step: field.step,
-											value:
-												(shadows[field.key as keyof ShadowsProps] as number) ??
-												field.min,
-											onChange: (value) => handleFieldChange(field.key, value)
-										}}
-										label={field.label}
-										tooltip={field.tooltip}
-										labelProps={{
-											low: `${field.min}`,
-											high: `${field.max}`
-										}}
-										formatValue={field.formatValue}
-										valueMapping={field.valueMapping}
-										allowDirectInput={true}
-									/>
-								)
-							})}
+						<div className="flex items-center gap-2">
+							<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Soft Shadow</p>
+							<InfoTooltip content="Soft shadows blend multiple frames for a realistic, gentle effect." />
 						</div>
-						<div className="bg-muted/50 space-y-4 rounded-xl p-4">
-							<div className="flex items-center gap-2">
-								<p className="text-lg font-medium">Randomized Light Settings</p>
-								<InfoTooltip content="Adjust the properties of the randomized light used for accumulative shadows." />
-							</div>
-							{ACCUMULATIVE_LIGHT_FIELDS.map((field) => {
-								const defaultLightValue =
-									defaultAccumulativeShadowsOptions.light?.[
-										field.key as keyof RandomizedLightProps
-									]
-								const currentValue =
-									shadows.type === 'accumulative'
-										? shadows.light?.[field.key as keyof RandomizedLightProps]
-										: undefined
+						<Separator />
+						{ACCUMULATIVE_FIELDS.map((field) => {
+							return (
+								<EnhancedSettingSlider
+									key={field.key}
+									id={`accumulative-${field.key}`}
+									sliderProps={{
+										min: field.min,
+										max: field.max,
+										step: field.step,
+										value:
+											(shadows[field.key as keyof ShadowsProps] as number) ??
+											field.min,
+										onChange: (value) => handleFieldChange(field.key, value)
+									}}
+									label={field.label}
+									tooltip={field.tooltip}
+									labelProps={{
+										low: `${field.min}`,
+										high: `${field.max}`
+									}}
+									formatValue={field.formatValue}
+									valueMapping={field.valueMapping}
+									allowDirectInput={true}
+								/>
+							)
+						})}
 
-								return (
-									<EnhancedSettingSlider
-										key={field.key}
-										id={`light-${field.key}`}
-										sliderProps={{
-											min: field.min,
-											max: field.max,
-											step: field.step,
-											value:
-												(currentValue as number) ??
-												(defaultLightValue as number) ??
-												field.min,
-											onChange: (value) =>
-												handleLightFieldChange(field.key, value)
-										}}
-										label={field.label}
-										tooltip={field.tooltip}
-										labelProps={{
-											low: `${field.min}`,
-											high: `${field.max}`
-										}}
-										formatValue={field.formatValue}
-										valueMapping={field.valueMapping}
-										allowDirectInput={true}
-									/>
-								)
-							})}
-						</div>
+						<Collapsible open={lightAdvancedOpen} onOpenChange={setLightAdvancedOpen}>
+							<CollapsibleTrigger asChild>
+								<Button variant="ghost" size="sm" className="w-full justify-between px-0 text-xs text-muted-foreground hover:text-foreground">
+									Advanced light settings
+									<ChevronDown className={`h-3.5 w-3.5 transition-transform ${lightAdvancedOpen ? 'rotate-180' : ''}`} />
+								</Button>
+							</CollapsibleTrigger>
+							<CollapsibleContent className="space-y-4 pt-2">
+								{ACCUMULATIVE_LIGHT_FIELDS.map((field) => {
+									const defaultLightValue =
+										defaultAccumulativeShadowsOptions.light?.[
+											field.key as keyof RandomizedLightProps
+										]
+									const currentValue =
+										shadows.type === 'accumulative'
+											? shadows.light?.[field.key as keyof RandomizedLightProps]
+											: undefined
+
+									return (
+										<EnhancedSettingSlider
+											key={field.key}
+											id={`light-${field.key}`}
+											sliderProps={{
+												min: field.min,
+												max: field.max,
+												step: field.step,
+												value:
+													(currentValue as number) ??
+													(defaultLightValue as number) ??
+													field.min,
+												onChange: (value) =>
+													handleLightFieldChange(field.key, value)
+											}}
+											label={field.label}
+											tooltip={field.tooltip}
+											labelProps={{
+												low: `${field.min}`,
+												high: `${field.max}`
+											}}
+											formatValue={field.formatValue}
+											valueMapping={field.valueMapping}
+											allowDirectInput={true}
+										/>
+									)
+								})}
+							</CollapsibleContent>
+						</Collapsible>
 					</motion.div>
 				)}
 			</AnimatePresence>

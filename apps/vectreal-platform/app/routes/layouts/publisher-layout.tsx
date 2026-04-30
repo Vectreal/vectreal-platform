@@ -7,6 +7,7 @@ import { data, Outlet, type MetaFunction } from 'react-router'
 
 import { Route } from './+types/publisher-layout'
 import { ControlsOverlay } from '../../components'
+import { PublisherViewerCaptureProvider } from '../../components/publisher/publisher-viewer-capture-context'
 import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
 import { getProject } from '../../lib/domain/project/project-repository.server'
@@ -201,11 +202,13 @@ const PublisherLayoutContent = ({
 
 	return (
 		<SidebarProvider open={showSidebar} onOpenChange={handleOpenChange}>
-			<main className="flex h-screen w-full flex-col overflow-hidden">
-				<UpgradeModal />
-				<ControlsOverlay {...loaderData} />
-				<Outlet />
-			</main>
+			<PublisherViewerCaptureProvider>
+				<main className="flex h-screen w-full flex-col overflow-hidden">
+					<UpgradeModal />
+					<ControlsOverlay {...loaderData} />
+					<Outlet />
+				</main>
+			</PublisherViewerCaptureProvider>
 		</SidebarProvider>
 	)
 }

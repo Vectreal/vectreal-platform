@@ -11,7 +11,7 @@ export const EMBED_COPY = {
 	previewUrlPlaceholder: 'Save scene to generate URL',
 	embedCodeLabel: 'Embed Code',
 	embedCodeHelp:
-		'Use the code below to embed your scene. Keep token access private and rotate keys when needed.',
+		'Use the code below to embed your scene. Keep token access private, rotate keys when needed, and refer to the embed guide for advanced parent-page control via postMessage.',
 	copyUrl: 'Copy URL',
 	copyEmbed: 'Copy Embed',
 	copied: 'Copied',

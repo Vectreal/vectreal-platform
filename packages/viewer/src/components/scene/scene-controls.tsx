@@ -2,6 +2,10 @@ import { OrbitControls } from '@react-three/drei'
 import { ControlsProps } from '@vctrl/core'
 import { memo, useEffect, useRef, useState } from 'react'
 
+interface SceneControlsProps extends ControlsProps {
+	enabledOverride?: boolean | null
+}
+
 export const defaultControlsOptions = {
 	controlsTimeout: 0,
 	maxPolarAngle: Math.PI / 2,
@@ -19,7 +23,7 @@ export const defaultControlsOptions = {
 /**
  * SceneControls component that enables orbit controls after a specified timeout.
  */
-const SceneControls = memo((props: ControlsProps) => {
+const SceneControls = memo((props: SceneControlsProps) => {
 	const { controlsTimeout, ...rest } = {
 		...defaultControlsOptions,
 		...props
@@ -49,6 +53,11 @@ const SceneControls = memo((props: ControlsProps) => {
 		return () => clearTimeout(timeoutId)
 	}, [controlsTimeout])
 
-	return <OrbitControls enabled={isControlsEnabled} {...rest} />
+	return (
+		<OrbitControls
+			enabled={props.enabledOverride ?? isControlsEnabled}
+			{...rest}
+		/>
+	)
 })
 export default SceneControls

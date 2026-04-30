@@ -1,6 +1,12 @@
+import {
+	normalizeCameraSettings,
+	normalizeSceneInteractions,
+	type SceneSettings,
+	type ServerSceneData
+} from '@vctrl/core'
+
 import type { SceneAggregateResponse } from '../../../../types/api'
 import type { SceneMetaState } from '../../../../types/publisher-config'
-import type { SceneSettings, ServerSceneData } from '@vctrl/core'
 
 export const getSceneNameFromFileName = (fileName: string): string => {
 	const trimmedFileName = fileName.trim()
@@ -26,21 +32,40 @@ export const getSettingsFromAggregate = (
 	}
 
 	if (aggregate.settings) {
-		return aggregate.settings
+		const normalizedCamera = normalizeCameraSettings(aggregate.settings.camera)
+		return {
+			...aggregate.settings,
+			camera: normalizedCamera,
+			interactions: normalizeSceneInteractions(
+				aggregate.settings.interactions,
+				{ camera: normalizedCamera }
+			)
+		}
 	}
 
 	const fallbackSettings = aggregate as SceneAggregateResponse & {
+		camera?: SceneSettings['camera']
+		interactions?: SceneSettings['interactions']
 		environment?: SceneSettings['environment']
 		controls?: SceneSettings['controls']
 		shadows?: SceneSettings['shadows']
 	}
+	const normalizedFallbackCamera = normalizeCameraSettings(
+		fallbackSettings.camera
+	)
 
 	if (
+		fallbackSettings.camera ||
+		fallbackSettings.interactions ||
 		fallbackSettings.environment ||
 		fallbackSettings.controls ||
 		fallbackSettings.shadows
 	) {
 		return {
+			camera: normalizedFallbackCamera,
+			interactions: normalizeSceneInteractions(fallbackSettings.interactions, {
+				camera: normalizedFallbackCamera
+			}),
 			environment: fallbackSettings.environment,
 			controls: fallbackSettings.controls,
 			shadows: fallbackSettings.shadows

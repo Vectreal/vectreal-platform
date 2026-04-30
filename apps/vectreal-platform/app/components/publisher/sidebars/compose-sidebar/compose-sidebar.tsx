@@ -1,37 +1,9 @@
-import { Accordion, AccordionContent } from '@shared/components/ui/accordion'
-import { Camera, MountainSnow, Tornado } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { memo, useMemo } from 'react'
 
-import { AccordionItem, AccordionTrigger } from '../accordion-components'
-import { CameraControlsSettings } from './camera-controls-settings'
-import { EnvironmentSettings } from './environment-settings'
-import { ShadowSettings } from './shadow-settings'
+import { getComposeToolDefinition } from './compose-tools'
 
-/**
- * Accordion section configuration
- * Following React best practices:
- * - rendering-hoist-jsx: Static config hoisted outside component
- */
-const ACCORDION_SECTIONS = [
-	{
-		value: 'environment',
-		icon: MountainSnow,
-		title: 'Environment Settings',
-		component: EnvironmentSettings
-	},
-	{
-		value: 'shadow',
-		icon: Tornado,
-		title: 'Shadow Settings',
-		component: ShadowSettings
-	},
-	{
-		value: 'camera-controls',
-		icon: Camera,
-		title: 'Camera Controls',
-		component: CameraControlsSettings
-	}
-] as const
+import type { ComposeTool } from '../../../../types/publisher-config'
 
 /**
  * ComposeSidebarContent component
@@ -40,32 +12,37 @@ const ACCORDION_SECTIONS = [
  * - rendering-hoist-jsx: Static section configs hoisted outside
  * - rerender-memo: Memoized to prevent unnecessary re-renders
  */
-const ComposeSidebarContent = memo(() => {
-	// Memoize accordion items to prevent recreation on each render
-	const accordionItems = useMemo(
-		() =>
-			ACCORDION_SECTIONS.map(
-				({ value, icon: Icon, title, component: Component }) => (
-					<AccordionItem key={value} value={value}>
-						<AccordionTrigger>
-							<Icon className="inline" size={14} />
-							{title}
-						</AccordionTrigger>
-						<AccordionContent>
-							<Component />
-						</AccordionContent>
-					</AccordionItem>
-				)
-			),
-		[]
-	)
+interface ComposeSidebarContentProps {
+	activeTool: ComposeTool
+}
 
-	return (
-		<Accordion type="single" className="space-y-2" collapsible>
-			{accordionItems}
-		</Accordion>
-	)
-})
+const ComposeSidebarContent = memo(
+	({ activeTool }: ComposeSidebarContentProps) => {
+		const toolDefinition = useMemo(
+			() => getComposeToolDefinition(activeTool),
+			[activeTool]
+		)
+		const ToolComponent = toolDefinition.component
+
+		return (
+			<div className="space-y-4">
+				<AnimatePresence mode="wait" initial={false}>
+					<motion.div
+						key={activeTool}
+						initial={{ opacity: 0, y: 14 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0, y: -10 }}
+						transition={{ duration: 0.18, ease: 'easeOut' }}
+						className="space-y-4"
+					>
+						<div className="sr-only">{toolDefinition.label}</div>
+						<ToolComponent />
+					</motion.div>
+				</AnimatePresence>
+			</div>
+		)
+	}
+)
 
 ComposeSidebarContent.displayName = 'ComposeSidebarContent'
 

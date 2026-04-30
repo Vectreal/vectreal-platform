@@ -210,29 +210,9 @@ function ExportButton({ file }: { file: ModelFile | null }) {
 
 ## Additional exports
 
-- `ServerCommunicationService` from `@vctrl/hooks`
 - `reconstructGltfFiles` from `@vctrl/hooks`
 - `ModelProvider` and `useModelContext` from `@vctrl/hooks/use-load-model`
 - Shared types such as `ModelFile`, `SceneLoadResult`, and `ServerSceneData`
-
-`ServerCommunicationService` methods:
-
-| Method                                             | Description               |
-| -------------------------------------------------- | ------------------------- |
-| `request(config)`                                  | Generic request helper    |
-| `get(endpoint, serverOptions?)`                    | Convenience GET           |
-| `post(endpoint, body, serverOptions?)`             | Convenience JSON POST     |
-| `postFormData(endpoint, formData, serverOptions?)` | Convenience FormData POST |
-
-`ServerRequestConfig` fields:
-
-| Field           | Type                                              |
-| --------------- | ------------------------------------------------- |
-| `endpoint`      | `string`                                          |
-| `method`        | `'GET' \| 'POST' \| 'PUT' \| 'DELETE' \| 'PATCH'` |
-| `body`          | `FormData \| Record<string, unknown> \| string`   |
-| `serverOptions` | `ServerOptions`                                   |
-| `contentType`   | `string`                                          |
 
 ---
 

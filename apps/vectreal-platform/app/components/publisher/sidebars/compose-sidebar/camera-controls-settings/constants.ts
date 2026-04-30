@@ -35,7 +35,7 @@ export interface FieldConfig {
 export const CAMERA_CONTROLS_FIELDS: FieldConfig[] = [
 	{
 		key: 'autoRotateSpeed',
-		label: 'Auto Rotate Speed',
+		label: 'Rotation Speed',
 		min: 0.1,
 		max: 10,
 		step: 0.1,
@@ -45,12 +45,12 @@ export const CAMERA_CONTROLS_FIELDS: FieldConfig[] = [
 	},
 	{
 		key: 'dampingFactor',
-		label: 'Damping Factor',
+		label: 'Movement Smoothness',
 		min: 0.01,
 		max: 1,
 		step: 0.01,
 		tooltip:
-			'Smoothness of camera movement. Lower values = smoother, more damped movement.',
+			'How smoothly the camera decelerates. Lower values feel floatier; higher values feel snappier.',
 		formatValue: (value) => value.toFixed(2)
 	},
 	{
@@ -65,7 +65,7 @@ export const CAMERA_CONTROLS_FIELDS: FieldConfig[] = [
 	},
 	{
 		key: 'rotateSpeed',
-		label: 'Rotate Speed',
+		label: 'Orbit Speed',
 		min: 0.1,
 		max: 3,
 		step: 0.1,
@@ -83,12 +83,12 @@ export const CAMERA_CONTROLS_FIELDS: FieldConfig[] = [
 	},
 	{
 		key: 'maxPolarAngle',
-		label: 'Max Polar Angle',
+		label: 'Vertical Limit',
 		min: 0,
 		max: Math.PI,
 		step: 0.01,
 		tooltip:
-			'Maximum vertical rotation angle. PI/2 prevents looking below the horizon.',
+			'How far down the camera can orbit. Lower values keep the camera above the horizon.',
 		formatValue: (value) => `${((value * 180) / Math.PI).toFixed(0)}°`
 	}
 ]

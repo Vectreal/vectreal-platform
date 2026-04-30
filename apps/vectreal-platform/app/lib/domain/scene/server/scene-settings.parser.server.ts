@@ -1,12 +1,28 @@
 import { JSONDocument } from '@gltf-transform/core'
 import { ApiResponse } from '@shared/utils'
-import { OptimizationReport, Optimizations } from '@vctrl/core'
+import {
+	normalizeCameraSettings,
+	normalizeSceneInteractions,
+	OptimizationReport,
+	Optimizations
+} from '@vctrl/core'
 
 import { UUID_REGEX } from '../../../../constants/utility-constants'
 import { parseActionRequest } from '../../../http/requests.server'
 
 import type { SceneSettingsRequest } from '../../../../types/api'
 import type { SceneMetaState } from '../../../../types/publisher-config'
+import type {
+	CameraProps,
+	CameraTransitionConfig,
+	SceneSettings
+} from '@vctrl/core'
+
+type CameraEntry = NonNullable<CameraProps['cameras']>[number]
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
 
 /**
  * Request parser for scene settings API operations.
@@ -238,7 +254,7 @@ export class SceneSettingsParser {
 	 */
 	private static parseSettingsData(
 		requestData: Record<string, unknown>
-	): Record<string, unknown> | Response {
+	): SceneSettings | Response {
 		let settings: Record<string, unknown> | undefined
 
 		// Try 'settings' field first (current implementation)
@@ -281,7 +297,316 @@ export class SceneSettingsParser {
 			return ApiResponse.badRequest('Settings must be a valid object')
 		}
 
-		return settings
+		const sceneSettings = settings as SceneSettings
+		const normalizedCamera = this.normalizeCameraSettings(sceneSettings.camera)
+		if (normalizedCamera instanceof Response) {
+			return normalizedCamera
+		}
+
+		let normalizedInteractions: SceneSettings['interactions']
+		try {
+			normalizedInteractions = normalizeSceneInteractions(
+				sceneSettings.interactions,
+				{ camera: normalizedCamera }
+			)
+		} catch (error) {
+			return ApiResponse.badRequest(
+				error instanceof Error
+					? error.message
+					: 'Invalid scene interactions configuration'
+			)
+		}
+
+		return {
+			...sceneSettings,
+			camera: normalizedCamera,
+			interactions: normalizedInteractions
+		}
+	}
+
+	private static normalizeCameraSettings(
+		camera?: CameraProps
+	): CameraProps | undefined | Response {
+		if (!camera) {
+			return camera
+		}
+
+		if (!Array.isArray(camera.cameras) || camera.cameras.length === 0) {
+			return ApiResponse.badRequest('camera.cameras must be a non-empty array')
+		}
+
+		const flattenedCameras: CameraEntry[] = []
+		const seenCameraIds = new Set<string>()
+
+		for (const [cameraIndex, entry] of camera.cameras.entries()) {
+			if (!isRecord(entry)) {
+				return ApiResponse.badRequest('Each camera must be a valid object')
+			}
+
+			const rawCameraId =
+				typeof entry.cameraId === 'string' && entry.cameraId.trim()
+					? entry.cameraId.trim()
+					: `camera-${cameraIndex + 1}`
+			const rawCameraName =
+				typeof entry.name === 'string' && entry.name.trim()
+					? entry.name.trim()
+					: `Camera ${cameraIndex + 1}`
+
+			if (Array.isArray(entry.states) && entry.states.length > 0) {
+				for (const [stateIndex, stateEntry] of entry.states.entries()) {
+					if (!isRecord(stateEntry)) {
+						return ApiResponse.badRequest(
+							'Each camera state must be a valid object'
+						)
+					}
+
+					const stateId =
+						typeof stateEntry.stateId === 'string' && stateEntry.stateId.trim()
+							? stateEntry.stateId.trim()
+							: `${rawCameraId}-state-${stateIndex + 1}`
+					if (seenCameraIds.has(stateId)) {
+						return ApiResponse.badRequest(
+							`Duplicate cameraId found after state flattening: ${stateId}`
+						)
+					}
+					seenCameraIds.add(stateId)
+
+					const stateName =
+						typeof stateEntry.name === 'string' && stateEntry.name.trim()
+							? stateEntry.name.trim()
+							: `${rawCameraName} ${stateIndex + 1}`
+
+					const {
+						stateId: _legacyStateId,
+						name: _legacyStateName,
+						initial: legacyInitial,
+						transition: stateTransition,
+						...stateWithoutLegacyFields
+					} = stateEntry
+
+					const transition = this.normalizeTransitionConfig(
+						(stateTransition as CameraTransitionConfig | undefined) ??
+							(entry.transition as CameraTransitionConfig | undefined) ??
+							(entry.shouldAnimate === false
+								? { type: 'none' }
+								: {
+										type: 'linear',
+										duration:
+											typeof (entry.animationConfig as { duration?: unknown })
+												?.duration === 'number'
+												? (entry.animationConfig as { duration: number })
+														.duration
+												: 1000,
+										easing: 'ease_in_out'
+									}),
+						`${stateId}.transition`
+					)
+					if (transition instanceof Response) {
+						return transition
+					}
+
+					const {
+						states: _states,
+						activeStateId: _activeStateId,
+						shouldAnimate: _shouldAnimate,
+						animationConfig: _animationConfig,
+						...cameraWithoutLegacyFields
+					} = entry
+
+					flattenedCameras.push({
+						...(cameraWithoutLegacyFields as CameraEntry),
+						...(stateWithoutLegacyFields as CameraEntry),
+						cameraId: stateId,
+						name: stateName,
+						initial: Boolean(
+							legacyInitial ||
+							(entry.activeStateId && entry.activeStateId === stateId)
+						),
+						transition
+					})
+				}
+				continue
+			}
+
+			if (seenCameraIds.has(rawCameraId)) {
+				return ApiResponse.badRequest(
+					`Duplicate cameraId found: ${rawCameraId}`
+				)
+			}
+			seenCameraIds.add(rawCameraId)
+
+			const transition = this.normalizeTransitionConfig(
+				(entry.transition as CameraTransitionConfig | undefined) ??
+					(entry.shouldAnimate === false
+						? { type: 'none' }
+						: {
+								type: 'linear',
+								duration:
+									typeof (entry.animationConfig as { duration?: unknown })
+										?.duration === 'number'
+										? (entry.animationConfig as { duration: number }).duration
+										: 1000,
+								easing: 'ease_in_out'
+							}),
+				`${rawCameraId}.transition`
+			)
+			if (transition instanceof Response) {
+				return transition
+			}
+
+			const {
+				states: _states,
+				activeStateId: _activeStateId,
+				shouldAnimate: _shouldAnimate,
+				animationConfig: _animationConfig,
+				...cameraWithoutLegacyFields
+			} = entry
+
+			flattenedCameras.push({
+				...(cameraWithoutLegacyFields as CameraEntry),
+				cameraId: rawCameraId,
+				name: rawCameraName,
+				transition
+			})
+		}
+
+		const requestedActiveCameraId =
+			typeof camera.activeCameraId === 'string' && camera.activeCameraId.trim()
+				? camera.activeCameraId.trim()
+				: ''
+		const resolvedActiveCameraId =
+			(requestedActiveCameraId &&
+			flattenedCameras.some(
+				(cameraEntry) => cameraEntry.cameraId === requestedActiveCameraId
+			)
+				? requestedActiveCameraId
+				: undefined) ??
+			flattenedCameras.find((cameraEntry) => cameraEntry.initial)?.cameraId ??
+			flattenedCameras[0].cameraId
+
+		return normalizeCameraSettings({
+			...camera,
+			activeCameraId: resolvedActiveCameraId,
+			cameras: flattenedCameras.map((cameraEntry) => ({
+				...cameraEntry,
+				initial: cameraEntry.cameraId === resolvedActiveCameraId
+			}))
+		})
+	}
+
+	private static normalizeTransitionConfig(
+		transition: CameraTransitionConfig | undefined,
+		path: string
+	): CameraTransitionConfig | Response | undefined {
+		if (!transition) {
+			return undefined
+		}
+
+		if (!isRecord(transition)) {
+			return ApiResponse.badRequest(`${path} must be an object`)
+		}
+
+		const type = transition.type
+		if (type !== 'linear' && type !== 'object_avoidance' && type !== 'none') {
+			return ApiResponse.badRequest(
+				`${path}.type must be one of linear, object_avoidance, none`
+			)
+		}
+
+		if (typeof transition.duration !== 'undefined') {
+			if (
+				typeof transition.duration !== 'number' ||
+				!Number.isFinite(transition.duration) ||
+				transition.duration < 0
+			) {
+				return ApiResponse.badRequest(
+					`${path}.duration must be a non-negative number`
+				)
+			}
+		}
+
+		if (
+			typeof transition.easing !== 'undefined' &&
+			transition.easing !== 'linear' &&
+			transition.easing !== 'ease_in' &&
+			transition.easing !== 'ease_out' &&
+			transition.easing !== 'ease_in_out'
+		) {
+			return ApiResponse.badRequest(
+				`${path}.easing must be one of linear, ease_in, ease_out, ease_in_out`
+			)
+		}
+
+		if (type === 'object_avoidance') {
+			if (
+				typeof transition.objectAvoidance !== 'undefined' &&
+				!isRecord(transition.objectAvoidance)
+			) {
+				return ApiResponse.badRequest(
+					`${path}.objectAvoidance must be an object when provided`
+				)
+			}
+
+			const objectAvoidance = isRecord(transition.objectAvoidance)
+				? transition.objectAvoidance
+				: {}
+
+			const clearance = objectAvoidance.clearance
+			const arcHeight = objectAvoidance.arcHeight
+			const samples = objectAvoidance.samples
+			const tension = objectAvoidance.tension
+
+			if (
+				typeof clearance !== 'undefined' &&
+				(typeof clearance !== 'number' || !Number.isFinite(clearance))
+			) {
+				return ApiResponse.badRequest(
+					`${path}.objectAvoidance.clearance must be a number`
+				)
+			}
+
+			if (
+				typeof arcHeight !== 'undefined' &&
+				(typeof arcHeight !== 'number' || !Number.isFinite(arcHeight))
+			) {
+				return ApiResponse.badRequest(
+					`${path}.objectAvoidance.arcHeight must be a number`
+				)
+			}
+
+			if (
+				typeof samples !== 'undefined' &&
+				(typeof samples !== 'number' ||
+					!Number.isFinite(samples) ||
+					samples < 2)
+			) {
+				return ApiResponse.badRequest(
+					`${path}.objectAvoidance.samples must be a number >= 2`
+				)
+			}
+
+			if (
+				typeof tension !== 'undefined' &&
+				(typeof tension !== 'number' || !Number.isFinite(tension))
+			) {
+				return ApiResponse.badRequest(
+					`${path}.objectAvoidance.tension must be a number`
+				)
+			}
+
+			return {
+				...transition,
+				type,
+				objectAvoidance: {
+					clearance: typeof clearance === 'number' ? clearance : 2,
+					arcHeight: typeof arcHeight === 'number' ? arcHeight : 2,
+					samples: typeof samples === 'number' ? samples : 24,
+					tension: typeof tension === 'number' ? tension : 0.5
+				}
+			}
+		}
+
+		return transition
 	}
 
 	/**

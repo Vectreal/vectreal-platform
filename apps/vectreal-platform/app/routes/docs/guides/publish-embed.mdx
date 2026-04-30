@@ -69,6 +69,8 @@ Requests from unlisted domains receive a `403 Forbidden` response.
 
 After publishing, copy the embed snippet from the **Embed** section in the publish sidebar or from the scene detail page in the dashboard.
 
+The hosted preview iframe can also be controlled from the parent page over `postMessage`. Use the standard snippet first, then add the advanced host-page control flow described below if you need synchronized camera changes, scroll-driven scenes, or temporary controls locking.
+
 **Responsive 16:9 snippet:**
 
 ```html
@@ -94,6 +96,104 @@ After publishing, copy the embed snippet from the **Embed** section in the publi
   loading="lazy"
 ></iframe>
 ```
+
+---
+
+## Advanced control
+
+Hosted preview iframes support a small `postMessage` protocol layered on top of the standard preview routes.
+
+### Message sources
+
+| Source | Direction | Meaning |
+|---|---|---|
+| `vectreal-host` | Parent page → iframe | A trusted host page command or trigger update |
+| `vectreal-preview` | Iframe → parent page | A viewer lifecycle event or emitted interaction event |
+
+### Host to preview messages
+
+| Type | Payload | Effect |
+|---|---|---|
+| `viewer_command` | `command: { type: 'activate_camera', cameraId: string }` | Activates one persisted scene camera |
+| `viewer_command` | `command: { type: 'set_controls_enabled', enabled: boolean }` | Temporarily enables or disables viewer orbit interaction |
+| `host_scroll_progress` | `progress: number` | Reports normalized host scroll progress used by persisted `host_scroll_progress` interactions |
+| `host_message` | `message: string` | Triggers persisted `host_message` interactions by message name |
+
+### Preview to host messages
+
+| Type | Payload | Meaning |
+|---|---|---|
+| `viewer_event` | `event: { type: 'viewer_ready' }` | The hosted preview is ready to receive viewer commands |
+| `viewer_event` | `event: { type: 'initial_framing_completed', cameraId: string \| null }` | Initial framing and stabilization has completed |
+| `viewer_event` | `event: { type: 'camera_changed', cameraId: string }` | The active scene camera changed |
+| `interaction_event` | `eventName`, optional `payload`, optional `interactionId` | A persisted `emit_custom_event` interaction fired |
+
+### Plain HTML example
+
+```html
+<div style="position:relative;padding-top:56.25%;width:100%">
+  <iframe
+    id="vectreal-preview"
+    src="https://vectreal.com/preview/fullscreen/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
+    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
+    allow="autoplay; xr-spatial-tracking"
+    loading="lazy"
+  ></iframe>
+</div>
+
+<script>
+  const iframe = document.getElementById('vectreal-preview')
+  const targetOrigin = 'https://vectreal.com'
+
+  window.addEventListener('message', (event) => {
+    if (event.origin !== targetOrigin) return
+    if (event.data?.source !== 'vectreal-preview') return
+
+    console.log('Vectreal preview event', event.data)
+  })
+
+  function activateCamera(cameraId) {
+    iframe.contentWindow?.postMessage(
+      {
+        source: 'vectreal-host',
+        type: 'viewer_command',
+        command: { type: 'activate_camera', cameraId }
+      },
+      targetOrigin
+    )
+  }
+
+  function setControlsEnabled(enabled) {
+    iframe.contentWindow?.postMessage(
+      {
+        source: 'vectreal-host',
+        type: 'viewer_command',
+        command: { type: 'set_controls_enabled', enabled }
+      },
+      targetOrigin
+    )
+  }
+
+  function reportScrollProgress(progress) {
+    iframe.contentWindow?.postMessage(
+      {
+        source: 'vectreal-host',
+        type: 'host_scroll_progress',
+        progress
+      },
+      targetOrigin
+    )
+  }
+</script>
+```
+
+### Behavior notes
+
+- This protocol is only available on hosted preview routes such as `/preview/fullscreen/:projectId/:sceneId`.
+- Preview API keys and allowed embed domains still gate access before the iframe loads.
+- `set_controls_enabled` only affects runtime interactivity in the current viewer session. It does not rewrite persisted `controlsOptions` defaults.
+- `host_scroll_progress` should be normalized to the `[0, 1]` range. The hosted preview bridge only re-fires range-based interactions when progress re-enters a configured range.
+- `host_message` is intended for named host-driven triggers such as `next-step`, `open-details`, or `focus-product`.
 
 ---
 

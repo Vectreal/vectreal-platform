@@ -9,6 +9,11 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
+import { Separator } from '@shared/components/ui/separator'
+import {
+	ToggleGroup,
+	ToggleGroupItem
+} from '@shared/components/ui/toggle-group'
 import {
 	EnvironmentKey,
 	EnvironmentProps,
@@ -45,7 +50,7 @@ const ENVIRONMENT_PRESETS: EnvironmentKey[] = [
 
 const GROUPED_ENVIRONMENT_PRESETS = ENVIRONMENT_PRESETS.reduce(
 	(acc, preset) => {
-		const category = preset.split('-')[0] // Get the category from the preset name
+		const category = preset.split('-')[0]
 		if (!acc[category]) {
 			acc[category] = []
 		}
@@ -55,7 +60,7 @@ const GROUPED_ENVIRONMENT_PRESETS = ENVIRONMENT_PRESETS.reduce(
 	{} as Record<string, EnvironmentKey[]>
 )
 
-const ENVIRONMENT_RESOLUTIONS: EnvironmentResolution[] = ['1k', '4k']
+// const ENVIRONMENT_RESOLUTIONS: EnvironmentResolution[] = ['1k', '4k']
 
 const EnvironmentSettings = () => {
 	const [environment, setEnvironment] = useAtom(environmentAtom)
@@ -74,152 +79,146 @@ const EnvironmentSettings = () => {
 
 	return (
 		<div className="space-y-4">
-			<p className="px-2">
-				Configure the scene environment and lighting settings.
-			</p>
-			<small className="text-muted-foreground/75 mb-6 mt-2 block px-2">
-				Environment settings affect how your model appears through lighting,
-				reflections, and background elements.
-			</small>
+			<div className="flex items-center justify-between gap-2">
+				<p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+					HDR Environment
+				</p>
+				<InfoTooltip content="Controls scene lighting and background, affecting reflections and model appearance." />
+			</div>
+			<Separator />
 
-			<div className="bg-muted/50 space-y-4 rounded-xl p-4">
-				<div className="flex items-center gap-2">
-					<p className="text-lg font-medium">Environment</p>
-					<InfoTooltip content="Controls scene lighting and background, affecting reflections and model appearance." />
-				</div>
-
-				<Label>HDR Preset</Label>
-				<div className="grid grid-cols-[4fr_1fr] gap-2">
-					<Select
-						value={environment.preset}
-						onValueChange={(value) => {
-							handleEnvironmentChange('preset', value as EnvironmentKey)
-						}}
-					>
-						<SelectTrigger className="w-full capitalize">
-							<SelectValue placeholder="Select Environment Preset" />
-						</SelectTrigger>
-						<SelectContent>
-							{Object.entries(GROUPED_ENVIRONMENT_PRESETS).map(
-								([group, presets]) => (
-									<SelectGroup key={group}>
-										<SelectLabel className="capitalize">{group}</SelectLabel>
-										{presets.map((preset) => (
-											<SelectItem
-												key={preset}
-												value={preset}
-												className="capitalize"
-											>
-												{preset.toString().split('-').slice(1).join(' ')}
-											</SelectItem>
-										))}
-										<SelectSeparator />
-									</SelectGroup>
-								)
-							)}
-						</SelectContent>
-					</Select>
-					<Select
-						value={environment.environmentResolution}
-						onValueChange={(value) => {
+			<Label>HDR Preset</Label>
+			<div className="grid grid-cols-[4fr_1fr] gap-2">
+				<Select
+					value={environment.preset}
+					onValueChange={(value) => {
+						handleEnvironmentChange('preset', value as EnvironmentKey)
+					}}
+				>
+					<SelectTrigger className="w-full capitalize">
+						<SelectValue placeholder="Select Environment Preset" />
+					</SelectTrigger>
+					<SelectContent>
+						{Object.entries(GROUPED_ENVIRONMENT_PRESETS).map(
+							([group, presets]) => (
+								<SelectGroup key={group}>
+									<SelectLabel className="capitalize">{group}</SelectLabel>
+									{presets.map((preset) => (
+										<SelectItem
+											key={preset}
+											value={preset}
+											className="capitalize"
+										>
+											{preset.toString().split('-').slice(1).join(' ')}
+										</SelectItem>
+									))}
+									<SelectSeparator />
+								</SelectGroup>
+							)
+						)}
+					</SelectContent>
+				</Select>
+				<ToggleGroup
+					type="single"
+					value={environment.environmentResolution ?? '1k'}
+					onValueChange={(value) => {
+						if (value)
 							handleEnvironmentChange(
 								'environmentResolution',
 								value as EnvironmentResolution
 							)
-						}}
-					>
-						<SelectTrigger className="w-full capitalize">
-							<SelectValue placeholder="Select Environment Resolution" />
-						</SelectTrigger>
-						<SelectContent>
-							{ENVIRONMENT_RESOLUTIONS.map((option) => (
-								<SelectItem key={option} value={option} className="capitalize">
-									{option}{' '}
-									<small className="text-muted-foreground text-xs">
-										{option === '1k' ? '~1MB' : '~20MB'}
-									</small>
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-
-				<EnhancedSettingSlider
-					id="environment-intensity"
-					sliderProps={{
-						min: 0,
-						max: 5,
-						step: 0.01,
-						value: environment.environmentIntensity || 1,
-						onChange: (value) =>
-							handleEnvironmentChange('environmentIntensity', value)
 					}}
-					label="Environment Intensity"
-					tooltip="Controls how bright the environment map appears, affecting lighting and reflections."
-					labelProps={{
-						low: '0 - Off',
-						high: '5 - Very Bright'
-					}}
-					formatValue={(value) => value.toFixed(2)}
-					valueMapping={valueMappings.quadratic}
-					allowDirectInput={true}
-				/>
-
-				<SettingToggle
-					enabled={!!environment.background}
-					onToggle={(enabled) =>
-						setEnvironment((prev) => ({
-							...prev,
-							background: enabled
-						}))
-					}
-					title="Show as background"
-					description="Display the environment map as the background of the scene."
-					info="This will set the environment map as the background of the scene, allowing it to be visible behind the model."
-				/>
-
-				<EnhancedSettingSlider
-					enabled={!!environment.background}
-					id="environment-blur"
-					sliderProps={{
-						min: 0,
-						max: 1,
-						step: 0.01,
-						value: environment.backgroundBlurriness || 0,
-						onChange: (value) =>
-							handleEnvironmentChange('backgroundBlurriness', value)
-					}}
-					label="Background Blurriness"
-					tooltip="Controls the blurriness of the background when environment is visible."
-					labelProps={{
-						low: '0 - Sharp',
-						high: '1 - Fully Blurred'
-					}}
-					formatValue={(value) => value.toFixed(2)}
-					allowDirectInput={true}
-				/>
-				<EnhancedSettingSlider
-					enabled={!!environment.background}
-					id="background-intensity"
-					sliderProps={{
-						min: 0,
-						max: 3,
-						step: 0.01,
-						value: environment.backgroundIntensity || 1,
-						onChange: (value) =>
-							handleEnvironmentChange('backgroundIntensity', value)
-					}}
-					label="Background Intensity"
-					tooltip="Controls the brightness of the background when environment is visible."
-					labelProps={{
-						low: '0 - Off',
-						high: '3 - Very Bright'
-					}}
-					formatValue={(value) => value.toFixed(2)}
-					valueMapping={valueMappings.quadratic}
-					allowDirectInput={true}
-				/>
+					variant="outline"
+					className="h-9"
+				>
+					<ToggleGroupItem value="1k" className="px-3 text-xs">
+						1k
+					</ToggleGroupItem>
+					<ToggleGroupItem value="4k" className="px-3 text-xs">
+						4k
+					</ToggleGroupItem>
+				</ToggleGroup>
 			</div>
+
+			<EnhancedSettingSlider
+				id="environment-intensity"
+				sliderProps={{
+					min: 0,
+					max: 5,
+					step: 0.01,
+					value: environment.environmentIntensity || 1,
+					onChange: (value) =>
+						handleEnvironmentChange('environmentIntensity', value)
+				}}
+				label="Lighting Strength"
+				tooltip="Controls how bright the environment map appears, affecting lighting and reflections."
+				labelProps={{
+					low: '0 - Off',
+					high: '5 - Very Bright'
+				}}
+				formatValue={(value) => value.toFixed(2)}
+				valueMapping={valueMappings.quadratic}
+				allowDirectInput={true}
+			/>
+
+			<p className="text-muted-foreground pt-1 text-xs font-medium">
+				Background
+			</p>
+
+			<SettingToggle
+				enabled={!!environment.background}
+				onToggle={(enabled) =>
+					setEnvironment((prev) => ({
+						...prev,
+						background: enabled
+					}))
+				}
+				title="Show as background"
+				description="Display the environment map as the background of the scene."
+				info="This will set the environment map as the background of the scene, allowing it to be visible behind the model."
+			/>
+
+			<EnhancedSettingSlider
+				enabled={!!environment.background}
+				id="environment-blur"
+				sliderProps={{
+					min: 0,
+					max: 1,
+					step: 0.01,
+					value: environment.backgroundBlurriness || 0,
+					onChange: (value) =>
+						handleEnvironmentChange('backgroundBlurriness', value)
+				}}
+				label="Background Blur"
+				tooltip="Controls the blurriness of the background when environment is visible."
+				labelProps={{
+					low: '0 - Sharp',
+					high: '1 - Fully Blurred'
+				}}
+				formatValue={(value) => value.toFixed(2)}
+				allowDirectInput={true}
+			/>
+			<EnhancedSettingSlider
+				enabled={!!environment.background}
+				id="background-intensity"
+				sliderProps={{
+					min: 0,
+					max: 3,
+					step: 0.01,
+					value: environment.backgroundIntensity || 1,
+					onChange: (value) =>
+						handleEnvironmentChange('backgroundIntensity', value)
+				}}
+				label="Background Brightness"
+				tooltip="Controls the brightness of the background when environment is visible."
+				labelProps={{
+					low: '0 - Off',
+					high: '3 - Very Bright'
+				}}
+				formatValue={(value) => value.toFixed(2)}
+				valueMapping={valueMappings.quadratic}
+				allowDirectInput={true}
+			/>
 		</div>
 	)
 }

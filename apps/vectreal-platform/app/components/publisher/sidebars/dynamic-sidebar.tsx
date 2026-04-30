@@ -143,12 +143,12 @@ export const DynamicSidebar = ({
 						variants={variants}
 						transition={{ type: 'tween', ease: 'easeInOut', duration: 0.3 }}
 						className={cn(
-							'bg-muted/50 relative z-20 h-full w-[23rem] flex-col overflow-hidden rounded-xl border shadow-xl backdrop-blur-2xl',
+							'bg-muted/50 relative z-20 flex h-full w-[23rem] flex-col overflow-hidden rounded-xl border shadow-xl backdrop-blur-2xl',
 							className
 						)}
 					>
 						{showDesktopHeader && (
-							<div className="flex shrink-0 items-start justify-between border-b px-3 py-3">
+							<div className="flex shrink-0 items-start justify-between border-b px-4 py-4">
 								<div>
 									<p className="text-sm font-semibold">{title}</p>
 									{description && (
@@ -168,9 +168,7 @@ export const DynamicSidebar = ({
 							</div>
 						)}
 
-						<div className="flex h-[93.5%] min-h-0 flex-1 flex-col">
-							{children}
-						</div>
+						<div className="flex min-h-0 flex-1 flex-col">{children}</div>
 					</motion.div>
 				)}
 			</AnimatePresence>

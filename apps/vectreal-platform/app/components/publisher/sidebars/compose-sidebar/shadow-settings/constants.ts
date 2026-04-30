@@ -25,11 +25,11 @@ export interface FieldConfig {
 export const ACCUMULATIVE_FIELDS: FieldConfig[] = [
 	{
 		key: 'frames',
-		label: 'Frames',
+		label: 'Sample Count',
 		min: 1,
 		max: 100,
 		step: 1,
-		tooltip: 'Number of frames to accumulate for soft shadows.',
+		tooltip: 'Number of sample frames accumulated to produce soft shadows. Higher values produce softer shadows but are slower to compute.',
 		formatValue: (value) => value.toFixed(0),
 		valueMapping: valueMappings.quadratic
 	},

@@ -1,10 +1,13 @@
 import {
 	buildAssetLookupKeys,
 	isValidBase64,
+	normalizeCameraSettings,
+	normalizeSceneInteractions,
 	normalizeAssetUri
 } from '@vctrl/core'
 
 import type {
+	CameraProps,
 	SceneSettings,
 	SerializedSceneAssetDataMap,
 	ServerSceneData,
@@ -19,11 +22,17 @@ function toSceneSettings(payload: ServerScenePayload): SceneSettings {
 	const nestedSettings = isRecord(payload.settings)
 		? (payload.settings as SceneSettings)
 		: {}
+	const resolvedCamera = normalizeCameraSettings(
+		(payload.camera ?? nestedSettings.camera) as CameraProps | undefined
+	)
 
 	return {
 		...nestedSettings,
 		bounds: payload.bounds ?? nestedSettings.bounds,
-		camera: payload.camera ?? nestedSettings.camera,
+		camera: resolvedCamera,
+		interactions: normalizeSceneInteractions(nestedSettings.interactions, {
+			camera: resolvedCamera
+		}),
 		controls: payload.controls ?? nestedSettings.controls,
 		environment: payload.environment ?? nestedSettings.environment,
 		shadows: payload.shadows ?? nestedSettings.shadows

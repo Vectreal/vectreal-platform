@@ -11,10 +11,12 @@ import {
 	DynamicSidebar,
 	InfoBanner,
 	SaveButton,
+	SceneNameAndLocation,
 	SceneInfoTrigger,
 	ToolSidebar
 } from '.'
 import OptimizationModal from './optimization-modal'
+import { usePublisherViewerCapture } from './publisher-viewer-capture-context'
 import { useOptimizationModalFlow, useSceneLoader } from '../../hooks'
 import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
@@ -62,9 +64,10 @@ const OverlayControls = ({
 	useSceneSizeInitializer()
 
 	// Save location comes from the Jotai atom — initialized in publisher-layout
-	// and updated by SceneNameAndLocation picker in the sidebar
+	// and updated by the shell-level SceneNameAndLocation picker.
 	const saveLocationTarget = useAtomValue(saveLocationAtom)
 	const { hasUnsavedLocationChange } = useLocationChangeState()
+	const { requestSceneScreenshot } = usePublisherViewerCapture()
 
 	// Centralized scene loader — single source of truth (must be inside ModelProvider)
 	const { saveSceneSettings, saveAvailability, persistPendingSceneDraft } =
@@ -72,7 +75,8 @@ const OverlayControls = ({
 			sceneId,
 			userId: user?.id,
 			initialSceneAggregate: sceneAggregate as SceneAggregateResponse | null,
-			sceneMeta: sceneAggregate?.meta ?? null
+			sceneMeta: sceneAggregate?.meta ?? null,
+			requestSceneScreenshot
 		})
 
 	const {
@@ -234,7 +238,21 @@ const OverlayControls = ({
 		<Navigation user={user} />
 	) : (
 		<>
-			<FloatingPillWrapper className="bg-muted/50 fixed top-0 right-0 z-20 m-4 rounded-2xl p-1 backdrop-blur-2xl">
+			<div className="fixed top-0 left-1/2 z-30 hidden w-[min(30rem,calc(100vw-22rem))] -translate-x-1/2 px-4 pt-3 md:block">
+				<SceneNameAndLocation
+					authenticated={!!user}
+					className="border-border/60 bg-muted/60 rounded-2xl border px-1 shadow-2xl backdrop-blur-2xl"
+				/>
+			</div>
+
+			<div className="fixed inset-x-0 top-0 z-30 px-4 pt-[4.25rem] md:hidden">
+				<SceneNameAndLocation
+					authenticated={!!user}
+					className="border-border/60 bg-muted/60 rounded-2xl border px-1 shadow-2xl backdrop-blur-2xl"
+				/>
+			</div>
+
+			<FloatingPillWrapper className="bg-muted/50 fixed top-0 right-0 z-20 m-4 hidden rounded-2xl p-1 backdrop-blur-2xl md:flex">
 				<ButtonGroup className="items-center">
 					<SaveButton
 						sceneId={sceneId}
@@ -272,6 +290,28 @@ const OverlayControls = ({
 						sceneDetailsHref={sceneDetailsHref}
 					/>
 				)}
+			</FloatingPillWrapper>
+
+			<FloatingPillWrapper className="bg-muted/50 fixed top-0 right-0 z-50 m-4 flex rounded-2xl p-1 backdrop-blur-2xl md:hidden">
+				<ButtonGroup className="items-center gap-1">
+					<SaveButton
+						sceneId={sceneId}
+						userId={user?.id}
+						saveLocationTarget={saveLocationTarget}
+						saveAvailability={effectiveSaveAvailability}
+						onRequireAuth={handleRequireAuthForSave}
+						saveSceneSettings={saveSceneSettings}
+						compact
+					/>
+					{user ? (
+						<UserMenu
+							size="sm"
+							user={user}
+							onLogout={handleLogout}
+							sceneDetailsHref={sceneDetailsHref}
+						/>
+					) : null}
+				</ButtonGroup>
 			</FloatingPillWrapper>
 			<SceneInfoTrigger onClick={handleOpenPublishPanel} />
 			<DynamicSidebar

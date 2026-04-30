@@ -3,6 +3,7 @@ import {
 	CameraProps,
 	ControlsProps,
 	EnvironmentProps,
+	SceneSettings,
 	ShadowsProps
 } from '@vctrl/core'
 import { sql } from 'drizzle-orm'
@@ -34,6 +35,7 @@ export const sceneSettings = pgTable(
 		camera: json('camera').$type<CameraProps>(), // cameraAtom data
 		controls: json('controls').$type<ControlsProps>(), // controlsAtom data
 		environment: json('environment').$type<EnvironmentProps>(), // environmentAtom data
+		interactions: json('interactions').$type<SceneSettings['interactions']>(), // interactionsAtom data
 		shadows: json('shadows').$type<ShadowsProps>(), // shadowsAtom data
 
 		// Audit fields

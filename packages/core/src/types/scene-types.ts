@@ -32,6 +32,7 @@ import type {
 	SimplifyOptions,
 	TextureCompressOptions
 } from '../model-optimizer'
+import type { SceneInteractionDefinition } from './interaction-types'
 
 /**
  * Configuration for animating camera transitions in the 3D scene.
@@ -42,20 +43,91 @@ interface CameraAnimationConfig {
 }
 
 /**
+ * Transition mode when switching between two camera states.
+ */
+export type CameraTransitionType = 'linear' | 'object_avoidance' | 'none'
+
+/**
+ * Optional easing presets for serializable transition definitions.
+ */
+export type CameraTransitionEasing =
+	| 'linear'
+	| 'ease_in'
+	| 'ease_out'
+	| 'ease_in_out'
+
+/**
+ * Object-avoidance transition parameters.
+ */
+export interface CameraObjectAvoidanceConfig {
+	/**
+	 * Adds additional radius around the avoidance sphere.
+	 */
+	clearance?: number
+	/**
+	 * Relative arc height used to build spline control points.
+	 */
+	arcHeight?: number
+	/**
+	 * Number of interpolation samples along the spline.
+	 */
+	samples?: number
+	/**
+	 * Catmull-Rom tension parameter.
+	 */
+	tension?: number
+}
+
+/**
+ * Transition configuration for camera-state switches.
+ */
+export interface CameraTransitionConfig {
+	type: CameraTransitionType
+	duration?: number
+	easing?: CameraTransitionEasing
+	objectAvoidance?: CameraObjectAvoidanceConfig
+}
+
+/**
+ * A named camera state option for a camera.
+ */
+export type CameraStateConfig = PerspectiveCameraProps & {
+	stateId: string
+	name: string
+	initial?: boolean
+	target?: [number, number, number]
+	transition?: CameraTransitionConfig
+}
+
+/**
  * Configuration for a camera in the 3D scene.
  */
 type CameraConfig = PerspectiveCameraProps & {
 	cameraId: string
 	name: string
 	initial?: boolean // Indicates if this camera should be the default view when the scene loads
+	target?: [number, number, number]
+	/**
+	 * Transition used when switching to this camera.
+	 */
+	transition?: CameraTransitionConfig
+	/**
+	 * Legacy compatibility fields. New writes should use flat camera entries only.
+	 */
 	shouldAnimate?: boolean // Indicates if the camera should animate to its position on activation
 	animationConfig?: CameraAnimationConfig // Optional configuration for camera animation
+	states?: CameraStateConfig[]
+	activeStateId?: string
 }
 
 /**
  * Props for configuring the camera in a 3D scene.
  */
 export interface CameraProps {
+	/**
+	 * Canonical active camera selection.
+	 */
+	activeCameraId?: string
 	cameras?: CameraConfig[]
 }
 
@@ -169,8 +241,7 @@ export interface ShadowTypePropBase {
  * Props for Accumulative Shadows.
  */
 export interface AccumulativeShadowsProps
-	extends ShadowTypePropBase,
-		ThreeAccumulativeShadowsProps {
+	extends ShadowTypePropBase, ThreeAccumulativeShadowsProps {
 	type: 'accumulative'
 	light?: RandomizedLightProps
 }
@@ -179,8 +250,7 @@ export interface AccumulativeShadowsProps
  * Props for Contact Shadows.
  */
 export interface ContactShadowProps
-	extends ShadowTypePropBase,
-		ThreeContactShadowsProps {
+	extends ShadowTypePropBase, ThreeContactShadowsProps {
 	type: 'contact'
 }
 
@@ -198,6 +268,8 @@ export interface SceneSettings {
 	bounds?: BoundsProps
 	/** Camera settings */
 	camera?: CameraProps
+	/** Declarative scene interactions */
+	interactions?: SceneInteractionDefinition[]
 	/** Camera controls configuration */
 	controls?: ControlsProps
 	/** Environment/lighting configuration */
@@ -269,8 +341,7 @@ export interface ServerSceneData extends SceneSettings {
 }
 
 export interface TextureOptimization
-	extends BaseOptimization<'texture'>,
-		TextureCompressOptions {}
+	extends BaseOptimization<'texture'>, TextureCompressOptions {}
 
 export type OptimizationNames =
 	| 'simplification'
@@ -285,20 +356,16 @@ export interface BaseOptimization<Name = OptimizationNames> {
 }
 
 export interface SimplificationOptimization
-	extends BaseOptimization<'simplification'>,
-		SimplifyOptions {}
+	extends BaseOptimization<'simplification'>, SimplifyOptions {}
 
 export interface QuantizeOptimization
-	extends BaseOptimization<'quantize'>,
-		QuantizeOptions {}
+	extends BaseOptimization<'quantize'>, QuantizeOptions {}
 
 export interface DedupOptimization
-	extends BaseOptimization<'dedup'>,
-		DedupOptions {}
+	extends BaseOptimization<'dedup'>, DedupOptions {}
 
 export interface NormalsOptimization
-	extends BaseOptimization<'normals'>,
-		NormalsOptions {}
+	extends BaseOptimization<'normals'>, NormalsOptions {}
 
 export type Optimizations = {
 	simplification: SimplificationOptimization

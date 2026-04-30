@@ -11,6 +11,7 @@ import type { SceneSettings } from '@vctrl/core'
 const processInitialState: ProcessState = {
 	step: 'uploading',
 	mode: 'optimize',
+	activeComposeTool: 'environment',
 	showSidebar: false,
 	showPublishPanel: false,
 	isInitializing: false,
@@ -77,10 +78,14 @@ const showSidebarAtom = selectAtom(processAtom, (state) => state.showSidebar)
 const toolSidebarStateAtom = selectAtom(
 	processAtom,
 	(state) => ({
+		activeComposeTool: state.activeComposeTool,
 		mode: state.mode,
 		showSidebar: state.showSidebar
 	}),
-	(a, b) => a.mode === b.mode && a.showSidebar === b.showSidebar
+	(a, b) =>
+		a.activeComposeTool === b.activeComposeTool &&
+		a.mode === b.mode &&
+		a.showSidebar === b.showSidebar
 )
 
 const controlsOverlayStateAtom = selectAtom(

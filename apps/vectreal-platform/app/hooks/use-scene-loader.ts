@@ -50,12 +50,13 @@ import {
 	cameraAtom,
 	controlsAtom,
 	environmentAtom,
+	interactionsAtom,
 	shadowsAtom
 } from '../lib/stores/scene-settings-store'
-import { requestSceneScreenshot } from '../lib/viewer/scene-screenshot-bus'
 
 import type { SceneAggregateResponse } from '../types/api'
 import type { SceneMetaState } from '../types/publisher-config'
+import type { SceneScreenshotOptions } from '@vctrl/viewer'
 
 export type {
 	SaveLocationTarget,
@@ -72,6 +73,9 @@ export interface UseSceneLoaderParams {
 	userId?: string
 	initialSceneAggregate?: SceneAggregateResponse | null
 	sceneMeta?: SceneMetaState | null
+	requestSceneScreenshot?: (
+		options?: SceneScreenshotOptions
+	) => Promise<null | string>
 }
 
 const DEFAULT_MAX_CONCURRENT_SCENE_ASSET_UPLOADS = 4
@@ -98,13 +102,15 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		sceneId: paramSceneId,
 		userId,
 		initialSceneAggregate = null,
-		sceneMeta = null
+		sceneMeta = null,
+		requestSceneScreenshot
 	} = params === null
 		? {
 				sceneId: null,
 				userId: undefined,
 				initialSceneAggregate: null,
-				sceneMeta: null
+				sceneMeta: null,
+				requestSceneScreenshot: undefined
 			}
 		: params
 
@@ -170,6 +176,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	// Scene state atoms
 	const [bounds, setBounds] = useAtom(boundsAtom)
 	const [environment, setEnv] = useAtom(environmentAtom)
+	const [interactions, setInteractions] = useAtom(interactionsAtom)
 	const [camera, setCamera] = useAtom(cameraAtom)
 	const [controls, setControls] = useAtom(controlsAtom)
 	const [shadows, setShadows] = useAtom(shadowsAtom)
@@ -256,6 +263,10 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	const captureSceneThumbnail = useCallback(async (): Promise<
 		null | string
 	> => {
+		if (!requestSceneScreenshot) {
+			return null
+		}
+
 		try {
 			return await requestSceneScreenshot(DEFAULT_THUMBNAIL_CAPTURE_OPTIONS)
 		} catch (error) {
@@ -265,23 +276,25 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			})
 			return null
 		}
-	}, [currentSceneId])
+	}, [currentSceneId, requestSceneScreenshot])
 
 	// Get current settings from atoms
 	const currentSettings: SceneSettings = useMemo(
 		() => ({
 			bounds,
 			environment,
+			interactions,
 			camera,
 			controls,
 			shadows
 		}),
-		[bounds, environment, camera, controls, shadows]
+		[bounds, environment, interactions, camera, controls, shadows]
 	)
 
 	const resetSceneState = useCallback(() => {
 		setBounds(defaultBoundsOptions)
 		setEnv(defaultEnvOptions)
+		setInteractions(undefined)
 		setCamera(defaultCameraOptions)
 		setControls(defaultControlsOptions)
 		setShadows(defaultShadowOptions)
@@ -422,6 +435,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		(settings: SceneSettings) => {
 			setBounds(settings.bounds || defaultBoundsOptions)
 			setEnv(settings.environment || defaultEnvOptions)
+			setInteractions(settings.interactions)
 			setCamera(settings.camera || defaultCameraOptions)
 			setControls(settings.controls || defaultControlsOptions)
 			setShadows(settings.shadows || defaultShadowOptions)
@@ -429,13 +443,14 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			const loadedSettings: SceneSettings = {
 				bounds: settings.bounds || defaultBoundsOptions,
 				environment: settings.environment || defaultEnvOptions,
+				interactions: settings.interactions,
 				camera: settings.camera || defaultCameraOptions,
 				controls: settings.controls || defaultControlsOptions,
 				shadows: settings.shadows || defaultShadowOptions
 			}
 			setLastSavedSettings(loadedSettings)
 		},
-		[setBounds, setCamera, setControls, setEnv, setShadows]
+		[setBounds, setCamera, setControls, setEnv, setInteractions, setShadows]
 	)
 
 	const hydrateOptimizationState = useCallback(

@@ -425,6 +425,7 @@ class SceneSettingsService {
 				camera: settings.camera ?? undefined,
 				controls: settings.controls ?? undefined,
 				environment: settings.environment ?? undefined,
+				interactions: settings.interactions ?? undefined,
 				shadows: settings.shadows ?? undefined
 			},
 			assets: sceneAssetsData,
@@ -742,6 +743,8 @@ class SceneSettingsService {
 			JSON.stringify(current.controls) !== JSON.stringify(existing.controls) ||
 			JSON.stringify(current.environment) !==
 				JSON.stringify(existing.environment) ||
+			JSON.stringify(current.interactions) !==
+				JSON.stringify(existing.interactions) ||
 			JSON.stringify(current.shadows) !== JSON.stringify(existing.shadows)
 		)
 	}
