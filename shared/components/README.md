@@ -11,7 +11,6 @@ This package primarily re-exports shadcn-based UI primitives with project-specif
 - `useAcceptPattern(isMobileDefault?)`
 - `useIsAtTop(margin?)`
 - `useIsMobile(initial?)`
-- `useSceneScreenshot()`
 
 ### UI
 

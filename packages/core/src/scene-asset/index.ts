@@ -1,5 +1,7 @@
 import type { SceneAssetDataEntry } from '../types'
 
+export { normalizeCameraSettings } from './normalize-camera-settings'
+
 /**
  * Normalizes a resource URI used in glTF references.
  *

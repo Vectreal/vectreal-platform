@@ -32,6 +32,7 @@ import type {
 	SimplifyOptions,
 	TextureCompressOptions
 } from '../model-optimizer'
+import type { SceneInteractionDefinition } from './interaction-types'
 
 /**
  * Configuration for animating camera transitions in the 3D scene.
@@ -240,8 +241,7 @@ export interface ShadowTypePropBase {
  * Props for Accumulative Shadows.
  */
 export interface AccumulativeShadowsProps
-	extends ShadowTypePropBase,
-		ThreeAccumulativeShadowsProps {
+	extends ShadowTypePropBase, ThreeAccumulativeShadowsProps {
 	type: 'accumulative'
 	light?: RandomizedLightProps
 }
@@ -250,8 +250,7 @@ export interface AccumulativeShadowsProps
  * Props for Contact Shadows.
  */
 export interface ContactShadowProps
-	extends ShadowTypePropBase,
-		ThreeContactShadowsProps {
+	extends ShadowTypePropBase, ThreeContactShadowsProps {
 	type: 'contact'
 }
 
@@ -269,6 +268,8 @@ export interface SceneSettings {
 	bounds?: BoundsProps
 	/** Camera settings */
 	camera?: CameraProps
+	/** Declarative scene interactions */
+	interactions?: SceneInteractionDefinition[]
 	/** Camera controls configuration */
 	controls?: ControlsProps
 	/** Environment/lighting configuration */
@@ -340,8 +341,7 @@ export interface ServerSceneData extends SceneSettings {
 }
 
 export interface TextureOptimization
-	extends BaseOptimization<'texture'>,
-		TextureCompressOptions {}
+	extends BaseOptimization<'texture'>, TextureCompressOptions {}
 
 export type OptimizationNames =
 	| 'simplification'
@@ -356,20 +356,16 @@ export interface BaseOptimization<Name = OptimizationNames> {
 }
 
 export interface SimplificationOptimization
-	extends BaseOptimization<'simplification'>,
-		SimplifyOptions {}
+	extends BaseOptimization<'simplification'>, SimplifyOptions {}
 
 export interface QuantizeOptimization
-	extends BaseOptimization<'quantize'>,
-		QuantizeOptions {}
+	extends BaseOptimization<'quantize'>, QuantizeOptions {}
 
 export interface DedupOptimization
-	extends BaseOptimization<'dedup'>,
-		DedupOptions {}
+	extends BaseOptimization<'dedup'>, DedupOptions {}
 
 export interface NormalsOptimization
-	extends BaseOptimization<'normals'>,
-		NormalsOptions {}
+	extends BaseOptimization<'normals'>, NormalsOptions {}
 
 export type Optimizations = {
 	simplification: SimplificationOptimization

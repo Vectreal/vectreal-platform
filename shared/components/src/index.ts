@@ -1,7 +1,6 @@
 export * from './hooks/use-accept-pattern'
 export * from './hooks/use-is-at-top'
 export * from './hooks/use-mobile'
-export * from './hooks/use-scene-screenshot'
 
 export * from './ui/accordion'
 export * from './ui/alert'

@@ -34,6 +34,8 @@ export const hasSceneSettingsChanged = (
 		JSON.stringify(current.camera) !== JSON.stringify(baseline.camera) ||
 		JSON.stringify(current.environment) !==
 			JSON.stringify(baseline.environment) ||
+		JSON.stringify(current.interactions) !==
+			JSON.stringify(baseline.interactions) ||
 		JSON.stringify(current.controls) !== JSON.stringify(baseline.controls) ||
 		JSON.stringify(current.shadows) !== JSON.stringify(baseline.shadows)
 	)

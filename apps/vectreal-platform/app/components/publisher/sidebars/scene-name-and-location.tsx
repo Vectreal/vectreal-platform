@@ -1,4 +1,5 @@
 import { Input } from '@shared/components/ui/input'
+import { Separator } from '@shared/components/ui/separator'
 import {
 	Select,
 	SelectContent,
@@ -134,7 +135,7 @@ const SceneNameField = () => {
 			) : (
 				<button
 					onClick={() => setIsEditing(true)}
-					className="text-foreground/90 hover:text-foreground flex w-full items-center border-3 border-transparent px-2 py-1 text-sm transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+					className="text-foreground/90 hover:text-foreground flex w-full items-center rounded-lg border border-transparent px-2 py-1.5 text-sm transition-colors"
 				>
 					<span className="w-full truncate text-left">{sceneName}</span>
 				</button>
@@ -304,7 +305,7 @@ const LocationRow = ({ open, authenticated, onToggle }: LocationRowProps) => {
 		<button
 			onClick={onToggle}
 			className={cn(
-				'text-muted-foreground hover:text-foreground group flex w-full items-center gap-1.5 px-2 py-1 text-xs transition-colors',
+				'text-muted-foreground hover:text-foreground group flex max-w-full min-w-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors',
 				open && 'text-foreground'
 			)}
 			aria-expanded={open}
@@ -340,10 +341,12 @@ const LocationRow = ({ open, authenticated, onToggle }: LocationRowProps) => {
 
 interface SceneNameAndLocationProps {
 	authenticated: boolean
+	className?: string
 }
 
 export function SceneNameAndLocation({
-	authenticated
+	authenticated,
+	className
 }: SceneNameAndLocationProps) {
 	const [locationOpen, setLocationOpen] = useState(false)
 
@@ -370,16 +373,29 @@ export function SceneNameAndLocation({
 	return (
 		<div
 			ref={containerRef}
-			className="bg-muted/50 min-w-0 grow overflow-hidden rounded-xl"
+			className={cn(
+				'bg-muted/50 min-w-0 grow overflow-hidden rounded-xl',
+				className
+			)}
 		>
-			<div className="flex items-center">
-				<SceneNameField />
+			<div className="flex min-w-0 items-center gap-2 px-2 py-1.5">
+				<div className="min-w-0 flex-1">
+					<SceneNameField />
+				</div>
+				{authenticated ? (
+					<>
+						<Separator orientation="vertical" className="h-4 shrink-0" />
+						<div className="max-w-[48%] min-w-0 shrink">
+							<LocationRow
+								open={locationOpen}
+								authenticated={authenticated}
+								onToggle={toggleLocation}
+							/>
+						</div>
+					</>
+				) : null}
 			</div>
-			<LocationRow
-				open={locationOpen}
-				authenticated={authenticated}
-				onToggle={toggleLocation}
-			/>
+			{locationOpen ? <Separator /> : null}
 			{/* Always mounted — LocationPicker's motion.div handles height 0↔auto.
 			    Keeping it mounted preserves fetcher data and avoids remount flicker. */}
 			<LocationPicker open={locationOpen} />

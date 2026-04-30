@@ -16,6 +16,11 @@ import {
 	Vector3Tuple
 } from 'three'
 
+import type {
+	ViewerCommand,
+	ViewerCommandExecutor,
+	ViewerInteractionEvent
+} from '../../types/viewer-interactions'
 import type { SceneCameraSnapshotCapture } from '../../types/viewer-types'
 
 /**
@@ -46,6 +51,8 @@ interface SceneCameraProps extends CameraProps {
 	onCameraSnapshotCaptureReady?: (
 		capture: null | SceneCameraSnapshotCapture
 	) => void
+	onInteractionEvent?: (event: ViewerInteractionEvent) => void
+	onCommandExecutorReady?: (executor: null | ViewerCommandExecutor) => void
 }
 
 type CameraTransitionRuntime = {
@@ -83,7 +90,7 @@ const DEFAULT_OBJECT_AVOIDANCE_TENSION = 0.5
 function hasSerializableVector3(value: unknown): boolean {
 	return (
 		(Array.isArray(value) && value.length >= 3) ||
-		(value instanceof Vector3) ||
+		value instanceof Vector3 ||
 		(typeof value === 'object' &&
 			value !== null &&
 			'x' in value &&
@@ -152,7 +159,9 @@ function toEuler(value: unknown): Euler {
 	return new Euler(0, 0, 0)
 }
 
-function resolveTransition(cameraEntry: NonNullable<CameraProps['cameras']>[number]): CameraTransitionConfig {
+function resolveTransition(
+	cameraEntry: NonNullable<CameraProps['cameras']>[number]
+): CameraTransitionConfig {
 	if (cameraEntry.transition?.type) {
 		return cameraEntry.transition
 	}
@@ -190,10 +199,10 @@ function resolveCameraSelection(
 	sceneCamera: PerspectiveCamera
 ): ResolvedCameraSelection {
 	const selectedCamera =
-		(cameras?.find((camera) => camera.cameraId === activeCameraId) ??
-			cameras?.find((camera) => camera.initial) ??
-			cameras?.[0] ??
-			defaultCameraOptions.cameras?.[0])
+		cameras?.find((camera) => camera.cameraId === activeCameraId) ??
+		cameras?.find((camera) => camera.initial) ??
+		cameras?.[0] ??
+		defaultCameraOptions.cameras?.[0]
 
 	const transition = selectedCamera
 		? resolveTransition(selectedCamera)
@@ -220,13 +229,17 @@ function resolveCameraSelection(
 	const targetPosition = hasPosition
 		? toVector3(selectedCamera?.position, sceneCamera.position)
 		: hasRotation
-			? rawTargetLookAt.clone().sub(forward.clone().multiplyScalar(fallbackOrbitRadius))
+			? rawTargetLookAt
+					.clone()
+					.sub(forward.clone().multiplyScalar(fallbackOrbitRadius))
 			: sceneCamera.position.clone()
 
 	const targetLookAt = hasTarget
 		? rawTargetLookAt
 		: hasPosition && hasRotation
-			? targetPosition.clone().add(forward.clone().multiplyScalar(fallbackOrbitRadius))
+			? targetPosition
+					.clone()
+					.add(forward.clone().multiplyScalar(fallbackOrbitRadius))
 			: rawTargetLookAt
 
 	return {
@@ -291,7 +304,12 @@ function buildObjectAvoidanceCurve(
 }
 
 export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
-	const { onInitialFramingComplete, onCameraSnapshotCaptureReady } = props
+	const {
+		onInitialFramingComplete,
+		onCameraSnapshotCaptureReady,
+		onCommandExecutorReady,
+		onInteractionEvent
+	} = props
 	const { cameras, activeCameraId } = { ...defaultCameraOptions, ...props }
 	const MAX_STABILIZATION_FRAMES = 24
 	const MAX_STABILIZATION_DURATION_MS = 500
@@ -319,8 +337,8 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const previousSelectionKey = useRef<string | null>(null)
 	const previousSelectionSignature = useRef<string | null>(null)
 
-	const captureCameraSnapshot = useCallback<SceneCameraSnapshotCapture>(
-		async () => {
+	const captureCameraSnapshot =
+		useCallback<SceneCameraSnapshotCapture>(async () => {
 			const activeCamera = sceneCamera as PerspectiveCamera
 			const controlsTarget = controls?.target ?? new Vector3(0, 0, 0)
 
@@ -338,9 +356,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				target: [controlsTarget.x, controlsTarget.y, controlsTarget.z],
 				fov: activeCamera.fov
 			}
-		},
-		[controls?.target, sceneCamera]
-	)
+		}, [controls?.target, sceneCamera])
 
 	useEffect(() => {
 		onCameraSnapshotCaptureReady?.(captureCameraSnapshot)
@@ -422,6 +438,61 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		[applyCameraInstantly, controls?.target, invalidate, sceneCamera]
 	)
 
+	const executeViewerCommand = useCallback(
+		(command: ViewerCommand) => {
+			if (command.type !== 'activate_camera') {
+				return
+			}
+
+			const nextSelection = resolveCameraSelection(
+				cameras,
+				command.cameraId,
+				controls?.target ?? new Vector3(0, 0, 0),
+				sceneCamera as PerspectiveCamera
+			)
+
+			if (nextSelection.cameraId !== command.cameraId) {
+				return
+			}
+
+			startTransition(nextSelection)
+			previousSelectionKey.current = nextSelection.cameraId
+			previousSelectionSignature.current = JSON.stringify({
+				position: nextSelection.targetPosition.toArray(),
+				target: nextSelection.targetLookAt.toArray(),
+				rotation: [
+					nextSelection.targetRotation.x,
+					nextSelection.targetRotation.y,
+					nextSelection.targetRotation.z
+				],
+				fov: nextSelection.targetFov,
+				transition: nextSelection.transition
+			})
+			onInteractionEvent?.({
+				type: 'camera_changed',
+				cameraId: nextSelection.cameraId
+			})
+		},
+		[
+			cameras,
+			controls?.target,
+			onInteractionEvent,
+			sceneCamera,
+			startTransition
+		]
+	)
+
+	useEffect(() => {
+		// Expose the smallest imperative runtime surface possible so app layers can
+		// drive viewer state without reaching into camera internals.
+		onCommandExecutorReady?.({ execute: executeViewerCommand })
+		onInteractionEvent?.({ type: 'viewer_ready' })
+
+		return () => {
+			onCommandExecutorReady?.(null)
+		}
+	}, [executeViewerCommand, onCommandExecutorReady, onInteractionEvent])
+
 	const initializeCamera = useCallback(
 		(sceneCamera: PerspectiveCamera) => {
 			const initialControlsTarget = controls?.target ?? new Vector3(0, 0, 0)
@@ -501,7 +572,18 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		startTransition(selection)
 		previousSelectionKey.current = selectionKey
 		previousSelectionSignature.current = signature
-	}, [activeCameraId, cameras, controls?.target, sceneCamera, startTransition])
+		onInteractionEvent?.({
+			type: 'camera_changed',
+			cameraId: selection.cameraId
+		})
+	}, [
+		activeCameraId,
+		cameras,
+		controls?.target,
+		onInteractionEvent,
+		sceneCamera,
+		startTransition
+	])
 
 	useFrame(() => {
 		if (transitionRuntime.current) {
@@ -584,6 +666,10 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		if (stabilizationTimedOut || stabilizationFrameLimitReached) {
 			hasInitialFramingCompleted.current = true
 			isWaitingForStableFrame.current = false
+			onInteractionEvent?.({
+				type: 'initial_framing_completed',
+				cameraId: previousSelectionKey.current
+			})
 			onInitialFramingComplete?.()
 			return
 		}
@@ -635,6 +721,10 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		if (stableFrameCount.current >= 2) {
 			hasInitialFramingCompleted.current = true
 			isWaitingForStableFrame.current = false
+			onInteractionEvent?.({
+				type: 'initial_framing_completed',
+				cameraId: previousSelectionKey.current
+			})
 			onInitialFramingComplete?.()
 			return
 		}

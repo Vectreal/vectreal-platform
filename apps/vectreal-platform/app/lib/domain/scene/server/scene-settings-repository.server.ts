@@ -57,6 +57,7 @@ function buildSceneSettingsValues(params: SceneSettingsUpsertInput) {
 		camera: params.settings.camera,
 		controls: params.settings.controls,
 		environment: params.settings.environment,
+		interactions: params.settings.interactions,
 		shadows: params.settings.shadows
 	}
 }

@@ -17,6 +17,9 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 // Base types
 export * from './base-types'
 
+// Interaction types
+export * from './interaction-types'
+
 // Server types
 export * from './server-types'
 

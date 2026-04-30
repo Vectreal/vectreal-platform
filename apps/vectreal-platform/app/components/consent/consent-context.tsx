@@ -7,7 +7,7 @@ import {
 	useState,
 	type ReactNode
 } from 'react'
-import { useFetcher } from 'react-router'
+import { useFetcher, useLocation } from 'react-router'
 
 import { CONSENT_POLICY_VERSION } from '../../lib/consent/consent-policy'
 
@@ -175,5 +175,13 @@ export function useConsent(): ConsentContextValue {
 /** Returns true when the consent banner should be displayed. */
 export function useNeedsBanner(policyVersion: string): boolean {
 	const { consent, consentVersion } = useConsent()
+	const { pathname } = useLocation()
+
+	// Don't show banner on the privacy policy page, to avoid confusion
+	if (pathname === '/privacy-policy') return false
+
+	// Don't show the banner on the preview pages. Consent managemnent must be done on the embedding site.
+	if (pathname.startsWith('/preview/')) return false
+
 	return consent === null || consentVersion !== policyVersion
 }

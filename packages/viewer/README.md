@@ -38,23 +38,26 @@ function App() {
 
 ## `VectrealViewer` props
 
-| Prop                       | Type                                                | Required | Description                                                                      |
-| -------------------------- | --------------------------------------------------- | -------- | -------------------------------------------------------------------------------- |
-| `model`                    | `Object3D`                                          | No\*     | The Three.js scene to display. Optional when using the `use-load-model` context. |
-| `className`                | `string`                                            | No       | Additional CSS classes for the viewer container                                  |
-| `theme`                    | `'light' \| 'dark' \| 'system'`                     | No       | Viewer theme, default is `system`                                                |
-| `enableViewportRendering`  | `boolean`                                           | No       | Render only while in viewport, default `true`                                    |
-| `enablePostProcessing`     | `boolean`                                           | No       | Toggle postprocessing effects, default `true`                                    |
-| `boundsOptions`            | `BoundsProps`                                       | No       | Scene bounds and framing behavior                                                |
-| `cameraOptions`            | `CameraProps`                                       | No       | Perspective camera configuration                                                 |
-| `controlsOptions`          | `ControlsProps`                                     | No       | OrbitControls configuration                                                      |
-| `envOptions`               | `EnvironmentProps`                                  | No       | Stage and Environment component configuration                                    |
-| `shadowsOptions`           | `ShadowsProps`                                      | No       | Shadow behavior configuration                                                    |
-| `popover`                  | `React.ReactNode`                                   | No       | Optional info popover slot                                                       |
-| `loader`                   | `React.ReactNode`                                   | No       | Custom loading UI                                                                |
-| `loadingThumbnail`         | `ViewerLoadingThumbnail`                            | No       | Optional blurred loading thumbnail                                               |
-| `onScreenshot`             | `(dataUrl: string) => void`                         | No       | Called when a screenshot is captured                                             |
-| `onScreenshotCaptureReady` | `(capture: SceneScreenshotCapture \| null) => void` | No       | Receives a capture function for on-demand screenshots                            |
+| Prop                           | Type                                                    | Required | Description                                                                      |
+| ------------------------------ | ------------------------------------------------------- | -------- | -------------------------------------------------------------------------------- |
+| `model`                        | `Object3D`                                              | No\*     | The Three.js scene to display. Optional when using the `use-load-model` context. |
+| `className`                    | `string`                                                | No       | Additional CSS classes for the viewer container                                  |
+| `theme`                        | `'light' \| 'dark' \| 'system'`                         | No       | Viewer theme, default is `system`                                                |
+| `enableViewportRendering`      | `boolean`                                               | No       | Render only while in viewport, default `true`                                    |
+| `enablePostProcessing`         | `boolean`                                               | No       | Toggle postprocessing effects, default `true`                                    |
+| `boundsOptions`                | `BoundsProps`                                           | No       | Scene bounds and framing behavior                                                |
+| `cameraOptions`                | `CameraProps`                                           | No       | Perspective camera configuration                                                 |
+| `controlsOptions`              | `ControlsProps`                                         | No       | OrbitControls configuration                                                      |
+| `envOptions`                   | `EnvironmentProps`                                      | No       | Stage and Environment component configuration                                    |
+| `shadowsOptions`               | `ShadowsProps`                                          | No       | Shadow behavior configuration                                                    |
+| `popover`                      | `React.ReactNode`                                       | No       | Optional info popover slot                                                       |
+| `loader`                       | `React.ReactNode`                                       | No       | Custom loading UI                                                                |
+| `loadingThumbnail`             | `ViewerLoadingThumbnail`                                | No       | Optional blurred loading thumbnail                                               |
+| `onScreenshot`                 | `(dataUrl: string) => void`                             | No       | Called when a screenshot is captured                                             |
+| `onScreenshotCaptureReady`     | `(capture: SceneScreenshotCapture \| null) => void`     | No       | Receives a capture function for on-demand screenshots                            |
+| `onCameraSnapshotCaptureReady` | `(capture: SceneCameraSnapshotCapture \| null) => void` | No       | Receives a capture function for the current camera pose                          |
+| `onInteractionEvent`           | `(event: ViewerInteractionEvent) => void`               | No       | Receives viewer lifecycle and runtime interaction events                         |
+| `onCommandExecutorReady`       | `(executor: ViewerCommandExecutor \| null) => void`     | No       | Receives a minimal imperative runtime command executor                           |
 
 ### Notes on content source
 
@@ -126,6 +129,82 @@ Based on [@react-three/drei OrbitControls](https://github.com/pmndrs/drei#orbitc
 		controlsTimeout: 2000
 	}}
 />
+```
+
+---
+
+## Camera snapshot callback
+
+`onCameraSnapshotCaptureReady(capture)` gives you a function that captures the current viewer camera pose as `{ position, rotation, target, fov }`.
+
+---
+
+## Runtime commands and events
+
+`VectrealViewer` exposes a small runtime interaction surface for surrounding app code.
+
+### Commands
+
+`onCommandExecutorReady(executor)` gives you a `ViewerCommandExecutor` with `execute(command)`.
+
+Current commands:
+
+| Command                | Payload                | Effect                                             |
+| ---------------------- | ---------------------- | -------------------------------------------------- |
+| `activate_camera`      | `{ cameraId: string }` | Transitions to one of the configured scene cameras |
+| `set_controls_enabled` | `{ enabled: boolean }` | Temporarily enables or disables orbit interaction  |
+
+### Events
+
+`onInteractionEvent(event)` emits the current viewer runtime events:
+
+| Event                       | Payload                        | Meaning                                     |
+| --------------------------- | ------------------------------ | ------------------------------------------- |
+| `viewer_ready`              | none                           | Viewer runtime is ready to accept commands  |
+| `initial_framing_completed` | `{ cameraId: string \| null }` | Initial framing and stabilization completed |
+| `camera_changed`            | `{ cameraId: string }`         | Active camera changed                       |
+
+```tsx
+import { useRef } from 'react'
+import { type ViewerCommandExecutor, VectrealViewer } from '@vctrl/viewer'
+
+function ViewerRuntimeExample({ model }: { model: object }) {
+	const executorRef = useRef<null | ViewerCommandExecutor>(null)
+
+	return (
+		<>
+			<button
+				onClick={() =>
+					executorRef.current?.execute({
+						type: 'activate_camera',
+						cameraId: 'overview'
+					})
+				}
+			>
+				Go to overview
+			</button>
+			<button
+				onClick={() =>
+					executorRef.current?.execute({
+						type: 'set_controls_enabled',
+						enabled: false
+					})
+				}
+			>
+				Lock controls
+			</button>
+			<VectrealViewer
+				model={model as never}
+				onCommandExecutorReady={(executor) => {
+					executorRef.current = executor
+				}}
+				onInteractionEvent={(event) => {
+					console.log('viewer event', event)
+				}}
+			/>
+		</>
+	)
+}
 ```
 
 ---

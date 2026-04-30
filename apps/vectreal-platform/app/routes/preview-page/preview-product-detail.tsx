@@ -7,11 +7,7 @@ import {
 	CardTitle
 } from '@shared/components/ui/card'
 import { Separator } from '@shared/components/ui/separator'
-import {
-	ModelFile,
-	SceneLoadResult,
-	useLoadModel
-} from '@vctrl/hooks/use-load-model'
+import { ModelFile, SceneLoadResult } from '@vctrl/hooks/use-load-model'
 import {
 	InfoPopover,
 	InfoPopoverCloseButton,
@@ -20,32 +16,43 @@ import {
 	InfoPopoverTrigger,
 	InfoPopoverVectrealFooter
 } from '@vctrl/viewer'
-import { memo, useCallback, useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { memo } from 'react'
 
 import { Route } from './+types/preview-product-detail'
+import { usePreviewScene } from './use-preview-scene'
 import CenteredSpinner from '../../components/centered-spinner'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
+import { useHostedPreviewBridge } from '../../lib/domain/embed/hosted-preview-bridge'
 
 interface PreviewModelProps {
 	file: ModelFile | null
+	onCommandExecutorReady: ReturnType<
+		typeof useHostedPreviewBridge
+	>['onCommandExecutorReady']
+	onInteractionEvent: ReturnType<
+		typeof useHostedPreviewBridge
+	>['onInteractionEvent']
 	sceneData?: SceneLoadResult
 }
 
-const inFlightPreviewSceneSettingsRequests = new Map<
-	string,
-	Promise<SceneLoadResult>
->()
+interface PreviewInfoPopoverProps {
+	title?: string
+	description?: string
+}
 
-const PreviewInfoPopover = () => (
+const PreviewInfoPopover = ({
+	title,
+	description
+}: PreviewInfoPopoverProps) => (
 	<InfoPopover>
 		<InfoPopoverTrigger />
 		<InfoPopoverContent>
 			<InfoPopoverCloseButton />
 			<InfoPopoverText>
+				{title ? <p className="font-medium">{title}</p> : null}
 				<p>
-					This is a preview of your scene as it will appear when published. Test
-					on various devices and network conditions for the best experience.
+					{description ||
+						'This is a preview of your scene as it will appear when published. Test on various devices and network conditions for the best experience.'}
 				</p>
 			</InfoPopoverText>
 			<InfoPopoverVectrealFooter />
@@ -53,86 +60,52 @@ const PreviewInfoPopover = () => (
 	</InfoPopover>
 )
 
-const ProductDetailModel = memo(({ file, sceneData }: PreviewModelProps) => {
-	return (
-		<div className="bg-background relative h-[60vh] min-h-[420px] w-full overflow-hidden rounded-xl border md:h-[68vh]">
-			<ClientVectrealViewer
-				className="h-full w-full"
-				model={file?.model}
-				envOptions={sceneData?.environment}
-				controlsOptions={sceneData?.controls}
-				shadowsOptions={sceneData?.shadows}
-				popover={<PreviewInfoPopover />}
-				loader={<CenteredSpinner text="Preparing scene..." />}
-				fallback={<CenteredSpinner text="Loading scene..." />}
-			/>
-		</div>
-	)
-})
+const ProductDetailModel = memo(
+	({
+		file,
+		sceneData,
+		onInteractionEvent,
+		onCommandExecutorReady
+	}: PreviewModelProps) => {
+		return (
+			<div className="bg-background relative h-[60vh] min-h-[420px] w-full overflow-hidden rounded-xl border md:h-[68vh]">
+				<ClientVectrealViewer
+					boundsOptions={sceneData?.bounds}
+					cameraOptions={sceneData?.camera}
+					className="h-full w-full"
+					model={file?.model}
+					envOptions={sceneData?.environment}
+					controlsOptions={sceneData?.controls}
+					onCommandExecutorReady={onCommandExecutorReady}
+					onInteractionEvent={onInteractionEvent}
+					shadowsOptions={sceneData?.shadows}
+					popover={
+						<PreviewInfoPopover
+							title={sceneData?.meta?.name?.trim() || undefined}
+							description={sceneData?.meta?.description?.trim() || undefined}
+						/>
+					}
+					loader={<CenteredSpinner text="Preparing scene..." />}
+					fallback={<CenteredSpinner text="Loading scene..." />}
+				/>
+			</div>
+		)
+	}
+)
 
 const PreviewProductDetailPage = ({ params }: Route.ComponentProps) => {
-	const [searchParams] = useSearchParams()
-	const { file, loadFromServer } = useLoadModel()
-
-	const [isLoadingScene, setIsLoadingScene] = useState(false)
-	const [sceneData, setSceneData] = useState<SceneLoadResult>()
-
 	const sceneId = params.sceneId
 	const projectId = params.projectId
-
-	const getSceneSettings = useCallback(async () => {
-		if (!sceneId || !projectId) return
-
-		setIsLoadingScene(true)
-		const requestKey = `${sceneId}:${projectId}:${searchParams.get('token')?.trim() || ''}`
-
-		const token = searchParams.get('token')?.trim() || undefined
-		const endpointParams = new URLSearchParams({
-			projectId,
-			preview: '1'
-		})
-
-		if (token) {
-			endpointParams.set('token', token)
+	const { file, isLoadingScene, sceneData } = usePreviewScene({
+		sceneId,
+		projectId
+	})
+	const { onCommandExecutorReady, onInteractionEvent } = useHostedPreviewBridge(
+		{
+			sceneId,
+			interactions: sceneData?.interactions
 		}
-
-		try {
-			const existingRequest =
-				inFlightPreviewSceneSettingsRequests.get(requestKey)
-			const request =
-				existingRequest ??
-				loadFromServer({
-					sceneId,
-					serverOptions: {
-						endpoint: `/api/scenes/${sceneId}?${endpointParams.toString()}`,
-						apiKey: token
-					}
-				})
-
-			if (!existingRequest) {
-				inFlightPreviewSceneSettingsRequests.set(
-					requestKey,
-					request.finally(() => {
-						inFlightPreviewSceneSettingsRequests.delete(requestKey)
-					})
-				)
-			}
-
-			const loadedSceneData = await request
-
-			setSceneData(loadedSceneData)
-		} catch (error) {
-			console.error('Failed to load preview scene:', error)
-		} finally {
-			setIsLoadingScene(false)
-		}
-	}, [loadFromServer, projectId, sceneId, searchParams])
-
-	useEffect(() => {
-		if (sceneId && projectId && sceneData?.sceneId !== sceneId) {
-			void getSceneSettings()
-		}
-	}, [getSceneSettings, projectId, sceneData, sceneId])
+	)
 
 	if (isLoadingScene && !file?.model) {
 		return <CenteredSpinner className="h-screen" text="Loading scene..." />
@@ -150,7 +123,12 @@ const PreviewProductDetailPage = ({ params }: Route.ComponentProps) => {
 							Placeholder Product Name
 						</h1>
 					</div>
-					<ProductDetailModel file={file} sceneData={sceneData} />
+					<ProductDetailModel
+						file={file}
+						onCommandExecutorReady={onCommandExecutorReady}
+						onInteractionEvent={onInteractionEvent}
+						sceneData={sceneData}
+					/>
 					<p className="text-muted-foreground text-sm">
 						This 3D preview is placed where a product image gallery usually
 						appears, so you can visualize the viewer in a live shop layout.

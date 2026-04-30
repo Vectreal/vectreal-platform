@@ -13,6 +13,7 @@ import type {
 	CameraProps,
 	ControlsProps,
 	EnvironmentProps,
+	SceneSettings,
 	ShadowsProps
 } from '@vctrl/core'
 
@@ -27,12 +28,14 @@ const selectedCameraIdAtom = atom<string>(
 )
 const controlsAtom = atom<ControlsProps>(defaultControlsOptions)
 const environmentAtom = atom<EnvironmentProps>(defaultEnvOptions)
+const interactionsAtom = atom<SceneSettings['interactions']>(undefined)
 const shadowsAtom = atom<ShadowsProps>(defaultShadowOptions)
 const sceneViewerSettingsAtom = atom((get) => ({
 	bounds: get(boundsAtom),
 	camera: get(cameraAtom),
 	controls: get(controlsAtom),
 	env: get(environmentAtom),
+	interactions: get(interactionsAtom),
 	shadows: get(shadowsAtom)
 }))
 
@@ -46,6 +49,7 @@ sceneSettingsStore.set(
 )
 sceneSettingsStore.set(controlsAtom, defaultControlsOptions)
 sceneSettingsStore.set(environmentAtom, defaultEnvOptions)
+sceneSettingsStore.set(interactionsAtom, undefined)
 sceneSettingsStore.set(shadowsAtom, defaultShadowOptions)
 
 export {
@@ -54,6 +58,7 @@ export {
 	cameraAtom,
 	controlsAtom,
 	environmentAtom,
+	interactionsAtom,
 	selectedCameraIdAtom,
 	sceneViewerSettingsAtom,
 	shadowsAtom,

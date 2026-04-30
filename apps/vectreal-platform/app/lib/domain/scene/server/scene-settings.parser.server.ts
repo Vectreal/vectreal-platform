@@ -1,6 +1,11 @@
 import { JSONDocument } from '@gltf-transform/core'
 import { ApiResponse } from '@shared/utils'
-import { OptimizationReport, Optimizations } from '@vctrl/core'
+import {
+	normalizeCameraSettings,
+	normalizeSceneInteractions,
+	OptimizationReport,
+	Optimizations
+} from '@vctrl/core'
 
 import { UUID_REGEX } from '../../../../constants/utility-constants'
 import { parseActionRequest } from '../../../http/requests.server'
@@ -298,9 +303,24 @@ export class SceneSettingsParser {
 			return normalizedCamera
 		}
 
+		let normalizedInteractions: SceneSettings['interactions']
+		try {
+			normalizedInteractions = normalizeSceneInteractions(
+				sceneSettings.interactions,
+				{ camera: normalizedCamera }
+			)
+		} catch (error) {
+			return ApiResponse.badRequest(
+				error instanceof Error
+					? error.message
+					: 'Invalid scene interactions configuration'
+			)
+		}
+
 		return {
 			...sceneSettings,
-			camera: normalizedCamera
+			camera: normalizedCamera,
+			interactions: normalizedInteractions
 		}
 	}
 
@@ -370,14 +390,15 @@ export class SceneSettingsParser {
 							(entry.shouldAnimate === false
 								? { type: 'none' }
 								: {
-									type: 'linear',
-									duration:
-										typeof (entry.animationConfig as { duration?: unknown })
-											?.duration === 'number'
-											? (entry.animationConfig as { duration: number }).duration
-											: 1000,
-									easing: 'ease_in_out'
-								}),
+										type: 'linear',
+										duration:
+											typeof (entry.animationConfig as { duration?: unknown })
+												?.duration === 'number'
+												? (entry.animationConfig as { duration: number })
+														.duration
+												: 1000,
+										easing: 'ease_in_out'
+									}),
 						`${stateId}.transition`
 					)
 					if (transition instanceof Response) {
@@ -399,7 +420,7 @@ export class SceneSettingsParser {
 						name: stateName,
 						initial: Boolean(
 							legacyInitial ||
-								(entry.activeStateId && entry.activeStateId === stateId)
+							(entry.activeStateId && entry.activeStateId === stateId)
 						),
 						transition
 					})
@@ -408,7 +429,9 @@ export class SceneSettingsParser {
 			}
 
 			if (seenCameraIds.has(rawCameraId)) {
-				return ApiResponse.badRequest(`Duplicate cameraId found: ${rawCameraId}`)
+				return ApiResponse.badRequest(
+					`Duplicate cameraId found: ${rawCameraId}`
+				)
 			}
 			seenCameraIds.add(rawCameraId)
 
@@ -417,14 +440,14 @@ export class SceneSettingsParser {
 					(entry.shouldAnimate === false
 						? { type: 'none' }
 						: {
-							type: 'linear',
-							duration:
-								typeof (entry.animationConfig as { duration?: unknown })
-									?.duration === 'number'
-									? (entry.animationConfig as { duration: number }).duration
-									: 1000,
-							easing: 'ease_in_out'
-						}),
+								type: 'linear',
+								duration:
+									typeof (entry.animationConfig as { duration?: unknown })
+										?.duration === 'number'
+										? (entry.animationConfig as { duration: number }).duration
+										: 1000,
+								easing: 'ease_in_out'
+							}),
 				`${rawCameraId}.transition`
 			)
 			if (transition instanceof Response) {
@@ -458,17 +481,17 @@ export class SceneSettingsParser {
 			)
 				? requestedActiveCameraId
 				: undefined) ??
-			(flattenedCameras.find((cameraEntry) => cameraEntry.initial)?.cameraId ??
-				flattenedCameras[0].cameraId)
+			flattenedCameras.find((cameraEntry) => cameraEntry.initial)?.cameraId ??
+			flattenedCameras[0].cameraId
 
-		return {
+		return normalizeCameraSettings({
 			...camera,
 			activeCameraId: resolvedActiveCameraId,
 			cameras: flattenedCameras.map((cameraEntry) => ({
 				...cameraEntry,
 				initial: cameraEntry.cameraId === resolvedActiveCameraId
 			}))
-		}
+		})
 	}
 
 	private static normalizeTransitionConfig(

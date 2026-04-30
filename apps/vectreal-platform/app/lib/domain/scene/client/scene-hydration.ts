@@ -1,127 +1,12 @@
-import type { SceneAggregateResponse } from '../../../../types/api'
-import type { SceneMetaState } from '../../../../types/publisher-config'
-import type {
-	CameraProps,
-	CameraTransitionConfig,
-	SceneSettings,
-	ServerSceneData
+import {
+	normalizeCameraSettings,
+	normalizeSceneInteractions,
+	type SceneSettings,
+	type ServerSceneData
 } from '@vctrl/core'
 
-function normalizeCameraSettings(
-	camera?: CameraProps
-): CameraProps | undefined {
-	if (!camera?.cameras || camera.cameras.length === 0) {
-		return camera
-	}
-
-	const flattenedCameras = camera.cameras.flatMap((entry, cameraIndex) => {
-		if (entry.states && entry.states.length > 0) {
-			return entry.states.map((stateEntry, stateIndex) => {
-				const {
-					stateId: _legacyStateId,
-					name: _legacyStateName,
-					initial: _legacyInitial,
-					transition: stateTransition,
-					...stateWithoutLegacyFields
-				} = stateEntry
-				const stateId =
-					typeof stateEntry.stateId === 'string' && stateEntry.stateId.trim()
-						? stateEntry.stateId.trim()
-						: `${entry.cameraId || `camera-${cameraIndex + 1}`}-state-${stateIndex + 1}`
-				const stateName =
-					typeof stateEntry.name === 'string' && stateEntry.name.trim()
-						? stateEntry.name.trim()
-						: `${entry.name || `Camera ${cameraIndex + 1}`} ${stateIndex + 1}`
-				const transition: CameraTransitionConfig | undefined =
-					stateTransition ??
-					entry.transition ??
-					(entry.shouldAnimate === false
-						? { type: 'none' }
-						: {
-								type: 'linear',
-								duration: entry.animationConfig?.duration ?? 1000,
-								easing: 'ease_in_out'
-							})
-
-				return {
-					...entry,
-					...stateWithoutLegacyFields,
-					cameraId: stateId,
-					name: stateName,
-					initial: Boolean(
-						_legacyInitial ||
-						(entry.activeStateId && entry.activeStateId === stateId)
-					),
-					transition
-				}
-			})
-		}
-
-		const fallbackTransition: CameraTransitionConfig | undefined =
-			entry.transition ??
-			(entry.shouldAnimate === false
-				? { type: 'none' }
-				: {
-						type: 'linear',
-						duration: entry.animationConfig?.duration ?? 1000,
-						easing: 'ease_in_out'
-					})
-
-		return [
-			{
-				...entry,
-				cameraId: entry.cameraId || `camera-${cameraIndex + 1}`,
-				name: entry.name || `Camera ${cameraIndex + 1}`,
-				transition: fallbackTransition
-			}
-		]
-	})
-
-	const uniqueCameraIds = new Set<string>()
-	const normalizedCameras = flattenedCameras.map((cameraEntry, index) => {
-		const cameraId = cameraEntry.cameraId || `camera-${index + 1}`
-		let normalizedCameraId = cameraId
-		if (uniqueCameraIds.has(normalizedCameraId)) {
-			normalizedCameraId = `${cameraId}-${index + 1}`
-		}
-		uniqueCameraIds.add(normalizedCameraId)
-
-		const {
-			states: _states,
-			activeStateId: _activeStateId,
-			shouldAnimate: _shouldAnimate,
-			animationConfig: _animationConfig,
-			...cameraWithoutLegacyFields
-		} = cameraEntry
-
-		return {
-			...cameraWithoutLegacyFields,
-			cameraId: normalizedCameraId,
-			name: cameraEntry.name || `Camera ${index + 1}`
-		}
-	})
-
-	const resolvedActiveCameraId =
-		(camera.activeCameraId &&
-		normalizedCameras.some((entry) => entry.cameraId === camera.activeCameraId)
-			? camera.activeCameraId
-			: undefined) ??
-		normalizedCameras.find((entry) => entry.initial)?.cameraId ??
-		normalizedCameras[0]?.cameraId
-
-	if (!resolvedActiveCameraId) {
-		return camera
-	}
-
-	return {
-		...camera,
-		activeCameraId: resolvedActiveCameraId,
-		cameras: normalizedCameras.map((entry) => ({
-			...entry,
-			initial: entry.cameraId === resolvedActiveCameraId
-		}))
-	}
-}
+import type { SceneAggregateResponse } from '../../../../types/api'
+import type { SceneMetaState } from '../../../../types/publisher-config'
 
 export const getSceneNameFromFileName = (fileName: string): string => {
 	const trimmedFileName = fileName.trim()
@@ -147,27 +32,40 @@ export const getSettingsFromAggregate = (
 	}
 
 	if (aggregate.settings) {
+		const normalizedCamera = normalizeCameraSettings(aggregate.settings.camera)
 		return {
 			...aggregate.settings,
-			camera: normalizeCameraSettings(aggregate.settings.camera)
+			camera: normalizedCamera,
+			interactions: normalizeSceneInteractions(
+				aggregate.settings.interactions,
+				{ camera: normalizedCamera }
+			)
 		}
 	}
 
 	const fallbackSettings = aggregate as SceneAggregateResponse & {
 		camera?: SceneSettings['camera']
+		interactions?: SceneSettings['interactions']
 		environment?: SceneSettings['environment']
 		controls?: SceneSettings['controls']
 		shadows?: SceneSettings['shadows']
 	}
+	const normalizedFallbackCamera = normalizeCameraSettings(
+		fallbackSettings.camera
+	)
 
 	if (
 		fallbackSettings.camera ||
+		fallbackSettings.interactions ||
 		fallbackSettings.environment ||
 		fallbackSettings.controls ||
 		fallbackSettings.shadows
 	) {
 		return {
-			camera: normalizeCameraSettings(fallbackSettings.camera),
+			camera: normalizedFallbackCamera,
+			interactions: normalizeSceneInteractions(fallbackSettings.interactions, {
+				camera: normalizedFallbackCamera
+			}),
 			environment: fallbackSettings.environment,
 			controls: fallbackSettings.controls,
 			shadows: fallbackSettings.shadows

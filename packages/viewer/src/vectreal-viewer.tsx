@@ -32,6 +32,7 @@ import {
 	Suspense,
 	useCallback,
 	useEffect,
+	useRef,
 	useState
 } from 'react'
 import { Object3D } from 'three'
@@ -51,6 +52,9 @@ import { useViewerLoading } from './hooks/use-viewer-loading'
 import type {
 	SceneCameraSnapshotCapture,
 	SceneScreenshotCapture,
+	ViewerCommand,
+	ViewerCommandExecutor,
+	ViewerInteractionEvent,
 	ViewerLoadingThumbnail
 } from './types/viewer-types'
 
@@ -59,6 +63,9 @@ export type {
 	SceneCameraSnapshotCapture,
 	SceneScreenshotCapture,
 	SceneScreenshotOptions,
+	ViewerCommandExecutor,
+	ViewerCommand,
+	ViewerInteractionEvent,
 	ViewerLoadingThumbnail
 } from './types/viewer-types'
 
@@ -156,6 +163,16 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	onCameraSnapshotCaptureReady?: (
 		capture: null | SceneCameraSnapshotCapture
 	) => void
+
+	/**
+	 * Callback invoked when the viewer emits runtime interaction events.
+	 */
+	onInteractionEvent?: (event: ViewerInteractionEvent) => void
+
+	/**
+	 * Callback that receives a command executor for imperative viewer actions.
+	 */
+	onCommandExecutorReady?: (executor: null | ViewerCommandExecutor) => void
 }
 
 /**
@@ -196,6 +213,8 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		onScreenshot,
 		onScreenshotCaptureReady,
 		onCameraSnapshotCaptureReady,
+		onInteractionEvent,
+		onCommandExecutorReady,
 		enableViewportRendering = true,
 		enablePostProcessing = true,
 		loader = <DefaultSpinner />
@@ -204,10 +223,15 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	const hasContent = !!(model || children)
 	const [isInitialFramingComplete, setIsInitialFramingComplete] =
 		useState(false)
+	const [controlsEnabledOverride, setControlsEnabledOverride] = useState<
+		null | boolean
+	>(null)
+	const cameraCommandExecutorRef = useRef<null | ViewerCommandExecutor>(null)
 
 	useEffect(() => {
 		if (!hasContent) {
 			setIsInitialFramingComplete(false)
+			setControlsEnabledOverride(null)
 		}
 	}, [hasContent])
 
@@ -215,12 +239,37 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		setIsInitialFramingComplete(true)
 	}, [])
 
+	const executeViewerCommand = useCallback((command: ViewerCommand) => {
+		switch (command.type) {
+			case 'activate_camera':
+				cameraCommandExecutorRef.current?.execute(command)
+				break
+			case 'set_controls_enabled':
+				setControlsEnabledOverride(command.enabled)
+				break
+		}
+	}, [])
+
+	const handleSceneCameraExecutorReady = useCallback(
+		(executor: null | ViewerCommandExecutor) => {
+			cameraCommandExecutorRef.current = executor
+		},
+		[]
+	)
+
+	useEffect(() => {
+		onCommandExecutorReady?.({ execute: executeViewerCommand })
+
+		return () => {
+			onCommandExecutorReady?.(null)
+		}
+	}, [executeViewerCommand, onCommandExecutorReady])
+
 	const { loadingState, completeLoadingTransition } = useViewerLoading(
 		hasContent,
 		isInitialFramingComplete
 	)
 	const shadowsEnabled = shadowsOptions?.enabled ?? false
-
 	return (
 		<Suspense fallback={loader}>
 			<Canvas
@@ -252,7 +301,10 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 							<SceneEnvironment {...envOptions} />
 							{/* <Perf /> */}
 							{enablePostProcessing ? <ScenePostProcessing /> : null}
-							<SceneControls {...controlsOptions} />
+							<SceneControls
+								{...controlsOptions}
+								enabledOverride={controlsEnabledOverride}
+							/>
 							{/* <SceneToneMapping
 								mapping={toneMappingOptions?.mapping}
 								exposure={toneMappingOptions?.exposure}
@@ -261,12 +313,13 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 								<SceneCamera
 									{...cameraOptions}
 									onCameraSnapshotCaptureReady={onCameraSnapshotCaptureReady}
+									onCommandExecutorReady={handleSceneCameraExecutorReady}
 									onInitialFramingComplete={handleInitialFramingComplete}
+									onInteractionEvent={onInteractionEvent}
 								/>
 								<Center top>
 									{model ? (
 										<SceneModel
-											enableShadows={shadowsEnabled}
 											onScreenshot={onScreenshot}
 											onScreenshotCaptureReady={onScreenshotCaptureReady}
 											object={model}

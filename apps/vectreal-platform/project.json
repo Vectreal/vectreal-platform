@@ -122,7 +122,7 @@
 			"options": {
 				"cwd": "apps/vectreal-platform",
 				"envFile": ".env.development",
-				"commands": ["pnpm exec supabase db push --local"],
+				"commands": ["pnpm exec supabase db push --local --yes"],
 				"parallel": false
 			}
 		},

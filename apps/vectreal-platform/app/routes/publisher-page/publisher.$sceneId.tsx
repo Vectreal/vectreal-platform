@@ -20,6 +20,7 @@ import { useNavigation, useParams } from 'react-router'
 import { Route } from './+types/publisher.$sceneId'
 import { DropZone } from './drop-zone'
 import CenteredSpinner from '../../components/centered-spinner'
+import { usePublisherViewerCapture } from '../../components/publisher/publisher-viewer-capture-context'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import {
 	processInitialState,
@@ -33,8 +34,6 @@ import {
 	selectedCameraIdAtom
 } from '../../lib/stores/scene-settings-store'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
-import { registerSceneCameraSnapshotCaptureHandler } from '../../lib/viewer/scene-camera-snapshot-bus'
-import { registerSceneScreenshotCaptureHandler } from '../../lib/viewer/scene-screenshot-bus'
 import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbnail'
 
 import type {
@@ -148,19 +147,21 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 		'Scene thumbnail preview'
 	)
 	const previousRouteSceneIdRef = useRef<null | string>(routeSceneId)
+	const { registerSceneScreenshotCapture, registerSceneCameraSnapshotCapture } =
+		usePublisherViewerCapture()
 
 	const handleScreenshotCaptureReady = useCallback(
 		(capture: null | SceneScreenshotCapture) => {
-			registerSceneScreenshotCaptureHandler(capture)
+			registerSceneScreenshotCapture(capture)
 		},
-		[]
+		[registerSceneScreenshotCapture]
 	)
 
 	const handleCameraSnapshotCaptureReady = useCallback(
 		(capture: null | SceneCameraSnapshotCapture) => {
-			registerSceneCameraSnapshotCaptureHandler(capture)
+			registerSceneCameraSnapshotCapture(capture)
 		},
-		[]
+		[registerSceneCameraSnapshotCapture]
 	)
 
 	// Cleanup on unmount
@@ -170,25 +171,38 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 			Boolean(previousRouteSceneId) && !routeSceneId
 
 		if (navigatedFromSceneToBase) {
-			registerSceneScreenshotCaptureHandler(null)
-			registerSceneCameraSnapshotCaptureHandler(null)
+			registerSceneScreenshotCapture(null)
+			registerSceneCameraSnapshotCapture(null)
 			reset()
 			setProcess(processInitialState)
 			setOptimizationRuntime(RESET)
 		}
 
 		previousRouteSceneIdRef.current = routeSceneId
-	}, [routeSceneId, reset, setOptimizationRuntime, setProcess])
+	}, [
+		routeSceneId,
+		registerSceneCameraSnapshotCapture,
+		registerSceneScreenshotCapture,
+		reset,
+		setOptimizationRuntime,
+		setProcess
+	])
 
 	useEffect(() => {
 		return () => {
-			registerSceneScreenshotCaptureHandler(null)
-			registerSceneCameraSnapshotCaptureHandler(null)
+			registerSceneScreenshotCapture(null)
+			registerSceneCameraSnapshotCapture(null)
 			reset()
 			setProcess(processInitialState)
 			setOptimizationRuntime(RESET)
 		}
-	}, [setOptimizationRuntime, setProcess, reset])
+	}, [
+		registerSceneCameraSnapshotCapture,
+		registerSceneScreenshotCapture,
+		setOptimizationRuntime,
+		setProcess,
+		reset
+	])
 
 	const isLoading = isInitializing || isDownloading || isFileLoading
 

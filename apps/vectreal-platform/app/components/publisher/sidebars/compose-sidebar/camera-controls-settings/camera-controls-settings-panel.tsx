@@ -13,7 +13,10 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 import { Separator } from '@shared/components/ui/separator'
-import { ToggleGroup, ToggleGroupItem } from '@shared/components/ui/toggle-group'
+import {
+	ToggleGroup,
+	ToggleGroupItem
+} from '@shared/components/ui/toggle-group'
 import { useAtom } from 'jotai/react'
 import { ChevronDown, Plus, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
@@ -30,8 +33,8 @@ import {
 	controlsAtom,
 	selectedCameraIdAtom
 } from '../../../../../lib/stores/scene-settings-store'
-import { requestSceneCameraSnapshot } from '../../../../../lib/viewer/scene-camera-snapshot-bus'
 import { InfoTooltip } from '../../../../info-tooltip'
+import { usePublisherViewerCapture } from '../../../publisher-viewer-capture-context'
 import {
 	EnhancedSettingSlider,
 	SettingToggle
@@ -216,9 +219,10 @@ function getNormalizedTransition(
 }
 
 function normalizeCameraPayload(camera: CameraProps): CameraProps {
-	const sourceCameras = camera.cameras && camera.cameras.length > 0
-		? camera.cameras
-		: defaultCameraOptions.cameras ?? []
+	const sourceCameras =
+		camera.cameras && camera.cameras.length > 0
+			? camera.cameras
+			: (defaultCameraOptions.cameras ?? [])
 
 	const flattenedCameras = sourceCameras.flatMap((entry, cameraIndex) => {
 		if (entry.states && entry.states.length > 0) {
@@ -242,10 +246,10 @@ function normalizeCameraPayload(camera: CameraProps): CameraProps {
 					(entry.shouldAnimate === false
 						? { type: 'none' as const }
 						: {
-							type: 'linear' as const,
-							duration: entry.animationConfig?.duration ?? 1000,
-							easing: 'ease_in_out' as const
-						})
+								type: 'linear' as const,
+								duration: entry.animationConfig?.duration ?? 1000,
+								easing: 'ease_in_out' as const
+							})
 
 				return {
 					...entry,
@@ -254,7 +258,7 @@ function normalizeCameraPayload(camera: CameraProps): CameraProps {
 					name: stateName,
 					initial: Boolean(
 						stateEntry.initial ||
-							(entry.activeStateId && entry.activeStateId === stateId)
+						(entry.activeStateId && entry.activeStateId === stateId)
 					),
 					transition
 				}
@@ -274,10 +278,10 @@ function normalizeCameraPayload(camera: CameraProps): CameraProps {
 					(entry.shouldAnimate === false
 						? { type: 'none' as const }
 						: {
-							type: 'linear' as const,
-							duration: entry.animationConfig?.duration ?? 1000,
-							easing: 'ease_in_out' as const
-						})
+								type: 'linear' as const,
+								duration: entry.animationConfig?.duration ?? 1000,
+								easing: 'ease_in_out' as const
+							})
 			}
 		]
 	})
@@ -301,8 +305,7 @@ function normalizeCameraPayload(camera: CameraProps): CameraProps {
 		return {
 			...cameraWithoutLegacyFields,
 			cameraId,
-			name:
-				typeof entry.name === 'string' ? entry.name : `Camera ${index + 1}`
+			name: typeof entry.name === 'string' ? entry.name : `Camera ${index + 1}`
 		}
 	})
 
@@ -316,8 +319,8 @@ function normalizeCameraPayload(camera: CameraProps): CameraProps {
 		normalizedCameras.some((entry) => entry.cameraId === camera.activeCameraId)
 			? camera.activeCameraId
 			: undefined) ??
-		(normalizedCameras.find((entry) => entry.initial)?.cameraId ??
-			fallbackCamera.cameraId)
+		normalizedCameras.find((entry) => entry.initial)?.cameraId ??
+		fallbackCamera.cameraId
 
 	return {
 		...camera,
@@ -339,12 +342,17 @@ const CameraControlsSettingsPanel = memo(() => {
 	const [cameraNameDraft, setCameraNameDraft] = useState('')
 	const [transitionAdvancedOpen, setTransitionAdvancedOpen] = useState(false)
 	const [controlsAdvancedOpen, setControlsAdvancedOpen] = useState(false)
+	const { requestSceneCameraSnapshot } = usePublisherViewerCapture()
 
-	const normalizedCamera = useMemo(() => normalizeCameraPayload(camera), [camera])
+	const normalizedCamera = useMemo(
+		() => normalizeCameraPayload(camera),
+		[camera]
+	)
 	const selectedCamera = useMemo(
 		() =>
 			normalizedCamera.cameras?.find(
-				(cameraEntry) => cameraEntry.cameraId === normalizedCamera.activeCameraId
+				(cameraEntry) =>
+					cameraEntry.cameraId === normalizedCamera.activeCameraId
 			) ??
 			normalizedCamera.cameras?.find(
 				(cameraEntry) => cameraEntry.cameraId === selectedCameraId
@@ -478,9 +486,7 @@ const CameraControlsSettingsPanel = memo(() => {
 				normalized.cameras?.[0]?.cameraId
 			const sourceCamera =
 				normalized.cameras?.find(
-					(entry) =>
-						entry.cameraId ===
-						currentCameraId
+					(entry) => entry.cameraId === currentCameraId
 				) ?? normalized.cameras?.[0]
 
 			const newCamera: CameraEntry = {
@@ -663,10 +669,7 @@ const CameraControlsSettingsPanel = memo(() => {
 	)
 
 	const handleObjectAvoidanceParamChange = useCallback(
-		(
-			key: 'clearance' | 'arcHeight' | 'samples' | 'tension',
-			value: number
-		) => {
+		(key: 'clearance' | 'arcHeight' | 'samples' | 'tension', value: number) => {
 			if (selectedTransition.type !== 'object_avoidance') {
 				return
 			}
@@ -711,7 +714,9 @@ const CameraControlsSettingsPanel = memo(() => {
 			{/* Camera Manager */}
 			<div className="space-y-3">
 				<div className="flex items-center gap-2">
-					<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Camera Manager</p>
+					<p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+						Camera Manager
+					</p>
 					<InfoTooltip content="Select, create, rename, and delete saved cameras. The selected camera becomes the active runtime camera." />
 				</div>
 				<Separator />
@@ -728,7 +733,10 @@ const CameraControlsSettingsPanel = memo(() => {
 						</SelectTrigger>
 						<SelectContent>
 							{(normalizedCamera.cameras ?? []).map((cameraEntry) => (
-								<SelectItem key={cameraEntry.cameraId} value={cameraEntry.cameraId}>
+								<SelectItem
+									key={cameraEntry.cameraId}
+									value={cameraEntry.cameraId}
+								>
 									{cameraEntry.name || 'Unnamed Camera'}
 								</SelectItem>
 							))}
@@ -737,7 +745,9 @@ const CameraControlsSettingsPanel = memo(() => {
 					<Button
 						variant="outline"
 						size="icon"
-						onClick={() => { void handleAddCamera() }}
+						onClick={() => {
+							void handleAddCamera()
+						}}
 						title="Add camera"
 					>
 						<Plus />
@@ -754,7 +764,7 @@ const CameraControlsSettingsPanel = memo(() => {
 				</div>
 
 				<div className="space-y-1">
-					<p className="text-xs text-muted-foreground">Camera Name</p>
+					<p className="text-muted-foreground text-xs">Camera Name</p>
 					<Input
 						value={cameraNameDraft}
 						onChange={(event) => setCameraNameDraft(event.target.value)}
@@ -779,7 +789,9 @@ const CameraControlsSettingsPanel = memo(() => {
 			{/* Camera Settings */}
 			<div className="space-y-4">
 				<div className="flex items-center gap-2">
-					<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Camera Settings</p>
+					<p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+						Camera Settings
+					</p>
 					<InfoTooltip content="Configure the selected camera's field of view and transform-level properties." />
 				</div>
 				<Separator />
@@ -797,24 +809,31 @@ const CameraControlsSettingsPanel = memo(() => {
 			{/* Camera Transition */}
 			<div className="space-y-4">
 				<div className="flex items-center gap-2">
-					<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Camera Transition</p>
+					<p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+						Camera Transition
+					</p>
 					<InfoTooltip content="Define how switching to the selected camera is animated." />
 				</div>
 				<Separator />
 
 				<div className="space-y-1.5">
-					<p className="text-xs text-muted-foreground">Transition Type</p>
+					<p className="text-muted-foreground text-xs">Transition Type</p>
 					<ToggleGroup
 						type="single"
 						value={selectedTransition.type}
 						onValueChange={(value) => {
-							if (value) handleTransitionTypeChange(value as CameraTransitionType)
+							if (value)
+								handleTransitionTypeChange(value as CameraTransitionType)
 						}}
 						variant="outline"
 						className="w-full"
 					>
 						{TRANSITION_TYPE_OPTIONS.map((option) => (
-							<ToggleGroupItem key={option.value} value={option.value} className="flex-1 text-xs">
+							<ToggleGroupItem
+								key={option.value}
+								value={option.value}
+								className="flex-1 text-xs"
+							>
 								{option.label}
 							</ToggleGroupItem>
 						))}
@@ -840,18 +859,25 @@ const CameraControlsSettingsPanel = memo(() => {
 						/>
 
 						<div className="space-y-1.5">
-							<p className="text-xs text-muted-foreground">Easing</p>
+							<p className="text-muted-foreground text-xs">Easing</p>
 							<ToggleGroup
 								type="single"
 								value={selectedTransition.easing ?? 'ease_in_out'}
 								onValueChange={(value) => {
-									if (value) handleTransitionEasingChange(value as CameraTransitionEasing)
+									if (value)
+										handleTransitionEasingChange(
+											value as CameraTransitionEasing
+										)
 								}}
 								variant="outline"
 								className="w-full"
 							>
 								{TRANSITION_EASING_OPTIONS.map((option) => (
-									<ToggleGroupItem key={option.value} value={option.value} className="flex-1 text-xs">
+									<ToggleGroupItem
+										key={option.value}
+										value={option.value}
+										className="flex-1 text-xs"
+									>
 										{option.label}
 									</ToggleGroupItem>
 								))}
@@ -861,11 +887,20 @@ const CameraControlsSettingsPanel = memo(() => {
 				)}
 
 				{selectedTransition.type === 'object_avoidance' && (
-					<Collapsible open={transitionAdvancedOpen} onOpenChange={setTransitionAdvancedOpen}>
+					<Collapsible
+						open={transitionAdvancedOpen}
+						onOpenChange={setTransitionAdvancedOpen}
+					>
 						<CollapsibleTrigger asChild>
-							<Button variant="ghost" size="sm" className="w-full justify-between px-0 text-xs text-muted-foreground hover:text-foreground">
+							<Button
+								variant="ghost"
+								size="sm"
+								className="text-muted-foreground hover:text-foreground w-full justify-between px-0 text-xs"
+							>
 								Path settings
-								<ChevronDown className={`h-3.5 w-3.5 transition-transform ${transitionAdvancedOpen ? 'rotate-180' : ''}`} />
+								<ChevronDown
+									className={`h-3.5 w-3.5 transition-transform ${transitionAdvancedOpen ? 'rotate-180' : ''}`}
+								/>
 							</Button>
 						</CollapsibleTrigger>
 						<CollapsibleContent className="space-y-4 pt-2">
@@ -952,7 +987,9 @@ const CameraControlsSettingsPanel = memo(() => {
 			{/* Camera Controls */}
 			<div className="space-y-4">
 				<div className="flex items-center gap-2">
-					<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Camera Controls</p>
+					<p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+						Camera Controls
+					</p>
 					<InfoTooltip content="Configure how users can interact with the camera in your scene." />
 				</div>
 				<Separator />
@@ -971,7 +1008,9 @@ const CameraControlsSettingsPanel = memo(() => {
 					description="Automatically rotate the camera around the model."
 				/>
 
-				<p className="text-xs font-medium text-muted-foreground pt-2">Interaction Speeds</p>
+				<p className="text-muted-foreground pt-2 text-xs font-medium">
+					Interaction Speeds
+				</p>
 
 				{CAMERA_CONTROLS_FIELDS.filter((config) =>
 					SPEED_FIELDS.includes(config.key)
@@ -994,11 +1033,20 @@ const CameraControlsSettingsPanel = memo(() => {
 					)
 				})}
 
-				<Collapsible open={controlsAdvancedOpen} onOpenChange={setControlsAdvancedOpen}>
+				<Collapsible
+					open={controlsAdvancedOpen}
+					onOpenChange={setControlsAdvancedOpen}
+				>
 					<CollapsibleTrigger asChild>
-						<Button variant="ghost" size="sm" className="w-full justify-between px-0 text-xs text-muted-foreground hover:text-foreground">
+						<Button
+							variant="ghost"
+							size="sm"
+							className="text-muted-foreground hover:text-foreground w-full justify-between px-0 text-xs"
+						>
 							Advanced controls
-							<ChevronDown className={`h-3.5 w-3.5 transition-transform ${controlsAdvancedOpen ? 'rotate-180' : ''}`} />
+							<ChevronDown
+								className={`h-3.5 w-3.5 transition-transform ${controlsAdvancedOpen ? 'rotate-180' : ''}`}
+							/>
 						</Button>
 					</CollapsibleTrigger>
 					<CollapsibleContent className="space-y-4 pt-2">

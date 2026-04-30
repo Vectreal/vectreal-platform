@@ -55,6 +55,9 @@ function App() {
 | `loadingThumbnail` | `ViewerLoadingThumbnail` | No | Optional blurred loading thumbnail |
 | `onScreenshot` | `(dataUrl: string) => void` | No | Called when a screenshot is captured |
 | `onScreenshotCaptureReady` | `(capture: SceneScreenshotCapture \| null) => void` | No | Receives capture function for on-demand screenshots |
+| `onCameraSnapshotCaptureReady` | `(capture: SceneCameraSnapshotCapture \| null) => void` | No | Receives a capture function for the current camera pose |
+| `onInteractionEvent` | `(event: ViewerInteractionEvent) => void` | No | Receives viewer lifecycle and runtime interaction events |
+| `onCommandExecutorReady` | `(executor: ViewerCommandExecutor \| null) => void` | No | Receives a minimal imperative runtime command executor |
 
 ### Notes on content source
 
@@ -311,6 +314,89 @@ The callback types are exported from `@vctrl/viewer` as `SceneScreenshotCapture`
 | `mimeType` | `'image/jpeg' \| 'image/webp'` | Output format |
 | `quality` | `number` | Image quality hint for lossy output |
 | `mode` | `'auto-fit' \| 'viewport'` | Capture strategy |
+
+---
+
+## Camera snapshot callback
+
+`onCameraSnapshotCaptureReady(capture)` gives you a function that captures the current viewer camera pose as `{ position, rotation, target, fov }`.
+
+This is useful when building camera authoring tools or when you need to persist the current camera framing from surrounding UI.
+
+---
+
+## Runtime commands and events
+
+`VectrealViewer` exposes a small runtime interaction surface for app layers that need to coordinate camera state or viewer interactivity without reaching into internal scene objects.
+
+### Commands
+
+`onCommandExecutorReady(executor)` receives a `ViewerCommandExecutor` with `execute(command)`.
+
+Current commands:
+
+| Command | Payload | Effect |
+|---|---|---|
+| `activate_camera` | `{ cameraId: string }` | Transitions to one of the configured scene cameras |
+| `set_controls_enabled` | `{ enabled: boolean }` | Temporarily enables or disables orbit interaction |
+
+### Events
+
+`onInteractionEvent(event)` emits the current viewer runtime events:
+
+| Event | Payload | Meaning |
+|---|---|---|
+| `viewer_ready` | none | Viewer runtime is ready to accept commands |
+| `initial_framing_completed` | `{ cameraId: string \| null }` | Initial framing and stabilization completed |
+| `camera_changed` | `{ cameraId: string }` | Active camera changed |
+
+### Example
+
+```tsx
+import { useRef } from 'react'
+import {
+  type ViewerCommandExecutor,
+  VectrealViewer
+} from '@vctrl/viewer'
+
+function ViewerRuntimeExample({ model }: { model: object }) {
+  const executorRef = useRef<null | ViewerCommandExecutor>(null)
+
+  return (
+    <>
+      <button
+        onClick={() =>
+          executorRef.current?.execute({
+            type: 'activate_camera',
+            cameraId: 'overview'
+          })
+        }
+      >
+        Go to overview
+      </button>
+      <button
+        onClick={() =>
+          executorRef.current?.execute({
+            type: 'set_controls_enabled',
+            enabled: false
+          })
+        }
+      >
+        Lock controls
+      </button>
+      <VectrealViewer
+        model={model as never}
+        onCommandExecutorReady={(executor) => {
+          executorRef.current = executor
+        }}
+        onInteractionEvent={(event) => {
+          console.log('viewer event', event)
+        }}
+      />
+    </>
+  )
+}
+```
 
 ## Integration with `@vctrl/hooks`
 

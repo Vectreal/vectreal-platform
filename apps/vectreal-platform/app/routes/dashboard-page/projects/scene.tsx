@@ -59,6 +59,7 @@ import { useDashboardSceneActions } from '../../../hooks/use-dashboard-scene-act
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import { buildFullscreenPreviewPath } from '../../../lib/domain/embed/embed-snippet'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
+import { loadSceneFromApi } from '../../../lib/domain/scene/client/load-scene-from-api.client'
 import { buildSceneAggregate } from '../../../lib/domain/scene/server/scene-aggregate.server'
 import {
 	getScene,
@@ -251,11 +252,6 @@ interface PreviewModelProps {
 	thumbnailUrl?: string | null
 }
 
-const inFlightSceneSettingsRequests = new Map<
-	string,
-	Promise<SceneLoadResult>
->()
-
 const PreviewModel = memo(
 	({ file, sceneData, thumbnailUrl }: PreviewModelProps) => {
 		const loadingThumbnail = toViewerLoadingThumbnail(
@@ -266,6 +262,8 @@ const PreviewModel = memo(
 		return (
 			<div className={cn('relative h-full')}>
 				<ClientVectrealViewer
+					boundsOptions={sceneData?.bounds}
+					cameraOptions={sceneData?.camera}
 					model={file?.model}
 					envOptions={sceneData?.environment}
 					controlsOptions={sceneData?.controls}
@@ -378,8 +376,6 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 	const [drawerOpen, setDrawerOpen] = useState(false)
 	const [copiedLink, setCopiedLink] = useState(false)
 
-	const isMountedRef = useRef(true)
-	const activeSceneIdRef = useRef<string | null>(sceneId)
 	const metadataResetTimerRef = useRef<number | null>(null)
 
 	const fullscreenPreviewPath = buildFullscreenPreviewPath({
@@ -396,12 +392,10 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 	const isMetadataUnsaved = isTitleUnsaved || isDescriptionUnsaved
 
 	useEffect(() => {
-		isMountedRef.current = true
 		return () => {
 			if (metadataResetTimerRef.current) {
 				window.clearTimeout(metadataResetTimerRef.current)
 			}
-			isMountedRef.current = false
 		}
 	}, [])
 
@@ -411,10 +405,6 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		setSceneDescriptionDraft(scene.description || '')
 		setMetadataStatus('idle')
 	}, [scene])
-
-	useEffect(() => {
-		activeSceneIdRef.current = sceneId
-	}, [sceneId])
 
 	useEffect(() => {
 		if (
@@ -518,55 +508,46 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		window.setTimeout(() => setCopiedLink(false), 1500)
 	}
 
-	const getSceneSettings = useCallback(async () => {
-		try {
-			if (!sceneId) return
-
-			setIsLoadingScene(true)
-
-			const existingRequest = inFlightSceneSettingsRequests.get(sceneId)
-			const request =
-				existingRequest ??
-				loadFromServer({
-					sceneId,
-					serverOptions: {
-						endpoint: `/api/scenes/${sceneId}`
-					}
-				})
-
-			if (!existingRequest) {
-				inFlightSceneSettingsRequests.set(
-					sceneId,
-					request.finally(() => {
-						inFlightSceneSettingsRequests.delete(sceneId)
-					})
-				)
-			}
-
-			const loadedSceneData = await request
-
-			if (!isMountedRef.current || activeSceneIdRef.current !== sceneId) {
-				return
-			}
-
-			setSceneData(loadedSceneData)
-		} catch (error) {
-			console.error('Failed to load scene:', error)
-			if (isMountedRef.current && activeSceneIdRef.current === sceneId) {
-				setIsLoadingScene(false)
-			}
-		}
-	}, [loadFromServer, sceneId])
-
 	const openPublisherForPublishing = useCallback(() => {
 		navigate(`/publisher/${sceneState.id}`)
 	}, [navigate, sceneState.id])
 
 	useEffect(() => {
-		if (sceneId && sceneData?.sceneId !== sceneId) {
-			getSceneSettings()
+		if (!sceneId || sceneData?.sceneId === sceneId) {
+			return
 		}
-	}, [getSceneSettings, sceneData, sceneId])
+
+		let cancelled = false
+
+		const loadSceneSettings = async () => {
+			try {
+				setIsLoadingScene(true)
+
+				const loadedSceneData = await loadSceneFromApi({
+					sceneId,
+					endpoint: `/api/scenes/${sceneId}`,
+					loadFromServer
+				})
+
+				if (cancelled) {
+					return
+				}
+
+				setSceneData(loadedSceneData)
+			} catch (error) {
+				console.error('Failed to load scene:', error)
+				if (!cancelled) {
+					setIsLoadingScene(false)
+				}
+			}
+		}
+
+		void loadSceneSettings()
+
+		return () => {
+			cancelled = true
+		}
+	}, [loadFromServer, sceneData?.sceneId, sceneId])
 
 	// Stop loading state once file is actually loaded
 	useEffect(() => {
@@ -579,7 +560,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		<div className="h-[calc(100dvh-5rem)] overflow-hidden px-5 pt-1 pb-5 xl:px-6">
 			<div className="grid h-full min-h-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
 				<main className="flex min-h-0 flex-col gap-4">
-					<section className="relative min-h-64 flex-1 overflow-hidden rounded-2xl bg-black/[0.02]">
+					<section className="relative min-h-64 flex-1 overflow-hidden rounded-2xl bg-black/2">
 						<PreviewModel
 							file={file}
 							sceneData={sceneData}

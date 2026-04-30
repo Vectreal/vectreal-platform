@@ -13,9 +13,8 @@ export interface SceneCameraSnapshot {
 	fov: number
 }
 
-export type SceneCameraSnapshotCapture = () => Promise<
-	null | SceneCameraSnapshot
->
+export type SceneCameraSnapshotCapture =
+	() => Promise<null | SceneCameraSnapshot>
 
 export type SceneScreenshotCapture = (
 	options?: SceneScreenshotOptions
@@ -25,3 +24,9 @@ export interface ViewerLoadingThumbnail {
 	src: string
 	alt?: string
 }
+
+export type {
+	ViewerCommand,
+	ViewerCommandExecutor,
+	ViewerInteractionEvent
+} from './viewer-interactions'
