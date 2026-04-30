@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.18.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.17.0...viewer-v0.18.0) (2026-04-30)
+
+
+### Features
+
+* add camera transition and snapshot functionality ([#435](https://github.com/Vectreal/vectreal-platform/issues/435)) ([da2de12](https://github.com/Vectreal/vectreal-platform/commit/da2de12c51376877b1cbf6e87066383024aff78a))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.18.0
+
 ## [0.17.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.16.2...viewer-v0.17.0) (2026-04-13)
 
 

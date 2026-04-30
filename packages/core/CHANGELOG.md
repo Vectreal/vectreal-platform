@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/Vectreal/vectreal-platform/compare/core-v0.17.0...core-v0.18.0) (2026-04-30)
+
+
+### Features
+
+* add camera transition and snapshot functionality ([#435](https://github.com/Vectreal/vectreal-platform/issues/435)) ([da2de12](https://github.com/Vectreal/vectreal-platform/commit/da2de12c51376877b1cbf6e87066383024aff78a))
+
 ## [0.17.0](https://github.com/Vectreal/vectreal-platform/compare/core-v0.16.2...core-v0.17.0) (2026-04-13)
 
 
