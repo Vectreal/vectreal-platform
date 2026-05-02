@@ -1,0 +1,273 @@
+---
+title: "API Keys 101 — How Vectreal Keys Actually Work, and How to Ship Them Safely"
+slug: "api-keys-101"
+excerpt: "A practical guide to Vectreal API keys — what they unlock, how to scope them to projects and domains, and the three rotation patterns that keep production safe."
+publishedAt: "2026-05-02"
+updatedAt: "2026-05-02"
+category: "guides"
+tags:
+- "platform"
+- "open-source"
+- "security"
+- "api-keys"
+- "guides"
+author:
+    name: "Vectreal Team"
+    role: "Founding Contributors"
+    bio: "Building open infrastructure for practical 3D on the web."
+    avatar: "/assets/images/logo-192.png"
+    xUrl: "https://x.com/vectreal"
+    linkedinUrl: "https://www.linkedin.com/company/vectreal"
+coverImage: "/assets/images/newsroom/04/og-api-keys-101.webp"
+draft: false
+thumbnailImage: "/assets/images/newsroom/04/thumbnail-api-keys-101.webp"
+---
+
+{/* ## Blog Summary (80–120 words)
+
+You are about to ship a Vectreal embed to production. Your security reviewer wants three answers: who can use this key, what can it touch, and what happens if it leaks. This post walks through how Vectreal API keys actually work today — organization-scoped, project-scoped, with a one-time plaintext display, an expiration window, and a domain allowlist working as a second layer. You will leave with a clean mental model, a decision tree for when to issue a new key, three rotation patterns that match real deployment shapes, and the exact mistakes our team has watched teams make at launch time. */}
+
+{/* ─────────────────────────────────────────────
+   ASSET BRIEF — Cover Image (og-api-keys-101.webp)
+   Purpose: Newsroom OG / preview card.
+   Style: Brand dark surface (#0a0a0a). Centered glyph: a stylized key
+          with a small "vctrl_" label fading in at the bow, and a thin
+          orange (#FC6C18) outline rectangle around it suggesting a
+          domain allowlist boundary. Subtle Vectreal "V" mark bottom-right.
+          DM Sans for any text. No human figures, no stock photography.
+   Size: 1200×630, webp, <120 KB.
+   Output: /public/assets/images/newsroom/04/og-api-keys-101.webp
+   ───────────────────────────────────────────── */}
+
+{/* ASSET BRIEF — Thumbnail (thumbnail-api-keys-101.webp)
+   1:1 crop derived from cover; 600×600, webp, <60 KB.
+   Output: /public/assets/images/newsroom/04/thumbnail-api-keys-101.webp */}
+
+### Before You Begin
+
+Vectreal API keys are managed in your dashboard at [vectreal.com/dashboard/api-keys](https://vectreal.com/dashboard/api-keys). You need to be an **admin** or **owner** of the organization to create or revoke keys — members and viewers can use embeds that depend on a key, but they cannot mint new ones.
+
+If you have not connected an organization yet, the [Vectreal Publisher walkthrough](https://vectreal.com/news-room/the-vectreal-publisher-walkthrough) covers project setup. For framework integration after this post, see [React Viewer Integration](https://vectreal.com/news-room/react-viewer-integration).
+
+---
+
+### The Two-Minute Version
+
+If you only have two minutes:
+
+1. Vectreal API keys are **organization-scoped**. There are no per-user "personal" keys today.
+2. Each key is **scoped to a subset of projects** at creation. It cannot reach scenes outside that subset.
+3. Keys are presented as `vctrl_…` Bearer tokens. The plaintext is shown **exactly once** at creation; only the last four characters are kept on file as a preview.
+4. Keys carry an **expiration** of 30, 60, 90 days, or never. We strongly recommend setting one.
+5. Domain allowlists at the project level are the **second security layer** — even a leaked key cannot be used from an un-allowed origin.
+
+If that map is enough, jump to [Three rotation patterns that match real deployments](#three-rotation-patterns).
+
+---
+
+### What an API Key Is, in One Diagram
+
+![Vectreal API key boundaries — organization, project subset, allowlisted domains](/assets/images/newsroom/04/01-key-scope-diagram.svg)
+
+{/* ASSET BRIEF — Scope Diagram (01-key-scope-diagram.svg)
+   Purpose: Show the layered scope of a Vectreal API key.
+   Layout: Three concentric rounded rectangles (left to right or nested):
+     - Outermost: "Organization" — labeled with org name placeholder.
+     - Middle: "Projects this key can access" — show 2 of 4 project tiles
+                highlighted in #FC6C18 outline; the other two are dimmed.
+     - Innermost: "Allowed domains" — list two example domains (e.g.
+                marketing.example.com, app.example.com) inside a thin
+                orange-bordered chip stack.
+   Token chip "vctrl_…aB7Q" floats above with a thin arrow pointing to
+     the allowlist boundary, captioned "Bearer header passes here".
+   Colors: Surface #0a0a0a, primary #FC6C18, text #EAEAEA. No gradients.
+   Style: Flat geometric, DM Sans labels, vector — must scale at any width.
+   Output: /public/assets/images/newsroom/04/01-key-scope-diagram.svg */}
+
+A Vectreal API key is **not** a single shared secret that unlocks the whole platform. Three layers stack on top of each other:
+
+| Layer | What it controls | Where it is configured |
+|---|---|---|
+| Organization | Which org's data the key can touch | Set at key creation, immutable afterwards |
+| Projects | Which scenes within that org the key can read | Multi-select at creation; minimum one project |
+| Domains | Which origins are allowed to present the key | Per-project embed domain allowlist |
+
+The first two layers live on the key itself. The third layer lives on the project. A request only succeeds when all three line up — same org, allowed project, allowed origin. That intersection is what makes a leaked key recoverable.
+
+---
+
+### Creating a Key — Step by Step
+
+![Create API Key drawer — name, organization, projects, expiration](/assets/images/newsroom/04/02-create-key-drawer.jpeg)
+
+{/* ASSET BRIEF — Create Drawer Screenshot (02-create-key-drawer.jpeg)
+   Source: Live capture of /dashboard/api-keys/new in a logged-in state.
+   What to capture: Right-side drawer fully expanded, showing all five
+     fields: Name ("Production Marketing Site"), Description (one-liner),
+     Organization (selected: real org name acceptable, anonymize if needed),
+     Projects (two projects selected — show the chips), Expiration ("90 days").
+   State: Form filled but Submit not yet pressed.
+   Crop: Drawer + a sliver of the page behind for context. Hide any unrelated
+     dashboard data — no real keys, no real org IDs.
+   Resolution: Retina, 2400 px wide, exported at 1200 px webp/jpeg.
+   Output: /public/assets/images/newsroom/04/02-create-key-drawer.jpeg */}
+
+From the dashboard:
+
+1. Open **API keys** → click **Create API Key**.
+2. **Name** — keep it descriptive (`Production Marketing Site`, `Staging Pipeline`, `CI Smoke Tests`). The name is what you will read in the revoke dialog at 2 a.m. someday.
+3. **Description** — optional, up to 500 characters. Use it to record which application or pipeline the key serves.
+4. **Organization** — choose which org owns the key. If you are an admin/owner of more than one, switch carefully here.
+5. **Projects** — at least one project is required. Select the smallest set the consuming application actually needs. Keys cannot access scenes outside this selection.
+6. **Expiration** — 30, 60, 90 days, or never. Default is 90. We recommend never picking "never" for keys that ship to client-side code.
+
+When you click **Create API Key**, the platform generates a token and shows you the full plaintext **exactly once** in a one-time dialog.
+
+![One-time key reveal dialog with copy-to-clipboard](/assets/images/newsroom/04/03-one-time-reveal.jpeg)
+
+{/* ASSET BRIEF — One-Time Key Reveal (03-one-time-reveal.jpeg)
+   Source: Capture of the "API Key Created Successfully" dialog after
+     submitting the create form.
+   What to capture: Modal dialog showing the warning bar ("Copy this key
+     now…"), the monospace key field with a placeholder token like
+     `vctrl_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` (REDACT — never
+     a real token), the copy button, and the "Next Steps" panel with the
+     `Authorization: Bearer vctrl_…` snippet.
+   Crop: Dialog only against a slightly dimmed dashboard backdrop.
+   Output: /public/assets/images/newsroom/04/03-one-time-reveal.jpeg */}
+
+Treat that screen as the only chance you will get. After you close it the platform retains a hashed copy and a four-character preview (`…aB7Q`); the plaintext is no longer recoverable. If you misplace it, you create a new key and revoke the old one.
+
+---
+
+### How a Key Is Used in a Request
+
+Vectreal API keys travel in the standard HTTP `Authorization` header as Bearer tokens:
+
+```http
+GET /api/scenes/<scene-id> HTTP/1.1
+Host: vectreal.com
+Authorization: Bearer vctrl_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+On the server side, three checks happen on every request:
+
+1. **Format** — token must start with `vctrl_` and parse cleanly.
+2. **Domain** — the request's `Origin` (or `Referer`) must match the project's allowed-domain patterns. Localhost is allowed by default for development; production hosts must be added explicitly.
+3. **Project membership** — the scene the request is for must belong to a project this key was scoped to at creation.
+
+A failure on any layer rejects the request, and repeated failures from the same client identifier are rate-limited (60 attempts per minute per origin IP).
+
+That last point matters for one practical reason: a casual leak — a key showing up in a client-side bundle that the leaker uploads to GitHub — does not automatically translate to abuse. Without an allowed origin, a request still fails. The allowlist is the layer that converts a stolen key into a useless string.
+
+---
+
+### Three Rotation Patterns That Match Real Deployments
+
+![Three deployment shapes mapped to rotation cadence](/assets/images/newsroom/04/04-rotation-patterns.svg)
+
+{/* ASSET BRIEF — Rotation Patterns Diagram (04-rotation-patterns.svg)
+   Purpose: Visualize the three deployment shapes covered in this section.
+   Layout: Three columns, each labeled with a deployment shape:
+     1. "Single marketing site" — single Vectreal logo + a globe icon, one
+        key chip "Prod" expiring in 90d.
+     2. "Per-environment app" — three key chips "Dev / Staging / Prod"
+        side by side, each tied to a different domain.
+     3. "Per-tenant SaaS" — array of small client tiles, each with its
+        own key chip; arrow shows revocation isolation.
+   Style: Same flat vector treatment as the scope diagram. #FC6C18
+     accents only on active elements; rest #EAEAEA on #0a0a0a.
+   Output: /public/assets/images/newsroom/04/04-rotation-patterns.svg */}
+
+Most teams ship one of three shapes. Pick the one closest to you and the rotation cadence falls out.
+
+#### 1. Single marketing site (one origin, one key)
+
+You have one production website embedding a handful of Vectreal scenes. The key lives in the page's HTML or a server-side template.
+
+- **Issue:** one key, scoped to the project that holds your marketing scenes.
+- **Domains:** allow only your production domain (and your staging domain if you preview there).
+- **Expiration:** 90 days.
+- **Rotation:** every 60 days, mint the new key, ship the new build, revoke the old key after a 24-hour overlap.
+
+This is the simplest pattern and the one most teams start with. It also benefits the most from setting an expiration — your future self will rotate the key on your behalf.
+
+#### 2. Per-environment application (dev / staging / prod)
+
+You have a real product. Engineers run scenes locally, your QA environment loads them on a staging domain, and prod is its own thing.
+
+- **Issue:** three keys — one per environment.
+- **Domains:** each key's project should allow only that environment's origin. `localhost` is fine on the dev key; do not allow it on prod.
+- **Expiration:** 30 days for dev, 60 for staging, 90 for prod. Tighter on the keys most likely to leak (dev) and looser on the one with the most rotation cost (prod).
+- **Rotation:** automate. The simplest version is a calendar event 14 days before expiration that creates a ticket assigned to whoever owns deploys.
+
+The benefit of this layout is blast-radius control. A leaked dev key is annoying; a leaked prod key is an incident. Keeping them separate means revoking the wrong one does not take production down.
+
+#### 3. Per-tenant SaaS (one Vectreal project per customer)
+
+You are building a SaaS product where each of your customers gets their own Vectreal project (their own scenes, their own embed). You provision a Vectreal API key per customer at sign-up.
+
+- **Issue:** one key per tenant, scoped to that tenant's project only.
+- **Domains:** allow each tenant's domain on their own project. Your central marketing domain can stay on a separate key.
+- **Expiration:** 90 days, with a renewal job in your provisioning workflow.
+- **Rotation:** revocation becomes part of off-boarding. When a customer cancels, the revoke step is idempotent and immediate — embed traffic from their domain stops on the next request.
+
+This is the layout most likely to grow past plan limits. The current per-org limits are **2 keys (Free), 10 (Pro), 50 (Business), unlimited (Enterprise)**. If you are crossing those thresholds at customer growth scale, the conversation is about tier rather than security model.
+
+---
+
+### The Three Mistakes We See Most Often
+
+After months of helping teams launch, three patterns come up over and over.
+
+**1. One key shared across every site.** A single "production" key embedded into half a dozen unrelated marketing sites. Convenient until one of them leaves the build, gets archived, and the key shows up in someone's browser cache six months later. Fix: one key per origin.
+
+**2. "Never expires" by default.** Setting `Never expires` because it is the easiest option and then forgetting the key was ever created. Eighteen months later nobody remembers which application is using it, and rotating becomes a research project. Fix: pick 90 days. Future-you will thank you.
+
+**3. Wide-open project scope.** Selecting *all* projects at creation because it was faster than checking. Now the key can read internal-only client work, prototype scenes, and the sales-demo project. Fix: smallest scope that works. You can always create a second, narrower key later — it is one click.
+
+If you have shipped any of these, do not panic. Go to **API keys**, revoke the over-broad key, and create a replacement with the right scope. The revoke is immediate; the only client of the old key was your past habit.
+
+---
+
+### Frequently Asked, Quickly Answered
+
+**Can I share a key across organizations?** No. Keys are bound to a single organization at creation.
+
+**Can a member without admin/owner role create or revoke keys?** No. Both actions require the admin or owner role within the organization.
+
+**Where do I see who created a key?** The API keys table shows the creator's name (or email) and creation date in the row metadata.
+
+**What does "revoke" do exactly?** It marks the key inactive, immediately. Any application using it loses access on the next request. The action cannot be undone — you cannot un-revoke a key, only create a new one.
+
+**What happens to embedded scenes if I revoke a key they depend on?** They will fail to load on the next request. If you need overlap during rotation, mint the new key first, ship the new build that uses it, then revoke the old one once traffic has cut over. We typically suggest a 24-hour overlap window.
+
+**Are there usage analytics per key?** The dashboard shows last-used timestamp per key today. Per-key request counts and per-domain breakdowns are on the roadmap.
+
+**Does the platform record API key activity for audit?** Audit logs are an entitlement available on Business and Enterprise plans (`org_audit_log`). On Free and Pro plans you have the dashboard's last-used timestamp.
+
+---
+
+### What This Unlocks Next
+
+You now have a key that is scoped, expiring, and bound to the origins you actually deploy from. The next moves:
+
+- **Embed the scene in your app.** If you are integrating into React specifically, the [React Viewer Integration walkthrough](https://vectreal.com/news-room/react-viewer-integration) covers SSR-safe loading and the `ModelProvider` pattern.
+- **Tighten the second layer.** Open your project's **Embed domain allowlist** and remove any wildcard or development hosts that snuck in during testing. The allowlist is what saves you when a key leaks.
+- **Schedule the rotation.** Whichever of the three patterns above matches you, put the next rotation on a calendar before you forget you read this.
+
+If you are thinking about how to standardize this across a team that ships many embeds, talk to us. Vectreal is open-source, and our roadmap is public — security primitives like audit logs and per-key analytics get prioritized when teams tell us where the friction is.
+
+---
+
+> **Have a question or want to share how your team manages embed keys?** Open a thread in our [GitHub Discussions](https://github.com/vectreal/vectreal-platform/discussions) or join the conversation in [Discord](https://discord.gg/vectreal). The platform improves fastest when we hear from teams shipping it in production.
+
+{/* ASSET BRIEF — Closing Image (optional, 05-cta-banner.webp)
+   Purpose: End-of-article CTA banner.
+   Style: Wide banner, brand dark, with the headline "Build with Vectreal"
+     and three small chips: "Open source", "AGPL-3.0", "Self-host ready".
+     Primary button area styled but inert (the actual link is in the
+     paragraph above).
+   Output: /public/assets/images/newsroom/04/05-cta-banner.webp */}
+
+*Vectreal is open-source under AGPL-3.0. The platform, viewer, hooks, and core packages live at [github.com/vectreal/vectreal-platform](https://github.com/vectreal/vectreal-platform).*

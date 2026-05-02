@@ -1,0 +1,312 @@
+---
+title: "Camera Presets, Transitions, and the Single Biggest Quality Lever in 3D Web Publishing"
+slug: "camera-presets-and-transitions"
+excerpt: "Multi-camera scenes, smart transitions, and the small set of decisions that turn a flat embed into a presentation people actually finish watching."
+publishedAt: "2026-05-06"
+updatedAt: "2026-05-06"
+category: "guides"
+tags:
+- "platform"
+- "open-source"
+- "3d-web"
+- "camera"
+- "presentation"
+- "guides"
+author:
+    name: "Vectreal Team"
+    role: "Founding Contributors"
+    bio: "Building open infrastructure for practical 3D on the web."
+    avatar: "/assets/images/logo-192.png"
+    xUrl: "https://x.com/vectreal"
+    linkedinUrl: "https://www.linkedin.com/company/vectreal"
+coverImage: "/assets/images/newsroom/05/og-camera-presets-and-transitions.webp"
+draft: true
+thumbnailImage: "/assets/images/newsroom/05/thumbnail-camera-presets-and-transitions.webp"
+---
+
+{/* ## Blog Summary (80–120 words)
+
+Your scene loads. The visitor sees the model from a corner-of-the-room angle that flattens its silhouette and hides the detail you spent two days modeling. They drag once, give up, and bounce. Camera choice is the largest quality lever in 3D web publishing — and the one teams reach for last. This post walks through the Vectreal camera system as it ships today: multiple saved cameras per scene, three transition types (Instant, Linear, Smart object-avoidance), four easing curves, and the controls that decide whether your viewer feels professional or jittery. Three preset bundles for e-commerce, architecture, and product demos at the end. */}
+
+{/* ASSET BRIEF — Cover Image (og-camera-presets-and-transitions.webp)
+   Purpose: Newsroom OG / preview card.
+   Style: Brand dark surface (#0a0a0a). A single 3D product silhouette
+          shown from three camera angles arranged in a fanned-out
+          composition (hero / detail / 3-quarter). Each angle outlined
+          in #FC6C18 with a small "Camera 1 / 2 / 3" label in DM Sans.
+          Subtle Vectreal "V" mark bottom-right.
+   Size: 1200×630, webp, <120 KB. No human figures.
+   Output: /public/assets/images/newsroom/05/og-camera-presets-and-transitions.webp */}
+
+{/* ASSET BRIEF — Thumbnail (thumbnail-camera-presets-and-transitions.webp)
+   1:1 crop derived from cover; 600×600, webp, <60 KB.
+   Output: /public/assets/images/newsroom/05/thumbnail-camera-presets-and-transitions.webp */}
+
+### Before You Begin
+
+Camera configuration lives in the Vectreal Publisher's **Compose** sidebar, under **Camera Controls**. Open any scene in the Publisher and the controls described here are immediately available — no plugin, no extra package, no premium tier required. The Publisher itself is at [vectreal.com/publisher](https://vectreal.com/publisher).
+
+If you have not published a scene yet, start with the [Publisher walkthrough](https://vectreal.com/news-room/the-vectreal-publisher-walkthrough). If you are integrating Vectreal into a React app, the camera configuration documented here is delivered through the same `cameraOptions` and `controlsOptions` props covered in the [React Viewer Integration guide](https://vectreal.com/news-room/react-viewer-integration).
+
+---
+
+### Why This Is the Lever That Matters
+
+Three things determine whether a 3D embed feels professional:
+
+1. The model.
+2. The lighting.
+3. The first thing the camera shows the visitor.
+
+Most teams obsess over the first two. The third is what separates "interesting prototype" from "scene people actually use." A great model framed badly looks generic. A modest model framed well looks intentional.
+
+This is the lever, and Vectreal gives you a full keyboard for it.
+
+---
+
+### What Ships Today — The Camera System in One Table
+
+![Vectreal camera system overview — Manager, Settings, Transition, Controls](/assets/images/newsroom/05/01-camera-system-overview.svg)
+
+{/* ASSET BRIEF — Camera System Overview Diagram (01-camera-system-overview.svg)
+   Purpose: Visual map of the four sidebar sections in the Compose tab.
+   Layout: Four labeled cards in a 2x2 grid:
+     1. "Camera Manager" — icon: stack of camera tiles with select arrow.
+     2. "Camera Settings" — icon: lens with FOV degree dial (20°–120°).
+     3. "Camera Transition" — three small chips: Instant / Linear / Smart.
+     4. "Camera Controls" — toggle icons: Zoom, Auto Rotate; speed sliders.
+   Style: Same flat vector treatment as Article 04 diagrams.
+     #FC6C18 accents on icons; #EAEAEA text on #0a0a0a.
+   Output: /public/assets/images/newsroom/05/01-camera-system-overview.svg */}
+
+| Section | What it does | Where the visitor feels it |
+|---|---|---|
+| Camera Manager | Save multiple named cameras per scene; switch between them at runtime. | "Oh, there are presets — I can see different angles." |
+| Camera Settings | Per-camera field of view (20°–120°). | The whole composition. Wide vs. tight. |
+| Camera Transition | How switching to a camera animates: Instant, Linear, or Smart. | The moment between angles. Feels professional or jittery. |
+| Camera Controls | Zoom on/off, auto-rotate on/off, speeds, vertical limit. | Whether dragging the model feels good. |
+
+These four panels, working together, are the difference between "loaded a 3D file" and "shipped a presentation."
+
+---
+
+### Camera Manager — The Concept Most Teams Skip
+
+![Camera Manager — multi-camera dropdown, add, rename, delete](/assets/images/newsroom/05/02-camera-manager.jpeg)
+
+{/* ASSET BRIEF — Camera Manager Screenshot (02-camera-manager.jpeg)
+   Source: Live capture of the Compose sidebar, Camera Controls panel,
+     with three saved cameras visible in the dropdown:
+     "Hero", "Detail", and "Three-Quarter".
+   Crop: Sidebar segment showing the Camera Manager block + a sliver
+     of the viewport behind it for context. Dropdown should be open
+     so the named cameras are visible.
+   State: Hover state on Add button optional.
+   Resolution: Retina, 2400 px wide, exported at 1200 px webp/jpeg.
+   Output: /public/assets/images/newsroom/05/02-camera-manager.jpeg */}
+
+The single largest quality jump comes from saving more than one camera. Most embeds ship with the default angle the file imported with — usually a corner-of-the-room shot that the modeler set up for working, not for showing.
+
+In the Publisher:
+
+1. Frame your scene in the viewport with the orbit controls until the composition reads.
+2. Click **Add camera** in the Camera Manager.
+3. Rename it to something the future-you will recognize: `Hero`, `Detail — Top Lid`, `Three-Quarter`.
+4. Frame the next angle.
+5. Repeat.
+
+Each saved camera stores its position, target, and field of view. Switching between cameras at runtime cuts (or transitions, depending on settings — more below) to the saved view.
+
+**A useful default starting set is three cameras:**
+
+- **Hero** — the angle the visitor lands on. Three-quarter front, slightly above the model's center of mass, framed so the silhouette reads cleanly against the background.
+- **Detail** — close in on the part that matters most. The lid, the seam, the engraving, the texture.
+- **Context** — pulled back, model centered, showing scale.
+
+If you only had time to set up one extra camera, **set up Hero**. The first frame is the entire experience for half your visitors.
+
+---
+
+### Camera Settings — Field of View Is Doing More Work Than You Think
+
+![Field of View comparison — 30°, 50°, 90° on the same model](/assets/images/newsroom/05/03-fov-comparison.jpeg)
+
+{/* ASSET BRIEF — FOV Comparison Image (03-fov-comparison.jpeg)
+   Purpose: Three side-by-side renders of the same model at three FOVs.
+   Layout: Left: 30° (telephoto-like, compressed depth). Center: 50°
+     (default, natural). Right: 90° (wide, distorted, immersive).
+   Each labeled with the FOV value below the render.
+   Background: Brand dark surface; subtle gradient or floor shadow OK.
+   Crop: Three equal-width tiles in a single image, 1200x600 final.
+   Output: /public/assets/images/newsroom/05/03-fov-comparison.jpeg */}
+
+The Vectreal Publisher exposes **field of view from 20° to 120°**, set per camera. This number is doing more work than most teams realize.
+
+| FOV | Feel | Best for |
+|---|---|---|
+| 20°–35° | Tight, telephoto. Compresses depth. Distortion-free at edges. | Product close-ups; detail shots; when you want the silhouette to read flat and graphic. |
+| 40°–60° | Natural. The default range. | Hero shots; most product photography; architectural exteriors at distance. |
+| 65°–85° | Wide. Begins to distort straight lines at the edges. | Architectural interiors; immersive scenes; when you want the visitor to feel inside the model. |
+| 90°–120° | Very wide. Strong edge distortion. | Establishing shots; specific stylistic effects (game cameras, VR feel). |
+
+A common mistake is leaving every camera at the same FOV. **Vary it deliberately:** Hero at 50°, Detail at 30° (tighter, less distortion on close geometry), Context at 70° (slightly wider to show scale).
+
+---
+
+### Camera Transitions — Where "Polished" and "Jittery" Diverge
+
+![Three transition types — Instant, Linear, Smart object-avoidance](/assets/images/newsroom/05/04-transition-types.svg)
+
+{/* ASSET BRIEF — Transition Types Diagram (04-transition-types.svg)
+   Purpose: Show the three transition behaviors visually.
+   Layout: Three rows, each with start camera (left), path (middle),
+     end camera (right):
+     1. Instant — straight dotted line with a "cut" symbol in the middle.
+     2. Linear — straight solid line, blue-grey gradient.
+     3. Smart — curved arc that visibly bends around a small obstacle
+        (a cube/sphere shape) sitting between the two cameras. Use
+        #FC6C18 for the active arc.
+   Annotations: Tiny labels under each — "Cut", "Lerp", "Path-aware".
+   Output: /public/assets/images/newsroom/05/04-transition-types.svg */}
+
+When the visitor (or your app code) switches from one camera to another, three behaviors are available.
+
+#### Instant
+
+A cut. No animation. The camera teleports to the new position on the next frame.
+
+**Use it for:** kiosks, exhibition installations, anything where the visitor is using a remote and expects buttons to feel immediate. Also useful for accessibility — instant cuts are kinder to viewers sensitive to motion.
+
+#### Linear
+
+The default. The camera lerps from its current position to the saved camera in a configurable duration (0–5000 ms) with a configurable easing curve.
+
+**Easing options:**
+
+| Easing | Feel | When to reach for it |
+|---|---|---|
+| Linear | Mechanical, constant speed. | Rare — usually feels robotic. |
+| Ease In | Slow start, fast end. | Subtle "pull" out of a static frame. |
+| Ease Out | Fast start, slow end. | Arrival into a hero shot — gives the destination weight. |
+| Smooth (ease_in_out) | Slow start, slow end, fast middle. | Almost always the right answer for camera moves. |
+
+The default duration is **1000 ms** (one second). For most product scenes that's the right number. Bump to 1500–2000 ms for architectural interiors where the visitor needs more time to read the new space. Drop below 500 ms and the move starts to feel rushed.
+
+#### Smart (object_avoidance)
+
+A path-aware transition. The camera does not move in a straight line — it computes an arc that lifts over obstacles between the start and end positions. This is the transition that turns a model viewer into something that feels like a guided tour.
+
+**The four parameters:**
+
+| Parameter | What it controls | Range | Sensible default |
+|---|---|---|---|
+| Obstacle Margin | Extra space the path keeps from any obstacle. | 0–20 | 2 |
+| Path Height | How high the path arcs over obstacles. | 0–20 | 2 |
+| Path Smoothness | Number of samples along the arc. Higher is smoother but more expensive. | 2–128 | 24 |
+| Path Curve | How tightly the path follows the arc shape. | 0–1 | 0.5 |
+
+Smart is the option to turn on when your scene has geometry between your cameras — interior architecture, a product with multiple components, a scene with a stage element. For a single object on a turntable, Linear is usually enough.
+
+---
+
+### Camera Controls — The Layer That Decides How "Good" Dragging Feels
+
+![Camera Controls panel — zoom, auto-rotate, speeds, vertical limit](/assets/images/newsroom/05/05-camera-controls.jpeg)
+
+{/* ASSET BRIEF — Camera Controls Screenshot (05-camera-controls.jpeg)
+   Source: Live capture of the Camera Controls block in the Compose
+     sidebar with the Advanced controls panel expanded.
+   What to capture: Enable Zoom toggle, Auto Rotate toggle, the four
+     speed sliders (Rotation Speed, Zoom Speed, Orbit Speed, Pan Speed),
+     and the expanded Advanced section showing Movement Smoothness
+     (damping factor) and Vertical Limit sliders.
+   Crop: Sidebar segment only.
+   Output: /public/assets/images/newsroom/05/05-camera-controls.jpeg */}
+
+Two toggles and a handful of sliders, but each one shifts how the embed feels in the visitor's hands.
+
+| Control | Range | What changes |
+|---|---|---|
+| Enable Zoom | on/off | Whether scroll-zoom is allowed. Off for kiosks. On for everything else. |
+| Auto Rotate | on/off | Whether the camera spins idly when the visitor is not interacting. Useful for marketing pages where the embed is in the visitor's peripheral vision. |
+| Rotation Speed | 0.1–10 | Auto-rotate speed. **Default 1.0.** Above 3 starts to feel showroom-spinny. |
+| Movement Smoothness | 0.01–1 | Damping factor — how quickly the camera decelerates after the visitor lets go. Lower = floatier. Higher = snappier. |
+| Zoom Speed | 0.1–5 | Scroll-zoom step size. |
+| Orbit Speed | 0.1–3 | Drag-rotation speed. |
+| Pan Speed | 0.1–3 | Right-click pan speed. |
+| Vertical Limit | 0–180° | How far down the camera can orbit. Set this to 90° to keep the camera above the horizon — saves visitors from the inside-out view of a model with no underside. |
+
+**The single most-impactful one** for most embeds is **Vertical Limit**. Set it to **90°** (which the slider displays in degrees). Visitors stop accidentally clipping under the floor.
+
+---
+
+### Three Preset Bundles That Match Real Use Cases
+
+You can think of all of the above as a kit, and reach into it differently depending on the scene's job. Three starting points that work well in production:
+
+#### E-commerce product (single object on a "stage")
+
+**Cameras:** Hero (3/4 front, FOV 50°), Detail (closeup of the most-photographed feature, FOV 30°), Context (pulled back, FOV 60°).
+**Transitions:** Linear, Smooth easing, 1000 ms.
+**Controls:** Zoom on. Auto-rotate **off** (it competes with intentional product photography). Vertical Limit 90°. Movement Smoothness 0.1 for a soft-floating feel.
+
+The visitor lands on Hero, can drag to inspect, can switch to Detail to see the feature that closes the sale.
+
+#### Architectural interior
+
+**Cameras:** Entry (wide, FOV 75°), Living Area (FOV 60°), Detail (FOV 40° on a finish or fixture).
+**Transitions:** Smart, with Path Height 3, Obstacle Margin 2, Path Smoothness 32. Duration 1500–2000 ms — interiors need time to read.
+**Controls:** Zoom on. Auto-rotate off. Pan on. Vertical Limit 100° to allow looking slightly down at floor finishes.
+
+Smart transitions are doing real work here — without them, switching between cameras inside a building cuts straight through walls.
+
+#### Guided product demo (presentation mode)
+
+**Cameras:** an ordered tour — `01 — Open`, `02 — Top`, `03 — Inside`, `04 — Detail`, `05 — Closeout`. Each numbered for predictable iteration.
+**Transitions:** Linear or Smart depending on geometry. Smooth easing. **Duration 1500 ms** to give each step room to breathe.
+**Controls:** Zoom off. Auto-rotate off. Pan off. The visitor's job is to **press Next**, not to free-fly.
+
+This is the layout that turns a 3D embed into a slide deck. Combined with a few buttons in your surrounding UI to trigger camera switches, it becomes a presentation people watch start to finish.
+
+---
+
+### A Five-Minute Polish Pass
+
+If you have shipped a Vectreal scene and want to upgrade it before doing anything else:
+
+1. Open the scene in the Publisher.
+2. Frame a Hero camera. Save it. Rename it. Set FOV to 50°.
+3. Set Vertical Limit to 90°.
+4. Set transition to Linear, Smooth easing, 1000 ms.
+5. Re-publish.
+
+That's it. Five minutes. The first frame is now intentional, the visitor cannot fall through the floor, and any future camera switch animates instead of teleporting. The visible quality jump is significant.
+
+---
+
+### What This Unlocks Next
+
+You now have a multi-camera scene with intentional framing and polished transitions. From here:
+
+- **If you want camera switches driven from your application code**, the [React Viewer Integration guide](https://vectreal.com/news-room/react-viewer-integration) covers the `cameraOptions` prop surface — saved cameras flow directly into it as the `cameras` array.
+- **If you want to share previews privately before publishing**, the private-preview entitlement is available on Pro and above. Mint a key per the [API Keys 101 guide](https://vectreal.com/news-room/api-keys-101) and embed the preview behind your domain allowlist.
+- **If your scene has many components and Smart transitions are expensive at high sample counts**, drop Path Smoothness to 16 or 24 and re-time the duration. The visual difference is small; the runtime cost is meaningful on lower-end devices.
+
+We are also actively gathering input on what should land next in the camera system — preset bundles shipped as community-shared exports, scripted camera tours, and triggered transitions. If you have a use case the current surface does not cover well, tell us about it.
+
+---
+
+> **Have a scene you want to show off, or a camera setup you've fallen in love with?** Drop it in our [Discord](https://discord.gg/vectreal) — we run a "preset drops" thread for shareable camera configurations. The roadmap moves fastest when teams tell us where the friction is.
+
+{/* ASSET BRIEF — Closing video (optional, 06-walkthrough-video.mp4)
+   Length: 60–90 seconds. Screen capture only.
+   Content: Open Publisher → Compose tab → add three cameras (Hero,
+     Detail, Context) → set FOV per camera → switch transition to
+     Linear / Smooth / 1000ms → toggle Auto Rotate off → set Vertical
+     Limit to 90° → publish. End on the published preview cycling
+     through the three cameras with smooth transitions.
+   Audio: None or low-volume DM-Sans-feeling soft synth bed; no VO
+     necessary, the on-screen UI labels carry the narrative.
+   Output: /public/assets/videos/newsroom/05/06-walkthrough-video.mp4 */}
+
+*Vectreal is open-source under AGPL-3.0. The platform, viewer, hooks, and core packages live at [github.com/vectreal/vectreal-platform](https://github.com/vectreal/vectreal-platform).*
