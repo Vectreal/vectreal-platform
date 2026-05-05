@@ -138,11 +138,11 @@ Browser-side React hooks for the 3D pipeline — the runtime counterpart to `@vc
 
 Three primary hooks:
 
-- **`useLoadModel`** — parse glTF, GLB, OBJ, and USDZ files from file lists, dropped directories, or server endpoints. Supports both context mode (via `ModelProvider`) and direct mode.
+- **`useLoadModel`** — parse glTF, GLB, and USDZ files from file lists, dropped directories, or server endpoints. Supports both context mode (via `ModelProvider`) and direct mode.
 - **`useOptimizeModel`** — run glTF-Transform optimization passes in a Web Worker: mesh simplification, deduplication, quantization, normals normalization, and texture compression.
 - **`useExportModel`** — export the current scene to `.glb` or a zipped glTF bundle.
 
-Peer dependencies: React `^18 || ^19`, Three.js `^0.170`, React Three Fiber `^9`.
+Peer dependencies: React `^18 || ^19`. Three.js (`^0.177.0`) is bundled as a direct dependency.
 
 #### `@vctrl/core`
 
