@@ -218,7 +218,13 @@ function ExportButton({ file }: { file: ModelFile | null }) {
 |---|---|
 | `react` | `^18 \|\| ^19` |
 
-> `three` (`^0.177.0`) is a **direct dependency** of `@vctrl/hooks` and is bundled automatically. You do not need to declare it separately when using hooks alone, though `@vctrl/viewer` requires it as a peer dependency.
+> `three` (`^0.177.0`) is a **direct dependency** of `@vctrl/hooks` and does not need to be declared separately when using hooks in isolation. However, `@vctrl/viewer` declares `three` as a peer dependency. If you are using both packages together, **declare `three` explicitly** in your own project's `package.json` to guarantee a single shared instance — Three.js uses global singletons internally and having duplicate instances produces subtle rendering bugs:
+>
+> ```bash
+> npm install three@^0.177.0
+> # or
+> pnpm add three@^0.177.0
+> ```
 
 ---
 
