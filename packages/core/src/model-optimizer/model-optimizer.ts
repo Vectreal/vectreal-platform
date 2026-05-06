@@ -237,7 +237,7 @@ export class ModelOptimizer {
 
 		try {
 			// This would require fs in Node.js environment
-			const fs = await import('fs/promises')
+			const fs = await import(/* @vite-ignore */ 'fs/promises')
 			const buffer = await fs.readFile(filePath)
 			await this.loadFromBuffer(new Uint8Array(buffer))
 		} catch (error) {
@@ -357,7 +357,7 @@ export class ModelOptimizer {
 		let sharp: TextureCompressionEncoder
 
 		try {
-			const sharpModule = await import('sharp')
+			const sharpModule = await import(/* @vite-ignore */ 'sharp')
 			sharp = sharpModule.default || sharpModule
 
 			if (typeof sharp !== 'function') {

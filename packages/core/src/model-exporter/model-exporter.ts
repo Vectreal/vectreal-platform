@@ -269,8 +269,8 @@ export class ModelExporter {
 		filePath: string
 	): Promise<void> {
 		try {
-			const fs = await import('fs/promises')
-			const path = await import('path')
+			const fs = await import(/* @vite-ignore */ 'fs/promises')
+			const path = await import(/* @vite-ignore */ 'path')
 
 			this.emitProgress('Saving to file system', 0)
 
