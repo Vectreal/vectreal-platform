@@ -2,6 +2,7 @@ name: CD - Deploy Platform to Production
 
 permissions:
   contents: read
+  id-token: write
 
 on:
   workflow_dispatch:
