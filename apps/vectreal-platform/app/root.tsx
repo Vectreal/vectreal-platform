@@ -51,8 +51,20 @@ export const meta: MetaFunction = () => [
 export const middleware: Route.MiddlewareFunction[] = [posthogMiddleware]
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const [csrf, cookieHeader] = await csrfSession.commitToken(request)
 	const pathname = new URL(request.url).pathname
+
+	// Keep liveness checks isolated from session and database dependencies.
+	if (pathname === '/health') {
+		return {
+			csrf: '',
+			themeMode: 'system' as const,
+			forceDarkTheme: false,
+			consentState: null,
+			consentVersion: null
+		}
+	}
+
+	const [csrf, cookieHeader] = await csrfSession.commitToken(request)
 	const forceDarkTheme = pathname === '/' || pathname === '/home'
 	const themeMode = await getThemeModeFromRequest(request)
 	const requestCookieHeader = request.headers.get('Cookie') ?? ''
