@@ -28,7 +28,8 @@ variable "turnstile_staging_hostname" {
 }
 
 locals {
-  cloudflare_disabled_placeholder_token = "turnstile_disabled_placeholder_token"
+  # Must satisfy Cloudflare provider api_token validation even when Turnstile is disabled.
+  cloudflare_disabled_placeholder_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   cloudflare_api_token_min_length = 20
   cloudflare_api_token_normalized = trimspace(var.cloudflare_api_token)
   cloudflare_api_token_is_valid   = can(regex("^[A-Za-z0-9_-]+$", local.cloudflare_api_token_normalized)) && length(local.cloudflare_api_token_normalized) >= local.cloudflare_api_token_min_length
