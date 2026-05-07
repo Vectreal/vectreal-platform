@@ -2,6 +2,7 @@ name: Shared - Google Cloud Run Deployment
 
 permissions:
   contents: read
+  id-token: write   # required for Workload Identity Federation
 
 on:
   workflow_call:
@@ -74,8 +75,11 @@ on:
         type: boolean
         default: false
     secrets:
-      gcp-credentials:
-        description: 'Google Cloud credentials JSON'
+      gcp-workload-identity-provider:
+        description: 'Workload Identity Provider resource name (projects/NUM/locations/global/workloadIdentityPools/POOL/providers/PROVIDER)'
+        required: true
+      gcp-service-account:
+        description: 'Service account email to impersonate via Workload Identity Federation'
         required: true
       gcp-project-id:
         description: 'Google Cloud project ID'
@@ -144,7 +148,8 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
-          credentials_json: ${{ secrets.gcp-credentials }}
+          workload_identity_provider: ${{ secrets.gcp-workload-identity-provider }}
+          service_account: ${{ secrets.gcp-service-account }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v3

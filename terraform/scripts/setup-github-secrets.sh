@@ -157,18 +157,29 @@ fi
 echo "🔑 Setting GitHub Secrets..."
 echo ""
 
-# GCP credentials (if they exist)
-PROD_KEY="$REPO_ROOT/credentials/gcp-prod-deployer-key.json"
-STAGING_KEY="$REPO_ROOT/credentials/gcp-staging-deployer-key.json"
+# GCP Workload Identity Federation secrets (replaces long-lived JSON key credentials)
+# These values come from `terraform output` after applying infrastructure.
+echo "→ Setting GCP Workload Identity Federation secrets..."
 
-if [ -f "$PROD_KEY" ] && [ -f "$STAGING_KEY" ]; then
-    echo "→ Setting GCP credentials..."
-    gh secret set GCP_CREDENTIALS < "$PROD_KEY"
-    gh secret set GCP_CREDENTIALS_STAGING < "$STAGING_KEY"
-    echo "  ✅ GCP credentials"
+TF_DIR="$SCRIPT_DIR/.."
+
+WIF_PROVIDER=$(terraform -chdir="$TF_DIR" output -raw workload_identity_provider 2>/dev/null || true)
+PROD_SA_EMAIL=$(terraform -chdir="$TF_DIR" output -raw prod_deployer_sa_email 2>/dev/null || true)
+STAGING_SA_EMAIL=$(terraform -chdir="$TF_DIR" output -raw staging_deployer_sa_email 2>/dev/null || true)
+
+if [ -n "$WIF_PROVIDER" ] && [ -n "$PROD_SA_EMAIL" ] && [ -n "$STAGING_SA_EMAIL" ]; then
+    gh secret set GCP_WIF_PROVIDER_PROD --body "$WIF_PROVIDER"
+    gh secret set GCP_WIF_PROVIDER_STAGING --body "$WIF_PROVIDER"
+    gh secret set GCP_SA_EMAIL_PROD --body "$PROD_SA_EMAIL"
+    gh secret set GCP_SA_EMAIL_STAGING --body "$STAGING_SA_EMAIL"
+    echo "  ✅ GCP Workload Identity Federation secrets (4)"
 else
-    echo "⚠️  Skipping GCP credentials (files not found)"
-    echo "   Run './apply-infrastructure.sh' first to generate them"
+    echo "⚠️  Could not read Workload Identity outputs from Terraform."
+    echo "   Make sure 'terraform apply' has been run with enable_workload_identity=true."
+    echo "   Then re-run this script, or set the following secrets manually:"
+    echo "     GCP_WIF_PROVIDER_PROD / GCP_WIF_PROVIDER_STAGING  — terraform output workload_identity_provider"
+    echo "     GCP_SA_EMAIL_PROD                                  — terraform output prod_deployer_sa_email"
+    echo "     GCP_SA_EMAIL_STAGING                               — terraform output staging_deployer_sa_email"
 fi
 
 # GCP Project ID
@@ -298,6 +309,9 @@ echo "🔄 To rotate secrets:"
 echo "   1. Edit .env.development"
 echo "   2. Run this script again: ./setup-github-secrets.sh"
 echo "   3. Redeploy: git commit --allow-empty -m 'Rotate secrets' && git push"
+echo ""
+echo "🔑 To refresh GCP Workload Identity secrets:"
+echo "   Run 'terraform apply' in ./terraform then re-run this script."
 echo ""
 echo "🚀 Next Steps:"
 echo "   Deploy your application:"

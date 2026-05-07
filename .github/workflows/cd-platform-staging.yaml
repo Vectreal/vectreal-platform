@@ -46,7 +46,8 @@ jobs:
       static-cache-control: 'public, max-age=31536000, immutable'
       fail-on-health-check: false
     secrets:
-      gcp-credentials: ${{ secrets.GCP_CREDENTIALS_STAGING }}
+      gcp-workload-identity-provider: ${{ secrets.GCP_WIF_PROVIDER_STAGING }}
+      gcp-service-account: ${{ secrets.GCP_SA_EMAIL_STAGING }}
       gcp-project-id: ${{ secrets.GCP_PROJECT_ID_STAGING }}
       database-url: ${{ secrets.DATABASE_URL_STAGING }}
       supabase-url: ${{ secrets.SUPABASE_URL_STAGING }}
