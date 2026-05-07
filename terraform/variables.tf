@@ -141,6 +141,12 @@ variable "create_service_account_keys" {
   default     = false
 }
 
+variable "enable_workload_identity" {
+  description = "Create a Workload Identity Pool and GitHub OIDC provider for keyless GitHub Actions authentication. Strongly recommended over long-lived service account keys."
+  type        = bool
+  default     = true
+}
+
 variable "placeholder_image" {
   description = "Placeholder Docker image for initial Cloud Run service creation (only used if manage_cloud_run_services=true)"
   type        = string
