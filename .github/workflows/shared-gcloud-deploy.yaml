@@ -303,18 +303,48 @@ jobs:
           HEALTHCHECK_URL="${SERVICE_URL%/}/health"
           echo "Health check URL: $HEALTHCHECK_URL"
 
+          health_check_request() {
+            local response_file
+            local status_code
+
+            response_file="$(mktemp)"
+            status_code="$(curl -sS -L \
+              -A "GitHubActions-HealthCheck/1.0" \
+              -H "Accept: application/json" \
+              --connect-timeout 5 \
+              --max-time 15 \
+              -o "$response_file" \
+              -w "%{http_code}" \
+              "$HEALTHCHECK_URL" || true)"
+
+            if [[ "$status_code" =~ ^2[0-9][0-9]$ ]]; then
+              rm -f "$response_file"
+              return 0
+            fi
+
+            echo "Health check HTTP status: ${status_code:-curl_error}"
+            if [ -s "$response_file" ]; then
+              echo "Health check response body (first 400 chars):"
+              head -c 400 "$response_file"
+              echo
+            fi
+
+            rm -f "$response_file"
+            return 1
+          }
+
           # Try health check endpoint
           MAX_RETRIES=8
           RETRY_COUNT=0
 
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             echo "Health check attempt $((RETRY_COUNT + 1))/$MAX_RETRIES..."
-            
-            if curl -f -s "$HEALTHCHECK_URL" > /dev/null 2>&1; then
+
+            if health_check_request; then
               echo "✅ Service is healthy!"
               exit 0
             fi
-            
+
             RETRY_COUNT=$((RETRY_COUNT + 1))
             if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
               echo "⏳ Waiting 15 seconds before retry..."
