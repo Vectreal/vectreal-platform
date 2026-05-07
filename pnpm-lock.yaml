@@ -27,7 +27,7 @@ importers:
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.73.1(react@19.2.5))
       '@marsidev/react-turnstile':
-        specifier: 1.5.2
+        specifier: ^1.5.2
         version: 1.5.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@mdx-js/rollup':
         specifier: ^3.1.1

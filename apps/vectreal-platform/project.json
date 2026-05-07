@@ -248,11 +248,9 @@
 		},
 		"gen-thumbnails": {
 			"executor": "nx:run-commands",
-			"outputs": [
-				"{workspaceRoot}/apps/vectreal-platform/public/assets/images/newsroom"
-			],
+			"outputs": ["apps/vectreal-platform/public/assets/images/newsroom"],
 			"options": {
-				"cwd": "{workspaceRoot}",
+				"cwd": "apps/vectreal-platform",
 				"command": "node scripts/truchet-thumbnail-gen.mjs"
 			}
 		}

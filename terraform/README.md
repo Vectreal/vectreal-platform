@@ -137,9 +137,9 @@ gh workflow run "CD - Deploy Platform to Production" # Deploy to production
 
 ### Cloudflare Resources (optional)
 
-| Resource                          | Purpose                                                                                                          |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| **Turnstile Widgets (optional)**  | Managed bot-protection widgets for production and staging, provisioned when `cloudflare_account_id` is set      |
+| Resource                         | Purpose                                                                                                    |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Turnstile Widgets (optional)** | Managed bot-protection widgets for production and staging, provisioned when `cloudflare_account_id` is set |
 
 ### What is NOT Created by Terraform
 
@@ -410,4 +410,4 @@ This infrastructure is designed to be cost-effective:
 - 📖 [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - 💬 [Vectreal Discord](https://discord.gg/A9a3nPkZw7)
 
-For infrastructure issues, check the [GitHub Issues](https://github.com/YOUR-ORG/vectreal-platform/issues).
+For infrastructure issues, check the [GitHub Issues](https://github.com/vectreal/vectreal-platform/issues).
