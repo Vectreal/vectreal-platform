@@ -68,8 +68,8 @@ export class ModelLoader {
 
 		try {
 			// Import fs in Node.js environment
-			const fs = await import('fs/promises')
-			const path = await import('path')
+			const fs = await import(/* @vite-ignore */ 'fs/promises')
+			const path = await import(/* @vite-ignore */ 'path')
 
 			const buffer = await fs.readFile(filePath)
 			const fileName = path.basename(filePath)
