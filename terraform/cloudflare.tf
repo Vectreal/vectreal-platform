@@ -28,11 +28,14 @@ variable "turnstile_staging_hostname" {
 }
 
 locals {
-  enable_turnstile = var.cloudflare_account_id != "" && var.cloudflare_api_token != ""
+  cloudflare_api_token_min_length = 20
+  cloudflare_api_token_normalized = trimspace(var.cloudflare_api_token)
+  cloudflare_api_token_is_valid   = can(regex("^[A-Za-z0-9_-]+$", local.cloudflare_api_token_normalized)) && length(local.cloudflare_api_token_normalized) >= local.cloudflare_api_token_min_length
+  enable_turnstile                = var.cloudflare_account_id != "" && local.cloudflare_api_token_normalized != "" && local.cloudflare_api_token_is_valid
 }
 
 provider "cloudflare" {
-  api_token = var.cloudflare_api_token
+  api_token = local.enable_turnstile ? local.cloudflare_api_token_normalized : null
 }
 
 resource "cloudflare_turnstile_widget" "production" {
