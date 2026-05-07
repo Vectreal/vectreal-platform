@@ -23,6 +23,7 @@ import { data, Form, Link, useLoaderData, useNavigation } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { PublicErrorBoundary } from '../components/errors'
+import { TurnstileWidget } from '../components/turnstile-widget'
 import {
 	CONTACT_HONEYPOT_FIELD,
 	CONTACT_SOURCE_VALUES,
@@ -30,10 +31,11 @@ import {
 	type ContactInquiryType
 } from '../lib/domain/contact/contact-shared'
 import {
-	buildContactSource
-	// submitContactForm
+	buildContactSource,
+	submitContactForm
 } from '../lib/domain/contact/contact-submission.server'
 import { ensureValidCsrfFormData } from '../lib/http/csrf.server'
+import { verifyTurnstileToken } from '../lib/http/turnstile.server'
 import { buildPageMeta } from '../lib/seo'
 import { LEGAL_PAGE_SEO_BY_PATH } from '../lib/seo-registry'
 import { createSupabaseClient } from '../lib/supabase.server'
@@ -51,20 +53,24 @@ export async function loader({ request }: Route.LoaderArgs) {
 	} = await client.auth.getUser()
 
 	return data(
-		{ source: buildContactSource(request), isAuthenticated: Boolean(user) },
+		{
+			source: buildContactSource(request),
+			isAuthenticated: Boolean(user),
+			turnstileSiteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY ?? ''
+		},
 		{ headers }
 	)
 }
 
 export async function action({
-	request
-	// context
+	request,
+	context
 }: Route.ActionArgs) {
 	const {
-		client
-		// headers
+		client,
+		headers
 	} = await createSupabaseClient(request)
-	// const responseHeaders = new Headers(headers)
+	const responseHeaders = new Headers(headers)
 	const {
 		data: { user }
 	} = await client.auth.getUser()
@@ -75,23 +81,34 @@ export async function action({
 		return csrfCheck
 	}
 
+	const turnstileToken = formData.get('cf-turnstile-response')
+	const verification = await verifyTurnstileToken(
+		typeof turnstileToken === 'string' ? turnstileToken : ''
+	)
+	if (!verification.success) {
+		return data<ActionData>(
+			{ status: 'error', formError: 'Bot verification failed. Please try again.' },
+			{ status: 400, headers: responseHeaders }
+		)
+	}
+
 	const rawSource = formData.get('source')
 	const source = CONTACT_SOURCE_VALUES.includes(
 		rawSource as (typeof CONTACT_SOURCE_VALUES)[number]
 	)
 		? (rawSource as (typeof CONTACT_SOURCE_VALUES)[number])
 		: ('other' as const)
-	// let result: { status: number; body: ActionData }
+	let result: { status: number; body: ActionData }
 
 	try {
-		// result = await submitContactForm({
-		// 	request,
-		// 	context,
-		// 	formData,
-		// 	userId: user?.id ?? null,
-		// 	isAuthenticated: Boolean(user),
-		// 	source
-		// })
+		result = await submitContactForm({
+			request,
+			context,
+			formData,
+			userId: user?.id ?? null,
+			isAuthenticated: Boolean(user),
+			source
+		})
 	} catch (error) {
 		console.error('[contact/action] failed to process contact submission', {
 			error,
@@ -99,20 +116,20 @@ export async function action({
 			isAuthenticated: Boolean(user)
 		})
 
-		// result = {
-		// 	status: 500,
-		// 	body: {
-		// 		status: 'error',
-		// 		formError:
-		// 			'We could not send your message right now. Please try again shortly.'
-		// 	}
-		// }
+		result = {
+			status: 500,
+			body: {
+				status: 'error',
+				formError:
+					'We could not send your message right now. Please try again shortly.'
+			}
+		}
 	}
 
-	// return data<ActionData>(result.body, {
-	// 	status: result.status,
-	// 	headers: responseHeaders
-	// })
+	return data<ActionData>(result.body, {
+		status: result.status,
+		headers: responseHeaders
+	})
 }
 
 export function meta(_: Route.MetaArgs) {
@@ -120,7 +137,8 @@ export function meta(_: Route.MetaArgs) {
 }
 
 export default function ContactPage({ actionData }: Route.ComponentProps) {
-	const { source, isAuthenticated } = useLoaderData<typeof loader>()
+	const { source, isAuthenticated, turnstileSiteKey } =
+		useLoaderData<typeof loader>()
 	const typedActionData = actionData as ActionData | undefined
 	const posthog = usePostHog()
 	const navigation = useNavigation()
@@ -129,6 +147,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 	const initialInquiryType = typedActionData?.fields?.inquiryType ?? 'support'
 	const [inquiryType, setInquiryType] =
 		useState<InquiryType>(initialInquiryType)
+	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 
 	useEffect(() => {
 		setInquiryType(initialInquiryType)
@@ -217,6 +236,11 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 							>
 								<AuthenticityTokenInput />
 								<input type="hidden" name="source" value={source} />
+								<input
+									type="hidden"
+									name="cf-turnstile-response"
+									value={turnstileToken ?? ''}
+								/>
 								<input
 									type="text"
 									name={HONEYPOT_FIELD}
@@ -310,8 +334,23 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 									)}
 								</div>
 
+								<TurnstileWidget
+									siteKey={turnstileSiteKey}
+									onSuccess={setTurnstileToken}
+									onError={() => {
+										setTurnstileToken(null)
+									}}
+								/>
+
 								<div className="flex flex-wrap items-center gap-3">
-									<Button type="submit" size="lg" disabled={isSubmitting}>
+									<Button
+										type="submit"
+										size="lg"
+										disabled={
+											isSubmitting ||
+											(Boolean(turnstileSiteKey) && turnstileToken === null)
+										}
+									>
 										{isSubmitting ? 'Sending...' : 'Send message'}
 									</Button>
 									<p className="text-muted-foreground text-sm">
