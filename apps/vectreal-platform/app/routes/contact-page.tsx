@@ -147,19 +147,11 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 	const initialInquiryType = typedActionData?.fields?.inquiryType ?? 'support'
 	const [inquiryType, setInquiryType] =
 		useState<InquiryType>(initialInquiryType)
-	const [turnstileToken, setTurnstileToken] = useState<string | null>(() =>
-		turnstileSiteKey ? null : 'dev-bypass'
-	)
+	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 
 	useEffect(() => {
 		setInquiryType(initialInquiryType)
 	}, [initialInquiryType])
-
-	useEffect(() => {
-		if (!turnstileSiteKey) {
-			setTurnstileToken('dev-bypass')
-		}
-	}, [turnstileSiteKey])
 
 	useEffect(() => {
 		if (initialTrackedRef.current) {
@@ -354,7 +346,10 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 									<Button
 										type="submit"
 										size="lg"
-										disabled={isSubmitting || turnstileToken === null}
+										disabled={
+											isSubmitting ||
+											(Boolean(turnstileSiteKey) && turnstileToken === null)
+										}
 									>
 										{isSubmitting ? 'Sending...' : 'Send message'}
 									</Button>

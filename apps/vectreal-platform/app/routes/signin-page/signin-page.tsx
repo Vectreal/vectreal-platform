@@ -7,7 +7,7 @@ import {
 	TooltipTrigger
 } from '@shared/components/ui/tooltip'
 import { Eye, EyeClosed, ExternalLink, Save } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { data, Form, Link, redirect, type MetaFunction } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
@@ -259,17 +259,10 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 
 const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	const [showPassword, setShowPassword] = useState(false)
-	const [turnstileToken, setTurnstileToken] = useState<string | null>(() =>
-		loaderData.turnstileSiteKey ? null : 'dev-bypass'
-	)
+	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 	const togglePasswordVisibility = () => {
 		setShowPassword((prev) => !prev)
 	}
-	useEffect(() => {
-		if (!loaderData.turnstileSiteKey) {
-			setTurnstileToken('dev-bypass')
-		}
-	}, [loaderData.turnstileSiteKey])
 
 	const typedActionData = actionData as SigninActionData | undefined
 	const errors = typedActionData?.errors
@@ -389,7 +382,11 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 						}}
 					/>
 				</div>
-				<Button type="submit" className="w-full" disabled={turnstileToken === null}>
+				<Button
+					type="submit"
+					className="w-full"
+					disabled={Boolean(loaderData.turnstileSiteKey) && turnstileToken === null}
+				>
 					Sign In
 				</Button>
 			</Form>

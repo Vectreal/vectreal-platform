@@ -16,7 +16,7 @@ import { User } from '@supabase/supabase-js'
 import { motion } from 'framer-motion'
 import { AnimatePresence } from 'framer-motion'
 import { AlertCircle, Eye, EyeClosed, ExternalLink, Save } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { data, Form, Link, redirect, type MetaFunction } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
@@ -275,17 +275,10 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
  */
 const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 	const [showPassword, setShowPassword] = useState<boolean>(false)
-	const [turnstileToken, setTurnstileToken] = useState<string | null>(() =>
-		loaderData.turnstileSiteKey ? null : 'dev-bypass'
-	)
+	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 	const togglePasswordVisibility = () => {
 		setShowPassword((prev) => !prev)
 	}
-	useEffect(() => {
-		if (!loaderData.turnstileSiteKey) {
-			setTurnstileToken('dev-bypass')
-		}
-	}, [loaderData.turnstileSiteKey])
 
 	// Extract errors from actionData (now { errors } or undefined)
 	const actionData = props.actionData as
@@ -496,7 +489,11 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 						}}
 					/>
 				</div>
-				<Button type="submit" className="w-full" disabled={turnstileToken === null}>
+				<Button
+					type="submit"
+					className="w-full"
+					disabled={Boolean(loaderData.turnstileSiteKey) && turnstileToken === null}
+				>
 					Sign Up
 				</Button>
 			</Form>
