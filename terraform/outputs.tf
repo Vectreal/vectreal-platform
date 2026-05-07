@@ -35,13 +35,13 @@ output "region" {
 
 output "prod_deployer_key_path" {
   description = "Path to the production deployer service account key"
-  value       = local_sensitive_file.prod_key.filename
+  value       = var.create_service_account_keys ? local_sensitive_file.prod_key[0].filename : ""
   sensitive   = true
 }
 
 output "staging_deployer_key_path" {
   description = "Path to the staging deployer service account key"
-  value       = local_sensitive_file.staging_key.filename
+  value       = var.create_service_account_keys ? local_sensitive_file.staging_key[0].filename : ""
   sensitive   = true
 }
 
@@ -72,20 +72,20 @@ output "local_dev_private_bucket_name" {
 
 output "local_dev_storage_key_path" {
   description = "Path to the local development storage service account key"
-  value       = local_sensitive_file.local_dev_storage_key.filename
+  value       = var.create_service_account_keys ? local_sensitive_file.local_dev_storage_key[0].filename : ""
   sensitive   = true
 }
 
 output "turnstile_production_site_key" {
   description = "Cloudflare Turnstile site key for production (set as CLOUDFLARE_TURNSTILE_SITE_KEY_PROD GitHub secret)"
   value       = local.enable_turnstile ? cloudflare_turnstile_widget.production[0].id : ""
-  sensitive   = false
+  sensitive   = true
 }
 
 output "turnstile_staging_site_key" {
   description = "Cloudflare Turnstile site key for staging (set as CLOUDFLARE_TURNSTILE_SITE_KEY_STAGING GitHub secret)"
   value       = local.enable_turnstile ? cloudflare_turnstile_widget.staging[0].id : ""
-  sensitive   = false
+  sensitive   = true
 }
 
 # GitHub Secrets Setup - Use the helper script
