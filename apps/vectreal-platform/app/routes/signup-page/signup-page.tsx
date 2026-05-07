@@ -16,7 +16,7 @@ import { User } from '@supabase/supabase-js'
 import { motion } from 'framer-motion'
 import { AnimatePresence } from 'framer-motion'
 import { AlertCircle, Eye, EyeClosed, ExternalLink, Save } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { data, Form, Link, redirect, type MetaFunction } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
@@ -117,7 +117,8 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 	const turnstileToken = formData.get('cf-turnstile-response')
 	const verification = await verifyTurnstileToken(
-		typeof turnstileToken === 'string' ? turnstileToken : ''
+		typeof turnstileToken === 'string' ? turnstileToken : '',
+		request
 	)
 	if (!verification.success) {
 		return data<SignupActionData>(
@@ -276,6 +277,7 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 	const [showPassword, setShowPassword] = useState<boolean>(false)
 	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+	const [turnstileResetNonce, setTurnstileResetNonce] = useState(0)
 	const togglePasswordVisibility = () => {
 		setShowPassword((prev) => !prev)
 	}
@@ -298,6 +300,15 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 		'formError' in actionData
 			? actionData.formError
 			: null
+
+	useEffect(() => {
+		if (!props.actionData) {
+			return
+		}
+
+		setTurnstileToken(null)
+		setTurnstileResetNonce((current) => current + 1)
+	}, [props.actionData])
 
 	const actionResultData =
 		typeof actionData === 'object' &&
@@ -484,6 +495,7 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 					<TurnstileWidget
 						siteKey={loaderData.turnstileSiteKey}
 						onSuccess={setTurnstileToken}
+						resetNonce={turnstileResetNonce}
 						onError={() => {
 							setTurnstileToken(null)
 						}}
@@ -492,7 +504,9 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 				<Button
 					type="submit"
 					className="w-full"
-					disabled={Boolean(loaderData.turnstileSiteKey) && turnstileToken === null}
+					disabled={
+						Boolean(loaderData.turnstileSiteKey) && turnstileToken === null
+					}
 				>
 					Sign Up
 				</Button>
