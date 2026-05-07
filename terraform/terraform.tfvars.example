@@ -48,3 +48,10 @@ github_repo = "vectreal-platform"
 # staging_static_bucket_name    = "vectreal-static-staging"
 # production_static_bucket_name = "vectreal-static-prod"
 
+# Optional: Cloudflare Turnstile widget provisioning
+# Requires a Cloudflare account and an API token with Turnstile:Edit permission.
+# Leave empty to skip (widgets can be created manually in the CF dashboard instead).
+# cloudflare_account_id          = "your-cloudflare-account-id"
+# cloudflare_api_token           = "your-cloudflare-api-token"
+# turnstile_production_hostname  = "vectreal.com"
+# turnstile_staging_hostname     = "staging.vectreal.com"

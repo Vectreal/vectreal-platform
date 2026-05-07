@@ -4,6 +4,7 @@
 	"type": "module",
 	"scripts": {},
 	"dependencies": {
+		"@marsidev/react-turnstile": "^1.5.2",
 		"@gltf-transform/core": "^4.0.8",
 		"@google-cloud/storage": "^7.16.0",
 		"@nx/vite": "21.3.0",

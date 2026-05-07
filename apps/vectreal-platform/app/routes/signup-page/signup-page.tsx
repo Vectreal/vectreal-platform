@@ -16,13 +16,15 @@ import { User } from '@supabase/supabase-js'
 import { motion } from 'framer-motion'
 import { AnimatePresence } from 'framer-motion'
 import { AlertCircle, Eye, EyeClosed, ExternalLink, Save } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { data, Form, Link, redirect, type MetaFunction } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signup-page'
+import { TurnstileWidget } from '../../components/turnstile-widget'
 import { checkAuthRateLimit } from '../../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
+import { verifyTurnstileToken } from '../../lib/http/turnstile.server'
 import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
@@ -111,6 +113,17 @@ export async function action({ request, context }: Route.ActionArgs) {
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
 	if (csrfCheck) {
 		return csrfCheck
+	}
+
+	const turnstileToken = formData.get('cf-turnstile-response')
+	const verification = await verifyTurnstileToken(
+		typeof turnstileToken === 'string' ? turnstileToken : ''
+	)
+	if (!verification.success) {
+		return data<SignupActionData>(
+			{ formError: 'Bot verification failed. Please try again.' },
+			{ status: 400 }
+		)
 	}
 
 	const {
@@ -248,6 +261,7 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 			nextPath,
 			user: user ?? null,
 			isAuthenticated: !!user,
+			turnstileSiteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY ?? '',
 			message: user ? 'Already authenticated' : null
 		},
 		{ headers }
@@ -261,9 +275,17 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
  */
 const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 	const [showPassword, setShowPassword] = useState<boolean>(false)
+	const [turnstileToken, setTurnstileToken] = useState<string | null>(() =>
+		loaderData.turnstileSiteKey ? null : 'dev-bypass'
+	)
 	const togglePasswordVisibility = () => {
 		setShowPassword((prev) => !prev)
 	}
+	useEffect(() => {
+		if (!loaderData.turnstileSiteKey) {
+			setTurnstileToken('dev-bypass')
+		}
+	}, [loaderData.turnstileSiteKey])
 
 	// Extract errors from actionData (now { errors } or undefined)
 	const actionData = props.actionData as
@@ -361,6 +383,11 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 				noValidate
 			>
 				<AuthenticityTokenInput />
+				<input
+					type="hidden"
+					name="cf-turnstile-response"
+					value={turnstileToken ?? ''}
+				/>
 				<div className="mb-4">
 					<label className="mb-2 block text-sm font-medium" htmlFor="username">
 						Username
@@ -460,7 +487,16 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 						</p>
 					)}
 				</div>
-				<Button type="submit" className="w-full">
+				<div className="mb-4">
+					<TurnstileWidget
+						siteKey={loaderData.turnstileSiteKey}
+						onSuccess={setTurnstileToken}
+						onError={() => {
+							setTurnstileToken(null)
+						}}
+					/>
+				</div>
+				<Button type="submit" className="w-full" disabled={turnstileToken === null}>
 					Sign Up
 				</Button>
 			</Form>

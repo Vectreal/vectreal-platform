@@ -76,6 +76,18 @@ output "local_dev_storage_key_path" {
   sensitive   = true
 }
 
+output "turnstile_production_site_key" {
+  description = "Cloudflare Turnstile site key for production (set as CLOUDFLARE_TURNSTILE_SITE_KEY_PROD GitHub secret)"
+  value       = local.enable_turnstile ? cloudflare_turnstile_widget.production[0].id : ""
+  sensitive   = false
+}
+
+output "turnstile_staging_site_key" {
+  description = "Cloudflare Turnstile site key for staging (set as CLOUDFLARE_TURNSTILE_SITE_KEY_STAGING GitHub secret)"
+  value       = local.enable_turnstile ? cloudflare_turnstile_widget.staging[0].id : ""
+  sensitive   = false
+}
+
 # GitHub Secrets Setup - Use the helper script
 output "github_secrets_setup_help" {
   description = "How to set up GitHub secrets"

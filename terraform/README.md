@@ -135,6 +135,12 @@ gh workflow run "CD - Deploy Platform to Production" # Deploy to production
 | **Enabled APIs**            | Cloud Run, IAM, Artifact Registry, Container Registry, Cloud Storage                                             |
 | **Service Account Keys**    | Optional only (`create_service_account_keys=true`); disabled by default                                          |
 
+### Cloudflare Resources (optional)
+
+| Resource                          | Purpose                                                                                                          |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **Turnstile Widgets (optional)**  | Managed bot-protection widgets for production and staging, provisioned when `cloudflare_account_id` is set      |
+
 ### What is NOT Created by Terraform
 
 - ❌ Secret Manager resources (using GitHub Secrets instead)
@@ -174,7 +180,16 @@ Set these via the setup script or manually:
 - `APPLICATION_URL_STAGING` - Staging domain
 - `CSRF_SECRET_STAGING` - CSRF/session cookie signing secret
 
-**Total: 16 GitHub Secrets**
+### Cloudflare Secrets (4 secrets)
+
+- `CLOUDFLARE_TURNSTILE_SITE_KEY_PROD` - Public site key for production browser forms
+- `CLOUDFLARE_TURNSTILE_SECRET_KEY_PROD` - Secret key for server-side verification in production
+- `CLOUDFLARE_TURNSTILE_SITE_KEY_STAGING` - Public site key for staging browser forms
+- `CLOUDFLARE_TURNSTILE_SECRET_KEY_STAGING` - Secret key for server-side verification in staging
+
+**Total: 20 GitHub Secrets**
+
+For local development, both `CLOUDFLARE_TURNSTILE_SITE_KEY` and `CLOUDFLARE_TURNSTILE_SECRET_KEY` can be omitted. Turnstile verification is bypassed automatically outside production when the secret key is not set.
 
 ## Configuration
 
@@ -354,6 +369,7 @@ terraform/
 ├── static-assets.tf             # Public staging static bucket for CDN
 ├── service-accounts.tf          # Service accounts and IAM
 ├── cloud-run.tf                 # Cloud Run (optional)
+├── cloudflare.tf                # Cloudflare Turnstile widgets (optional)
 ├── cdn-lb.tf                    # Staging edge Global HTTPS LB + Cloud CDN
 ├── terraform.tfvars.example     # Configuration template
 ├── terraform.tfvars             # Your configuration (git-ignored)
