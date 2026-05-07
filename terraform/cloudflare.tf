@@ -2,15 +2,6 @@
 # Cloudflare Turnstile Widgets (optional - set cloudflare_account_id to enable)
 # =============================================================================
 
-terraform {
-  required_providers {
-    cloudflare = {
-      source  = "cloudflare/cloudflare"
-      version = "~> 4.0"
-    }
-  }
-}
-
 variable "cloudflare_account_id" {
   description = "Cloudflare account ID. Leave empty to skip Turnstile widget provisioning."
   type        = string
