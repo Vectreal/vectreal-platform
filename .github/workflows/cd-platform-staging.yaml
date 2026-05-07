@@ -57,6 +57,8 @@ jobs:
       application-url: ${{ secrets.APPLICATION_URL_STAGING }}
       csrf-secret: ${{ secrets.CSRF_SECRET_STAGING }}
       stripe-secret-key: ${{ secrets.STRIPE_SECRET_KEY_STAGING }}
+      cloudflare-turnstile-site-key: ${{ secrets.CLOUDFLARE_TURNSTILE_SITE_KEY_STAGING }}
+      cloudflare-turnstile-secret-key: ${{ secrets.CLOUDFLARE_TURNSTILE_SECRET_KEY_STAGING }}
       posthog-token: ${{ secrets.VITE_PUBLIC_POSTHOG_TOKEN }}
       posthog-host: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
       contact-data-encryption-key: ${{ secrets.CONTACT_DATA_ENCRYPTION_KEY_STAGING }}

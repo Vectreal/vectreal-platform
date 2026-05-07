@@ -62,14 +62,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 	)
 }
 
-export async function action({
-	request,
-	context
-}: Route.ActionArgs) {
-	const {
-		client,
-		headers
-	} = await createSupabaseClient(request)
+export async function action({ request, context }: Route.ActionArgs) {
+	const { client, headers } = await createSupabaseClient(request)
 	const responseHeaders = new Headers(headers)
 	const {
 		data: { user }
@@ -83,11 +77,15 @@ export async function action({
 
 	const turnstileToken = formData.get('cf-turnstile-response')
 	const verification = await verifyTurnstileToken(
-		typeof turnstileToken === 'string' ? turnstileToken : ''
+		typeof turnstileToken === 'string' ? turnstileToken : '',
+		request
 	)
 	if (!verification.success) {
 		return data<ActionData>(
-			{ status: 'error', formError: 'Bot verification failed. Please try again.' },
+			{
+				status: 'error',
+				formError: 'Bot verification failed. Please try again.'
+			},
 			{ status: 400, headers: responseHeaders }
 		)
 	}
@@ -148,10 +146,20 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 	const [inquiryType, setInquiryType] =
 		useState<InquiryType>(initialInquiryType)
 	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+	const [turnstileResetNonce, setTurnstileResetNonce] = useState(0)
 
 	useEffect(() => {
 		setInquiryType(initialInquiryType)
 	}, [initialInquiryType])
+
+	useEffect(() => {
+		if (!typedActionData) {
+			return
+		}
+
+		setTurnstileToken(null)
+		setTurnstileResetNonce((current) => current + 1)
+	}, [typedActionData])
 
 	useEffect(() => {
 		if (initialTrackedRef.current) {
@@ -337,6 +345,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 								<TurnstileWidget
 									siteKey={turnstileSiteKey}
 									onSuccess={setTurnstileToken}
+									resetNonce={turnstileResetNonce}
 									onError={() => {
 										setTurnstileToken(null)
 									}}

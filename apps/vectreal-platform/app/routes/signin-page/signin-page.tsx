@@ -7,7 +7,7 @@ import {
 	TooltipTrigger
 } from '@shared/components/ui/tooltip'
 import { Eye, EyeClosed, ExternalLink, Save } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { data, Form, Link, redirect, type MetaFunction } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
@@ -106,7 +106,8 @@ export async function action({ request }: Route.ActionArgs) {
 
 	const turnstileToken = formData.get('cf-turnstile-response')
 	const verification = await verifyTurnstileToken(
-		typeof turnstileToken === 'string' ? turnstileToken : ''
+		typeof turnstileToken === 'string' ? turnstileToken : '',
+		request
 	)
 	if (!verification.success) {
 		return data<SigninActionData>(
@@ -260,12 +261,22 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	const [showPassword, setShowPassword] = useState(false)
 	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+	const [turnstileResetNonce, setTurnstileResetNonce] = useState(0)
 	const togglePasswordVisibility = () => {
 		setShowPassword((prev) => !prev)
 	}
 
 	const typedActionData = actionData as SigninActionData | undefined
 	const errors = typedActionData?.errors
+
+	useEffect(() => {
+		if (!typedActionData) {
+			return
+		}
+
+		setTurnstileToken(null)
+		setTurnstileResetNonce((current) => current + 1)
+	}, [typedActionData])
 
 	return (
 		<div className="w-full max-w-md">
@@ -377,6 +388,7 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 					<TurnstileWidget
 						siteKey={loaderData.turnstileSiteKey}
 						onSuccess={setTurnstileToken}
+						resetNonce={turnstileResetNonce}
 						onError={() => {
 							setTurnstileToken(null)
 						}}
@@ -385,7 +397,9 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 				<Button
 					type="submit"
 					className="w-full"
-					disabled={Boolean(loaderData.turnstileSiteKey) && turnstileToken === null}
+					disabled={
+						Boolean(loaderData.turnstileSiteKey) && turnstileToken === null
+					}
 				>
 					Sign In
 				</Button>

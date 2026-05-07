@@ -2,7 +2,7 @@ name: Shared - Google Cloud Run Deployment
 
 permissions:
   contents: read
-  id-token: write   # required for Workload Identity Federation
+  id-token: write # required for Workload Identity Federation
 
 on:
   workflow_call:
@@ -105,6 +105,12 @@ on:
       stripe-secret-key:
         description: 'Stripe secret API key used for billing operations'
         required: true
+      cloudflare-turnstile-site-key:
+        description: 'Cloudflare Turnstile site key exposed to the SSR app at runtime'
+        required: false
+      cloudflare-turnstile-secret-key:
+        description: 'Cloudflare Turnstile secret key used for server-side verification'
+        required: false
       posthog-token:
         description: 'PostHog project API key (VITE_PUBLIC_POSTHOG_TOKEN)'
         required: false
@@ -260,6 +266,8 @@ jobs:
             APPLICATION_URL=${{ secrets.application-url }}
             CSRF_SECRET=${{ secrets.csrf-secret }}
             STRIPE_SECRET_KEY=${{ secrets.stripe-secret-key }}
+            CLOUDFLARE_TURNSTILE_SITE_KEY=${{ secrets.cloudflare-turnstile-site-key }}
+            CLOUDFLARE_TURNSTILE_SECRET_KEY=${{ secrets.cloudflare-turnstile-secret-key }}
             VITE_PUBLIC_POSTHOG_TOKEN=${{ secrets.posthog-token }}
             VITE_PUBLIC_POSTHOG_HOST=${{ secrets.posthog-host }}
             VITE_PUBLIC_POSTHOG_UI_HOST=${{ secrets.posthog-ui-host || 'https://eu.posthog.com' }}

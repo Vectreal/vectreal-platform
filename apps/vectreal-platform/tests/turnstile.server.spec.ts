@@ -4,6 +4,11 @@ describe('verifyTurnstileToken', () => {
 	const originalNodeEnv = process.env.NODE_ENV
 	const originalSecret = process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY
 	const originalFetch = global.fetch
+	const request = new Request('https://vectreal.com/sign-in', {
+		headers: {
+			'cf-connecting-ip': '203.0.113.10'
+		}
+	})
 
 	afterEach(() => {
 		process.env.NODE_ENV = originalNodeEnv
@@ -36,12 +41,19 @@ describe('verifyTurnstileToken', () => {
 		process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY = 'secret'
 		global.fetch = vi.fn().mockResolvedValue({
 			ok: true,
-			json: async () => ({ success: true })
+			json: async () => ({ success: true, hostname: 'vectreal.com' })
 		} as Response)
 
-		const result = await verifyTurnstileToken('token')
+		const result = await verifyTurnstileToken('token', request)
 
 		expect(result).toEqual({ success: true })
+		expect(global.fetch).toHaveBeenCalledTimes(1)
+		const [, init] = vi.mocked(global.fetch).mock.calls[0]
+		const body = init?.body as URLSearchParams
+		expect(body.get('response')).toBe('token')
+		expect(body.get('secret')).toBe('secret')
+		expect(body.get('remoteip')).toBe('203.0.113.10')
+		expect(body.get('idempotency_key')).toBeTruthy()
 	})
 
 	it('returns failure with error codes when Cloudflare verification fails', async () => {
@@ -59,6 +71,21 @@ describe('verifyTurnstileToken', () => {
 		expect(result).toEqual({
 			success: false,
 			errorCodes: ['invalid-input-response']
+		})
+	})
+
+	it('returns failure when Cloudflare reports a hostname mismatch', async () => {
+		process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY = 'secret'
+		global.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: async () => ({ success: true, hostname: 'attacker.example' })
+		} as Response)
+
+		const result = await verifyTurnstileToken('token', request)
+
+		expect(result).toEqual({
+			success: false,
+			errorCodes: ['hostname-mismatch']
 		})
 	})
 })

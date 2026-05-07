@@ -1,21 +1,28 @@
-import {
-	Turnstile,
-	type TurnstileInstance
-} from '@marsidev/react-turnstile'
-import { useRef } from 'react'
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
+import { useEffect, useRef } from 'react'
 
 interface TurnstileWidgetProps {
 	siteKey: string
 	onSuccess: (token: string) => void
 	onError?: () => void
+	resetNonce?: number
 }
 
 export function TurnstileWidget({
 	siteKey,
 	onSuccess,
-	onError
+	onError,
+	resetNonce = 0
 }: TurnstileWidgetProps) {
 	const turnstileRef = useRef<TurnstileInstance>(null)
+
+	useEffect(() => {
+		if (resetNonce === 0) {
+			return
+		}
+
+		turnstileRef.current?.reset()
+	}, [resetNonce])
 
 	if (!siteKey) {
 		return null
