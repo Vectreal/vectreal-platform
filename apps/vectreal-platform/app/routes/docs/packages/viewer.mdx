@@ -40,7 +40,7 @@ function App() {
 
 | Prop | Type | Required | Description |
 |---|---|---|---|
-| `model` | `Object3D` | No* | The Three.js scene to display. *Optional when using the `use-load-model` context. |
+| `model` | `Object3D` | No* | The Three.js scene to display. *Optional when rendering via `children` instead. |
 | `className` | `string` | No | Additional CSS classes for the viewer container |
 | `theme` | `'light' \| 'dark' \| 'system'` | No | Viewer theme, default is `system` |
 | `enableViewportRendering` | `boolean` | No | Render only while in viewport (default `true`) |
@@ -400,16 +400,16 @@ function ViewerRuntimeExample({ model }: { model: object }) {
 
 ## Integration with `@vctrl/hooks`
 
-The viewer is designed to be used alongside [`@vctrl/hooks`](/docs/packages/hooks). When you wrap your app with the `ModelProvider` context from `@vctrl/hooks`, the viewer automatically picks up the loaded model:
+The viewer is designed to be used alongside [`@vctrl/hooks`](/docs/packages/hooks). Wrap your app with `ModelProvider` and consume the loaded model via `useModelContext`, then pass it to the `model` prop:
 
 ```tsx
-import { ModelProvider, useLoadModel } from '@vctrl/hooks/use-load-model'
+import { ModelProvider, useModelContext } from '@vctrl/hooks/use-load-model'
 import { VectrealViewer } from '@vctrl/viewer'
 import '@vctrl/viewer/css'
 
 function Scene() {
-  // No `model` prop needed — viewer reads from context
-  return <VectrealViewer />
+  const { file } = useModelContext(false)
+  return <VectrealViewer model={file?.model} />
 }
 
 export default function App() {
@@ -420,6 +420,8 @@ export default function App() {
   )
 }
 ```
+
+> `VectrealViewer` does not read the loaded model from context automatically. You must always pass the `model` prop explicitly. `useModelContext` (or `useLoadModel`) gives you `file?.model` to forward.
 
 ---
 
