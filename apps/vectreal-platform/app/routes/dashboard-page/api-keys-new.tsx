@@ -451,6 +451,8 @@ export default function ApiKeysNewPage({
 			slug: p.project.slug
 		}))
 
+	const isCreateDisabled = isSubmitting || showKeyDialog || !selectedOrgAccess?.granted
+
 	// Reset project selection when organization changes
 	useEffect(() => {
 		form.setValue('projectIds', [])
@@ -717,11 +719,7 @@ export default function ApiKeysNewPage({
 								<DrawerFooter className="px-0 pt-2">
 									<Button
 										type="submit"
-										disabled={
-											isSubmitting ||
-											showKeyDialog ||
-											!selectedOrgAccess?.granted
-										}
+										disabled={isCreateDisabled}
 										className="w-full"
 									>
 										{isSubmitting ? (
