@@ -8,7 +8,14 @@ import {
 } from '@shared/components/ui/tooltip'
 import { Eye, EyeClosed, ExternalLink, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { data, Form, Link, redirect, type MetaFunction } from 'react-router'
+import {
+	data,
+	Form,
+	Link,
+	redirect,
+	useNavigation,
+	type MetaFunction
+} from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signin-page'
@@ -104,18 +111,6 @@ export async function action({ request }: Route.ActionArgs) {
 		return csrfCheck
 	}
 
-	const turnstileToken = formData.get('cf-turnstile-response')
-	const verification = await verifyTurnstileToken(
-		typeof turnstileToken === 'string' ? turnstileToken : '',
-		request
-	)
-	if (!verification.success) {
-		return data<SigninActionData>(
-			{ formError: 'Bot verification failed. Please try again.' },
-			{ status: 400 }
-		)
-	}
-
 	const {
 		errors,
 		data: { email, password }
@@ -145,6 +140,18 @@ export async function action({ request }: Route.ActionArgs) {
 					'Retry-After': String(rateLimitResult.retryAfterSeconds)
 				}
 			}
+		)
+	}
+
+	const turnstileToken = formData.get('cf-turnstile-response')
+	const verification = await verifyTurnstileToken(
+		typeof turnstileToken === 'string' ? turnstileToken : '',
+		request
+	)
+	if (!verification.success) {
+		return data<SigninActionData>(
+			{ formError: 'Bot verification failed. Please try again.' },
+			{ status: 400 }
 		)
 	}
 
@@ -259,6 +266,7 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 }
 
 const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
+	const navigation = useNavigation()
 	const [showPassword, setShowPassword] = useState(false)
 	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 	const [turnstileResetNonce, setTurnstileResetNonce] = useState(0)
@@ -277,6 +285,8 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 		setTurnstileToken(null)
 		setTurnstileResetNonce((current) => current + 1)
 	}, [typedActionData])
+
+	const isSubmitting = navigation.state === 'submitting'
 
 	return (
 		<div className="w-full max-w-md">
@@ -398,10 +408,11 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 					type="submit"
 					className="w-full"
 					disabled={
-						Boolean(loaderData.turnstileSiteKey) && turnstileToken === null
+						isSubmitting ||
+						(Boolean(loaderData.turnstileSiteKey) && turnstileToken === null)
 					}
 				>
-					Sign In
+					{isSubmitting ? 'Signing In...' : 'Sign In'}
 				</Button>
 			</Form>
 		</div>

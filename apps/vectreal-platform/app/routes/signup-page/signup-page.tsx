@@ -17,7 +17,14 @@ import { motion } from 'framer-motion'
 import { AnimatePresence } from 'framer-motion'
 import { AlertCircle, Eye, EyeClosed, ExternalLink, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { data, Form, Link, redirect, type MetaFunction } from 'react-router'
+import {
+	data,
+	Form,
+	Link,
+	redirect,
+	useNavigation,
+	type MetaFunction
+} from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signup-page'
@@ -115,18 +122,6 @@ export async function action({ request, context }: Route.ActionArgs) {
 		return csrfCheck
 	}
 
-	const turnstileToken = formData.get('cf-turnstile-response')
-	const verification = await verifyTurnstileToken(
-		typeof turnstileToken === 'string' ? turnstileToken : '',
-		request
-	)
-	if (!verification.success) {
-		return data<SignupActionData>(
-			{ formError: 'Bot verification failed. Please try again.' },
-			{ status: 400 }
-		)
-	}
-
 	const {
 		errors,
 		data: { email, password, username }
@@ -156,6 +151,18 @@ export async function action({ request, context }: Route.ActionArgs) {
 					'Retry-After': String(rateLimitResult.retryAfterSeconds)
 				}
 			}
+		)
+	}
+
+	const turnstileToken = formData.get('cf-turnstile-response')
+	const verification = await verifyTurnstileToken(
+		typeof turnstileToken === 'string' ? turnstileToken : '',
+		request
+	)
+	if (!verification.success) {
+		return data<SignupActionData>(
+			{ formError: 'Bot verification failed. Please try again.' },
+			{ status: 400 }
 		)
 	}
 
@@ -275,6 +282,7 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
  * @param props Additional props
  */
 const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
+	const navigation = useNavigation()
 	const [showPassword, setShowPassword] = useState<boolean>(false)
 	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 	const [turnstileResetNonce, setTurnstileResetNonce] = useState(0)
@@ -318,6 +326,7 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 			: null
 
 	const isEmailVerified = actionResultData?.user?.user_metadata?.email_verified
+	const isSubmitting = navigation.state === 'submitting'
 
 	return (
 		<AnimatePresence mode="wait">
@@ -505,10 +514,11 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 					type="submit"
 					className="w-full"
 					disabled={
-						Boolean(loaderData.turnstileSiteKey) && turnstileToken === null
+						isSubmitting ||
+						(Boolean(loaderData.turnstileSiteKey) && turnstileToken === null)
 					}
 				>
-					Sign Up
+					{isSubmitting ? 'Signing Up...' : 'Sign Up'}
 				</Button>
 			</Form>
 		</AnimatePresence>
