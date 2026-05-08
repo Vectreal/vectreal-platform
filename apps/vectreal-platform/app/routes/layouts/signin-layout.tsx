@@ -202,16 +202,16 @@ const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 							</span>
 
 							<Outlet />
-						{loaderData.turnstileSiteKey && (
-							<TurnstileWidget
-								ref={oauthTurnstileRef}
-								siteKey={loaderData.turnstileSiteKey}
-								mode="invisible"
-								onSuccess={handleOAuthTurnstileSuccess}
-								onError={handleOAuthTurnstileError}
-								resetNonce={oauthTurnstileResetNonce}
-							/>
-						)}
+							{loaderData.turnstileSiteKey && (
+								<TurnstileWidget
+									ref={oauthTurnstileRef}
+									siteKey={loaderData.turnstileSiteKey}
+									mode="invisible"
+									onSuccess={handleOAuthTurnstileSuccess}
+									onError={handleOAuthTurnstileError}
+									resetNonce={oauthTurnstileResetNonce}
+								/>
+							)}
 							<div className="mt-4 flex grow flex-col items-center justify-between">
 								<button
 									type="button"
