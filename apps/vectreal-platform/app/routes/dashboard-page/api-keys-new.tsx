@@ -40,7 +40,13 @@ import { useSetAtom } from 'jotai/react'
 import { AlertCircle, CheckCircle2, Copy, KeyRound, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { data, Form as RemixForm, useLocation, useNavigate } from 'react-router'
+import {
+	data,
+	Form as RemixForm,
+	useLocation,
+	useNavigate,
+	useNavigation
+} from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { toast } from 'sonner'
 import { z, ZodError } from 'zod'
@@ -392,6 +398,9 @@ export default function ApiKeysNewPage({
 	const location = useLocation()
 	const navigate = useNavigate()
 
+	const navigation = useNavigation()
+	const isSubmitting = navigation.state !== 'idle'
+
 	const [showKeyDialog, setShowKeyDialog] = useState(false)
 	const [createdKey, setCreatedKey] = useState<{
 		plaintext: string
@@ -441,6 +450,8 @@ export default function ApiKeysNewPage({
 			name: p.project.name,
 			slug: p.project.slug
 		}))
+
+	const isCreateDisabled = isSubmitting || showKeyDialog || !selectedOrgAccess?.granted
 
 	// Reset project selection when organization changes
 	useEffect(() => {
@@ -708,12 +719,10 @@ export default function ApiKeysNewPage({
 								<DrawerFooter className="px-0 pt-2">
 									<Button
 										type="submit"
-										disabled={
-											form.formState.isSubmitting || !selectedOrgAccess?.granted
-										}
+										disabled={isCreateDisabled}
 										className="w-full"
 									>
-										{form.formState.isSubmitting ? (
+										{isSubmitting ? (
 											<>Creating...</>
 										) : (
 											<>
