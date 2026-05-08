@@ -28,10 +28,11 @@ export async function verifyTurnstileToken(
 	request?: Request
 ): Promise<{ success: boolean; errorCodes?: string[] }> {
 	const turnstileSecretKey = process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY
+	const isProduction = process.env.NODE_ENV === 'production'
 	const trimmedToken = token.trim()
 
 	if (!turnstileSecretKey) {
-		if (process.env.NODE_ENV !== 'production') {
+		if (!isProduction) {
 			console.warn(
 				'[turnstile] CLOUDFLARE_TURNSTILE_SECRET_KEY is not set. Skipping verification in non-production.'
 			)
@@ -72,6 +73,12 @@ export async function verifyTurnstileToken(
 		const payload = (await response.json()) as TurnstileVerificationResponse
 
 		if (!payload.success) {
+			if (!isProduction) {
+				console.warn('[turnstile] verification failed', {
+					errorCodes: payload['error-codes'] ?? ['verification-failed']
+				})
+			}
+
 			return {
 				success: false,
 				errorCodes: payload['error-codes'] ?? ['verification-failed']
@@ -88,7 +95,14 @@ export async function verifyTurnstileToken(
 			responseHostname &&
 			responseHostname !== expectedHostname
 		) {
-			return { success: false, errorCodes: ['hostname-mismatch'] }
+			if (isProduction) {
+				return { success: false, errorCodes: ['hostname-mismatch'] }
+			}
+
+			console.warn('[turnstile] hostname mismatch ignored in non-production', {
+				expectedHostname,
+				responseHostname
+			})
 		}
 
 		return { success: true }
