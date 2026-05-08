@@ -22,7 +22,6 @@ import { Route } from './+types/signin-page'
 import { TurnstileWidget } from '../../components/turnstile-widget'
 import { checkAuthRateLimit } from '../../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
-import { verifyTurnstileToken } from '../../lib/http/turnstile.server'
 import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
@@ -144,16 +143,8 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	const turnstileToken = formData.get('cf-turnstile-response')
-	const verification = await verifyTurnstileToken(
-		typeof turnstileToken === 'string' ? turnstileToken : '',
-		request
-	)
-	if (!verification.success) {
-		return data<SigninActionData>(
-			{ formError: 'Bot verification failed. Please try again.' },
-			{ status: 400 }
-		)
-	}
+	const captchaToken =
+		typeof turnstileToken === 'string' ? turnstileToken : undefined
 
 	const { client, headers } = await createSupabaseClient(request)
 	let authData: Awaited<
@@ -166,7 +157,8 @@ export async function action({ request }: Route.ActionArgs) {
 	try {
 		const response = await client.auth.signInWithPassword({
 			email,
-			password
+			password,
+			options: { captchaToken }
 		})
 		authData = response.data
 		authError = response.error
@@ -194,15 +186,18 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	if (authError) {
-		const invalidCredentials = authError.message
-			.toLowerCase()
-			.includes('invalid login credentials')
+		const message = authError.message.toLowerCase()
+		const invalidCredentials = message.includes('invalid login credentials')
+		const captchaFailed =
+			message.includes('captcha') || message.includes('turnstile')
 
-		const errorCode: AuthErrorCode = invalidCredentials
-			? 'invalid_credentials'
-			: 'unknown'
+		const errorCode: AuthErrorCode = captchaFailed
+			? 'verification_failed'
+			: invalidCredentials
+				? 'invalid_credentials'
+				: 'unknown'
 
-		if (!invalidCredentials) {
+		if (!invalidCredentials && !captchaFailed) {
 			console.error('[auth/sign-in] sign-in failed', {
 				message: authError.message,
 				email: normalizedEmail

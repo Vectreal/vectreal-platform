@@ -4,12 +4,23 @@ import { Button } from '@shared/components/ui/button'
 import { Separator } from '@shared/components/ui/separator'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate, useSubmit } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 
+import { Route } from './+types/signin-layout'
 import { AuthErrorBoundary } from '../../components/errors'
 import HeroScene from '../../components/home/hero-scene'
+import {
+	TurnstileWidget,
+	type TurnstileWidgetHandle
+} from '../../components/turnstile-widget'
+
+export async function loader() {
+	return {
+		turnstileSiteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY ?? ''
+	}
+}
 
 const SignupModel = () => {
 	return (
@@ -28,7 +39,7 @@ const SignupModel = () => {
 	)
 }
 
-const SigninLayout = () => {
+const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 	const submit = useSubmit()
 	const csrfToken = useAuthenticityToken()
 	const location = useLocation()
@@ -41,20 +52,58 @@ const SigninLayout = () => {
 	const [loadingProvider, setLoadingProvider] = useState<
 		null | 'google' | 'github'
 	>(null)
+	const [oauthTurnstileResetNonce, setOauthTurnstileResetNonce] = useState(0)
+	const pendingProviderRef = useRef<'google' | 'github' | null>(null)
+	const oauthTurnstileRef = useRef<TurnstileWidgetHandle>(null)
 
-	function handleSocialLogin(provider: 'google' | 'github') {
-		if (loadingProvider) return
-		setLoadingProvider(provider)
+	function submitSocialLogin(
+		provider: 'google' | 'github',
+		captchaToken?: string
+	) {
 		const formData = new FormData()
 		formData.append('provider', provider)
 		formData.append('backURL', nextPath)
 		formData.append('csrf', csrfToken)
+		if (captchaToken) {
+			formData.append('cf-turnstile-response', captchaToken)
+		}
 		// Use a full navigation submit so external OAuth redirects happen in the
 		// top-level browsing context instead of a background fetch request.
 		submit(formData, {
 			method: 'post',
 			action: '/auth/social-signin'
 		})
+	}
+
+	function handleSocialLogin(provider: 'google' | 'github') {
+		if (loadingProvider) return
+		setLoadingProvider(provider)
+
+		if (!loaderData.turnstileSiteKey) {
+			// No site key configured — submit without Turnstile (e.g. local dev)
+			submitSocialLogin(provider)
+			return
+		}
+
+		// Gate: execute the invisible Turnstile challenge first
+		pendingProviderRef.current = provider
+		oauthTurnstileRef.current?.execute()
+	}
+
+	function handleOAuthTurnstileSuccess(token: string) {
+		const provider = pendingProviderRef.current
+		pendingProviderRef.current = null
+		if (!provider) return
+		submitSocialLogin(provider, token)
+		// Reset the widget so it can be reused if the user returns to this page
+		setOauthTurnstileResetNonce((n) => n + 1)
+	}
+
+	function handleOAuthTurnstileError() {
+		// Challenge failed — allow the user to try again
+		pendingProviderRef.current = null
+		setLoadingProvider(null)
+		setOauthTurnstileResetNonce((n) => n + 1)
 	}
 
 	const handleSwitch = () => {
@@ -153,7 +202,16 @@ const SigninLayout = () => {
 							</span>
 
 							<Outlet />
-
+						{loaderData.turnstileSiteKey && (
+							<TurnstileWidget
+								ref={oauthTurnstileRef}
+								siteKey={loaderData.turnstileSiteKey}
+								mode="invisible"
+								onSuccess={handleOAuthTurnstileSuccess}
+								onError={handleOAuthTurnstileError}
+								resetNonce={oauthTurnstileResetNonce}
+							/>
+						)}
 							<div className="mt-4 flex grow flex-col items-center justify-between">
 								<button
 									type="button"
