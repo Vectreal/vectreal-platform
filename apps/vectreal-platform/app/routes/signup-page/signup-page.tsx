@@ -31,7 +31,6 @@ import { Route } from './+types/signup-page'
 import { TurnstileWidget } from '../../components/turnstile-widget'
 import { checkAuthRateLimit } from '../../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
-import { verifyTurnstileToken } from '../../lib/http/turnstile.server'
 import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
@@ -155,16 +154,8 @@ export async function action({ request, context }: Route.ActionArgs) {
 	}
 
 	const turnstileToken = formData.get('cf-turnstile-response')
-	const verification = await verifyTurnstileToken(
-		typeof turnstileToken === 'string' ? turnstileToken : '',
-		request
-	)
-	if (!verification.success) {
-		return data<SignupActionData>(
-			{ formError: 'Bot verification failed. Please try again.' },
-			{ status: 400 }
-		)
-	}
+	const captchaToken =
+		typeof turnstileToken === 'string' ? turnstileToken : undefined
 
 	const { client, headers } = await createSupabaseClient(request)
 	let signupData: Awaited<ReturnType<typeof client.auth.signUp>>['data']
@@ -174,7 +165,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 		const response = await client.auth.signUp({
 			email,
 			password,
-			options: { data: { username } }
+			options: { data: { username }, captchaToken }
 		})
 		signupData = response.data
 		signupError = response.error
@@ -212,7 +203,10 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 	if (signupError) {
 		const message = signupError.message.toLowerCase()
+		const captchaFailed =
+			message.includes('captcha') || message.includes('turnstile')
 		const isKnownClientError =
+			captchaFailed ||
 			message.includes('already registered') ||
 			message.includes('invalid') ||
 			message.includes('password')

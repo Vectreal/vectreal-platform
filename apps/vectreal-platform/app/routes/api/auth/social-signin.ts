@@ -4,6 +4,7 @@ import { redirect } from 'react-router'
 import { Route } from './+types/social-signin'
 import { checkAuthRateLimit } from '../../../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../../../lib/http/csrf.server'
+import { verifyTurnstileToken } from '../../../lib/http/turnstile.server'
 import { createSupabaseClient } from '../../../lib/supabase.server'
 
 const OAUTH_PROVIDERS = new Set(['google', 'github'])
@@ -50,6 +51,15 @@ export async function action({ request }: Route.ActionArgs) {
 				}
 			}
 		)
+	}
+
+	const turnstileToken = formData.get('cf-turnstile-response')
+	const verification = await verifyTurnstileToken(
+		typeof turnstileToken === 'string' ? turnstileToken : '',
+		request
+	)
+	if (!verification.success) {
+		return ApiResponse.error('Bot verification failed. Please try again.', 400)
 	}
 
 	const cleanAppUrl = applicationUrl.endsWith('/')
