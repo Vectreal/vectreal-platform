@@ -28,3 +28,28 @@ export interface ContactActionData {
 		message: string
 	}
 }
+
+export type ContactSubmissionView = 'form' | 'success' | 'error'
+
+export function getContactSubmissionView(
+	actionData?: ContactActionData
+): ContactSubmissionView {
+	if (!actionData) {
+		return 'form'
+	}
+
+	if (actionData.status === 'success') {
+		return 'success'
+	}
+
+	const hasFieldErrors = Boolean(
+		actionData.fieldErrors &&
+			Object.values(actionData.fieldErrors).some((error) => Boolean(error))
+	)
+
+	if (actionData.status === 'error' && actionData.formError && !hasFieldErrors) {
+		return 'error'
+	}
+
+	return 'form'
+}
