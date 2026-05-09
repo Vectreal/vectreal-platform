@@ -1,5 +1,4 @@
 import { usePostHog } from '@posthog/react'
-import { Button } from '@shared/components/ui/button'
 import {
 	Card,
 	CardContent,
@@ -7,28 +6,22 @@ import {
 	CardHeader,
 	CardTitle
 } from '@shared/components/ui/card'
-import { Input } from '@shared/components/ui/input'
-import { Label } from '@shared/components/ui/label'
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue
-} from '@shared/components/ui/select'
-import { Textarea } from '@shared/components/ui/textarea'
-import { CheckCircle2, LifeBuoy, Mail, Sparkles, Users } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { LifeBuoy, Mail, Sparkles, Users } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { data, Form, Link, useLoaderData, useNavigation } from 'react-router'
-import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
+import { data, Link, useLoaderData, useNavigation } from 'react-router'
 
-import { PublicErrorBoundary } from '../components/errors'
-import { TurnstileWidget } from '../components/turnstile-widget'
 import {
-	CONTACT_HONEYPOT_FIELD,
+	ContactErrorResult,
+	ContactForm,
+	ContactSuccessResult
+} from '../components/contact'
+import { PublicErrorBoundary } from '../components/errors'
+import {
 	CONTACT_SOURCE_VALUES,
 	type ContactActionData,
-	type ContactInquiryType
+	type ContactInquiryType,
+	getContactSubmissionView
 } from '../lib/domain/contact/contact-shared'
 import {
 	buildContactSource,
@@ -41,7 +34,6 @@ import { LEGAL_PAGE_SEO_BY_PATH } from '../lib/seo-registry'
 import { createSupabaseClient } from '../lib/supabase.server'
 
 import type { Route } from './+types/contact-page'
-const HONEYPOT_FIELD = CONTACT_HONEYPOT_FIELD
 
 type InquiryType = ContactInquiryType
 type ActionData = ContactActionData
@@ -147,6 +139,11 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 		useState<InquiryType>(initialInquiryType)
 	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 	const [turnstileResetNonce, setTurnstileResetNonce] = useState(0)
+	const [isResultDismissed, setIsResultDismissed] = useState(false)
+	const prefersReducedMotion = useReducedMotion()
+	const submissionView = getContactSubmissionView(typedActionData)
+	const showSubmissionResult = !isResultDismissed && submissionView !== 'form'
+	const isSubmitting = navigation.state === 'submitting'
 
 	useEffect(() => {
 		setInquiryType(initialInquiryType)
@@ -157,6 +154,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 			return
 		}
 
+		setIsResultDismissed(false)
 		setTurnstileToken(null)
 		setTurnstileResetNonce((current) => current + 1)
 	}, [typedActionData])
@@ -165,6 +163,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 		if (initialTrackedRef.current) {
 			return
 		}
+
 		initialTrackedRef.current = true
 		posthog?.capture('contact_page_viewed', {
 			source,
@@ -173,10 +172,30 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 		})
 	}, [isAuthenticated, posthog, source])
 
-	const isSubmitting = navigation.state === 'submitting'
+	const handleDismissResult = () => {
+		setIsResultDismissed(true)
+		setTurnstileToken(null)
+		setTurnstileResetNonce((current) => current + 1)
+	}
+
+	const handleTurnstileSuccess = (token: string) => {
+		setTurnstileToken(token)
+	}
+
+	const handleTurnstileError = () => {
+		setTurnstileToken(null)
+	}
+
+	const handleSubmit = () => {
+		posthog?.capture('contact_form_submit_started', {
+			inquiry_type: inquiryType,
+			is_authenticated: isAuthenticated,
+			client_type: 'web'
+		})
+	}
 
 	return (
-		<main className="from-accent/10 relative isolate overflow-hidden bg-gradient-to-b via-transparent to-transparent px-6 py-20 pt-32 md:px-8">
+		<main className="from-accent/10 relative isolate overflow-hidden bg-linear-to-b via-transparent to-transparent px-6 py-20 pt-32 md:px-8">
 			<div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_15%_20%,hsl(var(--accent)/0.16),transparent_42%),radial-gradient(circle_at_85%_10%,hsl(var(--accent)/0.1),transparent_45%)]" />
 			<div className="mx-auto max-w-6xl space-y-10">
 				<section className="space-y-4 text-left">
@@ -199,177 +218,71 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-6">
-							{typedActionData?.status === 'success' ? (
-								<div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
-									<p className="flex items-center gap-2 font-medium">
-										<CheckCircle2 className="h-4 w-4" />
-										Message sent successfully
-									</p>
-									<p className="mt-2 text-sm text-emerald-700">
-										Thanks for reaching out. We will get back to you shortly.
-									</p>
-									{typedActionData.referenceCode ? (
-										<p className="mt-2 text-sm text-emerald-700">
-											Reference code:{' '}
-											<span className="font-semibold">
-												{typedActionData.referenceCode}
-											</span>
-										</p>
-									) : null}
-									{typedActionData.notice ? (
-										<p className="text-warning-muted-foreground mt-2 text-sm">
-											{typedActionData.notice}
-										</p>
-									) : null}
-								</div>
-							) : null}
-
-							{typedActionData?.status === 'error' &&
-							typedActionData.formError ? (
-								<div className="border-error-border bg-error-bg text-error-foreground mb-4 rounded-2xl border p-4 text-sm">
-									{typedActionData.formError}
-								</div>
-							) : null}
-
-							<Form
-								method="post"
-								className="space-y-5"
-								onSubmit={() => {
-									posthog?.capture('contact_form_submit_started', {
-										inquiry_type: inquiryType,
-										is_authenticated: isAuthenticated,
-										client_type: 'web'
-									})
-								}}
-							>
-								<AuthenticityTokenInput />
-								<input type="hidden" name="source" value={source} />
-								<input
-									type="hidden"
-									name="cf-turnstile-response"
-									value={turnstileToken ?? ''}
-								/>
-								<input
-									type="text"
-									name={HONEYPOT_FIELD}
-									tabIndex={-1}
-									autoComplete="off"
-									className="hidden"
-									aria-hidden="true"
-								/>
-
-								<div className="grid gap-5 sm:grid-cols-2">
-									<div className="space-y-2">
-										<Label htmlFor="name">Full name</Label>
-										<Input
-											id="name"
-											name="name"
-											required
-											autoComplete="name"
-											defaultValue={typedActionData?.fields?.name ?? ''}
-											placeholder="Jane Doe"
-										/>
-										{typedActionData?.fieldErrors?.name ? (
-											<p className="text-destructive text-sm">
-												{typedActionData.fieldErrors.name}
-											</p>
-										) : null}
-									</div>
-
-									<div className="space-y-2">
-										<Label htmlFor="email">Work email</Label>
-										<Input
-											id="email"
-											name="email"
-											type="email"
-											required
-											autoComplete="email"
-											defaultValue={typedActionData?.fields?.email ?? ''}
-											placeholder="you@company.com"
-										/>
-										{typedActionData?.fieldErrors?.email ? (
-											<p className="text-destructive text-sm">
-												{typedActionData.fieldErrors.email}
-											</p>
-										) : null}
-									</div>
-								</div>
-
-								<div className="space-y-2">
-									<Label htmlFor="inquiryType">Inquiry type</Label>
-									<Select
-										value={inquiryType}
-										onValueChange={(value) => {
-											setInquiryType(value as InquiryType)
-										}}
-									>
-										<SelectTrigger id="inquiryType" className="w-full">
-											<SelectValue placeholder="Select inquiry type" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="support">Product support</SelectItem>
-											<SelectItem value="sales">Sales and plans</SelectItem>
-											<SelectItem value="partnership">Partnership</SelectItem>
-											<SelectItem value="other">Other</SelectItem>
-										</SelectContent>
-									</Select>
-									<input type="hidden" name="inquiryType" value={inquiryType} />
-									{typedActionData?.fieldErrors?.inquiryType ? (
-										<p className="text-destructive text-sm">
-											{typedActionData.fieldErrors.inquiryType}
-										</p>
-									) : null}
-								</div>
-
-								<div className="space-y-2">
-									<Label htmlFor="message">Message</Label>
-									<Textarea
-										id="message"
-										name="message"
-										required
-										rows={7}
-										defaultValue={typedActionData?.fields?.message ?? ''}
-										placeholder="Tell us about your use case, current blockers, and timeline."
-									/>
-									{typedActionData?.fieldErrors?.message ? (
-										<p className="text-destructive text-sm">
-											{typedActionData.fieldErrors.message}
-										</p>
-									) : (
-										<p className="text-muted-foreground text-xs">
-											No sensitive credentials or private keys, please.
-										</p>
-									)}
-								</div>
-
-								<TurnstileWidget
-									siteKey={turnstileSiteKey}
-									onSuccess={setTurnstileToken}
-									resetNonce={turnstileResetNonce}
-									onError={() => {
-										setTurnstileToken(null)
-									}}
-								/>
-
-								<div className="flex flex-wrap items-center gap-3">
-									<Button
-										type="submit"
-										size="lg"
-										disabled={
-											isSubmitting ||
-											(Boolean(turnstileSiteKey) && turnstileToken === null)
+							<AnimatePresence mode="wait" initial={false}>
+								{showSubmissionResult ? (
+									<motion.div
+										key={`result-${submissionView}`}
+										initial={
+											prefersReducedMotion
+												? false
+												: { opacity: 0, y: 8, scale: 0.98 }
 										}
+										animate={
+											prefersReducedMotion
+												? undefined
+												: { opacity: 1, y: 0, scale: 1 }
+										}
+										exit={
+											prefersReducedMotion
+												? undefined
+												: { opacity: 0, y: -8, scale: 0.98 }
+										}
+										transition={{ duration: 0.2, ease: 'easeOut' }}
 									>
-										{isSubmitting ? 'Sending...' : 'Send message'}
-									</Button>
-									<p className="text-muted-foreground text-sm">
-										Prefer direct email?{' '}
-										<a href="mailto:info@vectreal.com" className="underline">
-											info@vectreal.com
-										</a>
-									</p>
-								</div>
-							</Form>
+										{submissionView === 'success' ? (
+											<ContactSuccessResult
+												referenceCode={typedActionData?.referenceCode}
+												notice={typedActionData?.notice}
+												onDismiss={handleDismissResult}
+											/>
+										) : (
+											<ContactErrorResult
+												error={typedActionData?.formError}
+												onDismiss={handleDismissResult}
+											/>
+										)}
+									</motion.div>
+								) : (
+									<motion.div
+										key="form"
+										initial={
+											prefersReducedMotion ? false : { opacity: 0, y: 8 }
+										}
+										animate={
+											prefersReducedMotion ? undefined : { opacity: 1, y: 0 }
+										}
+										exit={
+											prefersReducedMotion ? undefined : { opacity: 0, y: -8 }
+										}
+										transition={{ duration: 0.2, ease: 'easeOut' }}
+									>
+										<ContactForm
+											source={source}
+											isAuthenticated={isAuthenticated}
+											inquiryType={inquiryType}
+											onInquiryTypeChange={setInquiryType}
+											turnstileSiteKey={turnstileSiteKey}
+											turnstileToken={turnstileToken}
+											onTurnstileSuccess={handleTurnstileSuccess}
+											onTurnstileError={handleTurnstileError}
+											turnstileResetNonce={turnstileResetNonce}
+											isSubmitting={isSubmitting}
+											actionData={typedActionData}
+											onSubmit={handleSubmit}
+										/>
+									</motion.div>
+								)}
+							</AnimatePresence>
 						</CardContent>
 					</Card>
 
