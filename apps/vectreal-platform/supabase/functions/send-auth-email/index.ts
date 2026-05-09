@@ -534,12 +534,10 @@ Deno.serve(async (request) => {
 		})
 
 		return Response.json({ ok: true }, { status: HTTP_STATUS.ok })
-	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : ERROR_MESSAGE.unknown
-		console.error(LOG_MESSAGE.deliveryFailed, message)
+	} catch {
+		console.error(LOG_MESSAGE.deliveryFailed)
 		return Response.json(
-			{ error: message },
+			{ error: ERROR_MESSAGE.unknown },
 			{ status: HTTP_STATUS.internalServerError }
 		)
 	}
