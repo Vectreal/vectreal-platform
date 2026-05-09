@@ -1,7 +1,7 @@
 import { usePostHog } from '@posthog/react'
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
-import { Search } from 'lucide-react'
+import { ArrowRight, Search, X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { data, Form, Link } from 'react-router'
 
@@ -19,12 +19,46 @@ import type { Route } from './+types/news-room-page'
 
 type SortMode = 'newest' | 'oldest'
 
+interface NewsRoomFilters {
+	query: string
+	category: string
+	tag: string
+	sort: SortMode
+}
+
 function parseSortMode(value: string | null): SortMode {
 	return value === 'oldest' ? 'oldest' : 'newest'
 }
 
 function includesCaseInsensitive(value: string, search: string): boolean {
 	return value.toLowerCase().includes(search.toLowerCase())
+}
+
+function buildNewsRoomPath(
+	filters: NewsRoomFilters,
+	overrides: Partial<NewsRoomFilters> = {}
+): string {
+	const nextFilters = { ...filters, ...overrides }
+	const params = new URLSearchParams()
+
+	if (nextFilters.query) {
+		params.set('q', nextFilters.query)
+	}
+
+	if (nextFilters.category) {
+		params.set('category', nextFilters.category)
+	}
+
+	if (nextFilters.tag) {
+		params.set('tag', nextFilters.tag)
+	}
+
+	if (nextFilters.sort !== 'newest') {
+		params.set('sort', nextFilters.sort)
+	}
+
+	const queryString = params.toString()
+	return queryString ? `/news-room?${queryString}` : '/news-room'
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -93,6 +127,16 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 	const { consent } = useConsent()
 	const viewTrackedRef = useRef(false)
 	const [featuredArticle, ...remainingArticles] = articles
+	const hasAdvancedFilters =
+		Boolean(filters.category) ||
+		Boolean(filters.tag) ||
+		filters.sort === 'oldest'
+	const hasAnyFilters = Boolean(filters.query) || hasAdvancedFilters
+	const featuredTopics = categories.slice(0, 4)
+	const featuredTags = tags.slice(0, 3)
+	const latestStoryPath = featuredArticle
+		? `/news-room/${featuredArticle.slug}`
+		: '/news-room#news-feed'
 
 	useEffect(() => {
 		if (!consent?.analytics || viewTrackedRef.current) {
@@ -119,8 +163,8 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 	])
 
 	return (
-		<div className="mx-auto w-full max-w-7xl px-6 pt-24 pb-20">
-			<header className="mb-12 space-y-4">
+		<div className="mx-auto w-full max-w-7xl px-4 pt-22 pb-20 md:px-6 md:pt-24">
+			<header className="mb-10 space-y-4 md:mb-12">
 				<p className="text-muted-foreground text-xs font-semibold tracking-[0.22em] uppercase">
 					Newsroom
 				</p>
@@ -131,87 +175,151 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 					Launches, engineering notes, and product decisions. Cleanly published
 					from MDX.
 				</p>
-				<div className="flex flex-wrap gap-2 pt-2 text-xs">
-					<Badge variant="outline">{articles.length} Articles</Badge>
-					<Badge variant="outline">Product & Engineering</Badge>
-					<Badge variant="outline">Weekly Updates</Badge>
+				<div className="flex flex-wrap items-center gap-2 pt-2">
+					<Badge variant="outline" className="px-2.5 py-1 text-[11px]">
+						{articles.length} published stories
+					</Badge>
+					<Button asChild size="sm" className="h-8 px-3">
+						<Link to="/sign-up">
+							Start free
+							<ArrowRight className="h-3.5 w-3.5" />
+						</Link>
+					</Button>
+					<Button variant="ghost" size="sm" asChild className="h-8 px-3">
+						<Link to={latestStoryPath} viewTransition>
+							Read latest
+						</Link>
+					</Button>
 				</div>
 			</header>
 
-			<section className="border-border/60 bg-muted/15 mb-12 rounded-2xl border p-4 md:p-6">
-				<div className="mb-4 flex items-center justify-between gap-3">
-					<h2 className="text-base font-semibold tracking-tight">
-						Filter & Search
-					</h2>
-					<p className="text-muted-foreground text-xs">URL-synced controls</p>
-				</div>
-				<Form method="get" className="grid gap-3 md:grid-cols-5">
-					<label className="relative block md:col-span-2">
-						<Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+			<section className="mb-8 flex flex-wrap items-center gap-2 md:mb-10">
+				<Form method="get" className="flex items-center gap-2">
+					<input type="hidden" name="category" value={filters.category} />
+					<input type="hidden" name="tag" value={filters.tag} />
+					<input type="hidden" name="sort" value={filters.sort} />
+					<label className="border-border/70 bg-card/20 focus-within:border-border inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 transition-all duration-200">
+						<Search className="text-muted-foreground h-3.5 w-3.5" />
 						<input
 							type="search"
 							name="q"
 							defaultValue={filters.query}
-							placeholder="Search posts…"
+							placeholder="Search"
 							aria-label="Search newsroom posts"
-							className="border-input bg-background/60 placeholder:text-muted-foreground focus-visible:ring-ring h-10 w-full rounded-md border pr-3 pl-9 text-sm outline-none focus-visible:ring-2"
+							className="placeholder:text-muted-foreground h-6 w-22 bg-transparent text-xs transition-all duration-300 outline-none focus:w-44 md:w-28 md:focus:w-52"
 						/>
 					</label>
-
-					<select
-						name="category"
-						defaultValue={filters.category}
-						aria-label="Filter by category"
-						className="border-input bg-background/60 h-10 rounded-md border px-3 text-sm"
+					<Button
+						type="submit"
+						variant="ghost"
+						size="sm"
+						className="h-8 rounded-full px-3 transition-transform duration-200 hover:-translate-y-0.5"
 					>
-						<option value="">All categories</option>
-						{categories.map((item) => (
-							<option key={item} value={item}>
-								{item}
-							</option>
-						))}
-					</select>
-
-					<select
-						name="tag"
-						defaultValue={filters.tag}
-						aria-label="Filter by tag"
-						className="border-input bg-background/60 h-10 rounded-md border px-3 text-sm"
-					>
-						<option value="">All tags</option>
-						{tags.map((item) => (
-							<option key={item} value={item}>
-								{item}
-							</option>
-						))}
-					</select>
-
-					<select
-						name="sort"
-						defaultValue={filters.sort}
-						aria-label="Sort articles"
-						className="border-input bg-background/60 h-10 rounded-md border px-3 text-sm"
-					>
-						<option value="newest">Newest first</option>
-						<option value="oldest">Oldest first</option>
-					</select>
-
-					<div className="flex items-center gap-2 md:col-span-5">
-						<Button type="submit">Apply Filters</Button>
-						<Button variant="ghost" asChild>
-							<Link to="/news-room">Reset</Link>
-						</Button>
-					</div>
+						Search
+					</Button>
 				</Form>
+
+				<Button
+					variant={
+						!filters.category && !filters.tag && filters.sort === 'newest'
+							? 'secondary'
+							: 'ghost'
+					}
+					size="sm"
+					asChild
+					className="h-8 rounded-full px-3 transition-transform duration-200 hover:-translate-y-0.5"
+				>
+					<Link
+						to={buildNewsRoomPath(filters, {
+							category: '',
+							tag: '',
+							sort: 'newest'
+						})}
+					>
+						All
+					</Link>
+				</Button>
+
+				{featuredTopics.map((topic) => (
+					<Button
+						key={topic}
+						variant={filters.category === topic ? 'secondary' : 'ghost'}
+						size="sm"
+						asChild
+						className="h-8 rounded-full px-3 transition-transform duration-200 hover:-translate-y-0.5"
+					>
+						<Link
+							to={buildNewsRoomPath(filters, {
+								category: topic,
+								tag: '',
+								sort: 'newest'
+							})}
+						>
+							{topic}
+						</Link>
+					</Button>
+				))}
+
+				{featuredTags.map((tag) => (
+					<Button
+						key={tag}
+						variant={filters.tag === tag ? 'secondary' : 'ghost'}
+						size="sm"
+						asChild
+						className="h-8 rounded-full px-3 transition-transform duration-200 hover:-translate-y-0.5"
+					>
+						<Link
+							to={buildNewsRoomPath(filters, {
+								tag,
+								category: '',
+								sort: 'newest'
+							})}
+						>
+							#{tag}
+						</Link>
+					</Button>
+				))}
+
+				<Button
+					variant={filters.sort === 'oldest' ? 'secondary' : 'ghost'}
+					size="sm"
+					asChild
+					className="h-8 rounded-full px-3 transition-transform duration-200 hover:-translate-y-0.5"
+				>
+					<Link
+						to={buildNewsRoomPath(filters, {
+							sort: filters.sort === 'oldest' ? 'newest' : 'oldest'
+						})}
+					>
+						{filters.sort === 'oldest' ? 'Oldest first' : 'Newest first'}
+					</Link>
+				</Button>
+
+				{hasAnyFilters ? (
+					<Badge variant="outline" asChild className="h-8 rounded-full px-3">
+						<Link to="/news-room" className="inline-flex items-center gap-1">
+							Reset
+							<X className="h-3 w-3" aria-hidden="true" />
+						</Link>
+					</Badge>
+				) : null}
 			</section>
 
-			<section className="space-y-4">
+			<section id="news-feed" className="scroll-mt-24 space-y-4">
 				{articles.length === 0 ? (
-					<div className="border-border/50 bg-muted/10 rounded-2xl border p-10 text-center">
+					<div className="border-border/50 bg-muted/10 rounded-2xl border p-8 text-center md:p-10">
 						<h2 className="mb-1 text-lg font-semibold">No matching posts</h2>
 						<p className="text-muted-foreground text-sm">
-							Try another filter or clear search.
+							Try another topic or clear your filters.
 						</p>
+						<div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+							<Button size="sm" asChild>
+								<Link to="/news-room">Show latest</Link>
+							</Button>
+							<Button variant="ghost" size="sm" asChild>
+								<Link to="/sign-up">Create free account</Link>
+							</Button>
+						</div>
 					</div>
 				) : (
 					<>
@@ -221,14 +329,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 								viewTransition
 								className="group block"
 							>
-								{/*
-								 * Featured card — typography-first layout.
-								 * On mobile: narrow mosaic strip spans the top as a brand
-								 * signature, text fills below. On desktop: mosaic column
-								 * sits on the right (~30% width), text dominates the left.
-								 */}
 								<article className="border-border/70 bg-card/15 hover:border-border overflow-hidden rounded-2xl border transition-all duration-200 hover:-translate-y-0.5">
-									{/* Mobile-only pattern strip */}
 									{featuredArticle.thumbnailImage ? (
 										<div className="h-20 overflow-hidden md:hidden">
 											<img
@@ -243,16 +344,18 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 									) : null}
 
 									<div className="grid md:grid-cols-[1fr_280px]">
-										{/* Text column */}
-										<div className="flex flex-col justify-between p-7 md:p-10">
+										<div className="flex flex-col justify-between p-6 md:p-9">
 											<div>
-												{/* Meta row: Featured badge + category + reading time */}
 												<div className="mb-5 flex flex-wrap items-center gap-2.5">
 													<span className="bg-primary/10 text-primary rounded px-2 py-0.5 text-[11px] font-semibold tracking-[0.12em] uppercase">
 														Featured
 													</span>
 													<span className="text-muted-foreground text-[11px] font-medium tracking-[0.12em] uppercase">
 														{featuredArticle.category}
+													</span>
+													<span className="text-border">·</span>
+													<span className="text-muted-foreground text-[11px]">
+														{formatNewsDate(featuredArticle.publishedAt)}
 													</span>
 													<span className="text-border">·</span>
 													<span className="text-muted-foreground text-[11px]">
@@ -263,25 +366,23 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 												<h2 className="group-hover:text-foreground/85 mb-4 text-3xl leading-[1.06] font-semibold tracking-tight text-balance transition-colors md:text-5xl">
 													{featuredArticle.title}
 												</h2>
-												<p className="text-muted-foreground max-w-xl text-base leading-relaxed md:text-lg">
+												<p className="text-muted-foreground line-clamp-3 max-w-xl text-base leading-relaxed md:text-lg">
 													{featuredArticle.excerpt}
 												</p>
 											</div>
 
-											<footer className="border-border/40 mt-8 flex flex-wrap items-center gap-3 border-t pt-5">
+											<footer className="border-border/40 mt-7 flex flex-wrap items-center gap-3 border-t pt-5">
 												<div>
 													<p className="text-sm leading-tight font-semibold">
 														{featuredArticle.author.name}
 													</p>
 													<p className="text-muted-foreground text-xs">
-														{featuredArticle.author.role} ·{' '}
-														{formatNewsDate(featuredArticle.publishedAt)}
+														{featuredArticle.author.role}
 													</p>
 												</div>
 											</footer>
 										</div>
 
-										{/* Desktop-only mosaic accent column */}
 										{featuredArticle.thumbnailImage ? (
 											<div className="border-border/40 relative hidden overflow-hidden border-l md:block">
 												<img
@@ -308,17 +409,9 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 										viewTransition
 										className="group block"
 									>
-										{/*
-										 * Grid card — horizontal split.
-										 * Text takes the left ~¾, mosaic is a narrow
-										 * accent strip on the right — always visible,
-										 * never the focus.
-										 */}
 										<article className="border-border/70 bg-card/15 hover:border-border grid grid-cols-[1fr_auto] overflow-hidden rounded-2xl border transition-all duration-200 hover:-translate-y-0.5">
-											{/* Text column */}
 											<div className="flex flex-col justify-between p-5 md:p-6">
 												<div>
-													{/* Category + date meta */}
 													<div className="mb-3 flex flex-wrap items-center gap-1.5">
 														<span className="text-primary text-[11px] font-semibold tracking-[0.12em] uppercase">
 															{article.category}
@@ -327,12 +420,16 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 														<span className="text-muted-foreground text-[11px]">
 															{formatNewsDate(article.publishedAt)}
 														</span>
+														<span className="text-border text-[11px]">·</span>
+														<span className="text-muted-foreground text-[11px]">
+															{article.readingTimeMinutes} min
+														</span>
 													</div>
 
 													<h3 className="group-hover:text-foreground/85 mb-2.5 text-xl leading-snug font-semibold tracking-tight text-balance transition-colors md:text-2xl">
 														{article.title}
 													</h3>
-													<p className="text-muted-foreground line-clamp-2 text-sm leading-relaxed md:text-base">
+													<p className="text-muted-foreground line-clamp-3 text-sm leading-relaxed md:text-base">
 														{article.excerpt}
 													</p>
 												</div>
@@ -341,16 +438,14 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 													<span className="text-foreground text-xs font-semibold">
 														{article.author.name}
 													</span>
-													<span className="text-border text-xs">·</span>
 													<span className="text-muted-foreground text-xs">
-														{article.readingTimeMinutes} min read
+														{article.author.role}
 													</span>
 												</footer>
 											</div>
 
-											{/* Mosaic accent strip */}
 											{article.thumbnailImage ? (
-												<div className="border-border/40 relative w-20 overflow-hidden border-l md:w-28">
+												<div className="border-border/40 relative w-14 overflow-hidden border-l md:w-24">
 													<img
 														src={article.thumbnailImage}
 														alt=""
@@ -365,6 +460,30 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 								))}
 							</div>
 						) : null}
+
+						<section className="from-primary/12 via-primary/5 to-background border-primary/20 mt-10 rounded-2xl border bg-linear-to-br p-5 md:mt-12 md:p-7">
+							<p className="text-primary mb-2 text-xs font-semibold tracking-[0.14em] uppercase">
+								Build while you're learning
+							</p>
+							<h2 className="max-w-2xl text-2xl leading-tight font-semibold tracking-tight md:text-3xl">
+								Turn ideas from these articles into live 3D experiences.
+							</h2>
+							<p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed md:text-base">
+								Create a free account to publish your first scene and keep
+								shipping faster with Vectreal.
+							</p>
+							<div className="mt-4 flex flex-wrap items-center gap-2">
+								<Button asChild>
+									<Link to="/sign-up">
+										Start free
+										<ArrowRight className="h-4 w-4" />
+									</Link>
+								</Button>
+								<Button variant="ghost" asChild>
+									<Link to="/pricing">Compare plans</Link>
+								</Button>
+							</div>
+						</section>
 					</>
 				)}
 			</section>

@@ -14,16 +14,18 @@ import {
 	Link,
 	redirect,
 	useNavigation,
+	useOutletContext,
 	type MetaFunction
 } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signin-page'
-import { TurnstileWidget } from '../../components/turnstile-widget'
 import { checkAuthRateLimit } from '../../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
+
+import type { AuthLayoutContext } from '../layouts/signin-layout'
 
 type AuthErrorCode =
 	| 'verification_failed'
@@ -253,7 +255,6 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 			nextPath,
 			user: user ?? null,
 			isAuthenticated: !!user,
-			turnstileSiteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY ?? '',
 			message: user ? 'Already authenticated' : null
 		},
 		{ headers }
@@ -263,8 +264,6 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	const navigation = useNavigation()
 	const [showPassword, setShowPassword] = useState(false)
-	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
-	const [turnstileResetNonce, setTurnstileResetNonce] = useState(0)
 	const togglePasswordVisibility = () => {
 		setShowPassword((prev) => !prev)
 	}
@@ -272,14 +271,13 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	const typedActionData = actionData as SigninActionData | undefined
 	const errors = typedActionData?.errors
 
-	useEffect(() => {
-		if (!typedActionData) {
-			return
-		}
+	const { turnstileToken, resetTurnstile, hasTurnstile } =
+		useOutletContext<AuthLayoutContext>()
 
-		setTurnstileToken(null)
-		setTurnstileResetNonce((current) => current + 1)
-	}, [typedActionData])
+	useEffect(() => {
+		if (!typedActionData) return
+		resetTurnstile()
+	}, [typedActionData, resetTurnstile])
 
 	const isSubmitting = navigation.state === 'submitting'
 
@@ -389,23 +387,10 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 						<p className="text-destructive mt-1 text-sm">{errors.password}</p>
 					)}
 				</div>
-				<div className="mb-4">
-					<TurnstileWidget
-						siteKey={loaderData.turnstileSiteKey}
-						onSuccess={setTurnstileToken}
-						resetNonce={turnstileResetNonce}
-						onError={() => {
-							setTurnstileToken(null)
-						}}
-					/>
-				</div>
 				<Button
 					type="submit"
 					className="w-full"
-					disabled={
-						isSubmitting ||
-						(Boolean(loaderData.turnstileSiteKey) && turnstileToken === null)
-					}
+					disabled={isSubmitting || (hasTurnstile && !turnstileToken)}
 				>
 					{isSubmitting ? 'Signing In...' : 'Sign In'}
 				</Button>

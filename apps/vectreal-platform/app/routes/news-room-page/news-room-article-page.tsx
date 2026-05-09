@@ -8,7 +8,7 @@ import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import { ScrollArea } from '@shared/components/ui/scroll-area'
 import { cn } from '@shared/utils'
-import { ChevronLeft, ChevronRight, Copy } from 'lucide-react'
+import { ArrowRight, ChevronLeft, ChevronRight, Copy } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { data, Link } from 'react-router'
 
@@ -308,6 +308,38 @@ export default function NewsRoomArticlePage({
 				>
 					<ArticleComponent />
 				</article>
+
+				<section className="from-primary/12 via-primary/5 to-background border-primary/20 mb-10 rounded-2xl border bg-linear-to-br p-5 md:p-7">
+					<p className="text-primary mb-2 text-xs font-semibold tracking-[0.14em] uppercase">
+						Built for makers shipping in 3D
+					</p>
+					<h2 className="max-w-2xl text-2xl leading-tight font-semibold tracking-tight md:text-3xl">
+						Ready to publish your first interactive scene?
+					</h2>
+					<p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed md:text-base">
+						Start free to upload, optimize, and embed your first scene with the
+						same workflows featured in this newsroom.
+					</p>
+					<div className="mt-3 flex flex-wrap items-center gap-1.5">
+						<Badge variant="outline">No credit card required</Badge>
+						<Badge variant="outline">Free plan available</Badge>
+						<Badge variant="outline">Embed in minutes</Badge>
+					</div>
+					<div className="mt-4 flex flex-wrap items-center gap-2">
+						<Button asChild>
+							<Link to="/sign-up">
+								Create free account
+								<ArrowRight className="h-4 w-4" />
+							</Link>
+						</Button>
+						<Button variant="ghost" asChild>
+							<Link to="/pricing">See plans</Link>
+						</Button>
+						<Button variant="ghost" asChild>
+							<Link to="/docs/getting-started">Read getting started</Link>
+						</Button>
+					</div>
+				</section>
 
 				<div className="border-border/60 mt-12 flex flex-col gap-6 border-t pt-6">
 					<p className="text-muted-foreground text-xs font-semibold tracking-[0.18em] uppercase">

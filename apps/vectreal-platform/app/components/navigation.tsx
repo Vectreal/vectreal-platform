@@ -19,6 +19,7 @@ import {
 	ExternalLink,
 	LayoutDashboard,
 	LogIn,
+	Mail,
 	Newspaper,
 	Rocket
 } from 'lucide-react'
@@ -81,6 +82,11 @@ const MARKETING_ITEMS: NavItem[] = [
 		label: 'Newsroom',
 		to: '/news-room',
 		icon: <Newspaper className="size-4" />
+	},
+	{
+		label: 'Contact',
+		to: '/contact',
+		icon: <Mail className="size-4" />
 	}
 ]
 

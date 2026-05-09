@@ -113,6 +113,9 @@ export const Footer = () => {
 								<li className="text-foreground list-item">
 									<Link to="/news-room">News Room</Link>
 								</li>
+								<li className="text-foreground list-item">
+									<Link to="/contact">Contact Us</Link>
+								</li>
 							</ul>
 						</div>
 						<div>
@@ -137,9 +140,6 @@ export const Footer = () => {
 								</li>
 								<li className="text-foreground list-item">
 									<Link to="/terms-of-service">Terms of Service</Link>
-								</li>
-								<li className="text-foreground list-item">
-									<Link to="/contact">Contact Us</Link>
 								</li>
 								<li className="text-foreground list-item">
 									<Link to="/imprint">Imprint</Link>

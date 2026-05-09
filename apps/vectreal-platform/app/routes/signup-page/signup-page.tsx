@@ -23,18 +23,19 @@ import {
 	Link,
 	redirect,
 	useNavigation,
+	useOutletContext,
 	type MetaFunction
 } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signup-page'
-import { TurnstileWidget } from '../../components/turnstile-widget'
 import { checkAuthRateLimit } from '../../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
 import type { PostHogContext } from '../../lib/posthog/posthog-middleware'
+import type { AuthLayoutContext } from '../layouts/signin-layout'
 
 export const meta: MetaFunction = () =>
 	buildMeta(
@@ -263,7 +264,7 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 			nextPath,
 			user: user ?? null,
 			isAuthenticated: !!user,
-			turnstileSiteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY ?? '',
+
 			message: user ? 'Already authenticated' : null
 		},
 		{ headers }
@@ -278,8 +279,6 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 	const navigation = useNavigation()
 	const [showPassword, setShowPassword] = useState<boolean>(false)
-	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
-	const [turnstileResetNonce, setTurnstileResetNonce] = useState(0)
 	const togglePasswordVisibility = () => {
 		setShowPassword((prev) => !prev)
 	}
@@ -303,21 +302,20 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 			? actionData.formError
 			: null
 
-	useEffect(() => {
-		if (!props.actionData) {
-			return
-		}
-
-		setTurnstileToken(null)
-		setTurnstileResetNonce((current) => current + 1)
-	}, [props.actionData])
-
 	const actionResultData =
 		typeof actionData === 'object' &&
 		actionData !== null &&
 		'data' in actionData
 			? (actionData.data as { user: User })
 			: null
+
+	const { turnstileToken, resetTurnstile, hasTurnstile } =
+		useOutletContext<AuthLayoutContext>()
+
+	useEffect(() => {
+		if (!props.actionData) return
+		resetTurnstile()
+	}, [props.actionData, resetTurnstile])
 
 	const isEmailVerified = actionResultData?.user?.user_metadata?.email_verified
 	const isSubmitting = navigation.state === 'submitting'
@@ -494,23 +492,10 @@ const SignupPage = ({ loaderData, ...props }: Route.ComponentProps) => {
 						</p>
 					)}
 				</div>
-				<div className="mb-4">
-					<TurnstileWidget
-						siteKey={loaderData.turnstileSiteKey}
-						onSuccess={setTurnstileToken}
-						resetNonce={turnstileResetNonce}
-						onError={() => {
-							setTurnstileToken(null)
-						}}
-					/>
-				</div>
 				<Button
 					type="submit"
 					className="w-full"
-					disabled={
-						isSubmitting ||
-						(Boolean(loaderData.turnstileSiteKey) && turnstileToken === null)
-					}
+					disabled={isSubmitting || (hasTurnstile && !turnstileToken)}
 				>
 					{isSubmitting ? 'Signing Up...' : 'Sign Up'}
 				</Button>

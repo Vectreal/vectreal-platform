@@ -4,7 +4,6 @@
 	"sourceRoot": "apps/vectreal-platform/src",
 	"projectType": "application",
 	"tags": [],
-
 	"targets": {
 		"typecheck": {
 			"executor": "nx:run-commands",
@@ -248,7 +247,7 @@
 		},
 		"gen-thumbnails": {
 			"executor": "nx:run-commands",
-			"outputs": ["apps/vectreal-platform/public/assets/images/newsroom"],
+			"outputs": ["{projectRoot}/public/assets/images/newsroom"],
 			"options": {
 				"cwd": "apps/vectreal-platform",
 				"command": "node scripts/truchet-thumbnail-gen.mjs"

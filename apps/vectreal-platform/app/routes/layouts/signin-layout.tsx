@@ -4,17 +4,20 @@ import { Button } from '@shared/components/ui/button'
 import { Separator } from '@shared/components/ui/separator'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate, useSubmit } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signin-layout'
 import { AuthErrorBoundary } from '../../components/errors'
 import HeroScene from '../../components/home/hero-scene'
-import {
-	TurnstileWidget,
-	type TurnstileWidgetHandle
-} from '../../components/turnstile-widget'
+import { TurnstileWidget } from '../../components/turnstile-widget'
+
+export interface AuthLayoutContext {
+	turnstileToken: string | null
+	resetTurnstile: () => void
+	hasTurnstile: boolean
+}
 
 export async function loader() {
 	return {
@@ -52,9 +55,14 @@ const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 	const [loadingProvider, setLoadingProvider] = useState<
 		null | 'google' | 'github'
 	>(null)
-	const [oauthTurnstileResetNonce, setOauthTurnstileResetNonce] = useState(0)
+	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+	const [turnstileResetNonce, setTurnstileResetNonce] = useState(0)
 	const pendingProviderRef = useRef<'google' | 'github' | null>(null)
-	const oauthTurnstileRef = useRef<TurnstileWidgetHandle>(null)
+
+	const resetTurnstile = useCallback(() => {
+		setTurnstileToken(null)
+		setTurnstileResetNonce((n) => n + 1)
+	}, [])
 
 	function submitSocialLogin(
 		provider: 'google' | 'github',
@@ -85,25 +93,38 @@ const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 			return
 		}
 
-		// Gate: execute the invisible Turnstile challenge first
+		if (turnstileToken) {
+			// Token already resolved — consume it immediately and submit.
+			const token = turnstileToken
+			resetTurnstile()
+			submitSocialLogin(provider, token)
+			return
+		}
+
+		// Token not ready yet — CF is still assessing. Store the pending provider;
+		// handleTurnstileSuccess will submit once the challenge resolves.
 		pendingProviderRef.current = provider
-		oauthTurnstileRef.current?.execute()
 	}
 
-	function handleOAuthTurnstileSuccess(token: string) {
-		const provider = pendingProviderRef.current
-		pendingProviderRef.current = null
-		if (!provider) return
-		submitSocialLogin(provider, token)
-		// Reset the widget so it can be reused if the user returns to this page
-		setOauthTurnstileResetNonce((n) => n + 1)
+	function handleTurnstileSuccess(token: string) {
+		if (pendingProviderRef.current) {
+			// An OAuth click was waiting — consume the token and submit immediately.
+			const provider = pendingProviderRef.current
+			pendingProviderRef.current = null
+			submitSocialLogin(provider, token)
+			resetTurnstile()
+			return
+		}
+		// No pending OAuth — store for the email form's hidden field.
+		setTurnstileToken(token)
 	}
 
-	function handleOAuthTurnstileError() {
-		// Challenge failed — allow the user to try again
-		pendingProviderRef.current = null
-		setLoadingProvider(null)
-		setOauthTurnstileResetNonce((n) => n + 1)
+	function handleTurnstileError() {
+		setTurnstileToken(null)
+		if (pendingProviderRef.current) {
+			pendingProviderRef.current = null
+			setLoadingProvider(null)
+		}
 	}
 
 	const handleSwitch = () => {
@@ -201,15 +222,21 @@ const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 								</p>
 							</span>
 
-							<Outlet />
+							<Outlet
+								context={
+									{
+										turnstileToken,
+										resetTurnstile,
+										hasTurnstile: !!loaderData.turnstileSiteKey
+									} satisfies AuthLayoutContext
+								}
+							/>
 							{loaderData.turnstileSiteKey && (
 								<TurnstileWidget
-									ref={oauthTurnstileRef}
 									siteKey={loaderData.turnstileSiteKey}
-									mode="invisible"
-									onSuccess={handleOAuthTurnstileSuccess}
-									onError={handleOAuthTurnstileError}
-									resetNonce={oauthTurnstileResetNonce}
+									onSuccess={handleTurnstileSuccess}
+									onError={handleTurnstileError}
+									resetNonce={turnstileResetNonce}
 								/>
 							)}
 							<div className="mt-4 flex grow flex-col items-center justify-between">
