@@ -26,7 +26,7 @@
 //   Manual / legacy:        SEED=42 node scripts/truchet-thumbnail-gen.mjs "Title" "Category"
 //
 // Requires:  npm i sharp  (or pnpm add -w sharp)
-// Output:    apps/vectreal-platform/public/assets/images/newsroom/
+// Output:    apps/vectreal-platform/public/assets/images/newsroom/<article-number>/
 
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -45,14 +45,14 @@ const BASE_URL = 'https://vectreal.com/news-room'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ARTICLES_DIR = path.resolve(
 	__dirname,
-	'../apps/vectreal-platform/app/routes/news-room-page/articles'
+	'../app/routes/news-room-page/articles'
 )
 
 // Public static-assets destination — thumbnails land here so Vite/RR serves
 // them at the root-relative path used in coverImage frontmatter.
 const PUBLIC_IMAGES_DIR = path.resolve(
 	__dirname,
-	'../apps/vectreal-platform/public/assets/images/newsroom'
+	'../public/assets/images/newsroom'
 )
 
 // Root-relative public URL prefix used as the coverImage value written back
@@ -264,13 +264,15 @@ async function loadArticle(filePath) {
 	const seed = numMatch
 		? parseInt(numMatch[1], 10)
 		: Math.floor(Math.random() * 1e9)
+	const articleFolder = numMatch ? numMatch[1] : null
 
 	return {
 		title: fm.title || filename,
 		category: (fm.category || 'news').toUpperCase(),
 		// slug is used to construct the full article URL shown in the footer
 		slug: fm.slug || filename.replace(/\.mdx$/, ''),
-		seed
+		seed,
+		articleFolder
 	}
 }
 
@@ -348,13 +350,21 @@ function buildOgSvg(tiles, t, category, title, slug) {
 //   - thumbnail (no panel) → written to `thumbnailImage` frontmatter field
 //   - OG image (with panel) → written to `coverImage` frontmatter field
 // `sourceMdx` — when provided both frontmatter fields are updated in-place.
-async function renderArticleImages({ title, category, slug, seed, sourceMdx }) {
+async function renderArticleImages({
+	title,
+	category,
+	slug,
+	seed,
+	sourceMdx,
+	articleFolder = null
+}) {
 	const rand = makePrng(seed)
 
 	// All visual choices are derived from the seed — both images share these
 	const t = pick(rand, THEMES)
-	const tileKind = pick(rand, ['arcs', 'diag', 'tri', 'mixed'])
-	const tileSize = pick(rand, [30, 40, 50])
+	const tileKind = 'diag'
+	// const tileKind = pick(rand, ['arcs', 'diag', 'tri', 'mixed'])
+	const tileSize = pick(rand, [50, 75, 100])
 	const cols = Math.ceil(W / tileSize)
 	const rows = Math.ceil(H / tileSize)
 
@@ -369,10 +379,13 @@ async function renderArticleImages({ title, category, slug, seed, sourceMdx }) {
 
 	const meta = `seed=${seed} theme=${THEMES.indexOf(t)} kind=${tileKind} size=${tileSize}`
 
-	await fs.mkdir(PUBLIC_IMAGES_DIR, { recursive: true })
+	const outputDir = articleFolder
+		? path.join(PUBLIC_IMAGES_DIR, articleFolder)
+		: PUBLIC_IMAGES_DIR
+	await fs.mkdir(outputDir, { recursive: true })
 
 	// --- thumbnail: pure mosaic, no overlay — used for listing-page cards ---
-	const thumbnailPath = path.join(PUBLIC_IMAGES_DIR, `thumbnail-${slug}.webp`)
+	const thumbnailPath = path.join(outputDir, `thumbnail-${slug}.webp`)
 	const mosaicSvg = buildMosaicSvg(rand, tileSize, tileKind, t, tiles)
 	await sharp(Buffer.from(mosaicSvg))
 		.webp({ quality: 90 })
@@ -380,15 +393,16 @@ async function renderArticleImages({ title, category, slug, seed, sourceMdx }) {
 	console.log(`✓ thumbnail  ${thumbnailPath}  ${meta}`)
 
 	// --- OG image: mosaic + text panel — used for og:image / SEO social cards ---
-	const ogPath = path.join(PUBLIC_IMAGES_DIR, `og-${slug}.webp`)
+	const ogPath = path.join(outputDir, `og-${slug}.webp`)
 	const ogSvg = buildOgSvg(tiles, t, category, title, slug)
 	await sharp(Buffer.from(ogSvg)).webp({ quality: 90 }).toFile(ogPath)
 	console.log(`✓ og-image   ${ogPath}  ${meta}`)
 
 	// Write both paths back into MDX frontmatter
 	if (sourceMdx) {
-		const thumbnailUrl = `${PUBLIC_IMAGE_URL_PREFIX}/thumbnail-${slug}.webp`
-		const ogUrl = `${PUBLIC_IMAGE_URL_PREFIX}/og-${slug}.webp`
+		const articlePublicFolder = articleFolder ? `/${articleFolder}` : ''
+		const thumbnailUrl = `${PUBLIC_IMAGE_URL_PREFIX}${articlePublicFolder}/thumbnail-${slug}.webp`
+		const ogUrl = `${PUBLIC_IMAGE_URL_PREFIX}${articlePublicFolder}/og-${slug}.webp`
 		await writeFrontmatterField(sourceMdx, 'thumbnailImage', thumbnailUrl)
 		await writeFrontmatterField(sourceMdx, 'coverImage', ogUrl)
 		console.log(
