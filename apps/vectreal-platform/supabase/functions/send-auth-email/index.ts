@@ -12,6 +12,7 @@ interface AuthHookUser {
 	id: string
 	email?: string
 	user_metadata?: {
+		name?: string
 		username?: string
 	}
 }
@@ -257,6 +258,11 @@ function escapeHtml(input: string): string {
 }
 
 function getDisplayName(payload: AuthHookPayload): string {
+	const name = payload.user.user_metadata?.name?.trim()
+	if (name) {
+		return name
+	}
+
 	const username = payload.user.user_metadata?.username?.trim()
 	if (username) {
 		return username
