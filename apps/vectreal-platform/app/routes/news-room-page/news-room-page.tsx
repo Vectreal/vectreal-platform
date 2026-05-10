@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react'
 import { data, Form, Link } from 'react-router'
 
 import { useConsent } from '../../components/consent/consent-context'
+import { PageHero } from '../../components/layout-components'
 import {
 	formatNewsDate,
 	getNewsArticles,
@@ -163,330 +164,327 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 	])
 
 	return (
-		<div className="mx-auto w-full max-w-7xl px-4 pt-22 pb-20 md:px-6 md:pt-24">
-			<header className="mb-10 space-y-4 md:mb-12">
-				<p className="text-muted-foreground text-xs font-semibold tracking-[0.22em] uppercase">
-					Newsroom
-				</p>
-				<h1 className="max-w-4xl text-4xl leading-[1.02] font-medium tracking-tight text-balance md:text-6xl">
-					Learn about what's new and what's next at Vectreal.
-				</h1>
-				<p className="text-muted-foreground max-w-3xl text-base leading-relaxed md:text-lg">
-					Launches, engineering notes, and product decisions. Cleanly published
-					from MDX.
-				</p>
-				<div className="flex flex-wrap items-center gap-2 pt-2">
-					<Badge variant="outline" className="px-2.5 py-1 text-[11px]">
-						{articles.length} published stories
-					</Badge>
-					<Button asChild size="sm" className="h-8 px-3">
-						<Link to="/sign-up">
-							Start free
-							<ArrowRight className="h-3.5 w-3.5" />
-						</Link>
-					</Button>
-					<Button variant="ghost" size="sm" asChild className="h-8 px-3">
-						<Link to={latestStoryPath} viewTransition>
-							Read latest
-						</Link>
-					</Button>
-				</div>
-			</header>
+		<div>
+			<PageHero
+				eyebrow="Newsroom"
+				heading="Learn about what's new and what's next at Vectreal."
+				description="Launches, engineering notes, and product decisions. Cleanly published from MDX."
+				actions={
+					<>
+						<Badge variant="outline" className="px-2.5 py-1 text-[11px]">
+							{articles.length} published stories
+						</Badge>
+						<Button asChild size="sm" className="h-8 px-3">
+							<Link to="/sign-up">
+								Start free
+								<ArrowRight className="h-3.5 w-3.5" />
+							</Link>
+						</Button>
+						<Button variant="ghost" size="sm" asChild className="h-8 px-3">
+							<Link to={latestStoryPath} viewTransition>
+								Read latest
+							</Link>
+						</Button>
+					</>
+				}
+			/>
 
-			<section className="mb-8 flex flex-wrap items-center gap-2 md:mb-10">
-				<Form method="get" className="flex items-center gap-2">
-					<input type="hidden" name="category" value={filters.category} />
-					<input type="hidden" name="tag" value={filters.tag} />
-					<input type="hidden" name="sort" value={filters.sort} />
-					<label className="border-border/70 bg-card/20 focus-within:border-border inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 transition-all duration-200">
-						<Search className="text-muted-foreground h-3.5 w-3.5" />
-						<input
-							type="search"
-							name="q"
-							defaultValue={filters.query}
-							placeholder="Search"
-							aria-label="Search newsroom posts"
-							className="placeholder:text-muted-foreground h-6 w-22 bg-transparent text-xs transition-all duration-300 outline-none focus:w-44 md:w-28 md:focus:w-52"
-						/>
-					</label>
+			<div className="mx-auto w-full max-w-7xl px-4 pb-20 md:px-6">
+				<section className="mb-8 flex flex-wrap items-center gap-2 md:mb-10">
+					<Form method="get" className="flex items-center gap-2">
+						<input type="hidden" name="category" value={filters.category} />
+						<input type="hidden" name="tag" value={filters.tag} />
+						<input type="hidden" name="sort" value={filters.sort} />
+						<label className="border-border/70 bg-card/20 focus-within:border-border inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 transition-all duration-200">
+							<Search className="text-muted-foreground h-3.5 w-3.5" />
+							<input
+								type="search"
+								name="q"
+								defaultValue={filters.query}
+								placeholder="Search"
+								aria-label="Search newsroom posts"
+								className="placeholder:text-muted-foreground h-6 w-22 bg-transparent text-xs transition-all duration-300 outline-none focus:w-44 md:w-28 md:focus:w-52"
+							/>
+						</label>
+						<Button
+							type="submit"
+							variant="ghost"
+							size="sm"
+							className="h-8 rounded-full px-3 transition-transform duration-200 hover:-translate-y-0.5"
+						>
+							Search
+						</Button>
+					</Form>
+
 					<Button
-						type="submit"
-						variant="ghost"
-						size="sm"
-						className="h-8 rounded-full px-3 transition-transform duration-200 hover:-translate-y-0.5"
-					>
-						Search
-					</Button>
-				</Form>
-
-				<Button
-					variant={
-						!filters.category && !filters.tag && filters.sort === 'newest'
-							? 'secondary'
-							: 'ghost'
-					}
-					size="sm"
-					asChild
-					className="h-8 rounded-full px-3 transition-transform duration-200 hover:-translate-y-0.5"
-				>
-					<Link
-						to={buildNewsRoomPath(filters, {
-							category: '',
-							tag: '',
-							sort: 'newest'
-						})}
-					>
-						All
-					</Link>
-				</Button>
-
-				{featuredTopics.map((topic) => (
-					<Button
-						key={topic}
-						variant={filters.category === topic ? 'secondary' : 'ghost'}
+						variant={
+							!filters.category && !filters.tag && filters.sort === 'newest'
+								? 'secondary'
+								: 'ghost'
+						}
 						size="sm"
 						asChild
 						className="h-8 rounded-full px-3 transition-transform duration-200 hover:-translate-y-0.5"
 					>
 						<Link
 							to={buildNewsRoomPath(filters, {
-								category: topic,
+								category: '',
 								tag: '',
 								sort: 'newest'
 							})}
 						>
-							{topic}
+							All
 						</Link>
 					</Button>
-				))}
 
-				{featuredTags.map((tag) => (
+					{featuredTopics.map((topic) => (
+						<Button
+							key={topic}
+							variant={filters.category === topic ? 'secondary' : 'ghost'}
+							size="sm"
+							asChild
+							className="h-8 rounded-full px-3 transition-transform duration-200 hover:-translate-y-0.5"
+						>
+							<Link
+								to={buildNewsRoomPath(filters, {
+									category: topic,
+									tag: '',
+									sort: 'newest'
+								})}
+							>
+								{topic}
+							</Link>
+						</Button>
+					))}
+
+					{featuredTags.map((tag) => (
+						<Button
+							key={tag}
+							variant={filters.tag === tag ? 'secondary' : 'ghost'}
+							size="sm"
+							asChild
+							className="h-8 rounded-full px-3 transition-transform duration-200 hover:-translate-y-0.5"
+						>
+							<Link
+								to={buildNewsRoomPath(filters, {
+									tag,
+									category: '',
+									sort: 'newest'
+								})}
+							>
+								#{tag}
+							</Link>
+						</Button>
+					))}
+
 					<Button
-						key={tag}
-						variant={filters.tag === tag ? 'secondary' : 'ghost'}
+						variant={filters.sort === 'oldest' ? 'secondary' : 'ghost'}
 						size="sm"
 						asChild
 						className="h-8 rounded-full px-3 transition-transform duration-200 hover:-translate-y-0.5"
 					>
 						<Link
 							to={buildNewsRoomPath(filters, {
-								tag,
-								category: '',
-								sort: 'newest'
+								sort: filters.sort === 'oldest' ? 'newest' : 'oldest'
 							})}
 						>
-							#{tag}
+							{filters.sort === 'oldest' ? 'Oldest first' : 'Newest first'}
 						</Link>
 					</Button>
-				))}
 
-				<Button
-					variant={filters.sort === 'oldest' ? 'secondary' : 'ghost'}
-					size="sm"
-					asChild
-					className="h-8 rounded-full px-3 transition-transform duration-200 hover:-translate-y-0.5"
-				>
-					<Link
-						to={buildNewsRoomPath(filters, {
-							sort: filters.sort === 'oldest' ? 'newest' : 'oldest'
-						})}
-					>
-						{filters.sort === 'oldest' ? 'Oldest first' : 'Newest first'}
-					</Link>
-				</Button>
+					{hasAnyFilters ? (
+						<Badge variant="outline" asChild className="h-8 rounded-full px-3">
+							<Link to="/news-room" className="inline-flex items-center gap-1">
+								Reset
+								<X className="h-3 w-3" aria-hidden="true" />
+							</Link>
+						</Badge>
+					) : null}
+				</section>
 
-				{hasAnyFilters ? (
-					<Badge variant="outline" asChild className="h-8 rounded-full px-3">
-						<Link to="/news-room" className="inline-flex items-center gap-1">
-							Reset
-							<X className="h-3 w-3" aria-hidden="true" />
-						</Link>
-					</Badge>
-				) : null}
-			</section>
-
-			<section id="news-feed" className="scroll-mt-24 space-y-4">
-				{articles.length === 0 ? (
-					<div className="border-border/50 bg-muted/10 rounded-2xl border p-8 text-center md:p-10">
-						<h2 className="mb-1 text-lg font-semibold">No matching posts</h2>
-						<p className="text-muted-foreground text-sm">
-							Try another topic or clear your filters.
-						</p>
-						<div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-							<Button size="sm" asChild>
-								<Link to="/news-room">Show latest</Link>
-							</Button>
-							<Button variant="ghost" size="sm" asChild>
-								<Link to="/sign-up">Create free account</Link>
-							</Button>
+				<section id="news-feed" className="scroll-mt-24 space-y-4">
+					{articles.length === 0 ? (
+						<div className="border-border/50 bg-muted/10 rounded-2xl border p-8 text-center md:p-10">
+							<h2 className="mb-1 text-lg font-semibold">No matching posts</h2>
+							<p className="text-muted-foreground text-sm">
+								Try another topic or clear your filters.
+							</p>
+							<div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+								<Button size="sm" asChild>
+									<Link to="/news-room">Show latest</Link>
+								</Button>
+								<Button variant="ghost" size="sm" asChild>
+									<Link to="/sign-up">Create free account</Link>
+								</Button>
+							</div>
 						</div>
-					</div>
-				) : (
-					<>
-						{featuredArticle ? (
-							<Link
-								to={`/news-room/${featuredArticle.slug}`}
-								viewTransition
-								className="group block"
-							>
-								<article className="border-border/70 bg-card/15 hover:border-border overflow-hidden rounded-2xl border transition-all duration-200 hover:-translate-y-0.5">
-									{featuredArticle.thumbnailImage ? (
-										<div className="h-20 overflow-hidden md:hidden">
-											<img
-												src={featuredArticle.thumbnailImage}
-												alt=""
-												width={1200}
-												height={160}
-												fetchPriority="high"
-												className="h-full w-full object-cover object-center"
-											/>
-										</div>
-									) : null}
-
-									<div className="grid md:grid-cols-[1fr_280px]">
-										<div className="flex flex-col justify-between p-6 md:p-9">
-											<div>
-												<div className="mb-5 flex flex-wrap items-center gap-2.5">
-													<span className="bg-primary/10 text-primary rounded px-2 py-0.5 text-[11px] font-semibold tracking-[0.12em] uppercase">
-														Featured
-													</span>
-													<span className="text-muted-foreground text-[11px] font-medium tracking-[0.12em] uppercase">
-														{featuredArticle.category}
-													</span>
-													<span className="text-border">·</span>
-													<span className="text-muted-foreground text-[11px]">
-														{formatNewsDate(featuredArticle.publishedAt)}
-													</span>
-													<span className="text-border">·</span>
-													<span className="text-muted-foreground text-[11px]">
-														{featuredArticle.readingTimeMinutes} min read
-													</span>
-												</div>
-
-												<h2 className="group-hover:text-foreground/85 mb-4 text-3xl leading-[1.06] font-semibold tracking-tight text-balance transition-colors md:text-5xl">
-													{featuredArticle.title}
-												</h2>
-												<p className="text-muted-foreground line-clamp-3 max-w-xl text-base leading-relaxed md:text-lg">
-													{featuredArticle.excerpt}
-												</p>
-											</div>
-
-											<footer className="border-border/40 mt-7 flex flex-wrap items-center gap-3 border-t pt-5">
-												<div>
-													<p className="text-sm leading-tight font-semibold">
-														{featuredArticle.author.name}
-													</p>
-													<p className="text-muted-foreground text-xs">
-														{featuredArticle.author.role}
-													</p>
-												</div>
-											</footer>
-										</div>
-
+					) : (
+						<>
+							{featuredArticle ? (
+								<Link
+									to={`/news-room/${featuredArticle.slug}`}
+									viewTransition
+									className="group block"
+								>
+									<article className="border-border/70 bg-card/15 hover:border-border overflow-hidden rounded-2xl border transition-all duration-200 hover:-translate-y-0.5">
 										{featuredArticle.thumbnailImage ? (
-											<div className="border-border/40 relative hidden overflow-hidden border-l md:block">
+											<div className="h-20 overflow-hidden md:hidden">
 												<img
 													src={featuredArticle.thumbnailImage}
 													alt=""
-													width={280}
-													height={520}
+													width={1200}
+													height={160}
 													fetchPriority="high"
 													className="h-full w-full object-cover object-center"
 												/>
 											</div>
 										) : null}
-									</div>
-								</article>
-							</Link>
-						) : null}
 
-						{remainingArticles.length > 0 ? (
-							<div className="grid gap-4 md:grid-cols-2">
-								{remainingArticles.map((article) => (
-									<Link
-										key={article.slug}
-										to={`/news-room/${article.slug}`}
-										viewTransition
-										className="group block"
-									>
-										<article className="border-border/70 bg-card/15 hover:border-border grid grid-cols-[1fr_auto] overflow-hidden rounded-2xl border transition-all duration-200 hover:-translate-y-0.5">
-											<div className="flex flex-col justify-between p-5 md:p-6">
+										<div className="grid md:grid-cols-[1fr_280px]">
+											<div className="flex flex-col justify-between p-6 md:p-9">
 												<div>
-													<div className="mb-3 flex flex-wrap items-center gap-1.5">
-														<span className="text-primary text-[11px] font-semibold tracking-[0.12em] uppercase">
-															{article.category}
+													<div className="mb-5 flex flex-wrap items-center gap-2.5">
+														<span className="bg-primary/10 text-primary rounded px-2 py-0.5 text-[11px] font-semibold tracking-[0.12em] uppercase">
+															Featured
 														</span>
-														<span className="text-border text-[11px]">·</span>
-														<span className="text-muted-foreground text-[11px]">
-															{formatNewsDate(article.publishedAt)}
+														<span className="text-muted-foreground text-[11px] font-medium tracking-[0.12em] uppercase">
+															{featuredArticle.category}
 														</span>
-														<span className="text-border text-[11px]">·</span>
+														<span className="text-border">·</span>
 														<span className="text-muted-foreground text-[11px]">
-															{article.readingTimeMinutes} min
+															{formatNewsDate(featuredArticle.publishedAt)}
+														</span>
+														<span className="text-border">·</span>
+														<span className="text-muted-foreground text-[11px]">
+															{featuredArticle.readingTimeMinutes} min read
 														</span>
 													</div>
 
-													<h3 className="group-hover:text-foreground/85 mb-2.5 text-xl leading-snug font-semibold tracking-tight text-balance transition-colors md:text-2xl">
-														{article.title}
-													</h3>
-													<p className="text-muted-foreground line-clamp-3 text-sm leading-relaxed md:text-base">
-														{article.excerpt}
+													<h2 className="group-hover:text-foreground/85 mb-4 text-3xl leading-[1.06] font-semibold tracking-tight text-balance transition-colors md:text-5xl">
+														{featuredArticle.title}
+													</h2>
+													<p className="text-muted-foreground line-clamp-3 max-w-xl text-base leading-relaxed md:text-lg">
+														{featuredArticle.excerpt}
 													</p>
 												</div>
 
-												<footer className="border-border/40 mt-5 flex items-center gap-1.5 border-t pt-4">
-													<span className="text-foreground text-xs font-semibold">
-														{article.author.name}
-													</span>
-													<span className="text-muted-foreground text-xs">
-														{article.author.role}
-													</span>
+												<footer className="border-border/40 mt-7 flex flex-wrap items-center gap-3 border-t pt-5">
+													<div>
+														<p className="text-sm leading-tight font-semibold">
+															{featuredArticle.author.name}
+														</p>
+														<p className="text-muted-foreground text-xs">
+															{featuredArticle.author.role}
+														</p>
+													</div>
 												</footer>
 											</div>
 
-											{article.thumbnailImage ? (
-												<div className="border-border/40 relative w-14 overflow-hidden border-l md:w-24">
+											{featuredArticle.thumbnailImage ? (
+												<div className="border-border/40 relative hidden overflow-hidden border-l md:block">
 													<img
-														src={article.thumbnailImage}
+														src={featuredArticle.thumbnailImage}
 														alt=""
-														width={112}
-														height={300}
+														width={280}
+														height={520}
+														fetchPriority="high"
 														className="h-full w-full object-cover object-center"
 													/>
 												</div>
 											) : null}
-										</article>
-									</Link>
-								))}
-							</div>
-						) : null}
+										</div>
+									</article>
+								</Link>
+							) : null}
 
-						<section className="from-primary/12 via-primary/5 to-background border-primary/20 mt-10 rounded-2xl border bg-linear-to-br p-5 md:mt-12 md:p-7">
-							<p className="text-primary mb-2 text-xs font-semibold tracking-[0.14em] uppercase">
-								Build while you're learning
-							</p>
-							<h2 className="max-w-2xl text-2xl leading-tight font-semibold tracking-tight md:text-3xl">
-								Turn ideas from these articles into live 3D experiences.
-							</h2>
-							<p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed md:text-base">
-								Create a free account to publish your first scene and keep
-								shipping faster with Vectreal.
-							</p>
-							<div className="mt-4 flex flex-wrap items-center gap-2">
-								<Button asChild>
-									<Link to="/sign-up">
-										Start free
-										<ArrowRight className="h-4 w-4" />
-									</Link>
-								</Button>
-								<Button variant="ghost" asChild>
-									<Link to="/pricing">Compare plans</Link>
-								</Button>
-							</div>
-						</section>
-					</>
-				)}
-			</section>
+							{remainingArticles.length > 0 ? (
+								<div className="grid gap-4 md:grid-cols-2">
+									{remainingArticles.map((article) => (
+										<Link
+											key={article.slug}
+											to={`/news-room/${article.slug}`}
+											viewTransition
+											className="group block"
+										>
+											<article className="border-border/70 bg-card/15 hover:border-border grid grid-cols-[1fr_auto] overflow-hidden rounded-2xl border transition-all duration-200 hover:-translate-y-0.5">
+												<div className="flex flex-col justify-between p-5 md:p-6">
+													<div>
+														<div className="mb-3 flex flex-wrap items-center gap-1.5">
+															<span className="text-primary text-[11px] font-semibold tracking-[0.12em] uppercase">
+																{article.category}
+															</span>
+															<span className="text-border text-[11px]">·</span>
+															<span className="text-muted-foreground text-[11px]">
+																{formatNewsDate(article.publishedAt)}
+															</span>
+															<span className="text-border text-[11px]">·</span>
+															<span className="text-muted-foreground text-[11px]">
+																{article.readingTimeMinutes} min
+															</span>
+														</div>
+
+														<h3 className="group-hover:text-foreground/85 mb-2.5 text-xl leading-snug font-semibold tracking-tight text-balance transition-colors md:text-2xl">
+															{article.title}
+														</h3>
+														<p className="text-muted-foreground line-clamp-3 text-sm leading-relaxed md:text-base">
+															{article.excerpt}
+														</p>
+													</div>
+
+													<footer className="border-border/40 mt-5 flex items-center gap-1.5 border-t pt-4">
+														<span className="text-foreground text-xs font-semibold">
+															{article.author.name}
+														</span>
+														<span className="text-muted-foreground text-xs">
+															{article.author.role}
+														</span>
+													</footer>
+												</div>
+
+												{article.thumbnailImage ? (
+													<div className="border-border/40 relative w-14 overflow-hidden border-l md:w-24">
+														<img
+															src={article.thumbnailImage}
+															alt=""
+															width={112}
+															height={300}
+															className="h-full w-full object-cover object-center"
+														/>
+													</div>
+												) : null}
+											</article>
+										</Link>
+									))}
+								</div>
+							) : null}
+
+							<section className="from-primary/12 via-primary/5 to-background border-primary/20 mt-10 rounded-2xl border bg-linear-to-br p-5 md:mt-12 md:p-7">
+								<p className="text-primary mb-2 text-xs font-semibold tracking-[0.14em] uppercase">
+									Build while you're learning
+								</p>
+								<h2 className="max-w-2xl text-2xl leading-tight font-semibold tracking-tight md:text-3xl">
+									Turn ideas from these articles into live 3D experiences.
+								</h2>
+								<p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed md:text-base">
+									Create a free account to publish your first scene and keep
+									shipping faster with Vectreal.
+								</p>
+								<div className="mt-4 flex flex-wrap items-center gap-2">
+									<Button asChild>
+										<Link to="/sign-up">
+											Start free
+											<ArrowRight className="h-4 w-4" />
+										</Link>
+									</Button>
+									<Button variant="ghost" asChild>
+										<Link to="/pricing">Compare plans</Link>
+									</Button>
+								</div>
+							</section>
+						</>
+					)}
+				</section>
+			</div>
 		</div>
 	)
 }

@@ -79,13 +79,16 @@ export const DropZone = ({ isMobile }: Props) => {
 				className="flex h-full w-full flex-col items-center justify-center gap-4 text-center"
 			>
 				<div className="w-full max-w-6xl p-4">
-					<header className="mb-8 flex items-center justify-between text-left">
-						<div>
-							<h1 className="text-4xl tracking-tight">Upload Your 3D Assets</h1>
-							<p className="text-muted-foreground mt-2">
-								Drop your files here to optimize them for web and AR viewing
-							</p>
-						</div>
+					<header className="mb-8 text-left">
+						<p className="text-muted-foreground mb-2 text-xs font-semibold tracking-[0.22em] uppercase">
+							Publisher
+						</p>
+						<h1 className="max-w-4xl text-4xl leading-[1.02] font-medium tracking-tight text-balance md:text-6xl">
+							Upload Your 3D Assets
+						</h1>
+						<p className="text-muted-foreground mt-2 max-w-3xl text-base leading-relaxed md:text-lg">
+							Drop your files here to optimize them for web and AR viewing
+						</p>
 					</header>
 					<div className="flex flex-col gap-4">
 						{/* <div className="flex flex-col gap-4 md:flex-row lg:grid lg:grid-cols-[2fr_1fr]"> */}
