@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { pgPolicy, pgTable, text, uuid } from 'drizzle-orm/pg-core'
+import { pgPolicy, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { authUid, authenticatedRole } from 'drizzle-orm/supabase'
 
 export const users = pgTable(
@@ -7,7 +7,17 @@ export const users = pgTable(
 	{
 		id: uuid('id').primaryKey(),
 		email: text('email').notNull().unique(),
-		name: text('name').notNull()
+		name: text('name').notNull(),
+		/** Onboarding: profession/role the user identifies with */
+		role: text('role'),
+		/** Onboarding: intended use case for the platform */
+		useCase: text('use_case'),
+		/** Onboarding: optional company or team name */
+		companyName: text('company_name'),
+		/** Onboarding: how the user heard about Vectreal */
+		referralSource: text('referral_source'),
+		/** Timestamp of ToS + Privacy Policy acceptance, written at account creation */
+		tosAcceptedAt: timestamp('tos_accepted_at', { withTimezone: true })
 	},
 	(table) => [
 		pgPolicy('users_select_self', {

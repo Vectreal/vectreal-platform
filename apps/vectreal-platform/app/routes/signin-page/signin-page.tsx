@@ -6,6 +6,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger
 } from '@shared/components/ui/tooltip'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Eye, EyeClosed, ExternalLink, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import {
@@ -264,12 +265,11 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	const navigation = useNavigation()
 	const [showPassword, setShowPassword] = useState(false)
-	const togglePasswordVisibility = () => {
-		setShowPassword((prev) => !prev)
-	}
 
 	const typedActionData = actionData as SigninActionData | undefined
 	const errors = typedActionData?.errors
+	const formError =
+		typedActionData?.formError ?? loaderData?.authErrorMessage ?? null
 
 	const { turnstileToken, resetTurnstile, hasTurnstile } =
 		useOutletContext<AuthLayoutContext>()
@@ -281,19 +281,32 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 
 	const isSubmitting = navigation.state === 'submitting'
 
+	const fieldVariants = {
+		hidden: { opacity: 0, y: 8 },
+		visible: (i: number) => ({
+			opacity: 1,
+			y: 0,
+			transition: { delay: i * 0.06, duration: 0.22, ease: 'easeOut' }
+		})
+	}
+
 	return (
 		<div className="w-full max-w-md">
-			{loaderData?.authErrorMessage && (
-				<div className="border-error-border bg-error-bg text-error-foreground mb-6 rounded-lg border p-4 text-sm">
-					{loaderData.authErrorMessage}
-				</div>
-			)}
-
-			{typedActionData?.formError && (
-				<div className="border-error-border bg-error-bg text-error-foreground mb-6 rounded-lg border p-4 text-sm">
-					{typedActionData.formError}
-				</div>
-			)}
+			{/* Animated error banner */}
+			<AnimatePresence mode="wait">
+				{formError && (
+					<motion.div
+						key={formError}
+						initial={{ opacity: 0, y: -6 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0, y: -6 }}
+						transition={{ duration: 0.2 }}
+						className="border-error-border bg-error-bg text-error-foreground mb-6 rounded-lg border p-4 text-sm"
+					>
+						{formError}
+					</motion.div>
+				)}
+			</AnimatePresence>
 
 			{loaderData?.sceneSaved && (
 				<div className="border-success/50 bg-success/25 text-success-foreground/80 mb-6 space-y-2 rounded-lg border p-4 text-sm">
@@ -330,7 +343,15 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 					name="cf-turnstile-response"
 					value={turnstileToken ?? ''}
 				/>
-				<div className="mb-4">
+
+				{/* Email */}
+				<motion.div
+					className="mb-4"
+					custom={0}
+					variants={fieldVariants}
+					initial="hidden"
+					animate="visible"
+				>
 					<label className="mb-2 block text-sm font-medium" htmlFor="email">
 						Email
 					</label>
@@ -346,8 +367,16 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 					{errors?.email && (
 						<p className="text-destructive mt-1 text-sm">{errors.email}</p>
 					)}
-				</div>
-				<div className="mb-4">
+				</motion.div>
+
+				{/* Password */}
+				<motion.div
+					className="mb-1"
+					custom={1}
+					variants={fieldVariants}
+					initial="hidden"
+					animate="visible"
+				>
 					<label className="mb-2 block text-sm font-medium" htmlFor="password">
 						Password
 					</label>
@@ -355,45 +384,70 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 						<Input
 							name="password"
 							autoComplete="current-password"
-							placeholder="********"
+							placeholder="••••••••"
 							type={showPassword ? 'text' : 'password'}
 							id="password"
-							className="w-full p-2"
+							className="w-full p-2 pr-10"
 							required
 						/>
 						<TooltipProvider>
 							<Tooltip>
-								<TooltipTrigger
-									type="button"
-									className="[&_svg]:text-muted-foreground absolute top-0 right-0 p-2 px-3 [&_svg]:h-4 [&_svg]:w-4"
-								>
-									<Button
-										onClick={togglePasswordVisibility}
-										asChild
+								<TooltipTrigger asChild>
+									<button
 										type="button"
-										size="icon"
-										variant="ghost"
+										onClick={() => setShowPassword((p) => !p)}
+										aria-label={showPassword ? 'Hide password' : 'Show password'}
+										className="text-muted-foreground hover:text-foreground absolute right-0 top-0 flex h-full items-center px-3 transition-colors"
 									>
-										{showPassword ? <EyeClosed /> : <Eye />}
-									</Button>
-									<TooltipContent>
-										{showPassword ? 'Hide password' : 'Show password'}
-									</TooltipContent>
+										{showPassword ? (
+											<EyeClosed className="h-4 w-4" />
+										) : (
+											<Eye className="h-4 w-4" />
+										)}
+									</button>
 								</TooltipTrigger>
+								<TooltipContent>
+									{showPassword ? 'Hide password' : 'Show password'}
+								</TooltipContent>
 							</Tooltip>
 						</TooltipProvider>
 					</span>
 					{errors?.password && (
 						<p className="text-destructive mt-1 text-sm">{errors.password}</p>
 					)}
-				</div>
-				<Button
-					type="submit"
-					className="w-full"
-					disabled={isSubmitting || (hasTurnstile && !turnstileToken)}
+				</motion.div>
+
+				{/* Forgot password */}
+				<motion.div
+					className="mb-6 flex justify-end"
+					custom={2}
+					variants={fieldVariants}
+					initial="hidden"
+					animate="visible"
 				>
-					{isSubmitting ? 'Signing In...' : 'Sign In'}
-				</Button>
+					<Link
+						to="/forgot-password"
+						className="text-muted-foreground hover:text-foreground text-xs transition-colors"
+					>
+						Forgot password?
+					</Link>
+				</motion.div>
+
+				{/* Submit */}
+				<motion.div
+					custom={3}
+					variants={fieldVariants}
+					initial="hidden"
+					animate="visible"
+				>
+					<Button
+						type="submit"
+						className="w-full"
+						disabled={isSubmitting || (hasTurnstile && !turnstileToken)}
+					>
+						{isSubmitting ? 'Signing in…' : 'Sign In'}
+					</Button>
+				</motion.div>
 			</Form>
 		</div>
 	)

@@ -45,10 +45,15 @@ export default [
 
 	/// PAGES
 	layout('./routes/layouts/nav-layout.tsx', [
-		// sign-in and sign-up
+		// sign-in, sign-up, forgot-password, and post-signup confirmation gate
 		layout('./routes/layouts/signin-layout.tsx', [
 			route('sign-up', './routes/signup-page/signup-page.tsx'),
-			route('sign-in', './routes/signin-page/signin-page.tsx')
+			route('sign-in', './routes/signin-page/signin-page.tsx'),
+			route(
+				'forgot-password',
+				'./routes/forgot-password-page/forgot-password.tsx'
+			),
+			route('auth/confirm-pending', './routes/confirm-pending.tsx')
 		]),
 
 		// home page - index route
