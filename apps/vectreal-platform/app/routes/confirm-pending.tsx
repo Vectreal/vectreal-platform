@@ -114,10 +114,6 @@ export async function action({ request }: Route.ActionArgs) {
 		console.error('[auth/confirm-pending] resend failed', {
 			message: error.message
 		})
-		return data<ActionData>(
-			{ error: 'Unable to resend confirmation. Please try again.' },
-			{ status: 500, headers }
-		)
 	}
 
 	return data<ActionData>({ sent: true }, { headers })
