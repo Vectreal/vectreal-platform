@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.19.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.18.0...workspace-v0.19.0) (2026-05-10)
+
+
+### Features
+
+* enhance news room articles with images and optimize layout ([#465](https://github.com/Vectreal/vectreal-platform/issues/465)) ([406595b](https://github.com/Vectreal/vectreal-platform/commit/406595bd8e3f61317adec08acc4560d8440b7ff6))
+
+
+### Bug Fixes
+
+* disable API key create button during submission to prevent duplicates ([#455](https://github.com/Vectreal/vectreal-platform/issues/455)) ([9d8c51f](https://github.com/Vectreal/vectreal-platform/commit/9d8c51f9ef95131815b513888bc19ccae072a53a))
+* eliminate Vite v8 build warnings — upgrade plugin-react to v6, suppress Node.js dynamic import noise ([#445](https://github.com/Vectreal/vectreal-platform/issues/445)) ([211e188](https://github.com/Vectreal/vectreal-platform/commit/211e188b00130486c38904fe2cff584261a6702f))
+* enhance health check robustness and isolate liveness checks in the loader ([#452](https://github.com/Vectreal/vectreal-platform/issues/452)) ([a408181](https://github.com/Vectreal/vectreal-platform/commit/a40818150fcd7f634de59aca215b9dc0c97b358c))
+* enhance Turnstile widget functionality and improve bot verification in sign-in and sign-up flows ([#454](https://github.com/Vectreal/vectreal-platform/issues/454)) ([a26de91](https://github.com/Vectreal/vectreal-platform/commit/a26de9151607fb1a49c80ee70a8f06417186e37e))
+* implement health check script for service health verification in deployment workflow ([#464](https://github.com/Vectreal/vectreal-platform/issues/464)) ([e95e326](https://github.com/Vectreal/vectreal-platform/commit/e95e3264d77f63eca89704b8f159591be8f49d9f))
+* integrate Cloudflare Turnstile for bot verification in sign-in and sign-up flows ([#456](https://github.com/Vectreal/vectreal-platform/issues/456)) ([35c7e7f](https://github.com/Vectreal/vectreal-platform/commit/35c7e7f8cdc521b35b5d0746b9ba32382bab6410))
+* integration of Cloudflare Turnstile for bot verification in contact, sign-in, and sign-up flows ([#451](https://github.com/Vectreal/vectreal-platform/issues/451)) ([6f42aa6](https://github.com/Vectreal/vectreal-platform/commit/6f42aa6dafa866065bff4c0d49bee28808761f02))
+* update permissions to include id-token write access for production and staging workflows ([#449](https://github.com/Vectreal/vectreal-platform/issues/449)) ([e75e15f](https://github.com/Vectreal/vectreal-platform/commit/e75e15f8ae415452b4d309fbdf7e627d57678173))
+* update permissions to include id-token write access for production and staging workflows ([#450](https://github.com/Vectreal/vectreal-platform/issues/450)) ([622a1b5](https://github.com/Vectreal/vectreal-platform/commit/622a1b52fdba2f56e09db7f5b0bc1791a7d56be5))
+* update tests for cn utility to improve coverage and clarity ([#468](https://github.com/Vectreal/vectreal-platform/issues/468)) ([e6a6ed5](https://github.com/Vectreal/vectreal-platform/commit/e6a6ed5e44ff1de52500256ef479903feef8ce40))
+
 ## [0.18.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.17.0...workspace-v0.18.0) (2026-04-30)
 
 

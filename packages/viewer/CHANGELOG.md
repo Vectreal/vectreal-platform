@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.19.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.18.0...viewer-v0.19.0) (2026-05-10)
+
+
+### Miscellaneous Chores
+
+* **viewer:** Synchronize vectreal-monorepo versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.19.0
+
 ## [0.18.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.17.0...viewer-v0.18.0) (2026-04-30)
 
 
