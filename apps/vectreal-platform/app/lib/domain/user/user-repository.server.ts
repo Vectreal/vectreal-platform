@@ -49,12 +49,17 @@ async function ensureUserExistsDb(
 	}
 
 	const rawTos = supabaseUser.user_metadata?.tos_accepted_at
-	const tosAcceptedAt =
+	const parsedTosAcceptedAt =
 		typeof rawTos === 'string'
 			? new Date(rawTos)
 			: rawTos instanceof Date
 				? rawTos
 				: null
+	const tosAcceptedAt =
+		parsedTosAcceptedAt &&
+		!Number.isNaN(parsedTosAcceptedAt.getTime())
+			? parsedTosAcceptedAt
+			: null
 
 	const inserted = await dbClient
 		.insert(users)
