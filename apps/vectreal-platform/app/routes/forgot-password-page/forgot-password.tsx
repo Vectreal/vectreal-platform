@@ -90,7 +90,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 	const { client, headers } = await createSupabaseClient(request)
 	const url = new URL(request.url)
-	const redirectTo = `${url.origin}/auth/confirm?type=recovery&next=/dashboard`
+	const redirectTo = `${url.origin}/reset-password`
 
 	// Fire-and-forget style — never reveal whether the email exists (OWASP A7)
 	await client.auth.resetPasswordForEmail(normalizedEmail, { redirectTo })

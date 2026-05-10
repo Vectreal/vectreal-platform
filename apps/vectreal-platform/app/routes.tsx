@@ -53,6 +53,7 @@ export default [
 				'forgot-password',
 				'./routes/forgot-password-page/forgot-password.tsx'
 			),
+			route('reset-password', './routes/reset-password-page/reset-password.tsx'),
 			route('auth/confirm-pending', './routes/confirm-pending.tsx')
 		]),
 
