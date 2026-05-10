@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.19.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.18.0...hooks-v0.19.0) (2026-05-10)
+
+
+### Bug Fixes
+
+* eliminate Vite v8 build warnings — upgrade plugin-react to v6, suppress Node.js dynamic import noise ([#445](https://github.com/Vectreal/vectreal-platform/issues/445)) ([211e188](https://github.com/Vectreal/vectreal-platform/commit/211e188b00130486c38904fe2cff584261a6702f))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.19.0
+
 ## [0.18.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.17.0...hooks-v0.18.0) (2026-04-30)
 
 
