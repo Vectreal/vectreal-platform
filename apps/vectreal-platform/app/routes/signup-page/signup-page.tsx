@@ -331,7 +331,7 @@ const SignupPage = ({ loaderData, actionData }: Route.ComponentProps) => {
 	useEffect(() => {
 		if (!actionData) return
 		resetTurnstile()
-		if (actionData && 'errors' in actionData && actionData.errors?.tos) {
+		if ('errors' in actionData && actionData.errors?.tos) {
 			setTosShake(true)
 			setTimeout(() => setTosShake(false), 500)
 		}
