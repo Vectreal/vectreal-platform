@@ -105,9 +105,8 @@ file_size_limit = "50MiB"
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-# Local dev: hardcoded since dotenv does not expand ${VAR} references at config load time.
-# Production: VECTREAL_URL env var is set correctly in the deployment environment.
-site_url = "http://localhost:4200"
+# Set this from VECTREAL_URL so the canonical auth URL is correct in every environment.
+site_url = "env(VECTREAL_URL)"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = ["env(VECTREAL_URL)", "http://localhost:4200"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
