@@ -19,6 +19,8 @@ interface ResetPasswordActionData {
 	formError?: string
 }
 
+const MIN_PASSWORD_LENGTH = 8
+
 export const meta: MetaFunction = () =>
 	buildMeta(
 		[
@@ -49,18 +51,18 @@ export async function action({ request }: Route.ActionArgs) {
 		return csrfCheck
 	}
 
-	const password = formData.get('password')
-	const confirmPassword = formData.get('confirmPassword')
+	const passwordValue = formData.get('password')
+	const confirmPasswordValue = formData.get('confirmPassword')
+	const password = typeof passwordValue === 'string' ? passwordValue : ''
+	const confirmPassword =
+		typeof confirmPasswordValue === 'string' ? confirmPasswordValue : ''
 	const errors: ResetPasswordActionData['errors'] = {}
 
-	if (typeof password !== 'string' || password.length < 8) {
-		errors.password = 'Password must be at least 8 characters.'
+	if (password.length < MIN_PASSWORD_LENGTH) {
+		errors.password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
 	}
 
-	if (
-		typeof confirmPassword !== 'string' ||
-		confirmPassword !== password
-	) {
+	if (!confirmPassword || confirmPassword !== password) {
 		errors.confirmPassword = 'Passwords do not match.'
 	}
 
