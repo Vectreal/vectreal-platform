@@ -1,6 +1,6 @@
 # Vectreal Platform
 
-[![Vectreal Platform Banner](https://storage.googleapis.com/documentation-assets/vectreal-core-banner.png)](https://vectreal.com)
+[![Vectreal Platform Banner](/assets/vectreal-banner-l.webp)](https://vectreal.com)
 
 _Deployment Actions_  
 [![Staging Deployment](https://img.shields.io/github/actions/workflow/status/vectreal/vectreal-platform/cd-platform-staging.yaml?logo=github&label=Staging%20Deployment&color=fc6c18)](https://github.com/Vectreal/vectreal-platform/actions)
@@ -14,14 +14,13 @@ _NPM packages_
 [![NPM Hooks](https://img.shields.io/npm/dm/%40vctrl%2Fhooks?logo=npm&label=%40vctrl/hooks)](https://npmjs.com/package/@vctrl/hooks)
 [![NPM Viewer](https://img.shields.io/npm/dm/%40vctrl%2Fviewer?logo=npm&label=%40vctrl/viewer)](https://npmjs.com/package/@vctrl/viewer)
 
-_Product Hunt_  
-[![Featured on Product Hunt](https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1119194&theme=light&t=1776193236739)](https://www.producthunt.com/products/vectreal?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-vectreal-platform)
-
 ---
 
 Vectreal is an open platform for preparing, managing, and publishing 3D content for the web.
 
 This monorepo contains the full platform app, reusable React packages, shared libraries, and infrastructure code used to run Vectreal in production.
+
+[![Vectreal Platform Publisher Demo](/assets/publisher-demo.gif)](https://vectreal.com)
 
 Built on [Three.js](https://github.com/mrdoob/three.js), [React Three Fiber](https://github.com/pmndrs/react-three-fiber), [glTF-Transform](https://gltf-transform.dev), [Supabase](https://supabase.com), and [Nx](https://nx.dev).
 
