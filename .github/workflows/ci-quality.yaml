@@ -119,8 +119,8 @@ jobs:
 
       - name: Run affected quality targets
         if: ${{ steps.affected-range.outputs.has_range == 'true' }}
-        run: npx nx affected -t lint,typecheck,build-ci --base=${{ steps.affected-range.outputs.base }} --head=${{ steps.affected-range.outputs.head }}
+        run: npx nx affected -t lint,typecheck,test,build-ci --base=${{ steps.affected-range.outputs.base }} --head=${{ steps.affected-range.outputs.head }}
 
       - name: Run full quality targets
         if: ${{ steps.affected-range.outputs.has_range != 'true' }}
-        run: npx nx run-many -t lint,typecheck,build-ci
+        run: npx nx run-many -t lint,typecheck,test,build-ci

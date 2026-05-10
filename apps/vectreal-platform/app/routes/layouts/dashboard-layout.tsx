@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
 	data,
 	Outlet,
+	redirect,
 	useFetchers,
 	useLoaderData,
 	useLocation,
@@ -66,6 +67,13 @@ export async function loader({ request }: Route.LoaderArgs) {
 		getSidebarProjects(user.id, 3),
 		getUserOrganizations(user.id)
 	])
+
+	// Safety net: if the user has no org yet (e.g. bypassed onboarding), send them
+	// through onboarding which calls initializeUserDefaults and creates the org.
+	if (orgs.length === 0) {
+		return redirect('/onboarding', { headers })
+	}
+
 	const primaryOrgId = orgs[0]?.organization.id ?? null
 	const { plan } = primaryOrgId
 		? await getOrgSubscription(primaryOrgId)

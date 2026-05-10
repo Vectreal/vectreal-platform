@@ -1,5 +1,12 @@
 import { and, eq } from 'drizzle-orm'
 
+export interface ProfileUpdateData {
+	role?: string | null
+	useCase?: string | null
+	companyName?: string | null
+	referralSource?: string | null
+}
+
 import { getDbClient } from '../../../db/client'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { organizationMemberships } from '../../../db/schema/core/organization-memberships'
@@ -41,16 +48,42 @@ async function ensureUserExistsDb(
 		return { user: existingUser[0], isNewUser: false }
 	}
 
-	const [newUser] = await dbClient
+	const rawTos = supabaseUser.user_metadata?.tos_accepted_at
+	const parsedTosAcceptedAt =
+		typeof rawTos === 'string'
+			? new Date(rawTos)
+			: rawTos instanceof Date
+				? rawTos
+				: null
+	const tosAcceptedAt =
+		parsedTosAcceptedAt &&
+		!Number.isNaN(parsedTosAcceptedAt.getTime())
+			? parsedTosAcceptedAt
+			: null
+
+	const inserted = await dbClient
 		.insert(users)
 		.values({
 			id: supabaseUser.id,
 			email: supabaseUser.email || '',
-			name: supabaseUser.user_metadata?.name || supabaseUser.email || 'User'
+			name: supabaseUser.user_metadata?.name || supabaseUser.email || 'User',
+			tosAcceptedAt: tosAcceptedAt ?? null
 		})
+		.onConflictDoNothing()
 		.returning()
 
-	return { user: newUser, isNewUser: true }
+	// Race condition: another request inserted between our select and this insert.
+	// The insert was a no-op — fetch the already-existing row.
+	if (inserted.length === 0) {
+		const [existing] = await dbClient
+			.select()
+			.from(users)
+			.where(eq(users.id, supabaseUser.id))
+			.limit(1)
+		return { user: existing, isNewUser: false }
+	}
+
+	return { user: inserted[0], isNewUser: true }
 }
 
 async function createOrganizationDb(
@@ -65,6 +98,13 @@ async function createOrganizationDb(
 			ownerId: userId
 		})
 		.returning()
+
+	if (!organization) {
+		throw new Error(
+			`[createOrganizationDb] insert returned no rows for userId=${userId}. ` +
+				`Check RLS policies or FK constraints on public.organizations.`
+		)
+	}
 
 	await dbClient.insert(organizationMemberships).values({
 		userId,
@@ -357,13 +397,25 @@ export async function getUserByEmail(
 export async function updateUserProfile(
 	userId: string,
 	updates: {
-		name: string
+		name?: string
+		role?: string | null
+		useCase?: string | null
+		companyName?: string | null
+		referralSource?: string | null
 	}
 ): Promise<typeof users.$inferSelect> {
 	const [updatedUser] = await db
 		.update(users)
 		.set({
-			name: updates.name
+			...(updates.name !== undefined && { name: updates.name }),
+			...(updates.role !== undefined && { role: updates.role }),
+			...(updates.useCase !== undefined && { useCase: updates.useCase }),
+			...(updates.companyName !== undefined && {
+				companyName: updates.companyName
+			}),
+			...(updates.referralSource !== undefined && {
+				referralSource: updates.referralSource
+			})
 		})
 		.where(eq(users.id, userId))
 		.returning()

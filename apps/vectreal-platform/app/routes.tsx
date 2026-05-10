@@ -45,10 +45,16 @@ export default [
 
 	/// PAGES
 	layout('./routes/layouts/nav-layout.tsx', [
-		// sign-in and sign-up
+		// sign-in, sign-up, forgot-password, and post-signup confirmation gate
 		layout('./routes/layouts/signin-layout.tsx', [
 			route('sign-up', './routes/signup-page/signup-page.tsx'),
-			route('sign-in', './routes/signin-page/signin-page.tsx')
+			route('sign-in', './routes/signin-page/signin-page.tsx'),
+			route(
+				'forgot-password',
+				'./routes/forgot-password-page/forgot-password.tsx'
+			),
+			route('reset-password', './routes/reset-password-page/reset-password.tsx'),
+			route('auth/confirm-pending', './routes/confirm-pending.tsx')
 		]),
 
 		// home page - index route
@@ -87,8 +93,9 @@ export default [
 
 		// Docs — platform-first open-source documentation
 		...prefix('docs', [
+			// Docs landing page — full-width hero, outside the sidebar layout
+			index('./routes/docs/index.tsx'),
 			layout('./routes/layouts/docs-layout.tsx', [
-				index('./routes/docs/index.mdx'),
 				// Getting Started
 				...prefix('getting-started', [
 					index('./routes/docs/getting-started/index.mdx', {

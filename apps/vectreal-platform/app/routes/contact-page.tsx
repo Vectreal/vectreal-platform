@@ -17,6 +17,7 @@ import {
 	ContactSuccessResult
 } from '../components/contact'
 import { PublicErrorBoundary } from '../components/errors'
+import { PageHero } from '../components/layout-components'
 import {
 	CONTACT_SOURCE_VALUES,
 	type ContactActionData,
@@ -195,20 +196,14 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 	}
 
 	return (
-		<main className="from-accent/10 relative isolate overflow-hidden bg-linear-to-b via-transparent to-transparent px-6 py-20 pt-32 md:px-8">
-			<div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_15%_20%,hsl(var(--accent)/0.16),transparent_42%),radial-gradient(circle_at_85%_10%,hsl(var(--accent)/0.1),transparent_45%)]" />
-			<div className="mx-auto max-w-6xl space-y-10">
-				<section className="space-y-4 text-left">
-					<h1 className="text-4xl font-normal tracking-tight sm:text-5xl">
-						Tell us what you are building
-					</h1>
-					<p className="text-muted-foreground max-w-2xl text-lg">
-						Whether you need product support, a business plan discussion, or a
-						partnership conversation, this form routes you straight to the right
-						team.
-					</p>
-				</section>
+		<main>
+			<PageHero
+				eyebrow="Contact"
+				heading="Tell us what you are building"
+				description="Whether you need product support, a business plan discussion, or a partnership conversation, this form routes you straight to the right team."
+			/>
 
+			<div className="mx-auto max-w-7xl px-6 pb-20">
 				<div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
 					<Card className="border-accent/25 rounded-3xl shadow-none">
 						<CardHeader>

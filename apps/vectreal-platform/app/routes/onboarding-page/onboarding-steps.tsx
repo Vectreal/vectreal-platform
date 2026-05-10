@@ -1,7 +1,9 @@
 /**
- * Step data, types, and motion variants for the onboarding page.
+ * Step definitions and motion variants for the onboarding flow.
+ *
+ * Steps collect optional profile data that helps personalize the experience.
+ * All fields are nullable — any step can be skipped.
  */
-import { Code2, Compass, Globe, Layers } from 'lucide-react'
 
 import {
 	DashboardVisual,
@@ -10,25 +12,45 @@ import {
 	WelcomeVisual
 } from './onboarding-visuals'
 
-import type { LucideIcon } from 'lucide-react'
 import type { ComponentType } from 'react'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Profile data shape ───────────────────────────────────────────────────────
 
-export interface DocLink {
-	label: string
-	to: string
-	description: string
-	icon: LucideIcon
+export interface OnboardingProfile {
+	role: string | null
+	useCase: string | null
+	companyName: string | null
+	referralSource: string | null
 }
 
-export interface OnboardingStep {
+export type OnboardingProfileKey = keyof OnboardingProfile
+
+// ─── Step types ───────────────────────────────────────────────────────────────
+
+export interface PillOption {
+	value: string
+	label: string
+}
+
+interface BaseStep {
 	id: number
 	title: string
 	tagline: string
-	docLink: DocLink
 	Visual: ComponentType
+	fieldKey: OnboardingProfileKey
 }
+
+export interface PillStep extends BaseStep {
+	inputType: 'pills'
+	options: ReadonlyArray<PillOption>
+}
+
+export interface TextStep extends BaseStep {
+	inputType: 'text'
+	placeholder: string
+}
+
+export type OnboardingStep = PillStep | TextStep
 
 // ─── Motion variants ──────────────────────────────────────────────────────────
 
@@ -77,54 +99,56 @@ export const VISUAL_VARIANTS = {
 export const STEPS: OnboardingStep[] = [
 	{
 		id: 0,
-		title: 'Welcome to Vectreal',
-		tagline:
-			'An open platform for preparing, managing, and publishing 3D content for the web — built for creators.',
-		docLink: {
-			label: 'Quick start guide',
-			to: '/docs/getting-started/first-model',
-			description: 'Up and running in 5 minutes',
-			icon: Compass
-		},
+		title: 'Tell us about yourself.',
+		tagline: 'This helps us tailor the experience for you.',
+		fieldKey: 'role',
+		inputType: 'pills',
+		options: [
+			{ value: 'developer', label: 'Developer' },
+			{ value: 'designer', label: 'Designer' },
+			{ value: '3d_artist', label: '3D Artist' },
+			{ value: 'marketer', label: 'Marketer' },
+			{ value: 'other', label: 'Other' }
+		],
 		Visual: WelcomeVisual
 	},
 	{
 		id: 1,
-		title: 'Meet the Publisher',
-		tagline:
-			'The Publisher is your 3D canvas. Drag any model file onto it — GLB, glTF, OBJ, USDZ or FBX — and start editing.',
-		docLink: {
-			label: 'Publisher overview',
-			to: '/docs/guides/upload',
-			description: 'Drag, drop, and edit 3D models',
-			icon: Layers
-		},
+		title: 'How are you planning to use Vectreal?',
+		tagline: 'No wrong answers — just helps us prioritise what matters to you.',
+		fieldKey: 'useCase',
+		inputType: 'pills',
+		options: [
+			{ value: 'personal', label: 'Personal / Hobby' },
+			{ value: 'small_business', label: 'Small Business' },
+			{ value: 'agency_studio', label: 'Agency or Studio' },
+			{ value: 'enterprise', label: 'Enterprise' }
+		],
 		Visual: UploadVisual
 	},
 	{
 		id: 2,
-		title: 'Publish to the Web',
-		tagline:
-			'One click delivers your scene to our global CDN. Embed it anywhere with the generated iframe or script snippet.',
-		docLink: {
-			label: 'Optimize guide',
-			to: '/docs/guides/optimize',
-			description: 'Tune quality before pushing live',
-			icon: Globe
-		},
-		Visual: PublishVisual
+		title: 'What\u2019s your team or company name?',
+		tagline: 'Optional \u2014 skip if you\u2019re flying solo.',
+		fieldKey: 'companyName',
+		inputType: 'text',
+		placeholder: 'Acme Inc.',
+		Visual: DashboardVisual
 	},
 	{
 		id: 3,
-		title: 'Your Dashboard',
-		tagline:
-			'Manage every scene and project from a single place. Invite teammates, track analytics, and keep everything organised.',
-		docLink: {
-			label: 'Embed options',
-			to: '/docs/guides/publish-embed',
-			description: 'iframe, script, and link formats',
-			icon: Code2
-		},
-		Visual: DashboardVisual
+		title: 'How did you hear about us?',
+		tagline: 'We appreciate you finding us.',
+		fieldKey: 'referralSource',
+		inputType: 'pills',
+		options: [
+			{ value: 'social_media', label: 'Social Media' },
+			{ value: 'word_of_mouth', label: 'Word of Mouth' },
+			{ value: 'search', label: 'Search' },
+			{ value: 'ad', label: 'Ad' },
+			{ value: 'developer_community', label: 'Dev Community' },
+			{ value: 'other', label: 'Other' }
+		],
+		Visual: PublishVisual
 	}
 ]

@@ -46,8 +46,11 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 			token_hash
 		})
 		if (!error) {
-			// redirect user to specified redirect URL or root of app
-			return redirect(next, { headers })
+			// signup and magiclink types both represent first-time or direct auth flows
+			// that should land on onboarding so the user's org/project gets initialised.
+			const destination =
+				type === 'signup' || type === 'magiclink' ? '/onboarding' : next
+			return redirect(destination, { headers })
 		}
 
 		console.warn('[auth/confirm] OTP verification failed', {

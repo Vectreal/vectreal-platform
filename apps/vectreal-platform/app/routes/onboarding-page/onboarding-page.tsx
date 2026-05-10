@@ -1,20 +1,26 @@
 import { VectrealLogoAnimated } from '@shared/components/assets/icons/vectreal-logo-animated'
 import { Button } from '@shared/components/ui/button'
+import { Input } from '@shared/components/ui/input'
 import { cn } from '@shared/utils'
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion'
 import { ArrowRight, LayoutDashboard } from 'lucide-react'
-import { useState } from 'react'
-import { Link, type MetaFunction } from 'react-router'
+import { useRef, useState } from 'react'
+import { Link, redirect, useFetcher, type MetaFunction } from 'react-router'
 
 import { Route } from './+types/onboarding-page'
 import {
 	CONTENT_VARIANTS,
-	type DocLink,
+	type OnboardingProfile,
+	type OnboardingProfileKey,
 	STEPS,
 	VISUAL_VARIANTS
 } from './onboarding-steps'
-import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
+import { AuthErrorBoundary } from '../../components/errors'
+import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
+import { updateUserProfile } from '../../lib/domain/user/user-repository.server'
 import { buildMeta } from '../../lib/seo'
+
+export { AuthErrorBoundary as ErrorBoundary }
 
 export const meta: MetaFunction = () =>
 	buildMeta(
@@ -29,32 +35,62 @@ export const meta: MetaFunction = () =>
 // ─── Loader ───────────────────────────────────────────────────────────────────
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user, headers } = await loadAuthenticatedSession(request)
+	const { user, headers } = await loadAuthenticatedUser(request)
 	return Response.json({ user }, { headers: new Headers(headers) })
 }
 
-// ─── DocCard ──────────────────────────────────────────────────────────────────
+// ─── Action ───────────────────────────────────────────────────────────────────
 
-const DocCard = ({ label, to, description, icon: Icon }: DocLink) => (
-	<Link
-		to={to}
-		className="group flex items-center gap-3 rounded-xl border border-white/8 bg-white/3 px-3 py-3 transition-all duration-200 hover:border-[rgba(252,108,24,0.3)] hover:bg-[rgba(252,108,24,0.05)]"
-	>
-		<div
-			className="flex size-9 shrink-0 items-center justify-center rounded-lg"
-			style={{
-				background: 'rgba(252,108,24,0.1)',
-				border: '1px solid rgba(252,108,24,0.2)'
-			}}
-		>
-			<Icon className="size-4" style={{ color: '#fc6c18' }} />
-		</div>
-		<div className="min-w-0 flex-1">
-			<p className="text-sm font-medium text-white/80">{label}</p>
-			<p className="mt-0.5 text-xs text-white/35">{description}</p>
-		</div>
-		<ArrowRight className="size-3.5 shrink-0 text-white/15 transition-colors duration-200 group-hover:text-[#fc6c18]" />
-	</Link>
+export async function action({ request }: Route.ActionArgs) {
+	const { user, headers } = await loadAuthenticatedUser(request)
+	const formData = await request.formData()
+
+	const toNullable = (v: FormDataEntryValue | null): string | null => {
+		if (!v || typeof v !== 'string' || v.trim() === '') return null
+		return v.trim()
+	}
+
+	await updateUserProfile(user.id, {
+		role: toNullable(formData.get('role')),
+		useCase: toNullable(formData.get('useCase')),
+		companyName: toNullable(formData.get('companyName')),
+		referralSource: toNullable(formData.get('referralSource'))
+	})
+
+	return redirect('/dashboard', { headers: new Headers(headers) })
+}
+
+// ─── PillGroup ────────────────────────────────────────────────────────────────
+
+const PillGroup = ({
+	options,
+	value,
+	onChange
+}: {
+	options: ReadonlyArray<{ value: string; label: string }>
+	value: string | null
+	onChange: (v: string) => void
+}) => (
+	<div className="flex flex-wrap gap-2">
+		{options.map((opt) => {
+			const active = value === opt.value
+			return (
+				<button
+					key={opt.value}
+					type="button"
+					onClick={() => onChange(active ? '' : opt.value)}
+					className={cn(
+						'rounded-full border px-4 py-1.5 text-sm font-medium transition-all duration-150',
+						active
+							? 'border-[rgba(252,108,24,0.6)] bg-[rgba(252,108,24,0.12)] text-[#fc6c18]'
+							: 'border-white/12 bg-white/4 text-white/55 hover:border-white/25 hover:text-white/80'
+					)}
+				>
+					{opt.label}
+				</button>
+			)
+		})}
+	</div>
 )
 
 // ─── StepDot ──────────────────────────────────────────────────────────────────
@@ -101,6 +137,16 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 	const [currentStep, setCurrentStep] = useState(0)
 	const [direction, setDirection] = useState(1)
 	const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
+	const [profile, setProfile] = useState<OnboardingProfile>({
+		role: null,
+		useCase: null,
+		companyName: null,
+		referralSource: null
+	})
+
+	const fetcher = useFetcher()
+	const textInputRef = useRef<HTMLInputElement>(null)
+	const isSubmitting = fetcher.state !== 'idle'
 
 	const rawName =
 		(
@@ -121,17 +167,38 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 	const isLast = currentStep === STEPS.length - 1
 	const { Visual } = step
 
+	const setField = (key: OnboardingProfileKey, value: string) => {
+		setProfile((prev) => ({ ...prev, [key]: value || null }))
+	}
+
+	const submitProfile = (partial?: Partial<OnboardingProfile>) => {
+		const payload = partial ? { ...profile, ...partial } : profile
+		const fd = new FormData()
+		for (const [k, v] of Object.entries(payload)) {
+			fd.set(k, v ?? '')
+		}
+		fetcher.submit(fd, { method: 'post' })
+	}
+
 	const navigateTo = (index: number) => {
 		setDirection(index > currentStep ? 1 : -1)
 		setCompletedSteps((prev) => new Set(prev).add(currentStep))
 		setCurrentStep(index)
 	}
 
+	const handleContinue = () => {
+		if (isLast) {
+			submitProfile()
+		} else {
+			navigateTo(currentStep + 1)
+		}
+	}
+
 	return (
 		<MotionConfig reducedMotion="user">
 			<div className="bg-background flex h-screen w-screen overflow-hidden">
 				{/* ── Left panel: animated visual ────────────────────────────── */}
-				<div className="relative hidden flex-[3] overflow-hidden md:flex">
+				<div className="relative hidden flex-3 overflow-hidden md:flex">
 					<AnimatePresence mode="wait" initial={false}>
 						<motion.div
 							key={step.id}
@@ -147,7 +214,7 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 				</div>
 
 				{/* ── Right panel: content + nav ──────────────────────────────── */}
-				<div className="border-border/20 bg-background flex w-full flex-col border-l md:flex-[2]">
+				<div className="border-border/20 bg-background flex w-full flex-col border-l md:flex-2">
 					{/* Header */}
 					<header className="flex shrink-0 items-center justify-between px-10 pt-8 pb-6">
 						<Link to="/" aria-label="Home">
@@ -156,15 +223,15 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 								colored
 							/>
 						</Link>
-						<Link to="/dashboard">
-							<Button
-								variant="ghost"
-								size="sm"
-								className="text-muted-foreground/50 hover:text-muted-foreground h-8 text-xs"
-							>
-								Skip
-							</Button>
-						</Link>
+						<Button
+							variant="ghost"
+							size="sm"
+							disabled={isSubmitting}
+							onClick={() => submitProfile()}
+							className="text-muted-foreground/50 hover:text-muted-foreground h-8 text-xs"
+						>
+							Skip
+						</Button>
 					</header>
 
 					{/* Mobile visual band */}
@@ -202,8 +269,23 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 									{step.tagline}
 								</p>
 
-								{/* Doc card */}
-								<DocCard {...step.docLink} />
+								{/* Step input */}
+								{step.inputType === 'pills' ? (
+									<PillGroup
+										options={step.options}
+										value={profile[step.fieldKey]}
+										onChange={(v) => setField(step.fieldKey, v)}
+									/>
+								) : (
+									<Input
+										ref={textInputRef}
+										placeholder={step.placeholder}
+										value={profile[step.fieldKey] ?? ''}
+										onChange={(e) => setField(step.fieldKey, e.target.value)}
+										className="max-w-xs"
+										autoComplete="organization"
+									/>
+								)}
 							</motion.div>
 						</AnimatePresence>
 					</div>
@@ -224,7 +306,7 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 							))}
 						</div>
 
-						{/* Back / Next */}
+						{/* Back / Continue */}
 						<div className="flex items-center justify-between gap-3">
 							<Button
 								variant="ghost"
@@ -240,28 +322,25 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 								← Back
 							</Button>
 
-							{isLast ? (
-								<Button
-									asChild
-									size="sm"
-									className="min-w-[130px] font-semibold"
-									style={{ background: 'var(--orange)' }}
-								>
-									<Link to="/dashboard" className="flex items-center gap-1.5">
+							<Button
+								size="sm"
+								onClick={handleContinue}
+								disabled={isSubmitting}
+								className="min-w-[130px] font-semibold"
+								style={isLast ? { background: 'var(--orange)' } : undefined}
+							>
+								{isLast ? (
+									<>
 										<LayoutDashboard className="h-3.5 w-3.5" />
-										Go to Dashboard
-									</Link>
-								</Button>
-							) : (
-								<Button
-									size="sm"
-									onClick={() => navigateTo(currentStep + 1)}
-									className="min-w-[130px] font-semibold"
-								>
-									Continue
-									<ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-								</Button>
-							)}
+										{isSubmitting ? 'Saving…' : 'Go to Dashboard'}
+									</>
+								) : (
+									<>
+										Continue
+										<ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+									</>
+								)}
+							</Button>
 						</div>
 					</div>
 				</div>

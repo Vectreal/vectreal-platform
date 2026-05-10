@@ -75,6 +75,7 @@ describe('verifyTurnstileToken', () => {
 	})
 
 	it('returns failure when Cloudflare reports a hostname mismatch', async () => {
+		process.env.NODE_ENV = 'production'
 		process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY = 'secret'
 		global.fetch = vi.fn().mockResolvedValue({
 			ok: true,
