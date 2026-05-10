@@ -92,8 +92,9 @@ export default [
 
 		// Docs — platform-first open-source documentation
 		...prefix('docs', [
+			// Docs landing page — full-width hero, outside the sidebar layout
+			index('./routes/docs/index.tsx'),
 			layout('./routes/layouts/docs-layout.tsx', [
-				index('./routes/docs/index.mdx'),
 				// Getting Started
 				...prefix('getting-started', [
 					index('./routes/docs/getting-started/index.mdx', {

@@ -90,35 +90,6 @@ const MARKETING_ITEMS: NavItem[] = [
 	}
 ]
 
-const DOCS_ITEMS: NavItem[] = [
-	{
-		label: 'Pricing',
-		to: '/pricing',
-		icon: <DollarSign className="size-4" />
-	},
-	{
-		label: 'News Room',
-		to: '/news-room',
-		icon: <Newspaper className="size-4" />
-	},
-	{
-		label: 'Publisher',
-		to: '/publisher',
-		icon: <Rocket className="size-4" />
-	}
-]
-
-function getNavItems(context: NavContext): NavItem[] {
-	switch (context) {
-		case 'docs':
-			return DOCS_ITEMS
-		case 'auth':
-			return []
-		default:
-			return MARKETING_ITEMS
-	}
-}
-
 function getActiveIndex(items: NavItem[], pathname: string): number {
 	return items.findIndex((item) => {
 		if (item.to === '/') return pathname === '/' || pathname === '/home'
@@ -300,13 +271,16 @@ function DesktopNav({
 									Sign In
 								</Link>
 							</Button>
-							<Button asChild size="sm" className="rounded-xl">
-								<Link to="/publisher">
-									<Rocket className="size-4" />
-									Try Publisher
-								</Link>
-							</Button>
 						</>
+					)}
+
+					{!user && (
+						<Button asChild size="sm" className="rounded-xl">
+							<Link to="/publisher">
+								<Rocket className="size-4" />
+								Try Publisher
+							</Link>
+						</Button>
 					)}
 
 					{user && (
@@ -598,7 +572,7 @@ export const Navigation = ({ user }: NavigationProps) => {
 	const { pathname } = useLocation()
 
 	const context = getNavContext(pathname)
-	const navItems = getNavItems(context)
+	const navItems = MARKETING_ITEMS
 	const isHomePage = pathname === '/' || pathname === '/home'
 	const isAuthPage = context === 'auth'
 
