@@ -1,11 +1,12 @@
-import { createElement } from 'react'
 
 import { render } from '@react-email/render'
+import { createElement } from 'react'
 
-import type { ContactInquiryType } from '../domain/contact/contact-shared'
 import { getResendClient, resolveContactInboxEmail, resolveFromEmail } from './resend.server'
 import { ContactConfirmationEmail } from './templates/contact-confirmation'
 import { ContactInternalEmail } from './templates/contact-internal'
+
+import type { ContactInquiryType } from '../domain/contact/contact-shared'
 
 // ---------------------------------------------------------------------------
 // Helpers
