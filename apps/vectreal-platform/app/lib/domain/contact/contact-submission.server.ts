@@ -11,6 +11,10 @@ import {
 } from './contact-shared'
 import { getDbClient } from '../../../db/client'
 import { contactSubmissions } from '../../../db/schema'
+import {
+	sendInternalContactNotification,
+	sendSubmitterConfirmation,
+} from '../../email/contact-email-sender.server'
 import { encryptSensitiveValue } from '../../security/pii-encryption.server'
 
 import type { PostHogContext } from '../../posthog/posthog-middleware'
@@ -127,66 +131,6 @@ export function buildContactSource(request: Request): ContactSource {
 	}
 }
 
-async function sendContactNotification(args: {
-	to: string[]
-	subject: string
-	text: string
-}): Promise<{ ok: boolean; messageId?: string; error?: string }> {
-	const resendApiKey = process.env.RESEND_API_KEY
-	const fromEmail =
-		process.env.CONTACT_FROM_EMAIL ?? 'Vectreal <info@vectreal.com>'
-
-	if (!resendApiKey) {
-		if (process.env.NODE_ENV === 'production') {
-			return {
-				ok: false,
-				error: 'Contact email provider is not configured.'
-			}
-		}
-
-		console.warn(
-			'[contact] RESEND_API_KEY not configured - skipping send in dev'
-		)
-		return { ok: true }
-	}
-
-	try {
-		const response = await fetch('https://api.resend.com/emails', {
-			method: 'POST',
-			headers: {
-				Authorization: `Bearer ${resendApiKey}`,
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				from: fromEmail,
-				to: args.to,
-				subject: args.subject,
-				text: args.text
-			})
-		})
-
-		if (!response.ok) {
-			const body = await response.text()
-			return {
-				ok: false,
-				error: `Email provider error (${response.status}): ${body}`
-			}
-		}
-
-		const payload = (await response.json()) as { id?: string }
-
-		return { ok: true, messageId: payload.id }
-	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : 'Unknown email provider error'
-
-		return {
-			ok: false,
-			error: `Failed to send contact notification: ${message}`
-		}
-	}
-}
-
 function buildReferenceCode() {
 	const suffix = randomBytes(4).toString('hex').toUpperCase()
 	return `VCTR-${suffix}`
@@ -197,47 +141,6 @@ function getResponseTimeBucket(durationMs: number) {
 	if (durationMs < 1000) return '250ms_1s'
 	if (durationMs < 3000) return '1s_3s'
 	return 'gte_3s'
-}
-
-async function sendInternalContactNotification(args: {
-	name: string
-	email: string
-	inquiryType: ContactInquiryType
-	message: string
-}): Promise<{ ok: boolean; messageId?: string; error?: string }> {
-	const inboxEmail = process.env.CONTACT_INBOX_EMAIL ?? 'info@vectreal.com'
-
-	return sendContactNotification({
-		to: [inboxEmail],
-		subject: `[Contact] ${args.inquiryType} inquiry from ${args.name}`,
-		text: [
-			`Name: ${args.name}`,
-			`Email: ${args.email}`,
-			`Inquiry type: ${args.inquiryType}`,
-			'',
-			args.message
-		].join('\n')
-	})
-}
-
-async function sendSubmitterConfirmation(args: {
-	referenceCode: string
-	email: string
-	inquiryType: ContactInquiryType
-}): Promise<{ ok: boolean; messageId?: string; error?: string }> {
-	return sendContactNotification({
-		to: [args.email],
-		subject: `We received your message (${args.referenceCode})`,
-		text: [
-			`Thanks for contacting Vectreal.`,
-			'',
-			`Reference code: ${args.referenceCode}`,
-			`Inquiry type: ${args.inquiryType}`,
-			'',
-			`Our team typically responds within one business day.`,
-			`If needed, reply directly to info@vectreal.com and include your reference code.`
-		].join('\n')
-	})
 }
 
 function captureServerEvent(args: {
@@ -477,6 +380,7 @@ export async function submitContactForm(args: {
 	}
 
 	const confirmationResult = await sendSubmitterConfirmation({
+		displayName: name,
 		referenceCode: submission.referenceCode,
 		email,
 		inquiryType

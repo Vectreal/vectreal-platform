@@ -44,6 +44,7 @@ export function TurnstileWidget({
 	return (
 		<Turnstile
 			ref={turnstileRef}
+			scriptOptions={{ defer: true }}
 			siteKey={siteKey}
 			options={{ ...modeOptions[mode], responseField: false }}
 			onSuccess={onSuccess}

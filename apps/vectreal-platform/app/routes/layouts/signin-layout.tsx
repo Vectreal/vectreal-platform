@@ -37,7 +37,7 @@ const SignupModel = () => {
 					</strong>
 				</p>
 			</div>
-			<div className="from-background absolute bottom-0 h-96 w-full bg-gradient-to-t to-transparent" />
+			<div className="from-background absolute bottom-0 h-96 w-full bg-linear-to-t to-transparent" />
 		</div>
 	)
 }

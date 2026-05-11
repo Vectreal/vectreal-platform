@@ -181,6 +181,14 @@ otp_expiry = 3600
 subject = "Please confirm your email address"
 content_path = "./supabase/templates/confirm.html"
 
+# Route all auth emails through the React Router API route.
+# The hook is called with a signed webhook (HMAC-SHA256, StandardWebhooks spec).
+# For local dev, the React Router dev server must be running on port 4200.
+[auth.hook.send_email]
+enabled = true
+uri = "http://host.docker.internal:4200/auth/send-email"
+secrets = "env(SEND_EMAIL_HOOK_SECRET)"
+
 
 [auth.sms]
 # Allow/disallow new user signups via SMS to your project.

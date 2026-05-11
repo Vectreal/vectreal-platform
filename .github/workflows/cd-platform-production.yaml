@@ -52,4 +52,5 @@ jobs:
       resend-api-key: ${{ secrets.RESEND_API_KEY_PROD }}
       resend-webhook-secret: ${{ secrets.RESEND_WEBHOOK_SECRET_PROD }}
       contact-inbox-email: ${{ secrets.CONTACT_INBOX_EMAIL_PROD }}
-      contact-from-email: ${{ secrets.CONTACT_FROM_EMAIL_PROD }}
+      from-email: ${{ secrets.FROM_EMAIL }}
+      send-email-hook-secret: ${{ secrets.SEND_EMAIL_HOOK_SECRET_PROD }}

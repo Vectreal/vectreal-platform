@@ -29,6 +29,7 @@ export default [
 	route('auth/social-signin', './routes/api/auth/social-signin.ts'),
 	route('auth/callback', './routes/api/auth/callback.ts'),
 	route('auth/confirm', './routes/api/auth/confirm.ts'),
+	route('auth/send-email', './routes/api/auth/send-email.ts'),
 
 	// Billing api
 	route('api/billing/checkout', './routes/api/billing/checkout.ts'),

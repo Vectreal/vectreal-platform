@@ -132,8 +132,11 @@ on:
       contact-inbox-email:
         description: 'Inbox address for contact submissions'
         required: false
-      contact-from-email:
-        description: 'Verified sender for contact emails'
+      from-email:
+        description: 'Verified sender address for all outbound emails (auth + contact)'
+        required: false
+      send-email-hook-secret:
+        description: 'HMAC secret for verifying Supabase send_email hook requests'
         required: false
 
 jobs:
@@ -275,7 +278,8 @@ jobs:
             RESEND_API_KEY=${{ secrets.resend-api-key }}
             RESEND_WEBHOOK_SECRET=${{ secrets.resend-webhook-secret }}
             CONTACT_INBOX_EMAIL=${{ secrets.contact-inbox-email }}
-            CONTACT_FROM_EMAIL=${{ secrets.contact-from-email }}
+            FROM_EMAIL=${{ secrets.from-email }}
+            SEND_EMAIL_HOOK_SECRET=${{ secrets.send-email-hook-secret }}
 
       - name: Verify deployment health
         run: |

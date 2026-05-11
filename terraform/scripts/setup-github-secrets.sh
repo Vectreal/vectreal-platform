@@ -70,15 +70,16 @@ if [ ! -f "$ENV_FILE" ]; then
     echo "  - STRIPE_SECRET_KEY_PROD / STRIPE_SECRET_KEY_STAGING"
     echo "  - CLOUDFLARE_TURNSTILE_SITE_KEY_PROD / CLOUDFLARE_TURNSTILE_SITE_KEY_STAGING"
     echo "  - CLOUDFLARE_TURNSTILE_SECRET_KEY_PROD / CLOUDFLARE_TURNSTILE_SECRET_KEY_STAGING"
+    echo "  - RESEND_API_KEY_PROD / RESEND_API_KEY_STAGING"
+    echo "  - FROM_EMAIL"
+    echo "  - SEND_EMAIL_HOOK_SECRET_PROD / SEND_EMAIL_HOOK_SECRET_STAGING"
     echo "Optional variables:"
     echo "  - VITE_PUBLIC_POSTHOG_TOKEN"
     echo "  - VITE_PUBLIC_POSTHOG_HOST"
     echo "  - VITE_PUBLIC_POSTHOG_UI_HOST"
     echo "  - CONTACT_DATA_ENCRYPTION_KEY_PROD / CONTACT_DATA_ENCRYPTION_KEY_STAGING"
-    echo "  - RESEND_API_KEY_PROD / RESEND_API_KEY_STAGING"
     echo "  - RESEND_WEBHOOK_SECRET_PROD / RESEND_WEBHOOK_SECRET_STAGING"
     echo "  - CONTACT_INBOX_EMAIL_PROD / CONTACT_INBOX_EMAIL_STAGING"
-    echo "  - CONTACT_FROM_EMAIL_PROD / CONTACT_FROM_EMAIL_STAGING"
     echo "  - RELEASE_APP_ID"
     echo "  - RELEASE_APP_PRIVATE_KEY_FILE (recommended)"
     exit 1
@@ -109,6 +110,8 @@ REQUIRED_VARS=(
     "STRIPE_SECRET_KEY_PROD"
     "CLOUDFLARE_TURNSTILE_SITE_KEY_PROD"
     "CLOUDFLARE_TURNSTILE_SECRET_KEY_PROD"
+    "RESEND_API_KEY_PROD"
+    "SEND_EMAIL_HOOK_SECRET_PROD"
     "DATABASE_URL_STAGING"
     "SUPABASE_URL_STAGING"
     "SUPABASE_KEY_STAGING"
@@ -118,6 +121,9 @@ REQUIRED_VARS=(
     "STRIPE_SECRET_KEY_STAGING"
     "CLOUDFLARE_TURNSTILE_SITE_KEY_STAGING"
     "CLOUDFLARE_TURNSTILE_SECRET_KEY_STAGING"
+    "RESEND_API_KEY_STAGING"
+    "SEND_EMAIL_HOOK_SECRET_STAGING"
+    "FROM_EMAIL"
 )
 
 MISSING_VARS=()
@@ -232,19 +238,15 @@ gh secret set CLOUDFLARE_TURNSTILE_SECRET_KEY_PROD --body "$CLOUDFLARE_TURNSTILE
 if [ -n "$CONTACT_DATA_ENCRYPTION_KEY_PROD" ]; then
     gh secret set CONTACT_DATA_ENCRYPTION_KEY_PROD --body "$CONTACT_DATA_ENCRYPTION_KEY_PROD"
 fi
-if [ -n "$RESEND_API_KEY_PROD" ]; then
-    gh secret set RESEND_API_KEY_PROD --body "$RESEND_API_KEY_PROD"
-fi
+gh secret set RESEND_API_KEY_PROD --body "$RESEND_API_KEY_PROD"
 if [ -n "$RESEND_WEBHOOK_SECRET_PROD" ]; then
     gh secret set RESEND_WEBHOOK_SECRET_PROD --body "$RESEND_WEBHOOK_SECRET_PROD"
 fi
 if [ -n "$CONTACT_INBOX_EMAIL_PROD" ]; then
     gh secret set CONTACT_INBOX_EMAIL_PROD --body "$CONTACT_INBOX_EMAIL_PROD"
 fi
-if [ -n "$CONTACT_FROM_EMAIL_PROD" ]; then
-    gh secret set CONTACT_FROM_EMAIL_PROD --body "$CONTACT_FROM_EMAIL_PROD"
-fi
-echo "  ✅ Production secrets (9)"
+gh secret set SEND_EMAIL_HOOK_SECRET_PROD --body "$SEND_EMAIL_HOOK_SECRET_PROD"
+echo "  ✅ Production secrets (11)"
 
 # Staging secrets
 echo "→ Setting staging secrets..."
@@ -261,19 +263,15 @@ gh secret set CLOUDFLARE_TURNSTILE_SECRET_KEY_STAGING --body "$CLOUDFLARE_TURNST
 if [ -n "$CONTACT_DATA_ENCRYPTION_KEY_STAGING" ]; then
     gh secret set CONTACT_DATA_ENCRYPTION_KEY_STAGING --body "$CONTACT_DATA_ENCRYPTION_KEY_STAGING"
 fi
-if [ -n "$RESEND_API_KEY_STAGING" ]; then
-    gh secret set RESEND_API_KEY_STAGING --body "$RESEND_API_KEY_STAGING"
-fi
+gh secret set RESEND_API_KEY_STAGING --body "$RESEND_API_KEY_STAGING"
 if [ -n "$RESEND_WEBHOOK_SECRET_STAGING" ]; then
     gh secret set RESEND_WEBHOOK_SECRET_STAGING --body "$RESEND_WEBHOOK_SECRET_STAGING"
 fi
 if [ -n "$CONTACT_INBOX_EMAIL_STAGING" ]; then
     gh secret set CONTACT_INBOX_EMAIL_STAGING --body "$CONTACT_INBOX_EMAIL_STAGING"
 fi
-if [ -n "$CONTACT_FROM_EMAIL_STAGING" ]; then
-    gh secret set CONTACT_FROM_EMAIL_STAGING --body "$CONTACT_FROM_EMAIL_STAGING"
-fi
-echo "  ✅ Staging secrets (9)"
+gh secret set SEND_EMAIL_HOOK_SECRET_STAGING --body "$SEND_EMAIL_HOOK_SECRET_STAGING"
+echo "  ✅ Staging secrets (11)"
 
 if [ "$CONTACT_SECRETS_READY" = true ]; then
     echo "  ✅ Contact encryption keys configured for both environments"
@@ -281,6 +279,11 @@ else
     echo "⚠️  CONTACT_DATA_ENCRYPTION_KEY_{PROD,STAGING} not fully set in .env.development"
     echo "   Deployment continues with backward-compatible runtime fallback to CSRF secret"
 fi
+
+# FROM_EMAIL — shared sender address, same across all environments
+echo "→ Setting shared sender address..."
+gh secret set FROM_EMAIL --body "$FROM_EMAIL"
+echo "  ✅ FROM_EMAIL"
 
 # PostHog secrets (shared across environments — same project, same token)
 if [ -n "$VITE_PUBLIC_POSTHOG_TOKEN" ]; then
