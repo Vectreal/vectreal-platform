@@ -78,8 +78,7 @@ if [ ! -f "$ENV_FILE" ]; then
     echo "  - RESEND_API_KEY_PROD / RESEND_API_KEY_STAGING"
     echo "  - RESEND_WEBHOOK_SECRET_PROD / RESEND_WEBHOOK_SECRET_STAGING"
     echo "  - CONTACT_INBOX_EMAIL_PROD / CONTACT_INBOX_EMAIL_STAGING"
-    echo "  - CONTACT_FROM_EMAIL_PROD / CONTACT_FROM_EMAIL_STAGING"
-    echo "  - AUTH_FROM_EMAIL_PROD / AUTH_FROM_EMAIL_STAGING"
+    echo "  - FROM_EMAIL (shared sender — same for all envs, e.g. Vectreal <noreply@mail.vectreal.com>)"
     echo "  - SEND_EMAIL_HOOK_SECRET_PROD / SEND_EMAIL_HOOK_SECRET_STAGING"
     echo "  - RELEASE_APP_ID"
     echo "  - RELEASE_APP_PRIVATE_KEY_FILE (recommended)"
@@ -243,12 +242,6 @@ fi
 if [ -n "$CONTACT_INBOX_EMAIL_PROD" ]; then
     gh secret set CONTACT_INBOX_EMAIL_PROD --body "$CONTACT_INBOX_EMAIL_PROD"
 fi
-if [ -n "$CONTACT_FROM_EMAIL_PROD" ]; then
-    gh secret set CONTACT_FROM_EMAIL_PROD --body "$CONTACT_FROM_EMAIL_PROD"
-fi
-if [ -n "$AUTH_FROM_EMAIL_PROD" ]; then
-    gh secret set AUTH_FROM_EMAIL_PROD --body "$AUTH_FROM_EMAIL_PROD"
-fi
 if [ -n "$SEND_EMAIL_HOOK_SECRET_PROD" ]; then
     gh secret set SEND_EMAIL_HOOK_SECRET_PROD --body "$SEND_EMAIL_HOOK_SECRET_PROD"
 fi
@@ -278,12 +271,6 @@ fi
 if [ -n "$CONTACT_INBOX_EMAIL_STAGING" ]; then
     gh secret set CONTACT_INBOX_EMAIL_STAGING --body "$CONTACT_INBOX_EMAIL_STAGING"
 fi
-if [ -n "$CONTACT_FROM_EMAIL_STAGING" ]; then
-    gh secret set CONTACT_FROM_EMAIL_STAGING --body "$CONTACT_FROM_EMAIL_STAGING"
-fi
-if [ -n "$AUTH_FROM_EMAIL_STAGING" ]; then
-    gh secret set AUTH_FROM_EMAIL_STAGING --body "$AUTH_FROM_EMAIL_STAGING"
-fi
 if [ -n "$SEND_EMAIL_HOOK_SECRET_STAGING" ]; then
     gh secret set SEND_EMAIL_HOOK_SECRET_STAGING --body "$SEND_EMAIL_HOOK_SECRET_STAGING"
 fi
@@ -294,6 +281,16 @@ if [ "$CONTACT_SECRETS_READY" = true ]; then
 else
     echo "⚠️  CONTACT_DATA_ENCRYPTION_KEY_{PROD,STAGING} not fully set in .env.development"
     echo "   Deployment continues with backward-compatible runtime fallback to CSRF secret"
+fi
+
+# FROM_EMAIL — shared sender address, same across all environments
+if [ -n "$FROM_EMAIL" ]; then
+    echo "→ Setting shared sender address..."
+    gh secret set FROM_EMAIL --body "$FROM_EMAIL"
+    echo "  ✅ FROM_EMAIL"
+else
+    echo "⚠️  FROM_EMAIL not set in .env.development"
+    echo "   Set it to: Vectreal <noreply@mail.vectreal.com>"
 fi
 
 # PostHog secrets (shared across environments — same project, same token)

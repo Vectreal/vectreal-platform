@@ -93,7 +93,9 @@ export default defineConfig(({ command }) => {
 
 		server: {
 			port: 4200,
-			host: 'localhost'
+			host: 'localhost',
+			// Allow Supabase Docker containers to call back via host.docker.internal
+			allowedHosts: ['host.docker.internal']
 		},
 		preview: {
 			port: 4300,

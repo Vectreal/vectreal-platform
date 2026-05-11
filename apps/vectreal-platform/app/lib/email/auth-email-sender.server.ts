@@ -1,7 +1,7 @@
 import { render } from '@react-email/render'
 import { createElement } from 'react'
 
-import { getResendClient, resolveAuthFromEmail } from './resend.server'
+import { getResendClient, resolveFromEmail } from './resend.server'
 import {
   AuthEmail,
   getAuthEmailSubject,
@@ -99,23 +99,6 @@ function resolveTokenHash(
   return payload.email_data.token_hash
 }
 
-function buildTextFallback(payload: AuthHookPayload, action: CanonicalEmailAction): string {
-  if (action === 'reauthentication') {
-    return `Your Vectreal verification code is: ${payload.email_data.token}`
-  }
-  if (action === 'password_changed_notification') {
-    return 'Your Vectreal password was changed. If this was not you, reset your password immediately and contact support.'
-  }
-  const confirmType = CONFIRM_TYPE_BY_ACTION[action]
-  if (!confirmType) return ''
-  const link = buildConfirmLink({
-    siteUrl: payload.email_data.site_url,
-    tokenHash: resolveTokenHash(payload, action),
-    type: confirmType,
-    redirectTo: payload.email_data.redirect_to,
-  })
-  return `Continue your Vectreal action: ${link}`
-}
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -147,13 +130,15 @@ export async function sendAuthEmail(payload: AuthHookPayload): Promise<void> {
   const subject = getAuthEmailSubject(action)
 
   // Render via React Email — createElement avoids needing JSX in .server.ts
-  const html = await render(
-    createElement(AuthEmail, { action, displayName, ctaHref, code }),
-  )
-  const text = buildTextFallback(payload, action)
+  // plainText: true generates a full text/plain MIME part, fixing spam filter penalties
+  const element = createElement(AuthEmail, { action, displayName, ctaHref, code })
+  const [html, text] = await Promise.all([
+    render(element),
+    render(element, { plainText: true }),
+  ])
 
   const resend = getResendClient()
-  const from = resolveAuthFromEmail()
+  const from = resolveFromEmail()
 
   const { error } = await resend.emails.send({
     from,

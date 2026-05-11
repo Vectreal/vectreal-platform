@@ -8,12 +8,20 @@ function resolveResendApiKey(): string {
   return key
 }
 
-export function resolveAuthFromEmail(): string {
-  const from = process.env.AUTH_FROM_EMAIL
+export function resolveFromEmail(): string {
+  const from = process.env.FROM_EMAIL
   if (!from) {
-    throw new Error('Missing required environment variable: AUTH_FROM_EMAIL')
+    throw new Error('Missing required environment variable: FROM_EMAIL')
   }
   return from
+}
+
+export function resolveContactInboxEmail(): string {
+  const inbox = process.env.CONTACT_INBOX_EMAIL
+  if (!inbox) {
+    throw new Error('Missing required environment variable: CONTACT_INBOX_EMAIL')
+  }
+  return inbox
 }
 
 let cachedResend: Resend | null = null
