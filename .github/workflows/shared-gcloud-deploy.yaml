@@ -135,6 +135,12 @@ on:
       contact-from-email:
         description: 'Verified sender for contact emails'
         required: false
+      auth-from-email:
+        description: 'Verified sender for Supabase auth emails (magic link, recovery, invite, etc.)'
+        required: false
+      send-email-hook-secret:
+        description: 'HMAC secret for verifying Supabase send_email hook requests'
+        required: false
 
 jobs:
   deploy:
@@ -276,6 +282,8 @@ jobs:
             RESEND_WEBHOOK_SECRET=${{ secrets.resend-webhook-secret }}
             CONTACT_INBOX_EMAIL=${{ secrets.contact-inbox-email }}
             CONTACT_FROM_EMAIL=${{ secrets.contact-from-email }}
+            AUTH_FROM_EMAIL=${{ secrets.auth-from-email }}
+            SEND_EMAIL_HOOK_SECRET=${{ secrets.send-email-hook-secret }}
 
       - name: Verify deployment health
         run: |

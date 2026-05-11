@@ -66,3 +66,5 @@ jobs:
       resend-webhook-secret: ${{ secrets.RESEND_WEBHOOK_SECRET_STAGING }}
       contact-inbox-email: ${{ secrets.CONTACT_INBOX_EMAIL_STAGING }}
       contact-from-email: ${{ secrets.CONTACT_FROM_EMAIL_STAGING }}
+      auth-from-email: ${{ secrets.AUTH_FROM_EMAIL_STAGING }}
+      send-email-hook-secret: ${{ secrets.SEND_EMAIL_HOOK_SECRET_STAGING }}

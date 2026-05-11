@@ -396,8 +396,10 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 									<button
 										type="button"
 										onClick={() => setShowPassword((p) => !p)}
-										aria-label={showPassword ? 'Hide password' : 'Show password'}
-										className="text-muted-foreground hover:text-foreground absolute right-0 top-0 flex h-full items-center px-3 transition-colors"
+										aria-label={
+											showPassword ? 'Hide password' : 'Show password'
+										}
+										className="text-muted-foreground hover:text-foreground absolute top-0 right-0 flex h-full items-center px-3 transition-colors"
 									>
 										{showPassword ? (
 											<EyeClosed className="h-4 w-4" />

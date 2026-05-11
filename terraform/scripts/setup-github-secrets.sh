@@ -79,6 +79,8 @@ if [ ! -f "$ENV_FILE" ]; then
     echo "  - RESEND_WEBHOOK_SECRET_PROD / RESEND_WEBHOOK_SECRET_STAGING"
     echo "  - CONTACT_INBOX_EMAIL_PROD / CONTACT_INBOX_EMAIL_STAGING"
     echo "  - CONTACT_FROM_EMAIL_PROD / CONTACT_FROM_EMAIL_STAGING"
+    echo "  - AUTH_FROM_EMAIL_PROD / AUTH_FROM_EMAIL_STAGING"
+    echo "  - SEND_EMAIL_HOOK_SECRET_PROD / SEND_EMAIL_HOOK_SECRET_STAGING"
     echo "  - RELEASE_APP_ID"
     echo "  - RELEASE_APP_PRIVATE_KEY_FILE (recommended)"
     exit 1
@@ -244,6 +246,12 @@ fi
 if [ -n "$CONTACT_FROM_EMAIL_PROD" ]; then
     gh secret set CONTACT_FROM_EMAIL_PROD --body "$CONTACT_FROM_EMAIL_PROD"
 fi
+if [ -n "$AUTH_FROM_EMAIL_PROD" ]; then
+    gh secret set AUTH_FROM_EMAIL_PROD --body "$AUTH_FROM_EMAIL_PROD"
+fi
+if [ -n "$SEND_EMAIL_HOOK_SECRET_PROD" ]; then
+    gh secret set SEND_EMAIL_HOOK_SECRET_PROD --body "$SEND_EMAIL_HOOK_SECRET_PROD"
+fi
 echo "  ✅ Production secrets (9)"
 
 # Staging secrets
@@ -272,6 +280,12 @@ if [ -n "$CONTACT_INBOX_EMAIL_STAGING" ]; then
 fi
 if [ -n "$CONTACT_FROM_EMAIL_STAGING" ]; then
     gh secret set CONTACT_FROM_EMAIL_STAGING --body "$CONTACT_FROM_EMAIL_STAGING"
+fi
+if [ -n "$AUTH_FROM_EMAIL_STAGING" ]; then
+    gh secret set AUTH_FROM_EMAIL_STAGING --body "$AUTH_FROM_EMAIL_STAGING"
+fi
+if [ -n "$SEND_EMAIL_HOOK_SECRET_STAGING" ]; then
+    gh secret set SEND_EMAIL_HOOK_SECRET_STAGING --body "$SEND_EMAIL_HOOK_SECRET_STAGING"
 fi
 echo "  ✅ Staging secrets (9)"
 
