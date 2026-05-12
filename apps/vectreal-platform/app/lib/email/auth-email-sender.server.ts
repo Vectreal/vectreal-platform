@@ -49,6 +49,13 @@ const AUTH_CONFIRM_PATH = '/auth/confirm'
 // Helpers
 // ---------------------------------------------------------------------------
 
+// Supabase's hook payload `site_url` reflects the Supabase project's own REST
+// base URL, not the application URL. Always prefer APPLICATION_URL so the
+// confirmation link points at the app's /auth/confirm route.
+function resolveAppBaseUrl(payloadSiteUrl: string): string {
+	return process.env.APPLICATION_URL?.trim() || payloadSiteUrl
+}
+
 function canonicalizeAction(raw: RawEmailActionType): CanonicalEmailAction {
 	const action = ACTION_ALIAS_TO_CANONICAL[raw]
 	if (!action) {
@@ -132,7 +139,7 @@ export async function sendAuthEmail(payload: AuthHookPayload): Promise<void> {
 		const confirmType = CONFIRM_TYPE_BY_ACTION[action]
 		if (confirmType) {
 			ctaHref = buildConfirmLink({
-				siteUrl: payload.email_data.site_url,
+				siteUrl: resolveAppBaseUrl(payload.email_data.site_url),
 				tokenHash: resolveTokenHash(payload, action),
 				type: confirmType,
 				redirectTo: payload.email_data.redirect_to
