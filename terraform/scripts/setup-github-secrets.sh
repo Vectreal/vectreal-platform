@@ -244,6 +244,11 @@ if [[ "$MODE" == "verify" ]]; then
   check_gh_secret "FROM_EMAIL"
   check_gh_secret "CONTACT_INBOX_EMAIL"
   check_gh_secret "GCP_PROJECT_ID"
+  # For GCP project IDs we can show the expected value from .env.development
+  # since they're not sensitive — helpful for catching the "-" type of mistake.
+  printf "       (expected: %s)\n" "$GCP_PROJECT_ID"
+  check_gh_secret "GCP_PROJECT_ID_STAGING"
+  printf "       (expected: %s)\n" "$GCP_PROJECT_ID"
 
   if [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]]; then
     printf "\n  ${CYAN}staging:${NC}\n"
@@ -408,10 +413,12 @@ fi
 # ---------------------------------------------------------------------------
 sync_env_secrets() {
   local env=$1
-  local ENV="${env^^}"
-  local varname
+  local ENV varname
+  ENV=$(printf '%s' "$env" | tr '[:lower:]' '[:upper:]')
 
-  section "${env^} secrets"
+  local env_label
+  env_label="$(printf '%s' "$env" | sed 's/./\u&/')"
+  section "${env_label} secrets"
 
   # ${!varname} is single indirection: expand the variable whose NAME is stored
   # in $varname. Build the name first, then look it up — the nested form
