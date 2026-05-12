@@ -248,7 +248,7 @@ if [[ "$MODE" == "verify" ]]; then
   # since they're not sensitive — helpful for catching the "-" type of mistake.
   printf "       (expected: %s)\n" "$GCP_PROJECT_ID"
   check_gh_secret "GCP_PROJECT_ID_STAGING"
-  printf "       (expected: %s)\n" "$GCP_PROJECT_ID"
+  printf "       (expected: %s; derived from GCP_PROJECT_ID in this script)\n" "$GCP_PROJECT_ID"
 
   if [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]]; then
     printf "\n  ${CYAN}staging:${NC}\n"
@@ -321,10 +321,29 @@ fi
 # ---------------------------------------------------------------------------
 set_secret() {
   local name=$1 value=$2
+
+  # Normalize single-line ID secrets to prevent hidden whitespace issues.
+  case "$name" in
+    GCP_PROJECT_ID|GCP_PROJECT_ID_STAGING)
+      value=$(printf '%s' "$value" | tr -d '\r\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+      ;;
+  esac
+
   if [[ -z "$value" ]]; then
     SECRETS_SKIPPED+=("$name")
     return
   fi
+
+  case "$name" in
+    GCP_PROJECT_ID|GCP_PROJECT_ID_STAGING)
+      if [[ ! "$value" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]]; then
+        SECRETS_FAILED+=("$name")
+        err "$name (invalid format; expected 6-30 chars, lowercase letters/numbers/hyphens, start letter, end letter/number)"
+        return
+      fi
+      ;;
+  esac
+
   if printf '%s' "$value" | gh secret set "$name" --body - 2>/dev/null; then
     SECRETS_SET+=("$name")
     ok "$name"
@@ -367,6 +386,9 @@ fi
 # ---------------------------------------------------------------------------
 section "Shared secrets"
 set_secret "GCP_PROJECT_ID"         "$GCP_PROJECT_ID"
+# Staging intentionally inherits the same GCP project ID as production.
+# If you later split projects, set GCP_PROJECT_ID_STAGING manually in GitHub
+# or extend this script to source a dedicated env variable.
 set_secret "GCP_PROJECT_ID_STAGING" "$GCP_PROJECT_ID"
 set_secret "FROM_EMAIL"             "$FROM_EMAIL"
 set_secret "CONTACT_INBOX_EMAIL"    "$CONTACT_INBOX_EMAIL"

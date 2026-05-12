@@ -174,6 +174,23 @@ jobs:
         run: |
           gcloud auth configure-docker ${{ inputs.artifact-region }}-docker.pkg.dev
 
+      - name: Validate GCP project id for image tagging
+        if: ${{ inputs.build-and-push-image }}
+        run: |
+          PROJECT_ID="${{ secrets.gcp-project-id }}"
+
+          if [ -z "$PROJECT_ID" ]; then
+            echo "::error::Missing required secret value for gcp-project-id."
+            exit 1
+          fi
+
+          if ! printf '%s' "$PROJECT_ID" | grep -Eq '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'; then
+            echo "::error::gcp-project-id has invalid format for Docker/Artifact Registry path."
+            echo "::notice::Expected 6-30 chars, lowercase letters/numbers/hyphens, start with a letter, end with letter/number."
+            echo "::notice::Observed length: ${#PROJECT_ID}"
+            exit 1
+          fi
+
       - name: Compute image tags
         if: ${{ inputs.build-and-push-image }}
         id: image-tags
@@ -183,6 +200,12 @@ jobs:
 
           if [ "${{ inputs.environment }}" = "production" ]; then
             LATEST_TAG="${{ inputs.artifact-region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:latest"
+          fi
+
+          if ! printf '%s' "$PRIMARY_TAG" | grep -Eq '^[a-z0-9.-]+/[a-z0-9._/-]+:[A-Za-z0-9._-]+$'; then
+            echo "::error::Computed PRIMARY_TAG is not a valid Docker image reference."
+            echo "::notice::Tag candidate: $PRIMARY_TAG"
+            exit 1
           fi
 
           echo "primary=${PRIMARY_TAG}" >> "$GITHUB_OUTPUT"
