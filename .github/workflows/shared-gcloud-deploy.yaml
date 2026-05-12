@@ -168,8 +168,12 @@ jobs:
         run: |
           PROJECT_ID="${{ secrets.gcp-project-id }}"
 
+          # Regex for valid GCP project IDs: 6-30 chars, lowercase letters/digits/hyphens,
+          # start with a letter, end with a letter/digit.
+          GCP_ID_RE='^[a-z][a-z0-9-]{4,28}[a-z0-9]$'
+
           # Validate format: 6-30 chars, lowercase letters/digits/hyphens, start with letter, end with letter/digit.
-          if printf '%s' "$PROJECT_ID" | grep -Eq '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'; then
+          if printf '%s' "$PROJECT_ID" | grep -Eq "$GCP_ID_RE"; then
             echo "id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -178,7 +182,7 @@ jobs:
           SA_EMAIL="${{ secrets.gcp-service-account }}"
           DERIVED_ID="$(printf '%s' "$SA_EMAIL" | sed -n 's/^[^@]*@\([^.]*\)\.iam\.gserviceaccount\.com$/\1/p')"
 
-          if printf '%s' "$DERIVED_ID" | grep -Eq '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'; then
+          if printf '%s' "$DERIVED_ID" | grep -Eq "$GCP_ID_RE"; then
             echo "::warning::gcp-project-id secret has an invalid or missing value (length: ${#PROJECT_ID}). Derived project ID from the service account email instead. Fix by running: ./terraform/scripts/setup-github-secrets.sh"
             echo "id=$DERIVED_ID" >> "$GITHUB_OUTPUT"
             exit 0
