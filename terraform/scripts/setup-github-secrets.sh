@@ -1,323 +1,515 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-set -e
+# =============================================================================
+# Vectreal Platform — GitHub Secrets + Supabase Hook Sync
+# =============================================================================
+# Usage:
+#   ./setup-github-secrets.sh               # sync everything (both envs)
+#   ./setup-github-secrets.sh --env staging # sync staging only
+#   ./setup-github-secrets.sh --env prod    # sync production only
+#   ./setup-github-secrets.sh --verify      # read-only: check current state
+#   ./setup-github-secrets.sh --help        # show this help
+#
+# Reads from .env.development at the repo root.
+# Syncs:
+#   1. GitHub Actions secrets
+#   2. Supabase send_email hook URI + secret (via Management API)
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Colours (printf-based, portable across bash and zsh)
+# ---------------------------------------------------------------------------
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+ok()      { printf "  ${GREEN}✓${NC}  %s\n" "$*"; }
+warn()    { printf "  ${YELLOW}⚠${NC}  %s\n" "$*"; }
+err()     { printf "  ${RED}✗${NC}  %s\n" "$*"; }
+section() { printf "\n${BOLD}%s${NC}\n" "$*"; }
+
+# ---------------------------------------------------------------------------
+# Bookkeeping
+# ---------------------------------------------------------------------------
+SECRETS_SET=()
+SECRETS_FAILED=()
+SECRETS_SKIPPED=()
+HOOKS_SYNCED=()
+HOOKS_FAILED=()
+
+# ---------------------------------------------------------------------------
+# Parse flags
+# ---------------------------------------------------------------------------
+MODE="sync"   # sync | verify
+ENV_FILTER="" # "" | staging | prod
+
+show_help() {
+  grep '^#' "$0" | grep -v '^#!/' | sed 's/^# \{0,2\}//'
+  exit 0
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --verify) MODE="verify"; shift ;;
+    --env)
+      shift
+      case "$1" in
+        staging|prod) ENV_FILTER="$1"; shift ;;
+        *) printf "${RED}Error:${NC} --env must be 'staging' or 'prod'\n"; exit 1 ;;
+      esac
+      ;;
+    --help|-h) show_help ;;
+    *) printf "${RED}Error:${NC} Unknown flag: $1\n"; exit 1 ;;
+  esac
+done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-echo "🔐 Vectreal Platform - GitHub Secrets Setup"
-echo "============================================"
-echo ""
+printf "\n${BOLD}Vectreal Platform — Secrets Sync${NC}\n"
+printf "==================================\n"
+[[ "$MODE" == "verify" ]] && printf "  Mode: ${CYAN}verify (read-only)${NC}\n"
+[[ -n "$ENV_FILTER" ]]    && printf "  Env:  ${CYAN}%s only${NC}\n" "$ENV_FILTER"
 
-# ============================================================================
-# Check Prerequisites
-# ============================================================================
-echo "📋 Checking prerequisites..."
+# ---------------------------------------------------------------------------
+# Prerequisites
+# ---------------------------------------------------------------------------
+section "Prerequisites"
 
-# Check gh CLI
-if ! command -v gh &> /dev/null; then
-    echo "❌ GitHub CLI is not installed. Please install it first:"
-    echo "   brew install gh"
-    echo "   # or visit: https://cli.github.com/"
-    exit 1
+PREREQ_FAILED=false
+for cmd in gh curl jq; do
+  if ! command -v "$cmd" &>/dev/null; then
+    err "$cmd is not installed"
+    PREREQ_FAILED=true
+  else
+    ok "$cmd"
+  fi
+done
+
+if [[ "$PREREQ_FAILED" == "true" ]]; then
+  printf "\n"
+  err "Install missing tools before continuing (brew install gh curl jq)"
+  exit 1
 fi
 
-echo "✅ GitHub CLI found"
-echo ""
-
-# ============================================================================
-# Check GitHub Authentication
-# ============================================================================
-echo "🔐 Checking GitHub authentication..."
+# ---------------------------------------------------------------------------
+# GitHub auth
+# ---------------------------------------------------------------------------
+section "GitHub authentication"
 
 if ! gh auth status &>/dev/null; then
-    echo "⚠️  Not authenticated with GitHub CLI"
-    echo ""
-    read -p "Authenticate now? (y/n): " DO_AUTH
-    if [[ "$DO_AUTH" == "y" ]]; then
-        gh auth login
-    else
-        echo "❌ GitHub authentication required. Please run: gh auth login"
-        exit 1
-    fi
-else
-    echo "✅ Already authenticated"
+  warn "Not authenticated — launching gh auth login..."
+  gh auth login || { err "Authentication failed"; exit 1; }
 fi
-echo ""
+ok "Authenticated"
 
-# ============================================================================
-# Load Secrets from .env.development
-# ============================================================================
+# ---------------------------------------------------------------------------
+# Load .env.development
+# ---------------------------------------------------------------------------
 ENV_FILE="$REPO_ROOT/.env.development"
 
-echo "📂 Checking for secrets file..."
+section "Environment file"
 
-if [ ! -f "$ENV_FILE" ]; then
-    echo "❌ Error: $ENV_FILE not found!"
-    echo ""
-    echo "Create it from the example:"
-    echo "   cp .env.development.example .env.development"
-    echo "   # Then edit with your actual values"
-    echo ""
-    echo "Required variables:"
-    echo "  - GCP_PROJECT_ID"
-    echo "  - DATABASE_URL_PROD / DATABASE_URL_STAGING"
-    echo "  - SUPABASE_URL_PROD / SUPABASE_URL_STAGING"
-    echo "  - SUPABASE_KEY_PROD / SUPABASE_KEY_STAGING"
-    echo "  - GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD / GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING"
-    echo "  - APPLICATION_URL_PROD / APPLICATION_URL_STAGING"
-    echo "  - CSRF_SECRET_PROD / CSRF_SECRET_STAGING"
-    echo "  - STRIPE_SECRET_KEY_PROD / STRIPE_SECRET_KEY_STAGING"
-    echo "  - CLOUDFLARE_TURNSTILE_SITE_KEY_PROD / CLOUDFLARE_TURNSTILE_SITE_KEY_STAGING"
-    echo "  - CLOUDFLARE_TURNSTILE_SECRET_KEY_PROD / CLOUDFLARE_TURNSTILE_SECRET_KEY_STAGING"
-    echo "  - RESEND_API_KEY_PROD / RESEND_API_KEY_STAGING"
-    echo "  - FROM_EMAIL"
-    echo "  - SEND_EMAIL_HOOK_SECRET_PROD / SEND_EMAIL_HOOK_SECRET_STAGING"
-    echo "Optional variables:"
-    echo "  - VITE_PUBLIC_POSTHOG_TOKEN"
-    echo "  - VITE_PUBLIC_POSTHOG_HOST"
-    echo "  - VITE_PUBLIC_POSTHOG_UI_HOST"
-    echo "  - CONTACT_DATA_ENCRYPTION_KEY_PROD / CONTACT_DATA_ENCRYPTION_KEY_STAGING"
-    echo "  - RESEND_WEBHOOK_SECRET_PROD / RESEND_WEBHOOK_SECRET_STAGING"
-    echo "  - CONTACT_INBOX_EMAIL_PROD / CONTACT_INBOX_EMAIL_STAGING"
-    echo "  - RELEASE_APP_ID"
-    echo "  - RELEASE_APP_PRIVATE_KEY_FILE (recommended)"
-    exit 1
+if [[ ! -f "$ENV_FILE" ]]; then
+  err "$ENV_FILE not found"
+  printf "\n"
+  printf "  Create it from the example:\n"
+  printf "    cp .env.development.example .env.development\n"
+  printf "    # then fill in your values\n"
+  exit 1
 fi
 
-echo "✅ Found secrets file"
-echo ""
-echo "📦 Loading secrets from .env.development..."
-
-# Source the env file
 set -a
+# shellcheck disable=SC1090
 source "$ENV_FILE"
 set +a
 
-# ============================================================================
-# Validate Required Variables
-# ============================================================================
-echo "✓ Validating required variables..."
+ok "$ENV_FILE loaded"
 
-REQUIRED_VARS=(
-    "GCP_PROJECT_ID"
-    "DATABASE_URL_PROD"
-    "SUPABASE_URL_PROD"
-    "SUPABASE_KEY_PROD"
-    "GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD"
-    "APPLICATION_URL_PROD"
-    "CSRF_SECRET_PROD"
-    "STRIPE_SECRET_KEY_PROD"
-    "CLOUDFLARE_TURNSTILE_SITE_KEY_PROD"
-    "CLOUDFLARE_TURNSTILE_SECRET_KEY_PROD"
-    "RESEND_API_KEY_PROD"
-    "SEND_EMAIL_HOOK_SECRET_PROD"
-    "DATABASE_URL_STAGING"
-    "SUPABASE_URL_STAGING"
-    "SUPABASE_KEY_STAGING"
-    "GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING"
-    "APPLICATION_URL_STAGING"
-    "CSRF_SECRET_STAGING"
-    "STRIPE_SECRET_KEY_STAGING"
-    "CLOUDFLARE_TURNSTILE_SITE_KEY_STAGING"
-    "CLOUDFLARE_TURNSTILE_SECRET_KEY_STAGING"
-    "RESEND_API_KEY_STAGING"
-    "SEND_EMAIL_HOOK_SECRET_STAGING"
-    "FROM_EMAIL"
+# ---------------------------------------------------------------------------
+# Validate required variables
+# ---------------------------------------------------------------------------
+section "Validating required variables"
+
+REQUIRED_SHARED=(
+  "GCP_PROJECT_ID"
+  "FROM_EMAIL"
+  "CONTACT_INBOX_EMAIL"
+  "SUPABASE_ACCESS_TOKEN"
 )
 
-MISSING_VARS=()
-for var in "${REQUIRED_VARS[@]}"; do
-    if [ -z "${!var}" ]; then
-        MISSING_VARS+=("$var")
+REQUIRED_STAGING=(
+  "SUPABASE_PROJECT_REF_STAGING"
+  "DATABASE_URL_STAGING"
+  "SUPABASE_URL_STAGING"
+  "SUPABASE_KEY_STAGING"
+  "GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING"
+  "APPLICATION_URL_STAGING"
+  "CSRF_SECRET_STAGING"
+  "STRIPE_SECRET_KEY_STAGING"
+  "SEND_EMAIL_HOOK_SECRET_STAGING"
+  "CLOUDFLARE_TURNSTILE_SITE_KEY_STAGING"
+  "CLOUDFLARE_TURNSTILE_SECRET_KEY_STAGING"
+  "RESEND_API_KEY_STAGING"
+)
+
+REQUIRED_PROD=(
+  "SUPABASE_PROJECT_REF_PROD"
+  "DATABASE_URL_PROD"
+  "SUPABASE_URL_PROD"
+  "SUPABASE_KEY_PROD"
+  "GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD"
+  "APPLICATION_URL_PROD"
+  "CSRF_SECRET_PROD"
+  "STRIPE_SECRET_KEY_PROD"
+  "SEND_EMAIL_HOOK_SECRET_PROD"
+  "CLOUDFLARE_TURNSTILE_SITE_KEY_PROD"
+  "CLOUDFLARE_TURNSTILE_SECRET_KEY_PROD"
+  "RESEND_API_KEY_PROD"
+)
+
+MISSING=()
+check_vars() {
+  for var in "$@"; do
+    [[ -z "${!var}" ]] && MISSING+=("$var")
+  done
+}
+
+check_vars "${REQUIRED_SHARED[@]}"
+[[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && check_vars "${REQUIRED_STAGING[@]}"
+[[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod"    ]] && check_vars "${REQUIRED_PROD[@]}"
+
+if [[ ${#MISSING[@]} -gt 0 ]]; then
+  err "Missing required variables in .env.development:"
+  for v in "${MISSING[@]}"; do printf "      %s\n" "$v"; done
+  printf "\n"
+  printf "  Tip: SUPABASE_ACCESS_TOKEN — generate at https://supabase.com/dashboard/account/tokens\n"
+  exit 1
+fi
+
+ok "All required variables present"
+
+# Hook secret format check
+check_hook_secret_format() {
+  local val=$1 label=$2
+  [[ "$val" != v1,whsec_* ]] && warn "$label does not start with 'v1,whsec_' — Supabase may reject it"
+}
+
+[[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && \
+  check_hook_secret_format "$SEND_EMAIL_HOOK_SECRET_STAGING" "SEND_EMAIL_HOOK_SECRET_STAGING"
+[[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]] && \
+  check_hook_secret_format "$SEND_EMAIL_HOOK_SECRET_PROD" "SEND_EMAIL_HOOK_SECRET_PROD"
+
+# ---------------------------------------------------------------------------
+# Helper: extract a field from Supabase API JSON
+# The auth config response may contain raw control chars in jwt_secret etc.
+# Strip them before feeding to jq, then fall back to grep if jq still fails.
+# ---------------------------------------------------------------------------
+supabase_json_field() {
+  local json="$1" field="$2" default="${3:-}"
+  local cleaned value
+
+  # Remove ASCII control chars except tab (\x09) and newline (\x0a)
+  cleaned=$(printf '%s' "$json" | LC_ALL=C tr -d '\000-\010\013-\037')
+
+  value=$(printf '%s' "$cleaned" | jq -r ".$field // empty" 2>/dev/null)
+
+  if [[ -n "$value" ]]; then
+    printf '%s' "$value"
+  else
+    # Fallback: extract with grep for simple string/bool fields
+    printf '%s' "$json" | grep -o "\"${field}\":[^,}]*" | head -1 | sed 's/.*: *//' | tr -d '"' || printf '%s' "$default"
+  fi
+}
+
+# ===========================================================================
+# VERIFY MODE
+# ===========================================================================
+if [[ "$MODE" == "verify" ]]; then
+
+  section "GitHub Secrets (existence check)"
+
+  check_gh_secret() {
+    local name=$1
+    if gh secret list 2>/dev/null | grep -q "^${name}[[:space:]]"; then
+      ok "$name exists"
+    else
+      warn "$name NOT FOUND"
     fi
-done
+  }
 
-if [ ${#MISSING_VARS[@]} -gt 0 ]; then
-    echo ""
-    echo "❌ Error: Missing required variables in .env.development:"
-    for var in "${MISSING_VARS[@]}"; do
-        echo "  - $var"
+  check_gh_secret "FROM_EMAIL"
+  check_gh_secret "CONTACT_INBOX_EMAIL"
+  check_gh_secret "GCP_PROJECT_ID"
+
+  if [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]]; then
+    printf "\n  ${CYAN}staging:${NC}\n"
+    for v in DATABASE_URL SUPABASE_URL SUPABASE_KEY CSRF_SECRET STRIPE_SECRET_KEY \
+              SEND_EMAIL_HOOK_SECRET RESEND_API_KEY CONTACT_DATA_ENCRYPTION_KEY \
+              CLOUDFLARE_TURNSTILE_SITE_KEY CLOUDFLARE_TURNSTILE_SECRET_KEY \
+              RESEND_WEBHOOK_SECRET; do
+      check_gh_secret "${v}_STAGING"
     done
-    echo ""
-    echo "Please edit .env.development and add all required values"
-    exit 1
+  fi
+
+  if [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]]; then
+    printf "\n  ${CYAN}production:${NC}\n"
+    for v in DATABASE_URL SUPABASE_URL SUPABASE_KEY CSRF_SECRET STRIPE_SECRET_KEY \
+              SEND_EMAIL_HOOK_SECRET RESEND_API_KEY CONTACT_DATA_ENCRYPTION_KEY \
+              CLOUDFLARE_TURNSTILE_SITE_KEY CLOUDFLARE_TURNSTILE_SECRET_KEY \
+              RESEND_WEBHOOK_SECRET; do
+      check_gh_secret "${v}_PROD"
+    done
+  fi
+
+  section "Supabase send_email hook (URI check)"
+  printf "  ${YELLOW}Note:${NC} Supabase does not expose secret values via API — only URI + enabled state can be verified.\n\n"
+
+  verify_supabase_hook() {
+    local project_ref=$1 expected_url=$2 label=$3
+    local expected_uri="${expected_url}/auth/send-email"
+
+    local response
+    response=$(curl -sf \
+      "https://api.supabase.com/v1/projects/${project_ref}/config/auth" \
+      -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" 2>&1)
+
+    if [[ $? -ne 0 ]]; then
+      err "$label — API call failed (check SUPABASE_ACCESS_TOKEN)"
+      return
+    fi
+
+    local enabled uri
+    enabled=$(supabase_json_field "$response" "hook_send_email_enabled" "false")
+    uri=$(supabase_json_field "$response" "hook_send_email_uri" "")
+
+    if [[ "$enabled" != "true" ]]; then
+      warn "$label — hook is DISABLED in Supabase project"
+    elif [[ "$uri" == "$expected_uri" ]]; then
+      ok "$label — enabled, URI matches"
+      printf "       %s\n" "$uri"
+    else
+      err "$label — URI mismatch"
+      printf "       expected: %s\n" "$expected_uri"
+      printf "       actual:   %s\n" "$uri"
+    fi
+  }
+
+  [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && \
+    verify_supabase_hook "$SUPABASE_PROJECT_REF_STAGING" "$APPLICATION_URL_STAGING" "staging"
+  [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]] && \
+    verify_supabase_hook "$SUPABASE_PROJECT_REF_PROD" "$APPLICATION_URL_PROD" "prod"
+
+  printf "\n${GREEN}Verify complete. No changes made.${NC}\n\n"
+  exit 0
 fi
 
-echo "✅ All required variables present"
-echo ""
+# ===========================================================================
+# SYNC MODE
+# ===========================================================================
 
-CONTACT_SECRETS_READY=true
-if [ -z "$CONTACT_DATA_ENCRYPTION_KEY_PROD" ] || [ -z "$CONTACT_DATA_ENCRYPTION_KEY_STAGING" ]; then
-    CONTACT_SECRETS_READY=false
-fi
+# ---------------------------------------------------------------------------
+# Helper: set_secret <name> <value>
+# ---------------------------------------------------------------------------
+set_secret() {
+  local name=$1 value=$2
+  if [[ -z "$value" ]]; then
+    SECRETS_SKIPPED+=("$name")
+    return
+  fi
+  if printf '%s' "$value" | gh secret set "$name" --body - 2>/dev/null; then
+    SECRETS_SET+=("$name")
+    ok "$name"
+  else
+    SECRETS_FAILED+=("$name")
+    err "$name (failed)"
+  fi
+}
 
-RELEASE_APP_SECRETS_READY=true
-if [ -z "$RELEASE_APP_ID" ] || [ -z "$RELEASE_APP_PRIVATE_KEY_FILE" ]; then
-    RELEASE_APP_SECRETS_READY=false
-fi
-
-# ============================================================================
-# Set GitHub Secrets
-# ============================================================================
-echo "🔑 Setting GitHub Secrets..."
-echo ""
-
-# GCP Workload Identity Federation secrets (replaces long-lived JSON key credentials)
-# These values come from `terraform output` after applying infrastructure.
-echo "→ Setting GCP Workload Identity Federation secrets..."
+# ---------------------------------------------------------------------------
+# GCP Workload Identity Federation (from Terraform outputs)
+# ---------------------------------------------------------------------------
+section "GCP Workload Identity Federation"
 
 TF_DIR="$SCRIPT_DIR/.."
-
 WIF_PROVIDER=$(terraform -chdir="$TF_DIR" output -raw workload_identity_provider 2>/dev/null || true)
 PROD_SA_EMAIL=$(terraform -chdir="$TF_DIR" output -raw prod_deployer_sa_email 2>/dev/null || true)
 STAGING_SA_EMAIL=$(terraform -chdir="$TF_DIR" output -raw staging_deployer_sa_email 2>/dev/null || true)
 
-if [ -n "$WIF_PROVIDER" ] && [ -n "$PROD_SA_EMAIL" ] && [ -n "$STAGING_SA_EMAIL" ]; then
-    gh secret set GCP_WIF_PROVIDER_PROD --body "$WIF_PROVIDER"
-    gh secret set GCP_WIF_PROVIDER_STAGING --body "$WIF_PROVIDER"
-    gh secret set GCP_SA_EMAIL_PROD --body "$PROD_SA_EMAIL"
-    gh secret set GCP_SA_EMAIL_STAGING --body "$STAGING_SA_EMAIL"
-    echo "  ✅ GCP Workload Identity Federation secrets (4)"
+if [[ -n "$WIF_PROVIDER" && -n "$PROD_SA_EMAIL" && -n "$STAGING_SA_EMAIL" ]]; then
+  [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && {
+    set_secret "GCP_WIF_PROVIDER_STAGING" "$WIF_PROVIDER"
+    set_secret "GCP_SA_EMAIL_STAGING" "$STAGING_SA_EMAIL"
+  }
+  [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]] && {
+    set_secret "GCP_WIF_PROVIDER_PROD" "$WIF_PROVIDER"
+    set_secret "GCP_SA_EMAIL_PROD" "$PROD_SA_EMAIL"
+  }
 else
-    echo "⚠️  Could not read Workload Identity outputs from Terraform."
-    echo "   Make sure 'terraform apply' has been run with enable_workload_identity=true."
-    echo "   Then re-run this script, or set the following secrets manually:"
-    echo "     GCP_WIF_PROVIDER_PROD / GCP_WIF_PROVIDER_STAGING  — terraform output workload_identity_provider"
-    echo "     GCP_SA_EMAIL_PROD                                  — terraform output prod_deployer_sa_email"
-    echo "     GCP_SA_EMAIL_STAGING                               — terraform output staging_deployer_sa_email"
+  warn "Terraform outputs unavailable — skipping WIF secrets"
+  printf "       Run 'terraform apply' in ./terraform, then re-run this script.\n"
+  printf "       Or set manually:\n"
+  printf "         GCP_WIF_PROVIDER_{PROD,STAGING}  — terraform output workload_identity_provider\n"
+  printf "         GCP_SA_EMAIL_PROD                — terraform output prod_deployer_sa_email\n"
+  printf "         GCP_SA_EMAIL_STAGING             — terraform output staging_deployer_sa_email\n"
 fi
 
-# GCP Project ID
-echo "→ Setting GCP project IDs..."
-gh secret set GCP_PROJECT_ID --body "$GCP_PROJECT_ID"
-gh secret set GCP_PROJECT_ID_STAGING --body "$GCP_PROJECT_ID"
-echo "  ✅ GCP project IDs"
+# ---------------------------------------------------------------------------
+# Shared secrets
+# ---------------------------------------------------------------------------
+section "Shared secrets"
+set_secret "GCP_PROJECT_ID"         "$GCP_PROJECT_ID"
+set_secret "GCP_PROJECT_ID_STAGING" "$GCP_PROJECT_ID"
+set_secret "FROM_EMAIL"             "$FROM_EMAIL"
+set_secret "CONTACT_INBOX_EMAIL"    "$CONTACT_INBOX_EMAIL"
 
-# Release workflow GitHub App secrets (optional)
-if [ "$RELEASE_APP_SECRETS_READY" = true ]; then
-    echo "→ Setting release workflow app secrets..."
-    gh secret set RELEASE_APP_ID --body "$RELEASE_APP_ID"
+if [[ -n "$VITE_PUBLIC_POSTHOG_TOKEN" ]]; then
+  set_secret "VITE_PUBLIC_POSTHOG_TOKEN"   "$VITE_PUBLIC_POSTHOG_TOKEN"
+  set_secret "VITE_PUBLIC_POSTHOG_HOST"    "${VITE_PUBLIC_POSTHOG_HOST:-https://us.i.posthog.com}"
+  set_secret "VITE_PUBLIC_POSTHOG_UI_HOST" "${VITE_PUBLIC_POSTHOG_UI_HOST:-https://eu.posthog.com}"
+else
+  warn "VITE_PUBLIC_POSTHOG_TOKEN not set — skipping PostHog secrets"
+fi
 
-    if [ -n "$RELEASE_APP_PRIVATE_KEY_FILE" ]; then
-        KEY_FILE_PATH="$RELEASE_APP_PRIVATE_KEY_FILE"
-        if [[ "$KEY_FILE_PATH" != /* ]]; then
-            KEY_FILE_PATH="$REPO_ROOT/$KEY_FILE_PATH"
-        fi
+# ---------------------------------------------------------------------------
+# Release app secrets (optional)
+# ---------------------------------------------------------------------------
+if [[ -n "$RELEASE_APP_ID" ]]; then
+  section "Release app secrets"
+  set_secret "RELEASE_APP_ID" "$RELEASE_APP_ID"
 
-        if [ ! -f "$KEY_FILE_PATH" ]; then
-            echo "❌ RELEASE_APP_PRIVATE_KEY_FILE not found: $KEY_FILE_PATH"
-            exit 1
-        fi
+  KEY_FILE="$RELEASE_APP_PRIVATE_KEY_FILE"
+  [[ -n "$KEY_FILE" && "$KEY_FILE" != /* ]] && KEY_FILE="$REPO_ROOT/$KEY_FILE"
 
-        gh secret set RELEASE_APP_PRIVATE_KEY < "$KEY_FILE_PATH"
+  if [[ -n "$KEY_FILE" && -f "$KEY_FILE" ]]; then
+    if gh secret set RELEASE_APP_PRIVATE_KEY < "$KEY_FILE" 2>/dev/null; then
+      SECRETS_SET+=("RELEASE_APP_PRIVATE_KEY")
+      ok "RELEASE_APP_PRIVATE_KEY (from $RELEASE_APP_PRIVATE_KEY_FILE)"
     else
-        # Support escaped multiline PEM in env var by translating '\n' to real newlines.
-        printf '%b' "$RELEASE_APP_PRIVATE_KEY" | gh secret set RELEASE_APP_PRIVATE_KEY
+      SECRETS_FAILED+=("RELEASE_APP_PRIVATE_KEY")
+      err "RELEASE_APP_PRIVATE_KEY"
     fi
-
-    echo "  ✅ Release app secrets (2)"
-else
-    echo "⚠️  Skipping release app secrets"
-    echo "   Set RELEASE_APP_ID and either RELEASE_APP_PRIVATE_KEY_FILE or RELEASE_APP_PRIVATE_KEY in .env.development"
-    echo "   to enable app-based release automation"
+  elif [[ -n "$RELEASE_APP_PRIVATE_KEY" ]]; then
+    if printf '%b' "$RELEASE_APP_PRIVATE_KEY" | gh secret set RELEASE_APP_PRIVATE_KEY 2>/dev/null; then
+      SECRETS_SET+=("RELEASE_APP_PRIVATE_KEY"); ok "RELEASE_APP_PRIVATE_KEY"
+    else
+      SECRETS_FAILED+=("RELEASE_APP_PRIVATE_KEY"); err "RELEASE_APP_PRIVATE_KEY"
+    fi
+  else
+    warn "RELEASE_APP_PRIVATE_KEY_FILE not found — skipping key"
+  fi
 fi
 
-# Production secrets
-echo "→ Setting production secrets..."
-gh secret set DATABASE_URL_PROD --body "$DATABASE_URL_PROD"
-gh secret set SUPABASE_URL_PROD --body "$SUPABASE_URL_PROD"
-gh secret set SUPABASE_KEY_PROD --body "$SUPABASE_KEY_PROD"
-gh secret set GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD --body "$GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD"
-gh secret set APPLICATION_URL_PROD --body "$APPLICATION_URL_PROD"
-gh secret set CSRF_SECRET_PROD --body "$CSRF_SECRET_PROD"
-gh secret set STRIPE_SECRET_KEY_PROD --body "$STRIPE_SECRET_KEY_PROD"
-gh secret set CLOUDFLARE_TURNSTILE_SITE_KEY_PROD --body "$CLOUDFLARE_TURNSTILE_SITE_KEY_PROD"
-gh secret set CLOUDFLARE_TURNSTILE_SECRET_KEY_PROD --body "$CLOUDFLARE_TURNSTILE_SECRET_KEY_PROD"
+# ---------------------------------------------------------------------------
+# Environment-specific secrets
+# ---------------------------------------------------------------------------
+sync_env_secrets() {
+  local env=$1
+  local ENV="${env^^}"
 
-if [ -n "$CONTACT_DATA_ENCRYPTION_KEY_PROD" ]; then
-    gh secret set CONTACT_DATA_ENCRYPTION_KEY_PROD --body "$CONTACT_DATA_ENCRYPTION_KEY_PROD"
-fi
-gh secret set RESEND_API_KEY_PROD --body "$RESEND_API_KEY_PROD"
-if [ -n "$RESEND_WEBHOOK_SECRET_PROD" ]; then
-    gh secret set RESEND_WEBHOOK_SECRET_PROD --body "$RESEND_WEBHOOK_SECRET_PROD"
-fi
-if [ -n "$CONTACT_INBOX_EMAIL_PROD" ]; then
-    gh secret set CONTACT_INBOX_EMAIL_PROD --body "$CONTACT_INBOX_EMAIL_PROD"
-fi
-gh secret set SEND_EMAIL_HOOK_SECRET_PROD --body "$SEND_EMAIL_HOOK_SECRET_PROD"
-echo "  ✅ Production secrets (11)"
+  section "${env^} secrets"
 
-# Staging secrets
-echo "→ Setting staging secrets..."
-gh secret set DATABASE_URL_STAGING --body "$DATABASE_URL_STAGING"
-gh secret set SUPABASE_URL_STAGING --body "$SUPABASE_URL_STAGING"
-gh secret set SUPABASE_KEY_STAGING --body "$SUPABASE_KEY_STAGING"
-gh secret set GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING --body "$GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING"
-gh secret set APPLICATION_URL_STAGING --body "$APPLICATION_URL_STAGING"
-gh secret set CSRF_SECRET_STAGING --body "$CSRF_SECRET_STAGING"
-gh secret set STRIPE_SECRET_KEY_STAGING --body "$STRIPE_SECRET_KEY_STAGING"
-gh secret set CLOUDFLARE_TURNSTILE_SITE_KEY_STAGING --body "$CLOUDFLARE_TURNSTILE_SITE_KEY_STAGING"
-gh secret set CLOUDFLARE_TURNSTILE_SECRET_KEY_STAGING --body "$CLOUDFLARE_TURNSTILE_SECRET_KEY_STAGING"
+  set_secret "DATABASE_URL_${ENV}"                        "${!DATABASE_URL_${ENV}}"
+  set_secret "SUPABASE_URL_${ENV}"                        "${!SUPABASE_URL_${ENV}}"
+  set_secret "SUPABASE_KEY_${ENV}"                        "${!SUPABASE_KEY_${ENV}}"
+  set_secret "GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_${ENV}" "${!GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_${ENV}}"
+  set_secret "APPLICATION_URL_${ENV}"                     "${!APPLICATION_URL_${ENV}}"
+  set_secret "CSRF_SECRET_${ENV}"                         "${!CSRF_SECRET_${ENV}}"
+  set_secret "STRIPE_SECRET_KEY_${ENV}"                   "${!STRIPE_SECRET_KEY_${ENV}}"
+  set_secret "SEND_EMAIL_HOOK_SECRET_${ENV}"              "${!SEND_EMAIL_HOOK_SECRET_${ENV}}"
+  set_secret "CLOUDFLARE_TURNSTILE_SITE_KEY_${ENV}"       "${!CLOUDFLARE_TURNSTILE_SITE_KEY_${ENV}}"
+  set_secret "CLOUDFLARE_TURNSTILE_SECRET_KEY_${ENV}"     "${!CLOUDFLARE_TURNSTILE_SECRET_KEY_${ENV}}"
+  set_secret "RESEND_API_KEY_${ENV}"                      "${!RESEND_API_KEY_${ENV}}"
 
-if [ -n "$CONTACT_DATA_ENCRYPTION_KEY_STAGING" ]; then
-    gh secret set CONTACT_DATA_ENCRYPTION_KEY_STAGING --body "$CONTACT_DATA_ENCRYPTION_KEY_STAGING"
-fi
-gh secret set RESEND_API_KEY_STAGING --body "$RESEND_API_KEY_STAGING"
-if [ -n "$RESEND_WEBHOOK_SECRET_STAGING" ]; then
-    gh secret set RESEND_WEBHOOK_SECRET_STAGING --body "$RESEND_WEBHOOK_SECRET_STAGING"
-fi
-if [ -n "$CONTACT_INBOX_EMAIL_STAGING" ]; then
-    gh secret set CONTACT_INBOX_EMAIL_STAGING --body "$CONTACT_INBOX_EMAIL_STAGING"
-fi
-gh secret set SEND_EMAIL_HOOK_SECRET_STAGING --body "$SEND_EMAIL_HOOK_SECRET_STAGING"
-echo "  ✅ Staging secrets (11)"
+  # Optional
+  local rws_var="RESEND_WEBHOOK_SECRET_${ENV}"
+  local enc_var="CONTACT_DATA_ENCRYPTION_KEY_${ENV}"
+  [[ -n "${!rws_var}" ]] && set_secret "RESEND_WEBHOOK_SECRET_${ENV}"       "${!rws_var}"
+  [[ -n "${!enc_var}" ]] && set_secret "CONTACT_DATA_ENCRYPTION_KEY_${ENV}" "${!enc_var}"
+}
 
-if [ "$CONTACT_SECRETS_READY" = true ]; then
-    echo "  ✅ Contact encryption keys configured for both environments"
-else
-    echo "⚠️  CONTACT_DATA_ENCRYPTION_KEY_{PROD,STAGING} not fully set in .env.development"
-    echo "   Deployment continues with backward-compatible runtime fallback to CSRF secret"
-fi
+[[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && sync_env_secrets "staging"
+[[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod"    ]] && sync_env_secrets "prod"
 
-# FROM_EMAIL — shared sender address, same across all environments
-echo "→ Setting shared sender address..."
-gh secret set FROM_EMAIL --body "$FROM_EMAIL"
-echo "  ✅ FROM_EMAIL"
+# ---------------------------------------------------------------------------
+# Supabase auth hook sync
+# ---------------------------------------------------------------------------
+sync_supabase_hook() {
+  local project_ref=$1 hook_secret=$2 app_url=$3 label=$4
+  local hook_uri="${app_url}/auth/send-email"
 
-# PostHog secrets (shared across environments — same project, same token)
-if [ -n "$VITE_PUBLIC_POSTHOG_TOKEN" ]; then
-    echo "→ Setting PostHog secrets..."
-    gh secret set VITE_PUBLIC_POSTHOG_TOKEN --body "$VITE_PUBLIC_POSTHOG_TOKEN"
-    POSTHOG_HOST="${VITE_PUBLIC_POSTHOG_HOST:-https://us.i.posthog.com}"
-    POSTHOG_UI_HOST="${VITE_PUBLIC_POSTHOG_UI_HOST:-https://eu.posthog.com}"
-    gh secret set VITE_PUBLIC_POSTHOG_HOST --body "$POSTHOG_HOST"
-    gh secret set VITE_PUBLIC_POSTHOG_UI_HOST --body "$POSTHOG_UI_HOST"
-    echo "  ✅ PostHog secrets (3)"
-else
-    echo "⚠️  Skipping PostHog secrets (VITE_PUBLIC_POSTHOG_TOKEN not set in .env.development)"
-fi
-# ============================================================================
+  local response http_code body
+  response=$(curl -s -w "\n%{http_code}" -X PATCH \
+    "https://api.supabase.com/v1/projects/${project_ref}/config/auth" \
+    -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"hook_send_email_enabled\":true,\"hook_send_email_uri\":\"${hook_uri}\",\"hook_send_email_secrets\":\"${hook_secret}\"}" 2>&1)
+
+  http_code=$(printf '%s' "$response" | tail -n1)
+  body=$(printf '%s' "$response" | sed '$d')
+
+  if [[ "$http_code" =~ ^2 ]]; then
+    HOOKS_SYNCED+=("$label")
+    ok "$label — URI: $hook_uri"
+  else
+    HOOKS_FAILED+=("$label")
+    err "$label — HTTP ${http_code}"
+    printf "       Manually update in Supabase dashboard:\n"
+    printf "         Project: %s\n" "$project_ref"
+    printf "         Auth → Hooks → send_email\n"
+    printf "         URI:    %s\n" "$hook_uri"
+    printf "         Secret: %s\n" "$hook_secret"
+    [[ -n "$body" && "$body" != "null" ]] && printf "         API response: %s\n" "$body"
+  fi
+}
+
+section "Supabase auth hook sync"
+printf "  ${YELLOW}Note:${NC} Hook URI and secret are set atomically — Supabase project always matches the GitHub secret.\n\n"
+
+[[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && \
+  sync_supabase_hook "$SUPABASE_PROJECT_REF_STAGING" "$SEND_EMAIL_HOOK_SECRET_STAGING" "$APPLICATION_URL_STAGING" "staging"
+[[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]] && \
+  sync_supabase_hook "$SUPABASE_PROJECT_REF_PROD" "$SEND_EMAIL_HOOK_SECRET_PROD" "$APPLICATION_URL_PROD" "prod"
+
+# ---------------------------------------------------------------------------
 # Summary
-# ============================================================================
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "✅ All GitHub secrets configured!"
-echo ""
-echo "📋 Verify secrets:"
-echo "   gh secret list"
-echo ""
-echo "🔄 To rotate secrets:"
-echo "   1. Edit .env.development"
-echo "   2. Run this script again: ./setup-github-secrets.sh"
-echo "   3. Redeploy: git commit --allow-empty -m 'Rotate secrets' && git push"
-echo ""
-echo "🔑 To refresh GCP Workload Identity secrets:"
-echo "   Run 'terraform apply' in ./terraform then re-run this script."
-echo ""
-echo "🚀 Next Steps:"
-echo "   Deploy your application:"
-echo "   git push origin main                                 # Deploy to staging"
-echo "   gh workflow run \"CD - Deploy Platform to Production\" # Deploy to production"
-echo ""
+# ---------------------------------------------------------------------------
+TOTAL_SET=${#SECRETS_SET[@]}
+TOTAL_FAILED=${#SECRETS_FAILED[@]}
+TOTAL_SKIPPED=${#SECRETS_SKIPPED[@]}
+TOTAL_HOOKS_OK=${#HOOKS_SYNCED[@]}
+TOTAL_HOOKS_FAIL=${#HOOKS_FAILED[@]}
+
+printf "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+printf "  GitHub secrets set:      ${GREEN}%d${NC}\n" "$TOTAL_SET"
+[[ $TOTAL_SKIPPED -gt 0 ]] && printf "  GitHub secrets skipped:  ${YELLOW}%d${NC} (empty values)\n" "$TOTAL_SKIPPED"
+[[ $TOTAL_FAILED  -gt 0 ]] && printf "  GitHub secrets failed:   ${RED}%d${NC}\n"    "$TOTAL_FAILED"
+printf "  Supabase hooks synced:   ${GREEN}%d${NC}\n" "$TOTAL_HOOKS_OK"
+[[ $TOTAL_HOOKS_FAIL -gt 0 ]] && printf "  Supabase hooks failed:   ${RED}%d${NC}\n" "$TOTAL_HOOKS_FAIL"
+printf "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+
+if [[ ${#SECRETS_FAILED[@]} -gt 0 ]]; then
+  printf "\n"
+  warn "Failed secrets: ${SECRETS_FAILED[*]}"
+  printf "  Check your GitHub token permissions: gh auth status\n"
+fi
+
+if [[ ${#HOOKS_FAILED[@]} -gt 0 ]]; then
+  printf "\n"
+  warn "Hook sync failed for: ${HOOKS_FAILED[*]}"
+  printf "  Check SUPABASE_ACCESS_TOKEN is valid: https://supabase.com/dashboard/account/tokens\n"
+fi
+
+printf "\n${BOLD}Next steps${NC}\n"
+printf "  Verify current state:\n"
+printf "    ./setup-github-secrets.sh --verify\n\n"
+printf "  Deploy staging (automatic on push to main):\n"
+printf "    git push origin main\n\n"
+printf "  Deploy production:\n"
+printf "    gh workflow run 'CD - Deploy Platform to Production'\n\n"
+
+[[ $TOTAL_FAILED -gt 0 || $TOTAL_HOOKS_FAIL -gt 0 ]] && exit 1
+exit 0

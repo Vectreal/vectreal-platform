@@ -44,35 +44,34 @@ export interface AuthHookPayload {
 // Signature verification
 // ---------------------------------------------------------------------------
 
-function resolveHookSecret(): string {
-  const secret = process.env.SEND_EMAIL_HOOK_SECRET
-  if (!secret) {
+function resolveSecret(): Buffer {
+  const raw = process.env.SEND_EMAIL_HOOK_SECRET
+  if (!raw || !raw.trim()) {
     throw new Error(
       'Missing required environment variable: SEND_EMAIL_HOOK_SECRET',
     )
   }
-  return secret
+  // Strip known prefixes, trim whitespace that may be injected during CI/CD
+  // transmission, then normalise URL-safe base64 (- → +, _ → /) so Node's
+  // Buffer decoder handles both standard and URL-safe variants correctly.
+  const base64 = raw
+    .trim()
+    .replace(/^v1,whsec_/, '')
+    .replace(/^whsec_/, '')
+    .trim()
+    .replace(/-/g, '+')
+    .replace(/_/g, '/')
+
+  return Buffer.from(base64, 'base64')
 }
 
-function decodeHookSecret(raw: string): Buffer {
-  // Strip Supabase-style prefixes (v1,whsec_ or whsec_)
-  const stripped = raw.replace(/^v1,whsec_/, '').replace(/^whsec_/, '')
-  return Buffer.from(stripped, 'base64')
-}
-
-function parseV1Signatures(signatureHeader: string): string[] {
-  return signatureHeader
+// The webhook-signature header contains space-separated "v1,<base64sig>" tokens.
+function extractV1Signatures(header: string): Buffer[] {
+  return header
     .split(/\s+/)
-    .flatMap((entry) => entry.split(';'))
-    .map((entry) => entry.trim())
-    .filter(Boolean)
-    .flatMap((entry) => {
-      const comma = entry.indexOf(',')
-      if (comma === -1) return []
-      const version = entry.slice(0, comma)
-      const sig = entry.slice(comma + 1)
-      return version === 'v1' && sig ? [sig] : []
-    })
+    .filter((entry) => entry.startsWith('v1,'))
+    .map((entry) => Buffer.from(entry.slice(3), 'base64'))
+    .filter((buf) => buf.length > 0)
 }
 
 export function verifyAuthHookRequest(args: {
@@ -89,36 +88,30 @@ export function verifyAuthHookRequest(args: {
     throw new Error('Missing required webhook headers')
   }
 
-  const timestampSeconds = Number.parseInt(timestamp, 10)
-  if (Number.isNaN(timestampSeconds)) {
+  const ts = Number.parseInt(timestamp, 10)
+  if (Number.isNaN(ts)) {
     throw new Error('Invalid webhook timestamp')
   }
 
-  const nowSeconds = Math.floor(Date.now() / 1000)
-  if (Math.abs(nowSeconds - timestampSeconds) > 300) {
+  if (Math.abs(Math.floor(Date.now() / 1000) - ts) > 300) {
     throw new Error('Webhook timestamp is outside the allowed window')
   }
 
-  const secret = decodeHookSecret(resolveHookSecret())
-  const signedContent = `${id}.${timestamp}.${args.payload}`
-  const digest = createHmac('sha256', secret)
-    .update(signedContent)
-    .digest('base64')
+  const secret = resolveSecret()
+  const expected = createHmac('sha256', secret)
+    .update(`${id}.${timestamp}.${args.payload}`)
+    .digest()
 
-  const expected = Buffer.from(digest)
-  const candidates = parseV1Signatures(signature)
+  const candidates = extractV1Signatures(signature)
 
   if (candidates.length === 0) {
     throw new Error('Missing v1 webhook signature')
   }
 
-  const verified = candidates.some((candidate) => {
-    const received = Buffer.from(candidate)
-    return (
-      received.length === expected.length &&
-      timingSafeEqual(received, expected)
-    )
-  })
+  const verified = candidates.some(
+    (received) =>
+      received.length === expected.length && timingSafeEqual(received, expected),
+  )
 
   if (!verified) {
     throw new Error('Invalid webhook signature')

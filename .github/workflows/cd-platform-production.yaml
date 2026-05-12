@@ -51,6 +51,6 @@ jobs:
       contact-data-encryption-key: ${{ secrets.CONTACT_DATA_ENCRYPTION_KEY_PROD }}
       resend-api-key: ${{ secrets.RESEND_API_KEY_PROD }}
       resend-webhook-secret: ${{ secrets.RESEND_WEBHOOK_SECRET_PROD }}
-      contact-inbox-email: ${{ secrets.CONTACT_INBOX_EMAIL_PROD }}
+      contact-inbox-email: ${{ secrets.CONTACT_INBOX_EMAIL }}
       from-email: ${{ secrets.FROM_EMAIL }}
       send-email-hook-secret: ${{ secrets.SEND_EMAIL_HOOK_SECRET_PROD }}
