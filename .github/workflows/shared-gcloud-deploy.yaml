@@ -82,8 +82,8 @@ on:
         description: 'Service account email to impersonate via Workload Identity Federation'
         required: true
       gcp-project-id:
-        description: 'Google Cloud project ID'
-        required: true
+        description: 'Google Cloud project ID. When omitted or invalid the project ID is derived from the gcp-service-account email.'
+        required: false
       database-url:
         description: 'Database URL for migrations and runtime'
         required: true
@@ -163,6 +163,31 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v3
 
+      - name: Resolve GCP project id
+        id: project
+        run: |
+          PROJECT_ID="${{ secrets.gcp-project-id }}"
+
+          # Validate format: 6-30 chars, lowercase letters/digits/hyphens, start with letter, end with letter/digit.
+          if printf '%s' "$PROJECT_ID" | grep -Eq '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'; then
+            echo "id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Fallback: extract from the service account email (name@PROJECT_ID.iam.gserviceaccount.com).
+          SA_EMAIL="${{ secrets.gcp-service-account }}"
+          DERIVED_ID="$(printf '%s' "$SA_EMAIL" | sed -n 's/^[^@]*@\([^.]*\)\.iam\.gserviceaccount\.com$/\1/p')"
+
+          if printf '%s' "$DERIVED_ID" | grep -Eq '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'; then
+            echo "::warning::gcp-project-id secret has an invalid or missing value (length: ${#PROJECT_ID}). Derived project ID from the service account email instead. Fix by running: ./terraform/scripts/setup-github-secrets.sh"
+            echo "id=$DERIVED_ID" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "::error::Could not resolve a valid GCP project ID from the gcp-project-id secret (length: ${#PROJECT_ID}) or the service account email."
+          echo "::error::Fix: ensure GCP_PROJECT_ID / GCP_PROJECT_ID_STAGING is set correctly and run ./terraform/scripts/setup-github-secrets.sh"
+          exit 1
+
       - name: Promote static assets between buckets
         if: ${{ inputs.static-bucket-name != '' && !inputs.build-and-push-image && inputs.promote-static-from-bucket != '' }}
         run: |
@@ -174,32 +199,15 @@ jobs:
         run: |
           gcloud auth configure-docker ${{ inputs.artifact-region }}-docker.pkg.dev
 
-      - name: Validate GCP project id for image tagging
-        if: ${{ inputs.build-and-push-image }}
-        run: |
-          PROJECT_ID="${{ secrets.gcp-project-id }}"
-
-          if [ -z "$PROJECT_ID" ]; then
-            echo "::error::Missing required secret value for gcp-project-id."
-            exit 1
-          fi
-
-          if ! printf '%s' "$PROJECT_ID" | grep -Eq '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'; then
-            echo "::error::gcp-project-id has invalid format for Docker/Artifact Registry path."
-            echo "::notice::Expected 6-30 chars, lowercase letters/numbers/hyphens, start with a letter, end with letter/number."
-            echo "::notice::Observed length: ${#PROJECT_ID}"
-            exit 1
-          fi
-
       - name: Compute image tags
         if: ${{ inputs.build-and-push-image }}
         id: image-tags
         run: |
-          PRIMARY_TAG="${{ inputs.artifact-region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:${{ github.sha }}"
+          PRIMARY_TAG="${{ inputs.artifact-region }}-docker.pkg.dev/${{ steps.project.outputs.id }}/vectreal-platform/${{ inputs.image-name }}:${{ github.sha }}"
           LATEST_TAG=""
 
           if [ "${{ inputs.environment }}" = "production" ]; then
-            LATEST_TAG="${{ inputs.artifact-region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:latest"
+            LATEST_TAG="${{ inputs.artifact-region }}-docker.pkg.dev/${{ steps.project.outputs.id }}/vectreal-platform/${{ inputs.image-name }}:latest"
           fi
 
           if ! printf '%s' "$PRIMARY_TAG" | grep -Eq '^[a-z0-9.-]+/[a-z0-9._/-]+:[A-Za-z0-9._-]+$'; then
@@ -270,7 +278,7 @@ jobs:
           if [ -n "${{ inputs.image-uri }}" ]; then
             echo "uri=${{ inputs.image-uri }}" >> "$GITHUB_OUTPUT"
           else
-            echo "uri=${{ inputs.artifact-region }}-docker.pkg.dev/${{ secrets.gcp-project-id }}/vectreal-platform/${{ inputs.image-name }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            echo "uri=${{ inputs.artifact-region }}-docker.pkg.dev/${{ steps.project.outputs.id }}/vectreal-platform/${{ inputs.image-name }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Deploy to Cloud Run
@@ -284,7 +292,7 @@ jobs:
           env_vars: |
             NODE_ENV=${{ inputs.node-env }}
             ENVIRONMENT=${{ inputs.environment }}
-            GOOGLE_CLOUD_PROJECT=${{ secrets.gcp-project-id }}
+            GOOGLE_CLOUD_PROJECT=${{ steps.project.outputs.id }}
             DATABASE_URL=${{ secrets.database-url }}
             SUPABASE_URL=${{ secrets.supabase-url }}
             SUPABASE_KEY=${{ secrets.supabase-key }}
