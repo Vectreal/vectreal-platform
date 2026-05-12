@@ -160,7 +160,7 @@ Set these via the setup script or manually:
 - `GCP_CREDENTIALS` - Production deployer service account key
 - `GCP_PROJECT_ID` - GCP project ID
 - `GCP_CREDENTIALS_STAGING` - Staging deployer service account key
-- `GCP_PROJECT_ID_STAGING` - GCP project ID (typically same as prod)
+- `GCP_PROJECT_ID_STAGING` - GCP project ID for staging (setup script sets this from `GCP_PROJECT_ID` by default; override manually in GitHub if staging uses a different project)
 
 ### Production Secrets (6 secrets)
 
