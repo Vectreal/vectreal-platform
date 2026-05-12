@@ -409,26 +409,35 @@ fi
 sync_env_secrets() {
   local env=$1
   local ENV="${env^^}"
+  local varname
 
   section "${env^} secrets"
 
-  set_secret "DATABASE_URL_${ENV}"                        "${!DATABASE_URL_${ENV}}"
-  set_secret "SUPABASE_URL_${ENV}"                        "${!SUPABASE_URL_${ENV}}"
-  set_secret "SUPABASE_KEY_${ENV}"                        "${!SUPABASE_KEY_${ENV}}"
-  set_secret "GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_${ENV}" "${!GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_${ENV}}"
-  set_secret "APPLICATION_URL_${ENV}"                     "${!APPLICATION_URL_${ENV}}"
-  set_secret "CSRF_SECRET_${ENV}"                         "${!CSRF_SECRET_${ENV}}"
-  set_secret "STRIPE_SECRET_KEY_${ENV}"                   "${!STRIPE_SECRET_KEY_${ENV}}"
-  set_secret "SEND_EMAIL_HOOK_SECRET_${ENV}"              "${!SEND_EMAIL_HOOK_SECRET_${ENV}}"
-  set_secret "CLOUDFLARE_TURNSTILE_SITE_KEY_${ENV}"       "${!CLOUDFLARE_TURNSTILE_SITE_KEY_${ENV}}"
-  set_secret "CLOUDFLARE_TURNSTILE_SECRET_KEY_${ENV}"     "${!CLOUDFLARE_TURNSTILE_SECRET_KEY_${ENV}}"
-  set_secret "RESEND_API_KEY_${ENV}"                      "${!RESEND_API_KEY_${ENV}}"
+  # ${!varname} is single indirection: expand the variable whose NAME is stored
+  # in $varname. Build the name first, then look it up — the nested form
+  # ${!FIELD_${ENV}} would be double-indirection and silently return empty.
+  for field in \
+    DATABASE_URL \
+    SUPABASE_URL \
+    SUPABASE_KEY \
+    GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET \
+    APPLICATION_URL \
+    CSRF_SECRET \
+    STRIPE_SECRET_KEY \
+    SEND_EMAIL_HOOK_SECRET \
+    CLOUDFLARE_TURNSTILE_SITE_KEY \
+    CLOUDFLARE_TURNSTILE_SECRET_KEY \
+    RESEND_API_KEY
+  do
+    varname="${field}_${ENV}"
+    set_secret "$varname" "${!varname}"
+  done
 
-  # Optional
-  local rws_var="RESEND_WEBHOOK_SECRET_${ENV}"
-  local enc_var="CONTACT_DATA_ENCRYPTION_KEY_${ENV}"
-  [[ -n "${!rws_var}" ]] && set_secret "RESEND_WEBHOOK_SECRET_${ENV}"       "${!rws_var}"
-  [[ -n "${!enc_var}" ]] && set_secret "CONTACT_DATA_ENCRYPTION_KEY_${ENV}" "${!enc_var}"
+  # Optional — only set when the value is non-empty
+  for field in RESEND_WEBHOOK_SECRET CONTACT_DATA_ENCRYPTION_KEY; do
+    varname="${field}_${ENV}"
+    [[ -n "${!varname}" ]] && set_secret "$varname" "${!varname}"
+  done
 }
 
 [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && sync_env_secrets "staging"
