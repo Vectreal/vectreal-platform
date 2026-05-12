@@ -195,7 +195,12 @@ ok "All required variables present"
 # Hook secret format check
 check_hook_secret_format() {
   local val=$1 label=$2
-  [[ "$val" != v1,whsec_* ]] && warn "$label does not start with 'v1,whsec_' — Supabase may reject it"
+  # Accept both the full Supabase dashboard format ("v1,whsec_<b64>") and a
+  # plain base64 payload (already stripped). Reject obviously empty or
+  # whitespace-only values.
+  local stripped
+  stripped=$(printf '%s' "$val" | sed -e 's/^v1,whsec_//' -e 's/^whsec_//' | tr -d ' \r\n')
+  [[ -z "$stripped" ]] && warn "$label appears empty after stripping known prefixes"
 }
 
 [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && \
@@ -327,6 +332,15 @@ set_secret() {
     GCP_PROJECT_ID|GCP_PROJECT_ID_STAGING)
       value=$(printf '%s' "$value" | tr -d '\r\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
       ;;
+    # Strip the "v1,whsec_" or "whsec_" Supabase dashboard prefix before
+    # storing. Cloud Run env_vars uses comma as a KEY=VALUE delimiter, so a
+    # value containing "v1,whsec_..." is silently truncated to just "v1".
+    # The runtime verifier strips the prefix itself, so storing only the
+    # base64 payload is correct and safe. The full prefixed value is still
+    # sent to Supabase via sync_supabase_hook (called separately).
+    SEND_EMAIL_HOOK_SECRET|SEND_EMAIL_HOOK_SECRET_STAGING|SEND_EMAIL_HOOK_SECRET_PROD)
+      value=$(printf '%s' "$value" | tr -d '\r\n' | sed -e 's/^v1,whsec_//' -e 's/^whsec_//' | tr -d ' ')
+      ;;
   esac
 
   if [[ -z "$value" ]]; then
@@ -344,7 +358,7 @@ set_secret() {
       ;;
   esac
 
-  if printf '%s' "$value" | gh secret set "$name" --body - 2>/dev/null; then
+  if printf '%s' "$value" | gh secret set "$name" 2>/dev/null; then
     SECRETS_SET+=("$name")
     ok "$name"
   else
