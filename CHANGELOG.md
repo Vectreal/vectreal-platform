@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.20.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.19.0...workspace-v0.20.0) (2026-05-12)
+
+
+### Features
+
+* **email:** implement authentication email sending functionality ([#474](https://github.com/Vectreal/vectreal-platform/issues/474)) ([ea031f3](https://github.com/Vectreal/vectreal-platform/commit/ea031f30105892ee4db2bbe5357f5c4a9ba92334))
+
+
+### Bug Fixes
+
+* enable manual triggering for staging deployment workflow ([#480](https://github.com/Vectreal/vectreal-platform/issues/480)) ([e9714a6](https://github.com/Vectreal/vectreal-platform/commit/e9714a63bfda5a359cac76a550540bfc2eb4ffe8))
+* enhance GCP project ID handling in secrets verification ([#479](https://github.com/Vectreal/vectreal-platform/issues/479)) ([09fac11](https://github.com/Vectreal/vectreal-platform/commit/09fac119d68cccb50e53301049c0c88a954391fc))
+* enhance GCP project ID handling in setup script and documentation ([#481](https://github.com/Vectreal/vectreal-platform/issues/481)) ([50619c5](https://github.com/Vectreal/vectreal-platform/commit/50619c500d1d3e9fee6d14abaa6c4192494b893c))
+* improve environment variable handling in GitHub secrets sync script ([#478](https://github.com/Vectreal/vectreal-platform/issues/478)) ([32c2a8b](https://github.com/Vectreal/vectreal-platform/commit/32c2a8b325fd389c3a36d974104dce3a4c2a61fd))
+* resolve application URL for email confirmation links and update redirect logic ([#486](https://github.com/Vectreal/vectreal-platform/issues/486)) ([dd40fca](https://github.com/Vectreal/vectreal-platform/commit/dd40fca4ab28ae8414e183b3d8af12dae8c8cd16))
+
 ## [0.19.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.18.0...workspace-v0.19.0) (2026-05-10)
 
 
