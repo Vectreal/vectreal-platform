@@ -8,7 +8,8 @@ const SAFE_NEXT_PATH_PREFIXES = [
 	'/dashboard',
 	'/publisher',
 	'/onboarding',
-	'/home'
+	'/home',
+	'/reset-password'
 ]
 
 function getSafeNextPath(next: string | null): string {
@@ -46,10 +47,8 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 			token_hash
 		})
 		if (!error) {
-			// signup and magiclink types both represent first-time or direct auth flows
-			// that should land on onboarding so the user's org/project gets initialised.
-			const destination =
-				type === 'signup' || type === 'magiclink' ? '/onboarding' : next
+			// signup lands on onboarding so the user's org/project gets initialised.
+			const destination = type === 'signup' ? '/onboarding' : next
 			return redirect(destination, { headers })
 		}
 
