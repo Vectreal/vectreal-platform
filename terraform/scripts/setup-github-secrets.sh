@@ -344,7 +344,7 @@ set_secret() {
       ;;
   esac
 
-  if printf '%s' "$value" | gh secret set "$name" --body - 2>/dev/null; then
+  if printf '%s' "$value" | gh secret set "$name" 2>/dev/null; then
     SECRETS_SET+=("$name")
     ok "$name"
   else
