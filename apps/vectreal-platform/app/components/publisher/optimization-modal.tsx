@@ -295,7 +295,7 @@ const OptimizationDrawer: FC<OptimizationModalProps> = ({
 									<Accordion type="single" collapsible className="space-y-3">
 										<AccordionItem
 											value="advanced"
-											className="bg-shell-surface-soft rounded-2xl px-4 shadow-sm"
+											className="bg-shell-surface-soft/50 rounded-2xl px-4 shadow-sm"
 										>
 											<AccordionTrigger className="py-3">
 												<div className="flex items-center gap-2.5 text-left">

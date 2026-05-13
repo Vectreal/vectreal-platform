@@ -80,7 +80,7 @@ export function SimplificationSettings() {
 
 			<div
 				className={cn(
-					'bg-shell-surface-soft space-y-5 rounded-xl p-4 text-sm shadow-sm',
+					'bg-shell-surface-soft/50 space-y-5 rounded-xl p-4 text-sm shadow-sm',
 					!enabled && 'pointer-events-none opacity-50'
 				)}
 			>

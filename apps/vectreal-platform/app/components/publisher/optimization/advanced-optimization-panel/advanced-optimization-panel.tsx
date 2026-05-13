@@ -46,7 +46,7 @@ const AdvancedPanel: FC = () => {
 			<SimplificationSettings />
 			<TextureSettings />
 
-			<div className="bg-shell-surface-soft space-y-4 rounded-xl p-4 shadow-sm">
+			<div className="bg-shell-surface-soft/50 space-y-4 rounded-xl p-4 shadow-sm">
 				<SettingToggle
 					enabled={optimizations.quantize.enabled}
 					onToggle={(checked) => setEnabled(checked, 'quantize')}
