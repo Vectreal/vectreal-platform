@@ -118,7 +118,6 @@ const OptimizationDrawer: FC<OptimizationModalProps> = ({
 	const optimizeButtonMode = shouldShowCompletionActions
 		? 'optimize-more'
 		: 'apply'
-	const completionActionWidthClass = 'w-full sm:w-[18rem]'
 
 	return (
 		<DynamicSidebar
@@ -324,41 +323,36 @@ const OptimizationDrawer: FC<OptimizationModalProps> = ({
 				</div>
 
 				<div className="border-shell-border-soft bg-shell-surface shrink-0 border-t px-5 py-4">
-					<div className="flex flex-col gap-3">
+					<div className="flex flex-row justify-between gap-3">
 						{isInitialRequired && !isPending ? (
 							<Button type="button" variant="ghost" asChild>
 								<Link to={resolvedDashboardHref}>Back to Dashboard</Link>
 							</Button>
 						) : null}
 						{shouldShowCompletionActions ? (
-							<div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-								<div className={completionActionWidthClass}>
-									<OptimizeButton
-										onOptimize={runOptimization}
-										isPending={isPending}
-										mode={optimizeButtonMode}
-										hierarchy="secondary"
-										isPreparing={isOptimizerPreparing}
-										fixedBottom={false}
-									/>
-								</div>
+							<>
+								<OptimizeButton
+									onOptimize={runOptimization}
+									isPending={isPending}
+									mode={optimizeButtonMode}
+									isPreparing={isOptimizerPreparing}
+								/>
+
 								<Button
 									type="button"
-									className={completionActionWidthClass}
+									className="grow"
 									onClick={() => onOpenChange(false)}
 								>
 									Continue to Composition
 								</Button>
-							</div>
+							</>
 						) : (
 							<div className="w-full sm:w-[18rem]">
 								<OptimizeButton
 									onOptimize={runOptimization}
 									isPending={isPending}
 									mode={optimizeButtonMode}
-									hierarchy="primary"
 									isPreparing={isOptimizerPreparing}
-									fixedBottom={false}
 								/>
 							</div>
 						)}

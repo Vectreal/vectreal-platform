@@ -22,14 +22,14 @@ import {
 } from 'react'
 import { useFetcher } from 'react-router'
 
-import { useLocationChangeState } from '../../../hooks/use-location-change-state'
+import { useLocationChangeState } from '../../hooks/use-location-change-state'
 import {
 	currentLocationAtom,
 	saveLocationAtom,
 	sceneMetaAtom
-} from '../../../lib/stores/publisher-config-store'
+} from '../../lib/stores/publisher-config-store'
 
-import type { SceneLocationOptionsResponse } from '../../../types/api'
+import type { SceneLocationOptionsResponse } from '../../types/api'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -374,7 +374,7 @@ export function SceneNameAndLocation({
 		<div
 			ref={containerRef}
 			className={cn(
-				'bg-muted/50 min-w-0 grow overflow-hidden rounded-xl',
+				'bg-muted/50 min-w-0 grow overflow-hidden rounded-2xl',
 				className
 			)}
 		>
