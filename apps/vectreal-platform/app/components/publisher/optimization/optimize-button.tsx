@@ -98,7 +98,7 @@ export const OptimizeButton: FC<OptimizeButtonProps> = ({
 			<div
 				className={
 					fixedBottom
-						? 'bg-muted/50 fixed bottom-0 left-0 z-10 flex w-full shadow-2xl backdrop-blur-xl'
+						? 'bg-shell-overlay border-shell-border-soft fixed bottom-0 left-0 z-10 flex w-full border-t shadow-2xl backdrop-blur-2xl'
 						: 'flex w-full'
 				}
 			>

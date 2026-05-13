@@ -7,29 +7,38 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 import { Switch } from '@shared/components/ui/switch'
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger
-} from '@shared/components/ui/tooltip'
 import { cn } from '@shared/utils'
 import { useAtom } from 'jotai/react'
-import { Info } from 'lucide-react'
 
 import { optimizationAtom } from '../../../../lib/stores/scene-optimization-store'
-import { SettingSlider } from '../../settings-components'
+import { InfoTooltip } from '../../../info-tooltip'
+import { ToggleButtonGroup } from '../../settings-components'
 
+import type { ToggleButtonGroupOption } from '../../settings-components'
 import type { TextureOptimization } from '@vctrl/core'
 import type { FC } from 'react'
 
-const textureSize = [
-	{ value: 256, label: '256×256' },
-	{ value: 512, label: '512×512' },
-	{ value: 768, label: '768×768' },
-	{ value: 1024, label: '1024×1024' },
-	{ value: 2048, label: '2048×2048' }
+const TEXTURE_SIZE_OPTIONS: ToggleButtonGroupOption<number>[] = [
+	{ value: 256, label: '256' },
+	{ value: 512, label: '512' },
+	{ value: 768, label: '768' },
+	{ value: 1024, label: '1024' },
+	{ value: 2048, label: '2048' }
 ]
+
+const QUALITY_PRESETS: ToggleButtonGroupOption<number>[] = [
+	{ value: 68, label: 'Performance', subLabel: 'Faster loading' },
+	{ value: 80, label: 'Balanced', subLabel: 'Best default' },
+	{ value: 92, label: 'Max detail', subLabel: 'Highest fidelity' }
+]
+
+function getClosestQuality(current: number): number {
+	return QUALITY_PRESETS.reduce((closest, o) =>
+		Math.abs(o.value - current) < Math.abs(closest.value - current)
+			? o
+			: closest
+	).value
+}
 
 export const TextureSettings: FC = () => {
 	const [{ optimizations: plannedOptimizations }, setOptimization] =
@@ -59,19 +68,7 @@ export const TextureSettings: FC = () => {
 			<div className="mb-4 flex items-center justify-between px-2">
 				<div className="flex items-center gap-2">
 					<p className="text-lg font-medium">Texture Optimization</p>
-					<TooltipProvider>
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<Info className="text-muted-foreground h-4 w-4 cursor-help" />
-							</TooltipTrigger>
-							<TooltipContent className="max-w-80">
-								<p>
-									Resizes and compresses textures to reduce file size. Smaller
-									textures and higher compression will reduce visual quality.
-								</p>
-							</TooltipContent>
-						</Tooltip>
-					</TooltipProvider>
+					<InfoTooltip content="Resizes and compresses textures to reduce file size. Smaller textures and higher compression will reduce visual quality." />
 				</div>
 				<Switch
 					checked={enabled}
@@ -81,7 +78,7 @@ export const TextureSettings: FC = () => {
 
 			<div
 				className={cn(
-					'bg-muted/25 space-y-6 rounded-xl p-4 text-sm',
+					'bg-shell-surface-soft space-y-5 rounded-xl p-4 text-sm shadow-sm',
 					!enabled && 'pointer-events-none opacity-50'
 				)}
 			>
@@ -97,34 +94,33 @@ export const TextureSettings: FC = () => {
 							<SelectValue placeholder="Select texture size" />
 						</SelectTrigger>
 						<SelectContent>
-							{textureSize.map((option) => (
+							{TEXTURE_SIZE_OPTIONS.map((option) => (
 								<SelectItem key={option.value} value={option.value.toString()}>
-									{option.label}
+									{option.value}×{option.value}
 								</SelectItem>
 							))}
 						</SelectContent>
 					</Select>
 				</div>
 
-				<SettingSlider
-					id="quality-slider"
-					label="Quality"
-					sliderProps={{
-						value: quality,
-						min: 30,
-						max: 100,
-						step: 1,
-						onChange: (value) => setTexture({ quality: value })
-					}}
-					labelProps={{
-						low: 'Lower quality',
-						high: 'Higher quality'
-					}}
-					formatValue={(value) => `${value}%`}
-				/>
+				<div className="space-y-2">
+					<div className="flex items-center justify-between gap-3">
+						<Label className="text-sm font-semibold">Compression profile</Label>
+						<span className="text-accent text-xs font-medium">
+							{getClosestQuality(quality)}%
+						</span>
+					</div>
+					<ToggleButtonGroup
+						options={QUALITY_PRESETS}
+						isActive={(v) => getClosestQuality(quality) === v}
+						onChange={(v) => setTexture({ quality: v })}
+					/>
+				</div>
 
 				<div className="space-y-3">
-					<Label htmlFor="texture-size">Texture format</Label>
+					<Label htmlFor="texture-format" className="text-sm font-semibold">
+						Texture format
+					</Label>
 					<Select
 						value={targetFormat}
 						onValueChange={(value) =>
@@ -135,9 +131,9 @@ export const TextureSettings: FC = () => {
 							<SelectValue placeholder="Select texture format" />
 						</SelectTrigger>
 						<SelectContent>
-							{['png', 'jpg', 'webp'].map((format) => (
+							{(['png', 'jpeg', 'webp'] as const).map((format) => (
 								<SelectItem key={format} value={format}>
-									{format.toUpperCase()}
+									{format === 'jpeg' ? 'JPG' : format.toUpperCase()}
 								</SelectItem>
 							))}
 						</SelectContent>

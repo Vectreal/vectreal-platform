@@ -10,7 +10,13 @@ import { Progress } from '@shared/components/ui/progress'
 import { cn } from '@shared/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
-import { CheckCircle2, Circle, Sparkles, SlidersHorizontal } from 'lucide-react'
+import {
+	CheckCircle2,
+	Circle,
+	Sparkles,
+	SlidersHorizontal,
+	X
+} from 'lucide-react'
 import { useEffect, useMemo, type FC } from 'react'
 import { Link } from 'react-router'
 
@@ -132,24 +138,38 @@ const OptimizationDrawer: FC<OptimizationModalProps> = ({
 			showMobileHeader={false}
 			className="w-[min(34rem,calc(100vw-1rem))]"
 		>
-			<div className="bg-background flex min-h-0 flex-1 flex-col">
-				<div className="shrink-0 border-b px-6 pt-5 pb-4 text-left">
-					<motion.div
-						initial={{ opacity: 0, y: 10 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.2 }}
-						className="flex flex-col gap-0.5"
-					>
-						<div className="flex items-center gap-2">
-							<h2 className="text-base font-semibold">Optimize Scene</h2>
-							{!isPending && (
-								<span className="text-muted-foreground rounded border px-2 py-0.5 text-[11px]">
-									{optimizationPreset}
-								</span>
-							)}
-						</div>
-						<p className="text-muted-foreground text-xs">{drawerDescription}</p>
-					</motion.div>
+			<div className="bg-shell-surface flex min-h-0 flex-1 flex-col">
+				<div className="border-shell-border-soft shrink-0 border-b px-5 py-4">
+					<div className="flex items-start justify-between gap-2">
+						<motion.div
+							initial={{ opacity: 0, y: 10 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.2 }}
+							className="flex flex-col gap-0.5"
+						>
+							<div className="flex items-center gap-2">
+								<h2 className="text-base font-semibold">Optimize Scene</h2>
+								{!isPending && (
+									<span className="bg-shell-surface-soft text-muted-foreground rounded-lg px-2 py-0.5 text-[11px]">
+										{optimizationPreset}
+									</span>
+								)}
+							</div>
+							<p className="text-muted-foreground text-xs">
+								{drawerDescription}
+							</p>
+						</motion.div>
+						{!isBlockingClose && (
+							<Button
+								variant="ghost"
+								size="icon"
+								className="publisher-shell-focus shrink-0"
+								onClick={() => onOpenChange(false)}
+							>
+								<X className="h-4 w-4" />
+							</Button>
+						)}
+					</div>
 				</div>
 
 				<div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
@@ -242,7 +262,7 @@ const OptimizationDrawer: FC<OptimizationModalProps> = ({
 								animate={{ opacity: 1 }}
 								exit={{ opacity: 0 }}
 								transition={{ duration: 0.2 }}
-								className="space-y-4 px-6 py-5"
+								className="space-y-3 px-5 py-4"
 							>
 								<motion.section
 									initial={{ opacity: 0, y: 6 }}
@@ -257,7 +277,7 @@ const OptimizationDrawer: FC<OptimizationModalProps> = ({
 										initial={{ opacity: 0, y: 6 }}
 										animate={{ opacity: 1, y: 0 }}
 										transition={{ duration: 0.2, delay: 0.06 }}
-										className="bg-muted/30 rounded-xl border px-4 py-3"
+										className="publisher-shell-nested px-4 py-3"
 									>
 										<div className="text-muted-foreground mb-2 flex items-center justify-between text-xs tracking-wide uppercase">
 											<span>Guest optimization quota</span>
@@ -275,7 +295,7 @@ const OptimizationDrawer: FC<OptimizationModalProps> = ({
 									<Accordion type="single" collapsible className="space-y-3">
 										<AccordionItem
 											value="advanced"
-											className="rounded-2xl border px-4"
+											className="bg-shell-surface-soft rounded-2xl px-4 shadow-sm"
 										>
 											<AccordionTrigger className="py-3">
 												<div className="flex items-center gap-2.5 text-left">
@@ -303,7 +323,7 @@ const OptimizationDrawer: FC<OptimizationModalProps> = ({
 					</AnimatePresence>
 				</div>
 
-				<div className="bg-background shrink-0 border-t px-6 py-4">
+				<div className="border-shell-border-soft bg-shell-surface shrink-0 border-t px-5 py-4">
 					<div className="flex flex-col gap-3">
 						{isInitialRequired && !isPending ? (
 							<Button type="button" variant="ghost" asChild>
@@ -331,27 +351,16 @@ const OptimizationDrawer: FC<OptimizationModalProps> = ({
 								</Button>
 							</div>
 						) : (
-							<>
-								{!isBlockingClose && (
-									<Button
-										type="button"
-										variant="outline"
-										onClick={() => onOpenChange(false)}
-									>
-										Close
-									</Button>
-								)}
-								<div className="w-full sm:w-[18rem]">
-									<OptimizeButton
-										onOptimize={runOptimization}
-										isPending={isPending}
-										mode={optimizeButtonMode}
-										hierarchy="primary"
-										isPreparing={isOptimizerPreparing}
-										fixedBottom={false}
-									/>
-								</div>
-							</>
+							<div className="w-full sm:w-[18rem]">
+								<OptimizeButton
+									onOptimize={runOptimization}
+									isPending={isPending}
+									mode={optimizeButtonMode}
+									hierarchy="primary"
+									isPreparing={isOptimizerPreparing}
+									fixedBottom={false}
+								/>
+							</div>
 						)}
 					</div>
 				</div>

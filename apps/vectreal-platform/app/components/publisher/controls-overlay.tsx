@@ -241,18 +241,18 @@ const OverlayControls = ({
 			<div className="fixed top-0 left-1/2 z-30 hidden w-[min(30rem,calc(100vw-22rem))] -translate-x-1/2 px-4 pt-3 md:block">
 				<SceneNameAndLocation
 					authenticated={!!user}
-					className="border-border/60 bg-muted/60 rounded-2xl border px-1 shadow-2xl backdrop-blur-2xl"
+					className="publisher-shell-floating px-1"
 				/>
 			</div>
 
 			<div className="fixed inset-x-0 top-0 z-30 px-4 pt-[4.25rem] md:hidden">
 				<SceneNameAndLocation
 					authenticated={!!user}
-					className="border-border/60 bg-muted/60 rounded-2xl border px-1 shadow-2xl backdrop-blur-2xl"
+					className="publisher-shell-floating px-1"
 				/>
 			</div>
 
-			<FloatingPillWrapper className="bg-muted/50 fixed top-0 right-0 z-20 m-4 hidden rounded-2xl p-1 backdrop-blur-2xl md:flex">
+			<FloatingPillWrapper className="fixed top-0 right-0 z-20 m-4 hidden p-1 md:flex">
 				<ButtonGroup className="items-center">
 					<SaveButton
 						sceneId={sceneId}
@@ -267,7 +267,7 @@ const OverlayControls = ({
 					<>
 						<Separator
 							orientation="vertical"
-							className="bg-muted-foreground/50 h-4"
+							className="bg-shell-border-strong h-4"
 						/>
 						<span className="mx-1 mr-3 flex items-center">
 							<p className="text-muted-foreground mx-2 text-xs font-medium tracking-wide">
@@ -292,7 +292,7 @@ const OverlayControls = ({
 				)}
 			</FloatingPillWrapper>
 
-			<FloatingPillWrapper className="bg-muted/50 fixed top-0 right-0 z-50 m-4 flex rounded-2xl p-1 backdrop-blur-2xl md:hidden">
+			<FloatingPillWrapper className="fixed top-0 right-0 z-50 m-4 flex p-1 md:hidden">
 				<ButtonGroup className="items-center gap-1">
 					<SaveButton
 						sceneId={sceneId}

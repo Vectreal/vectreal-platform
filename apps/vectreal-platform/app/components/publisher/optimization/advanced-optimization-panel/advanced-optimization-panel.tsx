@@ -42,11 +42,11 @@ const AdvancedPanel: FC = () => {
 	}
 
 	return (
-		<div className="mx-auto w-full max-w-3xl space-y-6">
+		<div className="mx-auto w-full max-w-3xl space-y-5">
 			<SimplificationSettings />
 			<TextureSettings />
 
-			<div className="space-y-6">
+			<div className="bg-shell-surface-soft space-y-4 rounded-xl p-4 shadow-sm">
 				<SettingToggle
 					enabled={optimizations.quantize.enabled}
 					onToggle={(checked) => setEnabled(checked, 'quantize')}
