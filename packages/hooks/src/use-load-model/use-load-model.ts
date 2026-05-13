@@ -22,6 +22,7 @@ import eventSystem from './event-system'
 import reducer, { initialState } from './state'
 import {
 	Action,
+	StructuredLoadError,
 	InputFileOrDirectory,
 	ModelFile,
 	SceneDataLoadOptions,
@@ -46,6 +47,83 @@ import type {
 	ServerSceneData,
 	ServerScenePayload
 } from '@vctrl/core'
+
+const createStructuredLoadError = ({
+	code,
+	message,
+	recoverable,
+	source,
+	cause,
+	context
+}: StructuredLoadError): StructuredLoadError => ({
+	code,
+	message,
+	recoverable,
+	source,
+	cause,
+	context
+})
+
+const toErrorMessage = (error: unknown): string => {
+	if (error instanceof Error && error.message) {
+		return error.message
+	}
+
+	if (typeof error === 'string' && error.trim().length > 0) {
+		return error
+	}
+
+	return 'Unknown error'
+}
+
+const normalizeLocalLoadError = (
+	error: unknown,
+	code: StructuredLoadError['code'],
+	context?: Record<string, unknown>
+): StructuredLoadError => {
+	const message = toErrorMessage(error)
+	const derivedCode =
+		message.includes('missing required referenced assets')
+			? 'missing_assets'
+			: code
+
+	return createStructuredLoadError({
+		code: derivedCode,
+		message,
+		recoverable: true,
+		source: 'local-upload',
+		cause: error,
+		context
+	})
+}
+
+const normalizeServerLoadError = (
+	error: unknown,
+	sceneId: string
+): StructuredLoadError => {
+	const message = toErrorMessage(error)
+
+	let code: StructuredLoadError['code'] = 'server_load_failed'
+	if (message.includes('Server responded with 404')) {
+		code = 'not_found'
+	} else if (
+		message.includes('Server responded with 402') ||
+		message.includes('Server responded with 403')
+	) {
+		code = 'quota_exceeded'
+	}
+
+	return createStructuredLoadError({
+		code,
+		message,
+		recoverable: code !== 'not_found',
+		source: 'server-load',
+		cause: error,
+		context: {
+			sceneId
+		}
+	})
+}
 
 const safeNormalizeAssetUri = (value: string): string => {
 	try {
@@ -271,7 +349,14 @@ function useLoadModel<
 			} catch (error) {
 				console.error('Error loading binary model:', error)
 				dispatch({ type: 'set-file-loading', payload: false })
-				eventSystem.emit('load-error', error)
+				eventSystem.emit(
+					'load-error',
+					normalizeLocalLoadError(error, 'binary_load_failed', {
+						fileName: file.name,
+						fileType,
+						fileSize: file.size
+					})
+				)
 			}
 		},
 		[modelLoader, optimizer]
@@ -333,7 +418,14 @@ function useLoadModel<
 					otherFiles.map((f) => f.name)
 				)
 				dispatch({ type: 'set-file-loading', payload: false })
-				eventSystem.emit('load-error', error)
+				eventSystem.emit(
+					'load-error',
+					normalizeLocalLoadError(error, 'gltf_load_failed', {
+						fileName: gltfFile.name,
+						fileSize: gltfFile.size,
+						assetCount: otherFiles.length
+					})
+				)
 			}
 		},
 		[modelLoader, optimizer]
@@ -537,7 +629,7 @@ function useLoadModel<
 				dispatch({ type: 'set-file-loading', payload: false })
 
 				// Emit error event
-				eventSystem.emit('server-load-error', error)
+				eventSystem.emit('server-load-error', normalizeServerLoadError(error, sceneId))
 
 				// Re-throw for caller to handle
 				throw error

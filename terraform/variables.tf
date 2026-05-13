@@ -136,7 +136,13 @@ variable "manage_cloud_run_services" {
 }
 
 variable "create_service_account_keys" {
-  description = "Whether Terraform should create long-lived service account keys and write them to local files. Prefer workload identity federation and keep this disabled unless strictly required."
+  description = "Whether Terraform should create long-lived deployer service account keys (production + staging) and write them to local files. Prefer workload identity federation and keep this disabled unless strictly required."
+  type        = bool
+  default     = false
+}
+
+variable "create_local_dev_storage_key" {
+  description = "Whether Terraform should create a local development storage service account key at credentials/google-storage-local-dev-sa.json."
   type        = bool
   default     = false
 }

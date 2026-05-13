@@ -61,6 +61,7 @@ import { buildFullscreenPreviewPath } from '../../../lib/domain/embed/embed-snip
 import { getProject } from '../../../lib/domain/project/project-repository.server'
 import { loadSceneFromApi } from '../../../lib/domain/scene/client/load-scene-from-api.client'
 import { buildSceneAggregate } from '../../../lib/domain/scene/server/scene-aggregate.server'
+import { getDashboardSceneLoadErrorMessage } from '../../../lib/domain/scene/scene-load-error-messages'
 import {
 	getScene,
 	getSceneFolderAncestry
@@ -70,10 +71,7 @@ import { shouldRevalidateForRouteParams } from '../../../lib/navigation/dashboar
 import { deleteDialogAtom } from '../../../lib/stores/dashboard-management-store'
 import { toViewerLoadingThumbnail } from '../../../lib/viewer/viewer-loading-thumbnail'
 
-import type {
-	SceneAggregateResponse,
-	SerializedSceneAssetDataMap
-} from '../../../types/api'
+import type { SceneAggregateResponse, SerializedSceneAssetDataMap } from '../../../types/api'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 const MAX_PRELOADED_SCENE_ASSET_BYTES = 1_500_000
@@ -363,6 +361,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 
 	const [isLoadingScene, setIsLoadingScene] = useState(false)
 	const [sceneData, setSceneData] = useState<SceneLoadResult>()
+	const [sceneLoadError, setSceneLoadError] = useState<string | null>(null)
 	const [sceneState, setSceneState] = useState(scene)
 
 	const [sceneNameDraft, setSceneNameDraft] = useState(scene.name)
@@ -512,6 +511,11 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		navigate(`/publisher/${sceneState.id}`)
 	}, [navigate, sceneState.id])
 
+	const retrySceneLoad = useCallback(() => {
+		setSceneLoadError(null)
+		setSceneData(undefined)
+	}, [])
+
 	useEffect(() => {
 		if (!sceneId || sceneData?.sceneId === sceneId) {
 			return
@@ -522,6 +526,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		const loadSceneSettings = async () => {
 			try {
 				setIsLoadingScene(true)
+				setSceneLoadError(null)
 
 				const loadedSceneData = await loadSceneFromApi({
 					sceneId,
@@ -537,6 +542,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 			} catch (error) {
 				console.error('Failed to load scene:', error)
 				if (!cancelled) {
+					setSceneLoadError(getDashboardSceneLoadErrorMessage(error))
 					setIsLoadingScene(false)
 				}
 			}
@@ -560,6 +566,20 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		<div className="h-[calc(100dvh-5rem)] overflow-hidden px-5 pt-1 pb-5 xl:px-6">
 			<div className="grid h-full min-h-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
 				<main className="flex min-h-0 flex-col gap-4">
+					{sceneLoadError && !file?.model ? (
+						<section className="bg-muted/30 border-border space-y-3 rounded-2xl border p-5">
+							<h2 className="text-base font-semibold">Unable to Load Scene</h2>
+							<p className="text-muted-foreground text-sm">{sceneLoadError}</p>
+							<div className="flex flex-wrap gap-2">
+								<Button type="button" onClick={retrySceneLoad}>
+									Retry
+								</Button>
+								<Button type="button" variant="outline" onClick={openPublisherForPublishing}>
+									Open in Publisher
+								</Button>
+							</div>
+						</section>
+					) : null}
 					<section className="relative min-h-64 flex-1 overflow-hidden rounded-2xl bg-black/2">
 						<PreviewModel
 							file={file}

@@ -9,6 +9,12 @@ const VALID_DEPLOYED_ENVIRONMENTS = ['staging', 'production'] as const
 type DeployedEnvironment = (typeof VALID_DEPLOYED_ENVIRONMENTS)[number]
 type RuntimeEnvironment = 'local' | DeployedEnvironment
 
+const LOCAL_SETUP_INSTRUCTIONS = [
+	'Run `pnpm nx run terraform:bootstrap-local-gcs` from the repository root.',
+	'Or run `cd terraform && ./scripts/bootstrap-local-gcs.sh` directly.',
+	'Ensure .env.development sets GOOGLE_CLOUD_STORAGE_CREDENTIALS_DIR=credentials, GOOGLE_CLOUD_STORAGE_CREDENTIALS_FILE=google-storage-local-dev-sa.json, GOOGLE_CLOUD_PROJECT=vectreal-platform and GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET=vectreal-private-bucket-dev.'
+].join(' ')
+
 function getRequiredEnv(name: string): string {
 	const value = process.env[name]?.trim()
 
@@ -74,7 +80,7 @@ function resolveLocalCredentialsPath(): string {
 
 	if (candidates.length === 0) {
 		throw new Error(
-			'Missing local credentials configuration: set GOOGLE_CLOUD_STORAGE_CREDENTIALS_FILE (recommended) or GOOGLE_APPLICATION_CREDENTIALS'
+			`Missing local credentials configuration: set GOOGLE_CLOUD_STORAGE_CREDENTIALS_FILE (recommended) or GOOGLE_APPLICATION_CREDENTIALS. ${LOCAL_SETUP_INSTRUCTIONS}`
 		)
 	}
 
@@ -85,8 +91,28 @@ function resolveLocalCredentialsPath(): string {
 	}
 
 	throw new Error(
-		`Missing local Google Cloud credentials file. Checked: ${[...new Set(candidates)].join(', ')}`
+		`Missing local Google Cloud credentials file. Checked: ${[...new Set(candidates)].join(', ')}. ${LOCAL_SETUP_INSTRUCTIONS}`
 	)
+}
+
+export function validateLocalGoogleCloudStorageConfiguration() {
+	const runtimeEnvironment = getRuntimeEnvironment()
+
+	if (runtimeEnvironment !== 'local') {
+		return
+	}
+
+	resolveLocalCredentialsPath()
+	getRequiredEnv('GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET')
+
+	if (
+		process.env.GOOGLE_CLOUD_PROJECT?.trim() &&
+		process.env.GOOGLE_CLOUD_PROJECT !== REQUIRED_PROJECT_ID
+	) {
+		throw new Error(
+			`GOOGLE_CLOUD_PROJECT must be ${REQUIRED_PROJECT_ID}, received: ${process.env.GOOGLE_CLOUD_PROJECT}`
+		)
+	}
 }
 
 function getRuntimeEnvironment() {

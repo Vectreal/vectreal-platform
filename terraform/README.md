@@ -26,8 +26,7 @@ This approach eliminates circular dependencies and reduces infrastructure comple
 **Step 1: Apply Infrastructure**
 
 ```bash
-cd terraform
-./scripts/apply-infrastructure.sh
+pnpm nx run terraform:apply-infrastructure
 ```
 
 This script will:
@@ -41,7 +40,7 @@ This script will:
 **Step 2: Configure GitHub Secrets**
 
 ```bash
-./scripts/setup-github-secrets.sh
+pnpm nx run terraform:setup-github-secrets
 ```
 
 This script will:
@@ -151,6 +150,12 @@ GitHub Actions deploys new revisions by updating image and runtime env vars on t
 
 For secure CI authentication, prefer GitHub OIDC workload identity federation. Keep long-lived key generation disabled (`create_service_account_keys = false`) unless you explicitly need a bootstrap-only exception.
 
+For local upload/download flows, bootstrap only the local development storage key:
+
+```bash
+pnpm nx run terraform:bootstrap-local-gcs
+```
+
 ## Required GitHub Secrets
 
 Set these via the setup script or manually:
@@ -206,6 +211,7 @@ github_org = "your-github-org"
 # production_private_bucket_name = "vectreal-private-bucket"
 # staging_private_bucket_name    = "vectreal-private-bucket-staging"
 # local_dev_private_bucket_name  = "vectreal-private-bucket-dev"
+# create_local_dev_storage_key   = false
 
 # Optional: Bootstrap mode where GitHub Actions creates Cloud Run services
 # manage_cloud_run_services = false  # default is true
@@ -303,7 +309,7 @@ terraform state list                # List all resources
 ### Update Secrets
 
 1. Edit `.env.development`
-2. Run: `./scripts/setup-github-secrets.sh`
+2. Run: `pnpm nx run terraform:setup-github-secrets`
 3. Or manually: `gh secret set SECRET_NAME --body "new-value"`
 4. Redeploy: `git push origin main`
 
