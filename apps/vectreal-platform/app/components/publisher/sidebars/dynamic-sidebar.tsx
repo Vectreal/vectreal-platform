@@ -35,6 +35,10 @@ const rightVariants: Variants = {
 export interface DynamicSidebarProps {
 	open: boolean
 	onOpenChange: (open: boolean) => void
+	/** Tailwind z-index class applied to the fixed desktop container. */
+	zIndexClassName?: string
+	/** When true, all close affordances are hidden/disabled. */
+	closeDisabled?: boolean
 	/** When true, renders a vaul Drawer (bottom sheet) instead of the fixed desktop panel. */
 	isMobile: boolean
 	/** Which edge the panel slides from. Defaults to 'left'. */
@@ -42,6 +46,8 @@ export interface DynamicSidebarProps {
 	/** Used as DrawerTitle on mobile (required for accessibility). Also shown when showDesktopHeader is true. */
 	title: string
 	description?: string
+	/** Whether to render the built-in mobile drawer header. */
+	showMobileHeader?: boolean
 	/**
 	 * When true, the desktop panel renders a built-in header bar with title, description,
 	 * and a close button. Use for sidebars that don't supply their own header inside children
@@ -63,6 +69,9 @@ export const DynamicSidebar = ({
 	direction = 'left',
 	title,
 	description,
+	closeDisabled = false,
+	zIndexClassName = 'z-40',
+	showMobileHeader = true,
 	showDesktopHeader = false,
 	children,
 	className
@@ -74,7 +83,11 @@ export const DynamicSidebar = ({
 		return (
 			<Drawer
 				open={open}
+				dismissible={!closeDisabled}
 				onOpenChange={(next) => {
+					if (!next && closeDisabled) {
+						return
+					}
 					if (next) {
 						// Blur the triggering element before the drawer opens. Vaul sets
 						// aria-hidden on the rest of the page synchronously; if a button
@@ -101,21 +114,25 @@ export const DynamicSidebar = ({
 						first?.focus()
 					}}
 				>
-					<DrawerHeader className="shrink-0 border-b pb-3">
-						<div className="flex items-start justify-between gap-2">
-							<div>
-								<DrawerTitle>{title}</DrawerTitle>
-								{description && (
-									<DrawerDescription>{description}</DrawerDescription>
+					{showMobileHeader && (
+						<DrawerHeader className="shrink-0 border-b pb-3">
+							<div className="flex items-start justify-between gap-2">
+								<div>
+									<DrawerTitle>{title}</DrawerTitle>
+									{description && (
+										<DrawerDescription>{description}</DrawerDescription>
+									)}
+								</div>
+								{!closeDisabled && (
+									<DrawerClose asChild>
+										<Button variant="ghost" size="icon" className="shrink-0">
+											<X className="h-4 w-4" />
+										</Button>
+									</DrawerClose>
 								)}
 							</div>
-							<DrawerClose asChild>
-								<Button variant="ghost" size="icon" className="shrink-0">
-									<X className="h-4 w-4" />
-								</Button>
-							</DrawerClose>
-						</div>
-					</DrawerHeader>
+						</DrawerHeader>
+					)}
 
 					<div className="flex min-h-0 flex-1 flex-col">{children}</div>
 				</DrawerContent>
@@ -129,7 +146,7 @@ export const DynamicSidebar = ({
 
 	return (
 		<div
-			className={cn('fixed top-0 z-30 h-full p-4', positionClass, {
+			className={cn('fixed top-0 h-full p-4', zIndexClassName, positionClass, {
 				'px-0': !open
 			})}
 		>
@@ -157,14 +174,16 @@ export const DynamicSidebar = ({
 										</p>
 									)}
 								</div>
-								<Button
-									variant="ghost"
-									size="icon"
-									className="shrink-0"
-									onClick={handleClose}
-								>
-									<X className="h-4 w-4" />
-								</Button>
+								{!closeDisabled && (
+									<Button
+										variant="ghost"
+										size="icon"
+										className="shrink-0"
+										onClick={handleClose}
+									>
+										<X className="h-4 w-4" />
+									</Button>
+								)}
 							</div>
 						)}
 

@@ -83,7 +83,7 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 		sceneId,
 		projectId,
 		userId,
-		onOpenOptimizationModal,
+		onOpenOptimizationDrawer,
 		canReoptimize,
 		viewModel,
 		saveAvailability,
@@ -303,7 +303,7 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 							size="sm"
 							variant="secondary"
 							className="w-full"
-							onClick={() => onOpenOptimizationModal?.()}
+							onClick={() => onOpenOptimizationDrawer?.()}
 						>
 							<Sparkles size={14} className="mr-2" />
 							Re-optimize Scene

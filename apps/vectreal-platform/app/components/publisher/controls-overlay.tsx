@@ -15,9 +15,9 @@ import {
 	SceneInfoTrigger,
 	ToolSidebar
 } from '.'
-import OptimizationModal from './optimization-modal'
+import OptimizationDrawer from './optimization-drawer'
 import { usePublisherViewerCapture } from './publisher-viewer-capture-context'
-import { useOptimizationModalFlow, useSceneLoader } from '../../hooks'
+import { useOptimizationDrawerFlow, useSceneLoader } from '../../hooks'
 import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import { useLocationChangeState } from '../../hooks/use-location-change-state'
@@ -82,11 +82,11 @@ const OverlayControls = ({
 	const {
 		effectiveSaveAvailability,
 		isInitialOptimizationRequired,
-		isOptimizationModalOpen,
-		handleOptimizationModalChange,
-		handleOpenOptimizationModal,
-		openReoptimizeModal
-	} = useOptimizationModalFlow({
+		isOptimizationDrawerOpen,
+		handleOptimizationDrawerChange,
+		handleOpenOptimizationDrawer,
+		openReoptimizeDrawer
+	} = useOptimizationDrawerFlow({
 		saveAvailability,
 		hasUnsavedLocationChange
 	})
@@ -179,7 +179,7 @@ const OverlayControls = ({
 			saveSceneSettings,
 			saveAvailability: effectiveSaveAvailability,
 			viewModel: publishSidebarViewModel,
-			onOpenOptimizationModal: openReoptimizeModal,
+			onOpenOptimizationDrawer: openReoptimizeDrawer,
 			canReoptimize: Boolean(sceneId)
 		}),
 		[
@@ -190,7 +190,7 @@ const OverlayControls = ({
 			saveSceneSettings,
 			effectiveSaveAvailability,
 			publishSidebarViewModel,
-			openReoptimizeModal
+			openReoptimizeDrawer
 		]
 	)
 
@@ -317,6 +317,7 @@ const OverlayControls = ({
 			<DynamicSidebar
 				open={showPublishPanel}
 				onOpenChange={handlePublishPanelChange}
+				zIndexClassName="z-[70]"
 				isMobile={isMobile}
 				direction="right"
 				title="Scene Info & Publish"
@@ -327,19 +328,20 @@ const OverlayControls = ({
 					<PublishSidebarContent hideHeader showSceneInfo />
 				</PublishSidebarProvider>
 			</DynamicSidebar>
-			<OptimizationModal
-				open={isOptimizationModalOpen}
-				onOpenChange={handleOptimizationModalChange}
+			<OptimizationDrawer
+				open={isOptimizationDrawerOpen}
+				onOpenChange={handleOptimizationDrawerChange}
 				userId={user?.id}
 				isInitialRequired={isInitialOptimizationRequired}
 				dashboardHref={sceneDetailsHref ?? '/dashboard'}
+				isMobile={isMobile}
 			/>
 			<ToolSidebar user={user} isMobile={isMobile} />
 			<InfoBanner
 				sceneBytes={currentSceneBytes}
 				isLoading={isSceneSizeLoading}
 				statusText={optimizerStatusText}
-				onOpenOptimization={handleOpenOptimizationModal}
+				onOpenOptimization={handleOpenOptimizationDrawer}
 			/>
 		</>
 	)

@@ -5,14 +5,6 @@ import {
 	AccordionTrigger
 } from '@shared/components/ui/accordion'
 import { Button } from '@shared/components/ui/button'
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle
-} from '@shared/components/ui/dialog'
 import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { Progress } from '@shared/components/ui/progress'
 import { cn } from '@shared/utils'
@@ -26,6 +18,7 @@ import { AdvancedPanel } from './optimization/advanced-optimization-panel'
 import BasicOptimizationPanel from './optimization/basic-optimization-panel'
 import { OptimizeButton } from './optimization/optimize-button'
 import { useOptimizationProcess } from './optimization/use-optimization-process'
+import { DynamicSidebar } from './sidebars/dynamic-sidebar'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import {
 	optimizationAtom,
@@ -38,14 +31,16 @@ interface OptimizationModalProps {
 	userId?: string
 	isInitialRequired: boolean
 	dashboardHref?: string
+	isMobile: boolean
 }
 
-const OptimizationModal: FC<OptimizationModalProps> = ({
+const OptimizationDrawer: FC<OptimizationModalProps> = ({
 	open,
 	onOpenChange,
 	userId,
 	isInitialRequired,
-	dashboardHref
+	dashboardHref,
+	isMobile
 }) => {
 	const { optimizationPreset } = useAtomValue(optimizationAtom)
 	const { isPending } = useAtomValue(optimizationRuntimeAtom)
@@ -86,7 +81,7 @@ const OptimizationModal: FC<OptimizationModalProps> = ({
 		}
 	}, [open, isPending])
 
-	const modalDescription = useMemo(() => {
+	const drawerDescription = useMemo(() => {
 		if (isPending) {
 			return 'Applying optimization. Please keep this open until it completes.'
 		}
@@ -113,7 +108,7 @@ const OptimizationModal: FC<OptimizationModalProps> = ({
 			: 0
 
 	return (
-		<Dialog
+		<DynamicSidebar
 			open={open}
 			onOpenChange={(nextOpen) => {
 				if (!nextOpen && isBlockingClose) {
@@ -121,222 +116,204 @@ const OptimizationModal: FC<OptimizationModalProps> = ({
 				}
 				onOpenChange(nextOpen)
 			}}
+			zIndexClassName="z-[70]"
+			closeDisabled={isBlockingClose}
+			isMobile={isMobile}
+			direction="left"
+			title="Optimize Scene"
+			description={drawerDescription}
+			showMobileHeader={false}
+			className="w-[min(34rem,calc(100vw-1rem))]"
 		>
-			<DialogContent
-				className="flex max-h-[min(88svh,52rem)] flex-col overflow-hidden border-0 p-0 md:max-w-3xl"
-				showCloseButton={!isBlockingClose}
-				onEscapeKeyDown={(event) => {
-					if (isBlockingClose) {
-						event.preventDefault()
-					}
-				}}
-				onInteractOutside={(event) => {
-					if (isBlockingClose) {
-						event.preventDefault()
-					}
-				}}
-			>
-				<div className="bg-background flex min-h-0 flex-1 flex-col">
-					{/* Compact header */}
-					<DialogHeader className="shrink-0 border-b px-6 pt-5 pb-4 text-left">
-						<motion.div
-							initial={{ opacity: 0, y: 10 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.2 }}
-							className="flex flex-col gap-0.5"
-						>
-							<div className="flex items-center gap-2">
-								<Sparkles className="text-muted-foreground h-4 w-4" />
-								<DialogTitle className="text-base">Optimize Scene</DialogTitle>
-								{!isPending && (
-									<span className="text-muted-foreground rounded border px-2 py-0.5 text-[11px]">
-										{optimizationPreset}
-									</span>
-								)}
-							</div>
-							<DialogDescription className="text-xs">
-								{modalDescription}
-							</DialogDescription>
-						</motion.div>
-					</DialogHeader>
+			<div className="bg-background flex min-h-0 flex-1 flex-col">
+				<div className="shrink-0 border-b px-6 pt-5 pb-4 text-left">
+					<motion.div
+						initial={{ opacity: 0, y: 10 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.2 }}
+						className="flex flex-col gap-0.5"
+					>
+						<div className="flex items-center gap-2">
+							<h2 className="text-base font-semibold">Optimize Scene</h2>
+							{!isPending && (
+								<span className="text-muted-foreground rounded border px-2 py-0.5 text-[11px]">
+									{optimizationPreset}
+								</span>
+							)}
+						</div>
+						<p className="text-muted-foreground text-xs">{drawerDescription}</p>
+					</motion.div>
+				</div>
 
-					{/* Main scrollable content */}
-					<div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
-						<AnimatePresence mode="wait">
-							{isPending ? (
-								/* ── Processing state ── */
-								<motion.div
-									key="processing"
-									initial={{ opacity: 0, y: 8 }}
-									animate={{ opacity: 1, y: 0 }}
-									exit={{ opacity: 0, y: -8 }}
-									transition={{ duration: 0.25 }}
-									className="flex flex-col items-center px-6 py-10"
-								>
-									{/* Animated icon */}
-									<div className="mb-6 flex flex-col items-center gap-3 text-center">
-										<div className="relative flex h-16 w-16 items-center justify-center">
-											<div
-												className="bg-primary/10 absolute inset-0 animate-ping rounded-full"
-												style={{ animationDuration: '2s' }}
-											/>
-											<div
-												className="bg-primary/15 absolute inset-2 animate-ping rounded-full"
-												style={{
-													animationDuration: '2s',
-													animationDelay: '0.4s'
-												}}
-											/>
-											<div className="border-primary/20 bg-primary/10 relative flex h-10 w-10 items-center justify-center rounded-full border">
-												<Sparkles className="text-primary h-5 w-5" />
-											</div>
+				<div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
+					<AnimatePresence mode="wait">
+						{isPending ? (
+							<motion.div
+								key="processing"
+								initial={{ opacity: 0, y: 8 }}
+								animate={{ opacity: 1, y: 0 }}
+								exit={{ opacity: 0, y: -8 }}
+								transition={{ duration: 0.25 }}
+								className="flex flex-col items-center px-6 py-10"
+							>
+								<div className="mb-6 flex flex-col items-center gap-3 text-center">
+									<div className="relative flex h-16 w-16 items-center justify-center">
+										<div
+											className="bg-primary/10 absolute inset-0 animate-ping rounded-full"
+											style={{ animationDuration: '2s' }}
+										/>
+										<div
+											className="bg-primary/15 absolute inset-2 animate-ping rounded-full"
+											style={{
+												animationDuration: '2s',
+												animationDelay: '0.4s'
+											}}
+										/>
+										<div className="border-primary/20 bg-primary/10 relative flex h-10 w-10 items-center justify-center rounded-full border">
+											<Sparkles className="text-primary h-5 w-5" />
 										</div>
-										<p className="text-sm font-medium">Processing your scene</p>
-										<p className="text-muted-foreground max-w-xs text-xs">
-											Don't close this window — optimization is in progress.
+									</div>
+									<p className="text-sm font-medium">Processing your scene</p>
+									<p className="text-muted-foreground max-w-xs text-xs">
+										Do not close this panel while optimization is in progress.
+									</p>
+								</div>
+
+								{optimizingStep.allSteps.length > 0 && (
+									<div className="mb-6 w-full max-w-sm">
+										<Progress value={progressPercent} className="h-1" />
+										<p className="text-muted-foreground mt-1.5 text-right text-[11px]">
+											{optimizingStep.completed.length} /{' '}
+											{optimizingStep.allSteps.length} steps
 										</p>
 									</div>
+								)}
 
-									{/* Step progress bar */}
-									{optimizingStep.allSteps.length > 0 && (
-										<div className="mb-6 w-full max-w-sm">
-											<Progress value={progressPercent} className="h-1" />
-											<p className="text-muted-foreground mt-1.5 text-right text-[11px]">
-												{optimizingStep.completed.length} /{' '}
-												{optimizingStep.allSteps.length} steps
-											</p>
-										</div>
-									)}
-
-									{/* Step list */}
-									<div className="w-full max-w-sm space-y-1">
-										{optimizingStep.allSteps.map((step) => {
-											const isDone = optimizingStep.completed.includes(step)
-											const isRunning =
-												optimizingStep.current === step && !isDone
-											return (
-												<motion.div
-													key={step}
-													layout
+								<div className="w-full max-w-sm space-y-1">
+									{optimizingStep.allSteps.map((step) => {
+										const isDone = optimizingStep.completed.includes(step)
+										const isRunning = optimizingStep.current === step && !isDone
+										return (
+											<motion.div
+												key={step}
+												layout
+												className={cn(
+													'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors duration-300',
+													isRunning && 'bg-primary/5'
+												)}
+											>
+												<div className="shrink-0">
+													{isDone ? (
+														<CheckCircle2 className="h-4 w-4 text-green-500" />
+													) : isRunning ? (
+														<LoadingSpinner className="h-4 w-4" />
+													) : (
+														<Circle className="text-muted-foreground/30 h-4 w-4" />
+													)}
+												</div>
+												<span
 													className={cn(
-														'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors duration-300',
-														isRunning && 'bg-primary/5'
+														'transition-colors duration-300',
+														isDone
+															? 'text-muted-foreground line-through'
+															: isRunning
+																? 'text-foreground font-medium'
+																: 'text-muted-foreground'
 													)}
 												>
-													<div className="shrink-0">
-														{isDone ? (
-															<CheckCircle2 className="h-4 w-4 text-green-500" />
-														) : isRunning ? (
-															<LoadingSpinner className="h-4 w-4" />
-														) : (
-															<Circle className="text-muted-foreground/30 h-4 w-4" />
-														)}
-													</div>
-													<span
-														className={cn(
-															'transition-colors duration-300',
-															isDone
-																? 'text-muted-foreground line-through'
-																: isRunning
-																	? 'text-foreground font-medium'
-																	: 'text-muted-foreground'
-														)}
-													>
-														{step}
-													</span>
-												</motion.div>
-											)
-										})}
-									</div>
-								</motion.div>
-							) : (
-								/* ── Configuration state ── */
-								<motion.div
-									key="config"
-									initial={{ opacity: 0 }}
-									animate={{ opacity: 1 }}
-									exit={{ opacity: 0 }}
-									transition={{ duration: 0.2 }}
-									className="space-y-4 px-6 py-5"
-								>
-									{/* 1. Preset selector — primary action */}
-									<motion.section
-										initial={{ opacity: 0, y: 6 }}
-										animate={{ opacity: 1, y: 0 }}
-										transition={{ duration: 0.2, delay: 0.02 }}
-									>
-										<BasicOptimizationPanel />
-									</motion.section>
-
-									{/* 2. Guest quota */}
-									{!userId && guestQuota && (
-										<motion.div
-											initial={{ opacity: 0, y: 6 }}
-											animate={{ opacity: 1, y: 0 }}
-											transition={{ duration: 0.2, delay: 0.06 }}
-											className="bg-muted/30 rounded-xl border px-4 py-3"
-										>
-											<div className="text-muted-foreground mb-2 flex items-center justify-between text-xs tracking-wide uppercase">
-												<span>Guest optimization quota</span>
-												<span>{guestQuota.remaining} left today</span>
-											</div>
-											<Progress value={quotaPercent} className="h-1.5" />
-										</motion.div>
-									)}
-
-									{/* 3. Advanced controls */}
-									<motion.section
-										initial={{ opacity: 0, y: 6 }}
-										animate={{ opacity: 1, y: 0 }}
-										transition={{ duration: 0.2, delay: 0.08 }}
-									>
-										<Accordion type="single" collapsible className="space-y-3">
-											<AccordionItem
-												value="advanced"
-												className="rounded-2xl border px-4"
-											>
-												<AccordionTrigger className="py-3">
-													<div className="flex items-center gap-2.5 text-left">
-														<SlidersHorizontal className="text-muted-foreground h-4 w-4 shrink-0" />
-														<div>
-															<p className="text-sm font-semibold">
-																Advanced controls
-															</p>
-															<p className="text-muted-foreground text-xs">
-																Fine-tune mesh, texture, and geometry settings.
-															</p>
-														</div>
-													</div>
-												</AccordionTrigger>
-												<AccordionContent>
-													<div className="pb-2">
-														<AdvancedPanel />
-													</div>
-												</AccordionContent>
-											</AccordionItem>
-										</Accordion>
-									</motion.section>
-								</motion.div>
-							)}
-						</AnimatePresence>
-					</div>
-
-					{/* Footer */}
-					<DialogFooter className="bg-background shrink-0 border-t px-6 py-4">
-						{isInitialRequired && !isPending ? (
-							<Button type="button" variant="ghost" asChild>
-								<Link to={resolvedDashboardHref}>Back to Dashboard</Link>
-							</Button>
-						) : null}
-						{!isBlockingClose && (
-							<Button
-								type="button"
-								variant="outline"
-								onClick={() => onOpenChange(false)}
+													{step}
+												</span>
+											</motion.div>
+										)
+									})}
+								</div>
+							</motion.div>
+						) : (
+							<motion.div
+								key="config"
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
+								transition={{ duration: 0.2 }}
+								className="space-y-4 px-6 py-5"
 							>
-								Close
-							</Button>
+								<motion.section
+									initial={{ opacity: 0, y: 6 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{ duration: 0.2, delay: 0.02 }}
+								>
+									<BasicOptimizationPanel />
+								</motion.section>
+
+								{!userId && guestQuota && (
+									<motion.div
+										initial={{ opacity: 0, y: 6 }}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ duration: 0.2, delay: 0.06 }}
+										className="bg-muted/30 rounded-xl border px-4 py-3"
+									>
+										<div className="text-muted-foreground mb-2 flex items-center justify-between text-xs tracking-wide uppercase">
+											<span>Guest optimization quota</span>
+											<span>{guestQuota.remaining} left today</span>
+										</div>
+										<Progress value={quotaPercent} className="h-1.5" />
+									</motion.div>
+								)}
+
+								<motion.section
+									initial={{ opacity: 0, y: 6 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{ duration: 0.2, delay: 0.08 }}
+								>
+									<Accordion type="single" collapsible className="space-y-3">
+										<AccordionItem
+											value="advanced"
+											className="rounded-2xl border px-4"
+										>
+											<AccordionTrigger className="py-3">
+												<div className="flex items-center gap-2.5 text-left">
+													<SlidersHorizontal className="text-muted-foreground h-4 w-4 shrink-0" />
+													<div>
+														<p className="text-sm font-semibold">
+															Advanced controls
+														</p>
+														<p className="text-muted-foreground text-xs">
+															Fine-tune mesh, texture, and geometry settings.
+														</p>
+													</div>
+												</div>
+											</AccordionTrigger>
+											<AccordionContent>
+												<div className="pb-2">
+													<AdvancedPanel />
+												</div>
+											</AccordionContent>
+										</AccordionItem>
+									</Accordion>
+								</motion.section>
+							</motion.div>
 						)}
+					</AnimatePresence>
+				</div>
+
+				<div className="bg-background shrink-0 border-t px-6 py-4">
+					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+						<div className="flex gap-2">
+							{isInitialRequired && !isPending ? (
+								<Button type="button" variant="ghost" asChild>
+									<Link to={resolvedDashboardHref}>Back to Dashboard</Link>
+								</Button>
+							) : null}
+							{!isBlockingClose && (
+								<Button
+									type="button"
+									variant="outline"
+									onClick={() => onOpenChange(false)}
+								>
+									Close
+								</Button>
+							)}
+						</div>
 						<div className="w-full sm:w-[18rem]">
 							<OptimizeButton
 								onOptimize={runOptimization}
@@ -346,11 +323,11 @@ const OptimizationModal: FC<OptimizationModalProps> = ({
 								fixedBottom={false}
 							/>
 						</div>
-					</DialogFooter>
+					</div>
 				</div>
-			</DialogContent>
-		</Dialog>
+			</div>
+		</DynamicSidebar>
 	)
 }
 
-export default OptimizationModal
+export default OptimizationDrawer
