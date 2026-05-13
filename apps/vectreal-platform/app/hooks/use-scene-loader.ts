@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { type SceneSettings } from '@vctrl/core'
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import {
@@ -7,18 +8,16 @@ import {
 	useModelContext
 } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue } from 'jotai/react'
-import { usePostHog } from '@posthog/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
-import { useConsent } from '../components/consent/consent-context'
 import { useSceneAggregateBootstrap } from './scene-loader/use-scene-aggregate-bootstrap'
 import { useSceneDraftRehydration } from './scene-loader/use-scene-draft-rehydration'
 import { useSceneModelEvents } from './scene-loader/use-scene-model-events'
 import { useSceneParamsSync } from './scene-loader/use-scene-params-sync'
 import { useSceneSaveFlow } from './scene-loader/use-scene-save-flow'
-import { buildSceneUploadFailedAnalyticsProps } from '../lib/domain/analytics/scene-events'
+import { useConsent } from '../components/consent/consent-context'
 import { optimizationPresets } from '../constants/optimizations'
 import {
 	defaultBoundsOptions,
@@ -27,6 +26,7 @@ import {
 	defaultEnvOptions,
 	defaultShadowOptions
 } from '../constants/viewer-defaults'
+import { buildSceneUploadFailedAnalyticsProps } from '../lib/domain/analytics/scene-events'
 import {
 	calculateAggregateReferencedBytes,
 	executeAggregateSceneHydration,

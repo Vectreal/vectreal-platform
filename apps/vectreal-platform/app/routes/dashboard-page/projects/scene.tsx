@@ -60,8 +60,8 @@ import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.s
 import { buildFullscreenPreviewPath } from '../../../lib/domain/embed/embed-snippet'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
 import { loadSceneFromApi } from '../../../lib/domain/scene/client/load-scene-from-api.client'
-import { buildSceneAggregate } from '../../../lib/domain/scene/server/scene-aggregate.server'
 import { getDashboardSceneLoadErrorMessage } from '../../../lib/domain/scene/scene-load-error-messages'
+import { buildSceneAggregate } from '../../../lib/domain/scene/server/scene-aggregate.server'
 import {
 	getScene,
 	getSceneFolderAncestry

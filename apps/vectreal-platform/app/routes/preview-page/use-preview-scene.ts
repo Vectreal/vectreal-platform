@@ -1,16 +1,16 @@
+import { usePostHog } from '@posthog/react'
 import {
 	type StructuredLoadError,
 	useLoadModel
 } from '@vctrl/hooks/use-load-model'
-import { usePostHog } from '@posthog/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
+import { useConsent } from '../../components/consent/consent-context'
 import {
 	buildPreviewSceneRequest,
 	loadSceneFromApi
 } from '../../lib/domain/scene/client/load-scene-from-api.client'
-import { useConsent } from '../../components/consent/consent-context'
 
 import type { SceneLoadResult } from '@vctrl/hooks/use-load-model'
 
