@@ -115,6 +115,28 @@ function getRuntimeEnvironment() {
 	return 'local' as const
 }
 
+/**
+ * Validates that local Google Cloud Storage configuration is present and correct.
+ * Intended to be called at server startup in non-production environments to surface
+ * misconfigured credentials early rather than at request time.
+ */
+export function validateLocalGoogleCloudStorageConfiguration(): void {
+	try {
+		resolveLocalCredentialsPath()
+	} catch (error) {
+		console.warn(
+			'[GCS] Local credentials validation failed:',
+			error instanceof Error ? error.message : error
+		)
+	}
+
+	if (!process.env.GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET?.trim()) {
+		console.warn(
+			'[GCS] GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET is not set; storage operations will fail.'
+		)
+	}
+}
+
 export async function createStorage() {
 	const runtimeEnvironment = getRuntimeEnvironment()
 	const isDeployed = runtimeEnvironment !== 'local'
