@@ -69,7 +69,15 @@ pnpm nx run vectreal-platform:supabase-db-reset
 
 This drops and re-creates the local database and applies all migrations from `apps/vectreal-platform/supabase/migrations/`.
 
-### 5. Start the dev server
+### 5. Bootstrap local Google Cloud Storage credentials
+
+```bash
+pnpm nx run terraform:bootstrap-local-gcs
+```
+
+This generates a local-only service account key at `credentials/google-storage-local-dev-sa.json` using Terraform and validates your Google Cloud auth.
+
+### 6. Start the dev server
 
 ```bash
 pnpm nx dev vectreal-platform

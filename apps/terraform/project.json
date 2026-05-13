@@ -1,0 +1,30 @@
+{
+	"name": "terraform",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "terraform",
+	"projectType": "application",
+	"tags": ["scope:infra"],
+	"targets": {
+		"apply-infrastructure": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "terraform",
+				"command": "./scripts/apply-infrastructure.sh"
+			}
+		},
+		"bootstrap-local-gcs": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "terraform",
+				"command": "./scripts/bootstrap-local-gcs.sh"
+			}
+		},
+		"setup-github-secrets": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "terraform",
+				"command": "./scripts/setup-github-secrets.sh"
+			}
+		}
+	}
+}
