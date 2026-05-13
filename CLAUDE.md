@@ -57,28 +57,31 @@ Internal package dependencies use `workspace:*` and must not be pinned to regist
 ## Platform App Architecture (`apps/vectreal-platform/`)
 
 ### Framework
+
 React Router v7 in framework mode with SSR. Route config lives in `app/routes.tsx` (not file-based). Route modules live under `app/routes/`.
 
 ### Key directories
 
-| Path | Purpose |
-|------|---------|
-| `app/routes/` | All route modules (pages + API routes) |
-| `app/routes/api/` | Server-only API endpoints (auth, billing, scenes, etc.) |
-| `app/routes/layouts/` | Shared layout wrappers |
-| `app/routes/dashboard-page/` | Dashboard routes (projects, billing, settings, etc.) |
-| `app/lib/domain/` | Business logic (auth, billing, asset, organization, project, scene, user) |
-| `app/lib/sessions/` | Cookie-based session helpers (auth, CSRF, consent, theme) |
-| `app/lib/http/` | Request parsing and response utilities |
-| `app/db/` | Drizzle ORM client (`client.ts`) and schema (`schema/`) |
-| `app/constants/` | Plan config (`plan-config.ts`), feature flags, etc. |
-| `app/components/` | App-level React components |
-| `app/hooks/` | App-level React hooks |
+| Path                         | Purpose                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------- |
+| `app/routes/`                | All route modules (pages + API routes)                                    |
+| `app/routes/api/`            | Server-only API endpoints (auth, billing, scenes, etc.)                   |
+| `app/routes/layouts/`        | Shared layout wrappers                                                    |
+| `app/routes/dashboard-page/` | Dashboard routes (projects, billing, settings, etc.)                      |
+| `app/lib/domain/`            | Business logic (auth, billing, asset, organization, project, scene, user) |
+| `app/lib/sessions/`          | Cookie-based session helpers (auth, CSRF, consent, theme)                 |
+| `app/lib/http/`              | Request parsing and response utilities                                    |
+| `app/db/`                    | Drizzle ORM client (`client.ts`) and schema (`schema/`)                   |
+| `app/constants/`             | Plan config (`plan-config.ts`), feature flags, etc.                       |
+| `app/components/`            | App-level React components                                                |
+| `app/hooks/`                 | App-level React hooks                                                     |
 
 ### Auth pattern
+
 `loadAuthenticatedUser(request)` returns `{ user, userWithDefaults, headers }`. Current org is at `userWithDefaults.organization.id`. Role check: `getUserOrganizations(user.id)` → find membership → check `owner | admin`.
 
 ### Billing architecture
+
 - `orgSubscriptions` table is the single source of truth for plan state.
 - `syncSubscriptionFromStripe()` upserts by `organizationId`.
 - Checkout flow (`app/routes/api/billing/checkout.ts`): if `billingState === 'active'` and `stripeSubscriptionId` exists → `stripe.subscriptions.update()` (proration); otherwise → Stripe Checkout session.
@@ -88,9 +91,11 @@ React Router v7 in framework mode with SSR. Route config lives in `app/routes.ts
 - Plans: `free | pro | business | enterprise`. Entitlements/limits defined in `app/constants/plan-config.ts`.
 
 ### Database
+
 Drizzle ORM over Supabase PostgreSQL. Schema modules under `app/db/schema/` (auth, billing, consent, core, project, shared). Generate a new migration with `pnpm nx run vectreal-platform:drizzle-generate`, then push to staging/prod with the supabase-db-push targets.
 
 ### Shared UI
+
 Components are in `shared/components/ui/` (shadcn-based, Radix UI primitives). Import as `@shared/components/ui/*`.
 
 ## Conventions
@@ -99,3 +104,27 @@ Components are in `shared/components/ui/` (shadcn-based, Radix UI primitives). I
 - **Versioning**: Managed by Release Please. Do not use `nx release`. Use `workspace:*` for internal deps.
 - **Docs pages**: MDX files in `app/routes/docs/`. Adding a new page also requires a nav entry in the docs layout.
 - **Server-only modules**: Files that must not be bundled client-side are named `*.server.ts`.
+
+<!-- nx configuration start-->
+<!-- Leave the start & end comments to automatically receive updates. -->
+
+## General Guidelines for working with Nx
+
+- For navigating/exploring the workspace, invoke the `nx-workspace` skill first - it has patterns for querying projects, targets, and dependencies
+- When running tasks (for example build, lint, test, e2e, etc.), always prefer running the task through `nx` (i.e. `nx run`, `nx run-many`, `nx affected`) instead of using the underlying tooling directly
+- Prefix nx commands with the workspace's package manager (e.g., `pnpm nx build`, `npm exec nx test`) - avoids using globally installed CLI
+- You have access to the Nx MCP server and its tools, use them to help the user
+- For Nx plugin best practices, check `node_modules/@nx/<plugin>/PLUGIN.md`. Not all plugins have this file - proceed without it if unavailable.
+- NEVER guess CLI flags - always check nx_docs or `--help` first when unsure
+
+## Scaffolding & Generators
+
+- For scaffolding tasks (creating apps, libs, project structure, setup), ALWAYS invoke the `nx-generate` skill FIRST before exploring or calling MCP tools
+
+## When to use nx_docs
+
+- USE for: advanced config options, unfamiliar flags, migration guides, plugin configuration, edge cases
+- DON'T USE for: basic generator syntax (`nx g @nx/react:app`), standard commands, things you already know
+- The `nx-generate` skill handles generator discovery internally - don't call nx_docs just to look up generator syntax
+
+<!-- nx configuration end-->

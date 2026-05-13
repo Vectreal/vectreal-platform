@@ -73,5 +73,6 @@ The following repository skills are also available:
 
 - [vectreal-extension-architecture](.agents/skills/vectreal-extension-architecture/SKILL.md) — use for architecture and extension work (route trees, loaders/actions, domain boundaries, client/server separation, Drizzle/RLS, Nx workflow discipline).
 - [vectreal-brand-ux-design](.agents/skills/vectreal-brand-ux-design/SKILL.md) — use for UI/UX and branding work (token-first styling, typography, motion, accessibility, responsive behavior, intentional and high-polish design execution).
+- [vectreal-iterative-delivery](.agents/skills/vectreal-iterative-delivery/SKILL.md) — use for ambiguity reduction, phased execution, mandatory implementation→verification→autonomous review→plan alignment loops, exhaustive per-iteration verification coverage, sub-agent-assisted validation when work is cross-cutting, and required loop evidence blocks before completion claims.
 
 Use these tools when answering questions about project configuration, graph errors, or Nx best practices.
