@@ -75,8 +75,9 @@ export const ToolSidebar = memo(
 									aria-label={shortLabel}
 									aria-pressed={isActive}
 									className={cn('h-10 w-10 rounded-2xl transition-all', {
-										'bg-background ring-border/60 shadow-lg ring-1': isActive,
-										'hover:bg-background/80 hover:ring-border/40 hover:ring-1':
+										'publisher-shell-focus bg-shell-surface ring-shell-border-strong shadow-md ring-1':
+											isActive,
+										'publisher-shell-focus hover:bg-shell-surface-soft hover:ring-shell-border-soft hover:ring-1':
 											!isActive
 									})}
 									onClick={() => handleToolSelect(value)}
@@ -94,7 +95,7 @@ export const ToolSidebar = memo(
 		)
 
 		const mobileToolBar = (
-			<div className="bg-muted/50 fixed top-0 left-0 z-40 m-4 flex gap-1 rounded-2xl p-1 shadow-xl backdrop-blur-2xl md:hidden">
+			<div className="publisher-shell-floating fixed top-0 left-0 z-40 m-4 flex gap-1 p-1 md:hidden">
 				{COMPOSE_TOOL_DEFINITIONS.map(({ value, icon: Icon, shortLabel }) => {
 					const isActive = value === activeComposeTool && showSidebar
 
@@ -105,7 +106,7 @@ export const ToolSidebar = memo(
 							size="icon"
 							aria-label={shortLabel}
 							aria-pressed={isActive}
-							className="h-10 w-10 rounded-xl"
+							className="publisher-shell-focus h-10 w-10 rounded-xl"
 							onClick={() => handleToolSelect(value)}
 						>
 							<Icon className="h-4 w-4" />
@@ -132,7 +133,7 @@ export const ToolSidebar = memo(
 				>
 					<div
 						className={cn(
-							'no-scrollbar min-h-0 flex-1 overflow-auto px-4 pt-4 pb-5'
+							'no-scrollbar min-h-0 flex-1 overflow-auto px-4 py-4'
 						)}
 					>
 						<ComposeSidebar activeTool={activeComposeTool} />

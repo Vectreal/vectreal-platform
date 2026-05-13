@@ -115,7 +115,7 @@ export const DynamicSidebar = ({
 					}}
 				>
 					{showMobileHeader && (
-						<DrawerHeader className="shrink-0 border-b pb-3">
+						<DrawerHeader className="border-shell-border-soft shrink-0 border-b pb-3">
 							<div className="flex items-start justify-between gap-2">
 								<div>
 									<DrawerTitle>{title}</DrawerTitle>
@@ -146,9 +146,14 @@ export const DynamicSidebar = ({
 
 	return (
 		<div
-			className={cn('fixed top-0 h-full p-4', zIndexClassName, positionClass, {
-				'px-0': !open
-			})}
+			className={cn(
+				'pointer-events-none fixed top-0 h-full p-4',
+				zIndexClassName,
+				positionClass,
+				{
+					'px-0': !open
+				}
+			)}
 		>
 			<AnimatePresence mode="wait">
 				{open && (
@@ -160,12 +165,12 @@ export const DynamicSidebar = ({
 						variants={variants}
 						transition={{ type: 'tween', ease: 'easeInOut', duration: 0.3 }}
 						className={cn(
-							'bg-muted/50 relative z-20 flex h-full w-[23rem] flex-col overflow-hidden rounded-xl border shadow-xl backdrop-blur-2xl',
+							'publisher-shell-panel pointer-events-auto relative z-20 flex h-full w-[23rem] flex-col overflow-hidden',
 							className
 						)}
 					>
 						{showDesktopHeader && (
-							<div className="flex shrink-0 items-start justify-between border-b px-4 py-4">
+							<div className="border-shell-border-soft flex shrink-0 items-start justify-between border-b px-4 py-4">
 								<div>
 									<p className="text-sm font-semibold">{title}</p>
 									{description && (
@@ -178,7 +183,7 @@ export const DynamicSidebar = ({
 									<Button
 										variant="ghost"
 										size="icon"
-										className="shrink-0"
+										className="publisher-shell-focus shrink-0"
 										onClick={handleClose}
 									>
 										<X className="h-4 w-4" />

@@ -23,10 +23,14 @@ function SettingToggle({
 		<div className="flex items-start justify-between">
 			<div className="space-y-2">
 				<div className="flex items-center gap-2">
-					<Label htmlFor={id}>{title}</Label>
+					<Label htmlFor={id} className="text-sm font-semibold">
+						{title}
+					</Label>
 					{info && <InfoTooltip content={info} />}{' '}
 				</div>
-				<p className="text-muted-foreground text-sm">{description}</p>
+				<p className="text-muted-foreground text-sm leading-relaxed">
+					{description}
+				</p>
 			</div>
 			<Switch
 				id={id}

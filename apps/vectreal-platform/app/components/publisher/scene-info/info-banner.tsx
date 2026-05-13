@@ -18,7 +18,7 @@ const InfoBanner = ({
 	const canOpenOptimization = typeof onOpenOptimization === 'function'
 
 	return (
-		<div className="bg-muted text-primary/80 fixed bottom-0 z-20 flex w-full items-center gap-4 px-4 py-1 text-xs font-medium">
+		<div className="bg-shell-surface border-shell-border-soft text-foreground/70 fixed bottom-0 z-20 flex w-full items-center gap-4 border-t px-4 py-1.5 text-xs font-medium">
 			<button
 				type="button"
 				onClick={onOpenOptimization}
@@ -26,7 +26,7 @@ const InfoBanner = ({
 				className={cn(
 					'flex items-center gap-2 rounded-md px-2 py-1 transition-colors',
 					canOpenOptimization
-						? 'hover:bg-background/60 focus-visible:ring-primary/50 cursor-pointer focus-visible:ring-2 focus-visible:outline-none'
+						? 'hover:bg-shell-surface-soft focus-visible:ring-primary/50 cursor-pointer focus-visible:ring-2 focus-visible:outline-none'
 						: 'cursor-default'
 				)}
 			>
@@ -39,7 +39,9 @@ const InfoBanner = ({
 					) : (
 						'—'
 					)}
-					{canOpenOptimization && <Sparkles className="h-3.5 w-3.5 opacity-70" />}
+					{canOpenOptimization && (
+						<Sparkles className="h-3.5 w-3.5 opacity-70" />
+					)}
 				</span>
 			</button>
 			{statusText ? (

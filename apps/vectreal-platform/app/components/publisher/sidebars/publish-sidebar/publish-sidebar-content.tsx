@@ -154,7 +154,7 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 
 						<FileSizeComparison sizeInfo={publishMetricSizeInfo} />
 
-						<div className="bg-muted/50 space-y-3 rounded-lg p-4 text-xs">
+						<div className="publisher-shell-nested space-y-3 p-4 text-xs">
 							<div className="flex items-center justify-between gap-3">
 								<p className="text-muted-foreground">Triangles</p>
 								<p className="font-medium">
@@ -196,12 +196,10 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 				{canAccessPublishFeatures && <ScenePreview />}
 
 				<Accordion type="single" collapsible className="space-y-2 p-4">
-					<AccordionItem value="save" className="px-4">
-						<AccordionTrigger className="px-2">
-							<span className="flex items-center gap-3">
-								<Save className="inline" size={14} />
-								Download
-							</span>
+					<AccordionItem value="save">
+						<AccordionTrigger>
+							<Save className="inline" size={14} />
+							Download
 						</AccordionTrigger>
 						<AccordionContent>
 							<SaveOptions />
@@ -209,7 +207,7 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 					</AccordionItem>
 
 					{!isAuthenticated && (
-						<div className="px-6 pb-2">
+						<div className="px-4 pb-3">
 							<p className="text-muted-foreground mb-2 text-xs">
 								Sign up and save this scene once to unlock Publish and Embed.
 							</p>
@@ -260,12 +258,10 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 
 					{canAccessPublishFeatures && (
 						<>
-							<AccordionItem value="publish" className="px-4">
-								<AccordionTrigger className="px-2">
-									<span className="flex items-center gap-3">
-										<Globe className="inline" size={14} />
-										Publish
-									</span>
+							<AccordionItem value="publish">
+								<AccordionTrigger>
+									<Globe className="inline" size={14} />
+									Publish
 								</AccordionTrigger>
 								<AccordionContent>
 									<PublishOptions
@@ -277,12 +273,10 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 							</AccordionItem>
 
 							{publishState.status === 'published' && (
-								<AccordionItem value="embed" className="px-4">
-									<AccordionTrigger className="px-2">
-										<span className="flex items-center gap-3">
-											<Code className="inline" size={14} />
-											Embed
-										</span>
+								<AccordionItem value="embed">
+									<AccordionTrigger>
+										<Code className="inline" size={14} />
+										Embed
 									</AccordionTrigger>
 									<AccordionContent>
 										<EmbedOptions sceneId={sceneId} projectId={projectId} />
