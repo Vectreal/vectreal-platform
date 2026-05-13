@@ -25,6 +25,7 @@ crash.*.log
 credentials/
 *.json
 !terraform.tfvars.example
+!project.json
 
 # Override files
 override.tf
