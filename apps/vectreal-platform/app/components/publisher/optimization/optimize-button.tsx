@@ -8,12 +8,20 @@ import {
 import { AnimatePresence, motion } from 'framer-motion'
 import { SparklesIcon } from 'lucide-react'
 
-import type { FC } from 'react'
+import type { ComponentProps, FC } from 'react'
+
+type OptimizeButtonMode = 'apply' | 'optimize-more'
+type OptimizeButtonHierarchy = 'primary' | 'secondary'
 
 interface OptimizeButtonProps {
 	onOptimize: () => Promise<boolean | void>
 	isPending: boolean
-	hasOptimized: boolean
+	hasOptimized?: boolean
+	mode?: OptimizeButtonMode
+	hierarchy?: OptimizeButtonHierarchy
+	label?: string
+	buttonVariant?: ComponentProps<typeof Button>['variant']
+	buttonClassName?: string
 	isPreparing?: boolean
 	disabled?: boolean
 	fixedBottom?: boolean
@@ -24,17 +32,29 @@ const OPTIMIZER_PREPARING_TOOLTIP =
 
 export const OptimizeButton: FC<OptimizeButtonProps> = ({
 	hasOptimized,
+	mode,
+	hierarchy = 'primary',
+	label,
+	buttonVariant,
+	buttonClassName,
 	isPending,
 	isPreparing = false,
 	disabled,
 	fixedBottom = true,
 	onOptimize
 }) => {
+	const resolvedMode = mode ?? (hasOptimized ? 'optimize-more' : 'apply')
+	const resolvedVariant =
+		buttonVariant ?? (hierarchy === 'secondary' ? 'secondary' : 'default')
+	const buttonLabel =
+		label ??
+		(resolvedMode === 'optimize-more' ? 'Optimize More' : 'Apply Optimizations')
+
 	const button = (
 		<span className={fixedBottom ? 'm-2 flex grow' : 'flex grow'}>
 			<Button
-				variant="default"
-				className="grow rounded-lg"
+				variant={resolvedVariant}
+				className={`grow ${buttonClassName ?? ''}`.trim()}
 				onClick={onOptimize}
 				disabled={isPending || disabled}
 			>
@@ -63,7 +83,7 @@ export const OptimizeButton: FC<OptimizeButtonProps> = ({
 							transition={{ duration: 0.3 }}
 						>
 							<SparklesIcon className="h-4 w-4" />
-							{hasOptimized ? 'Optimize More' : 'Apply Optimizations'}
+							{buttonLabel}
 						</motion.div>
 					)}
 				</AnimatePresence>

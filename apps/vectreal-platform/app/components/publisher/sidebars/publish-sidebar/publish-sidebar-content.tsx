@@ -296,7 +296,8 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 				{canAccessPublishFeatures && canReoptimize && (
 					<div className="space-y-3 p-4">
 						<p className="text-muted-foreground text-xs">
-							Need another pass? Re-optimize your saved scene before publishing.
+							Need another pass? Continue composing first, then re-optimize if
+							you need a final tuning run before publishing.
 						</p>
 						<Button
 							type="button"

@@ -635,6 +635,8 @@ export const useOptimizationProcess = ({
 	}
 
 	const hasImproved = resolvedMetrics.hasImproved
+	const hasCompletedOptimizationPass =
+		typeof optimizationRuntime.optimizedSceneBytes === 'number'
 
 	return {
 		info,
@@ -644,6 +646,7 @@ export const useOptimizationProcess = ({
 		isOptimizerPreparing: isPreparing,
 		isOptimizerReady: isReady,
 		hasImproved,
+		hasCompletedOptimizationPass,
 		sizeInfo,
 		guestQuota,
 		optimizingStep,

@@ -45,13 +45,15 @@ const OptimizationDrawer: FC<OptimizationModalProps> = ({
 	const { optimizationPreset } = useAtomValue(optimizationAtom)
 	const { isPending } = useAtomValue(optimizationRuntimeAtom)
 	const {
-		hasImproved,
+		hasCompletedOptimizationPass,
 		handleOptimizeClick,
 		guestQuota,
 		isOptimizerPreparing,
 		optimizingStep
 	} = useOptimizationProcess({ isAuthenticated: Boolean(userId) })
-	const isBlockingClose = isPending || isInitialRequired
+	const canProgressToComposition = hasCompletedOptimizationPass
+	const isBlockingClose =
+		isPending || (isInitialRequired && !canProgressToComposition)
 
 	const quotaPercent = useMemo(() => {
 		if (!guestQuota || guestQuota.limit <= 0) {
@@ -106,6 +108,11 @@ const OptimizationDrawer: FC<OptimizationModalProps> = ({
 						100
 				)
 			: 0
+	const shouldShowCompletionActions = !isPending && canProgressToComposition
+	const optimizeButtonMode = shouldShowCompletionActions
+		? 'optimize-more'
+		: 'apply'
+	const completionActionWidthClass = 'w-full sm:w-[18rem]'
 
 	return (
 		<DynamicSidebar
@@ -297,32 +304,55 @@ const OptimizationDrawer: FC<OptimizationModalProps> = ({
 				</div>
 
 				<div className="bg-background shrink-0 border-t px-6 py-4">
-					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-						<div className="flex gap-2">
-							{isInitialRequired && !isPending ? (
-								<Button type="button" variant="ghost" asChild>
-									<Link to={resolvedDashboardHref}>Back to Dashboard</Link>
-								</Button>
-							) : null}
-							{!isBlockingClose && (
+					<div className="flex flex-col gap-3">
+						{isInitialRequired && !isPending ? (
+							<Button type="button" variant="ghost" asChild>
+								<Link to={resolvedDashboardHref}>Back to Dashboard</Link>
+							</Button>
+						) : null}
+						{shouldShowCompletionActions ? (
+							<div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+								<div className={completionActionWidthClass}>
+									<OptimizeButton
+										onOptimize={runOptimization}
+										isPending={isPending}
+										mode={optimizeButtonMode}
+										hierarchy="secondary"
+										isPreparing={isOptimizerPreparing}
+										fixedBottom={false}
+									/>
+								</div>
 								<Button
 									type="button"
-									variant="outline"
+									className={completionActionWidthClass}
 									onClick={() => onOpenChange(false)}
 								>
-									Close
+									Continue to Composition
 								</Button>
-							)}
-						</div>
-						<div className="w-full sm:w-[18rem]">
-							<OptimizeButton
-								onOptimize={runOptimization}
-								isPending={isPending}
-								hasOptimized={hasImproved}
-								isPreparing={isOptimizerPreparing}
-								fixedBottom={false}
-							/>
-						</div>
+							</div>
+						) : (
+							<>
+								{!isBlockingClose && (
+									<Button
+										type="button"
+										variant="outline"
+										onClick={() => onOpenChange(false)}
+									>
+										Close
+									</Button>
+								)}
+								<div className="w-full sm:w-[18rem]">
+									<OptimizeButton
+										onOptimize={runOptimization}
+										isPending={isPending}
+										mode={optimizeButtonMode}
+										hierarchy="primary"
+										isPreparing={isOptimizerPreparing}
+										fixedBottom={false}
+									/>
+								</div>
+							</>
+						)}
 					</div>
 				</div>
 			</div>
