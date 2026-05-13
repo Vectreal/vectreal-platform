@@ -1,7 +1,8 @@
-import { Camera, MountainSnow, Tornado } from 'lucide-react'
+import { Camera, MountainSnow, MousePointer2, Tornado } from 'lucide-react'
 
 import { CameraControlsSettings } from './camera-controls-settings'
 import { EnvironmentSettings } from './environment-settings'
+import { InteractionControlsSettings } from './interaction-controls-settings'
 import { ShadowSettings } from './shadow-settings'
 
 import type { ComposeTool } from '../../../../types/publisher-config'
@@ -41,9 +42,18 @@ const COMPOSE_TOOL_DEFINITIONS: ComposeToolDefinition[] = [
 		label: 'Camera',
 		shortLabel: 'Camera',
 		description:
-			'Manage saved cameras, framing, and movement settings in one focused inspector.',
+			'Manage saved cameras, field of view, and animated transitions.',
 		icon: Camera,
 		component: CameraControlsSettings
+	},
+	{
+		value: 'interaction-controls',
+		label: 'Interaction',
+		shortLabel: 'Interaction',
+		description:
+			'Configure how viewers orbit, zoom, and move around the scene.',
+		icon: MousePointer2,
+		component: InteractionControlsSettings
 	}
 ]
 

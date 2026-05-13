@@ -1,4 +1,3 @@
-import { Button } from '@shared/components/ui/button'
 import {
 	Tooltip,
 	TooltipContent,
@@ -14,14 +13,14 @@ export const SceneInfoTrigger = ({ onClick }: SceneInfoTriggerProps) => {
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
-				<Button
-					variant="secondary"
+				<button
+					type="button"
 					onClick={onClick}
-					className="fixed right-0 bottom-6 z-20 m-4"
+					className="publisher-shell-focus publisher-shell-floating text-foreground fixed right-0 bottom-8 z-20 m-3 flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-opacity hover:opacity-90"
 				>
-					Open publishing panel{' '}
-					<ArrowUpRight className="inline-block h-3 w-3" />
-				</Button>
+					Open publishing panel
+					<ArrowUpRight className="h-3.5 w-3.5" />
+				</button>
 			</TooltipTrigger>
 			<TooltipContent>
 				<p>View scene information and publish your scene</p>

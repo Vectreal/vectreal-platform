@@ -25,7 +25,7 @@ const ComposeSidebarContent = memo(
 		const ToolComponent = toolDefinition.component
 
 		return (
-			<div className="space-y-4">
+			<div className="space-y-3">
 				<AnimatePresence mode="wait" initial={false}>
 					<motion.div
 						key={activeTool}
@@ -33,7 +33,7 @@ const ComposeSidebarContent = memo(
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: -10 }}
 						transition={{ duration: 0.18, ease: 'easeOut' }}
-						className="space-y-4"
+						className="space-y-3"
 					>
 						<div className="sr-only">{toolDefinition.label}</div>
 						<ToolComponent />

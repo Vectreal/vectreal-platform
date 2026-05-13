@@ -16,7 +16,7 @@ const FloatingPillWrapper = ({
 			layout="position"
 			{...rest}
 			className={cn(
-				'bg-background/50 flex w-fit items-center justify-between rounded-2xl p-2 shadow-2xl backdrop-blur-2xl',
+				'publisher-shell-floating flex w-fit items-center justify-between p-2',
 				className
 			)}
 		/>

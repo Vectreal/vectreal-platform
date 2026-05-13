@@ -11,10 +11,6 @@ import {
 } from '@shared/components/ui/select'
 import { Separator } from '@shared/components/ui/separator'
 import {
-	ToggleGroup,
-	ToggleGroupItem
-} from '@shared/components/ui/toggle-group'
-import {
 	EnvironmentKey,
 	EnvironmentProps,
 	EnvironmentResolution
@@ -24,11 +20,13 @@ import { useCallback } from 'react'
 
 import { InfoTooltip } from '../../../..'
 import { environmentAtom } from '../../../../../lib/stores/scene-settings-store'
-import { valueMappings } from '../../../../../lib/utils/value-mapping'
 import {
-	EnhancedSettingSlider,
-	SettingToggle
+	PresetButton,
+	SettingToggle,
+	ToggleButtonGroup
 } from '../../../settings-components'
+
+import type { ToggleButtonGroupOption } from '../../../settings-components'
 
 const ENVIRONMENT_PRESETS: EnvironmentKey[] = [
 	'nature-moonlit',
@@ -60,7 +58,39 @@ const GROUPED_ENVIRONMENT_PRESETS = ENVIRONMENT_PRESETS.reduce(
 	{} as Record<string, EnvironmentKey[]>
 )
 
-// const ENVIRONMENT_RESOLUTIONS: EnvironmentResolution[] = ['1k', '4k']
+const RESOLUTION_OPTIONS: ToggleButtonGroupOption<EnvironmentResolution>[] = [
+	{ value: '1k', label: '1k' },
+	{ value: '4k', label: '4k' }
+]
+
+const LIGHTING_OPTIONS: ToggleButtonGroupOption<number>[] = [
+	{ value: 0.3, label: 'Dim' },
+	{ value: 1, label: 'Normal' },
+	{ value: 2.5, label: 'Bright' }
+]
+
+const BG_BLUR_OPTIONS: ToggleButtonGroupOption<number>[] = [
+	{ value: 0, label: 'Sharp' },
+	{ value: 0.3, label: 'Soft' },
+	{ value: 0.8, label: 'Blurred' }
+]
+
+const BG_BRIGHTNESS_OPTIONS: ToggleButtonGroupOption<number>[] = [
+	{ value: 0, label: 'Off' },
+	{ value: 1, label: 'Normal' },
+	{ value: 2, label: 'Bright' }
+]
+
+function getClosestValue(
+	options: ToggleButtonGroupOption<number>[],
+	current: number
+): number {
+	return options.reduce((closest, o) =>
+		Math.abs(o.value - current) < Math.abs(closest.value - current)
+			? o
+			: closest
+	).value
+}
 
 const EnvironmentSettings = () => {
 	const [environment, setEnvironment] = useAtom(environmentAtom)
@@ -88,14 +118,14 @@ const EnvironmentSettings = () => {
 			<Separator />
 
 			<Label>HDR Preset</Label>
-			<div className="grid grid-cols-[4fr_1fr] gap-2">
+			<div className="flex items-stretch gap-2">
 				<Select
 					value={environment.preset}
 					onValueChange={(value) => {
 						handleEnvironmentChange('preset', value as EnvironmentKey)
 					}}
 				>
-					<SelectTrigger className="w-full capitalize">
+					<SelectTrigger className="flex-1 capitalize">
 						<SelectValue placeholder="Select Environment Preset" />
 					</SelectTrigger>
 					<SelectContent>
@@ -118,48 +148,35 @@ const EnvironmentSettings = () => {
 						)}
 					</SelectContent>
 				</Select>
-				<ToggleGroup
-					type="single"
-					value={environment.environmentResolution ?? '1k'}
-					onValueChange={(value) => {
-						if (value)
-							handleEnvironmentChange(
-								'environmentResolution',
-								value as EnvironmentResolution
-							)
-					}}
-					variant="outline"
-					className="h-9"
-				>
-					<ToggleGroupItem value="1k" className="px-3 text-xs">
-						1k
-					</ToggleGroupItem>
-					<ToggleGroupItem value="4k" className="px-3 text-xs">
-						4k
-					</ToggleGroupItem>
-				</ToggleGroup>
+				<div className="flex gap-1.5">
+					{RESOLUTION_OPTIONS.map((opt) => (
+						<PresetButton
+							key={opt.value}
+							label={opt.label}
+							isActive={
+								(environment.environmentResolution ?? '1k') === opt.value
+							}
+							onClick={() =>
+								handleEnvironmentChange('environmentResolution', opt.value)
+							}
+						/>
+					))}
+				</div>
 			</div>
 
-			<EnhancedSettingSlider
-				id="environment-intensity"
-				sliderProps={{
-					min: 0,
-					max: 5,
-					step: 0.01,
-					value: environment.environmentIntensity || 1,
-					onChange: (value) =>
-						handleEnvironmentChange('environmentIntensity', value)
-				}}
-				label="Lighting Strength"
-				tooltip="Controls how bright the environment map appears, affecting lighting and reflections."
-				labelProps={{
-					low: '0 - Off',
-					high: '5 - Very Bright'
-				}}
-				formatValue={(value) => value.toFixed(2)}
-				valueMapping={valueMappings.quadratic}
-				allowDirectInput={true}
-			/>
+			<div className="space-y-1.5">
+				<p className="text-muted-foreground text-xs">Lighting Strength</p>
+				<ToggleButtonGroup
+					options={LIGHTING_OPTIONS}
+					isActive={(v) =>
+						getClosestValue(
+							LIGHTING_OPTIONS,
+							environment.environmentIntensity ?? 1
+						) === v
+					}
+					onChange={(v) => handleEnvironmentChange('environmentIntensity', v)}
+				/>
+			</div>
 
 			<p className="text-muted-foreground pt-1 text-xs font-medium">
 				Background
@@ -178,47 +195,37 @@ const EnvironmentSettings = () => {
 				info="This will set the environment map as the background of the scene, allowing it to be visible behind the model."
 			/>
 
-			<EnhancedSettingSlider
-				enabled={!!environment.background}
-				id="environment-blur"
-				sliderProps={{
-					min: 0,
-					max: 1,
-					step: 0.01,
-					value: environment.backgroundBlurriness || 0,
-					onChange: (value) =>
-						handleEnvironmentChange('backgroundBlurriness', value)
-				}}
-				label="Background Blur"
-				tooltip="Controls the blurriness of the background when environment is visible."
-				labelProps={{
-					low: '0 - Sharp',
-					high: '1 - Fully Blurred'
-				}}
-				formatValue={(value) => value.toFixed(2)}
-				allowDirectInput={true}
-			/>
-			<EnhancedSettingSlider
-				enabled={!!environment.background}
-				id="background-intensity"
-				sliderProps={{
-					min: 0,
-					max: 3,
-					step: 0.01,
-					value: environment.backgroundIntensity || 1,
-					onChange: (value) =>
-						handleEnvironmentChange('backgroundIntensity', value)
-				}}
-				label="Background Brightness"
-				tooltip="Controls the brightness of the background when environment is visible."
-				labelProps={{
-					low: '0 - Off',
-					high: '3 - Very Bright'
-				}}
-				formatValue={(value) => value.toFixed(2)}
-				valueMapping={valueMappings.quadratic}
-				allowDirectInput={true}
-			/>
+			<div
+				className={`space-y-1.5 ${!environment.background ? 'pointer-events-none opacity-40' : ''}`}
+			>
+				<p className="text-muted-foreground text-xs">Background Blur</p>
+				<ToggleButtonGroup
+					options={BG_BLUR_OPTIONS}
+					isActive={(v) =>
+						getClosestValue(
+							BG_BLUR_OPTIONS,
+							environment.backgroundBlurriness ?? 0
+						) === v
+					}
+					onChange={(v) => handleEnvironmentChange('backgroundBlurriness', v)}
+				/>
+			</div>
+
+			<div
+				className={`space-y-1.5 ${!environment.background ? 'pointer-events-none opacity-40' : ''}`}
+			>
+				<p className="text-muted-foreground text-xs">Background Brightness</p>
+				<ToggleButtonGroup
+					options={BG_BRIGHTNESS_OPTIONS}
+					isActive={(v) =>
+						getClosestValue(
+							BG_BRIGHTNESS_OPTIONS,
+							environment.backgroundIntensity ?? 1
+						) === v
+					}
+					onChange={(v) => handleEnvironmentChange('backgroundIntensity', v)}
+				/>
+			</div>
 		</div>
 	)
 }

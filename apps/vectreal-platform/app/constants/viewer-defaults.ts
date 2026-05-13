@@ -65,7 +65,7 @@ export const defaultShadowOptions: ShadowsProps = {
 	enabled: false,
 	opacity: 0.4,
 	blur: 0.1,
-	scale: 5,
+	scale: 25, // large default to avoid shadow-plane floor clipping
 	color: '#000000',
 	smooth: true
 }
@@ -77,7 +77,7 @@ export const defaultAccumulativeShadowsOptions: AccumulativeShadowsProps = {
 	frames: 30,
 	alphaTest: 0.35,
 	opacity: 1,
-	scale: 10,
+	scale: 25, // large default to avoid shadow-plane floor clipping
 	resolution: 1024,
 	colorBlend: 2,
 	color: '#000000',

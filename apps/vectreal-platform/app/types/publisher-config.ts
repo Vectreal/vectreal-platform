@@ -1,6 +1,10 @@
 //// Process state
 export type SidebarMode = 'optimize' | 'compose'
-export type ComposeTool = 'environment' | 'shadow' | 'camera-controls'
+export type ComposeTool =
+	| 'environment'
+	| 'shadow'
+	| 'camera-controls'
+	| 'interaction-controls'
 export interface SceneMetaState {
 	name: string
 	description: string

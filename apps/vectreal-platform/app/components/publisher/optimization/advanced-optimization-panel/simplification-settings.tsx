@@ -1,26 +1,43 @@
-// UI Components
 import { Switch } from '@shared/components/ui/switch'
 import { cn } from '@shared/utils'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom } from 'jotai/react'
 
-// Store
 import { optimizationAtom } from '../../../../lib/stores/scene-optimization-store'
 import { InfoTooltip } from '../../../info-tooltip'
-import { SettingSlider } from '../../settings-components'
+import { ToggleButtonGroup } from '../../settings-components'
 
-/**
- * Type definitions for optimization state structure
- */
+import type { ToggleButtonGroupOption } from '../../settings-components'
+
+const REDUCTION_PRESETS: ToggleButtonGroupOption<number>[] = [
+	{ value: 0.25, label: 'Light', subLabel: 'Preserve detail' },
+	{ value: 0.45, label: 'Balanced', subLabel: 'General purpose' },
+	{ value: 0.65, label: 'Aggressive', subLabel: 'Max reduction' }
+]
+
+const DEVIATION_PRESETS: ToggleButtonGroupOption<number>[] = [
+	{ value: 0.002, label: 'Strict', subLabel: 'Best shape accuracy' },
+	{ value: 0.007, label: 'Balanced', subLabel: 'Recommended' },
+	{ value: 0.014, label: 'Relaxed', subLabel: 'Smaller output' }
+]
+
+function getClosestValue(
+	options: ToggleButtonGroupOption<number>[],
+	current: number
+): number {
+	return options.reduce((closest, o) =>
+		Math.abs(o.value - current) < Math.abs(closest.value - current)
+			? o
+			: closest
+	).value
+}
+
 interface SimplificationSettings {
 	enabled: boolean
 	ratio: number
 	error: number
 }
 
-/**
- * Custom hook for simplification settings management
- */
 const useSimplificationSettings = () => {
 	const [state, setOptimization] = useAtom(optimizationAtom)
 	const { simplification } = state.optimizations
@@ -38,9 +55,6 @@ const useSimplificationSettings = () => {
 	return { settings: simplification, updateSettings }
 }
 
-/**
- * SimplificationSettings component for controlling mesh simplification parameters
- */
 export function SimplificationSettings() {
 	const { settings, updateSettings } = useSimplificationSettings()
 	const {
@@ -48,14 +62,8 @@ export function SimplificationSettings() {
 	} = useModelContext(true)
 
 	const totalVertices = report?.stats.vertices.after || 0
-
 	const { enabled, ratio, error } = settings
-
-	// Calculate estimated polygon reduction based on ratio
 	const estimatedVertices = Math.round(totalVertices * (1 - (ratio || 0)))
-
-	// Format decimal values consistently
-	const formatDecimal = (value: number) => value.toFixed(3)
 
 	return (
 		<>
@@ -72,51 +80,55 @@ export function SimplificationSettings() {
 
 			<div
 				className={cn(
-					'bg-muted/25 space-y-6 rounded-xl p-4 text-sm',
+					'bg-shell-surface-soft/50 space-y-5 rounded-xl p-4 text-sm shadow-sm',
 					!enabled && 'pointer-events-none opacity-50'
 				)}
 			>
-				<SettingSlider
-					id="ratio-slider"
-					label="Reduction Target"
-					tooltip="Sets how much to reduce the original vertex count. A value of 0.5 aims to keep 50% of vertices."
-					sliderProps={{
-						value: ratio ?? 0,
-						min: 0,
-						max: 1,
-						step: 0.01,
-						onChange: (value) => updateSettings({ ratio: value })
-					}}
-					labelProps={{
-						low: 'Smaller file size',
-						high: 'Better detail'
-					}}
-				/>
+				<div className="space-y-2">
+					<div className="flex items-center justify-between gap-2">
+						<div className="flex items-center gap-2">
+							<p className="text-sm font-semibold">Reduction target</p>
+							<InfoTooltip content="Select how aggressively the mesh should be reduced. Higher reduction creates smaller files with less geometry detail." />
+						</div>
+						<span className="text-accent text-xs font-medium">
+							{Math.round(getClosestValue(REDUCTION_PRESETS, ratio ?? 0) * 100)}
+							%
+						</span>
+					</div>
+					<ToggleButtonGroup
+						options={REDUCTION_PRESETS}
+						isActive={(v) =>
+							getClosestValue(REDUCTION_PRESETS, ratio ?? 0) === v
+						}
+						onChange={(v) => updateSettings({ ratio: v })}
+					/>
+				</div>
 
-				<div className="bg-muted/50 rounded-md p-3 text-sm">
+				<div className="publisher-shell-nested p-3 text-sm">
 					<span className="text-muted-foreground">Estimated vertices: </span>
 					<span className="text-accent font-medium">
 						{estimatedVertices.toLocaleString()}
 					</span>
 				</div>
 
-				<SettingSlider
-					id="error-slider"
-					label="Deviation Limit"
-					tooltip="Determines maximum allowed deviation from original mesh. Higher values allow more simplification but less accuracy."
-					sliderProps={{
-						value: error ?? 0.001,
-						min: 0.0005,
-						max: 0.02,
-						step: 0.001,
-						onChange: (value) => updateSettings({ error: value })
-					}}
-					labelProps={{
-						low: 'More precise',
-						high: 'More optimized'
-					}}
-					formatValue={formatDecimal}
-				/>
+				<div className="space-y-2">
+					<div className="flex items-center justify-between gap-2">
+						<div className="flex items-center gap-2">
+							<p className="text-sm font-semibold">Deviation limit</p>
+							<InfoTooltip content="Sets the maximum shape deviation allowed during simplification. Lower values preserve more detail." />
+						</div>
+						<span className="text-accent text-xs font-medium">
+							{getClosestValue(DEVIATION_PRESETS, error ?? 0.001).toFixed(3)}
+						</span>
+					</div>
+					<ToggleButtonGroup
+						options={DEVIATION_PRESETS}
+						isActive={(v) =>
+							getClosestValue(DEVIATION_PRESETS, error ?? 0.001) === v
+						}
+						onChange={(v) => updateSettings({ error: v })}
+					/>
+				</div>
 			</div>
 		</>
 	)

@@ -2,31 +2,11 @@ import {
 	defaultCameraOptions,
 	defaultControlsOptions
 } from '../../../../../constants/viewer-defaults'
-import {
-	ValueMapping,
-	valueMappings
-} from '../../../../../lib/utils/value-mapping'
+import { valueMappings } from '../../../../../lib/utils/value-mapping'
 
-/**
- * Camera and controls field configurations
- * Based on defaults from @vctrl/viewer package
- *
- * Following React best practices:
- * - rendering-hoist-jsx: Static configuration hoisted outside component
- * - js-cache-property-access: Centralized field definitions
- */
+import type { FieldConfig } from '../../../../../types/settings-field'
 
-export interface FieldConfig {
-	key: string
-	label: string
-	min: number
-	max: number
-	step: number
-	tooltip: string
-	formatValue?: (value: number) => string
-	valueMapping?: ValueMapping
-	unit?: string
-}
+export type { FieldConfig }
 
 /**
  * Camera controls field configurations

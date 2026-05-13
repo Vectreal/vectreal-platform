@@ -83,7 +83,7 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 		sceneId,
 		projectId,
 		userId,
-		onOpenOptimizationModal,
+		onOpenOptimizationDrawer,
 		canReoptimize,
 		viewModel,
 		saveAvailability,
@@ -117,14 +117,13 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 	const publishedAssetSizeBytes = publishState.publishedAssetSizeBytes
 
 	return (
-		<div className="no-scrollbar grow overflow-auto pb-2">
+		<div className="no-scrollbar min-h-0 flex-1 overflow-y-auto pb-2">
 			<motion.div
 				variants={sidebarContentVariants}
 				initial="initial"
 				animate="animate"
 				exit="exit"
 				key="publish-sidebar"
-				className="overflow-auto"
 			>
 				{!hideHeader && (
 					<>
@@ -154,7 +153,7 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 
 						<FileSizeComparison sizeInfo={publishMetricSizeInfo} />
 
-						<div className="bg-muted/50 space-y-3 rounded-lg p-4 text-xs">
+						<div className="publisher-shell-nested space-y-3 p-4 text-xs">
 							<div className="flex items-center justify-between gap-3">
 								<p className="text-muted-foreground">Triangles</p>
 								<p className="font-medium">
@@ -196,12 +195,10 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 				{canAccessPublishFeatures && <ScenePreview />}
 
 				<Accordion type="single" collapsible className="space-y-2 p-4">
-					<AccordionItem value="save" className="px-4">
-						<AccordionTrigger className="px-2">
-							<span className="flex items-center gap-3">
-								<Save className="inline" size={14} />
-								Download
-							</span>
+					<AccordionItem value="save">
+						<AccordionTrigger>
+							<Save className="inline" size={14} />
+							Download
 						</AccordionTrigger>
 						<AccordionContent>
 							<SaveOptions />
@@ -209,7 +206,7 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 					</AccordionItem>
 
 					{!isAuthenticated && (
-						<div className="px-6 pb-2">
+						<div className="px-4 pb-3">
 							<p className="text-muted-foreground mb-2 text-xs">
 								Sign up and save this scene once to unlock Publish and Embed.
 							</p>
@@ -260,12 +257,10 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 
 					{canAccessPublishFeatures && (
 						<>
-							<AccordionItem value="publish" className="px-4">
-								<AccordionTrigger className="px-2">
-									<span className="flex items-center gap-3">
-										<Globe className="inline" size={14} />
-										Publish
-									</span>
+							<AccordionItem value="publish">
+								<AccordionTrigger>
+									<Globe className="inline" size={14} />
+									Publish
 								</AccordionTrigger>
 								<AccordionContent>
 									<PublishOptions
@@ -277,12 +272,10 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 							</AccordionItem>
 
 							{publishState.status === 'published' && (
-								<AccordionItem value="embed" className="px-4">
-									<AccordionTrigger className="px-2">
-										<span className="flex items-center gap-3">
-											<Code className="inline" size={14} />
-											Embed
-										</span>
+								<AccordionItem value="embed">
+									<AccordionTrigger>
+										<Code className="inline" size={14} />
+										Embed
 									</AccordionTrigger>
 									<AccordionContent>
 										<EmbedOptions sceneId={sceneId} projectId={projectId} />
@@ -296,14 +289,15 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 				{canAccessPublishFeatures && canReoptimize && (
 					<div className="space-y-3 p-4">
 						<p className="text-muted-foreground text-xs">
-							Need another pass? Re-optimize your saved scene before publishing.
+							Need another pass? Continue composing first, then re-optimize if
+							you need a final tuning run before publishing.
 						</p>
 						<Button
 							type="button"
 							size="sm"
 							variant="secondary"
 							className="w-full"
-							onClick={() => onOpenOptimizationModal?.()}
+							onClick={() => onOpenOptimizationDrawer?.()}
 						>
 							<Sparkles size={14} className="mr-2" />
 							Re-optimize Scene

@@ -97,10 +97,10 @@ const BasicPanel = () => {
 						key={id}
 						onClick={() => handleSelect(id)}
 						className={cn(
-							'group focus-visible:ring-ring w-full rounded-xl border p-4 text-left transition-all duration-200 focus:outline-none focus-visible:ring-2',
+							'publisher-shell-focus group w-full rounded-xl border p-4 text-left transition-all duration-200',
 							isSelected
-								? 'border-accent/40 bg-accent/6'
-								: 'bg-muted/40 hover:border-border hover:bg-muted/60 border-transparent'
+								? 'border-accent/35 bg-shell-surface'
+								: 'border-shell-border-soft bg-shell-surface-soft hover:border-shell-border-strong hover:bg-shell-surface'
 						)}
 					>
 						{/* Always-visible header row */}
@@ -125,7 +125,7 @@ const BasicPanel = () => {
 									'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors duration-200',
 									isSelected
 										? 'bg-accent/15 text-accent'
-										: 'bg-background text-muted-foreground group-hover:text-foreground'
+										: 'bg-shell-surface text-muted-foreground group-hover:text-foreground'
 								)}
 							>
 								<Icon className="h-4 w-4" />
@@ -169,7 +169,7 @@ const BasicPanel = () => {
 										{meta.description}
 									</p>
 
-									<div className="mt-3 border-t pt-3 pl-[3.25rem]">
+									<div className="border-shell-border-soft mt-3 border-t pt-3 pl-[3.25rem]">
 										<p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-widest uppercase">
 											Applied techniques
 										</p>

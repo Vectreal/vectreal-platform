@@ -10,17 +10,19 @@ interface UseOptimizationModalFlowArgs {
 	hasUnsavedLocationChange: boolean
 }
 
+type UseOptimizationDrawerFlowArgs = UseOptimizationModalFlowArgs
+
 /**
  * Centralizes optimization-modal behavior and first-save optimization gating.
  *
  * This keeps controls/publisher UI components focused on rendering while the
  * hook owns modal orchestration side effects.
  */
-export function useOptimizationModalFlow({
+export function useOptimizationDrawerFlow({
 	saveAvailability,
 	hasUnsavedLocationChange
-}: UseOptimizationModalFlowArgs) {
-	const [optimizationModal, setOptimizationModal] = useAtom(
+}: UseOptimizationDrawerFlowArgs) {
+	const [optimizationDrawer, setOptimizationDrawer] = useAtom(
 		optimizationModalAtom
 	)
 
@@ -41,52 +43,58 @@ export function useOptimizationModalFlow({
 		effectiveSaveAvailability.reason === 'requires-first-optimization'
 
 	useEffect(() => {
-		if (!isInitialOptimizationRequired || optimizationModal.isOpen) {
+		if (!isInitialOptimizationRequired || optimizationDrawer.isOpen) {
 			return
 		}
 
-		setOptimizationModal({
+		setOptimizationDrawer({
 			isOpen: true,
 			source: 'initial'
 		})
 	}, [
 		isInitialOptimizationRequired,
-		optimizationModal.isOpen,
-		setOptimizationModal
+		optimizationDrawer.isOpen,
+		setOptimizationDrawer
 	])
 
-	const handleOptimizationModalChange = useCallback(
+	const handleOptimizationDrawerChange = useCallback(
 		(open: boolean) => {
 			if (!open && isInitialOptimizationRequired) {
 				return
 			}
 
-			setOptimizationModal((prev) => ({
+			setOptimizationDrawer((prev) => ({
 				...prev,
 				isOpen: open,
 				source: open ? prev.source : null
 			}))
 		},
-		[isInitialOptimizationRequired, setOptimizationModal]
+		[isInitialOptimizationRequired, setOptimizationDrawer]
 	)
 
-	const openReoptimizeModal = useCallback(() => {
-		setOptimizationModal({ isOpen: true, source: 'reoptimize' })
-	}, [setOptimizationModal])
+	const openReoptimizeDrawer = useCallback(() => {
+		setOptimizationDrawer({ isOpen: true, source: 'reoptimize' })
+	}, [setOptimizationDrawer])
 
-	const handleOpenOptimizationModal = useCallback(() => {
-		setOptimizationModal((prev) => ({
+	const handleOpenOptimizationDrawer = useCallback(() => {
+		setOptimizationDrawer((prev) => ({
 			isOpen: true,
 			source: prev.source ?? 'reoptimize'
 		}))
-	}, [setOptimizationModal])
+	}, [setOptimizationDrawer])
 
 	return {
 		effectiveSaveAvailability,
 		isInitialOptimizationRequired,
-		isOptimizationModalOpen: optimizationModal.isOpen,
-		handleOptimizationModalChange,
-		handleOpenOptimizationModal,
-		openReoptimizeModal
+		isOptimizationDrawerOpen: optimizationDrawer.isOpen,
+		handleOptimizationDrawerChange,
+		handleOpenOptimizationDrawer,
+		openReoptimizeDrawer,
+		isOptimizationModalOpen: optimizationDrawer.isOpen,
+		handleOptimizationModalChange: handleOptimizationDrawerChange,
+		handleOpenOptimizationModal: handleOpenOptimizationDrawer,
+		openReoptimizeModal: openReoptimizeDrawer
 	}
 }
+
+export const useOptimizationModalFlow = useOptimizationDrawerFlow

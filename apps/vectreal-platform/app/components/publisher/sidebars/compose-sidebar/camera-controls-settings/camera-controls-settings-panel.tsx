@@ -1,8 +1,7 @@
 import { Button } from '@shared/components/ui/button'
 import {
 	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger
+	CollapsibleContent
 } from '@shared/components/ui/collapsible'
 import { Input } from '@shared/components/ui/input'
 import {
@@ -13,33 +12,28 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 import { Separator } from '@shared/components/ui/separator'
-import {
-	ToggleGroup,
-	ToggleGroupItem
-} from '@shared/components/ui/toggle-group'
 import { useAtom } from 'jotai/react'
-import { ChevronDown, Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
-	CAMERA_CONTROLS_FIELDS,
-	CAMERA_FIELDS,
 	defaultCameraOptions,
 	defaultControlsOptions,
 	type FieldConfig
 } from './constants'
 import {
 	cameraAtom,
-	controlsAtom,
 	selectedCameraIdAtom
 } from '../../../../../lib/stores/scene-settings-store'
 import { InfoTooltip } from '../../../../info-tooltip'
 import { usePublisherViewerCapture } from '../../../publisher-viewer-capture-context'
 import {
 	EnhancedSettingSlider,
-	SettingToggle
+	ToggleButtonGroup
 } from '../../../settings-components'
+import { CollapsibleSectionTrigger } from '../../accordion-components'
 
+import type { ToggleButtonGroupOption } from '../../../settings-components'
 import type {
 	CameraProps,
 	CameraTransitionConfig,
@@ -88,43 +82,6 @@ const ControlField = memo(
 )
 ControlField.displayName = 'ControlField'
 
-const CameraField = memo(
-	({
-		config,
-		value,
-		onUpdate
-	}: {
-		config: FieldConfig
-		value: number
-		onUpdate: (key: string, value: number) => void
-	}) => (
-		<EnhancedSettingSlider
-			id={config.key}
-			sliderProps={{
-				min: config.min,
-				max: config.max,
-				step: config.step,
-				value:
-					value ??
-					(defaultCameraOptions.cameras?.[0]?.[
-						config.key as keyof NonNullable<CameraProps['cameras']>[number]
-					] as number),
-				onChange: (newValue) => onUpdate(config.key, newValue)
-			}}
-			label={config.label}
-			tooltip={config.tooltip}
-			labelProps={{
-				low: `${config.min}${config.unit || ''}`,
-				high: `${config.max}${config.unit || ''}`
-			}}
-			formatValue={config.formatValue}
-			valueMapping={config.valueMapping}
-			allowDirectInput={true}
-		/>
-	)
-)
-CameraField.displayName = 'CameraField'
-
 function createId(prefix: string): string {
 	return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
@@ -148,24 +105,20 @@ function applySnapshotToCamera(
 	}
 }
 
-const TRANSITION_TYPE_OPTIONS: Array<{
-	value: CameraTransitionType
-	label: string
-}> = [
-	{ value: 'none', label: 'Instant' },
-	{ value: 'linear', label: 'Linear' },
-	{ value: 'object_avoidance', label: 'Smart' }
-]
+const TRANSITION_TYPE_OPTIONS: ToggleButtonGroupOption<CameraTransitionType>[] =
+	[
+		{ value: 'none', label: 'Instant' },
+		{ value: 'linear', label: 'Linear' },
+		{ value: 'object_avoidance', label: 'Smart' }
+	]
 
-const TRANSITION_EASING_OPTIONS: Array<{
-	value: CameraTransitionEasing
-	label: string
-}> = [
-	{ value: 'linear', label: 'Linear' },
-	{ value: 'ease_in', label: 'Ease In' },
-	{ value: 'ease_out', label: 'Ease Out' },
-	{ value: 'ease_in_out', label: 'Smooth' }
-]
+const TRANSITION_EASING_OPTIONS: ToggleButtonGroupOption<CameraTransitionEasing>[] =
+	[
+		{ value: 'linear', label: 'Linear' },
+		{ value: 'ease_in', label: 'Ease In' },
+		{ value: 'ease_out', label: 'Ease Out' },
+		{ value: 'ease_in_out', label: 'Smooth' }
+	]
 
 const DEFAULT_OBJECT_AVOIDANCE = {
 	clearance: 2,
@@ -332,16 +285,44 @@ function normalizeCameraPayload(camera: CameraProps): CameraProps {
 	}
 }
 
-const SPEED_FIELDS = ['autoRotateSpeed', 'zoomSpeed', 'rotateSpeed', 'panSpeed']
-const ADVANCED_FIELDS = ['dampingFactor', 'maxPolarAngle']
+const FOV_PRESETS: ToggleButtonGroupOption<number>[] = [
+	{ value: 90, label: 'Wide', subLabel: '90°' },
+	{ value: 60, label: 'Standard', subLabel: '60°' },
+	{ value: 35, label: 'Telephoto', subLabel: '35°' }
+]
+
+const DURATION_PRESETS: ToggleButtonGroupOption<number>[] = [
+	{ value: 0, label: 'Instant', subLabel: '0ms' },
+	{ value: 500, label: 'Quick', subLabel: '500ms' },
+	{ value: 2000, label: 'Slow', subLabel: '2000ms' }
+]
+
+function getClosestPreset<T extends { value: number }>(
+	presets: T[],
+	current: number
+): number {
+	let closest = presets[0].value
+	let minDiff = Math.abs(current - presets[0].value)
+	for (const preset of presets) {
+		const diff = Math.abs(current - preset.value)
+		if (diff < minDiff) {
+			minDiff = diff
+			closest = preset.value
+		}
+	}
+	return closest
+}
+
+const getClosestFovPreset = (current: number) =>
+	getClosestPreset(FOV_PRESETS, current)
+const getClosestDurationPreset = (current: number) =>
+	getClosestPreset(DURATION_PRESETS, current)
 
 const CameraControlsSettingsPanel = memo(() => {
-	const [controls, setControls] = useAtom(controlsAtom)
 	const [camera, setCamera] = useAtom(cameraAtom)
 	const [selectedCameraId, setSelectedCameraId] = useAtom(selectedCameraIdAtom)
 	const [cameraNameDraft, setCameraNameDraft] = useState('')
 	const [transitionAdvancedOpen, setTransitionAdvancedOpen] = useState(false)
-	const [controlsAdvancedOpen, setControlsAdvancedOpen] = useState(false)
 	const { requestSceneCameraSnapshot } = usePublisherViewerCapture()
 
 	const normalizedCamera = useMemo(
@@ -414,16 +395,6 @@ const CameraControlsSettingsPanel = memo(() => {
 			})
 		},
 		[selectedCameraId, setCamera]
-	)
-
-	const handleControlUpdate = useCallback(
-		(key: string, value: number) => {
-			setControls((prev) => ({
-				...prev,
-				[key]: value
-			}))
-		},
-		[setControls]
 	)
 
 	const handleCameraUpdate = useCallback(
@@ -699,22 +670,12 @@ const CameraControlsSettingsPanel = memo(() => {
 		[handleTransitionUpdate, selectedTransition]
 	)
 
-	const handleToggle = useCallback(
-		(key: keyof typeof controls, enabled: boolean) => {
-			setControls((prev) => ({
-				...prev,
-				[key]: enabled
-			}))
-		},
-		[setControls]
-	)
-
 	return (
 		<div className="space-y-6">
 			{/* Camera Manager */}
 			<div className="space-y-3">
 				<div className="flex items-center gap-2">
-					<p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+					<p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
 						Camera Manager
 					</p>
 					<InfoTooltip content="Select, create, rename, and delete saved cameras. The selected camera becomes the active runtime camera." />
@@ -787,29 +748,31 @@ const CameraControlsSettingsPanel = memo(() => {
 			</div>
 
 			{/* Camera Settings */}
-			<div className="space-y-4">
+			<div className="space-y-3">
 				<div className="flex items-center gap-2">
-					<p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+					<p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
 						Camera Settings
 					</p>
-					<InfoTooltip content="Configure the selected camera's field of view and transform-level properties." />
+					<InfoTooltip content="Configure the selected camera's field of view." />
 				</div>
 				<Separator />
 
-				{CAMERA_FIELDS.map((config) => (
-					<CameraField
-						key={config.key}
-						config={config}
-						value={selectedCamera?.[config.key as keyof CameraEntry] as number}
-						onUpdate={handleCameraUpdate}
+				<div className="space-y-1.5">
+					<p className="text-muted-foreground text-xs">Field of View</p>
+					<ToggleButtonGroup
+						options={FOV_PRESETS}
+						isActive={(v) =>
+							getClosestFovPreset(selectedCamera?.fov ?? 60) === v
+						}
+						onChange={(v) => handleCameraUpdate('fov', v)}
 					/>
-				))}
+				</div>
 			</div>
 
 			{/* Camera Transition */}
 			<div className="space-y-4">
 				<div className="flex items-center gap-2">
-					<p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+					<p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
 						Camera Transition
 					</p>
 					<InfoTooltip content="Define how switching to the selected camera is animated." />
@@ -818,70 +781,38 @@ const CameraControlsSettingsPanel = memo(() => {
 
 				<div className="space-y-1.5">
 					<p className="text-muted-foreground text-xs">Transition Type</p>
-					<ToggleGroup
-						type="single"
+					<ToggleButtonGroup
+						options={TRANSITION_TYPE_OPTIONS}
 						value={selectedTransition.type}
-						onValueChange={(value) => {
-							if (value)
-								handleTransitionTypeChange(value as CameraTransitionType)
-						}}
-						variant="outline"
-						className="w-full"
-					>
-						{TRANSITION_TYPE_OPTIONS.map((option) => (
-							<ToggleGroupItem
-								key={option.value}
-								value={option.value}
-								className="flex-1 text-xs"
-							>
-								{option.label}
-							</ToggleGroupItem>
-						))}
-					</ToggleGroup>
+						onChange={handleTransitionTypeChange}
+					/>
 				</div>
 
 				{selectedTransition.type !== 'none' && (
 					<>
-						<EnhancedSettingSlider
-							id="transition-duration"
-							sliderProps={{
-								min: 0,
-								max: 5000,
-								step: 50,
-								value: selectedTransition.duration ?? 1000,
-								onChange: handleTransitionDurationChange
-							}}
-							label="Duration"
-							tooltip="Duration of the camera transition in milliseconds."
-							labelProps={{ low: '0ms', high: '5000ms' }}
-							formatValue={(value) => `${Math.round(value)}ms`}
-							allowDirectInput={true}
-						/>
+						<div className="space-y-3">
+							<div className="space-y-1.5">
+								<p className="text-muted-foreground text-xs">Duration</p>
+								<ToggleButtonGroup
+									options={DURATION_PRESETS}
+									isActive={(v) =>
+										getClosestDurationPreset(
+											selectedTransition.duration ?? 1000
+										) === v
+									}
+									onChange={handleTransitionDurationChange}
+								/>
+							</div>
 
-						<div className="space-y-1.5">
-							<p className="text-muted-foreground text-xs">Easing</p>
-							<ToggleGroup
-								type="single"
-								value={selectedTransition.easing ?? 'ease_in_out'}
-								onValueChange={(value) => {
-									if (value)
-										handleTransitionEasingChange(
-											value as CameraTransitionEasing
-										)
-								}}
-								variant="outline"
-								className="w-full"
-							>
-								{TRANSITION_EASING_OPTIONS.map((option) => (
-									<ToggleGroupItem
-										key={option.value}
-										value={option.value}
-										className="flex-1 text-xs"
-									>
-										{option.label}
-									</ToggleGroupItem>
-								))}
-							</ToggleGroup>
+							<div className="space-y-1.5">
+								<p className="text-muted-foreground text-xs">Easing</p>
+								<ToggleButtonGroup
+									options={TRANSITION_EASING_OPTIONS}
+									value={selectedTransition.easing ?? 'ease_in_out'}
+									onChange={handleTransitionEasingChange}
+									columns={4}
+								/>
+							</div>
 						</div>
 					</>
 				)}
@@ -891,18 +822,9 @@ const CameraControlsSettingsPanel = memo(() => {
 						open={transitionAdvancedOpen}
 						onOpenChange={setTransitionAdvancedOpen}
 					>
-						<CollapsibleTrigger asChild>
-							<Button
-								variant="ghost"
-								size="sm"
-								className="text-muted-foreground hover:text-foreground w-full justify-between px-0 text-xs"
-							>
-								Path settings
-								<ChevronDown
-									className={`h-3.5 w-3.5 transition-transform ${transitionAdvancedOpen ? 'rotate-180' : ''}`}
-								/>
-							</Button>
-						</CollapsibleTrigger>
+						<CollapsibleSectionTrigger isOpen={transitionAdvancedOpen}>
+							Path settings
+						</CollapsibleSectionTrigger>
 						<CollapsibleContent className="space-y-4 pt-2">
 							<EnhancedSettingSlider
 								id="transition-avoidance-clearance"
@@ -982,86 +904,6 @@ const CameraControlsSettingsPanel = memo(() => {
 						</CollapsibleContent>
 					</Collapsible>
 				)}
-			</div>
-
-			{/* Camera Controls */}
-			<div className="space-y-4">
-				<div className="flex items-center gap-2">
-					<p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-						Camera Controls
-					</p>
-					<InfoTooltip content="Configure how users can interact with the camera in your scene." />
-				</div>
-				<Separator />
-
-				<SettingToggle
-					enabled={!!controls.enableZoom}
-					onToggle={(enabled) => handleToggle('enableZoom', enabled)}
-					title="Enable Zoom"
-					description="Allow users to zoom in and out."
-				/>
-
-				<SettingToggle
-					enabled={!!controls.autoRotate}
-					onToggle={(enabled) => handleToggle('autoRotate', enabled)}
-					title="Auto Rotate"
-					description="Automatically rotate the camera around the model."
-				/>
-
-				<p className="text-muted-foreground pt-2 text-xs font-medium">
-					Interaction Speeds
-				</p>
-
-				{CAMERA_CONTROLS_FIELDS.filter((config) =>
-					SPEED_FIELDS.includes(config.key)
-				).map((config) => {
-					const isEnabled =
-						config.key === 'autoRotateSpeed'
-							? !!controls.autoRotate
-							: config.key === 'zoomSpeed'
-								? !!controls.enableZoom
-								: true
-
-					return (
-						<ControlField
-							key={config.key}
-							config={config}
-							value={controls[config.key as keyof typeof controls] as number}
-							onUpdate={handleControlUpdate}
-							enabled={isEnabled}
-						/>
-					)
-				})}
-
-				<Collapsible
-					open={controlsAdvancedOpen}
-					onOpenChange={setControlsAdvancedOpen}
-				>
-					<CollapsibleTrigger asChild>
-						<Button
-							variant="ghost"
-							size="sm"
-							className="text-muted-foreground hover:text-foreground w-full justify-between px-0 text-xs"
-						>
-							Advanced controls
-							<ChevronDown
-								className={`h-3.5 w-3.5 transition-transform ${controlsAdvancedOpen ? 'rotate-180' : ''}`}
-							/>
-						</Button>
-					</CollapsibleTrigger>
-					<CollapsibleContent className="space-y-4 pt-2">
-						{CAMERA_CONTROLS_FIELDS.filter((config) =>
-							ADVANCED_FIELDS.includes(config.key)
-						).map((config) => (
-							<ControlField
-								key={config.key}
-								config={config}
-								value={controls[config.key as keyof typeof controls] as number}
-								onUpdate={handleControlUpdate}
-							/>
-						))}
-					</CollapsibleContent>
-				</Collapsible>
 			</div>
 		</div>
 	)
