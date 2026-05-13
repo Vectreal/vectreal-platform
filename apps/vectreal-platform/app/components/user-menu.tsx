@@ -97,7 +97,11 @@ export function UserMenu({
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side="bottom" className="ml-4 min-w-64 capitalize">
 				<DropdownMenuLabel>
-					Hey, {user.user_metadata?.full_name.split(' ').at(0) || user.email}!
+					Hey,{' '}
+					{user.user_metadata?.full_name?.split(' ').at(0) ||
+						user.user_metadata?.name?.split(' ').at(0) ||
+						user.email}
+					!
 				</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem onClick={() => handleMenuItemClick('/publisher')}>
