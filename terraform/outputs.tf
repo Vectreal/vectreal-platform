@@ -72,7 +72,7 @@ output "local_dev_private_bucket_name" {
 
 output "local_dev_storage_key_path" {
   description = "Path to the local development storage service account key"
-  value       = var.create_service_account_keys ? local_sensitive_file.local_dev_storage_key[0].filename : ""
+  value       = var.create_service_account_keys || var.create_local_dev_storage_key ? local_sensitive_file.local_dev_storage_key[0].filename : ""
   sensitive   = true
 }
 
@@ -115,7 +115,7 @@ output "github_secrets_setup_help" {
     - Verify configuration
     
     Usage:
-      ./scripts/setup-github-secrets.sh
+      pnpm nx run terraform:setup-github-secrets
   EOT
 }
 
@@ -129,11 +129,11 @@ output "next_steps" {
        cp .env.development.example .env.development
        # Edit with your actual production and staging secrets
 
-     1a. Local development storage credentials are generated automatically at:
-       credentials/google-storage-local-dev-sa.json
+     1a. Generate local development storage credentials (optional, local-only):
+       pnpm nx run terraform:bootstrap-local-gcs
     
     2. Set up GitHub secrets:
-       ./scripts/setup-github-secrets.sh
+       pnpm nx run terraform:setup-github-secrets
     
     3. Verify secrets are set:
        gh secret list

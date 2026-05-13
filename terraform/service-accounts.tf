@@ -113,7 +113,7 @@ resource "google_service_account_key" "staging_deployer_key" {
 }
 
 resource "google_service_account_key" "local_dev_storage_key" {
-  count              = var.create_service_account_keys ? 1 : 0
+  count              = var.create_service_account_keys || var.create_local_dev_storage_key ? 1 : 0
   service_account_id = google_service_account.local_dev_storage.name
 }
 
@@ -131,7 +131,7 @@ resource "local_sensitive_file" "staging_key" {
 }
 
 resource "local_sensitive_file" "local_dev_storage_key" {
-  count    = var.create_service_account_keys ? 1 : 0
+  count    = var.create_service_account_keys || var.create_local_dev_storage_key ? 1 : 0
   content  = base64decode(google_service_account_key.local_dev_storage_key[0].private_key)
   filename = "${path.module}/../credentials/google-storage-local-dev-sa.json"
 }
