@@ -129,6 +129,25 @@ export type EventTypes =
 	| 'server-load-complete' // Emitted when server-based scene loading completes
 	| 'server-load-error' // Emitted when server-based scene loading fails
 
+export type ViewerLoadErrorCode =
+	| 'unsupported_format'
+	| 'binary_load_failed'
+	| 'gltf_load_failed'
+	| 'missing_assets'
+	| 'server_load_failed'
+	| 'not_found'
+	| 'quota_exceeded'
+	| 'unknown'
+
+export interface StructuredLoadError {
+	code: ViewerLoadErrorCode
+	message: string
+	recoverable: boolean
+	source: 'local-upload' | 'server-load'
+	cause?: unknown
+	context?: Record<string, unknown>
+}
+
 /**
  * Maps event types to their corresponding data payloads.
  * Ensures type safety when handling events.
@@ -146,14 +165,14 @@ export type EventData = {
 	'load-complete': LoadData['file']
 	/** No data for reset event */
 	'load-reset': null
-	/** Error object when loading fails */
-	'load-error': Error | unknown
+	/** Normalized error payload when loading fails */
+	'load-error': StructuredLoadError | Error | unknown
 	/** Scene ID being loaded from server */
 	'server-load-start': string
 	/** Complete scene load result */
 	'server-load-complete': SceneLoadResult
-	/** Error during server scene loading */
-	'server-load-error': Error | unknown
+	/** Normalized error payload during server scene loading */
+	'server-load-error': StructuredLoadError | Error | unknown
 }
 
 /**

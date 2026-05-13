@@ -12,7 +12,7 @@ import {
 } from '@shared/components/ui/dropdown-menu'
 import { useSetAtom } from 'jotai/react'
 import {
-	ArrowUp,
+	ArrowUpCircle,
 	Edit,
 	Folder,
 	FolderOpen,
@@ -72,7 +72,7 @@ const ACTION_CONFIGS: Record<ACTION_VARIANT, ActionGroupConfig | null> = {
 	[ACTION_VARIANT.DASHBOARD]: {
 		primary: {
 			label: 'Upload Model',
-			icon: ArrowUp,
+			icon: ArrowUpCircle,
 			to: '/publisher'
 		},
 		menu: [
@@ -116,7 +116,7 @@ const ACTION_CONFIGS: Record<ACTION_VARIANT, ActionGroupConfig | null> = {
 		},
 		secondary: {
 			label: 'Upload Model',
-			icon: ArrowUp,
+			icon: ArrowUpCircle,
 			to: ({ projectId }: RouteContext) =>
 				PUBLISHER_ROUTES.withContext(projectId),
 			variant: 'default'
@@ -137,7 +137,7 @@ const ACTION_CONFIGS: Record<ACTION_VARIANT, ActionGroupConfig | null> = {
 		},
 		secondary: {
 			label: 'Upload Model',
-			icon: ArrowUp,
+			icon: ArrowUpCircle,
 			to: ({ projectId, folderId }: RouteContext) =>
 				PUBLISHER_ROUTES.withContext(projectId, folderId),
 			variant: 'default'

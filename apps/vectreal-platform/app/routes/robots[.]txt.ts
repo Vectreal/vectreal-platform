@@ -20,7 +20,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		'',
 		'# Authenticated / private pages',
 		'Disallow: /dashboard',
-		'Disallow: /publisher',
 		'Disallow: /onboarding',
 		'Disallow: /preview',
 		'',

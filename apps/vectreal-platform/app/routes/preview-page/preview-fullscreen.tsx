@@ -1,3 +1,4 @@
+import { Button } from '@shared/components/ui/button'
 import { ModelFile, SceneLoadResult } from '@vctrl/hooks/use-load-model'
 import {
 	InfoPopover,
@@ -87,7 +88,7 @@ const PreviewModel = memo(
 const PreviewFullscreenPage = ({ params }: Route.ComponentProps) => {
 	const sceneId = params.sceneId
 	const projectId = params.projectId
-	const { file, isLoadingScene, sceneData } = usePreviewScene({
+	const { file, isLoadingScene, sceneData, previewError, retrySceneLoad } = usePreviewScene({
 		sceneId,
 		projectId
 	})
@@ -100,6 +101,25 @@ const PreviewFullscreenPage = ({ params }: Route.ComponentProps) => {
 
 	if (isLoadingScene && !file?.model) {
 		return <CenteredSpinner className="h-screen" text="Loading scene..." />
+	}
+
+	if (previewError && !file?.model) {
+		return (
+			<div className="bg-background flex h-screen w-full items-center justify-center p-6">
+				<div className="border-border bg-card w-full max-w-lg space-y-4 rounded-2xl border p-6">
+					<h1 className="text-lg font-semibold">Unable to Load Scene Preview</h1>
+					<p className="text-muted-foreground text-sm">{previewError.message}</p>
+					<div className="flex gap-2">
+						<Button type="button" onClick={() => void retrySceneLoad()}>
+							Retry
+						</Button>
+						<Button type="button" variant="outline" onClick={() => window.history.back()}>
+							Go Back
+						</Button>
+					</div>
+				</div>
+			</div>
+		)
 	}
 
 	return (

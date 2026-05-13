@@ -3,18 +3,22 @@ import { useExportModel } from '@vctrl/hooks/use-export-model'
 import {
 	type EventHandler,
 	type ModelFile,
+	type StructuredLoadError,
 	useModelContext
 } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue } from 'jotai/react'
+import { usePostHog } from '@posthog/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
+import { useConsent } from '../components/consent/consent-context'
 import { useSceneAggregateBootstrap } from './scene-loader/use-scene-aggregate-bootstrap'
 import { useSceneDraftRehydration } from './scene-loader/use-scene-draft-rehydration'
 import { useSceneModelEvents } from './scene-loader/use-scene-model-events'
 import { useSceneParamsSync } from './scene-loader/use-scene-params-sync'
 import { useSceneSaveFlow } from './scene-loader/use-scene-save-flow'
+import { buildSceneUploadFailedAnalyticsProps } from '../lib/domain/analytics/scene-events'
 import { optimizationPresets } from '../constants/optimizations'
 import {
 	defaultBoundsOptions,
@@ -87,6 +91,35 @@ const DEFAULT_THUMBNAIL_CAPTURE_OPTIONS = {
 	mode: 'auto-fit' as const
 }
 
+function mapStructuredLoadErrorMessage(error: StructuredLoadError): string {
+	switch (error.code) {
+		case 'missing_assets':
+			return 'Model references missing assets. Upload the full model folder (including textures/buffers) and retry.'
+		case 'unsupported_format':
+			return 'Unsupported model format. Upload a .gltf, .glb, or .usdz file.'
+		case 'quota_exceeded':
+			return 'Upload limit reached for this plan. Upgrade to continue uploading models.'
+		case 'not_found':
+			return 'Scene could not be found. Refresh and try again.'
+		default:
+			return error.message || 'Failed to load model'
+	}
+}
+
+function isStructuredLoadError(error: unknown): error is StructuredLoadError {
+	if (!error || typeof error !== 'object') {
+		return false
+	}
+
+	const candidate = error as Partial<StructuredLoadError>
+	return (
+		typeof candidate.code === 'string' &&
+		typeof candidate.message === 'string' &&
+		typeof candidate.recoverable === 'boolean' &&
+		typeof candidate.source === 'string'
+	)
+}
+
 /**
  * Manages scene load/save side effects and shared store synchronization.
  *
@@ -116,6 +149,11 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 
 	const sceneLoadAttemptedRef = useRef(false)
 	const pendingSceneHydratedRef = useRef(false)
+	const lastLoadErrorToastRef = useRef<{ signature: string; at: number } | null>(
+		null
+	)
+	const posthog = usePostHog()
+	const { consent } = useConsent()
 	// Last-saved baselines live in atoms (not useState) so they survive route
 	// transitions without being reset by component remounting.
 	const [lastSavedSettings, setLastSavedSettings] = useAtom(
@@ -376,14 +414,42 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		console.error('Load error:', error)
 
 		let errorMessage = 'Failed to load model'
-		if (error instanceof Error) {
+		let analyticsProps:
+			| ReturnType<typeof buildSceneUploadFailedAnalyticsProps>
+			| null = null
+		if (isStructuredLoadError(error)) {
+			errorMessage = mapStructuredLoadErrorMessage(error)
+			analyticsProps = buildSceneUploadFailedAnalyticsProps(error, errorMessage)
+		} else if (error instanceof Error) {
 			errorMessage = error.message
 		} else if (typeof error === 'string') {
 			errorMessage = error
 		}
 
-		toast.error(errorMessage)
-	}, [])
+		const signature = `${analyticsProps?.error_code ?? 'unknown'}:${errorMessage}`
+		const now = Date.now()
+		const isDuplicateToast =
+			lastLoadErrorToastRef.current?.signature === signature &&
+			now - lastLoadErrorToastRef.current.at < 2000
+
+		if (!isDuplicateToast) {
+			toast.error(errorMessage)
+			lastLoadErrorToastRef.current = { signature, at: now }
+		}
+
+		if (consent?.analytics) {
+			if (analyticsProps) {
+				posthog?.capture('scene_upload_failed', analyticsProps)
+			} else {
+				posthog?.capture('scene_upload_failed', {
+					client_type: 'web',
+					file_format: 'unknown',
+					error_code: 'unknown',
+					error_message: errorMessage
+				})
+			}
+		}
+	}, [consent?.analytics, posthog])
 
 	useSceneModelEvents({
 		on,

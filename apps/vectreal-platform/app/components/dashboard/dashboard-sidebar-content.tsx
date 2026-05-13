@@ -39,7 +39,7 @@ import {
 	Folder,
 	FolderOpen,
 	LayoutDashboard,
-	ArrowUp
+	ArrowUpCircleIcon
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useFetcher } from 'react-router'
@@ -91,7 +91,7 @@ const quickLinks: SidebarLinkItem[] = [
 	{
 		title: 'Upload Model',
 		url: '/publisher',
-		icon: ArrowUp
+		icon: ArrowUpCircleIcon
 	}
 ]
 

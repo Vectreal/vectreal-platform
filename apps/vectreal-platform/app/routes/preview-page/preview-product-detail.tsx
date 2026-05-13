@@ -17,6 +17,7 @@ import {
 	InfoPopoverVectrealFooter
 } from '@vctrl/viewer'
 import { memo } from 'react'
+import { Link } from 'react-router'
 
 import { Route } from './+types/preview-product-detail'
 import { usePreviewScene } from './use-preview-scene'
@@ -96,7 +97,7 @@ const ProductDetailModel = memo(
 const PreviewProductDetailPage = ({ params }: Route.ComponentProps) => {
 	const sceneId = params.sceneId
 	const projectId = params.projectId
-	const { file, isLoadingScene, sceneData } = usePreviewScene({
+	const { file, isLoadingScene, sceneData, previewError, retrySceneLoad } = usePreviewScene({
 		sceneId,
 		projectId
 	})
@@ -109,6 +110,29 @@ const PreviewProductDetailPage = ({ params }: Route.ComponentProps) => {
 
 	if (isLoadingScene && !file?.model) {
 		return <CenteredSpinner className="h-screen" text="Loading scene..." />
+	}
+
+	if (previewError && !file?.model) {
+		return (
+			<div className="bg-background flex min-h-screen items-center justify-center px-4">
+				<Card className="w-full max-w-lg">
+					<CardHeader>
+						<CardTitle>Unable to Load Scene Preview</CardTitle>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						<p className="text-muted-foreground text-sm">{previewError.message}</p>
+						<div className="flex flex-wrap gap-2">
+							<Button type="button" onClick={() => void retrySceneLoad()}>
+								Retry
+							</Button>
+							<Button type="button" variant="outline" asChild>
+								<Link to="/dashboard/projects">Back to dashboard</Link>
+							</Button>
+						</div>
+					</CardContent>
+				</Card>
+			</div>
+		)
 	}
 
 	return (
