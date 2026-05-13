@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import {
 	DynamicSidebar,
 	InfoBanner,
+	MobileToolBar,
 	SaveButton,
 	SceneNameAndLocation,
 	SceneInfoTrigger,
@@ -245,13 +246,7 @@ const OverlayControls = ({
 				/>
 			</div>
 
-			<div className="fixed inset-x-0 top-0 z-30 px-4 pt-[4.25rem] md:hidden">
-				<SceneNameAndLocation
-					authenticated={!!user}
-					className="publisher-shell-floating px-1"
-				/>
-			</div>
-
+			{/* Desktop top bar */}
 			<FloatingPillWrapper className="fixed top-0 right-0 z-20 m-4 hidden p-1 md:flex">
 				<ButtonGroup className="items-center">
 					<SaveButton
@@ -281,7 +276,6 @@ const OverlayControls = ({
 						</span>
 					</>
 				)}
-
 				{user && (
 					<UserMenu
 						size="sm"
@@ -292,27 +286,37 @@ const OverlayControls = ({
 				)}
 			</FloatingPillWrapper>
 
-			<FloatingPillWrapper className="fixed top-0 right-0 z-50 m-4 flex p-1 md:hidden">
-				<ButtonGroup className="items-center gap-1">
-					<SaveButton
-						sceneId={sceneId}
-						userId={user?.id}
-						saveLocationTarget={saveLocationTarget}
-						saveAvailability={effectiveSaveAvailability}
-						onRequireAuth={handleRequireAuthForSave}
-						saveSceneSettings={saveSceneSettings}
-						compact
-					/>
-					{user ? (
-						<UserMenu
-							size="sm"
-							user={user}
-							onLogout={handleLogout}
-							sceneDetailsHref={sceneDetailsHref}
-						/>
-					) : null}
-				</ButtonGroup>
-			</FloatingPillWrapper>
+			{/* Mobile header — unified flex layout */}
+			<div className="fixed inset-x-0 top-0 z-40 flex flex-col gap-2 p-4 md:hidden">
+				<SceneNameAndLocation
+					authenticated={!!user}
+					className="publisher-shell-floating px-1"
+				/>
+				<div className="flex items-center justify-between gap-2">
+					<MobileToolBar />
+					<FloatingPillWrapper className="p-1">
+						<ButtonGroup className="items-center gap-1">
+							<SaveButton
+								sceneId={sceneId}
+								userId={user?.id}
+								saveLocationTarget={saveLocationTarget}
+								saveAvailability={effectiveSaveAvailability}
+								onRequireAuth={handleRequireAuthForSave}
+								saveSceneSettings={saveSceneSettings}
+								compact
+							/>
+							{user && (
+								<UserMenu
+									size="sm"
+									user={user}
+									onLogout={handleLogout}
+									sceneDetailsHref={sceneDetailsHref}
+								/>
+							)}
+						</ButtonGroup>
+					</FloatingPillWrapper>
+				</div>
+			</div>
 			<SceneInfoTrigger onClick={handleOpenPublishPanel} />
 			<DynamicSidebar
 				open={showPublishPanel}

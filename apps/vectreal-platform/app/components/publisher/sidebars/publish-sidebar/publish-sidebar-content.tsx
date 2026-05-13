@@ -117,14 +117,13 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 	const publishedAssetSizeBytes = publishState.publishedAssetSizeBytes
 
 	return (
-		<div className="no-scrollbar grow overflow-auto pb-2">
+		<div className="no-scrollbar min-h-0 flex-1 overflow-y-auto pb-2">
 			<motion.div
 				variants={sidebarContentVariants}
 				initial="initial"
 				animate="animate"
 				exit="exit"
 				key="publish-sidebar"
-				className="overflow-auto"
 			>
 				{!hideHeader && (
 					<>

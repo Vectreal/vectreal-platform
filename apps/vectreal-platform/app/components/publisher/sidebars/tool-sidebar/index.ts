@@ -1,1 +1,1 @@
-export { ToolSidebar } from './tool-sidebar'
+export { ToolSidebar, MobileToolBar } from './tool-sidebar'
