@@ -13,9 +13,11 @@ import {
 	isGltfExportResult
 } from './scene-settings-assets.server'
 import {
+	getHotspotsBySceneSettingsId,
 	getSceneAssetIds,
 	getSceneSettingsBySceneId,
 	getSceneSettingsWithAssetsRow,
+	replaceHotspots,
 	replaceSceneAssets,
 	type SceneSettingsTransaction,
 	upsertSceneSettings
@@ -179,6 +181,9 @@ class SceneSettingsService {
 				await replaceSceneAssets(tx, savedSettings.id, assetIds)
 			}
 
+			// Always sync hotspots — the client is authoritative on the full list.
+			await replaceHotspots(tx, savedSettings.id, settings.hotspots ?? [])
+
 			if (optimizationReport || optimizationSettings) {
 				await this.upsertSceneStats(tx, {
 					report: optimizationReport,
@@ -272,6 +277,9 @@ class SceneSettingsService {
 			if (!existingSettings || assetsChanged) {
 				await replaceSceneAssets(tx, savedSettings.id, sceneAssetIds)
 			}
+
+			// Always sync hotspots — the client is authoritative on the full list.
+			await replaceHotspots(tx, savedSettings.id, settings.hotspots ?? [])
 
 			if (optimizationReport || optimizationSettings) {
 				await this.upsertSceneStats(tx, {
@@ -372,10 +380,15 @@ class SceneSettingsService {
 	 */
 	async getSceneSettingsWithAssets(sceneId: string) {
 		let result: Awaited<ReturnType<typeof getSceneSettingsWithAssetsRow>>
+		let hotspots: import('@vctrl/core').HotspotDefinition[] = []
 
 		try {
 			result = await this.db.transaction(async (tx) => {
-				return await getSceneSettingsWithAssetsRow(tx, sceneId)
+				const row = await getSceneSettingsWithAssetsRow(tx, sceneId)
+				if (row) {
+					hotspots = await getHotspotsBySceneSettingsId(tx, row.settings.id)
+				}
+				return row
 			})
 		} catch (error) {
 			console.error('Failed to query scene settings with assets:', {
@@ -426,7 +439,8 @@ class SceneSettingsService {
 				controls: settings.controls ?? undefined,
 				environment: settings.environment ?? undefined,
 				interactions: settings.interactions ?? undefined,
-				shadows: settings.shadows ?? undefined
+				shadows: settings.shadows ?? undefined,
+				hotspots: hotspots.length > 0 ? hotspots : undefined
 			},
 			assets: sceneAssetsData,
 			assetDataMap, // Map of assetId -> asset data for reconstruction

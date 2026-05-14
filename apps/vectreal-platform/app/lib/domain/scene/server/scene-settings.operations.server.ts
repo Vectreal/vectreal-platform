@@ -395,7 +395,8 @@ export async function saveSceneSettings(
 }
 
 export async function getSceneSettings(
-	request: SceneSettingsRequest
+	request: SceneSettingsRequest,
+	options?: { forPublicView?: boolean }
 ): Promise<Response> {
 	try {
 		const { sceneId } = request as GetSceneSettingsRequest
@@ -433,7 +434,20 @@ export async function getSceneSettings(
 			})
 		}
 
-		return ApiResponse.success({ ...result, meta, assetData: serialized })
+		const finalResult =
+			options?.forPublicView && result.settings?.hotspots
+				? {
+						...result,
+						settings: {
+							...result.settings,
+							hotspots: result.settings.hotspots.filter(
+								(h) => !h.internalOnly
+							)
+						}
+					}
+				: result
+
+		return ApiResponse.success({ ...finalResult, meta, assetData: serialized })
 	} catch (error) {
 		console.error('Failed to get scene settings:', error)
 		return ApiResponse.serverError(
