@@ -51,7 +51,7 @@ const STYLE_PRESET_OPTIONS: ToggleButtonGroupOption<HotspotStylePreset>[] = [
 
 const HotspotsSettingsPanel = memo(() => {
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
-	const [camera] = useAtom(cameraAtom)
+	const [camera, setCamera] = useAtom(cameraAtom)
 	const [selectedId, setSelectedId] = useState<string | null>(null)
 
 	const hotspotCameras = useMemo(
@@ -74,17 +74,42 @@ const HotspotsSettingsPanel = memo(() => {
 	)
 
 	const handleAdd = useCallback(() => {
-		const next = createDefaultHotspot()
+		const pairedCameraId = `hotspot-camera-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+		const next: HotspotDefinition = {
+			...createDefaultHotspot(),
+			linkedCameraId: pairedCameraId
+		}
 		setHotspots((prev) => [...prev, next])
+		setCamera((prev) => ({
+			...prev,
+			cameras: [
+				...(prev.cameras ?? []),
+				{
+					cameraId: pairedCameraId,
+					name: `${next.name} Camera`,
+					kind: 'hotspot' as const,
+					fov: 60
+				}
+			]
+		}))
 		setSelectedId(next.id)
-	}, [setHotspots])
+	}, [setCamera, setHotspots])
 
 	const handleDelete = useCallback(
 		(id: string) => {
+			const hotspot = hotspots.find((h) => h.id === id)
 			setHotspots((prev) => prev.filter((h) => h.id !== id))
+			if (hotspot?.linkedCameraId) {
+				setCamera((prev) => ({
+					...prev,
+					cameras: (prev.cameras ?? []).filter(
+						(c) => c.cameraId !== hotspot.linkedCameraId
+					)
+				}))
+			}
 			setSelectedId((prev) => (prev === id ? null : prev))
 		},
-		[setHotspots]
+		[hotspots, setCamera, setHotspots]
 	)
 
 	const handlePositionChange = useCallback(
@@ -119,9 +144,18 @@ const HotspotsSettingsPanel = memo(() => {
 				<Separator />
 
 				{hotspots.length === 0 ? (
-					<p className="text-muted-foreground py-4 text-center text-xs">
-						No hotspots yet. Click + to add one.
-					</p>
+					<div className="py-4 text-center">
+						<p className="text-muted-foreground text-xs">
+							No hotspots yet.
+						</p>
+						<p className="text-muted-foreground mb-3 text-xs">
+							Add one to create a point of interest for viewers.
+						</p>
+						<Button variant="outline" size="sm" onClick={handleAdd} className="gap-1.5">
+							<Plus className="h-3.5 w-3.5" />
+							Add Hotspot
+						</Button>
+					</div>
 				) : (
 					<div className="space-y-1">
 						{hotspots.map((hotspot) => (
@@ -226,9 +260,7 @@ const HotspotsSettingsPanel = memo(() => {
 
 					{/* Style Preset */}
 					<div className="space-y-1.5">
-						<Label className="text-muted-foreground text-xs">
-							Style
-						</Label>
+						<Label className="text-muted-foreground text-xs">Style</Label>
 						<ToggleButtonGroup
 							options={STYLE_PRESET_OPTIONS}
 							value={selectedHotspot.stylePreset}
@@ -236,6 +268,23 @@ const HotspotsSettingsPanel = memo(() => {
 								updateHotspot(selectedHotspot.id, { stylePreset: v })
 							}
 						/>
+						{selectedHotspot.stylePreset !== 'dot' && (
+							<div className="space-y-1">
+								<Label className="text-muted-foreground text-xs">
+									Asset URL
+								</Label>
+								<Input
+									value={selectedHotspot.payloadUrl ?? ''}
+									onChange={(e) =>
+										updateHotspot(selectedHotspot.id, {
+											payloadUrl: e.target.value || undefined
+										})
+									}
+									placeholder="https://…"
+									className="text-xs"
+								/>
+							</div>
+						)}
 					</div>
 
 					{/* Linked Camera */}
@@ -244,7 +293,7 @@ const HotspotsSettingsPanel = memo(() => {
 							<Label className="text-muted-foreground text-xs">
 								Linked Camera
 							</Label>
-							<InfoTooltip content="Hotspot cameras are added in the Camera Tools panel with kind='hotspot'." />
+							<InfoTooltip content="Viewers transition to this camera when clicking the hotspot. Created automatically — frame it using the Camera tool." />
 						</div>
 						{hotspotCameras.length > 0 ? (
 							<Select
@@ -269,7 +318,7 @@ const HotspotsSettingsPanel = memo(() => {
 							</Select>
 						) : (
 							<p className="text-muted-foreground text-xs">
-								No hotspot cameras defined yet.
+								Add a hotspot to automatically create a linked camera.
 							</p>
 						)}
 					</div>

@@ -14,8 +14,8 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 import { Separator } from '@shared/components/ui/separator'
-import { useAtom } from 'jotai/react'
-import { Pin, Plus, Trash2 } from 'lucide-react'
+import { useAtom, useAtomValue } from 'jotai/react'
+import { Camera, Pin, Plus, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
@@ -25,6 +25,7 @@ import {
 } from './constants'
 import {
 	cameraAtom,
+	hotspotsAtom,
 	selectedCameraIdAtom
 } from '../../../../../lib/stores/scene-settings-store'
 import { InfoTooltip } from '../../../../info-tooltip'
@@ -287,9 +288,20 @@ const DEFAULT_STRATEGY_OPTIONS: ToggleButtonGroupOption<DefaultCameraStrategy>[]
 const CameraControlsSettingsPanel = memo(() => {
 	const [camera, setCamera] = useAtom(cameraAtom)
 	const [selectedCameraId, setSelectedCameraId] = useAtom(selectedCameraIdAtom)
+	const hotspots = useAtomValue(hotspotsAtom)
 	const [cameraNameDraft, setCameraNameDraft] = useState('')
 	const [transitionAdvancedOpen, setTransitionAdvancedOpen] = useState(false)
 	const { requestSceneCameraSnapshot } = usePublisherViewerCapture()
+
+	const hotspotNameByCameraId = useMemo(
+		() =>
+			Object.fromEntries(
+				hotspots
+					.filter((h) => h.linkedCameraId)
+					.map((h) => [h.linkedCameraId, h.name])
+			),
+		[hotspots]
+	)
 
 	const normalizedCamera = useMemo(
 		() => normalizeCameraPayload(camera),
@@ -547,6 +559,12 @@ const CameraControlsSettingsPanel = memo(() => {
 		void handleSelectCamera(resolvedDefaultCameraId)
 	}, [handleSelectCamera, resolvedDefaultCameraId])
 
+	const handleCaptureCurrentView = useCallback(async () => {
+		const snapshot = await requestSceneCameraSnapshot()
+		if (!snapshot) return
+		updateSelectedCamera((cameraEntry) => applySnapshotToCamera(cameraEntry, snapshot))
+	}, [requestSceneCameraSnapshot, updateSelectedCamera])
+
 	const handleTransitionUpdate = useCallback(
 		(nextTransition: CameraTransitionConfig) => {
 			setCamera((prev) => ({
@@ -731,7 +749,14 @@ const CameraControlsSettingsPanel = memo(() => {
 											key={cameraEntry.cameraId}
 											value={cameraEntry.cameraId}
 										>
-											{cameraEntry.name || 'Unnamed Camera'}
+											<span className="flex items-center gap-1.5">
+												{cameraEntry.name || 'Unnamed Camera'}
+												{hotspotNameByCameraId[cameraEntry.cameraId] && (
+													<span className="text-muted-foreground text-xs">
+														→ {hotspotNameByCameraId[cameraEntry.cameraId]}
+													</span>
+												)}
+											</span>
 										</SelectItem>
 									))}
 								</SelectGroup>
@@ -756,6 +781,16 @@ const CameraControlsSettingsPanel = memo(() => {
 						title="Delete camera"
 					>
 						<Trash2 />
+					</Button>
+					<Button
+						variant="outline"
+						size="icon"
+						onClick={() => {
+							void handleCaptureCurrentView()
+						}}
+						title="Capture current view into this camera"
+					>
+						<Camera />
 					</Button>
 				</div>
 
@@ -858,6 +893,21 @@ const CameraControlsSettingsPanel = memo(() => {
 						}
 						onChange={(v) => handleCameraUpdate('fov', v)}
 					/>
+					<EnhancedSettingSlider
+						id="camera-fov"
+						sliderProps={{
+							min: 20,
+							max: 120,
+							step: 1,
+							value: selectedCamera?.fov ?? 60,
+							onChange: (value) => handleCameraUpdate('fov', value)
+						}}
+						label="Custom FOV"
+						tooltip="Set a precise field of view value in degrees."
+						labelProps={{ low: '20°', high: '120°' }}
+						formatValue={(v) => `${Math.round(v)}°`}
+						allowDirectInput
+					/>
 				</div>
 			</div>
 
@@ -893,6 +943,21 @@ const CameraControlsSettingsPanel = memo(() => {
 										) === v
 									}
 									onChange={handleTransitionDurationChange}
+								/>
+								<EnhancedSettingSlider
+									id="transition-duration"
+									sliderProps={{
+										min: 0,
+										max: 5000,
+										step: 50,
+										value: selectedTransition.duration ?? 1000,
+										onChange: handleTransitionDurationChange
+									}}
+									label="Custom Duration"
+									tooltip="Set a precise transition duration in milliseconds."
+									labelProps={{ low: '0ms', high: '5000ms' }}
+									formatValue={(v) => `${Math.round(v)}ms`}
+									allowDirectInput
 								/>
 							</div>
 
