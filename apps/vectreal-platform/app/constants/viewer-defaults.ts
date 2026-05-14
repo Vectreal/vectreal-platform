@@ -22,20 +22,20 @@ export const defaultCameraOptions: CameraProps = {
 			cameraId: 'default',
 			name: 'Default Camera',
 			fov: 60,
-			initial: true,
-			transition: {
-				type: 'object_avoidance',
-				duration: 1000,
-				easing: 'ease_in_out',
-				objectAvoidance: {
-					clearance: 2,
-					arcHeight: 2,
-					samples: 64,
-					tension: 0.5
-				}
-			}
+			initial: true
 		}
-	]
+	],
+	sceneTransition: {
+		type: 'object_avoidance',
+		duration: 1000,
+		easing: 'ease_in_out',
+		objectAvoidance: {
+			clearance: 2,
+			arcHeight: 2,
+			samples: 64,
+			tension: 0.5
+		}
+	}
 }
 export const defaultControlsOptions: ControlsProps = {
 	controlsTimeout: 0,
