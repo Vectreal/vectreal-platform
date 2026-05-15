@@ -1,8 +1,9 @@
-import { Camera, MountainSnow, MousePointer2, Tornado } from 'lucide-react'
+import { Camera, MountainSnow, Package, Sparkles, Tornado } from 'lucide-react'
 
-import { CameraControlsSettings } from './camera-controls-settings'
+import { AssetsSettings } from './assets-settings'
+import { CameraToolsSettings } from './camera-tools-settings'
 import { EnvironmentSettings } from './environment-settings'
-import { InteractionControlsSettings } from './interaction-controls-settings'
+import { HotspotsSettings } from './hotspots-settings'
 import { ShadowSettings } from './shadow-settings'
 
 import type { ComposeTool } from '../../../../types/publisher-config'
@@ -38,22 +39,31 @@ const COMPOSE_TOOL_DEFINITIONS: ComposeToolDefinition[] = [
 		component: ShadowSettings
 	},
 	{
-		value: 'camera-controls',
-		label: 'Camera',
+		value: 'camera-tools',
+		label: 'Camera & Interaction',
 		shortLabel: 'Camera',
 		description:
-			'Manage saved cameras, field of view, and animated transitions.',
+			'Manage saved cameras, field of view, transitions, and viewer interaction behaviour.',
 		icon: Camera,
-		component: CameraControlsSettings
+		component: CameraToolsSettings
 	},
 	{
-		value: 'interaction-controls',
-		label: 'Interaction',
-		shortLabel: 'Interaction',
+		value: 'hotspots',
+		label: 'Hotspots',
+		shortLabel: 'Hotspots',
 		description:
-			'Configure how viewers orbit, zoom, and move around the scene.',
-		icon: MousePointer2,
-		component: InteractionControlsSettings
+			'Place and configure hotspot markers linked to camera positions.',
+		icon: Sparkles,
+		component: HotspotsSettings
+	},
+	{
+		value: 'assets',
+		label: 'Assets',
+		shortLabel: 'Assets',
+		description:
+			'Browse scene assets — textures, materials, and models — and save them for reuse.',
+		icon: Package,
+		component: AssetsSettings
 	}
 ]
 

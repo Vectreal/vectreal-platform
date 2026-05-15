@@ -7,13 +7,15 @@ import { Input } from '@shared/components/ui/input'
 import {
 	Select,
 	SelectContent,
+	SelectGroup,
 	SelectItem,
+	SelectLabel,
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
 import { Separator } from '@shared/components/ui/separator'
 import { useAtom } from 'jotai/react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Pin, Plus, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
@@ -38,7 +40,8 @@ import type {
 	CameraProps,
 	CameraTransitionConfig,
 	CameraTransitionEasing,
-	CameraTransitionType
+	CameraTransitionType,
+	DefaultCameraStrategy
 } from '@vctrl/core'
 import type { SceneCameraSnapshot } from '@vctrl/viewer'
 
@@ -171,92 +174,42 @@ function getNormalizedTransition(
 	}
 }
 
+function resolveDefaultCameraId(
+	cameras: CameraEntry[],
+	strategy?: DefaultCameraStrategy,
+	manualId?: string
+): string {
+	if (!cameras.length) return ''
+	const sceneCameras = cameras.filter((c) => !c.kind || c.kind === 'scene')
+	const pool = sceneCameras.length > 0 ? sceneCameras : cameras
+
+	if (strategy === 'manual') {
+		const found = cameras.find((c) => c.cameraId === manualId)
+		return found?.cameraId ?? pool[0]?.cameraId ?? ''
+	}
+	if (strategy === 'last') {
+		return pool[pool.length - 1]?.cameraId ?? ''
+	}
+	// 'first' (default when strategy is undefined)
+	return pool[0]?.cameraId ?? ''
+}
+
 function normalizeCameraPayload(camera: CameraProps): CameraProps {
 	const sourceCameras =
 		camera.cameras && camera.cameras.length > 0
 			? camera.cameras
 			: (defaultCameraOptions.cameras ?? [])
 
-	const flattenedCameras = sourceCameras.flatMap((entry, cameraIndex) => {
-		if (entry.states && entry.states.length > 0) {
-			return entry.states.map((stateEntry, stateIndex) => {
-				const stateId =
-					typeof stateEntry.stateId === 'string' && stateEntry.stateId.trim()
-						? stateEntry.stateId.trim()
-						: `${entry.cameraId || `camera-${cameraIndex + 1}`}-state-${stateIndex + 1}`
-				const baseCameraName =
-					typeof entry.name === 'string'
-						? entry.name
-						: `Camera ${cameraIndex + 1}`
-				const stateName =
-					typeof stateEntry.name === 'string'
-						? stateEntry.name
-						: `${baseCameraName} ${stateIndex + 1}`
-
-				const transition =
-					stateEntry.transition ??
-					entry.transition ??
-					(entry.shouldAnimate === false
-						? { type: 'none' as const }
-						: {
-								type: 'linear' as const,
-								duration: entry.animationConfig?.duration ?? 1000,
-								easing: 'ease_in_out' as const
-							})
-
-				return {
-					...entry,
-					...stateEntry,
-					cameraId: stateId,
-					name: stateName,
-					initial: Boolean(
-						stateEntry.initial ||
-						(entry.activeStateId && entry.activeStateId === stateId)
-					),
-					transition
-				}
-			})
-		}
-
-		return [
-			{
-				...entry,
-				cameraId: entry.cameraId || `camera-${cameraIndex + 1}`,
-				name:
-					typeof entry.name === 'string'
-						? entry.name
-						: `Camera ${cameraIndex + 1}`,
-				transition:
-					entry.transition ??
-					(entry.shouldAnimate === false
-						? { type: 'none' as const }
-						: {
-								type: 'linear' as const,
-								duration: entry.animationConfig?.duration ?? 1000,
-								easing: 'ease_in_out' as const
-							})
-			}
-		]
-	})
-
 	const seenCameraIds = new Set<string>()
-	const normalizedCameras = flattenedCameras.map((entry, index) => {
+	const normalizedCameras = sourceCameras.map((entry, index) => {
 		const rawCameraId = entry.cameraId || `camera-${index + 1}`
 		const cameraId = seenCameraIds.has(rawCameraId)
 			? `${rawCameraId}-${index + 1}`
 			: rawCameraId
 		seenCameraIds.add(cameraId)
 
-		const {
-			states: _states,
-			activeStateId: _activeStateId,
-			shouldAnimate: _shouldAnimate,
-			animationConfig: _animationConfig,
-			...cameraWithoutLegacyFields
-		} = entry
-
 		return {
-			...cameraWithoutLegacyFields,
+			...entry,
 			cameraId,
 			name: typeof entry.name === 'string' ? entry.name : `Camera ${index + 1}`
 		}
@@ -275,12 +228,18 @@ function normalizeCameraPayload(camera: CameraProps): CameraProps {
 		normalizedCameras.find((entry) => entry.initial)?.cameraId ??
 		fallbackCamera.cameraId
 
+	const effectiveDefaultId = resolveDefaultCameraId(
+		normalizedCameras,
+		camera.defaultCameraStrategy,
+		camera.defaultCameraId
+	)
+
 	return {
 		...camera,
 		activeCameraId,
 		cameras: normalizedCameras.map((entry) => ({
 			...entry,
-			initial: entry.cameraId === activeCameraId
+			initial: entry.cameraId === effectiveDefaultId
 		}))
 	}
 }
@@ -318,6 +277,13 @@ const getClosestFovPreset = (current: number) =>
 const getClosestDurationPreset = (current: number) =>
 	getClosestPreset(DURATION_PRESETS, current)
 
+const DEFAULT_STRATEGY_OPTIONS: ToggleButtonGroupOption<DefaultCameraStrategy>[] =
+	[
+		{ value: 'first', label: 'First' },
+		{ value: 'last', label: 'Last' },
+		{ value: 'manual', label: 'Manual' }
+	]
+
 const CameraControlsSettingsPanel = memo(() => {
 	const [camera, setCamera] = useAtom(cameraAtom)
 	const [selectedCameraId, setSelectedCameraId] = useAtom(selectedCameraIdAtom)
@@ -342,8 +308,35 @@ const CameraControlsSettingsPanel = memo(() => {
 		[normalizedCamera, selectedCameraId]
 	)
 	const selectedTransition = useMemo(
-		() => getNormalizedTransition(selectedCamera?.transition),
-		[selectedCamera?.transition]
+		() => getNormalizedTransition(normalizedCamera.sceneTransition),
+		[normalizedCamera.sceneTransition]
+	)
+
+	const sceneCameras = useMemo(
+		() =>
+			(normalizedCamera.cameras ?? []).filter(
+				(c) => !c.kind || c.kind === 'scene'
+			),
+		[normalizedCamera.cameras]
+	)
+
+	const hotspotCameras = useMemo(
+		() => (normalizedCamera.cameras ?? []).filter((c) => c.kind === 'hotspot'),
+		[normalizedCamera.cameras]
+	)
+
+	const resolvedDefaultCameraId = useMemo(
+		() =>
+			resolveDefaultCameraId(
+				normalizedCamera.cameras ?? [],
+				normalizedCamera.defaultCameraStrategy,
+				normalizedCamera.defaultCameraId
+			),
+		[
+			normalizedCamera.cameras,
+			normalizedCamera.defaultCameraStrategy,
+			normalizedCamera.defaultCameraId
+		]
 	)
 
 	useEffect(() => {
@@ -379,17 +372,9 @@ const CameraControlsSettingsPanel = memo(() => {
 					activeCameraId,
 					cameras: (normalized.cameras ?? []).map((cameraEntry) => {
 						if (cameraEntry.cameraId !== activeCameraId) {
-							return {
-								...cameraEntry,
-								initial: false
-							}
+							return cameraEntry
 						}
-
-						const updated = update(cameraEntry)
-						return {
-							...updated,
-							initial: true
-						}
+						return update(cameraEntry)
 					})
 				}
 			})
@@ -434,11 +419,7 @@ const CameraControlsSettingsPanel = memo(() => {
 							entry.cameraId === currentCameraId
 								? applySnapshotToCamera(entry, snapshot)
 								: entry
-
-						return {
-							...withSnapshot,
-							initial: withSnapshot.cameraId === nextCameraId
-						}
+						return withSnapshot
 					})
 				}
 			})
@@ -470,8 +451,7 @@ const CameraControlsSettingsPanel = memo(() => {
 					snapshot
 				),
 				cameraId: newCameraId,
-				name: `Camera ${(normalized.cameras?.length ?? 0) + 1}`,
-				initial: true
+				name: `Camera ${(normalized.cameras?.length ?? 0) + 1}`
 			}
 
 			return {
@@ -479,15 +459,9 @@ const CameraControlsSettingsPanel = memo(() => {
 				activeCameraId: newCameraId,
 				cameras: [
 					...(normalized.cameras ?? []).map((entry) => {
-						const withSnapshot =
-							entry.cameraId === currentCameraId
-								? applySnapshotToCamera(entry, snapshot)
-								: entry
-
-						return {
-							...withSnapshot,
-							initial: false
-						}
+						return entry.cameraId === currentCameraId
+							? applySnapshotToCamera(entry, snapshot)
+							: entry
 					}),
 					newCamera
 				]
@@ -518,10 +492,7 @@ const CameraControlsSettingsPanel = memo(() => {
 			return {
 				...normalized,
 				activeCameraId: nextActiveCameraId,
-				cameras: remainingCameras.map((cameraEntry) => ({
-					...cameraEntry,
-					initial: cameraEntry.cameraId === nextActiveCameraId
-				}))
+				cameras: remainingCameras
 			}
 		})
 	}, [selectedCameraId, setCamera, setSelectedCameraId])
@@ -540,14 +511,50 @@ const CameraControlsSettingsPanel = memo(() => {
 		handleRenameCamera(cameraNameDraft)
 	}, [cameraNameDraft, handleRenameCamera])
 
-	const handleTransitionUpdate = useCallback(
-		(nextTransition: CameraTransitionConfig) => {
-			updateSelectedCamera((cameraEntry) => ({
-				...cameraEntry,
-				transition: nextTransition
+	const handleSetDefaultCameraStrategy = useCallback(
+		(strategy: DefaultCameraStrategy) => {
+			setCamera((prev) => {
+				const normalized = normalizeCameraPayload(prev)
+				// When switching to manual, seed the manual id with the current active camera
+				const manualId =
+					strategy === 'manual'
+						? (prev.defaultCameraId ??
+							normalized.activeCameraId ??
+							normalized.cameras?.[0]?.cameraId)
+						: undefined
+				return {
+					...normalized,
+					defaultCameraStrategy: strategy,
+					defaultCameraId: manualId
+				}
+			})
+		},
+		[setCamera]
+	)
+
+	const handleSetDefaultCameraId = useCallback(
+		(cameraId: string) => {
+			setCamera((prev) => ({
+				...normalizeCameraPayload(prev),
+				defaultCameraStrategy: 'manual',
+				defaultCameraId: cameraId
 			}))
 		},
-		[updateSelectedCamera]
+		[setCamera]
+	)
+
+	const handlePreviewDefaultCamera = useCallback(() => {
+		void handleSelectCamera(resolvedDefaultCameraId)
+	}, [handleSelectCamera, resolvedDefaultCameraId])
+
+	const handleTransitionUpdate = useCallback(
+		(nextTransition: CameraTransitionConfig) => {
+			setCamera((prev) => ({
+				...prev,
+				sceneTransition: nextTransition
+			}))
+		},
+		[setCamera]
 	)
 
 	const handleTransitionTypeChange = useCallback(
@@ -678,7 +685,7 @@ const CameraControlsSettingsPanel = memo(() => {
 					<p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
 						Camera Manager
 					</p>
-					<InfoTooltip content="Select, create, rename, and delete saved cameras. The selected camera becomes the active runtime camera." />
+					<InfoTooltip content="Select, create, rename, and delete saved cameras. The selected camera becomes the preview camera in the editor." />
 				</div>
 				<Separator />
 
@@ -693,14 +700,42 @@ const CameraControlsSettingsPanel = memo(() => {
 							<SelectValue placeholder="Select camera" />
 						</SelectTrigger>
 						<SelectContent>
-							{(normalizedCamera.cameras ?? []).map((cameraEntry) => (
-								<SelectItem
-									key={cameraEntry.cameraId}
-									value={cameraEntry.cameraId}
-								>
-									{cameraEntry.name || 'Unnamed Camera'}
-								</SelectItem>
-							))}
+							<SelectGroup>
+								<SelectLabel className="text-xs">Scene Cameras</SelectLabel>
+								{sceneCameras.map((cameraEntry) => (
+									<SelectItem
+										key={cameraEntry.cameraId}
+										value={cameraEntry.cameraId}
+									>
+										<span className="flex items-center gap-1.5">
+											{cameraEntry.cameraId === resolvedDefaultCameraId && (
+												<Pin className="text-primary h-3 w-3 shrink-0" />
+											)}
+											{cameraEntry.name || 'Unnamed Camera'}
+										</span>
+									</SelectItem>
+								))}
+								{sceneCameras.length === 0 && (
+									<SelectItem value="__none_scene" disabled>
+										None
+									</SelectItem>
+								)}
+							</SelectGroup>
+							{hotspotCameras.length > 0 && (
+								<SelectGroup>
+									<SelectLabel className="text-xs">
+										Hotspot Cameras
+									</SelectLabel>
+									{hotspotCameras.map((cameraEntry) => (
+										<SelectItem
+											key={cameraEntry.cameraId}
+											value={cameraEntry.cameraId}
+										>
+											{cameraEntry.name || 'Unnamed Camera'}
+										</SelectItem>
+									))}
+								</SelectGroup>
+							)}
 						</SelectContent>
 					</Select>
 					<Button
@@ -745,6 +780,63 @@ const CameraControlsSettingsPanel = memo(() => {
 						placeholder="Camera name"
 					/>
 				</div>
+			</div>
+
+			{/* Default Camera */}
+			<div className="space-y-3">
+				<div className="flex items-center gap-2">
+					<p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+						Default Camera
+					</p>
+					<InfoTooltip content="Choose which camera viewers see first. 'First' and 'Last' follow scene camera order; 'Manual' lets you pin a specific camera." />
+				</div>
+				<Separator />
+
+				<div className="space-y-1.5">
+					<p className="text-muted-foreground text-xs">Strategy</p>
+					<ToggleButtonGroup
+						options={DEFAULT_STRATEGY_OPTIONS}
+						value={normalizedCamera.defaultCameraStrategy ?? 'first'}
+						onChange={handleSetDefaultCameraStrategy}
+					/>
+				</div>
+
+				{(normalizedCamera.defaultCameraStrategy ?? 'first') === 'manual' && (
+					<div className="space-y-1.5">
+						<p className="text-muted-foreground text-xs">Default Camera</p>
+						<Select
+							value={normalizedCamera.defaultCameraId ?? resolvedDefaultCameraId}
+							onValueChange={handleSetDefaultCameraId}
+						>
+							<SelectTrigger className="w-full">
+								<SelectValue placeholder="Select default camera" />
+							</SelectTrigger>
+							<SelectContent>
+								{sceneCameras.map((cameraEntry) => (
+									<SelectItem
+										key={cameraEntry.cameraId}
+										value={cameraEntry.cameraId}
+									>
+										{cameraEntry.name || 'Unnamed Camera'}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+				)}
+
+				{resolvedDefaultCameraId &&
+					selectedCamera?.cameraId !== resolvedDefaultCameraId && (
+						<Button
+							variant="outline"
+							size="sm"
+							className="w-full gap-1.5"
+							onClick={handlePreviewDefaultCamera}
+						>
+							<Pin className="h-3.5 w-3.5" />
+							Preview Default Camera
+						</Button>
+					)}
 			</div>
 
 			{/* Camera Settings */}

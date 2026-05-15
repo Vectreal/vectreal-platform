@@ -245,16 +245,6 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 						</div>
 					)}
 
-					{isSaveDisabled &&
-						saveAvailability?.reason === 'requires-first-optimization' && (
-							<div className="my-4 pb-2">
-								<p className="text-muted-foreground mb-2 text-xs">
-									Optimize your scene first to enable saving and publishing
-									features.
-								</p>
-							</div>
-						)}
-
 					{canAccessPublishFeatures && (
 						<>
 							<AccordionItem value="publish">

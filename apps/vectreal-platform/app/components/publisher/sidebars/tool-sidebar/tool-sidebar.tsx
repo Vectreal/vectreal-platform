@@ -13,14 +13,14 @@ import {
 	processAtom,
 	toolSidebarStateAtom
 } from '../../../../lib/stores/publisher-config-store'
-import { ComposeSidebar } from '../compose-sidebar'
+import { ComposeSidebar, ObjectSidebar, OBJECT_TOOL_DEFINITIONS, getObjectToolDefinition } from '../compose-sidebar'
 import {
 	COMPOSE_TOOL_DEFINITIONS,
 	getComposeToolDefinition
 } from '../compose-sidebar/compose-tools'
 import { DynamicSidebar } from '../dynamic-sidebar'
 
-import type { ComposeTool } from '../../../../types/publisher-config'
+import type { ComposeTool, ObjectTool, SidebarGroup } from '../../../../types/publisher-config'
 
 // ---------------------------------------------------------------------------
 // Shared hook
@@ -46,9 +46,6 @@ function useToolSelect() {
 
 	return { activeComposeTool, showSidebar, handleToolSelect }
 }
-
-// ---------------------------------------------------------------------------
-// MobileToolBar — rendered in the unified mobile header (controls-overlay)
 // ---------------------------------------------------------------------------
 
 export const MobileToolBar = () => {
@@ -89,7 +86,11 @@ export const ToolSidebar = memo(
 	({ user: _user, isMobile = false }: ToolSidebarProps) => {
 		const { activeComposeTool, showSidebar, handleToolSelect } = useToolSelect()
 		const setProcessState = useSetAtom(processAtom)
-		const activeToolDefinition = getComposeToolDefinition(activeComposeTool)
+		const { activeSidebarGroup, activeObjectTool } = useAtomValue(toolSidebarStateAtom)
+		const activeToolDefinition =
+			activeSidebarGroup === 'object'
+				? getObjectToolDefinition(activeObjectTool)
+				: getComposeToolDefinition(activeComposeTool)
 
 		const handleOpenChange = useCallback(
 			(open: boolean) => {
@@ -100,36 +101,146 @@ export const ToolSidebar = memo(
 			[setProcessState]
 		)
 
+		const handleSidebarGroupChange = useCallback(
+			(group: SidebarGroup) => {
+				setProcessState((prev) => ({
+					...prev,
+					activeSidebarGroup: group,
+					showSidebar: true
+				}))
+			},
+			[setProcessState]
+		)
+
+		const handleObjectToolSelect = useCallback(
+			(tool: ObjectTool) => {
+				setProcessState((prev) => ({
+					...prev,
+					activeObjectTool: tool,
+					activeSidebarGroup: 'object',
+					showSidebar:
+						prev.activeObjectTool === tool && prev.activeSidebarGroup === 'object'
+							? !prev.showSidebar
+							: true
+				}))
+			},
+			[setProcessState]
+		)
+
 		return (
 			<>
 				<div className="fixed top-0 left-0 z-40 m-3 hidden flex-col gap-2 md:flex">
-					{COMPOSE_TOOL_DEFINITIONS.map(({ value, icon: Icon, shortLabel }) => {
-						const isActive = value === activeComposeTool && showSidebar
-						return (
-							<Tooltip key={value}>
-								<TooltipTrigger asChild>
-									<Button
-										variant={isActive ? 'secondary' : 'ghost'}
-										size="icon"
-										aria-label={shortLabel}
-										aria-pressed={isActive}
-										className={cn('h-10 w-10 rounded-2xl transition-all', {
-											'publisher-shell-focus bg-shell-surface ring-shell-border-strong shadow-md ring-1':
-												isActive,
-											'publisher-shell-focus hover:bg-shell-surface-soft hover:ring-shell-border-soft hover:ring-1':
-												!isActive
-										})}
-										onClick={() => handleToolSelect(value)}
-									>
-										<Icon className="text-muted-foreground h-5 w-5" />
-									</Button>
-								</TooltipTrigger>
-								<TooltipContent side="right" sideOffset={10}>
-									{shortLabel}
-								</TooltipContent>
-							</Tooltip>
-						)
-					})}
+					{/* Sidebar group toggle */}
+					<div className="publisher-shell-floating flex gap-0.5 rounded-2xl p-1">
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									variant={activeSidebarGroup === 'scene' ? 'secondary' : 'ghost'}
+									size="sm"
+									className={cn(
+										'h-8 rounded-xl px-3 text-xs font-medium transition-all',
+										{
+											'publisher-shell-focus bg-shell-surface ring-shell-border-strong shadow-sm ring-1':
+												activeSidebarGroup === 'scene',
+											'publisher-shell-focus hover:bg-shell-surface-soft':
+												activeSidebarGroup !== 'scene'
+										}
+									)}
+									onClick={() => handleSidebarGroupChange('scene')}
+									aria-pressed={activeSidebarGroup === 'scene'}
+								>
+									Scene
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent side="right" sideOffset={10}>
+								Scene tools
+							</TooltipContent>
+						</Tooltip>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									variant={activeSidebarGroup === 'object' ? 'secondary' : 'ghost'}
+									size="sm"
+									className={cn(
+										'h-8 rounded-xl px-3 text-xs font-medium transition-all',
+										{
+											'publisher-shell-focus bg-shell-surface ring-shell-border-strong shadow-sm ring-1':
+												activeSidebarGroup === 'object',
+											'publisher-shell-focus hover:bg-shell-surface-soft':
+												activeSidebarGroup !== 'object'
+										}
+									)}
+									onClick={() => handleSidebarGroupChange('object')}
+									aria-pressed={activeSidebarGroup === 'object'}
+								>
+									Object
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent side="right" sideOffset={10}>
+								Object tools
+							</TooltipContent>
+						</Tooltip>
+					</div>
+
+					{/* Tool buttons */}
+					{activeSidebarGroup === 'scene'
+						? COMPOSE_TOOL_DEFINITIONS.map(({ value, icon: Icon, shortLabel }) => {
+								const isActive = value === activeComposeTool && showSidebar
+								return (
+									<Tooltip key={value}>
+										<TooltipTrigger asChild>
+											<Button
+												variant={isActive ? 'secondary' : 'ghost'}
+												size="icon"
+												aria-label={shortLabel}
+												aria-pressed={isActive}
+												className={cn('h-10 w-10 rounded-2xl transition-all', {
+													'publisher-shell-focus bg-shell-surface ring-shell-border-strong shadow-md ring-1':
+														isActive,
+													'publisher-shell-focus hover:bg-shell-surface-soft hover:ring-shell-border-soft hover:ring-1':
+														!isActive
+												})}
+												onClick={() => handleToolSelect(value)}
+											>
+												<Icon className="text-muted-foreground h-5 w-5" />
+											</Button>
+										</TooltipTrigger>
+										<TooltipContent side="right" sideOffset={10}>
+											{shortLabel}
+										</TooltipContent>
+									</Tooltip>
+								)
+							})
+						: OBJECT_TOOL_DEFINITIONS.map(({ value, icon: Icon, shortLabel }) => {
+								const isActive =
+									value === activeObjectTool &&
+									activeSidebarGroup === 'object' &&
+									showSidebar
+								return (
+									<Tooltip key={value}>
+										<TooltipTrigger asChild>
+											<Button
+												variant={isActive ? 'secondary' : 'ghost'}
+												size="icon"
+												aria-label={shortLabel}
+												aria-pressed={isActive}
+												className={cn('h-10 w-10 rounded-2xl transition-all', {
+													'publisher-shell-focus bg-shell-surface ring-shell-border-strong shadow-md ring-1':
+														isActive,
+													'publisher-shell-focus hover:bg-shell-surface-soft hover:ring-shell-border-soft hover:ring-1':
+														!isActive
+												})}
+												onClick={() => handleObjectToolSelect(value)}
+											>
+												<Icon className="text-muted-foreground h-5 w-5" />
+											</Button>
+										</TooltipTrigger>
+										<TooltipContent side="right" sideOffset={10}>
+											{shortLabel}
+										</TooltipContent>
+									</Tooltip>
+								)
+							})}
 				</div>
 
 				<DynamicSidebar
@@ -143,7 +254,11 @@ export const ToolSidebar = memo(
 					className={cn({ 'ml-[3rem] w-[21rem]': !isMobile })}
 				>
 					<div className="no-scrollbar min-h-0 flex-1 overflow-auto px-4 py-4">
-						<ComposeSidebar activeTool={activeComposeTool} />
+						{activeSidebarGroup === 'scene' ? (
+							<ComposeSidebar activeTool={activeComposeTool} />
+						) : (
+							<ObjectSidebar activeTool={activeObjectTool} />
+						)}
 					</div>
 				</DynamicSidebar>
 			</>

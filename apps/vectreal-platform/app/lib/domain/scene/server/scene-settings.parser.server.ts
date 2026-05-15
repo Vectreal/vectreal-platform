@@ -317,10 +317,35 @@ export class SceneSettingsParser {
 			)
 		}
 
+		const normalizedHotspots = this.normalizeHotspots(
+			sceneSettings.hotspots,
+			normalizedCamera?.cameras ?? []
+		)
+		if (normalizedHotspots instanceof Response) {
+			return normalizedHotspots
+		}
+
+		const normalizedObjectOverrides = this.normalizeObjectOverrides(
+			sceneSettings.objectOverrides
+		)
+		if (normalizedObjectOverrides instanceof Response) {
+			return normalizedObjectOverrides
+		}
+
+		const normalizedPlaceables = this.normalizePlaceables(
+			sceneSettings.placeables
+		)
+		if (normalizedPlaceables instanceof Response) {
+			return normalizedPlaceables
+		}
+
 		return {
 			...sceneSettings,
 			camera: normalizedCamera,
-			interactions: normalizedInteractions
+			interactions: normalizedInteractions,
+			hotspots: normalizedHotspots,
+			objectOverrides: normalizedObjectOverrides,
+			placeables: normalizedPlaceables
 		}
 	}
 
@@ -335,7 +360,18 @@ export class SceneSettingsParser {
 			return ApiResponse.badRequest('camera.cameras must be a non-empty array')
 		}
 
-		const flattenedCameras: CameraEntry[] = []
+		// Validate scene-global transition if provided.
+		if (camera.sceneTransition !== undefined) {
+			const normalizedTransition = this.normalizeTransitionConfig(
+				camera.sceneTransition,
+				'camera.sceneTransition'
+			)
+			if (normalizedTransition instanceof Response) {
+				return normalizedTransition
+			}
+		}
+
+		const normalizedCameras: CameraEntry[] = []
 		const seenCameraIds = new Set<string>()
 
 		for (const [cameraIndex, entry] of camera.cameras.entries()) {
@@ -352,82 +388,6 @@ export class SceneSettingsParser {
 					? entry.name.trim()
 					: `Camera ${cameraIndex + 1}`
 
-			if (Array.isArray(entry.states) && entry.states.length > 0) {
-				for (const [stateIndex, stateEntry] of entry.states.entries()) {
-					if (!isRecord(stateEntry)) {
-						return ApiResponse.badRequest(
-							'Each camera state must be a valid object'
-						)
-					}
-
-					const stateId =
-						typeof stateEntry.stateId === 'string' && stateEntry.stateId.trim()
-							? stateEntry.stateId.trim()
-							: `${rawCameraId}-state-${stateIndex + 1}`
-					if (seenCameraIds.has(stateId)) {
-						return ApiResponse.badRequest(
-							`Duplicate cameraId found after state flattening: ${stateId}`
-						)
-					}
-					seenCameraIds.add(stateId)
-
-					const stateName =
-						typeof stateEntry.name === 'string' && stateEntry.name.trim()
-							? stateEntry.name.trim()
-							: `${rawCameraName} ${stateIndex + 1}`
-
-					const {
-						stateId: _legacyStateId,
-						name: _legacyStateName,
-						initial: legacyInitial,
-						transition: stateTransition,
-						...stateWithoutLegacyFields
-					} = stateEntry
-
-					const transition = this.normalizeTransitionConfig(
-						(stateTransition as CameraTransitionConfig | undefined) ??
-							(entry.transition as CameraTransitionConfig | undefined) ??
-							(entry.shouldAnimate === false
-								? { type: 'none' }
-								: {
-										type: 'linear',
-										duration:
-											typeof (entry.animationConfig as { duration?: unknown })
-												?.duration === 'number'
-												? (entry.animationConfig as { duration: number })
-														.duration
-												: 1000,
-										easing: 'ease_in_out'
-									}),
-						`${stateId}.transition`
-					)
-					if (transition instanceof Response) {
-						return transition
-					}
-
-					const {
-						states: _states,
-						activeStateId: _activeStateId,
-						shouldAnimate: _shouldAnimate,
-						animationConfig: _animationConfig,
-						...cameraWithoutLegacyFields
-					} = entry
-
-					flattenedCameras.push({
-						...(cameraWithoutLegacyFields as CameraEntry),
-						...(stateWithoutLegacyFields as CameraEntry),
-						cameraId: stateId,
-						name: stateName,
-						initial: Boolean(
-							legacyInitial ||
-							(entry.activeStateId && entry.activeStateId === stateId)
-						),
-						transition
-					})
-				}
-				continue
-			}
-
 			if (seenCameraIds.has(rawCameraId)) {
 				return ApiResponse.badRequest(
 					`Duplicate cameraId found: ${rawCameraId}`
@@ -435,38 +395,10 @@ export class SceneSettingsParser {
 			}
 			seenCameraIds.add(rawCameraId)
 
-			const transition = this.normalizeTransitionConfig(
-				(entry.transition as CameraTransitionConfig | undefined) ??
-					(entry.shouldAnimate === false
-						? { type: 'none' }
-						: {
-								type: 'linear',
-								duration:
-									typeof (entry.animationConfig as { duration?: unknown })
-										?.duration === 'number'
-										? (entry.animationConfig as { duration: number }).duration
-										: 1000,
-								easing: 'ease_in_out'
-							}),
-				`${rawCameraId}.transition`
-			)
-			if (transition instanceof Response) {
-				return transition
-			}
-
-			const {
-				states: _states,
-				activeStateId: _activeStateId,
-				shouldAnimate: _shouldAnimate,
-				animationConfig: _animationConfig,
-				...cameraWithoutLegacyFields
-			} = entry
-
-			flattenedCameras.push({
-				...(cameraWithoutLegacyFields as CameraEntry),
+			normalizedCameras.push({
+				...(entry as CameraEntry),
 				cameraId: rawCameraId,
-				name: rawCameraName,
-				transition
+				name: rawCameraName
 			})
 		}
 
@@ -476,22 +408,177 @@ export class SceneSettingsParser {
 				: ''
 		const resolvedActiveCameraId =
 			(requestedActiveCameraId &&
-			flattenedCameras.some(
+			normalizedCameras.some(
 				(cameraEntry) => cameraEntry.cameraId === requestedActiveCameraId
 			)
 				? requestedActiveCameraId
 				: undefined) ??
-			flattenedCameras.find((cameraEntry) => cameraEntry.initial)?.cameraId ??
-			flattenedCameras[0].cameraId
+			normalizedCameras.find((cameraEntry) => cameraEntry.initial)?.cameraId ??
+			normalizedCameras[0].cameraId
 
 		return normalizeCameraSettings({
 			...camera,
 			activeCameraId: resolvedActiveCameraId,
-			cameras: flattenedCameras.map((cameraEntry) => ({
+			cameras: normalizedCameras.map((cameraEntry) => ({
 				...cameraEntry,
 				initial: cameraEntry.cameraId === resolvedActiveCameraId
 			}))
 		})
+	}
+
+	/**
+	 * Validates and passes through hotspot definitions.
+	 */
+	private static normalizeHotspots(
+		hotspots: SceneSettings['hotspots'],
+		cameras: CameraEntry[]
+	): SceneSettings['hotspots'] | Response {
+		if (!hotspots) return hotspots
+		if (!Array.isArray(hotspots)) {
+			return ApiResponse.badRequest('hotspots must be an array')
+		}
+
+		const VALID_STYLE_PRESETS = new Set(['dot', 'image'])
+		const cameraIds = new Set(cameras.map((c) => c.cameraId))
+		const seenSequenceIndices = new Set<number>()
+
+		for (const [i, hotspot] of hotspots.entries()) {
+			if (!isRecord(hotspot)) {
+				return ApiResponse.badRequest(`hotspots[${i}] must be a valid object`)
+			}
+			if (typeof hotspot.id !== 'string' || !hotspot.id.trim()) {
+				return ApiResponse.badRequest(`hotspots[${i}].id is required`)
+			}
+			if (typeof hotspot.name !== 'string' || !hotspot.name.trim()) {
+				return ApiResponse.badRequest(`hotspots[${i}].name is required`)
+			}
+			if (
+				!Array.isArray(hotspot.worldPosition) ||
+				hotspot.worldPosition.length !== 3 ||
+				!(hotspot.worldPosition as unknown[]).every(
+					(v) => typeof v === 'number'
+				)
+			) {
+				return ApiResponse.badRequest(
+					`hotspots[${i}].worldPosition must be [number, number, number]`
+				)
+			}
+			if (typeof hotspot.visible !== 'boolean') {
+				return ApiResponse.badRequest(
+					`hotspots[${i}].visible must be a boolean`
+				)
+			}
+			if (typeof hotspot.internalOnly !== 'boolean') {
+				return ApiResponse.badRequest(
+					`hotspots[${i}].internalOnly must be a boolean`
+				)
+			}
+			if (!VALID_STYLE_PRESETS.has(hotspot.stylePreset as string)) {
+				return ApiResponse.badRequest(
+					`hotspots[${i}].stylePreset must be 'dot' or 'image'`
+				)
+			}
+			if (
+				hotspot.linkedCameraId !== undefined &&
+				hotspot.linkedCameraId !== null
+			) {
+				if (typeof hotspot.linkedCameraId !== 'string') {
+					return ApiResponse.badRequest(
+						`hotspots[${i}].linkedCameraId must be a string`
+					)
+				}
+				if (!cameraIds.has(hotspot.linkedCameraId)) {
+					return ApiResponse.badRequest(
+						`hotspots[${i}].linkedCameraId references unknown camera '${hotspot.linkedCameraId}'`
+					)
+				}
+			}
+			if (
+				hotspot.sequenceIndex !== undefined &&
+				hotspot.sequenceIndex !== null
+			) {
+				if (
+					typeof hotspot.sequenceIndex !== 'number' ||
+					!Number.isInteger(hotspot.sequenceIndex) ||
+					hotspot.sequenceIndex < 0
+				) {
+					return ApiResponse.badRequest(
+						`hotspots[${i}].sequenceIndex must be a non-negative integer`
+					)
+				}
+				if (seenSequenceIndices.has(hotspot.sequenceIndex)) {
+					return ApiResponse.badRequest(
+						`hotspots has duplicate sequenceIndex ${hotspot.sequenceIndex}`
+					)
+				}
+				seenSequenceIndices.add(hotspot.sequenceIndex)
+			}
+		}
+
+		return hotspots
+	}
+
+	/**
+	 * Validates and passes through object override entries.
+	 */
+	private static normalizeObjectOverrides(
+		overrides: SceneSettings['objectOverrides']
+	): SceneSettings['objectOverrides'] | Response {
+		if (!overrides) return overrides
+		if (!Array.isArray(overrides)) {
+			return ApiResponse.badRequest('objectOverrides must be an array')
+		}
+
+		for (const [i, override] of overrides.entries()) {
+			if (!isRecord(override)) {
+				return ApiResponse.badRequest(
+					`objectOverrides[${i}] must be a valid object`
+				)
+			}
+			if (typeof override.nodeId !== 'string' || !override.nodeId.trim()) {
+				return ApiResponse.badRequest(
+					`objectOverrides[${i}].nodeId is required`
+				)
+			}
+			if (typeof override.enabled !== 'boolean') {
+				return ApiResponse.badRequest(
+					`objectOverrides[${i}].enabled must be a boolean`
+				)
+			}
+		}
+
+		return overrides
+	}
+
+	/**
+	 * Validates and passes through placeable reference entries.
+	 */
+	private static normalizePlaceables(
+		placeables: SceneSettings['placeables']
+	): SceneSettings['placeables'] | Response {
+		if (!placeables) return placeables
+		if (!Array.isArray(placeables)) {
+			return ApiResponse.badRequest('placeables must be an array')
+		}
+
+		for (const [i, placeable] of placeables.entries()) {
+			if (!isRecord(placeable)) {
+				return ApiResponse.badRequest(`placeables[${i}] must be a valid object`)
+			}
+			if (typeof placeable.id !== 'string' || !placeable.id.trim()) {
+				return ApiResponse.badRequest(`placeables[${i}].id is required`)
+			}
+			if (
+				typeof placeable.catalogId !== 'string' ||
+				!placeable.catalogId.trim()
+			) {
+				return ApiResponse.badRequest(
+					`placeables[${i}].catalogId is required`
+				)
+			}
+		}
+
+		return placeables
 	}
 
 	private static normalizeTransitionConfig(

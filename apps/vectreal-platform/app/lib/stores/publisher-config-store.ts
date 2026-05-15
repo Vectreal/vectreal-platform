@@ -11,7 +11,9 @@ import type { SceneSettings } from '@vctrl/core'
 const processInitialState: ProcessState = {
 	step: 'uploading',
 	mode: 'optimize',
-	activeComposeTool: 'environment',
+	activeComposeTool: 'camera-tools',
+	activeObjectTool: 'object-list',
+	activeSidebarGroup: 'scene',
 	showSidebar: false,
 	showPublishPanel: false,
 	isInitializing: false,
@@ -79,11 +81,15 @@ const toolSidebarStateAtom = selectAtom(
 	processAtom,
 	(state) => ({
 		activeComposeTool: state.activeComposeTool,
+		activeObjectTool: state.activeObjectTool,
+		activeSidebarGroup: state.activeSidebarGroup,
 		mode: state.mode,
 		showSidebar: state.showSidebar
 	}),
 	(a, b) =>
 		a.activeComposeTool === b.activeComposeTool &&
+		a.activeObjectTool === b.activeObjectTool &&
+		a.activeSidebarGroup === b.activeSidebarGroup &&
 		a.mode === b.mode &&
 		a.showSidebar === b.showSidebar
 )

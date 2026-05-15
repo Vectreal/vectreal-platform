@@ -99,6 +99,7 @@ interface ExecuteAggregateSceneHydrationParams {
 	applySceneSettings: (settings: SceneSettings) => void
 	setSceneMetaState: (sceneMeta: SceneMetaState) => void
 	setLastSavedSceneMeta: (sceneMeta: SceneMetaState) => void
+	setSceneNodeNames?: (names: string[]) => void
 	loadFromData: (params: {
 		sceneId: string
 		sceneData: ServerSceneData
@@ -112,6 +113,7 @@ export const executeAggregateSceneHydration = async ({
 	applySceneSettings,
 	setSceneMetaState,
 	setLastSavedSceneMeta,
+	setSceneNodeNames,
 	loadFromData
 }: ExecuteAggregateSceneHydrationParams): Promise<string> => {
 	hydrateOptimizationState(aggregate)
@@ -124,6 +126,19 @@ export const executeAggregateSceneHydration = async ({
 	if (aggregate.meta) {
 		setSceneMetaState(aggregate.meta)
 		setLastSavedSceneMeta(aggregate.meta)
+	}
+
+	// Always extract and populate node names — reset to [] if no glTF present
+	if (setSceneNodeNames) {
+		const nodes = aggregate.gltfJson
+			? (aggregate.gltfJson as { nodes?: Array<{ name?: string }> }).nodes
+			: undefined
+		const names = Array.isArray(nodes)
+			? nodes
+					.map((n) => n?.name)
+					.filter((n): n is string => typeof n === 'string' && n.length > 0)
+			: []
+		setSceneNodeNames(names)
 	}
 
 	if (aggregate.gltfJson && aggregate.assetData) {

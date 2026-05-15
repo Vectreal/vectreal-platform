@@ -54,7 +54,11 @@ import {
 	cameraAtom,
 	controlsAtom,
 	environmentAtom,
+	hotspotsAtom,
 	interactionsAtom,
+	objectOverridesAtom,
+	placeablesAtom,
+	sceneNodeNamesAtom,
 	shadowsAtom
 } from '../lib/stores/scene-settings-store'
 
@@ -218,6 +222,10 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	const [camera, setCamera] = useAtom(cameraAtom)
 	const [controls, setControls] = useAtom(controlsAtom)
 	const [shadows, setShadows] = useAtom(shadowsAtom)
+	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
+	const [objectOverrides, setObjectOverrides] = useAtom(objectOverridesAtom)
+	const [placeables, setPlaceables] = useAtom(placeablesAtom)
+	const [, setSceneNodeNames] = useAtom(sceneNodeNamesAtom)
 
 	// Process state atom - use full atom access for reading and writing
 	const [sceneMetaState, setSceneMetaState] = useAtom(sceneMetaAtom)
@@ -324,9 +332,22 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			interactions,
 			camera,
 			controls,
-			shadows
+			shadows,
+			hotspots: hotspots.length > 0 ? hotspots : undefined,
+			objectOverrides: objectOverrides.length > 0 ? objectOverrides : undefined,
+			placeables: placeables.length > 0 ? placeables : undefined
 		}),
-		[bounds, environment, interactions, camera, controls, shadows]
+		[
+			bounds,
+			environment,
+			interactions,
+			camera,
+			controls,
+			shadows,
+			hotspots,
+			objectOverrides,
+			placeables
+		]
 	)
 
 	const resetSceneState = useCallback(() => {
@@ -336,6 +357,10 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setCamera(defaultCameraOptions)
 		setControls(defaultControlsOptions)
 		setShadows(defaultShadowOptions)
+		setHotspots([])
+		setObjectOverrides([])
+		setPlaceables([])
+		setSceneNodeNames([])
 		setSceneMetaState(sceneMetaInitialState)
 		setLastSavedSettings(null)
 		setLastSavedSceneMeta(null)
@@ -350,7 +375,10 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setEnv,
 		setCamera,
 		setControls,
-		setShadows,
+		setShadows,		setHotspots,
+		setObjectOverrides,
+		setPlaceables,
+		setSceneNodeNames,
 		setSceneMetaState,
 		setLastSavedSettings,
 		setLastSavedSceneMeta,
@@ -505,6 +533,9 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			setCamera(settings.camera || defaultCameraOptions)
 			setControls(settings.controls || defaultControlsOptions)
 			setShadows(settings.shadows || defaultShadowOptions)
+			setHotspots(settings.hotspots ?? [])
+			setObjectOverrides(settings.objectOverrides ?? [])
+			setPlaceables(settings.placeables ?? [])
 
 			const loadedSettings: SceneSettings = {
 				bounds: settings.bounds || defaultBoundsOptions,
@@ -512,11 +543,24 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				interactions: settings.interactions,
 				camera: settings.camera || defaultCameraOptions,
 				controls: settings.controls || defaultControlsOptions,
-				shadows: settings.shadows || defaultShadowOptions
+				shadows: settings.shadows || defaultShadowOptions,
+				hotspots: settings.hotspots,
+				objectOverrides: settings.objectOverrides,
+				placeables: settings.placeables
 			}
 			setLastSavedSettings(loadedSettings)
 		},
-		[setBounds, setCamera, setControls, setEnv, setInteractions, setShadows]
+		[
+			setBounds,
+			setCamera,
+			setControls,
+			setEnv,
+			setHotspots,
+			setInteractions,
+			setObjectOverrides,
+			setPlaceables,
+			setShadows
+		]
 	)
 
 	const hydrateOptimizationState = useCallback(
@@ -557,6 +601,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 					applySceneSettings,
 					setSceneMetaState,
 					setLastSavedSceneMeta,
+					setSceneNodeNames,
 					loadFromData
 				})
 				toast.success(`Loaded scene: ${sceneName}`)
@@ -575,6 +620,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			applySceneSettings,
 			setSceneMetaState,
 			setLastSavedSceneMeta,
+			setSceneNodeNames,
 			loadFromData,
 			setIsDownloading
 		]

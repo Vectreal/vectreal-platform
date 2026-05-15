@@ -1,12 +1,18 @@
 import { eq } from 'drizzle-orm'
 
 import * as dbSchema from '../../../../db/schema'
-import { assets, sceneAssets, sceneSettings } from '../../../../db/schema'
+import {
+	assets,
+	sceneAssets,
+	sceneHotspots,
+	sceneSettings
+} from '../../../../db/schema'
 import {
 	SceneSettingsUpsertInput,
 	SceneSettingsWithAssets
 } from '../../../../types/api'
 
+import type { HotspotDefinition } from '@vctrl/core'
 import type { ExtractTablesWithRelations } from 'drizzle-orm'
 import type { PgTransaction } from 'drizzle-orm/pg-core'
 import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js'
@@ -58,7 +64,9 @@ function buildSceneSettingsValues(params: SceneSettingsUpsertInput) {
 		controls: params.settings.controls,
 		environment: params.settings.environment,
 		interactions: params.settings.interactions,
-		shadows: params.settings.shadows
+		shadows: params.settings.shadows,
+		objectOverrides: params.settings.objectOverrides ?? null,
+		placeables: params.settings.placeables ?? null
 	}
 }
 
@@ -119,4 +127,61 @@ export async function replaceSceneAssets(
 		.where(eq(sceneAssets.sceneSettingsId, sceneSettingsId))
 
 	await linkSceneAssets(tx, sceneSettingsId, assetIds)
+}
+
+// ---------------------------------------------------------------------------
+// Hotspot CRUD
+// ---------------------------------------------------------------------------
+
+export async function getHotspotsBySceneSettingsId(
+	tx: SceneSettingsTransaction,
+	sceneSettingsId: string
+): Promise<HotspotDefinition[]> {
+	const rows = await tx
+		.select()
+		.from(sceneHotspots)
+		.where(eq(sceneHotspots.sceneSettingsId, sceneSettingsId))
+		.orderBy(sceneHotspots.sequenceIndex, sceneHotspots.createdAt)
+
+	return rows.map((r) => ({
+		id: r.id,
+		name: r.name,
+		worldPosition: [r.worldPositionX, r.worldPositionY, r.worldPositionZ],
+		linkedCameraId: r.linkedCameraId ?? undefined,
+		visible: r.visible,
+		internalOnly: r.internalOnly,
+		sequenceIndex: r.sequenceIndex ?? undefined,
+		stylePreset: r.stylePreset,
+		payloadUrl: r.payloadUrl ?? undefined
+	}))
+}
+
+export async function replaceHotspots(
+	tx: SceneSettingsTransaction,
+	sceneSettingsId: string,
+	hotspots: HotspotDefinition[]
+): Promise<void> {
+	// Delete all existing hotspots for this scene settings row.
+	await tx
+		.delete(sceneHotspots)
+		.where(eq(sceneHotspots.sceneSettingsId, sceneSettingsId))
+
+	if (hotspots.length === 0) return
+
+	await tx.insert(sceneHotspots).values(
+		hotspots.map((h) => ({
+			id: h.id,
+			sceneSettingsId,
+			name: h.name,
+			worldPositionX: h.worldPosition[0],
+			worldPositionY: h.worldPosition[1],
+			worldPositionZ: h.worldPosition[2],
+			linkedCameraId: h.linkedCameraId ?? null,
+			visible: h.visible,
+			internalOnly: h.internalOnly,
+			sequenceIndex: h.sequenceIndex ?? null,
+			stylePreset: h.stylePreset,
+			payloadUrl: h.payloadUrl ?? null
+		}))
+	)
 }

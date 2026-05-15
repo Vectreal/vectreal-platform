@@ -1,5 +1,5 @@
 import { useAtom } from 'jotai/react'
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import { optimizationModalAtom } from '../lib/stores/scene-optimization-store'
 
@@ -39,37 +39,17 @@ export function useOptimizationDrawerFlow({
 		[saveAvailability, hasUnsavedLocationChange]
 	)
 
-	const isInitialOptimizationRequired =
-		effectiveSaveAvailability.reason === 'requires-first-optimization'
-
-	useEffect(() => {
-		if (!isInitialOptimizationRequired || optimizationDrawer.isOpen) {
-			return
-		}
-
-		setOptimizationDrawer({
-			isOpen: true,
-			source: 'initial'
-		})
-	}, [
-		isInitialOptimizationRequired,
-		optimizationDrawer.isOpen,
-		setOptimizationDrawer
-	])
+	const isInitialOptimizationRequired = false
 
 	const handleOptimizationDrawerChange = useCallback(
 		(open: boolean) => {
-			if (!open && isInitialOptimizationRequired) {
-				return
-			}
-
 			setOptimizationDrawer((prev) => ({
 				...prev,
 				isOpen: open,
 				source: open ? prev.source : null
 			}))
 		},
-		[isInitialOptimizationRequired, setOptimizationDrawer]
+		[setOptimizationDrawer]
 	)
 
 	const openReoptimizeDrawer = useCallback(() => {

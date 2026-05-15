@@ -9,7 +9,6 @@ import {
 	hasOptimizationChanges,
 	hasUnsavedSceneChanges,
 	resolveSaveAvailability,
-	shouldRequireFirstSaveOptimization,
 	type SaveSceneOrchestratorOptions,
 	type SaveAvailabilityState
 } from '../../lib/domain/scene'
@@ -83,20 +82,7 @@ export const useSceneSaveFlow = ({
 		[optimizationReport]
 	)
 
-	const hasAppliedOptimization = useMemo(
-		() => typeof optimizedSceneBytes === 'number',
-		[optimizedSceneBytes]
-	)
-
-	const isFirstSavePendingOptimization = useMemo(
-		() =>
-			shouldRequireFirstSaveOptimization({
-				currentSceneId,
-				lastSavedSceneId,
-				hasAppliedOptimization
-			}),
-		[currentSceneId, lastSavedSceneId, hasAppliedOptimization]
-	)
+	const isFirstSavePendingOptimization = false
 
 	useEffect(() => {
 		if (!optimisticSaveBaseline || inFlightSaveRef.current) {
@@ -463,10 +449,9 @@ export const useSceneSaveFlow = ({
 		() =>
 			resolveSaveAvailability({
 				userId,
-				isFirstSavePendingOptimization,
 				hasChanges
 			}),
-		[userId, isFirstSavePendingOptimization, hasChanges]
+		[userId, hasChanges]
 	)
 
 	return {

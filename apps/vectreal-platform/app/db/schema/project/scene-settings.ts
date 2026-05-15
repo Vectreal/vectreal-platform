@@ -3,6 +3,8 @@ import {
 	CameraProps,
 	ControlsProps,
 	EnvironmentProps,
+	ObjectOverride,
+	PlaceableRef,
 	SceneSettings,
 	ShadowsProps
 } from '@vctrl/core'
@@ -37,6 +39,10 @@ export const sceneSettings = pgTable(
 		environment: json('environment').$type<EnvironmentProps>(), // environmentAtom data
 		interactions: json('interactions').$type<SceneSettings['interactions']>(), // interactionsAtom data
 		shadows: json('shadows').$type<ShadowsProps>(), // shadowsAtom data
+		// Per-object transform + material + texture overrides (stored as JSON).
+		objectOverrides: json('object_overrides').$type<ObjectOverride[]>(),
+		// Built-in placeable instances inserted into the scene (stored as JSON).
+		placeables: json('placeables').$type<PlaceableRef[]>(),
 
 		// Audit fields
 		createdAt: timestamp('created_at').defaultNow().notNull(),

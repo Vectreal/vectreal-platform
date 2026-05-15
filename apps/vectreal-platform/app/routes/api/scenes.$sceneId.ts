@@ -465,11 +465,14 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		)
 
 		const response = await runWithSceneSettingsCoalescing(requestKey, () =>
-			sceneSettingsOps.getSceneSettings({
-				...parsedRequest,
-				action,
-				sceneId: effectiveSceneId
-			})
+			sceneSettingsOps.getSceneSettings(
+				{
+					...parsedRequest,
+					action,
+					sceneId: effectiveSceneId
+				},
+				{ forPublicView: authContext.mode === 'apiKey' }
+			)
 		)
 
 		return withNoStoreHeaders(

@@ -6,7 +6,6 @@ import {
 	executeSceneSaveOrchestrator,
 	hasOptimizationChanges,
 	resolveSaveAvailability,
-	shouldRequireFirstSaveOptimization,
 	type SaveSceneOrchestratorOptions,
 	hasUnsavedSceneChanges
 } from '../lib/domain/scene'
@@ -103,20 +102,7 @@ export const useSceneSaveFlow = ({
 		[optimizationReport]
 	)
 
-	const hasAppliedOptimization = useMemo(
-		() => typeof optimizedSceneBytes === 'number',
-		[optimizedSceneBytes]
-	)
-
-	const isFirstSavePendingOptimization = useMemo(
-		() =>
-			shouldRequireFirstSaveOptimization({
-				currentSceneId,
-				lastSavedSceneId,
-				hasAppliedOptimization
-			}),
-		[currentSceneId, lastSavedSceneId, hasAppliedOptimization]
-	)
+	const isFirstSavePendingOptimization = false
 
 	useEffect(() => {
 		if (!reportSignature || lastSavedReportSignature || !latestSceneStats) {

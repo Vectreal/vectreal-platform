@@ -1,12 +1,7 @@
 import { Button } from '@shared/components/ui/button'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
-import {
-	CircleFadingArrowUp,
-	Cloud,
-	LoaderCircle,
-	Sparkles
-} from 'lucide-react'
+import { CircleFadingArrowUp, Cloud, LoaderCircle } from 'lucide-react'
 
 import { usePublisherSaveAction } from '../../hooks/use-publisher-save-action'
 import { isSavingAtom } from '../../lib/stores/publisher-config-store'
@@ -64,23 +59,17 @@ const SaveButton = ({
 					label: 'Sign In to Save',
 					icon: <CircleFadingArrowUp size={16} className="inline" />
 				}
-			: saveAvailability.reason === 'requires-first-optimization'
+			: saveAvailability.reason === 'no-unsaved-changes'
 				? {
-						key: 'optimize-first',
-						label: 'Optimize First',
-						icon: <Sparkles size={16} className="inline animate-pulse" />
+						key: 'saved',
+						label: 'Saved',
+						icon: <Cloud size={16} className="inline" />
 					}
-				: saveAvailability.reason === 'no-unsaved-changes'
-					? {
-							key: 'saved',
-							label: 'Saved',
-							icon: <Cloud size={16} className="inline" />
-						}
-					: {
-							key: 'ready',
-							label: 'Save',
-							icon: <CircleFadingArrowUp size={16} className="inline" />
-						}
+				: {
+						key: 'ready',
+						label: 'Save',
+						icon: <CircleFadingArrowUp size={16} className="inline" />
+					}
 
 	const contentTransition = shouldReduceMotion
 		? { duration: 0 }
@@ -101,7 +90,7 @@ const SaveButton = ({
 			className={
 				compact
 					? 'flex items-center justify-center rounded-xl'
-					: 'flex w-[10.75rem] items-center justify-start gap-2.5 rounded-xl px-4'
+					: 'flex items-center justify-start gap-2.5 rounded-xl px-4'
 			}
 			aria-label={saveVisual.label}
 			disabled={isSaveDisabled}
