@@ -12,10 +12,14 @@ import {
 import { Separator } from '@shared/components/ui/separator'
 import { Switch } from '@shared/components/ui/switch'
 import { useAtom } from 'jotai/react'
-import { Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
-import { memo, useCallback, useMemo, useState } from 'react'
+import { Crosshair, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo } from 'react'
 
 import {
+	isClickToPlaceActiveAtom
+} from '../../../../../lib/stores/publisher-config-store'
+import {
+	activeHotspotIdAtom,
 	cameraAtom,
 	hotspotsAtom
 } from '../../../../../lib/stores/scene-settings-store'
@@ -39,6 +43,7 @@ function createDefaultHotspot(): HotspotDefinition {
 		worldPosition: [0, 0, 0],
 		visible: true,
 		internalOnly: false,
+		occlusionEnabled: true,
 		stylePreset: 'dot'
 	}
 }
@@ -52,12 +57,20 @@ const STYLE_PRESET_OPTIONS: ToggleButtonGroupOption<HotspotStylePreset>[] = [
 const HotspotsSettingsPanel = memo(() => {
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 	const [camera, setCamera] = useAtom(cameraAtom)
-	const [selectedId, setSelectedId] = useState<string | null>(null)
+	const [selectedId, setSelectedId] = useAtom(activeHotspotIdAtom)
+	const [isClickToPlaceActive, setIsClickToPlaceActive] = useAtom(isClickToPlaceActiveAtom)
 
 	const hotspotCameras = useMemo(
 		() => (camera.cameras ?? []).filter((c) => c.kind === 'hotspot'),
 		[camera.cameras]
 	)
+
+	// Auto-disable click-to-place when deselecting a hotspot
+	useEffect(() => {
+		if (!selectedId) {
+			setIsClickToPlaceActive(false)
+		}
+	}, [selectedId, setIsClickToPlaceActive])
 
 	const selectedHotspot = useMemo(
 		() => hotspots.find((h) => h.id === selectedId) ?? null,
@@ -211,11 +224,26 @@ const HotspotsSettingsPanel = memo(() => {
 			{/* Selected Hotspot Editor */}
 			{selectedHotspot && (
 				<div className="space-y-4">
-					<div className="flex items-center gap-2">
+					<div className="flex items-center justify-between gap-2">
 						<p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
 							Edit: {selectedHotspot.name || 'Unnamed'}
 						</p>
+						<Button
+							variant={isClickToPlaceActive ? 'default' : 'outline'}
+							size="sm"
+							className="h-6 gap-1.5 px-2 text-xs"
+							onClick={() => setIsClickToPlaceActive((v) => !v)}
+							title="Click on the model to move this hotspot"
+						>
+							<Crosshair className="h-3 w-3" />
+							{isClickToPlaceActive ? 'Placing...' : 'Click to Place'}
+						</Button>
 					</div>
+					{isClickToPlaceActive && (
+						<p className="text-muted-foreground bg-accent/50 rounded-md px-2 py-1 text-xs">
+							Click anywhere on the model to move this hotspot there.
+						</p>
+					)}
 					<Separator />
 
 					{/* Name */}
@@ -297,10 +325,10 @@ const HotspotsSettingsPanel = memo(() => {
 						</div>
 						{hotspotCameras.length > 0 ? (
 							<Select
-								value={selectedHotspot.linkedCameraId ?? ''}
+								value={selectedHotspot.linkedCameraId ?? 'none'}
 								onValueChange={(v) =>
 									updateHotspot(selectedHotspot.id, {
-										linkedCameraId: v || undefined
+										linkedCameraId: v === 'none' ? undefined : v
 									})
 								}
 							>
@@ -308,7 +336,7 @@ const HotspotsSettingsPanel = memo(() => {
 									<SelectValue placeholder="None" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="">None</SelectItem>
+									<SelectItem value="none">None</SelectItem>
 									{hotspotCameras.map((c) => (
 										<SelectItem key={c.cameraId} value={c.cameraId}>
 											{c.name || c.cameraId}
@@ -387,6 +415,18 @@ const HotspotsSettingsPanel = memo(() => {
 								checked={selectedHotspot.internalOnly}
 								onCheckedChange={(v) =>
 									updateHotspot(selectedHotspot.id, { internalOnly: v })
+								}
+							/>
+						</div>
+						<div className="flex items-center justify-between">
+							<div className="flex items-center gap-1.5">
+								<Label className="text-sm">Depth Occlusion</Label>
+								<InfoTooltip content="When enabled, the hotspot fades when hidden behind scene geometry. Disable to always show at full opacity." />
+							</div>
+							<Switch
+								checked={selectedHotspot.occlusionEnabled ?? true}
+								onCheckedChange={(v) =>
+									updateHotspot(selectedHotspot.id, { occlusionEnabled: v })
 								}
 							/>
 						</div>

@@ -4,6 +4,7 @@ import {
 	useContext,
 	useMemo,
 	useRef,
+	type MutableRefObject,
 	type PropsWithChildren
 } from 'react'
 
@@ -11,7 +12,8 @@ import type {
 	SceneCameraSnapshot,
 	SceneCameraSnapshotCapture,
 	SceneScreenshotCapture,
-	SceneScreenshotOptions
+	SceneScreenshotOptions,
+	ViewerCommandExecutor
 } from '@vctrl/viewer'
 
 interface PublisherViewerCaptureContextValue {
@@ -25,6 +27,8 @@ interface PublisherViewerCaptureContextValue {
 		capture: null | SceneCameraSnapshotCapture
 	) => void
 	requestSceneCameraSnapshot: () => Promise<null | SceneCameraSnapshot>
+	registerCommandExecutor: (executor: null | ViewerCommandExecutor) => void
+	commandExecutor: MutableRefObject<null | ViewerCommandExecutor>
 }
 
 const PublisherViewerCaptureContext =
@@ -37,6 +41,7 @@ export function PublisherViewerCaptureProvider({
 	const cameraSnapshotCaptureRef = useRef<null | SceneCameraSnapshotCapture>(
 		null
 	)
+	const commandExecutorRef = useRef<null | ViewerCommandExecutor>(null)
 
 	const registerSceneScreenshotCapture = useCallback(
 		(capture: null | SceneScreenshotCapture) => {
@@ -67,18 +72,28 @@ export function PublisherViewerCaptureProvider({
 			: null
 	}, [])
 
+	const registerCommandExecutor = useCallback(
+		(executor: null | ViewerCommandExecutor) => {
+			commandExecutorRef.current = executor
+		},
+		[]
+	)
+
 	const value = useMemo<PublisherViewerCaptureContextValue>(
 		() => ({
 			registerSceneScreenshotCapture,
 			requestSceneScreenshot,
 			registerSceneCameraSnapshotCapture,
-			requestSceneCameraSnapshot
+			requestSceneCameraSnapshot,
+			registerCommandExecutor,
+			commandExecutor: commandExecutorRef
 		}),
 		[
 			registerSceneScreenshotCapture,
 			requestSceneScreenshot,
 			registerSceneCameraSnapshotCapture,
-			requestSceneCameraSnapshot
+			requestSceneCameraSnapshot,
+			registerCommandExecutor
 		]
 	)
 

@@ -318,16 +318,15 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									onInteractionEvent={onInteractionEvent}
 								/>
 								<Center top>
-									{model ? (
+									{model && (
 										<SceneModel
 											onScreenshot={onScreenshot}
 											onScreenshotCaptureReady={onScreenshotCaptureReady}
 											object={model}
 										/>
-									) : (
-										children
 									)}
 								</Center>
+								{children}
 							</SceneBounds>
 						</>
 					)}

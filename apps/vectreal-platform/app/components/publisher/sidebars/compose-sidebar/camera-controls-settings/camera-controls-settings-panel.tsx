@@ -15,7 +15,7 @@ import {
 } from '@shared/components/ui/select'
 import { Separator } from '@shared/components/ui/separator'
 import { useAtom, useAtomValue } from 'jotai/react'
-import { Camera, Pin, Plus, Trash2 } from 'lucide-react'
+import { Camera, Eye, Globe, Pin, Plus, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
@@ -23,6 +23,7 @@ import {
 	defaultControlsOptions,
 	type FieldConfig
 } from './constants'
+import { isPreviewModeAtom } from '../../../../../lib/stores/publisher-config-store'
 import {
 	cameraAtom,
 	hotspotsAtom,
@@ -288,6 +289,7 @@ const DEFAULT_STRATEGY_OPTIONS: ToggleButtonGroupOption<DefaultCameraStrategy>[]
 const CameraControlsSettingsPanel = memo(() => {
 	const [camera, setCamera] = useAtom(cameraAtom)
 	const [selectedCameraId, setSelectedCameraId] = useAtom(selectedCameraIdAtom)
+	const [isPreviewMode, setIsPreviewMode] = useAtom(isPreviewModeAtom)
 	const hotspots = useAtomValue(hotspotsAtom)
 	const [cameraNameDraft, setCameraNameDraft] = useState('')
 	const [transitionAdvancedOpen, setTransitionAdvancedOpen] = useState(false)
@@ -310,11 +312,11 @@ const CameraControlsSettingsPanel = memo(() => {
 	const selectedCamera = useMemo(
 		() =>
 			normalizedCamera.cameras?.find(
-				(cameraEntry) =>
-					cameraEntry.cameraId === normalizedCamera.activeCameraId
+				(cameraEntry) => cameraEntry.cameraId === selectedCameraId
 			) ??
 			normalizedCamera.cameras?.find(
-				(cameraEntry) => cameraEntry.cameraId === selectedCameraId
+				(cameraEntry) =>
+					cameraEntry.cameraId === normalizedCamera.activeCameraId
 			) ??
 			normalizedCamera.cameras?.[0],
 		[normalizedCamera, selectedCameraId]
@@ -370,20 +372,20 @@ const CameraControlsSettingsPanel = memo(() => {
 		(update: (cameraEntry: CameraEntry) => CameraEntry) => {
 			setCamera((prev) => {
 				const normalized = normalizeCameraPayload(prev)
-				const activeCameraId =
-					normalized.activeCameraId ||
+				// Always use the editor-selected camera as the target, not the viewport's active camera
+				const targetCameraId =
 					selectedCameraId ||
+					normalized.activeCameraId ||
 					normalized.cameras?.[0]?.cameraId
 
-				if (!activeCameraId) {
+				if (!targetCameraId) {
 					return normalized
 				}
 
 				return {
 					...normalized,
-					activeCameraId,
 					cameras: (normalized.cameras ?? []).map((cameraEntry) => {
-						if (cameraEntry.cameraId !== activeCameraId) {
+						if (cameraEntry.cameraId !== targetCameraId) {
 							return cameraEntry
 						}
 						return update(cameraEntry)
@@ -406,6 +408,13 @@ const CameraControlsSettingsPanel = memo(() => {
 
 	const handleSelectCamera = useCallback(
 		async (nextCameraId: string) => {
+			if (!isPreviewMode) {
+				// Navigate mode: just change the editor selection, don't snap the viewport
+				setSelectedCameraId(nextCameraId)
+				return
+			}
+
+			// Preview mode: save current viewport to current camera, then transition to the new one
 			const snapshot = await requestSceneCameraSnapshot()
 			setSelectedCameraId(nextCameraId)
 			setCamera((prev) => {
@@ -419,13 +428,10 @@ const CameraControlsSettingsPanel = memo(() => {
 				}
 
 				const currentCameraId =
-					normalized.activeCameraId ||
-					selectedCameraId ||
-					normalized.cameras?.[0]?.cameraId
+					selectedCameraId || normalized.cameras?.[0]?.cameraId
 
 				return {
 					...normalized,
-					activeCameraId: nextCameraId,
 					cameras: (normalized.cameras ?? []).map((entry) => {
 						const withSnapshot =
 							entry.cameraId === currentCameraId
@@ -436,7 +442,7 @@ const CameraControlsSettingsPanel = memo(() => {
 				}
 			})
 		},
-		[selectedCameraId, setCamera, setSelectedCameraId]
+		[isPreviewMode, selectedCameraId, setCamera, setSelectedCameraId, requestSceneCameraSnapshot]
 	)
 
 	const handleAddCamera = useCallback(async () => {
@@ -699,12 +705,41 @@ const CameraControlsSettingsPanel = memo(() => {
 		<div className="space-y-6">
 			{/* Camera Manager */}
 			<div className="space-y-3">
-				<div className="flex items-center gap-2">
-					<p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-						Camera Manager
-					</p>
-					<InfoTooltip content="Select, create, rename, and delete saved cameras. The selected camera becomes the preview camera in the editor." />
+				<div className="flex items-center justify-between gap-2">
+					<div className="flex items-center gap-2">
+						<p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+							Camera Manager
+						</p>
+						<InfoTooltip content="Select, create, rename, and delete saved cameras. Toggle Preview to view from a saved camera, or Navigate for free orbit." />
+					</div>
+					<div className="flex items-center gap-1 rounded-md border p-0.5">
+						<Button
+							variant={!isPreviewMode ? 'secondary' : 'ghost'}
+							size="sm"
+							className="h-6 gap-1 px-2 text-xs"
+							onClick={() => setIsPreviewMode(false)}
+							title="Navigate freely without snapping to cameras"
+						>
+							<Globe className="h-3 w-3" />
+							Navigate
+						</Button>
+						<Button
+							variant={isPreviewMode ? 'secondary' : 'ghost'}
+							size="sm"
+							className="h-6 gap-1 px-2 text-xs"
+							onClick={() => setIsPreviewMode(true)}
+							title="Preview through the selected camera"
+						>
+							<Eye className="h-3 w-3" />
+							Preview
+						</Button>
+					</div>
 				</div>
+				{isPreviewMode && (
+					<p className="text-muted-foreground bg-accent/50 rounded-md px-2 py-1 text-xs">
+						Previewing through <span className="font-medium">{selectedCamera?.name ?? 'camera'}</span>. Switch cameras to transition.
+					</p>
+				)}
 				<Separator />
 
 				<div className="flex items-center gap-2">

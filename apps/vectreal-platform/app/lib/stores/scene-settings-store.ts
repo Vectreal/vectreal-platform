@@ -32,6 +32,7 @@ const environmentAtom = atom<EnvironmentProps>(defaultEnvOptions)
 const interactionsAtom = atom<SceneSettings['interactions']>(undefined)
 const shadowsAtom = atom<ShadowsProps>(defaultShadowOptions)
 const hotspotsAtom = atom<HotspotDefinition[]>([])
+const activeHotspotIdAtom = atom<string | null>(null)
 const sceneViewerSettingsAtom = atom((get) => ({
 	bounds: get(boundsAtom),
 	camera: get(cameraAtom),
@@ -55,9 +56,11 @@ sceneSettingsStore.set(environmentAtom, defaultEnvOptions)
 sceneSettingsStore.set(interactionsAtom, undefined)
 sceneSettingsStore.set(shadowsAtom, defaultShadowOptions)
 sceneSettingsStore.set(hotspotsAtom, [])
+sceneSettingsStore.set(activeHotspotIdAtom, null)
 
 export {
 	// Vectreal viewer settings atoms
+	activeHotspotIdAtom,
 	boundsAtom,
 	cameraAtom,
 	controlsAtom,

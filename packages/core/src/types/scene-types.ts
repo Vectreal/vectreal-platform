@@ -302,6 +302,11 @@ export interface HotspotDefinition {
 	 * Unused when stylePreset === 'dot'.
 	 */
 	payloadUrl?: string
+	/**
+	 * When true the hotspot fades/hides when occluded by scene geometry.
+	 * When false the hotspot renders at full opacity regardless of depth.
+	 */
+	occlusionEnabled?: boolean
 }
 
 // ---------------------------------------------------------------------------

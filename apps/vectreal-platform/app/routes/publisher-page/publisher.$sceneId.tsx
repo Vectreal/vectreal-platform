@@ -20,13 +20,15 @@ import { useNavigation, useParams } from 'react-router'
 import { Route } from './+types/publisher.$sceneId'
 import { DropZone } from './drop-zone'
 import CenteredSpinner from '../../components/centered-spinner'
+import { PublisherEditorScene } from '../../components/publisher/publisher-editor-scene'
 import { usePublisherViewerCapture } from '../../components/publisher/publisher-viewer-capture-context'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import {
 	processInitialState,
 	publisherLoadingStateAtom,
 	processAtom,
-	sceneMetaAtom
+	sceneMetaAtom,
+	isPreviewModeAtom
 } from '../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
 import {
@@ -38,7 +40,8 @@ import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbn
 
 import type {
 	SceneCameraSnapshotCapture,
-	SceneScreenshotCapture
+	SceneScreenshotCapture,
+	ViewerCommandExecutor
 } from '@vctrl/viewer'
 import type { ShouldRevalidateFunction } from 'react-router'
 
@@ -141,14 +144,18 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 		sceneViewerSettingsAtom
 	)
 	const selectedCameraId = useAtomValue(selectedCameraIdAtom)
+	const isPreviewMode = useAtomValue(isPreviewModeAtom)
 	const sceneMeta = useAtomValue(sceneMetaAtom)
 	const loadingThumbnail = toViewerLoadingThumbnail(
 		sceneMeta.thumbnailUrl,
 		'Scene thumbnail preview'
 	)
 	const previousRouteSceneIdRef = useRef<null | string>(routeSceneId)
-	const { registerSceneScreenshotCapture, registerSceneCameraSnapshotCapture } =
-		usePublisherViewerCapture()
+	const {
+		registerSceneScreenshotCapture,
+		registerSceneCameraSnapshotCapture,
+		registerCommandExecutor
+	} = usePublisherViewerCapture()
 
 	const handleScreenshotCaptureReady = useCallback(
 		(capture: null | SceneScreenshotCapture) => {
@@ -162,6 +169,13 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 			registerSceneCameraSnapshotCapture(capture)
 		},
 		[registerSceneCameraSnapshotCapture]
+	)
+
+	const handleCommandExecutorReady = useCallback(
+		(executor: null | ViewerCommandExecutor) => {
+			registerCommandExecutor(executor)
+		},
+		[registerCommandExecutor]
 	)
 
 	// Cleanup on unmount
@@ -241,7 +255,9 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 								key="model-viewer"
 								cameraOptions={{
 									...camera,
-									activeCameraId: camera.activeCameraId || selectedCameraId
+									activeCameraId: isPreviewMode
+										? (selectedCameraId ?? camera.activeCameraId)
+										: camera.activeCameraId
 								}}
 								controlsOptions={controls}
 								envOptions={env}
@@ -251,8 +267,11 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 								loader={<LoadingScreen />}
 								onScreenshotCaptureReady={handleScreenshotCaptureReady}
 								onCameraSnapshotCaptureReady={handleCameraSnapshotCaptureReady}
+								onCommandExecutorReady={handleCommandExecutorReady}
 								fallback={<LoadingScreen />}
-							/>
+							>
+								{file?.model && <PublisherEditorScene />}
+							</ClientVectrealViewer>
 						</motion.div>
 					) : (
 						<motion.div
