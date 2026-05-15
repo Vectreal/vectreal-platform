@@ -82,7 +82,12 @@ export async function loadAuthenticatedUser(
 
 			const redirectHeaders = new Headers(headers as HeadersInit)
 			signOutHeaders.forEach((value, key) => {
-				redirectHeaders.append(key, value)
+				if (key.toLowerCase() === 'set-cookie') {
+					redirectHeaders.append(key, value)
+					return
+				}
+
+				redirectHeaders.set(key, value)
 			})
 
 			throw redirect('/sign-in?error=email_conflict', {
