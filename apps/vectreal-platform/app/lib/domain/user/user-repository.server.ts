@@ -61,11 +61,13 @@ async function ensureUserExistsDb(
 			? parsedTosAcceptedAt
 			: null
 
+	const normalizedEmail = (supabaseUser.email || '').trim().toLowerCase()
+
 	const inserted = await dbClient
 		.insert(users)
 		.values({
 			id: supabaseUser.id,
-			email: supabaseUser.email || '',
+			email: normalizedEmail,
 			name: supabaseUser.user_metadata?.name || supabaseUser.email || 'User',
 			tosAcceptedAt: tosAcceptedAt ?? null
 		})
@@ -95,7 +97,7 @@ async function ensureUserExistsDb(
 			const [byEmail] = await dbClient
 				.select()
 				.from(users)
-				.where(eq(users.email, supabaseUser.email))
+				.where(eq(users.email, supabaseUser.email.trim().toLowerCase()))
 				.limit(1)
 
 			if (byEmail) {
