@@ -61,11 +61,13 @@ async function ensureUserExistsDb(
 			? parsedTosAcceptedAt
 			: null
 
+	const normalizedEmail = (supabaseUser.email || '').trim().toLowerCase()
+
 	const inserted = await dbClient
 		.insert(users)
 		.values({
 			id: supabaseUser.id,
-			email: supabaseUser.email || '',
+			email: normalizedEmail,
 			name: supabaseUser.user_metadata?.name || supabaseUser.email || 'User',
 			tosAcceptedAt: tosAcceptedAt ?? null
 		})
@@ -85,11 +87,29 @@ async function ensureUserExistsDb(
 			return { user: byId, isNewUser: false }
 		}
 
-		// Email conflict: this email is already registered under a different account
-		// (e.g. the user previously signed in via OAuth with the same email address).
-		// Supabase de-dupes auth.users by email, but only when identity linking is
-		// enabled — in some configurations a new Supabase UUID can be issued for the
-		// same email, causing the INSERT to conflict on the unique email column here.
+		// UUID mismatch: the email is already registered under a different UUID.
+		// This can happen when Supabase identity linking is disabled and the user
+		// has multiple auth identities (e.g. OAuth + email/password) for the same
+		// email address, resulting in separate UUIDs. Since Supabase has already
+		// authenticated this user with the email, returning the existing record is
+		// safe — both UUIDs belong to the same person.
+		if (supabaseUser.email) {
+			const [byEmail] = await dbClient
+				.select()
+				.from(users)
+				.where(eq(users.email, supabaseUser.email.trim().toLowerCase()))
+				.limit(1)
+
+			if (byEmail) {
+				console.warn('[ensureUserExistsDb] UUID mismatch — returning existing user by email', {
+					supabaseUserId: supabaseUser.id,
+					existingUserId: byEmail.id
+				})
+				return { user: byEmail, isNewUser: false }
+			}
+		}
+
+		// Should be unreachable: INSERT conflicted on email but no row found by email.
 		throw new Error(
 			`email_conflict: ${supabaseUser.email} is already registered under a different account`
 		)
