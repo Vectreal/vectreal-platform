@@ -91,19 +91,20 @@ async function ensureUserExistsDb(
 		// email address, resulting in separate UUIDs. Since Supabase has already
 		// authenticated this user with the email, returning the existing record is
 		// safe — both UUIDs belong to the same person.
-		const [byEmail] = await dbClient
-			.select()
-			.from(users)
-			.where(eq(users.email, supabaseUser.email ?? ''))
-			.limit(1)
+		if (supabaseUser.email) {
+			const [byEmail] = await dbClient
+				.select()
+				.from(users)
+				.where(eq(users.email, supabaseUser.email))
+				.limit(1)
 
-		if (byEmail) {
-			console.warn('[ensureUserExistsDb] UUID mismatch — returning existing user by email', {
-				supabaseUserId: supabaseUser.id,
-				existingUserId: byEmail.id,
-				email: supabaseUser.email
-			})
-			return { user: byEmail, isNewUser: false }
+			if (byEmail) {
+				console.warn('[ensureUserExistsDb] UUID mismatch — returning existing user by email', {
+					supabaseUserId: supabaseUser.id,
+					existingUserId: byEmail.id
+				})
+				return { user: byEmail, isNewUser: false }
+			}
 		}
 
 		// Should be unreachable: INSERT conflicted on email but no row found by email.
