@@ -74,13 +74,14 @@ export async function loadAuthenticatedUser(
 			try {
 				await client.auth.signOut({ scope: 'local' })
 			} catch (signOutError) {
-				console.warn('Failed to clear local auth session after email conflict:', {
-					error: signOutError
-				})
+				console.warn(
+					'Failed to clear local auth session after email conflict; redirecting to sign-in anyway.',
+					{ error: signOutError }
+				)
 			}
 
 			const redirectHeaders = new Headers(headers as HeadersInit)
-			new Headers(signOutHeaders).forEach((value, key) => {
+			signOutHeaders.forEach((value, key) => {
 				redirectHeaders.append(key, value)
 			})
 
