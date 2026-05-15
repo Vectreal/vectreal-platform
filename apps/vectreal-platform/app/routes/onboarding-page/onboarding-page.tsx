@@ -42,7 +42,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 // ─── Action ───────────────────────────────────────────────────────────────────
 
 export async function action({ request }: Route.ActionArgs) {
-	const { user, headers } = await loadAuthenticatedUser(request)
+	const { userWithDefaults, headers } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
 
 	const toNullable = (v: FormDataEntryValue | null): string | null => {
@@ -50,7 +50,7 @@ export async function action({ request }: Route.ActionArgs) {
 		return v.trim()
 	}
 
-	await updateUserProfile(user.id, {
+	await updateUserProfile(userWithDefaults.user.id, {
 		role: toNullable(formData.get('role')),
 		useCase: toNullable(formData.get('useCase')),
 		companyName: toNullable(formData.get('companyName')),

@@ -121,7 +121,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	const { user, userWithDefaults, headers } =
+	const { userWithDefaults, headers } =
 		await loadAuthenticatedUser(request)
 	const formData = await request.formData()
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
@@ -137,7 +137,7 @@ export async function action({ request }: Route.ActionArgs) {
 				name: formData.get('name')
 			})
 
-			const updatedUser = await updateUserProfile(user.id, {
+			const updatedUser = await updateUserProfile(userWithDefaults.user.id, {
 				name: validated.name
 			})
 
@@ -188,7 +188,7 @@ export async function action({ request }: Route.ActionArgs) {
 				userWithDefaults.organization.id
 			)
 
-			await deleteUserAndRelatedData(user.id)
+			await deleteUserAndRelatedData(userWithDefaults.user.id)
 
 			try {
 				await client.auth.signOut({ scope: 'local' })
