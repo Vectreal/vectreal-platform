@@ -1,6 +1,7 @@
 import { redirect } from 'react-router'
 
 import { getAuthUser } from '../../http/auth.server'
+import { createSupabaseClient } from '../../supabase.server'
 import {
 	initializeUserDefaults,
 	type UserWithDefaults
@@ -69,8 +70,28 @@ export async function loadAuthenticatedUser(
 		console.error('Failed to initialize user:', error)
 
 		if (message.startsWith('email_conflict:')) {
+			const { client, headers: signOutHeaders } = await createSupabaseClient(request)
+			try {
+				await client.auth.signOut({ scope: 'local' })
+			} catch (signOutError) {
+				console.warn(
+					'Failed to clear local auth session after email conflict; redirecting to sign-in anyway.',
+					{ error: signOutError }
+				)
+			}
+
+			const redirectHeaders = new Headers(headers as HeadersInit)
+			signOutHeaders.forEach((value, key) => {
+				if (key.toLowerCase() === 'set-cookie') {
+					redirectHeaders.append(key, value)
+					return
+				}
+
+				redirectHeaders.set(key, value)
+			})
+
 			throw redirect('/sign-in?error=email_conflict', {
-				headers: new Headers(headers as HeadersInit)
+				headers: redirectHeaders
 			})
 		}
 
