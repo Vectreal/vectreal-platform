@@ -72,15 +72,27 @@ async function ensureUserExistsDb(
 		.onConflictDoNothing()
 		.returning()
 
-	// Race condition: another request inserted between our select and this insert.
-	// The insert was a no-op — fetch the already-existing row.
+	// INSERT was a no-op: a unique-constraint conflict fired (id or email).
 	if (inserted.length === 0) {
-		const [existing] = await dbClient
+		// Happy path: concurrent request already inserted this exact user (same UUID).
+		const [byId] = await dbClient
 			.select()
 			.from(users)
 			.where(eq(users.id, supabaseUser.id))
 			.limit(1)
-		return { user: existing, isNewUser: false }
+
+		if (byId) {
+			return { user: byId, isNewUser: false }
+		}
+
+		// Email conflict: this email is already registered under a different account
+		// (e.g. the user previously signed in via OAuth with the same email address).
+		// Supabase de-dupes auth.users by email, but only when identity linking is
+		// enabled — in some configurations a new Supabase UUID can be issued for the
+		// same email, causing the INSERT to conflict on the unique email column here.
+		throw new Error(
+			`email_conflict: ${supabaseUser.email} is already registered under a different account`
+		)
 	}
 
 	return { user: inserted[0], isNewUser: true }
