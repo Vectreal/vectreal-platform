@@ -65,7 +65,17 @@ export async function loadAuthenticatedUser(
 			headers
 		}
 	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error)
 		console.error('Failed to initialize user:', error)
-		throw new Response('Failed to initialize user data', { status: 500 })
+
+		if (message.startsWith('email_conflict:')) {
+			throw redirect('/sign-in?error=email_conflict', {
+				headers: new Headers(headers as HeadersInit)
+			})
+		}
+
+		throw new Response(`Failed to initialize user data: ${message}`, {
+			status: 500
+		})
 	}
 }

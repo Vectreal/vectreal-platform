@@ -32,6 +32,7 @@ type AuthErrorCode =
 	| 'verification_failed'
 	| 'provider_exchange_failed'
 	| 'user_init_failed'
+	| 'email_conflict'
 	| 'missing_code'
 	| 'session_missing'
 	| 'rate_limited'
@@ -45,6 +46,8 @@ const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
 		'Authentication provider sign-in failed. Please try again.',
 	user_init_failed:
 		'Your account was authenticated, but setup could not be completed. Please try signing in again.',
+	email_conflict:
+		'An account with this email already exists. Please sign in with your existing method (e.g. Google or GitHub).',
 	missing_code:
 		'Missing authentication code. Please restart the sign-in flow and try again.',
 	session_missing: 'Session creation failed. Please sign in again.',
