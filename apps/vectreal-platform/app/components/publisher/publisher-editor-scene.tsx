@@ -1,21 +1,18 @@
 import { Html, TransformControls } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useAtom, useAtomValue } from 'jotai/react'
-import {
-	memo,
-	useCallback,
-	useEffect,
-	useRef,
-	useState,
-	type FC
-} from 'react'
+import { memo, useCallback, useEffect, useRef, useState, type FC } from 'react'
 import * as THREE from 'three'
 
 import { usePublisherViewerCapture } from './publisher-viewer-capture-context'
-import { isClickToPlaceActiveAtom } from '../../lib/stores/publisher-config-store'
+import {
+	isClickToPlaceActiveAtom,
+	processAtom
+} from '../../lib/stores/publisher-config-store'
 import {
 	activeHotspotIdAtom,
-	hotspotsAtom
+	hotspotsAtom,
+	selectedCameraIdAtom
 } from '../../lib/stores/scene-settings-store'
 
 import type { HotspotDefinition } from '@vctrl/core'
@@ -50,11 +47,21 @@ function useHotspotStyles() {
 interface HotspotDotProps {
 	hotspot: HotspotDefinition
 	isSelected: boolean
+	isHotspotToolActive: boolean
+	activeCameraId?: string
 	onSelect: (id: string) => void
+	onActivateCamera: (cameraId: string) => void
 }
 
 const HotspotDot: FC<HotspotDotProps> = memo(
-	({ hotspot, isSelected, onSelect }) => {
+	({
+		hotspot,
+		isSelected,
+		isHotspotToolActive,
+		activeCameraId,
+		onSelect,
+		onActivateCamera
+	}) => {
 		const [hovered, setHovered] = useState(false)
 		const wrapperRef = useRef<HTMLDivElement>(null)
 		const posVec = useRef(new THREE.Vector3(...hotspot.worldPosition))
@@ -91,11 +98,18 @@ const HotspotDot: FC<HotspotDotProps> = memo(
 			wrapperRef.current.style.opacity = occluded ? '0.18' : '1'
 		})
 
-		const accentColor = isSelected
-			? '#f97316'
-			: hotspot.visible
-				? '#3b82f6'
-				: '#6b7280'
+		const isLinkedCameraActive =
+			!isHotspotToolActive &&
+			!!hotspot.linkedCameraId &&
+			hotspot.linkedCameraId === activeCameraId
+		const accentColor =
+			isSelected && isHotspotToolActive
+				? '#f97316'
+				: isLinkedCameraActive
+					? '#22c55e'
+					: hotspot.visible
+						? '#3b82f6'
+						: '#6b7280'
 
 		const showLabel = isSelected || hovered
 
@@ -118,7 +132,11 @@ const HotspotDot: FC<HotspotDotProps> = memo(
 					}}
 					onClick={(e) => {
 						e.stopPropagation()
-						onSelect(hotspot.id)
+						if (isHotspotToolActive) {
+							onSelect(hotspot.id)
+						} else if (hotspot.linkedCameraId) {
+							onActivateCamera(hotspot.linkedCameraId)
+						}
 					}}
 					onMouseEnter={() => setHovered(true)}
 					onMouseLeave={() => setHovered(false)}
@@ -197,12 +215,18 @@ const HotspotGizmo = memo(({ hotspot, onMove }: HotspotGizmoProps) => {
 
 	const handleDragStart = useCallback(() => {
 		isDraggingRef.current = true
-		commandExecutor.current?.execute({ type: 'set_controls_enabled', enabled: false })
+		commandExecutor.current?.execute({
+			type: 'set_controls_enabled',
+			enabled: false
+		})
 	}, [commandExecutor])
 
 	const handleDragEnd = useCallback(() => {
 		isDraggingRef.current = false
-		commandExecutor.current?.execute({ type: 'set_controls_enabled', enabled: true })
+		commandExecutor.current?.execute({
+			type: 'set_controls_enabled',
+			enabled: true
+		})
 		if (meshRef.current) {
 			const p = meshRef.current.position
 			onMove(hotspot.id, [p.x, p.y, p.z])
@@ -253,7 +277,11 @@ interface ClickToPlaceProps {
 	onPlace: (id: string, position: [number, number, number]) => void
 }
 
-function ClickToPlace({ isActive, activeHotspotId, onPlace }: ClickToPlaceProps) {
+function ClickToPlace({
+	isActive,
+	activeHotspotId,
+	onPlace
+}: ClickToPlaceProps) {
 	const { raycaster, camera, scene, gl } = useThree()
 
 	useEffect(() => {
@@ -282,7 +310,8 @@ function ClickToPlace({ isActive, activeHotspotId, onPlace }: ClickToPlaceProps)
 		}
 
 		gl.domElement.addEventListener('pointerdown', handlePointerDown)
-		return () => gl.domElement.removeEventListener('pointerdown', handlePointerDown)
+		return () =>
+			gl.domElement.removeEventListener('pointerdown', handlePointerDown)
 	}, [isActive, activeHotspotId, camera, scene, raycaster, gl, onPlace])
 
 	return null
@@ -298,12 +327,22 @@ export const PublisherEditorScene = memo(() => {
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 	const [activeHotspotId, setActiveHotspotId] = useAtom(activeHotspotIdAtom)
 	const isClickToPlaceActive = useAtomValue(isClickToPlaceActiveAtom)
+	const process = useAtomValue(processAtom)
+	const [selectedCameraId, setSelectedCameraId] = useAtom(selectedCameraIdAtom)
+	const isHotspotToolActive = process.activeComposeTool === 'hotspots'
 
 	const handleSelectHotspot = useCallback(
 		(id: string) => {
 			setActiveHotspotId((prev) => (prev === id ? null : id))
 		},
 		[setActiveHotspotId]
+	)
+
+	const handleActivateHotspotCamera = useCallback(
+		(cameraId: string) => {
+			setSelectedCameraId(cameraId)
+		},
+		[setSelectedCameraId]
 	)
 
 	const handleMoveHotspot = useCallback(
@@ -333,11 +372,14 @@ export const PublisherEditorScene = memo(() => {
 					key={hotspot.id}
 					hotspot={hotspot}
 					isSelected={hotspot.id === activeHotspotId}
+					isHotspotToolActive={isHotspotToolActive}
+					activeCameraId={selectedCameraId ?? undefined}
 					onSelect={handleSelectHotspot}
+					onActivateCamera={handleActivateHotspotCamera}
 				/>
 			))}
 
-			{activeHotspot && (
+			{isHotspotToolActive && activeHotspot && (
 				<HotspotGizmo
 					key={activeHotspot.id}
 					hotspot={activeHotspot}
@@ -346,7 +388,7 @@ export const PublisherEditorScene = memo(() => {
 			)}
 
 			<ClickToPlace
-				isActive={isClickToPlaceActive}
+				isActive={isClickToPlaceActive && isHotspotToolActive}
 				activeHotspotId={activeHotspotId}
 				onPlace={handlePlaceHotspot}
 			/>

@@ -10,6 +10,7 @@ import { useAtomValue, useSetAtom } from 'jotai/react'
 import { memo, useCallback } from 'react'
 
 import {
+	arePublisherActionsDisabledAtom,
 	processAtom,
 	toolSidebarStateAtom
 } from '../../../../lib/stores/publisher-config-store'
@@ -87,18 +88,45 @@ interface ToolSidebarProps {
 
 export const ToolSidebar = memo(
 	({ user: _user, isMobile = false }: ToolSidebarProps) => {
-		const { activeComposeTool, showSidebar, handleToolSelect } = useToolSelect()
+		const { activeComposeTool, showSidebar } =
+			useAtomValue(toolSidebarStateAtom)
+		const arePublisherActionsDisabled = useAtomValue(
+			arePublisherActionsDisabledAtom
+		)
 		const setProcessState = useSetAtom(processAtom)
 		const activeToolDefinition = getComposeToolDefinition(activeComposeTool)
 
+		const handleToolSelect = useCallback(
+			(tool: ComposeTool) => {
+				if (arePublisherActionsDisabled) {
+					return
+				}
+
+				setProcessState((prev) => ({
+					...prev,
+					mode: 'compose',
+					activeComposeTool: tool,
+					showSidebar:
+						prev.activeComposeTool === tool ? !prev.showSidebar : true,
+					showPublishPanel: false
+				}))
+			},
+			[arePublisherActionsDisabled, setProcessState]
+		)
+
 		const handleOpenChange = useCallback(
 			(open: boolean) => {
+				if (arePublisherActionsDisabled) {
+					return
+				}
+
 				setProcessState((prev) =>
 					prev.showSidebar === open ? prev : { ...prev, showSidebar: open }
 				)
 			},
-			[setProcessState]
+			[arePublisherActionsDisabled, setProcessState]
 		)
+
 
 		return (
 			<>

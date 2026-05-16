@@ -172,7 +172,7 @@ export const DynamicSidebar = ({
 						{showDesktopHeader && (
 							<div className="border-shell-border-soft flex shrink-0 items-start justify-between border-b px-4 py-4">
 								<div>
-									<p className="text-sm font-semibold">{title}</p>
+									<p className="text-lg font-medium">{title}</p>
 									{description && (
 										<p className="text-muted-foreground text-xs">
 											{description}

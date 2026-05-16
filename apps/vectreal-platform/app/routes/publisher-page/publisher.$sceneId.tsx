@@ -27,8 +27,7 @@ import {
 	processInitialState,
 	publisherLoadingStateAtom,
 	processAtom,
-	sceneMetaAtom,
-	isPreviewModeAtom
+	sceneMetaAtom
 } from '../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
 import {
@@ -144,7 +143,6 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 		sceneViewerSettingsAtom
 	)
 	const selectedCameraId = useAtomValue(selectedCameraIdAtom)
-	const isPreviewMode = useAtomValue(isPreviewModeAtom)
 	const sceneMeta = useAtomValue(sceneMetaAtom)
 	const loadingThumbnail = toViewerLoadingThumbnail(
 		sceneMeta.thumbnailUrl,
@@ -255,9 +253,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 								key="model-viewer"
 								cameraOptions={{
 									...camera,
-									activeCameraId: isPreviewMode
-										? (selectedCameraId ?? camera.activeCameraId)
-										: camera.activeCameraId
+									activeCameraId: selectedCameraId ?? camera.activeCameraId
 								}}
 								controlsOptions={controls}
 								envOptions={env}

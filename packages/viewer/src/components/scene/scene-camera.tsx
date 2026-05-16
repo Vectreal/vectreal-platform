@@ -4,8 +4,7 @@ import {
 	CameraProps,
 	CameraTransitionConfig,
 	CameraTransitionEasing,
-	CameraTransitionType,
-	DefaultCameraStrategy
+	CameraTransitionType
 } from '@vctrl/core'
 import { useCallback, useEffect, useRef } from 'react'
 import {
@@ -193,28 +192,16 @@ function resolveCameraSelection(
 	activeCameraId: CameraProps['activeCameraId'],
 	currentControlsTarget: Vector3,
 	sceneCamera: PerspectiveCamera,
-	sceneTransition?: CameraTransitionConfig,
-	defaultCameraStrategy?: DefaultCameraStrategy,
-	defaultCameraId?: string
+	sceneTransition?: CameraTransitionConfig
 ): ResolvedCameraSelection {
-	// Resolve the effective default camera using the strategy.
-	const resolveStrategyDefault = () => {
-		if (defaultCameraStrategy === 'manual' && defaultCameraId) {
-			return cameras?.find((c) => c.cameraId === defaultCameraId)
-		}
-		const sceneCameras = cameras?.filter((c) => !c.kind || c.kind === 'scene')
-		const pool = sceneCameras && sceneCameras.length > 0 ? sceneCameras : cameras
-		if (defaultCameraStrategy === 'last') {
-			return pool?.[pool.length - 1]
-		}
-		// 'first' (default strategy)
-		return pool?.[0]
-	}
+	const sceneCameras = cameras?.filter((c) => !c.kind || c.kind === 'scene')
+	const defaultCamera =
+		sceneCameras && sceneCameras.length > 0 ? sceneCameras[0] : cameras?.[0]
 
 	const selectedCamera =
 		cameras?.find((camera) => camera.cameraId === activeCameraId) ??
 		cameras?.find((camera) => camera.initial) ??
-		resolveStrategyDefault() ??
+		defaultCamera ??
 		cameras?.[0] ??
 		defaultCameraOptions.cameras?.[0]
 
@@ -324,7 +311,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		onCommandExecutorReady,
 		onInteractionEvent
 	} = props
-	const { cameras, activeCameraId, sceneTransition, defaultCameraStrategy, defaultCameraId } = {
+	const { cameras, activeCameraId, sceneTransition } = {
 		...defaultCameraOptions,
 		...props
 	}
@@ -466,9 +453,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				command.cameraId,
 				controls?.target ?? new Vector3(0, 0, 0),
 				sceneCamera as PerspectiveCamera,
-				sceneTransition,
-				defaultCameraStrategy,
-				defaultCameraId
+				sceneTransition
 			)
 
 			if (nextSelection.cameraId !== command.cameraId) {
@@ -521,9 +506,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				activeCameraId,
 				initialControlsTarget,
 				sceneCamera,
-				sceneTransition,
-				defaultCameraStrategy,
-				defaultCameraId
+				sceneTransition
 			)
 			applyCameraInstantly(selection)
 
@@ -554,7 +537,14 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				transition: selection.transition
 			})
 		},
-		[activeCameraId, applyCameraInstantly, bounds, cameras, controls?.target, defaultCameraId, defaultCameraStrategy]
+		[
+			activeCameraId,
+			applyCameraInstantly,
+			bounds,
+			cameras,
+			controls?.target,
+			sceneTransition
+		]
 	)
 
 	useEffect(() => {
@@ -571,9 +561,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			activeCameraId,
 			controls?.target ?? new Vector3(0, 0, 0),
 			sceneCamera as PerspectiveCamera,
-			sceneTransition,
-			defaultCameraStrategy,
-			defaultCameraId
+			sceneTransition
 		)
 		const selectionKey = selection.cameraId
 		const signature = JSON.stringify({
@@ -595,7 +583,13 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			return
 		}
 
-		startTransition(selection)
+		// Only animate when switching between cameras; apply property edits instantly
+		// so sidebar changes don't re-trigger the transition for the active camera.
+		if (previousSelectionKey.current === selectionKey) {
+			applyCameraInstantly(selection)
+		} else {
+			startTransition(selection)
+		}
 		previousSelectionKey.current = selectionKey
 		previousSelectionSignature.current = signature
 		onInteractionEvent?.({
@@ -604,6 +598,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		})
 	}, [
 		activeCameraId,
+		applyCameraInstantly,
 		cameras,
 		controls?.target,
 		onInteractionEvent,

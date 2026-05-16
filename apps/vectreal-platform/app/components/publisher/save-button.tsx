@@ -2,11 +2,13 @@ import { Button } from '@shared/components/ui/button'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
 import {
+	Check,
 	CircleFadingArrowUp,
 	Cloud,
 	LoaderCircle,
 	Sparkles
 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
 import { usePublisherSaveAction } from '../../hooks/use-publisher-save-action'
 import { isSavingAtom } from '../../lib/stores/publisher-config-store'
@@ -23,6 +25,7 @@ interface SaveButtonProps {
 	saveLocationTarget: SaveLocationTarget
 	saveAvailability: SaveAvailabilityState
 	compact?: boolean
+	forceDisabled?: boolean
 	onRequireAuth?: () => Promise<void> | void
 	saveSceneSettings: (
 		target?: SaveLocationTarget
@@ -35,11 +38,24 @@ const SaveButton = ({
 	saveLocationTarget,
 	saveAvailability,
 	compact = false,
+	forceDisabled = false,
 	onRequireAuth,
 	saveSceneSettings
 }: SaveButtonProps) => {
 	const isSaving = useAtomValue(isSavingAtom)
 	const shouldReduceMotion = useReducedMotion()
+	const prevSavingRef = useRef(isSaving)
+	const [justSaved, setJustSaved] = useState(false)
+
+	useEffect(() => {
+		const wasJustSaved = prevSavingRef.current && !isSaving
+		prevSavingRef.current = isSaving
+		if (!wasJustSaved) return
+		setJustSaved(true)
+		const timer = setTimeout(() => setJustSaved(false), 1800)
+		return () => clearTimeout(timer)
+	}, [isSaving])
+
 	const { handleSaveScene } = usePublisherSaveAction({
 		sceneId,
 		userId,
@@ -49,38 +65,44 @@ const SaveButton = ({
 	})
 
 	const isSaveDisabled = userId
-		? isSaving || !saveAvailability.canSave
-		: isSaving
+		? forceDisabled || isSaving || !saveAvailability.canSave
+		: forceDisabled || isSaving
 
-	const saveVisual = isSaving
+	const saveVisual = justSaved
 		? {
-				key: 'saving',
-				label: 'Saving...',
-				icon: <LoaderCircle size={16} className="inline animate-spin" />
+				key: 'just-saved',
+				label: 'Saved',
+				icon: <Check size={16} className="inline" />
 			}
-		: !userId
+		: isSaving
 			? {
-					key: 'auth',
-					label: 'Sign In to Save',
-					icon: <CircleFadingArrowUp size={16} className="inline" />
+					key: 'saving',
+					label: 'Saving...',
+					icon: <LoaderCircle size={16} className="inline animate-spin" />
 				}
-			: saveAvailability.reason === 'requires-first-optimization'
+			: !userId
 				? {
-						key: 'optimize-first',
-						label: 'Optimize First',
-						icon: <Sparkles size={16} className="inline animate-pulse" />
+						key: 'auth',
+						label: 'Sign In to Save',
+						icon: <CircleFadingArrowUp size={16} className="inline" />
 					}
-				: saveAvailability.reason === 'no-unsaved-changes'
+				: saveAvailability.reason === 'requires-first-optimization'
 					? {
-							key: 'saved',
-							label: 'Saved',
-							icon: <Cloud size={16} className="inline" />
+							key: 'optimize-first',
+							label: 'Optimize First',
+							icon: <Sparkles size={16} className="inline animate-pulse" />
 						}
-					: {
-							key: 'ready',
-							label: 'Save',
-							icon: <CircleFadingArrowUp size={16} className="inline" />
-						}
+					: saveAvailability.reason === 'no-unsaved-changes'
+						? {
+								key: 'saved',
+								label: 'Saved',
+								icon: <Cloud size={16} className="inline" />
+							}
+						: {
+								key: 'ready',
+								label: 'Save',
+								icon: <CircleFadingArrowUp size={16} className="inline" />
+							}
 
 	const contentTransition = shouldReduceMotion
 		? { duration: 0 }
@@ -99,9 +121,10 @@ const SaveButton = ({
 			variant="ghost"
 			size={compact ? 'icon' : undefined}
 			className={
-				compact
+				(compact
 					? 'flex items-center justify-center rounded-xl'
-					: 'flex w-[10.75rem] items-center justify-start gap-2.5 rounded-xl px-4'
+					: 'flex w-[10.75rem] items-center justify-start gap-2.5 rounded-xl px-4') +
+				(justSaved ? ' text-emerald-500 dark:text-emerald-400' : '')
 			}
 			aria-label={saveVisual.label}
 			disabled={isSaveDisabled}

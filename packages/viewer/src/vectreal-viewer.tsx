@@ -320,6 +320,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 								<Center top>
 									{model && (
 										<SceneModel
+											cameraOptions={cameraOptions}
 											onScreenshot={onScreenshot}
 											onScreenshotCaptureReady={onScreenshotCaptureReady}
 											object={model}

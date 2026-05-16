@@ -22,10 +22,10 @@ export const PublishSidebarTrigger = ({
 					variant="secondary"
 					disabled={disabled}
 					onClick={onClick}
-					className="publisher-shell-focus publisher-shell-floating text-foreground fixed right-0 bottom-8 z-20 m-3 flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-opacity hover:opacity-90"
+					className="fixed right-0 bottom-6 z-20 m-4"
 				>
-					Open publishing panel
-					<ArrowUpRight className="h-3.5 w-3.5" />
+					Open publishing panel{' '}
+					<ArrowUpRight className="inline-block h-3 w-3" />
 				</Button>
 			</TooltipTrigger>
 			<TooltipContent>

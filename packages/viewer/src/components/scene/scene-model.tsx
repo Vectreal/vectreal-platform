@@ -1,7 +1,8 @@
 import { useBounds } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import { memo, useCallback, useEffect } from 'react'
-import { Mesh, Object3D, PerspectiveCamera, Vector3 } from 'three'
+import { Euler, Mesh, Object3D, PerspectiveCamera, Vector3 } from 'three'
+import type { CameraProps } from '@vctrl/core'
 
 import type {
 	SceneScreenshotCapture,
@@ -19,6 +20,11 @@ interface ModelProps {
 	onScreenshot?: (dataUrl: string) => void
 	onScreenshotCaptureReady?: (capture: null | SceneScreenshotCapture) => void
 	enableShadows?: boolean
+	/**
+	 * Camera configuration containing the list of available cameras.
+	 * Used to resolve target camera positions when capturing with targetCameraId.
+	 */
+	cameraOptions?: CameraProps
 }
 
 type OrbitControlsLike = {
@@ -27,12 +33,12 @@ type OrbitControlsLike = {
 	update: () => void
 }
 
-const DEFAULT_SCREENSHOT_OPTIONS: Required<SceneScreenshotOptions> = {
+const DEFAULT_SCREENSHOT_OPTIONS = {
 	width: 1280,
 	height: 720,
-	mimeType: 'image/webp',
+	mimeType: 'image/webp' as const,
 	quality: 0.86,
-	mode: 'auto-fit'
+	mode: 'auto-fit' as const
 }
 
 const waitForNextFrame = async () =>
@@ -40,7 +46,7 @@ const waitForNextFrame = async () =>
 
 const buildScreenshotDataUrl = async (
 	sourceCanvas: HTMLCanvasElement,
-	options: Required<SceneScreenshotOptions>
+	options: Required<Omit<SceneScreenshotOptions, 'targetCameraId'>>
 ): Promise<string> => {
 	const outputCanvas = document.createElement('canvas')
 	outputCanvas.width = options.width
@@ -90,6 +96,7 @@ const buildScreenshotDataUrl = async (
 const SceneModel = memo((props: ModelProps) => {
 	const {
 		object,
+		cameraOptions,
 		onScreenshot,
 		onScreenshotCaptureReady,
 		enableShadows = false
@@ -105,7 +112,8 @@ const SceneModel = memo((props: ModelProps) => {
 
 	const captureScreenshot = useCallback<SceneScreenshotCapture>(
 		async (inputOptions) => {
-			const options = {
+			const options: Required<Omit<SceneScreenshotOptions, 'targetCameraId'>> &
+				Pick<SceneScreenshotOptions, 'targetCameraId'> = {
 				...DEFAULT_SCREENSHOT_OPTIONS,
 				...inputOptions
 			}
@@ -119,7 +127,54 @@ const SceneModel = memo((props: ModelProps) => {
 			const initialControlsEnabled = controls?.enabled
 
 			try {
-				if (options.mode === 'auto-fit') {
+				// If a target camera ID is specified, resolve and apply that camera's settings first
+				if (options.targetCameraId && cameraOptions?.cameras) {
+					const targetCameraConfig = cameraOptions.cameras.find(
+						(c) => c.cameraId === options.targetCameraId
+					)
+
+					if (targetCameraConfig) {
+						// Apply target camera's position if available
+						if (
+							Array.isArray(targetCameraConfig.position) &&
+							targetCameraConfig.position.length >= 3
+						) {
+							activeCamera.position.fromArray(targetCameraConfig.position)
+						}
+
+						// Apply target camera's rotation if available
+						if (
+							Array.isArray(targetCameraConfig.rotation) &&
+							targetCameraConfig.rotation.length >= 3
+						) {
+							const euler = new Euler(
+								...(targetCameraConfig.rotation as [number, number, number])
+							)
+							activeCamera.quaternion.setFromEuler(euler)
+						}
+
+						// Apply target camera's field of view if available
+						if (typeof targetCameraConfig.fov === 'number') {
+							activeCamera.fov = targetCameraConfig.fov
+						}
+
+						// Apply target camera's target/lookAt if controls exist
+						if (
+							controls?.target &&
+							(Array.isArray(targetCameraConfig.target) ||
+								Array.isArray(targetCameraConfig.lookAt))
+						) {
+							const targetPosition = (targetCameraConfig.target ??
+								targetCameraConfig.lookAt) as
+								| [number, number, number]
+								| undefined
+							if (targetPosition) {
+								controls.target.fromArray(targetPosition)
+							}
+						}
+					}
+				} else if (options.mode === 'auto-fit') {
+					// Original auto-fit behavior when no target camera is specified
 					if (typeof controls?.enabled === 'boolean') {
 						controls.enabled = false
 					}
@@ -174,7 +229,17 @@ const SceneModel = memo((props: ModelProps) => {
 				invalidate()
 			}
 		},
-		[bounds, camera, controls, gl, invalidate, object, onScreenshot, scene]
+		[
+			bounds,
+			camera,
+			cameraOptions,
+			controls,
+			gl,
+			invalidate,
+			object,
+			onScreenshot,
+			scene
+		]
 	)
 
 	useEffect(() => {

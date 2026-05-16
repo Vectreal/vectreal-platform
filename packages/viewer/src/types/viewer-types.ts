@@ -4,6 +4,12 @@ export interface SceneScreenshotOptions {
 	mimeType?: 'image/jpeg' | 'image/webp'
 	quality?: number
 	mode?: 'auto-fit' | 'viewport'
+	/**
+	 * Optional camera ID to capture from. If provided, the viewer will transition to
+	 * that camera before capturing the screenshot, then return to the original camera.
+	 * This is useful for capturing thumbnails from the default camera perspective.
+	 */
+	targetCameraId?: string
 }
 
 export interface SceneCameraSnapshot {

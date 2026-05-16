@@ -9,28 +9,27 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
-import { Separator } from '@shared/components/ui/separator'
 import { Switch } from '@shared/components/ui/switch'
 import { useAtom } from 'jotai/react'
 import { Crosshair, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo } from 'react'
 
-import {
-	isClickToPlaceActiveAtom
-} from '../../../../../lib/stores/publisher-config-store'
+import { isClickToPlaceActiveAtom } from '../../../../../lib/stores/publisher-config-store'
 import {
 	activeHotspotIdAtom,
 	cameraAtom,
 	hotspotsAtom
 } from '../../../../../lib/stores/scene-settings-store'
-import { InfoTooltip } from '../../../../info-tooltip'
 import { ToggleButtonGroup } from '../../../settings-components'
+import {
+	SidebarSection,
+	SidebarSectionContent,
+	SettingRow,
+	SettingGroup
+} from '../../sidebar-section'
 
 import type { ToggleButtonGroupOption } from '../../../settings-components'
-import type {
-	HotspotDefinition,
-	HotspotStylePreset
-} from '@vctrl/core'
+import type { HotspotDefinition, HotspotStylePreset } from '@vctrl/core'
 
 function createHotspotId(): string {
 	return `hotspot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -58,12 +57,11 @@ const HotspotsSettingsPanel = memo(() => {
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 	const [camera, setCamera] = useAtom(cameraAtom)
 	const [selectedId, setSelectedId] = useAtom(activeHotspotIdAtom)
-	const [isClickToPlaceActive, setIsClickToPlaceActive] = useAtom(isClickToPlaceActiveAtom)
-
-	const hotspotCameras = useMemo(
-		() => (camera.cameras ?? []).filter((c) => c.kind === 'hotspot'),
-		[camera.cameras]
+	const [isClickToPlaceActive, setIsClickToPlaceActive] = useAtom(
+		isClickToPlaceActiveAtom
 	)
+
+	const allCameras = camera.cameras ?? []
 
 	// Auto-disable click-to-place when deselecting a hotspot
 	useEffect(() => {
@@ -100,7 +98,6 @@ const HotspotsSettingsPanel = memo(() => {
 				{
 					cameraId: pairedCameraId,
 					name: `${next.name} Camera`,
-					kind: 'hotspot' as const,
 					fov: 60
 				}
 			]
@@ -140,167 +137,169 @@ const HotspotsSettingsPanel = memo(() => {
 	)
 
 	return (
-		<div className="space-y-6">
-			{/* Hotspot List */}
-			<div className="space-y-3">
-				<div className="flex items-center justify-between">
-					<div className="flex items-center gap-2">
-						<p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-							Hotspots
-						</p>
-						<InfoTooltip content="Hotspots mark interactive points in 3D space. They can trigger camera transitions or display custom overlays." />
-					</div>
-					<Button variant="outline" size="icon" onClick={handleAdd} title="Add hotspot">
-						<Plus />
-					</Button>
-				</div>
-				<Separator />
-
-				{hotspots.length === 0 ? (
-					<div className="py-4 text-center">
-						<p className="text-muted-foreground text-xs">
-							No hotspots yet.
-						</p>
-						<p className="text-muted-foreground mb-3 text-xs">
-							Add one to create a point of interest for viewers.
-						</p>
-						<Button variant="outline" size="sm" onClick={handleAdd} className="gap-1.5">
-							<Plus className="h-3.5 w-3.5" />
-							Add Hotspot
-						</Button>
-					</div>
-				) : (
-					<div className="space-y-1">
-						{hotspots.map((hotspot) => (
-							<div
-								key={hotspot.id}
-								className={`flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors ${
-									selectedId === hotspot.id
-										? 'bg-accent'
-										: 'hover:bg-accent/50'
-								}`}
-								onClick={() =>
-									setSelectedId((prev) =>
-										prev === hotspot.id ? null : hotspot.id
-									)
-								}
+		<div className="space-y-8">
+			{/* Hotspots List */}
+			<SidebarSection
+				title="Hotspots"
+				tooltip="Hotspots mark interactive points in 3D space. They can trigger camera transitions or display custom overlays."
+			>
+				<SidebarSectionContent>
+					{hotspots.length === 0 ? (
+						<div className="py-6 text-center">
+							<p className="text-muted-foreground text-sm">No hotspots yet.</p>
+							<p className="text-muted-foreground mt-1 mb-4 text-xs">
+								Add one to create a point of interest for viewers.
+							</p>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={handleAdd}
+								className="gap-1.5"
 							>
-								<div className="min-w-0 flex-1">
-									<p className="truncate text-sm leading-tight">
-										{hotspot.name || 'Unnamed Hotspot'}
-									</p>
-									<p className="text-muted-foreground font-mono text-xs">
-										{hotspot.worldPosition.map((v) => v.toFixed(2)).join(', ')}
-									</p>
+								<Plus className="h-3.5 w-3.5" />
+								Add Hotspot
+							</Button>
+						</div>
+					) : (
+						<div className="space-y-1.5">
+							{hotspots.map((hotspot) => (
+								<div
+									key={hotspot.id}
+									className={`flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 transition-colors ${
+										selectedId === hotspot.id
+											? 'bg-accent/80'
+											: 'hover:bg-accent/40'
+									}`}
+									onClick={() =>
+										setSelectedId((prev) =>
+											prev === hotspot.id ? null : hotspot.id
+										)
+									}
+								>
+									<div className="min-w-0 flex-1">
+										<p className="truncate text-sm leading-tight font-medium">
+											{hotspot.name || 'Unnamed Hotspot'}
+										</p>
+										<p className="text-muted-foreground font-mono text-xs">
+											{hotspot.worldPosition
+												.map((v) => v.toFixed(2))
+												.join(', ')}
+										</p>
+									</div>
+									<div className="flex shrink-0 items-center gap-1.5">
+										{hotspot.internalOnly && (
+											<Badge variant="secondary" className="text-xs">
+												Editor only
+											</Badge>
+										)}
+										{!hotspot.visible && (
+											<EyeOff className="text-muted-foreground h-3.5 w-3.5" />
+										)}
+										<Button
+											variant="ghost"
+											size="icon"
+											className="h-6 w-6"
+											onClick={(e) => {
+												e.stopPropagation()
+												handleDelete(hotspot.id)
+											}}
+											title="Delete hotspot"
+										>
+											<Trash2 className="h-3.5 w-3.5" />
+										</Button>
+									</div>
 								</div>
-								<div className="flex shrink-0 items-center gap-1.5">
-									{hotspot.internalOnly && (
-										<Badge variant="secondary" className="text-xs">
-											Editor only
-										</Badge>
-									)}
-									{!hotspot.visible && (
-										<EyeOff className="text-muted-foreground h-3.5 w-3.5" />
-									)}
-									<Button
-										variant="ghost"
-										size="icon"
-										className="h-6 w-6"
-										onClick={(e) => {
-											e.stopPropagation()
-											handleDelete(hotspot.id)
-										}}
-										title="Delete hotspot"
-									>
-										<Trash2 className="h-3.5 w-3.5" />
-									</Button>
-								</div>
-							</div>
-						))}
-					</div>
-				)}
-			</div>
+							))}
+							<Button
+								variant="outline"
+								size="sm"
+								className="mt-3 w-full gap-1.5"
+								onClick={handleAdd}
+								title="Add hotspot"
+							>
+								<Plus className="h-3.5 w-3.5" />
+								Add Hotspot
+							</Button>
+						</div>
+					)}
+				</SidebarSectionContent>
+			</SidebarSection>
 
 			{/* Selected Hotspot Editor */}
 			{selectedHotspot && (
-				<div className="space-y-4">
-					<div className="flex items-center justify-between gap-2">
-						<p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-							Edit: {selectedHotspot.name || 'Unnamed'}
-						</p>
+				<SidebarSection title={`Edit: ${selectedHotspot.name || 'Unnamed'}`}>
+					<SidebarSectionContent>
+						{/* Click to Place Info */}
+						{isClickToPlaceActive && (
+							<div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2">
+								<p className="text-xs text-amber-700 dark:text-amber-400">
+									Click anywhere on the model to move this hotspot there.
+								</p>
+							</div>
+						)}
+
+						{/* Click to Place Button */}
 						<Button
 							variant={isClickToPlaceActive ? 'default' : 'outline'}
 							size="sm"
-							className="h-6 gap-1.5 px-2 text-xs"
+							className="w-full gap-1.5"
 							onClick={() => setIsClickToPlaceActive((v) => !v)}
 							title="Click on the model to move this hotspot"
 						>
-							<Crosshair className="h-3 w-3" />
+							<Crosshair className="h-3.5 w-3.5" />
 							{isClickToPlaceActive ? 'Placing...' : 'Click to Place'}
 						</Button>
-					</div>
-					{isClickToPlaceActive && (
-						<p className="text-muted-foreground bg-accent/50 rounded-md px-2 py-1 text-xs">
-							Click anywhere on the model to move this hotspot there.
-						</p>
-					)}
-					<Separator />
 
-					{/* Name */}
-					<div className="space-y-1">
-						<Label className="text-muted-foreground text-xs">Name</Label>
-						<Input
-							value={selectedHotspot.name}
-							onChange={(e) =>
-								updateHotspot(selectedHotspot.id, { name: e.target.value })
-							}
-							placeholder="Hotspot name"
-						/>
-					</div>
+						{/* Name */}
+						<SettingRow label="Name">
+							<Input
+								value={selectedHotspot.name}
+								onChange={(e) =>
+									updateHotspot(selectedHotspot.id, { name: e.target.value })
+								}
+								placeholder="Hotspot name"
+								className="text-sm"
+							/>
+						</SettingRow>
 
-					{/* World Position */}
-					<div className="space-y-1.5">
-						<div className="flex items-center gap-1.5">
-							<Label className="text-muted-foreground text-xs">
-								World Position
-							</Label>
-							<InfoTooltip content="3D world-space coordinates (X, Y, Z). Viewer pick coming in a future update." />
-						</div>
-						<div className="grid grid-cols-3 gap-1.5">
-							{(['X', 'Y', 'Z'] as const).map((axis, idx) => (
-								<div key={axis} className="space-y-0.5">
-									<Label className="text-muted-foreground text-xs">
-										{axis}
-									</Label>
-									<Input
-										type="number"
-										step="0.1"
-										value={selectedHotspot.worldPosition[idx]}
-										onChange={(e) =>
-											handlePositionChange(idx as 0 | 1 | 2, e.target.value)
-										}
-										className="h-7 font-mono text-xs"
-									/>
-								</div>
-							))}
-						</div>
-					</div>
+						{/* World Position */}
+						<SettingGroup
+							label="World Position"
+							description="3D world-space coordinates (X, Y, Z)"
+						>
+							<div className="grid grid-cols-3 gap-1.5">
+								{(['X', 'Y', 'Z'] as const).map((axis, idx) => (
+									<div key={axis} className="space-y-1">
+										<Label className="text-muted-foreground text-xs font-medium">
+											{axis}
+										</Label>
+										<Input
+											type="number"
+											step="0.1"
+											value={selectedHotspot.worldPosition[idx]}
+											onChange={(e) =>
+												handlePositionChange(idx as 0 | 1 | 2, e.target.value)
+											}
+											className="h-8 font-mono text-xs"
+										/>
+									</div>
+								))}
+							</div>
+						</SettingGroup>
 
-					{/* Style Preset */}
-					<div className="space-y-1.5">
-						<Label className="text-muted-foreground text-xs">Style</Label>
-						<ToggleButtonGroup
-							options={STYLE_PRESET_OPTIONS}
-							value={selectedHotspot.stylePreset}
-							onChange={(v) =>
-								updateHotspot(selectedHotspot.id, { stylePreset: v })
-							}
-						/>
+						{/* Style Preset */}
+						<SettingGroup label="Style">
+							<ToggleButtonGroup
+								options={STYLE_PRESET_OPTIONS}
+								value={selectedHotspot.stylePreset}
+								onChange={(v) =>
+									updateHotspot(selectedHotspot.id, { stylePreset: v })
+								}
+							/>
+						</SettingGroup>
+
 						{selectedHotspot.stylePreset !== 'dot' && (
-							<div className="space-y-1">
-								<Label className="text-muted-foreground text-xs">
-									Asset URL
-								</Label>
+							<SettingRow label="Asset URL">
 								<Input
 									value={selectedHotspot.payloadUrl ?? ''}
 									onChange={(e) =>
@@ -309,22 +308,17 @@ const HotspotsSettingsPanel = memo(() => {
 										})
 									}
 									placeholder="https://…"
-									className="text-xs"
+									className="text-sm"
 								/>
-							</div>
+							</SettingRow>
 						)}
-					</div>
 
-					{/* Linked Camera */}
-					<div className="space-y-1.5">
-						<div className="flex items-center gap-1.5">
-							<Label className="text-muted-foreground text-xs">
-								Linked Camera
-							</Label>
-							<InfoTooltip content="Viewers transition to this camera when clicking the hotspot. Created automatically — frame it using the Camera tool." />
-						</div>
-						{hotspotCameras.length > 0 ? (
-							<Select
+						{/* Linked Camera */}
+						<SettingGroup
+							label="Linked Camera"
+							description="Viewers transition to this camera when clicking the hotspot"
+						>
+										<Select
 								value={selectedHotspot.linkedCameraId ?? 'none'}
 								onValueChange={(v) =>
 									updateHotspot(selectedHotspot.id, {
@@ -337,101 +331,85 @@ const HotspotsSettingsPanel = memo(() => {
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value="none">None</SelectItem>
-									{hotspotCameras.map((c) => (
+									{allCameras.map((c) => (
 										<SelectItem key={c.cameraId} value={c.cameraId}>
 											{c.name || c.cameraId}
 										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
-						) : (
-							<p className="text-muted-foreground text-xs">
-								Add a hotspot to automatically create a linked camera.
-							</p>
-						)}
-					</div>
+						</SettingGroup>
 
-					{/* Sequence Index */}
-					<div className="space-y-1.5">
-						<div className="flex items-center gap-1.5">
-							<Label className="text-muted-foreground text-xs">
-								Sequence Order
-							</Label>
-							<InfoTooltip content="Set a 0-based index to include this hotspot in the navigation sequence. Leave empty to exclude." />
-						</div>
-						<Input
-							type="number"
-							min={0}
-							step={1}
-							placeholder="Not in sequence"
-							value={
-								selectedHotspot.sequenceIndex !== undefined
-									? selectedHotspot.sequenceIndex
-									: ''
-							}
-							onChange={(e) => {
-								const raw = e.target.value
-								if (raw === '') {
-									updateHotspot(selectedHotspot.id, {
-										sequenceIndex: undefined
-									})
-									return
+						{/* Sequence Index */}
+						<SettingRow label="Sequence Order">
+							<Input
+								type="number"
+								min={0}
+								step={1}
+								placeholder="Not in sequence"
+								value={
+									selectedHotspot.sequenceIndex !== undefined
+										? selectedHotspot.sequenceIndex
+										: ''
 								}
-								const parsed = parseInt(raw, 10)
-								if (!isNaN(parsed) && parsed >= 0) {
-									updateHotspot(selectedHotspot.id, { sequenceIndex: parsed })
-								}
-							}}
-							className="h-7 font-mono text-xs"
-						/>
-					</div>
+								onChange={(e) => {
+									const raw = e.target.value
+									if (raw === '') {
+										updateHotspot(selectedHotspot.id, {
+											sequenceIndex: undefined
+										})
+										return
+									}
+									const parsed = parseInt(raw, 10)
+									if (!isNaN(parsed) && parsed >= 0) {
+										updateHotspot(selectedHotspot.id, { sequenceIndex: parsed })
+									}
+								}}
+								className="h-8 font-mono text-sm"
+							/>
+						</SettingRow>
 
-					{/* Toggles */}
-					<div className="space-y-2.5">
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-1.5">
-								<Label className="text-sm">
-									{selectedHotspot.visible ? (
-										<Eye className="inline h-3.5 w-3.5" />
-									) : (
-										<EyeOff className="inline h-3.5 w-3.5" />
-									)}{' '}
-									Visible
-								</Label>
+						{/* Toggles */}
+						<div className="space-y-3 border-t pt-4">
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-2">
+									<Label className="text-sm font-medium">
+										{selectedHotspot.visible ? (
+											<Eye className="mr-1 inline h-4 w-4" />
+										) : (
+											<EyeOff className="mr-1 inline h-4 w-4" />
+										)}
+										Visible
+									</Label>
+								</div>
+								<Switch
+									checked={selectedHotspot.visible}
+									onCheckedChange={(v) =>
+										updateHotspot(selectedHotspot.id, { visible: v })
+									}
+								/>
 							</div>
-							<Switch
-								checked={selectedHotspot.visible}
-								onCheckedChange={(v) =>
-									updateHotspot(selectedHotspot.id, { visible: v })
-								}
-							/>
-						</div>
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-1.5">
-								<Label className="text-sm">Editor Only</Label>
-								<InfoTooltip content="When enabled, this hotspot is visible in the editor but excluded from the published embed." />
+							<div className="flex items-center justify-between">
+								<Label className="text-sm font-medium">Editor Only</Label>
+								<Switch
+									checked={selectedHotspot.internalOnly}
+									onCheckedChange={(v) =>
+										updateHotspot(selectedHotspot.id, { internalOnly: v })
+									}
+								/>
 							</div>
-							<Switch
-								checked={selectedHotspot.internalOnly}
-								onCheckedChange={(v) =>
-									updateHotspot(selectedHotspot.id, { internalOnly: v })
-								}
-							/>
-						</div>
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-1.5">
-								<Label className="text-sm">Depth Occlusion</Label>
-								<InfoTooltip content="When enabled, the hotspot fades when hidden behind scene geometry. Disable to always show at full opacity." />
+							<div className="flex items-center justify-between">
+								<Label className="text-sm font-medium">Depth Occlusion</Label>
+								<Switch
+									checked={selectedHotspot.occlusionEnabled ?? true}
+									onCheckedChange={(v) =>
+										updateHotspot(selectedHotspot.id, { occlusionEnabled: v })
+									}
+								/>
 							</div>
-							<Switch
-								checked={selectedHotspot.occlusionEnabled ?? true}
-								onCheckedChange={(v) =>
-									updateHotspot(selectedHotspot.id, { occlusionEnabled: v })
-								}
-							/>
 						</div>
-					</div>
-				</div>
+					</SidebarSectionContent>
+				</SidebarSection>
 			)}
 		</div>
 	)

@@ -386,28 +386,36 @@ export class SceneSettingsParser {
 			})
 		}
 
-		const requestedActiveCameraId =
-			typeof camera.activeCameraId === 'string' && camera.activeCameraId.trim()
-				? camera.activeCameraId.trim()
-				: ''
-		const resolvedActiveCameraId =
-			(requestedActiveCameraId &&
-			normalizedCameras.some(
-				(cameraEntry) => cameraEntry.cameraId === requestedActiveCameraId
-			)
-				? requestedActiveCameraId
-				: undefined) ??
-			normalizedCameras.find((cameraEntry) => cameraEntry.initial)?.cameraId ??
-			normalizedCameras[0].cameraId
+		// Find the first scene camera (non-hotspot)
+		const firstSceneCameraId = normalizedCameras.find(
+			(entry) => !entry.kind || entry.kind === 'scene'
+		)?.cameraId
 
-		return normalizeCameraSettings({
+		if (!firstSceneCameraId) {
+			return ApiResponse.badRequest(
+				'camera.cameras must contain at least one scene camera'
+			)
+		}
+
+		// Enforce implicit first-camera default:
+		// - activeCameraId always points to first scene camera
+		// - Strip legacy defaultCameraStrategy and defaultCameraId fields
+		// - initial flag is set on first scene camera only
+		const normalizedWithDefault = {
 			...camera,
-			activeCameraId: resolvedActiveCameraId,
+			// Strip legacy fields that could cause confusion
+			defaultCameraStrategy: undefined,
+			defaultCameraId: undefined,
+			// Always use first scene camera as the active camera
+			activeCameraId: firstSceneCameraId,
 			cameras: normalizedCameras.map((cameraEntry) => ({
 				...cameraEntry,
-				initial: cameraEntry.cameraId === resolvedActiveCameraId
+				initial: cameraEntry.cameraId === firstSceneCameraId
 			}))
-		})
+		}
+
+		// Apply canonical normalization (which will re-enforce the implicit default)
+		return normalizeCameraSettings(normalizedWithDefault)
 	}
 
 	/**
