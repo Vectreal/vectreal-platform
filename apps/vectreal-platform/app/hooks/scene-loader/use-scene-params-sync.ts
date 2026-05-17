@@ -1,3 +1,4 @@
+import { useSetAtom } from 'jotai/react'
 import { useEffect, useRef } from 'react'
 
 import {
@@ -5,7 +6,11 @@ import {
 	shouldInitializeScene
 } from '../../lib/domain/scene'
 import { sceneMetaInitialState } from '../../lib/stores/publisher-config-store'
-import { optimizationRuntimeInitialState } from '../../lib/stores/scene-optimization-store'
+import {
+	optimizationModalAtom,
+	optimizationModalInitialState,
+	optimizationRuntimeInitialState
+} from '../../lib/stores/scene-optimization-store'
 
 import type { UseSceneParamsSyncArgs } from './contracts'
 
@@ -27,6 +32,7 @@ export const useSceneParamsSync = ({
 		setLastSavedSceneId
 	} = actions
 
+	const setOptimizationModal = useSetAtom(optimizationModalAtom)
 	const previousParamSceneIdRef = useRef<null | string>(null)
 
 	useEffect(() => {
@@ -49,6 +55,11 @@ export const useSceneParamsSync = ({
 		}
 
 		if (hasSceneChanged || shouldResetForNewUpload) {
+			// Always close the optimization drawer when the active scene changes so
+			// stale isOpen state from a previous session never bleeds into a new one.
+			// The store is a module-level singleton and persists across unmounts.
+			setOptimizationModal(optimizationModalInitialState)
+
 			if (isPostSaveNavigation) {
 				// Post-save navigation: baselines are already correct. Only sync the
 				// server-returned stats and clear the marker so subsequent navigation
@@ -106,6 +117,7 @@ export const useSceneParamsSync = ({
 		setOptimizationRuntime,
 		setCurrentSceneId,
 		lastSavedSceneId,
-		setLastSavedSceneId
+		setLastSavedSceneId,
+		setOptimizationModal
 	])
 }
