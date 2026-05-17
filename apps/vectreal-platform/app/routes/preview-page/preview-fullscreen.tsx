@@ -65,12 +65,7 @@ const PreviewModel = memo(
 		return (
 			<div className="h-screen w-full">
 				<ClientVectrealViewer
-					boundsOptions={{
-								...(sceneData?.bounds ?? {}),
-								enable: !sceneData?.camera?.cameras?.some(
-									(c) => c.position != null
-								)
-							}}
+					boundsOptions={sceneData?.bounds}
 					cameraOptions={sceneData?.camera}
 					className="h-full w-full"
 					model={file?.model}

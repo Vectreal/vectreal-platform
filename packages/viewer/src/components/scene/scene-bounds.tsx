@@ -3,7 +3,6 @@ import { BoundsProps } from '@vctrl/core'
 import { memo } from 'react'
 
 export const defaultBoundsOptions = {
-	enable: true,
 	fit: true,
 	clip: true,
 	margin: 1.5,
@@ -17,9 +16,10 @@ const SceneBounds = memo((props: BoundsProps) => {
 	}
 
 	// Always render <Bounds> to keep the useBounds() context alive for SceneCamera.
-	// When disabled, suppress auto-framing by overriding fit and clip.
+	// Disable declarative fit entirely — SceneCamera drives all fitting imperatively
+	// via bounds.reset().fit() so timing is fully controlled.
 	return (
-		<Bounds {...rest} fit={enable && rest.fit} clip={enable && rest.clip}>
+		<Bounds {...rest} fit={false}>
 			{children}
 		</Bounds>
 	)

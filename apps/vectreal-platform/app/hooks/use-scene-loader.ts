@@ -1,5 +1,5 @@
 import { usePostHog } from '@posthog/react'
-import { type BoundsProps, type SceneSettings, type ServerSceneData } from '@vctrl/core'
+import { type SceneSettings, type ServerSceneData } from '@vctrl/core'
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import {
 	type EventHandler,
@@ -527,13 +527,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	const applySceneSettings = useCallback(
 		(settings: SceneSettings) => {
 			const resolvedCamera = settings.camera || defaultCameraOptions
-			const hasPositionedCamera = resolvedCamera.cameras?.some(
-				(c) => c.position != null
-			)
-			const resolvedBounds: BoundsProps = {
-				...(settings.bounds || defaultBoundsOptions),
-				enable: !hasPositionedCamera
-			}
+			const resolvedBounds = settings.bounds || defaultBoundsOptions
 
 			setBounds(resolvedBounds)
 			setEnv(settings.environment || defaultEnvOptions)

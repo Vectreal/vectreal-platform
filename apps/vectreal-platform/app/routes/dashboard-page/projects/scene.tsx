@@ -265,6 +265,7 @@ const PreviewModel = memo(
 				<ClientVectrealViewer
 					cameraOptions={sceneData?.camera}
 					model={file?.model}
+					boundsOptions={sceneData?.bounds}
 					envOptions={sceneData?.environment}
 					controlsOptions={sceneData?.controls}
 					shadowsOptions={sceneData?.shadows}
