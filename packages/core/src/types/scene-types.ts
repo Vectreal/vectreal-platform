@@ -35,12 +35,17 @@ import type {
 import type { SceneInteractionDefinition } from './interaction-types'
 
 /**
- * Configuration for animating camera transitions in the 3D scene.
+ * Camera classification used for inspector grouping and publish filtering.
+ * 'scene' cameras appear in the scene camera inspector list.
+ * 'hotspot' cameras are linked to a hotspot and shown in a separate section.
  */
-interface CameraAnimationConfig {
-	duration: number // Duration of the animation in milliseconds
-	easing?: (t: number) => number // Optional easing function for the animation
-}
+export type CameraKind = 'scene' | 'hotspot'
+
+/**
+ * Controls how the default (initial-load) camera is automatically resolved
+ * when no explicit defaultCameraId is set.
+ */
+export type DefaultCameraStrategy = 'first' | 'last' | 'manual'
 
 /**
  * Transition mode when switching between two camera states.
@@ -89,35 +94,19 @@ export interface CameraTransitionConfig {
 }
 
 /**
- * A named camera state option for a camera.
- */
-export type CameraStateConfig = PerspectiveCameraProps & {
-	stateId: string
-	name: string
-	initial?: boolean
-	target?: [number, number, number]
-	transition?: CameraTransitionConfig
-}
-
-/**
  * Configuration for a camera in the 3D scene.
  */
-type CameraConfig = PerspectiveCameraProps & {
+export type CameraConfig = PerspectiveCameraProps & {
 	cameraId: string
 	name: string
+	/**
+	 * Camera classification. 'scene' cameras appear in the scene camera list;
+	 * 'hotspot' cameras are linked to a hotspot and shown in a separate section.
+	 * Defaults to 'scene' when absent.
+	 */
+	kind?: CameraKind
 	initial?: boolean // Indicates if this camera should be the default view when the scene loads
 	target?: [number, number, number]
-	/**
-	 * Transition used when switching to this camera.
-	 */
-	transition?: CameraTransitionConfig
-	/**
-	 * Legacy compatibility fields. New writes should use flat camera entries only.
-	 */
-	shouldAnimate?: boolean // Indicates if the camera should animate to its position on activation
-	animationConfig?: CameraAnimationConfig // Optional configuration for camera animation
-	states?: CameraStateConfig[]
-	activeStateId?: string
 }
 
 /**
@@ -129,6 +118,20 @@ export interface CameraProps {
 	 */
 	activeCameraId?: string
 	cameras?: CameraConfig[]
+	/**
+	 * Scene-global transition applied when switching cameras.
+	 * Replaces per-camera CameraConfig.transition in new saves.
+	 */
+	sceneTransition?: CameraTransitionConfig
+	/**
+	 * Controls how the default camera is automatically resolved when defaultCameraId is absent.
+	 * Defaults to 'first'.
+	 */
+	defaultCameraStrategy?: DefaultCameraStrategy
+	/**
+	 * Explicitly selected default camera ID. Takes precedence over defaultCameraStrategy.
+	 */
+	defaultCameraId?: string
 }
 
 /**
@@ -259,6 +262,57 @@ export interface ContactShadowProps
  */
 export type ShadowsProps = AccumulativeShadowsProps | ContactShadowProps
 
+// ---------------------------------------------------------------------------
+// Hotspot types
+// ---------------------------------------------------------------------------
+
+/** MVP hotspot style presets. Full arbitrary HTML/Lottie support is deferred. */
+export type HotspotStylePreset = 'dot' | 'image' | 'svg'
+
+/**
+ * A single point-of-interest hotspot anchored to a world-space position.
+ * Linked to a camera entity with kind='hotspot'.
+ */
+export interface HotspotDefinition {
+	id: string
+	name: string
+	/** World-space 3D position [x, y, z]. */
+	worldPosition: [number, number, number]
+	/**
+	 * ID of the camera with kind='hotspot' linked to this hotspot.
+	 * The camera must exist in CameraProps.cameras.
+	 */
+	linkedCameraId?: string
+	/** Whether the hotspot dot/overlay is visible to the end user. */
+	visible: boolean
+	/**
+	 * If true the hotspot is only rendered inside the publisher editor.
+	 * It is excluded from the published/embed runtime payload.
+	 * The authoring data is always retained.
+	 */
+	internalOnly: boolean
+	/**
+	 * 0-based position in the optional hotspot navigation sequence.
+	 * undefined = not part of any sequence.
+	 */
+	sequenceIndex?: number
+	stylePreset: HotspotStylePreset
+	/**
+	 * URL or inline data URI for 'image' and 'svg' presets.
+	 * Unused when stylePreset === 'dot'.
+	 */
+	payloadUrl?: string
+	/**
+	 * When true the hotspot fades/hides when occluded by scene geometry.
+	 * When false the hotspot renders at full opacity regardless of depth.
+	 */
+	occlusionEnabled?: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Scene settings
+// ---------------------------------------------------------------------------
+
 /**
  * Scene settings containing viewer configuration.
  * Used for persisting and restoring scene appearance and behavior.
@@ -276,6 +330,8 @@ export interface SceneSettings {
 	environment?: EnvironmentProps
 	/** Shadow rendering settings */
 	shadows?: ShadowsProps
+	/** Hotspot definitions. internalOnly hotspots are excluded from the published runtime payload. */
+	hotspots?: HotspotDefinition[]
 }
 
 /** Extended GLTF document including optional persisted asset metadata. */

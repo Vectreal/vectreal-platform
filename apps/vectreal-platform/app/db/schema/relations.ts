@@ -15,6 +15,7 @@ import { folders } from './project/folders'
 import { projects } from './project/projects'
 import { sceneAssets } from './project/scene-assets'
 import { sceneFolders } from './project/scene-folders'
+import { sceneHotspots } from './project/scene-hotspots'
 import { scenePublished } from './project/scene-published'
 import { sceneSettings } from './project/scene-settings'
 import { sceneStats } from './project/scene-stats'
@@ -163,9 +164,18 @@ export const sceneSettingsRelations = relations(
 			fields: [sceneSettings.createdBy],
 			references: [users.id]
 		}),
-		sceneAssets: many(sceneAssets)
+		sceneAssets: many(sceneAssets),
+		hotspots: many(sceneHotspots)
 	})
 )
+
+// Scene hotspot relations
+export const sceneHotspotsRelations = relations(sceneHotspots, ({ one }) => ({
+	sceneSettings: one(sceneSettings, {
+		fields: [sceneHotspots.sceneSettingsId],
+		references: [sceneSettings.id]
+	})
+}))
 
 // Scene assets relations
 export const sceneAssetsRelations = relations(sceneAssets, ({ one }) => ({

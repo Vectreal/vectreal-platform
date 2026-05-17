@@ -69,7 +69,7 @@ async function ensureUserExistsDb(
 			id: supabaseUser.id,
 			email: normalizedEmail,
 			name: supabaseUser.user_metadata?.name || supabaseUser.email || 'User',
-			tosAcceptedAt: tosAcceptedAt ?? null
+			...(tosAcceptedAt !== null && { tosAcceptedAt })
 		})
 		.onConflictDoNothing()
 		.returning()

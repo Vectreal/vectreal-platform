@@ -1,10 +1,17 @@
 import type { CameraProps } from '../types'
 
 /**
- * Normalizes the canonical camera payload without performing legacy migration.
+ * Normalizes the canonical camera payload and enforces implicit first-camera defaults.
  *
- * This helper only resolves a stable `activeCameraId`, fills missing top-level
- * camera ids/names, and keeps `initial` aligned with the selected camera.
+ * This helper:
+ * 1. Strips legacy `defaultCameraStrategy` and `defaultCameraId` fields
+ * 2. Finds the first scene camera (non-hotspot) and marks it as initial
+ * 3. Resolves a stable `activeCameraId` that points to the first scene camera
+ * 4. Fills missing camera ids/names
+ * 5. Keeps `initial` flag aligned with the active camera
+ *
+ * The semantic is: the first scene camera is ALWAYS the default unless explicitly
+ * reordered by the user (moving a camera to the front via the pin action).
  */
 export function normalizeCameraSettings(
 	camera?: CameraProps
@@ -19,24 +26,26 @@ export function normalizeCameraSettings(
 		name: entry.name || `Camera ${index + 1}`
 	}))
 
-	const activeCameraId =
-		(camera.activeCameraId &&
-		normalizedCameras.some((entry) => entry.cameraId === camera.activeCameraId)
-			? camera.activeCameraId
-			: undefined) ??
-		normalizedCameras.find((entry) => entry.initial)?.cameraId ??
-		normalizedCameras[0]?.cameraId
+	// Find the first scene camera (non-hotspot)
+	const firstSceneCameraId = normalizedCameras.find(
+		(entry) => !entry.kind || entry.kind === 'scene'
+	)?.cameraId
 
-	if (!activeCameraId) {
+	if (!firstSceneCameraId) {
 		return camera
 	}
 
 	return {
 		...camera,
-		activeCameraId,
+		// Strip legacy fields to prevent confusion
+		defaultCameraStrategy: undefined,
+		defaultCameraId: undefined,
+		// Always set activeCameraId to the first scene camera (implicit default)
+		activeCameraId: firstSceneCameraId,
 		cameras: normalizedCameras.map((entry) => ({
 			...entry,
-			initial: entry.cameraId === activeCameraId
+			// Mark first scene camera as initial; all others as non-initial
+			initial: entry.cameraId === firstSceneCameraId
 		}))
 	}
 }

@@ -103,6 +103,14 @@ const hasUnsavedChangesAtom = selectAtom(
 	(state) => state.hasUnsavedChanges
 )
 
+// Editor mode atoms — not persisted, reset on each session
+const isPreviewModeAtom = atom(false)
+const isClickToPlaceActiveAtom = atom(false)
+const arePublisherActionsDisabledAtom = atom((get) => get(isPreviewModeAtom))
+const canEditCameraSettingsAtom = atom(
+	(get) => !get(arePublisherActionsDisabledAtom)
+)
+
 export {
 	// atoms
 	processAtom,
@@ -115,6 +123,10 @@ export {
 	controlsOverlayStateAtom,
 	isSavingAtom,
 	hasUnsavedChangesAtom,
+	isPreviewModeAtom,
+	isClickToPlaceActiveAtom,
+	arePublisherActionsDisabledAtom,
+	canEditCameraSettingsAtom,
 	lastSavedSettingsAtom,
 	lastSavedSceneMetaAtom,
 	lastSavedSceneIdAtom,

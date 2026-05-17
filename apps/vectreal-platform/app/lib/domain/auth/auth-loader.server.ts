@@ -70,7 +70,8 @@ export async function loadAuthenticatedUser(
 		console.error('Failed to initialize user:', error)
 
 		if (message.startsWith('email_conflict:')) {
-			const { client, headers: signOutHeaders } = await createSupabaseClient(request)
+			const { client, headers: signOutHeaders } =
+				await createSupabaseClient(request)
 			try {
 				await client.auth.signOut({ scope: 'local' })
 			} catch (signOutError) {

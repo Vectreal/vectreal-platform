@@ -7,15 +7,18 @@ interface InfoBannerProps {
 	isLoading?: boolean
 	statusText?: string | null
 	onOpenOptimization?: () => void
+	disabled?: boolean
 }
 
 const InfoBanner = ({
 	sceneBytes,
 	isLoading = false,
 	statusText = null,
-	onOpenOptimization
+	onOpenOptimization,
+	disabled = false
 }: InfoBannerProps) => {
-	const canOpenOptimization = typeof onOpenOptimization === 'function'
+	const canOpenOptimization =
+		typeof onOpenOptimization === 'function' && !disabled
 
 	return (
 		<div className="bg-shell-surface border-shell-border-soft text-foreground/70 fixed bottom-0 z-20 flex w-full items-center gap-4 border-t px-4 py-1.5 text-xs font-medium">

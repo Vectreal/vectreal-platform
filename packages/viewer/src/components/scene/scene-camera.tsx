@@ -31,17 +31,17 @@ import type { SceneCameraSnapshotCapture } from '../../types/viewer-types'
  */
 export const defaultCameraOptions: CameraProps = {
 	activeCameraId: 'default',
+	sceneTransition: {
+		type: 'linear',
+		duration: 1000,
+		easing: 'ease_in_out'
+	},
 	cameras: [
 		{
 			cameraId: 'default',
 			name: 'Default Camera',
 			fov: 60,
-			initial: true,
-			transition: {
-				type: 'linear',
-				duration: 1000,
-				easing: 'ease_in_out'
-			}
+			initial: true
 		}
 	]
 }
@@ -160,20 +160,15 @@ function toEuler(value: unknown): Euler {
 }
 
 function resolveTransition(
-	cameraEntry: NonNullable<CameraProps['cameras']>[number]
+	sceneTransition: CameraTransitionConfig | undefined
 ): CameraTransitionConfig {
-	if (cameraEntry.transition?.type) {
-		return cameraEntry.transition
-	}
-
-	if (cameraEntry.shouldAnimate === false) {
-		return { type: 'none' }
+	if (sceneTransition?.type) {
+		return sceneTransition
 	}
 
 	return {
 		type: 'linear',
-		duration:
-			cameraEntry.animationConfig?.duration ?? DEFAULT_TRANSITION_DURATION_MS,
+		duration: DEFAULT_TRANSITION_DURATION_MS,
 		easing: 'ease_in_out'
 	}
 }
@@ -196,16 +191,22 @@ function resolveCameraSelection(
 	cameras: CameraProps['cameras'],
 	activeCameraId: CameraProps['activeCameraId'],
 	currentControlsTarget: Vector3,
-	sceneCamera: PerspectiveCamera
+	sceneCamera: PerspectiveCamera,
+	sceneTransition?: CameraTransitionConfig
 ): ResolvedCameraSelection {
+	const sceneCameras = cameras?.filter((c) => !c.kind || c.kind === 'scene')
+	const defaultCamera =
+		sceneCameras && sceneCameras.length > 0 ? sceneCameras[0] : cameras?.[0]
+
 	const selectedCamera =
 		cameras?.find((camera) => camera.cameraId === activeCameraId) ??
 		cameras?.find((camera) => camera.initial) ??
+		defaultCamera ??
 		cameras?.[0] ??
 		defaultCameraOptions.cameras?.[0]
 
 	const transition = selectedCamera
-		? resolveTransition(selectedCamera)
+		? resolveTransition(sceneTransition)
 		: ({ type: 'none' } as CameraTransitionConfig)
 
 	const rawTargetLookAt = toVector3(
@@ -310,7 +311,10 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		onCommandExecutorReady,
 		onInteractionEvent
 	} = props
-	const { cameras, activeCameraId } = { ...defaultCameraOptions, ...props }
+	const { cameras, activeCameraId, sceneTransition } = {
+		...defaultCameraOptions,
+		...props
+	}
 	const MAX_STABILIZATION_FRAMES = 24
 	const MAX_STABILIZATION_DURATION_MS = 500
 
@@ -448,7 +452,8 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				cameras,
 				command.cameraId,
 				controls?.target ?? new Vector3(0, 0, 0),
-				sceneCamera as PerspectiveCamera
+				sceneCamera as PerspectiveCamera,
+				sceneTransition
 			)
 
 			if (nextSelection.cameraId !== command.cameraId) {
@@ -500,7 +505,8 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				cameras,
 				activeCameraId,
 				initialControlsTarget,
-				sceneCamera
+				sceneCamera,
+				sceneTransition
 			)
 			applyCameraInstantly(selection)
 
@@ -531,7 +537,14 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				transition: selection.transition
 			})
 		},
-		[activeCameraId, applyCameraInstantly, bounds, cameras, controls?.target]
+		[
+			activeCameraId,
+			applyCameraInstantly,
+			bounds,
+			cameras,
+			controls?.target,
+			sceneTransition
+		]
 	)
 
 	useEffect(() => {
@@ -547,7 +560,8 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			cameras,
 			activeCameraId,
 			controls?.target ?? new Vector3(0, 0, 0),
-			sceneCamera as PerspectiveCamera
+			sceneCamera as PerspectiveCamera,
+			sceneTransition
 		)
 		const selectionKey = selection.cameraId
 		const signature = JSON.stringify({
@@ -569,7 +583,13 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			return
 		}
 
-		startTransition(selection)
+		// Only animate when switching between cameras; apply property edits instantly
+		// so sidebar changes don't re-trigger the transition for the active camera.
+		if (previousSelectionKey.current === selectionKey) {
+			applyCameraInstantly(selection)
+		} else {
+			startTransition(selection)
+		}
 		previousSelectionKey.current = selectionKey
 		previousSelectionSignature.current = signature
 		onInteractionEvent?.({
@@ -578,6 +598,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		})
 	}, [
 		activeCameraId,
+		applyCameraInstantly,
 		cameras,
 		controls?.target,
 		onInteractionEvent,

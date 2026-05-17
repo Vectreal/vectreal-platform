@@ -54,6 +54,7 @@ import {
 	cameraAtom,
 	controlsAtom,
 	environmentAtom,
+	hotspotsAtom,
 	interactionsAtom,
 	shadowsAtom
 } from '../lib/stores/scene-settings-store'
@@ -149,9 +150,10 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 
 	const sceneLoadAttemptedRef = useRef(false)
 	const pendingSceneHydratedRef = useRef(false)
-	const lastLoadErrorToastRef = useRef<{ signature: string; at: number } | null>(
-		null
-	)
+	const lastLoadErrorToastRef = useRef<{
+		signature: string
+		at: number
+	} | null>(null)
 	const posthog = usePostHog()
 	const { consent } = useConsent()
 	// Last-saved baselines live in atoms (not useState) so they survive route
@@ -218,6 +220,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	const [camera, setCamera] = useAtom(cameraAtom)
 	const [controls, setControls] = useAtom(controlsAtom)
 	const [shadows, setShadows] = useAtom(shadowsAtom)
+	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 
 	// Process state atom - use full atom access for reading and writing
 	const [sceneMetaState, setSceneMetaState] = useAtom(sceneMetaAtom)
@@ -306,7 +309,17 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		}
 
 		try {
-			return await requestSceneScreenshot(DEFAULT_THUMBNAIL_CAPTURE_OPTIONS)
+			// Get the default/first scene camera ID to capture from
+			const defaultCameraId =
+				camera.cameras?.find((c) => !c.kind || c.kind === 'scene')?.cameraId ??
+				camera.cameras?.[0]?.cameraId ??
+				undefined
+
+			return await requestSceneScreenshot({
+				...DEFAULT_THUMBNAIL_CAPTURE_OPTIONS,
+				// Capture from the default camera perspective for seamless loading
+				targetCameraId: defaultCameraId
+			})
 		} catch (error) {
 			console.warn('[scene-settings] thumbnail capture failed', {
 				sceneId: currentSceneId || null,
@@ -314,7 +327,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			})
 			return null
 		}
-	}, [currentSceneId, requestSceneScreenshot])
+	}, [currentSceneId, camera.cameras, requestSceneScreenshot])
 
 	// Get current settings from atoms
 	const currentSettings: SceneSettings = useMemo(
@@ -324,9 +337,10 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			interactions,
 			camera,
 			controls,
-			shadows
+			shadows,
+			hotspots: hotspots.length > 0 ? hotspots : undefined
 		}),
-		[bounds, environment, interactions, camera, controls, shadows]
+		[bounds, environment, interactions, camera, controls, shadows, hotspots]
 	)
 
 	const resetSceneState = useCallback(() => {
@@ -336,6 +350,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setCamera(defaultCameraOptions)
 		setControls(defaultControlsOptions)
 		setShadows(defaultShadowOptions)
+		setHotspots([])
 		setSceneMetaState(sceneMetaInitialState)
 		setLastSavedSettings(null)
 		setLastSavedSceneMeta(null)
@@ -351,6 +366,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setCamera,
 		setControls,
 		setShadows,
+		setHotspots,
 		setSceneMetaState,
 		setLastSavedSettings,
 		setLastSavedSceneMeta,
@@ -410,46 +426,52 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		]
 	) as EventHandler<'load-complete'>
 
-	const handleLoadError = useCallback((error: unknown) => {
-		console.error('Load error:', error)
+	const handleLoadError = useCallback(
+		(error: unknown) => {
+			console.error('Load error:', error)
 
-		let errorMessage = 'Failed to load model'
-		let analyticsProps:
-			| ReturnType<typeof buildSceneUploadFailedAnalyticsProps>
-			| null = null
-		if (isStructuredLoadError(error)) {
-			errorMessage = mapStructuredLoadErrorMessage(error)
-			analyticsProps = buildSceneUploadFailedAnalyticsProps(error, errorMessage)
-		} else if (error instanceof Error) {
-			errorMessage = error.message
-		} else if (typeof error === 'string') {
-			errorMessage = error
-		}
-
-		const signature = `${analyticsProps?.error_code ?? 'unknown'}:${errorMessage}`
-		const now = Date.now()
-		const isDuplicateToast =
-			lastLoadErrorToastRef.current?.signature === signature &&
-			now - lastLoadErrorToastRef.current.at < 2000
-
-		if (!isDuplicateToast) {
-			toast.error(errorMessage)
-			lastLoadErrorToastRef.current = { signature, at: now }
-		}
-
-		if (consent?.analytics) {
-			if (analyticsProps) {
-				posthog?.capture('scene_upload_failed', analyticsProps)
-			} else {
-				posthog?.capture('scene_upload_failed', {
-					client_type: 'web',
-					file_format: 'unknown',
-					error_code: 'unknown',
-					error_message: errorMessage
-				})
+			let errorMessage = 'Failed to load model'
+			let analyticsProps: ReturnType<
+				typeof buildSceneUploadFailedAnalyticsProps
+			> | null = null
+			if (isStructuredLoadError(error)) {
+				errorMessage = mapStructuredLoadErrorMessage(error)
+				analyticsProps = buildSceneUploadFailedAnalyticsProps(
+					error,
+					errorMessage
+				)
+			} else if (error instanceof Error) {
+				errorMessage = error.message
+			} else if (typeof error === 'string') {
+				errorMessage = error
 			}
-		}
-	}, [consent?.analytics, posthog])
+
+			const signature = `${analyticsProps?.error_code ?? 'unknown'}:${errorMessage}`
+			const now = Date.now()
+			const isDuplicateToast =
+				lastLoadErrorToastRef.current?.signature === signature &&
+				now - lastLoadErrorToastRef.current.at < 2000
+
+			if (!isDuplicateToast) {
+				toast.error(errorMessage)
+				lastLoadErrorToastRef.current = { signature, at: now }
+			}
+
+			if (consent?.analytics) {
+				if (analyticsProps) {
+					posthog?.capture('scene_upload_failed', analyticsProps)
+				} else {
+					posthog?.capture('scene_upload_failed', {
+						client_type: 'web',
+						file_format: 'unknown',
+						error_code: 'unknown',
+						error_message: errorMessage
+					})
+				}
+			}
+		},
+		[consent?.analytics, posthog]
+	)
 
 	useSceneModelEvents({
 		on,
@@ -505,6 +527,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			setCamera(settings.camera || defaultCameraOptions)
 			setControls(settings.controls || defaultControlsOptions)
 			setShadows(settings.shadows || defaultShadowOptions)
+			setHotspots(settings.hotspots ?? [])
 
 			const loadedSettings: SceneSettings = {
 				bounds: settings.bounds || defaultBoundsOptions,
@@ -512,11 +535,20 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				interactions: settings.interactions,
 				camera: settings.camera || defaultCameraOptions,
 				controls: settings.controls || defaultControlsOptions,
-				shadows: settings.shadows || defaultShadowOptions
+				shadows: settings.shadows || defaultShadowOptions,
+				hotspots: settings.hotspots
 			}
 			setLastSavedSettings(loadedSettings)
 		},
-		[setBounds, setCamera, setControls, setEnv, setInteractions, setShadows]
+		[
+			setBounds,
+			setCamera,
+			setControls,
+			setEnv,
+			setHotspots,
+			setInteractions,
+			setShadows
+		]
 	)
 
 	const hydrateOptimizationState = useCallback(

@@ -1,7 +1,14 @@
-import { Camera, MountainSnow, MousePointer2, Tornado } from 'lucide-react'
+import {
+	Camera,
+	Locate,
+	MountainSnow,
+	MousePointer2,
+	Tornado
+} from 'lucide-react'
 
 import { CameraControlsSettings } from './camera-controls-settings'
 import { EnvironmentSettings } from './environment-settings'
+import { HotspotsSettings } from './hotspots-settings'
 import { InteractionControlsSettings } from './interaction-controls-settings'
 import { ShadowSettings } from './shadow-settings'
 
@@ -54,6 +61,15 @@ const COMPOSE_TOOL_DEFINITIONS: ComposeToolDefinition[] = [
 			'Configure how viewers orbit, zoom, and move around the scene.',
 		icon: MousePointer2,
 		component: InteractionControlsSettings
+	},
+	{
+		value: 'hotspots',
+		label: 'Hotspots',
+		shortLabel: 'Hotspots',
+		description:
+			'Add point-of-interest markers linked to saved camera positions.',
+		icon: Locate,
+		component: HotspotsSettings
 	}
 ]
 

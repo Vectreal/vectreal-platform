@@ -1,30 +1,36 @@
 import { ButtonGroup } from '@shared/components/ui/button-group'
 import { Separator } from '@shared/components/ui/separator'
+import { cn } from '@shared/utils'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtomValue, useSetAtom } from 'jotai/react'
 import posthog from 'posthog-js'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useNavigate, useSubmit } from 'react-router'
 import { toast } from 'sonner'
 
 import {
 	DynamicSidebar,
 	InfoBanner,
-	MobileToolBar,
 	SaveButton,
 	SceneNameAndLocation,
-	SceneInfoTrigger,
 	ToolSidebar
 } from '.'
 import OptimizationDrawer from './optimization-drawer'
+import PreviewCameraControls from './preview-camera-controls'
 import { usePublisherViewerCapture } from './publisher-viewer-capture-context'
-import { useOptimizationDrawerFlow, useSceneLoader } from '../../hooks'
-import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
+import { useOptimizationModalFlow, useSceneLoader } from '../../hooks'
+import { PublishSidebarProvider } from './sidebars/publish-sidebar/publish-sidebar-context'
+import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
 import { useLocationChangeState } from '../../hooks/use-location-change-state'
+import { Navigation } from '../navigation'
+import PublishSidebarContent from './sidebars/publish-sidebar/publish-sidebar-content'
+import { PublishSidebarTrigger } from './sidebars/publish-sidebar/publish-sidebar-trigger'
 import { resolveSceneMetrics } from '../../lib/domain/scene'
 import {
+	arePublisherActionsDisabledAtom,
 	controlsOverlayStateAtom,
+	isPreviewModeAtom,
 	processAtom,
 	saveLocationAtom
 } from '../../lib/stores/publisher-config-store'
@@ -32,10 +38,7 @@ import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-sto
 import { PublisherLoaderData, SceneAggregateResponse } from '../../types/api'
 import { InfoTooltip } from '../info-tooltip'
 import { FloatingPillWrapper } from '../layout-components'
-import { Navigation } from '../navigation'
 import { UserMenu } from '../user-menu'
-import PublishSidebarContent from './sidebars/publish-sidebar/publish-sidebar-content'
-import { PublishSidebarProvider } from './sidebars/publish-sidebar/publish-sidebar-context'
 import { buildPublishSidebarViewModel } from './sidebars/publish-sidebar/publish-sidebar-view-model'
 
 const OverlayControls = ({
@@ -50,6 +53,10 @@ const OverlayControls = ({
 	const submit = useSubmit()
 	const { file, isFileLoading, optimizer } = useModelContext(true)
 	const { step, showPublishPanel } = useAtomValue(controlsOverlayStateAtom)
+	const arePublisherActionsDisabled = useAtomValue(
+		arePublisherActionsDisabledAtom
+	)
+	const isPreviewMode = useAtomValue(isPreviewModeAtom)
 	const setProcessState = useSetAtom(processAtom)
 	const {
 		latestSceneStats,
@@ -87,7 +94,7 @@ const OverlayControls = ({
 		handleOptimizationDrawerChange,
 		handleOpenOptimizationDrawer,
 		openReoptimizeDrawer
-	} = useOptimizationDrawerFlow({
+	} = useOptimizationModalFlow({
 		saveAvailability,
 		hasUnsavedLocationChange
 	})
@@ -195,6 +202,24 @@ const OverlayControls = ({
 		]
 	)
 
+	useEffect(() => {
+		if (!isPreviewMode) {
+			return
+		}
+
+		setProcessState((prev) => {
+			if (!prev.showSidebar && !prev.showPublishPanel) {
+				return prev
+			}
+
+			return {
+				...prev,
+				showSidebar: false,
+				showPublishPanel: false
+			}
+		})
+	}, [isPreviewMode, setProcessState])
+
 	const handleOpenPublishPanel = useCallback(() => {
 		setProcessState((prev) => {
 			if (prev.showPublishPanel && !prev.showSidebar) {
@@ -239,21 +264,40 @@ const OverlayControls = ({
 		<Navigation user={user} />
 	) : (
 		<>
-			<div className="fixed top-0 left-1/2 z-30 hidden w-[min(30rem,calc(100vw-22rem))] -translate-x-1/2 px-4 pt-3 md:block">
+			<div
+				className={cn(
+					'fixed top-0 left-1/2 z-30 hidden w-[min(30rem,calc(100vw-22rem))] -translate-x-1/2 px-4 pt-3 md:block',
+					arePublisherActionsDisabled &&
+						'pointer-events-none opacity-45 saturate-50'
+				)}
+			>
 				<SceneNameAndLocation
 					authenticated={!!user}
 					className="publisher-shell-floating px-1"
 				/>
 			</div>
 
-			{/* Desktop top bar */}
-			<FloatingPillWrapper className="fixed top-0 right-0 z-20 m-4 hidden p-1 md:flex">
+			<div
+				className={cn(
+					'fixed inset-x-0 top-0 z-30 px-4 pt-[4.25rem] md:hidden',
+					arePublisherActionsDisabled &&
+						'pointer-events-none opacity-45 saturate-50'
+				)}
+			>
+				<SceneNameAndLocation
+					authenticated={!!user}
+					className="border-border/60 bg-muted/60 rounded-2xl border px-1 shadow-2xl backdrop-blur-2xl"
+				/>
+			</div>
+
+			<FloatingPillWrapper className="bg-muted/50 fixed top-0 right-0 z-20 m-4 hidden rounded-2xl p-1 backdrop-blur-2xl md:flex">
 				<ButtonGroup className="items-center">
 					<SaveButton
 						sceneId={sceneId}
 						userId={user?.id}
 						saveLocationTarget={saveLocationTarget}
 						saveAvailability={effectiveSaveAvailability}
+						forceDisabled={isPreviewMode}
 						onRequireAuth={handleRequireAuthForSave}
 						saveSceneSettings={saveSceneSettings}
 					/>
@@ -286,38 +330,32 @@ const OverlayControls = ({
 				)}
 			</FloatingPillWrapper>
 
-			{/* Mobile header — unified flex layout */}
-			<div className="fixed inset-x-0 top-0 z-40 flex flex-col gap-2 p-4 md:hidden">
-				<SceneNameAndLocation
-					authenticated={!!user}
-					className="publisher-shell-floating px-1"
-				/>
-				<div className="flex items-center justify-between gap-2">
-					<MobileToolBar />
-					<FloatingPillWrapper className="p-1">
-						<ButtonGroup className="items-center gap-1">
-							<SaveButton
-								sceneId={sceneId}
-								userId={user?.id}
-								saveLocationTarget={saveLocationTarget}
-								saveAvailability={effectiveSaveAvailability}
-								onRequireAuth={handleRequireAuthForSave}
-								saveSceneSettings={saveSceneSettings}
-								compact
-							/>
-							{user && (
-								<UserMenu
-									size="sm"
-									user={user}
-									onLogout={handleLogout}
-									sceneDetailsHref={sceneDetailsHref}
-								/>
-							)}
-						</ButtonGroup>
-					</FloatingPillWrapper>
-				</div>
-			</div>
-			<SceneInfoTrigger onClick={handleOpenPublishPanel} />
+			<FloatingPillWrapper className="bg-muted/50 fixed top-0 right-0 z-50 m-4 flex rounded-2xl p-1 backdrop-blur-2xl md:hidden">
+				<ButtonGroup className="items-center gap-1">
+					<SaveButton
+						sceneId={sceneId}
+						userId={user?.id}
+						saveLocationTarget={saveLocationTarget}
+						saveAvailability={effectiveSaveAvailability}
+						forceDisabled={isPreviewMode}
+						onRequireAuth={handleRequireAuthForSave}
+						saveSceneSettings={saveSceneSettings}
+						compact
+					/>
+					{user ? (
+						<UserMenu
+							size="sm"
+							user={user}
+							onLogout={handleLogout}
+							sceneDetailsHref={sceneDetailsHref}
+						/>
+					) : null}
+				</ButtonGroup>
+			</FloatingPillWrapper>
+			<PublishSidebarTrigger
+				onClick={handleOpenPublishPanel}
+				disabled={arePublisherActionsDisabled}
+			/>
 			<DynamicSidebar
 				open={showPublishPanel}
 				onOpenChange={handlePublishPanelChange}
@@ -346,7 +384,10 @@ const OverlayControls = ({
 				isLoading={isSceneSizeLoading}
 				statusText={optimizerStatusText}
 				onOpenOptimization={handleOpenOptimizationDrawer}
+				disabled={arePublisherActionsDisabled}
 			/>
+
+			<PreviewCameraControls />
 		</>
 	)
 }
