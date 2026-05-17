@@ -314,9 +314,7 @@ const LocationRow = ({ open, authenticated, onToggle }: LocationRowProps) => {
 			<FolderOpen className="h-3 w-3 shrink-0" />
 			<span className="min-w-0 grow truncate text-left">
 				{locationLabel ?? (
-					<span className="text-muted-foreground/60 italic">
-						Choose save location…
-					</span>
+					<span className="text-inherit italic">Choose save location…</span>
 				)}
 			</span>
 			{hasUnsavedLocationChange && locationLabel && (
