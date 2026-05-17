@@ -399,13 +399,9 @@ export class SceneSettingsParser {
 
 		// Enforce implicit first-camera default:
 		// - activeCameraId always points to first scene camera
-		// - Strip legacy defaultCameraStrategy and defaultCameraId fields
 		// - initial flag is set on first scene camera only
 		const normalizedWithDefault = {
 			...camera,
-			// Strip legacy fields that could cause confusion
-			defaultCameraStrategy: undefined,
-			defaultCameraId: undefined,
 			// Always use first scene camera as the active camera
 			activeCameraId: firstSceneCameraId,
 			cameras: normalizedCameras.map((cameraEntry) => ({

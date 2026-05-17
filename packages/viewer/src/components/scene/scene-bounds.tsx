@@ -10,11 +10,18 @@ export const defaultBoundsOptions = {
 } satisfies BoundsProps
 
 const SceneBounds = memo((props: BoundsProps) => {
-	const { ...rest } = {
+	const { enable, children, ...rest } = {
 		...defaultBoundsOptions,
 		...props
 	}
 
-	return <Bounds {...rest} />
+	// Always render <Bounds> to keep the useBounds() context alive for SceneCamera.
+	// Disable declarative fit entirely — SceneCamera drives all fitting imperatively
+	// via bounds.reset().fit() so timing is fully controlled.
+	return (
+		<Bounds {...rest} fit={false}>
+			{children}
+		</Bounds>
+	)
 })
 export default SceneBounds

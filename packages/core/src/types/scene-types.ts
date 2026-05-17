@@ -42,12 +42,6 @@ import type { SceneInteractionDefinition } from './interaction-types'
 export type CameraKind = 'scene' | 'hotspot'
 
 /**
- * Controls how the default (initial-load) camera is automatically resolved
- * when no explicit defaultCameraId is set.
- */
-export type DefaultCameraStrategy = 'first' | 'last' | 'manual'
-
-/**
  * Transition mode when switching between two camera states.
  */
 export type CameraTransitionType = 'linear' | 'object_avoidance' | 'none'
@@ -123,22 +117,15 @@ export interface CameraProps {
 	 * Replaces per-camera CameraConfig.transition in new saves.
 	 */
 	sceneTransition?: CameraTransitionConfig
-	/**
-	 * Controls how the default camera is automatically resolved when defaultCameraId is absent.
-	 * Defaults to 'first'.
-	 */
-	defaultCameraStrategy?: DefaultCameraStrategy
-	/**
-	 * Explicitly selected default camera ID. Takes precedence over defaultCameraStrategy.
-	 */
-	defaultCameraId?: string
 }
 
 /**
  * Props for the SceneBounds component, extending ThreeBoundsProps from '@react-three/drei'.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface BoundsProps extends ThreeBoundsProps {}
+
+export interface BoundsProps extends ThreeBoundsProps {
+	enable?: boolean
+}
 
 /**
  * Props for the SceneControls component, extending OrbitControlsProps from '@react-three/drei'.

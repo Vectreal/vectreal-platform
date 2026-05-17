@@ -221,6 +221,13 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	} = props
 
 	const hasContent = !!(model || children)
+
+	// Bounds-based camera framing is the fallback for scenes without saved camera positions.
+	// Explicit boundsOptions.enable overrides this inference.
+	const boundsEnabled =
+		boundsOptions?.enable !== undefined
+			? boundsOptions.enable
+			: !cameraOptions?.cameras?.some((c) => c.position != null)
 	const [isInitialFramingComplete, setIsInitialFramingComplete] =
 		useState(false)
 	const [controlsEnabledOverride, setControlsEnabledOverride] = useState<
@@ -309,9 +316,11 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 								mapping={toneMappingOptions?.mapping}
 								exposure={toneMappingOptions?.exposure}
 								/> */}
-							<SceneBounds {...boundsOptions}>
+							<SceneBounds {...boundsOptions} enable={boundsEnabled}>
 								<SceneCamera
 									{...cameraOptions}
+									boundsEnabled={boundsEnabled}
+									hasContent={hasContent}
 									onCameraSnapshotCaptureReady={onCameraSnapshotCaptureReady}
 									onCommandExecutorReady={handleSceneCameraExecutorReady}
 									onInitialFramingComplete={handleInitialFramingComplete}
