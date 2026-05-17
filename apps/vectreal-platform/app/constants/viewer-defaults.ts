@@ -9,6 +9,7 @@ import type {
 import type { Vector3Tuple } from 'three'
 
 export const defaultBoundsOptions: BoundsProps = {
+	enable: true,
 	fit: true,
 	clip: true,
 	margin: 1.5,

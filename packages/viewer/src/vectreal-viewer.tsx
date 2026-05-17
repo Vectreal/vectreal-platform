@@ -312,6 +312,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 							<SceneBounds {...boundsOptions}>
 								<SceneCamera
 									{...cameraOptions}
+									boundsEnabled={boundsOptions?.enable !== false}
 									onCameraSnapshotCaptureReady={onCameraSnapshotCaptureReady}
 									onCommandExecutorReady={handleSceneCameraExecutorReady}
 									onInitialFramingComplete={handleInitialFramingComplete}

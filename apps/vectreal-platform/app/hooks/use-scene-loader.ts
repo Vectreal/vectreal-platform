@@ -1,5 +1,5 @@
 import { usePostHog } from '@posthog/react'
-import { type SceneSettings, type ServerSceneData } from '@vctrl/core'
+import { type BoundsProps, type SceneSettings, type ServerSceneData } from '@vctrl/core'
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import {
 	type EventHandler,
@@ -526,19 +526,28 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	 */
 	const applySceneSettings = useCallback(
 		(settings: SceneSettings) => {
-			setBounds(settings.bounds || defaultBoundsOptions)
+			const resolvedCamera = settings.camera || defaultCameraOptions
+			const hasPositionedCamera = resolvedCamera.cameras?.some(
+				(c) => c.position != null
+			)
+			const resolvedBounds: BoundsProps = {
+				...(settings.bounds || defaultBoundsOptions),
+				enable: !hasPositionedCamera
+			}
+
+			setBounds(resolvedBounds)
 			setEnv(settings.environment || defaultEnvOptions)
 			setInteractions(settings.interactions)
-			setCamera(settings.camera || defaultCameraOptions)
+			setCamera(resolvedCamera)
 			setControls(settings.controls || defaultControlsOptions)
 			setShadows(settings.shadows || defaultShadowOptions)
 			setHotspots(settings.hotspots ?? [])
 
 			const loadedSettings: SceneSettings = {
-				bounds: settings.bounds || defaultBoundsOptions,
+				bounds: resolvedBounds,
 				environment: settings.environment || defaultEnvOptions,
 				interactions: settings.interactions,
-				camera: settings.camera || defaultCameraOptions,
+				camera: resolvedCamera,
 				controls: settings.controls || defaultControlsOptions,
 				shadows: settings.shadows || defaultShadowOptions,
 				hotspots: settings.hotspots

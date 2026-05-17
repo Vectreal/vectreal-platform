@@ -47,6 +47,7 @@ export const defaultCameraOptions: CameraProps = {
 }
 
 interface SceneCameraProps extends CameraProps {
+	boundsEnabled?: boolean
 	onInitialFramingComplete?: () => void
 	onCameraSnapshotCaptureReady?: (
 		capture: null | SceneCameraSnapshotCapture
@@ -306,6 +307,7 @@ function buildObjectAvoidanceCurve(
 
 export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const {
+		boundsEnabled = true,
 		onInitialFramingComplete,
 		onCameraSnapshotCaptureReady,
 		onCommandExecutorReady,
@@ -510,7 +512,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			)
 			applyCameraInstantly(selection)
 
-			bounds.reset().fit()
+			if (boundsEnabled) bounds.reset().fit()
 
 			if (!hasInitialFramingCompleted.current) {
 				isWaitingForStableFrame.current = true
@@ -541,6 +543,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			activeCameraId,
 			applyCameraInstantly,
 			bounds,
+			boundsEnabled,
 			cameras,
 			controls?.target,
 			sceneTransition

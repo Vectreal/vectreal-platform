@@ -218,8 +218,6 @@ function withImplicitFirstCameraDefault(camera: CameraProps): CameraProps {
 	const firstSceneCameraId = resolveFirstSceneCameraId(camera.cameras ?? [])
 	return {
 		...camera,
-		defaultCameraStrategy: undefined,
-		defaultCameraId: undefined,
 		cameras: (camera.cameras ?? []).map((entry) => ({
 			...entry,
 			initial: entry.cameraId === firstSceneCameraId

@@ -71,7 +71,12 @@ const ProductDetailModel = memo(
 		return (
 			<div className="bg-background relative h-[60vh] min-h-[420px] w-full overflow-hidden rounded-xl border md:h-[68vh]">
 				<ClientVectrealViewer
-					boundsOptions={sceneData?.bounds}
+					boundsOptions={{
+								...(sceneData?.bounds ?? {}),
+								enable: !sceneData?.camera?.cameras?.some(
+									(c) => c.position != null
+								)
+							}}
 					cameraOptions={sceneData?.camera}
 					className="h-full w-full"
 					model={file?.model}
