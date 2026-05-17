@@ -726,7 +726,11 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			originalSavedRef.current = false
 		}
 		on('load-start', handleLoadStart)
-		return () => off('load-start', handleLoadStart)
+		on('load-reset', handleLoadStart)
+		return () => {
+			off('load-start', handleLoadStart)
+			off('load-reset', handleLoadStart)
+		}
 	}, [on, off])
 
 	// Stable refs so the save effect below can read current values without
