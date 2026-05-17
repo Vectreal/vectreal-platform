@@ -526,22 +526,19 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	 */
 	const applySceneSettings = useCallback(
 		(settings: SceneSettings) => {
-			const resolvedCamera = settings.camera || defaultCameraOptions
-			const resolvedBounds = settings.bounds || defaultBoundsOptions
-
-			setBounds(resolvedBounds)
+			setBounds(settings.bounds || defaultBoundsOptions)
 			setEnv(settings.environment || defaultEnvOptions)
 			setInteractions(settings.interactions)
-			setCamera(resolvedCamera)
+			setCamera(settings.camera || defaultCameraOptions)
 			setControls(settings.controls || defaultControlsOptions)
 			setShadows(settings.shadows || defaultShadowOptions)
 			setHotspots(settings.hotspots ?? [])
 
 			const loadedSettings: SceneSettings = {
-				bounds: resolvedBounds,
+				bounds: settings.bounds || defaultBoundsOptions,
 				environment: settings.environment || defaultEnvOptions,
 				interactions: settings.interactions,
-				camera: resolvedCamera,
+				camera: settings.camera || defaultCameraOptions,
 				controls: settings.controls || defaultControlsOptions,
 				shadows: settings.shadows || defaultShadowOptions,
 				hotspots: settings.hotspots

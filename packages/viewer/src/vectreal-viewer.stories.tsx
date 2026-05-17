@@ -1,3 +1,5 @@
+import { fn } from '@storybook/test'
+
 import {
 	InfoPopover,
 	InfoPopoverCloseButton,
@@ -14,7 +16,6 @@ import {
 import VectrealViewer from './vectreal-viewer'
 
 import type { Meta, StoryObj } from '@storybook/react-vite'
-
 const meta = {
 	title: 'Viewer/Vectreal Viewer',
 	component: VectrealViewer,
@@ -36,6 +37,7 @@ const meta = {
 		)
 	],
 	args: {
+		onCommandExecutorReady: fn(),
 		theme: 'system',
 		controlsOptions: { ...defaultControlsOptions, autoRotate: false },
 		envOptions: defaultEnvOptions,

@@ -48,7 +48,7 @@ export const defaultCameraOptions: CameraProps = {
 
 interface SceneCameraProps extends CameraProps {
 	boundsEnabled?: boolean
-	hasModel?: boolean
+	hasContent?: boolean
 	onInitialFramingComplete?: () => void
 	onCameraSnapshotCaptureReady?: (
 		capture: null | SceneCameraSnapshotCapture
@@ -309,7 +309,7 @@ function buildObjectAvoidanceCurve(
 export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const {
 		boundsEnabled = true,
-		hasModel = false,
+		hasContent: hasModel = false,
 		onInitialFramingComplete,
 		onCameraSnapshotCaptureReady,
 		onCommandExecutorReady,
