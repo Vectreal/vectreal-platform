@@ -71,7 +71,10 @@ import { shouldRevalidateForRouteParams } from '../../../lib/navigation/dashboar
 import { deleteDialogAtom } from '../../../lib/stores/dashboard-management-store'
 import { toViewerLoadingThumbnail } from '../../../lib/viewer/viewer-loading-thumbnail'
 
-import type { SceneAggregateResponse, SerializedSceneAssetDataMap } from '../../../types/api'
+import type {
+	SceneAggregateResponse,
+	SerializedSceneAssetDataMap
+} from '../../../types/api'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 const MAX_PRELOADED_SCENE_ASSET_BYTES = 1_500_000
@@ -260,7 +263,6 @@ const PreviewModel = memo(
 		return (
 			<div className={cn('relative h-full')}>
 				<ClientVectrealViewer
-					boundsOptions={sceneData?.bounds}
 					cameraOptions={sceneData?.camera}
 					model={file?.model}
 					envOptions={sceneData?.environment}
@@ -574,7 +576,11 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 								<Button type="button" onClick={retrySceneLoad}>
 									Retry
 								</Button>
-								<Button type="button" variant="outline" onClick={openPublisherForPublishing}>
+								<Button
+									type="button"
+									variant="outline"
+									onClick={openPublisherForPublishing}
+								>
 									Open in Publisher
 								</Button>
 							</div>

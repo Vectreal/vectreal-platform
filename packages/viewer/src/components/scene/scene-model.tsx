@@ -2,12 +2,12 @@ import { useBounds } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import { memo, useCallback, useEffect } from 'react'
 import { Euler, Mesh, Object3D, PerspectiveCamera, Vector3 } from 'three'
-import type { CameraProps } from '@vctrl/core'
 
 import type {
 	SceneScreenshotCapture,
 	SceneScreenshotOptions
 } from '../../types/viewer-types'
+import type { CameraProps } from '@vctrl/core'
 
 interface ModelProps {
 	/**
