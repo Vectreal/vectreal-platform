@@ -77,7 +77,7 @@ SidebarSectionContent.displayName = 'SidebarSectionContent'
  */
 
 interface SettingRowProps {
-	label: string
+	label?: string
 	children: ReactNode
 	className?: string
 }
@@ -85,9 +85,11 @@ interface SettingRowProps {
 export const SettingRow = memo(
 	({ label, children, className = '' }: SettingRowProps) => (
 		<div className={`space-y-2 ${className}`}>
-			<label className="text-muted-foreground text-xs font-medium">
-				{label}
-			</label>
+			{label && (
+				<label className="text-muted-foreground text-xs font-medium">
+					{label}
+				</label>
+			)}
 			{children}
 		</div>
 	)

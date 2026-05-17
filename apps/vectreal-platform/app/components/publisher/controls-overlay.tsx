@@ -11,13 +11,11 @@ import { toast } from 'sonner'
 import {
 	DynamicSidebar,
 	InfoBanner,
-	MobileToolBar,
 	SaveButton,
 	SceneNameAndLocation,
 	ToolSidebar
 } from '.'
 import OptimizationDrawer from './optimization-drawer'
-import OptimizationModal from './optimization-modal'
 import PreviewCameraControls from './preview-camera-controls'
 import { usePublisherViewerCapture } from './publisher-viewer-capture-context'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'

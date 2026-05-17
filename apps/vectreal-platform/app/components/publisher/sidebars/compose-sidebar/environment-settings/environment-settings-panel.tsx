@@ -9,10 +9,6 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 import {
-	ToggleGroup,
-	ToggleGroupItem
-} from '@shared/components/ui/toggle-group'
-import {
 	EnvironmentKey,
 	EnvironmentProps,
 	EnvironmentResolution
@@ -28,6 +24,7 @@ import {
 	SettingToggle,
 	ToggleButtonGroup
 } from '../../../settings-components'
+import { PresetButtonGroup } from '../../preset-button-group'
 import {
 	SidebarSection,
 	SidebarSectionContent,
@@ -85,7 +82,7 @@ const BG_BLUR_OPTIONS: ToggleButtonGroupOption<number>[] = [
 ]
 
 const BG_BRIGHTNESS_OPTIONS: ToggleButtonGroupOption<number>[] = [
-	{ value: 0, label: 'Off' },
+	{ value: 0.001, label: 'Off' },
 	{ value: 1, label: 'Normal' },
 	{ value: 2, label: 'Bright' }
 ]
@@ -154,51 +151,69 @@ const EnvironmentSettings = () => {
 								)}
 							</SelectContent>
 						</Select>
-						<ToggleGroup
-							type="single"
-							value={environment.environmentResolution ?? '1k'}
-							onValueChange={(value) => {
-								if (value)
-									handleEnvironmentChange(
-										'environmentResolution',
-										value as EnvironmentResolution
-									)
-							}}
-							variant="outline"
-							className="h-9"
-						>
-							<ToggleGroupItem value="1k" className="px-3 text-xs">
-								1k
-							</ToggleGroupItem>
-							<ToggleGroupItem value="4k" className="px-3 text-xs">
-								4k
-							</ToggleGroupItem>
-						</ToggleGroup>
+
+						<div className="flex shrink-0 items-center gap-1">
+							{RESOLUTION_OPTIONS.map((res) => {
+								const isActive = environment.environmentResolution === res.value
+
+								return (
+									<PresetButton
+										key={res.value}
+										label={res.label}
+										isActive={isActive}
+										className="w-full"
+										onClick={() =>
+											handleEnvironmentChange(
+												'environmentResolution',
+												res.value
+											)
+										}
+									/>
+								)
+							})}
+						</div>
 					</div>
 				</SettingGroup>
 
 				{/* Lighting Strength */}
-				<SettingRow label="Lighting Strength">
-					<EnhancedSettingSlider
-						id="environment-intensity"
-						sliderProps={{
-							min: 0,
-							max: 5,
-							step: 0.01,
-							value: environment.environmentIntensity || 1,
-							onChange: (value) =>
-								handleEnvironmentChange('environmentIntensity', value)
-						}}
+				<SettingRow>
+					<PresetButtonGroup
 						label="Lighting Strength"
-						tooltip="Controls how bright the environment map appears, affecting lighting and reflections."
-						labelProps={{
-							low: '0 - Off',
-							high: '5 - Very Bright'
-						}}
-						formatValue={(value) => value.toFixed(2)}
-						valueMapping={valueMappings.quadratic}
-						allowDirectInput={true}
-					/>
+						sliderChildren={
+							<EnhancedSettingSlider
+								id="environment-intensity"
+								sliderProps={{
+									min: 0,
+									max: 5,
+									step: 0.01,
+									value: environment.environmentIntensity || 1,
+									onChange: (value) =>
+										handleEnvironmentChange('environmentIntensity', value)
+								}}
+								label="Lighting Strength"
+								tooltip="Controls how bright the environment map appears, affecting lighting and reflections."
+								labelProps={{
+									low: '0 - Off',
+									high: '5 - Very Bright'
+								}}
+								formatValue={(value) => value.toFixed(2)}
+								valueMapping={valueMappings.quadratic}
+								allowDirectInput={true}
+							/>
+						}
+					>
+						<ToggleButtonGroup
+							options={LIGHTING_OPTIONS}
+							value={getClosestValue(
+								LIGHTING_OPTIONS,
+								environment.environmentIntensity || 1
+							)}
+							onChange={(value) =>
+								handleEnvironmentChange('environmentIntensity', value)
+							}
+							className="w-full"
+						/>
+					</PresetButtonGroup>
 				</SettingRow>
 
 				{/* Background Toggle */}
@@ -217,52 +232,86 @@ const EnvironmentSettings = () => {
 
 				{/* Background Blur */}
 				{environment.background && (
-					<SettingRow label="Background Blur">
-						<EnhancedSettingSlider
-							id="environment-blur"
-							sliderProps={{
-								min: 0,
-								max: 1,
-								step: 0.01,
-								value: environment.backgroundBlurriness || 0,
-								onChange: (value) =>
-									handleEnvironmentChange('backgroundBlurriness', value)
-							}}
+					<SettingRow>
+						<PresetButtonGroup
 							label="Background Blur"
-							tooltip="Controls the blurriness of the background when environment is visible."
-							labelProps={{
-								low: '0 - Sharp',
-								high: '1 - Fully Blurred'
-							}}
-							formatValue={(value) => value.toFixed(2)}
-							allowDirectInput={true}
-						/>
+							sliderChildren={
+								<EnhancedSettingSlider
+									id="environment-blur"
+									sliderProps={{
+										min: 0,
+										max: 1,
+										step: 0.01,
+										value: environment.backgroundBlurriness || 0,
+										onChange: (value) =>
+											handleEnvironmentChange('backgroundBlurriness', value)
+									}}
+									label="Background Blur"
+									tooltip="Controls the blurriness of the background when environment is visible."
+									labelProps={{
+										low: '0 - Sharp',
+										high: '1 - Fully Blurred'
+									}}
+									formatValue={(value) => value.toFixed(2)}
+									allowDirectInput={true}
+								/>
+							}
+						>
+							<ToggleButtonGroup
+								options={BG_BLUR_OPTIONS}
+								value={getClosestValue(
+									BG_BLUR_OPTIONS,
+									environment.backgroundBlurriness || 0
+								)}
+								onChange={(value) =>
+									handleEnvironmentChange('backgroundBlurriness', value)
+								}
+								className="w-full"
+							/>
+						</PresetButtonGroup>
 					</SettingRow>
 				)}
 
 				{/* Background Brightness */}
 				{environment.background && (
-					<SettingRow label="Background Brightness">
-						<EnhancedSettingSlider
-							id="background-intensity"
-							sliderProps={{
-								min: 0,
-								max: 3,
-								step: 0.01,
-								value: environment.backgroundIntensity || 1,
-								onChange: (value) =>
-									handleEnvironmentChange('backgroundIntensity', value)
-							}}
+					<SettingRow>
+						<PresetButtonGroup
 							label="Background Brightness"
-							tooltip="Controls the brightness of the background when environment is visible."
-							labelProps={{
-								low: '0 - Off',
-								high: '3 - Very Bright'
-							}}
-							formatValue={(value) => value.toFixed(2)}
-							valueMapping={valueMappings.quadratic}
-							allowDirectInput={true}
-						/>
+							sliderChildren={
+								<EnhancedSettingSlider
+									id="background-intensity"
+									sliderProps={{
+										min: 0,
+										max: 3,
+										step: 0.01,
+										value: environment.backgroundIntensity || 1,
+										onChange: (value) =>
+											handleEnvironmentChange('backgroundIntensity', value)
+									}}
+									label="Background Brightness"
+									tooltip="Controls the brightness of the background when environment is visible."
+									labelProps={{
+										low: '0 - Off',
+										high: '3 - Very Bright'
+									}}
+									formatValue={(value) => value.toFixed(2)}
+									valueMapping={valueMappings.quadratic}
+									allowDirectInput={true}
+								/>
+							}
+						>
+							<ToggleButtonGroup
+								options={BG_BRIGHTNESS_OPTIONS}
+								value={getClosestValue(
+									BG_BRIGHTNESS_OPTIONS,
+									environment.backgroundIntensity || 1
+								)}
+								onChange={(value) =>
+									handleEnvironmentChange('backgroundIntensity', value)
+								}
+								className="w-full"
+							/>
+						</PresetButtonGroup>
 					</SettingRow>
 				)}
 			</SidebarSectionContent>
