@@ -53,6 +53,7 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 	const {
 		hasCompletedOptimizationPass,
 		handleOptimizeClick,
+		handleStackOptimizeClick,
 		guestQuota,
 		isOptimizerPreparing,
 		optimizingStep
@@ -103,6 +104,10 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 
 	const runOptimization = async () => {
 		await handleOptimizeClick()
+	}
+
+	const runStackOptimization = async () => {
+		await handleStackOptimizeClick()
 	}
 
 	const resolvedDashboardHref = dashboardHref ?? DASHBOARD_ROUTES.DASHBOARD
@@ -333,6 +338,7 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 							<>
 								<OptimizeButton
 									onOptimize={runOptimization}
+									onStackOptimize={runStackOptimization}
 									isPending={isPending}
 									mode={optimizeButtonMode}
 									isPreparing={isOptimizerPreparing}
@@ -350,6 +356,7 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 							<div className="w-full sm:w-[18rem]">
 								<OptimizeButton
 									onOptimize={runOptimization}
+									onStackOptimize={runStackOptimization}
 									isPending={isPending}
 									mode={optimizeButtonMode}
 									isPreparing={isOptimizerPreparing}

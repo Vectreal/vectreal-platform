@@ -31,3 +31,21 @@ export interface SavePendingSceneDraftInput {
 	/** Byte size of the raw client scene at the time of persisting. */
 	clientSceneBytes?: number | null
 }
+
+/**
+ * Original un-optimized scene snapshot stored in IndexedDB on first upload.
+ *
+ * Keyed by the same tab-scoped draft ID as PendingSceneDraft so both entries
+ * share a lookup key and survive auth redirects.
+ */
+export interface OriginalSceneModel {
+	id: string
+	createdAt: number
+	expiresAt: number
+	sceneData: ServerSceneData
+}
+
+/** Input used when writing the original scene snapshot to IDB. */
+export interface SaveOriginalSceneModelInput {
+	sceneData: ServerSceneData
+}
