@@ -1,5 +1,5 @@
 import { usePostHog } from '@posthog/react'
-import { type SceneSettings } from '@vctrl/core'
+import { type SceneSettings, type ServerSceneData } from '@vctrl/core'
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import {
 	type EventHandler,
@@ -33,9 +33,13 @@ import {
 	executeOptimizationStateHydration,
 	inferOptimizationPreset,
 	persistPendingSceneDraftOrchestrator,
-	getSceneNameFromFileName
+	getSceneNameFromFileName,
+	serializeSceneAssetData
 } from '../lib/domain/scene'
-import { clearPendingSceneDraft } from '../lib/persistence/pending-scene-idb'
+import {
+	clearPendingSceneDraft,
+	saveOriginalSceneModel
+} from '../lib/persistence/pending-scene-idb'
 import {
 	processAtom,
 	sceneMetaAtom,
@@ -150,6 +154,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 
 	const sceneLoadAttemptedRef = useRef(false)
 	const pendingSceneHydratedRef = useRef(false)
+	const originalSavedRef = useRef(false)
 	const lastLoadErrorToastRef = useRef<{
 		signature: string
 		at: number
@@ -711,6 +716,55 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		hydrationActions: draftHydrationActions,
 		optimizationActions: draftOptimizationActions
 	})
+
+	// Reset the guard whenever a new file is dropped so the next optimizer-ready
+	// transition triggers a fresh IDB write for the new model.
+	useEffect(() => {
+		originalSavedRef.current = false
+	}, [file?.model])
+
+	// Capture and persist the original un-optimized scene to IDB immediately
+	// after the optimizer finishes loading a locally uploaded file.
+	// Skipped for server-loaded scenes (paramSceneId / initialSceneAggregate).
+	useEffect(() => {
+		if (!optimizer?.isReady) return
+		if (paramSceneId || initialSceneAggregate) return
+		if (originalSavedRef.current) return
+		originalSavedRef.current = true
+
+		void (async () => {
+			const gltfJson = await prepareGltfDocumentForUpload()
+			if (!gltfJson || typeof gltfJson !== 'object') return
+
+			const gltfData = (gltfJson as { data?: unknown }).data ?? gltfJson
+			const gltfAssets = (gltfJson as { assets?: unknown }).assets
+			const assetData = await serializeSceneAssetData(gltfData, gltfAssets)
+
+			const sceneData: ServerSceneData = {
+				meta: {
+					name: sceneMetaState.name,
+					description: sceneMetaState.description,
+					thumbnailUrl: sceneMetaState.thumbnailUrl
+				},
+				gltfJson: gltfData as ServerSceneData['gltfJson'],
+				assetData,
+				bounds: currentSettings.bounds,
+				environment: currentSettings.environment,
+				camera: currentSettings.camera,
+				controls: currentSettings.controls,
+				shadows: currentSettings.shadows
+			}
+
+			await saveOriginalSceneModel({ sceneData })
+		})()
+	}, [
+		optimizer?.isReady,
+		paramSceneId,
+		initialSceneAggregate,
+		prepareGltfDocumentForUpload,
+		sceneMetaState,
+		currentSettings
+	])
 
 	const aggregateBootstrapState = {
 		sceneLoadAttemptedRef,

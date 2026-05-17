@@ -2,7 +2,10 @@ import { useEffect } from 'react'
 import { toast } from 'sonner'
 
 import { executePendingSceneDraftHydration } from '../../lib/domain/scene'
-import { loadPendingSceneDraft } from '../../lib/persistence/pending-scene-idb'
+import {
+	loadPendingSceneDraft,
+	setTabDraftId
+} from '../../lib/persistence/pending-scene-idb'
 
 import type { UseSceneDraftRehydrationArgs } from './contracts'
 
@@ -67,6 +70,14 @@ export const useSceneDraftRehydration = ({
 					setSceneMetaState,
 					setLastSavedSceneMeta
 				})
+
+				// Re-anchor sessionStorage tab ID so subsequent IDB lookups
+				// (e.g. loadOriginalSceneModel) resolve the correct entries in a
+				// new OAuth tab that started with a fresh sessionStorage.
+				if (draftId) {
+					setTabDraftId(draftId)
+				}
+
 				toast.success('Restored your unsaved scene from this browser')
 			} catch (error) {
 				console.error('Failed to restore pending scene draft:', error)

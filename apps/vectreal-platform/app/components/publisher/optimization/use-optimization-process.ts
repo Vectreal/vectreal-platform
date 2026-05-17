@@ -10,6 +10,7 @@ import {
 	toUpgradeModalPayload
 } from '../../../lib/domain/billing/client/billing-limit-error'
 import { resolveSceneMetrics } from '../../../lib/domain/scene'
+import { loadOriginalSceneModel } from '../../../lib/persistence/pending-scene-idb'
 import {
 	optimizationAtom,
 	optimizationRuntimeAtom
@@ -217,6 +218,8 @@ export const useOptimizationProcess = ({
 		dedupOptimization,
 		normalsOptimization,
 		applyOptimization,
+		reset,
+		loadFromServerSceneData,
 		info,
 		report
 	} = optimizer
@@ -327,12 +330,14 @@ export const useOptimizationProcess = ({
 	const handleOptimizeClick = useCallback(async () => {
 		if (isPending || isPreparing || !isReady) return false
 
-		let didApplyOptimization = false
-
+		// Lock the UI immediately so the drawer cannot be closed and the button
+		// shows "Optimizing..." during the IDB reload phase.
 		setOptimizationRuntime((prev) => ({
 			...prev,
 			isPending: true
 		}))
+
+		let didApplyOptimization = false
 
 		const STEP_LABELS: Record<string, string> = {
 			simplification: 'Mesh simplification',
@@ -344,6 +349,19 @@ export const useOptimizationProcess = ({
 		const SYNC_STEP = 'Syncing to viewer'
 
 		try {
+			// Non-destructive: reload from the original unoptimized snapshot so each
+			// preset starts from the original file rather than the previously optimized
+			// state. Runs inside try so finally always clears isPending on failure.
+			const original = await loadOriginalSceneModel()
+			if (original) {
+				reset()
+				await loadFromServerSceneData(original.sceneData)
+			} else {
+				console.warn(
+					'[optimization] No original scene in IDB; optimizing from current document state.'
+				)
+			}
+
 			const optimizationOptions = Object.values(plannedOptimizations).filter(
 				(option): option is OptimizationOption => !!option && option.enabled
 			)
@@ -569,6 +587,8 @@ export const useOptimizationProcess = ({
 		dedupOptimization,
 		normalsOptimization,
 		applyOptimization,
+		reset,
+		loadFromServerSceneData,
 		calculateSceneBytes,
 		file?.sourcePackageBytes,
 		file?.sourceTextureBytes,
