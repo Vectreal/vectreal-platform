@@ -1,0 +1,277 @@
+---
+title: "Optimization Presets Demystified — and the Texture Compression Playbook That Sits Underneath Them"
+slug: "optimization-presets-and-texture-compression"
+excerpt: "Discover the power of our four optimization presets: Raw, High, Medium, and Low. Each preset is a designed recipe that balances mesh ratio, texture quality, and graph cleanup to suit your specific needs. By utilizing KTX2 + Basis Universal for texture compression and glTF-Transform for mesh simplification, we ensure that your files are optimized for both size and quality."
+publishedAt: "2026-05-17"
+updatedAt: "2026-05-17"
+category: "guides"
+tags:
+- "platform"
+- "open-source"
+- "3d-web"
+- "optimization"
+- "texture-compression"
+- "performance"
+- "ktx2"
+- "gltf-transform"
+author:
+    name: "Vectreal Team"
+    role: "Founding Contributors"
+    bio: "Building open infrastructure for practical 3D on the web."
+    avatar: "/assets/images/logo-192.png"
+    xUrl: "https://x.com/vectreal"
+    linkedinUrl: "https://www.linkedin.com/company/vectreal"
+coverImage: "/assets/images/newsroom/06/og-optimization-presets-and-texture-compression.webp"
+draft: false
+thumbnailImage: "/assets/images/newsroom/06/thumbnail-optimization-presets-and-texture-compression.webp"
+---
+
+A great 3D embed loads in under three seconds, holds 60 fps on a mid-range laptop, and looks like the model the artist actually shipped. A poorly optimized one downloads thirty megabytes, stutters on first interaction, and trades visual quality for size in ways nobody asked for. The difference between the two is almost never the model. It's the optimization pass — and specifically the four-line summary of what that pass actually did to the mesh and the textures.
+
+The Vectreal Publisher exposes this as four presets — Raw, High, Medium, Low. They look simple. The thinking behind them is not. Each preset is a coordinated set of decisions about how much geometry to keep, how aggressively to compress textures, and what to leave alone. They are non-destructive — switching between them re-processes from the original uploaded file every time. Nothing is permanently lost, and you can sweep through all four in the time it takes to make a cup of coffee.
+
+This article walks through what each preset actually does, when to override the defaults, and the texture-compression playbook that does most of the heavy lifting underneath. Every number cited is the value the Publisher ships with today. The pipeline is open source under AGPL-3.0, so if you want to verify a number you can read the source.
+
+---
+
+## What "optimization" means in a 3D web context
+
+Three things travel from a 3D file to a browser, and all three are usually too big.
+
+The first is **geometry** — the triangles that describe surfaces. A model exported from a high-end DCC tool typically lands at hundreds of thousands of triangles. A web-friendly version often needs a quarter of that, sometimes less. The trick is reducing triangle count without flattening detail in the places a viewer's eye lands.
+
+The second is **textures** — the images mapped onto those triangles. Textures are usually the biggest single contributor to file size. A 2K PBR material set (albedo, normal, roughness, metallic, ambient occlusion) at PNG quality lands somewhere around eight to twelve megabytes per material slot. A scene with three materials and the default PNG export ships twenty-five megabytes of textures before geometry is even counted.
+
+The third is **scene structure** — buffers, animations, nodes, accessors. These add up quietly. A glTF with unused attributes, redundant accessors, or unreferenced animation clips ships them all. A good optimization pass strips what nothing references.
+
+Vectreal's optimization handles all three. Mesh simplification runs on geometry. KTX2/Basis Universal handles textures. Scene cleanup happens on the glTF graph. The four presets are pre-tuned recipes — combinations of these three knobs that hit common quality-vs-size tradeoffs.
+
+---
+
+## The four presets, in order
+
+A practical way to think about the presets: each one is "what looks acceptable in this context, with the minimum bytes that get you there." Raw is the ground truth. Low is the budget tier. The two in the middle are the ones most production scenes will land on.
+
+| Preset | Mesh ratio | Texture quality | Typical use |
+| --- | --- | --- | --- |
+| Raw | 100% | Lossless | Internal review, archival, debugging |
+| High | 90% | 90% (KTX2 / Basis) | Production-grade default |
+| Medium | 70% | 75% (KTX2 / Basis) | E-commerce, marketing pages |
+| Low | 50% | 60% (KTX2 / Basis) | Mobile-first, thumbnail grids |
+
+### Raw — 100% mesh, lossless textures
+
+Raw keeps everything. Triangle count matches the source file exactly. Textures stay in their original format and resolution. What Raw does run is a glTF graph cleanup — strip unreferenced data, deduplicate accessors, normalize unit conventions. The output is a clean glTF with the original visual fidelity.
+
+Raw is the right choice for three situations. The first is **internal review** — when an art director needs to see exactly what the artist exported, not what the pipeline produced. The second is **archival** — a published version of the source-of-truth that has the same provenance as the original file. The third is **debugging an optimization regression** — set the preset to Raw, see if the issue goes away, then narrow down which pass introduced it.
+
+Raw is almost never the right choice for a production embed. A typical Raw output is large enough that a visitor on a hotel WiFi will wait long enough to bounce.
+
+### High — 90% mesh, 90% texture quality
+
+High is the "I want it to look the same and be smaller" preset. Mesh decimation drops 10% of triangles using a quadric-error metric — vertices in flat regions get merged first, silhouette edges are preserved. Textures get re-encoded at 90% quality through the KTX2/Basis Universal pipeline.
+
+The visible difference between Raw and High is typically zero. The file-size difference is significant. For most production-grade models — architectural visualization, high-end product photography, anything where visual fidelity is the brand promise — High is the safe default.
+
+When High is the wrong choice: very simple geometry where 10% reduction shaves nothing meaningful, or extremely texture-heavy scenes where the texture quality drop introduces visible banding in gradient-heavy materials. Both cases are rare. High is the preset most production scenes ship with.
+
+### Medium — 70% mesh, 75% texture quality
+
+Medium is the "this is shipping on a marketing site and load time matters more than pixel-perfection" preset. Triangle count drops by 30%. Textures get re-encoded at 75% quality. The file shrinks substantially, often by more than half versus Raw, depending on how much of the original size was geometry vs. texture.
+
+Medium is the right choice for **e-commerce product pages, configurator front-ends, landing pages with multiple 3D modules, and any embed where the user expects fast load over museum-grade detail**. The visual quality drop is real but usually acceptable — the kind of difference a viewer would notice in a side-by-side comparison and otherwise miss.
+
+Things to watch with Medium: hard-edge geometry (typography, mechanical parts with crisp bevels) shows decimation artifacts at 70% more clearly than organic geometry. Textures with fine high-frequency detail (woven fabric, brushed metal at close range) start showing block artifacts at 75% compression. If the scene leans hard on either, override Medium with a custom setting or step up to High.
+
+### Low — 50% mesh, 60% texture quality
+
+Low is the "this needs to load on a thin pipe right now" preset. Half the triangles, textures at 60% quality. The file is small enough to ship over flaky mobile networks without timing out.
+
+Low is the right choice for **mobile-first product detail pages, thumbnails in a grid, AR preview previews where the AR engine will re-tessellate anyway, and any embed where the alternative is the visitor not seeing the model at all**. The visual quality drop is visible — silhouettes get a touch softer, texture detail flattens — but the scene is still recognizably the model.
+
+Low is the wrong choice for anything where the model itself is the product. A jewelry shop's 4-carat solitaire at Low looks like a 1.5-carat solitaire. A textile manufacturer's herringbone weave at Low looks like a fuzzy gray field. Know your audience.
+
+---
+
+## Non-destructive — why this matters more than it sounds
+
+Every preset re-processes from the original uploaded file. Switching from High to Medium does not chain decimation on top of decimation. The original file sits in the Publisher's storage, untouched, and each preset is a fresh derivation.
+
+The practical implication: you can iterate freely. Try High. Look at the embed. Try Medium. Compare. Try Low. Decide. The original file is never harmed, and the preset choice is just metadata until you publish.
+
+This is the single design decision that separates "optimization tool" from "optimization workflow." A destructive pipeline forces a one-shot decision — pick your preset, lose your original, live with it. A non-destructive pipeline lets you treat optimization the same way you treat color grading or audio mastering: try variations, compare, decide.
+
+There is a small cost. Each preset switch triggers a full re-process. For a multi-material scene with high-resolution textures, that's a few seconds. The work runs in a Web Worker — the viewport stays interactive while compression runs in the background — but the new preset is not instantly available. Coffee-cup latency for thoughtful choices is a fair trade.
+
+---
+
+## What's actually happening underneath — the pipeline in three stages
+
+The optimization pipeline runs three stages, in order, every time you change a preset.
+
+### Stage 1 — Mesh simplification via glTF-Transform
+
+[glTF-Transform](https://gltf-transform.dev/) is the de-facto standard library for programmatic glTF manipulation. Vectreal uses it for the mesh stage of every preset above Raw.
+
+Mesh simplification uses a [quadric-error metric](https://en.wikipedia.org/wiki/Surface_simplification) — the same algorithm Blender's Decimate modifier uses. The metric measures how much the surface would distort if a vertex were removed. Vertices in flat regions have low error and get merged first. Vertices on silhouette edges or high-curvature surfaces have high error and survive.
+
+The target ratio (90 / 70 / 50%) is the percentage of the original triangle count that gets kept. The algorithm runs until that ratio is hit. For an artist with a 200,000-triangle model, that produces 180,000 / 140,000 / 100,000 triangles respectively.
+
+Things glTF-Transform does as part of the same pass: weld duplicate vertices, dedupe materials, dedupe textures, prune unused nodes and animations, normalize coordinate conventions. Many real-world scenes get a 5–15% size reduction from these passes alone, before mesh decimation is counted.
+
+### Stage 2 — Texture compression via KTX2 + Basis Universal
+
+This is the stage that does the heavy lifting on file size, and it deserves its own section. Skip ahead to the texture compression playbook below for the long version. The short version: every texture in the scene gets converted from PNG/JPEG to KTX2 (the container format) with Basis Universal as the encoded payload. The result is a single texture file that decodes to one of several GPU-native formats at load time, depending on what the visitor's device supports.
+
+The texture-quality percentages in the preset table (Lossless / 90% / 75% / 60%) map to the quality slider on the Basis Universal encoder. The encoder is deterministic — the same input file at the same quality setting produces the same output every time. There is no random retry budget, no quality drift across re-runs.
+
+Texture compression runs in a Web Worker. The Publisher's viewport stays responsive — you can orbit the scene, change cameras, set up lighting — while the worker grinds through compression in the background. A first-time pass on a multi-material scene typically takes 10–40 seconds depending on texture resolution. Subsequent preset switches are faster because the worker can reuse cached intermediate results.
+
+### Stage 3 — glTF graph cleanup
+
+The third stage is housekeeping. The pipeline walks the glTF graph and removes anything that the cleaned-up mesh and compressed textures no longer reference — orphan accessors, unused buffers, dangling animation channels. It also normalizes a few common inconsistencies — unit conventions, axis orientation, color space assumptions — that frequently come from cross-tool export.
+
+This stage is small in compute and large in impact. A glTF exported from a DCC tool often carries a few hundred kilobytes of metadata that the viewer never needs. After cleanup, that metadata is gone. The file that goes over the wire is the minimum representation of the scene the viewer will actually render.
+
+---
+
+## Texture compression playbook
+
+If you read one section of this article carefully, this is the one. Texture compression is where most of the optimization budget gets spent, and the difference between a thoughtful texture strategy and a careless one is often the difference between a 3 MB scene and a 25 MB scene.
+
+### Why PNG and JPEG are wrong for 3D
+
+PNG and JPEG are designed for 2D display — a browser decompresses them and shows them on screen. A GPU rendering a 3D scene needs the texture in a different form. It needs a format that can be sampled at arbitrary UV coordinates, mipmapped, filtered, and held in GPU memory.
+
+When a browser renders a 3D scene textured with a PNG, it does this: download the PNG, decompress it to raw RGBA pixels in CPU memory, upload the raw pixels to the GPU. A 2K PNG that ships as 6 MB on disk decompresses to 16 MB of raw pixels in GPU memory. The compression saved download bandwidth but cost GPU memory.
+
+KTX2 + Basis Universal solves this by shipping the texture in a format that decodes directly to GPU-native compressed formats — BC7 on desktop, ASTC on mobile, ETC2 as a fallback. The texture stays compressed in GPU memory, the upload is faster, and the format is sampling-friendly. A KTX2 texture is typically 4–8× smaller in GPU memory than its decompressed PNG equivalent.
+
+### What Basis Universal actually is
+
+[Basis Universal](https://github.com/BinomialLLC/basis_universal) is a "transcode-at-load-time" texture format. The encoded file is a generic intermediate. At load time, the GPU driver transcodes it to whatever compressed format the local GPU supports best. The same KTX2/Basis file works on every device — the driver picks the right local format.
+
+This is a big deal. The traditional alternative was shipping multiple texture variants — DDS for Windows, PVR for iOS, ETC for Android — and detecting which one to load. Basis Universal collapses that into one file with one URL.
+
+### The quality slider, in plain terms
+
+Basis Universal exposes a quality setting from roughly 0 to 255. Vectreal's presets map to four points on that scale.
+
+| Preset | Encoder quality | Typical artifact threshold |
+| --- | --- | --- |
+| Raw | Lossless (uncompressed KTX2) | None |
+| High | 90% | Imperceptible on smooth gradients; very faint blocking on extreme close-up detail |
+| Medium | 75% | Faint blocking visible on close inspection of high-frequency detail |
+| Low | 60% | Visible banding on smooth gradients; visible blocking on fine detail |
+
+The threshold values are guidance, not promises. Compression is content-dependent. A scene that is mostly flat color with a few highlight regions will tolerate quality 60 with no visible degradation. A scene full of fine herringbone weave will show artifacts at quality 75. The right way to pick a quality setting is to look at the scene at each preset and choose the lowest one that still looks right.
+
+### When to override the preset for textures specifically
+
+Sometimes the right answer is "Medium for the mesh, but High texture quality." The preset system handles the common cases. Custom optimization handles the edge cases.
+
+**Override the texture quality upward when:**
+
+- The scene has a hero texture — a label, a logo, a piece of typography rendered as a texture — where any blocking is going to be visible. Bump that material's texture to High or Lossless and leave the rest at Medium.
+- The scene is texture-light but geometry-heavy. Mesh decimation savings dominate; texture quality is not where the budget should go.
+- The scene targets retina displays at close viewing distance. A 1× viewing distance on a 2× pixel-density screen demands more texture quality than the same scene at marketing-card distance.
+
+**Override the texture quality downward when:**
+
+- The scene targets mobile-first and the textures are background or accent (not hero) materials. The 75% → 60% step on accents is invisible at thumb's-distance on a phone.
+- The scene uses many small materials. Each individual material doesn't carry much detail, but the count adds up. Dropping texture quality across the board saves more bytes than fewer materials at higher quality.
+
+### Texture resolution is a separate lever
+
+The quality slider compresses the texture you give it. It does not change the resolution. A 4K texture at 60% quality is still a 4K texture — it just has more aggressive block compression.
+
+For most web 3D, 2K textures are more than enough. 1K is often plenty. Going from 4K to 2K is a 4× memory saving, which dwarfs anything the quality slider can do. The right order of operations is: pick the right resolution first, then pick the right quality.
+
+The Publisher does not currently auto-downsize textures based on resolution. That's on the roadmap and we'd rather get it right than ship it fast. For now, downsize in your DCC tool before export, or in a separate pass before upload.
+
+---
+
+## Reading the metrics — before and after, in honest numbers
+
+Every published Vectreal scene exposes a stats panel. Two numbers tell most of the story.
+
+**Total file size** is the byte count of what the visitor downloads. This includes the optimized glTF, the KTX2 textures, and any animation data. The number you want to see is "under 5 MB for a hero scene, under 2 MB for a thumbnail-grid scene, under 500 KB for an inline product detail card."
+
+**Triangle count** is the number of triangles the GPU will rasterize per frame. For a mid-range laptop running a single-scene embed, 100,000–250,000 triangles is comfortable. For a phone, halve that. For a multi-embed page, halve again. These are rules of thumb, not hard limits — actual headroom depends on shader complexity and post-processing — but they're a reasonable starting frame.
+
+The number the metrics panel doesn't show, and the one that often matters most, is **time to first frame**. That's a function of total file size, network speed, and viewer initialization. The honest way to measure it is to load the embed on the device and network you actually expect visitors to use. Chrome DevTools throttling helps but doesn't fully capture mobile reality. If your visitors are mostly on hotel WiFi and ten-year-old Android phones, build with that constraint visible.
+
+A practical optimization workflow: open the embed on the device profile you care about, time the first frame, switch presets until the time is acceptable, then verify the visual quality is still acceptable. Optimize for the constraint that bites first.
+
+---
+
+## The five-minute optimization pass
+
+Anyone with a published Vectreal scene can run this in five minutes and ship a better-loading version of the same scene.
+
+1. Open the Publisher. Open your scene.
+2. Note the current preset and the current file size in the stats panel.
+3. Drop the preset one notch (High → Medium, or Medium → Low).
+4. Wait for the re-processing pass to finish. Look at the scene. Compare against the previous preset side-by-side if you can.
+5. If the visual quality is still acceptable, re-publish. If not, go back up one notch.
+
+The file size delta is usually 30–60% per preset step. Time-to-first-frame on mobile drops proportionally. Visitors who were bouncing because the model never finished loading start finishing the load.
+
+The pass is honest about its assumptions: you're trusting the eye, not a metric. The right way to do it for production is to run the comparison on the actual device profile your visitors use. The way most teams will actually do it is "look at it on my laptop, ship if it looks fine." Both are defensible. The first one is better.
+
+---
+
+## When to override the presets entirely
+
+The four presets cover most scenes. Three situations call for custom optimization.
+
+### Custom situation 1 — Hero scene with one critical material
+
+A jewelry product detail page where the diamond is the entire point. The diamond's material needs maximum texture fidelity. The setting and the band are supporting cast. The right answer is mesh at Medium (the diamond is geometrically simple), texture at Lossless for the diamond material, texture at High for the setting, texture at Medium for the band. The presets can't express this directly. Custom optimization can.
+
+The Publisher exposes per-material overrides for advanced users. The presets sit on top of the override system — selecting a preset is shorthand for "apply this set of overrides to every material." You can start from a preset and selectively override one or two materials without losing the rest.
+
+### Custom situation 2 — Geometry-heavy, texture-light scene
+
+A CAD model — a mechanical part, an architectural detail, an engineering visualization — where the geometry carries all the information and the textures are flat colors or simple PBR slabs. Mesh decimation at 50% might still look fine. Texture compression beyond 90% saves nothing because the textures were already tiny. The right preset is "Low mesh, Lossless texture." That's not one of the four presets. It's custom.
+
+### Custom situation 3 — Multi-embed pages
+
+A landing page with five 3D modules across the fold. Each one needs to load fast. None of them is the hero. The right preset for each is probably Low. The right way to pick is to look at the whole-page load profile, not each scene in isolation. If the page has a budget of 4 MB total, that's 800 KB per scene, which is firmly Low territory.
+
+---
+
+## What's not yet shipped — roadmap honesty
+
+Three optimization workflows sit on the roadmap. Each one is the next thing we want to get right, not the next thing we want to ship fast.
+
+**Automatic texture resolution adjustment.** Today the Publisher compresses whatever resolution you give it. Future versions will detect overspec textures and downsize them before compression. The hard part is doing this without surprising the user when their crisp 4K hero texture comes back at 2K.
+
+**Per-LOD mesh optimization.** A scene rendered close-up needs full mesh detail. The same scene rendered as a thumbnail needs much less. Today's pipeline produces one optimized mesh. Future versions will produce a chain of LODs and let the viewer swap based on rendered size.
+
+**Custom-budget mode.** Today the four presets are quality-target presets. A future "byte-budget" mode would take a target file size and pick the optimization parameters that hit it. Useful for teams with hard performance constraints — "this scene must ship under 1.5 MB, get me as close to that as possible."
+
+None of these have dates. Input on which one matters most to your workflow is genuinely useful — the [GitHub Discussions Ideas thread for this article](https://github.com/Vectreal/vectreal-platform/discussions) is the right place.
+
+---
+
+## The honest version, in three lines
+
+- The four presets cover the 80% case. Pick Medium, look at it, decide whether to step up or down.
+- Texture compression is doing most of the work. KTX2 + Basis Universal is the modern answer; PNG and JPEG were designed for a different problem.
+- Optimization is iteration, not a one-shot decision. The pipeline is non-destructive — go look at the same scene at each preset and pick the one that works.
+
+The Publisher is open under AGPL-3.0. The pipeline source is in the repo. The presets are configuration, not magic — you can read what each one does and verify the numbers cited above against the live code.
+
+If you have a scene shipped at Raw and you've never tried Medium, this is your prompt. Open the Publisher, switch presets, look at the result. Five minutes. Smaller file. Same scene.
+
+---
+
+## Try it
+
+→ Open the Publisher and run the five-minute pass on a scene you've already shipped: https://vectreal.com/publisher
+→ See the camera and presentation companion: https://vectreal.com/news-room/camera-presets-and-transitions
+→ Read the React integration follow-up: https://vectreal.com/news-room/react-viewer-integration
+→ Source under AGPL-3.0: https://github.com/Vectreal/vectreal-platform
+→ Community Discord (preset-drops + before/after thread): https://discord.gg/A9a3nPkZw7
+
