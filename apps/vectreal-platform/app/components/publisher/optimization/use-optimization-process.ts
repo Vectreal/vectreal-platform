@@ -326,274 +326,293 @@ export const useOptimizationProcess = ({
 		setOptimizationRuntime
 	])
 
-	// Handle optimization process
-	const handleOptimizeClick = useCallback(async () => {
-		if (isPending || isPreparing || !isReady) return false
+	// Shared optimization body. Pass fromOriginal=true (default) to reload from the
+	// IDB original snapshot first — non-destructive preset switching per the article.
+	// Pass fromOriginal=false to apply on top of the current optimizer document state.
+	const runOptimization = useCallback(
+		async (fromOriginal: boolean): Promise<boolean> => {
+			if (isPending || isPreparing || !isReady) return false
 
-		// Lock the UI immediately so the drawer cannot be closed and the button
-		// shows "Optimizing..." during the IDB reload phase.
-		setOptimizationRuntime((prev) => ({
-			...prev,
-			isPending: true
-		}))
+			// Lock the UI immediately so the drawer cannot be closed and the button
+			// shows "Optimizing..." during the IDB reload phase.
+			setOptimizationRuntime((prev) => ({
+				...prev,
+				isPending: true
+			}))
 
-		let didApplyOptimization = false
+			let didApplyOptimization = false
 
-		const STEP_LABELS: Record<string, string> = {
-			simplification: 'Mesh simplification',
-			texture: 'Texture optimization',
-			quantize: 'Vertex quantization',
-			dedup: 'Duplicate removal',
-			normals: 'Normal refinement'
-		}
-		const SYNC_STEP = 'Syncing to viewer'
-
-		try {
-			// Non-destructive: reload from the original unoptimized snapshot so each
-			// preset starts from the original file rather than the previously optimized
-			// state. Runs inside try so finally always clears isPending on failure.
-			const original = await loadOriginalSceneModel()
-			if (original) {
-				reset()
-				await loadFromServerSceneData(original.sceneData)
-			} else {
-				console.warn(
-					'[optimization] No original scene in IDB; optimizing from current document state.'
-				)
+			const STEP_LABELS: Record<string, string> = {
+				simplification: 'Mesh simplification',
+				texture: 'Texture optimization',
+				quantize: 'Vertex quantization',
+				dedup: 'Duplicate removal',
+				normals: 'Normal refinement'
 			}
+			const SYNC_STEP = 'Syncing to viewer'
 
-			const optimizationOptions = Object.values(plannedOptimizations).filter(
-				(option): option is OptimizationOption => !!option && option.enabled
-			)
-			let shouldConsumeOptimizationRun = false
-
-			const stepNames = optimizationOptions.map(
-				(o) => STEP_LABELS[o.name] ?? o.name
-			)
-			setOptimizingStep({
-				current: null,
-				completed: [],
-				allSteps: [...stepNames, SYNC_STEP]
-			})
-
-			if (optimizationOptions.length > 0) {
-				const checkResult = await requestOptimizationRunQuota('check')
-				if (checkResult.isGuest) {
-					setGuestQuota(toGuestQuotaState(checkResult))
-					if (typeof checkResult.remaining === 'number') {
-						toast.message(
-							`Guest optimizations left today: ${checkResult.remaining}/${typeof checkResult.limit === 'number' ? checkResult.limit : DEFAULT_GUEST_QUOTA_LIMIT}`
-						)
-					}
-				}
-				if (
-					checkResult.outcome === 'soft_limit_warning' &&
-					typeof checkResult.currentValue === 'number' &&
-					typeof checkResult.limit === 'number'
-				) {
-					toast.warning(
-						`Optimization usage is high (${checkResult.currentValue}/${checkResult.limit}). Consider upgrading to avoid interruptions.`
-					)
-				}
-			}
-
-			if (typeof clientSceneBytes !== 'number') {
-				const baselineSceneBytes =
-					typeof file?.sourcePackageBytes === 'number'
-						? file.sourcePackageBytes
-						: typeof latestSceneStats?.currentSceneBytes === 'number'
-							? latestSceneStats.currentSceneBytes
-							: await withTimeout(
-									calculateSceneBytes(),
-									MODEL_SYNC_TIMEOUT_MS,
-									'Baseline scene size calculation'
-								)
-				if (typeof baselineSceneBytes === 'number') {
-					setOptimizationRuntime((prev) => ({
-						...prev,
-						isSceneSizeLoading: false,
-						clientSceneBytes: baselineSceneBytes
-					}))
-				}
-			}
-
-			if (typeof clientTextureBytes !== 'number') {
-				const baselineTextureBytes =
-					typeof file?.sourceTextureBytes === 'number'
-						? file.sourceTextureBytes
-						: (report?.stats.textures.before ?? null)
-				if (typeof baselineTextureBytes === 'number') {
-					setOptimizationRuntime((prev) => ({
-						...prev,
-						clientTextureBytes: baselineTextureBytes
-					}))
-				}
-			}
-
-			for (let i = 0; i < optimizationOptions.length; i++) {
-				const option = optimizationOptions[i]
-				const stepLabel = STEP_LABELS[option.name] ?? option.name
-
-				setOptimizingStep((prev) => ({ ...prev, current: stepLabel }))
-
-				try {
-					if (option.name === 'simplification') {
-						await withTimeout(
-							simplifyOptimization(option),
-							OPTIMIZATION_STEP_TIMEOUT_MS,
-							'Simplification'
-						)
-						shouldConsumeOptimizationRun = true
-					} else if (option.name === 'texture') {
-						await withTimeout(
-							texturesOptimization(option),
-							OPTIMIZATION_STEP_TIMEOUT_MS,
-							'Texture optimization'
-						)
-						shouldConsumeOptimizationRun = true
-					} else if (option.name === 'quantize') {
-						await withTimeout(
-							quantizeOptimization(),
-							OPTIMIZATION_STEP_TIMEOUT_MS,
-							'Quantization'
-						)
-						shouldConsumeOptimizationRun = true
-					} else if (option.name === 'dedup') {
-						await withTimeout(
-							dedupOptimization(),
-							OPTIMIZATION_STEP_TIMEOUT_MS,
-							'Deduplication'
-						)
-						shouldConsumeOptimizationRun = true
-					} else if (option.name === 'normals') {
-						await withTimeout(
-							normalsOptimization(),
-							OPTIMIZATION_STEP_TIMEOUT_MS,
-							'Normals optimization'
-						)
-						shouldConsumeOptimizationRun = true
+			try {
+				if (fromOriginal) {
+					// Non-destructive: reload from the original unoptimized snapshot so each
+					// preset starts from the original file rather than the previously optimized
+					// state. Runs inside try so finally always clears isPending on failure.
+					const original = await loadOriginalSceneModel()
+					if (original) {
+						reset()
+						await loadFromServerSceneData(original.sceneData)
 					} else {
-						const unknownOption = option as OptimizationOption
-						console.warn(`Unknown optimization type: ${unknownOption.name}`)
+						console.warn(
+							'[optimization] No original scene in IDB; optimizing from current document state.'
+						)
 					}
+				}
 
-					setOptimizingStep((prev) => ({
-						...prev,
-						completed: [...prev.completed, stepLabel]
-					}))
+				const optimizationOptions = Object.values(plannedOptimizations).filter(
+					(option): option is OptimizationOption => !!option && option.enabled
+				)
+				let shouldConsumeOptimizationRun = false
 
-					// Let UI update between optimizations
-					await new Promise<void>((resolve) =>
-						requestAnimationFrame(() => setTimeout(() => resolve(), 0))
-					)
-				} catch (error) {
-					console.error(`Error processing ${option.name}:`, error)
+				const stepNames = optimizationOptions.map(
+					(o) => STEP_LABELS[o.name] ?? o.name
+				)
+				setOptimizingStep({
+					current: null,
+					completed: [],
+					allSteps: [...stepNames, SYNC_STEP]
+				})
 
+				if (optimizationOptions.length > 0) {
+					const checkResult = await requestOptimizationRunQuota('check')
+					if (checkResult.isGuest) {
+						setGuestQuota(toGuestQuotaState(checkResult))
+						if (typeof checkResult.remaining === 'number') {
+							toast.message(
+								`Guest optimizations left today: ${checkResult.remaining}/${typeof checkResult.limit === 'number' ? checkResult.limit : DEFAULT_GUEST_QUOTA_LIMIT}`
+							)
+						}
+					}
 					if (
-						option.name === 'texture' &&
-						error instanceof Error &&
-						error.message.includes('failed for ') &&
-						!error.message.includes('failed for all textures')
+						checkResult.outcome === 'soft_limit_warning' &&
+						typeof checkResult.currentValue === 'number' &&
+						typeof checkResult.limit === 'number'
 					) {
-						shouldConsumeOptimizationRun = true
+						toast.warning(
+							`Optimization usage is high (${checkResult.currentValue}/${checkResult.limit}). Consider upgrading to avoid interruptions.`
+						)
+					}
+				}
+
+				if (typeof clientSceneBytes !== 'number') {
+					const baselineSceneBytes =
+						typeof file?.sourcePackageBytes === 'number'
+							? file.sourcePackageBytes
+							: typeof latestSceneStats?.currentSceneBytes === 'number'
+								? latestSceneStats.currentSceneBytes
+								: await withTimeout(
+										calculateSceneBytes(),
+										MODEL_SYNC_TIMEOUT_MS,
+										'Baseline scene size calculation'
+									)
+					if (typeof baselineSceneBytes === 'number') {
+						setOptimizationRuntime((prev) => ({
+							...prev,
+							isSceneSizeLoading: false,
+							clientSceneBytes: baselineSceneBytes
+						}))
+					}
+				}
+
+				if (typeof clientTextureBytes !== 'number') {
+					const baselineTextureBytes =
+						typeof file?.sourceTextureBytes === 'number'
+							? file.sourceTextureBytes
+							: (report?.stats.textures.before ?? null)
+					if (typeof baselineTextureBytes === 'number') {
+						setOptimizationRuntime((prev) => ({
+							...prev,
+							clientTextureBytes: baselineTextureBytes
+						}))
+					}
+				}
+
+				for (let i = 0; i < optimizationOptions.length; i++) {
+					const option = optimizationOptions[i]
+					const stepLabel = STEP_LABELS[option.name] ?? option.name
+
+					setOptimizingStep((prev) => ({ ...prev, current: stepLabel }))
+
+					try {
+						if (option.name === 'simplification') {
+							await withTimeout(
+								simplifyOptimization(option),
+								OPTIMIZATION_STEP_TIMEOUT_MS,
+								'Simplification'
+							)
+							shouldConsumeOptimizationRun = true
+						} else if (option.name === 'texture') {
+							await withTimeout(
+								texturesOptimization(option),
+								OPTIMIZATION_STEP_TIMEOUT_MS,
+								'Texture optimization'
+							)
+							shouldConsumeOptimizationRun = true
+						} else if (option.name === 'quantize') {
+							await withTimeout(
+								quantizeOptimization(),
+								OPTIMIZATION_STEP_TIMEOUT_MS,
+								'Quantization'
+							)
+							shouldConsumeOptimizationRun = true
+						} else if (option.name === 'dedup') {
+							await withTimeout(
+								dedupOptimization(),
+								OPTIMIZATION_STEP_TIMEOUT_MS,
+								'Deduplication'
+							)
+							shouldConsumeOptimizationRun = true
+						} else if (option.name === 'normals') {
+							await withTimeout(
+								normalsOptimization(),
+								OPTIMIZATION_STEP_TIMEOUT_MS,
+								'Normals optimization'
+							)
+							shouldConsumeOptimizationRun = true
+						} else {
+							const unknownOption = option as OptimizationOption
+							console.warn(`Unknown optimization type: ${unknownOption.name}`)
+						}
+
 						setOptimizingStep((prev) => ({
 							...prev,
 							completed: [...prev.completed, stepLabel]
 						}))
+
+						// Let UI update between optimizations
+						await new Promise<void>((resolve) =>
+							requestAnimationFrame(() => setTimeout(() => resolve(), 0))
+						)
+					} catch (error) {
+						console.error(`Error processing ${option.name}:`, error)
+
+						if (
+							option.name === 'texture' &&
+							error instanceof Error &&
+							error.message.includes('failed for ') &&
+							!error.message.includes('failed for all textures')
+						) {
+							shouldConsumeOptimizationRun = true
+							setOptimizingStep((prev) => ({
+								...prev,
+								completed: [...prev.completed, stepLabel]
+							}))
+						}
 					}
 				}
-			}
 
-			// Sync the optimized model back to the Three.js viewer
-			if (shouldConsumeOptimizationRun) {
-				setOptimizingStep((prev) => ({ ...prev, current: SYNC_STEP }))
-				try {
-					await withTimeout(
-						applyOptimization(),
-						MODEL_SYNC_TIMEOUT_MS,
-						'Model sync'
+				// Sync the optimized model back to the Three.js viewer
+				if (shouldConsumeOptimizationRun) {
+					setOptimizingStep((prev) => ({ ...prev, current: SYNC_STEP }))
+					try {
+						await withTimeout(
+							applyOptimization(),
+							MODEL_SYNC_TIMEOUT_MS,
+							'Model sync'
+						)
+						setOptimizingStep((prev) => ({
+							...prev,
+							completed: [...prev.completed, SYNC_STEP]
+						}))
+					} catch (syncError) {
+						console.warn('Model sync after optimization failed:', syncError)
+					}
+				}
+
+				didApplyOptimization = shouldConsumeOptimizationRun
+
+				if (optimizationOptions.length > 0 && shouldConsumeOptimizationRun) {
+					try {
+						const consumeResult = await requestOptimizationRunQuota('consume')
+
+						if (consumeResult.isGuest) {
+							setGuestQuota(toGuestQuotaState(consumeResult))
+						}
+					} catch (error) {
+						console.warn('Failed to record optimization run usage:', error)
+					}
+				}
+			} catch (error) {
+				console.error('Error during optimization:', error)
+				if (isBillingLimitError(error)) {
+					const modalPayload = toUpgradeModalPayload(error)
+					setUpgradeModal(
+						buildUpgradeModalState({
+							...modalPayload,
+							actionAttempted: 'optimization_run'
+						})
 					)
-					setOptimizingStep((prev) => ({
-						...prev,
-						completed: [...prev.completed, SYNC_STEP]
-					}))
-				} catch (syncError) {
-					console.warn('Model sync after optimization failed:', syncError)
+					toast.error(error.message)
+					return false
 				}
-			}
 
-			didApplyOptimization = shouldConsumeOptimizationRun
-
-			if (optimizationOptions.length > 0 && shouldConsumeOptimizationRun) {
-				try {
-					const consumeResult = await requestOptimizationRunQuota('consume')
-
-					if (consumeResult.isGuest) {
-						setGuestQuota(toGuestQuotaState(consumeResult))
-					}
-				} catch (error) {
-					console.warn('Failed to record optimization run usage:', error)
-				}
-			}
-		} catch (error) {
-			console.error('Error during optimization:', error)
-			if (isBillingLimitError(error)) {
-				const modalPayload = toUpgradeModalPayload(error)
-				setUpgradeModal(
-					buildUpgradeModalState({
-						...modalPayload,
-						actionAttempted: 'optimization_run'
-					})
+				toast.error(
+					error instanceof Error && error.message.includes('Unauthorized')
+						? 'Sign in to sync optimization quotas across browsers.'
+						: error instanceof Error
+							? error.message
+							: 'Optimization failed. Please retry.'
 				)
-				toast.error(error.message)
 				return false
+			} finally {
+				setOptimizationRuntime((prev) => ({
+					...prev,
+					isPending: false
+				}))
+				setOptimizingStep({ current: null, completed: [], allSteps: [] })
 			}
 
-			toast.error(
-				error instanceof Error && error.message.includes('Unauthorized')
-					? 'Sign in to sync optimization quotas across browsers.'
-					: error instanceof Error
-						? error.message
-						: 'Optimization failed. Please retry.'
-			)
-			return false
-		} finally {
-			setOptimizationRuntime((prev) => ({
-				...prev,
-				isPending: false
-			}))
-			setOptimizingStep({ current: null, completed: [], allSteps: [] })
-		}
+			if (didApplyOptimization) {
+				void refreshOptimizedSizeInfo()
+			}
 
-		if (didApplyOptimization) {
-			void refreshOptimizedSizeInfo()
-		}
+			return didApplyOptimization
+		},
+		[
+			isPending,
+			isPreparing,
+			isReady,
+			clientSceneBytes,
+			clientTextureBytes,
+			latestSceneStats,
+			refreshOptimizedSizeInfo,
+			setOptimizationRuntime,
+			setUpgradeModal,
+			plannedOptimizations,
+			simplifyOptimization,
+			texturesOptimization,
+			quantizeOptimization,
+			dedupOptimization,
+			normalsOptimization,
+			applyOptimization,
+			reset,
+			loadFromServerSceneData,
+			calculateSceneBytes,
+			file?.sourcePackageBytes,
+			file?.sourceTextureBytes,
+			report?.stats.textures.before
+		]
+	)
 
-		return didApplyOptimization
-	}, [
-		isPending,
-		isPreparing,
-		isReady,
-		clientSceneBytes,
-		clientTextureBytes,
-		latestSceneStats,
-		refreshOptimizedSizeInfo,
-		setOptimizationRuntime,
-		setUpgradeModal,
-		plannedOptimizations,
-		simplifyOptimization,
-		texturesOptimization,
-		quantizeOptimization,
-		dedupOptimization,
-		normalsOptimization,
-		applyOptimization,
-		reset,
-		loadFromServerSceneData,
-		calculateSceneBytes,
-		file?.sourcePackageBytes,
-		file?.sourceTextureBytes,
-		report?.stats.textures.before
-	])
+	// Non-destructive: re-applies the current preset from the original uploaded file.
+	const handleOptimizeClick = useCallback(
+		() => runOptimization(true),
+		[runOptimization]
+	)
+
+	// Stacking: applies on top of the current optimizer state (fine-tuning).
+	const handleStackOptimizeClick = useCallback(
+		() => runOptimization(false),
+		[runOptimization]
+	)
 
 	useEffect(() => {
 		if (isAuthenticated) {
@@ -670,6 +689,7 @@ export const useOptimizationProcess = ({
 		sizeInfo,
 		guestQuota,
 		optimizingStep,
-		handleOptimizeClick
+		handleOptimizeClick,
+		handleStackOptimizeClick
 	}
 }

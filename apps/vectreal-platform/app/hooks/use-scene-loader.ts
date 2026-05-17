@@ -717,15 +717,39 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		optimizationActions: draftOptimizationActions
 	})
 
-	// Reset the guard whenever a new file is dropped so the next optimizer-ready
-	// transition triggers a fresh IDB write for the new model.
+	// Reset the save guard when a genuinely new file is dropped by the user.
+	// Using load-start (not file?.model) because applyOptimization() also changes
+	// file.model after each optimization pass — we must NOT reset the guard then,
+	// or the save effect would re-fire and overwrite IDB with an optimized snapshot.
 	useEffect(() => {
-		originalSavedRef.current = false
-	}, [file?.model])
+		const handleLoadStart = () => {
+			originalSavedRef.current = false
+		}
+		on('load-start', handleLoadStart)
+		return () => off('load-start', handleLoadStart)
+	}, [on, off])
+
+	// Stable refs so the save effect below can read current values without
+	// listing them as dependencies (which would re-trigger the effect on every
+	// scene-meta or settings change, including those caused by applyOptimization).
+	const prepareGltfRef = useRef(prepareGltfDocumentForUpload)
+	const sceneMetaRef = useRef(sceneMetaState)
+	const settingsRef = useRef(currentSettings)
+	useEffect(() => {
+		prepareGltfRef.current = prepareGltfDocumentForUpload
+	})
+	useEffect(() => {
+		sceneMetaRef.current = sceneMetaState
+	})
+	useEffect(() => {
+		settingsRef.current = currentSettings
+	})
 
 	// Capture and persist the original un-optimized scene to IDB immediately
 	// after the optimizer finishes loading a locally uploaded file.
 	// Skipped for server-loaded scenes (paramSceneId / initialSceneAggregate).
+	// Guarded by originalSavedRef so it only runs once per file drop — the ref
+	// is reset by the load-start listener above, never by applyOptimization.
 	useEffect(() => {
 		if (!optimizer?.isReady) return
 		if (paramSceneId || initialSceneAggregate) return
@@ -733,38 +757,34 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		originalSavedRef.current = true
 
 		void (async () => {
-			const gltfJson = await prepareGltfDocumentForUpload()
+			const gltfJson = await prepareGltfRef.current()
 			if (!gltfJson || typeof gltfJson !== 'object') return
 
 			const gltfData = (gltfJson as { data?: unknown }).data ?? gltfJson
 			const gltfAssets = (gltfJson as { assets?: unknown }).assets
 			const assetData = await serializeSceneAssetData(gltfData, gltfAssets)
 
+			const meta = sceneMetaRef.current
+			const settings = settingsRef.current
+
 			const sceneData: ServerSceneData = {
 				meta: {
-					name: sceneMetaState.name,
-					description: sceneMetaState.description,
-					thumbnailUrl: sceneMetaState.thumbnailUrl
+					name: meta.name,
+					description: meta.description,
+					thumbnailUrl: meta.thumbnailUrl
 				},
 				gltfJson: gltfData as ServerSceneData['gltfJson'],
 				assetData,
-				bounds: currentSettings.bounds,
-				environment: currentSettings.environment,
-				camera: currentSettings.camera,
-				controls: currentSettings.controls,
-				shadows: currentSettings.shadows
+				bounds: settings.bounds,
+				environment: settings.environment,
+				camera: settings.camera,
+				controls: settings.controls,
+				shadows: settings.shadows
 			}
 
 			await saveOriginalSceneModel({ sceneData })
 		})()
-	}, [
-		optimizer?.isReady,
-		paramSceneId,
-		initialSceneAggregate,
-		prepareGltfDocumentForUpload,
-		sceneMetaState,
-		currentSettings
-	])
+	}, [optimizer?.isReady, paramSceneId, initialSceneAggregate])
 
 	const aggregateBootstrapState = {
 		sceneLoadAttemptedRef,
