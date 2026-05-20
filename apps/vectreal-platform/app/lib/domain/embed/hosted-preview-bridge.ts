@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useRef } from 'react'
-
 import {
 	HOSTED_PREVIEW_VIEWER_SOURCE,
-	type HostedPreviewOutgoingMessage,
-	isHostedPreviewIncomingMessage
-} from './hosted-preview-protocol'
+	isHostedPreviewIncomingMessage,
+	type EmbedCameraDescriptor,
+	type HostedPreviewOutgoingMessage
+} from '@vctrl/embed'
+import { useCallback, useEffect, useRef } from 'react'
 
-import type { SceneInteractionDefinition } from '@vctrl/core'
+import type {
+	CameraConfig,
+	CameraProps,
+	SceneInteractionDefinition
+} from '@vctrl/core'
 import type {
 	VectrealViewerProps,
 	ViewerCommandExecutor,
@@ -16,6 +20,9 @@ import type {
 interface UseHostedPreviewBridgeParams {
 	sceneId?: string
 	interactions?: SceneInteractionDefinition[]
+	cameras?: CameraProps['cameras']
+	/** Commands to execute once on viewer_ready (e.g. from URL params). */
+	initialCommands?: import('@vctrl/viewer').ViewerCommand[]
 }
 
 export type HostedPreviewBridgeProps = Pick<
@@ -30,18 +37,6 @@ function getInteractionKey(
 	return interaction.id || `interaction-${interaction.order ?? index + 1}`
 }
 
-function getParentOriginFromReferrer(): null | string {
-	if (typeof document === 'undefined' || !document.referrer) {
-		return null
-	}
-
-	try {
-		return new URL(document.referrer).origin
-	} catch {
-		return null
-	}
-}
-
 function getSortedInteractions(
 	interactions?: SceneInteractionDefinition[]
 ): SceneInteractionDefinition[] {
@@ -54,16 +49,36 @@ function getSortedInteractions(
 		.sort((left, right) => (left.order ?? 0) - (right.order ?? 0))
 }
 
+function buildCameraDescriptors(
+	cameras?: CameraProps['cameras']
+): EmbedCameraDescriptor[] {
+	if (!cameras?.length) return []
+	return cameras.map((c: CameraConfig) => ({
+		id: c.cameraId ?? '',
+		name: c.name ?? c.cameraId ?? '',
+		fov: c.fov
+	}))
+}
+
 export function useHostedPreviewBridge({
 	sceneId,
-	interactions
+	interactions,
+	cameras,
+	initialCommands
 }: UseHostedPreviewBridgeParams): HostedPreviewBridgeProps {
 	const executorRef = useRef<null | ViewerCommandExecutor>(null)
 	const parentOriginRef = useRef<null | string>(null)
+	const outboundQueueRef = useRef<HostedPreviewOutgoingMessage[]>([])
 	const sortedInteractionsRef = useRef(getSortedInteractions(interactions))
 	const activeScrollInteractionIdsRef = useRef(new Set<string>())
 	const firedViewerReadyInteractionIdsRef = useRef(new Set<string>())
 	const lastScrollProgressRef = useRef<null | number>(null)
+	const camerasRef = useRef(cameras)
+	const initialCommandsFiredRef = useRef(false)
+
+	useEffect(() => {
+		camerasRef.current = cameras
+	}, [cameras])
 
 	useEffect(() => {
 		sortedInteractionsRef.current = getSortedInteractions(interactions)
@@ -77,12 +92,36 @@ export function useHostedPreviewBridge({
 				return
 			}
 
-			const targetOrigin =
-				parentOriginRef.current || getParentOriginFromReferrer() || '*'
+			// If we don't know the parent origin yet, queue for when it's established.
+			if (!parentOriginRef.current) {
+				outboundQueueRef.current.push(message)
+				return
+			}
 
-			window.parent.postMessage(message, targetOrigin)
+			window.parent.postMessage(message, parentOriginRef.current)
 		},
 		[]
+	)
+
+	const flushOutboundQueue = useCallback((origin: string) => {
+		if (!outboundQueueRef.current.length) return
+		for (const message of outboundQueueRef.current) {
+			window.parent.postMessage(message, origin)
+		}
+		outboundQueueRef.current = []
+	}, [])
+
+	const sendPong = useCallback(
+		(replyOrigin: string) => {
+			const pong: HostedPreviewOutgoingMessage = {
+				source: HOSTED_PREVIEW_VIEWER_SOURCE,
+				type: 'pong',
+				sceneId,
+				cameras: buildCameraDescriptors(camerasRef.current)
+			}
+			window.parent.postMessage(pong, replyOrigin)
+		},
+		[sceneId]
 	)
 
 	const executeInteraction = useCallback(
@@ -179,6 +218,14 @@ export function useHostedPreviewBridge({
 				return
 			}
 
+			// Apply URL param initial commands once, before interaction sweep.
+			if (!initialCommandsFiredRef.current && initialCommands?.length) {
+				initialCommandsFiredRef.current = true
+				for (const command of initialCommands) {
+					executorRef.current?.execute(command)
+				}
+			}
+
 			sortedInteractionsRef.current.forEach((interaction, index) => {
 				if (interaction.trigger.type !== 'viewer_ready') {
 					return
@@ -219,8 +266,12 @@ export function useHostedPreviewBridge({
 		}
 
 		const handleMessage = (event: MessageEvent<unknown>) => {
-			if (event.origin) {
-				parentOriginRef.current = event.origin
+			// Establish (or confirm) trusted parent origin from the first valid message.
+			if (event.origin && event.origin !== 'null') {
+				if (!parentOriginRef.current) {
+					parentOriginRef.current = event.origin
+					flushOutboundQueue(event.origin)
+				}
 			}
 
 			if (!isHostedPreviewIncomingMessage(event.data)) {
@@ -228,6 +279,12 @@ export function useHostedPreviewBridge({
 			}
 
 			switch (event.data.type) {
+				case 'ping':
+					// Reply immediately with pong so VectrealEmbed.ready() can resolve.
+					if (parentOriginRef.current) {
+						sendPong(parentOriginRef.current)
+					}
+					break
 				case 'viewer_command':
 					executorRef.current?.execute(event.data.command)
 					break
@@ -245,7 +302,7 @@ export function useHostedPreviewBridge({
 		return () => {
 			window.removeEventListener('message', handleMessage)
 		}
-	}, [applyHostMessage, applyScrollProgress])
+	}, [applyHostMessage, applyScrollProgress, flushOutboundQueue, sendPong])
 
 	return {
 		onCommandExecutorReady,

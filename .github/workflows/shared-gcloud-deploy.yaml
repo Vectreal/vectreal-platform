@@ -138,6 +138,12 @@ on:
       send-email-hook-secret:
         description: 'HMAC secret for verifying Supabase send_email hook requests'
         required: false
+      vectreal-api-key-prod:
+        description: 'Vectreal API key for production preview embeds (VITE_PUBLIC_VECTREAL_API_KEY_PROD)'
+        required: false
+      demo-scene-url:
+        description: 'Full URL for the landing page 3D demo embed, including token (VITE_PUBLIC_DEMO_SCENE_URL)'
+        required: false
 
 jobs:
   deploy:
@@ -246,6 +252,8 @@ jobs:
             --build-arg BUILD_VITE_PUBLIC_POSTHOG_TOKEN=${{ secrets.posthog-token }} \
             --build-arg BUILD_VITE_PUBLIC_POSTHOG_HOST=${{ secrets.posthog-host }} \
             --build-arg BUILD_VITE_PUBLIC_POSTHOG_UI_HOST=${{ secrets.posthog-ui-host || 'https://eu.posthog.com' }} \
+            --build-arg BUILD_VITE_PUBLIC_VECTREAL_API_KEY_PROD=${{ secrets.vectreal-api-key-prod }} \
+            --build-arg BUILD_VITE_PUBLIC_DEMO_SCENE_URL=${{ secrets.demo-scene-url }} \
             --cache-from type=gha \
             --cache-to type=gha,mode=max \
             "${TAG_ARGS[@]}" \
@@ -309,6 +317,8 @@ jobs:
             VITE_PUBLIC_POSTHOG_TOKEN=${{ secrets.posthog-token }}
             VITE_PUBLIC_POSTHOG_HOST=${{ secrets.posthog-host }}
             VITE_PUBLIC_POSTHOG_UI_HOST=${{ secrets.posthog-ui-host || 'https://eu.posthog.com' }}
+            VITE_PUBLIC_VECTREAL_API_KEY_PROD=${{ secrets.vectreal-api-key-prod }}
+            VITE_PUBLIC_DEMO_SCENE_URL=${{ secrets.demo-scene-url }}
             CONTACT_DATA_ENCRYPTION_KEY=${{ secrets.contact-data-encryption-key }}
             RESEND_API_KEY=${{ secrets.resend-api-key }}
             RESEND_WEBHOOK_SECRET=${{ secrets.resend-webhook-secret }}

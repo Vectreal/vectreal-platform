@@ -248,6 +248,8 @@ if [[ "$MODE" == "verify" ]]; then
 
   check_gh_secret "FROM_EMAIL"
   check_gh_secret "CONTACT_INBOX_EMAIL"
+  check_gh_secret "VITE_PUBLIC_VECTREAL_API_KEY_PROD"
+  check_gh_secret "VITE_PUBLIC_DEMO_SCENE_URL"
   check_gh_secret "GCP_PROJECT_ID"
   # For GCP project IDs we can show the expected value from .env.development
   # since they're not sensitive — helpful for catching the "-" type of mistake.
@@ -413,6 +415,21 @@ if [[ -n "$VITE_PUBLIC_POSTHOG_TOKEN" ]]; then
   set_secret "VITE_PUBLIC_POSTHOG_UI_HOST" "${VITE_PUBLIC_POSTHOG_UI_HOST:-https://eu.posthog.com}"
 else
   warn "VITE_PUBLIC_POSTHOG_TOKEN not set — skipping PostHog secrets"
+fi
+
+# Vectreal embed vars — baked into the client bundle at Docker build time.
+# VITE_PUBLIC_VECTREAL_API_KEY_PROD: API token for Vectreal preview embeds in articles.
+# VITE_PUBLIC_DEMO_SCENE_URL: Full URL for the landing page 3D demo (includes token).
+#   Set this once you have published the demo scene in the Publisher.
+if [[ -n "$VITE_PUBLIC_VECTREAL_API_KEY_PROD" ]]; then
+  set_secret "VITE_PUBLIC_VECTREAL_API_KEY_PROD" "$VITE_PUBLIC_VECTREAL_API_KEY_PROD"
+else
+  warn "VITE_PUBLIC_VECTREAL_API_KEY_PROD not set — article preview embeds will not load"
+fi
+if [[ -n "$VITE_PUBLIC_DEMO_SCENE_URL" ]]; then
+  set_secret "VITE_PUBLIC_DEMO_SCENE_URL" "$VITE_PUBLIC_DEMO_SCENE_URL"
+else
+  warn "VITE_PUBLIC_DEMO_SCENE_URL not set — landing page will use fallback demo scene"
 fi
 
 # ---------------------------------------------------------------------------

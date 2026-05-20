@@ -41,7 +41,8 @@
 			],
 			"@vctrl/core/model-exporter": [
 				"packages/core/src/model-exporter/index.ts"
-			]
+			],
+			"@vctrl/embed": ["./packages/embed/src/index.ts"]
 		}
 	},
 	"exclude": ["node_modules", "tmp", "**/public/**/*"]

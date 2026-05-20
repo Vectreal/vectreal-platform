@@ -6,9 +6,11 @@ import {
 	InfoPopoverContent,
 	InfoPopoverText,
 	InfoPopoverTrigger,
-	InfoPopoverVectrealFooter
+	InfoPopoverVectrealFooter,
+	type ViewerCommand
 } from '@vctrl/viewer'
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
+import { useSearchParams } from 'react-router'
 
 import { Route } from './+types/preview-fullscreen'
 import { usePreviewScene } from './use-preview-scene'
@@ -85,6 +87,34 @@ const PreviewModel = memo(
 	}
 )
 
+function usePreviewInitialCommands(): ViewerCommand[] {
+	const [searchParams] = useSearchParams()
+	return useMemo(() => {
+		const commands: ViewerCommand[] = []
+
+		const camera = searchParams.get('camera')?.trim()
+		if (camera) {
+			commands.push({ type: 'activate_camera', cameraId: camera })
+		}
+
+		const autoRotate = searchParams.get('autoRotate')
+		if (autoRotate !== null) {
+			commands.push({ type: 'set_auto_rotate', enabled: autoRotate !== '0' })
+		}
+
+		const transition = searchParams.get('transition')
+		if (
+			transition === 'none' ||
+			transition === 'linear' ||
+			transition === 'object_avoidance'
+		) {
+			commands.push({ type: 'set_transition', transitionType: transition })
+		}
+
+		return commands
+	}, [searchParams])
+}
+
 const PreviewFullscreenPage = ({ params }: Route.ComponentProps) => {
 	const sceneId = params.sceneId
 	const projectId = params.projectId
@@ -92,10 +122,13 @@ const PreviewFullscreenPage = ({ params }: Route.ComponentProps) => {
 		sceneId,
 		projectId
 	})
+	const initialCommands = usePreviewInitialCommands()
 	const { onCommandExecutorReady, onInteractionEvent } = useHostedPreviewBridge(
 		{
 			sceneId,
-			interactions: sceneData?.interactions
+			interactions: sceneData?.interactions,
+			cameras: sceneData?.camera?.cameras,
+			initialCommands
 		}
 	)
 

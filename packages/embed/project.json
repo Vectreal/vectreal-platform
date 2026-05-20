@@ -1,0 +1,63 @@
+{
+	"name": "vctrl/embed",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "packages/embed/src",
+	"projectType": "library",
+	"tags": [],
+	"targets": {
+		"lint": {
+			"executor": "@nx/eslint:lint",
+			"outputs": ["{options.outputFile}"],
+			"options": {
+				"fix": true,
+				"lintFilePatterns": [
+					"packages/embed/src/**/*.{ts,js}",
+					"packages/embed/vite.config.ts",
+					"packages/embed/package.json"
+				]
+			}
+		},
+		"typecheck": {
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"command": "tsc --noEmit -p packages/embed/tsconfig.json"
+			}
+		},
+		"build": {
+			"executor": "@nx/vite:build",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "build/packages/vctrl/embed",
+				"configFile": "packages/embed/vite.config.ts"
+			}
+		},
+		"build-ci": {
+			"executor": "@nx/vite:build",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "build/packages/vctrl/embed",
+				"configFile": "packages/embed/vite.config.ts"
+			}
+		},
+		"copy-md": {
+			"dependsOn": ["build"],
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"commands": [
+					"rsync -rat packages/embed/*.md build/packages/vctrl/embed/"
+				]
+			}
+		},
+		"publish": {
+			"dependsOn": ["copy-md"],
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"command": "npm publish --access public",
+				"cwd": "build/packages/vctrl/embed"
+			}
+		}
+	}
+}

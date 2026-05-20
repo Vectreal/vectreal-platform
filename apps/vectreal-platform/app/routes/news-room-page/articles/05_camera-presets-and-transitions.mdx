@@ -42,6 +42,8 @@ Your scene loads. The visitor sees the model from a corner-of-the-room angle tha
    1:1 crop derived from cover; 600×600, webp, <60 KB.
    Output: /public/assets/images/newsroom/05/thumbnail-camera-presets-and-transitions.webp */}
 
+import EmbedShowcase from './embed-showcase'
+
 ### Before You Begin
 
 Camera configuration lives in the Vectreal Publisher's **Compose** sidebar, under **Camera Controls**. Open any scene in the Publisher and the controls described here are immediately available — no plugin, no extra package, no premium tier required. The Publisher itself is at [vectreal.com/publisher](https://vectreal.com/publisher).
@@ -129,6 +131,12 @@ If you only had time to set up one extra camera, **set up Hero**. The first fram
 
 ### Camera Settings — Field of View Is Doing More Work Than You Think
 
+<EmbedShowcase
+  src={`https://vectreal.com/preview/fullscreen/395a09f0-9340-42f2-ac98-03339cf27c9c/bae36111-22da-46a4-85c5-2d9bfdbb8f4f?token=${import.meta.env.VITE_PUBLIC_VECTREAL_API_KEY_PROD}&transition=linear`}
+  label="Live embed · drag to orbit · scroll to zoom"
+  caption="Default camera at FOV 50°. Drag the model to feel the natural perspective. The camera system described in this article drives every Vectreal embed."
+  height={440}
+/>
 ![Field of View comparison — 30°, 50°, 90° on the same model](/assets/images/newsroom/05/03-fov-comparison.jpeg)
 
 {/* ASSET BRIEF — FOV Comparison Image (03-fov-comparison.jpeg)
@@ -170,6 +178,26 @@ A common mistake is leaving every camera at the same FOV. **Vary it deliberately
    Output: /public/assets/images/newsroom/05/04-transition-types.svg */}
 
 When the visitor (or your app code) switches from one camera to another, three behaviors are available.
+
+{/* Live transition comparison — two embeds with different ?transition= params.
+    Both scenes are identical; only the transition type differs.
+    Configure the scene below with at least two cameras (e.g. "hero" and "detail")
+    for the comparison to be meaningful. */}
+
+<div className="my-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+  <EmbedShowcase
+    src={`https://vectreal.com/preview/fullscreen/395a09f0-9340-42f2-ac98-03339cf27c9c/bae36111-22da-46a4-85c5-2d9bfdbb8f4f?token=${import.meta.env.VITE_PUBLIC_VECTREAL_API_KEY_PROD}&transition=none`}
+    label="Transition: Instant"
+    caption="Camera teleports immediately — no animation."
+    height={320}
+  />
+  <EmbedShowcase
+    src={`https://vectreal.com/preview/fullscreen/395a09f0-9340-42f2-ac98-03339cf27c9c/bae36111-22da-46a4-85c5-2d9bfdbb8f4f?token=${import.meta.env.VITE_PUBLIC_VECTREAL_API_KEY_PROD}&transition=linear`}
+    label="Transition: Linear · ease in-out · 1000 ms"
+    caption="Camera lerps smoothly to the saved position."
+    height={320}
+  />
+</div>
 
 #### Instant
 
@@ -269,6 +297,13 @@ Smart transitions are doing real work here — without them, switching between c
 This is the layout that turns a 3D embed into a slide deck. Combined with a few buttons in your surrounding UI to trigger camera switches, it becomes a presentation people watch start to finish.
 
 ---
+
+<EmbedShowcase
+  src={`https://vectreal.com/preview/fullscreen/395a09f0-9340-42f2-ac98-03339cf27c9c/bae36111-22da-46a4-85c5-2d9bfdbb8f4f?token=${import.meta.env.VITE_PUBLIC_VECTREAL_API_KEY_PROD}&transition=object_avoidance&autoRotate=0`}
+  label="Smart transition · object avoidance · controls off"
+  caption="E-commerce preset: auto-rotate off, zoom on, vertical limit 90°. Switch cameras using the viewer's built-in camera selector — the Smart transition arcs around geometry between views."
+  height={480}
+/>
 
 ### A Five-Minute Polish Pass
 

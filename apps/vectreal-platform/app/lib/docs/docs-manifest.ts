@@ -162,10 +162,31 @@ export const docsPages: DocPage[] = [
 		order: 2,
 		version: 'latest'
 	},
+	{
+		slug: 'guides/embed-sdk',
+		title: 'Embed SDK',
+		description:
+			'Control embedded 3D scenes from your page — camera switching, scroll interactions, event callbacks, and the raw postMessage protocol.',
+		sourcePath:
+			'apps/vectreal-platform/app/routes/docs/guides/embed-sdk.mdx',
+		category: 'guides',
+		order: 3,
+		version: 'latest'
+	},
 
 	// ──────────────────────────────────────────────────────────────────────────
 	// Package Reference
 	// ──────────────────────────────────────────────────────────────────────────
+	{
+		slug: 'packages/embed',
+		title: '@vctrl/embed',
+		description:
+			'Framework-agnostic JavaScript SDK for controlling Vectreal embedded previews from any web page.',
+		sourcePath: 'apps/vectreal-platform/app/routes/docs/packages/embed.mdx',
+		category: 'packages',
+		order: 0,
+		version: 'latest'
+	},
 	{
 		slug: 'packages/viewer',
 		title: '@vctrl/viewer',
@@ -173,7 +194,7 @@ export const docsPages: DocPage[] = [
 			'React component for rendering and interacting with 3D models in the browser.',
 		sourcePath: 'apps/vectreal-platform/app/routes/docs/packages/viewer.mdx',
 		category: 'packages',
-		order: 0,
+		order: 1,
 		version: 'latest'
 	},
 	{
@@ -183,7 +204,7 @@ export const docsPages: DocPage[] = [
 			'React hooks for loading, optimising, and exporting 3D models in the browser.',
 		sourcePath: 'apps/vectreal-platform/app/routes/docs/packages/hooks.mdx',
 		category: 'packages',
-		order: 1,
+		order: 2,
 		version: 'latest'
 	},
 	{
@@ -193,7 +214,7 @@ export const docsPages: DocPage[] = [
 			'Server-side 3D model processing — loader, optimizer, and exporter for Node.js.',
 		sourcePath: 'apps/vectreal-platform/app/routes/docs/packages/core.mdx',
 		category: 'packages',
-		order: 2,
+		order: 3,
 		version: 'latest'
 	},
 

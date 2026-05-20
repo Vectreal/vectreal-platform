@@ -1,10 +1,19 @@
+export { VectrealEmbed } from './embed'
+export type {
+	EmbedEventHandler,
+	EmbedEventMap,
+	EmbedEventType,
+	EmbedOptions,
+	EmbedReadyInfo,
+	SetTransitionOptions
+} from './embed'
+
 export {
 	HOSTED_PREVIEW_HOST_SOURCE,
 	HOSTED_PREVIEW_VIEWER_SOURCE,
 	isHostedPreviewIncomingMessage,
 	isViewerCommand
-} from '@vctrl/embed'
-
+} from './protocol'
 export type {
 	EmbedCameraDescriptor,
 	HostedPreviewCustomEventMessage,
@@ -16,4 +25,4 @@ export type {
 	HostedPreviewScrollProgressMessage,
 	HostedPreviewViewerCommandMessage,
 	HostedPreviewViewerEventMessage
-} from '@vctrl/embed'
+} from './protocol'
