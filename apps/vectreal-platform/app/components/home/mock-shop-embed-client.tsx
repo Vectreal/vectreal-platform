@@ -18,17 +18,20 @@ const CHAPTERS = [
 	{
 		id: 'default',
 		label: 'Overview',
-		description: 'Built from full-carbon to carve through technical terrain at speed.'
+		description:
+			'Built from full-carbon to carve through technical terrain at speed.'
 	},
 	{
 		id: 'camera-1779054230007-lg5mbd',
 		label: 'Drivetrain',
-		description: 'SRAM GX Eagle keeps you shifting precisely across every pitch.'
+		description:
+			'SRAM GX Eagle keeps you shifting precisely across every pitch.'
 	},
 	{
 		id: 'camera-1779320332512-tded3h',
 		label: 'Profile',
-		description: 'Geometry tuned for rowdy descents. Capable enough to earn them.'
+		description:
+			'Geometry tuned for rowdy descents. Capable enough to earn them.'
 	},
 	{
 		id: 'camera-1779320572791-qm1tv5',
@@ -46,6 +49,8 @@ export default function MockShopEmbedClient() {
 	const embedRef = useRef<VectrealEmbed | null>(null)
 	const sectionRef = useRef<HTMLDivElement>(null)
 	const lastChapterRef = useRef<ChapterId>('default')
+	const suppressScrollRef = useRef(false)
+	const suppressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 	const [activeChapter, setActiveChapter] = useState<ChapterId>('default')
 	const [embedReady, setEmbedReady] = useState(false)
 
@@ -96,6 +101,10 @@ export default function MockShopEmbedClient() {
 		if (!section) return
 
 		const handleScroll = () => {
+			// Ignore scroll events fired during a programmatic smooth-scroll so the
+			// optimistic indicator state set by activateChapter doesn't flicker.
+			if (suppressScrollRef.current) return
+
 			const rect = section.getBoundingClientRect()
 			const scrollable = rect.height - window.innerHeight
 			if (scrollable <= 0) return
@@ -128,6 +137,32 @@ export default function MockShopEmbedClient() {
 		setActiveChapter(id)
 		lastChapterRef.current = id
 		if (embedReady) embedRef.current?.activateCamera(id)
+
+		const section = sectionRef.current
+		if (!section) return
+
+		const chapterThresholds: Record<ChapterId, number> = {
+			default: 0,
+			'camera-1779054230007-lg5mbd': 0.28,
+			'camera-1779320332512-tded3h': 0.56,
+			'camera-1779320572791-qm1tv5': 0.82
+		}
+
+		// Suppress scroll handler while the page animates to the target position
+		// so intermediate progress values don't fight the optimistic state update.
+		suppressScrollRef.current = true
+		if (suppressTimerRef.current) clearTimeout(suppressTimerRef.current)
+		suppressTimerRef.current = setTimeout(() => {
+			suppressScrollRef.current = false
+		}, 1000)
+
+		const progress = chapterThresholds[id]
+		const sectionTop = section.getBoundingClientRect().top + window.scrollY
+		const scrollable = section.offsetHeight - window.innerHeight
+		window.scrollTo({
+			top: sectionTop + progress * scrollable,
+			behavior: 'smooth'
+		})
 	}
 
 	const descStyle = {
@@ -137,30 +172,43 @@ export default function MockShopEmbedClient() {
 
 	return (
 		// Sticky scroll container — 4× viewport height gives comfortable pacing
-		<div ref={sectionRef} className="relative" style={{ height: '400vh' }}>
+		<div ref={sectionRef} className="relative" style={{ height: '600vh' }}>
 			<div className="sticky top-0 h-screen overflow-hidden bg-black">
 				{/* Fullscreen iframe — hidden until embed is ready to prevent HDR flash */}
 				<iframe
 					ref={iframeRef}
 					src={DEMO_SCENE_URL}
 					className={cn(
-						'pointer-events-none absolute inset-0 h-full w-full border-0 transition-opacity duration-1000',
-						embedReady ? 'opacity-100' : 'opacity-0'
+						'pointer-events-none absolute inset-0 h-full w-full border-0 transition-opacity duration-1000'
+						// embedReady ? 'opacity-100' : 'opacity-0'
 					)}
 					allow="autoplay; xr-spatial-tracking"
 					allowFullScreen
 					title="Alpine X3 Pro — interactive 3D preview"
 				/>
 
+				{/* Loading indicator — visible until embed is ready */}
+				{/* <div
+					className={cn(
+						'pointer-events-none absolute inset-0 z-[1] flex flex-col items-center justify-center gap-3 transition-opacity duration-700',
+						embedReady ? 'opacity-0' : 'opacity-100'
+					)}
+				>
+					<div className="h-6 w-6 animate-spin rounded-full border-2 border-white/10 border-t-white/40" />
+					<p className="text-[11px] tracking-widest text-white/25 uppercase">
+						Loading scene
+					</p>
+				</div> */}
+
 				{/* Touch passthrough — lets vertical scroll reach the page on mobile */}
 				<div
-					className="absolute inset-0 z-[1]"
+					className="absolute inset-0 z-1"
 					style={{ touchAction: 'pan-y' }}
 				/>
 
 				{/* Vignettes */}
-				<div className="pointer-events-none absolute inset-0 z-[2] bg-linear-to-r from-black/55 via-transparent to-black/15" />
-				<div className="pointer-events-none absolute inset-0 z-[2] bg-linear-to-b from-black/30 via-transparent to-black/75" />
+				<div className="pointer-events-none absolute inset-0 z-2 bg-linear-to-r from-black/55 via-transparent to-black/15" />
+				<div className="pointer-events-none absolute inset-0 z-2 bg-linear-to-b from-black/30 via-transparent to-black/75" />
 
 				{/* Powered by Vectreal — top-left, offset below nav on mobile */}
 				<div className="absolute top-20 left-6 z-10 lg:top-6">
@@ -323,7 +371,9 @@ export default function MockShopEmbedClient() {
 								{displayedDesc}
 							</p>
 						</div>
-						<p className="text-accent shrink-0 text-base font-bold">$1,299.99</p>
+						<p className="text-accent shrink-0 text-base font-bold">
+							$1,299.99
+						</p>
 					</div>
 				</div>
 			</div>
