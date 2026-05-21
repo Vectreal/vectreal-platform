@@ -74,8 +74,20 @@ export class VectrealEmbed {
 		this.readyTimeout = options.readyTimeout ?? DEFAULT_READY_TIMEOUT_MS
 
 		const src = iframe.src || iframe.getAttribute('src') || ''
-		this.targetOrigin =
-			options.iframeOrigin ?? (src ? new URL(src).origin : '*')
+		let detectedOrigin: string | undefined
+		if (src) {
+			try {
+				detectedOrigin = new URL(src, window.location.href).origin
+			} catch {
+				// unparseable src — fall through to require explicit iframeOrigin
+			}
+		}
+		if (!options.iframeOrigin && !detectedOrigin) {
+			throw new Error(
+				'VectrealEmbed: cannot determine iframe origin from src. Pass options.iframeOrigin explicitly.'
+			)
+		}
+		this.targetOrigin = options.iframeOrigin ?? detectedOrigin!
 
 		this.boundListener = this.handleMessage.bind(this)
 		window.addEventListener('message', this.boundListener)
