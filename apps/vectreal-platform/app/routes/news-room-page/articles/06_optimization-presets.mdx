@@ -26,11 +26,15 @@ draft: false
 thumbnailImage: "/assets/images/newsroom/06/thumbnail-optimization-presets-and-texture-compression.webp"
 ---
 
+import YoutubeEmbed from './youtube-embed'
+
 A great 3D embed loads in under three seconds, holds 60 fps on a mid-range laptop, and looks like the model the artist actually shipped. A poorly optimized one downloads thirty megabytes, stutters on first interaction, and trades visual quality for size in ways nobody asked for. The difference between the two is almost never the model. It's the optimization pass — and specifically the four-line summary of what that pass actually did to the mesh and the textures.
 
 The Vectreal Publisher exposes this as four presets — Raw, High, Medium, Low. They look simple. The thinking behind them is not. Each preset is a coordinated set of decisions about how much geometry to keep, how aggressively to compress textures, and what to leave alone. They are non-destructive — switching between them re-processes from the original uploaded file every time. Nothing is permanently lost, and you can sweep through all four in the time it takes to make a cup of coffee.
 
 This article walks through what each preset actually does, when to override the defaults, and the texture-compression playbook that does most of the heavy lifting underneath. Every number cited is the value the Publisher ships with today. The pipeline is open source under AGPL-3.0, so if you want to verify a number you can read the source.
+
+<YoutubeEmbed videoId="raCHH3G8T7w" caption="Optimization presets in action — watch the full walkthrough." />
 
 ---
 
