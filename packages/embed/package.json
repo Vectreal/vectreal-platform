@@ -1,0 +1,41 @@
+{
+	"version": "0.1.0",
+	"name": "@vctrl/embed",
+	"description": "Framework-agnostic JavaScript SDK for controlling Vectreal embedded 3D scene previews via postMessage.",
+	"bugs": {
+		"url": "https://github.com/vectreal/vectreal-platform/issues"
+	},
+	"homepage": "https://vectreal.com",
+	"keywords": [
+		"vectreal",
+		"3d",
+		"embed",
+		"sdk",
+		"iframe",
+		"postmessage",
+		"gltf",
+		"glb",
+		"model-viewer"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/vectreal/vectreal-platform.git"
+	},
+	"license": "AGPL-3.0-only",
+	"main": "./index.cjs",
+	"module": "./index.js",
+	"browser": "./vectreal-embed.umd.js",
+	"types": "./index.d.ts",
+	"type": "module",
+	"sideEffects": false,
+	"publishConfig": {
+		"access": "public"
+	},
+	"exports": {
+		".": {
+			"types": "./index.d.ts",
+			"import": "./index.js",
+			"require": "./index.cjs"
+		}
+	}
+}

@@ -6,9 +6,11 @@ import {
 	InfoPopoverContent,
 	InfoPopoverText,
 	InfoPopoverTrigger,
-	InfoPopoverVectrealFooter
+	InfoPopoverVectrealFooter,
+	type ViewerCommand
 } from '@vctrl/viewer'
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
+import { useSearchParams } from 'react-router'
 
 import { Route } from './+types/preview-fullscreen'
 import { usePreviewScene } from './use-preview-scene'
@@ -85,17 +87,49 @@ const PreviewModel = memo(
 	}
 )
 
+function usePreviewInitialCommands(): ViewerCommand[] {
+	const [searchParams] = useSearchParams()
+	return useMemo(() => {
+		const commands: ViewerCommand[] = []
+
+		const camera = searchParams.get('camera')?.trim()
+		if (camera) {
+			commands.push({ type: 'activate_camera', cameraId: camera })
+		}
+
+		const autoRotate = searchParams.get('autoRotate')
+		if (autoRotate !== null) {
+			commands.push({ type: 'set_auto_rotate', enabled: autoRotate !== '0' })
+		}
+
+		const transition = searchParams.get('transition')
+		if (
+			transition === 'none' ||
+			transition === 'linear' ||
+			transition === 'object_avoidance'
+		) {
+			commands.push({ type: 'set_transition', transitionType: transition })
+		}
+
+		return commands
+	}, [searchParams])
+}
+
 const PreviewFullscreenPage = ({ params }: Route.ComponentProps) => {
 	const sceneId = params.sceneId
 	const projectId = params.projectId
-	const { file, isLoadingScene, sceneData, previewError, retrySceneLoad } = usePreviewScene({
-		sceneId,
-		projectId
-	})
+	const { file, isLoadingScene, sceneData, previewError, retrySceneLoad } =
+		usePreviewScene({
+			sceneId,
+			projectId
+		})
+	const initialCommands = usePreviewInitialCommands()
 	const { onCommandExecutorReady, onInteractionEvent } = useHostedPreviewBridge(
 		{
 			sceneId,
-			interactions: sceneData?.interactions
+			interactions: sceneData?.interactions,
+			cameras: sceneData?.camera?.cameras,
+			initialCommands
 		}
 	)
 
@@ -107,13 +141,21 @@ const PreviewFullscreenPage = ({ params }: Route.ComponentProps) => {
 		return (
 			<div className="bg-background flex h-screen w-full items-center justify-center p-6">
 				<div className="border-border bg-card w-full max-w-lg space-y-4 rounded-2xl border p-6">
-					<h1 className="text-lg font-semibold">Unable to Load Scene Preview</h1>
-					<p className="text-muted-foreground text-sm">{previewError.message}</p>
+					<h1 className="text-lg font-semibold">
+						Unable to Load Scene Preview
+					</h1>
+					<p className="text-muted-foreground text-sm">
+						{previewError.message}
+					</p>
 					<div className="flex gap-2">
 						<Button type="button" onClick={() => void retrySceneLoad()}>
 							Retry
 						</Button>
-						<Button type="button" variant="outline" onClick={() => window.history.back()}>
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => window.history.back()}
+						>
 							Go Back
 						</Button>
 					</div>

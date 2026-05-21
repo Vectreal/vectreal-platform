@@ -233,12 +233,26 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	const [controlsEnabledOverride, setControlsEnabledOverride] = useState<
 		null | boolean
 	>(null)
+	const [autoRotateOverride, setAutoRotateOverride] = useState<{
+		enabled: boolean
+		speed?: number
+	} | null>(null)
+	const [controlsOptionsOverride, setControlsOptionsOverride] = useState<{
+		zoom?: boolean
+		pan?: boolean
+	} | null>(null)
+	const [transitionOverride, setTransitionOverride] = useState<
+		CameraProps['sceneTransition'] | null
+	>(null)
 	const cameraCommandExecutorRef = useRef<null | ViewerCommandExecutor>(null)
 
 	useEffect(() => {
 		if (!hasContent) {
 			setIsInitialFramingComplete(false)
 			setControlsEnabledOverride(null)
+			setAutoRotateOverride(null)
+			setControlsOptionsOverride(null)
+			setTransitionOverride(null)
 		}
 	}, [hasContent])
 
@@ -253,6 +267,19 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 				break
 			case 'set_controls_enabled':
 				setControlsEnabledOverride(command.enabled)
+				break
+			case 'set_auto_rotate':
+				setAutoRotateOverride({ enabled: command.enabled, speed: command.speed })
+				break
+			case 'set_controls_options':
+				setControlsOptionsOverride((prev) => ({ ...prev, ...command }))
+				break
+			case 'set_transition':
+				setTransitionOverride({
+					type: command.transitionType,
+					duration: command.duration,
+					easing: command.easing
+				})
 				break
 		}
 	}, [])
@@ -311,6 +338,18 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 							<SceneControls
 								{...controlsOptions}
 								enabledOverride={controlsEnabledOverride}
+								{...(autoRotateOverride !== null
+									? {
+											autoRotate: autoRotateOverride.enabled,
+											autoRotateSpeed: autoRotateOverride.speed
+										}
+									: {})}
+								{...(controlsOptionsOverride !== null
+									? {
+											enableZoom: controlsOptionsOverride.zoom,
+											enablePan: controlsOptionsOverride.pan
+										}
+									: {})}
 							/>
 							{/* <SceneToneMapping
 								mapping={toneMappingOptions?.mapping}
@@ -319,6 +358,9 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 							<SceneBounds {...boundsOptions} enable={boundsEnabled}>
 								<SceneCamera
 									{...cameraOptions}
+									sceneTransition={
+										transitionOverride ?? cameraOptions?.sceneTransition
+									}
 									boundsEnabled={boundsEnabled}
 									hasContent={hasContent}
 									onCameraSnapshotCaptureReady={onCameraSnapshotCaptureReady}

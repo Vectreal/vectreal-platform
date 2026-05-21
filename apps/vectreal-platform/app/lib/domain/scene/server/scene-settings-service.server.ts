@@ -29,6 +29,7 @@ import {
 	organizations,
 	permissions,
 	projects,
+	sceneAssets,
 	sceneFolders,
 	scenePublished,
 	scenes,
@@ -103,6 +104,43 @@ class SceneSettingsService {
 			.limit(1)
 
 		return scene.length > 0 ? scene[0].projectId : null
+	}
+
+	async getExistingAssetHashes(
+		sceneId: string
+	): Promise<Record<string, { assetId: string; contentHash: string }>> {
+		const settingsRows = await this.db
+			.select({ id: sceneSettings.id })
+			.from(sceneSettings)
+			.where(eq(sceneSettings.sceneId, sceneId))
+			.limit(1)
+
+		if (settingsRows.length === 0) return {}
+
+		const sceneAssetRows = await this.db
+			.select({ assetId: sceneAssets.assetId })
+			.from(sceneAssets)
+			.where(eq(sceneAssets.sceneSettingsId, settingsRows[0].id))
+
+		const assetIds = sceneAssetRows.map((row) => row.assetId)
+		if (assetIds.length === 0) return {}
+
+		const assetRecords = await this.db
+			.select({ id: assets.id, name: assets.name, metadata: assets.metadata })
+			.from(assets)
+			.where(inArray(assets.id, assetIds))
+
+		const result: Record<string, { assetId: string; contentHash: string }> = {}
+		for (const asset of assetRecords) {
+			const metadata = asset.metadata as { contentHash?: string } | null
+			if (metadata?.contentHash) {
+				result[asset.name] = {
+					assetId: asset.id,
+					contentHash: metadata.contentHash
+				}
+			}
+		}
+		return result
 	}
 
 	/**

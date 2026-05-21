@@ -1,0 +1,137 @@
+# @vctrl/embed
+
+Framework-agnostic JavaScript SDK for controlling Vectreal embedded previews from any web page.
+
+---
+
+## Installation
+
+```bash
+npm install @vctrl/embed
+```
+
+**CDN (UMD):**
+
+```html
+<script src="https://cdn.vectreal.com/embed/latest/vectreal-embed.umd.js"></script>
+```
+
+---
+
+## `VectrealEmbed`
+
+The main class. Wraps the postMessage protocol with a promise-based API.
+
+```ts
+import { VectrealEmbed } from '@vctrl/embed'
+
+const embed = new VectrealEmbed(iframeElement, options?)
+```
+
+### Constructor options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `iframeOrigin` | `string` | Detected from `iframe.src` | Override the expected iframe origin for postMessage security. |
+| `readyTimeout` | `number` | `15000` | Milliseconds before `ready()` rejects. |
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `ready()` | `Promise<EmbedReadyInfo>` | Resolves with `{ sceneId, cameras }` when the viewer is ready. |
+| `activateCamera(cameraId)` | `void` | Switch to a named camera. |
+| `setTransition(options)` | `void` | Override transition for subsequent camera switches. |
+| `setControlsEnabled(enabled)` | `void` | Enable or disable orbit controls. |
+| `setAutoRotate(enabled, speed?)` | `void` | Toggle auto-rotate. |
+| `setZoomEnabled(enabled)` | `void` | Toggle scroll-zoom. |
+| `setPanEnabled(enabled)` | `void` | Toggle right-click pan. |
+| `sendScrollProgress(progress)` | `void` | Drive scroll interactions (0–1). |
+| `sendMessage(message, payload?)` | `void` | Trigger a named `host_message` interaction. |
+| `on(type, handler)` | `() => void` | Subscribe to an event. Returns unsubscribe. |
+| `off(type, handler)` | `void` | Remove a specific handler. |
+| `destroy()` | `void` | Remove all listeners and stop processing messages. |
+
+---
+
+## Types
+
+### `EmbedReadyInfo`
+
+```ts
+interface EmbedReadyInfo {
+  sceneId: string | undefined
+  cameras: EmbedCameraDescriptor[]
+}
+```
+
+### `EmbedCameraDescriptor`
+
+```ts
+interface EmbedCameraDescriptor {
+  id: string
+  name: string
+  fov?: number
+}
+```
+
+### `SetTransitionOptions`
+
+```ts
+interface SetTransitionOptions {
+  type: 'none' | 'linear' | 'object_avoidance'
+  duration?: number
+  easing?: 'linear' | 'ease_in' | 'ease_out' | 'ease_in_out'
+}
+```
+
+### `EmbedEventMap`
+
+```ts
+type EmbedEventMap = {
+  viewer_ready: void
+  model_loaded: void
+  camera_changed: { cameraId: string }
+  auto_rotate_changed: { enabled: boolean }
+  interaction_event: {
+    interactionId?: string
+    eventName: string
+    payload?: Record<string, unknown>
+  }
+}
+```
+
+---
+
+## Protocol constants and types
+
+The package also exports the canonical postMessage protocol types used by both the SDK and the Vectreal preview bridge.
+
+```ts
+import {
+  HOSTED_PREVIEW_HOST_SOURCE,   // 'vectreal-host'
+  HOSTED_PREVIEW_VIEWER_SOURCE, // 'vectreal-preview'
+  isHostedPreviewIncomingMessage,
+  isViewerCommand
+} from '@vctrl/embed'
+
+import type {
+  HostedPreviewIncomingMessage,
+  HostedPreviewOutgoingMessage,
+  HostedPreviewPingMessage,
+  HostedPreviewPongMessage,
+  HostedPreviewViewerCommandMessage,
+  HostedPreviewScrollProgressMessage,
+  HostedPreviewHostMessage,
+  HostedPreviewViewerEventMessage,
+  HostedPreviewCustomEventMessage,
+} from '@vctrl/embed'
+```
+
+---
+
+## Related
+
+- [Embed SDK guide](/docs/guides/embed-sdk) — full integration walkthrough
+- [Publishing & Embedding](/docs/guides/publish-embed) — publish a scene and create preview API keys
+- [@vctrl/viewer](/docs/packages/viewer) — React viewer component for direct embedding without an iframe

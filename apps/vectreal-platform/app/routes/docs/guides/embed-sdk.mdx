@@ -1,0 +1,271 @@
+# Embed SDK
+
+Control embedded Vectreal scenes from your page — camera switching, scroll-driven interactions, event callbacks, and the full postMessage protocol.
+
+---
+
+## Overview
+
+Every Vectreal hosted preview iframe already speaks a structured postMessage protocol. The `@vctrl/embed` SDK wraps that protocol in a clean, promise-based JavaScript API so you can control the viewer without writing raw message listeners.
+
+Two integration paths are available:
+
+| Path | When to use |
+|---|---|
+| **JavaScript SDK** (`@vctrl/embed`) | You want camera control, event callbacks, or scroll interactions from your page code. |
+| **URL parameters** | You need a static initial state with no JavaScript — set the starting camera or transition type in the iframe `src`. |
+| **Raw postMessage** | You want zero dependencies and are comfortable implementing the protocol yourself. |
+
+---
+
+## Quick start — JavaScript SDK
+
+**Step 1 — Install**
+
+```bash
+npm install @vctrl/embed
+```
+
+Or include the CDN script before your page code:
+
+```html
+<script src="https://cdn.vectreal.com/embed/latest/vectreal-embed.umd.js"></script>
+```
+
+**Step 2 — Add the iframe**
+
+```html
+<div style="width: 100%; height: 400px;">
+  <iframe
+    id="vectreal-scene"
+    src="https://vectreal.com/preview/fullscreen/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
+    style="width: 100%; height: 100%; border: 0;"
+    allow="autoplay; xr-spatial-tracking"
+    allowfullscreen
+  ></iframe>
+</div>
+```
+
+**Step 3 — Control it**
+
+```js
+import { VectrealEmbed } from '@vctrl/embed'
+
+const iframe = document.getElementById('vectreal-scene')
+const embed = new VectrealEmbed(iframe)
+
+// Wait until the scene is ready, then get available cameras
+const { cameras } = await embed.ready()
+console.log('Cameras:', cameras)
+
+// Switch camera
+embed.activateCamera('detail')
+
+// Listen to events
+embed.on('camera_changed', ({ cameraId }) => {
+  console.log('Active camera:', cameraId)
+})
+
+// Clean up when done
+embed.destroy()
+```
+
+---
+
+## URL parameters
+
+For zero-JavaScript initial configuration, add parameters to the iframe `src`:
+
+| Parameter | Values | Effect |
+|---|---|---|
+| `?camera=<id>` | Any saved camera ID | Activates that camera as soon as the viewer is ready |
+| `?autoRotate=0` or `?autoRotate=1` | `0` to disable, `1` to enable | Overrides the stored auto-rotate setting |
+| `?transition=<type>` | `none`, `linear`, `object_avoidance` | Overrides the stored transition type |
+
+```html
+<!-- Opens on a specific camera with auto-rotate off -->
+<iframe
+  src="https://vectreal.com/preview/fullscreen/<projectId>/<sceneId>?token=KEY&camera=hero&autoRotate=0"
+  ...
+></iframe>
+```
+
+URL parameters apply once on `viewer_ready`. They do not persist to the stored scene configuration.
+
+---
+
+## API reference
+
+### `new VectrealEmbed(iframe, options?)`
+
+```ts
+const embed = new VectrealEmbed(iframe, {
+  iframeOrigin: 'https://vectreal.com', // optional, auto-detected from iframe.src
+  readyTimeout: 15000                   // optional, ms before ready() rejects
+})
+```
+
+### Methods
+
+| Method | Signature | Description |
+|---|---|---|
+| `ready` | `() => Promise<EmbedReadyInfo>` | Resolves when the viewer emits `viewer_ready`. Returns `{ sceneId, cameras }`. |
+| `activateCamera` | `(cameraId: string) => void` | Switch to a named camera. |
+| `setTransition` | `(options: SetTransitionOptions) => void` | Override transition type for subsequent camera switches. |
+| `setControlsEnabled` | `(enabled: boolean) => void` | Enable or disable orbit controls. |
+| `setAutoRotate` | `(enabled: boolean, speed?: number) => void` | Toggle auto-rotate. |
+| `setZoomEnabled` | `(enabled: boolean) => void` | Toggle scroll-zoom. |
+| `setPanEnabled` | `(enabled: boolean) => void` | Toggle right-click pan. |
+| `sendScrollProgress` | `(progress: number) => void` | Drive scroll-triggered interactions (0–1). |
+| `sendMessage` | `(message: string, payload?) => void` | Trigger a named `host_message` interaction. |
+| `on` | `(type, handler) => () => void` | Subscribe to an event. Returns an unsubscribe function. |
+| `off` | `(type, handler) => void` | Remove a specific handler. |
+| `destroy` | `() => void` | Remove all listeners and stop processing messages. |
+
+### Events
+
+| Event type | Payload | When |
+|---|---|---|
+| `viewer_ready` | `void` | The viewer command surface is registered and ready. |
+| `model_loaded` | `void` | The model has finished loading and initial framing is complete. |
+| `camera_changed` | `{ cameraId: string }` | The active camera changed. |
+| `auto_rotate_changed` | `{ enabled: boolean }` | Auto-rotate state changed. |
+| `interaction_event` | `{ eventName, interactionId?, payload? }` | A Publisher-configured `emit_custom_event` interaction fired. |
+
+### `SetTransitionOptions`
+
+```ts
+interface SetTransitionOptions {
+  type: 'none' | 'linear' | 'object_avoidance'
+  duration?: number  // ms
+  easing?: 'linear' | 'ease_in' | 'ease_out' | 'ease_in_out'
+}
+```
+
+---
+
+## Scroll-driven interactions
+
+Report your page's scroll position to trigger camera transitions and other interactions configured in the Publisher:
+
+```js
+window.addEventListener('scroll', () => {
+  const progress =
+    window.scrollY / (document.body.scrollHeight - window.innerHeight)
+  embed.sendScrollProgress(progress)
+})
+```
+
+The bridge only re-fires a scroll range interaction when the progress value enters the configured range from outside — it will not repeat while progress stays inside the range.
+
+---
+
+## Named host message triggers
+
+Send a named string to trigger Publisher-configured `host_message` interactions:
+
+```js
+document.getElementById('next-step').addEventListener('click', () => {
+  embed.sendMessage('next-step')
+})
+```
+
+The message string must match exactly what was entered in the Publisher interaction editor.
+
+---
+
+## Raw postMessage protocol
+
+If you prefer zero dependencies, you can implement the protocol directly. Both sides must use the exact source strings below — the bridge validates them and silently discards anything that does not match.
+
+### Source identifiers
+
+| Constant | Value | Used on |
+|---|---|---|
+| `HOSTED_PREVIEW_HOST_SOURCE` | `'vectreal-host'` | All messages from the parent page |
+| `HOSTED_PREVIEW_VIEWER_SOURCE` | `'vectreal-preview'` | All messages from the iframe |
+
+### Parent page → iframe
+
+| `type` | Additional fields | Effect |
+|---|---|---|
+| `ping` | — | Requests a `pong` with scene metadata. Send this on iframe load. |
+| `viewer_command` | `command: ViewerCommand` | Execute a viewer command. |
+| `host_scroll_progress` | `progress: number` | Report normalized scroll progress (0–1). |
+| `host_message` | `message: string`, `payload?` | Trigger a named interaction. |
+
+### Iframe → parent page
+
+| `type` | Additional fields | Meaning |
+|---|---|---|
+| `pong` | `sceneId`, `cameras: EmbedCameraDescriptor[]` | Response to `ping` — scene is ready. |
+| `viewer_event` | `event: ViewerInteractionEvent`, `sceneId?` | Viewer lifecycle event. |
+| `interaction_event` | `eventName`, `interactionId?`, `payload?` | A Publisher custom event fired. |
+
+### Minimal raw example
+
+```html
+<iframe id="vectreal-preview"
+  src="https://vectreal.com/preview/fullscreen/<projectId>/<sceneId>?token=KEY"
+  ...
+></iframe>
+
+<script>
+  const iframe = document.getElementById('vectreal-preview')
+  const targetOrigin = 'https://vectreal.com'
+
+  window.addEventListener('message', (event) => {
+    if (event.origin !== targetOrigin) return
+    if (event.data?.source !== 'vectreal-preview') return
+
+    if (event.data.type === 'pong') {
+      console.log('Ready. Cameras:', event.data.cameras)
+    }
+    if (event.data.type === 'viewer_event') {
+      console.log('Viewer event:', event.data.event)
+    }
+  })
+
+  // Send ping so the viewer knows a host is listening
+  iframe.addEventListener('load', () => {
+    iframe.contentWindow.postMessage(
+      { source: 'vectreal-host', type: 'ping' },
+      targetOrigin
+    )
+  })
+
+  function activateCamera(cameraId) {
+    iframe.contentWindow.postMessage(
+      {
+        source: 'vectreal-host',
+        type: 'viewer_command',
+        command: { type: 'activate_camera', cameraId }
+      },
+      targetOrigin
+    )
+  }
+</script>
+```
+
+---
+
+## Security
+
+- **Origin validation** — the bridge accepts messages only from the first origin that successfully contacts it. The SDK uses `new URL(iframe.src).origin` as `targetOrigin` automatically; never `'*'`.
+- **Token privacy** — keep `YOUR_PREVIEW_API_KEY` server-side or in environment variables. Tokens are validated against the project's allowed domain list on every request.
+- **Domain allowlist** — configure which external origins can load your preview at [Dashboard → Projects](/dashboard/projects). Requests from unlisted domains receive `403 Forbidden`.
+
+---
+
+## Next steps
+
+- [Publishing & Embedding](/docs/guides/publish-embed) — publish a scene and create a preview API key
+- [@vctrl/embed](/docs/packages/embed) — full package API reference
+- [@vctrl/viewer](/docs/packages/viewer) — embed the viewer directly in a React app without an iframe
+
+---
+
+## Related package references
+
+- [@vctrl/embed](/docs/packages/embed)
+- [@vctrl/viewer](/docs/packages/viewer)

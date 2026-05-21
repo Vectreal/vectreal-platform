@@ -16,7 +16,7 @@ import {
 	TooltipContent,
 	TooltipTrigger
 } from '@shared/components/ui/tooltip'
-import { cn } from '@shared/utils'
+import { cn, deriveUniqueSlug, slugify } from '@shared/utils'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import {
 	Camera,
@@ -108,10 +108,6 @@ const ControlField = memo(
 	)
 )
 ControlField.displayName = 'ControlField'
-
-function createId(prefix: string): string {
-	return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-}
 
 type CameraEntry = NonNullable<CameraProps['cameras']>[number]
 
@@ -233,10 +229,16 @@ function normalizeCameraState(camera: CameraProps): CameraProps {
 
 	const seenCameraIds = new Set<string>()
 	const normalizedCameras = sourceCameras.map((entry, index) => {
-		const rawCameraId = entry.cameraId || `camera-${index + 1}`
-		const cameraId = seenCameraIds.has(rawCameraId)
-			? `${rawCameraId}-${index + 1}`
-			: rawCameraId
+		const nameForId =
+			typeof entry.name === 'string' && entry.name.trim()
+				? entry.name
+				: `Camera ${index + 1}`
+		const base = entry.cameraId || slugify(nameForId)
+		let cameraId = base
+		let n = 2
+		while (seenCameraIds.has(cameraId)) {
+			cameraId = `${base}-${n++}`
+		}
 		seenCameraIds.add(cameraId)
 
 		return {
@@ -311,7 +313,7 @@ const CameraControlsSettingsPanel = memo(() => {
 	const canEditCameraSettings = useAtomValue(canEditCameraSettingsAtom)
 	const setIsPreviewMode = useSetAtom(isPreviewModeAtom)
 	const setProcessState = useSetAtom(processAtom)
-	const hotspots = useAtomValue(hotspotsAtom)
+	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 	const [cameraNameDraft, setCameraNameDraft] = useState('')
 	const [transitionAdvancedOpen, setTransitionAdvancedOpen] = useState(false)
 	const { requestSceneCameraSnapshot } = usePublisherViewerCapture()
@@ -463,7 +465,7 @@ const CameraControlsSettingsPanel = memo(() => {
 
 	const handleAddCamera = useCallback(async () => {
 		const snapshot = await captureCurrentViewSnapshot()
-		const newCameraId = createId('camera')
+		let newCameraId = ''
 		setCamera((prev) => {
 			const normalized = normalizeCameraState(prev)
 			const currentCameraId = resolveEditorTargetCameraId(
@@ -475,17 +477,24 @@ const CameraControlsSettingsPanel = memo(() => {
 					(entry) => entry.cameraId === currentCameraId
 				) ?? normalized.cameras?.[0]
 
+			const newIndex = (normalized.cameras?.length ?? 0) + 1
+			const newName = `Camera ${newIndex}`
+			const existingIds = (normalized.cameras ?? []).map((c) => c.cameraId)
+			newCameraId = deriveUniqueSlug(newName, existingIds, {
+				fallback: 'camera'
+			})
+
 			const newCamera: CameraEntry = {
 				...applySnapshotToCamera(
 					(sourceCamera ??
 						defaultCameraOptions.cameras?.[0] ?? {
 							cameraId: newCameraId,
-							name: 'Camera'
+							name: newName
 						}) as CameraEntry,
 					snapshot
 				),
 				cameraId: newCameraId,
-				name: `Camera ${(normalized.cameras?.length ?? 0) + 1}`
+				name: newName
 			}
 
 			return withImplicitFirstCameraDefault({
@@ -501,7 +510,7 @@ const CameraControlsSettingsPanel = memo(() => {
 				]
 			})
 		})
-		setSelectedCameraId(newCameraId)
+		if (newCameraId) setSelectedCameraId(newCameraId)
 	}, [
 		captureCurrentViewSnapshot,
 		selectedCameraId,
@@ -537,12 +546,45 @@ const CameraControlsSettingsPanel = memo(() => {
 
 	const handleRenameCamera = useCallback(
 		(nextName: string) => {
-			updateSelectedCameraEntry((cameraEntry) => ({
-				...cameraEntry,
-				name: nextName
-			}))
+			const oldId = selectedCamera?.cameraId
+			if (!oldId) return
+
+			setCamera((prev) => {
+				const normalized = normalizeCameraState(prev)
+				const existingIds = (normalized.cameras ?? []).map((c) => c.cameraId)
+				const newId = deriveUniqueSlug(nextName, existingIds, {
+					excludeId: oldId,
+					fallback: 'camera'
+				})
+
+				const updatedCameras = (normalized.cameras ?? []).map((entry) =>
+					entry.cameraId === oldId
+						? { ...entry, cameraId: newId, name: nextName }
+						: entry
+				)
+
+				const updatedActiveCameraId =
+					normalized.activeCameraId === oldId
+						? newId
+						: normalized.activeCameraId
+
+				if (newId !== oldId) {
+					setSelectedCameraId(newId)
+					setHotspots((prev) =>
+						prev.map((h) =>
+							h.linkedCameraId === oldId ? { ...h, linkedCameraId: newId } : h
+						)
+					)
+				}
+
+				return withImplicitFirstCameraDefault({
+					...normalized,
+					activeCameraId: updatedActiveCameraId,
+					cameras: updatedCameras
+				})
+			})
 		},
-		[updateSelectedCameraEntry]
+		[selectedCamera?.cameraId, setCamera, setHotspots, setSelectedCameraId]
 	)
 
 	const handleCommitCameraName = useCallback(() => {
@@ -806,48 +848,55 @@ const CameraControlsSettingsPanel = memo(() => {
 
 					{/* Camera Name */}
 					<SettingRow label="Camera Name">
-						<div className="flex w-full">
-							<Input
-								value={cameraNameDraft}
-								disabled={isCameraEditingLocked}
-								onChange={(event) => setCameraNameDraft(event.target.value)}
-								onBlur={handleCommitCameraName}
-								onKeyDown={(event) => {
-									if (event.key === 'Enter') {
-										event.preventDefault()
-										handleCommitCameraName()
-										return
-									}
+						<div className="flex w-full flex-col gap-1">
+							<div className="flex w-full">
+								<Input
+									value={cameraNameDraft}
+									disabled={isCameraEditingLocked}
+									onChange={(event) => setCameraNameDraft(event.target.value)}
+									onBlur={handleCommitCameraName}
+									onKeyDown={(event) => {
+										if (event.key === 'Enter') {
+											event.preventDefault()
+											handleCommitCameraName()
+											return
+										}
 
-									if (event.key === 'Escape') {
-										event.preventDefault()
-										setCameraNameDraft(selectedCamera?.name ?? '')
-									}
-								}}
-								placeholder="Enter camera name..."
-								className="text-sm"
-							/>
-							{/* Set current camera as default */}
-							{resolvedDefaultCameraId &&
-								selectedCamera?.cameraId !== resolvedDefaultCameraId && (
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<Button
-												size="icon"
-												variant="secondary"
-												className="shrink-0"
-												disabled={isCameraEditingLocked}
-												onClick={handlePinSelectedCameraAsDefault}
-												aria-label="Set selected camera as default"
-											>
-												<Pin className="h-3.5 w-3.5" />
-											</Button>
-										</TooltipTrigger>
-										<TooltipContent side="top">
-											Set selected camera as default
-										</TooltipContent>
-									</Tooltip>
-								)}
+										if (event.key === 'Escape') {
+											event.preventDefault()
+											setCameraNameDraft(selectedCamera?.name ?? '')
+										}
+									}}
+									placeholder="Enter camera name..."
+									className="text-sm"
+								/>
+								{/* Set current camera as default */}
+								{resolvedDefaultCameraId &&
+									selectedCamera?.cameraId !== resolvedDefaultCameraId && (
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<Button
+													size="icon"
+													variant="secondary"
+													className="shrink-0"
+													disabled={isCameraEditingLocked}
+													onClick={handlePinSelectedCameraAsDefault}
+													aria-label="Set selected camera as default"
+												>
+													<Pin className="h-3.5 w-3.5" />
+												</Button>
+											</TooltipTrigger>
+											<TooltipContent side="top">
+												Set selected camera as default
+											</TooltipContent>
+										</Tooltip>
+									)}
+							</div>
+							{selectedCamera?.cameraId && (
+								<p className="text-muted-foreground truncate px-0.5 font-mono text-xs">
+									{selectedCamera.cameraId}
+								</p>
+							)}
 						</div>
 					</SettingRow>
 

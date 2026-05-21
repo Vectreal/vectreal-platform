@@ -29,6 +29,7 @@ interface ExecuteSceneSaveOrchestratorParams {
 	currentSceneId: null | string
 	currentSettings: SceneSettings
 	sceneMetaState: SceneMetaState
+	lastSavedSettings: SceneSettings | null
 	optimizationSettings: unknown
 	optimizationReport: null | unknown
 	options?: SaveSceneOrchestratorOptions
@@ -62,6 +63,7 @@ export const executeSceneSaveOrchestrator = async ({
 	currentSceneId,
 	currentSettings,
 	sceneMetaState,
+	lastSavedSettings,
 	optimizationSettings,
 	optimizationReport,
 	options,
@@ -108,8 +110,22 @@ export const executeSceneSaveOrchestrator = async ({
 
 	const preparedSceneId = prepared.sceneId as string
 	const preparedProjectId = prepared.projectId as string | undefined
+	const existingAssets = prepared.existingAssets as
+		| Record<string, { assetId: string; contentHash: string }>
+		| undefined
 
-	const thumbnailDataUrl = await captureSceneThumbnail()
+	const currentDefaultCameraId =
+		currentSettings.camera?.cameras?.find(
+			(c) => !c.kind || c.kind === 'scene'
+		)?.cameraId ?? currentSettings.camera?.cameras?.[0]?.cameraId
+	const lastSavedDefaultCameraId =
+		lastSavedSettings?.camera?.cameras?.find(
+			(c) => !c.kind || c.kind === 'scene'
+		)?.cameraId ?? lastSavedSettings?.camera?.cameras?.[0]?.cameraId
+	const defaultCameraChanged = currentDefaultCameraId !== lastSavedDefaultCameraId
+	const needsThumbnail = !sceneMetaState.thumbnailUrl || defaultCameraChanged
+
+	const thumbnailDataUrl = needsThumbnail ? await captureSceneThumbnail() : null
 	let sceneMetaForSave = sceneMetaState
 
 	if (thumbnailDataUrl) {
@@ -125,6 +141,12 @@ export const executeSceneSaveOrchestrator = async ({
 			uploadThumbnailFormData.append('sceneId', preparedSceneId)
 			if (preparedProjectId) {
 				uploadThumbnailFormData.append('projectId', preparedProjectId)
+			}
+			if (options?.targetProjectId) {
+				uploadThumbnailFormData.append(
+					'targetProjectId',
+					options.targetProjectId
+				)
 			}
 			uploadThumbnailFormData.append('kind', 'image')
 			uploadThumbnailFormData.append('file', thumbnailFile)
@@ -156,6 +178,16 @@ export const executeSceneSaveOrchestrator = async ({
 	const maxConcurrentAssetUploads =
 		options?.maxConcurrentAssetUploads ?? maxConcurrentAssetUploadsDefault
 
+	const hashBytes = async (bytes: Uint8Array): Promise<string> => {
+		const hashBuffer = await crypto.subtle.digest(
+			'SHA-256',
+			bytes.buffer as ArrayBuffer
+		)
+		return Array.from(new Uint8Array(hashBuffer))
+			.map((b) => b.toString(16).padStart(2, '0'))
+			.join('')
+	}
+
 	const sceneAssetIds: string[] = []
 	const gltfData = (gltfJsonToSend as { data?: unknown }).data ?? gltfJsonToSend
 	const imageMimeLookup = buildImageMimeLookup(gltfData)
@@ -170,12 +202,24 @@ export const executeSceneSaveOrchestrator = async ({
 				data,
 				imageMimeLookup
 			)
+
+			if (existingAssets?.[fileName]) {
+				const bytes = new Uint8Array(await descriptor.file.arrayBuffer())
+				const hash = await hashBytes(bytes)
+				if (hash === existingAssets[fileName].contentHash) {
+					return existingAssets[fileName].assetId
+				}
+			}
+
 			const uploadAssetFormData = new FormData()
 			uploadAssetFormData.append('action', 'upload-scene-asset')
 			uploadAssetFormData.append('requestId', requestId)
 			uploadAssetFormData.append('sceneId', preparedSceneId)
 			if (preparedProjectId) {
 				uploadAssetFormData.append('projectId', preparedProjectId)
+			}
+			if (options?.targetProjectId) {
+				uploadAssetFormData.append('targetProjectId', options.targetProjectId)
 			}
 			uploadAssetFormData.append('kind', descriptor.kind)
 			uploadAssetFormData.append('file', descriptor.file)
@@ -204,28 +248,50 @@ export const executeSceneSaveOrchestrator = async ({
 		}
 	}
 
+	const uploadGltfFile = async (bytes: Uint8Array): Promise<string> => {
+		const uploadGltfFormData = new FormData()
+		uploadGltfFormData.append('action', 'upload-scene-gltf')
+		uploadGltfFormData.append('requestId', requestId)
+		uploadGltfFormData.append('sceneId', preparedSceneId)
+		if (preparedProjectId) {
+			uploadGltfFormData.append('projectId', preparedProjectId)
+		}
+		if (options?.targetProjectId) {
+			uploadGltfFormData.append('targetProjectId', options.targetProjectId)
+		}
+		uploadGltfFormData.append(
+			'file',
+			new File([bytes.buffer as ArrayBuffer], 'scene.gltf', {
+				type: 'model/gltf+json'
+			})
+		)
+		const uploadedGltf = await toJsonOrThrow(
+			await fetch(`/api/scenes/${preparedSceneId}`, {
+				method: 'POST',
+				body: uploadGltfFormData
+			})
+		)
+		return uploadedGltf.assetId as string
+	}
+
 	const gltfBlob = new Blob([JSON.stringify(gltfData)], {
 		type: 'model/gltf+json'
 	})
-	const uploadGltfFormData = new FormData()
-	uploadGltfFormData.append('action', 'upload-scene-gltf')
-	uploadGltfFormData.append('requestId', requestId)
-	uploadGltfFormData.append('sceneId', preparedSceneId)
-	if (preparedProjectId) {
-		uploadGltfFormData.append('projectId', preparedProjectId)
-	}
-	uploadGltfFormData.append(
-		'file',
-		new File([gltfBlob], 'scene.gltf', { type: 'model/gltf+json' })
-	)
+	const gltfBytes = new Uint8Array(await gltfBlob.arrayBuffer())
 
-	const uploadedGltf = await toJsonOrThrow(
-		await fetch(`/api/scenes/${preparedSceneId}`, {
-			method: 'POST',
-			body: uploadGltfFormData
-		})
-	)
-	sceneAssetIds.push(uploadedGltf.assetId)
+	let gltfAssetId: string
+	const existingGltf = existingAssets?.['scene.gltf']
+	if (existingGltf) {
+		const hash = await hashBytes(gltfBytes)
+		if (hash === existingGltf.contentHash) {
+			gltfAssetId = existingGltf.assetId
+		} else {
+			gltfAssetId = await uploadGltfFile(gltfBytes)
+		}
+	} else {
+		gltfAssetId = await uploadGltfFile(gltfBytes)
+	}
+	sceneAssetIds.push(gltfAssetId)
 
 	const formData = new FormData()
 	formData.append('action', 'commit-scene-save')
