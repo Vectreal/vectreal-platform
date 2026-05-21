@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.21.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.20.0...viewer-v0.21.0) (2026-05-21)
+
+
+### Features
+
+* implement camera system improvements and enhance bounds handling ([#511](https://github.com/Vectreal/vectreal-platform/issues/511)) ([15e0789](https://github.com/Vectreal/vectreal-platform/commit/15e078911bca650528d162d5b224f3d289ffbaef))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.21.0
+
 ## [0.20.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.19.0...viewer-v0.20.0) (2026-05-12)
 
 
