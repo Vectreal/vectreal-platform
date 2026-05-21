@@ -48,6 +48,7 @@ type PublishSceneRequest = SceneSettingsRequest & {
 type UploadPreparedScene = {
 	sceneId: string
 	projectId: string
+	existingAssets: Record<string, { assetId: string; contentHash: string }>
 }
 
 function assertParsed<T>(value: T, message: string): asserts value is T {
@@ -187,12 +188,19 @@ export async function prepareSceneUpload(
 		}
 	}
 
-	return resolveSceneAndProject(
+	const resolved = await resolveSceneAndProject(
 		request.sceneId,
 		userId,
 		request.targetProjectId,
 		request.projectId
 	)
+
+	const existingAssets =
+		request.sceneId?.trim() && !request.targetProjectId
+			? await sceneSettingsService.getExistingAssetHashes(resolved.sceneId)
+			: {}
+
+	return { ...resolved, existingAssets }
 }
 
 export async function uploadSceneAsset(
@@ -440,9 +448,7 @@ export async function getSceneSettings(
 						...result,
 						settings: {
 							...result.settings,
-							hotspots: result.settings.hotspots.filter(
-								(h) => !h.internalOnly
-							)
+							hotspots: result.settings.hotspots.filter((h) => !h.internalOnly)
 						}
 					}
 				: result
