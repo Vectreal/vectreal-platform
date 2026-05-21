@@ -3,18 +3,18 @@ import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
 import { cn } from '@shared/utils'
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion'
-import { ArrowRight, LayoutDashboard } from 'lucide-react'
+import { ArrowLeft, ArrowRight, LayoutDashboard } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { Link, redirect, useFetcher, type MetaFunction } from 'react-router'
 
 import { Route } from './+types/onboarding-page'
 import {
-	CONTENT_VARIANTS,
 	type OnboardingProfile,
 	type OnboardingProfileKey,
-	STEPS,
-	VISUAL_VARIANTS
+	CONTENT_VARIANTS,
+	STEPS
 } from './onboarding-steps'
+import { WelcomeVisual } from './onboarding-visuals'
 import { AuthErrorBoundary } from '../../components/errors'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import { updateUserProfile } from '../../lib/domain/user/user-repository.server'
@@ -83,7 +83,7 @@ const PillGroup = ({
 						'rounded-full border px-4 py-1.5 text-sm font-medium transition-all duration-150',
 						active
 							? 'border-[rgba(252,108,24,0.6)] bg-[rgba(252,108,24,0.12)] text-[#fc6c18]'
-							: 'border-white/12 bg-white/4 text-white/55 hover:border-white/25 hover:text-white/80'
+							: 'text-primary/55 hover:border-primary/25 hover:text-primary/80 border-primary/12 bg-primary/4'
 					)}
 				>
 					{opt.label}
@@ -123,7 +123,7 @@ const StepDot = ({
 					? '#fc6c18'
 					: completed
 						? 'rgba(252,108,24,0.55)'
-						: 'rgba(255,255,255,0.2)'
+						: 'var(--primary)'
 			}}
 			transition={{ type: 'spring', stiffness: 500, damping: 35 }}
 		/>
@@ -165,7 +165,6 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 	const step = STEPS[currentStep]
 	const isFirst = currentStep === 0
 	const isLast = currentStep === STEPS.length - 1
-	const { Visual } = step
 
 	const setField = (key: OnboardingProfileKey, value: string) => {
 		setProfile((prev) => ({ ...prev, [key]: value || null }))
@@ -199,18 +198,7 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 			<div className="bg-background flex h-screen w-screen overflow-hidden">
 				{/* ── Left panel: animated visual ────────────────────────────── */}
 				<div className="relative hidden flex-3 overflow-hidden md:flex">
-					<AnimatePresence mode="wait" initial={false}>
-						<motion.div
-							key={step.id}
-							className="absolute inset-0"
-							variants={VISUAL_VARIANTS}
-							initial="enter"
-							animate="center"
-							exit="exit"
-						>
-							<Visual />
-						</motion.div>
-					</AnimatePresence>
+					<WelcomeVisual />
 				</div>
 
 				{/* ── Right panel: content + nav ──────────────────────────────── */}
@@ -236,7 +224,7 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 
 					{/* Mobile visual band */}
 					<div className="border-border/20 bg-muted/5 mx-10 mb-6 h-48 shrink-0 overflow-hidden rounded-2xl border md:hidden">
-						<Visual />
+						<WelcomeVisual />
 					</div>
 
 					{/* Animated content */}
@@ -252,7 +240,7 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 								className="absolute inset-0 flex flex-col justify-center px-10 pb-8"
 							>
 								{/* Step counter */}
-								<p className="mb-4 text-[10px] font-semibold tracking-[0.2em] text-white/25 uppercase">
+								<p className="text-primary/25 mb-4 text-[10px] font-semibold tracking-[0.2em] uppercase">
 									{String(currentStep + 1).padStart(2, '0')} /{' '}
 									{String(STEPS.length).padStart(2, '0')}
 								</p>
@@ -265,7 +253,7 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 								</h1>
 
 								{/* Tagline */}
-								<p className="mb-8 text-sm leading-relaxed text-white/50">
+								<p className="text-primary/50 mb-8 text-sm leading-relaxed">
 									{step.tagline}
 								</p>
 
@@ -319,7 +307,8 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 								tabIndex={isFirst ? -1 : 0}
 								aria-hidden={isFirst}
 							>
-								← Back
+								<ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+								Back
 							</Button>
 
 							<Button

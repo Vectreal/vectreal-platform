@@ -1,8 +1,7 @@
-import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
 import { VectrealEmbed } from '@vctrl/embed'
-import { ChevronsDown, Star } from 'lucide-react'
+import { ChevronsDown } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 // ---------------------------------------------------------------------------
@@ -19,22 +18,25 @@ const CHAPTERS = [
 	{
 		id: 'default',
 		label: 'Overview',
-		description: 'Full-suspension carbon frame. Race geometry.'
+		description:
+			'Built from full-carbon to carve through technical terrain at speed.'
 	},
 	{
 		id: 'camera-1779054230007-lg5mbd',
-		label: 'Detail',
-		description: 'GX Eagle 12-speed drivetrain. SRAM precision.'
+		label: 'Drivetrain',
+		description:
+			'SRAM GX Eagle keeps you shifting precisely across every pitch.'
 	},
 	{
 		id: 'camera-1779320332512-tded3h',
 		label: 'Profile',
-		description: '140mm travel. Built for technical descents.'
+		description:
+			'Geometry tuned for rowdy descents. Capable enough to earn them.'
 	},
 	{
 		id: 'camera-1779320572791-qm1tv5',
-		label: 'Handlebars',
-		description: '12.4 kg. Light enough to climb, strong enough to descend.'
+		label: 'Cockpit',
+		description: 'Carbon cockpit, 12.4 kg. Nothing extra, nothing missing.'
 	}
 ] as const
 
@@ -42,29 +44,31 @@ type ChapterId = (typeof CHAPTERS)[number]['id']
 
 // ---------------------------------------------------------------------------
 
-const Stars = ({ count = 4 }: { count?: number }) => (
-	<div className="flex gap-0.5">
-		{Array.from({ length: 5 }).map((_, i) => (
-			<Star
-				key={i}
-				size={12}
-				className={
-					i < count ? 'fill-amber-400 text-amber-400' : 'text-white/15'
-				}
-			/>
-		))}
-	</div>
-)
-
 export default function MockShopEmbedClient() {
 	const iframeRef = useRef<HTMLIFrameElement>(null)
 	const embedRef = useRef<VectrealEmbed | null>(null)
 	const sectionRef = useRef<HTMLDivElement>(null)
 	const lastChapterRef = useRef<ChapterId>('default')
+	const suppressScrollRef = useRef(false)
+	const suppressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 	const [activeChapter, setActiveChapter] = useState<ChapterId>('default')
 	const [embedReady, setEmbedReady] = useState(false)
 
 	const chapter = CHAPTERS.find((c) => c.id === activeChapter) ?? CHAPTERS[0]
+
+	// Fade-swap state for description — opacity out → swap text → opacity in
+	const [displayedDesc, setDisplayedDesc] = useState(chapter.description)
+	const [descFading, setDescFading] = useState(false)
+
+	useEffect(() => {
+		if (chapter.description === displayedDesc) return
+		setDescFading(true)
+		const t = setTimeout(() => {
+			setDisplayedDesc(chapter.description)
+			setDescFading(false)
+		}, 180)
+		return () => clearTimeout(t)
+	}, [chapter.description])
 
 	// Initialise embed SDK
 	useEffect(() => {
@@ -97,6 +101,10 @@ export default function MockShopEmbedClient() {
 		if (!section) return
 
 		const handleScroll = () => {
+			// Ignore scroll events fired during a programmatic smooth-scroll so the
+			// optimistic indicator state set by activateChapter doesn't flicker.
+			if (suppressScrollRef.current) return
+
 			const rect = section.getBoundingClientRect()
 			const scrollable = rect.height - window.innerHeight
 			if (scrollable <= 0) return
@@ -125,26 +133,85 @@ export default function MockShopEmbedClient() {
 		return () => window.removeEventListener('scroll', handleScroll)
 	}, [embedReady])
 
+	const activateChapter = (id: ChapterId) => {
+		setActiveChapter(id)
+		lastChapterRef.current = id
+		if (embedReady) embedRef.current?.activateCamera(id)
+
+		const section = sectionRef.current
+		if (!section) return
+
+		const chapterThresholds: Record<ChapterId, number> = {
+			default: 0,
+			'camera-1779054230007-lg5mbd': 0.28,
+			'camera-1779320332512-tded3h': 0.56,
+			'camera-1779320572791-qm1tv5': 0.82
+		}
+
+		// Suppress scroll handler while the page animates to the target position
+		// so intermediate progress values don't fight the optimistic state update.
+		suppressScrollRef.current = true
+		if (suppressTimerRef.current) clearTimeout(suppressTimerRef.current)
+		suppressTimerRef.current = setTimeout(() => {
+			suppressScrollRef.current = false
+		}, 1000)
+
+		const progress = chapterThresholds[id]
+		const sectionTop = section.getBoundingClientRect().top + window.scrollY
+		const scrollable = section.offsetHeight - window.innerHeight
+		window.scrollTo({
+			top: sectionTop + progress * scrollable,
+			behavior: 'smooth'
+		})
+	}
+
+	const descStyle = {
+		transition: 'opacity 0.18s ease',
+		opacity: descFading ? 0 : 1
+	}
+
 	return (
 		// Sticky scroll container — 4× viewport height gives comfortable pacing
-		<div ref={sectionRef} className="relative" style={{ height: '400vh' }}>
+		<div ref={sectionRef} className="relative" style={{ height: '600vh' }}>
 			<div className="sticky top-0 h-screen overflow-hidden bg-black">
-				{/* Fullscreen iframe — pointer-events-none so scroll reaches parent */}
+				{/* Fullscreen iframe — hidden until embed is ready to prevent HDR flash */}
 				<iframe
 					ref={iframeRef}
 					src={DEMO_SCENE_URL}
-					className="pointer-events-none absolute inset-0 h-full w-full border-0"
+					className={cn(
+						'pointer-events-none absolute inset-0 h-full w-full border-0 transition-opacity duration-1000'
+						// embedReady ? 'opacity-100' : 'opacity-0'
+					)}
 					allow="autoplay; xr-spatial-tracking"
 					allowFullScreen
 					title="Alpine X3 Pro — interactive 3D preview"
 				/>
 
-				{/* Vignettes */}
-				<div className="pointer-events-none absolute inset-0 bg-linear-to-r from-black/55 via-transparent to-black/15" />
-				<div className="pointer-events-none absolute inset-0 bg-linear-to-b from-black/30 via-transparent to-black/75" />
+				{/* Loading indicator — visible until embed is ready */}
+				{/* <div
+					className={cn(
+						'pointer-events-none absolute inset-0 z-[1] flex flex-col items-center justify-center gap-3 transition-opacity duration-700',
+						embedReady ? 'opacity-0' : 'opacity-100'
+					)}
+				>
+					<div className="h-6 w-6 animate-spin rounded-full border-2 border-white/10 border-t-white/40" />
+					<p className="text-[11px] tracking-widest text-white/25 uppercase">
+						Loading scene
+					</p>
+				</div> */}
 
-				{/* Powered by Vectreal — top-left */}
-				<div className="absolute top-6 left-6 z-10">
+				{/* Touch passthrough — lets vertical scroll reach the page on mobile */}
+				<div
+					className="absolute inset-0 z-1"
+					style={{ touchAction: 'pan-y' }}
+				/>
+
+				{/* Vignettes */}
+				<div className="pointer-events-none absolute inset-0 z-2 bg-linear-to-r from-black/55 via-transparent to-black/15" />
+				<div className="pointer-events-none absolute inset-0 z-2 bg-linear-to-b from-black/30 via-transparent to-black/75" />
+
+				{/* Powered by Vectreal — top-left, offset below nav on mobile */}
+				<div className="absolute top-20 left-6 z-10 lg:top-6">
 					<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-1.5 backdrop-blur-sm">
 						<span className="bg-accent h-1.5 w-1.5 rounded-full" />
 						<span className="text-xs font-medium tracking-wide text-white/60">
@@ -153,59 +220,58 @@ export default function MockShopEmbedClient() {
 					</div>
 				</div>
 
-				{/* Product card — bottom-left */}
-				<div className="absolute bottom-12 left-6 z-10 max-w-xs">
-					<div
-						key={chapter.id}
-						className="rounded-2xl border border-white/10 bg-black/45 p-5 shadow-2xl backdrop-blur-md transition-all duration-500"
-					>
-						<div className="mb-3 flex items-center gap-3">
-							<Badge className="bg-accent/90 border-0 px-2 py-0.5 text-[11px] text-white">
-								Limited Edition
-							</Badge>
-							<Stars />
-						</div>
+				{/* ── Desktop layout ─────────────────────────────────────────── */}
 
-						<h3 className="text-xl leading-snug font-semibold tracking-tight text-white">
+				{/* Product card — bottom-left */}
+				<div className="absolute bottom-14 left-6 z-10 hidden max-w-xs md:block">
+					<div className="rounded-2xl border border-white/10 bg-black/45 p-5 shadow-2xl backdrop-blur-md">
+						<p className="text-[10px] font-medium tracking-[0.18em] text-white/30 uppercase">
+							Mountain Bike · Carbon
+						</p>
+
+						<h3 className="mt-2 text-xl leading-snug font-semibold tracking-tight text-white">
 							Alpine X3 Pro
 						</h3>
-						<p className="mt-0.5 text-xs font-medium tracking-widest text-white/40 uppercase">
-							Mountain Bike
+
+						<p className="mt-1 text-[10px] tracking-wider text-white/25 uppercase">
+							140mm · 12.4 kg · GX Eagle
 						</p>
 
 						<p className="text-accent mt-4 text-2xl font-bold tracking-tight">
 							$1,299.99
 						</p>
 
-						<p className="mt-3 text-sm leading-relaxed text-white/65">
-							{chapter.description}
-						</p>
+						{/* Fixed min-height prevents layout shift across description lengths */}
+						<div className="mt-3 min-h-[3rem]">
+							<p
+								style={descStyle}
+								className="text-sm leading-relaxed text-white/60"
+							>
+								{displayedDesc}
+							</p>
+						</div>
 
 						<Button
 							disabled
-							className="mt-4 w-full border-white/15 bg-white/8 text-white/70 hover:bg-white/15"
+							className="mt-4 w-full border-white/10 bg-white/6 text-white/50 hover:bg-white/10"
 							variant="outline"
 							size="sm"
 						>
 							Add to Cart
 						</Button>
 
-						<p className="mt-2.5 text-center text-[11px] text-white/25">
+						<p className="mt-2.5 text-center text-[11px] text-white/20">
 							Concept demo · Not for sale
 						</p>
 					</div>
 				</div>
 
 				{/* Chapter indicator — bottom-right */}
-				<div className="absolute right-6 bottom-12 z-10 flex flex-col items-end gap-2.5">
+				<div className="absolute right-6 bottom-14 z-10 hidden flex-col items-end gap-2.5 md:flex">
 					{CHAPTERS.map((c) => (
 						<button
 							key={c.id}
-							onClick={() => {
-								setActiveChapter(c.id)
-								lastChapterRef.current = c.id
-								if (embedReady) embedRef.current?.activateCamera(c.id)
-							}}
+							onClick={() => activateChapter(c.id)}
 							className="group flex items-center gap-2.5"
 							aria-label={`View ${c.label}`}
 						>
@@ -219,22 +285,25 @@ export default function MockShopEmbedClient() {
 							>
 								{c.label}
 							</span>
-							<span
-								className={cn(
-									'block rounded-full transition-all duration-300',
-									activeChapter === c.id
-										? 'bg-accent/85 h-2 w-6'
-										: 'h-1.5 w-1.5 bg-white/25 group-hover:bg-white/55'
-								)}
-							/>
+							{/* Fixed-width container prevents label shift on dot resize */}
+							<span className="flex w-6 shrink-0 items-center justify-end">
+								<span
+									className={cn(
+										'block rounded-full transition-all duration-300',
+										activeChapter === c.id
+											? 'bg-accent/85 h-2 w-6'
+											: 'h-2 w-1.5 bg-white/25 group-hover:bg-white/55'
+									)}
+								/>
+							</span>
 						</button>
 					))}
 				</div>
 
-				{/* Scroll hint — fades once user advances past first chapter */}
+				{/* Scroll hint — desktop */}
 				<div
 					className={cn(
-						'pointer-events-none absolute bottom-7 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-1.5 transition-opacity duration-700',
+						'pointer-events-none absolute bottom-8 left-1/2 z-10 hidden -translate-x-1/2 flex-col items-center gap-1.5 transition-opacity duration-700 md:flex',
 						activeChapter !== 'default' ? 'opacity-0' : 'opacity-100'
 					)}
 				>
@@ -242,6 +311,70 @@ export default function MockShopEmbedClient() {
 						Scroll to explore
 					</p>
 					<ChevronsDown size={13} className="animate-bounce text-white/25" />
+				</div>
+
+				{/* ── Mobile layout ──────────────────────────────────────────── */}
+
+				<div className="absolute inset-x-0 bottom-10 z-10 flex flex-col gap-4 px-4 md:hidden">
+					{/* Scroll hint */}
+					<div
+						className={cn(
+							'pointer-events-none flex flex-col items-center gap-1.5 transition-opacity duration-700',
+							activeChapter !== 'default' ? 'opacity-0' : 'opacity-100'
+						)}
+					>
+						<p className="text-[11px] tracking-widest text-white/35 uppercase">
+							Scroll to explore
+						</p>
+						<ChevronsDown size={13} className="animate-bounce text-white/25" />
+					</div>
+
+					{/* Chapter indicators — centered */}
+					<div className="flex justify-center gap-6">
+						{CHAPTERS.map((c) => (
+							<button
+								key={c.id}
+								onClick={() => activateChapter(c.id)}
+								className="group flex flex-col items-center gap-1"
+								aria-label={`View ${c.label}`}
+							>
+								<span
+									className={cn(
+										'text-[10px] font-medium tracking-wide transition-all duration-300',
+										activeChapter === c.id
+											? 'text-white'
+											: 'text-white/30 group-hover:text-white/55'
+									)}
+								>
+									{c.label}
+								</span>
+								<span
+									className={cn(
+										'block rounded-full transition-all duration-300',
+										activeChapter === c.id
+											? 'bg-accent/85 h-1.5 w-5'
+											: 'h-1.5 w-1.5 bg-white/25 group-hover:bg-white/55'
+									)}
+								/>
+							</button>
+						))}
+					</div>
+
+					{/* Compact product bar */}
+					<div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/50 px-4 py-3 backdrop-blur-md">
+						<div className="min-w-0 flex-1 pr-4">
+							<p className="text-sm font-semibold text-white">Alpine X3 Pro</p>
+							<p
+								style={descStyle}
+								className="truncate text-[11px] text-white/40"
+							>
+								{displayedDesc}
+							</p>
+						</div>
+						<p className="text-accent shrink-0 text-base font-bold">
+							$1,299.99
+						</p>
+					</div>
 				</div>
 			</div>
 		</div>

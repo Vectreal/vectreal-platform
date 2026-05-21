@@ -5,15 +5,6 @@
  * All fields are nullable — any step can be skipped.
  */
 
-import {
-	DashboardVisual,
-	PublishVisual,
-	UploadVisual,
-	WelcomeVisual
-} from './onboarding-visuals'
-
-import type { ComponentType } from 'react'
-
 // ─── Profile data shape ───────────────────────────────────────────────────────
 
 export interface OnboardingProfile {
@@ -36,7 +27,6 @@ interface BaseStep {
 	id: number
 	title: string
 	tagline: string
-	Visual: ComponentType
 	fieldKey: OnboardingProfileKey
 }
 
@@ -109,8 +99,7 @@ export const STEPS: OnboardingStep[] = [
 			{ value: '3d_artist', label: '3D Artist' },
 			{ value: 'marketer', label: 'Marketer' },
 			{ value: 'other', label: 'Other' }
-		],
-		Visual: WelcomeVisual
+		]
 	},
 	{
 		id: 1,
@@ -123,8 +112,7 @@ export const STEPS: OnboardingStep[] = [
 			{ value: 'small_business', label: 'Small Business' },
 			{ value: 'agency_studio', label: 'Agency or Studio' },
 			{ value: 'enterprise', label: 'Enterprise' }
-		],
-		Visual: UploadVisual
+		]
 	},
 	{
 		id: 2,
@@ -132,8 +120,7 @@ export const STEPS: OnboardingStep[] = [
 		tagline: 'Optional \u2014 skip if you\u2019re flying solo.',
 		fieldKey: 'companyName',
 		inputType: 'text',
-		placeholder: 'Acme Inc.',
-		Visual: DashboardVisual
+		placeholder: 'Acme Inc.'
 	},
 	{
 		id: 3,
@@ -148,7 +135,6 @@ export const STEPS: OnboardingStep[] = [
 			{ value: 'ad', label: 'Ad' },
 			{ value: 'developer_community', label: 'Dev Community' },
 			{ value: 'other', label: 'Other' }
-		],
-		Visual: PublishVisual
+		]
 	}
 ]
