@@ -54,7 +54,10 @@ export default [
 				'forgot-password',
 				'./routes/forgot-password-page/forgot-password.tsx'
 			),
-			route('reset-password', './routes/reset-password-page/reset-password.tsx'),
+			route(
+				'reset-password',
+				'./routes/reset-password-page/reset-password.tsx'
+			),
 			route('auth/confirm-pending', './routes/confirm-pending.tsx')
 		]),
 
@@ -112,10 +115,12 @@ export default [
 				...prefix('guides', [
 					route('upload', './routes/docs/guides/upload.mdx'),
 					route('optimize', './routes/docs/guides/optimize.mdx'),
-					route('publish-embed', './routes/docs/guides/publish-embed.mdx')
+					route('publish-embed', './routes/docs/guides/publish-embed.mdx'),
+					route('embed-sdk', './routes/docs/guides/embed-sdk.mdx')
 				]),
 				// Package Reference
 				...prefix('packages', [
+					route('embed', './routes/docs/packages/embed.mdx'),
 					route('viewer', './routes/docs/packages/viewer.mdx'),
 					route('hooks', './routes/docs/packages/hooks.mdx'),
 					route('core', './routes/docs/packages/core.mdx')
