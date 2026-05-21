@@ -30,8 +30,7 @@ export const EMBED_COPY = {
 	missingSceneForUrl: 'Save this scene first to generate a preview URL.',
 	embedCodeUnavailable:
 		'<!-- Save this scene before generating an embed snippet -->',
-	sdkCodeUnavailable:
-		'// Save this scene before generating an SDK snippet',
+	sdkCodeUnavailable: '// Save this scene before generating an SDK snippet',
 	openPreview: 'Open preview',
 	tabHtml: 'HTML',
 	tabSdk: 'SDK'

@@ -1,7 +1,12 @@
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
 import { Label } from '@shared/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/components/ui/tabs'
+import {
+	Tabs,
+	TabsContent,
+	TabsList,
+	TabsTrigger
+} from '@shared/components/ui/tabs'
 import { cn } from '@shared/utils'
 import { Copy, ExternalLink, Link2 } from 'lucide-react'
 import { useMemo, useState, type FC } from 'react'

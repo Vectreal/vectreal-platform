@@ -118,10 +118,11 @@ function usePreviewInitialCommands(): ViewerCommand[] {
 const PreviewFullscreenPage = ({ params }: Route.ComponentProps) => {
 	const sceneId = params.sceneId
 	const projectId = params.projectId
-	const { file, isLoadingScene, sceneData, previewError, retrySceneLoad } = usePreviewScene({
-		sceneId,
-		projectId
-	})
+	const { file, isLoadingScene, sceneData, previewError, retrySceneLoad } =
+		usePreviewScene({
+			sceneId,
+			projectId
+		})
 	const initialCommands = usePreviewInitialCommands()
 	const { onCommandExecutorReady, onInteractionEvent } = useHostedPreviewBridge(
 		{
@@ -140,13 +141,21 @@ const PreviewFullscreenPage = ({ params }: Route.ComponentProps) => {
 		return (
 			<div className="bg-background flex h-screen w-full items-center justify-center p-6">
 				<div className="border-border bg-card w-full max-w-lg space-y-4 rounded-2xl border p-6">
-					<h1 className="text-lg font-semibold">Unable to Load Scene Preview</h1>
-					<p className="text-muted-foreground text-sm">{previewError.message}</p>
+					<h1 className="text-lg font-semibold">
+						Unable to Load Scene Preview
+					</h1>
+					<p className="text-muted-foreground text-sm">
+						{previewError.message}
+					</p>
 					<div className="flex gap-2">
 						<Button type="button" onClick={() => void retrySceneLoad()}>
 							Retry
 						</Button>
-						<Button type="button" variant="outline" onClick={() => window.history.back()}>
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => window.history.back()}
+						>
 							Go Back
 						</Button>
 					</div>

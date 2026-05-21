@@ -167,8 +167,7 @@ export const docsPages: DocPage[] = [
 		title: 'Embed SDK',
 		description:
 			'Control embedded 3D scenes from your page — camera switching, scroll interactions, event callbacks, and the raw postMessage protocol.',
-		sourcePath:
-			'apps/vectreal-platform/app/routes/docs/guides/embed-sdk.mdx',
+		sourcePath: 'apps/vectreal-platform/app/routes/docs/guides/embed-sdk.mdx',
 		category: 'guides',
 		order: 3,
 		version: 'latest'

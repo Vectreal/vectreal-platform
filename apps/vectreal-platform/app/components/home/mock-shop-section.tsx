@@ -17,8 +17,8 @@ const MockShopSection = () => {
 				<div className="mx-auto max-w-7xl">
 					<h2>Real Store, Real Product, Real Impact</h2>
 					<p className="text-foreground/90 mt-4 text-lg md:text-xl">
-						See how Vectreal powers interactive 3D e-commerce — scroll to explore
-						the model
+						See how Vectreal powers interactive 3D e-commerce — scroll to
+						explore the model
 					</p>
 				</div>
 			</div>

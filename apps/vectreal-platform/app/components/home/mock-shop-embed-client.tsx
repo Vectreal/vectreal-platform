@@ -1,9 +1,8 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
+import { VectrealEmbed } from '@vctrl/embed'
 import { Star } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-
-import { VectrealEmbed } from '@vctrl/embed'
 
 // ---------------------------------------------------------------------------
 // Scene configuration
@@ -60,7 +59,9 @@ const Stars = ({ count = 4 }: { count?: number }) => (
 			<Star
 				key={i}
 				size={14}
-				className={i < count ? 'fill-amber-400 text-amber-400' : 'text-white/20'}
+				className={
+					i < count ? 'fill-amber-400 text-amber-400' : 'text-white/20'
+				}
 			/>
 		))}
 	</div>
@@ -87,7 +88,11 @@ export default function MockShopEmbedClient() {
 		embed.ready().then(() => {
 			setEmbedReady(true)
 			// Smooth transition for subsequent camera switches
-			embed.setTransition({ type: 'linear', duration: 1200, easing: 'ease_in_out' })
+			embed.setTransition({
+				type: 'linear',
+				duration: 1200,
+				easing: 'ease_in_out'
+			})
 			embed.setAutoRotate(false)
 		})
 
@@ -175,7 +180,7 @@ export default function MockShopEmbedClient() {
 						<h3 className="text-xl leading-snug font-semibold text-white">
 							Alpine X3 Pro
 						</h3>
-						<p className="text-white/50 mt-0.5 text-sm">Mountain Bike</p>
+						<p className="mt-0.5 text-sm text-white/50">Mountain Bike</p>
 
 						<p className="text-accent mt-4 text-2xl font-bold">$1,299.99</p>
 
