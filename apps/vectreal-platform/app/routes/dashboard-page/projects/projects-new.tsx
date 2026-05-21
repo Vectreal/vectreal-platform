@@ -26,6 +26,7 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 import { Textarea } from '@shared/components/ui/textarea'
+import { slugify } from '@shared/utils'
 import { useSetAtom } from 'jotai/react'
 import { AlertCircle, Plus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -175,7 +176,7 @@ export async function action({ request }: Route.ActionArgs) {
 		// Handle Zod validation errors
 		if (error instanceof ZodError) {
 			const fieldErrors: Record<string, string> = {}
-				error.issues.forEach((err) => {
+			error.issues.forEach((err) => {
 				if (err.path.length > 0) {
 					const field = err.path[0] as string
 					fieldErrors[field] = err.message
@@ -249,22 +250,12 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 		}
 	}, [actionData, form])
 
-	// Generate slug from name
-	const generateSlug = (name: string) => {
-		return name
-			.toLowerCase()
-			.trim()
-			.replace(/[^a-z0-9]+/g, '-')
-			.replace(/^-+|-+$/g, '')
-	}
-
 	// Auto-generate slug when name changes
 	const handleNameChange = (value: string) => {
 		form.clearErrors('name')
 		form.setValue('name', value, { shouldValidate: true })
 		if (!form.getValues('slug') || isGeneratingSlug) {
-			const generatedSlug = generateSlug(value)
-			form.setValue('slug', generatedSlug, { shouldValidate: true })
+			form.setValue('slug', slugify(value), { shouldValidate: true })
 			setIsGeneratingSlug(true)
 		}
 	}

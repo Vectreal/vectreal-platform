@@ -208,6 +208,7 @@ export const useSceneSaveFlow = ({
 						currentSceneId,
 						currentSettings,
 						sceneMetaState,
+						lastSavedSettings,
 						optimizationSettings,
 						optimizationReport: optimizationReport ?? null,
 						options,

@@ -29,6 +29,7 @@ interface ExecuteSceneSaveOrchestratorParams {
 	currentSceneId: null | string
 	currentSettings: SceneSettings
 	sceneMetaState: SceneMetaState
+	lastSavedSettings: SceneSettings | null
 	optimizationSettings: unknown
 	optimizationReport: null | unknown
 	options?: SaveSceneOrchestratorOptions
@@ -62,6 +63,7 @@ export const executeSceneSaveOrchestrator = async ({
 	currentSceneId,
 	currentSettings,
 	sceneMetaState,
+	lastSavedSettings,
 	optimizationSettings,
 	optimizationReport,
 	options,
@@ -112,7 +114,18 @@ export const executeSceneSaveOrchestrator = async ({
 		| Record<string, { assetId: string; contentHash: string }>
 		| undefined
 
-	const thumbnailDataUrl = await captureSceneThumbnail()
+	const currentDefaultCameraId =
+		currentSettings.camera?.cameras?.find(
+			(c) => !c.kind || c.kind === 'scene'
+		)?.cameraId ?? currentSettings.camera?.cameras?.[0]?.cameraId
+	const lastSavedDefaultCameraId =
+		lastSavedSettings?.camera?.cameras?.find(
+			(c) => !c.kind || c.kind === 'scene'
+		)?.cameraId ?? lastSavedSettings?.camera?.cameras?.[0]?.cameraId
+	const defaultCameraChanged = currentDefaultCameraId !== lastSavedDefaultCameraId
+	const needsThumbnail = !sceneMetaState.thumbnailUrl || defaultCameraChanged
+
+	const thumbnailDataUrl = needsThumbnail ? await captureSceneThumbnail() : null
 	let sceneMetaForSave = sceneMetaState
 
 	if (thumbnailDataUrl) {
