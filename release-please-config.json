@@ -35,6 +35,11 @@
 			"release-type": "node",
 			"component": "viewer",
 			"package-name": "@vctrl/viewer"
+		},
+		"packages/embed": {
+			"release-type": "node",
+			"component": "embed",
+			"package-name": "@vctrl/embed"
 		}
 	}
 }
