@@ -38,7 +38,7 @@ const PreviewInfoPopover = ({
 	title,
 	description
 }: PreviewInfoPopoverProps) => (
-	<InfoPopover>
+	<InfoPopover className="z-100">
 		<InfoPopoverTrigger />
 		<InfoPopoverContent>
 			<InfoPopoverCloseButton />

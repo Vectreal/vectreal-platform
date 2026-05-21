@@ -36,22 +36,31 @@ const popoverClasses = {
 		'flex cursor-pointer items-center justify-between gap-2 border-t border-[var(--vctrl-border)] bg-[var(--vctrl-bg)] px-4 py-2 text-xs text-[var(--vctrl-text)] visited:text-[var(--vctrl-text)] hover:text-[var(--vctrl-text)] transition-[color,background-color] duration-300 hover:bg-[var(--vctrl-hover-bg)] active:bg-[var(--vctrl-active-bg)] [&_svg]:h-4 [&_svg]:w-4 [&_svg]:text-current'
 } as const
 
-export const InfoPopover = ({ children }: PropsWithChildren) => {
+interface PropsWithChildrenAndClass extends PropsWithChildren {
+	className?: string
+}
+
+export const InfoPopover = ({
+	children,
+	className
+}: PropsWithChildrenAndClass) => {
 	const [isOpen, setIsOpen] = useState(false)
 	const id = useId()
 
 	return (
 		<PopoverContext.Provider value={{ isOpen, setIsOpen }} key={id}>
-			<div className={cn(popoverClasses.root)}>{children}</div>
+			<div className={cn(popoverClasses.root, className)}>{children}</div>
 		</PopoverContext.Provider>
 	)
 }
 
-export const InfoPopoverTrigger = () => {
+export const InfoPopoverTrigger = ({
+	className
+}: PropsWithChildrenAndClass) => {
 	const { isOpen, setIsOpen } = useContext(PopoverContext)
 
 	return (
-		<div className={cn(popoverClasses.triggerRoot)}>
+		<div className={cn(popoverClasses.triggerRoot, className)}>
 			<button
 				className={cn(popoverClasses.triggerButton)}
 				onClick={() => setIsOpen(true)}
@@ -67,10 +76,9 @@ export const InfoPopoverTrigger = () => {
 }
 
 export const InfoPopoverContent = ({
-	children
-}: {
-	children: React.ReactNode
-}) => {
+	children,
+	className
+}: PropsWithChildrenAndClass) => {
 	const { isOpen, setIsOpen } = useContext(PopoverContext)
 	const popoverRef = useRef<HTMLDivElement>(null)
 
@@ -124,7 +132,8 @@ export const InfoPopoverContent = ({
 			aria-modal="true"
 			className={cn(
 				popoverClasses.modalBase,
-				isOpen ? popoverClasses.modalOpen : popoverClasses.modalClosed
+				isOpen ? popoverClasses.modalOpen : popoverClasses.modalClosed,
+				className
 			)}
 			ref={popoverRef}
 			tabIndex={-1}
@@ -137,27 +146,31 @@ export const InfoPopoverContent = ({
 export const InfoPopoverText = ({
 	children,
 	className
-}: PropsWithChildren<{ className?: string }>) => (
+}: PropsWithChildrenAndClass) => (
 	<div className={cn(popoverClasses.textContainer, className)}>{children}</div>
 )
 
-export const InfoPopoverCloseButton = () => {
+export const InfoPopoverCloseButton = ({
+	className
+}: PropsWithChildrenAndClass) => {
 	const { setIsOpen } = useContext(PopoverContext)
 
 	return (
 		<button
 			onClick={() => setIsOpen(false)}
 			aria-label="Close information popover"
-			className={cn(popoverClasses.closeButton)}
+			className={cn(popoverClasses.closeButton, className)}
 		>
 			<CrossIcon className="h-4 w-4" />
 		</button>
 	)
 }
 
-export const InfoPopoverVectrealFooter = () => (
+export const InfoPopoverVectrealFooter = ({
+	className
+}: PropsWithChildrenAndClass) => (
 	<a
-		className={cn(popoverClasses.footer)}
+		className={cn(popoverClasses.footer, className)}
 		href="https://vectreal.com"
 		target="_blank"
 		rel="noopener noreferrer"

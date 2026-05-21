@@ -68,6 +68,7 @@ export class VectrealEmbed {
 	}> = []
 	private isReady = false
 	private boundListener: (event: MessageEvent<unknown>) => void
+	private pingIntervalId: number | null = null
 
 	constructor(iframe: HTMLIFrameElement, options: EmbedOptions = {}) {
 		this.iframe = iframe
@@ -92,9 +93,10 @@ export class VectrealEmbed {
 		this.boundListener = this.handleMessage.bind(this)
 		window.addEventListener('message', this.boundListener)
 
-		// Dispatch ping immediately so the iframe knows a host is listening.
-		// Commands sent before pong are queued.
-		this.postToIframe({ source: HOSTED_PREVIEW_HOST_SOURCE, type: 'ping' })
+		// Retry ping every 500 ms until we receive a pong. The iframe's React app
+		// may not have hydrated and registered its message listener yet when the
+		// constructor runs, so a single fire-and-forget ping is unreliable.
+		this.startPingPolling()
 	}
 
 	// ---------------------------------------------------------------------------
@@ -136,6 +138,7 @@ export class VectrealEmbed {
 
 	/** Remove all listeners and stop responding to messages. */
 	destroy(): void {
+		this.stopPingPolling()
 		window.removeEventListener('message', this.boundListener)
 		this.handlers.clear()
 		this.pendingCommands = []
@@ -261,6 +264,24 @@ export class VectrealEmbed {
 		}
 	}
 
+	private startPingPolling(): void {
+		this.postToIframe({ source: HOSTED_PREVIEW_HOST_SOURCE, type: 'ping' })
+		this.pingIntervalId = window.setInterval(() => {
+			if (this.isReady) {
+				this.stopPingPolling()
+				return
+			}
+			this.postToIframe({ source: HOSTED_PREVIEW_HOST_SOURCE, type: 'ping' })
+		}, 500)
+	}
+
+	private stopPingPolling(): void {
+		if (this.pingIntervalId !== null) {
+			window.clearInterval(this.pingIntervalId)
+			this.pingIntervalId = null
+		}
+	}
+
 	private flushPendingCommands(): void {
 		for (const cmd of this.pendingCommands) {
 			this.postToIframe(cmd)
@@ -295,6 +316,7 @@ export class VectrealEmbed {
 
 		switch (data.type) {
 			case 'pong':
+				this.stopPingPolling()
 				this.sceneId = data.sceneId
 				this.cameras = data.cameras
 				this.isReady = true
