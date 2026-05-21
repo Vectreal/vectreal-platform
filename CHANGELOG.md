@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.21.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.20.0...workspace-v0.21.0) (2026-05-21)
+
+
+### Features
+
+* add local Google Cloud Storage setup instructions and configura… ([#499](https://github.com/Vectreal/vectreal-platform/issues/499)) ([8448285](https://github.com/Vectreal/vectreal-platform/commit/84482854455dcd1993e96fcad1275116df16a4b2))
+* **embed:** update package version to 0.20.0 and configure release settings ([#526](https://github.com/Vectreal/vectreal-platform/issues/526)) ([7d6aa97](https://github.com/Vectreal/vectreal-platform/commit/7d6aa97ecf5f372ac46aec4cc72a4d294b7fcdfa))
+* enhance error handling for scene loading and upload failures ([#498](https://github.com/Vectreal/vectreal-platform/issues/498)) ([309e7c6](https://github.com/Vectreal/vectreal-platform/commit/309e7c691c5ce8121fa244aa8a8c283a1a43d672))
+* enhance scene loader event handling by adding load-reset listener ([#512](https://github.com/Vectreal/vectreal-platform/issues/512)) ([76cbc7c](https://github.com/Vectreal/vectreal-platform/commit/76cbc7c3d4c23fb6330c53f732ddd998ddff2fe4))
+* enhance user authentication error handling for email conflicts ([#502](https://github.com/Vectreal/vectreal-platform/issues/502)) ([36c6c4d](https://github.com/Vectreal/vectreal-platform/commit/36c6c4d32ecebdac0b36a9440e0f313f0c3372df))
+* implement camera system improvements and enhance bounds handling ([#511](https://github.com/Vectreal/vectreal-platform/issues/511)) ([15e0789](https://github.com/Vectreal/vectreal-platform/commit/15e078911bca650528d162d5b224f3d289ffbaef))
+* implement non-destructive optimization process and save original scene model ([#510](https://github.com/Vectreal/vectreal-platform/issues/510)) ([ce0629e](https://github.com/Vectreal/vectreal-platform/commit/ce0629e2289e3eb8e2020a859f6bf43867525fce))
+
+
+### Bug Fixes
+
+* **auth:** clear conflicted local session to prevent post-sign-in redirect loops ([#505](https://github.com/Vectreal/vectreal-platform/issues/505)) ([965d2dc](https://github.com/Vectreal/vectreal-platform/commit/965d2dcd1b8e0e2f9a374f7a09f2f3507016a0dc))
+* unblock email users blocked by email_conflict on UUID mismatch ([#506](https://github.com/Vectreal/vectreal-platform/issues/506)) ([feb748f](https://github.com/Vectreal/vectreal-platform/commit/feb748ff85ef1c540cff69f52905a499f5bdfb19))
+* use DB user ID (userWithDefaults.user.id) instead of Supabase UUID in onboarding and settings actions ([#507](https://github.com/Vectreal/vectreal-platform/issues/507)) ([aeff9cc](https://github.com/Vectreal/vectreal-platform/commit/aeff9cc6c4b1eabb81d67aab058b4bc4964da13b))
+* user name property access for greeting in UserMenu to include additional name options ([#487](https://github.com/Vectreal/vectreal-platform/issues/487)) ([81af08b](https://github.com/Vectreal/vectreal-platform/commit/81af08b5247a0a15c75f03ed16f54d03ce51b590))
+
 ## [0.20.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.19.0...workspace-v0.20.0) (2026-05-12)
 
 

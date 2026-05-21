@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.21.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.20.0...hooks-v0.21.0) (2026-05-21)
+
+
+### Features
+
+* add local Google Cloud Storage setup instructions and configura… ([#499](https://github.com/Vectreal/vectreal-platform/issues/499)) ([8448285](https://github.com/Vectreal/vectreal-platform/commit/84482854455dcd1993e96fcad1275116df16a4b2))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.21.0
+
 ## [0.20.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.19.0...hooks-v0.20.0) (2026-05-12)
 
 
