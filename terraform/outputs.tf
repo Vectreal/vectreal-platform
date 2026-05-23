@@ -151,3 +151,8 @@ output "next_steps" {
     - ../terraform/README.md - Infrastructure details
   EOT
 }
+
+output "optimization_function_url" {
+  description = "URL for the optimize-textures Cloud Function (empty when disabled)"
+  value       = var.enable_optimization_function ? google_cloudfunctions2_function.optimize_textures[0].service_config[0].uri : ""
+}

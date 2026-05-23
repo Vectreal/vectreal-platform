@@ -265,6 +265,9 @@ if [[ "$MODE" == "verify" ]]; then
               RESEND_WEBHOOK_SECRET; do
       check_gh_secret "${v}_STAGING"
     done
+    for v in OPTIMIZE_TEXTURES_WORKER_URL OPTIMIZE_TEXTURES_WORKER_TOKEN; do
+      check_gh_secret "${v}_STAGING"
+    done
   fi
 
   if [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]]; then
@@ -273,6 +276,9 @@ if [[ "$MODE" == "verify" ]]; then
               SEND_EMAIL_HOOK_SECRET RESEND_API_KEY CONTACT_DATA_ENCRYPTION_KEY \
               CLOUDFLARE_TURNSTILE_SITE_KEY CLOUDFLARE_TURNSTILE_SECRET_KEY \
               RESEND_WEBHOOK_SECRET; do
+      check_gh_secret "${v}_PROD"
+    done
+    for v in OPTIMIZE_TEXTURES_WORKER_URL OPTIMIZE_TEXTURES_WORKER_TOKEN; do
       check_gh_secret "${v}_PROD"
     done
   fi
@@ -494,7 +500,12 @@ sync_env_secrets() {
   done
 
   # Optional — only set when the value is non-empty
-  for field in RESEND_WEBHOOK_SECRET CONTACT_DATA_ENCRYPTION_KEY; do
+  for field in \
+    RESEND_WEBHOOK_SECRET \
+    CONTACT_DATA_ENCRYPTION_KEY \
+    OPTIMIZE_TEXTURES_WORKER_URL \
+    OPTIMIZE_TEXTURES_WORKER_TOKEN
+  do
     varname="${field}_${ENV}"
     [[ -n "${!varname}" ]] && set_secret "$varname" "${!varname}"
   done

@@ -65,6 +65,8 @@ jobs:
       posthog-host: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
       vectreal-api-key-prod: ${{ secrets.VITE_PUBLIC_VECTREAL_API_KEY_PROD }}
       demo-scene-url: ${{ secrets.VITE_PUBLIC_DEMO_SCENE_URL }}
+      optimize-textures-worker-url: ${{ secrets.OPTIMIZE_TEXTURES_WORKER_URL_STAGING }}
+      optimize-textures-worker-token: ${{ secrets.OPTIMIZE_TEXTURES_WORKER_TOKEN_STAGING }}
       contact-data-encryption-key: ${{ secrets.CONTACT_DATA_ENCRYPTION_KEY_STAGING }}
       resend-api-key: ${{ secrets.RESEND_API_KEY_STAGING }}
       resend-webhook-secret: ${{ secrets.RESEND_WEBHOOK_SECRET_STAGING }}

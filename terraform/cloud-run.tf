@@ -50,7 +50,7 @@ resource "google_cloud_run_v2_service" "production" {
           cpu    = var.production_cpu
           memory = var.production_memory
         }
-        cpu_idle = true
+        cpu_idle = false
       }
 
       # Basic environment variables - GitHub Actions configures secrets

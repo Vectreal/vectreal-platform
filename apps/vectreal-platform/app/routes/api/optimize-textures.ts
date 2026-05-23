@@ -100,6 +100,92 @@ const isGenericTextureFileName = (value: string): boolean => {
 	return GENERIC_TEXTURE_FILE_NAME_PATTERN.test(extractTextureFileName(trimmed))
 }
 
+function getOptimizeTexturesWorkerUrl(): string | null {
+	const configuredUrl = process.env.OPTIMIZE_TEXTURES_WORKER_URL?.trim()
+	if (!configuredUrl) {
+		return null
+	}
+
+	try {
+		new URL(configuredUrl)
+		return configuredUrl
+	} catch {
+		console.warn(
+			'[optimize-textures] Ignoring invalid OPTIMIZE_TEXTURES_WORKER_URL'
+		)
+		return null
+	}
+}
+
+async function proxyToOptimizeTexturesWorker(params: {
+	workerUrl: string
+	inputBuffer: Uint8Array
+	textureIndex: number
+	textureName: string
+	optionsStr: string
+}): Promise<Response | null> {
+	const { workerUrl, inputBuffer, textureIndex, textureName, optionsStr } = params
+	const workerToken = process.env.OPTIMIZE_TEXTURES_WORKER_TOKEN?.trim()
+	const requestHeaders: Record<string, string> = {
+		'Content-Type': 'application/octet-stream',
+		'X-Texture-Index': String(textureIndex),
+		'X-Texture-File-Name': textureName,
+		'X-Optimize-Options': optionsStr
+	}
+
+	if (workerToken) {
+		requestHeaders['X-Optimize-Worker-Token'] = workerToken
+	}
+
+	let workerResponse: Response
+	try {
+		workerResponse = await fetch(workerUrl, {
+			method: 'POST',
+			headers: requestHeaders,
+			body: Buffer.from(inputBuffer)
+		})
+	} catch (error) {
+		console.warn(
+			'[optimize-textures] Worker request failed, falling back to local optimizer',
+			error
+		)
+		return null
+	}
+
+	// Fallback only when worker runtime is unhealthy/unavailable.
+	if (workerResponse.status >= 500) {
+		console.warn(
+			`[optimize-textures] Worker returned ${workerResponse.status}, falling back to local optimizer`
+		)
+		return null
+	}
+
+	if (workerResponse.status === 401 || workerResponse.status === 403) {
+		console.error(
+			`[optimize-textures] Worker authentication failed with status ${workerResponse.status}`
+		)
+	}
+
+	const responseHeaders = new Headers(workerResponse.headers)
+	responseHeaders.set('Cache-Control', 'no-store')
+
+	if (workerResponse.ok) {
+		const outputMimeType = responseHeaders.get('Content-Type') || 'image/webp'
+		const outputFileName = resolveCanonicalTextureFileName(
+			textureName,
+			outputMimeType
+		)
+		responseHeaders.set('X-Texture-Index', String(textureIndex))
+		responseHeaders.set('X-Texture-Name', outputFileName)
+		responseHeaders.set('X-Texture-File-Name', outputFileName)
+	}
+
+	return new Response(workerResponse.body, {
+		status: workerResponse.status,
+		headers: responseHeaders
+	})
+}
+
 /**
  * Server-side texture optimization API endpoint.
  *
@@ -247,6 +333,22 @@ export async function action({ request }: Route.ActionArgs) {
 		}
 
 		const inputBuffer = Buffer.from(requestBuffer)
+
+		const workerUrl = getOptimizeTexturesWorkerUrl()
+		if (workerUrl) {
+			const workerResponse = await proxyToOptimizeTexturesWorker({
+				workerUrl,
+				inputBuffer,
+				textureIndex,
+				textureName,
+				optionsStr
+			})
+
+			if (workerResponse) {
+				return workerResponse
+			}
+		}
+
 		const sharpModule = await import('sharp')
 		const sharp = sharpModule.default || sharpModule
 

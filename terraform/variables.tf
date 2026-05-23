@@ -60,7 +60,7 @@ variable "local_dev_private_bucket_name" {
 variable "production_min_instances" {
   description = "Minimum number of instances for production"
   type        = number
-  default     = 0
+  default     = 1
 }
 
 variable "production_max_instances" {
@@ -271,5 +271,66 @@ variable "production_static_max_ttl_seconds" {
   description = "Maximum CDN TTL for production static backend bucket"
   type        = number
   default     = 31536000
+}
+
+variable "enable_optimization_function" {
+  description = "Whether to deploy the dedicated optimize-textures Cloud Function (2nd gen)"
+  type        = bool
+  default     = false
+}
+
+variable "optimization_function_name" {
+  description = "Name of the optimize-textures Cloud Function"
+  type        = string
+  default     = "vectreal-optimize-textures"
+}
+
+variable "optimization_function_runtime" {
+  description = "Runtime used by the optimize-textures Cloud Function"
+  type        = string
+  default     = "nodejs22"
+}
+
+variable "optimization_function_memory" {
+  description = "Memory allocation for the optimize-textures Cloud Function"
+  type        = string
+  default     = "2Gi"
+}
+
+variable "optimization_function_cpu" {
+  description = "CPU allocation for the optimize-textures Cloud Function"
+  type        = string
+  default     = "2"
+}
+
+variable "optimization_function_timeout_seconds" {
+  description = "Timeout for optimize-textures Cloud Function requests"
+  type        = number
+  default     = 300
+}
+
+variable "optimization_function_min_instances" {
+  description = "Minimum instances for optimize-textures Cloud Function"
+  type        = number
+  default     = 0
+}
+
+variable "optimization_function_max_instances" {
+  description = "Maximum instances for optimize-textures Cloud Function"
+  type        = number
+  default     = 20
+}
+
+variable "optimization_function_ingress" {
+  description = "Ingress setting for optimize-textures Cloud Function"
+  type        = string
+  default     = "ALLOW_ALL"
+}
+
+variable "optimization_worker_token" {
+  description = "Optional shared token required by the optimize-textures worker"
+  type        = string
+  default     = ""
+  sensitive   = true
 }
 
