@@ -21,7 +21,9 @@ export function parseOptions(optionsStr: string): OptimizeTextureOptions {
 		resize = [Number(parsed.resize[0]), Number(parsed.resize[1])]
 	}
 	const quality =
-		typeof parsed.quality === 'number' ? parsed.quality : DEFAULT_OPTIONS.quality
+		typeof parsed.quality === 'number'
+			? parsed.quality
+			: DEFAULT_OPTIONS.quality
 	const targetFormat =
 		parsed.targetFormat === 'jpeg' ||
 		parsed.targetFormat === 'png' ||

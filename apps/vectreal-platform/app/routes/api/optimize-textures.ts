@@ -124,7 +124,8 @@ async function proxyToOptimizeTexturesWorker(params: {
 	textureName: string
 	optionsStr: string
 }): Promise<Response | null> {
-	const { workerUrl, inputBuffer, textureIndex, textureName, optionsStr } = params
+	const { workerUrl, inputBuffer, textureIndex, textureName, optionsStr } =
+		params
 	const workerToken = process.env.OPTIMIZE_TEXTURES_WORKER_TOKEN?.trim()
 	const requestHeaders: Record<string, string> = {
 		'Content-Type': 'application/octet-stream',
