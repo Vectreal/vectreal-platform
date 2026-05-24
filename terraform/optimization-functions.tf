@@ -1,5 +1,8 @@
 locals {
   optimization_function_source_dir = "${path.module}/../build/apps/vectreal-platform/functions/optimize-textures"
+  optimization_function_source_files = sort(fileset(local.optimization_function_source_dir, "**"))
+  optimization_function_source_hash  = sha256(join("", [for file in local.optimization_function_source_files : "${file}:${filesha256("${local.optimization_function_source_dir}/${file}")}\n"]))
+  optimization_function_source_md5   = md5(join("", [for file in local.optimization_function_source_files : "${file}:${filesha256("${local.optimization_function_source_dir}/${file}")}\n"]))
 }
 
 data "archive_file" "optimize_textures_source" {
@@ -33,9 +36,11 @@ resource "google_storage_bucket" "functions_source" {
 
 resource "google_storage_bucket_object" "optimize_textures_source" {
   count  = var.enable_optimization_function ? 1 : 0
-  name   = "optimize-textures-${data.archive_file.optimize_textures_source[0].output_md5}.zip"
+  name   = "optimize-textures-${substr(local.optimization_function_source_hash, 0, 16)}.zip"
   bucket = google_storage_bucket.functions_source[0].name
   source = data.archive_file.optimize_textures_source[0].output_path
+  # Keep replacement detection deterministic even if archive metadata changes.
+  source_md5hash = local.optimization_function_source_md5
 }
 
 resource "google_cloudfunctions2_function" "optimize_textures" {
