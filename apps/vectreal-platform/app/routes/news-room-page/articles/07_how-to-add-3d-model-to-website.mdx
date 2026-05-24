@@ -1,0 +1,273 @@
+---
+title: "How to Add a 3D Model to Any Website - The Complete Options Map"
+slug: "how-to-add-3d-model-to-website"
+excerpt: "Four paths for getting an interactive 3D model live on a web page - from no-code publisher to React component to full engine - with a decision matrix that finds your fit."
+publishedAt: "2026-05-26"
+updatedAt: "2026-05-24"
+category: "guides"
+tags:
+- "3d-web"
+- "guides"
+- "embed"
+- "gltf"
+- "react"
+- "open-source"
+author:
+    name: "Vectreal Team"
+    role: "Founding Contributors"
+    bio: "Building open infrastructure for practical 3D on the web."
+    avatar: "/assets/images/logo-192.png"
+    xUrl: "https://x.com/vectreal"
+    linkedinUrl: "https://www.linkedin.com/company/vectreal"
+coverImage: "/assets/images/newsroom/07/og-how-to-add-3d-model-to-website.webp"
+draft: false
+thumbnailImage: "/assets/images/newsroom/07/thumbnail-how-to-add-3d-model-to-website.webp"
+---
+
+{/* ## Blog Summary (80–120 words)
+
+You have a 3D model. You want it interactive on a web page - rotating, zoomable, real. This guide maps every realistic path from file to live embed. Two axes matter: where the 3D content comes from (your existing model vs. content created inside the tool), and how deep the integration needs to go (iframe embed vs. React component vs. full engine). Some platforms span that second axis - Vectreal requires zero code to publish an embed from the Publisher UI, and also ships a React component and Node.js packages for teams that want full programmatic control. A decision matrix at the end maps all three dimensions to a concrete recommendation. */}
+
+{/*
+COVER IMAGE BRIEF - /assets/images/newsroom/07/og-how-to-add-3d-model-to-website.webp
+Aspect ratio: 1200×630 (Open Graph standard).
+Composition: A horizontal spectrum bar running left-to-right across the image, labelled "No code" on the left and "Full engine" on the right. Brand orange (#FC6C18) gradient fills the bar. Above the bar, icons/labels for each path at their position on the spectrum: `<model-viewer>` at the far left, Vectreal Publisher just right of centre-left (with a bracket spanning from there to centre-right, labelled "@vctrl/viewer"), React Three Fiber at the far right. Below the bar, a separate row shows "Content creation tools (Spline, Vectary)" positioned at far left as a distinct track. Background: deep black (#0a0a0a). Font: DM Sans.
+Overlaid title text: "How to Add a 3D Model to Any Website".
+Mood: Structured, decision-oriented - communicates a spectrum, not a simple list.
+
+THUMBNAIL BRIEF - /assets/images/newsroom/07/thumbnail-how-to-add-3d-model-to-website.webp
+Aspect ratio: 4:3.
+Same spectrum composition, tighter crop focusing on the bar and labels. No overlaid text.
+*/}
+
+### Every Team Hits This Moment
+
+A product demo needs a 3D model on the landing page. A portfolio needs the artist's work rotating and interactive rather than flattened into a screenshot. A product detail page needs a viewer that lets the customer turn the object and examine the back.
+
+The file exists. The web page exists. Getting the first to work on the second turns out to be less obvious than expected - not because the technology is immature, but because there are several meaningfully different paths, each suited to a different combination of team, content, and integration depth. The important thing to know upfront: some of these paths require no code at all. Choosing the wrong one wastes hours. This guide maps the full picture.
+
+---
+
+### Two Axes, Not One
+
+Most comparisons of 3D web tools treat this as a single spectrum from "easy" to "powerful." That framing misses the critical distinction.
+
+There are actually two separate questions, and they are independent of each other:
+
+**Where does the 3D content come from?**
+
+Some tools require you to create 3D content inside them - their pipeline is built around their own modelling environment. Others accept models you bring in from anywhere: Blender, Maya, Cinema 4D, CAD software, asset stores. These two groups are not interchangeable. A tool that cannot import your existing GLB is not a simpler version of one that can.
+
+**How deep does the integration need to go?**
+
+This is the code-vs-no-code question - but it is more granular than a binary. The spectrum runs from "paste an iframe into any page" (no code required) to "React component inside your component tree" (some code) to "build the rendering stack yourself" (significant code). Importantly, some platforms span this spectrum: they offer a no-code publisher path and a developer SDK path in the same product.
+
+The options map and decision matrix below follow both axes.
+
+---
+
+### The Options Map
+
+| Tool | Bring your own model | No-code path | Developer path |
+|---|---|---|---|
+| `<model-viewer>` | Yes - you host it | Yes (HTML element) | - |
+| Vectreal | Yes - platform hosts it | Yes (Publisher UI → iframe) | Yes (`@vctrl/*` npm) |
+| React Three Fiber | Yes - you host it | - | Yes (full engine) |
+| Spline / Vectary | No - content made in-tool | Yes | Limited |
+
+The key observation: Vectreal is the only option in this set that is simultaneously no-code for non-developers and a full SDK for developers. Those are not two separate products - they are two access points into the same underlying pipeline.
+
+---
+
+### Option 1 - The `<model-viewer>` Web Component
+
+Google's `model-viewer` is a custom HTML element that renders a GLB or glTF file in a browser with no JavaScript setup required. The full integration is a script tag, one HTML element, and a path to your model file:
+
+```html
+<script type="module"
+  src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js">
+</script>
+
+<model-viewer
+  src="/models/product.glb"
+  alt="Interactive 3D product view"
+  camera-controls
+  auto-rotate
+  style="width: 100%; height: 480px;">
+</model-viewer>
+```
+
+This works across every modern browser, requires no build step, and introduces no runtime dependencies into your codebase.
+
+**When it is the right choice:** a static HTML page or CMS that accepts raw HTML, a single model that will not change frequently, and a team that wants to own the file hosting directly without routing through any platform.
+
+**What it leaves to you:** `<model-viewer>` renders a file it is pointed at. It does not optimize that file, version it, manage access control, or give a non-developer a way to update the scene without changing code. You are also responsible for making the file web-ready before it arrives - a raw Blender export can weigh 40–120 MB. For a personal project with one static model, those gaps are acceptable. For a team managing evolving content, they compound.
+
+---
+
+### Option 2 - Vectreal: No-Code Publisher to Full SDK
+
+Vectreal is worth treating as its own category because it spans the spectrum that other tools occupy only partially. The starting point is the Publisher - a browser-based interface that requires no code whatsoever.
+
+**The no-code path (Publisher → iframe)**
+
+Open the [Vectreal Publisher](https://vectreal.com/publisher). Drag in a GLB, glTF, OBJ, or USDZ file. The platform optimizes it automatically - mesh simplification, KTX2/Basis Universal texture compression, scene graph cleanup - all in the same pipeline used by production deployments. Configure the camera angle, environment lighting, and background. Set which domains are allowed to display the embed. Publish.
+
+What comes back is a stable scene URL and an iframe snippet:
+
+```html
+<iframe
+  src="https://vectreal.com/preview/[scene-id]?key=[api-key]"
+  width="100%"
+  height="500"
+  frameborder="0"
+  allow="autoplay; fullscreen"
+  loading="lazy"
+  title="Interactive 3D scene">
+</iframe>
+```
+
+Paste it anywhere - a React component, a Webflow section, a Shopify product description, a Notion page, raw HTML. No JavaScript required on the embedding side. No account required to upload and preview; sign in to save and publish.
+
+This is as no-code as Spline or Vectary. The difference is that it works with models you already have, from any DCC tool, with their original materials and geometry intact. A 3D artist can go from a Blender export to a live, optimized embed on a production site without writing a line of code and without waiting for a developer.
+
+**The developer path (`@vctrl/viewer` → React component)**
+
+For teams that need the viewer inside the React component tree - sharing context, state, routing, and theming with the rest of the application - `@vctrl/viewer` wraps the same renderer as a standard React component:
+
+```tsx
+import { VectrealViewer } from '@vctrl/viewer'
+import '@vctrl/viewer/css'
+
+export function ProductViewer({ sceneUrl }: { sceneUrl: string }) {
+  return (
+    <VectrealViewer
+      src={sceneUrl}
+      camera={{ position: [0, 1, 4] }}
+      environment="studio"
+    />
+  )
+}
+```
+
+The scene URL points to a published Vectreal scene. The pipeline - optimization, hosting, CDN delivery, access control - is the same one the Publisher uses. The developer gets component-level control over the viewer configuration without building or maintaining the underlying infrastructure.
+
+For server-side use - programmatic optimization, format conversion, pipeline automation - `@vctrl/core` provides the same gltf-transform pipeline as a Node.js module. The [React Viewer Integration guide](https://vectreal.com/news-room/react-viewer-integration) covers the `@vctrl/viewer` setup in full. The [Publisher Walkthrough](https://vectreal.com/news-room/the-vectreal-publisher-walkthrough) covers the no-code path end-to-end.
+
+**The open-source distinction**
+
+Vectreal's core packages and the platform application itself are open-source under AGPL-3.0. The code that runs the pipeline, the viewer, and the Publisher is in the public repository. This matters if code auditability, self-hosting, or freedom from vendor lock-in are requirements for the team.
+
+---
+
+### Option 3 - React Three Fiber
+
+React Three Fiber is a React renderer for Three.js. It gives a React application direct, declarative control over a 3D scene: geometry, materials, lighting, animation, camera, and post-processing - all as React components, with full access to the surrounding application's state and lifecycle.
+
+```tsx
+import { Canvas } from '@react-three/fiber'
+import { useGLTF, OrbitControls, Environment } from '@react-three/drei'
+
+function Model() {
+  const { scene } = useGLTF('/models/product.glb')
+  return <primitive object={scene} />
+}
+
+export function ProductViewer() {
+  return (
+    <Canvas camera={{ position: [0, 1, 4], fov: 45 }}>
+      <Model />
+      <OrbitControls enableZoom enablePan={false} />
+      <Environment preset="studio" />
+    </Canvas>
+  )
+}
+```
+
+The ceiling for what this produces is as high as any 3D engine. It is the correct choice when 3D is the core product - a configurator, an architectural walkthrough, a data visualization where the 3D scene is the primary interface.
+
+**What most tutorials do not show:** React Three Fiber is a rendering engine. It renders a model. It does not optimize the file, manage content versions, scope access by API key, provide a staging workflow, or give a non-developer a way to update the scene without a code deploy. Three.js also requires `window` - it needs lazy-loading behind `ssr: false` in any SSR framework to avoid hydration errors.
+
+For teams building a 3D application, React Three Fiber is the right tool. For teams adding a viewer to an application that is not primarily about 3D, the overhead typically outweighs the control.
+
+---
+
+### Option 4 - No-Code Design Tools (Spline, Vectary)
+
+Spline and Vectary are browser-based tools for creating 3D web experiences. You model, animate, and configure the scene inside the tool, then export an embed. The entire content creation workflow lives within their environment.
+
+These tools are the right choice when a designer wants to build a 3D web experience from scratch - an animated hero section, a motion-rich brand moment, a stylised interactive scene - and the content does not exist yet as an external file.
+
+They are a poor fit for displaying a model that already exists: a product exported from Blender, a mechanical part from CAD software, a character asset from a pipeline. Their import support is limited by design - their format is optimized for content native to their tool. If you are bringing your own file, you are fighting the grain of the product.
+
+This is the fundamental difference from the Vectreal Publisher. Both are no-code. The distinction is that Vectreal publishes the model you have; Spline and Vectary help you build one you do not have yet.
+
+---
+
+### The Decision Matrix
+
+Two questions determine the right path.
+
+**Question 1: Where does the 3D content come from?**
+
+If the model already exists - exported from Blender, Maya, Cinema 4D, a CAD tool, or downloaded as a GLB - the relevant options are `<model-viewer>`, Vectreal, or React Three Fiber. Spline and Vectary are not practical for this case.
+
+If there is no model yet and a designer will build the scene inside a tool - go to Spline or Vectary.
+
+**Question 2: How deep does the viewer need to integrate with the surrounding site or application?**
+
+Work through this in order:
+
+*Does the viewer need to live inside a React component tree - sharing state, context, theme, or layout with the rest of the application?*
+
+Yes → `@vctrl/viewer`. This is Vectreal's developer path: component-level control, same pipeline as the Publisher, SSR-safe.
+
+No → continue.
+
+*Is this a 3D application - configurator, walkthrough, interactive visualization where 3D is the core user experience?*
+
+Yes → React Three Fiber. The full engine is the right tool when 3D is the product, not a feature of the product.
+
+No → continue.
+
+*Does the team need non-developers to update the 3D content, scene configuration, or camera settings after launch without a code deploy?*
+
+Yes → Vectreal Publisher. The dashboard lets anyone on the team update and re-publish a scene. The embed URL stays stable - no code change required on the site.
+
+No → continue.
+
+*Is the integration a single model on a page with no pipeline, hosting, or version management requirements?*
+
+Yes → `<model-viewer>`. Minimal, self-contained, no platform dependency.
+
+The majority of product and portfolio use cases resolve at the third step: a team with existing 3D assets that needs a production-quality viewer any team member can manage. That is what the Publisher was built for - and it requires no code to use.
+
+---
+
+### File Preparation Applies to Every Path
+
+Whichever option you choose, the source 3D file needs to be web-ready before it reaches the viewer. A raw Blender or Maya export is sized for asset pipelines, not browser delivery. The paths differ only in who handles this step:
+
+| Path | Who optimizes the file |
+|---|---|
+| `<model-viewer>` | You - separately, before uploading to your CDN |
+| Vectreal Publisher | The platform - automatically at publish time |
+| `@vctrl/viewer` | The platform - via the same Publisher pipeline |
+| React Three Fiber | You - separately, before bundling or serving |
+| Spline / Vectary | The tool - content is created in a web-native format |
+
+If optimization is unfamiliar territory, the Publisher handles it as part of the standard upload flow - run the model through the presets, compare quality and file size, publish. No account required to try it, and the optimized GLB can be downloaded and used with any other path above.
+
+---
+
+### Starting Point
+
+If you are evaluating before committing: the Publisher is free to test without an account. Upload a model, apply an optimization preset, configure a camera, and see the live embed result before writing a line of code. The meaningful decisions - file size targets, quality tradeoffs, camera and lighting configuration - are all visible in that workflow.
+
+The React component path starts at:
+
+```bash
+npm install @vctrl/viewer
+```
+
+Full setup documentation, including the SSR-safe lazy-load pattern, is in the [React Viewer Integration guide](https://vectreal.com/news-room/react-viewer-integration).
