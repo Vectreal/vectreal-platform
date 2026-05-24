@@ -1,5 +1,5 @@
 /**
- * EmbedShowcase — an article-level wrapper for Vectreal iframe embeds.
+ * EmbedShowcase - an article-level wrapper for Vectreal iframe embeds.
  * Provides consistent caption, label, and sizing so embeds look intentional
  * rather than raw iframes dropped inline.
  *

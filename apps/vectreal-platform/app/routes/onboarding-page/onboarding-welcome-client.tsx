@@ -1,6 +1,6 @@
 /**
  * Client-only R3F scene for the Welcome step.
- * Imported lazily by onboarding-visuals.tsx — never runs on the server.
+ * Imported lazily by onboarding-visuals.tsx - never runs on the server.
  */
 import { useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'

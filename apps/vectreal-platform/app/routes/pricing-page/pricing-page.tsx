@@ -21,7 +21,7 @@ export async function loader(_: Route.LoaderArgs) {
 		const prices = await getCheckoutOptions()
 		return data({ prices })
 	} catch (error) {
-		// Stripe may not be configured in all environments — graceful fallback
+		// Stripe may not be configured in all environments - graceful fallback
 		console.error('Failed to load checkout options for pricing page.', error)
 		return data({ prices: null })
 	}
@@ -49,7 +49,7 @@ export default function PricingPage() {
 			<PageHero
 				eyebrow="Pricing"
 				heading="Simple, transparent pricing for every workflow."
-				description="Start for free. Upgrade when you need more. Every plan includes the core 3D publishing workflow — no hidden fees."
+				description="Start for free. Upgrade when you need more. Every plan includes the core 3D publishing workflow - no hidden fees."
 				actions={
 					<>
 						<Badge variant="outline">4 Plans</Badge>

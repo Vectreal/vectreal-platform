@@ -2,7 +2,7 @@ import type { ValueMapping } from '../lib/utils/value-mapping'
 
 /**
  * Shared field configuration for inspector slider settings.
- * Single source of truth — import from here in all constants files.
+ * Single source of truth - import from here in all constants files.
  */
 export interface FieldConfig {
 	key: string

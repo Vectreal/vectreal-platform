@@ -10,7 +10,10 @@ import { startTransition } from 'react'
 import { hydrateRoot } from 'react-dom/client'
 import { HydratedRouter } from 'react-router/dom'
 
-if (!import.meta.env.DEV || import.meta.env.VITE_PUBLIC_POSTHOG_ENABLED === 'true') {
+if (
+	!import.meta.env.DEV ||
+	import.meta.env.VITE_PUBLIC_POSTHOG_ENABLED === 'true'
+) {
 	posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_TOKEN, {
 		api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
 		ui_host:
@@ -18,7 +21,7 @@ if (!import.meta.env.DEV || import.meta.env.VITE_PUBLIC_POSTHOG_ENABLED === 'tru
 		defaults: '2026-01-30',
 		// Add tracing headers so server-side middleware can correlate events.
 		__add_tracing_headers: [window.location.host, 'localhost'],
-		// Start in memory-only mode — no cookies or localStorage until the user
+		// Start in memory-only mode - no cookies or localStorage until the user
 		// grants analytics consent. Basic anonymous traffic (pageviews) is still
 		// captured without storing anything on the device (DSGVO-compliant).
 		// ConsentProvider switches persistence to 'localStorage+cookie' once the

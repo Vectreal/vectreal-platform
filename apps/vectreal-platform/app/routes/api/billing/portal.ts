@@ -55,7 +55,7 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 		)
 	}
 
-	// Fetch the Stripe customer ID — required for portal access
+	// Fetch the Stripe customer ID - required for portal access
 	const db = getDbClient()
 	const [sub] = await db
 		.select({ stripeCustomerId: orgSubscriptions.stripeCustomerId })

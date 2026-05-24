@@ -16,7 +16,7 @@
  *     3. If they differ, record a drift entry and (optionally) repair.
  *
  * The function returns a `ReconciliationReport` whether or not repairs were
- * applied — callers can inspect the report and decide whether to alert.
+ * applied - callers can inspect the report and decide whether to alert.
  */
 
 import { isNotNull } from 'drizzle-orm'
@@ -134,8 +134,7 @@ async function processRow(
 	const stripePlan = resolvePlanFromSubscription(stripeSub, row.plan)
 
 	const hasDrift =
-		row.billingState !== stripeBillingState ||
-		row.plan !== stripePlan
+		row.billingState !== stripeBillingState || row.plan !== stripePlan
 
 	if (!hasDrift) {
 		return { inSync: true, entry: null, error: null }
@@ -271,4 +270,3 @@ export async function reconcileStripeSubscriptions(
 
 	return report
 }
-

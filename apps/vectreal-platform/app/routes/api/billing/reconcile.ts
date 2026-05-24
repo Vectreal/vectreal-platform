@@ -9,8 +9,8 @@
  *
  * Request body (JSON, all optional):
  *   {
- *     repair: boolean  // default false — when true, repair detected drift
- *     limit: number    // default 500 — max subscriptions to examine
+ *     repair: boolean  // default false - when true, repair detected drift
+ *     limit: number    // default 500 - max subscriptions to examine
  *   }
  *
  * Access control:
@@ -71,9 +71,7 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 	}
 
 	if (!isAuthorized(request)) {
-		return ApiResponse.unauthorized(
-			'Missing or invalid Authorization header'
-		)
+		return ApiResponse.unauthorized('Missing or invalid Authorization header')
 	}
 
 	let body: { repair?: unknown; limit?: unknown } = {}
@@ -118,8 +116,7 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 
 		return ApiResponse.success(report)
 	} catch (err) {
-		const message =
-			err instanceof Error ? err.message : 'Reconciliation failed'
+		const message = err instanceof Error ? err.message : 'Reconciliation failed'
 		console.error('[billing/reconcile] fatal error', { message })
 		return ApiResponse.serverError(message)
 	}

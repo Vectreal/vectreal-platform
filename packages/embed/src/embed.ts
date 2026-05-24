@@ -80,7 +80,7 @@ export class VectrealEmbed {
 			try {
 				detectedOrigin = new URL(src, window.location.href).origin
 			} catch {
-				// unparseable src — fall through to require explicit iframeOrigin
+				// unparseable src - fall through to require explicit iframeOrigin
 			}
 		}
 		if (!options.iframeOrigin && !detectedOrigin) {
@@ -354,7 +354,7 @@ export class VectrealEmbed {
 				this.emit('auto_rotate_changed', { enabled: event.enabled })
 				break
 			case 'initial_framing_completed':
-				// Translate to model_loaded for embed consumers — signals scene is visible
+				// Translate to model_loaded for embed consumers - signals scene is visible
 				this.emit('model_loaded', undefined as void)
 				break
 		}

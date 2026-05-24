@@ -25,8 +25,8 @@ export { AuthErrorBoundary as ErrorBoundary }
 export const meta: MetaFunction = () =>
 	buildMeta(
 		[
-			{ title: 'Get Started — Vectreal' },
-			{ property: 'og:title', content: 'Get Started — Vectreal' }
+			{ title: 'Get Started - Vectreal' },
+			{ property: 'og:title', content: 'Get Started - Vectreal' }
 		],
 		undefined,
 		{ private: true }

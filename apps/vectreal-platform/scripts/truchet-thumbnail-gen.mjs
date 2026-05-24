@@ -1,13 +1,13 @@
 // truchet-thumbnail-gen.mjs
-// TRUCHET TILE MOSAIC — News-room thumbnail generator
+// TRUCHET TILE MOSAIC - News-room thumbnail generator
 //
 // Generates two WebP images per article from the same seeded mosaic:
 //
-//   thumbnail-<slug>.webp  — pure mosaic, no text overlay
+//   thumbnail-<slug>.webp  - pure mosaic, no text overlay
 //                            used as the visual card image on the listing page
 //                            written to frontmatter as `thumbnailImage`
 //
-//   og-<slug>.webp         — mosaic + solid panel with title, category & URL
+//   og-<slug>.webp         - mosaic + solid panel with title, category & URL
 //                            used as the og:image / SEO social card
 //                            written to frontmatter as `coverImage`
 //
@@ -16,9 +16,9 @@
 // deterministic seed, so output is stable across re-runs.
 //
 // Frontmatter fields consumed:
-//   title     — headline text rendered on the OG panel
-//   slug      — appended to BASE_URL to form the article URL in the OG footer
-//   category  — displayed in the tag chip (uppercased)
+//   title     - headline text rendered on the OG panel
+//   slug      - appended to BASE_URL to form the article URL in the OG footer
+//   category  - displayed in the tag chip (uppercased)
 //
 // Usage:
 //   Batch (all articles):   node scripts/truchet-thumbnail-gen.mjs
@@ -38,7 +38,7 @@ import sharp from 'sharp'
 const W = 1200,
 	H = 630
 
-// Canonical base URL for news-room articles — slug is appended per article
+// Canonical base URL for news-room articles - slug is appended per article
 const BASE_URL = 'https://vectreal.com/news-room'
 
 // Path to the MDX articles folder, relative to this script
@@ -48,7 +48,7 @@ const ARTICLES_DIR = path.resolve(
 	'../app/routes/news-room-page/articles'
 )
 
-// Public static-assets destination — thumbnails land here so Vite/RR serves
+// Public static-assets destination - thumbnails land here so Vite/RR serves
 // them at the root-relative path used in coverImage frontmatter.
 const PUBLIC_IMAGES_DIR = path.resolve(
 	__dirname,
@@ -214,14 +214,14 @@ function parseFrontmatter(content) {
 // ---------- frontmatter writer ----------
 // Writes (or updates) a single top-level key in the MDX frontmatter block.
 // Handles three cases:
-//   1. Key already present — replaces the existing line in place.
-//   2. Key absent — inserts a new line just before the closing `---`.
-//   3. No frontmatter block at all — prepends a minimal block.
+//   1. Key already present - replaces the existing line in place.
+//   2. Key absent - inserts a new line just before the closing `---`.
+//   3. No frontmatter block at all - prepends a minimal block.
 async function writeFrontmatterField(filePath, key, value) {
 	const original = await fs.readFile(filePath, 'utf8')
 	const quoted = `"${value}"`
 
-	// Case 1: key already exists — replace in-place (handles quoted or unquoted)
+	// Case 1: key already exists - replace in-place (handles quoted or unquoted)
 	const existingKeyRe = new RegExp(`^(${key}:\\s*).*$`, 'm')
 	if (existingKeyRe.test(original)) {
 		const updated = original.replace(existingKeyRe, `$1${quoted}`)
@@ -229,7 +229,7 @@ async function writeFrontmatterField(filePath, key, value) {
 		return
 	}
 
-	// Case 2: frontmatter exists but key is missing — insert before closing ---
+	// Case 2: frontmatter exists but key is missing - insert before closing ---
 	const closingFenceRe = /^---\s*$/m
 	if (/^---/.test(original) && closingFenceRe.test(original.slice(3))) {
 		// Find the second occurrence of `---`
@@ -243,7 +243,7 @@ async function writeFrontmatterField(filePath, key, value) {
 		return
 	}
 
-	// Case 3: no frontmatter at all — prepend
+	// Case 3: no frontmatter at all - prepend
 	await fs.writeFile(
 		filePath,
 		`---\n${key}: ${quoted}\n---\n\n${original}`,
@@ -279,7 +279,7 @@ async function loadArticle(filePath) {
 // ---------- mosaic SVG builder ----------
 // Builds the base mosaic SVG string (tiles only, no overlay).
 // The rand state is advanced in place, so theme/kind/size choices must be
-// made before calling this — pass the already-advanced rand.
+// made before calling this - pass the already-advanced rand.
 function buildMosaicSvg(rand, tileSize, tileKind, t, tiles) {
 	return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <!-- base fill (tile color A covers any gaps) -->
@@ -298,7 +298,7 @@ function buildOgSvg(tiles, t, category, title, slug) {
 	// Wrap title into lines for the panel (24 chars per line maximum)
 	const lines = wrap(title, 24)
 
-	// Panel layout — solid Swiss-style rectangle with a thick 6px accent border
+	// Panel layout - solid Swiss-style rectangle with a thick 6px accent border
 	const panelX = 60,
 		panelY = 60
 	const panelPadX = 42,
@@ -320,7 +320,7 @@ function buildOgSvg(tiles, t, category, title, slug) {
   <!-- panel background -->
   <rect x="${panelX}" y="${panelY}" width="${panelW}" height="${panelH}" fill="${t.panelBg}"/>
 
-  <!-- category tag — solid filled rect, no rounded corners (Swiss style) -->
+  <!-- category tag - solid filled rect, no rounded corners (Swiss style) -->
   <rect x="${panelX + panelPadX}" y="${panelY + panelPadY}" width="${category.length * 12 + 42}" height="38" fill="${t.panelAccent}"/>
   <text x="${panelX + panelPadX + 16}" y="${panelY + panelPadY + 25}" font-family="Inter, Arial" font-size="16" font-weight="700" fill="${t.panelBg}" letter-spacing="3">${esc(category)}</text>
 
@@ -349,7 +349,7 @@ function buildOgSvg(tiles, t, category, title, slug) {
 // Generates two WebP files per article from the same seeded mosaic:
 //   - thumbnail (no panel) → written to `thumbnailImage` frontmatter field
 //   - OG image (with panel) → written to `coverImage` frontmatter field
-// `sourceMdx` — when provided both frontmatter fields are updated in-place.
+// `sourceMdx` - when provided both frontmatter fields are updated in-place.
 async function renderArticleImages({
 	title,
 	category,
@@ -360,7 +360,7 @@ async function renderArticleImages({
 }) {
 	const rand = makePrng(seed)
 
-	// All visual choices are derived from the seed — both images share these
+	// All visual choices are derived from the seed - both images share these
 	const t = pick(rand, THEMES)
 	const tileKind = 'diag'
 	// const tileKind = pick(rand, ['arcs', 'diag', 'tri', 'mixed'])
@@ -384,7 +384,7 @@ async function renderArticleImages({
 		: PUBLIC_IMAGES_DIR
 	await fs.mkdir(outputDir, { recursive: true })
 
-	// --- thumbnail: pure mosaic, no overlay — used for listing-page cards ---
+	// --- thumbnail: pure mosaic, no overlay - used for listing-page cards ---
 	const thumbnailPath = path.join(outputDir, `thumbnail-${slug}.webp`)
 	const mosaicSvg = buildMosaicSvg(rand, tileSize, tileKind, t, tiles)
 	await sharp(Buffer.from(mosaicSvg))
@@ -392,7 +392,7 @@ async function renderArticleImages({
 		.toFile(thumbnailPath)
 	console.log(`✓ thumbnail  ${thumbnailPath}  ${meta}`)
 
-	// --- OG image: mosaic + text panel — used for og:image / SEO social cards ---
+	// --- OG image: mosaic + text panel - used for og:image / SEO social cards ---
 	const ogPath = path.join(outputDir, `og-${slug}.webp`)
 	const ogSvg = buildOgSvg(tiles, t, category, title, slug)
 	await sharp(Buffer.from(ogSvg)).webp({ quality: 90 }).toFile(ogPath)
@@ -415,7 +415,7 @@ async function renderArticleImages({
 const [, , firstArg, secondArg] = process.argv
 
 if (!firstArg) {
-	// Batch mode — generate both images for every MDX file in the articles folder.
+	// Batch mode - generate both images for every MDX file in the articles folder.
 	const files = (await fs.readdir(ARTICLES_DIR))
 		.filter((f) => f.endsWith('.mdx'))
 		.sort() // process in filename (numeric prefix) order
@@ -428,12 +428,12 @@ if (!firstArg) {
 		await renderArticleImages({ ...article, sourceMdx: filePath })
 	}
 } else if (firstArg.endsWith('.mdx')) {
-	// Single MDX file mode — generate both images and update frontmatter.
+	// Single MDX file mode - generate both images and update frontmatter.
 	const filePath = path.resolve(firstArg)
 	const article = await loadArticle(filePath)
 	await renderArticleImages({ ...article, sourceMdx: filePath })
 } else {
-	// Legacy manual mode — title and category passed as CLI args, seed from env.
+	// Legacy manual mode - title and category passed as CLI args, seed from env.
 	// Outputs both variants to the public images dir; no MDX file is updated.
 	// Example: SEED=42 node scripts/truchet-thumbnail-gen.mjs "My Title" "Engineering"
 	const seed = Number(process.env.SEED) || Math.floor(Math.random() * 1e9)

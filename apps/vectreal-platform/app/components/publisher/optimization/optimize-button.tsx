@@ -31,7 +31,7 @@ interface OptimizeButtonProps {
 }
 
 const OPTIMIZER_PREPARING_TOOLTIP =
-	'Preparing optimizer. Once ready, you can apply optimizations to improve performance and file size. Every preset re-processes from your original uploaded file — switching presets never chains on top of a previous pass.'
+	'Preparing optimizer. Once ready, you can apply optimizations to improve performance and file size. Every preset re-processes from your original uploaded file - switching presets never chains on top of a previous pass.'
 
 export const OptimizeButton: FC<OptimizeButtonProps> = ({
 	hasOptimized,

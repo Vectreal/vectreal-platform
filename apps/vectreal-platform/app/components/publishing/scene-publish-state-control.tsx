@@ -210,7 +210,7 @@ export function ScenePublishStateControl({
 						Published GLB size:{' '}
 						{typeof effectivePublishState.publishedAssetSizeBytes === 'number'
 							? formatFileSize(effectivePublishState.publishedAssetSizeBytes)
-							: '—'}
+							: '-'}
 					</motion.p>
 				)}
 			</AnimatePresence>

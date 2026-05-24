@@ -37,8 +37,7 @@ function useToolSelect() {
 				...prev,
 				mode: 'compose',
 				activeComposeTool: tool,
-				showSidebar:
-					prev.activeComposeTool === tool ? !prev.showSidebar : true,
+				showSidebar: prev.activeComposeTool === tool ? !prev.showSidebar : true,
 				showPublishPanel: false
 			}))
 		},
@@ -49,7 +48,7 @@ function useToolSelect() {
 }
 
 // ---------------------------------------------------------------------------
-// MobileToolBar — rendered in the unified mobile header (controls-overlay)
+// MobileToolBar - rendered in the unified mobile header (controls-overlay)
 // ---------------------------------------------------------------------------
 
 export const MobileToolBar = () => {
@@ -126,7 +125,6 @@ export const ToolSidebar = memo(
 			},
 			[arePublisherActionsDisabled, setProcessState]
 		)
-
 
 		return (
 			<>

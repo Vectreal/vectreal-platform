@@ -46,7 +46,7 @@ export default function DocsIndexPage() {
 			<PageHero
 				eyebrow="Documentation"
 				heading="Everything you need to build with Vectreal."
-				description="From local dev setup to embedding 3D content in production — platform guides, package APIs, and architecture references."
+				description="From local dev setup to embedding 3D content in production - platform guides, package APIs, and architecture references."
 				actions={
 					<>
 						<Button asChild size="sm" className="h-8 px-3">

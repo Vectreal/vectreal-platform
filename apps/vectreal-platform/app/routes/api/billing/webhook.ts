@@ -4,7 +4,7 @@
  * Stripe webhook receiver.
  *
  * This endpoint is called by Stripe when billing events occur.  It does NOT
- * use Supabase session auth — instead it authenticates via Stripe's
+ * use Supabase session auth - instead it authenticates via Stripe's
  * HMAC-SHA256 webhook signature (`Stripe-Signature` header).
  *
  * Processing contract:
@@ -21,7 +21,7 @@
  *   - The endpoint must not be behind CSRF protection (Stripe cannot send tokens).
  *
  * Important:
- *   - The raw body must be read as text/buffer — do NOT call request.json()
+ *   - The raw body must be read as text/buffer - do NOT call request.json()
  *     before passing to constructStripeEvent().
  */
 
@@ -48,7 +48,7 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 		return ApiResponse.badRequest('Missing Stripe-Signature header')
 	}
 
-	// Read raw body — must be done before any other body-consuming call
+	// Read raw body - must be done before any other body-consuming call
 	let rawBody: string
 	try {
 		rawBody = await request.text()
@@ -61,7 +61,8 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 	try {
 		event = constructStripeEvent(rawBody, signatureHeader)
 	} catch (err) {
-		const message = err instanceof Error ? err.message : 'Signature verification failed'
+		const message =
+			err instanceof Error ? err.message : 'Signature verification failed'
 		console.warn('[billing/webhook] signature verification failed', { message })
 		return ApiResponse.error(message, 400)
 	}

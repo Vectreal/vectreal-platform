@@ -158,7 +158,7 @@ async function getOrCreateCounter(
 		}
 	}
 
-	// Row already exists — fetch it
+	// Row already exists - fetch it
 	const [existing] = await db
 		.select({ id: orgUsageCounters.id, value: orgUsageCounters.value })
 		.from(orgUsageCounters)
@@ -295,14 +295,14 @@ export async function getCurrentUsage(
 /**
  * Checks whether a proposed increment would exceed the quota limit.
  *
- * This performs a non-mutating check — callers are responsible for calling
+ * This performs a non-mutating check - callers are responsible for calling
  * `incrementUsage` if they wish to consume the quota.
  *
  * Returns:
- *   - `unlimited`           — quota is null (enterprise)
- *   - `allowed`             — usage + delta < hard limit and below soft threshold
- *   - `soft_limit_warning`  — usage + delta >= 80 % of hard limit but <= hard limit
- *   - `hard_limit_exceeded` — usage + delta > hard limit
+ *   - `unlimited`           - quota is null (enterprise)
+ *   - `allowed`             - usage + delta < hard limit and below soft threshold
+ *   - `soft_limit_warning`  - usage + delta >= 80 % of hard limit but <= hard limit
+ *   - `hard_limit_exceeded` - usage + delta > hard limit
  */
 export async function checkQuota(
 	organizationId: string,

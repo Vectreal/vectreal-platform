@@ -173,7 +173,7 @@ function BillingUpgradeContent({
 	const checkoutFetcher = useFetcher()
 	const posthog = usePostHog()
 
-	// Client-side flag evaluation — undefined while PostHog is loading; fall back
+	// Client-side flag evaluation - undefined while PostHog is loading; fall back
 	// to the server-resolved value so the button state is correct on first render.
 	const clientFlagEnabled = useFeatureFlagEnabled('billing-checkout')
 	const checkoutEnabled =
@@ -204,7 +204,7 @@ function BillingUpgradeContent({
 	)
 
 	// Whether this selection will skip Stripe's hosted checkout and update
-	// the subscription in-place — mirrors the server-side route decision.
+	// the subscription in-place - mirrors the server-side route decision.
 	const isDirectUpdate = billing.billingState === 'active'
 
 	useEffect(() => {
@@ -356,7 +356,7 @@ function BillingUpgradeContent({
 														displayPriceCents,
 														selectedPrice.currency
 													)
-												: '—'}
+												: '-'}
 											/month
 											{billingPeriod === 'annual' && annualSavings
 												? ` · ${formatCurrency(selectedPrice.amountCents, selectedPrice.currency)} billed yearly`
@@ -419,7 +419,7 @@ function BillingUpgradeContent({
 				<FeatureCompareGrid />
 			</div>
 
-			{/* Confirmation dialog — only shown for direct subscription updates (active plan) */}
+			{/* Confirmation dialog - only shown for direct subscription updates (active plan) */}
 			<Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
 				<DialogContent className="max-w-sm">
 					<DialogHeader>

@@ -71,13 +71,13 @@ const OverlayControls = ({
 	// sidebar is opened for the first time.
 	useSceneSizeInitializer()
 
-	// Save location comes from the Jotai atom — initialized in publisher-layout
+	// Save location comes from the Jotai atom - initialized in publisher-layout
 	// and updated by the shell-level SceneNameAndLocation picker.
 	const saveLocationTarget = useAtomValue(saveLocationAtom)
 	const { hasUnsavedLocationChange } = useLocationChangeState()
 	const { requestSceneScreenshot } = usePublisherViewerCapture()
 
-	// Centralized scene loader — single source of truth (must be inside ModelProvider)
+	// Centralized scene loader - single source of truth (must be inside ModelProvider)
 	const { saveSceneSettings, saveAvailability, persistPendingSceneDraft } =
 		useSceneLoader({
 			sceneId,

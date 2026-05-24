@@ -122,7 +122,7 @@ export async function action({
 		await loadAuthenticatedUser(request)
 	const responseHeaders = new Headers(headers)
 
-	// Feature flag guard — block checkout when billing-checkout is disabled
+	// Feature flag guard - block checkout when billing-checkout is disabled
 	const posthog = (context as PostHogContext).posthog
 	if (posthog) {
 		const checkoutEnabled = await posthog.isFeatureEnabled(
@@ -168,7 +168,7 @@ export async function action({
 		)
 	}
 
-	// Resolve organization — the user's primary (first-joined) organization
+	// Resolve organization - the user's primary (first-joined) organization
 	const organizationId = userWithDefaults.organization.id
 
 	// Validate the user is an owner or admin of the organization
@@ -228,7 +228,7 @@ export async function action({
 	// Route decision: update the existing subscription in-place when the org
 	// already has an active subscription. This avoids creating a second Stripe
 	// subscription (which would cause double-billing) and enables proration.
-	// Only `active` qualifies — past_due / trialing / etc. fall through to
+	// Only `active` qualifies - past_due / trialing / etc. fall through to
 	// the hosted Checkout flow where payment details can be re-entered.
 	const isActiveSub =
 		existingSub?.stripeSubscriptionId != null &&
@@ -236,7 +236,7 @@ export async function action({
 		billingState === 'active'
 
 	if (isActiveSub) {
-		// Retrieve the existing subscription — needed only for the item ID.
+		// Retrieve the existing subscription - needed only for the item ID.
 		const existingSubscription = await stripe.subscriptions.retrieve(
 			existingSub.stripeSubscriptionId!
 		)
@@ -256,7 +256,7 @@ export async function action({
 			}
 		)
 
-		// Sync DB immediately — the success page needs no further Stripe call.
+		// Sync DB immediately - the success page needs no further Stripe call.
 		await syncSubscriptionFromStripe({
 			organizationId,
 			stripeCustomerId: existingSub.stripeCustomerId!,
@@ -277,7 +277,7 @@ export async function action({
 		return ApiResponse.created({ redirectUrl }, { headers: responseHeaders })
 	}
 
-	// New subscription — use Stripe-hosted Checkout.
+	// New subscription - use Stripe-hosted Checkout.
 	const session = await stripe.checkout.sessions.create({
 		mode: 'subscription',
 		customer: existingSub?.stripeCustomerId ?? undefined,

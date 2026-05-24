@@ -64,7 +64,7 @@ function parseLocationOptions(
 }
 
 // ---------------------------------------------------------------------------
-// Scene name — inline click-to-edit
+// Scene name - inline click-to-edit
 // ---------------------------------------------------------------------------
 
 const SceneNameField = () => {
@@ -145,7 +145,7 @@ const SceneNameField = () => {
 }
 
 // ---------------------------------------------------------------------------
-// Location picker — expandable section with project + folder selects
+// Location picker - expandable section with project + folder selects
 // ---------------------------------------------------------------------------
 
 interface LocationPickerProps {
@@ -282,7 +282,7 @@ const LocationPicker = ({ open }: LocationPickerProps) => {
 }
 
 // ---------------------------------------------------------------------------
-// Location row — collapsed breadcrumb trigger
+// Location row - collapsed breadcrumb trigger
 // ---------------------------------------------------------------------------
 
 interface LocationRowProps {
@@ -350,7 +350,7 @@ export function SceneNameAndLocation({
 
 	const toggleLocation = useCallback(() => setLocationOpen((prev) => !prev), [])
 
-	// Close when clicking outside — but ignore clicks inside Radix portals
+	// Close when clicking outside - but ignore clicks inside Radix portals
 	// (SelectContent, DropdownMenu, etc. render outside the DOM tree via portals,
 	//  so containerRef.contains() returns false for them, causing false closes)
 	const containerRef = useRef<HTMLDivElement>(null)
@@ -394,7 +394,7 @@ export function SceneNameAndLocation({
 				) : null}
 			</div>
 			{locationOpen ? <Separator /> : null}
-			{/* Always mounted — LocationPicker's motion.div handles height 0↔auto.
+			{/* Always mounted - LocationPicker's motion.div handles height 0↔auto.
 			    Keeping it mounted preserves fetcher data and avoids remount flicker. */}
 			<LocationPicker open={locationOpen} />
 		</div>

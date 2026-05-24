@@ -56,7 +56,7 @@ export async function upsertConsent(
 
 	if (userId) {
 		// Authenticated path: upsert on userId only.
-		// Never store anonymousId on authenticated rows — it may already belong
+		// Never store anonymousId on authenticated rows - it may already belong
 		// to a prior anonymous consent record, causing a unique-constraint clash.
 		const [row] = await db
 			.insert(consentRecords)

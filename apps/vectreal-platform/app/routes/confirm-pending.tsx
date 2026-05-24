@@ -31,7 +31,7 @@ import type { AuthLayoutContext } from './layouts/signin-layout'
 export { AuthErrorBoundary as ErrorBoundary }
 
 export const meta: MetaFunction = () =>
-	buildMeta([{ title: 'Check Your Email — Vectreal' }], undefined, {
+	buildMeta([{ title: 'Check Your Email - Vectreal' }], undefined, {
 		private: true
 	})
 
@@ -52,7 +52,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		data: { user }
 	} = await client.auth.getUser()
 
-	// Already confirmed — send straight to onboarding (first-time) or dashboard
+	// Already confirmed - send straight to onboarding (first-time) or dashboard
 	// (the onboarding page is idempotent; existing users skip through it quickly)
 	if (user?.email_confirmed_at) {
 		return redirect('/onboarding', { headers })
@@ -275,7 +275,7 @@ export default function ConfirmPending() {
 								exit={{ opacity: 0, height: 0, marginTop: 0 }}
 								className="overflow-hidden text-center text-sm text-green-500"
 							>
-								Confirmation email sent — check your inbox.
+								Confirmation email sent - check your inbox.
 							</motion.p>
 						)}
 						{(sendError || isRateLimited) && (

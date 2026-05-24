@@ -151,7 +151,7 @@ export async function sendAuthEmail(payload: AuthHookPayload): Promise<void> {
 		action === 'reauthentication' ? payload.email_data.token : undefined
 	const subject = getAuthEmailSubject(action)
 
-	// Render via React Email — createElement avoids needing JSX in .server.ts
+	// Render via React Email - createElement avoids needing JSX in .server.ts
 	// plainText: true generates a full text/plain MIME part, fixing spam filter penalties
 	const element = createElement(AuthEmail, {
 		action,

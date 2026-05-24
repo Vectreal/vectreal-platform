@@ -12,8 +12,8 @@ import { buildMeta } from '../../lib/seo'
 export const meta: MetaFunction = () =>
 	buildMeta(
 		[
-			{ title: 'Preview — Vectreal' },
-			{ property: 'og:title', content: 'Preview — Vectreal' }
+			{ title: 'Preview - Vectreal' },
+			{ property: 'og:title', content: 'Preview - Vectreal' }
 		],
 		undefined,
 		{ private: true }

@@ -54,8 +54,8 @@ import type { ShouldRevalidateFunction } from 'react-router'
 export const meta: MetaFunction = () =>
 	buildMeta(
 		[
-			{ title: 'Dashboard — Vectreal' },
-			{ property: 'og:title', content: 'Dashboard — Vectreal' }
+			{ title: 'Dashboard - Vectreal' },
+			{ property: 'og:title', content: 'Dashboard - Vectreal' }
 		],
 		undefined,
 		{ private: true }

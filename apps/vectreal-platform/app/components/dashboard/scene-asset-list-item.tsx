@@ -5,7 +5,7 @@ import type { SceneAssetSummary } from '../../routes/dashboard-page/projects/sce
 import type { SerializedSceneAssetDataMap } from '../../types/api'
 
 function formatBytes(bytes: number | null | undefined): string {
-	if (bytes == null || Number.isNaN(bytes)) return '—'
+	if (bytes == null || Number.isNaN(bytes)) return '-'
 	if (bytes === 0) return '0 B'
 	const units = ['B', 'KB', 'MB', 'GB']
 	const i = Math.floor(Math.log(bytes) / Math.log(1024))

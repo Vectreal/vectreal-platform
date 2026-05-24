@@ -48,7 +48,7 @@ const metricValue = (value?: number | null, isLoading = false) => {
 		return value.toLocaleString()
 	}
 
-	return isLoading ? 'Loading...' : '—'
+	return isLoading ? 'Loading...' : '-'
 }
 
 const metricBytesValue = (value?: number | null, isLoading = false) => {
@@ -56,7 +56,7 @@ const metricBytesValue = (value?: number | null, isLoading = false) => {
 		return formatFileSize(value)
 	}
 
-	return isLoading ? 'Loading...' : '—'
+	return isLoading ? 'Loading...' : '-'
 }
 
 const getSizeDeltaLabel = (deltaBytes?: number | null) => {
@@ -185,7 +185,7 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 								<p className="font-medium">
 									{publishedAssetSizeBytes
 										? formatFileSize(publishedAssetSizeBytes)
-										: '—'}
+										: '-'}
 								</p>
 							</div>
 						</div>

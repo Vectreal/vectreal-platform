@@ -13,7 +13,7 @@ import { organizations } from '../core/organizations'
 import { isOrganizationAdmin, isOrganizationMember } from '../rls'
 
 /**
- * Per-organisation entitlement overrides — used for enterprise add-ons
+ * Per-organisation entitlement overrides - used for enterprise add-ons
  * or manual capability grants that differ from the plan baseline.
  *
  * Entitlement keys are defined in prd/03-entitlements.md.

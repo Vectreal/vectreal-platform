@@ -18,7 +18,7 @@ interface ToggleButtonGroupProps<V> {
 	options: ToggleButtonGroupOption<V>[]
 	/** Exact-match active value. Ignored when `isActive` is provided. */
 	value?: V
-	/** Custom active predicate — use when active is determined by closest-match logic. */
+	/** Custom active predicate - use when active is determined by closest-match logic. */
 	isActive?: (optionValue: V) => boolean
 	onChange: (value: V) => void
 	columns?: 2 | 3 | 4

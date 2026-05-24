@@ -1,5 +1,5 @@
 -- Migration: Create consent_records table with unique constraints
--- EPIC-5 / Issue #287 — Consent persistence
+-- EPIC-5 / Issue #287 - Consent persistence
 --
 -- Creates the consent_records table (skip if already applied via schema push)
 -- and ensures unique constraints exist on user_id and anonymous_id so that

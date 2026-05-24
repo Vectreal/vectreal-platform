@@ -65,8 +65,8 @@ interface SigninActionData {
 export const meta: MetaFunction = () =>
 	buildMeta(
 		[
-			{ title: 'Sign In — Vectreal' },
-			{ property: 'og:title', content: 'Sign In — Vectreal' },
+			{ title: 'Sign In - Vectreal' },
+			{ property: 'og:title', content: 'Sign In - Vectreal' },
 			{
 				name: 'description',
 				content: 'Sign in to your Vectreal account to manage your 3D content.'

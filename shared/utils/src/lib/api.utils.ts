@@ -130,7 +130,7 @@ export class ApiResponse {
 	}
 
 	/**
-	 * 402 Payment Required — the organisation's plan is inactive (e.g. canceled,
+	 * 402 Payment Required - the organisation's plan is inactive (e.g. canceled,
 	 * unpaid).  Carries a machine-readable `quota` envelope so clients can show
 	 * the appropriate upgrade prompt.
 	 */
@@ -153,12 +153,15 @@ export class ApiResponse {
 		}
 		return new Response(JSON.stringify(body), {
 			status: 402,
-			headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
+			headers: {
+				'Content-Type': 'application/json',
+				'Cache-Control': 'no-store'
+			}
 		})
 	}
 
 	/**
-	 * 403 Quota Exceeded — the organisation has consumed the hard quota for the
+	 * 403 Quota Exceeded - the organisation has consumed the hard quota for the
 	 * requested resource.  Carries a machine-readable `quota` envelope so
 	 * clients can show the appropriate upgrade prompt.
 	 */

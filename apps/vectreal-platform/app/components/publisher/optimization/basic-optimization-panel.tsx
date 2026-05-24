@@ -143,7 +143,7 @@ const BasicPanel = () => {
 								{meta.label}
 							</span>
 
-							{/* Specs — always visible for at-a-glance comparison */}
+							{/* Specs - always visible for at-a-glance comparison */}
 							<div className="flex shrink-0 items-center gap-1.5">
 								<span className="text-muted-foreground text-xs tabular-nums">
 									{meta.res}
@@ -155,7 +155,7 @@ const BasicPanel = () => {
 							</div>
 						</div>
 
-						{/* Expanded detail — selected preset only */}
+						{/* Expanded detail - selected preset only */}
 						<AnimatePresence initial={false}>
 							{isSelected && (
 								<motion.div

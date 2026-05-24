@@ -25,7 +25,7 @@ export const FileSizeComparison: FC<FileSizeComparisonProps> = ({
 		value === null
 			? isHydratingInitialMetrics
 				? 'Loading...'
-				: '—'
+				: '-'
 			: formatFileSize(value)
 
 	return (

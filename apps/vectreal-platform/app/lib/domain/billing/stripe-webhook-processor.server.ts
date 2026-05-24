@@ -8,7 +8,7 @@
  *   1. Verify Stripe signature before touching the database.
  *   2. Register the event in `billing_webhook_events` (status = pending).
  *      If a row with the same (provider, providerEventId) already exists the
- *      event has already been seen — return early to prevent duplicate work.
+ *      event has already been seen - return early to prevent duplicate work.
  *   3. Dispatch to the appropriate handler based on event type.
  *   4. On success mark the row as `processed`; on failure mark it `failed`
  *      and store the error message so operators can replay.
@@ -49,7 +49,7 @@ import {
 
 /**
  * Fires a single server-side PostHog event from within webhook processing.
- * Non-critical — analytics failure is swallowed so it never blocks billing logic.
+ * Non-critical - analytics failure is swallowed so it never blocks billing logic.
  */
 async function captureWebhookAnalyticsEvent(
 	distinctId: string,
@@ -432,7 +432,7 @@ async function dispatchEvent(event: Stripe.Event): Promise<void> {
 			break
 
 		case 'customer.subscription.trial_will_end':
-			// Notification only — no state change.
+			// Notification only - no state change.
 			// Log at debug level for observability; no DB write required.
 			console.debug(
 				`[stripe-webhook] trial_will_end for subscription ${(event.data.object as Stripe.Subscription).id}`

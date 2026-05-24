@@ -95,19 +95,19 @@ const optimizedBuffer = await optimizer.export()
 
 | Method | Options | Description |
 |---|---|---|
-| `loadFromThreeJS(model)` | — | Load a Three.js scene into optimizer |
-| `loadFromBuffer(buf)` | — | Load GLB binary data |
-| `loadFromFile(path)` | — | Load from file path |
-| `loadFromJSON(json)` | — | Load serialized glTF JSON/resources |
+| `loadFromThreeJS(model)` | - | Load a Three.js scene into optimizer |
+| `loadFromBuffer(buf)` | - | Load GLB binary data |
+| `loadFromFile(path)` | - | Load from file path |
+| `loadFromJSON(json)` | - | Load serialized glTF JSON/resources |
 | `simplify(opts)` | `{ ratio: number }` | Mesh simplification (0.0–1.0) |
 | `deduplicate(opts)` | `DedupOptions` | Remove duplicate geometry/material data |
 | `quantize(opts)` | `QuantizeOptions` | Reduce precision to reduce size |
 | `optimizeNormals(opts)` | `NormalsOptions` | Recompute/normalize normal data |
 | `compressTextures(opts)` | `TextureCompressOptions` | Server-side texture compression |
 | `optimizeAll(opts)` | `{ simplify?, dedup?, quantize?, normals?, textures? }` | Run batch optimization passes |
-| `getReport()` | — | Return before/after optimization metrics |
-| `export()` / `exportJSON()` | — | Export optimized GLB or JSON glTF document |
-| `hasModel()` / `reset()` | — | Model state utilities |
+| `getReport()` | - | Return before/after optimization metrics |
+| `export()` / `exportJSON()` | - | Export optimized GLB or JSON glTF document |
+| `hasModel()` / `reset()` | - | Model state utilities |
 
 ### Optimization options reference
 
@@ -273,6 +273,6 @@ Full source and README in [`packages/core/`](https://github.com/Vectreal/vectrea
 
 ## Related docs
 
-- [Deployment](/docs/operations/deployment) — where `@vctrl/core` powers server-side build/runtime flows
-- [Publishing & Embedding](/docs/guides/publish-embed) — preview and serving model output
-- [@vctrl/hooks](/docs/packages/hooks) — browser/runtime companion API
+- [Deployment](/docs/operations/deployment) - where `@vctrl/core` powers server-side build/runtime flows
+- [Publishing & Embedding](/docs/guides/publish-embed) - preview and serving model output
+- [@vctrl/hooks](/docs/packages/hooks) - browser/runtime companion API

@@ -327,7 +327,7 @@ export const useOptimizationProcess = ({
 	])
 
 	// Shared optimization body. Pass fromOriginal=true (default) to reload from the
-	// IDB original snapshot first — non-destructive preset switching per the article.
+	// IDB original snapshot first - non-destructive preset switching per the article.
 	// Pass fromOriginal=false to apply on top of the current optimizer document state.
 	const runOptimization = useCallback(
 		async (fromOriginal: boolean): Promise<boolean> => {

@@ -43,7 +43,7 @@ function resolveStripeSecretKey(): string {
 
 /**
  * Returns the Stripe webhook signing secret from environment variables.
- * Throws when absent — call this only inside the webhook handler.
+ * Throws when absent - call this only inside the webhook handler.
  */
 export function resolveStripeWebhookSecret(): string {
 	const secret = process.env.STRIPE_WEBHOOK_SECRET

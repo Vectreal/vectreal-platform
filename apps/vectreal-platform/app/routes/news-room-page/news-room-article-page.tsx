@@ -347,49 +347,48 @@ export default function NewsRoomArticlePage({
 					</p>
 					<div className="grid gap-3 md:grid-cols-2">
 						{adjacent.previous ? (
-							<Button
-								variant="ghost"
-								asChild
-								className="h-auto justify-start px-0 py-0"
-							>
-								<Link
-									to={`/news-room/${adjacent.previous.slug}`}
-									viewTransition
-									className="border-border/70 bg-card/20 hover:border-border group rounded-xl border p-4"
-								>
-									<p className="text-muted-foreground mb-2 inline-flex items-center gap-2 text-xs tracking-wide uppercase">
+							<div className="space-y-2">
+								<p className="text-muted-foreground inline-flex items-center gap-2 text-xs tracking-wide uppercase">
+									Previous Article
+								</p>
+								<p className="group-hover:text-foreground text-sm leading-snug font-semibold transition-colors">
+									{adjacent.previous.title}
+								</p>
+
+								<Button variant="ghost" asChild size="sm">
+									<Link
+										to={`/news-room/${adjacent.previous.slug}`}
+										viewTransition
+										className="border-border/70 bg-card/20 hover:border-border group rounded-xl border p-4"
+									>
 										<ChevronLeft className="h-4 w-4" aria-hidden="true" />
-										Previous Article
-									</p>
-									<p className="group-hover:text-foreground text-sm leading-snug font-semibold transition-colors">
-										{adjacent.previous.title}
-									</p>
-								</Link>
-							</Button>
+										Go to previous article
+									</Link>
+								</Button>
+							</div>
 						) : (
 							<span />
 						)}
 
 						{adjacent.next ? (
-							<Button
-								variant="ghost"
-								asChild
-								className="h-auto justify-end px-0 py-0"
-							>
-								<Link
-									to={`/news-room/${adjacent.next.slug}`}
-									viewTransition
-									className="border-border/70 bg-card/20 hover:border-border group rounded-xl border p-4 text-right"
-								>
-									<p className="text-muted-foreground mb-2 inline-flex items-center gap-2 text-xs tracking-wide uppercase">
-										Next Article
+							<div className="space-y-2">
+								<p className="text-muted-foreground inline-flex items-center gap-2 text-xs tracking-wide uppercase">
+									Next Article
+								</p>
+								<p className="group-hover:text-foreground text-sm leading-snug font-semibold transition-colors">
+									{adjacent.next.title}
+								</p>
+								<Button variant="ghost" asChild size="sm">
+									<Link
+										to={`/news-room/${adjacent.next.slug}`}
+										viewTransition
+										className="border-border/70 bg-card/20 hover:border-border group rounded-xl border p-4 text-right"
+									>
+										Go to next article
 										<ChevronRight className="h-4 w-4" aria-hidden="true" />
-									</p>
-									<p className="group-hover:text-foreground text-sm leading-snug font-semibold transition-colors">
-										{adjacent.next.title}
-									</p>
-								</Link>
-							</Button>
+									</Link>
+								</Button>
+							</div>
 						) : (
 							<span />
 						)}

@@ -98,7 +98,7 @@ function getActiveIndex(items: NavItem[], pathname: string): number {
 }
 
 // ---------------------------------------------------------------------------
-// Sliding pill indicator — the signature interaction
+// Sliding pill indicator - the signature interaction
 // ---------------------------------------------------------------------------
 
 interface PillBounds {

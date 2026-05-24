@@ -86,7 +86,7 @@ export function ConsentProvider({
 	}, [fetcher.state, fetcher.data])
 
 	// Sync PostHog persistence and opt-in/out whenever analytics consent changes.
-	// null = first visit, no decision yet — stay in memory mode (DSGVO-safe).
+	// null = first visit, no decision yet - stay in memory mode (DSGVO-safe).
 	// accepted → switch to localStorage+cookie persistence so the session
 	//   persists across pages, then opt in.
 	// rejected → stay in memory mode and opt out.
@@ -109,7 +109,7 @@ export function ConsentProvider({
 	const saveConsent = useCallback(
 		(choices: Omit<ConsentChoices, 'necessary'>) => {
 			// Fire before switching persistence so the event is always captured
-			// in memory mode — no cookies required, DSGVO-safe.
+			// in memory mode - no cookies required, DSGVO-safe.
 			if (typeof window !== 'undefined') {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const ph = (window as any).posthog
