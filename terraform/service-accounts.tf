@@ -152,7 +152,7 @@ resource "google_iam_workload_identity_pool_provider" "github_actions" {
   workload_identity_pool_id          = google_iam_workload_identity_pool.github_actions[0].workload_identity_pool_id
   workload_identity_pool_provider_id = "github"
   display_name                       = "GitHub"
-  description                        = "GitHub OIDC provider — scoped to ${var.github_org}/${var.github_repo}"
+  description                        = "GitHub OIDC provider - scoped to ${var.github_org}/${var.github_repo}"
 
   attribute_mapping = {
     "google.subject"       = "assertion.sub"

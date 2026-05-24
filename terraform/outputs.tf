@@ -77,17 +77,17 @@ output "local_dev_storage_key_path" {
 }
 
 output "workload_identity_provider" {
-  description = "Full Workload Identity Provider resource name — set as GCP_WIF_PROVIDER_PROD and GCP_WIF_PROVIDER_STAGING GitHub secrets"
+  description = "Full Workload Identity Provider resource name - set as GCP_WIF_PROVIDER_PROD and GCP_WIF_PROVIDER_STAGING GitHub secrets"
   value       = var.enable_workload_identity ? google_iam_workload_identity_pool_provider.github_actions[0].name : ""
 }
 
 output "prod_deployer_sa_email" {
-  description = "Production deployer service account email — set as GCP_SA_EMAIL_PROD GitHub secret"
+  description = "Production deployer service account email - set as GCP_SA_EMAIL_PROD GitHub secret"
   value       = google_service_account.prod_deployer.email
 }
 
 output "staging_deployer_sa_email" {
-  description = "Staging deployer service account email — set as GCP_SA_EMAIL_STAGING GitHub secret"
+  description = "Staging deployer service account email - set as GCP_SA_EMAIL_STAGING GitHub secret"
   value       = google_service_account.staging_deployer.email
 }
 
@@ -150,4 +150,9 @@ output "next_steps" {
     📚 Documentation:
     - ../terraform/README.md - Infrastructure details
   EOT
+}
+
+output "optimization_function_url" {
+  description = "URL for the optimize-textures Cloud Function (empty when disabled)"
+  value       = var.enable_optimization_function ? google_cloudfunctions2_function.optimize_textures[0].service_config[0].uri : ""
 }

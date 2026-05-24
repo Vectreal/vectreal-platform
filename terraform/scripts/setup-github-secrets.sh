@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # =============================================================================
-# Vectreal Platform — GitHub Secrets + Supabase Hook Sync
+# Vectreal Platform - GitHub Secrets + Supabase Hook Sync
 # =============================================================================
 # Usage:
 #   ./setup-github-secrets.sh               # sync everything (both envs)
@@ -69,7 +69,7 @@ done
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-printf "\n${BOLD}Vectreal Platform — Secrets Sync${NC}\n"
+printf "\n${BOLD}Vectreal Platform - Secrets Sync${NC}\n"
 printf "==================================\n"
 [[ "$MODE" == "verify" ]] && printf "  Mode: ${CYAN}verify (read-only)${NC}\n"
 [[ -n "$ENV_FILTER" ]]    && printf "  Env:  ${CYAN}%s only${NC}\n" "$ENV_FILTER"
@@ -101,7 +101,7 @@ fi
 section "GitHub authentication"
 
 if ! gh auth status &>/dev/null; then
-  warn "Not authenticated — launching gh auth login..."
+  warn "Not authenticated - launching gh auth login..."
   gh auth login || { err "Authentication failed"; exit 1; }
 fi
 ok "Authenticated"
@@ -186,7 +186,7 @@ if [[ ${#MISSING[@]} -gt 0 ]]; then
   err "Missing required variables in .env.development:"
   for v in "${MISSING[@]}"; do printf "      %s\n" "$v"; done
   printf "\n"
-  printf "  Tip: SUPABASE_ACCESS_TOKEN — generate at https://supabase.com/dashboard/account/tokens\n"
+  printf "  Tip: SUPABASE_ACCESS_TOKEN - generate at https://supabase.com/dashboard/account/tokens\n"
   exit 1
 fi
 
@@ -252,7 +252,7 @@ if [[ "$MODE" == "verify" ]]; then
   check_gh_secret "VITE_PUBLIC_DEMO_SCENE_URL"
   check_gh_secret "GCP_PROJECT_ID"
   # For GCP project IDs we can show the expected value from .env.development
-  # since they're not sensitive — helpful for catching the "-" type of mistake.
+  # since they're not sensitive - helpful for catching the "-" type of mistake.
   printf "       (expected: %s)\n" "$GCP_PROJECT_ID"
   check_gh_secret "GCP_PROJECT_ID_STAGING"
   printf "       (expected: %s; derived from GCP_PROJECT_ID in this script)\n" "$GCP_PROJECT_ID"
@@ -265,6 +265,9 @@ if [[ "$MODE" == "verify" ]]; then
               RESEND_WEBHOOK_SECRET; do
       check_gh_secret "${v}_STAGING"
     done
+    for v in OPTIMIZE_TEXTURES_WORKER_URL OPTIMIZE_TEXTURES_WORKER_TOKEN; do
+      check_gh_secret "${v}_STAGING"
+    done
   fi
 
   if [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]]; then
@@ -275,10 +278,13 @@ if [[ "$MODE" == "verify" ]]; then
               RESEND_WEBHOOK_SECRET; do
       check_gh_secret "${v}_PROD"
     done
+    for v in OPTIMIZE_TEXTURES_WORKER_URL OPTIMIZE_TEXTURES_WORKER_TOKEN; do
+      check_gh_secret "${v}_PROD"
+    done
   fi
 
   section "Supabase send_email hook (URI check)"
-  printf "  ${YELLOW}Note:${NC} Supabase does not expose secret values via API — only URI + enabled state can be verified.\n\n"
+  printf "  ${YELLOW}Note:${NC} Supabase does not expose secret values via API - only URI + enabled state can be verified.\n\n"
 
   verify_supabase_hook() {
     local project_ref=$1 expected_url=$2 label=$3
@@ -290,7 +296,7 @@ if [[ "$MODE" == "verify" ]]; then
       -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" 2>&1)
 
     if [[ $? -ne 0 ]]; then
-      err "$label — API call failed (check SUPABASE_ACCESS_TOKEN)"
+      err "$label - API call failed (check SUPABASE_ACCESS_TOKEN)"
       return
     fi
 
@@ -299,12 +305,12 @@ if [[ "$MODE" == "verify" ]]; then
     uri=$(supabase_json_field "$response" "hook_send_email_uri" "")
 
     if [[ "$enabled" != "true" ]]; then
-      warn "$label — hook is DISABLED in Supabase project"
+      warn "$label - hook is DISABLED in Supabase project"
     elif [[ "$uri" == "$expected_uri" ]]; then
-      ok "$label — enabled, URI matches"
+      ok "$label - enabled, URI matches"
       printf "       %s\n" "$uri"
     else
-      err "$label — URI mismatch"
+      err "$label - URI mismatch"
       printf "       expected: %s\n" "$expected_uri"
       printf "       actual:   %s\n" "$uri"
     fi
@@ -378,6 +384,7 @@ TF_DIR="$SCRIPT_DIR/.."
 WIF_PROVIDER=$(terraform -chdir="$TF_DIR" output -raw workload_identity_provider 2>/dev/null || true)
 PROD_SA_EMAIL=$(terraform -chdir="$TF_DIR" output -raw prod_deployer_sa_email 2>/dev/null || true)
 STAGING_SA_EMAIL=$(terraform -chdir="$TF_DIR" output -raw staging_deployer_sa_email 2>/dev/null || true)
+OPTIMIZE_WORKER_URL=$(terraform -chdir="$TF_DIR" output -raw optimization_function_url 2>/dev/null || true)
 
 if [[ -n "$WIF_PROVIDER" && -n "$PROD_SA_EMAIL" && -n "$STAGING_SA_EMAIL" ]]; then
   [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && {
@@ -389,12 +396,25 @@ if [[ -n "$WIF_PROVIDER" && -n "$PROD_SA_EMAIL" && -n "$STAGING_SA_EMAIL" ]]; th
     set_secret "GCP_SA_EMAIL_PROD" "$PROD_SA_EMAIL"
   }
 else
-  warn "Terraform outputs unavailable — skipping WIF secrets"
+  warn "Terraform outputs unavailable - skipping WIF secrets"
   printf "       Run 'terraform apply' in ./terraform, then re-run this script.\n"
   printf "       Or set manually:\n"
-  printf "         GCP_WIF_PROVIDER_{PROD,STAGING}  — terraform output workload_identity_provider\n"
-  printf "         GCP_SA_EMAIL_PROD                — terraform output prod_deployer_sa_email\n"
-  printf "         GCP_SA_EMAIL_STAGING             — terraform output staging_deployer_sa_email\n"
+  printf "         GCP_WIF_PROVIDER_{PROD,STAGING}  - terraform output workload_identity_provider\n"
+  printf "         GCP_SA_EMAIL_PROD                - terraform output prod_deployer_sa_email\n"
+  printf "         GCP_SA_EMAIL_STAGING             - terraform output staging_deployer_sa_email\n"
+fi
+
+# If dedicated optimize-textures function is enabled, default worker URL secrets
+# to the Terraform output when not explicitly set in .env.development.
+if [[ -n "$OPTIMIZE_WORKER_URL" ]]; then
+  if [[ -z "${OPTIMIZE_TEXTURES_WORKER_URL_STAGING:-}" ]]; then
+    OPTIMIZE_TEXTURES_WORKER_URL_STAGING="$OPTIMIZE_WORKER_URL"
+    ok "Defaulted OPTIMIZE_TEXTURES_WORKER_URL_STAGING from terraform output"
+  fi
+  if [[ -z "${OPTIMIZE_TEXTURES_WORKER_URL_PROD:-}" ]]; then
+    OPTIMIZE_TEXTURES_WORKER_URL_PROD="$OPTIMIZE_WORKER_URL"
+    ok "Defaulted OPTIMIZE_TEXTURES_WORKER_URL_PROD from terraform output"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -414,22 +434,22 @@ if [[ -n "$VITE_PUBLIC_POSTHOG_TOKEN" ]]; then
   set_secret "VITE_PUBLIC_POSTHOG_HOST"    "${VITE_PUBLIC_POSTHOG_HOST:-https://us.i.posthog.com}"
   set_secret "VITE_PUBLIC_POSTHOG_UI_HOST" "${VITE_PUBLIC_POSTHOG_UI_HOST:-https://eu.posthog.com}"
 else
-  warn "VITE_PUBLIC_POSTHOG_TOKEN not set — skipping PostHog secrets"
+  warn "VITE_PUBLIC_POSTHOG_TOKEN not set - skipping PostHog secrets"
 fi
 
-# Vectreal embed vars — baked into the client bundle at Docker build time.
+# Vectreal embed vars - baked into the client bundle at Docker build time.
 # VITE_PUBLIC_VECTREAL_API_KEY_PROD: API token for Vectreal preview embeds in articles.
 # VITE_PUBLIC_DEMO_SCENE_URL: Full URL for the landing page 3D demo (includes token).
 #   Set this once you have published the demo scene in the Publisher.
 if [[ -n "$VITE_PUBLIC_VECTREAL_API_KEY_PROD" ]]; then
   set_secret "VITE_PUBLIC_VECTREAL_API_KEY_PROD" "$VITE_PUBLIC_VECTREAL_API_KEY_PROD"
 else
-  warn "VITE_PUBLIC_VECTREAL_API_KEY_PROD not set — article preview embeds will not load"
+  warn "VITE_PUBLIC_VECTREAL_API_KEY_PROD not set - article preview embeds will not load"
 fi
 if [[ -n "$VITE_PUBLIC_DEMO_SCENE_URL" ]]; then
   set_secret "VITE_PUBLIC_DEMO_SCENE_URL" "$VITE_PUBLIC_DEMO_SCENE_URL"
 else
-  warn "VITE_PUBLIC_DEMO_SCENE_URL not set — landing page will use fallback demo scene"
+  warn "VITE_PUBLIC_DEMO_SCENE_URL not set - landing page will use fallback demo scene"
 fi
 
 # ---------------------------------------------------------------------------
@@ -457,7 +477,7 @@ if [[ -n "$RELEASE_APP_ID" ]]; then
       SECRETS_FAILED+=("RELEASE_APP_PRIVATE_KEY"); err "RELEASE_APP_PRIVATE_KEY"
     fi
   else
-    warn "RELEASE_APP_PRIVATE_KEY_FILE not found — skipping key"
+    warn "RELEASE_APP_PRIVATE_KEY_FILE not found - skipping key"
   fi
 fi
 
@@ -474,7 +494,7 @@ sync_env_secrets() {
   section "${env_label} secrets"
 
   # ${!varname} is single indirection: expand the variable whose NAME is stored
-  # in $varname. Build the name first, then look it up — the nested form
+  # in $varname. Build the name first, then look it up - the nested form
   # ${!FIELD_${ENV}} would be double-indirection and silently return empty.
   for field in \
     DATABASE_URL \
@@ -493,8 +513,13 @@ sync_env_secrets() {
     set_secret "$varname" "${!varname}"
   done
 
-  # Optional — only set when the value is non-empty
-  for field in RESEND_WEBHOOK_SECRET CONTACT_DATA_ENCRYPTION_KEY; do
+  # Optional - only set when the value is non-empty
+  for field in \
+    RESEND_WEBHOOK_SECRET \
+    CONTACT_DATA_ENCRYPTION_KEY \
+    OPTIMIZE_TEXTURES_WORKER_URL \
+    OPTIMIZE_TEXTURES_WORKER_TOKEN
+  do
     varname="${field}_${ENV}"
     [[ -n "${!varname}" ]] && set_secret "$varname" "${!varname}"
   done
@@ -522,10 +547,10 @@ sync_supabase_hook() {
 
   if [[ "$http_code" =~ ^2 ]]; then
     HOOKS_SYNCED+=("$label")
-    ok "$label — URI: $hook_uri"
+    ok "$label - URI: $hook_uri"
   else
     HOOKS_FAILED+=("$label")
-    err "$label — HTTP ${http_code}"
+    err "$label - HTTP ${http_code}"
     printf "       Manually update in Supabase dashboard:\n"
     printf "         Project: %s\n" "$project_ref"
     printf "         Auth → Hooks → send_email\n"
@@ -536,7 +561,7 @@ sync_supabase_hook() {
 }
 
 section "Supabase auth hook sync"
-printf "  ${YELLOW}Note:${NC} Hook URI and secret are set atomically — Supabase project always matches the GitHub secret.\n\n"
+printf "  ${YELLOW}Note:${NC} Hook URI and secret are set atomically - Supabase project always matches the GitHub secret.\n\n"
 
 [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && \
   sync_supabase_hook "$SUPABASE_PROJECT_REF_STAGING" "$SEND_EMAIL_HOOK_SECRET_STAGING" "$APPLICATION_URL_STAGING" "staging"

@@ -65,7 +65,7 @@ WORKDIR /app
 
 ENV NODE_ENV=${NODE_ENV}
 ENV PORT=8080
-ENV NODE_OPTIONS="--enable-source-maps --heapsnapshot-near-heap-limit=2"
+ENV NODE_OPTIONS="--heapsnapshot-near-heap-limit=2"
 
 # =============================================================================
 # REQUIRED ENVIRONMENT VARIABLES (must be set at runtime):
@@ -77,6 +77,8 @@ ENV NODE_OPTIONS="--enable-source-maps --heapsnapshot-near-heap-limit=2"
 # - GOOGLE_CLOUD_PROJECT: Google Cloud project ID (vectreal-platform)
 # - GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET: Google Cloud Storage private bucket name
 # - APPLICATION_URL: Application URL for OAuth redirects (optional)
+# - OPTIMIZE_TEXTURES_WORKER_URL: Optional runtime URL for external texture optimization worker
+# - OPTIMIZE_TEXTURES_WORKER_TOKEN: Optional shared token sent to the optimization worker
 # =============================================================================
 
 # Create non-root user for security

@@ -50,7 +50,7 @@ resource "google_cloud_run_v2_service" "production" {
           cpu    = var.production_cpu
           memory = var.production_memory
         }
-        cpu_idle = true
+        cpu_idle = false
       }
 
       # Basic environment variables - GitHub Actions configures secrets
@@ -85,6 +85,10 @@ resource "google_cloud_run_v2_service" "production" {
       # GitHub Actions manages these - ignore Terraform drift
       template[0].containers[0].image,
       template[0].containers[0].env,
+      # gcloud deploy and Cloud Run API may normalize scaling fields (including
+      # manual_instance_count) and cause perpetual 0 -> null plan churn.
+      scaling,
+      template[0].scaling,
     ]
   }
 }
@@ -149,6 +153,10 @@ resource "google_cloud_run_v2_service" "staging" {
       # GitHub Actions manages these - ignore Terraform drift
       template[0].containers[0].image,
       template[0].containers[0].env,
+      # gcloud deploy and Cloud Run API may normalize scaling fields (including
+      # manual_instance_count) and cause perpetual 0 -> null plan churn.
+      scaling,
+      template[0].scaling,
     ]
   }
 }

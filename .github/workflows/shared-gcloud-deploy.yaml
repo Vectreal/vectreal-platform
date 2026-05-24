@@ -144,6 +144,12 @@ on:
       demo-scene-url:
         description: 'Full URL for the landing page 3D demo embed, including token (VITE_PUBLIC_DEMO_SCENE_URL)'
         required: false
+      optimize-textures-worker-url:
+        description: 'Optional URL for dedicated optimize-textures worker runtime'
+        required: false
+      optimize-textures-worker-token:
+        description: 'Optional shared token for optimize-textures worker authentication'
+        required: false
 
 jobs:
   deploy:
@@ -318,6 +324,8 @@ jobs:
             VITE_PUBLIC_POSTHOG_HOST=${{ secrets.posthog-host }}
             VITE_PUBLIC_POSTHOG_UI_HOST=${{ secrets.posthog-ui-host || 'https://eu.posthog.com' }}
             VITE_PUBLIC_VECTREAL_API_KEY_PROD=${{ secrets.vectreal-api-key-prod }}
+            OPTIMIZE_TEXTURES_WORKER_URL=${{ secrets.optimize-textures-worker-url }}
+            OPTIMIZE_TEXTURES_WORKER_TOKEN=${{ secrets.optimize-textures-worker-token }}
             VITE_PUBLIC_DEMO_SCENE_URL=${{ secrets.demo-scene-url }}
             CONTACT_DATA_ENCRYPTION_KEY=${{ secrets.contact-data-encryption-key }}
             RESEND_API_KEY=${{ secrets.resend-api-key }}

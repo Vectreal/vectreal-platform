@@ -6,7 +6,37 @@
 	"projectType": "application",
 	"tags": ["scope:infra"],
 	"targets": {
+		"plan-infrastructure": {
+			"dependsOn": [
+				{
+					"projects": ["vectreal-optimize-textures-function"],
+					"target": "build"
+				}
+			],
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "terraform -chdir=terraform init -input=false && terraform -chdir=terraform validate && terraform -chdir=terraform plan"
+			}
+		},
+		"apply-infrastructure-auto-approve": {
+			"dependsOn": [
+				{
+					"projects": ["vectreal-optimize-textures-function"],
+					"target": "build"
+				}
+			],
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "terraform -chdir=terraform init -input=false && terraform -chdir=terraform validate && terraform -chdir=terraform apply -auto-approve"
+			}
+		},
 		"apply-infrastructure": {
+			"dependsOn": [
+				{
+					"projects": ["vectreal-optimize-textures-function"],
+					"target": "build"
+				}
+			],
 			"executor": "nx:run-commands",
 			"options": {
 				"cwd": "terraform",

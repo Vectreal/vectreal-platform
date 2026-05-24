@@ -125,8 +125,6 @@ resource "google_compute_backend_service" "staging_app" {
 
   cdn_policy {
     cache_mode  = "USE_ORIGIN_HEADERS"
-    default_ttl = var.staging_app_default_ttl_seconds
-    max_ttl     = var.staging_app_max_ttl_seconds
     client_ttl  = 0
 
     serve_while_stale = 60
@@ -162,8 +160,6 @@ resource "google_compute_backend_service" "production_app" {
 
   cdn_policy {
     cache_mode  = "USE_ORIGIN_HEADERS"
-    default_ttl = var.production_app_default_ttl_seconds
-    max_ttl     = var.production_app_max_ttl_seconds
     client_ttl  = 0
 
     serve_while_stale = 60
