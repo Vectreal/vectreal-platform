@@ -12,7 +12,7 @@ interface PageHeroProps {
 /**
  * Shared above-the-fold hero section used by all main nav pages
  * (docs, contact, newsroom, pricing). Encodes the brand-aligned
- * design spec in one place — gradient background, typography scale,
+ * design spec in one place - gradient background, typography scale,
  * eyebrow label, description, and an actions slot.
  */
 const PageHero = ({
@@ -29,7 +29,7 @@ const PageHero = ({
 				className
 			)}
 		>
-			{/* Decorative radial accent gradients — purely visual, pointer-events off */}
+			{/* Decorative radial accent gradients - purely visual, pointer-events off */}
 			<div
 				aria-hidden="true"
 				className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_15%_25%,hsl(var(--accent)/0.14),transparent_42%),radial-gradient(circle_at_82%_12%,hsl(var(--accent)/0.09),transparent_45%)]"

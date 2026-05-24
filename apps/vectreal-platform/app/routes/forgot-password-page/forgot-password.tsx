@@ -2,7 +2,7 @@
  * /forgot-password
  *
  * Sends a Supabase password-reset email via Resend (through the send-auth-email hook).
- * Always returns 200 regardless of whether the email is registered — prevents enumeration.
+ * Always returns 200 regardless of whether the email is registered - prevents enumeration.
  */
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
@@ -30,8 +30,8 @@ export { AuthErrorBoundary as ErrorBoundary }
 export const meta: MetaFunction = () =>
 	buildMeta(
 		[
-			{ title: 'Forgot Password — Vectreal' },
-			{ property: 'og:title', content: 'Forgot Password — Vectreal' }
+			{ title: 'Forgot Password - Vectreal' },
+			{ property: 'og:title', content: 'Forgot Password - Vectreal' }
 		],
 		undefined,
 		{ private: true }
@@ -92,7 +92,7 @@ export async function action({ request }: Route.ActionArgs) {
 	const url = new URL(request.url)
 	const redirectTo = `${url.origin}/reset-password`
 
-	// Fire-and-forget style — never reveal whether the email exists (OWASP A7)
+	// Fire-and-forget style - never reveal whether the email exists (OWASP A7)
 	await client.auth.resetPasswordForEmail(normalizedEmail, { redirectTo })
 
 	return data<ActionData>({ ok: true }, { headers })

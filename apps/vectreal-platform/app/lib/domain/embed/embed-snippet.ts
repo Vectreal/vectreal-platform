@@ -11,7 +11,7 @@ export const EMBED_COPY = {
 	previewUrlPlaceholder: 'Save scene to generate URL',
 	embedCodeLabel: 'Embed Code',
 	embedCodeHelp:
-		'Embed with a plain iframe or use the JavaScript SDK for runtime control — camera switching, scroll interactions, and event callbacks.',
+		'Embed with a plain iframe or use the JavaScript SDK for runtime control - camera switching, scroll interactions, and event callbacks.',
 	sdkCodeLabel: 'JavaScript SDK',
 	sdkCodeHelp:
 		'Include the SDK to control the embed from your page: switch cameras, listen to events, trigger scroll interactions, and more. Install via npm or use the CDN script tag.',

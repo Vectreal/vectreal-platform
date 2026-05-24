@@ -98,7 +98,7 @@ type SceneDetailsSummary = {
 
 function formatBytes(bytes: number | null | undefined): string {
 	if (bytes == null || Number.isNaN(bytes)) {
-		return '—'
+		return '-'
 	}
 
 	if (bytes === 0) {
@@ -882,7 +882,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 									</p>
 									<p className="font-medium">
 										{formatBytes(sceneDetails.meshBytes)} /{' '}
-										{sceneDetails.verticesCount ?? '—'}
+										{sceneDetails.verticesCount ?? '-'}
 									</p>
 								</div>
 							</div>

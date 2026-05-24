@@ -30,7 +30,7 @@ const sceneMetaAtom = atomWithStorage<SceneMetaState>(
 	sceneMetaInitialState
 )
 
-// Last-saved baselines — persisted in Jotai atoms (not React state) so they
+// Last-saved baselines - persisted in Jotai atoms (not React state) so they
 // survive route transitions within the same publisher session without remounting.
 // Cleared explicitly on full scene reset or on post-save navigation.
 const lastSavedSettingsAtom = atom<SceneSettings | null>(null)
@@ -50,7 +50,7 @@ publisherConfigStore.set(lastSavedSettingsAtom, null)
 publisherConfigStore.set(lastSavedSceneMetaAtom, null)
 publisherConfigStore.set(lastSavedSceneIdAtom, null)
 
-// Save location atoms — not persisted to storage, initialized from loader data each session
+// Save location atoms - not persisted to storage, initialized from loader data each session
 const saveLocationAtom = atom<SaveLocationTarget>({
 	targetProjectId: undefined,
 	targetFolderId: null
@@ -103,7 +103,7 @@ const hasUnsavedChangesAtom = selectAtom(
 	(state) => state.hasUnsavedChanges
 )
 
-// Editor mode atoms — not persisted, reset on each session
+// Editor mode atoms - not persisted, reset on each session
 const isPreviewModeAtom = atom(false)
 const isClickToPlaceActiveAtom = atom(false)
 const arePublisherActionsDisabledAtom = atom((get) => get(isPreviewModeAtom))

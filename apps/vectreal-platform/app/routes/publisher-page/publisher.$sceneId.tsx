@@ -131,7 +131,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 		publisherLoadingStateAtom
 	)
 	const navigation = useNavigation()
-	// True when React Router is loading a publisher route — covers navigating
+	// True when React Router is loading a publisher route - covers navigating
 	// between scene IDs within the publisher layout (e.g. after a new scene
 	// is saved and the URL moves from /publisher to /publisher/<id>).
 	const isNavigationLoading =

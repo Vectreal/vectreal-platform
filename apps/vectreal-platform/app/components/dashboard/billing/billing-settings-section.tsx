@@ -63,7 +63,7 @@ const BILLING_STATE_CONFIG: Record<
 		variant: 'destructive',
 		icon: AlertTriangle,
 		description:
-			'Payment failed. Please update your payment method within 7 days — after that, your account will be locked to read-only.'
+			'Payment failed. Please update your payment method within 7 days - after that, your account will be locked to read-only.'
 	},
 	unpaid: {
 		label: 'Unpaid',

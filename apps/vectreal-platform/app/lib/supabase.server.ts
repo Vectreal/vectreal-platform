@@ -17,7 +17,7 @@ interface SupabaseClientContext {
  * running during the same SSR render share a single client instance.
  *
  * This prevents the refresh-token race condition where multiple loaders
- * each try to exchange the same expired refresh token simultaneously —
+ * each try to exchange the same expired refresh token simultaneously -
  * only the first would succeed after Supabase rotates the token, causing
  * all others to receive `refresh_token_not_found`.
  */

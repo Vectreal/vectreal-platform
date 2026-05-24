@@ -56,7 +56,7 @@ export default function MockShopEmbedClient() {
 
 	const chapter = CHAPTERS.find((c) => c.id === activeChapter) ?? CHAPTERS[0]
 
-	// Fade-swap state for description — opacity out → swap text → opacity in
+	// Fade-swap state for description - opacity out → swap text → opacity in
 	const [displayedDesc, setDisplayedDesc] = useState(chapter.description)
 	const [descFading, setDescFading] = useState(false)
 
@@ -171,10 +171,10 @@ export default function MockShopEmbedClient() {
 	}
 
 	return (
-		// Sticky scroll container — 4× viewport height gives comfortable pacing
+		// Sticky scroll container - 4× viewport height gives comfortable pacing
 		<div ref={sectionRef} className="relative" style={{ height: '600vh' }}>
 			<div className="sticky top-0 h-screen overflow-hidden bg-black">
-				{/* Fullscreen iframe — hidden until embed is ready to prevent HDR flash */}
+				{/* Fullscreen iframe - hidden until embed is ready to prevent HDR flash */}
 				<iframe
 					ref={iframeRef}
 					src={DEMO_SCENE_URL}
@@ -184,10 +184,10 @@ export default function MockShopEmbedClient() {
 					)}
 					allow="autoplay; xr-spatial-tracking"
 					allowFullScreen
-					title="Alpine X3 Pro — interactive 3D preview"
+					title="Alpine X3 Pro - interactive 3D preview"
 				/>
 
-				{/* Loading indicator — visible until embed is ready */}
+				{/* Loading indicator - visible until embed is ready */}
 				{/* <div
 					className={cn(
 						'pointer-events-none absolute inset-0 z-[1] flex flex-col items-center justify-center gap-3 transition-opacity duration-700',
@@ -200,7 +200,7 @@ export default function MockShopEmbedClient() {
 					</p>
 				</div> */}
 
-				{/* Touch passthrough — lets vertical scroll reach the page on mobile */}
+				{/* Touch passthrough - lets vertical scroll reach the page on mobile */}
 				<div
 					className="absolute inset-0 z-1"
 					style={{ touchAction: 'pan-y' }}
@@ -210,7 +210,7 @@ export default function MockShopEmbedClient() {
 				<div className="pointer-events-none absolute inset-0 z-2 bg-linear-to-r from-black/55 via-transparent to-black/15" />
 				<div className="pointer-events-none absolute inset-0 z-2 bg-linear-to-b from-black/30 via-transparent to-black/75" />
 
-				{/* Powered by Vectreal — top-left, offset below nav on mobile */}
+				{/* Powered by Vectreal - top-left, offset below nav on mobile */}
 				<div className="absolute top-20 left-6 z-10 lg:top-6">
 					<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-1.5 backdrop-blur-sm">
 						<span className="bg-accent h-1.5 w-1.5 rounded-full" />
@@ -222,7 +222,7 @@ export default function MockShopEmbedClient() {
 
 				{/* ── Desktop layout ─────────────────────────────────────────── */}
 
-				{/* Product card — bottom-left */}
+				{/* Product card - bottom-left */}
 				<div className="absolute bottom-14 left-6 z-10 hidden max-w-xs md:block">
 					<div className="rounded-2xl border border-white/10 bg-black/45 p-5 shadow-2xl backdrop-blur-md">
 						<p className="text-[10px] font-medium tracking-[0.18em] text-white/30 uppercase">
@@ -266,7 +266,7 @@ export default function MockShopEmbedClient() {
 					</div>
 				</div>
 
-				{/* Chapter indicator — bottom-right */}
+				{/* Chapter indicator - bottom-right */}
 				<div className="absolute right-6 bottom-14 z-10 hidden flex-col items-end gap-2.5 md:flex">
 					{CHAPTERS.map((c) => (
 						<button
@@ -300,7 +300,7 @@ export default function MockShopEmbedClient() {
 					))}
 				</div>
 
-				{/* Scroll hint — desktop */}
+				{/* Scroll hint - desktop */}
 				<div
 					className={cn(
 						'pointer-events-none absolute bottom-8 left-1/2 z-10 hidden -translate-x-1/2 flex-col items-center gap-1.5 transition-opacity duration-700 md:flex',
@@ -329,7 +329,7 @@ export default function MockShopEmbedClient() {
 						<ChevronsDown size={13} className="animate-bounce text-white/25" />
 					</div>
 
-					{/* Chapter indicators — centered */}
+					{/* Chapter indicators - centered */}
 					<div className="flex justify-center gap-6">
 						{CHAPTERS.map((c) => (
 							<button

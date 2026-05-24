@@ -219,7 +219,7 @@ class SceneSettingsService {
 				await replaceSceneAssets(tx, savedSettings.id, assetIds)
 			}
 
-			// Always sync hotspots — the client is authoritative on the full list.
+			// Always sync hotspots - the client is authoritative on the full list.
 			await replaceHotspots(tx, savedSettings.id, settings.hotspots ?? [])
 
 			if (optimizationReport || optimizationSettings) {
@@ -316,7 +316,7 @@ class SceneSettingsService {
 				await replaceSceneAssets(tx, savedSettings.id, sceneAssetIds)
 			}
 
-			// Always sync hotspots — the client is authoritative on the full list.
+			// Always sync hotspots - the client is authoritative on the full list.
 			await replaceHotspots(tx, savedSettings.id, settings.hotspots ?? [])
 
 			if (optimizationReport || optimizationSettings) {

@@ -2,7 +2,7 @@
 
 [![NPM Downloads](https://img.shields.io/npm/dm/%40vctrl%2Fhooks?logo=npm&logoColor=%23fc6c18&label=%40vctrl%2Fhooks%20%7C%20NPM%20Downloads&color=%23fc6c18)](https://www.npmjs.com/package/@vctrl/hooks)
 
-Browser-side React hooks for loading, optimizing, and exporting 3D models. The runtime counterpart to [`@vctrl/core`](/docs/packages/core) — built for React apps that need to handle 3D files directly in the browser.
+Browser-side React hooks for loading, optimizing, and exporting 3D models. The runtime counterpart to [`@vctrl/core`](/docs/packages/core) - built for React apps that need to handle 3D files directly in the browser.
 
 ---
 
@@ -60,8 +60,8 @@ export default function App() {
 
 `useLoadModel` can be used in two ways:
 
-1. **Context mode** (recommended) — wrap your app with `ModelProvider`, then consume with `useModelContext()` anywhere in that tree.
-2. **Direct mode** — call `useLoadModel()` outside a provider to manage a local model state.
+1. **Context mode** (recommended) - wrap your app with `ModelProvider`, then consume with `useModelContext()` anywhere in that tree.
+2. **Direct mode** - call `useLoadModel()` outside a provider to manage a local model state.
 
 ### Return values
 
@@ -218,7 +218,7 @@ function ExportButton({ file }: { file: ModelFile | null }) {
 |---|---|
 | `react` | `^18 \|\| ^19` |
 
-> `three` (`^0.177.0`) is a **direct dependency** of `@vctrl/hooks` and does not need to be declared separately when using hooks in isolation. However, `@vctrl/viewer` declares `three` as a peer dependency. If you are using both packages together, **declare `three` explicitly** in your own project's `package.json` to guarantee a single shared instance — Three.js uses global singletons internally and having duplicate instances produces subtle rendering bugs:
+> `three` (`^0.177.0`) is a **direct dependency** of `@vctrl/hooks` and does not need to be declared separately when using hooks in isolation. However, `@vctrl/viewer` declares `three` as a peer dependency. If you are using both packages together, **declare `three` explicitly** in your own project's `package.json` to guarantee a single shared instance - Three.js uses global singletons internally and having duplicate instances produces subtle rendering bugs:
 >
 > ```bash
 > npm install three@^0.177.0
@@ -236,6 +236,6 @@ Full source and detailed README in [`packages/hooks/`](https://github.com/Vectre
 
 ## Related docs
 
-- [Uploading Models](/docs/guides/upload) — file ingestion and bundle handling
-- [Optimizing & Configuring](/docs/guides/optimize) — optimization presets and behavior
-- [@vctrl/viewer](/docs/packages/viewer) — rendering integration target
+- [Uploading Models](/docs/guides/upload) - file ingestion and bundle handling
+- [Optimizing & Configuring](/docs/guides/optimize) - optimization presets and behavior
+- [@vctrl/viewer](/docs/packages/viewer) - rendering integration target

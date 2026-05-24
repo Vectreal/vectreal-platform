@@ -136,9 +136,9 @@ interface PlanCardProps {
 	plan: Plan
 	period: 'monthly' | 'annual'
 	prices: BillingCheckoutOptions | null
-	/** The user's currently active plan — shows "Current plan" badge */
+	/** The user's currently active plan - shows "Current plan" badge */
 	activePlan?: Plan
-	/** The plan currently selected for checkout — shows highlighted ring */
+	/** The plan currently selected for checkout - shows highlighted ring */
 	selectedPlan?: Plan
 	/** Called when the card CTA is clicked in select mode */
 	onSelectPlan?: (plan: Plan) => void
@@ -306,7 +306,7 @@ function PlanCard({
 				))}
 			</CardContent>
 
-			{/* CTA footer — hidden in select mode for current plan; otherwise shown */}
+			{/* CTA footer - hidden in select mode for current plan; otherwise shown */}
 			{!isSelectMode && (
 				<CardFooter>
 					{display.ctaHref ? (
@@ -386,9 +386,9 @@ export interface PricingCardsSectionProps {
 	prices: BillingCheckoutOptions | null
 	/** Include the Enterprise card (default true) */
 	showEnterprise?: boolean
-	/** User's current plan — shows "Current plan" badge */
+	/** User's current plan - shows "Current plan" badge */
 	activePlan?: Plan
-	/** Plan currently selected for checkout — highlighted ring */
+	/** Plan currently selected for checkout - highlighted ring */
 	selectedPlan?: Plan
 	/** If provided, cards become interactive selectors */
 	onSelectPlan?: (plan: Plan) => void

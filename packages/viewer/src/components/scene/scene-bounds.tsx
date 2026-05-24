@@ -16,7 +16,7 @@ const SceneBounds = memo((props: BoundsProps) => {
 	}
 
 	// Always render <Bounds> to keep the useBounds() context alive for SceneCamera.
-	// Disable declarative fit entirely — SceneCamera drives all fitting imperatively
+	// Disable declarative fit entirely - SceneCamera drives all fitting imperatively
 	// via bounds.reset().fit() so timing is fully controlled.
 	return (
 		<Bounds {...rest} fit={false}>

@@ -37,8 +37,8 @@ export { AuthErrorBoundary as ErrorBoundary }
 export const meta: MetaFunction = () =>
 	buildMeta(
 		[
-			{ title: 'Sign Up — Vectreal' },
-			{ property: 'og:title', content: 'Sign Up — Vectreal' },
+			{ title: 'Sign Up - Vectreal' },
+			{ property: 'og:title', content: 'Sign Up - Vectreal' },
 			{
 				name: 'description',
 				content:
@@ -194,10 +194,9 @@ export async function action({ request, context }: Route.ActionArgs) {
 		}
 
 		const emailParam = encodeURIComponent(normalizedEmail)
-		return redirect(
-			`/auth/confirm-pending?email=${emailParam}`,
-			{ headers: new Headers(headers) }
-		)
+		return redirect(`/auth/confirm-pending?email=${emailParam}`, {
+			headers: new Headers(headers)
+		})
 	}
 
 	if (signupError) {
@@ -555,7 +554,7 @@ const SignupPage = ({ loaderData, actionData }: Route.ComponentProps) => {
 						</AnimatePresence>
 					</motion.div>
 
-					{/* Confirm password — revealed once password has content */}
+					{/* Confirm password - revealed once password has content */}
 					<AnimatePresence>
 						{password.length > 0 && (
 							<motion.div
@@ -707,4 +706,3 @@ const SignupPage = ({ loaderData, actionData }: Route.ComponentProps) => {
 }
 
 export default SignupPage
-

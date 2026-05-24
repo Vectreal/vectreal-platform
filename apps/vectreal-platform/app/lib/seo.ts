@@ -27,7 +27,7 @@ type JsonLd = Record<string, unknown>
 
 export interface BuildMetaOptions {
 	/**
-	 * When true, injects `noindex, nofollow` robots meta — use for all
+	 * When true, injects `noindex, nofollow` robots meta - use for all
 	 * authenticated / private pages (dashboard, publisher, preview, etc.).
 	 */
 	private?: boolean
@@ -188,13 +188,13 @@ export function buildMeta(
 
 	if (options.canonical) {
 		const absoluteCanonical = toAbsoluteUrl(options.canonical)
-		// <link rel="canonical"> — the primary crawlability signal
+		// <link rel="canonical"> - the primary crawlability signal
 		metaItems.push({
 			tagName: 'link',
 			rel: 'canonical',
 			href: absoluteCanonical
 		})
-		// og:url — aligns the Open Graph URL with the canonical
+		// og:url - aligns the Open Graph URL with the canonical
 		metaItems.push({
 			property: 'og:url',
 			content: absoluteCanonical

@@ -12,7 +12,7 @@ const MockShopSection = () => {
 
 	return (
 		<section aria-label="Interactive 3D product demo">
-			{/* Section heading — sits above the sticky scroll area */}
+			{/* Section heading - sits above the sticky scroll area */}
 			<div className="from-background to-background/0 relative z-10 bg-linear-to-b px-4 py-16">
 				<div className="mx-auto max-w-7xl">
 					<div className="border-accent/20 bg-accent/5 text-accent/70 mb-4 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium">
@@ -21,7 +21,7 @@ const MockShopSection = () => {
 					</div>
 					<h2>Real Store, Real Product, Real Impact</h2>
 					<p className="text-foreground/90 mt-4 max-w-xl text-lg md:text-xl">
-						See how Vectreal powers interactive 3D e-commerce — scroll to
+						See how Vectreal powers interactive 3D e-commerce - scroll to
 						explore the model
 					</p>
 				</div>
@@ -38,7 +38,7 @@ const MockShopSection = () => {
 					<MockShopEmbedClient />
 				</Suspense>
 			) : (
-				// SSR placeholder — prevents layout shift
+				// SSR placeholder - prevents layout shift
 				<div className="h-screen w-full bg-black" />
 			)}
 
@@ -47,7 +47,7 @@ const MockShopSection = () => {
 					Interactive 3D product visualization powered by Vectreal
 				</p>
 				<p className="text-muted-foreground/35 mt-1 text-xs">
-					Demo product — not available for purchase
+					Demo product - not available for purchase
 				</p>
 			</div>
 		</section>

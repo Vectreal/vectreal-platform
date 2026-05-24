@@ -56,8 +56,7 @@ async function ensureUserExistsDb(
 				? rawTos
 				: null
 	const tosAcceptedAt =
-		parsedTosAcceptedAt &&
-		!Number.isNaN(parsedTosAcceptedAt.getTime())
+		parsedTosAcceptedAt && !Number.isNaN(parsedTosAcceptedAt.getTime())
 			? parsedTosAcceptedAt
 			: null
 
@@ -92,7 +91,7 @@ async function ensureUserExistsDb(
 		// has multiple auth identities (e.g. OAuth + email/password) for the same
 		// email address, resulting in separate UUIDs. Since Supabase has already
 		// authenticated this user with the email, returning the existing record is
-		// safe — both UUIDs belong to the same person.
+		// safe - both UUIDs belong to the same person.
 		if (supabaseUser.email) {
 			const [byEmail] = await dbClient
 				.select()
@@ -101,10 +100,13 @@ async function ensureUserExistsDb(
 				.limit(1)
 
 			if (byEmail) {
-				console.warn('[ensureUserExistsDb] UUID mismatch — returning existing user by email', {
-					supabaseUserId: supabaseUser.id,
-					existingUserId: byEmail.id
-				})
+				console.warn(
+					'[ensureUserExistsDb] UUID mismatch - returning existing user by email',
+					{
+						supabaseUserId: supabaseUser.id,
+						existingUserId: byEmail.id
+					}
+				)
 				return { user: byEmail, isNewUser: false }
 			}
 		}

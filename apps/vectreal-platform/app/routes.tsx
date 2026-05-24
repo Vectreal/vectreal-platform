@@ -95,9 +95,9 @@ export default [
 			)
 		]),
 
-		// Docs — platform-first open-source documentation
+		// Docs - platform-first open-source documentation
 		...prefix('docs', [
-			// Docs landing page — full-width hero, outside the sidebar layout
+			// Docs landing page - full-width hero, outside the sidebar layout
 			index('./routes/docs/index.tsx'),
 			layout('./routes/layouts/docs-layout.tsx', [
 				// Getting Started

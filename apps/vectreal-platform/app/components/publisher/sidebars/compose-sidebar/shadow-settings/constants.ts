@@ -30,7 +30,7 @@ export const CONTACT_PRIMARY_FIELDS: FieldConfig[] = [
 ]
 
 /**
- * Advanced contact shadow controls — hidden in collapsed section.
+ * Advanced contact shadow controls - hidden in collapsed section.
  * Scale defaults are intentionally large in viewer-defaults to avoid
  * shadow-plane floor clipping on most scenes.
  */
@@ -75,7 +75,7 @@ export const ACCUMULATIVE_PRIMARY_FIELDS: FieldConfig[] = [
 ]
 
 /**
- * Advanced soft shadow controls — scale + light config.
+ * Advanced soft shadow controls - scale + light config.
  * Scale defaults large to avoid shadow-plane floor clipping.
  */
 export const ACCUMULATIVE_ADVANCED_FIELDS: FieldConfig[] = [
@@ -115,7 +115,7 @@ export const ACCUMULATIVE_LIGHT_FIELDS: FieldConfig[] = [
 	}
 ]
 
-// ─── Legacy aliases — kept so old imports continue to resolve ────────────────
+// ─── Legacy aliases - kept so old imports continue to resolve ────────────────
 /** @deprecated Use CONTACT_PRIMARY_FIELDS + CONTACT_ADVANCED_FIELDS instead */
 export const CONTACT_FIELDS: FieldConfig[] = [
 	...CONTACT_PRIMARY_FIELDS,

@@ -1,6 +1,6 @@
 # Embed SDK
 
-Control embedded Vectreal scenes from your page — camera switching, scroll-driven interactions, event callbacks, and the full postMessage protocol.
+Control embedded Vectreal scenes from your page - camera switching, scroll-driven interactions, event callbacks, and the full postMessage protocol.
 
 ---
 
@@ -13,14 +13,14 @@ Two integration paths are available:
 | Path | When to use |
 |---|---|
 | **JavaScript SDK** (`@vctrl/embed`) | You want camera control, event callbacks, or scroll interactions from your page code. |
-| **URL parameters** | You need a static initial state with no JavaScript — set the starting camera or transition type in the iframe `src`. |
+| **URL parameters** | You need a static initial state with no JavaScript - set the starting camera or transition type in the iframe `src`. |
 | **Raw postMessage** | You want zero dependencies and are comfortable implementing the protocol yourself. |
 
 ---
 
-## Quick start — JavaScript SDK
+## Quick start - JavaScript SDK
 
-**Step 1 — Install**
+**Step 1 - Install**
 
 ```bash
 npm install @vctrl/embed
@@ -32,7 +32,7 @@ Or include the CDN script before your page code:
 <script src="https://cdn.vectreal.com/embed/latest/vectreal-embed.umd.js"></script>
 ```
 
-**Step 2 — Add the iframe**
+**Step 2 - Add the iframe**
 
 ```html
 <div style="width: 100%; height: 400px;">
@@ -46,7 +46,7 @@ Or include the CDN script before your page code:
 </div>
 ```
 
-**Step 3 — Control it**
+**Step 3 - Control it**
 
 ```js
 import { VectrealEmbed } from '@vctrl/embed'
@@ -156,7 +156,7 @@ window.addEventListener('scroll', () => {
 })
 ```
 
-The bridge only re-fires a scroll range interaction when the progress value enters the configured range from outside — it will not repeat while progress stays inside the range.
+The bridge only re-fires a scroll range interaction when the progress value enters the configured range from outside - it will not repeat while progress stays inside the range.
 
 ---
 
@@ -176,7 +176,7 @@ The message string must match exactly what was entered in the Publisher interact
 
 ## Raw postMessage protocol
 
-If you prefer zero dependencies, you can implement the protocol directly. Both sides must use the exact source strings below — the bridge validates them and silently discards anything that does not match.
+If you prefer zero dependencies, you can implement the protocol directly. Both sides must use the exact source strings below - the bridge validates them and silently discards anything that does not match.
 
 ### Source identifiers
 
@@ -189,7 +189,7 @@ If you prefer zero dependencies, you can implement the protocol directly. Both s
 
 | `type` | Additional fields | Effect |
 |---|---|---|
-| `ping` | — | Requests a `pong` with scene metadata. Send this on iframe load. |
+| `ping` | - | Requests a `pong` with scene metadata. Send this on iframe load. |
 | `viewer_command` | `command: ViewerCommand` | Execute a viewer command. |
 | `host_scroll_progress` | `progress: number` | Report normalized scroll progress (0–1). |
 | `host_message` | `message: string`, `payload?` | Trigger a named interaction. |
@@ -198,7 +198,7 @@ If you prefer zero dependencies, you can implement the protocol directly. Both s
 
 | `type` | Additional fields | Meaning |
 |---|---|---|
-| `pong` | `sceneId`, `cameras: EmbedCameraDescriptor[]` | Response to `ping` — scene is ready. |
+| `pong` | `sceneId`, `cameras: EmbedCameraDescriptor[]` | Response to `ping` - scene is ready. |
 | `viewer_event` | `event: ViewerInteractionEvent`, `sceneId?` | Viewer lifecycle event. |
 | `interaction_event` | `eventName`, `interactionId?`, `payload?` | A Publisher custom event fired. |
 
@@ -251,17 +251,17 @@ If you prefer zero dependencies, you can implement the protocol directly. Both s
 
 ## Security
 
-- **Origin validation** — the bridge accepts messages only from the first origin that successfully contacts it. The SDK uses `new URL(iframe.src).origin` as `targetOrigin` automatically; never `'*'`.
-- **Token privacy** — keep `YOUR_PREVIEW_API_KEY` server-side or in environment variables. Tokens are validated against the project's allowed domain list on every request.
-- **Domain allowlist** — configure which external origins can load your preview at [Dashboard → Projects](/dashboard/projects). Requests from unlisted domains receive `403 Forbidden`.
+- **Origin validation** - the bridge accepts messages only from the first origin that successfully contacts it. The SDK uses `new URL(iframe.src).origin` as `targetOrigin` automatically; never `'*'`.
+- **Token privacy** - keep `YOUR_PREVIEW_API_KEY` server-side or in environment variables. Tokens are validated against the project's allowed domain list on every request.
+- **Domain allowlist** - configure which external origins can load your preview at [Dashboard → Projects](/dashboard/projects). Requests from unlisted domains receive `403 Forbidden`.
 
 ---
 
 ## Next steps
 
-- [Publishing & Embedding](/docs/guides/publish-embed) — publish a scene and create a preview API key
-- [@vctrl/embed](/docs/packages/embed) — full package API reference
-- [@vctrl/viewer](/docs/packages/viewer) — embed the viewer directly in a React app without an iframe
+- [Publishing & Embedding](/docs/guides/publish-embed) - publish a scene and create a preview API key
+- [@vctrl/embed](/docs/packages/embed) - full package API reference
+- [@vctrl/viewer](/docs/packages/viewer) - embed the viewer directly in a React app without an iframe
 
 ---
 

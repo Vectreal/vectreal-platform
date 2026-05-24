@@ -11,9 +11,9 @@
  * (headers: webhook-id, webhook-timestamp, webhook-signature).
  *
  * Environment variables required:
- *   SEND_EMAIL_HOOK_SECRET  — from Supabase dashboard / config.toml
- *   RESEND_API_KEY          — Resend API key
- *   FROM_EMAIL              — sender address, e.g. "Vectreal <auth@vectreal.com>"
+ *   SEND_EMAIL_HOOK_SECRET  - from Supabase dashboard / config.toml
+ *   RESEND_API_KEY          - Resend API key
+ *   FROM_EMAIL              - sender address, e.g. "Vectreal <auth@vectreal.com>"
  */
 
 import { ApiResponse } from '@shared/utils'

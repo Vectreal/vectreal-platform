@@ -12,7 +12,7 @@ import { authUid, authenticatedRole } from 'drizzle-orm/supabase'
 import { users } from '../core/users'
 
 /**
- * Consent records — kept in sync with prd/05-consent-categories.md
+ * Consent records - kept in sync with prd/05-consent-categories.md
  *
  * Stores one row per consent interaction. For authenticated users the row is
  * tied to `user_id`; for anonymous visitors `anonymous_id` is used instead.
@@ -26,7 +26,7 @@ export const consentRecords = pgTable(
 	'consent_records',
 	{
 		id: uuid('id').primaryKey().defaultRandom(),
-		/** FK to users table — null for anonymous visitors. */
+		/** FK to users table - null for anonymous visitors. */
 		userId: uuid('user_id')
 			.unique()
 			.references(() => users.id, { onDelete: 'cascade' }),
@@ -34,7 +34,7 @@ export const consentRecords = pgTable(
 		anonymousId: text('anonymous_id').unique(),
 		/** Semver of the consent policy accepted (e.g. "1.0.0"). */
 		version: text('version').notNull().default('1.0.0'),
-		/** always true — stored for auditability */
+		/** always true - stored for auditability */
 		necessary: boolean('necessary').notNull().default(true),
 		/** Functional / preference cookies */
 		functional: boolean('functional').notNull().default(false),

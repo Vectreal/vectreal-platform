@@ -13,7 +13,7 @@ import { organizations } from '../core/organizations'
 import { isOrganizationAdmin, isOrganizationMember } from '../rls'
 
 /**
- * Canonical plan identifiers — kept in sync with prd/01-plans-and-tiers.md
+ * Canonical plan identifiers - kept in sync with prd/01-plans-and-tiers.md
  */
 export const planEnum = pgEnum('plan', [
 	'free',
@@ -23,7 +23,7 @@ export const planEnum = pgEnum('plan', [
 ])
 
 /**
- * Subscription lifecycle states — kept in sync with prd/04-billing-states.md
+ * Subscription lifecycle states - kept in sync with prd/04-billing-states.md
  */
 export const billingStateEnum = pgEnum('billing_state', [
 	'none',

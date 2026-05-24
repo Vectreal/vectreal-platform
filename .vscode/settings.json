@@ -3,7 +3,6 @@
 	"editor.codeActionsOnSave": {
 		"source.fixAll.eslint": "always"
 	},
-	"nxConsole.generateAiAgentRules": true,
 	"typescript.tsdk": "node_modules/typescript/lib",
 	"typescript.enablePromptUseWorkspaceTsdk": true,
 	"typescript.preferences.includePackageJsonAutoImports": "on",
@@ -27,7 +26,7 @@
 			"text": "This is a pnpm + Nx monorepo. Always run tasks via `nx` (e.g. `nx run <project>:<task>`). Never call tsc, vite, jest, or other tools directly."
 		},
 		{
-			"text": "The platform app uses React Router v7 framework mode with SSR. Use loaders, actions, Route.LoaderArgs, and Route.ActionArgs. Follow framework-mode conventions — not SPA patterns."
+			"text": "The platform app uses React Router v7 framework mode with SSR. Use loaders, actions, Route.LoaderArgs, and Route.ActionArgs. Follow framework-mode conventions - not SPA patterns."
 		},
 		{
 			"text": "Use Drizzle ORM for all database access. Schemas are under apps/vectreal-platform/app/db/schema/. Use RLS helpers from apps/vectreal-platform/app/db/schema/rls.ts."

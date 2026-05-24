@@ -2,7 +2,7 @@
  * Step definitions and motion variants for the onboarding flow.
  *
  * Steps collect optional profile data that helps personalize the experience.
- * All fields are nullable — any step can be skipped.
+ * All fields are nullable - any step can be skipped.
  */
 
 // ─── Profile data shape ───────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ export const STEPS: OnboardingStep[] = [
 	{
 		id: 1,
 		title: 'How are you planning to use Vectreal?',
-		tagline: 'No wrong answers — just helps us prioritise what matters to you.',
+		tagline: 'No wrong answers - just helps us prioritise what matters to you.',
 		fieldKey: 'useCase',
 		inputType: 'pills',
 		options: [

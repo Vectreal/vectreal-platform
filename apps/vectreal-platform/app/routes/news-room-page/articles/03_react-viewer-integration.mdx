@@ -1,7 +1,7 @@
 ---
-title: "React Viewer Integration — Minimal Setup to Production"
+title: "React Viewer Integration - Minimal Setup to Production"
 slug: "react-viewer-integration"
-excerpt: "Drop a Vectreal scene into a real React app in under thirty minutes — SSR-safe, lazy-loaded, and ready for production."
+excerpt: "Drop a Vectreal scene into a real React app in under thirty minutes - SSR-safe, lazy-loaded, and ready for production."
 publishedAt: "2026-04-20"
 updatedAt: "2026-05-02"
 category: "guides"
@@ -26,33 +26,33 @@ thumbnailImage: "/assets/images/newsroom/03/thumbnail-react-viewer-integration.w
 
 {/* ## Blog Summary (80–120 words)
 
-You have a published Vectreal scene and a React app. You want them to meet — properly, in production, without breaking SSR or dragging in a render-blocking 3D bundle. This guide takes you from `npm install` to a working `<VectrealViewer />` in your codebase, through the SSR-safe pattern that keeps hydration clean, the five props you will actually reach for, and the production checklist for shipping with confidence. By the end you will have a viewer wired to your published scene URL, lazy-loaded, fallback-ready, and tuned for the way your team builds. */}
+You have a published Vectreal scene and a React app. You want them to meet - properly, in production, without breaking SSR or dragging in a render-blocking 3D bundle. This guide takes you from `npm install` to a working `<VectrealViewer />` in your codebase, through the SSR-safe pattern that keeps hydration clean, the five props you will actually reach for, and the production checklist for shipping with confidence. By the end you will have a viewer wired to your published scene URL, lazy-loaded, fallback-ready, and tuned for the way your team builds. */}
 
 {/*
-COVER IMAGE BRIEF — /assets/images/newsroom/03/og-react-viewer-integration.webp
+COVER IMAGE BRIEF - /assets/images/newsroom/03/og-react-viewer-integration.webp
 Aspect ratio: 1200x630 (Open Graph standard).
 Composition: Split frame. Left side, code editor with a clean snippet of the VectrealViewer import and JSX render. Right side, a rendered 3D scene inside a stylized browser chrome. Brand orange (#FC6C18) accent on the active line in the editor and on the viewer's loading ring. Background: deep black (#0a0a0a). Font: DM Sans for any overlaid title.
 Overlaid title text: "React Viewer Integration".
-Mood: precise, modern, builder-focused — not playful.
+Mood: precise, modern, builder-focused - not playful.
 
-THUMBNAIL BRIEF — /assets/images/newsroom/thumbnail-react-viewer-integration.webp
+THUMBNAIL BRIEF - /assets/images/newsroom/thumbnail-react-viewer-integration.webp
 Aspect ratio: 4:3 (used in cards on the newsroom index).
-Same visual language as cover, cropped tighter on the JSX snippet so it reads at small sizes. No overlaid text — let the index page render the title.
+Same visual language as cover, cropped tighter on the JSX snippet so it reads at small sizes. No overlaid text - let the index page render the title.
 */}
 
 ### Why This Guide Exists
 
 If you read [the Publisher walkthrough](https://vectreal.com/news-room/the-vectreal-publisher-walkthrough), you ended that piece with a published scene URL and an iframe snippet. The iframe is the fastest path to "live somewhere on the internet," and for marketing sites it is often the right answer.
 
-But most of the people who reach for Vectreal next are React developers who want the scene inside their own app — sharing layout, state, theming, and routing with the rest of the product. That is what `@vctrl/viewer` is for. It is the same renderer the Publisher itself uses, packaged as a React component you can import, configure, and ship.
+But most of the people who reach for Vectreal next are React developers who want the scene inside their own app - sharing layout, state, theming, and routing with the rest of the product. That is what `@vctrl/viewer` is for. It is the same renderer the Publisher itself uses, packaged as a React component you can import, configure, and ship.
 
 This guide takes you from a fresh React project to a viewer rendering in production. Every snippet is verified against `@vctrl/viewer` version 0.18.0. The package is pre-1.0 and under active development, so we will flag what is stable and what may move.
 
 {/*
-HERO IMAGE BRIEF — inline, top of "Why This Guide Exists"
+HERO IMAGE BRIEF - inline, top of "Why This Guide Exists"
 Filename: /assets/images/newsroom/react-viewer-integration/hero-viewer-in-app.webp
 Width: 1600px, aspect 16:9.
-Content: A laptop-style screenshot mockup of a real React product UI (sidebar nav, header, content area). Inside the content area, the VectrealViewer renders a clean glTF model — preferably the same demo model used in the Publisher walkthrough so readers recognize it. The viewer's controls (orbit, environment toggle) are visible at the bottom edge.
+Content: A laptop-style screenshot mockup of a real React product UI (sidebar nav, header, content area). Inside the content area, the VectrealViewer renders a clean glTF model - preferably the same demo model used in the Publisher walkthrough so readers recognize it. The viewer's controls (orbit, environment toggle) are visible at the bottom edge.
 Style: Light/dark variant pair would be nice; default is dark to match brand.
 Caption to use beneath image: "The same renderer that powers the Vectreal Publisher, embedded inside your own React app."
 */}
@@ -61,7 +61,7 @@ Caption to use beneath image: "The same renderer that powers the Vectreal Publis
 
 ### What You'll Build
 
-A functioning React component that loads a published Vectreal scene and renders it inside your application — orbit controls, environment lighting, and screenshot capture wired up. The pattern works in any React 18 or 19 app, including SSR frameworks like React Router v7, Next.js, and Remix.
+A functioning React component that loads a published Vectreal scene and renders it inside your application - orbit controls, environment lighting, and screenshot capture wired up. The pattern works in any React 18 or 19 app, including SSR frameworks like React Router v7, Next.js, and Remix.
 
 If you prefer to skim the result first, the working example sits at the bottom of this post. Otherwise, start at the top and build it with us.
 
@@ -75,14 +75,14 @@ A short, honest list:
 |---|---|---|
 | Node.js | 20 or newer | Required by the underlying tooling |
 | React | 18 or 19 | Declared as a peer dependency |
-| Three.js | 0.177.x | Declared as a peer dependency — install alongside `@vctrl/viewer` |
-| A published Vectreal scene | — | If you don't have one yet, [the Publisher walkthrough](https://vectreal.com/news-room/the-vectreal-publisher-walkthrough) gets you there in a few minutes |
+| Three.js | 0.177.x | Declared as a peer dependency - install alongside `@vctrl/viewer` |
+| A published Vectreal scene | - | If you don't have one yet, [the Publisher walkthrough](https://vectreal.com/news-room/the-vectreal-publisher-walkthrough) gets you there in a few minutes |
 
-The viewer ships its own CSS bundle, which you import once. There is no Tailwind dependency, no global stylesheet collision risk, and no required theme provider — though the viewer respects a light/dark/system theme prop if you want it to follow yours.
+The viewer ships its own CSS bundle, which you import once. There is no Tailwind dependency, no global stylesheet collision risk, and no required theme provider - though the viewer respects a light/dark/system theme prop if you want it to follow yours.
 
 ---
 
-### Step 1 — Install
+### Step 1 - Install
 
 In any React project:
 
@@ -92,10 +92,10 @@ npm install @vctrl/viewer @vctrl/hooks three
 pnpm add @vctrl/viewer @vctrl/hooks three
 ```
 
-`@vctrl/hooks` is the companion package that handles model loading, caching, and the React context that lets the viewer pull a model without you wiring it through props. You can use the viewer without it — and we will show that pattern too — but for most apps it is the cleaner starting point.
+`@vctrl/hooks` is the companion package that handles model loading, caching, and the React context that lets the viewer pull a model without you wiring it through props. You can use the viewer without it - and we will show that pattern too - but for most apps it is the cleaner starting point.
 
 {/*
-GIF BRIEF — Step 1 install animation
+GIF BRIEF - Step 1 install animation
 Filename: /assets/images/newsroom/react-viewer-integration/step-1-install.gif
 Dimensions: 1200x400, ≤ 1.5MB.
 Content: A terminal screen-recording of the pnpm add command running, showing the resolution of all three packages and a successful exit. Use the brand orange for the cursor. Loop with a 2-second pause at the end.
@@ -104,7 +104,7 @@ Optional alt: a static screenshot if GIF weight is a concern.
 
 ---
 
-### Step 2 — The Smallest Possible Viewer
+### Step 2 - The Smallest Possible Viewer
 
 Here is the minimum working example. It renders a scene from a model you have loaded into the `@vctrl/hooks` context.
 
@@ -130,23 +130,23 @@ export default function App() {
 Three things are doing the work:
 
 1. **`ModelProvider`** wraps the part of the tree where the viewer lives. It owns the loaded model and exposes loading state via context.
-2. **`useLoadModel()`** reads from that context. Pull `file.model` out of the returned object and pass it to the `model` prop — there is no automatic bridge between the hooks context and the viewer.
+2. **`useLoadModel()`** reads from that context. Pull `file.model` out of the returned object and pass it to the `model` prop - there is no automatic bridge between the hooks context and the viewer.
 3. **`import '@vctrl/viewer/css'`** is required. The viewer renders a Three.js canvas inside a positioned container; without the stylesheet, layout will collapse and you will see nothing.
 
 That's the whole core. Everything that follows is layered on top.
 
 {/*
-SCREENSHOT BRIEF — Step 2 result
+SCREENSHOT BRIEF - Step 2 result
 Filename: /assets/images/newsroom/react-viewer-integration/step-2-minimum-viewer.webp
 Dimensions: 1600x900.
-Content: Browser window showing the minimal viewer rendering a model — neutral environment, default camera, clean orbit controls visible. Add a small annotation arrow pointing to the orbit control hint icon with the label "default OrbitControls included".
+Content: Browser window showing the minimal viewer rendering a model - neutral environment, default camera, clean orbit controls visible. Add a small annotation arrow pointing to the orbit control hint icon with the label "default OrbitControls included".
 */}
 
 ---
 
-### Step 3 — Load a Published Scene
+### Step 3 - Load a Published Scene
 
-The minimum example assumed a model was already in context. In production you will more often load a Vectreal-hosted published scene by its scene ID — the identifier displayed after you click **Publish** in the Publisher.
+The minimum example assumed a model was already in context. In production you will more often load a Vectreal-hosted published scene by its scene ID - the identifier displayed after you click **Publish** in the Publisher.
 
 `useLoadModel` exposes `loadFromServer`, which fetches a scene from the Vectreal API by ID, resolves the GLTF payload and settings, and loads the result into the viewer.
 
@@ -180,11 +180,11 @@ export default function App() {
 }
 ```
 
-> `loadFromServer` is designed for the Vectreal scene API and expects a structured JSON response with the GLTF payload and scene settings. If you want to load a model from an arbitrary CDN URL, fetch the file yourself and pass it to `load([file])` instead. For private scenes that require an API key, see the [API keys guide](https://vectreal.com/news-room/api-keys-101) — pass the key via `serverOptions.apiKey`.
+> `loadFromServer` is designed for the Vectreal scene API and expects a structured JSON response with the GLTF payload and scene settings. If you want to load a model from an arbitrary CDN URL, fetch the file yourself and pass it to `load([file])` instead. For private scenes that require an API key, see the [API keys guide](https://vectreal.com/news-room/api-keys-101) - pass the key via `serverOptions.apiKey`.
 
 ---
 
-### Step 4 — The SSR-Safe Pattern
+### Step 4 - The SSR-Safe Pattern
 
 If you are building with React Router v7 in framework mode, Next.js, Remix, or any other SSR setup, this is the section that prevents three days of "why does my hydration warning never go away."
 
@@ -240,7 +240,7 @@ export default function ViewerImpl({ sceneId }: { sceneId: string }) {
 
 Why this works:
 
-- The route imports `ViewerClient`, which is safe to render anywhere — server or client.
+- The route imports `ViewerClient`, which is safe to render anywhere - server or client.
 - `ViewerClient` returns `null` during SSR, so no Three.js code touches the server bundle.
 - On the client, `lazy(() => import(...))` creates a separate chunk that only downloads when the viewer is actually rendered.
 - The Suspense fallback preserves layout while the chunk loads, eliminating layout shift.
@@ -248,17 +248,17 @@ Why this works:
 This pattern is what the Vectreal Platform itself uses internally to render the Publisher inside an SSR app. It is battle-tested at production scale.
 
 {/*
-DIAGRAM BRIEF — SSR data-flow diagram
+DIAGRAM BRIEF - SSR data-flow diagram
 Filename: /assets/images/newsroom/react-viewer-integration/step-4-ssr-flow.svg
 Format: SVG, brand colors (#0a0a0a background, #FC6C18 accent on active path, #EAEAEA for nodes).
 Content: A simple horizontal flow. Left to right: "Server Render" → "ViewerClient returns null" → "Client Hydrate" → "lazy() loads chunk" → "ModelProvider mounts" → "VectrealViewer renders".
-Style: Each step is a rounded rectangle. Arrows are thin and brand orange. No clipart, no icons inside the boxes — just the labels in DM Sans.
+Style: Each step is a rounded rectangle. Arrows are thin and brand orange. No clipart, no icons inside the boxes - just the labels in DM Sans.
 Caption: "Where the viewer enters the page lifecycle in an SSR app."
 */}
 
 ---
 
-### Step 5 — The Five Props You'll Actually Use
+### Step 5 - The Five Props You'll Actually Use
 
 `<VectrealViewer />` has a deep configuration surface. Most of it you will leave at defaults. These five are what you'll reach for in real apps.
 
@@ -300,7 +300,7 @@ Define one or more named cameras. The viewer animates between them when you swit
 />
 ```
 
-This is the same surface a future post in this series will expand on — a dedicated camera-presets guide is on the way.
+This is the same surface a future post in this series will expand on - a dedicated camera-presets guide is on the way.
 
 #### `controlsOptions`
 
@@ -334,26 +334,26 @@ The environment preset, intensity, and background behavior. The preset list come
 Choose `'1k'` for fast loads and `'4k'` for hero pages where visual fidelity matters more than initial paint.
 
 {/*
-COMPARISON IMAGE BRIEF — five-prop visual reference
+COMPARISON IMAGE BRIEF - five-prop visual reference
 Filename: /assets/images/newsroom/react-viewer-integration/step-5-prop-grid.webp
 Dimensions: 1600x900 (or a 2x2 grid version at 1600x1600).
 Content: A grid showing the same model rendered with four different prop combinations:
-  Tile 1 — default (no envOptions, no theme override)
-  Tile 2 — theme="dark", envOptions preset "studio-key"
-  Tile 3 — controlsOptions autoRotate true, motion-blur trail visible (capture mid-rotation)
-  Tile 4 — cameraOptions positioned for a low hero angle
+  Tile 1 - default (no envOptions, no theme override)
+  Tile 2 - theme="dark", envOptions preset "studio-key"
+  Tile 3 - controlsOptions autoRotate true, motion-blur trail visible (capture mid-rotation)
+  Tile 4 - cameraOptions positioned for a low hero angle
 Each tile labeled with the prop being demonstrated. Background black, captions in DM Sans white/orange.
 */}
 
 ---
 
-### Step 6 — Production Checklist
+### Step 6 - Production Checklist
 
 Before you ship:
 
 **Lazy-load the viewer chunk.** The SSR pattern above already does this via `lazy()`. If you are not using SSR, still wrap the viewer in `lazy()` so the Three.js bundle does not block your initial page paint.
 
-**Wrap in an error boundary.** The viewer can fail to load a model — wrong URL, malformed file, network drop. An error boundary keeps a single bad scene from crashing the surrounding route.
+**Wrap in an error boundary.** The viewer can fail to load a model - wrong URL, malformed file, network drop. An error boundary keeps a single bad scene from crashing the surrounding route.
 
 ```tsx
 import { ErrorBoundary } from 'react-error-boundary'
@@ -363,7 +363,7 @@ import { ErrorBoundary } from 'react-error-boundary'
 </ErrorBoundary>
 ```
 
-**Provide a fallback for `enableViewportRendering`.** The viewer pauses rendering when scrolled out of view, which is the right default. If your viewer is never visible (e.g., inside a hidden tab) it will not waste GPU cycles. No action needed — just know this is happening.
+**Provide a fallback for `enableViewportRendering`.** The viewer pauses rendering when scrolled out of view, which is the right default. If your viewer is never visible (e.g., inside a hidden tab) it will not waste GPU cycles. No action needed - just know this is happening.
 
 **Set `loadingThumbnail` for hero placements.** Pass a low-resolution preview image so the viewer container does not look empty during the model fetch. The viewer blurs and crossfades it as the real scene loads.
 
@@ -379,17 +379,17 @@ import { ErrorBoundary } from 'react-error-boundary'
 **Confirm AGPL-3.0 compatibility for your project.** `@vctrl/viewer` is licensed under AGPL-3.0-only. If you are building a closed-source web service, review the implications with your legal team before shipping. If you are building open-source, you're already aligned.
 
 {/*
-SCREENSHOT BRIEF — production checklist visual
+SCREENSHOT BRIEF - production checklist visual
 Filename: /assets/images/newsroom/react-viewer-integration/step-6-loading-thumbnail.webp
 Dimensions: 1600x900.
-Content: A side-by-side. Left: viewer container with no loadingThumbnail set — empty grey box, awkward gap during load. Right: viewer container with loadingThumbnail set — blurred preview crossfading into the loaded model. Label both panels clearly. Use a horizontal divider with the brand orange.
+Content: A side-by-side. Left: viewer container with no loadingThumbnail set - empty grey box, awkward gap during load. Right: viewer container with loadingThumbnail set - blurred preview crossfading into the loaded model. Label both panels clearly. Use a horizontal divider with the brand orange.
 */}
 
 ---
 
 ### The Whole Working Example
 
-Pulling it all together — copy this file, swap the scene ID, and you have a production-ready viewer.
+Pulling it all together - copy this file, swap the scene ID, and you have a production-ready viewer.
 
 ```tsx
 // app/components/viewer-client.tsx
@@ -462,20 +462,20 @@ export default function ViewerImpl({ sceneId }: { sceneId: string }) {
 ```
 
 {/*
-VIDEO BRIEF — end-to-end walkthrough (optional, recommended)
+VIDEO BRIEF - end-to-end walkthrough (optional, recommended)
 Filename: /assets/videos/newsroom/react-viewer-integration-walkthrough.mp4
 Duration: 4–6 minutes.
 Aspect ratio: 16:9, 1920x1080.
 Sections (must be section-aligned with the blog per brand custom instructions):
-  0:00–0:30  Intro — what we're building, show finished result
-  0:30–1:00  Step 1 — npm install
-  1:00–2:00  Step 2 — minimum viewer (live coding in editor, run, see result in browser)
-  2:00–2:45  Step 3 — load a published scene
-  2:45–4:00  Step 4 — SSR-safe pattern (this section needs the most screen real-estate)
-  4:00–5:00  Step 5 — props tour (theme, camera, controls, env)
-  5:00–5:45  Step 6 — production checklist
-  5:45–6:00  Outro — link to the next post in the series
-Voiceover tone: confident, technical, friendly — match brand voice (modern, professional, accessible).
+  0:00–0:30  Intro - what we're building, show finished result
+  0:30–1:00  Step 1 - npm install
+  1:00–2:00  Step 2 - minimum viewer (live coding in editor, run, see result in browser)
+  2:00–2:45  Step 3 - load a published scene
+  2:45–4:00  Step 4 - SSR-safe pattern (this section needs the most screen real-estate)
+  4:00–5:00  Step 5 - props tour (theme, camera, controls, env)
+  5:00–5:45  Step 6 - production checklist
+  5:45–6:00  Outro - link to the next post in the series
+Voiceover tone: confident, technical, friendly - match brand voice (modern, professional, accessible).
 On-screen captions throughout for accessibility.
 End card: orange CTA button "Try @vctrl/viewer" linking to npm.
 Also produce a 60-second short-form clip extracted from the SSR pattern section for X / Reddit / LinkedIn.
@@ -490,15 +490,15 @@ A short, honest list of what you should know before shipping:
 | Topic | Status |
 |---|---|
 | React 18 / 19 | Both supported |
-| Three.js peer dep | `^0.177.0` — install alongside `@vctrl/viewer` |
+| Three.js peer dep | `^0.177.0` - install alongside `@vctrl/viewer` |
 | SSR | Supported via the client-only pattern shown above |
 | WebXR / AR | Three.js supports WebXR, but a first-class viewer prop is on the roadmap, not yet shipped |
 | Grid configuration | Typed but not currently active in the render flow |
 | Custom HDR files | Supported via `envOptions.files` |
 | Screenshot capture | Supported via `onScreenshot` and `onScreenshotCaptureReady` callbacks |
-| Versioning | Pre-1.0 — minor versions may include breaking changes; pin in production |
+| Versioning | Pre-1.0 - minor versions may include breaking changes; pin in production |
 
-If you hit a behavior that is not documented or that surprises you, the source is on [GitHub](https://github.com/Vectreal/vectreal-platform/tree/main/packages/viewer) — issues are open and the maintainers respond.
+If you hit a behavior that is not documented or that surprises you, the source is on [GitHub](https://github.com/Vectreal/vectreal-platform/tree/main/packages/viewer) - issues are open and the maintainers respond.
 
 ---
 
@@ -506,7 +506,7 @@ If you hit a behavior that is not documented or that surprises you, the source i
 
 - **Install it now:** `npm install @vctrl/viewer @vctrl/hooks three`. The minimum viewer in Step 2 is twelve lines.
 - **Publish your first scene:** if you don't have one yet, [the Publisher walkthrough](https://vectreal.com/news-room/the-vectreal-publisher-walkthrough) takes about ten minutes.
-- **Coming next in the series:** API key scopes — when to use a personal key, when to use organization scope, and how the allowlist fits with the React integration you just built.
+- **Coming next in the series:** API key scopes - when to use a personal key, when to use organization scope, and how the allowlist fits with the React integration you just built.
 - **Camera presets and visual quality:** the `cameraOptions` and `envOptions` surface deserves its own deep dive, and a dedicated post is on the way.
 - **Contribute or ask questions:** the full source is on [GitHub](https://github.com/Vectreal/vectreal-platform). Live conversation happens on [Discord](https://discord.gg/A9a3nPkZw7).
 

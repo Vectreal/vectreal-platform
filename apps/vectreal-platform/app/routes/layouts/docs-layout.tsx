@@ -58,7 +58,7 @@ export const meta: MetaFunction<undefined, { root: RootLoader }> = (args) =>
 	})()
 
 /**
- * DocsLayout — wraps all /docs/* routes.
+ * DocsLayout - wraps all /docs/* routes.
  *
  * Renders:
  *  - A fixed left sidebar with grouped navigation

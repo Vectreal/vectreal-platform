@@ -88,34 +88,34 @@ const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 		setLoadingProvider(provider)
 
 		if (!loaderData.turnstileSiteKey) {
-			// No site key configured — submit without Turnstile (e.g. local dev)
+			// No site key configured - submit without Turnstile (e.g. local dev)
 			submitSocialLogin(provider)
 			return
 		}
 
 		if (turnstileToken) {
-			// Token already resolved — consume it immediately and submit.
+			// Token already resolved - consume it immediately and submit.
 			const token = turnstileToken
 			resetTurnstile()
 			submitSocialLogin(provider, token)
 			return
 		}
 
-		// Token not ready yet — CF is still assessing. Store the pending provider;
+		// Token not ready yet - CF is still assessing. Store the pending provider;
 		// handleTurnstileSuccess will submit once the challenge resolves.
 		pendingProviderRef.current = provider
 	}
 
 	function handleTurnstileSuccess(token: string) {
 		if (pendingProviderRef.current) {
-			// An OAuth click was waiting — consume the token and submit immediately.
+			// An OAuth click was waiting - consume the token and submit immediately.
 			const provider = pendingProviderRef.current
 			pendingProviderRef.current = null
 			submitSocialLogin(provider, token)
 			resetTurnstile()
 			return
 		}
-		// No pending OAuth — store for the email form's hidden field.
+		// No pending OAuth - store for the email form's hidden field.
 		setTurnstileToken(token)
 	}
 
@@ -156,14 +156,14 @@ const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 									}}
 								>
 									<span className="relative flex items-center justify-center gap-2">
-										{/* Idle label — defines the button width */}
+										{/* Idle label - defines the button width */}
 										<span
 											className="flex items-center gap-2 transition-opacity duration-150"
 											style={{ opacity: loadingProvider === 'google' ? 0 : 1 }}
 										>
 											<GoogleLogo className="h-4 w-4" /> Continue with Google
 										</span>
-										{/* Loading overlay — absolutely positioned, same space */}
+										{/* Loading overlay - absolutely positioned, same space */}
 										<span
 											className="absolute inset-0 flex items-center justify-center gap-2 transition-opacity duration-150"
 											style={{ opacity: loadingProvider === 'google' ? 1 : 0 }}

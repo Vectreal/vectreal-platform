@@ -24,8 +24,8 @@ const MIN_PASSWORD_LENGTH = 8
 export const meta: MetaFunction = () =>
 	buildMeta(
 		[
-			{ title: 'Reset Password — Vectreal' },
-			{ property: 'og:title', content: 'Reset Password — Vectreal' }
+			{ title: 'Reset Password - Vectreal' },
+			{ property: 'og:title', content: 'Reset Password - Vectreal' }
 		],
 		undefined,
 		{ private: true }

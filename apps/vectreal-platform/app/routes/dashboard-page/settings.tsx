@@ -121,8 +121,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	const { userWithDefaults, headers } =
-		await loadAuthenticatedUser(request)
+	const { userWithDefaults, headers } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
 	if (csrfCheck) {
@@ -183,7 +182,7 @@ export async function action({ request }: Route.ActionArgs) {
 				await createSupabaseClient(request)
 
 			// Cancel any active Stripe subscription before the DB cascade removes
-			// the subscription record — otherwise Stripe keeps billing the card.
+			// the subscription record - otherwise Stripe keeps billing the card.
 			await cancelStripeSubscriptionsForOrganization(
 				userWithDefaults.organization.id
 			)
@@ -314,7 +313,7 @@ export default function SettingsPage({
 				open={deleteModalOpen}
 				onOpenChange={setDeleteModalOpen}
 				title="Delete account"
-				description="This permanently deletes your account and all related platform data. Any active paid subscription will be immediately canceled — no further charges will be made. This action cannot be undone."
+				description="This permanently deletes your account and all related platform data. Any active paid subscription will be immediately canceled - no further charges will be made. This action cannot be undone."
 				confirmationText="DELETE MY ACCOUNT"
 				confirmLabel="Delete account"
 				onConfirm={(typedText) => {

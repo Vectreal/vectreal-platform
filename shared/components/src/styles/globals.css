@@ -1,4 +1,4 @@
-/* Design system — token-based light/dark themes */
+/* Design system - token-based light/dark themes */
 @source '../../../../';
 
 @import 'tailwindcss';
@@ -15,7 +15,7 @@
 	--orange: #fc6c18;
 	--dark-orange: #f54703;
 
-	/* Semantic tokens — light theme */
+	/* Semantic tokens - light theme */
 	--background: oklch(1 0 0);
 	--foreground: oklch(0.145 0 0);
 	--card: oklch(1 0 0);
@@ -36,18 +36,18 @@
 	--input: oklch(0.922 0 0);
 	--ring: oklch(0.708 0 0);
 
-	/* Success (green) — light theme */
+	/* Success (green) - light theme */
 	--success: oklch(0.627 0.17 145);
 	--success-foreground: oklch(0.215 0.06 145);
 
-	/* Warning (amber) — light theme */
+	/* Warning (amber) - light theme */
 	--warning: oklch(0.769 0.185 75);
 	--warning-foreground: oklch(0.277 0.065 70);
 	--warning-muted-foreground: oklch(0.445 0.14 75);
 	--warning-bg: oklch(0.986 0.012 82);
 	--warning-border: oklch(0.88 0.065 80);
 
-	/* Error banner (red) — light theme */
+	/* Error banner (red) - light theme */
 	--error-bg: oklch(0.97 0.018 25);
 	--error-border: oklch(0.86 0.08 25);
 	--error-foreground: oklch(0.42 0.18 25);
@@ -80,7 +80,7 @@
 .dark {
 	color-scheme: dark;
 
-	/* Semantic tokens — dark theme */
+	/* Semantic tokens - dark theme */
 	--background: oklch(0.145 0 0);
 	--foreground: oklch(0.985 0 0);
 	--card: oklch(0.145 0 0);
@@ -101,18 +101,18 @@
 	--input: oklch(0.269 0 0);
 	--ring: oklch(0.439 0 0);
 
-	/* Success (green) — dark theme */
+	/* Success (green) - dark theme */
 	--success: oklch(0.871 0.15 145);
 	--success-foreground: oklch(0.94 0.04 145);
 
-	/* Warning (amber) — dark theme */
+	/* Warning (amber) - dark theme */
 	--warning: oklch(0.769 0.185 75);
 	--warning-foreground: oklch(0.978 0.026 80);
 	--warning-muted-foreground: oklch(0.88 0.12 80);
 	--warning-bg: oklch(0.175 0.018 82);
 	--warning-border: oklch(0.295 0.04 80);
 
-	/* Error banner (red) — dark theme */
+	/* Error banner (red) - dark theme */
 	--error-bg: oklch(0.19 0.03 25);
 	--error-border: oklch(0.38 0.1 25);
 	--error-foreground: oklch(0.88 0.06 25);

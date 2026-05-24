@@ -43,8 +43,8 @@ import type { ShouldRevalidateFunction } from 'react-router'
 export const meta: MetaFunction = () =>
 	buildMeta(
 		[
-			{ title: 'Publisher — Vectreal' },
-			{ property: 'og:title', content: 'Publisher — Vectreal' }
+			{ title: 'Publisher - Vectreal' },
+			{ property: 'og:title', content: 'Publisher - Vectreal' }
 		],
 		undefined,
 		{ private: true }
@@ -111,7 +111,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		sceneAggregate = aggregate
 		publishedMeta = scenePublishedMeta
 	} else if (!sceneId && user?.id) {
-		// New scene — read project/folder context from URL search params
+		// New scene - read project/folder context from URL search params
 		const url = new URL(request.url)
 		const contextProjectId = url.searchParams.get('projectId')?.trim() || null
 		const contextFolderId = url.searchParams.get('folderId')?.trim() || null
@@ -131,7 +131,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 					currentFolderName = folder?.name ?? null
 				}
 			} catch {
-				// Invalid project/folder params — silently ignore, user picks in UI
+				// Invalid project/folder params - silently ignore, user picks in UI
 			}
 		}
 	}

@@ -107,14 +107,14 @@ interface CheckoutData {
 	billingPeriod: string | null
 	fromPlan: string | null
 	/** True when the subscription was updated in-place (no Stripe Checkout
-	 *  redirect) — the DB is already synced before the user lands here. */
+	 *  redirect) - the DB is already synced before the user lands here. */
 	isDirectUpdate: boolean
 }
 
 /**
  * Retrieves the Stripe checkout session, verifies it belongs to the given org,
  * syncs the new subscription to the DB, and cancels any prior subscription that
- * was replaced — preventing double-billing on plan/price switches.
+ * was replaced - preventing double-billing on plan/price switches.
  */
 async function syncCompletedCheckout(
 	sessionId: string,
@@ -162,7 +162,7 @@ async function syncCompletedCheckout(
 
 	// Capture the existing subscription ID before syncing overwrites it.
 	// This is necessary to cancel the old subscription when the user switched
-	// plans or billing period — Stripe creates a new subscription rather than
+	// plans or billing period - Stripe creates a new subscription rather than
 	// updating the existing one, so we must cancel the old one explicitly to
 	// avoid double-billing.
 	const [existing] = await db
@@ -224,10 +224,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 		throw redirect('/dashboard/billing', { headers })
 	}
 
-
 	// Direct-update path: the checkout action already updated the subscription
 	// in-place and synced the DB. Plan metadata is carried as query params
-	// (display-only — actual entitlements are governed by the DB, not these params).
+	// (display-only - actual entitlements are governed by the DB, not these params).
 	if (!sessionId) {
 		return data(
 			{
@@ -251,7 +250,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	try {
 		checkoutData = await syncCompletedCheckout(sessionId, organizationId)
 	} catch (error) {
-		// Non-critical — Stripe unavailable, continue gracefully
+		// Non-critical - Stripe unavailable, continue gracefully
 		console.error('[billing] Failed to sync checkout session', error)
 	}
 
@@ -308,7 +307,7 @@ export default function BillingUpgradeSuccessPage() {
 			? 'All features are available immediately.'
 			: 'Your plan is now active and all features are available immediately.'
 	} else {
-		title = "Payment received — you're all set"
+		title = "Payment received - you're all set"
 		subtitle =
 			'Your subscription is being activated and will be ready momentarily.'
 	}
@@ -333,7 +332,7 @@ export default function BillingUpgradeSuccessPage() {
 					</div>
 				</CardHeader>
 
-				{/* Transition pill — shown for tier upgrades and period switches */}
+				{/* Transition pill - shown for tier upgrades and period switches */}
 				{(isTierUpgrade || isPeriodSwitch) && (
 					<CardContent className="pt-0 pb-4">
 						<div className="bg-muted/60 border-border/40 flex items-center justify-center gap-3 rounded-lg border px-4 py-3">
@@ -358,7 +357,7 @@ export default function BillingUpgradeSuccessPage() {
 					</CardContent>
 				)}
 
-				{/* Unlocked features — only for tier changes, not period switches */}
+				{/* Unlocked features - only for tier changes, not period switches */}
 				{unlockedFeatures.length > 0 && (
 					<CardContent className="space-y-3 pt-0">
 						<Separator />

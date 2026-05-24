@@ -5,7 +5,7 @@
  *   - prd/03-entitlements.md (entitlement keys per plan)
  *   - prd/02-limits-and-quotas.md (numeric limits per plan)
  *
- * Values are intentionally NOT hard-coded in guard logic — callers should
+ * Values are intentionally NOT hard-coded in guard logic - callers should
  * use the entitlement-service or usage-service helpers instead.
  *
  * NOTE: Enterprise "Custom" / "Unlimited" values are expressed as

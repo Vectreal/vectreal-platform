@@ -200,7 +200,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 									</CardHeader>
 									<CardContent>
 										<p>
-											Just drag & drop your model — glTF, FBX, OBJ, STL and
+											Just drag & drop your model - glTF, FBX, OBJ, STL and
 											more.
 										</p>
 										<p>Our system gets to work instantly.</p>
@@ -220,7 +220,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 									<CardContent>
 										<p>
 											Choose quality settings from raw to low, tweak lighting,
-											and refine camera angles—all in an immersive editor.
+											and refine camera angles-all in an immersive editor.
 										</p>
 									</CardContent>
 								</BasicCard>
@@ -257,7 +257,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 									<CardContent>
 										<p>
 											Unlock a code snippet for direct embed into websites,
-											portfolios, eCommerce, blogs—you name it.
+											portfolios, eCommerce, blogs-you name it.
 										</p>
 									</CardContent>
 								</BasicCard>

@@ -40,7 +40,7 @@ const InfoBanner = ({
 					) : typeof sceneBytes === 'number' ? (
 						formatFileSize(sceneBytes)
 					) : (
-						'—'
+						'-'
 					)}
 					{canOpenOptimization && (
 						<Sparkles className="h-3.5 w-3.5 opacity-70" />
@@ -57,7 +57,7 @@ const InfoBanner = ({
 					{statusText}
 				</span>
 			) : null}
-			{/* {latestSceneStats?. ?? '—'} */}
+			{/* {latestSceneStats?. ?? '-'} */}
 		</div>
 	)
 }

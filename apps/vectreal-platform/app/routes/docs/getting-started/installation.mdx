@@ -77,7 +77,7 @@ The app will be available at [http://localhost:4200](http://localhost:4200).
 
 ## 6. Verify the setup
 
-1. Open [http://localhost:4200](http://localhost:4200) — you should see the Vectreal home page.
+1. Open [http://localhost:4200](http://localhost:4200) - you should see the Vectreal home page.
 2. Navigate to `/sign-up` and create an account.
 3. You should be redirected to the onboarding flow, then to the dashboard.
 4. Upload a model in the Publisher to confirm the full GCS pipeline works.
@@ -104,16 +104,16 @@ pnpm nx show project vectreal-platform --web
 
 ## Troubleshooting
 
-**`supabase start` fails** — make sure Docker Desktop is running and you have at least 4 GB of RAM allocated to Docker.
+**`supabase start` fails** - make sure Docker Desktop is running and you have at least 4 GB of RAM allocated to Docker.
 
-**`Database URL` connection errors** — check that `SUPABASE_DB_PORT` in `.env.development` matches the port shown in `supabase status`.
+**`Database URL` connection errors** - check that `SUPABASE_DB_PORT` in `.env.development` matches the port shown in `supabase status`.
 
-**GCS `PERMISSION_DENIED` errors** — verify the service account key file path in `GOOGLE_CLOUD_STORAGE_CREDENTIALS_FILE` is correct and the account has `Storage Object Admin` on the bucket.
+**GCS `PERMISSION_DENIED` errors** - verify the service account key file path in `GOOGLE_CLOUD_STORAGE_CREDENTIALS_FILE` is correct and the account has `Storage Object Admin` on the bucket.
 
 ---
 
 ## Next steps
 
-- [Your First Model](/docs/getting-started/first-model) — upload, optimize, and publish a 3D model
-- [Guides](/docs/guides/upload) — deep-dive into individual platform features
-- [Package Reference](/docs/packages/viewer) — jump to `@vctrl/viewer`, `@vctrl/hooks`, and `@vctrl/core` APIs
+- [Your First Model](/docs/getting-started/first-model) - upload, optimize, and publish a 3D model
+- [Guides](/docs/guides/upload) - deep-dive into individual platform features
+- [Package Reference](/docs/packages/viewer) - jump to `@vctrl/viewer`, `@vctrl/hooks`, and `@vctrl/core` APIs

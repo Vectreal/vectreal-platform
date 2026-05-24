@@ -719,7 +719,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 
 	// Reset the save guard when a genuinely new file is dropped by the user.
 	// Using load-start (not file?.model) because applyOptimization() also changes
-	// file.model after each optimization pass — we must NOT reset the guard then,
+	// file.model after each optimization pass - we must NOT reset the guard then,
 	// or the save effect would re-fire and overwrite IDB with an optimized snapshot.
 	useEffect(() => {
 		const handleLoadStart = () => {
@@ -752,7 +752,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	// Capture and persist the original un-optimized scene to IDB immediately
 	// after the optimizer finishes loading a locally uploaded file.
 	// Skipped for server-loaded scenes (paramSceneId / initialSceneAggregate).
-	// Guarded by originalSavedRef so it only runs once per file drop — the ref
+	// Guarded by originalSavedRef so it only runs once per file drop - the ref
 	// is reset by the load-start listener above, never by applyOptimization.
 	useEffect(() => {
 		if (!optimizer?.isReady) return

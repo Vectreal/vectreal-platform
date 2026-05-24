@@ -29,7 +29,7 @@ export default function BillingUpgradeCanceledPage() {
 		<div className="mx-auto w-full max-w-xl p-6">
 			<Card>
 				<CardHeader className="space-y-2">
-					<CardTitle>No problem — nothing changed</CardTitle>
+					<CardTitle>No problem - nothing changed</CardTitle>
 					<p className="text-muted-foreground text-sm">
 						No charge was made. Your current plan is still active and nothing
 						has changed.{' '}

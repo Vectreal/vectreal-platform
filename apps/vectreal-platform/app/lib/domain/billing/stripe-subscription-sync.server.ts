@@ -237,7 +237,7 @@ export async function findOrganizationBySubscriptionId(
  * because the cascade will wipe `org_subscriptions` (losing the Stripe IDs)
  * without ever instructing Stripe to stop billing the customer's card.
  *
- * Error handling: Stripe errors are caught and logged but do NOT propagate —
+ * Error handling: Stripe errors are caught and logged but do NOT propagate -
  * account deletion must not be blocked by a transient Stripe outage.
  * Orphaned subscriptions can be identified and cleaned up via the
  * `/api/billing/reconcile` endpoint.
@@ -254,7 +254,7 @@ export async function cancelStripeSubscriptionsForOrganization(
 		.limit(1)
 
 	if (!row?.stripeSubscriptionId) {
-		// No paid subscription recorded — nothing to cancel in Stripe.
+		// No paid subscription recorded - nothing to cancel in Stripe.
 		return
 	}
 
@@ -269,7 +269,7 @@ export async function cancelStripeSubscriptionsForOrganization(
 	} catch (err) {
 		// Non-blocking: log the failure so operators can reconcile manually.
 		console.error(
-			'[billing] Failed to cancel Stripe subscription during account deletion — subscription may require manual cleanup',
+			'[billing] Failed to cancel Stripe subscription during account deletion - subscription may require manual cleanup',
 			{ organizationId, stripeSubscriptionId: row.stripeSubscriptionId, err }
 		)
 	}
