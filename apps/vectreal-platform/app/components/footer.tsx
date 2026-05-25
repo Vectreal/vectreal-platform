@@ -220,7 +220,7 @@ export const Footer = () => {
 								</svg>
 							</Link>
 							<Link
-								to="https://youtube.com/vectreal/"
+								to="https://youtube.com/@vectreal/"
 								aria-label="YouTube"
 								className="text-foreground/70 hover:text-foreground transition-colors"
 							>
