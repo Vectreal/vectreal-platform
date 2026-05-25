@@ -95,6 +95,18 @@ export default function MockShopEmbedClient() {
 		}
 	}, [])
 
+	// Re-sync camera when the page regains visibility (prevents drift after tab switch / window blur)
+	useEffect(() => {
+		if (!embedReady) return
+		const handleVisibilityChange = () => {
+			if (document.visibilityState === 'visible') {
+				embedRef.current?.activateCamera(lastChapterRef.current)
+			}
+		}
+		document.addEventListener('visibilitychange', handleVisibilityChange)
+		return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+	}, [embedReady])
+
 	// Scroll → camera switching
 	useEffect(() => {
 		const section = sectionRef.current
