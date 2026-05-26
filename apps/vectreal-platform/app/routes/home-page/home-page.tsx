@@ -14,7 +14,7 @@ import { Check, Globe, Sparkle, Wrench } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { Route } from './+types/home-page'
-import screenshotPublisher from '../../assets/images/publisher-optimize-2181px.webp'
+// import screenshotPublisher from '../../assets/images/publisher-optimize-2181px.webp'
 import FiletypeCarousel from '../../components/home/filetype-carousel'
 import GridBg from '../../components/home/grid-bg'
 import HeroParallaxBg from '../../components/home/hero-parallax-bg'
@@ -22,6 +22,7 @@ import HeroScene from '../../components/home/hero-scene'
 import MockShopSection from '../../components/home/mock-shop-section'
 import BasicCard from '../../components/layout-components/basic-card'
 import Section from '../../components/layout-components/section'
+import YoutubeEmbed from '../../components/youtube-embed'
 import { buildPageMeta } from '../../lib/seo'
 import {
 	buildOrganizationJsonLd,
@@ -269,7 +270,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 
 			<Section border fadeIn>
 				<div className="mb-16 flex flex-col gap-8">
-					<div className="flex flex-col gap-4 text-center">
+					<div className="flex flex-col text-center">
 						<h3 className="w-full text-center">
 							Have a model? Dive in and show it off.
 						</h3>
@@ -281,11 +282,10 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 
 					<div className="flex flex-col gap-4 md:gap-6">
 						<div className="flex flex-col-reverse justify-between gap-4 md:grid md:grid-rows-[auto_auto]">
-							<div className="mx-auto h-full max-w-6xl grow overflow-hidden shadow-2xl">
-								<img
-									src={screenshotPublisher}
-									alt="Screenshot of the Vectreal Publisher interface"
-									className="h-full w-full overflow-clip object-contain"
+							<div className="mx-auto h-full w-full max-w-3xl grow overflow-hidden shadow-2xl">
+								<YoutubeEmbed
+									videoId="raCHH3G8T7w"
+									caption="Optimization presets in action - watch the full walkthrough."
 								/>
 							</div>
 							<div className="flex flex-col justify-between gap-4 py-4 md:flex-row">

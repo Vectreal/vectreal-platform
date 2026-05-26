@@ -17,12 +17,15 @@ const MockShopSection = () => {
 				<div className="mx-auto max-w-7xl">
 					<div className="border-accent/20 bg-accent/5 text-accent/70 mb-4 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium">
 						<span className="bg-accent/60 h-1.5 w-1.5 rounded-full" />
-						Interactive Demo
+						Live Embed
 					</div>
-					<h2>Real Store, Real Product, Real Impact</h2>
-					<p className="text-foreground/90 mt-4 max-w-xl text-lg md:text-xl">
-						See how Vectreal powers interactive 3D e-commerce - scroll to
-						explore the model
+					<h2>
+						Explore the product,
+						<br className="hidden sm:block" /> not a photo of it.
+					</h2>
+					<p className="text-foreground/60 mt-4 max-w-xl text-lg md:text-xl">
+						Scroll through a live Vectreal embed. Each chapter reveals a
+						different camera angle — triggered by a single SDK call.
 					</p>
 				</div>
 			</div>
@@ -42,14 +45,7 @@ const MockShopSection = () => {
 				<div className="h-screen w-full bg-black" />
 			)}
 
-			<div className="from-background/0 to-background bg-gradient-to-b px-4 py-8 text-center">
-				<p className="text-muted-foreground/60 text-sm">
-					Interactive 3D product visualization powered by Vectreal
-				</p>
-				<p className="text-muted-foreground/35 mt-1 text-xs">
-					Demo product - not available for purchase
-				</p>
-			</div>
+			<div className="from-background/0 to-background h-16 bg-linear-to-b" />
 		</section>
 	)
 }

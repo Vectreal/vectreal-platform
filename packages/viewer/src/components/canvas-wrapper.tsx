@@ -79,8 +79,13 @@ const Canvas = ({
 		}
 	}, [])
 
-	// Determine rendering and visibility states
-	const shouldRenderCanvas = isReady && isInViewport && isPageVisible
+	// Determine rendering and visibility states.
+	// isPageVisible intentionally excluded: hiding the tab should pause the render
+	// loop (frameloop="never") rather than unmounting the canvas. Unmounting destroys
+	// Three.js state — camera position, transition runtime, controls target — which
+	// causes camera drift when the tab regains focus. isInViewport still gates the
+	// full unmount because off-screen viewers should free the WebGL context.
+	const shouldRenderCanvas = isReady && isInViewport
 	const shouldShowCanvasContent = loadingState !== 'loading'
 
 	useEffect(() => {
@@ -137,7 +142,7 @@ const Canvas = ({
 				<ThreeCanvas
 					{...props}
 					dpr={props.dpr ?? [1, 1.5]}
-					frameloop={props.frameloop ?? 'demand'}
+					frameloop={!isPageVisible ? 'never' : (props.frameloop ?? 'demand')}
 					className={cn(
 						'h-full w-full opacity-0 transition-opacity ease-out',
 						canvasVisible && shouldShowCanvasContent && 'opacity-100'
