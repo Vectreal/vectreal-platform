@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 
-import { useConsent } from '../../../components/consent/consent-context'
+import { useConsent } from './consent/consent-context'
 
 interface YoutubeEmbedProps {
 	videoId: string

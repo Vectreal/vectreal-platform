@@ -1,7 +1,8 @@
 import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
 import { VectrealEmbed } from '@vctrl/embed'
-import { ChevronsDown } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ChevronsDown, MousePointerClick, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 // ---------------------------------------------------------------------------
@@ -17,30 +18,52 @@ const DEMO_SCENE_URL =
 const CHAPTERS = [
 	{
 		id: 'default',
-		label: 'Overview',
+		label: 'Shop View',
+		heading: 'Alpine X3 Pro',
 		description:
-			'Built from full-carbon to carve through technical terrain at speed.'
+			'A real product listing powered by Vectreal. Customers scroll through camera presets to inspect every detail — no plugin required.',
+		type: 'shop' as const,
+		code: null,
+		threshold: 0
 	},
 	{
 		id: 'camera-1779054230007-lg5mbd',
-		label: 'Drivetrain',
+		label: 'Camera Presets',
+		heading: 'Guided views,\nzero extra code.',
 		description:
-			'SRAM GX Eagle keeps you shifting precisely across every pitch.'
+			'Define named camera positions in the Vectreal editor. Switch between them at runtime with one SDK call — smooth interpolation included.',
+		type: 'feature' as const,
+		code: "embed.activateCamera('drivetrain')",
+		threshold: 0.25
 	},
 	{
 		id: 'camera-1779320332512-tded3h',
-		label: 'Profile',
+		label: 'React SDK',
+		heading: 'Drop in.\nConfigure from JSX.',
 		description:
-			'Geometry tuned for rowdy descents. Capable enough to earn them.'
+			'The Vectreal React component renders photorealistic 3D in any React or Next.js project. Lighting, materials, and controls — all as props.',
+		type: 'feature' as const,
+		code: '<VectrealViewer src={modelUrl} />',
+		threshold: 0.5
 	},
 	{
 		id: 'camera-1779320572791-qm1tv5',
-		label: 'Cockpit',
-		description: 'Carbon cockpit, 12.4 kg. Nothing extra, nothing missing.'
+		label: 'Embed',
+		heading: 'One iframe.\nAny platform.',
+		description:
+			'Paste an <iframe> into Shopify, Webflow, or WordPress. Drive cameras and events via the Vectreal JS SDK — no framework needed.',
+		type: 'feature' as const,
+		code: '<iframe src="vectreal.com/preview/…" />',
+		threshold: 0.75
 	}
 ] as const
 
 type ChapterId = (typeof CHAPTERS)[number]['id']
+
+// Single source of truth for threshold → scroll position mapping
+const chapterThresholds = Object.fromEntries(
+	CHAPTERS.map((c) => [c.id, c.threshold])
+) as Record<ChapterId, number>
 
 // ---------------------------------------------------------------------------
 
@@ -51,24 +74,19 @@ export default function MockShopEmbedClient() {
 	const lastChapterRef = useRef<ChapterId>('default')
 	const suppressScrollRef = useRef(false)
 	const suppressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const snapDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const interactiveModeRef = useRef(false)
+
 	const [activeChapter, setActiveChapter] = useState<ChapterId>('default')
 	const [embedReady, setEmbedReady] = useState(false)
+	const [interactiveMode, setInteractiveMode] = useState(false)
 
 	const chapter = CHAPTERS.find((c) => c.id === activeChapter) ?? CHAPTERS[0]
 
-	// Fade-swap state for description - opacity out → swap text → opacity in
-	const [displayedDesc, setDisplayedDesc] = useState(chapter.description)
-	const [descFading, setDescFading] = useState(false)
-
+	// Keep ref in sync so scroll handler reads current value without stale closure
 	useEffect(() => {
-		if (chapter.description === displayedDesc) return
-		setDescFading(true)
-		const t = setTimeout(() => {
-			setDisplayedDesc(chapter.description)
-			setDescFading(false)
-		}, 180)
-		return () => clearTimeout(t)
-	}, [chapter.description])
+		interactiveModeRef.current = interactiveMode
+	}, [interactiveMode])
 
 	// Initialise embed SDK
 	useEffect(() => {
@@ -95,7 +113,7 @@ export default function MockShopEmbedClient() {
 		}
 	}, [])
 
-	// Re-sync camera when the page regains visibility (prevents drift after tab switch / window blur)
+	// Re-sync camera when the page regains visibility (prevents drift after tab switch)
 	useEffect(() => {
 		if (!embedReady) return
 		const handleVisibilityChange = () => {
@@ -104,34 +122,34 @@ export default function MockShopEmbedClient() {
 			}
 		}
 		document.addEventListener('visibilitychange', handleVisibilityChange)
-		return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+		return () =>
+			document.removeEventListener('visibilitychange', handleVisibilityChange)
 	}, [embedReady])
 
-	// Scroll → camera switching
+	// Scroll → camera switching + snap-to-chapter on settle
 	useEffect(() => {
 		const section = sectionRef.current
 		if (!section) return
 
 		const handleScroll = () => {
-			// Ignore scroll events fired during a programmatic smooth-scroll so the
-			// optimistic indicator state set by activateChapter doesn't flicker.
 			if (suppressScrollRef.current) return
+			if (interactiveModeRef.current) return
 
 			const rect = section.getBoundingClientRect()
 			const scrollable = rect.height - window.innerHeight
 			if (scrollable <= 0) return
+
+			// Outside sticky range — cancel any queued snap and leave page scroll alone
+			if (rect.top > 0 || rect.bottom < window.innerHeight) {
+				if (snapDebounceRef.current) clearTimeout(snapDebounceRef.current)
+				return
+			}
+
 			const progress = Math.max(0, Math.min(1, -rect.top / scrollable))
 
-			const thresholds: [ChapterId, number][] = [
-				['default', 0],
-				['camera-1779054230007-lg5mbd', 0.28],
-				['camera-1779320332512-tded3h', 0.56],
-				['camera-1779320572791-qm1tv5', 0.82]
-			]
-
-			let next: ChapterId = 'default'
-			for (const [id, t] of thresholds) {
-				if (progress >= t) next = id
+			let next: ChapterId = CHAPTERS[0].id
+			for (const c of CHAPTERS) {
+				if (progress >= c.threshold) next = c.id
 			}
 
 			if (next !== lastChapterRef.current) {
@@ -139,6 +157,23 @@ export default function MockShopEmbedClient() {
 				setActiveChapter(next)
 				if (embedReady) embedRef.current?.activateCamera(next)
 			}
+
+			// After scroll settles, snap exactly to the chapter's scroll position
+			if (snapDebounceRef.current) clearTimeout(snapDebounceRef.current)
+			snapDebounceRef.current = setTimeout(() => {
+				if (interactiveModeRef.current) return
+				const sectionTop = section.getBoundingClientRect().top + window.scrollY
+				const targetY =
+					sectionTop + chapterThresholds[lastChapterRef.current] * scrollable
+
+				suppressScrollRef.current = true
+				if (suppressTimerRef.current) clearTimeout(suppressTimerRef.current)
+				suppressTimerRef.current = setTimeout(() => {
+					suppressScrollRef.current = false
+				}, 1000)
+
+				window.scrollTo({ top: targetY, behavior: 'smooth' })
+			}, 80)
 		}
 
 		window.addEventListener('scroll', handleScroll, { passive: true })
@@ -146,6 +181,8 @@ export default function MockShopEmbedClient() {
 	}, [embedReady])
 
 	const activateChapter = (id: ChapterId) => {
+		if (interactiveMode) return
+
 		setActiveChapter(id)
 		lastChapterRef.current = id
 		if (embedReady) embedRef.current?.activateCamera(id)
@@ -153,242 +190,323 @@ export default function MockShopEmbedClient() {
 		const section = sectionRef.current
 		if (!section) return
 
-		const chapterThresholds: Record<ChapterId, number> = {
-			default: 0,
-			'camera-1779054230007-lg5mbd': 0.28,
-			'camera-1779320332512-tded3h': 0.56,
-			'camera-1779320572791-qm1tv5': 0.82
-		}
-
-		// Suppress scroll handler while the page animates to the target position
-		// so intermediate progress values don't fight the optimistic state update.
 		suppressScrollRef.current = true
 		if (suppressTimerRef.current) clearTimeout(suppressTimerRef.current)
 		suppressTimerRef.current = setTimeout(() => {
 			suppressScrollRef.current = false
 		}, 1000)
 
-		const progress = chapterThresholds[id]
 		const sectionTop = section.getBoundingClientRect().top + window.scrollY
 		const scrollable = section.offsetHeight - window.innerHeight
 		window.scrollTo({
-			top: sectionTop + progress * scrollable,
+			top: sectionTop + chapterThresholds[id] * scrollable,
 			behavior: 'smooth'
 		})
 	}
 
-	const descStyle = {
-		transition: 'opacity 0.18s ease',
-		opacity: descFading ? 0 : 1
+	const handleEnterInteractive = () => {
+		if (!embedReady) return
+		setInteractiveMode(true)
+		embedRef.current?.setControlsEnabled(true)
 	}
 
+	const handleExitInteractive = () => {
+		setInteractiveMode(false)
+		embedRef.current?.setControlsEnabled(false)
+		if (embedReady) embedRef.current?.activateCamera(lastChapterRef.current)
+	}
+
+	// Lock body scroll on mobile when fullscreen interactive mode is active
+	useEffect(() => {
+		const isMobile = window.matchMedia('(max-width: 767px)').matches
+		if (!isMobile) return
+
+		if (interactiveMode) {
+			document.body.style.overflow = 'hidden'
+			document.body.style.touchAction = 'none'
+		} else {
+			document.body.style.overflow = ''
+			document.body.style.touchAction = ''
+		}
+
+		return () => {
+			document.body.style.overflow = ''
+			document.body.style.touchAction = ''
+		}
+	}, [interactiveMode])
+
 	return (
-		// Sticky scroll container - 4× viewport height gives comfortable pacing
-		<div ref={sectionRef} className="relative" style={{ height: '600vh' }}>
-			<div className="sticky top-0 h-screen overflow-hidden bg-black">
-				{/* Fullscreen iframe - hidden until embed is ready to prevent HDR flash */}
-				<iframe
-					ref={iframeRef}
-					src={DEMO_SCENE_URL}
-					className={cn(
-						'pointer-events-none absolute inset-0 h-full w-full border-0 transition-opacity duration-1000'
-						// embedReady ? 'opacity-100' : 'opacity-0'
-					)}
-					allow="autoplay; xr-spatial-tracking"
-					allowFullScreen
-					title="Alpine X3 Pro - interactive 3D preview"
-				/>
-
-				{/* Loading indicator - visible until embed is ready */}
-				{/* <div
-					className={cn(
-						'pointer-events-none absolute inset-0 z-[1] flex flex-col items-center justify-center gap-3 transition-opacity duration-700',
-						embedReady ? 'opacity-0' : 'opacity-100'
-					)}
-				>
-					<div className="h-6 w-6 animate-spin rounded-full border-2 border-white/10 border-t-white/40" />
-					<p className="text-[11px] tracking-widest text-white/25 uppercase">
-						Loading scene
-					</p>
-				</div> */}
-
-				{/* Touch passthrough - lets vertical scroll reach the page on mobile */}
-				<div
-					className="absolute inset-0 z-1"
-					style={{ touchAction: 'pan-y' }}
-				/>
-
-				{/* Vignettes */}
-				<div className="pointer-events-none absolute inset-0 z-2 bg-linear-to-r from-black/55 via-transparent to-black/15" />
-				<div className="pointer-events-none absolute inset-0 z-2 bg-linear-to-b from-black/30 via-transparent to-black/75" />
-
-				{/* Powered by Vectreal - top-left, offset below nav on mobile */}
-				<div className="absolute top-20 left-6 z-10 lg:top-6">
-					<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-1.5 backdrop-blur-sm">
-						<span className="bg-accent h-1.5 w-1.5 rounded-full" />
-						<span className="text-xs font-medium tracking-wide text-white/60">
-							Powered by Vectreal
-						</span>
-					</div>
-				</div>
-
-				{/* ── Desktop layout ─────────────────────────────────────────── */}
-
-				{/* Product card - bottom-left */}
-				<div className="absolute bottom-14 left-6 z-10 hidden max-w-xs md:block">
-					<div className="rounded-2xl border border-white/10 bg-black/45 p-5 shadow-2xl backdrop-blur-md">
-						<p className="text-[10px] font-medium tracking-[0.18em] text-white/30 uppercase">
-							Mountain Bike · Carbon
-						</p>
-
-						<h3 className="mt-2 text-xl leading-snug font-semibold tracking-tight text-white">
-							Alpine X3 Pro
-						</h3>
-
-						<p className="mt-1 text-[10px] tracking-wider text-white/25 uppercase">
-							140mm · 12.4 kg · GX Eagle
-						</p>
-
-						<p className="text-accent mt-4 text-2xl font-bold tracking-tight">
-							$1,299.99
-						</p>
-
-						{/* Fixed min-height prevents layout shift across description lengths */}
-						<div className="mt-3 min-h-[3rem]">
-							<p
-								style={descStyle}
-								className="text-sm leading-relaxed text-white/60"
-							>
-								{displayedDesc}
-							</p>
-						</div>
-
-						<Button
-							disabled
-							className="mt-4 w-full border-white/10 bg-white/6 text-white/50 hover:bg-white/10"
-							variant="outline"
-							size="sm"
-						>
-							Add to Cart
-						</Button>
-
-						<p className="mt-2.5 text-center text-[11px] text-white/20">
-							Concept demo · Not for sale
-						</p>
-					</div>
-				</div>
-
-				{/* Chapter indicator - bottom-right */}
-				<div className="absolute right-6 bottom-14 z-10 hidden flex-col items-end gap-2.5 md:flex">
-					{CHAPTERS.map((c) => (
-						<button
-							key={c.id}
-							onClick={() => activateChapter(c.id)}
-							className="group flex items-center gap-2.5"
-							aria-label={`View ${c.label}`}
-						>
-							<span
+		<div ref={sectionRef} className="relative" style={{ height: '300vh' }}>
+			{/* Sticky stage */}
+			<div className="bg-background sticky top-0 h-screen overflow-hidden">
+				<div className="mx-auto flex h-full w-full max-w-[1200px] flex-col items-center justify-center gap-16 px-5 py-16 md:px-10 md:py-10 lg:px-14">
+					<div className="grid grid-cols-1 gap-5 md:grid-cols-[3fr_2fr] md:items-center md:gap-8 lg:gap-12">
+						{/* ── Scene ─────────────────────────────────────────────── */}
+						<div className="flex flex-col gap-2">
+							<div
+								onClick={
+									!interactiveMode && embedReady
+										? handleEnterInteractive
+										: undefined
+								}
 								className={cn(
-									'text-xs font-medium tracking-wide transition-all duration-300',
-									activeChapter === c.id
-										? 'text-white'
-										: 'text-white/30 group-hover:text-white/55'
+									'relative aspect-4/3 overflow-hidden rounded-2xl bg-white/4 shadow-2xl transition-all duration-500',
+									!interactiveMode &&
+										embedReady &&
+										'md:hover:bg-muted/50 md:cursor-pointer md:hover:scale-[1.015]',
+									interactiveMode &&
+										'fixed inset-0 z-50 aspect-auto rounded-none md:relative md:inset-auto md:z-auto md:aspect-4/3 md:rounded-2xl'
 								)}
 							>
-								{c.label}
-							</span>
-							{/* Fixed-width container prevents label shift on dot resize */}
-							<span className="flex w-6 shrink-0 items-center justify-end">
-								<span
+								<iframe
+									ref={iframeRef}
+									src={DEMO_SCENE_URL}
 									className={cn(
-										'block rounded-full transition-all duration-300',
-										activeChapter === c.id
-											? 'bg-accent/85 h-2 w-6'
-											: 'h-2 w-1.5 bg-white/25 group-hover:bg-white/55'
+										'absolute inset-0 h-full w-full border-0',
+										interactiveMode
+											? 'pointer-events-auto'
+											: 'pointer-events-none'
 									)}
+									allow="autoplay; xr-spatial-tracking"
+									allowFullScreen
+									title="Alpine X3 Pro - interactive 3D preview"
 								/>
-							</span>
-						</button>
-					))}
-				</div>
 
-				{/* Scroll hint - desktop */}
-				<div
-					className={cn(
-						'pointer-events-none absolute bottom-8 left-1/2 z-10 hidden -translate-x-1/2 flex-col items-center gap-1.5 transition-opacity duration-700 md:flex',
-						activeChapter !== 'default' ? 'opacity-0' : 'opacity-100'
-					)}
-				>
-					<p className="text-[11px] tracking-widest text-white/35 uppercase">
-						Scroll to explore
-					</p>
-					<ChevronsDown size={13} className="animate-bounce text-white/25" />
-				</div>
+								{/* Touch passthrough — lets vertical scroll reach the page */}
+								{!interactiveMode && (
+									<div
+										className="absolute inset-0 z-1"
+										style={{ touchAction: 'pan-y' }}
+									/>
+								)}
 
-				{/* ── Mobile layout ──────────────────────────────────────────── */}
+								{/* Powered by Vectreal — top-left */}
+								<div className="absolute top-3 left-3 z-10">
+									<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-1.5 backdrop-blur-sm">
+										<span className="bg-accent h-1.5 w-1.5 rounded-full" />
+										<span className="text-xs font-medium tracking-wide text-white/55">
+											Powered by Vectreal
+										</span>
+									</div>
+								</div>
 
-				<div className="absolute inset-x-0 bottom-10 z-10 flex flex-col gap-4 px-4 md:hidden">
-					{/* Scroll hint */}
-					<div
-						className={cn(
-							'pointer-events-none flex flex-col items-center gap-1.5 transition-opacity duration-700',
-							activeChapter !== 'default' ? 'opacity-0' : 'opacity-100'
-						)}
-					>
-						<p className="text-[11px] tracking-widest text-white/35 uppercase">
-							Scroll to explore
-						</p>
-						<ChevronsDown size={13} className="animate-bounce text-white/25" />
-					</div>
-
-					{/* Chapter indicators - centered */}
-					<div className="flex justify-center gap-6">
-						{CHAPTERS.map((c) => (
-							<button
-								key={c.id}
-								onClick={() => activateChapter(c.id)}
-								className="group flex flex-col items-center gap-1"
-								aria-label={`View ${c.label}`}
-							>
-								<span
+								{/* Interact / Exit — inside canvas bounds, bottom-right */}
+								{/* On mobile in interactive mode, this button is hidden; a fixed sibling button handles exit instead */}
+								<button
+									onClick={
+										interactiveMode
+											? handleExitInteractive
+											: handleEnterInteractive
+									}
+									disabled={!embedReady}
 									className={cn(
-										'text-[10px] font-medium tracking-wide transition-all duration-300',
-										activeChapter === c.id
-											? 'text-white'
-											: 'text-white/30 group-hover:text-white/55'
+										'border-primary/10 bg-background/30 absolute z-10 items-center gap-2 rounded-full border px-3.5 py-2 text-[11px] font-medium tracking-[0.08em] uppercase backdrop-blur-sm transition-all duration-200',
+										interactiveMode ? 'hidden md:flex' : 'flex',
+										interactiveMode
+											? 'border-primary/20 text-primary/80 hover:text-primary right-3 bottom-3'
+											: 'text-primary/50 hover:border-primary/20 hover:text-primary/90 right-3 bottom-3',
+										!embedReady && 'pointer-events-none opacity-0'
+									)}
+									aria-label={
+										interactiveMode
+											? 'Exit interactive mode'
+											: 'Click and drag to orbit the model'
+									}
+								>
+									{interactiveMode ? (
+										<>
+											<X size={11} />
+											<span>Exit</span>
+										</>
+									) : (
+										<>
+											<MousePointerClick size={11} />
+											<span>Interact</span>
+										</>
+									)}
+								</button>
+							</div>
+
+							{/* Caption — sits directly below the viewer */}
+							<p className="text-foreground/20 px-0.5 text-[10px] leading-relaxed">
+								3D visualization powered by Vectreal · Concept demo, not for
+								sale
+							</p>
+							{
+								<div
+									className={cn(
+										'flex flex-wrap gap-x-5 gap-y-1 transition-opacity duration-300 md:gap-x-6',
+										interactiveMode && 'pointer-events-none opacity-30',
+										'md:invisible md:hidden' // Hidden on smaller screens to save space (scrolling is easier than clicking tabs on mobile anyway)
 									)}
 								>
-									{c.label}
-								</span>
-								<span
-									className={cn(
-										'block rounded-full transition-all duration-300',
-										activeChapter === c.id
-											? 'bg-accent/85 h-1.5 w-5'
-											: 'h-1.5 w-1.5 bg-white/25 group-hover:bg-white/55'
+									{CHAPTERS.map((c) => (
+										<button
+											key={c.id}
+											onClick={() => activateChapter(c.id)}
+											className="group relative pb-2.5"
+											aria-label={`View ${c.label}`}
+										>
+											<span
+												className={cn(
+													'text-[10px] font-medium tracking-[0.12em] uppercase transition-colors duration-300',
+													activeChapter === c.id
+														? 'text-foreground'
+														: 'text-foreground/25 group-hover:text-foreground/55'
+												)}
+											>
+												{c.label}
+											</span>
+											<span
+												className={cn(
+													'absolute right-0 bottom-0 left-0 h-px rounded-full transition-opacity duration-500',
+													activeChapter === c.id
+														? 'bg-accent opacity-100'
+														: 'opacity-0'
+												)}
+											/>
+										</button>
+									))}
+								</div>
+							}
+						</div>
+
+						{/* ── Text column ───────────────────────────────────────── */}
+						<div
+							className={cn(
+								'flex flex-col gap-5 transition-opacity duration-300 md:gap-6',
+								interactiveMode && 'pointer-events-none opacity-30'
+							)}
+						>
+							{/* Animated chapter content */}
+							<AnimatePresence mode="wait">
+								<motion.div
+									key={activeChapter}
+									initial={{ opacity: 0, y: 12 }}
+									animate={{ opacity: 1, y: 0 }}
+									exit={{ opacity: 0, y: -12 }}
+									transition={{ duration: 0.3, ease: 'easeInOut' }}
+									className="flex flex-col gap-3"
+								>
+									{/* Eyebrow label */}
+									<p className="text-accent/80 text-[10px] font-semibold tracking-[0.22em] uppercase">
+										{chapter.label}
+									</p>
+
+									{/* Heading — each \n becomes a block span for line-break control */}
+									<h4 className="text-foreground text-[1.75rem] leading-[1.1] tracking-tight md:text-3xl lg:text-[2.125rem]">
+										{chapter.heading.split('\n').map((line, i) => (
+											<span key={i} className="block">
+												{line}
+											</span>
+										))}
+									</h4>
+
+									{/* Description */}
+									<p className="text-foreground/50 text-sm leading-relaxed md:text-[0.9375rem]">
+										{chapter.description}
+									</p>
+
+									{/* Conditional: shop CTA vs SDK code snippet */}
+									{chapter.type === 'shop' ? (
+										<div className="mt-1 flex flex-col gap-3">
+											<div>
+												<p className="text-foreground/25 text-[10px] tracking-[0.18em] uppercase">
+													Mountain Bike · Carbon · 140mm · 12.4 kg
+												</p>
+												<p className="text-accent mt-1 text-2xl font-bold tracking-tight">
+													$1,299.99
+												</p>
+											</div>
+											<Button
+												disabled
+												className="border-foreground/10 bg-foreground/5 text-foreground/40 w-full"
+												variant="outline"
+												size="sm"
+											>
+												Add to Cart
+											</Button>
+											<p className="text-foreground/20 text-[11px]">
+												Concept demo · Not for sale
+											</p>
+										</div>
+									) : (
+										<div className="border-foreground/[0.07] bg-foreground/3 mt-1 rounded-xl border px-4 py-3">
+											<code className="text-foreground/55 font-mono text-[11px] break-all md:text-xs">
+												{chapter.code}
+											</code>
+										</div>
 									)}
-								/>
-							</button>
-						))}
+								</motion.div>
+							</AnimatePresence>
+						</div>
 					</div>
 
-					{/* Compact product bar */}
-					<div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/50 px-4 py-3 backdrop-blur-md">
-						<div className="min-w-0 flex-1 pr-4">
-							<p className="text-sm font-semibold text-white">Alpine X3 Pro</p>
-							<p
-								style={descStyle}
-								className="truncate text-[11px] text-white/40"
-							>
-								{displayedDesc}
-							</p>
+					{/* Chapter tab rail */}
+					{
+						<div
+							className={cn(
+								'flex flex-wrap gap-x-5 gap-y-1 transition-opacity duration-300 md:gap-x-6',
+								interactiveMode && 'pointer-events-none opacity-30',
+								'max-md:invisible max-md:hidden' // Hidden on smaller screens
+							)}
+						>
+							{CHAPTERS.map((c) => (
+								<button
+									key={c.id}
+									onClick={() => activateChapter(c.id)}
+									className="group relative pb-2.5"
+									aria-label={`View ${c.label}`}
+								>
+									<span
+										className={cn(
+											'text-[10px] font-medium tracking-[0.12em] uppercase transition-colors duration-300',
+											activeChapter === c.id
+												? 'text-foreground'
+												: 'text-foreground/25 group-hover:text-foreground/55'
+										)}
+									>
+										{c.label}
+									</span>
+									<span
+										className={cn(
+											'absolute right-0 bottom-0 left-0 h-px rounded-full transition-opacity duration-500',
+											activeChapter === c.id
+												? 'bg-accent opacity-100'
+												: 'opacity-0'
+										)}
+									/>
+								</button>
+							))}
 						</div>
-						<p className="text-accent shrink-0 text-base font-bold">
-							$1,299.99
+					}
+
+					{/* Scroll hint — fades out after first chapter */}
+					<div
+						className={cn(
+							'pointer-events-none absolute bottom-12 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-1.5 transition-opacity duration-700'
+						)}
+					>
+						<p className="text-[11px] tracking-widest text-white/30 uppercase">
+							Scroll to explore
 						</p>
+						<ChevronsDown size={12} className="animate-bounce text-white/20" />
 					</div>
 				</div>
 			</div>
+
+			{/* Mobile-only exit button — rendered outside the iframe stacking context so touch events reach it reliably */}
+			{interactiveMode && (
+				<div className="fixed bottom-8 left-0 right-0 z-60 flex justify-center md:hidden">
+					<button
+						onClick={handleExitInteractive}
+						className="flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-5 py-3 text-sm font-medium tracking-[0.08em] uppercase text-white/90 backdrop-blur-md"
+					>
+						<X size={14} />
+						<span>Exit</span>
+					</button>
+				</div>
+			)}
 		</div>
 	)
 }
