@@ -25,7 +25,7 @@ draft: true
 thumbnailImage: "/assets/images/newsroom/08/thumbnail-optimize-3d-model-for-web.webp"
 ---
 
-{/* ## Blog Summary (80–120 words)
+{/* ## Blog Summary (80-120 words)
 
 A 3D model exported from Blender or Maya is optimized for asset pipelines, not browser delivery. Geometry precision, uncompressed textures, and scene graph bloat routinely push a simple product model past 40 MB. For the web, the targets are sharply lower: under 5 MB for a hero embed, under 2 MB for a product page, under 500 KB for a grid. This guide explains the three culprits and the three techniques that address them - mesh simplification, texture compression, and glTF graph cleanup - with the manual gltf-transform CLI path and the platform path via Vectreal's Publisher presets and @vctrl/core for Node.js pipelines. */}
 
@@ -55,19 +55,19 @@ The gap between "file created by a DCC tool" and "file ready for a web embed" is
 
 ### Culprit 1 - Geometry precision
 
-A typical product model exported from Blender, Maya, or Cinema 4D carries 200,000–800,000 triangles. That precision is appropriate when the model is rendered in a film or used for downstream CAD work. It is far more than a web viewer needs. A browser viewer rendering at standard screen resolutions is drawing each triangle at an average size of a few pixels. Triangle counts above 200,000 contribute details that sub-pixel rasterization discards entirely.
+A typical product model exported from Blender, Maya, or Cinema 4D carries 200,000-800,000 triangles. That precision is appropriate when the model is rendered in a film or used for downstream CAD work. It is far more than a web viewer needs. A browser viewer rendering at standard screen resolutions is drawing each triangle at an average size of a few pixels. Triangle counts above 200,000 contribute details that sub-pixel rasterization discards entirely.
 
-The geometry itself is also uncompressed in a raw glTF or GLB. Vertex positions, normals, UVs, and tangents are stored as full-precision float32 arrays. For web delivery, quantized integer encoding achieves the same visual result in 30–50% fewer bytes per attribute.
+The geometry itself is also uncompressed in a raw glTF or GLB. Vertex positions, normals, UVs, and tangents are stored as full-precision float32 arrays. For web delivery, quantized integer encoding achieves the same visual result in 30-50% fewer bytes per attribute.
 
 ### Culprit 2 - Texture resolution and format
 
-Textures are almost always the dominant contributor to file size, and the problem compounds with the number of materials in the scene. A standard PBR material set - albedo, normal, roughness, metallic, ambient occlusion - typically produces five textures per material. At 2K resolution in PNG format, that is roughly 10–20 MB per material slot. A scene with three materials ships 30–60 MB of textures before any geometry is counted.
+Textures are almost always the dominant contributor to file size, and the problem compounds with the number of materials in the scene. A standard PBR material set - albedo, normal, roughness, metallic, ambient occlusion - typically produces five textures per material. At 2K resolution in PNG format, that is roughly 10-20 MB per material slot. A scene with three materials ships 30-60 MB of textures before any geometry is counted.
 
 The format problem is separate from the resolution problem. PNG and JPEG are 2D image formats designed to be decompressed and displayed on a flat screen. A GPU rendering a 3D scene needs the texture in a different state: held in compressed GPU memory, mipmapped, sampled at arbitrary UV coordinates. When a browser loads a PNG into a WebGL scene, it decompresses the PNG to raw RGBA pixels in CPU memory, then uploads those raw pixels to the GPU. A 2K PNG that ships as 6 MB on disk decompresses to 16 MB in GPU memory. The network saving from PNG compression does not carry through to GPU memory pressure.
 
 ### Culprit 3 - Scene graph overhead
 
-A glTF file is a JSON-described graph of nodes, meshes, materials, textures, cameras, animations, and accessors. DCC tools typically export everything in the scene - including objects marked as reference geometry, animation clips replaced by later versions, duplicate materials consolidated in the DCC but not in the export, and unreferenced buffer views that point to nothing. A real-world glTF from a production pipeline often contains 10–25% of data that no viewer ever touches.
+A glTF file is a JSON-described graph of nodes, meshes, materials, textures, cameras, animations, and accessors. DCC tools typically export everything in the scene - including objects marked as reference geometry, animation clips replaced by later versions, duplicate materials consolidated in the DCC but not in the export, and unreferenced buffer views that point to nothing. A real-world glTF from a production pipeline often contains 10-25% of data that no viewer ever touches.
 
 ---
 
@@ -77,10 +77,10 @@ Before running any optimization pass, establish the target. The right target dep
 
 | Context | Target file size | Triangle budget |
 |---|---|---|
-| Hero embed (landing page, above fold) | Under 5 MB | 150,000–250,000 |
-| Product detail page | Under 2 MB | 100,000–150,000 |
-| Grid or card (multiple embeds on one page) | Under 500 KB | 30,000–80,000 |
-| Mobile-first (LTE or slower) | Under 1 MB | 50,000–100,000 |
+| Hero embed (landing page, above fold) | Under 5 MB | 150,000-250,000 |
+| Product detail page | Under 2 MB | 100,000-150,000 |
+| Grid or card (multiple embeds on one page) | Under 500 KB | 30,000-80,000 |
+| Mobile-first (LTE or slower) | Under 1 MB | 50,000-100,000 |
 
 These are not aspirational targets. They are the numbers at which time-to-first-frame on a mid-range device over a typical consumer connection lands under three seconds. Above these thresholds, visible bounce events start accumulating. A model that takes eight seconds to load is, for most practical purposes, a model that does not load.
 
@@ -96,25 +96,25 @@ Mesh simplification reduces triangle count while preserving the visual shape of 
 
 In practice, removing 30% of triangles on a typical product model produces a visual difference that requires side-by-side comparison at high magnification to detect. Removing 50% produces a visible difference on close inspection of organic geometry; on hard-surface mechanical models, it often produces no visible difference at all. Simplification savings vary by model type - an organic character model with smooth surfaces simplifies well; a CAD model with precise flat faces may simplify less aggressively without introducing visible faceting.
 
-Mesh simplification alone typically reduces total file size by 10–30%, depending on how much of the original file is geometry versus textures.
+Mesh simplification alone typically reduces total file size by 10-30%, depending on how much of the original file is geometry versus textures.
 
 ### Technique 2 - Texture compression and format conversion
 
 This is where the large savings happen. Textures in a typical DCC export are PNG or JPEG. Converting them to a web-optimized format - WebP for broad compatibility, or KTX2/Basis Universal for GPU-native delivery - has an outsized effect on total file size because textures represent the majority of the bytes.
 
-**WebP** is the practical choice for server-side pipelines. It achieves 25–40% smaller file sizes than JPEG at comparable visual quality, with broad browser support. A PBR material set that ships as 18 MB of PNG arrives as roughly 4–6 MB of WebP at 85% quality - a reduction that dwarfs any mesh simplification savings on a typical scene.
+**WebP** is the practical choice for server-side pipelines. It achieves 25-40% smaller file sizes than JPEG at comparable visual quality, with broad browser support. A PBR material set that ships as 18 MB of PNG arrives as roughly 4-6 MB of WebP at 85% quality - a reduction that dwarfs any mesh simplification savings on a typical scene.
 
 **KTX2 / Basis Universal** is the GPU-native option. Unlike PNG or WebP (which are decompressed before the GPU sees them), KTX2 stays compressed in GPU memory, transcoding at load time to whatever format the local GPU supports best - BC7 on desktop, ASTC on mobile, ETC2 as a broad fallback. The result is faster upload to the GPU, lower sustained memory pressure, and better frame rate at high texture density. The Vectreal Publisher uses this path in its browser-side optimization pipeline.
 
-The quality tradeoff is real but manageable. High-quality conversion (quality setting around 85–90%) is visually indistinguishable from the source texture for the vast majority of materials. Medium quality (70–75%) introduces faint compression artifacts on close inspection of high-frequency detail - fine weaves, brushed metal, text rendered as a texture. The right quality setting is the lowest one that still looks correct for the specific scene, evaluated at the specific viewing distance and device profile that matters.
+The quality tradeoff is real but manageable. High-quality conversion (quality setting around 85-90%) is visually indistinguishable from the source texture for the vast majority of materials. Medium quality (70-75%) introduces faint compression artifacts on close inspection of high-frequency detail - fine weaves, brushed metal, text rendered as a texture. The right quality setting is the lowest one that still looks correct for the specific scene, evaluated at the specific viewing distance and device profile that matters.
 
-Texture compression is typically responsible for 60–80% of the total size reduction in an optimization pass. On a 35 MB model, converting PNG textures to WebP at high quality commonly drops the file to 5–8 MB before any mesh changes are made.
+Texture compression is typically responsible for 60-80% of the total size reduction in an optimization pass. On a 35 MB model, converting PNG textures to WebP at high quality commonly drops the file to 5-8 MB before any mesh changes are made.
 
 ### Technique 3 - glTF graph cleanup
 
 Graph cleanup removes data from the glTF JSON and binary buffer that nothing in the scene actually references. Specifically: duplicate accessors, unused buffer views, unreferenced animation clips, orphan nodes, redundant materials, and duplicate textures. It also normalizes common inconsistencies - coordinate axis mismatches, unit scale assumptions, missing color space declarations - that cause renderers to add overhead at load time.
 
-Graph cleanup is the smallest individual contributor to size reduction - typically 5–15% - but it compounds with the other two techniques. A model that has been mesh-simplified and texture-compressed still carries all of its dead graph weight until cleanup runs. Running cleanup as part of every pass ensures the binary buffer reflects the actual state of the optimized mesh and textures.
+Graph cleanup is the smallest individual contributor to size reduction - typically 5-15% - but it compounds with the other two techniques. A model that has been mesh-simplified and texture-compressed still carries all of its dead graph weight until cleanup runs. Running cleanup as part of every pass ensures the binary buffer reflects the actual state of the optimized mesh and textures.
 
 ---
 
@@ -182,7 +182,7 @@ gltf-transform etc1s stage3.glb output-optimized.glb
 gltf-transform inspect output-optimized.glb
 ```
 
-Running `inspect` before and after gives a precise accounting of what changed. A well-tuned pass on a typical product model moves the file from 30–80 MB to 2–6 MB with no visible quality difference at normal viewing distances.
+Running `inspect` before and after gives a precise accounting of what changed. A well-tuned pass on a typical product model moves the file from 30-80 MB to 2-6 MB with no visible quality difference at normal viewing distances.
 
 **What the CLI leaves to you:** it optimizes the file you give it, then stops. It does not host the result, version it, manage access by API key, or give a non-developer a way to re-optimize without running terminal commands. For a personal project with a single static model, that is fine. For a team with evolving 3D content and non-developer contributors, those gaps add up.
 
