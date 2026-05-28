@@ -76,7 +76,7 @@
 		"postcss": "^8.5.15",
 		"postgres": "^3.4.9",
 		"posthog-js": "^1.376.0",
-		"posthog-node": "^5.35.2",
+		"posthog-node": "^5.35.5",
 		"postprocessing": "^6.39.1",
 		"radix-ui": "^1.4.3",
 		"react": "^19.2.5",

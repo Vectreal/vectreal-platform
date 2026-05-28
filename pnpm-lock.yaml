@@ -207,8 +207,8 @@ importers:
         specifier: ^1.376.0
         version: 1.376.0
       posthog-node:
-        specifier: ^5.35.2
-        version: 5.35.2(rxjs@7.8.2)
+        specifier: ^5.35.5
+        version: 5.35.5(rxjs@7.8.2)
       postprocessing:
         specifier: ^6.39.1
         version: 6.39.1(three@0.184.0)
@@ -3438,6 +3438,9 @@ packages:
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
 
+  '@posthog/core@1.29.12':
+    resolution: {integrity: sha512-r/2RUa4zbN0XdBp6d+Yk8Jw1rPWXHxyXIgSm/wJf9yDLIouZbH0Pdkgbc1RIuhwL6BIHCFrOqK5jy8TFKTI6iw==}
+
   '@posthog/core@1.29.9':
     resolution: {integrity: sha512-DjvuIyBZ2Z/gBhtZlITlM2D8PlnMsHSQ1D78dbUYoVsgGguvanpJTobZObjLlFkybyvfZFYkpoJkFNI/2Pw4IQ==}
 
@@ -3453,6 +3456,9 @@ packages:
 
   '@posthog/types@1.376.0':
     resolution: {integrity: sha512-gbFfxCuZDs/D4QZMwdE+smD1jsuqgGpS6yKGHZZ19foxMy8RYHsU1E47iG1b88n/uN02fAabLibVwuxLtq8juw==}
+
+  '@posthog/types@1.376.3':
+    resolution: {integrity: sha512-w21lBoz3/ZGw7BZT7t2lJq1mpJwMvWpZijW7vEwBFNAQlq0KfKf2mj5KKUYZMXM1GdIQ0jHnn931uXPB1Ae60w==}
 
   '@protobufjs/aspromise@1.1.2':
     resolution: {integrity: sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==}
@@ -11231,8 +11237,8 @@ packages:
   posthog-js@1.376.0:
     resolution: {integrity: sha512-YGfQ6gSmqmEh287PHjXRDJ9zML3Su1UIt1+xjRy7Yk6yW43Sc7sFK3CpCkLchCGhIA4x6VaqK+LaqB+7+MCo7A==}
 
-  posthog-node@5.35.2:
-    resolution: {integrity: sha512-YwzkogTUrsFeUnJJH17p3zoZBFaHIh6swYoLV4Ic5pmd8fIVTz8w7NsHR7eWmJlqYe/+Hqo1acGN1jclNUbz3A==}
+  posthog-node@5.35.5:
+    resolution: {integrity: sha512-zPLpjK0uAxVTVmV2TH/hNAq0JN0vUjZdJ8KOBErQS58lIJRHTkMMofNmpolkGq9pijpFITcpLsMYMsFMWvjBmg==}
     engines: {node: ^20.20.0 || >=22.22.0}
     peerDependencies:
       rxjs: ^7.0.0
@@ -17057,6 +17063,10 @@ snapshots:
 
   '@polka/url@1.0.0-next.29': {}
 
+  '@posthog/core@1.29.12':
+    dependencies:
+      '@posthog/types': 1.376.3
+
   '@posthog/core@1.29.9':
     dependencies:
       '@posthog/types': 1.376.0
@@ -17069,6 +17079,8 @@ snapshots:
       '@types/react': 19.0.0
 
   '@posthog/types@1.376.0': {}
+
+  '@posthog/types@1.376.3': {}
 
   '@protobufjs/aspromise@1.1.2': {}
 
@@ -26540,9 +26552,9 @@ snapshots:
       query-selector-shadow-dom: 1.0.1
       web-vitals: 5.2.0
 
-  posthog-node@5.35.2(rxjs@7.8.2):
+  posthog-node@5.35.5(rxjs@7.8.2):
     dependencies:
-      '@posthog/core': 1.29.9
+      '@posthog/core': 1.29.12
     optionalDependencies:
       rxjs: 7.8.2
 
