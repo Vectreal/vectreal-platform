@@ -5,25 +5,22 @@
 
 version: 2
 updates:
-  - package-ecosystem: "npm" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: 'npm' # See documentation for possible values
+    directory: '/' # Location of package manifests
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     labels:
-      - "npm"
-      - "dependencies"
-      - "nx-updates"
+      - 'dependencies'
     groups:
       npm-dependencies:
         patterns:
-          - "@nx" # groups nx npm dependencies
-
+          - '@nx' # groups nx npm dependencies
 
   # GitHub Actions dependencies
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     labels:
-    - "github-actions"
-    - "dependencies"
+      - 'github-actions'
+      - 'dependencies'
