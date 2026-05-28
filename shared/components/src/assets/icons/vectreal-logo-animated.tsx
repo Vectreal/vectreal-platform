@@ -1,5 +1,5 @@
 import { cn } from '@shared/utils'
-import { motion } from 'framer-motion'
+import { motion, Variants } from 'framer-motion'
 
 interface Props {
 	className?: string
@@ -8,7 +8,7 @@ interface Props {
 	animated?: boolean
 }
 
-const parentVariants = {
+const parentVariants: Variants = {
 	hidden: {
 		opacity: 0,
 		transition: { ease: 'easeInOut' }
@@ -19,7 +19,7 @@ const parentVariants = {
 	}
 }
 
-const childVariants = {
+const childVariants: Variants = {
 	hidden: {
 		opacity: 0
 	},
