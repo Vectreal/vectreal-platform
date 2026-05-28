@@ -6,7 +6,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger
 } from '@shared/components/ui/tooltip'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, Variants } from 'framer-motion'
 import { Eye, EyeClosed, ExternalLink, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import {
@@ -284,7 +284,7 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 
 	const isSubmitting = navigation.state === 'submitting'
 
-	const fieldVariants = {
+	const fieldVariants: Variants = {
 		hidden: { opacity: 0, y: 8 },
 		visible: (i: number) => ({
 			opacity: 1,
