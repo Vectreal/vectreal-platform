@@ -64,7 +64,7 @@
 		"drizzle-orm": "^0.45.2",
 		"embla-carousel-react": "^8.6.0",
 		"file-saver": "^2.0.5",
-		"framer-motion": "^11.18.2",
+		"framer-motion": "^12.40.0",
 		"idb": "^8.0.3",
 		"input-otp": "^1.4.2",
 		"isbot": "^4.4.0",
