@@ -5,6 +5,8 @@
  * All fields are nullable - any step can be skipped.
  */
 
+import { Variants } from 'framer-motion'
+
 // ─── Profile data shape ───────────────────────────────────────────────────────
 
 export interface OnboardingProfile {
@@ -44,7 +46,7 @@ export type OnboardingStep = PillStep | TextStep
 
 // ─── Motion variants ──────────────────────────────────────────────────────────
 
-export const CONTENT_VARIANTS = {
+export const CONTENT_VARIANTS: Variants = {
 	enter: (dir: number) => ({
 		x: dir > 0 ? 48 : -48,
 		opacity: 0

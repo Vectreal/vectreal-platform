@@ -1,5 +1,10 @@
 import { Button } from '@shared/components/ui/button'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import {
+	AnimatePresence,
+	motion,
+	Transition,
+	useReducedMotion
+} from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
 import {
 	Check,
@@ -104,7 +109,7 @@ const SaveButton = ({
 								icon: <CircleFadingArrowUp size={16} className="inline" />
 							}
 
-	const contentTransition = shouldReduceMotion
+	const contentTransition: Transition = shouldReduceMotion
 		? { duration: 0 }
 		: { duration: 0.18, ease: [0.2, 1, 0.3, 1] }
 

@@ -1,9 +1,9 @@
 import { cn } from '@shared/utils'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, Variants } from 'framer-motion'
 
 import { RadioAccordionOptionProps } from './types'
 
-const itemInfoVariants = {
+const itemInfoVariants: Variants = {
 	open: {
 		height: 'auto',
 		opacity: 1
@@ -14,7 +14,7 @@ const itemInfoVariants = {
 	}
 }
 
-const selectedTextVariants = {
+const selectedTextVariants: Variants = {
 	show: {
 		y: 0,
 		opacity: 1,
