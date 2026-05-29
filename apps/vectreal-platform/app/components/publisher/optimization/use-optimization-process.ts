@@ -252,7 +252,7 @@ async function runGeometryOptimizationsInWorker(
 		const transferBuffer = inputBuffer.buffer.slice(
 			inputBuffer.byteOffset,
 			inputBuffer.byteOffset + inputBuffer.byteLength
-		)
+		) as ArrayBuffer
 		const msg: WorkerInputMessage = {
 			type: 'optimize',
 			buffer: transferBuffer,
