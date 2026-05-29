@@ -100,89 +100,55 @@ const isGenericTextureFileName = (value: string): boolean => {
 	return GENERIC_TEXTURE_FILE_NAME_PATTERN.test(extractTextureFileName(trimmed))
 }
 
-function getOptimizeTexturesWorkerUrl(): string | null {
-	const configuredUrl = process.env.OPTIMIZE_TEXTURES_WORKER_URL?.trim()
-	if (!configuredUrl) {
-		return null
-	}
-
-	try {
-		new URL(configuredUrl)
-		return configuredUrl
-	} catch {
-		console.warn(
-			'[optimize-textures] Ignoring invalid OPTIMIZE_TEXTURES_WORKER_URL'
-		)
-		return null
-	}
-}
-
-async function proxyToOptimizeTexturesWorker(params: {
-	workerUrl: string
+/**
+ * Invokes the optimize-textures Supabase Edge Function.
+ *
+ * The function URL is derived from SUPABASE_URL so no additional env vars
+ * are needed beyond what the app already requires for Supabase connectivity.
+ */
+async function invokeOptimizeTexturesFunction(params: {
 	inputBuffer: Uint8Array
 	textureIndex: number
 	textureName: string
 	optionsStr: string
-}): Promise<Response | null> {
-	const { workerUrl, inputBuffer, textureIndex, textureName, optionsStr } =
-		params
-	const workerToken = process.env.OPTIMIZE_TEXTURES_WORKER_TOKEN?.trim()
-	const requestHeaders: Record<string, string> = {
-		'Content-Type': 'application/octet-stream',
-		'X-Texture-Index': String(textureIndex),
-		'X-Texture-File-Name': textureName,
-		'X-Optimize-Options': optionsStr
-	}
+}): Promise<Response> {
+	const { inputBuffer, textureIndex, textureName, optionsStr } = params
 
-	if (workerToken) {
-		requestHeaders['X-Optimize-Worker-Token'] = workerToken
-	}
+	const supabaseUrl = process.env.SUPABASE_URL?.trim()
+	const supabaseKey = process.env.SUPABASE_KEY?.trim()
 
-	let workerResponse: Response
-	try {
-		workerResponse = await fetch(workerUrl, {
-			method: 'POST',
-			headers: requestHeaders,
-			body: Buffer.from(inputBuffer)
-		})
-	} catch (error) {
-		console.warn(
-			'[optimize-textures] Worker request failed, falling back to local optimizer',
-			error
+	if (!supabaseUrl || !supabaseKey) {
+		throw new Error(
+			'Missing required Supabase environment variables: SUPABASE_URL and SUPABASE_KEY must be set'
 		)
-		return null
 	}
 
-	// Fallback only when worker runtime is unhealthy/unavailable.
-	if (workerResponse.status >= 500) {
-		console.warn(
-			`[optimize-textures] Worker returned ${workerResponse.status}, falling back to local optimizer`
-		)
-		return null
-	}
+	const functionUrl = `${supabaseUrl}/functions/v1/optimize-textures`
 
-	if (workerResponse.status === 401 || workerResponse.status === 403) {
+	const fnResponse = await fetch(functionUrl, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/octet-stream',
+			'Authorization': `Bearer ${supabaseKey}`,
+			'X-Texture-Index': String(textureIndex),
+			'X-Texture-File-Name': textureName,
+			'X-Optimize-Options': optionsStr
+		},
+		body: inputBuffer
+	})
+
+	if (!fnResponse.ok && fnResponse.status !== 400) {
 		console.error(
-			`[optimize-textures] Worker authentication failed with status ${workerResponse.status}`
+			`[optimize-textures] Edge function returned ${fnResponse.status}`,
+			await fnResponse.text().catch(() => '')
 		)
 	}
 
-	const responseHeaders = new Headers(workerResponse.headers)
+	const responseHeaders = new Headers(fnResponse.headers)
 	responseHeaders.set('Cache-Control', 'no-store')
 
-	if (workerResponse.ok) {
-		const outputMimeType = responseHeaders.get('Content-Type') || 'image/webp'
-		const outputFileName = resolveCanonicalTextureFileName(
-			textureName,
-			outputMimeType
-		)
-		responseHeaders.set('X-Texture-Index', String(textureIndex))
-		responseHeaders.set('X-Texture-Name', outputFileName)
-		responseHeaders.set('X-Texture-File-Name', outputFileName)
-	}
-
-	return new Response(workerResponse.body, {
-		status: workerResponse.status,
+	return new Response(fnResponse.body, {
+		status: fnResponse.status,
 		headers: responseHeaders
 	})
 }
@@ -333,105 +299,24 @@ export async function action({ request }: Route.ActionArgs) {
 			)
 		}
 
-		const inputBuffer = Buffer.from(requestBuffer)
-
-		const workerUrl = getOptimizeTexturesWorkerUrl()
-		if (workerUrl) {
-			const workerResponse = await proxyToOptimizeTexturesWorker({
-				workerUrl,
-				inputBuffer,
-				textureIndex,
-				textureName,
-				optionsStr
-			})
-
-			if (workerResponse) {
-				return workerResponse
-			}
-		}
-
-		const sharpModule = await import('sharp')
-		const sharp = sharpModule.default || sharpModule
-
-		if (typeof sharp !== 'function') {
-			throw new Error('Sharp image processing library is not available')
-		}
-
-		let transform = sharp(inputBuffer, { animated: false })
-
-		if (Array.isArray(options.resize) && options.resize.length === 2) {
-			transform = transform.resize(options.resize[0], options.resize[1], {
-				fit: 'inside',
-				withoutEnlargement: true
-			})
-		}
-
-		const quality = typeof options.quality === 'number' ? options.quality : 80
-		const targetFormat = options.targetFormat || 'webp'
-		let outputMimeType = 'image/webp'
-
-		switch (targetFormat) {
-			case 'jpeg':
-				transform = transform.jpeg({ quality })
-				outputMimeType = 'image/jpeg'
-				break
-			case 'png':
-				transform = transform.png({ quality })
-				outputMimeType = 'image/png'
-				break
-			case 'webp':
-			default:
-				transform = transform.webp({ quality })
-				outputMimeType = 'image/webp'
-				break
-		}
-
-		const optimizedTexture = await transform.toBuffer()
-
-		if (optimizedTexture.byteLength === 0) {
-			throw new Error('Texture optimization produced an empty output payload')
-		}
-
-		const responseBody = new Uint8Array(optimizedTexture)
-		const outputFileName = resolveCanonicalTextureFileName(
+		return await invokeOptimizeTexturesFunction({
+			inputBuffer: new Uint8Array(requestBuffer),
+			textureIndex,
 			textureName,
-			outputMimeType
-		)
-
-		return new Response(responseBody, {
-			status: 200,
-			headers: {
-				'Content-Type': outputMimeType,
-				'Cache-Control': 'no-store',
-				'X-Texture-Index': String(textureIndex),
-				'X-Texture-Name': outputFileName,
-				'X-Texture-File-Name': outputFileName
-			}
+			optionsStr
 		})
 	} catch (error) {
-		console.error('Texture optimization failed:', error)
+		console.error('[optimize-textures] Request failed:', error)
 
-		let errorMessage = 'Texture optimization failed'
-		let statusCode = 500
-
-		if (error instanceof Error) {
-			if (error.message.includes('Sharp')) {
-				errorMessage =
-					'Sharp image processing library not available in server environment'
-			} else if (error.message.includes('Failed to load')) {
-				errorMessage = 'Invalid model file format'
-				statusCode = 400
-			} else {
-				errorMessage = error.message
-			}
-		}
+		const errorMessage =
+			error instanceof Error ? error.message : 'Texture optimization failed'
 
 		return data(
 			{
 				error: errorMessage,
 				details: error instanceof Error ? error.message : 'Unknown error'
 			},
-			{ status: statusCode, headers: { 'Cache-Control': 'no-store' } }
+			{ status: 500, headers: { 'Cache-Control': 'no-store' } }
 		)
 	}
 }
