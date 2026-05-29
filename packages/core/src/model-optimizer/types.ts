@@ -51,6 +51,13 @@ export interface NormalsOptions {
 }
 
 export interface TextureCompressOptions {
+	/**
+	 * Custom image encoder compatible with the sharp constructor API.
+	 * When provided, sharp is not imported — enabling use in environments
+	 * where native binaries are unavailable (Deno, Supabase Edge Functions).
+	 * Must implement: `(buffer) => { resize, webp, jpeg, png, toBuffer, metadata }`.
+	 */
+	encoder?: unknown
 	/** Maximum texture size */
 	resize?: [number, number]
 	/** Target texture format */

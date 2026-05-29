@@ -354,25 +354,30 @@ export class ModelOptimizer {
 
 		this.emitProgress('Compressing textures', 0)
 
-		let sharp: TextureCompressionEncoder
+		let encoder: TextureCompressionEncoder
 
-		try {
-			const sharpModule = await import(/* @vite-ignore */ 'sharp')
-			sharp = sharpModule.default || sharpModule
+		if (options.encoder) {
+			// Use caller-provided encoder (e.g. imagescript wrapper in Deno/edge environments)
+			encoder = options.encoder as TextureCompressionEncoder
+		} else {
+			try {
+				const sharpModule = await import(/* @vite-ignore */ 'sharp')
+				encoder = sharpModule.default || sharpModule
 
-			if (typeof sharp !== 'function') {
-				throw new Error('Sharp is not available or not properly installed')
+				if (typeof encoder !== 'function') {
+					throw new Error('Sharp is not available or not properly installed')
+				}
+			} catch (error) {
+				console.warn(
+					'Sharp-based compression failed, applying basic optimization:',
+					error
+				)
+				await this.applyBasicTextureOptimization(options)
+				return
 			}
-		} catch (error) {
-			console.warn(
-				'Sharp-based compression failed, applying basic optimization:',
-				error
-			)
-			await this.applyBasicTextureOptimization(options)
-			return
 		}
 
-		const { serverOptions, ...textureCompressOptions } = options
+		const { serverOptions, encoder: _encoder, ...textureCompressOptions } = options
 		const expectedMimeType = targetFormatToMimeType(
 			textureCompressOptions.targetFormat
 		)
@@ -381,7 +386,7 @@ export class ModelOptimizer {
 			targetFormat: textureCompressOptions.targetFormat,
 			quality: textureCompressOptions.quality,
 			resize: textureCompressOptions.resize,
-			sharpAvailable: typeof sharp === 'function'
+			encoderAvailable: typeof encoder === 'function'
 		})
 
 		if (!this._document) {
@@ -405,7 +410,7 @@ export class ModelOptimizer {
 
 			try {
 				await compressTexture(texture, {
-					encoder: sharp,
+					encoder,
 					targetFormat: textureCompressOptions.targetFormat,
 					quality: textureCompressOptions.quality,
 					resize: textureCompressOptions.resize
