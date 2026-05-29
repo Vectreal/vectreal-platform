@@ -156,6 +156,23 @@ const useOptimizeModel = () => {
 		[]
 	)
 
+	/** Replaces the optimizer's document with the GLB bytes returned by the Web Worker. */
+	const loadFromGlbBuffer = useCallback(
+		async (buffer: Uint8Array): Promise<void> => {
+			dispatch({ type: 'LOAD_START' })
+			try {
+				await optimizerRef.current.loadFromBuffer(buffer)
+				const report = await optimizerRef.current.getReport()
+				dispatch({ type: 'LOAD_SUCCESS', payload: { report } })
+			} catch (err) {
+				dispatch({ type: 'LOAD_ERROR', payload: err as Error })
+				console.error('Error loading GLB buffer into optimizer:', err)
+				throw err
+			}
+		},
+		[]
+	)
+
 	/**
 	 * Simplifies the loaded model by reducing polygon count using MeshoptSimplifier.
 	 * This reduces file size and improves rendering performance while maintaining visual quality.
@@ -377,6 +394,8 @@ const useOptimizeModel = () => {
 		load,
 
 		loadFromServerSceneData,
+
+		loadFromGlbBuffer,
 
 		/**
 		 * Retrieves the current model as a binary Uint8Array in glTF (.glb) format.

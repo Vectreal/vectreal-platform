@@ -4,6 +4,12 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
+import type {
+	WorkerInputMessage,
+	WorkerOptimizationOptions,
+	WorkerOutputMessage,
+} from '../../../workers/optimization.worker.types'
+
 import {
 	createBillingLimitErrorFromResponse,
 	isBillingLimitError,
@@ -200,6 +206,63 @@ async function requestOptimizationRunQuota(
 }
 
 /**
+ * Runs geometry-level optimizations (simplify/dedup/quantize/normals) in a Web
+ * Worker so the main thread stays responsive. Texture compression is excluded —
+ * it routes to the Supabase Edge Function separately.
+ *
+ * @param inputBuffer  Current model as GLB bytes
+ * @param options      Which non-texture steps to run
+ * @param onProgress   Called with step label + 0–100 progress each update
+ * @returns            Optimized GLB bytes
+ */
+async function runGeometryOptimizationsInWorker(
+	inputBuffer: Uint8Array,
+	options: WorkerOptimizationOptions,
+	onProgress: (step: string, progress: number) => void
+): Promise<Uint8Array> {
+	return new Promise<Uint8Array>((resolve, reject) => {
+		const worker = new Worker(
+			new URL('../../../workers/optimization.worker.ts', import.meta.url),
+			{ type: 'module' }
+		)
+
+		worker.onmessage = (event: MessageEvent<WorkerOutputMessage>) => {
+			const msg = event.data
+			switch (msg.type) {
+				case 'progress':
+					onProgress(msg.step, msg.progress)
+					break
+				case 'done':
+					worker.terminate()
+					resolve(new Uint8Array(msg.buffer))
+					break
+				case 'error':
+					worker.terminate()
+					reject(new Error(msg.message))
+					break
+			}
+		}
+
+		worker.onerror = (err) => {
+			worker.terminate()
+			reject(new Error(err.message ?? 'Optimization worker crashed'))
+		}
+
+		// Transfer the buffer to the worker for zero-copy handoff
+		const transferBuffer = inputBuffer.buffer.slice(
+			inputBuffer.byteOffset,
+			inputBuffer.byteOffset + inputBuffer.byteLength
+		)
+		const msg: WorkerInputMessage = {
+			type: 'optimize',
+			buffer: transferBuffer,
+			options,
+		}
+		worker.postMessage(msg, [transferBuffer])
+	})
+}
+
+/**
  * Custom hook that encapsulates the optimization logic and state management
  */
 export const useOptimizationProcess = ({
@@ -212,14 +275,12 @@ export const useOptimizationProcess = ({
 	const {
 		isReady,
 		isPreparing,
-		simplifyOptimization,
 		texturesOptimization,
-		quantizeOptimization,
-		dedupOptimization,
-		normalsOptimization,
 		applyOptimization,
 		reset,
 		loadFromServerSceneData,
+		loadFromGlbBuffer,
+		getModel,
 		info,
 		report
 	} = optimizer
@@ -435,67 +496,111 @@ export const useOptimizationProcess = ({
 					}
 				}
 
-				for (let i = 0; i < optimizationOptions.length; i++) {
-					const option = optimizationOptions[i]
-					const stepLabel = STEP_LABELS[option.name] ?? option.name
+				// --- Geometry phase (Web Worker, non-blocking) ---
+				const geometryOptions = optimizationOptions.filter(
+					(o): o is Exclude<OptimizationOption, TextureOptimization> =>
+						o.name !== 'texture'
+				)
+				const textureOption = optimizationOptions.find(
+					(o): o is TextureOptimization => o.name === 'texture'
+				)
 
-					setOptimizingStep((prev) => ({ ...prev, current: stepLabel }))
-
-					try {
+				if (geometryOptions.length > 0) {
+					const workerOptions: WorkerOptimizationOptions = {}
+					for (const option of geometryOptions) {
 						if (option.name === 'simplification') {
-							await withTimeout(
-								simplifyOptimization(option),
-								OPTIMIZATION_STEP_TIMEOUT_MS,
-								'Simplification'
-							)
-							shouldConsumeOptimizationRun = true
-						} else if (option.name === 'texture') {
-							await withTimeout(
-								texturesOptimization(option),
-								OPTIMIZATION_STEP_TIMEOUT_MS,
-								'Texture optimization'
-							)
-							shouldConsumeOptimizationRun = true
+							workerOptions.simplify = {
+								enabled: true,
+								ratio: option.ratio,
+								error: option.error
+							}
 						} else if (option.name === 'quantize') {
-							await withTimeout(
-								quantizeOptimization(),
-								OPTIMIZATION_STEP_TIMEOUT_MS,
-								'Quantization'
-							)
-							shouldConsumeOptimizationRun = true
+							workerOptions.quantize = {
+								enabled: true,
+								quantizePosition: option.quantizePosition,
+								quantizeNormal: option.quantizeNormal,
+								quantizeColor: option.quantizeColor,
+								quantizeTexcoord: option.quantizeTexcoord
+							}
 						} else if (option.name === 'dedup') {
-							await withTimeout(
-								dedupOptimization(),
-								OPTIMIZATION_STEP_TIMEOUT_MS,
-								'Deduplication'
-							)
-							shouldConsumeOptimizationRun = true
+							workerOptions.dedup = {
+								enabled: true,
+								textures: option.textures,
+								materials: option.materials,
+								meshes: option.meshes,
+								accessors: option.accessors
+							}
 						} else if (option.name === 'normals') {
-							await withTimeout(
-								normalsOptimization(),
-								OPTIMIZATION_STEP_TIMEOUT_MS,
-								'Normals optimization'
-							)
-							shouldConsumeOptimizationRun = true
-						} else {
-							const unknownOption = option as OptimizationOption
-							console.warn(`Unknown optimization type: ${unknownOption.name}`)
+							workerOptions.normals = {
+								enabled: true,
+								overwrite: option.overwrite
+							}
+						}
+					}
+
+					const currentBuffer = await withTimeout(
+						getModel(),
+						MODEL_SYNC_TIMEOUT_MS,
+						'Model export for worker'
+					)
+					if (currentBuffer) {
+						let lastWorkerStep: string | null = null
+
+						const optimizedBuffer = await withTimeout(
+							runGeometryOptimizationsInWorker(
+								currentBuffer,
+								workerOptions,
+								(step, _progress) => {
+									if (step !== lastWorkerStep) {
+										if (lastWorkerStep) {
+											setOptimizingStep((prev) => ({
+												...prev,
+												completed: [...prev.completed, lastWorkerStep!]
+											}))
+										}
+										lastWorkerStep = step
+										setOptimizingStep((prev) => ({ ...prev, current: step }))
+									}
+								}
+							),
+							OPTIMIZATION_STEP_TIMEOUT_MS * geometryOptions.length,
+							'Geometry worker'
+						)
+
+						if (lastWorkerStep) {
+							setOptimizingStep((prev) => ({
+								...prev,
+								completed: [...prev.completed, lastWorkerStep!]
+							}))
 						}
 
+						await withTimeout(
+							loadFromGlbBuffer(optimizedBuffer),
+							MODEL_SYNC_TIMEOUT_MS,
+							'Worker result sync'
+						)
+						shouldConsumeOptimizationRun = true
+					}
+				}
+
+				// --- Texture phase (Supabase Edge Function via server) ---
+				if (textureOption) {
+					const stepLabel = STEP_LABELS['texture']
+					setOptimizingStep((prev) => ({ ...prev, current: stepLabel }))
+					try {
+						await withTimeout(
+							texturesOptimization(textureOption),
+							OPTIMIZATION_STEP_TIMEOUT_MS,
+							'Texture optimization'
+						)
+						shouldConsumeOptimizationRun = true
 						setOptimizingStep((prev) => ({
 							...prev,
 							completed: [...prev.completed, stepLabel]
 						}))
-
-						// Let UI update between optimizations
-						await new Promise<void>((resolve) =>
-							requestAnimationFrame(() => setTimeout(() => resolve(), 0))
-						)
 					} catch (error) {
-						console.error(`Error processing ${option.name}:`, error)
-
+						console.error('Error processing texture:', error)
 						if (
-							option.name === 'texture' &&
 							error instanceof Error &&
 							error.message.includes('failed for ') &&
 							!error.message.includes('failed for all textures')
@@ -587,14 +692,12 @@ export const useOptimizationProcess = ({
 			setOptimizationRuntime,
 			setUpgradeModal,
 			plannedOptimizations,
-			simplifyOptimization,
 			texturesOptimization,
-			quantizeOptimization,
-			dedupOptimization,
-			normalsOptimization,
 			applyOptimization,
 			reset,
 			loadFromServerSceneData,
+			loadFromGlbBuffer,
+			getModel,
 			calculateSceneBytes,
 			file?.sourcePackageBytes,
 			file?.sourceTextureBytes,
