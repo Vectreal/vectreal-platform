@@ -47,32 +47,36 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
  */
 
 import { encodeImage } from './encoder.ts'
-import { FORMAT_MIME, parseOptions, parseTextureIndex } from './types.ts'
+import { parseOptions, parseTextureIndex } from './types.ts'
 
 // ---------------------------------------------------------------------------
 // File-name helpers (mirrors logic in the React Router API route)
 // ---------------------------------------------------------------------------
 
 function mimeTypeToExtension(mimeType: string): string | null {
-  switch (mimeType.toLowerCase()) {
-    case 'image/webp': return 'webp'
-    case 'image/jpeg': return 'jpg'
-    case 'image/png': return 'png'
-    default: return null
-  }
+	switch (mimeType.toLowerCase()) {
+		case 'image/webp':
+			return 'webp'
+		case 'image/jpeg':
+			return 'jpg'
+		case 'image/png':
+			return 'png'
+		default:
+			return null
+	}
 }
 
 function replaceExtension(fileName: string, ext: string): string {
-  const lastDot = fileName.lastIndexOf('.')
-  const lastSlash = fileName.lastIndexOf('/')
-  return lastDot > lastSlash
-    ? `${fileName.slice(0, lastDot)}.${ext}`
-    : `${fileName}.${ext}`
+	const lastDot = fileName.lastIndexOf('.')
+	const lastSlash = fileName.lastIndexOf('/')
+	return lastDot > lastSlash
+		? `${fileName.slice(0, lastDot)}.${ext}`
+		: `${fileName}.${ext}`
 }
 
 function resolveOutputFileName(fileName: string, mimeType: string): string {
-  const ext = mimeTypeToExtension(mimeType)
-  return ext ? replaceExtension(fileName, ext) : fileName
+	const ext = mimeTypeToExtension(mimeType)
+	return ext ? replaceExtension(fileName, ext) : fileName
 }
 
 // ---------------------------------------------------------------------------
@@ -80,10 +84,10 @@ function resolveOutputFileName(fileName: string, mimeType: string): string {
 // ---------------------------------------------------------------------------
 
 function jsonError(message: string, status: number): Response {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-  })
+	return new Response(JSON.stringify({ error: message }), {
+		status,
+		headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
+	})
 }
 
 // ---------------------------------------------------------------------------
@@ -91,80 +95,88 @@ function jsonError(message: string, status: number): Response {
 // ---------------------------------------------------------------------------
 
 Deno.serve(async (req: Request) => {
-  if (req.method !== 'POST') {
-    return jsonError('Method not allowed', 405)
-  }
+	if (req.method !== 'POST') {
+		return jsonError('Method not allowed', 405)
+	}
 
-  const contentType = req.headers.get('content-type') ?? ''
-  if (!contentType.includes('application/octet-stream')) {
-    return jsonError(
-      'Unsupported content type. optimize-textures requires application/octet-stream payloads.',
-      415,
-    )
-  }
+	const contentType = req.headers.get('content-type') ?? ''
+	if (!contentType.includes('application/octet-stream')) {
+		return jsonError(
+			'Unsupported content type. optimize-textures requires application/octet-stream payloads.',
+			415
+		)
+	}
 
-  // Parse and validate request metadata from headers
-  let textureIndex: number
-  try {
-    textureIndex = parseTextureIndex(req.headers.get('x-texture-index'))
-  } catch (err) {
-    return jsonError(err instanceof Error ? err.message : 'Invalid textureIndex', 400)
-  }
+	// Parse and validate request metadata from headers
+	let textureIndex: number
+	try {
+		textureIndex = parseTextureIndex(req.headers.get('x-texture-index'))
+	} catch (err) {
+		return jsonError(
+			err instanceof Error ? err.message : 'Invalid textureIndex',
+			400
+		)
+	}
 
-  const textureName = (
-    req.headers.get('x-texture-file-name') ??
-    req.headers.get('x-texture-name') ??
-    ''
-  ).trim()
+	const textureName = (
+		req.headers.get('x-texture-file-name') ??
+		req.headers.get('x-texture-name') ??
+		''
+	).trim()
 
-  if (!textureName) {
-    return jsonError('Missing texture file name', 400)
-  }
+	if (!textureName) {
+		return jsonError('Missing texture file name', 400)
+	}
 
-  const options = parseOptions(req.headers.get('x-optimize-options') ?? '')
+	const options = parseOptions(req.headers.get('x-optimize-options') ?? '')
 
-  const body = await req.arrayBuffer()
-  if (!body.byteLength) {
-    return jsonError('Texture payload is empty', 400)
-  }
+	const body = await req.arrayBuffer()
+	if (!body.byteLength) {
+		return jsonError('Texture payload is empty', 400)
+	}
 
-  try {
-    const [maxWidth, maxHeight] = options.resize
-    const optimized = await encodeImage(new Uint8Array(body), {
-      format: options.targetFormat,
-      quality: options.quality,
-      maxWidth,
-      maxHeight,
-    })
+	try {
+		const [maxWidth, maxHeight] = options.resize
+		const { data: optimized, mimeType: outputMimeType } = await encodeImage(
+			new Uint8Array(body),
+			{
+				format: options.targetFormat,
+				quality: options.quality,
+				maxWidth,
+				maxHeight
+			}
+		)
 
-    if (!optimized.byteLength) {
-      throw new Error('Encoder produced an empty output payload')
-    }
+		if (!optimized.byteLength) {
+			throw new Error('Encoder produced an empty output payload')
+		}
 
-    const outputMimeType = FORMAT_MIME[options.targetFormat]
-    const outputFileName = resolveOutputFileName(textureName, outputMimeType)
+		const outputFileName = resolveOutputFileName(textureName, outputMimeType)
 
-    return new Response(optimized, {
-      status: 200,
-      headers: {
-        'Content-Type': outputMimeType,
-        'Cache-Control': 'no-store',
-        'X-Texture-Index': String(textureIndex),
-        'X-Texture-Name': outputFileName,
-        'X-Texture-File-Name': outputFileName,
-      },
-    })
-  } catch (err) {
-    console.error('[optimize-textures] Processing failed:', err)
-    return new Response(
-      JSON.stringify({
-        error: 'Texture optimization failed',
-        details: err instanceof Error ? err.message : 'Unknown error',
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-      },
-    )
-  }
+		return new Response(optimized, {
+			status: 200,
+			headers: {
+				'Content-Type': outputMimeType,
+				'Cache-Control': 'no-store',
+				'X-Texture-Index': String(textureIndex),
+				'X-Texture-Name': outputFileName,
+				'X-Texture-File-Name': outputFileName
+			}
+		})
+	} catch (err) {
+		console.error('[optimize-textures] Processing failed:', err)
+		return new Response(
+			JSON.stringify({
+				error: 'Texture optimization failed',
+				details: err instanceof Error ? err.message : 'Unknown error'
+			}),
+			{
+				status: 500,
+				headers: {
+					'Content-Type': 'application/json',
+					'Cache-Control': 'no-store'
+				}
+			}
+		)
+	}
 })

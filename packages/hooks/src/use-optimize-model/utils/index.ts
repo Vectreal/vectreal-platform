@@ -15,15 +15,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 // Texture optimization utilities
-export {
-	optimizeTextures,
-	performClientSideTextureOptimization,
-	performServerSideTextureOptimization,
-	shouldUseServerOptimization
-} from './texture-optimization'
+export { optimizeTextures } from './texture-optimization'
 
-// Validation utilities
-export {
-	validateResponseContentType,
-	validateServerResponse
-} from './validation'
+// Browser-native texture encoder
+export { createBrowserTextureEncoder } from './browser-texture-encoder'

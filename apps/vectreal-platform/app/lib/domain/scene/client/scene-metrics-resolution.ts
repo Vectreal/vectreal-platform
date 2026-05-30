@@ -33,6 +33,7 @@ interface NormalizedSceneMetricsRuntimeInput {
 export interface ResolvedSceneMetrics {
 	vertices: SceneMetricPair
 	primitives: SceneMetricPair
+	textureCount: SceneMetricPair
 	textureBytes: SceneMetricPair
 	sceneBytes: SceneMetricPair
 	hasImproved: boolean
@@ -99,8 +100,11 @@ const resolvePair = ({
 	const initial = selectFirstNumber(
 		asNumber(persistedInitial),
 		asNumber(runtimeInitial),
-		asNumber(reportInitial),
-		allowInfo ? asNumber(infoInitial) : null
+		// info.initial is captured as a snapshot before any optimization runs, so it's
+		// more reliable than report.before which can reflect a post-geometry-worker state
+		// when geometry ran in the Web Worker before texture optimization updated the report.
+		allowInfo ? asNumber(infoInitial) : null,
+		asNumber(reportInitial)
 	)
 
 	const current = selectFirstNumber(
@@ -154,9 +158,13 @@ export const resolveSceneMetrics = ({
 		runtime
 	})
 
+	// When a fresh optimization has run, trust info.optimized over stale persisted DB values.
+	// persistedCurrent reflects the *previous* save's optimized state, not the current run.
+	const stalePersistCurrent = hasAppliedOptimizations ? null : undefined
+
 	const vertices = resolvePair({
 		persistedInitial: stats?.baseline?.verticesCount,
-		persistedCurrent: stats?.optimized?.verticesCount,
+		persistedCurrent: stalePersistCurrent ?? stats?.optimized?.verticesCount,
 		reportInitial: allowReportBaseline ? report?.stats.vertices.before : null,
 		reportCurrent: allowReportCurrent ? report?.stats.vertices.after : null,
 		infoInitial: info?.initial.verticesCount,
@@ -166,7 +174,7 @@ export const resolveSceneMetrics = ({
 
 	const primitives = resolvePair({
 		persistedInitial: stats?.baseline?.primitivesCount,
-		persistedCurrent: stats?.optimized?.primitivesCount,
+		persistedCurrent: stalePersistCurrent ?? stats?.optimized?.primitivesCount,
 		reportInitial: allowReportBaseline ? report?.stats.triangles.before : null,
 		reportCurrent: allowReportCurrent ? report?.stats.triangles.after : null,
 		infoInitial: info?.initial.primitivesCount,
@@ -176,7 +184,7 @@ export const resolveSceneMetrics = ({
 
 	const meshes = resolvePair({
 		persistedInitial: stats?.baseline?.meshesCount,
-		persistedCurrent: stats?.optimized?.meshesCount,
+		persistedCurrent: stalePersistCurrent ?? stats?.optimized?.meshesCount,
 		reportInitial: allowReportBaseline ? report?.stats.meshes.before : null,
 		reportCurrent: allowReportCurrent ? report?.stats.meshes.after : null,
 		infoInitial: info?.initial.meshesCount,
@@ -186,7 +194,7 @@ export const resolveSceneMetrics = ({
 
 	const textureCount = resolvePair({
 		persistedInitial: stats?.baseline?.texturesCount,
-		persistedCurrent: stats?.optimized?.texturesCount,
+		persistedCurrent: stalePersistCurrent ?? stats?.optimized?.texturesCount,
 		reportInitial: allowReportBaseline
 			? report?.stats.texturesCount.before
 			: null,
@@ -254,6 +262,7 @@ export const resolveSceneMetrics = ({
 	return {
 		vertices,
 		primitives,
+		textureCount,
 		textureBytes,
 		sceneBytes,
 		hasImproved:

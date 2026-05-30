@@ -91,7 +91,8 @@ type SceneDetailsSummary = {
 	fileSizeBytes: number | null
 	assetCount: number
 	textureBytes: number | null
-	meshBytes: number | null
+	textureCount: number | null
+	meshesCount: number | null
 	verticesCount: number | null
 	assets: SceneAssetSummary[]
 }
@@ -184,10 +185,14 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 				? Object.keys(sceneAggregate.assetData).length
 				: 0),
 		textureBytes:
+			sceneAggregate?.stats?.additionalMetrics?.currentTextureBytes ??
+			sceneAggregate?.stats?.additionalMetrics?.initialTextureBytes ??
+			null,
+		textureCount:
 			sceneAggregate?.stats?.optimized?.texturesCount ??
 			sceneAggregate?.stats?.baseline?.texturesCount ??
 			null,
-		meshBytes:
+		meshesCount:
 			sceneAggregate?.stats?.optimized?.meshesCount ??
 			sceneAggregate?.stats?.baseline?.meshesCount ??
 			null,
@@ -745,16 +750,19 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 									Texture Size
 								</p>
 								<p className="mt-1 font-medium">
-									{formatBytes(sceneDetails.textureBytes)}
+									{sceneDetails.textureBytes != null
+										? formatBytes(sceneDetails.textureBytes)
+										: sceneDetails.textureCount != null
+											? `${sceneDetails.textureCount} textures`
+											: '-'}
 								</p>
 							</div>
 							<div className="bg-background/70 rounded-xl p-3">
 								<p className="text-muted-foreground text-[11px] uppercase">
-									Mesh Size
+									Meshes
 								</p>
 								<p className="mt-1 font-medium">
-									{formatBytes(sceneDetails.meshBytes)}
-								</p>
+									{sceneDetails.meshesCount ?? '-'}</p>
 							</div>
 						</div>
 					</section>
@@ -873,15 +881,19 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 								<div className="bg-muted/50 rounded-xl p-3">
 									<p className="text-muted-foreground text-xs">Texture Size</p>
 									<p className="font-medium">
-										{formatBytes(sceneDetails.textureBytes)}
+										{sceneDetails.textureBytes != null
+											? formatBytes(sceneDetails.textureBytes)
+											: sceneDetails.textureCount != null
+												? `${sceneDetails.textureCount} textures`
+												: '-'}
 									</p>
 								</div>
 								<div className="bg-muted/50 rounded-xl p-3">
 									<p className="text-muted-foreground text-xs">
-										Mesh Size / Vertices
+										Meshes / Vertices
 									</p>
 									<p className="font-medium">
-										{formatBytes(sceneDetails.meshBytes)} /{' '}
+										{sceneDetails.meshesCount ?? '-'} /{' '}
 										{sceneDetails.verticesCount ?? '-'}
 									</p>
 								</div>

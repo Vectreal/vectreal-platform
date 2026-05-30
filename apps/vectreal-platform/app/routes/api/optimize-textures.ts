@@ -36,51 +36,6 @@ import {
 	readGuestOptimizeQuotaSnapshot
 } from '../../lib/sessions/guest-optimize-quota-session.server'
 
-const mimeTypeToExtension = (mimeType: string): string | null => {
-	switch (mimeType.toLowerCase()) {
-		case 'image/webp':
-			return 'webp'
-		case 'image/jpeg':
-			return 'jpg'
-		case 'image/png':
-			return 'png'
-		default:
-			return null
-	}
-}
-
-const replaceFileExtension = (fileName: string, extension: string): string => {
-	const queryIndex = fileName.indexOf('?')
-	const hashIndex = fileName.indexOf('#')
-	const suffixStart = [queryIndex, hashIndex]
-		.filter((index) => index >= 0)
-		.reduce((min, index) => Math.min(min, index), Number.POSITIVE_INFINITY)
-	const hasSuffix = Number.isFinite(suffixStart)
-	const base = hasSuffix ? fileName.slice(0, suffixStart) : fileName
-	const suffix = hasSuffix ? fileName.slice(suffixStart) : ''
-	const lastSlash = base.lastIndexOf('/')
-	const lastDot = base.lastIndexOf('.')
-	const hasExtension = lastDot > lastSlash
-	const nextBase = hasExtension
-		? `${base.slice(0, lastDot)}.${extension}`
-		: `${base}.${extension}`
-
-	return `${nextBase}${suffix}`
-}
-
-const resolveCanonicalTextureFileName = (
-	fileName: string,
-	mimeType: string
-): string => {
-	const fileNameOnly = extractTextureFileName(fileName)
-	const extension = mimeTypeToExtension(mimeType)
-	if (!extension) {
-		return fileNameOnly
-	}
-
-	return replaceFileExtension(fileNameOnly, extension)
-}
-
 const extractTextureFileName = (value: string): string => {
 	const withoutQuery = value.split('?')[0] || value
 	const withoutHash = withoutQuery.split('#')[0] || withoutQuery
@@ -107,7 +62,7 @@ const isGenericTextureFileName = (value: string): boolean => {
  * are needed beyond what the app already requires for Supabase connectivity.
  */
 async function invokeOptimizeTexturesFunction(params: {
-	inputBuffer: Uint8Array
+	inputBuffer: Uint8Array<ArrayBuffer>
 	textureIndex: number
 	textureName: string
 	optionsStr: string
@@ -124,30 +79,35 @@ async function invokeOptimizeTexturesFunction(params: {
 	}
 
 	const functionUrl = `${supabaseUrl}/functions/v1/optimize-textures`
+	const body = new Blob([inputBuffer], {
+		type: 'application/octet-stream'
+	})
 
 	const fnResponse = await fetch(functionUrl, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/octet-stream',
-			'Authorization': `Bearer ${supabaseKey}`,
+			Authorization: `Bearer ${supabaseKey}`,
 			'X-Texture-Index': String(textureIndex),
 			'X-Texture-File-Name': textureName,
 			'X-Optimize-Options': optionsStr
 		},
-		body: inputBuffer
+		body
 	})
+
+	const responseBodyBytes = await fnResponse.arrayBuffer()
 
 	if (!fnResponse.ok && fnResponse.status !== 400) {
 		console.error(
 			`[optimize-textures] Edge function returned ${fnResponse.status}`,
-			await fnResponse.text().catch(() => '')
+			new TextDecoder().decode(responseBodyBytes)
 		)
 	}
 
 	const responseHeaders = new Headers(fnResponse.headers)
 	responseHeaders.set('Cache-Control', 'no-store')
 
-	return new Response(fnResponse.body, {
+	return new Response(responseBodyBytes, {
 		status: fnResponse.status,
 		headers: responseHeaders
 	})
@@ -291,6 +251,8 @@ export async function action({ request }: Route.ActionArgs) {
 			}
 		}
 
+		const serializedOptions = JSON.stringify(options)
+
 		const requestBuffer = await request.arrayBuffer()
 		if (!requestBuffer.byteLength) {
 			return data(
@@ -303,7 +265,7 @@ export async function action({ request }: Route.ActionArgs) {
 			inputBuffer: new Uint8Array(requestBuffer),
 			textureIndex,
 			textureName,
-			optionsStr
+			optionsStr: serializedOptions
 		})
 	} catch (error) {
 		console.error('[optimize-textures] Request failed:', error)

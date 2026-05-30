@@ -115,14 +115,14 @@ export const executeSceneSaveOrchestrator = async ({
 		| undefined
 
 	const currentDefaultCameraId =
-		currentSettings.camera?.cameras?.find(
-			(c) => !c.kind || c.kind === 'scene'
-		)?.cameraId ?? currentSettings.camera?.cameras?.[0]?.cameraId
+		currentSettings.camera?.cameras?.find((c) => !c.kind || c.kind === 'scene')
+			?.cameraId ?? currentSettings.camera?.cameras?.[0]?.cameraId
 	const lastSavedDefaultCameraId =
 		lastSavedSettings?.camera?.cameras?.find(
 			(c) => !c.kind || c.kind === 'scene'
 		)?.cameraId ?? lastSavedSettings?.camera?.cameras?.[0]?.cameraId
-	const defaultCameraChanged = currentDefaultCameraId !== lastSavedDefaultCameraId
+	const defaultCameraChanged =
+		currentDefaultCameraId !== lastSavedDefaultCameraId
 	const needsThumbnail = !sceneMetaState.thumbnailUrl || defaultCameraChanged
 
 	const thumbnailDataUrl = needsThumbnail ? await captureSceneThumbnail() : null
@@ -203,11 +203,11 @@ export const executeSceneSaveOrchestrator = async ({
 				imageMimeLookup
 			)
 
-			if (existingAssets?.[fileName]) {
+			if (existingAssets?.[descriptor.fileName]) {
 				const bytes = new Uint8Array(await descriptor.file.arrayBuffer())
 				const hash = await hashBytes(bytes)
-				if (hash === existingAssets[fileName].contentHash) {
-					return existingAssets[fileName].assetId
+				if (hash === existingAssets[descriptor.fileName].contentHash) {
+					return existingAssets[descriptor.fileName].assetId
 				}
 			}
 

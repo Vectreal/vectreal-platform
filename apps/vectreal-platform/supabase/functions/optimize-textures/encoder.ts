@@ -25,17 +25,23 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
  * but is never enlarged if it already fits within the bounds.
  */
 
-import { Image } from 'npm:imagescript@1.3.0'
+import { Image } from 'https://deno.land/x/imagescript@1.3.0/mod.ts'
 
 export interface EncodeOptions {
-  /** Target output format */
-  format: 'webp' | 'jpeg' | 'png'
-  /** Quality 0–100 */
-  quality: number
-  /** Scale down to fit within this width (never enlarges) */
-  maxWidth?: number
-  /** Scale down to fit within this height (never enlarges) */
-  maxHeight?: number
+	/** Target output format */
+	format: 'webp' | 'jpeg' | 'png'
+	/** Quality 0–100 */
+	quality: number
+	/** Scale down to fit within this width (never enlarges) */
+	maxWidth?: number
+	/** Scale down to fit within this height (never enlarges) */
+	maxHeight?: number
+}
+
+export interface EncodeResult {
+	data: Uint8Array
+	/** Actual MIME type of the encoded output (may differ from requested format) */
+	mimeType: string
 }
 
 /**
@@ -44,34 +50,45 @@ export interface EncodeOptions {
  *
  * @param input  Raw image bytes (PNG, JPEG, WebP, GIF, or BMP)
  * @param opts   Encode options
- * @returns      Encoded image bytes in the requested format
+ * @returns      Encoded image bytes and the actual MIME type used
+ *
+ * Note: WebP encoding is not available in the Deno-native imagescript build
+ * (the pure-TS/WASM module only ships PNG and JPEG codecs). WebP requests are
+ * transparently downgraded to JPEG, which still achieves strong compression
+ * vs the original PNG/JPEG source. The returned `mimeType` reflects what was
+ * actually produced so callers can set correct Content-Type headers.
  */
 export async function encodeImage(
-  input: Uint8Array,
-  opts: EncodeOptions,
-): Promise<Uint8Array> {
-  const img = await Image.decode(input)
+	input: Uint8Array,
+	opts: EncodeOptions
+): Promise<EncodeResult> {
+	const img = await Image.decode(input)
 
-  const { maxWidth, maxHeight, format, quality } = opts
+	const { maxWidth, maxHeight, format, quality } = opts
 
-  if (maxWidth || maxHeight) {
-    const scaleW = maxWidth ? maxWidth / img.width : Infinity
-    const scaleH = maxHeight ? maxHeight / img.height : Infinity
-    const scale = Math.min(scaleW, scaleH, 1) // clamp at 1 — never enlarge
-    if (scale < 1) {
-      img.resize(Math.round(img.width * scale), Math.round(img.height * scale))
-    }
-  }
+	if (maxWidth || maxHeight) {
+		const scaleW = maxWidth ? maxWidth / img.width : Infinity
+		const scaleH = maxHeight ? maxHeight / img.height : Infinity
+		const scale = Math.min(scaleW, scaleH, 1) // clamp at 1 — never enlarge
+		if (scale < 1) {
+			img.resize(Math.round(img.width * scale), Math.round(img.height * scale))
+		}
+	}
 
-  switch (format) {
-    case 'jpeg':
-      return img.encodeJPEG(quality) as Promise<Uint8Array>
-    case 'png':
-      return img.encodePNG() as Promise<Uint8Array>
-    case 'webp':
-    default:
-      return img.encodeWebP(quality) as Promise<Uint8Array>
-  }
+	switch (format) {
+		case 'png': {
+			const data = (await img.encodePNG()) as Uint8Array
+			return { data, mimeType: 'image/png' }
+		}
+		case 'webp':
+		// WebP codec is not bundled in the Deno imagescript module — fall back to JPEG.
+		// Falls through intentionally.
+		case 'jpeg':
+		default: {
+			const data = (await img.encodeJPEG(quality)) as Uint8Array
+			return { data, mimeType: 'image/jpeg' }
+		}
+	}
 }
 
 /**
@@ -84,46 +101,68 @@ export async function encodeImage(
  * in Deno/edge contexts when passed to ModelOptimizer.
  */
 export function createSharpCompatEncoder() {
-  return function sharpCompat(inputBuffer: Uint8Array | ArrayBuffer) {
-    const input = inputBuffer instanceof Uint8Array
-      ? inputBuffer
-      : new Uint8Array(inputBuffer)
+	return function sharpCompat(inputBuffer: Uint8Array | ArrayBuffer) {
+		const input =
+			inputBuffer instanceof Uint8Array
+				? inputBuffer
+				: new Uint8Array(inputBuffer)
 
-    let targetFormat: 'webp' | 'jpeg' | 'png' = 'webp'
-    let quality = 80
-    let maxWidth: number | undefined
-    let maxHeight: number | undefined
+		let targetFormat: 'webp' | 'jpeg' | 'png' = 'webp'
+		let quality = 80
+		let maxWidth: number | undefined
+		let maxHeight: number | undefined
 
-    const instance = {
-      resize(w?: number, h?: number, _opts?: unknown) {
-        maxWidth = w
-        maxHeight = h
-        return instance
-      },
-      webp(opts?: { quality?: number }) {
-        targetFormat = 'webp'
-        if (typeof opts?.quality === 'number') quality = opts.quality
-        return instance
-      },
-      jpeg(opts?: { quality?: number }) {
-        targetFormat = 'jpeg'
-        if (typeof opts?.quality === 'number') quality = opts.quality
-        return instance
-      },
-      png(opts?: { quality?: number }) {
-        targetFormat = 'png'
-        if (typeof opts?.quality === 'number') quality = opts.quality
-        return instance
-      },
-      async toBuffer(): Promise<Uint8Array> {
-        return encodeImage(input, { format: targetFormat, quality, maxWidth, maxHeight })
-      },
-      async metadata(): Promise<{ width: number; height: number; format: string }> {
-        const img = await Image.decode(input)
-        return { width: img.width, height: img.height, format: 'unknown' }
-      },
-    }
+		const instance = {
+			resize(w?: number, h?: number, _opts?: unknown) {
+				maxWidth = w
+				maxHeight = h
+				return instance
+			},
+			webp(opts?: { quality?: number }) {
+				targetFormat = 'webp'
+				if (typeof opts?.quality === 'number') quality = opts.quality
+				return instance
+			},
+			jpeg(opts?: { quality?: number }) {
+				targetFormat = 'jpeg'
+				if (typeof opts?.quality === 'number') quality = opts.quality
+				return instance
+			},
+			png(opts?: { quality?: number }) {
+				targetFormat = 'png'
+				if (typeof opts?.quality === 'number') quality = opts.quality
+				return instance
+			},
+			async toBuffer(): Promise<Uint8Array> {
+				const result = await encodeImage(input, {
+					format: targetFormat,
+					quality,
+					maxWidth,
+					maxHeight
+				})
+				return result.data
+			},
+			async toBufferWithMime(): Promise<{
+				data: Uint8Array
+				mimeType: string
+			}> {
+				return encodeImage(input, {
+					format: targetFormat,
+					quality,
+					maxWidth,
+					maxHeight
+				})
+			},
+			async metadata(): Promise<{
+				width: number
+				height: number
+				format: string
+			}> {
+				const img = await Image.decode(input)
+				return { width: img.width, height: img.height, format: 'unknown' }
+			}
+		}
 
-    return instance
-  }
+		return instance
+	}
 }

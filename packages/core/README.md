@@ -1,6 +1,6 @@
 # @vctrl/core
 
-Server-side 3D model processing for Node.js. This package provides the shared loading, optimization, and export pipeline used by other Vectreal packages.
+Isomorphic 3D model processing for Node.js and the browser. This package provides the shared loading, optimization, and export pipeline used by other Vectreal packages.
 
 ---
 
@@ -12,7 +12,7 @@ npm install @vctrl/core
 pnpm add @vctrl/core
 ```
 
-> `@vctrl/core` targets Node.js only. It uses [Sharp](https://sharp.pixelplumbing.com) for server-side texture compression, which requires a native build.
+> **Texture compression is encoder-injectable.** In Node.js, [Sharp](https://sharp.pixelplumbing.com) is used by default. In browser environments, pass `createBrowserTextureEncoder()` from `@vctrl/hooks` via `TextureCompressOptions.encoder` — it uses OffscreenCanvas and requires no native build or server call.
 
 ---
 
@@ -86,21 +86,21 @@ const optimizedBuffer = await optimizer.export()
 
 ### Methods
 
-| Method                      | Options                                                 | Description                                  |
-| --------------------------- | ------------------------------------------------------- | -------------------------------------------- |
-| `loadFromThreeJS(model)`    | -                                                       | Load a Three.js scene into the optimizer     |
-| `loadFromBuffer(buf)`       | -                                                       | Load GLB binary data                         |
-| `loadFromFile(path)`        | -                                                       | Load from file path                          |
-| `loadFromJSON(json)`        | -                                                       | Load serialized glTF JSON and resources      |
-| `simplify(opts)`            | `{ ratio: number }`                                     | Mesh simplification from 0.0 to 1.0          |
-| `deduplicate(opts)`         | `DedupOptions`                                          | Remove duplicate geometry and material data  |
-| `quantize(opts)`            | `QuantizeOptions`                                       | Reduce precision to reduce size              |
-| `optimizeNormals(opts)`     | `NormalsOptions`                                        | Recompute or normalize normal data           |
-| `compressTextures(opts)`    | `TextureCompressOptions`                                | Server-side texture compression              |
-| `optimizeAll(opts)`         | `{ simplify?, dedup?, quantize?, normals?, textures? }` | Run batch optimization passes                |
-| `getReport()`               | -                                                       | Return before and after optimization metrics |
-| `export()` / `exportJSON()` | -                                                       | Export optimized GLB or JSON glTF document   |
-| `hasModel()` / `reset()`    | -                                                       | Model state utilities                        |
+| Method                      | Options                                                 | Description                                                                                                |
+| --------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `loadFromThreeJS(model)`    | -                                                       | Load a Three.js scene into the optimizer                                                                   |
+| `loadFromBuffer(buf)`       | -                                                       | Load GLB binary data                                                                                       |
+| `loadFromFile(path)`        | -                                                       | Load from file path                                                                                        |
+| `loadFromJSON(json)`        | -                                                       | Load serialized glTF JSON and resources                                                                    |
+| `simplify(opts)`            | `{ ratio: number }`                                     | Mesh simplification from 0.0 to 1.0                                                                        |
+| `deduplicate(opts)`         | `DedupOptions`                                          | Remove duplicate geometry and material data                                                                |
+| `quantize(opts)`            | `QuantizeOptions`                                       | Reduce precision to reduce size                                                                            |
+| `optimizeNormals(opts)`     | `NormalsOptions`                                        | Recompute or normalize normal data                                                                         |
+| `compressTextures(opts)`    | `TextureCompressOptions`                                | Texture compression via injected encoder (Sharp in Node.js, OffscreenCanvas in browser via `@vctrl/hooks`) |
+| `optimizeAll(opts)`         | `{ simplify?, dedup?, quantize?, normals?, textures? }` | Run batch optimization passes                                                                              |
+| `getReport()`               | -                                                       | Return before and after optimization metrics                                                               |
+| `export()` / `exportJSON()` | -                                                       | Export optimized GLB or JSON glTF document                                                                 |
+| `hasModel()` / `reset()`    | -                                                       | Model state utilities                                                                                      |
 
 ### Optimization options reference
 
@@ -137,18 +137,14 @@ const optimizedBuffer = await optimizer.export()
 
 #### `compressTextures(options?: TextureCompressOptions)`
 
-| Option                  | Type                        | Current behavior                                                                |
-| ----------------------- | --------------------------- | ------------------------------------------------------------------------------- |
-| `resize`                | `[number, number]`          | Passed to `compressTexture()`                                                   |
-| `targetFormat`          | `'webp' \| 'jpeg' \| 'png'` | Passed to `compressTexture()`                                                   |
-| `quality`               | `number`                    | Passed to `compressTexture()`                                                   |
-| `requestTimeoutMs`      | `number`                    | Present in type but not consumed by the current `ModelOptimizer` implementation |
-| `maxTextureUploadBytes` | `number`                    | Present in type but not consumed by the current `ModelOptimizer` implementation |
-| `maxRetries`            | `number`                    | Present in type but not consumed by the current `ModelOptimizer` implementation |
-| `maxConcurrentRequests` | `number`                    | Present in type but not consumed by the current `ModelOptimizer` implementation |
-| `serverOptions`         | `ServerOptions`             | Accepted in type but stripped before local Sharp compression                    |
+| Option         | Type                        | Current behavior                             |
+| -------------- | --------------------------- | -------------------------------------------- |
+| `resize`       | `[number, number]`          | Target dimensions for texture resize         |
+| `targetFormat` | `'webp' \| 'jpeg' \| 'png'` | Output encoding format                       |
+| `quality`      | `number`                    | Encoder quality 0–100                        |
+| `encoder`      | `TextureCompressionEncoder` | Custom encoder; defaults to Sharp in Node.js |
 
-When Sharp is unavailable, `compressTextures` falls back to basic texture optimization using `dedup` and `prune` instead of throwing.
+When no encoder is available, `compressTextures` falls back to basic texture optimization using `dedup` and `prune` instead of throwing.
 
 #### `optimizeAll(options?)`
 

@@ -120,7 +120,7 @@ export default function App() {
 
 ## `useOptimizeModel`
 
-Runs mesh simplification and texture compression using [glTF-Transform](https://gltf-transform.dev) in a Web Worker.
+Runs mesh simplification, deduplication, quantization, and normals optimization using [glTF-Transform](https://gltf-transform.dev) — geometry passes run in a Web Worker. Texture compression runs in the main thread via browser-native OffscreenCanvas encoding.
 
 ```tsx
 import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
@@ -166,15 +166,15 @@ function Optimizer() {
 
 `useOptimizeModel` methods map directly to `@vctrl/core/model-optimizer` option types:
 
-| Method                 | Option fields                                                                                                                                                                                                                                        |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `simplifyOptimization` | `ratio?: number`, `error?: number`                                                                                                                                                                                                                   |
-| `dedupOptimization`    | `textures?: boolean`, `materials?: boolean`, `meshes?: boolean`, `accessors?: boolean`                                                                                                                                                               |
-| `quantizeOptimization` | `quantizePosition?: number`, `quantizeNormal?: number`, `quantizeColor?: number`, `quantizeTexcoord?: number`                                                                                                                                        |
-| `normalsOptimization`  | `overwrite?: boolean`                                                                                                                                                                                                                                |
-| `texturesOptimization` | `resize?: [number, number]`, `targetFormat?: 'webp' \| 'jpeg' \| 'png'`, `quality?: number`, `requestTimeoutMs?: number`, `maxTextureUploadBytes?: number`, `maxRetries?: number`, `maxConcurrentRequests?: number`, `serverOptions?: ServerOptions` |
+| Method                 | Option fields                                                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `simplifyOptimization` | `ratio?: number`, `error?: number`                                                                            |
+| `dedupOptimization`    | `textures?: boolean`, `materials?: boolean`, `meshes?: boolean`, `accessors?: boolean`                        |
+| `quantizeOptimization` | `quantizePosition?: number`, `quantizeNormal?: number`, `quantizeColor?: number`, `quantizeTexcoord?: number` |
+| `normalsOptimization`  | `overwrite?: boolean`                                                                                         |
+| `texturesOptimization` | `resize?: [number, number]`, `targetFormat?: 'webp' \| 'jpeg' \| 'png'`, `quality?: number`                   |
 
-`serverOptions` is provided by `@vctrl/core` and supports endpoint, API key, and headers.
+Texture compression runs browser-native via `OffscreenCanvas`. No server call is made.
 
 ---
 
