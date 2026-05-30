@@ -266,7 +266,11 @@ export const useOptimizationProcess = ({
 						MODEL_SYNC_TIMEOUT_MS,
 						'Model export for worker'
 					)
-					if (currentBuffer) {
+					if (!currentBuffer) {
+						toast.warning(
+							'Could not export the model for geometry optimization. Try reloading the scene.'
+						)
+					} else {
 						let lastWorkerStep: string | null = null
 
 						const optimizedBuffer = await withTimeout(

@@ -56,15 +56,15 @@ import type { ServerSceneData } from '@vctrl/core'
  * @example
  * const optimizer = useOptimizeModel()
  *
- * // Load a model
- * await optimizer.load(threeJsScene)
+ * // Load a GLB into the optimizer
+ * await optimizer.loadFromGlbBuffer(glbBytes)
  *
- * // Apply optimizations
- * await optimizer.simplifyOptimization({ ratio: 0.5 })
- * await optimizer.quantizeOptimization({ bits: 12 })
+ * // Geometry optimizations run via Web Worker (use-optimization-process.ts)
+ * // Texture compression runs browser-native via texturesOptimization()
+ * await optimizer.texturesOptimization({ targetFormat: 'webp', quality: 0.8 })
  *
- * // Get optimized model
- * const optimizedBinary = await optimizer.getModel()
+ * // Sync result back to the Three.js viewer
+ * await optimizer.applyOptimization()
  *
  * @returns Object containing optimization methods, state, and report data
  */

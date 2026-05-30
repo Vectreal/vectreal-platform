@@ -367,7 +367,14 @@ export async function deleteAssets(assetIds: string[]): Promise<void> {
 				.remove([asset.filePath])
 
 			if (error) {
-				throw new Error(error.message)
+				// File already gone from storage — still clean up the DB record.
+				if (/not found/i.test(error.message)) {
+					console.warn(
+						`Storage file not found for asset ${assetId}, removing DB record only`
+					)
+				} else {
+					throw new Error(error.message)
+				}
 			}
 
 			await db.delete(assets).where(eq(assets.id, assetId))

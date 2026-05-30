@@ -74,25 +74,11 @@ export async function runTextureCompression(
 		textureCompressOptions.targetFormat
 	)
 
-	console.log('Texture compression options:', {
-		targetFormat: textureCompressOptions.targetFormat,
-		quality: textureCompressOptions.quality,
-		resize: textureCompressOptions.resize,
-		encoderAvailable: typeof encoder === 'function'
-	})
-
 	const textures = document.getRoot().listTextures()
-	console.log('Before texture compression:')
-	textures.forEach((texture, i) => {
-		console.log(`Texture ${i}: ${texture.getMimeType() || 'unknown mime type'}`)
-	})
-
 	const failures: Array<{ index: number; reason: string }> = []
 
-	console.log('Compressing textures individually...')
 	for (let i = 0; i < textures.length; i++) {
 		const texture = textures[i]
-		console.log(`Processing texture ${i}/${textures.length}`)
 
 		try {
 			await compressTexture(texture, {
@@ -107,10 +93,6 @@ export async function runTextureCompression(
 					`expected ${expectedMimeType}, received ${texture.getMimeType() || 'unknown mime type'}`
 				)
 			}
-
-			console.log(
-				`Texture ${i} compressed successfully to ${texture.getMimeType()}`
-			)
 		} catch (error) {
 			failures.push({
 				index: i,
@@ -133,13 +115,6 @@ export async function runTextureCompression(
 			`Texture compression failed for ${failures.length} of ${textures.length} textures. ${failureSummary}`
 		)
 	}
-
-	console.log('All textures processed')
-
-	console.log('After texture compression:')
-	textures.forEach((texture, i) => {
-		console.log(`Texture ${i}: ${texture.getMimeType() || 'unknown mime type'}`)
-	})
 
 	emitProgress('Texture compression complete', 100)
 }

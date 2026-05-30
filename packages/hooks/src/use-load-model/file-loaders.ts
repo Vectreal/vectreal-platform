@@ -29,7 +29,9 @@ export const loadBinaryModel = async (
 		dispatch({ type: 'set-file', payload: loadedFile })
 		dispatch({ type: 'set-file-loading', payload: false })
 
-		if (optimizer) {
+		// USDZ files are ZIP archives — loadFromGlbBuffer validates GLB magic bytes
+		// and throws for any non-GLB binary. Skip optimizer loading for USDZ.
+		if (optimizer && fileType !== ModelFileTypes.usdz) {
 			const buffer = new Uint8Array(await file.arrayBuffer())
 			await optimizer.loadFromGlbBuffer(buffer)
 		}

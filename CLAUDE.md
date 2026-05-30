@@ -29,7 +29,7 @@ pnpm nx run vectreal-platform:drizzle-generate
 
 # Supabase (local) — includes DB, Auth, Storage, and Edge Function runtime
 pnpm supabase start
-pnpm supabase functions serve                    # serve optimize-textures at :54321/functions/v1/
+pnpm supabase functions serve                    # serve Edge Functions at :54321/functions/v1/
 pnpm nx run vectreal-platform:supabase-db-reset
 
 # Deploy DB schema
@@ -46,7 +46,7 @@ apps/vectreal-platform/    # Full-stack React Router v7 SSR app
 packages/
   viewer/                  # @vctrl/viewer — React 3D viewer component
   hooks/                   # @vctrl/hooks — browser-side model loading/optimization
-  core/                    # @vctrl/core — Node.js server-side model processing
+  core/                    # @vctrl/core — Isomorphic 3D model processing (Node.js + browser/Web Worker)
 shared/
   components/              # Shared Radix UI / shadcn-based component library
   utils/                   # Shared utility functions

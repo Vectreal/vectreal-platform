@@ -268,6 +268,13 @@ export class ModelOptimizer {
 			this.applyTransforms.bind(this)
 		)
 
+		// Sync URI and name to reflect the new MIME type after compression
+		// (e.g. .png → .webp), matching what the texture-naming helpers expect.
+		document
+			.getRoot()
+			.listTextures()
+			.forEach((texture, i) => this.syncTextureIdentity(texture, i))
+
 		this.appliedOptimizations.push('texture compression')
 	}
 

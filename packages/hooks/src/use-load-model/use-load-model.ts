@@ -262,7 +262,7 @@ function useLoadModel<
 				})
 
 				if (!res.ok) {
-					throw new Error(`Scene load failed: ${res.status} ${res.statusText}`)
+					throw new Error(`Server responded with ${res.status} ${res.statusText}`)
 				}
 
 				const envelope = (await res.json()) as ApiEnvelope<ServerScenePayload>
@@ -277,11 +277,9 @@ function useLoadModel<
 			} catch (error) {
 				console.error('Server scene loading failed:', error)
 				dispatch({ type: 'set-file-loading', payload: false })
-				eventSystem.emit(
-					'server-load-error',
-					normalizeServerLoadError(error, sceneId)
-				)
-				throw error
+				const structuredError = normalizeServerLoadError(error, sceneId)
+				eventSystem.emit('server-load-error', structuredError)
+				throw structuredError
 			}
 		},
 		[loadFromData, updateProgress]
