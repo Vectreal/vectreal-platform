@@ -24,6 +24,8 @@ import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signup-page'
 import { AuthErrorBoundary } from '../../components/errors'
+import { getReferralAttribution } from '../../lib/analytics/referral-attribution'
+import { captureServerEvent } from '../../lib/domain/analytics/server-events.server'
 import { checkAuthRateLimit } from '../../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { buildMeta } from '../../lib/seo'
@@ -148,7 +150,24 @@ export async function action({ request, context }: Route.ActionArgs) {
 	const captchaToken =
 		typeof turnstileToken === 'string' ? turnstileToken : undefined
 
+	const referrer =
+		typeof formData.get('referrer') === 'string'
+			? (formData.get('referrer') as string)
+			: ''
+	const utmSource =
+		typeof formData.get('utm_source') === 'string'
+			? (formData.get('utm_source') as string)
+			: ''
+
 	const { client, headers } = await createSupabaseClient(request)
+
+	// Build emailRedirectTo with referral attribution so confirm.ts can read it
+	const origin = new URL(request.url).origin
+	const confirmUrl = new URL(`${origin}/auth/confirm`)
+	confirmUrl.searchParams.set('type', 'signup')
+	confirmUrl.searchParams.set('next', '/onboarding')
+	if (referrer) confirmUrl.searchParams.set('referrer', referrer)
+	if (utmSource) confirmUrl.searchParams.set('utm_source', utmSource)
 
 	let signupData: Awaited<ReturnType<typeof client.auth.signUp>>['data']
 	let signupError: Awaited<ReturnType<typeof client.auth.signUp>>['error']
@@ -160,7 +179,8 @@ export async function action({ request, context }: Route.ActionArgs) {
 			password,
 			options: {
 				data: { name, tos_accepted_at: tosAcceptedAt },
-				captchaToken
+				captchaToken,
+				emailRedirectTo: confirmUrl.toString()
 			}
 		})
 		signupData = response.data
@@ -180,21 +200,29 @@ export async function action({ request, context }: Route.ActionArgs) {
 	}
 
 	if (signupData?.user) {
-		const posthog = (context as PostHogContext).posthog
-		posthog?.capture({
-			distinctId: signupData.user.id,
-			event: 'user_signed_up',
-			properties: { method: 'email', client_type: 'web' }
-		})
-
 		// If Supabase already confirmed the user (local dev with enable_confirmations=false),
 		// skip the confirm-pending gate and go straight to onboarding.
 		if (signupData.user.email_confirmed_at) {
+			const posthog = (context as PostHogContext).posthog
+			captureServerEvent(posthog, signupData.user.id, {
+				name: 'user_signed_up',
+				props: {
+					method: 'email',
+					referrer: referrer || undefined,
+					utm_source: utmSource || undefined
+				}
+			})
 			return redirect('/onboarding', { headers: new Headers(headers) })
 		}
 
-		const emailParam = encodeURIComponent(normalizedEmail)
-		return redirect(`/auth/confirm-pending?email=${emailParam}`, {
+		const confirmPendingUrl = new URL(
+			'/auth/confirm-pending',
+			new URL(request.url).origin
+		)
+		confirmPendingUrl.searchParams.set('email', normalizedEmail)
+		if (referrer) confirmPendingUrl.searchParams.set('referrer', referrer)
+		if (utmSource) confirmPendingUrl.searchParams.set('utm_source', utmSource)
+		return redirect(confirmPendingUrl.toString(), {
 			headers: new Headers(headers)
 		})
 	}
@@ -302,9 +330,17 @@ const SignupPage = ({ loaderData, actionData }: Route.ComponentProps) => {
 	const [confirmPassword, setConfirmPassword] = useState('')
 	const [tosChecked, setTosChecked] = useState(false)
 	const [tosShake, setTosShake] = useState(false)
+	const [referralData, setReferralData] = useState<{
+		referrer?: string
+		utm_source?: string
+	}>({})
 
 	const { turnstileToken, resetTurnstile, hasTurnstile } =
 		useOutletContext<AuthLayoutContext>()
+
+	useEffect(() => {
+		setReferralData(getReferralAttribution())
+	}, [])
 
 	const nameId = useId()
 	const emailId = useId()
@@ -400,6 +436,20 @@ const SignupPage = ({ loaderData, actionData }: Route.ComponentProps) => {
 						name="cf-turnstile-response"
 						value={turnstileToken ?? ''}
 					/>
+					{referralData.referrer && (
+						<input
+							type="hidden"
+							name="referrer"
+							value={referralData.referrer}
+						/>
+					)}
+					{referralData.utm_source && (
+						<input
+							type="hidden"
+							name="utm_source"
+							value={referralData.utm_source}
+						/>
+					)}
 
 					{/* Name */}
 					<motion.div className="mb-4" {...fieldVariants(0)}>

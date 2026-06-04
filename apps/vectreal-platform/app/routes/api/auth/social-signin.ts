@@ -28,17 +28,18 @@ export async function action({ request }: Route.ActionArgs) {
 
 	const provider = formData.get('provider')
 	const backURL = formData.get('backURL')
+
 	const requestUrl = new URL(request.url)
 	const appOrigin =
 		process.env.APPLICATION_URL || process.env.VECTREAL_URL || requestUrl.origin
 	const applicationUrl = String(appOrigin)
 
-	const providerValue = typeof provider === 'string' ? provider : ''
+	// Rate-limit before provider validation so invalid-provider probes are throttled too.
 	const rateLimitResult = checkAuthRateLimit(request, {
 		bucket: 'auth-social-signin',
 		maxRequests: 30,
 		windowMs: 60 * 1000,
-		keyParts: [providerValue || 'unknown']
+		keyParts: [typeof provider === 'string' ? provider : 'unknown']
 	})
 
 	if (rateLimitResult.limited) {
@@ -51,6 +52,10 @@ export async function action({ request }: Route.ActionArgs) {
 				}
 			}
 		)
+	}
+
+	if (typeof provider !== 'string' || !OAUTH_PROVIDERS.has(provider)) {
+		return ApiResponse.badRequest('Invalid provider')
 	}
 
 	const turnstileToken = formData.get('cf-turnstile-response')
@@ -67,13 +72,15 @@ export async function action({ request }: Route.ActionArgs) {
 		: applicationUrl
 
 	const next = getSafeNextPath(backURL, requestUrl)
-	const redirectTo = `${cleanAppUrl}/auth/callback?next=${encodeURIComponent(next)}`
+	let redirectTo = `${cleanAppUrl}/auth/callback?next=${encodeURIComponent(next)}`
 
-	if (typeof provider !== 'string' || !OAUTH_PROVIDERS.has(provider)) {
-		console.warn('[auth/social-signin] rejected invalid provider', {
-			provider: providerValue || 'missing'
-		})
-		return ApiResponse.badRequest('Invalid provider')
+	const referrer = formData.get('referrer')
+	const utm_source = formData.get('utm_source')
+	if (typeof referrer === 'string' && referrer) {
+		redirectTo += `&referrer=${encodeURIComponent(referrer)}`
+	}
+	if (typeof utm_source === 'string' && utm_source) {
+		redirectTo += `&utm_source=${encodeURIComponent(utm_source)}`
 	}
 
 	const { client, headers } = await createSupabaseClient(request)

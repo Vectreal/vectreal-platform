@@ -41,7 +41,7 @@ export default function PricingPage() {
 	const posthog = usePostHog()
 
 	useEffect(() => {
-		posthog?.capture('view_pricing', { source: 'direct' })
+		posthog?.capture('pricing_page_viewed', { source: 'direct', client_type: 'web' })
 	}, [posthog])
 
 	return (

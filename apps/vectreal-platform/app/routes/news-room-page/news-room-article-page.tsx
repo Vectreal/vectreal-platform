@@ -126,7 +126,10 @@ export default function NewsRoomArticlePage({
 			slug: article.slug,
 			category: article.category,
 			reading_time_minutes: article.readingTimeMinutes,
-			client_type: 'web'
+			client_type: 'web',
+			referrer: document.referrer || undefined,
+			utm_source:
+				new URLSearchParams(window.location.search).get('utm_source') || undefined
 		})
 	}, [
 		article.category,

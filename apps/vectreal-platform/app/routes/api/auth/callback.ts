@@ -1,38 +1,15 @@
 import { redirect } from 'react-router'
 
 import { Route } from './+types/callback'
+import { captureServerEvent } from '../../../lib/domain/analytics/server-events.server'
+import {
+	buildSigninErrorRedirect,
+	getSafeNextPath
+} from '../../../lib/domain/auth/auth-redirect.server'
 import { initializeUserDefaults } from '../../../lib/domain/user/user-repository.server'
 import { createSupabaseClient } from '../../../lib/supabase.server'
 
 import type { PostHogContext } from '../../../lib/posthog/posthog-middleware'
-
-const SAFE_NEXT_PATH_PREFIXES = [
-	'/dashboard',
-	'/publisher',
-	'/onboarding',
-	'/home'
-]
-
-function getSafeNextPath(next: string | null): string {
-	if (!next || !next.startsWith('/')) {
-		return '/dashboard'
-	}
-
-	if (
-		SAFE_NEXT_PATH_PREFIXES.some(
-			(prefix) => next === prefix || next.startsWith(`${prefix}/`)
-		)
-	) {
-		return next
-	}
-
-	return '/dashboard'
-}
-
-function buildSigninErrorRedirect(errorCode: string, next: string) {
-	const params = new URLSearchParams({ error: errorCode, next })
-	return `/sign-in?${params.toString()}`
-}
 
 export async function loader({ request, context }: Route.LoaderArgs) {
 	const requestUrl = new URL(request.url)
@@ -52,9 +29,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		})
 		return redirect(
 			buildSigninErrorRedirect('provider_exchange_failed', next),
-			{
-				headers
-			}
+			{ headers }
 		)
 	}
 
@@ -67,23 +42,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		})
 	}
 
-	try {
-		const userWithDefaults = await initializeUserDefaults(userData.user)
-		const posthog = (context as PostHogContext).posthog
-		posthog?.capture({
-			distinctId: userData.user.id,
-			event: 'user_signed_in',
-			properties: {
-				method: 'oauth',
-				client_type: 'web'
-			}
-		})
+	let userWithDefaults: Awaited<ReturnType<typeof initializeUserDefaults>>
 
-		if (userWithDefaults.isNewUser && next === '/dashboard') {
-			return redirect('/onboarding', {
-				headers: new Headers(headers)
-			})
-		}
+	try {
+		userWithDefaults = await initializeUserDefaults(userData.user)
 	} catch (dbError) {
 		console.error('[auth/callback] user initialization failed', {
 			error: dbError,
@@ -104,7 +66,34 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		})
 	}
 
-	return redirect(next, {
-		headers: new Headers(headers)
+	const posthog = (context as PostHogContext).posthog
+	captureServerEvent(posthog, userData.user.id, {
+		name: 'user_signed_in',
+		props: { method: 'oauth' }
 	})
+
+	if (userWithDefaults.isNewUser) {
+		const referrer = requestUrl.searchParams.get('referrer')
+		const utm_source = requestUrl.searchParams.get('utm_source')
+		captureServerEvent(posthog, userData.user.id, {
+			name: 'user_signed_up',
+			props: {
+				method: 'oauth',
+				referrer: referrer || undefined,
+				utm_source: utm_source || undefined
+			}
+		})
+	}
+
+	// Send ALL new users through onboarding, not just those arriving at /dashboard.
+	// Preserve next so onboarding can redirect to the original deep-link destination after completion.
+	if (userWithDefaults.isNewUser && next !== '/onboarding') {
+		const onboardingUrl =
+			next === '/dashboard'
+				? '/onboarding'
+				: `/onboarding?next=${encodeURIComponent(next)}`
+		return redirect(onboardingUrl, { headers: new Headers(headers) })
+	}
+
+	return redirect(next, { headers: new Headers(headers) })
 }

@@ -120,7 +120,8 @@ export function ConsentProvider({
 							: 'cookie_consent_rejected',
 						{
 							functional: choices.functional,
-							marketing: choices.marketing
+							marketing: choices.marketing,
+							client_type: 'web'
 						}
 					)
 				}

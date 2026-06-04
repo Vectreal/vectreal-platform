@@ -20,6 +20,7 @@ import {
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/confirm-pending'
+import { clearReferralAttribution } from '../lib/analytics/referral-attribution'
 import { AuthErrorBoundary } from '../components/errors'
 import { checkAuthRateLimit } from '../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../lib/http/csrf.server'
@@ -61,8 +62,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url)
 	const email = url.searchParams.get('email') ?? ''
 	const next = url.searchParams.get('next') ?? '/onboarding'
+	const referrer = url.searchParams.get('referrer') ?? ''
+	const utm_source = url.searchParams.get('utm_source') ?? ''
 
-	return data({ email, next }, { headers })
+	return data({ email, next, referrer, utm_source }, { headers })
 }
 
 // ─── Action ───────────────────────────────────────────────────────────────────
@@ -103,11 +106,22 @@ export async function action({ request }: Route.ActionArgs) {
 	const captchaToken =
 		typeof turnstileToken === 'string' ? turnstileToken : undefined
 
+	// Rebuild emailRedirectTo with referral params so the resent confirmation
+	// link preserves attribution through to confirm.ts.
+	const origin = new URL(request.url).origin
+	const confirmUrl = new URL(`${origin}/auth/confirm`)
+	confirmUrl.searchParams.set('type', 'signup')
+	confirmUrl.searchParams.set('next', '/onboarding')
+	const referrer = formData.get('referrer')
+	const utm_source = formData.get('utm_source')
+	if (typeof referrer === 'string' && referrer) confirmUrl.searchParams.set('referrer', referrer)
+	if (typeof utm_source === 'string' && utm_source) confirmUrl.searchParams.set('utm_source', utm_source)
+
 	const { client, headers } = await createSupabaseClient(request)
 	const { error } = await client.auth.resend({
 		type: 'signup',
 		email: email.trim().toLowerCase(),
-		options: { captchaToken }
+		options: { captchaToken, emailRedirectTo: confirmUrl.toString() }
 	})
 
 	if (error) {
@@ -133,12 +147,16 @@ function maskEmail(email: string): string {
 const RESEND_COOLDOWN_SECONDS = 60
 
 export default function ConfirmPending() {
-	const { email } = useLoaderData<typeof loader>()
+	const { email, referrer, utm_source } = useLoaderData<typeof loader>()
 	const fetcher = useFetcher<ActionData>()
 	const { turnstileToken, resetTurnstile, hasTurnstile } =
 		useOutletContext<AuthLayoutContext>()
 
 	const [cooldown, setCooldown] = useState(0)
+
+	useEffect(() => {
+		clearReferralAttribution()
+	}, [])
 
 	const isSending = fetcher.state !== 'idle'
 	const wasSent = fetcher.data?.sent === true
@@ -227,6 +245,8 @@ export default function ConfirmPending() {
 						<fetcher.Form method="post">
 							<AuthenticityTokenInput />
 							<input type="hidden" name="email" value={email} />
+							{referrer && <input type="hidden" name="referrer" value={referrer} />}
+							{utm_source && <input type="hidden" name="utm_source" value={utm_source} />}
 							{turnstileToken && (
 								<input
 									type="hidden"

@@ -271,7 +271,8 @@ export default function BillingUpgradeSuccessPage() {
 		posthog?.capture('plan_upgrade_completed', {
 			from_plan: fromPlan ?? 'free',
 			to_plan: planId,
-			billing_period: billingPeriod ?? 'monthly'
+			billing_period: billingPeriod ?? 'monthly',
+			client_type: 'web'
 		})
 	}, [planId, fromPlan, billingPeriod, posthog])
 

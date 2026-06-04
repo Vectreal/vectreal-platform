@@ -3,6 +3,7 @@ import {
 	SidebarProvider,
 	SidebarTrigger
 } from '@shared/components/ui/sidebar'
+import { usePostHog } from '@posthog/react'
 import { Provider } from 'jotai/react'
 import { Loader2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -110,12 +111,19 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 
 const DashboardLayout = () => {
 	const { user, sidebarProjects, plan } = useLoaderData<typeof loader>()
+	const posthog = usePostHog()
 	const location = useLocation()
 	const navigation = useNavigation()
 	const revalidator = useRevalidator()
 	useAuthResumeRevalidation({ enabled: Boolean(user) })
 	const fetchers = useFetchers()
 	const [sidebarOpen, setSidebarOpen] = useState(true)
+
+	const orgId = sidebarProjects[0]?.organizationId
+	useEffect(() => {
+		if (!orgId) return
+		posthog?.group('organization', orgId, { plan })
+	}, [orgId, plan]) // eslint-disable-line react-hooks/exhaustive-deps
 	const [showSkeleton, setShowSkeleton] = useState(false)
 
 	const handleSidebarOpenChange = (open: boolean) => {

@@ -151,7 +151,10 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 			has_query: Boolean(filters.query),
 			has_category_filter: Boolean(filters.category),
 			has_tag_filter: Boolean(filters.tag),
-			sort_mode: filters.sort
+			sort_mode: filters.sort,
+			referrer: document.referrer || undefined,
+			utm_source:
+				new URLSearchParams(window.location.search).get('utm_source') || undefined
 		})
 	}, [
 		articles.length,

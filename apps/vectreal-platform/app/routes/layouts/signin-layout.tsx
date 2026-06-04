@@ -4,7 +4,7 @@ import { Button } from '@shared/components/ui/button'
 import { Separator } from '@shared/components/ui/separator'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate, useSubmit } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 
@@ -12,6 +12,10 @@ import { Route } from './+types/signin-layout'
 import { AuthErrorBoundary } from '../../components/errors'
 import HeroScene from '../../components/home/hero-scene'
 import { TurnstileWidget } from '../../components/turnstile-widget'
+import {
+	getReferralAttribution,
+	saveReferralAttribution
+} from '../../lib/analytics/referral-attribution'
 
 export interface AuthLayoutContext {
 	turnstileToken: string | null
@@ -52,6 +56,10 @@ const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 
 	const isSignUp = location.pathname.endsWith('/sign-up')
 
+	useEffect(() => {
+		saveReferralAttribution()
+	}, [])
+
 	const [loadingProvider, setLoadingProvider] = useState<
 		null | 'google' | 'github'
 	>(null)
@@ -75,6 +83,12 @@ const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 		if (captchaToken) {
 			formData.append('cf-turnstile-response', captchaToken)
 		}
+		const { referrer, utm_source } = getReferralAttribution()
+		if (referrer) formData.append('referrer', referrer)
+		if (utm_source) formData.append('utm_source', utm_source)
+		// Attribution is cleared in onboarding-page on mount, after user_signed_up
+		// has already fired server-side. Clearing here would lose attribution if
+		// OAuth fails or the user cancels and returns to this page.
 		// Use a full navigation submit so external OAuth redirects happen in the
 		// top-level browsing context instead of a background fetch request.
 		submit(formData, {

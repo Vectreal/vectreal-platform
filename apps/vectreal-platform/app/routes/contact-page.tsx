@@ -169,7 +169,10 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 		posthog?.capture('contact_page_viewed', {
 			source,
 			is_authenticated: isAuthenticated,
-			client_type: 'web'
+			client_type: 'web',
+			referrer: document.referrer || undefined,
+			utm_source:
+				new URLSearchParams(window.location.search).get('utm_source') || undefined
 		})
 	}, [isAuthenticated, posthog, source])
 

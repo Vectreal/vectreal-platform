@@ -2,38 +2,16 @@ import { type EmailOtpType } from '@supabase/supabase-js'
 import { redirect } from 'react-router'
 
 import { Route } from './+types/confirm'
+import { captureServerEvent } from '../../../lib/domain/analytics/server-events.server'
+import {
+	buildSigninErrorRedirect,
+	getSafeNextPath
+} from '../../../lib/domain/auth/auth-redirect.server'
 import { createSupabaseClient } from '../../../lib/supabase.server'
 
-const SAFE_NEXT_PATH_PREFIXES = [
-	'/dashboard',
-	'/publisher',
-	'/onboarding',
-	'/home',
-	'/reset-password'
-]
+import type { PostHogContext } from '../../../lib/posthog/posthog-middleware'
 
-function getSafeNextPath(next: string | null): string {
-	if (!next || !next.startsWith('/')) {
-		return '/dashboard'
-	}
-
-	if (
-		SAFE_NEXT_PATH_PREFIXES.some(
-			(prefix) => next === prefix || next.startsWith(`${prefix}/`)
-		)
-	) {
-		return next
-	}
-
-	return '/dashboard'
-}
-
-function buildSigninErrorRedirect(errorCode: string, next: string) {
-	const searchParams = new URLSearchParams({ error: errorCode, next })
-	return `/sign-in?${searchParams.toString()}`
-}
-
-export const loader = async ({ request }: Route.LoaderArgs) => {
+export const loader = async ({ request, context }: Route.LoaderArgs) => {
 	const { searchParams } = new URL(request.url)
 	const token_hash = searchParams.get('token_hash')
 	const type = searchParams.get('type') as EmailOtpType | null
@@ -42,12 +20,23 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 	const { client, headers } = await createSupabaseClient(request)
 
 	if (token_hash && type) {
-		const { error } = await client.auth.verifyOtp({
-			type,
-			token_hash
-		})
+		const { error, data } = await client.auth.verifyOtp({ type, token_hash })
 		if (!error) {
-			// signup lands on onboarding so the user's org/project gets initialised.
+			if (type === 'signup' && !data.user) {
+				console.warn('[auth/confirm] signup OTP verified but no user returned', {
+					token_hash_prefix: token_hash.slice(0, 8)
+				})
+			}
+			if (type === 'signup' && data.user) {
+				const referrer = searchParams.get('referrer') || undefined
+				const utm_source = searchParams.get('utm_source') || undefined
+				const posthog = (context as PostHogContext).posthog
+				captureServerEvent(posthog, data.user.id, {
+					name: 'user_signed_up',
+					props: { method: 'email', referrer, utm_source }
+				})
+			}
+
 			const destination = type === 'signup' ? '/onboarding' : next
 			return redirect(destination, { headers })
 		}

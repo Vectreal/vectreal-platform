@@ -9,8 +9,10 @@ import {
 import { Button } from '@shared/components/ui/button'
 import { CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
+import { usePostHog } from '@posthog/react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Check, Globe, Sparkle, Wrench } from 'lucide-react'
+import { useEffect } from 'react'
 import { Link } from 'react-router'
 
 import { Route } from './+types/home-page'
@@ -44,6 +46,16 @@ export function meta(_: Route.MetaArgs) {
 
 const HomePage = ({ loaderData }: Route.ComponentProps) => {
 	const isMobile = useIsMobile(loaderData.isMobile)
+	const posthog = usePostHog()
+
+	useEffect(() => {
+		posthog?.capture('home_page_viewed', {
+			client_type: 'web',
+			referrer: document.referrer || undefined,
+			utm_source:
+				new URLSearchParams(window.location.search).get('utm_source') || undefined
+		})
+	}, []) // eslint-disable-line react-hooks/exhaustive-deps
 
 	return (
 		<main className="bg-background">

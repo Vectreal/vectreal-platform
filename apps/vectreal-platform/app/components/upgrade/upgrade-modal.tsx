@@ -79,18 +79,20 @@ export function UpgradeModal() {
 	// Fire analytics events when the modal transitions from closed to open
 	useEffect(() => {
 		if (state.open && !wasOpenRef.current) {
-			posthog?.capture('upgrade_modal_open', {
+			posthog?.capture('upgrade_modal_opened', {
 				reason: state.reason,
 				plan: state.plan,
 				limit_key: state.limitKey,
-				action_attempted: state.actionAttempted
+				action_attempted: state.actionAttempted,
+				client_type: 'web'
 			})
 
 			if (state.reason === 'quota_exceeded') {
 				posthog?.capture('limit_gate_shown', {
 					limit_key: state.limitKey ?? 'unknown',
 					plan: state.plan,
-					action_attempted: state.actionAttempted
+					action_attempted: state.actionAttempted,
+					client_type: 'web'
 				})
 			}
 		}
