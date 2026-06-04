@@ -26,8 +26,10 @@ if (
 		// captured without storing anything on the device (DSGVO-compliant).
 		// ConsentProvider switches persistence to 'localStorage+cookie' once the
 		// user accepts analytics.
-		persistence: 'memory'
+		persistence: 'memory',
+		capture_pageview: false
 	})
+	posthog.register({ client_type: 'web' })
 
 	// Expose posthog globally so ConsentProvider can call opt_in/opt_out
 	// without importing posthog-js directly in every component.

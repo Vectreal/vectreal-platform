@@ -1,10 +1,11 @@
+import { usePostHog } from '@posthog/react'
 import { VectrealLogoAnimated } from '@shared/components/assets/icons/vectreal-logo-animated'
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
 import { cn } from '@shared/utils'
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion'
 import { ArrowLeft, ArrowRight, LayoutDashboard } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, redirect, useFetcher, type MetaFunction } from 'react-router'
 
 import { Route } from './+types/onboarding-page'
@@ -15,8 +16,11 @@ import {
 	STEPS
 } from './onboarding-steps'
 import { WelcomeVisual } from './onboarding-visuals'
+import { PostHogIdentify } from '../../components/consent/posthog-identify'
 import { AuthErrorBoundary } from '../../components/errors'
+import { clearReferralAttribution } from '../../lib/analytics/referral-attribution'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
+import { getSafeNextPath } from '../../lib/domain/auth/auth-redirect.server'
 import { updateUserProfile } from '../../lib/domain/user/user-repository.server'
 import { buildMeta } from '../../lib/seo'
 
@@ -57,7 +61,9 @@ export async function action({ request }: Route.ActionArgs) {
 		referralSource: toNullable(formData.get('referralSource'))
 	})
 
-	return redirect('/dashboard', { headers: new Headers(headers) })
+	// Respect a deep-link destination threaded through from the OAuth callback.
+	const next = getSafeNextPath(new URL(request.url).searchParams.get('next'))
+	return redirect(next, { headers: new Headers(headers) })
 }
 
 // ─── PillGroup ────────────────────────────────────────────────────────────────
@@ -131,9 +137,21 @@ const StepDot = ({
 	</button>
 )
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface LoaderUser {
+	id?: string
+	email?: string
+	user_metadata?: { name?: string; full_name?: string }
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
+	const posthog = usePostHog()
+	const track = (event: string, props?: Record<string, unknown>) =>
+		posthog?.capture(event, props)
+
 	const [currentStep, setCurrentStep] = useState(0)
 	const [direction, setDirection] = useState(1)
 	const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
@@ -148,14 +166,10 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 	const textInputRef = useRef<HTMLInputElement>(null)
 	const isSubmitting = fetcher.state !== 'idle'
 
+	const user = (loaderData as { user?: LoaderUser })?.user
+
 	const rawName =
-		(
-			loaderData as {
-				user?: { user_metadata?: { name?: string }; email?: string }
-			}
-		)?.user?.user_metadata?.name ??
-		(loaderData as { user?: { email?: string } })?.user?.email?.split('@')[0] ??
-		null
+		user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? null
 
 	const userName = rawName
 		?.split(' ')
@@ -166,12 +180,31 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 	const isFirst = currentStep === 0
 	const isLast = currentStep === STEPS.length - 1
 
+	// Clear referral attribution on mount — user has now signed up and passed through the attribution pipeline
+	useEffect(() => {
+		clearReferralAttribution()
+	}, [])
+
+	// Fire onboarding_step_viewed whenever the current step changes (and on mount for the first step)
+	useEffect(() => {
+		track('onboarding_step_viewed', {
+			step_index: currentStep,
+			step_id: step.fieldKey
+		})
+	}, [currentStep, posthog])
+
 	const setField = (key: OnboardingProfileKey, value: string) => {
 		setProfile((prev) => ({ ...prev, [key]: value || null }))
 	}
 
-	const submitProfile = (partial?: Partial<OnboardingProfile>) => {
+	const submitProfile = (
+		partial?: Partial<OnboardingProfile>,
+		skipped?: boolean
+	) => {
 		const payload = partial ? { ...profile, ...partial } : profile
+		if (skipped) {
+			track('onboarding_skipped', { at_step: currentStep })
+		}
 		const fd = new FormData()
 		for (const [k, v] of Object.entries(payload)) {
 			fd.set(k, v ?? '')
@@ -187,6 +220,12 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 
 	const handleContinue = () => {
 		if (isLast) {
+			track('onboarding_completed', {
+				role: profile.role || undefined,
+				use_case: profile.useCase || undefined,
+				has_company: Boolean(profile.companyName),
+				referral_source: profile.referralSource || undefined
+			})
 			submitProfile()
 		} else {
 			navigateTo(currentStep + 1)
@@ -195,6 +234,13 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 
 	return (
 		<MotionConfig reducedMotion="user">
+			{user?.id && (
+				<PostHogIdentify
+					userId={user.id}
+					email={user.email}
+					name={user.user_metadata?.full_name}
+				/>
+			)}
 			<div className="bg-background flex h-screen w-screen overflow-hidden">
 				{/* ── Left panel: animated visual ────────────────────────────── */}
 				<div className="relative hidden flex-3 overflow-hidden md:flex">
@@ -215,7 +261,7 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 							variant="ghost"
 							size="sm"
 							disabled={isSubmitting}
-							onClick={() => submitProfile()}
+							onClick={() => submitProfile(undefined, true)}
 							className="text-muted-foreground/50 hover:text-muted-foreground h-8 text-xs"
 						>
 							Skip

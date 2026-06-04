@@ -117,8 +117,7 @@ export function usePreviewScene({ sceneId, projectId }: UsePreviewSceneParams) {
 		trackedPreviewKeysRef.current.add(trackingKey)
 		posthog?.capture('preview_viewed', {
 			scene_id: sceneId,
-			embed_type: 'link',
-			client_type: 'web'
+			embed_type: 'link'
 		})
 	}, [consent?.analytics, posthog, projectId, sceneData, sceneId])
 

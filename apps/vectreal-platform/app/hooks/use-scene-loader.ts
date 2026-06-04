@@ -159,6 +159,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		signature: string
 		at: number
 	} | null>(null)
+	const loadStartTimeRef = useRef<number | null>(null)
 	const posthog = usePostHog()
 	const { consent } = useConsent()
 	// Last-saved baselines live in atoms (not useState) so they survive route
@@ -420,9 +421,25 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				showInfo: true,
 				showSidebar: false
 			}))
+
+			if (!paramSceneId && consent?.analytics) {
+				const fileFormat = data.name.includes('.')
+					? data.name.split('.').pop()?.toLowerCase() ?? 'unknown'
+					: 'unknown'
+				const duration_ms =
+					loadStartTimeRef.current != null
+						? Date.now() - loadStartTimeRef.current
+						: undefined
+				posthog?.capture('scene_upload_succeeded', {
+					file_format: fileFormat,
+					duration_ms
+				})
+			}
 		},
 		[
 			paramSceneId,
+			consent?.analytics,
+			posthog,
 			currentSettings,
 			setCurrentSceneId,
 			setProcess,
@@ -467,7 +484,6 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 					posthog?.capture('scene_upload_failed', analyticsProps)
 				} else {
 					posthog?.capture('scene_upload_failed', {
-						client_type: 'web',
 						file_format: 'unknown',
 						error_code: 'unknown',
 						error_message: errorMessage
@@ -724,6 +740,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	useEffect(() => {
 		const handleLoadStart = () => {
 			originalSavedRef.current = false
+			loadStartTimeRef.current = Date.now()
 		}
 		on('load-start', handleLoadStart)
 		on('load-reset', handleLoadStart)

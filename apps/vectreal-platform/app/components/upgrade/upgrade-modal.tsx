@@ -79,7 +79,7 @@ export function UpgradeModal() {
 	// Fire analytics events when the modal transitions from closed to open
 	useEffect(() => {
 		if (state.open && !wasOpenRef.current) {
-			posthog?.capture('upgrade_modal_open', {
+			posthog?.capture('upgrade_modal_opened', {
 				reason: state.reason,
 				plan: state.plan,
 				limit_key: state.limitKey,

@@ -1,8 +1,7 @@
-import { usePostHog } from '@posthog/react'
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import { Separator } from '@shared/components/ui/separator'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { data, Link, useLoaderData } from 'react-router'
 
 import {
@@ -38,11 +37,6 @@ export function meta(_: Route.MetaArgs) {
 export default function PricingPage() {
 	const { prices } = useLoaderData<typeof loader>()
 	const [period, setPeriod] = useState<'monthly' | 'annual'>('monthly')
-	const posthog = usePostHog()
-
-	useEffect(() => {
-		posthog?.capture('view_pricing', { source: 'direct' })
-	}, [posthog])
 
 	return (
 		<main>

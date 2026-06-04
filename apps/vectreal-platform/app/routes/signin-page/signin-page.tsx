@@ -21,11 +21,13 @@ import {
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signin-page'
+import { captureServerEvent } from '../../lib/domain/analytics/server-events.server'
 import { checkAuthRateLimit } from '../../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
+import type { PostHogContext } from '../../lib/posthog/posthog-middleware'
 import type { AuthLayoutContext } from '../layouts/signin-layout'
 
 type AuthErrorCode =
@@ -109,7 +111,7 @@ const getSafeNext = (request: Request) => {
 	return next
 }
 
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request, context }: Route.ActionArgs) {
 	const formData = await request.formData()
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
 	if (csrfCheck) {
@@ -183,6 +185,12 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	if (authData?.user && authData.session) {
+		const posthog = (context as PostHogContext).posthog
+		captureServerEvent(posthog, authData.user.id, {
+			name: 'user_signed_in',
+			props: { method: 'email' }
+		})
+
 		const additionalHeaders = new Headers(headers)
 		const next = getSafeNext(request)
 

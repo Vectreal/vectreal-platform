@@ -16,6 +16,7 @@ import {
 	sendSubmitterConfirmation,
 } from '../../email/contact-email-sender.server'
 import { encryptSensitiveValue } from '../../security/pii-encryption.server'
+import { captureServerEvent, type ServerAnalyticsEvent } from '../analytics/server-events.server'
 
 import type { PostHogContext } from '../../posthog/posthog-middleware'
 
@@ -143,25 +144,15 @@ function getResponseTimeBucket(durationMs: number) {
 	return 'gte_3s'
 }
 
-function captureServerEvent(args: {
-	context: unknown
-	request: Request
-	event: string
-	properties: Record<string, string | number | boolean | null>
-}) {
-	const posthog = (args.context as PostHogContext).posthog
-	if (!posthog) {
-		return
-	}
-
+function fireEvent(
+	context: unknown,
+	request: Request,
+	event: ServerAnalyticsEvent
+) {
+	const posthog = (context as PostHogContext).posthog
 	const distinctId =
-		args.request.headers.get('X-POSTHOG-DISTINCT-ID') ?? 'contact-anonymous'
-
-	posthog.capture({
-		distinctId,
-		event: args.event,
-		properties: args.properties
-	})
+		request.headers.get('X-POSTHOG-DISTINCT-ID') ?? 'contact-anonymous'
+	captureServerEvent(posthog, distinctId, event)
 }
 
 export async function submitContactForm(args: {
@@ -188,15 +179,9 @@ export async function submitContactForm(args: {
 	}
 
 	if (honeypotValue.length > 0) {
-		captureServerEvent({
-			context: args.context,
-			request: args.request,
-			event: 'contact_form_blocked',
-			properties: {
-				block_reason: 'honeypot',
-				inquiry_type: inquiryType,
-				client_type: 'web'
-			}
+		fireEvent(args.context, args.request, {
+			name: 'contact_form_blocked',
+			props: { block_reason: 'honeypot', inquiry_type: inquiryType }
 		})
 
 		return { status: 200, body: { status: 'success' } }
@@ -225,15 +210,9 @@ export async function submitContactForm(args: {
 	}
 
 	if (Object.keys(fieldErrors).length > 0) {
-		captureServerEvent({
-			context: args.context,
-			request: args.request,
-			event: 'contact_form_submit_failed',
-			properties: {
-				failure_stage: 'validation',
-				inquiry_type: inquiryType,
-				client_type: 'web'
-			}
+		fireEvent(args.context, args.request, {
+			name: 'contact_form_submit_failed',
+			props: { failure_stage: 'validation', inquiry_type: inquiryType }
 		})
 
 		return {
@@ -250,15 +229,9 @@ export async function submitContactForm(args: {
 	const clientIp = getClientIp(args.request)
 	const rateLimitKey = `${clientIp}:${email}`
 	if (isRateLimited(rateLimitKey)) {
-		captureServerEvent({
-			context: args.context,
-			request: args.request,
-			event: 'contact_form_blocked',
-			properties: {
-				block_reason: 'rate_limit',
-				inquiry_type: inquiryType,
-				client_type: 'web'
-			}
+		fireEvent(args.context, args.request, {
+			name: 'contact_form_blocked',
+			props: { block_reason: 'rate_limit', inquiry_type: inquiryType }
 		})
 
 		return {
@@ -303,15 +276,9 @@ export async function submitContactForm(args: {
 				insertError instanceof Error &&
 				insertError.message.includes('unique constraint')
 			if (!isUniqueViolation || attempt === MAX_INSERT_ATTEMPTS) {
-				captureServerEvent({
-					context: args.context,
-					request: args.request,
-					event: 'contact_form_submit_failed',
-					properties: {
-						failure_stage: 'db',
-						inquiry_type: inquiryType,
-						client_type: 'web'
-					}
+				fireEvent(args.context, args.request, {
+					name: 'contact_form_submit_failed',
+					props: { failure_stage: 'db', inquiry_type: inquiryType }
 				})
 				return {
 					status: 500,
@@ -357,15 +324,9 @@ export async function submitContactForm(args: {
 			})
 			.where(eq(contactSubmissions.id, submission.id))
 
-		captureServerEvent({
-			context: args.context,
-			request: args.request,
-			event: 'contact_form_submit_failed',
-			properties: {
-				failure_stage: 'provider',
-				inquiry_type: inquiryType,
-				client_type: 'web'
-			}
+		fireEvent(args.context, args.request, {
+			name: 'contact_form_submit_failed',
+			props: { failure_stage: 'provider', inquiry_type: inquiryType }
 		})
 
 		return {
@@ -398,15 +359,12 @@ export async function submitContactForm(args: {
 			})
 			.where(eq(contactSubmissions.id, submission.id))
 
-		captureServerEvent({
-			context: args.context,
-			request: args.request,
-			event: 'contact_form_submit_failed',
-			properties: {
+		fireEvent(args.context, args.request, {
+			name: 'contact_form_submit_failed',
+			props: {
 				failure_stage: 'provider',
 				inquiry_type: inquiryType,
-				error_code: 'confirmation_email_failed',
-				client_type: 'web'
+				error_code: 'confirmation_email_failed'
 			}
 		})
 	}
@@ -424,15 +382,12 @@ export async function submitContactForm(args: {
 			.where(eq(contactSubmissions.id, submission.id))
 	}
 
-	captureServerEvent({
-		context: args.context,
-		request: args.request,
-		event: 'contact_form_submitted',
-		properties: {
+	fireEvent(args.context, args.request, {
+		name: 'contact_form_submitted',
+		props: {
 			inquiry_type: inquiryType,
 			delivery_channel: 'resend',
 			response_time_bucket_ms: getResponseTimeBucket(Date.now() - requestStart),
-			client_type: 'web',
 			anti_bot_mode: 'csrf_honeypot_rate_limit'
 		}
 	})

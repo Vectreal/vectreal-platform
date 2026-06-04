@@ -208,7 +208,9 @@ function BillingUpgradeContent({
 	const isDirectUpdate = billing.billingState === 'active'
 
 	useEffect(() => {
-		posthog?.capture('view_pricing', { source: 'settings', plan: billing.plan })
+		posthog?.capture('billing_upgrade_viewed', {
+			plan: billing.plan
+		})
 	}, [posthog, billing.plan])
 
 	type CheckoutFetcherResponse = {

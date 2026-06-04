@@ -1,5 +1,6 @@
-import { buildSceneUploadFailedAnalyticsProps } from '../app/lib/domain/analytics/scene-events'
 import { describe, expect, it } from 'vitest'
+
+import { buildSceneUploadFailedAnalyticsProps } from '../app/lib/domain/analytics/scene-events'
 
 describe('buildSceneUploadFailedAnalyticsProps', () => {
 	it('builds canonical payload with extension-based file_format and size', () => {
@@ -15,7 +16,6 @@ describe('buildSceneUploadFailedAnalyticsProps', () => {
 		}
 
 		expect(buildSceneUploadFailedAnalyticsProps(error, 'fallback')).toEqual({
-			client_type: 'web',
 			file_format: 'gltf',
 			error_code: 'gltf_load_failed',
 			error_message: 'Failed to parse GLTF',
@@ -34,8 +34,9 @@ describe('buildSceneUploadFailedAnalyticsProps', () => {
 			}
 		}
 
-		expect(buildSceneUploadFailedAnalyticsProps(error, 'Default message')).toEqual({
-			client_type: 'web',
+		expect(
+			buildSceneUploadFailedAnalyticsProps(error, 'Default message')
+		).toEqual({
 			file_format: 'glb',
 			error_code: 'binary_load_failed',
 			error_message: 'Default message'
@@ -50,8 +51,8 @@ describe('buildSceneUploadFailedAnalyticsProps', () => {
 			source: 'local-upload'
 		}
 
-		expect(buildSceneUploadFailedAnalyticsProps(error, 'fallback').file_format).toBe(
-			'unknown'
-		)
+		expect(
+			buildSceneUploadFailedAnalyticsProps(error, 'fallback').file_format
+		).toBe('unknown')
 	})
 })
