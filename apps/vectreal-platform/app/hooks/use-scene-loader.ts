@@ -431,7 +431,6 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 						? Date.now() - loadStartTimeRef.current
 						: undefined
 				posthog?.capture('scene_upload_succeeded', {
-					client_type: 'web',
 					file_format: fileFormat,
 					duration_ms
 				})
@@ -485,7 +484,6 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 					posthog?.capture('scene_upload_failed', analyticsProps)
 				} else {
 					posthog?.capture('scene_upload_failed', {
-						client_type: 'web',
 						file_format: 'unknown',
 						error_code: 'unknown',
 						error_message: errorMessage

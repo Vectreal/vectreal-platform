@@ -152,6 +152,17 @@ function applyResolvedTheme(
 	root.style.colorScheme = shouldUseDark ? 'dark' : 'light'
 }
 
+function PageViewTracker() {
+	const location = useLocation()
+	const posthog = usePostHog()
+
+	useEffect(() => {
+		posthog?.capture('$pageview', { $current_url: window.location.href })
+	}, [location.pathname, location.search, posthog])
+
+	return null
+}
+
 function ThemeManager({ themeMode }: { themeMode: ThemeMode }) {
 	const location = useLocation()
 
@@ -277,6 +288,7 @@ export function Layout({ children }: { children: ReactNode }) {
 			</head>
 			<body>
 				<ThemeManager themeMode={themeMode} />
+				<PageViewTracker />
 				<GlobalNavigationLoader />
 				{children}
 				<Toaster toastOptions={{ className: 'rounded-2xl!' }} />

@@ -8,7 +8,7 @@ import {
 } from '@shared/components/ui/card'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { LifeBuoy, Mail, Sparkles, Users } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { data, Link, useLoaderData, useNavigation } from 'react-router'
 
 import {
@@ -133,7 +133,6 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 	const typedActionData = actionData as ActionData | undefined
 	const posthog = usePostHog()
 	const navigation = useNavigation()
-	const initialTrackedRef = useRef(false)
 
 	const initialInquiryType = typedActionData?.fields?.inquiryType ?? 'support'
 	const [inquiryType, setInquiryType] =
@@ -160,22 +159,6 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 		setTurnstileResetNonce((current) => current + 1)
 	}, [typedActionData])
 
-	useEffect(() => {
-		if (initialTrackedRef.current) {
-			return
-		}
-
-		initialTrackedRef.current = true
-		posthog?.capture('contact_page_viewed', {
-			source,
-			is_authenticated: isAuthenticated,
-			client_type: 'web',
-			referrer: document.referrer || undefined,
-			utm_source:
-				new URLSearchParams(window.location.search).get('utm_source') || undefined
-		})
-	}, [isAuthenticated, posthog, source])
-
 	const handleDismissResult = () => {
 		setIsResultDismissed(true)
 		setTurnstileToken(null)
@@ -193,8 +176,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 	const handleSubmit = () => {
 		posthog?.capture('contact_form_submit_started', {
 			inquiry_type: inquiryType,
-			is_authenticated: isAuthenticated,
-			client_type: 'web'
+			is_authenticated: isAuthenticated
 		})
 	}
 

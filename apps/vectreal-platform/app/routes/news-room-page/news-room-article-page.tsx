@@ -125,11 +125,7 @@ export default function NewsRoomArticlePage({
 		posthog?.capture('newsroom_article_viewed', {
 			slug: article.slug,
 			category: article.category,
-			reading_time_minutes: article.readingTimeMinutes,
-			client_type: 'web',
-			referrer: document.referrer || undefined,
-			utm_source:
-				new URLSearchParams(window.location.search).get('utm_source') || undefined
+			reading_time_minutes: article.readingTimeMinutes
 		})
 	}, [
 		article.category,
@@ -167,8 +163,7 @@ export default function NewsRoomArticlePage({
 					scrollTrackedMilestones.current.add(milestone)
 					posthog?.capture('newsroom_article_scroll_milestone', {
 						slug: article.slug,
-						milestone_percent: milestone,
-						client_type: 'web'
+						milestone_percent: milestone
 					})
 				}
 			}
@@ -192,8 +187,7 @@ export default function NewsRoomArticlePage({
 			posthog?.capture('newsroom_article_read_completed', {
 				slug: article.slug,
 				duration_ms: durationMs,
-				max_scroll_percent: maxScrollPercentRef.current,
-				client_type: 'web'
+				max_scroll_percent: maxScrollPercentRef.current
 			})
 		}
 	}, [article.slug, consent?.analytics, posthog])

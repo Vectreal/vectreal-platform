@@ -83,16 +83,14 @@ export function UpgradeModal() {
 				reason: state.reason,
 				plan: state.plan,
 				limit_key: state.limitKey,
-				action_attempted: state.actionAttempted,
-				client_type: 'web'
+				action_attempted: state.actionAttempted
 			})
 
 			if (state.reason === 'quota_exceeded') {
 				posthog?.capture('limit_gate_shown', {
 					limit_key: state.limitKey ?? 'unknown',
 					plan: state.plan,
-					action_attempted: state.actionAttempted,
-					client_type: 'web'
+					action_attempted: state.actionAttempted
 				})
 			}
 		}

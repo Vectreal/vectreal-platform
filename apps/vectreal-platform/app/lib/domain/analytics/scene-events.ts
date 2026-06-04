@@ -1,7 +1,6 @@
 import type { StructuredLoadError } from '@vctrl/hooks/use-load-model'
 
 interface SceneUploadFailedAnalyticsProps {
-	client_type: 'web'
 	file_format: string
 	error_code: string
 	error_message: string
@@ -30,7 +29,6 @@ export function buildSceneUploadFailedAnalyticsProps(
 	fallbackMessage: string
 ): SceneUploadFailedAnalyticsProps {
 	const props: SceneUploadFailedAnalyticsProps = {
-		client_type: 'web',
 		file_format: inferFileFormat(error),
 		error_code: error.code,
 		error_message: error.message || fallbackMessage

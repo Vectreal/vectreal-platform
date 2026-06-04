@@ -150,7 +150,7 @@ interface LoaderUser {
 const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 	const posthog = usePostHog()
 	const track = (event: string, props?: Record<string, unknown>) =>
-		posthog?.capture(event, { client_type: 'web', ...props })
+		posthog?.capture(event, props)
 
 	const [currentStep, setCurrentStep] = useState(0)
 	const [direction, setDirection] = useState(1)
@@ -191,7 +191,7 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 			step_index: currentStep,
 			step_id: step.fieldKey
 		})
-	}, [currentStep])
+	}, [currentStep, posthog])
 
 	const setField = (key: OnboardingProfileKey, value: string) => {
 		setProfile((prev) => ({ ...prev, [key]: value || null }))

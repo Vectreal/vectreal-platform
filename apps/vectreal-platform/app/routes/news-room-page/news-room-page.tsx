@@ -146,15 +146,11 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 
 		viewTrackedRef.current = true
 		posthog?.capture('newsroom_listing_viewed', {
-			client_type: 'web',
 			result_count: articles.length,
 			has_query: Boolean(filters.query),
 			has_category_filter: Boolean(filters.category),
 			has_tag_filter: Boolean(filters.tag),
-			sort_mode: filters.sort,
-			referrer: document.referrer || undefined,
-			utm_source:
-				new URLSearchParams(window.location.search).get('utm_source') || undefined
+			sort_mode: filters.sort
 		})
 	}, [
 		articles.length,
