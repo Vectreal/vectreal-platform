@@ -21,13 +21,13 @@ import {
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signin-page'
-import { checkAuthRateLimit } from '../../lib/domain/auth/auth-rate-limit.server'
 import { captureServerEvent } from '../../lib/domain/analytics/server-events.server'
+import { checkAuthRateLimit } from '../../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
-import type { PostHogContext } from '../../lib/posthog/posthog-middleware'
 
+import type { PostHogContext } from '../../lib/posthog/posthog-middleware'
 import type { AuthLayoutContext } from '../layouts/signin-layout'
 
 type AuthErrorCode =

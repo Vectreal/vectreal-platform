@@ -1,9 +1,9 @@
+import { usePostHog } from '@posthog/react'
 import {
 	SidebarInset,
 	SidebarProvider,
 	SidebarTrigger
 } from '@shared/components/ui/sidebar'
-import { usePostHog } from '@posthog/react'
 import { Provider } from 'jotai/react'
 import { Loader2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -123,7 +123,7 @@ const DashboardLayout = () => {
 	useEffect(() => {
 		if (!orgId) return
 		posthog?.group('organization', orgId, { plan })
-	}, [orgId, plan]) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [orgId, plan])
 	const [showSkeleton, setShowSkeleton] = useState(false)
 
 	const handleSidebarOpenChange = (open: boolean) => {

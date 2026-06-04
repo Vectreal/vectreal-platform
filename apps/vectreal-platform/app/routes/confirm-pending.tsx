@@ -20,8 +20,8 @@ import {
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/confirm-pending'
-import { clearReferralAttribution } from '../lib/analytics/referral-attribution'
 import { AuthErrorBoundary } from '../components/errors'
+import { clearReferralAttribution } from '../lib/analytics/referral-attribution'
 import { checkAuthRateLimit } from '../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../lib/http/csrf.server'
 import { buildMeta } from '../lib/seo'

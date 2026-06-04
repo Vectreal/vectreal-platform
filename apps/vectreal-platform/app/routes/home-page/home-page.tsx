@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { GithubLogo } from '@shared/components/assets/icons/github-logo'
 import { useIsMobile } from '@shared/components/hooks/use-mobile'
 import {
@@ -9,7 +10,6 @@ import {
 import { Button } from '@shared/components/ui/button'
 import { CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
-import { usePostHog } from '@posthog/react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Check, Globe, Sparkle, Wrench } from 'lucide-react'
 import { useEffect } from 'react'
@@ -53,9 +53,10 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 			client_type: 'web',
 			referrer: document.referrer || undefined,
 			utm_source:
-				new URLSearchParams(window.location.search).get('utm_source') || undefined
+				new URLSearchParams(window.location.search).get('utm_source') ||
+				undefined
 		})
-	}, []) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [])
 
 	return (
 		<main className="bg-background">

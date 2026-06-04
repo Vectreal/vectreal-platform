@@ -15,8 +15,8 @@ import {
 	sendInternalContactNotification,
 	sendSubmitterConfirmation,
 } from '../../email/contact-email-sender.server'
-import { captureServerEvent, type ServerAnalyticsEvent } from '../analytics/server-events.server'
 import { encryptSensitiveValue } from '../../security/pii-encryption.server'
+import { captureServerEvent, type ServerAnalyticsEvent } from '../analytics/server-events.server'
 
 import type { PostHogContext } from '../../posthog/posthog-middleware'
 
