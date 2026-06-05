@@ -51,7 +51,10 @@ import {
 	getSession,
 	getThemeModeFromRequest
 } from '../../lib/sessions/theme-session.server'
-import { createSupabaseClient } from '../../lib/supabase.server'
+import {
+	createSupabaseAdminClient,
+	createSupabaseClient
+} from '../../lib/supabase.server'
 
 import type { SettingsLoaderData } from '../../lib/domain/dashboard/dashboard-types'
 
@@ -121,7 +124,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	const { userWithDefaults, headers } = await loadAuthenticatedUser(request)
+	const { user, userWithDefaults, headers } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
 	if (csrfCheck) {
@@ -186,6 +189,15 @@ export async function action({ request }: Route.ActionArgs) {
 			await cancelStripeSubscriptionsForOrganization(
 				userWithDefaults.organization.id
 			)
+
+			const adminClient = createSupabaseAdminClient()
+			const { error: deleteAuthError } =
+				await adminClient.auth.admin.deleteUser(user.id)
+			if (deleteAuthError) {
+				throw new Error(
+					`Failed to delete authentication account: ${deleteAuthError.message}`
+				)
+			}
 
 			await deleteUserAndRelatedData(userWithDefaults.user.id)
 
