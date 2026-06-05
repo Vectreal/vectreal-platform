@@ -195,7 +195,7 @@ export async function action({ request }: Route.ActionArgs) {
 				await adminClient.auth.admin.deleteUser(user.id)
 			if (deleteAuthError) {
 				throw new Error(
-					`Failed to delete authentication account: ${deleteAuthError.message}`
+					`Failed to delete authentication account. Your account data has not been modified. Please try again or contact support. Details: ${deleteAuthError.message}`
 				)
 			}
 
