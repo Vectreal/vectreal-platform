@@ -203,8 +203,15 @@ export async function action({ request }: Route.ActionArgs) {
 			const { error: deleteAuthError } =
 				await adminClient.auth.admin.deleteUser(authenticatedUser.id)
 			if (deleteAuthError) {
+				console.error(
+					'[settings] failed to delete auth account after user data deletion',
+					{
+						userId: authenticatedUser.id,
+						error: deleteAuthError
+					}
+				)
 				throw new Error(
-					`Your account data was deleted, but we could not fully remove your authentication account. Please contact support. Details: ${deleteAuthError.message}`
+					'Your account data was deleted, but we could not fully remove your sign-in account. Please contact support.'
 				)
 			}
 
