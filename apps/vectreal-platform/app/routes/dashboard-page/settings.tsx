@@ -28,7 +28,13 @@ import {
 import { AlertTriangle, Save, Settings2, Shield, UserRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { data, Form as RemixForm, redirect, useSubmit } from 'react-router'
+import {
+	data,
+	Form as RemixForm,
+	redirect,
+	useNavigation,
+	useSubmit
+} from 'react-router'
 import {
 	AuthenticityTokenInput,
 	useAuthenticityToken
@@ -212,7 +218,9 @@ export async function action({ request }: Route.ActionArgs) {
 				responseHeaders.append(key, value)
 			}
 
-			return redirect('/sign-up', { headers: responseHeaders })
+			return redirect('/sign-up?account_deleted=true', {
+				headers: responseHeaders
+			})
 		}
 
 		return data({ error: 'Unknown settings action.' }, { status: 400, headers })
@@ -255,6 +263,7 @@ export default function SettingsPage({
 	const [deleteModalOpen, setDeleteModalOpen] = useState(false)
 	const [themeMode, setThemeMode] = useState(loaderData.themeMode)
 	const { setPreferencesOpen } = useConsent()
+	const navigation = useNavigation()
 
 	const handleThemeModeChange = (value: string) => {
 		if (value === 'system' || value === 'light' || value === 'dark') {
@@ -263,6 +272,9 @@ export default function SettingsPage({
 	}
 	const csrfToken = useAuthenticityToken()
 	const submit = useSubmit()
+	const isDeleteSubmitting =
+		navigation.state !== 'idle' &&
+		navigation.formData?.get('intent') === 'delete-account'
 
 	const normalizedActionData = (actionData ?? {}) as SettingsActionData
 	const actionError = normalizedActionData.error
@@ -328,6 +340,7 @@ export default function SettingsPage({
 				description="This permanently deletes your account and all related platform data. Any active paid subscription will be immediately canceled - no further charges will be made. This action cannot be undone."
 				confirmationText="DELETE MY ACCOUNT"
 				confirmLabel="Delete account"
+				isPending={isDeleteSubmitting}
 				onConfirm={(typedText) => {
 					submit(
 						{
@@ -474,6 +487,7 @@ export default function SettingsPage({
 					<Button
 						type="button"
 						variant="destructive"
+						disabled={isDeleteSubmitting}
 						onClick={() => setDeleteModalOpen(true)}
 					>
 						Delete account
