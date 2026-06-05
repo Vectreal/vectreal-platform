@@ -130,7 +130,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	const { user, userWithDefaults, headers } = await loadAuthenticatedUser(request)
+	const { user: authenticatedUser, userWithDefaults, headers } =
+		await loadAuthenticatedUser(request)
 	const formData = await request.formData()
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
 	if (csrfCheck) {
@@ -196,16 +197,16 @@ export async function action({ request }: Route.ActionArgs) {
 				userWithDefaults.organization.id
 			)
 
+			await deleteUserAndRelatedData(userWithDefaults.user.id)
+
 			const adminClient = createSupabaseAdminClient()
 			const { error: deleteAuthError } =
-				await adminClient.auth.admin.deleteUser(user.id)
+				await adminClient.auth.admin.deleteUser(authenticatedUser.id)
 			if (deleteAuthError) {
 				throw new Error(
-					`Failed to delete authentication account. Your account data has not been modified. Please try again or contact support. Details: ${deleteAuthError.message}`
+					`Your account data was deleted, but we could not fully remove your authentication account. Please contact support. Details: ${deleteAuthError.message}`
 				)
 			}
-
-			await deleteUserAndRelatedData(userWithDefaults.user.id)
 
 			try {
 				await client.auth.signOut({ scope: 'local' })
@@ -274,6 +275,7 @@ export default function SettingsPage({
 	const submit = useSubmit()
 	const isDeleteSubmitting =
 		navigation.state !== 'idle' &&
+		navigation.formMethod?.toLowerCase() === 'post' &&
 		navigation.formData?.get('intent') === 'delete-account'
 
 	const normalizedActionData = (actionData ?? {}) as SettingsActionData
