@@ -14,7 +14,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-import type { BeforeAfterMetric, ServerOptions } from '../types'
+import type { BeforeAfterMetric } from '../types'
 
 export interface SimplifyOptions {
 	/** The simplification ratio (0.0 to 1.0) */
@@ -51,24 +51,21 @@ export interface NormalsOptions {
 }
 
 export interface TextureCompressOptions {
+	/**
+	 * Custom image encoder compatible with the sharp constructor API.
+	 * When provided, sharp is not imported — enabling use in browser and edge
+	 * environments. Must implement:
+	 * `(buffer) => { resize, webp, jpeg, png, toBuffer, metadata }`.
+	 *
+	 * In browser contexts, pass `createBrowserTextureEncoder()` from `@vctrl/hooks`.
+	 */
+	encoder?: unknown
 	/** Maximum texture size */
 	resize?: [number, number]
 	/** Target texture format */
 	targetFormat?: 'webp' | 'jpeg' | 'png'
 	/** Compression quality (0-100) */
 	quality?: number
-
-	/** Request timeout in milliseconds for per-texture server calls */
-	requestTimeoutMs?: number
-	/** Maximum texture payload bytes to allow for upload */
-	maxTextureUploadBytes?: number
-	/** Maximum retry attempts for transient server errors */
-	maxRetries?: number
-	/** Maximum parallel per-texture server requests */
-	maxConcurrentRequests?: number
-
-	/** Whether to use server endpoint (if available) */
-	serverOptions?: ServerOptions
 }
 
 export interface TextureDescriptor {

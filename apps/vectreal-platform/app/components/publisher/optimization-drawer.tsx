@@ -7,10 +7,11 @@ import {
 import { Button } from '@shared/components/ui/button'
 import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { Progress } from '@shared/components/ui/progress'
-import { cn } from '@shared/utils'
+import { cn, formatFileSize } from '@shared/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
 import {
+	ArrowRight,
 	CheckCircle2,
 	Circle,
 	Sparkles,
@@ -25,6 +26,7 @@ import BasicOptimizationPanel from './optimization/basic-optimization-panel'
 import { OptimizeButton } from './optimization/optimize-button'
 import { useOptimizationProcess } from './optimization/use-optimization-process'
 import { DynamicSidebar } from './sidebars/dynamic-sidebar'
+import { FileSizeComparison } from './sidebars/file-size-comparison'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import {
 	optimizationAtom,
@@ -51,6 +53,9 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 	const { optimizationPreset } = useAtomValue(optimizationAtom)
 	const { isPending } = useAtomValue(optimizationRuntimeAtom)
 	const {
+		info,
+		resolvedMetrics,
+		sizeInfo,
 		hasCompletedOptimizationPass,
 		handleOptimizeClick,
 		handleStackOptimizeClick,
@@ -123,6 +128,31 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 	const optimizeButtonMode = shouldShowCompletionActions
 		? 'optimize-more'
 		: 'apply'
+
+	const sizeReductionPercent = useMemo(() => {
+		const before = resolvedMetrics.sceneBytes.initial
+		const after = resolvedMetrics.sceneBytes.current
+		if (typeof before !== 'number' || typeof after !== 'number' || before <= 0 || after >= before) {
+			return null
+		}
+		return Math.round(((before - after) / before) * 100)
+	}, [resolvedMetrics.sceneBytes])
+
+	const sizeDeltaLabel = useMemo(() => {
+		const before = resolvedMetrics.sceneBytes.initial
+		const after = resolvedMetrics.sceneBytes.current
+		if (typeof before !== 'number' || typeof after !== 'number') return null
+		const delta = before - after
+		if (delta > 0) return `${formatFileSize(delta)} smaller`
+		if (delta < 0) return `${formatFileSize(Math.abs(delta))} larger`
+		return 'No size change'
+	}, [resolvedMetrics.sceneBytes])
+
+	const metricVal = (v: number | null | undefined) =>
+		typeof v === 'number' ? v.toLocaleString() : '-'
+
+	const metricBytesVal = (v: number | null | undefined) =>
+		typeof v === 'number' ? formatFileSize(v) : '-'
 
 	return (
 		<DynamicSidebar
@@ -268,6 +298,82 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 								transition={{ duration: 0.2 }}
 								className="space-y-3 px-5 py-4"
 							>
+								<AnimatePresence mode="wait">
+									{hasCompletedOptimizationPass ? (
+										<motion.div
+											key="post-opt-metrics"
+											initial={{ opacity: 0, y: -8 }}
+											animate={{ opacity: 1, y: 0 }}
+											exit={{ opacity: 0, y: -8 }}
+											transition={{ duration: 0.3 }}
+											className="publisher-shell-nested space-y-1 px-4 pt-3 pb-1"
+										>
+											<p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+												Optimization Result
+											</p>
+											<FileSizeComparison
+												sizeInfo={sizeInfo}
+												reductionPercent={sizeReductionPercent}
+												deltaLabel={sizeDeltaLabel}
+											/>
+											<div className="space-y-2 pb-3 text-xs">
+												<div className="flex items-center justify-between gap-3">
+													<p className="text-muted-foreground">Triangles</p>
+													<p className="font-medium">
+														{metricVal(resolvedMetrics.primitives.initial)}
+														<ArrowRight className="text-muted-foreground mx-1 inline h-3 w-3" />
+														{metricVal(resolvedMetrics.primitives.current)}
+													</p>
+												</div>
+												<div className="flex items-center justify-between gap-3">
+													<p className="text-muted-foreground">Texture Size</p>
+													<p className="font-medium">
+														{metricBytesVal(resolvedMetrics.textureBytes.initial)}
+														<ArrowRight className="text-muted-foreground mx-1 inline h-3 w-3" />
+														{metricBytesVal(resolvedMetrics.textureBytes.current)}
+													</p>
+												</div>
+											</div>
+										</motion.div>
+									) : (
+										<motion.div
+											key="pre-opt-metrics"
+											initial={{ opacity: 0 }}
+											animate={{ opacity: 1 }}
+											exit={{ opacity: 0 }}
+											transition={{ duration: 0.2 }}
+											className="flex items-center justify-around px-1 py-2"
+										>
+											{[
+											{
+												label: 'Triangles',
+												value: metricVal(info?.initial.primitivesCount)
+											},
+											{
+												label: 'File Size',
+												value:
+													sizeInfo.initialSceneBytes != null
+														? formatFileSize(sizeInfo.initialSceneBytes)
+														: '-'
+											},
+											{
+												label: 'Textures',
+												value: metricVal(info?.initial.texturesCount)
+											}
+										].map(({ label, value }) => (
+												<div key={label} className="text-center">
+													<p className="text-muted-foreground/60 text-[10px] font-medium tracking-wide uppercase">
+														{label}
+													</p>
+													<p className="text-muted-foreground text-sm font-medium tabular-nums">
+														{value}
+													</p>
+												</div>
+											))}
+										</motion.div>
+									)}
+								</AnimatePresence>
+
 								<motion.section
 									initial={{ opacity: 0, y: 6 }}
 									animate={{ opacity: 1, y: 0 }}

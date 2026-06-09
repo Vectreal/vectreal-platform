@@ -10,14 +10,13 @@ import { Separator } from '@shared/components/ui/separator'
 import { formatFileSize } from '@shared/utils'
 import { motion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
-import { ArrowRight, Code, Globe, Save, Sparkles } from 'lucide-react'
+import { Code, Globe, Save, Sparkles } from 'lucide-react'
 
 import { usePublisherSaveAction } from '../../../../hooks/use-publisher-save-action'
 import { isSavingAtom } from '../../../../lib/stores/publisher-config-store'
 import { AccordionItem, AccordionTrigger } from '../accordion-components'
 import { sidebarContentVariants } from '../animation'
 import { usePublishSidebarContext } from './publish-sidebar-context'
-import { FileSizeComparison } from '../file-size-comparison'
 import { EmbedOptions } from './sections/embed-options'
 import { PublishOptions } from './sections/publish-options'
 import { SaveOptions } from './sections/save-options'
@@ -28,35 +27,6 @@ import type { FC } from 'react'
 interface PublishSidebarContentProps {
 	hideHeader?: boolean
 	showSceneInfo?: boolean
-}
-
-const formatPublishedAt = (value?: string | null) => {
-	if (!value) {
-		return 'Not published yet'
-	}
-
-	const date = new Date(value)
-	if (Number.isNaN(date.getTime())) {
-		return 'Not published yet'
-	}
-
-	return date.toLocaleString()
-}
-
-const metricValue = (value?: number | null, isLoading = false) => {
-	if (typeof value === 'number') {
-		return value.toLocaleString()
-	}
-
-	return isLoading ? 'Loading...' : '-'
-}
-
-const metricBytesValue = (value?: number | null, isLoading = false) => {
-	if (typeof value === 'number') {
-		return formatFileSize(value)
-	}
-
-	return isLoading ? 'Loading...' : '-'
 }
 
 const getSizeDeltaLabel = (deltaBytes?: number | null) => {
@@ -101,20 +71,16 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 		? isSaving || !saveAvailability?.canSave
 		: isSaving
 
-	const metrics = showSceneInfo ? viewModel.metrics : null
 	const sizeReductionPercent = showSceneInfo
 		? viewModel.sizeReductionPercent
 		: null
 	const sizeDeltaBytes = showSceneInfo ? viewModel.sizeDeltaBytes : null
 	const sizeDeltaLabel = getSizeDeltaLabel(sizeDeltaBytes)
-	const isHydratingInitialMetrics = viewModel.isHydratingInitialMetrics
-	const publishMetricSizeInfo = viewModel.publishMetricSizeInfo
+	const currentSceneBytes = viewModel.publishMetricSizeInfo.currentSceneBytes
 	const isAuthenticated = viewModel.isAuthenticated
 	const hasSavedScene = viewModel.hasSavedScene
 	const canAccessPublishFeatures = viewModel.canAccessPublishFeatures
 	const publishState = viewModel.publishState
-	const publishedAt = publishState.publishedAt
-	const publishedAssetSizeBytes = publishState.publishedAssetSizeBytes
 
 	return (
 		<div className="no-scrollbar min-h-0 flex-1 overflow-y-auto pb-2">
@@ -138,55 +104,23 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 					</>
 				)}
 
-				{metrics && (
-					<div className="p-4">
-						<div className="mb-3 flex items-center justify-between">
+				{showSceneInfo && (
+					<div className="px-4 pb-2 pt-4">
+						<div className="flex items-center justify-between">
 							<p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
-								Optimization Metrics
+								Scene Size
 							</p>
-							{sizeReductionPercent !== null && sizeDeltaLabel ? (
-								<span className="text-primary bg-primary/15 rounded-full px-2 py-0.5 text-xs font-semibold">
-									-{sizeReductionPercent}% • {sizeDeltaLabel}
-								</span>
-							) : null}
-						</div>
-
-						<FileSizeComparison sizeInfo={publishMetricSizeInfo} />
-
-						<div className="publisher-shell-nested space-y-3 p-4 text-xs">
-							<div className="flex items-center justify-between gap-3">
-								<p className="text-muted-foreground">Triangles</p>
-								<p className="font-medium">
-									{metricValue(
-										metrics.primitives.initial,
-										isHydratingInitialMetrics
-									)}{' '}
-									<ArrowRight className="text-muted-foreground mx-1 inline h-3 w-3" />
-									{metricValue(metrics.primitives.current)}
-								</p>
-							</div>
-							<div className="flex items-center justify-between gap-3">
-								<p className="text-muted-foreground">Texture Size</p>
-								<p className="font-medium">
-									{metricBytesValue(
-										metrics.textureBytes.initial,
-										isHydratingInitialMetrics
-									)}{' '}
-									<ArrowRight className="text-muted-foreground mx-1 inline h-3 w-3" />
-									{metricBytesValue(metrics.textureBytes.current)}
-								</p>
-							</div>
-							<div className="flex items-center justify-between gap-3">
-								<p className="text-muted-foreground">Published At</p>
-								<p className="font-medium">{formatPublishedAt(publishedAt)}</p>
-							</div>
-							<div className="flex items-center justify-between gap-3">
-								<p className="text-muted-foreground">Published Asset</p>
-								<p className="font-medium">
-									{publishedAssetSizeBytes
-										? formatFileSize(publishedAssetSizeBytes)
+							<div className="flex items-center gap-2">
+								{sizeReductionPercent !== null && sizeDeltaLabel ? (
+									<span className="text-primary bg-primary/15 rounded-full px-2 py-0.5 text-xs font-semibold">
+										-{sizeReductionPercent}% • {sizeDeltaLabel}
+									</span>
+								) : null}
+								<span className="text-sm font-medium">
+									{currentSceneBytes != null
+										? formatFileSize(currentSceneBytes)
 										: '-'}
-								</p>
+								</span>
 							</div>
 						</div>
 					</div>

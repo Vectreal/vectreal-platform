@@ -12,10 +12,14 @@ export interface FileSizeComparisonSizeInfo {
 
 interface FileSizeComparisonProps {
 	sizeInfo: FileSizeComparisonSizeInfo
+	reductionPercent?: number | null
+	deltaLabel?: string | null
 }
 
 export const FileSizeComparison: FC<FileSizeComparisonProps> = ({
-	sizeInfo
+	sizeInfo,
+	reductionPercent,
+	deltaLabel
 }) => {
 	const initialFileSize = sizeInfo.initialSceneBytes ?? null
 	const currentFileSize = sizeInfo.currentSceneBytes ?? initialFileSize
@@ -28,9 +32,11 @@ export const FileSizeComparison: FC<FileSizeComparisonProps> = ({
 				: '-'
 			: formatFileSize(value)
 
+	const showReduction = reductionPercent != null && deltaLabel != null
+
 	return (
-		<div className="py-4">
-			<div className="flex items-center justify-between">
+		<div className="py-3">
+			<div className="flex items-center justify-between gap-2">
 				<motion.div
 					className="text-center"
 					initial={{ opacity: 0, y: 20 }}
@@ -40,9 +46,28 @@ export const FileSizeComparison: FC<FileSizeComparisonProps> = ({
 					<div className="text-accent text-3xl font-medium tracking-tight">
 						{formatValue(initialFileSize)}
 					</div>
-					<div className="text-sm text-zinc-400">Before</div>
+					<div className="text-muted-foreground text-sm">Before</div>
 				</motion.div>
-				<ArrowRightIcon className="text-accent h-8 w-8 transform" />
+
+				<motion.div
+					className="flex min-w-0 flex-1 flex-col items-center gap-0.5"
+					initial={{ opacity: 0 }}
+					animate={{ opacity: 1 }}
+					transition={{ duration: 0.4, delay: 0.15 }}
+				>
+					{showReduction && (
+						<span className="text-primary text-sm font-semibold leading-none">
+							-{reductionPercent}%
+						</span>
+					)}
+					<ArrowRightIcon className="text-muted-foreground/50 h-5 w-5 shrink-0" />
+					{showReduction && (
+						<span className="text-muted-foreground text-[11px] leading-none">
+							{deltaLabel}
+						</span>
+					)}
+				</motion.div>
+
 				<motion.div
 					className="text-center"
 					initial={{ opacity: 0, y: 20 }}
@@ -52,7 +77,7 @@ export const FileSizeComparison: FC<FileSizeComparisonProps> = ({
 					<div className="text-primary text-3xl font-medium tracking-tight">
 						{formatValue(currentFileSize)}
 					</div>
-					<div className="text-sm text-zinc-400">After</div>
+					<div className="text-muted-foreground text-sm">After</div>
 				</motion.div>
 			</div>
 		</div>

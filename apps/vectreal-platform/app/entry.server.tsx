@@ -11,7 +11,6 @@ import { isbot } from 'isbot'
 import { renderToPipeableStream } from 'react-dom/server'
 import { ServerRouter } from 'react-router'
 
-import { validateLocalGoogleCloudStorageConfiguration } from './lib/gcloud-storage.server'
 import { isCacheablePublicPath } from './lib/http/cacheable-public-paths.server'
 
 import type { RenderToPipeableStreamOptions } from 'react-dom/server'
@@ -19,9 +18,6 @@ import type { AppLoadContext, EntryContext } from 'react-router'
 
 export const streamTimeout = 5_000
 
-if (process.env.NODE_ENV !== 'production' && !process.env.K_SERVICE) {
-	validateLocalGoogleCloudStorageConfiguration()
-}
 
 function hasAuthSignals(request: Request): boolean {
 	if (request.headers.has('authorization')) {

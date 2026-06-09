@@ -14,7 +14,11 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-import { toSerializedAssetBytes } from '@vctrl/core'
+import {
+	buildAssetLookupKeys,
+	normalizeAssetUri,
+	toSerializedAssetBytes
+} from '@vctrl/core'
 import {
 	type DedupOptions,
 	ModelOptimizer,
@@ -45,22 +49,22 @@ import type { ServerSceneData } from '@vctrl/core'
  * - Geometry deduplication to remove redundant data
  * - Vertex attribute quantization to reduce file size
  * - Normal vector optimization
- * - Texture compression (server-side only)
+ * - Texture compression (browser-native via OffscreenCanvas)
  * - Progress tracking and error handling
  * - Optimization reports with before/after metrics
  *
  * @example
  * const optimizer = useOptimizeModel()
  *
- * // Load a model
- * await optimizer.load(threeJsScene)
+ * // Load a GLB into the optimizer
+ * await optimizer.loadFromGlbBuffer(glbBytes)
  *
- * // Apply optimizations
- * await optimizer.simplifyOptimization({ ratio: 0.5 })
- * await optimizer.quantizeOptimization({ bits: 12 })
+ * // Geometry optimizations run via Web Worker (use-optimization-process.ts)
+ * // Texture compression runs browser-native via texturesOptimization()
+ * await optimizer.texturesOptimization({ targetFormat: 'webp', quality: 0.8 })
  *
- * // Get optimized model
- * const optimizedBinary = await optimizer.getModel()
+ * // Sync result back to the Three.js viewer
+ * await optimizer.applyOptimization()
  *
  * @returns Object containing optimization methods, state, and report data
  */
@@ -127,12 +131,48 @@ const useOptimizeModel = () => {
 
 			try {
 				const optimizer = optimizerRef.current
-				const resources: Record<string, Uint8Array<ArrayBuffer>> = {}
 
+				// Build a lookup from asset fileName (and its variants) → asset entry,
+				// so we can resolve each URI referenced in the GLTF JSON to its bytes.
+				const assetLookup = new Map<
+					string,
+					(typeof sceneData.assetData)[string]
+				>()
 				for (const asset of Object.values(sceneData.assetData ?? {})) {
-					resources[asset.fileName] = toSerializedAssetBytes(
-						asset
-					) as Uint8Array<ArrayBuffer>
+					for (const key of buildAssetLookupKeys(asset.fileName)) {
+						assetLookup.set(key, asset)
+					}
+				}
+
+				// Key resources by the EXACT URI string present in the GLTF JSON so
+				// that @gltf-transform/core's readJSON() can perform a direct lookup
+				// without any URI normalisation on its side.
+				const resources: Record<string, Uint8Array<ArrayBuffer>> = {}
+				const gltfDoc = sceneData.gltfJson as unknown as {
+					images?: Array<{ uri?: string }>
+					buffers?: Array<{ uri?: string }>
+				}
+				const referencedUris: string[] = [
+					...(gltfDoc.images ?? [])
+						.map((i) => i.uri)
+						.filter((u): u is string => !!u && !u.startsWith('data:')),
+					...(gltfDoc.buffers ?? [])
+						.map((b) => b.uri)
+						.filter((u): u is string => !!u && !u.startsWith('data:'))
+				]
+
+				for (const uri of referencedUris) {
+					const normalized = normalizeAssetUri(uri)
+					const basename = normalized.split('/').pop() || normalized
+					const asset =
+						assetLookup.get(uri) ??
+						assetLookup.get(normalized) ??
+						assetLookup.get(basename)
+					if (asset) {
+						resources[uri] = toSerializedAssetBytes(
+							asset
+						) as Uint8Array<ArrayBuffer>
+					}
 				}
 
 				const jsonDocument = {
@@ -150,6 +190,43 @@ const useOptimizeModel = () => {
 			} catch (err) {
 				dispatch({ type: 'LOAD_ERROR', payload: err as Error })
 				console.error('Error loading server scene into optimizer:', err)
+				throw err
+			}
+		},
+		[]
+	)
+
+	/** Replaces the optimizer's document with the GLB bytes returned by the Web Worker. */
+	const loadFromGlbBuffer = useCallback(
+		async (buffer: Uint8Array): Promise<void> => {
+			dispatch({ type: 'LOAD_START' })
+			try {
+				await optimizerRef.current.loadFromBuffer(buffer)
+				const report = await optimizerRef.current.getReport()
+				dispatch({ type: 'LOAD_SUCCESS', payload: { report } })
+			} catch (err) {
+				dispatch({ type: 'LOAD_ERROR', payload: err as Error })
+				console.error('Error loading GLB buffer into optimizer:', err)
+				throw err
+			}
+		},
+		[]
+	)
+
+	/** Load a GLTF (JSON) model directly from raw bytes + asset map, preserving original texture names. */
+	const loadFromGLTFWithAssets = useCallback(
+		async (
+			gltfBytes: Uint8Array,
+			assets: Map<string, Uint8Array>
+		): Promise<void> => {
+			dispatch({ type: 'LOAD_START' })
+			try {
+				await optimizerRef.current.loadFromGLTFWithAssets(gltfBytes, assets)
+				const report = await optimizerRef.current.getReport()
+				dispatch({ type: 'LOAD_SUCCESS', payload: { report } })
+			} catch (err) {
+				dispatch({ type: 'LOAD_ERROR', payload: err as Error })
+				console.error('Error loading GLTF with assets into optimizer:', err)
 				throw err
 			}
 		},
@@ -286,23 +363,19 @@ const useOptimizeModel = () => {
 	)
 
 	/**
-	 * Compresses textures in the model using advanced compression formats.
-	 * Significantly reduces file size while maintaining visual quality.
-	 *
-	 * **Note:** This optimization requires server-side processing (Sharp library)
-	 * and may not work in browser-only environments.
+	 * Compresses textures in the model using browser-native OffscreenCanvas encoding.
+	 * Significantly reduces file size while maintaining visual quality. No server call is made.
 	 *
 	 * @param options - Configuration options for texture compression
-	 * @param options.format - Target compression format (e.g.,  from '@shared/ui', 'ktx2')
+	 * @param options.targetFormat - Target compression format ('webp' | 'jpeg' | 'png')
 	 * @param options.quality - Compression quality (0-100)
 	 * @returns Promise that resolves when texture compression is complete
-	 * @throws Error if Sharp is not available or compression fails
+	 * @throws Error if OffscreenCanvas is unavailable or encoding fails
 	 */
 	const texturesOptimization = useCallback(
 		async (options?: TextureCompressOptions): Promise<void> => {
 			try {
-				// Apply texture compression using utility function
-				// This handles Sharp availability checks and fallbacks
+				// Browser encoder is injected automatically via createBrowserTextureEncoder
 				await optimizeTextures(optimizerRef.current, options)
 
 				// Generate updated report
@@ -377,6 +450,10 @@ const useOptimizeModel = () => {
 		load,
 
 		loadFromServerSceneData,
+
+		loadFromGlbBuffer,
+
+		loadFromGLTFWithAssets,
 
 		/**
 		 * Retrieves the current model as a binary Uint8Array in glTF (.glb) format.
@@ -455,12 +532,12 @@ const useOptimizeModel = () => {
 		normalsOptimization,
 
 		/**
-		 * Compresses textures using advanced formats (requires server-side processing).
-		 * Note: Only works in Node.js environments with Sharp library available.
+		 * Compresses textures using browser-native OffscreenCanvas encoding.
+		 * No server call is made. Works in any modern browser context.
 		 *
-		 * @param options - Texture compression options (format, quality)
+		 * @param options - Texture compression options (targetFormat, quality, resize)
 		 * @returns Promise that resolves when compression is complete
-		 * @throws Error if Sharp is not available
+		 * @throws Error if OffscreenCanvas is unavailable or encoding fails
 		 */
 		texturesOptimization
 	}

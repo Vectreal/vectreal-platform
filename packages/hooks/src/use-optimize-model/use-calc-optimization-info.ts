@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { OptimizationInfo, OptimizationState } from './types'
 
@@ -48,20 +48,19 @@ export interface OptimizationInfoData {
 export const useCalcOptimizationInfo = (
 	state: OptimizationState
 ): OptimizationInfoData => {
-	const initialReport = useRef<OptimizationReport | null>(null)
-	const [initialCaptured, setInitialCaptured] = useState<boolean>(false)
+	// State (not ref) so that capturing the initial report triggers a re-render,
+	// allowing the memo below to recompute info.initial with the real values.
+	const [initialReport, setInitialReport] = useState<OptimizationReport | null>(null)
 	const report = state.report
 
-	// Capture initial state
 	useEffect(() => {
-		if (!initialCaptured && report) {
-			initialReport.current = report
-			setInitialCaptured(true)
+		if (!initialReport && report) {
+			setInitialReport(report)
 		}
-	}, [initialCaptured, report])
+	}, [initialReport, report])
 
 	const info = useMemo(() => {
-		const initial = getSnapshotFromReport(initialReport.current)
+		const initial = getSnapshotFromReport(initialReport)
 		const current = getSnapshotFromReport(report)
 
 		return {
@@ -87,11 +86,10 @@ export const useCalcOptimizationInfo = (
 				sceneBytes: initial.sceneBytes - current.sceneBytes
 			}
 		}
-	}, [report])
+	}, [report, initialReport])
 
 	const reset = useCallback(() => {
-		initialReport.current = null
-		setInitialCaptured(false)
+		setInitialReport(null)
 	}, [])
 
 	return {

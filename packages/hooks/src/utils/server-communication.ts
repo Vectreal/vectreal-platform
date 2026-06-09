@@ -181,8 +181,7 @@ export class ServerCommunicationService {
 		requestData.append('textureMimeType', texture.mimeType)
 
 		if (options) {
-			const { serverOptions: _, ...restOptions } = options
-			requestData.append('options', JSON.stringify(restOptions))
+			requestData.append('options', JSON.stringify(options))
 		}
 
 		return requestData

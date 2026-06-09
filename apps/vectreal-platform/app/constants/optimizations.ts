@@ -1,6 +1,5 @@
 import type { OptimizationPreset } from '../types/scene-optimization'
-import type { Optimizations } from 'packages/core/src/types/scene-types'
-
+import type { Optimizations } from '@vctrl/core'
 
 export const lowPreset: Optimizations = {
 	simplification: {
@@ -14,10 +13,7 @@ export const lowPreset: Optimizations = {
 		enabled: true,
 		resize: [2048, 2048],
 		quality: 90,
-		targetFormat: 'webp',
-		serverOptions: {
-			enabled: true
-		}
+		targetFormat: 'webp'
 	},
 	quantize: {
 		name: 'quantize',
@@ -45,10 +41,7 @@ export const mediumPreset: Optimizations = {
 		enabled: true,
 		resize: [1024, 1024],
 		quality: 80,
-		targetFormat: 'webp',
-		serverOptions: {
-			enabled: true
-		}
+		targetFormat: 'webp'
 	},
 	quantize: {
 		name: 'quantize',
@@ -76,10 +69,7 @@ export const highPreset: Optimizations = {
 		enabled: true,
 		resize: [512, 512],
 		quality: 70,
-		targetFormat: 'webp',
-		serverOptions: {
-			enabled: true
-		}
+		targetFormat: 'webp'
 	},
 	quantize: {
 		name: 'quantize',

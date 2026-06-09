@@ -1,14 +1,13 @@
 import { randomUUID } from 'crypto'
 import { createHash } from 'node:crypto'
 
+import { createClient } from '@supabase/supabase-js'
 import { and, eq } from 'drizzle-orm'
 
 import { getDbClient } from '../../../db/client'
 import { assets, folders } from '../../../db/schema'
-import { createStorage } from '../../gcloud-storage.server'
 
 import type { SceneAssetBinaryDataMap } from '../../../types/api'
-import type { Bucket } from '@google-cloud/storage'
 
 export interface AssetUploadResult {
 	assetId: string
@@ -28,16 +27,73 @@ export interface GLTFAssetData {
 const db = getDbClient()
 const ASSET_FOLDER_NAME = 'Scene Assets'
 const DEFAULT_MIME_TYPE = 'application/octet-stream'
+const STORAGE_BUCKET = 'assets'
+let ensureBucketPromise: Promise<void> | null = null
 
 /**
- * Returns fresh bucket handles for each operation.
- *
- * Avoiding long-lived cached instances helps prevent stream lifecycle issues
- * observed in production during multi-file uploads.
+ * Returns a Supabase client authenticated with the service role key.
+ * The service role bypasses RLS — all permission checks happen at the route layer.
  */
-async function getPrivateBucket() {
-	const storage = await createStorage()
-	return storage.private
+function getStorageClient() {
+	const supabaseUrl = process.env.SUPABASE_URL?.trim()
+	const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+
+	if (!supabaseUrl || !serviceRoleKey) {
+		throw new Error(
+			'Missing required environment variables: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set'
+		)
+	}
+
+	return createClient(supabaseUrl, serviceRoleKey, {
+		auth: { persistSession: false }
+	}).storage
+}
+
+/**
+ * Ensures the storage bucket exists before any object operations.
+ * This keeps storage setup out of ad-hoc SQL migrations.
+ */
+async function ensureStorageBucket() {
+	const storage = getStorageClient()
+
+	const { data: bucket, error: getBucketError } =
+		await storage.getBucket(STORAGE_BUCKET)
+
+	if (getBucketError && getBucketError.message !== 'Bucket not found') {
+		throw new Error(
+			`Failed to inspect storage bucket: ${getBucketError.message}`
+		)
+	}
+
+	if (!bucket) {
+		const { error: createBucketError } = await storage.createBucket(
+			STORAGE_BUCKET,
+			{
+				public: false,
+				fileSizeLimit: 104857600
+			}
+		)
+
+		if (
+			createBucketError &&
+			!createBucketError.message.toLowerCase().includes('already exists')
+		) {
+			throw new Error(
+				`Failed to create storage bucket ${STORAGE_BUCKET}: ${createBucketError.message}`
+			)
+		}
+	}
+}
+
+async function ensureStorageBucketOnce() {
+	if (!ensureBucketPromise) {
+		ensureBucketPromise = ensureStorageBucket().catch((error) => {
+			ensureBucketPromise = null
+			throw error
+		})
+	}
+
+	await ensureBucketPromise
 }
 
 /**
@@ -69,28 +125,6 @@ async function ensureAssetFolder(projectId: string) {
 		.returning()
 
 	return folderResult[0]
-}
-
-/**
- * Uploads raw bytes to Google Cloud Storage.
- *
- * Scene-save uploads use in-memory buffers. Keep this path non-resumable to
- * avoid resumable stream/session lifecycle issues under retry conditions.
- */
-async function uploadToGCS(
-	bucket: Bucket,
-	filePath: string,
-	data: Uint8Array,
-	mimeType: string
-): Promise<void> {
-	const file = bucket.file(filePath)
-
-	await file.save(Buffer.from(data), {
-		metadata: {
-			contentType: mimeType
-		},
-		resumable: false
-	})
 }
 
 /**
@@ -146,7 +180,9 @@ export async function uploadSceneAssets(
 	projectId: string,
 	gltfAssets: GLTFAssetData[]
 ): Promise<AssetUploadResult[]> {
-	const privateBucket = await getPrivateBucket()
+	await ensureStorageBucketOnce()
+
+	const storage = getStorageClient()
 	const folder = await ensureAssetFolder(projectId)
 	const results: AssetUploadResult[] = []
 
@@ -177,7 +213,16 @@ export async function uploadSceneAssets(
 
 		try {
 			// Upload first, then persist DB row to avoid dangling records.
-			await uploadToGCS(privateBucket, filePath, asset.data, asset.mimeType)
+			const { error: uploadError } = await storage
+				.from(STORAGE_BUCKET)
+				.upload(filePath, asset.data, {
+					contentType: asset.mimeType,
+					upsert: false
+				})
+
+			if (uploadError) {
+				throw new Error(uploadError.message)
+			}
 
 			await db.insert(assets).values({
 				id: assetId,
@@ -223,6 +268,8 @@ export async function downloadAsset(assetId: string): Promise<{
 	mimeType: string
 	fileName: string
 }> {
+	await ensureStorageBucketOnce()
+
 	const [asset] = await db
 		.select()
 		.from(assets)
@@ -233,14 +280,19 @@ export async function downloadAsset(assetId: string): Promise<{
 		throw new Error(`Asset not found: ${assetId}`)
 	}
 
-	const privateBucket = await getPrivateBucket()
-	const file = privateBucket.file(asset.filePath)
+	const storage = getStorageClient()
 
 	try {
-		const [buffer] = await file.download()
+		const { data, error } = await storage
+			.from(STORAGE_BUCKET)
+			.download(asset.filePath)
+
+		if (error) {
+			throw new Error(error.message)
+		}
 
 		return {
-			data: new Uint8Array(buffer),
+			data: new Uint8Array(await data.arrayBuffer()),
 			mimeType: asset.mimeType || DEFAULT_MIME_TYPE,
 			fileName: asset.name
 		}
@@ -293,7 +345,9 @@ export async function downloadAssets(
  * Missing assets are treated as non-fatal and logged as warnings.
  */
 export async function deleteAssets(assetIds: string[]): Promise<void> {
-	const privateBucket = await getPrivateBucket()
+	await ensureStorageBucketOnce()
+
+	const storage = getStorageClient()
 
 	for (const assetId of assetIds) {
 		try {
@@ -308,8 +362,20 @@ export async function deleteAssets(assetIds: string[]): Promise<void> {
 				continue
 			}
 
-			const file = privateBucket.file(asset.filePath)
-			await file.delete({ ignoreNotFound: true })
+			const { error } = await storage
+				.from(STORAGE_BUCKET)
+				.remove([asset.filePath])
+
+			if (error) {
+				// File already gone from storage — still clean up the DB record.
+				if (/not found/i.test(error.message)) {
+					console.warn(
+						`Storage file not found for asset ${assetId}, removing DB record only`
+					)
+				} else {
+					throw new Error(error.message)
+				}
+			}
 
 			await db.delete(assets).where(eq(assets.id, assetId))
 		} catch (error) {

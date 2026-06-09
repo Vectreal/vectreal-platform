@@ -14,28 +14,49 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-import { Document, JSONDocument, Transform, WebIO } from '@gltf-transform/core'
+import {
+	Document,
+	JSONDocument,
+	Texture,
+	Transform,
+	WebIO
+} from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 import {
 	cloneDocument,
-	compressTexture,
-	dedup,
 	DedupOptions as GltfDedupOptions,
 	NormalsOptions as GltfNormalsOptions,
 	QuantizeOptions as GltfQuantizeOptions,
 	inspect,
 	InspectReport,
 	normals,
-	prune,
 	quantize,
 	simplify,
-	weld
+	weld,
+	dedup
 } from '@gltf-transform/functions'
 import { MeshoptSimplifier } from 'meshoptimizer'
 import { Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
 import { OperationProgress } from '../types'
+import {
+	loadFromThreeJS as _loadFromThreeJS,
+	loadFromBuffer as _loadFromBuffer,
+	loadFromFile as _loadFromFile,
+	loadFromJSON as _loadFromJSON,
+	loadFromGLTFWithAssets as _loadFromGLTFWithAssets
+} from './model-loading'
+import { buildOptimizationReport } from './report-helpers'
+import { runTextureCompression } from './texture-compression'
+import {
+	mimeTypeToExtension,
+	replaceUriExtension,
+	buildTextureFallbackFileName,
+	extractFileNameSegment,
+	isGenericTextureFileName,
+	resolveTextureByMaterialSlot
+} from './texture-naming'
 import {
 	DedupOptions,
 	NormalsOptions,
@@ -47,101 +68,19 @@ import {
 	TextureCompressOptions
 } from './types'
 
-const mimeTypeToExtension = (mimeType: string): string | null => {
-	switch (mimeType.toLowerCase()) {
-		case 'image/webp':
-			return 'webp'
-		case 'image/jpeg':
-			return 'jpg'
-		case 'image/png':
-			return 'png'
-		default:
-			return null
-	}
-}
-
-const targetFormatToMimeType = (
-	targetFormat?: 'webp' | 'jpeg' | 'png'
-): string | null => {
-	switch (targetFormat) {
-		case 'webp':
-			return 'image/webp'
-		case 'jpeg':
-			return 'image/jpeg'
-		case 'png':
-			return 'image/png'
-		default:
-			return null
-	}
-}
-
-const replaceUriExtension = (uri: string, extension: string): string => {
-	if (!uri || uri.startsWith('data:')) {
-		return uri
-	}
-
-	const queryIndex = uri.indexOf('?')
-	const hashIndex = uri.indexOf('#')
-	const suffixStart = [queryIndex, hashIndex]
-		.filter((index) => index >= 0)
-		.reduce((min, index) => Math.min(min, index), Number.POSITIVE_INFINITY)
-	const hasSuffix = Number.isFinite(suffixStart)
-	const base = hasSuffix ? uri.slice(0, suffixStart) : uri
-	const suffix = hasSuffix ? uri.slice(suffixStart) : ''
-
-	const lastSlash = base.lastIndexOf('/')
-	const lastDot = base.lastIndexOf('.')
-	const hasExtension = lastDot > lastSlash
-	const nextBase = hasExtension
-		? `${base.slice(0, lastDot)}.${extension}`
-		: `${base}.${extension}`
-
-	return `${nextBase}${suffix}`
-}
-
-const buildTextureFallbackFileName = (
-	index: number,
-	mimeType: string | null
-): string => {
-	const extension = mimeType ? mimeTypeToExtension(mimeType) : null
-	return extension ? `texture-${index}.${extension}` : `texture-${index}`
-}
-
-const extractFileNameSegment = (value: string): string => {
-	const withoutQuery = value.split('?')[0] || value
-	const withoutHash = withoutQuery.split('#')[0] || withoutQuery
-	const normalized = withoutHash.replace(/\\/g, '/').trim()
-	return normalized.split('/').pop() || normalized
-}
-
-const GENERIC_TEXTURE_FILE_NAME_PATTERN =
-	/^(?:text{1,2}ure|image|img)[-_ ]?\d+(?:\.[a-z0-9]+)?$/i
-
-const isGenericTextureFileName = (value: string): boolean => {
-	const trimmed = value.trim()
-	if (trimmed.length === 0) {
-		return false
-	}
-
-	const fileName = extractFileNameSegment(trimmed)
-	return GENERIC_TEXTURE_FILE_NAME_PATTERN.test(fileName)
-}
-
-type TextureCompressionEncoder = NonNullable<
-	Parameters<typeof compressTexture>[1]
->['encoder']
-
 /**
- * Server-side 3D model optimization service using glTF-Transform.
+ * Isomorphic 3D model optimization service using glTF-Transform.
  *
- * This class provides comprehensive model optimization capabilities including:
+ * Provides comprehensive model optimization including:
  * - Mesh simplification
  * - Deduplication
  * - Quantization
  * - Normal optimization
- * - Texture compression
+ * - Texture compression via injectable encoder
  *
- * Designed for Node.js server environments with full Sharp support.
+ * Works in Node.js (Sharp default), browser (OffscreenCanvas via
+ * `createBrowserTextureEncoder` from `@vctrl/hooks`), and edge/Deno
+ * environments (custom encoder injection).
  */
 export class ModelOptimizer {
 	private _document: Document | null = null
@@ -170,20 +109,16 @@ export class ModelOptimizer {
 	 * @param model - The Three.js Object3D model to optimize
 	 */
 	public async loadFromThreeJS(model: Object3D): Promise<void> {
-		this.emitProgress('Loading model from Three.js object', 0)
-
-		try {
-			const parseOptions = { binary: true }
-			const binary = await this.exporter.parseAsync(model, parseOptions)
-			const modelBuffer = new Uint8Array(binary as ArrayBuffer)
-
-			await this.loadFromBuffer(modelBuffer)
-			this.emitProgress('Model loaded successfully', 100)
-		} catch (error) {
-			throw new Error(`Failed to load Three.js model: ${error}`, {
-				cause: error
-			})
-		}
+		const result = await _loadFromThreeJS(
+			model,
+			this.io,
+			this.exporter,
+			this.emitProgress.bind(this),
+			(doc) => this.normalizeAllTextureURIs(doc)
+		)
+		this._document = result.document
+		this.originalSize = result.originalSize
+		this.originalReport = result.originalReport
 	}
 
 	/**
@@ -192,39 +127,15 @@ export class ModelOptimizer {
 	 * @param buffer - The binary model data (GLB format)
 	 */
 	public async loadFromBuffer(buffer: Uint8Array): Promise<void> {
-		this.emitProgress('Loading model from buffer', 0)
-
-		try {
-			// Basic validation before attempting to load
-			if (buffer.byteLength === 0) {
-				throw new Error('Buffer is empty')
-			}
-
-			// Check for GLB magic number
-			const magicBytes = buffer.slice(0, 4)
-			const magic = String.fromCharCode(...magicBytes)
-
-			if (magic !== 'glTF') {
-				console.error('Invalid buffer format:', {
-					byteLength: buffer.byteLength,
-					firstBytes: Array.from(buffer.slice(0, 16)),
-					magicString: magic
-				})
-				throw new Error(
-					`Invalid glTF 2.0 binary. Expected 'glTF' magic bytes, got '${magic}'`
-				)
-			}
-
-			this._document = await this.io.readBinary(buffer)
-			this.originalSize = buffer.byteLength
-			// Capture original report for comparison
-			this.originalReport = inspect(this._document)
-			this.emitProgress('Model loaded successfully', 100)
-		} catch (error) {
-			throw new Error(`Failed to load model from buffer: ${error}`, {
-				cause: error
-			})
-		}
+		const result = await _loadFromBuffer(
+			buffer,
+			this.io,
+			this.emitProgress.bind(this),
+			(doc) => this.normalizeAllTextureURIs(doc)
+		)
+		this._document = result.document
+		this.originalSize = result.originalSize
+		this.originalReport = result.originalReport
 	}
 
 	/**
@@ -233,18 +144,15 @@ export class ModelOptimizer {
 	 * @param filePath - Path to the model file
 	 */
 	public async loadFromFile(filePath: string): Promise<void> {
-		this.emitProgress('Loading model from file', 0)
-
-		try {
-			// This would require fs in Node.js environment
-			const fs = await import(/* @vite-ignore */ 'fs/promises')
-			const buffer = await fs.readFile(filePath)
-			await this.loadFromBuffer(new Uint8Array(buffer))
-		} catch (error) {
-			throw new Error(`Failed to load model from file: ${error}`, {
-				cause: error
-			})
-		}
+		const result = await _loadFromFile(
+			filePath,
+			this.io,
+			this.emitProgress.bind(this),
+			(doc) => this.normalizeAllTextureURIs(doc)
+		)
+		this._document = result.document
+		this.originalSize = result.originalSize
+		this.originalReport = result.originalReport
 	}
 
 	/**
@@ -253,20 +161,16 @@ export class ModelOptimizer {
 	 * @param json - The JSON glTF document
 	 */
 	public async loadFromJSON(json: JSONDocument): Promise<void> {
-		this.emitProgress('Loading model from JSON document', 0)
-
-		try {
-			this._document = await this.io.readJSON(json)
-			// Keep baseline inspect data consistent across load paths
-			// (buffer and JSON) so report.before metrics are reliable.
-			this.originalReport = inspect(this._document)
-			const binary = await this.export()
-			this.originalSize = binary.byteLength
-		} catch (error) {
-			throw new Error(`Failed to load model from JSON document: ${error}`, {
-				cause: error
-			})
-		}
+		const result = await _loadFromJSON(
+			json,
+			this.io,
+			this.emitProgress.bind(this),
+			(doc) => this.normalizeAllTextureURIs(doc),
+			() => this.export()
+		)
+		this._document = result.document
+		this.originalSize = result.originalSize
+		this.originalReport = result.originalReport
 	}
 
 	/**
@@ -343,143 +247,35 @@ export class ModelOptimizer {
 	}
 
 	/**
-	 * Apply texture compression optimization using Sharp.
+	 * Compress textures using an injectable encoder.
+	 *
+	 * In Node.js the Sharp library is used by default. In browser or edge
+	 * environments pass a custom encoder via `options.encoder` — for example
+	 * `createBrowserTextureEncoder()` from `@vctrl/hooks` which uses
+	 * OffscreenCanvas and requires no network call.
 	 *
 	 * @param options - Texture compression options
 	 */
 	public async compressTextures(
 		options: TextureCompressOptions = {}
 	): Promise<void> {
-		this.ensureModelLoaded()
+		const document = this.ensureModelLoaded()
 
-		this.emitProgress('Compressing textures', 0)
-
-		let sharp: TextureCompressionEncoder
-
-		try {
-			const sharpModule = await import(/* @vite-ignore */ 'sharp')
-			sharp = sharpModule.default || sharpModule
-
-			if (typeof sharp !== 'function') {
-				throw new Error('Sharp is not available or not properly installed')
-			}
-		} catch (error) {
-			console.warn(
-				'Sharp-based compression failed, applying basic optimization:',
-				error
-			)
-			await this.applyBasicTextureOptimization(options)
-			return
-		}
-
-		const { serverOptions, ...textureCompressOptions } = options
-		const expectedMimeType = targetFormatToMimeType(
-			textureCompressOptions.targetFormat
+		await runTextureCompression(
+			document,
+			options,
+			this.emitProgress.bind(this),
+			this.applyTransforms.bind(this)
 		)
 
-		console.log('Texture compression options:', {
-			targetFormat: textureCompressOptions.targetFormat,
-			quality: textureCompressOptions.quality,
-			resize: textureCompressOptions.resize,
-			sharpAvailable: typeof sharp === 'function'
-		})
+		// Sync URI and name to reflect the new MIME type after compression
+		// (e.g. .png → .webp), matching what the texture-naming helpers expect.
+		document
+			.getRoot()
+			.listTextures()
+			.forEach((texture, i) => this.syncTextureIdentity(texture, i))
 
-		if (!this._document) {
-			throw new Error('Document is not loaded')
-		}
-
-		const textures = this._document.getRoot().listTextures()
-		console.log('Before texture compression:')
-		textures.forEach((texture, i) => {
-			console.log(
-				`Texture ${i}: ${texture.getMimeType() || 'unknown mime type'}`
-			)
-		})
-
-		const failures: Array<{ index: number; reason: string }> = []
-
-		console.log('Compressing textures individually...')
-		for (let i = 0; i < textures.length; i++) {
-			const texture = textures[i]
-			console.log(`Processing texture ${i}/${textures.length}`)
-
-			try {
-				await compressTexture(texture, {
-					encoder: sharp,
-					targetFormat: textureCompressOptions.targetFormat,
-					quality: textureCompressOptions.quality,
-					resize: textureCompressOptions.resize
-				})
-
-				this.syncTextureIdentity(texture, i)
-
-				if (expectedMimeType && texture.getMimeType() !== expectedMimeType) {
-					throw new Error(
-						`expected ${expectedMimeType}, received ${texture.getMimeType() || 'unknown mime type'}`
-					)
-				}
-
-				console.log(
-					`Texture ${i} compressed successfully to ${texture.getMimeType()}`
-				)
-			} catch (error) {
-				failures.push({
-					index: i,
-					reason: error instanceof Error ? error.message : String(error)
-				})
-				console.warn(`Failed to compress texture ${i}:`, error)
-			}
-
-			this.emitProgress(
-				'Compressing textures',
-				Math.round(((i + 1) / textures.length) * 100)
-			)
-		}
-
-		if (failures.length > 0) {
-			const failureSummary = failures
-				.map((failure) => `#${failure.index}: ${failure.reason}`)
-				.join('; ')
-			throw new Error(
-				`Texture compression failed for ${failures.length} of ${textures.length} textures. ${failureSummary}`
-			)
-		}
-
-		console.log('All textures processed')
 		this.appliedOptimizations.push('texture compression')
-
-		console.log('After texture compression:')
-		textures.forEach((texture, i) => {
-			console.log(
-				`Texture ${i}: ${texture.getMimeType() || 'unknown mime type'}`
-			)
-		})
-
-		this.emitProgress('Texture compression complete', 100)
-	}
-
-	/**
-	 * Apply basic texture optimization without Sharp.
-	 * This provides fallback functionality when Sharp is not available.
-	 */
-	private async applyBasicTextureOptimization(
-		_options: TextureCompressOptions
-	): Promise<void> {
-		this.emitProgress('Applying basic texture optimization', 50)
-
-		const transforms = [
-			dedup(), // Remove duplicate resources including textures
-			prune() // Remove unused resources including textures
-		]
-
-		await this.applyTransforms(transforms, 'basic texture optimization')
-
-		console.warn(
-			'Applied basic texture optimization only. ' +
-				'For advanced compression (WebP, JPEG conversion), ensure Sharp is properly configured.'
-		)
-
-		this.emitProgress('Basic texture optimization complete', 100)
 	}
 
 	/**
@@ -529,157 +325,16 @@ export class ModelOptimizer {
 	 */
 	public async getReport(): Promise<OptimizationReport> {
 		const document = this.ensureModelLoaded()
-
 		const currentInspectReport = inspect(document)
 		const currentSize = (await this.export()).byteLength
 
-		// Helper function to calculate vertex and primitive counts from inspect report
-		const calculateCounts = (inspectReport: InspectReport) => {
-			let vertices = 0
-			let primitives = 0
-
-			if (inspectReport.meshes && inspectReport.meshes.properties) {
-				inspectReport.meshes.properties.forEach((mesh) => {
-					vertices += mesh.vertices || 0
-					primitives += mesh.glPrimitives || 0
-				})
-			}
-
-			return { vertices, primitives }
-		}
-
-		// Helper function to calculate texture memory usage in bytes
-		const calculateTextureSize = (inspectReport: InspectReport) => {
-			let totalSize = 0
-			if (inspectReport.textures && inspectReport.textures.properties) {
-				inspectReport.textures.properties.forEach((texture) => {
-					// Use the actual size property if available, otherwise use gpuSize
-					totalSize += texture.size || texture.gpuSize || 0
-				})
-			}
-			return totalSize
-		}
-
-		const calculateTextureCount = (inspectReport: InspectReport) => {
-			if (!inspectReport.textures?.properties) {
-				return 0
-			}
-			return inspectReport.textures.properties.length
-		}
-
-		const calculateTextureResolutions = (inspectReport: InspectReport) => {
-			const resolutions = new Set<string>()
-			if (inspectReport.textures?.properties) {
-				inspectReport.textures.properties.forEach((texture) => {
-					const entry = texture as unknown as {
-						width?: number
-						height?: number
-						dimensions?: [number, number]
-					}
-
-					if (
-						typeof entry.width === 'number' &&
-						typeof entry.height === 'number'
-					) {
-						resolutions.add(`${entry.width}x${entry.height}`)
-						return
-					}
-
-					if (
-						Array.isArray(entry.dimensions) &&
-						entry.dimensions.length === 2 &&
-						typeof entry.dimensions[0] === 'number' &&
-						typeof entry.dimensions[1] === 'number'
-					) {
-						resolutions.add(`${entry.dimensions[0]}x${entry.dimensions[1]}`)
-					}
-				})
-			}
-			return Array.from(resolutions)
-		}
-
-		// Helper function to calculate mesh memory usage in bytes
-		const calculateMeshSize = (inspectReport: InspectReport) => {
-			let totalSize = 0
-			if (inspectReport.meshes && inspectReport.meshes.properties) {
-				inspectReport.meshes.properties.forEach((mesh) => {
-					// Use the actual size property from the mesh report
-					totalSize += mesh.size || 0
-				})
-			}
-			return totalSize
-		}
-
-		const originalCounts = this.originalReport
-			? calculateCounts(this.originalReport)
-			: { vertices: 0, primitives: 0 }
-		const currentCounts = calculateCounts(currentInspectReport)
-
-		const originalTextureSize = this.originalReport
-			? calculateTextureSize(this.originalReport)
-			: 0
-		const currentTextureSize = calculateTextureSize(currentInspectReport)
-
-		const originalTextureCount = this.originalReport
-			? calculateTextureCount(this.originalReport)
-			: 0
-		const currentTextureCount = calculateTextureCount(currentInspectReport)
-
-		const originalTextureResolutions = this.originalReport
-			? calculateTextureResolutions(this.originalReport)
-			: []
-		const currentTextureResolutions =
-			calculateTextureResolutions(currentInspectReport)
-
-		const originalMeshSize = this.originalReport
-			? calculateMeshSize(this.originalReport)
-			: 0
-		const currentMeshSize = calculateMeshSize(currentInspectReport)
-
-		return {
-			originalSize: this.originalSize,
-			optimizedSize: currentSize,
-			compressionRatio: this.originalSize / currentSize,
-			appliedOptimizations: [...this.appliedOptimizations],
-			stats: {
-				vertices: {
-					before: originalCounts.vertices,
-					after: currentCounts.vertices
-				},
-				triangles: {
-					before: originalCounts.primitives,
-					after: currentCounts.primitives
-				},
-				materials: {
-					before: this.originalReport?.materials?.properties
-						? this.originalReport.materials.properties.length
-						: 0,
-					after: currentInspectReport.materials?.properties
-						? currentInspectReport.materials.properties.length
-						: 0
-				},
-				textures: {
-					before: originalTextureSize,
-					after: currentTextureSize
-				},
-				texturesCount: {
-					before: originalTextureCount,
-					after: currentTextureCount
-				},
-				textureResolutions: {
-					before: originalTextureResolutions,
-					after: currentTextureResolutions
-				},
-				meshes: {
-					before: originalMeshSize,
-					after: currentMeshSize
-				},
-				nodes: {
-					before: 0, // Node count not available in inspect report
-					after: 0 // Node count not available in inspect report
-				}
-			}
-		}
+		return buildOptimizationReport(
+			this.originalSize,
+			currentSize,
+			this.originalReport,
+			currentInspectReport,
+			this.appliedOptimizations
+		)
 	}
 
 	/**
@@ -775,6 +430,45 @@ export class ModelOptimizer {
 		this.syncTextureIdentity(texture, index, fileName)
 	}
 
+	/**
+	 * Load a GLTF (JSON) model directly from raw bytes and an asset map, bypassing Three.js.
+	 * This preserves original texture URIs and filenames present in the GLTF document.
+	 *
+	 * @param gltfBytes - Raw bytes of the .gltf JSON file
+	 * @param assets - Map of URI → bytes for all referenced assets (textures, buffers)
+	 */
+	public async loadFromGLTFWithAssets(
+		gltfBytes: Uint8Array,
+		assets: Map<string, Uint8Array>
+	): Promise<void> {
+		const result = await _loadFromGLTFWithAssets(
+			gltfBytes,
+			assets,
+			this.io,
+			this.emitProgress.bind(this),
+			(doc) => this.normalizeAllTextureURIs(doc),
+			() => this.export()
+		)
+		this._document = result.document
+		this.originalSize = result.originalSize
+		this.originalReport = result.originalReport
+	}
+
+	/**
+	 * Normalize all texture URIs and names to canonical form.
+	 * Called eagerly after every load path to ensure consistent naming
+	 * regardless of how the model was loaded (Three.js, GLB, GLTF JSON).
+	 */
+	public normalizeAllTextureURIs(doc?: Document): void {
+		const target = doc ?? this._document
+		if (!target) return
+		if (doc) this._document = doc
+		const textures = target.getRoot().listTextures()
+		textures.forEach((texture, index) => {
+			this.syncTextureIdentity(texture, index)
+		})
+	}
+
 	private resolveTextureCanonicalFileName(
 		texture: {
 			getMimeType: () => string | null
@@ -795,19 +489,30 @@ export class ModelOptimizer {
 				: ''
 		const stableName =
 			currentName && !isGenericTextureFileName(currentName) ? currentName : ''
-		const fallbackFileName = buildTextureFallbackFileName(
-			index,
-			texture.getMimeType()
-		)
-		const rawBaseFileName = stableUri || stableName || fallbackFileName
-		const baseFileName = extractFileNameSegment(rawBaseFileName)
 		const extension = mimeTypeToExtension(texture.getMimeType() || '')
 
-		if (!extension) {
-			return baseFileName
+		// Priority 1: existing stable URI or name
+		if (stableUri || stableName) {
+			const baseFileName = extractFileNameSegment(stableUri || stableName)
+			return extension
+				? replaceUriExtension(baseFileName, extension)
+				: baseFileName
 		}
 
-		return replaceUriExtension(baseFileName, extension)
+		// Priority 2: material-slot name (e.g. "Wood_Planks_baseColor.png")
+		if (this._document) {
+			const slot = resolveTextureByMaterialSlot(
+				this._document,
+				texture as unknown as Texture
+			)
+			if (slot) {
+				const slotFileName = `${slot.materialName}_${slot.slotName}`
+				return extension ? `${slotFileName}.${extension}` : slotFileName
+			}
+		}
+
+		// Priority 3: positional fallback
+		return buildTextureFallbackFileName(index, texture.getMimeType())
 	}
 
 	private syncTextureIdentity(
