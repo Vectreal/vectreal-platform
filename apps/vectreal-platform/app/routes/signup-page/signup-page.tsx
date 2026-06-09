@@ -275,10 +275,11 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 	if (user) return redirect(getSafeNext(request), { headers })
 
 	const url = new URL(request.url)
+	const accountDeleted = url.searchParams.get('account_deleted') === 'true'
 	const sceneSaved = url.searchParams.get('scene_saved') === 'true'
 	const nextPath = url.searchParams.get('next') ?? null
 
-	return data({ sceneSaved, nextPath }, { headers })
+	return data({ accountDeleted, sceneSaved, nextPath }, { headers })
 }
 
 // ─── Password strength helper ─────────────────────────────────────────────────
@@ -359,6 +360,7 @@ const SignupPage = ({ loaderData, actionData }: Route.ComponentProps) => {
 		confirmPassword.length > 0 && confirmPassword !== password
 
 	const loaderTyped = loaderData as {
+		accountDeleted: boolean
 		sceneSaved: boolean
 		nextPath: string | null
 	}
@@ -375,6 +377,23 @@ const SignupPage = ({ loaderData, actionData }: Route.ComponentProps) => {
 	return (
 		<MotionConfig reducedMotion="user">
 			<div className="w-full max-w-md">
+				{loaderTyped?.accountDeleted && (
+					<motion.div
+						initial={{ opacity: 0, y: -8 }}
+						animate={{ opacity: 1, y: 0 }}
+						className="border-success/50 bg-success/25 text-success-foreground/80 mb-6 space-y-2 rounded-lg border p-4 text-sm"
+					>
+						<span className="flex gap-2">
+							<ShieldCheck className="h-4 w-4 text-inherit" aria-hidden="true" />
+							<p className="font-medium text-inherit">Account deleted</p>
+						</span>
+						<p className="text-success-foreground/60">
+							Your Vectreal account was deleted successfully. You can create a
+							new account at any time.
+						</p>
+					</motion.div>
+				)}
+
 				{/* Scene preservation notice */}
 				{loaderTyped?.sceneSaved && (
 					<motion.div

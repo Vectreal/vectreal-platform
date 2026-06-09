@@ -462,10 +462,19 @@ export async function updateUserProfile(
 }
 
 export async function deleteUserAndRelatedData(userId: string): Promise<void> {
-	const deletedUsers = await db
-		.delete(users)
-		.where(eq(users.id, userId))
-		.returning({ id: users.id })
+	const deletedUsers = await db.transaction(async (tx) => {
+		// `organization_memberships.invited_by` intentionally uses NO ACTION to
+		// preserve invite history, so clear references before deleting the user.
+		await tx
+			.update(organizationMemberships)
+			.set({ invitedBy: null })
+			.where(eq(organizationMemberships.invitedBy, userId))
+
+		return tx
+			.delete(users)
+			.where(eq(users.id, userId))
+			.returning({ id: users.id })
+	})
 
 	if (deletedUsers.length === 0) {
 		throw new Error('User account not found')

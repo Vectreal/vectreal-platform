@@ -4,6 +4,7 @@ import {
 	serializeCookieHeader,
 	type CookieOptions
 } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -74,4 +75,23 @@ export async function createSupabaseClient(request: Request) {
 	const context: SupabaseClientContext = { client, headers }
 	clientCache.set(request, context)
 	return context
+}
+
+export function createSupabaseAdminClient() {
+	if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+		throw new Error(
+			'Missing required Supabase admin environment variables: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set'
+		)
+	}
+
+	return createClient(
+		process.env.SUPABASE_URL,
+		process.env.SUPABASE_SERVICE_ROLE_KEY,
+		{
+			auth: {
+				autoRefreshToken: false,
+				persistSession: false
+			}
+		}
+	)
 }
