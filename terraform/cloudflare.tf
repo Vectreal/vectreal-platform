@@ -158,3 +158,203 @@ resource "cloudflare_ruleset" "cache_rules" {
     }
   }
 }
+
+# =============================================================================
+# Redirect: core.vectreal.com → vectreal.com (legacy domain retirement)
+# Dummy A record is required for Cloudflare to intercept traffic via the proxy.
+# =============================================================================
+
+resource "cloudflare_record" "core" {
+  count   = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id = var.cloudflare_zone_id
+  name    = "core"
+  type    = "A"
+  content = "192.0.2.1"
+  proxied = true
+}
+
+resource "cloudflare_page_rule" "core_redirect" {
+  count    = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id  = var.cloudflare_zone_id
+  target   = "core.vectreal.com/*"
+  priority = 1
+
+  actions {
+    forwarding_url {
+      url         = "https://vectreal.com/$1"
+      status_code = 301
+    }
+  }
+}
+
+# =============================================================================
+# MX Records
+# =============================================================================
+
+resource "cloudflare_record" "mx_google_primary" {
+  count    = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id  = var.cloudflare_zone_id
+  name     = "@"
+  type     = "MX"
+  content  = "aspmx.l.google.com"
+  priority = 1
+  proxied  = false
+}
+
+resource "cloudflare_record" "mx_google_alt1" {
+  count    = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id  = var.cloudflare_zone_id
+  name     = "@"
+  type     = "MX"
+  content  = "alt1.aspmx.l.google.com"
+  priority = 5
+  proxied  = false
+}
+
+resource "cloudflare_record" "mx_google_alt2" {
+  count    = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id  = var.cloudflare_zone_id
+  name     = "@"
+  type     = "MX"
+  content  = "alt2.aspmx.l.google.com"
+  priority = 5
+  proxied  = false
+}
+
+resource "cloudflare_record" "mx_google_alt3" {
+  count    = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id  = var.cloudflare_zone_id
+  name     = "@"
+  type     = "MX"
+  content  = "alt3.aspmx.l.google.com"
+  priority = 10
+  proxied  = false
+}
+
+resource "cloudflare_record" "mx_google_alt4" {
+  count    = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id  = var.cloudflare_zone_id
+  name     = "@"
+  type     = "MX"
+  content  = "alt4.aspmx.l.google.com"
+  priority = 10
+  proxied  = false
+}
+
+resource "cloudflare_record" "mx_ses_inbound" {
+  count    = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id  = var.cloudflare_zone_id
+  name     = "mail"
+  type     = "MX"
+  content  = "inbound-smtp.eu-west-1.amazonaws.com"
+  priority = 10
+  proxied  = false
+}
+
+resource "cloudflare_record" "mx_ses_feedback" {
+  count    = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id  = var.cloudflare_zone_id
+  name     = "send.mail"
+  type     = "MX"
+  content  = "feedback-smtp.eu-west-1.amazonses.com"
+  priority = 10
+  proxied  = false
+}
+
+# =============================================================================
+# CNAME Records (infrastructure / verification)
+# =============================================================================
+
+resource "cloudflare_record" "google_site_verification_cname" {
+  count   = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id = var.cloudflare_zone_id
+  name    = "2vrtxzfgvoc7"
+  type    = "CNAME"
+  content = "gv-4tric6ghpyq5gr.dv.googlehosted.com"
+  proxied = false
+}
+
+resource "cloudflare_record" "domainconnect" {
+  count   = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id = var.cloudflare_zone_id
+  name    = "_domainconnect"
+  type    = "CNAME"
+  content = "_domainconnect.domains.squarespace.com"
+  proxied = true
+}
+
+resource "cloudflare_record" "firebase_dkim1" {
+  count   = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id = var.cloudflare_zone_id
+  name    = "firebase1._domainkey"
+  type    = "CNAME"
+  content = "mail-vectreal-com.dkim1._domainkey.firebasemail.com"
+  proxied = false
+}
+
+resource "cloudflare_record" "firebase_dkim2" {
+  count   = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id = var.cloudflare_zone_id
+  name    = "firebase2._domainkey"
+  type    = "CNAME"
+  content = "mail-vectreal-com.dkim2._domainkey.firebasemail.com"
+  proxied = false
+}
+
+resource "cloudflare_record" "posthog_proxy" {
+  count   = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id = var.cloudflare_zone_id
+  name    = "go"
+  type    = "CNAME"
+  content = "b748e11b6bbb0c1c6303.cf-prod-eu-proxy.europehog.com"
+  proxied = true
+}
+
+# =============================================================================
+# TXT Records (SPF, DKIM, DMARC, verification)
+# =============================================================================
+
+resource "cloudflare_record" "spf" {
+  count   = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id = var.cloudflare_zone_id
+  name    = "@"
+  type    = "TXT"
+  content = "v=spf1 include:_spf.google.com include:_spf.firebasemail.com ~all"
+  proxied = false
+}
+
+resource "cloudflare_record" "google_site_verification" {
+  count   = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id = var.cloudflare_zone_id
+  name    = "@"
+  type    = "TXT"
+  content = "google-site-verification=XPvO5u7EGXIMpX9t58UISEq0081eyiqLOYXOArJb38Q"
+  proxied = false
+}
+
+resource "cloudflare_record" "dmarc" {
+  count   = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id = var.cloudflare_zone_id
+  name    = "_dmarc"
+  type    = "TXT"
+  content = "v=DMARC1; p=none;"
+  proxied = false
+}
+
+resource "cloudflare_record" "github_org_verification" {
+  count   = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id = var.cloudflare_zone_id
+  name    = "_gh-vectreal-o"
+  type    = "TXT"
+  content = "6ee506eb76"
+  proxied = false
+}
+
+resource "cloudflare_record" "google_dkim" {
+  count   = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id = var.cloudflare_zone_id
+  name    = "google._domainkey"
+  type    = "TXT"
+  content = "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqFG2z6CciKGe0s8ZYly+tvafMps9NUsqAkYXsk087+yPCAojr+Z9y5MxUHYiOvq1eIoxuKfPImfv5/4QWYmJ7lf4Ogk8GuZ0tNi7FNBtdKusjoMWfxlC7mqACQU2gx1JZgASCiZ4p0HNFe72Luzy6HYwUrCxpnTN4k9jQilcjg6revFThizw8uLfKxU75SLdVPLYUIUTGkQeJnof60fx+F63L6r1GI1FPS+Y97TphFj1jMePQzPJAyg9tqaqzWFG1h3EnDluFgC1TkHE39RMaSpAdw6Q+iAOQeHbXv6yJEFsqxT0pbkzkTu/uDCMoDZbzXJE9BelCn3aQXHkuIodywIDAQAB"
+  proxied = false
+}

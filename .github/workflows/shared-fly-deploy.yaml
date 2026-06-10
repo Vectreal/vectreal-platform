@@ -117,17 +117,22 @@ jobs:
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
 
-      - name: Deploy to Fly.io
+      - name: Push image to Fly.io registry and deploy
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           APP_NAME: ${{ inputs.app_name }}
           FLY_CONFIG: ${{ inputs.fly_config }}
-          IMAGE: ${{ steps.tag.outputs.image }}
+          GHCR_IMAGE: ${{ steps.tag.outputs.image }}
+          COMMIT_SHA: ${{ github.sha }}
         run: |
+          flyctl auth docker
+          FLY_IMAGE="registry.fly.io/${APP_NAME}:${COMMIT_SHA}"
+          docker tag "$GHCR_IMAGE" "$FLY_IMAGE"
+          docker push "$FLY_IMAGE"
           flyctl deploy \
             --app "$APP_NAME" \
             --config "$FLY_CONFIG" \
-            --image "$IMAGE" \
+            --image "$FLY_IMAGE" \
             --wait-timeout 120
 
       - name: Health check
