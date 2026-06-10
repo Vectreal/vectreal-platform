@@ -74,7 +74,7 @@ jobs:
           REPO_OWNER: ${{ github.repository_owner }}
           COMMIT_SHA: ${{ github.sha }}
         run: |
-          echo "image=ghcr.io/${REPO_OWNER}/vectreal-platform:${COMMIT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/$(echo "${REPO_OWNER}" | tr '[:upper:]' '[:lower:]')/vectreal-platform:${COMMIT_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push image
         uses: docker/build-push-action@v5
