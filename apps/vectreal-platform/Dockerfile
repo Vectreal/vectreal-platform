@@ -89,6 +89,8 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
     CMD node -e "require('http').get('http://localhost:8080/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start the application using react-router-serve from the correct directory
-WORKDIR /app
-CMD ["./node_modules/.bin/react-router-serve", "build/apps/vectreal-platform/server/index.js"]
+# react-router.config.ts sets buildDirectory: '../../build/apps/vectreal-platform'
+# relative to apps/vectreal-platform/. The server bundle stores assetsBuildDirectory
+# as that same relative path, so react-router-serve must run from this directory.
+WORKDIR /app/apps/vectreal-platform
+CMD ["../../node_modules/.bin/react-router-serve", "../../build/apps/vectreal-platform/server/index.js"]
