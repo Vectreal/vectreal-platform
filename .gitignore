@@ -35,5 +35,6 @@ credentials/
 .claude/settings.local.json
 
 todos
+docs/superpowers/*
 docs/superpowers
 tmp

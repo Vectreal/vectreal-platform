@@ -1,8 +1,9 @@
+# .github/workflows/cd-platform-production.yaml
 name: CD - Deploy Platform to Production
 
 permissions:
   contents: read
-  id-token: write
+  packages: write
 
 on:
   workflow_dispatch:
@@ -20,41 +21,20 @@ jobs:
     name: Deploy to Production Environment
     needs: quality-gate
     if: ${{ needs.quality-gate.result == 'success' }}
-    uses: ./.github/workflows/shared-gcloud-deploy.yaml
+    uses: ./.github/workflows/shared-fly-deploy.yaml
     with:
+      app_name: vectreal-platform
+      fly_config: apps/vectreal-platform/fly.toml
+      static_bucket: vectreal-static-prod
       environment: production
-      service-name: vectreal-platform
-      image-name: vectreal-platform
-      region: us-central1
-      artifact-region: us-central1
-      node-env: production
-      allow-unauthenticated: true
-      cloud-run-flags: ''
-      static-bucket-name: 'vectreal-static-prod'
-      static-cache-control: 'public, max-age=31536000, immutable'
-      fail-on-health-check: true
+      fail_on_health_check: true
     secrets:
-      gcp-workload-identity-provider: ${{ secrets.GCP_WIF_PROVIDER_PROD }}
-      gcp-service-account: ${{ secrets.GCP_SA_EMAIL_PROD }}
-      gcp-project-id: ${{ secrets.GCP_PROJECT_ID }}
-      database-url: ${{ secrets.DATABASE_URL_PROD }}
-      supabase-url: ${{ secrets.SUPABASE_URL_PROD }}
-      supabase-key: ${{ secrets.SUPABASE_KEY_PROD }}
-      google-cloud-storage-private-bucket: ${{ secrets.GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD }}
-      application-url: ${{ secrets.APPLICATION_URL_PROD }}
-      csrf-secret: ${{ secrets.CSRF_SECRET_PROD }}
-      stripe-secret-key: ${{ secrets.STRIPE_SECRET_KEY_PROD }}
-      cloudflare-turnstile-site-key: ${{ secrets.CLOUDFLARE_TURNSTILE_SITE_KEY_PROD }}
-      cloudflare-turnstile-secret-key: ${{ secrets.CLOUDFLARE_TURNSTILE_SECRET_KEY_PROD }}
-      posthog-token: ${{ secrets.VITE_PUBLIC_POSTHOG_TOKEN }}
-      posthog-host: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
-      vectreal-api-key-prod: ${{ secrets.VITE_PUBLIC_VECTREAL_API_KEY_PROD }}
-      demo-scene-url: ${{ secrets.VITE_PUBLIC_DEMO_SCENE_URL }}
-      optimize-textures-worker-url: ${{ secrets.OPTIMIZE_TEXTURES_WORKER_URL_PROD }}
-      optimize-textures-worker-token: ${{ secrets.OPTIMIZE_TEXTURES_WORKER_TOKEN_PROD }}
-      contact-data-encryption-key: ${{ secrets.CONTACT_DATA_ENCRYPTION_KEY_PROD }}
-      resend-api-key: ${{ secrets.RESEND_API_KEY_PROD }}
-      resend-webhook-secret: ${{ secrets.RESEND_WEBHOOK_SECRET_PROD }}
-      contact-inbox-email: ${{ secrets.CONTACT_INBOX_EMAIL }}
-      from-email: ${{ secrets.FROM_EMAIL }}
-      send-email-hook-secret: ${{ secrets.SEND_EMAIL_HOOK_SECRET_PROD }}
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      VITE_PUBLIC_POSTHOG_TOKEN: ${{ secrets.VITE_PUBLIC_POSTHOG_TOKEN }}
+      VITE_PUBLIC_POSTHOG_HOST: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
+      VITE_PUBLIC_POSTHOG_UI_HOST: ${{ secrets.VITE_PUBLIC_POSTHOG_UI_HOST }}
+      VITE_PUBLIC_VECTREAL_API_KEY_PROD: ${{ secrets.VITE_PUBLIC_VECTREAL_API_KEY_PROD }}
+      VITE_PUBLIC_DEMO_SCENE_URL: ${{ secrets.VITE_PUBLIC_DEMO_SCENE_URL }}

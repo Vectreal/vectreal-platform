@@ -1,3 +1,4 @@
+# .github/workflows/cd-platform-staging.yaml
 name: CD - Deploy Platform to Staging
 
 on:
@@ -22,11 +23,11 @@ on:
       - '.github/workflows/ci-quality.yaml'
       - '.github/workflows/cd-platform-staging.yaml'
       - '.github/workflows/cd-platform-production.yaml'
-      - '.github/workflows/shared-gcloud-deploy.yaml'
+      - '.github/workflows/shared-fly-deploy.yaml'
 
 permissions:
   contents: read
-  id-token: write
+  packages: write
 
 concurrency:
   group: cd-platform-staging-${{ github.ref }}
@@ -35,41 +36,20 @@ concurrency:
 jobs:
   deploy-staging:
     name: Deploy to Staging Environment
-    uses: ./.github/workflows/shared-gcloud-deploy.yaml
+    uses: ./.github/workflows/shared-fly-deploy.yaml
     with:
+      app_name: vectreal-platform-staging
+      fly_config: apps/vectreal-platform/fly.staging.toml
+      static_bucket: vectreal-static-staging
       environment: staging
-      service-name: vectreal-platform-staging
-      image-name: vectreal-platform-staging
-      region: europe-west3
-      artifact-region: us-central1
-      node-env: staging
-      allow-unauthenticated: false
-      cloud-run-flags: '--ingress internal-and-cloud-load-balancing'
-      static-bucket-name: 'vectreal-static-staging'
-      static-cache-control: 'public, max-age=31536000, immutable'
-      fail-on-health-check: false
+      fail_on_health_check: false
     secrets:
-      gcp-workload-identity-provider: ${{ secrets.GCP_WIF_PROVIDER_STAGING }}
-      gcp-service-account: ${{ secrets.GCP_SA_EMAIL_STAGING }}
-      gcp-project-id: ${{ secrets.GCP_PROJECT_ID_STAGING }}
-      database-url: ${{ secrets.DATABASE_URL_STAGING }}
-      supabase-url: ${{ secrets.SUPABASE_URL_STAGING }}
-      supabase-key: ${{ secrets.SUPABASE_KEY_STAGING }}
-      google-cloud-storage-private-bucket: ${{ secrets.GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING }}
-      application-url: ${{ secrets.APPLICATION_URL_STAGING }}
-      csrf-secret: ${{ secrets.CSRF_SECRET_STAGING }}
-      stripe-secret-key: ${{ secrets.STRIPE_SECRET_KEY_STAGING }}
-      cloudflare-turnstile-site-key: ${{ secrets.CLOUDFLARE_TURNSTILE_SITE_KEY_STAGING }}
-      cloudflare-turnstile-secret-key: ${{ secrets.CLOUDFLARE_TURNSTILE_SECRET_KEY_STAGING }}
-      posthog-token: ${{ secrets.VITE_PUBLIC_POSTHOG_TOKEN }}
-      posthog-host: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
-      vectreal-api-key-prod: ${{ secrets.VITE_PUBLIC_VECTREAL_API_KEY_PROD }}
-      demo-scene-url: ${{ secrets.VITE_PUBLIC_DEMO_SCENE_URL }}
-      optimize-textures-worker-url: ${{ secrets.OPTIMIZE_TEXTURES_WORKER_URL_STAGING }}
-      optimize-textures-worker-token: ${{ secrets.OPTIMIZE_TEXTURES_WORKER_TOKEN_STAGING }}
-      contact-data-encryption-key: ${{ secrets.CONTACT_DATA_ENCRYPTION_KEY_STAGING }}
-      resend-api-key: ${{ secrets.RESEND_API_KEY_STAGING }}
-      resend-webhook-secret: ${{ secrets.RESEND_WEBHOOK_SECRET_STAGING }}
-      contact-inbox-email: ${{ secrets.CONTACT_INBOX_EMAIL }}
-      from-email: ${{ secrets.FROM_EMAIL }}
-      send-email-hook-secret: ${{ secrets.SEND_EMAIL_HOOK_SECRET_STAGING }}
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      VITE_PUBLIC_POSTHOG_TOKEN: ${{ secrets.VITE_PUBLIC_POSTHOG_TOKEN }}
+      VITE_PUBLIC_POSTHOG_HOST: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
+      VITE_PUBLIC_POSTHOG_UI_HOST: ${{ secrets.VITE_PUBLIC_POSTHOG_UI_HOST }}
+      VITE_PUBLIC_VECTREAL_API_KEY_PROD: ${{ secrets.VITE_PUBLIC_VECTREAL_API_KEY_PROD }}
+      VITE_PUBLIC_DEMO_SCENE_URL: ${{ secrets.VITE_PUBLIC_DEMO_SCENE_URL }}
