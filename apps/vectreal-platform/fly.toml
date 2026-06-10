@@ -1,0 +1,28 @@
+# apps/vectreal-platform/fly.toml
+app            = "vectreal-platform"
+primary_region = "fra"
+
+[http_service]
+  internal_port       = 8080
+  force_https         = true
+  auto_stop_machines  = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type       = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+[[vm]]
+  size = "performance-2x"
+
+[checks]
+  [checks.health]
+    grace_period = "30s"
+    interval     = "15s"
+    method       = "get"
+    path         = "/health"
+    port         = 8080
+    timeout      = "10s"
+    type         = "http"

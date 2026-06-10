@@ -1,0 +1,149 @@
+# .github/workflows/shared-fly-deploy.yaml
+name: Shared - Fly.io Deployment
+
+permissions:
+  contents: read
+  packages: write
+
+on:
+  workflow_call:
+    inputs:
+      app_name:
+        description: 'Fly.io app name'
+        required: true
+        type: string
+      fly_config:
+        description: 'Path to fly.toml (e.g. apps/vectreal-platform/fly.toml)'
+        required: true
+        type: string
+      static_bucket:
+        description: 'R2 bucket name for static assets'
+        required: true
+        type: string
+      environment:
+        description: 'Deployment environment (staging | production)'
+        required: true
+        type: string
+      fail_on_health_check:
+        description: 'Fail the workflow when the post-deploy health check fails'
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      FLY_API_TOKEN:
+        required: true
+      CLOUDFLARE_ACCOUNT_ID:
+        required: true
+      R2_ACCESS_KEY_ID:
+        required: true
+      R2_SECRET_ACCESS_KEY:
+        required: true
+      VITE_PUBLIC_POSTHOG_TOKEN:
+        required: true
+      VITE_PUBLIC_POSTHOG_HOST:
+        required: true
+      VITE_PUBLIC_POSTHOG_UI_HOST:
+        required: false
+      VITE_PUBLIC_VECTREAL_API_KEY_PROD:
+        required: false
+      VITE_PUBLIC_DEMO_SCENE_URL:
+        required: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tag
+        id: tag
+        env:
+          REPO_OWNER: ${{ github.repository_owner }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          echo "image=ghcr.io/${REPO_OWNER}/vectreal-platform:${COMMIT_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/vectreal-platform/Dockerfile
+          push: true
+          tags: ${{ steps.tag.outputs.image }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_VITE_PUBLIC_POSTHOG_TOKEN=${{ secrets.VITE_PUBLIC_POSTHOG_TOKEN }}
+            BUILD_VITE_PUBLIC_POSTHOG_HOST=${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
+            BUILD_VITE_PUBLIC_POSTHOG_UI_HOST=${{ secrets.VITE_PUBLIC_POSTHOG_UI_HOST || 'https://eu.posthog.com' }}
+            BUILD_VITE_PUBLIC_VECTREAL_API_KEY_PROD=${{ secrets.VITE_PUBLIC_VECTREAL_API_KEY_PROD }}
+            BUILD_VITE_PUBLIC_DEMO_SCENE_URL=${{ secrets.VITE_PUBLIC_DEMO_SCENE_URL }}
+
+      - name: Extract static assets from image
+        env:
+          IMAGE: ${{ steps.tag.outputs.image }}
+        run: |
+          id=$(docker create "$IMAGE")
+          docker cp "$id":/app/build/apps/vectreal-platform/client ./extracted-assets
+          docker rm "$id"
+
+      - name: Upload static assets to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          STATIC_BUCKET: ${{ inputs.static_bucket }}
+        run: |
+          aws s3 sync ./extracted-assets \
+            "s3://${STATIC_BUCKET}" \
+            --endpoint-url "https://${CF_ACCOUNT_ID}.r2.cloudflarestorage.com" \
+            --cache-control "public, max-age=31536000, immutable" \
+            --delete
+
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          APP_NAME: ${{ inputs.app_name }}
+          FLY_CONFIG: ${{ inputs.fly_config }}
+          IMAGE: ${{ steps.tag.outputs.image }}
+        run: |
+          flyctl deploy \
+            --app "$APP_NAME" \
+            --config "$FLY_CONFIG" \
+            --image "$IMAGE" \
+            --wait-timeout 120
+
+      - name: Health check
+        env:
+          APP_NAME: ${{ inputs.app_name }}
+          FAIL_ON_ERROR: ${{ inputs.fail_on_health_check }}
+        run: |
+          for i in {1..8}; do
+            status=$(curl -sL -o /dev/null -w "%{http_code}" \
+              "https://${APP_NAME}.fly.dev/health")
+            [ "$status" = "200" ] && echo "Health check passed" && exit 0
+            echo "Attempt $i: status $status, retrying in 15s..."
+            sleep 15
+          done
+          echo "Health check failed after 8 attempts"
+          if [ "$FAIL_ON_ERROR" = "true" ]; then
+            exit 1
+          fi
+          echo "::warning::Health check failed but workflow configured to continue."

@@ -67,19 +67,11 @@ ENV NODE_ENV=${NODE_ENV}
 ENV PORT=8080
 ENV NODE_OPTIONS="--heapsnapshot-near-heap-limit=2"
 
-# =============================================================================
-# REQUIRED ENVIRONMENT VARIABLES (must be set at runtime):
-# =============================================================================
-# - DATABASE_URL: PostgreSQL connection string
-# - SUPABASE_URL: Supabase project URL (e.g., https://xxx.supabase.co)
-# - SUPABASE_KEY: Supabase anonymous/public key
-# - STRIPE_SECRET_KEY: Stripe API secret key (sk_test_* or sk_live_*)
-# - GOOGLE_CLOUD_PROJECT: Google Cloud project ID (vectreal-platform)
-# - GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET: Google Cloud Storage private bucket name
-# - APPLICATION_URL: Application URL for OAuth redirects (optional)
-# - OPTIMIZE_TEXTURES_WORKER_URL: Optional runtime URL for external texture optimization worker
-# - OPTIMIZE_TEXTURES_WORKER_TOKEN: Optional shared token sent to the optimization worker
-# =============================================================================
+# Runtime secrets are injected by Fly.io (set via setup-fly-secrets.sh).
+# Required: DATABASE_URL, SUPABASE_URL, SUPABASE_KEY, STRIPE_SECRET_KEY,
+#           CSRF_SECRET, APPLICATION_URL, CLOUDFLARE_TURNSTILE_SITE_KEY,
+#           CLOUDFLARE_TURNSTILE_SECRET_KEY, RESEND_API_KEY, FROM_EMAIL,
+#           CONTACT_INBOX_EMAIL, SEND_EMAIL_HOOK_SECRET
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
