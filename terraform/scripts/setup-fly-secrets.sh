@@ -111,6 +111,7 @@ REQUIRED_STAGING=(
   "DATABASE_URL_STAGING"
   "SUPABASE_URL_STAGING"
   "SUPABASE_KEY_STAGING"
+  "SUPABASE_SECRET_KEY_STAGING"
   "APPLICATION_URL_STAGING"
   "CSRF_SECRET_STAGING"
   "STRIPE_SECRET_KEY_STAGING"
@@ -124,6 +125,7 @@ REQUIRED_PROD=(
   "DATABASE_URL_PROD"
   "SUPABASE_URL_PROD"
   "SUPABASE_KEY_PROD"
+  "SUPABASE_SECRET_KEY_PROD"
   "APPLICATION_URL_PROD"
   "CSRF_SECRET_PROD"
   "STRIPE_SECRET_KEY_PROD"
@@ -172,10 +174,11 @@ if [[ "$MODE" == "verify" ]]; then
     local env="$1" app="$2"
     local ENV
     ENV=$(printf '%s' "$env" | tr '[:lower:]' '[:upper:]')
-    for field in DATABASE_URL SUPABASE_URL SUPABASE_KEY CSRF_SECRET STRIPE_SECRET_KEY \
-                 APPLICATION_URL SEND_EMAIL_HOOK_SECRET CLOUDFLARE_TURNSTILE_SITE_KEY \
-                 CLOUDFLARE_TURNSTILE_SECRET_KEY RESEND_API_KEY CONTACT_DATA_ENCRYPTION_KEY \
-                 RESEND_WEBHOOK_SECRET CONTACT_INBOX_EMAIL FROM_EMAIL; do
+    for field in DATABASE_URL SUPABASE_URL SUPABASE_KEY SUPABASE_SECRET_KEY \
+                 CSRF_SECRET STRIPE_SECRET_KEY APPLICATION_URL SEND_EMAIL_HOOK_SECRET \
+                 CLOUDFLARE_TURNSTILE_SITE_KEY CLOUDFLARE_TURNSTILE_SECRET_KEY \
+                 RESEND_API_KEY CONTACT_DATA_ENCRYPTION_KEY RESEND_WEBHOOK_SECRET \
+                 CONTACT_INBOX_EMAIL FROM_EMAIL; do
       check_fly_secret "$app" "$field"
     done
   }
@@ -205,6 +208,7 @@ sync_fly_secrets() {
   local db_url; db_url="$(eval echo "\${DATABASE_URL_${ENV}}")"
   local sb_url; sb_url="$(eval echo "\${SUPABASE_URL_${ENV}}")"
   local sb_key; sb_key="$(eval echo "\${SUPABASE_KEY_${ENV}}")"
+  local sb_service_role; sb_service_role="$(eval echo "\${SUPABASE_SECRET_KEY_${ENV}}")"
   local app_url; app_url="$(eval echo "\${APPLICATION_URL_${ENV}}")"
   local csrf;    csrf="$(eval echo "\${CSRF_SECRET_${ENV}}")"
   local stripe;  stripe="$(eval echo "\${STRIPE_SECRET_KEY_${ENV}}")"
@@ -220,6 +224,7 @@ sync_fly_secrets() {
       DATABASE_URL="$db_url" \
       SUPABASE_URL="$sb_url" \
       SUPABASE_KEY="$sb_key" \
+      SUPABASE_SECRET_KEY="$sb_service_role" \
       APPLICATION_URL="$app_url" \
       CSRF_SECRET="$csrf" \
       STRIPE_SECRET_KEY="$stripe" \

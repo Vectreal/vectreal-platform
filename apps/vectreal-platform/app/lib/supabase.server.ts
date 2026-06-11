@@ -78,15 +78,15 @@ export async function createSupabaseClient(request: Request) {
 }
 
 export function createSupabaseAdminClient() {
-	if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+	if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) {
 		throw new Error(
-			'Missing required Supabase admin environment variables: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set'
+			'Missing required environment variables: SUPABASE_URL and SUPABASE_SECRET_KEY must be set'
 		)
 	}
 
 	return createClient(
 		process.env.SUPABASE_URL,
-		process.env.SUPABASE_SERVICE_ROLE_KEY,
+		process.env.SUPABASE_SECRET_KEY,
 		{
 			auth: {
 				autoRefreshToken: false,
