@@ -36,15 +36,15 @@ let ensureBucketPromise: Promise<void> | null = null
  */
 function getStorageClient() {
 	const supabaseUrl = process.env.SUPABASE_URL?.trim()
-	const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+	const secretKey = process.env.SUPABASE_SECRET_KEY?.trim()
 
-	if (!supabaseUrl || !serviceRoleKey) {
+	if (!supabaseUrl || !secretKey) {
 		throw new Error(
-			'Missing required environment variables: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set'
+			'Missing required environment variables: SUPABASE_URL and SUPABASE_SECRET_KEY must be set'
 		)
 	}
 
-	return createClient(supabaseUrl, serviceRoleKey, {
+	return createClient(supabaseUrl, secretKey, {
 		auth: { persistSession: false }
 	}).storage
 }

@@ -124,8 +124,8 @@ resource "google_compute_backend_service" "staging_app" {
   enable_cdn            = true
 
   cdn_policy {
-    cache_mode  = "USE_ORIGIN_HEADERS"
-    client_ttl  = 0
+    cache_mode = "USE_ORIGIN_HEADERS"
+    client_ttl = 0
 
     serve_while_stale = 60
 
@@ -159,8 +159,8 @@ resource "google_compute_backend_service" "production_app" {
   enable_cdn            = true
 
   cdn_policy {
-    cache_mode  = "USE_ORIGIN_HEADERS"
-    client_ttl  = 0
+    cache_mode = "USE_ORIGIN_HEADERS"
+    client_ttl = 0
 
     serve_while_stale = 60
 
