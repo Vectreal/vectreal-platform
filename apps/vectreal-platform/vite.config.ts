@@ -84,27 +84,12 @@ const shouldEnableReactCompiler = (command: 'build' | 'serve') => {
 	return command === 'build'
 }
 
-function appendSlashIfMissing(url: string) {
-	if (!url.endsWith('/')) {
-		return `${url}/`
-	}
-	return url
-}
-
 export default defineConfig(({ command }) => {
 	const reactCompilerEnabled = shouldEnableReactCompiler(command)
-
-	// In CI, VITE_PUBLIC_ASSET_BASE_URL is set to the R2 CDN origin so all
-	// built asset URLs point to the edge rather than the Fly.io compute node.
-	// Unset locally → Vite defaults to '/' (dev server serves assets directly).
-	const assetBaseUrl = appendSlashIfMissing(
-		process.env.VITE_PUBLIC_ASSET_BASE_URL ?? '/'
-	)
 
 	return {
 		root: __dirname,
 		cacheDir: '../../node_modules/.vite/apps/vectreal-platform',
-		base: assetBaseUrl,
 
 		server: {
 			port: 4200,

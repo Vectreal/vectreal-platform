@@ -63,7 +63,6 @@ resource "cloudflare_turnstile_widget" "staging" {
 
 # =============================================================================
 # DNS Records — Cloudflare proxies to Fly.io
-# static.* served directly from R2 via Custom Domain (no DNS record needed here)
 # =============================================================================
 
 resource "cloudflare_record" "vectreal_com" {
@@ -97,28 +96,6 @@ resource "cloudflare_record" "staging" {
 }
 
 # =============================================================================
-# R2 Static Asset Buckets
-# Custom domains are connected via Cloudflare dashboard:
-#   R2 → bucket → Settings → Custom Domains → Connect Domain
-#   prod:    static.vectreal.com
-#   staging: static-staging.vectreal.com
-# =============================================================================
-
-resource "cloudflare_r2_bucket" "static_prod" {
-  count      = local.enable_cloudflare ? 1 : 0
-  account_id = var.cloudflare_account_id
-  name       = "vectreal-static-prod"
-  location   = "WEUR"
-}
-
-resource "cloudflare_r2_bucket" "static_staging" {
-  count      = local.enable_cloudflare ? 1 : 0
-  account_id = var.cloudflare_account_id
-  name       = "vectreal-static-staging"
-  location   = "WEUR"
-}
-
-# =============================================================================
 # Cache Rules
 # =============================================================================
 
@@ -130,8 +107,8 @@ resource "cloudflare_ruleset" "cache_rules" {
   phase   = "http_request_cache_settings"
 
   rules {
-    description = "Immutable static assets (R2)"
-    expression  = "(http.host eq \"static.vectreal.com\") or (http.host eq \"static-staging.vectreal.com\")"
+    description = "Immutable hashed assets served by Fly.io — cache at edge for 1 year"
+    expression  = "((http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")) and starts_with(http.request.uri.path, \"/assets/\")"
     action      = "set_cache_settings"
     action_parameters {
       cache = true
@@ -147,8 +124,8 @@ resource "cloudflare_ruleset" "cache_rules" {
   }
 
   rules {
-    description = "SSR app pages — respect origin headers"
-    expression  = "(http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")"
+    description = "SSR app pages — respect origin cache headers"
+    expression  = "((http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")) and not starts_with(http.request.uri.path, \"/assets/\")"
     action      = "set_cache_settings"
     action_parameters {
       cache = true
