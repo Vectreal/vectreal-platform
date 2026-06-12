@@ -93,6 +93,7 @@ jobs:
           GHCR_IMAGE: ${{ steps.tag.outputs.image }}
           COMMIT_SHA: ${{ github.sha }}
         run: |
+          docker pull "$GHCR_IMAGE"
           flyctl auth docker
           FLY_IMAGE="registry.fly.io/${APP_NAME}:${COMMIT_SHA}"
           docker tag "$GHCR_IMAGE" "$FLY_IMAGE"
