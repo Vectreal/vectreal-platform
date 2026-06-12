@@ -20,6 +20,11 @@ on:
         description: 'R2 bucket name for static assets'
         required: true
         type: string
+      asset_base_url:
+        description: 'Base URL for built assets (e.g. https://static.vectreal.com). Empty = serve from Fly.io origin.'
+        required: false
+        type: string
+        default: ''
       environment:
         description: 'Deployment environment (staging | production)'
         required: true
@@ -91,6 +96,7 @@ jobs:
             BUILD_VITE_PUBLIC_POSTHOG_UI_HOST=${{ secrets.VITE_PUBLIC_POSTHOG_UI_HOST || 'https://eu.posthog.com' }}
             BUILD_VITE_PUBLIC_VECTREAL_API_KEY_PROD=${{ secrets.VITE_PUBLIC_VECTREAL_API_KEY_PROD }}
             BUILD_VITE_PUBLIC_DEMO_SCENE_URL=${{ secrets.VITE_PUBLIC_DEMO_SCENE_URL }}
+            BUILD_VITE_PUBLIC_ASSET_BASE_URL=${{ inputs.asset_base_url }}
 
       - name: Extract static assets from image
         env:

@@ -41,6 +41,7 @@ jobs:
       app_name: vectreal-platform-staging
       fly_config: apps/vectreal-platform/fly.staging.toml
       static_bucket: vectreal-static-staging
+      asset_base_url: https://static-staging.vectreal.com
       environment: staging
       fail_on_health_check: false
     secrets:
