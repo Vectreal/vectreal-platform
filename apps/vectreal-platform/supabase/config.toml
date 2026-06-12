@@ -175,7 +175,6 @@ sender_name = "Vectreal"
 # Uncomment to customize email template
 [auth.email.template.confirmation]
 subject = "Please confirm your email address"
-content_path = "./supabase/templates/confirm.html"
 
 # Route all auth emails through the React Router API route.
 # The hook is called with a signed webhook (HMAC-SHA256, StandardWebhooks spec).

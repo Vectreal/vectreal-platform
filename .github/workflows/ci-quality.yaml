@@ -20,7 +20,6 @@ on:
       - '.github/workflows/ci-quality.yaml'
       - '.github/workflows/cd-platform-staging.yaml'
       - '.github/workflows/cd-platform-production.yaml'
-      - '.github/workflows/shared-gcloud-deploy.yaml'
   merge_group:
     branches:
       - 'main'
@@ -43,7 +42,6 @@ on:
       - '.github/workflows/ci-quality.yaml'
       - '.github/workflows/cd-platform-staging.yaml'
       - '.github/workflows/cd-platform-production.yaml'
-      - '.github/workflows/shared-gcloud-deploy.yaml'
 
 permissions:
   contents: read

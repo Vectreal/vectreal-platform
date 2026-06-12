@@ -26,6 +26,7 @@ jobs:
       app_name: vectreal-platform
       fly_config: apps/vectreal-platform/fly.toml
       static_bucket: vectreal-static-prod
+      asset_base_url: https://static.vectreal.com
       environment: production
       fail_on_health_check: true
     secrets:

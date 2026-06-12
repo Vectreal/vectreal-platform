@@ -1,11 +1,8 @@
-# Copy this file to terraform.tfvars and fill in your values
+# Copy this file to terraform.tfvars and fill in your values.
 # DO NOT commit terraform.tfvars to version control!
 
-# Cloudflare (required — provides DNS, R2 buckets, cache rules, and Turnstile)
-cloudflare_account_id = "your-cloudflare-account-id"
-cloudflare_api_token  = "your-cloudflare-api-token-with-zone-dns-r2-turnstile-edit"
-cloudflare_zone_id    = "your-cloudflare-zone-id"  # from zone overview sidebar
-
-# Optional: Cloudflare Turnstile widget provisioning (uses same credentials above)
-# turnstile_production_hostname = "vectreal.com"
-# turnstile_staging_hostname    = "staging.vectreal.com"
+cloudflare_account_id         = ""
+cloudflare_api_token          = ""
+cloudflare_zone_id            = ""
+turnstile_production_hostname = "vectreal.com"
+turnstile_staging_hostname    = "staging.vectreal.com"

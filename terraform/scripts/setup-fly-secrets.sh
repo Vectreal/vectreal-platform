@@ -208,7 +208,7 @@ sync_fly_secrets() {
   local db_url; db_url="$(eval echo "\${DATABASE_URL_${ENV}}")"
   local sb_url; sb_url="$(eval echo "\${SUPABASE_URL_${ENV}}")"
   local sb_key; sb_key="$(eval echo "\${SUPABASE_KEY_${ENV}}")"
-  local sb_service_role; sb_service_role="$(eval echo "\${SUPABASE_SECRET_KEY_${ENV}}")"
+  local sb_secret_key; sb_secret_key="$(eval echo "\${SUPABASE_SECRET_KEY_${ENV}}")"
   local app_url; app_url="$(eval echo "\${APPLICATION_URL_${ENV}}")"
   local csrf;    csrf="$(eval echo "\${CSRF_SECRET_${ENV}}")"
   local stripe;  stripe="$(eval echo "\${STRIPE_SECRET_KEY_${ENV}}")"
@@ -224,7 +224,7 @@ sync_fly_secrets() {
       DATABASE_URL="$db_url" \
       SUPABASE_URL="$sb_url" \
       SUPABASE_KEY="$sb_key" \
-      SUPABASE_SECRET_KEY="$sb_service_role" \
+      SUPABASE_SECRET_KEY="$sb_secret_key" \
       APPLICATION_URL="$app_url" \
       CSRF_SECRET="$csrf" \
       STRIPE_SECRET_KEY="$stripe" \
