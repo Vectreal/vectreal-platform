@@ -16,15 +16,6 @@ on:
         description: 'Path to fly.toml (e.g. apps/vectreal-platform/fly.toml)'
         required: true
         type: string
-      static_bucket:
-        description: 'R2 bucket name for static assets'
-        required: true
-        type: string
-      asset_base_url:
-        description: 'Base URL for built assets (e.g. https://static.vectreal.com). Empty = serve from Fly.io origin.'
-        required: false
-        type: string
-        default: ''
       environment:
         description: 'Deployment environment (staging | production)'
         required: true
@@ -36,12 +27,6 @@ on:
         default: false
     secrets:
       FLY_API_TOKEN:
-        required: true
-      CLOUDFLARE_ACCOUNT_ID:
-        required: true
-      R2_ACCESS_KEY_ID:
-        required: true
-      R2_SECRET_ACCESS_KEY:
         required: true
       VITE_PUBLIC_POSTHOG_TOKEN:
         required: true
@@ -96,29 +81,6 @@ jobs:
             BUILD_VITE_PUBLIC_POSTHOG_UI_HOST=${{ secrets.VITE_PUBLIC_POSTHOG_UI_HOST || 'https://eu.posthog.com' }}
             BUILD_VITE_PUBLIC_VECTREAL_API_KEY_PROD=${{ secrets.VITE_PUBLIC_VECTREAL_API_KEY_PROD }}
             BUILD_VITE_PUBLIC_DEMO_SCENE_URL=${{ secrets.VITE_PUBLIC_DEMO_SCENE_URL }}
-            BUILD_VITE_PUBLIC_ASSET_BASE_URL=${{ inputs.asset_base_url }}
-
-      - name: Extract static assets from image
-        env:
-          IMAGE: ${{ steps.tag.outputs.image }}
-        run: |
-          id=$(docker create "$IMAGE")
-          docker cp "$id":/app/build/apps/vectreal-platform/client ./extracted-assets
-          docker rm "$id"
-
-      - name: Upload static assets to R2
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          STATIC_BUCKET: ${{ inputs.static_bucket }}
-        run: |
-          aws s3 sync ./extracted-assets \
-            "s3://${STATIC_BUCKET}" \
-            --endpoint-url "https://${CF_ACCOUNT_ID}.r2.cloudflarestorage.com" \
-            --cache-control "public, max-age=31536000, immutable" \
-            --delete
 
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
