@@ -249,6 +249,19 @@ export interface ContactShadowProps
  */
 export type ShadowsProps = AccumulativeShadowsProps | ContactShadowProps
 
+/**
+ * Options for runtime model size normalization.
+ * The viewer clamps the model's bounding-box diagonal to [minSize, maxSize]
+ * by applying a uniform scale to the model root group.
+ */
+export interface NormalizationOptions {
+	enabled: boolean
+	/** Lower bound for the bounding-box diagonal. Default: 0.5 */
+	minSize?: number
+	/** Upper bound for the bounding-box diagonal. Default: 5 */
+	maxSize?: number
+}
+
 // ---------------------------------------------------------------------------
 // Hotspot types
 // ---------------------------------------------------------------------------
@@ -317,6 +330,8 @@ export interface SceneSettings {
 	environment?: EnvironmentProps
 	/** Shadow rendering settings */
 	shadows?: ShadowsProps
+	/** Runtime model size normalization. Does not modify the underlying glTF data. */
+	normalization?: NormalizationOptions
 	/** Hotspot definitions. internalOnly hotspots are excluded from the published runtime payload. */
 	hotspots?: HotspotDefinition[]
 }

@@ -24,6 +24,7 @@ import {
 	defaultCameraOptions,
 	defaultControlsOptions,
 	defaultEnvOptions,
+	defaultNormalizationOptions,
 	defaultShadowOptions
 } from '../constants/viewer-defaults'
 import { buildSceneUploadFailedAnalyticsProps } from '../lib/domain/analytics/scene-events'
@@ -60,6 +61,7 @@ import {
 	environmentAtom,
 	hotspotsAtom,
 	interactionsAtom,
+	normalizationAtom,
 	shadowsAtom
 } from '../lib/stores/scene-settings-store'
 
@@ -226,6 +228,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	const [camera, setCamera] = useAtom(cameraAtom)
 	const [controls, setControls] = useAtom(controlsAtom)
 	const [shadows, setShadows] = useAtom(shadowsAtom)
+	const [normalization, setNormalization] = useAtom(normalizationAtom)
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 
 	// Process state atom - use full atom access for reading and writing
@@ -344,9 +347,10 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			camera,
 			controls,
 			shadows,
+			normalization,
 			hotspots: hotspots.length > 0 ? hotspots : undefined
 		}),
-		[bounds, environment, interactions, camera, controls, shadows, hotspots]
+		[bounds, environment, interactions, camera, controls, shadows, normalization, hotspots]
 	)
 
 	const resetSceneState = useCallback(() => {
@@ -356,6 +360,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setCamera(defaultCameraOptions)
 		setControls(defaultControlsOptions)
 		setShadows(defaultShadowOptions)
+		setNormalization(defaultNormalizationOptions)
 		setHotspots([])
 		setSceneMetaState(sceneMetaInitialState)
 		setLastSavedSettings(null)
@@ -372,6 +377,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setCamera,
 		setControls,
 		setShadows,
+		setNormalization,
 		setHotspots,
 		setSceneMetaState,
 		setLastSavedSettings,
@@ -548,6 +554,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			setCamera(settings.camera || defaultCameraOptions)
 			setControls(settings.controls || defaultControlsOptions)
 			setShadows(settings.shadows || defaultShadowOptions)
+			setNormalization(settings.normalization || defaultNormalizationOptions)
 			setHotspots(settings.hotspots ?? [])
 
 			const loadedSettings: SceneSettings = {
@@ -557,6 +564,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				camera: settings.camera || defaultCameraOptions,
 				controls: settings.controls || defaultControlsOptions,
 				shadows: settings.shadows || defaultShadowOptions,
+				normalization: settings.normalization || defaultNormalizationOptions,
 				hotspots: settings.hotspots
 			}
 			setLastSavedSettings(loadedSettings)
@@ -568,6 +576,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			setEnv,
 			setHotspots,
 			setInteractions,
+			setNormalization,
 			setShadows
 		]
 	)
@@ -800,7 +809,8 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				environment: settings.environment,
 				camera: settings.camera,
 				controls: settings.controls,
-				shadows: settings.shadows
+				shadows: settings.shadows,
+				normalization: settings.normalization
 			}
 
 			await saveOriginalSceneModel({ sceneData })
