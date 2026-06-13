@@ -4,6 +4,7 @@ import type {
 	CameraProps,
 	ControlsProps,
 	EnvironmentProps,
+	NormalizationOptions,
 	ShadowsProps
 } from '@vctrl/core'
 import type { Vector3Tuple } from 'three'
@@ -88,4 +89,10 @@ export const defaultAccumulativeShadowsOptions: AccumulativeShadowsProps = {
 		ambient: 0.5,
 		position: [5, 10, 5] as Vector3Tuple
 	}
+}
+
+export const defaultNormalizationOptions: NormalizationOptions = {
+	enabled: false,
+	minSize: 0.5,
+	maxSize: 5
 }

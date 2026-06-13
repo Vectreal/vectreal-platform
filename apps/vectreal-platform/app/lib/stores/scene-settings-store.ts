@@ -5,6 +5,7 @@ import {
 	defaultCameraOptions,
 	defaultControlsOptions,
 	defaultEnvOptions,
+	defaultNormalizationOptions,
 	defaultShadowOptions
 } from '../../constants/viewer-defaults'
 
@@ -14,6 +15,7 @@ import type {
 	ControlsProps,
 	EnvironmentProps,
 	HotspotDefinition,
+	NormalizationOptions,
 	SceneSettings,
 	ShadowsProps
 } from '@vctrl/core'
@@ -31,6 +33,7 @@ const controlsAtom = atom<ControlsProps>(defaultControlsOptions)
 const environmentAtom = atom<EnvironmentProps>(defaultEnvOptions)
 const interactionsAtom = atom<SceneSettings['interactions']>(undefined)
 const shadowsAtom = atom<ShadowsProps>(defaultShadowOptions)
+const normalizationAtom = atom<NormalizationOptions>(defaultNormalizationOptions)
 const hotspotsAtom = atom<HotspotDefinition[]>([])
 const activeHotspotIdAtom = atom<string | null>(null)
 const sceneViewerSettingsAtom = atom((get) => ({
@@ -40,6 +43,7 @@ const sceneViewerSettingsAtom = atom((get) => ({
 	env: get(environmentAtom),
 	interactions: get(interactionsAtom),
 	shadows: get(shadowsAtom),
+	normalization: get(normalizationAtom),
 	hotspots: get(hotspotsAtom)
 }))
 
@@ -55,6 +59,7 @@ sceneSettingsStore.set(controlsAtom, defaultControlsOptions)
 sceneSettingsStore.set(environmentAtom, defaultEnvOptions)
 sceneSettingsStore.set(interactionsAtom, undefined)
 sceneSettingsStore.set(shadowsAtom, defaultShadowOptions)
+sceneSettingsStore.set(normalizationAtom, defaultNormalizationOptions)
 sceneSettingsStore.set(hotspotsAtom, [])
 sceneSettingsStore.set(activeHotspotIdAtom, null)
 
@@ -67,6 +72,7 @@ export {
 	environmentAtom,
 	hotspotsAtom,
 	interactionsAtom,
+	normalizationAtom,
 	selectedCameraIdAtom,
 	sceneViewerSettingsAtom,
 	shadowsAtom,
