@@ -5,8 +5,10 @@ import {
 	AccordionTrigger
 } from '@shared/components/ui/accordion'
 import { Button } from '@shared/components/ui/button'
+import { Label } from '@shared/components/ui/label'
 import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { Progress } from '@shared/components/ui/progress'
+import { Switch } from '@shared/components/ui/switch'
 import { cn, formatFileSize } from '@shared/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom, useAtomValue } from 'jotai/react'
@@ -21,15 +23,13 @@ import {
 import { useEffect, useMemo, type FC } from 'react'
 import { Link } from 'react-router'
 
+import { InfoTooltip } from '../info-tooltip'
 import { AdvancedPanel } from './optimization/advanced-optimization-panel'
 import BasicOptimizationPanel from './optimization/basic-optimization-panel'
 import { OptimizeButton } from './optimization/optimize-button'
 import { useOptimizationProcess } from './optimization/use-optimization-process'
 import { DynamicSidebar } from './sidebars/dynamic-sidebar'
 import { FileSizeComparison } from './sidebars/file-size-comparison'
-import { Label } from '@shared/components/ui/label'
-import { Switch } from '@shared/components/ui/switch'
-import { InfoTooltip } from '../info-tooltip'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import {
 	optimizationAtom,

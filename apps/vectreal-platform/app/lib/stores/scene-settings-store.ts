@@ -33,7 +33,9 @@ const controlsAtom = atom<ControlsProps>(defaultControlsOptions)
 const environmentAtom = atom<EnvironmentProps>(defaultEnvOptions)
 const interactionsAtom = atom<SceneSettings['interactions']>(undefined)
 const shadowsAtom = atom<ShadowsProps>(defaultShadowOptions)
-const normalizationAtom = atom<NormalizationOptions>(defaultNormalizationOptions)
+const normalizationAtom = atom<NormalizationOptions>(
+	defaultNormalizationOptions
+)
 const hotspotsAtom = atom<HotspotDefinition[]>([])
 const activeHotspotIdAtom = atom<string | null>(null)
 const sceneViewerSettingsAtom = atom((get) => ({
