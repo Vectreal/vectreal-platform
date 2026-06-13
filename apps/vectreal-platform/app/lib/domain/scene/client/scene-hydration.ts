@@ -49,6 +49,7 @@ export const getSettingsFromAggregate = (
 		environment?: SceneSettings['environment']
 		controls?: SceneSettings['controls']
 		shadows?: SceneSettings['shadows']
+		normalization?: SceneSettings['normalization']
 	}
 	const normalizedFallbackCamera = normalizeCameraSettings(
 		fallbackSettings.camera
@@ -59,7 +60,8 @@ export const getSettingsFromAggregate = (
 		fallbackSettings.interactions ||
 		fallbackSettings.environment ||
 		fallbackSettings.controls ||
-		fallbackSettings.shadows
+		fallbackSettings.shadows ||
+		fallbackSettings.normalization
 	) {
 		return {
 			camera: normalizedFallbackCamera,
@@ -68,7 +70,8 @@ export const getSettingsFromAggregate = (
 			}),
 			environment: fallbackSettings.environment,
 			controls: fallbackSettings.controls,
-			shadows: fallbackSettings.shadows
+			shadows: fallbackSettings.shadows,
+			normalization: fallbackSettings.normalization
 		}
 	}
 

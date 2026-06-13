@@ -139,7 +139,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 		Boolean(navigation.location?.pathname?.startsWith('/publisher'))
 	const setProcess = useSetAtom(processAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
-	const { bounds, camera, controls, env, shadows } = useAtomValue(
+	const { bounds, camera, controls, env, shadows, normalization } = useAtomValue(
 		sceneViewerSettingsAtom
 	)
 	const selectedCameraId = useAtomValue(selectedCameraIdAtom)
@@ -258,6 +258,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 								controlsOptions={controls}
 								envOptions={env}
 								shadowsOptions={shadows}
+								normalizationOptions={normalization}
 								boundsOptions={bounds}
 								loadingThumbnail={loadingThumbnail}
 								loader={<LoadingScreen />}
