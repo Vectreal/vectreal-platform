@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.22.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.21.0...viewer-v0.22.0) (2026-06-13)
+
+
+### Features
+
+* enhance mock shop embed client and section with improved UI elements and interactions ([#529](https://github.com/Vectreal/vectreal-platform/issues/529)) ([0a9a780](https://github.com/Vectreal/vectreal-platform/commit/0a9a780bb7e593049a2cf0c835adc6a093c54ad1))
+* **viewer:** add NormalizationOptions scale wrapper to SceneModel ([b0ed884](https://github.com/Vectreal/vectreal-platform/commit/b0ed8844cdc40528fb88731ce197d1891651c2ba))
+* **viewer:** expose normalizationOptions prop on VectrealViewer ([0668b17](https://github.com/Vectreal/vectreal-platform/commit/0668b17a9857f122324ac657b482bd5569ed9e2f))
+
+
+### Bug Fixes
+
+* re-sync camera on page visibility change to prevent drift ([78b95e5](https://github.com/Vectreal/vectreal-platform/commit/78b95e5b7a98907eef191434c24986b2e4b5cb5e))
+* re-sync camera on page visibility change to prevent drift ([c665729](https://github.com/Vectreal/vectreal-platform/commit/c6657295b82bcfae1249d7156bbbc6deba45f151))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.22.0
+
 ## [0.21.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.20.0...viewer-v0.21.0) (2026-05-21)
 
 
