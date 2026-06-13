@@ -9,7 +9,7 @@ import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { Progress } from '@shared/components/ui/progress'
 import { cn, formatFileSize } from '@shared/utils'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useAtomValue } from 'jotai/react'
+import { useAtom, useAtomValue } from 'jotai/react'
 import {
 	ArrowRight,
 	CheckCircle2,
@@ -27,11 +27,15 @@ import { OptimizeButton } from './optimization/optimize-button'
 import { useOptimizationProcess } from './optimization/use-optimization-process'
 import { DynamicSidebar } from './sidebars/dynamic-sidebar'
 import { FileSizeComparison } from './sidebars/file-size-comparison'
+import { Label } from '@shared/components/ui/label'
+import { Switch } from '@shared/components/ui/switch'
+import { InfoTooltip } from '../info-tooltip'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import {
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../lib/stores/scene-optimization-store'
+import { normalizationAtom } from '../../lib/stores/scene-settings-store'
 
 interface OptimizationDrawerProps {
 	open: boolean
@@ -52,6 +56,11 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 }) => {
 	const { optimizationPreset } = useAtomValue(optimizationAtom)
 	const { isPending } = useAtomValue(optimizationRuntimeAtom)
+	const [normalization, setNormalization] = useAtom(normalizationAtom)
+
+	const handleToggleNormalization = (enabled: boolean) => {
+		setNormalization((prev) => ({ ...prev, enabled }))
+	}
 	const {
 		info,
 		resolvedMetrics,
@@ -373,6 +382,25 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 										</motion.div>
 									)}
 								</AnimatePresence>
+
+								<motion.div
+									initial={{ opacity: 0, y: 6 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{ duration: 0.2, delay: 0.01 }}
+									className="publisher-shell-nested flex items-center justify-between gap-3 px-4 py-3"
+								>
+									<div className="flex items-center gap-2">
+										<Label htmlFor="normalize-size-toggle" className="text-sm font-medium">
+											Normalize model size
+										</Label>
+										<InfoTooltip content="Scales your model to fit within a workable size range. Prevents overly small or large models from breaking shadows, camera framing, and other scale-sensitive features." />
+									</div>
+									<Switch
+										id="normalize-size-toggle"
+										checked={normalization.enabled}
+										onCheckedChange={handleToggleNormalization}
+									/>
+								</motion.div>
 
 								<motion.section
 									initial={{ opacity: 0, y: 6 }}
