@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.22.0](https://github.com/Vectreal/vectreal-platform/compare/core-v0.21.0...core-v0.22.0) (2026-06-13)
+
+
+### Features
+
+* **core:** add NormalizationOptions type to SceneSettings ([47e6cb3](https://github.com/Vectreal/vectreal-platform/commit/47e6cb3e24039752a85b676a9a0878efc6642aeb))
+* **optimization:** migrate to Supabase Edge Functions & Storage ([#554](https://github.com/Vectreal/vectreal-platform/issues/554)) ([420f94a](https://github.com/Vectreal/vectreal-platform/commit/420f94a5ee6c1cecf35b98d0bc9695922b2bf122))
+
 ## [0.21.0](https://github.com/Vectreal/vectreal-platform/compare/core-v0.20.0...core-v0.21.0) (2026-05-21)
 
 

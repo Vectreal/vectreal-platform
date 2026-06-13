@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.22.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.21.0...workspace-v0.22.0) (2026-06-13)
+
+
+### Features
+
+* add YouTube embed component for optimization presets article ([c921974](https://github.com/Vectreal/vectreal-platform/commit/c92197416cb3e5cd0410ea97dceba0936ce2f97b))
+* add YouTube embed component to optimization presets article ([186686f](https://github.com/Vectreal/vectreal-platform/commit/186686f58f64f64daf998e4bab189c46b612d671))
+* **auth:** enhance user sign-in and sign-up tracking with referral attribution ([#560](https://github.com/Vectreal/vectreal-platform/issues/560)) ([e4c521d](https://github.com/Vectreal/vectreal-platform/commit/e4c521d0311171d41a4916601ba1143c11ffcb59))
+* Change platform runtime architecture to use cloudflare and fly.io instead of gcp cloud run and storage ([#562](https://github.com/Vectreal/vectreal-platform/issues/562)) ([1701ad9](https://github.com/Vectreal/vectreal-platform/commit/1701ad9c91f4f3e2aefb03fe65ec38b9d6ef3df0))
+* **cloudflare:** add DNS records and redirect for legacy domain retirement ([#564](https://github.com/Vectreal/vectreal-platform/issues/564)) ([0c272a7](https://github.com/Vectreal/vectreal-platform/commit/0c272a7e76139d5c5346ee6a0977e6c8c79cf820))
+* **core:** add NormalizationOptions type to SceneSettings ([47e6cb3](https://github.com/Vectreal/vectreal-platform/commit/47e6cb3e24039752a85b676a9a0878efc6642aeb))
+* **db:** add normalization column to scene_settings ([53999b7](https://github.com/Vectreal/vectreal-platform/commit/53999b79365435f58512e44e746f5bf51cdea9bf))
+* enhance mock shop embed client and section with improved UI elements and interactions ([#529](https://github.com/Vectreal/vectreal-platform/issues/529)) ([0a9a780](https://github.com/Vectreal/vectreal-platform/commit/0a9a780bb7e593049a2cf0c835adc6a093c54ad1))
+* enhance mock shop embed with interactive features and improved layout ([7ac6b3b](https://github.com/Vectreal/vectreal-platform/commit/7ac6b3bea2737efe5e2ce358627e6b16785e4ac5))
+* implement dedicated texture optimization function and update deployment configurations ([c0469d5](https://github.com/Vectreal/vectreal-platform/commit/c0469d5f96afc2accd95a97c3d082d0cde21ffcf))
+* **mock-shop:** enhance product descriptions and layout for better user experience ([34eb956](https://github.com/Vectreal/vectreal-platform/commit/34eb956b62e5074540216f573799fa7f58dc0e3d))
+* **mock-shop:** improve code formatting and enhance scroll handling logic ([bdee4dc](https://github.com/Vectreal/vectreal-platform/commit/bdee4dc4e2376482447484a5366a7cbed4756615))
+* normalize repository owner name to lowercase in image tag output ([#563](https://github.com/Vectreal/vectreal-platform/issues/563)) ([f56512b](https://github.com/Vectreal/vectreal-platform/commit/f56512bc45aac4f2e105d577f04edf23dc815582))
+* **onboarding:** update visuals and improve onboarding step definitions ([e65bf81](https://github.com/Vectreal/vectreal-platform/commit/e65bf819ddedd641ce04a075ec43a1bf3f554621))
+* **optimization:** migrate to Supabase Edge Functions & Storage ([#554](https://github.com/Vectreal/vectreal-platform/issues/554)) ([420f94a](https://github.com/Vectreal/vectreal-platform/commit/420f94a5ee6c1cecf35b98d0bc9695922b2bf122))
+* **publisher:** add normalizationAtom and defaultNormalizationOptions ([28e040a](https://github.com/Vectreal/vectreal-platform/commit/28e040a8bdb7614d17d0ad1644fddc990bc9979a))
+* **publisher:** add normalize model size toggle to optimization drawer ([0b024d0](https://github.com/Vectreal/vectreal-platform/commit/0b024d01f433055abc7416dc613ee29c64757c4b))
+* **publisher:** wire normalization through hydration, publisher, and preview pages ([6168163](https://github.com/Vectreal/vectreal-platform/commit/6168163311156622cbc8037a83f70d7832ce9cf6))
+* **publisher:** wire normalizationAtom into scene load/save/reset ([d59d6d7](https://github.com/Vectreal/vectreal-platform/commit/d59d6d7093db4d0b913f082619066df38b26affd))
+* **supabase:** add secret key environment variables for staging and production ([#566](https://github.com/Vectreal/vectreal-platform/issues/566)) ([282c7e2](https://github.com/Vectreal/vectreal-platform/commit/282c7e2cfa4e765172d90ab70062e0219713e652))
+* **viewer:** add NormalizationOptions scale wrapper to SceneModel ([b0ed884](https://github.com/Vectreal/vectreal-platform/commit/b0ed8844cdc40528fb88731ce197d1891651c2ba))
+* **viewer:** expose normalizationOptions prop on VectrealViewer ([0668b17](https://github.com/Vectreal/vectreal-platform/commit/0668b17a9857f122324ac657b482bd5569ed9e2f))
+
+
+### Bug Fixes
+
+* cdn/arch setup and secrets management ([19f9002](https://github.com/Vectreal/vectreal-platform/commit/19f900278dccfd789ea37e9cf803a4d13fb1bbf5))
+* **deploy:** pull Docker image before tagging for Fly.io deployment ([#570](https://github.com/Vectreal/vectreal-platform/issues/570)) ([093a730](https://github.com/Vectreal/vectreal-platform/commit/093a73019d61b58d589273ec9385c551678caa81))
+* **docker:** update WORKDIR and CMD for react-router-serve to reflect new directory structure ([#565](https://github.com/Vectreal/vectreal-platform/issues/565)) ([10072ba](https://github.com/Vectreal/vectreal-platform/commit/10072ba58eccb8fd297d0880cfc351bf4a692000))
+* re-sync camera on page visibility change to prevent drift ([78b95e5](https://github.com/Vectreal/vectreal-platform/commit/78b95e5b7a98907eef191434c24986b2e4b5cb5e))
+* re-sync camera on page visibility change to prevent drift ([c665729](https://github.com/Vectreal/vectreal-platform/commit/c6657295b82bcfae1249d7156bbbc6deba45f151))
+* **vite:** ensure asset base URL ends with a slash ([#568](https://github.com/Vectreal/vectreal-platform/issues/568)) ([f363d5d](https://github.com/Vectreal/vectreal-platform/commit/f363d5d29b5674f634049e55dc74827d363afd58))
+
 ## [0.21.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.20.0...workspace-v0.21.0) (2026-05-21)
 
 

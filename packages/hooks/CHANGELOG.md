@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.22.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.21.0...hooks-v0.22.0) (2026-06-13)
+
+
+### Features
+
+* **optimization:** migrate to Supabase Edge Functions & Storage ([#554](https://github.com/Vectreal/vectreal-platform/issues/554)) ([420f94a](https://github.com/Vectreal/vectreal-platform/commit/420f94a5ee6c1cecf35b98d0bc9695922b2bf122))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.22.0
+
 ## [0.21.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.20.0...hooks-v0.21.0) (2026-05-21)
 
 
