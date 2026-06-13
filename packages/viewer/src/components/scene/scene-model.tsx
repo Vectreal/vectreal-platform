@@ -1,13 +1,13 @@
 import { useBounds } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
-import { memo, useCallback, useEffect } from 'react'
-import { Euler, Mesh, Object3D, PerspectiveCamera, Vector3 } from 'three'
+import { memo, useCallback, useEffect, useMemo } from 'react'
+import { Box3, Euler, Mesh, Object3D, PerspectiveCamera, Vector3 } from 'three'
 
 import type {
 	SceneScreenshotCapture,
 	SceneScreenshotOptions
 } from '../../types/viewer-types'
-import type { CameraProps } from '@vctrl/core'
+import type { CameraProps, NormalizationOptions } from '@vctrl/core'
 
 interface ModelProps {
 	/**
@@ -20,6 +20,7 @@ interface ModelProps {
 	onScreenshot?: (dataUrl: string) => void
 	onScreenshotCaptureReady?: (capture: null | SceneScreenshotCapture) => void
 	enableShadows?: boolean
+	normalizationOptions?: NormalizationOptions
 	/**
 	 * Camera configuration containing the list of available cameras.
 	 * Used to resolve target camera positions when capturing with targetCameraId.
@@ -99,7 +100,8 @@ const SceneModel = memo((props: ModelProps) => {
 		cameraOptions,
 		onScreenshot,
 		onScreenshotCaptureReady,
-		enableShadows = false
+		enableShadows = false,
+		normalizationOptions
 	} = props
 	const bounds = useBounds()
 	const { camera, controls, gl, invalidate, scene } = useThree((state) => ({
@@ -109,6 +111,18 @@ const SceneModel = memo((props: ModelProps) => {
 		invalidate: state.invalidate,
 		scene: state.scene
 	}))
+
+	const normalizedScale = useMemo(() => {
+		if (!normalizationOptions?.enabled) return 1
+		const box = new Box3().setFromObject(object)
+		const diagonal = box.getSize(new Vector3()).length()
+		if (diagonal <= 0) return 1
+		const min = normalizationOptions.minSize ?? 0.5
+		const max = normalizationOptions.maxSize ?? 5
+		if (diagonal < min) return min / diagonal
+		if (diagonal > max) return max / diagonal
+		return 1
+	}, [object, normalizationOptions])
 
 	const captureScreenshot = useCallback<SceneScreenshotCapture>(
 		async (inputOptions) => {
@@ -265,7 +279,7 @@ const SceneModel = memo((props: ModelProps) => {
 	}, [captureScreenshot, onScreenshotCaptureReady])
 
 	return (
-		<group name="focus-target" dispose={null}>
+		<group name="focus-target" scale={normalizedScale} dispose={null}>
 			<primitive object={object} />
 		</group>
 	)
