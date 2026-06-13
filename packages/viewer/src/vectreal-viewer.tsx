@@ -23,6 +23,7 @@ import {
 	ControlsProps,
 	EnvironmentProps,
 	GridProps,
+	NormalizationOptions,
 	ShadowsProps
 } from '@vctrl/core'
 // import { Perf } from 'r3f-perf'
@@ -128,6 +129,13 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	shadowsOptions?: ShadowsProps
 
 	/**
+	 * Options for runtime model size normalization.
+	 * Clamps the model's bounding-box diagonal to [minSize, maxSize].
+	 * Does not modify the underlying model data.
+	 */
+	normalizationOptions?: NormalizationOptions
+
+	/**
 	 * Options for the grid.
 	 */
 	gridOptions?: GridProps
@@ -208,6 +216,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		// gridOptions,
 		controlsOptions,
 		shadowsOptions,
+		normalizationOptions,
 		popover,
 		loadingThumbnail,
 		onScreenshot,
@@ -375,6 +384,8 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 											onScreenshot={onScreenshot}
 											onScreenshotCaptureReady={onScreenshotCaptureReady}
 											object={model}
+											enableShadows={shadowsEnabled}
+											normalizationOptions={normalizationOptions}
 										/>
 									)}
 								</Center>
