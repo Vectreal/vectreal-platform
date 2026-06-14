@@ -288,6 +288,28 @@ export interface PublisherLoaderData {
 	readonly publishedMeta: PublishedSceneMetaResponse | null
 }
 
+export type TrellisGenerationStatus =
+	| 'queued'
+	| 'starting'
+	| 'processing'
+	| 'succeeded'
+	| 'failed'
+
+export interface TrellisGenerationSubmitResponse {
+	readonly jobId: string
+	readonly jobToken: string
+	readonly status: TrellisGenerationStatus
+	readonly pollAfterMs: number
+}
+
+export interface TrellisGenerationStatusResponse
+	extends TrellisGenerationSubmitResponse {
+	readonly progress: number | null
+	readonly message?: string | null
+	readonly artifactReady: boolean
+	readonly retryable: boolean
+}
+
 // ============================================================================
 // API Response Types
 // ============================================================================

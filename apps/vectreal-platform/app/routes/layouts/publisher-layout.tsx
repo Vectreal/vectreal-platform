@@ -206,7 +206,7 @@ const PublisherLayoutContent = ({
 				<main className="flex h-screen w-full flex-col overflow-hidden">
 					<UpgradeModal />
 					<ControlsOverlay {...loaderData} />
-					<Outlet />
+					<Outlet context={loaderData} />
 				</main>
 			</PublisherViewerCaptureProvider>
 		</SidebarProvider>
