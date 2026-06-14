@@ -1,0 +1,43 @@
+# .github/workflows/cd-trellis-runtime-staging.yaml
+name: CD - Deploy Trellis Runtime to Staging
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/trellis-runtime/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'nx.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/cd-trellis-runtime-staging.yaml'
+      - '.github/workflows/cd-trellis-runtime-production.yaml'
+      - '.github/workflows/shared-fly-deploy.yaml'
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: cd-trellis-runtime-staging-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-staging:
+    name: Deploy Trellis Runtime to Staging
+    uses: ./.github/workflows/shared-fly-deploy.yaml
+    with:
+      app_name: vectreal-trellis-runtime-staging
+      image_name: vectreal-trellis-runtime
+      fly_config: apps/trellis-runtime/fly.staging.toml
+      dockerfile: apps/trellis-runtime/Dockerfile
+      environment: staging
+      fail_on_health_check: false
+    secrets:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      VITE_PUBLIC_POSTHOG_TOKEN: ${{ secrets.VITE_PUBLIC_POSTHOG_TOKEN }}
+      VITE_PUBLIC_POSTHOG_HOST: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
+

@@ -1,0 +1,38 @@
+{
+  "name": "trellis-runtime",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/trellis-runtime/src",
+  "projectType": "application",
+  "tags": ["scope:infra"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/build/apps/trellis-runtime"],
+      "options": {
+        "command": "tsc -p apps/trellis-runtime/tsconfig.json --outDir build/apps/trellis-runtime"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "outputs": [],
+      "options": {
+        "command": "tsc -p apps/trellis-runtime/tsconfig.json --noEmit"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["apps/trellis-runtime/**/*.ts"]
+      }
+    },
+    "start": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node build/apps/trellis-runtime/server.js"
+      },
+      "dependsOn": ["build"]
+    }
+  }
+}
+

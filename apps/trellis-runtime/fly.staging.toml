@@ -1,0 +1,29 @@
+# apps/trellis-runtime/fly.staging.toml
+app            = "vectreal-trellis-runtime-staging"
+primary_region = "fra"
+
+[http_service]
+  internal_port       = 8080
+  force_https         = true
+  auto_stop_machines  = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type       = "requests"
+    hard_limit = 5
+    soft_limit = 4
+
+[[vm]]
+  size = "performance-1x"
+
+[checks]
+  [checks.health]
+    grace_period = "30s"
+    interval     = "15s"
+    method       = "get"
+    path         = "/health"
+    port         = 8080
+    timeout      = "10s"
+    type         = "http"
+
