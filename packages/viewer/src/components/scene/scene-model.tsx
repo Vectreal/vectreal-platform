@@ -256,9 +256,6 @@ const SceneModel = memo((props: ModelProps) => {
 		]
 	)
 
-	// useLayoutEffect fires before the browser paints and before AccumulativeShadows'
-	// own useLayoutEffect accumulates shadow frames, so castShadow is guaranteed to
-	// be set on all meshes before any shadow map renders.
 	useLayoutEffect(() => {
 		if (!enableShadows) {
 			object.traverse((child) => {
