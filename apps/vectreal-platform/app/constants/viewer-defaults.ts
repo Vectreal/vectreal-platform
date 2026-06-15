@@ -66,7 +66,7 @@ export const defaultShadowOptions: ShadowsProps = {
 	enabled: false,
 	opacity: 0.4,
 	blur: 0.1,
-	scale: 25, // large default to avoid shadow-plane floor clipping
+	scale: 1,
 	color: '#000000',
 	smooth: true
 }
@@ -74,11 +74,16 @@ export const defaultShadowOptions: ShadowsProps = {
 export const defaultAccumulativeShadowsOptions: AccumulativeShadowsProps = {
 	type: 'accumulative',
 	enabled: false,
-	temporal: false,
-	frames: 30,
+	// temporal=true accumulates one sample per frame via useFrame rather than
+	// all frames at once in useLayoutEffect. This means: (a) shadows build up
+	// after castShadow is set on model meshes, so the initial frame is never
+	// blank; (b) slider changes only trigger api.reset() (cheap) instead of
+	// re-rendering all frames synchronously, eliminating control lag.
+	temporal: true,
+	frames: 40,
 	alphaTest: 0.35,
 	opacity: 1,
-	scale: 25, // large default to avoid shadow-plane floor clipping
+	scale: 1,
 	resolution: 1024,
 	colorBlend: 2,
 	color: '#000000',

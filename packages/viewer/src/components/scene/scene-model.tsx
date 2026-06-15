@@ -1,6 +1,6 @@
 import { useBounds } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { Box3, Euler, Mesh, Object3D, PerspectiveCamera, Vector3 } from 'three'
 
 import type {
@@ -256,12 +256,20 @@ const SceneModel = memo((props: ModelProps) => {
 		]
 	)
 
-	useEffect(() => {
+	// useLayoutEffect fires before the browser paints and before AccumulativeShadows'
+	// own useLayoutEffect accumulates shadow frames, so castShadow is guaranteed to
+	// be set on all meshes before any shadow map renders.
+	useLayoutEffect(() => {
 		if (!enableShadows) {
+			object.traverse((child) => {
+				if (child instanceof Mesh) {
+					child.castShadow = false
+					child.receiveShadow = false
+				}
+			})
 			return
 		}
 
-		// Enable shadow casting for all meshes in the model
 		object.traverse((child) => {
 			if (child instanceof Mesh) {
 				child.castShadow = true

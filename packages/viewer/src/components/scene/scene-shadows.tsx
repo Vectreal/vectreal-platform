@@ -17,7 +17,7 @@ export const defaultShadowsOptions: ShadowsProps = {
 	enabled: false,
 	opacity: 0.4,
 	blur: 0.1,
-	scale: 5,
+	scale: 1,
 	color: '#000000',
 	smooth: true
 }
@@ -25,11 +25,11 @@ export const defaultShadowsOptions: ShadowsProps = {
 export const defaultAccumulativeShadowsOptions: AccumulativeShadowsProps = {
 	type: 'accumulative',
 	enabled: false,
-	temporal: false,
-	frames: 30,
+	temporal: true,
+	frames: 40,
 	alphaTest: 0.35,
 	opacity: 1,
-	scale: 10,
+	scale: 1,
 	resolution: 1024,
 	colorBlend: 2,
 	color: '#000000',
