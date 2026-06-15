@@ -74,7 +74,11 @@ export const defaultShadowOptions: ShadowsProps = {
 export const defaultAccumulativeShadowsOptions: AccumulativeShadowsProps = {
 	type: 'accumulative',
 	enabled: false,
-	temporal: false,
+	// temporal=true accumulates one sample per useFrame rather than all frames at
+	// once in useLayoutEffect. This ensures shadow-map generation is driven by
+	// the normal r3f render loop (where castShadow and gl.shadowMap.enabled are
+	// guaranteed to be set), instead of during React's synchronous commit phase.
+	temporal: true,
 	frames: 40,
 	alphaTest: 0.35,
 	opacity: 1,

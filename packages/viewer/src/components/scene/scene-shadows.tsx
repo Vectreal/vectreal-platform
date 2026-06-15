@@ -25,7 +25,7 @@ export const defaultShadowsOptions: ShadowsProps = {
 export const defaultAccumulativeShadowsOptions: AccumulativeShadowsProps = {
 	type: 'accumulative',
 	enabled: false,
-	temporal: false,
+	temporal: true,
 	frames: 40,
 	alphaTest: 0.35,
 	opacity: 1,
