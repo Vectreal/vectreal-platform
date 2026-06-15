@@ -16,8 +16,6 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 import { JSONDocument } from '@gltf-transform/core'
 import {
 	OrbitControlsProps,
-	RandomizedLightProps,
-	AccumulativeShadowsProps as ThreeAccumulativeShadowsProps,
 	BoundsProps as ThreeBoundsProps,
 	ContactShadowsProps as ThreeContactShadowsProps,
 	EnvironmentProps as ThreeEnvironmentProps,
@@ -219,21 +217,14 @@ export interface EnvironmentProps extends InheritedEnvProps {
 	environmentResolution?: EnvironmentResolution
 }
 
+export type ShadowType = 'contact'
+
 /**
  * Base interface for shadow properties.
  */
 export interface ShadowTypePropBase {
-	type: 'accumulative' | 'contact'
+	type: ShadowType
 	enabled?: boolean
-}
-
-/**
- * Props for Accumulative Shadows.
- */
-export interface AccumulativeShadowsProps
-	extends ShadowTypePropBase, ThreeAccumulativeShadowsProps {
-	type: 'accumulative'
-	light?: RandomizedLightProps
 }
 
 /**
@@ -245,9 +236,9 @@ export interface ContactShadowProps
 }
 
 /**
- * Union type for shadow properties.
+ * Shadow configuration props. Extend `ShadowType` to add future shadow variants.
  */
-export type ShadowsProps = AccumulativeShadowsProps | ContactShadowProps
+export type ShadowsProps = ContactShadowProps
 
 /**
  * Options for runtime model size normalization.

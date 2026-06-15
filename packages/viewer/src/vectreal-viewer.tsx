@@ -340,7 +340,6 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					{hasContent && (
 						<>
 							{/* <SceneGrid {...gridOptions} /> */}
-							<SceneShadows {...shadowsOptions} />
 							<SceneEnvironment {...envOptions} />
 							{/* <Perf /> */}
 							{enablePostProcessing ? <ScenePostProcessing /> : null}
@@ -389,6 +388,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 										/>
 									)}
 								</Center>
+								<SceneShadows {...shadowsOptions} />
 								{children}
 							</SceneBounds>
 						</>

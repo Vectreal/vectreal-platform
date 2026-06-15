@@ -1,5 +1,4 @@
 import type {
-	AccumulativeShadowsProps,
 	BoundsProps,
 	CameraProps,
 	ControlsProps,
@@ -7,7 +6,6 @@ import type {
 	NormalizationOptions,
 	ShadowsProps
 } from '@vctrl/core'
-import type { Vector3Tuple } from 'three'
 
 export const defaultBoundsOptions: BoundsProps = {
 	fit: true,
@@ -66,29 +64,9 @@ export const defaultShadowOptions: ShadowsProps = {
 	enabled: false,
 	opacity: 0.4,
 	blur: 0.1,
-	scale: 25, // large default to avoid shadow-plane floor clipping
+	scale: 1,
 	color: '#000000',
 	smooth: true
-}
-
-export const defaultAccumulativeShadowsOptions: AccumulativeShadowsProps = {
-	type: 'accumulative',
-	enabled: false,
-	temporal: false,
-	frames: 30,
-	alphaTest: 0.35,
-	opacity: 1,
-	scale: 25, // large default to avoid shadow-plane floor clipping
-	resolution: 1024,
-	colorBlend: 2,
-	color: '#000000',
-	light: {
-		intensity: 1,
-		amount: 5,
-		radius: 7.5,
-		ambient: 0.5,
-		position: [5, 10, 5] as Vector3Tuple
-	}
 }
 
 export const defaultNormalizationOptions: NormalizationOptions = {

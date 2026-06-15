@@ -13,6 +13,5 @@ export { default as SceneModel } from './scene-model'
 export { default as ScenePostProcessing } from './scene-postprocessing'
 export {
 	default as SceneShadows,
-	defaultShadowsOptions as defaultShadowOptions,
-	defaultAccumulativeShadowsOptions
+	defaultShadowsOptions as defaultShadowOptions
 } from './scene-shadows'
