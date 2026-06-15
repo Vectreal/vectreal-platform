@@ -3,7 +3,7 @@ import {
 	ContactShadows,
 	RandomizedLight
 } from '@react-three/drei'
-import { useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import {
 	AccumulativeShadowsProps,
 	ContactShadowProps,
@@ -25,11 +25,11 @@ export const defaultShadowsOptions: ShadowsProps = {
 export const defaultAccumulativeShadowsOptions: AccumulativeShadowsProps = {
 	type: 'accumulative',
 	enabled: false,
-	temporal: true,
+	temporal: false,
 	frames: 40,
 	alphaTest: 0.35,
 	opacity: 1,
-	scale: 1,
+	scale: 10,
 	resolution: 1024,
 	colorBlend: 2,
 	color: '#000000',
@@ -53,6 +53,25 @@ export const defaultAccumulativeShadowsOptions: AccumulativeShadowsProps = {
  */
 const SceneShadows = memo((props?: Partial<ShadowsProps>) => {
 	const { scene } = useThree()
+
+	// ContactShadows renders depth into its own WebGLRenderTarget via useFrame.
+	// r3f sets gl.autoClear = false globally, so the RT is never cleared before
+	// each depth render. Background pixels (alpha=0 from the depth material)
+	// retain the previous blurred result through NormalBlending, causing the
+	// shadow to accumulate and grow each frame. We bracket ContactShadows'
+	// useFrame (priority 0) with autoClear=true/false so the RT is cleared
+	// before each depth render and restored immediately after.
+	const isContactEnabled =
+		(props?.type === 'contact' || props?.type === undefined) &&
+		!!(props?.enabled)
+
+	useFrame((state) => {
+		if (isContactEnabled) state.gl.autoClear = true
+	}, -1)
+
+	useFrame((state) => {
+		if (isContactEnabled) state.gl.autoClear = false
+	}, 1)
 
 	// Calculate dynamic light position based on scene bounds
 	const lightPosition = useMemo((): Vector3Tuple => {

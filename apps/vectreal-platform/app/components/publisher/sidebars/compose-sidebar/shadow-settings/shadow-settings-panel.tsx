@@ -7,7 +7,7 @@ import { Separator } from '@shared/components/ui/separator'
 import { Switch } from '@shared/components/ui/switch'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom } from 'jotai/react'
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
 	ACCUMULATIVE_ADVANCED_FIELDS,
@@ -71,60 +71,116 @@ const ShadowField = ({
 
 // ─── Panel ───────────────────────────────────────────────────────────────────
 
+const DEBOUNCE_MS = 180
+
 const ShadowSettingsPanel = () => {
 	const [shadows, setShadows] = useAtom(shadowsAtom)
 	const [advancedOpen, setAdvancedOpen] = useState(false)
-	const { type } = shadows
-	const shadowsEnabled = shadows.enabled ?? false
 
-	const handleToggleShadows = (enabled: boolean) => {
-		setShadows((prev) => ({ ...prev, enabled }))
-	}
+	// Local draft: sliders write here immediately for responsive UI.
+	// For accumulative shadows, writes to the atom are debounced so
+	// AccumulativeShadows doesn't re-accumulate all 40 frames on every
+	// slider tick (which causes noticeable lag).
+	const [draft, setDraft] = useState<ShadowsProps>(shadows)
+	const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+	// Track the last value we wrote to the atom so we can ignore the
+	// resulting atom update (avoid resetting draft mid-drag).
+	const lastWritten = useRef<ShadowsProps>(shadows)
+
+	// Sync draft when atom changes from an external source (scene load, reset).
+	useEffect(() => {
+		if (shadows !== lastWritten.current) {
+			setDraft(shadows)
+			lastWritten.current = shadows
+		}
+	}, [shadows])
+
+	// Cancel pending debounce on unmount.
+	useEffect(
+		() => () => {
+			if (flushTimer.current) clearTimeout(flushTimer.current)
+		},
+		[]
+	)
+
+	const flush = useCallback(
+		(value: ShadowsProps) => {
+			if (flushTimer.current) clearTimeout(flushTimer.current)
+			flushTimer.current = null
+			lastWritten.current = value
+			setShadows(value)
+		},
+		[setShadows]
+	)
+
+	// Write to atom immediately for non-accumulative types and structural
+	// changes (enable/disable, type switch). Debounce only accumulative
+	// numeric fields to prevent expensive re-accumulation on every tick.
+	const schedule = useCallback(
+		(value: ShadowsProps, immediate = false) => {
+			setDraft(value)
+			if (flushTimer.current) clearTimeout(flushTimer.current)
+			if (immediate || value.type !== 'accumulative') {
+				flush(value)
+			} else {
+				flushTimer.current = setTimeout(() => flush(value), DEBOUNCE_MS)
+			}
+		},
+		[flush]
+	)
+
+	const { type } = draft
+	const shadowsEnabled = draft.enabled ?? false
+
+	const handleToggleShadows = (enabled: boolean) =>
+		schedule({ ...draft, enabled }, true)
 
 	const handleTypeChange = (value: ShadowsProps['type']) => {
-		setShadows((prev) => {
-			const enabled = prev.enabled ?? false
-			return value === 'accumulative'
+		const enabled = draft.enabled ?? false
+		schedule(
+			value === 'accumulative'
 				? { ...defaultAccumulativeShadowsOptions, enabled }
-				: { ...defaultShadowOptions, enabled }
-		})
+				: { ...defaultShadowOptions, enabled },
+			true
+		)
 	}
 
-	const handleFieldChange = (key: string, value: number | string) => {
-		setShadows((prev) => ({ ...prev, [key]: value }))
-	}
+	const handleFieldChange = (key: string, value: number | string) =>
+		schedule({ ...draft, [key]: value })
 
 	const handleLightFieldChange = (key: string, value: number | string) => {
-		setShadows((prev) => {
-			const enabled = prev.enabled ?? false
-			if (prev.type !== 'accumulative') {
-				return {
-					...defaultAccumulativeShadowsOptions,
-					enabled,
-					light: { ...defaultAccumulativeShadowsOptions.light, [key]: value }
-				}
-			}
-			return {
-				...prev,
-				light: {
-					...(prev.light || defaultAccumulativeShadowsOptions.light),
-					[key]: value
-				}
-			}
-		})
+		const enabled = draft.enabled ?? false
+		const next: ShadowsProps =
+			draft.type !== 'accumulative'
+				? {
+						...defaultAccumulativeShadowsOptions,
+						enabled,
+						light: {
+							...defaultAccumulativeShadowsOptions.light,
+							[key]: value
+						}
+					}
+				: {
+						...draft,
+						light: {
+							...(draft.light || defaultAccumulativeShadowsOptions.light),
+							[key]: value
+						}
+					}
+		schedule(next)
 	}
 
 	const getFieldValue = (key: string) =>
-		(shadows[key as keyof ShadowsProps] as number) ?? 0
+		(draft[key as keyof ShadowsProps] as number) ?? 0
 
 	const getLightFieldValue = (key: string) => {
-		if (shadows.type !== 'accumulative') return 0
+		if (draft.type !== 'accumulative') return 0
 		const defaultLightValue =
 			defaultAccumulativeShadowsOptions.light?.[
 				key as keyof RandomizedLightProps
 			]
 		return (
-			(shadows.light?.[key as keyof RandomizedLightProps] as number) ??
+			(draft.light?.[key as keyof RandomizedLightProps] as number) ??
 			(defaultLightValue as number) ??
 			0
 		)

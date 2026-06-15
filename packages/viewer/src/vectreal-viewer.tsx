@@ -340,7 +340,6 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					{hasContent && (
 						<>
 							{/* <SceneGrid {...gridOptions} /> */}
-							<SceneShadows {...shadowsOptions} />
 							<SceneEnvironment {...envOptions} />
 							{/* <Perf /> */}
 							{enablePostProcessing ? <ScenePostProcessing /> : null}
@@ -389,6 +388,11 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 										/>
 									)}
 								</Center>
+								{/* SceneShadows is placed after SceneModel so SceneModel's
+								    useLayoutEffect (castShadow) fires before AccumulativeShadows'
+								    useLayoutEffect (which accumulates all frames synchronously).
+								    React fires useLayoutEffect depth-first in tree order. */}
+								<SceneShadows {...shadowsOptions} />
 								{children}
 							</SceneBounds>
 						</>
