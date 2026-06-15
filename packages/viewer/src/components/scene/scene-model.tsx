@@ -1,6 +1,6 @@
 import { useBounds } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
-import { memo, useCallback, useEffect, useMemo } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { Box3, Euler, Mesh, Object3D, PerspectiveCamera, Vector3 } from 'three'
 
 import type {
@@ -269,6 +269,15 @@ const SceneModel = memo((props: ModelProps) => {
 			}
 		})
 	}, [enableShadows, object])
+
+	// Refit the camera whenever normalization is toggled on/off.
+	// Skips the initial mount so SceneCamera's own framing runs first.
+	const normEnabledRef = useRef(normalizationOptions?.enabled)
+	useEffect(() => {
+		if (normEnabledRef.current === normalizationOptions?.enabled) return
+		normEnabledRef.current = normalizationOptions?.enabled
+		bounds.refresh(object).clip().fit()
+	}, [bounds, normalizationOptions?.enabled, object])
 
 	useEffect(() => {
 		onScreenshotCaptureReady?.(captureScreenshot)
