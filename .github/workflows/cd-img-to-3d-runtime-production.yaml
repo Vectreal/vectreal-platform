@@ -1,0 +1,42 @@
+# .github/workflows/cd-img-to-3d-runtime-production.yaml
+name: CD - Deploy Image-to-3D Runtime
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/img-to-3d-runtime/modal_app.py'
+      - 'apps/img-to-3d-runtime/inference.py'
+      - 'apps/img-to-3d-runtime/api.py'
+      - 'apps/img-to-3d-runtime/pyproject.toml'
+      - '.github/workflows/cd-img-to-3d-runtime-production.yaml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-img-to-3d-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to Modal
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --directory apps/img-to-3d-runtime --extra dev
+
+      - name: Deploy
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: uv run --directory apps/img-to-3d-runtime modal deploy apps/img-to-3d-runtime/modal_app.py

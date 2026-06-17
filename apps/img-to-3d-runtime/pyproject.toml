@@ -1,0 +1,51 @@
+[project]
+name = "vectreal-img-to-3d-runtime"
+version = "0.1.0"
+description = "Serverless GPU inference service for image-to-3D generation"
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+# CLI tooling for local dev and deployment — not bundled in Modal images
+dev = ["modal>=0.73"]
+# CPU-only dependencies — installed in the lightweight web-layer container
+web = [
+    "fastapi[standard]>=0.115",
+    "python-multipart>=0.0.9",
+    "pydantic>=2.0",
+]
+# GPU-layer base dependencies — installed in the CUDA container.
+# NOTE: flash-attn, nvdiffrast, nvdiffrec, cumesh, flexgemm, o-voxel, and the
+# trellis2 package itself require compilation from source and are handled
+# separately via run_commands in modal_app.py.
+gpu = [
+    "torch==2.6.0",
+    "torchvision==0.21.0",
+    "imageio>=2.34",
+    "imageio-ffmpeg",
+    "tqdm",
+    "easydict",
+    "opencv-python-headless",
+    "ninja",
+    "trimesh",
+    "transformers>=4.40",
+    "tensorboard",
+    "pandas",
+    "lpips",
+    "zstandard",
+    "kornia",
+    "timm",
+    "Pillow",
+    "huggingface_hub",
+    # utils3d is an unlisted dependency of trellis2 — pinned commit for reproducibility
+    "utils3d @ git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8",
+]
+
+[tool.uv.sources]
+# PyTorch CUDA 12.4 build — must come from the PyTorch index, not PyPI
+torch = { index = "pytorch-cu124" }
+torchvision = { index = "pytorch-cu124" }
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true

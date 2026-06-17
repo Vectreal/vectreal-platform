@@ -1,10 +1,10 @@
+import { ApiResponse } from '@shared/utils'
 import { ActionFunctionArgs } from 'react-router'
 
-import { submitTrellisGeneration } from '../../lib/domain/trellis/trellis-generation.server'
+import { submitImgTo3dGeneration } from '../../lib/domain/img-to-3d/img-to-3d-generation.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 import { ensureSameOriginMutation } from '../../lib/http/csrf.server'
 import { ensurePost } from '../../lib/http/requests.server'
-import { ApiResponse } from '@shared/utils'
 
 export async function action({ request }: ActionFunctionArgs) {
 	const methodCheck = ensurePost(request)
@@ -22,28 +22,21 @@ export async function action({ request }: ActionFunctionArgs) {
 		return authResult
 	}
 
-	const contentLength = Number(request.headers.get('content-length') || '0')
-	const maxImageBytes = Number(process.env.TRELLIS_MAX_IMAGE_BYTES || 10 * 1024 * 1024)
-	if (contentLength > maxImageBytes) {
-		return ApiResponse.error(
-			`Uploaded image exceeds the ${Math.round(maxImageBytes / (1024 * 1024))} MB limit.`,
-			413,
-			{ headers: new Headers(authResult.headers) }
-		)
-	}
-
 	const formData = await request.formData()
-	const file = formData.get('image')
+	// Accept one or more images under the 'images' field. Per-file size validation
+	// is handled inside submitImgTo3dGeneration so each file gets a useful error.
+	const rawFiles = formData.getAll('images')
+	const files = rawFiles.filter((f): f is File => f instanceof File)
 	const targetProjectId = formData.get('targetProjectId')
 
-	if (!(file instanceof File)) {
-		return ApiResponse.badRequest('Image file is required for generation.')
+	if (files.length === 0) {
+		return ApiResponse.badRequest('At least one image file is required for generation.')
 	}
 
-	const response = await submitTrellisGeneration({
+	const response = await submitImgTo3dGeneration({
 		request,
 		userId: authResult.user.id,
-		file,
+		files,
 		targetProjectId:
 			typeof targetProjectId === 'string' && targetProjectId.trim()
 				? targetProjectId.trim()
@@ -60,4 +53,3 @@ export async function action({ request }: ActionFunctionArgs) {
 		headers
 	})
 }
-

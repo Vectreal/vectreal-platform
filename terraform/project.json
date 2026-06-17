@@ -45,6 +45,13 @@
 				"cwd": "terraform",
 				"command": "./scripts/setup-fly-secrets.sh --verify"
 			}
+		},
+		"setup-modal-secrets": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "terraform",
+				"command": "./scripts/setup-modal-secrets.sh"
+			}
 		}
 	}
 }

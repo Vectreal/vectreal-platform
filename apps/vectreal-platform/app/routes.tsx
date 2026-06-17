@@ -21,14 +21,14 @@ export default [
 		'./routes/api/scenes.$sceneId.thumbnail.$assetId.ts'
 	),
 	route('api/scenes/:sceneId?', './routes/api/scenes.$sceneId.ts'),
-	route('api/trellis/generations', './routes/api/trellis.generations.ts'),
+	route('api/img-to-3d/generations', './routes/api/img-to-3d.generations.ts'),
 	route(
-		'api/trellis/generations/:jobId',
-		'./routes/api/trellis.generations.$jobId.ts'
+		'api/img-to-3d/generations/:jobId',
+		'./routes/api/img-to-3d.generations.$jobId.ts'
 	),
 	route(
-		'api/trellis/generations/:jobId/artifact',
-		'./routes/api/trellis.generations.$jobId.artifact.ts'
+		'api/img-to-3d/generations/:jobId/artifact',
+		'./routes/api/img-to-3d.generations.$jobId.artifact.ts'
 	),
 	route('api/scene-location-options', './routes/api/scene-location-options.ts'),
 

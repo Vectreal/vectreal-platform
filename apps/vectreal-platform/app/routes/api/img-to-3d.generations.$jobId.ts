@@ -1,8 +1,8 @@
+import { ApiResponse } from '@shared/utils'
 import { LoaderFunctionArgs } from 'react-router'
 
-import { getTrellisGenerationStatus } from '../../lib/domain/trellis/trellis-generation.server'
+import { getImgTo3dGenerationStatus } from '../../lib/domain/img-to-3d/img-to-3d-generation.server'
 import { getAuthUser } from '../../lib/http/auth.server'
-import { ApiResponse } from '@shared/utils'
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
 	const authResult = await getAuthUser(request)
@@ -20,7 +20,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		return ApiResponse.badRequest('Generation token is required.')
 	}
 
-	const response = await getTrellisGenerationStatus({
+	const response = await getImgTo3dGenerationStatus({
 		jobId,
 		jobToken,
 		userId: authResult.user.id
@@ -36,4 +36,3 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		headers
 	})
 }
-

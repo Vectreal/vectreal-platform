@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
-interface TrellisJobTokenPayload {
+interface ImgTo3dJobTokenPayload {
 	jobId: string
 	userId: string
 	expiresAt: number
@@ -8,15 +8,15 @@ interface TrellisJobTokenPayload {
 
 function getJobTokenSecret(): string {
 	const secret =
-		process.env.TRELLIS_JOB_TOKEN_SECRET?.trim() ||
+		process.env.IMG_TO_3D_JOB_TOKEN_SECRET?.trim() ||
 		process.env.CSRF_SECRET ||
 		process.env.SESSION_SECRET
 
 	if (!secret && process.env.NODE_ENV === 'production') {
-		throw new Error('TRELLIS_JOB_TOKEN_SECRET is required in production')
+		throw new Error('IMG_TO_3D_JOB_TOKEN_SECRET is required in production')
 	}
 
-	return secret || 'dev-only-trellis-job-token-secret'
+	return secret || 'dev-only-img-to-3d-job-token-secret'
 }
 
 function encodeBase64Url(value: string): string {
@@ -33,14 +33,14 @@ function createSignature(payload: string): string {
 		.digest('base64url')
 }
 
-export function createTrellisJobToken(payload: TrellisJobTokenPayload): string {
+export function createImgTo3dJobToken(payload: ImgTo3dJobTokenPayload): string {
 	const serialized = encodeBase64Url(JSON.stringify(payload))
 	const signature = createSignature(serialized)
 
 	return `${serialized}.${signature}`
 }
 
-export function verifyTrellisJobToken(token: string): TrellisJobTokenPayload {
+export function verifyImgTo3dJobToken(token: string): ImgTo3dJobTokenPayload {
 	const [serialized, signature] = token.split('.')
 	if (!serialized || !signature) {
 		throw new Error('Invalid generation token')
@@ -57,7 +57,7 @@ export function verifyTrellisJobToken(token: string): TrellisJobTokenPayload {
 		throw new Error('Invalid generation token')
 	}
 
-	const parsed = JSON.parse(decodeBase64Url(serialized)) as Partial<TrellisJobTokenPayload>
+	const parsed = JSON.parse(decodeBase64Url(serialized)) as Partial<ImgTo3dJobTokenPayload>
 	if (
 		typeof parsed.jobId !== 'string' ||
 		typeof parsed.userId !== 'string' ||
@@ -70,6 +70,5 @@ export function verifyTrellisJobToken(token: string): TrellisJobTokenPayload {
 		throw new Error('Generation token has expired')
 	}
 
-	return parsed as TrellisJobTokenPayload
+	return parsed as ImgTo3dJobTokenPayload
 }
-

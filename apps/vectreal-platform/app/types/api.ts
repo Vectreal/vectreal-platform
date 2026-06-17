@@ -288,26 +288,36 @@ export interface PublisherLoaderData {
 	readonly publishedMeta: PublishedSceneMetaResponse | null
 }
 
-export type TrellisGenerationStatus =
+export type ImgTo3dGenerationStatus =
 	| 'queued'
 	| 'starting'
 	| 'processing'
 	| 'succeeded'
 	| 'failed'
 
-export interface TrellisGenerationSubmitResponse {
+/** A single job entry returned in the submission response. */
+export interface ImgTo3dJobEntry {
 	readonly jobId: string
 	readonly jobToken: string
-	readonly status: TrellisGenerationStatus
+	readonly status: ImgTo3dGenerationStatus
 	readonly pollAfterMs: number
 }
 
-export interface TrellisGenerationStatusResponse
-	extends TrellisGenerationSubmitResponse {
+/** Response from POST /api/img-to-3d/generations — one entry per submitted image. */
+export interface ImgTo3dGenerationSubmitResponse {
+	readonly jobs: readonly ImgTo3dJobEntry[]
+}
+
+/** Response from GET /api/img-to-3d/generations/:jobId. */
+export interface ImgTo3dGenerationStatusResponse {
+	readonly jobId: string
+	readonly jobToken: string
+	readonly status: ImgTo3dGenerationStatus
 	readonly progress: number | null
-	readonly message?: string | null
+	readonly message: string | null
 	readonly artifactReady: boolean
 	readonly retryable: boolean
+	readonly pollAfterMs: number
 }
 
 // ============================================================================
