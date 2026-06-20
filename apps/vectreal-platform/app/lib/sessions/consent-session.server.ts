@@ -1,6 +1,6 @@
 import { createCookieSessionStorage } from 'react-router'
 
-import { CONSENT_POLICY_VERSION } from '../consent/consent-policy'
+import { CONSENT_POLICY_VERSION } from '../../constants/consent-policy'
 
 export { CONSENT_POLICY_VERSION }
 

@@ -1,6 +1,6 @@
 import { isValidElement } from 'react'
 
-import { normalizeSlug } from '../content/slug'
+import { normalizeSlug } from '../utils/slug'
 
 import type { ComponentType, ReactNode } from 'react'
 

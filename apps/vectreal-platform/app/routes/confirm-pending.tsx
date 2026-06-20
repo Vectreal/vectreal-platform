@@ -21,7 +21,7 @@ import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/confirm-pending'
 import { AuthErrorBoundary } from '../components/errors'
-import { clearReferralAttribution } from '../lib/analytics/referral-attribution'
+import { clearReferralAttribution } from '../lib/domain/analytics/referral-attribution'
 import { checkAuthRateLimit } from '../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../lib/http/csrf.server'
 import { buildMeta } from '../lib/seo'
@@ -114,8 +114,10 @@ export async function action({ request }: Route.ActionArgs) {
 	confirmUrl.searchParams.set('next', '/onboarding')
 	const referrer = formData.get('referrer')
 	const utm_source = formData.get('utm_source')
-	if (typeof referrer === 'string' && referrer) confirmUrl.searchParams.set('referrer', referrer)
-	if (typeof utm_source === 'string' && utm_source) confirmUrl.searchParams.set('utm_source', utm_source)
+	if (typeof referrer === 'string' && referrer)
+		confirmUrl.searchParams.set('referrer', referrer)
+	if (typeof utm_source === 'string' && utm_source)
+		confirmUrl.searchParams.set('utm_source', utm_source)
 
 	const { client, headers } = await createSupabaseClient(request)
 	const { error } = await client.auth.resend({
@@ -245,8 +247,12 @@ export default function ConfirmPending() {
 						<fetcher.Form method="post">
 							<AuthenticityTokenInput />
 							<input type="hidden" name="email" value={email} />
-							{referrer && <input type="hidden" name="referrer" value={referrer} />}
-							{utm_source && <input type="hidden" name="utm_source" value={utm_source} />}
+							{referrer && (
+								<input type="hidden" name="referrer" value={referrer} />
+							)}
+							{utm_source && (
+								<input type="hidden" name="utm_source" value={utm_source} />
+							)}
 							{turnstileToken && (
 								<input
 									type="hidden"

@@ -15,7 +15,7 @@ import { TurnstileWidget } from '../../components/turnstile-widget'
 import {
 	getReferralAttribution,
 	saveReferralAttribution
-} from '../../lib/analytics/referral-attribution'
+} from '../../lib/domain/analytics/referral-attribution'
 
 export interface AuthLayoutContext {
 	turnstileToken: string | null

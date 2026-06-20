@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { normalizeSlug } from '../content/slug'
+import { normalizeSlug } from '../utils/slug'
 
 const NEWS_INDEX_PATH = '/news-room'
 const NEWS_ARTICLES_DIRECTORY = fileURLToPath(
