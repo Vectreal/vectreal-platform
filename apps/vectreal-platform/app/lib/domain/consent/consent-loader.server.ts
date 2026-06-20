@@ -1,8 +1,8 @@
+import { getConsent } from './consent-repository.server'
 import { type ConsentChoices } from '../../../components/consent/consent-context'
 import { getSession as getConsentSession } from '../../sessions/consent-session.server'
 import { hasSupabaseAuthCookie } from '../../sessions/supabase-auth-cookie.server'
 import { createSupabaseClient } from '../../supabase.server'
-import { getConsent } from './consent-repository.server'
 
 export interface ConsentLoaderResult {
 	consentState: ConsentChoices | null
