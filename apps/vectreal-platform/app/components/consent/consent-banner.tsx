@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Link } from 'react-router'
 
 import { useConsent, useNeedsBanner } from './consent-context'
-import { CONSENT_POLICY_VERSION } from '../../lib/consent/consent-policy'
+import { CONSENT_POLICY_VERSION } from '../../constants/consent-policy'
 
 export function ConsentBanner() {
 	const { saveConsent, setPreferencesOpen } = useConsent()

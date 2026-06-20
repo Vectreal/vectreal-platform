@@ -9,7 +9,7 @@ import {
 } from 'react'
 import { useFetcher, useLocation } from 'react-router'
 
-import { CONSENT_POLICY_VERSION } from '../../lib/consent/consent-policy'
+import { CONSENT_POLICY_VERSION } from '../../constants/consent-policy'
 
 export interface ConsentChoices {
 	necessary: true

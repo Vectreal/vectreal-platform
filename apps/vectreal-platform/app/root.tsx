@@ -18,24 +18,18 @@ import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/root'
 import { ConsentBanner } from './components/consent/consent-banner'
-import {
-	ConsentProvider,
-	type ConsentChoices
-} from './components/consent/consent-context'
+import { ConsentProvider } from './components/consent/consent-context'
 import { ConsentPreferencesDialog } from './components/consent/consent-preferences-dialog'
 import { GlobalNavigationLoader } from './components/global-navigation-loader'
-import { getConsent } from './lib/domain/consent/consent-repository.server'
+import { resolveConsent } from './lib/domain/consent/consent-loader.server'
 import { posthogMiddleware } from './lib/posthog/posthog-middleware'
 import { buildMeta } from './lib/seo'
 import { buildOrganizationJsonLd } from './lib/seo-registry'
-import { getSession as getConsentSession } from './lib/sessions/consent-session.server'
 import { csrfSession } from './lib/sessions/csrf-session.server'
-import { hasSupabaseAuthCookie } from './lib/sessions/supabase-auth-cookie.server'
 import {
 	getThemeModeFromRequest,
 	type ThemeMode
 } from './lib/sessions/theme-session.server'
-import { createSupabaseClient } from './lib/supabase.server'
 import styles from './styles/global.module.css'
 
 import type { ShouldRevalidateFunction } from 'react-router'
@@ -67,44 +61,24 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const [csrf, cookieHeader] = await csrfSession.commitToken(request)
 	const forceDarkTheme = pathname === '/' || pathname === '/home'
 	const themeMode = await getThemeModeFromRequest(request)
-	const requestCookieHeader = request.headers.get('Cookie') ?? ''
-	const hasAuthCookie = hasSupabaseAuthCookie(requestCookieHeader)
-
-	// Resolve consent state for the current visitor
-	let userId: null | string = null
-	if (hasAuthCookie) {
-		const { client } = await createSupabaseClient(request)
-		const {
-			data: { user }
-		} = await client.auth.getUser()
-		userId = user?.id ?? null
-	}
-	const consentSession = await getConsentSession(request.headers.get('Cookie'))
-	const anonymousId = consentSession.get('anonymousId') ?? null
-	const consentRecord = await getConsent(userId, anonymousId).catch(() => null)
-
-	const consentState: ConsentChoices | null = consentRecord
-		? {
-				necessary: true,
-				functional: consentRecord.functional,
-				analytics: consentRecord.analytics,
-				marketing: consentRecord.marketing
-			}
-		: null
+	const { consentState, consentVersion, supabaseHeaders } =
+		await resolveConsent(request)
 
 	const loaderData = {
 		csrf,
 		themeMode,
 		forceDarkTheme,
 		consentState,
-		consentVersion: consentRecord?.version ?? null
+		consentVersion
 	}
 
-	if (cookieHeader) {
-		return data(loaderData, { headers: { 'Set-Cookie': cookieHeader } })
+	const responseHeaders = new Headers()
+	if (cookieHeader) responseHeaders.append('Set-Cookie', cookieHeader)
+	if (supabaseHeaders) {
+		supabaseHeaders.forEach((value, key) => responseHeaders.append(key, value))
 	}
 
-	return loaderData
+	return data(loaderData, { headers: responseHeaders })
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({

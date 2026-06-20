@@ -24,7 +24,7 @@ import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signup-page'
 import { AuthErrorBoundary } from '../../components/errors'
-import { getReferralAttribution } from '../../lib/analytics/referral-attribution'
+import { getReferralAttribution } from '../../lib/domain/analytics/referral-attribution'
 import { captureServerEvent } from '../../lib/domain/analytics/server-events.server'
 import { checkAuthRateLimit } from '../../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
@@ -384,7 +384,10 @@ const SignupPage = ({ loaderData, actionData }: Route.ComponentProps) => {
 						className="border-success/50 bg-success/25 text-success-foreground/80 mb-6 space-y-2 rounded-lg border p-4 text-sm"
 					>
 						<span className="flex gap-2">
-							<ShieldCheck className="h-4 w-4 text-inherit" aria-hidden="true" />
+							<ShieldCheck
+								className="h-4 w-4 text-inherit"
+								aria-hidden="true"
+							/>
 							<p className="font-medium text-inherit">Account deleted</p>
 						</span>
 						<p className="text-success-foreground/60">

@@ -4,7 +4,7 @@ import {
   saveReferralAttribution,
   getReferralAttribution,
   clearReferralAttribution,
-} from '../app/lib/analytics/referral-attribution'
+} from '../app/lib/domain/analytics/referral-attribution'
 
 beforeEach(() => {
   const store: Record<string, string> = {}
