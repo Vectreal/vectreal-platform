@@ -2,6 +2,23 @@ import type { SceneStatsData } from '../../../../types/api'
 import type { SceneMetaState } from '../../../../types/publisher-config'
 import type { OptimizationReport, SceneSettings } from '@vctrl/core'
 
+/**
+ * Produces a stable JSON string for deep equality checks.
+ * Object keys are sorted at every level so insertion order never causes
+ * false positives. Arrays preserve their order — order matters for things
+ * like hotspot sequences.
+ */
+const canonicalize = (value: unknown): string =>
+	JSON.stringify(value, (_key, v) =>
+		v !== null && typeof v === 'object' && !Array.isArray(v)
+			? Object.fromEntries(
+					Object.entries(v as Record<string, unknown>).sort(([a], [b]) =>
+						a.localeCompare(b)
+					)
+				)
+			: v
+	)
+
 const toComparableSceneMeta = ({
 	name,
 	description
@@ -17,7 +34,7 @@ export const buildOptimizationReportSignature = (
 		return null
 	}
 
-	return JSON.stringify({
+	return canonicalize({
 		originalSize: report.originalSize,
 		optimizedSize: report.optimizedSize,
 		stats: report.stats,
@@ -25,28 +42,22 @@ export const buildOptimizationReportSignature = (
 	})
 }
 
+/**
+ * Returns true if any field of SceneSettings differs between current and baseline.
+ * Uses canonical serialization so new fields added to SceneSettings are
+ * automatically included without any changes here.
+ */
 export const hasSceneSettingsChanged = (
 	current: SceneSettings,
 	baseline: SceneSettings
-): boolean => {
-	return (
-		JSON.stringify(current.bounds) !== JSON.stringify(baseline.bounds) ||
-		JSON.stringify(current.camera) !== JSON.stringify(baseline.camera) ||
-		JSON.stringify(current.environment) !==
-			JSON.stringify(baseline.environment) ||
-		JSON.stringify(current.interactions) !==
-			JSON.stringify(baseline.interactions) ||
-		JSON.stringify(current.controls) !== JSON.stringify(baseline.controls) ||
-		JSON.stringify(current.shadows) !== JSON.stringify(baseline.shadows)
-	)
-}
+): boolean => canonicalize(current) !== canonicalize(baseline)
 
 export const hasSceneMetaChanged = (
 	current: SceneMetaState,
 	baseline: SceneMetaState
 ): boolean =>
-	JSON.stringify(toComparableSceneMeta(current)) !==
-	JSON.stringify(toComparableSceneMeta(baseline))
+	canonicalize(toComparableSceneMeta(current)) !==
+	canonicalize(toComparableSceneMeta(baseline))
 
 interface OptimizationChangeArgs {
 	reportSignature: null | string

@@ -22,6 +22,10 @@ interface ModelProps {
 	enableShadows?: boolean
 	normalizationOptions?: NormalizationOptions
 	/**
+	 * Called with the raw (pre-normalization) bounding-box diagonal whenever the model object changes.
+	 */
+	onRawDiagonalComputed?: (diagonal: number) => void
+	/**
 	 * Camera configuration containing the list of available cameras.
 	 * Used to resolve target camera positions when capturing with targetCameraId.
 	 */
@@ -33,6 +37,9 @@ type OrbitControlsLike = {
 	target: Vector3
 	update: () => void
 }
+
+const NORMALIZATION_DEFAULT_MIN_SIZE = 0.5
+const NORMALIZATION_DEFAULT_MAX_SIZE = 5
 
 const DEFAULT_SCREENSHOT_OPTIONS = {
 	width: 1280,
@@ -101,7 +108,8 @@ const SceneModel = memo((props: ModelProps) => {
 		onScreenshot,
 		onScreenshotCaptureReady,
 		enableShadows = false,
-		normalizationOptions
+		normalizationOptions,
+		onRawDiagonalComputed,
 	} = props
 	const bounds = useBounds()
 	const { camera, controls, gl, invalidate, scene } = useThree((state) => ({
@@ -112,17 +120,23 @@ const SceneModel = memo((props: ModelProps) => {
 		scene: state.scene
 	}))
 
-	const normalizedScale = useMemo(() => {
-		if (!normalizationOptions?.enabled) return 1
+	const rawDiagonal = useMemo(() => {
 		const box = new Box3().setFromObject(object)
-		const diagonal = box.getSize(new Vector3()).length()
-		if (diagonal <= 0) return 1
-		const min = normalizationOptions.minSize ?? 0.5
-		const max = normalizationOptions.maxSize ?? 5
-		if (diagonal < min) return min / diagonal
-		if (diagonal > max) return max / diagonal
+		return box.getSize(new Vector3()).length()
+	}, [object])
+
+	const normalizedScale = useMemo(() => {
+		if (!normalizationOptions?.enabled || rawDiagonal <= 0) return 1
+		const min = normalizationOptions.minSize ?? NORMALIZATION_DEFAULT_MIN_SIZE
+		const max = normalizationOptions.maxSize ?? NORMALIZATION_DEFAULT_MAX_SIZE
+		if (rawDiagonal < min) return min / rawDiagonal
+		if (rawDiagonal > max) return max / rawDiagonal
 		return 1
-	}, [object, normalizationOptions])
+	}, [rawDiagonal, normalizationOptions])
+
+	useEffect(() => {
+		if (rawDiagonal > 0) onRawDiagonalComputed?.(rawDiagonal)
+	}, [rawDiagonal, onRawDiagonalComputed])
 
 	const captureScreenshot = useCallback<SceneScreenshotCapture>(
 		async (inputOptions) => {
@@ -275,12 +289,13 @@ const SceneModel = memo((props: ModelProps) => {
 		})
 	}, [enableShadows, object])
 
-	// Refit the camera whenever normalization is toggled on/off.
-	// Skips the initial mount so SceneCamera's own framing runs first.
-	const normEnabledRef = useRef(normalizationOptions?.enabled)
+	// Refit when normalization toggles or a new object loads while normalization is already on.
+	// Skips the initial mount when normalization is off so SceneCamera can handle first framing.
+	const mountedRef = useRef(false)
 	useEffect(() => {
-		if (normEnabledRef.current === normalizationOptions?.enabled) return
-		normEnabledRef.current = normalizationOptions?.enabled
+		const isFirstMount = !mountedRef.current
+		mountedRef.current = true
+		if (isFirstMount && !normalizationOptions?.enabled) return
 		bounds.refresh(object).clip().fit()
 	}, [bounds, normalizationOptions?.enabled, object])
 

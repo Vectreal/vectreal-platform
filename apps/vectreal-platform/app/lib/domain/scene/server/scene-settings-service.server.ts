@@ -19,6 +19,7 @@ import {
 	getSceneSettingsWithAssetsRow,
 	replaceHotspots,
 	replaceSceneAssets,
+	rowToSceneSettings,
 	type SceneSettingsTransaction,
 	upsertSceneSettings
 } from './scene-settings-repository.server'
@@ -471,15 +472,7 @@ class SceneSettingsService {
 
 		return {
 			meta: await this.getSceneMetadata(sceneId),
-			settings: {
-				bounds: settings.bounds ?? undefined,
-				camera: settings.camera ?? undefined,
-				controls: settings.controls ?? undefined,
-				environment: settings.environment ?? undefined,
-				interactions: settings.interactions ?? undefined,
-				shadows: settings.shadows ?? undefined,
-				hotspots: hotspots.length > 0 ? hotspots : undefined
-			},
+			settings: rowToSceneSettings(settings, hotspots),
 			assets: sceneAssetsData,
 			assetDataMap, // Map of assetId -> asset data for reconstruction
 			gltfJson // The parsed GLTF JSON document

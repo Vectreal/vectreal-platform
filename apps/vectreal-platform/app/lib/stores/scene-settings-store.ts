@@ -36,6 +36,7 @@ const shadowsAtom = atom<ShadowsProps>(defaultShadowOptions)
 const normalizationAtom = atom<NormalizationOptions>(
 	defaultNormalizationOptions
 )
+const rawModelDiagonalAtom = atom<number>(0)
 const hotspotsAtom = atom<HotspotDefinition[]>([])
 const activeHotspotIdAtom = atom<string | null>(null)
 const sceneViewerSettingsAtom = atom((get) => ({
@@ -62,6 +63,7 @@ sceneSettingsStore.set(environmentAtom, defaultEnvOptions)
 sceneSettingsStore.set(interactionsAtom, undefined)
 sceneSettingsStore.set(shadowsAtom, defaultShadowOptions)
 sceneSettingsStore.set(normalizationAtom, defaultNormalizationOptions)
+sceneSettingsStore.set(rawModelDiagonalAtom, 0)
 sceneSettingsStore.set(hotspotsAtom, [])
 sceneSettingsStore.set(activeHotspotIdAtom, null)
 
@@ -75,6 +77,7 @@ export {
 	hotspotsAtom,
 	interactionsAtom,
 	normalizationAtom,
+	rawModelDiagonalAtom,
 	selectedCameraIdAtom,
 	sceneViewerSettingsAtom,
 	shadowsAtom,

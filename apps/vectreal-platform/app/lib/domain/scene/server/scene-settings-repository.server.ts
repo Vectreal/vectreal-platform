@@ -7,7 +7,7 @@ import {
 	SceneSettingsWithAssets
 } from '../../../../types/api'
 
-import type { HotspotDefinition } from '@vctrl/core'
+import type { HotspotDefinition, SceneSettings } from '@vctrl/core'
 import type { ExtractTablesWithRelations } from 'drizzle-orm'
 import type { PgTransaction } from 'drizzle-orm/pg-core'
 import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js'
@@ -17,6 +17,34 @@ export type SceneSettingsTransaction = PgTransaction<
 	typeof dbSchema,
 	ExtractTablesWithRelations<typeof dbSchema>
 >
+
+type SceneSettingsRow = typeof sceneSettings.$inferSelect
+
+/**
+ * Maps a DB row to a SceneSettings object.
+ *
+ * This is the single source of truth for the read direction. When a new JSON
+ * column is added to the `scene_settings` table and the corresponding field is
+ * added to `SceneSettings`, update this function — not every call site.
+ *
+ * hotspots are stored in a separate table and must be merged in by the caller.
+ * DB nullable JSON columns are coerced from null → undefined.
+ */
+export function rowToSceneSettings(
+	row: SceneSettingsRow,
+	hotspots: HotspotDefinition[] = []
+): SceneSettings {
+	return {
+		bounds: row.bounds ?? undefined,
+		camera: row.camera ?? undefined,
+		controls: row.controls ?? undefined,
+		environment: row.environment ?? undefined,
+		interactions: row.interactions ?? undefined,
+		normalization: row.normalization ?? undefined,
+		shadows: row.shadows ?? undefined,
+		hotspots: hotspots.length > 0 ? hotspots : undefined,
+	}
+}
 
 export async function getSceneSettingsBySceneId(
 	tx: SceneSettingsTransaction,
@@ -51,15 +79,13 @@ export async function getSceneSettingsWithAssetsRow(
 }
 
 function buildSceneSettingsValues(params: SceneSettingsUpsertInput) {
+	// hotspots are managed separately via replaceHotspots — exclude them here.
+	// All other SceneSettings fields map 1:1 to columns and flow through automatically.
+	const { hotspots: _hotspots, ...columnSettings } = params.settings
 	return {
 		sceneId: params.sceneId,
 		createdBy: params.createdBy,
-		bounds: params.settings.bounds,
-		camera: params.settings.camera,
-		controls: params.settings.controls,
-		environment: params.settings.environment,
-		interactions: params.settings.interactions,
-		shadows: params.settings.shadows
+		...columnSettings
 	}
 }
 

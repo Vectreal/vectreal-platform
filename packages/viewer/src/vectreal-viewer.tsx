@@ -181,6 +181,11 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * Callback that receives a command executor for imperative viewer actions.
 	 */
 	onCommandExecutorReady?: (executor: null | ViewerCommandExecutor) => void
+
+	/**
+	 * Called with the raw (pre-normalization) bounding-box diagonal whenever the loaded model changes.
+	 */
+	onRawDiagonalComputed?: (diagonal: number) => void
 }
 
 /**
@@ -224,6 +229,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		onCameraSnapshotCaptureReady,
 		onInteractionEvent,
 		onCommandExecutorReady,
+		onRawDiagonalComputed,
 		enableViewportRendering = true,
 		enablePostProcessing = true,
 		loader = <DefaultSpinner />
@@ -385,6 +391,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 											object={model}
 											enableShadows={shadowsEnabled}
 											normalizationOptions={normalizationOptions}
+											onRawDiagonalComputed={onRawDiagonalComputed}
 										/>
 									)}
 								</Center>

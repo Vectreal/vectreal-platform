@@ -79,6 +79,7 @@ const ProductDetailModel = memo(
 					controlsOptions={sceneData?.controls}
 					onCommandExecutorReady={onCommandExecutorReady}
 					onInteractionEvent={onInteractionEvent}
+					normalizationOptions={sceneData?.normalization}
 					shadowsOptions={sceneData?.shadows}
 					popover={
 						<PreviewInfoPopover
