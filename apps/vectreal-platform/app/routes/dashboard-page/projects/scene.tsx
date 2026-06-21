@@ -273,6 +273,7 @@ const PreviewModel = memo(
 					boundsOptions={sceneData?.bounds}
 					envOptions={sceneData?.environment}
 					controlsOptions={sceneData?.controls}
+					normalizationOptions={sceneData?.normalization}
 					shadowsOptions={sceneData?.shadows}
 					loadingThumbnail={loadingThumbnail}
 					loader={<CenteredSpinner text="Preparing scene..." />}

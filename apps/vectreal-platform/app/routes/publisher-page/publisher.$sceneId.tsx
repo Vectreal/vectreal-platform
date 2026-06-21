@@ -31,6 +31,7 @@ import {
 } from '../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
 import {
+	rawModelDiagonalAtom,
 	sceneViewerSettingsAtom,
 	selectedCameraIdAtom
 } from '../../lib/stores/scene-settings-store'
@@ -139,6 +140,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 		Boolean(navigation.location?.pathname?.startsWith('/publisher'))
 	const setProcess = useSetAtom(processAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
+	const setRawDiagonal = useSetAtom(rawModelDiagonalAtom)
 	const { bounds, camera, controls, env, shadows, normalization } = useAtomValue(
 		sceneViewerSettingsAtom
 	)
@@ -265,6 +267,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 								onScreenshotCaptureReady={handleScreenshotCaptureReady}
 								onCameraSnapshotCaptureReady={handleCameraSnapshotCaptureReady}
 								onCommandExecutorReady={handleCommandExecutorReady}
+								onRawDiagonalComputed={setRawDiagonal}
 								fallback={<LoadingScreen />}
 							>
 								{file?.model && <PublisherEditorScene />}

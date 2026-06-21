@@ -56,9 +56,9 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 				{/* Stars background */}
 				<HeroParallaxBg />
 				{/* Raidal gradient over the whole image from bottom left to top right in the accent color */}
-				<div className="from-accent/20 to-accent/0 absolute inset-0 -z-0 bg-radial-[at_bottom_left]" />
+				<div className="from-accent/20 to-accent/0 absolute inset-0 z-0 bg-radial-[at_bottom_left]" />
 				{/* side to side vignette gradient */}
-				<div className="from-background to-background absolute inset-0 -z-0 bg-gradient-to-r via-transparent" />
+				<div className="from-background to-background absolute inset-0 z-0 bg-linear-to-r via-transparent" />
 
 				<div
 					className={cn(
@@ -66,7 +66,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 						isMobile && '-mt-32 w-[unset] px-6'
 					)}
 				>
-					<h1 className="from-primary to-primary/25 relative bg-gradient-to-br bg-clip-text text-3xl leading-[.9] font-black text-transparent uppercase sm:text-4xl md:text-6xl lg:text-9xl">
+					<h1 className="from-primary to-primary/25 relative bg-linear-to-br bg-clip-text text-3xl leading-[.9] font-black text-transparent uppercase sm:text-4xl md:text-6xl lg:text-9xl">
 						<div>Upload</div>
 						<div>Prepare</div>
 						<div>Publish</div>
@@ -116,7 +116,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 			</section>
 
 			{/* gradient border effect */}
-			<div className="from-background via-muted-foreground/50 to-background h-[1px] w-full bg-gradient-to-r" />
+			<div className="from-background via-muted-foreground/50 to-background h-px w-full bg-linear-to-r" />
 
 			{/* Additional information chip covering the fold */}
 			<div className="-mt-6 h-12">

@@ -69,7 +69,7 @@ export const defaultShadowOptions: ShadowsProps = {
 	smooth: true
 }
 
-export const defaultNormalizationOptions: NormalizationOptions = {
+export const defaultNormalizationOptions: Required<NormalizationOptions> = {
 	enabled: false,
 	minSize: 0.5,
 	maxSize: 5

@@ -7,7 +7,7 @@ import {
 	type StructuredLoadError,
 	useModelContext
 } from '@vctrl/hooks/use-load-model'
-import { useAtom, useAtomValue } from 'jotai/react'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
@@ -62,6 +62,7 @@ import {
 	hotspotsAtom,
 	interactionsAtom,
 	normalizationAtom,
+	rawModelDiagonalAtom,
 	shadowsAtom
 } from '../lib/stores/scene-settings-store'
 
@@ -229,6 +230,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	const [controls, setControls] = useAtom(controlsAtom)
 	const [shadows, setShadows] = useAtom(shadowsAtom)
 	const [normalization, setNormalization] = useAtom(normalizationAtom)
+	const setRawModelDiagonal = useSetAtom(rawModelDiagonalAtom)
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 
 	// Process state atom - use full atom access for reading and writing
@@ -555,6 +557,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			setControls(settings.controls || defaultControlsOptions)
 			setShadows(settings.shadows || defaultShadowOptions)
 			setNormalization(settings.normalization || defaultNormalizationOptions)
+			setRawModelDiagonal(0)
 			setHotspots(settings.hotspots ?? [])
 
 			const loadedSettings: SceneSettings = {
@@ -577,6 +580,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			setHotspots,
 			setInteractions,
 			setNormalization,
+			setRawModelDiagonal,
 			setShadows
 		]
 	)
@@ -805,12 +809,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				},
 				gltfJson: gltfData as ServerSceneData['gltfJson'],
 				assetData,
-				bounds: settings.bounds,
-				environment: settings.environment,
-				camera: settings.camera,
-				controls: settings.controls,
-				shadows: settings.shadows,
-				normalization: settings.normalization
+				...settings
 			}
 
 			await saveOriginalSceneModel({ sceneData })
