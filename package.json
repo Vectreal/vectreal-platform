@@ -102,7 +102,7 @@
 		"@babel/core": "^7.29.6",
 		"@eslint/css": "^1.1.0",
 		"@eslint/js": "^10.0.1",
-		"@eslint/json": "^1.2.0",
+		"@eslint/json": "^2.0.0",
 		"@eslint/markdown": "^8.0.1",
 		"@nx/devkit": "22.7.5",
 		"@nx/eslint": "22.7.5",
