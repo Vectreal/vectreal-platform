@@ -70,7 +70,7 @@ function getUnlockedFeatures(
 			const k = key as keyof typeof selectedEntitlements
 			return selectedEntitlements[k] && !currentEntitlements[k]
 		})
-		.map((key) => ENTITLEMENT_DISPLAY_LABELS[key] ?? key)
+		.map((key) => ENTITLEMENT_DISPLAY_LABELS[key as keyof typeof ENTITLEMENT_DISPLAY_LABELS] ?? key)
 		.filter((label) => !seen.has(label) && !!seen.add(label))
 		.slice(0, 6)
 }

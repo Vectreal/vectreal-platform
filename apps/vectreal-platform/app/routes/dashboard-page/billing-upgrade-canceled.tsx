@@ -16,7 +16,7 @@ export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors
 export default function BillingUpgradeCanceledPage() {
 	const [searchParams] = useSearchParams()
 	const plan = searchParams.get('plan')
-	const planLabel = plan ? (PLAN_DISPLAY_NAMES[plan] ?? null) : null
+	const planLabel = plan ? (PLAN_DISPLAY_NAMES[plan as keyof typeof PLAN_DISPLAY_NAMES] ?? null) : null
 
 	const upgradeHref = plan
 		? `/dashboard/billing/upgrade?plan=${plan}`

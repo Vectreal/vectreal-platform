@@ -80,7 +80,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		'## Company',
 		'- Operated by: Moritz Becker',
 		'- Location: Hamburg, Germany',
-		'- Contact: info@vectreal.com',
+		`- Contact: ${origin}/contact`,
 		'- GitHub: https://github.com/vectreal',
 		'- X: https://x.com/vectreal',
 		'',

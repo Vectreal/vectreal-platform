@@ -13,6 +13,8 @@
  * dynamically. Point users to /pricing for current rates.
  */
 
+import type { EntitlementKey, LimitKey, Plan } from './plan-config'
+
 // ---------------------------------------------------------------------------
 // Platform description strings
 // Source: prd/00-product-overview.md § "Platform Description Strings"
@@ -109,7 +111,7 @@ export const PLATFORM_FEATURE_LIST = [
 // ---------------------------------------------------------------------------
 
 // Canonical display names — used wherever a plan ID maps to a human label.
-export const PLAN_DISPLAY_NAMES: Record<string, string> = {
+export const PLAN_DISPLAY_NAMES: Record<Plan, string> = {
 	free: 'Free',
 	pro: 'Pro',
 	business: 'Business',
@@ -117,7 +119,7 @@ export const PLAN_DISPLAY_NAMES: Record<string, string> = {
 }
 
 // One-line value proposition per tier shown on pricing cards.
-export const PLAN_TAGLINES: Record<string, string> = {
+export const PLAN_TAGLINES: Record<Plan, string> = {
 	free: 'For hobbyists and open-source projects',
 	pro: 'For independent creators and small studios',
 	business: 'For growing teams and agencies',
@@ -125,7 +127,7 @@ export const PLAN_TAGLINES: Record<string, string> = {
 }
 
 // Primary CTA button text for each plan on the public pricing page.
-export const PLAN_CTA: Record<string, string> = {
+export const PLAN_CTA: Record<Plan, string> = {
 	free: 'Get started free',
 	pro: 'Start with Pro',
 	business: 'Start with Business',
@@ -133,7 +135,7 @@ export const PLAN_CTA: Record<string, string> = {
 }
 
 // CTA link destination. null = computed checkout URL.
-export const PLAN_CTA_HREF: Record<string, string | null> = {
+export const PLAN_CTA_HREF: Record<Plan, string | null> = {
 	free: '/sign-up',
 	pro: null,
 	business: null,
@@ -141,7 +143,7 @@ export const PLAN_CTA_HREF: Record<string, string | null> = {
 }
 
 // Which plan card to visually highlight as "Most popular".
-export const PLAN_HIGHLIGHTED: Record<string, boolean> = {
+export const PLAN_HIGHLIGHTED: Record<Plan, boolean> = {
 	free: false,
 	pro: true,
 	business: false,
@@ -154,9 +156,8 @@ export const PLAN_HIGHLIGHTED: Record<string, boolean> = {
 // Source: prd/01-plans-and-tiers.md § "Pricing anchors"
 // ---------------------------------------------------------------------------
 
-export const PLAN_FALLBACK_PRICES: Record<
-	string,
-	{ monthly: number; annualMonthly: number }
+export const PLAN_FALLBACK_PRICES: Partial<
+	Record<Plan, { monthly: number; annualMonthly: number }>
 > = {
 	pro: { monthly: 29, annualMonthly: 23 },
 	business: { monthly: 79, annualMonthly: 63 }
@@ -173,7 +174,7 @@ export const PAYMENT_TRUST_COPY = 'Secured by Stripe · Cancel anytime'
 // Source: prd/01-plans-and-tiers.md, prd/02-limits-and-quotas.md
 // ---------------------------------------------------------------------------
 
-export const PLAN_OFFER_DESCRIPTIONS: Record<string, string> = {
+export const PLAN_OFFER_DESCRIPTIONS: Record<Plan, string> = {
 	free: '10 scenes, 500 MB storage, 3 concurrent published scenes, 20 optimization runs/month. API access and community support included. No credit card required.',
 	pro: '200 scenes, 10 GB storage, 50 concurrent published scenes, 500 optimization runs/month. Adds analytics, AR mode, branding removal, version history, and email support.',
 	business:
@@ -204,7 +205,7 @@ export const PRICING_PAGE_COPY = {
 //          upgrade success page, and any other entitlement-keyed UI.
 // ---------------------------------------------------------------------------
 
-export const ENTITLEMENT_DISPLAY_LABELS: Record<string, string> = {
+export const ENTITLEMENT_DISPLAY_LABELS: Record<EntitlementKey, string> = {
 	scene_upload: 'Scene upload',
 	scene_optimize: 'Optimization pipeline',
 	scene_publish: 'Publish to CDN',
@@ -238,7 +239,7 @@ export const ENTITLEMENT_DISPLAY_LABELS: Record<string, string> = {
 // Entitlement keys grouped for the feature comparison grid, in display order.
 export const ENTITLEMENT_FEATURE_GROUPS: Array<{
 	label: string
-	features: Array<{ key: string; label: string }>
+	features: Array<{ key: EntitlementKey; label: string }>
 }> = [
 	{
 		label: 'Publishing',
@@ -368,7 +369,7 @@ export const PLAN_CARD_LIMIT_KEYS = [
 	'org_seats'
 ] as const
 
-export const LIMIT_DISPLAY_LABELS: Record<string, string> = {
+export const LIMIT_DISPLAY_LABELS: Partial<Record<LimitKey, string>> = {
 	storage_bytes_total: 'Storage',
 	scenes_total: 'Scenes',
 	scenes_published_concurrent: 'Published scenes',

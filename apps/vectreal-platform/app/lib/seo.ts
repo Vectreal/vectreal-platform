@@ -47,6 +47,18 @@ export interface BuildMetaOptions {
 	image?: string
 	/** Accessible alt text for social cards. */
 	imageAlt?: string
+	/**
+	 * Width of the Open Graph image in pixels.
+	 * Only emit when you know the exact dimensions of the image.
+	 * Omit when using the default 512×512 icon.
+	 */
+	imageWidth?: number
+	/**
+	 * Height of the Open Graph image in pixels.
+	 * Only emit when you know the exact dimensions of the image.
+	 * Omit when using the default 512×512 icon.
+	 */
+	imageHeight?: number
 	/** Open Graph content type, defaults to website. */
 	type?: 'website' | 'article'
 	/** Twitter card type, defaults to summary_large_image. */
@@ -73,6 +85,8 @@ export interface SeoPageDefinition {
 	canonical: string
 	image?: string
 	imageAlt?: string
+	imageWidth?: number
+	imageHeight?: number
 	type?: 'website' | 'article'
 	structuredData?: JsonLd | JsonLd[]
 	publishedTime?: string
@@ -153,14 +167,6 @@ export function buildMeta(
 			content: socialImageAlt
 		},
 		{
-			property: 'og:image:width',
-			content: '1200'
-		},
-		{
-			property: 'og:image:height',
-			content: '630'
-		},
-		{
 			name: 'twitter:card',
 			content: twitterCard
 		},
@@ -224,6 +230,21 @@ export function buildMeta(
 
 	// Convert map values back to array
 	const metaItems = Array.from(metaMap.values())
+
+	// Only emit image dimensions when explicitly known — omitting them is safer
+	// than emitting incorrect values (e.g. 1200x630 for the 512x512 default icon).
+	if (options.imageWidth !== undefined) {
+		metaItems.push({
+			property: 'og:image:width',
+			content: String(options.imageWidth)
+		})
+	}
+	if (options.imageHeight !== undefined) {
+		metaItems.push({
+			property: 'og:image:height',
+			content: String(options.imageHeight)
+		})
+	}
 
 	if (options.canonical) {
 		const absoluteCanonical = toAbsoluteUrl(options.canonical)
@@ -297,6 +318,8 @@ export function buildPageMeta(
 		| 'canonical'
 		| 'image'
 		| 'imageAlt'
+		| 'imageWidth'
+		| 'imageHeight'
 		| 'type'
 		| 'publishedTime'
 		| 'modifiedTime'
@@ -319,6 +342,8 @@ export function buildPageMeta(
 			canonical: page.canonical,
 			image: page.image,
 			imageAlt: page.imageAlt,
+			imageWidth: page.imageWidth,
+			imageHeight: page.imageHeight,
 			type: page.type,
 			structuredData: page.structuredData,
 			publishedTime: page.publishedTime,
