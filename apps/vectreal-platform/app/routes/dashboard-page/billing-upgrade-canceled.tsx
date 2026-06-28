@@ -9,17 +9,14 @@ import {
 import { ArrowRight } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router'
 
-export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
+import { PLAN_DISPLAY_NAMES } from '../../constants/product-copy'
 
-const PLAN_LABELS: Record<string, string> = {
-	pro: 'Pro',
-	business: 'Business'
-}
+export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
 export default function BillingUpgradeCanceledPage() {
 	const [searchParams] = useSearchParams()
 	const plan = searchParams.get('plan')
-	const planLabel = plan ? (PLAN_LABELS[plan] ?? null) : null
+	const planLabel = plan ? (PLAN_DISPLAY_NAMES[plan] ?? null) : null
 
 	const upgradeHref = plan
 		? `/dashboard/billing/upgrade?plan=${plan}`

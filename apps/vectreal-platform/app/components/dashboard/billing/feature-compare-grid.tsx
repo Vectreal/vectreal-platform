@@ -9,90 +9,11 @@ import { Check, Minus } from 'lucide-react'
 import React from 'react'
 
 import { PLAN_ENTITLEMENTS, type Plan } from '../../../constants/plan-config'
-
-// ---------------------------------------------------------------------------
-// Feature groups & plan display labels (mirrors pricing-page)
-// ---------------------------------------------------------------------------
-
-const PLAN_DISPLAY_NAME: Record<Plan, string> = {
-	free: 'Free',
-	pro: 'Pro',
-	business: 'Business',
-	enterprise: 'Enterprise'
-}
-
-const PLAN_IS_HIGHLIGHTED: Record<Plan, boolean> = {
-	free: false,
-	pro: true,
-	business: false,
-	enterprise: false
-}
-
-const FEATURE_GROUPS: Array<{
-	label: string
-	features: Array<{
-		key: keyof (typeof PLAN_ENTITLEMENTS)['free']
-		label: string
-	}>
-}> = [
-	{
-		label: 'Publishing',
-		features: [
-			{ key: 'scene_upload', label: 'Scene upload' },
-			{ key: 'scene_optimize', label: 'Optimization pipeline' },
-			{ key: 'scene_publish', label: 'Publish to CDN' },
-			{ key: 'scene_embed', label: 'Embed snippet' },
-			{ key: 'scene_preview_private', label: 'Private preview link' },
-			{ key: 'scene_version_history', label: 'Version history' }
-		]
-	},
-	{
-		label: 'Optimization',
-		features: [
-			{ key: 'optimization_preset_low', label: 'Low / Medium presets' },
-			{ key: 'optimization_preset_high', label: 'High-quality preset' },
-			{ key: 'optimization_custom_params', label: 'Custom parameters' },
-			{ key: 'optimization_priority_queue', label: 'Priority queue' }
-		]
-	},
-	{
-		label: 'Embed & Viewer',
-		features: [
-			{ key: 'embed_domain_allowlist', label: 'Domain allowlist' },
-			{ key: 'embed_branding_removal', label: 'Remove Vectreal branding' },
-			{ key: 'embed_viewer_customisation', label: 'Viewer customisation' },
-			{ key: 'embed_analytics', label: 'Embed analytics' },
-			{ key: 'embed_ar_mode', label: 'AR / WebXR mode' }
-		]
-	},
-	{
-		label: 'Organisation',
-		features: [
-			{ key: 'org_multi_member', label: 'Multi-member workspace' },
-			{ key: 'org_roles', label: 'Role-based access' },
-			{ key: 'org_api_keys', label: 'API keys' },
-			{ key: 'org_sso', label: 'SAML / OIDC SSO' },
-			{ key: 'org_audit_log', label: 'Audit log export' }
-		]
-	},
-	{
-		label: 'Data & Compliance',
-		features: [
-			{ key: 'data_export', label: 'Bulk data export' },
-			{ key: 'data_residency_eu', label: 'EU data residency' },
-			{ key: 'data_residency_custom', label: 'Custom data residency' }
-		]
-	},
-	{
-		label: 'Support',
-		features: [
-			{ key: 'support_community', label: 'Community & Discord' },
-			{ key: 'support_email', label: 'Email support (48 h SLA)' },
-			{ key: 'support_priority', label: 'Priority support (8 h SLA)' },
-			{ key: 'support_dedicated', label: 'Dedicated support channel' }
-		]
-	}
-]
+import {
+	ENTITLEMENT_FEATURE_GROUPS,
+	PLAN_DISPLAY_NAMES,
+	PLAN_HIGHLIGHTED
+} from '../../../constants/product-copy'
 
 const PLANS: Plan[] = ['free', 'pro', 'business', 'enterprise']
 
@@ -144,16 +65,16 @@ export function FeatureCompareGrid() {
 									key={plan}
 									className={cn(
 										'pb-4 text-center text-sm font-semibold',
-										PLAN_IS_HIGHLIGHTED[plan] && 'text-primary'
+										PLAN_HIGHLIGHTED[plan] && 'text-primary'
 									)}
 								>
-									{PLAN_DISPLAY_NAME[plan]}
+									{PLAN_DISPLAY_NAMES[plan]}
 								</th>
 							))}
 						</tr>
 					</thead>
 					<tbody>
-						{FEATURE_GROUPS.map(({ label, features }) => (
+						{ENTITLEMENT_FEATURE_GROUPS.map(({ label, features }) => (
 							<React.Fragment key={label}>
 								<tr className="bg-muted/30">
 									<td
@@ -163,16 +84,20 @@ export function FeatureCompareGrid() {
 										{label}
 									</td>
 								</tr>
-								{features.map(({ key, label: featureLabel }) => (
-									<FeatureMatrixRow
-										key={key}
-										label={featureLabel}
-										plans={PLANS.map((plan) => ({
-											plan,
-											granted: PLAN_ENTITLEMENTS[plan][key]
-										}))}
-									/>
-								))}
+								{features.map(({ key, label: featureLabel }) => {
+									const typedKey =
+										key as keyof (typeof PLAN_ENTITLEMENTS)['free']
+									return (
+										<FeatureMatrixRow
+											key={key}
+											label={featureLabel}
+											plans={PLANS.map((plan) => ({
+												plan,
+												granted: PLAN_ENTITLEMENTS[plan][typedKey]
+											}))}
+										/>
+									)
+								})}
 							</React.Fragment>
 						))}
 					</tbody>

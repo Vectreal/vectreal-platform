@@ -61,17 +61,67 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 	// ── 1. Static marketing / content pages ────────────────────────────────
 	const staticEntries: SitemapEntry[] = [
-		{ path: '/', changefreq: 'weekly', priority: '1.0' },
-		{ path: '/pricing', changefreq: 'monthly', priority: '0.8' },
-		{ path: '/news-room', changefreq: 'daily', priority: '0.8' },
-		{ path: '/docs', changefreq: 'weekly', priority: '0.8' },
-		{ path: '/about', changefreq: 'monthly', priority: '0.6' },
-		{ path: '/changelog', changefreq: 'weekly', priority: '0.6' },
-		{ path: '/contact', changefreq: 'monthly', priority: '0.5' },
-		{ path: '/code-of-conduct', changefreq: 'yearly', priority: '0.3' },
-		{ path: '/privacy-policy', changefreq: 'yearly', priority: '0.3' },
-		{ path: '/terms-of-service', changefreq: 'yearly', priority: '0.3' },
-		{ path: '/imprint', changefreq: 'yearly', priority: '0.3' }
+		{ path: '/', lastmod: '2026-06-29', changefreq: 'weekly', priority: '1.0' },
+		{
+			path: '/pricing',
+			lastmod: '2026-06-29',
+			changefreq: 'monthly',
+			priority: '0.8'
+		},
+		{
+			path: '/news-room',
+			lastmod: '2026-06-29',
+			changefreq: 'daily',
+			priority: '0.8'
+		},
+		{
+			path: '/docs',
+			lastmod: '2026-06-29',
+			changefreq: 'weekly',
+			priority: '0.8'
+		},
+		{
+			path: '/about',
+			lastmod: '2026-01-19',
+			changefreq: 'monthly',
+			priority: '0.6'
+		},
+		{
+			path: '/changelog',
+			lastmod: '2026-06-29',
+			changefreq: 'weekly',
+			priority: '0.6'
+		},
+		{
+			path: '/contact',
+			lastmod: '2026-01-01',
+			changefreq: 'monthly',
+			priority: '0.5'
+		},
+		{
+			path: '/code-of-conduct',
+			lastmod: '2025-01-01',
+			changefreq: 'yearly',
+			priority: '0.3'
+		},
+		{
+			path: '/privacy-policy',
+			lastmod: '2026-01-01',
+			changefreq: 'yearly',
+			priority: '0.3'
+		},
+		{
+			path: '/terms-of-service',
+			lastmod: '2026-01-01',
+			changefreq: 'yearly',
+			priority: '0.3'
+		},
+		{
+			path: '/imprint',
+			lastmod: '2026-01-19',
+			changefreq: 'yearly',
+			priority: '0.3'
+		}
 	]
 
 	// ── 2. News Room articles ───────────────────────────────────────────────

@@ -16,20 +16,10 @@ import { useFetcher } from 'react-router'
 import { Link } from 'react-router'
 
 import { DASHBOARD_ROUTES } from '../../../constants/dashboard'
+import { PLAN_DISPLAY_NAMES } from '../../../constants/product-copy'
 
-import type { BillingState, Plan } from '../../../constants/plan-config'
+import type { BillingState } from '../../../constants/plan-config'
 import type { BillingSettingsData } from '../../../lib/domain/dashboard/dashboard-types'
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const PLAN_LABELS: Record<Plan, string> = {
-	free: 'Free',
-	pro: 'Pro',
-	business: 'Business',
-	enterprise: 'Enterprise'
-}
 
 const BILLING_STATE_CONFIG: Record<
 	BillingState,
@@ -236,7 +226,7 @@ export function BillingSettingsSection({
 
 	const stateConfig = BILLING_STATE_CONFIG[billingState]
 	const StateIcon = stateConfig.icon
-	const planLabel = PLAN_LABELS[plan]
+	const planLabel = PLAN_DISPLAY_NAMES[plan]
 	const isPaid = plan !== 'free'
 	const isEnterprise = plan === 'enterprise'
 	const showWarning = WARNING_STATES.has(billingState)
