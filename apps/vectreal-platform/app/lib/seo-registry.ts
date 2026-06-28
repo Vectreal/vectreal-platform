@@ -1,4 +1,10 @@
 import { SITE_URL, type SeoPageDefinition } from './seo'
+import {
+	PLAN_OFFER_DESCRIPTIONS,
+	PLATFORM_FEATURE_LIST,
+	PLATFORM_SOCIAL_DESCRIPTION,
+	PLATFORM_TAGLINE
+} from '../constants/product-copy'
 
 interface NewsArticleStructuredDataInput {
 	title: string
@@ -8,13 +14,20 @@ interface NewsArticleStructuredDataInput {
 	updatedAt?: string
 	image?: string
 	authorName: string
+	authorRole?: string
+	authorXUrl?: string
+	authorLinkedinUrl?: string
+}
+
+export interface BreadcrumbItem {
+	name: string
+	item?: string
 }
 
 export const PUBLIC_SEO_PAGES = {
 	home: {
 		title: 'Vectreal - Your platform for creating and sharing 3D scenes.',
-		description:
-			'Vectreal is your go-to platform for creating, sharing, and exploring stunning 3D scenes. Upload, optimize, and publish 3D content in seconds.',
+		description: PLATFORM_SOCIAL_DESCRIPTION,
 		canonical: '/'
 	},
 	pricing: {
@@ -102,10 +115,111 @@ export function buildOrganizationJsonLd() {
 	return {
 		'@context': 'https://schema.org',
 		'@type': 'Organization',
+		'@id': `${SITE_URL}/#organization`,
 		name: 'Vectreal',
 		url: SITE_URL,
-		logo: `${SITE_URL}/android-chrome-512x512.png`,
-		description: PUBLIC_SEO_PAGES.home.description
+		logo: {
+			'@type': 'ImageObject',
+			url: `${SITE_URL}/android-chrome-512x512.png`,
+			width: 512,
+			height: 512
+		},
+		description: PLATFORM_TAGLINE,
+		sameAs: ['https://github.com/vectreal', 'https://x.com/vectreal'],
+		contactPoint: {
+			'@type': 'ContactPoint',
+			email: 'info@vectreal.com',
+			contactType: 'customer support'
+		}
+	}
+}
+
+export function buildWebSiteJsonLd() {
+	return {
+		'@context': 'https://schema.org',
+		'@type': 'WebSite',
+		'@id': `${SITE_URL}/#website`,
+		url: SITE_URL,
+		name: 'Vectreal',
+		description: PLATFORM_TAGLINE,
+		inLanguage: 'en-US',
+		publisher: { '@id': `${SITE_URL}/#organization` }
+	}
+}
+
+export function buildWebApplicationJsonLd() {
+	return {
+		'@context': 'https://schema.org',
+		'@type': 'WebApplication',
+		'@id': `${SITE_URL}/#webapp`,
+		name: 'Vectreal Platform',
+		url: SITE_URL,
+		applicationCategory: 'BusinessApplication',
+		operatingSystem: 'Web',
+		featureList: [...PLATFORM_FEATURE_LIST],
+		offers: Object.entries(PLAN_OFFER_DESCRIPTIONS).map(
+			([name, description]) => ({
+				'@type': 'Offer',
+				name: name.charAt(0).toUpperCase() + name.slice(1),
+				description,
+				...(name === 'free' ? { price: '0', priceCurrency: 'USD' } : {})
+			})
+		),
+		publisher: { '@id': `${SITE_URL}/#organization` }
+	}
+}
+
+function nameToSlug(name: string): string {
+	return name
+		.toLowerCase()
+		.replace(/\s+/g, '-')
+		.replace(/[^a-z0-9-]/g, '')
+}
+
+export function buildAuthorPersonJsonLd(author: {
+	name: string
+	role?: string
+	xUrl?: string
+	linkedinUrl?: string
+}) {
+	const sameAs = [author.xUrl, author.linkedinUrl].filter(Boolean) as string[]
+	return {
+		'@context': 'https://schema.org',
+		'@type': 'Person',
+		'@id': `${SITE_URL}/#author-${nameToSlug(author.name)}`,
+		name: author.name,
+		...(author.role ? { jobTitle: author.role } : {}),
+		affiliation: { '@id': `${SITE_URL}/#organization` },
+		...(sameAs.length > 0 ? { sameAs } : {})
+	}
+}
+
+export function buildBreadcrumbListJsonLd(items: BreadcrumbItem[]) {
+	return {
+		'@context': 'https://schema.org',
+		'@type': 'BreadcrumbList',
+		itemListElement: items.map((crumb, index) => ({
+			'@type': 'ListItem',
+			position: index + 1,
+			name: crumb.name,
+			...(crumb.item ? { item: crumb.item } : {})
+		}))
+	}
+}
+
+export function buildCollectionPageJsonLd(args: {
+	name: string
+	url: string
+	description: string
+}) {
+	return {
+		'@context': 'https://schema.org',
+		'@type': 'CollectionPage',
+		'@id': `${args.url}#collectionpage`,
+		name: args.name,
+		url: args.url,
+		description: args.description,
+		publisher: { '@id': `${SITE_URL}/#organization` }
 	}
 }
 
@@ -113,26 +227,18 @@ export function buildNewsArticleJsonLd(
 	article: NewsArticleStructuredDataInput
 ) {
 	const canonicalUrl = `${SITE_URL}${article.canonicalPath}`
+	const authorId = `${SITE_URL}/#author-${nameToSlug(article.authorName)}`
 
 	return {
 		'@context': 'https://schema.org',
 		'@type': 'Article',
+		'@id': `${canonicalUrl}#article`,
 		headline: article.title,
 		description: article.description,
 		datePublished: article.publishedAt,
 		dateModified: article.updatedAt ?? article.publishedAt,
-		author: {
-			'@type': 'Person',
-			name: article.authorName
-		},
-		publisher: {
-			'@type': 'Organization',
-			name: 'Vectreal',
-			logo: {
-				'@type': 'ImageObject',
-				url: `${SITE_URL}/android-chrome-512x512.png`
-			}
-		},
+		author: { '@id': authorId },
+		publisher: { '@id': `${SITE_URL}/#organization` },
 		mainEntityOfPage: {
 			'@type': 'WebPage',
 			'@id': canonicalUrl

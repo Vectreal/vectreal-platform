@@ -13,8 +13,8 @@ import {
 	getNewsCategories,
 	getNewsTags
 } from '../../lib/news/news-manifest'
-import { buildPageMeta } from '../../lib/seo'
-import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
+import { buildPageMeta, SITE_URL } from '../../lib/seo'
+import { buildCollectionPageJsonLd, PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
 
 import type { Route } from './+types/news-room-page'
 
@@ -119,7 +119,14 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export function meta(_: Route.MetaArgs) {
-	return buildPageMeta(PUBLIC_SEO_PAGES.newsroom)
+	return buildPageMeta({
+		...PUBLIC_SEO_PAGES.newsroom,
+		structuredData: buildCollectionPageJsonLd({
+			name: 'Vectreal News Room',
+			url: `${SITE_URL}/news-room`,
+			description: PUBLIC_SEO_PAGES.newsroom.description
+		})
+	})
 }
 
 export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {

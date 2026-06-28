@@ -15,6 +15,7 @@ import { AlertTriangle, Lock, TrendingUp, Zap } from 'lucide-react'
 import { useCallback, useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router'
 
+import { PLAN_DISPLAY_NAMES } from '../../constants/product-copy'
 import { upgradeModalAtom } from '../../lib/stores/upgrade-modal-store'
 
 import type { UpgradeModalDenialReason } from '../../lib/stores/upgrade-modal-store'
@@ -46,13 +47,6 @@ const REASON_CONFIG: Record<
 		badgeLabel: 'Plan inactive',
 		badgeVariant: 'destructive'
 	}
-}
-
-const PLAN_LABELS: Record<string, string> = {
-	free: 'Free',
-	pro: 'Pro',
-	business: 'Business',
-	enterprise: 'Enterprise'
 }
 
 // ---------------------------------------------------------------------------
@@ -117,8 +111,8 @@ export function UpgradeModal() {
 	const config = REASON_CONFIG[state.reason]
 	const Icon = config.icon
 
-	const currentPlanLabel = state.plan ? PLAN_LABELS[state.plan] : null
-	const upgradeToLabel = state.upgradeTo ? PLAN_LABELS[state.upgradeTo] : null
+	const currentPlanLabel = state.plan ? PLAN_DISPLAY_NAMES[state.plan] : null
+	const upgradeToLabel = state.upgradeTo ? PLAN_DISPLAY_NAMES[state.upgradeTo] : null
 
 	const usagePercent =
 		state.limit != null && state.currentValue != null

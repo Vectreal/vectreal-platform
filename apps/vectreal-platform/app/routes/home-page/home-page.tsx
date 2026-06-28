@@ -14,7 +14,6 @@ import { Check, Globe, Sparkle, Wrench } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { Route } from './+types/home-page'
-// import screenshotPublisher from '../../assets/images/publisher-optimize-2181px.webp'
 import FiletypeCarousel from '../../components/home/filetype-carousel'
 import GridBg from '../../components/home/grid-bg'
 import HeroParallaxBg from '../../components/home/hero-parallax-bg'
@@ -23,6 +22,7 @@ import MockShopSection from '../../components/home/mock-shop-section'
 import BasicCard from '../../components/layout-components/basic-card'
 import Section from '../../components/layout-components/section'
 import YoutubeEmbed from '../../components/youtube-embed'
+import { SUPPORTED_FORMAT_NAMES } from '../../constants/product-copy'
 import { buildPageMeta } from '../../lib/seo'
 import {
 	buildOrganizationJsonLd,
@@ -201,8 +201,8 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 									</CardHeader>
 									<CardContent>
 										<p>
-											Just drag & drop your model - glTF, FBX, OBJ, STL and
-											more.
+											Just drag & drop your model -{' '}
+											{SUPPORTED_FORMAT_NAMES.join(', ')} supported.
 										</p>
 										<p>Our system gets to work instantly.</p>
 									</CardContent>
@@ -597,9 +597,9 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 										Which 3D formats are supported?
 									</AccordionTrigger>
 									<AccordionContent>
-										You can upload common formats like glTF/GLB and related
-										assets. For multi-file models, upload the full bundle
-										together to preserve references.
+										Supported formats: {SUPPORTED_FORMAT_NAMES.join(', ')}. For
+										multi-file glTF uploads, include the full bundle (.gltf +
+										.bin + textures) to preserve all references.
 									</AccordionContent>
 								</AccordionItem>
 								<AccordionItem className="bg-transparent!" value="faq-files">

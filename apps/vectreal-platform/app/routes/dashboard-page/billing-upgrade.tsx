@@ -32,6 +32,11 @@ import {
 } from '../../components/dashboard'
 import { PLAN_ENTITLEMENTS, type Plan } from '../../constants/plan-config'
 import {
+	ENTITLEMENT_DISPLAY_LABELS,
+	PAYMENT_TRUST_COPY,
+	PLAN_DISPLAY_NAMES
+} from '../../constants/product-copy'
+import {
 	getCheckoutOptions,
 	loadBillingDashboardData
 } from '../../lib/domain/billing/billing-dashboard-loader.server'
@@ -41,13 +46,6 @@ import type {
 	BillingCheckoutPeriods
 } from '../../lib/domain/dashboard/dashboard-types'
 import type { PostHogContext } from '../../lib/posthog/posthog-middleware'
-
-const PLAN_LABELS = {
-	free: 'Free',
-	pro: 'Pro',
-	business: 'Business',
-	enterprise: 'Enterprise'
-} as const
 
 type BillingPeriod = 'monthly' | 'annual'
 
@@ -64,50 +62,17 @@ function getUnlockedFeatures(
 	selectedPlan: 'pro' | 'business'
 ) {
 	if (currentPlan === selectedPlan) return []
-
 	const currentEntitlements = PLAN_ENTITLEMENTS[currentPlan]
 	const selectedEntitlements = PLAN_ENTITLEMENTS[selectedPlan]
-	const labels: Record<keyof typeof PLAN_ENTITLEMENTS.free, string> = {
-		scene_upload: 'Scene upload',
-		scene_optimize: 'Optimization pipeline',
-		scene_publish: 'Publish to CDN',
-		scene_embed: 'Embed snippet',
-		scene_preview_private: 'Private preview links',
-		scene_version_history: 'Version history',
-		optimization_preset_low: 'Low / medium presets',
-		optimization_preset_medium: 'Low / medium presets',
-		optimization_preset_high: 'High-quality optimization preset',
-		optimization_custom_params: 'Custom optimization parameters',
-		optimization_priority_queue: 'Priority optimization queue',
-		embed_domain_allowlist: 'Embed domain allowlist',
-		embed_branding_removal: 'Branding removal',
-		embed_viewer_customisation: 'Viewer customization',
-		embed_analytics: 'Embed analytics',
-		embed_ar_mode: 'AR / WebXR mode',
-		org_multi_member: 'Multi-member workspace',
-		org_roles: 'Role-based access',
-		org_api_keys: 'Organization API keys',
-		org_sso: 'SSO',
-		org_audit_log: 'Audit log export',
-		data_export: 'Data export',
-		data_residency_eu: 'EU data residency',
-		data_residency_custom: 'Custom data residency',
-		support_community: 'Community support',
-		support_email: 'Email support',
-		support_priority: 'Priority support',
-		support_dedicated: 'Dedicated support channel'
-	}
-
 	const seen = new Set<string>()
-	const unlocked = Object.keys(selectedEntitlements)
+	return Object.keys(selectedEntitlements)
 		.filter((key) => {
-			const typedKey = key as keyof typeof selectedEntitlements
-			return selectedEntitlements[typedKey] && !currentEntitlements[typedKey]
+			const k = key as keyof typeof selectedEntitlements
+			return selectedEntitlements[k] && !currentEntitlements[k]
 		})
-		.map((key) => labels[key as keyof typeof labels])
-		.filter((label) => label && !seen.has(label) && !!seen.add(label))
-
-	return unlocked.slice(0, 6)
+		.map((key) => ENTITLEMENT_DISPLAY_LABELS[key as keyof typeof ENTITLEMENT_DISPLAY_LABELS] ?? key)
+		.filter((label) => !seen.has(label) && !!seen.add(label))
+		.slice(0, 6)
 }
 
 function computeAnnualSavings(pricing: BillingCheckoutPeriods) {
@@ -347,7 +312,7 @@ function BillingUpgradeContent({
 							<div className="flex flex-col gap-1">
 								<span className="flex grow flex-col">
 									<p className="text-sm font-medium">
-										Selected: {PLAN_LABELS[plan]} ·{' '}
+										Selected: {PLAN_DISPLAY_NAMES[plan]} ·{' '}
 										{billingPeriod === 'annual' ? 'Annual' : 'Monthly'}
 									</p>
 
@@ -410,7 +375,7 @@ function BillingUpgradeContent({
 								<div className="flex items-center gap-1.5">
 									<Lock className="text-muted-foreground h-3 w-3" />
 									<p className="text-muted-foreground text-xs">
-										Secured by Stripe · Cancel anytime
+										{PAYMENT_TRUST_COPY}
 									</p>
 								</div>
 							</div>
@@ -437,14 +402,14 @@ function BillingUpgradeContent({
 						{billing.plan !== plan && (
 							<div className="flex items-center gap-2">
 								<span className="text-muted-foreground">
-									{PLAN_LABELS[billing.plan]}
+									{PLAN_DISPLAY_NAMES[billing.plan]}
 								</span>
 								<ArrowRight className="text-muted-foreground h-3.5 w-3.5" />
-								<span className="font-medium">{PLAN_LABELS[plan]}</span>
+								<span className="font-medium">{PLAN_DISPLAY_NAMES[plan]}</span>
 							</div>
 						)}
 						<div className="font-medium">
-							{PLAN_LABELS[plan]} ·{' '}
+							{PLAN_DISPLAY_NAMES[plan]} ·{' '}
 							{billingPeriod === 'annual' ? 'Annual' : 'Monthly'}
 						</div>
 						{selectedPrice && displayPriceCents !== null && (

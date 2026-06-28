@@ -22,8 +22,12 @@ import {
 	getNewsArticle,
 	getRelatedNewsArticles
 } from '../../lib/news/news-manifest'
-import { buildPageMeta } from '../../lib/seo'
-import { buildNewsArticleJsonLd } from '../../lib/seo-registry'
+import { buildPageMeta, SITE_URL } from '../../lib/seo'
+import {
+	buildAuthorPersonJsonLd,
+	buildBreadcrumbListJsonLd,
+	buildNewsArticleJsonLd
+} from '../../lib/seo-registry'
 import styles from '../../styles/mdx.module.css'
 
 import type { Route } from './+types/news-room-article-page'
@@ -78,23 +82,48 @@ export function meta({ data }: Route.MetaArgs) {
 	const description = data.article.excerpt
 	const canonical = `/news-room/${data.article.slug}`
 
-	return buildPageMeta({
-		title,
-		description,
-		canonical,
-		type: 'article',
-		image: data.article.coverImage,
-		imageAlt: data.article.title,
-		structuredData: buildNewsArticleJsonLd({
-			title: data.article.title,
+	return buildPageMeta(
+		{
+			title,
 			description,
-			canonicalPath: canonical,
-			publishedAt: data.article.publishedAt,
-			updatedAt: data.article.updatedAt,
+			canonical,
+			type: 'article',
 			image: data.article.coverImage,
-			authorName: data.article.author.name
-		})
-	})
+			imageAlt: data.article.title,
+			publishedTime: data.article.publishedAt,
+			modifiedTime: data.article.updatedAt ?? data.article.publishedAt,
+			articleAuthor: data.article.author.name,
+			articleSection: data.article.category,
+			structuredData: [
+			buildNewsArticleJsonLd({
+				title: data.article.title,
+				description,
+				canonicalPath: canonical,
+				publishedAt: data.article.publishedAt,
+				updatedAt: data.article.updatedAt,
+				image: data.article.coverImage,
+				authorName: data.article.author.name,
+				authorRole: data.article.author.role,
+				authorXUrl: data.article.author.xUrl,
+				authorLinkedinUrl: data.article.author.linkedinUrl
+			}),
+			buildAuthorPersonJsonLd({
+				name: data.article.author.name,
+				role: data.article.author.role,
+				xUrl: data.article.author.xUrl,
+				linkedinUrl: data.article.author.linkedinUrl
+			}),
+			buildBreadcrumbListJsonLd([
+				{ name: 'Home', item: SITE_URL },
+				{ name: 'News Room', item: `${SITE_URL}/news-room` },
+				{ name: data.article.title }
+			])
+			]
+		},
+		undefined,
+		// Article cover images are 1200x630, so use the large card format.
+		{ twitterCard: data.article.coverImage ? 'summary_large_image' : undefined }
+	)
 }
 
 export default function NewsRoomArticlePage({

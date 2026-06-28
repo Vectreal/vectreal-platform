@@ -24,8 +24,12 @@ import {
 	getAdjacentDocPages,
 	getDocPage
 } from '../../lib/docs/docs-manifest'
-import { buildPageMeta, getRootMeta } from '../../lib/seo'
-import { buildDocsPageSeo, PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
+import { buildPageMeta, getRootMeta, SITE_URL } from '../../lib/seo'
+import {
+	buildBreadcrumbListJsonLd,
+	buildDocsPageSeo,
+	PUBLIC_SEO_PAGES
+} from '../../lib/seo-registry'
 import styles from '../../styles/mdx.module.css'
 
 import type { RootLoader } from '../../root'
@@ -37,22 +41,45 @@ export const meta: MetaFunction<undefined, { root: RootLoader }> = (args) =>
 			.replace(/\/$/, '')
 		const page = getDocPage(slug)
 
+		const slugParts = slug.split('/').filter(Boolean)
+		const categorySlug = slugParts[0] as
+			| keyof typeof DOC_CATEGORY_LABELS
+			| undefined
+		const categoryLabel = categorySlug
+			? DOC_CATEGORY_LABELS[categorySlug]
+			: undefined
+
+		const breadcrumbItems = [
+			{ name: 'Home', item: SITE_URL },
+			{ name: 'Docs', item: `${SITE_URL}/docs` },
+			...(categoryLabel && categorySlug !== slug
+				? [{ name: categoryLabel, item: `${SITE_URL}/docs/${categorySlug}` }]
+				: []),
+			...(page && page.title !== 'Documentation' && page.title !== categoryLabel
+				? [{ name: page.title }]
+				: [])
+		]
+
 		if (!page) {
 			return buildPageMeta(
 				{
 					...PUBLIC_SEO_PAGES.docs,
-					canonical: args.location.pathname
+					canonical: args.location.pathname,
+					structuredData: buildBreadcrumbListJsonLd(breadcrumbItems)
 				},
 				getRootMeta(args)
 			)
 		}
 
 		return buildPageMeta(
-			buildDocsPageSeo({
-				pathname: args.location.pathname,
-				title: page.title,
-				description: page.description
-			}),
+			{
+				...buildDocsPageSeo({
+					pathname: args.location.pathname,
+					title: page.title,
+					description: page.description
+				}),
+				structuredData: buildBreadcrumbListJsonLd(breadcrumbItems)
+			},
 			getRootMeta(args)
 		)
 	})()

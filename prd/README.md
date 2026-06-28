@@ -10,6 +10,7 @@ Every decision that touches monetisation, access control, or data collection **m
 
 | # | Document | What it defines |
 |---|----------|-----------------|
+| 0 | [Product Overview](./00-product-overview.md) | Platform description, open-source packages, supported file formats, and canonical feature/copy strings |
 | 1 | [Plans & Tiers](./01-plans-and-tiers.md) | Plan names, target audiences, pricing anchors, and upgrade/downgrade rules |
 | 2 | [Limits & Quotas](./02-limits-and-quotas.md) | Hard and soft resource limits per plan (storage, scenes, API calls, …) |
 | 3 | [Entitlements](./03-entitlements.md) | Feature flags and capability matrix keyed by plan |

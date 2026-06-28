@@ -24,7 +24,11 @@ import { GlobalNavigationLoader } from './components/global-navigation-loader'
 import { resolveConsent } from './lib/domain/consent/consent-loader.server'
 import { posthogMiddleware } from './lib/posthog/posthog-middleware'
 import { buildMeta } from './lib/seo'
-import { buildOrganizationJsonLd } from './lib/seo-registry'
+import {
+	buildOrganizationJsonLd,
+	buildWebApplicationJsonLd,
+	buildWebSiteJsonLd
+} from './lib/seo-registry'
 import { csrfSession } from './lib/sessions/csrf-session.server'
 import {
 	getThemeModeFromRequest,
@@ -38,7 +42,11 @@ import '@shared/components/styles/globals.css'
 export const meta: MetaFunction = () => [
 	...buildMeta([], undefined, {
 		canonical: '/',
-		structuredData: buildOrganizationJsonLd()
+		structuredData: [
+			buildOrganizationJsonLd(),
+			buildWebSiteJsonLd(),
+			buildWebApplicationJsonLd()
+		]
 	})
 ]
 

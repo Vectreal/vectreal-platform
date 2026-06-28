@@ -15,6 +15,11 @@ import { useEffect } from 'react'
 import { data, Link, redirect, useLoaderData } from 'react-router'
 
 import { PLAN_ENTITLEMENTS, type Plan } from '../../constants/plan-config'
+import {
+	ENTITLEMENT_DISPLAY_LABELS,
+	PLAN_DISPLAY_NAMES,
+	UPGRADE_FEATURE_HIGHLIGHT_KEYS
+} from '../../constants/product-copy'
 import { getDbClient } from '../../db/client'
 import { orgSubscriptions } from '../../db/schema/billing/subscriptions'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
@@ -32,38 +37,7 @@ export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors
 
 type PaidPlan = Extract<Plan, 'pro' | 'business'>
 
-const PLAN_LABELS: Record<PaidPlan, string> = {
-	pro: 'Pro',
-	business: 'Business'
-}
-
-const ALL_PLAN_LABELS: Record<Plan, string> = {
-	free: 'Free',
-	pro: 'Pro',
-	business: 'Business',
-	enterprise: 'Enterprise'
-}
-
 const VALID_PLANS: Plan[] = ['free', 'pro', 'business', 'enterprise']
-
-// Key highlights to show in the "what you just unlocked" section
-const FEATURE_HIGHLIGHTS: Partial<
-	Record<keyof typeof PLAN_ENTITLEMENTS.free, string>
-> = {
-	scene_preview_private: 'Private preview links',
-	scene_version_history: 'Version history',
-	optimization_preset_high: 'High-quality optimization preset',
-	optimization_custom_params: 'Custom optimization parameters',
-	optimization_priority_queue: 'Priority optimization queue',
-	embed_branding_removal: 'Remove Vectreal branding from embeds',
-	embed_viewer_customisation: 'Viewer customization & theming',
-	embed_analytics: 'Embed analytics and performance data',
-	embed_ar_mode: 'AR / WebXR mode for 3D previews',
-	org_multi_member: 'Invite team members to your workspace',
-	org_roles: 'Role-based access control',
-	support_email: 'Email support',
-	support_priority: 'Priority support (8 h SLA)'
-}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -79,22 +53,18 @@ function toValidPlan(value: string | null): Plan | null {
 		: null
 }
 
-/**
- * Returns the feature highlights unlocked when moving to `plan` from `basePlan`.
- * Compares against `free` by default (new subscriber view).
- */
 function getUnlockedHighlights(
 	plan: PaidPlan,
 	basePlan: Plan = 'free'
 ): string[] {
 	const baseEntitlements = PLAN_ENTITLEMENTS[basePlan]
 	const planEntitlements = PLAN_ENTITLEMENTS[plan]
-
-	return (
-		Object.keys(FEATURE_HIGHLIGHTS) as (keyof typeof PLAN_ENTITLEMENTS.free)[]
-	)
-		.filter((key) => planEntitlements[key] && !baseEntitlements[key])
-		.map((key) => FEATURE_HIGHLIGHTS[key]!)
+	return (UPGRADE_FEATURE_HIGHLIGHT_KEYS as readonly string[])
+		.filter((key) => {
+			const k = key as keyof typeof planEntitlements
+			return planEntitlements[k] && !baseEntitlements[k]
+		})
+		.map((key) => ENTITLEMENT_DISPLAY_LABELS[key as keyof typeof ENTITLEMENT_DISPLAY_LABELS] ?? key)
 		.slice(0, 5)
 }
 
@@ -276,7 +246,7 @@ export default function BillingUpgradeSuccessPage() {
 	}, [planId, fromPlan, billingPeriod, posthog])
 
 	const plan = isPaidPlan(planId) ? planId : null
-	const planLabel = plan ? PLAN_LABELS[plan] : null
+	const planLabel = plan ? PLAN_DISPLAY_NAMES[plan] : null
 
 	const validFromPlan = toValidPlan(fromPlan)
 	const isPeriodSwitch = isDirectUpdate && fromPlan === planId
@@ -339,7 +309,7 @@ export default function BillingUpgradeSuccessPage() {
 							<span className="text-muted-foreground text-sm">
 								{isTierUpgrade
 									? validFromPlan
-										? ALL_PLAN_LABELS[validFromPlan]
+										? PLAN_DISPLAY_NAMES[validFromPlan]
 										: 'Previous plan'
 									: billingPeriod === 'annual'
 										? 'Monthly'

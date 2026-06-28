@@ -9,6 +9,7 @@ import {
 	PricingCardsSection
 } from '../../components/dashboard'
 import { PageHero } from '../../components/layout-components'
+import { PRICING_PAGE_COPY } from '../../constants/product-copy'
 import { getCheckoutOptions } from '../../lib/domain/billing/billing-dashboard-loader.server'
 import { buildPageMeta } from '../../lib/seo'
 import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
@@ -42,8 +43,8 @@ export default function PricingPage() {
 		<main>
 			<PageHero
 				eyebrow="Pricing"
-				heading="Simple, transparent pricing for every workflow."
-				description="Start for free. Upgrade when you need more. Every plan includes the core 3D publishing workflow - no hidden fees."
+				heading={PRICING_PAGE_COPY.heading}
+				description={PRICING_PAGE_COPY.description}
 				actions={
 					<>
 						<Badge variant="outline">4 Plans</Badge>
@@ -66,10 +67,11 @@ export default function PricingPage() {
 
 				{/* Enterprise CTA */}
 				<section className="bg-muted/30 rounded-2xl p-10 text-left">
-					<h2 className="text-2xl font-medium">Need a custom setup?</h2>
+					<h2 className="text-2xl font-medium">
+						{PRICING_PAGE_COPY.enterpriseHeading}
+					</h2>
 					<p className="text-muted-foreground mt-2 max-w-lg">
-						Enterprise plans include custom data residency, dedicated support,
-						audit log export, and bespoke SLA agreements. Talk to us.
+						{PRICING_PAGE_COPY.enterpriseDescription}
 					</p>
 					<div className="mt-6 flex justify-start gap-4">
 						<Link to="/contact">

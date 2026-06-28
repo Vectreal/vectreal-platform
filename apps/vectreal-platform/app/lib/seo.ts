@@ -1,3 +1,8 @@
+import {
+	PLATFORM_SOCIAL_DESCRIPTION,
+	SUPPORTED_FORMAT_NAMES
+} from '../constants/product-copy'
+
 import type { loader } from '../root'
 import type { MetaArgs, MetaDescriptor } from 'react-router'
 
@@ -14,14 +19,15 @@ export const SITE_URL =
 const DEFAULT_SITE_NAME = 'Vectreal'
 const DEFAULT_TITLE =
 	'Vectreal - Your platform for creating and sharing 3D scenes.'
-const DEFAULT_DESCRIPTION =
-	'Vectreal is your go-to platform for creating, sharing, and exploring stunning 3D scenes. Join our community of creators and bring your virtual visions to life!'
-const DEFAULT_KEYWORDS =
-	'3D, scenes, platform, Vectreal, create, share, virtual reality, graphics, design'
+const DEFAULT_DESCRIPTION = PLATFORM_SOCIAL_DESCRIPTION
+const DEFAULT_KEYWORDS = `3D, scenes, platform, Vectreal, create, share, ${SUPPORTED_FORMAT_NAMES.join(', ')}, 3D model optimization, embeddable 3D viewer`
+// TODO: replace with a 1200x630 PNG at public/assets/images/og-default.png for summary_large_image cards.
+// Until then the 512x512 icon is used, which requires DEFAULT_TWITTER_CARD = 'summary'.
 const DEFAULT_OG_IMAGE = '/android-chrome-512x512.png'
 const DEFAULT_OG_IMAGE_ALT = 'Vectreal platform'
 const DEFAULT_LOCALE = 'en_US'
-const DEFAULT_TWITTER_CARD = 'summary_large_image'
+// 'summary' matches the square 512x512 fallback icon. Switch to 'summary_large_image' once DEFAULT_OG_IMAGE is 1200x630.
+const DEFAULT_TWITTER_CARD = 'summary'
 
 type JsonLd = Record<string, unknown>
 
@@ -41,6 +47,18 @@ export interface BuildMetaOptions {
 	image?: string
 	/** Accessible alt text for social cards. */
 	imageAlt?: string
+	/**
+	 * Width of the Open Graph image in pixels.
+	 * Only emit when you know the exact dimensions of the image.
+	 * Omit when using the default 512×512 icon.
+	 */
+	imageWidth?: number
+	/**
+	 * Height of the Open Graph image in pixels.
+	 * Only emit when you know the exact dimensions of the image.
+	 * Omit when using the default 512×512 icon.
+	 */
+	imageHeight?: number
 	/** Open Graph content type, defaults to website. */
 	type?: 'website' | 'article'
 	/** Twitter card type, defaults to summary_large_image. */
@@ -51,6 +69,14 @@ export interface BuildMetaOptions {
 	siteName?: string
 	/** Optional JSON-LD payload(s) rendered as script tags. */
 	structuredData?: JsonLd | JsonLd[]
+	/** ISO 8601 publish date - emits article:published_time when type is article. */
+	publishedTime?: string
+	/** ISO 8601 modification date - emits article:modified_time when type is article. */
+	modifiedTime?: string
+	/** Author name - emits article:author when type is article. */
+	articleAuthor?: string
+	/** Content category - emits article:section when type is article. */
+	articleSection?: string
 }
 
 export interface SeoPageDefinition {
@@ -59,8 +85,14 @@ export interface SeoPageDefinition {
 	canonical: string
 	image?: string
 	imageAlt?: string
+	imageWidth?: number
+	imageHeight?: number
 	type?: 'website' | 'article'
 	structuredData?: JsonLd | JsonLd[]
+	publishedTime?: string
+	modifiedTime?: string
+	articleAuthor?: string
+	articleSection?: string
 }
 
 /** Build an absolute canonical URL from a path or full URL. */
@@ -96,6 +128,11 @@ export function buildMeta(
 	const baseMeta: MetaDescriptor[] = [
 		{
 			title: DEFAULT_TITLE
+		},
+		{
+			name: 'robots',
+			content:
+				'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1'
 		},
 		{
 			property: 'og:title',
@@ -183,8 +220,31 @@ export function buildMeta(
 		})
 	}
 
+	// Private pages override the default index/follow robots directive.
+	if (options.private) {
+		metaMap.set('name:robots', {
+			name: 'robots',
+			content: 'noindex, nofollow'
+		})
+	}
+
 	// Convert map values back to array
 	const metaItems = Array.from(metaMap.values())
+
+	// Only emit image dimensions when explicitly known — omitting them is safer
+	// than emitting incorrect values (e.g. 1200x630 for the 512x512 default icon).
+	if (options.imageWidth !== undefined) {
+		metaItems.push({
+			property: 'og:image:width',
+			content: String(options.imageWidth)
+		})
+	}
+	if (options.imageHeight !== undefined) {
+		metaItems.push({
+			property: 'og:image:height',
+			content: String(options.imageHeight)
+		})
+	}
 
 	if (options.canonical) {
 		const absoluteCanonical = toAbsoluteUrl(options.canonical)
@@ -201,12 +261,31 @@ export function buildMeta(
 		})
 	}
 
-	if (options.private) {
-		// Privatize the page: prevent indexing by search engines.
-		metaItems.push({
-			name: 'robots',
-			content: 'noindex, nofollow'
-		})
+	if (ogType === 'article') {
+		if (options.publishedTime) {
+			metaItems.push({
+				property: 'article:published_time',
+				content: options.publishedTime
+			})
+		}
+		if (options.modifiedTime) {
+			metaItems.push({
+				property: 'article:modified_time',
+				content: options.modifiedTime
+			})
+		}
+		if (options.articleAuthor) {
+			metaItems.push({
+				property: 'article:author',
+				content: options.articleAuthor
+			})
+		}
+		if (options.articleSection) {
+			metaItems.push({
+				property: 'article:section',
+				content: options.articleSection
+			})
+		}
 	}
 
 	if (options.structuredData) {
@@ -236,7 +315,16 @@ export function buildPageMeta(
 	rootMeta?: MetaDescriptor[],
 	options: Omit<
 		BuildMetaOptions,
-		'canonical' | 'image' | 'imageAlt' | 'type'
+		| 'canonical'
+		| 'image'
+		| 'imageAlt'
+		| 'imageWidth'
+		| 'imageHeight'
+		| 'type'
+		| 'publishedTime'
+		| 'modifiedTime'
+		| 'articleAuthor'
+		| 'articleSection'
 	> = {}
 ): NonNullable<MetaDescriptor>[] {
 	return buildMeta(
@@ -254,8 +342,14 @@ export function buildPageMeta(
 			canonical: page.canonical,
 			image: page.image,
 			imageAlt: page.imageAlt,
+			imageWidth: page.imageWidth,
+			imageHeight: page.imageHeight,
 			type: page.type,
-			structuredData: page.structuredData
+			structuredData: page.structuredData,
+			publishedTime: page.publishedTime,
+			modifiedTime: page.modifiedTime,
+			articleAuthor: page.articleAuthor,
+			articleSection: page.articleSection
 		}
 	)
 }

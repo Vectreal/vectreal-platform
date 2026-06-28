@@ -29,104 +29,39 @@ import { Check, Minus, Zap } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { PLAN_LIMITS, type Plan } from '../../../constants/plan-config'
+import {
+	ANNUAL_DISCOUNT_CLAIM,
+	LIMIT_DISPLAY_LABELS,
+	PLAN_CARD_LIMIT_KEYS,
+	PLAN_CTA,
+	PLAN_CTA_HREF,
+	PLAN_DISPLAY_NAMES,
+	PLAN_FALLBACK_PRICES,
+	PLAN_HIGHLIGHTED,
+	PLAN_TAGLINES
+} from '../../../constants/product-copy'
 
 import type { BillingCheckoutOptions } from '../../../lib/domain/dashboard/dashboard-types'
 
 // ---------------------------------------------------------------------------
-// Static plan display config
+// Limit display config — labels from product-copy, format logic stays here
 // ---------------------------------------------------------------------------
 
-const PLAN_DISPLAY: Record<
-	Plan,
-	{
-		name: string
-		tagline: string
-		monthlyPrice: number | null
-		annualMonthlyPrice: number | null
-		highlighted: boolean
-		cta: string
-		ctaHref: string | null
+function formatLimitValue(key: string, v: number | null): string {
+	if (key === 'storage_bytes_total') {
+		if (v === null) return 'Custom'
+		const gb = v / (1024 * 1024 * 1024)
+		if (gb >= 1) return `${gb.toLocaleString()} GB`
+		return `${(v / (1024 * 1024)).toLocaleString()} MB`
 	}
-> = {
-	free: {
-		name: 'Free',
-		tagline: 'For hobbyists and open-source projects',
-		monthlyPrice: 0,
-		annualMonthlyPrice: 0,
-		highlighted: false,
-		cta: 'Get started free',
-		ctaHref: '/sign-up'
-	},
-	pro: {
-		name: 'Pro',
-		tagline: 'For independent creators and small studios',
-		monthlyPrice: 29,
-		annualMonthlyPrice: 23,
-		highlighted: true,
-		cta: 'Start with Pro',
-		ctaHref: null
-	},
-	business: {
-		name: 'Business',
-		tagline: 'For growing teams and agencies',
-		monthlyPrice: 79,
-		annualMonthlyPrice: 63,
-		highlighted: false,
-		cta: 'Start with Business',
-		ctaHref: null
-	},
-	enterprise: {
-		name: 'Enterprise',
-		tagline: 'Custom SLA and dedicated support',
-		monthlyPrice: null,
-		annualMonthlyPrice: null,
-		highlighted: false,
-		cta: 'Contact sales',
-		ctaHref: '/contact'
-	}
+	return v === null ? 'Unlimited' : v.toLocaleString()
 }
 
-const HIGHLIGHTED_LIMITS: Array<{
-	key: keyof (typeof PLAN_LIMITS)['free']
-	label: string
-	format: (v: number | null) => string
-}> = [
-	{
-		key: 'storage_bytes_total',
-		label: 'Storage',
-		format: (v) => {
-			if (v === null) return 'Custom'
-			const gb = v / (1024 * 1024 * 1024)
-			if (gb >= 1) return `${gb.toLocaleString()} GB`
-			return `${(v / (1024 * 1024)).toLocaleString()} MB`
-		}
-	},
-	{
-		key: 'scenes_total',
-		label: 'Scenes',
-		format: (v) => (v === null ? 'Unlimited' : v.toLocaleString())
-	},
-	{
-		key: 'scenes_published_concurrent',
-		label: 'Published scenes',
-		format: (v) => (v === null ? 'Unlimited' : v.toLocaleString())
-	},
-	{
-		key: 'projects_total',
-		label: 'Projects',
-		format: (v) => (v === null ? 'Unlimited' : v.toLocaleString())
-	},
-	{
-		key: 'optimization_runs_per_month',
-		label: 'Optimization runs / month',
-		format: (v) => (v === null ? 'Unlimited' : v.toLocaleString())
-	},
-	{
-		key: 'org_seats',
-		label: 'Team seats',
-		format: (v) => (v === null ? 'Unlimited' : v.toLocaleString())
-	}
-]
+const HIGHLIGHTED_LIMITS = PLAN_CARD_LIMIT_KEYS.map((key) => ({
+	key: key as keyof (typeof PLAN_LIMITS)['free'],
+	label: LIMIT_DISPLAY_LABELS[key],
+	format: (v: number | null) => formatLimitValue(key, v)
+}))
 
 // ---------------------------------------------------------------------------
 // PlanCard
@@ -163,8 +98,13 @@ function PlanCard({
 	onSelectPlan,
 	selectablePlans
 }: PlanCardProps) {
-	const display = PLAN_DISPLAY[plan]
 	const limits = PLAN_LIMITS[plan]
+	const name = PLAN_DISPLAY_NAMES[plan]
+	const tagline = PLAN_TAGLINES[plan]
+	const cta = PLAN_CTA[plan]
+	const ctaHref = PLAN_CTA_HREF[plan]
+	const highlighted = PLAN_HIGHLIGHTED[plan]
+	const fallbackPrices = PLAN_FALLBACK_PRICES[plan]
 
 	const isEnterprise = plan === 'enterprise'
 	const isFree = plan === 'free'
@@ -198,8 +138,8 @@ function PlanCard({
 				)
 			: null
 
-	const staticMonthlyPrice = display.monthlyPrice
-	const staticAnnualMonthlyPrice = display.annualMonthlyPrice
+	const staticMonthlyPrice = fallbackPrices?.monthly ?? null
+	const staticAnnualMonthlyPrice = fallbackPrices?.annualMonthly ?? null
 
 	// In select mode, this plan is clickable as a selector
 	const isSelectMode = onSelectPlan !== undefined
@@ -211,9 +151,7 @@ function PlanCard({
 				'flex flex-col transition-all',
 				// Highlighted ring: selected (on upgrade route) or "most popular" (pricing page)
 				isSelected && 'border-primary ring-primary ring-2',
-				display.highlighted &&
-					!isSelectMode &&
-					'border-primary ring-primary ring-2',
+				highlighted && !isSelectMode && 'border-primary ring-primary ring-2',
 				// Dimmed when another plan is selected
 				isSelectMode && selectedPlan && !isSelected && 'opacity-60',
 				isSelectMode &&
@@ -229,7 +167,7 @@ function PlanCard({
 		>
 			<CardHeader className="space-y-2">
 				<div className="flex items-center justify-between">
-					<CardTitle className="text-xl">{display.name}</CardTitle>
+					<CardTitle className="text-xl">{name}</CardTitle>
 					<div className="flex items-center gap-1.5">
 						{isActive && (
 							<Badge variant="secondary" className="text-xs">
@@ -241,14 +179,14 @@ function PlanCard({
 								Selected
 							</Badge>
 						)}
-						{display.highlighted && !isSelectMode && (
+						{highlighted && !isSelectMode && (
 							<Badge className="bg-primary text-primary-foreground">
 								Most popular
 							</Badge>
 						)}
 					</div>
 				</div>
-				<CardDescription>{display.tagline}</CardDescription>
+				<CardDescription>{tagline}</CardDescription>
 				<div className="pt-2">
 					{isEnterprise ? (
 						<p className="text-2xl font-medium">Custom</p>
@@ -309,14 +247,14 @@ function PlanCard({
 			{/* CTA footer - hidden in select mode for current plan; otherwise shown */}
 			{!isSelectMode && (
 				<CardFooter>
-					{display.ctaHref ? (
-						<Link to={display.ctaHref} className="w-full">
+					{ctaHref ? (
+						<Link to={ctaHref} className="w-full">
 							<Button
 								className="w-full"
-								variant={display.highlighted ? 'default' : 'outline'}
+								variant={highlighted ? 'default' : 'outline'}
 							>
-								{display.highlighted && <Zap className="mr-2 h-4 w-4" />}
-								{display.cta}
+								{highlighted && <Zap className="mr-2 h-4 w-4" />}
+								{cta}
 							</Button>
 						</Link>
 					) : (
@@ -326,10 +264,10 @@ function PlanCard({
 						>
 							<Button
 								className="w-full"
-								variant={display.highlighted ? 'default' : 'outline'}
+								variant={highlighted ? 'default' : 'outline'}
 							>
-								{display.highlighted && <Zap className="mr-2 h-4 w-4" />}
-								{display.cta}
+								{highlighted && <Zap className="mr-2 h-4 w-4" />}
+								{cta}
 							</Button>
 						</Link>
 					)}
@@ -350,7 +288,7 @@ function PlanCard({
 							? 'Selected'
 							: isEnterprise
 								? 'Contact sales'
-								: `Select ${display.name}`}
+								: `Select ${name}`}
 					</Button>
 				</CardFooter>
 			)}
@@ -437,7 +375,7 @@ export function PricingCardsSection({
 					>
 						Annual
 						<Badge variant="secondary" className="text-xs">
-							Save up to 20%
+							{ANNUAL_DISCOUNT_CLAIM}
 						</Badge>
 					</button>
 				</div>
