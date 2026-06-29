@@ -59,6 +59,31 @@
 	--chart-5: oklch(0.645 0.246 16.439);
 	--radius: 0.625rem;
 
+	/* Motion tokens */
+	--duration-instant: 80ms;
+	--duration-fast: 150ms;
+	--duration-base: 250ms;
+	--duration-slow: 400ms;
+	--duration-cinematic: 700ms;
+
+	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+	--ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+	/* Landing surface depth scale */
+	--surface-0: oklch(0.145 0 0);
+	--surface-1: oklch(0.18 0 0);
+	--surface-2: oklch(0.22 0 0);
+	--surface-border: oklch(0.28 0 0 / 0.6);
+	--surface-glow: oklch(0.55 0.22 40 / 0.10);
+
+	/* Display typography scale */
+	--text-display: clamp(3.5rem, 8vw, 7rem);
+	--text-headline: clamp(2rem, 4vw, 3.5rem);
+	--text-label-xs: 0.6875rem;
+	--tracking-display: -0.04em;
+	--tracking-headline: -0.025em;
+
 	/* Sidebar tokens */
 	--sidebar: oklch(0.985 0 0);
 	--sidebar-foreground: oklch(0.145 0 0);
@@ -168,6 +193,20 @@
 	--color-chart-5: var(--chart-5);
 	--color-orange: var(--orange);
 	--color-dark-orange: var(--dark-orange);
+
+	/* Surface tokens */
+	--color-surface-0: var(--surface-0);
+	--color-surface-1: var(--surface-1);
+	--color-surface-2: var(--surface-2);
+	--color-surface-border: var(--surface-border);
+	--color-surface-glow: var(--surface-glow);
+
+	/* Motion duration utilities */
+	--duration-instant: var(--duration-instant);
+	--duration-fast: var(--duration-fast);
+	--duration-base: var(--duration-base);
+	--duration-slow: var(--duration-slow);
+	--duration-cinematic: var(--duration-cinematic);
 
 	--radius-sm: calc(var(--radius) - 4px);
 	--radius-md: calc(var(--radius) - 2px);
@@ -293,6 +332,16 @@
 	}
 }
 
+@keyframes landing-glow-pulse {
+	0%, 100% { opacity: 0.10; transform: scale(1); }
+	50%       { opacity: 0.18; transform: scale(1.08); }
+}
+
+@keyframes marquee {
+	from { transform: translateX(0); }
+	to   { transform: translateX(-50%); }
+}
+
 .animate-loading-bar {
 	animation: loading-bar 2s ease-in-out;
 }
@@ -327,4 +376,19 @@
 
 .animation-delay-450 {
 	animation-delay: 450ms;
+}
+
+.animate-glow-pulse {
+	animation: landing-glow-pulse 4s ease-in-out infinite;
+}
+
+.animate-marquee {
+	animation: marquee 28s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.animate-glow-pulse,
+	.animate-marquee {
+		animation: none;
+	}
 }
