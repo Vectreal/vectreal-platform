@@ -260,6 +260,47 @@
 }
 
 @layer components {
+	/* ---- Type scale (single source of truth) ---- */
+	.text-eyebrow {
+		font-size: 0.6875rem;
+		font-weight: 500;
+		line-height: 1;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+	}
+	.text-display {
+		font-size: clamp(2.75rem, 6.4vw, 5.5rem);
+		font-weight: 500;
+		line-height: 1.02;
+		letter-spacing: -0.038em;
+		text-wrap: balance;
+	}
+	.text-h2 {
+		font-size: clamp(1.9rem, 3.6vw, 3.25rem);
+		font-weight: 500;
+		line-height: 1.08;
+		letter-spacing: -0.03em;
+		text-wrap: balance;
+	}
+	.text-h3 {
+		font-size: clamp(1.35rem, 2vw, 1.75rem);
+		font-weight: 500;
+		line-height: 1.18;
+		letter-spacing: -0.02em;
+	}
+	.text-stat {
+		font-size: clamp(3rem, 5.5vw, 4.25rem);
+		font-weight: 500;
+		line-height: 1;
+		letter-spacing: -0.04em;
+		font-variant-numeric: tabular-nums;
+	}
+	.text-body-lg {
+		font-size: 1.125rem;
+		line-height: 1.6;
+		text-wrap: pretty;
+	}
+
 	.highlight-card {
 		@apply from-muted/25 border-border/50 relative inset-0 flex h-full w-full flex-col justify-center gap-2 border-t bg-linear-to-b to-transparent p-4 shadow-xl backdrop-blur-lg content-[''] md:p-6;
 		/* @apply relative z-10 flex h-full w-full flex-col justify-center gap-2 p-4 md:p-6; */
@@ -342,6 +383,45 @@
 	to   { transform: translateX(-50%); }
 }
 
+@keyframes aurora-drift {
+	0% {
+		transform: translate3d(-8%, -4%, 0) scale(1);
+		opacity: 0.5;
+	}
+	50% {
+		transform: translate3d(8%, 6%, 0) scale(1.15);
+		opacity: 0.8;
+	}
+	100% {
+		transform: translate3d(-8%, -4%, 0) scale(1);
+		opacity: 0.5;
+	}
+}
+
+@keyframes aurora-drift-2 {
+	0% {
+		transform: translate3d(6%, 8%, 0) scale(1.1);
+		opacity: 0.4;
+	}
+	50% {
+		transform: translate3d(-10%, -6%, 0) scale(1);
+		opacity: 0.7;
+	}
+	100% {
+		transform: translate3d(6%, 8%, 0) scale(1.1);
+		opacity: 0.4;
+	}
+}
+
+@keyframes float-y {
+	0%, 100% { transform: translateY(0); }
+	50%      { transform: translateY(-10px); }
+}
+
+@keyframes spin-slow {
+	to { transform: rotate(360deg); }
+}
+
 .animate-loading-bar {
 	animation: loading-bar 2s ease-in-out;
 }
@@ -352,6 +432,31 @@
 
 .animate-skeleton-fade {
 	animation: skeleton-fade 0.4s ease-out forwards;
+}
+
+.animate-aurora {
+	animation: aurora-drift 18s ease-in-out infinite;
+}
+
+.animate-aurora-2 {
+	animation: aurora-drift-2 22s ease-in-out infinite;
+}
+
+.animate-float-y {
+	animation: float-y 6s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+	animation: spin-slow 24s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.animate-aurora,
+	.animate-aurora-2,
+	.animate-float-y,
+	.animate-spin-slow {
+		animation: none;
+	}
 }
 
 .animation-delay-75 {

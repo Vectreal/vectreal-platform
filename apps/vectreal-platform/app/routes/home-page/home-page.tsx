@@ -1,5 +1,4 @@
 import { GithubLogo } from '@shared/components/assets/icons/github-logo'
-import { useIsMobile } from '@shared/components/hooks/use-mobile'
 import {
 	Accordion,
 	AccordionContent,
@@ -24,9 +23,10 @@ import FiletypeCarousel from '../../components/home/filetype-carousel'
 import {
 	BentoCard,
 	GradientCtaBlock,
+	OptimizationVisual,
 	ScrollytellViewerSection,
 	SocialProofBar,
-	StatCounter,
+	StatRing,
 	StepFlow
 } from '../../components/landing'
 import Section from '../../components/layout-components/section'
@@ -159,7 +159,7 @@ const SectionLabel = ({
 }) => (
 	<div
 		className={cn(
-			'border-accent/20 bg-accent/5 text-accent/70 inline-flex w-fit items-center gap-1.5 self-start rounded-full border px-3 py-1 text-xs font-medium tracking-widest uppercase',
+			'border-accent/20 bg-accent/5 text-accent/70 text-eyebrow inline-flex w-fit items-center gap-1.5 self-start rounded-full border px-3 py-1.5',
 			className
 		)}
 	>
@@ -171,39 +171,33 @@ const SectionLabel = ({
 const SectionHeading = ({
 	label,
 	title,
-	subtitle
+	subtitle,
+	align = 'left'
 }: {
 	label: string
 	title: string
 	subtitle?: string
+	align?: 'left' | 'center'
 }) => (
-	<div className="flex flex-col gap-4">
+	<div
+		className={cn(
+			'flex flex-col gap-4',
+			align === 'center' && 'items-center text-center'
+		)}
+	>
 		<SectionLabel>{label}</SectionLabel>
-		<h2
-			className="text-foreground font-medium text-balance"
-			style={{
-				fontSize: 'var(--text-headline)',
-				letterSpacing: 'var(--tracking-headline)',
-				lineHeight: 1.05
-			}}
-		>
-			{title}
-		</h2>
+		<h2 className="text-h2 text-foreground">{title}</h2>
 		{subtitle && (
-			<p className="text-muted-foreground max-w-xl text-lg text-pretty">
-				{subtitle}
-			</p>
+			<p className="text-muted-foreground text-body-lg max-w-xl">{subtitle}</p>
 		)}
 	</div>
 )
 
-const HomePage = ({ loaderData }: Route.ComponentProps) => {
-	const isMobile = useIsMobile(loaderData.isMobile)
-
+const HomePage = () => {
 	return (
 		<main className="bg-background">
 			{/* 1. Cinematic hero */}
-			<CinematicHero isMobile={isMobile} />
+			<CinematicHero />
 
 			{/* 2. Social proof bar */}
 			<SocialProofBar items={SOCIAL_PROOF_ITEMS} />
@@ -223,7 +217,19 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 				</div>
 			</Section>
 
-			{/* 5. Stats */}
+			{/* 5. Optimization value prop */}
+			<Section fadeIn className="my-24">
+				<div className="flex flex-col gap-12">
+					<SectionHeading
+						label="Optimization"
+						title="Ship lighter, load faster"
+						subtitle="Drop a heavy production asset and get a web-ready model in seconds — automatically."
+					/>
+					<OptimizationVisual />
+				</div>
+			</Section>
+
+			{/* 6. Stats */}
 			<Section fadeIn className="my-24">
 				<div className="flex flex-col gap-12">
 					<SectionHeading
@@ -232,23 +238,20 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 						subtitle="Industry data proves interactive 3D models deliver measurable business outcomes."
 					/>
 					<div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-						<StatCounter
+						<StatRing
 							value={60}
-							suffix="%"
 							label="higher purchase intent when products are showcased with interactive 3D or AR"
 							source="AP News"
 							sourceUrl="https://apnews.com/press-release/globe-newswire/technology-business-lifestyle-79fe640885f900736beed0fe33f7d972"
 						/>
-						<StatCounter
+						<StatRing
 							value={44}
-							suffix="%"
 							label="more products added to cart after customers engage with interactive 3D"
 							source="Shopify"
 							sourceUrl="https://www.shopify.com/ie/case-studies/rebecca-minkoff"
 						/>
-						<StatCounter
+						<StatRing
 							value={94}
-							suffix="%"
 							label="increase in conversion rates for products enhanced with augmented reality"
 							source="Harvard Business Review"
 							sourceUrl="https://hbr.org/2020/10/how-ar-is-redefining-retail-in-the-pandemic"
@@ -274,10 +277,12 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 								tilt={feature.tilt}
 								glow={feature.glow}
 							>
-								<feature.icon
-									className="text-accent h-6 w-6"
-									aria-hidden="true"
-								/>
+								<div className="border-surface-border bg-surface-0/60 group-hover:border-accent/40 group-hover:bg-accent/5 flex size-11 items-center justify-center rounded-xl border transition-colors duration-300">
+									<feature.icon
+										className="text-accent size-5 transition-transform duration-300 group-hover:scale-110"
+										aria-hidden="true"
+									/>
+								</div>
 								<div className="flex flex-col gap-1.5">
 									<p className="text-foreground font-medium">
 										{feature.title}

@@ -1,7 +1,11 @@
 // app/components/landing/index.ts
 export { StatCounter } from './stat-counter'
+export { StatRing } from './stat-ring'
 export { BentoCard } from './bento-card'
 export { StepFlow } from './step-flow'
 export { SocialProofBar } from './social-proof-bar'
 export { GradientCtaBlock } from './gradient-cta-block'
 export { ScrollytellViewerSection } from './scrollytell-viewer-section'
+export { AuroraBackground } from './aurora-background'
+export { Magnetic } from './magnetic'
+export { OptimizationVisual } from './optimization-visual'
