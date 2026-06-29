@@ -19,7 +19,7 @@ const CHAPTERS = [
 	{
 		id: 'default',
 		label: 'Shop View',
-		heading: 'Alpine X3 Pro',
+		heading: '911 GT3',
 		description:
 			'A real product listing powered by Vectreal. Customers scroll through camera presets to inspect every detail — no plugin required.',
 		type: 'shop' as const,
@@ -269,7 +269,7 @@ export default function MockShopEmbedClient() {
 									)}
 									allow="autoplay; xr-spatial-tracking"
 									allowFullScreen
-									title="Alpine X3 Pro - interactive 3D preview"
+									title="Porsche 911 GT3 - interactive 3D preview"
 								/>
 
 								{/* Touch passthrough — lets vertical scroll reach the page */}
@@ -412,10 +412,10 @@ export default function MockShopEmbedClient() {
 										<div className="mt-1 flex flex-col gap-3">
 											<div>
 												<p className="text-foreground/25 text-[10px] tracking-[0.18em] uppercase">
-													Mountain Bike · Carbon · 140mm · 12.4 kg
+													Coupe · 4.0L Flat-6 · 510 HP · Jet Black Metallic
 												</p>
 												<p className="text-accent mt-1 text-2xl font-bold tracking-tight">
-													$1,299.99
+													$182,900
 												</p>
 											</div>
 											<Button
@@ -424,7 +424,7 @@ export default function MockShopEmbedClient() {
 												variant="outline"
 												size="sm"
 											>
-												Add to Cart
+												Configure
 											</Button>
 											<p className="text-foreground/20 text-[11px]">
 												Concept demo · Not for sale
