@@ -7,21 +7,29 @@ import {
 	AccordionTrigger
 } from '@shared/components/ui/accordion'
 import { Button } from '@shared/components/ui/button'
-import { CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
-import { AnimatePresence, motion } from 'framer-motion'
-import { Check, Globe, Sparkle, Wrench } from 'lucide-react'
+import {
+	Code,
+	Globe,
+	Rocket,
+	Upload,
+	Wrench,
+	Zap
+} from 'lucide-react'
 import { Link } from 'react-router'
 
 import { Route } from './+types/home-page'
+import { CinematicHero } from '../../components/home/cinematic-hero'
 import FiletypeCarousel from '../../components/home/filetype-carousel'
-import GridBg from '../../components/home/grid-bg'
-import HeroParallaxBg from '../../components/home/hero-parallax-bg'
-import HeroScene from '../../components/home/hero-scene'
-import MockShopSection from '../../components/home/mock-shop-section'
-import BasicCard from '../../components/layout-components/basic-card'
+import {
+	BentoCard,
+	GradientCtaBlock,
+	ScrollytellViewerSection,
+	SocialProofBar,
+	StatCounter,
+	StepFlow
+} from '../../components/landing'
 import Section from '../../components/layout-components/section'
-import YoutubeEmbed from '../../components/youtube-embed'
 import { SUPPORTED_FORMAT_NAMES } from '../../constants/product-copy'
 import { buildPageMeta } from '../../lib/seo'
 import {
@@ -32,7 +40,6 @@ import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const isMobile = isMobileRequest(request)
-
 	return { isMobile }
 }
 
@@ -42,591 +49,385 @@ export function meta(_: Route.MetaArgs) {
 	})
 }
 
+const SOCIAL_PROOF_ITEMS = [
+	{ text: '60% higher purchase intent with 3D' },
+	{ text: '44% more add-to-cart with interactive models' },
+	{ text: '94% conversion lift with AR' },
+	{ text: '100% open-source' },
+	{ text: 'No registration required' },
+	{ text: 'Instant publishing' }
+]
+
+const HOW_IT_WORKS_STEPS = [
+	{
+		number: '01',
+		title: 'Upload',
+		body: `Just drag & drop your model — ${SUPPORTED_FORMAT_NAMES.join(', ')} supported. Our system gets to work instantly.`
+	},
+	{
+		number: '02',
+		title: 'Optimize & Customize',
+		body: 'Choose quality settings, tweak lighting, and refine camera angles in an immersive editor.'
+	},
+	{
+		number: '03',
+		title: 'Manage',
+		body: 'Secure cloud storage with versioning, asset organization, and instant previews.'
+	},
+	{
+		number: '04',
+		title: 'Publish',
+		body: 'Unlock an embed snippet for direct integration into websites, portfolios, eCommerce, and blogs.'
+	}
+]
+
+const BENTO_FEATURES: Array<{
+	icon: React.ComponentType<{ className?: string }>
+	title: string
+	body: string
+	tilt: boolean
+	glow: boolean
+	span: string
+}> = [
+	{
+		icon: Zap,
+		title: 'No Registration',
+		body: 'Upload and test instantly — no account required until you want persistent publishing.',
+		tilt: true,
+		glow: false,
+		span: ''
+	},
+	{
+		icon: Rocket,
+		title: 'Instant Publishing',
+		body: 'From drag & drop to a live shareable URL in under two minutes.',
+		tilt: true,
+		glow: false,
+		span: ''
+	},
+	{
+		icon: GithubLogo,
+		title: '100% Open Source',
+		body: 'Built in the open. Contribute, fork, self-host — your call.',
+		tilt: true,
+		glow: false,
+		span: ''
+	},
+	{
+		icon: Upload,
+		title: 'Simple Drag & Drop',
+		body: `Every major 3D format supported: ${SUPPORTED_FORMAT_NAMES.join(', ')}.`,
+		tilt: false,
+		glow: true,
+		span: 'md:col-span-2'
+	},
+	{
+		icon: Globe,
+		title: 'Web-Native 3D',
+		body: 'Optimized for the browser. Fast loads, clean renders, zero plugins.',
+		tilt: true,
+		glow: false,
+		span: ''
+	},
+	{
+		icon: Code,
+		title: 'Embed Anywhere',
+		body: 'A single snippet drops your scene into any site — with domain and API constraints.',
+		tilt: false,
+		glow: false,
+		span: ''
+	}
+]
+
+const COMMUNITY_ITEMS: Array<{
+	icon: React.ComponentType<{ className?: string }>
+	text: string
+}> = [
+	{
+		icon: Wrench,
+		text: 'Built by developers, artists, and dreamers'
+	},
+	{
+		icon: Globe,
+		text: 'Global contributors, shared knowledge, real collaboration'
+	},
+	{
+		icon: GithubLogo,
+		text: '100% open-source — fork it, extend it, own it'
+	}
+]
+
+const SectionLabel = ({
+	children,
+	className
+}: {
+	children: React.ReactNode
+	className?: string
+}) => (
+	<div
+		className={cn(
+			'border-accent/20 bg-accent/5 text-accent/70 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium tracking-widest uppercase',
+			className
+		)}
+	>
+		<span className="bg-accent/60 h-1.5 w-1.5 rounded-full" aria-hidden="true" />
+		{children}
+	</div>
+)
+
 const HomePage = ({ loaderData }: Route.ComponentProps) => {
 	const isMobile = useIsMobile(loaderData.isMobile)
 
 	return (
 		<main className="bg-background">
-			<section
-				className={cn(
-					'relative mx-auto flex overflow-hidden xl:max-w-7xl',
-					isMobile ? 'max-md:flex-col-reverse' : 'pl-8'
-				)}
-			>
-				{/* Stars background */}
-				<HeroParallaxBg />
-				{/* Raidal gradient over the whole image from bottom left to top right in the accent color */}
-				<div className="from-accent/20 to-accent/0 absolute inset-0 z-0 bg-radial-[at_bottom_left]" />
-				{/* side to side vignette gradient */}
-				<div className="from-background to-background absolute inset-0 z-0 bg-linear-to-r via-transparent" />
+			{/* 1. Cinematic hero */}
+			<CinematicHero isMobile={isMobile} />
 
-				<div
-					className={cn(
-						'flex w-full flex-col gap-4 py-16 pb-20',
-						isMobile && '-mt-32 w-[unset] px-6'
-					)}
-				>
-					<h1 className="from-primary to-primary/25 relative bg-linear-to-br bg-clip-text text-3xl leading-[.9] font-black text-transparent uppercase sm:text-4xl md:text-6xl lg:text-9xl">
-						<div>Upload</div>
-						<div>Prepare</div>
-						<div>Publish</div>
-					</h1>
+			{/* 2. Social proof bar */}
+			<SocialProofBar items={SOCIAL_PROOF_ITEMS} />
 
-					<div className="z-10 flex flex-col items-start justify-center">
-						<p className="text-foreground/90 mt-4 text-lg mix-blend-difference md:text-xl">
-							Vectreal is{' '}
-							<strong className="text-foreground font-medium">
-								your all-in-one platform
-							</strong>{' '}
-							for preparing, managing, and publishing 3D models for the web
+			{/* 3. Scrollytell product demo */}
+			<ScrollytellViewerSection />
+
+			{/* 4. How it works */}
+			<Section fadeIn className="my-24">
+				<div className="flex flex-col gap-12">
+					<div className="flex flex-col gap-3">
+						<SectionLabel>Process</SectionLabel>
+						<h2
+							className="text-foreground font-black leading-none"
+							style={{
+								fontSize: 'var(--text-headline)',
+								letterSpacing: 'var(--tracking-headline)'
+							}}
+						>
+							How It Works
+						</h2>
+						<p className="text-muted-foreground max-w-xl text-lg">
+							Effortless from start to finish.
 						</p>
-						<p className="text-foreground/90 mt-4 text-lg mix-blend-difference md:text-xl">
-							Turn Your Creations Into Experiences today
-						</p>
-
-						<div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center">
-							<Link to="/publisher">
-								<Button
-									size="lg"
-									className="group bg-accent transition-all hover:scale-[1.02] hover:animate-pulse"
-								>
-									<Sparkle className="mr-2 h-5 w-5 transition-all group-hover:rotate-12" />
-									Publish Your First Model
-								</Button>
-							</Link>
-							<Link
-								to="https://github.com/vectreal/vectreal-platform"
-								target="_blank"
-								rel="noreferrer"
-							>
-								<Button
-									variant="outline"
-									size="lg"
-									className="hover:bg-background/50 border-accent/20 transition-all"
-								>
-									<GithubLogo className="mr-2 h-5 w-5" />
-									Start Contributing
-								</Button>
-							</Link>
-						</div>
 					</div>
-				</div>
-
-				<HeroScene />
-			</section>
-
-			{/* gradient border effect */}
-			<div className="from-background via-muted-foreground/50 to-background h-px w-full bg-linear-to-r" />
-
-			{/* Additional information chip covering the fold */}
-			<div className="-mt-6 h-12">
-				<AnimatePresence>
-					<motion.div
-						layout="size"
-						initial={{ opacity: 0, height: 0 }}
-						animate={{
-							opacity: 1,
-							height: 'auto',
-							transition: { delay: 0.5 }
-						}}
-						exit={{ opacity: 0, height: 0 }}
-						transition={{ duration: 0.5 }}
-						className="bg-background/20 mx-auto flex w-fit max-w-3xl justify-center gap-4 space-x-4 overflow-clip rounded-full border border-white/10 px-4 shadow-md backdrop-blur-lg"
-					>
-						{(isMobile
-							? [
-									{
-										icon: Check,
-										text: 'Try Vectreal Free'
-									}
-								]
-							: [
-									{ icon: Check, text: 'No registration' },
-									{ icon: Check, text: 'Instant publishing' },
-									{ icon: Check, text: 'Simple drag & drop' },
-									{ icon: Check, text: 'Share immediately' }
-								]
-						).map((item, i) => (
-							<div
-								key={i}
-								className="text-foreground/90 inline-flex items-center gap-2 py-3 text-sm"
-							>
-								<item.icon className="text-primary h-4 w-4" />
-								<span>{item.text}</span>
-								{i < 3 && (
-									<span className="text-foreground/30 ml-1 hidden sm:inline">
-										•
-									</span>
-								)}
-							</div>
-						))}
-					</motion.div>
-				</AnimatePresence>
-			</div>
-
-			<Section className="relative my-8 h-128 w-full overflow-hidden" fadeIn>
-				<GridBg isMobile={isMobile} />
-				<div className="z-10 flex flex-col gap-4 text-center">
-					<p className="text-foreground/90 mt-4 text-lg md:text-xl">
-						Whether you're testing concepts or powering an online store
-					</p>
-					<h3>
-						Vectreal gives you{' '}
-						<span className="text-accent">everything you need</span> to get from
-						file to frame.
-					</h3>
+					<StepFlow steps={HOW_IT_WORKS_STEPS} />
 				</div>
 			</Section>
 
-			<Section className="mt-16" fadeIn>
-				<div className="flex flex-col gap-8">
-					<div className="w-full">
-						<h2>How It Works</h2>
-						<p className="text-foreground/90 mt-4 text-lg md:text-xl">
-							Effortless from Start to Finish
-						</p>
-					</div>
-
-					<div className="w-full">
-						<ol className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-							<li className="grow">
-								<BasicCard highlight className="h-full">
-									<CardHeader>
-										<CardTitle className="text-4xl font-light">
-											0<span className="text-accent pl-1 font-bold">1</span>
-										</CardTitle>
-										<p className="text-foreground/90 mt-4 text-lg md:text-xl">
-											Upload
-										</p>
-									</CardHeader>
-									<CardContent>
-										<p>
-											Just drag & drop your model -{' '}
-											{SUPPORTED_FORMAT_NAMES.join(', ')} supported.
-										</p>
-										<p>Our system gets to work instantly.</p>
-									</CardContent>
-								</BasicCard>
-							</li>
-							<li className="grow">
-								<BasicCard highlight className="h-full">
-									<CardHeader>
-										<CardTitle className="text-4xl font-light">
-											0<span className="text-accent pl-1 font-bold">2</span>
-										</CardTitle>
-										<p className="text-foreground/90 mt-4 text-lg md:text-xl">
-											Optimize & Customize
-										</p>
-									</CardHeader>
-									<CardContent>
-										<p>
-											Choose quality settings from raw to low, tweak lighting,
-											and refine camera angles-all in an immersive editor.
-										</p>
-									</CardContent>
-								</BasicCard>
-							</li>
-
-							<li className="grow">
-								<BasicCard highlight className="h-full">
-									<CardHeader>
-										<CardTitle className="text-4xl font-light">
-											0<span className="text-accent pl-1 font-bold">3</span>
-										</CardTitle>
-										<p className="text-foreground/90 mt-4 text-lg md:text-xl">
-											Manage
-										</p>
-									</CardHeader>
-									<CardContent>
-										<p>
-											Secure cloud storage with versioning, asset organization,
-											and instant previews.
-										</p>
-									</CardContent>
-								</BasicCard>
-							</li>
-							<li className="grow">
-								<BasicCard highlight className="h-full">
-									<CardHeader>
-										<CardTitle className="text-4xl font-light">
-											0<span className="text-accent pl-1 font-bold">4</span>
-										</CardTitle>
-										<p className="text-foreground/90 mt-4 text-lg md:text-xl">
-											Publish
-										</p>
-									</CardHeader>
-									<CardContent>
-										<p>
-											Unlock a code snippet for direct embed into websites,
-											portfolios, eCommerce, blogs-you name it.
-										</p>
-									</CardContent>
-								</BasicCard>
-							</li>
-						</ol>
-					</div>
-				</div>
-			</Section>
-
-			<Section border fadeIn>
-				<div className="mb-16 flex flex-col gap-8">
-					<div className="flex flex-col text-center">
-						<h3 className="w-full text-center">
-							Have a model? Dive in and show it off.
-						</h3>
-						<p className="text-foreground/90 mt-4 text-lg md:text-xl">
-							From portfolios to interactive experiences, Vectreal gives your 3D
-							models the platform they deserve in under 2 minutes.
-						</p>
-					</div>
-
-					<div className="flex flex-col gap-4 md:gap-6">
-						<div className="flex flex-col-reverse justify-between gap-4 md:grid md:grid-rows-[auto_auto]">
-							<div className="mx-auto h-full w-full max-w-3xl grow overflow-hidden shadow-2xl">
-								<YoutubeEmbed
-									videoId="raCHH3G8T7w"
-									caption="Optimization presets in action - watch the full walkthrough."
-								/>
-							</div>
-							<div className="flex flex-col justify-between gap-4 py-4 md:flex-row">
-								<BasicCard>
-									<CardHeader>
-										<CardTitle className="text-xl font-medium">
-											Artists & Designers
-										</CardTitle>
-									</CardHeader>
-									<CardContent>
-										<p>
-											Showcase work with customizable environments that make
-											your models shine.
-										</p>
-									</CardContent>
-								</BasicCard>
-								<BasicCard>
-									<CardHeader>
-										<CardTitle className="text-xl font-medium">
-											Developers
-										</CardTitle>
-									</CardHeader>
-									<CardContent>
-										<p>
-											Integrate 3D content with minimal code and maximum
-											performance.
-										</p>
-									</CardContent>
-								</BasicCard>
-								<BasicCard>
-									<CardHeader>
-										<CardTitle className="text-xl font-medium">
-											Businesses
-										</CardTitle>
-									</CardHeader>
-									<CardContent>
-										<p>
-											Transform catalogs with interactive 3D models that boost
-											engagement.
-										</p>
-									</CardContent>
-								</BasicCard>
-							</div>
-						</div>
-
-						<div className="flex w-full justify-end gap-4 max-md:flex-col md:items-end">
-							<p className="mb-2">
-								Ready to transform your 3D content experience?
-							</p>
-
-							<Link to="/publisher">
-								<Button>
-									<Sparkle className="mr-2" />
-									Launch Your First Model
-								</Button>
-							</Link>
-						</div>
-					</div>
-				</div>
-			</Section>
-
-			<MockShopSection />
-
-			<Section fadeIn>
-				<div className="flex flex-col gap-8">
-					<div className="w-full">
-						<h2>3D Content Drives Customer Engagement</h2>
-						<p className="text-foreground/90 mt-4 text-lg md:text-xl">
+			{/* 5. Stats */}
+			<Section fadeIn className="my-24">
+				<div className="flex flex-col gap-12">
+					<div className="flex flex-col gap-3">
+						<SectionLabel>Results</SectionLabel>
+						<h2
+							className="text-foreground font-black leading-none"
+							style={{
+								fontSize: 'var(--text-headline)',
+								letterSpacing: 'var(--tracking-headline)'
+							}}
+						>
+							3D Content Drives Results
+						</h2>
+						<p className="text-muted-foreground max-w-xl text-lg">
 							Industry data proves interactive 3D models deliver measurable
-							business results
+							business outcomes.
 						</p>
 					</div>
-
 					<div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-						<BasicCard>
-							<CardHeader>
-								<CardTitle className="text-5xl font-bold">
-									60<span className="text-accent font-light">%</span>
-								</CardTitle>
-							</CardHeader>
-							<CardContent className="flex grow flex-col justify-between">
-								<p className="mb-4">
-									higher purchase intent when products are showcased with
-									interactive 3D or AR experiences
-								</p>
-								<div className="text-muted-foreground/75 flex items-center text-sm">
-									<span>AP News</span>
-									<Link
-										viewTransition
-										to="https://apnews.com/press-release/globe-newswire/technology-business-lifestyle-79fe640885f900736beed0fe33f7d972"
-										className="ml-auto"
-										target="_blank"
-										rel="noreferrer"
-									>
-										Read more →
-									</Link>
-								</div>
-							</CardContent>
-						</BasicCard>
-
-						<BasicCard>
-							<CardHeader>
-								<CardTitle className="text-5xl font-bold">
-									44<span className="text-accent font-light">%</span>
-								</CardTitle>
-							</CardHeader>
-							<CardContent className="flex grow flex-col justify-between">
-								<p className="mb-4">
-									more products added to cart after customers engage with
-									interactive 3D product visualizations
-								</p>
-								<div className="text-muted-foreground/75 flex items-center text-sm">
-									<span>Shopify</span>
-									<Link
-										viewTransition
-										to="https://www.shopify.com/ie/case-studies/rebecca-minkoff"
-										className="ml-auto"
-										target="_blank"
-										rel="noreferrer"
-									>
-										Read more →
-									</Link>
-								</div>
-							</CardContent>
-						</BasicCard>
-
-						<BasicCard>
-							<CardHeader>
-								<CardTitle className="text-5xl font-bold">
-									94<span className="text-accent font-light">%</span>
-								</CardTitle>
-							</CardHeader>
-							<CardContent className="flex grow flex-col justify-between">
-								<p className="mb-4">
-									increase in conversion rates for products enhanced with
-									augmented reality features
-								</p>
-								<div className="text-muted-foreground/75 flex items-center text-sm">
-									<span>Harvard Business Review</span>
-									<Link
-										viewTransition
-										to="https://hbr.org/2020/10/how-ar-is-redefining-retail-in-the-pandemic"
-										className="ml-auto"
-										target="_blank"
-										rel="noreferrer"
-									>
-										Read more →
-									</Link>
-								</div>
-							</CardContent>
-						</BasicCard>
+						<StatCounter
+							value={60}
+							suffix="%"
+							label="higher purchase intent when products are showcased with interactive 3D or AR"
+							source="AP News"
+							sourceUrl="https://apnews.com/press-release/globe-newswire/technology-business-lifestyle-79fe640885f900736beed0fe33f7d972"
+						/>
+						<StatCounter
+							value={44}
+							suffix="%"
+							label="more products added to cart after customers engage with interactive 3D"
+							source="Shopify"
+							sourceUrl="https://www.shopify.com/ie/case-studies/rebecca-minkoff"
+						/>
+						<StatCounter
+							value={94}
+							suffix="%"
+							label="increase in conversion rates for products enhanced with augmented reality"
+							source="Harvard Business Review"
+							sourceUrl="https://hbr.org/2020/10/how-ar-is-redefining-retail-in-the-pandemic"
+						/>
 					</div>
 				</div>
 			</Section>
 
-			<Section fadeIn contentClassName="max-w-2xl w-full">
-				<GridBg isMobile={isMobile} />
-				<div className="z-10 flex flex-col gap-4 py-24">
-					<div className="w-full">
-						<h2>Ready When You Are</h2>
-						<p className="text-foreground/90 mt-4 text-lg md:text-xl">
-							Your 3D Vision Today - No barriers, no waiting
-						</p>
-					</div>
-					<BasicCard>
-						<CardContent className="flex w-full flex-col justify-between gap-4 md:flex-row">
-							<ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
-								<li className="flex items-center gap-2">
-									<Check size={16} className="text-primary" /> No registration
-								</li>
-								<li className="flex items-center gap-2">
-									<Check size={16} className="text-primary" /> Instant
-									publishing
-								</li>
-								<li className="flex items-center gap-2">
-									<Check size={16} className="text-primary" /> Simple drag &
-									drop
-								</li>
-								<li className="flex items-center gap-2">
-									<Check size={16} className="text-primary" /> Share immediately
-								</li>
-							</ul>
-							<Button asChild>
-								<Link to="/publisher" className="mt-2">
-									<Sparkle className="mr-2" />
-									Launch Your First Model
-								</Link>
-							</Button>
-						</CardContent>
-					</BasicCard>
-				</div>
-			</Section>
-
-			<FiletypeCarousel />
-
-			<Section
-				fadeIn
-				contentClassName="max-w-2xl"
-				className="my-8 h-128 w-full overflow-hidden"
-			>
-				<GridBg isMobile={isMobile} />
-				<div className="z-10 flex flex-col gap-4">
-					<div className="w-full">
-						<h2>Resources & Learning</h2>
-						<p className="text-foreground/90 mt-4 text-lg md:text-xl">
-							Want to dive deeper?
+			{/* 6. Feature bento grid */}
+			<Section fadeIn className="my-24">
+				<div className="flex flex-col gap-12">
+					<div className="flex flex-col gap-3">
+						<SectionLabel>Platform</SectionLabel>
+						<h2
+							className="text-foreground font-black leading-none"
+							style={{
+								fontSize: 'var(--text-headline)',
+								letterSpacing: 'var(--tracking-headline)'
+							}}
+						>
+							Everything You Need
+						</h2>
+						<p className="text-muted-foreground max-w-xl text-lg">
+							One platform, zero friction.
 						</p>
 					</div>
 
-					<BasicCard className="flex w-full flex-col gap-4">
-						<CardContent>
-							<p className="mb-4">
-								We've got guides, best practices, case studies, and tutorials to
-								help you go from beginner to pro.
-							</p>
-							<Button asChild className="w-fit">
-								<Link to="/docs">Explore the Documentation</Link>
-							</Button>
-						</CardContent>
-					</BasicCard>
+					<ul className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+						{BENTO_FEATURES.map((feature) => (
+							<BentoCard
+								key={feature.title}
+								as="li"
+								tilt={feature.tilt}
+								glow={feature.glow}
+								className={feature.span}
+							>
+								<feature.icon
+									className="text-accent h-6 w-6"
+									aria-hidden="true"
+								/>
+								<div className="flex flex-col gap-1.5">
+									<p className="text-foreground font-semibold">
+										{feature.title}
+									</p>
+									<p className="text-muted-foreground text-sm leading-relaxed">
+										{feature.body}
+									</p>
+								</div>
+							</BentoCard>
+						))}
+					</ul>
 				</div>
 			</Section>
 
-			<Section border fadeIn>
-				<div className="flex flex-col gap-4">
-					<span>
-						<h2>Powered by Community</h2>
-						<p className="text-foreground/90 mt-4 text-lg md:text-xl">
+			{/* 7. Format carousel */}
+			<Section fadeIn className="my-24">
+				<div className="flex flex-col gap-6">
+					<SectionLabel>Formats</SectionLabel>
+					<h3
+						className="text-foreground font-semibold"
+						style={{ fontSize: '1.25rem' }}
+					>
+						Supports Every Major Format
+					</h3>
+					<FiletypeCarousel />
+				</div>
+			</Section>
+
+			{/* 8. Community */}
+			<Section fadeIn className="my-24">
+				<div className="flex flex-col gap-8">
+					<div className="flex flex-col gap-3">
+						<SectionLabel>Community</SectionLabel>
+						<h2
+							className="text-foreground font-black leading-none"
+							style={{
+								fontSize: 'var(--text-headline)',
+								letterSpacing: 'var(--tracking-headline)'
+							}}
+						>
+							Powered by Community
+						</h2>
+						<p className="text-muted-foreground max-w-xl text-lg">
 							Vectreal is built by and for the 3D community.
 						</p>
-					</span>
+					</div>
 
-					<ul className="flex flex-col justify-between gap-4 md:flex-row">
-						<li className="w-full grow flex-col">
-							<BasicCard className="h-full">
-								<CardContent>
-									<Check className="mt-1 inline" size={32} />
-									<p className="text-foreground/90 mt-4 text-lg md:text-xl">
-										100% open-source
-									</p>
-								</CardContent>
-							</BasicCard>
-						</li>
-						<li className="w-full grow flex-col">
-							<BasicCard className="h-full">
-								<CardContent>
-									<Wrench className="mt-1 inline" size={32} />
-									<p className="text-foreground/90 mt-4 text-lg md:text-xl">
-										Built by developers, artists, and dreamers
-									</p>
-								</CardContent>
-							</BasicCard>
-						</li>
-						<li className="w-full grow flex-col">
-							<BasicCard className="h-full">
-								<CardContent>
-									<Globe className="mt-1 inline" size={32} />
-									<p className="text-foreground/90 mt-4 text-lg md:text-xl">
-										Global contributors, shared knowledge, real collaboration
-									</p>
-								</CardContent>
-							</BasicCard>
-						</li>
+					<ul className="grid grid-cols-1 gap-4 md:grid-cols-3">
+						{COMMUNITY_ITEMS.map((item) => (
+							<BentoCard key={item.text} as="li">
+								<item.icon className="text-accent h-5 w-5" aria-hidden="true" />
+								<p className="text-muted-foreground text-sm leading-relaxed">
+									{item.text}
+								</p>
+							</BentoCard>
+						))}
 					</ul>
 
-					<p className="text-foreground/90 mt-4 text-lg md:text-xl">
-						Join the community that’s reimagining how 3D lives on the web.
-					</p>
-					<Button asChild className="mt-2 w-fit px-8!">
-						<Link
-							to="https://github.com/vectreal"
-							target="_blank"
-							rel="noreferrer"
-						>
-							<GithubLogo /> Meet the Community
+					<Button asChild className="mt-2 w-fit rounded-xl px-8">
+						<Link to="https://github.com/vectreal" target="_blank" rel="noreferrer">
+							<GithubLogo className="mr-2" />
+							Meet the Community
 						</Link>
 					</Button>
 				</div>
 			</Section>
 
-			<Section
-				fadeIn
-				contentClassName="max-w-2xl w-full"
-				className="my-8 h-full w-full overflow-hidden"
-			>
-				<GridBg isMobile={isMobile} />
-				<div className="z-10 flex flex-col gap-6 py-12">
-					<div className="w-full">
-						<h2>Frequently Asked Questions</h2>
-						<p className="text-foreground/90 mt-4 text-lg md:text-xl">
-							Quick answers for setup, uploads, and publishing
+			{/* 9. FAQ */}
+			<Section fadeIn className="my-24">
+				<div className="flex flex-col gap-8">
+					<div className="flex flex-col gap-3">
+						<SectionLabel>FAQ</SectionLabel>
+						<h2
+							className="text-foreground font-black leading-none"
+							style={{
+								fontSize: 'var(--text-headline)',
+								letterSpacing: 'var(--tracking-headline)'
+							}}
+						>
+							Frequently Asked Questions
+						</h2>
+						<p className="text-muted-foreground text-lg">
+							Quick answers for setup, uploads, and publishing.
 						</p>
 					</div>
-					<BasicCard className="max-w-2xl">
-						<CardContent className="pt-6">
-							<Accordion type="single" collapsible className="w-full">
-								<AccordionItem className="bg-transparent!" value="faq-account">
-									<AccordionTrigger>
-										Do I need an account to test Vectreal?
-									</AccordionTrigger>
-									<AccordionContent>
-										No account is required to upload and test in Publisher.
-										Create an account only when you want persistent management
-										and publishing workflows.
-									</AccordionContent>
-								</AccordionItem>
-								<AccordionItem className="bg-transparent!" value="faq-formats">
-									<AccordionTrigger>
-										Which 3D formats are supported?
-									</AccordionTrigger>
-									<AccordionContent>
-										Supported formats: {SUPPORTED_FORMAT_NAMES.join(', ')}. For
-										multi-file glTF uploads, include the full bundle (.gltf +
-										.bin + textures) to preserve all references.
-									</AccordionContent>
-								</AccordionItem>
-								<AccordionItem className="bg-transparent!" value="faq-files">
-									<AccordionTrigger>
-										What happens to my files before publish?
-									</AccordionTrigger>
-									<AccordionContent>
-										Files remain local while you test and optimize in the
-										browser. Cloud storage and hosted sharing flows start only
-										when you explicitly publish.
-									</AccordionContent>
-								</AccordionItem>
-								<AccordionItem className="bg-transparent!" value="faq-embed">
-									<AccordionTrigger>
-										Can I embed scenes in my own site?
-									</AccordionTrigger>
-									<AccordionContent>
-										Yes. Once published, you can generate embed snippets and
-										configure domain/API constraints for controlled integration
-										into product pages and apps.
-									</AccordionContent>
-								</AccordionItem>
-							</Accordion>
-						</CardContent>
-					</BasicCard>
+
+					<BentoCard className="max-w-2xl">
+						<Accordion type="single" collapsible className="w-full">
+							<AccordionItem value="faq-account">
+								<AccordionTrigger>
+									Do I need an account to test Vectreal?
+								</AccordionTrigger>
+								<AccordionContent>
+									No account is required to upload and test in Publisher. Create
+									an account only when you want persistent management and
+									publishing workflows.
+								</AccordionContent>
+							</AccordionItem>
+							<AccordionItem value="faq-formats">
+								<AccordionTrigger>
+									Which 3D formats are supported?
+								</AccordionTrigger>
+								<AccordionContent>
+									Supported formats: {SUPPORTED_FORMAT_NAMES.join(', ')}. For
+									multi-file glTF uploads, include the full bundle (.gltf + .bin
+									+ textures) to preserve all references.
+								</AccordionContent>
+							</AccordionItem>
+							<AccordionItem value="faq-files">
+								<AccordionTrigger>
+									What happens to my files before publish?
+								</AccordionTrigger>
+								<AccordionContent>
+									Files remain local while you test and optimize in the browser.
+									Cloud storage and hosted sharing flows start only when you
+									explicitly publish.
+								</AccordionContent>
+							</AccordionItem>
+							<AccordionItem value="faq-embed">
+								<AccordionTrigger>
+									Can I embed scenes in my own site?
+								</AccordionTrigger>
+								<AccordionContent>
+									Yes. Once published, you can generate embed snippets and
+									configure domain/API constraints for controlled integration
+									into product pages and apps.
+								</AccordionContent>
+							</AccordionItem>
+						</Accordion>
+					</BentoCard>
 				</div>
 			</Section>
+
+			{/* 10. CTA block */}
+			<GradientCtaBlock
+				headline="Start Publishing Today"
+				subtext="No account needed. Drag, optimize, publish — in under 2 minutes."
+				primaryCta={{ label: 'Publish Your First Model', to: '/publisher' }}
+				secondaryCta={{ label: 'Explore the Docs', to: '/docs' }}
+			/>
 		</main>
 	)
 }

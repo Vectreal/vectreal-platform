@@ -7,7 +7,9 @@ import {
 	useSpring,
 	useTransform
 } from 'framer-motion'
+
 import type { PropsWithChildren } from 'react'
+
 
 interface BentoCardProps extends PropsWithChildren {
 	className?: string
