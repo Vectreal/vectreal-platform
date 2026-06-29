@@ -58,15 +58,13 @@ export function StepFlow({ steps, className }: StepFlowProps) {
 								className="font-black leading-none"
 								style={{
 									fontSize: 'clamp(2.5rem, 4vw, 3.5rem)',
-									letterSpacing: 'var(--tracking-display)',
-									color: 'var(--foreground)',
-									opacity: 0.15
+									letterSpacing: 'var(--tracking-display)'
 								}}
 							>
-								{step.number.slice(0, 1)}
-								<span style={{ color: 'var(--accent)', opacity: 1 }}>
-									{step.number.slice(1)}
+								<span className="text-foreground/15">
+									{step.number.slice(0, 1)}
 								</span>
+								<span className="text-accent">{step.number.slice(1)}</span>
 							</span>
 							<p
 								className="text-foreground font-semibold"
