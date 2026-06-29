@@ -18,7 +18,11 @@ const OPT_WIDTH_PCT = (OPT_MB / RAW_MB) * 100 // ~2.6
 
 export function OptimizationVisual({ className }: { className?: string }) {
 	const ref = useRef<HTMLDivElement>(null)
-	const isInView = useInView(ref, { once: true, amount: 0.4 })
+	const isInView = useInView(ref, {
+		once: true,
+		amount: 0.55,
+		margin: '0px 0px -10% 0px'
+	})
 	const prefersReducedMotion = useReducedMotion()
 
 	// Optimized bar width (% of track) and the counting numbers
@@ -32,10 +36,11 @@ export function OptimizationVisual({ className }: { className?: string }) {
 
 	useEffect(() => {
 		if (!isInView || prefersReducedMotion) return
-		const ease = [0.16, 1, 0.3, 1] as const
-		const a = animate(optWidth, OPT_WIDTH_PCT, { duration: 1.6, ease, delay: 0.2 })
-		const b = animate(optMb, OPT_MB, { duration: 1.6, ease, delay: 0.2 })
-		const c = animate(reduction, REDUCTION, { duration: 1.6, ease, delay: 0.4 })
+		// Deliberately slow so the compression really reads as it happens.
+		const ease = [0.22, 1, 0.36, 1] as const
+		const a = animate(optWidth, OPT_WIDTH_PCT, { duration: 3.8, ease, delay: 0.4 })
+		const b = animate(optMb, OPT_MB, { duration: 3.8, ease, delay: 0.4 })
+		const c = animate(reduction, REDUCTION, { duration: 3.8, ease, delay: 0.6 })
 		return () => {
 			a.stop()
 			b.stop()
@@ -47,7 +52,7 @@ export function OptimizationVisual({ className }: { className?: string }) {
 		<div
 			ref={ref}
 			className={cn(
-				'bg-surface-1 border-surface-border relative overflow-hidden rounded-3xl border p-8 md:p-12',
+				'bg-surface-1 border-surface-border relative overflow-hidden rounded-2xl border p-6 md:p-10',
 				className
 			)}
 		>

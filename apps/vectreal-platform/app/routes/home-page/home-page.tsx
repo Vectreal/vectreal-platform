@@ -7,14 +7,7 @@ import {
 } from '@shared/components/ui/accordion'
 import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
-import {
-	Code,
-	Globe,
-	Rocket,
-	Upload,
-	Wrench,
-	Zap
-} from 'lucide-react'
+import { Code, Globe, Rocket, Upload, Wrench, Zap } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { Route } from './+types/home-page'
@@ -23,13 +16,13 @@ import FiletypeCarousel from '../../components/home/filetype-carousel'
 import {
 	BentoCard,
 	GradientCtaBlock,
+	HowItWorksShowcase,
+	LandingSection,
 	OptimizationVisual,
 	ScrollytellViewerSection,
 	SocialProofBar,
-	StatRing,
-	StepFlow
+	StatRing
 } from '../../components/landing'
-import Section from '../../components/layout-components/section'
 import { SUPPORTED_FORMAT_NAMES } from '../../constants/product-copy'
 import { buildPageMeta } from '../../lib/seo'
 import {
@@ -56,29 +49,6 @@ const SOCIAL_PROOF_ITEMS = [
 	{ text: '100% open-source' },
 	{ text: 'No registration required' },
 	{ text: 'Instant publishing' }
-]
-
-const HOW_IT_WORKS_STEPS = [
-	{
-		number: '01',
-		title: 'Upload',
-		body: `Just drag & drop your model — ${SUPPORTED_FORMAT_NAMES.join(', ')} supported. Our system gets to work instantly.`
-	},
-	{
-		number: '02',
-		title: 'Optimize & Customize',
-		body: 'Choose quality settings, tweak lighting, and refine camera angles in an immersive editor.'
-	},
-	{
-		number: '03',
-		title: 'Manage',
-		body: 'Secure cloud storage with versioning, asset organization, and instant previews.'
-	},
-	{
-		number: '04',
-		title: 'Publish',
-		body: 'Unlock an embed snippet for direct integration into websites, portfolios, eCommerce, and blogs.'
-	}
 ]
 
 const BENTO_FEATURES: Array<{
@@ -150,6 +120,29 @@ const COMMUNITY_ITEMS: Array<{
 	}
 ]
 
+const FAQ_ITEMS: { value: string; q: string; a: string }[] = [
+	{
+		value: 'faq-account',
+		q: 'Do I need an account to test Vectreal?',
+		a: 'No account is required to upload and test in Publisher. Create an account only when you want persistent management and publishing workflows.'
+	},
+	{
+		value: 'faq-formats',
+		q: 'Which 3D formats are supported?',
+		a: `Supported formats: ${SUPPORTED_FORMAT_NAMES.join(', ')}. For multi-file glTF uploads, include the full bundle (.gltf + .bin + textures) to preserve all references.`
+	},
+	{
+		value: 'faq-files',
+		q: 'What happens to my files before publish?',
+		a: 'Files remain local while you test and optimize in the browser. Cloud storage and hosted sharing flows start only when you explicitly publish.'
+	},
+	{
+		value: 'faq-embed',
+		q: 'Can I embed scenes in my own site?',
+		a: 'Yes. Once published, you can generate embed snippets and configure domain/API constraints for controlled integration into product pages and apps.'
+	}
+]
+
 const SectionLabel = ({
 	children,
 	className
@@ -195,7 +188,7 @@ const SectionHeading = ({
 
 const HomePage = () => {
 	return (
-		<main className="bg-background">
+		<main className="bg-background overflow-x-clip">
 			{/* 1. Cinematic hero */}
 			<CinematicHero />
 
@@ -206,20 +199,20 @@ const HomePage = () => {
 			<ScrollytellViewerSection />
 
 			{/* 4. How it works */}
-			<Section fadeIn className="my-24">
-				<div className="flex flex-col gap-12">
+			<LandingSection aria-label="How it works">
+				<div className="flex flex-col gap-12 md:gap-16">
 					<SectionHeading
 						label="Process"
 						title="How It Works"
 						subtitle="Effortless from start to finish."
 					/>
-					<StepFlow steps={HOW_IT_WORKS_STEPS} />
+					<HowItWorksShowcase />
 				</div>
-			</Section>
+			</LandingSection>
 
 			{/* 5. Optimization value prop */}
-			<Section fadeIn className="my-24">
-				<div className="flex flex-col gap-12">
+			<LandingSection aria-label="Optimization" glow="right">
+				<div className="flex flex-col gap-12 md:gap-16">
 					<SectionHeading
 						label="Optimization"
 						title="Ship lighter, load faster"
@@ -227,55 +220,62 @@ const HomePage = () => {
 					/>
 					<OptimizationVisual />
 				</div>
-			</Section>
+			</LandingSection>
 
 			{/* 6. Stats */}
-			<Section fadeIn className="my-24">
-				<div className="flex flex-col gap-12">
+			<LandingSection aria-label="Results" glow="left">
+				<div className="flex flex-col gap-12 md:gap-16">
 					<SectionHeading
 						label="Results"
 						title="3D Content Drives Results"
 						subtitle="Industry data proves interactive 3D models deliver measurable business outcomes."
 					/>
-					<div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+					<div className="no-scrollbar -mx-6 flex snap-x snap-mandatory gap-6 overflow-x-auto px-6 pb-1 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0 md:pb-0">
 						<StatRing
+							className="w-[78%] shrink-0 snap-center sm:w-[55%] md:w-auto md:shrink"
 							value={60}
+							delay={0}
 							label="higher purchase intent when products are showcased with interactive 3D or AR"
 							source="AP News"
 							sourceUrl="https://apnews.com/press-release/globe-newswire/technology-business-lifestyle-79fe640885f900736beed0fe33f7d972"
 						/>
 						<StatRing
+							className="w-[78%] shrink-0 snap-center sm:w-[55%] md:w-auto md:shrink"
 							value={44}
+							delay={0.7}
 							label="more products added to cart after customers engage with interactive 3D"
 							source="Shopify"
 							sourceUrl="https://www.shopify.com/ie/case-studies/rebecca-minkoff"
 						/>
 						<StatRing
+							className="w-[78%] shrink-0 snap-center sm:w-[55%] md:w-auto md:shrink"
 							value={94}
+							delay={1.4}
 							label="increase in conversion rates for products enhanced with augmented reality"
 							source="Harvard Business Review"
 							sourceUrl="https://hbr.org/2020/10/how-ar-is-redefining-retail-in-the-pandemic"
 						/>
 					</div>
 				</div>
-			</Section>
+			</LandingSection>
 
 			{/* 6. Feature bento grid */}
-			<Section fadeIn className="my-24">
-				<div className="flex flex-col gap-12">
+			<LandingSection>
+				<div className="flex flex-col gap-12 md:gap-16">
 					<SectionHeading
 						label="Platform"
 						title="Everything You Need"
 						subtitle="One platform, zero friction."
 					/>
 
-					<ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+					<ul className="no-scrollbar -mx-6 flex snap-x snap-mandatory gap-6 overflow-x-auto px-6 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3">
 						{BENTO_FEATURES.map((feature) => (
 							<BentoCard
 								key={feature.title}
 								as="li"
 								tilt={feature.tilt}
 								glow={feature.glow}
+								className="w-[78%] shrink-0 snap-center sm:w-auto sm:shrink"
 							>
 								<div className="border-surface-border bg-surface-0/60 group-hover:border-accent/40 group-hover:bg-accent/5 flex size-11 items-center justify-center rounded-xl border transition-colors duration-300">
 									<feature.icon
@@ -295,11 +295,11 @@ const HomePage = () => {
 						))}
 					</ul>
 				</div>
-			</Section>
+			</LandingSection>
 
 			{/* 7. Format carousel */}
-			<Section fadeIn className="my-24">
-				<div className="flex flex-col gap-12">
+			<LandingSection>
+				<div className="flex flex-col gap-12 md:gap-16">
 					<SectionHeading
 						label="Formats"
 						title="Supports Every Major Format"
@@ -307,92 +307,160 @@ const HomePage = () => {
 					/>
 					<FiletypeCarousel />
 				</div>
-			</Section>
+			</LandingSection>
 
 			{/* 8. Community */}
-			<Section fadeIn className="my-24">
-				<div className="flex flex-col gap-8">
-					<SectionHeading
-						label="Community"
-						title="Powered by Community"
-						subtitle="Vectreal is built by and for the 3D community."
-					/>
+			<LandingSection aria-label="Community" glow="right">
+				<div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+					{/* Left: copy + CTAs */}
+					<div className="flex flex-col gap-6">
+						<SectionHeading
+							label="Community"
+							title="Built in the open"
+							subtitle="Vectreal is 100% open-source — built by and for the 3D community. Fork it, extend it, ship it."
+						/>
+						<ul className="flex flex-col gap-3">
+							{COMMUNITY_ITEMS.map((item) => (
+								<li key={item.text} className="flex items-center gap-3">
+									<span className="border-surface-border bg-surface-1 flex size-9 shrink-0 items-center justify-center rounded-lg border">
+										<item.icon
+											className="text-accent size-4"
+											aria-hidden="true"
+										/>
+									</span>
+									<span className="text-muted-foreground text-sm">
+										{item.text}
+									</span>
+								</li>
+							))}
+						</ul>
+						<div className="mt-1 flex flex-col gap-3 sm:flex-row">
+							<Button asChild className="rounded-xl px-6">
+								<Link
+									to="https://github.com/vectreal"
+									target="_blank"
+									rel="noreferrer"
+								>
+									<GithubLogo className="mr-2 size-4" />
+									Star on GitHub
+								</Link>
+							</Button>
+							<Button
+								asChild
+								variant="outline"
+								className="border-surface-border rounded-xl px-6"
+							>
+								<Link
+									to="https://discord.gg/A9a3nPkZw7"
+									target="_blank"
+									rel="noreferrer"
+								>
+									Join the Discord
+								</Link>
+							</Button>
+						</div>
+					</div>
 
-					<ul className="grid grid-cols-1 gap-4 md:grid-cols-3">
-						{COMMUNITY_ITEMS.map((item) => (
-							<BentoCard key={item.text} as="li">
-								<item.icon className="text-accent h-5 w-5" aria-hidden="true" />
-								<p className="text-muted-foreground text-sm leading-relaxed">
-									{item.text}
-								</p>
-							</BentoCard>
-						))}
-					</ul>
-
-					<Button asChild className="mt-2 w-fit rounded-xl px-8">
-						<Link to="https://github.com/vectreal" target="_blank" rel="noreferrer">
-							<GithubLogo className="mr-2" />
-							Meet the Community
-						</Link>
-					</Button>
+					{/* Right: real install + usage code visual */}
+					<div className="bg-surface-1 border-surface-border overflow-hidden rounded-2xl border shadow-xl">
+						<div className="border-surface-border flex items-center gap-2 border-b px-4 py-3">
+							<span className="size-3 rounded-full bg-[#ff5f57]" />
+							<span className="size-3 rounded-full bg-[#febc2e]" />
+							<span className="size-3 rounded-full bg-[#28c840]" />
+							<span className="text-muted-foreground/60 ml-2 text-xs">
+								your-app.tsx
+							</span>
+						</div>
+						<pre className="overflow-x-auto p-5 font-mono text-[13px] leading-relaxed">
+							<code>
+								<span className="text-muted-foreground/50">
+									{'# Install the viewer\n'}
+								</span>
+								<span className="text-foreground">
+									{'pnpm add '}
+								</span>
+								<span className="text-accent">{'@vctrl/viewer\n\n'}</span>
+								<span className="text-muted-foreground/50">
+									{'// Drop a model into any React app\n'}
+								</span>
+								<span className="text-[#7aa2f7]">{'import'}</span>
+								<span className="text-foreground">
+									{' { VectrealViewer } '}
+								</span>
+								<span className="text-[#7aa2f7]">{'from'}</span>
+								<span className="text-accent">{" '@vctrl/viewer'\n\n"}</span>
+								<span className="text-foreground">{'<'}</span>
+								<span className="text-[#e0af68]">{'VectrealViewer'}</span>
+								<span className="text-[#9ece6a]">{' src'}</span>
+								<span className="text-foreground">{'='}</span>
+								<span className="text-accent">{'{modelUrl}'}</span>
+								<span className="text-foreground">{' />'}</span>
+							</code>
+						</pre>
+					</div>
 				</div>
-			</Section>
+			</LandingSection>
 
 			{/* 9. FAQ */}
-			<Section fadeIn className="my-24">
-				<div className="flex flex-col gap-8">
-					<SectionHeading
-						label="FAQ"
-						title="Frequently Asked Questions"
-						subtitle="Quick answers for setup, uploads, and publishing."
-					/>
+			<LandingSection aria-label="FAQ">
+				<div className="grid items-start gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+					{/* Left: heading + aside */}
+					<div className="flex flex-col gap-6 lg:sticky lg:top-28 lg:self-start">
+						<SectionHeading
+							label="FAQ"
+							title="Frequently asked questions"
+							subtitle="Quick answers for setup, uploads, and publishing."
+						/>
+						<div className="bg-surface-1 border-surface-border flex flex-col gap-2.5 rounded-2xl border p-5">
+							<p className="text-foreground font-medium">
+								Still have questions?
+							</p>
+							<p className="text-muted-foreground text-sm leading-relaxed">
+								Reach the team directly or ask the community.
+							</p>
+							<div className="mt-1 flex flex-wrap gap-3">
+								<Link
+									to="/contact"
+									className="text-accent hover:text-accent/80 text-sm font-medium underline-offset-4 hover:underline"
+								>
+									Contact us
+								</Link>
+								<span className="text-muted-foreground/40" aria-hidden="true">
+									·
+								</span>
+								<Link
+									to="https://discord.gg/A9a3nPkZw7"
+									target="_blank"
+									rel="noreferrer"
+									className="text-accent hover:text-accent/80 text-sm font-medium underline-offset-4 hover:underline"
+								>
+									Ask on Discord
+								</Link>
+							</div>
+						</div>
+					</div>
 
-					<BentoCard className="max-w-2xl">
+					{/* Right: accordion */}
+					<div className="bg-surface-1 border-surface-border overflow-hidden rounded-2xl border">
 						<Accordion type="single" collapsible className="w-full">
-							<AccordionItem value="faq-account">
-								<AccordionTrigger>
-									Do I need an account to test Vectreal?
-								</AccordionTrigger>
-								<AccordionContent>
-									No account is required to upload and test in Publisher. Create
-									an account only when you want persistent management and
-									publishing workflows.
-								</AccordionContent>
-							</AccordionItem>
-							<AccordionItem value="faq-formats">
-								<AccordionTrigger>
-									Which 3D formats are supported?
-								</AccordionTrigger>
-								<AccordionContent>
-									Supported formats: {SUPPORTED_FORMAT_NAMES.join(', ')}. For
-									multi-file glTF uploads, include the full bundle (.gltf + .bin
-									+ textures) to preserve all references.
-								</AccordionContent>
-							</AccordionItem>
-							<AccordionItem value="faq-files">
-								<AccordionTrigger>
-									What happens to my files before publish?
-								</AccordionTrigger>
-								<AccordionContent>
-									Files remain local while you test and optimize in the browser.
-									Cloud storage and hosted sharing flows start only when you
-									explicitly publish.
-								</AccordionContent>
-							</AccordionItem>
-							<AccordionItem value="faq-embed">
-								<AccordionTrigger>
-									Can I embed scenes in my own site?
-								</AccordionTrigger>
-								<AccordionContent>
-									Yes. Once published, you can generate embed snippets and
-									configure domain/API constraints for controlled integration
-									into product pages and apps.
-								</AccordionContent>
-							</AccordionItem>
+							{FAQ_ITEMS.map((item) => (
+								<AccordionItem
+									key={item.value}
+									value={item.value}
+									className="border-surface-border border-b bg-transparent! px-5 last:border-b-0"
+								>
+									<AccordionTrigger className="text-foreground py-5 text-left text-[0.95rem] hover:no-underline">
+										{item.q}
+									</AccordionTrigger>
+									<AccordionContent className="text-muted-foreground pb-5 text-sm leading-relaxed">
+										{item.a}
+									</AccordionContent>
+								</AccordionItem>
+							))}
 						</Accordion>
-					</BentoCard>
+					</div>
 				</div>
-			</Section>
+			</LandingSection>
 
 			{/* 10. CTA block */}
 			<GradientCtaBlock

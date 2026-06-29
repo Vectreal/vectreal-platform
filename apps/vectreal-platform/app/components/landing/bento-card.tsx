@@ -59,10 +59,10 @@ export function BentoCard({
 						: undefined
 				}
 				className={cn(
-					'relative h-full overflow-hidden rounded-2xl border p-6 transition-colors duration-300',
+					'relative h-full overflow-hidden rounded-2xl border p-5 transition-colors duration-300',
 					'bg-surface-1 border-surface-border',
 					glow && 'hover:border-accent/30',
-					'flex flex-col gap-4'
+					'flex flex-col gap-3.5'
 				)}
 			>
 				{/* Subtle inner radial gradient tint */}

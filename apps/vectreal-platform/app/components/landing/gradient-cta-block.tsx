@@ -30,7 +30,7 @@ export function GradientCtaBlock({
 
 	return (
 		<section
-			className={cn('relative overflow-hidden py-32', className)}
+			className={cn('relative overflow-hidden py-24 md:py-28', className)}
 			aria-label="Call to action"
 		>
 			{/* Radial glow bloom */}

@@ -276,10 +276,10 @@
 		text-wrap: balance;
 	}
 	.text-h2 {
-		font-size: clamp(1.9rem, 3.6vw, 3.25rem);
+		font-size: clamp(1.75rem, 2.8vw, 2.5rem);
 		font-weight: 500;
-		line-height: 1.08;
-		letter-spacing: -0.03em;
+		line-height: 1.1;
+		letter-spacing: -0.025em;
 		text-wrap: balance;
 	}
 	.text-h3 {

@@ -17,38 +17,35 @@ const loopedFileTypes = [...fileTypes, ...fileTypes]
 
 const FiletypeCarousel = () => {
 	return (
-		<section className="overflow-hidden">
-			<div className="w-full">
-				<div className="relative flex w-full gap-4 overflow-hidden px-2">
-					{/* Gradient overlay */}
-					<div className="from-background to-background pointer-events-none absolute bottom-0 left-0 z-10 h-[6.5rem] w-full bg-gradient-to-r via-transparent via-50%"></div>
+		<section className="relative overflow-hidden">
+			{/* Edge-only fade masks */}
+			<div className="from-background pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r to-transparent" />
+			<div className="from-background pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l to-transparent" />
 
-					<motion.div
-						className="flex gap-4 whitespace-nowrap"
-						initial={{ x: '0%' }}
-						animate={{ x: '-50%' }}
-						transition={{
-							repeat: Infinity,
-							duration: 30,
-							ease: 'linear'
-						}}
+			<motion.div
+				className="flex w-max gap-4"
+				initial={{ x: '0%' }}
+				animate={{ x: '-50%' }}
+				transition={{
+					repeat: Infinity,
+					duration: 30,
+					ease: 'linear'
+				}}
+			>
+				{loopedFileTypes.map((fileType, index) => (
+					<Card
+						key={index}
+						className="bg-surface-1 border-surface-border flex h-24 w-56 shrink-0 flex-col justify-center rounded-2xl border px-6 py-2"
 					>
-						{loopedFileTypes.map((fileType, index) => (
-							<Card
-								key={index}
-								className="bg-surface-1 border-surface-border flex h-[6.5rem] !w-auto flex-col justify-center rounded-2xl border px-6 py-2"
-							>
-								<p className="whitespace-nowrap text-lg font-medium">
-									{fileType.name}
-								</p>
-								<p className="text-muted-foreground whitespace-nowrap text-sm">
-									{fileType.description}
-								</p>
-							</Card>
-						))}
-					</motion.div>
-				</div>
-			</div>
+						<p className="whitespace-nowrap text-lg font-medium">
+							{fileType.name}
+						</p>
+						<p className="text-muted-foreground whitespace-nowrap text-sm">
+							{fileType.description}
+						</p>
+					</Card>
+				))}
+			</motion.div>
 		</section>
 	)
 }
