@@ -168,7 +168,7 @@ function SlidingPill({
 			<motion.div
 				className={cn(
 					'absolute top-1 bottom-1 rounded-xl',
-					isHovering ? 'bg-muted/80' : 'bg-accent/10'
+					isHovering ? 'bg-muted/80' : 'bg-accent/15 border border-accent/20'
 				)}
 				animate={{
 					left: bounds.left,
@@ -277,7 +277,7 @@ function DesktopNav({
 						<Button asChild size="sm" className="rounded-xl">
 							<Link to="/publisher">
 								<Rocket className="size-4" />
-								Try Publisher
+								Get Started
 							</Link>
 						</Button>
 					)}
@@ -476,7 +476,7 @@ function MobileNav({
 							<Button asChild className="w-full rounded-xl" size="lg">
 								<Link to="/publisher">
 									<Rocket className="size-4" />
-									Try Publisher
+									Get Started
 								</Link>
 							</Button>
 						</div>
