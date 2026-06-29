@@ -87,55 +87,48 @@ const BENTO_FEATURES: Array<{
 	body: string
 	tilt: boolean
 	glow: boolean
-	span: string
 }> = [
 	{
-		icon: Zap,
-		title: 'No Registration',
-		body: 'Upload and test instantly — no account required until you want persistent publishing.',
+		icon: Upload,
+		title: 'Simple Drag & Drop',
+		body: `Every major 3D format supported: ${SUPPORTED_FORMAT_NAMES.join(', ')}.`,
 		tilt: true,
-		glow: false,
-		span: ''
+		glow: true
 	},
 	{
 		icon: Rocket,
 		title: 'Instant Publishing',
 		body: 'From drag & drop to a live shareable URL in under two minutes.',
 		tilt: true,
-		glow: false,
-		span: ''
+		glow: false
 	},
 	{
-		icon: GithubLogo,
-		title: '100% Open Source',
-		body: 'Built in the open. Contribute, fork, self-host — your call.',
+		icon: Zap,
+		title: 'No Registration',
+		body: 'Upload and test instantly — no account required until you want persistent publishing.',
 		tilt: true,
-		glow: false,
-		span: ''
-	},
-	{
-		icon: Upload,
-		title: 'Simple Drag & Drop',
-		body: `Every major 3D format supported: ${SUPPORTED_FORMAT_NAMES.join(', ')}.`,
-		tilt: false,
-		glow: true,
-		span: 'md:col-span-2'
+		glow: false
 	},
 	{
 		icon: Globe,
 		title: 'Web-Native 3D',
 		body: 'Optimized for the browser. Fast loads, clean renders, zero plugins.',
 		tilt: true,
-		glow: false,
-		span: ''
+		glow: false
 	},
 	{
 		icon: Code,
 		title: 'Embed Anywhere',
 		body: 'A single snippet drops your scene into any site — with domain and API constraints.',
-		tilt: false,
-		glow: false,
-		span: ''
+		tilt: true,
+		glow: false
+	},
+	{
+		icon: GithubLogo,
+		title: '100% Open Source',
+		body: 'Built in the open. Contribute, fork, self-host — your call.',
+		tilt: true,
+		glow: false
 	}
 ]
 
@@ -166,12 +159,41 @@ const SectionLabel = ({
 }) => (
 	<div
 		className={cn(
-			'border-accent/20 bg-accent/5 text-accent/70 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium tracking-widest uppercase',
+			'border-accent/20 bg-accent/5 text-accent/70 inline-flex w-fit items-center gap-1.5 self-start rounded-full border px-3 py-1 text-xs font-medium tracking-widest uppercase',
 			className
 		)}
 	>
 		<span className="bg-accent/60 h-1.5 w-1.5 rounded-full" aria-hidden="true" />
 		{children}
+	</div>
+)
+
+const SectionHeading = ({
+	label,
+	title,
+	subtitle
+}: {
+	label: string
+	title: string
+	subtitle?: string
+}) => (
+	<div className="flex flex-col gap-4">
+		<SectionLabel>{label}</SectionLabel>
+		<h2
+			className="text-foreground font-medium text-balance"
+			style={{
+				fontSize: 'var(--text-headline)',
+				letterSpacing: 'var(--tracking-headline)',
+				lineHeight: 1.05
+			}}
+		>
+			{title}
+		</h2>
+		{subtitle && (
+			<p className="text-muted-foreground max-w-xl text-lg text-pretty">
+				{subtitle}
+			</p>
+		)}
 	</div>
 )
 
@@ -192,21 +214,11 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 			{/* 4. How it works */}
 			<Section fadeIn className="my-24">
 				<div className="flex flex-col gap-12">
-					<div className="flex flex-col gap-3">
-						<SectionLabel>Process</SectionLabel>
-						<h2
-							className="text-foreground font-black leading-none"
-							style={{
-								fontSize: 'var(--text-headline)',
-								letterSpacing: 'var(--tracking-headline)'
-							}}
-						>
-							How It Works
-						</h2>
-						<p className="text-muted-foreground max-w-xl text-lg">
-							Effortless from start to finish.
-						</p>
-					</div>
+					<SectionHeading
+						label="Process"
+						title="How It Works"
+						subtitle="Effortless from start to finish."
+					/>
 					<StepFlow steps={HOW_IT_WORKS_STEPS} />
 				</div>
 			</Section>
@@ -214,22 +226,11 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 			{/* 5. Stats */}
 			<Section fadeIn className="my-24">
 				<div className="flex flex-col gap-12">
-					<div className="flex flex-col gap-3">
-						<SectionLabel>Results</SectionLabel>
-						<h2
-							className="text-foreground font-black leading-none"
-							style={{
-								fontSize: 'var(--text-headline)',
-								letterSpacing: 'var(--tracking-headline)'
-							}}
-						>
-							3D Content Drives Results
-						</h2>
-						<p className="text-muted-foreground max-w-xl text-lg">
-							Industry data proves interactive 3D models deliver measurable
-							business outcomes.
-						</p>
-					</div>
+					<SectionHeading
+						label="Results"
+						title="3D Content Drives Results"
+						subtitle="Industry data proves interactive 3D models deliver measurable business outcomes."
+					/>
 					<div className="grid grid-cols-1 gap-4 md:grid-cols-3">
 						<StatCounter
 							value={60}
@@ -259,37 +260,26 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 			{/* 6. Feature bento grid */}
 			<Section fadeIn className="my-24">
 				<div className="flex flex-col gap-12">
-					<div className="flex flex-col gap-3">
-						<SectionLabel>Platform</SectionLabel>
-						<h2
-							className="text-foreground font-black leading-none"
-							style={{
-								fontSize: 'var(--text-headline)',
-								letterSpacing: 'var(--tracking-headline)'
-							}}
-						>
-							Everything You Need
-						</h2>
-						<p className="text-muted-foreground max-w-xl text-lg">
-							One platform, zero friction.
-						</p>
-					</div>
+					<SectionHeading
+						label="Platform"
+						title="Everything You Need"
+						subtitle="One platform, zero friction."
+					/>
 
-					<ul className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+					<ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 						{BENTO_FEATURES.map((feature) => (
 							<BentoCard
 								key={feature.title}
 								as="li"
 								tilt={feature.tilt}
 								glow={feature.glow}
-								className={feature.span}
 							>
 								<feature.icon
 									className="text-accent h-6 w-6"
 									aria-hidden="true"
 								/>
 								<div className="flex flex-col gap-1.5">
-									<p className="text-foreground font-semibold">
+									<p className="text-foreground font-medium">
 										{feature.title}
 									</p>
 									<p className="text-muted-foreground text-sm leading-relaxed">
@@ -304,14 +294,12 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 
 			{/* 7. Format carousel */}
 			<Section fadeIn className="my-24">
-				<div className="flex flex-col gap-6">
-					<SectionLabel>Formats</SectionLabel>
-					<h3
-						className="text-foreground font-semibold"
-						style={{ fontSize: '1.25rem' }}
-					>
-						Supports Every Major Format
-					</h3>
+				<div className="flex flex-col gap-12">
+					<SectionHeading
+						label="Formats"
+						title="Supports Every Major Format"
+						subtitle="Bring your files as they are — we handle conversion and cloud integration."
+					/>
 					<FiletypeCarousel />
 				</div>
 			</Section>
@@ -319,21 +307,11 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 			{/* 8. Community */}
 			<Section fadeIn className="my-24">
 				<div className="flex flex-col gap-8">
-					<div className="flex flex-col gap-3">
-						<SectionLabel>Community</SectionLabel>
-						<h2
-							className="text-foreground font-black leading-none"
-							style={{
-								fontSize: 'var(--text-headline)',
-								letterSpacing: 'var(--tracking-headline)'
-							}}
-						>
-							Powered by Community
-						</h2>
-						<p className="text-muted-foreground max-w-xl text-lg">
-							Vectreal is built by and for the 3D community.
-						</p>
-					</div>
+					<SectionHeading
+						label="Community"
+						title="Powered by Community"
+						subtitle="Vectreal is built by and for the 3D community."
+					/>
 
 					<ul className="grid grid-cols-1 gap-4 md:grid-cols-3">
 						{COMMUNITY_ITEMS.map((item) => (
@@ -358,21 +336,11 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 			{/* 9. FAQ */}
 			<Section fadeIn className="my-24">
 				<div className="flex flex-col gap-8">
-					<div className="flex flex-col gap-3">
-						<SectionLabel>FAQ</SectionLabel>
-						<h2
-							className="text-foreground font-black leading-none"
-							style={{
-								fontSize: 'var(--text-headline)',
-								letterSpacing: 'var(--tracking-headline)'
-							}}
-						>
-							Frequently Asked Questions
-						</h2>
-						<p className="text-muted-foreground text-lg">
-							Quick answers for setup, uploads, and publishing.
-						</p>
-					</div>
+					<SectionHeading
+						label="FAQ"
+						title="Frequently Asked Questions"
+						subtitle="Quick answers for setup, uploads, and publishing."
+					/>
 
 					<BentoCard className="max-w-2xl">
 						<Accordion type="single" collapsible className="w-full">

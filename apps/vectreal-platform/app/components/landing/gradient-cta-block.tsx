@@ -55,10 +55,11 @@ export function GradientCtaBlock({
 			>
 				<motion.h2
 					variants={prefersReducedMotion ? undefined : fadeUp}
-					className="text-foreground font-black leading-none"
+					className="text-foreground font-medium text-balance"
 					style={{
 						fontSize: 'var(--text-headline)',
-						letterSpacing: 'var(--tracking-headline)'
+						letterSpacing: 'var(--tracking-headline)',
+						lineHeight: 1.05
 					}}
 				>
 					{headline}
@@ -66,7 +67,7 @@ export function GradientCtaBlock({
 
 				<motion.p
 					variants={prefersReducedMotion ? undefined : fadeUp}
-					className="text-muted-foreground max-w-lg text-lg"
+					className="text-muted-foreground max-w-lg text-lg text-pretty"
 				>
 					{subtext}
 				</motion.p>
@@ -75,7 +76,11 @@ export function GradientCtaBlock({
 					variants={prefersReducedMotion ? undefined : fadeUp}
 					className="flex flex-col gap-3 sm:flex-row"
 				>
-					<Button asChild size="lg" className="rounded-xl px-8">
+					<Button
+						asChild
+						size="lg"
+						className="bg-accent hover:bg-accent/90 rounded-xl px-8 text-white"
+					>
 						<Link to={primaryCta.to}>{primaryCta.label}</Link>
 					</Button>
 					{secondaryCta && (
@@ -83,7 +88,7 @@ export function GradientCtaBlock({
 							asChild
 							size="lg"
 							variant="outline"
-							className="border-surface-border rounded-xl px-8"
+							className="border-surface-border bg-surface-1/50 rounded-xl px-8 backdrop-blur-sm"
 						>
 							<Link to={secondaryCta.to}>{secondaryCta.label}</Link>
 						</Button>

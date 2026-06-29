@@ -17,13 +17,7 @@ const loopedFileTypes = [...fileTypes, ...fileTypes]
 
 const FiletypeCarousel = () => {
 	return (
-		<section className="mt-4 overflow-hidden">
-			<div className="mx-auto w-full max-w-5xl px-4">
-				<h3 className="mb-8 text-center">
-					We offer a wide variety of file types and cloud integrations
-				</h3>
-			</div>
-
+		<section className="overflow-hidden">
 			<div className="w-full">
 				<div className="relative flex w-full gap-4 overflow-hidden px-2">
 					{/* Gradient overlay */}
@@ -42,12 +36,12 @@ const FiletypeCarousel = () => {
 						{loopedFileTypes.map((fileType, index) => (
 							<Card
 								key={index}
-								className="bg-muted/50 flex h-[6.5rem] !w-auto flex-col justify-center border-none px-4 py-2"
+								className="bg-surface-1 border-surface-border flex h-[6.5rem] !w-auto flex-col justify-center rounded-2xl border px-6 py-2"
 							>
-								<p className="text-lg font-medium whitespace-nowrap">
+								<p className="whitespace-nowrap text-lg font-medium">
 									{fileType.name}
 								</p>
-								<p className="text-muted-foreground text-sm whitespace-nowrap">
+								<p className="text-muted-foreground whitespace-nowrap text-sm">
 									{fileType.description}
 								</p>
 							</Card>

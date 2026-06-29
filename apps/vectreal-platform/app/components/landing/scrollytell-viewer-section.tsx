@@ -1,25 +1,9 @@
 // app/components/landing/scrollytell-viewer-section.tsx
-import { fadeUp, staggerContainer } from '@shared/components/motion'
 import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
-import { cn } from '@shared/utils'
-import {
-	motion,
-	useInView,
-	useReducedMotion,
-	useScroll,
-	useTransform
-} from 'framer-motion'
+import { motion, useInView, useReducedMotion, useScroll, useTransform } from 'framer-motion'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 
-const MockShopEmbedClient = lazy(
-	() => import('../home/mock-shop-embed-client')
-)
-
-const ANNOTATION_CHIPS = [
-	{ label: 'Drag & drop upload', position: 'top-[15%] left-[8%]' },
-	{ label: 'Real-time optimization', position: 'top-[40%] right-[6%]' },
-	{ label: 'One-click embed', position: 'bottom-[18%] left-[12%]' }
-]
+const MockShopEmbedClient = lazy(() => import('../home/mock-shop-embed-client'))
 
 export function ScrollytellViewerSection() {
 	const sectionRef = useRef<HTMLDivElement>(null)
@@ -30,10 +14,6 @@ export function ScrollytellViewerSection() {
 	const isNearView = useInView(sectionRef, {
 		once: true,
 		margin: '200px 0px'
-	})
-	const isViewerVisible = useInView(viewerRef, {
-		once: true,
-		amount: 0.3
 	})
 
 	useEffect(() => {
@@ -48,7 +28,7 @@ export function ScrollytellViewerSection() {
 	const scale = useTransform(
 		scrollYProgress,
 		[0, 0.3],
-		prefersReducedMotion ? [1, 1] : [0.94, 1]
+		prefersReducedMotion ? [1, 1] : [0.96, 1]
 	)
 	const opacity = useTransform(
 		scrollYProgress,
@@ -59,27 +39,23 @@ export function ScrollytellViewerSection() {
 	return (
 		<section ref={sectionRef} aria-label="Live 3D product demo">
 			{/* Section heading */}
-			<div className="from-background to-background/0 relative z-10 bg-linear-to-b px-4 py-20">
+			<div className="from-background to-background/0 relative z-10 bg-linear-to-b px-4 py-16">
 				<div className="mx-auto max-w-7xl">
-					<div
-						className={cn(
-							'border-accent/20 bg-accent/5 text-accent/70 mb-4 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium tracking-widest uppercase'
-						)}
-					>
+					<div className="border-accent/20 bg-accent/5 text-accent/70 mb-4 inline-flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium tracking-widest uppercase">
 						<span className="bg-accent/60 h-1.5 w-1.5 rounded-full" />
 						Live Embed
 					</div>
 					<h2
-						className="text-foreground font-black leading-none"
+						className="text-foreground font-medium text-balance"
 						style={{
 							fontSize: 'var(--text-headline)',
-							letterSpacing: 'var(--tracking-headline)'
+							letterSpacing: 'var(--tracking-headline)',
+							lineHeight: 1.1
 						}}
 					>
-						Explore the product,
-						<br className="hidden sm:block" /> not a photo of it.
+						Explore the product, not a photo of it.
 					</h2>
-					<p className="text-muted-foreground mt-4 max-w-xl text-lg">
+					<p className="text-muted-foreground mt-4 max-w-xl text-lg text-pretty">
 						Scroll through a live Vectreal embed. Each chapter reveals a
 						different camera angle — triggered by a single SDK call.
 					</p>
@@ -104,31 +80,6 @@ export function ScrollytellViewerSection() {
 					</Suspense>
 				) : (
 					<div className="h-screen w-full bg-black" />
-				)}
-
-				{/* Annotation chips — appear once viewer is visible */}
-				{isViewerVisible && !prefersReducedMotion && (
-					<motion.div
-						variants={staggerContainer}
-						initial="hidden"
-						animate="visible"
-						className="pointer-events-none absolute inset-0 hidden md:block"
-						aria-hidden="true"
-					>
-						{ANNOTATION_CHIPS.map((chip) => (
-							<motion.div
-								key={chip.label}
-								variants={fadeUp}
-								className={cn(
-									'bg-surface-2/90 border-surface-border absolute rounded-full border px-3 py-1.5 text-xs font-medium backdrop-blur-md',
-									'text-foreground/80',
-									chip.position
-								)}
-							>
-								{chip.label}
-							</motion.div>
-						))}
-					</motion.div>
 				)}
 			</motion.div>
 

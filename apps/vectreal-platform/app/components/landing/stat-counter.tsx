@@ -55,11 +55,16 @@ export function StatCounter({
 				className
 			)}
 		>
-			<div className="text-foreground font-black leading-none tracking-tight"
-				style={{ fontSize: 'var(--text-display)' }}>
+			<div
+				className="text-foreground font-medium leading-none"
+				style={{
+					fontSize: 'var(--text-display)',
+					letterSpacing: '-0.03em'
+				}}
+			>
 				{prefix}
 				<motion.span>{rounded}</motion.span>
-				<span className="text-accent font-light">{suffix}</span>
+				<span className="text-accent">{suffix}</span>
 			</div>
 			<p className="text-muted-foreground max-w-[22ch] text-base leading-snug">
 				{label}
