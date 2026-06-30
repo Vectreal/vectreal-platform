@@ -4,7 +4,9 @@ import { memo } from 'react'
 
 export const defaultBoundsOptions = {
 	fit: true,
-	clip: true,
+	// near/far are managed per-frame in SceneModel (dynamic clipping); keep drei
+	// from also writing them so there is a single source of truth.
+	clip: false,
 	margin: 1.5,
 	maxDuration: 0
 } satisfies BoundsProps
