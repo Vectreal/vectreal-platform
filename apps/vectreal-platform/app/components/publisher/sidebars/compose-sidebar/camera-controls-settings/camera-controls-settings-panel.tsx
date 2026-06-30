@@ -415,52 +415,16 @@ const CameraControlsSettingsPanel = memo(() => {
 		return requestSceneCameraSnapshot()
 	}, [requestSceneCameraSnapshot])
 
-	const persistSnapshotOnCamera = useCallback(
-		(snapshot: null | SceneCameraSnapshot, cameraId: string) => {
-			setCamera((prev) => {
-				const normalized = normalizeCameraState(prev)
-				if (!cameraId) return normalized
-
-				return withImplicitFirstCameraDefault({
-					...normalized,
-					cameras: (normalized.cameras ?? []).map((entry) =>
-						entry.cameraId === cameraId
-							? applySnapshotToCamera(entry, snapshot)
-							: entry
-					)
-				})
-			})
-		},
-		[setCamera]
-	)
-
 	const handleSelectCamera = useCallback(
-		async (nextCameraId: string) => {
-			if (!isPreviewMode) {
-				// Navigate mode: just change the editor selection, don't snap the viewport
-				setSelectedCameraId(nextCameraId)
-				return
-			}
-
-			// Preview mode: save current viewport to current camera, then transition to the new one
-			const snapshot = await captureCurrentViewSnapshot()
-			const currentCameraId = resolveEditorTargetCameraId(
-				normalizedCamera,
-				selectedCameraId
-			)
-			if (currentCameraId) {
-				persistSnapshotOnCamera(snapshot, currentCameraId)
-			}
+		(nextCameraId: string) => {
+			// Persisting the live viewport is reserved for the explicit "Set camera to
+			// current view" button. Selecting a camera — including reviewing saved
+			// cameras in preview mode ("Lock editing and review saved cameras") — only
+			// changes the active selection and transitions the viewport; it never
+			// overwrites a saved camera with the current free-orbit view.
 			setSelectedCameraId(nextCameraId)
 		},
-		[
-			captureCurrentViewSnapshot,
-			isPreviewMode,
-			normalizedCamera,
-			persistSnapshotOnCamera,
-			selectedCameraId,
-			setSelectedCameraId
-		]
+		[setSelectedCameraId]
 	)
 
 	const handleAddCamera = useCallback(async () => {
@@ -497,17 +461,13 @@ const CameraControlsSettingsPanel = memo(() => {
 				name: newName
 			}
 
+			// The new camera adopts the current view as its initial pose, but existing
+			// cameras are left untouched — only the explicit "Set camera to current
+			// view" button overwrites a saved camera with the live viewport.
 			return withImplicitFirstCameraDefault({
 				...normalized,
 				activeCameraId: newCameraId,
-				cameras: [
-					...(normalized.cameras ?? []).map((entry) => {
-						return entry.cameraId === currentCameraId
-							? applySnapshotToCamera(entry, snapshot)
-							: entry
-					}),
-					newCamera
-				]
+				cameras: [...(normalized.cameras ?? []), newCamera]
 			})
 		})
 		if (newCameraId) setSelectedCameraId(newCameraId)
@@ -978,7 +938,11 @@ const CameraControlsSettingsPanel = memo(() => {
 					<Button
 						variant="secondary"
 						disabled={isCameraEditingLocked}
-						className={`w-full transition-colors duration-300${capturedView ? 'bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400' : ''}`}
+						className={cn(
+						'w-full transition-colors duration-300',
+						capturedView &&
+							'bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400'
+					)}
 						onClick={() => {
 							void handleCaptureCurrentView()
 						}}
@@ -986,10 +950,16 @@ const CameraControlsSettingsPanel = memo(() => {
 					>
 						<span className="relative h-4 w-4 shrink-0">
 							<Camera
-								className={`absolute inset-0 h-4 w-4 transition-all duration-200${capturedView ? 'scale-50 opacity-0' : 'scale-100 opacity-100'}`}
+								className={cn(
+								'absolute inset-0 h-4 w-4 transition-all duration-200',
+								capturedView ? 'scale-50 opacity-0' : 'scale-100 opacity-100'
+							)}
 							/>
 							<Check
-								className={`absolute inset-0 h-4 w-4 transition-all duration-200${capturedView ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`}
+								className={cn(
+								'absolute inset-0 h-4 w-4 transition-all duration-200',
+								capturedView ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
+							)}
 							/>
 						</span>
 						<span className="transition-all duration-200">

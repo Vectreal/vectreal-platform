@@ -1,7 +1,15 @@
 import { useBounds } from '@react-three/drei'
-import { useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
-import { Box3, Euler, Mesh, Object3D, PerspectiveCamera, Vector3 } from 'three'
+import {
+	Box3,
+	Euler,
+	Mesh,
+	Object3D,
+	PerspectiveCamera,
+	Sphere,
+	Vector3
+} from 'three'
 
 import type {
 	SceneScreenshotCapture,
@@ -133,6 +141,59 @@ const SceneModel = memo((props: ModelProps) => {
 		if (rawDiagonal > max) return max / rawDiagonal
 		return 1
 	}, [rawDiagonal, normalizationOptions])
+
+	// Dynamic camera clipping planes. drei's one-shot `.clip()` sets near/far tight
+	// to the bounding box at the fit distance, then clips the model the moment the
+	// camera zooms closer (and normalization, which rescales the model, left stale
+	// planes behind). Instead, recompute near/far every frame from the model's
+	// bounding sphere and the live camera distance: the planes stay tight enough for
+	// good depth precision yet always contain the model. Never persisted.
+	//
+	// The sphere is read from the rendered group's WORLD bounds (the model sits
+	// inside a <Center> wrapper that offsets it, so a local-bounds approximation
+	// would mis-place the center). It only changes when the model or its scale
+	// changes, so it is cached and recomputed lazily.
+	const focusGroupRef = useRef<Object3D>(null)
+	const clipSphereRef = useRef(new Sphere())
+	const clipSphereDirtyRef = useRef(true)
+
+	useEffect(() => {
+		clipSphereDirtyRef.current = true
+	}, [object, normalizedScale])
+
+	useFrame(() => {
+		const perspectiveCamera = camera as PerspectiveCamera
+		if (!perspectiveCamera.isPerspectiveCamera) {
+			return
+		}
+
+		if (clipSphereDirtyRef.current && focusGroupRef.current) {
+			focusGroupRef.current.updateWorldMatrix(true, true)
+			new Box3()
+				.setFromObject(focusGroupRef.current)
+				.getBoundingSphere(clipSphereRef.current)
+			if (clipSphereRef.current.radius > 0) {
+				clipSphereDirtyRef.current = false
+			}
+		}
+
+		const sphere = clipSphereRef.current
+		if (sphere.radius <= 0) {
+			return
+		}
+
+		const distance = perspectiveCamera.position.distanceTo(sphere.center)
+		const radius = sphere.radius
+		// Margins keep the model's front/back just inside the planes.
+		const near = Math.max(distance - radius * 1.1, radius * 0.001, 1e-4)
+		const far = distance + radius * 1.1
+
+		if (perspectiveCamera.near !== near || perspectiveCamera.far !== far) {
+			perspectiveCamera.near = near
+			perspectiveCamera.far = far
+			perspectiveCamera.updateProjectionMatrix()
+		}
+	})
 
 	useEffect(() => {
 		if (rawDiagonal > 0) onRawDiagonalComputed?.(rawDiagonal)
@@ -296,7 +357,9 @@ const SceneModel = memo((props: ModelProps) => {
 		const isFirstMount = !mountedRef.current
 		mountedRef.current = true
 		if (isFirstMount && !normalizationOptions?.enabled) return
-		bounds.refresh(object).clip().fit()
+		// Framing only — near/far are handled dynamically by the useFrame above, so
+		// rescaling/normalization no longer leaves stale clipping planes behind.
+		bounds.refresh(object).fit()
 	}, [bounds, normalizationOptions?.enabled, object])
 
 	useEffect(() => {
@@ -308,7 +371,12 @@ const SceneModel = memo((props: ModelProps) => {
 	}, [captureScreenshot, onScreenshotCaptureReady])
 
 	return (
-		<group name="focus-target" scale={normalizedScale} dispose={null}>
+		<group
+			ref={focusGroupRef}
+			name="focus-target"
+			scale={normalizedScale}
+			dispose={null}
+		>
 			<primitive object={object} />
 		</group>
 	)
