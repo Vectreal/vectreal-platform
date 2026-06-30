@@ -48,7 +48,7 @@ jobs:
 
       - name: Checkout repository
         if: ${{ steps.release.outputs.release_created == 'true' }}
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Build package-grouped root release notes
         if: ${{ steps.release.outputs.release_created == 'true' }}
@@ -124,7 +124,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
