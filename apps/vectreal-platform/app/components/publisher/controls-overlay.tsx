@@ -80,7 +80,8 @@ const OverlayControls = ({
 	// gap until the route param updates to the new scene id post-navigation.
 	const sessionSavedSceneId = useAtomValue(lastSavedSceneIdAtom)
 	const { hasUnsavedLocationChange } = useLocationChangeState()
-	const { requestSceneScreenshot } = usePublisherViewerCapture()
+	const { requestSceneScreenshot, requestShadowBake } =
+		usePublisherViewerCapture()
 
 	// Centralized scene loader - single source of truth (must be inside ModelProvider)
 	const { saveSceneSettings, saveAvailability, persistPendingSceneDraft } =
@@ -89,7 +90,8 @@ const OverlayControls = ({
 			userId: user?.id,
 			initialSceneAggregate: sceneAggregate as SceneAggregateResponse | null,
 			sceneMeta: sceneAggregate?.meta ?? null,
-			requestSceneScreenshot
+			requestSceneScreenshot,
+			requestShadowBake
 		})
 
 	const {

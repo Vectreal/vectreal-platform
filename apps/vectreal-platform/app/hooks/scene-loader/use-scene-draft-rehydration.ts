@@ -22,14 +22,14 @@ export const useSceneDraftRehydration = ({
 		initialSceneAggregate,
 		fileModel,
 		isFileLoading,
-		locationPathname,
-		onRestoreHandled
+		locationPathname
 	} = restoreRequest
 	const {
 		setIsDownloading,
 		loadFromData,
 		setSceneMetaState,
-		setLastSavedSceneMeta
+		setLastSavedSceneMeta,
+		onRestoreHandled
 	} = hydrationActions
 	const {
 		inferOptimizationPreset,

@@ -25,7 +25,8 @@ import {
 	defaultControlsOptions,
 	defaultEnvOptions,
 	defaultNormalizationOptions,
-	defaultShadowOptions
+	defaultShadowOptions,
+	normalizeShadowOptions
 } from '../constants/viewer-defaults'
 import { buildSceneUploadFailedAnalyticsProps } from '../lib/domain/analytics/scene-events'
 import {
@@ -55,6 +56,7 @@ import {
 	optimizationRuntimeInitialState
 } from '../lib/stores/scene-optimization-store'
 import {
+	bakedShadowSourceAtom,
 	boundsAtom,
 	cameraAtom,
 	controlsAtom,
@@ -68,7 +70,7 @@ import {
 
 import type { SceneAggregateResponse } from '../types/api'
 import type { SceneMetaState } from '../types/publisher-config'
-import type { SceneScreenshotOptions } from '@vctrl/viewer'
+import type { SceneScreenshotOptions, ShadowBakeResult } from '@vctrl/viewer'
 
 export type {
 	SaveLocationTarget,
@@ -88,9 +90,9 @@ export interface UseSceneLoaderParams {
 	requestSceneScreenshot?: (
 		options?: SceneScreenshotOptions
 	) => Promise<null | string>
+	requestShadowBake?: () => Promise<ShadowBakeResult | null>
 }
 
-const DEFAULT_MAX_CONCURRENT_SCENE_ASSET_UPLOADS = 4
 const DEFAULT_THUMBNAIL_CAPTURE_OPTIONS = {
 	width: 1280,
 	height: 720,
@@ -144,14 +146,16 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		userId,
 		initialSceneAggregate = null,
 		sceneMeta = null,
-		requestSceneScreenshot
+		requestSceneScreenshot,
+		requestShadowBake
 	} = params === null
 		? {
 				sceneId: null,
 				userId: undefined,
 				initialSceneAggregate: null,
 				sceneMeta: null,
-				requestSceneScreenshot: undefined
+				requestSceneScreenshot: undefined,
+				requestShadowBake: undefined
 			}
 		: params
 
@@ -230,6 +234,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	const [controls, setControls] = useAtom(controlsAtom)
 	const [shadows, setShadows] = useAtom(shadowsAtom)
 	const [normalization, setNormalization] = useAtom(normalizationAtom)
+	const setBakedShadowSource = useSetAtom(bakedShadowSourceAtom)
 	const setRawModelDiagonal = useSetAtom(rawModelDiagonalAtom)
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 
@@ -339,6 +344,21 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			return null
 		}
 	}, [currentSceneId, camera.cameras, requestSceneScreenshot])
+
+	const captureShadowBake = useCallback(async (): Promise<ShadowBakeResult | null> => {
+		if (!requestShadowBake) {
+			return null
+		}
+		try {
+			return await requestShadowBake()
+		} catch (error) {
+			console.warn('[scene-settings] shadow bake capture failed', {
+				sceneId: currentSceneId || null,
+				error
+			})
+			return null
+		}
+	}, [currentSceneId, requestShadowBake])
 
 	// Get current settings from atoms
 	const currentSettings: SceneSettings = useMemo(
@@ -555,7 +575,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			setInteractions(settings.interactions)
 			setCamera(settings.camera || defaultCameraOptions)
 			setControls(settings.controls || defaultControlsOptions)
-			setShadows(settings.shadows || defaultShadowOptions)
+			setShadows(normalizeShadowOptions(settings.shadows))
 			setNormalization(settings.normalization || defaultNormalizationOptions)
 			setRawModelDiagonal(0)
 			setHotspots(settings.hotspots ?? [])
@@ -566,7 +586,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				interactions: settings.interactions,
 				camera: settings.camera || defaultCameraOptions,
 				controls: settings.controls || defaultControlsOptions,
-				shadows: settings.shadows || defaultShadowOptions,
+				shadows: normalizeShadowOptions(settings.shadows),
 				normalization: settings.normalization || defaultNormalizationOptions,
 				hotspots: settings.hotspots
 			}
@@ -621,6 +641,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 					aggregate,
 					hydrateOptimizationState,
 					applySceneSettings,
+					applyBakedShadowSource: setBakedShadowSource,
 					setSceneMetaState,
 					setLastSavedSceneMeta,
 					loadFromData
@@ -639,6 +660,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		[
 			hydrateOptimizationState,
 			applySceneSettings,
+			setBakedShadowSource,
 			setSceneMetaState,
 			setLastSavedSceneMeta,
 			loadFromData,
@@ -706,7 +728,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		createRequestId,
 		prepareGltfDocumentForUpload,
 		captureSceneThumbnail,
-		maxConcurrentAssetUploadsDefault: DEFAULT_MAX_CONCURRENT_SCENE_ASSET_UPLOADS
+		captureShadowBake
 	}
 
 	const { saveSceneSettings, saveAvailability } = useSceneSaveFlow({
@@ -723,15 +745,15 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		initialSceneAggregate,
 		fileModel: file?.model,
 		isFileLoading,
-		locationPathname: location.pathname,
-		onRestoreHandled: handleRestoreHandled
+		locationPathname: location.pathname
 	}
 
 	const draftHydrationActions = {
 		setIsDownloading,
 		loadFromData,
 		setSceneMetaState,
-		setLastSavedSceneMeta
+		setLastSavedSceneMeta,
+		onRestoreHandled: handleRestoreHandled
 	}
 
 	const draftOptimizationActions = {

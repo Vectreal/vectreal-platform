@@ -1,4 +1,5 @@
 import type {
+	AccumulativeShadowsProps,
 	BoundsProps,
 	CameraProps,
 	ControlsProps,
@@ -59,14 +60,70 @@ export const defaultEnvOptions: EnvironmentProps = {
 	backgroundBlurriness: 0.5
 }
 
-export const defaultShadowOptions: ShadowsProps = {
-	type: 'contact',
+export const defaultShadowOptions: AccumulativeShadowsProps = {
+	type: 'accumulative',
 	enabled: false,
-	opacity: 0.4,
-	blur: 0.1,
-	scale: 1,
+	temporal: true,
+	// Fewer frames settle faster / appear sooner (see scene-shadows.tsx).
+	frames: 48,
+	// alphaTest is the transient/fallback cutoff used while the bake ramps; once it
+	// settles the viewer auto-calibrates it to the measured lit-plane brightness.
+	alphaTest: 3.0,
+	// Manual trim on that auto cutoff (1 = pure auto). Surfaced as Advanced "Cutoff".
+	cutoffScale: 1,
+	opacity: 0.9,
+	// Tight to the model footprint so the shadow stays crisp (see scene-shadows.tsx).
+	scale: 2.5,
+	resolution: 1024,
+	colorBlend: 2,
 	color: '#000000',
-	smooth: true
+	// Screen-space crevice occlusion (N8AO). Opt-in: real-time SSAO runs every
+	// rendered frame, so the default is the zero-idle-cost baked shadow only.
+	ao: false,
+	aoIntensity: 1.4,
+	// Soft contact/ground shadow (drei ContactShadows) approximating ground AO.
+	// Opt-in; baked once. Tuned via blur (softness) and opacity (darkness).
+	contact: {
+		enabled: false,
+		opacity: 0.6,
+		blur: 3,
+		scale: 1.5,
+		reach: 0.35
+	},
+	light: {
+		intensity: Math.PI * 2,
+		amount: 8,
+		// Penumbra softness, in model-size units.
+		radius: 0.8,
+		// Hemisphere fill fraction — surfaced as "Darkness" (less fill = darker).
+		ambient: 0.3,
+		// Straight overhead by default — minimal initial shadow (see scene-shadows.tsx).
+		position: [0, 2.5, 0],
+		bias: 0.001
+	}
+}
+
+/**
+ * Coerces stored shadow settings to a valid accumulative config. Contact shadows
+ * are now an internal animating-only fallback (never user-selected), so legacy
+ * `contact` or partial configs are normalized to the accumulative defaults while
+ * preserving `enabled`. Accumulative configs are merged over the defaults so a
+ * partial save still fills in any missing fields.
+ */
+export const normalizeShadowOptions = (stored?: ShadowsProps): ShadowsProps => {
+	if (stored?.type === 'accumulative') {
+		return {
+			...defaultShadowOptions,
+			...stored,
+			light: { ...defaultShadowOptions.light, ...stored.light },
+			contact: { ...defaultShadowOptions.contact, ...stored.contact }
+		}
+	}
+
+	return {
+		...defaultShadowOptions,
+		enabled: stored?.enabled ?? defaultShadowOptions.enabled
+	}
 }
 
 export const defaultNormalizationOptions: Required<NormalizationOptions> = {

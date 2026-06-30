@@ -14,7 +14,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { toSerializedAssetBytes } from '@vctrl/core'
+import { PERSISTED_BAKE_FILENAME, toSerializedAssetBytes } from '@vctrl/core'
 
 import type { InputFileOrDirectory, ServerSceneData } from '../types'
 
@@ -54,6 +54,14 @@ export function reconstructGltfFiles(
 	if (data.assetData && typeof data.assetData === 'object') {
 		for (const [, assetInfo] of Object.entries(data.assetData)) {
 			const { fileName, mimeType } = assetInfo
+
+			// The persisted shadow bake rides in the same asset map but is not
+			// referenced by the glTF; skip it so it isn't handed to the loader as a
+			// stray file. It is consumed separately as the shadow plane texture.
+			if (fileName === PERSISTED_BAKE_FILENAME) {
+				continue
+			}
+
 			const uint8Array = toSerializedAssetBytes(assetInfo)
 
 			// Create a Blob from the binary data

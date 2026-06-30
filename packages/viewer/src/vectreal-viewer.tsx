@@ -18,6 +18,7 @@ import { Center } from '@react-three/drei'
 import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
 import {
+	AccumulativeShadowsProps,
 	BoundsProps,
 	CameraProps,
 	ControlsProps,
@@ -51,8 +52,10 @@ import {
 import { useViewerLoading } from './hooks/use-viewer-loading'
 
 import type {
+	BakedShadow,
 	SceneCameraSnapshotCapture,
 	SceneScreenshotCapture,
+	ShadowBakeCapture,
 	ViewerCommand,
 	ViewerCommandExecutor,
 	ViewerInteractionEvent,
@@ -60,10 +63,13 @@ import type {
 } from './types/viewer-types'
 
 export type {
+	BakedShadow,
 	SceneCameraSnapshot,
 	SceneCameraSnapshotCapture,
 	SceneScreenshotCapture,
 	SceneScreenshotOptions,
+	ShadowBakeCapture,
+	ShadowBakeResult,
 	ViewerCommandExecutor,
 	ViewerCommand,
 	ViewerInteractionEvent,
@@ -71,10 +77,14 @@ export type {
 } from './types/viewer-types'
 
 export interface VectrealViewerProps extends PropsWithChildren {
+	// --- Content ---
+
 	/**
 	 * The 3D model to render in the viewer. (three.js `Object3D`)
 	 */
 	model?: Object3D
+
+	// --- Container & appearance ---
 
 	/**
 	 * An optional className to apply to the outermost container of the viewer.
@@ -89,6 +99,8 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 */
 	theme?: 'light' | 'dark' | 'system'
 
+	// --- Performance ---
+
 	/**
 	 * Whether to render the canvas only when visible in viewport.
 	 * Improves performance by not rendering off-screen scenes.
@@ -102,6 +114,8 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * Default: true
 	 */
 	enablePostProcessing?: boolean
+
+	// --- Scene configuration ---
 
 	/**
 	 * Options for the scene bounds.
@@ -140,6 +154,45 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 */
 	gridOptions?: GridProps
 
+	// --- Editor affordances ---
+	// Editing-surface features (e.g. the publisher). Public/embedded viewers omit
+	// these. See the package README for the slim-embed surface.
+
+	/**
+	 * When true, renders an in-scene draggable handle for aiming the shadow light.
+	 * Intended for editing surfaces (e.g. the publisher), not public viewers.
+	 */
+	shadowLightEditable?: boolean
+
+	/**
+	 * When true, the accumulative shadow bakes in a single pass on mount instead of
+	 * fading in across frames, so it is present immediately when a scene opens.
+	 * Intended for read-only/preview surfaces; the editor leaves this off to keep
+	 * the smooth temporal fade-in while tweaking. Default: false.
+	 */
+	staticShadowBake?: boolean
+
+	/**
+	 * A persisted accumulative-shadow bake. When present and still valid for the
+	 * current shadow settings + model, the viewer renders the stored texture and
+	 * skips re-baking entirely (no recomputation on load).
+	 */
+	bakedShadow?: BakedShadow
+
+	/**
+	 * Receives a function that captures the settled shadow bake as a density PNG,
+	 * for persistence. Intended for editing surfaces that save scenes.
+	 */
+	onShadowBakeReady?: (capture: ShadowBakeCapture | null) => void
+
+	/**
+	 * Called with a new shadow light position (model-size units) when the in-scene
+	 * handle is dragged. Store this back into `shadowsOptions.light.position`.
+	 */
+	onShadowLightChange?: (position: [number, number, number]) => void
+
+	// --- Slots ---
+
 	/**
 	 * Slot for the info popover component.
 	 */
@@ -154,6 +207,8 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * Optional thumbnail rendered as a blurred backdrop under the loader.
 	 */
 	loadingThumbnail?: ViewerLoadingThumbnail
+
+	// --- Callbacks & events ---
 
 	/**
 	 * Callback function to handle screenshot generation (accept data URL via param).
@@ -212,27 +267,39 @@ export interface VectrealViewerProps extends PropsWithChildren {
  */
 const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	const {
-		className,
+		// Content
 		children,
+		// Container & appearance
+		className,
 		theme = 'system',
-		cameraOptions,
+		// Performance
+		enableViewportRendering = true,
+		enablePostProcessing = true,
+		// Scene configuration
 		boundsOptions,
-		envOptions,
-		// gridOptions,
+		cameraOptions,
 		controlsOptions,
+		envOptions,
 		shadowsOptions,
 		normalizationOptions,
+		// gridOptions,
+		// Editor affordances
+		shadowLightEditable,
+		staticShadowBake = false,
+		bakedShadow,
+		onShadowBakeReady,
+		onShadowLightChange,
+		// Slots
 		popover,
 		loadingThumbnail,
+		loader = <DefaultSpinner />,
+		// Callbacks & events
 		onScreenshot,
 		onScreenshotCaptureReady,
 		onCameraSnapshotCaptureReady,
 		onInteractionEvent,
 		onCommandExecutorReady,
-		onRawDiagonalComputed,
-		enableViewportRendering = true,
-		enablePostProcessing = true,
-		loader = <DefaultSpinner />
+		onRawDiagonalComputed
 	} = props
 
 	const hasContent = !!(model || children)
@@ -319,6 +386,11 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		isInitialFramingComplete
 	)
 	const shadowsEnabled = shadowsOptions?.enabled ?? false
+	// AO config lives on the accumulative shadow settings. It's gated on shadows
+	// being enabled so toggling shadows off also tears down the AO composer.
+	const accumulativeShadows =
+		shadowsOptions?.type === 'accumulative' ? shadowsOptions : undefined
+	const aoEnabled = shadowsEnabled && (accumulativeShadows?.ao ?? false)
 	return (
 		<Suspense fallback={loader}>
 			<Canvas
@@ -339,7 +411,10 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					/>
 				}
 				enableViewportRendering={enableViewportRendering}
-				shadows={shadowsEnabled}
+				// 'percentage' = PCFShadowMap. AccumulativeShadows bakes its own soft
+				// shadow from its RandomizedLight, so the realtime filter just needs to
+				// be enabled. (A bare `shadows` would use the deprecated PCFSoftShadowMap.)
+				shadows={shadowsEnabled ? 'percentage' : false}
 				gl={{ antialias: false, powerPreference: 'low-power' }}
 			>
 				<Suspense fallback={null}>
@@ -348,7 +423,13 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 							{/* <SceneGrid {...gridOptions} /> */}
 							<SceneEnvironment {...envOptions} />
 							{/* <Perf /> */}
-							{enablePostProcessing ? <ScenePostProcessing /> : null}
+							{enablePostProcessing ? (
+								<ScenePostProcessing
+									ao={aoEnabled}
+									aoIntensity={accumulativeShadows?.aoIntensity}
+									model={model}
+								/>
+							) : null}
 							<SceneControls
 								{...controlsOptions}
 								enabledOverride={controlsEnabledOverride}
@@ -395,7 +476,15 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 										/>
 									)}
 								</Center>
-								<SceneShadows {...shadowsOptions} />
+								<SceneShadows
+									model={model}
+									{...(shadowsOptions as Partial<AccumulativeShadowsProps>)}
+									lightEditable={shadowLightEditable}
+									onLightChange={onShadowLightChange}
+									staticBake={staticShadowBake}
+									bakedShadow={bakedShadow}
+									onShadowBakeReady={onShadowBakeReady}
+								/>
 								{children}
 							</SceneBounds>
 						</>

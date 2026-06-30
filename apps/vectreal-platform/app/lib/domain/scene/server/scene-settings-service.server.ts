@@ -1,4 +1,5 @@
 import { JSONDocument } from '@gltf-transform/core'
+import { SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { and, eq, inArray } from 'drizzle-orm'
 
 import { updateSceneMetadata } from './scene-folder-repository.server'
@@ -307,6 +308,13 @@ class SceneSettingsService {
 				return { ...existingSettings, unchanged: true }
 			}
 
+			// Assets this scene no longer links (superseded bake/thumbnail, textures
+			// dropped by a model change). Candidates for GC once the new links commit.
+			const newAssetIdSet = new Set(sceneAssetIds)
+			const removedAssetIds = existingAssetIds.filter(
+				(id) => !newAssetIdSet.has(id)
+			)
+
 			const savedSettings = await upsertSceneSettings(tx, {
 				sceneId: updatedScene.id,
 				createdBy: userId,
@@ -333,7 +341,7 @@ class SceneSettingsService {
 				})
 			}
 
-			return { savedSettings, unchanged: false as const }
+			return { savedSettings, unchanged: false as const, removedAssetIds }
 		})
 
 		await this.updateSceneAggregateMetadata(sceneId, userId, meta)
@@ -342,7 +350,39 @@ class SceneSettingsService {
 			return saveResult
 		}
 
+		// Post-commit so storage deletes stay out of the DB transaction.
+		await this.garbageCollectUnreferencedAssets(saveResult.removedAssetIds ?? [])
+
 		return saveResult.savedSettings
+	}
+
+	/**
+	 * Deletes assets that were unlinked from a scene and are no longer referenced by
+	 * ANY scene (storage object + DB row). Best-effort and post-commit: a GC failure
+	 * never fails the save. The cross-scene reference check guards assets shared via
+	 * the project's dedup folder (e.g. an identical texture used by another scene).
+	 */
+	private async garbageCollectUnreferencedAssets(candidateAssetIds: string[]) {
+		if (candidateAssetIds.length === 0) return
+
+		try {
+			const stillReferenced = await this.db
+				.select({ assetId: sceneAssets.assetId })
+				.from(sceneAssets)
+				.where(inArray(sceneAssets.assetId, candidateAssetIds))
+
+			const referenced = new Set(stillReferenced.map((row) => row.assetId))
+			const orphaned = candidateAssetIds.filter((id) => !referenced.has(id))
+
+			if (orphaned.length > 0) {
+				await deleteAssets(orphaned)
+			}
+		} catch (error) {
+			console.warn('[scene-settings] unreferenced asset GC failed', {
+				candidateCount: candidateAssetIds.length,
+				error
+			})
+		}
 	}
 
 	/**
@@ -441,8 +481,12 @@ class SceneSettingsService {
 
 		const { settings, assets: sceneAssetsData } = result
 
-		// Extract asset IDs
-		const assetIds = sceneAssetsData.map((asset) => asset.id)
+		// Extract asset IDs to download into the aggregate. The thumbnail is tracked
+		// as a scene asset (for GC) but served by URL, not rendered, so it is excluded
+		// from the inlined render data to keep the aggregate lean.
+		const assetIds = sceneAssetsData
+			.filter((asset) => asset.name !== SCENE_THUMBNAIL_FILENAME)
+			.map((asset) => asset.id)
 
 		// Download asset data from cloud storage
 		let gltfJson: ExtendedGLTFDocument | null = null
