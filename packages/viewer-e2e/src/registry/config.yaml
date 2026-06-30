@@ -1,0 +1,45 @@
+# Verdaccio configuration for the @vctrl/viewer packaging e2e.
+# This registry is ephemeral: storage lives under a tmp dir created by the
+# orchestration script and is wiped on every run. It proxies npmjs for any
+# package that is not published locally so transitive deps resolve normally.
+
+storage: ./storage
+max_body_size: 200mb
+
+uplinks:
+  npmjs:
+    url: https://registry.npmjs.org/
+    cache: true
+    maxage: 30m
+
+packages:
+  # Publish the workspace packages locally only (never proxy them to npm),
+  # so the e2e always exercises the freshly built artifacts.
+  '@vctrl/*':
+    access: $all
+    publish: $all
+    unpublish: $all
+
+  '@shared/*':
+    access: $all
+    publish: $all
+    unpublish: $all
+
+  '**':
+    access: $all
+    publish: $all
+    proxy: npmjs
+
+# Allow unauthenticated publish/install (the registry is local and ephemeral).
+auth:
+  htpasswd:
+    file: ./htpasswd
+    max_users: -1
+
+log:
+  type: stdout
+  format: pretty
+  level: warn
+
+# Speed up CI: do not check for verdaccio self-updates.
+self_path: ./

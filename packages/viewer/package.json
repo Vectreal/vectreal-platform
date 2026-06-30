@@ -28,7 +28,7 @@
 	},
 	"license": "AGPL-3.0-only",
 	"main": "./index.js",
-	"module": "./index.mjs",
+	"module": "./index.js",
 	"types": "./index.d.ts",
 	"type": "module",
 	"publishConfig": {
@@ -51,13 +51,15 @@
 		"@react-three/drei": "^10.0.7",
 		"@react-three/fiber": "^9.1.2",
 		"@react-three/postprocessing": "^3.0.4",
-		"postprocessing": "^6.37.3",
-		"@vctrl/core": "workspace:*",
-		"@shared/components": "workspace:*",
-		"@shared/utils": "workspace:*"
+		"postprocessing": "^6.37.3"
 	},
 	"peerDependencies": {
 		"three": "^0.177.0",
 		"react": "^18.0.0 || ^19.0.0"
+	},
+	"devDependencies": {
+		"@vctrl/core": "workspace:*",
+		"@shared/components": "workspace:*",
+		"@shared/utils": "workspace:*"
 	}
 }

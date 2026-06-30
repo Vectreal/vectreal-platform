@@ -9,6 +9,12 @@ import tseslint from 'typescript-eslint'
 
 export default defineConfig(tseslint.configs.recommended, [
 	{
+		// Throwaway consumer app for the @vctrl/viewer packaging e2e. Its deps
+		// (@vctrl/viewer, vite, react) only exist in the tmp install created at
+		// runtime, so it must not participate in workspace linting.
+		ignores: ['packages/viewer-e2e/src/consumer-template/**']
+	},
+	{
 		files: ['**/*.{js,mjs,cjs,jsx}'],
 		ignores: [
 			'**/node_modules/**',

@@ -25,6 +25,7 @@ jobs:
       core_version: ${{ steps.release.outputs['packages/core--version'] }}
       hooks_version: ${{ steps.release.outputs['packages/hooks--version'] }}
       viewer_version: ${{ steps.release.outputs['packages/viewer--version'] }}
+      embed_version: ${{ steps.release.outputs['packages/embed--version'] }}
 
     steps:
       - name: Create GitHub App token
@@ -57,6 +58,7 @@ jobs:
           CORE_VERSION: ${{ steps.release.outputs['packages/core--version'] }}
           HOOKS_VERSION: ${{ steps.release.outputs['packages/hooks--version'] }}
           VIEWER_VERSION: ${{ steps.release.outputs['packages/viewer--version'] }}
+          EMBED_VERSION: ${{ steps.release.outputs['packages/embed--version'] }}
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         shell: bash
         run: |
@@ -96,6 +98,9 @@ jobs:
             echo
             echo "### @vctrl/viewer (${VIEWER_VERSION:-unchanged})"
             extract_section "packages/viewer/CHANGELOG.md" "$VIEWER_VERSION"
+            echo
+            echo "### @vctrl/embed (${EMBED_VERSION:-unchanged})"
+            extract_section "packages/embed/CHANGELOG.md" "$EMBED_VERSION"
           } > release-notes.md
 
           gh release edit "$TAG_NAME" --notes-file release-notes.md
@@ -103,7 +108,11 @@ jobs:
   publish:
     name: Publish Released Packages to NPM
     needs: release-please
-    if: ${{ needs.release-please.outputs.root_release_created == 'true' }}
+    # Publish whenever release-please cuts ANY package release, not only when the
+    # root "." component bumps. The linked-versions plugin keeps @vctrl/* in sync,
+    # but a release can bump the packages without a root change — gating on the
+    # root previously skipped publishing entirely (npm stalled at 0.18.0).
+    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
     environment: packages-releasing
     runs-on: ubuntu-22.04
     permissions:
@@ -163,6 +172,44 @@ jobs:
       - name: Print Environment Info
         run: npx nx report
         shell: bash
+
+      - name: Build released packages
+        run: pnpm nx run-many -t build -p vctrl/core vctrl/hooks vctrl/viewer vctrl/embed
+        shell: bash
+
+      - name: Guard - no workspace specifiers in built manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          # release-please's node-workspace plugin must rewrite every `workspace:*`
+          # specifier to a real version before release. If any survive into a built
+          # manifest's consumer-facing fields, the published package is broken
+          # (uninstallable, or pnpm silently drops the dep). Fail loudly here rather
+          # than ship it. devDependencies are exempt: consumers never install them.
+          node -e '
+            const fs = require("fs");
+            const manifests = [
+              "build/packages/vctrl/core/package.json",
+              "build/packages/vctrl/hooks/package.json",
+              "build/packages/vctrl/viewer/package.json",
+              "build/packages/vctrl/embed/package.json"
+            ];
+            const fields = ["dependencies", "peerDependencies", "optionalDependencies"];
+            let bad = false;
+            for (const m of manifests) {
+              const pkg = JSON.parse(fs.readFileSync(m, "utf8"));
+              for (const f of fields) {
+                for (const [name, spec] of Object.entries(pkg[f] || {})) {
+                  if (typeof spec === "string" && spec.startsWith("workspace:")) {
+                    console.error(`LEAK: ${m} ${f}.${name} = ${spec}`);
+                    bad = true;
+                  }
+                }
+              }
+            }
+            if (bad) { console.error("Refusing to publish: unrewritten workspace specifiers."); process.exit(1); }
+            console.log("OK: no workspace specifiers in consumer-facing fields.");
+          '
 
       - name: Diagnostics - npm trusted publishing context
         shell: bash
@@ -255,6 +302,20 @@ jobs:
 
       - name: Publish @vctrl/viewer
         run: npx nx run vctrl/viewer:publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'
+
+      - name: Preflight pack @vctrl/embed
+        run: |
+          npx nx run vctrl/embed:copy-md
+          cd build/packages/vctrl/embed
+          npm pack --dry-run
+        shell: bash
+
+      - name: Publish @vctrl/embed
+        run: npx nx run vctrl/embed:publish
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

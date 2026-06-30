@@ -55,16 +55,17 @@ export default defineConfig({
 
 		rollupOptions: {
 			// External packages that should not be bundled into your library.
+			// @vctrl/core (and its subpaths) is externalized so consumers share a
+			// single published copy instead of bundling it (which also pulled core's
+			// node-only deps like sharp into this browser package).
 			external: [
 				'react',
 				'react-dom',
 				'three',
 				'react/jsx-runtime',
 				'file-saver',
-				'jszip'
-				// '@gltf-transform/core',
-				// '@gltf-transform/functions',
-				// '@gltf-transform/extensions'
+				'jszip',
+				/^@vctrl\/core(\/.*)?$/
 			],
 			output: {
 				globals: {

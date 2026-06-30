@@ -45,5 +45,10 @@
 			"@vctrl/embed": ["./packages/embed/src/index.ts"]
 		}
 	},
-	"exclude": ["node_modules", "tmp", "**/public/**/*"]
+	"exclude": [
+		"node_modules",
+		"tmp",
+		"**/public/**/*",
+		"packages/viewer-e2e/src/consumer-template"
+	]
 }

@@ -1,0 +1,84 @@
+name: CI - Viewer Packaging E2E
+
+# Installs and renders the *published* @vctrl/viewer tarball from a local
+# Verdaccio registry to catch packaging (bad externals, missing deps,
+# unresolved imports) and runtime-crash regressions before they reach an
+# integration site. Heavier than the quality gate, so it runs only when the
+# viewer or its workspace deps change.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'packages/viewer/**'
+      - 'packages/viewer-e2e/**'
+      - 'packages/core/**'
+      - 'packages/hooks/**'
+      - 'shared/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/ci-viewer-e2e.yaml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/viewer/**'
+      - 'packages/viewer-e2e/**'
+      - 'packages/core/**'
+      - 'packages/hooks/**'
+      - 'shared/**'
+      - '.github/workflows/ci-viewer-e2e.yaml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: viewer-e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  viewer-e2e:
+    name: Publish + Render @vctrl/viewer
+    runs-on: ubuntu-22.04
+    env:
+      NX_DAEMON: 'false'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Restore Nx local cache
+        uses: actions/cache@v5
+        with:
+          path: .nx/cache
+          key: ${{ runner.os }}-nx-${{ github.ref_name }}-${{ hashFiles('pnpm-lock.yaml', 'nx.json', '**/project.json', 'tsconfig.base.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nx-${{ github.ref_name }}-
+            ${{ runner.os }}-nx-main-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run viewer packaging e2e
+        run: pnpm nx run vctrl/viewer-e2e:e2e:ci
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: viewer-e2e-playwright-report
+          path: packages/viewer-e2e/playwright-report
+          if-no-files-found: ignore
+          retention-days: 7

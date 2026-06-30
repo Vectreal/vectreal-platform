@@ -1,0 +1,25 @@
+{
+	"name": "vctrl-viewer-consumer",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"build": "vite build",
+		"preview": "vite preview"
+	},
+	"dependencies": {
+		"@react-three/drei": "^10.0.7",
+		"@react-three/fiber": "^9.1.2",
+		"@react-three/postprocessing": "^3.0.4",
+		"@vctrl/hooks": "latest",
+		"@vctrl/viewer": "latest",
+		"postprocessing": "^6.37.3",
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0",
+		"three": "^0.177.0"
+	},
+	"devDependencies": {
+		"@vitejs/plugin-react": "^5.0.0",
+		"vite": "^7.0.0"
+	}
+}

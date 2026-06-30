@@ -30,7 +30,7 @@
 			"executor": "nx:run-commands",
 			"outputs": [],
 			"options": {
-				"command": "npm publish --access public",
+				"command": "pnpm publish --no-git-checks --access public",
 				"cwd": "build/packages/vctrl/viewer"
 			}
 		},

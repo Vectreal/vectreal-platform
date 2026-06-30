@@ -1,0 +1,34 @@
+{
+	"name": "vctrl/viewer-e2e",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"projectType": "application",
+	"sourceRoot": "packages/viewer-e2e/src",
+	"implicitDependencies": ["vctrl/viewer", "vctrl/core", "vctrl/hooks"],
+	"tags": ["scope:e2e"],
+	"targets": {
+		"e2e": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"options": {
+				"command": "node --import @swc-node/register/esm-register packages/viewer-e2e/src/run-e2e.ts",
+				"cwd": "{workspaceRoot}"
+			},
+			"configurations": {
+				"ci": {
+					"command": "node --import @swc-node/register/esm-register packages/viewer-e2e/src/run-e2e.ts --ci"
+				}
+			}
+		},
+		"lint": {
+			"executor": "@nx/eslint:lint",
+			"outputs": ["{options.outputFile}"],
+			"options": {
+				"lintFilePatterns": [
+					"packages/viewer-e2e/src/*.ts",
+					"packages/viewer-e2e/tests/**/*.ts",
+					"packages/viewer-e2e/*.ts"
+				]
+			}
+		}
+	}
+}
