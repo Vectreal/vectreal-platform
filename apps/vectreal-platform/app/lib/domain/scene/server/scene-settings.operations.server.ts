@@ -87,14 +87,18 @@ async function resolveSceneAndProject(
 	userId: string,
 	targetProjectId?: string,
 	projectId?: string
-): Promise<{ sceneId: string; projectId: string }> {
+): Promise<{
+	sceneId: string
+	projectId: string
+	existingProjectId: string | null
+}> {
 	if (sceneId?.trim()) {
 		const existingProjectId =
 			await sceneSettingsService.getProjectIdFromScene(sceneId)
 
 		if (existingProjectId) {
 			const resolvedProjectId = targetProjectId ?? existingProjectId
-			return { sceneId, projectId: resolvedProjectId }
+			return { sceneId, projectId: resolvedProjectId, existingProjectId }
 		}
 
 		const fallbackProjectId = targetProjectId ?? projectId
@@ -104,7 +108,7 @@ async function resolveSceneAndProject(
 				throw new Error('Target project not found or access denied')
 			}
 
-			return { sceneId, projectId: fallbackProjectId }
+			return { sceneId, projectId: fallbackProjectId, existingProjectId: null }
 		}
 
 		throw new Error(`Scene not found with ID: ${sceneId}`)
@@ -117,10 +121,15 @@ async function resolveSceneAndProject(
 			throw new Error('Target project not found or access denied')
 		}
 
-		return { sceneId: randomUUID(), projectId: targetProjectId }
+		return {
+			sceneId: randomUUID(),
+			projectId: targetProjectId,
+			existingProjectId: null
+		}
 	}
 
-	return await createNewScene(userId)
+	const created = await createNewScene(userId)
+	return { ...created, existingProjectId: null }
 }
 
 async function validateSaveLocationTarget(
@@ -195,12 +204,30 @@ export async function prepareSceneUpload(
 		request.projectId
 	)
 
+	// Reuse already-stored assets for same-project saves (the common case), so the
+	// client can content-hash dedupe and skip re-uploading unchanged model assets.
+	// Only a genuine move to a DIFFERENT project must re-upload assets fresh into
+	// that project's storage. Previously ANY targetProjectId disabled dedup — and
+	// the post-save location sync sets targetProjectId on every save after the
+	// first, so identical assets were re-uploaded on every subsequent save.
+	// A targeted save is treated as a cross-project move (no asset reuse) when the
+	// target differs from the scene's established project, OR when the scene has no
+	// established project to compare against. Same-project saves reuse assets.
+	const isCrossProjectMove =
+		!!request.targetProjectId &&
+		(resolved.existingProjectId === null ||
+			request.targetProjectId !== resolved.existingProjectId)
+
 	const existingAssets =
-		request.sceneId?.trim() && !request.targetProjectId
+		request.sceneId?.trim() && !isCrossProjectMove
 			? await sceneSettingsService.getExistingAssetHashes(resolved.sceneId)
 			: {}
 
-	return { ...resolved, existingAssets }
+	return {
+		sceneId: resolved.sceneId,
+		projectId: resolved.projectId,
+		existingAssets
+	}
 }
 
 export async function uploadSceneAsset(
