@@ -57,6 +57,10 @@ export interface SceneSaveFlowActions {
 	createRequestId: () => string
 	prepareGltfDocumentForUpload: () => Promise<unknown>
 	captureSceneThumbnail: () => Promise<null | string>
+	captureShadowBake: () => Promise<{
+		dataUrl: string
+		signature: string
+	} | null>
 	maxConcurrentAssetUploadsDefault: number
 }
 

@@ -27,13 +27,15 @@ import {
 	processInitialState,
 	publisherLoadingStateAtom,
 	processAtom,
-	sceneMetaAtom
+	sceneMetaAtom,
+	toolSidebarStateAtom
 } from '../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
 import {
 	rawModelDiagonalAtom,
 	sceneViewerSettingsAtom,
-	selectedCameraIdAtom
+	selectedCameraIdAtom,
+	shadowsAtom
 } from '../../lib/stores/scene-settings-store'
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbnail'
@@ -41,6 +43,7 @@ import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbn
 import type {
 	SceneCameraSnapshotCapture,
 	SceneScreenshotCapture,
+	ShadowBakeCapture,
 	ViewerCommandExecutor
 } from '@vctrl/viewer'
 import type { ShouldRevalidateFunction } from 'react-router'
@@ -141,11 +144,46 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 	const setProcess = useSetAtom(processAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
 	const setRawDiagonal = useSetAtom(rawModelDiagonalAtom)
+	const setShadows = useSetAtom(shadowsAtom)
 	const { bounds, camera, controls, env, shadows, normalization } = useAtomValue(
 		sceneViewerSettingsAtom
 	)
+
+	// Persist drags of the in-scene shadow light handle. Debounced so a drag
+	// commits one re-bake when the user settles, not on every pointer move.
+	const shadowLightCommitTimer = useRef<ReturnType<typeof setTimeout> | null>(
+		null
+	)
+	const handleShadowLightChange = useCallback(
+		(position: [number, number, number]) => {
+			if (shadowLightCommitTimer.current) {
+				clearTimeout(shadowLightCommitTimer.current)
+			}
+			shadowLightCommitTimer.current = setTimeout(() => {
+				setShadows((prev) =>
+					prev.type === 'accumulative'
+						? { ...prev, light: { ...prev.light, position } }
+						: prev
+				)
+			}, 80)
+		},
+		[setShadows]
+	)
+	useEffect(
+		() => () => {
+			if (shadowLightCommitTimer.current) {
+				clearTimeout(shadowLightCommitTimer.current)
+			}
+		},
+		[]
+	)
 	const selectedCameraId = useAtomValue(selectedCameraIdAtom)
 	const sceneMeta = useAtomValue(sceneMetaAtom)
+	const { activeComposeTool, showSidebar } = useAtomValue(toolSidebarStateAtom)
+	// The in-scene light handle only belongs to the shadow tool, so show it only
+	// while that tool's panel is open (and shadows are on).
+	const isShadowToolActive =
+		showSidebar && activeComposeTool === 'shadow' && (shadows?.enabled ?? false)
 	const loadingThumbnail = toViewerLoadingThumbnail(
 		sceneMeta.thumbnailUrl,
 		'Scene thumbnail preview'
@@ -154,8 +192,20 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 	const {
 		registerSceneScreenshotCapture,
 		registerSceneCameraSnapshotCapture,
+		registerShadowBakeCapture,
 		registerCommandExecutor
 	} = usePublisherViewerCapture()
+
+	// Resolve the persisted shadow bake (if any) to a served URL so the viewer can
+	// render it instead of recomputing the bake. Served via the owner-authed image
+	// route; the viewer ignores it once the bake inputs change (signature mismatch).
+	const bakedShadow =
+		shadows?.type === 'accumulative' && shadows.baked && routeSceneId
+			? {
+					url: `/api/scenes/${routeSceneId}/thumbnail/${shadows.baked.assetId}`,
+					signature: shadows.baked.signature
+				}
+			: undefined
 
 	const handleScreenshotCaptureReady = useCallback(
 		(capture: null | SceneScreenshotCapture) => {
@@ -176,6 +226,13 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 			registerCommandExecutor(executor)
 		},
 		[registerCommandExecutor]
+	)
+
+	const handleShadowBakeReady = useCallback(
+		(capture: null | ShadowBakeCapture) => {
+			registerShadowBakeCapture(capture)
+		},
+		[registerShadowBakeCapture]
 	)
 
 	// Cleanup on unmount
@@ -260,6 +317,11 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 								controlsOptions={controls}
 								envOptions={env}
 								shadowsOptions={shadows}
+								bakedShadow={bakedShadow}
+								onShadowBakeReady={handleShadowBakeReady}
+								shadowLightEditable={isShadowToolActive}
+								onShadowLightChange={handleShadowLightChange}
+								showViewCube
 								normalizationOptions={normalization}
 								boundsOptions={bounds}
 								loadingThumbnail={loadingThumbnail}

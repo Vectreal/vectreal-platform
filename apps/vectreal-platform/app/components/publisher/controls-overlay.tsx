@@ -75,7 +75,8 @@ const OverlayControls = ({
 	// and updated by the shell-level SceneNameAndLocation picker.
 	const saveLocationTarget = useAtomValue(saveLocationAtom)
 	const { hasUnsavedLocationChange } = useLocationChangeState()
-	const { requestSceneScreenshot } = usePublisherViewerCapture()
+	const { requestSceneScreenshot, requestShadowBake } =
+		usePublisherViewerCapture()
 
 	// Centralized scene loader - single source of truth (must be inside ModelProvider)
 	const { saveSceneSettings, saveAvailability, persistPendingSceneDraft } =
@@ -84,7 +85,8 @@ const OverlayControls = ({
 			userId: user?.id,
 			initialSceneAggregate: sceneAggregate as SceneAggregateResponse | null,
 			sceneMeta: sceneAggregate?.meta ?? null,
-			requestSceneScreenshot
+			requestSceneScreenshot,
+			requestShadowBake
 		})
 
 	const {

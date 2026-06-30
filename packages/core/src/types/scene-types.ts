@@ -15,7 +15,9 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 import { JSONDocument } from '@gltf-transform/core'
 import {
+	AccumulativeShadowsProps as ThreeAccumulativeShadowsProps,
 	OrbitControlsProps,
+	RandomizedLightProps,
 	BoundsProps as ThreeBoundsProps,
 	ContactShadowsProps as ThreeContactShadowsProps,
 	EnvironmentProps as ThreeEnvironmentProps,
@@ -217,7 +219,7 @@ export interface EnvironmentProps extends InheritedEnvProps {
 	environmentResolution?: EnvironmentResolution
 }
 
-export type ShadowType = 'contact'
+export type ShadowType = 'contact' | 'accumulative'
 
 /**
  * Base interface for shadow properties.
@@ -236,9 +238,100 @@ export interface ContactShadowProps
 }
 
 /**
+ * Light configuration for accumulative shadows (a drei `RandomizedLight`).
+ */
+export type AccumulativeShadowLight = Pick<
+	RandomizedLightProps,
+	'intensity' | 'amount' | 'radius' | 'ambient' | 'position' | 'bias'
+>
+
+/**
+ * Reference to a persisted accumulative-shadow bake. Stored in the scene's
+ * shadow settings so a saved scene can load the baked shadow texture instead of
+ * recomputing it. The bytes live in asset storage under {@link assetId}; the
+ * viewer reuses the texture only while {@link signature} still matches the
+ * current bake inputs.
+ */
+export interface BakedShadowRef {
+	/** Scene asset id of the stored shadow-density PNG. */
+	assetId: string
+	/** Bake signature the texture was captured with. */
+	signature: string
+}
+
+/**
+ * Configuration for the soft contact/ground shadow that approximates ground
+ * ambient occlusion under the model. Plane size and capture height are derived
+ * from the model automatically; these are the surfaced controls.
+ */
+export interface ContactShadowConfig {
+	/** Whether the ground shadow is rendered. Defaults to false. */
+	enabled?: boolean
+	/** Darkness of the ground shadow (0–1). Defaults to 0.6. */
+	opacity?: number
+	/** Softness/blur of the ground shadow. Higher is softer. Defaults to 3. */
+	blur?: number
+	/** Plane size as a multiple of the model footprint (how far the pool spreads). Defaults to 1.5. */
+	scale?: number
+	/**
+	 * How far UP from the floor geometry still casts the ground shadow, as a
+	 * fraction of the model's height (the ContactShadows depth-camera `far`). Lower
+	 * confines the darkening to where the model is closest to the ground for a
+	 * tighter, more accurate ambient-occlusion look; higher reaches up the model
+	 * for a broad grounding pool. Defaults to 0.35.
+	 */
+	reach?: number
+}
+
+/**
+ * Props for Accumulative Shadows — high quality baked soft shadows for a static
+ * subject. Camera auto-rotate orbits the camera (not the model), so the bake
+ * stays valid while rotating; the viewer falls back to contact shadows only
+ * while a model's geometry is actually animating.
+ */
+export interface AccumulativeShadowsProps
+	extends ShadowTypePropBase, ThreeAccumulativeShadowsProps {
+	type: 'accumulative'
+	light?: AccumulativeShadowLight
+	/**
+	 * Manual trim on the auto-calibrated shadow cutoff. The viewer measures the
+	 * baked plane's lit brightness and sets `alphaTest` to it automatically (so the
+	 * shadow reads correctly across environments); this multiplier nudges that
+	 * result. 1 = pure auto, &lt;1 deepens (risks haze), &gt;1 lightens. Defaults to 1.
+	 */
+	cutoffScale?: number
+	/**
+	 * Enables screen-space ambient occlusion (N8AO) so the model self-occludes in
+	 * crevices and tight gaps. This reintroduces a postprocessing composer and runs
+	 * every rendered frame, so it is opt-in. Defaults to false.
+	 */
+	ao?: boolean
+	/**
+	 * A soft contact/ground shadow (drei `ContactShadows`) layered under the
+	 * directional accumulative bake. It approximates the ambient occlusion the
+	 * model casts on the floor and keeps the model grounded independently of the
+	 * directional light's angle. Baked once (no per-frame cost). Tuned mainly via
+	 * `blur` (softness) and `opacity` (darkness).
+	 */
+	contact?: ContactShadowConfig
+	/**
+	 * Strength of the ambient occlusion when {@link ao} is enabled. Higher is
+	 * darker. Defaults to 1.4.
+	 */
+	aoIntensity?: number
+	/**
+	 * A persisted bake of the accumulative shadow. Written on save and consumed on
+	 * load so a returning visit renders the stored texture instead of recomputing
+	 * the bake. Invalidated automatically when the bake inputs change (see the
+	 * viewer's bake signature).
+	 */
+	baked?: BakedShadowRef
+}
+
+/**
  * Shadow configuration props. Extend `ShadowType` to add future shadow variants.
  */
-export type ShadowsProps = ContactShadowProps
+export type ShadowsProps = ContactShadowProps | AccumulativeShadowsProps
 
 /**
  * Options for runtime model size normalization.

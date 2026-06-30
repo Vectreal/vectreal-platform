@@ -14,10 +14,11 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { Center } from '@react-three/drei'
+import { Center, GizmoHelper, GizmoViewcube } from '@react-three/drei'
 import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
 import {
+	AccumulativeShadowsProps,
 	BoundsProps,
 	CameraProps,
 	ControlsProps,
@@ -51,8 +52,10 @@ import {
 import { useViewerLoading } from './hooks/use-viewer-loading'
 
 import type {
+	BakedShadow,
 	SceneCameraSnapshotCapture,
 	SceneScreenshotCapture,
+	ShadowBakeCapture,
 	ViewerCommand,
 	ViewerCommandExecutor,
 	ViewerInteractionEvent,
@@ -60,10 +63,13 @@ import type {
 } from './types/viewer-types'
 
 export type {
+	BakedShadow,
 	SceneCameraSnapshot,
 	SceneCameraSnapshotCapture,
 	SceneScreenshotCapture,
 	SceneScreenshotOptions,
+	ShadowBakeCapture,
+	ShadowBakeResult,
 	ViewerCommandExecutor,
 	ViewerCommand,
 	ViewerInteractionEvent,
@@ -127,6 +133,45 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * Options for the shadows.
 	 */
 	shadowsOptions?: ShadowsProps
+
+	/**
+	 * When true, renders an in-scene draggable handle for aiming the shadow light.
+	 * Intended for editing surfaces (e.g. the publisher), not public viewers.
+	 */
+	shadowLightEditable?: boolean
+
+	/**
+	 * When true, renders a clickable orientation cube (lower-left) for snapping the
+	 * camera to absolute views. Intended for editing surfaces.
+	 */
+	showViewCube?: boolean
+
+	/**
+	 * When true, the accumulative shadow bakes in a single pass on mount instead of
+	 * fading in across frames, so it is present immediately when a scene opens.
+	 * Intended for read-only/preview surfaces; the editor leaves this off to keep
+	 * the smooth temporal fade-in while tweaking. Default: false.
+	 */
+	staticShadowBake?: boolean
+
+	/**
+	 * A persisted accumulative-shadow bake. When present and still valid for the
+	 * current shadow settings + model, the viewer renders the stored texture and
+	 * skips re-baking entirely (no recomputation on load).
+	 */
+	bakedShadow?: BakedShadow
+
+	/**
+	 * Receives a function that captures the settled shadow bake as a density PNG,
+	 * for persistence. Intended for editing surfaces that save scenes.
+	 */
+	onShadowBakeReady?: (capture: ShadowBakeCapture | null) => void
+
+	/**
+	 * Called with a new shadow light position (model-size units) when the in-scene
+	 * handle is dragged. Store this back into `shadowsOptions.light.position`.
+	 */
+	onShadowLightChange?: (position: [number, number, number]) => void
 
 	/**
 	 * Options for runtime model size normalization.
@@ -221,6 +266,12 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		// gridOptions,
 		controlsOptions,
 		shadowsOptions,
+		shadowLightEditable,
+		onShadowLightChange,
+		showViewCube,
+		staticShadowBake = false,
+		bakedShadow,
+		onShadowBakeReady,
 		normalizationOptions,
 		popover,
 		loadingThumbnail,
@@ -319,6 +370,11 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		isInitialFramingComplete
 	)
 	const shadowsEnabled = shadowsOptions?.enabled ?? false
+	// AO config lives on the accumulative shadow settings. It's gated on shadows
+	// being enabled so toggling shadows off also tears down the AO composer.
+	const accumulativeShadows =
+		shadowsOptions?.type === 'accumulative' ? shadowsOptions : undefined
+	const aoEnabled = shadowsEnabled && (accumulativeShadows?.ao ?? false)
 	return (
 		<Suspense fallback={loader}>
 			<Canvas
@@ -339,7 +395,10 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					/>
 				}
 				enableViewportRendering={enableViewportRendering}
-				shadows={shadowsEnabled}
+				// 'percentage' = PCFShadowMap. AccumulativeShadows bakes its own soft
+				// shadow from its RandomizedLight, so the realtime filter just needs to
+				// be enabled. (A bare `shadows` would use the deprecated PCFSoftShadowMap.)
+				shadows={shadowsEnabled ? 'percentage' : false}
 				gl={{ antialias: false, powerPreference: 'low-power' }}
 			>
 				<Suspense fallback={null}>
@@ -348,7 +407,13 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 							{/* <SceneGrid {...gridOptions} /> */}
 							<SceneEnvironment {...envOptions} />
 							{/* <Perf /> */}
-							{enablePostProcessing ? <ScenePostProcessing /> : null}
+							{enablePostProcessing ? (
+								<ScenePostProcessing
+									ao={aoEnabled}
+									aoIntensity={accumulativeShadows?.aoIntensity}
+									model={model}
+								/>
+							) : null}
 							<SceneControls
 								{...controlsOptions}
 								enabledOverride={controlsEnabledOverride}
@@ -395,9 +460,37 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 										/>
 									)}
 								</Center>
-								<SceneShadows {...shadowsOptions} />
+								<SceneShadows
+									model={model}
+									{...(shadowsOptions as Partial<AccumulativeShadowsProps>)}
+									lightEditable={shadowLightEditable}
+									onLightChange={onShadowLightChange}
+									staticBake={staticShadowBake}
+									bakedShadow={bakedShadow}
+									onShadowBakeReady={onShadowBakeReady}
+								/>
 								{children}
 							</SceneBounds>
+							{showViewCube && (
+								<GizmoHelper
+									alignment="bottom-left"
+									margin={[72, 72]}
+									// drei's Hud re-renders the whole scene itself at renderPriority
+									// 1, which would clobber the AO EffectComposer's output (also at
+									// priority 1). At priority 2 the Hud skips that scene re-render and
+									// just overlays the gizmo on top of the composed frame, so the
+									// cube and postprocessing coexist. Without AO there's no composer,
+									// so the default priority 1 keeps working as before.
+									renderPriority={aoEnabled ? 2 : 1}
+								>
+									<GizmoViewcube
+										color="#f4f4f5"
+										textColor="#52525b"
+										strokeColor="#d4d4d8"
+										hoverColor="#fbbf24"
+									/>
+								</GizmoHelper>
+							)}
 						</>
 					)}
 				</Suspense>

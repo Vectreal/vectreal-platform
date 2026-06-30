@@ -76,6 +76,7 @@ const PreviewModel = memo(
 					onCommandExecutorReady={onCommandExecutorReady}
 					onInteractionEvent={onInteractionEvent}
 					shadowsOptions={sceneData?.shadows}
+					staticShadowBake
 					normalizationOptions={sceneData?.normalization}
 					popover={
 						<PreviewInfoPopover title={title} description={description} />

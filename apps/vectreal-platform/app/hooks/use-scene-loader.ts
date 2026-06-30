@@ -25,7 +25,8 @@ import {
 	defaultControlsOptions,
 	defaultEnvOptions,
 	defaultNormalizationOptions,
-	defaultShadowOptions
+	defaultShadowOptions,
+	normalizeShadowOptions
 } from '../constants/viewer-defaults'
 import { buildSceneUploadFailedAnalyticsProps } from '../lib/domain/analytics/scene-events'
 import {
@@ -88,6 +89,10 @@ export interface UseSceneLoaderParams {
 	requestSceneScreenshot?: (
 		options?: SceneScreenshotOptions
 	) => Promise<null | string>
+	requestShadowBake?: () => Promise<{
+		dataUrl: string
+		signature: string
+	} | null>
 }
 
 const DEFAULT_MAX_CONCURRENT_SCENE_ASSET_UPLOADS = 4
@@ -144,14 +149,16 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		userId,
 		initialSceneAggregate = null,
 		sceneMeta = null,
-		requestSceneScreenshot
+		requestSceneScreenshot,
+		requestShadowBake
 	} = params === null
 		? {
 				sceneId: null,
 				userId: undefined,
 				initialSceneAggregate: null,
 				sceneMeta: null,
-				requestSceneScreenshot: undefined
+				requestSceneScreenshot: undefined,
+				requestShadowBake: undefined
 			}
 		: params
 
@@ -339,6 +346,24 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			return null
 		}
 	}, [currentSceneId, camera.cameras, requestSceneScreenshot])
+
+	const captureShadowBake = useCallback(async (): Promise<{
+		dataUrl: string
+		signature: string
+	} | null> => {
+		if (!requestShadowBake) {
+			return null
+		}
+		try {
+			return await requestShadowBake()
+		} catch (error) {
+			console.warn('[scene-settings] shadow bake capture failed', {
+				sceneId: currentSceneId || null,
+				error
+			})
+			return null
+		}
+	}, [currentSceneId, requestShadowBake])
 
 	// Get current settings from atoms
 	const currentSettings: SceneSettings = useMemo(
@@ -555,7 +580,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			setInteractions(settings.interactions)
 			setCamera(settings.camera || defaultCameraOptions)
 			setControls(settings.controls || defaultControlsOptions)
-			setShadows(settings.shadows || defaultShadowOptions)
+			setShadows(normalizeShadowOptions(settings.shadows))
 			setNormalization(settings.normalization || defaultNormalizationOptions)
 			setRawModelDiagonal(0)
 			setHotspots(settings.hotspots ?? [])
@@ -566,7 +591,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				interactions: settings.interactions,
 				camera: settings.camera || defaultCameraOptions,
 				controls: settings.controls || defaultControlsOptions,
-				shadows: settings.shadows || defaultShadowOptions,
+				shadows: normalizeShadowOptions(settings.shadows),
 				normalization: settings.normalization || defaultNormalizationOptions,
 				hotspots: settings.hotspots
 			}
@@ -706,6 +731,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		createRequestId,
 		prepareGltfDocumentForUpload,
 		captureSceneThumbnail,
+		captureShadowBake,
 		maxConcurrentAssetUploadsDefault: DEFAULT_MAX_CONCURRENT_SCENE_ASSET_UPLOADS
 	}
 

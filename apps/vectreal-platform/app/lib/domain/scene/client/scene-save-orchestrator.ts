@@ -36,6 +36,10 @@ interface ExecuteSceneSaveOrchestratorParams {
 	createRequestId: () => string
 	prepareGltfDocumentForUpload: () => Promise<unknown>
 	captureSceneThumbnail: () => Promise<null | string>
+	captureShadowBake?: () => Promise<{
+		dataUrl: string
+		signature: string
+	} | null>
 	maxConcurrentAssetUploadsDefault: number
 }
 
@@ -70,6 +74,7 @@ export const executeSceneSaveOrchestrator = async ({
 	createRequestId,
 	prepareGltfDocumentForUpload,
 	captureSceneThumbnail,
+	captureShadowBake,
 	maxConcurrentAssetUploadsDefault
 }: ExecuteSceneSaveOrchestratorParams): Promise<
 	SaveSceneOrchestratorResult | { unchanged: true }
@@ -172,6 +177,59 @@ export const executeSceneSaveOrchestrator = async ({
 							: 'Unknown thumbnail upload error'
 				})
 			}
+		}
+	}
+
+	// Persist the accumulative shadow bake so the scene loads without recomputing
+	// it. Best-effort: any failure (bake not settled, upload error) just leaves the
+	// scene to re-bake live on next load. The captured density PNG is uploaded as a
+	// scene image asset and referenced from the shadow settings by id + signature.
+	let settingsForSave = currentSettings
+	if (captureShadowBake) {
+		try {
+			const bake = await captureShadowBake()
+			const shadows = currentSettings.shadows
+			if (bake && shadows?.type === 'accumulative') {
+				const bakeFile = createFileFromDataUrl(bake.dataUrl, 'shadow-bake.png')
+				if (bakeFile) {
+					const uploadBakeFormData = new FormData()
+					uploadBakeFormData.append('action', 'upload-scene-asset')
+					uploadBakeFormData.append('requestId', requestId)
+					uploadBakeFormData.append('sceneId', preparedSceneId)
+					if (preparedProjectId) {
+						uploadBakeFormData.append('projectId', preparedProjectId)
+					}
+					if (options?.targetProjectId) {
+						uploadBakeFormData.append('targetProjectId', options.targetProjectId)
+					}
+					uploadBakeFormData.append('kind', 'image')
+					uploadBakeFormData.append('file', bakeFile)
+
+					const uploadedBake = await toJsonOrThrow(
+						await fetch(`/api/scenes/${preparedSceneId}`, {
+							method: 'POST',
+							body: uploadBakeFormData
+						})
+					)
+
+					settingsForSave = {
+						...currentSettings,
+						shadows: {
+							...shadows,
+							baked: {
+								assetId: uploadedBake.assetId as string,
+								signature: bake.signature
+							}
+						}
+					}
+				}
+			}
+		} catch (error) {
+			console.warn('[scene-settings] shadow bake persist failed', {
+				sceneId: preparedSceneId,
+				error:
+					error instanceof Error ? error.message : 'Unknown shadow bake error'
+			})
 		}
 	}
 
@@ -307,7 +365,7 @@ export const executeSceneSaveOrchestrator = async ({
 	if (typeof options?.targetFolderId !== 'undefined') {
 		formData.append('targetFolderId', options.targetFolderId ?? '')
 	}
-	formData.append('settings', JSON.stringify(currentSettings))
+	formData.append('settings', JSON.stringify(settingsForSave))
 	formData.append('meta', JSON.stringify(sceneMetaForSave))
 	formData.append('sceneAssetIds', JSON.stringify(sceneAssetIds))
 	formData.append('optimizationSettings', JSON.stringify(optimizationSettings))

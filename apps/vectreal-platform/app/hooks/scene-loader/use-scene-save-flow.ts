@@ -61,6 +61,7 @@ export const useSceneSaveFlow = ({
 		createRequestId,
 		prepareGltfDocumentForUpload,
 		captureSceneThumbnail,
+		captureShadowBake,
 		maxConcurrentAssetUploadsDefault
 	} = actions
 
@@ -215,6 +216,7 @@ export const useSceneSaveFlow = ({
 						createRequestId,
 						prepareGltfDocumentForUpload,
 						captureSceneThumbnail,
+						captureShadowBake,
 						maxConcurrentAssetUploadsDefault
 					})
 				} catch (error) {
@@ -240,6 +242,7 @@ export const useSceneSaveFlow = ({
 		},
 		[
 			captureSceneThumbnail,
+			captureShadowBake,
 			createRequestId,
 			currentSceneId,
 			currentSettings,

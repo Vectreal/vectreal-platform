@@ -13,6 +13,8 @@ import type {
 	SceneCameraSnapshotCapture,
 	SceneScreenshotCapture,
 	SceneScreenshotOptions,
+	ShadowBakeCapture,
+	ShadowBakeResult,
 	ViewerCommandExecutor
 } from '@vctrl/viewer'
 
@@ -27,6 +29,8 @@ interface PublisherViewerCaptureContextValue {
 		capture: null | SceneCameraSnapshotCapture
 	) => void
 	requestSceneCameraSnapshot: () => Promise<null | SceneCameraSnapshot>
+	registerShadowBakeCapture: (capture: null | ShadowBakeCapture) => void
+	requestShadowBake: () => Promise<null | ShadowBakeResult>
 	registerCommandExecutor: (executor: null | ViewerCommandExecutor) => void
 	commandExecutor: MutableRefObject<null | ViewerCommandExecutor>
 }
@@ -72,6 +76,19 @@ export function PublisherViewerCaptureProvider({
 			: null
 	}, [])
 
+	const shadowBakeCaptureRef = useRef<null | ShadowBakeCapture>(null)
+
+	const registerShadowBakeCapture = useCallback(
+		(capture: null | ShadowBakeCapture) => {
+			shadowBakeCaptureRef.current = capture
+		},
+		[]
+	)
+
+	const requestShadowBake = useCallback(async () => {
+		return shadowBakeCaptureRef.current ? shadowBakeCaptureRef.current() : null
+	}, [])
+
 	const registerCommandExecutor = useCallback(
 		(executor: null | ViewerCommandExecutor) => {
 			commandExecutorRef.current = executor
@@ -85,6 +102,8 @@ export function PublisherViewerCaptureProvider({
 			requestSceneScreenshot,
 			registerSceneCameraSnapshotCapture,
 			requestSceneCameraSnapshot,
+			registerShadowBakeCapture,
+			requestShadowBake,
 			registerCommandExecutor,
 			commandExecutor: commandExecutorRef
 		}),
@@ -93,6 +112,8 @@ export function PublisherViewerCaptureProvider({
 			requestSceneScreenshot,
 			registerSceneCameraSnapshotCapture,
 			requestSceneCameraSnapshot,
+			registerShadowBakeCapture,
+			requestShadowBake,
 			registerCommandExecutor
 		]
 	)
