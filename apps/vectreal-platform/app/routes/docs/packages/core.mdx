@@ -12,7 +12,7 @@ npm install @vctrl/core
 pnpm add @vctrl/core
 ```
 
-> `@vctrl/core` targets Node.js only. It uses [Sharp](https://sharp.pixelplumbing.com) for server-side texture compression, which requires a native build.
+> `@vctrl/core` runs in Node.js, browsers, and edge runtimes. For server-side texture compression it can use [Sharp](https://sharp.pixelplumbing.com), but Sharp is an optional add-on rather than a hard dependency: install it yourself (`npm install sharp`) to enable the native path. Without it, `compressTextures` falls back to a basic optimization, and browser/edge callers inject their own encoder, so no native build is required for those targets.
 
 ---
 

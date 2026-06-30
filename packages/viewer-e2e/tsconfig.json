@@ -1,0 +1,16 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"target": "es2022",
+		"lib": ["es2022", "dom", "dom.iterable"],
+		"types": ["node"],
+		"strict": true,
+		"noEmit": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true
+	},
+	"include": ["src/run-e2e.ts", "tests/**/*.ts", "playwright.config.ts"],
+	"exclude": ["node_modules", "src/consumer-template"]
+}
