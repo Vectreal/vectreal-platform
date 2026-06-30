@@ -273,7 +273,7 @@ const OverlayControls = ({
 		[setProcessState]
 	)
 
-	return isUploadStep ? (
+	return isUploadStep && !sceneId ? (
 		<Navigation user={user} />
 	) : (
 		<>
