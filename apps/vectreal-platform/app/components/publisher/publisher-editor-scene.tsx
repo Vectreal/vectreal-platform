@@ -4,6 +4,7 @@ import { useAtom, useAtomValue } from 'jotai/react'
 import { memo, useCallback, useEffect, useRef, useState, type FC } from 'react'
 import * as THREE from 'three'
 
+import { PublisherViewCube } from './publisher-view-cube'
 import { usePublisherViewerCapture } from './publisher-viewer-capture-context'
 import {
 	isClickToPlaceActiveAtom,
@@ -392,6 +393,8 @@ export const PublisherEditorScene = memo(() => {
 				activeHotspotId={activeHotspotId}
 				onPlace={handlePlaceHotspot}
 			/>
+
+			<PublisherViewCube />
 		</>
 	)
 })

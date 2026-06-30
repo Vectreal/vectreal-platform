@@ -17,6 +17,7 @@ import { usePreviewScene } from './use-preview-scene'
 import CenteredSpinner from '../../components/centered-spinner'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import { useHostedPreviewBridge } from '../../lib/domain/embed/hosted-preview-bridge'
+import { resolveBakedShadowSource } from '../../lib/domain/scene/client/baked-shadow-source'
 
 interface PreviewInfoPopoverProps {
 	title?: string
@@ -64,6 +65,12 @@ const PreviewModel = memo(
 		onInteractionEvent,
 		onCommandExecutorReady
 	}: PreviewModelProps) => {
+		// Persisted shadow bake from the scene's inlined asset data, so embeds render
+		// the stored shadow in parallel with the model instead of re-baking on load.
+		const bakedShadow = useMemo(
+			() => resolveBakedShadowSource(sceneData?.shadows, sceneData?.assetData),
+			[sceneData?.shadows, sceneData?.assetData]
+		)
 		return (
 			<div className="h-screen w-full">
 				<ClientVectrealViewer
@@ -77,6 +84,7 @@ const PreviewModel = memo(
 					onInteractionEvent={onInteractionEvent}
 					shadowsOptions={sceneData?.shadows}
 					staticShadowBake
+					bakedShadow={bakedShadow}
 					normalizationOptions={sceneData?.normalization}
 					popover={
 						<PreviewInfoPopover title={title} description={description} />

@@ -1,3 +1,5 @@
+import { PERSISTED_BAKE_FILENAME, SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
+
 import { createFileFromDataUrl } from './scene-draft-serialization'
 import {
 	buildImageMimeLookup,
@@ -7,6 +9,14 @@ import { createBillingLimitErrorFromResponse } from '../../billing/client/billin
 
 import type { SceneMetaState } from '../../../../types/publisher-config'
 import type { SceneSettings } from '@vctrl/core'
+import type { ShadowBakeResult } from '@vctrl/viewer'
+
+/**
+ * How many scene assets to upload in parallel. Single source of truth for the
+ * save pipeline's concurrency; a per-call `options.maxConcurrentAssetUploads`
+ * may override it. Kept here because the orchestrator is the only consumer.
+ */
+export const MAX_CONCURRENT_ASSET_UPLOADS = 4
 
 export interface SaveSceneOrchestratorOptions {
 	includeOptimizationReport?: boolean
@@ -36,11 +46,18 @@ interface ExecuteSceneSaveOrchestratorParams {
 	createRequestId: () => string
 	prepareGltfDocumentForUpload: () => Promise<unknown>
 	captureSceneThumbnail: () => Promise<null | string>
-	captureShadowBake?: () => Promise<{
-		dataUrl: string
-		signature: string
-	} | null>
-	maxConcurrentAssetUploadsDefault: number
+	captureShadowBake?: () => Promise<ShadowBakeResult | null>
+}
+
+// Pulls the asset id out of an internal thumbnail URL
+// (`/api/scenes/:sceneId/thumbnail/:assetId`). Used to re-link the current
+// thumbnail on every save so it isn't garbage-collected, and so a superseded one
+// becomes an unlinked GC candidate.
+const extractThumbnailAssetId = (thumbnailUrl?: string | null): string | null => {
+	if (!thumbnailUrl) return null
+	// Anchor to the end so only the final `/thumbnail/<id>` segment is taken.
+	const match = thumbnailUrl.match(/\/thumbnail\/([^/?#]+)$/)
+	return match ? match[1] : null
 }
 
 const toJsonOrThrow = async (response: Response) => {
@@ -74,8 +91,7 @@ export const executeSceneSaveOrchestrator = async ({
 	createRequestId,
 	prepareGltfDocumentForUpload,
 	captureSceneThumbnail,
-	captureShadowBake,
-	maxConcurrentAssetUploadsDefault
+	captureShadowBake
 }: ExecuteSceneSaveOrchestratorParams): Promise<
 	SaveSceneOrchestratorResult | { unchanged: true }
 > => {
@@ -136,7 +152,7 @@ export const executeSceneSaveOrchestrator = async ({
 	if (thumbnailDataUrl) {
 		const thumbnailFile = createFileFromDataUrl(
 			thumbnailDataUrl,
-			'scene-thumbnail.webp'
+			SCENE_THUMBNAIL_FILENAME
 		)
 
 		if (thumbnailFile) {
@@ -180,17 +196,29 @@ export const executeSceneSaveOrchestrator = async ({
 		}
 	}
 
-	// Persist the accumulative shadow bake so the scene loads without recomputing
-	// it. Best-effort: any failure (bake not settled, upload error) just leaves the
-	// scene to re-bake live on next load. The captured density PNG is uploaded as a
-	// scene image asset and referenced from the shadow settings by id + signature.
+	// Persist / refresh the accumulative shadow bake so the scene loads without
+	// recomputing it. The capture reports the bake state for the CURRENT inputs:
+	//  - a fresh density PNG (`dataUrl`) → upload it and reference the new asset,
+	//  - `dataUrl` null with a matching signature → the stored bake is still valid;
+	//    keep its asset (the bake is non-deterministic, so re-uploading would churn
+	//    storage and trigger needless GC),
+	//  - nothing settled → drop any persisted ref so a STALE bake is never shipped;
+	//    the scene re-bakes live next load and re-persists once it settles.
+	// Best-effort: any failure leaves the scene to re-bake live next load. The bake
+	// asset id (fresh or kept) is linked into the scene's asset set (below) so it
+	// rides the aggregate on load.
 	let settingsForSave = currentSettings
-	if (captureShadowBake) {
+	let bakedShadowAssetId: string | null = null
+	const currentShadows = currentSettings.shadows
+	if (captureShadowBake && currentShadows?.type === 'accumulative') {
+		let bakedRef: typeof currentShadows.baked | undefined
 		try {
 			const bake = await captureShadowBake()
-			const shadows = currentSettings.shadows
-			if (bake && shadows?.type === 'accumulative') {
-				const bakeFile = createFileFromDataUrl(bake.dataUrl, 'shadow-bake.png')
+			if (bake?.dataUrl) {
+				const bakeFile = createFileFromDataUrl(
+					bake.dataUrl,
+					PERSISTED_BAKE_FILENAME
+				)
 				if (bakeFile) {
 					const uploadBakeFormData = new FormData()
 					uploadBakeFormData.append('action', 'upload-scene-asset')
@@ -212,17 +240,17 @@ export const executeSceneSaveOrchestrator = async ({
 						})
 					)
 
-					settingsForSave = {
-						...currentSettings,
-						shadows: {
-							...shadows,
-							baked: {
-								assetId: uploadedBake.assetId as string,
-								signature: bake.signature
-							}
-						}
-					}
+					bakedShadowAssetId = uploadedBake.assetId as string
+					bakedRef = { assetId: bakedShadowAssetId, signature: bake.signature }
 				}
+			} else if (
+				bake &&
+				currentShadows.baked &&
+				currentShadows.baked.signature === bake.signature
+			) {
+				// Stored bake is still valid for the current inputs: keep and relink it.
+				bakedRef = currentShadows.baked
+				bakedShadowAssetId = currentShadows.baked.assetId
 			}
 		} catch (error) {
 			console.warn('[scene-settings] shadow bake persist failed', {
@@ -231,10 +259,15 @@ export const executeSceneSaveOrchestrator = async ({
 					error instanceof Error ? error.message : 'Unknown shadow bake error'
 			})
 		}
+
+		settingsForSave = {
+			...currentSettings,
+			shadows: { ...currentShadows, baked: bakedRef }
+		}
 	}
 
 	const maxConcurrentAssetUploads =
-		options?.maxConcurrentAssetUploads ?? maxConcurrentAssetUploadsDefault
+		options?.maxConcurrentAssetUploads ?? MAX_CONCURRENT_ASSET_UPLOADS
 
 	const hashBytes = async (bytes: Uint8Array): Promise<string> => {
 		const hashBuffer = await crypto.subtle.digest(
@@ -350,6 +383,22 @@ export const executeSceneSaveOrchestrator = async ({
 		gltfAssetId = await uploadGltfFile(gltfBytes)
 	}
 	sceneAssetIds.push(gltfAssetId)
+
+	// Link the persisted shadow bake into the scene's asset set so the server
+	// downloads it into the aggregate (base64-inlined alongside the model assets)
+	// and every surface loads it in parallel, with no separate request.
+	if (bakedShadowAssetId) {
+		sceneAssetIds.push(bakedShadowAssetId)
+	}
+
+	// Link the current thumbnail (newly uploaded or the existing one) so it is
+	// tracked as a scene asset: this keeps it from being GC'd and lets a superseded
+	// thumbnail become an unlinked GC candidate. It is excluded from the aggregate's
+	// inlined render data server-side (served by URL, not rendered).
+	const thumbnailAssetId = extractThumbnailAssetId(sceneMetaForSave.thumbnailUrl)
+	if (thumbnailAssetId) {
+		sceneAssetIds.push(thumbnailAssetId)
+	}
 
 	const formData = new FormData()
 	formData.append('action', 'commit-scene-save')

@@ -42,7 +42,7 @@ import {
 	Trash2,
 	X
 } from 'lucide-react'
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { data, Link, useNavigate } from 'react-router'
 
 import { Route } from './+types/scene'
@@ -59,6 +59,7 @@ import { useDashboardSceneActions } from '../../../hooks/use-dashboard-scene-act
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import { buildFullscreenPreviewPath } from '../../../lib/domain/embed/embed-snippet'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
+import { resolveBakedShadowSource } from '../../../lib/domain/scene/client/baked-shadow-source'
 import { loadSceneFromApi } from '../../../lib/domain/scene/client/load-scene-from-api.client'
 import { getDashboardSceneLoadErrorMessage } from '../../../lib/domain/scene/scene-load-error-messages'
 import { buildSceneAggregate } from '../../../lib/domain/scene/server/scene-aggregate.server'
@@ -264,6 +265,10 @@ const PreviewModel = memo(
 			thumbnailUrl,
 			'Scene thumbnail preview'
 		)
+		const bakedShadow = useMemo(
+			() => resolveBakedShadowSource(sceneData?.shadows, sceneData?.assetData),
+			[sceneData?.shadows, sceneData?.assetData]
+		)
 
 		return (
 			<div className={cn('relative h-full')}>
@@ -275,6 +280,8 @@ const PreviewModel = memo(
 					controlsOptions={sceneData?.controls}
 					normalizationOptions={sceneData?.normalization}
 					shadowsOptions={sceneData?.shadows}
+					staticShadowBake
+					bakedShadow={bakedShadow}
 					loadingThumbnail={loadingThumbnail}
 					loader={<CenteredSpinner text="Preparing scene..." />}
 					fallback={<CenteredSpinner text="Loading scene..." />}

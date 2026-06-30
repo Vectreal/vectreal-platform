@@ -22,7 +22,8 @@ import ShadowAutoCutoff from './shadow-auto-cutoff'
 import {
 	captureShadowDensity,
 	computeBakeSignature,
-	computeModelFingerprint
+	computeModelFingerprint,
+	PERSISTED_BAKE_RESOLUTION
 } from './shadow-bake'
 import ShadowLightGizmo from './shadow-light-gizmo'
 
@@ -229,32 +230,47 @@ const useModelMetrics = (model?: Object3D): ModelMetrics => {
 interface ShadowBakeCaptureProps {
 	apiRef: RefObject<ComponentRef<typeof AccumulativeShadows> | null>
 	signature: string
-	resolution: number
+	/** True when the persisted bake is being rendered (no live bake to capture). */
+	usingPersistedBake: boolean
 	onReady?: (capture: ShadowBakeCapture | null) => void
 }
 
 /**
- * Exposes a function that reads the settled accumulative-shadow bake into a
- * density PNG (see captureShadowDensity), tagged with the current bake signature.
- * The app calls it on save to persist the bake. Registered/cleared the same way
- * as the screenshot capture. Returns null until the bake has settled.
+ * Exposes a function that reports the bake state at save time, so persistence is
+ * always fresh and never churns:
+ * - persisted bake still valid for the current inputs → `{ signature, dataUrl: null }`
+ *   (keep the stored asset, no re-upload),
+ * - a live bake has settled → `{ signature, dataUrl }` (a fresh density PNG to
+ *   persist; see captureShadowDensity),
+ * - nothing settled / no accumulative shadow → `null`.
+ *
+ * Mounted unconditionally (in both the persisted and live branches) so a save can
+ * confirm the persisted bake is current; registered/cleared like the screenshot
+ * capture. The bake is non-deterministic (RandomizedLight jitter), so reusing the
+ * stored asset when inputs are unchanged is what avoids a new upload every save.
  */
 const ShadowBakeCapture = ({
 	apiRef,
 	signature,
-	resolution,
+	usingPersistedBake,
 	onReady
 }: ShadowBakeCaptureProps) => {
 	const gl = useThree((state) => state.gl)
-	// Keep the latest signature without re-registering the capture each bake.
+	// Keep the latest values without re-registering the capture each render.
 	const signatureRef = useRef(signature)
 	signatureRef.current = signature
+	const usingPersistedBakeRef = useRef(usingPersistedBake)
+	usingPersistedBakeRef.current = usingPersistedBake
 
 	useEffect(() => {
 		if (!onReady) return
 		const capture: ShadowBakeCapture = async () => {
+			// Persisted bake is already valid for the current inputs: keep it.
+			if (usingPersistedBakeRef.current) {
+				return { dataUrl: null, signature: signatureRef.current }
+			}
 			const api = apiRef.current
-			// Only a fully accumulated bake is worth persisting.
+			// Only a fully accumulated live bake is worth persisting.
 			if (!api || api.count < api.frames) return null
 			const mesh = api.getMesh() as Mesh & {
 				material: { map?: Texture | null; alphaTest: number }
@@ -262,13 +278,18 @@ const ShadowBakeCapture = ({
 			const map = mesh?.material?.map
 			const alphaTest = mesh?.material?.alphaTest
 			if (!map || alphaTest == null) return null
-			const dataUrl = captureShadowDensity(gl, map, alphaTest, resolution)
+			const dataUrl = captureShadowDensity(
+				gl,
+				map,
+				alphaTest,
+				PERSISTED_BAKE_RESOLUTION
+			)
 			if (!dataUrl) return null
 			return { dataUrl, signature: signatureRef.current }
 		}
 		onReady(capture)
 		return () => onReady(null)
-	}, [gl, apiRef, resolution, onReady])
+	}, [gl, apiRef, onReady])
 
 	return null
 }
@@ -456,19 +477,45 @@ const SceneShadows = memo(
 		])
 
 		// Signature of the current bake inputs. A persisted bake is reused only while
-		// it still matches; any change to the light/frames/scale/model re-bakes live
-		// (and the next save re-persists). Uses `options.frames` (the full count, not
-		// the drag-preview reduction).
-		const bakeSignature = computeBakeSignature(
-			{
-				light: options.light,
-				frames: options.frames,
-				scale: options.scale,
-				resolution: options.resolution
-			},
-			footprint,
-			radius,
-			vertexCount
+		// it still matches; any change to the light/frames/scale/alphaTest/colorBlend/
+		// model re-bakes live (and the next save re-persists). Uses `options.frames`
+		// (the full count, not the drag-preview reduction). Memoized so it isn't
+		// re-serialized + re-hashed on every render.
+		const bakeSignature = useMemo(
+			() =>
+				computeBakeSignature(
+					{
+						light: options.light,
+						frames: options.frames,
+						scale: options.scale,
+						resolution: options.resolution,
+						alphaTest: options.alphaTest,
+						colorBlend: options.colorBlend,
+						cutoffScale: options.cutoffScale
+					},
+					footprint,
+					radius,
+					vertexCount
+				),
+			// Depend on primitive inputs, not the freshly-spread `options`/`options.light`
+			// objects, so the memo actually holds across unrelated re-renders.
+			[
+				options.frames,
+				options.scale,
+				options.resolution,
+				options.alphaTest,
+				options.colorBlend,
+				options.cutoffScale,
+				options.light.position,
+				options.light.radius,
+				options.light.ambient,
+				options.light.amount,
+				options.light.intensity,
+				options.light.bias,
+				footprint,
+				radius,
+				vertexCount
+			]
 		)
 		// Use the persisted bake when one exists and either the model isn't measured
 		// yet (render it optimistically rather than spawn the expensive live bake we
@@ -514,16 +561,18 @@ const SceneShadows = memo(
 							cutoffScale={options.cutoffScale ?? 1}
 							temporal={temporal ?? true}
 						/>
-
-						{onShadowBakeReady && (
-							<ShadowBakeCapture
-								apiRef={apiRef}
-								signature={bakeSignature}
-								resolution={options.resolution ?? defaultShadowsOptions.resolution!}
-								onReady={onShadowBakeReady}
-							/>
-						)}
 					</>
+				)}
+
+				{/* Mounted in both branches so a save can either persist a fresh live
+				    bake or confirm the stored one is still valid (avoiding re-upload). */}
+				{onShadowBakeReady && (
+					<ShadowBakeCapture
+						apiRef={apiRef}
+						signature={bakeSignature}
+						usingPersistedBake={usePersistedBake}
+						onReady={onShadowBakeReady}
+					/>
 				)}
 
 				{lightEditable && onLightChange && (

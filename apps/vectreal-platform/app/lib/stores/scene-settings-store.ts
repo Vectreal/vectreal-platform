@@ -19,6 +19,7 @@ import type {
 	SceneSettings,
 	ShadowsProps
 } from '@vctrl/core'
+import type { BakedShadow } from '@vctrl/viewer'
 
 const sceneSettingsStore = createStore()
 
@@ -39,6 +40,10 @@ const normalizationAtom = atom<NormalizationOptions>(
 const rawModelDiagonalAtom = atom<number>(0)
 const hotspotsAtom = atom<HotspotDefinition[]>([])
 const activeHotspotIdAtom = atom<string | null>(null)
+// Persisted shadow bake resolved from the loaded scene aggregate (a data URL +
+// signature), or null when the scene has none. Set during hydration so the viewer
+// can render the stored shadow instead of recomputing the bake.
+const bakedShadowSourceAtom = atom<BakedShadow | null>(null)
 const sceneViewerSettingsAtom = atom((get) => ({
 	bounds: get(boundsAtom),
 	camera: get(cameraAtom),
@@ -66,10 +71,12 @@ sceneSettingsStore.set(normalizationAtom, defaultNormalizationOptions)
 sceneSettingsStore.set(rawModelDiagonalAtom, 0)
 sceneSettingsStore.set(hotspotsAtom, [])
 sceneSettingsStore.set(activeHotspotIdAtom, null)
+sceneSettingsStore.set(bakedShadowSourceAtom, null)
 
 export {
 	// Vectreal viewer settings atoms
 	activeHotspotIdAtom,
+	bakedShadowSourceAtom,
 	boundsAtom,
 	cameraAtom,
 	controlsAtom,

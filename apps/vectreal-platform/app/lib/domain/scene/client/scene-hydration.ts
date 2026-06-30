@@ -5,8 +5,11 @@ import {
 	type ServerSceneData
 } from '@vctrl/core'
 
+import { resolveBakedShadowSource } from './baked-shadow-source'
+
 import type { SceneAggregateResponse } from '../../../../types/api'
 import type { SceneMetaState } from '../../../../types/publisher-config'
+import type { BakedShadow } from '@vctrl/viewer'
 
 export const getSceneNameFromFileName = (fileName: string): string => {
 	const trimmedFileName = fileName.trim()
@@ -100,6 +103,7 @@ interface ExecuteAggregateSceneHydrationParams {
 	aggregate: SceneAggregateResponse
 	hydrateOptimizationState: (aggregate: SceneAggregateResponse) => void
 	applySceneSettings: (settings: SceneSettings) => void
+	applyBakedShadowSource: (source: BakedShadow | null) => void
 	setSceneMetaState: (sceneMeta: SceneMetaState) => void
 	setLastSavedSceneMeta: (sceneMeta: SceneMetaState) => void
 	loadFromData: (params: {
@@ -113,6 +117,7 @@ export const executeAggregateSceneHydration = async ({
 	aggregate,
 	hydrateOptimizationState,
 	applySceneSettings,
+	applyBakedShadowSource,
 	setSceneMetaState,
 	setLastSavedSceneMeta,
 	loadFromData
@@ -123,6 +128,13 @@ export const executeAggregateSceneHydration = async ({
 	if (settings) {
 		applySceneSettings(settings)
 	}
+
+	// Resolve the persisted shadow bake from the aggregate's inlined asset data so
+	// the viewer renders the stored shadow with no extra request (null clears any
+	// previous scene's bake).
+	applyBakedShadowSource(
+		resolveBakedShadowSource(settings?.shadows, aggregate.assetData) ?? null
+	)
 
 	if (aggregate.meta) {
 		setSceneMetaState(aggregate.meta)

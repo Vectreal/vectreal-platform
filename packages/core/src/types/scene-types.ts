@@ -260,6 +260,21 @@ export interface BakedShadowRef {
 }
 
 /**
+ * Stable filename for the persisted accumulative-shadow density PNG. Used as the
+ * key-agnostic identifier for the bake asset across the save upload, the scene
+ * aggregate, and file reconstruction (so the bake is found by name rather than by
+ * the asset-map key, which differs between load paths).
+ */
+export const PERSISTED_BAKE_FILENAME = 'shadow-bake.png'
+
+/**
+ * Stable filename for the scene thumbnail asset. Used to identify the thumbnail so
+ * it can be tracked as a scene asset (for garbage collection) while being excluded
+ * from the aggregate's inlined render data (it is served by URL, not rendered).
+ */
+export const SCENE_THUMBNAIL_FILENAME = 'scene-thumbnail.webp'
+
+/**
  * Configuration for the soft contact/ground shadow that approximates ground
  * ambient occlusion under the model. Plane size and capture height are derived
  * from the model automatically; these are the surfaced controls.

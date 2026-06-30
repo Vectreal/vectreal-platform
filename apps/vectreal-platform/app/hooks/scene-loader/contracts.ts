@@ -16,6 +16,7 @@ import type {
 	SceneDataLoadOptions,
 	SceneLoadResult
 } from '@vctrl/hooks/use-load-model'
+import type { ShadowBakeResult } from '@vctrl/viewer'
 import type { MutableRefObject } from 'react'
 
 export interface ScenePersistenceState {
@@ -57,11 +58,7 @@ export interface SceneSaveFlowActions {
 	createRequestId: () => string
 	prepareGltfDocumentForUpload: () => Promise<unknown>
 	captureSceneThumbnail: () => Promise<null | string>
-	captureShadowBake: () => Promise<{
-		dataUrl: string
-		signature: string
-	} | null>
-	maxConcurrentAssetUploadsDefault: number
+	captureShadowBake: () => Promise<ShadowBakeResult | null>
 }
 
 export interface UseSceneSaveFlowArgs {
@@ -80,7 +77,6 @@ export interface DraftRestoreRequest {
 	fileModel: unknown
 	isFileLoading: boolean
 	locationPathname: string
-	onRestoreHandled?: () => void
 }
 
 export interface DraftHydrationActions {
@@ -88,6 +84,8 @@ export interface DraftHydrationActions {
 	loadFromData: (params: SceneDataLoadOptions) => Promise<SceneLoadResult>
 	setSceneMetaState: (sceneMeta: SceneMetaState) => void
 	setLastSavedSceneMeta: (sceneMeta: SceneMetaState) => void
+	/** Invoked after a restore attempt settles (success or failure). */
+	onRestoreHandled?: () => void
 }
 
 export interface DraftOptimizationActions {

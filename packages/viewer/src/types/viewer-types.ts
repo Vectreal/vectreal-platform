@@ -26,9 +26,16 @@ export type SceneScreenshotCapture = (
 	options?: SceneScreenshotOptions
 ) => Promise<null | string>
 
-/** A captured accumulative-shadow bake: a density PNG data URL + its signature. */
+/**
+ * The state of the accumulative-shadow bake at save time, for persistence.
+ * `signature` is always the current bake inputs' signature. `dataUrl` is a fresh
+ * density PNG when a live bake settled and needs (re)persisting, or `null` when
+ * the already-persisted bake is still valid for these inputs (no re-upload). A
+ * `null` result from the capture function means there is nothing worth persisting
+ * (no accumulative shadow, or the bake has not settled).
+ */
 export interface ShadowBakeResult {
-	dataUrl: string
+	dataUrl: string | null
 	signature: string
 }
 

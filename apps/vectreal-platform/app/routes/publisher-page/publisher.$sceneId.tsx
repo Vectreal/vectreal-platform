@@ -32,6 +32,7 @@ import {
 } from '../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
 import {
+	bakedShadowSourceAtom,
 	rawModelDiagonalAtom,
 	sceneViewerSettingsAtom,
 	selectedCameraIdAtom,
@@ -75,6 +76,11 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 
 	return defaultShouldRevalidate
 }
+
+// Debounce window (ms) for committing shadow-light drags. Long enough to
+// coalesce a continuous pointer drag into a single re-bake, short enough that
+// the commit feels immediate once the user lets go.
+const SHADOW_LIGHT_COMMIT_DEBOUNCE_MS = 80
 
 const LOADING_MESSAGES = [
 	'Preparing the Publisher...',
@@ -165,10 +171,12 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 						? { ...prev, light: { ...prev.light, position } }
 						: prev
 				)
-			}, 80)
+			}, SHADOW_LIGHT_COMMIT_DEBOUNCE_MS)
 		},
 		[setShadows]
 	)
+	// Clear any pending shadow-light commit on unmount so a debounced setShadows
+	// can't fire into an unmounted tree (e.g. navigating away mid-drag).
 	useEffect(
 		() => () => {
 			if (shadowLightCommitTimer.current) {
@@ -196,16 +204,10 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 		registerCommandExecutor
 	} = usePublisherViewerCapture()
 
-	// Resolve the persisted shadow bake (if any) to a served URL so the viewer can
-	// render it instead of recomputing the bake. Served via the owner-authed image
-	// route; the viewer ignores it once the bake inputs change (signature mismatch).
-	const bakedShadow =
-		shadows?.type === 'accumulative' && shadows.baked && routeSceneId
-			? {
-					url: `/api/scenes/${routeSceneId}/thumbnail/${shadows.baked.assetId}`,
-					signature: shadows.baked.signature
-				}
-			: undefined
+	// Persisted shadow bake resolved from the loaded aggregate's inlined asset data
+	// (a data URL, no separate request). The viewer ignores it once the bake inputs
+	// change during editing (signature mismatch) and re-bakes live.
+	const bakedShadow = useAtomValue(bakedShadowSourceAtom) ?? undefined
 
 	const handleScreenshotCaptureReady = useCallback(
 		(capture: null | SceneScreenshotCapture) => {
@@ -321,7 +323,6 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 								onShadowBakeReady={handleShadowBakeReady}
 								shadowLightEditable={isShadowToolActive}
 								onShadowLightChange={handleShadowLightChange}
-								showViewCube
 								normalizationOptions={normalization}
 								boundsOptions={bounds}
 								loadingThumbnail={loadingThumbnail}

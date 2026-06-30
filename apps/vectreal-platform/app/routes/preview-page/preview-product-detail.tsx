@@ -16,7 +16,7 @@ import {
 	InfoPopoverTrigger,
 	InfoPopoverVectrealFooter
 } from '@vctrl/viewer'
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { Link } from 'react-router'
 
 import { Route } from './+types/preview-product-detail'
@@ -24,6 +24,7 @@ import { usePreviewScene } from './use-preview-scene'
 import CenteredSpinner from '../../components/centered-spinner'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import { useHostedPreviewBridge } from '../../lib/domain/embed/hosted-preview-bridge'
+import { resolveBakedShadowSource } from '../../lib/domain/scene/client/baked-shadow-source'
 
 interface PreviewModelProps {
 	file: ModelFile | null
@@ -68,6 +69,10 @@ const ProductDetailModel = memo(
 		onInteractionEvent,
 		onCommandExecutorReady
 	}: PreviewModelProps) => {
+		const bakedShadow = useMemo(
+			() => resolveBakedShadowSource(sceneData?.shadows, sceneData?.assetData),
+			[sceneData?.shadows, sceneData?.assetData]
+		)
 		return (
 			<div className="bg-background relative h-[60vh] min-h-[420px] w-full overflow-hidden rounded-xl border md:h-[68vh]">
 				<ClientVectrealViewer
@@ -81,6 +86,8 @@ const ProductDetailModel = memo(
 					onInteractionEvent={onInteractionEvent}
 					normalizationOptions={sceneData?.normalization}
 					shadowsOptions={sceneData?.shadows}
+					staticShadowBake
+					bakedShadow={bakedShadow}
 					popover={
 						<PreviewInfoPopover
 							title={sceneData?.meta?.name?.trim() || undefined}

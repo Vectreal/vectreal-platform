@@ -14,7 +14,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { Center, GizmoHelper, GizmoViewcube } from '@react-three/drei'
+import { Center } from '@react-three/drei'
 import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
 import {
@@ -77,10 +77,14 @@ export type {
 } from './types/viewer-types'
 
 export interface VectrealViewerProps extends PropsWithChildren {
+	// --- Content ---
+
 	/**
 	 * The 3D model to render in the viewer. (three.js `Object3D`)
 	 */
 	model?: Object3D
+
+	// --- Container & appearance ---
 
 	/**
 	 * An optional className to apply to the outermost container of the viewer.
@@ -95,6 +99,8 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 */
 	theme?: 'light' | 'dark' | 'system'
 
+	// --- Performance ---
+
 	/**
 	 * Whether to render the canvas only when visible in viewport.
 	 * Improves performance by not rendering off-screen scenes.
@@ -108,6 +114,8 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * Default: true
 	 */
 	enablePostProcessing?: boolean
+
+	// --- Scene configuration ---
 
 	/**
 	 * Options for the scene bounds.
@@ -135,16 +143,26 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	shadowsOptions?: ShadowsProps
 
 	/**
+	 * Options for runtime model size normalization.
+	 * Clamps the model's bounding-box diagonal to [minSize, maxSize].
+	 * Does not modify the underlying model data.
+	 */
+	normalizationOptions?: NormalizationOptions
+
+	/**
+	 * Options for the grid.
+	 */
+	gridOptions?: GridProps
+
+	// --- Editor affordances ---
+	// Editing-surface features (e.g. the publisher). Public/embedded viewers omit
+	// these. See the package README for the slim-embed surface.
+
+	/**
 	 * When true, renders an in-scene draggable handle for aiming the shadow light.
 	 * Intended for editing surfaces (e.g. the publisher), not public viewers.
 	 */
 	shadowLightEditable?: boolean
-
-	/**
-	 * When true, renders a clickable orientation cube (lower-left) for snapping the
-	 * camera to absolute views. Intended for editing surfaces.
-	 */
-	showViewCube?: boolean
 
 	/**
 	 * When true, the accumulative shadow bakes in a single pass on mount instead of
@@ -173,17 +191,7 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 */
 	onShadowLightChange?: (position: [number, number, number]) => void
 
-	/**
-	 * Options for runtime model size normalization.
-	 * Clamps the model's bounding-box diagonal to [minSize, maxSize].
-	 * Does not modify the underlying model data.
-	 */
-	normalizationOptions?: NormalizationOptions
-
-	/**
-	 * Options for the grid.
-	 */
-	gridOptions?: GridProps
+	// --- Slots ---
 
 	/**
 	 * Slot for the info popover component.
@@ -199,6 +207,8 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * Optional thumbnail rendered as a blurred backdrop under the loader.
 	 */
 	loadingThumbnail?: ViewerLoadingThumbnail
+
+	// --- Callbacks & events ---
 
 	/**
 	 * Callback function to handle screenshot generation (accept data URL via param).
@@ -257,33 +267,39 @@ export interface VectrealViewerProps extends PropsWithChildren {
  */
 const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	const {
-		className,
+		// Content
 		children,
+		// Container & appearance
+		className,
 		theme = 'system',
-		cameraOptions,
+		// Performance
+		enableViewportRendering = true,
+		enablePostProcessing = true,
+		// Scene configuration
 		boundsOptions,
-		envOptions,
-		// gridOptions,
+		cameraOptions,
 		controlsOptions,
+		envOptions,
 		shadowsOptions,
+		normalizationOptions,
+		// gridOptions,
+		// Editor affordances
 		shadowLightEditable,
-		onShadowLightChange,
-		showViewCube,
 		staticShadowBake = false,
 		bakedShadow,
 		onShadowBakeReady,
-		normalizationOptions,
+		onShadowLightChange,
+		// Slots
 		popover,
 		loadingThumbnail,
+		loader = <DefaultSpinner />,
+		// Callbacks & events
 		onScreenshot,
 		onScreenshotCaptureReady,
 		onCameraSnapshotCaptureReady,
 		onInteractionEvent,
 		onCommandExecutorReady,
-		onRawDiagonalComputed,
-		enableViewportRendering = true,
-		enablePostProcessing = true,
-		loader = <DefaultSpinner />
+		onRawDiagonalComputed
 	} = props
 
 	const hasContent = !!(model || children)
@@ -471,26 +487,6 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 								/>
 								{children}
 							</SceneBounds>
-							{showViewCube && (
-								<GizmoHelper
-									alignment="bottom-left"
-									margin={[72, 72]}
-									// drei's Hud re-renders the whole scene itself at renderPriority
-									// 1, which would clobber the AO EffectComposer's output (also at
-									// priority 1). At priority 2 the Hud skips that scene re-render and
-									// just overlays the gizmo on top of the composed frame, so the
-									// cube and postprocessing coexist. Without AO there's no composer,
-									// so the default priority 1 keeps working as before.
-									renderPriority={aoEnabled ? 2 : 1}
-								>
-									<GizmoViewcube
-										color="#f4f4f5"
-										textColor="#52525b"
-										strokeColor="#d4d4d8"
-										hoverColor="#fbbf24"
-									/>
-								</GizmoHelper>
-							)}
 						</>
 					)}
 				</Suspense>

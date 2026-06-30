@@ -61,8 +61,7 @@ export const useSceneSaveFlow = ({
 		createRequestId,
 		prepareGltfDocumentForUpload,
 		captureSceneThumbnail,
-		captureShadowBake,
-		maxConcurrentAssetUploadsDefault
+		captureShadowBake
 	} = actions
 
 	const setCurrentLocation = useSetAtom(currentLocationAtom)
@@ -216,8 +215,7 @@ export const useSceneSaveFlow = ({
 						createRequestId,
 						prepareGltfDocumentForUpload,
 						captureSceneThumbnail,
-						captureShadowBake,
-						maxConcurrentAssetUploadsDefault
+						captureShadowBake
 					})
 				} catch (error) {
 					console.error('Failed to save scene settings:', {
@@ -250,8 +248,7 @@ export const useSceneSaveFlow = ({
 			optimizationSettings,
 			optimizationReport,
 			prepareGltfDocumentForUpload,
-			userId,
-			maxConcurrentAssetUploadsDefault
+			userId
 		]
 	)
 
