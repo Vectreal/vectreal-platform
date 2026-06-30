@@ -31,6 +31,7 @@ import {
 	arePublisherActionsDisabledAtom,
 	controlsOverlayStateAtom,
 	isPreviewModeAtom,
+	lastSavedSceneIdAtom,
 	processAtom,
 	saveLocationAtom
 } from '../../lib/stores/publisher-config-store'
@@ -74,6 +75,10 @@ const OverlayControls = ({
 	// Save location comes from the Jotai atom - initialized in publisher-layout
 	// and updated by the shell-level SceneNameAndLocation picker.
 	const saveLocationTarget = useAtomValue(saveLocationAtom)
+	// Confirmed persisted-save signal (set only after a successful, non-unchanged
+	// save). Used to reveal publish sections immediately on first save, bridging the
+	// gap until the route param updates to the new scene id post-navigation.
+	const sessionSavedSceneId = useAtomValue(lastSavedSceneIdAtom)
 	const { hasUnsavedLocationChange } = useLocationChangeState()
 	const { requestSceneScreenshot } = usePublisherViewerCapture()
 
@@ -161,6 +166,7 @@ const OverlayControls = ({
 		() =>
 			buildPublishSidebarViewModel({
 				sceneId: sceneId ?? undefined,
+				sessionSavedSceneId: sessionSavedSceneId ?? undefined,
 				userId: user?.id,
 				publishedAt,
 				publishedAssetSizeBytes:
@@ -171,6 +177,7 @@ const OverlayControls = ({
 			}),
 		[
 			sceneId,
+			sessionSavedSceneId,
 			user?.id,
 			publishedAt,
 			publishedMeta?.publishedAssetSizeBytes,
@@ -180,7 +187,11 @@ const OverlayControls = ({
 
 	const publishSidebarValue = useMemo(
 		() => ({
-			sceneId: sceneId ?? undefined,
+			// Prefer the session-resolved id so the publish/embed actions (and the
+			// sidebar's own save) operate on the just-saved scene during the window
+			// before the route param catches up, avoiding a redundant re-save and an
+			// empty embed snippet.
+			sceneId: publishSidebarViewModel.publishState.sceneId || undefined,
 			projectId: projectId ?? undefined,
 			userId: user?.id,
 			onRequireAuth: handleRequireAuthForSave,

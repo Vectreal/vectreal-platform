@@ -48,12 +48,14 @@ const getSizeDeltaBytes = (
 
 export const buildPublishSidebarViewModel = ({
 	sceneId,
+	sessionSavedSceneId,
 	userId,
 	publishedAt,
 	publishedAssetSizeBytes,
 	resolvedMetrics
 }: {
 	sceneId?: string
+	sessionSavedSceneId?: string
 	userId?: string
 	publishedAt?: string | null
 	publishedAssetSizeBytes?: number | null
@@ -70,9 +72,17 @@ export const buildPublishSidebarViewModel = ({
 	)
 	const isHydratingInitialMetrics = Boolean(metrics?.isInitialMetricsHydrating)
 	const isAuthenticated = Boolean(userId)
-	const hasSavedScene = Boolean(
-		typeof sceneId === 'string' && sceneId.length > 0
-	)
+	// Treat the scene as saved when the route already carries its id OR a save has
+	// been confirmed this session. The latter bridges the window between a first
+	// save completing and the route updating to /publisher/:newId, so the publish
+	// sections reveal immediately instead of flickering or staying on "save".
+	const resolvedSceneId =
+		(typeof sceneId === 'string' && sceneId.length > 0 && sceneId) ||
+		(typeof sessionSavedSceneId === 'string' &&
+			sessionSavedSceneId.length > 0 &&
+			sessionSavedSceneId) ||
+		''
+	const hasSavedScene = resolvedSceneId.length > 0
 
 	return {
 		metrics,
@@ -85,7 +95,7 @@ export const buildPublishSidebarViewModel = ({
 			isInitialMetricsHydrating: isHydratingInitialMetrics
 		},
 		publishState: {
-			sceneId: sceneId ?? '',
+			sceneId: resolvedSceneId,
 			status: publishedAt ? 'published' : 'draft',
 			publishedAt: publishedAt ?? null,
 			publishedAssetId: null,
