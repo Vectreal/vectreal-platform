@@ -1,3 +1,5 @@
+export * from './motion'
+
 export * from './hooks/use-accept-pattern'
 export * from './hooks/use-is-at-top'
 export * from './hooks/use-mobile'

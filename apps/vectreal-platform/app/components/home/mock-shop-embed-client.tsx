@@ -13,13 +13,13 @@ const DEMO_SCENE_URL =
 	typeof import.meta !== 'undefined' &&
 	(import.meta.env.VITE_PUBLIC_DEMO_SCENE_URL as string | undefined)
 		? (import.meta.env.VITE_PUBLIC_DEMO_SCENE_URL as string)
-		: `https://vectreal.com/preview/fullscreen/395a09f0-9340-42f2-ac98-03339cf27c9c/bae36111-22da-46a4-85c5-2d9bfdbb8f4f?token=${import.meta.env.VITE_PUBLIC_VECTREAL_API_KEY_PROD}`
+		: `https://vectreal.com/preview/fullscreen/395a09f0-9340-42f2-ac98-03339cf27c9c/488bd4a1-46d3-4ee1-8497-25f68a5d6fa2?token=${import.meta.env.VITE_PUBLIC_VECTREAL_API_KEY_PROD}`
 
 const CHAPTERS = [
 	{
 		id: 'default',
 		label: 'Shop View',
-		heading: 'Alpine X3 Pro',
+		heading: '911 GT3',
 		description:
 			'A real product listing powered by Vectreal. Customers scroll through camera presets to inspect every detail — no plugin required.',
 		type: 'shop' as const,
@@ -27,7 +27,7 @@ const CHAPTERS = [
 		threshold: 0
 	},
 	{
-		id: 'camera-1779054230007-lg5mbd',
+		id: 'side-view',
 		label: 'Camera Presets',
 		heading: 'Guided views,\nzero extra code.',
 		description:
@@ -37,7 +37,7 @@ const CHAPTERS = [
 		threshold: 0.25
 	},
 	{
-		id: 'camera-1779320332512-tded3h',
+		id: 'light-closeup',
 		label: 'React SDK',
 		heading: 'Drop in.\nConfigure from JSX.',
 		description:
@@ -47,7 +47,7 @@ const CHAPTERS = [
 		threshold: 0.5
 	},
 	{
-		id: 'camera-1779320572791-qm1tv5',
+		id: 'back-side',
 		label: 'Embed',
 		heading: 'One iframe.\nAny platform.',
 		description:
@@ -239,7 +239,7 @@ export default function MockShopEmbedClient() {
 		<div ref={sectionRef} className="relative" style={{ height: '300vh' }}>
 			{/* Sticky stage */}
 			<div className="bg-background sticky top-0 h-screen overflow-hidden">
-				<div className="mx-auto flex h-full w-full max-w-[1200px] flex-col items-center justify-center gap-16 px-5 py-16 md:px-10 md:py-10 lg:px-14">
+				<div className="mx-auto flex h-full w-full max-w-[2000px] flex-col items-center justify-center gap-16 px-5 py-16 md:px-10 md:py-10 lg:px-14">
 					<div className="grid grid-cols-1 gap-5 md:grid-cols-[3fr_2fr] md:items-center md:gap-8 lg:gap-12">
 						{/* ── Scene ─────────────────────────────────────────────── */}
 						<div className="flex flex-col gap-2">
@@ -269,7 +269,7 @@ export default function MockShopEmbedClient() {
 									)}
 									allow="autoplay; xr-spatial-tracking"
 									allowFullScreen
-									title="Alpine X3 Pro - interactive 3D preview"
+									title="Porsche 911 GT3 - interactive 3D preview"
 								/>
 
 								{/* Touch passthrough — lets vertical scroll reach the page */}
@@ -385,7 +385,7 @@ export default function MockShopEmbedClient() {
 									initial={{ opacity: 0, y: 12 }}
 									animate={{ opacity: 1, y: 0 }}
 									exit={{ opacity: 0, y: -12 }}
-									transition={{ duration: 0.3, ease: 'easeInOut' }}
+									transition={{ duration: 0.3, ease: 'easeInOut', delay: 0.55 }}
 									className="flex flex-col gap-3"
 								>
 									{/* Eyebrow label */}
@@ -412,10 +412,10 @@ export default function MockShopEmbedClient() {
 										<div className="mt-1 flex flex-col gap-3">
 											<div>
 												<p className="text-foreground/25 text-[10px] tracking-[0.18em] uppercase">
-													Mountain Bike · Carbon · 140mm · 12.4 kg
+													Coupe · 4.0L Flat-6 · 510 HP · Jet Black Metallic
 												</p>
 												<p className="text-accent mt-1 text-2xl font-bold tracking-tight">
-													$1,299.99
+													$182,900
 												</p>
 											</div>
 											<Button
@@ -424,7 +424,7 @@ export default function MockShopEmbedClient() {
 												variant="outline"
 												size="sm"
 											>
-												Add to Cart
+												Configure
 											</Button>
 											<p className="text-foreground/20 text-[11px]">
 												Concept demo · Not for sale
@@ -497,10 +497,10 @@ export default function MockShopEmbedClient() {
 
 			{/* Mobile-only exit button — rendered outside the iframe stacking context so touch events reach it reliably */}
 			{interactiveMode && (
-				<div className="fixed bottom-8 left-0 right-0 z-60 flex justify-center md:hidden">
+				<div className="fixed right-0 bottom-8 left-0 z-60 flex justify-center md:hidden">
 					<button
 						onClick={handleExitInteractive}
-						className="flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-5 py-3 text-sm font-medium tracking-[0.08em] uppercase text-white/90 backdrop-blur-md"
+						className="flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-5 py-3 text-sm font-medium tracking-[0.08em] text-white/90 uppercase backdrop-blur-md"
 					>
 						<X size={14} />
 						<span>Exit</span>

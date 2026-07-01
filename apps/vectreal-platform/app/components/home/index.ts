@@ -1,3 +1,4 @@
+export { CinematicHero } from './cinematic-hero'
 export { default as FiletypeCarousel } from './filetype-carousel'
 export { default as GridBg } from './grid-bg'
 export { default as HeroParallaxBg } from './hero-parallax-bg'

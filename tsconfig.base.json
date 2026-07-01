@@ -20,6 +20,7 @@
 			"@shared/components/assets/*": ["shared/components/src/assets/*"],
 			"@shared/components/hooks/*": ["shared/components/src/hooks/*"],
 			"@shared/components/styles/*": ["shared/components/src/styles/*"],
+			"@shared/components/motion": ["shared/components/src/motion/index.ts"],
 			"@shared/components/ui/*": ["shared/components/src/ui/*"],
 			"@shared/utils": ["shared/utils/src/index.ts"],
 			"@vctrl/hooks/use-export-model": [
