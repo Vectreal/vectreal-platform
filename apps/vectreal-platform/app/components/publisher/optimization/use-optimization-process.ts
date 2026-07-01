@@ -1,37 +1,22 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useAtom, useAtomValue } from 'jotai/react'
+import { useCallback, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
 	withTimeout,
-	requestOptimizationRunQuota,
-	toGuestQuotaState,
-	DEFAULT_GUEST_QUOTA_LIMIT,
 	runGeometryOptimizationsInWorker,
 	OPTIMIZATION_STEP_TIMEOUT_MS,
 	MODEL_SYNC_TIMEOUT_MS,
 	useSceneSizeCalculator
 } from './utils'
-import {
-	isBillingLimitError,
-	toUpgradeModalPayload
-} from '../../../lib/domain/billing/client/billing-limit-error'
 import { resolveSceneMetrics } from '../../../lib/domain/scene'
 import { loadOriginalSceneModel } from '../../../lib/persistence/pending-scene-idb'
 import {
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../../lib/stores/scene-optimization-store'
-import {
-	buildUpgradeModalState,
-	upgradeModalAtom
-} from '../../../lib/stores/upgrade-modal-store'
 
-import type {
-	GuestQuotaState,
-	OptimizationQuotaResult
-} from './utils/optimization-quota'
 import type { WorkerOptimizationOptions } from '../../../workers/optimization.worker.types'
 import type {
 	DedupOptimization,
@@ -69,11 +54,7 @@ const SYNC_STEP = 'Syncing to viewer'
 /**
  * Custom hook that encapsulates the optimization logic and state management
  */
-export const useOptimizationProcess = ({
-	isAuthenticated
-}: {
-	isAuthenticated: boolean
-}) => {
+export const useOptimizationProcess = () => {
 	const { optimizer, file } = useModelContext(true)
 	const {
 		isReady,
@@ -92,7 +73,6 @@ export const useOptimizationProcess = ({
 	const [optimizationRuntime, setOptimizationRuntime] = useAtom(
 		optimizationRuntimeAtom
 	)
-	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 	const {
 		isPending,
 		optimizedSceneBytes,
@@ -102,15 +82,6 @@ export const useOptimizationProcess = ({
 		latestSceneStats
 	} = optimizationRuntime
 
-	const [guestQuota, setGuestQuota] = useState<GuestQuotaState | null>(
-		isAuthenticated
-			? null
-			: {
-					currentValue: 0,
-					limit: DEFAULT_GUEST_QUOTA_LIMIT,
-					remaining: DEFAULT_GUEST_QUOTA_LIMIT
-				}
-	)
 	const [optimizingStep, setOptimizingStep] = useState<{
 		current: string | null
 		completed: string[]
@@ -164,27 +135,6 @@ export const useOptimizationProcess = ({
 					completed: [],
 					allSteps: [...stepNames, SYNC_STEP]
 				})
-
-				if (optimizationOptions.length > 0) {
-					const checkResult = await requestOptimizationRunQuota('check')
-					if (checkResult.isGuest) {
-						setGuestQuota(toGuestQuotaState(checkResult))
-						if (typeof checkResult.remaining === 'number') {
-							toast.message(
-								`Guest optimizations left today: ${checkResult.remaining}/${typeof checkResult.limit === 'number' ? checkResult.limit : DEFAULT_GUEST_QUOTA_LIMIT}`
-							)
-						}
-					}
-					if (
-						checkResult.outcome === 'soft_limit_warning' &&
-						typeof checkResult.currentValue === 'number' &&
-						typeof checkResult.limit === 'number'
-					) {
-						toast.warning(
-							`Optimization usage is high (${checkResult.currentValue}/${checkResult.limit}). Consider upgrading to avoid interruptions.`
-						)
-					}
-				}
 
 				if (typeof clientSceneBytes !== 'number') {
 					const baselineSceneBytes =
@@ -361,37 +311,12 @@ export const useOptimizationProcess = ({
 				}
 
 				didApplyOptimization = shouldConsumeOptimizationRun
-
-				if (optimizationOptions.length > 0 && shouldConsumeOptimizationRun) {
-					try {
-						const consumeResult = await requestOptimizationRunQuota('consume')
-						if (consumeResult.isGuest) {
-							setGuestQuota(toGuestQuotaState(consumeResult))
-						}
-					} catch (error) {
-						console.warn('Failed to record optimization run usage:', error)
-					}
-				}
 			} catch (error) {
 				console.error('Error during optimization:', error)
-				if (isBillingLimitError(error)) {
-					const modalPayload = toUpgradeModalPayload(error)
-					setUpgradeModal(
-						buildUpgradeModalState({
-							...modalPayload,
-							actionAttempted: 'optimization_run'
-						})
-					)
-					toast.error(error.message)
-					return false
-				}
-
 				toast.error(
-					error instanceof Error && error.message.includes('Unauthorized')
-						? 'Sign in to sync optimization quotas across browsers.'
-						: error instanceof Error
-							? error.message
-							: 'Optimization failed. Please retry.'
+					error instanceof Error
+						? error.message
+						: 'Optimization failed. Please retry.'
 				)
 				return false
 			} finally {
@@ -414,7 +339,6 @@ export const useOptimizationProcess = ({
 			latestSceneStats,
 			refreshOptimizedSizeInfo,
 			setOptimizationRuntime,
-			setUpgradeModal,
 			plannedOptimizations,
 			texturesOptimization,
 			applyOptimization,
@@ -438,27 +362,6 @@ export const useOptimizationProcess = ({
 		() => runOptimization(false),
 		[runOptimization]
 	)
-
-	useEffect(() => {
-		if (isAuthenticated) {
-			setGuestQuota(null)
-			return
-		}
-
-		let cancelled = false
-		void requestOptimizationRunQuota('check')
-			.then((result: OptimizationQuotaResult) => {
-				if (cancelled || !result.isGuest) return
-				setGuestQuota(toGuestQuotaState(result))
-			})
-			.catch((error: unknown) => {
-				console.warn('Failed to fetch guest optimization quota:', error)
-			})
-
-		return () => {
-			cancelled = true
-		}
-	}, [isAuthenticated])
 
 	const resolvedMetrics = useMemo(
 		() =>
@@ -509,7 +412,6 @@ export const useOptimizationProcess = ({
 		hasImproved,
 		hasCompletedOptimizationPass,
 		sizeInfo,
-		guestQuota,
 		optimizingStep,
 		handleOptimizeClick,
 		handleStackOptimizeClick

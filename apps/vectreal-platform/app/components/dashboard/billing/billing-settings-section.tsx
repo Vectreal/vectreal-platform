@@ -355,7 +355,7 @@ export function BillingSettingsSection({
 			</div>
 
 			{/* ── KPI stat grid ─────────────────────────────────── */}
-			<section className="grid grid-cols-2 gap-3 md:grid-cols-4">
+			<section className="grid grid-cols-2 gap-3 md:grid-cols-3">
 				<StatTile
 					label="Scenes"
 					current={usage.scenesTotal}
@@ -370,12 +370,6 @@ export function BillingSettingsSection({
 					label="Published"
 					current={usage.publishedScenes}
 					limit={usage.publishedSceneLimit}
-				/>
-				<StatTile
-					label="Opt. runs"
-					current={usage.optimizationRuns}
-					limit={usage.optimizationLimit}
-					monthly
 				/>
 			</section>
 
@@ -410,12 +404,6 @@ export function BillingSettingsSection({
 						API &amp; processing
 					</p>
 					<div className="space-y-3">
-						<MeterRow
-							label="Optimization runs"
-							current={usage.optimizationRuns}
-							limit={usage.optimizationLimit}
-							monthly
-						/>
 						<MeterRow
 							label="API requests"
 							current={usage.apiRequestsMonth}

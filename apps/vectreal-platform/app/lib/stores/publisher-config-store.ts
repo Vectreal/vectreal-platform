@@ -63,6 +63,12 @@ const currentLocationAtom = atom<SceneCurrentLocation>({
 	folderName: null
 })
 
+/**
+ * The organization's per-scene byte limit (storage_bytes_per_scene), seeded from
+ * the publisher loader. `null` means unlimited (or an unauthenticated guest).
+ */
+const maxSceneBytesAtom = atom<number | null>(null)
+
 const publisherLoadingStateAtom = selectAtom(
 	processAtom,
 	(state) => ({
@@ -117,6 +123,7 @@ export {
 	sceneMetaAtom,
 	saveLocationAtom,
 	currentLocationAtom,
+	maxSceneBytesAtom,
 	publisherLoadingStateAtom,
 	showSidebarAtom,
 	toolSidebarStateAtom,

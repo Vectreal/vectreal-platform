@@ -4,12 +4,11 @@ export type SaveAvailabilityReason =
 	| 'ready'
 	| 'no-user'
 	| 'no-unsaved-changes'
-	| 'requires-first-optimization'
+	| 'requires-size-reduction'
 
 export interface SaveAvailabilityState {
 	canSave: boolean
 	reason: SaveAvailabilityReason
-	isFirstSavePendingOptimization: boolean
 }
 
 interface SceneInitializationArgs {
@@ -33,58 +32,28 @@ export const shouldInitializeScene = ({
 	)
 }
 
-interface FirstSaveOptimizationArgs {
-	currentSceneId: null | string
-	lastSavedSceneId: null | string
-	hasAppliedOptimization: boolean
-}
-
-export const shouldRequireFirstSaveOptimization = ({
-	currentSceneId,
-	lastSavedSceneId,
-	hasAppliedOptimization
-}: FirstSaveOptimizationArgs): boolean => {
-	return !currentSceneId && !lastSavedSceneId && !hasAppliedOptimization
-}
-
 interface SaveAvailabilityArgs {
 	userId?: string
-	isFirstSavePendingOptimization: boolean
+	isSceneOverSizeLimit: boolean
 	hasChanges: boolean
 }
 
 export const resolveSaveAvailability = ({
 	userId,
-	isFirstSavePendingOptimization,
+	isSceneOverSizeLimit,
 	hasChanges
 }: SaveAvailabilityArgs): SaveAvailabilityState => {
 	if (!userId) {
-		return {
-			canSave: false,
-			reason: 'no-user',
-			isFirstSavePendingOptimization
-		}
+		return { canSave: false, reason: 'no-user' }
 	}
 
-	if (isFirstSavePendingOptimization) {
-		return {
-			canSave: false,
-			reason: 'requires-first-optimization',
-			isFirstSavePendingOptimization: true
-		}
+	if (isSceneOverSizeLimit) {
+		return { canSave: false, reason: 'requires-size-reduction' }
 	}
 
 	if (!hasChanges) {
-		return {
-			canSave: false,
-			reason: 'no-unsaved-changes',
-			isFirstSavePendingOptimization: false
-		}
+		return { canSave: false, reason: 'no-unsaved-changes' }
 	}
 
-	return {
-		canSave: true,
-		reason: 'ready',
-		isFirstSavePendingOptimization: false
-	}
+	return { canSave: true, reason: 'ready' }
 }

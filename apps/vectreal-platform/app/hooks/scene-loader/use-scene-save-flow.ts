@@ -1,4 +1,4 @@
-import { useSetAtom } from 'jotai/react'
+import { useAtomValue, useSetAtom } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
@@ -9,12 +9,13 @@ import {
 	hasOptimizationChanges,
 	hasUnsavedSceneChanges,
 	resolveSaveAvailability,
-	shouldRequireFirstSaveOptimization,
 	type SaveSceneOrchestratorOptions,
 	type SaveAvailabilityState
 } from '../../lib/domain/scene'
+import { isSceneOverSizeLimit } from '../../lib/domain/scene/scene-size-limit'
 import {
 	currentLocationAtom,
+	maxSceneBytesAtom,
 	saveLocationAtom
 } from '../../lib/stores/publisher-config-store'
 import { isSceneCurrentLocation } from '../../types/api'
@@ -66,6 +67,7 @@ export const useSceneSaveFlow = ({
 
 	const setCurrentLocation = useSetAtom(currentLocationAtom)
 	const setSaveLocation = useSetAtom(saveLocationAtom)
+	const maxSceneBytes = useAtomValue(maxSceneBytesAtom)
 	const inFlightSaveRef = useRef<Promise<
 		SaveSceneResult | { unchanged: true } | undefined
 	> | null>(null)
@@ -83,19 +85,19 @@ export const useSceneSaveFlow = ({
 		[optimizationReport]
 	)
 
-	const hasAppliedOptimization = useMemo(
-		() => typeof optimizedSceneBytes === 'number',
-		[optimizedSceneBytes]
+	const sceneCurrentBytes = useMemo(
+		() =>
+			typeof optimizedSceneBytes === 'number'
+				? optimizedSceneBytes
+				: typeof clientSceneBytes === 'number'
+					? clientSceneBytes
+					: undefined,
+		[optimizedSceneBytes, clientSceneBytes]
 	)
 
-	const isFirstSavePendingOptimization = useMemo(
-		() =>
-			shouldRequireFirstSaveOptimization({
-				currentSceneId,
-				lastSavedSceneId,
-				hasAppliedOptimization
-			}),
-		[currentSceneId, lastSavedSceneId, hasAppliedOptimization]
+	const sceneOverSizeLimit = useMemo(
+		() => isSceneOverSizeLimit(sceneCurrentBytes, maxSceneBytes),
+		[sceneCurrentBytes, maxSceneBytes]
 	)
 
 	useEffect(() => {
@@ -275,12 +277,6 @@ export const useSceneSaveFlow = ({
 			})
 			const sceneInitialBytes =
 				typeof clientSceneBytes === 'number' ? clientSceneBytes : undefined
-			const sceneCurrentBytes =
-				typeof optimizedSceneBytes === 'number'
-					? optimizedSceneBytes
-					: typeof clientSceneBytes === 'number'
-						? clientSceneBytes
-						: undefined
 
 			setOptimisticSaveBaseline({
 				sceneId: currentSceneId,
@@ -464,10 +460,10 @@ export const useSceneSaveFlow = ({
 		() =>
 			resolveSaveAvailability({
 				userId,
-				isFirstSavePendingOptimization,
+				isSceneOverSizeLimit: sceneOverSizeLimit,
 				hasChanges
 			}),
-		[userId, isFirstSavePendingOptimization, hasChanges]
+		[userId, sceneOverSizeLimit, hasChanges]
 	)
 
 	return {

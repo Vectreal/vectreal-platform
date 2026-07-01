@@ -32,10 +32,6 @@ export default [
 
 	// Billing api
 	route('api/billing/checkout', './routes/api/billing/checkout.ts'),
-	route(
-		'api/billing/optimization-runs',
-		'./routes/api/billing/optimization-runs.ts'
-	),
 	route('api/billing/portal', './routes/api/billing/portal.ts'),
 	route('api/billing/webhook', './routes/api/billing/webhook.ts'),
 	route('api/billing/reconcile', './routes/api/billing/reconcile.ts'),

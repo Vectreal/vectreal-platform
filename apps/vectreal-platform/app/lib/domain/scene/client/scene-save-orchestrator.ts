@@ -122,6 +122,10 @@ export const executeSceneSaveOrchestrator = async ({
 		prepareFormData.append('targetFolderId', options.targetFolderId ?? '')
 	}
 
+	if (typeof options?.currentSceneBytes === 'number') {
+		prepareFormData.append('currentSceneBytes', String(options.currentSceneBytes))
+	}
+
 	const prepared = await toJsonOrThrow(
 		await fetch(endpoint, {
 			method: 'POST',

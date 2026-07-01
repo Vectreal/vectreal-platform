@@ -175,10 +175,10 @@ export const PAYMENT_TRUST_COPY = 'Secured by Stripe · Cancel anytime'
 // ---------------------------------------------------------------------------
 
 export const PLAN_OFFER_DESCRIPTIONS: Record<Plan, string> = {
-	free: '10 scenes, 500 MB storage, 3 concurrent published scenes, 20 optimization runs/month. API access and community support included. No credit card required.',
-	pro: '200 scenes, 10 GB storage, 50 concurrent published scenes, 500 optimization runs/month. Adds analytics, AR mode, branding removal, version history, and email support.',
+	free: '10 scenes, 500 MB storage, 3 concurrent published scenes. API access and community support included. No credit card required.',
+	pro: '200 scenes, 10 GB storage, 50 concurrent published scenes. Adds analytics, AR mode, branding removal, version history, and email support.',
 	business:
-		'2,000 scenes, 100 GB storage, 500 concurrent published scenes, 5,000 optimization runs/month. Adds team collaboration (up to 10 seats), priority optimization queue, EU data residency, and priority support.',
+		'2,000 scenes, 100 GB storage, 500 concurrent published scenes. Adds team collaboration (up to 10 seats), priority optimization queue, EU data residency, and priority support.',
 	enterprise:
 		'Unlimited scenes and storage, custom seats, SSO, audit log, custom data residency, and dedicated support. Custom pricing via sales.'
 }
@@ -365,7 +365,7 @@ export const PLAN_CARD_LIMIT_KEYS = [
 	'scenes_total',
 	'scenes_published_concurrent',
 	'projects_total',
-	'optimization_runs_per_month',
+	'storage_bytes_per_scene',
 	'org_seats'
 ] as const
 
@@ -374,7 +374,7 @@ export const LIMIT_DISPLAY_LABELS: Partial<Record<LimitKey, string>> = {
 	scenes_total: 'Scenes',
 	scenes_published_concurrent: 'Published scenes',
 	projects_total: 'Projects',
-	optimization_runs_per_month: 'Optimization runs / month',
+	storage_bytes_per_scene: 'Max scene size',
 	org_seats: 'Team seats'
 }
 

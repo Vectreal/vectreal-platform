@@ -15,7 +15,8 @@ import { uploadSceneAssets } from '../../asset/asset-storage.server'
 import {
 	hasEntitlement,
 	getRecommendedUpgrade,
-	getOrgSubscription
+	getOrgSubscription,
+	getQuotaLimit
 } from '../../billing/entitlement-service.server'
 import { QuotaExceededError } from '../../billing/quota-exceeded-error'
 import { checkQuota } from '../../billing/usage-service.server'
@@ -25,6 +26,7 @@ import {
 	getOrCreateDefaultProject,
 	userExists
 } from '../../user/user-repository.server'
+import { isSceneOverSizeLimit } from '../scene-size-limit'
 
 import type { SceneSettingsRequest } from '../../../../types/api'
 import type { SceneMetaState } from '../../../../types/publisher-config'
@@ -193,6 +195,31 @@ export async function prepareSceneUpload(
 				upgradeTo,
 				message:
 					'Scene limit reached for your plan. Upgrade to create more scenes.'
+			})
+		}
+	}
+
+	// Enforce per-scene size limit against the reported final (post-optimization)
+	// scene size. currentSceneBytes is client-reported (same value used for scene
+	// stats); this is a plan gate, not a security boundary. storage_bytes_total
+	// and the storage bucket file-size limit remain hard backstops.
+	if (typeof request.currentSceneBytes === 'number') {
+		const organization = await getOrCreateDefaultOrganization(userId)
+		const { limit } = await getQuotaLimit(
+			organization.id,
+			'storage_bytes_per_scene'
+		)
+		if (isSceneOverSizeLimit(request.currentSceneBytes, limit)) {
+			const { plan } = await getOrgSubscription(organization.id)
+			const upgradeTo = getRecommendedUpgrade(plan)
+			throw new QuotaExceededError({
+				limitKey: 'storage_bytes_per_scene',
+				currentValue: request.currentSceneBytes,
+				limit,
+				plan,
+				upgradeTo,
+				message:
+					'Scene exceeds the maximum size for your plan. Optimize further or upgrade.'
 			})
 		}
 	}

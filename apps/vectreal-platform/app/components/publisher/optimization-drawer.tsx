@@ -43,8 +43,8 @@ import {
 interface OptimizationDrawerProps {
 	open: boolean
 	onOpenChange: (open: boolean) => void
-	userId?: string
-	isInitialRequired: boolean
+	isOverSizeLimit: boolean
+	maxSceneBytes: number | null
 	dashboardHref?: string
 	isMobile: boolean
 }
@@ -52,8 +52,8 @@ interface OptimizationDrawerProps {
 const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 	open,
 	onOpenChange,
-	userId,
-	isInitialRequired,
+	isOverSizeLimit,
+	maxSceneBytes,
 	dashboardHref,
 	isMobile
 }) => {
@@ -73,24 +73,14 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 		hasCompletedOptimizationPass,
 		handleOptimizeClick,
 		handleStackOptimizeClick,
-		guestQuota,
 		isOptimizerPreparing,
 		optimizingStep
-	} = useOptimizationProcess({ isAuthenticated: Boolean(userId) })
+	} = useOptimizationProcess()
 	const canProgressToComposition = hasCompletedOptimizationPass
-	const isBlockingClose =
-		isPending || (isInitialRequired && !canProgressToComposition)
-
-	const quotaPercent = useMemo(() => {
-		if (!guestQuota || guestQuota.limit <= 0) {
-			return 0
-		}
-
-		return Math.min(
-			100,
-			Math.round((guestQuota.currentValue / guestQuota.limit) * 100)
-		)
-	}, [guestQuota])
+	// Soft-gate: only an in-progress optimization blocks closing. Being over the
+	// size limit keeps save disabled (server 402 is the hard backstop) but never
+	// traps the user in the drawer.
+	const isBlockingClose = isPending
 
 	useEffect(() => {
 		if (!open || !isPending) {
@@ -114,12 +104,16 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 			return 'Applying optimization. Please keep this open until it completes.'
 		}
 
-		if (isInitialRequired) {
-			return 'Run one optimization pass to unlock save and publish.'
+		if (isOverSizeLimit && typeof maxSceneBytes === 'number') {
+			const current =
+				typeof sizeInfo.currentSceneBytes === 'number'
+					? formatFileSize(sizeInfo.currentSceneBytes)
+					: 'This scene'
+			return `${current} exceeds your plan's ${formatFileSize(maxSceneBytes)} max scene size. Optimize to get under ${formatFileSize(maxSceneBytes)} to save.`
 		}
 
 		return 'Adjust options and run another optimization pass.'
-	}, [isInitialRequired, isPending])
+	}, [isOverSizeLimit, maxSceneBytes, isPending, sizeInfo.currentSceneBytes])
 
 	const runOptimization = async () => {
 		await handleOptimizeClick()
@@ -449,21 +443,6 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 									<BasicOptimizationPanel />
 								</motion.section>
 
-								{!userId && guestQuota && (
-									<motion.div
-										initial={{ opacity: 0, y: 6 }}
-										animate={{ opacity: 1, y: 0 }}
-										transition={{ duration: 0.2, delay: 0.06 }}
-										className="publisher-shell-nested px-4 py-3"
-									>
-										<div className="text-muted-foreground mb-2 flex items-center justify-between text-xs tracking-wide uppercase">
-											<span>Guest optimization quota</span>
-											<span>{guestQuota.remaining} left today</span>
-										</div>
-										<Progress value={quotaPercent} className="h-1.5" />
-									</motion.div>
-								)}
-
 								<motion.section
 									initial={{ opacity: 0, y: 6 }}
 									animate={{ opacity: 1, y: 0 }}
@@ -502,7 +481,7 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 
 				<div className="border-shell-border-soft bg-shell-surface shrink-0 border-t px-5 py-4">
 					<div className="flex flex-row justify-between gap-3">
-						{isInitialRequired && !isPending ? (
+						{isOverSizeLimit && !isPending ? (
 							<Button type="button" variant="ghost" asChild>
 								<Link to={resolvedDashboardHref}>Back to Dashboard</Link>
 							</Button>

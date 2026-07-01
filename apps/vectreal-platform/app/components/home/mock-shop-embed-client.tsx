@@ -13,7 +13,7 @@ const DEMO_SCENE_URL =
 	typeof import.meta !== 'undefined' &&
 	(import.meta.env.VITE_PUBLIC_DEMO_SCENE_URL as string | undefined)
 		? (import.meta.env.VITE_PUBLIC_DEMO_SCENE_URL as string)
-		: `https://vectreal.com/preview/fullscreen/395a09f0-9340-42f2-ac98-03339cf27c9c/bae36111-22da-46a4-85c5-2d9bfdbb8f4f?token=${import.meta.env.VITE_PUBLIC_VECTREAL_API_KEY_PROD}`
+		: `https://vectreal.com/preview/fullscreen/395a09f0-9340-42f2-ac98-03339cf27c9c/488bd4a1-46d3-4ee1-8497-25f68a5d6fa2?token=${import.meta.env.VITE_PUBLIC_VECTREAL_API_KEY_PROD}`
 
 const CHAPTERS = [
 	{
@@ -497,10 +497,10 @@ export default function MockShopEmbedClient() {
 
 			{/* Mobile-only exit button — rendered outside the iframe stacking context so touch events reach it reliably */}
 			{interactiveMode && (
-				<div className="fixed bottom-8 left-0 right-0 z-60 flex justify-center md:hidden">
+				<div className="fixed right-0 bottom-8 left-0 z-60 flex justify-center md:hidden">
 					<button
 						onClick={handleExitInteractive}
-						className="flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-5 py-3 text-sm font-medium tracking-[0.08em] uppercase text-white/90 backdrop-blur-md"
+						className="flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-5 py-3 text-sm font-medium tracking-[0.08em] text-white/90 uppercase backdrop-blur-md"
 					>
 						<X size={14} />
 						<span>Exit</span>

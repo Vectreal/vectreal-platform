@@ -48,7 +48,8 @@ const OverlayControls = ({
 	sceneId,
 	projectId,
 	sceneAggregate,
-	publishedMeta
+	publishedMeta,
+	maxSceneBytes
 }: PublisherLoaderData) => {
 	const navigate = useNavigate()
 	const submit = useSubmit()
@@ -96,7 +97,7 @@ const OverlayControls = ({
 
 	const {
 		effectiveSaveAvailability,
-		isInitialOptimizationRequired,
+		requiresSizeReduction,
 		isOptimizationDrawerOpen,
 		handleOptimizationDrawerChange,
 		handleOpenOptimizationDrawer,
@@ -386,8 +387,8 @@ const OverlayControls = ({
 			<OptimizationDrawer
 				open={isOptimizationDrawerOpen}
 				onOpenChange={handleOptimizationDrawerChange}
-				userId={user?.id}
-				isInitialRequired={isInitialOptimizationRequired}
+				isOverSizeLimit={requiresSizeReduction}
+				maxSceneBytes={maxSceneBytes}
 				dashboardHref={sceneDetailsHref ?? '/dashboard'}
 				isMobile={isMobile}
 			/>

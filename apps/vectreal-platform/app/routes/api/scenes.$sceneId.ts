@@ -4,6 +4,7 @@ import { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
 import { QuotaExceededError } from '../../lib/domain/billing/quota-exceeded-error'
 import { getProject } from '../../lib/domain/project/project-repository.server'
+import { parseSceneBytes } from '../../lib/domain/scene/scene-size-limit'
 import {
 	acquireHeavySceneActionToken,
 	acquireSceneWriteLock,
@@ -782,7 +783,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				targetFolderId:
 					typeof actionRequest.targetFolderId === 'string'
 						? actionRequest.targetFolderId.trim() || null
-						: undefined
+						: undefined,
+				currentSceneBytes: parseSceneBytes(actionRequest.currentSceneBytes)
 			}
 		: SceneSettingsParser.parseSceneSettingsRequestData(actionRequest)
 

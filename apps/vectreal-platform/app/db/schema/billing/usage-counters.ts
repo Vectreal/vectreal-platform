@@ -22,7 +22,7 @@ import { isOrganizationAdmin, isOrganizationMember } from '../rls'
  * most recent period boundary for that counter.
  *
  * Counter keys correspond to limit keys in prd/02-limits-and-quotas.md,
- * e.g. "optimization_runs_per_month", "api_requests_per_month".
+ * e.g. "api_requests_per_month", "embed_bandwidth_gb_per_month".
  */
 export const orgUsageCounters = pgTable(
 	'org_usage_counters',
@@ -31,7 +31,7 @@ export const orgUsageCounters = pgTable(
 		organizationId: uuid('organization_id')
 			.notNull()
 			.references(() => organizations.id, { onDelete: 'cascade' }),
-		/** Canonical counter key, e.g. "optimization_runs_per_month". */
+		/** Canonical counter key, e.g. "api_requests_per_month". */
 		counterKey: text('counter_key').notNull(),
 		/**
 		 * Accumulated value for the current window.
