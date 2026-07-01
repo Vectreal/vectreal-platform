@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.22.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.21.0...hooks-v0.22.0) (2026-07-01)
+
+
+### Features
+
+* enhance @vctrl/core documentation and improve package structure ([f74b8c8](https://github.com/Vectreal/vectreal-platform/commit/f74b8c881b0dad4ef35da0013492adfd5bde0ed9))
+* enhance @vctrl/core documentation and improve package structure ([6599388](https://github.com/Vectreal/vectreal-platform/commit/65993883139d8fb0ab52839b14068276f482642a))
+* Implement shadow bake persistence and garbage collection ([003f962](https://github.com/Vectreal/vectreal-platform/commit/003f962bcaf773fe58015412536fd5eb9b8c3f68))
+* **optimization:** migrate to Supabase Edge Functions & Storage ([#554](https://github.com/Vectreal/vectreal-platform/issues/554)) ([420f94a](https://github.com/Vectreal/vectreal-platform/commit/420f94a5ee6c1cecf35b98d0bc9695922b2bf122))
+* **viewer:** add accumulative shadow baking features and related components ([08427b6](https://github.com/Vectreal/vectreal-platform/commit/08427b6f4ea0e9ae2ea8849de2f0dd8627b0af07))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.22.0
+
 ## [0.21.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.20.0...hooks-v0.21.0) (2026-05-21)
 
 

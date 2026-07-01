@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.22.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.21.0...viewer-v0.22.0) (2026-07-01)
+
+
+### Features
+
+* enhance @vctrl/core documentation and improve package structure ([f74b8c8](https://github.com/Vectreal/vectreal-platform/commit/f74b8c881b0dad4ef35da0013492adfd5bde0ed9))
+* enhance @vctrl/core documentation and improve package structure ([6599388](https://github.com/Vectreal/vectreal-platform/commit/65993883139d8fb0ab52839b14068276f482642a))
+* enhance mock shop embed client and section with improved UI elements and interactions ([#529](https://github.com/Vectreal/vectreal-platform/issues/529)) ([0a9a780](https://github.com/Vectreal/vectreal-platform/commit/0a9a780bb7e593049a2cf0c835adc6a093c54ad1))
+* enhance model size normalization UX and integrate raw diagonal computation ([cf9f6c2](https://github.com/Vectreal/vectreal-platform/commit/cf9f6c2d99cafa0a26447da416ad3c3789428ed0))
+* enhance model size normalization UX and integrate raw diagonal computation ([cb68f83](https://github.com/Vectreal/vectreal-platform/commit/cb68f83298c260f7fb441434047671f5dbdcd8dd))
+* Implement shadow bake persistence and garbage collection ([003f962](https://github.com/Vectreal/vectreal-platform/commit/003f962bcaf773fe58015412536fd5eb9b8c3f68))
+* **viewer:** add accumulative shadow baking features and related components ([08427b6](https://github.com/Vectreal/vectreal-platform/commit/08427b6f4ea0e9ae2ea8849de2f0dd8627b0af07))
+* **viewer:** add accumulative shadow baking features and related components ([17d14c5](https://github.com/Vectreal/vectreal-platform/commit/17d14c55aff0b1b1d825ec5c56388e18c8334858))
+* **viewer:** add NormalizationOptions scale wrapper to SceneModel ([b0ed884](https://github.com/Vectreal/vectreal-platform/commit/b0ed8844cdc40528fb88731ce197d1891651c2ba))
+* **viewer:** expose normalizationOptions prop on VectrealViewer ([0668b17](https://github.com/Vectreal/vectreal-platform/commit/0668b17a9857f122324ac657b482bd5569ed9e2f))
+* **viewer:** refit camera when normalization is toggled ([573699f](https://github.com/Vectreal/vectreal-platform/commit/573699fe0a32616e6752187dd66b238da37be9d5))
+
+
+### Bug Fixes
+
+* re-sync camera on page visibility change to prevent drift ([78b95e5](https://github.com/Vectreal/vectreal-platform/commit/78b95e5b7a98907eef191434c24986b2e4b5cb5e))
+* re-sync camera on page visibility change to prevent drift ([c665729](https://github.com/Vectreal/vectreal-platform/commit/c6657295b82bcfae1249d7156bbbc6deba45f151))
+* **viewer:** correct shadow defaults, rendering, and control lag ([6e7d112](https://github.com/Vectreal/vectreal-platform/commit/6e7d11208d4968743259f7dc59335e8e51abdd2f))
+* **viewer:** dynamic camera near/far and button-exclusive camera persistence ([5718df0](https://github.com/Vectreal/vectreal-platform/commit/5718df01766c1254d8f6e25cbc9020801a3bd072))
+* **viewer:** dynamic camera near/far and button-exclusive camera persistence ([ba77456](https://github.com/Vectreal/vectreal-platform/commit/ba7745694642a18e0530214d6cc9bb520df2913f))
+* **viewer:** fix shadow RT accumulation, accumulative rendering, and control lag ([219e4a6](https://github.com/Vectreal/vectreal-platform/commit/219e4a6c65aafac39160098dadf1a69c427793c2))
+* **viewer:** switch AccumulativeShadows to temporal=true ([6e7a83c](https://github.com/Vectreal/vectreal-platform/commit/6e7a83c8eb2eddd9f3d16eb08fc9530cfba8ad98))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @vctrl/core bumped to 0.22.0
+
 ## [0.21.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.20.0...viewer-v0.21.0) (2026-05-21)
 
 
