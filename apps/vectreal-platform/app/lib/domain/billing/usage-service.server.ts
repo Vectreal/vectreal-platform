@@ -35,7 +35,6 @@ const NON_EXPIRING_WINDOW_START = new Date('1970-01-01T00:00:00.000Z')
 const NON_EXPIRING_WINDOW_END = new Date('9999-12-31T23:59:59.999Z')
 
 const MONTHLY_COUNTER_KEYS: ReadonlySet<LimitKey> = new Set([
-	'optimization_runs_per_month',
 	'api_requests_per_month',
 	'embed_bandwidth_gb_per_month',
 	'preview_loads_per_month'

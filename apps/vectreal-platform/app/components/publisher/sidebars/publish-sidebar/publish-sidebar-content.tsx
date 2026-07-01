@@ -180,11 +180,11 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 					)}
 
 					{isSaveDisabled &&
-						saveAvailability?.reason === 'requires-first-optimization' && (
+						saveAvailability?.reason === 'requires-size-reduction' && (
 							<div className="my-4 pb-2">
 								<p className="text-muted-foreground mb-2 text-xs">
-									Optimize your scene first to enable saving and publishing
-									features.
+									This scene is over your plan's max scene size. Optimize to
+									reduce it below the limit to enable saving and publishing.
 								</p>
 							</div>
 						)}

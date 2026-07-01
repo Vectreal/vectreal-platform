@@ -1,5 +1,5 @@
 import { useAtom } from 'jotai/react'
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import { optimizationModalAtom } from '../lib/stores/scene-optimization-store'
 
@@ -37,37 +37,40 @@ export function useOptimizationDrawerFlow({
 		[saveAvailability, hasUnsavedLocationChange]
 	)
 
-	const isInitialOptimizationRequired =
-		effectiveSaveAvailability.reason === 'requires-first-optimization'
+	const requiresSizeReduction =
+		effectiveSaveAvailability.reason === 'requires-size-reduction'
+
+	// Pre-open the optimizer once per over-limit episode. Soft-gate: if the user
+	// closes it while still over the limit, we do not force it back open; the ref
+	// resets only when the scene drops back under the limit.
+	const hasAutoOpenedForSizeRef = useRef(false)
 
 	useEffect(() => {
-		if (!isInitialOptimizationRequired || optimizationDrawer.isOpen) {
+		if (!requiresSizeReduction) {
+			hasAutoOpenedForSizeRef.current = false
 			return
 		}
 
+		if (optimizationDrawer.isOpen || hasAutoOpenedForSizeRef.current) {
+			return
+		}
+
+		hasAutoOpenedForSizeRef.current = true
 		setOptimizationDrawer({
 			isOpen: true,
 			source: 'initial'
 		})
-	}, [
-		isInitialOptimizationRequired,
-		optimizationDrawer.isOpen,
-		setOptimizationDrawer
-	])
+	}, [requiresSizeReduction, optimizationDrawer.isOpen, setOptimizationDrawer])
 
 	const handleOptimizationDrawerChange = useCallback(
 		(open: boolean) => {
-			if (!open && isInitialOptimizationRequired) {
-				return
-			}
-
 			setOptimizationDrawer((prev) => ({
 				...prev,
 				isOpen: open,
 				source: open ? prev.source : null
 			}))
 		},
-		[isInitialOptimizationRequired, setOptimizationDrawer]
+		[setOptimizationDrawer]
 	)
 
 	const openReoptimizeDrawer = useCallback(() => {
@@ -83,7 +86,7 @@ export function useOptimizationDrawerFlow({
 
 	return {
 		effectiveSaveAvailability,
-		isInitialOptimizationRequired,
+		requiresSizeReduction,
 		isOptimizationDrawerOpen: optimizationDrawer.isOpen,
 		handleOptimizationDrawerChange,
 		handleOpenOptimizationDrawer,

@@ -286,6 +286,7 @@ export interface PublisherLoaderData {
 	readonly currentLocation: SceneCurrentLocation
 	readonly sceneAggregate: SceneAggregateResponse | null
 	readonly publishedMeta: PublishedSceneMetaResponse | null
+	readonly maxSceneBytes: number | null
 }
 
 // ============================================================================

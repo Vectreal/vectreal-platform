@@ -91,10 +91,10 @@ const SaveButton = ({
 						label: 'Sign In to Save',
 						icon: <CircleFadingArrowUp size={16} className="inline" />
 					}
-				: saveAvailability.reason === 'requires-first-optimization'
+				: saveAvailability.reason === 'requires-size-reduction'
 					? {
-							key: 'optimize-first',
-							label: 'Optimize First',
+							key: 'reduce-size',
+							label: 'Optimize to Save',
 							icon: <Sparkles size={16} className="inline animate-pulse" />
 						}
 					: saveAvailability.reason === 'no-unsaved-changes'

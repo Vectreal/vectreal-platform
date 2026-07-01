@@ -1,8 +1,7 @@
 import {
 	hasSceneMetaChanged,
 	resolveSaveAvailability,
-	shouldInitializeScene,
-	shouldRequireFirstSaveOptimization
+	shouldInitializeScene
 } from '../app/lib/domain/scene'
 
 describe('scene save state', () => {
@@ -39,38 +38,44 @@ describe('scene save state', () => {
 		).toBe(true)
 	})
 
-	it('does not require first-save optimization once a save marker exists', () => {
+	it('blocks save with no user', () => {
 		expect(
-			shouldRequireFirstSaveOptimization({
-				currentSceneId: null,
-				lastSavedSceneId: 'scene-1',
-				hasAppliedOptimization: false
+			resolveSaveAvailability({
+				userId: undefined,
+				isSceneOverSizeLimit: false,
+				hasChanges: true
 			})
-		).toBe(false)
+		).toEqual({ canSave: false, reason: 'no-user' })
 	})
 
-	it('requires first-save optimization for unsaved unoptimized uploads', () => {
+	it('requires size reduction when over the limit', () => {
 		expect(
-			shouldRequireFirstSaveOptimization({
-				currentSceneId: null,
-				lastSavedSceneId: null,
-				hasAppliedOptimization: false
+			resolveSaveAvailability({
+				userId: 'user-1',
+				isSceneOverSizeLimit: true,
+				hasChanges: true
 			})
-		).toBe(true)
+		).toEqual({ canSave: false, reason: 'requires-size-reduction' })
 	})
 
 	it('returns ready when live dirty state is true', () => {
 		expect(
 			resolveSaveAvailability({
 				userId: 'user-1',
-				isFirstSavePendingOptimization: false,
+				isSceneOverSizeLimit: false,
 				hasChanges: true
 			})
-		).toEqual({
-			canSave: true,
-			reason: 'ready',
-			isFirstSavePendingOptimization: false
-		})
+		).toEqual({ canSave: true, reason: 'ready' })
+	})
+
+	it('reports no-unsaved-changes when under limit with no changes', () => {
+		expect(
+			resolveSaveAvailability({
+				userId: 'user-1',
+				isSceneOverSizeLimit: false,
+				hasChanges: false
+			})
+		).toEqual({ canSave: false, reason: 'no-unsaved-changes' })
 	})
 
 	it('ignores thumbnail-only scene meta changes for dirty tracking', () => {

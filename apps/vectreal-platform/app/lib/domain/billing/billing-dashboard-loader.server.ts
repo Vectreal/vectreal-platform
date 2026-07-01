@@ -141,14 +141,12 @@ export async function loadBillingDashboardData(
 
 	const [
 		sceneQuota,
-		optimizationQuota,
 		projectsQuota,
 		publishedSceneQuota,
 		apiRequestsMonthQuota,
 		storageQuota,
 		embedBandwidthQuota,
 		previewLoadsQuota,
-		optimizationUsage,
 		apiRequestsMonthUsage,
 		storageBytesTotalUsage,
 		embedBandwidthUsage,
@@ -156,14 +154,12 @@ export async function loadBillingDashboardData(
 		checkoutOptions
 	] = await Promise.all([
 		getQuotaLimit(organizationId, 'scenes_total'),
-		getQuotaLimit(organizationId, 'optimization_runs_per_month'),
 		getQuotaLimit(organizationId, 'projects_total'),
 		getQuotaLimit(organizationId, 'scenes_published_concurrent'),
 		getQuotaLimit(organizationId, 'api_requests_per_month'),
 		getQuotaLimit(organizationId, 'storage_bytes_total'),
 		getQuotaLimit(organizationId, 'embed_bandwidth_gb_per_month'),
 		getQuotaLimit(organizationId, 'preview_loads_per_month'),
-		getCurrentUsage(organizationId, 'optimization_runs_per_month'),
 		getCurrentUsage(organizationId, 'api_requests_per_month'),
 		getCurrentUsage(organizationId, 'storage_bytes_total'),
 		getCurrentUsage(organizationId, 'embed_bandwidth_gb_per_month'),
@@ -199,8 +195,6 @@ export async function loadBillingDashboardData(
 			sceneLimit: sceneQuota.limit,
 			publishedScenes: publishedCount,
 			publishedSceneLimit: publishedSceneQuota.limit,
-			optimizationRuns: optimizationUsage,
-			optimizationLimit: optimizationQuota.limit,
 			projectsTotal: userProjects.length,
 			projectsLimit: projectsQuota.limit,
 			apiRequestsMonth: apiRequestsMonthUsage,

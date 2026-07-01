@@ -10,6 +10,7 @@ import { ControlsOverlay } from '../../components'
 import { PublisherViewerCaptureProvider } from '../../components/publisher/publisher-viewer-capture-context'
 import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
+import { getQuotaLimit } from '../../lib/domain/billing/entitlement-service.server'
 import { getProject } from '../../lib/domain/project/project-repository.server'
 import { buildSceneAggregate } from '../../lib/domain/scene/server/scene-aggregate.server'
 import {
@@ -17,10 +18,12 @@ import {
 	getSceneFolder
 } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
+import { getOrCreateDefaultOrganization } from '../../lib/domain/user/user-repository.server'
 import { buildMeta } from '../../lib/seo'
 import { hasSupabaseAuthCookie } from '../../lib/sessions/supabase-auth-cookie.server'
 import {
 	currentLocationAtom,
+	maxSceneBytesAtom,
 	processAtom,
 	publisherConfigStore,
 	saveLocationAtom,
@@ -79,6 +82,17 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 
 	const isMobile = isMobileRequest(request)
 
+	// Resolve the org's per-scene size limit concurrently with the scene queries
+	// below (rather than serially after them) so it never adds latency to the hot
+	// publisher-load path.
+	const maxSceneBytesPromise: Promise<number | null> = user?.id
+		? getOrCreateDefaultOrganization(user.id).then((organization) =>
+				getQuotaLimit(organization.id, 'storage_bytes_per_scene').then(
+					({ limit }) => limit
+				)
+			)
+		: Promise.resolve(null)
+
 	const sceneId = params.sceneId?.trim() || null
 	let projectId: string | null = null
 	let currentProjectName: string | null = null
@@ -136,6 +150,8 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		}
 	}
 
+	const maxSceneBytes = await maxSceneBytesPromise
+
 	const loaderData = {
 		isMobile,
 		user: user || null,
@@ -148,7 +164,8 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 			folderName: currentFolderName
 		},
 		sceneAggregate,
-		publishedMeta
+		publishedMeta,
+		maxSceneBytes
 	}
 
 	return data(loaderData as PublisherLoaderData, { headers })
@@ -179,16 +196,25 @@ const PublisherLayoutContent = ({
 	const setProcessState = useSetAtom(processAtom)
 	const setCurrentLocation = useSetAtom(currentLocationAtom)
 	const setSaveLocation = useSetAtom(saveLocationAtom)
+	const setMaxSceneBytes = useSetAtom(maxSceneBytesAtom)
 	useAuthResumeRevalidation({ enabled: Boolean(loaderData.user) })
 
-	const { currentLocation, projectId } = loaderData
+	const { currentLocation, projectId, maxSceneBytes } = loaderData
 	useLayoutEffect(() => {
 		setCurrentLocation(currentLocation)
 		setSaveLocation({
 			targetProjectId: currentLocation.projectId ?? projectId ?? undefined,
 			targetFolderId: currentLocation.folderId ?? null
 		})
-	}, [currentLocation, projectId, setCurrentLocation, setSaveLocation])
+		setMaxSceneBytes(maxSceneBytes)
+	}, [
+		currentLocation,
+		projectId,
+		maxSceneBytes,
+		setCurrentLocation,
+		setSaveLocation,
+		setMaxSceneBytes
+	])
 
 	const handleOpenChange = useCallback(
 		(isOpen: boolean) => {

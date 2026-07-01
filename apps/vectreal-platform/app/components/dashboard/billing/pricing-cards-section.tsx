@@ -47,11 +47,15 @@ import type { BillingCheckoutOptions } from '../../../lib/domain/dashboard/dashb
 // Limit display config — labels from product-copy, format logic stays here
 // ---------------------------------------------------------------------------
 
-function formatLimitValue(key: string, v: number | null): string {
+export function formatLimitValue(key: string, v: number | null): string {
 	if (key === 'storage_bytes_total') {
 		if (v === null) return 'Custom'
 		const gb = v / (1024 * 1024 * 1024)
 		if (gb >= 1) return `${gb.toLocaleString()} GB`
+		return `${(v / (1024 * 1024)).toLocaleString()} MB`
+	}
+	if (key === 'storage_bytes_per_scene') {
+		if (v === null) return 'Custom'
 		return `${(v / (1024 * 1024)).toLocaleString()} MB`
 	}
 	return v === null ? 'Unlimited' : v.toLocaleString()
