@@ -1,3 +1,4 @@
+import { useIsMobile } from '@shared/components'
 import { GithubLogo } from '@shared/components/assets/icons/github-logo'
 import {
 	Accordion,
@@ -11,6 +12,7 @@ import { Code, Globe, Rocket, Upload, Wrench, Zap } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { Route } from './+types/home-page'
+import { GridBg } from '../../components'
 import { CinematicHero } from '../../components/home/cinematic-hero'
 import FiletypeCarousel from '../../components/home/filetype-carousel'
 import {
@@ -156,7 +158,10 @@ const SectionLabel = ({
 			className
 		)}
 	>
-		<span className="bg-accent/60 h-1.5 w-1.5 rounded-full" aria-hidden="true" />
+		<span
+			className="bg-accent/60 h-1.5 w-1.5 rounded-full"
+			aria-hidden="true"
+		/>
 		{children}
 	</div>
 )
@@ -186,7 +191,9 @@ const SectionHeading = ({
 	</div>
 )
 
-const HomePage = () => {
+const HomePage = ({ loaderData }: Route.ComponentProps) => {
+	const isMobile = useIsMobile(loaderData.isMobile)
+
 	return (
 		<main className="bg-background overflow-x-clip">
 			{/* 1. Cinematic hero */}
@@ -200,7 +207,7 @@ const HomePage = () => {
 
 			{/* 4. How it works */}
 			<LandingSection aria-label="How it works">
-				<div className="flex flex-col gap-12 md:gap-16">
+				<div className="relative z-10 flex flex-col gap-12 md:gap-16">
 					<SectionHeading
 						label="Process"
 						title="How It Works"
@@ -208,6 +215,8 @@ const HomePage = () => {
 					/>
 					<HowItWorksShowcase />
 				</div>
+
+				<GridBg isMobile={isMobile} />
 			</LandingSection>
 
 			{/* 5. Optimization value prop */}
@@ -261,7 +270,7 @@ const HomePage = () => {
 
 			{/* 6. Feature bento grid */}
 			<LandingSection>
-				<div className="flex flex-col gap-12 md:gap-16">
+				<div className="relative z-10 flex flex-col gap-12 md:gap-16">
 					<SectionHeading
 						label="Platform"
 						title="Everything You Need"
@@ -284,9 +293,7 @@ const HomePage = () => {
 									/>
 								</div>
 								<div className="flex flex-col gap-1.5">
-									<p className="text-foreground font-medium">
-										{feature.title}
-									</p>
+									<p className="text-foreground font-medium">{feature.title}</p>
 									<p className="text-muted-foreground text-sm leading-relaxed">
 										{feature.body}
 									</p>
@@ -295,6 +302,8 @@ const HomePage = () => {
 						))}
 					</ul>
 				</div>
+
+				<GridBg isMobile={isMobile} />
 			</LandingSection>
 
 			{/* 7. Format carousel */}
@@ -311,7 +320,7 @@ const HomePage = () => {
 
 			{/* 8. Community */}
 			<LandingSection aria-label="Community" glow="right">
-				<div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+				<div className="relative z-10 grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
 					{/* Left: copy + CTAs */}
 					<div className="flex flex-col gap-6">
 						<SectionHeading
@@ -376,9 +385,7 @@ const HomePage = () => {
 								<span className="text-muted-foreground/50">
 									{'# Install the viewer\n'}
 								</span>
-								<span className="text-foreground">
-									{'pnpm add '}
-								</span>
+								<span className="text-foreground">{'pnpm add '}</span>
 								<span className="text-accent">{'@vctrl/viewer\n\n'}</span>
 								<span className="text-muted-foreground/50">
 									{'// Drop a model into any React app\n'}
@@ -399,6 +406,8 @@ const HomePage = () => {
 						</pre>
 					</div>
 				</div>
+
+				<GridBg isMobile={isMobile} />
 			</LandingSection>
 
 			{/* 9. FAQ */}

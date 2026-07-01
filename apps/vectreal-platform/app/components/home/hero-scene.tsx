@@ -1,4 +1,3 @@
-import { cn } from '@shared/utils'
 import { lazy, Suspense, useEffect, useState } from 'react'
 
 import CenteredSpinner from '../centered-spinner'
@@ -18,24 +17,14 @@ const HeroScene = ({ vertical }: HeroSceneProps) => {
 
 	if (!isMounted) {
 		return (
-			<div
-				className={cn(
-					'relative w-full overflow-hidden max-sm:h-100',
-					vertical && 'h-full max-md:h-[50vh] max-md:min-h-[300px]'
-				)}
-			/>
+			<div className="relative h-full w-full overflow-hidden max-md:h-[50vh] max-md:min-h-[300px] max-sm:h-100" />
 		)
 	}
 
 	return (
 		<Suspense
 			fallback={
-				<div
-					className={cn(
-						'relative w-full overflow-hidden max-sm:h-100',
-						vertical && 'h-full max-md:h-[50vh] max-md:min-h-[300px]'
-					)}
-				>
+				<div className="relative h-full w-full overflow-hidden max-md:h-[50vh] max-md:min-h-[300px] max-sm:h-100">
 					<CenteredSpinner />
 				</div>
 			}

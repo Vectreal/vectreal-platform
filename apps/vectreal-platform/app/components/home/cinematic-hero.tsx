@@ -30,7 +30,7 @@ export function CinematicHero() {
 	return (
 		<section
 			ref={sectionRef}
-			className="relative flex min-h-[88svh] w-full items-center overflow-hidden pt-28 pb-16 lg:min-h-[100dvh] lg:pt-0 lg:pb-0"
+			className="relative flex w-full items-center overflow-hidden pt-16 pb-16 lg:min-h-[75dvh] lg:pt-0 lg:pb-0"
 			aria-label="Hero"
 		>
 			<AuroraBackground />
@@ -45,7 +45,11 @@ export function CinematicHero() {
 				{/* Text column — below the rocket on mobile, left on desktop */}
 				<motion.div
 					className="order-2 lg:order-1"
-					style={prefersReducedMotion ? undefined : { y: textY, opacity: textOpacity }}
+					style={
+						prefersReducedMotion
+							? undefined
+							: { y: textY, opacity: textOpacity }
+					}
 				>
 					<motion.div
 						variants={prefersReducedMotion ? undefined : staggerContainer}
@@ -125,7 +129,7 @@ export function CinematicHero() {
 					initial={prefersReducedMotion ? undefined : { opacity: 0 }}
 					animate={prefersReducedMotion ? undefined : { opacity: 1 }}
 					transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-					className="relative order-1 h-[34vh] w-full sm:h-[44vh] lg:order-2 lg:h-[88vh]"
+					className="relative order-1 h-[50vh] w-full sm:h-[44vh] lg:order-2 lg:h-[75dvh]"
 				>
 					{/* Glow disc behind the model */}
 					<div
@@ -150,7 +154,7 @@ export function CinematicHero() {
 						</div>
 					</div>
 
-					<HeroScene vertical />
+					<HeroScene />
 				</motion.div>
 			</div>
 

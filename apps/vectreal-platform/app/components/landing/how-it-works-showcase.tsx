@@ -118,11 +118,7 @@ function UploadGraphic() {
 }
 
 function OptimizeGraphic() {
-	const tasks = [
-		'Mesh decimation',
-		'Texture compression',
-		'Draco encoding'
-	]
+	const tasks = ['Mesh decimation', 'Texture compression', 'Draco encoding']
 	return (
 		<div className="mx-auto flex h-full w-full max-w-md flex-col justify-center gap-3">
 			{tasks.map((task, i) => (
@@ -197,9 +193,7 @@ function ManageGraphic() {
 						>
 							{v}
 						</span>
-						{i === 0 && (
-							<span className="bg-accent size-1.5 rounded-full" />
-						)}
+						{i === 0 && <span className="bg-accent size-1.5 rounded-full" />}
 					</motion.div>
 				))}
 			</div>
@@ -295,7 +289,7 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 			onMouseEnter={() => setPaused(true)}
 			onMouseLeave={() => setPaused(false)}
 			className={cn(
-				'grid gap-6 lg:grid-cols-[0.85fr_1.15fr] lg:gap-8',
+				'flex flex-col items-center gap-6 lg:flex-row lg:gap-8',
 				className
 			)}
 		>
@@ -311,8 +305,8 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 								className={cn(
 									'group relative flex w-full items-start gap-4 overflow-hidden rounded-2xl border p-4 text-left transition-colors duration-300',
 									isActive
-										? 'border-accent/30 bg-surface-1'
-										: 'border-surface-border bg-surface-1/40 hover:bg-surface-1/70'
+										? 'border-accent/30 bg-surface-2'
+										: 'border-surface-border bg-surface-1 hover:bg-surface-1/80'
 								)}
 							>
 								{/* Active progress bar — driven by rAF progress value */}
@@ -367,7 +361,7 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 			</ul>
 
 			{/* Animated stage */}
-			<div className="bg-surface-1 border-surface-border relative h-[340px] overflow-hidden rounded-2xl border md:h-[400px]">
+			<div className="bg-surface-1 border-surface-border relative h-[340px] grow overflow-hidden rounded-2xl border md:h-[400px]">
 				{/* dot-grid texture */}
 				<div
 					className="pointer-events-none absolute inset-0 opacity-[0.5]"
@@ -394,11 +388,11 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 				<AnimatePresence mode="wait">
 					<motion.div
 						key={active}
-						initial={
-							prefersReducedMotion ? false : { opacity: 0, scale: 0.98 }
-						}
+						initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.98 }}
 						animate={{ opacity: 1, scale: 1 }}
-						exit={prefersReducedMotion ? undefined : { opacity: 0, scale: 1.02 }}
+						exit={
+							prefersReducedMotion ? undefined : { opacity: 0, scale: 1.02 }
+						}
 						transition={stageTransition}
 						className="absolute inset-0 p-8"
 					>

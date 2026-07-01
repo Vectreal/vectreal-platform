@@ -1,6 +1,12 @@
 // app/components/landing/scrollytell-viewer-section.tsx
 import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
-import { motion, useInView, useReducedMotion, useScroll, useTransform } from 'framer-motion'
+import {
+	motion,
+	useInView,
+	useReducedMotion,
+	useScroll,
+	useTransform
+} from 'framer-motion'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 
 const MockShopEmbedClient = lazy(() => import('../home/mock-shop-embed-client'))

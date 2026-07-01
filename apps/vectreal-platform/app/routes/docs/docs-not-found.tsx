@@ -8,7 +8,7 @@ export function loader() {
 
 export default function DocsNotFoundPage() {
 	return (
-		<div className="flex min-h-[40vh] items-center justify-center px-2 py-12">
+		<div className="flex min-h-[50vh] items-center justify-center px-2 py-12">
 			<div className="w-full max-w-2xl rounded-2xl border p-8">
 				<div className="mb-5 flex items-center gap-3">
 					<div className="bg-destructive/10 rounded-full p-2">

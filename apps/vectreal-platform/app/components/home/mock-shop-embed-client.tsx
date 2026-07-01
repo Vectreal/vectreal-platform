@@ -239,7 +239,7 @@ export default function MockShopEmbedClient() {
 		<div ref={sectionRef} className="relative" style={{ height: '300vh' }}>
 			{/* Sticky stage */}
 			<div className="bg-background sticky top-0 h-screen overflow-hidden">
-				<div className="mx-auto flex h-full w-full max-w-[1200px] flex-col items-center justify-center gap-16 px-5 py-16 md:px-10 md:py-10 lg:px-14">
+				<div className="mx-auto flex h-full w-full max-w-[2000px] flex-col items-center justify-center gap-16 px-5 py-16 md:px-10 md:py-10 lg:px-14">
 					<div className="grid grid-cols-1 gap-5 md:grid-cols-[3fr_2fr] md:items-center md:gap-8 lg:gap-12">
 						{/* ── Scene ─────────────────────────────────────────────── */}
 						<div className="flex flex-col gap-2">
@@ -385,7 +385,7 @@ export default function MockShopEmbedClient() {
 									initial={{ opacity: 0, y: 12 }}
 									animate={{ opacity: 1, y: 0 }}
 									exit={{ opacity: 0, y: -12 }}
-									transition={{ duration: 0.3, ease: 'easeInOut' }}
+									transition={{ duration: 0.3, ease: 'easeInOut', delay: 0.55 }}
 									className="flex flex-col gap-3"
 								>
 									{/* Eyebrow label */}
