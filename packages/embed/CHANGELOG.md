@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.22.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v0.21.0...embed-v0.22.0) (2026-07-01)
+
+
+### Features
+
+* enhance @vctrl/core documentation and improve package structure ([f74b8c8](https://github.com/Vectreal/vectreal-platform/commit/f74b8c881b0dad4ef35da0013492adfd5bde0ed9))
+* enhance @vctrl/core documentation and improve package structure ([6599388](https://github.com/Vectreal/vectreal-platform/commit/65993883139d8fb0ab52839b14068276f482642a))
+* enhance mock shop embed client and section with improved UI elements and interactions ([#529](https://github.com/Vectreal/vectreal-platform/issues/529)) ([0a9a780](https://github.com/Vectreal/vectreal-platform/commit/0a9a780bb7e593049a2cf0c835adc6a093c54ad1))
+
 ## [0.21.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v0.20.0...embed-v0.21.0) (2026-05-21)
 
 
