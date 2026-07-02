@@ -20,6 +20,10 @@ export default [
 		'api/scenes/:sceneId/thumbnail/:assetId',
 		'./routes/api/scenes.$sceneId.thumbnail.$assetId.ts'
 	),
+	route(
+		'api/scenes/:sceneId/assets/:assetId',
+		'./routes/api/scenes.$sceneId.assets.$assetId.ts'
+	),
 	route('api/scenes/:sceneId?', './routes/api/scenes.$sceneId.ts'),
 	route('api/scene-location-options', './routes/api/scene-location-options.ts'),
 
