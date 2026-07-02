@@ -37,6 +37,7 @@ import {
 	resolveServerSceneDataContract,
 	reconstructGltfFiles
 } from './utils'
+import { fetchManifestAssetData } from './utils/fetch-manifest-assets'
 
 import type { useOptimizeModel } from '../use-optimize-model'
 import type {
@@ -44,6 +45,49 @@ import type {
 	OperationProgress,
 	ServerScenePayload
 } from '@vctrl/core'
+
+async function fetchManifestPayload(
+	endpoint: string,
+	headers: HeadersInit
+): Promise<ServerScenePayload | null> {
+	try {
+		const res = await fetch(endpoint, {
+			method: 'GET',
+			headers: { Accept: 'application/json', ...headers }
+		})
+		if (!res.ok) return null
+
+		const envelope = (await res.json()) as ApiEnvelope<ServerScenePayload>
+		const candidate = (envelope.data ?? envelope) as ServerScenePayload
+
+		if (!candidate || typeof candidate !== 'object') return null
+		if (!candidate.gltfJson) return null
+		if (!candidate.assetRefs && !candidate.assetData) return null
+
+		return candidate
+	} catch {
+		return null
+	}
+}
+
+async function fetchLegacyScenePayload(
+	endpoint: string,
+	headers: HeadersInit,
+	sceneId: string
+): Promise<ServerScenePayload> {
+	const formData = new FormData()
+	formData.append('action', 'get-scene-settings')
+	formData.append('sceneId', sceneId)
+
+	const res = await fetch(endpoint, { method: 'POST', headers, body: formData })
+
+	if (!res.ok) {
+		throw new Error(`Server responded with ${res.status} ${res.statusText}`)
+	}
+
+	const envelope = (await res.json()) as ApiEnvelope<ServerScenePayload>
+	return (envelope.data ?? envelope) as ServerScenePayload
+}
 
 /**
  * Custom hook to load and manage 3D models with optional optimization integration.
@@ -243,10 +287,6 @@ function useLoadModel<
 				dispatch({ type: 'set-file-loading', payload: true })
 				updateProgress(0)
 
-				const formData = new FormData()
-				formData.append('action', 'get-scene-settings')
-				formData.append('sceneId', sceneId)
-
 				const endpoint = serverOptions?.endpoint ?? `/api/scenes/${sceneId}`
 				const headers: HeadersInit = serverOptions?.apiKey
 					? {
@@ -255,18 +295,29 @@ function useLoadModel<
 						}
 					: { ...serverOptions?.headers }
 
-				const res = await fetch(endpoint, {
-					method: 'POST',
-					headers,
-					body: formData
-				})
+				let scenePayload = await fetchManifestPayload(endpoint, headers)
 
-				if (!res.ok) {
-					throw new Error(`Server responded with ${res.status} ${res.statusText}`)
+				if (scenePayload?.assetRefs && !scenePayload.assetData) {
+					updateProgress(10)
+					const assetData = await fetchManifestAssetData(
+						scenePayload.assetRefs,
+						{
+							headers,
+							onProgress: (fraction) =>
+								updateProgress(10 + Math.round(fraction * 30))
+						}
+					)
+					scenePayload = { ...scenePayload, assetData }
 				}
 
-				const envelope = (await res.json()) as ApiEnvelope<ServerScenePayload>
-				const scenePayload = (envelope.data ?? envelope) as ServerScenePayload
+				if (!scenePayload) {
+					scenePayload = await fetchLegacyScenePayload(
+						endpoint,
+						headers,
+						sceneId
+					)
+				}
+
 				const sceneData = resolveServerSceneDataContract(scenePayload)
 
 				const sceneLoadResult = await loadFromData({ sceneId, sceneData })
