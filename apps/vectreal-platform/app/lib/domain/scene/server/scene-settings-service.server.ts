@@ -576,8 +576,7 @@ class SceneSettingsService {
 		return {
 			meta: await this.getSceneMetadata(sceneId),
 			settings: rowToSceneSettings(settings, hotspots),
-			// sceneSettings table has no updatedAt column; use createdAt as best proxy
-			settingsUpdatedAt: settings.createdAt ?? null,
+			settingsUpdatedAt: settings.updatedAt ?? null,
 			assets: sceneAssetsData,
 			gltfJson
 		}

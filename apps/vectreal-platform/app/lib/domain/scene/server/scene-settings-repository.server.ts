@@ -113,7 +113,7 @@ export async function upsertSceneSettings(
 		.values(insertValues)
 		.onConflictDoUpdate({
 			target: sceneSettings.sceneId,
-			set: updateValues
+			set: { ...updateValues, updatedAt: new Date() }
 		})
 		.returning()
 
