@@ -39,4 +39,47 @@ describe('fetchManifestAssetData', () => {
 
 		await expect(fetchManifestAssetData(refs)).rejects.toThrow('404')
 	})
+
+	it('uses count-weighted progress when some refs lack byteSize', async () => {
+		const mixedRefs = {
+			sized: { url: '/assets/sized', fileName: 'model.bin', mimeType: 'application/octet-stream', byteSize: 100 },
+			unsized: { url: '/assets/unsized', fileName: 'tex.webp', mimeType: 'image/webp', byteSize: null }
+		}
+
+		const fractions: number[] = []
+		let resolveUnsized: (value?: any) => void = () => {}
+
+		vi.stubGlobal('fetch', vi.fn((url: string) => {
+			if (url.includes('sized')) {
+				return Promise.resolve({
+					ok: true,
+					arrayBuffer: async () => new Uint8Array([1, 2]).buffer
+				})
+			} else {
+				return Promise.resolve({
+					ok: true,
+					arrayBuffer: () => new Promise<ArrayBuffer>(resolve => {
+						resolveUnsized = () => resolve(new Uint8Array([3, 4]).buffer)
+					})
+				})
+			}
+		}))
+
+		const fetchPromise = fetchManifestAssetData(mixedRefs, { onProgress: (f) => fractions.push(f) })
+
+		// Allow microtask queue to process (sized fetch should complete first)
+		await new Promise(resolve => setTimeout(resolve, 0))
+
+		// At this point, sized fetch should have completed and reported 0.5
+		// (both fetch calls start in parallel, but sized completes first)
+		expect(fractions.length).toBeGreaterThan(0)
+		expect(fractions.some(f => f < 1)).toBe(true)
+
+		// Resolve the unsized fetch
+		resolveUnsized()
+		await fetchPromise
+
+		// Final progress should be 1
+		expect(fractions[fractions.length - 1]).toBe(1)
+	})
 })
