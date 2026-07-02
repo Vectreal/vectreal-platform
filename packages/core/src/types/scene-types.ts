@@ -449,8 +449,8 @@ export interface ExtendedGLTFDocument extends JSONDocument {
 
 /** Serialized scene asset payload used in API transport. */
 export interface SceneAssetDataEntry {
-	/** Binary data as array of numbers or base64 string */
-	data: number[] | string
+	/** Binary data as raw bytes, array of numbers, or base64 string */
+	data: number[] | string | Uint8Array
 	/** Original filename of the asset */
 	fileName: string
 	/** MIME type of the asset */
@@ -461,6 +461,21 @@ export interface SceneAssetDataEntry {
 
 /** Serialized scene asset map keyed by asset identifier. */
 export type SerializedSceneAssetDataMap = Record<string, SceneAssetDataEntry>
+
+/** Reference to a scene asset served as a separate binary request. */
+export interface SceneAssetRef {
+	/** URL the client fetches the raw bytes from */
+	url: string
+	/** Original filename of the asset (matches glTF URI references) */
+	fileName: string
+	/** MIME type of the asset */
+	mimeType: string
+	/** Byte size when known, used for progress weighting */
+	byteSize: number | null
+}
+
+/** Asset reference map keyed by asset identifier. */
+export type SceneAssetRefMap = Record<string, SceneAssetRef>
 
 /** Optional scene metadata payload persisted with scene settings. */
 export interface SceneMetaData {
@@ -485,6 +500,8 @@ export interface ServerScenePayload {
 	gltfJson: ExtendedGLTFDocument | null
 	/** Binary asset data keyed by asset identifier. */
 	assetData: SerializedSceneAssetDataMap | null
+	/** Asset references for manifest-based loading (bytes fetched separately). */
+	assetRefs?: SceneAssetRefMap | null
 }
 
 /** Resolved scene data contract consumed by loaders and viewer clients. */
