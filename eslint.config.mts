@@ -12,7 +12,14 @@ export default defineConfig(tseslint.configs.recommended, [
 		// Throwaway consumer app for the @vctrl/viewer packaging e2e. Its deps
 		// (@vctrl/viewer, vite, react) only exist in the tmp install created at
 		// runtime, so it must not participate in workspace linting.
-		ignores: ['packages/viewer-e2e/src/consumer-template/**']
+		//
+		// `.claude/worktrees/**` holds temporary git worktrees — full repo copies
+		// with their own tsconfig files. Linting them makes typescript-eslint see
+		// multiple candidate tsconfigRootDirs and fail to parse every file.
+		ignores: [
+			'packages/viewer-e2e/src/consumer-template/**',
+			'.claude/**'
+		]
 	},
 	{
 		files: ['**/*.{js,mjs,cjs,jsx}'],
@@ -29,6 +36,12 @@ export default defineConfig(tseslint.configs.recommended, [
 
 	{
 		files: ['**/*.{ts,mts,cts,tsx}'],
+		// Pin the tsconfig root so typescript-eslint never has to guess it. Without
+		// this, a second repo copy on disk (e.g. a git worktree) produces multiple
+		// candidate roots and the parser throws on every file.
+		languageOptions: {
+			parserOptions: { tsconfigRootDir: import.meta.dirname }
+		},
 		plugins: { import: pluginImport },
 		rules: {
 			// Core JS rules like no-undef can report false-positives on TS type namespaces
