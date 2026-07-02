@@ -9,6 +9,27 @@ import { getAuthUser } from '../../lib/http/auth.server'
 
 const db = getDbClient()
 
+// Only these MIME types are served verbatim. Anything else (including
+// text/html, image/svg+xml, application/xml, and unknown types) is downgraded
+// to application/octet-stream to prevent stored-XSS via client-supplied types.
+const PASSIVE_MIME_TYPES = new Set([
+	'image/png',
+	'image/jpeg',
+	'image/webp',
+	'image/ktx2',
+	'image/avif',
+	'model/gltf-binary',
+	'model/gltf+json',
+	'application/octet-stream',
+])
+
+function sanitizeMimeType(mimeType: string | undefined | null): string {
+	if (!mimeType || !PASSIVE_MIME_TYPES.has(mimeType)) {
+		return 'application/octet-stream'
+	}
+	return mimeType
+}
+
 export async function loader({ request, params }: LoaderFunctionArgs) {
 	const auth = await getAuthUser(request)
 	if (auth instanceof Response) {
@@ -54,16 +75,24 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	try {
 		const assetData = await downloadAsset(assetId)
 		const body = new Blob([Buffer.from(assetData.data)], {
-			type: assetData.mimeType
+			type: sanitizeMimeType(assetData.mimeType)
 		})
 
 		return new Response(body, {
 			status: 200,
 			headers: (() => {
 				const responseHeaders = new Headers(headers)
-				responseHeaders.set('Content-Type', assetData.mimeType)
+				responseHeaders.set(
+					'Content-Type',
+					sanitizeMimeType(assetData.mimeType)
+				)
 				responseHeaders.set('Cache-Control', 'private, max-age=60')
-				responseHeaders.set('Last-Modified', asset.updatedAt.toUTCString())
+				responseHeaders.set(
+					'Last-Modified',
+					asset.updatedAt.toUTCString()
+				)
+				responseHeaders.set('X-Content-Type-Options', 'nosniff')
+				responseHeaders.set('Content-Security-Policy', 'sandbox')
 				return responseHeaders
 			})()
 		})
