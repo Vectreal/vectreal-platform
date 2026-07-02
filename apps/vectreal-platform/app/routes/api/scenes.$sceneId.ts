@@ -15,7 +15,10 @@ import {
 	releaseSceneWriteLock,
 	reserveIdempotentSceneRequest
 } from '../../lib/domain/scene/server/scene-action-guard.server'
-import { buildSceneAggregate } from '../../lib/domain/scene/server/scene-aggregate.server'
+import {
+	buildSceneManifest,
+	buildSceneManifestEtag
+} from '../../lib/domain/scene/server/scene-aggregate.server'
 import {
 	createSceneFolder,
 	deleteSceneFolder,
@@ -36,7 +39,6 @@ import type {
 	ContentActionResponse,
 	ContentActionResult,
 	ContentItemType,
-	SceneAggregateResponse,
 	SceneSettingsAction
 } from '../../types/api'
 
@@ -70,6 +72,16 @@ function withNoStoreHeaders(response: Response): Response {
 		status: response.status,
 		headers
 	})
+}
+
+function withManifestCacheHeaders(
+	response: Response,
+	etag: string | null
+): Response {
+	const headers = new Headers(response.headers)
+	headers.set('Cache-Control', 'private, no-cache')
+	if (etag) headers.set('ETag', etag)
+	return new Response(response.body, { status: response.status, headers })
 }
 
 function withAdditionalHeaders(
@@ -325,21 +337,36 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			}
 		}
 
+		const token = url.searchParams.get('token')?.trim() || null
+		const buildPreviewAssetUrl = (assetId: string) => {
+			const assetParams = new URLSearchParams({
+				preview: '1',
+				projectId: previewProjectId
+			})
+			if (token) assetParams.set('token', token)
+			return `/api/scenes/${sceneId}/assets/${assetId}?${assetParams.toString()}`
+		}
+
 		try {
-			const aggregate: SceneAggregateResponse =
-				await buildSceneAggregate(sceneId)
+			const manifest = await buildSceneManifest(sceneId, buildPreviewAssetUrl)
+			const etag = buildSceneManifestEtag(sceneId, manifest.settingsUpdatedAt)
+
+			if (etag && request.headers.get('If-None-Match') === etag) {
+				return withManifestCacheHeaders(new Response(null, { status: 304 }), etag)
+			}
 
 			if (authContext.mode === 'session') {
-				return withNoStoreHeaders(
-					ApiResponse.success(aggregate, 200, {
+				return withManifestCacheHeaders(
+					ApiResponse.success(manifest, 200, {
 						headers: new Headers(authContext.headers)
-					})
+					}),
+					etag
 				)
 			}
 
-			return withNoStoreHeaders(ApiResponse.success(aggregate))
+			return withManifestCacheHeaders(ApiResponse.success(manifest), etag)
 		} catch (error) {
-			console.error('Failed to load preview scene aggregate:', {
+			console.error('Failed to load preview scene manifest:', {
 				sceneId,
 				projectId: previewProjectId,
 				error
@@ -368,13 +395,30 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	}
 
 	try {
-		const aggregate: SceneAggregateResponse = await buildSceneAggregate(sceneId)
+		const manifest = await buildSceneManifest(
+			sceneId,
+			(assetId) => `/api/scenes/${sceneId}/assets/${assetId}`
+		)
+		const etag = buildSceneManifestEtag(sceneId, manifest.settingsUpdatedAt)
 
-		return ApiResponse.success(aggregate, 200, {
-			headers: new Headers(authResult.headers)
-		})
+		if (etag && request.headers.get('If-None-Match') === etag) {
+			return withManifestCacheHeaders(
+				new Response(null, {
+					status: 304,
+					headers: new Headers(authResult.headers)
+				}),
+				etag
+			)
+		}
+
+		return withManifestCacheHeaders(
+			ApiResponse.success(manifest, 200, {
+				headers: new Headers(authResult.headers)
+			}),
+			etag
+		)
 	} catch (error) {
-		console.error('Failed to load scene aggregate:', {
+		console.error('Failed to load scene manifest:', {
 			sceneId,
 			userId: authResult.user.id,
 			error

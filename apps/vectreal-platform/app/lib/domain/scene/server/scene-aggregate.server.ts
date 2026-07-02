@@ -86,6 +86,19 @@ export async function buildSceneManifest(
 	}
 }
 
+/**
+ * Returns a weak ETag for the scene manifest based on the scene ID and the
+ * timestamp of the last settings save. Returns null when no timestamp is
+ * available so callers can skip caching headers entirely.
+ */
+export function buildSceneManifestEtag(
+	sceneId: string,
+	settingsUpdatedAt: string | null
+): string | null {
+	if (!settingsUpdatedAt) return null
+	return `W/"scene-${sceneId}-${settingsUpdatedAt}"`
+}
+
 function serializeAssetData(
 	assetData: SceneAssetBinaryDataMap | null
 ): SerializedSceneAssetDataMap {
