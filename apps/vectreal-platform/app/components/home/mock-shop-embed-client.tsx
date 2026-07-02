@@ -1,109 +1,101 @@
-import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
 import { VectrealEmbed } from '@vctrl/embed'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'framer-motion'
 import { ChevronsDown, MousePointerClick, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-// ---------------------------------------------------------------------------
-// Scene configuration
-// ---------------------------------------------------------------------------
+import { ChapterRail } from './mock-shop-chapter-rail'
+import {
+	CHAPTERS,
+	chapterIdByPos,
+	chapterIndexById,
+	chapterPosFromProgress,
+	chapterProgressByIndex,
+	DEMO_SCENE_URL,
+	type ChapterId
+} from './mock-shop-chapters'
+import { Filmstrip } from './mock-shop-filmstrip'
 
-const DEMO_SCENE_URL =
-	typeof import.meta !== 'undefined' &&
-	(import.meta.env.VITE_PUBLIC_DEMO_SCENE_URL as string | undefined)
-		? (import.meta.env.VITE_PUBLIC_DEMO_SCENE_URL as string)
-		: `https://vectreal.com/preview/fullscreen/395a09f0-9340-42f2-ac98-03339cf27c9c/488bd4a1-46d3-4ee1-8497-25f68a5d6fa2?token=${import.meta.env.VITE_PUBLIC_VECTREAL_API_KEY_PROD}`
-
-const CHAPTERS = [
-	{
-		id: 'default',
-		label: 'Shop View',
-		heading: '911 GT3',
-		description:
-			'A real product listing powered by Vectreal. Customers scroll through camera presets to inspect every detail — no plugin required.',
-		type: 'shop' as const,
-		code: null,
-		threshold: 0
-	},
-	{
-		id: 'side-view',
-		label: 'Camera Presets',
-		heading: 'Guided views,\nzero extra code.',
-		description:
-			'Define named camera positions in the Vectreal editor. Switch between them at runtime with one SDK call — smooth interpolation included.',
-		type: 'feature' as const,
-		code: "embed.activateCamera('drivetrain')",
-		threshold: 0.25
-	},
-	{
-		id: 'light-closeup',
-		label: 'React SDK',
-		heading: 'Drop in.\nConfigure from JSX.',
-		description:
-			'The Vectreal React component renders photorealistic 3D in any React or Next.js project. Lighting, materials, and controls — all as props.',
-		type: 'feature' as const,
-		code: '<VectrealViewer src={modelUrl} />',
-		threshold: 0.5
-	},
-	{
-		id: 'back-side',
-		label: 'Embed',
-		heading: 'One iframe.\nAny platform.',
-		description:
-			'Paste an <iframe> into Shopify, Webflow, or WordPress. Drive cameras and events via the Vectreal JS SDK — no framework needed.',
-		type: 'feature' as const,
-		code: '<iframe src="vectreal.com/preview/…" />',
-		threshold: 0.75
-	}
-] as const
-
-type ChapterId = (typeof CHAPTERS)[number]['id']
-
-// Single source of truth for threshold → scroll position mapping
-const chapterThresholds = Object.fromEntries(
-	CHAPTERS.map((c) => [c.id, c.threshold])
-) as Record<ChapterId, number>
-
-// ---------------------------------------------------------------------------
+// Camera switches wait this long after the last scroll movement, so the camera
+// only changes once scrolling settles (or the user blows past intermediate
+// chapters) instead of thrashing continuously as the filmstrip glides.
+const CAMERA_SETTLE_MS = 160
 
 export default function MockShopEmbedClient() {
 	const iframeRef = useRef<HTMLIFrameElement>(null)
 	const embedRef = useRef<VectrealEmbed | null>(null)
 	const sectionRef = useRef<HTMLDivElement>(null)
-	const lastChapterRef = useRef<ChapterId>('default')
-	const suppressScrollRef = useRef(false)
-	const suppressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-	const snapDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+	// activeChapterRef: what the user is currently looking at (follows scroll).
+	// cameraChapterRef: the last camera we actually activated (settle-debounced).
+	const activeChapterRef = useRef<ChapterId>('default')
+	const cameraChapterRef = useRef<ChapterId>('default')
 	const interactiveModeRef = useRef(false)
+	const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
 	const [activeChapter, setActiveChapter] = useState<ChapterId>('default')
 	const [embedReady, setEmbedReady] = useState(false)
 	const [interactiveMode, setInteractiveMode] = useState(false)
 
-	const chapter = CHAPTERS.find((c) => c.id === activeChapter) ?? CHAPTERS[0]
+	const prefersReducedMotion = useReducedMotion()
 
-	// Keep ref in sync so scroll handler reads current value without stale closure
+	const { scrollYProgress } = useScroll({
+		target: sectionRef,
+		offset: ['start start', 'end end']
+	})
+
+	// Single source of truth: scroll progress. The visuals derive from it directly
+	// via array-form transforms (compositor-driven, no per-frame JS). The camera
+	// and aria — the discrete side — read the chapter position computed from the
+	// same progress on demand, so nothing can drift apart.
+	const chapterPosNow = () => chapterPosFromProgress(scrollYProgress.get())
+
+	// Scroll hint fades out once the user leaves the first chapter.
+	const hintOpacity = useTransform(scrollYProgress, [0, 0.12], [1, 0])
+
+	// Activate a chapter's camera, de-duplicated against the last one activated.
+	const activateCamera = (id: ChapterId) => {
+		if (id === cameraChapterRef.current) return
+		cameraChapterRef.current = id
+		if (embedReady) embedRef.current?.activateCamera(id)
+	}
+
+	// Keep ref in sync so the scroll listener reads the current value.
 	useEffect(() => {
 		interactiveModeRef.current = interactiveMode
 	}, [interactiveMode])
 
-	// Initialise embed SDK
+	// The aria/current chapter follows the rounded position (for the tab's
+	// aria-current); the camera waits for the scroll to settle so it only commits
+	// to a definite chapter once you stop or blow past intermediate steps.
+	useMotionValueEvent(scrollYProgress, 'change', () => {
+		// Track the current chapter without a re-render — the tab emphasis is a
+		// motion transform, so nothing visual needs React state mid-scroll. Keeping
+		// setState out of the per-frame path avoids reconciliation hitches while
+		// free-scrolling; aria-current and the camera update on settle instead.
+		activeChapterRef.current = chapterIdByPos(chapterPosNow())
+
+		if (interactiveModeRef.current) return
+		if (settleTimerRef.current) clearTimeout(settleTimerRef.current)
+		settleTimerRef.current = setTimeout(() => {
+			if (interactiveModeRef.current) return
+			const id = chapterIdByPos(chapterPosNow())
+			activeChapterRef.current = id
+			setActiveChapter(id)
+			activateCamera(id)
+		}, CAMERA_SETTLE_MS)
+	})
+
+	// Initialise embed SDK.
 	useEffect(() => {
 		if (!iframeRef.current) return
-		const embed = new VectrealEmbed(iframeRef.current, {
-			readyTimeout: 20_000
-		})
+		const embed = new VectrealEmbed(iframeRef.current, { readyTimeout: 20_000 })
 		embedRef.current = embed
 
 		embed.ready().then(() => {
 			setEmbedReady(true)
 			embed.setControlsEnabled(false)
-			embed.setTransition({
-				type: 'linear',
-				duration: 1200,
-				easing: 'ease_in_out'
-			})
+			embed.setTransition({ type: 'linear', duration: 1200, easing: 'ease_in_out' })
 			embed.setAutoRotate(false)
 		})
 
@@ -113,12 +105,13 @@ export default function MockShopEmbedClient() {
 		}
 	}, [])
 
-	// Re-sync camera when the page regains visibility (prevents drift after tab switch)
+	// Re-sync camera when the page regains visibility (prevents drift after a tab switch).
 	useEffect(() => {
 		if (!embedReady) return
 		const handleVisibilityChange = () => {
 			if (document.visibilityState === 'visible') {
-				embedRef.current?.activateCamera(lastChapterRef.current)
+				embedRef.current?.activateCamera(activeChapterRef.current)
+				cameraChapterRef.current = activeChapterRef.current
 			}
 		}
 		document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -126,97 +119,40 @@ export default function MockShopEmbedClient() {
 			document.removeEventListener('visibilitychange', handleVisibilityChange)
 	}, [embedReady])
 
-	// Scroll → camera switching + snap-to-chapter on settle
+	// Enable the section's vertical scroll-snap only while it is on screen, and
+	// re-assert the camera on re-entry. scroll-snap-type lives on the document
+	// element (the window scroller), so leaving it on globally makes the rest of
+	// the page — notably the horizontal card carousels — feel stuck in vertical
+	// snap on touch; gating it to visibility keeps snapping to the chapters only.
+	// The camera re-assert fixes the embed resetting to its default while
+	// offscreen (bypassing the activateCamera dedupe, which would otherwise skip).
 	useEffect(() => {
 		const section = sectionRef.current
 		if (!section) return
-
-		const handleScroll = () => {
-			if (suppressScrollRef.current) return
-			if (interactiveModeRef.current) return
-
-			const rect = section.getBoundingClientRect()
-			const scrollable = rect.height - window.innerHeight
-			if (scrollable <= 0) return
-
-			// Outside sticky range — cancel any queued snap and leave page scroll alone
-			if (rect.top > 0 || rect.bottom < window.innerHeight) {
-				if (snapDebounceRef.current) clearTimeout(snapDebounceRef.current)
-				return
-			}
-
-			const progress = Math.max(0, Math.min(1, -rect.top / scrollable))
-
-			let next: ChapterId = CHAPTERS[0].id
-			for (const c of CHAPTERS) {
-				if (progress >= c.threshold) next = c.id
-			}
-
-			if (next !== lastChapterRef.current) {
-				lastChapterRef.current = next
-				setActiveChapter(next)
-				if (embedReady) embedRef.current?.activateCamera(next)
-			}
-
-			// After scroll settles, snap exactly to the chapter's scroll position
-			if (snapDebounceRef.current) clearTimeout(snapDebounceRef.current)
-			snapDebounceRef.current = setTimeout(() => {
-				if (interactiveModeRef.current) return
-				const sectionTop = section.getBoundingClientRect().top + window.scrollY
-				const targetY =
-					sectionTop + chapterThresholds[lastChapterRef.current] * scrollable
-
-				suppressScrollRef.current = true
-				if (suppressTimerRef.current) clearTimeout(suppressTimerRef.current)
-				suppressTimerRef.current = setTimeout(() => {
-					suppressScrollRef.current = false
-				}, 1000)
-
-				window.scrollTo({ top: targetY, behavior: 'smooth' })
-			}, 80)
+		const html = document.documentElement
+		const io = new IntersectionObserver(
+			([entry]) => {
+				if (entry.isIntersecting) {
+					html.style.scrollSnapType = 'y proximity'
+					if (embedReady && !interactiveModeRef.current) {
+						const id = chapterIdByPos(chapterPosNow())
+						cameraChapterRef.current = id
+						embedRef.current?.activateCamera(id)
+					}
+				} else {
+					html.style.scrollSnapType = ''
+				}
+			},
+			{ threshold: 0 }
+		)
+		io.observe(section)
+		return () => {
+			io.disconnect()
+			html.style.scrollSnapType = ''
 		}
-
-		window.addEventListener('scroll', handleScroll, { passive: true })
-		return () => window.removeEventListener('scroll', handleScroll)
 	}, [embedReady])
 
-	const activateChapter = (id: ChapterId) => {
-		if (interactiveMode) return
-
-		setActiveChapter(id)
-		lastChapterRef.current = id
-		if (embedReady) embedRef.current?.activateCamera(id)
-
-		const section = sectionRef.current
-		if (!section) return
-
-		suppressScrollRef.current = true
-		if (suppressTimerRef.current) clearTimeout(suppressTimerRef.current)
-		suppressTimerRef.current = setTimeout(() => {
-			suppressScrollRef.current = false
-		}, 1000)
-
-		const sectionTop = section.getBoundingClientRect().top + window.scrollY
-		const scrollable = section.offsetHeight - window.innerHeight
-		window.scrollTo({
-			top: sectionTop + chapterThresholds[id] * scrollable,
-			behavior: 'smooth'
-		})
-	}
-
-	const handleEnterInteractive = () => {
-		if (!embedReady) return
-		setInteractiveMode(true)
-		embedRef.current?.setControlsEnabled(true)
-	}
-
-	const handleExitInteractive = () => {
-		setInteractiveMode(false)
-		embedRef.current?.setControlsEnabled(false)
-		if (embedReady) embedRef.current?.activateCamera(lastChapterRef.current)
-	}
-
-	// Lock body scroll on mobile when fullscreen interactive mode is active
+	// Lock body scroll on mobile when fullscreen interactive mode is active.
 	useEffect(() => {
 		const isMobile = window.matchMedia('(max-width: 767px)').matches
 		if (!isMobile) return
@@ -235,8 +171,53 @@ export default function MockShopEmbedClient() {
 		}
 	}, [interactiveMode])
 
+	// Tab click: jump straight to the chapter (user-initiated, so switch immediately).
+	const handleSelectChapter = (id: ChapterId) => {
+		if (interactiveMode) return
+		activeChapterRef.current = id
+		setActiveChapter(id)
+		activateCamera(id)
+
+		const section = sectionRef.current
+		if (!section) return
+		const sectionTop = section.getBoundingClientRect().top + window.scrollY
+		const scrollable = section.offsetHeight - window.innerHeight
+		const progress = chapterProgressByIndex(chapterIndexById(id))
+		window.scrollTo({
+			top: sectionTop + progress * scrollable,
+			behavior: 'smooth'
+		})
+	}
+
+	const handleEnterInteractive = () => {
+		if (!embedReady) return
+		setInteractiveMode(true)
+		embedRef.current?.setControlsEnabled(true)
+	}
+
+	const handleExitInteractive = () => {
+		setInteractiveMode(false)
+		embedRef.current?.setControlsEnabled(false)
+		if (embedReady) embedRef.current?.activateCamera(activeChapterRef.current)
+		cameraChapterRef.current = activeChapterRef.current
+	}
+
 	return (
 		<div ref={sectionRef} className="relative" style={{ height: '300vh' }}>
+			{/* Snap anchors — one per chapter at its scroll offset (scrollable range
+			    is 200vh: the 300vh section minus the 100vh sticky stage) */}
+			{CHAPTERS.map((c, i) => (
+				<div
+					key={`anchor-${c.id}`}
+					aria-hidden
+					className="pointer-events-none absolute left-0 h-px w-px"
+					style={{
+						top: `${chapterProgressByIndex(i) * 200}vh`,
+						scrollSnapAlign: 'start'
+					}}
+				/>
+			))}
+
 			{/* Sticky stage */}
 			<div className="bg-background sticky top-0 h-screen overflow-hidden">
 				<div className="mx-auto flex h-full w-full max-w-[2000px] flex-col items-center justify-center gap-16 px-5 py-16 md:px-10 md:py-10 lg:px-14">
@@ -263,9 +244,7 @@ export default function MockShopEmbedClient() {
 									src={DEMO_SCENE_URL}
 									className={cn(
 										'absolute inset-0 h-full w-full border-0',
-										interactiveMode
-											? 'pointer-events-auto'
-											: 'pointer-events-none'
+										interactiveMode ? 'pointer-events-auto' : 'pointer-events-none'
 									)}
 									allow="autoplay; xr-spatial-tracking"
 									allowFullScreen
@@ -290,8 +269,8 @@ export default function MockShopEmbedClient() {
 									</div>
 								</div>
 
-								{/* Interact / Exit — inside canvas bounds, bottom-right */}
-								{/* On mobile in interactive mode, this button is hidden; a fixed sibling button handles exit instead */}
+								{/* Interact / Exit — inside canvas bounds, bottom-right. On mobile in
+								    interactive mode this is hidden; a fixed sibling button handles exit. */}
 								<button
 									onClick={
 										interactiveMode
@@ -329,173 +308,60 @@ export default function MockShopEmbedClient() {
 
 							{/* Caption — sits directly below the viewer */}
 							<p className="text-foreground/20 px-0.5 text-[10px] leading-relaxed">
-								3D visualization powered by Vectreal · Concept demo, not for
-								sale
+								3D visualization powered by Vectreal · Concept demo, not for sale
 							</p>
-							{
-								<div
-									className={cn(
-										'flex flex-wrap gap-x-5 gap-y-1 transition-opacity duration-300 md:gap-x-6',
-										interactiveMode && 'pointer-events-none opacity-30',
-										'md:invisible md:hidden' // Hidden on smaller screens to save space (scrolling is easier than clicking tabs on mobile anyway)
-									)}
-								>
-									{CHAPTERS.map((c) => (
-										<button
-											key={c.id}
-											onClick={() => activateChapter(c.id)}
-											className="group relative pb-2.5"
-											aria-label={`View ${c.label}`}
-										>
-											<span
-												className={cn(
-													'text-[10px] font-medium tracking-[0.12em] uppercase transition-colors duration-300',
-													activeChapter === c.id
-														? 'text-foreground'
-														: 'text-foreground/25 group-hover:text-foreground/55'
-												)}
-											>
-												{c.label}
-											</span>
-											<span
-												className={cn(
-													'absolute right-0 bottom-0 left-0 h-px rounded-full transition-opacity duration-500',
-													activeChapter === c.id
-														? 'bg-accent opacity-100'
-														: 'opacity-0'
-												)}
-											/>
-										</button>
-									))}
-								</div>
-							}
+
+							{/* Mobile chapter rail — desktop uses the bottom rail instead */}
+							<ChapterRail
+								progress={scrollYProgress}
+								activeChapter={activeChapter}
+								onSelect={handleSelectChapter}
+								className={cn(
+									'mt-1 transition-opacity duration-300 md:hidden',
+									interactiveMode && 'pointer-events-none opacity-30'
+								)}
+							/>
 						</div>
 
-						{/* ── Text column ───────────────────────────────────────── */}
+						{/* ── Text column: scroll-tracked filmstrip ─────────────── */}
 						<div
 							className={cn(
-								'flex flex-col gap-5 transition-opacity duration-300 md:gap-6',
+								'transition-opacity duration-300',
 								interactiveMode && 'pointer-events-none opacity-30'
 							)}
 						>
-							{/* Animated chapter content */}
-							<AnimatePresence mode="wait">
-								<motion.div
-									key={activeChapter}
-									initial={{ opacity: 0, y: 12 }}
-									animate={{ opacity: 1, y: 0 }}
-									exit={{ opacity: 0, y: -12 }}
-									transition={{ duration: 0.3, ease: 'easeInOut', delay: 0.55 }}
-									className="flex flex-col gap-3"
-								>
-									{/* Eyebrow label */}
-									<p className="text-accent/80 text-[10px] font-semibold tracking-[0.22em] uppercase">
-										{chapter.label}
-									</p>
-
-									{/* Heading — each \n becomes a block span for line-break control */}
-									<h4 className="text-foreground text-[1.75rem] leading-[1.1] tracking-tight md:text-3xl lg:text-[2.125rem]">
-										{chapter.heading.split('\n').map((line, i) => (
-											<span key={i} className="block">
-												{line}
-											</span>
-										))}
-									</h4>
-
-									{/* Description */}
-									<p className="text-foreground/50 text-sm leading-relaxed md:text-[0.9375rem]">
-										{chapter.description}
-									</p>
-
-									{/* Conditional: shop CTA vs SDK code snippet */}
-									{chapter.type === 'shop' ? (
-										<div className="mt-1 flex flex-col gap-3">
-											<div>
-												<p className="text-foreground/25 text-[10px] tracking-[0.18em] uppercase">
-													Coupe · 4.0L Flat-6 · 510 HP · Jet Black Metallic
-												</p>
-												<p className="text-accent mt-1 text-2xl font-bold tracking-tight">
-													$182,900
-												</p>
-											</div>
-											<Button
-												disabled
-												className="border-foreground/10 bg-foreground/5 text-foreground/40 w-full"
-												variant="outline"
-												size="sm"
-											>
-												Configure
-											</Button>
-											<p className="text-foreground/20 text-[11px]">
-												Concept demo · Not for sale
-											</p>
-										</div>
-									) : (
-										<div className="border-foreground/[0.07] bg-foreground/3 mt-1 rounded-xl border px-4 py-3">
-											<code className="text-foreground/55 font-mono text-[11px] break-all md:text-xs">
-												{chapter.code}
-											</code>
-										</div>
-									)}
-								</motion.div>
-							</AnimatePresence>
+							<Filmstrip
+								progress={scrollYProgress}
+								reduced={!!prefersReducedMotion}
+							/>
 						</div>
 					</div>
 
-					{/* Chapter tab rail */}
-					{
-						<div
-							className={cn(
-								'flex flex-wrap gap-x-5 gap-y-1 transition-opacity duration-300 md:gap-x-6',
-								interactiveMode && 'pointer-events-none opacity-30',
-								'max-md:invisible max-md:hidden' // Hidden on smaller screens
-							)}
-						>
-							{CHAPTERS.map((c) => (
-								<button
-									key={c.id}
-									onClick={() => activateChapter(c.id)}
-									className="group relative pb-2.5"
-									aria-label={`View ${c.label}`}
-								>
-									<span
-										className={cn(
-											'text-[10px] font-medium tracking-[0.12em] uppercase transition-colors duration-300',
-											activeChapter === c.id
-												? 'text-foreground'
-												: 'text-foreground/25 group-hover:text-foreground/55'
-										)}
-									>
-										{c.label}
-									</span>
-									<span
-										className={cn(
-											'absolute right-0 bottom-0 left-0 h-px rounded-full transition-opacity duration-500',
-											activeChapter === c.id
-												? 'bg-accent opacity-100'
-												: 'opacity-0'
-										)}
-									/>
-								</button>
-							))}
-						</div>
-					}
+					{/* Desktop chapter rail */}
+					<ChapterRail
+						progress={scrollYProgress}
+						activeChapter={activeChapter}
+						onSelect={handleSelectChapter}
+						className={cn(
+							'w-full max-w-xl transition-opacity duration-300 max-md:hidden',
+							interactiveMode && 'pointer-events-none opacity-30'
+						)}
+					/>
 
 					{/* Scroll hint — fades out after first chapter */}
-					<div
-						className={cn(
-							'pointer-events-none absolute bottom-12 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-1.5 transition-opacity duration-700'
-						)}
+					<motion.div
+						style={{ opacity: prefersReducedMotion ? undefined : hintOpacity }}
+						className="pointer-events-none absolute bottom-12 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-1.5"
 					>
 						<p className="text-[11px] tracking-widest text-white/30 uppercase">
 							Scroll to explore
 						</p>
 						<ChevronsDown size={12} className="animate-bounce text-white/20" />
-					</div>
+					</motion.div>
 				</div>
 			</div>
 
-			{/* Mobile-only exit button — rendered outside the iframe stacking context so touch events reach it reliably */}
+			{/* Mobile-only exit button — outside the iframe stacking context so touch events reach it */}
 			{interactiveMode && (
 				<div className="fixed right-0 bottom-8 left-0 z-60 flex justify-center md:hidden">
 					<button

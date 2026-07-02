@@ -294,7 +294,7 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 			)}
 		>
 			{/* Step list */}
-			<ul className="flex flex-col gap-2.5">
+			<ul className="flex shrink-0 flex-col gap-2.5">
 				{STEPS.map((step, i) => {
 					const isActive = i === active
 					return (
@@ -361,7 +361,7 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 			</ul>
 
 			{/* Animated stage */}
-			<div className="bg-surface-1 border-surface-border relative h-[340px] grow overflow-hidden rounded-2xl border md:h-[400px]">
+			<div className="bg-surface-1 border-surface-border relative h-[340px] shrink-0 grow overflow-hidden rounded-2xl border max-lg:w-full md:h-[400px]">
 				{/* dot-grid texture */}
 				<div
 					className="pointer-events-none absolute inset-0 opacity-[0.5]"
