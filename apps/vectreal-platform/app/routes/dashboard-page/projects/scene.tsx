@@ -22,7 +22,6 @@ import {
 	DropdownMenuTrigger
 } from '@shared/components/ui/dropdown-menu'
 import { cn } from '@shared/utils'
-import { getSerializedAssetByteSize, type ServerSceneData } from '@vctrl/core'
 import {
 	ModelFile,
 	SceneLoadResult,
@@ -62,23 +61,21 @@ import { getProject } from '../../../lib/domain/project/project-repository.serve
 import { resolveBakedShadowSource } from '../../../lib/domain/scene/client/baked-shadow-source'
 import { loadSceneFromApi } from '../../../lib/domain/scene/client/load-scene-from-api.client'
 import { getDashboardSceneLoadErrorMessage } from '../../../lib/domain/scene/scene-load-error-messages'
-import { buildSceneAggregate } from '../../../lib/domain/scene/server/scene-aggregate.server'
 import {
 	getScene,
 	getSceneFolderAncestry
 } from '../../../lib/domain/scene/server/scene-folder-repository.server'
 import { getPublishedScenePreview } from '../../../lib/domain/scene/server/scene-preview-repository.server'
+import { sceneSettingsService } from '../../../lib/domain/scene/server/scene-settings-service.server'
 import { shouldRevalidateForRouteParams } from '../../../lib/navigation/dashboard-route-behavior'
 import { deleteDialogAtom } from '../../../lib/stores/dashboard-management-store'
 import { toViewerLoadingThumbnail } from '../../../lib/viewer/viewer-loading-thumbnail'
 
 import type {
-	SceneAggregateResponse,
+	SceneAdditionalMetrics,
 	SerializedSceneAssetDataMap
 } from '../../../types/api'
 import type { ShouldRevalidateFunction } from 'react-router'
-
-const MAX_PRELOADED_SCENE_ASSET_BYTES = 1_500_000
 
 export type SceneAssetSummary = {
 	id: string
@@ -116,31 +113,6 @@ function formatBytes(bytes: number | null | undefined): string {
 	return `${size >= 100 ? Math.round(size) : size.toFixed(size < 10 ? 1 : 0)} ${units[index]}`
 }
 
-function toInitialSceneData(
-	aggregate: SceneAggregateResponse | null
-): ServerSceneData | null {
-	if (!aggregate?.gltfJson || !aggregate.assetData) {
-		return null
-	}
-
-	const totalAssetBytes = Object.values(aggregate.assetData).reduce(
-		(total, asset) => {
-			return total + getSerializedAssetByteSize(asset.data)
-		},
-		0
-	)
-
-	if (totalAssetBytes > MAX_PRELOADED_SCENE_ASSET_BYTES) {
-		return null
-	}
-
-	return {
-		gltfJson: aggregate.gltfJson,
-		assetData: aggregate.assetData,
-		...aggregate.settings
-	}
-}
-
 export async function loader({ request, params }: Route.LoaderArgs) {
 	const projectId = params.projectId
 	const sceneId = params.sceneId
@@ -165,43 +137,36 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Scene not found', { status: 404 })
 	}
 
-	const [folderPath, sceneAggregate] = await Promise.all([
+	const [folderPath, stats, sceneAssets] = await Promise.all([
 		scene.folderId
 			? getSceneFolderAncestry(scene.folderId, user.id)
 			: Promise.resolve([]),
-		buildSceneAggregate(sceneId)
+		sceneSettingsService.getSceneStats(sceneId).catch(() => null),
+		sceneSettingsService.getSceneAssetRecords(sceneId)
 	])
 
 	const publishedMeta = await getPublishedScenePreview(projectId, sceneId)
 
-	const initialSceneData = toInitialSceneData(sceneAggregate)
+	const additionalMetrics =
+		stats?.additionalMetrics as SceneAdditionalMetrics | null | undefined
+
 	const sceneDetails: SceneDetailsSummary = {
 		fileSizeBytes:
-			sceneAggregate?.stats?.currentSceneBytes ??
-			sceneAggregate?.stats?.initialSceneBytes ??
-			null,
-		assetCount:
-			sceneAggregate?.assets?.length ??
-			(sceneAggregate?.assetData
-				? Object.keys(sceneAggregate.assetData).length
-				: 0),
+			stats?.currentSceneBytes ?? stats?.initialSceneBytes ?? null,
+		assetCount: sceneAssets.length,
 		textureBytes:
-			sceneAggregate?.stats?.additionalMetrics?.currentTextureBytes ??
-			sceneAggregate?.stats?.additionalMetrics?.initialTextureBytes ??
+			additionalMetrics?.currentTextureBytes ??
+			additionalMetrics?.initialTextureBytes ??
 			null,
 		textureCount:
-			sceneAggregate?.stats?.optimized?.texturesCount ??
-			sceneAggregate?.stats?.baseline?.texturesCount ??
-			null,
+			stats?.optimized?.texturesCount ?? stats?.baseline?.texturesCount ?? null,
 		meshesCount:
-			sceneAggregate?.stats?.optimized?.meshesCount ??
-			sceneAggregate?.stats?.baseline?.meshesCount ??
-			null,
+			stats?.optimized?.meshesCount ?? stats?.baseline?.meshesCount ?? null,
 		verticesCount:
-			sceneAggregate?.stats?.optimized?.verticesCount ??
-			sceneAggregate?.stats?.baseline?.verticesCount ??
+			stats?.optimized?.verticesCount ??
+			stats?.baseline?.verticesCount ??
 			null,
-		assets: (sceneAggregate?.assets ?? []).map((asset) => ({
+		assets: sceneAssets.map((asset) => ({
 			id: asset.id,
 			name: asset.name,
 			type: asset.type,
@@ -223,7 +188,6 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 				publishedAssetSizeBytes: publishedMeta?.publishedAssetSizeBytes ?? null
 			},
 			folderPath,
-			initialSceneData,
 			sceneDetails
 		},
 		{ headers }
@@ -580,6 +544,9 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 
 	return (
 		<div className="h-[calc(100dvh-5rem)] overflow-hidden px-5 pt-1 pb-5 xl:px-6">
+			{sceneState.thumbnailUrl ? (
+				<link rel="preload" as="image" href={sceneState.thumbnailUrl} />
+			) : null}
 			<div className="grid h-full min-h-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
 				<main className="flex min-h-0 flex-col gap-4">
 					{sceneLoadError && !file?.model ? (
