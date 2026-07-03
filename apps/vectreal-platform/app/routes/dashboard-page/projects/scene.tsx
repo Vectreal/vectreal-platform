@@ -511,7 +511,8 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 				const loadedSceneData = await loadSceneFromApi({
 					sceneId,
 					endpoint: `/api/scenes/${sceneId}`,
-					loadFromServer
+					loadFromServer,
+					parseMode: 'direct'
 				})
 
 				if (cancelled) {

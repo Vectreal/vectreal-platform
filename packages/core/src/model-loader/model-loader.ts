@@ -16,9 +16,12 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import { Document, GLTF, WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
+import type { Object3D } from 'three'
 
 import { OperationProgress } from '../types'
+import { buildAssetLookupKeys } from '../scene-asset'
 import { ModelFileTypes, ModelLoadResult, ThreeJSModelResult } from './types'
+import { resolveModifiedUrl } from './resolve-modified-url'
 
 /**
  * Universal 3D model loader service.
@@ -509,6 +512,65 @@ export class ModelLoader {
 			throw new Error(`Failed to convert document to Three.js: ${error}`, {
 				cause: error
 			})
+		}
+	}
+
+	/**
+	 * Parse glTF JSON straight to a Three.js scene without the
+	 * glTF-Transform document round-trip. View-only fast path: referenced
+	 * buffers/images are served from in-memory object URLs.
+	 */
+	public async parseGLTFJsonToThreeJS(
+		gltfJson: unknown,
+		assets: Map<string, Uint8Array>
+	): Promise<{ scene: Object3D; size: number; loadTime: number }> {
+		const startTime = Date.now()
+		this.emitProgress('Parsing model data', 25)
+
+		const [{ GLTFLoader }, { LoadingManager }] = await Promise.all([
+			import('three/examples/jsm/loaders/GLTFLoader.js'),
+			import('three')
+		])
+
+		const urlMap = new Map<string, string>()
+		let totalSize = 0
+
+		for (const [name, bytes] of assets.entries()) {
+			totalSize += bytes.byteLength
+			const objectUrl = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>]))
+			for (const key of buildAssetLookupKeys(name)) {
+				urlMap.set(key, objectUrl)
+			}
+		}
+
+		const manager = new LoadingManager()
+		manager.setURLModifier((url) => resolveModifiedUrl(urlMap, url))
+		const loader = new GLTFLoader(manager)
+		const gltfText = JSON.stringify(gltfJson)
+		totalSize += gltfText.length
+
+		try {
+			const gltf = await new Promise<{ scene: Object3D }>((resolve, reject) => {
+				loader.parse(gltfText, '', resolve, (error) =>
+					reject(
+						error instanceof Error
+							? error
+							: new Error(`Failed to parse glTF: ${error}`)
+					)
+				)
+			})
+
+			this.emitProgress('Model loaded successfully', 100)
+
+			return {
+				scene: gltf.scene,
+				size: totalSize,
+				loadTime: Date.now() - startTime
+			}
+		} finally {
+			for (const objectUrl of new Set(urlMap.values())) {
+				URL.revokeObjectURL(objectUrl)
+			}
 		}
 	}
 

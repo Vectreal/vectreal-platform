@@ -86,7 +86,8 @@ export function usePreviewScene({ sceneId, projectId }: UsePreviewSceneParams) {
 				endpoint,
 				loadFromServer,
 				apiKey: token,
-				requestKey
+				requestKey,
+				parseMode: 'direct'
 			})
 
 			setSceneData(loadedSceneData)

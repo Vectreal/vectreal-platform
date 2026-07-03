@@ -63,6 +63,8 @@ export interface SceneLoadOptions {
 	serverOptions?: ServerOptions
 	/** Whether to automatically apply scene settings (default: true) */
 	applySettings?: boolean
+	/** 'direct' parses glTF JSON straight with GLTFLoader (view-only fast path). */
+	parseMode?: 'document' | 'direct'
 }
 
 /**
@@ -75,6 +77,8 @@ export interface SceneDataLoadOptions {
 	sceneData: ServerSceneData
 	/** Whether to automatically apply scene settings (default: true) */
 	applySettings?: boolean
+	/** 'direct' parses glTF JSON straight with GLTFLoader (view-only fast path). */
+	parseMode?: 'document' | 'direct'
 }
 
 /**

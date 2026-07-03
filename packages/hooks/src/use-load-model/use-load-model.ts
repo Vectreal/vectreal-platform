@@ -15,6 +15,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 import { ModelFileTypes, ModelLoader } from '@vctrl/core/model-loader'
+import { PERSISTED_BAKE_FILENAME, toSerializedAssetBytes } from '@vctrl/core'
 import { useCallback, useMemo, useReducer, useRef } from 'react'
 
 import { normalizeServerLoadError } from './error-helpers'
@@ -236,6 +237,39 @@ function useLoadModel<
 
 			updateProgress(40)
 
+			if (options.parseMode === 'direct' && sceneData.gltfJson) {
+				const assets = new Map<string, Uint8Array>()
+				for (const entry of Object.values(sceneData.assetData ?? {})) {
+					if (entry.fileName === PERSISTED_BAKE_FILENAME) continue
+					assets.set(entry.fileName, toSerializedAssetBytes(entry))
+				}
+
+				const { sourcePackageBytes, textureBytes } =
+					calculateReferencedBytesFromServerScene(sceneData)
+
+				updateProgress(60)
+
+				const result = await modelLoader.parseGLTFJsonToThreeJS(
+					sceneData.gltfJson,
+					assets
+				)
+
+				const loadedFile: ModelFile = {
+					model: result.scene,
+					type: ModelFileTypes.gltf,
+					name: sceneData.meta?.name || 'scene',
+					sourcePackageBytes,
+					sourceTextureBytes: textureBytes
+				}
+
+				dispatch({ type: 'set-file', payload: loadedFile })
+				dispatch({ type: 'set-file-loading', payload: false })
+				loadedFileRef.current = loadedFile
+				updateProgress(100)
+
+				return { file: loadedFile, sceneId, ...sceneData }
+			}
+
 			const files = reconstructGltfFiles(sceneData)
 			const { sourcePackageBytes, textureBytes } =
 				calculateReferencedBytesFromServerScene(sceneData)
@@ -279,7 +313,7 @@ function useLoadModel<
 
 	const loadFromServer = useCallback(
 		async (options: SceneLoadOptions): Promise<SceneLoadResult> => {
-			const { sceneId, serverOptions } = options
+			const { sceneId, serverOptions, parseMode } = options
 
 			try {
 				eventSystem.emit('server-load-start', sceneId)
@@ -320,7 +354,7 @@ function useLoadModel<
 
 				const sceneData = resolveServerSceneDataContract(scenePayload)
 
-				const sceneLoadResult = await loadFromData({ sceneId, sceneData })
+				const sceneLoadResult = await loadFromData({ sceneId, sceneData, parseMode })
 
 				eventSystem.emit('server-load-complete', sceneLoadResult)
 
