@@ -352,6 +352,15 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			const etag = buildSceneManifestEtag(sceneId, manifest.settingsUpdatedAt)
 
 			if (etag && request.headers.get('If-None-Match') === etag) {
+				if (authContext.mode === 'session') {
+					return withManifestCacheHeaders(
+						new Response(null, {
+							status: 304,
+							headers: new Headers(authContext.headers)
+						}),
+						etag
+					)
+				}
 				return withManifestCacheHeaders(new Response(null, { status: 304 }), etag)
 			}
 
