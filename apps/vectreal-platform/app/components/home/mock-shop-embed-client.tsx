@@ -1,8 +1,15 @@
 import { cn } from '@shared/utils'
 import { VectrealEmbed } from '@vctrl/embed'
-import { motion, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'framer-motion'
+import {
+	motion,
+	useMotionValueEvent,
+	useReducedMotion,
+	useScroll,
+	useTransform
+} from 'framer-motion'
 import { ChevronsDown, MousePointerClick, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import { ChapterRail } from './mock-shop-chapter-rail'
 import {
@@ -21,10 +28,26 @@ import { Filmstrip } from './mock-shop-filmstrip'
 // chapters) instead of thrashing continuously as the filmstrip glides.
 const CAMERA_SETTLE_MS = 160
 
-export default function MockShopEmbedClient() {
+interface MockShopEmbedClientProps {
+	isMobileViewport?: boolean
+}
+
+export default function MockShopEmbedClient({
+	isMobileViewport
+}: MockShopEmbedClientProps) {
 	const iframeRef = useRef<HTMLIFrameElement>(null)
 	const embedRef = useRef<VectrealEmbed | null>(null)
 	const sectionRef = useRef<HTMLDivElement>(null)
+	const lockScrollYRef = useRef(0)
+	const bodyStyleSnapshotRef = useRef<{
+		position: string
+		top: string
+		left: string
+		right: string
+		width: string
+		overflow: string
+	} | null>(null)
+	const isProgrammaticSnapRef = useRef(false)
 
 	// activeChapterRef: what the user is currently looking at (follows scroll).
 	// cameraChapterRef: the last camera we actually activated (settle-debounced).
@@ -53,6 +76,29 @@ export default function MockShopEmbedClient() {
 	// Scroll hint fades out once the user leaves the first chapter.
 	const hintOpacity = useTransform(scrollYProgress, [0, 0.12], [1, 0])
 
+	const getChapterTop = (id: ChapterId) => {
+		const section = sectionRef.current
+		if (!section) return null
+		const sectionTop = section.getBoundingClientRect().top + window.scrollY
+		const scrollable = section.offsetHeight - window.innerHeight
+		const progress = chapterProgressByIndex(chapterIndexById(id))
+		return sectionTop + progress * scrollable
+	}
+
+	const snapToChapter = (
+		id: ChapterId,
+		behavior: ScrollBehavior = 'smooth'
+	) => {
+		const top = getChapterTop(id)
+		if (top === null) return
+		if (Math.abs(window.scrollY - top) < 2) return
+		isProgrammaticSnapRef.current = true
+		window.scrollTo({ top, behavior })
+		window.setTimeout(() => {
+			isProgrammaticSnapRef.current = false
+		}, 260)
+	}
+
 	// Activate a chapter's camera, de-duplicated against the last one activated.
 	const activateCamera = (id: ChapterId) => {
 		if (id === cameraChapterRef.current) return
@@ -79,6 +125,7 @@ export default function MockShopEmbedClient() {
 		if (settleTimerRef.current) clearTimeout(settleTimerRef.current)
 		settleTimerRef.current = setTimeout(() => {
 			if (interactiveModeRef.current) return
+			if (isProgrammaticSnapRef.current) return
 			const id = chapterIdByPos(chapterPosNow())
 			activeChapterRef.current = id
 			setActiveChapter(id)
@@ -95,7 +142,11 @@ export default function MockShopEmbedClient() {
 		embed.ready().then(() => {
 			setEmbedReady(true)
 			embed.setControlsEnabled(false)
-			embed.setTransition({ type: 'linear', duration: 1200, easing: 'ease_in_out' })
+			embed.setTransition({
+				type: 'linear',
+				duration: 1200,
+				easing: 'ease_in_out'
+			})
 			embed.setAutoRotate(false)
 		})
 
@@ -119,28 +170,20 @@ export default function MockShopEmbedClient() {
 			document.removeEventListener('visibilitychange', handleVisibilityChange)
 	}, [embedReady])
 
-	// Enable the section's vertical scroll-snap only while it is on screen, and
-	// re-assert the camera on re-entry. scroll-snap-type lives on the document
-	// element (the window scroller), so leaving it on globally makes the rest of
-	// the page — notably the horizontal card carousels — feel stuck in vertical
-	// snap on touch; gating it to visibility keeps snapping to the chapters only.
-	// The camera re-assert fixes the embed resetting to its default while
-	// offscreen (bypassing the activateCamera dedupe, which would otherwise skip).
+	// Re-assert the camera when the section enters the viewport. This keeps the
+	// embed and chapter state in sync without mutating global scroll-snap on the
+	// root scroller, which can feel sticky on iOS Safari.
 	useEffect(() => {
 		const section = sectionRef.current
 		if (!section) return
-		const html = document.documentElement
 		const io = new IntersectionObserver(
 			([entry]) => {
 				if (entry.isIntersecting) {
-					html.style.scrollSnapType = 'y proximity'
 					if (embedReady && !interactiveModeRef.current) {
 						const id = chapterIdByPos(chapterPosNow())
 						cameraChapterRef.current = id
 						embedRef.current?.activateCamera(id)
 					}
-				} else {
-					html.style.scrollSnapType = ''
 				}
 			},
 			{ threshold: 0 }
@@ -148,28 +191,61 @@ export default function MockShopEmbedClient() {
 		io.observe(section)
 		return () => {
 			io.disconnect()
-			html.style.scrollSnapType = ''
 		}
 	}, [embedReady])
 
 	// Lock body scroll on mobile when fullscreen interactive mode is active.
+	// iOS Safari is more reliable with position locking than touch-action toggles.
 	useEffect(() => {
-		const isMobile = window.matchMedia('(max-width: 767px)').matches
-		if (!isMobile) return
+		if (!isMobileViewport) return
+
+		const body = document.body
 
 		if (interactiveMode) {
-			document.body.style.overflow = 'hidden'
-			document.body.style.touchAction = 'none'
+			if (!bodyStyleSnapshotRef.current) {
+				bodyStyleSnapshotRef.current = {
+					position: body.style.position,
+					top: body.style.top,
+					left: body.style.left,
+					right: body.style.right,
+					width: body.style.width,
+					overflow: body.style.overflow
+				}
+			}
+			lockScrollYRef.current = window.scrollY
+			body.style.position = 'fixed'
+			body.style.top = `-${lockScrollYRef.current}px`
+			body.style.left = '0'
+			body.style.right = '0'
+			body.style.width = '100%'
+			body.style.overflow = 'hidden'
 		} else {
-			document.body.style.overflow = ''
-			document.body.style.touchAction = ''
+			const snapshot = bodyStyleSnapshotRef.current
+			if (snapshot) {
+				body.style.position = snapshot.position
+				body.style.top = snapshot.top
+				body.style.left = snapshot.left
+				body.style.right = snapshot.right
+				body.style.width = snapshot.width
+				body.style.overflow = snapshot.overflow
+				window.scrollTo({ top: lockScrollYRef.current, behavior: 'auto' })
+				bodyStyleSnapshotRef.current = null
+			}
 		}
 
 		return () => {
-			document.body.style.overflow = ''
-			document.body.style.touchAction = ''
+			const snapshot = bodyStyleSnapshotRef.current
+			if (snapshot) {
+				body.style.position = snapshot.position
+				body.style.top = snapshot.top
+				body.style.left = snapshot.left
+				body.style.right = snapshot.right
+				body.style.width = snapshot.width
+				body.style.overflow = snapshot.overflow
+				bodyStyleSnapshotRef.current = null
+			}
 		}
-	}, [interactiveMode])
+	}, [interactiveMode, isMobileViewport])
 
 	// Tab click: jump straight to the chapter (user-initiated, so switch immediately).
 	const handleSelectChapter = (id: ChapterId) => {
@@ -177,16 +253,7 @@ export default function MockShopEmbedClient() {
 		activeChapterRef.current = id
 		setActiveChapter(id)
 		activateCamera(id)
-
-		const section = sectionRef.current
-		if (!section) return
-		const sectionTop = section.getBoundingClientRect().top + window.scrollY
-		const scrollable = section.offsetHeight - window.innerHeight
-		const progress = chapterProgressByIndex(chapterIndexById(id))
-		window.scrollTo({
-			top: sectionTop + progress * scrollable,
-			behavior: 'smooth'
-		})
+		snapToChapter(id, prefersReducedMotion ? 'auto' : 'smooth')
 	}
 
 	const handleEnterInteractive = () => {
@@ -202,8 +269,74 @@ export default function MockShopEmbedClient() {
 		cameraChapterRef.current = activeChapterRef.current
 	}
 
+	const shouldUseMobileOverlay = interactiveMode && isMobileViewport
+
+	const viewerFrame = (
+		<>
+			<iframe
+				ref={iframeRef}
+				src={DEMO_SCENE_URL}
+				className={cn(
+					'absolute inset-0 h-full w-full border-0',
+					interactiveMode ? 'pointer-events-auto' : 'pointer-events-none'
+				)}
+				allow="autoplay; xr-spatial-tracking"
+				allowFullScreen
+				title="Porsche 911 GT3 - interactive 3D preview"
+			/>
+
+			{!interactiveMode && (
+				<div
+					className="absolute inset-0 z-1"
+					style={{ touchAction: 'pan-y' }}
+				/>
+			)}
+
+			<div className="absolute top-3 left-3 z-10">
+				<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-1.5 backdrop-blur-sm">
+					<span className="bg-accent h-1.5 w-1.5 rounded-full" />
+					<span className="text-xs font-medium tracking-wide text-white/55">
+						Powered by Vectreal
+					</span>
+				</div>
+			</div>
+
+			<button
+				onClick={
+					interactiveMode ? handleExitInteractive : handleEnterInteractive
+				}
+				disabled={!embedReady}
+				className={cn(
+					'border-primary/10 bg-background/30 absolute right-3 bottom-3 z-10 flex items-center gap-2 rounded-full border px-3.5 py-2 text-[11px] font-medium tracking-[0.08em] uppercase backdrop-blur-sm transition-all duration-200',
+					interactiveMode
+						? 'border-primary/20 text-primary/80 hover:text-primary'
+						: 'text-primary/50 hover:border-primary/20 hover:text-primary/90',
+					!embedReady && 'pointer-events-none opacity-0',
+					shouldUseMobileOverlay && 'hidden md:flex'
+				)}
+				aria-label={
+					interactiveMode
+						? 'Exit interactive mode'
+						: 'Click and drag to orbit the model'
+				}
+			>
+				{interactiveMode ? (
+					<>
+						<X size={11} />
+						<span>Exit</span>
+					</>
+				) : (
+					<>
+						<MousePointerClick size={11} />
+						<span>Interact</span>
+					</>
+				)}
+			</button>
+		</>
+	)
+
 	return (
-		<div ref={sectionRef} className="relative" style={{ height: '300vh' }}>
+		<div ref={sectionRef} className="relative h-[300vh] md:h-[300dvh]">
 			{/* Snap anchors — one per chapter at its scroll offset (scrollable range
 			    is 200vh: the 300vh section minus the 100vh sticky stage) */}
 			{CHAPTERS.map((c, i) => (
@@ -219,7 +352,7 @@ export default function MockShopEmbedClient() {
 			))}
 
 			{/* Sticky stage */}
-			<div className="bg-background sticky top-0 h-screen overflow-hidden">
+			<div className="bg-background sticky top-0 h-[100dvh] overflow-hidden">
 				<div className="mx-auto flex h-full w-full max-w-[2000px] flex-col items-center justify-center gap-16 px-5 py-16 md:px-10 md:py-10 lg:px-14">
 					<div className="grid grid-cols-1 gap-5 md:grid-cols-[3fr_2fr] md:items-center md:gap-8 lg:gap-12">
 						{/* ── Scene ─────────────────────────────────────────────── */}
@@ -236,79 +369,18 @@ export default function MockShopEmbedClient() {
 										embedReady &&
 										'md:hover:bg-muted/50 md:cursor-pointer md:hover:scale-[1.015]',
 									interactiveMode &&
-										'fixed inset-0 z-50 aspect-auto rounded-none md:relative md:inset-auto md:z-auto md:aspect-4/3 md:rounded-2xl'
+										!isMobileViewport &&
+										'fixed inset-0 z-50 aspect-auto rounded-none md:relative md:inset-auto md:z-auto md:aspect-4/3 md:rounded-2xl',
+									shouldUseMobileOverlay && 'pointer-events-none opacity-0'
 								)}
 							>
-								<iframe
-									ref={iframeRef}
-									src={DEMO_SCENE_URL}
-									className={cn(
-										'absolute inset-0 h-full w-full border-0',
-										interactiveMode ? 'pointer-events-auto' : 'pointer-events-none'
-									)}
-									allow="autoplay; xr-spatial-tracking"
-									allowFullScreen
-									title="Porsche 911 GT3 - interactive 3D preview"
-								/>
-
-								{/* Touch passthrough — lets vertical scroll reach the page */}
-								{!interactiveMode && (
-									<div
-										className="absolute inset-0 z-1"
-										style={{ touchAction: 'pan-y' }}
-									/>
-								)}
-
-								{/* Powered by Vectreal — top-left */}
-								<div className="absolute top-3 left-3 z-10">
-									<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-1.5 backdrop-blur-sm">
-										<span className="bg-accent h-1.5 w-1.5 rounded-full" />
-										<span className="text-xs font-medium tracking-wide text-white/55">
-											Powered by Vectreal
-										</span>
-									</div>
-								</div>
-
-								{/* Interact / Exit — inside canvas bounds, bottom-right. On mobile in
-								    interactive mode this is hidden; a fixed sibling button handles exit. */}
-								<button
-									onClick={
-										interactiveMode
-											? handleExitInteractive
-											: handleEnterInteractive
-									}
-									disabled={!embedReady}
-									className={cn(
-										'border-primary/10 bg-background/30 absolute z-10 items-center gap-2 rounded-full border px-3.5 py-2 text-[11px] font-medium tracking-[0.08em] uppercase backdrop-blur-sm transition-all duration-200',
-										interactiveMode ? 'hidden md:flex' : 'flex',
-										interactiveMode
-											? 'border-primary/20 text-primary/80 hover:text-primary right-3 bottom-3'
-											: 'text-primary/50 hover:border-primary/20 hover:text-primary/90 right-3 bottom-3',
-										!embedReady && 'pointer-events-none opacity-0'
-									)}
-									aria-label={
-										interactiveMode
-											? 'Exit interactive mode'
-											: 'Click and drag to orbit the model'
-									}
-								>
-									{interactiveMode ? (
-										<>
-											<X size={11} />
-											<span>Exit</span>
-										</>
-									) : (
-										<>
-											<MousePointerClick size={11} />
-											<span>Interact</span>
-										</>
-									)}
-								</button>
+								{!shouldUseMobileOverlay && viewerFrame}
 							</div>
 
 							{/* Caption — sits directly below the viewer */}
 							<p className="text-foreground/20 px-0.5 text-[10px] leading-relaxed">
-								3D visualization powered by Vectreal · Concept demo, not for sale
+								3D visualization powered by Vectreal · Concept demo, not for
+								sale
 							</p>
 
 							{/* Mobile chapter rail — desktop uses the bottom rail instead */}
@@ -361,18 +433,37 @@ export default function MockShopEmbedClient() {
 				</div>
 			</div>
 
-			{/* Mobile-only exit button — outside the iframe stacking context so touch events reach it */}
-			{interactiveMode && (
-				<div className="fixed right-0 bottom-8 left-0 z-60 flex justify-center md:hidden">
-					<button
-						onClick={handleExitInteractive}
-						className="flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-5 py-3 text-sm font-medium tracking-[0.08em] text-white/90 uppercase backdrop-blur-md"
-					>
-						<X size={14} />
-						<span>Exit</span>
-					</button>
-				</div>
-			)}
+			{shouldUseMobileOverlay &&
+				typeof document !== 'undefined' &&
+				createPortal(
+					<div className="fixed inset-0 z-60 bg-black/95">
+						<div className="relative h-[100dvh] w-screen overflow-hidden">
+							{viewerFrame}
+							<div
+								className="pointer-events-none absolute inset-x-0 bottom-0 h-28"
+								style={{
+									background:
+										'linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0))'
+								}}
+							/>
+							<div
+								className="absolute inset-x-0 z-20 flex justify-center"
+								style={{
+									bottom: 'max(1.25rem, env(safe-area-inset-bottom))'
+								}}
+							>
+								<button
+									onClick={handleExitInteractive}
+									className="flex items-center gap-2 rounded-full bg-white/10 px-5 py-3 text-sm font-medium tracking-[0.08em] text-white/90 uppercase backdrop-blur-md"
+								>
+									<X size={14} />
+									<span>Exit</span>
+								</button>
+							</div>
+						</div>
+					</div>,
+					document.body
+				)}
 		</div>
 	)
 }

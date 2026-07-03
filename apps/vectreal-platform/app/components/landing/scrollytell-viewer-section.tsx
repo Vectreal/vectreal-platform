@@ -1,4 +1,3 @@
-// app/components/landing/scrollytell-viewer-section.tsx
 import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import {
 	motion,
@@ -11,12 +10,17 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 
 const MockShopEmbedClient = lazy(() => import('../home/mock-shop-embed-client'))
 
-export function ScrollytellViewerSection() {
+interface ScrolllytellViewerSectionProps {
+	isMobileViewport?: boolean
+}
+
+export function ScrollytellViewerSection({
+	isMobileViewport
+}: ScrolllytellViewerSectionProps) {
 	const sectionRef = useRef<HTMLDivElement>(null)
 	const viewerRef = useRef<HTMLDivElement>(null)
 	const prefersReducedMotion = useReducedMotion()
 	const [isMounted, setIsMounted] = useState(false)
-
 	const isNearView = useInView(sectionRef, {
 		once: true,
 		margin: '200px 0px'
@@ -34,12 +38,12 @@ export function ScrollytellViewerSection() {
 	const scale = useTransform(
 		scrollYProgress,
 		[0, 0.3],
-		prefersReducedMotion ? [1, 1] : [0.96, 1]
+		prefersReducedMotion || isMobileViewport ? [1, 1] : [0.96, 1]
 	)
 	const opacity = useTransform(
 		scrollYProgress,
 		[0, 0.2],
-		prefersReducedMotion ? [1, 1] : [0, 1]
+		prefersReducedMotion || isMobileViewport ? [1, 1] : [0, 1]
 	)
 
 	return (
@@ -77,15 +81,15 @@ export function ScrollytellViewerSection() {
 				{isMounted ? (
 					<Suspense
 						fallback={
-							<div className="flex h-screen w-full items-center justify-center bg-black">
+							<div className="flex h-[100dvh] w-full items-center justify-center bg-black">
 								<LoadingSpinner className="text-white" />
 							</div>
 						}
 					>
-						<MockShopEmbedClient />
+						<MockShopEmbedClient isMobileViewport={isMobileViewport} />
 					</Suspense>
 				) : (
-					<div className="h-screen w-full bg-black" />
+					<div className="h-[100dvh] w-full bg-black" />
 				)}
 			</motion.div>
 
