@@ -431,7 +431,7 @@ class SceneSettingsService {
 			// Update settings
 			const [updatedSettings] = await tx
 				.update(sceneSettings)
-				.set({ ...settings })
+				.set({ ...settings, updatedAt: new Date() })
 				.where(eq(sceneSettings.id, sceneSettingsId))
 				.returning()
 

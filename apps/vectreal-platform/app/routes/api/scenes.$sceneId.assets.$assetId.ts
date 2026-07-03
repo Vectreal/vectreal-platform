@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { LoaderFunctionArgs } from 'react-router'
 
 import { getDbClient } from '../../db/client'
@@ -150,22 +150,27 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
 	const authHeaders = auth.headers ?? {}
 
-	const [asset] = await db
-		.select({ id: assets.id, metadata: assets.metadata })
-		.from(assets)
-		.where(and(eq(assets.id, assetId), eq(assets.ownerId, auth.user.id)))
-		.limit(1)
-
-	const metadata = asset?.metadata as { sceneId?: unknown } | null
-	if (!asset || metadata?.sceneId !== sceneId) {
+	// Authorization gate first: ensures unauthorized users get the same 404
+	// regardless of whether the asset exists, preventing existence oracle leaks.
+	const scene = await getScene(sceneId, auth.user.id)
+	if (!scene) {
 		return new Response('Asset not found', {
 			status: 404,
 			headers: withNoStoreHeaders(authHeaders)
 		})
 	}
 
-	const scene = await getScene(sceneId, auth.user.id)
-	if (!scene) {
+	// Asset lookup by ID only; ownership is org-scoped, not user-scoped.
+	// The sceneId metadata check below enforces that this asset belongs to
+	// the scene the caller has already been granted access to.
+	const [asset] = await db
+		.select({ id: assets.id, metadata: assets.metadata })
+		.from(assets)
+		.where(eq(assets.id, assetId))
+		.limit(1)
+
+	const metadata = asset?.metadata as { sceneId?: unknown } | null
+	if (!asset || metadata?.sceneId !== sceneId) {
 		return new Response('Asset not found', {
 			status: 404,
 			headers: withNoStoreHeaders(authHeaders)
