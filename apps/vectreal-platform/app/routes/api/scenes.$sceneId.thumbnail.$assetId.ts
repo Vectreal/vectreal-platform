@@ -86,7 +86,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 					'Content-Type',
 					sanitizeMimeType(assetData.mimeType)
 				)
-				responseHeaders.set('Cache-Control', 'private, max-age=60')
+				responseHeaders.set('Cache-Control', 'private, max-age=31536000, immutable')
 				responseHeaders.set(
 					'Last-Modified',
 					asset.updatedAt.toUTCString()
