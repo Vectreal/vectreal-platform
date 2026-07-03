@@ -64,8 +64,10 @@ export const useSceneParamsSync = ({
 				// Post-save navigation: baselines are already correct. Only sync the
 				// server-returned stats and clear the marker so subsequent navigation
 				// is treated as a genuine scene change.
+				// Both SceneManifestResponse and SceneAggregateResponse expose
+				// the same `settings` field; cast is safe for this read-only lookup.
 				const persistedSettings = getSettingsFromAggregate(
-					initialSceneAggregate
+					initialSceneAggregate as Parameters<typeof getSettingsFromAggregate>[0]
 				)
 				if (persistedSettings) {
 					setLastSavedSettings(persistedSettings)

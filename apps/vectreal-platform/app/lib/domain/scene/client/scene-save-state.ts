@@ -1,4 +1,4 @@
-import type { SceneAggregateResponse } from '../../../../types/api'
+import type { SceneAggregateResponse, SceneManifestResponse } from '../../../../types/api'
 
 export type SaveAvailabilityReason =
 	| 'ready'
@@ -14,7 +14,7 @@ export interface SaveAvailabilityState {
 interface SceneInitializationArgs {
 	hasSceneChanged: boolean
 	paramSceneId: null | string
-	initialSceneAggregate: null | SceneAggregateResponse
+	initialSceneAggregate: null | SceneAggregateResponse | SceneManifestResponse
 	isPostSaveNavigation: boolean
 }
 

@@ -5,6 +5,7 @@ import {
 	type EventHandler,
 	type ModelFile,
 	type StructuredLoadError,
+	fetchManifestAssetData,
 	useModelContext
 } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
@@ -68,7 +69,7 @@ import {
 	shadowsAtom
 } from '../lib/stores/scene-settings-store'
 
-import type { SceneAggregateResponse } from '../types/api'
+import type { SceneAggregateResponse, SceneManifestResponse } from '../types/api'
 import type { SceneMetaState } from '../types/publisher-config'
 import type { SceneScreenshotOptions, ShadowBakeResult } from '@vctrl/viewer'
 
@@ -85,7 +86,7 @@ export type {
 export interface UseSceneLoaderParams {
 	sceneId: null | string
 	userId?: string
-	initialSceneAggregate?: SceneAggregateResponse | null
+	initialSceneAggregate?: SceneManifestResponse | null
 	sceneMeta?: SceneMetaState | null
 	requestSceneScreenshot?: (
 		options?: SceneScreenshotOptions
@@ -627,7 +628,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	)
 
 	const loadSceneFromAggregate = useCallback(
-		async (sceneId: string, aggregate: SceneAggregateResponse) => {
+		async (sceneId: string, manifest: SceneManifestResponse) => {
 			if (sceneLoadAttemptedRef.current) {
 				return
 			}
@@ -636,6 +637,20 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 			setIsDownloading(true)
 
 			try {
+				const assetData = manifest.assetRefs
+					? await fetchManifestAssetData(manifest.assetRefs)
+					: {}
+
+				const aggregate: SceneAggregateResponse = {
+					sceneId: manifest.sceneId,
+					meta: manifest.meta,
+					stats: manifest.stats,
+					settings: manifest.settings,
+					gltfJson: manifest.gltfJson,
+					assetData,
+					assets: manifest.assets
+				}
+
 				const sceneName = await executeAggregateSceneHydration({
 					sceneId,
 					aggregate,

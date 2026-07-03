@@ -36,7 +36,7 @@ import {
 	saveLocationAtom
 } from '../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
-import { PublisherLoaderData, SceneAggregateResponse } from '../../types/api'
+import { PublisherLoaderData, SceneManifestResponse } from '../../types/api'
 import { InfoTooltip } from '../info-tooltip'
 import { FloatingPillWrapper } from '../layout-components'
 import { UserMenu } from '../user-menu'
@@ -89,7 +89,7 @@ const OverlayControls = ({
 		useSceneLoader({
 			sceneId,
 			userId: user?.id,
-			initialSceneAggregate: sceneAggregate as SceneAggregateResponse | null,
+			initialSceneAggregate: sceneAggregate as SceneManifestResponse | null,
 			sceneMeta: sceneAggregate?.meta ?? null,
 			requestSceneScreenshot,
 			requestShadowBake

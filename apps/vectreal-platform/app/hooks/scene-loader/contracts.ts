@@ -1,4 +1,7 @@
-import type { SceneAggregateResponse, SceneStatsData } from '../../types/api'
+import type {
+	SceneManifestResponse,
+	SceneStatsData
+} from '../../types/api'
 import type { SceneMetaState } from '../../types/publisher-config'
 import type { SaveLocationTarget } from '../../types/publisher-scene'
 import type {
@@ -73,7 +76,7 @@ export interface DraftRestoreRequest {
 	/** Optional draft ID embedded in the URL, enables cross-tab restoration after OAuth. */
 	draftId?: string | null
 	paramSceneId: null | string
-	initialSceneAggregate: null | SceneAggregateResponse
+	initialSceneAggregate: null | SceneManifestResponse
 	fileModel: unknown
 	isFileLoading: boolean
 	locationPathname: string
@@ -109,7 +112,7 @@ export interface UseSceneDraftRehydrationArgs {
 export interface SceneRouteSyncState {
 	paramSceneId: null | string
 	sceneMeta: null | SceneMetaState
-	initialSceneAggregate: null | SceneAggregateResponse
+	initialSceneAggregate: null | SceneManifestResponse
 	lastSavedSceneId: string | null
 }
 
@@ -139,7 +142,7 @@ export interface UseSceneParamsSyncArgs {
 export interface SceneAggregateBootstrapState {
 	sceneLoadAttemptedRef: MutableRefObject<boolean>
 	paramSceneId: null | string
-	initialSceneAggregate: null | SceneAggregateResponse
+	initialSceneAggregate: null | SceneManifestResponse
 	fileModel: unknown
 	isFileLoading: boolean
 }
@@ -148,7 +151,7 @@ export interface SceneAggregateBootstrapActions {
 	setIsInitializing: (initializing: boolean) => void
 	loadSceneFromAggregate: (
 		sceneId: string,
-		aggregate: SceneAggregateResponse
+		manifest: SceneManifestResponse
 	) => Promise<void>
 }
 
