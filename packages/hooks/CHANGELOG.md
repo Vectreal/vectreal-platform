@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.23.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.22.0...hooks-v0.23.0) (2026-07-03)
+
+
+### Features
+
+* **hooks:** fetch manifest scene assets in parallel as raw bytes ([c669e9d](https://github.com/Vectreal/vectreal-platform/commit/c669e9d01e644687483e6666b7fdc1feebd3a1f1))
+* **hooks:** load scenes via GET manifest with legacy POST fallback ([72f8bef](https://github.com/Vectreal/vectreal-platform/commit/72f8bef1f3cbfac63175524b2665dfcbd080c53c))
+
+
+### Bug Fixes
+
+* **hooks:** abort sibling asset fetches on failure and fix mixed-size progress ([6657673](https://github.com/Vectreal/vectreal-platform/commit/6657673c4a2873c400d10f8ebfcd48dcf4acb8ec))
+
+
+### Performance Improvements
+
+* **viewer:** direct GLTFLoader parse path for view-only scene loading ([c3c148d](https://github.com/Vectreal/vectreal-platform/commit/c3c148dc8cb6194cb5555982688046017f595ac4))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.23.0
+
 ## [0.22.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.21.0...hooks-v0.22.0) (2026-07-01)
 
 

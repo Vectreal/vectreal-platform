@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.23.0](https://github.com/Vectreal/vectreal-platform/compare/core-v0.22.0...core-v0.23.0) (2026-07-03)
+
+
+### Features
+
+* **core:** accept Uint8Array asset bytes and add scene asset ref types ([794eea0](https://github.com/Vectreal/vectreal-platform/commit/794eea0aceda135d3c7ecc263227752f8499ffa6))
+
+
+### Performance Improvements
+
+* **viewer:** direct GLTFLoader parse path for view-only scene loading ([c3c148d](https://github.com/Vectreal/vectreal-platform/commit/c3c148dc8cb6194cb5555982688046017f595ac4))
+
 ## [0.22.0](https://github.com/Vectreal/vectreal-platform/compare/core-v0.21.0...core-v0.22.0) (2026-07-01)
 
 
