@@ -261,7 +261,8 @@ export async function POST(request: Request) {
 | Requirement | Version |
 |---|---|
 | Node.js | 18 or later |
-| `sharp` | `^0.34` |
+
+`sharp` (`^0.34`) is **optional**, not required. Install it only to enable native server-side texture compression; without it, `compressTextures` falls back to basic optimization (see the note at the top of this page). Browser and edge callers inject their own encoder and need no native build.
 
 ---
 

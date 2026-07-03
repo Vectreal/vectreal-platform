@@ -152,7 +152,6 @@ function Optimizer() {
 | ------------------------------------ | ------------------------------------------------------------------ | ---------------------------------------------------------------------- |
 | `load(model)`                        | `(model: Object3D) => Promise<void>`                               | Load a Three.js scene into the optimizer                               |
 | `loadFromServerSceneData(sceneData)` | `Promise<void>`                                                    | Initialize optimizer from a server scene payload                       |
-| `applyOptimization(fn, opts?)`       | `<T>(fn?: (opts?: T) => Promise<void>, opts?: T) => Promise<void>` | Apply optimization and sync the optimized model back into loader state |
 | `simplifyOptimization(options?)`     | `Promise<void>`                                                    | Simplify mesh geometry                                                 |
 | `dedupOptimization(options?)`        | `Promise<void>`                                                    | Deduplicate model data                                                 |
 | `quantizeOptimization(options?)`     | `Promise<void>`                                                    | Quantize vertex attributes                                             |
@@ -161,6 +160,8 @@ function Optimizer() {
 | `getModel()`                         | `Promise<Uint8Array \| null>`                                      | Export the current optimized model as GLB binary                       |
 | `report` / `info`                    | Objects                                                            | Optimization metrics and derived stats                                 |
 | `loading` / `error`                  | State                                                              | Optimization status                                                    |
+
+> `applyOptimization(fn, opts?)` is **not** returned by `useOptimizeModel` directly. It becomes available on the `optimizer` object returned by `useLoadModel(optimizer)` when you pass an optimizer instance in; it runs an optimization step and syncs the result back into loader state (see the example above).
 
 ### Optimization option types
 
@@ -218,11 +219,10 @@ function ExportButton({ file }: { file: ModelFile | null }) {
 
 ## Peer dependencies
 
-| Package              | Version        |
-| -------------------- | -------------- |
-| `react`              | `^18 \|\| ^19` |
-| `three`              | `^0.170`       |
-| `@react-three/fiber` | `^9`           |
+| Package | Version        |
+| ------- | -------------- |
+| `react` | `^18 \|\| ^19` |
+| `three` | `^0.177`       |
 
 ---
 

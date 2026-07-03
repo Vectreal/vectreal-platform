@@ -13,6 +13,7 @@ _NPM packages_
 [![NPM CORE](https://img.shields.io/npm/dm/%40vctrl%2Fcore?logo=npm&label=%40vctrl/core)](https://npmjs.com/package/@vctrl/core)
 [![NPM Hooks](https://img.shields.io/npm/dm/%40vctrl%2Fhooks?logo=npm&label=%40vctrl/hooks)](https://npmjs.com/package/@vctrl/hooks)
 [![NPM Viewer](https://img.shields.io/npm/dm/%40vctrl%2Fviewer?logo=npm&label=%40vctrl/viewer)](https://npmjs.com/package/@vctrl/viewer)
+[![NPM Embed](https://img.shields.io/npm/dm/%40vctrl%2Fembed?logo=npm&label=%40vctrl/embed)](https://npmjs.com/package/@vctrl/embed)
 
 ---
 
@@ -41,8 +42,9 @@ Built on [Three.js](https://github.com/mrdoob/three.js), [React Three Fiber](htt
 | Viewer package   | `packages/viewer/`        | `@vctrl/viewer` React 3D viewer component                                               |
 | Hooks package    | `packages/hooks/`         | `@vctrl/hooks` browser-side loading, optimization, and export hooks                     |
 | Core package     | `packages/core/`          | `@vctrl/core` server-side model processing pipeline                                     |
+| Embed package    | `packages/embed/`         | `@vctrl/embed` framework-agnostic SDK for controlling embedded 3D scenes                 |
 | Shared libraries | `shared/`                 | Shared UI components and utilities                                                      |
-| Infrastructure   | `terraform/`              | Google Cloud Run, CDN, IAM, and storage configuration                                   |
+| Infrastructure   | `terraform/`              | Cloudflare DNS, Turnstile widgets, and Fly.io secret sync scripts                       |
 
 ## Documentation Map
 
@@ -51,7 +53,7 @@ Built on [Three.js](https://github.com/mrdoob/three.js), [React Three Fiber](htt
 | [Getting Started](https://vectreal.com/docs/getting-started)   | Local setup, prerequisites, and a first-model walkthrough       |
 | [Guides](https://vectreal.com/docs/guides/upload)              | Upload, optimize, publish, and embed workflows                  |
 | [Package Reference](https://vectreal.com/docs/packages/viewer) | API docs for `@vctrl/viewer`, `@vctrl/hooks`, and `@vctrl/core` |
-| [Operations](https://vectreal.com/docs/operations/deployment)  | GCP deployment, Terraform, and CI/CD                            |
+| [Operations](https://vectreal.com/docs/operations/deployment)  | Fly.io deployment, Terraform, and CI/CD                          |
 | [Contributing](https://vectreal.com/docs/contributing)         | Branching, commits, testing, and PR process                     |
 
 ## Workflows And Package Reference
@@ -90,15 +92,15 @@ cp .env.development.example .env.development
 
 The main variables required for local development are:
 
-| Variable                                | Description                                                  |
-| --------------------------------------- | ------------------------------------------------------------ |
-| `SUPABASE_URL`                          | Local Supabase API URL, usually `http://localhost:54321`     |
-| `SUPABASE_KEY`                          | Supabase anon key from `supabase status`                     |
-| `DATABASE_URL`                          | PostgreSQL connection string for the local Supabase database |
-| `GOOGLE_CLOUD_STORAGE_CREDENTIALS_FILE` | Path to a GCS service account JSON key                       |
-| `GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET`   | Bucket used for model assets                                 |
+| Variable             | Description                                                  |
+| -------------------- | ------------------------------------------------------------ |
+| `SUPABASE_URL`       | Local Supabase API URL, usually `http://localhost:54321`     |
+| `SUPABASE_KEY`       | Supabase anon key from `supabase status`                     |
+| `SUPABASE_SECRET_KEY`| Supabase service-role key, used server-side for asset storage |
+| `DATABASE_URL`       | PostgreSQL connection string for the local Supabase database |
+| `CSRF_SECRET`        | Long random string for CSRF token signing                    |
 
-Google Cloud Storage is required for upload and asset-serving flows.
+Model assets are stored in Supabase Storage (the `assets` bucket), which is created automatically on first upload. Values above are printed by `pnpm supabase start`.
 
 ### 4. Start the local Supabase stack
 
@@ -147,19 +149,19 @@ vectreal-platform/
 ├── packages/
 │   ├── viewer/               # @vctrl/viewer — React 3D viewer component
 │   ├── hooks/                # @vctrl/hooks — browser-side loading and optimisation hooks
-│   └── core/                 # @vctrl/core — server-side model processing
+│   ├── core/                 # @vctrl/core — isomorphic model processing
+│   └── embed/                # @vctrl/embed — SDK for controlling embedded scenes
 ├── shared/
 │   ├── components/           # Shared Radix UI component library
 │   └── utils/                # Shared utility functions
-└── terraform/                # GCP infrastructure as code
+└── terraform/                # Cloudflare DNS + Turnstile, Fly.io secret sync
 ```
 
 The platform app uses:
 
 - React Router v7 in framework mode with SSR
-- Supabase for authentication and database
+- Supabase for authentication, database, and asset storage
 - Drizzle ORM for type-safe SQL access
-- Google Cloud Storage for 3D asset storage
 - `@vctrl/viewer` and `@vctrl/hooks` for the in-browser 3D pipeline
 
 ## Package Overview
@@ -168,18 +170,19 @@ The platform app uses:
 | --------------- | ---------------------------------------------------------------- | -------------------------------------------------------- |
 | `@vctrl/viewer` | Ready-to-use React 3D viewer component                           | [Viewer docs](https://vectreal.com/docs/packages/viewer) |
 | `@vctrl/hooks`  | Browser-side hooks for loading, optimizing, and exporting models | [Hooks docs](https://vectreal.com/docs/packages/hooks)   |
-| `@vctrl/core`   | Node.js loading, optimization, and export utilities              | [Core docs](https://vectreal.com/docs/packages/core)     |
+| `@vctrl/core`   | Isomorphic (Node.js + browser) loading, optimization, and export utilities | [Core docs](https://vectreal.com/docs/packages/core)     |
+| `@vctrl/embed`  | Framework-agnostic SDK for controlling embedded 3D scenes         | [Embed docs](https://vectreal.com/docs/packages/embed)   |
 
 ## Deployment
 
-Vectreal is deployed on Google Cloud Run behind a global HTTPS load balancer with CDN. Infrastructure is managed in Terraform and deployments are automated with GitHub Actions.
+Vectreal is deployed on [Fly.io](https://fly.io) (region `fra`) via GitHub Actions, which builds a Docker image and deploys it with `flyctl`. Cloudflare fronts DNS, caching, and Turnstile bot protection; Terraform manages the Cloudflare configuration. Application secrets are synced to Fly.io from your local `.env.development`.
 
-First-time infrastructure setup:
+Cloudflare infrastructure and Fly.io secret setup:
 
 ```bash
 cd terraform
-./scripts/apply-infrastructure.sh
-./scripts/setup-github-secrets.sh
+./scripts/apply-infrastructure.sh          # apply Cloudflare DNS + Turnstile config
+./scripts/setup-fly-secrets.sh --env prod  # sync Fly.io app secrets
 ```
 
 Database migration flow:

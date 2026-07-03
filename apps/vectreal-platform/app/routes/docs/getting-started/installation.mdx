@@ -37,11 +37,11 @@ The key variables you must configure for local development:
 |---|---|
 | `SUPABASE_URL` | Local Supabase API URL (default `http://localhost:54321`) |
 | `SUPABASE_KEY` | Supabase anon key (from `supabase status`) |
+| `SUPABASE_SECRET_KEY` | Supabase service-role key, used server-side for asset storage |
 | `DATABASE_URL` | PostgreSQL connection string (default uses local Supabase port) |
-| `GOOGLE_CLOUD_STORAGE_CREDENTIALS_FILE` | Path to a GCS service account key JSON file |
-| `GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET` | GCS bucket name for model assets |
+| `CSRF_SECRET` | Long random string for CSRF token signing |
 
-> Google Cloud Storage is required for uploading and serving 3D model files. Create a bucket and service account via the [GCP console](https://console.cloud.google.com/) for local testing.
+> Model assets are stored in Supabase Storage (the `assets` bucket), which is created automatically on first upload. No separate storage provider is required for local development - the local Supabase stack in the next step provides Storage.
 
 ---
 
@@ -80,7 +80,7 @@ The app will be available at [http://localhost:4200](http://localhost:4200).
 1. Open [http://localhost:4200](http://localhost:4200) - you should see the Vectreal home page.
 2. Navigate to `/sign-up` and create an account.
 3. You should be redirected to the onboarding flow, then to the dashboard.
-4. Upload a model in the Publisher to confirm the full GCS pipeline works.
+4. Upload a model in the Publisher to confirm the full asset pipeline works.
 
 ---
 
@@ -108,7 +108,7 @@ pnpm nx show project vectreal-platform --web
 
 **`Database URL` connection errors** - check that `SUPABASE_DB_PORT` in `.env.development` matches the port shown in `supabase status`.
 
-**GCS `PERMISSION_DENIED` errors** - verify the service account key file path in `GOOGLE_CLOUD_STORAGE_CREDENTIALS_FILE` is correct and the account has `Storage Object Admin` on the bucket.
+**Asset upload or storage errors** - confirm `SUPABASE_URL` and `SUPABASE_SECRET_KEY` are set. The server uses the service-role key to create and write to the `assets` storage bucket; the anon key alone is not sufficient.
 
 ---
 

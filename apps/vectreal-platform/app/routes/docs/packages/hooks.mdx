@@ -148,7 +148,6 @@ function Optimizer() {
 |---|---|---|
 | `load(model)` | `(model: Object3D) => Promise<void>` | Load a Three.js scene into optimizer |
 | `loadFromServerSceneData(sceneData)` | `Promise<void>` | Initialize optimizer from server scene payload |
-| `applyOptimization(fn, opts?)` | `<T>(fn?: (opts?: T) => Promise<void>, opts?: T) => Promise<void>` | Apply optimization and sync optimized model back into loader state |
 | `simplifyOptimization(options?)` | `Promise<void>` | Simplify mesh geometry |
 | `dedupOptimization(options?)` | `Promise<void>` | Deduplicate model data |
 | `quantizeOptimization(options?)` | `Promise<void>` | Quantize vertex attributes |
@@ -157,6 +156,8 @@ function Optimizer() {
 | `getModel()` | `Promise<Uint8Array \| null>` | Export current optimized model as GLB binary |
 | `report` / `info` | Objects | Optimization metrics and derived stats |
 | `loading` / `error` | State | Optimization status |
+
+> `applyOptimization(fn, opts?)` is **not** a direct method on `useOptimizeModel`. It is exposed on the `optimizer` object returned by `useLoadModel(optimizer)` when you pass an optimizer instance in; it runs an optimization step and syncs the result back into loader state, as shown in the example above.
 
 ### Optimization option types
 
@@ -218,7 +219,7 @@ function ExportButton({ file }: { file: ModelFile | null }) {
 |---|---|
 | `react` | `^18 \|\| ^19` |
 
-> `three` (`^0.177.0`) is a **direct dependency** of `@vctrl/hooks` and does not need to be declared separately when using hooks in isolation. However, `@vctrl/viewer` declares `three` as a peer dependency. If you are using both packages together, **declare `three` explicitly** in your own project's `package.json` to guarantee a single shared instance - Three.js uses global singletons internally and having duplicate instances produces subtle rendering bugs:
+> `three` (`^0.177.0`) is a **peer dependency** of `@vctrl/hooks`, so you must install it in your own project. `@vctrl/viewer` also declares `three` as a peer dependency. **Declare `three` explicitly** in your own project's `package.json` to guarantee a single shared instance - Three.js uses global singletons internally and having duplicate instances produces subtle rendering bugs:
 >
 > ```bash
 > npm install three@^0.177.0

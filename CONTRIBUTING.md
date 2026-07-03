@@ -2,21 +2,21 @@
 
 Thank you for your interest in contributing! This guide will get you from zero to an open PR in under 30 minutes.
 
-***
+---
 
 ## Prerequisites
 
 | Tool         | Minimum version | Install                            |
 | ------------ | --------------- | ---------------------------------- |
-| Node.js      | >= 22.x (LTS)  | [nodejs.org](https://nodejs.org)   |
-| pnpm         | >= 10.x        | `npm i -g pnpm`                    |
+| Node.js      | >= 21.0.0       | [nodejs.org](https://nodejs.org)   |
+| pnpm         | >= 10.x         | `npm i -g pnpm`                    |
 | Docker       | any recent      | [docker.com](https://docker.com)   |
 | Supabase CLI | latest          | `npm i -g supabase`                |
 | Git          | any recent      | [git-scm.com](https://git-scm.com) |
 
 Optional but recommended: [Nx Console](https://marketplace.visualstudio.com/items?itemName=nrwl.angular-console) extension for VS Code.
 
-***
+---
 
 ## Quick Start (30 minutes or less)
 
@@ -45,9 +45,9 @@ pnpm nx dev vectreal-platform
 # Open http://localhost:4200
 ```
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for deeper setup, package workflows, and troubleshooting.
+See [`apps/vectreal-platform/README.md`](apps/vectreal-platform/README.md) and the [Installation guide](https://vectreal.com/docs/getting-started/installation) for deeper setup, package workflows, and troubleshooting.
 
-***
+---
 
 ## Branching Strategy
 
@@ -61,7 +61,7 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for deeper setup, package workflows, and tr
 
 Branch from `main` and open your PR back to `main`.
 
-***
+---
 
 ## Commit Messages
 
@@ -85,7 +85,7 @@ docs: expand local setup guide
 
 Breaking changes: add `!` after the type, e.g. `feat(hooks)!: rename useLoadModel return shape`.
 
-***
+---
 
 ## Making Changes
 
@@ -102,16 +102,16 @@ Breaking changes: add `!` after the type, e.g. `feat(hooks)!: rename useLoadMode
    ```
 5. Update docs if you changed a public API, added env vars, or changed a route.
 
-***
+---
 
 ## Pull Requests
 
-* Fill in the PR template completely.
-* Link issues with `Closes #<number>` or `Fixes #<number>`.
-* Keep PRs focused: one feature or fix per PR.
-* All CI checks must pass before merge.
+- Fill in the PR template completely.
+- Link issues with `Closes #<number>` or `Fixes #<number>`.
+- Keep PRs focused: one feature or fix per PR.
+- All CI checks must pass before merge.
 
-***
+---
 
 ## Monorepo Commands
 
@@ -129,7 +129,7 @@ pnpm nx show project <project-name> --web
 pnpm nx reset
 ```
 
-***
+---
 
 ## Release Ownership and Version Policy
 
@@ -139,7 +139,7 @@ pnpm nx reset
 4. Internal dependencies between co-developed packages must use `workspace:*` unless there is a documented exception.
 5. The app at `apps/vectreal-platform` uses `workspace:*` for `@vctrl/*` dependencies to stay lockstep with local package development.
 
-***
+---
 
 ## Editing Docs
 
@@ -147,13 +147,13 @@ Every page on [vectreal.com/docs](https://vectreal.com/docs) is an MDX file in `
 
 To add a new docs page, see the instructions in [`apps/vectreal-platform/README.md`](apps/vectreal-platform/README.md#docs).
 
-***
+---
 
 ## Reporting Bugs
 
 Use [GitHub Issues](https://github.com/Vectreal/vectreal-platform/issues/new/choose) and select the Bug Report template. Include: steps to reproduce, expected vs actual behavior, environment details, and any console output.
 
-***
+---
 
 ## License
 
