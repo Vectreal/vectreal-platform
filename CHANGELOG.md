@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.23.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.22.0...workspace-v0.23.0) (2026-07-03)
+
+
+### Features
+
+* **api:** add ETag/304 support to scene manifest loader ([4c3c246](https://github.com/Vectreal/vectreal-platform/commit/4c3c246d8591698b556157f082d0b6bf81acb04a))
+* **core:** accept Uint8Array asset bytes and add scene asset ref types ([794eea0](https://github.com/Vectreal/vectreal-platform/commit/794eea0aceda135d3c7ecc263227752f8499ffa6))
+* **hooks:** fetch manifest scene assets in parallel as raw bytes ([c669e9d](https://github.com/Vectreal/vectreal-platform/commit/c669e9d01e644687483e6666b7fdc1feebd3a1f1))
+* **hooks:** load scenes via GET manifest with legacy POST fallback ([72f8bef](https://github.com/Vectreal/vectreal-platform/commit/72f8bef1f3cbfac63175524b2665dfcbd080c53c))
+* implement chapter rail and filmstrip components for enhanced scrolling experience ([2a1f04a](https://github.com/Vectreal/vectreal-platform/commit/2a1f04adaef98b7258268df90e1ad9e78889c73d))
+* implement chapter rail and filmstrip components for enhanced scrolling experience ([7dc3a44](https://github.com/Vectreal/vectreal-platform/commit/7dc3a445ede67ff1e3dc0d0bd47daa30f17a679c))
+* **scenes:** add immutable binary scene asset endpoint ([61441c4](https://github.com/Vectreal/vectreal-platform/commit/61441c42eede9b45982563bc388cb4de666d589d))
+* **scenes:** add scene manifest builder without asset byte downloads ([e0a073f](https://github.com/Vectreal/vectreal-platform/commit/e0a073fc802507ccc1f1e0954e6450a58394869d))
+* **scenes:** track scene settings updatedAt for manifest versioning ([8bb8966](https://github.com/Vectreal/vectreal-platform/commit/8bb89667bccdcfba1d7837fe1b96ac7d307cb47c))
+
+
+### Bug Fixes
+
+* **hooks:** abort sibling asset fetches on failure and fix mixed-size progress ([6657673](https://github.com/Vectreal/vectreal-platform/commit/6657673c4a2873c400d10f8ebfcd48dcf4acb8ec))
+* **scenes:** authorize asset downloads by scene access instead of asset ownership ([57b02db](https://github.com/Vectreal/vectreal-platform/commit/57b02dba065162bc1569b842f43b37de7651a5d0))
+* **scenes:** harden asset and thumbnail responses against stored XSS and error caching ([d508a3e](https://github.com/Vectreal/vectreal-platform/commit/d508a3ea3aca2d0e63876663d0e22504011e26ca))
+* **scenes:** preserve session headers on preview manifest 304 ([e56028a](https://github.com/Vectreal/vectreal-platform/commit/e56028a6f7f4f1430355b4d9fa26cad08a1c26b9))
+
+
+### Performance Improvements
+
+* **dashboard:** metadata-only scene loader with instant thumbnail curtain ([9786c9e](https://github.com/Vectreal/vectreal-platform/commit/9786c9e70ed276b99f3374142c238b63c846ccd7))
+* **publisher:** load scene manifest in layout loader, resolve asset bytes client-side ([b893334](https://github.com/Vectreal/vectreal-platform/commit/b89333416acbc74bc726100e8e28ec8e77994071))
+* **scenes:** cache thumbnails immutably by asset id ([bd10c09](https://github.com/Vectreal/vectreal-platform/commit/bd10c09fee1cdc3650ee6f5511174619e1a8ca76))
+* **viewer:** direct GLTFLoader parse path for view-only scene loading ([c3c148d](https://github.com/Vectreal/vectreal-platform/commit/c3c148dc8cb6194cb5555982688046017f595ac4))
+
 ## [0.22.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.21.0...workspace-v0.22.0) (2026-07-01)
 
 
