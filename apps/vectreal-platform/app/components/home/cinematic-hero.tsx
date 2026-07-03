@@ -13,7 +13,7 @@ import { Link } from 'react-router'
 
 import HeroScene from './hero-scene'
 import { AuroraBackground } from '../landing/aurora-background'
-import { Magnetic } from '../landing/magnetic'
+// import { Magnetic } from '../landing/magnetic'
 
 export function CinematicHero() {
 	const prefersReducedMotion = useReducedMotion()
@@ -91,18 +91,18 @@ export function CinematicHero() {
 							variants={prefersReducedMotion ? undefined : fadeUp}
 							className="flex flex-col gap-3 sm:flex-row sm:items-center"
 						>
-							<Magnetic>
-								<Button
-									asChild
-									size="lg"
-									className="group bg-accent hover:bg-accent/90 rounded-xl px-7 text-white shadow-[0_8px_30px_-8px_var(--surface-glow)]"
-								>
-									<Link to="/publisher">
-										Publish Your First Model
-										<ArrowRight className="ml-1 size-4 transition-transform group-hover:translate-x-0.5" />
-									</Link>
-								</Button>
-							</Magnetic>
+							{/* <Magnetic> */}
+							<Button
+								asChild
+								size="lg"
+								className="group bg-accent hover:bg-accent/90 rounded-xl px-7 text-white shadow-[0_8px_30px_-8px_var(--surface-glow)]"
+							>
+								<Link to="/publisher">
+									Publish Your First Model
+									<ArrowRight className="ml-1 size-4 transition-transform group-hover:translate-x-0.5" />
+								</Link>
+							</Button>
+							{/* </Magnetic> */}
 							<Button
 								asChild
 								size="lg"
