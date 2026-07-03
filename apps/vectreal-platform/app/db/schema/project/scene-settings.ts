@@ -42,6 +42,7 @@ export const sceneSettings = pgTable(
 
 		// Audit fields
 		createdAt: timestamp('created_at').defaultNow().notNull(),
+		updatedAt: timestamp('updated_at').defaultNow().notNull(),
 		createdBy: uuid('created_by')
 			.references(() => users.id, { onDelete: 'cascade' })
 			.notNull()

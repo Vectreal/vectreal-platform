@@ -122,6 +122,7 @@ const isBase64AlphabetChar = (char: string): boolean => {
 
 /**
  * Estimates serialized byte size for either:
+ * - raw bytes (`Uint8Array`),
  * - raw numeric bytes (`number[]`) or
  * - base64 text payloads (`string`).
  *
@@ -129,8 +130,12 @@ const isBase64AlphabetChar = (char: string): boolean => {
  * trailing `=` padding count, while tolerating ASCII whitespace.
  */
 export function getSerializedAssetByteSize(
-	assetData: number[] | string
+	assetData: number[] | string | Uint8Array
 ): number {
+	if (assetData instanceof Uint8Array) {
+		return assetData.byteLength
+	}
+
 	if (Array.isArray(assetData)) {
 		return assetData.length
 	}
@@ -229,6 +234,7 @@ export function decodeBase64ToUint8Array(base64: string): Uint8Array {
 /**
  * Converts serialized scene asset payload to raw bytes.
  *
+ * - `Uint8Array` is returned as-is.
  * - `number[]` is treated as explicit byte values.
  * - `encoding === 'base64'` is decoded from base64 text.
  * - otherwise input text is UTF-8 encoded.
@@ -236,6 +242,10 @@ export function decodeBase64ToUint8Array(base64: string): Uint8Array {
 export function toSerializedAssetBytes(
 	asset: Pick<SceneAssetDataEntry, 'data' | 'encoding'>
 ): Uint8Array {
+	if (asset.data instanceof Uint8Array) {
+		return asset.data
+	}
+
 	if (Array.isArray(asset.data)) {
 		return Uint8Array.from(asset.data)
 	}

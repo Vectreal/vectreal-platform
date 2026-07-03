@@ -14,4 +14,8 @@ export {
 	type ServerSceneData
 } from './types'
 export { reconstructGltfFiles } from './utils/reconstruct-files'
+export {
+	fetchManifestAssetData,
+	type FetchManifestAssetsOptions
+} from './utils/fetch-manifest-assets'
 export * from './model-context'

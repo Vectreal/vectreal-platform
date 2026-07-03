@@ -15,6 +15,7 @@ interface LoadSceneFromApiParams {
 	loadFromServer: LoadSceneFromServer
 	apiKey?: string
 	requestKey?: string
+	parseMode?: 'document' | 'direct'
 }
 
 export function loadSceneFromApi({
@@ -22,7 +23,8 @@ export function loadSceneFromApi({
 	endpoint,
 	loadFromServer,
 	apiKey,
-	requestKey = sceneId
+	requestKey = sceneId,
+	parseMode
 }: LoadSceneFromApiParams): Promise<SceneLoadResult> {
 	const existingRequest = inFlightSceneRequests.get(requestKey)
 	if (existingRequest) {
@@ -34,7 +36,8 @@ export function loadSceneFromApi({
 		serverOptions: {
 			endpoint,
 			apiKey
-		}
+		},
+		parseMode
 	})
 
 	inFlightSceneRequests.set(

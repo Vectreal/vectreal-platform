@@ -10,12 +10,13 @@ import type {
 	ExtendedGLTFDocument,
 	Optimizations,
 	OptimizationReport,
+	SceneAssetRefMap,
 	SerializedSceneAssetDataMap,
 	SceneSettings,
 	SerializedGLTFExportResult
 } from '@vctrl/core'
 
-export type { SerializedSceneAssetDataMap } from '@vctrl/core'
+export type { SceneAssetRef, SceneAssetRefMap, SerializedSceneAssetDataMap } from '@vctrl/core'
 
 // ============================================================================
 // Asset Types
@@ -193,6 +194,18 @@ export interface SceneAggregateResponse {
 	readonly updatedAt?: Date
 }
 
+/** Lean scene manifest returned by GET /api/scenes/:sceneId and SSR loaders. */
+export interface SceneManifestResponse {
+	readonly sceneId: string
+	readonly meta: SceneMetaState | null
+	readonly stats: SceneStatsData | null
+	readonly gltfJson: ExtendedGLTFDocument | null
+	readonly assetRefs: SceneAssetRefMap | null
+	readonly assets: SceneAssetRecord[] | null
+	readonly settings?: SceneSettings | null
+	readonly settingsUpdatedAt: string | null
+}
+
 export interface SaveSceneSettingsResponse {
 	readonly sceneId: string
 	readonly stats: SceneStatsData | null
@@ -284,7 +297,7 @@ export interface PublisherLoaderData {
 	readonly sceneId: string | null
 	readonly projectId: string | null
 	readonly currentLocation: SceneCurrentLocation
-	readonly sceneAggregate: SceneAggregateResponse | null
+	readonly sceneAggregate: SceneManifestResponse | null
 	readonly publishedMeta: PublishedSceneMetaResponse | null
 	readonly maxSceneBytes: number | null
 }

@@ -51,6 +51,7 @@ import {
 } from '../../../utils/scene-stats-helpers'
 import {
 	deleteAssets,
+	downloadAsset,
 	downloadAssets,
 	uploadSceneAssets
 } from '../../asset/asset-storage.server'
@@ -430,7 +431,7 @@ class SceneSettingsService {
 			// Update settings
 			const [updatedSettings] = await tx
 				.update(sceneSettings)
-				.set({ ...settings })
+				.set({ ...settings, updatedAt: new Date() })
 				.where(eq(sceneSettings.id, sceneSettingsId))
 				.returning()
 
@@ -520,6 +521,77 @@ class SceneSettingsService {
 			assets: sceneAssetsData,
 			assetDataMap, // Map of assetId -> asset data for reconstruction
 			gltfJson // The parsed GLTF JSON document
+		}
+	}
+
+	/**
+	 * Retrieves the latest scene settings plus asset metadata only.
+	 * Downloads just the glTF JSON asset; binary assets are served by
+	 * reference through the scene asset endpoint instead of being inlined.
+	 */
+	async getSceneSettingsWithAssetRefs(sceneId: string) {
+		let result: Awaited<ReturnType<typeof getSceneSettingsWithAssetsRow>>
+		let hotspots: import('@vctrl/core').HotspotDefinition[] = []
+
+		try {
+			result = await this.db.transaction(async (tx) => {
+				const row = await getSceneSettingsWithAssetsRow(tx, sceneId)
+				if (row) {
+					hotspots = await getHotspotsBySceneSettingsId(tx, row.settings.id)
+				}
+				return row
+			})
+		} catch (error) {
+			console.error('Failed to query scene settings with asset refs:', {
+				sceneId,
+				error
+			})
+			return null
+		}
+
+		if (!result) return null
+
+		const { settings, assets: sceneAssetsData } = result
+
+		let gltfJson: ExtendedGLTFDocument | null = null
+		const gltfAsset = sceneAssetsData.find(
+			(asset) => asset.mimeType === 'model/gltf+json'
+		)
+
+		if (gltfAsset) {
+			try {
+				const gltfAssetData = await downloadAsset(gltfAsset.id)
+				gltfJson = JSON.parse(
+					new TextDecoder().decode(gltfAssetData.data)
+				) as ExtendedGLTFDocument
+			} catch (error) {
+				console.error('Failed to download glTF JSON asset:', {
+					sceneId,
+					assetId: gltfAsset.id,
+					error
+				})
+			}
+		}
+
+		return {
+			meta: await this.getSceneMetadata(sceneId),
+			settings: rowToSceneSettings(settings, hotspots),
+			settingsUpdatedAt: settings.updatedAt ?? null,
+			assets: sceneAssetsData,
+			gltfJson
+		}
+	}
+
+	/** Asset metadata for a scene without downloading any bytes. */
+	async getSceneAssetRecords(sceneId: string) {
+		try {
+			const result = await this.db.transaction((tx) =>
+				getSceneSettingsWithAssetsRow(tx, sceneId)
+			)
+			return result?.assets ?? []
+		} catch (error) {
+			console.error('Failed to query scene asset records:', { sceneId, error })
+			return []
 		}
 	}
 

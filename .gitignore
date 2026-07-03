@@ -37,4 +37,5 @@ credentials/
 todos
 docs/superpowers/*
 docs/superpowers
+.superpowers
 tmp

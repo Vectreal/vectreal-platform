@@ -12,7 +12,7 @@ import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
 import { getQuotaLimit } from '../../lib/domain/billing/entitlement-service.server'
 import { getProject } from '../../lib/domain/project/project-repository.server'
-import { buildSceneAggregate } from '../../lib/domain/scene/server/scene-aggregate.server'
+import { buildSceneManifest } from '../../lib/domain/scene/server/scene-aggregate.server'
 import {
 	getScene,
 	getSceneFolder
@@ -38,7 +38,7 @@ import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 import type {
 	PublishedSceneMetaResponse,
 	PublisherLoaderData,
-	SceneAggregateResponse
+	SceneManifestResponse
 } from '../../types/api'
 import type { User } from '@supabase/supabase-js'
 import type { ShouldRevalidateFunction } from 'react-router'
@@ -99,7 +99,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	let currentFolderId: string | null = null
 	let currentFolderName: string | null = null
 
-	let sceneAggregate: SceneAggregateResponse | null = null
+	let sceneAggregate: SceneManifestResponse | null = null
 	let publishedMeta: PublishedSceneMetaResponse | null = null
 
 	if (sceneId && user?.id) {
@@ -116,7 +116,10 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 			scene.folderId
 				? getSceneFolder(scene.folderId, user.id)
 				: Promise.resolve(null),
-			buildSceneAggregate(sceneId),
+			buildSceneManifest(
+					sceneId,
+					(assetId) => `/api/scenes/${sceneId}/assets/${assetId}`
+				),
 			getPublishedScenePreview(scene.projectId, sceneId).catch(() => null)
 		])
 
