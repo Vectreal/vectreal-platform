@@ -1,6 +1,6 @@
 # Deployment
 
-The Vectreal Platform is deployed on **Google Cloud Run** behind a **Global HTTPS Load Balancer** with CDN, managed by Terraform and automated through GitHub Actions.
+The Vectreal Platform is deployed on **Fly.io** (region `fra`), fronted by **Cloudflare** for DNS, edge caching, and Turnstile bot protection. Deployments are automated through GitHub Actions.
 
 > The canonical source of truth for infrastructure configuration is [`terraform/README.md`](https://github.com/Vectreal/vectreal-platform/blob/main/terraform/README.md). This page provides a high-level overview and links to the detailed Terraform docs rather than duplicating them.
 
@@ -12,44 +12,56 @@ The Vectreal Platform is deployed on **Google Cloud Run** behind a **Global HTTP
 GitHub Actions CI/CD
        │
        ▼
-Artifact Registry (Docker images)
+Docker image → GHCR → Fly.io registry
        │
        ▼
-Cloud Run (container instances)
-  ├── production   (vectreal.com)
-  └── staging      (staging.vectreal.com)
+Fly.io apps (region fra)
+  ├── vectreal-platform          (production, vectreal.com)
+  └── vectreal-platform-staging  (staging, staging.vectreal.com)
        │
        ▼
-Global HTTPS Load Balancer + Cloud CDN
+Cloudflare (DNS, edge cache, Turnstile)
        │
        ▼
-Supabase (Auth + Database)
-Google Cloud Storage (3D assets)
+Supabase (Auth + Postgres + Storage)
 ```
+
+Terraform manages only the Cloudflare configuration (DNS records, Turnstile widgets, cache rules). Fly.io app configuration lives in `apps/vectreal-platform/fly.toml` (production) and `fly.staging.toml` (staging). Application data and 3D assets are hosted by Supabase.
 
 ---
 
-## First-time infrastructure setup
+## First-time setup
 
 ### Prerequisites
 
-- A GCP project with billing enabled
-- `gcloud` CLI authenticated with Owner or Editor role
-- Terraform ≥ 1.5
-- GitHub CLI (`gh`) authenticated
+- A [Fly.io](https://fly.io) account with the `flyctl` CLI authenticated
+- A Cloudflare account managing the `vectreal.com` zone
+- Terraform ≥ 1.0
+- A populated `.env.development` at the repo root
 
-### Two-step setup
+### Cloudflare infrastructure
 
 ```bash
-# 1. Provision GCP infrastructure (Cloud Run, Artifact Registry, IAM, GCS)
 cd terraform
-./scripts/apply-infrastructure.sh
-
-# 2. Configure GitHub secrets from your .env.development
-./scripts/setup-github-secrets.sh
+./scripts/apply-infrastructure.sh   # terraform init + validate + apply
 ```
 
-See the [full Terraform README](https://github.com/Vectreal/vectreal-platform/blob/main/terraform/README.md) for all configuration options, Terraform variable reference, and troubleshooting.
+This provisions the Cloudflare DNS records, Turnstile widgets, and cache rules described in the [Terraform README](https://github.com/Vectreal/vectreal-platform/blob/main/terraform/README.md).
+
+### Fly.io app secrets
+
+Runtime secrets are synced to the Fly.io apps from your local `.env.development`:
+
+```bash
+# Staging
+pnpm nx run terraform:setup-fly-secrets-staging
+
+# Production
+pnpm nx run terraform:setup-fly-secrets-prod
+
+# Read-only check of current state
+pnpm nx run terraform:verify-fly-secrets
+```
 
 ---
 
@@ -57,32 +69,31 @@ See the [full Terraform README](https://github.com/Vectreal/vectreal-platform/bl
 
 Workflows live in `.github/workflows/`.
 
-| Workflow | Trigger | What it does |
-|---|---|---|
-| **Staging deploy** | Push to `main` | Builds Docker image, pushes to Artifact Registry, deploys to Cloud Run staging |
-| **Production deploy** | Manual `workflow_dispatch` | Promotes staging image to production Cloud Run |
-| **Package release** | Version tag `v*.*.*` | Builds and publishes npm packages to npmjs.com |
+| Workflow | Fly app | Trigger | What it does |
+|---|---|---|---|
+| **Staging deploy** (`cd-platform-staging.yaml`) | `vectreal-platform-staging` | Push to `main` (on app/package changes) | Builds the Docker image, pushes to GHCR and the Fly.io registry, runs `flyctl deploy` against `fly.staging.toml` |
+| **Production deploy** (`cd-platform-production.yaml`) | `vectreal-platform` | Manual `workflow_dispatch` | Runs the CI quality gate, then deploys the image against `fly.toml` |
+| **Package release** | n/a | Managed by Release Please | Publishes `@vctrl/*` packages to npmjs.com |
+
+Both deploy workflows call the shared `shared-fly-deploy.yaml` workflow. The build injects `VITE_PUBLIC_*` values as Docker build args; runtime secrets (Supabase, Stripe, Cloudflare Turnstile, email) are set as Fly.io app secrets.
 
 ### Required GitHub secrets
 
 | Secret | Description |
 |---|---|
-| `GCP_CREDENTIALS` / `GCP_CREDENTIALS_STAGING` | Service account JSON key for Cloud Run deployments |
-| `GCP_PROJECT_ID` / `GCP_PROJECT_ID_STAGING` | Google Cloud project ID |
-| `DATABASE_URL_PROD` / `DATABASE_URL_STAGING` | PostgreSQL connection string |
-| `SUPABASE_URL_PROD` / `SUPABASE_URL_STAGING` | Supabase project URL |
-| `SUPABASE_KEY_PROD` / `SUPABASE_KEY_STAGING` | Supabase anon key |
-| `GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_PROD` / `GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET_STAGING` | GCS bucket name |
-| `APPLICATION_URL_PROD` / `APPLICATION_URL_STAGING` | Public app URL used for health checks and runtime config |
-| `CSRF_SECRET_PROD` / `CSRF_SECRET_STAGING` | Server-side CSRF/session secret |
+| `FLY_API_TOKEN` | Fly.io deploy token |
+| `VITE_PUBLIC_POSTHOG_TOKEN` / `VITE_PUBLIC_POSTHOG_HOST` | PostHog analytics config (build-time) |
+| `VITE_PUBLIC_POSTHOG_UI_HOST` | Optional PostHog UI host |
+| `VITE_PUBLIC_VECTREAL_API_KEY_PROD` | Optional public API key for demo scenes |
+| `VITE_PUBLIC_DEMO_SCENE_URL` | Optional demo scene URL |
 
-> If you use the helper script (`terraform/scripts/setup-github-secrets.sh`), these names are configured automatically.
+Application runtime secrets (Supabase URLs/keys, `DATABASE_URL`, `CSRF_SECRET`, Stripe keys, Cloudflare Turnstile keys) are managed on Fly.io via the `setup-fly-secrets` scripts rather than as GitHub secrets.
 
 ---
 
 ## Database migrations
 
-Migrations follow a Supabase-first flow - Drizzle generates SQL, Supabase CLI applies it.
+Migrations follow a Supabase-first flow - Drizzle generates SQL from schema edits, the Supabase CLI applies it.
 
 ```bash
 # Generate SQL from schema changes
@@ -95,35 +106,23 @@ pnpm nx run vectreal-platform:supabase-db-push-staging
 pnpm nx run vectreal-platform:supabase-db-push-prod
 ```
 
-See [`DB_MIGRATIONS.md`](https://github.com/Vectreal/vectreal-platform/blob/main/apps/vectreal-platform/DB_MIGRATIONS.md) for the full migration workflow.
+Never hand-author migration SQL; generate it from schema modules in `app/db/schema/`.
 
 ---
 
 ## Docker
 
-The platform app is containerised with Docker. See [`DOCKER.md`](https://github.com/Vectreal/vectreal-platform/blob/main/apps/vectreal-platform/DOCKER.md) for local Docker usage, multi-stage build details, and health check configuration.
+The platform app is built from a multi-stage `Dockerfile` at `apps/vectreal-platform/Dockerfile`. CI builds this image once, pushes it to GHCR and the Fly.io registry, and deploys it with `flyctl`. The container exposes a `/health` endpoint that the deploy workflow polls after each release.
 
 ---
 
-## Staging-first latency rollout
+## Staging-first rollout
 
 Before promoting any change to production:
 
-1. Push to `main` → staging deployment runs automatically.
+1. Push to `main` → the staging deployment runs automatically.
 2. Validate on `staging.vectreal.com` (auth flows, 3D pipeline, embed preview).
 3. Run the production deploy workflow manually once staging is green.
-
----
-
-## Cost optimisation
-
-Key cost levers for Cloud Run:
-
-- Set `--min-instances=0` for staging to scale to zero when idle.
-- Use committed-use discounts for production if traffic is predictable.
-- Cloud CDN caches static assets from the staging GCS bucket - cache hit ratio is visible in Cloud Monitoring.
-
-Full cost guidance in the [Terraform README](https://github.com/Vectreal/vectreal-platform/blob/main/terraform/README.md#cost-optimization).
 
 ---
 

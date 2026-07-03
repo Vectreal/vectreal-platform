@@ -72,31 +72,38 @@ function App() {
 
 ```ts
 type CameraProps = {
+  activeCameraId?: string
   cameras?: Array<PerspectiveCameraProps & {
     cameraId: string
     name: string
+    kind?: 'scene' | 'hotspot'
     initial?: boolean
-    shouldAnimate?: boolean
-    animationConfig?: {
-      duration: number
-      easing?: (t: number) => number
-    }
+    target?: [number, number, number]
   }>
+  sceneTransition?: {
+    type: 'linear' | 'object_avoidance' | 'none'
+    duration?: number
+    easing?: 'linear' | 'ease_in' | 'ease_out' | 'ease_in_out'
+  }
 }
 ```
 
-Each camera entry extends `PerspectiveCameraProps` from Drei and adds viewer-specific camera switching metadata.
+Each camera entry extends `PerspectiveCameraProps` from Drei and adds viewer-specific camera switching metadata. Transitions between cameras are configured once at the scene level via `sceneTransition`, not per camera.
 
 ```jsx
 <VectrealViewer
   cameraOptions={{
+    activeCameraId: 'default',
+    sceneTransition: {
+      type: 'linear',
+      duration: 900,
+      easing: 'ease_in_out'
+    },
     cameras: [
       {
         cameraId: 'default',
         name: 'Default',
         initial: true,
-        shouldAnimate: true,
-        animationConfig: { duration: 900 },
         position: [0, 5, 8],
         fov: 55,
         near: 0.1,
@@ -339,6 +346,9 @@ Current commands:
 |---|---|---|
 | `activate_camera` | `{ cameraId: string }` | Transitions to one of the configured scene cameras |
 | `set_controls_enabled` | `{ enabled: boolean }` | Temporarily enables or disables orbit interaction |
+| `set_transition` | `{ transitionType: 'none' \| 'linear' \| 'object_avoidance'; duration?: number; easing?: string }` | Overrides the active camera transition |
+| `set_auto_rotate` | `{ enabled: boolean; speed?: number }` | Toggles and configures auto-rotation |
+| `set_controls_options` | `{ zoom?: boolean; pan?: boolean }` | Enables or disables zoom/pan interaction at runtime |
 
 ### Events
 

@@ -245,7 +245,8 @@ export async function POST(request: Request) {
 | Requirement | Version     |
 | ----------- | ----------- |
 | Node.js     | 18 or later |
-| `sharp`     | `^0.34`     |
+
+`sharp` is an **optional** dependency, not a hard requirement. Install it yourself (`npm install sharp`, tested against `^0.34`) to enable native server-side texture compression. When `sharp` is not installed, `compressTextures()` falls back to basic glTF-Transform optimization (deduplication and pruning). In the browser, pass a custom encoder such as `createBrowserTextureEncoder()` from `@vctrl/hooks` instead.
 
 ---
 

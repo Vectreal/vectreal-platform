@@ -1,6 +1,6 @@
 # Vectreal Platform App
 
-The main Vectreal Platform application — a full-stack React Router v7 app with SSR, Supabase auth, Drizzle ORM, and Google Cloud Storage.
+The main Vectreal Platform application — a full-stack React Router v7 app with SSR, Supabase auth, Drizzle ORM, and Supabase Storage.
 
 > **Full documentation**: [vectreal.com/docs](https://vectreal.com/docs)
 
@@ -13,7 +13,7 @@ The main Vectreal Platform application — a full-stack React Router v7 app with
 | Framework   | React Router v7 (framework mode, SSR)                |
 | Auth        | Supabase Auth (email/password + Google/GitHub OAuth) |
 | Database    | PostgreSQL via Supabase + Drizzle ORM                |
-| Storage     | Google Cloud Storage (private buckets)               |
+| Storage     | Supabase Storage (`assets` bucket)                   |
 | 3D pipeline | `@vctrl/hooks` (browser) + `@vctrl/core` (server)    |
 | UI          | Radix UI + Tailwind CSS v4 (`@shared/components`)    |
 | Build       | Vite + Nx                                            |
@@ -24,7 +24,7 @@ The main Vectreal Platform application — a full-stack React Router v7 app with
 
 ### Prerequisites
 
-- Node.js 18+, pnpm 9+, Docker (for local Supabase)
+- Node.js 21+, pnpm 10+, Docker (for local Supabase)
 - Supabase CLI: `npm i -g supabase`
 
 ### Quick start
@@ -54,14 +54,13 @@ See [`../../.env.development.example`](../../.env.development.example) for the f
 
 **Required for core functionality:**
 
-| Variable                                | Description                                        |
-| --------------------------------------- | -------------------------------------------------- |
-| `SUPABASE_URL`                          | Supabase API URL (local: `http://localhost:54321`) |
-| `SUPABASE_KEY`                          | Supabase anon key (from `supabase status`)         |
-| `DATABASE_URL`                          | PostgreSQL connection string                       |
-| `CSRF_SECRET`                           | Long random string for CSRF token signing          |
-| `GOOGLE_CLOUD_STORAGE_CREDENTIALS_FILE` | Path to GCS service account JSON key               |
-| `GOOGLE_CLOUD_STORAGE_PRIVATE_BUCKET`   | GCS bucket name for model assets                   |
+| Variable              | Description                                          |
+| --------------------- | --------------------------------------------------- |
+| `SUPABASE_URL`        | Supabase API URL (local: `http://localhost:54321`)  |
+| `SUPABASE_KEY`        | Supabase anon key (from `supabase status`)          |
+| `SUPABASE_SECRET_KEY` | Supabase service-role key, used server-side for the `assets` storage bucket |
+| `DATABASE_URL`        | PostgreSQL connection string                        |
+| `CSRF_SECRET`         | Long random string for CSRF token signing           |
 
 ---
 
@@ -76,7 +75,7 @@ app/
 │   ├── preview-page/        # Embeddable scene viewer
 │   ├── onboarding-page/     # First-run onboarding wizard
 │   ├── layouts/             # Layout wrappers (nav, dashboard, docs, signin, mdx)
-│   └── api/                 # API routes (scenes, auth, optimize-textures)
+│   └── api/                 # Server-only API routes (auth, billing, scenes, consent, contact, theme)
 ├── components/              # UI components (publisher, dashboard, navigation, etc.)
 ├── lib/
 │   ├── domain/              # Business logic by domain (auth, scene, project, user, ...)
@@ -109,7 +108,7 @@ pnpm nx run vectreal-platform:supabase-db-push-staging
 pnpm nx run vectreal-platform:supabase-db-push-prod
 ```
 
-See [`DB_MIGRATIONS.md`](DB_MIGRATIONS.md) for the full workflow.
+Drizzle schema modules live in `app/db/schema/`. Generate migrations from schema edits with `drizzle-generate`; never hand-author migration SQL.
 
 ---
 
@@ -132,18 +131,18 @@ The standard `dev` target remains unchanged; use `dev-react-compiler` when you w
 
 ## Docker
 
-See [`DOCKER.md`](DOCKER.md) for building and running the app in a container, environment variable requirements, and health check configuration.
+The platform app is containerised with a multi-stage [`Dockerfile`](Dockerfile). The same image is built in CI and deployed to Fly.io. Runtime config is provided through Fly.io app secrets; the container exposes a `/health` endpoint used by the deploy health check.
 
 ---
 
 ## Deployment
 
-Deployed to **Google Cloud Run** via Terraform and GitHub Actions.
+Deployed to **Fly.io** (region `fra`) via GitHub Actions. The workflow builds the Docker image, pushes it to GHCR and the Fly.io registry, then runs `flyctl deploy`.
 
-| Workflow   | Trigger                    |
-| ---------- | -------------------------- |
-| Staging    | Push to `main`             |
-| Production | Manual `workflow_dispatch` |
+| Workflow   | Fly app                     | Config             | Trigger                    |
+| ---------- | --------------------------- | ------------------ | -------------------------- |
+| Staging    | `vectreal-platform-staging` | `fly.staging.toml` | Push to `main`             |
+| Production | `vectreal-platform`         | `fly.toml`         | Manual `workflow_dispatch` |
 
 See the [Deployment docs](https://vectreal.com/docs/operations/deployment) or [`../../terraform/README.md`](../../terraform/README.md) for the full infrastructure reference.
 
