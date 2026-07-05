@@ -18,12 +18,12 @@ pnpm add @vctrl/core
 
 ## Module overview
 
-| Module           | Import path                   | Description                                                        |
-| ---------------- | ----------------------------- | ------------------------------------------------------------------ |
-| `ModelLoader`    | `@vctrl/core/model-loader`    | Load model files into glTF-Transform `Document` or Three.js scenes |
-| `ModelOptimizer` | `@vctrl/core/model-optimizer` | Run optimization passes and export optimized output                |
-| `ModelExporter`  | `@vctrl/core/model-exporter`  | Export `Document` or Three.js objects to GLB or GLTF               |
-| `SceneAsset`     | `@vctrl/core`                 | Scene asset serialization helpers and shared server payload types  |
+| Module              | Import path                   | Description                                                                                                                                                      |
+| ------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ModelLoader`       | `@vctrl/core/model-loader`    | Load model files into glTF-Transform `Document` or Three.js scenes                                                                                               |
+| `ModelOptimizer`    | `@vctrl/core/model-optimizer` | Run optimization passes and export optimized output                                                                                                              |
+| `ModelExporter`     | `@vctrl/core/model-exporter`  | Export `Document` or Three.js objects to GLB or GLTF                                                                                                             |
+| Scene asset helpers | `@vctrl/core`                 | Named functions (`normalizeAssetUri`, `toSerializedAssetBytes`, `resolveMimeTypeFromFileName`, `normalizeCameraSettings`, etc.) plus shared server payload types |
 
 ---
 
@@ -137,14 +137,13 @@ const optimizedBuffer = await optimizer.export()
 
 #### `compressTextures(options?: TextureCompressOptions)`
 
-| Option         | Type                        | Current behavior                             |
-| -------------- | --------------------------- | -------------------------------------------- |
-| `resize`       | `[number, number]`          | Target dimensions for texture resize         |
-| `targetFormat` | `'webp' \| 'jpeg' \| 'png'` | Output encoding format                       |
-| `quality`      | `number`                    | Encoder quality 0–100                        |
-| `encoder`      | `TextureCompressionEncoder` | Custom encoder; defaults to Sharp in Node.js |
-
-When no encoder is available, `compressTextures` falls back to basic texture optimization using `dedup` and `prune` instead of throwing.
+| Option         | Type                        | Current behavior                                                                                                                                                        |
+| -------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resize`       | `[number, number]`          | Target dimensions for texture resize                                                                                                                                    |
+| `targetFormat` | `'webp' \| 'jpeg' \| 'png'` | Output encoding format                                                                                                                                                  |
+| `quality`      | `number`                    | Encoder quality 0–100                                                                                                                                                   |
+| `encoder`      | `unknown`                   | Custom image encoder compatible with the Sharp constructor API. When provided, Sharp is not imported (enables browser/edge use); otherwise defaults to Sharp in Node.js |
+When no `encoder` is passed, `compressTextures` dynamically imports Sharp; only if that import fails (Sharp not installed) does it fall back to basic texture optimization using `dedup` and `prune` instead of throwing.
 
 #### `optimizeAll(options?)`
 
@@ -246,7 +245,7 @@ export async function POST(request: Request) {
 | ----------- | ----------- |
 | Node.js     | 18 or later |
 
-`sharp` is an **optional** dependency, not a hard requirement. Install it yourself (`npm install sharp`, tested against `^0.34`) to enable native server-side texture compression. When `sharp` is not installed, `compressTextures()` falls back to basic glTF-Transform optimization (deduplication and pruning). In the browser, pass a custom encoder such as `createBrowserTextureEncoder()` from `@vctrl/hooks` instead.
+`sharp` is **optional** and is not declared as a dependency of this package — it is `import()`ed dynamically at runtime only if present. Install it in your host app (`npm install sharp`; the Vectreal Platform pins `^0.34`) to enable native server-side texture compression. When `sharp` is not installed, `compressTextures()` falls back to basic glTF-Transform optimization (deduplication and pruning). In the browser, pass a custom encoder such as `createBrowserTextureEncoder()` from `@vctrl/hooks` instead.
 
 ---
 

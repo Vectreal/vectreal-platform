@@ -85,42 +85,44 @@ export default function App() {
 
 `on` and `off` support these typed events:
 
-| Event                  | Payload             |
-| ---------------------- | ------------------- |
-| `multiple-models`      | `File[]`            |
-| `not-loaded-files`     | `File[]`            |
-| `load-start`           | `null`              |
-| `load-progress`        | `number`            |
-| `load-complete`        | `ModelFile \| null` |
-| `load-reset`           | `null`              |
-| `load-error`           | `Error \| unknown`  |
-| `server-load-start`    | `string`            |
-| `server-load-complete` | `SceneLoadResult`   |
-| `server-load-error`    | `Error \| unknown`  |
+| Event                  | Payload                                   |
+| ---------------------- | ----------------------------------------- |
+| `multiple-models`      | `File[]`                                  |
+| `not-loaded-files`     | `File[]`                                  |
+| `load-start`           | `null`                                    |
+| `load-progress`        | `number`                                  |
+| `load-complete`        | `ModelFile \| null`                       |
+| `load-reset`           | `null`                                    |
+| `load-error`           | `StructuredLoadError \| Error \| unknown` |
+| `server-load-start`    | `string`                                  |
+| `server-load-complete` | `SceneLoadResult`                         |
+| `server-load-error`    | `StructuredLoadError \| Error \| unknown` |
 
 ### Scene loading option types
 
 `loadFromServer(options)` uses:
 
-| Field           | Type            | Description                                   |
-| --------------- | --------------- | --------------------------------------------- |
-| `sceneId`       | `string`        | Scene identifier to fetch                     |
-| `serverOptions` | `ServerOptions` | Endpoint, auth, and header configuration      |
-| `applySettings` | `boolean`       | Whether scene settings are applied after load |
+| Field           | Type                     | Description                                                                |
+| --------------- | ------------------------ | -------------------------------------------------------------------------- |
+| `sceneId`       | `string`                 | Scene identifier to fetch                                                  |
+| `serverOptions` | `ServerOptions`          | Endpoint, auth, and header configuration                                   |
+| `applySettings` | `boolean`                | Whether scene settings are applied after load (default `true`)             |
+| `parseMode`     | `'document' \| 'direct'` | `'direct'` parses glTF JSON straight with GLTFLoader (view-only fast path) |
 
 `loadFromData(options)` uses:
 
-| Field           | Type                  | Description                                                    |
-| --------------- | --------------------- | -------------------------------------------------------------- |
-| `sceneId`       | `string \| undefined` | Optional scene identifier                                      |
-| `sceneData`     | `ServerSceneData`     | Already-resolved payload containing glTF, settings, and assets |
-| `applySettings` | `boolean`             | Whether scene settings are applied after load                  |
+| Field           | Type                     | Description                                                                |
+| --------------- | ------------------------ | -------------------------------------------------------------------------- |
+| `sceneId`       | `string \| undefined`    | Optional scene identifier                                                  |
+| `sceneData`     | `ServerSceneData`        | Already-resolved payload containing glTF, settings, and assets             |
+| `applySettings` | `boolean`                | Whether scene settings are applied after load (default `true`)             |
+| `parseMode`     | `'document' \| 'direct'` | `'direct'` parses glTF JSON straight with GLTFLoader (view-only fast path) |
 
 ---
 
 ## `useOptimizeModel`
 
-Runs mesh simplification, deduplication, quantization, and normals optimization using [glTF-Transform](https://gltf-transform.dev) — geometry passes run in a Web Worker. Texture compression runs in the main thread via browser-native OffscreenCanvas encoding.
+Runs mesh simplification, deduplication, quantization, and normals optimization using [glTF-Transform](https://gltf-transform.dev). The hook's optimization methods run on the main thread; texture compression uses browser-native OffscreenCanvas encoding (no server call). Move the geometry passes off the main thread by driving them from a Web Worker in your own app if you need to keep the UI responsive on large models — the Vectreal Platform publisher does this.
 
 ```tsx
 import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
@@ -212,6 +214,7 @@ function ExportButton({ file }: { file: ModelFile | null }) {
 ## Additional exports
 
 - `reconstructGltfFiles` from `@vctrl/hooks`
+- `createBrowserTextureEncoder` from `@vctrl/hooks` — an OffscreenCanvas-based texture encoder you can pass to `@vctrl/core`'s `compressTextures({ encoder })` for browser-side texture compression
 - `ModelProvider` and `useModelContext` from `@vctrl/hooks/use-load-model`
 - Shared types such as `ModelFile`, `SceneLoadResult`, and `ServerSceneData`
 

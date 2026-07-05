@@ -41,7 +41,7 @@ Built on [Three.js](https://github.com/mrdoob/three.js), [React Three Fiber](htt
 | Platform app     | `apps/vectreal-platform/` | Full-stack React Router v7 app with SSR, auth, dashboard, publisher, and preview routes |
 | Viewer package   | `packages/viewer/`        | `@vctrl/viewer` React 3D viewer component                                               |
 | Hooks package    | `packages/hooks/`         | `@vctrl/hooks` browser-side loading, optimization, and export hooks                     |
-| Core package     | `packages/core/`          | `@vctrl/core` server-side model processing pipeline                                     |
+| Core package     | `packages/core/`          | `@vctrl/core` isomorphic (Node.js + browser) model processing pipeline                  |
 | Embed package    | `packages/embed/`         | `@vctrl/embed` framework-agnostic SDK for controlling embedded 3D scenes                 |
 | Shared libraries | `shared/`                 | Shared UI components and utilities                                                      |
 | Infrastructure   | `terraform/`              | Cloudflare DNS, Turnstile widgets, and Fly.io secret sync scripts                       |

@@ -85,7 +85,7 @@ export const docsPages: DocPage[] = [
 		title: 'Documentation',
 		description:
 			'Everything you need to build with the Vectreal Platform and its open-source packages.',
-		sourcePath: 'apps/vectreal-platform/app/routes/docs/index.mdx',
+		sourcePath: 'apps/vectreal-platform/app/routes/docs/index.tsx',
 		category: 'overview',
 		order: 0,
 		version: 'latest'

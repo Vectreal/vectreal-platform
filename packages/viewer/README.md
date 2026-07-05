@@ -264,15 +264,17 @@ Configures the [@react-three/drei `Stage`](https://github.com/pmndrs/drei#stage)
 | Option        | Default |
 | ------------- | ------- |
 | `fit`         | `true`  |
-| `clip`        | `true`  |
+| `clip`        | `false` |
 | `margin`      | `1.5`   |
 | `maxDuration` | `0`     |
+
+`clip` defaults to `false` on purpose: the viewer manages camera near/far per frame (dynamic clipping) so Drei should not also write them.
 
 ```tsx
 <VectrealViewer
 	boundsOptions={{
 		fit: true,
-		clip: true,
+		clip: false,
 		margin: 1.25,
 		maxDuration: 300
 	}}
@@ -281,92 +283,97 @@ Configures the [@react-three/drei `Stage`](https://github.com/pmndrs/drei#stage)
 
 ### shadowsOptions (`ShadowsProps`)
 
-`ShadowsProps` is a discriminated union using `type`.
+`ShadowsProps` is a discriminated union on `type`:
 
-#### Contact shadows (`type: 'contact'`)
-
-Viewer defaults:
-
-| Option    | Default     |
-| --------- | ----------- |
-| `type`    | `'contact'` |
-| `opacity` | `0.4`       |
-| `blur`    | `0.1`       |
-| `scale`   | `5`         |
-| `color`   | `'#000000'` |
-| `smooth`  | `true`      |
-
-Commonly used ContactShadows fields:
-
-| Option       | Type                         |
-| ------------ | ---------------------------- |
-| `opacity`    | `number`                     |
-| `blur`       | `number`                     |
-| `scale`      | `number \| [number, number]` |
-| `far`        | `number`                     |
-| `resolution` | `number`                     |
-| `color`      | `string`                     |
-| `frames`     | `number`                     |
-
-```tsx
-<VectrealViewer
-	shadowsOptions={{
-		type: 'contact',
-		opacity: 0.45,
-		blur: 1.8,
-		scale: 6,
-		far: 12,
-		resolution: 1024,
-		color: '#111111'
-	}}
-/>
+```ts
+type ShadowsProps = AccumulativeShadowsProps | ContactShadowProps
 ```
 
-#### Accumulative shadows (`type: 'accumulative'`)
+The viewer's default configuration is `type: 'accumulative'` (with `enabled: false`, so shadows are off until you opt in). Accumulative shadows bake a high-quality soft shadow into a ground plane from a `RandomizedLight`; because the bake is camera-independent it stays valid while auto-rotate orbits the camera. Numeric controls (`scale`, `light.radius`, `light.position`) are expressed relative to the model's measured size, so they stay proportioned across models.
+
+#### Accumulative shadows (`type: 'accumulative'`) — the default
 
 Viewer defaults:
 
 | Option       | Default          |
 | ------------ | ---------------- |
 | `type`       | `'accumulative'` |
-| `temporal`   | `false`          |
-| `frames`     | `30`             |
-| `alphaTest`  | `0.35`           |
-| `opacity`    | `1`              |
-| `scale`      | `10`             |
+| `enabled`    | `false`          |
+| `temporal`   | `true`           |
+| `frames`     | `48`             |
+| `alphaTest`  | `3.0`            |
+| `cutoffScale`| `1`              |
+| `opacity`    | `0.9`            |
+| `scale`      | `2.5`            |
 | `resolution` | `1024`           |
 | `colorBlend` | `2`              |
 | `color`      | `'#000000'`      |
+| `ao`         | `false`          |
+| `aoIntensity`| `1.4`            |
 
-Nested light defaults (`shadowsOptions.light`):
+> `alphaTest` here is not a discard threshold — in Drei's `SoftShadowMaterial` it scales the shadow alpha against the lit plane brightness, so the viewer's default sits at `3.0` (just below the measured lit brightness), and shadow depth is driven by `light.ambient` rather than `alphaTest`. `ao` enables screen-space ambient occlusion (N8AO); it reintroduces a postprocessing composer and runs every frame, so it is opt-in.
 
-| Option      | Default                                           |
-| ----------- | ------------------------------------------------- |
-| `intensity` | `1`                                               |
-| `amount`    | `5`                                               |
-| `radius`    | `7.5`                                             |
-| `ambient`   | `0.5`                                             |
-| `position`  | `[5, 10, 5]` or auto-calculated from scene bounds |
+Nested light defaults (`shadowsOptions.light`, a Drei `RandomizedLight`):
+
+| Option      | Default        | Notes                                                      |
+| ----------- | -------------- | ---------------------------------------------------------- |
+| `intensity` | `Math.PI * 2`  | Bright bake light, divided by `amount` per sub-light       |
+| `amount`    | `8`            | Number of jittered light samples accumulated into the bake |
+| `radius`    | `0.8`          | Positional jitter in model-size units (penumbra softness)  |
+| `ambient`   | `0.3`          | Hemisphere fill; lower = darker shadow core (UI "Darkness")|
+| `position`  | `[0, 2.5, 0]`  | Light direction in model-size units, scaled by model radius|
+| `bias`      | `0.001`        | Shadow bias                                                |
+
+Nested contact/ground shadow (`shadowsOptions.contact`, a `ContactShadowConfig`). This is a soft ground shadow layered under the accumulative bake to approximate ground ambient occlusion:
+
+| Option    | Default | Notes                                                  |
+| --------- | ------- | ------------------------------------------------------ |
+| `enabled` | `false` | Whether the ground shadow is rendered                  |
+| `opacity` | `0.6`   | Darkness of the ground shadow (0–1)                    |
+| `blur`    | `3`     | Softness; higher is softer                             |
+| `scale`   | `1.5`   | Plane size as a multiple of the model footprint        |
+| `reach`   | `0.35`  | How far up the model the ground shadow reaches (0–1)   |
 
 ```tsx
 <VectrealViewer
 	shadowsOptions={{
 		type: 'accumulative',
+		enabled: true,
 		temporal: true,
-		frames: 40,
-		alphaTest: 0.4,
-		opacity: 0.95,
-		scale: 12,
+		frames: 48,
+		opacity: 0.9,
+		scale: 2.5,
 		resolution: 1024,
 		colorBlend: 2,
 		color: '#000000',
 		light: {
-			amount: 6,
-			radius: 7,
-			ambient: 0.5,
-			intensity: 1,
-			bias: 0.0001
-		}
+			amount: 8,
+			radius: 0.8,
+			ambient: 0.3,
+			intensity: Math.PI * 2,
+			position: [0, 2.5, 0],
+			bias: 0.001
+		},
+		contact: { enabled: true, opacity: 0.6, blur: 3, scale: 1.5 }
+	}}
+/>
+```
+
+#### Contact shadows (`type: 'contact'`)
+
+`ContactShadowProps` extends Drei's [`ContactShadows`](https://github.com/pmndrs/drei#contactshadows) props with `type: 'contact'`. Selecting this variant forwards your props to Drei `ContactShadows`; the viewer injects no default value set of its own for this variant (unlike the accumulative config above).
+
+```tsx
+<VectrealViewer
+	shadowsOptions={{
+		type: 'contact',
+		enabled: true,
+		opacity: 0.45,
+		blur: 1.8,
+		scale: 6,
+		far: 12,
+		resolution: 1024,
+		color: '#111111'
 	}}
 />
 ```
@@ -422,8 +429,8 @@ export default function App() {
 
 ```bash
 pnpm nx build vctrl/viewer
-pnpm nx test vctrl/viewer
 pnpm nx storybook vctrl/viewer
+pnpm nx test-storybook vctrl/viewer
 ```
 
 ---

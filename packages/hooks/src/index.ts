@@ -21,6 +21,7 @@ export { default as useOptimizeModel } from './use-optimize-model/use-optimize-m
 
 // Export utilities
 export { reconstructGltfFiles } from './use-load-model/utils/reconstruct-files'
+export { createBrowserTextureEncoder } from './use-optimize-model/utils/browser-texture-encoder'
 
 // Re-export types for convenience
 export type {

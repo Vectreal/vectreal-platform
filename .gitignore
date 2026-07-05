@@ -39,3 +39,4 @@ docs/superpowers/*
 docs/superpowers
 .superpowers
 tmp
+.claude/ralph-loop.local.md
