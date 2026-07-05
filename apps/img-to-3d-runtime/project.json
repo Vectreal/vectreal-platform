@@ -1,0 +1,27 @@
+{
+	"name": "img-to-3d-runtime",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "apps/img-to-3d-runtime",
+	"projectType": "application",
+	"tags": ["scope:infra"],
+	"targets": {
+		"modal-serve": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "uv run --directory apps/img-to-3d-runtime modal serve modal_app.py"
+			}
+		},
+		"modal-deploy": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "uv run --directory apps/img-to-3d-runtime modal deploy modal_app.py"
+			}
+		},
+		"modal-logs": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "uv run --directory apps/img-to-3d-runtime modal app logs vectreal-img-to-3d-runtime"
+			}
+		}
+	}
+}

@@ -15,7 +15,7 @@ import {
 	useState,
 	type FC
 } from 'react'
-import { useNavigation, useParams } from 'react-router'
+import { useNavigation, useOutletContext, useParams } from 'react-router'
 
 import { Route } from './+types/publisher.$sceneId'
 import { DropZone } from './drop-zone'
@@ -41,6 +41,7 @@ import {
 import { isMobileRequest } from '../../lib/utils/is-mobile-request'
 import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbnail'
 
+import type { PublisherLoaderData } from '../../types/api'
 import type {
 	SceneCameraSnapshotCapture,
 	SceneScreenshotCapture,
@@ -134,6 +135,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 	const isMobile = useIsMobile(loaderData.isMobile)
 	const params = useParams()
 	const routeSceneId = params.sceneId ?? null
+	const layoutData = useOutletContext<PublisherLoaderData>()
 
 	// Get model and settings from context/atoms
 	const { file, isFileLoading, reset } = useModelContext()
@@ -345,7 +347,12 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 							transition={{ duration: 0.3 }}
 							className="relative flex h-full w-full items-center justify-center"
 						>
-							<DropZone key="drop-zone" isMobile={isMobile} />
+							<DropZone
+								key="drop-zone"
+								isMobile={isMobile}
+								targetProjectId={layoutData.currentLocation.projectId ?? undefined}
+								userId={layoutData.user?.id}
+							/>
 						</motion.div>
 					)}
 				</AnimatePresence>

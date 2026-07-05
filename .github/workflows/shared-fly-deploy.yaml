@@ -12,10 +12,20 @@ on:
         description: 'Fly.io app name'
         required: true
         type: string
+      image_name:
+        description: 'GHCR image name (e.g. vectreal-platform)'
+        required: false
+        type: string
+        default: 'vectreal-platform'
       fly_config:
         description: 'Path to fly.toml (e.g. apps/vectreal-platform/fly.toml)'
         required: true
         type: string
+      dockerfile:
+        description: 'Path to Dockerfile'
+        required: false
+        type: string
+        default: 'apps/vectreal-platform/Dockerfile'
       environment:
         description: 'Deployment environment (staging | production)'
         required: true
@@ -63,14 +73,15 @@ jobs:
         env:
           REPO_OWNER: ${{ github.repository_owner }}
           COMMIT_SHA: ${{ github.sha }}
+          IMAGE_NAME: ${{ inputs.image_name }}
         run: |
-          echo "image=ghcr.io/$(echo "${REPO_OWNER}" | tr '[:upper:]' '[:lower:]')/vectreal-platform:${COMMIT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/$(echo "${REPO_OWNER}" | tr '[:upper:]' '[:lower:]')/${IMAGE_NAME}:${COMMIT_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push image
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: apps/vectreal-platform/Dockerfile
+          file: ${{ inputs.dockerfile }}
           push: true
           tags: ${{ steps.tag.outputs.image }}
           cache-from: type=gha

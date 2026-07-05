@@ -25,6 +25,15 @@ export default [
 		'./routes/api/scenes.$sceneId.assets.$assetId.ts'
 	),
 	route('api/scenes/:sceneId?', './routes/api/scenes.$sceneId.ts'),
+	route('api/img-to-3d/generations', './routes/api/img-to-3d.generations.ts'),
+	route(
+		'api/img-to-3d/generations/:jobId',
+		'./routes/api/img-to-3d.generations.$jobId.ts'
+	),
+	route(
+		'api/img-to-3d/generations/:jobId/artifact',
+		'./routes/api/img-to-3d.generations.$jobId.artifact.ts'
+	),
 	route('api/scene-location-options', './routes/api/scene-location-options.ts'),
 
 	// Auth api

@@ -302,6 +302,38 @@ export interface PublisherLoaderData {
 	readonly maxSceneBytes: number | null
 }
 
+export type ImgTo3dGenerationStatus =
+	| 'queued'
+	| 'starting'
+	| 'processing'
+	| 'succeeded'
+	| 'failed'
+
+/** A single job entry returned in the submission response. */
+export interface ImgTo3dJobEntry {
+	readonly jobId: string
+	readonly jobToken: string
+	readonly status: ImgTo3dGenerationStatus
+	readonly pollAfterMs: number
+}
+
+/** Response from POST /api/img-to-3d/generations — one entry per submitted image. */
+export interface ImgTo3dGenerationSubmitResponse {
+	readonly jobs: readonly ImgTo3dJobEntry[]
+}
+
+/** Response from GET /api/img-to-3d/generations/:jobId. */
+export interface ImgTo3dGenerationStatusResponse {
+	readonly jobId: string
+	readonly jobToken: string
+	readonly status: ImgTo3dGenerationStatus
+	readonly progress: number | null
+	readonly message: string | null
+	readonly artifactReady: boolean
+	readonly retryable: boolean
+	readonly pollAfterMs: number
+}
+
 // ============================================================================
 // API Response Types
 // ============================================================================
