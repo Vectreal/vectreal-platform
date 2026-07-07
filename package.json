@@ -86,7 +86,7 @@
 		"react-hook-form": "^7.73.1",
 		"react-resizable-panels": "^2.1.9",
 		"react-router": "7.15.1",
-		"recharts": "^2.15.4",
+		"recharts": "^3.9.2",
 		"remix-utils": "^8.8.0",
 		"resend": "^4.6.0",
 		"sharp": "^0.34.5",
