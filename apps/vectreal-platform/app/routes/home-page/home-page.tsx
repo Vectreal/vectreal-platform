@@ -18,6 +18,7 @@ import {
 	FiletypeCarousel,
 	GradientCtaBlock,
 	HowItWorksShowcase,
+	OptimizationGridBg,
 	OptimizationVisual,
 	SocialProofBar,
 	StatRing
@@ -43,9 +44,9 @@ export function meta(_: Route.MetaArgs) {
 }
 
 const SOCIAL_PROOF_ITEMS = [
-	{ text: '60% higher purchase intent with 3D' },
-	{ text: '44% more add-to-cart with interactive models' },
-	{ text: '94% conversion lift with AR' },
+	// { text: '60% higher purchase intent with 3D' },
+	// { text: '44% more add-to-cart with interactive models' },
+	// { text: '94% conversion lift with AR' },
 	{ text: '100% open-source' },
 	{ text: 'No registration required' },
 	{ text: 'Instant publishing' }
@@ -172,7 +173,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 
 			{/* 5. Optimization value prop */}
 			<Section aria-label="Optimization" glow="right">
-				<div className="flex flex-col gap-12 md:gap-16">
+				<div className="relative z-10 flex flex-col gap-12 md:gap-16">
 					<SectionHeading
 						label="Optimization"
 						title="Ship lighter, load faster"
@@ -180,6 +181,8 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 					/>
 					<OptimizationVisual />
 				</div>
+
+				<OptimizationGridBg />
 			</Section>
 
 			{/* 6. Stats */}
@@ -270,7 +273,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 			</Section>
 
 			{/* 8. Community */}
-			<Section aria-label="Community" glow="right">
+			<Section aria-label="Community">
 				<div className="relative z-10 grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
 					{/* Left: copy + CTAs */}
 					<div className="flex flex-col gap-6">

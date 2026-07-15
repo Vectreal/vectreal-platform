@@ -11,33 +11,42 @@ import {
 	Code2,
 	Database,
 	FileBox,
+	type LucideIcon,
+	PauseIcon,
 	Share2,
 	SlidersHorizontal,
 	Upload
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-const STEPS = [
+interface Step {
+	index: number
+	title: string
+	icon: LucideIcon
+	body: string
+}
+
+const STEPS: Step[] = [
 	{
-		number: '01',
+		index: 0,
 		title: 'Upload',
 		icon: Upload,
 		body: 'Drag & drop your model — GLB, glTF, USDZ, USDA. Processing starts instantly.'
 	},
 	{
-		number: '02',
+		index: 1,
 		title: 'Optimize',
 		icon: SlidersHorizontal,
 		body: 'Automatic mesh decimation, texture compression, and Draco encoding.'
 	},
 	{
-		number: '03',
+		index: 2,
 		title: 'Manage',
 		icon: Database,
 		body: 'Versioned cloud storage, asset organization, and instant previews.'
 	},
 	{
-		number: '04',
+		index: 3,
 		title: 'Publish',
 		icon: Share2,
 		body: 'Generate an embed snippet and drop your scene into any site.'
@@ -245,10 +254,17 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 	const prefersReducedMotion = useReducedMotion()
 	const [active, setActive] = useState(0)
 	const [paused, setPaused] = useState(false)
+	const [hoveredItem, setHoveredItem] = useState<Step | null>()
 	const [progress, setProgress] = useState(0)
 	const progressRef = useRef(0)
 
 	const running = inView && !paused && !prefersReducedMotion
+
+	function handleItemClick(index: number) {
+		setPaused(true)
+		setProgress(0)
+		setActive(index)
+	}
 
 	// Reset progress whenever the active step changes
 	useEffect(() => {
@@ -285,7 +301,6 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 	return (
 		<div
 			ref={ref}
-			onMouseEnter={() => setPaused(true)}
 			onMouseLeave={() => setPaused(false)}
 			className={cn(
 				'flex flex-col items-center gap-6 lg:flex-row lg:gap-8',
@@ -297,10 +312,14 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 				{STEPS.map((step, i) => {
 					const isActive = i === active
 					return (
-						<li key={step.number}>
+						<li
+							key={step.index}
+							onMouseEnter={() => setHoveredItem(step)}
+							onMouseLeave={() => setHoveredItem(null)}
+						>
 							<button
 								type="button"
-								onClick={() => setActive(i)}
+								onClick={() => handleItemClick(i)}
 								className={cn(
 									'group relative flex w-full items-start gap-4 overflow-hidden rounded-2xl border p-4 text-left transition-colors duration-300',
 									isActive
@@ -323,12 +342,59 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 											: 'border-surface-border bg-surface-0/60'
 									)}
 								>
-									<step.icon
-										className={cn(
-											'size-5 transition-colors duration-300',
-											isActive ? 'text-accent' : 'text-muted-foreground'
+									<AnimatePresence mode="wait">
+										{!paused && hoveredItem?.index === i ? (
+											<motion.span
+												key={'pause' + i}
+												// key={
+												// 	i +
+												// 	(hoveredItem?.index === i
+												// 		? String(hoveredItem?.index)
+												// 		: '')
+												// }
+												initial={{
+													scale: 0.5,
+													opacity: 0
+												}}
+												animate={{
+													scale: 1,
+													opacity: 1,
+													transition: { delay: 0.25 }
+												}}
+												exit={{
+													scale: 0.95,
+													opacity: 0,
+													transition: { duration: 0.25 }
+												}}
+											>
+												<PauseIcon />
+											</motion.span>
+										) : (
+											<motion.span
+												key={'icon' + i}
+												initial={{
+													scale: 0.95,
+													opacity: 0
+												}}
+												animate={{
+													scale: 1,
+													opacity: 1
+												}}
+												exit={{
+													scale: 1.5,
+													opacity: 0,
+													transition: { duration: 0.1 }
+												}}
+											>
+												<step.icon
+													className={cn(
+														'size-5 transition-colors duration-300',
+														isActive ? 'text-accent' : 'text-muted-foreground'
+													)}
+												/>
+											</motion.span>
 										)}
-									/>
+									</AnimatePresence>
 								</span>
 								<div className="flex flex-col gap-0.5">
 									<div className="flex items-center gap-2">
@@ -338,7 +404,7 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 												isActive ? 'text-accent' : 'text-muted-foreground/50'
 											)}
 										>
-											{step.number}
+											0{String(step.index + 1)}
 										</span>
 										<span
 											className={cn(

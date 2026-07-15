@@ -95,9 +95,9 @@ export function OptimizationVisual({ className }: { className?: string }) {
 								{optMbStr}
 							</motion.span>
 						</div>
-						<div className="bg-surface-0 border-surface-border h-4 w-full overflow-hidden rounded-full border">
+						<div className="bg-surface-0 border-surface-border relative h-4 w-full overflow-hidden rounded-full border">
 							<motion.div
-								className="bg-accent h-full rounded-full"
+								className="bg-accent absolute right-0 h-full rounded-full"
 								style={{ width: optWidthStr }}
 							/>
 						</div>
