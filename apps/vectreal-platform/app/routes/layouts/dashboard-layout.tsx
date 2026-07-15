@@ -25,9 +25,9 @@ import {
 	DashboardHeader,
 	DashboardManagementDialogs,
 	DashboardSidebarContent,
-	DynamicBreadcrumb
+	DynamicBreadcrumb,
+	LogoSidebar
 } from '../../components/dashboard'
-import { LogoSidebar } from '../../components/layout-components'
 import {
 	DashboardSkeleton,
 	FolderContentSkeleton,

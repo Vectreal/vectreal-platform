@@ -10,7 +10,7 @@ import CenteredSpinner from '../centered-spinner'
 
 import type { Group } from 'three'
 
-type PointerRef = React.MutableRefObject<{ x: number; y: number }>
+type PointerRef = React.RefObject<{ x: number; y: number }>
 
 interface ModelProps {
 	url: string

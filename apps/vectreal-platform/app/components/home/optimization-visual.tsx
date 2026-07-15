@@ -1,4 +1,3 @@
-// app/components/landing/optimization-visual.tsx
 import { cn } from '@shared/utils'
 import {
 	animate,
@@ -38,7 +37,11 @@ export function OptimizationVisual({ className }: { className?: string }) {
 		if (!isInView || prefersReducedMotion) return
 		// Deliberately slow so the compression really reads as it happens.
 		const ease = [0.22, 1, 0.36, 1] as const
-		const a = animate(optWidth, OPT_WIDTH_PCT, { duration: 3.8, ease, delay: 0.4 })
+		const a = animate(optWidth, OPT_WIDTH_PCT, {
+			duration: 3.8,
+			ease,
+			delay: 0.4
+		})
 		const b = animate(optMb, OPT_MB, { duration: 3.8, ease, delay: 0.4 })
 		const c = animate(reduction, REDUCTION, { duration: 3.8, ease, delay: 0.6 })
 		return () => {
@@ -72,9 +75,7 @@ export function OptimizationVisual({ className }: { className?: string }) {
 					{/* Raw */}
 					<div className="flex flex-col gap-2">
 						<div className="flex items-baseline justify-between">
-							<span className="text-muted-foreground text-sm">
-								Raw upload
-							</span>
+							<span className="text-muted-foreground text-sm">Raw upload</span>
 							<span className="text-muted-foreground font-medium tabular-nums">
 								{RAW_MB} MB
 							</span>
@@ -105,7 +106,7 @@ export function OptimizationVisual({ className }: { className?: string }) {
 
 				{/* Reduction badge */}
 				<div className="flex flex-col items-start gap-3 lg:items-center lg:text-center">
-					<div className="border-accent/20 bg-accent/5 inline-flex items-center gap-2 rounded-full border px-3 py-1">
+					<div className="border-accent/20 inline-flex items-center gap-2 rounded-full border px-3 py-1">
 						<TrendingDown className="text-accent size-3.5" aria-hidden="true" />
 						<span className="text-eyebrow text-accent/80">Smaller payload</span>
 					</div>

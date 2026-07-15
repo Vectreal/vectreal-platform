@@ -19,8 +19,8 @@ const FiletypeCarousel = () => {
 	return (
 		<section className="relative overflow-hidden">
 			{/* Edge-only fade masks */}
-			<div className="from-background pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r to-transparent" />
-			<div className="from-background pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l to-transparent" />
+			<div className="from-background pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-linear-to-r to-transparent" />
+			<div className="from-background pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-linear-to-l to-transparent" />
 
 			<motion.div
 				className="flex w-max gap-4"
@@ -35,12 +35,12 @@ const FiletypeCarousel = () => {
 				{loopedFileTypes.map((fileType, index) => (
 					<Card
 						key={index}
-						className="bg-surface-1 border-surface-border flex h-24 w-56 shrink-0 flex-col justify-center rounded-2xl border px-6 py-2"
+						className="bg-surface-1 border-surface-border flex h-24 min-w-56 shrink-0 flex-col justify-center rounded-2xl border px-6 py-2"
 					>
-						<p className="whitespace-nowrap text-lg font-medium">
+						<p className="text-lg font-medium whitespace-nowrap">
 							{fileType.name}
 						</p>
-						<p className="text-muted-foreground whitespace-nowrap text-sm">
+						<p className="text-muted-foreground text-sm whitespace-nowrap">
 							{fileType.description}
 						</p>
 					</Card>

@@ -16,7 +16,11 @@ import type {
 	SerializedGLTFExportResult
 } from '@vctrl/core'
 
-export type { SceneAssetRef, SceneAssetRefMap, SerializedSceneAssetDataMap } from '@vctrl/core'
+export type {
+	SceneAssetRef,
+	SceneAssetRefMap,
+	SerializedSceneAssetDataMap
+} from '@vctrl/core'
 
 // ============================================================================
 // Asset Types
@@ -292,7 +296,7 @@ export interface SceneLocationOptionsResponse {
 }
 
 export interface PublisherLoaderData {
-	readonly isMobile: boolean
+	readonly isMobileRequest: boolean
 	readonly user: User | null
 	readonly sceneId: string | null
 	readonly projectId: string | null

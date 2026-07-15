@@ -1,4 +1,4 @@
-export function isMobileRequest(request: Request): boolean {
+export function identifyMobileRequest(request: Request): boolean {
 	const userAgent = request.headers.get('user-agent') || ''
 	const mobileUserAgents = [
 		'Android',

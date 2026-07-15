@@ -1,9 +1,8 @@
-// app/components/landing/landing-section.tsx
 import { cn } from '@shared/utils'
 import { motion, useInView, useReducedMotion } from 'framer-motion'
 import { type PropsWithChildren, useRef } from 'react'
 
-interface LandingSectionProps extends PropsWithChildren {
+interface SectionProps extends PropsWithChildren {
 	className?: string
 	/** Vertical rhythm. `default` for standard sections, `tight` to pull a
 	 * related section closer to the one above it. */
@@ -20,16 +19,20 @@ interface LandingSectionProps extends PropsWithChildren {
  * fade-up reveal on scroll. Content always fills the column (no
  * shrink-to-content alignment drift).
  */
-export function LandingSection({
+function Section({
 	children,
 	className,
 	spacing = 'default',
 	glow = false,
 	id,
 	'aria-label': ariaLabel
-}: LandingSectionProps) {
+}: SectionProps) {
 	const ref = useRef<HTMLDivElement>(null)
-	const isInView = useInView(ref, { once: true, amount: 0.15, margin: '0px 0px -10% 0px' })
+	const isInView = useInView(ref, {
+		once: true,
+		amount: 0.15,
+		margin: '0px 0px -10% 0px'
+	})
 	const prefersReducedMotion = useReducedMotion()
 
 	return (
@@ -73,3 +76,5 @@ export function LandingSection({
 		</section>
 	)
 }
+
+export default Section

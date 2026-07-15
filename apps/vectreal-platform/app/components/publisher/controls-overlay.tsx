@@ -43,7 +43,7 @@ import { UserMenu } from '../user-menu'
 import { buildPublishSidebarViewModel } from './sidebars/publish-sidebar/publish-sidebar-view-model'
 
 const OverlayControls = ({
-	isMobile,
+	isMobileRequest,
 	user,
 	sceneId,
 	projectId,
@@ -275,7 +275,7 @@ const OverlayControls = ({
 	)
 
 	return isUploadStep && !sceneId ? (
-		<Navigation user={user} />
+		<Navigation user={user} isMobileRequest={isMobileRequest} />
 	) : (
 		<>
 			<div
@@ -374,7 +374,7 @@ const OverlayControls = ({
 				open={showPublishPanel}
 				onOpenChange={handlePublishPanelChange}
 				zIndexClassName="z-[70]"
-				isMobile={isMobile}
+				isMobile={isMobileRequest}
 				direction="right"
 				title="Scene Info & Publish"
 				description="Save, publish, and embed your latest scene."
@@ -390,9 +390,9 @@ const OverlayControls = ({
 				isOverSizeLimit={requiresSizeReduction}
 				maxSceneBytes={maxSceneBytes}
 				dashboardHref={sceneDetailsHref ?? '/dashboard'}
-				isMobile={isMobile}
+				isMobile={isMobileRequest}
 			/>
-			<ToolSidebar user={user} isMobile={isMobile} />
+			<ToolSidebar user={user} isMobile={isMobileRequest} />
 			<InfoBanner
 				sceneBytes={currentSceneBytes}
 				isLoading={isSceneSizeLoading}

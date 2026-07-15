@@ -7,7 +7,7 @@ import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidat
 import { isCacheablePublicPath } from '../../lib/http/cacheable-public-paths.server'
 import { hasSupabaseAuthCookie } from '../../lib/sessions/supabase-auth-cookie.server'
 import { createSupabaseClient } from '../../lib/supabase.server'
-import { isMobileRequest } from '../../lib/utils/is-mobile-request'
+import { identifyMobileRequest } from '../../lib/utils/identify-mobile-request'
 
 const PUBLIC_CACHE_CONTROL =
 	'public, max-age=0, s-maxage=300, stale-while-revalidate=600'
@@ -41,7 +41,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	 * Determine if the request comes from a mobile client by the headers in the request
 	 */
 	const defaultResponse = {
-		isMobile: isMobileRequest(request),
+		isMobile: identifyMobileRequest(request),
 		user: null
 	}
 	const cookieHeader = request.headers.get('Cookie') ?? ''
@@ -86,7 +86,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 		if (user && isRootPage) {
 			return redirect('/dashboard', { headers })
 		} else {
-			return data({ user, isMobile: isMobileRequest(request) }, { headers })
+			return data(
+				{ user, isMobile: identifyMobileRequest(request) },
+				{ headers }
+			)
 		}
 	} catch (error) {
 		console.error('Error during loader authentication check:', error)
@@ -99,7 +102,10 @@ const Layout = ({ loaderData }: Route.ComponentProps) => {
 
 	return (
 		<>
-			<Navigation user={loaderData.user} />
+			<Navigation
+				user={loaderData.user}
+				isMobileRequest={loaderData.isMobile}
+			/>
 			<Outlet />
 			<Footer />
 		</>

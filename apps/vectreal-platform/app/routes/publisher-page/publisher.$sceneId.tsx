@@ -38,7 +38,7 @@ import {
 	selectedCameraIdAtom,
 	shadowsAtom
 } from '../../lib/stores/scene-settings-store'
-import { isMobileRequest } from '../../lib/utils/is-mobile-request'
+import { identifyMobileRequest } from '../../lib/utils/identify-mobile-request'
 import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbnail'
 
 import type {
@@ -51,7 +51,7 @@ import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	return {
-		isMobile: isMobileRequest(request)
+		isMobile: identifyMobileRequest(request)
 	}
 }
 
@@ -151,9 +151,8 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
 	const setRawDiagonal = useSetAtom(rawModelDiagonalAtom)
 	const setShadows = useSetAtom(shadowsAtom)
-	const { bounds, camera, controls, env, shadows, normalization } = useAtomValue(
-		sceneViewerSettingsAtom
-	)
+	const { bounds, camera, controls, env, shadows, normalization } =
+		useAtomValue(sceneViewerSettingsAtom)
 
 	// Persist drags of the in-scene shadow light handle. Debounced so a drag
 	// commits one re-bake when the user settles, not on every pointer move.

@@ -33,7 +33,7 @@ import { sceneOptimizationStore } from '../../lib/stores/scene-optimization-stor
 import { sceneSettingsStore } from '../../lib/stores/scene-settings-store'
 import { upgradeModalStore } from '../../lib/stores/upgrade-modal-store'
 import { createSupabaseClient } from '../../lib/supabase.server'
-import { isMobileRequest } from '../../lib/utils/is-mobile-request'
+import { identifyMobileRequest } from '../../lib/utils/identify-mobile-request'
 
 import type {
 	PublishedSceneMetaResponse,
@@ -80,7 +80,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		}
 	}
 
-	const isMobile = isMobileRequest(request)
+	const isMobileRequest = identifyMobileRequest(request)
 
 	// Resolve the org's per-scene size limit concurrently with the scene queries
 	// below (rather than serially after them) so it never adds latency to the hot
@@ -117,9 +117,9 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 				? getSceneFolder(scene.folderId, user.id)
 				: Promise.resolve(null),
 			buildSceneManifest(
-					sceneId,
-					(assetId) => `/api/scenes/${sceneId}/assets/${assetId}`
-				),
+				sceneId,
+				(assetId) => `/api/scenes/${sceneId}/assets/${assetId}`
+			),
 			getPublishedScenePreview(scene.projectId, sceneId).catch(() => null)
 		])
 
@@ -156,7 +156,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	const maxSceneBytes = await maxSceneBytesPromise
 
 	const loaderData = {
-		isMobile,
+		isMobileRequest,
 		user: user || null,
 		sceneId,
 		projectId,

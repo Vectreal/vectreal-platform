@@ -209,12 +209,12 @@ export const DropZone = ({ isMobile }: Props) => {
 									className="hover:bg-accent/50 flex h-auto w-full grow items-center justify-start gap-3 rounded-xl p-3"
 								>
 									<Link to="/docs" viewTransition>
-										<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md">
+										<div className="bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-md">
 											<ExternalLink className="h-4 w-4" />{' '}
 										</div>
-										<div className="text-left">
+										<div className="overflow-hidden text-left">
 											<div className="font-medium">Documentation Hub</div>
-											<div className="text-muted-foreground text-xs">
+											<div className="text-muted-foreground text-xs whitespace-break-spaces">
 												Full guides, package references, and deployment docs
 											</div>
 										</div>
@@ -222,65 +222,6 @@ export const DropZone = ({ isMobile }: Props) => {
 								</Button>
 							</div>
 						</div>
-						{/* <div className="flex flex-col gap-6">
-							<BasicCard className="py-0 text-left">
-								<CardContent className="space-y-4 p-4">
-									<div className="space-y-3">
-										<div className="flex items-center gap-3">
-											<File className="text-accent/75 h-5 w-5" />
-											<h3 className="text-lg! font-medium">3D Files</h3>
-										</div>
-										<ul className="text-muted-foreground list-disc space-y-2 pl-4 text-sm">
-											<li>glTF / GLB (recommended)</li>
-											<li>USDZ for Apple AR</li>
-											<li>OBJ with textures</li>
-										</ul>
-									</div>
-
-									<div className="space-y-3">
-										<div className="flex items-center gap-3">
-											<Image className="text-accent/75 h-5 w-5" />
-											<h3 className="text-lg! font-medium">Textures</h3>
-										</div>
-										<ul className="text-muted-foreground list-disc space-y-2 pl-4 text-sm">
-											<li>PNG (with transparency)</li>
-											<li>JPG (compressed)</li>
-											<li>WEBP (modern format)</li>
-										</ul>
-									</div>
-									{!isMobile && (
-										<>
-											<div className="space-y-3">
-												<div className="flex items-center gap-3">
-													<UserX2 className="text-accent/75 h-5 w-5" />
-													<h3 className="text-lg! font-medium">
-														No Registration Required
-													</h3>
-												</div>
-
-												<p className="text-muted-foreground text-sm">
-													Process your files locally - no account needed until
-													you're ready to publish
-												</p>
-											</div>
-											<div className="space-y-3">
-												<div className="flex items-center gap-3">
-													<Rocket className="text-accent/75 h-5 w-5" />
-													<h3 className="text-lg! font-medium">
-														Instant Publishing
-													</h3>
-												</div>
-
-												<p className="text-muted-foreground text-sm">
-													Share your optimized 3D content directly through
-													Vectreal when ready
-												</p>
-											</div>
-										</>
-									)}
-								</CardContent>
-							</BasicCard>
-						</div> */}
 					</div>
 				</div>
 

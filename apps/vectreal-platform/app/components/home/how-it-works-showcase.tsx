@@ -1,4 +1,3 @@
-// app/components/landing/how-it-works-showcase.tsx
 import { cn } from '@shared/utils'
 import {
 	AnimatePresence,
@@ -131,7 +130,7 @@ function OptimizeGraphic() {
 				>
 					<span className="text-foreground text-sm">{task}</span>
 					<motion.span
-						className="bg-accent/15 text-accent flex size-6 items-center justify-center rounded-full"
+						className="bg-accent flex size-6 items-center justify-center rounded-full text-white"
 						initial={{ scale: 0 }}
 						animate={{ scale: 1 }}
 						transition={{
@@ -179,7 +178,7 @@ function ManageGraphic() {
 						key={v}
 						className={cn(
 							'border-surface-border flex items-center justify-between rounded-xl border px-4 py-3',
-							i === 0 ? 'bg-accent/5 border-accent/30' : 'bg-surface-2/40'
+							i === 0 ? 'border-accent/30' : 'bg-surface-2/40'
 						)}
 						initial={{ opacity: 0, y: 14, scale: 0.96 }}
 						animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -221,7 +220,7 @@ function PublishGraphic() {
 				</motion.div>
 			</div>
 			<motion.div
-				className="border-accent/30 bg-accent/5 inline-flex items-center gap-2 rounded-full border px-3 py-1.5"
+				className="border-accent/30 inline-flex items-center gap-2 rounded-full border px-3 py-1.5"
 				initial={{ opacity: 0, scale: 0.9 }}
 				animate={{ opacity: 1, scale: 1 }}
 				transition={{ delay: 1.7, type: 'spring', stiffness: 300, damping: 18 }}
@@ -230,7 +229,7 @@ function PublishGraphic() {
 					<span className="bg-accent absolute inline-flex size-full animate-ping rounded-full opacity-60" />
 					<span className="bg-accent relative inline-flex size-2 rounded-full" />
 				</span>
-				<span className="text-accent text-xs font-medium">Live</span>
+				<span className="text-xs font-medium text-white">Live</span>
 			</motion.div>
 		</div>
 	)
@@ -320,7 +319,7 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 									className={cn(
 										'flex size-10 shrink-0 items-center justify-center rounded-xl border transition-colors duration-300',
 										isActive
-											? 'border-accent/40 bg-accent/10'
+											? 'border-accent/40 bg-accent bg-opacity-10'
 											: 'border-surface-border bg-surface-0/60'
 									)}
 								>
@@ -361,7 +360,7 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 			</ul>
 
 			{/* Animated stage */}
-			<div className="bg-surface-1 border-surface-border relative h-[340px] shrink-0 grow overflow-hidden rounded-2xl border max-lg:w-full md:h-[400px]">
+			<div className="bg-surface-1 border-surface-border lg:w-unset relative h-[340px] w-full overflow-hidden rounded-2xl border md:h-[400px]">
 				{/* dot-grid texture */}
 				<div
 					className="pointer-events-none absolute inset-0 opacity-[0.5]"

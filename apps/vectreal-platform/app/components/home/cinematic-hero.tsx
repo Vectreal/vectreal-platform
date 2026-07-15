@@ -11,8 +11,8 @@ import { ArrowRight, ChevronDown } from 'lucide-react'
 import { useRef } from 'react'
 import { Link } from 'react-router'
 
+import { AuroraBackground } from './aurora-background'
 import HeroScene from './hero-scene'
-import { AuroraBackground } from '../landing/aurora-background'
 // import { Magnetic } from '../landing/magnetic'
 
 export function CinematicHero() {
@@ -55,7 +55,7 @@ export function CinematicHero() {
 						variants={prefersReducedMotion ? undefined : staggerContainer}
 						initial={prefersReducedMotion ? undefined : 'hidden'}
 						animate="visible"
-						className="flex flex-col items-start gap-7 lg:pr-8"
+						className="-mt-12 flex flex-col items-start gap-4 lg:mt-0 lg:gap-8 lg:pr-8"
 					>
 						<motion.div
 							variants={prefersReducedMotion ? undefined : fadeUp}
@@ -129,7 +129,7 @@ export function CinematicHero() {
 					initial={prefersReducedMotion ? undefined : { opacity: 0 }}
 					animate={prefersReducedMotion ? undefined : { opacity: 1 }}
 					transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-					className="relative order-1 h-[50vh] w-full sm:h-[44vh] lg:order-2 lg:h-[75dvh]"
+					className="relative order-1 h-[40vh] w-full sm:h-[50vh] lg:order-2 lg:h-[75dvh]"
 				>
 					{/* Glow disc behind the model */}
 					<div
@@ -146,11 +146,11 @@ export function CinematicHero() {
 						className="pointer-events-none absolute inset-0 -z-10 hidden items-center justify-center lg:flex"
 						aria-hidden="true"
 					>
-						<div className="border-surface-border/70 animate-spin-slow aspect-square w-[78%] max-w-[540px] rounded-full border border-dashed" />
-						<div className="border-surface-border/40 absolute aspect-square w-[100%] max-w-[680px] rounded-full border" />
-						<div className="border-surface-border/60 absolute aspect-square w-[54%] max-w-[360px] rounded-full border" />
-						<div className="animate-spin-slow absolute aspect-square w-[78%] max-w-[540px]">
-							<span className="bg-accent absolute top-0 left-1/2 size-2 -translate-x-1/2 rounded-full shadow-[0_0_12px_2px_var(--accent)]" />
+						<div className="border-surface-border animate-spin-slow aspect-square w-3/4 max-w-[540px] rounded-full border border-dashed" />
+						<div className="border-surface-border/50 absolute aspect-square w-full max-w-[680px] rounded-full border" />
+						<div className="border-surface-border/75 absolute aspect-square w-1/2 max-w-[360px] rounded-full border" />
+						<div className="animate-spin-slow absolute aspect-square w-3/4 max-w-[540px]">
+							<span className="bg-accent absolute top-0 left-1/2 size-2 -translate-y-1/2 rounded-full shadow-[0_0_12px_2px_var(--accent)]" />
 						</div>
 					</div>
 
