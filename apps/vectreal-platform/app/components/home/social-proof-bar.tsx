@@ -17,7 +17,7 @@ export function SocialProofBar({ items, className }: SocialProofBarProps) {
 	return (
 		<div
 			className={cn(
-				'border-surface-border flex w-full justify-center gap-12 overflow-hidden border-t py-8 whitespace-nowrap',
+				'border-surface-border flex w-full flex-wrap justify-center gap-12 gap-y-4 overflow-hidden border-t py-8 whitespace-nowrap',
 				className
 			)}
 			aria-label="Social proof highlights"

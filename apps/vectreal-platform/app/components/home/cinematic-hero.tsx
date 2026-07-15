@@ -25,7 +25,7 @@ export function CinematicHero() {
 		offset: ['start start', 'end start']
 	})
 	const textY = useTransform(scrollYProgress, [0, 1], [0, -70])
-	const textOpacity = useTransform(scrollYProgress, [0, 0.7], [1, 0])
+	const textOpacity = useTransform(scrollYProgress, [0, 0.7], [1, 0.5])
 
 	return (
 		<section
