@@ -35,7 +35,7 @@ export default function DocsNotFoundPage() {
 							Documentation Home
 						</Link>
 					</Button>
-					<Button asChild variant="outline">
+					<Button asChild variant="secondary">
 						<Link to="/docs/getting-started" viewTransition>
 							<ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
 							Getting Started

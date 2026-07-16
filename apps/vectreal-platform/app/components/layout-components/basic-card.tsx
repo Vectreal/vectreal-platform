@@ -4,8 +4,9 @@ import { ComponentProps } from 'react'
 
 interface BasicCardProps extends ComponentProps<'div'> {
 	className?: string
-	cardClassNames?: string
+	cardClassName?: string
 	highlight?: boolean
+	as?: 'div' | 'article' | 'section' | 'header'
 }
 
 const getHighlightClasses = (highlight: boolean | undefined) => {
@@ -18,17 +19,21 @@ const getHighlightClasses = (highlight: boolean | undefined) => {
 const BasicCard = ({
 	children,
 	className,
-	cardClassNames,
+	cardClassName,
 	highlight,
+	as: Component = 'div',
 	...props
 }: BasicCardProps) => {
 	const highlightClasses = getHighlightClasses(highlight)
 
 	return (
-		<div className={cn('group relative', className)} {...props}>
+		<Component
+			className={cn('group relative overflow-hidden rounded-3xl', className)}
+			{...props}
+		>
 			<div
 				className={cn(
-					'bg-accent/60 absolute top-0 left-0 -z-0 m-3 mt-0! h-2 animate-pulse rounded-full blur-xl transition-all md:m-6',
+					'bg-accent/60 absolute top-0 left-0 z-0 m-3 mt-0! h-2 animate-pulse rounded-full blur-xl transition-all md:m-6',
 					highlightClasses
 				)}
 			/>
@@ -40,14 +45,13 @@ const BasicCard = ({
 			/>
 			<Card
 				className={cn(
-					'bg-muted/60 border-t-accent/25 border-l-accent/10 relative h-full overflow-hidden rounded-3xl backdrop-blur-2xl',
-					cardClassNames
+					'bg-surface-1 border-t-accent/25 border-l-accent/25 relative h-full rounded-3xl backdrop-blur-2xl',
+					cardClassName
 				)}
 			>
-				<div className="from-accent/2 pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br to-transparent" />
 				{children}
 			</Card>
-		</div>
+		</Component>
 	)
 }
 

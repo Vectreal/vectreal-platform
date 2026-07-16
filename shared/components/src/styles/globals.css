@@ -75,7 +75,7 @@
 	--surface-1: oklch(0.18 0 0);
 	--surface-2: oklch(0.22 0 0);
 	--surface-border: oklch(0.28 0 0 / 0.6);
-	--surface-glow: oklch(0.55 0.22 40 / 0.10);
+	--surface-glow: oklch(0.55 0.22 40 / 0.1);
 
 	/* Display typography scale */
 	--text-display: clamp(3.5rem, 8vw, 7rem);
@@ -374,13 +374,24 @@
 }
 
 @keyframes landing-glow-pulse {
-	0%, 100% { opacity: 0.10; transform: scale(1); }
-	50%       { opacity: 0.18; transform: scale(1.08); }
+	0%,
+	100% {
+		opacity: 0.1;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 0.18;
+		transform: scale(1.08);
+	}
 }
 
 @keyframes marquee {
-	from { transform: translateX(0); }
-	to   { transform: translateX(-50%); }
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(-50%);
+	}
 }
 
 @keyframes aurora-drift {
@@ -414,12 +425,19 @@
 }
 
 @keyframes float-y {
-	0%, 100% { transform: translateY(0); }
-	50%      { transform: translateY(-10px); }
+	0%,
+	100% {
+		transform: translateY(0);
+	}
+	50% {
+		transform: translateY(-10px);
+	}
 }
 
 @keyframes spin-slow {
-	to { transform: rotate(360deg); }
+	to {
+		transform: rotate(360deg);
+	}
 }
 
 .animate-loading-bar {
@@ -485,15 +503,4 @@
 
 .animate-glow-pulse {
 	animation: landing-glow-pulse 4s ease-in-out infinite;
-}
-
-.animate-marquee {
-	animation: marquee 28s linear infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.animate-glow-pulse,
-	.animate-marquee {
-		animation: none;
-	}
 }

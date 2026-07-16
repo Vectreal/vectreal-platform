@@ -47,9 +47,9 @@ export default function PricingPage() {
 				description={PRICING_PAGE_COPY.description}
 				actions={
 					<>
-						<Badge variant="outline">4 Plans</Badge>
-						<Badge variant="outline">Free to start</Badge>
-						<Badge variant="outline">Cancel anytime</Badge>
+						<Badge variant="secondary">4 Plans</Badge>
+						<Badge variant="secondary">Free to start</Badge>
+						<Badge variant="secondary">Cancel anytime</Badge>
 					</>
 				}
 			/>
@@ -78,7 +78,7 @@ export default function PricingPage() {
 							<Button size="lg">Contact sales</Button>
 						</Link>
 						<Link to="/docs">
-							<Button size="lg" variant="outline">
+							<Button size="lg" variant="secondary">
 								Read the docs
 							</Button>
 						</Link>

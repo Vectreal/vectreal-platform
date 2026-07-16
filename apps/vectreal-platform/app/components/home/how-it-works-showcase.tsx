@@ -1,4 +1,3 @@
-// app/components/landing/how-it-works-showcase.tsx
 import { cn } from '@shared/utils'
 import {
 	AnimatePresence,
@@ -12,33 +11,42 @@ import {
 	Code2,
 	Database,
 	FileBox,
+	type LucideIcon,
+	PauseIcon,
 	Share2,
 	SlidersHorizontal,
 	Upload
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-const STEPS = [
+interface Step {
+	index: number
+	title: string
+	icon: LucideIcon
+	body: string
+}
+
+const STEPS: Step[] = [
 	{
-		number: '01',
+		index: 0,
 		title: 'Upload',
 		icon: Upload,
 		body: 'Drag & drop your model — GLB, glTF, USDZ, USDA. Processing starts instantly.'
 	},
 	{
-		number: '02',
+		index: 1,
 		title: 'Optimize',
 		icon: SlidersHorizontal,
 		body: 'Automatic mesh decimation, texture compression, and Draco encoding.'
 	},
 	{
-		number: '03',
+		index: 2,
 		title: 'Manage',
 		icon: Database,
 		body: 'Versioned cloud storage, asset organization, and instant previews.'
 	},
 	{
-		number: '04',
+		index: 3,
 		title: 'Publish',
 		icon: Share2,
 		body: 'Generate an embed snippet and drop your scene into any site.'
@@ -131,7 +139,7 @@ function OptimizeGraphic() {
 				>
 					<span className="text-foreground text-sm">{task}</span>
 					<motion.span
-						className="bg-accent/15 text-accent flex size-6 items-center justify-center rounded-full"
+						className="bg-accent flex size-6 items-center justify-center rounded-full text-white"
 						initial={{ scale: 0 }}
 						animate={{ scale: 1 }}
 						transition={{
@@ -179,7 +187,7 @@ function ManageGraphic() {
 						key={v}
 						className={cn(
 							'border-surface-border flex items-center justify-between rounded-xl border px-4 py-3',
-							i === 0 ? 'bg-accent/5 border-accent/30' : 'bg-surface-2/40'
+							i === 0 ? 'border-accent/30' : 'bg-surface-2/40'
 						)}
 						initial={{ opacity: 0, y: 14, scale: 0.96 }}
 						animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -221,7 +229,7 @@ function PublishGraphic() {
 				</motion.div>
 			</div>
 			<motion.div
-				className="border-accent/30 bg-accent/5 inline-flex items-center gap-2 rounded-full border px-3 py-1.5"
+				className="border-accent/30 inline-flex items-center gap-2 rounded-full border px-3 py-1.5"
 				initial={{ opacity: 0, scale: 0.9 }}
 				animate={{ opacity: 1, scale: 1 }}
 				transition={{ delay: 1.7, type: 'spring', stiffness: 300, damping: 18 }}
@@ -230,7 +238,7 @@ function PublishGraphic() {
 					<span className="bg-accent absolute inline-flex size-full animate-ping rounded-full opacity-60" />
 					<span className="bg-accent relative inline-flex size-2 rounded-full" />
 				</span>
-				<span className="text-accent text-xs font-medium">Live</span>
+				<span className="text-xs font-medium text-white">Live</span>
 			</motion.div>
 		</div>
 	)
@@ -246,10 +254,17 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 	const prefersReducedMotion = useReducedMotion()
 	const [active, setActive] = useState(0)
 	const [paused, setPaused] = useState(false)
+	const [hoveredItem, setHoveredItem] = useState<Step | null>()
 	const [progress, setProgress] = useState(0)
 	const progressRef = useRef(0)
 
 	const running = inView && !paused && !prefersReducedMotion
+
+	function handleItemClick(index: number) {
+		setPaused(true)
+		setProgress(0)
+		setActive(index)
+	}
 
 	// Reset progress whenever the active step changes
 	useEffect(() => {
@@ -286,7 +301,6 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 	return (
 		<div
 			ref={ref}
-			onMouseEnter={() => setPaused(true)}
 			onMouseLeave={() => setPaused(false)}
 			className={cn(
 				'flex flex-col items-center gap-6 lg:flex-row lg:gap-8',
@@ -298,10 +312,14 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 				{STEPS.map((step, i) => {
 					const isActive = i === active
 					return (
-						<li key={step.number}>
+						<li
+							key={step.index}
+							onMouseEnter={() => setHoveredItem(step)}
+							onMouseLeave={() => setHoveredItem(null)}
+						>
 							<button
 								type="button"
-								onClick={() => setActive(i)}
+								onClick={() => handleItemClick(i)}
 								className={cn(
 									'group relative flex w-full items-start gap-4 overflow-hidden rounded-2xl border p-4 text-left transition-colors duration-300',
 									isActive
@@ -320,16 +338,63 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 									className={cn(
 										'flex size-10 shrink-0 items-center justify-center rounded-xl border transition-colors duration-300',
 										isActive
-											? 'border-accent/40 bg-accent/10'
+											? 'border-accent/40 bg-accent bg-opacity-10'
 											: 'border-surface-border bg-surface-0/60'
 									)}
 								>
-									<step.icon
-										className={cn(
-											'size-5 transition-colors duration-300',
-											isActive ? 'text-accent' : 'text-muted-foreground'
+									<AnimatePresence mode="wait">
+										{!paused && hoveredItem?.index === i ? (
+											<motion.span
+												key={'pause' + i}
+												// key={
+												// 	i +
+												// 	(hoveredItem?.index === i
+												// 		? String(hoveredItem?.index)
+												// 		: '')
+												// }
+												initial={{
+													scale: 0.5,
+													opacity: 0
+												}}
+												animate={{
+													scale: 1,
+													opacity: 1,
+													transition: { delay: 0.25 }
+												}}
+												exit={{
+													scale: 0.95,
+													opacity: 0,
+													transition: { duration: 0.25 }
+												}}
+											>
+												<PauseIcon />
+											</motion.span>
+										) : (
+											<motion.span
+												key={'icon' + i}
+												initial={{
+													scale: 0.95,
+													opacity: 0
+												}}
+												animate={{
+													scale: 1,
+													opacity: 1
+												}}
+												exit={{
+													scale: 1.5,
+													opacity: 0,
+													transition: { duration: 0.1 }
+												}}
+											>
+												<step.icon
+													className={cn(
+														'size-5 transition-colors duration-300',
+														isActive ? 'text-accent' : 'text-muted-foreground'
+													)}
+												/>
+											</motion.span>
 										)}
-									/>
+									</AnimatePresence>
 								</span>
 								<div className="flex flex-col gap-0.5">
 									<div className="flex items-center gap-2">
@@ -339,7 +404,7 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 												isActive ? 'text-accent' : 'text-muted-foreground/50'
 											)}
 										>
-											{step.number}
+											0{String(step.index + 1)}
 										</span>
 										<span
 											className={cn(
@@ -361,7 +426,7 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 			</ul>
 
 			{/* Animated stage */}
-			<div className="bg-surface-1 border-surface-border relative h-[340px] shrink-0 grow overflow-hidden rounded-2xl border max-lg:w-full md:h-[400px]">
+			<div className="bg-surface-1 border-surface-border lg:w-unset relative h-[340px] w-full overflow-hidden rounded-2xl border md:h-[400px]">
 				{/* dot-grid texture */}
 				<div
 					className="pointer-events-none absolute inset-0 opacity-[0.5]"

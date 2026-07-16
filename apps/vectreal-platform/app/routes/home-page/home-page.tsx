@@ -7,34 +7,33 @@ import {
 	AccordionTrigger
 } from '@shared/components/ui/accordion'
 import { Button } from '@shared/components/ui/button'
-import { cn } from '@shared/utils'
 import { Code, Globe, Rocket, Upload, Wrench, Zap } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { Route } from './+types/home-page'
 import { GridBg } from '../../components'
-import { CinematicHero } from '../../components/home/cinematic-hero'
-import FiletypeCarousel from '../../components/home/filetype-carousel'
 import {
 	BentoCard,
+	CinematicHero,
+	FiletypeCarousel,
 	GradientCtaBlock,
 	HowItWorksShowcase,
-	LandingSection,
+	OptimizationGridBg,
 	OptimizationVisual,
-	ScrollytellViewerSection,
 	SocialProofBar,
 	StatRing
-} from '../../components/landing'
+} from '../../components/home'
+import { SectionHeader, Section } from '../../components/home/section'
 import { SUPPORTED_FORMAT_NAMES } from '../../constants/product-copy'
 import { buildPageMeta } from '../../lib/seo'
 import {
 	buildOrganizationJsonLd,
 	PUBLIC_SEO_PAGES
 } from '../../lib/seo-registry'
-import { isMobileRequest } from '../../lib/utils/is-mobile-request'
+import { identifyMobileRequest } from '../../lib/utils/identify-mobile-request'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const isMobile = isMobileRequest(request)
+	const isMobile = identifyMobileRequest(request)
 	return { isMobile }
 }
 
@@ -45,9 +44,9 @@ export function meta(_: Route.MetaArgs) {
 }
 
 const SOCIAL_PROOF_ITEMS = [
-	{ text: '60% higher purchase intent with 3D' },
-	{ text: '44% more add-to-cart with interactive models' },
-	{ text: '94% conversion lift with AR' },
+	// { text: '60% higher purchase intent with 3D' },
+	// { text: '44% more add-to-cart with interactive models' },
+	// { text: '94% conversion lift with AR' },
 	{ text: '100% open-source' },
 	{ text: 'No registration required' },
 	{ text: 'Instant publishing' }
@@ -144,53 +143,6 @@ const FAQ_ITEMS: { value: string; q: string; a: string }[] = [
 		a: 'Yes. Once published, you can generate embed snippets and configure domain/API constraints for controlled integration into product pages and apps.'
 	}
 ]
-
-const SectionLabel = ({
-	children,
-	className
-}: {
-	children: React.ReactNode
-	className?: string
-}) => (
-	<div
-		className={cn(
-			'border-accent/20 bg-accent/5 text-accent/70 text-eyebrow inline-flex w-fit items-center gap-1.5 self-start rounded-full border px-3 py-1.5',
-			className
-		)}
-	>
-		<span
-			className="bg-accent/60 h-1.5 w-1.5 rounded-full"
-			aria-hidden="true"
-		/>
-		{children}
-	</div>
-)
-
-const SectionHeading = ({
-	label,
-	title,
-	subtitle,
-	align = 'left'
-}: {
-	label: string
-	title: string
-	subtitle?: string
-	align?: 'left' | 'center'
-}) => (
-	<div
-		className={cn(
-			'flex flex-col gap-4',
-			align === 'center' && 'items-center text-center'
-		)}
-	>
-		<SectionLabel>{label}</SectionLabel>
-		<h2 className="text-h2 text-foreground">{title}</h2>
-		{subtitle && (
-			<p className="text-muted-foreground text-body-lg max-w-xl">{subtitle}</p>
-		)}
-	</div>
-)
-
 const HomePage = ({ loaderData }: Route.ComponentProps) => {
 	const isMobile = useIsMobile(loaderData.isMobile)
 
@@ -203,12 +155,12 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 			<SocialProofBar items={SOCIAL_PROOF_ITEMS} />
 
 			{/* 3. Scrollytell product demo */}
-			<ScrollytellViewerSection isMobileViewport={isMobile} />
+			{/* <ScrollytellViewerSection isMobileViewport={isMobile} /> */}
 
 			{/* 4. How it works */}
-			<LandingSection aria-label="How it works">
+			<Section aria-label="How it works">
 				<div className="relative z-10 flex flex-col gap-12 md:gap-16">
-					<SectionHeading
+					<SectionHeader
 						label="Process"
 						title="How It Works"
 						subtitle="Effortless from start to finish."
@@ -217,24 +169,26 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 				</div>
 
 				<GridBg isMobile={isMobile} />
-			</LandingSection>
+			</Section>
 
 			{/* 5. Optimization value prop */}
-			<LandingSection aria-label="Optimization" glow="right">
-				<div className="flex flex-col gap-12 md:gap-16">
-					<SectionHeading
+			<Section aria-label="Optimization" glow="right">
+				<div className="relative z-10 flex flex-col gap-12 md:gap-16">
+					<SectionHeader
 						label="Optimization"
 						title="Ship lighter, load faster"
 						subtitle="Drop a heavy production asset and get a web-ready model in seconds — automatically."
 					/>
 					<OptimizationVisual />
 				</div>
-			</LandingSection>
+
+				<OptimizationGridBg />
+			</Section>
 
 			{/* 6. Stats */}
-			<LandingSection aria-label="Results" glow="left">
+			<Section aria-label="Results" glow="left">
 				<div className="flex flex-col gap-12 md:gap-16">
-					<SectionHeading
+					<SectionHeader
 						label="Results"
 						title="3D Content Drives Results"
 						subtitle="Industry data proves interactive 3D models deliver measurable business outcomes."
@@ -266,12 +220,12 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 						/>
 					</div>
 				</div>
-			</LandingSection>
+			</Section>
 
 			{/* 6. Feature bento grid */}
-			<LandingSection>
+			<Section>
 				<div className="relative z-10 flex flex-col gap-12 md:gap-16">
-					<SectionHeading
+					<SectionHeader
 						label="Platform"
 						title="Everything You Need"
 						subtitle="One platform, zero friction."
@@ -304,26 +258,26 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 				</div>
 
 				<GridBg isMobile={isMobile} />
-			</LandingSection>
+			</Section>
 
 			{/* 7. Format carousel */}
-			<LandingSection>
+			<Section>
 				<div className="flex flex-col gap-12 md:gap-16">
-					<SectionHeading
+					<SectionHeader
 						label="Formats"
 						title="Supports Every Major Format"
 						subtitle="Bring your files as they are — we handle conversion and cloud integration."
 					/>
 					<FiletypeCarousel />
 				</div>
-			</LandingSection>
+			</Section>
 
 			{/* 8. Community */}
-			<LandingSection aria-label="Community" glow="right">
+			<Section aria-label="Community">
 				<div className="relative z-10 grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
 					{/* Left: copy + CTAs */}
 					<div className="flex flex-col gap-6">
-						<SectionHeading
+						<SectionHeader
 							label="Community"
 							title="Built in the open"
 							subtitle="Vectreal is 100% open-source — built by and for the 3D community. Fork it, extend it, ship it."
@@ -408,14 +362,14 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 				</div>
 
 				<GridBg isMobile={isMobile} />
-			</LandingSection>
+			</Section>
 
 			{/* 9. FAQ */}
-			<LandingSection aria-label="FAQ">
+			<Section aria-label="FAQ">
 				<div className="grid items-start gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
 					{/* Left: heading + aside */}
 					<div className="flex flex-col gap-6 lg:sticky lg:top-28 lg:self-start">
-						<SectionHeading
+						<SectionHeader
 							label="FAQ"
 							title="Frequently asked questions"
 							subtitle="Quick answers for setup, uploads, and publishing."
@@ -469,7 +423,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 						</Accordion>
 					</div>
 				</div>
-			</LandingSection>
+			</Section>
 
 			{/* 10. CTA block */}
 			<GradientCtaBlock

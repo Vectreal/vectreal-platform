@@ -109,7 +109,7 @@ export function ConsentPreferencesDialog() {
 				</div>
 
 				<DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-					<Button variant="outline" onClick={handleSave}>
+					<Button variant="secondary" onClick={handleSave}>
 						Save preferences
 					</Button>
 					<Button onClick={handleAcceptAll}>Accept all</Button>

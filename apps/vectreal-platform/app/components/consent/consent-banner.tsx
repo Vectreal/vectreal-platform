@@ -9,8 +9,6 @@ export function ConsentBanner() {
 	const { saveConsent, setPreferencesOpen } = useConsent()
 	const showBanner = useNeedsBanner(CONSENT_POLICY_VERSION)
 
-	if (!showBanner) return null
-
 	function handleAcceptAll() {
 		saveConsent({ functional: true, analytics: true, marketing: true })
 	}
@@ -48,7 +46,7 @@ export function ConsentBanner() {
 
 						<div className="flex shrink-0 flex-wrap gap-2">
 							<Button
-								variant="outline"
+								variant="ghost"
 								size="sm"
 								onClick={() => setPreferencesOpen(true)}
 								aria-label="Manage cookie preferences"
@@ -56,7 +54,7 @@ export function ConsentBanner() {
 								Manage preferences
 							</Button>
 							<Button
-								variant="outline"
+								variant="ghost"
 								size="sm"
 								onClick={handleRejectAll}
 								aria-label="Reject all non-essential cookies"

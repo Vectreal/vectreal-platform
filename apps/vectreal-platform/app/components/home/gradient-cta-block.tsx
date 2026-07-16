@@ -1,5 +1,9 @@
 // app/components/landing/gradient-cta-block.tsx
-import { fadeUp, staggerContainer, useInViewAnimation } from '@shared/components/motion'
+import {
+	fadeUp,
+	staggerContainer,
+	useInViewAnimation
+} from '@shared/components/motion'
 import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
 import { motion, useReducedMotion } from 'framer-motion'

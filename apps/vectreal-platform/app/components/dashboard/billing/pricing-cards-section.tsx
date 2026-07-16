@@ -17,7 +17,6 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import {
-	Card,
 	CardContent,
 	CardDescription,
 	CardFooter,
@@ -40,6 +39,7 @@ import {
 	PLAN_HIGHLIGHTED,
 	PLAN_TAGLINES
 } from '../../../constants/product-copy'
+import { BasicCard } from '../../layout-components'
 
 import type { BillingCheckoutOptions } from '../../../lib/domain/dashboard/dashboard-types'
 
@@ -150,12 +150,13 @@ function PlanCard({
 	const isSelectable = !isSelectMode || isSelectableInSelectMode
 
 	return (
-		<Card
+		<BasicCard
+			highlight={isSelected || highlighted || undefined}
 			className={cn(
-				'flex flex-col transition-all',
+				'bg-surface-1 flex flex-col transition-all',
 				// Highlighted ring: selected (on upgrade route) or "most popular" (pricing page)
-				isSelected && 'border-primary ring-primary ring-2',
-				highlighted && !isSelectMode && 'border-primary ring-primary ring-2',
+				isSelected && 'bg-surface-2',
+				highlighted && !isSelectMode && 'bg-surface-2',
 				// Dimmed when another plan is selected
 				isSelectMode && selectedPlan && !isSelected && 'opacity-60',
 				isSelectMode &&
@@ -255,7 +256,7 @@ function PlanCard({
 						<Link to={ctaHref} className="w-full">
 							<Button
 								className="w-full"
-								variant={highlighted ? 'default' : 'outline'}
+								variant={highlighted ? 'default' : 'secondary'}
 							>
 								{highlighted && <Zap className="mr-2 h-4 w-4" />}
 								{cta}
@@ -268,7 +269,7 @@ function PlanCard({
 						>
 							<Button
 								className="w-full"
-								variant={highlighted ? 'default' : 'outline'}
+								variant={highlighted ? 'default' : 'secondary'}
 							>
 								{highlighted && <Zap className="mr-2 h-4 w-4" />}
 								{cta}
@@ -281,7 +282,7 @@ function PlanCard({
 				<CardFooter>
 					<Button
 						className="w-full"
-						variant={isSelected ? 'default' : 'outline'}
+						variant={isSelected ? 'default' : 'secondary'}
 						onClick={(e) => {
 							e.stopPropagation()
 							onSelectPlan(plan)
@@ -311,7 +312,7 @@ function PlanCard({
 					</Button>
 				</CardFooter>
 			)}
-		</Card>
+		</BasicCard>
 	)
 }
 
@@ -354,12 +355,12 @@ export function PricingCardsSection({
 		<section>
 			{/* Billing period toggle */}
 			<div className="mb-8 flex justify-center">
-				<div className="bg-muted flex items-center gap-1 rounded-lg p-1">
+				<div className="bg-muted flex items-center gap-1 rounded-2xl p-1">
 					<button
 						type="button"
 						onClick={() => onPeriodChange('monthly')}
 						className={cn(
-							'rounded-md px-4 py-1.5 text-sm font-medium transition-all',
+							'rounded-lg px-4 py-1.5 text-sm font-medium transition-all',
 							period === 'monthly'
 								? 'bg-background text-foreground shadow-sm'
 								: 'text-muted-foreground hover:text-foreground'
@@ -371,7 +372,7 @@ export function PricingCardsSection({
 						type="button"
 						onClick={() => onPeriodChange('annual')}
 						className={cn(
-							'flex items-center gap-1.5 rounded-md px-4 py-1.5 text-sm font-medium transition-all',
+							'flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-medium transition-all',
 							period === 'annual'
 								? 'bg-background text-foreground shadow-sm'
 								: 'text-muted-foreground hover:text-foreground'

@@ -417,7 +417,7 @@ const SignupPage = ({ loaderData, actionData }: Route.ComponentProps) => {
 							<Button
 								asChild
 								size="sm"
-								variant="outline"
+								variant="secondary"
 								className="border-success/50 text-success-foreground/80 hover:bg-success/20 mt-1 w-full"
 							>
 								<Link to={loaderTyped.nextPath}>

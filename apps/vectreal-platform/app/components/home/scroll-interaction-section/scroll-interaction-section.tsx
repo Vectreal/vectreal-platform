@@ -8,13 +8,13 @@ import {
 } from 'framer-motion'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 
-const MockShopEmbedClient = lazy(() => import('../home/mock-shop-embed-client'))
+const MockShopEmbedClient = lazy(() => import('./mock-shop-embed-client'))
 
 interface ScrolllytellViewerSectionProps {
 	isMobileViewport?: boolean
 }
 
-export function ScrollytellViewerSection({
+function ScrollInteractionSection({
 	isMobileViewport
 }: ScrolllytellViewerSectionProps) {
 	const sectionRef = useRef<HTMLDivElement>(null)
@@ -81,7 +81,7 @@ export function ScrollytellViewerSection({
 				{isMounted ? (
 					<Suspense
 						fallback={
-							<div className="flex h-[100dvh] w-full items-center justify-center bg-black">
+							<div className="flex h-dvh w-full items-center justify-center bg-black">
 								<LoadingSpinner className="text-white" />
 							</div>
 						}
@@ -89,7 +89,7 @@ export function ScrollytellViewerSection({
 						<MockShopEmbedClient isMobileViewport={isMobileViewport} />
 					</Suspense>
 				) : (
-					<div className="h-[100dvh] w-full bg-black" />
+					<div className="h-dvh w-full bg-black" />
 				)}
 			</motion.div>
 
@@ -97,3 +97,5 @@ export function ScrollytellViewerSection({
 		</section>
 	)
 }
+
+export default ScrollInteractionSection

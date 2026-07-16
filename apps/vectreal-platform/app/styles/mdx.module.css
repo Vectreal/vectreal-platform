@@ -26,14 +26,16 @@
 		font-size: clamp(2rem, 5vw, 3.5rem);
 		font-weight: medium;
 		line-height: 1.2;
-		background: linear-gradient(
+		/* background: linear-gradient(
 			to bottom right,
 			var(--color-primary),
 			color-mix(in oklch, var(--color-primary) 50%, transparent)
-		);
-		-webkit-background-clip: text;
-		background-clip: text;
-		color: transparent;
+		); */
+		color: var(--color-foreground);
+		/* -webkit-background-clip: text; */
+		/* background-clip: text; */
+		/* color: transparent; */
+		@apply max-w-4xl text-4xl leading-[1.02] font-medium tracking-tight text-balance md:text-6xl;
 	}
 
 	h2 {
@@ -111,12 +113,13 @@
 	hr {
 		border: none;
 		height: 1px;
-		background: linear-gradient(
+		/* background: linear-gradient(
 			to right,
 			transparent,
 			color-mix(in oklch, var(--color-foreground) 30%, transparent),
 			transparent
-		);
+		); */
+		background: var(--color-surface-border);
 	}
 
 	blockquote {

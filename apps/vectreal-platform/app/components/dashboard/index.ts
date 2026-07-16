@@ -7,6 +7,7 @@ export { default as DashboardSidebarContent } from './dashboard-sidebar-content'
 export { DataTable, SortableHeader, createCheckboxColumn } from './data-table'
 export { DynamicBreadcrumb } from './dynamic-breadcrumb'
 export { InlineEditableMetadataField } from './inline-editable-metadata-field'
+export { default as LogoSidebar } from './logo-sidebar'
 export { ProjectMultiSelect, type ProjectOption } from './project-multi-select'
 export {
 	SceneAssetListItem,

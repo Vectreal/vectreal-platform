@@ -12,6 +12,7 @@ import { ArrowRight, ChevronLeft, ChevronRight, Copy } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { data, Link } from 'react-router'
 
+import { BasicCard } from '../../components'
 import { useConsent } from '../../components/consent/consent-context'
 import { DocsPageToc } from '../../components/docs/docs-page-toc'
 import { PublicErrorBoundary } from '../../components/errors'
@@ -95,29 +96,29 @@ export function meta({ data }: Route.MetaArgs) {
 			articleAuthor: data.article.author.name,
 			articleSection: data.article.category,
 			structuredData: [
-			buildNewsArticleJsonLd({
-				title: data.article.title,
-				description,
-				canonicalPath: canonical,
-				publishedAt: data.article.publishedAt,
-				updatedAt: data.article.updatedAt,
-				image: data.article.coverImage,
-				authorName: data.article.author.name,
-				authorRole: data.article.author.role,
-				authorXUrl: data.article.author.xUrl,
-				authorLinkedinUrl: data.article.author.linkedinUrl
-			}),
-			buildAuthorPersonJsonLd({
-				name: data.article.author.name,
-				role: data.article.author.role,
-				xUrl: data.article.author.xUrl,
-				linkedinUrl: data.article.author.linkedinUrl
-			}),
-			buildBreadcrumbListJsonLd([
-				{ name: 'Home', item: SITE_URL },
-				{ name: 'News Room', item: `${SITE_URL}/news-room` },
-				{ name: data.article.title }
-			])
+				buildNewsArticleJsonLd({
+					title: data.article.title,
+					description,
+					canonicalPath: canonical,
+					publishedAt: data.article.publishedAt,
+					updatedAt: data.article.updatedAt,
+					image: data.article.coverImage,
+					authorName: data.article.author.name,
+					authorRole: data.article.author.role,
+					authorXUrl: data.article.author.xUrl,
+					authorLinkedinUrl: data.article.author.linkedinUrl
+				}),
+				buildAuthorPersonJsonLd({
+					name: data.article.author.name,
+					role: data.article.author.role,
+					xUrl: data.article.author.xUrl,
+					linkedinUrl: data.article.author.linkedinUrl
+				}),
+				buildBreadcrumbListJsonLd([
+					{ name: 'Home', item: SITE_URL },
+					{ name: 'News Room', item: `${SITE_URL}/news-room` },
+					{ name: data.article.title }
+				])
 			]
 		},
 		undefined,
@@ -262,12 +263,12 @@ export default function NewsRoomArticlePage({
 					</Link>
 				</Button>
 
-				<header className="from-card/45 to-muted/10 border-border/60 mb-10 rounded-2xl border bg-linear-to-br p-6 md:p-8">
+				<BasicCard as="header" cardClassName="mb-10 p-6 md:p-8">
 					<div className="mb-5 flex flex-wrap items-center gap-2">
-						<Badge variant="outline" className="capitalize">
+						<Badge variant="secondary" className="capitalize">
 							{article.category}
 						</Badge>
-						<Badge variant="outline">
+						<Badge variant="secondary">
 							{article.readingTimeMinutes} min read
 						</Badge>
 						{article.draft ? (
@@ -314,7 +315,7 @@ export default function NewsRoomArticlePage({
 							</p>
 						</div>
 						<div className="ml-auto flex items-center gap-2">
-							<Button variant="outline" size="sm" onClick={copyArticleLink}>
+							<Button variant="secondary" size="sm" onClick={copyArticleLink}>
 								<Copy className="mr-2 h-3.5 w-3.5" />
 								{copied ? 'Copied' : 'Copy Link'}
 							</Button>
@@ -326,7 +327,7 @@ export default function NewsRoomArticlePage({
 							{article.author.bio}
 						</p>
 					)}
-				</header>
+				</BasicCard>
 
 				<article
 					ref={contentRef}
@@ -347,9 +348,9 @@ export default function NewsRoomArticlePage({
 						same workflows featured in this newsroom.
 					</p>
 					<div className="mt-3 flex flex-wrap items-center gap-1.5">
-						<Badge variant="outline">No credit card required</Badge>
-						<Badge variant="outline">Free plan available</Badge>
-						<Badge variant="outline">Embed in minutes</Badge>
+						<Badge variant="secondary">No credit card required</Badge>
+						<Badge variant="secondary">Free plan available</Badge>
+						<Badge variant="secondary">Embed in minutes</Badge>
 					</div>
 					<div className="mt-4 flex flex-wrap items-center gap-2">
 						<Button asChild>

@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'react'
 import { data, Form, Link } from 'react-router'
 
 import { useConsent } from '../../components/consent/consent-context'
-import { PageHero } from '../../components/layout-components'
+import { BasicCard, PageHero } from '../../components/layout-components'
 import {
 	formatNewsDate,
 	getNewsArticles,
@@ -14,7 +14,10 @@ import {
 	getNewsTags
 } from '../../lib/news/news-manifest'
 import { buildPageMeta, SITE_URL } from '../../lib/seo'
-import { buildCollectionPageJsonLd, PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
+import {
+	buildCollectionPageJsonLd,
+	PUBLIC_SEO_PAGES
+} from '../../lib/seo-registry'
 
 import type { Route } from './+types/news-room-page'
 
@@ -177,20 +180,20 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 				description="Launches, engineering notes, and product decisions. Cleanly published from MDX."
 				actions={
 					<>
-						<Badge variant="outline" className="px-2.5 py-1 text-[11px]">
-							{articles.length} published stories
-						</Badge>
-						<Button asChild size="sm" className="h-8 px-3">
+						<Button asChild size="sm">
 							<Link to="/sign-up">
 								Start free
 								<ArrowRight className="h-3.5 w-3.5" />
 							</Link>
 						</Button>
-						<Button variant="ghost" size="sm" asChild className="h-8 px-3">
+						<Button variant="secondary" size="sm" asChild>
 							<Link to={latestStoryPath} viewTransition>
 								Read latest
 							</Link>
 						</Button>
+						<Badge variant="secondary">
+							{articles.length} published stories
+						</Badge>
 					</>
 				}
 			/>
@@ -212,12 +215,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 								className="placeholder:text-muted-foreground h-6 w-22 bg-transparent text-xs transition-all duration-300 outline-none focus:w-44 md:w-28 md:focus:w-52"
 							/>
 						</label>
-						<Button
-							type="submit"
-							variant="ghost"
-							size="sm"
-							className="h-8 rounded-full px-3 transition-transform duration-200 hover:-translate-y-0.5"
-						>
+						<Button type="submit" variant="ghost" size="sm">
 							Search
 						</Button>
 					</Form>
@@ -230,7 +228,6 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 						}
 						size="sm"
 						asChild
-						className="h-8 rounded-full px-3 transition-transform duration-200 hover:-translate-y-0.5"
 					>
 						<Link
 							to={buildNewsRoomPath(filters, {
@@ -249,7 +246,6 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 							variant={filters.category === topic ? 'secondary' : 'ghost'}
 							size="sm"
 							asChild
-							className="h-8 rounded-full px-3 transition-transform duration-200 hover:-translate-y-0.5"
 						>
 							<Link
 								to={buildNewsRoomPath(filters, {
@@ -269,7 +265,6 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 							variant={filters.tag === tag ? 'secondary' : 'ghost'}
 							size="sm"
 							asChild
-							className="h-8 rounded-full px-3 transition-transform duration-200 hover:-translate-y-0.5"
 						>
 							<Link
 								to={buildNewsRoomPath(filters, {
@@ -287,7 +282,6 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 						variant={filters.sort === 'oldest' ? 'secondary' : 'ghost'}
 						size="sm"
 						asChild
-						className="h-8 rounded-full px-3 transition-transform duration-200 hover:-translate-y-0.5"
 					>
 						<Link
 							to={buildNewsRoomPath(filters, {
@@ -299,7 +293,11 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 					</Button>
 
 					{hasAnyFilters ? (
-						<Badge variant="outline" asChild className="h-8 rounded-full px-3">
+						<Badge
+							variant="secondary"
+							asChild
+							className="h-8 rounded-full px-3"
+						>
 							<Link to="/news-room" className="inline-flex items-center gap-1">
 								Reset
 								<X className="h-3 w-3" aria-hidden="true" />
@@ -332,7 +330,11 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 									viewTransition
 									className="group block"
 								>
-									<article className="border-border/70 bg-card/15 hover:border-border overflow-hidden rounded-2xl border transition-all duration-200 hover:-translate-y-0.5">
+									<BasicCard
+										as="article"
+										highlight
+										cardClassName="overflow-hidden py-0"
+									>
 										{featuredArticle.thumbnailImage ? (
 											<div className="h-20 overflow-hidden md:hidden">
 												<img
@@ -399,7 +401,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 												</div>
 											) : null}
 										</div>
-									</article>
+									</BasicCard>
 								</Link>
 							) : null}
 
@@ -412,7 +414,10 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 											viewTransition
 											className="group block"
 										>
-											<article className="border-border/70 bg-card/15 hover:border-border grid grid-cols-[1fr_auto] overflow-hidden rounded-2xl border transition-all duration-200 hover:-translate-y-0.5">
+											<BasicCard
+												highlight
+												cardClassName="grid grid-cols-[1fr_auto] overflow-hidden py-0"
+											>
 												<div className="flex flex-col justify-between p-5 md:p-6">
 													<div>
 														<div className="mb-3 flex flex-wrap items-center gap-1.5">
@@ -458,7 +463,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 														/>
 													</div>
 												) : null}
-											</article>
+											</BasicCard>
 										</Link>
 									))}
 								</div>
