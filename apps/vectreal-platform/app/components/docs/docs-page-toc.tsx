@@ -52,7 +52,7 @@ export function DocsPageToc({
 						href={`#${heading.id}`}
 						onClick={(event) => handleTocClick(event, heading.id)}
 						className={cn(
-							'hover:text-foreground block rounded-md px-2 py-1 text-sm transition-colors',
+							'hover:text-foreground block rounded-lg px-2 py-1 text-sm transition-colors',
 							heading.level === 3 && 'pl-5',
 							activeId === heading.id
 								? 'bg-muted text-foreground font-medium'

@@ -80,7 +80,6 @@ export const Navigation = ({ user, isMobileRequest }: NavigationProps) => {
 			user={user}
 			navItems={MARKETING_ITEMS}
 			onLogout={handleLogout}
-			isHomePage={isHomePage}
 			isAuthPage={isAuthPage}
 		/>
 	)

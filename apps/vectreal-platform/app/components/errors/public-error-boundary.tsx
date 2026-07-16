@@ -1,6 +1,6 @@
 import { Button } from '@shared/components/ui/button'
-import { AlertCircle, Home, RefreshCw } from 'lucide-react'
-import { isRouteErrorResponse, Link, useRouteError } from 'react-router'
+import { AlertCircle, RefreshCw } from 'lucide-react'
+import { isRouteErrorResponse, useRouteError } from 'react-router'
 
 export function PublicErrorBoundary() {
 	const error = useRouteError()
@@ -48,12 +48,6 @@ export function PublicErrorBoundary() {
 						<RefreshCw className="mr-2 h-4 w-4" />
 						Try Again
 					</Button>
-					<Link to="/" viewTransition>
-						<Button variant="outline" className="w-full sm:w-auto">
-							<Home className="mr-2 h-4 w-4" />
-							Go Home
-						</Button>
-					</Link>
 				</div>
 			</div>
 		</div>

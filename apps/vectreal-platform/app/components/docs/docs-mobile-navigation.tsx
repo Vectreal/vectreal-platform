@@ -37,7 +37,7 @@ export function DocsMobileNavigation({
 		<div className="mb-6 flex items-center justify-between gap-3 lg:hidden">
 			<Sheet open={open} onOpenChange={setOpen}>
 				<SheetTrigger asChild>
-					<Button variant="outline" size="sm" className="gap-2">
+					<Button variant="secondary" size="sm" className="gap-2">
 						<Menu className="h-4 w-4" aria-hidden="true" />
 						Browse docs
 					</Button>

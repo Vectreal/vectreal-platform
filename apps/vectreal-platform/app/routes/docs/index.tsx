@@ -49,13 +49,13 @@ export default function DocsIndexPage() {
 				description="From local dev setup to embedding 3D content in production - platform guides, package APIs, and architecture references."
 				actions={
 					<>
-						<Button asChild size="sm" className="h-8 px-3">
+						<Button asChild size="sm">
 							<Link to="/docs/getting-started">
 								Get started
 								<ArrowRight className="h-3.5 w-3.5" />
 							</Link>
 						</Button>
-						<Button asChild variant="ghost" size="sm" className="h-8 px-3">
+						<Button asChild variant="ghost" size="sm">
 							<a
 								href="https://github.com/Vectreal/vectreal-platform"
 								target="_blank"
@@ -64,7 +64,7 @@ export default function DocsIndexPage() {
 								View on GitHub
 							</a>
 						</Button>
-						<Badge variant="outline">Open source</Badge>
+						<Badge variant="secondary">Open source</Badge>
 					</>
 				}
 			/>

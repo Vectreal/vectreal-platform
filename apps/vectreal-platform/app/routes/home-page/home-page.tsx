@@ -23,7 +23,7 @@ import {
 	SocialProofBar,
 	StatRing
 } from '../../components/home'
-import { SectionHeading, Section } from '../../components/home/section'
+import { SectionHeader, Section } from '../../components/home/section'
 import { SUPPORTED_FORMAT_NAMES } from '../../constants/product-copy'
 import { buildPageMeta } from '../../lib/seo'
 import {
@@ -160,7 +160,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 			{/* 4. How it works */}
 			<Section aria-label="How it works">
 				<div className="relative z-10 flex flex-col gap-12 md:gap-16">
-					<SectionHeading
+					<SectionHeader
 						label="Process"
 						title="How It Works"
 						subtitle="Effortless from start to finish."
@@ -174,7 +174,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 			{/* 5. Optimization value prop */}
 			<Section aria-label="Optimization" glow="right">
 				<div className="relative z-10 flex flex-col gap-12 md:gap-16">
-					<SectionHeading
+					<SectionHeader
 						label="Optimization"
 						title="Ship lighter, load faster"
 						subtitle="Drop a heavy production asset and get a web-ready model in seconds — automatically."
@@ -188,7 +188,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 			{/* 6. Stats */}
 			<Section aria-label="Results" glow="left">
 				<div className="flex flex-col gap-12 md:gap-16">
-					<SectionHeading
+					<SectionHeader
 						label="Results"
 						title="3D Content Drives Results"
 						subtitle="Industry data proves interactive 3D models deliver measurable business outcomes."
@@ -225,7 +225,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 			{/* 6. Feature bento grid */}
 			<Section>
 				<div className="relative z-10 flex flex-col gap-12 md:gap-16">
-					<SectionHeading
+					<SectionHeader
 						label="Platform"
 						title="Everything You Need"
 						subtitle="One platform, zero friction."
@@ -263,7 +263,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 			{/* 7. Format carousel */}
 			<Section>
 				<div className="flex flex-col gap-12 md:gap-16">
-					<SectionHeading
+					<SectionHeader
 						label="Formats"
 						title="Supports Every Major Format"
 						subtitle="Bring your files as they are — we handle conversion and cloud integration."
@@ -277,7 +277,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 				<div className="relative z-10 grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
 					{/* Left: copy + CTAs */}
 					<div className="flex flex-col gap-6">
-						<SectionHeading
+						<SectionHeader
 							label="Community"
 							title="Built in the open"
 							subtitle="Vectreal is 100% open-source — built by and for the 3D community. Fork it, extend it, ship it."
@@ -369,7 +369,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 				<div className="grid items-start gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
 					{/* Left: heading + aside */}
 					<div className="flex flex-col gap-6 lg:sticky lg:top-28 lg:self-start">
-						<SectionHeading
+						<SectionHeader
 							label="FAQ"
 							title="Frequently asked questions"
 							subtitle="Quick answers for setup, uploads, and publishing."

@@ -26,7 +26,7 @@ export const ScenePreview: FC = () => {
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ duration: 0.4 }}
 			>
-				<BasicCard highlight={false} cardClassNames="py-0! overflow-clip">
+				<BasicCard highlight={false} cardClassName="py-0! overflow-clip">
 					<div className="relative aspect-video w-full">
 						{isLoading ? (
 							<div className="absolute inset-0 flex items-center justify-center">

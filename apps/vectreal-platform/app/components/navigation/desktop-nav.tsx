@@ -7,7 +7,6 @@ import { useLocation, Link } from 'react-router'
 
 import { UserMenu } from '../user-menu'
 import { NavItem } from './types'
-import { ThemeToggleButton } from '../theme-toggle-button'
 
 import type { User } from '@supabase/supabase-js'
 
@@ -15,7 +14,7 @@ interface DesktopNavProps {
 	user: User | null
 	navItems: NavItem[]
 	onLogout: () => void
-	isHomePage: boolean
+
 	isAuthPage: boolean
 }
 
@@ -26,13 +25,7 @@ function getActiveIndex(items: NavItem[], pathname: string): number {
 	})
 }
 
-function DesktopNav({
-	user,
-	navItems,
-	onLogout,
-	isHomePage,
-	isAuthPage
-}: DesktopNavProps) {
+function DesktopNav({ user, navItems, onLogout, isAuthPage }: DesktopNavProps) {
 	const { pathname } = useLocation()
 	const containerRef = useRef<HTMLDivElement>(null)
 	const activeIndex = getActiveIndex(navItems, pathname)
@@ -78,8 +71,6 @@ function DesktopNav({
 
 				{/* Right actions */}
 				<div className="flex shrink-0 items-center gap-1">
-					{!isHomePage && <ThemeToggleButton />}
-
 					{!user && !isAuthPage && (
 						<>
 							<Button asChild variant="ghost" size="sm" className="rounded-xl">
