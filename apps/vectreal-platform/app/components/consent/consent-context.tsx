@@ -3,7 +3,6 @@ import {
 	useCallback,
 	useContext,
 	useEffect,
-	useRef,
 	useState,
 	type ReactNode
 } from 'react'
@@ -53,12 +52,8 @@ export function ConsentProvider({
 		initialVersion
 	)
 	const [preferencesOpen, setPreferencesOpen] = useState(false)
-	const optimisticPreviousRef = useRef<{
-		consent: ConsentChoices | null
-		version: string | null
-	} | null>(null)
 
-	// When the fetcher returns new data after saving, update local state
+	// On error response from the action, roll back the optimistic update.
 	useEffect(() => {
 		if (
 			fetcher.state === 'idle' &&
@@ -66,24 +61,13 @@ export function ConsentProvider({
 			typeof fetcher.data === 'object'
 		) {
 			const d = fetcher.data as Record<string, unknown>
-			if (typeof d.analytics === 'boolean') {
-				setConsent({
-					necessary: true,
-					functional: Boolean(d.functional),
-					analytics: Boolean(d.analytics),
-					marketing: Boolean(d.marketing)
-				})
-				if (typeof d.version === 'string') {
-					setConsentVersion(d.version)
-				}
-				optimisticPreviousRef.current = null
-			} else if (typeof d.error === 'string' && optimisticPreviousRef.current) {
-				setConsent(optimisticPreviousRef.current.consent)
-				setConsentVersion(optimisticPreviousRef.current.version)
-				optimisticPreviousRef.current = null
+			if (typeof d.error === 'string') {
+				// Restore pre-submit values from loader data (safe source of truth).
+				setConsent(initialConsent)
+				setConsentVersion(initialVersion)
 			}
 		}
-	}, [fetcher.state, fetcher.data])
+	}, [fetcher.state, fetcher.data, initialConsent, initialVersion])
 
 	// Sync PostHog persistence and opt-in/out whenever analytics consent changes.
 	// null = first visit, no decision yet - stay in memory mode (DSGVO-safe).
@@ -126,11 +110,8 @@ export function ConsentProvider({
 				}
 			}
 
-			optimisticPreviousRef.current = {
-				consent,
-				version: consentVersion
-			}
-
+			// Optimistic update — hides the banner immediately without waiting for
+			// the server round-trip. Rolled back on error response above.
 			setConsent({
 				necessary: true,
 				functional: choices.functional,
@@ -148,7 +129,7 @@ export function ConsentProvider({
 				}
 			)
 		},
-		[consent, consentVersion, fetcher]
+		[fetcher]
 	)
 
 	return (
