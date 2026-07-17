@@ -1,4 +1,5 @@
 export { StatRing } from './stat-ring'
+export { SnapRow } from './snap-row'
 export { BentoCard } from './bento-card'
 export { HowItWorksShowcase } from './how-it-works-showcase'
 export { SocialProofBar } from './social-proof-bar'

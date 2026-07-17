@@ -20,6 +20,7 @@ import {
 	HowItWorksShowcase,
 	OptimizationGridBg,
 	OptimizationVisual,
+	SnapRow,
 	SocialProofBar,
 	StatRing
 } from '../../components/home'
@@ -193,7 +194,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 						title="3D Content Drives Results"
 						subtitle="Industry data proves interactive 3D models deliver measurable business outcomes."
 					/>
-					<div className="no-scrollbar -mx-6 flex snap-x snap-proximity gap-6 overflow-x-auto px-6 pb-1 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0 md:pb-0">
+					<SnapRow gridClassName="md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0 md:pb-0">
 						<StatRing
 							className="w-[78%] shrink-0 snap-center sm:w-[55%] md:w-auto md:shrink"
 							value={60}
@@ -218,7 +219,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 							source="Harvard Business Review"
 							sourceUrl="https://hbr.org/2020/10/how-ar-is-redefining-retail-in-the-pandemic"
 						/>
-					</div>
+					</SnapRow>
 				</div>
 			</Section>
 
@@ -231,7 +232,10 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 						subtitle="One platform, zero friction."
 					/>
 
-					<ul className="no-scrollbar -mx-6 flex snap-x snap-proximity gap-6 overflow-x-auto px-6 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3">
+					<SnapRow
+						as="ul"
+						gridClassName="sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3"
+					>
 						{BENTO_FEATURES.map((feature) => (
 							<BentoCard
 								key={feature.title}
@@ -254,7 +258,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 								</div>
 							</BentoCard>
 						))}
-					</ul>
+					</SnapRow>
 				</div>
 
 				<GridBg isMobile={isMobile} />
