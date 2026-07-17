@@ -264,7 +264,7 @@ export default function NewsRoomArticlePage({
 				</Button>
 
 				<BasicCard as="header" cardClassName="mb-16 p-6 md:p-8">
-					<div className="mb-5 flex flex-wrap items-center gap-2">
+					<div className="-ml-1 flex flex-wrap items-center gap-2">
 						<Badge variant="secondary" className="capitalize">
 							{article.category}
 						</Badge>
@@ -278,7 +278,7 @@ export default function NewsRoomArticlePage({
 						) : null}
 					</div>
 
-					<h1 className="mb-3 max-w-4xl text-4xl leading-[1.03] font-medium tracking-tight text-balance md:text-6xl">
+					<h1 className="max-w-4xl text-4xl leading-[1.03] font-medium tracking-tight text-balance md:text-6xl">
 						{article.title}
 					</h1>
 					<p className="text-muted-foreground max-w-3xl text-base leading-relaxed md:text-lg">
@@ -295,7 +295,7 @@ export default function NewsRoomArticlePage({
 						) : null}
 					</div>
 
-					<div className="border-border/50 mt-6 flex flex-wrap items-center gap-3 border-t pt-6">
+					<div className="border-border/50 flex flex-wrap items-center gap-3 border-t pt-4">
 						<Avatar className="border-border/70 h-11 w-11 border">
 							{article.author.avatar ? (
 								<AvatarImage
@@ -323,7 +323,7 @@ export default function NewsRoomArticlePage({
 					</div>
 
 					{article.author.bio && (
-						<p className="text-muted-foreground mt-4 text-sm leading-relaxed md:text-base">
+						<p className="text-muted-foreground text-sm leading-relaxed md:text-base">
 							{article.author.bio}
 						</p>
 					)}
@@ -336,7 +336,7 @@ export default function NewsRoomArticlePage({
 					<ArticleComponent />
 				</article>
 
-				<BasicCard as="section" cardClassName="p-5 md:p-7">
+				<BasicCard as="section" cardClassName="p-6 md:p-8">
 					<p className="text-primary mb-2 text-xs font-semibold tracking-[0.14em] uppercase">
 						Built for makers shipping in 3D
 					</p>
@@ -421,7 +421,7 @@ export default function NewsRoomArticlePage({
 
 				{related.length > 0 && (
 					<section className="mt-32">
-						<h2 className="mb-6 text-xl font-medium tracking-tight">
+						<h2 className="mb-6! ml-2 text-xl font-medium tracking-tight">
 							More from the newsroom
 						</h2>
 						<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
