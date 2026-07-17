@@ -39,7 +39,7 @@
 	}
 
 	h2 {
-		@apply text-xl font-medium tracking-wide capitalize;
+		@apply text-xl font-light tracking-wide capitalize;
 		border-left: 2px solid var(--color-accent);
 		padding-left: 1rem;
 		margin-top: 1rem;

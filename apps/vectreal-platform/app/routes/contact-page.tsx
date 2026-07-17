@@ -190,7 +190,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 
 			<div className="mx-auto max-w-7xl px-6 pb-20">
 				<div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-					<Card className="border-accent/25 rounded-3xl shadow-none">
+					<Card className="">
 						<CardHeader>
 							<CardTitle className="text-2xl">Send a Message</CardTitle>
 							<CardDescription>

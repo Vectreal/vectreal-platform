@@ -263,7 +263,7 @@ export default function NewsRoomArticlePage({
 					</Link>
 				</Button>
 
-				<BasicCard as="header" cardClassName="mb-10 p-6 md:p-8">
+				<BasicCard as="header" cardClassName="mb-16 p-6 md:p-8">
 					<div className="mb-5 flex flex-wrap items-center gap-2">
 						<Badge variant="secondary" className="capitalize">
 							{article.category}
@@ -278,7 +278,7 @@ export default function NewsRoomArticlePage({
 						) : null}
 					</div>
 
-					<h1 className="mb-4 max-w-4xl text-4xl leading-[1.03] font-medium tracking-tight text-balance md:text-6xl">
+					<h1 className="mb-3 max-w-4xl text-4xl leading-[1.03] font-medium tracking-tight text-balance md:text-6xl">
 						{article.title}
 					</h1>
 					<p className="text-muted-foreground max-w-3xl text-base leading-relaxed md:text-lg">
@@ -295,7 +295,7 @@ export default function NewsRoomArticlePage({
 						) : null}
 					</div>
 
-					<div className="border-border/50 mt-6 flex flex-wrap items-center gap-3 border-t pt-5">
+					<div className="border-border/50 mt-6 flex flex-wrap items-center gap-3 border-t pt-6">
 						<Avatar className="border-border/70 h-11 w-11 border">
 							{article.author.avatar ? (
 								<AvatarImage
@@ -331,12 +331,12 @@ export default function NewsRoomArticlePage({
 
 				<article
 					ref={contentRef}
-					className={cn(styles.docsContent, styles.newsroomContent, 'mb-10')}
+					className={cn(styles.docsContent, styles.newsroomContent, 'mb-16')}
 				>
 					<ArticleComponent />
 				</article>
 
-				<section className="from-primary/12 via-primary/5 to-background border-primary/20 mb-10 rounded-2xl border bg-linear-to-br p-5 md:p-7">
+				<BasicCard as="section" cardClassName="p-5 md:p-7">
 					<p className="text-primary mb-2 text-xs font-semibold tracking-[0.14em] uppercase">
 						Built for makers shipping in 3D
 					</p>
@@ -366,7 +366,7 @@ export default function NewsRoomArticlePage({
 							<Link to="/docs/getting-started">Read getting started</Link>
 						</Button>
 					</div>
-				</section>
+				</BasicCard>
 
 				<div className="border-border/60 mt-12 flex flex-col gap-6 border-t pt-6">
 					<p className="text-muted-foreground text-xs font-semibold tracking-[0.18em] uppercase">
@@ -374,48 +374,45 @@ export default function NewsRoomArticlePage({
 					</p>
 					<div className="grid gap-3 md:grid-cols-2">
 						{adjacent.previous ? (
-							<div className="space-y-2">
-								<p className="text-muted-foreground inline-flex items-center gap-2 text-xs tracking-wide uppercase">
+							<Link
+								to={`/news-room/${adjacent.previous.slug}`}
+								title={`Go to previous article: ${adjacent.previous.title}`}
+								viewTransition
+								className="group relative flex flex-col gap-2 px-8"
+							>
+								<ChevronLeft
+									className="absolute top-1/2 left-0 h-6 w-6 -translate-y-1/2 opacity-50 transition-opacity group-hover:opacity-100"
+									aria-hidden="true"
+								/>
+								<p className="text-muted-foreground text-medium text-xs tracking-wide uppercase">
 									Previous Article
 								</p>
-								<p className="group-hover:text-foreground text-sm leading-snug font-semibold transition-colors">
+								<p className="text-sm leading-snug font-medium opacity-50 transition-opacity group-hover:opacity-100">
 									{adjacent.previous.title}
 								</p>
-
-								<Button variant="ghost" asChild size="sm">
-									<Link
-										to={`/news-room/${adjacent.previous.slug}`}
-										viewTransition
-										className="border-border/70 bg-card/20 hover:border-border group rounded-xl border p-4"
-									>
-										<ChevronLeft className="h-4 w-4" aria-hidden="true" />
-										Go to previous article
-									</Link>
-								</Button>
-							</div>
+							</Link>
 						) : (
 							<span />
 						)}
 
 						{adjacent.next ? (
-							<div className="space-y-2">
-								<p className="text-muted-foreground inline-flex items-center gap-2 text-xs tracking-wide uppercase">
+							<Link
+								to={`/news-room/${adjacent.next.slug}`}
+								title={`Go to previous article: ${adjacent.next.title}`}
+								viewTransition
+								className="group relative flex flex-col items-end gap-2 px-8 text-right"
+							>
+								<ChevronRight
+									className="absolute top-1/2 right-0 h-6 w-6 -translate-y-1/2 opacity-50 transition-opacity group-hover:opacity-100"
+									aria-hidden="true"
+								/>
+								<p className="text-muted-foreground text-medium text-xs tracking-wide uppercase">
 									Next Article
 								</p>
-								<p className="group-hover:text-foreground text-sm leading-snug font-semibold transition-colors">
+								<p className="text-sm leading-snug font-medium opacity-50 transition-opacity group-hover:opacity-100">
 									{adjacent.next.title}
 								</p>
-								<Button variant="ghost" asChild size="sm">
-									<Link
-										to={`/news-room/${adjacent.next.slug}`}
-										viewTransition
-										className="border-border/70 bg-card/20 hover:border-border group rounded-xl border p-4 text-right"
-									>
-										Go to next article
-										<ChevronRight className="h-4 w-4" aria-hidden="true" />
-									</Link>
-								</Button>
-							</div>
+							</Link>
 						) : (
 							<span />
 						)}
@@ -423,27 +420,25 @@ export default function NewsRoomArticlePage({
 				</div>
 
 				{related.length > 0 && (
-					<section className="mt-14">
-						<h2 className="mb-5 text-xl font-semibold tracking-tight">
+					<section className="mt-32">
+						<h2 className="mb-6 text-xl font-medium tracking-tight">
 							More from the newsroom
 						</h2>
 						<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 							{related.map((item) => (
-								<Link
-									key={item.slug}
-									to={`/news-room/${item.slug}`}
-									className="border-border/70 bg-card/15 hover:border-border block rounded-xl border p-5 transition-colors"
-								>
-									<p className="text-muted-foreground mb-2 text-xs tracking-wide uppercase">
-										{formatNewsDate(item.publishedAt)} •{' '}
-										{item.readingTimeMinutes} min
-									</p>
-									<h3 className="mb-2 text-base leading-snug font-semibold">
-										{item.title}
-									</h3>
-									<p className="text-muted-foreground line-clamp-3 text-sm">
-										{item.excerpt}
-									</p>
+								<Link key={item.slug} to={`/news-room/${item.slug}`}>
+									<BasicCard cardClassName="p-5">
+										<p className="text-muted-foreground mb-2 text-xs tracking-wide uppercase">
+											{formatNewsDate(item.publishedAt)} •{' '}
+											{item.readingTimeMinutes} min
+										</p>
+										<h3 className="mb-2 line-clamp-3 text-base leading-snug font-medium">
+											{item.title}
+										</h3>
+										<p className="text-muted-foreground line-clamp-3 text-sm">
+											{item.excerpt}
+										</p>
+									</BasicCard>
 								</Link>
 							))}
 						</div>
@@ -456,7 +451,7 @@ export default function NewsRoomArticlePage({
 				aria-label="On this page"
 			>
 				<div className="border-border/50 h-full border-l pl-4">
-					<p className="text-muted-foreground mb-3 px-1 text-xs font-semibold tracking-wider uppercase">
+					<p className="text-muted-foreground mb-3 px-1 text-xs font-medium tracking-wider uppercase">
 						On this page
 					</p>
 					<ScrollArea className="h-[calc(100vh-8rem)] pr-2 pb-8">
