@@ -152,11 +152,10 @@ function PlanCard({
 	return (
 		<BasicCard
 			highlight={isSelected || highlighted || undefined}
-			className={cn(
-				'bg-surface-1 flex flex-col transition-all',
-				// Highlighted ring: selected (on upgrade route) or "most popular" (pricing page)
-				isSelected && 'bg-surface-2',
-				highlighted && !isSelectMode && 'bg-surface-2',
+			cardClassName={cn(
+				'transition-all',
+				isSelected && 'bg-muted',
+				highlighted && !isSelectMode && 'bg-muted',
 				// Dimmed when another plan is selected
 				isSelectMode && selectedPlan && !isSelected && 'opacity-60',
 				isSelectMode &&
@@ -164,6 +163,7 @@ function PlanCard({
 					isSelectable &&
 					'cursor-pointer hover:opacity-100'
 			)}
+			className="flex flex-col"
 			onClick={
 				isSelectMode && !isActive && isSelectable
 					? () => onSelectPlan(plan)
