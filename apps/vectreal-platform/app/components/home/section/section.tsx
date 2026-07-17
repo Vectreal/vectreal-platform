@@ -1,5 +1,5 @@
 import { cn } from '@shared/utils'
-import { motion, useInView, useReducedMotion } from 'framer-motion'
+import { useInView, useReducedMotion } from 'framer-motion'
 import { type PropsWithChildren, useRef } from 'react'
 
 interface SectionProps extends PropsWithChildren {
@@ -18,6 +18,13 @@ interface SectionProps extends PropsWithChildren {
  * uniform horizontal padding, deliberate vertical rhythm, and a single
  * fade-up reveal on scroll. Content always fills the column (no
  * shrink-to-content alignment drift).
+ *
+ * The reveal is a plain CSS transition (not a Framer Motion `animate`)
+ * triggered by toggling a class once `useInView` fires: a JS/rAF-driven
+ * transform animation firing right as the section enters the viewport —
+ * i.e. during active native scroll — visibly fights WebKit's momentum-
+ * scroll compositing on iOS. A compositor-owned CSS transition doesn't
+ * have that main-thread contention.
  */
 function Section({
 	children,
@@ -58,21 +65,18 @@ function Section({
 					aria-hidden="true"
 				/>
 			)}
-			<motion.div
+			<div
 				ref={ref}
-				initial={prefersReducedMotion ? undefined : { opacity: 0, y: 28 }}
-				animate={
-					prefersReducedMotion
-						? undefined
-						: isInView
-							? { opacity: 1, y: 0 }
-							: { opacity: 0, y: 28 }
-				}
-				transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-				className="relative z-10 mx-auto w-full max-w-7xl px-6"
+				className={cn(
+					'relative z-10 mx-auto w-full max-w-7xl px-6',
+					!prefersReducedMotion && [
+						'transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]',
+						isInView ? 'translate-y-0 opacity-100' : 'translate-y-7 opacity-0'
+					]
+				)}
 			>
 				{children}
-			</motion.div>
+			</div>
 		</section>
 	)
 }

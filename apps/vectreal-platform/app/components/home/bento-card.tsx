@@ -7,15 +7,37 @@ import {
 	useSpring,
 	useTransform
 } from 'framer-motion'
+import { useEffect, useState } from 'react'
 
 import type { PropsWithChildren } from 'react'
-
 
 interface BentoCardProps extends PropsWithChildren {
 	className?: string
 	tilt?: boolean
 	glow?: boolean
 	as?: 'div' | 'li' | 'article'
+}
+
+/**
+ * True only for pointers that can genuinely hover (mouse/trackpad). On iOS
+ * Safari, a touch that starts a scroll gesture still fires one "sacrificial"
+ * compatibility `mousemove` before the browser recognizes it as a scroll —
+ * without this guard that nudges the tilt's spring mid-swipe, visibly
+ * rotating (and thus vertically shifting) the card and fighting the
+ * horizontal scroll-snap drag.
+ */
+function useCanHover() {
+	const [canHover, setCanHover] = useState(false)
+
+	useEffect(() => {
+		const mql = window.matchMedia('(hover: hover) and (pointer: fine)')
+		const onChange = () => setCanHover(mql.matches)
+		onChange()
+		mql.addEventListener('change', onChange)
+		return () => mql.removeEventListener('change', onChange)
+	}, [])
+
+	return canHover
 }
 
 export function BentoCard({
@@ -26,6 +48,8 @@ export function BentoCard({
 	as: Tag = 'div'
 }: BentoCardProps) {
 	const prefersReducedMotion = useReducedMotion()
+	const canHover = useCanHover()
+	const tiltEnabled = tilt && !prefersReducedMotion && canHover
 
 	const mouseX = useMotionValue(0)
 	const mouseY = useMotionValue(0)
@@ -37,7 +61,7 @@ export function BentoCard({
 	const rotateY = useTransform(springX, [-0.5, 0.5], [-6, 6])
 
 	function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-		if (!tilt || prefersReducedMotion) return
+		if (!tiltEnabled) return
 		const rect = e.currentTarget.getBoundingClientRect()
 		mouseX.set((e.clientX - rect.left) / rect.width - 0.5)
 		mouseY.set((e.clientY - rect.top) / rect.height - 0.5)
@@ -51,10 +75,10 @@ export function BentoCard({
 	return (
 		<Tag className={cn('group relative', className)}>
 			<motion.div
-				onMouseMove={tilt ? handleMouseMove : undefined}
-				onMouseLeave={tilt ? handleMouseLeave : undefined}
+				onMouseMove={tiltEnabled ? handleMouseMove : undefined}
+				onMouseLeave={tiltEnabled ? handleMouseLeave : undefined}
 				style={
-					tilt && !prefersReducedMotion
+					tiltEnabled
 						? { rotateX, rotateY, transformStyle: 'preserve-3d' }
 						: undefined
 				}
@@ -78,11 +102,13 @@ export function BentoCard({
 					<div
 						className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"
 						style={{
-							boxShadow: '0 0 48px 0 var(--surface-glow)',
+							boxShadow: '0 0 48px 0 var(--surface-glow)'
 						}}
 					/>
 				)}
-				<div className="relative z-10 flex h-full flex-col gap-4">{children}</div>
+				<div className="relative z-10 flex h-full flex-col gap-4">
+					{children}
+				</div>
 			</motion.div>
 		</Tag>
 	)
