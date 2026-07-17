@@ -1,8 +1,6 @@
 import { docsPages } from '../lib/docs/docs-manifest'
 import { getNewsArticles } from '../lib/news/news-manifest'
 
-import type { LoaderFunctionArgs } from 'react-router'
-
 interface SitemapEntry {
 	path: string
 	lastmod?: string
@@ -56,8 +54,8 @@ function buildXml(entries: SitemapEntry[], baseUrl: string): string {
  * Cached at the CDN layer for one hour (s-maxage=3600) and revalidated in the
  * background for up to 24 hours.
  */
-export async function loader({ request }: LoaderFunctionArgs) {
-	const origin = new URL(request.url).origin
+export async function loader() {
+	const origin = 'https://vectreal.com'
 
 	// ── 1. Static marketing / content pages ────────────────────────────────
 	const staticEntries: SitemapEntry[] = [
@@ -154,7 +152,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
 	return new Response(xml, {
 		headers: {
 			'Content-Type': 'application/xml; charset=utf-8',
-			'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400'
+			'Cache-Control':
+				'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400'
 		}
 	})
 }
