@@ -17,7 +17,7 @@ import {
 	ContactSuccessResult
 } from '../components/contact'
 import { PublicErrorBoundary } from '../components/errors'
-import { PageHero } from '../components/layout-components'
+import { BasicCard, PageHero } from '../components/layout-components'
 import {
 	CONTACT_SOURCE_VALUES,
 	type ContactActionData,
@@ -190,7 +190,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 
 			<div className="mx-auto max-w-7xl px-6 pb-20">
 				<div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-					<Card className="">
+					<BasicCard>
 						<CardHeader>
 							<CardTitle className="text-2xl">Send a Message</CardTitle>
 							<CardDescription>
@@ -264,7 +264,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 								)}
 							</AnimatePresence>
 						</CardContent>
-					</Card>
+					</BasicCard>
 
 					<div className="space-y-6">
 						<Card className="border-accent/20 rounded-3xl shadow-none">
