@@ -255,25 +255,32 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 	const [active, setActive] = useState(0)
 	const [paused, setPaused] = useState(false)
 	const [hoveredItem, setHoveredItem] = useState<Step | null>()
-	const [progress, setProgress] = useState(0)
 	const progressRef = useRef(0)
+	const progressBarRef = useRef<HTMLSpanElement>(null)
 
 	const running = inView && !paused && !prefersReducedMotion
 
 	function handleItemClick(index: number) {
 		setPaused(true)
-		setProgress(0)
+		progressRef.current = 0
 		setActive(index)
 	}
 
-	// Reset progress whenever the active step changes
+	// Reset progress whenever the active step changes. Written straight to the
+	// DOM (not React state) since this bar's width would otherwise need a
+	// state update on every step change; kept consistent with the rAF loop
+	// below, which also writes directly to the DOM.
 	useEffect(() => {
 		progressRef.current = 0
-		setProgress(0)
+		if (progressBarRef.current) progressBarRef.current.style.width = '0%'
 	}, [active])
 
 	// rAF-driven progress: delta-based (immune to tab throttling), holds on
 	// pause/offscreen, advances the step when it completes. No setTimeout drift.
+	// Writes the bar width directly to the DOM instead of through React state —
+	// a per-frame setState here would re-render this whole subtree 60x/sec,
+	// saturating the main thread and starving iOS Safari's touch-scroll /
+	// CSS scroll-snap handling for other sections on the page.
 	useEffect(() => {
 		if (!running) return
 		let raf = 0
@@ -285,7 +292,9 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 				progressRef.current + dt / STEP_DURATION,
 				1
 			)
-			setProgress(progressRef.current)
+			if (progressBarRef.current) {
+				progressBarRef.current.style.width = `${progressRef.current * 100}%`
+			}
 			if (progressRef.current >= 1) {
 				setActive((a) => (a + 1) % STEPS.length)
 				return
@@ -327,11 +336,12 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 										: 'border-surface-border bg-surface-1 hover:bg-surface-1/80'
 								)}
 							>
-								{/* Active progress bar — driven by rAF progress value */}
+								{/* Active progress bar — width written directly to the DOM by the rAF loop, not React state */}
 								{isActive && !prefersReducedMotion && (
 									<span
+										ref={progressBarRef}
 										className="bg-accent/70 absolute bottom-0 left-0 h-0.5"
-										style={{ width: `${progress * 100}%` }}
+										style={{ width: '0%' }}
 									/>
 								)}
 								<span
