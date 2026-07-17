@@ -1,13 +1,18 @@
 import { Button } from '@shared/components/ui/button'
 import { AnimatePresence, motion } from 'framer-motion'
 import { RefreshCw, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
+
+const SESSION_KEY = 'pwa-update-dismissed'
 
 /**
  * Displays a non-intrusive update-available banner when a new service worker
  * version is waiting to activate. The banner lets users reload immediately or
  * dismiss without interrupting their current session.
+ *
+ * Dismissed state is persisted in sessionStorage so the banner does not
+ * reappear within the same browser session after the user has dismissed it.
  *
  * This component must only be rendered on the client (never during SSR) because
  * it imports `virtual:pwa-register/react`, a Vite build-time virtual module
@@ -15,7 +20,22 @@ import { useRegisterSW } from 'virtual:pwa-register/react'
  * from `remix-utils` and React `lazy()` to enforce that boundary.
  */
 export default function PwaUpdateBanner() {
+	// Initialize to false and hydrate from sessionStorage in useEffect to avoid
+	// accessing browser APIs during SSR or React's concurrent render init cycle.
 	const [dismissed, setDismissed] = useState(false)
+
+	useEffect(() => {
+		if (sessionStorage.getItem(SESSION_KEY) === 'true') {
+			setDismissed(true)
+		}
+	}, [])
+
+	useEffect(() => {
+		if (dismissed) {
+			sessionStorage.setItem(SESSION_KEY, 'true')
+		}
+	}, [dismissed])
+
 	const {
 		needRefresh: [needRefresh],
 		updateServiceWorker

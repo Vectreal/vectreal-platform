@@ -19,6 +19,10 @@ const prettyCodeOptions = {
 	keepBackground: true
 }
 
+// Public path prefix for Draco decoder files (binary/wasm) served from
+// public/draco/. These assets rarely change and benefit from a long-lived cache.
+const DRACO_PUBLIC_PATH_PREFIX = '/draco/'
+
 const reactCompilerEnvVar = 'VITE_EXPERIMENTAL_REACT_COMPILER'
 
 const reactCompilerOptions = {
@@ -137,8 +141,8 @@ export default defineConfig(({ command }) => {
 			VitePWA({
 				// New service worker waits for user confirmation before activating.
 				registerType: 'prompt',
-				// Registration is handled manually in entry.client.tsx via useRegisterSW.
-				injectRegister: null,
+				// Registration is handled manually via useRegisterSW in pwa-update-banner.tsx.
+				injectRegister: false,
 				// Use the existing public/site.webmanifest; the plugin won't touch it.
 				manifest: false,
 				// Dev mode: emit a minimal no-op SW so dev builds don't break.
@@ -157,7 +161,7 @@ export default defineConfig(({ command }) => {
 						// rarely change — use an immutable cache-first strategy.
 						{
 							urlPattern: ({ url }) =>
-								url.pathname.startsWith('/draco/'),
+								url.pathname.startsWith(DRACO_PUBLIC_PATH_PREFIX),
 							handler: 'CacheFirst',
 							options: {
 								cacheName: 'draco-assets',
