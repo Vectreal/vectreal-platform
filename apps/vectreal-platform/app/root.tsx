@@ -1,7 +1,7 @@
 import { usePostHog } from '@posthog/react'
 import { Toaster } from '@shared/components/ui/sonner'
 import { cn } from '@shared/utils'
-import { useEffect, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import {
 	data,
 	Links,
@@ -15,6 +15,7 @@ import {
 	useRouteError
 } from 'react-router'
 import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
+import { ClientOnly } from 'remix-utils/client-only'
 
 import { Route } from './+types/root'
 import { ConsentBanner } from './components/consent/consent-banner'
@@ -38,6 +39,12 @@ import styles from './styles/global.module.css'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 import '@shared/components/styles/globals.css'
+
+// Lazy-loaded so `virtual:pwa-register/react` is only bundled for the client.
+// The ClientOnly wrapper below ensures this never renders during SSR.
+const PwaUpdateBanner = lazy(
+	() => import('./components/pwa-update-banner')
+)
 
 export const meta: MetaFunction = () => [
 	...buildMeta([], undefined, {
@@ -155,6 +162,7 @@ export function Layout({ children }: { children: ReactNode }) {
 				<head>
 					<Meta />
 					<Links />
+					<link rel="manifest" href="/site.webmanifest" />
 					<CriticalStyles />
 					<ThemeScript forceDark={forceDarkTheme} />
 				</head>
@@ -183,6 +191,7 @@ export function Layout({ children }: { children: ReactNode }) {
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
 				<Meta />
 				<Links />
+				<link rel="manifest" href="/site.webmanifest" />
 				<CriticalStyles />
 				<ThemeScript forceDark={forceDarkTheme} />
 			</head>
@@ -192,6 +201,13 @@ export function Layout({ children }: { children: ReactNode }) {
 				<GlobalNavigationLoader />
 				{children}
 				<Toaster toastOptions={{ className: 'rounded-2xl!' }} />
+				<ClientOnly fallback={null}>
+					{() => (
+						<Suspense fallback={null}>
+							<PwaUpdateBanner />
+						</Suspense>
+					)}
+				</ClientOnly>
 				<ScrollRestoration
 					getKey={(location) => `${location.pathname}${location.search}`}
 				/>

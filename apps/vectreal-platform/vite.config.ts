@@ -12,6 +12,7 @@ import remarkGfm from 'remark-gfm'
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter'
 import { defineConfig, type PluginOption } from 'vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
+import { VitePWA } from 'vite-plugin-pwa'
 
 const prettyCodeOptions = {
 	theme: 'github-dark',
@@ -132,7 +133,44 @@ export default defineConfig(({ command }) => {
 				projectRoot: __dirname
 			}),
 			!process.env.VITEST && reactRouter(),
-			reactCompilerPlugin(reactCompilerEnabled)
+			reactCompilerPlugin(reactCompilerEnabled),
+			VitePWA({
+				// New service worker waits for user confirmation before activating.
+				registerType: 'prompt',
+				// Registration is handled manually in entry.client.tsx via useRegisterSW.
+				injectRegister: null,
+				// Use the existing public/site.webmanifest; the plugin won't touch it.
+				manifest: false,
+				// Dev mode: emit a minimal no-op SW so dev builds don't break.
+				devOptions: {
+					enabled: false
+				},
+				workbox: {
+					// Precache compiled JS/CSS bundles, icons, and fonts.
+					// HTML navigation responses are intentionally excluded (SSR app).
+					globPatterns: ['**/*.{js,css,ico,png,svg,woff2}'],
+					// No navigate fallback — this is an SSR app; navigation must
+					// reach the server so pages remain fresh.
+					navigateFallback: null,
+					runtimeCaching: [
+						// Draco WASM/JS decoder files ship in public/draco/ and
+						// rarely change — use an immutable cache-first strategy.
+						{
+							urlPattern: ({ url }) =>
+								url.pathname.startsWith('/draco/'),
+							handler: 'CacheFirst',
+							options: {
+								cacheName: 'draco-assets',
+								expiration: {
+									maxEntries: 20,
+									maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+								},
+								cacheableResponse: { statuses: [0, 200] }
+							}
+						}
+					]
+				}
+			})
 		],
 		// worker: {
 		//  plugins: [ nxViteTsPaths() ],

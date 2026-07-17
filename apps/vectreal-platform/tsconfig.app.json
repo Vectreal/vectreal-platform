@@ -34,7 +34,7 @@
 
 	"compilerOptions": {
 		"lib": ["dom", "dom.iterable", "esnext"],
-		"types": ["node", "vite/client", "@react-router/node"],
+		"types": ["node", "vite/client", "@react-router/node", "vite-plugin-pwa/client"],
 		"rootDirs": [".", "./.react-router/types"]
 	}
 }
