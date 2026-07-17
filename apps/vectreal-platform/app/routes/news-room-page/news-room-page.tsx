@@ -469,18 +469,22 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 								</div>
 							) : null}
 
-							<section className="from-primary/12 via-primary/5 to-background border-primary/20 mt-10 rounded-2xl border bg-linear-to-br p-5 md:mt-12 md:p-7">
-								<p className="text-primary mb-2 text-xs font-semibold tracking-[0.14em] uppercase">
+							<BasicCard
+								as="section"
+								cardClassName="p-6 md:p-8 "
+								className="mt-32"
+							>
+								<p className="text-primary text-xs font-semibold tracking-wider uppercase">
 									Build while you're learning
 								</p>
 								<h2 className="max-w-2xl text-2xl leading-tight font-semibold tracking-tight md:text-3xl">
 									Turn ideas from these articles into live 3D experiences.
 								</h2>
-								<p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed md:text-base">
+								<p className="text-muted-foreground max-w-2xl text-sm leading-relaxed md:text-base">
 									Create a free account to publish your first scene and keep
 									shipping faster with Vectreal.
 								</p>
-								<div className="mt-4 flex flex-wrap items-center gap-2">
+								<div className="flex flex-wrap items-center gap-2">
 									<Button asChild>
 										<Link to="/sign-up">
 											Start free
@@ -491,7 +495,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 										<Link to="/pricing">Compare plans</Link>
 									</Button>
 								</div>
-							</section>
+							</BasicCard>
 						</>
 					)}
 				</section>

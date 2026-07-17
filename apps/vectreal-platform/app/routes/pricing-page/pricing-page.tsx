@@ -8,7 +8,7 @@ import {
 	FeatureCompareGrid,
 	PricingCardsSection
 } from '../../components/dashboard'
-import { PageHero } from '../../components/layout-components'
+import { BasicCard, PageHero } from '../../components/layout-components'
 import { PRICING_PAGE_COPY } from '../../constants/product-copy'
 import { getCheckoutOptions } from '../../lib/domain/billing/billing-dashboard-loader.server'
 import { buildPageMeta } from '../../lib/seo'
@@ -66,14 +66,14 @@ export default function PricingPage() {
 				<FeatureCompareGrid />
 
 				{/* Enterprise CTA */}
-				<section className="bg-muted/30 rounded-2xl p-10 text-left">
+				<BasicCard as="section" cardClassName="p-6 text-left md:p-8">
 					<h2 className="text-2xl font-medium">
 						{PRICING_PAGE_COPY.enterpriseHeading}
 					</h2>
-					<p className="text-muted-foreground mt-2 max-w-lg">
+					<p className="text-muted-foreground max-w-lg">
 						{PRICING_PAGE_COPY.enterpriseDescription}
 					</p>
-					<div className="mt-6 flex justify-start gap-4">
+					<div className="flex justify-start gap-4">
 						<Link to="/contact">
 							<Button size="lg">Contact sales</Button>
 						</Link>
@@ -83,7 +83,7 @@ export default function PricingPage() {
 							</Button>
 						</Link>
 					</div>
-				</section>
+				</BasicCard>
 			</div>
 		</main>
 	)
