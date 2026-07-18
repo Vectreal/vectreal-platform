@@ -145,7 +145,7 @@ export default defineConfig(({ command }) => {
 				injectRegister: false,
 				// Use the existing public/site.webmanifest; the plugin won't touch it.
 				manifest: false,
-				// Dev mode: emit a minimal no-op SW so dev builds don't break.
+				// Dev mode: service worker stays disabled.
 				devOptions: {
 					enabled: false
 				},
@@ -153,12 +153,9 @@ export default defineConfig(({ command }) => {
 					// Precache compiled JS/CSS bundles, icons, and fonts.
 					// HTML navigation responses are intentionally excluded (SSR app).
 					globPatterns: ['**/*.{js,css,ico,png,svg,woff2}'],
-					// No navigate fallback — this is an SSR app; navigation must
-					// reach the server so pages remain fresh.
-					navigateFallback: null,
 					runtimeCaching: [
 						// Draco WASM/JS decoder files ship in public/draco/ and
-						// rarely change — use an immutable cache-first strategy.
+						// are not fingerprinted, so keep cache-first but with a short TTL.
 						{
 							urlPattern: ({ url }) =>
 								url.pathname.startsWith(DRACO_PUBLIC_PATH_PREFIX),
@@ -167,7 +164,7 @@ export default defineConfig(({ command }) => {
 								cacheName: 'draco-assets',
 								expiration: {
 									maxEntries: 20,
-									maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+									maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
 								},
 								cacheableResponse: { statuses: [0, 200] }
 							}
