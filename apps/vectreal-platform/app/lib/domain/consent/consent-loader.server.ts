@@ -13,7 +13,7 @@ export interface ConsentLoaderResult {
  * It is an unsigned persistent cookie (1-year maxAge) that survives app
  * deployments and secret rotations without losing user consent.
  *
- * DB persistence is handled asynchronously in the /api/consent action
+ * DB persistence is handled on the /api/consent write path
  * for compliance auditing only — it plays no part in the read path.
  */
 export async function resolveConsent(

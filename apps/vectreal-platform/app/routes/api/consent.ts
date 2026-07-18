@@ -46,7 +46,10 @@ export async function action({ request }: Route.ActionArgs) {
 		choices
 	})
 
-	// Persist to DB for compliance auditing (best-effort, non-blocking).
+	const responseHeaders = new Headers()
+	responseHeaders.append('Set-Cookie', cookieHeader)
+
+	// Persist to DB for compliance auditing (best-effort on the write path).
 	// A failure here must never prevent the cookie from being set.
 	try {
 		const ipCountry =
@@ -55,7 +58,10 @@ export async function action({ request }: Route.ActionArgs) {
 			null
 		const userAgent = request.headers.get('User-Agent')
 
-		const { client } = await createSupabaseClient(request)
+		const { client, headers } = await createSupabaseClient(request)
+		for (const [key, value] of headers.entries()) {
+			responseHeaders.append(key, value)
+		}
 		const {
 			data: { user }
 		} = await client.auth.getUser()
@@ -85,7 +91,7 @@ export async function action({ request }: Route.ActionArgs) {
 			version: CONSENT_POLICY_VERSION
 		},
 		{
-			headers: { 'Set-Cookie': cookieHeader }
+			headers: responseHeaders
 		}
 	)
 }

@@ -3,6 +3,7 @@ import {
 	useCallback,
 	useContext,
 	useEffect,
+	useRef,
 	useState,
 	type ReactNode
 } from 'react'
@@ -52,6 +53,10 @@ export function ConsentProvider({
 		initialVersion
 	)
 	const [preferencesOpen, setPreferencesOpen] = useState(false)
+	const optimisticPreviousRef = useRef<{
+		consent: ConsentChoices | null
+		consentVersion: string | null
+	} | null>(null)
 
 	// On error response from the action, roll back the optimistic update.
 	useEffect(() => {
@@ -62,10 +67,13 @@ export function ConsentProvider({
 		) {
 			const d = fetcher.data as Record<string, unknown>
 			if (typeof d.error === 'string') {
-				// Restore pre-submit values from loader data (safe source of truth).
-				setConsent(initialConsent)
-				setConsentVersion(initialVersion)
+				// Restore pre-submit values from before the optimistic update.
+				setConsent(optimisticPreviousRef.current?.consent ?? initialConsent)
+				setConsentVersion(
+					optimisticPreviousRef.current?.consentVersion ?? initialVersion
+				)
 			}
+			optimisticPreviousRef.current = null
 		}
 	}, [fetcher.state, fetcher.data, initialConsent, initialVersion])
 
@@ -112,6 +120,7 @@ export function ConsentProvider({
 
 			// Optimistic update — hides the banner immediately without waiting for
 			// the server round-trip. Rolled back on error response above.
+			optimisticPreviousRef.current = { consent, consentVersion }
 			setConsent({
 				necessary: true,
 				functional: choices.functional,
@@ -129,7 +138,7 @@ export function ConsentProvider({
 				}
 			)
 		},
-		[fetcher]
+		[fetcher, consent, consentVersion]
 	)
 
 	return (
