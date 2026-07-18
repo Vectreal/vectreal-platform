@@ -6,8 +6,7 @@ import { ensureSameOriginMutation } from '../../lib/http/csrf.server'
 import {
 	type ConsentChoices,
 	CONSENT_POLICY_VERSION,
-	commitSession,
-	getSession
+	serializeConsentCookieHeader
 } from '../../lib/sessions/consent-session.server'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
@@ -40,49 +39,59 @@ export async function action({ request }: Route.ActionArgs) {
 		return data({ error: 'Invalid consent payload' }, { status: 400 })
 	}
 
-	const ipCountry =
-		request.headers.get('CF-IPCountry') ||
-		request.headers.get('X-Vercel-IP-Country') ||
-		null
-	const userAgent = request.headers.get('User-Agent')
-
-	const { client } = await createSupabaseClient(request)
-	const {
-		data: { user }
-	} = await client.auth.getUser()
-
-	const consentSession = await getSession(request.headers.get('Cookie'))
-	const anonymousId = consentSession.get('anonymousId') ?? null
-
-	const saved = await upsertConsent({
-		userId: user?.id ?? null,
-		anonymousId,
-		choices,
+	// Always commit the consent cookie — this is the source of truth for the
+	// banner. It is unsigned so it will never be invalidated by a secret rotation.
+	const cookieHeader = await serializeConsentCookieHeader({
 		version: CONSENT_POLICY_VERSION,
-		ipCountry,
-		userAgent
+		choices
 	})
 
-	// Persist anonymous ID in cookie so future visits can find the record
-	if (!user) {
-		consentSession.set('anonymousId', saved.anonymousId ?? '')
+	const responseHeaders = new Headers()
+	responseHeaders.append('Set-Cookie', cookieHeader)
+
+	// Persist to DB for compliance auditing (best-effort on the write path).
+	// A failure here must never prevent the cookie from being set.
+	try {
+		const ipCountry =
+			request.headers.get('CF-IPCountry') ||
+			request.headers.get('X-Vercel-IP-Country') ||
+			null
+		const userAgent = request.headers.get('User-Agent')
+
+		const { client, headers } = await createSupabaseClient(request)
+		for (const [key, value] of headers.entries()) {
+			responseHeaders.append(key, value)
+		}
+		const {
+			data: { user }
+		} = await client.auth.getUser()
+
+		// Only persist DB record for authenticated users. Anonymous visitors are
+		// covered by the cookie alone; the DB record is purely for compliance.
+		if (user?.id) {
+			await upsertConsent({
+				userId: user.id,
+				anonymousId: null,
+				choices,
+				version: CONSENT_POLICY_VERSION,
+				ipCountry,
+				userAgent
+			})
+		}
+	} catch (err) {
+		console.error('[consent] DB persist failed (non-fatal):', err)
 	}
-
-	consentSession.set('version', CONSENT_POLICY_VERSION)
-	consentSession.set('choices', choices)
-
-	const cookieHeader = await commitSession(consentSession)
 
 	return data(
 		{
 			necessary: true,
-			functional: saved.functional,
-			analytics: saved.analytics,
-			marketing: saved.marketing,
-			version: saved.version
+			functional: choices.functional,
+			analytics: choices.analytics,
+			marketing: choices.marketing,
+			version: CONSENT_POLICY_VERSION
 		},
 		{
-			headers: { 'Set-Cookie': cookieHeader }
+			headers: responseHeaders
 		}
 	)
 }

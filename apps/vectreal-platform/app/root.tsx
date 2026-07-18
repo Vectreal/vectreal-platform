@@ -69,8 +69,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const [csrf, cookieHeader] = await csrfSession.commitToken(request)
 	const forceDarkTheme = pathname === '/' || pathname === '/home'
 	const themeMode = await getThemeModeFromRequest(request)
-	const { consentState, consentVersion, supabaseHeaders } =
-		await resolveConsent(request)
+	const { consentState, consentVersion } = await resolveConsent(request)
 
 	const loaderData = {
 		csrf,
@@ -82,9 +81,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	const responseHeaders = new Headers()
 	if (cookieHeader) responseHeaders.append('Set-Cookie', cookieHeader)
-	if (supabaseHeaders) {
-		supabaseHeaders.forEach((value, key) => responseHeaders.append(key, value))
-	}
 
 	return data(loaderData, { headers: responseHeaders })
 }
