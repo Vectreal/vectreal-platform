@@ -14,8 +14,8 @@ import {
 	useLocation,
 	useRouteError
 } from 'react-router'
-import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
 import { ClientOnly } from 'remix-utils/client-only'
+import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/root'
 import { ConsentBanner } from './components/consent/consent-banner'
