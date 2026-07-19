@@ -7,7 +7,7 @@ import { consentRecords } from '../../../db/schema/consent/consent-records'
 import {
 	type ConsentChoices,
 	CONSENT_POLICY_VERSION
-} from '../../sessions/consent-session.server'
+} from '../../consent/consent-cookie'
 
 export interface UpsertConsentParams {
 	userId: string | null

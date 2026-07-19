@@ -21,7 +21,6 @@ import { ConsentBanner } from './components/consent/consent-banner'
 import { ConsentProvider } from './components/consent/consent-context'
 import { ConsentPreferencesDialog } from './components/consent/consent-preferences-dialog'
 import { GlobalNavigationLoader } from './components/global-navigation-loader'
-import { resolveConsent } from './lib/domain/consent/consent-loader.server'
 import { posthogMiddleware } from './lib/posthog/posthog-middleware'
 import { buildMeta } from './lib/seo'
 import {
@@ -60,23 +59,18 @@ export async function loader({ request }: Route.LoaderArgs) {
 		return {
 			csrf: '',
 			themeMode: 'system' as const,
-			forceDarkTheme: false,
-			consentState: null,
-			consentVersion: null
+			forceDarkTheme: false
 		}
 	}
 
 	const [csrf, cookieHeader] = await csrfSession.commitToken(request)
 	const forceDarkTheme = pathname === '/' || pathname === '/home'
 	const themeMode = await getThemeModeFromRequest(request)
-	const { consentState, consentVersion } = await resolveConsent(request)
 
 	const loaderData = {
 		csrf,
 		themeMode,
-		forceDarkTheme,
-		consentState,
-		consentVersion
+		forceDarkTheme
 	}
 
 	const responseHeaders = new Headers()
@@ -301,15 +295,9 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 }
 
 export default function App({ loaderData }: Route.ComponentProps) {
-	const consentState = loaderData?.consentState ?? null
-	const consentVersion = loaderData?.consentVersion ?? null
-
 	return (
 		<AuthenticityTokenProvider token={loaderData?.csrf}>
-			<ConsentProvider
-				initialConsent={consentState}
-				initialVersion={consentVersion}
-			>
+			<ConsentProvider>
 				<Outlet />
 				<ConsentBanner />
 				<ConsentPreferencesDialog />

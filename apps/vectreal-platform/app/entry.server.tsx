@@ -12,20 +12,26 @@ import { renderToPipeableStream } from 'react-dom/server'
 import { ServerRouter } from 'react-router'
 
 import { isCacheablePublicPath } from './lib/http/cacheable-public-paths.server'
+import { hasSupabaseAuthCookie } from './lib/sessions/supabase-auth-cookie.server'
 
 import type { RenderToPipeableStreamOptions } from 'react-dom/server'
 import type { AppLoadContext, EntryContext } from 'react-router'
 
 export const streamTimeout = 5_000
 
-
-function hasAuthSignals(request: Request): boolean {
+/**
+ * A response is safe to cache publicly only when it carries no per-visitor
+ * state. The single signal for that is the Supabase auth cookie: authenticated
+ * responses are personalized, everything else is anonymous. Consent is
+ * client-hydrated (see use-current-user / consent-context), so a consent cookie
+ * no longer makes a page uncacheable.
+ */
+function isAnonymousRequest(request: Request): boolean {
 	if (request.headers.has('authorization')) {
-		return true
+		return false
 	}
 
-	const cookieHeader = request.headers.get('cookie')
-	return Boolean(cookieHeader && cookieHeader.trim().length > 0)
+	return !hasSupabaseAuthCookie(request.headers.get('cookie'))
 }
 
 function applyDefaultCacheHeaders(
@@ -46,7 +52,7 @@ function applyDefaultCacheHeaders(
 	const hasSearchParams = requestUrl.search.length > 0
 	const cacheablePublicPath = isCacheablePublicPath(requestUrl.pathname)
 
-	if (!hasAuthSignals(request) && !hasSearchParams && cacheablePublicPath) {
+	if (isAnonymousRequest(request) && !hasSearchParams && cacheablePublicPath) {
 		responseHeaders.set(
 			'Cache-Control',
 			'public, max-age=0, s-maxage=60, stale-while-revalidate=300'
