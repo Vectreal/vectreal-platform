@@ -13,7 +13,8 @@
 		"noFallthroughCasesInSwitch": true,
 		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"ignoreDeprecations": "6.0"
 	},
 	"include": ["src/**/*.ts"],
 	"exclude": ["jest.config.ts", "src/**/*.spec.ts", "src/**/*.test.ts"]

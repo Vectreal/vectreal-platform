@@ -27,7 +27,7 @@ export default defineConfig({
 			fileName: 'index',
 			formats: ['es', 'cjs']
 		},
-		rollupOptions: {
+		rolldownOptions: {
 			output: [
 				{
 					format: 'es',

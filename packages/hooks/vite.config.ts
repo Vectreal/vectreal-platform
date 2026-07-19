@@ -53,7 +53,7 @@ export default defineConfig({
 			fileName: (format, entry) => `${entry}.${format}.js`
 		},
 
-		rollupOptions: {
+		rolldownOptions: {
 			// External packages that should not be bundled into your library.
 			// @vctrl/core (and its subpaths) is externalized so consumers share a
 			// single published copy instead of bundling it (which also pulled core's
