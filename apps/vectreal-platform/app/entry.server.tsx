@@ -17,7 +17,12 @@ import {
 } from './lib/http/cacheable-public-paths.server'
 
 import type { RenderToPipeableStreamOptions } from 'react-dom/server'
-import type { AppLoadContext, EntryContext } from 'react-router'
+import type {
+	ActionFunctionArgs,
+	AppLoadContext,
+	EntryContext,
+	LoaderFunctionArgs
+} from 'react-router'
 
 export const streamTimeout = 5_000
 
@@ -42,6 +47,23 @@ function applyDefaultCacheHeaders(
 	}
 
 	responseHeaders.set('Cache-Control', 'no-store')
+}
+
+/**
+ * Apply the same cache policy to single-fetch loader/action (`.data`) responses
+ * that `handleRequest` applies to documents. React Router does not propagate a
+ * loader's `data(payload, { headers })` onto the `.data` response, so without
+ * this hook authenticated `.data` responses ship with no `Cache-Control` and
+ * Cloudflare (cache=true, respect_origin) caches them by URL — serving one
+ * visitor's user/org/scene data to another. Routing through the same predicate
+ * keeps documents and data on a single source of truth.
+ */
+export function handleDataRequest(
+	response: Response,
+	{ request }: LoaderFunctionArgs | ActionFunctionArgs
+): Response {
+	applyDefaultCacheHeaders(request, response.headers, response.status)
+	return response
 }
 
 export default function handleRequest(
