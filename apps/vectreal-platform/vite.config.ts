@@ -179,6 +179,7 @@ export default defineConfig(({ command }) => {
 		// Removed 'ssr.external' because it's incompatible with Cloudflare Vite plugin
 		// Externals are now only handled in rolldownOptions.external
 		ssr: {
+			enable: true,
 			// posthog-js and @posthog/react must be bundled for SSR to avoid module resolution errors
 			noExternal: ['posthog-js', '@posthog/react']
 		},

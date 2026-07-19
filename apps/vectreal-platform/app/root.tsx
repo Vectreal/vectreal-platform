@@ -40,8 +40,8 @@ import styles from './styles/global.module.css'
 import type { ShouldRevalidateFunction } from 'react-router'
 import '@shared/components/styles/globals.css'
 
-// Lazy-loaded so `virtual:pwa-register/react` is only bundled for the client.
-// The ClientOnly wrapper below ensures this never renders during SSR.
+// Lazy-loaded so the workbox-window service-worker registration is only bundled
+// for the client. The ClientOnly wrapper below ensures this never renders during SSR.
 const PwaUpdateBanner = lazy(
 	() => import('./components/pwa-update-banner')
 )
