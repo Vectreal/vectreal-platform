@@ -48,7 +48,14 @@ export function isAnonymousCacheableRequest(request: Request): boolean {
 	const url = new URL(request.url)
 	if (url.search.length > 0) return false
 
-	return isCacheablePublicPath(url.pathname)
+	// Single-fetch loader requests hit the same URL with a `.data` suffix
+	// (`/about` → `/about.data`). Normalize it so the data response inherits the
+	// same cache policy as its document.
+	const pathname = url.pathname.endsWith('.data')
+		? url.pathname.slice(0, -'.data'.length)
+		: url.pathname
+
+	return isCacheablePublicPath(pathname)
 }
 
 /** Headers applied to an anonymous, publicly cacheable response. */
