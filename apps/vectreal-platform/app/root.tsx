@@ -26,6 +26,7 @@ import {
 	ThemeController,
 	ThemeScript
 } from './components/theme'
+import { isAnonymousCacheableRequest } from './lib/http/cacheable-public-paths.server'
 import { posthogMiddleware } from './lib/posthog/posthog-middleware'
 import { buildMeta } from './lib/seo'
 import {
@@ -63,11 +64,24 @@ export async function loader({ request }: Route.LoaderArgs) {
 		}
 	}
 
-	const [csrf, cookieHeader] = await csrfSession.commitToken(request)
 	// forceDarkTheme is route-derived (not per-visitor), so it stays cache-safe.
 	// The visitor's own theme preference is read from the cookie client-side by
 	// ThemeScript, never baked into this (CDN-cached) HTML.
 	const forceDarkTheme = isForceDarkRoute(pathname)
+
+	// Anonymous-cacheable responses must carry NO per-visitor state. The CSRF
+	// cookie/token is per-visitor, and remix-utils omits its Set-Cookie for
+	// returning visitors, which would let the edge cache and fan out one
+	// visitor's token. Mint the token only on non-cacheable (no-store)
+	// responses; the root loader revalidates into those before any POST.
+	if (isAnonymousCacheableRequest(request)) {
+		return {
+			csrf: '',
+			forceDarkTheme
+		}
+	}
+
+	const [csrf, cookieHeader] = await csrfSession.commitToken(request)
 
 	const loaderData = {
 		csrf,
