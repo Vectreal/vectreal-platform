@@ -9,7 +9,8 @@
 		"strict": true,
 		"noEmit": true,
 		"esModuleInterop": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"ignoreDeprecations": "6.0"
 	},
 	"include": ["src/run-e2e.ts", "tests/**/*.ts", "playwright.config.ts"],
 	"exclude": ["node_modules", "src/consumer-template"]

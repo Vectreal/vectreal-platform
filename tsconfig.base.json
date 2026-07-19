@@ -44,7 +44,11 @@
 				"packages/core/src/model-exporter/index.ts"
 			],
 			"@vctrl/embed": ["./packages/embed/src/index.ts"]
-		}
+		},
+		"strict": false,
+		"noUncheckedSideEffectImports": false,
+		"types": ["*"],
+		"esModuleInterop": false
 	},
 	"exclude": [
 		"node_modules",

@@ -6,7 +6,8 @@
 		"allowSyntheticDefaultImports": true,
 		"strict": true,
 		"lib": ["ESNext", "DOM", "DOM.Iterable"],
-		"types": ["vite/client"]
+		"types": ["vite/client"],
+		"ignoreDeprecations": "6.0"
 	},
 	"files": [],
 	"include": [],
