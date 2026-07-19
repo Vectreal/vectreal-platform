@@ -106,8 +106,14 @@ resource "cloudflare_ruleset" "cache_rules" {
   kind    = "zone"
   phase   = "http_request_cache_settings"
 
+  # Host guard shared by every rule.
+  # Keep in sync with the app allowlist in
+  # apps/vectreal-platform/app/lib/http/cacheable-public-paths.server.ts
+  # (enforced by the cloudflare-cache-parity vitest test).
+
+  # Rule 1 — Immutable hashed assets served by Fly.io: cache at edge for 1 year.
   rules {
-    description = "Immutable hashed assets served by Fly.io — cache at edge for 1 year"
+    description = "Immutable hashed assets — cache 1 year"
     expression  = "((http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")) and starts_with(http.request.uri.path, \"/assets/\")"
     action      = "set_cache_settings"
     action_parameters {
@@ -123,15 +129,35 @@ resource "cloudflare_ruleset" "cache_rules" {
     }
   }
 
+  # Rule 2 — Public allowlist documents and their single-fetch .data variants:
+  # cacheable, honoring origin Cache-Control for BOTH edge and browser TTL so
+  # the zone-default 4h Browser Cache TTL never rewrites the origin's max-age=0.
+  # Cache key stays cookie-free (Cloudflare default). respect_origin means an
+  # authenticated request (origin answers no-store) is still never stored.
   rules {
-    description = "SSR app pages — respect origin cache headers"
-    expression  = "((http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")) and not starts_with(http.request.uri.path, \"/assets/\")"
+    description = "Public allowlist pages — respect origin cache headers"
+    expression  = "((http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")) and (http.request.uri.path in {\"/\" \"/home\" \"/about\" \"/changelog\" \"/code-of-conduct\" \"/contact\" \"/privacy-policy\" \"/terms-of-service\" \"/imprint\" \"/robots.txt\" \"/sitemap.xml\" \"/llms.txt\" \"/.data\" \"/home.data\" \"/about.data\" \"/changelog.data\" \"/code-of-conduct.data\" \"/contact.data\" \"/privacy-policy.data\" \"/terms-of-service.data\" \"/imprint.data\"} or starts_with(http.request.uri.path, \"/docs\") or starts_with(http.request.uri.path, \"/news-room\"))"
     action      = "set_cache_settings"
     action_parameters {
       cache = true
       edge_ttl {
         mode = "respect_origin"
       }
+      browser_ttl {
+        mode = "respect_origin"
+      }
+    }
+  }
+
+  # Rule 3 — Fail-closed catch-all: everything not matched above is never
+  # edge-cached, regardless of origin headers. .data (except the allowlist
+  # variants above), /api/*, /auth/*, dashboard, publisher, preview, onboarding.
+  rules {
+    description = "Fail-closed: bypass cache for everything else"
+    expression  = "((http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")) and not starts_with(http.request.uri.path, \"/assets/\") and not (http.request.uri.path in {\"/\" \"/home\" \"/about\" \"/changelog\" \"/code-of-conduct\" \"/contact\" \"/privacy-policy\" \"/terms-of-service\" \"/imprint\" \"/robots.txt\" \"/sitemap.xml\" \"/llms.txt\" \"/.data\" \"/home.data\" \"/about.data\" \"/changelog.data\" \"/code-of-conduct.data\" \"/contact.data\" \"/privacy-policy.data\" \"/terms-of-service.data\" \"/imprint.data\"} or starts_with(http.request.uri.path, \"/docs\") or starts_with(http.request.uri.path, \"/news-room\"))"
+    action      = "set_cache_settings"
+    action_parameters {
+      cache = false
     }
   }
 }
