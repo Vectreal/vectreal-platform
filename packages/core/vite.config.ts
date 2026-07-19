@@ -37,7 +37,7 @@ export default defineConfig({
 			fileName: (format, entry) => `${entry}.${format}.js`
 		},
 
-		rollupOptions: {
+		rolldownOptions: {
 			// External packages that should not be bundled into your library.
 			external: [
 				'three',

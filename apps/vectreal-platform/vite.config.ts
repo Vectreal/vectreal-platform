@@ -138,7 +138,7 @@ export default defineConfig(({ command }) => {
 		//  plugins: [ nxViteTsPaths() ],
 		// },
 		// Removed 'ssr.external' because it's incompatible with Cloudflare Vite plugin
-		// Externals are now only handled in rollupOptions.external
+		// Externals are now only handled in rolldownOptions.external
 		ssr: {
 			// posthog-js and @posthog/react must be bundled for SSR to avoid module resolution errors
 			noExternal: ['posthog-js', '@posthog/react']
@@ -149,7 +149,7 @@ export default defineConfig(({ command }) => {
 			commonjsOptions: {
 				transformMixedEsModules: true
 			},
-			rollupOptions: {
+			rolldownOptions: {
 				onwarn(warning, warn) {
 					const message =
 						typeof warning === 'string' ? warning : (warning.message ?? '')
