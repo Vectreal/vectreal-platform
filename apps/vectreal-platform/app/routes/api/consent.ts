@@ -1,13 +1,13 @@
 import { data } from 'react-router'
 
 import { Route } from './+types/consent'
+import {
+	buildConsentSetCookie,
+	type ConsentChoices,
+	CONSENT_POLICY_VERSION
+} from '../../lib/consent/consent-cookie'
 import { upsertConsent } from '../../lib/domain/consent/consent-repository.server'
 import { ensureSameOriginMutation } from '../../lib/http/csrf.server'
-import {
-	type ConsentChoices,
-	CONSENT_POLICY_VERSION,
-	serializeConsentCookieHeader
-} from '../../lib/sessions/consent-session.server'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
 function parseChoices(body: unknown): ConsentChoices | null {
@@ -39,15 +39,18 @@ export async function action({ request }: Route.ActionArgs) {
 		return data({ error: 'Invalid consent payload' }, { status: 400 })
 	}
 
-	// Always commit the consent cookie — this is the source of truth for the
-	// banner. It is unsigned so it will never be invalidated by a secret rotation.
-	const cookieHeader = await serializeConsentCookieHeader({
+	// Always commit the consent cookie; this is the source of truth for the
+	// banner. It is client-readable and unsigned so the browser hydrates the
+	// banner from it directly and it survives secret rotation on deploys.
+	const cookieHeader = buildConsentSetCookie({
 		version: CONSENT_POLICY_VERSION,
 		choices
 	})
 
 	const responseHeaders = new Headers()
 	responseHeaders.append('Set-Cookie', cookieHeader)
+	// This mutation response is per-visitor and must never be cached at the edge.
+	responseHeaders.set('Cache-Control', 'no-store')
 
 	// Persist to DB for compliance auditing (best-effort on the write path).
 	// A failure here must never prevent the cookie from being set.

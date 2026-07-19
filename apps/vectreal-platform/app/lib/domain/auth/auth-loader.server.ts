@@ -1,6 +1,7 @@
 import { redirect } from 'react-router'
 
 import { getAuthUser } from '../../http/auth.server'
+import { hasSupabaseAuthCookie } from '../../sessions/supabase-auth-cookie'
 import { createSupabaseClient } from '../../supabase.server'
 import {
 	initializeUserDefaults,
@@ -8,6 +9,44 @@ import {
 } from '../user/user-repository.server'
 
 import type { User } from '@supabase/supabase-js'
+
+export interface OptionalUserResult {
+	user: User | null
+	headers: Headers
+}
+
+/**
+ * Resolve the current user without redirecting: the read path for the
+ * client-hydrated session endpoint used by public (CDN-cacheable) pages.
+ *
+ * Skips the Supabase round-trip entirely when no auth cookie is present, and
+ * clears a stale refresh token so the browser stops resending it.
+ */
+export async function resolveOptionalUser(
+	request: Request
+): Promise<OptionalUserResult> {
+	const cookieHeader = request.headers.get('Cookie')
+	if (!hasSupabaseAuthCookie(cookieHeader)) {
+		return { user: null, headers: new Headers() }
+	}
+
+	const { client, headers } = await createSupabaseClient(request)
+	const {
+		data: { user },
+		error
+	} = await client.auth.getUser()
+
+	if (error?.code === 'refresh_token_not_found') {
+		try {
+			await client.auth.signOut({ scope: 'local' })
+		} catch {
+			// Ignore cleanup errors and continue as unauthenticated.
+		}
+		return { user: null, headers }
+	}
+
+	return { user: user ?? null, headers }
+}
 
 export interface AuthLoaderResult {
 	user: User

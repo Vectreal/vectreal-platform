@@ -1,63 +1,29 @@
-import { useCallback, useEffect, useRef } from 'react'
 import { useRevalidator } from 'react-router'
+
+import { useOnResume } from './use-on-resume'
 
 interface UseAuthResumeRevalidationOptions {
 	enabled?: boolean
 	cooldownMs?: number
 }
 
-const DEFAULT_COOLDOWN_MS = 30_000
-
+/**
+ * Revalidate route loaders when the user returns to the tab, so server-loaded
+ * auth state (dashboard, publisher) stays fresh after the session may have been
+ * refreshed or signed out elsewhere.
+ */
 export function useAuthResumeRevalidation({
 	enabled = true,
-	cooldownMs = DEFAULT_COOLDOWN_MS
+	cooldownMs
 }: UseAuthResumeRevalidationOptions = {}) {
 	const revalidator = useRevalidator()
-	const lastRevalidationAtRef = useRef(0)
 
-	const triggerRevalidation = useCallback(() => {
-		if (!enabled || revalidator.state !== 'idle') {
-			return
-		}
-
-		const now = Date.now()
-		if (now - lastRevalidationAtRef.current < cooldownMs) {
-			return
-		}
-
-		lastRevalidationAtRef.current = now
-		revalidator.revalidate()
-	}, [cooldownMs, enabled, revalidator])
-
-	useEffect(() => {
-		if (!enabled) {
-			return
-		}
-
-		const handleVisibilityChange = () => {
-			if (document.hidden) {
-				return
+	useOnResume(
+		() => {
+			if (revalidator.state === 'idle') {
+				revalidator.revalidate()
 			}
-
-			triggerRevalidation()
-		}
-
-		const handleFocus = () => {
-			triggerRevalidation()
-		}
-
-		const handlePageShow = () => {
-			triggerRevalidation()
-		}
-
-		document.addEventListener('visibilitychange', handleVisibilityChange)
-		window.addEventListener('focus', handleFocus)
-		window.addEventListener('pageshow', handlePageShow)
-
-		return () => {
-			document.removeEventListener('visibilitychange', handleVisibilityChange)
-			window.removeEventListener('focus', handleFocus)
-			window.removeEventListener('pageshow', handlePageShow)
-		}
-	}, [enabled, triggerRevalidation])
+		},
+		{ enabled, cooldownMs }
+	)
 }

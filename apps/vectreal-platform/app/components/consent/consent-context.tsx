@@ -9,14 +9,13 @@ import {
 } from 'react'
 import { useFetcher, useLocation } from 'react-router'
 
-import { CONSENT_POLICY_VERSION } from '../../constants/consent-policy'
+import {
+	CONSENT_POLICY_VERSION,
+	type ConsentChoices,
+	readConsentCookie
+} from '../../lib/consent/consent-cookie'
 
-export interface ConsentChoices {
-	necessary: true
-	functional: boolean
-	analytics: boolean
-	marketing: boolean
-}
+export type { ConsentChoices }
 
 interface ConsentContextValue {
 	/** Current resolved consent state. null = not yet answered (banner should show). */
@@ -28,35 +27,42 @@ interface ConsentContextValue {
 	/** Whether the preferences dialog is open. */
 	preferencesOpen: boolean
 	setPreferencesOpen: (open: boolean) => void
+	/**
+	 * True once consent has been read from the cookie on the client. Until then
+	 * the banner stays hidden so server and first client render agree (the HTML
+	 * is CDN-cached and cannot carry per-visitor consent).
+	 */
+	hydrated: boolean
 }
 
 const ConsentContext = createContext<ConsentContextValue | null>(null)
 
 interface ConsentProviderProps {
 	children: ReactNode
-	/**
-	 * Server-resolved initial consent state (from root loader).
-	 * Pass null when no record exists yet.
-	 */
-	initialConsent: ConsentChoices | null
-	initialVersion: string | null
 }
 
-export function ConsentProvider({
-	children,
-	initialConsent,
-	initialVersion
-}: ConsentProviderProps) {
+export function ConsentProvider({ children }: ConsentProviderProps) {
 	const fetcher = useFetcher()
-	const [consent, setConsent] = useState<ConsentChoices | null>(initialConsent)
-	const [consentVersion, setConsentVersion] = useState<string | null>(
-		initialVersion
-	)
+	const [consent, setConsent] = useState<ConsentChoices | null>(null)
+	const [consentVersion, setConsentVersion] = useState<string | null>(null)
+	const [hydrated, setHydrated] = useState(false)
 	const [preferencesOpen, setPreferencesOpen] = useState(false)
 	const optimisticPreviousRef = useRef<{
 		consent: ConsentChoices | null
 		consentVersion: string | null
 	} | null>(null)
+
+	// Hydrate consent from the client-readable cookie after mount. This is the
+	// single source of truth for banner visibility and is immune to CDN caching
+	// of the server-rendered HTML.
+	useEffect(() => {
+		const stored = readConsentCookie()
+		if (stored) {
+			setConsent(stored.choices)
+			setConsentVersion(stored.version)
+		}
+		setHydrated(true)
+	}, [])
 
 	// On error response from the action, roll back the optimistic update.
 	useEffect(() => {
@@ -68,14 +74,12 @@ export function ConsentProvider({
 			const d = fetcher.data as Record<string, unknown>
 			if (typeof d.error === 'string') {
 				// Restore pre-submit values from before the optimistic update.
-				setConsent(optimisticPreviousRef.current?.consent ?? initialConsent)
-				setConsentVersion(
-					optimisticPreviousRef.current?.consentVersion ?? initialVersion
-				)
+				setConsent(optimisticPreviousRef.current?.consent ?? null)
+				setConsentVersion(optimisticPreviousRef.current?.consentVersion ?? null)
 			}
 			optimisticPreviousRef.current = null
 		}
-	}, [fetcher.state, fetcher.data, initialConsent, initialVersion])
+	}, [fetcher.state, fetcher.data])
 
 	// Sync PostHog persistence and opt-in/out whenever analytics consent changes.
 	// null = first visit, no decision yet - stay in memory mode (DSGVO-safe).
@@ -118,7 +122,7 @@ export function ConsentProvider({
 				}
 			}
 
-			// Optimistic update — hides the banner immediately without waiting for
+			// Optimistic update hides the banner immediately without waiting for
 			// the server round-trip. Rolled back on error response above.
 			optimisticPreviousRef.current = { consent, consentVersion }
 			setConsent({
@@ -148,7 +152,8 @@ export function ConsentProvider({
 				consentVersion,
 				saveConsent,
 				preferencesOpen,
-				setPreferencesOpen
+				setPreferencesOpen,
+				hydrated
 			}}
 		>
 			{children}
@@ -164,8 +169,12 @@ export function useConsent(): ConsentContextValue {
 
 /** Returns true when the consent banner should be displayed. */
 export function useNeedsBanner(policyVersion: string): boolean {
-	const { consent, consentVersion } = useConsent()
+	const { consent, consentVersion, hydrated } = useConsent()
 	const { pathname } = useLocation()
+
+	// Stay hidden until the cookie has been read on the client so SSR and the
+	// first client render agree (no hydration mismatch, no flash for consenters).
+	if (!hydrated) return false
 
 	// Don't show banner on the privacy policy page, to avoid confusion
 	if (pathname === '/privacy-policy') return false

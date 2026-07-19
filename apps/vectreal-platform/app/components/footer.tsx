@@ -1,9 +1,11 @@
 import { VectrealLogoAnimated } from '@shared/components/assets/icons/vectreal-logo-animated'
 import { motion } from 'framer-motion'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 
 import { useConsent } from './consent/consent-context'
 import { ShimmerRotatingText } from './shimmer-rotating-text'
+import { isForceDarkRoute } from './theme'
+import { ThemeToggleButton } from './theme-toggle-button'
 
 export const SlimFooter = () => {
 	const { setPreferencesOpen } = useConsent()
@@ -31,6 +33,10 @@ export const SlimFooter = () => {
 
 export const Footer = () => {
 	const { setPreferencesOpen } = useConsent()
+	const { pathname } = useLocation()
+
+	// Hide the toggle on routes that force dark (home), where it would be inert.
+	const showThemeToggle = !isForceDarkRoute(pathname)
 
 	const whispers = [
 		'latency low. fidelity high.',
@@ -63,12 +69,10 @@ export const Footer = () => {
 									<Link to="/publisher">Publisher</Link>
 								</li>
 								<li className="text-foreground list-item">
-									<Link to="/dashboard">Dashboard</Link>
+									<Link to="/pricing">Pricing</Link>
 								</li>
 								<li className="text-foreground list-item">
-									<Link to="https://github.com/Vectreal/vectreal-platform/releases">
-										Release Notes
-									</Link>
+									<Link to="/dashboard">Dashboard</Link>
 								</li>
 								<li className="text-foreground list-item">
 									<Link to="/changelog">Changelog</Link>
@@ -103,9 +107,6 @@ export const Footer = () => {
 							</h3>
 							<ul className="flex flex-col gap-4">
 								<li className="text-foreground list-item">
-									<Link to="/home">Home</Link>
-								</li>
-								<li className="text-foreground list-item">
 									<Link to="/about">About Us</Link>
 								</li>
 								<li className="text-foreground list-item">
@@ -113,34 +114,6 @@ export const Footer = () => {
 								</li>
 								<li className="text-foreground list-item">
 									<Link to="/contact">Contact Us</Link>
-								</li>
-							</ul>
-						</div>
-						<div>
-							<h3 className="text-foreground mb-4 text-lg font-semibold">
-								Legal
-							</h3>
-							<ul className="flex flex-col gap-4">
-								<li className="text-foreground list-item">
-									<Link to="/privacy-policy">Privacy Policy</Link>
-								</li>
-								<li className="text-foreground list-item">
-									<Link to="/code-of-conduct">Code of Conduct</Link>
-								</li>
-								<li className="text-foreground list-item">
-									<button
-										type="button"
-										className="hover:text-foreground transition-colors"
-										onClick={() => setPreferencesOpen(true)}
-									>
-										Cookie Preferences
-									</button>
-								</li>
-								<li className="text-foreground list-item">
-									<Link to="/terms-of-service">Terms of Service</Link>
-								</li>
-								<li className="text-foreground list-item">
-									<Link to="/imprint">Imprint</Link>
 								</li>
 							</ul>
 						</div>
@@ -157,6 +130,39 @@ export const Footer = () => {
 								</li>
 								<li className="text-foreground list-item">
 									<Link to="https://reddit.com/r/vectreal/">Reddit</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="https://github.com/Vectreal/vectreal-platform/releases">
+										Release Notes
+									</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="/code-of-conduct">Code of Conduct</Link>
+								</li>
+							</ul>
+						</div>
+						<div>
+							<h3 className="text-foreground mb-4 text-lg font-semibold">
+								Legal
+							</h3>
+							<ul className="flex flex-col gap-4">
+								<li className="text-foreground list-item">
+									<Link to="/privacy-policy">Privacy Policy</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="/terms-of-service">Terms of Service</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<Link to="/imprint">Imprint</Link>
+								</li>
+								<li className="text-foreground list-item">
+									<button
+										type="button"
+										className="hover:text-foreground transition-colors"
+										onClick={() => setPreferencesOpen(true)}
+									>
+										Cookie Preferences
+									</button>
 								</li>
 							</ul>
 						</div>
@@ -248,6 +254,12 @@ export const Footer = () => {
 								</svg>
 							</Link>
 						</div>
+
+						{showThemeToggle && (
+							<div className="border-border/50 flex items-center border-l pl-3">
+								<ThemeToggleButton />
+							</div>
+						)}
 					</div>
 
 					<ShimmerRotatingText

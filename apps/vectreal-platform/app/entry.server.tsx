@@ -11,22 +11,15 @@ import { isbot } from 'isbot'
 import { renderToPipeableStream } from 'react-dom/server'
 import { ServerRouter } from 'react-router'
 
-import { isCacheablePublicPath } from './lib/http/cacheable-public-paths.server'
+import {
+	isAnonymousCacheableRequest,
+	PUBLIC_CACHE_CONTROL
+} from './lib/http/cacheable-public-paths.server'
 
 import type { RenderToPipeableStreamOptions } from 'react-dom/server'
 import type { AppLoadContext, EntryContext } from 'react-router'
 
 export const streamTimeout = 5_000
-
-
-function hasAuthSignals(request: Request): boolean {
-	if (request.headers.has('authorization')) {
-		return true
-	}
-
-	const cookieHeader = request.headers.get('cookie')
-	return Boolean(cookieHeader && cookieHeader.trim().length > 0)
-}
 
 function applyDefaultCacheHeaders(
 	request: Request,
@@ -42,15 +35,8 @@ function applyDefaultCacheHeaders(
 		return
 	}
 
-	const requestUrl = new URL(request.url)
-	const hasSearchParams = requestUrl.search.length > 0
-	const cacheablePublicPath = isCacheablePublicPath(requestUrl.pathname)
-
-	if (!hasAuthSignals(request) && !hasSearchParams && cacheablePublicPath) {
-		responseHeaders.set(
-			'Cache-Control',
-			'public, max-age=0, s-maxage=60, stale-while-revalidate=300'
-		)
+	if (isAnonymousCacheableRequest(request)) {
+		responseHeaders.set('Cache-Control', PUBLIC_CACHE_CONTROL)
 		responseHeaders.set('Vary', 'Accept-Encoding')
 		return
 	}

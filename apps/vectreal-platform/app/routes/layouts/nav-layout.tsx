@@ -1,115 +1,47 @@
-import { data, Outlet, redirect } from 'react-router'
+import { data, Outlet } from 'react-router'
 
 import { Route } from './+types/nav-layout'
 import { Footer } from '../../components/footer'
 import { Navigation } from '../../components/navigation'
-import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
-import { isCacheablePublicPath } from '../../lib/http/cacheable-public-paths.server'
-import { hasSupabaseAuthCookie } from '../../lib/sessions/supabase-auth-cookie.server'
-import { createSupabaseClient } from '../../lib/supabase.server'
+import {
+	CurrentUserProvider,
+	useCurrentUser
+} from '../../hooks/use-current-user'
+import {
+	isAnonymousCacheableRequest,
+	publicCacheHeaders
+} from '../../lib/http/cacheable-public-paths.server'
 import { identifyMobileRequest } from '../../lib/utils/identify-mobile-request'
 
-const PUBLIC_CACHE_CONTROL =
-	'public, max-age=0, s-maxage=300, stale-while-revalidate=600'
-
-function isPublicCacheCandidate(request: Request): boolean {
-	if (request.method !== 'GET') {
-		return false
-	}
-
-	if (request.headers.has('authorization')) {
-		return false
-	}
-
-	const url = new URL(request.url)
-	if (url.search.length > 0) {
-		return false
-	}
-
-	return isCacheablePublicPath(url.pathname)
-}
-
-function withPublicCacheHeaders(initialHeaders?: Headers): Headers {
-	const headers = new Headers(initialHeaders)
-	headers.set('Cache-Control', PUBLIC_CACHE_CONTROL)
-	headers.set('Vary', 'Accept-Encoding')
-	return headers
-}
-
 export async function loader({ request }: Route.LoaderArgs) {
-	/**
-	 * Determine if the request comes from a mobile client by the headers in the request
-	 */
-	const defaultResponse = {
-		isMobile: identifyMobileRequest(request),
-		user: null
-	}
-	const cookieHeader = request.headers.get('Cookie') ?? ''
-	const hasAuthCookie = hasSupabaseAuthCookie(cookieHeader)
-	const canUsePublicCache = !hasAuthCookie && isPublicCacheCandidate(request)
+	// Public pages are CDN-cacheable, so this loader must stay free of
+	// per-visitor state. Auth is hydrated on the client via CurrentUserProvider.
+	// `isMobile` is only an SSR hint; useIsMobile re-detects on the client.
+	const loaderData = { isMobile: identifyMobileRequest(request) }
 
-	if (!hasAuthCookie) {
-		return canUsePublicCache
-			? data(defaultResponse, { headers: withPublicCacheHeaders() })
-			: data(defaultResponse)
-	}
-
-	try {
-		const { client, headers } = await createSupabaseClient(request)
-
-		const {
-			data: { user },
-			error: userError
-		} = await client.auth.getUser()
-
-		if (!user) {
-			return data(defaultResponse, { headers })
-		}
-
-		// Stale refresh token – clear the cookie so the browser doesn't keep
-		// sending it, then fall through as unauthenticated (no error log needed).
-		if (userError?.code === 'refresh_token_not_found') {
-			try {
-				await client.auth.signOut({ scope: 'local' })
-			} catch {
-				// Ignore cleanup errors
-			}
-			return data(defaultResponse, { headers })
-		}
-
-		// Create a new URL object to parse the request URL
-		const url = new URL(request.url)
-		const isRootPage = url.pathname === '/'
-
-		// If the user is authenticated and trying to access the root page, redirect to the dashboard
-		// This makes the dashboard the landing page for authenticated users
-		if (user && isRootPage) {
-			return redirect('/dashboard', { headers })
-		} else {
-			return data(
-				{ user, isMobile: identifyMobileRequest(request) },
-				{ headers }
-			)
-		}
-	} catch (error) {
-		console.error('Error during loader authentication check:', error)
-	}
-
-	return data(defaultResponse)
+	// Mirror the document cache policy on the loader (.data) response so
+	// client-side navigations to public pages stay edge-cacheable too. The
+	// headers export below propagates these onto the single-fetch response.
+	return isAnonymousCacheableRequest(request)
+		? data(loaderData, { headers: publicCacheHeaders() })
+		: data(loaderData)
 }
-const Layout = ({ loaderData }: Route.ComponentProps) => {
-	useAuthResumeRevalidation({ enabled: Boolean(loaderData.user) })
 
-	return (
-		<>
-			<Navigation
-				user={loaderData.user}
-				isMobileRequest={loaderData.isMobile}
-			/>
-			<Outlet />
-			<Footer />
-		</>
-	)
+export function headers({ loaderHeaders }: Route.HeadersArgs) {
+	return loaderHeaders
 }
+
+function NavigationWithUser({ isMobileRequest }: { isMobileRequest: boolean }) {
+	const { user } = useCurrentUser()
+	return <Navigation user={user} isMobileRequest={isMobileRequest} />
+}
+
+const Layout = ({ loaderData }: Route.ComponentProps) => (
+	<CurrentUserProvider>
+		<NavigationWithUser isMobileRequest={loaderData.isMobile} />
+		<Outlet />
+		<Footer />
+	</CurrentUserProvider>
+)
 
 export default Layout

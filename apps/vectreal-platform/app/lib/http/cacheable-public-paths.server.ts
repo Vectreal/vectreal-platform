@@ -1,3 +1,5 @@
+import { hasSupabaseAuthCookie } from '../sessions/supabase-auth-cookie'
+
 const CACHEABLE_PUBLIC_PATH_LIST = [
 	'/',
 	'/home',
@@ -22,4 +24,37 @@ export function isCacheablePublicPath(pathname: string): boolean {
 	}
 
 	return pathname.startsWith('/docs') || pathname.startsWith('/news-room')
+}
+
+/**
+ * Cache directive for anonymous public pages. Short shared TTL keeps the origin
+ * light without serving stale personalized content, since only anonymous
+ * responses ever reach this branch.
+ */
+export const PUBLIC_CACHE_CONTROL =
+	'public, max-age=0, s-maxage=60, stale-while-revalidate=300'
+
+/**
+ * Single source of truth for "may this response be cached publicly?". A response
+ * is cacheable only when it carries no per-visitor state, and the one signal for
+ * that is the absence of the Supabase auth cookie (consent and theme are
+ * client-hydrated, so their cookies never affect cacheability).
+ */
+export function isAnonymousCacheableRequest(request: Request): boolean {
+	if (request.method !== 'GET') return false
+	if (request.headers.has('authorization')) return false
+	if (hasSupabaseAuthCookie(request.headers.get('cookie'))) return false
+
+	const url = new URL(request.url)
+	if (url.search.length > 0) return false
+
+	return isCacheablePublicPath(url.pathname)
+}
+
+/** Headers applied to an anonymous, publicly cacheable response. */
+export function publicCacheHeaders(): Headers {
+	const headers = new Headers()
+	headers.set('Cache-Control', PUBLIC_CACHE_CONTROL)
+	headers.set('Vary', 'Accept-Encoding')
+	return headers
 }

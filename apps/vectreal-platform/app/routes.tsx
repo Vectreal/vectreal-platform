@@ -28,6 +28,7 @@ export default [
 	route('api/scene-location-options', './routes/api/scene-location-options.ts'),
 
 	// Auth api
+	route('auth/session', './routes/api/auth/session.ts'),
 	route('auth/logout', './routes/api/auth/logout.ts'),
 	route('auth/social-signin', './routes/api/auth/social-signin.ts'),
 	route('auth/callback', './routes/api/auth/callback.ts'),

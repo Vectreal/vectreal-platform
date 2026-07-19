@@ -20,7 +20,7 @@ import {
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import { getOrCreateDefaultOrganization } from '../../lib/domain/user/user-repository.server'
 import { buildMeta } from '../../lib/seo'
-import { hasSupabaseAuthCookie } from '../../lib/sessions/supabase-auth-cookie.server'
+import { hasSupabaseAuthCookie } from '../../lib/sessions/supabase-auth-cookie'
 import {
 	currentLocationAtom,
 	maxSceneBytesAtom,
