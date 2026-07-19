@@ -45,6 +45,7 @@ import { z, ZodError } from 'zod'
 import { Route } from './+types/settings'
 import { useConsent } from '../../components/consent/consent-context'
 import { WrittenConfirmationModal } from '../../components/shared/written-confirmation-modal'
+import { applyTheme, isForceDarkRoute } from '../../components/theme'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import { cancelStripeSubscriptionsForOrganization } from '../../lib/domain/billing/stripe-subscription-sync.server'
 import {
@@ -53,14 +54,13 @@ import {
 } from '../../lib/domain/user/user-repository.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import {
-	commitSession,
-	getSession,
-	getThemeModeFromRequest
-} from '../../lib/sessions/theme-session.server'
-import {
 	createSupabaseAdminClient,
 	createSupabaseClient
 } from '../../lib/supabase.server'
+import {
+	buildThemeSetCookie,
+	parseThemeCookieHeader
+} from '../../lib/theme/theme-cookie'
 
 import type { SettingsLoaderData } from '../../lib/domain/dashboard/dashboard-types'
 
@@ -97,28 +97,10 @@ type SettingsActionData = {
 
 type ThemeModeValue = 'system' | 'light' | 'dark'
 
-function applyThemeMode(mode: 'system' | 'light' | 'dark') {
-	if (typeof document === 'undefined') {
-		return
-	}
-
-	const pathname = window.location.pathname
-	const forceDarkTheme = pathname === '/' || pathname === '/home'
-	const prefersDark =
-		typeof window !== 'undefined' &&
-		window.matchMedia('(prefers-color-scheme: dark)').matches
-	const shouldUseDark =
-		forceDarkTheme || mode === 'dark' || (mode === 'system' && prefersDark)
-
-	const root = document.documentElement
-	root.classList.toggle('dark', shouldUseDark)
-	root.style.colorScheme = shouldUseDark ? 'dark' : 'light'
-}
-
 export async function loader({ request }: Route.LoaderArgs) {
 	const { user, userWithDefaults, headers } =
 		await loadAuthenticatedUser(request)
-	const themeMode = await getThemeModeFromRequest(request)
+	const themeMode = parseThemeCookieHeader(request.headers.get('Cookie'))
 
 	const loaderData: SettingsLoaderData = {
 		user,
@@ -166,11 +148,11 @@ export async function action({ request }: Route.ActionArgs) {
 				themeMode: formData.get('themeMode')
 			})
 
-			const themeSession = await getSession(request.headers.get('Cookie'))
-			themeSession.set('themeMode', validated.themeMode)
-
 			const responseHeaders = new Headers(headers)
-			responseHeaders.append('Set-Cookie', await commitSession(themeSession))
+			responseHeaders.append(
+				'Set-Cookie',
+				buildThemeSetCookie(validated.themeMode)
+			)
 
 			return data(
 				{
@@ -335,7 +317,7 @@ export default function SettingsPage({
 		if (actionIntent === 'preferences' && actionSuccess) {
 			if (actionThemeMode) {
 				setThemeMode(actionThemeMode)
-				applyThemeMode(actionThemeMode)
+				applyTheme(actionThemeMode, isForceDarkRoute(window.location.pathname))
 			}
 		}
 	}, [actionIntent, actionSuccess, actionThemeMode])

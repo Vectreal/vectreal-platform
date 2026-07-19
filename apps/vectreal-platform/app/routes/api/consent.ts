@@ -39,7 +39,7 @@ export async function action({ request }: Route.ActionArgs) {
 		return data({ error: 'Invalid consent payload' }, { status: 400 })
 	}
 
-	// Always commit the consent cookie — this is the source of truth for the
+	// Always commit the consent cookie; this is the source of truth for the
 	// banner. It is client-readable and unsigned so the browser hydrates the
 	// banner from it directly and it survives secret rotation on deploys.
 	const cookieHeader = buildConsentSetCookie({

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router'
+import { data, Outlet, useLocation, useNavigate } from 'react-router'
 
 import { Route } from './+types/nav-layout'
 import { Footer } from '../../components/footer'
@@ -8,13 +8,28 @@ import {
 	CurrentUserProvider,
 	useCurrentUser
 } from '../../hooks/use-current-user'
+import {
+	isAnonymousCacheableRequest,
+	publicCacheHeaders
+} from '../../lib/http/cacheable-public-paths.server'
 import { identifyMobileRequest } from '../../lib/utils/identify-mobile-request'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	// Public pages are CDN-cacheable, so this loader must stay free of
 	// per-visitor state. Auth is hydrated on the client via CurrentUserProvider.
-	// `isMobile` is only an SSR hint — useIsMobile re-detects on the client.
-	return { isMobile: identifyMobileRequest(request) }
+	// `isMobile` is only an SSR hint; useIsMobile re-detects on the client.
+	const loaderData = { isMobile: identifyMobileRequest(request) }
+
+	// Mirror the document cache policy on the loader (.data) response so
+	// client-side navigations to public pages stay edge-cacheable too. The
+	// headers export below propagates these onto the single-fetch response.
+	return isAnonymousCacheableRequest(request)
+		? data(loaderData, { headers: publicCacheHeaders() })
+		: data(loaderData)
+}
+
+export function headers({ loaderHeaders }: Route.HeadersArgs) {
+	return loaderHeaders
 }
 
 function NavigationWithUser({ isMobileRequest }: { isMobileRequest: boolean }) {

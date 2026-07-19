@@ -1,7 +1,14 @@
-import { createContext, useContext, useEffect, type ReactNode } from 'react'
-import { useFetcher } from 'react-router'
+import {
+	createContext,
+	useContext,
+	useEffect,
+	useRef,
+	type ReactNode
+} from 'react'
+import { useFetcher, useLocation } from 'react-router'
 
 import { useOnResume } from './use-on-resume'
+import { hasClientSupabaseAuthCookie } from '../lib/sessions/supabase-auth-cookie'
 
 import type { User } from '@supabase/supabase-js'
 
@@ -20,29 +27,35 @@ const SESSION_ENDPOINT = '/auth/session'
  * Client-hydrated current user for public (CDN-cacheable) pages.
  *
  * Public HTML is cached anonymously and cannot carry per-visitor auth, so the
- * nav renders signed-out on first paint and this provider fetches the real
- * session from `/auth/session` (always `no-store`) after mount. It also
- * re-fetches when the tab regains focus so sign-in/out in another tab is picked
- * up without a full reload.
+ * nav renders signed-out on first paint and this provider resolves the real
+ * session from `/auth/session` (always no-store). The fetch is gated on the
+ * presence of the Supabase auth cookie, so anonymous visitors (the audience the
+ * cache serves) never make the request. It resolves on mount, on every route
+ * change (to reflect sign-in/out navigations), and when the tab regains focus.
  */
 export function CurrentUserProvider({ children }: { children: ReactNode }) {
 	const fetcher = useFetcher<{ user: User | null }>()
+	const { pathname } = useLocation()
+	const user = fetcher.data?.user ?? null
 
-	// Initial hydration after mount (runs once).
+	// Consult the server when an auth cookie exists, or when we still hold a user
+	// that may need clearing (e.g. just signed out, cookie already removed).
+	const loadSession = () => {
+		if (fetcher.state !== 'idle') return
+		if (!hasClientSupabaseAuthCookie() && !user) return
+		fetcher.load(SESSION_ENDPOINT)
+	}
+	const loadSessionRef = useRef(loadSession)
+	loadSessionRef.current = loadSession
+
 	useEffect(() => {
-		if (fetcher.state === 'idle' && fetcher.data === undefined) {
-			fetcher.load(SESSION_ENDPOINT)
-		}
-	}, [fetcher])
+		loadSessionRef.current()
+	}, [pathname])
 
-	useOnResume(() => {
-		if (fetcher.state === 'idle') {
-			fetcher.load(SESSION_ENDPOINT)
-		}
-	})
+	useOnResume(() => loadSessionRef.current())
 
 	const value: CurrentUserContextValue = {
-		user: fetcher.data?.user ?? null,
+		user,
 		ready: fetcher.data !== undefined
 	}
 

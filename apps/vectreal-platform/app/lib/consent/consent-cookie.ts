@@ -1,4 +1,5 @@
 import { CONSENT_POLICY_VERSION } from '../../constants/consent-policy'
+import { buildSetCookie, readClientCookie } from '../http/cookies'
 
 export { CONSENT_POLICY_VERSION }
 
@@ -18,16 +19,16 @@ export interface ConsentCookieData {
 }
 
 /**
- * Isomorphic consent cookie helpers — the single source of truth for how
- * consent is encoded, read, and validated on both the server and the client.
+ * Isomorphic consent cookie helpers, the single source of truth for how consent
+ * is encoded, read, and validated on both the server and the client.
  *
  * The cookie is intentionally NOT httpOnly and NOT signed: consent preferences
  * are not security-sensitive, and keeping them client-readable lets the banner
- * hydrate purely from `document.cookie`. That decouples banner visibility from
- * the server-rendered HTML, which is CDN-cached for anonymous visitors and
- * therefore cannot carry per-visitor state. Leaving it unsigned also means the
- * cookie survives app-secret rotation on every deploy, so the banner never
- * re-appears after a release.
+ * hydrate purely from document.cookie. That decouples banner visibility from the
+ * server-rendered HTML, which is CDN-cached for anonymous visitors and therefore
+ * cannot carry per-visitor state. Leaving it unsigned also means the cookie
+ * survives app-secret rotation on every deploy, so the banner never re-appears
+ * after a release.
  */
 
 function normalizeConsentData(value: unknown): ConsentCookieData | null {
@@ -59,7 +60,7 @@ export function encodeConsentCookieValue(data: ConsentCookieData): string {
 }
 
 /** Decode a raw cookie value back into validated consent data, or null. */
-export function decodeConsentCookieValue(
+function decodeConsentCookieValue(
 	raw: string | null | undefined
 ): ConsentCookieData | null {
 	if (!raw) return null
@@ -70,52 +71,22 @@ export function decodeConsentCookieValue(
 	}
 }
 
-/** Read a single cookie's raw value out of a `Cookie` header string. */
-function readRawCookie(
-	cookieHeader: string | null,
-	name: string
-): string | null {
-	if (!cookieHeader) return null
-	for (const part of cookieHeader.split(';')) {
-		const eq = part.indexOf('=')
-		if (eq === -1) continue
-		if (part.slice(0, eq).trim() === name) {
-			return part.slice(eq + 1).trim()
-		}
-	}
-	return null
-}
-
-/** Parse validated consent data from a raw `Cookie` header (server or client). */
-export function parseConsentCookieHeader(
-	cookieHeader: string | null
-): ConsentCookieData | null {
-	return decodeConsentCookieValue(readRawCookie(cookieHeader, CONSENT_COOKIE_NAME))
-}
-
 /**
- * Client-only: read consent straight from `document.cookie`.
+ * Client only: read consent straight from document.cookie.
  * Returns null on the server or when no valid consent cookie exists.
  */
 export function readConsentCookie(): ConsentCookieData | null {
-	if (typeof document === 'undefined') return null
-	return parseConsentCookieHeader(document.cookie)
+	return decodeConsentCookieValue(readClientCookie(CONSENT_COOKIE_NAME))
 }
 
 /**
- * Build the `Set-Cookie` header value for consent (written on the server).
- * Pure string building — no secrets — so it lives alongside the encode/decode
- * pair the browser uses to read it back.
+ * Build the Set-Cookie header value for consent (written on the server).
+ * Client-readable and unsigned, matching how the browser reads it back.
  */
 export function buildConsentSetCookie(data: ConsentCookieData): string {
-	const attributes = [
-		`${CONSENT_COOKIE_NAME}=${encodeConsentCookieValue(data)}`,
-		`Max-Age=${CONSENT_COOKIE_MAX_AGE}`,
-		'Path=/',
-		'SameSite=Lax'
-	]
-	if (process.env.NODE_ENV === 'production') {
-		attributes.push('Secure')
-	}
-	return attributes.join('; ')
+	return buildSetCookie(
+		CONSENT_COOKIE_NAME,
+		encodeConsentCookieValue(data),
+		CONSENT_COOKIE_MAX_AGE
+	)
 }

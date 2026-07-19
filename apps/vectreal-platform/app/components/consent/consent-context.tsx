@@ -122,7 +122,7 @@ export function ConsentProvider({ children }: ConsentProviderProps) {
 				}
 			}
 
-			// Optimistic update — hides the banner immediately without waiting for
+			// Optimistic update hides the banner immediately without waiting for
 			// the server round-trip. Rolled back on error response above.
 			optimisticPreviousRef.current = { consent, consentVersion }
 			setConsent({

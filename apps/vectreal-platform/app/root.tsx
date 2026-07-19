@@ -21,6 +21,11 @@ import { ConsentBanner } from './components/consent/consent-banner'
 import { ConsentProvider } from './components/consent/consent-context'
 import { ConsentPreferencesDialog } from './components/consent/consent-preferences-dialog'
 import { GlobalNavigationLoader } from './components/global-navigation-loader'
+import {
+	isForceDarkRoute,
+	ThemeController,
+	ThemeScript
+} from './components/theme'
 import { posthogMiddleware } from './lib/posthog/posthog-middleware'
 import { buildMeta } from './lib/seo'
 import {
@@ -29,10 +34,6 @@ import {
 	buildWebSiteJsonLd
 } from './lib/seo-registry'
 import { csrfSession } from './lib/sessions/csrf-session.server'
-import {
-	getThemeModeFromRequest,
-	type ThemeMode
-} from './lib/sessions/theme-session.server'
 import styles from './styles/global.module.css'
 
 import type { ShouldRevalidateFunction } from 'react-router'
@@ -58,18 +59,18 @@ export async function loader({ request }: Route.LoaderArgs) {
 	if (pathname === '/health') {
 		return {
 			csrf: '',
-			themeMode: 'system' as const,
 			forceDarkTheme: false
 		}
 	}
 
 	const [csrf, cookieHeader] = await csrfSession.commitToken(request)
-	const forceDarkTheme = pathname === '/' || pathname === '/home'
-	const themeMode = await getThemeModeFromRequest(request)
+	// forceDarkTheme is route-derived (not per-visitor), so it stays cache-safe.
+	// The visitor's own theme preference is read from the cookie client-side by
+	// ThemeScript, never baked into this (CDN-cached) HTML.
+	const forceDarkTheme = isForceDarkRoute(pathname)
 
 	const loaderData = {
 		csrf,
-		themeMode,
 		forceDarkTheme
 	}
 
@@ -103,27 +104,6 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 
 export type RootLoader = typeof loader
 
-function applyResolvedTheme(
-	themeMode: ThemeMode,
-	forceDarkTheme: boolean
-): void {
-	if (typeof document === 'undefined') {
-		return
-	}
-
-	const root = document.documentElement
-	const prefersDark =
-		typeof window !== 'undefined' &&
-		window.matchMedia('(prefers-color-scheme: dark)').matches
-	const shouldUseDark =
-		forceDarkTheme ||
-		themeMode === 'dark' ||
-		(themeMode === 'system' && prefersDark)
-
-	root.classList.toggle('dark', shouldUseDark)
-	root.style.colorScheme = shouldUseDark ? 'dark' : 'light'
-}
-
 function PageViewTracker() {
 	const location = useLocation()
 	const posthog = usePostHog()
@@ -133,53 +113,6 @@ function PageViewTracker() {
 	}, [location.pathname, location.search, posthog])
 
 	return null
-}
-
-function ThemeManager({ themeMode }: { themeMode: ThemeMode }) {
-	const location = useLocation()
-
-	useEffect(() => {
-		const forceDarkTheme =
-			location.pathname === '/' || location.pathname === '/home'
-		applyResolvedTheme(themeMode, forceDarkTheme)
-
-		if (forceDarkTheme || themeMode !== 'system') {
-			return
-		}
-
-		const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-		const handleChange = () => {
-			applyResolvedTheme('system', false)
-		}
-
-		mediaQuery.addEventListener('change', handleChange)
-
-		return () => {
-			mediaQuery.removeEventListener('change', handleChange)
-		}
-	}, [location.pathname, themeMode])
-
-	return null
-}
-
-function ThemeInitScript({
-	themeMode,
-	forceDarkTheme
-}: {
-	themeMode: ThemeMode
-	forceDarkTheme: boolean
-}) {
-	const script = `(() => {
-  const root = document.documentElement;
-  const forceDarkTheme = ${JSON.stringify(forceDarkTheme)};
-  const themeMode = ${JSON.stringify(themeMode)};
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const shouldUseDark = forceDarkTheme || themeMode === 'dark' || (themeMode === 'system' && prefersDark);
-  root.classList.toggle('dark', shouldUseDark);
-  root.style.colorScheme = shouldUseDark ? 'dark' : 'light';
-})();`
-
-	return <script dangerouslySetInnerHTML={{ __html: script }} />
 }
 
 const CriticalStyles = () => (
@@ -199,9 +132,10 @@ const CriticalStyles = () => (
 export function Layout({ children }: { children: ReactNode }) {
 	const error = useRouteError()
 	const rootLoaderData = useLoaderData<RootLoader>()
-	const themeMode: ThemeMode = rootLoaderData?.themeMode ?? 'system'
+	// Only route-derived force-dark is known at render time; the visitor's own
+	// preference is applied before paint by ThemeScript (reads the cookie), so it
+	// is never baked into this CDN-cached HTML.
 	const forceDarkTheme = Boolean(rootLoaderData?.forceDarkTheme)
-	const initialShouldUseDark = forceDarkTheme || themeMode === 'dark'
 
 	if (error) {
 		console.error('Error in root layout:', error)
@@ -222,10 +156,7 @@ export function Layout({ children }: { children: ReactNode }) {
 					<Meta />
 					<Links />
 					<CriticalStyles />
-					<ThemeInitScript
-						themeMode={themeMode}
-						forceDarkTheme={forceDarkTheme}
-					/>
+					<ThemeScript forceDark={forceDarkTheme} />
 				</head>
 				<body>
 					<div className="error">
@@ -244,8 +175,8 @@ export function Layout({ children }: { children: ReactNode }) {
 		<html
 			lang="en"
 			suppressHydrationWarning
-			className={cn(styles.global, initialShouldUseDark && 'dark')}
-			style={{ colorScheme: initialShouldUseDark ? 'dark' : 'light' }}
+			className={cn(styles.global, forceDarkTheme && 'dark')}
+			style={{ colorScheme: forceDarkTheme ? 'dark' : 'light' }}
 		>
 			<head>
 				<meta charSet="utf-8" />
@@ -253,13 +184,10 @@ export function Layout({ children }: { children: ReactNode }) {
 				<Meta />
 				<Links />
 				<CriticalStyles />
-				<ThemeInitScript
-					themeMode={themeMode}
-					forceDarkTheme={forceDarkTheme}
-				/>
+				<ThemeScript forceDark={forceDarkTheme} />
 			</head>
 			<body>
-				<ThemeManager themeMode={themeMode} />
+				<ThemeController />
 				<PageViewTracker />
 				<GlobalNavigationLoader />
 				{children}

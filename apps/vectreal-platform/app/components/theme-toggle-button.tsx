@@ -3,16 +3,7 @@ import { Moon, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useFetcher, useLocation } from 'react-router'
 
-type ThemeMode = 'light' | 'dark'
-
-function applyThemeMode(mode: ThemeMode, pathname: string) {
-	const forceDarkTheme = pathname === '/' || pathname === '/home'
-	const shouldUseDark = forceDarkTheme || mode === 'dark'
-
-	const root = document.documentElement
-	root.classList.toggle('dark', shouldUseDark)
-	root.style.colorScheme = shouldUseDark ? 'dark' : 'light'
-}
+import { applyTheme, isForceDarkRoute } from './theme'
 
 export function ThemeToggleButton() {
 	const fetcher = useFetcher()
@@ -28,9 +19,9 @@ export function ThemeToggleButton() {
 	}, [location.pathname])
 
 	function handleToggle() {
-		const nextMode: ThemeMode = isDarkMode ? 'light' : 'dark'
+		const nextMode = isDarkMode ? 'light' : 'dark'
 		setIsDarkMode(nextMode === 'dark')
-		applyThemeMode(nextMode, location.pathname)
+		applyTheme(nextMode, isForceDarkRoute(location.pathname))
 
 		fetcher.submit(
 			{ themeMode: nextMode },

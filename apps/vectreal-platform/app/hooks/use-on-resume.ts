@@ -8,8 +8,9 @@ interface UseOnResumeOptions {
 const DEFAULT_COOLDOWN_MS = 30_000
 
 /**
- * Run `onResume` when the tab is brought back to the foreground — focus,
- * visibility change, or bfcache restore (`pageshow`) — throttled by a cooldown.
+ * Run `onResume` when the tab is brought back to the foreground (focus,
+ * visibility change, or bfcache restore via `pageshow`), throttled by a
+ * cooldown.
  *
  * Shared primitive so every "refresh when the user returns" behavior (auth
  * revalidation, current-user re-fetch) uses the same events and cadence.

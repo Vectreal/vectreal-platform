@@ -1,7 +1,7 @@
 import { redirect } from 'react-router'
 
 import { getAuthUser } from '../../http/auth.server'
-import { hasSupabaseAuthCookie } from '../../sessions/supabase-auth-cookie.server'
+import { hasSupabaseAuthCookie } from '../../sessions/supabase-auth-cookie'
 import { createSupabaseClient } from '../../supabase.server'
 import {
 	initializeUserDefaults,
@@ -16,7 +16,7 @@ export interface OptionalUserResult {
 }
 
 /**
- * Resolve the current user without redirecting — the read path for the
+ * Resolve the current user without redirecting: the read path for the
  * client-hydrated session endpoint used by public (CDN-cacheable) pages.
  *
  * Skips the Supabase round-trip entirely when no auth cookie is present, and
