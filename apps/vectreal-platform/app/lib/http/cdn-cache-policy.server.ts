@@ -59,6 +59,6 @@ export function isProtectedRouteFamilyPath(pathname: string): boolean {
 }
 
 /** Exact public paths that require explicit .data variants in Cloudflare Rule 2. */
-export const CDN_PUBLIC_EXACT_DATA_VARIANTS = CDN_PUBLIC_EXACT_PATHS
-	.filter((path) => !CRAWL_FILE_PATHS.has(path))
-	.map((path) => (path === '/' ? '/.data' : `${path}.data`))
+export const CDN_PUBLIC_EXACT_DATA_VARIANTS = CDN_PUBLIC_EXACT_PATHS.filter(
+	(path) => !CRAWL_FILE_PATHS.has(path)
+).map((path) => (path === '/' ? '/.data' : `${path}.data`))

@@ -29,9 +29,10 @@ describe('Cloudflare cache ruleset parity with the TS allowlist', () => {
 		const missing = CDN_PUBLIC_EXACT_PATHS.filter(
 			(p) => !tf.includes(quoted(p))
 		)
-		expect(missing, `paths missing from cloudflare.tf: ${missing.join(', ')}`).toEqual(
-			[]
-		)
+		expect(
+			missing,
+			`paths missing from cloudflare.tf: ${missing.join(', ')}`
+		).toEqual([])
 	})
 
 	it('references the .data variant of every non-root exact allowlist path', () => {

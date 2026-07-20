@@ -6,12 +6,12 @@ This directory contains the Terraform configuration for the Vectreal Platform. T
 
 All resources live in `cloudflare.tf` and are gated behind the `enable_cloudflare` flag (set `cloudflare_account_id` and a valid `cloudflare_api_token` to enable):
 
-| Resource | Purpose |
-| --- | --- |
-| **Turnstile widgets** | Bot-protection widgets for production and staging (`cloudflare_turnstile_widget`) |
-| **DNS records** | CNAMEs pointing `vectreal.com`, `www`, and `staging` at the Fly.io apps; MX records (Google Workspace + SES); SPF/DKIM/DMARC and verification TXT records; Fly.io `_acme-challenge` / `_fly-ownership` records for custom-domain TLS |
-| **Cache rules** | Edge caching ruleset - immutable `/assets/*` cached for 1 year, anonymous public SSR pages respect origin cache headers, all app/auth routes fail-closed |
-| **Legacy redirect** | `core.vectreal.com` → `vectreal.com` (301) |
+| Resource              | Purpose                                                                                                                                                                                                                              |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Turnstile widgets** | Bot-protection widgets for production and staging (`cloudflare_turnstile_widget`)                                                                                                                                                    |
+| **DNS records**       | CNAMEs pointing `vectreal.com`, `www`, and `staging` at the Fly.io apps; MX records (Google Workspace + SES); SPF/DKIM/DMARC and verification TXT records; Fly.io `_acme-challenge` / `_fly-ownership` records for custom-domain TLS |
+| **Cache rules**       | Edge caching ruleset - immutable `/assets/*` cached for 1 year, anonymous public SSR pages respect origin cache headers, all app/auth routes fail-closed                                                                             |
+| **Legacy redirect**   | `core.vectreal.com` → `vectreal.com` (301)                                                                                                                                                                                           |
 
 DNS records additionally require `cloudflare_zone_id` to be set.
 
@@ -60,20 +60,20 @@ pnpm nx run terraform:verify-fly-secrets      # read-only check
 
 ## Variables
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `cloudflare_account_id` | `""` | Cloudflare account ID. Empty disables all Cloudflare provisioning. |
-| `cloudflare_api_token` | `""` | API token (min 20 chars) with Turnstile + DNS edit permissions. |
-| `cloudflare_zone_id` | `""` | Zone ID for `vectreal.com`. Required for DNS records. |
-| `turnstile_production_hostname` | `vectreal.com` | Allowed hostname for the production Turnstile widget. |
-| `turnstile_staging_hostname` | `staging.vectreal.com` | Allowed hostname for the staging Turnstile widget. |
+| Variable                        | Default                | Description                                                        |
+| ------------------------------- | ---------------------- | ------------------------------------------------------------------ |
+| `cloudflare_account_id`         | `""`                   | Cloudflare account ID. Empty disables all Cloudflare provisioning. |
+| `cloudflare_api_token`          | `""`                   | API token (min 20 chars) with Turnstile + DNS edit permissions.    |
+| `cloudflare_zone_id`            | `""`                   | Zone ID for `vectreal.com`. Required for DNS records.              |
+| `turnstile_production_hostname` | `vectreal.com`         | Allowed hostname for the production Turnstile widget.              |
+| `turnstile_staging_hostname`    | `staging.vectreal.com` | Allowed hostname for the staging Turnstile widget.                 |
 
 ## Outputs
 
-| Output | Description |
-| --- | --- |
+| Output                          | Description                                                              |
+| ------------------------------- | ------------------------------------------------------------------------ |
 | `turnstile_production_site_key` | Turnstile site key for production (`CLOUDFLARE_TURNSTILE_SITE_KEY_PROD`) |
-| `turnstile_staging_site_key` | Turnstile site key for staging (`CLOUDFLARE_TURNSTILE_SITE_KEY_STAGING`) |
+| `turnstile_staging_site_key`    | Turnstile site key for staging (`CLOUDFLARE_TURNSTILE_SITE_KEY_STAGING`) |
 
 Both are marked `sensitive`. Read them with `terraform output -raw <name>`.
 
@@ -105,13 +105,13 @@ terraform/
 
 ## Nx targets
 
-| Target | Command |
-| --- | --- |
-| `plan-infrastructure` | `terraform init + validate + plan` |
-| `apply-infrastructure` | Runs `scripts/apply-infrastructure.sh` |
-| `apply-infrastructure-auto-approve` | `terraform apply -auto-approve` |
-| `setup-fly-secrets-staging` / `setup-fly-secrets-prod` | Sync Fly.io secrets for one environment |
-| `verify-fly-secrets` | Read-only check of current secret/hook state |
+| Target                                                 | Command                                      |
+| ------------------------------------------------------ | -------------------------------------------- |
+| `plan-infrastructure`                                  | `terraform init + validate + plan`           |
+| `apply-infrastructure`                                 | Runs `scripts/apply-infrastructure.sh`       |
+| `apply-infrastructure-auto-approve`                    | `terraform apply -auto-approve`              |
+| `setup-fly-secrets-staging` / `setup-fly-secrets-prod` | Sync Fly.io secrets for one environment      |
+| `verify-fly-secrets`                                   | Read-only check of current secret/hook state |
 
 ## Cache policy maintenance
 
