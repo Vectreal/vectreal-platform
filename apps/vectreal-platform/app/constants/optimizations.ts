@@ -26,6 +26,11 @@ export const lowPreset: Optimizations = {
 	normals: {
 		name: 'normals',
 		enabled: false
+	},
+	draco: {
+		name: 'draco',
+		enabled: false,
+		method: 'edgebreaker'
 	}
 }
 
@@ -54,6 +59,11 @@ export const mediumPreset: Optimizations = {
 	normals: {
 		name: 'normals',
 		enabled: false
+	},
+	draco: {
+		name: 'draco',
+		enabled: false,
+		method: 'edgebreaker'
 	}
 }
 
@@ -82,6 +92,11 @@ export const highPreset: Optimizations = {
 	normals: {
 		name: 'normals',
 		enabled: false
+	},
+	draco: {
+		name: 'draco',
+		enabled: false,
+		method: 'edgebreaker'
 	}
 }
 

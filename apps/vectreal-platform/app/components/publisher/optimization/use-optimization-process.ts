@@ -20,6 +20,7 @@ import {
 import type { WorkerOptimizationOptions } from '../../../workers/optimization.worker.types'
 import type {
 	DedupOptimization,
+	DracoCompressOptimization,
 	NormalsOptimization,
 	QuantizeOptimization,
 	SimplificationOptimization,
@@ -41,13 +42,15 @@ type OptimizationOption =
 	| QuantizeOptimization
 	| DedupOptimization
 	| NormalsOptimization
+	| DracoCompressOptimization
 
 const STEP_LABELS: Record<string, string> = {
 	simplification: 'Mesh simplification',
 	texture: 'Texture optimization',
 	quantize: 'Vertex quantization',
 	dedup: 'Duplicate removal',
-	normals: 'Normal refinement'
+	normals: 'Normal refinement',
+	draco: 'Draco compression'
 }
 const SYNC_STEP = 'Syncing to viewer'
 
@@ -207,6 +210,18 @@ export const useOptimizationProcess = () => {
 							workerOptions.normals = {
 								enabled: true,
 								overwrite: option.overwrite
+							}
+						} else if (option.name === 'draco') {
+							workerOptions.draco = {
+								enabled: true,
+								method: option.method,
+								encodeSpeed: option.encodeSpeed,
+								decodeSpeed: option.decodeSpeed,
+								quantizePosition: option.quantizePosition,
+								quantizeNormal: option.quantizeNormal,
+								quantizeColor: option.quantizeColor,
+								quantizeTexcoord: option.quantizeTexcoord,
+								quantizeGeneric: option.quantizeGeneric
 							}
 						}
 					}

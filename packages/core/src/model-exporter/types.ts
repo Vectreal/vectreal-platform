@@ -79,4 +79,15 @@ export interface SerializedGLTFExportResult {
 	assetIds?: Map<string, number>
 }
 
+export interface USDZExportResult {
+	/** Exported binary data for USDZ */
+	data: Uint8Array
+	/** Export format */
+	format: 'usdz'
+	/** File size in bytes */
+	size: number
+	/** Export duration in milliseconds */
+	exportTime: number
+}
+
 export type ExportResult = GLBExportResult | GLTFExportResult

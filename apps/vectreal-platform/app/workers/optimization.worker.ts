@@ -105,6 +105,22 @@ self.onmessage = async (event: MessageEvent<WorkerInputMessage>) => {
 			post({ type: 'progress', step: 'Normal refinement', progress: 100 })
 		}
 
+		// Runs last: compresses whatever geometry the earlier steps produced.
+		if (options.draco?.enabled) {
+			post({ type: 'progress', step: 'Draco compression', progress: 0 })
+			await optimizer.compressGeometry({
+				method: options.draco.method,
+				encodeSpeed: options.draco.encodeSpeed,
+				decodeSpeed: options.draco.decodeSpeed,
+				quantizePosition: options.draco.quantizePosition,
+				quantizeNormal: options.draco.quantizeNormal,
+				quantizeColor: options.draco.quantizeColor,
+				quantizeTexcoord: options.draco.quantizeTexcoord,
+				quantizeGeneric: options.draco.quantizeGeneric
+			})
+			post({ type: 'progress', step: 'Draco compression', progress: 100 })
+		}
+
 		const result = await optimizer.export()
 		// Transfer ownership of the underlying ArrayBuffer to avoid copying
 		post({ type: 'done', buffer: result.buffer as ArrayBuffer }, [

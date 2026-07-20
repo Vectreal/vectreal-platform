@@ -18,12 +18,17 @@ import { Document, GLTF, WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 
 
+import { canLoadDracoInBrowser, loadDracoModule } from '../draco/load-draco-module'
+import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extension'
 import { buildAssetLookupKeys } from '../scene-asset'
 import { OperationProgress } from '../types'
+import { getThreeDracoLoader } from './draco-three-loader'
 import { resolveModifiedUrl } from './resolve-modified-url'
 import { ModelFileTypes, ModelLoadResult, ThreeJSModelResult } from './types'
 
 import type { Object3D } from 'three'
+
+const DEFAULT_DRACO_DECODER_PATH = '/draco/'
 
 /**
  * Universal 3D model loader service.
@@ -38,9 +43,36 @@ import type { Object3D } from 'three'
 export class ModelLoader {
 	private io: WebIO
 	private progressCallback?: (progress: OperationProgress) => void
+	private dracoDecoderPath: string
+	private dracoDecoderRegistration: Promise<void> | null = null
 
-	constructor() {
+	constructor(options?: { dracoDecoderPath?: string }) {
 		this.io = new WebIO().registerExtensions(ALL_EXTENSIONS)
+		this.dracoDecoderPath =
+			options?.dracoDecoderPath ?? DEFAULT_DRACO_DECODER_PATH
+	}
+
+	/**
+	 * Lazily loads and registers the Draco decoder module on this instance's
+	 * WebIO, so `readBinary`/`readJSON` can decode `KHR_draco_mesh_compression`
+	 * primitives. Memoized so the decoder is only fetched once per instance.
+	 */
+	private ensureDracoDecoderRegistered(): Promise<void> {
+		if (!this.dracoDecoderRegistration) {
+			// Outside a browser/worker environment there is no decoder to load.
+			// Non-Draco content is unaffected; Draco content will still throw
+			// glTF-Transform's own clear "install extension dependency" error.
+			this.dracoDecoderRegistration = canLoadDracoInBrowser()
+				? loadDracoModule('decoder', this.dracoDecoderPath).then(
+						(decoderModule) => {
+							this.io.registerDependencies({
+								'draco3d.decoder': decoderModule
+							})
+						}
+					)
+				: Promise.resolve()
+		}
+		return this.dracoDecoderRegistration
 	}
 
 	/**
@@ -82,7 +114,9 @@ export class ModelLoader {
 
 			this.emitProgress('Parsing model data', 50)
 
+			await this.ensureDracoDecoderRegistered()
 			const document = await this.io.readBinary(new Uint8Array(buffer))
+			stripDecodedDracoExtension(document)
 			const loadTime = Date.now() - startTime
 
 			this.emitProgress('Model loaded successfully', 100)
@@ -117,7 +151,9 @@ export class ModelLoader {
 
 			this.emitProgress('Parsing model data', 50)
 
+			await this.ensureDracoDecoderRegistered()
 			const document = await this.io.readBinary(new Uint8Array(buffer))
+			stripDecodedDracoExtension(document)
 			const loadTime = Date.now() - startTime
 
 			this.emitProgress('Model loaded successfully', 100)
@@ -155,7 +191,9 @@ export class ModelLoader {
 
 			this.emitProgress('Parsing model data', 50)
 
+			await this.ensureDracoDecoderRegistered()
 			const document = await this.io.readBinary(buffer)
+			stripDecodedDracoExtension(document)
 			const loadTime = Date.now() - startTime
 
 			this.emitProgress('Model loaded successfully', 100)
@@ -351,6 +389,7 @@ export class ModelLoader {
 				progressOffset + 75 * progressScale
 			)
 
+			await this.ensureDracoDecoderRegistered()
 			const document = await this.io.readJSON({
 				json: gltfJson,
 				resources: resources.entries().reduce(
@@ -361,6 +400,7 @@ export class ModelLoader {
 					{} as Record<string, Uint8Array<ArrayBuffer>>
 				)
 			})
+			stripDecodedDracoExtension(document)
 
 			const totalSize =
 				gltfBuffer.byteLength +
@@ -529,9 +569,10 @@ export class ModelLoader {
 		const startTime = Date.now()
 		this.emitProgress('Parsing model data', 25)
 
-		const [{ GLTFLoader }, { LoadingManager }] = await Promise.all([
+		const [{ GLTFLoader }, { LoadingManager }, dracoLoader] = await Promise.all([
 			import('three/examples/jsm/loaders/GLTFLoader.js'),
-			import('three')
+			import('three'),
+			getThreeDracoLoader(this.dracoDecoderPath)
 		])
 
 		const urlMap = new Map<string, string>()
@@ -548,6 +589,7 @@ export class ModelLoader {
 		const manager = new LoadingManager()
 		manager.setURLModifier((url) => resolveModifiedUrl(urlMap, url))
 		const loader = new GLTFLoader(manager)
+		loader.setDRACOLoader(dracoLoader)
 		const gltfText = JSON.stringify(gltfJson)
 		totalSize += gltfText.length
 

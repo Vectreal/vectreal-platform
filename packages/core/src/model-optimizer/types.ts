@@ -50,6 +50,25 @@ export interface NormalsOptions {
 	overwrite?: boolean
 }
 
+export interface DracoOptions {
+	/** Compression method. Edgebreaker gives higher compression; sequential preserves vertex order. */
+	method?: 'edgebreaker' | 'sequential'
+	/** Encoder speed (0-10, slower = smaller). */
+	encodeSpeed?: number
+	/** Decoder speed (0-10). */
+	decodeSpeed?: number
+	/** Position quantization bits. */
+	quantizePosition?: number
+	/** Normal quantization bits. */
+	quantizeNormal?: number
+	/** Color quantization bits. */
+	quantizeColor?: number
+	/** Texture coordinate quantization bits. */
+	quantizeTexcoord?: number
+	/** Generic attribute quantization bits. */
+	quantizeGeneric?: number
+}
+
 export interface TextureCompressOptions {
 	/**
 	 * Custom image encoder compatible with the sharp constructor API.
@@ -108,6 +127,22 @@ export interface OptimizationStats {
 	nodes: BeforeAfterMetric
 }
 
+/**
+ * Draco geometry-compression metrics. Populated only when `compressGeometry`
+ * ran and was kept (not reverted for making the export bigger). Distinct
+ * from `OptimizationStats.meshes`, which always reflects uncompressed
+ * geometry byte size — Draco compression is deferred until write time, so
+ * `inspect()` can't see it.
+ */
+export interface DracoCompressionReport {
+	/** Uncompressed geometry payload size in bytes, before compression. */
+	geometryBytesBefore: number
+	/** Draco-compressed geometry payload size in bytes. */
+	geometryBytesAfterCompression: number
+	/** Percentage reduction in geometry bytes (0-100). */
+	reductionPercent: number
+}
+
 export interface OptimizationReport {
 	/** Total scene payload size in bytes before optimization. */
 	originalSize: number
@@ -119,4 +154,6 @@ export interface OptimizationReport {
 	appliedOptimizations: string[]
 	/** Optimization statistics */
 	stats: OptimizationStats
+	/** Draco geometry-compression metrics, if `compressGeometry` was applied. */
+	draco?: DracoCompressionReport
 }

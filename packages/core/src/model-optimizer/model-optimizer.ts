@@ -25,6 +25,8 @@ import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 import {
 	cloneDocument,
 	DedupOptions as GltfDedupOptions,
+	draco,
+	DracoOptions as GltfDracoOptions,
 	NormalsOptions as GltfNormalsOptions,
 	QuantizeOptions as GltfQuantizeOptions,
 	inspect,
@@ -39,6 +41,7 @@ import { MeshoptSimplifier } from 'meshoptimizer'
 import { Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
+import { canLoadDracoInBrowser, loadDracoModule } from '../draco/load-draco-module'
 import { OperationProgress } from '../types'
 import {
 	loadFromThreeJS as _loadFromThreeJS,
@@ -47,7 +50,11 @@ import {
 	loadFromJSON as _loadFromJSON,
 	loadFromGLTFWithAssets as _loadFromGLTFWithAssets
 } from './model-loading'
-import { buildOptimizationReport } from './report-helpers'
+import {
+	buildOptimizationReport,
+	calculateDracoCompressedGeometrySize,
+	calculateMeshSize
+} from './report-helpers'
 import { runTextureCompression } from './texture-compression'
 import {
 	mimeTypeToExtension,
@@ -59,6 +66,8 @@ import {
 } from './texture-naming'
 import {
 	DedupOptions,
+	DracoCompressionReport,
+	DracoOptions,
 	NormalsOptions,
 	OptimizationReport,
 	QuantizeOptions,
@@ -67,6 +76,8 @@ import {
 	TextureDescriptor,
 	TextureCompressOptions
 } from './types'
+
+const DEFAULT_DRACO_PATH = '/draco/'
 
 /**
  * Isomorphic 3D model optimization service using glTF-Transform.
@@ -90,10 +101,58 @@ export class ModelOptimizer {
 	private originalReport: InspectReport | null = null
 	private appliedOptimizations: string[] = []
 	private progressCallback?: (progress: OperationProgress) => void
+	private dracoPath: string
+	private dracoEncoderRegistration: Promise<void> | null = null
+	private dracoDecoderRegistration: Promise<void> | null = null
+	private dracoReport: DracoCompressionReport | null = null
 
-	constructor() {
+	constructor(options?: { dracoPath?: string }) {
 		this.io = new WebIO().registerExtensions(ALL_EXTENSIONS)
 		this.exporter = new GLTFExporter()
+		this.dracoPath = options?.dracoPath ?? DEFAULT_DRACO_PATH
+	}
+
+	/**
+	 * Lazily loads and registers the Draco encoder module on this instance's
+	 * WebIO, so `writeBinary`/`writeJSON` can encode `KHR_draco_mesh_compression`
+	 * primitives after `document.transform(draco(...))`. Memoized per instance.
+	 */
+	private ensureDracoEncoderRegistered(): Promise<void> {
+		if (!this.dracoEncoderRegistration) {
+			this.dracoEncoderRegistration = canLoadDracoInBrowser()
+				? loadDracoModule('encoder', this.dracoPath).then((encoderModule) => {
+						this.io.registerDependencies({
+							'draco3d.encoder': encoderModule
+						})
+					})
+				: Promise.reject(
+						new Error(
+							'Draco encoding requires a browser (window or worker) environment'
+						)
+					)
+		}
+		return this.dracoEncoderRegistration
+	}
+
+	/**
+	 * Lazily loads and registers the Draco decoder module on this instance's
+	 * WebIO, so `readBinary`/`readJSON` can decode `KHR_draco_mesh_compression`
+	 * primitives — needed both for loading pre-compressed input and for
+	 * reloading this optimizer's own Draco-compressed output (e.g. syncing
+	 * the worker's compressed buffer back to the main-thread optimizer via
+	 * `loadFromBuffer`). Memoized per instance; no-ops outside a browser.
+	 */
+	private ensureDracoDecoderRegistered(): Promise<void> {
+		if (!this.dracoDecoderRegistration) {
+			this.dracoDecoderRegistration = canLoadDracoInBrowser()
+				? loadDracoModule('decoder', this.dracoPath).then((decoderModule) => {
+						this.io.registerDependencies({
+							'draco3d.decoder': decoderModule
+						})
+					})
+				: Promise.resolve()
+		}
+		return this.dracoDecoderRegistration
 	}
 
 	/**
@@ -109,6 +168,7 @@ export class ModelOptimizer {
 	 * @param model - The Three.js Object3D model to optimize
 	 */
 	public async loadFromThreeJS(model: Object3D): Promise<void> {
+		await this.ensureDracoDecoderRegistered()
 		const result = await _loadFromThreeJS(
 			model,
 			this.io,
@@ -127,6 +187,7 @@ export class ModelOptimizer {
 	 * @param buffer - The binary model data (GLB format)
 	 */
 	public async loadFromBuffer(buffer: Uint8Array): Promise<void> {
+		await this.ensureDracoDecoderRegistered()
 		const result = await _loadFromBuffer(
 			buffer,
 			this.io,
@@ -144,6 +205,7 @@ export class ModelOptimizer {
 	 * @param filePath - Path to the model file
 	 */
 	public async loadFromFile(filePath: string): Promise<void> {
+		await this.ensureDracoDecoderRegistered()
 		const result = await _loadFromFile(
 			filePath,
 			this.io,
@@ -161,6 +223,7 @@ export class ModelOptimizer {
 	 * @param json - The JSON glTF document
 	 */
 	public async loadFromJSON(json: JSONDocument): Promise<void> {
+		await this.ensureDracoDecoderRegistered()
 		const result = await _loadFromJSON(
 			json,
 			this.io,
@@ -244,6 +307,52 @@ export class ModelOptimizer {
 			'normals optimization'
 		)
 		this.emitProgress('Normals optimization complete', 100)
+	}
+
+	/**
+	 * Apply Draco geometry compression via `KHR_draco_mesh_compression`.
+	 *
+	 * Should run last in an optimization pass — simplification/quantization/etc.
+	 * operate on decoded accessors, so running them after compression would be
+	 * pointless (compression is deferred until the document is written).
+	 *
+	 * Unlike the other optimization steps, the "after" size can't come from
+	 * `inspect()` (which only sees decoded accessor bytes); it's computed by
+	 * writing the document and reading back the compressed bufferView sizes.
+	 */
+	public async compressGeometry(options: DracoOptions = {}): Promise<void> {
+		this.ensureModelLoaded()
+
+		this.emitProgress('Applying Draco compression', 0)
+
+		await this.ensureDracoEncoderRegistered()
+
+		const geometryBytesBefore = calculateMeshSize(inspect(this.document))
+
+		await this.applyTransforms(
+			[draco(options as GltfDracoOptions)],
+			'draco compression'
+		)
+
+		if (this.appliedOptimizations.includes('draco compression')) {
+			const jsonDoc = await this.io.writeJSON(this.document)
+			const geometryBytesAfterCompression =
+				calculateDracoCompressedGeometrySize(jsonDoc)
+			const reductionPercent =
+				geometryBytesBefore > 0
+					? ((geometryBytesBefore - geometryBytesAfterCompression) /
+							geometryBytesBefore) *
+						100
+					: 0
+
+			this.dracoReport = {
+				geometryBytesBefore,
+				geometryBytesAfterCompression,
+				reductionPercent
+			}
+		}
+
+		this.emitProgress('Draco compression complete', 100)
 	}
 
 	/**
@@ -333,7 +442,8 @@ export class ModelOptimizer {
 			currentSize,
 			this.originalReport,
 			currentInspectReport,
-			this.appliedOptimizations
+			this.appliedOptimizations,
+			this.dracoReport ?? undefined
 		)
 	}
 
@@ -361,6 +471,7 @@ export class ModelOptimizer {
 		this.originalSize = 0
 		this.originalReport = null
 		this.appliedOptimizations = []
+		this.dracoReport = null
 	}
 
 	/**
@@ -441,6 +552,7 @@ export class ModelOptimizer {
 		gltfBytes: Uint8Array,
 		assets: Map<string, Uint8Array>
 	): Promise<void> {
+		await this.ensureDracoDecoderRegistered()
 		const result = await _loadFromGLTFWithAssets(
 			gltfBytes,
 			assets,
