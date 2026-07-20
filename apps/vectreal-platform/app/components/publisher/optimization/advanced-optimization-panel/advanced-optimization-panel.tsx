@@ -72,7 +72,7 @@ const AdvancedPanel: FC = () => {
 					info={tooltips.normals}
 				/>
 				<SettingToggle
-					enabled={optimizations.draco.enabled}
+					enabled={optimizations.draco?.enabled}
 					onToggle={(checked) => setEnabled(checked, 'draco')}
 					title="Compress Geometry (Draco)"
 					description={descriptions.draco}

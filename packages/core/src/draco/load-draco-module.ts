@@ -22,7 +22,9 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
  * scripts that assign a `DracoDecoderModule`/`DracoEncoderModule` factory to
  * the global scope. Loading them requires different mechanics depending on
  * where this runs:
- * - Inside a Web Worker (e.g. the optimization worker): `importScripts`.
+ * - Inside a classic Web Worker: `importScripts`.
+ * - Inside a module Web Worker: fetch the script and execute it via a
+ *   temporary blob module wrapper that publishes the factory on `self`.
  * - On the main thread (browser window): script-tag injection, since
  *   `importScripts` isn't available outside a worker.
  * Node isn't supported here — nothing in this codebase calls ModelLoader or
@@ -52,15 +54,21 @@ type WorkerGlobal = {
 	importScripts: (...urls: string[]) => void
 } & Record<string, unknown>
 
+function getFactoryFromGlobal(
+	kind: DracoModuleKind
+): (() => Promise<unknown>) | undefined {
+	return (self as unknown as Record<string, unknown>)[
+		GLOBAL_FACTORY_NAME[kind]
+	] as (() => Promise<unknown>) | undefined
+}
+
 async function loadInWorker(
 	scriptUrl: string,
 	kind: DracoModuleKind
 ): Promise<unknown> {
 	const workerGlobal = self as unknown as WorkerGlobal
 	workerGlobal.importScripts(scriptUrl)
-	const factory = workerGlobal[GLOBAL_FACTORY_NAME[kind]] as
-		| (() => Promise<unknown>)
-		| undefined
+	const factory = getFactoryFromGlobal(kind)
 
 	if (!factory) {
 		throw new Error(
@@ -69,6 +77,62 @@ async function loadInWorker(
 	}
 
 	return factory()
+}
+
+async function loadInModuleWorker(
+	scriptUrl: string,
+	kind: DracoModuleKind
+): Promise<unknown> {
+	const response = await fetch(scriptUrl)
+	if (!response.ok) {
+		throw new Error(
+			`Failed to load Draco ${kind} script from ${scriptUrl} (HTTP ${response.status})`
+		)
+	}
+
+	const source = await response.text()
+	const globalFactoryName = GLOBAL_FACTORY_NAME[kind]
+	const moduleSource = `${source}
+if (typeof self === 'object' && typeof ${globalFactoryName} !== 'undefined') {
+  self[${JSON.stringify(globalFactoryName)}] = ${globalFactoryName};
+}
+//# sourceURL=${scriptUrl}`
+	const blobUrl = URL.createObjectURL(
+		new Blob([moduleSource], { type: 'text/javascript' })
+	)
+
+	try {
+		await import(/* @vite-ignore */ blobUrl)
+	} finally {
+		URL.revokeObjectURL(blobUrl)
+	}
+
+	const factory = getFactoryFromGlobal(kind)
+
+	if (!factory) {
+		throw new Error(
+			`Failed to load Draco ${kind}: ${GLOBAL_FACTORY_NAME[kind]} was not defined after module import('${scriptUrl}')`
+		)
+	}
+
+	return factory()
+}
+
+function canUseImportScripts(): boolean {
+	if (
+		typeof self === 'undefined' ||
+		typeof (self as unknown as Record<string, unknown>)['importScripts'] !==
+			'function'
+	) {
+		return false
+	}
+
+	try {
+		;(self as unknown as WorkerGlobal).importScripts('data:text/javascript,')
+		return true
+	} catch {
+		return false
+	}
 }
 
 async function loadInWindow(
@@ -104,12 +168,14 @@ async function loadInWindow(
  * calls ModelLoader/ModelOptimizer/ModelExporter server-side today.
  */
 export function canLoadDracoInBrowser(): boolean {
-	return (
-		typeof document !== 'undefined' ||
-		(typeof self !== 'undefined' &&
-			typeof (self as unknown as Record<string, unknown>)['importScripts'] ===
-				'function')
-	)
+	const isWindow = typeof document !== 'undefined'
+	const isWorkerGlobal =
+		typeof self !== 'undefined' &&
+		typeof (self as unknown as Record<string, unknown>)['postMessage'] ===
+			'function' &&
+		typeof document === 'undefined'
+
+	return isWindow || isWorkerGlobal
 }
 
 /**
@@ -127,20 +193,21 @@ export function loadDracoModule(
 	const scriptUrl = resolveScriptUrl(decoderPath, kind)
 
 	const isWorker =
-		typeof self !== 'undefined' &&
-		typeof (self as unknown as Record<string, unknown>)['importScripts'] ===
-			'function'
+		typeof self !== 'undefined' && typeof document === 'undefined'
+	const canImportScripts = isWorker && canUseImportScripts()
 	const isWindow = typeof document !== 'undefined'
 
-	const promise = isWorker
+	const promise = canImportScripts
 		? loadInWorker(scriptUrl, kind)
-		: isWindow
-			? loadInWindow(scriptUrl, kind)
-			: Promise.reject(
-					new Error(
-						`Draco ${kind} loading requires a browser (window or worker) environment`
+		: isWorker
+			? loadInModuleWorker(scriptUrl, kind)
+			: isWindow
+				? loadInWindow(scriptUrl, kind)
+				: Promise.reject(
+						new Error(
+							`Draco ${kind} loading requires a browser (window or worker) environment`
+						)
 					)
-				)
 
 	modulePromises.set(cacheKey, promise)
 	return promise
