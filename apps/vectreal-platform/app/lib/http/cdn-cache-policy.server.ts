@@ -8,7 +8,6 @@ export const CDN_PUBLIC_EXACT_PATHS = [
 	'/about',
 	'/changelog',
 	'/code-of-conduct',
-	'/contact',
 	'/privacy-policy',
 	'/terms-of-service',
 	'/imprint',

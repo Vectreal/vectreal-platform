@@ -74,6 +74,15 @@ describe('isAnonymousCacheableRequest', () => {
 		)
 	})
 
+	it('does NOT cache /contact so server-rendered forms can mint CSRF tokens', () => {
+		expect(isAnonymousCacheableRequest(req('https://x.test/contact'))).toBe(
+			false
+		)
+		expect(isAnonymousCacheableRequest(req('https://x.test/contact.data'))).toBe(
+			false
+		)
+	})
+
 	it('keeps protected route families fail-closed', () => {
 		for (const prefix of CDN_PROTECTED_PREFIXES) {
 			expect(isAnonymousCacheableRequest(req(`https://x.test${prefix}`))).toBe(
