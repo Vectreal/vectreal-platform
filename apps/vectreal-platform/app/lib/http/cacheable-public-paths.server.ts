@@ -1,19 +1,14 @@
+import {
+	CDN_PUBLIC_EXACT_PATHS,
+	CDN_PUBLIC_PREFIXES,
+	isPublicCacheablePath
+} from './cdn-cache-policy.server'
 import { hasSupabaseAuthCookie } from '../sessions/supabase-auth-cookie'
 
-const CACHEABLE_PUBLIC_PATH_LIST = [
-	'/',
-	'/home',
-	'/about',
-	'/changelog',
-	'/code-of-conduct',
-	'/contact',
-	'/privacy-policy',
-	'/terms-of-service',
-	'/imprint',
-	'/robots.txt',
-	'/sitemap.xml',
-	'/llms.txt'
-] as const
+export const CACHEABLE_PUBLIC_PATH_LIST = CDN_PUBLIC_EXACT_PATHS
+
+/** Prefix rules: any path under these is a cacheable public path. */
+export const CACHEABLE_PUBLIC_PATH_PREFIXES = CDN_PUBLIC_PREFIXES
 
 export const CACHEABLE_PUBLIC_PATHS = new Set(CACHEABLE_PUBLIC_PATH_LIST)
 const CACHEABLE_PUBLIC_PATHS_SET: ReadonlySet<string> = CACHEABLE_PUBLIC_PATHS
@@ -23,16 +18,27 @@ export function isCacheablePublicPath(pathname: string): boolean {
 		return true
 	}
 
-	return pathname.startsWith('/docs') || pathname.startsWith('/news-room')
+	return isPublicCacheablePath(pathname)
 }
 
 /**
- * Cache directive for anonymous public pages. Short shared TTL keeps the origin
- * light without serving stale personalized content, since only anonymous
- * responses ever reach this branch.
+ * Single cache directive for anonymous public pages. `max-age=0` makes browsers
+ * revalidate against the edge (near-fresh for users); `s-maxage=300` protects
+ * the origin; a short `stale-while-revalidate=60` avoids the multi-minute stale
+ * window the old `swr=300` produced. Only anonymous responses ever reach this
+ * branch.
  */
 export const PUBLIC_CACHE_CONTROL =
-	'public, max-age=0, s-maxage=60, stale-while-revalidate=300'
+	'public, max-age=0, s-maxage=300, stale-while-revalidate=60'
+
+/**
+ * Path-only cacheability check that normalizes the single-fetch `.data` suffix.
+ * Exposed so both the request predicate and the Terraform parity test share one
+ * implementation.
+ */
+export function isAnonymousCacheablePath(pathname: string): boolean {
+	return isPublicCacheablePath(pathname)
+}
 
 /**
  * Single source of truth for "may this response be cached publicly?". A response
@@ -48,14 +54,7 @@ export function isAnonymousCacheableRequest(request: Request): boolean {
 	const url = new URL(request.url)
 	if (url.search.length > 0) return false
 
-	// Single-fetch loader requests hit the same URL with a `.data` suffix
-	// (`/about` → `/about.data`). Normalize it so the data response inherits the
-	// same cache policy as its document.
-	const pathname = url.pathname.endsWith('.data')
-		? url.pathname.slice(0, -'.data'.length)
-		: url.pathname
-
-	return isCacheablePublicPath(pathname)
+	return isAnonymousCacheablePath(url.pathname)
 }
 
 /** Headers applied to an anonymous, publicly cacheable response. */

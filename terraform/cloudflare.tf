@@ -34,15 +34,13 @@ variable "turnstile_staging_hostname" {
 }
 
 locals {
-  # Must satisfy Cloudflare provider api_token validation even when disabled.
-  cloudflare_api_token_min_length = 20
-  cloudflare_api_token_normalized = trimspace(var.cloudflare_api_token)
-  cloudflare_api_token_is_valid   = length(local.cloudflare_api_token_normalized) >= local.cloudflare_api_token_min_length
-  enable_cloudflare               = var.cloudflare_account_id != "" && local.cloudflare_api_token_is_valid
+  enable_cloudflare = var.cloudflare_account_id != ""
 }
 
 provider "cloudflare" {
-  api_token = local.cloudflare_api_token_normalized
+  # Cloudflare provider requires one credential value at config-load time.
+  # When disabled, use a non-secret placeholder that satisfies format checks.
+  api_token = var.cloudflare_api_token
 }
 
 resource "cloudflare_turnstile_widget" "production" {
@@ -106,8 +104,14 @@ resource "cloudflare_ruleset" "cache_rules" {
   kind    = "zone"
   phase   = "http_request_cache_settings"
 
+  # Host guard shared by every rule.
+  # Keep in sync with the centralized policy in
+  # apps/vectreal-platform/app/lib/http/cdn-cache-policy.server.ts
+  # (enforced by the cloudflare-cache-parity vitest test).
+
+  # Rule 1 — Immutable hashed assets served by Fly.io: cache at edge for 1 year.
   rules {
-    description = "Immutable hashed assets served by Fly.io — cache at edge for 1 year"
+    description = "Immutable hashed assets — cache 1 year"
     expression  = "((http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")) and starts_with(http.request.uri.path, \"/assets/\")"
     action      = "set_cache_settings"
     action_parameters {
@@ -123,15 +127,37 @@ resource "cloudflare_ruleset" "cache_rules" {
     }
   }
 
+  # Rule 2 — Public allowlist documents and their single-fetch .data variants:
+  # cacheable, honoring origin Cache-Control for BOTH edge and browser TTL so
+  # the zone-default 4h Browser Cache TTL never rewrites the origin's max-age=0.
+  # Cache key stays cookie-free (Cloudflare default). respect_origin means an
+  # authenticated request (origin answers no-store) is still never stored.
   rules {
-    description = "SSR app pages — respect origin cache headers"
-    expression  = "((http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")) and not starts_with(http.request.uri.path, \"/assets/\")"
+    description = "Public allowlist pages (GET only) — respect origin cache headers"
+    expression  = "((http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")) and (http.request.uri.path in {\"/\" \"/home\" \"/about\" \"/changelog\" \"/code-of-conduct\" \"/privacy-policy\" \"/terms-of-service\" \"/imprint\" \"/robots.txt\" \"/sitemap.xml\" \"/llms.txt\" \"/.data\" \"/home.data\" \"/about.data\" \"/changelog.data\" \"/code-of-conduct.data\" \"/privacy-policy.data\" \"/terms-of-service.data\" \"/imprint.data\"} or starts_with(http.request.uri.path, \"/docs\") or starts_with(http.request.uri.path, \"/news-room\")) and http.request.method eq \"GET\""
     action      = "set_cache_settings"
     action_parameters {
       cache = true
       edge_ttl {
         mode = "respect_origin"
       }
+      browser_ttl {
+        mode = "respect_origin"
+      }
+    }
+  }
+
+  # Rule 3 — Fail-closed catch-all: everything not matched above is never
+  # edge-cached, regardless of origin headers. This includes protected route
+  # families from the shared policy, including /dashboard/* (billing, settings,
+  # projects, organizations), /publisher/*, /preview/*, /onboarding, /api/*,
+  # and /auth/* plus any future route that is not explicitly public-allowlisted.
+  rules {
+    description = "Fail-closed: bypass cache for everything else"
+    expression  = "((http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")) and not starts_with(http.request.uri.path, \"/assets/\") and not ((http.request.uri.path in {\"/\" \"/home\" \"/about\" \"/changelog\" \"/code-of-conduct\" \"/privacy-policy\" \"/terms-of-service\" \"/imprint\" \"/robots.txt\" \"/sitemap.xml\" \"/llms.txt\" \"/.data\" \"/home.data\" \"/about.data\" \"/changelog.data\" \"/code-of-conduct.data\" \"/privacy-policy.data\" \"/terms-of-service.data\" \"/imprint.data\"} or starts_with(http.request.uri.path, \"/docs\") or starts_with(http.request.uri.path, \"/news-room\")) and http.request.method eq \"GET\")"
+    action      = "set_cache_settings"
+    action_parameters {
+      cache = false
     }
   }
 }
