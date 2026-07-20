@@ -6,6 +6,10 @@ import {
 	isAnonymousCacheableRequest,
 	PUBLIC_CACHE_CONTROL
 } from '../app/lib/http/cacheable-public-paths.server'
+import {
+	CDN_PROTECTED_PREFIXES,
+	normalizePathForCachePolicy
+} from '../app/lib/http/cdn-cache-policy.server'
 
 function req(url: string, headers: Record<string, string> = {}): Request {
 	return new Request(url, { headers })
@@ -68,6 +72,42 @@ describe('isAnonymousCacheableRequest', () => {
 		expect(isAnonymousCacheableRequest(req('https://x.test/dashboard'))).toBe(
 			false
 		)
+	})
+
+	it('keeps protected route families fail-closed', () => {
+		for (const prefix of CDN_PROTECTED_PREFIXES) {
+			expect(isAnonymousCacheableRequest(req(`https://x.test${prefix}`))).toBe(
+				false
+			)
+			expect(
+				isAnonymousCacheableRequest(req(`https://x.test${prefix}/sample`))
+			).toBe(false)
+			expect(
+				isAnonymousCacheableRequest(req(`https://x.test${prefix}.data`))
+			).toBe(false)
+			expect(normalizePathForCachePolicy(`${prefix}.data`)).toBe(prefix)
+		}
+	})
+
+	it('does NOT cache dashboard settings and billing pages', () => {
+		expect(
+			isAnonymousCacheableRequest(req('https://x.test/dashboard/settings'))
+		).toBe(false)
+		expect(
+			isAnonymousCacheableRequest(req('https://x.test/dashboard/billing'))
+		).toBe(false)
+		expect(
+			isAnonymousCacheableRequest(req('https://x.test/dashboard/billing.data'))
+		).toBe(false)
+	})
+
+	it('does NOT cache publisher and preview pages', () => {
+		expect(
+			isAnonymousCacheableRequest(req('https://x.test/publisher/scene-123'))
+		).toBe(false)
+		expect(
+			isAnonymousCacheableRequest(req('https://x.test/preview/fullscreen/p/s'))
+		).toBe(false)
 	})
 
 	it('caches nested docs/news-room prefixes', () => {

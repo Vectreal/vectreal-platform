@@ -4,9 +4,11 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 import {
-	CACHEABLE_PUBLIC_PATH_LIST,
-	CACHEABLE_PUBLIC_PATH_PREFIXES
-} from '../app/lib/http/cacheable-public-paths.server'
+	CDN_PROTECTED_PREFIXES,
+	CDN_PUBLIC_EXACT_DATA_VARIANTS,
+	CDN_PUBLIC_EXACT_PATHS,
+	CDN_PUBLIC_PREFIXES
+} from '../app/lib/http/cdn-cache-policy.server'
 
 // apps/vectreal-platform/tests/ -> repo root is three levels up.
 // The relative path is kept in a variable (not inlined) so Vite's static
@@ -24,7 +26,7 @@ const quoted = (value: string) => `\\"${value}\\"`
 
 describe('Cloudflare cache ruleset parity with the TS allowlist', () => {
 	it('references every exact allowlist path in the Terraform config', () => {
-		const missing = CACHEABLE_PUBLIC_PATH_LIST.filter(
+		const missing = CDN_PUBLIC_EXACT_PATHS.filter(
 			(p) => !tf.includes(quoted(p))
 		)
 		expect(missing, `paths missing from cloudflare.tf: ${missing.join(', ')}`).toEqual(
@@ -33,12 +35,9 @@ describe('Cloudflare cache ruleset parity with the TS allowlist', () => {
 	})
 
 	it('references the .data variant of every non-root exact allowlist path', () => {
-		// Root "/" is requested as "/.data"; others as "<path>.data".
-		const dataVariants = CACHEABLE_PUBLIC_PATH_LIST
-			// Prefix-covered and crawl files are matched by starts_with / need no .data literal.
-			.filter((p) => !['/robots.txt', '/sitemap.xml', '/llms.txt'].includes(p))
-			.map((p) => (p === '/' ? '/.data' : `${p}.data`))
-		const missing = dataVariants.filter((p) => !tf.includes(quoted(p)))
+		const missing = CDN_PUBLIC_EXACT_DATA_VARIANTS.filter(
+			(p) => !tf.includes(quoted(p))
+		)
 		expect(
 			missing,
 			`.data variants missing from cloudflare.tf: ${missing.join(', ')}`
@@ -46,13 +45,32 @@ describe('Cloudflare cache ruleset parity with the TS allowlist', () => {
 	})
 
 	it('references every prefix rule in the Terraform config', () => {
-		const missing = CACHEABLE_PUBLIC_PATH_PREFIXES.filter(
+		const missing = CDN_PUBLIC_PREFIXES.filter(
 			(prefix) =>
 				!tf.includes(`starts_with(http.request.uri.path, ${quoted(prefix)})`)
 		)
 		expect(
 			missing,
 			`prefixes missing from cloudflare.tf: ${missing.join(', ')}`
+		).toEqual([])
+	})
+
+	it('does not include protected route-family prefixes in the public rule', () => {
+		const publicRuleLine = tf
+			.split('\n')
+			.find((line) =>
+				line.includes(
+					'description = "Public allowlist pages (GET only) — respect origin cache headers"'
+				)
+			)
+		expect(publicRuleLine).toBeDefined()
+
+		const protectedInPublicRule = CDN_PROTECTED_PREFIXES.filter((prefix) =>
+			tf.includes(`starts_with(http.request.uri.path, ${quoted(prefix)})`)
+		)
+		expect(
+			protectedInPublicRule,
+			`protected prefixes should not be public-cache allowlisted: ${protectedInPublicRule.join(', ')}`
 		).toEqual([])
 	})
 })

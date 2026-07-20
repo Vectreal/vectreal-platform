@@ -107,8 +107,8 @@ resource "cloudflare_ruleset" "cache_rules" {
   phase   = "http_request_cache_settings"
 
   # Host guard shared by every rule.
-  # Keep in sync with the app allowlist in
-  # apps/vectreal-platform/app/lib/http/cacheable-public-paths.server.ts
+  # Keep in sync with the centralized policy in
+  # apps/vectreal-platform/app/lib/http/cdn-cache-policy.server.ts
   # (enforced by the cloudflare-cache-parity vitest test).
 
   # Rule 1 — Immutable hashed assets served by Fly.io: cache at edge for 1 year.
@@ -150,8 +150,10 @@ resource "cloudflare_ruleset" "cache_rules" {
   }
 
   # Rule 3 — Fail-closed catch-all: everything not matched above is never
-  # edge-cached, regardless of origin headers. .data (except the allowlist
-  # variants above), /api/*, /auth/*, dashboard, publisher, preview, onboarding.
+  # edge-cached, regardless of origin headers. This includes protected route
+  # families from the shared policy, including /dashboard/* (billing, settings,
+  # projects, organizations), /publisher/*, /preview/*, /onboarding, /api/*,
+  # and /auth/* plus any future route that is not explicitly public-allowlisted.
   rules {
     description = "Fail-closed: bypass cache for everything else"
     expression  = "((http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")) and not starts_with(http.request.uri.path, \"/assets/\") and not ((http.request.uri.path in {\"/\" \"/home\" \"/about\" \"/changelog\" \"/code-of-conduct\" \"/contact\" \"/privacy-policy\" \"/terms-of-service\" \"/imprint\" \"/robots.txt\" \"/sitemap.xml\" \"/llms.txt\" \"/.data\" \"/home.data\" \"/about.data\" \"/changelog.data\" \"/code-of-conduct.data\" \"/contact.data\" \"/privacy-policy.data\" \"/terms-of-service.data\" \"/imprint.data\"} or starts_with(http.request.uri.path, \"/docs\") or starts_with(http.request.uri.path, \"/news-room\")) and http.request.method eq \"GET\")"

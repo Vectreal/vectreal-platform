@@ -10,7 +10,7 @@ All resources live in `cloudflare.tf` and are gated behind the `enable_cloudflar
 | --- | --- |
 | **Turnstile widgets** | Bot-protection widgets for production and staging (`cloudflare_turnstile_widget`) |
 | **DNS records** | CNAMEs pointing `vectreal.com`, `www`, and `staging` at the Fly.io apps; MX records (Google Workspace + SES); SPF/DKIM/DMARC and verification TXT records; Fly.io `_acme-challenge` / `_fly-ownership` records for custom-domain TLS |
-| **Cache rules** | Edge caching ruleset - immutable `/assets/*` cached for 1 year, SSR pages respect origin cache headers |
+| **Cache rules** | Edge caching ruleset - immutable `/assets/*` cached for 1 year, anonymous public SSR pages respect origin cache headers, all app/auth routes fail-closed |
 | **Legacy redirect** | `core.vectreal.com` → `vectreal.com` (301) |
 
 DNS records additionally require `cloudflare_zone_id` to be set.
@@ -112,6 +112,15 @@ terraform/
 | `apply-infrastructure-auto-approve` | `terraform apply -auto-approve` |
 | `setup-fly-secrets-staging` / `setup-fly-secrets-prod` | Sync Fly.io secrets for one environment |
 | `verify-fly-secrets` | Read-only check of current secret/hook state |
+
+## Cache policy maintenance
+
+Cloudflare Rule 2 literals are intentionally static in Terraform, but they are validated against the application cache policy source of truth:
+
+- Policy source: `apps/vectreal-platform/app/lib/http/cdn-cache-policy.server.ts`
+- Parity guard: `apps/vectreal-platform/tests/cloudflare-cache-parity.test.ts`
+
+Update the policy module first, then align `terraform/cloudflare.tf` Rule 2, and run the parity test through Nx before applying infrastructure changes.
 
 ## Notes
 

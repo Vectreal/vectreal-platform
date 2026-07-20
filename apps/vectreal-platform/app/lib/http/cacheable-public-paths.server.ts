@@ -1,22 +1,14 @@
+import {
+	CDN_PUBLIC_EXACT_PATHS,
+	CDN_PUBLIC_PREFIXES,
+	isPublicCacheablePath
+} from './cdn-cache-policy.server'
 import { hasSupabaseAuthCookie } from '../sessions/supabase-auth-cookie'
 
-export const CACHEABLE_PUBLIC_PATH_LIST = [
-	'/',
-	'/home',
-	'/about',
-	'/changelog',
-	'/code-of-conduct',
-	'/contact',
-	'/privacy-policy',
-	'/terms-of-service',
-	'/imprint',
-	'/robots.txt',
-	'/sitemap.xml',
-	'/llms.txt'
-] as const
+export const CACHEABLE_PUBLIC_PATH_LIST = CDN_PUBLIC_EXACT_PATHS
 
 /** Prefix rules: any path under these is a cacheable public path. */
-export const CACHEABLE_PUBLIC_PATH_PREFIXES = ['/docs', '/news-room'] as const
+export const CACHEABLE_PUBLIC_PATH_PREFIXES = CDN_PUBLIC_PREFIXES
 
 export const CACHEABLE_PUBLIC_PATHS = new Set(CACHEABLE_PUBLIC_PATH_LIST)
 const CACHEABLE_PUBLIC_PATHS_SET: ReadonlySet<string> = CACHEABLE_PUBLIC_PATHS
@@ -26,9 +18,7 @@ export function isCacheablePublicPath(pathname: string): boolean {
 		return true
 	}
 
-	return CACHEABLE_PUBLIC_PATH_PREFIXES.some((prefix) =>
-		pathname.startsWith(prefix)
-	)
+	return isPublicCacheablePath(pathname)
 }
 
 /**
@@ -47,10 +37,7 @@ export const PUBLIC_CACHE_CONTROL =
  * implementation.
  */
 export function isAnonymousCacheablePath(pathname: string): boolean {
-	const normalized = pathname.endsWith('.data')
-		? pathname.slice(0, -'.data'.length)
-		: pathname
-	return isCacheablePublicPath(normalized)
+	return isPublicCacheablePath(pathname)
 }
 
 /**
