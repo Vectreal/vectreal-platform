@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import { buildSceneUploadFailedAnalyticsProps } from '../app/lib/domain/analytics/scene-events'
 
+import type { StructuredLoadError } from '@vctrl/hooks/use-load-model'
+
 describe('buildSceneUploadFailedAnalyticsProps', () => {
 	it('builds canonical payload with extension-based file_format and size', () => {
-		const error = {
+		const error: StructuredLoadError = {
 			code: 'gltf_load_failed',
 			message: 'Failed to parse GLTF',
 			recoverable: true,
@@ -24,7 +26,7 @@ describe('buildSceneUploadFailedAnalyticsProps', () => {
 	})
 
 	it('falls back to fileType and fallback message when needed', () => {
-		const error = {
+		const error: StructuredLoadError = {
 			code: 'binary_load_failed',
 			message: '',
 			recoverable: true,
@@ -44,7 +46,7 @@ describe('buildSceneUploadFailedAnalyticsProps', () => {
 	})
 
 	it('uses unknown file_format when no format context is available', () => {
-		const error = {
+		const error: StructuredLoadError = {
 			code: 'unknown',
 			message: 'Oops',
 			recoverable: true,

@@ -6,9 +6,9 @@ import { defaultBoundsOptions } from '../app/constants/viewer-defaults'
 import { useSceneSaveFlow } from '../app/hooks/scene-loader/use-scene-save-flow'
 
 import type { ScenePersistenceState } from '../app/hooks/scene-loader/contracts'
+import type { SceneMetaState } from '../app/types/publisher-config'
 import type { SaveSceneResult } from '../app/types/publisher-scene'
 import type { SceneOptimizationRuntimeState } from '../app/types/scene-optimization'
-import type { SceneMetaState } from '../app/types/publisher-config'
 import type { SceneSettings } from '@vctrl/core'
 
 const { mockSetAtom, mockExecuteSceneSaveOrchestrator } = vi.hoisted(() => ({
@@ -86,7 +86,8 @@ function SceneSaveFlowHarness({
 	const [sceneMetaState, setSceneMetaState] = useState(sceneMeta)
 	const [lastSavedSettings, setLastSavedSettings] =
 		useState<SceneSettings | null>(initialLastSavedSettings)
-	const [lastSavedSceneMeta, setLastSavedSceneMeta] = useState(sceneMeta)
+	const [lastSavedSceneMeta, setLastSavedSceneMeta] =
+		useState<SceneMetaState | null>(sceneMeta)
 	const [lastSavedSceneId, setLastSavedSceneId] = useState<string | null>(
 		'scene-1'
 	)
@@ -138,7 +139,7 @@ function SceneSaveFlowHarness({
 			createRequestId: () => 'request-1',
 			prepareGltfDocumentForUpload: vi.fn().mockResolvedValue(null),
 			captureSceneThumbnail: vi.fn().mockResolvedValue(null),
-			maxConcurrentAssetUploadsDefault: 4
+			captureShadowBake: vi.fn().mockResolvedValue(null)
 		}
 	})
 

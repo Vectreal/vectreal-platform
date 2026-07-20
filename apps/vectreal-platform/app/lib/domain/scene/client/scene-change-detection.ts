@@ -120,16 +120,19 @@ export const hasUnsavedSceneChanges = ({
 		return false
 	}
 
-	const settingsBaseline = lastSavedSettings || currentSettings
-	const sceneMetaBaseline = lastSavedSceneMeta || sceneMetaState
+	if (lastSavedSettings === null || lastSavedSceneMeta === null) {
+		// Scene has never been saved, so there is no baseline to diff against.
+		// Anything present is by definition unsaved.
+		return true
+	}
 
 	const settingsChanged = hasSceneSettingsChanged(
 		currentSettings,
-		settingsBaseline
+		lastSavedSettings
 	)
 	const sceneMetaChanged = hasSceneMetaChanged(
 		sceneMetaState,
-		sceneMetaBaseline
+		lastSavedSceneMeta
 	)
 	const optimizationChanged = hasOptimizationChanges({
 		reportSignature,
