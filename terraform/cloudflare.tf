@@ -34,15 +34,13 @@ variable "turnstile_staging_hostname" {
 }
 
 locals {
-  # Must satisfy Cloudflare provider api_token validation even when disabled.
-  cloudflare_api_token_min_length = 20
-  cloudflare_api_token_normalized = trimspace(var.cloudflare_api_token)
-  cloudflare_api_token_is_valid   = length(local.cloudflare_api_token_normalized) >= local.cloudflare_api_token_min_length
-  enable_cloudflare               = var.cloudflare_account_id != "" && local.cloudflare_api_token_is_valid
+  enable_cloudflare = var.cloudflare_account_id != ""
 }
 
 provider "cloudflare" {
-  api_token = local.cloudflare_api_token_normalized
+  # Cloudflare provider requires one credential value at config-load time.
+  # When disabled, use a non-secret placeholder that satisfies format checks.
+  api_token = var.cloudflare_api_token
 }
 
 resource "cloudflare_turnstile_widget" "production" {
