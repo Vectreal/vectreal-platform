@@ -1,8 +1,11 @@
 import {
 	hasSceneMetaChanged,
+	hasUnsavedSceneChanges,
 	resolveSaveAvailability,
 	shouldInitializeScene
 } from '../app/lib/domain/scene'
+
+import type { SceneSettings } from '@vctrl/core'
 
 describe('scene save state', () => {
 	it('does not initialize on same-scene revalidation', () => {
@@ -110,5 +113,42 @@ describe('scene save state', () => {
 				}
 			)
 		).toBe(true)
+	})
+
+	it('treats a never-saved scene as having unsaved changes', () => {
+		const currentSettings = { environment: 'studio' } as SceneSettings
+
+		expect(
+			hasUnsavedSceneChanges({
+				isInitializing: false,
+				currentSettings,
+				lastSavedSettings: null,
+				sceneMetaState: { name: 'New scene', description: '', thumbnailUrl: '' },
+				lastSavedSceneMeta: null,
+				reportSignature: null,
+				lastSavedReportSignature: null,
+				optimizedSceneBytes: null,
+				latestSceneStats: null
+			})
+		).toBe(true)
+	})
+
+	it('detects no changes once a baseline has been saved and nothing edited', () => {
+		const settings = { environment: 'studio' } as SceneSettings
+		const sceneMeta = { name: 'Scene A', description: '', thumbnailUrl: '' }
+
+		expect(
+			hasUnsavedSceneChanges({
+				isInitializing: false,
+				currentSettings: settings,
+				lastSavedSettings: settings,
+				sceneMetaState: sceneMeta,
+				lastSavedSceneMeta: sceneMeta,
+				reportSignature: null,
+				lastSavedReportSignature: null,
+				optimizedSceneBytes: null,
+				latestSceneStats: null
+			})
+		).toBe(false)
 	})
 })
