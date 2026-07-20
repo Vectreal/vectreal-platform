@@ -78,9 +78,9 @@ describe('isAnonymousCacheableRequest', () => {
 		expect(isAnonymousCacheableRequest(req('https://x.test/contact'))).toBe(
 			false
 		)
-		expect(isAnonymousCacheableRequest(req('https://x.test/contact.data'))).toBe(
-			false
-		)
+		expect(
+			isAnonymousCacheableRequest(req('https://x.test/contact.data'))
+		).toBe(false)
 	})
 
 	it('keeps protected route families fail-closed', () => {
