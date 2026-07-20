@@ -1,8 +1,8 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { LoaderFunctionArgs } from 'react-router'
 
 import { getDbClient } from '../../db/client'
-import { assets } from '../../db/schema'
+import { sceneAssets, sceneSettings } from '../../db/schema'
 import { downloadAsset } from '../../lib/domain/asset/asset-storage.server'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
 import { getScene } from '../../lib/domain/scene/server/scene-folder-repository.server'
@@ -10,6 +10,31 @@ import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-pr
 import { getAuthUser } from '../../lib/http/auth.server'
 
 const db = getDbClient()
+
+/**
+ * Whether `assetId` is linked to `sceneId` via the `scene_assets` join table.
+ *
+ * Assets are de-duplicated per project by content hash (see
+ * `uploadSceneAssets`), so the same asset row can legitimately be shared by
+ * multiple scenes — the asset's `metadata.sceneId` only records the scene
+ * that happened to create the row first and must not be used for
+ * authorization.
+ */
+async function assetBelongsToScene(
+	assetId: string,
+	sceneId: string
+): Promise<boolean> {
+	const [row] = await db
+		.select({ assetId: sceneAssets.assetId })
+		.from(sceneAssets)
+		.innerJoin(sceneSettings, eq(sceneAssets.sceneSettingsId, sceneSettings.id))
+		.where(
+			and(eq(sceneAssets.assetId, assetId), eq(sceneSettings.sceneId, sceneId))
+		)
+		.limit(1)
+
+	return Boolean(row)
+}
 
 // Asset rows are content-addressed per save: new bytes always get a new UUID
 // (upsert: false, path embeds assetId), so immutable caching is safe here.
@@ -104,21 +129,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		}
 
 		const previewScene = await getPublishedScenePreview(projectId, sceneId)
-		if (!previewScene) {
-			return new Response('Asset not found', {
-				status: 404,
-				headers: withNoStoreHeaders()
-			})
-		}
-
-		const [asset] = await db
-			.select({ id: assets.id, metadata: assets.metadata })
-			.from(assets)
-			.where(eq(assets.id, assetId))
-			.limit(1)
-
-		const metadata = asset?.metadata as { sceneId?: unknown } | null
-		if (!asset || metadata?.sceneId !== sceneId) {
+		if (!previewScene || previewScene.publishedAssetId !== assetId) {
 			return new Response('Asset not found', {
 				status: 404,
 				headers: withNoStoreHeaders()
@@ -160,17 +171,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		})
 	}
 
-	// Asset lookup by ID only; ownership is org-scoped, not user-scoped.
-	// The sceneId metadata check below enforces that this asset belongs to
-	// the scene the caller has already been granted access to.
-	const [asset] = await db
-		.select({ id: assets.id, metadata: assets.metadata })
-		.from(assets)
-		.where(eq(assets.id, assetId))
-		.limit(1)
-
-	const metadata = asset?.metadata as { sceneId?: unknown } | null
-	if (!asset || metadata?.sceneId !== sceneId) {
+	// Asset-to-scene link check: assets are de-duplicated per project by content
+	// hash, so the same asset row can be shared by multiple scenes — this must
+	// check the scene_assets join table, not a single-owner field on the asset.
+	if (!(await assetBelongsToScene(assetId, sceneId))) {
 		return new Response('Asset not found', {
 			status: 404,
 			headers: withNoStoreHeaders(authHeaders)
