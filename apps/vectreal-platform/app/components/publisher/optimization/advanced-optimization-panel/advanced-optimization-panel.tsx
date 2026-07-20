@@ -10,7 +10,8 @@ import type { FC } from 'react'
 const descriptions = {
 	quantize: 'Reduces color precision to lower file size',
 	dedup: 'Removes duplicate vertices and geometry',
-	normals: 'Optimizes normal vectors for smoother appearance'
+	normals: 'Optimizes normal vectors for smoother appearance',
+	draco: 'Compresses geometry with Draco (includes its own quantization)'
 }
 
 const tooltips = {
@@ -19,7 +20,9 @@ const tooltips = {
 	dedup:
 		'Identifies and merges duplicate vertices, materials, and textures to reduce redundancy and decrease file size.',
 	normals:
-		'Recalculates and optimizes normal vectors to improve lighting appearance while reducing file size.'
+		'Recalculates and optimizes normal vectors to improve lighting appearance while reducing file size.',
+	draco:
+		'Applies Draco mesh compression, which can significantly reduce geometry size. Draco quantizes vertex attributes itself, so combining it with "Quantize Vertices" is redundant.'
 }
 
 const AdvancedPanel: FC = () => {
@@ -27,7 +30,7 @@ const AdvancedPanel: FC = () => {
 
 	const setEnabled = (
 		checked: boolean,
-		type: 'quantize' | 'dedup' | 'normals'
+		type: 'quantize' | 'dedup' | 'normals' | 'draco'
 	) => {
 		setOptimizationState((previousOptimizationState) => ({
 			...previousOptimizationState,
@@ -67,6 +70,13 @@ const AdvancedPanel: FC = () => {
 					title="Optimize Normals"
 					description={descriptions.normals}
 					info={tooltips.normals}
+				/>
+				<SettingToggle
+					enabled={optimizations.draco.enabled}
+					onToggle={(checked) => setEnabled(checked, 'draco')}
+					title="Compress Geometry (Draco)"
+					description={descriptions.draco}
+					info={tooltips.draco}
 				/>
 			</div>
 		</div>

@@ -27,6 +27,7 @@ import { PerspectiveCameraProps } from '@react-three/drei'
 
 import type {
 	DedupOptions,
+	DracoOptions,
 	NormalsOptions,
 	QuantizeOptions,
 	SimplifyOptions,
@@ -523,6 +524,7 @@ export type OptimizationNames =
 	| 'quantize'
 	| 'dedup'
 	| 'normals'
+	| 'draco'
 
 export interface BaseOptimization<Name = OptimizationNames> {
 	name: Name
@@ -541,10 +543,14 @@ export interface DedupOptimization
 export interface NormalsOptimization
 	extends BaseOptimization<'normals'>, NormalsOptions {}
 
+export interface DracoCompressOptimization
+	extends BaseOptimization<'draco'>, DracoOptions {}
+
 export type Optimizations = {
 	simplification: SimplificationOptimization
 	texture: TextureOptimization
 	quantize: QuantizeOptimization
 	dedup: DedupOptimization
 	normals: NormalsOptimization
+	draco: DracoCompressOptimization
 }

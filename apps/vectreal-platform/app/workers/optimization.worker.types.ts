@@ -46,6 +46,17 @@ export interface WorkerOptimizationOptions {
     enabled: boolean
     overwrite?: boolean
   }
+  draco?: {
+    enabled: boolean
+    method?: 'edgebreaker' | 'sequential'
+    encodeSpeed?: number
+    decodeSpeed?: number
+    quantizePosition?: number
+    quantizeNormal?: number
+    quantizeColor?: number
+    quantizeTexcoord?: number
+    quantizeGeneric?: number
+  }
 }
 
 /** Message sent TO the worker. The buffer ArrayBuffer should be transferred. */

@@ -16,36 +16,68 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import { Document, WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
+import { cloneDocument, draco, DracoOptions } from '@gltf-transform/functions'
 import JSZip from 'jszip'
 import { Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
+import { canLoadDracoInBrowser, loadDracoModule } from '../draco/load-draco-module'
 import { OperationProgress } from '../types'
 import {
 	ExportOptions,
 	ExportResult,
 	GLBExportResult,
-	GLTFExportResult
+	GLTFExportResult,
+	USDZExportResult
 } from './types'
 
+const DEFAULT_DRACO_PATH = '/draco/'
+
 /**
- * Server-side 3D model export service.
+ * 3D model export service.
  *
  * This class provides comprehensive model export capabilities for:
- * - GLB (binary) format
+ * - GLB (binary) format, optionally Draco-compressed
  * - GLTF (JSON + assets) format
+ * - USDZ format (browser only, via Three.js's USDZExporter)
  * - ZIP archives with multiple files
  *
- * Designed for Node.js server environments.
+ * `saveToFile` is Node-only; the rest run in the browser (Draco/USDZ export
+ * specifically require one).
  */
 export class ModelExporter {
 	private io: WebIO
 	private threeExporter: GLTFExporter
 	private progressCallback?: (progress: OperationProgress) => void
+	private dracoPath: string
+	private dracoEncoderRegistration: Promise<void> | null = null
 
-	constructor() {
+	constructor(options?: { dracoPath?: string }) {
 		this.io = new WebIO().registerExtensions(ALL_EXTENSIONS)
 		this.threeExporter = new GLTFExporter()
+		this.dracoPath = options?.dracoPath ?? DEFAULT_DRACO_PATH
+	}
+
+	/**
+	 * Lazily loads and registers the Draco encoder module on this instance's
+	 * WebIO, so `writeBinary` can encode `KHR_draco_mesh_compression`
+	 * primitives after `document.transform(draco(...))`. Memoized per instance.
+	 */
+	private ensureDracoEncoderRegistered(): Promise<void> {
+		if (!this.dracoEncoderRegistration) {
+			this.dracoEncoderRegistration = canLoadDracoInBrowser()
+				? loadDracoModule('encoder', this.dracoPath).then((encoderModule) => {
+						this.io.registerDependencies({
+							'draco3d.encoder': encoderModule
+						})
+					})
+				: Promise.reject(
+						new Error(
+							'Draco encoding requires a browser (window or worker) environment'
+						)
+					)
+		}
+		return this.dracoEncoderRegistration
 	}
 
 	/**
@@ -84,6 +116,54 @@ export class ModelExporter {
 			}
 		} catch (error) {
 			throw new Error(`Failed to export GLB: ${error}`, { cause: error })
+		}
+	}
+
+	/**
+	 * Export a glTF-Transform document as a Draco-compressed GLB binary.
+	 *
+	 * Operates on a clone, so the caller's document (and whatever geometry
+	 * state it's in — compressed or not) is left untouched. This is an
+	 * export-time-only compression pass, independent of whether the document
+	 * was optimized with `ModelOptimizer.compressGeometry`.
+	 *
+	 * @param document - The glTF-Transform document
+	 * @param options - Draco compression options
+	 * @returns Promise resolving to the export result
+	 */
+	public async exportDocumentGLBDraco(
+		document: Document,
+		options: DracoOptions = {}
+	): Promise<GLBExportResult> {
+		const startTime = Date.now()
+		this.emitProgress('Exporting to Draco-compressed GLB format', 0)
+
+		try {
+			await this.ensureDracoEncoderRegistered()
+
+			this.emitProgress('Compressing geometry', 25)
+			const workingDoc = cloneDocument(document)
+			await workingDoc.transform(draco(options))
+
+			this.emitProgress('Serializing document', 60)
+			const binaryDoc = await this.io.writeBinary(workingDoc)
+
+			this.emitProgress('Finalizing export', 90)
+			const buffer = binaryDoc as Uint8Array
+
+			const exportTime = Date.now() - startTime
+			this.emitProgress('Export completed', 100)
+
+			return {
+				data: buffer,
+				format: 'glb',
+				size: buffer.byteLength,
+				exportTime
+			}
+		} catch (error) {
+			throw new Error(`Failed to export Draco-compressed GLB: ${error}`, {
+				cause: error
+			})
 		}
 	}
 
@@ -184,6 +264,45 @@ export class ModelExporter {
 			}
 		} catch (error) {
 			throw new Error(`Failed to export Three.js object: ${error}`, {
+				cause: error
+			})
+		}
+	}
+
+	/**
+	 * Export a Three.js Object3D as USDZ, for AR Quick Look on iOS/macOS.
+	 * Browser only — dynamically imports Three.js's `USDZExporter`.
+	 *
+	 * @param object - The Three.js Object3D
+	 * @returns Promise resolving to the export result
+	 */
+	public async exportThreeJSUSDZ(object: Object3D): Promise<USDZExportResult> {
+		const startTime = Date.now()
+		this.emitProgress('Exporting Three.js object to USDZ', 0)
+
+		try {
+			const { USDZExporter } = await import(
+				'three/examples/jsm/exporters/USDZExporter.js'
+			)
+			const exporter = new USDZExporter()
+
+			this.emitProgress('Serializing Three.js scene', 40)
+			const result = await exporter.parseAsync(object)
+
+			this.emitProgress('Finalizing USDZ binary', 90)
+			const binary = new Uint8Array(result)
+			const exportTime = Date.now() - startTime
+
+			this.emitProgress('Export completed', 100)
+
+			return {
+				data: binary,
+				format: 'usdz',
+				size: binary.byteLength,
+				exportTime
+			}
+		} catch (error) {
+			throw new Error(`Failed to export Three.js object to USDZ: ${error}`, {
 				cause: error
 			})
 		}

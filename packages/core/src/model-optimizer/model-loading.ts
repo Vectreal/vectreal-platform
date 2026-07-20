@@ -26,6 +26,8 @@ import { inspect, InspectReport } from '@gltf-transform/functions'
 import { Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
+import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extension'
+
 type LoadResult = {
 	document: Document
 	originalSize: number
@@ -97,6 +99,7 @@ export async function loadFromBuffer(
 		}
 
 		const document = await io.readBinary(buffer)
+		stripDecodedDracoExtension(document)
 		const originalSize = buffer.byteLength
 		const originalReport = inspect(document)
 		normalizeURIs(document)
@@ -153,6 +156,7 @@ export async function loadFromJSON(
 
 	try {
 		const document = await io.readJSON(json)
+		stripDecodedDracoExtension(document)
 		const originalReport = inspect(document)
 		normalizeURIs(document)
 		const binary = await exportFn()

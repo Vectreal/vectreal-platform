@@ -2,15 +2,15 @@ import { Button } from '@shared/components/ui/button'
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { motion } from 'framer-motion'
-import { Box, Download, FileAxis3d } from 'lucide-react'
+import { Archive, Box, Download, FileAxis3d, Smartphone } from 'lucide-react'
 import { useState, type FC } from 'react'
 import { toast } from 'sonner'
 
 import { Option, RadioAccordion } from '../../../../radio-accordion'
 import { itemVariants } from '../../animation'
 
-type ExportFormat = 'glb' | 'gltf'
-// | 'usdz' | 'obj';
+type ExportFormat = 'glb' | 'gltf' | 'glb-draco' | 'usdz'
+// | 'obj';
 
 const EXPORT_OPTIONS: Option<ExportFormat>[] = [
 	{
@@ -26,8 +26,20 @@ const EXPORT_OPTIONS: Option<ExportFormat>[] = [
 		description:
 			'JSON-based format with separate assets, ideal for debugging and editing',
 		icon: <Box className="h-4 w-4" />
+	},
+	{
+		id: 'glb-draco',
+		label: 'GLB (Draco-compressed)',
+		description:
+			'Smallest download — geometry compressed with Draco, single binary file',
+		icon: <Archive className="h-4 w-4" />
+	},
+	{
+		id: 'usdz',
+		label: 'USDZ',
+		description: 'For AR Quick Look on iOS and macOS devices',
+		icon: <Smartphone className="h-4 w-4" />
 	}
-	// { value: 'usdz', label: 'USDZ', desc: 'For AR on iOS devices' },
 	// {
 	// 	value: 'obj',
 	// 	label: 'OBJ',
@@ -47,10 +59,11 @@ export const SaveOptions: FC = () => {
 	const [format, setFormat] = useState<ExportFormat>('gltf')
 	const { file, optimizer } = useModelContext()
 
-	const { handleDocumentGltfExport } = useExportModel(
-		handleExportSuccess,
-		handleExportError
-	)
+	const {
+		handleDocumentGltfExport,
+		handleDocumentGlbDracoExport,
+		handleThreeUsdzExport
+	} = useExportModel(handleExportSuccess, handleExportError)
 
 	function handleFormatChange(value: Option<ExportFormat>) {
 		if (value.id === format) {
@@ -77,6 +90,15 @@ export const SaveOptions: FC = () => {
 			return
 		}
 
+		if (selectedFormatOption.id === 'usdz') {
+			if (!file) {
+				toast.error('Model not loaded or optimization failed.')
+				return
+			}
+			handleThreeUsdzExport(file)
+			return
+		}
+
 		const document = optimizer?._getDocument()
 
 		if (!document) {
@@ -88,6 +110,8 @@ export const SaveOptions: FC = () => {
 			handleDocumentGltfExport(document, file, true)
 		} else if (selectedFormatOption.id === 'gltf') {
 			handleDocumentGltfExport(document, file, false)
+		} else if (selectedFormatOption.id === 'glb-draco') {
+			handleDocumentGlbDracoExport(document, file)
 		}
 	}
 

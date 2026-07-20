@@ -68,6 +68,7 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 			rawDiagonal > (normalization.maxSize ?? defaultNormalizationOptions.maxSize))
 	const {
 		info,
+		report,
 		resolvedMetrics,
 		sizeInfo,
 		hasCompletedOptimizationPass,
@@ -341,6 +342,23 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 														{metricBytesVal(resolvedMetrics.textureBytes.current)}
 													</p>
 												</div>
+												{report?.draco ? (
+													<div className="flex items-center justify-between gap-3">
+														<p className="text-muted-foreground">
+															Geometry (Draco)
+														</p>
+														<p className="font-medium">
+															{metricBytesVal(report.draco.geometryBytesBefore)}
+															<ArrowRight className="text-muted-foreground mx-1 inline h-3 w-3" />
+															{metricBytesVal(
+																report.draco.geometryBytesAfterCompression
+															)}
+															<span className="text-muted-foreground ml-1">
+																(-{Math.round(report.draco.reductionPercent)}%)
+															</span>
+														</p>
+													</div>
+												) : null}
 											</div>
 										</motion.div>
 									) : (

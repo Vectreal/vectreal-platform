@@ -62,6 +62,54 @@ const useExportModel = (
 		[onSaved, onError]
 	)
 
+	const handleThreeUsdzExport = useCallback(
+		async (file: ModelFile | null): Promise<void> => {
+			const scene = file?.model
+			if (!scene) {
+				console.error('Scene not initialized')
+				return
+			}
+
+			try {
+				const exporter = exporterRef.current
+				const baseFileName = file.name.replace(/\.[^/.]+$/, '')
+
+				const result = await exporter.exportThreeJSUSDZ(scene)
+				fileSaver.saveAs(
+					new Blob([new Uint8Array(result.data)]),
+					`${baseFileName}.usdz`
+				)
+
+				if (onSaved) onSaved()
+			} catch (error) {
+				console.error('USDZ export failed:', error)
+				if (onError) onError(error as Error)
+			}
+		},
+		[onSaved, onError]
+	)
+
+	const handleDocumentGlbDracoExport = useCallback(
+		async (jsonDocument: Document, file: ModelFile | null): Promise<void> => {
+			try {
+				const exporter = exporterRef.current
+				const baseFileName = file?.name.replace(/\.[^/.]+$/, '') || 'model'
+
+				const result = await exporter.exportDocumentGLBDraco(jsonDocument)
+				fileSaver.saveAs(
+					new Blob([new Uint8Array(result.data)]),
+					`${baseFileName}.glb`
+				)
+
+				if (onSaved) onSaved()
+			} catch (error) {
+				console.error('Draco GLB export failed:', error)
+				if (onError) onError(error as Error)
+			}
+		},
+		[onSaved, onError]
+	)
+
 	const handleDocumentGltfExport = useCallback(
 		async function (
 			jsonDocument: Document,
@@ -106,7 +154,9 @@ const useExportModel = (
 	)
 	return {
 		handleThreeGltfExport,
-		handleDocumentGltfExport
+		handleDocumentGltfExport,
+		handleThreeUsdzExport,
+		handleDocumentGlbDracoExport
 	}
 }
 

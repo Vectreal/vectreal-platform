@@ -18,9 +18,10 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
  * Pure helpers for building the OptimizationReport from glTF-Transform InspectReport data.
  */
 
+import { JSONDocument } from '@gltf-transform/core'
 import { InspectReport } from '@gltf-transform/functions'
 
-import { OptimizationReport } from './types'
+import { DracoCompressionReport, OptimizationReport } from './types'
 
 export function calculateCounts(inspectReport: InspectReport) {
 	let vertices = 0
@@ -90,12 +91,44 @@ export function calculateMeshSize(inspectReport: InspectReport): number {
 	return totalSize
 }
 
+/**
+ * Sums the byte length of Draco-compressed geometry bufferViews in a written
+ * JSONDocument. `inspect()` can't see this — Draco compression only happens
+ * when the document is serialized, so the compressed size has to be read
+ * back out of the written glTF JSON's `KHR_draco_mesh_compression` bufferView
+ * references instead.
+ */
+export function calculateDracoCompressedGeometrySize(
+	jsonDoc: JSONDocument
+): number {
+	const { json } = jsonDoc
+	const bufferViewIndices = new Set<number>()
+
+	for (const mesh of json.meshes ?? []) {
+		for (const primitive of mesh.primitives ?? []) {
+			const dracoExtension = primitive.extensions?.[
+				'KHR_draco_mesh_compression'
+			] as { bufferView?: number } | undefined
+			if (typeof dracoExtension?.bufferView === 'number') {
+				bufferViewIndices.add(dracoExtension.bufferView)
+			}
+		}
+	}
+
+	let totalSize = 0
+	for (const index of bufferViewIndices) {
+		totalSize += json.bufferViews?.[index]?.byteLength ?? 0
+	}
+	return totalSize
+}
+
 export function buildOptimizationReport(
 	originalSize: number,
 	currentSize: number,
 	originalReport: InspectReport | null,
 	currentInspectReport: InspectReport,
-	appliedOptimizations: string[]
+	appliedOptimizations: string[],
+	dracoReport?: DracoCompressionReport
 ): OptimizationReport {
 	const originalCounts = originalReport
 		? calculateCounts(originalReport)
@@ -107,6 +140,7 @@ export function buildOptimizationReport(
 		optimizedSize: currentSize,
 		compressionRatio: originalSize / currentSize,
 		appliedOptimizations: [...appliedOptimizations],
+		...(dracoReport ? { draco: dracoReport } : {}),
 		stats: {
 			vertices: {
 				before: originalCounts.vertices,
