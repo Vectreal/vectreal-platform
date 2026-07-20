@@ -12,7 +12,7 @@
 		{
 			"type": "linked-versions",
 			"groupName": "vectreal-monorepo",
-			"components": ["workspace", "core", "hooks", "viewer"]
+			"components": ["workspace", "core", "hooks", "viewer", "embed"]
 		}
 	],
 	"packages": {
