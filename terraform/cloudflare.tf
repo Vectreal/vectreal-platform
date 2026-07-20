@@ -135,8 +135,8 @@ resource "cloudflare_ruleset" "cache_rules" {
   # Cache key stays cookie-free (Cloudflare default). respect_origin means an
   # authenticated request (origin answers no-store) is still never stored.
   rules {
-    description = "Public allowlist pages — respect origin cache headers"
-    expression  = "((http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")) and (http.request.uri.path in {\"/\" \"/home\" \"/about\" \"/changelog\" \"/code-of-conduct\" \"/contact\" \"/privacy-policy\" \"/terms-of-service\" \"/imprint\" \"/robots.txt\" \"/sitemap.xml\" \"/llms.txt\" \"/.data\" \"/home.data\" \"/about.data\" \"/changelog.data\" \"/code-of-conduct.data\" \"/contact.data\" \"/privacy-policy.data\" \"/terms-of-service.data\" \"/imprint.data\"} or starts_with(http.request.uri.path, \"/docs\") or starts_with(http.request.uri.path, \"/news-room\"))"
+    description = "Public allowlist pages (GET only) — respect origin cache headers"
+    expression  = "((http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")) and (http.request.uri.path in {\"/\" \"/home\" \"/about\" \"/changelog\" \"/code-of-conduct\" \"/contact\" \"/privacy-policy\" \"/terms-of-service\" \"/imprint\" \"/robots.txt\" \"/sitemap.xml\" \"/llms.txt\" \"/.data\" \"/home.data\" \"/about.data\" \"/changelog.data\" \"/code-of-conduct.data\" \"/contact.data\" \"/privacy-policy.data\" \"/terms-of-service.data\" \"/imprint.data\"} or starts_with(http.request.uri.path, \"/docs\") or starts_with(http.request.uri.path, \"/news-room\")) and http.request.method eq \"GET\""
     action      = "set_cache_settings"
     action_parameters {
       cache = true
@@ -154,7 +154,7 @@ resource "cloudflare_ruleset" "cache_rules" {
   # variants above), /api/*, /auth/*, dashboard, publisher, preview, onboarding.
   rules {
     description = "Fail-closed: bypass cache for everything else"
-    expression  = "((http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")) and not starts_with(http.request.uri.path, \"/assets/\") and not (http.request.uri.path in {\"/\" \"/home\" \"/about\" \"/changelog\" \"/code-of-conduct\" \"/contact\" \"/privacy-policy\" \"/terms-of-service\" \"/imprint\" \"/robots.txt\" \"/sitemap.xml\" \"/llms.txt\" \"/.data\" \"/home.data\" \"/about.data\" \"/changelog.data\" \"/code-of-conduct.data\" \"/contact.data\" \"/privacy-policy.data\" \"/terms-of-service.data\" \"/imprint.data\"} or starts_with(http.request.uri.path, \"/docs\") or starts_with(http.request.uri.path, \"/news-room\"))"
+    expression  = "((http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")) and not starts_with(http.request.uri.path, \"/assets/\") and not ((http.request.uri.path in {\"/\" \"/home\" \"/about\" \"/changelog\" \"/code-of-conduct\" \"/contact\" \"/privacy-policy\" \"/terms-of-service\" \"/imprint\" \"/robots.txt\" \"/sitemap.xml\" \"/llms.txt\" \"/.data\" \"/home.data\" \"/about.data\" \"/changelog.data\" \"/code-of-conduct.data\" \"/contact.data\" \"/privacy-policy.data\" \"/terms-of-service.data\" \"/imprint.data\"} or starts_with(http.request.uri.path, \"/docs\") or starts_with(http.request.uri.path, \"/news-room\")) and http.request.method eq \"GET\")"
     action      = "set_cache_settings"
     action_parameters {
       cache = false
