@@ -1,5 +1,6 @@
 import { Badge } from '@shared/components/ui/badge'
 import { cn } from '@shared/utils'
+import { toSerializedAssetBytes } from '@vctrl/core'
 
 import type { SceneAssetSummary } from '../../routes/dashboard-page/projects/scene'
 import type { SerializedSceneAssetDataMap } from '../../types/api'
@@ -24,24 +25,39 @@ type OtherAssetProps = {
 	className?: string
 }
 
-type SceneAssetListItemProps = TextureAssetProps | OtherAssetProps
+export type SceneAssetListItemProps = TextureAssetProps | OtherAssetProps
 
-/** Derives a base64 data URL for a texture asset from the serialized asset map. */
+function bytesToBase64(bytes: Uint8Array): string {
+	let binary = ''
+	for (let index = 0; index < bytes.length; index += 1) {
+		binary += String.fromCharCode(bytes[index])
+	}
+	return btoa(binary)
+}
+
+/**
+ * Derives a preview data URL for a texture asset from serialized asset bytes.
+ * Accepts number[]/Uint8Array/base64 payloads via toSerializedAssetBytes.
+ */
 function resolveTextureUrl(
 	asset: SceneAssetSummary,
 	assetData: SerializedSceneAssetDataMap | null | undefined
 ): string | undefined {
-	if (
-		asset.type !== 'texture' ||
-		!asset.mimeType ||
-		!asset.fileSize ||
-		!assetData?.[asset.id]
-	) {
+	if (asset.type !== 'texture' || !assetData?.[asset.id]) {
 		return undefined
 	}
+
 	const entry = assetData[asset.id]
-	if (typeof entry.data !== 'string') return undefined
-	return `data:${asset.mimeType};base64,${entry.data}`
+	if (!entry?.mimeType) {
+		return undefined
+	}
+
+	const bytes = toSerializedAssetBytes(entry)
+	if (bytes.length === 0) {
+		return undefined
+	}
+
+	return `data:${entry.mimeType};base64,${bytesToBase64(bytes)}`
 }
 
 /**
@@ -52,7 +68,7 @@ export function buildAssetListItemProps(
 	asset: SceneAssetSummary,
 	assetData?: SerializedSceneAssetDataMap | null
 ): TextureAssetProps | OtherAssetProps {
-	if (asset.type === 'texture') {
+	if (asset.type === 'texture' && assetData) {
 		const textureUrl = resolveTextureUrl(asset, assetData)
 		if (textureUrl) {
 			return {

@@ -147,12 +147,13 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	const publishedMeta = await getPublishedScenePreview(projectId, sceneId)
 
-	const additionalMetrics =
-		stats?.additionalMetrics as SceneAdditionalMetrics | null | undefined
+	const additionalMetrics = stats?.additionalMetrics as
+		| SceneAdditionalMetrics
+		| null
+		| undefined
 
 	const sceneDetails: SceneDetailsSummary = {
-		fileSizeBytes:
-			stats?.currentSceneBytes ?? stats?.initialSceneBytes ?? null,
+		fileSizeBytes: stats?.currentSceneBytes ?? stats?.initialSceneBytes ?? null,
 		assetCount: sceneAssets.length,
 		textureBytes:
 			additionalMetrics?.currentTextureBytes ??
@@ -163,9 +164,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		meshesCount:
 			stats?.optimized?.meshesCount ?? stats?.baseline?.meshesCount ?? null,
 		verticesCount:
-			stats?.optimized?.verticesCount ??
-			stats?.baseline?.verticesCount ??
-			null,
+			stats?.optimized?.verticesCount ?? stats?.baseline?.verticesCount ?? null,
 		assets: sceneAssets.map((asset) => ({
 			id: asset.id,
 			name: asset.name,
@@ -268,6 +267,16 @@ function DrawerAssetsSection({
 	const hasMore = assets.length > ASSETS_COLLAPSED_LIMIT
 	const initial = assets.slice(0, ASSETS_COLLAPSED_LIMIT)
 	const extra = assets.slice(ASSETS_COLLAPSED_LIMIT)
+	const assetPropsById = useMemo(
+		() =>
+			new Map(
+				assets.map((asset) => [
+					asset.id,
+					buildAssetListItemProps(asset, assetData)
+				])
+			),
+		[assets, assetData]
+	)
 
 	return (
 		<section className="space-y-3">
@@ -280,7 +289,8 @@ function DrawerAssetsSection({
 						<SceneAssetListItem
 							key={asset.id}
 							className="bg-muted/40"
-							{...buildAssetListItemProps(asset, assetData)}
+							{...(assetPropsById.get(asset.id) ||
+								buildAssetListItemProps(asset, assetData))}
 						/>
 					))}
 
@@ -298,7 +308,8 @@ function DrawerAssetsSection({
 									<SceneAssetListItem
 										key={asset.id}
 										className="bg-muted/40"
-										{...buildAssetListItemProps(asset, assetData)}
+										{...(assetPropsById.get(asset.id) ||
+											buildAssetListItemProps(asset, assetData))}
 									/>
 								))}
 							</motion.div>
@@ -738,7 +749,8 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 									Meshes
 								</p>
 								<p className="mt-1 font-medium">
-									{sceneDetails.meshesCount ?? '-'}</p>
+									{sceneDetails.meshesCount ?? '-'}
+								</p>
 							</div>
 						</div>
 					</section>
