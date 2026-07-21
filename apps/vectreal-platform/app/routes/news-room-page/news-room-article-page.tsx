@@ -6,6 +6,11 @@ import {
 } from '@shared/components/ui/avatar'
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
+import {
+	HoverCard,
+	HoverCardContent,
+	HoverCardTrigger
+} from '@shared/components/ui/hover-card'
 import { ScrollArea } from '@shared/components/ui/scroll-area'
 import { cn } from '@shared/utils'
 import { ArrowRight, ChevronLeft, ChevronRight, Copy } from 'lucide-react'
@@ -40,6 +45,19 @@ function initials(name: string): string {
 		.slice(0, 2)
 		.map((part) => part[0]?.toUpperCase() ?? '')
 		.join('')
+}
+
+function githubHandle(url: string | undefined): string | null {
+	if (!url) {
+		return null
+	}
+
+	const match = url.match(/github\.com\/([^/?#]+)/i)
+	if (!match?.[1]) {
+		return null
+	}
+
+	return `@${match[1]}`
 }
 
 export async function loader({ params }: Route.LoaderArgs) {
@@ -145,6 +163,7 @@ export default function NewsRoomArticlePage({
 	const startedAtRef = useRef(Date.now())
 	const { headings, activeId } = useDocToc(contentRef, article.slug)
 	const [copied, setCopied] = useState(false)
+	const authorGithubHandle = githubHandle(article.author.xUrl)
 
 	useEffect(() => {
 		if (!consent?.analytics || viewTrackedRef.current) {
@@ -263,8 +282,8 @@ export default function NewsRoomArticlePage({
 					</Link>
 				</Button>
 
-				<BasicCard as="header" cardClassName="mb-16 p-6 md:p-8">
-					<div className="-ml-1 flex flex-wrap items-center gap-2">
+				<div className="mt-8 mb-6 -ml-1 flex flex-wrap items-center justify-between gap-2 md:mt-16">
+					<div className="flex items-center gap-2">
 						<Badge variant="secondary" className="capitalize">
 							{article.category}
 						</Badge>
@@ -277,15 +296,7 @@ export default function NewsRoomArticlePage({
 							</Badge>
 						) : null}
 					</div>
-
-					<h1 className="max-w-4xl text-4xl leading-[1.03] font-medium tracking-tight text-balance md:text-6xl">
-						{article.title}
-					</h1>
-					<p className="text-muted-foreground max-w-3xl text-base leading-relaxed md:text-lg">
-						{article.excerpt}
-					</p>
-
-					<div className="text-muted-foreground mt-6 flex flex-wrap items-center gap-2 text-sm">
+					<div className="text-muted-foreground flex items-center gap-2 text-sm">
 						<span>{formatNewsDate(article.publishedAt)}</span>
 						{article.updatedAt ? (
 							<>
@@ -294,40 +305,90 @@ export default function NewsRoomArticlePage({
 							</>
 						) : null}
 					</div>
+				</div>
 
-					<div className="border-border/50 flex flex-wrap items-center gap-3 border-t pt-4">
-						<Avatar className="border-border/70 h-11 w-11 border">
-							{article.author.avatar ? (
-								<AvatarImage
-									className="p-2"
-									src={article.author.avatar}
-									alt={article.author.name}
-								/>
-							) : null}
-							<AvatarFallback>{initials(article.author.name)}</AvatarFallback>
-						</Avatar>
-						<div>
-							<p className="text-sm font-semibold tracking-tight">
-								{article.author.name}
-							</p>
-							<p className="text-muted-foreground text-xs">
-								{article.author.role}
-							</p>
-						</div>
-						<div className="ml-auto flex items-center gap-2">
-							<Button variant="secondary" size="sm" onClick={copyArticleLink}>
-								<Copy className="mr-2 h-3.5 w-3.5" />
-								{copied ? 'Copied' : 'Copy Link'}
-							</Button>
-						</div>
-					</div>
-
-					{article.author.bio && (
-						<p className="text-muted-foreground text-sm leading-relaxed md:text-base">
-							{article.author.bio}
-						</p>
-					)}
+				<BasicCard as="header" cardClassName="p-6 md:p-8">
+					<h1 className="max-w-4xl text-4xl leading-[1.03] font-medium tracking-tight text-balance md:text-6xl">
+						{article.title}
+					</h1>
+					<p className="text-muted-foreground max-w-3xl text-base leading-relaxed md:text-lg">
+						{article.excerpt}
+					</p>
 				</BasicCard>
+
+				<div className="border-border/50 mb-8 flex flex-wrap items-center gap-3 border-t pt-4 md:mb-16">
+					<HoverCard openDelay={130} closeDelay={120}>
+						<HoverCardTrigger asChild>
+							<Button variant="ghost" className="h-[unset] gap-2 text-left">
+								<Avatar className="border-border/70 h-11 w-11 border">
+									{article.author.avatar ? (
+										<AvatarImage
+											src={article.author.avatar}
+											alt={article.author.name}
+										/>
+									) : null}
+									<AvatarFallback>
+										{initials(article.author.name)}
+									</AvatarFallback>
+								</Avatar>
+								<div>
+									<p className="text-sm font-semibold tracking-tight">
+										{article.author.name}
+									</p>
+									<p className="text-muted-foreground text-xs">
+										{article.author.role}
+									</p>
+								</div>
+							</Button>
+						</HoverCardTrigger>
+						<HoverCardContent
+							align="start"
+							sideOffset={10}
+							className="w-80 p-4"
+						>
+							<div className="flex items-start gap-3">
+								<Avatar className="border-border/70 h-11 w-11 border">
+									{article.author.avatar ? (
+										<AvatarImage
+											src={article.author.avatar}
+											alt={article.author.name}
+										/>
+									) : null}
+									<AvatarFallback>
+										{initials(article.author.name)}
+									</AvatarFallback>
+								</Avatar>
+								<div className="min-w-0 flex-1">
+									<p className="text-sm font-semibold tracking-tight">
+										{article.author.name}
+									</p>
+									<p className="text-muted-foreground text-xs">
+										{article.author.role}
+									</p>
+									<p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+										{article.author.bio ?? 'Author at Vectreal.'}
+									</p>
+									{article.author.xUrl ? (
+										<a
+											href={article.author.xUrl}
+											target="_blank"
+											rel="noreferrer"
+											className="text-primary mt-2 inline-block text-xs font-medium hover:underline"
+										>
+											{authorGithubHandle ?? 'GitHub Profile'}
+										</a>
+									) : null}
+								</div>
+							</div>
+						</HoverCardContent>
+					</HoverCard>
+					<div className="ml-auto flex items-center gap-2">
+						<Button variant="secondary" size="sm" onClick={copyArticleLink}>
+							<Copy className="mr-2 h-3.5 w-3.5" />
+							{copied ? 'Copied' : 'Copy Link'}
+						</Button>
+					</div>
+				</div>
 
 				<article
 					ref={contentRef}

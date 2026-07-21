@@ -42,12 +42,13 @@
 		@apply text-xl font-light tracking-wide capitalize;
 		border-left: 2px solid var(--color-accent);
 		padding-left: 1rem;
-		margin-top: 1rem;
+		margin-top: 4rem !important;
 		scroll-margin-top: 6.5rem;
 	}
 
 	h3 {
 		@apply text-lg font-normal tracking-wide;
+		font-size: clamp(1.05rem, 1rem + 0.24vw, 1.3rem);
 		scroll-margin-top: 6.5rem;
 	}
 
@@ -89,7 +90,9 @@
 	p {
 		@apply text-base;
 		line-height: 1.8;
-		opacity: 0.82;
+		opacity: 0.8;
+		font-size: clamp(1.03rem, 0.97rem + 0.2vw, 1.12rem);
+		line-height: 1.9;
 	}
 
 	a {
@@ -196,27 +199,4 @@
 /* Docs layout MDX (fills the flex content column, no max-width) ─────────── */
 .docsContent {
 	@apply flex flex-col gap-8;
-}
-
-.newsroomContent {
-	@apply mx-auto flex max-w-3xl flex-col gap-8;
-
-	p {
-		font-size: clamp(1.03rem, 0.97rem + 0.2vw, 1.12rem);
-		line-height: 1.9;
-		opacity: 0.9;
-	}
-
-	h2 {
-		margin-top: 1.5rem;
-		font-size: clamp(1.25rem, 1.1rem + 0.4vw, 1.7rem);
-	}
-
-	h3 {
-		font-size: clamp(1.05rem, 1rem + 0.24vw, 1.3rem);
-	}
-
-	pre {
-		font-size: 0.9rem;
-	}
 }
