@@ -269,23 +269,6 @@ The distinction between glTF and GLB, what each actually contains, and why it ma
 
 ---
 
-## Starting Point
+The numbers are only convincing once you watch them drop on your own file. Upload one and read the stats panel:
 
-If you have a model and want to see the numbers without writing any code: the Publisher is free to use without an account. Upload the file, switch through the four presets, read the stats panel. The meaningful decisions - quality tradeoffs, file size targets, triangle budgets - are all visible in that workflow before any account or commit is needed.
-
-For the CLI path:
-
-```bash
-npm install --global @gltf-transform/cli
-gltf-transform inspect your-model.glb
-```
-
-The inspect output shows where the bytes are. Start with texture compression - that is almost always where the majority of the size lives.
-
-For the Node.js pipeline path:
-
-```bash
-npm install @vctrl/core
-```
-
-The API documentation is in the [repository](https://github.com/Vectreal/vectreal-platform). The `ModelOptimizer` source is readable and the operations map directly to the gltf-transform functions they wrap.
+Try it, no account needed: [vectreal.com/publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=optimize-3d-model-for-web)

@@ -248,26 +248,6 @@ If you have shipped any of these, do not panic. Go to **API keys**, revoke the o
 
 ---
 
-### What This Unlocks Next
+Keys live in your dashboard, but the scene they protect starts in the Publisher. If you have not published one yet, that is step zero:
 
-You now have a key that is scoped, expiring, and bound to the origins you actually deploy from. The next moves:
-
-- **Embed the scene in your app.** If you are integrating into React specifically, the [React Viewer Integration walkthrough](https://vectreal.com/news-room/react-viewer-integration) covers SSR-safe loading and the `ModelProvider` pattern.
-- **Tighten the second layer.** Open your project's **Embed domain allowlist** and remove any wildcard or development hosts that snuck in during testing. The allowlist is what saves you when a key leaks.
-- **Schedule the rotation.** Whichever of the three patterns above matches you, put the next rotation on a calendar before you forget you read this.
-
-If you are thinking about how to standardize this across a team that ships many embeds, talk to us. Vectreal is open-source, and our roadmap is public - security primitives like audit logs and per-key analytics get prioritized when teams tell us where the friction is.
-
----
-
-> **Have a question or want to share how your team manages embed keys?** Open a thread in our [GitHub Discussions](https://github.com/vectreal/vectreal-platform/discussions) or join the conversation in [Discord](https://discord.gg/vectreal). The platform improves fastest when we hear from teams shipping it in production.
-
-{/* ASSET BRIEF - Closing Image (optional, 05-cta-banner.webp)
-   Purpose: End-of-article CTA banner.
-   Style: Wide banner, brand dark, with the headline "Build with Vectreal"
-     and three small chips: "Open source", "AGPL-3.0", "Self-host ready".
-     Primary button area styled but inert (the actual link is in the
-     paragraph above).
-   Output: /public/assets/images/newsroom/04/05-cta-banner.webp */}
-
-*Vectreal is open-source under AGPL-3.0. The platform, viewer, hooks, and core packages live at [github.com/vectreal/vectreal-platform](https://github.com/vectreal/vectreal-platform).*
+Try it, no account needed: [vectreal.com/publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=api-keys-101)

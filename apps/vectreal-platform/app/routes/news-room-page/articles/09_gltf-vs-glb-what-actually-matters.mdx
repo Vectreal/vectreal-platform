@@ -1,0 +1,69 @@
+---
+title: "glTF vs GLB - What Actually Matters When You Ship to the Web"
+slug: "gltf-vs-glb-what-actually-matters"
+excerpt: "glTF and GLB are not two formats - they are two ways of packaging the same glTF 2.0 data. This walks through what the choice actually changes on disk, the two places it matters (shipping vs. editing and caching), why file size lives in compression rather than the container, and what both formats mean when you publish to Vectreal."
+publishedAt: "2026-07-22"
+updatedAt: "2026-07-22"
+category: "guides"
+tags:
+- "platform"
+- "open-source"
+- "3d-web"
+- "gltf"
+- "glb"
+- "formats"
+- "publishing"
+author:
+    name: "Moritz Becker"
+    role: "Founder at Vectreal"
+    bio: "Building open infrastructure for practical 3D on the web."
+    avatar: "/assets/images/author-image.jpeg"
+    xUrl: "https://github.com/schlomoh"
+    linkedinUrl: ""
+draft: false
+thumbnailImage: "/assets/images/newsroom/09/thumbnail-gltf-vs-glb-what-actually-matters.webp"
+coverImage: "/assets/images/newsroom/09/og-gltf-vs-glb-what-actually-matters.webp"
+---
+
+When I export a model for the web, the tool asks me to pick a format: `.gltf` or `.glb`. For a long time I picked whichever the last tutorial used. Then I started paying attention to what the choice actually changes, and it turned out to be smaller than the format debate makes it sound - and more consequential in exactly two places.
+
+Here is the short version. glTF and GLB are not two formats. They are two ways of packaging the same one.
+
+## Same data, two containers
+
+Both `.gltf` and `.glb` carry glTF 2.0 - the same scene graph, the same materials, the same animations, defined by the same Khronos specification. The difference is how the pieces are stored on disk.
+
+A `.gltf` export is a set of files:
+
+```
+model.gltf     JSON - the scene description, human-readable
+model.bin      binary buffer - geometry, animation data
+texture_0.png  image files, referenced by the JSON
+texture_1.png
+```
+
+A `.glb` export is one file. The [glTF specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html) defines GLB as a 12-byte header followed by chunks: a JSON chunk holding that same scene description as UTF-8, and a binary chunk holding the geometry and, optionally, the textures. Nothing is lost or added. The JSON that sat in a separate file is now the first chunk; the `.bin` and images are packed into the second (Khronos glTF 2.0 spec, accessed 2026-07-22).
+
+So the mental model I use now: **glTF is the format, GLB is the way to zip it into one file.** There is also a third variant - a single `.gltf` that embeds its buffers as base64 data URIs directly in the JSON. It is worth knowing only so you can avoid it: base64 inflates binary data by roughly a third, which is why a self-contained GLB ends up smaller than a self-contained glTF carrying the same embedded data ([GeometryViewer, glTF vs GLB](https://geometryviewer.com/blog/gltf-vs-glb), accessed 2026-07-22).
+
+## Where the choice actually matters
+
+Two places, and they pull in opposite directions.
+
+**GLB wins on shipping.** One file moves cleanly. There are no relative paths to break, no texture that silently 404s because it did not get uploaded alongside the JSON, nothing to reassemble on the other end. If the model is done and you are handing it to a page, a CDN, or a colleague, a single self-contained file is the format that does not surprise you.
+
+**Separate glTF wins on editing and caching.** Because the scene description is a plain JSON file, you can open it in a text editor and change a material name, a node, or a URI by hand - the export is not sealed shut. And separate texture files can be cached individually by the browser, so a shared texture used across several models is fetched once rather than re-embedded in every file ([FabRapid, GLB vs glTF](https://3d-tools.fabrapid.com/blog/glb-vs-gltf), accessed 2026-07-22).
+
+Everything else people argue about - load speed, file size - is mostly downstream of compression, not the container. Draco compresses the geometry buffer and works with either packaging: in a separate glTF the compressed data lands in the `.bin`, in a GLB it lands in the binary chunk. It can cut vertex data substantially, and the cost is decode time - the browser has to run a WebAssembly decoder before the geometry is usable ([Cesium, Draco compression](https://cesium.com/blog/2018/04/09/draco-compression/), accessed 2026-07-22). That trade-off is real, but it is the same trade-off whichever container you picked. The container is not where your file size problem lives.
+
+## What this means for publishing to Vectreal
+
+Vectreal takes both. GLB uploads as the single file it is. A glTF bundle uploads as the whole set - the `.gltf`, its `.bin`, and its textures - and the parser identifies the `.gltf` root and resolves the referenced `.bin` and texture files automatically. You can drag and drop, use the file picker, or drop a full glTF folder; no account is needed to try it.
+
+glTF with its separate files is the preferred input, with full material support. GLB works too, as a self-contained single file. OBJ is supported as a legacy path. USDZ support is partial right now - textures and some material types may not render correctly - and I would not reach for it for the web yet.
+
+One honest note on size: there is no limit enforced at upload or preview, so you can drop a large file and look at it. A cap does apply when you save a published scene. And a genuinely large file - above roughly 500 MB - can slow the browser down while it parses, regardless of format. This is a pre-1.0 project; I would rather tell you where the edges are than let you find them.
+
+If you have a model sitting in a folder right now, the fastest way to see how it lands is to drop it in and look:
+
+Try it, no account needed: [vectreal.com/publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=gltf-vs-glb)
