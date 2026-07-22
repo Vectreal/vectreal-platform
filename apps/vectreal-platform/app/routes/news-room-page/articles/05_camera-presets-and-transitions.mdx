@@ -319,29 +319,6 @@ That's it. Five minutes. The first frame is now intentional, the visitor cannot 
 
 ---
 
-### What This Unlocks Next
+Camera work is where a scene stops looking like a model and starts looking shipped. The controls are one click away in the Publisher:
 
-You now have a multi-camera scene with intentional framing and polished transitions. From here:
-
-- **If you want camera switches driven from your application code**, the [React Viewer Integration guide](https://vectreal.com/news-room/react-viewer-integration) covers the `cameraOptions` prop surface - saved cameras flow directly into it as the `cameras` array.
-- **If you want to share previews privately before publishing**, the private-preview entitlement is available on Pro and above. Mint a key per the [API Keys 101 guide](https://vectreal.com/news-room/api-keys-101) and embed the preview behind your domain allowlist.
-- **If your scene has many components and Smart transitions are expensive at high sample counts**, drop Path Smoothness to 16 or 24 and re-time the duration. The visual difference is small; the runtime cost is meaningful on lower-end devices.
-
-We are also actively gathering input on what should land next in the camera system - preset bundles shipped as community-shared exports, scripted camera tours, and triggered transitions. If you have a use case the current surface does not cover well, tell us about it.
-
----
-
-> **Have a scene you want to show off, or a camera setup you've fallen in love with?** Drop it in our [Discord](https://discord.gg/vectreal) - we run a "preset drops" thread for shareable camera configurations. The roadmap moves fastest when teams tell us where the friction is.
-
-{/* ASSET BRIEF - Closing video (optional, 06-walkthrough-video.mp4)
-   Length: 60–90 seconds. Screen capture only.
-   Content: Open Publisher → Compose tab → add three cameras (Hero,
-     Detail, Context) → set FOV per camera → switch transition to
-     Linear / Smooth / 1000ms → toggle Auto Rotate off → set Vertical
-     Limit to 90° → publish. End on the published preview cycling
-     through the three cameras with smooth transitions.
-   Audio: None or low-volume DM-Sans-feeling soft synth bed; no VO
-     necessary, the on-screen UI labels carry the narrative.
-   Output: /public/assets/videos/newsroom/05/06-walkthrough-video.mp4 */}
-
-*Vectreal is open-source under AGPL-3.0. The platform, viewer, hooks, and core packages live at [github.com/vectreal/vectreal-platform](https://github.com/vectreal/vectreal-platform).*
+Try it, no account needed: [vectreal.com/publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=camera-presets-and-transitions)
