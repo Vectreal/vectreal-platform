@@ -84,7 +84,7 @@
 		"react-dropzone": "^14.4.1",
 		"react-hook-form": "^7.73.1",
 		"react-resizable-panels": "^2.1.9",
-		"react-router": "7.15.1",
+		"react-router": "7.18.0",
 		"recharts": "^3.9.2",
 		"remix-utils": "^8.8.0",
 		"resend": "^4.6.0",
