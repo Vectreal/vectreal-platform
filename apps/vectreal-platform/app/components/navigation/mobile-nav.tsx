@@ -6,8 +6,8 @@ import { cn } from '@shared/utils'
 import { User } from '@supabase/supabase-js'
 import { motion } from 'framer-motion'
 import {
-	ArrowRight,
 	ExternalLink,
+	Home,
 	LayoutDashboard,
 	LogIn,
 	MenuIcon,
@@ -58,8 +58,6 @@ function MobileNav({
 	}, [pathname])
 
 	const allDrawerItems: NavItem[] = [
-		{ label: 'Home', to: '/', icon: <ArrowRight className="size-4" /> },
-		...navItems,
 		...(user
 			? [
 					{
@@ -68,7 +66,9 @@ function MobileNav({
 						icon: <LayoutDashboard className="size-4" />
 					}
 				]
-			: [])
+			: []),
+		{ label: 'Home', to: '/', icon: <Home className="size-4" /> },
+		...navItems
 	]
 
 	return (
