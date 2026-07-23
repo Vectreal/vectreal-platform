@@ -402,7 +402,7 @@ export default function NewsRoomArticlePage({
 					<ArticleComponent />
 				</article>
 
-				<BasicCard as="section" cardClassName="p-6 gap-3 md:p-8">
+				<BasicCard as="section" cardClassName="flex flex-col gap-3 p-6 md:p-8">
 					<p className="text-primary mb-2 text-xs font-semibold tracking-[0.14em] uppercase">
 						Built for makers shipping in 3D
 					</p>
@@ -487,7 +487,7 @@ export default function NewsRoomArticlePage({
 						<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 							{related.map((item) => (
 								<Link key={item.slug} to={`/news-room/${item.slug}`}>
-									<BasicCard cardClassName="p-5 gap-3">
+									<BasicCard cardClassName="flex flex-col gap-3 p-5">
 										<p className="text-muted-foreground mb-2 text-xs tracking-wide uppercase">
 											{formatNewsDate(item.publishedAt)} •{' '}
 											{item.readingTimeMinutes} min
