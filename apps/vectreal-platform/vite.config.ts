@@ -12,11 +12,16 @@ import remarkGfm from 'remark-gfm'
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter'
 import { defineConfig, type PluginOption } from 'vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
+import { VitePWA } from 'vite-plugin-pwa'
 
 const prettyCodeOptions = {
 	theme: 'github-dark',
 	keepBackground: true
 }
+
+// Public path prefix for Draco decoder files (binary/wasm) served from
+// public/draco/. These assets rarely change and benefit from a long-lived cache.
+const DRACO_PUBLIC_PATH_PREFIX = '/draco/'
 
 const reactCompilerEnvVar = 'VITE_EXPERIMENTAL_REACT_COMPILER'
 
@@ -132,7 +137,41 @@ export default defineConfig(({ command }) => {
 				projectRoot: __dirname
 			}),
 			!process.env.VITEST && reactRouter(),
-			reactCompilerPlugin(reactCompilerEnabled)
+			reactCompilerPlugin(reactCompilerEnabled),
+			VitePWA({
+				// New service worker waits for user confirmation before activating.
+				registerType: 'prompt',
+				// Registration is handled manually via useRegisterSW in pwa-update-banner.tsx.
+				injectRegister: false,
+				// Use the existing public/site.webmanifest; the plugin won't touch it.
+				manifest: false,
+				// Dev mode: service worker stays disabled.
+				devOptions: {
+					enabled: false
+				},
+				workbox: {
+					// Precache compiled JS/CSS bundles, icons, and fonts.
+					// HTML navigation responses are intentionally excluded (SSR app).
+					globPatterns: ['**/*.{js,css,ico,png,svg,woff2}'],
+					runtimeCaching: [
+						// Draco WASM/JS decoder files ship in public/draco/ and
+						// are not fingerprinted, so keep cache-first but with a short TTL.
+						{
+							urlPattern: ({ url }) =>
+								url.pathname.startsWith(DRACO_PUBLIC_PATH_PREFIX),
+							handler: 'CacheFirst',
+							options: {
+								cacheName: 'draco-assets',
+								expiration: {
+									maxEntries: 20,
+									maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
+								},
+								cacheableResponse: { statuses: [0, 200] }
+							}
+						}
+					]
+				}
+			})
 		],
 		// worker: {
 		//  plugins: [ nxViteTsPaths() ],
@@ -140,6 +179,7 @@ export default defineConfig(({ command }) => {
 		// Removed 'ssr.external' because it's incompatible with Cloudflare Vite plugin
 		// Externals are now only handled in rolldownOptions.external
 		ssr: {
+			enable: true,
 			// posthog-js and @posthog/react must be bundled for SSR to avoid module resolution errors
 			noExternal: ['posthog-js', '@posthog/react']
 		},

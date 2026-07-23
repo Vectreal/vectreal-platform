@@ -22,6 +22,7 @@
 		"vite.config.mts",
 		"vitest.config.ts",
 		"vitest.config.mts",
+		"app/sw.ts",
 		"app/**/*.test.ts",
 		"app/**/*.spec.ts",
 		"app/**/*.test.tsx",
