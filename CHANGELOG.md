@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.24.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.23.0...workspace-v0.24.0) (2026-07-23)
+
+
+### Features
+
+* add SnapRow component for mobile scroll-snap functionality ([#605](https://github.com/Vectreal/vectreal-platform/issues/605)) ([e87ba58](https://github.com/Vectreal/vectreal-platform/commit/e87ba5872cf31bca5aba4a6e49fdf3c55ee8a35f))
+* **assets:** optimize asset loading and improve texture URL resolution ([#623](https://github.com/Vectreal/vectreal-platform/issues/623)) ([33680b8](https://github.com/Vectreal/vectreal-platform/commit/33680b82b0b8275ecce89cd151858359548a1068))
+* enhance mobile support in ScrollytellViewerSection and MockShopEmbedClient ([3e56906](https://github.com/Vectreal/vectreal-platform/commit/3e5690622152024568118bb52c3c4e5ee612af89))
+* improve UI components and styles for better design consistency ([#604](https://github.com/Vectreal/vectreal-platform/issues/604)) ([960afaf](https://github.com/Vectreal/vectreal-platform/commit/960afafa1938bcd5fed7903f048fd56790cb9df9))
+* simplify loader function by removing unused parameters and hardcoding origin URL ([#606](https://github.com/Vectreal/vectreal-platform/issues/606)) ([cc4cb82](https://github.com/Vectreal/vectreal-platform/commit/cc4cb8283b77b05eb7ac79eee980b723fe2e6041))
+
+
+### Bug Fixes
+
+* **author:** update author details across multiple articles and improve hover card styling ([#622](https://github.com/Vectreal/vectreal-platform/issues/622)) ([5d0415f](https://github.com/Vectreal/vectreal-platform/commit/5d0415fe85fe5afde5123228cf9972ddc1ab376b))
+* **caching:** close cross-user Cloudflare cache leak, fail-closed edge ruleset ([#616](https://github.com/Vectreal/vectreal-platform/issues/616)) ([6630704](https://github.com/Vectreal/vectreal-platform/commit/663070461e6e09464b9dc219c9f531e7f26c42b8))
+* **caching:** enhance cache handling for loader and action responses to prevent data leakage ([#615](https://github.com/Vectreal/vectreal-platform/issues/615)) ([d3eff20](https://github.com/Vectreal/vectreal-platform/commit/d3eff2006e6e66e85bf3c78aaacdfe8511a8af9b))
+* **chart:** improve tooltip and legend handling in chart component ([#613](https://github.com/Vectreal/vectreal-platform/issues/613)) ([74fc3e9](https://github.com/Vectreal/vectreal-platform/commit/74fc3e9c1a4f11f9afe05fb9b9ded8ed43a2d8d8))
+* **consent:** cookie-only banner — remove signed session, DB read path, and root loader dependency ([#611](https://github.com/Vectreal/vectreal-platform/issues/611)) ([44b6547](https://github.com/Vectreal/vectreal-platform/commit/44b65470421101edc34d61f27fede1cfac459ba4))
+* **draco:** handle optional chaining for Draco optimization toggle ([#621](https://github.com/Vectreal/vectreal-platform/issues/621)) ([481c72c](https://github.com/Vectreal/vectreal-platform/commit/481c72c05af1e3e189a0708d4d2e707be680ccd3))
+* **release:** add 'embed' component to linked-versions configuration ([#619](https://github.com/Vectreal/vectreal-platform/issues/619)) ([687642c](https://github.com/Vectreal/vectreal-platform/commit/687642c5e3a1d647097ebcf25ff9ce034d99b66d))
+* **scene:** handle unsaved changes correctly and update tests for scene save flow ([#618](https://github.com/Vectreal/vectreal-platform/issues/618)) ([06c4a43](https://github.com/Vectreal/vectreal-platform/commit/06c4a4387a027dc393f092e7743dda380cae5148))
+* update accent foreground color and enhance dropdown menu item focus styles ([12a22dc](https://github.com/Vectreal/vectreal-platform/commit/12a22dc7ad907e58227ed3f0ba6a079f1087e9af))
+
 ## [0.23.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.22.0...workspace-v0.23.0) (2026-07-03)
 
 

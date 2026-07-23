@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.0](https://github.com/Vectreal/vectreal-platform/compare/core-v0.23.0...core-v0.24.0) (2026-07-23)
+
+
+### Bug Fixes
+
+* **draco:** handle optional chaining for Draco optimization toggle ([#621](https://github.com/Vectreal/vectreal-platform/issues/621)) ([481c72c](https://github.com/Vectreal/vectreal-platform/commit/481c72c05af1e3e189a0708d4d2e707be680ccd3))
+
 ## [0.23.0](https://github.com/Vectreal/vectreal-platform/compare/core-v0.22.0...core-v0.23.0) (2026-07-03)
 
 
