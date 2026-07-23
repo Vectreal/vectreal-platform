@@ -13,7 +13,7 @@
 		"@fontsource-variable/dm-sans": "^5.2.8",
 		"@gltf-transform/core": "^4.3.0",
 		"@gltf-transform/extensions": "^4.3.0",
-		"@gltf-transform/functions": "^4.3.0",
+		"@gltf-transform/functions": "^4.4.1",
 		"@hookform/resolvers": "^5.2.2",
 		"@marsidev/react-turnstile": "^1.5.3",
 		"@mdx-js/rollup": "^3.1.1",
