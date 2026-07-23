@@ -403,7 +403,7 @@ export default function NewsRoomArticlePage({
 				</article>
 
 				<BasicCard as="section" cardClassName="flex flex-col gap-3 p-6 md:p-8">
-					<p className="text-primary mb-2 text-xs font-semibold tracking-[0.14em] uppercase">
+					<p className="text-primary text-xs font-semibold tracking-[0.14em] uppercase">
 						Built for makers shipping in 3D
 					</p>
 					<h2 className="max-w-2xl text-2xl leading-tight font-semibold tracking-tight md:text-3xl">
@@ -488,7 +488,7 @@ export default function NewsRoomArticlePage({
 							{related.map((item) => (
 								<Link key={item.slug} to={`/news-room/${item.slug}`}>
 									<BasicCard cardClassName="flex flex-col gap-3 p-5">
-										<p className="text-muted-foreground mb-2 text-xs tracking-wide uppercase">
+										<p className="text-muted-foreground text-xs tracking-wide uppercase">
 											{formatNewsDate(item.publishedAt)} •{' '}
 											{item.readingTimeMinutes} min
 										</p>
