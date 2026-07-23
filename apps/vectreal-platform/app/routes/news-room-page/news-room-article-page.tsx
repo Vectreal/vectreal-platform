@@ -273,7 +273,7 @@ export default function NewsRoomArticlePage({
 	}
 
 	return (
-		<div className="mx-auto flex w-full max-w-7xl gap-0 px-4 pt-22 pb-18">
+		<div className="mx-auto flex w-full max-w-7xl gap-0 px-4 pt-16 pb-18">
 			<main className="min-w-0 flex-1 lg:px-8">
 				<Button variant="ghost" asChild className="mb-6 -ml-2">
 					<Link to="/news-room" viewTransition>
@@ -282,7 +282,7 @@ export default function NewsRoomArticlePage({
 					</Link>
 				</Button>
 
-				<div className="mt-8 mb-6 -ml-1 flex flex-wrap items-center justify-between gap-2 md:mt-16">
+				<div className="mt-4 mb-6 -ml-1 flex flex-wrap items-center justify-between gap-2 px-2 md:mt-16">
 					<div className="flex items-center gap-2">
 						<Badge variant="secondary" className="capitalize">
 							{article.category}
@@ -296,6 +296,12 @@ export default function NewsRoomArticlePage({
 							</Badge>
 						) : null}
 					</div>
+				</div>
+
+				<BasicCard as="header" cardClassName="p-6 md:p-8">
+					<h1 className="max-w-4xl text-4xl leading-[1.03] font-medium tracking-tight text-balance md:text-6xl">
+						{article.title}
+					</h1>
 					<div className="text-muted-foreground flex items-center gap-2 text-sm">
 						<span>{formatNewsDate(article.publishedAt)}</span>
 						{article.updatedAt ? (
@@ -305,18 +311,13 @@ export default function NewsRoomArticlePage({
 							</>
 						) : null}
 					</div>
-				</div>
 
-				<BasicCard as="header" cardClassName="p-6 md:p-8">
-					<h1 className="max-w-4xl text-4xl leading-[1.03] font-medium tracking-tight text-balance md:text-6xl">
-						{article.title}
-					</h1>
 					<p className="text-muted-foreground max-w-3xl text-base leading-relaxed md:text-lg">
 						{article.excerpt}
 					</p>
 				</BasicCard>
 
-				<div className="border-border/50 mb-8 flex flex-wrap items-center gap-3 border-t pt-4 md:mb-16">
+				<div className="mb-8 flex flex-wrap items-center gap-3 pt-4 md:mb-16">
 					<HoverCard openDelay={130} closeDelay={120}>
 						<HoverCardTrigger asChild>
 							<Button variant="ghost" className="h-[unset] gap-2 text-left">
@@ -392,23 +393,24 @@ export default function NewsRoomArticlePage({
 
 				<article
 					ref={contentRef}
-					className={cn(styles.docsContent, styles.newsroomContent, 'mb-16')}
+					className={cn(
+						styles.docsContent,
+						styles.newsroomContent,
+						'mb-16 px-2'
+					)}
 				>
 					<ArticleComponent />
 				</article>
 
-				<BasicCard as="section" cardClassName="p-6 md:p-8">
+				<BasicCard as="section" cardClassName="p-6 gap-3 md:p-8">
 					<p className="text-primary mb-2 text-xs font-semibold tracking-[0.14em] uppercase">
 						Built for makers shipping in 3D
 					</p>
 					<h2 className="max-w-2xl text-2xl leading-tight font-semibold tracking-tight md:text-3xl">
 						Ready to publish your first interactive scene?
 					</h2>
-					<p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed md:text-base">
-						Start free to upload, optimize, and embed your first scene with the
-						same workflows featured in this newsroom.
-					</p>
-					<div className="mt-3 flex flex-wrap items-center gap-1.5">
+
+					<div className="flex flex-wrap items-center gap-1.5">
 						<Badge variant="secondary">No credit card required</Badge>
 						<Badge variant="secondary">Free plan available</Badge>
 						<Badge variant="secondary">Embed in minutes</Badge>
@@ -422,9 +424,6 @@ export default function NewsRoomArticlePage({
 						</Button>
 						<Button variant="ghost" asChild>
 							<Link to="/pricing">See plans</Link>
-						</Button>
-						<Button variant="ghost" asChild>
-							<Link to="/docs/getting-started">Read getting started</Link>
 						</Button>
 					</div>
 				</BasicCard>
@@ -488,7 +487,7 @@ export default function NewsRoomArticlePage({
 						<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 							{related.map((item) => (
 								<Link key={item.slug} to={`/news-room/${item.slug}`}>
-									<BasicCard cardClassName="p-5">
+									<BasicCard cardClassName="p-5 gap-3">
 										<p className="text-muted-foreground mb-2 text-xs tracking-wide uppercase">
 											{formatNewsDate(item.publishedAt)} •{' '}
 											{item.readingTimeMinutes} min
