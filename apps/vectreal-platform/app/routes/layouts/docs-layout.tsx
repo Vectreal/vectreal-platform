@@ -8,7 +8,8 @@ import {
 } from '@shared/components/ui/breadcrumb'
 import { Button } from '@shared/components/ui/button'
 import { ScrollArea } from '@shared/components/ui/scroll-area'
-import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react'
+import { cn } from '@shared/utils'
+import { ChevronLeft, ChevronRight, Menu, Pencil } from 'lucide-react'
 import { useRef } from 'react'
 import { type MetaFunction, Link, Outlet, useLocation } from 'react-router'
 
@@ -118,9 +119,9 @@ export default function DocsLayout() {
 	const categoryPage = categorySlug ? getDocPage(categorySlug) : undefined
 
 	return (
-		<div className="mx-auto flex w-full max-w-7xl gap-0 px-4 pt-22 pb-16">
+		<div className="mx-auto flex w-full max-w-7xl gap-0 px-4 pb-16">
 			<aside
-				className="sticky top-20 hidden h-[calc(100vh-5rem)] w-64 shrink-0 lg:block"
+				className="sticky top-24 hidden h-[calc(100vh-5rem)] w-64 shrink-0 md:top-28 lg:block"
 				aria-label="Docs navigation"
 			>
 				<ScrollArea className="h-full pr-4 pb-8">
@@ -129,20 +130,26 @@ export default function DocsLayout() {
 			</aside>
 
 			<main className="min-w-0 flex-1 lg:px-8">
-				<DocsMobileNavigation
-					pathname={pathname}
-					headings={headings}
-					activeId={activeId}
-				/>
-
-				<div className="mb-4 flex items-center justify-between gap-3">
+				<div className="bg-muted fixed top-12 left-0 z-20 mb-4 flex w-dvw items-center justify-between gap-3 px-4 py-1 md:top-16">
 					<Breadcrumb aria-label="Docs breadcrumb">
 						<BreadcrumbList>
 							<BreadcrumbItem>
 								<BreadcrumbLink asChild>
-									<Link to="/docs" viewTransition>
-										Docs
-									</Link>
+									<span>
+										<Link className="max-md:hidden" to="/docs" viewTransition>
+											Docs
+										</Link>
+
+										<DocsMobileNavigation
+											pathname={pathname}
+											headings={headings}
+											activeId={activeId}
+										>
+											<span className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm font-medium">
+												<Menu className="h-5 w-5" /> Docs
+											</span>
+										</DocsMobileNavigation>
+									</span>
 								</BreadcrumbLink>
 							</BreadcrumbItem>
 							{categoryLabel && (
@@ -173,12 +180,13 @@ export default function DocsLayout() {
 								)}
 						</BreadcrumbList>
 					</Breadcrumb>
-					<span className="border-border/60 bg-muted/50 text-foreground rounded-full border px-2.5 py-0.5 text-xs font-medium">
-						{page?.version ?? 'latest'}
-					</span>
+					<span className="border-border/60 bg-muted/50 text-foreground rounded-full border px-2.5 py-0.5 text-xs font-medium"></span>
 				</div>
 
-				<article ref={contentRef} className={styles.docsContent}>
+				<article
+					ref={contentRef}
+					className={cn('mt-24 md:mt-28', styles.docsContent)}
+				>
 					<Outlet />
 				</article>
 

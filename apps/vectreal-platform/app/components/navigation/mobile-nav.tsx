@@ -1,7 +1,13 @@
 import { VectrealLogoAnimated } from '@shared/components/assets/icons/vectreal-logo-animated'
 import { Button } from '@shared/components/ui/button'
 import { Separator } from '@shared/components/ui/separator'
-import { Sheet, SheetContent } from '@shared/components/ui/sheet'
+import {
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetHeader,
+	SheetTitle
+} from '@shared/components/ui/sheet'
 import { cn } from '@shared/utils'
 import { User } from '@supabase/supabase-js'
 import { motion } from 'framer-motion'
@@ -77,7 +83,14 @@ function MobileNav({
 				className="fixed top-0 right-0 left-0 z-50 flex items-center justify-between p-2"
 				aria-label="Main navigation"
 			>
-				<div className="from-background absolute inset-0 z-0 h-12 bg-linear-to-b to-transparent backdrop-blur-sm" />
+				<div
+					className={cn(
+						'absolute inset-0 z-0 h-12 backdrop-blur-sm',
+						isHomePage
+							? 'from-background bg-linear-to-b to-transparent'
+							: 'bg-background/80 border-border/40 border-b'
+					)}
+				/>
 				<div className="relative flex w-full items-center justify-between">
 					{/* Logo */}
 					<Link
@@ -124,6 +137,20 @@ function MobileNav({
 					side="right"
 					className="bg-background/80 border-border/40 flex flex-col gap-0 pt-8 backdrop-blur-2xl"
 				>
+					<SheetHeader className="px-4">
+						<SheetTitle className="capitalize">
+							{user
+								? `Hi, ${user.user_metadata?.full_name || 'User'}!`
+								: 'Menu'}
+						</SheetTitle>
+						<SheetDescription className="text-muted-foreground text-sm">
+							{user
+								? 'Navigate your dashboard and account settings.'
+								: 'Explore the platform and sign in to access your dashboard.'}
+						</SheetDescription>
+					</SheetHeader>
+
+					<Separator className="bg-border/50" />
 					{/* Publisher CTA for unauthenticated users */}
 					{!user && (
 						<div className="px-4 pt-4">

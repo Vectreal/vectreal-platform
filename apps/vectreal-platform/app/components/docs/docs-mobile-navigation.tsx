@@ -1,4 +1,3 @@
-import { Button } from '@shared/components/ui/button'
 import { ScrollArea } from '@shared/components/ui/scroll-area'
 import {
 	Sheet,
@@ -8,7 +7,7 @@ import {
 	SheetTitle,
 	SheetTrigger
 } from '@shared/components/ui/sheet'
-import { BookText, Menu } from 'lucide-react'
+import { BookText } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { DocsPageToc } from './docs-page-toc'
@@ -16,13 +15,14 @@ import { DocsTreeNav } from './docs-tree-nav'
 
 import type { DocHeading } from '../../hooks/use-doc-toc'
 
-interface DocsMobileNavigationProps {
+interface DocsMobileNavigationProps extends React.PropsWithChildren {
 	pathname: string
 	headings: DocHeading[]
 	activeId: string | null
 }
 
 export function DocsMobileNavigation({
+	children,
 	pathname,
 	headings,
 	activeId
@@ -34,14 +34,9 @@ export function DocsMobileNavigation({
 	}, [pathname])
 
 	return (
-		<div className="mb-6 flex items-center justify-between gap-3 lg:hidden">
+		<div className="flex items-center justify-between gap-3 lg:hidden">
 			<Sheet open={open} onOpenChange={setOpen}>
-				<SheetTrigger asChild>
-					<Button variant="secondary" size="sm" className="gap-2">
-						<Menu className="h-4 w-4" aria-hidden="true" />
-						Browse docs
-					</Button>
-				</SheetTrigger>
+				<SheetTrigger asChild>{children}</SheetTrigger>
 				<SheetContent side="left" className="w-[90vw] max-w-sm">
 					<SheetHeader>
 						<SheetTitle className="flex items-center gap-2">

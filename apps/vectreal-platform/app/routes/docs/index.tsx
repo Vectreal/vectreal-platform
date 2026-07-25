@@ -1,4 +1,3 @@
-import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import { CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
 import { ArrowRight, BookOpen, Code2, GitBranch, Rocket } from 'lucide-react'
@@ -64,7 +63,6 @@ export default function DocsIndexPage() {
 								View on GitHub
 							</a>
 						</Button>
-						<Badge variant="secondary">Open source</Badge>
 					</>
 				}
 			/>

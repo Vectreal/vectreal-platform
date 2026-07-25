@@ -273,7 +273,7 @@ export default function NewsRoomArticlePage({
 	}
 
 	return (
-		<div className="mx-auto flex w-full max-w-7xl gap-0 px-4 pt-16 pb-18">
+		<div className="mx-auto flex w-full max-w-7xl gap-0 px-4 py-16">
 			<main className="min-w-0 flex-1 lg:px-8">
 				<Button variant="ghost" asChild className="mb-6 -ml-2">
 					<Link to="/news-room" viewTransition>
@@ -406,7 +406,7 @@ export default function NewsRoomArticlePage({
 					<p className="text-primary text-xs font-semibold tracking-[0.14em] uppercase">
 						Built for makers shipping in 3D
 					</p>
-					<h2 className="max-w-2xl text-2xl leading-tight font-semibold tracking-tight md:text-3xl">
+					<h2 className="max-w-2xl text-2xl leading-tight! font-semibold tracking-tight md:text-3xl">
 						Ready to publish your first interactive scene?
 					</h2>
 

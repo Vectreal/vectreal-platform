@@ -115,6 +115,7 @@ export const DynamicBreadcrumb = memo(() => {
 		<AnimatePresence mode="wait" initial={false}>
 			<motion.div
 				key={contentKey}
+				className="overflow-hidden"
 				initial={{ opacity: 0, x: -8 }}
 				animate={{ opacity: 1, x: 0 }}
 				exit={{ opacity: 0, x: 8 }}
@@ -140,8 +141,8 @@ export const DynamicBreadcrumb = memo(() => {
 						</BreadcrumbList>
 					</Breadcrumb>
 				) : (
-					<Breadcrumb className="grow">
-						<BreadcrumbList className="text-primary/75">
+					<Breadcrumb className="grow overflow-x-auto">
+						<BreadcrumbList className="text-primary/75 flex-nowrap gap-1 whitespace-nowrap">
 							{renderedBreadcrumbs.map((item, index) => {
 								const isFirst = index === 0
 								const showSeparator = !isFirst

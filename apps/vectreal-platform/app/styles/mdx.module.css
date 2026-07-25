@@ -148,7 +148,7 @@
 
 	pre code {
 		background: transparent;
-		color: inherit;
+		color: var(--color-accent);
 		padding: 0;
 	}
 
