@@ -14,7 +14,6 @@ const STATIC_PRERENDER_PATHS = [
 	'/',
 	'/about',
 	'/changelog',
-	'/contact',
 	'/code-of-conduct',
 	'/privacy-policy',
 	'/terms-of-service',
