@@ -44,7 +44,7 @@ texture_1.png
 
 A `.glb` export is one file. The [glTF specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html) defines GLB as a 12-byte header followed by chunks: a JSON chunk holding that same scene description as UTF-8, and a binary chunk holding the geometry and, optionally, the textures. Nothing is lost or added. The JSON that sat in a separate file is now the first chunk, and the `.bin` and images are packed into the second (Khronos glTF 2.0 spec, accessed 2026-07-22).
 
-So the model I use now is simple: **glTF is the format, GLB is the way to zip it into one file.** There is also a third variant, a single `.gltf` that embeds its buffers as base64 data URIs directly in the JSON. It is worth knowing so you can avoid it: base64 inflates binary data by roughly a third, which is why a self-contained GLB ends up smaller than a self-contained glTF carrying the same embedded data ([GeometryViewer, glTF vs GLB](https://geometryviewer.com/blog/gltf-vs-glb), accessed 2026-07-22).
+So the model I use now is simple: **glTF is the format, GLB is the way to bundle it into one file.** There is also a third variant, a single `.gltf` that embeds its buffers as base64 data URIs directly in the JSON. It is worth knowing so you can avoid it: base64 inflates binary data by roughly a third, which is why a self-contained GLB ends up smaller than a self-contained glTF carrying the same embedded data ([GeometryViewer, glTF vs GLB](https://geometryviewer.com/blog/gltf-vs-glb), accessed 2026-07-22).
 
 ## Where the choice actually matters
 
