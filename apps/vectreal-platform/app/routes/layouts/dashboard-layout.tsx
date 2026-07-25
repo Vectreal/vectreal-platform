@@ -236,26 +236,30 @@ const DashboardLayout = () => {
 							plan={plan}
 						/>
 					</LogoSidebar>
-					<SidebarInset className="relative overflow-hidden">
+					<SidebarInset className="relative w-dvw overflow-hidden">
 						<DashboardManagementDialogs />
 						<UpgradeModal />
 
-						<div className="z-50 flex items-center gap-4 p-4 px-6 pl-4">
+						<div className="bg-background/80 fixed top-0 z-50 flex w-dvw items-center gap-4 p-4 px-6 pl-4 backdrop-blur-lg">
 							<SidebarTrigger />
-							<div className="flex items-center gap-2">
+							<div className="flex items-center gap-2 overflow-hidden">
 								<DynamicBreadcrumb />
 								{isBackgroundRefreshing && (
-									<Loader2 className="text-muted-foreground h-3.5 w-3.5 animate-spin" />
+									<Loader2 className="text-muted-foreground h-3.5 w-3.5 shrink-0 animate-spin" />
 								)}
 							</div>
 						</div>
-						{!(isSceneDetailRoute && willBePublisherRoute) &&
-							!(isSceneDetailRoute || willBeSceneDetail) && <DashboardHeader />}
-						{isContentNavigationLoading && !willBeOverlayRoute ? (
-							skeleton
-						) : (
-							<Outlet />
-						)}
+						<div className="mt-14">
+							{!(isSceneDetailRoute && willBePublisherRoute) &&
+								!(isSceneDetailRoute || willBeSceneDetail) && (
+									<DashboardHeader />
+								)}
+							{isContentNavigationLoading && !willBeOverlayRoute ? (
+								skeleton
+							) : (
+								<Outlet />
+							)}
+						</div>
 					</SidebarInset>
 				</SidebarProvider>
 			</Provider>
