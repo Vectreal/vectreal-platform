@@ -1,0 +1,127 @@
+---
+title: "Adding Shadows to a 3D Model on Your Website"
+slug: "adding-shadows-to-a-3d-model-on-your-website"
+excerpt: "A 3D model without a shadow looks like it is hovering. This walks through turning shadows on in the Vectreal Publisher, choosing between the three presets, aiming the light in the scene, when to add the separate ground shadow, and why none of it costs your visitors anything once the scene is published."
+publishedAt: "2026-07-28"
+updatedAt: "2026-07-28"
+category: "guides"
+tags:
+- "platform"
+- "publisher"
+- "shadows"
+- "3d-web"
+- "performance"
+- "publishing"
+author:
+    name: "Moritz Becker"
+    role: "Founder at Vectreal"
+    bio: "Building open infrastructure for practical 3D on the web."
+    avatar: "/assets/images/author-image.jpeg"
+    xUrl: "https://github.com/schlomoh"
+    linkedinUrl: ""
+draft: false
+thumbnailImage: "/assets/images/newsroom/10/thumbnail-adding-shadows-to-a-3d-model-on-your-website.webp"
+coverImage: "/assets/images/newsroom/10/og-adding-shadows-to-a-3d-model-on-your-website.webp"
+---
+
+{/* DRAFT - not for publish. Open items before flipping `draft: false`:
+   1. Replace both EmbedShowcase `src` placeholders with real published scene URLs
+      (same model, one with shadows off, one with the Studio preset applied).
+   2. Produce cover + thumbnail assets and add `coverImage` / `thumbnailImage`
+      frontmatter, following the pattern in articles 05 and 09.
+   3. Set `publishedAt` to the real publish date. */}
+
+{/* ASSET BRIEF - Cover (og-adding-shadows-to-a-3d-model-on-your-website.webp)
+   1200x630, webp. Black ground (#0A0A0A), DM Sans, title in light grey (#EAEAEA),
+   orange (#FC6C18) accent rule. Model shown twice, shadow off vs on.
+   Output: /public/assets/images/newsroom/10/og-adding-shadows-to-a-3d-model-on-your-website.webp */}
+
+{/* ASSET BRIEF - Thumbnail (thumbnail-adding-shadows-to-a-3d-model-on-your-website.webp)
+   1:1 crop derived from cover; 600x600, webp, <60 KB.
+   Output: /public/assets/images/newsroom/10/thumbnail-adding-shadows-to-a-3d-model-on-your-website.webp */}
+
+import EmbedShowcase from './embed-showcase'
+
+A 3D model without a shadow looks like it is hovering. Turn shadows on in the Vectreal Publisher, pick one of three presets, and the model sits on the surface instead. It takes one switch and one click, and the shadow adds nothing for the page you embed it into to work out.
+
+That last part is the reason I built shadows the way I did, and I will get to it. First, the same model with shadows off and then on.
+
+<EmbedShowcase
+	src="PLACEHOLDER_SCENE_URL_SHADOWS_OFF"
+	label="Shadows off"
+	caption="Without a shadow the model reads as floating, with no relationship to the surface under it."
+	height={420}
+/>
+
+<EmbedShowcase
+	src="PLACEHOLDER_SCENE_URL_SHADOWS_ON"
+	label="Shadows on, Studio preset"
+	caption="The same scene with shadows enabled and the Studio preset applied. Nothing else changed."
+	height={420}
+/>
+
+Nothing was modelled, lit, or exported differently between those two. The only difference is a switch in the Publisher.
+
+## How do I turn shadows on
+
+Open a scene in the Publisher, go to the **Compose** sidebar, and pick the **Shadows** tool. There is a single **Enabled** switch at the top. Until you flip it, the panel just says "Enable shadows to configure shadow quality", because everything below it is inactive.
+
+Shadows are off by default on every scene. I made that call because a shadow is a look, not a correctness fix, and defaulting every uploaded model into a styled look seemed presumptuous. The cost is that nobody discovers them by accident, which is most of why this article exists.
+
+## Which preset should I pick
+
+Once shadows are on you get three one-tap looks. Each one sets the strength, the depth, the softness and the light direction together, so you are choosing a whole look rather than assembling one.
+
+| Preset | What it gives you | Reach for it when |
+| --- | --- | --- |
+| **Soft** | Diffuse, gentle grounding shadow | The model sits in a light or airy layout and you want it grounded without drama |
+| **Studio** | Balanced product-shot shadow | Most product pages. This is the sensible default |
+| **Dramatic** | Deep, crisp, low-angle shadow | A hero image where the model is the whole point |
+
+If one of them is close but not right, the three sliders under **Directional shadow** adjust it: **Opacity** is overall strength, **Darkness** is how deep the core of the shadow gets, and **Softness** is how diffuse the edges are.
+
+To change which direction the shadow falls, aim the light directly in the scene. While the Shadows panel is open you get a handle in the viewport: a line running up from the base of the model to a marker, which you click to reveal arrows for pulling the light around. The shadow follows as you drag, at reduced quality, then sharpens when you let go. I built it that way because picking light direction from a slider is guesswork, and because the full-quality shadow takes a moment to settle, which makes dragging against it feel broken.
+
+## What is the ground shadow, and do I need it
+
+It is a second, separate shadow with its own toggle, and it does a different job. The directional shadow is the cast that the light throws off to one side. The ground shadow is the soft pool directly under the model, approximating the darkening a real object creates where it meets the floor.
+
+The reason both exist is that the directional shadow moves. Choose Dramatic and the cast swings out low and to the side, which looks good but leaves the model itself looking slightly unanchored. The ground shadow does not move with the light, so it keeps the object attached to the surface underneath it regardless of where the cast lands.
+
+It has four controls: **Opacity** and **Softness** work as you would expect, **Spread** is how far the pool extends out from the model, and **Reach** is how far up the model it climbs. Low reach keeps it tight to the points actually touching the floor, which on something like a car means the tyres rather than the whole silhouette.
+
+Turn it on if your model has an obvious contact area. Leave it off if the directional shadow already looks right.
+
+## Will this slow my page down
+
+No, and the reason is the part of this I am most pleased with.
+
+A good soft shadow is slow to work out. The Publisher builds it up in stages, which is why you see it settle over a second or so while you are composing. That is fine in an editor, where you are already sitting and waiting.
+
+Paying that cost again on your live page would not be fine. So the Publisher does the work once, saves the finished shadow as a small image alongside the scene, and your page loads that image rather than working anything out. Visitors get the result without their device doing the job. The saved shadow travels inside the scene itself, so there is nothing extra to download.
+
+Two things follow from that. Changing the shadow's colour or strength later is instant, because those get applied on top of the saved image. Changing something structural, like the preset or the softness, means the shadow is rebuilt and saved again next time you hit save, so that one save takes a moment longer.
+
+The exception is the ground shadow. If you have that turned on, it is worked out once when your page loads rather than being saved in advance. It is cheap, and it happens a single time rather than continuously, but it is not quite free the way the main shadow is.
+
+If your model has an animation playing, the embed switches to a simpler live shadow for the duration, because a saved shadow cannot follow geometry that moves. Camera auto-rotate is fine, because that turns the camera rather than the model.
+
+If you want the full detail of how the saving works, I wrote that up separately in [baking accumulative shadows into a texture](https://vectreal.com/news-room/baking-accumulative-shadows-into-a-texture).
+
+## What about ambient occlusion
+
+There is an **Ambient occlusion** toggle in the **Advanced** section, with a strength slider once it is on. It darkens crevices and tight gaps on the model itself, which is a different effect from either shadow above.
+
+This one is not saved in advance, and it cannot be: it is worked out continuously while the model is on screen, so it makes the visitor's device work harder the whole time. Worth it for a hero shot at the top of a page. Not worth it for a grid of thumbnails. I left it off by default and behind the Advanced section for that reason.
+
+The same section has **Shadow Scale**, which sizes the invisible surface the shadow is drawn on, and **Cutoff Trim**, which nudges the automatic threshold if the ground looks hazy. Most scenes need neither. The threshold is worked out per scene against whatever environment lighting you have chosen, which is the bit I would rather you never have to think about.
+
+## Try it on your own model
+
+Open [the Publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=shadows-guide) and load a model: either a single `.glb` file, or the whole folder that a `.gltf` export produces, textures and all. No account needed to get to the point where you can see whether it looks right.
+
+When it does, publish the scene and put the embed on your page. The shadow comes with it. One thing to expect at that step: an embed running on your own domain needs an API key, and you allow your domain per project, so publishing is not quite the last action before it appears somewhere else.
+
+Vectreal is pre-1.0 and the shadow controls are still moving.
+
+Try it, no account needed: [vectreal.com/publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=shadows-guide)
