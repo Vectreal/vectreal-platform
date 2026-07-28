@@ -95,7 +95,7 @@ export function CinematicHero() {
 							<Button
 								asChild
 								size="lg"
-								className="group bg-accent hover:bg-accent/90 rounded-xl px-7 text-white shadow-[0_8px_30px_-8px_var(--surface-glow)]"
+								className="group bg-accent hover:bg-accent/90 text-white shadow-[0_8px_30px_-8px_var(--surface-glow)]"
 							>
 								<Link to="/publisher">
 									Publish Your First Model
@@ -107,7 +107,7 @@ export function CinematicHero() {
 								asChild
 								size="lg"
 								variant="ghost"
-								className="text-muted-foreground hover:text-foreground rounded-xl px-5"
+								className="text-muted-foreground hover:text-foreground"
 							>
 								<Link
 									to="https://github.com/vectreal/vectreal-platform"
