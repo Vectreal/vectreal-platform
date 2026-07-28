@@ -3,7 +3,7 @@ title: "From Upload to Embed - The Vectreal Publisher Walkthrough"
 slug: "the-vectreal-publisher-walkthrough"
 excerpt: "A practical step-by-step guide to the Vectreal Publisher workflow, from first upload to production embed."
 publishedAt: "2026-04-07"
-updatedAt: "2026-04-07"
+updatedAt: "2026-07-28"
 category: "guides"
 tags:
 - "platform"
@@ -47,8 +47,10 @@ Drag your 3D file onto the Publisher canvas. The parser identifies the format, r
 |---|---|---|
 | GLB | `.glb` | Self-contained binary glTF - easiest to share, single file |
 | glTF | `.gltf` + `.bin` + textures | Full material and animation support; preferred format |
-| OBJ | `.obj` (+ `.mtl`) | Legacy format - MTL file and textures resolved automatically if in the same directory |
 | USDZ | `.usdz` | Limited support - textures and some material types may not render correctly. Work in progress. |
+| USDA | `.usda` | Supported |
+
+Those four are the whole list. OBJ, FBX and STL do not load, so convert to glTF or GLB first.
 
 **glTF bundles:** glTF separates geometry, binaries, and textures into multiple files. To upload a full bundle, drag the **entire folder** onto the upload area, or select all files at once in the file picker. The parser identifies the `.gltf` root and resolves all referenced `.bin` and texture files automatically.
 
@@ -111,10 +113,9 @@ Set the camera's starting world-space position (`x, y, z`). The camera will anim
 
 #### Shadows
 
-Two shadow types are available:
+Shadows are off by default. The **Shadows** tool has a single **Enabled** switch, then three presets (Soft, Studio, Dramatic) that each set a complete look, plus **Opacity**, **Darkness** and **Softness** sliders to adjust one. A separate **Ground shadow** section adds a soft pool under the model, and **Ambient occlusion** sits behind **Advanced**.
 
-- **Contact shadows** - lightweight and sharp, good for most use cases. Configurable opacity, blur, scale, and color.
-- **Accumulative shadows** - physically richer, with configurable temporal sampling, frame count, and a nested light configuration for softness and intensity.
+The full walkthrough, including how to aim the light in the scene and why none of this costs your published embed anything, is in [adding shadows to a 3D model on your website](https://vectreal.com/news-room/adding-shadows-to-a-3d-model-on-your-website).
 
 #### Grid
 
@@ -131,7 +132,9 @@ Click **Save** in the Publisher header.
 - If you are signed in, the scene saves to your account immediately and appears in the Dashboard.
 - If you are in an anonymous session, you will be prompted to sign in or create a free account. Your configuration is preserved - nothing is lost.
 
-After saving, the scene appears in your [Dashboard](https://vectreal.com/dashboard). From the Dashboard, you can also replace the model (drag a new file onto the canvas in an open scene - camera, lighting, and publish settings are preserved) and manage multiple scenes across projects.
+After saving, the scene appears in your [Dashboard](https://vectreal.com/dashboard), where you can manage multiple scenes across projects.
+
+To load a different model, start from [vectreal.com/publisher](https://vectreal.com/publisher) and drop it on the upload area there.
 
 ---
 
