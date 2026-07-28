@@ -33,6 +33,18 @@ variable "turnstile_staging_hostname" {
   default     = "staging.vectreal.com"
 }
 
+variable "supabase_project_ref_prod" {
+  description = "Production Supabase project ref (the <ref> in <ref>.supabase.co), used as the custom domain CNAME target"
+  type        = string
+  default     = ""
+}
+
+variable "supabase_custom_domain_acme_challenge" {
+  description = "TXT value for _acme-challenge.auth.vectreal.com, from `supabase domains create` output. Leave empty until that command has been run."
+  type        = string
+  default     = ""
+}
+
 locals {
   enable_cloudflare = var.cloudflare_account_id != ""
 }
@@ -335,6 +347,46 @@ resource "cloudflare_record" "mx_ses_feedback" {
   type            = "MX"
   content         = "feedback-smtp.eu-west-1.amazonses.com"
   priority        = 10
+  proxied         = false
+}
+
+resource "cloudflare_record" "resend_spf" {
+  count           = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id         = var.cloudflare_zone_id
+  allow_overwrite = true
+  name            = "send.mail"
+  type            = "TXT"
+  content         = "v=spf1 include:amazonses.com ~all"
+  proxied         = false
+}
+
+resource "cloudflare_record" "resend_dkim" {
+  count           = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id         = var.cloudflare_zone_id
+  allow_overwrite = true
+  name            = "resend._domainkey.mail"
+  type            = "TXT"
+  content         = "p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDGnedmvT+i+2JBVu39HGYY3F/bWKxQTqb7g23Q35M1/c9wIIeL8p18Pu+ROUBMnUWDse7H/u5cMPU1CIPOedHPLhRD2l1mztDrhsz6SosekDCJ+7/QeVkJwOosgRyM6c6CHwW11ehpi5s6BCEvNo/+OmpNrYMBBcPOeJeLjGn7vwIDAQAB"
+  proxied         = false
+}
+
+resource "cloudflare_record" "supabase_custom_domain_cname" {
+  count           = local.enable_cloudflare && var.cloudflare_zone_id != "" && var.supabase_project_ref_prod != "" ? 1 : 0
+  zone_id         = var.cloudflare_zone_id
+  allow_overwrite = true
+  name            = "auth"
+  type            = "CNAME"
+  content         = "${var.supabase_project_ref_prod}.supabase.co"
+  proxied         = false
+}
+
+resource "cloudflare_record" "supabase_custom_domain_acme_challenge" {
+  count           = local.enable_cloudflare && var.cloudflare_zone_id != "" && var.supabase_custom_domain_acme_challenge != "" ? 1 : 0
+  zone_id         = var.cloudflare_zone_id
+  allow_overwrite = true
+  name            = "_acme-challenge.auth"
+  type            = "TXT"
+  content         = var.supabase_custom_domain_acme_challenge
   proxied         = false
 }
 
