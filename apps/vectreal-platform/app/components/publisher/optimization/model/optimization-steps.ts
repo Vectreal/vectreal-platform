@@ -8,7 +8,13 @@ import type { Optimizations } from '@vctrl/core'
 
 /** Reloading the source scene and measuring baselines, before any step runs. */
 export const PREPARE_STEP = 'Preparing scene'
-/** The worker's final export plus the reload into the viewer, after every step. */
+/**
+ * The worker's export and the reload of its bytes onto the main-thread
+ * optimizer. Its own row because it lands between the geometry steps and the
+ * texture phase, and on a large model it is slow enough to look like a stall.
+ */
+export const LOAD_GEOMETRY_STEP = 'Loading optimized geometry'
+/** Handing the finished document to the viewer, after every step. */
 export const SYNC_STEP = 'Syncing to viewer'
 
 export interface OptimizationStepPlan {
@@ -34,6 +40,7 @@ export function planOptimizationSteps(
 		allSteps: [
 			PREPARE_STEP,
 			...geometryKeys.map((key) => getOptimizationDefinition(key).stepLabel),
+			...(geometryKeys.length > 0 ? [LOAD_GEOMETRY_STEP] : []),
 			...(hasTextureStep
 				? [getOptimizationDefinition('texture').stepLabel]
 				: []),

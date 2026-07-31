@@ -1,4 +1,5 @@
 import {
+	LOAD_GEOMETRY_STEP,
 	planOptimizationSteps,
 	PREPARE_STEP,
 	SYNC_STEP
@@ -36,6 +37,7 @@ describe('planOptimizationSteps', () => {
 			'Duplicate removal',
 			'Vertex quantization',
 			'Draco compression',
+			LOAD_GEOMETRY_STEP,
 			SYNC_STEP
 		])
 	})
@@ -46,9 +48,23 @@ describe('planOptimizationSteps', () => {
 		)
 
 		expect(hasTextureStep).toBe(true)
+		// The worker reload sits between the two phases because that is when it
+		// happens; borrowing the trailing sync row for it made the checklist jump
+		// to the end and back once textures started.
 		expect(allSteps).toEqual([
 			PREPARE_STEP,
 			'Mesh simplification',
+			LOAD_GEOMETRY_STEP,
+			'Texture optimization',
+			SYNC_STEP
+		])
+	})
+
+	it('omits the geometry reload row when no geometry step runs', () => {
+		const { allSteps } = planOptimizationSteps(enable(balancedPreset, ['texture']))
+
+		expect(allSteps).toEqual([
+			PREPARE_STEP,
 			'Texture optimization',
 			SYNC_STEP
 		])
@@ -68,6 +84,7 @@ describe('planOptimizationSteps', () => {
 			PREPARE_STEP,
 			'Mesh simplification',
 			'Draco compression',
+			LOAD_GEOMETRY_STEP,
 			SYNC_STEP
 		])
 		expect(
@@ -85,6 +102,7 @@ describe('planOptimizationSteps', () => {
 		expect(planOptimizationSteps(partial).allSteps).toEqual([
 			PREPARE_STEP,
 			'Mesh simplification',
+			LOAD_GEOMETRY_STEP,
 			SYNC_STEP
 		])
 	})

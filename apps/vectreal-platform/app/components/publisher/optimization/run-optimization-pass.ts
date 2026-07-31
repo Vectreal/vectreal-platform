@@ -4,6 +4,7 @@ import {
 	buildWorkerOptions,
 	getOptimizationDefinition,
 	planOptimizationSteps,
+	LOAD_GEOMETRY_STEP,
 	PREPARE_STEP,
 	SYNC_STEP
 } from './model'
@@ -172,9 +173,10 @@ async function runGeometryPhase(
 
 	if (runningStep) steps.complete(runningStep)
 
-	// The worker's final export and this reload both take real time on large
-	// models; without a step here the panel sits at "N/N" with nothing spinning.
-	steps.begin(SYNC_STEP)
+	// Its own row rather than borrowing SYNC_STEP, which is planned last: with
+	// textures enabled that would jump the checklist to the end and then back
+	// when the texture phase starts.
+	steps.begin(LOAD_GEOMETRY_STEP)
 	await withTimeout(
 		model.loadFromGlbBuffer(result.buffer, {
 			appliedOptimizations: result.appliedOptimizations,

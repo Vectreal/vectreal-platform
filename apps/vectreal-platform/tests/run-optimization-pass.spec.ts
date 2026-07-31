@@ -1,7 +1,11 @@
 import { beforeEach, vi } from 'vitest'
 
 import { runOptimizationPass } from '../app/components/publisher/optimization/run-optimization-pass'
-import { PREPARE_STEP, SYNC_STEP } from '../app/components/publisher/optimization/model'
+import {
+	LOAD_GEOMETRY_STEP,
+	PREPARE_STEP,
+	SYNC_STEP
+} from '../app/components/publisher/optimization/model'
 import { balancedPreset } from '../app/constants/optimizations'
 
 import type { OptimizationPassDeps } from '../app/components/publisher/optimization/run-optimization-pass'
@@ -119,7 +123,13 @@ describe('runOptimizationPass', () => {
 		await runOptimizationPass(deps)
 
 		expect(steps.calls[0]).toBe(
-			`plan:${[PREPARE_STEP, 'Duplicate removal', 'Texture optimization', SYNC_STEP].join('|')}`
+			`plan:${[
+				PREPARE_STEP,
+				'Duplicate removal',
+				LOAD_GEOMETRY_STEP,
+				'Texture optimization',
+				SYNC_STEP
+			].join('|')}`
 		)
 		expect(steps.calls[1]).toBe(`begin:${PREPARE_STEP}`)
 	})

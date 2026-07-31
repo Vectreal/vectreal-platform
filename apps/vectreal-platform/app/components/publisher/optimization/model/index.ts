@@ -14,6 +14,7 @@ export type {
 
 export {
 	planOptimizationSteps,
+	LOAD_GEOMETRY_STEP,
 	PREPARE_STEP,
 	SYNC_STEP
 } from './optimization-steps'
