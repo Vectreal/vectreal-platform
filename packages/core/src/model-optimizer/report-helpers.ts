@@ -107,6 +107,17 @@ export function calculateMeshSize(inspectReport: InspectReport): number {
  * chunks; chunk 0 is always JSON.
  */
 export function readGlbJsonChunk(glb: Uint8Array): JSONDocument['json'] {
+	const chunkStart = GLB_HEADER_BYTES + GLB_CHUNK_HEADER_BYTES
+
+	// Every offset below is read unchecked, so establish up front that the header
+	// and the first chunk header are actually present. Otherwise a short buffer
+	// surfaces as a DataView RangeError that says nothing about GLB.
+	if (glb.byteLength < chunkStart) {
+		throw new Error(
+			`Malformed GLB: expected at least ${chunkStart} bytes, got ${glb.byteLength}`
+		)
+	}
+
 	const view = new DataView(glb.buffer, glb.byteOffset, glb.byteLength)
 
 	if (view.getUint32(0, true) !== GLB_MAGIC) {
@@ -118,7 +129,16 @@ export function readGlbJsonChunk(glb: Uint8Array): JSONDocument['json'] {
 		throw new Error('Malformed GLB: first chunk is not JSON')
 	}
 
-	const chunkStart = GLB_HEADER_BYTES + GLB_CHUNK_HEADER_BYTES
+	// A declared length running past the buffer would otherwise decode a
+	// truncated string and fail as a confusing JSON syntax error.
+	if (chunkStart + chunkLength > glb.byteLength) {
+		throw new Error(
+			`Malformed GLB: JSON chunk declares ${chunkLength} bytes but only ${
+				glb.byteLength - chunkStart
+			} remain`
+		)
+	}
+
 	const chunkText = new TextDecoder().decode(
 		glb.subarray(chunkStart, chunkStart + chunkLength)
 	)

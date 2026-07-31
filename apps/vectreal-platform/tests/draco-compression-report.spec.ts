@@ -78,6 +78,23 @@ describe('readGlbJsonChunk', () => {
 	it('rejects bytes that are not a GLB', () => {
 		expect(() => readGlbJsonChunk(new Uint8Array(32))).toThrow(/glTF/)
 	})
+
+	it('rejects a buffer too short to hold a chunk header', () => {
+		expect(() => readGlbJsonChunk(new Uint8Array(12))).toThrow(
+			/expected at least 20 bytes/
+		)
+	})
+
+	it('rejects a JSON chunk length running past the buffer', () => {
+		const glb = buildGlb(dracoJson)
+		new DataView(glb.buffer, glb.byteOffset, glb.byteLength).setUint32(
+			12,
+			glb.byteLength * 2,
+			true
+		)
+
+		expect(() => readGlbJsonChunk(glb)).toThrow(/JSON chunk declares/)
+	})
 })
 
 describe('calculateDracoCompressedGeometrySize', () => {
