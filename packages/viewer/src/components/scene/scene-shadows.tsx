@@ -4,7 +4,7 @@ import {
 	RandomizedLight
 } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
-import { AccumulativeShadowsProps, NormalizationOptions } from '@vctrl/core'
+import type { AccumulativeShadowsProps, NormalizationOptions } from '@vctrl/core'
 import {
 	type ComponentRef,
 	memo,
