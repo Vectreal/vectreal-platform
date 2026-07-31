@@ -191,8 +191,12 @@ export const useOptimizationProcess = () => {
 	return {
 		info,
 		report,
-		// Survives the texture pass, which rebuilds `report` from the optimizer.
-		dracoReport: runtimeDracoReport ?? report?.draco ?? null,
+		// The runtime value alone, deliberately. A pass clears it up front and
+		// sets it only if a geometry phase measured Draco, so it always describes
+		// the latest run. Falling back to the optimizer's own `report.draco`
+		// resurrected the previous measurement after a texture-only pass, which
+		// also invalidates any projected size it was quoting.
+		dracoReport: runtimeDracoReport ?? null,
 		simplificationOutcome,
 		resolvedMetrics,
 		isPending,
