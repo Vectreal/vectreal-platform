@@ -43,6 +43,7 @@ import {
 	serializeSceneAssetData
 } from '../lib/domain/scene'
 import {
+	clearOriginalSceneModel,
 	clearPendingSceneDraft,
 	saveOriginalSceneModel
 } from '../lib/persistence/pending-scene-idb'
@@ -790,10 +791,20 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	// Using load-start (not file?.model) because applyOptimization() also changes
 	// file.model after each optimization pass - we must NOT reset the guard then,
 	// or the save effect would re-fire and overwrite IDB with an optimized snapshot.
+	//
+	// The same event invalidates both IDB entries the previous model left behind.
+	// They are keyed per tab, not per model, so without this the optimization
+	// pass could reload the *previous* model's snapshot into the viewer during
+	// the window before the new snapshot finishes being written. Only
+	// useLoadModel's load()/reset() emit these events - the optimization pass
+	// goes through useOptimizeModel and emits neither, so this cannot fire
+	// mid-pass and strand it without a snapshot.
 	useEffect(() => {
 		const handleLoadStart = () => {
 			originalSavedRef.current = false
 			loadStartTimeRef.current = Date.now()
+			void clearOriginalSceneModel()
+			void clearPendingSceneDraft()
 		}
 		on('load-start', handleLoadStart)
 		on('load-reset', handleLoadStart)
