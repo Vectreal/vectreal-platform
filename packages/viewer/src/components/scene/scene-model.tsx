@@ -95,6 +95,11 @@ function solveAutoFitFraming(
 	const horizontalFov =
 		2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect)
 	const limitingFov = Math.min(verticalFov, horizontalFov)
+	// A zero-width canvas gives aspect 0, which collapses the horizontal FOV and
+	// would divide by sin(0). Bail the same way as unmeasurable bounds rather
+	// than moving the camera to Infinity.
+	if (!(limitingFov > 0)) return null
+
 	const distance = (sphere.radius / Math.sin(limitingFov / 2)) * AUTO_FIT_MARGIN
 
 	const target = sphere.center.clone()
