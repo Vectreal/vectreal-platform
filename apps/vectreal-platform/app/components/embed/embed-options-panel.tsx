@@ -14,7 +14,7 @@ import { toast } from 'sonner'
 
 import {
 	addPreviewTokenPlaceholder,
-	buildFullscreenPreviewPath,
+	buildEmbedPath,
 	buildResponsiveEmbedSnippet,
 	buildSdkEmbedSnippet,
 	EMBED_COPY,
@@ -42,7 +42,7 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 	const canEmbed = Boolean(sceneId && projectId)
 
 	const previewPath = canEmbed
-		? buildFullscreenPreviewPath({
+		? buildEmbedPath({
 				projectId: projectId as string,
 				sceneId: sceneId as string
 			})

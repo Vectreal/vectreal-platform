@@ -27,6 +27,7 @@ export const CDN_PROTECTED_PREFIXES = [
 	'/dashboard',
 	'/publisher',
 	'/preview',
+	'/embed',
 	'/onboarding',
 	'/api',
 	'/auth'

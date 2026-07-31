@@ -1,11 +1,10 @@
 import { ApiResponse } from '@shared/utils'
-import { data, Outlet, type MetaFunction } from 'react-router'
+import { data, Outlet, redirect, type MetaFunction } from 'react-router'
 
 import { Route } from './+types/preview-layout'
-import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
+import { buildEmbedPath } from '../../lib/domain/embed/embed-snippet'
 import { getProject } from '../../lib/domain/project/project-repository.server'
 import { getScene } from '../../lib/domain/scene/server/scene-folder-repository.server'
-import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 import { buildMeta } from '../../lib/seo'
 
@@ -28,6 +27,14 @@ function withNoStoreHeaders(response: Response): Response {
 	})
 }
 
+/**
+ * The internal preview authenticates by session and nothing else.
+ *
+ * A request arriving here with a token is meant for an external embed, so it is
+ * redirected to the `/embed` equivalent rather than handled. Keeping exactly one
+ * credential type per route is what stops the external URL from ever reaching a
+ * surface that renders dashboard chrome.
+ */
 export async function loader({ request, params }: Route.LoaderArgs) {
 	const projectId = params.projectId?.trim()
 	const sceneId = params.sceneId?.trim()
@@ -38,79 +45,35 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		)
 	}
 
+	const url = new URL(request.url)
 	const hasTokenCredential =
-		Boolean(new URL(request.url).searchParams.get('token')?.trim()) ||
+		Boolean(url.searchParams.get('token')?.trim()) ||
 		Boolean(request.headers.get('authorization')?.trim())
 
-	let authMode: 'apiKey' | 'session' | null = null
-	let authenticatedByApiKeyId: string | null = null
-	let sessionUserId: string | null = null
-	let sessionHeaders: HeadersInit = {}
-
 	if (hasTokenCredential) {
-		const authResult = await validatePreviewApiKeyForProject({
-			request,
-			projectId
-		})
-
-		if (!authResult.ok) {
-			if (authResult.error === 'rate_limited') {
-				return withNoStoreHeaders(ApiResponse.error('Too many requests', 429))
-			}
-			if (authResult.error === 'domain_not_allowed') {
-				return withNoStoreHeaders(ApiResponse.forbidden('Forbidden'))
-			}
-
-			return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
-		}
-
-		authMode = 'apiKey'
-		authenticatedByApiKeyId = authResult.apiKeyId
-	} else {
-		const sessionAuth = await getAuthUser(request)
-		if (sessionAuth instanceof Response) {
-			return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
-		}
-
-		sessionHeaders = sessionAuth.headers ?? {}
-
-		const project = await getProject(projectId, sessionAuth.user.id)
-		if (!project) {
-			return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
-		}
-
-		authMode = 'session'
-		sessionUserId = sessionAuth.user.id
+		return redirect(
+			`${buildEmbedPath({ projectId, sceneId })}${url.search}`
+		)
 	}
 
-	if (authMode === 'apiKey') {
-		const previewScene = await getPublishedScenePreview(projectId, sceneId)
-		if (!previewScene) {
-			return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
-		}
-	} else {
-		if (!sessionUserId) {
-			return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
-		}
-
-		const scene = await getScene(sceneId, sessionUserId)
-		if (!scene || scene.projectId !== projectId) {
-			return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
-		}
+	const sessionAuth = await getAuthUser(request)
+	if (sessionAuth instanceof Response) {
+		return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 	}
 
-	const url = new URL(request.url)
-	const tokenFromQuery = url.searchParams.get('token')?.trim() || null
+	const project = await getProject(projectId, sessionAuth.user.id)
+	if (!project) {
+		return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
+	}
+
+	const scene = await getScene(sceneId, sessionAuth.user.id)
+	if (!scene || scene.projectId !== projectId) {
+		return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
+	}
 
 	return data(
-		{
-			projectId,
-			sceneId,
-			authMode,
-			tokenFromQuery,
-			authenticatedByApiKeyId
-		},
-		{ headers: authMode === 'session' ? sessionHeaders : undefined }
+		{ projectId, sceneId },
+		{ headers: sessionAuth.headers ?? {} }
 	)
 }
 

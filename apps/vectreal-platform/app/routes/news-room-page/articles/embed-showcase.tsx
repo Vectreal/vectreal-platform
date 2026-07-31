@@ -6,7 +6,7 @@
  * Usage in MDX:
  *   import EmbedShowcase from './embed-showcase'
  *   <EmbedShowcase
- *     src="https://vectreal.com/preview/fullscreen/…?token=…"
+ *     src="https://vectreal.com/embed/…?token=…"
  *     label="Linear transition · Ease in-out · 1000 ms"
  *     caption="Switch cameras to see the linear transition in action."
  *     height={420}

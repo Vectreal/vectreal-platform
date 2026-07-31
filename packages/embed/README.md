@@ -23,7 +23,7 @@ npm install @vctrl/embed
 <div style="width: 100%; height: 400px;">
 	<iframe
 		id="vectreal-scene"
-		src="https://vectreal.com/preview/fullscreen/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
+		src="https://vectreal.com/embed/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
 		style="width: 100%; height: 100%; border: 0;"
 		allow="autoplay; xr-spatial-tracking"
 		allowfullscreen

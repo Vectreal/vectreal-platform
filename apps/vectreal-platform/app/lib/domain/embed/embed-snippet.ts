@@ -45,11 +45,20 @@ type EmbedSnippetOptions = {
 const DEFAULT_WIDTH = '100%'
 const DEFAULT_HEIGHT = '400px'
 
-export function buildFullscreenPreviewPath(params: {
+/** External embed target. Token-authenticated, never renders internal chrome. */
+export function buildEmbedPath(params: {
 	projectId: string
 	sceneId: string
 }): string {
-	return `/preview/fullscreen/${params.projectId}/${params.sceneId}`
+	return `/embed/${params.projectId}/${params.sceneId}`
+}
+
+/** Internal preview target. Session-authenticated, reachable from the dashboard. */
+export function buildInternalPreviewPath(params: {
+	projectId: string
+	sceneId: string
+}): string {
+	return `/preview/${params.projectId}/${params.sceneId}`
 }
 
 export function addPreviewTokenPlaceholder(previewPath: string): string {

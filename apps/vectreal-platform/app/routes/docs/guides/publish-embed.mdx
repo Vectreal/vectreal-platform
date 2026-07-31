@@ -34,7 +34,7 @@ External iframe embeds require a **preview API key** scoped to the project that 
 Pass the key as the `token` query parameter in the embed URL:
 
 ```
-/preview/fullscreen/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY
+/embed/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY
 ```
 
 Or as a `Bearer` token in the `Authorization` header for API requests:
@@ -76,7 +76,7 @@ The hosted preview iframe can also be controlled from the parent page over `post
 ```html
 <div style="position:relative;padding-top:56.25%;width:100%">
   <iframe
-    src="https://vectreal.com/preview/fullscreen/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
+    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
     style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
     allow="autoplay"
     loading="lazy"
@@ -88,7 +88,7 @@ The hosted preview iframe can also be controlled from the parent page over `post
 
 ```html
 <iframe
-  src="https://vectreal.com/preview/fullscreen/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
+  src="https://vectreal.com/embed/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
   width="800"
   height="450"
   style="border:0"
@@ -134,7 +134,7 @@ Hosted preview iframes support a small `postMessage` protocol layered on top of 
 <div style="position:relative;padding-top:56.25%;width:100%">
   <iframe
     id="vectreal-preview"
-    src="https://vectreal.com/preview/fullscreen/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
+    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
     style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
     allow="autoplay; xr-spatial-tracking"
     loading="lazy"
@@ -189,7 +189,7 @@ Hosted preview iframes support a small `postMessage` protocol layered on top of 
 
 ### Behavior notes
 
-- This protocol is only available on hosted preview routes such as `/preview/fullscreen/:projectId/:sceneId`.
+- This protocol is only available on hosted embed routes such as `/embed/:projectId/:sceneId`.
 - Preview API keys and allowed embed domains still gate access before the iframe loads.
 - `set_controls_enabled` only affects runtime interactivity in the current viewer session. It does not rewrite persisted `controlsOptions` defaults.
 - `host_scroll_progress` should be normalized to the `[0, 1]` range. The hosted preview bridge only re-fires range-based interactions when progress re-enters a configured range.
@@ -197,13 +197,19 @@ Hosted preview iframes support a small `postMessage` protocol layered on top of 
 
 ---
 
-## Preview mode
+## Embed route
 
-| Mode | URL | Description |
+| Route | URL | Description |
 |---|---|---|
-| **Fullscreen** | `/preview/fullscreen/:projectId/:sceneId` | Full viewport, immersive experience |
+| **Embed** | `/embed/:projectId/:sceneId` | Full viewport, immersive experience |
 
-Supports the `token` query param and `Authorization: Bearer` authentication.
+Supports the `token` query param and `Authorization: Bearer` authentication. A
+request without either receives `404`, whether or not the caller is signed in.
+
+Embeds published before this route existed used
+`/preview/fullscreen/:projectId/:sceneId`. That URL still works: it issues a
+permanent redirect to `/embed/...` and preserves the full query string, so
+existing embeds keep their token and camera parameters.
 
 ---
 
@@ -212,6 +218,8 @@ Supports the `token` query param and `Authorization: Bearer` authentication.
 | Scenario | Status |
 |---|---|
 | Missing `projectId` or `sceneId` | `400 Bad Request` |
+| No `token` or `Authorization` header | `404 Not Found` |
+| Legacy `/preview/fullscreen/...` URL | `301 Moved Permanently` |
 | Rate limited token validation | `429 Too Many Requests` |
 | Disallowed embed domain | `403 Forbidden` |
 | Draft or non-existent scene (external access) | `404 Not Found` |

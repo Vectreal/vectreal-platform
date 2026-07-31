@@ -6,7 +6,6 @@ import {
 } from '@shared/components/ui/avatar'
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
-import { ButtonGroup } from '@shared/components/ui/button-group'
 import {
 	Drawer,
 	DrawerClose,
@@ -15,12 +14,6 @@ import {
 	DrawerHeader,
 	DrawerTitle
 } from '@shared/components/ui/drawer'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger
-} from '@shared/components/ui/dropdown-menu'
 import { SceneLoadResult, useLoadModel } from '@vctrl/hooks/use-load-model'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useSetAtom } from 'jotai/react'
@@ -29,7 +22,6 @@ import {
 	ChevronRight,
 	Cloud,
 	Info,
-	LayoutDashboard,
 	Radio,
 	Rocket,
 	Trash2,
@@ -50,7 +42,7 @@ import { ScenePublishStateControl } from '../../../components/publishing/scene-p
 import SceneEmbedViewer from '../../../components/scene-embed/scene-embed-viewer'
 import { useDashboardSceneActions } from '../../../hooks/use-dashboard-scene-actions'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
-import { buildFullscreenPreviewPath } from '../../../lib/domain/embed/embed-snippet'
+import { buildInternalPreviewPath } from '../../../lib/domain/embed/embed-snippet'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
 import { loadSceneFromApi } from '../../../lib/domain/scene/client/load-scene-from-api.client'
 import { getDashboardSceneLoadErrorMessage } from '../../../lib/domain/scene/scene-load-error-messages'
@@ -330,7 +322,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 
 	const metadataResetTimerRef = useRef<number | null>(null)
 
-	const fullscreenPreviewPath = buildFullscreenPreviewPath({
+	const previewPath = buildInternalPreviewPath({
 		projectId: project.id,
 		sceneId: sceneState.id
 	})
@@ -582,29 +574,11 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 								/>
 							</div>
 							<div className="flex shrink-0 flex-col gap-3 max-md:w-full xl:justify-end">
-								<ButtonGroup className="w-full">
-									<Button asChild className="w-full">
-										<Link viewTransition to={fullscreenPreviewPath}>
-											Preview
-										</Link>
-									</Button>
-
-									<DropdownMenu>
-										<DropdownMenuTrigger asChild>
-											<Button size="icon">
-												<ChevronDown className="h-4 w-4" />
-											</Button>
-										</DropdownMenuTrigger>
-										<DropdownMenuContent>
-											<DropdownMenuItem asChild>
-												<Link viewTransition to={fullscreenPreviewPath}>
-													<LayoutDashboard className="mr-2 h-4 w-4" />
-													Fullscreen Preview
-												</Link>
-											</DropdownMenuItem>
-										</DropdownMenuContent>
-									</DropdownMenu>
-								</ButtonGroup>
+								<Button asChild className="w-full">
+									<Link viewTransition to={previewPath}>
+										Preview
+									</Link>
+								</Button>
 
 								<Button variant="secondary" asChild>
 									<Link viewTransition to={`/publisher/${sceneState.id}`}>

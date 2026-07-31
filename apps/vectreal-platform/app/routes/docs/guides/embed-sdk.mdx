@@ -38,7 +38,7 @@ Or include the CDN script before your page code:
 <div style="width: 100%; height: 400px;">
   <iframe
     id="vectreal-scene"
-    src="https://vectreal.com/preview/fullscreen/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
+    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
     style="width: 100%; height: 100%; border: 0;"
     allow="autoplay; xr-spatial-tracking"
     allowfullscreen
@@ -85,7 +85,7 @@ For zero-JavaScript initial configuration, add parameters to the iframe `src`:
 ```html
 <!-- Opens on a specific camera with auto-rotate off -->
 <iframe
-  src="https://vectreal.com/preview/fullscreen/<projectId>/<sceneId>?token=KEY&camera=hero&autoRotate=0"
+  src="https://vectreal.com/embed/<projectId>/<sceneId>?token=KEY&camera=hero&autoRotate=0"
   ...
 ></iframe>
 ```
@@ -206,7 +206,7 @@ If you prefer zero dependencies, you can implement the protocol directly. Both s
 
 ```html
 <iframe id="vectreal-preview"
-  src="https://vectreal.com/preview/fullscreen/<projectId>/<sceneId>?token=KEY"
+  src="https://vectreal.com/embed/<projectId>/<sceneId>?token=KEY"
   ...
 ></iframe>
 
