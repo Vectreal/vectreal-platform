@@ -33,7 +33,6 @@ import {
 	ChevronDown,
 	ChevronRight,
 	Cloud,
-	ExternalLink,
 	Info,
 	LayoutDashboard,
 	Radio,
@@ -372,7 +371,6 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		projectId: project.id,
 		sceneId: sceneState.id
 	})
-	const productPreviewPath = `/preview/product-detail/${project.id}/${sceneState.id}`
 	const dashboardPath = `/dashboard/projects/${project.id}/${sceneState.id}`
 	const sceneNameTrimmed = sceneNameDraft.trim()
 	const sceneDescriptionCurrent = sceneState.description || ''
@@ -588,7 +586,13 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 					</section>
 					<section className="bg-muted/30 space-y-6 rounded-2xl px-4 py-4 sm:px-5">
 						<header className="flex flex-col items-start gap-6 md:flex-row">
-							<div className="grow space-y-2 max-md:w-full">
+							{/*
+						  `min-w-0` is what stops a long scene name from pushing the
+						  action column off to the side: a flex item defaults to
+						  min-width:auto, so its content dictates the floor rather than
+						  the container.
+						*/}
+						<div className="min-w-0 grow space-y-2 max-md:w-full">
 								<InlineEditableMetadataField
 									ariaLabel="Scene title"
 									value={sceneNameDraft}
@@ -614,7 +618,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 									isSaved={metadataStatus === 'saved' && !isDescriptionUnsaved}
 								/>
 							</div>
-							<div className="flex flex-col gap-3 max-md:w-full xl:justify-end">
+							<div className="flex shrink-0 flex-col gap-3 max-md:w-full xl:justify-end">
 								<ButtonGroup className="w-full">
 									<Button asChild className="w-full">
 										<Link viewTransition to={fullscreenPreviewPath}>
@@ -633,13 +637,6 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 												<Link viewTransition to={fullscreenPreviewPath}>
 													<LayoutDashboard className="mr-2 h-4 w-4" />
 													Fullscreen Preview
-												</Link>
-											</DropdownMenuItem>
-
-											<DropdownMenuItem asChild>
-												<Link viewTransition to={productPreviewPath}>
-													<ExternalLink className="mr-2 h-4 w-4" />
-													Product Preview
 												</Link>
 											</DropdownMenuItem>
 										</DropdownMenuContent>
