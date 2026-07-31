@@ -478,6 +478,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 								</Center>
 								<SceneShadows
 									model={model}
+									normalizationOptions={normalizationOptions}
 									{...(shadowsOptions as Partial<AccumulativeShadowsProps>)}
 									lightEditable={shadowLightEditable}
 									onLightChange={onShadowLightChange}
