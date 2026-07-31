@@ -217,12 +217,14 @@ const useOptimizeModel = () => {
 			try {
 				await optimizerRef.current.loadFromBuffer(buffer)
 
-				if (meta) {
-					optimizerRef.current.setAppliedOptimizations(
-						meta.appliedOptimizations
-					)
-					optimizerRef.current.setDracoReport(meta.dracoReport ?? null)
-				}
+				// Always written, never conditionally: this optimizer instance is
+				// long-lived, so a load without meta (a fresh model, or a plain byte
+				// sync) would otherwise inherit the previous pass's steps and Draco
+				// report and describe the new document with the old one's results.
+				optimizerRef.current.setAppliedOptimizations(
+					meta?.appliedOptimizations ?? []
+				)
+				optimizerRef.current.setDracoReport(meta?.dracoReport ?? null)
 
 				const report = await optimizerRef.current.getReport()
 				dispatch({ type: 'LOAD_SUCCESS', payload: { report } })
