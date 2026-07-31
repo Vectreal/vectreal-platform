@@ -516,7 +516,7 @@ export interface ServerSceneData extends SceneSettings {
 }
 
 export interface TextureOptimization
-	extends BaseOptimization<'texture'>, TextureCompressOptions {}
+	extends BaseOptimization, TextureCompressOptions {}
 
 export type OptimizationNames =
 	| 'simplification'
@@ -526,25 +526,30 @@ export type OptimizationNames =
 	| 'normals'
 	| 'draco'
 
-export interface BaseOptimization<Name = OptimizationNames> {
-	name: Name
+/**
+ * `enabled` is the only field every optimization shares. There is deliberately
+ * no `name` here: the key in {@link Optimizations} already names the entry, and
+ * carrying it twice let the two drift apart — settings persisted before an
+ * optimization existed had no entry to spread, so toggling it on produced an
+ * entry with `enabled` but no `name`, which then read as an unnamed step.
+ */
+export interface BaseOptimization {
 	enabled: boolean
 }
 
 export interface SimplificationOptimization
-	extends BaseOptimization<'simplification'>, SimplifyOptions {}
+	extends BaseOptimization, SimplifyOptions {}
 
 export interface QuantizeOptimization
-	extends BaseOptimization<'quantize'>, QuantizeOptions {}
+	extends BaseOptimization, QuantizeOptions {}
 
-export interface DedupOptimization
-	extends BaseOptimization<'dedup'>, DedupOptions {}
+export interface DedupOptimization extends BaseOptimization, DedupOptions {}
 
 export interface NormalsOptimization
-	extends BaseOptimization<'normals'>, NormalsOptions {}
+	extends BaseOptimization, NormalsOptions {}
 
 export interface DracoCompressOptimization
-	extends BaseOptimization<'draco'>, DracoOptions {}
+	extends BaseOptimization, DracoOptions {}
 
 export type Optimizations = {
 	simplification: SimplificationOptimization
