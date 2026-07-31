@@ -4,6 +4,13 @@ const Toaster = ({ ...props }: ToasterProps) => {
 	return (
 		<Sonner
 			theme="dark"
+			// Centered horizontally so notifications read the same regardless of
+			// which side of the screen the current surface occupies, and inset by
+			// the same 12px the publisher's floating surfaces use so a toast lines
+			// up with whatever it appears beside. Overridable per call site.
+			position="bottom-center"
+			offset={12}
+			mobileOffset={12}
 			className="toaster group"
 			style={
 				{
