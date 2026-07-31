@@ -6,9 +6,11 @@ import type { Optimizations } from '@vctrl/core'
  * consistent.
  *
  * Draco quantizes vertex attributes itself, so running the standalone quantize
- * pass alongside it costs an extra pass and compounds precision loss. The two
- * are alternatives, and toggling either one moves the other so the pair is
- * never both-on or both-off by accident.
+ * pass alongside it costs an extra pass and compounds precision loss. The
+ * coupling runs one way only: switching Draco on turns quantize off, switching
+ * it off turns quantize back on. Quantize does not move Draco, because silently
+ * disabling the technique that does most of the work would be worse than the
+ * redundant pass it avoids.
  *
  * Written as a pure function so the coupling lives in one testable place rather
  * than in whichever control the user happened to touch.
