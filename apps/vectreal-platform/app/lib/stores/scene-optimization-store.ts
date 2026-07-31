@@ -1,7 +1,10 @@
 import { atomWithReset } from 'jotai/utils'
 import { createStore } from 'jotai/vanilla'
 
-import { mediumPreset } from '../../constants/optimizations'
+import {
+	DEFAULT_PRESET_ID,
+	optimizationPresets
+} from '../../constants/optimizations'
 
 import type {
 	SceneOptimizationModalState,
@@ -10,8 +13,8 @@ import type {
 } from '../../types/scene-optimization'
 
 const optimizationInitialState: OptimizationState = {
-	optimizations: mediumPreset,
-	optimizationPreset: 'medium'
+	optimizations: optimizationPresets[DEFAULT_PRESET_ID],
+	optimizationPreset: DEFAULT_PRESET_ID
 }
 
 const optimizationRuntimeInitialState: SceneOptimizationRuntimeState = {
@@ -19,10 +22,12 @@ const optimizationRuntimeInitialState: SceneOptimizationRuntimeState = {
 	isSceneSizeLoading: false,
 	optimizedSceneBytes: null,
 	clientSceneBytes: null,
+	workingSceneBytes: null,
 	optimizedTextureBytes: null,
 	clientTextureBytes: null,
 	lastSavedReportSignature: null,
-	latestSceneStats: null
+	latestSceneStats: null,
+	dracoReport: null
 }
 
 const optimizationModalInitialState: SceneOptimizationModalState = {

@@ -9,6 +9,7 @@ import {
 
 import { UUID_REGEX } from '../../../../constants/utility-constants'
 import { parseActionRequest } from '../../../http/requests.server'
+import { resolveDefaultSceneCameraId } from '../scene-camera'
 
 import type { SceneSettingsRequest } from '../../../../types/api'
 import type { SceneMetaState } from '../../../../types/publisher-config'
@@ -386,10 +387,7 @@ export class SceneSettingsParser {
 			})
 		}
 
-		// Find the first scene camera (non-hotspot)
-		const firstSceneCameraId = normalizedCameras.find(
-			(entry) => !entry.kind || entry.kind === 'scene'
-		)?.cameraId
+		const firstSceneCameraId = resolveDefaultSceneCameraId(normalizedCameras)
 
 		if (!firstSceneCameraId) {
 			return ApiResponse.badRequest(

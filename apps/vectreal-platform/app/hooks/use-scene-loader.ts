@@ -19,7 +19,10 @@ import { useSceneModelEvents } from './scene-loader/use-scene-model-events'
 import { useSceneParamsSync } from './scene-loader/use-scene-params-sync'
 import { useSceneSaveFlow } from './scene-loader/use-scene-save-flow'
 import { useConsent } from '../components/consent/consent-context'
-import { optimizationPresets } from '../constants/optimizations'
+import {
+	DEFAULT_PRESET_ID,
+	optimizationPresets
+} from '../constants/optimizations'
 import {
 	defaultBoundsOptions,
 	defaultCameraOptions,
@@ -615,7 +618,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				setOptimizationState,
 				setOptimizationRuntime,
 				optimizationRuntimeInitialState,
-				mediumOptimizations: optimizationPresets.medium
+				defaultOptimizations: optimizationPresets[DEFAULT_PRESET_ID]
 			})
 		},
 		[
