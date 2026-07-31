@@ -1,0 +1,80 @@
+---
+title: "Draco geometry compression in the Publisher"
+slug: "draco-geometry-compression-in-the-publisher"
+excerpt: "The Publisher compresses model geometry with Draco in two independent places: an Advanced optimization toggle, with the drawer reporting what the pass saved on your own model, and a GLB (Draco-compressed) download target. Both shipped on 21 July 2026. This covers where they are, what they change, and why a Draco file is not a drop-in replacement for a plain GLB."
+publishedAt: "2026-07-30"
+updatedAt: "2026-07-30"
+category: "releases"
+tags:
+  - "compression"
+  - "optimization"
+  - "publisher"
+  - "glb"
+author:
+    name: "Vectreal"
+    role: "Team"
+    bio: "Open infrastructure for publishing 3D on the web."
+    avatar: "/assets/images/logo-192.png"
+    xUrl: "https://github.com/Vectreal"
+    linkedinUrl: ""
+draft: true
+thumbnailImage: "/assets/images/newsroom/10/thumbnail-draco-geometry-compression-in-the-publisher.webp"
+coverImage: "/assets/images/newsroom/10/og-draco-geometry-compression-in-the-publisher.webp"
+
+voice: B
+author_persona: vectreal-team
+type: "Product Update"
+pillar: Open Source
+seo_cluster: "3D model optimization / file size for web"
+cta: https://vectreal.com/publisher
+---
+
+The Publisher compresses geometry with Draco. It appears in two independent places: an Advanced optimization toggle labelled **Compress Geometry (Draco)**, and a download target called **GLB (Draco-compressed)**. Both shipped on 21 July 2026 and we did not announce them at the time.
+
+## What Draco compresses
+
+Draco is Google's open source library for compressing and decompressing 3D geometric meshes and point clouds. Its own description of scope covers points, connectivity, texture coordinates, colour, normals and other generic attributes attached to geometry ([google/draco](https://github.com/google/draco), accessed 2026-07-29). Image data is outside that list, so a model's textures are untouched by it.
+
+glTF carries Draco through `KHR_draco_mesh_compression`, a Khronos extension whose status is "Complete, Ratified by the Khronos Group" ([glTF extension registry](https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_draco_mesh_compression), accessed 2026-07-29). A Draco-compressed GLB is still a GLB: the compressed geometry sits in a bufferView, and the file declares the extension so a loader knows what it is looking at.
+
+## Where the two controls are
+
+**The optimization toggle** is the last of four switches in the drawer's Advanced section, after Quantize Vertices, Remove Duplicates and Optimize Normals. It also runs last, so it compresses the geometry the earlier steps left behind rather than the geometry you uploaded.
+
+No preset turns it on. Base, Balanced and Performance all leave it off, which makes Advanced the only route to it.
+
+Do not pair it with Quantize Vertices. Draco quantizes vertex attributes itself, which makes running both redundant. The toggle's own tooltip says so.
+
+**The download target** is in the publish sidebar under Download Model, next to GLB (Binary), GLTF (ZIP) and USDZ. It compresses a copy of the document at export time. Two things follow from the copy: the model you are working on is left as it was, and the download is compressed whether or not the toggle was ever switched on.
+
+What you get back is a file that needs a Draco-aware loader to open. That is a real constraint on where you can send it, and the section on what it costs at the other end explains why.
+
+{/* CAPTURE: newsroom/10/draco-export-option.webp */}
+
+Both controls run in the browser, and both are about the model in front of you: the pass in the drawer and the file you download. The Draco encoder and decoder ship with the app and load the first time something needs them. Nothing is uploaded anywhere to be compressed.
+
+Try it, no account needed: [vectreal.com/publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=draco-geometry-compression-in-the-publisher)
+
+{/* CAPTURE: newsroom/10/draco-toggle-and-report.mp4 */}
+
+## The number you get is your own
+
+When Draco runs as part of an optimization pass, the drawer adds a **Geometry (Draco)** row showing what the geometry weighed going in, what it weighs coming out, and the reduction as a percentage. It is measured from the compressed data in the model you loaded, not from a reference asset.
+
+We are not publishing a headline compression figure, because there is not an honest one to publish. Draco's compression varies with the attributes present on the mesh and how compressible the connectivity is, which is why its own documentation frames the library in terms of the attribute types it handles rather than a ratio it achieves ([google/draco](https://github.com/google/draco), accessed 2026-07-29). The row is there so you can read your own number instead of taking ours.
+
+## What a Draco file costs at the other end
+
+Compressed geometry has to be decoded before anything can be drawn with it, and that decoding runs through a Draco decoder module the receiving application has to load: in a browser, a WebAssembly build of the library, which is what ours uses ([google/draco](https://github.com/google/draco), accessed 2026-07-29). We have not measured what that costs on our own pipeline, so we are not going to quote a figure for it. Moritz wrote up the trade-off in [glTF vs GLB](https://vectreal.com/news-room/gltf-vs-glb-what-actually-matters?utm_source=newsroom&utm_medium=article&utm_campaign=draco-geometry-compression-in-the-publisher), sourced there to Cesium.
+
+The compatibility cost is more definite. Our exports mark the extension as required, with no uncompressed fallback in the file. Under the extension's conformance rules, a loader that does not support Draco must fail to load an asset that lists `KHR_draco_mesh_compression` in `extensionsRequired`, rather than ignoring the extension and loading what it can (Khronos glTF extension registry, accessed 2026-07-29). So a Draco GLB is not a drop-in replacement for a plain one in a pipeline you do not control. Check what is at the other end before you commit a Draco file to it.
+
+Our own loader decodes Draco, so a compressed file downloaded from the Publisher uploads back into it and opens normally.
+
+## What it will not fix
+
+Draco compresses geometry and does nothing to textures. If a model is heavy because of its texture set, the size is in the Texture Settings that sit above these toggles in the same Advanced section, not here.
+
+The project is pre-1.0 and this path shipped nine days before this went up. If a model fails to compress, or comes back looking wrong, it is worth reporting.
+
+Try it, no account needed: [vectreal.com/publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=draco-geometry-compression-in-the-publisher)
