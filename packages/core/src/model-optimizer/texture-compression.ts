@@ -35,6 +35,23 @@ type ProgressEmitter = (operation: string, progress: number) => void
 type TransformRunner = (transforms: Transform[], name: string) => Promise<void>
 
 /**
+ * Do not inline this into the `import()` below.
+ *
+ * sharp is an optional Node-only native module. A literal `import('sharp')`
+ * survives this package's build as a literal specifier, so every downstream
+ * bundler statically resolves it and pulls sharp's Node builtins into browser
+ * bundles. Since sharp 0.35 ships ESM, that is a hard build error rather than
+ * an externalization warning:
+ *
+ *   "spawnSync" is not exported by "__vite-browser-external"
+ *
+ * Reading the specifier from a binding keeps the import opaque to static
+ * analysis while Node still resolves it at runtime. Browser and edge callers
+ * pass `options.encoder` and never reach this branch.
+ */
+const SHARP_SPECIFIER = 'sharp'
+
+/**
  * Run texture compression on a loaded document.
  * Returns the list of applied optimization labels to append.
  */
@@ -53,7 +70,7 @@ export async function runTextureCompression(
 		encoder = options.encoder as TextureCompressionEncoder
 	} else {
 		try {
-			const sharpModule = await import(/* @vite-ignore */ 'sharp')
+			const sharpModule = await import(/* @vite-ignore */ SHARP_SPECIFIER)
 			encoder = sharpModule.default || sharpModule
 
 			if (typeof encoder !== 'function') {
