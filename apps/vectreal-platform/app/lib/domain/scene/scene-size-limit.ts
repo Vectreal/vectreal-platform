@@ -67,7 +67,11 @@ export function resolveSceneCurrentBytes({
 		persistedCurrentSceneBytes,
 		clientSceneBytes
 	]) {
-		if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+		if (
+			typeof candidate === 'number' &&
+			Number.isFinite(candidate) &&
+			candidate >= 0
+		) {
 			return candidate
 		}
 	}
