@@ -8,71 +8,61 @@ import {
 } from '@shared/components/ui/select'
 import { Switch } from '@shared/components/ui/switch'
 import { cn } from '@shared/utils'
-import { useAtom } from 'jotai/react'
 
-import { optimizationAtom } from '../../../../lib/stores/scene-optimization-store'
-import { InfoTooltip } from '../../../info-tooltip'
-import { ToggleButtonGroup } from '../../settings-components'
+import { InfoTooltip } from '../../../../info-tooltip'
+import { ToggleButtonGroup } from '../../../settings-components'
+import { getOptimizationDefinition } from '../../model'
+import { useOptimizationSettings } from '../../use-optimization-settings'
 
-import type { ToggleButtonGroupOption } from '../../settings-components'
-import type { TextureOptimization } from '@vctrl/core'
+import type { ToggleButtonGroupOption } from '../../../settings-components'
 import type { FC } from 'react'
 
-const TEXTURE_SIZE_OPTIONS: ToggleButtonGroupOption<number>[] = [
-	{ value: 256, label: '256' },
-	{ value: 512, label: '512' },
-	{ value: 768, label: '768' },
-	{ value: 1024, label: '1024' },
-	{ value: 2048, label: '2048' }
-]
+const TEXTURE_SIZE_OPTIONS = [256, 512, 768, 1024, 2048]
 
 const QUALITY_PRESETS: ToggleButtonGroupOption<number>[] = [
-	{ value: 68, label: 'Performance', subLabel: 'Faster loading' },
+	{ value: 70, label: 'Performance', subLabel: 'Faster loading' },
 	{ value: 80, label: 'Balanced', subLabel: 'Best default' },
-	{ value: 92, label: 'Max detail', subLabel: 'Highest fidelity' }
+	{ value: 90, label: 'Max detail', subLabel: 'Highest fidelity' }
 ]
 
 function getClosestQuality(current: number): number {
-	return QUALITY_PRESETS.reduce((closest, o) =>
-		Math.abs(o.value - current) < Math.abs(closest.value - current)
-			? o
+	return QUALITY_PRESETS.reduce((closest, option) =>
+		Math.abs(option.value - current) < Math.abs(closest.value - current)
+			? option
 			: closest
 	).value
 }
 
-export const TextureSettings: FC = () => {
-	const [{ optimizations: plannedOptimizations }, setOptimization] =
-		useAtom(optimizationAtom)
+/**
+ * Texture resizing and re-encoding. Second in the panel: on texture-heavy
+ * models this outweighs every geometry saving combined.
+ */
+export const TextureField: FC = () => {
+	const { optimizations, update } = useOptimizationSettings()
+	const definition = getOptimizationDefinition('texture')
 	const {
 		enabled,
 		resize: [resize] = [1024, 1024],
 		quality = 80,
 		targetFormat
-	} = plannedOptimizations.texture
-
-	function setTexture(updates: Partial<TextureOptimization>) {
-		setOptimization((optimization) => ({
-			...optimization,
-			optimizations: {
-				...optimization.optimizations,
-				texture: {
-					...optimization.optimizations.texture,
-					...updates
-				}
-			}
-		}))
-	}
+	} = optimizations.texture
 
 	return (
-		<>
-			<div className="mb-4 flex items-center justify-between px-2">
-				<div className="flex items-center gap-2">
-					<p className="text-lg font-medium">Texture Optimization</p>
-					<InfoTooltip content="Resizes and compresses textures to reduce file size. Smaller textures and higher compression will reduce visual quality." />
+		<div className="space-y-4">
+			<div className="flex items-start justify-between gap-3 px-1">
+				<div className="space-y-1">
+					<div className="flex items-center gap-2">
+						<Label className="text-sm font-semibold">{definition.title}</Label>
+						<InfoTooltip content={definition.tooltip} />
+					</div>
+					<p className="text-muted-foreground text-sm leading-relaxed">
+						{definition.description}
+					</p>
 				</div>
 				<Switch
 					checked={enabled}
-					onCheckedChange={(checked) => setTexture({ enabled: checked })}
+					onCheckedChange={(checked) => update('texture', { enabled: checked })}
+					className="mt-1"
 				/>
 			</div>
 
@@ -83,20 +73,22 @@ export const TextureSettings: FC = () => {
 				)}
 			>
 				<div className="space-y-3">
-					<Label htmlFor="texture-size">Texture Size</Label>
+					<Label htmlFor="texture-size">Maximum size</Label>
 					<Select
 						value={resize.toString()}
 						onValueChange={(value) =>
-							setTexture({ resize: [parseInt(value), parseInt(value)] })
+							update('texture', {
+								resize: [Number.parseInt(value), Number.parseInt(value)]
+							})
 						}
 					>
 						<SelectTrigger id="texture-size" className="w-full">
 							<SelectValue placeholder="Select texture size" />
 						</SelectTrigger>
 						<SelectContent>
-							{TEXTURE_SIZE_OPTIONS.map((option) => (
-								<SelectItem key={option.value} value={option.value.toString()}>
-									{option.value}×{option.value}
+							{TEXTURE_SIZE_OPTIONS.map((size) => (
+								<SelectItem key={size} value={size.toString()}>
+									{size}×{size}
 								</SelectItem>
 							))}
 						</SelectContent>
@@ -112,19 +104,21 @@ export const TextureSettings: FC = () => {
 					</div>
 					<ToggleButtonGroup
 						options={QUALITY_PRESETS}
-						isActive={(v) => getClosestQuality(quality) === v}
-						onChange={(v) => setTexture({ quality: v })}
+						isActive={(value) => getClosestQuality(quality) === value}
+						onChange={(value) => update('texture', { quality: value })}
 					/>
 				</div>
 
 				<div className="space-y-3">
 					<Label htmlFor="texture-format" className="text-sm font-semibold">
-						Texture format
+						Format
 					</Label>
 					<Select
 						value={targetFormat}
 						onValueChange={(value) =>
-							setTexture({ targetFormat: value as 'webp' | 'jpeg' | 'png' })
+							update('texture', {
+								targetFormat: value as 'webp' | 'jpeg' | 'png'
+							})
 						}
 					>
 						<SelectTrigger id="texture-format" className="w-full">
@@ -140,6 +134,6 @@ export const TextureSettings: FC = () => {
 					</Select>
 				</div>
 			</div>
-		</>
+		</div>
 	)
 }

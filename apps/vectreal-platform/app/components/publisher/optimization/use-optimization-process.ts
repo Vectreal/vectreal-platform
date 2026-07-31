@@ -1,61 +1,34 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue } from 'jotai/react'
-import { useCallback, useMemo, useState } from 'react'
-import { toast } from 'sonner'
+import { useCallback, useMemo } from 'react'
 
-import {
-	withTimeout,
-	runGeometryOptimizationsInWorker,
-	OPTIMIZATION_STEP_TIMEOUT_MS,
-	MODEL_SYNC_TIMEOUT_MS,
-	useSceneSizeCalculator
-} from './utils'
+import { resolveSimplificationOutcome } from './model/simplification-outcome'
+import { runOptimizationPass } from './run-optimization-pass'
+import { useOptimizationSteps } from './use-optimization-steps'
+import { useSceneSizeCalculator } from './utils'
 import { resolveSceneMetrics } from '../../../lib/domain/scene'
-import { loadOriginalSceneModel } from '../../../lib/persistence/pending-scene-idb'
 import {
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../../lib/stores/scene-optimization-store'
 
-import type { WorkerOptimizationOptions } from '../../../workers/optimization.worker.types'
-import type {
-	DedupOptimization,
-	DracoCompressOptimization,
-	NormalsOptimization,
-	QuantizeOptimization,
-	SimplificationOptimization,
-	TextureOptimization
-} from '@vctrl/core'
-
 export type SizeInfo = {
 	initialSceneBytes?: number | null
 	currentSceneBytes?: number | null
+	/** Uncompressed working-document size, when it differs from the published one. */
+	workingSceneBytes?: number | null
 	initialTextureBytes?: number | null
 	currentTextureBytes?: number | null
 	isSceneSizeComputing?: boolean
 	isInitialMetricsHydrating?: boolean
 }
 
-type OptimizationOption =
-	| SimplificationOptimization
-	| TextureOptimization
-	| QuantizeOptimization
-	| DedupOptimization
-	| NormalsOptimization
-	| DracoCompressOptimization
-
-const STEP_LABELS: Record<string, string> = {
-	simplification: 'Mesh simplification',
-	texture: 'Texture optimization',
-	quantize: 'Vertex quantization',
-	dedup: 'Duplicate removal',
-	normals: 'Normal refinement',
-	draco: 'Draco compression'
-}
-const SYNC_STEP = 'Syncing to viewer'
-
 /**
- * Custom hook that encapsulates the optimization logic and state management
+ * Wires the optimization pass to React state.
+ *
+ * The pass itself lives in `run-optimization-pass.ts` as a plain function; this
+ * hook only assembles its dependencies and exposes the results the drawer
+ * renders.
  */
 export const useOptimizationProcess = () => {
 	const { optimizer, file } = useModelContext(true)
@@ -80,16 +53,15 @@ export const useOptimizationProcess = () => {
 		isPending,
 		optimizedSceneBytes,
 		clientSceneBytes,
+		workingSceneBytes,
 		optimizedTextureBytes,
 		clientTextureBytes,
-		latestSceneStats
+		latestSceneStats,
+		dracoReport: runtimeDracoReport
 	} = optimizationRuntime
 
-	const [optimizingStep, setOptimizingStep] = useState<{
-		current: string | null
-		completed: string[]
-		allSteps: string[]
-	}>({ current: null, completed: [], allSteps: [] })
+	const { steps: optimizingStep, controller: stepsController } =
+		useOptimizationSteps()
 
 	const { calculateSceneBytes, refreshOptimizedSizeInfo } =
 		useSceneSizeCalculator(
@@ -100,283 +72,68 @@ export const useOptimizationProcess = () => {
 			setOptimizationRuntime
 		)
 
-	// Shared optimization body.
-	// Pass fromOriginal=true (default) to reload from the IDB original snapshot first
-	// — non-destructive preset switching. Pass fromOriginal=false to apply on top of
-	// the current optimizer document state (fine-tuning / stacking).
-	const runOptimization = useCallback(
+	const runPass = useCallback(
 		async (fromOriginal: boolean): Promise<boolean> => {
 			if (isPending || isPreparing || !isReady) return false
 
-			setOptimizationRuntime((prev) => ({ ...prev, isPending: true }))
+			const { didApply, dracoReport } = await runOptimizationPass({
+				fromOriginal,
+				optimizations: plannedOptimizations,
+				steps: stepsController,
+				model: {
+					reset,
+					loadFromServerSceneData,
+					loadFromGlbBuffer,
+					getModel,
+					texturesOptimization,
+					applyOptimization
+				},
+				baseline: {
+					clientSceneBytes,
+					clientTextureBytes,
+					sourcePackageBytes: file?.sourcePackageBytes,
+					sourceTextureBytes: file?.sourceTextureBytes,
+					statsSceneBytes: latestSceneStats?.currentSceneBytes,
+					reportTextureBytesBefore: report?.stats.textures.before,
+					calculateSceneBytes
+				},
+				setRuntime: setOptimizationRuntime
+			})
 
-			let didApplyOptimization = false
-
-			try {
-				if (fromOriginal) {
-					const original = await loadOriginalSceneModel()
-					if (original) {
-						reset()
-						await loadFromServerSceneData(original.sceneData)
-					} else {
-						console.warn(
-							'[optimization] No original scene in IDB; optimizing from current document state.'
-						)
-					}
-				}
-
-				const optimizationOptions = Object.values(plannedOptimizations).filter(
-					(option): option is OptimizationOption => !!option && option.enabled
-				)
-				let shouldConsumeOptimizationRun = false
-
-				const stepNames = optimizationOptions.map(
-					(o) => STEP_LABELS[o.name] ?? o.name
-				)
-				setOptimizingStep({
-					current: null,
-					completed: [],
-					allSteps: [...stepNames, SYNC_STEP]
-				})
-
-				if (typeof clientSceneBytes !== 'number') {
-					const baselineSceneBytes =
-						typeof file?.sourcePackageBytes === 'number'
-							? file.sourcePackageBytes
-							: typeof latestSceneStats?.currentSceneBytes === 'number'
-								? latestSceneStats.currentSceneBytes
-								: await withTimeout(
-										calculateSceneBytes(),
-										MODEL_SYNC_TIMEOUT_MS,
-										'Baseline scene size calculation'
-									)
-					if (typeof baselineSceneBytes === 'number') {
-						setOptimizationRuntime((prev) => ({
-							...prev,
-							isSceneSizeLoading: false,
-							clientSceneBytes: baselineSceneBytes
-						}))
-					}
-				}
-
-				if (typeof clientTextureBytes !== 'number') {
-					const baselineTextureBytes =
-						typeof file?.sourceTextureBytes === 'number'
-							? file.sourceTextureBytes
-							: (report?.stats.textures.before ?? null)
-					if (typeof baselineTextureBytes === 'number') {
-						setOptimizationRuntime((prev) => ({
-							...prev,
-							clientTextureBytes: baselineTextureBytes
-						}))
-					}
-				}
-
-				// --- Geometry phase (Web Worker) ---
-				const geometryOptions = optimizationOptions.filter(
-					(o): o is Exclude<OptimizationOption, TextureOptimization> =>
-						o.name !== 'texture'
-				)
-				const textureOption = optimizationOptions.find(
-					(o): o is TextureOptimization => o.name === 'texture'
-				)
-
-				if (geometryOptions.length > 0) {
-					const workerOptions: WorkerOptimizationOptions = {}
-					for (const option of geometryOptions) {
-						if (option.name === 'simplification') {
-							workerOptions.simplify = {
-								enabled: true,
-								ratio: option.ratio,
-								error: option.error
-							}
-						} else if (option.name === 'quantize') {
-							workerOptions.quantize = {
-								enabled: true,
-								quantizePosition: option.quantizePosition,
-								quantizeNormal: option.quantizeNormal,
-								quantizeColor: option.quantizeColor,
-								quantizeTexcoord: option.quantizeTexcoord
-							}
-						} else if (option.name === 'dedup') {
-							workerOptions.dedup = {
-								enabled: true,
-								textures: option.textures,
-								materials: option.materials,
-								meshes: option.meshes,
-								accessors: option.accessors
-							}
-						} else if (option.name === 'normals') {
-							workerOptions.normals = {
-								enabled: true,
-								overwrite: option.overwrite
-							}
-						} else if (option.name === 'draco') {
-							workerOptions.draco = {
-								enabled: true,
-								method: option.method,
-								encodeSpeed: option.encodeSpeed,
-								decodeSpeed: option.decodeSpeed,
-								quantizePosition: option.quantizePosition,
-								quantizeNormal: option.quantizeNormal,
-								quantizeColor: option.quantizeColor,
-								quantizeTexcoord: option.quantizeTexcoord,
-								quantizeGeneric: option.quantizeGeneric
-							}
-						}
-					}
-
-					const currentBuffer = await withTimeout(
-						getModel(),
-						MODEL_SYNC_TIMEOUT_MS,
-						'Model export for worker'
-					)
-					if (!currentBuffer) {
-						toast.warning(
-							'Could not export the model for geometry optimization. Try reloading the scene.'
-						)
-					} else {
-						let lastWorkerStep: string | null = null
-
-						const optimizedBuffer = await withTimeout(
-							runGeometryOptimizationsInWorker(
-								currentBuffer,
-								workerOptions,
-								(step, progress) => {
-									if (step !== lastWorkerStep) {
-										lastWorkerStep = step
-										setOptimizingStep((prev) => ({ ...prev, current: step }))
-									} else if (progress === 100) {
-										// Step posted its own completion — tick it immediately
-										setOptimizingStep((prev) => ({
-											...prev,
-											completed: [...prev.completed, step]
-										}))
-										lastWorkerStep = null
-									}
-								}
-							),
-							OPTIMIZATION_STEP_TIMEOUT_MS * geometryOptions.length,
-							'Geometry worker'
-						)
-
-						if (lastWorkerStep) {
-							setOptimizingStep((prev) => ({
-								...prev,
-								completed: [...prev.completed, lastWorkerStep!]
-							}))
-						}
-
-						await withTimeout(
-							loadFromGlbBuffer(optimizedBuffer),
-							MODEL_SYNC_TIMEOUT_MS,
-							'Worker result sync'
-						)
-						shouldConsumeOptimizationRun = true
-					}
-				}
-
-				// --- Texture phase (browser-native OffscreenCanvas encoder) ---
-				if (textureOption) {
-					const stepLabel = STEP_LABELS['texture']
-					setOptimizingStep((prev) => ({ ...prev, current: stepLabel }))
-					try {
-						await withTimeout(
-							texturesOptimization(textureOption),
-							OPTIMIZATION_STEP_TIMEOUT_MS,
-							'Texture optimization'
-						)
-						shouldConsumeOptimizationRun = true
-						setOptimizingStep((prev) => ({
-							...prev,
-							completed: [...prev.completed, stepLabel]
-						}))
-					} catch (error) {
-						console.error('Error processing texture:', error)
-						if (
-							error instanceof Error &&
-							error.message.includes('failed for ') &&
-							!error.message.includes('failed for all textures')
-						) {
-							shouldConsumeOptimizationRun = true
-							setOptimizingStep((prev) => ({
-								...prev,
-								completed: [...prev.completed, stepLabel]
-							}))
-						}
-					}
-				}
-
-				// Sync the optimized model back to the Three.js viewer
-				if (shouldConsumeOptimizationRun) {
-					setOptimizingStep((prev) => ({ ...prev, current: SYNC_STEP }))
-					try {
-						await withTimeout(
-							applyOptimization(),
-							MODEL_SYNC_TIMEOUT_MS,
-							'Model sync'
-						)
-						setOptimizingStep((prev) => ({
-							...prev,
-							completed: [...prev.completed, SYNC_STEP]
-						}))
-					} catch (syncError) {
-						console.warn('Model sync after optimization failed:', syncError)
-					}
-				}
-
-				didApplyOptimization = shouldConsumeOptimizationRun
-			} catch (error) {
-				console.error('Error during optimization:', error)
-				toast.error(
-					error instanceof Error
-						? error.message
-						: 'Optimization failed. Please retry.'
-				)
-				return false
-			} finally {
-				setOptimizationRuntime((prev) => ({ ...prev, isPending: false }))
-				setOptimizingStep({ current: null, completed: [], allSteps: [] })
+			if (didApply) {
+				void refreshOptimizedSizeInfo(dracoReport)
 			}
 
-			if (didApplyOptimization) {
-				void refreshOptimizedSizeInfo()
-			}
-
-			return didApplyOptimization
+			return didApply
 		},
 		[
 			isPending,
 			isPreparing,
 			isReady,
-			clientSceneBytes,
-			clientTextureBytes,
-			latestSceneStats,
-			refreshOptimizedSizeInfo,
-			setOptimizationRuntime,
 			plannedOptimizations,
-			texturesOptimization,
-			applyOptimization,
+			stepsController,
 			reset,
 			loadFromServerSceneData,
 			loadFromGlbBuffer,
 			getModel,
-			calculateSceneBytes,
+			texturesOptimization,
+			applyOptimization,
+			clientSceneBytes,
+			clientTextureBytes,
 			file?.sourcePackageBytes,
 			file?.sourceTextureBytes,
-			report?.stats.textures.before
+			latestSceneStats?.currentSceneBytes,
+			report?.stats.textures.before,
+			calculateSceneBytes,
+			setOptimizationRuntime,
+			refreshOptimizedSizeInfo
 		]
 	)
 
-	const handleOptimizeClick = useCallback(
-		() => runOptimization(true),
-		[runOptimization]
-	)
-
-	const handleStackOptimizeClick = useCallback(
-		() => runOptimization(false),
-		[runOptimization]
-	)
+	// Re-running a preset reloads the pristine scene first, so passes never
+	// silently chain. "Optimize further" deliberately stacks on current state.
+	const handleOptimizeClick = useCallback(() => runPass(true), [runPass])
+	const handleStackOptimizeClick = useCallback(() => runPass(false), [runPass])
 
 	const resolvedMetrics = useMemo(
 		() =>
@@ -407,25 +164,43 @@ export const useOptimizationProcess = () => {
 	const sizeInfo: SizeInfo = {
 		initialSceneBytes: resolvedMetrics.sceneBytes.initial,
 		currentSceneBytes: resolvedMetrics.sceneBytes.current,
+		// Only meaningful when Draco is what makes the two diverge.
+		workingSceneBytes:
+			runtimeDracoReport?.isWorthApplying && workingSceneBytes != null
+				? workingSceneBytes
+				: null,
 		initialTextureBytes: resolvedMetrics.textureBytes.initial,
 		currentTextureBytes: resolvedMetrics.textureBytes.current,
 		isSceneSizeComputing: resolvedMetrics.isSceneSizeComputing,
 		isInitialMetricsHydrating: resolvedMetrics.isInitialMetricsHydrating
 	}
 
-	const hasImproved = resolvedMetrics.hasImproved
-	const hasCompletedOptimizationPass =
-		typeof optimizationRuntime.optimizedSceneBytes === 'number'
+	// Measured, not projected — and only when simplification was actually asked
+	// for, since otherwise there is no target to compare against.
+	const simplificationOutcome = useMemo(
+		() =>
+			plannedOptimizations.simplification?.enabled
+				? resolveSimplificationOutcome(
+						report,
+						plannedOptimizations.simplification.ratio
+					)
+				: null,
+		[report, plannedOptimizations.simplification]
+	)
 
 	return {
 		info,
 		report,
+		// Survives the texture pass, which rebuilds `report` from the optimizer.
+		dracoReport: runtimeDracoReport ?? report?.draco ?? null,
+		simplificationOutcome,
 		resolvedMetrics,
 		isPending,
 		isOptimizerPreparing: isPreparing,
 		isOptimizerReady: isReady,
-		hasImproved,
-		hasCompletedOptimizationPass,
+		hasImproved: resolvedMetrics.hasImproved,
+		hasCompletedOptimizationPass:
+			typeof optimizationRuntime.optimizedSceneBytes === 'number',
 		sizeInfo,
 		optimizingStep,
 		handleOptimizeClick,

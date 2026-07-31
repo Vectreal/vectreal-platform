@@ -1,101 +1,77 @@
 import { cn } from '@shared/utils'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useAtom } from 'jotai/react'
-import { BatteryFull, BatteryLow, BatteryMedium, Check } from 'lucide-react'
-import { useCallback, useEffect, type FC, type SVGProps } from 'react'
+import { Check, Feather, Gem, Scale, SlidersHorizontal } from 'lucide-react'
 
-import { optimizationPresets } from '../../../constants/optimizations'
-import { optimizationAtom } from '../../../lib/stores/scene-optimization-store'
+import { optimizationPresets } from '../../../../constants/optimizations'
+import { getOptimizationDefinition, listEnabledKeys } from '../model'
+import { useOptimizationSettings } from '../use-optimization-settings'
 
-export type OptimizationPreset = 'low' | 'medium' | 'high'
+import type { PresetId } from '../../../../types/scene-optimization'
+import type { FC, SVGProps } from 'react'
 
-type PresetMeta = {
+interface PresetMeta {
 	icon: FC<SVGProps<SVGSVGElement>>
 	label: string
-	res: string
-	quality: string
 	description: string
-	techniques: string[]
 }
 
-const PRESET_META: Record<OptimizationPreset, PresetMeta> = {
-	low: {
-		icon: BatteryLow,
-		label: 'Base',
-		res: '2K WebP',
-		quality: '90%',
+const PRESET_META: Record<PresetId, PresetMeta> = {
+	quality: {
+		icon: Gem,
+		label: 'Maximum quality',
 		description:
-			'Preserves most details with a larger file size. Ideal for high-fidelity previews and final renders.',
-		techniques: [
-			'Mesh simplification',
-			'Texture optimization',
-			'Vertex quantization'
-		]
+			'Keeps textures large and detail intact. Best for hero shots and close inspection, at the cost of a bigger download.'
 	},
-	medium: {
-		icon: BatteryMedium,
+	balanced: {
+		icon: Scale,
 		label: 'Balanced',
-		res: '1K WebP',
-		quality: '80%',
 		description:
-			'A well-balanced trade-off between quality and performance. Recommended for most use cases.',
-		techniques: [
-			'Mesh simplification',
-			'Texture optimization',
-			'Vertex quantization'
-		]
+			'The trade-off most scenes want: sharp on desktop, quick to load, no visible loss at normal viewing distance.'
 	},
-	high: {
-		icon: BatteryFull,
-		label: 'Performance',
-		res: '512px WebP',
-		quality: '70%',
+	smallest: {
+		icon: Feather,
+		label: 'Smallest',
 		description:
-			'Optimized for the smallest file size and fastest load times. Best for mobile and low-end hardware.',
-		techniques: [
-			'Mesh simplification',
-			'Texture optimization',
-			'Vertex quantization',
-			'Duplicate removal'
-		]
+			'Smallest file and fastest first paint. Best for mobile, slow connections, and scenes viewed at a distance.'
 	}
 }
 
-const PRESET_ORDER: OptimizationPreset[] = ['low', 'medium', 'high']
+const PRESET_ORDER: PresetId[] = ['quality', 'balanced', 'smallest']
 
-const BasicPanel = () => {
-	const [{ optimizationPreset }, setOptimizationConfig] =
-		useAtom(optimizationAtom)
+/**
+ * Reads the summary off the preset itself, so a card can never advertise a
+ * technique the preset does not actually run. These used to be hand-written
+ * arrays that had already fallen out of date.
+ */
+function describePreset(preset: PresetId) {
+	const optimizations = optimizationPresets[preset]
+	const [width] = optimizations.texture.resize ?? []
 
-	const handleSelect = useCallback(
-		(preset: OptimizationPreset) => {
-			if (optimizationPreset === preset) return
-			setOptimizationConfig((prev) => ({
-				...prev,
-				optimizationPreset: preset,
-				optimizations: optimizationPresets[preset]
-			}))
-		},
-		[optimizationPreset, setOptimizationConfig]
-	)
+	return {
+		resolution: width ? `${width >= 1024 ? `${width / 1024}K` : width}px` : '—',
+		quality: `${optimizations.texture.quality ?? 0}%`,
+		techniques: listEnabledKeys(optimizations).map(
+			(key) => getOptimizationDefinition(key).title
+		)
+	}
+}
 
-	useEffect(() => {
-		if (!optimizationPreset) {
-			handleSelect('medium')
-		}
-	}, [optimizationPreset, handleSelect])
+export const PresetPanel: FC = () => {
+	const { optimizationPreset, selectPreset } = useOptimizationSettings()
+	const isCustom = optimizationPreset === 'custom'
 
 	return (
 		<div className="space-y-2">
 			{PRESET_ORDER.map((id) => {
 				const meta = PRESET_META[id]
+				const { resolution, quality, techniques } = describePreset(id)
 				const isSelected = optimizationPreset === id
 				const Icon = meta.icon
 
 				return (
 					<button
 						key={id}
-						onClick={() => handleSelect(id)}
+						onClick={() => selectPreset(id, optimizationPresets[id])}
 						className={cn(
 							'publisher-shell-focus group w-full rounded-xl border p-4 text-left transition-all duration-200',
 							isSelected
@@ -103,9 +79,7 @@ const BasicPanel = () => {
 								: 'border-shell-border-soft bg-shell-surface-soft hover:border-shell-border-strong hover:bg-shell-surface'
 						)}
 					>
-						{/* Always-visible header row */}
 						<div className="flex items-center gap-3">
-							{/* Radio dot */}
 							<div
 								className={cn(
 									'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-200',
@@ -119,7 +93,6 @@ const BasicPanel = () => {
 								)}
 							</div>
 
-							{/* Icon */}
 							<div
 								className={cn(
 									'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors duration-200',
@@ -131,7 +104,6 @@ const BasicPanel = () => {
 								<Icon className="h-4 w-4" />
 							</div>
 
-							{/* Name */}
 							<span
 								className={cn(
 									'min-w-0 flex-1 text-sm font-medium transition-colors duration-200',
@@ -143,19 +115,17 @@ const BasicPanel = () => {
 								{meta.label}
 							</span>
 
-							{/* Specs - always visible for at-a-glance comparison */}
 							<div className="flex shrink-0 items-center gap-1.5">
 								<span className="text-muted-foreground text-xs tabular-nums">
-									{meta.res}
+									{resolution}
 								</span>
 								<span className="text-muted-foreground/40 text-[10px]">·</span>
 								<span className="text-muted-foreground text-xs tabular-nums">
-									{meta.quality}
+									{quality}
 								</span>
 							</div>
 						</div>
 
-						{/* Expanded detail - selected preset only */}
 						<AnimatePresence initial={false}>
 							{isSelected && (
 								<motion.div
@@ -174,11 +144,11 @@ const BasicPanel = () => {
 											Applied techniques
 										</p>
 										<div className="flex flex-col gap-1.5">
-											{meta.techniques.map((t) => (
-												<div key={t} className="flex items-center gap-2">
+											{techniques.map((technique) => (
+												<div key={technique} className="flex items-center gap-2">
 													<Check className="text-accent h-3 w-3 shrink-0" />
 													<span className="text-foreground/75 text-xs">
-														{t}
+														{technique}
 													</span>
 												</div>
 											))}
@@ -190,8 +160,30 @@ const BasicPanel = () => {
 					</button>
 				)
 			})}
+
+			{/*
+			  Settings that match no preset used to fall back to the middle card,
+			  which left it highlighted as though it were still in effect.
+			*/}
+			{isCustom && (
+				<motion.div
+					initial={{ opacity: 0, y: -4 }}
+					animate={{ opacity: 1, y: 0 }}
+					className="border-accent/35 bg-shell-surface flex items-center gap-3 rounded-xl border p-4"
+				>
+					<div className="bg-accent/15 text-accent flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
+						<SlidersHorizontal className="h-4 w-4" />
+					</div>
+					<div className="min-w-0">
+						<p className="text-sm font-medium">Custom</p>
+						<p className="text-muted-foreground text-xs">
+							Your settings do not match a preset. Pick one above to reset them.
+						</p>
+					</div>
+				</motion.div>
+			)}
 		</div>
 	)
 }
 
-export default BasicPanel
+export default PresetPanel
