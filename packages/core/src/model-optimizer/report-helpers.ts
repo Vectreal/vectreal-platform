@@ -23,6 +23,13 @@ import { InspectReport } from '@gltf-transform/functions'
 
 import { DracoCompressionReport, OptimizationReport } from './types'
 
+const GLB_HEADER_BYTES = 12
+const GLB_CHUNK_HEADER_BYTES = 8
+/** 'glTF' as a little-endian uint32. */
+const GLB_MAGIC = 0x46546c67
+/** 'JSON' as a little-endian uint32. */
+const GLB_CHUNK_TYPE_JSON = 0x4e4f534a
+
 export function calculateCounts(inspectReport: InspectReport) {
 	let vertices = 0
 	let primitives = 0
@@ -92,16 +99,43 @@ export function calculateMeshSize(inspectReport: InspectReport): number {
 }
 
 /**
- * Sums the byte length of Draco-compressed geometry bufferViews in a written
- * JSONDocument. `inspect()` can't see this — Draco compression only happens
- * when the document is serialized, so the compressed size has to be read
- * back out of the written glTF JSON's `KHR_draco_mesh_compression` bufferView
- * references instead.
+ * Extracts the JSON chunk of a GLB as a parsed glTF document.
+ *
+ * Lets callers read metadata out of bytes they already wrote (compressed
+ * bufferView sizes, extension declarations) without paying for a second
+ * serialization pass. GLB layout: a 12-byte header, then length-prefixed
+ * chunks; chunk 0 is always JSON.
+ */
+export function readGlbJsonChunk(glb: Uint8Array): JSONDocument['json'] {
+	const view = new DataView(glb.buffer, glb.byteOffset, glb.byteLength)
+
+	if (view.getUint32(0, true) !== GLB_MAGIC) {
+		throw new Error("Not a GLB: missing 'glTF' magic bytes")
+	}
+
+	const chunkLength = view.getUint32(12, true)
+	if (view.getUint32(16, true) !== GLB_CHUNK_TYPE_JSON) {
+		throw new Error('Malformed GLB: first chunk is not JSON')
+	}
+
+	const chunkStart = GLB_HEADER_BYTES + GLB_CHUNK_HEADER_BYTES
+	const chunkText = new TextDecoder().decode(
+		glb.subarray(chunkStart, chunkStart + chunkLength)
+	)
+
+	return JSON.parse(chunkText) as JSONDocument['json']
+}
+
+/**
+ * Sums the byte length of Draco-compressed geometry bufferViews in written
+ * glTF JSON. `inspect()` can't see this — Draco compression only happens when
+ * the document is serialized, so the compressed size has to be read back out
+ * of the written JSON's `KHR_draco_mesh_compression` bufferView references
+ * instead.
  */
 export function calculateDracoCompressedGeometrySize(
-	jsonDoc: JSONDocument
+	json: JSONDocument['json']
 ): number {
-	const { json } = jsonDoc
 	const bufferViewIndices = new Set<number>()
 
 	for (const mesh of json.meshes ?? []) {

@@ -53,7 +53,8 @@ import {
 import {
 	buildOptimizationReport,
 	calculateDracoCompressedGeometrySize,
-	calculateMeshSize
+	calculateMeshSize,
+	readGlbJsonChunk
 } from './report-helpers'
 import { runTextureCompression } from './texture-compression'
 import {
@@ -310,49 +311,99 @@ export class ModelOptimizer {
 	}
 
 	/**
-	 * Apply Draco geometry compression via `KHR_draco_mesh_compression`.
+	 * Measure what `KHR_draco_mesh_compression` would buy this model, without
+	 * touching the loaded document.
+	 *
+	 * Draco is lossy and is deferred until write time, so compressing the
+	 * working document would mean re-encoding (and degrading) the geometry on
+	 * every subsequent optimize/save round-trip. Instead this compresses a
+	 * throwaway clone once, reads every number back out of the bytes it just
+	 * wrote, and leaves the caller to apply compression at export time via
+	 * `ModelExporter.exportDocumentGLBDraco`.
+	 *
+	 * The result is also stored on this instance so `getReport()` picks it up.
+	 */
+	public async measureDracoCompression(
+		options: DracoOptions = {}
+	): Promise<DracoCompressionReport> {
+		const document = this.ensureModelLoaded()
+
+		this.emitProgress('Compressing geometry with Draco', 0)
+
+		await this.ensureDracoEncoderRegistered()
+
+		const geometryBytesBefore = calculateMeshSize(inspect(document))
+		const uncompressedGlbBytes = (await this.io.writeBinary(document)).byteLength
+
+		this.emitProgress('Compressing geometry with Draco', 40)
+
+		const workingDoc = cloneDocument(document)
+		await workingDoc.transform(draco(options as GltfDracoOptions))
+		const compressedGlb = await this.io.writeBinary(workingDoc)
+
+		this.emitProgress('Compressing geometry with Draco', 90)
+
+		const geometryBytesAfterCompression = calculateDracoCompressedGeometrySize(
+			readGlbJsonChunk(compressedGlb)
+		)
+		const reductionPercent =
+			geometryBytesBefore > 0
+				? ((geometryBytesBefore - geometryBytesAfterCompression) /
+						geometryBytesBefore) *
+					100
+				: 0
+
+		this.dracoReport = {
+			geometryBytesBefore,
+			geometryBytesAfterCompression,
+			reductionPercent,
+			projectedGlbBytes: compressedGlb.byteLength,
+			uncompressedGlbBytes,
+			isWorthApplying: compressedGlb.byteLength < uncompressedGlbBytes
+		}
+
+		this.emitProgress('Draco compression complete', 100)
+
+		return this.dracoReport
+	}
+
+	/**
+	 * Apply Draco geometry compression to the loaded document in place.
 	 *
 	 * Should run last in an optimization pass — simplification/quantization/etc.
 	 * operate on decoded accessors, so running them after compression would be
-	 * pointless (compression is deferred until the document is written).
+	 * pointless.
 	 *
-	 * Unlike the other optimization steps, the "after" size can't come from
-	 * `inspect()` (which only sees decoded accessor bytes); it's computed by
-	 * writing the document and reading back the compressed bufferView sizes.
+	 * The platform app does not use this: it measures with
+	 * `measureDracoCompression` and compresses at export time instead, so the
+	 * working document is never lossily re-encoded. Kept for Node/CLI callers
+	 * that want a compressed document directly.
 	 */
 	public async compressGeometry(options: DracoOptions = {}): Promise<void> {
 		this.ensureModelLoaded()
 
-		this.emitProgress('Applying Draco compression', 0)
+		const report = await this.measureDracoCompression(options)
 
-		await this.ensureDracoEncoderRegistered()
-
-		const geometryBytesBefore = calculateMeshSize(inspect(this.document))
-
-		await this.applyTransforms(
-			[draco(options as GltfDracoOptions)],
-			'draco compression'
-		)
-
-		if (this.appliedOptimizations.includes('draco compression')) {
-			const jsonDoc = await this.io.writeJSON(this.document)
-			const geometryBytesAfterCompression =
-				calculateDracoCompressedGeometrySize(jsonDoc)
-			const reductionPercent =
-				geometryBytesBefore > 0
-					? ((geometryBytesBefore - geometryBytesAfterCompression) /
-							geometryBytesBefore) *
-						100
-					: 0
-
-			this.dracoReport = {
-				geometryBytesBefore,
-				geometryBytesAfterCompression,
-				reductionPercent
-			}
+		if (!report.isWorthApplying) {
+			console.warn(
+				`draco compression increased model size (${report.uncompressedGlbBytes} → ${report.projectedGlbBytes} bytes), skipping.`
+			)
+			return
 		}
 
-		this.emitProgress('Draco compression complete', 100)
+		const workingDoc = cloneDocument(this.document)
+		await workingDoc.transform(draco(options as GltfDracoOptions))
+		this._document = workingDoc
+		this.appliedOptimizations.push('draco compression')
+	}
+
+	/**
+	 * Adopt a Draco measurement produced elsewhere — specifically by the
+	 * optimizer instance inside the geometry Web Worker, whose report would
+	 * otherwise die with the worker. Pass `null` to clear.
+	 */
+	public setDracoReport(report: DracoCompressionReport | null): void {
+		this.dracoReport = report
 	}
 
 	/**

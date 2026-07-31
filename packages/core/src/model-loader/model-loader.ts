@@ -515,12 +515,14 @@ export class ModelLoader {
 			const glbBuffer = await this.io.writeBinary(document)
 
 			// Dynamic import to avoid server-side issues
-			const { GLTFLoader } = await import(
-				'three/examples/jsm/loaders/GLTFLoader.js'
-			)
+			const [{ GLTFLoader }, dracoLoader] = await Promise.all([
+				import('three/examples/jsm/loaders/GLTFLoader.js'),
+				getThreeDracoLoader(this.dracoDecoderPath)
+			])
 
 			return new Promise((resolve, reject) => {
 				const loader = new GLTFLoader()
+				loader.setDRACOLoader(dracoLoader)
 
 				loader.parse(
 					glbBuffer.buffer as ArrayBuffer,

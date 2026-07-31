@@ -35,7 +35,13 @@ import { useCalcOptimizationInfo } from './use-calc-optimization-info'
 import { optimizeTextures } from './utils'
 
 import type { JSONDocument } from '@gltf-transform/core'
-import type { ServerSceneData } from '@vctrl/core'
+import type { DracoCompressionReport, ServerSceneData } from '@vctrl/core'
+
+/** Optimizer state produced inside the geometry Web Worker. */
+export interface WorkerResultMeta {
+	appliedOptimizations: string[]
+	dracoReport?: DracoCompressionReport
+}
 
 /**
  * Custom React hook for optimizing 3D models using the ModelOptimizer from @vctrl/core.
@@ -196,12 +202,28 @@ const useOptimizeModel = () => {
 		[]
 	)
 
-	/** Replaces the optimizer's document with the GLB bytes returned by the Web Worker. */
+	/**
+	 * Replaces the optimizer's document with the GLB bytes returned by the Web
+	 * Worker.
+	 *
+	 * `meta` carries the worker optimizer's own state — which steps it kept and
+	 * what Draco compression would save. That state dies with the worker and
+	 * can't be recovered from the GLB, so it has to be transplanted onto this
+	 * instance before the report is built.
+	 */
 	const loadFromGlbBuffer = useCallback(
-		async (buffer: Uint8Array): Promise<void> => {
+		async (buffer: Uint8Array, meta?: WorkerResultMeta): Promise<void> => {
 			dispatch({ type: 'LOAD_START' })
 			try {
 				await optimizerRef.current.loadFromBuffer(buffer)
+
+				if (meta) {
+					optimizerRef.current.setAppliedOptimizations(
+						meta.appliedOptimizations
+					)
+					optimizerRef.current.setDracoReport(meta.dracoReport ?? null)
+				}
+
 				const report = await optimizerRef.current.getReport()
 				dispatch({ type: 'LOAD_SUCCESS', payload: { report } })
 			} catch (err) {
