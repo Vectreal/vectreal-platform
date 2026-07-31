@@ -88,24 +88,38 @@ async function establishBaselines({
 	setRuntime
 }: Pick<OptimizationPassDeps, 'baseline' | 'setRuntime'>): Promise<void> {
 	if (typeof baseline.clientSceneBytes !== 'number') {
-		const sceneBytes =
-			typeof baseline.sourcePackageBytes === 'number'
-				? baseline.sourcePackageBytes
-				: typeof baseline.statsSceneBytes === 'number'
-					? baseline.statsSceneBytes
-					: await withTimeout(
-							baseline.calculateSceneBytes(),
-							MODEL_SYNC_TIMEOUT_MS,
-							'Baseline scene size calculation'
-						)
+		let sceneBytes: null | number = null
 
-		if (typeof sceneBytes === 'number') {
-			setRuntime((prev) => ({
-				...prev,
-				isSceneSizeLoading: false,
-				clientSceneBytes: sceneBytes
-			}))
+		if (typeof baseline.sourcePackageBytes === 'number') {
+			sceneBytes = baseline.sourcePackageBytes
+		} else if (typeof baseline.statsSceneBytes === 'number') {
+			sceneBytes = baseline.statsSceneBytes
+		} else {
+			// Measuring means exporting the whole document, so this is the slow
+			// path and likeliest to time out on exactly the large models the pass
+			// matters most for. The result is the display-only "before" column:
+			// worth an empty cell, never worth refusing to optimize.
+			try {
+				sceneBytes = await withTimeout(
+					baseline.calculateSceneBytes(),
+					MODEL_SYNC_TIMEOUT_MS,
+					'Baseline scene size calculation'
+				)
+			} catch (error) {
+				console.warn(
+					'[optimization] Could not measure the baseline scene size:',
+					error
+				)
+			}
 		}
+
+		// Cleared either way, so a failed measurement leaves the size blank
+		// rather than spinning forever.
+		setRuntime((prev) => ({
+			...prev,
+			isSceneSizeLoading: false,
+			...(typeof sceneBytes === 'number' ? { clientSceneBytes: sceneBytes } : {})
+		}))
 	}
 
 	if (typeof baseline.clientTextureBytes !== 'number') {

@@ -67,7 +67,8 @@ function createStepsSpy() {
 
 function createDeps(
 	optimizations: Optimizations,
-	overrides: Partial<OptimizationPassDeps['model']> = {}
+	overrides: Partial<OptimizationPassDeps['model']> = {},
+	baselineOverrides: Partial<OptimizationPassDeps['baseline']> = {}
 ) {
 	const steps = createStepsSpy()
 	const runtime: SceneOptimizationRuntimeState[] = []
@@ -95,7 +96,8 @@ function createDeps(
 			sourceTextureBytes: null,
 			statsSceneBytes: null,
 			reportTextureBytesBefore: null,
-			calculateSceneBytes: vi.fn().mockResolvedValue(1_000)
+			calculateSceneBytes: vi.fn().mockResolvedValue(1_000),
+			...baselineOverrides
 		},
 		setRuntime: (updater) => {
 			const next = updater({} as SceneOptimizationRuntimeState)
@@ -197,6 +199,31 @@ describe('runOptimizationPass', () => {
 		await runOptimizationPass(deps)
 
 		expect(model.reset).not.toHaveBeenCalled()
+	})
+
+	it('optimizes anyway when the baseline size cannot be measured', async () => {
+		// The baseline is the display-only "before" column, and measuring it means
+		// exporting the whole document — slowest on the models that most need the
+		// pass. A failure there must not refuse the optimization.
+		const { deps, model, runtime } = createDeps(
+			onlyEnable(['dedup']),
+			{},
+			{
+				clientSceneBytes: null,
+				calculateSceneBytes: vi
+					.fn()
+					.mockRejectedValue(new Error('Baseline scene size calculation timed out'))
+			}
+		)
+
+		const result = await runOptimizationPass(deps)
+
+		expect(result.didApply).toBe(true)
+		expect(model.applyOptimization).toHaveBeenCalled()
+		// The spinner stops even though the number never arrived.
+		expect(
+			runtime.some((state) => state.isSceneSizeLoading === false)
+		).toBe(true)
 	})
 
 	it('carries the Draco measurement out of the worker', async () => {
