@@ -1,6 +1,7 @@
 import {
 	isSceneOverSizeLimit,
-	parseSceneBytes
+	parseSceneBytes,
+	resolveSceneCurrentBytes
 } from '../app/lib/domain/scene/scene-size-limit'
 
 describe('parseSceneBytes', () => {
@@ -41,5 +42,70 @@ describe('isSceneOverSizeLimit', () => {
 
 	it('is false when bytes are unknown', () => {
 		expect(isSceneOverSizeLimit(undefined, limit)).toBe(false)
+	})
+})
+
+describe('resolveSceneCurrentBytes', () => {
+	it('prefers a measurement from this session', () => {
+		expect(
+			resolveSceneCurrentBytes({
+				optimizedSceneBytes: 100,
+				persistedCurrentSceneBytes: 200,
+				clientSceneBytes: 300
+			})
+		).toBe(100)
+	})
+
+	// Reopening a saved scene hydrates optimizedSceneBytes to null and
+	// clientSceneBytes to the uncompressed package size. Without the persisted
+	// value in between, a settings-only save would overwrite the smaller,
+	// accurate figure an earlier pass had already stored.
+	it('falls back to the persisted value, not the uncompressed baseline', () => {
+		expect(
+			resolveSceneCurrentBytes({
+				optimizedSceneBytes: null,
+				persistedCurrentSceneBytes: 200,
+				clientSceneBytes: 300
+			})
+		).toBe(200)
+	})
+
+	it('uses the baseline only when nothing better exists', () => {
+		expect(
+			resolveSceneCurrentBytes({
+				optimizedSceneBytes: null,
+				persistedCurrentSceneBytes: null,
+				clientSceneBytes: 300
+			})
+		).toBe(300)
+	})
+
+	it('returns undefined when the size is entirely unknown', () => {
+		expect(resolveSceneCurrentBytes({})).toBeUndefined()
+		expect(
+			resolveSceneCurrentBytes({
+				optimizedSceneBytes: null,
+				persistedCurrentSceneBytes: null,
+				clientSceneBytes: null
+			})
+		).toBeUndefined()
+	})
+
+	it('treats zero as a real size rather than a missing one', () => {
+		expect(
+			resolveSceneCurrentBytes({
+				optimizedSceneBytes: 0,
+				persistedCurrentSceneBytes: 200
+			})
+		).toBe(0)
+	})
+
+	it('skips non-finite values', () => {
+		expect(
+			resolveSceneCurrentBytes({
+				optimizedSceneBytes: Number.NaN,
+				persistedCurrentSceneBytes: 200
+			})
+		).toBe(200)
 	})
 })
