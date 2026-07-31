@@ -191,7 +191,7 @@ Copy the embed snippet from the **Embed** section in the publish sidebar or from
 ```html
 <div style="position:relative;padding-top:56.25%;width:100%">
   <iframe
-    src="https://vectreal.com/preview/fullscreen/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
+    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
     style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
     allow="autoplay"
     loading="lazy"
@@ -203,7 +203,7 @@ Copy the embed snippet from the **Embed** section in the publish sidebar or from
 
 ```html
 <iframe
-  src="https://vectreal.com/preview/fullscreen/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
+  src="https://vectreal.com/embed/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
   width="800"
   height="450"
   style="border:0"
@@ -214,14 +214,13 @@ Copy the embed snippet from the **Embed** section in the publish sidebar or from
 
 Paste either snippet into any HTML page. The embedded viewer loads your published scene.
 
-**Two preview layout variants are available:**
+**Embeds are served from a single route:**
 
 | Mode | URL pattern | Best for |
 |---|---|---|
-| Fullscreen | `/preview/fullscreen/:projectId/:sceneId` | Full viewport, immersive presentation |
-| Product detail | `/preview/product-detail/:projectId/:sceneId` | Compact viewer for e-commerce product pages |
+| Embed | `/embed/:projectId/:sceneId` | Full viewport, immersive presentation |
 
-Both modes support the `token` query parameter and `Authorization: Bearer` authentication.
+It supports the `token` query parameter and `Authorization: Bearer` authentication.
 
 ---
 

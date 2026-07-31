@@ -5,7 +5,7 @@ export const DEMO_SCENE_URL =
 	typeof import.meta !== 'undefined' &&
 	(import.meta.env.VITE_PUBLIC_DEMO_SCENE_URL as string | undefined)
 		? (import.meta.env.VITE_PUBLIC_DEMO_SCENE_URL as string)
-		: `https://vectreal.com/preview/fullscreen/395a09f0-9340-42f2-ac98-03339cf27c9c/488bd4a1-46d3-4ee1-8497-25f68a5d6fa2?token=${import.meta.env.VITE_PUBLIC_VECTREAL_API_KEY_PROD}`
+		: `https://vectreal.com/embed/395a09f0-9340-42f2-ac98-03339cf27c9c/488bd4a1-46d3-4ee1-8497-25f68a5d6fa2?token=${import.meta.env.VITE_PUBLIC_VECTREAL_API_KEY_PROD}`
 
 export const CHAPTERS = [
 	{

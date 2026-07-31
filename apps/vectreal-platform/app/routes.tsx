@@ -148,13 +148,21 @@ export default [
 		)
 	]),
 
-	// Preview page for scenes
-	layout('./routes/layouts/preview-layout.tsx', [
-		route(
-			'preview/fullscreen/:projectId/:sceneId/',
-			'./routes/preview-page/preview-fullscreen.tsx'
-		)
+	// External embeds: preview API key only, never internal chrome
+	layout('./routes/layouts/embed-layout.tsx', [
+		route('embed/:projectId/:sceneId', './routes/embed-page/embed-scene.tsx')
 	]),
+
+	// Internal preview: session only, reachable from the dashboard
+	layout('./routes/layouts/preview-layout.tsx', [
+		route('preview/:projectId/:sceneId', './routes/preview-page/preview-scene.tsx')
+	]),
+
+	// Embeds published before the /embed split still point here
+	route(
+		'preview/fullscreen/:projectId/:sceneId/',
+		'./routes/embed-page/legacy-embed-redirect.ts'
+	),
 
 	// Dashboard - each route handles its own data loading
 	...prefix('dashboard', [

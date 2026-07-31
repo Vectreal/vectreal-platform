@@ -110,10 +110,20 @@ describe('isAnonymousCacheableRequest', () => {
 		).toBe(false)
 	})
 
-	it('does NOT cache publisher and preview pages', () => {
+	it('does NOT cache publisher, preview, and embed pages', () => {
 		expect(
 			isAnonymousCacheableRequest(req('https://x.test/publisher/scene-123'))
 		).toBe(false)
+		expect(isAnonymousCacheableRequest(req('https://x.test/preview/p/s'))).toBe(
+			false
+		)
+		expect(isAnonymousCacheableRequest(req('https://x.test/embed/p/s'))).toBe(
+			false
+		)
+		expect(
+			isAnonymousCacheableRequest(req('https://x.test/embed/p/s.data'))
+		).toBe(false)
+		// The legacy embed URL redirects, but must stay fail-closed on the way.
 		expect(
 			isAnonymousCacheableRequest(req('https://x.test/preview/fullscreen/p/s'))
 		).toBe(false)

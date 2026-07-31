@@ -2,16 +2,21 @@ import { Button } from '@shared/components/ui/button'
 import { useMemo } from 'react'
 import { useSearchParams } from 'react-router'
 
-import { Route } from './+types/preview-fullscreen'
-import CenteredSpinner from '../../components/centered-spinner'
-import SceneEmbedInfoPopover from '../../components/scene-embed/scene-embed-info-popover'
-import SceneEmbedViewer from '../../components/scene-embed/scene-embed-viewer'
-import { useSceneEmbedScene } from '../../components/scene-embed/use-scene-embed-scene'
+import SceneEmbedInfoPopover from './scene-embed-info-popover'
+import SceneEmbedViewer from './scene-embed-viewer'
+import { useSceneEmbedScene } from './use-scene-embed-scene'
 import { useHostedPreviewBridge } from '../../lib/domain/embed/hosted-preview-bridge'
+import CenteredSpinner from '../centered-spinner'
 
 import type { ViewerCommand } from '@vctrl/viewer'
 
-function usePreviewInitialCommands(): ViewerCommand[] {
+export interface SceneEmbedPageProps {
+	projectId?: string
+	sceneId?: string
+}
+
+/** Opening viewer state driven by the embed URL's query parameters. */
+function useInitialCommands(): ViewerCommand[] {
 	const [searchParams] = useSearchParams()
 	return useMemo(() => {
 		const commands: ViewerCommand[] = []
@@ -39,15 +44,20 @@ function usePreviewInitialCommands(): ViewerCommand[] {
 	}, [searchParams])
 }
 
-const PreviewFullscreenPage = ({ params }: Route.ComponentProps) => {
-	const sceneId = params.sceneId
-	const projectId = params.projectId
+/**
+ * The full-viewport scene page shared by `/embed` and `/preview`.
+ *
+ * Both routes render exactly the same thing; they differ only in how their
+ * layout authenticates the request. Anything a surface adds on top (the
+ * internal preview's chrome) wraps this rather than being switched on inside.
+ */
+const SceneEmbedPage = ({ projectId, sceneId }: SceneEmbedPageProps) => {
 	const { file, isLoadingScene, sceneData, loadError, retrySceneLoad } =
 		useSceneEmbedScene({
 			sceneId,
 			projectId
 		})
-	const initialCommands = usePreviewInitialCommands()
+	const initialCommands = useInitialCommands()
 	const { onCommandExecutorReady, onInteractionEvent } = useHostedPreviewBridge(
 		{
 			sceneId,
@@ -101,4 +111,4 @@ const PreviewFullscreenPage = ({ params }: Route.ComponentProps) => {
 	)
 }
 
-export default PreviewFullscreenPage
+export default SceneEmbedPage
