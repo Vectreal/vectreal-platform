@@ -191,7 +191,6 @@ export class ModelExporter {
 			if (jsonDoc.resources) {
 				Object.entries(jsonDoc.resources).forEach(([name, data]) => {
 					if (name !== 'model.gltf') {
-						console.log('Adding asset:', name)
 						assets.set(name, data as Uint8Array)
 					}
 				})

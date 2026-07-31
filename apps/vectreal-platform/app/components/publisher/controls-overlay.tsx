@@ -15,7 +15,7 @@ import {
 	SceneNameAndLocation,
 	ToolSidebar
 } from '.'
-import OptimizationDrawer from './optimization-drawer'
+import OptimizationDrawer from './optimization/optimization-drawer'
 import PreviewCameraControls from './preview-camera-controls'
 import { usePublisherViewerCapture } from './publisher-viewer-capture-context'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'

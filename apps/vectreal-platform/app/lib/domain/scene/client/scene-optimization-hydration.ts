@@ -1,3 +1,5 @@
+import { DEFAULT_PRESET_ID } from '../../../../constants/optimizations'
+
 import type { SceneAggregateResponse } from '../../../../types/api'
 import type {
 	OptimizationPreset,
@@ -26,7 +28,7 @@ interface ExecuteOptimizationStateHydrationParams {
 			| ((prev: SceneOptimizationRuntimeState) => SceneOptimizationRuntimeState)
 	) => void
 	optimizationRuntimeInitialState: SceneOptimizationRuntimeState
-	mediumOptimizations: Optimizations
+	defaultOptimizations: Optimizations
 }
 
 export const executeOptimizationStateHydration = ({
@@ -36,7 +38,7 @@ export const executeOptimizationStateHydration = ({
 	setOptimizationState,
 	setOptimizationRuntime,
 	optimizationRuntimeInitialState,
-	mediumOptimizations
+	defaultOptimizations
 }: ExecuteOptimizationStateHydrationParams) => {
 	const persistedOptimizationSettings = aggregate?.stats?.optimizationSettings
 	const latestSceneStats = aggregate?.stats ?? null
@@ -46,8 +48,8 @@ export const executeOptimizationStateHydration = ({
 	if (!persistedOptimizationSettings) {
 		setOptimizationState((prev) => ({
 			...prev,
-			optimizationPreset: 'medium',
-			optimizations: mediumOptimizations
+			optimizationPreset: DEFAULT_PRESET_ID,
+			optimizations: defaultOptimizations
 		}))
 
 		setOptimizationRuntime({
