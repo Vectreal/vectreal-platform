@@ -33,7 +33,6 @@ import {
 	ChevronDown,
 	ChevronRight,
 	Cloud,
-	ExternalLink,
 	Info,
 	LayoutDashboard,
 	Radio,
@@ -372,7 +371,6 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		projectId: project.id,
 		sceneId: sceneState.id
 	})
-	const productPreviewPath = `/preview/product-detail/${project.id}/${sceneState.id}`
 	const dashboardPath = `/dashboard/projects/${project.id}/${sceneState.id}`
 	const sceneNameTrimmed = sceneNameDraft.trim()
 	const sceneDescriptionCurrent = sceneState.description || ''
@@ -633,13 +631,6 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 												<Link viewTransition to={fullscreenPreviewPath}>
 													<LayoutDashboard className="mr-2 h-4 w-4" />
 													Fullscreen Preview
-												</Link>
-											</DropdownMenuItem>
-
-											<DropdownMenuItem asChild>
-												<Link viewTransition to={productPreviewPath}>
-													<ExternalLink className="mr-2 h-4 w-4" />
-													Product Preview
 												</Link>
 											</DropdownMenuItem>
 										</DropdownMenuContent>

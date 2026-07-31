@@ -153,10 +153,6 @@ export default [
 		route(
 			'preview/fullscreen/:projectId/:sceneId/',
 			'./routes/preview-page/preview-fullscreen.tsx'
-		),
-		route(
-			'preview/product-detail/:projectId/:sceneId/',
-			'./routes/preview-page/preview-product-detail.tsx'
 		)
 	]),
 
