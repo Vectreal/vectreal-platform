@@ -35,7 +35,7 @@ const LoadingThumbnailBackdrop = ({
 				src={thumbnail.src}
 				alt={thumbnail.alt || 'Viewer loading thumbnail'}
 				className={cn(
-					'h-full w-full object-cover blur-xl transition-transform duration-700 ease-out',
+					'h-full w-full object-cover blur-sm transition-transform duration-700 ease-out',
 					isLoaded ? 'scale-100' : isEntered ? 'scale-105' : 'scale-110'
 				)}
 			/>
