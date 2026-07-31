@@ -6,20 +6,20 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
-import { useConsent } from '../../components/consent/consent-context'
 import {
 	buildPreviewSceneRequest,
 	loadSceneFromApi
 } from '../../lib/domain/scene/client/load-scene-from-api.client'
+import { useConsent } from '../consent/consent-context'
 
 import type { SceneLoadResult } from '@vctrl/hooks/use-load-model'
 
-interface UsePreviewSceneParams {
+interface UseSceneEmbedSceneParams {
 	sceneId?: string
 	projectId?: string
 }
 
-interface PreviewSceneError {
+interface SceneEmbedLoadError {
 	message: string
 	code?: StructuredLoadError['code']
 }
@@ -37,7 +37,7 @@ function isStructuredLoadError(error: unknown): error is StructuredLoadError {
 	)
 }
 
-function getPreviewError(error: unknown): PreviewSceneError {
+function toSceneEmbedLoadError(error: unknown): SceneEmbedLoadError {
 	if (isStructuredLoadError(error)) {
 		return {
 			message: error.message,
@@ -56,12 +56,12 @@ function getPreviewError(error: unknown): PreviewSceneError {
 	}
 }
 
-export function usePreviewScene({ sceneId, projectId }: UsePreviewSceneParams) {
+export function useSceneEmbedScene({ sceneId, projectId }: UseSceneEmbedSceneParams) {
 	const [searchParams] = useSearchParams()
 	const { file, loadFromServer } = useLoadModel()
 	const [isLoadingScene, setIsLoadingScene] = useState(false)
 	const [sceneData, setSceneData] = useState<SceneLoadResult>()
-	const [previewError, setPreviewError] = useState<PreviewSceneError | null>(null)
+	const [loadError, setLoadError] = useState<SceneEmbedLoadError | null>(null)
 	const posthog = usePostHog()
 	const { consent } = useConsent()
 	const trackedPreviewKeysRef = useRef(new Set<string>())
@@ -72,7 +72,7 @@ export function usePreviewScene({ sceneId, projectId }: UsePreviewSceneParams) {
 		}
 
 		setIsLoadingScene(true)
-		setPreviewError(null)
+		setLoadError(null)
 		const token = searchParams.get('token')?.trim() || undefined
 		const { endpoint, requestKey } = buildPreviewSceneRequest({
 			sceneId,
@@ -93,7 +93,7 @@ export function usePreviewScene({ sceneId, projectId }: UsePreviewSceneParams) {
 			setSceneData(loadedSceneData)
 		} catch (error) {
 			console.error('Failed to load preview scene:', error)
-			setPreviewError(getPreviewError(error))
+			setLoadError(toSceneEmbedLoadError(error))
 		} finally {
 			setIsLoadingScene(false)
 		}
@@ -126,7 +126,7 @@ export function usePreviewScene({ sceneId, projectId }: UsePreviewSceneParams) {
 		file,
 		isLoadingScene,
 		sceneData,
-		previewError,
+		loadError,
 		retrySceneLoad: getSceneSettings
 	}
 }

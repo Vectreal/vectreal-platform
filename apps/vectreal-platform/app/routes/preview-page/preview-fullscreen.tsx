@@ -1,101 +1,15 @@
 import { Button } from '@shared/components/ui/button'
-import { ModelFile, SceneLoadResult } from '@vctrl/hooks/use-load-model'
-import {
-	InfoPopover,
-	InfoPopoverCloseButton,
-	InfoPopoverContent,
-	InfoPopoverText,
-	InfoPopoverTrigger,
-	InfoPopoverVectrealFooter,
-	type ViewerCommand
-} from '@vctrl/viewer'
-import { memo, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useSearchParams } from 'react-router'
 
 import { Route } from './+types/preview-fullscreen'
-import { usePreviewScene } from './use-preview-scene'
 import CenteredSpinner from '../../components/centered-spinner'
-import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
+import SceneEmbedInfoPopover from '../../components/scene-embed/scene-embed-info-popover'
+import SceneEmbedViewer from '../../components/scene-embed/scene-embed-viewer'
+import { useSceneEmbedScene } from '../../components/scene-embed/use-scene-embed-scene'
 import { useHostedPreviewBridge } from '../../lib/domain/embed/hosted-preview-bridge'
-import { resolveBakedShadowSource } from '../../lib/domain/scene/client/baked-shadow-source'
 
-interface PreviewInfoPopoverProps {
-	title?: string
-	description?: string
-}
-
-interface PreviewModelProps extends PreviewInfoPopoverProps {
-	file: ModelFile | null
-	onCommandExecutorReady: ReturnType<
-		typeof useHostedPreviewBridge
-	>['onCommandExecutorReady']
-	onInteractionEvent: ReturnType<
-		typeof useHostedPreviewBridge
-	>['onInteractionEvent']
-	sceneData?: SceneLoadResult
-}
-
-const PreviewInfoPopover = ({
-	title,
-	description
-}: PreviewInfoPopoverProps) => (
-	<InfoPopover className="z-100">
-		<InfoPopoverTrigger />
-		<InfoPopoverContent>
-			<InfoPopoverCloseButton />
-			<InfoPopoverText>
-				{title ? <p className="mb-3 font-medium">{title}</p> : null}
-				{description ? (
-					<p>{description}</p>
-				) : (
-					<p className="opacity-50">No description provided for this scene.</p>
-				)}
-			</InfoPopoverText>
-			<InfoPopoverVectrealFooter />
-		</InfoPopoverContent>
-	</InfoPopover>
-)
-
-const PreviewModel = memo(
-	({
-		file,
-		sceneData,
-		title,
-		description,
-		onInteractionEvent,
-		onCommandExecutorReady
-	}: PreviewModelProps) => {
-		// Persisted shadow bake from the scene's inlined asset data, so embeds render
-		// the stored shadow in parallel with the model instead of re-baking on load.
-		const bakedShadow = useMemo(
-			() => resolveBakedShadowSource(sceneData?.shadows, sceneData?.assetData),
-			[sceneData?.shadows, sceneData?.assetData]
-		)
-		return (
-			<div className="h-screen w-full">
-				<ClientVectrealViewer
-					boundsOptions={sceneData?.bounds}
-					cameraOptions={sceneData?.camera}
-					className="h-full w-full"
-					model={file?.model}
-					envOptions={sceneData?.environment}
-					controlsOptions={sceneData?.controls}
-					onCommandExecutorReady={onCommandExecutorReady}
-					onInteractionEvent={onInteractionEvent}
-					shadowsOptions={sceneData?.shadows}
-					staticShadowBake
-					bakedShadow={bakedShadow}
-					normalizationOptions={sceneData?.normalization}
-					popover={
-						<PreviewInfoPopover title={title} description={description} />
-					}
-					loader={<CenteredSpinner text="Preparing scene..." />}
-					fallback={<CenteredSpinner text="Loading scene..." />}
-				/>
-			</div>
-		)
-	}
-)
+import type { ViewerCommand } from '@vctrl/viewer'
 
 function usePreviewInitialCommands(): ViewerCommand[] {
 	const [searchParams] = useSearchParams()
@@ -128,8 +42,8 @@ function usePreviewInitialCommands(): ViewerCommand[] {
 const PreviewFullscreenPage = ({ params }: Route.ComponentProps) => {
 	const sceneId = params.sceneId
 	const projectId = params.projectId
-	const { file, isLoadingScene, sceneData, previewError, retrySceneLoad } =
-		usePreviewScene({
+	const { file, isLoadingScene, sceneData, loadError, retrySceneLoad } =
+		useSceneEmbedScene({
 			sceneId,
 			projectId
 		})
@@ -147,16 +61,12 @@ const PreviewFullscreenPage = ({ params }: Route.ComponentProps) => {
 		return <CenteredSpinner className="h-screen" text="Loading scene..." />
 	}
 
-	if (previewError && !file?.model) {
+	if (loadError && !file?.model) {
 		return (
 			<div className="bg-background flex h-screen w-full items-center justify-center p-6">
 				<div className="border-border bg-card w-full max-w-lg space-y-4 rounded-2xl border p-6">
-					<h1 className="text-lg font-semibold">
-						Unable to Load Scene Preview
-					</h1>
-					<p className="text-muted-foreground text-sm">
-						{previewError.message}
-					</p>
+					<h1 className="text-lg font-semibold">Unable to Load Scene Preview</h1>
+					<p className="text-muted-foreground text-sm">{loadError.message}</p>
 					<div className="flex gap-2">
 						<Button type="button" onClick={() => void retrySceneLoad()}>
 							Retry
@@ -175,13 +85,18 @@ const PreviewFullscreenPage = ({ params }: Route.ComponentProps) => {
 	}
 
 	return (
-		<PreviewModel
+		<SceneEmbedViewer
+			className="h-screen"
 			file={file}
+			sceneData={sceneData}
 			onCommandExecutorReady={onCommandExecutorReady}
 			onInteractionEvent={onInteractionEvent}
-			sceneData={sceneData}
-			title={sceneData?.meta?.name?.trim() || undefined}
-			description={sceneData?.meta?.description?.trim() || undefined}
+			popover={
+				<SceneEmbedInfoPopover
+					title={sceneData?.meta?.name?.trim() || undefined}
+					description={sceneData?.meta?.description?.trim() || undefined}
+				/>
+			}
 		/>
 	)
 }
