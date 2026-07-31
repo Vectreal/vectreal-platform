@@ -77,6 +77,11 @@ function solveAutoFitFraming(
 	object: Object3D,
 	camera: PerspectiveCamera
 ): null | { position: Vector3; target: Vector3 } {
+	// setFromObject reads matrixWorld off every descendant. A capture can be
+	// requested before the renderer has run a frame for the current state, so
+	// refresh the branch first rather than measuring stale transforms.
+	object.updateWorldMatrix(true, true)
+
 	const box = new Box3().setFromObject(object)
 	if (box.isEmpty()) return null
 
