@@ -19,6 +19,11 @@ const canonicalize = (value: unknown): string =>
 			: v
 	)
 
+/**
+ * `thumbnailUrl` is excluded on purpose: it is server-assigned and can change
+ * on its own (regeneration, cache busting), which would falsely mark a scene
+ * dirty. Manual captures are handled separately below.
+ */
 const toComparableSceneMeta = ({
 	name,
 	description
@@ -26,6 +31,17 @@ const toComparableSceneMeta = ({
 	name,
 	description
 })
+
+/**
+ * A thumbnail the user just captured from the viewport, still held as an inline
+ * data URL because it has not been uploaded yet.
+ *
+ * The server never hands back a `data:` URL, so this cleanly separates "the
+ * user framed and captured a new thumbnail" from "the server changed the URL",
+ * and only the former should count as an unsaved change.
+ */
+const isLocallyCapturedThumbnail = (thumbnailUrl?: string): boolean =>
+	typeof thumbnailUrl === 'string' && thumbnailUrl.startsWith('data:')
 
 export const buildOptimizationReportSignature = (
 	report?: OptimizationReport | null
@@ -55,9 +71,21 @@ export const hasSceneSettingsChanged = (
 export const hasSceneMetaChanged = (
 	current: SceneMetaState,
 	baseline: SceneMetaState
-): boolean =>
-	canonicalize(toComparableSceneMeta(current)) !==
-	canonicalize(toComparableSceneMeta(baseline))
+): boolean => {
+	if (
+		canonicalize(toComparableSceneMeta(current)) !==
+		canonicalize(toComparableSceneMeta(baseline))
+	) {
+		return true
+	}
+
+	// Without this a manual recapture would leave the scene looking clean, and
+	// the user could navigate away having silently lost it.
+	return (
+		isLocallyCapturedThumbnail(current.thumbnailUrl) &&
+		current.thumbnailUrl !== baseline.thumbnailUrl
+	)
+}
 
 interface OptimizationChangeArgs {
 	reportSignature: null | string

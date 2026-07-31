@@ -6,6 +6,7 @@ import {
 	buildSceneUploadFileDescriptor
 } from './scene-upload-manifest'
 import { createBillingLimitErrorFromResponse } from '../../billing/client/billing-limit-error'
+import { buildDefaultCameraSignature } from '../scene-camera'
 
 import type { SceneMetaState } from '../../../../types/publisher-config'
 import type { SceneSettings } from '@vctrl/core'
@@ -139,15 +140,14 @@ export const executeSceneSaveOrchestrator = async ({
 		| Record<string, { assetId: string; contentHash: string }>
 		| undefined
 
-	const currentDefaultCameraId =
-		currentSettings.camera?.cameras?.find((c) => !c.kind || c.kind === 'scene')
-			?.cameraId ?? currentSettings.camera?.cameras?.[0]?.cameraId
-	const lastSavedDefaultCameraId =
-		lastSavedSettings?.camera?.cameras?.find(
-			(c) => !c.kind || c.kind === 'scene'
-		)?.cameraId ?? lastSavedSettings?.camera?.cameras?.[0]?.cameraId
+	// The thumbnail is the placeholder shown while the scene loads, so it has to
+	// match the frame the default camera opens on. Comparing the signature rather
+	// than just the camera id means nudging the default camera's pose also
+	// triggers a recapture — otherwise the saved thumbnail keeps showing the old
+	// framing and the load transition visibly jumps.
 	const defaultCameraChanged =
-		currentDefaultCameraId !== lastSavedDefaultCameraId
+		buildDefaultCameraSignature(currentSettings.camera?.cameras) !==
+		buildDefaultCameraSignature(lastSavedSettings?.camera?.cameras)
 	const needsThumbnail = !sceneMetaState.thumbnailUrl || defaultCameraChanged
 
 	const thumbnailDataUrl = needsThumbnail ? await captureSceneThumbnail() : null
