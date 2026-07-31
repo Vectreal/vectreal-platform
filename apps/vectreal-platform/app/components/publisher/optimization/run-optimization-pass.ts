@@ -162,27 +162,26 @@ async function runGeometryPhase(
 
 	let runningStep: string | null = null
 
-	const result = await withTimeout(
-		runGeometryOptimizationsInWorker(
-			currentBuffer,
-			buildWorkerOptions(optimizations),
-			(key, progress) => {
-				const label = getOptimizationDefinition(key).stepLabel
-				if (progress === 100) {
-					runningStep = null
-					steps.complete(label)
-					return
-				}
-				// A step reports progress repeatedly while it runs; only the first
-				// update needs to move the highlight.
-				if (label !== runningStep) {
-					runningStep = label
-					steps.begin(label)
-				}
+	// The budget goes in rather than wrapping the call: only the worker helper
+	// can terminate the Worker when it expires.
+	const result = await runGeometryOptimizationsInWorker(
+		currentBuffer,
+		buildWorkerOptions(optimizations),
+		(key, progress) => {
+			const label = getOptimizationDefinition(key).stepLabel
+			if (progress === 100) {
+				runningStep = null
+				steps.complete(label)
+				return
 			}
-		),
-		OPTIMIZATION_STEP_TIMEOUT_MS * stepCount,
-		'Geometry worker'
+			// A step reports progress repeatedly while it runs; only the first
+			// update needs to move the highlight.
+			if (label !== runningStep) {
+				runningStep = label
+				steps.begin(label)
+			}
+		},
+		OPTIMIZATION_STEP_TIMEOUT_MS * stepCount
 	)
 
 	if (runningStep) steps.complete(runningStep)
