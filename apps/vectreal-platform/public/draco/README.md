@@ -6,20 +6,38 @@ Draco is an open-source library for compressing and decompressing 3D geometric m
 
 ## Contents
 
-This folder contains the **glTF** build variant — targeted by the
-[glTF mesh compression extension](https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_draco_mesh_compression)
-(`KHR_draco_mesh_compression`), tracking the
-[corresponding Draco branch](https://github.com/google/draco/tree/gltf_2.0_draco_extension).
-Sourced from `node_modules/three/examples/jsm/libs/draco/gltf/` to guarantee
-it matches the installed three.js version.
+### Decoders — glTF build variant
+
+Sourced from `node_modules/three/examples/jsm/libs/draco/gltf/`, so they match
+the installed three.js version. `THREE.DRACOLoader` picks between them.
 
 * `draco_decoder.js` — Emscripten-compiled decoder, compatible with any modern browser.
 * `draco_decoder.wasm` — WebAssembly decoder, compatible with newer browsers and devices.
 * `draco_wasm_wrapper.js` — JavaScript wrapper for the WASM decoder.
-* `draco_encoder.js` — Emscripten-compiled encoder, used for producing Draco-compressed output.
 
-Do not swap this for the "default" (master branch) build — it targets a
-different bitstream and is not what `KHR_draco_mesh_compression` expects.
+### Encoder — Draco 1.5.7
+
+Sourced from
+[`google/draco@1.5.7/javascript`](https://github.com/google/draco/tree/1.5.7/javascript).
+Upstream filenames are kept so refreshing these is a straight copy.
+
+* `draco_encoder_wrapper.js` — JavaScript wrapper for the WASM encoder.
+* `draco_encoder.wasm` — WebAssembly encoder.
+
+The encoder is deliberately **not** taken from three.js's `gltf/` folder. That
+build predates `ExpertEncoder`, which `@gltf-transform/extensions` requires for
+per-attribute quantization — with it, encoding throws immediately. It also
+ships as asm.js only, which benchmarks ~8x slower than this WASM build.
+
+Verified: geometry encoded by 1.5.7 decodes correctly with the glTF-variant
+decoders above, so the two sets can be updated independently.
+
+### Loading
+
+Both are loaded by `packages/core/src/draco/load-draco-module.ts`, which must
+pass `locateFile` so `draco_encoder_wrapper.js` can find its sibling `.wasm`
+(inside a module worker the script runs from a `blob:` URL, where the default
+relative resolution fails).
 
 This is consumed with `THREE.DRACOLoader`:
 
