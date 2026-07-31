@@ -55,12 +55,45 @@ export const Loaded: Story = {
 	}
 }
 
+const THUMBNAIL_SRC =
+	'https://images.unsplash.com/photo-1673951284213-2a3550681b7d?ixlib=rb-4.1.0&q=85&fm=jpg&cs=srgb&w=1920&h=1080&fit=crop'
+
 export const LoadingWithThumbnail: Story = {
 	args: {
 		hasContent: false,
 		loadingThumbnail: {
-			src: 'https://images.unsplash.com/photo-1673951284213-2a3550681b7d?ixlib=rb-4.1.0&q=85&fm=jpg&cs=srgb&w=1920&h=1080&fit=crop',
+			src: THUMBNAIL_SRC,
 			alt: 'Preview thumbnail backdrop'
+		}
+	}
+}
+
+/**
+ * The presentation is the consuming app's call. Turning off the blur and the
+ * scrims shows the thumbnail as-is, which suits a shot already styled to match
+ * the surrounding page.
+ */
+export const LoadingWithUnstyledThumbnail: Story = {
+	args: {
+		hasContent: false,
+		loadingThumbnail: {
+			src: THUMBNAIL_SRC,
+			alt: 'Preview thumbnail backdrop',
+			blur: false,
+			scrim: false
+		}
+	}
+}
+
+/** `contain` fits the whole image in rather than cropping it to fill. */
+export const LoadingWithContainedThumbnail: Story = {
+	args: {
+		hasContent: false,
+		loadingThumbnail: {
+			src: THUMBNAIL_SRC,
+			alt: 'Preview thumbnail backdrop',
+			blur: 'blur-xl',
+			objectFit: 'contain'
 		}
 	}
 }

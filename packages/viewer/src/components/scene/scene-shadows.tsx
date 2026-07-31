@@ -4,7 +4,6 @@ import {
 	RandomizedLight
 } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
-import type { AccumulativeShadowsProps, NormalizationOptions } from '@vctrl/core'
 import {
 	type ComponentRef,
 	memo,
@@ -28,6 +27,7 @@ import {
 import ShadowLightGizmo from './shadow-light-gizmo'
 
 import type { BakedShadow, ShadowBakeCapture } from '../../types/viewer-types'
+import type { AccumulativeShadowsProps, NormalizationOptions } from '@vctrl/core'
 
 // Accumulative shadows: high-quality baked soft shadows for a static subject.
 // The shadow is baked into the receiving plane's UV space from the
