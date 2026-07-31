@@ -89,8 +89,9 @@ function solveAutoFitFraming(
 	if (!(sphere.radius > 0)) return null
 
 	// Fit against the tighter of the two axes so nothing is cropped on a
-	// non-square viewport.
-	const verticalFov = (camera.fov * Math.PI) / 180
+	// non-square viewport. getEffectiveFOV folds in camera.zoom, which is what
+	// three actually renders with — `fov` alone would over-frame a zoomed camera.
+	const verticalFov = (camera.getEffectiveFOV() * Math.PI) / 180
 	const horizontalFov =
 		2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect)
 	const limitingFov = Math.min(verticalFov, horizontalFov)
