@@ -79,6 +79,15 @@ describe('readGlbJsonChunk', () => {
 		expect(() => readGlbJsonChunk(new Uint8Array(32))).toThrow(/glTF/)
 	})
 
+	it('rejects a glTF 1.0 binary', () => {
+		// v1 put contentLength/contentFormat where v2 puts the chunk header, so
+		// reading it as v2 would misinterpret every offset that follows.
+		const glb = buildGlb(dracoJson)
+		new DataView(glb.buffer, glb.byteOffset, glb.byteLength).setUint32(4, 1, true)
+
+		expect(() => readGlbJsonChunk(glb)).toThrow(/Unsupported GLB version 1/)
+	})
+
 	it('rejects a buffer too short to hold a chunk header', () => {
 		expect(() => readGlbJsonChunk(new Uint8Array(12))).toThrow(
 			/expected at least 20 bytes/

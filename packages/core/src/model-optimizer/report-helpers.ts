@@ -27,6 +27,8 @@ const GLB_HEADER_BYTES = 12
 const GLB_CHUNK_HEADER_BYTES = 8
 /** 'glTF' as a little-endian uint32. */
 const GLB_MAGIC = 0x46546c67
+/** Only glTF 2.0 binary is supported; v1 laid its chunks out differently. */
+const GLB_VERSION = 2
 /** 'JSON' as a little-endian uint32. */
 const GLB_CHUNK_TYPE_JSON = 0x4e4f534a
 
@@ -122,6 +124,16 @@ export function readGlbJsonChunk(glb: Uint8Array): JSONDocument['json'] {
 
 	if (view.getUint32(0, true) !== GLB_MAGIC) {
 		throw new Error("Not a GLB: missing 'glTF' magic bytes")
+	}
+
+	// glTF 1.0 binary put contentLength/contentFormat where v2 puts the chunk
+	// header, so an unversioned read would misinterpret the offsets below and
+	// fail later as a confusing chunk or JSON error.
+	const version = view.getUint32(4, true)
+	if (version !== GLB_VERSION) {
+		throw new Error(
+			`Unsupported GLB version ${version}: only version ${GLB_VERSION} is supported`
+		)
 	}
 
 	const chunkLength = view.getUint32(12, true)
