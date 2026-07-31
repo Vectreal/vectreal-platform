@@ -60,6 +60,61 @@ const DEFAULT_SCREENSHOT_OPTIONS = {
 const waitForNextFrame = async () =>
 	new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
 
+/** Leaves a little air around the model instead of framing it edge to edge. */
+const AUTO_FIT_MARGIN = 1.12
+/** Lifts the camera slightly so the model is seen from just above eye level. */
+const AUTO_FIT_ELEVATION = 0.06
+
+/**
+ * Works out where the camera has to sit to frame an object completely.
+ *
+ * Keeps whatever direction the camera is already looking from, so an auto-fit
+ * capture respects how the user has orbited the scene, and only solves for the
+ * distance. Returns null for an object with no measurable bounds, in which case
+ * the caller should leave the camera alone.
+ */
+function solveAutoFitFraming(
+	object: Object3D,
+	camera: PerspectiveCamera
+): null | { position: Vector3; target: Vector3 } {
+	// setFromObject reads matrixWorld off every descendant. A capture can be
+	// requested before the renderer has run a frame for the current state, so
+	// refresh the branch first rather than measuring stale transforms.
+	object.updateWorldMatrix(true, true)
+
+	const box = new Box3().setFromObject(object)
+	if (box.isEmpty()) return null
+
+	const sphere = box.getBoundingSphere(new Sphere())
+	if (!(sphere.radius > 0)) return null
+
+	// Fit against the tighter of the two axes so nothing is cropped on a
+	// non-square viewport. getEffectiveFOV folds in camera.zoom, which is what
+	// three actually renders with — `fov` alone would over-frame a zoomed camera.
+	const verticalFov = (camera.getEffectiveFOV() * Math.PI) / 180
+	const horizontalFov =
+		2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect)
+	const limitingFov = Math.min(verticalFov, horizontalFov)
+	const distance = (sphere.radius / Math.sin(limitingFov / 2)) * AUTO_FIT_MARGIN
+
+	const target = sphere.center.clone()
+	// Fall back to a three-quarter view when the camera sits exactly on the
+	// target and there is no direction to preserve.
+	const direction = camera.position.clone().sub(target)
+	if (direction.lengthSq() === 0) {
+		direction.set(1, 0.5, 1)
+	}
+	direction.normalize()
+
+	return {
+		target,
+		position: target
+			.clone()
+			.add(direction.multiplyScalar(distance))
+			.add(new Vector3(0, distance * AUTO_FIT_ELEVATION, 0))
+	}
+}
+
 const buildScreenshotDataUrl = async (
 	sourceCanvas: HTMLCanvasElement,
 	options: Required<Omit<SceneScreenshotOptions, 'targetCameraId'>>
@@ -263,28 +318,26 @@ const SceneModel = memo((props: ModelProps) => {
 						}
 					}
 				} else if (options.mode === 'auto-fit') {
-					// Original auto-fit behavior when no target camera is specified
+					// Framed here rather than via drei's `bounds.fit()`, which animates
+					// the camera with damping over several frames. The old code called
+					// it and then immediately read `controls.target` and the camera
+					// position to derive a framing, so it computed from pre-fit values
+					// while the animation was still running, and rendered two frames
+					// later with the camera somewhere in between. On most models that
+					// left it far enough out to capture the environment and no model.
+					//
+					// Solving for the distance directly is deterministic, which also
+					// makes a thumbnail reproducible instead of timing-dependent.
 					if (typeof controls?.enabled === 'boolean') {
 						controls.enabled = false
 					}
 
-					bounds.refresh(object).clip().fit()
+					const framing = solveAutoFitFraming(object, activeCamera)
 
-					if (controls?.target) {
-						const target = controls.target.clone()
-						const direction = activeCamera.position
-							.clone()
-							.sub(target)
-							.normalize()
-						const distance = activeCamera.position.distanceTo(target)
-						const distanceMultiplier = 1.08
-						const elevatedPosition = target
-							.clone()
-							.add(direction.multiplyScalar(distance * distanceMultiplier))
-							.add(new Vector3(0, distance * 0.06, 0))
-
-						activeCamera.position.copy(elevatedPosition)
-						activeCamera.lookAt(target)
+					if (framing) {
+						activeCamera.position.copy(framing.position)
+						activeCamera.lookAt(framing.target)
+						controls?.target?.copy(framing.target)
 					}
 				}
 
@@ -318,17 +371,7 @@ const SceneModel = memo((props: ModelProps) => {
 				invalidate()
 			}
 		},
-		[
-			bounds,
-			camera,
-			cameraOptions,
-			controls,
-			gl,
-			invalidate,
-			object,
-			onScreenshot,
-			scene
-		]
+		[camera, cameraOptions, controls, gl, invalidate, object, onScreenshot, scene]
 	)
 
 	useLayoutEffect(() => {
