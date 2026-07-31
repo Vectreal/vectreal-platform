@@ -4,7 +4,7 @@ import {
 	RandomizedLight
 } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
-import { AccumulativeShadowsProps } from '@vctrl/core'
+import type { AccumulativeShadowsProps, NormalizationOptions } from '@vctrl/core'
 import {
 	type ComponentRef,
 	memo,
@@ -136,6 +136,14 @@ type SceneShadowsProps = Partial<AccumulativeShadowsProps> & {
 	 */
 	model?: Object3D
 	/**
+	 * Model normalization, which rescales the model via an ancestor group.
+	 *
+	 * Read only to know when to re-measure: the scale lives on a group above the
+	 * model, so toggling it changes the model's world size without changing the
+	 * `model` object itself, and nothing else here would notice.
+	 */
+	normalizationOptions?: NormalizationOptions
+	/**
 	 * Set while the loaded model's geometry is actively animating. Camera
 	 * auto-rotate keeps the model static and must NOT set this. When true the
 	 * viewer renders cheaper contact shadows that track the moving geometry.
@@ -202,8 +210,15 @@ const DEFAULT_METRICS: ModelMetrics = {
  * makes the shadow read too small under tall models and too large under flat
  * ones. Returns unit metrics until measured.
  */
-const useModelMetrics = (model?: Object3D): ModelMetrics => {
+const useModelMetrics = (
+	model?: Object3D,
+	normalizationOptions?: NormalizationOptions
+): ModelMetrics => {
 	const [metrics, setMetrics] = useState<ModelMetrics>(DEFAULT_METRICS)
+
+	const normalizationEnabled = normalizationOptions?.enabled ?? false
+	const normalizationMinSize = normalizationOptions?.minSize
+	const normalizationMaxSize = normalizationOptions?.maxSize
 
 	useEffect(() => {
 		if (!model) return
@@ -222,7 +237,11 @@ const useModelMetrics = (model?: Object3D): ModelMetrics => {
 				measured: true
 			})
 		}
-	}, [model])
+		// Normalization is a dependency because it rescales the model from an
+		// ancestor group: the object identity is unchanged, but every figure
+		// derived here (plane size, light distance, shadow-camera extent, and the
+		// bake signature built from them) is in model-size units and goes stale.
+	}, [model, normalizationEnabled, normalizationMinSize, normalizationMaxSize])
 
 	return metrics
 }
@@ -307,6 +326,7 @@ const ShadowBakeCapture = ({
 const SceneShadows = memo(
 	({
 		model,
+		normalizationOptions,
 		isModelAnimating = false,
 		lightEditable = false,
 		onLightChange,
@@ -316,7 +336,7 @@ const SceneShadows = memo(
 		...props
 	}: SceneShadowsProps) => {
 		const { footprint, radius, height, vertexCount, measured } =
-			useModelMetrics(model)
+			useModelMetrics(model, normalizationOptions)
 		const apiRef = useRef<React.ComponentRef<typeof AccumulativeShadows> | null>(
 			null
 		)
