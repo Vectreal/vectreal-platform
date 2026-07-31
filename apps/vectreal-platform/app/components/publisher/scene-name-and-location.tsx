@@ -124,7 +124,9 @@ const SceneNameField = () => {
 						onChange={(e) => setLocalName(e.target.value)}
 						onKeyDown={handleKeyDown}
 						onBlur={saveChanges}
-						className="focus: w-full rounded-sm bg-transparent px-2! py-1! text-sm transition-all duration-300 not-focus:border-0"
+						// Borderless to match the rest of the header row; the filled
+						// surface carries the editing state instead.
+						className="bg-shell-surface-soft h-9 w-full rounded-xl border-0 px-2 text-sm shadow-none focus-visible:ring-0"
 						aria-label="Scene name"
 					/>
 					<span
@@ -135,7 +137,7 @@ const SceneNameField = () => {
 			) : (
 				<button
 					onClick={() => setIsEditing(true)}
-					className="text-foreground/90 hover:text-foreground flex w-full items-center rounded-lg border border-transparent px-2 py-1.5 text-sm transition-colors"
+					className="text-foreground/90 hover:text-foreground hover:bg-shell-surface-soft flex h-9 w-full items-center rounded-xl px-2 text-sm transition-colors"
 				>
 					<span className="w-full truncate text-left">{sceneName}</span>
 				</button>
@@ -305,8 +307,8 @@ const LocationRow = ({ open, authenticated, onToggle }: LocationRowProps) => {
 		<button
 			onClick={onToggle}
 			className={cn(
-				'text-muted-foreground hover:text-foreground group flex max-w-full min-w-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors',
-				open && 'text-foreground'
+				'text-muted-foreground hover:text-foreground hover:bg-shell-surface-soft group flex h-9 max-w-full min-w-0 items-center gap-1.5 rounded-xl px-2 text-xs transition-colors',
+				open && 'text-foreground bg-shell-surface-soft'
 			)}
 			aria-expanded={open}
 			aria-label="Toggle save location picker"
@@ -369,14 +371,13 @@ export function SceneNameAndLocation({
 	}, [locationOpen])
 
 	return (
-		<div
-			ref={containerRef}
-			className={cn(
-				'bg-muted/50 min-w-0 grow overflow-hidden rounded-2xl',
-				className
-			)}
-		>
-			<div className="flex min-w-0 items-center gap-2 px-2 py-1.5">
+		<div ref={containerRef} className={cn('relative min-w-0 grow', className)}>
+			{/*
+			  A layout box only. It carries no padding or surface of its own so the
+			  row lands at exactly h-9, matching the save button and user menu; each
+			  control inside supplies its own hover affordance.
+			*/}
+			<div className="flex h-9 min-w-0 items-center gap-1">
 				<div className="min-w-0 flex-1">
 					<SceneNameField />
 				</div>
@@ -393,10 +394,35 @@ export function SceneNameAndLocation({
 					</>
 				) : null}
 			</div>
-			{locationOpen ? <Separator /> : null}
-			{/* Always mounted - LocationPicker's motion.div handles height 0↔auto.
-			    Keeping it mounted preserves fetcher data and avoids remount flicker. */}
-			<LocationPicker open={locationOpen} />
+
+			{/*
+			  The picker floats over whatever is below rather than expanding in
+			  place, so a fixed-height header row can host this without clipping it
+			  or resizing the canvas underneath.
+
+			  Always mounted - LocationPicker's motion.div handles height 0↔auto,
+			  and keeping it mounted preserves fetcher data and avoids remount
+			  flicker. The panel chrome is what gets dropped when closed, so a
+			  zero-height picker leaves nothing visible behind.
+			*/}
+			<div
+				className={cn(
+					// Local to the header's stacking context, so this only has to beat
+					// the header's own children. What lifts it over the canvas chrome
+					// is the header's layer, not this value.
+					'absolute top-[calc(100%+0.375rem)] right-0 left-0 z-10',
+					!locationOpen && 'pointer-events-none'
+				)}
+			>
+				<div
+					className={cn(
+						'overflow-hidden rounded-xl',
+						locationOpen && 'publisher-shell-panel'
+					)}
+				>
+					<LocationPicker open={locationOpen} />
+				</div>
+			</div>
 		</div>
 	)
 }
