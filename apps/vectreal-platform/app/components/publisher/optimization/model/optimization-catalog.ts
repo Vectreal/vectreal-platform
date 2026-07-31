@@ -6,8 +6,9 @@ export type OptimizationPhase = 'geometry' | 'texture'
 
 interface BaseDefinition {
 	/**
-	 * Row label in the progress checklist. The worker tags its progress messages
-	 * with this exact string, so the two cannot drift.
+	 * Row label in the progress checklist. Display only — the worker reports
+	 * progress by step *key* ({@link GeometryOptimizationKey}), which is what the
+	 * checklist matches on, so this string is free to change without breaking it.
 	 */
 	stepLabel: string
 	/** Control heading in the advanced panel, and the name used in preset summaries. */

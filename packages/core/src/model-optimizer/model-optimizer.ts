@@ -368,7 +368,7 @@ export class ModelOptimizer {
 	}
 
 	/**
-	 * Apply Draco geometry compression to the loaded document in place.
+	 * Replace the loaded document with a Draco-compressed copy of itself.
 	 *
 	 * Should run last in an optimization pass — simplification/quantization/etc.
 	 * operate on decoded accessors, so running them after compression would be
