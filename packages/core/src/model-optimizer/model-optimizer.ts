@@ -362,6 +362,14 @@ export class ModelOptimizer {
 			isWorthApplying: compressedGlb.byteLength < uncompressedGlbBytes
 		}
 
+		// Measuring leaves the document untouched, so nothing else records this
+		// step. It still has to appear here: callers treat a non-empty applied
+		// list as "a pass produced results", and a Draco-only pass would
+		// otherwise report nothing despite having a report to show.
+		if (this.dracoReport.isWorthApplying) {
+			this.addAppliedOptimization('draco compression')
+		}
+
 		this.emitProgress('Draco compression complete', 100)
 
 		return this.dracoReport
@@ -394,7 +402,9 @@ export class ModelOptimizer {
 		const workingDoc = cloneDocument(this.document)
 		await workingDoc.transform(draco(options as GltfDracoOptions))
 		this._document = workingDoc
-		this.appliedOptimizations.push('draco compression')
+		// measureDracoCompression already recorded it; this keeps the entry
+		// single if that ever stops being true.
+		this.addAppliedOptimization('draco compression')
 	}
 
 	/**

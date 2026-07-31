@@ -48,6 +48,18 @@ describe('resolveSceneMetrics with worker-sourced optimizations', () => {
 		expect(metrics.sceneBytes.initial).toBeNull()
 	})
 
+	it('keeps report baselines for a Draco-only pass', () => {
+		// Draco is measured rather than applied, so it does not go through the
+		// mutate-and-record path the other steps share. It has to record itself,
+		// or a pass with every other technique off reports nothing at all.
+		const metrics = resolveSceneMetrics({
+			report: buildReport({ appliedOptimizations: ['draco compression'] })
+		})
+
+		expect(metrics.sceneBytes.initial).toBe(8_000_000)
+		expect(metrics.vertices.initial).toBe(100_000)
+	})
+
 	it('prefers the projected Draco size over the uncompressed export', () => {
 		// What the runtime does when Draco is on: the working document stays
 		// uncompressed, so `currentSceneBytes` carries the measured projection.
