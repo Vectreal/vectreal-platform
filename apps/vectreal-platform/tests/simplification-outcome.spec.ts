@@ -4,7 +4,7 @@ import type { OptimizationReport } from '@vctrl/core'
 
 const reportWith = (before: number, after: number) =>
 	({
-		stats: { triangles: { before, after } }
+		stats: { vertices: { before, after } }
 	}) as unknown as OptimizationReport
 
 describe('resolveSimplificationOutcome', () => {
@@ -14,8 +14,8 @@ describe('resolveSimplificationOutcome', () => {
 			0.5
 		)
 
-		expect(outcome?.trianglesBefore).toBe(100_000)
-		expect(outcome?.trianglesAfter).toBe(40_000)
+		expect(outcome?.verticesBefore).toBe(100_000)
+		expect(outcome?.verticesAfter).toBe(40_000)
 		expect(outcome?.achievedKeepRatio).toBeCloseTo(0.4)
 	})
 

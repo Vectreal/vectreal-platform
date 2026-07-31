@@ -106,7 +106,7 @@ export const OptimizationResults: FC<OptimizationResultsProps> = ({
 				*/}
 				{simplificationOutcome?.fellShort ? (
 					<p className="text-muted-foreground text-[11px] leading-relaxed">
-						Polygon reduction stopped at{' '}
+						Mesh reduction stopped at{' '}
 						{Math.round((1 - simplificationOutcome.achievedKeepRatio) * 100)}%
 						of the requested{' '}
 						{Math.round((1 - simplificationOutcome.requestedKeepRatio) * 100)}%

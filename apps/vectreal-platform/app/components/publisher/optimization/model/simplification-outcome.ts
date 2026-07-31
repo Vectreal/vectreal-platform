@@ -1,12 +1,18 @@
 import type { OptimizationReport } from '@vctrl/core'
 
 export interface SimplificationOutcome {
-	/** Fraction of triangles the user asked to keep (glTF-Transform's `ratio`). */
+	/**
+	 * Fraction of *vertices* the user asked to keep. glTF-Transform's `ratio` is
+	 * documented as "target ratio (0-1) of vertices to keep", so the achieved
+	 * figure below is measured in the same unit — the two are printed against
+	 * each other in the panel, and triangles do not fall in lockstep with
+	 * vertices once a mesh has split vertices.
+	 */
 	requestedKeepRatio: number
 	/** Fraction actually kept, measured from the report. */
 	achievedKeepRatio: number
-	trianglesBefore: number
-	trianglesAfter: number
+	verticesBefore: number
+	verticesAfter: number
 	/**
 	 * True when the simplifier stopped well short of the target.
 	 *
@@ -37,27 +43,27 @@ export function resolveSimplificationOutcome(
 	report: OptimizationReport | null | undefined,
 	requestedKeepRatio: number | undefined
 ): SimplificationOutcome | null {
-	const trianglesBefore = report?.stats.triangles.before
-	const trianglesAfter = report?.stats.triangles.after
+	const verticesBefore = report?.stats.vertices.before
+	const verticesAfter = report?.stats.vertices.after
 
 	if (
-		typeof trianglesBefore !== 'number' ||
-		typeof trianglesAfter !== 'number' ||
-		trianglesBefore <= 0 ||
+		typeof verticesBefore !== 'number' ||
+		typeof verticesAfter !== 'number' ||
+		verticesBefore <= 0 ||
 		typeof requestedKeepRatio !== 'number'
 	) {
 		return null
 	}
 
-	const achievedKeepRatio = trianglesAfter / trianglesBefore
+	const achievedKeepRatio = verticesAfter / verticesBefore
 	const requestedReduction = 1 - requestedKeepRatio
 	const achievedReduction = 1 - achievedKeepRatio
 
 	return {
 		requestedKeepRatio,
 		achievedKeepRatio,
-		trianglesBefore,
-		trianglesAfter,
+		verticesBefore,
+		verticesAfter,
 		fellShort:
 			requestedReduction > 0 &&
 			achievedReduction < requestedReduction * ACCEPTABLE_FRACTION_OF_TARGET
