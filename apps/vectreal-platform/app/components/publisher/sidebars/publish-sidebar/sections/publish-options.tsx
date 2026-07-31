@@ -13,7 +13,10 @@ import {
 } from '../../../../../lib/domain/billing/client/billing-limit-error'
 import { publishSceneFromGlb } from '../../../../../lib/domain/scene/client/scene-publish'
 import { hasUnsavedChangesAtom } from '../../../../../lib/stores/publisher-config-store'
-import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
+import {
+	optimizationAtom,
+	optimizationRuntimeAtom
+} from '../../../../../lib/stores/scene-optimization-store'
 import {
 	buildUpgradeModalState,
 	upgradeModalAtom
@@ -46,6 +49,8 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const navigate = useNavigate()
 	const revalidator = useRevalidator()
 	const hasUnsavedChanges = useAtomValue(hasUnsavedChangesAtom)
+	const { optimizations } = useAtomValue(optimizationAtom)
+	const { dracoReport } = useAtomValue(optimizationRuntimeAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
 	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 	const exporterRef = useRef<ModelExporter>(new ModelExporter())
@@ -95,7 +100,27 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 
 			setPublishStatus('publishing')
 
-			const result = await exporterRef.current.exportDocumentGLB(document)
+			// Draco is applied here rather than during optimization: the working
+			// document stays uncompressed so editing and re-optimizing never
+			// re-encode (and degrade) the geometry. `isWorthApplying` is false when
+			// the measured compression came out larger than the plain GLB.
+			const draco = optimizations.draco
+			const shouldCompressGeometry = Boolean(
+				draco?.enabled && dracoReport?.isWorthApplying !== false
+			)
+
+			const result = shouldCompressGeometry
+				? await exporterRef.current.exportDocumentGLBDraco(document, {
+						method: draco.method,
+						encodeSpeed: draco.encodeSpeed,
+						decodeSpeed: draco.decodeSpeed,
+						quantizePosition: draco.quantizePosition,
+						quantizeNormal: draco.quantizeNormal,
+						quantizeColor: draco.quantizeColor,
+						quantizeTexcoord: draco.quantizeTexcoord,
+						quantizeGeneric: draco.quantizeGeneric
+					})
+				: await exporterRef.current.exportDocumentGLB(document)
 			setOptimizationRuntime((prev) => ({
 				...prev,
 				optimizedSceneBytes: result.size,
@@ -161,7 +186,9 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		revalidator,
 		setOptimizationRuntime,
 		setUpgradeModal,
-		file
+		file,
+		optimizations.draco,
+		dracoReport
 	])
 
 	const statusText =

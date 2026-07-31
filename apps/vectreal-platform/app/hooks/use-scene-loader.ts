@@ -42,6 +42,7 @@ import {
 	getSceneNameFromFileName,
 	serializeSceneAssetData
 } from '../lib/domain/scene'
+import { resolveDefaultSceneCameraId } from '../lib/domain/scene/scene-camera'
 import {
 	clearOriginalSceneModel,
 	clearPendingSceneDraft,
@@ -330,11 +331,10 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		}
 
 		try {
-			// Get the default/first scene camera ID to capture from
-			const defaultCameraId =
-				camera.cameras?.find((c) => !c.kind || c.kind === 'scene')?.cameraId ??
-				camera.cameras?.[0]?.cameraId ??
-				undefined
+			// Always the camera the scene opens on, so the automatic capture agrees
+			// with the manual "set opening view" action rather than framing something
+			// the viewer will never see.
+			const defaultCameraId = resolveDefaultSceneCameraId(camera.cameras)
 
 			return await requestSceneScreenshot({
 				...DEFAULT_THUMBNAIL_CAPTURE_OPTIONS,

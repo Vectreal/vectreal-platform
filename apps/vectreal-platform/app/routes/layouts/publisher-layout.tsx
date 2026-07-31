@@ -232,10 +232,17 @@ const PublisherLayoutContent = ({
 	return (
 		<SidebarProvider open={showSidebar} onOpenChange={handleOpenChange}>
 			<PublisherViewerCaptureProvider>
+				{/*
+				  Three rows: header, canvas stage, footer. The canvas is handed to
+				  the shell as children rather than rendered beside it, so the stage
+				  can bound the sidebars instead of them floating over the whole
+				  viewport.
+				*/}
 				<main className="flex h-screen w-full flex-col overflow-hidden">
 					<UpgradeModal />
-					<ControlsOverlay {...loaderData} />
-					<Outlet />
+					<ControlsOverlay {...loaderData}>
+						<Outlet />
+					</ControlsOverlay>
 				</main>
 			</PublisherViewerCaptureProvider>
 		</SidebarProvider>

@@ -140,14 +140,17 @@ export const DynamicSidebar = ({
 		)
 	}
 
-	// ---- Desktop: fixed panel with framer-motion slide ----------------------
+	// ---- Desktop: panel inside the canvas stage, framer-motion slide --------
 	const variants = direction === 'left' ? leftVariants : rightVariants
 	const positionClass = direction === 'left' ? 'left-0' : 'right-0'
 
 	return (
+		// Absolute, not fixed: the publisher stage is the positioning ancestor, so
+		// the panel is inset within the canvas and never rides over the header or
+		// footer rows.
 		<div
 			className={cn(
-				'pointer-events-none fixed top-0 h-full p-4',
+				'pointer-events-none absolute inset-y-0 p-4',
 				zIndexClassName,
 				positionClass,
 				{

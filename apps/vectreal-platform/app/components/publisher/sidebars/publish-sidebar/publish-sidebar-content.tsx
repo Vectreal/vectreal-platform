@@ -17,7 +17,9 @@ import { isSavingAtom } from '../../../../lib/stores/publisher-config-store'
 import { AccordionItem, AccordionTrigger } from '../accordion-components'
 import { sidebarContentVariants } from '../animation'
 import { usePublishSidebarContext } from './publish-sidebar-context'
+import { DeliverySummary } from './sections/delivery-summary'
 import { EmbedOptions } from './sections/embed-options'
+import { OptimizationOptions } from './sections/optimization-options'
 import { PublishOptions } from './sections/publish-options'
 import { SaveOptions } from './sections/save-options'
 import { ScenePreview } from './sections/scene-preview'
@@ -54,7 +56,6 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 		projectId,
 		userId,
 		onOpenOptimizationDrawer,
-		canReoptimize,
 		viewModel,
 		saveAvailability,
 		onRequireAuth,
@@ -105,30 +106,31 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 				)}
 
 				{showSceneInfo && (
-					<div className="px-4 pb-2 pt-4">
-						<div className="flex items-center justify-between">
-							<p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
-								Scene Size
-							</p>
-							<div className="flex items-center gap-2">
-								{sizeReductionPercent !== null && sizeDeltaLabel ? (
-									<span className="text-primary bg-primary/15 rounded-full px-2 py-0.5 text-xs font-semibold">
-										-{sizeReductionPercent}% • {sizeDeltaLabel}
-									</span>
-								) : null}
-								<span className="text-sm font-medium">
-									{currentSceneBytes != null
-										? formatFileSize(currentSceneBytes)
-										: '-'}
-								</span>
-							</div>
-						</div>
-					</div>
+					<DeliverySummary
+						sceneBytes={currentSceneBytes}
+						sizeReductionPercent={sizeReductionPercent}
+						sizeDeltaLabel={sizeDeltaLabel}
+						onOpenOptimization={onOpenOptimizationDrawer}
+					/>
 				)}
 
 				{canAccessPublishFeatures && <ScenePreview />}
 
 				<Accordion type="single" collapsible className="space-y-2 p-4">
+					{/*
+					  First in the list because it comes first in the workflow: what
+					  ships is decided here, before anything below it matters.
+					*/}
+					<AccordionItem value="optimize">
+						<AccordionTrigger>
+							<Sparkles className="inline" size={14} />
+							Optimization
+						</AccordionTrigger>
+						<AccordionContent>
+							<OptimizationOptions />
+						</AccordionContent>
+					</AccordionItem>
+
 					<AccordionItem value="save">
 						<AccordionTrigger>
 							<Save className="inline" size={14} />
@@ -220,24 +222,6 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 					)}
 				</Accordion>
 
-				{canAccessPublishFeatures && canReoptimize && (
-					<div className="space-y-3 p-4">
-						<p className="text-muted-foreground text-xs">
-							Need another pass? Continue composing first, then re-optimize if
-							you need a final tuning run before publishing.
-						</p>
-						<Button
-							type="button"
-							size="sm"
-							variant="secondary"
-							className="w-full"
-							onClick={() => onOpenOptimizationDrawer?.()}
-						>
-							<Sparkles size={14} className="mr-2" />
-							Re-optimize Scene
-						</Button>
-					</div>
-				)}
 			</motion.div>
 		</div>
 	)

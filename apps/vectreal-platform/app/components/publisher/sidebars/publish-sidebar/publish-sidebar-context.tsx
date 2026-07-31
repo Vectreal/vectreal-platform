@@ -15,7 +15,6 @@ export interface PublishSidebarContextValue {
 	projectId?: string
 	userId?: string
 	onOpenOptimizationDrawer?: () => void
-	canReoptimize?: boolean
 	onRequireAuth?: () => Promise<void> | void
 	saveSceneSettings: SaveSceneFn
 	saveAvailability: SaveAvailabilityState
