@@ -21,12 +21,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger
 } from '@shared/components/ui/dropdown-menu'
-import { cn } from '@shared/utils'
-import {
-	ModelFile,
-	SceneLoadResult,
-	useLoadModel
-} from '@vctrl/hooks/use-load-model'
+import { SceneLoadResult, useLoadModel } from '@vctrl/hooks/use-load-model'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useSetAtom } from 'jotai/react'
 import {
@@ -40,7 +35,7 @@ import {
 	Trash2,
 	X
 } from 'lucide-react'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { data, Link, useNavigate } from 'react-router'
 
 import { Route } from './+types/scene'
@@ -52,12 +47,11 @@ import {
 } from '../../../components/dashboard'
 import { EmbedOptionsPanel } from '../../../components/embed/embed-options-panel'
 import { ScenePublishStateControl } from '../../../components/publishing/scene-publish-state-control'
-import { ClientVectrealViewer } from '../../../components/viewer/client-vectreal-viewer'
+import SceneEmbedViewer from '../../../components/scene-embed/scene-embed-viewer'
 import { useDashboardSceneActions } from '../../../hooks/use-dashboard-scene-actions'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import { buildFullscreenPreviewPath } from '../../../lib/domain/embed/embed-snippet'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
-import { resolveBakedShadowSource } from '../../../lib/domain/scene/client/baked-shadow-source'
 import { loadSceneFromApi } from '../../../lib/domain/scene/client/load-scene-from-api.client'
 import { getDashboardSceneLoadErrorMessage } from '../../../lib/domain/scene/scene-load-error-messages'
 import {
@@ -215,44 +209,6 @@ export function HydrateFallback() {
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
 
-interface PreviewModelProps {
-	file: ModelFile | null
-	sceneData?: SceneLoadResult
-	thumbnailUrl?: string | null
-}
-
-const PreviewModel = memo(
-	({ file, sceneData, thumbnailUrl }: PreviewModelProps) => {
-		const loadingThumbnail = toViewerLoadingThumbnail(
-			thumbnailUrl,
-			'Scene thumbnail preview'
-		)
-		const bakedShadow = useMemo(
-			() => resolveBakedShadowSource(sceneData?.shadows, sceneData?.assetData),
-			[sceneData?.shadows, sceneData?.assetData]
-		)
-
-		return (
-			<div className={cn('relative h-full')}>
-				<ClientVectrealViewer
-					cameraOptions={sceneData?.camera}
-					model={file?.model}
-					boundsOptions={sceneData?.bounds}
-					envOptions={sceneData?.environment}
-					controlsOptions={sceneData?.controls}
-					normalizationOptions={sceneData?.normalization}
-					shadowsOptions={sceneData?.shadows}
-					staticShadowBake
-					bakedShadow={bakedShadow}
-					loadingThumbnail={loadingThumbnail}
-					loader={<CenteredSpinner text="Preparing scene..." />}
-					fallback={<CenteredSpinner text="Loading scene..." />}
-				/>
-			</div>
-		)
-	}
-)
-
 const ASSETS_COLLAPSED_LIMIT = 6
 
 function DrawerAssetsSection({
@@ -353,6 +309,13 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 	const [sceneData, setSceneData] = useState<SceneLoadResult>()
 	const [sceneLoadError, setSceneLoadError] = useState<string | null>(null)
 	const [sceneState, setSceneState] = useState(scene)
+	// Memoized because the viewer is memoized: a fresh object every render would
+	// re-render it on every keystroke in the metadata fields below.
+	const loadingThumbnail = useMemo(
+		() =>
+			toViewerLoadingThumbnail(sceneState.thumbnailUrl, 'Scene thumbnail preview'),
+		[sceneState.thumbnailUrl]
+	)
 
 	const [sceneNameDraft, setSceneNameDraft] = useState(scene.name)
 	const [sceneDescriptionDraft, setSceneDescriptionDraft] = useState(
@@ -578,10 +541,10 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						</section>
 					) : null}
 					<section className="relative min-h-64 flex-1 overflow-hidden rounded-2xl bg-black/2">
-						<PreviewModel
+						<SceneEmbedViewer
 							file={file}
 							sceneData={sceneData}
-							thumbnailUrl={sceneState.thumbnailUrl}
+							loadingThumbnail={loadingThumbnail}
 						/>
 					</section>
 					<section className="bg-muted/30 space-y-6 rounded-2xl px-4 py-4 sm:px-5">
