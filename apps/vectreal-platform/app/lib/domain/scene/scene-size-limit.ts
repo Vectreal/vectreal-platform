@@ -29,3 +29,48 @@ export function isSceneOverSizeLimit(
 		sceneBytes > limit
 	)
 }
+
+interface SceneCurrentBytesSources {
+	/** Measured by a pass in this session. Absent until one runs. */
+	optimizedSceneBytes?: number | null
+	/** What the last save wrote to `scene_stats.current_scene_bytes`. */
+	persistedCurrentSceneBytes?: number | null
+	/**
+	 * Size of the stored glTF + assets package. This is the *working* scene, not
+	 * the delivered artifact — with Draco enabled the published GLB is far
+	 * smaller — so it is only a starting point, never a correction.
+	 */
+	clientSceneBytes?: number | null
+}
+
+/**
+ * The scene's current delivered size, as sent to the server on save and used
+ * for the plan size gate.
+ *
+ * The persisted value has to sit between the two runtime figures. Reopening a
+ * saved scene hydrates `optimizedSceneBytes` to null and `clientSceneBytes` to
+ * the uncompressed package size, so without the middle term a settings-only
+ * save would send that larger number and overwrite a smaller, accurate one that
+ * an earlier optimization pass had already persisted.
+ *
+ * Mirrors the precedence `resolveSceneMetrics` uses for display
+ * (`runtimeCurrent ?? persistedCurrent ?? …`), so the number shown and the
+ * number saved cannot diverge.
+ */
+export function resolveSceneCurrentBytes({
+	optimizedSceneBytes,
+	persistedCurrentSceneBytes,
+	clientSceneBytes
+}: SceneCurrentBytesSources): number | undefined {
+	for (const candidate of [
+		optimizedSceneBytes,
+		persistedCurrentSceneBytes,
+		clientSceneBytes
+	]) {
+		if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+			return candidate
+		}
+	}
+
+	return undefined
+}
