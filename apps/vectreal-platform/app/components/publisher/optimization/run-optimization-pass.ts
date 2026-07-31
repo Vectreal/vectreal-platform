@@ -198,6 +198,7 @@ async function runGeometryPhase(
 		MODEL_SYNC_TIMEOUT_MS,
 		'Worker result sync'
 	)
+	steps.complete(LOAD_GEOMETRY_STEP)
 
 	return result
 }
