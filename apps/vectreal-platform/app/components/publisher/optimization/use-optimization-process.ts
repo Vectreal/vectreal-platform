@@ -76,7 +76,7 @@ export const useOptimizationProcess = () => {
 		async (fromOriginal: boolean): Promise<boolean> => {
 			if (isPending || isPreparing || !isReady) return false
 
-			const { didApply, dracoReport } = await runOptimizationPass({
+			const { documentChanged, dracoReport } = await runOptimizationPass({
 				fromOriginal,
 				optimizations: plannedOptimizations,
 				steps: stepsController,
@@ -100,11 +100,11 @@ export const useOptimizationProcess = () => {
 				setRuntime: setOptimizationRuntime
 			})
 
-			if (didApply) {
+			if (documentChanged) {
 				void refreshOptimizedSizeInfo(dracoReport)
 			}
 
-			return didApply
+			return documentChanged
 		},
 		[
 			isPending,

@@ -364,10 +364,13 @@ export class ModelOptimizer {
 	/**
 	 * Records a finished measurement on this instance.
 	 *
-	 * The applied-steps entry matters because measuring leaves the document
-	 * untouched, so nothing else records it: callers treat a non-empty applied
-	 * list as "a pass produced results", and a Draco-only pass would otherwise
-	 * report nothing despite having a report to show.
+	 * The applied-steps entry is added only when the measurement is worth
+	 * applying, which is the honest reading: callers treat a non-empty applied
+	 * list as "a pass produced results", and a Draco run that would grow the
+	 * file produced none. It matters that this happens here at all because
+	 * measuring leaves the document untouched, so the mutate-and-record path the
+	 * other steps share never runs — without it a Draco-only pass that did save
+	 * something would report nothing.
 	 */
 	private adoptDracoReport(report: DracoCompressionReport): void {
 		this.dracoReport = report

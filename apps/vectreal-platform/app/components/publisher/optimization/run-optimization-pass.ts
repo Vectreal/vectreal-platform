@@ -71,12 +71,23 @@ export interface OptimizationPassDeps {
 
 export interface OptimizationPassResult {
 	/** False when nothing ran, or the pass failed. */
-	didApply: boolean
+	/**
+	 * The loaded document was replaced, so the viewer and the size display have
+	 * to catch up. Deliberately not "a step reduced something": the geometry
+	 * phase reloads the worker's bytes into the optimizer before this is set, so
+	 * even a run where every step reverted has left the optimizer holding a
+	 * different document than the viewer. Gating the sync on applied steps would
+	 * leave the two divergent.
+	 */
+	documentChanged: boolean
 	/** Null unless Draco ran in this pass. Never carried over from a previous one. */
 	dracoReport: DracoCompressionReport | null
 }
 
-const FAILED: OptimizationPassResult = { didApply: false, dracoReport: null }
+const FAILED: OptimizationPassResult = {
+	documentChanged: false,
+	dracoReport: null
+}
 
 /**
  * Measures the pre-optimization sizes that are not already known, so the
@@ -256,7 +267,7 @@ export async function runOptimizationPass(
 	// otherwise leave the panel spinning with no checklist at all.
 	steps.plan(allSteps, PREPARE_STEP)
 
-	let didApply = false
+	let documentChanged = false
 	let dracoReport: DracoCompressionReport | null = null
 
 	try {
@@ -287,15 +298,16 @@ export async function runOptimizationPass(
 					)
 				}
 
-				didApply = true
+				// See the field's doc: the worker's bytes are already loaded by here.
+				documentChanged = true
 			}
 		}
 
 		if (hasTextureStep) {
-			didApply = (await runTexturePhase(deps)) || didApply
+			documentChanged = (await runTexturePhase(deps)) || documentChanged
 		}
 
-		if (didApply) {
+		if (documentChanged) {
 			steps.begin(SYNC_STEP)
 			try {
 				await withTimeout(
@@ -322,5 +334,5 @@ export async function runOptimizationPass(
 		steps.reset()
 	}
 
-	return { didApply, dracoReport }
+	return { documentChanged, dracoReport }
 }

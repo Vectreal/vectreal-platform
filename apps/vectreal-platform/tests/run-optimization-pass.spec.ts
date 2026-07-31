@@ -147,7 +147,7 @@ describe('runOptimizationPass', () => {
 			{ appliedOptimizations: ['deduplication'], dracoReport: undefined }
 		)
 		expect(model.applyOptimization).toHaveBeenCalledOnce()
-		expect(result.didApply).toBe(true)
+		expect(result.documentChanged).toBe(true)
 	})
 
 	it('skips the worker entirely when only textures are enabled', async () => {
@@ -157,7 +157,7 @@ describe('runOptimizationPass', () => {
 
 		expect(runGeometryOptimizationsInWorker).not.toHaveBeenCalled()
 		expect(model.texturesOptimization).toHaveBeenCalledOnce()
-		expect(result.didApply).toBe(true)
+		expect(result.documentChanged).toBe(true)
 	})
 
 	// Whichever phase runs first has to close out preparation, or the row spins
@@ -218,7 +218,7 @@ describe('runOptimizationPass', () => {
 
 		const result = await runOptimizationPass(deps)
 
-		expect(result.didApply).toBe(true)
+		expect(result.documentChanged).toBe(true)
 		expect(model.applyOptimization).toHaveBeenCalled()
 		// The spinner stops even though the number never arrived.
 		expect(
@@ -262,7 +262,7 @@ describe('runOptimizationPass', () => {
 
 		const result = await runOptimizationPass(deps)
 
-		expect(result).toEqual({ didApply: false, dracoReport: null })
+		expect(result).toEqual({ documentChanged: false, dracoReport: null })
 		expect(steps.calls).toContain('reset')
 		expect(steps.calls).not.toContain('settleAll')
 	})
@@ -284,7 +284,7 @@ describe('runOptimizationPass', () => {
 
 		const result = await runOptimizationPass(deps)
 
-		expect(result.didApply).toBe(false)
+		expect(result.documentChanged).toBe(false)
 		expect(model.applyOptimization).not.toHaveBeenCalled()
 	})
 })
