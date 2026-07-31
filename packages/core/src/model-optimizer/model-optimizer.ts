@@ -311,21 +311,16 @@ export class ModelOptimizer {
 	}
 
 	/**
-	 * Measure what `KHR_draco_mesh_compression` would buy this model, without
-	 * touching the loaded document.
+	 * Draco-encodes a clone of the loaded document and measures the result.
 	 *
-	 * Draco is lossy and is deferred until write time, so compressing the
-	 * working document would mean re-encoding (and degrading) the geometry on
-	 * every subsequent optimize/save round-trip. Instead this compresses a
-	 * throwaway clone once, reads every number back out of the bytes it just
-	 * wrote, and leaves the caller to apply compression at export time via
-	 * `ModelExporter.exportDocumentGLBDraco`.
-	 *
-	 * The result is also stored on this instance so `getReport()` picks it up.
+	 * The encode is the expensive half of every Draco path, so it happens here
+	 * exactly once and both callers take what they need: `measureDracoCompression`
+	 * keeps only the numbers, `compressGeometry` also adopts the document.
 	 */
-	public async measureDracoCompression(
-		options: DracoOptions = {}
-	): Promise<DracoCompressionReport> {
+	private async encodeDracoCopy(options: DracoOptions): Promise<{
+		report: DracoCompressionReport
+		workingDoc: Document
+	}> {
 		const document = this.ensureModelLoaded()
 
 		this.emitProgress('Compressing geometry with Draco', 0)
@@ -353,26 +348,56 @@ export class ModelOptimizer {
 					100
 				: 0
 
-		this.dracoReport = {
-			geometryBytesBefore,
-			geometryBytesAfterCompression,
-			reductionPercent,
-			projectedGlbBytes: compressedGlb.byteLength,
-			uncompressedGlbBytes,
-			isWorthApplying: compressedGlb.byteLength < uncompressedGlbBytes
+		return {
+			workingDoc,
+			report: {
+				geometryBytesBefore,
+				geometryBytesAfterCompression,
+				reductionPercent,
+				projectedGlbBytes: compressedGlb.byteLength,
+				uncompressedGlbBytes,
+				isWorthApplying: compressedGlb.byteLength < uncompressedGlbBytes
+			}
 		}
+	}
 
-		// Measuring leaves the document untouched, so nothing else records this
-		// step. It still has to appear here: callers treat a non-empty applied
-		// list as "a pass produced results", and a Draco-only pass would
-		// otherwise report nothing despite having a report to show.
-		if (this.dracoReport.isWorthApplying) {
+	/**
+	 * Records a finished measurement on this instance.
+	 *
+	 * The applied-steps entry matters because measuring leaves the document
+	 * untouched, so nothing else records it: callers treat a non-empty applied
+	 * list as "a pass produced results", and a Draco-only pass would otherwise
+	 * report nothing despite having a report to show.
+	 */
+	private adoptDracoReport(report: DracoCompressionReport): void {
+		this.dracoReport = report
+
+		if (report.isWorthApplying) {
 			this.addAppliedOptimization('draco compression')
 		}
 
 		this.emitProgress('Draco compression complete', 100)
+	}
 
-		return this.dracoReport
+	/**
+	 * Measure what `KHR_draco_mesh_compression` would buy this model, without
+	 * touching the loaded document.
+	 *
+	 * Draco is lossy and is deferred until write time, so compressing the
+	 * working document would mean re-encoding (and degrading) the geometry on
+	 * every subsequent optimize/save round-trip. Instead this compresses a
+	 * throwaway clone once, reads every number back out of the bytes it just
+	 * wrote, and leaves the caller to apply compression at export time via
+	 * `ModelExporter.exportDocumentGLBDraco`.
+	 *
+	 * The result is also stored on this instance so `getReport()` picks it up.
+	 */
+	public async measureDracoCompression(
+		options: DracoOptions = {}
+	): Promise<DracoCompressionReport> {
+		const { report } = await this.encodeDracoCopy(options)
+		this.adoptDracoReport(report)
+		return report
 	}
 
 	/**
@@ -388,9 +413,8 @@ export class ModelOptimizer {
 	 * that want a compressed document directly.
 	 */
 	public async compressGeometry(options: DracoOptions = {}): Promise<void> {
-		this.ensureModelLoaded()
-
-		const report = await this.measureDracoCompression(options)
+		const { report, workingDoc } = await this.encodeDracoCopy(options)
+		this.adoptDracoReport(report)
 
 		if (!report.isWorthApplying) {
 			console.warn(
@@ -399,12 +423,9 @@ export class ModelOptimizer {
 			return
 		}
 
-		const workingDoc = cloneDocument(this.document)
-		await workingDoc.transform(draco(options as GltfDracoOptions))
+		// The already-encoded clone, rather than a second encode of the same
+		// document.
 		this._document = workingDoc
-		// measureDracoCompression already recorded it; this keeps the entry
-		// single if that ever stops being true.
-		this.addAppliedOptimization('draco compression')
 	}
 
 	/**
