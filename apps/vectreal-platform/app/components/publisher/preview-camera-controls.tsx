@@ -6,19 +6,23 @@ import {
 	Select,
 	Button
 } from '@shared/components'
+import { cn } from '@shared/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useSetAtom, useAtom, useAtomValue } from 'jotai'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCallback, useMemo } from 'react'
 
+
+import { PUBLISHER_LAYER } from './shell/shell-layout'
+import { isSceneCamera } from '../../lib/domain/scene/scene-camera'
 import {
 	isPreviewModeAtom,
 	processAtom
-} from '../../../lib/stores/publisher-config-store'
+} from '../../lib/stores/publisher-config-store'
 import {
 	cameraAtom,
 	selectedCameraIdAtom
-} from '../../../lib/stores/scene-settings-store'
+} from '../../lib/stores/scene-settings-store'
 
 const PreviewCameraControls: React.FC = () => {
 	const [isPreviewMode, setIsPreviewMode] = useAtom(isPreviewModeAtom)
@@ -27,10 +31,7 @@ const PreviewCameraControls: React.FC = () => {
 	const [selectedCameraId, setSelectedCameraId] = useAtom(selectedCameraIdAtom)
 
 	const sceneCameras = useMemo(
-		() =>
-			(cameras ?? []).filter(
-				(cameraEntry) => !cameraEntry.kind || cameraEntry.kind === 'scene'
-			),
+		() => (cameras ?? []).filter(isSceneCamera),
 		[cameras]
 	)
 
@@ -89,7 +90,10 @@ const PreviewCameraControls: React.FC = () => {
 					animate={{ opacity: 1, y: 0 }}
 					exit={{ opacity: 0, y: 20 }}
 					transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-					className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex justify-center px-4"
+					className={cn(
+						"pointer-events-none absolute inset-x-0 bottom-3 flex justify-center px-3",
+						PUBLISHER_LAYER.previewControls
+					)}
 				>
 					<div className="pointer-events-auto relative">
 						<motion.button

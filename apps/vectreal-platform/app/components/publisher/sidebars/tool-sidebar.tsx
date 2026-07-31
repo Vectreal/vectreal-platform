@@ -9,76 +9,23 @@ import { User } from '@supabase/supabase-js'
 import { useAtomValue, useSetAtom } from 'jotai/react'
 import { memo, useCallback } from 'react'
 
+import { ComposeSidebar } from './compose-sidebar'
+import {
+	COMPOSE_TOOL_DEFINITIONS,
+	getComposeToolDefinition
+} from './compose-sidebar/compose-tools'
+import { DynamicSidebar } from './dynamic-sidebar'
 import {
 	arePublisherActionsDisabledAtom,
 	processAtom,
 	toolSidebarStateAtom
-} from '../../../../lib/stores/publisher-config-store'
-import { ComposeSidebar } from '../compose-sidebar'
+} from '../../../lib/stores/publisher-config-store'
 import {
-	COMPOSE_TOOL_DEFINITIONS,
-	getComposeToolDefinition
-} from '../compose-sidebar/compose-tools'
-import { DynamicSidebar } from '../dynamic-sidebar'
+	PUBLISHER_EDGE_INSET,
+	PUBLISHER_LAYER
+} from '../shell/shell-layout'
 
-import type { ComposeTool } from '../../../../types/publisher-config'
-
-// ---------------------------------------------------------------------------
-// Shared hook
-// ---------------------------------------------------------------------------
-
-function useToolSelect() {
-	const { activeComposeTool, showSidebar } = useAtomValue(toolSidebarStateAtom)
-	const setProcessState = useSetAtom(processAtom)
-
-	const handleToolSelect = useCallback(
-		(tool: ComposeTool) => {
-			setProcessState((prev) => ({
-				...prev,
-				mode: 'compose',
-				activeComposeTool: tool,
-				showSidebar: prev.activeComposeTool === tool ? !prev.showSidebar : true,
-				showPublishPanel: false
-			}))
-		},
-		[setProcessState]
-	)
-
-	return { activeComposeTool, showSidebar, handleToolSelect }
-}
-
-// ---------------------------------------------------------------------------
-// MobileToolBar - rendered in the unified mobile header (controls-overlay)
-// ---------------------------------------------------------------------------
-
-export const MobileToolBar = () => {
-	const { activeComposeTool, showSidebar, handleToolSelect } = useToolSelect()
-
-	return (
-		<div className="publisher-shell-floating flex gap-1 p-1">
-			{COMPOSE_TOOL_DEFINITIONS.map(({ value, icon: Icon, shortLabel }) => {
-				const isActive = value === activeComposeTool && showSidebar
-				return (
-					<Button
-						key={value}
-						variant={isActive ? 'default' : 'secondary'}
-						size="icon"
-						aria-label={shortLabel}
-						aria-pressed={isActive}
-						className="publisher-shell-focus h-10 w-10 rounded-xl"
-						onClick={() => handleToolSelect(value)}
-					>
-						<Icon className="h-4 w-4" />
-					</Button>
-				)
-			})}
-		</div>
-	)
-}
-
-// ---------------------------------------------------------------------------
-// ToolSidebar
-// ---------------------------------------------------------------------------
+import type { ComposeTool } from '../../../types/publisher-config'
 
 interface ToolSidebarProps {
 	user: User | null
@@ -128,14 +75,22 @@ export const ToolSidebar = memo(
 
 		return (
 			<>
-				<div className="fixed top-0 left-0 z-40 m-3 hidden flex-col gap-2 md:flex">
+				{/* Anchored to the canvas stage, so the rail starts below the header. */}
+				<div className={cn(
+						"absolute top-0 left-0 hidden flex-col gap-2 md:flex",
+						PUBLISHER_EDGE_INSET,
+						PUBLISHER_LAYER.toolRail
+					)}>
 					{COMPOSE_TOOL_DEFINITIONS.map(({ value, icon: Icon, shortLabel }) => {
 						const isActive = value === activeComposeTool && showSidebar
 						return (
 							<Tooltip key={value}>
 								<TooltipTrigger asChild>
 									<Button
-										variant={isActive ? 'secondary' : 'ghost'}
+										// Solid in both states, matching every other floating
+										// control. The ring and shadow carry the active
+										// distinction now that the variant no longer does.
+										variant="secondary"
 										size="icon"
 										aria-label={shortLabel}
 										aria-pressed={isActive}

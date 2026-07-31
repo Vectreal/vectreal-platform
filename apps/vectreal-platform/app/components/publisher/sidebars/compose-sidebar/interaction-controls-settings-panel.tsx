@@ -6,15 +6,15 @@ import { Separator } from '@shared/components/ui/separator'
 import { useAtom } from 'jotai/react'
 import { memo, useCallback, useState } from 'react'
 
-import { controlsAtom } from '../../../../../lib/stores/scene-settings-store'
-import { InfoTooltip } from '../../../../info-tooltip'
+import { controlsAtom } from '../../../../lib/stores/scene-settings-store'
+import { InfoTooltip } from '../../../info-tooltip'
 import {
 	EnhancedSettingSlider,
 	SettingToggle
-} from '../../../settings-components'
-import { PresetButton } from '../../../settings-components/preset-button'
-import { CollapsibleSectionTrigger } from '../../accordion-components'
-import { CAMERA_CONTROLS_FIELDS, defaultControlsOptions } from '../camera-controls-settings/constants'
+} from '../../settings-components'
+import { PresetButton } from '../../settings-components/preset-button'
+import { CollapsibleSectionTrigger } from '../accordion-components'
+import { CAMERA_CONTROLS_FIELDS, defaultControlsOptions } from './camera-controls-settings/constants'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 

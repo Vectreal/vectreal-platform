@@ -35,6 +35,7 @@ import {
 	defaultControlsOptions,
 	type FieldConfig
 } from './constants'
+import { resolveDefaultSceneCameraId } from '../../../../../lib/domain/scene/scene-camera'
 import {
 	canEditCameraSettingsAtom,
 	isPreviewModeAtom,
@@ -50,6 +51,7 @@ import {
 	EnhancedSettingSlider,
 	ToggleButtonGroup
 } from '../../../settings-components'
+import { useOpeningViewCapture } from '../../../shell/use-opening-view'
 import { CollapsibleSectionTrigger } from '../../accordion-components'
 import { PresetButtonGroup } from '../../preset-button-group'
 import {
@@ -131,8 +133,8 @@ function applySnapshotToCamera(
 const TRANSITION_TYPE_OPTIONS: ToggleButtonGroupOption<CameraTransitionType>[] =
 	[
 		{ value: 'none', label: 'Instant' },
-		{ value: 'linear', label: 'Linear' },
-		{ value: 'object_avoidance', label: 'Smart' }
+		{ value: 'linear', label: 'Linear', subLabel: 'Default' },
+		{ value: 'object_avoidance', label: 'Smart', subLabel: 'Experimental' }
 	]
 
 const TRANSITION_EASING_OPTIONS: ToggleButtonGroupOption<CameraTransitionEasing>[] =
@@ -194,8 +196,17 @@ function getNormalizedTransition(
 	}
 }
 
+/**
+ * Which camera gets `initial: true`, and therefore the frame the scene opens
+ * on.
+ *
+ * This used to return `cameras[0]` regardless of kind, despite its name. With a
+ * hotspot sitting first in the array it marked the hotspot as initial while the
+ * thumbnail was captured from the first *scene* camera, so the load placeholder
+ * and the frame it resolved into were of different views.
+ */
 function resolveFirstSceneCameraId(cameras: CameraEntry[]): string {
-	return cameras[0]?.cameraId ?? ''
+	return resolveDefaultSceneCameraId(cameras) ?? ''
 }
 
 function resolveEditorTargetCameraId(
@@ -317,6 +328,7 @@ const CameraControlsSettingsPanel = memo(() => {
 	const [cameraNameDraft, setCameraNameDraft] = useState('')
 	const [transitionAdvancedOpen, setTransitionAdvancedOpen] = useState(false)
 	const { requestSceneCameraSnapshot } = usePublisherViewerCapture()
+	const { setOpeningView } = useOpeningViewCapture()
 
 	const hotspotNameByCameraId = useMemo(
 		() =>
@@ -414,6 +426,10 @@ const CameraControlsSettingsPanel = memo(() => {
 	const captureCurrentViewSnapshot = useCallback(async () => {
 		return requestSceneCameraSnapshot()
 	}, [requestSceneCameraSnapshot])
+
+	const isEditingDefaultCamera =
+		resolveDefaultSceneCameraId(normalizedCamera.cameras) ===
+		resolveEditorTargetCameraId(normalizedCamera, selectedCameraId)
 
 	const handleSelectCamera = useCallback(
 		(nextCameraId: string) => {
@@ -586,18 +602,32 @@ const CameraControlsSettingsPanel = memo(() => {
 	)
 
 	const handleCaptureCurrentView = useCallback(async () => {
-		const snapshot = await captureCurrentViewSnapshot()
-		if (!snapshot) return
-		updateSelectedCameraEntry((cameraEntry) =>
-			applySnapshotToCamera(cameraEntry, snapshot)
-		)
+		// Pointing the default camera somewhere new moves the frame the scene opens
+		// on, and the thumbnail is the placeholder shown while loading resolves into
+		// that frame. Capturing both together is what stops the load from jumping.
+		// Other cameras are navigational and leave the opening view alone.
+		if (isEditingDefaultCamera) {
+			await setOpeningView()
+		} else {
+			const snapshot = await captureCurrentViewSnapshot()
+			if (!snapshot) return
+			updateSelectedCameraEntry((cameraEntry) =>
+				applySnapshotToCamera(cameraEntry, snapshot)
+			)
+		}
+
 		if (capturedViewTimerRef.current) clearTimeout(capturedViewTimerRef.current)
 		setCapturedView(true)
 		capturedViewTimerRef.current = setTimeout(
 			() => setCapturedView(false),
 			1800
 		)
-	}, [captureCurrentViewSnapshot, updateSelectedCameraEntry])
+	}, [
+		captureCurrentViewSnapshot,
+		isEditingDefaultCamera,
+		setOpeningView,
+		updateSelectedCameraEntry
+	])
 
 	const handleTransitionUpdate = useCallback(
 		(nextTransition: CameraTransitionConfig) => {
@@ -1029,6 +1059,14 @@ const CameraControlsSettingsPanel = memo(() => {
 							onChange={handleTransitionTypeChange}
 						/>
 					</PresetButtonGroup>
+
+					{selectedTransition.type === 'object_avoidance' && (
+						<p className="text-muted-foreground border-warning/40 bg-warning/5 rounded-lg border px-3 py-2 text-xs leading-relaxed">
+							Smart transitions solve a path around the model. Framing is still
+							unpredictable on some scenes — check the result in preview before
+							publishing.
+						</p>
+					)}
 
 					{/* Duration & Easing (Shown when not Instant) */}
 					{selectedTransition.type !== 'none' && (

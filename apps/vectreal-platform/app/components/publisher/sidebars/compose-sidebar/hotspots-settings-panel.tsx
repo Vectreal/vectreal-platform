@@ -14,21 +14,21 @@ import { useAtom } from 'jotai/react'
 import { Crosshair, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo } from 'react'
 
-import { isClickToPlaceActiveAtom } from '../../../../../lib/stores/publisher-config-store'
+import { isClickToPlaceActiveAtom } from '../../../../lib/stores/publisher-config-store'
 import {
 	activeHotspotIdAtom,
 	cameraAtom,
 	hotspotsAtom
-} from '../../../../../lib/stores/scene-settings-store'
-import { ToggleButtonGroup } from '../../../settings-components'
+} from '../../../../lib/stores/scene-settings-store'
+import { ToggleButtonGroup } from '../../settings-components'
 import {
 	SidebarSection,
 	SidebarSectionContent,
 	SettingRow,
 	SettingGroup
-} from '../../sidebar-section'
+} from '../sidebar-section'
 
-import type { ToggleButtonGroupOption } from '../../../settings-components'
+import type { ToggleButtonGroupOption } from '../../settings-components'
 import type { HotspotDefinition, HotspotStylePreset } from '@vctrl/core'
 
 function createHotspotId(): string {
