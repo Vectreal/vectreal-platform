@@ -58,19 +58,21 @@
 	--chart-4: oklch(0.627 0.265 303.9);
 	--chart-5: oklch(0.645 0.246 16.439);
 
-	/* Corner radii - confidently rounded, never tight */
-	--radius: 1.25rem;
-	--radius-sm: 0.875rem;
-	--radius-md: 1rem;
-	--radius-xl: 1.5rem;
-	--radius-2xl: 2rem;
+	/*
+	  Corner radii - confidently rounded, never tight.
 
-	/* Motion tokens */
-	--duration-instant: 80ms;
-	--duration-fast: 150ms;
-	--duration-base: 250ms;
-	--duration-slow: 400ms;
-	--duration-cinematic: 700ms;
+	  One knob. The rest of the scale is derived in `@theme` below, so the steps
+	  cannot drift apart. Do not re-declare `--radius-sm`/`-md`/`-xl`/`-2xl`
+	  here: those names are also Tailwind theme keys, and declaring them in both
+	  places is what previously made them self-referential.
+	*/
+	--radius: 1.25rem;
+
+	/*
+	  Motion tokens. The durations live in `@theme` below for the same reason the
+	  radius scale does: `--duration-*` is a Tailwind theme namespace, so
+	  declaring the names here too made them self-referential.
+	*/
 
 	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 	--ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
@@ -219,18 +221,27 @@
 	--color-surface-border-light: var(--surface-border-light);
 	--color-surface-glow-light: var(--surface-glow-light);
 
-	/* Motion duration utilities */
-	--duration-instant: var(--duration-instant);
-	--duration-fast: var(--duration-fast);
-	--duration-base: var(--duration-base);
-	--duration-slow: var(--duration-slow);
-	--duration-cinematic: var(--duration-cinematic);
+	/* Motion duration utilities: `duration-fast`, `duration-cinematic`, etc. */
+	--duration-instant: 80ms;
+	--duration-fast: 150ms;
+	--duration-base: 250ms;
+	--duration-slow: 400ms;
+	--duration-cinematic: 700ms;
 
-	--radius-sm: var(--radius-sm);
-	--radius-md: var(--radius-md);
+	/*
+	  Derived from the single `--radius` above rather than restating it. These
+	  used to read `--radius-sm: var(--radius-sm)`, which resolved against the
+	  identically named `:root` declaration and made the property cyclic. A
+	  cyclic custom property is invalid at computed-value time, so every
+	  `rounded-sm`/`-md`/`-xl`/`-2xl` collapsed to a square corner once the
+	  stylesheet finished applying. `rounded-lg` escaped only because
+	  `--radius-lg` reads `--radius`, a different name.
+	*/
+	--radius-sm: calc(var(--radius) - 6px);
+	--radius-md: calc(var(--radius) - 4px);
 	--radius-lg: var(--radius);
-	--radius-xl: var(--radius-xl);
-	--radius-2xl: var(--radius-2xl);
+	--radius-xl: calc(var(--radius) + 4px);
+	--radius-2xl: calc(var(--radius) + 12px);
 	--color-sidebar: var(--sidebar);
 	--color-sidebar-foreground: var(--sidebar-foreground);
 	--color-sidebar-primary: var(--sidebar-primary);

@@ -26,7 +26,7 @@ const popoverClasses = {
 	triggerButton:
 		'z-10 flex h-full w-full cursor-pointer items-center justify-center rounded-full border-0 bg-[var(--vctrl-bg)] p-1 leading-none appearance-none hover:bg-[var(--vctrl-hover-bg)] active:bg-[var(--vctrl-active-bg)]',
 	modalBase:
-		'vctrl-viewer-info-popover-modal absolute bottom-0 left-0 flex w-64 flex-col overflow-hidden rounded-lg bg-[var(--vctrl-bg)] text-[var(--vctrl-text)] transition-all duration-300 ease-out',
+		'vctrl-viewer-info-popover-modal absolute bottom-0 left-0 flex w-64 flex-col overflow-hidden rounded-[0.5rem] bg-[var(--vctrl-bg)] text-[var(--vctrl-text)] transition-all duration-300 ease-out',
 	modalOpen: 'visible translate-x-0 translate-y-0 opacity-100',
 	modalClosed: 'invisible -translate-x-2 translate-y-2 opacity-0',
 	textContainer: 'grow p-4 mr-4 [&_p]:text-sm [&_p]:text-[var(--vctrl-text)]',
