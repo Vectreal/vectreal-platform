@@ -2,6 +2,7 @@ import { data, useLoaderData } from 'react-router'
 
 import { Route } from './+types/billing'
 import { BillingSettingsSection } from '../../components/dashboard'
+import { BillingSkeleton } from '../../components/skeletons'
 import { loadBillingDashboardData } from '../../lib/domain/billing/billing-dashboard-loader.server'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -11,9 +12,13 @@ export async function loader({ request }: Route.LoaderArgs) {
 	return data(loaderData, { headers })
 }
 
+export function HydrateFallback() {
+	return <BillingSkeleton />
+}
+
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
-const BillingUpgradePage = () => {
+const BillingPage = () => {
 	const { billing } = useLoaderData<typeof loader>()
 
 	return (
@@ -23,4 +28,4 @@ const BillingUpgradePage = () => {
 	)
 }
 
-export default BillingUpgradePage
+export default BillingPage

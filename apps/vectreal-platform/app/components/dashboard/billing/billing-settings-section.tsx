@@ -1,6 +1,6 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
-import { Separator } from '@shared/components/ui/separator'
+import { useSetAtom } from 'jotai/react'
 import {
 	AlertTriangle,
 	ArrowUpRight,
@@ -19,7 +19,12 @@ import {
 	STORAGE_USAGE_HINT,
 	STORAGE_USAGE_LABEL
 } from '../../../constants/product-copy'
-import { UsageMeter } from '../usage-meter'
+import {
+	buildUpgradeModalState,
+	upgradeModalAtom
+} from '../../../lib/stores/upgrade-modal-store'
+import { InlineNotice } from '../../layout-components/inline-notice'
+import { hasUsagePressure, readUsage, UsageMeter } from '../usage-meter'
 
 import type { BillingState } from '../../../constants/plan-config'
 import type { BillingSettingsData } from '../../../lib/domain/dashboard/dashboard-types'
@@ -115,6 +120,7 @@ export function BillingSettingsSection({
 }: BillingSettingsSectionProps) {
 	const { plan, billingState, currentPeriodEnd, trialEnd, usage } = billing
 	const portalFetcher = useFetcher()
+	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 
 	const stateConfig = BILLING_STATE_CONFIG[billingState]
 	const StateIcon = stateConfig.icon
@@ -133,6 +139,24 @@ export function BillingSettingsSection({
 			: currentPeriodEnd
 				? new Date(currentPeriodEnd)
 				: null
+
+	/*
+	  Same pressure reading as the dashboard band, from the same function.
+
+	  This page listed seven meters and drew attention to none of them, so the
+	  one at 96% looked exactly like the one at 4%. The nudge appears only when
+	  something is actually close to a limit, which is what makes it worth
+	  reading when it does.
+	*/
+	const isUnderPressure = hasUsagePressure([
+		readUsage(usage.scenesTotal, usage.sceneLimit),
+		readUsage(usage.publishedScenes, usage.publishedSceneLimit),
+		readUsage(usage.projectsTotal, usage.projectsLimit),
+		readUsage(usage.storageBytesTotal, usage.storageLimit),
+		readUsage(usage.apiRequestsMonth, usage.apiRequestsMonthLimit),
+		readUsage(usage.embedBandwidthMonth, usage.embedBandwidthLimit),
+		readUsage(usage.previewLoadsMonth, usage.previewLoadsMonthLimit)
+	])
 
 	const handleOpenPortal = () => {
 		portalFetcher.submit({}, { method: 'POST', action: '/api/billing/portal' })
@@ -167,116 +191,127 @@ export function BillingSettingsSection({
 	}, [portalFetcher.state, portalFetcher.data])
 
 	return (
-		<div className="space-y-8">
-			{/* ── Plan header strip ─────────────────────────────── */}
-			<div className="space-y-4">
-				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-					<div className="flex items-center gap-3">
-						<h2 className="text-lg font-semibold tracking-tight">
-							{planLabel}
-						</h2>
-						<Badge
-							variant={stateConfig.variant}
-							className="flex items-center gap-1"
-						>
-							<StateIcon className="h-3 w-3" />
-							{stateConfig.label}
-						</Badge>
-						{renewalDate && (
-							<span className="text-muted-foreground hidden text-xs tabular-nums sm:inline">
+		<div className="space-y-4">
+			{/*
+			  Panels, not rules.
+
+			  The page was one flat column with `Separator` lines between its
+			  sections, which is the bordered-box pattern the surface ladder
+			  replaces: each section is now a raised panel that separates from the
+			  page by value, the same as every other dashboard surface.
+			*/}
+			<section className="ds-raised space-y-4 rounded-2xl p-5">
+				<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+					<div className="min-w-0 space-y-1">
+						<div className="flex flex-wrap items-center gap-2">
+							<h2 className="text-xl font-medium tracking-tight">{planLabel}</h2>
+							<Badge
+								variant={stateConfig.variant}
+								className="flex items-center gap-1"
+							>
+								<StateIcon className="size-3" />
+								{stateConfig.label}
+							</Badge>
+						</div>
+						{/*
+						  One renewal line, not two. It used to be written twice - once
+						  `hidden sm:inline` and once `sm:hidden` - so the same sentence
+						  had to be kept in sync in two places to change a word.
+						*/}
+						{renewalDate ? (
+							<p className="text-muted-foreground text-sm tabular-nums">
 								{billingState === 'trialing' ? 'Trial ends' : 'Renews'}{' '}
 								{renewalDate.toLocaleDateString(undefined, {
 									month: 'short',
 									day: 'numeric',
 									year: 'numeric'
 								})}
-							</span>
-						)}
+							</p>
+						) : null}
 					</div>
-					<div className="flex items-center gap-2">
+
+					<div className="flex shrink-0 flex-wrap items-center gap-2">
 						{isPaid && !isEnterprise && (
 							<Button
-								variant="outline"
+								variant="secondary"
 								size="sm"
 								onClick={handleOpenPortal}
 								disabled={portalFetcher.state !== 'idle'}
 							>
-								<ExternalLink className="mr-1.5 h-3 w-3" />
+								<ExternalLink className="size-3.5" />
 								{portalFetcher.state !== 'idle' ? 'Opening…' : 'Manage billing'}
 							</Button>
 						)}
 						{!isEnterprise && (
-							<Link to={checkoutPath}>
-								<Button size="sm" variant={isPaid ? 'ghost' : 'default'}>
-									<ArrowUpRight className="mr-1.5 h-3 w-3" />
+							<Button size="sm" variant={isPaid ? 'ghost' : 'default'} asChild>
+								<Link to={checkoutPath}>
+									<ArrowUpRight className="size-3.5" />
 									{isPaid ? 'View plans' : 'Upgrade'}
-								</Button>
-							</Link>
+								</Link>
+							</Button>
 						)}
 						{isEnterprise && (
-							<Link to="/contact">
-								<Button variant="outline" size="sm">
-									Contact account team
-								</Button>
-							</Link>
+							<Button variant="secondary" size="sm" asChild>
+								<Link to="/contact">Contact account team</Link>
+							</Button>
 						)}
 					</div>
 				</div>
 
-				{/* Mobile renewal date */}
-				{renewalDate && (
-					<p className="text-muted-foreground text-xs tabular-nums sm:hidden">
-						{billingState === 'trialing' ? 'Trial ends' : 'Renews'}{' '}
-						{renewalDate.toLocaleDateString(undefined, {
-							month: 'short',
-							day: 'numeric',
-							year: 'numeric'
-						})}
-					</p>
-				)}
-
-				{/* Warning alert bar */}
-				{showWarning && (
-					<div className="bg-destructive/5 border-destructive/20 flex items-start gap-2.5 rounded-lg border px-3 py-2.5">
-						<AlertTriangle className="text-destructive mt-0.5 h-3.5 w-3.5 shrink-0" />
-						<p className="text-destructive text-xs leading-relaxed">
-							{stateConfig.description}
-						</p>
-					</div>
-				)}
-			</div>
-
-			{/* ── KPI stat grid ─────────────────────────────────── */}
-			<section className="grid grid-cols-2 gap-3 md:grid-cols-3">
-				<UsageMeter
-					label="Scenes"
-					current={usage.scenesTotal}
-					limit={usage.sceneLimit}
-				/>
-				<UsageMeter
-					label="Projects"
-					current={usage.projectsTotal}
-					limit={usage.projectsLimit}
-				/>
-				<UsageMeter
-					label="Published"
-					current={usage.publishedScenes}
-					limit={usage.publishedSceneLimit}
-				/>
+				{showWarning ? (
+					<InlineNotice
+						tone="error"
+						className="flex items-start gap-2.5 leading-relaxed"
+					>
+						<AlertTriangle className="mt-px size-3.5 shrink-0" />
+						<span>{stateConfig.description}</span>
+					</InlineNotice>
+				) : null}
 			</section>
 
-			<Separator />
+			{/*
+			  Seven readings, each shown once.
 
-			{/* ── Detailed usage meters ────────────────────────── */}
-			<section className="grid gap-8 md:grid-cols-2">
-				<div className="space-y-4">
-					<p className="text-muted-foreground text-eyebrow">
-						Content
-					</p>
+			  Scenes, Projects and Published were rendered twice - as tiles at the
+			  top and again as rows below - so a third of the page repeated itself
+			  while the storage and delivery figures got a single line each.
+
+			  The two groups are what you keep and what you serve. Splitting them
+			  that way also collects every per-month limit in one place, instead of
+			  scattering "/mo" across three headings, and retires the
+			  "API & processing" group that existed to head a single row.
+			*/}
+			<section className="ds-raised space-y-5 rounded-2xl p-5">
+				<div className="flex flex-wrap items-center justify-between gap-2">
+					<h3 className="text-muted-foreground text-eyebrow">
+						Usage against your plan
+					</h3>
+					{isUnderPressure && !isEnterprise ? (
+						<Button
+							size="sm"
+							variant="secondary"
+							onClick={() =>
+								setUpgradeModal(
+									buildUpgradeModalState({
+										plan,
+										message:
+											'You are close to a limit on this plan. Upgrading raises them.',
+										actionAttempted: 'billing_usage_panel'
+									})
+								)
+							}
+						>
+							Upgrade
+						</Button>
+					) : null}
+				</div>
+
+				<div className="grid gap-x-10 gap-y-6 md:grid-cols-2">
 					<div className="space-y-3">
+						<p className="text-muted-foreground text-eyebrow">Stored</p>
 						<UsageMeter
 							variant="row"
-							label="Scenes (total)"
+							label="Scenes"
 							current={usage.scenesTotal}
 							limit={usage.sceneLimit}
 						/>
@@ -292,27 +327,6 @@ export function BillingSettingsSection({
 							current={usage.projectsTotal}
 							limit={usage.projectsLimit}
 						/>
-					</div>
-				</div>
-				<div className="space-y-4">
-					<p className="text-muted-foreground text-eyebrow">
-						API &amp; processing
-					</p>
-					<div className="space-y-3">
-						<UsageMeter
-							variant="row"
-							label="API requests"
-							current={usage.apiRequestsMonth}
-							limit={usage.apiRequestsMonthLimit}
-							monthly
-						/>
-					</div>
-				</div>
-				<div className="space-y-4">
-					<p className="text-muted-foreground text-eyebrow">
-						Storage &amp; bandwidth
-					</p>
-					<div className="space-y-3">
 						<UsageMeter
 							variant="row"
 							label={`${STORAGE_USAGE_LABEL} (MB)`}
@@ -324,6 +338,10 @@ export function BillingSettingsSection({
 									: null
 							}
 						/>
+					</div>
+
+					<div className="space-y-3">
+						<p className="text-muted-foreground text-eyebrow">Served</p>
 						<UsageMeter
 							variant="row"
 							label="Embed bandwidth (GB)"
@@ -338,14 +356,18 @@ export function BillingSettingsSection({
 							limit={usage.previewLoadsMonthLimit}
 							monthly
 						/>
+						<UsageMeter
+							variant="row"
+							label="API requests"
+							current={usage.apiRequestsMonth}
+							limit={usage.apiRequestsMonthLimit}
+							monthly
+						/>
 					</div>
 				</div>
 			</section>
 
-			<Separator />
-
-			{/* ── Footer: quick links + upgrade hint ───────────── */}
-			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+			<div className="flex flex-col gap-3 px-1 sm:flex-row sm:items-center sm:justify-between">
 				<nav className="text-muted-foreground flex items-center gap-1.5 text-xs">
 					<a
 						href="https://discord.gg/vectreal"
@@ -368,16 +390,18 @@ export function BillingSettingsSection({
 					</Link>
 				</nav>
 
-				{!isPaid && (
-					<p className="text-muted-foreground text-xs">
-						Need more?{' '}
-						<Link
-							to={DASHBOARD_ROUTES.BILLING_UPGRADE}
-							className="text-foreground underline-offset-4 hover:underline"
-						>
-							Compare plans
-						</Link>
-					</p>
+				{/*
+				  Offered to anyone who can move up, not only to free users. A Pro
+				  account has a Business plan above it, and this link was the only
+				  route to the comparison table for someone who already pays.
+				*/}
+				{!isEnterprise && (
+					<Link
+						to={DASHBOARD_ROUTES.BILLING_UPGRADE}
+						className="text-muted-foreground hover:text-foreground text-xs"
+					>
+						Compare plans
+					</Link>
 				)}
 			</div>
 		</div>

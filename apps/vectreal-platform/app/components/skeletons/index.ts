@@ -1,3 +1,4 @@
+export { BillingSkeleton } from './billing-skeleton'
 export { DashboardSkeleton } from './dashboard-skeleton'
 export { OrganizationsSkeleton } from './organizations-skeleton'
 export { ProjectsGridSkeleton } from './projects-grid-skeleton'
