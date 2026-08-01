@@ -1,18 +1,37 @@
 import { Button } from '@shared/components/ui/button'
-import { useMemo } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
 import SceneEmbedInfoPopover from './scene-embed-info-popover'
 import SceneEmbedViewer from './scene-embed-viewer'
 import { useSceneEmbedScene } from './use-scene-embed-scene'
 import { useHostedPreviewBridge } from '../../lib/domain/embed/hosted-preview-bridge'
+import { isSceneCamera } from '../../lib/domain/scene/scene-camera'
 import CenteredSpinner from '../centered-spinner'
 
-import type { ViewerCommand } from '@vctrl/viewer'
+import type {
+	ViewerCommand,
+	ViewerCommandExecutor,
+	ViewerInteractionEvent
+} from '@vctrl/viewer'
+import type { ReactNode } from 'react'
+
+/** What an overlay needs from the running viewer. */
+export interface SceneEmbedViewerControl {
+	/** Scene cameras only; hotspots and the like are navigational. */
+	cameras: { cameraId: string; name?: null | string }[]
+	activeCameraId: null | string
+	activateCamera: (cameraId: string) => void
+}
 
 export interface SceneEmbedPageProps {
 	projectId?: string
 	sceneId?: string
+	/**
+	 * Rendered over the viewer. A function because chrome needs the live control
+	 * surface, which only exists once the viewer has registered its executor.
+	 */
+	chrome?: (control: SceneEmbedViewerControl) => ReactNode
 }
 
 /** Opening viewer state driven by the embed URL's query parameters. */
@@ -51,20 +70,62 @@ function useInitialCommands(): ViewerCommand[] {
  * layout authenticates the request. Anything a surface adds on top (the
  * internal preview's chrome) wraps this rather than being switched on inside.
  */
-const SceneEmbedPage = ({ projectId, sceneId }: SceneEmbedPageProps) => {
+const SceneEmbedPage = ({
+	projectId,
+	sceneId,
+	chrome
+}: SceneEmbedPageProps) => {
 	const { file, isLoadingScene, sceneData, loadError, retrySceneLoad } =
 		useSceneEmbedScene({
 			sceneId,
 			projectId
 		})
 	const initialCommands = useInitialCommands()
-	const { onCommandExecutorReady, onInteractionEvent } = useHostedPreviewBridge(
-		{
-			sceneId,
-			interactions: sceneData?.interactions,
-			cameras: sceneData?.camera?.cameras,
-			initialCommands
+	const bridge = useHostedPreviewBridge({
+		sceneId,
+		interactions: sceneData?.interactions,
+		cameras: sceneData?.camera?.cameras,
+		initialCommands
+	})
+
+	const executorRef = useRef<null | ViewerCommandExecutor>(null)
+	const [activeCameraId, setActiveCameraId] = useState<null | string>(null)
+
+	// `useHostedPreviewBridge` returns a fresh object each render, and the viewer
+	// re-runs its executor-registration effect whenever these props change
+	// identity — unregistering with `null` on the way through. Reading the bridge
+	// from a ref keeps the callbacks below referentially stable, so tracking the
+	// active camera in state cannot tear down the executor that switching needs.
+	const bridgeRef = useRef(bridge)
+	bridgeRef.current = bridge
+
+	// The embed SDK bridge and the chrome both need these, so they chain rather
+	// than compete for the viewer's single callback slot.
+	const onCommandExecutorReady = useCallback(
+		(executor: null | ViewerCommandExecutor) => {
+			executorRef.current = executor
+			bridgeRef.current.onCommandExecutorReady?.(executor)
+		},
+		[]
+	)
+
+	const onInteractionEvent = useCallback((event: ViewerInteractionEvent) => {
+		if (event.type === 'camera_changed') {
+			setActiveCameraId(event.cameraId)
+		} else if (event.type === 'initial_framing_completed' && event.cameraId) {
+			setActiveCameraId(event.cameraId)
 		}
+
+		bridgeRef.current.onInteractionEvent?.(event)
+	}, [])
+
+	const activateCamera = useCallback((cameraId: string) => {
+		executorRef.current?.execute({ type: 'activate_camera', cameraId })
+	}, [])
+
+	const sceneCameras = useMemo(
+		() => (sceneData?.camera?.cameras ?? []).filter(isSceneCamera),
+		[sceneData?.camera?.cameras]
 	)
 
 	if (isLoadingScene && !file?.model) {
@@ -95,19 +156,25 @@ const SceneEmbedPage = ({ projectId, sceneId }: SceneEmbedPageProps) => {
 	}
 
 	return (
-		<SceneEmbedViewer
-			className="h-screen"
-			file={file}
-			sceneData={sceneData}
-			onCommandExecutorReady={onCommandExecutorReady}
-			onInteractionEvent={onInteractionEvent}
-			popover={
-				<SceneEmbedInfoPopover
-					title={sceneData?.meta?.name?.trim() || undefined}
-					description={sceneData?.meta?.description?.trim() || undefined}
-				/>
-			}
-		/>
+		<div className="relative h-screen w-full">
+			<SceneEmbedViewer
+				file={file}
+				sceneData={sceneData}
+				onCommandExecutorReady={onCommandExecutorReady}
+				onInteractionEvent={onInteractionEvent}
+				popover={
+					<SceneEmbedInfoPopover
+						title={sceneData?.meta?.name?.trim() || undefined}
+						description={sceneData?.meta?.description?.trim() || undefined}
+					/>
+				}
+			/>
+			{chrome?.({
+				cameras: sceneCameras,
+				activeCameraId,
+				activateCamera
+			})}
+		</div>
 	)
 }
 
