@@ -33,6 +33,26 @@ import {
 } from '../../lib/seo-registry'
 import { identifyMobileRequest } from '../../lib/utils/identify-mobile-request'
 
+/*
+  Literal colours, deliberately outside the token system.
+
+  The panel below is a picture of someone else's interface: macOS window
+  controls and a Tokyo Night editor. They have to stay put when this site's
+  theme changes, so tokenising them would be the bug, not the fix. Naming them
+  says so, and gives a lint rule something to allowlist.
+*/
+const WINDOW_CONTROLS = {
+	close: '#ff5f57',
+	minimize: '#febc2e',
+	zoom: '#28c840'
+} as const
+
+const SYNTAX = {
+	keyword: '#7aa2f7',
+	component: '#e0af68',
+	attribute: '#9ece6a'
+} as const
+
 export async function loader({ request }: Route.LoaderArgs) {
 	const isMobile = identifyMobileRequest(request)
 	return { isMobile }
@@ -331,9 +351,24 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 					{/* Right: real install + usage code visual */}
 					<div className="bg-surface-1 border-surface-border overflow-hidden rounded-2xl border shadow-xl">
 						<div className="border-surface-border flex items-center gap-2 border-b px-4 py-3">
-							<span className="size-3 rounded-full bg-[#ff5f57]" />
-							<span className="size-3 rounded-full bg-[#febc2e]" />
-							<span className="size-3 rounded-full bg-[#28c840]" />
+							{/*
+							  Deliberately literal, not tokens. These depict macOS window
+							  controls and a Tokyo Night editor - they are a picture of
+							  someone else's UI, so they must not follow this site's theme.
+							  See WINDOW_CONTROLS and SYNTAX above.
+							*/}
+							<span
+								className="size-3 rounded-full"
+								style={{ background: WINDOW_CONTROLS.close }}
+							/>
+							<span
+								className="size-3 rounded-full"
+								style={{ background: WINDOW_CONTROLS.minimize }}
+							/>
+							<span
+								className="size-3 rounded-full"
+								style={{ background: WINDOW_CONTROLS.zoom }}
+							/>
 							<span className="text-muted-foreground/60 ml-2 text-xs">
 								your-app.tsx
 							</span>
@@ -348,15 +383,15 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 								<span className="text-muted-foreground/50">
 									{'// Drop a model into any React app\n'}
 								</span>
-								<span className="text-[#7aa2f7]">{'import'}</span>
+								<span style={{ color: SYNTAX.keyword }}>{'import'}</span>
 								<span className="text-foreground">
 									{' { VectrealViewer } '}
 								</span>
-								<span className="text-[#7aa2f7]">{'from'}</span>
+								<span style={{ color: SYNTAX.keyword }}>{'from'}</span>
 								<span className="text-orange">{" '@vctrl/viewer'\n\n"}</span>
 								<span className="text-foreground">{'<'}</span>
-								<span className="text-[#e0af68]">{'VectrealViewer'}</span>
-								<span className="text-[#9ece6a]">{' src'}</span>
+								<span style={{ color: SYNTAX.component }}>{'VectrealViewer'}</span>
+								<span style={{ color: SYNTAX.attribute }}>{' src'}</span>
 								<span className="text-foreground">{'='}</span>
 								<span className="text-orange">{'{modelUrl}'}</span>
 								<span className="text-foreground">{' />'}</span>

@@ -202,11 +202,11 @@ export default function ConfirmPending() {
 						<div
 							className="flex h-16 w-16 items-center justify-center rounded-2xl"
 							style={{
-								background: 'rgba(252,108,24,0.1)',
-								border: '1px solid rgba(252,108,24,0.2)'
+								background: 'rgb(var(--orange-rgb) / 0.1)',
+								border: '1px solid rgb(var(--orange-rgb) / 0.2)'
 							}}
 						>
-							<Mail className="h-7 w-7" style={{ color: '#fc6c18' }} />
+							<Mail className="h-7 w-7" style={{ color: 'var(--orange)' }} />
 						</div>
 					</motion.div>
 
