@@ -20,16 +20,29 @@ function HoverCardContent({
 	className,
 	align = 'center',
 	sideOffset = 4,
+	container,
 	...props
-}: React.ComponentProps<typeof HoverCardPrimitive.Content>) {
+}: React.ComponentProps<typeof HoverCardPrimitive.Content> & {
+	/**
+	 * Portal target. The content mounts on `document.body` by default, which
+	 * puts it outside any themed subtree - so a hover card opened inside a
+	 * `.dark` container renders with light tokens. Pass the themed element to
+	 * keep it in scope. Storybook's side-by-side themes need this; so does any
+	 * app region that themes a subtree rather than the document.
+	 */
+	container?: HTMLElement | null
+}) {
 	return (
-		<HoverCardPrimitive.Portal data-slot="hover-card-portal">
+		<HoverCardPrimitive.Portal
+			data-slot="hover-card-portal"
+			container={container}
+		>
 			<HoverCardPrimitive.Content
 				data-slot="hover-card-content"
 				align={align}
 				sideOffset={sideOffset}
 				className={cn(
-					'bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-64 origin-(--radix-hover-card-content-transform-origin) rounded-xl! border p-4 shadow-md outline-hidden',
+					'ds-overlay text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-64 origin-(--radix-hover-card-content-transform-origin) rounded-xl! p-4 shadow-md outline-hidden',
 					className
 				)}
 				{...props}
