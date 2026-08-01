@@ -156,13 +156,13 @@ Based on [@react-three/drei OrbitControls](https://github.com/pmndrs/drei#orbitc
 
 Current commands:
 
-| Command                | Payload                | Effect                                             |
-| ---------------------- | ---------------------- | -------------------------------------------------- |
-| `activate_camera`      | `{ cameraId: string }`                        | Transitions to one of the configured scene cameras |
-| `set_controls_enabled` | `{ enabled: boolean }`                        | Temporarily enables or disables orbit interaction  |
-| `set_transition`       | `{ transitionType: 'none' \| 'linear' \| 'object_avoidance'; duration?: number; easing?: string }` | Overrides the active camera transition |
-| `set_auto_rotate`      | `{ enabled: boolean; speed?: number }`        | Toggles and configures auto-rotation               |
-| `set_controls_options` | `{ zoom?: boolean; pan?: boolean }`           | Enables or disables zoom/pan interaction at runtime |
+| Command                | Payload                                                                                            | Effect                                              |
+| ---------------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `activate_camera`      | `{ cameraId: string }`                                                                             | Transitions to one of the configured scene cameras  |
+| `set_controls_enabled` | `{ enabled: boolean }`                                                                             | Temporarily enables or disables orbit interaction   |
+| `set_transition`       | `{ transitionType: 'none' \| 'linear' \| 'object_avoidance'; duration?: number; easing?: string }` | Overrides the active camera transition              |
+| `set_auto_rotate`      | `{ enabled: boolean; speed?: number }`                                                             | Toggles and configures auto-rotation                |
+| `set_controls_options` | `{ zoom?: boolean; pan?: boolean }`                                                                | Enables or disables zoom/pan interaction at runtime |
 
 ### Events
 
@@ -423,7 +423,13 @@ export default function App() {
 ```bash
 pnpm nx build vctrl/viewer
 pnpm nx test vctrl/viewer
-pnpm nx storybook vctrl/viewer
+```
+
+The viewer's stories live in the workspace-wide Storybook, alongside the shared
+design system:
+
+```bash
+pnpm nx storybook storybook
 ```
 
 ---

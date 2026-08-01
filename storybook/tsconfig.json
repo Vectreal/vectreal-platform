@@ -5,10 +5,7 @@
 		"outDir": "",
 		"moduleResolution": "bundler",
 		"noEmit": true,
-		"types": [
-			"vite/client",
-			"node"
-		],
+		"types": ["vite/client", "node"],
 		"allowSyntheticDefaultImports": true,
 		"strict": true
 	},

@@ -1,10 +1,6 @@
 {
-	"name": "@vectreal/storybook",
+	"name": "@vctrl/storybook",
 	"version": "0.0.1",
 	"private": true,
-	"type": "module",
-	"scripts": {
-		"build-storybook": "storybook build",
-		"storybook": "storybook dev"
-	}
+	"type": "module"
 }

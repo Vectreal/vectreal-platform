@@ -7,9 +7,7 @@
 	"targets": {
 		"lint": {
 			"executor": "@nx/eslint:lint",
-			"outputs": [
-				"{options.outputFile}"
-			],
+			"outputs": ["{options.outputFile}"],
 			"options": {
 				"fix": true,
 				"lintFilePatterns": [
@@ -27,9 +25,7 @@
 		},
 		"build": {
 			"executor": "@nx/vite:build",
-			"outputs": [
-				"{options.outputPath}"
-			],
+			"outputs": ["{options.outputPath}"],
 			"defaultConfiguration": "production",
 			"options": {
 				"outputPath": "build/shared/components",
@@ -46,9 +42,7 @@
 		},
 		"build-ci": {
 			"executor": "@nx/vite:build",
-			"outputs": [
-				"{options.outputPath}"
-			],
+			"outputs": ["{options.outputPath}"],
 			"defaultConfiguration": "production",
 			"options": {
 				"outputPath": "build/shared/components",

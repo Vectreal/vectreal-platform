@@ -17,25 +17,13 @@
 			"dependsOn": [
 				"typecheck",
 				{
-					"projects": [
-						"vctrl/viewer"
-					],
+					"projects": ["vctrl/viewer"],
 					"target": "typecheck-storybook"
 				}
 			],
-			"outputs": [
-				"{projectRoot}/storybook-static"
-			],
+			"outputs": ["{projectRoot}/storybook-static"],
 			"options": {
 				"command": "storybook build",
-				"cwd": "storybook"
-			}
-		},
-		"storybook-dev": {
-			"executor": "nx:run-commands",
-			"continuous": true,
-			"options": {
-				"command": "storybook dev",
 				"cwd": "storybook"
 			}
 		}
