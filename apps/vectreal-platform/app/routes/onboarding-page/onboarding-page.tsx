@@ -88,7 +88,7 @@ const PillGroup = ({
 					className={cn(
 						'rounded-full border px-4 py-1.5 text-sm font-medium transition-all duration-150',
 						active
-							? 'border-[rgba(252,108,24,0.6)] bg-[rgba(252,108,24,0.12)] text-[#fc6c18]'
+							? 'border-[rgb(var(--orange-rgb)/0.6)] bg-[rgb(var(--orange-rgb)/0.12)] text-orange'
 							: 'text-primary/55 hover:border-primary/25 hover:text-primary/80 border-primary/12 bg-primary/4'
 					)}
 				>
@@ -126,9 +126,9 @@ const StepDot = ({
 				width: active ? 28 : 8,
 				height: 8,
 				backgroundColor: active
-					? '#fc6c18'
+					? 'var(--orange)'
 					: completed
-						? 'rgba(252,108,24,0.55)'
+						? 'rgb(var(--orange-rgb) / 0.55)'
 						: 'var(--primary)'
 			}}
 			transition={{ type: 'spring', stiffness: 500, damping: 35 }}

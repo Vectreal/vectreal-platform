@@ -107,7 +107,7 @@ const HotspotDot: FC<HotspotDotProps> = memo(
 			isSelected && isHotspotToolActive
 				? '#f97316'
 				: isLinkedCameraActive
-					? '#22c55e'
+					? 'var(--success)'
 					: hotspot.visible
 						? '#3b82f6'
 						: '#6b7280'

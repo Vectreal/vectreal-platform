@@ -57,12 +57,10 @@ export const OptimizationOptions: FC = () => {
 	const enabledKeys = listEnabledKeys(optimizations)
 
 	return (
-		<div className="space-y-3 pb-3">
+		<div className="space-y-3 pb-4">
 			<div className="flex items-center justify-between gap-2">
-				<p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
-					Preset
-				</p>
-				<span className="bg-shell-surface text-foreground rounded-lg px-2 py-0.5 text-xs font-medium">
+				<p className="text-muted-foreground text-eyebrow">Preset</p>
+				<span className="publisher-shell-nested text-foreground rounded-full px-2 py-0.5 text-xs font-medium">
 					{PRESET_LABELS[optimizationPreset] ?? optimizationPreset}
 				</span>
 			</div>

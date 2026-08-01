@@ -342,10 +342,56 @@
 		@apply bg-background text-foreground;
 	}
 
-	/* Explicitly inherit color so browser UA blue never bleeds through */
+	/*
+	  Heading defaults, so an `<h2>` with no size class is not left at the
+	  browser's 2em bold.
+
+	  These arrived from the app's `global.module.css`, where they were written
+	  as a raw scale (2.5rem/1.75rem) with a hardcoded 768px breakpoint. That
+	  file is a CSS module and therefore unlayered, and unlayered declarations
+	  beat anything in a layer whatever its specificity - so those rules silently
+	  overrode every Tailwind font-size on every h2 and h3 in the app. In `base`
+	  they do what a default should: apply when nothing else does, and lose to
+	  any class the markup actually asks for.
+	*/
+	h2 {
+		font-size: var(--text-h2);
+		font-weight: 400;
+		line-height: 1.1;
+		letter-spacing: var(--tracking-h2);
+	}
+
+	h3 {
+		font-size: var(--text-h3);
+		font-weight: 400;
+		line-height: 1.18;
+		letter-spacing: var(--tracking-h3);
+	}
+
+	/*
+	  Body copy inside a `<section>` reads as secondary by default. Kept as-is
+	  from `global.module.css` rather than dropped, so this PR does not also
+	  restyle every marketing section - but it is a broad default to be holding
+	  in base, and worth revisiting once call sites state their own intent.
+	*/
+	section p,
+	section li {
+		color: var(--muted-foreground);
+		font-weight: 400;
+		line-height: 1.5;
+	}
+
+	/*
+	  Explicitly inherit color so browser UA blue never bleeds through. The
+	  cursor and underline resets moved here from the app's `global.module.css`,
+	  which was applied to the document root and so was already global - only
+	  unlayered, and therefore unoverridable.
+	*/
 	a,
 	button {
 		color: inherit;
+		cursor: pointer;
+		text-decoration: none;
 	}
 }
 
@@ -581,8 +627,35 @@
 		@apply bg-shell-surface border-shell-border-soft rounded-xl border shadow-xl backdrop-blur-xl;
 	}
 
+	/*
+	  A block nested inside a publisher shell panel.
+
+	  Deliberately not `ds-raised`. The `ds-*` ladder mixes against `--background`
+	  because it describes surfaces sitting on the page; a shell panel does not —
+	  it floats over the 3D canvas at its own opacity, and in dark mode it is
+	  lighter than the page background. Mixing against `--background` there put a
+	  nested block *below* the panel it sits on.
+
+	  So it uses the ladder's mechanism (a value tint, never a border) against a
+	  transparent base, which separates from whatever the panel resolves to in
+	  either theme. It also stacks: a block nested inside a nested block reaches
+	  the next step up on its own, the same way the `ds-*` ladder self-corrects.
+
+	  Radius is left to the caller. Panels take `rounded-2xl` and inner blocks
+	  `rounded-xl`, and baking one in meant call sites had to override it with
+	  another utility from the same layer — a precedence coin-flip.
+	*/
 	.publisher-shell-nested {
-		@apply bg-shell-surface-soft rounded-xl shadow-sm;
+		background-color: color-mix(in oklch, var(--foreground) 5%, transparent);
+	}
+
+	/* Same surface, for blocks that are themselves the control. */
+	.publisher-shell-nested-interactive {
+		background-color: color-mix(in oklch, var(--foreground) 5%, transparent);
+		transition: background-color var(--duration-fast) var(--ease-out);
+	}
+	.publisher-shell-nested-interactive:hover {
+		background-color: color-mix(in oklch, var(--foreground) 9%, transparent);
 	}
 
 	.publisher-shell-focus {

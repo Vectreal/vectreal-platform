@@ -22,6 +22,7 @@ import {
 	toAbsoluteEmbedUrl
 } from '../../lib/domain/embed/embed-snippet'
 import { InfoTooltip } from '../info-tooltip'
+import { InlineNotice } from '../layout-components'
 
 interface EmbedOptionsPanelProps {
 	sceneId?: string
@@ -162,20 +163,18 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 	return (
 		<div className={cn('space-y-3', className)}>
 			{!canEmbed && (
-				<div className="border-warning/40 bg-warning/10 text-warning-muted-foreground rounded-2xl border px-3 py-2 text-xs">
-					{EMBED_COPY.unavailableUntilSaved}
-				</div>
+				<InlineNotice>{EMBED_COPY.unavailableUntilSaved}</InlineNotice>
 			)}
 			{canEmbed && (
-				<div className="border-warning/40 bg-warning/10 text-warning-muted-foreground rounded-2xl border px-3 py-2 text-xs">
+				<InlineNotice>
 					{EMBED_COPY.draftWarningPrefix}
 					<code className="mx-1">{PREVIEW_API_KEY_PLACEHOLDER}</code>
 					{EMBED_COPY.draftWarningSuffix}
-					<div className="text-warning-foreground/90 mt-1 text-[11px]">
+					<div className="text-label-xs mt-1 opacity-80">
 						Tip: create separate keys per environment and restrict keys to only
 						the projects each embed needs.
 					</div>
-				</div>
+				</InlineNotice>
 			)}
 
 			<div className="grid grid-cols-2 gap-4">

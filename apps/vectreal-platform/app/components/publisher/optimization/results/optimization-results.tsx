@@ -54,9 +54,9 @@ export const OptimizationResults: FC<OptimizationResultsProps> = ({
 			animate={{ opacity: 1, y: 0 }}
 			exit={{ opacity: 0, y: -8 }}
 			transition={{ duration: 0.3 }}
-			className="publisher-shell-nested space-y-1 px-4 pt-3 pb-1"
+			className="publisher-shell-nested space-y-1 rounded-xl px-4 pt-3 pb-1"
 		>
-			<p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+			<p className="text-muted-foreground text-eyebrow">
 				Optimization result
 			</p>
 

@@ -15,12 +15,28 @@ import {
 
 const OnboardingWelcomeScene = lazy(() => import('./onboarding-welcome-client'))
 
+/*
+  These panels are always dark - they sit on the onboarding backdrop, not on the
+  page surface - so they tint with white rather than with `--foreground`, and
+  the `ds-*` ladder does not apply. Naming the steps is still worth doing: there
+  were six distinct white alphas here and nothing said which was a hairline,
+  which was a resting surface and which was a raised one.
+*/
+const TINT = {
+	hairline: 'rgb(255 255 255 / 0.12)',
+	edge: 'rgb(255 255 255 / 0.16)',
+	surface: 'rgb(255 255 255 / 0.04)',
+	surfaceRaised: 'rgb(255 255 255 / 0.06)',
+	dots: 'rgb(255 255 255 / 0.35)',
+	mutedText: 'rgb(255 255 255 / 0.4)'
+} as const
+
 const GridBackground = () => (
 	<div
 		className="absolute inset-0 opacity-25"
 		style={{
 			backgroundImage:
-				'radial-gradient(circle, rgba(255,255,255,0.35) 1px, transparent 1px)',
+				`radial-gradient(circle, ${TINT.dots} 1px, transparent 1px)`,
 			backgroundSize: '24px 24px'
 		}}
 	/>
@@ -45,12 +61,12 @@ const SceneStatusBadge = ({ published }: SceneStatusBadgeProps) => (
 		animate={
 			published
 				? {
-						backgroundColor: 'rgba(252,108,24,0.15)',
-						color: '#fc6c18'
+						backgroundColor: 'rgb(var(--orange-rgb) / 0.15)',
+						color: 'var(--orange)'
 					}
 				: {
-						backgroundColor: 'rgba(255,255,255,0.06)',
-						color: 'rgba(255,255,255,0.4)'
+						backgroundColor: TINT.surfaceRaised,
+						color: TINT.mutedText
 					}
 		}
 		transition={{ duration: 0.3 }}
@@ -93,7 +109,7 @@ export const WelcomeVisual: ComponentType = () => {
 					className="absolute top-6 -right-24 h-64 w-64 rounded-full"
 					style={{
 						background:
-							'radial-gradient(circle, rgba(252,108,24,0.22), transparent 70%)',
+							'radial-gradient(circle, rgb(var(--orange-rgb) / 0.22), transparent 70%)',
 						filter: 'blur(42px)'
 					}}
 				/>
@@ -101,7 +117,7 @@ export const WelcomeVisual: ComponentType = () => {
 					className="absolute bottom-8 -left-16 h-48 w-48 rounded-full"
 					style={{
 						background:
-							'radial-gradient(circle, rgba(255,255,255,0.12), transparent 70%)',
+							`radial-gradient(circle, ${TINT.hairline}, transparent 70%)`,
 						filter: 'blur(36px)'
 					}}
 				/>
@@ -126,7 +142,7 @@ export const UploadVisual: ComponentType = () => {
 				className="pointer-events-none absolute inset-0"
 				style={{
 					background:
-						'radial-gradient(circle at 55% 45%, rgba(252,108,24,0.12) 0%, transparent 62%)'
+						'radial-gradient(circle at 55% 45%, rgb(var(--orange-rgb) / 0.12) 0%, transparent 62%)'
 				}}
 			/>
 
@@ -138,9 +154,9 @@ export const UploadVisual: ComponentType = () => {
 						className="relative z-10 flex w-[74%] max-w-[460px] flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-white/20 py-12"
 						animate={{
 							borderColor: [
-								'rgba(255,255,255,0.16)',
-								'rgba(252,108,24,0.55)',
-								'rgba(255,255,255,0.16)'
+								TINT.edge,
+								'rgb(var(--orange-rgb) / 0.55)',
+								TINT.edge
 							]
 						}}
 						transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
@@ -159,7 +175,7 @@ export const UploadVisual: ComponentType = () => {
 								className="pointer-events-none absolute inset-0 -z-10 rounded-2xl"
 								style={{
 									background:
-										'radial-gradient(circle, rgba(252,108,24,0.35) 0%, transparent 70%)',
+										'radial-gradient(circle, rgb(var(--orange-rgb) / 0.35) 0%, transparent 70%)',
 									filter: 'blur(18px)'
 								}}
 							/>
@@ -226,7 +242,7 @@ export const PublishVisual: ComponentType = () => {
 				className="pointer-events-none absolute inset-0"
 				style={{
 					background:
-						'radial-gradient(circle at 72% 56%, rgba(252,108,24,0.14) 0%, transparent 60%)'
+						'radial-gradient(circle at 72% 56%, rgb(var(--orange-rgb) / 0.14) 0%, transparent 60%)'
 				}}
 			/>
 
@@ -238,7 +254,7 @@ export const PublishVisual: ComponentType = () => {
 							className="relative z-10 size-28 rounded-3xl"
 							style={{
 								background:
-									'linear-gradient(135deg, rgba(252,108,24,0.75), rgba(252,108,24,0.38))'
+									'linear-gradient(135deg, rgb(var(--orange-rgb) / 0.75), rgb(var(--orange-rgb) / 0.38))'
 							}}
 							animate={{ rotate: 360 }}
 							transition={{ duration: 11, repeat: Infinity, ease: 'linear' }}
@@ -258,7 +274,7 @@ export const PublishVisual: ComponentType = () => {
 						<div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
 							<motion.div
 								className="h-full rounded-full"
-								animate={{ width: `${quality}%`, backgroundColor: '#fc6c18' }}
+								animate={{ width: `${quality}%`, backgroundColor: 'var(--orange)' }}
 								transition={{ type: 'spring', stiffness: 80, damping: 20 }}
 							/>
 						</div>
@@ -277,7 +293,7 @@ export const PublishVisual: ComponentType = () => {
 										animate={{ opacity: 1, y: 0 }}
 										exit={{ opacity: 0, y: -4 }}
 										className="flex items-center justify-center gap-1 rounded-lg py-1.5 text-[10px] font-semibold text-white"
-										style={{ background: '#fc6c18' }}
+										style={{ background: 'var(--orange)' }}
 									>
 										<Zap className="size-2.5" />
 										Publish
@@ -293,16 +309,16 @@ export const PublishVisual: ComponentType = () => {
 										<div className="flex items-center gap-1 text-[10px] text-white/60">
 											<CheckCircle2
 												className="size-3 shrink-0"
-												style={{ color: '#fc6c18' }}
+												style={{ color: 'var(--orange)' }}
 											/>
 											Live on CDN
 										</div>
 										<div
 											className="truncate rounded-md px-2 py-1 text-[8px]"
 											style={{
-												background: 'rgba(252,108,24,0.08)',
-												color: '#fc6c18',
-												border: '1px solid rgba(252,108,24,0.2)'
+												background: 'rgb(var(--orange-rgb) / 0.08)',
+												color: 'var(--orange)',
+												border: '1px solid rgb(var(--orange-rgb) / 0.2)'
 											}}
 										>
 											cdn.vectreal.com/...
@@ -335,7 +351,7 @@ export const DashboardVisual: ComponentType = () => {
 				className="pointer-events-none absolute inset-0"
 				style={{
 					background:
-						'radial-gradient(ellipse at 64% 0%, rgba(252,108,24,0.1) 0%, transparent 56%)'
+						'radial-gradient(ellipse at 64% 0%, rgb(var(--orange-rgb) / 0.1) 0%, transparent 56%)'
 				}}
 			/>
 
@@ -354,8 +370,8 @@ export const DashboardVisual: ComponentType = () => {
 									className="h-14 rounded-md"
 									style={{
 										background: scene.published
-											? 'linear-gradient(135deg, rgba(252,108,24,0.26), rgba(252,108,24,0.1))'
-											: 'rgba(255,255,255,0.04)'
+											? 'linear-gradient(135deg, rgb(var(--orange-rgb) / 0.26), rgb(var(--orange-rgb) / 0.1))'
+											: TINT.surface
 									}}
 								/>
 								<p className="truncate text-[9px] font-medium text-white/60">
