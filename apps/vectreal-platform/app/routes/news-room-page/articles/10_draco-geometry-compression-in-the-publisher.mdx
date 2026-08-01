@@ -1,7 +1,7 @@
 ---
 title: "Every optimization preset now compresses geometry with Draco"
 slug: "draco-geometry-compression-in-the-publisher"
-excerpt: "Draco used to be an opt-in toggle that no preset turned on. It is now on in all three: Maximum quality, Balanced and Smallest. Compression is applied when you publish, so the scene you edit stays at full precision, and it is skipped automatically on models where it would not make the file smaller."
+excerpt: "Draco used to be an opt-in toggle that no preset turned on. It is now on in all three: Maximum quality, Balanced and Smallest. Compression is applied when you publish, so the scene you edit stays at full precision, and once an optimization pass has measured it, publishing skips it on models where it would not make the file smaller."
 publishedAt: "2026-08-01"
 updatedAt: "2026-08-01"
 category: "releases"
@@ -18,8 +18,8 @@ author:
     xUrl: "https://github.com/Vectreal"
     linkedinUrl: ""
 draft: true
-thumbnailImage: "/assets/images/newsroom/12/thumbnail-draco-geometry-compression-in-the-publisher.webp"
-coverImage: "/assets/images/newsroom/12/og-draco-geometry-compression-in-the-publisher.webp"
+thumbnailImage: "/assets/images/newsroom/10/thumbnail-draco-geometry-compression-in-the-publisher.webp"
+coverImage: "/assets/images/newsroom/10/og-draco-geometry-compression-in-the-publisher.webp"
 
 voice: B
 author_persona: vectreal-team
@@ -29,19 +29,21 @@ seo_cluster: "3D model optimization / file size for web"
 cta: https://vectreal.com/publisher
 ---
 
-Every optimization preset in the Publisher now compresses geometry with Draco. Maximum quality, Balanced and Smallest all run it, so optimizing a model gets you compression without opening the advanced panel. It shipped on 31 July 2026.
+Every optimization preset in the Publisher now compresses geometry with Draco. Maximum quality, Balanced and Smallest all carry it, so the compression reaches your published scene without you opening the advanced panel. It shipped on 31 July 2026.
 
-Two details make that safe to turn on by default, and both are worth knowing before you rely on it: compression is applied when you publish rather than while you edit, and it is skipped on models where it would not help.
+One detail is worth knowing before you rely on it: the compression is applied when you publish rather than while you edit, which is what makes it safe to have on by default.
 
 ## What changed
 
 Draco was previously an advanced toggle that no preset switched on. Reaching it meant knowing it existed. It is now on everywhere, for two reasons stated in the pipeline itself: it is the largest geometry saving available, and unlike polygon reduction it does not change topology. The mesh keeps its shape and only precision is reduced.
 
-Vertex quantization moved the other way. It is now off in every preset and kept in the advanced panel as the fallback for anyone who turns Draco off, because Draco quantizes vertex attributes itself and stacking the standalone pass on top costs an extra pass and compounds precision loss.
+Two other steps moved at the same time, and the second is the bigger change to what a preset does to your model.
 
-Mesh simplification stays off in all three presets. It is the one step in the pipeline flagged as destructive: it rewrites topology and can leave holes, shading seams and distorted UVs. If you want it, it is opt-in from the advanced panel and it will tell you what it does first.
+Vertex quantization is now off in every preset, and kept in the advanced panel as the fallback for anyone who turns Draco off. Draco quantizes vertex attributes itself, so stacking the standalone pass on top costs an extra pass and compounds precision loss.
 
-{/* CAPTURE: newsroom/12/preset-cards.webp */}
+Mesh simplification is now off in every preset too. It used to run in all of them, discarding triangles down to a ratio that got more aggressive as the presets got smaller. It is the one step in the pipeline flagged as destructive: it rewrites topology and can leave holes, shading seams and distorted UVs. So the presets no longer throw geometry away by default. If you want it, it is opt-in from the advanced panel, which tells you what it does before you can switch it on.
+
+{/* CAPTURE: newsroom/10/preset-cards.webp */}
 
 Try it, no account needed: [vectreal.com/publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=draco-geometry-compression-in-the-publisher)
 
@@ -61,17 +63,19 @@ The practical consequence: the size figure you see after optimizing is a project
 
 ## When it is skipped
 
-Draco does not shrink every model. On small models, and on models where the textures dominate the file, the compressed GLB can come out the same size or larger than the plain one. The Publisher measures both and compares them.
+Draco does not shrink every model. On small models, and on models where the textures dominate the file, the compressed GLB can come out the same size or larger than the plain one. That is what the measuring pass is for: it writes the model both ways and compares the two.
 
-When compression would not help, publishing skips it and the results panel says so: the Geometry (Draco) row reads "Skipped, no size gain" instead of a before and after, and a notification tells you compression would not shrink this model. Nothing silently makes your file bigger, and nothing silently does nothing.
+When the measurement says compression would not help, publishing skips it. The Geometry (Draco) row reports the step as skipped for no size gain instead of showing a before and after, and a notification tells you compression would not shrink this model.
 
-{/* CAPTURE: newsroom/12/draco-results-row.mp4 */}
+The comparison comes from the optimization pass, so it is the pass that earns you the skip. Publishing a scene you never optimized compresses it without that check.
+
+{/* CAPTURE: newsroom/10/draco-results-row.mp4 */}
 
 ## The controls you still have
 
 The toggle is still there, at the top of the advanced panel, labelled Compress geometry (Draco). Turning it off turns vertex quantization back on, so you do not end up with neither. The coupling runs one way only: quantization never moves Draco, because silently disabling the step doing most of the work would be worse than the redundant pass it avoids.
 
-With Draco on you can also pick the method. **Smallest** uses edgebreaker and gives the better compression. **Sequential** compresses less and preserves vertex order, which matters if something downstream depends on index order.
+With Draco on you can also pick the method. **Smallest** uses edgebreaker and gives the better compression. **Sequential** compresses less and keeps vertex order, which is the one to reach for if something downstream depends on that order being preserved.
 
 Separately from all of this, the publish sidebar still has a **GLB (Draco-compressed)** download under Download Model, next to GLB (Binary), GLTF (ZIP) and USDZ. It compresses a copy at export time, so it produces a compressed file regardless of how the toggle is set.
 
@@ -83,7 +87,7 @@ This matters more now that compression is the default. If you publish through Ve
 
 ## What it will not fix
 
-Draco compresses geometry and does nothing to textures. On texture-heavy models the texture step usually outweighs every geometry saving combined, which is why it is the one setting that actually differs between the three presets: Maximum quality keeps textures at 2048px and 90% quality, Balanced halves the dimension, Smallest halves it again. The geometry steps are identical in all three.
+Draco compresses geometry and does nothing to textures. When a model is texture-heavy, the pipeline's own guidance is that the texture step tends to save more than all the geometry steps together, which is why texture treatment is the one setting that actually differs between the three presets: Maximum quality keeps textures at 2048px and 90% quality, Balanced halves the dimension, Smallest halves it again. The geometry steps are identical in all three.
 
 The project is pre-1.0. If a model fails to compress, or comes back looking wrong, it is worth reporting.
 
