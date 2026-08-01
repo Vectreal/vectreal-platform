@@ -46,7 +46,6 @@ export interface DataTableSelectionAction<TData> {
 interface DataTableProps<TData, TValue> {
 	columns: ColumnDef<TData, TValue>[]
 	data: TData[]
-	appearance?: 'default' | 'minimal'
 	searchKey?: string
 	searchPlaceholder?: string
 	searchValue: string
@@ -69,7 +68,6 @@ interface DataTableProps<TData, TValue> {
 export function DataTable<TData, TValue>({
 	columns,
 	data,
-	appearance = 'default',
 	searchKey,
 	searchPlaceholder = 'Search...',
 	searchValue,
@@ -122,7 +120,6 @@ export function DataTable<TData, TValue>({
 		.getFilteredSelectedRowModel()
 		.rows.map((row) => row.original)
 	const hasSelection = selectedRows.length > 0
-	const isMinimal = appearance === 'minimal'
 
 	const getCellTitle = (value: unknown): string | undefined => {
 		if (
@@ -156,11 +153,7 @@ export function DataTable<TData, TValue>({
 							placeholder={searchPlaceholder}
 							value={searchValue}
 							onChange={(event) => onSearchValueChange(event.target.value)}
-							className={
-								isMinimal
-									? 'bg-muted/30 h-10 rounded-xl border-0 pl-9 shadow-none focus-visible:ring-2'
-									: 'pl-9'
-							}
+							className="ds-sunken h-10 rounded-xl border-0 pl-9 shadow-none focus-visible:ring-2"
 						/>
 					</div>
 				)}
@@ -207,30 +200,23 @@ export function DataTable<TData, TValue>({
 				)}
 			</div>
 
-			<div
-				className={
-					isMinimal
-						? 'bg-muted/20 rounded-2xl p-2'
-						: 'bg-card/50 rounded-xl border backdrop-blur-sm'
-				}
-			>
-				<Table>
-					<TableHeader className={isMinimal ? '[&_tr]:border-0' : undefined}>
+			{/*
+			  One table treatment everywhere. The container is a raised surface
+			  rather than a bordered box, and rows separate from it by value on
+			  hover, so nothing here draws an outline.
+			*/}
+			<div className="ds-raised rounded-2xl p-2">
+				<Table className="border-separate border-spacing-0">
+					<TableHeader className="[&_tr]:border-0">
 						{table.getHeaderGroups().map((headerGroup) => (
 							<TableRow
 								key={headerGroup.id}
-								className={
-									isMinimal ? 'border-0 hover:bg-transparent' : undefined
-								}
+								className="border-0 hover:bg-transparent"
 							>
 								{headerGroup.headers.map((header) => (
 									<TableHead
 										key={header.id}
-										className={
-											isMinimal
-												? 'text-muted-foreground h-11 px-3 text-xs font-medium tracking-wide'
-												: undefined
-										}
+										className="text-muted-foreground h-11 px-3 text-xs font-medium tracking-wide"
 									>
 										{header.isPlaceholder
 											? null
@@ -249,21 +235,13 @@ export function DataTable<TData, TValue>({
 								<TableRow
 									key={row.id}
 									data-state={row.getIsSelected() && 'selected'}
-									className={
-										isMinimal
-											? 'hover:bg-muted/45 data-[state=selected]:bg-muted/50 rounded-xl border-0 transition-colors duration-150'
-											: undefined
-									}
+									className="group border-0"
 								>
 									{row.getVisibleCells().map((cell) => (
 										<TableCell
 											key={cell.id}
 											title={getCellTitle(cell.getValue())}
-											className={
-												isMinimal
-													? 'px-3 py-3 [&>a,&>span]:max-w-sm [&>a,&>span]:truncate!'
-													: '[&>a,&>span]:max-w-sm [&>a,&>span]:truncate!'
-											}
+											className="group-hover:bg-foreground/6 group-data-[state=selected]:bg-foreground/8 border-0 px-3 py-3 transition-colors duration-150 first:rounded-l-xl last:rounded-r-xl [&>a,&>span]:max-w-sm [&>a,&>span]:truncate!"
 										>
 											{flexRender(
 												cell.column.columnDef.cell,
@@ -274,14 +252,10 @@ export function DataTable<TData, TValue>({
 								</TableRow>
 							))
 						) : (
-							<TableRow className={isMinimal ? 'border-0' : undefined}>
+							<TableRow className="border-0">
 								<TableCell
 									colSpan={columns.length}
-									className={
-										isMinimal
-											? 'text-muted-foreground h-24 text-center'
-											: 'h-24 text-center'
-									}
+									className="text-muted-foreground h-24 text-center"
 								>
 									No results found.
 								</TableCell>
