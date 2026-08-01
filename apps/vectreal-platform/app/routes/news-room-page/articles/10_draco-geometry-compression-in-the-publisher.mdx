@@ -1,0 +1,94 @@
+---
+title: "Every optimization preset now compresses geometry with Draco"
+slug: "draco-geometry-compression-in-the-publisher"
+excerpt: "Draco used to be an opt-in toggle that no preset turned on. It is now on in all three: Maximum quality, Balanced and Smallest. Compression is applied when you publish, so the scene you edit stays at full precision, and once an optimization pass has measured it, publishing skips it on models where it would not make the file smaller."
+publishedAt: "2026-08-01"
+updatedAt: "2026-08-01"
+category: "releases"
+tags:
+  - "compression"
+  - "optimization"
+  - "publisher"
+  - "glb"
+author:
+    name: "Vectreal"
+    role: "Team"
+    bio: "Open infrastructure for publishing 3D on the web."
+    avatar: "/assets/images/logo-192.png"
+    xUrl: "https://github.com/Vectreal"
+    linkedinUrl: ""
+draft: true
+thumbnailImage: "/assets/images/newsroom/10/thumbnail-draco-geometry-compression-in-the-publisher.webp"
+coverImage: "/assets/images/newsroom/10/og-draco-geometry-compression-in-the-publisher.webp"
+
+voice: B
+author_persona: vectreal-team
+type: "Product Update"
+pillar: Open Source
+seo_cluster: "3D model optimization / file size for web"
+cta: https://vectreal.com/publisher
+---
+
+Every optimization preset in the Publisher now compresses geometry with Draco. Maximum quality, Balanced and Smallest all carry it, so the compression reaches your published scene without you opening the advanced panel. It shipped on 31 July 2026.
+
+One detail is worth knowing before you rely on it: the compression is applied when you publish rather than while you edit, which is what makes it safe to have on by default.
+
+## What changed
+
+Draco was previously an advanced toggle that no preset switched on. Reaching it meant knowing it existed. It is now on everywhere, for two reasons stated in the pipeline itself: it is the largest geometry saving available, and unlike polygon reduction it does not change topology. The mesh keeps its shape and only precision is reduced.
+
+Two other steps moved at the same time, and the second is the bigger change to what a preset does to your model.
+
+Vertex quantization is now off in every preset, and kept in the advanced panel as the fallback for anyone who turns Draco off. Draco quantizes vertex attributes itself, so stacking the standalone pass on top costs an extra pass and compounds precision loss.
+
+Mesh simplification is now off in every preset too. It used to run in all of them, discarding triangles down to a ratio that got more aggressive as the presets got smaller. It is the one step in the pipeline flagged as destructive: it rewrites topology and can leave holes, shading seams and distorted UVs. So the presets no longer throw geometry away by default. If you want it, it is opt-in from the advanced panel, which tells you what it does before you can switch it on.
+
+{/* CAPTURE: newsroom/10/preset-cards.webp */}
+
+Try it, no account needed: [vectreal.com/publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=draco-geometry-compression-in-the-publisher)
+
+## What Draco compresses
+
+Draco is Google's open source library for compressing and decompressing 3D geometric meshes and point clouds. Its own description of scope covers points, connectivity, texture coordinates, colour, normals and other generic attributes attached to geometry ([google/draco](https://github.com/google/draco), accessed 2026-08-01). Image data is outside that list, so textures are untouched by it.
+
+glTF carries Draco through `KHR_draco_mesh_compression`, a Khronos extension whose status is "Complete, Ratified by the Khronos Group" ([glTF extension registry](https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_draco_mesh_compression), accessed 2026-08-01). A Draco-compressed GLB is still a GLB: the compressed geometry sits in a bufferView, and the file declares the extension so a loader knows what it is looking at.
+
+## Compression happens when you publish
+
+Running an optimization pass does not compress the model you are editing. It measures what compression would achieve: the encoder runs on a copy, the numbers are kept, and the compressed copy is thrown away. The document you keep working on stays uncompressed.
+
+The compression itself is applied on the publish path. This is deliberate rather than incidental. Draco reduces precision, and a document that is compressed while you edit gets re-encoded every time you adjust a setting and re-run the pass, with each round losing a little more. Deferring it to publish means the scene you edit stays at full precision no matter how many times you change your mind, and the compression runs exactly once, on the way out.
+
+The practical consequence: the size figure you see after optimizing is a projection of what publishing will produce, not a measurement of what is currently in memory.
+
+## When it is skipped
+
+Draco does not shrink every model. On small models, and on models where the textures dominate the file, the compressed GLB can come out the same size or larger than the plain one. That is what the measuring pass is for: it writes the model both ways and compares the two.
+
+When the measurement says compression would not help, publishing skips it. The Geometry (Draco) row reports the step as skipped for no size gain instead of showing a before and after, and a notification tells you compression would not shrink this model.
+
+The comparison comes from the optimization pass, so it is the pass that earns you the skip. Publishing a scene you never optimized compresses it without that check.
+
+{/* CAPTURE: newsroom/10/draco-results-row.mp4 */}
+
+## The controls you still have
+
+The toggle is still there, at the top of the advanced panel, labelled Compress geometry (Draco). Turning it off turns vertex quantization back on, so you do not end up with neither. The coupling runs one way only: quantization never moves Draco, because silently disabling the step doing most of the work would be worse than the redundant pass it avoids.
+
+With Draco on you can also pick the method. **Smallest** uses edgebreaker and gives the better compression. **Sequential** compresses less and keeps vertex order, which is the one to reach for if something downstream depends on that order being preserved.
+
+Separately from all of this, the publish sidebar still has a **GLB (Draco-compressed)** download under Download Model, next to GLB (Binary), GLTF (ZIP) and USDZ. It compresses a copy at export time, so it produces a compressed file regardless of how the toggle is set.
+
+## What a Draco file costs at the other end
+
+Compressed geometry has to be decoded before anything can be drawn with it, and that decoding runs through a Draco decoder module the receiving application has to load: in a browser, a WebAssembly build of the library, which is what ours uses ([google/draco](https://github.com/google/draco), accessed 2026-08-01). We have not measured what that costs on our own pipeline, so we are not going to quote a figure for it. Moritz wrote up the trade-off in [glTF vs GLB](https://vectreal.com/news-room/gltf-vs-glb-what-actually-matters?utm_source=newsroom&utm_medium=article&utm_campaign=draco-geometry-compression-in-the-publisher), sourced there to Cesium.
+
+This matters more now that compression is the default. If you publish through Vectreal and embed the result, our viewer decodes it and there is nothing to do. If you download a Draco GLB and hand it to something else, check what is at the other end first. Our exports mark the extension as required, with no uncompressed fallback in the file, and under the extension's conformance rules a loader that does not support Draco must fail to load an asset that lists `KHR_draco_mesh_compression` in `extensionsRequired` rather than ignoring it and loading what it can (Khronos glTF extension registry, accessed 2026-08-01). A Draco GLB is not a drop-in replacement for a plain one in a pipeline you do not control.
+
+## What it will not fix
+
+Draco compresses geometry and does nothing to textures. When a model is texture-heavy, the pipeline's own guidance is that the texture step tends to save more than all the geometry steps together, which is why texture treatment is the one setting that actually differs between the three presets: Maximum quality keeps textures at 2048px and 90% quality, Balanced halves the dimension, Smallest halves it again. The geometry steps are identical in all three.
+
+The project is pre-1.0. If a model fails to compress, or comes back looking wrong, it is worth reporting.
+
+Try it, no account needed: [vectreal.com/publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=draco-geometry-compression-in-the-publisher)

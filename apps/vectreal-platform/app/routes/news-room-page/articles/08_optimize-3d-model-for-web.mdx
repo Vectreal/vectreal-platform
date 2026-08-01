@@ -7,12 +7,9 @@ updatedAt: "2026-05-24"
 category: "guides"
 tags:
 - "optimization"
-- "gltf"
-- "3d-web"
-- "guides"
+- "compression"
 - "performance"
-- "ktx2"
-- "gltf-transform"
+- "gltf"
 author:
     name: "Moritz Becker"
     role: "Founder at Vectreal"
@@ -265,7 +262,7 @@ One factor the size table above does not include: the choice of input format bef
 
 GLB is the right starting point for any web optimization pass. It is binary-packed and self-contained, with all external texture and buffer references resolved into a single file. Multi-file glTF (JSON + separate texture files) should be packed to GLB before optimizing. USDZ and OBJ files need conversion to GLB first.
 
-The distinction between glTF and GLB, what each actually contains, and why it matters for the optimization step is covered in [glTF vs GLB - What Actually Matters When You Ship to the Web](https://vectreal.com/news-room/gltf-vs-glb-web-publishing).
+The distinction between glTF and GLB, what each actually contains, and why it matters for the optimization step is covered in [glTF vs GLB: what actually matters when you ship to the web](https://vectreal.com/news-room/gltf-vs-glb-what-actually-matters).
 
 ---
 
