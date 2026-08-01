@@ -1,6 +1,6 @@
-import { cn } from '@shared/utils'
 import { Link } from 'react-router'
 
+import { docsNavItemClasses } from './docs-nav-item'
 import {
 	DOC_CATEGORY_LABELS,
 	DOC_CATEGORY_ORDER,
@@ -27,7 +27,7 @@ export function DocsTreeNav({ pathname, onNavigate }: DocsTreeNavProps) {
 
 				return (
 					<div key={category} className="mb-6">
-						<p className="text-muted-foreground mb-2 px-2 text-xs font-semibold tracking-wider uppercase">
+						<p className="text-muted-foreground text-eyebrow mb-2 px-2">
 							{DOC_CATEGORY_LABELS[category]}
 						</p>
 						<ul className="space-y-0.5">
@@ -41,12 +41,7 @@ export function DocsTreeNav({ pathname, onNavigate }: DocsTreeNavProps) {
 											to={href}
 											viewTransition
 											onClick={onNavigate}
-											className={cn(
-												'hover:bg-muted/60 block rounded-lg px-2 py-1.5 text-sm transition-colors',
-												isActive
-													? 'bg-muted text-foreground font-medium'
-													: 'text-muted-foreground'
-											)}
+											className={docsNavItemClasses(isActive)}
 											aria-current={isActive ? 'page' : undefined}
 										>
 											{docPage.title}

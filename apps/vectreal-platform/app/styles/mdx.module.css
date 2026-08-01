@@ -22,20 +22,23 @@
 		}
 	}
 
+	/*
+	  One declaration of the size, not three. This had a `clamp()`, a
+	  `font-weight: medium` (not a value `font-weight` accepts) and a
+	  `line-height`, all of them overridden by the `@apply` that followed - which
+	  in turn hand-wrote the scale `--text-headline` already holds.
+
+	  Spelled out rather than `@apply text-headline`: that class lives in
+	  `@layer components` and is not a Tailwind utility, so `@apply` cannot
+	  reach it. Same for every `.text-*` and `.ds-*` in the design system.
+	*/
 	h1 {
-		font-size: clamp(2rem, 5vw, 3.5rem);
-		font-weight: medium;
-		line-height: 1.2;
-		/* background: linear-gradient(
-			to bottom right,
-			var(--color-primary),
-			color-mix(in oklch, var(--color-primary) 50%, transparent)
-		); */
+		@apply max-w-4xl text-balance;
+		font-size: var(--text-headline);
+		font-weight: 500;
+		line-height: 1.06;
+		letter-spacing: var(--tracking-headline);
 		color: var(--color-foreground);
-		/* -webkit-background-clip: text; */
-		/* background-clip: text; */
-		/* color: transparent; */
-		@apply max-w-4xl text-4xl leading-[1.02] font-medium tracking-tight text-balance md:text-6xl;
 	}
 
 	h2 {
@@ -48,7 +51,6 @@
 
 	h3 {
 		@apply text-lg font-normal tracking-wide;
-		font-size: clamp(1.05rem, 1rem + 0.24vw, 1.3rem);
 		scroll-margin-top: 6.5rem;
 	}
 
@@ -89,10 +91,8 @@
 
 	p {
 		@apply text-base;
-		line-height: 1.8;
-		opacity: 0.8;
-		font-size: clamp(1.03rem, 0.97rem + 0.2vw, 1.12rem);
 		line-height: 1.9;
+		opacity: 0.8;
 	}
 
 	a {
@@ -122,7 +122,7 @@
 			color-mix(in oklch, var(--color-foreground) 30%, transparent),
 			transparent
 		); */
-		background: var(--color-surface-border);
+		background: color-mix(in oklch, var(--color-foreground) 10%, transparent);
 	}
 
 	blockquote {
@@ -140,9 +140,19 @@
 		padding: 0.125rem 0.375rem;
 	}
 
+	/*
+	  Was pinned to #0d1117, GitHub's dark editor background, so light mode got a
+	  black block in the middle of the page. This is `ds-sunken`'s value written
+	  out: the `ds-*` classes live in `@layer components` and are not Tailwind
+	  utilities, so `@apply` cannot reach them.
+	*/
 	pre {
-		@apply overflow-x-auto rounded-lg font-mono text-sm;
-		background: #0d1117;
+		@apply overflow-x-auto rounded-xl font-mono text-sm;
+		background-color: color-mix(
+			in oklch,
+			var(--color-foreground) 2.5%,
+			var(--color-background)
+		);
 		padding: 1.125rem;
 	}
 
@@ -153,7 +163,8 @@
 	}
 
 	pre[data-theme] {
-		border: 1px solid color-mix(in oklch, white 8%, transparent);
+		border: 1px solid
+			color-mix(in oklch, var(--color-foreground) 8%, transparent);
 	}
 
 	table {
@@ -162,13 +173,13 @@
 		th {
 			@apply px-3 py-2 text-left font-semibold;
 			border-bottom: 1px solid
-				color-mix(in oklch, var(--color-foreground) 15%, transparent);
+				color-mix(in oklch, var(--color-foreground) 10%, transparent);
 		}
 
 		td {
 			@apply px-3 py-2;
 			border-bottom: 1px solid
-				color-mix(in oklch, var(--color-foreground) 8%, transparent);
+				color-mix(in oklch, var(--color-foreground) 10%, transparent);
 			opacity: 0.9;
 		}
 
@@ -185,9 +196,9 @@
 	.iframe-container {
 		width: 100%;
 		max-width: 100%;
-		height: 400px !important;
+		height: 400px;
 		overflow: hidden;
-		border-radius: 0.75rem;
+		border-radius: var(--radius-xl);
 	}
 }
 

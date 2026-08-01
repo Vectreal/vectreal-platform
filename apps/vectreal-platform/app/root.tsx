@@ -35,7 +35,6 @@ import {
 	buildWebSiteJsonLd
 } from './lib/seo-registry'
 import { csrfSession } from './lib/sessions/csrf-session.server'
-import styles from './styles/global.module.css'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 import '@shared/components/styles/globals.css'
@@ -189,7 +188,7 @@ export function Layout({ children }: { children: ReactNode }) {
 		<html
 			lang="en"
 			suppressHydrationWarning
-			className={cn(styles.global, forceDarkTheme && 'dark')}
+			className={cn(forceDarkTheme && 'dark')}
 			style={{ colorScheme: forceDarkTheme ? 'dark' : 'light' }}
 		>
 			<head>
