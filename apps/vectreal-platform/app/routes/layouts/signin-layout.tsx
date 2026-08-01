@@ -151,7 +151,7 @@ const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 		<main className="h-full min-h-screen w-full overflow-hidden">
 			<section className="flex min-h-screen w-full flex-col overflow-hidden">
 				<div className="grid grow overflow-hidden md:grid-cols-[1fr_1fr]">
-					<div className="bg-card relative flex flex-col justify-center border-r p-8 shadow-2xl">
+					<div className="ds-raised relative flex flex-col justify-center p-8 shadow-2xl">
 						<div className="mx-auto flex max-w-md flex-col gap-8 py-16">
 							<div className="flex grow flex-col justify-end">
 								<h1 className="mb-6 text-2xl leading-tight font-medium sm:text-3xl md:text-4xl lg:text-5xl">
@@ -231,7 +231,7 @@ const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 							</AnimatePresence>
 							<span className="relative">
 								<Separator />
-								<p className="bg-card text-muted-foreground absolute left-1/2 -translate-x-1/2 -translate-y-3 px-2">
+								<p className="ds-raised text-muted-foreground absolute left-1/2 -translate-x-1/2 -translate-y-3 px-2">
 									or
 								</p>
 							</span>
