@@ -267,7 +267,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 					</BasicCard>
 
 					<div className="space-y-6">
-						<Card className="border-orange/20 rounded-3xl shadow-none">
+						<Card className="rounded-2xl">
 							<CardHeader>
 								<CardTitle className="text-lg">
 									Routes to the right team
@@ -306,7 +306,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 							</CardContent>
 						</Card>
 
-						<Card className="border-orange/20 rounded-3xl shadow-none">
+						<Card className="rounded-2xl">
 							<CardHeader>
 								<CardTitle className="text-lg">Quick links</CardTitle>
 							</CardHeader>

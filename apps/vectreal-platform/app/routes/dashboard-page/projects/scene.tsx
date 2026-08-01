@@ -236,7 +236,7 @@ function DrawerAssetsSection({
 					{initial.map((asset) => (
 						<SceneAssetListItem
 							key={asset.id}
-							className="bg-muted/40"
+							className="ds-raised"
 							{...(assetPropsById.get(asset.id) ||
 								buildAssetListItemProps(asset, assetData))}
 						/>
@@ -255,7 +255,7 @@ function DrawerAssetsSection({
 								{extra.map((asset) => (
 									<SceneAssetListItem
 										key={asset.id}
-										className="bg-muted/40"
+										className="ds-raised"
 										{...(assetPropsById.get(asset.id) ||
 											buildAssetListItemProps(asset, assetData))}
 									/>
@@ -516,7 +516,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 			<div className="grid h-full min-h-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
 				<main className="flex min-h-0 flex-col gap-4">
 					{sceneLoadError && !file?.model ? (
-						<section className="bg-muted/30 border-border space-y-3 rounded-2xl border p-5">
+						<section className="ds-raised space-y-3 rounded-2xl p-5">
 							<h2 className="text-base font-semibold">Unable to Load Scene</h2>
 							<p className="text-muted-foreground text-sm">{sceneLoadError}</p>
 							<div className="flex flex-wrap gap-2">
@@ -540,7 +540,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							loadingThumbnail={loadingThumbnail}
 						/>
 					</section>
-					<section className="bg-muted/30 space-y-6 rounded-2xl px-4 py-4 sm:px-5">
+					<section className="ds-raised space-y-6 rounded-2xl px-4 py-4 sm:px-5">
 						<header className="flex flex-col items-start gap-6 md:flex-row">
 							{/*
 						  `min-w-0` is what stops a long scene name from pushing the
@@ -606,7 +606,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							onClick={() => setDrawerOpen(true)}
 							title="Open details panel"
 							aria-label="Open details panel"
-							className="bg-muted/25 hover:bg-muted/50 group relative flex w-full flex-col gap-6 rounded-2xl p-4 text-left transition-colors duration-300"
+							className="ds-raised hover:bg-foreground/8 group relative flex w-full flex-col gap-6 rounded-2xl p-4 text-left transition-colors duration-300"
 						>
 							<Info className="text-muted-foreground absolute top-3 right-3 h-4 w-4 opacity-25 transition-opacity duration-300 group-hover:opacity-100" />
 							<div className="space-y-2">
@@ -653,7 +653,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 					</section>
 				</main>
 
-				<aside className="bg-muted/30 hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-4 xl:flex">
+				<aside className="ds-raised hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-4 xl:flex">
 					<section className="space-y-3">
 						<div>
 							<p className="text-muted-foreground text-[11px] tracking-[0.2em] uppercase">
@@ -722,7 +722,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 									<button
 										type="button"
 										onClick={() => setDrawerOpen(true)}
-										className="hover:bg-muted/50 bg-background/70 flex w-full items-center justify-between gap-3 rounded-xl p-3 text-left transition-colors duration-300"
+										className="ds-overlay hover:bg-foreground/12 flex w-full items-center justify-between gap-3 rounded-xl p-3 text-left transition-colors duration-300"
 									>
 										<p className="text-muted-foreground text-sm">
 											…and {sceneDetails.assets.length - 4} more.
@@ -802,17 +802,17 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 								Scene Stats
 							</h3>
 							<div className="grid grid-cols-2 gap-3 text-sm">
-								<div className="bg-muted/50 rounded-xl p-3">
+								<div className="ds-overlay rounded-xl p-3">
 									<p className="text-muted-foreground text-xs">Current Size</p>
 									<p className="font-medium">
 										{formatBytes(sceneDetails.fileSizeBytes)}
 									</p>
 								</div>
-								<div className="bg-muted/50 rounded-xl p-3">
+								<div className="ds-overlay rounded-xl p-3">
 									<p className="text-muted-foreground text-xs">Assets</p>
 									<p className="font-medium">{sceneDetails.assetCount}</p>
 								</div>
-								<div className="bg-muted/50 rounded-xl p-3">
+								<div className="ds-overlay rounded-xl p-3">
 									<p className="text-muted-foreground text-xs">Texture Size</p>
 									<p className="font-medium">
 										{sceneDetails.textureBytes != null
@@ -822,7 +822,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 												: '-'}
 									</p>
 								</div>
-								<div className="bg-muted/50 rounded-xl p-3">
+								<div className="ds-overlay rounded-xl p-3">
 									<p className="text-muted-foreground text-xs">
 										Meshes / Vertices
 									</p>

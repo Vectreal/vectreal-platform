@@ -348,7 +348,7 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 									className={cn(
 										'flex size-10 shrink-0 items-center justify-center rounded-xl border transition-colors duration-300',
 										isActive
-											? 'border-orange/40 bg-orange bg-opacity-10'
+											? 'border-orange/40 bg-orange/10'
 											: 'border-surface-border bg-surface-0/60'
 									)}
 								>

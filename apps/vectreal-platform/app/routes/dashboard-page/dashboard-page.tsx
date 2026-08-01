@@ -148,7 +148,6 @@ const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
 								}))
 							})
 						}}
-						appearance="minimal"
 					/>
 				</section>
 			) : (

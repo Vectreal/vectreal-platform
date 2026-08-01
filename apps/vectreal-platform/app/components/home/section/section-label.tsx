@@ -8,7 +8,7 @@ interface SectionLabelProps {
 const SectionLabel = ({ children, className }: SectionLabelProps) => (
 	<div
 		className={cn(
-			'border-orange/20 bg-orange bg-opacity-5 text-orange/70 text-eyebrow -ml-1 inline-flex w-fit items-center gap-1.5 self-start rounded-full border px-3 py-1.5',
+			'border-orange/20 bg-orange/5 text-orange/70 text-eyebrow -ml-1 inline-flex w-fit items-center gap-1.5 self-start rounded-full border px-3 py-1.5',
 			className
 		)}
 	>

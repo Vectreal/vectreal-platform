@@ -72,7 +72,7 @@
 	  here: those names are also Tailwind theme keys, and declaring them in both
 	  places is what previously made them self-referential.
 	*/
-	--radius: 1.25rem;
+	--radius: 1rem;
 
 	/*
 	  Motion tokens. The durations live in `@theme` below for the same reason the
@@ -98,12 +98,43 @@
 	--surface-border-light: oklch(0.88 0 0 / 0.7);
 	--surface-glow-light: oklch(0.75 0.14 40 / 0.14);
 
-	/* Display typography scale */
-	--text-display: clamp(3.5rem, 8vw, 7rem);
+	/*
+	  Typography scale, mirroring `tokens/typography.css` in the Vectreal Design
+	  System. The `.text-*` classes further down consume these rather than
+	  restating the numbers.
+
+	  Deliberately plain custom properties and NOT `@theme` keys: `--text-*`,
+	  `--tracking-*`, `--font-*`, `--space-*` and `--container-*` are all Tailwind
+	  theme namespaces, and declaring a name in both places makes it
+	  self-referential. See the radius note above.
+	*/
+	--text-display: clamp(2.75rem, 6.4vw, 5.5rem);
 	--text-headline: clamp(2rem, 4vw, 3.5rem);
+	--text-h2: clamp(1.75rem, 2.8vw, 2.5rem);
+	--text-h3: clamp(1.35rem, 2vw, 1.75rem);
+	--text-stat: clamp(3rem, 5.5vw, 4.25rem);
+	--text-body-lg: 1.125rem;
 	--text-label-xs: 0.6875rem;
-	--tracking-display: -0.04em;
+	--tracking-display: -0.038em;
 	--tracking-headline: -0.025em;
+	--tracking-h2: -0.025em;
+	--tracking-h3: -0.02em;
+	--tracking-eyebrow: 0.14em;
+
+	/* Spacing scale and page measure, from `tokens/spacing.css`. */
+	--space-1: 0.25rem;
+	--space-2: 0.5rem;
+	--space-3: 0.75rem;
+	--space-4: 1rem;
+	--space-5: 1.25rem;
+	--space-6: 1.5rem;
+	--space-8: 2rem;
+	--space-10: 2.5rem;
+	--space-12: 3rem;
+	--space-16: 4rem;
+	--space-24: 6rem;
+	--space-36: 9rem;
+	--container-max: 80rem;
 
 	/* Sidebar tokens */
 	--sidebar: oklch(0.985 0 0);
@@ -228,6 +259,12 @@
 	--color-surface-border-light: var(--surface-border-light);
 	--color-surface-glow-light: var(--surface-glow-light);
 
+	/*
+	  `--font-sans` is a Tailwind namespace, so it is set here rather than in
+	  `:root`, where it would have collided with Tailwind's own default stack.
+	*/
+	--font-sans: 'DM Sans Variable', sans-serif;
+
 	/* Motion duration utilities: `duration-fast`, `duration-cinematic`, etc. */
 	--duration-instant: 80ms;
 	--duration-fast: 150ms;
@@ -281,7 +318,7 @@
 	}
 
 	html {
-		font-family: 'DM Sans Variable', sans-serif;
+		font-family: var(--font-sans);
 		font-optical-sizing: auto;
 	}
 
@@ -297,43 +334,72 @@
 }
 
 @layer components {
+	/* ---- Surface elevation ----
+	  Vectreal separates surfaces by value, not by outlines: "matte flat
+	  surfaces, no hard borders". A 1px border at app-chrome contrast reads as a
+	  drawn box; a few percent of foreground mixed into the background reads as
+	  depth.
+
+	  These are theme-aware by construction, unlike the `--surface-0/1/2` tokens,
+	  which are fixed dark values for the always-dark marketing sections. Mixing
+	  against `--foreground` means the same class lifts in dark mode and settles
+	  in light mode without a second definition.
+
+	  raised  - cards, table containers, anything sitting on the page
+	  overlay - popovers, menus, and rows hovered on top of `raised`
+	  sunken  - wells and inputs that should recede instead of lift
+	*/
+	.ds-raised {
+		background-color: color-mix(in oklch, var(--foreground) 4%, var(--background));
+	}
+	.ds-overlay {
+		background-color: color-mix(in oklch, var(--foreground) 8%, var(--background));
+	}
+	.ds-sunken {
+		background-color: color-mix(in oklch, var(--foreground) 2.5%, var(--background));
+	}
+	/* Only where a divider genuinely carries meaning. Never to draw a box. */
+	.ds-divider {
+		background-color: color-mix(in oklch, var(--foreground) 10%, transparent);
+	}
+
 	/* ---- Type scale (single source of truth) ---- */
 	.text-eyebrow {
-		font-size: 0.6875rem;
+		font-size: var(--text-label-xs);
 		font-weight: 500;
 		line-height: 1;
-		letter-spacing: 0.14em;
+		letter-spacing: var(--tracking-eyebrow);
 		text-transform: uppercase;
 	}
 	.text-display {
-		font-size: clamp(2.75rem, 6.4vw, 5.5rem);
+		font-size: var(--text-display);
 		font-weight: 500;
 		line-height: 1.02;
-		letter-spacing: -0.038em;
+		letter-spacing: var(--tracking-display);
 		text-wrap: balance;
 	}
 	.text-h2 {
-		font-size: clamp(1.75rem, 2.8vw, 2.5rem);
+		font-size: var(--text-h2);
 		font-weight: 500;
 		line-height: 1.1;
-		letter-spacing: -0.025em;
+		letter-spacing: var(--tracking-h2);
 		text-wrap: balance;
 	}
 	.text-h3 {
-		font-size: clamp(1.35rem, 2vw, 1.75rem);
+		font-size: var(--text-h3);
 		font-weight: 500;
 		line-height: 1.18;
-		letter-spacing: -0.02em;
+		letter-spacing: var(--tracking-h3);
 	}
 	.text-stat {
-		font-size: clamp(3rem, 5.5vw, 4.25rem);
+		font-size: var(--text-stat);
 		font-weight: 500;
 		line-height: 1;
 		letter-spacing: -0.04em;
 		font-variant-numeric: tabular-nums;
 	}
 	.text-body-lg {
-		font-size: 1.125rem;
+		font-size: var(--text-body-lg);
 		line-height: 1.6;
 		text-wrap: pretty;
 	}
