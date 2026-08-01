@@ -18,7 +18,9 @@ export default defineConfig(tseslint.configs.recommended, [
 		// multiple candidate tsconfigRootDirs and fail to parse every file.
 		ignores: [
 			'packages/viewer-e2e/src/consumer-template/**',
-			'.claude/**'
+			'.claude/**',
+			// Built Storybook output. Gitignored, but lint globs still reach it.
+			'**/storybook-static/**'
 		]
 	},
 	{

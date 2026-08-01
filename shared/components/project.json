@@ -7,7 +7,9 @@
 	"targets": {
 		"lint": {
 			"executor": "@nx/eslint:lint",
-			"outputs": ["{options.outputFile}"],
+			"outputs": [
+				"{options.outputFile}"
+			],
 			"options": {
 				"fix": true,
 				"lintFilePatterns": [
@@ -25,7 +27,9 @@
 		},
 		"build": {
 			"executor": "@nx/vite:build",
-			"outputs": ["{options.outputPath}"],
+			"outputs": [
+				"{options.outputPath}"
+			],
 			"defaultConfiguration": "production",
 			"options": {
 				"outputPath": "build/shared/components",
@@ -42,7 +46,9 @@
 		},
 		"build-ci": {
 			"executor": "@nx/vite:build",
-			"outputs": ["{options.outputPath}"],
+			"outputs": [
+				"{options.outputPath}"
+			],
 			"defaultConfiguration": "production",
 			"options": {
 				"outputPath": "build/shared/components",
@@ -55,6 +61,35 @@
 				"production": {
 					"mode": "production"
 				}
+			}
+		},
+		"build-storybook": {
+			"executor": "nx:run-commands",
+			"dependsOn": [
+				"typecheck",
+				"typecheck-storybook"
+			],
+			"outputs": [
+				"{projectRoot}/storybook-static"
+			],
+			"options": {
+				"command": "storybook build",
+				"cwd": "shared/components"
+			}
+		},
+		"storybook-dev": {
+			"executor": "nx:run-commands",
+			"continuous": true,
+			"options": {
+				"command": "storybook dev",
+				"cwd": "shared/components"
+			}
+		},
+		"typecheck-storybook": {
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"command": "tsc --noEmit -p shared/components/tsconfig.storybook.json"
 			}
 		}
 	}

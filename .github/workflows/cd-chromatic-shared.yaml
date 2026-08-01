@@ -1,0 +1,70 @@
+name: CD - Publish Shared Components to Chromatic
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'shared/components/**'
+      - '.github/workflows/cd-chromatic-shared.yaml'
+  pull_request:
+    paths:
+      - 'shared/components/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-chromatic-shared
+  cancel-in-progress: true
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  chromatic:
+    name: Publish Shared Components to Chromatic
+    runs-on: ubuntu-22.04
+    environment: chromatic-publishing
+
+    # Needs its own Chromatic project, separate from the viewer's. Until
+    # CHROMATIC_PROJECT_TOKEN_SHARED is set, the Storybook is still built and
+    # type-checked here - only the upload is skipped - so this never blocks a PR.
+    env:
+      CHROMATIC_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN_SHARED }}
+
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: 📥 Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔨 Build Storybook
+        run: npx nx build-storybook shared/components
+
+      - name: ⏭️ Chromatic token not configured
+        if: env.CHROMATIC_TOKEN == ''
+        run: |
+          echo "::notice::CHROMATIC_PROJECT_TOKEN_SHARED is not set. Storybook was built but not published."
+
+      - name: ⚡ Publish to Chromatic
+        if: env.CHROMATIC_TOKEN != ''
+        uses: chromaui/action@v18
+        with:
+          projectToken: ${{ env.CHROMATIC_TOKEN }}
+          workingDir: shared/components
+          autoAcceptChanges: 'main'
+          exitZeroOnChanges: ${{ github.event_name == 'pull_request' }}
+          exitOnceUploaded: true
+          onlyChanged: true
+          skip: '@(renovate/**|dependabot/**|chore/**)'
