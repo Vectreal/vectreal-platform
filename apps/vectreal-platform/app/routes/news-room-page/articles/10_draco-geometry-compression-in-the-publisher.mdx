@@ -17,7 +17,7 @@ author:
     avatar: "/assets/images/logo-192.png"
     xUrl: "https://github.com/Vectreal"
     linkedinUrl: ""
-draft: true
+draft: false
 thumbnailImage: "/assets/images/newsroom/10/thumbnail-draco-geometry-compression-in-the-publisher.webp"
 coverImage: "/assets/images/newsroom/10/og-draco-geometry-compression-in-the-publisher.webp"
 
@@ -43,7 +43,7 @@ Vertex quantization is now off in every preset, and kept in the advanced panel a
 
 Mesh simplification is now off in every preset too. It used to run in all of them, discarding triangles down to a ratio that got more aggressive as the presets got smaller. It is the one step in the pipeline flagged as destructive: it rewrites topology and can leave holes, shading seams and distorted UVs. So the presets no longer throw geometry away by default. If you want it, it is opt-in from the advanced panel, which tells you what it does before you can switch it on.
 
-{/* CAPTURE: newsroom/10/preset-cards.webp */}
+![The Publisher's three optimization presets, Maximum quality, Balanced and Smallest, each listing geometry compression among its techniques, with Balanced selected.](/assets/images/newsroom/10/preset-cards.webp)
 
 Try it, no account needed: [vectreal.com/publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=draco-geometry-compression-in-the-publisher)
 
@@ -69,7 +69,7 @@ When the measurement says compression would not help, publishing skips it. The G
 
 The comparison comes from the optimization pass, so it is the pass that earns you the skip. Publishing a scene you never optimized compresses it without that check.
 
-{/* CAPTURE: newsroom/10/draco-results-row.mp4 */}
+<video src="/assets/images/newsroom/10/draco-results-row.mp4" autoPlay muted loop playsInline aria-label="The Publisher runs an optimization pass on the Balanced preset, then holds on the results panel where the Geometry (Draco) row shows the model's geometry size before and after compression."></video>
 
 ## The controls you still have
 
