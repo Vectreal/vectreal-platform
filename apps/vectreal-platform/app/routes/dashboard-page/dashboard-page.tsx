@@ -1,6 +1,5 @@
 import { useSetAtom } from 'jotai/react'
-import { File } from 'lucide-react'
-import { data } from 'react-router'
+import { data, Link } from 'react-router'
 
 import { Route } from './+types/dashboard-page'
 import {
@@ -11,7 +10,9 @@ import {
 } from '../../components/dashboard'
 import { DashboardSkeleton } from '../../components/skeletons'
 import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
-import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
+import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
+import { loadOrgUsage } from '../../lib/domain/billing/billing-dashboard-loader.server'
+import { getOrgSubscription } from '../../lib/domain/billing/entitlement-service.server'
 import {
 	computeProjectStats,
 	computeSceneStats,
@@ -24,7 +25,7 @@ import { deleteDialogAtom } from '../../lib/stores/dashboard-management-store'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user, headers } = await loadAuthenticatedSession(request)
+	const { user, userWithDefaults, headers } = await loadAuthenticatedUser(request)
 
 	const userProjects = await getUserProjects(user.id)
 
@@ -40,10 +41,25 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const sceneStats = computeSceneStats(scenes)
 	const mostRecentScene = recentScenes[0]
 
+	// `loadOrgUsage` takes the projects and scenes already in hand rather than
+	// re-fetching them, which is why it is a separate function from
+	// `loadBillingDashboardData`.
+	const organizationId = userWithDefaults.organization.id
+	const [usage, { plan }] = await Promise.all([
+		loadOrgUsage(organizationId, userProjects, scenes),
+		getOrgSubscription(organizationId)
+	])
+
+	const projectNamesById = Object.fromEntries(
+		userProjects.map(({ project }) => [project.id, project.name])
+	)
+
 	return data(
 		{
 			projects: userProjects,
 			recentScenes,
+			usage,
+			plan,
 			overview: {
 				kpis: {
 					totalProjects: projectStats.total,
@@ -51,7 +67,19 @@ export async function loader({ request }: Route.LoaderArgs) {
 					publishedScenes: sceneStats.byStatus.published,
 					draftScenes: sceneStats.byStatus.draft
 				},
-				mostRecentSceneId: mostRecentScene?.id
+				// The scene to offer as "jump back in". Computed here before, and
+				// returned, but nothing ever read it.
+				resumeScene: mostRecentScene
+					? {
+							id: mostRecentScene.id,
+							projectId: mostRecentScene.projectId,
+							name: mostRecentScene.name,
+							status: mostRecentScene.status,
+							thumbnailUrl: mostRecentScene.thumbnailUrl,
+							updatedAt: mostRecentScene.updatedAt,
+							projectName: projectNamesById[mostRecentScene.projectId] ?? ''
+						}
+					: null
 			}
 		},
 		{ headers }
@@ -87,7 +115,7 @@ export function HydrateFallback() {
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
 const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
-	const { projects, recentScenes, overview } = loaderData
+	const { projects, recentScenes, overview, usage, plan } = loaderData
 	const setDeleteDialog = useSetAtom(deleteDialogAtom)
 	const sceneTableState = useDashboardTableState({
 		namespace: 'dashboard-scenes'
@@ -111,17 +139,22 @@ const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
 
 	return (
 		<div className="space-y-8 p-6">
-			<DashboardOverview kpis={overview.kpis} />
+			<DashboardOverview
+				resumeScene={overview.resumeScene}
+				usage={usage}
+				plan={plan}
+			/>
 
 			{sceneTableData.length > 0 ? (
 				<section className="space-y-4">
-					<div className="flex flex-col gap-1">
-						<p className="text-muted-foreground text-sm tracking-tight">
-							Recent scenes
-						</p>
-						<h3 className="text-xl font-semibold tracking-tight">
-							Continue from your latest work
-						</h3>
+					<div className="flex flex-wrap items-center justify-between gap-2">
+						<h3 className="text-muted-foreground text-eyebrow">Recent work</h3>
+						<Link
+							to="/dashboard/projects"
+							className="text-muted-foreground hover:text-foreground text-xs"
+						>
+							View all projects →
+						</Link>
 					</div>
 					<DataTable
 						columns={sceneColumns}
@@ -150,19 +183,12 @@ const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
 						}}
 					/>
 				</section>
-			) : (
-				<div className="ds-raised flex flex-col items-center justify-center rounded-2xl p-14 text-center">
-					<div className="ds-overlay mb-5 flex h-16 w-16 items-center justify-center rounded-full">
-						<File className="text-muted-foreground h-8 w-8" />
-					</div>
-					<h3 className="mb-2 text-xl font-semibold tracking-tight">
-						No recent scenes yet
-					</h3>
-					<p className="text-muted-foreground max-w-sm text-sm sm:text-base">
-						Create or update a scene to see it listed here.
-					</p>
-				</div>
-			)}
+			) : null}
+			{/*
+			  No second empty state here. With zero scenes the overview above already
+			  shows the first-scene call to action; a "no recent scenes yet" panel
+			  underneath it said the same thing again, without a way forward.
+			*/}
 		</div>
 	)
 }

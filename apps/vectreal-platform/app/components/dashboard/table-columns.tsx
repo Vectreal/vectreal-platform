@@ -22,7 +22,6 @@ import {
 	CheckCircle2,
 	Clock,
 	Ellipsis,
-	File,
 	FilePenLine,
 	FolderOpen,
 	KeyRound,
@@ -37,6 +36,7 @@ import { memo, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 
 import { createCheckboxColumn, SortableHeader } from './data-table'
+import { SceneThumbnail } from './scene-thumbnail'
 
 import type { ColumnDef } from '@tanstack/react-table'
 
@@ -178,10 +178,14 @@ export const sceneColumns: ColumnDef<SceneRow>[] = [
 					type: 'scene' as const
 				}}
 				viewTransition
-				className="group flex items-center gap-2 font-medium hover:underline"
+				className="group flex items-center gap-2.5 font-medium"
 			>
-				<File className="text-primary/60 group-hover:text-primary h-4 w-4 transition-colors" />
-				{row.getValue('name')}
+				{/*
+				  `SceneRow` has carried `thumbnailUrl` all along and no column ever
+				  rendered it, so every scene looked the same in the list.
+				*/}
+				<SceneThumbnail src={row.original.thumbnailUrl} size="sm" />
+				<span className="group-hover:underline">{row.getValue('name')}</span>
 			</Link>
 		)
 	},

@@ -30,7 +30,10 @@ export function SceneThumbnail({
 	return (
 		<div
 			className={cn(
-				'ds-sunken relative overflow-hidden',
+				// `shrink-0` because the small variant sits in a flex row beside a
+				// scene name of arbitrary length, and a flex item shrinks by default -
+				// a long name squeezed the thumbnail out of square.
+				'ds-sunken relative shrink-0 overflow-hidden',
 				size === 'sm' ? 'size-9 rounded-lg' : 'aspect-video w-full rounded-xl',
 				className
 			)}

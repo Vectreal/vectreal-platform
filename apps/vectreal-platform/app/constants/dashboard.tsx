@@ -49,9 +49,11 @@ export const DASHBOARD_ROUTES = {
  */
 export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 	dashboard: {
-		title: 'Recent Activity',
+		// Not "Recent Activity": there is no activity or audit log behind this
+		// page. It is scenes ordered by `updatedAt`, plus plan usage.
+		title: 'Overview',
 		description:
-			'Monitor scene progress, stay aligned with organizations, and move directly from recent work into publish-ready flows.',
+			'Pick up where you left off, and see how much of your plan you are using.',
 		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: ACTION_VARIANT.DASHBOARD
 	},

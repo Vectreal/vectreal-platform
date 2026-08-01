@@ -1,11 +1,13 @@
-import { eq, inArray } from 'drizzle-orm'
+import { eq, inArray, sql } from 'drizzle-orm'
 import Stripe from 'stripe'
 
 import { getOrgSubscription, getQuotaLimit } from './entitlement-service.server'
 import { getCurrentUsage } from './usage-service.server'
 import { getDbClient } from '../../../db/client'
-import { scenePublished } from '../../../db/schema'
+import { assets, scenePublished } from '../../../db/schema'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
+import { sceneAssets } from '../../../db/schema/project/scene-assets'
+import { sceneSettings } from '../../../db/schema/project/scene-settings'
 import { getStripeClient } from '../../stripe.server'
 import { loadAuthenticatedUser } from '../auth/auth-loader.server'
 import { getUserProjects } from '../project/project-repository.server'
@@ -117,6 +119,100 @@ export async function getCheckoutOptions(): Promise<BillingCheckoutOptions> {
 	return options
 }
 
+/**
+ * Usage and limits for one organization, given its projects and scenes.
+ *
+ * Takes them as arguments rather than fetching them so callers that already
+ * have them - the dashboard index loads every scene row to compute its own
+ * stats - do not pay for the same two queries twice.
+ */
+export async function loadOrgUsage(
+	organizationId: string,
+	userProjects: Array<unknown>,
+	allScenes: Array<{ id: string }>
+): Promise<BillingSettingsData['usage']> {
+	const db = getDbClient()
+
+	const [
+		sceneQuota,
+		projectsQuota,
+		publishedSceneQuota,
+		apiRequestsMonthQuota,
+		storageQuota,
+		embedBandwidthQuota,
+		previewLoadsQuota,
+		apiRequestsMonthUsage,
+		embedBandwidthUsage,
+		previewLoadsUsage
+	] = await Promise.all([
+		getQuotaLimit(organizationId, 'scenes_total'),
+		getQuotaLimit(organizationId, 'projects_total'),
+		getQuotaLimit(organizationId, 'scenes_published_concurrent'),
+		getQuotaLimit(organizationId, 'api_requests_per_month'),
+		getQuotaLimit(organizationId, 'storage_bytes_total'),
+		getQuotaLimit(organizationId, 'embed_bandwidth_gb_per_month'),
+		getQuotaLimit(organizationId, 'preview_loads_per_month'),
+		getCurrentUsage(organizationId, 'api_requests_per_month'),
+		getCurrentUsage(organizationId, 'embed_bandwidth_gb_per_month'),
+		getCurrentUsage(organizationId, 'preview_loads_per_month')
+	])
+
+	const allSceneIds = allScenes.map((scene) => scene.id)
+
+	/*
+	  Storage is measured, not counted.
+
+	  It used to come from `getCurrentUsage(org, 'storage_bytes_total')`, which
+	  reads a usage counter - and nothing in the codebase ever incremented that
+	  counter. The key was read in two places and written in none, so the figure
+	  was structurally 0 for every organization on every plan, on both the
+	  billing page and anywhere else it was shown. Summing `assets.file_size`
+	  reports what is actually stored, the same way published scenes are counted
+	  from `scene_published` rather than from a counter.
+	*/
+	const storageRows =
+		allSceneIds.length > 0
+			? await db
+					.select({ total: sql<null | string>`sum(${assets.fileSize})` })
+					.from(assets)
+					.innerJoin(sceneAssets, eq(sceneAssets.assetId, assets.id))
+					.innerJoin(
+						sceneSettings,
+						eq(sceneSettings.id, sceneAssets.sceneSettingsId)
+					)
+					.where(inArray(sceneSettings.sceneId, allSceneIds))
+			: []
+	const storageBytesTotalUsage = Number(storageRows[0]?.total ?? 0)
+
+	// Published is counted from `scene_published`, not `scenes.status`. The two
+	// can disagree, and the quota is enforced against this table.
+	let publishedCount = 0
+	if (allSceneIds.length > 0) {
+		const publishedRows = await db
+			.select({ sceneId: scenePublished.sceneId })
+			.from(scenePublished)
+			.where(inArray(scenePublished.sceneId, allSceneIds))
+		publishedCount = publishedRows.length
+	}
+
+	return {
+		scenesTotal: allScenes.length,
+		sceneLimit: sceneQuota.limit,
+		publishedScenes: publishedCount,
+		publishedSceneLimit: publishedSceneQuota.limit,
+		projectsTotal: userProjects.length,
+		projectsLimit: projectsQuota.limit,
+		apiRequestsMonth: apiRequestsMonthUsage,
+		apiRequestsMonthLimit: apiRequestsMonthQuota.limit,
+		storageBytesTotal: storageBytesTotalUsage,
+		storageLimit: storageQuota.limit,
+		embedBandwidthMonth: embedBandwidthUsage,
+		embedBandwidthLimit: embedBandwidthQuota.limit,
+		previewLoadsMonth: previewLoadsUsage,
+		previewLoadsMonthLimit: previewLoadsQuota.limit
+	}
+}
+
 export async function loadBillingDashboardData(
 	request: Request,
 	options: { includeCheckoutOptions?: boolean } = {}
@@ -139,50 +235,15 @@ export async function loadBillingDashboardData(
 
 	const { plan, billingState } = await getOrgSubscription(organizationId)
 
-	const [
-		sceneQuota,
-		projectsQuota,
-		publishedSceneQuota,
-		apiRequestsMonthQuota,
-		storageQuota,
-		embedBandwidthQuota,
-		previewLoadsQuota,
-		apiRequestsMonthUsage,
-		storageBytesTotalUsage,
-		embedBandwidthUsage,
-		previewLoadsUsage,
-		checkoutOptions
-	] = await Promise.all([
-		getQuotaLimit(organizationId, 'scenes_total'),
-		getQuotaLimit(organizationId, 'projects_total'),
-		getQuotaLimit(organizationId, 'scenes_published_concurrent'),
-		getQuotaLimit(organizationId, 'api_requests_per_month'),
-		getQuotaLimit(organizationId, 'storage_bytes_total'),
-		getQuotaLimit(organizationId, 'embed_bandwidth_gb_per_month'),
-		getQuotaLimit(organizationId, 'preview_loads_per_month'),
-		getCurrentUsage(organizationId, 'api_requests_per_month'),
-		getCurrentUsage(organizationId, 'storage_bytes_total'),
-		getCurrentUsage(organizationId, 'embed_bandwidth_gb_per_month'),
-		getCurrentUsage(organizationId, 'preview_loads_per_month'),
-		includeCheckoutOptions ? getCheckoutOptions() : Promise.resolve(undefined)
-	])
-
 	const userProjects = await getUserProjects(user.id)
 	const projectIds = userProjects.map(({ project }) => project.id)
 	const scenesByProject = await getProjectsScenes(projectIds, user.id)
 	const allScenes = Array.from(scenesByProject.values()).flat()
-	const totalScenes = allScenes.length
 
-	// Count published scenes via the scene_published table
-	const allSceneIds = allScenes.map((s) => s.id)
-	let publishedCount = 0
-	if (allSceneIds.length > 0) {
-		const publishedRows = await db
-			.select({ sceneId: scenePublished.sceneId })
-			.from(scenePublished)
-			.where(inArray(scenePublished.sceneId, allSceneIds))
-		publishedCount = publishedRows.length
-	}
+	const [usage, checkoutOptions] = await Promise.all([
+		loadOrgUsage(organizationId, userProjects, allScenes),
+		includeCheckoutOptions ? getCheckoutOptions() : Promise.resolve(undefined)
+	])
 
 	const billing: BillingSettingsData = {
 		plan,
@@ -190,22 +251,7 @@ export async function loadBillingDashboardData(
 		currentPeriodEnd: subRow?.currentPeriodEnd?.toISOString() ?? null,
 		trialEnd: subRow?.trialEnd?.toISOString() ?? null,
 		hasStripeCustomer: !!subRow?.stripeCustomerId,
-		usage: {
-			scenesTotal: totalScenes,
-			sceneLimit: sceneQuota.limit,
-			publishedScenes: publishedCount,
-			publishedSceneLimit: publishedSceneQuota.limit,
-			projectsTotal: userProjects.length,
-			projectsLimit: projectsQuota.limit,
-			apiRequestsMonth: apiRequestsMonthUsage,
-			apiRequestsMonthLimit: apiRequestsMonthQuota.limit,
-			storageBytesTotal: storageBytesTotalUsage,
-			storageLimit: storageQuota.limit,
-			embedBandwidthMonth: embedBandwidthUsage,
-			embedBandwidthLimit: embedBandwidthQuota.limit,
-			previewLoadsMonth: previewLoadsUsage,
-			previewLoadsMonthLimit: previewLoadsQuota.limit
-		}
+		usage
 	}
 
 	const loaderData: BillingLoaderData = {
