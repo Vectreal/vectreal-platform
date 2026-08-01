@@ -267,7 +267,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 					</BasicCard>
 
 					<div className="space-y-6">
-						<Card className="border-accent/20 rounded-3xl shadow-none">
+						<Card className="border-orange/20 rounded-3xl shadow-none">
 							<CardHeader>
 								<CardTitle className="text-lg">
 									Routes to the right team
@@ -275,7 +275,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 							</CardHeader>
 							<CardContent className="space-y-4 text-sm">
 								<div className="flex items-start gap-3">
-									<LifeBuoy className="text-accent mt-0.5 h-4 w-4" />
+									<LifeBuoy className="text-orange mt-0.5 h-4 w-4" />
 									<div>
 										<p className="font-medium">Support</p>
 										<p className="text-muted-foreground">
@@ -284,7 +284,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 									</div>
 								</div>
 								<div className="flex items-start gap-3">
-									<Sparkles className="text-accent mt-0.5 h-4 w-4" />
+									<Sparkles className="text-orange mt-0.5 h-4 w-4" />
 									<div>
 										<p className="font-medium">Sales</p>
 										<p className="text-muted-foreground">
@@ -294,7 +294,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 									</div>
 								</div>
 								<div className="flex items-start gap-3">
-									<Users className="text-accent mt-0.5 h-4 w-4" />
+									<Users className="text-orange mt-0.5 h-4 w-4" />
 									<div>
 										<p className="font-medium">Partnerships</p>
 										<p className="text-muted-foreground">
@@ -306,19 +306,19 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 							</CardContent>
 						</Card>
 
-						<Card className="border-accent/20 rounded-3xl shadow-none">
+						<Card className="border-orange/20 rounded-3xl shadow-none">
 							<CardHeader>
 								<CardTitle className="text-lg">Quick links</CardTitle>
 							</CardHeader>
 							<CardContent className="space-y-3 text-sm">
-								<Link className="text-accent block underline" to="/pricing">
+								<Link className="text-orange block underline" to="/pricing">
 									View pricing and plans
 								</Link>
-								<Link className="text-accent block underline" to="/docs">
+								<Link className="text-orange block underline" to="/docs">
 									Read integration docs
 								</Link>
 								<a
-									className="text-accent block underline"
+									className="text-orange block underline"
 									href="mailto:info@vectreal.com"
 								>
 									Email the team directly

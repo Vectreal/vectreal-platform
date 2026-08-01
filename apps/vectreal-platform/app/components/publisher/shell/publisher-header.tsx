@@ -79,7 +79,7 @@ export const PublisherHeader: FC<PublisherHeaderProps> = ({
 					<>
 						<span className="hidden items-center gap-3 px-3 sm:flex">
 							<span
-								className="bg-accent h-1.5 w-1.5 rounded-full"
+								className="bg-orange h-1.5 w-1.5 rounded-full"
 								aria-hidden="true"
 							/>
 							<p className="text-muted-foreground text-xs font-medium tracking-wide">

@@ -167,8 +167,8 @@ const HotspotsSettingsPanel = memo(() => {
 									key={hotspot.id}
 									className={`flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 transition-colors ${
 										selectedId === hotspot.id
-											? 'bg-accent/80'
-											: 'hover:bg-accent/40'
+											? 'bg-orange/80'
+											: 'hover:bg-orange/40'
 									}`}
 									onClick={() =>
 										setSelectedId((prev) =>

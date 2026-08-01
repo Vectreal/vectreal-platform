@@ -294,7 +294,7 @@ export default function MockShopEmbedClient({
 
 			<div className="absolute top-3 left-3 z-10">
 				<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-1.5 backdrop-blur-sm">
-					<span className="bg-accent h-1.5 w-1.5 rounded-full" />
+					<span className="bg-orange h-1.5 w-1.5 rounded-full" />
 					<span className="text-xs font-medium tracking-wide text-white/55">
 						Powered by Vectreal
 					</span>

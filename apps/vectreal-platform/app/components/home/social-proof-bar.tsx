@@ -29,7 +29,7 @@ export function SocialProofBar({ items, className }: SocialProofBarProps) {
 					className="text-muted-foreground inline-flex items-center gap-2 text-xs font-medium tracking-widest uppercase"
 				>
 					<span
-						className="bg-accent/60 inline-block h-1 w-1 rounded-full"
+						className="bg-orange/60 inline-block h-1 w-1 rounded-full"
 						aria-hidden="true"
 					/>
 					{item.text}

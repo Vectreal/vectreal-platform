@@ -135,7 +135,7 @@ function StatTile({
 				className={cn(
 					'text-2xl font-semibold tracking-tight tabular-nums',
 					isCritical && 'text-destructive',
-					isWarning && !isCritical && 'text-accent!'
+					isWarning && !isCritical && 'text-orange!'
 				)}
 			>
 				{current.toLocaleString()}
@@ -149,7 +149,7 @@ function StatTile({
 					className={cn(
 						'h-1',
 						isCritical && '[&>div]:bg-destructive',
-						isWarning && !isCritical && '[&>div]:bg-accent!'
+						isWarning && !isCritical && '[&>div]:bg-orange!'
 					)}
 				/>
 			)}
@@ -189,7 +189,7 @@ function MeterRow({
 					className={cn(
 						'text-xs font-medium tabular-nums',
 						isCritical && 'text-destructive',
-						isWarning && !isCritical && 'text-accent!'
+						isWarning && !isCritical && 'text-orange!'
 					)}
 				>
 					{current.toLocaleString()}
@@ -202,7 +202,7 @@ function MeterRow({
 					className={cn(
 						'h-1',
 						isCritical && '[&>div]:bg-destructive',
-						isWarning && !isCritical && '[&>div]:bg-accent!'
+						isWarning && !isCritical && '[&>div]:bg-orange!'
 					)}
 				/>
 			)}

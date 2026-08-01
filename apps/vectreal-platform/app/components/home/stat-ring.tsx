@@ -74,7 +74,7 @@ export function StatRing({
 			ref={ref}
 			className={cn(
 				'bg-surface-1 border-surface-border group flex flex-col items-center gap-4 rounded-2xl border p-6 text-center transition-[transform,border-color] duration-300',
-				'hover:border-accent/30 hover:-translate-y-1',
+				'hover:border-orange/30 hover:-translate-y-1',
 				className
 			)}
 		>
@@ -104,7 +104,7 @@ export function StatRing({
 						cy={SIZE / 2}
 						r={RADIUS}
 						fill="none"
-						stroke="var(--accent)"
+						stroke="var(--orange)"
 						strokeWidth={STROKE}
 						strokeLinecap="round"
 						strokeDasharray={CIRCUMFERENCE}
@@ -117,7 +117,7 @@ export function StatRing({
 						style={{ fontSize: '2.25rem', letterSpacing: '-0.03em' }}
 					>
 						<motion.span>{rounded}</motion.span>
-						<span className="text-accent">{suffix}</span>
+						<span className="text-orange">{suffix}</span>
 					</span>
 				</div>
 			</div>

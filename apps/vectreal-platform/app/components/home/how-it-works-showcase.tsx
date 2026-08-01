@@ -97,7 +97,7 @@ function UploadGraphic() {
 					transition={{ type: 'spring', stiffness: 220, damping: 16 }}
 					className="bg-surface-2 border-surface-border flex size-20 items-center justify-center rounded-2xl border shadow-2xl"
 				>
-					<FileBox className="text-accent size-9" />
+					<FileBox className="text-orange size-9" />
 				</motion.div>
 			</div>
 			<div className="w-full max-w-md">
@@ -107,14 +107,14 @@ function UploadGraphic() {
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						transition={{ delay: 1.6 }}
-						className="text-accent"
+						className="text-orange"
 					>
 						uploaded
 					</motion.span>
 				</div>
 				<div className="bg-surface-2 h-2 w-full overflow-hidden rounded-full">
 					<motion.div
-						className="bg-accent h-full rounded-full"
+						className="bg-orange h-full rounded-full"
 						initial={{ width: '0%' }}
 						animate={{ width: '100%' }}
 						transition={{ duration: 1.4, ease: easeOut, delay: 0.3 }}
@@ -139,7 +139,7 @@ function OptimizeGraphic() {
 				>
 					<span className="text-foreground text-sm">{task}</span>
 					<motion.span
-						className="bg-accent flex size-6 items-center justify-center rounded-full text-white"
+						className="bg-orange flex size-6 items-center justify-center rounded-full text-white"
 						initial={{ scale: 0 }}
 						animate={{ scale: 1 }}
 						transition={{
@@ -162,7 +162,7 @@ function OptimizeGraphic() {
 				<span className="text-muted-foreground text-sm line-through">
 					124 MB
 				</span>
-				<span className="text-accent text-lg font-medium">→ 3.2 MB</span>
+				<span className="text-orange text-lg font-medium">→ 3.2 MB</span>
 			</motion.div>
 		</div>
 	)
@@ -178,7 +178,7 @@ function ManageGraphic() {
 				animate={{ opacity: 1, y: 0 }}
 				transition={stageTransition}
 			>
-				<Cloud className="text-accent size-4" />
+				<Cloud className="text-orange size-4" />
 				<span className="text-muted-foreground text-xs">Synced to cloud</span>
 			</motion.div>
 			<div className="flex w-full max-w-sm flex-col gap-2">
@@ -187,7 +187,7 @@ function ManageGraphic() {
 						key={v}
 						className={cn(
 							'border-surface-border flex items-center justify-between rounded-xl border px-4 py-3',
-							i === 0 ? 'border-accent/30' : 'bg-surface-2/40'
+							i === 0 ? 'border-orange/30' : 'bg-surface-2/40'
 						)}
 						initial={{ opacity: 0, y: 14, scale: 0.96 }}
 						animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -201,7 +201,7 @@ function ManageGraphic() {
 						>
 							{v}
 						</span>
-						{i === 0 && <span className="bg-accent size-1.5 rounded-full" />}
+						{i === 0 && <span className="bg-orange size-1.5 rounded-full" />}
 					</motion.div>
 				))}
 			</div>
@@ -224,19 +224,19 @@ function PublishGraphic() {
 					transition={{ duration: 1.3, ease: 'linear', delay: 0.3 }}
 				>
 					<span className="text-foreground">{'<iframe src='}</span>
-					<span className="text-accent">{'"vectreal.com/…"'}</span>
+					<span className="text-orange">{'"vectreal.com/…"'}</span>
 					<span className="text-foreground">{' />'}</span>
 				</motion.div>
 			</div>
 			<motion.div
-				className="border-accent/30 inline-flex items-center gap-2 rounded-full border px-3 py-1.5"
+				className="border-orange/30 inline-flex items-center gap-2 rounded-full border px-3 py-1.5"
 				initial={{ opacity: 0, scale: 0.9 }}
 				animate={{ opacity: 1, scale: 1 }}
 				transition={{ delay: 1.7, type: 'spring', stiffness: 300, damping: 18 }}
 			>
 				<span className="relative flex size-2">
-					<span className="bg-accent absolute inline-flex size-full animate-ping rounded-full opacity-60" />
-					<span className="bg-accent relative inline-flex size-2 rounded-full" />
+					<span className="bg-orange absolute inline-flex size-full animate-ping rounded-full opacity-60" />
+					<span className="bg-orange relative inline-flex size-2 rounded-full" />
 				</span>
 				<span className="text-xs font-medium text-white">Live</span>
 			</motion.div>
@@ -332,7 +332,7 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 								className={cn(
 									'group relative flex w-full items-start gap-4 overflow-hidden rounded-2xl border p-4 text-left transition-colors duration-300',
 									isActive
-										? 'border-accent/30 bg-surface-2'
+										? 'border-orange/30 bg-surface-2'
 										: 'border-surface-border bg-surface-1 hover:bg-surface-1/80'
 								)}
 							>
@@ -340,7 +340,7 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 								{isActive && !prefersReducedMotion && (
 									<span
 										ref={progressBarRef}
-										className="bg-accent/70 absolute bottom-0 left-0 h-0.5"
+										className="bg-orange/70 absolute bottom-0 left-0 h-0.5"
 										style={{ width: '0%' }}
 									/>
 								)}
@@ -348,7 +348,7 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 									className={cn(
 										'flex size-10 shrink-0 items-center justify-center rounded-xl border transition-colors duration-300',
 										isActive
-											? 'border-accent/40 bg-accent bg-opacity-10'
+											? 'border-orange/40 bg-orange bg-opacity-10'
 											: 'border-surface-border bg-surface-0/60'
 									)}
 								>
@@ -399,7 +399,7 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 												<step.icon
 													className={cn(
 														'size-5 transition-colors duration-300',
-														isActive ? 'text-accent' : 'text-muted-foreground'
+														isActive ? 'text-orange' : 'text-muted-foreground'
 													)}
 												/>
 											</motion.span>
@@ -411,7 +411,7 @@ export function HowItWorksShowcase({ className }: { className?: string }) {
 										<span
 											className={cn(
 												'text-xs font-medium tabular-nums transition-colors',
-												isActive ? 'text-accent' : 'text-muted-foreground/50'
+												isActive ? 'text-orange' : 'text-muted-foreground/50'
 											)}
 										>
 											0{String(step.index + 1)}

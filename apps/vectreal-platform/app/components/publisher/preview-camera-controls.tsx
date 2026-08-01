@@ -62,7 +62,7 @@ const PreviewCameraControls: React.FC = () => {
 							type="button"
 							onClick={handleExitPreviewMode}
 							aria-label="Exit preview mode"
-							className="bg-accent text-accent-foreground border-border/70 hover:text-foreground absolute -top-8 left-1/2 z-0 h-10 -translate-x-1/2 rounded-t-xl border border-b-0 px-3 pt-2 pb-3 text-xs shadow-lg"
+							className="bg-orange text-white border-border/70 hover:text-foreground absolute -top-8 left-1/2 z-0 h-10 -translate-x-1/2 rounded-t-xl border border-b-0 px-3 pt-2 pb-3 text-xs shadow-lg"
 							whileHover={{ y: -2 }}
 							whileTap={{ y: 0 }}
 						>

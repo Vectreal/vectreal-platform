@@ -32,7 +32,7 @@ function KpiTile({
 }) {
 	return (
 		<div className="bg-muted/30 hover:bg-muted/40 flex items-end gap-3 rounded-2xl p-5 pb-4 transition-colors duration-200">
-			<p className="text-accent! mb-1 min-w-6 text-right text-3xl leading-6! font-semibold">
+			<p className="text-orange! mb-1 min-w-6 text-right text-3xl leading-6! font-semibold">
 				{value}
 			</p>
 			<div className="flex items-baseline gap-3">
@@ -74,7 +74,7 @@ export function DashboardOverview({ kpis }: DashboardOverviewProps) {
 				</div>
 				<div className="border-muted/50 group relative h-50 w-full overflow-hidden rounded-2xl border md:h-full">
 					<div className="h-full opacity-75 blur-[50px]">
-						<div className="bg-accent absolute top-1/2 left-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2" />
+						<div className="bg-orange absolute top-1/2 left-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2" />
 						<div className="absolute top-1/2 left-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 bg-white" />
 					</div>
 					<div className="from-background/75 absolute inset-0 bottom-0 h-full rounded-xl bg-linear-to-t to-transparent opacity-100 transition-opacity duration-500 group-hover:opacity-25" />

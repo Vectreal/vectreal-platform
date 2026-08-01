@@ -85,7 +85,7 @@ export function BentoCard({
 				className={cn(
 					'relative h-full overflow-hidden rounded-2xl border p-5 transition-colors duration-300',
 					'bg-surface-1 border-surface-border',
-					glow && 'hover:border-accent/30',
+					glow && 'hover:border-orange/30',
 					'flex flex-col gap-3.5'
 				)}
 			>

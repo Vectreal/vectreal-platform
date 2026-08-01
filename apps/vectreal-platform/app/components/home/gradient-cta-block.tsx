@@ -83,7 +83,7 @@ export function GradientCtaBlock({
 					<Button
 						asChild
 						size="lg"
-						className="bg-accent hover:bg-accent/90 rounded-xl px-8 text-white"
+						className="bg-orange hover:bg-orange/90 rounded-xl px-8 text-white"
 					>
 						<Link to={primaryCta.to}>{primaryCta.label}</Link>
 					</Button>

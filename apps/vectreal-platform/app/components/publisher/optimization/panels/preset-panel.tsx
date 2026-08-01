@@ -75,7 +75,7 @@ export const PresetPanel: FC = () => {
 						className={cn(
 							'publisher-shell-focus group w-full rounded-xl border p-4 text-left transition-all duration-200',
 							isSelected
-								? 'border-accent/35 bg-shell-surface'
+								? 'border-orange/35 bg-shell-surface'
 								: 'border-shell-border-soft bg-shell-surface-soft hover:border-shell-border-strong hover:bg-shell-surface'
 						)}
 					>
@@ -84,7 +84,7 @@ export const PresetPanel: FC = () => {
 								className={cn(
 									'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-200',
 									isSelected
-										? 'border-accent bg-accent'
+										? 'border-orange bg-orange'
 										: 'border-muted-foreground/30 group-hover:border-muted-foreground/60'
 								)}
 							>
@@ -97,7 +97,7 @@ export const PresetPanel: FC = () => {
 								className={cn(
 									'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors duration-200',
 									isSelected
-										? 'bg-accent/15 text-accent'
+										? 'bg-orange/15 text-orange'
 										: 'bg-shell-surface text-muted-foreground group-hover:text-foreground'
 								)}
 							>
@@ -146,7 +146,7 @@ export const PresetPanel: FC = () => {
 										<div className="flex flex-col gap-1.5">
 											{techniques.map((technique) => (
 												<div key={technique} className="flex items-center gap-2">
-													<Check className="text-accent h-3 w-3 shrink-0" />
+													<Check className="text-orange h-3 w-3 shrink-0" />
 													<span className="text-foreground/75 text-xs">
 														{technique}
 													</span>
@@ -169,9 +169,9 @@ export const PresetPanel: FC = () => {
 				<motion.div
 					initial={{ opacity: 0, y: -4 }}
 					animate={{ opacity: 1, y: 0 }}
-					className="border-accent/35 bg-shell-surface flex items-center gap-3 rounded-xl border p-4"
+					className="border-orange/35 bg-shell-surface flex items-center gap-3 rounded-xl border p-4"
 				>
-					<div className="bg-accent/15 text-accent flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
+					<div className="bg-orange/15 text-orange flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
 						<SlidersHorizontal className="h-4 w-4" />
 					</div>
 					<div className="min-w-0">

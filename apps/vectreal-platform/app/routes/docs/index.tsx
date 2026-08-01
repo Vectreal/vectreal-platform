@@ -74,8 +74,8 @@ export default function DocsIndexPage() {
 						<Link key={href} to={href} className="group outline-none">
 							<BasicCard className="h-full" highlight>
 								<CardHeader className="pb-2">
-									<div className="bg-accent/10 mb-3 flex h-9 w-9 items-center justify-center rounded-xl">
-										<Icon className="text-accent h-4.5 w-4.5" />
+									<div className="bg-orange/10 mb-3 flex h-9 w-9 items-center justify-center rounded-xl">
+										<Icon className="text-orange h-4.5 w-4.5" />
 									</div>
 									<CardTitle className="text-base font-medium">
 										{title}

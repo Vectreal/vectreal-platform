@@ -91,13 +91,13 @@ export function OptimizationVisual({ className }: { className?: string }) {
 							<span className="text-foreground text-sm font-medium">
 								Vectreal optimized
 							</span>
-							<motion.span className="text-accent font-medium tabular-nums">
+							<motion.span className="text-orange font-medium tabular-nums">
 								{optMbStr}
 							</motion.span>
 						</div>
 						<div className="bg-surface-0 border-surface-border relative h-4 w-full overflow-hidden rounded-full border">
 							<motion.div
-								className="bg-accent absolute right-0 h-full rounded-full"
+								className="bg-orange absolute right-0 h-full rounded-full"
 								style={{ width: optWidthStr }}
 							/>
 						</div>
@@ -106,17 +106,17 @@ export function OptimizationVisual({ className }: { className?: string }) {
 
 				{/* Reduction badge */}
 				<div className="flex flex-col items-start gap-3 lg:items-center lg:text-center">
-					<div className="border-accent/20 inline-flex items-center gap-2 rounded-full border px-3 py-1">
-						<TrendingDown className="text-accent size-3.5" aria-hidden="true" />
-						<span className="text-eyebrow text-accent/80">Smaller payload</span>
+					<div className="border-orange/20 inline-flex items-center gap-2 rounded-full border px-3 py-1">
+						<TrendingDown className="text-orange size-3.5" aria-hidden="true" />
+						<span className="text-eyebrow text-orange/80">Smaller payload</span>
 					</div>
 					<div className="text-stat text-foreground flex items-center">
 						<ArrowDown
-							className="text-accent mr-1 size-8 md:size-10"
+							className="text-orange mr-1 size-8 md:size-10"
 							aria-hidden="true"
 						/>
 						<motion.span>{reductionStr}</motion.span>
-						<span className="text-accent">%</span>
+						<span className="text-orange">%</span>
 					</div>
 					<p className="text-muted-foreground max-w-[28ch] text-sm leading-relaxed">
 						Automatic mesh decimation, texture compression, and Draco encoding —

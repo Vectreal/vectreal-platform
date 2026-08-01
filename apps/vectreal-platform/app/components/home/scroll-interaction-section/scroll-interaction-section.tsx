@@ -51,8 +51,8 @@ function ScrollInteractionSection({
 			{/* Section heading */}
 			<div className="from-background to-background/0 relative z-10 bg-linear-to-b px-4 py-16">
 				<div className="mx-auto max-w-7xl">
-					<div className="border-accent/20 bg-accent/5 text-accent/70 mb-4 inline-flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium tracking-widest uppercase">
-						<span className="bg-accent/60 h-1.5 w-1.5 rounded-full" />
+					<div className="border-orange/20 bg-orange/5 text-orange/70 mb-4 inline-flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium tracking-widest uppercase">
+						<span className="bg-orange/60 h-1.5 w-1.5 rounded-full" />
 						Live Embed
 					</div>
 					<h2

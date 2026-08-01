@@ -25,14 +25,14 @@ const PageHero = ({
 	return (
 		<div
 			className={cn(
-				'from-accent/10 relative isolate overflow-hidden bg-linear-to-b via-transparent to-transparent',
+				'from-orange/10 relative isolate overflow-hidden bg-linear-to-b via-transparent to-transparent',
 				className
 			)}
 		>
 			{/* Decorative radial accent gradients - purely visual, pointer-events off */}
 			<div
 				aria-hidden="true"
-				className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_15%_25%,hsl(var(--accent)/0.14),transparent_42%),radial-gradient(circle_at_82%_12%,hsl(var(--accent)/0.09),transparent_45%)]"
+				className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_15%_25%,hsl(var(--orange)/0.14),transparent_42%),radial-gradient(circle_at_82%_12%,hsl(var(--orange)/0.09),transparent_45%)]"
 			/>
 
 			<div className="mx-auto max-w-7xl px-6 pt-24 pb-16">

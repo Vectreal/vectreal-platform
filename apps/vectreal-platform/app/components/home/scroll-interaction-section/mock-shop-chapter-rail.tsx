@@ -57,7 +57,7 @@ export function ChapterRail({
 			<motion.span
 				aria-hidden
 				style={{ x: indicatorX, width: '25%', willChange: 'transform' }}
-				className="bg-accent absolute bottom-0 left-0 h-px rounded-full"
+				className="bg-orange absolute bottom-0 left-0 h-px rounded-full"
 			/>
 			{CHAPTERS.map((c, i) => (
 				<button
