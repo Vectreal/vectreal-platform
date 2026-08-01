@@ -21,6 +21,7 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import {
 	Camera,
 	Check,
+	ExternalLink,
 	Eye,
 	EyeOff,
 	Link,
@@ -29,16 +30,20 @@ import {
 	Trash2
 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useParams } from 'react-router'
 
 import {
 	defaultCameraOptions,
 	defaultControlsOptions,
 	type FieldConfig
 } from './constants'
+import { buildInternalPreviewPath } from '../../../../../lib/domain/embed/embed-snippet'
 import { resolveDefaultSceneCameraId } from '../../../../../lib/domain/scene/scene-camera'
 import {
 	canEditCameraSettingsAtom,
+	currentLocationAtom,
 	isPreviewModeAtom,
+	lastSavedSceneIdAtom,
 	processAtom
 } from '../../../../../lib/stores/publisher-config-store'
 import {
@@ -324,6 +329,16 @@ const CameraControlsSettingsPanel = memo(() => {
 	const canEditCameraSettings = useAtomValue(canEditCameraSettingsAtom)
 	const setIsPreviewMode = useSetAtom(isPreviewModeAtom)
 	const setProcessState = useSetAtom(processAtom)
+	const routeParams = useParams()
+	const { projectId } = useAtomValue(currentLocationAtom)
+	const lastSavedSceneId = useAtomValue(lastSavedSceneIdAtom)
+	// The route param lags a first save, so fall back to the just-saved id.
+	// Without both ids there is no scene on disk to open, hence the disabled state.
+	const savedSceneId = routeParams.sceneId ?? lastSavedSceneId ?? null
+	const fullPreviewHref =
+		projectId && savedSceneId
+			? buildInternalPreviewPath({ projectId, sceneId: savedSceneId })
+			: null
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 	const [cameraNameDraft, setCameraNameDraft] = useState('')
 	const [transitionAdvancedOpen, setTransitionAdvancedOpen] = useState(false)
@@ -792,31 +807,73 @@ const CameraControlsSettingsPanel = memo(() => {
 		<div className="space-y-8">
 			<SidebarSection>
 				<SidebarSectionContent>
-					<div className="border-border/60 bg-muted/40 flex items-center justify-between rounded-xl border p-3">
-						<div>
+					<div className="border-border/60 bg-muted/40 space-y-2 rounded-xl border p-3">
+						<div className="flex items-center justify-between gap-3">
 							<p className="text-sm font-semibold">Preview Mode</p>
-							<p className="text-muted-foreground mt-0.5 text-xs">
-								Lock editing and review saved cameras in sequence.
-							</p>
+							<Button
+								variant={isPreviewMode ? 'secondary' : 'default'}
+								size="sm"
+								disabled={!allCameras.length}
+								onClick={
+									isPreviewMode ? handleExitPreviewMode : handleEnterPreviewMode
+								}
+							>
+								{isPreviewMode ? (
+									<>
+										<EyeOff className="mr-2 h-4 w-4" /> Exit
+									</>
+								) : (
+									<>
+										<Eye className="mr-2 h-4 w-4" /> Enter
+									</>
+								)}
+							</Button>
 						</div>
-						<Button
-							variant={isPreviewMode ? 'secondary' : 'default'}
-							size="sm"
-							disabled={!allCameras.length}
-							onClick={
-								isPreviewMode ? handleExitPreviewMode : handleEnterPreviewMode
-							}
-						>
-							{isPreviewMode ? (
-								<>
-									<EyeOff className="mr-2 h-4 w-4" /> Exit
-								</>
-							) : (
-								<>
-									<Eye className="mr-2 h-4 w-4" /> Enter
-								</>
-							)}
-						</Button>
+
+						{/*
+						  The handoff between the two preview tools. In-canvas preview
+						  reviews cameras while you compose; the full preview is the saved
+						  scene on its own route, opened in a new tab so the publisher and
+						  whatever is unsaved in it stay put. On its own row: sharing the
+						  trigger's axis squashed both.
+						*/}
+						{fullPreviewHref ? (
+							<Button
+								variant="ghost"
+								size="sm"
+								asChild
+								className="h-8 w-full justify-start px-2"
+							>
+								<a
+									href={fullPreviewHref}
+									target="_blank"
+									rel="noreferrer"
+									className="text-muted-foreground hover:text-foreground text-xs"
+								>
+									Open full preview
+									<ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+								</a>
+							</Button>
+						) : (
+							<Tooltip>
+								<TooltipTrigger asChild>
+									{/* A disabled button swallows pointer events, so the
+									    tooltip needs a wrapper to hang off. */}
+									<span tabIndex={0} className="block">
+										<Button
+											variant="ghost"
+											size="sm"
+											disabled
+											className="text-muted-foreground h-8 w-full justify-start px-2 text-xs"
+										>
+											Open full preview
+											<ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+										</Button>
+									</span>
+								</TooltipTrigger>
+								<TooltipContent>Save this scene first.</TooltipContent>
+							</Tooltip>
+						)}
 					</div>
 				</SidebarSectionContent>
 			</SidebarSection>
@@ -824,18 +881,6 @@ const CameraControlsSettingsPanel = memo(() => {
 			{/* Camera Manager */}
 			<SidebarSection>
 				<SidebarSectionContent>
-					{isPreviewMode && (
-						<div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2">
-							<p className="text-xs text-amber-700 dark:text-amber-400">
-								Previewing through{' '}
-								<span className="font-semibold">
-									{selectedCamera?.name ?? 'camera'}
-								</span>
-								. Switch cameras to transition.
-							</p>
-						</div>
-					)}
-
 					{/* Camera Name */}
 					<SettingRow label="Camera Name">
 						<div className="flex w-full flex-col gap-1">

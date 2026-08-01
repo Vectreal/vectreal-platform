@@ -6,6 +6,7 @@ import {
 } from '@shared/components/ui/tooltip'
 import { cn } from '@shared/utils'
 import { User } from '@supabase/supabase-js'
+import { motion } from 'framer-motion'
 import { useAtomValue, useSetAtom } from 'jotai/react'
 import { memo, useCallback } from 'react'
 
@@ -17,6 +18,7 @@ import {
 import { DynamicSidebar } from './dynamic-sidebar'
 import {
 	arePublisherActionsDisabledAtom,
+	isPreviewModeAtom,
 	processAtom,
 	toolSidebarStateAtom
 } from '../../../lib/stores/publisher-config-store'
@@ -39,6 +41,7 @@ export const ToolSidebar = memo(
 		const arePublisherActionsDisabled = useAtomValue(
 			arePublisherActionsDisabledAtom
 		)
+		const isPreviewMode = useAtomValue(isPreviewModeAtom)
 		const setProcessState = useSetAtom(processAtom)
 		const activeToolDefinition = getComposeToolDefinition(activeComposeTool)
 
@@ -76,11 +79,21 @@ export const ToolSidebar = memo(
 		return (
 			<>
 				{/* Anchored to the canvas stage, so the rail starts below the header. */}
-				<div className={cn(
-						"absolute top-0 left-0 hidden flex-col gap-2 md:flex",
+				<motion.div
+					// Editing tools have no meaning in preview mode, so the rail leaves
+					// instead of sitting there disabled.
+					animate={
+						isPreviewMode ? { opacity: 0, x: -8 } : { opacity: 1, x: 0 }
+					}
+					transition={{ duration: 0.24, ease: [0.4, 0, 0.2, 1] }}
+					aria-hidden={isPreviewMode}
+					className={cn(
+						'absolute top-0 left-0 hidden flex-col gap-2 md:flex',
 						PUBLISHER_EDGE_INSET,
-						PUBLISHER_LAYER.toolRail
-					)}>
+						PUBLISHER_LAYER.toolRail,
+						isPreviewMode && 'pointer-events-none'
+					)}
+				>
 					{COMPOSE_TOOL_DEFINITIONS.map(({ value, icon: Icon, shortLabel }) => {
 						const isActive = value === activeComposeTool && showSidebar
 						return (
@@ -111,7 +124,7 @@ export const ToolSidebar = memo(
 							</Tooltip>
 						)
 					})}
-				</div>
+				</motion.div>
 
 				<DynamicSidebar
 					open={showSidebar}
