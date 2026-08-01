@@ -1,8 +1,6 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
-import { Progress } from '@shared/components/ui/progress'
 import { Separator } from '@shared/components/ui/separator'
-import { cn } from '@shared/utils'
 import {
 	AlertTriangle,
 	ArrowUpRight,
@@ -17,6 +15,7 @@ import { Link } from 'react-router'
 
 import { DASHBOARD_ROUTES } from '../../../constants/dashboard'
 import { PLAN_DISPLAY_NAMES } from '../../../constants/product-copy'
+import { UsageMeter } from '../usage-meter'
 
 import type { BillingState } from '../../../constants/plan-config'
 import type { BillingSettingsData } from '../../../lib/domain/dashboard/dashboard-types'
@@ -98,117 +97,6 @@ const WARNING_STATES = new Set<BillingState>([
 	'incomplete_expired',
 	'paused'
 ])
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
-function StatTile({
-	label,
-	current,
-	limit,
-	monthly
-}: {
-	label: string
-	current: number
-	limit: number | null
-	monthly?: boolean
-}) {
-	const unlimited = limit === null
-	const percent = unlimited
-		? 0
-		: Math.min(Math.round((current / limit) * 100), 100)
-	const isWarning = !unlimited && percent >= 80
-	const isCritical = !unlimited && percent >= 95
-
-	return (
-		<div className="bg-muted/20 space-y-3 rounded-xl p-4">
-			<p className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
-				{label}
-				{monthly && (
-					<span className="text-muted-foreground/60 ml-1 tracking-normal normal-case">
-						/mo
-					</span>
-				)}
-			</p>
-			<p
-				className={cn(
-					'text-2xl font-semibold tracking-tight tabular-nums',
-					isCritical && 'text-destructive',
-					isWarning && !isCritical && 'text-orange!'
-				)}
-			>
-				{current.toLocaleString()}
-				<span className="text-muted-foreground ml-0.5 text-sm font-normal">
-					{!unlimited ? `/ ${limit.toLocaleString()}` : '/ ∞'}
-				</span>
-			</p>
-			{!unlimited && (
-				<Progress
-					value={percent}
-					className={cn(
-						'h-1',
-						isCritical && '[&>div]:bg-destructive',
-						isWarning && !isCritical && '[&>div]:bg-orange!'
-					)}
-				/>
-			)}
-			{unlimited && <div className="bg-muted/40 h-1 rounded-full" />}
-		</div>
-	)
-}
-
-function MeterRow({
-	label,
-	current,
-	limit,
-	monthly
-}: {
-	label: string
-	current: number
-	limit: number | null
-	monthly?: boolean
-}) {
-	const unlimited = limit === null
-	const percent = unlimited
-		? 0
-		: Math.min(Math.round((current / limit) * 100), 100)
-	const isWarning = !unlimited && percent >= 80
-	const isCritical = !unlimited && percent >= 95
-
-	return (
-		<div className="space-y-1.5">
-			<div className="flex items-center justify-between">
-				<span className="text-muted-foreground text-xs">
-					{label}
-					{monthly && (
-						<span className="text-muted-foreground/50 ml-1">/mo</span>
-					)}
-				</span>
-				<span
-					className={cn(
-						'text-xs font-medium tabular-nums',
-						isCritical && 'text-destructive',
-						isWarning && !isCritical && 'text-orange!'
-					)}
-				>
-					{current.toLocaleString()}
-					{!unlimited ? ` / ${limit.toLocaleString()}` : ' / ∞'}
-				</span>
-			</div>
-			{!unlimited && (
-				<Progress
-					value={percent}
-					className={cn(
-						'h-1',
-						isCritical && '[&>div]:bg-destructive',
-						isWarning && !isCritical && '[&>div]:bg-orange!'
-					)}
-				/>
-			)}
-		</div>
-	)
-}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -356,17 +244,17 @@ export function BillingSettingsSection({
 
 			{/* ── KPI stat grid ─────────────────────────────────── */}
 			<section className="grid grid-cols-2 gap-3 md:grid-cols-3">
-				<StatTile
+				<UsageMeter
 					label="Scenes"
 					current={usage.scenesTotal}
 					limit={usage.sceneLimit}
 				/>
-				<StatTile
+				<UsageMeter
 					label="Projects"
 					current={usage.projectsTotal}
 					limit={usage.projectsLimit}
 				/>
-				<StatTile
+				<UsageMeter
 					label="Published"
 					current={usage.publishedScenes}
 					limit={usage.publishedSceneLimit}
@@ -378,21 +266,24 @@ export function BillingSettingsSection({
 			{/* ── Detailed usage meters ────────────────────────── */}
 			<section className="grid gap-8 md:grid-cols-2">
 				<div className="space-y-4">
-					<p className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
+					<p className="text-muted-foreground text-eyebrow">
 						Content
 					</p>
 					<div className="space-y-3">
-						<MeterRow
+						<UsageMeter
+							variant="row"
 							label="Scenes (total)"
 							current={usage.scenesTotal}
 							limit={usage.sceneLimit}
 						/>
-						<MeterRow
+						<UsageMeter
+							variant="row"
 							label="Published scenes"
 							current={usage.publishedScenes}
 							limit={usage.publishedSceneLimit}
 						/>
-						<MeterRow
+						<UsageMeter
+							variant="row"
 							label="Projects"
 							current={usage.projectsTotal}
 							limit={usage.projectsLimit}
@@ -400,11 +291,12 @@ export function BillingSettingsSection({
 					</div>
 				</div>
 				<div className="space-y-4">
-					<p className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
+					<p className="text-muted-foreground text-eyebrow">
 						API &amp; processing
 					</p>
 					<div className="space-y-3">
-						<MeterRow
+						<UsageMeter
+							variant="row"
 							label="API requests"
 							current={usage.apiRequestsMonth}
 							limit={usage.apiRequestsMonthLimit}
@@ -413,11 +305,12 @@ export function BillingSettingsSection({
 					</div>
 				</div>
 				<div className="space-y-4">
-					<p className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
+					<p className="text-muted-foreground text-eyebrow">
 						Storage &amp; bandwidth
 					</p>
 					<div className="space-y-3">
-						<MeterRow
+						<UsageMeter
+							variant="row"
 							label="Storage used (MB)"
 							current={Math.round(usage.storageBytesTotal / (1024 * 1024))}
 							limit={
@@ -426,13 +319,15 @@ export function BillingSettingsSection({
 									: null
 							}
 						/>
-						<MeterRow
+						<UsageMeter
+							variant="row"
 							label="Embed bandwidth (GB)"
 							current={usage.embedBandwidthMonth}
 							limit={usage.embedBandwidthLimit}
 							monthly
 						/>
-						<MeterRow
+						<UsageMeter
+							variant="row"
 							label="Preview loads"
 							current={usage.previewLoadsMonth}
 							limit={usage.previewLoadsMonthLimit}

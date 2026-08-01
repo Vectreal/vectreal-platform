@@ -20,7 +20,11 @@ const require = createRequire(import.meta.url)
 const config: StorybookConfig = {
 	stories: [
 		'../../shared/components/src/**/*.@(mdx|stories.@(js|jsx|ts|tsx))',
-		'../../packages/viewer/src/**/*.@(mdx|stories.@(js|jsx|ts|tsx))'
+		'../../packages/viewer/src/**/*.@(mdx|stories.@(js|jsx|ts|tsx))',
+		// App-level components too. The dashboard's cards and meters carry as much
+		// design decision as the shared primitives do, and until now nothing
+		// visual regression-tested them.
+		'../../apps/vectreal-platform/app/components/**/*.@(mdx|stories.@(js|jsx|ts|tsx))'
 	],
 	addons: [getAbsolutePath('@storybook/addon-docs')],
 	docs: {
