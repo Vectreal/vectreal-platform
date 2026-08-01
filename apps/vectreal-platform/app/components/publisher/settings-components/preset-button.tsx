@@ -25,7 +25,7 @@ export const PresetButton = ({
 		className={cn(
 			'publisher-shell-focus rounded-xl px-3 py-2 text-xs font-semibold transition-all',
 			isActive
-				? 'border border-accent/55 bg-shell-surface ring-1 ring-accent/20 shadow-sm'
+				? 'border border-orange/55 bg-shell-surface ring-1 ring-orange/20 shadow-sm'
 				: 'bg-shell-surface-soft hover:bg-shell-surface',
 			className
 		)}

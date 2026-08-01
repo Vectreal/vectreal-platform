@@ -80,7 +80,7 @@ export function OptimizationGridBg({ className }: OptimizationGridBgProps) {
 
 				{/* Funnel: dense on the left, merged and simplified on the right */}
 				<g
-					stroke="var(--accent)"
+					stroke="var(--orange)"
 					strokeWidth={1.5}
 					strokeLinecap="round"
 					opacity={0.16}

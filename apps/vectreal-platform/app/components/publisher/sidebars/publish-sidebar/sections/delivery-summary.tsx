@@ -89,7 +89,7 @@ export const DeliverySummary: FC<DeliverySummaryProps> = ({
 					)}
 				>
 					<span className="flex items-center gap-2">
-						<Sparkles className="text-accent h-4 w-4 shrink-0" />
+						<Sparkles className="text-orange h-4 w-4 shrink-0" />
 						<span className="text-sm font-medium">Optimize scene</span>
 					</span>
 					<span className="text-muted-foreground mt-1 block text-xs leading-relaxed">

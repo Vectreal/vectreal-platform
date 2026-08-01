@@ -42,8 +42,8 @@ const RadioAccordionItem = <T extends string>(
 				'group relative w-full rounded-xl border border-transparent p-2 text-left',
 				'select-none',
 				!isSelected &&
-					'hover:bg-accent/5 focus-visible:bg-accent/10 bg-muted/25 focus:outline-none',
-				isSelected && 'bg-accent/10 border-accent/50'
+					'hover:bg-orange/5 focus-visible:bg-orange/10 bg-muted/25 focus:outline-none',
+				isSelected && 'bg-orange/10 border-orange/50'
 			)}
 		>
 			<div className="flex items-center gap-2">
@@ -51,8 +51,8 @@ const RadioAccordionItem = <T extends string>(
 					className={cn(
 						'flex h-6 w-6 items-center justify-center rounded-md transition-all duration-500',
 						isSelected
-							? 'bg-accent text-primary-foreground fill-primary-foreground'
-							: 'bg-muted text-muted-foreground fill-muted-foreground group-hover:bg-accent/20 group-hover:text-accent'
+							? 'bg-orange text-primary-foreground fill-primary-foreground'
+							: 'bg-muted text-muted-foreground fill-muted-foreground group-hover:bg-orange/20 group-hover:text-orange'
 					)}
 				>
 					{option.icon}

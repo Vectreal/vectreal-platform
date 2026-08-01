@@ -98,7 +98,7 @@ export const TextureField: FC = () => {
 				<div className="space-y-2">
 					<div className="flex items-center justify-between gap-3">
 						<Label className="text-sm font-semibold">Compression profile</Label>
-						<span className="text-accent text-xs font-medium">
+						<span className="text-orange text-xs font-medium">
 							{getClosestQuality(quality)}%
 						</span>
 					</div>

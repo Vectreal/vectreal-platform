@@ -73,7 +73,7 @@ export const OptimizationOptions: FC = () => {
 						const detail = describeSetting(key, optimizations)
 						return (
 							<div key={key} className="flex items-center gap-2 text-xs">
-								<Check className="text-accent h-3 w-3 shrink-0" />
+								<Check className="text-orange h-3 w-3 shrink-0" />
 								<span className="text-foreground/75">
 									{getOptimizationDefinition(key).title}
 								</span>

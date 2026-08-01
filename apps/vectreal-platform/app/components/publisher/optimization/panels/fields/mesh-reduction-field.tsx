@@ -87,7 +87,7 @@ export const MeshReductionField: FC = () => {
 							<p className="text-sm font-semibold">Target</p>
 							<InfoTooltip content="The share of the mesh to keep. Lower keeps fewer triangles and reduces detail further." />
 						</div>
-						<span className="text-accent text-xs font-medium">
+						<span className="text-orange text-xs font-medium">
 							Keep {Math.round(getClosestValue(KEEP_PRESETS, ratio) * 100)}%
 						</span>
 					</div>
@@ -104,7 +104,7 @@ export const MeshReductionField: FC = () => {
 							<p className="text-sm font-semibold">Deviation limit</p>
 							<InfoTooltip content="The maximum shape deviation allowed. The simplifier stops as soon as further collapses would exceed this, even if the target has not been reached." />
 						</div>
-						<span className="text-accent text-xs font-medium">
+						<span className="text-orange text-xs font-medium">
 							{getClosestValue(DEVIATION_PRESETS, error).toFixed(3)}
 						</span>
 					</div>

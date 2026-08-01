@@ -33,13 +33,13 @@ const BasicCard = ({
 		>
 			<div
 				className={cn(
-					'bg-accent/60 absolute top-0 left-0 z-0 m-3 mt-0! h-2 animate-pulse rounded-full blur-xl transition-all md:m-6',
+					'bg-orange/60 absolute top-0 left-0 z-0 m-3 mt-0! h-2 animate-pulse rounded-full blur-xl transition-all md:m-6',
 					highlightClasses
 				)}
 			/>
 			<div
 				className={cn(
-					'bg-accent absolute top-0 left-0 z-10 m-3 mt-0! h-1 w-8 rounded-b-full transition-all md:m-6',
+					'bg-orange absolute top-0 left-0 z-10 m-3 mt-0! h-1 w-8 rounded-b-full transition-all md:m-6',
 					highlightClasses
 				)}
 			/>

@@ -54,9 +54,9 @@ export function InlineEditableMetadataField({
 	}, [isEditing, multiline])
 
 	const indicatorClass = isSaving
-		? 'bg-accent animate-pulse'
+		? 'bg-orange animate-pulse'
 		: isUnsaved
-			? 'bg-accent'
+			? 'bg-orange'
 			: isSaved
 				? 'opacity-0'
 				: 'bg-muted-foreground/35'

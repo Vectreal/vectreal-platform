@@ -130,7 +130,7 @@ const SceneNameField = () => {
 						aria-label="Scene name"
 					/>
 					<span
-						className="bg-accent absolute top-1/2 right-2 h-1.5 w-1.5 -translate-y-1/2 animate-pulse rounded-full"
+						className="bg-orange absolute top-1/2 right-2 h-1.5 w-1.5 -translate-y-1/2 animate-pulse rounded-full"
 						aria-hidden="true"
 					/>
 				</div>
@@ -321,7 +321,7 @@ const LocationRow = ({ open, authenticated, onToggle }: LocationRowProps) => {
 			</span>
 			{hasUnsavedLocationChange && locationLabel && (
 				<span
-					className="bg-accent h-1.5 w-1.5 shrink-0 rounded-full"
+					className="bg-orange h-1.5 w-1.5 shrink-0 rounded-full"
 					aria-hidden="true"
 				/>
 			)}
