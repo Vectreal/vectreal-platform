@@ -29,12 +29,19 @@ const PageHero = ({
 				className
 			)}
 		>
-			{/* Decorative radial accent gradients - purely visual, pointer-events off */}
-			<div
-				aria-hidden="true"
-				className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_15%_25%,hsl(var(--orange)/0.14),transparent_42%),radial-gradient(circle_at_82%_12%,hsl(var(--orange)/0.09),transparent_45%)]"
-			/>
+			{/*
+			  There were two decorative radial accents here. They never rendered:
+			  the colour was written `hsl(var(--orange)/0.14)`, but --orange is a
+			  hex rather than HSL channels, so the whole `radial-gradient()` failed
+			  to parse. Every hero has shipped without them.
 
+			  Removed rather than repaired. Making them work restores a look nobody
+			  reviewed - at their written strength they wash the panel brown and
+			  leave a step where the hero meets the page. The top fade above is the
+			  hero's actual accent. If a glow is wanted, it should be designed
+			  against a real hero, and `rgb(var(--orange-rgb) / <alpha>)` is the
+			  spelling that works.
+			*/}
 			<div className="mx-auto max-w-7xl px-6 pt-24 pb-16">
 				<div className="space-y-4">
 					{eyebrow && (

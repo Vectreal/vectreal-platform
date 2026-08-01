@@ -14,6 +14,16 @@
 	/* Brand palette */
 	--orange: #fc6c18;
 	--dark-orange: #f54703;
+	/*
+	  Channel form of --orange, for `rgb(var(--orange-rgb) / <alpha>)`.
+
+	  --orange is a hex, so there is no valid way to apply an alpha to it inline;
+	  `hsl(var(--orange)/0.14)` was tried once and silently killed a gradient for
+	  months. color-mix works but degrades badly: lightningcss emits a no-alpha
+	  fallback for browsers that lack it, turning a 14% wash into solid brand
+	  orange. This spelling needs no fallback. Keep the two in sync.
+	*/
+	--orange-rgb: 252 108 24;
 
 	/* Semantic tokens - light theme */
 	--background: oklch(1 0 0);
@@ -363,6 +373,28 @@
 		background-color: color-mix(in oklch, var(--foreground) 10%, transparent);
 	}
 
+	/*
+	  Interactive surfaces. Hover lifts the surface exactly one step up the
+	  ladder, so a raised row hovers to overlay. Use these rather than pairing a
+	  `ds-*` class with a hand-written `hover:bg-foreground/N`: call sites had
+	  drifted to 6%, 8%, 12% and 14%, so equivalent rows hovered to different
+	  values in the same view.
+	*/
+	.ds-raised-interactive {
+		background-color: color-mix(in oklch, var(--foreground) 4%, var(--background));
+		transition: background-color var(--duration-fast) var(--ease-out);
+	}
+	.ds-raised-interactive:hover {
+		background-color: color-mix(in oklch, var(--foreground) 8%, var(--background));
+	}
+	.ds-overlay-interactive {
+		background-color: color-mix(in oklch, var(--foreground) 8%, var(--background));
+		transition: background-color var(--duration-fast) var(--ease-out);
+	}
+	.ds-overlay-interactive:hover {
+		background-color: color-mix(in oklch, var(--foreground) 12%, var(--background));
+	}
+
 	/* ---- Type scale (single source of truth) ---- */
 	.text-eyebrow {
 		font-size: var(--text-label-xs);
@@ -376,6 +408,19 @@
 		font-weight: 500;
 		line-height: 1.02;
 		letter-spacing: var(--tracking-display);
+		text-wrap: balance;
+	}
+	/*
+	  `--text-headline` sits between display and h2 and had no class, so the two
+	  call sites that wanted it reached for an inline
+	  `style={{ fontSize: 'var(--text-headline)' }}` and got none of the weight,
+	  leading or tracking that go with it.
+	*/
+	.text-headline {
+		font-size: var(--text-headline);
+		font-weight: 500;
+		line-height: 1.06;
+		letter-spacing: var(--tracking-headline);
 		text-wrap: balance;
 	}
 	.text-h2 {
@@ -402,6 +447,34 @@
 		font-size: var(--text-body-lg);
 		line-height: 1.6;
 		text-wrap: pretty;
+	}
+	/*
+	  The plain micro-label size. `.text-eyebrow` is this size plus uppercase and
+	  wide tracking; most of the 40-odd `text-[11px]` call sites are not eyebrows
+	  and only ever wanted the size.
+	*/
+	.text-label-xs {
+		font-size: var(--text-label-xs);
+		line-height: 1.4;
+	}
+
+	/* ---- Layout ---- */
+	/*
+	  The page measure. `--container-max` is 80rem, the same as `max-w-7xl`, which
+	  was hardcoded at 15 sites — each of them then choosing its own gutter, so a
+	  hero at `px-6` sat above a body at `px-4` and the content jogged sideways at
+	  the seam. The gutter belongs to the measure, not to the caller.
+	*/
+	.container-page {
+		width: 100%;
+		max-width: var(--container-max);
+		margin-inline: auto;
+		padding-inline: var(--space-4);
+	}
+	@media (min-width: 48rem) {
+		.container-page {
+			padding-inline: var(--space-6);
+		}
 	}
 
 	.highlight-card {
