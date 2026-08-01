@@ -364,6 +364,29 @@
 	  raised  - cards, table containers, anything sitting on the page
 	  overlay - popovers, menus, and rows hovered on top of `raised`
 	  sunken  - wells and inputs that should recede instead of lift
+
+	  A note on the built output, so nobody spends an afternoon on it twice.
+	  Each of these compiles to two declarations:
+
+	      .ds-raised { background-color: var(--foreground) }
+	      .ds-raised { background-color: color-mix(...) }
+
+	  The first is not a browser-support fallback. lightningcss cannot resolve a
+	  `color-mix()` whose colours are `var()` references, so it emits the first
+	  colour as a best-effort value. It is not removable by declaring browser
+	  targets - a `browserslist` covering only browsers with `color-mix` changes
+	  the output not at all, because support was never the reason.
+
+	  It is also not fixable by writing your own fallback first: lightningcss
+	  re-inserts its own after yours, so yours is overridden.
+
+	  Left as is, deliberately. The `color-mix` declaration comes second and wins
+	  everywhere the function is understood, which is every browser that can run
+	  this platform's WebGL. Only a pre-2023 engine would take the first value
+	  and paint the surface solid `--foreground`, and it could not render the
+	  viewer regardless. Removing the two-declaration output would mean giving up
+	  deriving the whole ladder from one `--foreground`, which is worth more than
+	  the dead bytes cost.
 	*/
 	.ds-raised {
 		background-color: color-mix(
