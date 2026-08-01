@@ -120,9 +120,6 @@ export function ProjectsBrowser({
 		[filtered]
 	)
 
-	const hasFilters =
-		query !== '' || organizationFilter !== 'all' || statusFilter !== 'all'
-
 	const clearFilters = () => {
 		tableState.setSearchValue('')
 		onOrganizationFilterChange('all')
@@ -216,19 +213,20 @@ export function ProjectsBrowser({
 				</ToggleGroup>
 			</div>
 
+			{/*
+			  The caller only renders this when there is at least one project, so
+			  an empty result here always means the filters excluded everything -
+			  which is why clearing them is offered unconditionally.
+			*/}
 			{filtered.length === 0 ? (
 				<div className="ds-raised rounded-2xl p-12 text-center">
 					<p className="font-medium">No projects match these filters</p>
 					<p className="text-muted-foreground mt-1 text-sm">
-						{hasFilters
-							? 'Try a different search term, or clear the filters.'
-							: 'Nothing to show here.'}
+						Try a different search term, or clear the filters.
 					</p>
-					{hasFilters ? (
-						<Button variant="secondary" className="mt-4" onClick={clearFilters}>
-							Clear filters
-						</Button>
-					) : null}
+					<Button variant="secondary" className="mt-4" onClick={clearFilters}>
+						Clear filters
+					</Button>
 				</div>
 			) : tableState.view === 'grid' ? (
 				<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
