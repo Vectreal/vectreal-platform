@@ -14,7 +14,11 @@ import { useFetcher } from 'react-router'
 import { Link } from 'react-router'
 
 import { DASHBOARD_ROUTES } from '../../../constants/dashboard'
-import { PLAN_DISPLAY_NAMES } from '../../../constants/product-copy'
+import {
+	PLAN_DISPLAY_NAMES,
+	STORAGE_USAGE_HINT,
+	STORAGE_USAGE_LABEL
+} from '../../../constants/product-copy'
 import { UsageMeter } from '../usage-meter'
 
 import type { BillingState } from '../../../constants/plan-config'
@@ -311,7 +315,8 @@ export function BillingSettingsSection({
 					<div className="space-y-3">
 						<UsageMeter
 							variant="row"
-							label="Storage used (MB)"
+							label={`${STORAGE_USAGE_LABEL} (MB)`}
+							hint={STORAGE_USAGE_HINT}
 							current={Math.round(usage.storageBytesTotal / (1024 * 1024))}
 							limit={
 								usage.storageLimit !== null

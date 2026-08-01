@@ -11,7 +11,11 @@ import {
 	UsageMeter,
 	UsageMeterGrid
 } from './usage-meter'
-import { PLAN_DISPLAY_NAMES } from '../../constants/product-copy'
+import {
+	PLAN_DISPLAY_NAMES,
+	STORAGE_USAGE_HINT,
+	STORAGE_USAGE_LABEL
+} from '../../constants/product-copy'
 import {
 	buildUpgradeModalState,
 	upgradeModalAtom
@@ -216,7 +220,8 @@ function AccountHealthBand({
 					limit={usage.projectsLimit}
 				/>
 				<UsageMeter
-					label="Storage"
+					label={STORAGE_USAGE_LABEL}
+					hint={STORAGE_USAGE_HINT}
 					current={usage.storageBytesTotal}
 					limit={usage.storageLimit}
 					format={(value) => `${Math.round(value / MB)} MB`}

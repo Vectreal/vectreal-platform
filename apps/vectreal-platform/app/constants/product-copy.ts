@@ -379,6 +379,25 @@ export const LIMIT_DISPLAY_LABELS: Partial<Record<LimitKey, string>> = {
 }
 
 // ---------------------------------------------------------------------------
+// Storage: what the quota actually measures.
+// ---------------------------------------------------------------------------
+
+/*
+  The publisher reports a scene at ~4 MB while storage reports several times
+  that for the same scene, and both figures are correct - they describe
+  different files. Compression is applied at publish, so the editable copy a
+  scene keeps is necessarily larger than the one that ships.
+
+  Two screens describing one scene with that gap and no explanation reads as a
+  bug, so the label and the tooltip below are shared by the dashboard and the
+  billing page rather than written twice with different wording.
+*/
+export const STORAGE_USAGE_LABEL = 'Scene storage'
+
+export const STORAGE_USAGE_HINT =
+	'What your scenes keep, not what visitors download. Each scene stores an editable copy at full precision, plus the compressed file served when you publish, its thumbnail, and any baked shadow. The size shown in the publisher is the published file alone, so it is the smaller of the two.'
+
+// ---------------------------------------------------------------------------
 // Upgrade success page: entitlement keys to highlight post-upgrade, in priority
 // order. Source: prd/03-entitlements.md § "Upgrade highlights"
 // ---------------------------------------------------------------------------
