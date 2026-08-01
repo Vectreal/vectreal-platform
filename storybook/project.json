@@ -23,7 +23,7 @@
 			],
 			"outputs": ["{projectRoot}/storybook-static"],
 			"options": {
-				"command": "storybook build",
+				"command": "storybook build --stats-json",
 				"cwd": "storybook"
 			}
 		}

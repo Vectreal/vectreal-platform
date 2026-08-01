@@ -67,7 +67,9 @@ jobs:
           projectToken: ${{ env.CHROMATIC_TOKEN }}
           workingDir: storybook
           # Publish the artifact the previous step already built and
-          # type-checked, rather than having Chromatic rebuild it.
+          # type-checked, rather than having Chromatic rebuild it. That build
+          # passes --stats-json, which TurboSnap (onlyChanged) needs and would
+          # otherwise only get from a Chromatic-run build.
           storybookBuildDir: storybook-static
           autoAcceptChanges: 'main'
           exitZeroOnChanges: ${{ github.event_name == 'pull_request' }}
