@@ -1,9 +1,4 @@
 import { usePostHog } from '@posthog/react'
-import {
-	Avatar,
-	AvatarFallback,
-	AvatarImage
-} from '@shared/components/ui/avatar'
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import {
@@ -13,14 +8,21 @@ import {
 } from '@shared/components/ui/hover-card'
 import { ScrollArea } from '@shared/components/ui/scroll-area'
 import { cn } from '@shared/utils'
-import { ArrowRight, ChevronLeft, ChevronRight, Copy } from 'lucide-react'
+import { ArrowRight, ChevronLeft, Copy } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { data, Link } from 'react-router'
 
-import { BasicCard } from '../../components'
 import { useConsent } from '../../components/consent/consent-context'
 import { DocsPageToc } from '../../components/docs/docs-page-toc'
 import { PublicErrorBoundary } from '../../components/errors'
+import {
+	AdjacentPager,
+	ArticleCard,
+	ArticleMeta,
+	AuthorChip,
+	BasicCard,
+	CtaPanel
+} from '../../components/layout-components'
 import { useDocToc } from '../../hooks/use-doc-toc'
 import {
 	formatNewsDate,
@@ -38,14 +40,6 @@ import styles from '../../styles/mdx.module.css'
 
 import type { Route } from './+types/news-room-article-page'
 
-function initials(name: string): string {
-	return name
-		.split(' ')
-		.filter(Boolean)
-		.slice(0, 2)
-		.map((part) => part[0]?.toUpperCase() ?? '')
-		.join('')
-}
 
 function githubHandle(url: string | undefined): string | null {
 	if (!url) {
@@ -260,7 +254,7 @@ export default function NewsRoomArticlePage({
 
 	if (!ArticleComponent) {
 		return (
-			<div className="mx-auto w-full max-w-4xl px-6 pt-28 pb-20 text-center">
+			<div className="container-page max-w-4xl pt-28 pb-20 text-center">
 				<h1 className="mb-2 text-2xl font-medium">Article unavailable</h1>
 				<p className="text-muted-foreground mb-6">
 					This article could not be rendered right now.
@@ -273,7 +267,7 @@ export default function NewsRoomArticlePage({
 	}
 
 	return (
-		<div className="mx-auto flex w-full max-w-7xl gap-0 px-4 py-16">
+		<div className="container-page flex gap-0 py-16">
 			<main className="min-w-0 flex-1 lg:px-8">
 				<Button variant="ghost" asChild className="mb-6 -ml-2">
 					<Link to="/news-room" viewTransition>
@@ -298,21 +292,19 @@ export default function NewsRoomArticlePage({
 					</div>
 				</div>
 
-				<BasicCard as="header" cardClassName="p-6 md:p-8">
-					<h1 className="max-w-4xl text-4xl leading-[1.03] font-medium tracking-tight text-balance md:text-6xl">
-						{article.title}
-					</h1>
-					<div className="text-muted-foreground flex items-center gap-2 text-sm">
-						<span>{formatNewsDate(article.publishedAt)}</span>
-						{article.updatedAt ? (
-							<>
-								<span>•</span>
-								<span>Updated {formatNewsDate(article.updatedAt)}</span>
-							</>
-						) : null}
-					</div>
+				<BasicCard as="header" cardClassName="flex flex-col gap-4 p-6 md:p-8">
+					<h1 className="text-headline max-w-4xl">{article.title}</h1>
 
-					<p className="text-muted-foreground max-w-3xl text-base leading-relaxed md:text-lg">
+					<ArticleMeta
+						items={[
+							formatNewsDate(article.publishedAt),
+							...(article.updatedAt
+								? [`Updated ${formatNewsDate(article.updatedAt)}`]
+								: [])
+						]}
+					/>
+
+					<p className="text-muted-foreground text-body-lg max-w-3xl leading-relaxed">
 						{article.excerpt}
 					</p>
 				</BasicCard>
@@ -321,25 +313,7 @@ export default function NewsRoomArticlePage({
 					<HoverCard openDelay={130} closeDelay={120}>
 						<HoverCardTrigger asChild>
 							<Button variant="ghost" className="h-[unset] gap-2 text-left">
-								<Avatar className="border-border/70 h-11 w-11 border">
-									{article.author.avatar ? (
-										<AvatarImage
-											src={article.author.avatar}
-											alt={article.author.name}
-										/>
-									) : null}
-									<AvatarFallback>
-										{initials(article.author.name)}
-									</AvatarFallback>
-								</Avatar>
-								<div>
-									<p className="text-sm font-semibold tracking-tight">
-										{article.author.name}
-									</p>
-									<p className="text-muted-foreground text-xs">
-										{article.author.role}
-									</p>
-								</div>
+								<AuthorChip author={article.author} />
 							</Button>
 						</HoverCardTrigger>
 						<HoverCardContent
@@ -347,26 +321,10 @@ export default function NewsRoomArticlePage({
 							sideOffset={10}
 							className="w-80 p-4"
 						>
-							<div className="flex items-start gap-3">
-								<Avatar className="border-border/70 h-11 w-11 border">
-									{article.author.avatar ? (
-										<AvatarImage
-											src={article.author.avatar}
-											alt={article.author.name}
-										/>
-									) : null}
-									<AvatarFallback>
-										{initials(article.author.name)}
-									</AvatarFallback>
-								</Avatar>
+							<div className="flex flex-col gap-3">
+								<AuthorChip author={article.author} />
 								<div className="min-w-0 flex-1">
-									<p className="text-sm font-semibold tracking-tight">
-										{article.author.name}
-									</p>
-									<p className="text-muted-foreground text-xs">
-										{article.author.role}
-									</p>
-									<p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+									<p className="text-muted-foreground text-xs leading-relaxed">
 										{article.author.bio ?? 'Author at Vectreal.'}
 									</p>
 									{article.author.xUrl ? (
@@ -374,7 +332,7 @@ export default function NewsRoomArticlePage({
 											href={article.author.xUrl}
 											target="_blank"
 											rel="noreferrer"
-											className="text-primary mt-2 inline-block text-xs font-medium hover:underline"
+											className="text-orange mt-2 inline-block text-xs font-medium hover:underline"
 										>
 											{authorGithubHandle ?? 'GitHub Profile'}
 										</a>
@@ -402,104 +360,57 @@ export default function NewsRoomArticlePage({
 					<ArticleComponent />
 				</article>
 
-				<BasicCard as="section" cardClassName="flex flex-col gap-3 p-6 md:p-8">
-					<p className="text-primary text-xs font-semibold tracking-[0.14em] uppercase">
-						Built for makers shipping in 3D
-					</p>
-					<h2 className="max-w-2xl text-2xl leading-tight! font-semibold tracking-tight md:text-3xl">
-						Ready to publish your first interactive scene?
-					</h2>
+				<CtaPanel
+					eyebrow="Built for makers shipping in 3D"
+					heading="Ready to publish your first interactive scene?"
+					aside={
+						<>
+							<Badge variant="secondary">No credit card required</Badge>
+							<Badge variant="secondary">Free plan available</Badge>
+							<Badge variant="secondary">Embed in minutes</Badge>
+						</>
+					}
+					actions={
+						<>
+							<Button asChild>
+								<Link to="/sign-up">
+									Create free account
+									<ArrowRight className="h-4 w-4" />
+								</Link>
+							</Button>
+							<Button variant="ghost" asChild>
+								<Link to="/pricing">See plans</Link>
+							</Button>
+						</>
+					}
+				/>
 
-					<div className="flex flex-wrap items-center gap-1.5">
-						<Badge variant="secondary">No credit card required</Badge>
-						<Badge variant="secondary">Free plan available</Badge>
-						<Badge variant="secondary">Embed in minutes</Badge>
-					</div>
-					<div className="mt-4 flex flex-wrap items-center gap-2">
-						<Button asChild>
-							<Link to="/sign-up">
-								Create free account
-								<ArrowRight className="h-4 w-4" />
-							</Link>
-						</Button>
-						<Button variant="ghost" asChild>
-							<Link to="/pricing">See plans</Link>
-						</Button>
-					</div>
-				</BasicCard>
-
-				<div className="border-border/60 mt-12 flex flex-col gap-6 border-t pt-6">
-					<p className="text-muted-foreground text-xs font-semibold tracking-[0.18em] uppercase">
-						Continue Reading
-					</p>
-					<div className="grid gap-3 md:grid-cols-2">
-						{adjacent.previous ? (
-							<Link
-								to={`/news-room/${adjacent.previous.slug}`}
-								title={`Go to previous article: ${adjacent.previous.title}`}
-								viewTransition
-								className="group relative flex flex-col gap-2 px-8"
-							>
-								<ChevronLeft
-									className="absolute top-1/2 left-0 h-6 w-6 -translate-y-1/2 opacity-50 transition-opacity group-hover:opacity-100"
-									aria-hidden="true"
-								/>
-								<p className="text-muted-foreground text-medium text-xs tracking-wide uppercase">
-									Previous Article
-								</p>
-								<p className="text-sm leading-snug font-medium opacity-50 transition-opacity group-hover:opacity-100">
-									{adjacent.previous.title}
-								</p>
-							</Link>
-						) : (
-							<span />
-						)}
-
-						{adjacent.next ? (
-							<Link
-								to={`/news-room/${adjacent.next.slug}`}
-								title={`Go to previous article: ${adjacent.next.title}`}
-								viewTransition
-								className="group relative flex flex-col items-end gap-2 px-8 text-right"
-							>
-								<ChevronRight
-									className="absolute top-1/2 right-0 h-6 w-6 -translate-y-1/2 opacity-50 transition-opacity group-hover:opacity-100"
-									aria-hidden="true"
-								/>
-								<p className="text-muted-foreground text-medium text-xs tracking-wide uppercase">
-									Next Article
-								</p>
-								<p className="text-sm leading-snug font-medium opacity-50 transition-opacity group-hover:opacity-100">
-									{adjacent.next.title}
-								</p>
-							</Link>
-						) : (
-							<span />
-						)}
-					</div>
-				</div>
+				<AdjacentPager
+					className="mt-12"
+					label="Continue reading"
+					previous={
+						adjacent.previous
+							? {
+									to: `/news-room/${adjacent.previous.slug}`,
+									title: adjacent.previous.title
+								}
+							: null
+					}
+					next={
+						adjacent.next
+							? { to: `/news-room/${adjacent.next.slug}`, title: adjacent.next.title }
+							: null
+					}
+				/>
 
 				{related.length > 0 && (
 					<section className="mt-32">
-						<h2 className="mb-6! ml-2 text-xl font-medium tracking-tight">
+						<h2 className="text-h3 mb-6! ml-2">
 							More from the newsroom
 						</h2>
 						<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 							{related.map((item) => (
-								<Link key={item.slug} to={`/news-room/${item.slug}`}>
-									<BasicCard cardClassName="flex flex-col gap-3 p-5">
-										<p className="text-muted-foreground text-xs tracking-wide uppercase">
-											{formatNewsDate(item.publishedAt)} •{' '}
-											{item.readingTimeMinutes} min
-										</p>
-										<h3 className="mb-2 line-clamp-3 text-base leading-snug font-medium">
-											{item.title}
-										</h3>
-										<p className="text-muted-foreground line-clamp-3 text-sm">
-											{item.excerpt}
-										</p>
-									</BasicCard>
-								</Link>
+								<ArticleCard key={item.slug} article={item} variant="compact" />
 							))}
 						</div>
 					</section>

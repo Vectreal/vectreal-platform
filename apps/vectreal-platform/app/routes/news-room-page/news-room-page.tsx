@@ -6,9 +6,12 @@ import { useEffect, useRef } from 'react'
 import { data, Form, Link } from 'react-router'
 
 import { useConsent } from '../../components/consent/consent-context'
-import { BasicCard, PageHero } from '../../components/layout-components'
 import {
-	formatNewsDate,
+	ArticleCard,
+	CtaPanel,
+	PageHero
+} from '../../components/layout-components'
+import {
 	getNewsArticles,
 	getNewsCategories,
 	getNewsTags
@@ -198,13 +201,13 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 				}
 			/>
 
-			<div className="mx-auto w-full max-w-7xl px-4 pb-20 md:px-6">
+			<div className="container-page pb-20">
 				<section className="mb-8 flex flex-wrap items-center gap-2 md:mb-10">
 					<Form method="get" className="flex items-center gap-2">
 						<input type="hidden" name="category" value={filters.category} />
 						<input type="hidden" name="tag" value={filters.tag} />
 						<input type="hidden" name="sort" value={filters.sort} />
-						<label className="border-border/70 bg-card/20 focus-within:border-border inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 transition-all duration-200">
+						<label className="ds-sunken focus-within:ring-ring/50 inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 transition-shadow focus-within:ring-2">
 							<Search className="text-muted-foreground h-3.5 w-3.5" />
 							<input
 								type="search"
@@ -308,7 +311,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 
 				<section id="news-feed" className="scroll-mt-24 space-y-4">
 					{articles.length === 0 ? (
-						<div className="border-border/50 bg-muted/10 rounded-2xl border p-8 text-center md:p-10">
+						<div className="ds-raised rounded-2xl p-8 text-center md:p-10">
 							<h2 className="mb-1 text-lg font-semibold">No matching posts</h2>
 							<p className="text-muted-foreground text-sm">
 								Try another topic or clear your filters.
@@ -325,177 +328,36 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 					) : (
 						<>
 							{featuredArticle ? (
-								<Link
-									to={`/news-room/${featuredArticle.slug}`}
-									viewTransition
-									className="group block"
-								>
-									<BasicCard
-										as="article"
-										highlight
-										cardClassName="overflow-hidden py-0"
-									>
-										{featuredArticle.thumbnailImage ? (
-											<div className="h-20 overflow-hidden md:hidden">
-												<img
-													src={featuredArticle.thumbnailImage}
-													alt=""
-													width={1200}
-													height={160}
-													fetchPriority="high"
-													className="h-full w-full object-cover object-center"
-												/>
-											</div>
-										) : null}
-
-										<div className="grid md:grid-cols-[1fr_280px]">
-											<div className="flex flex-col justify-between p-6 md:p-9">
-												<div>
-													<div className="mb-5 flex flex-wrap items-center gap-2.5">
-														<span className="bg-primary/10 text-primary rounded px-2 py-0.5 text-[11px] font-semibold tracking-[0.12em] uppercase">
-															Featured
-														</span>
-														<span className="text-muted-foreground text-[11px] font-medium tracking-[0.12em] uppercase">
-															{featuredArticle.category}
-														</span>
-														<span className="text-border">·</span>
-														<span className="text-muted-foreground text-[11px]">
-															{formatNewsDate(featuredArticle.publishedAt)}
-														</span>
-														<span className="text-border">·</span>
-														<span className="text-muted-foreground text-[11px]">
-															{featuredArticle.readingTimeMinutes} min read
-														</span>
-													</div>
-
-													<h2 className="group-hover:text-foreground/85 mb-4 text-3xl leading-[1.06] font-semibold tracking-tight text-balance transition-colors md:text-5xl">
-														{featuredArticle.title}
-													</h2>
-													<p className="text-muted-foreground line-clamp-3 max-w-xl text-base leading-relaxed md:text-lg">
-														{featuredArticle.excerpt}
-													</p>
-												</div>
-
-												<footer className="border-border/40 mt-7 flex flex-wrap items-center gap-3 border-t pt-5">
-													<div>
-														<p className="text-sm leading-tight font-semibold">
-															{featuredArticle.author.name}
-														</p>
-														<p className="text-muted-foreground text-xs">
-															{featuredArticle.author.role}
-														</p>
-													</div>
-												</footer>
-											</div>
-
-											{featuredArticle.thumbnailImage ? (
-												<div className="border-border/40 relative hidden overflow-hidden border-l md:block">
-													<img
-														src={featuredArticle.thumbnailImage}
-														alt=""
-														width={280}
-														height={520}
-														fetchPriority="high"
-														className="h-full w-full object-cover object-center"
-													/>
-												</div>
-											) : null}
-										</div>
-									</BasicCard>
-								</Link>
+								<ArticleCard article={featuredArticle} variant="featured" />
 							) : null}
 
 							{remainingArticles.length > 0 ? (
 								<div className="grid gap-4 md:grid-cols-2">
 									{remainingArticles.map((article) => (
-										<Link
-											key={article.slug}
-											to={`/news-room/${article.slug}`}
-											viewTransition
-											className="group block"
-										>
-											<BasicCard
-												highlight
-												cardClassName="grid grid-cols-[1fr_auto] overflow-hidden py-0"
-											>
-												<div className="flex flex-col justify-between p-5 md:p-6">
-													<div>
-														<div className="mb-3 flex flex-wrap items-center gap-1.5">
-															<span className="text-primary text-[11px] font-semibold tracking-[0.12em] uppercase">
-																{article.category}
-															</span>
-															<span className="text-border text-[11px]">·</span>
-															<span className="text-muted-foreground text-[11px]">
-																{formatNewsDate(article.publishedAt)}
-															</span>
-															<span className="text-border text-[11px]">·</span>
-															<span className="text-muted-foreground text-[11px]">
-																{article.readingTimeMinutes} min
-															</span>
-														</div>
-
-														<h3 className="group-hover:text-foreground/85 mb-2.5 text-xl leading-snug font-semibold tracking-tight text-balance transition-colors md:text-2xl">
-															{article.title}
-														</h3>
-														<p className="text-muted-foreground line-clamp-3 text-sm leading-relaxed md:text-base">
-															{article.excerpt}
-														</p>
-													</div>
-
-													<footer className="border-border/40 mt-5 flex items-center gap-1.5 border-t pt-4">
-														<span className="text-foreground text-xs font-semibold">
-															{article.author.name}
-														</span>
-														<span className="text-muted-foreground text-xs">
-															{article.author.role}
-														</span>
-													</footer>
-												</div>
-
-												{article.thumbnailImage ? (
-													<div className="border-border/40 relative w-14 overflow-hidden border-l md:w-24">
-														<img
-															src={article.thumbnailImage}
-															alt=""
-															width={112}
-															height={300}
-															className="h-full w-full object-cover object-center"
-														/>
-													</div>
-												) : null}
-											</BasicCard>
-										</Link>
+										<ArticleCard key={article.slug} article={article} />
 									))}
 								</div>
 							) : null}
 
-							<BasicCard
-								as="section"
-								cardClassName="p-6 md:p-8 "
+							<CtaPanel
 								className="mt-32"
-							>
-								<p className="text-primary text-xs font-semibold tracking-wider uppercase">
-									Build while you're learning
-								</p>
-								<h2 className="max-w-2xl text-2xl leading-tight font-semibold tracking-tight md:text-3xl">
-									Turn ideas from these articles into live 3D experiences.
-								</h2>
-								<p className="text-muted-foreground max-w-2xl text-sm leading-relaxed md:text-base">
-									Create a free account to publish your first scene and keep
-									shipping faster with Vectreal.
-								</p>
-								<div className="flex flex-wrap items-center gap-2">
-									<Button asChild>
-										<Link to="/sign-up">
-											Start free
-											<ArrowRight className="h-4 w-4" />
-										</Link>
-									</Button>
-									<Button variant="ghost" asChild>
-										<Link to="/pricing">Compare plans</Link>
-									</Button>
-								</div>
-							</BasicCard>
+								eyebrow="Build while you're learning"
+								heading="Turn ideas from these articles into live 3D experiences."
+								description="Create a free account to publish your first scene and keep shipping faster with Vectreal."
+								actions={
+									<>
+										<Button asChild>
+											<Link to="/sign-up">
+												Start free
+												<ArrowRight className="h-4 w-4" />
+											</Link>
+										</Button>
+										<Button variant="ghost" asChild>
+											<Link to="/pricing">Compare plans</Link>
+										</Button>
+									</>
+								}
+							/>
 						</>
 					)}
 				</section>
