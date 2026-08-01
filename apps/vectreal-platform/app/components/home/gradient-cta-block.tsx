@@ -59,12 +59,7 @@ export function GradientCtaBlock({
 			>
 				<motion.h2
 					variants={prefersReducedMotion ? undefined : fadeUp}
-					className="text-foreground font-medium text-balance"
-					style={{
-						fontSize: 'var(--text-headline)',
-						letterSpacing: 'var(--tracking-headline)',
-						lineHeight: 1.05
-					}}
+					className="text-headline text-foreground"
 				>
 					{headline}
 				</motion.h2>

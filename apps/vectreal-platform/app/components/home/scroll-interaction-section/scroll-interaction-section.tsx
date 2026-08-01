@@ -55,14 +55,7 @@ function ScrollInteractionSection({
 						<span className="bg-orange/60 h-1.5 w-1.5 rounded-full" />
 						Live Embed
 					</div>
-					<h2
-						className="text-foreground font-medium text-balance"
-						style={{
-							fontSize: 'var(--text-headline)',
-							letterSpacing: 'var(--tracking-headline)',
-							lineHeight: 1.1
-						}}
-					>
+					<h2 className="text-headline text-foreground">
 						Explore the product, not a photo of it.
 					</h2>
 					<p className="text-muted-foreground mt-4 max-w-xl text-lg text-pretty">
