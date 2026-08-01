@@ -509,7 +509,12 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 	}, [file, isLoadingScene])
 
 	return (
-		<div className="h-[calc(100dvh-5rem)] overflow-hidden px-5 pt-1 pb-5 xl:px-6">
+		/*
+		  `h-full` rather than a `100dvh` calculation: the dashboard shell now gives
+		  this row a definite height, so subtracting an assumed header height would
+		  overshoot it and produce a second scrollbar.
+		*/
+		<div className="h-full overflow-hidden px-5 pt-1 pb-5 xl:px-6">
 			{sceneState.thumbnailUrl ? (
 				<link rel="preload" as="image" href={sceneState.thumbnailUrl} />
 			) : null}

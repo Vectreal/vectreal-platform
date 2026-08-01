@@ -461,14 +461,20 @@
 	}
 }
 
-@keyframes skeleton-fade {
-	0% {
-		opacity: 0;
-		transform: translateY(4px);
-	}
+/*
+  Skeletons need a loop, not an entrance. This replaces `skeleton-fade`, which
+  ran once with `forwards`, so a skeleton settled into a static grey block and
+  read as empty content rather than pending content. A staggered
+  `animation-delay` now offsets the phase of this loop, which turns the stagger
+  into a travelling wave.
+*/
+@keyframes skeleton-pulse {
+	0%,
 	100% {
 		opacity: 1;
-		transform: translateY(0);
+	}
+	50% {
+		opacity: 0.4;
 	}
 }
 
@@ -547,8 +553,8 @@
 	animation: loading-shimmer 1.5s ease-in-out infinite;
 }
 
-.animate-skeleton-fade {
-	animation: skeleton-fade 0.4s ease-out forwards;
+.animate-skeleton-pulse {
+	animation: skeleton-pulse 1.6s ease-in-out infinite;
 }
 
 .animate-aurora {
@@ -571,33 +577,10 @@
 	.animate-aurora,
 	.animate-aurora-2,
 	.animate-float-y,
-	.animate-spin-slow {
+	.animate-spin-slow,
+	.animate-skeleton-pulse {
 		animation: none;
 	}
-}
-
-.animation-delay-75 {
-	animation-delay: 75ms;
-}
-
-.animation-delay-150 {
-	animation-delay: 150ms;
-}
-
-.animation-delay-225 {
-	animation-delay: 225ms;
-}
-
-.animation-delay-300 {
-	animation-delay: 300ms;
-}
-
-.animation-delay-375 {
-	animation-delay: 375ms;
-}
-
-.animation-delay-450 {
-	animation-delay: 450ms;
 }
 
 .animate-glow-pulse {
