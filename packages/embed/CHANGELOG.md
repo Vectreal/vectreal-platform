@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v0.22.0...embed-v0.24.0) (2026-08-01)
+
+
+### Features
+
+* **platform:** split /embed from /preview ([#662](https://github.com/Vectreal/vectreal-platform/issues/662)) ([19d9ec5](https://github.com/Vectreal/vectreal-platform/commit/19d9ec5cfa63a83fd04efbebb16ccac588fc325b))
+
 ## [0.22.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v0.21.0...embed-v0.22.0) (2026-07-01)
 
 

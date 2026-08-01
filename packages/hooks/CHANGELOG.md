@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.24.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.23.0...hooks-v0.24.0) (2026-08-01)
+
+
+### Features
+
+* **publisher:** draco-first optimization pipeline and panel rework ([#652](https://github.com/Vectreal/vectreal-platform/issues/652)) ([1161236](https://github.com/Vectreal/vectreal-platform/commit/1161236d0f4b2461b6b4af1ea4069fdf9da6d9c2))
+
+
+### Bug Fixes
+
+* **publisher:** scene size inflation and stale model reloads ([#653](https://github.com/Vectreal/vectreal-platform/issues/653)) ([9c5da02](https://github.com/Vectreal/vectreal-platform/commit/9c5da02f3f524337b5d715ff5454ac4687fc73e3))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.24.0
+
 ## [0.23.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.22.0...hooks-v0.23.0) (2026-07-03)
 
 
