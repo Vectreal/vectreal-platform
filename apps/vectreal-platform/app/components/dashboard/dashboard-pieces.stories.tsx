@@ -70,16 +70,15 @@ export const UsageMeters: Story = {
 
 /**
  * A missing thumbnail is the normal case, not the exception - `thumbnailUrl` is
- * only written after a publisher save with a viewport capture. The placeholder
- * tint is derived from the name, so it must stay stable per scene.
+ * only written after a publisher save with a viewport capture. Both a null
+ * source and a 404 resolve to the same neutral well, so there is one state to
+ * diff rather than two.
  */
 export const Thumbnails: Story = {
 	render: () => (
-		<div className="ds-raised grid grid-cols-2 gap-4 rounded-2xl p-6 md:grid-cols-4">
-			<SceneThumbnail src={null} name="Living Room" />
-			<SceneThumbnail src={null} name="Product Hero" />
-			<SceneThumbnail src={null} name="Office Chair" />
-			<SceneThumbnail src="/does-not-exist.png" name="Broken Source" />
+		<div className="ds-raised grid grid-cols-2 gap-4 rounded-2xl p-6">
+			<SceneThumbnail src={null} />
+			<SceneThumbnail src="/does-not-exist.png" />
 		</div>
 	)
 }

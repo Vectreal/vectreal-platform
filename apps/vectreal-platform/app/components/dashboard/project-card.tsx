@@ -60,7 +60,6 @@ export function ProjectCard({ project, className }: ProjectCardProps) {
 			>
 				<SceneThumbnail
 					src={project.thumbnailUrl}
-					name={project.name}
 					className="rounded-none"
 				/>
 

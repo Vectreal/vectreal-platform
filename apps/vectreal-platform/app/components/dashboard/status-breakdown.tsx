@@ -6,12 +6,20 @@ export interface SceneStatusCounts {
 	archived: number
 }
 
-/**
- * Published leads because it is the state that costs a quota slot and the one
- * users check for. Archived is only shown when there is some.
- */
+/*
+  One accent and two weights of neutral - not three colours.
+
+  Published leads because it is the state that costs a quota slot and the one
+  users scan for, so it gets the brand accent. Draft and archived are the same
+  hue at decreasing strength, which is what "less live" should look like.
+
+  Green was wrong here: publishing is a state, not a success, and nothing else
+  in the app says published-is-green - the scene table distinguishes them with
+  `Badge` default vs secondary. A colour that appears in one component and
+  nowhere else is a dialect, not a system.
+*/
 const STATUS_STYLES = [
-	{ key: 'published', label: 'published', dot: 'bg-success' },
+	{ key: 'published', label: 'published', dot: 'bg-orange' },
 	{ key: 'draft', label: 'draft', dot: 'bg-muted-foreground/60' },
 	{ key: 'archived', label: 'archived', dot: 'bg-muted-foreground/30' }
 ] as const

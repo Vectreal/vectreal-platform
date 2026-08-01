@@ -5,26 +5,9 @@ import { useState } from 'react'
 interface SceneThumbnailProps {
 	/** `scenes.thumbnailUrl` - an internal API path, and often null. */
 	src?: null | string
-	/** Seeds the placeholder, so the same scene always gets the same tint. */
-	name: string
 	className?: string
 	/** Rendered at card size by default; `sm` suits table rows. */
 	size?: 'sm' | 'md'
-}
-
-/**
- * Six brand-adjacent hues. Deliberately derived from the scene name rather than
- * random, so a scene keeps its colour across renders and pages - a placeholder
- * that changes on every navigation reads as a loading bug.
- */
-const PLACEHOLDER_HUES = [18, 340, 265, 200, 150, 45]
-
-function hueFor(name: string) {
-	let hash = 0
-	for (let index = 0; index < name.length; index += 1) {
-		hash = (hash * 31 + name.charCodeAt(index)) % 4096
-	}
-	return PLACEHOLDER_HUES[hash % PLACEHOLDER_HUES.length]
 }
 
 /**
@@ -38,7 +21,6 @@ function hueFor(name: string) {
  */
 export function SceneThumbnail({
 	src,
-	name,
 	className,
 	size = 'md'
 }: SceneThumbnailProps) {
@@ -53,12 +35,18 @@ export function SceneThumbnail({
 				className
 			)}
 		>
+			{/*
+			  A neutral well, not a per-scene colour.
+
+			  This first cycled six hues keyed off the scene name. That colour
+			  encoded nothing - the name sits right next to it - so it was decoration
+			  in six directions, and it put magenta and green into a product whose
+			  palette is one accent over neutrals. The surface ladder already says
+			  "nothing here yet"; it does not need help.
+			*/}
 			{showPlaceholder ? (
 				<div
 					className="flex h-full w-full items-center justify-center"
-					style={{
-						background: `linear-gradient(135deg, oklch(0.62 0.16 ${hueFor(name)} / 0.22), transparent 70%)`
-					}}
 					aria-hidden="true"
 				>
 					<Box

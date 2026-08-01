@@ -47,15 +47,24 @@ export function hasUsagePressure(readings: UsageReading[]) {
 	return readings.some((reading) => reading.level !== 'ok')
 }
 
+/*
+  Warning is `--warning` (amber), not `--orange`.
+
+  The billing page used the brand colour to mean "approaching your limit", which
+  is the same mistake as the newsroom's `text-primary`-as-accent: reaching for a
+  colour that already means something else. Orange is the brand, and it is used
+  below to mark the state a user cares about - it cannot also mean "careful".
+  Only these two semantic tokens appear here, and only for their semantics.
+*/
 const LEVEL_TEXT: Record<UsageLevel, string> = {
 	ok: '',
-	warning: 'text-orange!',
+	warning: 'text-warning',
 	critical: 'text-destructive'
 }
 
 const LEVEL_BAR: Record<UsageLevel, string> = {
 	ok: '',
-	warning: '[&>div]:bg-orange!',
+	warning: '[&>div]:bg-warning',
 	critical: '[&>div]:bg-destructive'
 }
 
