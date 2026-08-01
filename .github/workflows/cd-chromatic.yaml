@@ -1,0 +1,85 @@
+name: CD - Publish Storybook to Chromatic
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'storybook/**'
+      - 'shared/components/**'
+      - 'packages/viewer/**'
+      - '.github/workflows/cd-chromatic.yaml'
+  pull_request:
+    paths:
+      - 'storybook/**'
+      - 'shared/components/**'
+      - 'packages/viewer/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-chromatic
+  cancel-in-progress: true
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  chromatic:
+    name: Publish Storybook to Chromatic
+    runs-on: ubuntu-22.04
+    environment: chromatic-publishing
+
+    # One Chromatic project for the whole workspace. The upload is skipped when
+    # no token is configured, so the build and typecheck still run either way.
+    env:
+      CHROMATIC_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN_1 }}
+
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: 📥 Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔨 Build Storybook
+        run: npx nx build-storybook storybook
+
+      - name: ⏭️ Chromatic token not configured
+        if: env.CHROMATIC_TOKEN == ''
+        run: |
+          echo "::notice::CHROMATIC_PROJECT_TOKEN_1 is not set. Storybook was built but not published."
+
+      - name: ⚡ Publish to Chromatic
+        if: env.CHROMATIC_TOKEN != ''
+        uses: chromaui/action@v18
+        with:
+          projectToken: ${{ env.CHROMATIC_TOKEN }}
+          workingDir: storybook
+          # Publish the artifact the previous step already built and
+          # type-checked, rather than having Chromatic rebuild it. That build
+          # passes --stats-json, which TurboSnap (onlyChanged) needs and would
+          # otherwise only get from a Chromatic-run build.
+          storybookBuildDir: storybook-static
+          autoAcceptChanges: 'main'
+          exitZeroOnChanges: ${{ github.event_name == 'pull_request' }}
+          exitOnceUploaded: true
+          onlyChanged: true
+          # `chore/**` used to be skipped, from when this only covered the
+          # viewer. Now that it covers the design system, chore branches are
+          # exactly where refactors that move surfaces and tokens land - the
+          # branch that introduced this Storybook produced no snapshots because
+          # of that pattern. Bot branches stay skipped: they are high volume and
+          # a lockfile bump that does change rendering will be caught when it
+          # reaches main.
+          skip: '@(renovate/**|dependabot/**)'

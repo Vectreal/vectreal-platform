@@ -21,6 +21,9 @@ const meta = {
 	component: VectrealViewer,
 	tags: ['autodocs'],
 	parameters: {
+		// These scope their own theme and mount a WebGL canvas; the shared
+		// light/dark decorator would render each one twice.
+		dualTheme: false,
 		layout: 'fullscreen',
 		docs: {
 			description: {

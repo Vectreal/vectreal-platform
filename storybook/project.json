@@ -1,0 +1,31 @@
+{
+	"name": "storybook",
+	"$schema": "../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "storybook",
+	"projectType": "application",
+	"tags": [],
+	"targets": {
+		"typecheck": {
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"command": "tsc --noEmit -p storybook/tsconfig.json"
+			}
+		},
+		"build-storybook": {
+			"executor": "nx:run-commands",
+			"dependsOn": [
+				"typecheck",
+				{
+					"projects": ["vctrl/viewer"],
+					"target": "typecheck-storybook"
+				}
+			],
+			"outputs": ["{projectRoot}/storybook-static"],
+			"options": {
+				"command": "storybook build --stats-json",
+				"cwd": "storybook"
+			}
+		}
+	}
+}

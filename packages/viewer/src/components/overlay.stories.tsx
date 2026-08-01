@@ -7,10 +7,13 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 type OverlayProps = React.ComponentProps<typeof Overlay>
 
 const meta = {
-	title: 'Components/Loading Overlay',
+	title: 'Viewer/Loading Overlay',
 	component: Overlay,
 	tags: ['autodocs'],
 	parameters: {
+		// These scope their own theme and mount a WebGL canvas; the shared
+		// light/dark decorator would render each one twice.
+		dualTheme: false,
 		layout: 'fullscreen',
 		docs: {
 			description: {
@@ -20,7 +23,7 @@ const meta = {
 		}
 	},
 	args: {
-		hasContent: false,
+		loadingState: 'loading',
 		loader: <LoadingSpinner className="text-primary" />,
 		popover: (
 			<div className="rounded bg-zinc-900/80 px-2 py-1 text-xs text-white">
@@ -45,13 +48,13 @@ type Story = StoryObj<typeof meta>
 
 export const Loading: Story = {
 	args: {
-		hasContent: false
+		loadingState: 'loading'
 	}
 }
 
 export const Loaded: Story = {
 	args: {
-		hasContent: true
+		loadingState: 'loaded'
 	}
 }
 
@@ -60,7 +63,6 @@ const THUMBNAIL_SRC =
 
 export const LoadingWithThumbnail: Story = {
 	args: {
-		hasContent: false,
 		loadingThumbnail: {
 			src: THUMBNAIL_SRC,
 			alt: 'Preview thumbnail backdrop'
@@ -75,7 +77,6 @@ export const LoadingWithThumbnail: Story = {
  */
 export const LoadingWithUnstyledThumbnail: Story = {
 	args: {
-		hasContent: false,
 		loadingThumbnail: {
 			src: THUMBNAIL_SRC,
 			alt: 'Preview thumbnail backdrop',
@@ -88,7 +89,6 @@ export const LoadingWithUnstyledThumbnail: Story = {
 /** `contain` fits the whole image in rather than cropping it to fill. */
 export const LoadingWithContainedThumbnail: Story = {
 	args: {
-		hasContent: false,
 		loadingThumbnail: {
 			src: THUMBNAIL_SRC,
 			alt: 'Preview thumbnail backdrop',

@@ -12,7 +12,6 @@
 				"fix": true,
 				"lintFilePatterns": [
 					"packages/viewer/src/**/*.{ts,tsx,js,jsx}",
-					"packages/viewer/.storybook/**/*.{ts,tsx,js,jsx}",
 					"packages/viewer/vite.config.ts",
 					"packages/viewer/package.json"
 				]
@@ -60,27 +59,11 @@
 				"configFile": "packages/viewer/vite.config.ts"
 			}
 		},
-		"build-storybook": {
+		"typecheck-storybook": {
 			"executor": "nx:run-commands",
-			"dependsOn": ["typecheck"],
-			"outputs": ["{projectRoot}/storybook-static"],
+			"outputs": [],
 			"options": {
-				"command": "storybook build",
-				"cwd": "packages/viewer"
-			}
-		},
-		"storybook-dev": {
-			"executor": "nx:run-commands",
-			"continuous": true,
-			"options": {
-				"command": "storybook dev",
-				"cwd": "packages/viewer"
-			}
-		},
-		"chromatic": {
-			"executor": "nx:run-commands",
-			"options": {
-				"commands": ["npm --prefix packages/viewer run chromatic"]
+				"command": "tsc --noEmit -p packages/viewer/tsconfig.storybook.json"
 			}
 		}
 	}
