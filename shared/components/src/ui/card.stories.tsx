@@ -47,29 +47,28 @@ export const Default: Story = {
 }
 
 /**
- * A card on a raised panel, both elevations side by side.
+ * A card on a raised panel, and on a card on a raised panel.
  *
- * The default `raised` card is invisible here - it and the panel resolve to the
- * same 4% mix, so there is no edge between them. Nested cards need `overlay`.
- * The broken case is kept in the story on purpose: it is the whole reason the
- * prop exists, and a regression would show as the two boxes converging.
+ * `Card` is `ds-raised`, so nested on a raised surface it once resolved to the
+ * same mix as its parent and had no edge at all. The ladder now steps up on its
+ * own; a regression would show as these boxes converging.
  */
-export const OnRaisedSurface: Story = {
+export const Nested: Story = {
 	render: () => (
 		<div className="ds-raised space-y-4 rounded-2xl p-6">
 			<Card className="max-w-sm">
 				<CardHeader>
-					<CardTitle>elevation=&quot;raised&quot;</CardTitle>
-					<CardDescription>
-						Same value as the panel, so no separation
-					</CardDescription>
+					<CardTitle>One level in</CardTitle>
+					<CardDescription>Steps up from the panel behind it</CardDescription>
 				</CardHeader>
-			</Card>
-			<Card elevation="overlay" className="max-w-sm">
-				<CardHeader>
-					<CardTitle>elevation=&quot;overlay&quot;</CardTitle>
-					<CardDescription>One step up, so it reads as nested</CardDescription>
-				</CardHeader>
+				<CardContent>
+					<Card>
+						<CardHeader>
+							<CardTitle>Two levels in</CardTitle>
+							<CardDescription>Steps up again</CardDescription>
+						</CardHeader>
+					</Card>
+				</CardContent>
 			</Card>
 		</div>
 	)

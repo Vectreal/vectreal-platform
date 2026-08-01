@@ -386,6 +386,34 @@
 			var(--background)
 		);
 	}
+	/*
+	  The ladder self-corrects when it nests. A raised block inside a raised
+	  block steps up on its own, rather than resolving to the same mix as its
+	  parent and vanishing.
+
+	  Without this, elevation is only correct when every call site knows what it
+	  is sitting on - which is not knowable for a shared component. `Card` is
+	  `ds-raised`, so a card dropped onto a raised panel had no edge at all.
+
+	  Same-class nesting only. `ds-overlay` inside `ds-raised` is already an
+	  explicit, deliberate pairing and keeps its value.
+	*/
+	.ds-raised .ds-raised {
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 8%,
+			var(--background)
+		);
+	}
+	.ds-raised .ds-raised .ds-raised,
+	.ds-overlay .ds-overlay {
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 12%,
+			var(--background)
+		);
+	}
+
 	/* Only where a divider genuinely carries meaning. Never to draw a box. */
 	.ds-divider {
 		background-color: color-mix(in oklch, var(--foreground) 10%, transparent);
