@@ -31,7 +31,7 @@ function KpiTile({
 	helpText: string
 }) {
 	return (
-		<div className="bg-muted/30 hover:bg-muted/40 flex items-end gap-3 rounded-2xl p-5 pb-4 transition-colors duration-200">
+		<div className="ds-raised hover:bg-foreground/8 flex items-end gap-3 rounded-2xl p-5 pb-4 transition-colors duration-200">
 			<p className="text-orange! mb-1 min-w-6 text-right text-3xl leading-6! font-semibold">
 				{value}
 			</p>
@@ -72,7 +72,7 @@ export function DashboardOverview({ kpis }: DashboardOverviewProps) {
 						helpText={`${draftRatio} still in progress`}
 					/>
 				</div>
-				<div className="border-muted/50 group relative h-50 w-full overflow-hidden rounded-2xl border md:h-full">
+				<div className="ds-raised group relative h-50 w-full overflow-hidden rounded-2xl md:h-full">
 					<div className="h-full opacity-75 blur-[50px]">
 						<div className="bg-orange absolute top-1/2 left-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2" />
 						<div className="absolute top-1/2 left-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 bg-white" />
@@ -81,7 +81,7 @@ export function DashboardOverview({ kpis }: DashboardOverviewProps) {
 					<div className="absolute bottom-0 w-full overflow-clip p-3">
 						<Button
 							asChild
-							className="bg-muted/10 border-primary/10 text-primary group-hover:bg-muted/25! flex h-fit! gap-3 rounded-xl border p-3 text-left whitespace-break-spaces shadow-xl backdrop-blur-2xl transition-colors hover:shadow-2xl"
+							className="ds-overlay text-primary group-hover:bg-foreground/14! flex h-fit! gap-3 rounded-xl p-3 text-left whitespace-break-spaces shadow-xl backdrop-blur-2xl transition-colors hover:shadow-2xl"
 						>
 							<Link
 								to="/docs/guides/upload"

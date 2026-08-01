@@ -151,8 +151,8 @@ const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
 					/>
 				</section>
 			) : (
-				<div className="bg-muted/20 flex flex-col items-center justify-center rounded-3xl p-14 text-center">
-					<div className="bg-muted/35 mb-5 flex h-16 w-16 items-center justify-center rounded-full">
+				<div className="ds-raised flex flex-col items-center justify-center rounded-2xl p-14 text-center">
+					<div className="ds-overlay mb-5 flex h-16 w-16 items-center justify-center rounded-full">
 						<File className="text-muted-foreground h-8 w-8" />
 					</div>
 					<h3 className="mb-2 text-xl font-semibold tracking-tight">
