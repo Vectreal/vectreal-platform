@@ -4,6 +4,10 @@ import { ProjectCard } from './project-card'
 import { SceneThumbnail } from './scene-thumbnail'
 import { StatusBreakdown } from './status-breakdown'
 import { UsageMeter, UsageMeterGrid } from './usage-meter'
+import {
+	STORAGE_USAGE_HINT,
+	STORAGE_USAGE_LABEL
+} from '../../constants/product-copy'
 
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
@@ -37,7 +41,12 @@ export const UsageMeters: Story = {
 				<UsageMeter label="Scenes" current={4} limit={10} />
 				<UsageMeter label="Published" current={8} limit={10} />
 				<UsageMeter label="Projects" current={1} limit={1} />
-				<UsageMeter label="Storage" current={12} limit={null} />
+				<UsageMeter
+					label={STORAGE_USAGE_LABEL}
+					hint={STORAGE_USAGE_HINT}
+					current={12}
+					limit={null}
+				/>
 			</UsageMeterGrid>
 
 			<div className="max-w-sm space-y-3">
@@ -51,7 +60,8 @@ export const UsageMeters: Story = {
 				/>
 				<UsageMeter
 					variant="row"
-					label="Storage used"
+					label={STORAGE_USAGE_LABEL}
+					hint={STORAGE_USAGE_HINT}
 					current={480 * MB}
 					limit={500 * MB}
 					format={(value) => `${Math.round(value / MB)} MB`}

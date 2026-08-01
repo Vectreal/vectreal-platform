@@ -1,6 +1,8 @@
 import { Progress } from '@shared/components/ui/progress'
 import { cn } from '@shared/utils'
 
+import { InfoTooltip } from '../info-tooltip'
+
 import type { ReactNode } from 'react'
 
 /** At or above this share of the limit, the meter warns. */
@@ -76,6 +78,13 @@ interface UsageMeterProps {
 	/** Appends "/mo" to the label for per-period limits. */
 	monthly?: boolean
 	/**
+	 * Explains what the figure counts, behind an info trigger beside the label.
+	 *
+	 * For meters whose number invites a reasonable "that looks wrong" - storage
+	 * is the one that does - rather than for restating the label.
+	 */
+	hint?: ReactNode
+	/**
 	 * `tile` is a standalone block for a grid; `row` is a compact line for a
 	 * list. They differ only in layout - the reading and its colours are shared.
 	 */
@@ -99,6 +108,7 @@ export function UsageMeter({
 	current,
 	limit,
 	monthly,
+	hint,
 	variant = 'tile',
 	format = (value) => value.toLocaleString(),
 	className
@@ -119,11 +129,12 @@ export function UsageMeter({
 		return (
 			<div className={cn('space-y-1.5', className)}>
 				<div className="flex items-center justify-between gap-2">
-					<span className="text-muted-foreground text-xs">
+					<span className="text-muted-foreground flex items-center gap-1 text-xs">
 						{label}
 						{monthly ? (
-							<span className="text-muted-foreground/50 ml-1">/mo</span>
+							<span className="text-muted-foreground/50">/mo</span>
 						) : null}
+						{hint ? <InfoTooltip content={hint} className="size-3.5" /> : null}
 					</span>
 					<span
 						className={cn(
@@ -141,13 +152,16 @@ export function UsageMeter({
 
 	return (
 		<div className={cn('ds-sunken space-y-3 rounded-xl p-4', className)}>
-			<p className="text-muted-foreground text-eyebrow">
-				{label}
-				{monthly ? (
-					<span className="text-muted-foreground/60 ml-1 tracking-normal normal-case">
-						/mo
-					</span>
-				) : null}
+			<p className="text-muted-foreground text-eyebrow flex items-center gap-1.5">
+				<span>
+					{label}
+					{monthly ? (
+						<span className="text-muted-foreground/60 ml-1 tracking-normal normal-case">
+							/mo
+						</span>
+					) : null}
+				</span>
+				{hint ? <InfoTooltip content={hint} className="size-3.5" /> : null}
 			</p>
 			<p
 				className={cn(
