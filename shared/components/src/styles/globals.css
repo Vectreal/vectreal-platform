@@ -85,6 +85,12 @@
 	--radius: 1rem;
 
 	/*
+	  Pair radius with padding. `--radius-2xl` is 28px, so a `rounded-2xl` panel
+	  padded `p-4` (16px) crowds its content into the curve. Panels want `p-5` or
+	  more; `rounded-xl` inner blocks are comfortable at `p-3`.
+	*/
+
+	/*
 	  Motion tokens. The durations live in `@theme` below for the same reason the
 	  radius scale does: `--duration-*` is a Tailwind theme namespace, so
 	  declaring the names here too made them self-referential.
@@ -360,13 +366,25 @@
 	  sunken  - wells and inputs that should recede instead of lift
 	*/
 	.ds-raised {
-		background-color: color-mix(in oklch, var(--foreground) 4%, var(--background));
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 4%,
+			var(--background)
+		);
 	}
 	.ds-overlay {
-		background-color: color-mix(in oklch, var(--foreground) 8%, var(--background));
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 8%,
+			var(--background)
+		);
 	}
 	.ds-sunken {
-		background-color: color-mix(in oklch, var(--foreground) 2.5%, var(--background));
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 2.5%,
+			var(--background)
+		);
 	}
 	/* Only where a divider genuinely carries meaning. Never to draw a box. */
 	.ds-divider {
@@ -381,18 +399,34 @@
 	  values in the same view.
 	*/
 	.ds-raised-interactive {
-		background-color: color-mix(in oklch, var(--foreground) 4%, var(--background));
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 4%,
+			var(--background)
+		);
 		transition: background-color var(--duration-fast) var(--ease-out);
 	}
 	.ds-raised-interactive:hover {
-		background-color: color-mix(in oklch, var(--foreground) 8%, var(--background));
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 8%,
+			var(--background)
+		);
 	}
 	.ds-overlay-interactive {
-		background-color: color-mix(in oklch, var(--foreground) 8%, var(--background));
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 8%,
+			var(--background)
+		);
 		transition: background-color var(--duration-fast) var(--ease-out);
 	}
 	.ds-overlay-interactive:hover {
-		background-color: color-mix(in oklch, var(--foreground) 12%, var(--background));
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 12%,
+			var(--background)
+		);
 	}
 
 	/* ---- Type scale (single source of truth) ---- */

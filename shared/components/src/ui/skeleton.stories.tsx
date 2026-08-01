@@ -26,7 +26,7 @@ export const OnEachSurface: Story = {
 		<div className="space-y-3">
 			{['bg-background', 'ds-sunken', 'ds-raised', 'ds-overlay'].map(
 				(surface) => (
-					<div key={surface} className={`${surface} space-y-2 rounded-2xl p-4`}>
+					<div key={surface} className={`${surface} space-y-2 rounded-2xl p-5`}>
 						<p className="text-eyebrow text-muted-foreground">{surface}</p>
 						<Skeleton className="h-4 w-48" />
 						<Skeleton className="h-4 w-32" />
@@ -39,7 +39,7 @@ export const OnEachSurface: Story = {
 
 export const Staggered: Story = {
 	render: () => (
-		<div className="ds-raised space-y-2 rounded-2xl p-4">
+		<div className="ds-raised space-y-2 rounded-2xl p-5">
 			{Array.from({ length: 5 }, (_, index) => (
 				<Skeleton
 					key={index}
