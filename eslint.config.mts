@@ -113,6 +113,62 @@ export default defineConfig(tseslint.configs.recommended, [
 			]
 		}
 	},
+	/*
+	  Design-system adherence.
+
+	  Both rules encode a failure this consolidation actually hit, more than once
+	  each, and that nothing else catches.
+	*/
+	{
+		files: ['apps/**/*.{ts,tsx}', 'shared/**/*.{ts,tsx}'],
+		ignores: [
+			// Mail clients do not resolve custom properties, so email templates
+			// must inline their hex.
+			'**/lib/email/templates/**',
+			// Stories deliberately show raw values beside their tokens.
+			'**/*.stories.tsx'
+		],
+		rules: {
+			'no-restricted-syntax': [
+				'error',
+				{
+					/*
+					  A Tailwind variant on a `ds-*` or `.text-*` class.
+
+					  Those classes live in `@layer components` and are not registered
+					  utilities, so a variant has nothing to attach to and Tailwind
+					  emits no rule at all. It fails silently - the class is in the
+					  markup and simply does nothing. `hover:ds-overlay`,
+					  `focus-within:ds-overlay` and
+					  `group-data-[viewport=false]/navigation-menu:ds-overlay` all
+					  shipped past review during this sweep before being caught by
+					  reading built CSS.
+
+					  Write the value as an arbitrary utility instead:
+					  `hover:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))]`.
+					*/
+					selector:
+						'Literal[value=/(^|\\s)[a-z][a-z0-9-]*(\\[[^\\]]*\\])?(\\/[a-z-]+)?:(ds-(raised|overlay|sunken|divider)|text-(display|headline|h2|h3|stat|body-lg|eyebrow|label-xs))/]',
+					message:
+						'Tailwind variants cannot be applied to ds-* or text-* design-system classes: they are @layer components rules, not utilities, so this generates nothing. Use an arbitrary value, e.g. hover:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))].'
+				},
+				{
+					/*
+					  A raw hex colour in a Tailwind arbitrary value.
+
+					  Colours belong to the token set. Where a literal is genuinely
+					  correct - depicting someone else's interface, for instance - hoist
+					  it to a named constant with a comment, which also takes it out of
+					  the class string and past this rule.
+					*/
+					selector:
+						'Literal[value=/(bg|text|border|from|via|to|fill|stroke|shadow|ring|outline|decoration|accent|caret)-\\[#[0-9a-fA-F]{3,8}/]',
+					message:
+						'Raw hex in a Tailwind class. Use a design token (bg-orange, text-muted-foreground, ds-raised) or, for a colour that must not follow the theme, a named constant with a comment saying why.'
+				}
+			]
+		}
+	},
 	{
 		files: ['**/*.json'],
 		ignores: ['**/node_modules/**', '**/package.json'],
