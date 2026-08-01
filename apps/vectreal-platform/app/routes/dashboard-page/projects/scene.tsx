@@ -21,6 +21,7 @@ import {
 	ChevronDown,
 	ChevronRight,
 	Cloud,
+	Eye,
 	Info,
 	Radio,
 	Rocket,
@@ -574,15 +575,26 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 								/>
 							</div>
 							<div className="flex shrink-0 flex-col gap-3 max-md:w-full xl:justify-end">
-								<Button asChild className="w-full">
+								{/*
+								  Stacked actions, so both are left-aligned rather than
+								  centred: centring puts each icon at a different x because
+								  the labels differ in width, and the icons stop reading as a
+								  column.
+								*/}
+								<Button asChild className="w-full justify-start">
 									<Link viewTransition to={previewPath}>
+										<Eye className="mr-2 h-4 w-4 shrink-0" />
 										Preview
 									</Link>
 								</Button>
 
-								<Button variant="secondary" asChild>
+								<Button
+									variant="secondary"
+									asChild
+									className="w-full justify-start"
+								>
 									<Link viewTransition to={`/publisher/${sceneState.id}`}>
-										<Rocket className="mr-2 h-4 w-4" />
+										<Rocket className="mr-2 h-4 w-4 shrink-0" />
 										Open in Publisher
 									</Link>
 								</Button>

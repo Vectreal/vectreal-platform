@@ -1,13 +1,14 @@
 import { Button } from '@shared/components'
 import { cn } from '@shared/utils'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import { useCallback } from 'react'
 import { useNavigate } from 'react-router'
 
 import CameraSwitcherPill, {
 	type CameraSwitcherOption
 } from './camera-switcher-pill'
+import PreviewExitBadge from './preview-exit-badge'
 import { useChromeVisibility } from './use-chrome-visibility'
 
 export interface PreviewChromeProps {
@@ -73,14 +74,12 @@ const PreviewChrome = ({
 							exit={{ y: -offset }}
 							transition={fade}
 						>
-							<Button
-								variant="ghost"
-								onClick={handleExit}
-								className={cn(PILL_SURFACE, 'h-10 gap-2 px-3 text-xs')}
-							>
-								<ArrowLeft className="h-4 w-4" />
-								Back
-							</Button>
+							{/* Same badge the publisher's in-canvas preview uses, so
+							    leaving a preview looks the same wherever you are. */}
+							<PreviewExitBadge
+								exitLabel="Back to scene"
+								onExit={handleExit}
+							/>
 						</motion.div>
 
 						<motion.div
