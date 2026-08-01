@@ -8,7 +8,21 @@ export { DataTable, SortableHeader, createCheckboxColumn } from './data-table'
 export { DynamicBreadcrumb } from './dynamic-breadcrumb'
 export { InlineEditableMetadataField } from './inline-editable-metadata-field'
 export { default as LogoSidebar } from './logo-sidebar'
+export { ProjectCard, type ProjectCardData } from './project-card'
 export { ProjectMultiSelect, type ProjectOption } from './project-multi-select'
+export {
+	ProjectsBrowser,
+	type ProjectBrowseItem,
+	type StatusFilter
+} from './projects-browser'
+export { SceneThumbnail } from './scene-thumbnail'
+export { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
+export {
+	UsageMeter,
+	UsageMeterGrid,
+	readUsage,
+	hasUsagePressure
+} from './usage-meter'
 export {
 	SceneAssetListItem,
 	buildAssetListItemProps

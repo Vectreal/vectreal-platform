@@ -8,9 +8,13 @@ import type {
 	Updater
 } from '@tanstack/react-table'
 
+/** How a collection is laid out. Grid reads visually, table reads densely. */
+export type DashboardView = 'grid' | 'table'
+
 interface UseDashboardTableStateOptions {
 	namespace: string
 	defaultPageSize?: number
+	defaultView?: DashboardView
 }
 
 interface DashboardTableStateResult {
@@ -22,6 +26,8 @@ interface DashboardTableStateResult {
 	onPaginationChange: (updater: Updater<PaginationState>) => void
 	rowSelection: RowSelectionState
 	onRowSelectionChange: (updater: Updater<RowSelectionState>) => void
+	view: DashboardView
+	setView: (value: DashboardView) => void
 }
 
 function applyUpdater<T>(updater: Updater<T>, current: T): T {
@@ -34,7 +40,8 @@ function applyUpdater<T>(updater: Updater<T>, current: T): T {
 
 export function useDashboardTableState({
 	namespace,
-	defaultPageSize = 10
+	defaultPageSize = 10,
+	defaultView = 'grid'
 }: UseDashboardTableStateOptions): DashboardTableStateResult {
 	const [searchParams, setSearchParams] = useSearchParams()
 
@@ -43,6 +50,7 @@ export function useDashboardTableState({
 	const pageSizeKey = `${namespace}-pageSize`
 	const sortKey = `${namespace}-sort`
 	const sortDirKey = `${namespace}-sortDir`
+	const viewKey = `${namespace}-view`
 
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 
@@ -169,6 +177,39 @@ export function useDashboardTableState({
 		[]
 	)
 
+	/*
+	  The layout choice lives in the URL with the rest of the table state rather
+	  than in component state or localStorage: it survives reload and back
+	  navigation for the same reason the search term does, and a shared link
+	  arrives showing what the sender was looking at.
+	*/
+	const view: DashboardView =
+		searchParams.get(viewKey) === 'table'
+			? 'table'
+			: searchParams.get(viewKey) === 'grid'
+				? 'grid'
+				: defaultView
+
+	const setView = useCallback(
+		(value: DashboardView) => {
+			setSearchParams(
+				(prevParams) => {
+					const nextParams = new URLSearchParams(prevParams)
+					if (value === defaultView) {
+						nextParams.delete(viewKey)
+					} else {
+						nextParams.set(viewKey, value)
+					}
+					return nextParams
+				},
+				// Switching layout is not a place to come back to - it would take two
+				// Backs to leave the page after one toggle.
+				{ replace: true }
+			)
+		},
+		[defaultView, setSearchParams, viewKey]
+	)
+
 	return {
 		searchValue,
 		setSearchValue,
@@ -177,6 +218,8 @@ export function useDashboardTableState({
 		pagination,
 		onPaginationChange,
 		rowSelection,
-		onRowSelectionChange
+		onRowSelectionChange,
+		view,
+		setView
 	}
 }

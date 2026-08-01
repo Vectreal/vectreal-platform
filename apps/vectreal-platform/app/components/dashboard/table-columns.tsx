@@ -37,6 +37,7 @@ import { Link } from 'react-router'
 
 import { createCheckboxColumn, SortableHeader } from './data-table'
 import { SceneThumbnail } from './scene-thumbnail'
+import { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
 
 import type { ColumnDef } from '@tanstack/react-table'
 
@@ -49,8 +50,17 @@ export interface ProjectRow {
 	organizationName: string
 	canDelete: boolean
 	sceneCount: number
-	createdAt: Date
-	updatedAt: Date
+	counts: SceneStatusCounts
+	/**
+	 * Null when the project has no scenes.
+	 *
+	 * `projects` has no timestamp column of its own, so both dates are derived
+	 * from the project's scenes. The derivation used to fall back to `new Date()`,
+	 * which made every empty project report as updated today - a date the system
+	 * invented rather than recorded.
+	 */
+	createdAt: Date | null
+	updatedAt: Date | null
 }
 
 export const projectColumns: ColumnDef<ProjectRow>[] = [
@@ -92,9 +102,9 @@ export const projectColumns: ColumnDef<ProjectRow>[] = [
 		header: ({ column }) => (
 			<SortableHeader column={column}>Scenes</SortableHeader>
 		),
-		cell: ({ row }) => (
-			<Badge variant="secondary">{row.getValue('sceneCount')} scenes</Badge>
-		)
+		// Sorts on the count, reads as the breakdown. "12 scenes" never answered
+		// the question people have about a project, which is how much of it is live.
+		cell: ({ row }) => <StatusBreakdown counts={row.original.counts} verbose />
 	},
 	{
 		accessorKey: 'updatedAt',
@@ -102,14 +112,17 @@ export const projectColumns: ColumnDef<ProjectRow>[] = [
 			<SortableHeader column={column}>Last Updated</SortableHeader>
 		),
 		cell: ({ row }) => {
-			const date = row.getValue('updatedAt') as Date
+			const date = row.original.updatedAt
+
 			return (
 				<span className="text-muted-foreground text-sm">
-					{new Date(date).toLocaleDateString('en-US', {
-						month: 'short',
-						day: 'numeric',
-						year: 'numeric'
-					})}
+					{date
+						? new Date(date).toLocaleDateString('en-US', {
+								month: 'short',
+								day: 'numeric',
+								year: 'numeric'
+							})
+						: 'Never'}
 				</span>
 			)
 		}
