@@ -16,7 +16,7 @@ export const AccordionItem = ({ className, ...props }: AccordionItemProps) => {
 	return (
 		<BaseAccordionItem
 			{...props}
-			className={cn('publisher-shell-nested px-4', className)}
+			className={cn('publisher-shell-nested rounded-2xl px-4', className)}
 		/>
 	)
 }
@@ -30,7 +30,14 @@ export const AccordionTrigger = ({
 			{...props}
 			className={cn('py-3 hover:no-underline', className)}
 		>
-			<span className="flex items-center gap-3">{props.children}</span>
+			{/*
+			  The section icon is sized here rather than per call site, which had
+			  drifted across four values — some of them numeric `size` props that
+			  bypass the class entirely and so could not be corrected in one place.
+			*/}
+			<span className="flex items-center gap-3 [&_svg]:size-4 [&_svg]:shrink-0">
+				{props.children}
+			</span>
 		</BaseAccordionTrigger>
 	)
 }

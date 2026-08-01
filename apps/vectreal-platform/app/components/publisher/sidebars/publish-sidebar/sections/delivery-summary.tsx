@@ -1,5 +1,5 @@
-import { cn, formatFileSize } from '@shared/utils'
-import { Sparkles } from 'lucide-react'
+import { formatFileSize } from '@shared/utils'
+import { Sparkles, TriangleAlert } from 'lucide-react'
 
 import {
 	DELIVERY_ESTIMATE_EXPLANATION,
@@ -44,13 +44,11 @@ export const DeliverySummary: FC<DeliverySummaryProps> = ({
 	const hasOptimized = sizeReductionPercent !== null
 
 	return (
-		<div className="space-y-3 px-4 pt-4 pb-2">
+		<div className="space-y-3">
 			<div className="flex items-center justify-between gap-2">
-				<p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
-					Delivery
-				</p>
+				<p className="text-muted-foreground text-eyebrow">Delivery</p>
 				{estimate ? (
-					<span className="text-muted-foreground flex items-center gap-1 text-[11px]">
+					<span className="text-muted-foreground text-label-xs flex items-center gap-1">
 						{estimate.label} on {DELIVERY_REFERENCE_LABEL}
 						<InfoTooltip content={DELIVERY_ESTIMATE_EXPLANATION} />
 					</span>
@@ -83,13 +81,20 @@ export const DeliverySummary: FC<DeliverySummaryProps> = ({
 				<button
 					type="button"
 					onClick={onOpenOptimization}
-					className={cn(
-						'publisher-shell-focus border-shell-border-soft hover:border-shell-border-strong hover:bg-shell-surface-soft w-full rounded-xl border p-3 text-left transition-colors',
-						estimate?.isSlow && 'border-amber-500/40 bg-amber-500/5'
-					)}
+					className="publisher-shell-focus publisher-shell-nested-interactive w-full rounded-xl p-3 text-left"
 				>
+					{/*
+					  A slow scene changes the urgency of this control, not its identity.
+					  It used to swap the whole surface to an amber tint, which read as a
+					  different kind of element and also cost it its hover state, since
+					  the tint and the surface class set the same property.
+					*/}
 					<span className="flex items-center gap-2">
-						<Sparkles className="text-orange h-4 w-4 shrink-0" />
+						{estimate?.isSlow ? (
+							<TriangleAlert className="text-warning h-4 w-4 shrink-0" />
+						) : (
+							<Sparkles className="text-orange h-4 w-4 shrink-0" />
+						)}
 						<span className="text-sm font-medium">Optimize scene</span>
 					</span>
 					<span className="text-muted-foreground mt-1 block text-xs leading-relaxed">

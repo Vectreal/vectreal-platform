@@ -37,7 +37,7 @@ export const SceneNormalizationNotice: FC = () => {
 			initial={{ opacity: 0, y: 6 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.2, delay: 0.01 }}
-			className="publisher-shell-nested flex items-center justify-between gap-3 px-4 py-3"
+			className="publisher-shell-nested flex items-center justify-between gap-3 rounded-xl px-4 py-3"
 		>
 			{normalization.enabled ? (
 				<>

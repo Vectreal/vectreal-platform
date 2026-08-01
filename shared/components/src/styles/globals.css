@@ -581,8 +581,35 @@
 		@apply bg-shell-surface border-shell-border-soft rounded-xl border shadow-xl backdrop-blur-xl;
 	}
 
+	/*
+	  A block nested inside a publisher shell panel.
+
+	  Deliberately not `ds-raised`. The `ds-*` ladder mixes against `--background`
+	  because it describes surfaces sitting on the page; a shell panel does not —
+	  it floats over the 3D canvas at its own opacity, and in dark mode it is
+	  lighter than the page background. Mixing against `--background` there put a
+	  nested block *below* the panel it sits on.
+
+	  So it uses the ladder's mechanism (a value tint, never a border) against a
+	  transparent base, which separates from whatever the panel resolves to in
+	  either theme. It also stacks: a block nested inside a nested block reaches
+	  the next step up on its own, the same way the `ds-*` ladder self-corrects.
+
+	  Radius is left to the caller. Panels take `rounded-2xl` and inner blocks
+	  `rounded-xl`, and baking one in meant call sites had to override it with
+	  another utility from the same layer — a precedence coin-flip.
+	*/
 	.publisher-shell-nested {
-		@apply bg-shell-surface-soft rounded-xl shadow-sm;
+		background-color: color-mix(in oklch, var(--foreground) 5%, transparent);
+	}
+
+	/* Same surface, for blocks that are themselves the control. */
+	.publisher-shell-nested-interactive {
+		background-color: color-mix(in oklch, var(--foreground) 5%, transparent);
+		transition: background-color var(--duration-fast) var(--ease-out);
+	}
+	.publisher-shell-nested-interactive:hover {
+		background-color: color-mix(in oklch, var(--foreground) 9%, transparent);
 	}
 
 	.publisher-shell-focus {
