@@ -1,17 +1,7 @@
-import {
-	SelectItem,
-	SelectContent,
-	SelectTrigger,
-	SelectValue,
-	Select,
-	Button
-} from '@shared/components'
 import { cn } from '@shared/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useSetAtom, useAtom, useAtomValue } from 'jotai'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCallback, useMemo } from 'react'
-
 
 import { PUBLISHER_LAYER } from './shell/shell-layout'
 import { isSceneCamera } from '../../lib/domain/scene/scene-camera'
@@ -23,6 +13,7 @@ import {
 	cameraAtom,
 	selectedCameraIdAtom
 } from '../../lib/stores/scene-settings-store'
+import CameraSwitcherPill from '../scene-embed/preview-chrome/camera-switcher-pill'
 
 const PreviewCameraControls: React.FC = () => {
 	const [isPreviewMode, setIsPreviewMode] = useAtom(isPreviewModeAtom)
@@ -35,40 +26,11 @@ const PreviewCameraControls: React.FC = () => {
 		[cameras]
 	)
 
-	const activePreviewCameraIndex = useMemo(() => {
-		if (!sceneCameras.length) return -1
-		const selectedIndex = sceneCameras.findIndex(
-			(cameraEntry) => cameraEntry.cameraId === selectedCameraId
-		)
-		return selectedIndex >= 0 ? selectedIndex : 0
-	}, [sceneCameras, selectedCameraId])
-
-	const activePreviewCamera =
-		activePreviewCameraIndex >= 0
-			? sceneCameras[activePreviewCameraIndex]
-			: null
-
 	const handleSelectPreviewCamera = useCallback(
 		(nextCameraId: string) => {
 			setSelectedCameraId(nextCameraId)
 		},
 		[setSelectedCameraId]
-	)
-
-	const handleCyclePreviewCamera = useCallback(
-		(direction: -1 | 1) => {
-			if (!sceneCameras.length) {
-				return
-			}
-
-			const currentIndex =
-				activePreviewCameraIndex >= 0 ? activePreviewCameraIndex : 0
-			const nextIndex =
-				(currentIndex + direction + sceneCameras.length) % sceneCameras.length
-
-			setSelectedCameraId(sceneCameras[nextIndex].cameraId)
-		},
-		[activePreviewCameraIndex, sceneCameras, setSelectedCameraId]
 	)
 
 	const handleExitPreviewMode = useCallback(() => {
@@ -107,46 +69,12 @@ const PreviewCameraControls: React.FC = () => {
 							<span className="flex items-center gap-1.5">Exit Preview</span>
 						</motion.button>
 
-						<div className="bg-muted/92 border-border/70 relative z-10 flex items-center gap-2 rounded-2xl border px-2 py-1.5 shadow-2xl backdrop-blur-2xl">
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 rounded-xl"
-								onClick={() => handleCyclePreviewCamera(-1)}
-								aria-label="Previous camera"
-							>
-								<ChevronLeft className="h-4 w-4" />
-							</Button>
-
-							<Select
-								value={activePreviewCamera?.cameraId ?? ''}
-								onValueChange={handleSelectPreviewCamera}
-							>
-								<SelectTrigger className="h-8 min-w-44 rounded-xl text-xs">
-									<SelectValue placeholder="Select camera" />
-								</SelectTrigger>
-								<SelectContent>
-									{sceneCameras.map((cameraEntry) => (
-										<SelectItem
-											key={cameraEntry.cameraId}
-											value={cameraEntry.cameraId}
-										>
-											{cameraEntry.name || 'Unnamed Camera'}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 rounded-xl"
-								onClick={() => handleCyclePreviewCamera(1)}
-								aria-label="Next camera"
-							>
-								<ChevronRight className="h-4 w-4" />
-							</Button>
-						</div>
+						<CameraSwitcherPill
+							className="relative z-10"
+							cameras={sceneCameras}
+							activeCameraId={selectedCameraId ?? null}
+							onSelect={handleSelectPreviewCamera}
+						/>
 					</div>
 				</motion.div>
 			) : null}
