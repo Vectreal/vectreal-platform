@@ -66,7 +66,23 @@ function ResumeBand({ scene }: { scene: ResumeScene }) {
 	return (
 		<section className="ds-raised overflow-hidden rounded-2xl">
 			<div className="grid gap-5 p-5 sm:grid-cols-[minmax(0,14rem)_1fr] sm:items-center">
-				<SceneThumbnail src={scene.thumbnailUrl} />
+				{/*
+				  The status sits on the thumbnail, labelling the scene itself.
+
+				  It began the button row, where it read as a third control that
+				  happened not to be clickable; next to the "Jump back in" eyebrow it
+				  was worse, conflating the section's label with the scene's state.
+				  Over the image it is unambiguously a property of the thing shown.
+				*/}
+				<div className="relative">
+					<SceneThumbnail src={scene.thumbnailUrl} />
+					<Badge
+						variant={scene.status === 'published' ? 'default' : 'secondary'}
+						className="absolute top-2 left-2 capitalize shadow-sm"
+					>
+						{scene.status}
+					</Badge>
+				</div>
 
 				<div className="min-w-0 space-y-3">
 					<div className="min-w-0 space-y-1">
@@ -79,12 +95,6 @@ function ResumeBand({ scene }: { scene: ResumeScene }) {
 					</div>
 
 					<div className="flex flex-wrap items-center gap-2">
-						<Badge
-							variant={scene.status === 'published' ? 'default' : 'secondary'}
-							className="capitalize"
-						>
-							{scene.status}
-						</Badge>
 						<Button size="sm" asChild>
 							<Link to={`/publisher/${scene.id}`}>
 								<Pencil className="size-3.5" />

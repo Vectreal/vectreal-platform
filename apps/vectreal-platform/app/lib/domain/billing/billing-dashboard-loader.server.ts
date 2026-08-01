@@ -1,11 +1,13 @@
-import { eq, inArray } from 'drizzle-orm'
+import { eq, inArray, sql } from 'drizzle-orm'
 import Stripe from 'stripe'
 
 import { getOrgSubscription, getQuotaLimit } from './entitlement-service.server'
 import { getCurrentUsage } from './usage-service.server'
 import { getDbClient } from '../../../db/client'
-import { scenePublished } from '../../../db/schema'
+import { assets, scenePublished } from '../../../db/schema'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
+import { sceneAssets } from '../../../db/schema/project/scene-assets'
+import { sceneSettings } from '../../../db/schema/project/scene-settings'
 import { getStripeClient } from '../../stripe.server'
 import { loadAuthenticatedUser } from '../auth/auth-loader.server'
 import { getUserProjects } from '../project/project-repository.server'
@@ -140,7 +142,6 @@ export async function loadOrgUsage(
 		embedBandwidthQuota,
 		previewLoadsQuota,
 		apiRequestsMonthUsage,
-		storageBytesTotalUsage,
 		embedBandwidthUsage,
 		previewLoadsUsage
 	] = await Promise.all([
@@ -152,14 +153,39 @@ export async function loadOrgUsage(
 		getQuotaLimit(organizationId, 'embed_bandwidth_gb_per_month'),
 		getQuotaLimit(organizationId, 'preview_loads_per_month'),
 		getCurrentUsage(organizationId, 'api_requests_per_month'),
-		getCurrentUsage(organizationId, 'storage_bytes_total'),
 		getCurrentUsage(organizationId, 'embed_bandwidth_gb_per_month'),
 		getCurrentUsage(organizationId, 'preview_loads_per_month')
 	])
 
+	const allSceneIds = allScenes.map((scene) => scene.id)
+
+	/*
+	  Storage is measured, not counted.
+
+	  It used to come from `getCurrentUsage(org, 'storage_bytes_total')`, which
+	  reads a usage counter - and nothing in the codebase ever incremented that
+	  counter. The key was read in two places and written in none, so the figure
+	  was structurally 0 for every organization on every plan, on both the
+	  billing page and anywhere else it was shown. Summing `assets.file_size`
+	  reports what is actually stored, the same way published scenes are counted
+	  from `scene_published` rather than from a counter.
+	*/
+	const storageRows =
+		allSceneIds.length > 0
+			? await db
+					.select({ total: sql<null | string>`sum(${assets.fileSize})` })
+					.from(assets)
+					.innerJoin(sceneAssets, eq(sceneAssets.assetId, assets.id))
+					.innerJoin(
+						sceneSettings,
+						eq(sceneSettings.id, sceneAssets.sceneSettingsId)
+					)
+					.where(inArray(sceneSettings.sceneId, allSceneIds))
+			: []
+	const storageBytesTotalUsage = Number(storageRows[0]?.total ?? 0)
+
 	// Published is counted from `scene_published`, not `scenes.status`. The two
 	// can disagree, and the quota is enforced against this table.
-	const allSceneIds = allScenes.map((scene) => scene.id)
 	let publishedCount = 0
 	if (allSceneIds.length > 0) {
 		const publishedRows = await db
