@@ -27,9 +27,9 @@ export const ScenePreview: FC = () => {
 			initial={{ opacity: 0, y: 10 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.4 }}
-			className="space-y-2 px-4 pb-2"
+			className="space-y-3"
 		>
-			<div className="border-shell-border-soft bg-shell-surface-soft relative aspect-video w-full overflow-hidden rounded-xl border">
+			<div className="publisher-shell-nested relative aspect-video w-full overflow-hidden rounded-xl">
 				{thumbnailUrl ? (
 					<img
 						src={thumbnailUrl}

@@ -116,18 +116,16 @@ export const SaveOptions: FC = () => {
 	}
 
 	return (
-		<motion.div
-			variants={itemVariants}
-			className="flex flex-col gap-4 px-2 py-2"
-		>
-			{/* Export Section */}
+		<motion.div variants={itemVariants} className="flex flex-col gap-3 pb-4">
 			<div className="space-y-3">
-				<div>
-					<h4 className="text-sm font-medium">Download Model</h4>
-					<p className="text-muted-foreground text-xs">
-						Export your optimized 3D model for use in other applications
-					</p>
-				</div>
+				{/*
+				  No heading of its own: the accordion trigger above already says
+				  "Download", and a second title inside it was a third section-header
+				  shape competing with the two the sidebar actually uses.
+				*/}
+				<p className="text-muted-foreground text-xs">
+					Export your optimized 3D model for use in other applications
+				</p>
 
 				<RadioAccordion
 					label="Export Format"

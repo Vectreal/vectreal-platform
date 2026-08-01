@@ -21,6 +21,7 @@ import {
 	buildUpgradeModalState,
 	upgradeModalAtom
 } from '../../../../../lib/stores/upgrade-modal-store'
+import { InlineNotice } from '../../../../layout-components'
 import { ScenePublishStateControl } from '../../../../publishing/scene-publish-state-control'
 import { itemVariants } from '../../animation'
 
@@ -203,20 +204,18 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 						: 'Scene is ready to publish.'
 
 	return (
-		<motion.div variants={itemVariants} className="space-y-4 px-2 py-2">
+		<motion.div variants={itemVariants} className="space-y-3 pb-4">
 			<div className="text-muted-foreground text-sm">
 				Publish your current optimized scene. This saves first only when there
 				are unsaved changes.
 			</div>
 			{!sceneId && (
-				<div className="border-warning/40 bg-warning/10 text-warning-foreground rounded-md border px-3 py-2 text-xs">
+				<InlineNotice>
 					First publish will save and assign a scene ID automatically.
-				</div>
+				</InlineNotice>
 			)}
 
-			<div className="border-border/60 bg-muted/30 text-muted-foreground rounded-md border px-3 py-2 text-xs">
-				{statusText}
-			</div>
+			<InlineNotice tone="neutral">{statusText}</InlineNotice>
 
 			<ScenePublishStateControl
 				publishState={publishState}
