@@ -1,12 +1,28 @@
 import { cn } from '@shared/utils'
 import * as React from 'react'
 
-function Card({ className, ...props }: React.ComponentProps<'div'>) {
+/**
+ * `elevation` picks which step of the surface ladder the card sits on.
+ *
+ * The default `raised` is correct on the page background. On a surface that is
+ * already `ds-raised` it is not: both resolve to the same 4% mix, so the card
+ * has no edge at all. Nested cards step up to `overlay`.
+ *
+ * This is a prop rather than a `ds-overlay` class on `className`, because both
+ * utilities live in `@layer components` at equal specificity - which of them won
+ * would depend on their order in the stylesheet, not on the call site.
+ */
+function Card({
+	className,
+	elevation = 'raised',
+	...props
+}: React.ComponentProps<'div'> & { elevation?: 'raised' | 'overlay' }) {
 	return (
 		<div
 			data-slot="card"
 			className={cn(
-				'ds-raised text-card-foreground flex flex-col gap-6 rounded-xl py-6',
+				elevation === 'overlay' ? 'ds-overlay' : 'ds-raised',
+				'text-card-foreground flex flex-col gap-6 rounded-xl py-6',
 				className
 			)}
 			{...props}
