@@ -66,6 +66,9 @@ jobs:
         with:
           projectToken: ${{ env.CHROMATIC_TOKEN }}
           workingDir: storybook
+          # Publish the artifact the previous step already built and
+          # type-checked, rather than having Chromatic rebuild it.
+          storybookBuildDir: storybook-static
           autoAcceptChanges: 'main'
           exitZeroOnChanges: ${{ github.event_name == 'pull_request' }}
           exitOnceUploaded: true
