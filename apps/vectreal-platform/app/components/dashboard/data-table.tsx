@@ -166,36 +166,44 @@ export function DataTable<TData, TValue>({
 				)}
 
 				{hasSelection && (onDelete || onRename) && (
-					<div className="flex items-center gap-2">
+					<div className="ml-auto flex items-center gap-2">
 						<span className="text-muted-foreground text-sm">
 							{selectedRows.length} selected
 						</span>
-						<Button
-							disabled={disableSelectionActions || selectedRows.length !== 1}
-							variant="outline"
-							size="sm"
-							onClick={() => {
-								if (onRename) {
+						{/*
+						  Rename appears only when a caller handles it. It used to render
+						  whenever `onDelete` was passed, so the projects page - which
+						  passes only `onDelete` - offered a Rename button that did
+						  nothing at all when clicked.
+						*/}
+						{onRename ? (
+							<Button
+								disabled={disableSelectionActions || selectedRows.length !== 1}
+								variant="outline"
+								size="sm"
+								onClick={() => {
 									onRename(selectedRows.at(0)!)
 									onRowSelectionChange({})
-								}
-							}}
-						>
-							<TextCursor className="mr-2 h-4 w-4" />
-							Rename
-						</Button>
-						<Button
-							variant="destructive"
-							size="sm"
-							disabled={disableSelectionActions}
-							onClick={() => {
-								onDelete?.(selectedRows)
-								onRowSelectionChange({})
-							}}
-						>
-							<Trash2 className="mr-2 h-4 w-4" />
-							Delete
-						</Button>
+								}}
+							>
+								<TextCursor className="mr-2 h-4 w-4" />
+								Rename
+							</Button>
+						) : null}
+						{onDelete ? (
+							<Button
+								variant="destructive"
+								size="sm"
+								disabled={disableSelectionActions}
+								onClick={() => {
+									onDelete(selectedRows)
+									onRowSelectionChange({})
+								}}
+							>
+								<Trash2 className="mr-2 h-4 w-4" />
+								Delete
+							</Button>
+						) : null}
 					</div>
 				)}
 			</div>

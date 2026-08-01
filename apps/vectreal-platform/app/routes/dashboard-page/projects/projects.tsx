@@ -6,16 +6,25 @@ import {
 	EmptyHeader
 } from '@shared/components/ui/empty'
 import { Plus } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import { data, Link, Outlet, useFetcher, useRevalidator } from 'react-router'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+	data,
+	Link,
+	Outlet,
+	useFetcher,
+	useNavigate,
+	useRevalidator,
+	useSearchParams
+} from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { toast } from 'sonner'
 
 import { Route } from './+types/projects'
 import {
-	DataTable,
-	projectColumns,
-	type ProjectRow
+	ProjectsBrowser,
+	type ProjectBrowseItem,
+	type ProjectRow,
+	type StatusFilter
 } from '../../../components/dashboard'
 import { WrittenConfirmationModal } from '../../../components/shared/written-confirmation-modal'
 import { ProjectsGridSkeleton } from '../../../components/skeletons'
@@ -302,13 +311,42 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 	const fetcher = useFetcher<typeof action>()
 	const csrfToken = useAuthenticityToken()
 	const revalidator = useRevalidator()
+	const navigate = useNavigate()
 	const lastHandledResponseRef = useRef<string | null>(null)
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [projectIdsToDelete, setProjectIdsToDelete] = useState<string[]>([])
 	const tableState = useDashboardTableState({
 		namespace: 'projects-list'
 	})
+	const [searchParams, setSearchParams] = useSearchParams()
 	const isDeletingProjects = fetcher.state !== 'idle'
+
+	/*
+	  Both filters live in the URL beside the rest of the table state, under the
+	  same `projects-list` namespace, so a filtered view survives reload and
+	  back-navigation and can be shared as a link.
+	*/
+	const organizationFilter = searchParams.get('projects-list-org') ?? 'all'
+	const statusFilter = (searchParams.get('projects-list-status') ??
+		'all') as StatusFilter
+
+	const setFilterParam = useCallback(
+		(key: string, value: string) => {
+			setSearchParams((prevParams) => {
+				const nextParams = new URLSearchParams(prevParams)
+				if (value === 'all') {
+					nextParams.delete(key)
+				} else {
+					nextParams.set(key, value)
+				}
+				// Narrowing the list while on page 3 would otherwise land on an empty
+				// page, which reads as "no projects" rather than as a filter.
+				nextParams.set('projects-list-page', '1')
+				return nextParams
+			})
+		},
+		[setSearchParams]
+	)
 
 	useEffect(() => {
 		if (fetcher.state !== 'idle' || !fetcher.data) {
@@ -360,40 +398,74 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 		)
 	}
 
-	const projectTableData: ProjectRow[] = projects.map(
-		({ project, organizationId }) => {
-			const projectScenes = scenes.filter(
-				(scene) => scene.projectId === project.id
-			)
-			const latestSceneUpdate = projectScenes.reduce<Date | null>(
-				(latest, scene) => {
-					const sceneUpdatedAt = new Date(scene.updatedAt)
+	/*
+	  Everything both layouts show, derived from data the loader already has.
+	  No new queries: the scene rows are here for the counts, and the status
+	  breakdown and card thumbnail come out of the same pass.
+	*/
+	const projectItems: ProjectBrowseItem[] = useMemo(
+		() =>
+			projects.map(({ project, organizationId }) => {
+				const projectScenes = scenes.filter(
+					(scene) => scene.projectId === project.id
+				)
 
-					if (!latest || sceneUpdatedAt > latest) {
-						return sceneUpdatedAt
+				const counts = { published: 0, draft: 0, archived: 0 }
+				let latestSceneUpdate: Date | null = null
+				let thumbnailUrl: null | string = null
+				let thumbnailUpdatedAt: Date | null = null
+
+				for (const scene of projectScenes) {
+					if (scene.status in counts) {
+						counts[scene.status as keyof typeof counts] += 1
 					}
 
-					return latest
-				},
-				null
-			)
+					const sceneUpdatedAt = new Date(scene.updatedAt)
 
-			const stableTimestamp = latestSceneUpdate ?? new Date()
+					if (!latestSceneUpdate || sceneUpdatedAt > latestSceneUpdate) {
+						latestSceneUpdate = sceneUpdatedAt
+					}
 
-			return {
-				id: project.id,
-				name: project.name,
-				organizationName:
-					organizations.find(
-						({ organization }) => organization.id === organizationId
-					)?.organization.name || 'Unknown',
-				canDelete:
-					projectCreationCapabilities[organizationId]?.canDelete ?? false,
-				sceneCount: projectScenes.length,
-				createdAt: stableTimestamp,
-				updatedAt: stableTimestamp
-			}
-		}
+					// The card borrows the most recently updated scene that actually has
+					// a thumbnail, rather than the most recent scene - which is usually
+					// the one just created, and so the one without a capture yet.
+					if (
+						scene.thumbnailUrl &&
+						(!thumbnailUpdatedAt || sceneUpdatedAt > thumbnailUpdatedAt)
+					) {
+						thumbnailUrl = scene.thumbnailUrl
+						thumbnailUpdatedAt = sceneUpdatedAt
+					}
+				}
+
+				return {
+					id: project.id,
+					name: project.name,
+					organizationId,
+					organizationName:
+						organizations.find(
+							({ organization }) => organization.id === organizationId
+						)?.organization.name || 'Unknown',
+					canDelete:
+						projectCreationCapabilities[organizationId]?.canDelete ?? false,
+					sceneCount: projectScenes.length,
+					counts,
+					thumbnailUrl,
+					// Null, not today. `projects` has no timestamp of its own, so a
+					// project with no scenes genuinely has no date to report.
+					updatedAt: latestSceneUpdate
+				}
+			}),
+		[organizations, projectCreationCapabilities, projects, scenes]
+	)
+
+	const organizationOptions = useMemo(
+		() =>
+			organizations.map(({ organization }) => ({
+				id: organization.id,
+				name: organization.name
+			})),
+		[organizations]
 	)
 
 	const canCreateProjects = Object.values(projectCreationCapabilities).some(
@@ -403,27 +475,28 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 	return (
 		<>
 			<div className="p-6">
-				{projectTableData.length > 0 ? (
-					<DataTable
-						columns={projectColumns}
-						data={projectTableData}
+				{projectItems.length > 0 ? (
+					<ProjectsBrowser
+						items={projectItems}
+						organizations={organizationOptions}
+						tableState={tableState}
+						organizationFilter={organizationFilter}
+						onOrganizationFilterChange={(value) =>
+							setFilterParam('projects-list-org', value)
+						}
+						statusFilter={statusFilter}
+						onStatusFilterChange={(value) =>
+							setFilterParam('projects-list-status', value)
+						}
 						isUpdating={isDeletingProjects}
-						disableSelectionActions={isDeletingProjects}
-						searchKey="name"
-						searchPlaceholder="Search projects..."
-						searchValue={tableState.searchValue}
-						onSearchValueChange={tableState.setSearchValue}
-						sorting={tableState.sorting}
-						onSortingChange={tableState.onSortingChange}
-						pagination={tableState.pagination}
-						onPaginationChange={tableState.onPaginationChange}
-						rowSelection={tableState.rowSelection}
-						onRowSelectionChange={tableState.onRowSelectionChange}
-						getRowCanSelect={(row) => row.canDelete}
-						onDelete={(selectedRows) => {
-							const projectIds = (selectedRows as ProjectRow[]).map(
-								(row) => row.id
-							)
+						// Rename opens the edit dialog that already exists at this route's
+						// `/edit` child. The button used to render with nothing behind it,
+						// because the page never passed a handler.
+						onRename={(row: ProjectRow) =>
+							navigate(`/dashboard/projects/${row.id}/edit`)
+						}
+						onDelete={(selectedRows: ProjectRow[]) => {
+							const projectIds = selectedRows.map((row) => row.id)
 
 							if (projectIds.length === 0) {
 								toast.error('Select at least one project first')
