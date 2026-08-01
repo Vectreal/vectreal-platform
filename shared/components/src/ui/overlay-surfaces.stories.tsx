@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 import { Alert, AlertDescription, AlertTitle } from './alert'
 import { Button } from './button'
 import {
@@ -9,6 +11,7 @@ import {
 	CommandList
 } from './command'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from './hover-card'
+
 
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
@@ -67,18 +70,28 @@ export const CommandPalette: Story = {
 	)
 }
 
+/**
+ * The hover card portals to `document.body` by default, which lands it outside
+ * the decorator's themed wrapper - so it rendered light in the dark column and
+ * the story could not show the thing it exists to show. It is pinned to the
+ * panel here via `container`.
+ */
 export const HoverCardOnPanel: Story = {
-	render: () => (
-		<div className="ds-raised rounded-2xl p-6">
-			<HoverCard open>
-				<HoverCardTrigger asChild>
-					<Button variant="ghost">Author</Button>
-				</HoverCardTrigger>
-				<HoverCardContent align="start">
-					An overlay opening over a raised panel. It has to step up from the
-					panel, not match it.
-				</HoverCardContent>
-			</HoverCard>
-		</div>
-	)
+	render: function HoverCardStory() {
+		const [panel, setPanel] = useState<HTMLDivElement | null>(null)
+
+		return (
+			<div ref={setPanel} className="ds-raised relative rounded-2xl p-6">
+				<HoverCard open>
+					<HoverCardTrigger asChild>
+						<Button variant="ghost">Author</Button>
+					</HoverCardTrigger>
+					<HoverCardContent align="start" container={panel}>
+						An overlay opening over a raised panel. It has to step up from the
+						panel, not match it.
+					</HoverCardContent>
+				</HoverCard>
+			</div>
+		)
+	}
 }

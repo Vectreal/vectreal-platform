@@ -20,10 +20,23 @@ function HoverCardContent({
 	className,
 	align = 'center',
 	sideOffset = 4,
+	container,
 	...props
-}: React.ComponentProps<typeof HoverCardPrimitive.Content>) {
+}: React.ComponentProps<typeof HoverCardPrimitive.Content> & {
+	/**
+	 * Portal target. The content mounts on `document.body` by default, which
+	 * puts it outside any themed subtree - so a hover card opened inside a
+	 * `.dark` container renders with light tokens. Pass the themed element to
+	 * keep it in scope. Storybook's side-by-side themes need this; so does any
+	 * app region that themes a subtree rather than the document.
+	 */
+	container?: HTMLElement | null
+}) {
 	return (
-		<HoverCardPrimitive.Portal data-slot="hover-card-portal">
+		<HoverCardPrimitive.Portal
+			data-slot="hover-card-portal"
+			container={container}
+		>
 			<HoverCardPrimitive.Content
 				data-slot="hover-card-content"
 				align={align}
