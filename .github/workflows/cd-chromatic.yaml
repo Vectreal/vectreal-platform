@@ -73,4 +73,11 @@ jobs:
           exitZeroOnChanges: ${{ github.event_name == 'pull_request' }}
           exitOnceUploaded: true
           onlyChanged: true
-          skip: '@(renovate/**|dependabot/**|chore/**)'
+          # `chore/**` used to be skipped, from when this only covered the
+          # viewer. Now that it covers the design system, chore branches are
+          # exactly where refactors that move surfaces and tokens land - the
+          # branch that introduced this Storybook produced no snapshots because
+          # of that pattern. Bot branches stay skipped: they are high volume and
+          # a lockfile bump that does change rendering will be caught when it
+          # reaches main.
+          skip: '@(renovate/**|dependabot/**)'
