@@ -10,9 +10,5 @@
 			"import": "./index.mjs",
 			"require": "./index.js"
 		}
-	},
-	"scripts": {
-		"build-storybook": "storybook build",
-		"storybook": "storybook dev"
 	}
 }

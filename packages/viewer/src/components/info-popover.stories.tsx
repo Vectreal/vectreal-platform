@@ -10,10 +10,13 @@ import {
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 const meta = {
-	title: 'Components/Info Popover',
+	title: 'Viewer/Info Popover',
 	component: InfoPopover,
 	tags: ['autodocs'],
 	parameters: {
+		// These scope their own theme and mount a WebGL canvas; the shared
+		// light/dark decorator would render each one twice.
+		dualTheme: false,
 		layout: 'fullscreen',
 		docs: {
 			description: {

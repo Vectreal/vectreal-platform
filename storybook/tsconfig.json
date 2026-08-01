@@ -1,0 +1,20 @@
+{
+	"extends": "../tsconfig.base.json",
+	"compilerOptions": {
+		"jsx": "react-jsx",
+		"outDir": "",
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"types": [
+			"vite/client",
+			"node"
+		],
+		"allowSyntheticDefaultImports": true,
+		"strict": true
+	},
+	"include": [
+		".storybook/**/*.ts",
+		".storybook/**/*.tsx",
+		"../shared/components/src/**/*.stories.tsx"
+	]
+}

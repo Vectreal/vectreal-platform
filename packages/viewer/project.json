@@ -7,7 +7,9 @@
 	"targets": {
 		"lint": {
 			"executor": "@nx/eslint:lint",
-			"outputs": ["{options.outputFile}"],
+			"outputs": [
+				"{options.outputFile}"
+			],
 			"options": {
 				"fix": true,
 				"lintFilePatterns": [
@@ -26,7 +28,9 @@
 			}
 		},
 		"publish": {
-			"dependsOn": ["copy-md"],
+			"dependsOn": [
+				"copy-md"
+			],
 			"executor": "nx:run-commands",
 			"outputs": [],
 			"options": {
@@ -35,7 +39,9 @@
 			}
 		},
 		"copy-md": {
-			"dependsOn": ["build"],
+			"dependsOn": [
+				"build"
+			],
 			"executor": "nx:run-commands",
 			"outputs": [],
 			"options": {
@@ -46,7 +52,9 @@
 		},
 		"build": {
 			"executor": "@nx/vite:build",
-			"outputs": ["{options.outputPath}"],
+			"outputs": [
+				"{options.outputPath}"
+			],
 			"options": {
 				"outputPath": "build/packages/vctrl/viewer",
 				"configFile": "packages/viewer/vite.config.ts"
@@ -54,33 +62,19 @@
 		},
 		"build-ci": {
 			"executor": "@nx/vite:build",
-			"outputs": ["{options.outputPath}"],
+			"outputs": [
+				"{options.outputPath}"
+			],
 			"options": {
 				"outputPath": "build/packages/vctrl/viewer",
 				"configFile": "packages/viewer/vite.config.ts"
 			}
 		},
-		"build-storybook": {
+		"typecheck-storybook": {
 			"executor": "nx:run-commands",
-			"dependsOn": ["typecheck"],
-			"outputs": ["{projectRoot}/storybook-static"],
+			"outputs": [],
 			"options": {
-				"command": "storybook build",
-				"cwd": "packages/viewer"
-			}
-		},
-		"storybook-dev": {
-			"executor": "nx:run-commands",
-			"continuous": true,
-			"options": {
-				"command": "storybook dev",
-				"cwd": "packages/viewer"
-			}
-		},
-		"chromatic": {
-			"executor": "nx:run-commands",
-			"options": {
-				"commands": ["npm --prefix packages/viewer run chromatic"]
+				"command": "tsc --noEmit -p packages/viewer/tsconfig.storybook.json"
 			}
 		}
 	}
