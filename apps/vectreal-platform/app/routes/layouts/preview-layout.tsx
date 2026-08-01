@@ -4,6 +4,10 @@ import { data, Outlet, redirect, type MetaFunction } from 'react-router'
 import { Route } from './+types/preview-layout'
 import { buildEmbedPath } from '../../lib/domain/embed/embed-snippet'
 import { getProject } from '../../lib/domain/project/project-repository.server'
+import {
+	parseSceneRouteParams,
+	SCENE_ROUTE_PARAM_ERRORS
+} from '../../lib/domain/scene/scene-route-params'
 import { getScene } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 import { buildMeta } from '../../lib/seo'
@@ -36,15 +40,14 @@ function withNoStoreHeaders(response: Response): Response {
  * surface that renders dashboard chrome.
  */
 export async function loader({ request, params }: Route.LoaderArgs) {
-	const projectId = params.projectId?.trim()
-	const sceneId = params.sceneId?.trim()
-
-	if (!projectId || !sceneId) {
+	const parsedParams = parseSceneRouteParams(params)
+	if (!parsedParams.ok) {
 		return withNoStoreHeaders(
-			ApiResponse.badRequest('Project ID and Scene ID are required')
+			ApiResponse.badRequest(SCENE_ROUTE_PARAM_ERRORS[parsedParams.reason])
 		)
 	}
 
+	const { projectId, sceneId } = parsedParams.value
 	const url = new URL(request.url)
 	const hasTokenCredential =
 		Boolean(url.searchParams.get('token')?.trim()) ||
