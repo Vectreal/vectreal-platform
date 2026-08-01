@@ -299,9 +299,10 @@ function getPasswordStrength(password: string): {
 	if (/[A-Z]/.test(password)) score++
 	if (/[0-9]/.test(password)) score++
 	if (/[^a-zA-Z0-9]/.test(password)) score++
-	if (score <= 2) return { score: 1, label: 'Weak', color: '#ef4444' }
-	if (score <= 4) return { score: 2, label: 'Fair', color: '#f59e0b' }
-	return { score: 3, label: 'Strong', color: '#22c55e' }
+	if (score <= 2)
+		return { score: 1, label: 'Weak', color: 'var(--destructive)' }
+	if (score <= 4) return { score: 2, label: 'Fair', color: 'var(--warning)' }
+	return { score: 3, label: 'Strong', color: 'var(--success)' }
 }
 
 // ─── Motion config ────────────────────────────────────────────────────────────
