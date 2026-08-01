@@ -39,6 +39,7 @@ import {
 	SceneAssetListItem
 } from '../../../components/dashboard'
 import { EmbedOptionsPanel } from '../../../components/embed/embed-options-panel'
+import { StatGrid, StatTile } from '../../../components/layout-components'
 import { ScenePublishStateControl } from '../../../components/publishing/scene-publish-state-control'
 import SceneEmbedViewer from '../../../components/scene-embed/scene-embed-viewer'
 import { useDashboardSceneActions } from '../../../hooks/use-dashboard-scene-actions'
@@ -538,7 +539,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							</div>
 						</section>
 					) : null}
-					<section className="relative min-h-64 flex-1 overflow-hidden rounded-2xl bg-black/2">
+					<section className="relative min-h-64 flex-1 overflow-hidden rounded-2xl ds-sunken">
 						<SceneEmbedViewer
 							file={file}
 							sceneData={sceneData}
@@ -615,7 +616,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						>
 							<Info className="text-muted-foreground absolute top-3 right-3 h-4 w-4 opacity-25 transition-opacity duration-300 group-hover:opacity-100" />
 							<div className="space-y-2">
-								<p className="text-muted-foreground text-[11px] tracking-[0.22em] uppercase">
+								<p className="text-muted-foreground text-eyebrow">
 									Scene Workspace
 								</p>
 
@@ -661,57 +662,42 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 				<aside className="ds-raised hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-4 xl:flex">
 					<section className="space-y-3">
 						<div>
-							<p className="text-muted-foreground text-[11px] tracking-[0.2em] uppercase">
+							<p className="text-muted-foreground text-eyebrow">
 								At a Glance
 							</p>
 							<h2 className="mt-1 text-base leading-tight font-medium tracking-tight">
 								Scene Metrics
 							</h2>
 						</div>
-						<div className="grid grid-cols-2 gap-2 text-sm">
-							<div className="bg-background/70 rounded-xl p-3">
-								<p className="text-muted-foreground text-[11px] uppercase">
-									Size
-								</p>
-								<p className="mt-1 font-medium">
-									{formatBytes(sceneDetails.fileSizeBytes)}
-								</p>
-							</div>
-							<div className="bg-background/70 rounded-xl p-3">
-								<p className="text-muted-foreground text-[11px] uppercase">
-									Assets
-								</p>
-								<p className="mt-1 font-medium">{sceneDetails.assetCount}</p>
-							</div>
-							<div className="bg-background/70 rounded-xl p-3">
-								<p className="text-muted-foreground text-[11px] uppercase">
-									Texture Size
-								</p>
-								<p className="mt-1 font-medium">
-									{sceneDetails.textureBytes != null
+						<StatGrid>
+							<StatTile
+								label="Size"
+								value={formatBytes(sceneDetails.fileSizeBytes)}
+							/>
+							<StatTile label="Assets" value={sceneDetails.assetCount} />
+							<StatTile
+								label="Texture Size"
+								value={
+									sceneDetails.textureBytes != null
 										? formatBytes(sceneDetails.textureBytes)
 										: sceneDetails.textureCount != null
 											? `${sceneDetails.textureCount} textures`
-											: '-'}
-								</p>
-							</div>
-							<div className="bg-background/70 rounded-xl p-3">
-								<p className="text-muted-foreground text-[11px] uppercase">
-									Meshes
-								</p>
-								<p className="mt-1 font-medium">
-									{sceneDetails.meshesCount ?? '-'}
-								</p>
-							</div>
-						</div>
+											: '-'
+								}
+							/>
+							<StatTile
+								label="Meshes"
+								value={sceneDetails.meshesCount ?? '-'}
+							/>
+						</StatGrid>
 					</section>
 
 					<section className="space-y-2 overflow-y-auto">
-						<p className="text-muted-foreground text-[11px] tracking-[0.2em] uppercase">
+						<p className="text-muted-foreground text-eyebrow">
 							Assets Preview
 						</p>
 						{sceneDetails.assets.length === 0 ? (
-							<p className="text-muted-foreground bg-background/70 rounded-xl p-3 text-sm">
+							<p className="text-muted-foreground ds-sunken rounded-xl p-3 text-sm">
 								No linked assets.
 							</p>
 						) : (
@@ -720,7 +706,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 									<SceneAssetListItem
 										key={asset.id}
 										{...buildAssetListItemProps(asset, sceneData?.assetData)}
-										className="bg-background/70"
+										className="ds-sunken"
 									/>
 								))}
 								{sceneDetails.assets.length > 4 && (
@@ -739,7 +725,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						)}
 					</section>
 
-					<section className="bg-background/70 rounded-xl p-3">
+					<section className="ds-sunken rounded-xl p-3">
 						<div className="flex items-center gap-2">
 							<Avatar className="h-8 w-8">
 								<AvatarImage
@@ -806,37 +792,27 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							<h3 className="text-sm font-semibold tracking-tight">
 								Scene Stats
 							</h3>
-							<div className="grid grid-cols-2 gap-3 text-sm">
-								<div className="ds-overlay rounded-xl p-3">
-									<p className="text-muted-foreground text-xs">Current Size</p>
-									<p className="font-medium">
-										{formatBytes(sceneDetails.fileSizeBytes)}
-									</p>
-								</div>
-								<div className="ds-overlay rounded-xl p-3">
-									<p className="text-muted-foreground text-xs">Assets</p>
-									<p className="font-medium">{sceneDetails.assetCount}</p>
-								</div>
-								<div className="ds-overlay rounded-xl p-3">
-									<p className="text-muted-foreground text-xs">Texture Size</p>
-									<p className="font-medium">
-										{sceneDetails.textureBytes != null
+							<StatGrid>
+								<StatTile
+									label="Current Size"
+									value={formatBytes(sceneDetails.fileSizeBytes)}
+								/>
+								<StatTile label="Assets" value={sceneDetails.assetCount} />
+								<StatTile
+									label="Texture Size"
+									value={
+										sceneDetails.textureBytes != null
 											? formatBytes(sceneDetails.textureBytes)
 											: sceneDetails.textureCount != null
 												? `${sceneDetails.textureCount} textures`
-												: '-'}
-									</p>
-								</div>
-								<div className="ds-overlay rounded-xl p-3">
-									<p className="text-muted-foreground text-xs">
-										Meshes / Vertices
-									</p>
-									<p className="font-medium">
-										{sceneDetails.meshesCount ?? '-'} /{' '}
-										{sceneDetails.verticesCount ?? '-'}
-									</p>
-								</div>
-							</div>
+												: '-'
+									}
+								/>
+								<StatTile
+									label="Meshes / Vertices"
+									value={`${sceneDetails.meshesCount ?? '-'} / ${sceneDetails.verticesCount ?? '-'}`}
+								/>
+							</StatGrid>
 						</section>
 
 						<DrawerAssetsSection

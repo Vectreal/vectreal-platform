@@ -13,9 +13,19 @@ const getHighlightClasses = (highlight: boolean | undefined) => {
 	if (typeof highlight === 'boolean') {
 		return highlight ? 'h-1 group-hover:w-16' : 'hidden'
 	}
-	return 'h-[1px] w-8'
+	return 'h-px w-8'
 }
 
+/**
+ * A `Card` with the brand highlight bar across its top edge.
+ *
+ * The card body is deliberately left to `Card`, which already carries
+ * `ds-raised`. This wrapper used to override it with `bg-muted/75`,
+ * `rounded-3xl` and `border-t-accent/25 border-l-accent/25` - a raw surface, a
+ * radius outside the scale, and a drawn bevel - which re-introduced all three
+ * anti-patterns on every card across newsroom and docs. The bevel had also
+ * quietly turned grey when `--accent` became the neutral hover token.
+ */
 const BasicCard = ({
 	children,
 	className,
@@ -28,7 +38,7 @@ const BasicCard = ({
 
 	return (
 		<Component
-			className={cn('group relative overflow-hidden rounded-3xl', className)}
+			className={cn('group relative overflow-hidden rounded-2xl', className)}
 			{...props}
 		>
 			<div
@@ -43,12 +53,7 @@ const BasicCard = ({
 					highlightClasses
 				)}
 			/>
-			<Card
-				className={cn(
-					'bg-muted/75 border-t-accent/25 border-l-accent/25 relative h-full rounded-3xl backdrop-blur-2xl',
-					cardClassName
-				)}
-			>
+			<Card className={cn('relative h-full rounded-2xl', cardClassName)}>
 				{children}
 			</Card>
 		</Component>
