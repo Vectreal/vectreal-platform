@@ -9,6 +9,7 @@ import { DynamicSidebar, ToolSidebar } from '.'
 import OptimizationDrawer from './optimization/optimization-drawer'
 import PreviewCameraControls from './preview-camera-controls'
 import { usePublisherViewerCapture } from './publisher-viewer-capture-context'
+import { PreviewModeBadge } from './shell/preview-mode-badge'
 import { PublishCard } from './shell/publish-card'
 import { PublisherHeader } from './shell/publisher-header'
 import { PUBLISHER_LAYER } from './shell/shell-layout'
@@ -344,6 +345,8 @@ const OverlayControls = ({
 					dashboardHref={sceneDetailsHref ?? '/dashboard'}
 					isMobile={isMobileRequest}
 				/>
+
+				<PreviewModeBadge />
 
 				<PreviewCameraControls />
 			</div>

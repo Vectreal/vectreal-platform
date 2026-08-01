@@ -16,6 +16,7 @@ import {
 } from '../../../lib/domain/scene/scene-delivery-estimate'
 import {
 	hasUnsavedChangesAtom,
+	isPreviewModeAtom,
 	sceneMetaAtom
 } from '../../../lib/stores/publisher-config-store'
 
@@ -53,6 +54,7 @@ export const PublishCard: FC<PublishCardProps> = ({
 }) => {
 	const { thumbnailUrl } = useAtomValue(sceneMetaAtom)
 	const hasUnsavedChanges = useAtomValue(hasUnsavedChangesAtom)
+	const isPreviewMode = useAtomValue(isPreviewModeAtom)
 
 	const estimate = estimateDeliveryTime(sceneBytes)
 	const statusLabel = isPublished
@@ -64,12 +66,19 @@ export const PublishCard: FC<PublishCardProps> = ({
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 12 }}
-			animate={{ opacity: 1, y: 0 }}
+			// Preview mode is about seeing the scene, so the card leaves rather than
+			// dimming. `animate` (not `exit`) keeps it mounted, so its own publish
+			// state survives the round trip.
+			animate={
+				isPreviewMode ? { opacity: 0, y: 12 } : { opacity: 1, y: 0 }
+			}
 			transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+			aria-hidden={isPreviewMode}
 			className={cn(
 				'publisher-shell-panel absolute right-0 bottom-0 w-60 overflow-hidden p-2',
 				PUBLISHER_EDGE_INSET,
 				PUBLISHER_LAYER.card,
+				isPreviewMode && 'pointer-events-none',
 				disabled && 'pointer-events-none opacity-45 saturate-50'
 			)}
 		>
