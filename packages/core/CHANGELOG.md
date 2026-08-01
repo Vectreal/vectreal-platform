@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.24.0](https://github.com/Vectreal/vectreal-platform/compare/core-v0.23.0...core-v0.24.0) (2026-08-01)
+
+
+### Features
+
+* **publisher:** draco-first optimization pipeline and panel rework ([#652](https://github.com/Vectreal/vectreal-platform/issues/652)) ([1161236](https://github.com/Vectreal/vectreal-platform/commit/1161236d0f4b2461b6b4af1ea4069fdf9da6d9c2))
+
+
+### Bug Fixes
+
+* **core:** keep sharp out of browser bundles ([#661](https://github.com/Vectreal/vectreal-platform/issues/661)) ([c3e2c47](https://github.com/Vectreal/vectreal-platform/commit/c3e2c4739be38916d6e6094662b3cf76d299c741))
+* **draco:** handle optional chaining for Draco optimization toggle ([#621](https://github.com/Vectreal/vectreal-platform/issues/621)) ([481c72c](https://github.com/Vectreal/vectreal-platform/commit/481c72c05af1e3e189a0708d4d2e707be680ccd3))
+* **publisher:** scene size inflation and stale model reloads ([#653](https://github.com/Vectreal/vectreal-platform/issues/653)) ([9c5da02](https://github.com/Vectreal/vectreal-platform/commit/9c5da02f3f524337b5d715ff5454ac4687fc73e3))
+
 ## [0.23.0](https://github.com/Vectreal/vectreal-platform/compare/core-v0.22.0...core-v0.23.0) (2026-07-03)
 
 

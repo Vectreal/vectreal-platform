@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.24.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.23.0...viewer-v0.24.0) (2026-08-01)
+
+
+### Features
+
+* **viewer:** make the loading thumbnail stylable ([#659](https://github.com/Vectreal/vectreal-platform/issues/659)) ([77c1175](https://github.com/Vectreal/vectreal-platform/commit/77c11753134623fc7c1b49bd046a87e865c63b5b))
+
+
+### Bug Fixes
+
+* **ui:** stop the viewer overwriting the host's corner radii ([#667](https://github.com/Vectreal/vectreal-platform/issues/667)) ([a90b2c3](https://github.com/Vectreal/vectreal-platform/commit/a90b2c354880dd7ef039b644b60ce14cbb5f5f18))
+* **viewer:** shadows ignore model normalization ([#656](https://github.com/Vectreal/vectreal-platform/issues/656)) ([de25c09](https://github.com/Vectreal/vectreal-platform/commit/de25c09380050dcbcca3b8651ebd1f1e671866da))
+* **viewer:** solve auto-fit framing analytically ([#651](https://github.com/Vectreal/vectreal-platform/issues/651)) ([bb41945](https://github.com/Vectreal/vectreal-platform/commit/bb41945fc543a7effd34b01498dc873daaaeb5db))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @vctrl/core bumped to 0.24.0
+
 ## [0.23.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.22.0...viewer-v0.23.0) (2026-07-03)
 
 

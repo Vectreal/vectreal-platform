@@ -1,5 +1,55 @@
 # Changelog
 
+## [0.24.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.23.0...workspace-v0.24.0) (2026-08-01)
+
+
+### Features
+
+* add SnapRow component for mobile scroll-snap functionality ([#605](https://github.com/Vectreal/vectreal-platform/issues/605)) ([e87ba58](https://github.com/Vectreal/vectreal-platform/commit/e87ba5872cf31bca5aba4a6e49fdf3c55ee8a35f))
+* **articles:** update optimization presets images and publish status ([#684](https://github.com/Vectreal/vectreal-platform/issues/684)) ([ae31533](https://github.com/Vectreal/vectreal-platform/commit/ae3153335173480b05b8b6629904cd0e961dc006))
+* **assets:** optimize asset loading and improve texture URL resolution ([#623](https://github.com/Vectreal/vectreal-platform/issues/623)) ([33680b8](https://github.com/Vectreal/vectreal-platform/commit/33680b82b0b8275ecce89cd151858359548a1068))
+* **cloudflare:** add support for Supabase custom domain and ACME challenge records ([#647](https://github.com/Vectreal/vectreal-platform/issues/647)) ([5b65ed0](https://github.com/Vectreal/vectreal-platform/commit/5b65ed09b5c2a655beaea37040163858090c9ffd))
+* **dashboard:** grid and table views for projects browse ([#682](https://github.com/Vectreal/vectreal-platform/issues/682)) ([5d4951d](https://github.com/Vectreal/vectreal-platform/commit/5d4951d69b00d33d264ead5a12d584c77de2d76a))
+* **dashboard:** rebuild the landing page ([#680](https://github.com/Vectreal/vectreal-platform/issues/680)) ([fa7a004](https://github.com/Vectreal/vectreal-platform/commit/fa7a004472575f034bf9c6c5ddbb78c54d2b263f))
+* **dashboard:** shared pieces for the dashboard overhaul, and a thumbnail scoping fix ([#679](https://github.com/Vectreal/vectreal-platform/issues/679)) ([71b60fc](https://github.com/Vectreal/vectreal-platform/commit/71b60fc193283a7aed6acb8ac7ab45bc95f0624e))
+* enhance mobile support in ScrollytellViewerSection and MockShopEmbedClient ([3e56906](https://github.com/Vectreal/vectreal-platform/commit/3e5690622152024568118bb52c3c4e5ee612af89))
+* improve UI components and styles for better design consistency ([#604](https://github.com/Vectreal/vectreal-platform/issues/604)) ([960afaf](https://github.com/Vectreal/vectreal-platform/commit/960afafa1938bcd5fed7903f048fd56790cb9df9))
+* **platform:** internal preview chrome ([#664](https://github.com/Vectreal/vectreal-platform/issues/664)) ([6c7fe6a](https://github.com/Vectreal/vectreal-platform/commit/6c7fe6a56f81128b2eaf8cbd7eddee176cf4079b))
+* **platform:** split /embed from /preview ([#662](https://github.com/Vectreal/vectreal-platform/issues/662)) ([19d9ec5](https://github.com/Vectreal/vectreal-platform/commit/19d9ec5cfa63a83fd04efbebb16ccac588fc325b))
+* **publisher:** draco-first optimization pipeline and panel rework ([#652](https://github.com/Vectreal/vectreal-platform/issues/652)) ([1161236](https://github.com/Vectreal/vectreal-platform/commit/1161236d0f4b2461b6b4af1ea4069fdf9da6d9c2))
+* **publisher:** show preview mode instead of explaining it ([#665](https://github.com/Vectreal/vectreal-platform/issues/665)) ([d60a8df](https://github.com/Vectreal/vectreal-platform/commit/d60a8df455ddc170d1f188076eb210733437301a))
+* **publisher:** three-row shell, publish card, unified opening view ([#654](https://github.com/Vectreal/vectreal-platform/issues/654)) ([8aa58d8](https://github.com/Vectreal/vectreal-platform/commit/8aa58d82f33270604141eabba9cb4bf00f07181d))
+* simplify loader function by removing unused parameters and hardcoding origin URL ([#606](https://github.com/Vectreal/vectreal-platform/issues/606)) ([cc4cb82](https://github.com/Vectreal/vectreal-platform/commit/cc4cb8283b77b05eb7ac79eee980b723fe2e6041))
+* **ui:** align tokens with the design system and layer surfaces by value ([#668](https://github.com/Vectreal/vectreal-platform/issues/668)) ([d4ac619](https://github.com/Vectreal/vectreal-platform/commit/d4ac61936ab1d3216343f8748c5495f2b65fd181))
+* **ui:** stop BasicCard overriding the design system, extract StatTile ([#671](https://github.com/Vectreal/vectreal-platform/issues/671)) ([d686173](https://github.com/Vectreal/vectreal-platform/commit/d686173ced1d5c1696a9d917886ead409520b116))
+* **viewer:** make the loading thumbnail stylable ([#659](https://github.com/Vectreal/vectreal-platform/issues/659)) ([77c1175](https://github.com/Vectreal/vectreal-platform/commit/77c11753134623fc7c1b49bd046a87e865c63b5b))
+
+
+### Bug Fixes
+
+* **author:** update author details across multiple articles and improve hover card styling ([#622](https://github.com/Vectreal/vectreal-platform/issues/622)) ([5d0415f](https://github.com/Vectreal/vectreal-platform/commit/5d0415fe85fe5afde5123228cf9972ddc1ab376b))
+* **caching:** close cross-user Cloudflare cache leak, fail-closed edge ruleset ([#616](https://github.com/Vectreal/vectreal-platform/issues/616)) ([6630704](https://github.com/Vectreal/vectreal-platform/commit/663070461e6e09464b9dc219c9f531e7f26c42b8))
+* **caching:** enhance cache handling for loader and action responses to prevent data leakage ([#615](https://github.com/Vectreal/vectreal-platform/issues/615)) ([d3eff20](https://github.com/Vectreal/vectreal-platform/commit/d3eff2006e6e66e85bf3c78aaacdfe8511a8af9b))
+* **chart:** improve tooltip and legend handling in chart component ([#613](https://github.com/Vectreal/vectreal-platform/issues/613)) ([74fc3e9](https://github.com/Vectreal/vectreal-platform/commit/74fc3e9c1a4f11f9afe05fb9b9ded8ed43a2d8d8))
+* **consent:** cookie-only banner — remove signed session, DB read path, and root loader dependency ([#611](https://github.com/Vectreal/vectreal-platform/issues/611)) ([44b6547](https://github.com/Vectreal/vectreal-platform/commit/44b65470421101edc34d61f27fede1cfac459ba4))
+* **contact:** stop static-prerendering the contact page ([#635](https://github.com/Vectreal/vectreal-platform/issues/635)) ([2d7b467](https://github.com/Vectreal/vectreal-platform/commit/2d7b46753f1978967fe0701ebd4dfa28d2de82db))
+* **core:** keep sharp out of browser bundles ([#661](https://github.com/Vectreal/vectreal-platform/issues/661)) ([c3e2c47](https://github.com/Vectreal/vectreal-platform/commit/c3e2c4739be38916d6e6094662b3cf76d299c741))
+* **dashboard:** bound the breadcrumb bar to the inset and rebuild the skeletons ([#669](https://github.com/Vectreal/vectreal-platform/issues/669)) ([fa975f7](https://github.com/Vectreal/vectreal-platform/commit/fa975f7640b95480f3b06dd3e34b49ed7d7bcac1))
+* **dashboard:** purge product-detail preview, fix scene name overflow ([#649](https://github.com/Vectreal/vectreal-platform/issues/649)) ([bab121b](https://github.com/Vectreal/vectreal-platform/commit/bab121b66522a9403b5edbc1711724baa212e4c3))
+* **dashboard:** say what the storage quota measures ([#681](https://github.com/Vectreal/vectreal-platform/issues/681)) ([bfcde70](https://github.com/Vectreal/vectreal-platform/commit/bfcde7075ed52b12e10d49c7eadda0fb2b1b4ba7))
+* **draco:** handle optional chaining for Draco optimization toggle ([#621](https://github.com/Vectreal/vectreal-platform/issues/621)) ([481c72c](https://github.com/Vectreal/vectreal-platform/commit/481c72c05af1e3e189a0708d4d2e707be680ccd3))
+* **platform:** reject malformed scene route ids before querying ([#663](https://github.com/Vectreal/vectreal-platform/issues/663)) ([a1bf688](https://github.com/Vectreal/vectreal-platform/commit/a1bf6882dcefdd0a420e45f87f2d58a350e2e88e))
+* **publisher:** scene size inflation and stale model reloads ([#653](https://github.com/Vectreal/vectreal-platform/issues/653)) ([9c5da02](https://github.com/Vectreal/vectreal-platform/commit/9c5da02f3f524337b5d715ff5454ac4687fc73e3))
+* **release:** add 'embed' component to linked-versions configuration ([#619](https://github.com/Vectreal/vectreal-platform/issues/619)) ([687642c](https://github.com/Vectreal/vectreal-platform/commit/687642c5e3a1d647097ebcf25ff9ce034d99b66d))
+* **scene:** handle unsaved changes correctly and update tests for scene save flow ([#618](https://github.com/Vectreal/vectreal-platform/issues/618)) ([06c4a43](https://github.com/Vectreal/vectreal-platform/commit/06c4a4387a027dc393f092e7743dda380cae5148))
+* **ui:** adjust button corner radii and update checkbox border radius ([#646](https://github.com/Vectreal/vectreal-platform/issues/646)) ([f963df3](https://github.com/Vectreal/vectreal-platform/commit/f963df3641fb449adb32dbbb3051d986c1424cfb))
+* **ui:** polish mobile nav, docs layout, and dashboard header overflow ([#636](https://github.com/Vectreal/vectreal-platform/issues/636)) ([379ac56](https://github.com/Vectreal/vectreal-platform/commit/379ac562b01283d4f83b881416f8bbaf0a3e3db4))
+* **ui:** separate the brand colour from the hover token ([#666](https://github.com/Vectreal/vectreal-platform/issues/666)) ([664c5ec](https://github.com/Vectreal/vectreal-platform/commit/664c5ecef3ab8731d276d2fc45988714e16586cb))
+* **ui:** stop the viewer overwriting the host's corner radii ([#667](https://github.com/Vectreal/vectreal-platform/issues/667)) ([a90b2c3](https://github.com/Vectreal/vectreal-platform/commit/a90b2c354880dd7ef039b644b60ce14cbb5f5f18))
+* update accent foreground color and enhance dropdown menu item focus styles ([12a22dc](https://github.com/Vectreal/vectreal-platform/commit/12a22dc7ad907e58227ed3f0ba6a079f1087e9af))
+* **viewer:** shadows ignore model normalization ([#656](https://github.com/Vectreal/vectreal-platform/issues/656)) ([de25c09](https://github.com/Vectreal/vectreal-platform/commit/de25c09380050dcbcca3b8651ebd1f1e671866da))
+* **viewer:** solve auto-fit framing analytically ([#651](https://github.com/Vectreal/vectreal-platform/issues/651)) ([bb41945](https://github.com/Vectreal/vectreal-platform/commit/bb41945fc543a7effd34b01498dc873daaaeb5db))
+
 ## [0.23.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.22.0...workspace-v0.23.0) (2026-07-03)
 
 
