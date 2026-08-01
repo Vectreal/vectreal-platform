@@ -12,7 +12,10 @@ import {
 	type SaveSceneOrchestratorOptions,
 	type SaveAvailabilityState
 } from '../../lib/domain/scene'
-import { isSceneOverSizeLimit } from '../../lib/domain/scene/scene-size-limit'
+import {
+	isSceneOverSizeLimit,
+	resolveSceneCurrentBytes
+} from '../../lib/domain/scene/scene-size-limit'
 import {
 	currentLocationAtom,
 	maxSceneBytesAtom,
@@ -87,12 +90,12 @@ export const useSceneSaveFlow = ({
 
 	const sceneCurrentBytes = useMemo(
 		() =>
-			typeof optimizedSceneBytes === 'number'
-				? optimizedSceneBytes
-				: typeof clientSceneBytes === 'number'
-					? clientSceneBytes
-					: undefined,
-		[optimizedSceneBytes, clientSceneBytes]
+			resolveSceneCurrentBytes({
+				optimizedSceneBytes,
+				persistedCurrentSceneBytes: latestSceneStats?.currentSceneBytes,
+				clientSceneBytes
+			}),
+		[optimizedSceneBytes, latestSceneStats?.currentSceneBytes, clientSceneBytes]
 	)
 
 	const sceneOverSizeLimit = useMemo(

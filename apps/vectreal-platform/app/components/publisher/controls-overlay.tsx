@@ -1,31 +1,25 @@
-import { ButtonGroup } from '@shared/components/ui/button-group'
-import { Separator } from '@shared/components/ui/separator'
-import { cn } from '@shared/utils'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtomValue, useSetAtom } from 'jotai/react'
 import posthog from 'posthog-js'
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, type ReactNode } from 'react'
 import { useNavigate, useSubmit } from 'react-router'
 import { toast } from 'sonner'
 
-import {
-	DynamicSidebar,
-	InfoBanner,
-	SaveButton,
-	SceneNameAndLocation,
-	ToolSidebar
-} from '.'
-import OptimizationDrawer from './optimization-drawer'
+import { DynamicSidebar, ToolSidebar } from '.'
+import OptimizationDrawer from './optimization/optimization-drawer'
 import PreviewCameraControls from './preview-camera-controls'
 import { usePublisherViewerCapture } from './publisher-viewer-capture-context'
+import { PreviewModeBadge } from './shell/preview-mode-badge'
+import { PublishCard } from './shell/publish-card'
+import { PublisherHeader } from './shell/publisher-header'
+import { PUBLISHER_LAYER } from './shell/shell-layout'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import { useOptimizationModalFlow, useSceneLoader } from '../../hooks'
+import { Navigation } from '../navigation'
+import PublishSidebarContent from './sidebars/publish-sidebar/publish-sidebar-content'
 import { PublishSidebarProvider } from './sidebars/publish-sidebar/publish-sidebar-context'
 import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
 import { useLocationChangeState } from '../../hooks/use-location-change-state'
-import { Navigation } from '../navigation'
-import PublishSidebarContent from './sidebars/publish-sidebar/publish-sidebar-content'
-import { PublishSidebarTrigger } from './sidebars/publish-sidebar/publish-sidebar-trigger'
 import { resolveSceneMetrics } from '../../lib/domain/scene'
 import {
 	arePublisherActionsDisabledAtom,
@@ -37,11 +31,15 @@ import {
 } from '../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
 import { PublisherLoaderData, SceneManifestResponse } from '../../types/api'
-import { InfoTooltip } from '../info-tooltip'
-import { FloatingPillWrapper } from '../layout-components'
-import { UserMenu } from '../user-menu'
 import { buildPublishSidebarViewModel } from './sidebars/publish-sidebar/publish-sidebar-view-model'
 
+/**
+ * The publisher shell: a three-row grid of header, canvas stage, and footer.
+ *
+ * It owns the scene-loader state the rows and sidebars all read from, so the
+ * canvas arrives as `children` rather than as a sibling of a pile of
+ * fixed-position overlays.
+ */
 const OverlayControls = ({
 	isMobileRequest,
 	user,
@@ -49,8 +47,9 @@ const OverlayControls = ({
 	projectId,
 	sceneAggregate,
 	publishedMeta,
-	maxSceneBytes
-}: PublisherLoaderData) => {
+	maxSceneBytes,
+	children
+}: PublisherLoaderData & { children: ReactNode }) => {
 	const navigate = useNavigate()
 	const submit = useSubmit()
 	const { file, isFileLoading, optimizer } = useModelContext(true)
@@ -100,6 +99,9 @@ const OverlayControls = ({
 		requiresSizeReduction,
 		isOptimizationDrawerOpen,
 		handleOptimizationDrawerChange,
+		// Two ways in, by design. The card's size line is the direct route from
+		// the signal itself; the sidebar's Delivery section is the one you meet
+		// on the way to publishing.
 		handleOpenOptimizationDrawer,
 		openReoptimizeDrawer
 	} = useOptimizationModalFlow({
@@ -112,7 +114,6 @@ const OverlayControls = ({
 		sceneId && projectId
 			? DASHBOARD_ROUTES.SCENE_DETAIL(projectId, sceneId)
 			: undefined
-	const isPublished = Boolean(publishedMeta?.publishedAt)
 	const isOptimizerPreparing = optimizer.isPreparing
 	const optimizerStatusText = isFileLoading
 		? 'Reading model in the background...'
@@ -202,7 +203,6 @@ const OverlayControls = ({
 			saveAvailability: effectiveSaveAvailability,
 			viewModel: publishSidebarViewModel,
 			onOpenOptimizationDrawer: openReoptimizeDrawer,
-			canReoptimize: Boolean(sceneId)
 		}),
 		[
 			sceneId,
@@ -274,134 +274,82 @@ const OverlayControls = ({
 		[setProcessState]
 	)
 
-	return isUploadStep && !sceneId ? (
-		<Navigation user={user} isMobileRequest={isMobileRequest} />
-	) : (
+	// Pre-upload with no scene: there is nothing to frame yet, so the marketing
+	// nav stands in for the header and the stage chrome has nothing to show.
+	if (isUploadStep && !sceneId) {
+		return (
+			<>
+				<Navigation user={user} isMobileRequest={isMobileRequest} />
+				<div className="relative flex min-h-0 flex-1 flex-col">{children}</div>
+			</>
+		)
+	}
+
+	return (
 		<>
-			<div
-				className={cn(
-					'fixed top-0 left-1/2 z-30 hidden w-[min(30rem,calc(100vw-22rem))] -translate-x-1/2 px-4 pt-3 md:block',
-					arePublisherActionsDisabled &&
-						'pointer-events-none opacity-45 saturate-50'
-				)}
-			>
-				<SceneNameAndLocation
-					authenticated={!!user}
-					className="publisher-shell-floating px-1"
+			<PublisherHeader
+				user={user}
+				sceneId={sceneId}
+				sceneDetailsHref={sceneDetailsHref}
+				saveLocationTarget={saveLocationTarget}
+				saveAvailability={effectiveSaveAvailability}
+				saveSceneSettings={saveSceneSettings}
+				onRequireAuth={handleRequireAuthForSave}
+				onLogout={handleLogout}
+				publishedAt={publishedAt}
+				isPreviewMode={isPreviewMode}
+				actionsDisabled={arePublisherActionsDisabled}
+			/>
+
+			{/*
+			  Row 2. This is the positioning ancestor for every piece of floating
+			  canvas chrome — the tool rail, the publish card, the preview
+			  controls, and both sidebars all anchor to it with `absolute`, which
+			  is what keeps them from spilling over the header.
+			*/}
+			<div className="relative flex min-h-0 flex-1 flex-col">
+				{children}
+
+<ToolSidebar user={user} isMobile={isMobileRequest} />
+
+				<PublishCard
+					sceneBytes={currentSceneBytes}
+					isSceneSizeLoading={isSceneSizeLoading}
+					statusText={optimizerStatusText}
+					isPublished={Boolean(publishedAt)}
+					onOpenPublishPanel={handleOpenPublishPanel}
+					onOpenOptimization={handleOpenOptimizationDrawer}
+					disabled={arePublisherActionsDisabled}
 				/>
-			</div>
 
-			<div
-				className={cn(
-					'fixed inset-x-0 top-0 z-30 px-4 pt-[4.25rem] md:hidden',
-					arePublisherActionsDisabled &&
-						'pointer-events-none opacity-45 saturate-50'
-				)}
-			>
-				<SceneNameAndLocation
-					authenticated={!!user}
-					className="border-border/60 bg-muted/60 rounded-2xl border px-1 shadow-2xl backdrop-blur-2xl"
+				<DynamicSidebar
+					open={showPublishPanel}
+					onOpenChange={handlePublishPanelChange}
+					zIndexClassName={PUBLISHER_LAYER.sidebar}
+					isMobile={isMobileRequest}
+					direction="right"
+					title="Scene Info & Publish"
+					description="Save, publish, and embed your latest scene."
+					showDesktopHeader
+				>
+					<PublishSidebarProvider value={publishSidebarValue}>
+						<PublishSidebarContent hideHeader showSceneInfo />
+					</PublishSidebarProvider>
+				</DynamicSidebar>
+
+				<OptimizationDrawer
+					open={isOptimizationDrawerOpen}
+					onOpenChange={handleOptimizationDrawerChange}
+					isOverSizeLimit={requiresSizeReduction}
+					maxSceneBytes={maxSceneBytes}
+					dashboardHref={sceneDetailsHref ?? '/dashboard'}
+					isMobile={isMobileRequest}
 				/>
+
+				<PreviewModeBadge />
+
+				<PreviewCameraControls />
 			</div>
-
-			<FloatingPillWrapper className="bg-muted/50 fixed top-0 right-0 z-20 m-4 hidden rounded-2xl p-1 backdrop-blur-2xl md:flex">
-				<ButtonGroup className="items-center">
-					<SaveButton
-						sceneId={sceneId}
-						userId={user?.id}
-						saveLocationTarget={saveLocationTarget}
-						saveAvailability={effectiveSaveAvailability}
-						forceDisabled={isPreviewMode}
-						onRequireAuth={handleRequireAuthForSave}
-						saveSceneSettings={saveSceneSettings}
-					/>
-				</ButtonGroup>
-				{isPublished && (
-					<>
-						<Separator
-							orientation="vertical"
-							className="bg-shell-border-strong h-4"
-						/>
-						<span className="mx-1 mr-3 flex items-center">
-							<p className="text-muted-foreground mx-2 text-xs font-medium tracking-wide">
-								Published
-							</p>
-							<InfoTooltip
-								content={`Published at: ${new Date(
-									publishedMeta?.publishedAt ?? ''
-								).toLocaleString()}`}
-							/>
-						</span>
-					</>
-				)}
-				{user && (
-					<UserMenu
-						size="sm"
-						user={user}
-						onLogout={handleLogout}
-						sceneDetailsHref={sceneDetailsHref}
-					/>
-				)}
-			</FloatingPillWrapper>
-
-			<FloatingPillWrapper className="bg-muted/50 fixed top-0 right-0 z-50 m-4 flex rounded-2xl p-1 backdrop-blur-2xl md:hidden">
-				<ButtonGroup className="items-center gap-1">
-					<SaveButton
-						sceneId={sceneId}
-						userId={user?.id}
-						saveLocationTarget={saveLocationTarget}
-						saveAvailability={effectiveSaveAvailability}
-						forceDisabled={isPreviewMode}
-						onRequireAuth={handleRequireAuthForSave}
-						saveSceneSettings={saveSceneSettings}
-						compact
-					/>
-					{user ? (
-						<UserMenu
-							size="sm"
-							user={user}
-							onLogout={handleLogout}
-							sceneDetailsHref={sceneDetailsHref}
-						/>
-					) : null}
-				</ButtonGroup>
-			</FloatingPillWrapper>
-			<PublishSidebarTrigger
-				onClick={handleOpenPublishPanel}
-				disabled={arePublisherActionsDisabled}
-			/>
-			<DynamicSidebar
-				open={showPublishPanel}
-				onOpenChange={handlePublishPanelChange}
-				zIndexClassName="z-[70]"
-				isMobile={isMobileRequest}
-				direction="right"
-				title="Scene Info & Publish"
-				description="Save, publish, and embed your latest scene."
-				showDesktopHeader
-			>
-				<PublishSidebarProvider value={publishSidebarValue}>
-					<PublishSidebarContent hideHeader showSceneInfo />
-				</PublishSidebarProvider>
-			</DynamicSidebar>
-			<OptimizationDrawer
-				open={isOptimizationDrawerOpen}
-				onOpenChange={handleOptimizationDrawerChange}
-				isOverSizeLimit={requiresSizeReduction}
-				maxSceneBytes={maxSceneBytes}
-				dashboardHref={sceneDetailsHref ?? '/dashboard'}
-				isMobile={isMobileRequest}
-			/>
-			<ToolSidebar user={user} isMobile={isMobileRequest} />
-			<InfoBanner
-				sceneBytes={currentSceneBytes}
-				isLoading={isSceneSizeLoading}
-				statusText={optimizerStatusText}
-				onOpenOptimization={handleOpenOptimizationDrawer}
-				disabled={arePublisherActionsDisabled}
-			/>
-
-			<PreviewCameraControls />
 		</>
 	)
 }

@@ -225,7 +225,13 @@ const DashboardLayout = () => {
 					email={user.email}
 					name={user.user_metadata?.full_name as string | undefined}
 				/>
+				{/*
+				  The shell owns the viewport height so the inset can scroll its own
+				  content. Without this the wrapper grows with the page and the inset's
+				  rounded frame scrolls away with it.
+				*/}
 				<SidebarProvider
+					className="h-svh overflow-hidden"
 					open={sidebarOpen}
 					onOpenChange={handleSidebarOpenChange}
 				>
@@ -236,20 +242,37 @@ const DashboardLayout = () => {
 							plan={plan}
 						/>
 					</LogoSidebar>
-					<SidebarInset className="relative w-dvw overflow-hidden">
+					{/*
+					  Two rows: the breadcrumb bar, then everything else. The bar used to
+					  be `fixed w-dvw`, which spanned the whole viewport — across the
+					  sidebar and past the inset's rounded corners — and needed an `mt-14`
+					  on the content to compensate. As a grid row it is bounded by the
+					  inset by construction, and the content scrolls beneath it.
+					*/}
+					<SidebarInset className="relative grid min-w-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
 						<DashboardManagementDialogs />
 						<UpgradeModal />
 
-						<div className="bg-background/80 fixed top-0 z-50 flex w-dvw items-center gap-4 p-4 px-6 pl-4 backdrop-blur-lg">
-							<SidebarTrigger />
-							<div className="flex items-center gap-2 overflow-hidden">
+						{/*
+						  Rows are pinned explicitly because the dialogs above are also
+						  children of this grid. They portal their content and so occupy no
+						  row today, but nothing about the layout should depend on that.
+						*/}
+						<div className="row-start-1 flex min-w-0 items-center gap-3 px-4 py-3">
+							<SidebarTrigger className="shrink-0" />
+							{/*
+							  `min-w-0` lets the breadcrumb shrink below its content width,
+							  which is what lets it scroll instead of pushing the bar wider.
+							*/}
+							<div className="flex min-w-0 flex-1 items-center gap-2">
 								<DynamicBreadcrumb />
 								{isBackgroundRefreshing && (
 									<Loader2 className="text-muted-foreground h-3.5 w-3.5 shrink-0 animate-spin" />
 								)}
 							</div>
 						</div>
-						<div className="mt-14">
+
+						<div className="row-start-2 min-h-0 overflow-y-auto">
 							{!(isSceneDetailRoute && willBePublisherRoute) &&
 								!(isSceneDetailRoute || willBeSceneDetail) && (
 									<DashboardHeader />

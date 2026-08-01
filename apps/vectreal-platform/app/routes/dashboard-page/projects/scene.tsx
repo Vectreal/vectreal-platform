@@ -6,7 +6,6 @@ import {
 } from '@shared/components/ui/avatar'
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
-import { ButtonGroup } from '@shared/components/ui/button-group'
 import {
 	Drawer,
 	DrawerClose,
@@ -15,33 +14,21 @@ import {
 	DrawerHeader,
 	DrawerTitle
 } from '@shared/components/ui/drawer'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger
-} from '@shared/components/ui/dropdown-menu'
-import { cn } from '@shared/utils'
-import {
-	ModelFile,
-	SceneLoadResult,
-	useLoadModel
-} from '@vctrl/hooks/use-load-model'
+import { SceneLoadResult, useLoadModel } from '@vctrl/hooks/use-load-model'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useSetAtom } from 'jotai/react'
 import {
 	ChevronDown,
 	ChevronRight,
 	Cloud,
-	ExternalLink,
+	Eye,
 	Info,
-	LayoutDashboard,
 	Radio,
 	Rocket,
 	Trash2,
 	X
 } from 'lucide-react'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { data, Link, useNavigate } from 'react-router'
 
 import { Route } from './+types/scene'
@@ -52,13 +39,13 @@ import {
 	SceneAssetListItem
 } from '../../../components/dashboard'
 import { EmbedOptionsPanel } from '../../../components/embed/embed-options-panel'
+import { StatGrid, StatTile } from '../../../components/layout-components'
 import { ScenePublishStateControl } from '../../../components/publishing/scene-publish-state-control'
-import { ClientVectrealViewer } from '../../../components/viewer/client-vectreal-viewer'
+import SceneEmbedViewer from '../../../components/scene-embed/scene-embed-viewer'
 import { useDashboardSceneActions } from '../../../hooks/use-dashboard-scene-actions'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
-import { buildFullscreenPreviewPath } from '../../../lib/domain/embed/embed-snippet'
+import { buildInternalPreviewPath } from '../../../lib/domain/embed/embed-snippet'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
-import { resolveBakedShadowSource } from '../../../lib/domain/scene/client/baked-shadow-source'
 import { loadSceneFromApi } from '../../../lib/domain/scene/client/load-scene-from-api.client'
 import { getDashboardSceneLoadErrorMessage } from '../../../lib/domain/scene/scene-load-error-messages'
 import {
@@ -216,44 +203,6 @@ export function HydrateFallback() {
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
 
-interface PreviewModelProps {
-	file: ModelFile | null
-	sceneData?: SceneLoadResult
-	thumbnailUrl?: string | null
-}
-
-const PreviewModel = memo(
-	({ file, sceneData, thumbnailUrl }: PreviewModelProps) => {
-		const loadingThumbnail = toViewerLoadingThumbnail(
-			thumbnailUrl,
-			'Scene thumbnail preview'
-		)
-		const bakedShadow = useMemo(
-			() => resolveBakedShadowSource(sceneData?.shadows, sceneData?.assetData),
-			[sceneData?.shadows, sceneData?.assetData]
-		)
-
-		return (
-			<div className={cn('relative h-full')}>
-				<ClientVectrealViewer
-					cameraOptions={sceneData?.camera}
-					model={file?.model}
-					boundsOptions={sceneData?.bounds}
-					envOptions={sceneData?.environment}
-					controlsOptions={sceneData?.controls}
-					normalizationOptions={sceneData?.normalization}
-					shadowsOptions={sceneData?.shadows}
-					staticShadowBake
-					bakedShadow={bakedShadow}
-					loadingThumbnail={loadingThumbnail}
-					loader={<CenteredSpinner text="Preparing scene..." />}
-					fallback={<CenteredSpinner text="Loading scene..." />}
-				/>
-			</div>
-		)
-	}
-)
-
 const ASSETS_COLLAPSED_LIMIT = 6
 
 function DrawerAssetsSection({
@@ -288,7 +237,7 @@ function DrawerAssetsSection({
 					{initial.map((asset) => (
 						<SceneAssetListItem
 							key={asset.id}
-							className="bg-muted/40"
+							className="ds-raised"
 							{...(assetPropsById.get(asset.id) ||
 								buildAssetListItemProps(asset, assetData))}
 						/>
@@ -307,7 +256,7 @@ function DrawerAssetsSection({
 								{extra.map((asset) => (
 									<SceneAssetListItem
 										key={asset.id}
-										className="bg-muted/40"
+										className="ds-raised"
 										{...(assetPropsById.get(asset.id) ||
 											buildAssetListItemProps(asset, assetData))}
 									/>
@@ -354,6 +303,13 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 	const [sceneData, setSceneData] = useState<SceneLoadResult>()
 	const [sceneLoadError, setSceneLoadError] = useState<string | null>(null)
 	const [sceneState, setSceneState] = useState(scene)
+	// Memoized because the viewer is memoized: a fresh object every render would
+	// re-render it on every keystroke in the metadata fields below.
+	const loadingThumbnail = useMemo(
+		() =>
+			toViewerLoadingThumbnail(sceneState.thumbnailUrl, 'Scene thumbnail preview'),
+		[sceneState.thumbnailUrl]
+	)
 
 	const [sceneNameDraft, setSceneNameDraft] = useState(scene.name)
 	const [sceneDescriptionDraft, setSceneDescriptionDraft] = useState(
@@ -368,11 +324,10 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 
 	const metadataResetTimerRef = useRef<number | null>(null)
 
-	const fullscreenPreviewPath = buildFullscreenPreviewPath({
+	const previewPath = buildInternalPreviewPath({
 		projectId: project.id,
 		sceneId: sceneState.id
 	})
-	const productPreviewPath = `/preview/product-detail/${project.id}/${sceneState.id}`
 	const dashboardPath = `/dashboard/projects/${project.id}/${sceneState.id}`
 	const sceneNameTrimmed = sceneNameDraft.trim()
 	const sceneDescriptionCurrent = sceneState.description || ''
@@ -555,14 +510,19 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 	}, [file, isLoadingScene])
 
 	return (
-		<div className="h-[calc(100dvh-5rem)] overflow-hidden px-5 pt-1 pb-5 xl:px-6">
+		/*
+		  `h-full` rather than a `100dvh` calculation: the dashboard shell now gives
+		  this row a definite height, so subtracting an assumed header height would
+		  overshoot it and produce a second scrollbar.
+		*/
+		<div className="h-full overflow-hidden px-5 pt-1 pb-5 xl:px-6">
 			{sceneState.thumbnailUrl ? (
 				<link rel="preload" as="image" href={sceneState.thumbnailUrl} />
 			) : null}
 			<div className="grid h-full min-h-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
 				<main className="flex min-h-0 flex-col gap-4">
 					{sceneLoadError && !file?.model ? (
-						<section className="bg-muted/30 border-border space-y-3 rounded-2xl border p-5">
+						<section className="ds-raised space-y-3 rounded-2xl p-5">
 							<h2 className="text-base font-semibold">Unable to Load Scene</h2>
 							<p className="text-muted-foreground text-sm">{sceneLoadError}</p>
 							<div className="flex flex-wrap gap-2">
@@ -579,16 +539,22 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							</div>
 						</section>
 					) : null}
-					<section className="relative min-h-64 flex-1 overflow-hidden rounded-2xl bg-black/2">
-						<PreviewModel
+					<section className="relative min-h-64 flex-1 overflow-hidden rounded-2xl ds-sunken">
+						<SceneEmbedViewer
 							file={file}
 							sceneData={sceneData}
-							thumbnailUrl={sceneState.thumbnailUrl}
+							loadingThumbnail={loadingThumbnail}
 						/>
 					</section>
-					<section className="bg-muted/30 space-y-6 rounded-2xl px-4 py-4 sm:px-5">
+					<section className="ds-raised space-y-6 rounded-2xl px-4 py-4 sm:px-5">
 						<header className="flex flex-col items-start gap-6 md:flex-row">
-							<div className="grow space-y-2 max-md:w-full">
+							{/*
+						  `min-w-0` is what stops a long scene name from pushing the
+						  action column off to the side: a flex item defaults to
+						  min-width:auto, so its content dictates the floor rather than
+						  the container.
+						*/}
+						<div className="min-w-0 grow space-y-2 max-md:w-full">
 								<InlineEditableMetadataField
 									ariaLabel="Scene title"
 									value={sceneNameDraft}
@@ -614,41 +580,27 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 									isSaved={metadataStatus === 'saved' && !isDescriptionUnsaved}
 								/>
 							</div>
-							<div className="flex flex-col gap-3 max-md:w-full xl:justify-end">
-								<ButtonGroup className="w-full">
-									<Button asChild className="w-full">
-										<Link viewTransition to={fullscreenPreviewPath}>
-											Preview
-										</Link>
-									</Button>
+							<div className="flex shrink-0 flex-col gap-3 max-md:w-full xl:justify-end">
+								{/*
+								  Stacked actions, so both are left-aligned rather than
+								  centred: centring puts each icon at a different x because
+								  the labels differ in width, and the icons stop reading as a
+								  column.
+								*/}
+								<Button asChild className="w-full justify-start">
+									<Link viewTransition to={previewPath}>
+										<Eye className="mr-2 h-4 w-4 shrink-0" />
+										Preview
+									</Link>
+								</Button>
 
-									<DropdownMenu>
-										<DropdownMenuTrigger asChild>
-											<Button size="icon">
-												<ChevronDown className="h-4 w-4" />
-											</Button>
-										</DropdownMenuTrigger>
-										<DropdownMenuContent>
-											<DropdownMenuItem asChild>
-												<Link viewTransition to={fullscreenPreviewPath}>
-													<LayoutDashboard className="mr-2 h-4 w-4" />
-													Fullscreen Preview
-												</Link>
-											</DropdownMenuItem>
-
-											<DropdownMenuItem asChild>
-												<Link viewTransition to={productPreviewPath}>
-													<ExternalLink className="mr-2 h-4 w-4" />
-													Product Preview
-												</Link>
-											</DropdownMenuItem>
-										</DropdownMenuContent>
-									</DropdownMenu>
-								</ButtonGroup>
-
-								<Button variant="secondary" asChild>
+								<Button
+									variant="secondary"
+									asChild
+									className="w-full justify-start"
+								>
 									<Link viewTransition to={`/publisher/${sceneState.id}`}>
-										<Rocket className="mr-2 h-4 w-4" />
+										<Rocket className="mr-2 h-4 w-4 shrink-0" />
 										Open in Publisher
 									</Link>
 								</Button>
@@ -660,11 +612,11 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							onClick={() => setDrawerOpen(true)}
 							title="Open details panel"
 							aria-label="Open details panel"
-							className="bg-muted/25 hover:bg-muted/50 group relative flex w-full flex-col gap-6 rounded-2xl p-4 text-left transition-colors duration-300"
+							className="ds-raised hover:bg-foreground/8 group relative flex w-full flex-col gap-6 rounded-2xl p-4 text-left transition-colors duration-300"
 						>
 							<Info className="text-muted-foreground absolute top-3 right-3 h-4 w-4 opacity-25 transition-opacity duration-300 group-hover:opacity-100" />
 							<div className="space-y-2">
-								<p className="text-muted-foreground text-[11px] tracking-[0.22em] uppercase">
+								<p className="text-muted-foreground text-eyebrow">
 									Scene Workspace
 								</p>
 
@@ -707,60 +659,45 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 					</section>
 				</main>
 
-				<aside className="bg-muted/30 hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-4 xl:flex">
+				<aside className="ds-raised hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-4 xl:flex">
 					<section className="space-y-3">
 						<div>
-							<p className="text-muted-foreground text-[11px] tracking-[0.2em] uppercase">
+							<p className="text-muted-foreground text-eyebrow">
 								At a Glance
 							</p>
 							<h2 className="mt-1 text-base leading-tight font-medium tracking-tight">
 								Scene Metrics
 							</h2>
 						</div>
-						<div className="grid grid-cols-2 gap-2 text-sm">
-							<div className="bg-background/70 rounded-xl p-3">
-								<p className="text-muted-foreground text-[11px] uppercase">
-									Size
-								</p>
-								<p className="mt-1 font-medium">
-									{formatBytes(sceneDetails.fileSizeBytes)}
-								</p>
-							</div>
-							<div className="bg-background/70 rounded-xl p-3">
-								<p className="text-muted-foreground text-[11px] uppercase">
-									Assets
-								</p>
-								<p className="mt-1 font-medium">{sceneDetails.assetCount}</p>
-							</div>
-							<div className="bg-background/70 rounded-xl p-3">
-								<p className="text-muted-foreground text-[11px] uppercase">
-									Texture Size
-								</p>
-								<p className="mt-1 font-medium">
-									{sceneDetails.textureBytes != null
+						<StatGrid>
+							<StatTile
+								label="Size"
+								value={formatBytes(sceneDetails.fileSizeBytes)}
+							/>
+							<StatTile label="Assets" value={sceneDetails.assetCount} />
+							<StatTile
+								label="Texture Size"
+								value={
+									sceneDetails.textureBytes != null
 										? formatBytes(sceneDetails.textureBytes)
 										: sceneDetails.textureCount != null
 											? `${sceneDetails.textureCount} textures`
-											: '-'}
-								</p>
-							</div>
-							<div className="bg-background/70 rounded-xl p-3">
-								<p className="text-muted-foreground text-[11px] uppercase">
-									Meshes
-								</p>
-								<p className="mt-1 font-medium">
-									{sceneDetails.meshesCount ?? '-'}
-								</p>
-							</div>
-						</div>
+											: '-'
+								}
+							/>
+							<StatTile
+								label="Meshes"
+								value={sceneDetails.meshesCount ?? '-'}
+							/>
+						</StatGrid>
 					</section>
 
 					<section className="space-y-2 overflow-y-auto">
-						<p className="text-muted-foreground text-[11px] tracking-[0.2em] uppercase">
+						<p className="text-muted-foreground text-eyebrow">
 							Assets Preview
 						</p>
 						{sceneDetails.assets.length === 0 ? (
-							<p className="text-muted-foreground bg-background/70 rounded-xl p-3 text-sm">
+							<p className="text-muted-foreground ds-sunken rounded-xl p-3 text-sm">
 								No linked assets.
 							</p>
 						) : (
@@ -769,14 +706,14 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 									<SceneAssetListItem
 										key={asset.id}
 										{...buildAssetListItemProps(asset, sceneData?.assetData)}
-										className="bg-background/70"
+										className="ds-sunken"
 									/>
 								))}
 								{sceneDetails.assets.length > 4 && (
 									<button
 										type="button"
 										onClick={() => setDrawerOpen(true)}
-										className="hover:bg-muted/50 bg-background/70 flex w-full items-center justify-between gap-3 rounded-xl p-3 text-left transition-colors duration-300"
+										className="ds-overlay hover:bg-foreground/12 flex w-full items-center justify-between gap-3 rounded-xl p-3 text-left transition-colors duration-300"
 									>
 										<p className="text-muted-foreground text-sm">
 											…and {sceneDetails.assets.length - 4} more.
@@ -788,7 +725,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						)}
 					</section>
 
-					<section className="bg-background/70 rounded-xl p-3">
+					<section className="ds-sunken rounded-xl p-3">
 						<div className="flex items-center gap-2">
 							<Avatar className="h-8 w-8">
 								<AvatarImage
@@ -855,37 +792,27 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							<h3 className="text-sm font-semibold tracking-tight">
 								Scene Stats
 							</h3>
-							<div className="grid grid-cols-2 gap-3 text-sm">
-								<div className="bg-muted/50 rounded-xl p-3">
-									<p className="text-muted-foreground text-xs">Current Size</p>
-									<p className="font-medium">
-										{formatBytes(sceneDetails.fileSizeBytes)}
-									</p>
-								</div>
-								<div className="bg-muted/50 rounded-xl p-3">
-									<p className="text-muted-foreground text-xs">Assets</p>
-									<p className="font-medium">{sceneDetails.assetCount}</p>
-								</div>
-								<div className="bg-muted/50 rounded-xl p-3">
-									<p className="text-muted-foreground text-xs">Texture Size</p>
-									<p className="font-medium">
-										{sceneDetails.textureBytes != null
+							<StatGrid>
+								<StatTile
+									label="Current Size"
+									value={formatBytes(sceneDetails.fileSizeBytes)}
+								/>
+								<StatTile label="Assets" value={sceneDetails.assetCount} />
+								<StatTile
+									label="Texture Size"
+									value={
+										sceneDetails.textureBytes != null
 											? formatBytes(sceneDetails.textureBytes)
 											: sceneDetails.textureCount != null
 												? `${sceneDetails.textureCount} textures`
-												: '-'}
-									</p>
-								</div>
-								<div className="bg-muted/50 rounded-xl p-3">
-									<p className="text-muted-foreground text-xs">
-										Meshes / Vertices
-									</p>
-									<p className="font-medium">
-										{sceneDetails.meshesCount ?? '-'} /{' '}
-										{sceneDetails.verticesCount ?? '-'}
-									</p>
-								</div>
-							</div>
+												: '-'
+									}
+								/>
+								<StatTile
+									label="Meshes / Vertices"
+									value={`${sceneDetails.meshesCount ?? '-'} / ${sceneDetails.verticesCount ?? '-'}`}
+								/>
+							</StatGrid>
 						</section>
 
 						<DrawerAssetsSection

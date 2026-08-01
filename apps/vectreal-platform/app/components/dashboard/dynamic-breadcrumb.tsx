@@ -115,7 +115,7 @@ export const DynamicBreadcrumb = memo(() => {
 		<AnimatePresence mode="wait" initial={false}>
 			<motion.div
 				key={contentKey}
-				className="overflow-hidden"
+				className="min-w-0 flex-1"
 				initial={{ opacity: 0, x: -8 }}
 				animate={{ opacity: 1, x: 0 }}
 				exit={{ opacity: 0, x: 8 }}
@@ -125,23 +125,28 @@ export const DynamicBreadcrumb = memo(() => {
 				}}
 			>
 				{isLoading ? (
-					<Breadcrumb className="grow">
-						<BreadcrumbList className="text-primary/75">
+					<Breadcrumb className="no-scrollbar overflow-x-auto">
+						<BreadcrumbList className="text-primary/75 flex-nowrap gap-1 whitespace-nowrap">
 							<BreadcrumbItem>
 								<Skeleton className="h-4 w-20" />
 							</BreadcrumbItem>
 							<BreadcrumbSeparator />
 							<BreadcrumbItem>
-								<Skeleton className="h-4 w-16" />
+								<Skeleton className="h-4 w-16" style={{ animationDelay: '90ms' }} />
 							</BreadcrumbItem>
 							<BreadcrumbSeparator />
 							<BreadcrumbItem>
-								<Skeleton className="h-4 w-24" />
+								<Skeleton
+									className="h-4 w-24"
+									style={{ animationDelay: '180ms' }}
+								/>
 							</BreadcrumbItem>
 						</BreadcrumbList>
 					</Breadcrumb>
 				) : (
-					<Breadcrumb className="grow overflow-x-auto">
+					// One line, scrolled rather than wrapped: a wrapping trail would
+					// change the height of the bar and push the content down.
+					<Breadcrumb className="no-scrollbar overflow-x-auto">
 						<BreadcrumbList className="text-primary/75 flex-nowrap gap-1 whitespace-nowrap">
 							{renderedBreadcrumbs.map((item, index) => {
 								const isFirst = index === 0

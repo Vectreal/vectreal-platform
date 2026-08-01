@@ -287,7 +287,7 @@ const SceneActionsCell = memo(({ row }: { row: SceneRow }) => {
 						</DropdownMenuItem>
 						<DropdownMenuItem asChild>
 							<Link
-								to={`/preview/fullscreen/${row.projectId}/${row.id}/`}
+								to={`/preview/${row.projectId}/${row.id}`}
 								state={{
 									name: row.name,
 									description: row.description || undefined,

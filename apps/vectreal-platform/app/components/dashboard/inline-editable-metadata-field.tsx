@@ -54,9 +54,9 @@ export function InlineEditableMetadataField({
 	}, [isEditing, multiline])
 
 	const indicatorClass = isSaving
-		? 'bg-accent animate-pulse'
+		? 'bg-orange animate-pulse'
 		: isUnsaved
-			? 'bg-accent'
+			? 'bg-orange'
 			: isSaved
 				? 'opacity-0'
 				: 'bg-muted-foreground/35'
@@ -80,7 +80,7 @@ export function InlineEditableMetadataField({
 
 	return (
 		<div className={cn('group flex items-start gap-3', className)}>
-			<div className="min-w-0 flex-1">
+			<div className="min-w-0 flex-1 overflow-x-auto">
 				{isEditing ? (
 					multiline ? (
 						<MotionTextarea

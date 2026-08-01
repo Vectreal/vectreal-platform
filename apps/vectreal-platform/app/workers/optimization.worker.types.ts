@@ -21,43 +21,43 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
  * since they cross the worker boundary via structured clone / transferable.
  */
 
-/** Options for each non-texture optimization step passed to the worker. */
-export interface WorkerOptimizationOptions {
-  simplify?: {
-    enabled: boolean
-    ratio?: number
-    error?: number
-  }
-  dedup?: {
-    enabled: boolean
-    textures?: boolean
-    materials?: boolean
-    meshes?: boolean
-    accessors?: boolean
-  }
-  quantize?: {
-    enabled: boolean
-    quantizePosition?: number
-    quantizeNormal?: number
-    quantizeColor?: number
-    quantizeTexcoord?: number
-  }
-  normals?: {
-    enabled: boolean
-    overwrite?: boolean
-  }
-  draco?: {
-    enabled: boolean
-    method?: 'edgebreaker' | 'sequential'
-    encodeSpeed?: number
-    decodeSpeed?: number
-    quantizePosition?: number
-    quantizeNormal?: number
-    quantizeColor?: number
-    quantizeTexcoord?: number
-    quantizeGeneric?: number
-  }
+import type { DracoCompressionReport, Optimizations } from '@vctrl/core'
+
+/**
+ * Steps that run inside the worker. Texture compression is excluded: it needs
+ * the browser's OffscreenCanvas encoder and runs on the main thread.
+ */
+export type GeometryOptimizationKey = Exclude<keyof Optimizations, 'texture'>
+
+/**
+ * Per-step glTF-Transform options.
+ *
+ * Derived from the shared `Optimizations` type rather than restated, so a new
+ * option on a step is available here without a second edit. `enabled` is
+ * dropped because it is UI state — a key being present already means the step
+ * should run.
+ */
+export type WorkerOptimizationOptions = {
+  [Key in GeometryOptimizationKey]?: Omit<Optimizations[Key], 'enabled'>
 }
+
+/**
+ * The order the worker runs geometry steps in.
+ *
+ * Draco must come last: every other step operates on decoded accessors, so
+ * measuring compression before them would measure the wrong geometry.
+ * Simplification comes first so the cheaper passes work on the smaller mesh.
+ *
+ * `optimization-catalog.ts` lists the same steps with their UI copy, and a spec
+ * asserts the two orders agree.
+ */
+export const GEOMETRY_STEP_ORDER = [
+  'simplification',
+  'dedup',
+  'quantize',
+  'normals',
+  'draco'
+] as const satisfies readonly GeometryOptimizationKey[]
 
 /** Message sent TO the worker. The buffer ArrayBuffer should be transferred. */
 export interface WorkerInputMessage {
@@ -71,15 +71,29 @@ export interface WorkerInputMessage {
 export type WorkerOutputMessage =
   | {
       type: 'progress'
-      /** Human-readable label matching the step labels in use-optimization-process. */
-      step: string
+      /**
+       * Which step is reporting. A key rather than a label, so UI copy stays on
+       * the main thread and the worker has nothing to keep in sync with it.
+       */
+      step: GeometryOptimizationKey
       /** 0–100 completion percentage for the current step. */
       progress: number
     }
   | {
       type: 'done'
-      /** Optimized GLB as ArrayBuffer (transferred back for zero-copy). */
+      /**
+       * Optimized GLB as ArrayBuffer (transferred back for zero-copy).
+       * Always uncompressed — Draco is applied at export time, not here.
+       */
       buffer: ArrayBuffer
+      /**
+       * Steps the worker's optimizer actually kept. Without this the main
+       * thread can't tell an applied pass from a reverted one, since it only
+       * ever sees the resulting bytes.
+       */
+      appliedOptimizations: string[]
+      /** Draco measurement, when Draco compression was requested. */
+      dracoReport?: DracoCompressionReport
     }
   | {
       type: 'error'

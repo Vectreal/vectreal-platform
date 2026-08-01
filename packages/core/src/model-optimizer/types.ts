@@ -128,11 +128,10 @@ export interface OptimizationStats {
 }
 
 /**
- * Draco geometry-compression metrics. Populated only when `compressGeometry`
- * ran and was kept (not reverted for making the export bigger). Distinct
- * from `OptimizationStats.meshes`, which always reflects uncompressed
- * geometry byte size — Draco compression is deferred until write time, so
- * `inspect()` can't see it.
+ * Draco geometry-compression metrics, from `measureDracoCompression`. Distinct
+ * from `OptimizationStats.meshes`, which always reflects uncompressed geometry
+ * byte size — Draco compression is deferred until write time, so `inspect()`
+ * can't see it.
  */
 export interface DracoCompressionReport {
 	/** Uncompressed geometry payload size in bytes, before compression. */
@@ -141,6 +140,16 @@ export interface DracoCompressionReport {
 	geometryBytesAfterCompression: number
 	/** Percentage reduction in geometry bytes (0-100). */
 	reductionPercent: number
+	/** Byte length of the whole GLB once written with Draco compression. */
+	projectedGlbBytes: number
+	/** Byte length of the same GLB written without Draco, for comparison. */
+	uncompressedGlbBytes: number
+	/**
+	 * False when compression produced a larger (or equal) GLB than leaving the
+	 * geometry uncompressed — small or texture-dominated models, mostly. The
+	 * caller should skip compressing on export and tell the user why.
+	 */
+	isWorthApplying: boolean
 }
 
 export interface OptimizationReport {
@@ -154,6 +163,6 @@ export interface OptimizationReport {
 	appliedOptimizations: string[]
 	/** Optimization statistics */
 	stats: OptimizationStats
-	/** Draco geometry-compression metrics, if `compressGeometry` was applied. */
+	/** Draco geometry-compression metrics, if Draco compression was measured. */
 	draco?: DracoCompressionReport
 }

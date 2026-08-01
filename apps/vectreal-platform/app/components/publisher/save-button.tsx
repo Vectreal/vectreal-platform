@@ -1,4 +1,5 @@
 import { Button } from '@shared/components/ui/button'
+import { cn } from '@shared/utils'
 import {
 	AnimatePresence,
 	motion,
@@ -29,7 +30,6 @@ interface SaveButtonProps {
 	userId?: string
 	saveLocationTarget: SaveLocationTarget
 	saveAvailability: SaveAvailabilityState
-	compact?: boolean
 	forceDisabled?: boolean
 	onRequireAuth?: () => Promise<void> | void
 	saveSceneSettings: (
@@ -42,7 +42,6 @@ const SaveButton = ({
 	userId,
 	saveLocationTarget,
 	saveAvailability,
-	compact = false,
 	forceDisabled = false,
 	onRequireAuth,
 	saveSceneSettings
@@ -124,13 +123,12 @@ const SaveButton = ({
 	return (
 		<Button
 			variant="ghost"
-			size={compact ? 'icon' : undefined}
-			className={
-				(compact
-					? 'flex items-center justify-center rounded-xl'
-					: 'flex w-[10.75rem] items-center justify-start gap-2.5 rounded-xl px-4') +
-				(justSaved ? ' text-emerald-500 dark:text-emerald-400' : '')
-			}
+			// Icon-only where the header is tight, labelled once there is room.
+			className={cn(
+				'flex items-center justify-center gap-0 rounded-xl px-0',
+				'sm:justify-start sm:gap-2.5 sm:px-4',
+				justSaved && 'text-emerald-500 dark:text-emerald-400'
+			)}
 			aria-label={saveVisual.label}
 			disabled={isSaveDisabled}
 			onClick={handleSaveScene}
@@ -147,23 +145,21 @@ const SaveButton = ({
 					</motion.span>
 				</AnimatePresence>
 			</span>
-			{!compact ? (
-				<motion.span
-					layout="position"
-					className="grid min-w-0 flex-1 overflow-hidden text-left"
-				>
-					<AnimatePresence initial={false} mode="wait">
-						<motion.span
-							key={saveVisual.key}
-							className="truncate"
-							transition={contentTransition}
-							{...(contentMotion ?? {})}
-						>
-							{saveVisual.label}
-						</motion.span>
-					</AnimatePresence>
-				</motion.span>
-			) : null}
+			<motion.span
+				layout="position"
+				className="hidden min-w-0 flex-1 overflow-hidden text-left sm:grid"
+			>
+				<AnimatePresence initial={false} mode="wait">
+					<motion.span
+						key={saveVisual.key}
+						className="truncate"
+						transition={contentTransition}
+						{...(contentMotion ?? {})}
+					>
+						{saveVisual.label}
+					</motion.span>
+				</AnimatePresence>
+			</motion.span>
 		</Button>
 	)
 }

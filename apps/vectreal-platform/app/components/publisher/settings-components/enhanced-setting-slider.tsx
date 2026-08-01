@@ -142,11 +142,11 @@ const EnhancedSettingSlider = ({
 						onFocus={handleInputFocus}
 						onBlur={handleInputBlur}
 						onKeyDown={handleInputKeyDown}
-						className="text-accent h-7 w-20 text-right text-sm font-medium"
+						className="text-orange h-7 w-20 text-right text-sm font-medium"
 						aria-label={`${label} value input`}
 					/>
 				) : (
-					<span className="text-accent text-sm font-medium">
+					<span className="text-orange text-sm font-medium">
 						{formatValue(value)}
 					</span>
 				)}

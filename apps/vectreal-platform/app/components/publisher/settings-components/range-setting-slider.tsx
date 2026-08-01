@@ -210,11 +210,11 @@ const RangeSettingSlider = ({
 							onFocus={handleMinInputFocus}
 							onBlur={handleMinInputBlur}
 							onKeyDown={(e) => handleKeyDown(e, minValue, true)}
-							className="text-accent h-8 text-sm font-medium"
+							className="text-orange h-8 text-sm font-medium"
 							aria-label={`${label} ${rangeLabels.min} value`}
 						/>
 					) : (
-						<div className="text-accent flex h-8 items-center rounded-md border px-3 text-sm font-medium">
+						<div className="text-orange flex h-8 items-center rounded-md border px-3 text-sm font-medium">
 							{formatValue(minValue)}
 						</div>
 					)}
@@ -237,11 +237,11 @@ const RangeSettingSlider = ({
 							onFocus={handleMaxInputFocus}
 							onBlur={handleMaxInputBlur}
 							onKeyDown={(e) => handleKeyDown(e, maxValue, false)}
-							className="text-accent h-8 text-sm font-medium"
+							className="text-orange h-8 text-sm font-medium"
 							aria-label={`${label} ${rangeLabels.max} value`}
 						/>
 					) : (
-						<div className="text-accent flex h-8 items-center rounded-md border px-3 text-sm font-medium">
+						<div className="text-orange flex h-8 items-center rounded-md border px-3 text-sm font-medium">
 							{formatValue(maxValue)}
 						</div>
 					)}

@@ -244,9 +244,9 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 								glow={feature.glow}
 								className="w-[78%] shrink-0 snap-center sm:w-auto sm:shrink"
 							>
-								<div className="border-surface-border bg-surface-0/60 group-hover:border-accent/40 group-hover:bg-accent/5 flex size-11 items-center justify-center rounded-xl border transition-colors duration-300">
+								<div className="border-surface-border bg-surface-0/60 group-hover:border-orange/40 group-hover:bg-orange/5 flex size-11 items-center justify-center rounded-xl border transition-colors duration-300">
 									<feature.icon
-										className="text-accent size-5 transition-transform duration-300 group-hover:scale-110"
+										className="text-orange size-5 transition-transform duration-300 group-hover:scale-110"
 										aria-hidden="true"
 									/>
 								</div>
@@ -291,7 +291,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 								<li key={item.text} className="flex items-center gap-3">
 									<span className="border-surface-border bg-surface-1 flex size-9 shrink-0 items-center justify-center rounded-lg border">
 										<item.icon
-											className="text-accent size-4"
+											className="text-orange size-4"
 											aria-hidden="true"
 										/>
 									</span>
@@ -344,7 +344,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 									{'# Install the viewer\n'}
 								</span>
 								<span className="text-foreground">{'pnpm add '}</span>
-								<span className="text-accent">{'@vctrl/viewer\n\n'}</span>
+								<span className="text-orange">{'@vctrl/viewer\n\n'}</span>
 								<span className="text-muted-foreground/50">
 									{'// Drop a model into any React app\n'}
 								</span>
@@ -353,12 +353,12 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 									{' { VectrealViewer } '}
 								</span>
 								<span className="text-[#7aa2f7]">{'from'}</span>
-								<span className="text-accent">{" '@vctrl/viewer'\n\n"}</span>
+								<span className="text-orange">{" '@vctrl/viewer'\n\n"}</span>
 								<span className="text-foreground">{'<'}</span>
 								<span className="text-[#e0af68]">{'VectrealViewer'}</span>
 								<span className="text-[#9ece6a]">{' src'}</span>
 								<span className="text-foreground">{'='}</span>
-								<span className="text-accent">{'{modelUrl}'}</span>
+								<span className="text-orange">{'{modelUrl}'}</span>
 								<span className="text-foreground">{' />'}</span>
 							</code>
 						</pre>
@@ -388,7 +388,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 							<div className="mt-1 flex flex-wrap gap-3">
 								<Link
 									to="/contact"
-									className="text-accent hover:text-accent/80 text-sm font-medium underline-offset-4 hover:underline"
+									className="text-orange hover:text-orange/80 text-sm font-medium underline-offset-4 hover:underline"
 								>
 									Contact us
 								</Link>
@@ -399,7 +399,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 									to="https://discord.gg/A9a3nPkZw7"
 									target="_blank"
 									rel="noreferrer"
-									className="text-accent hover:text-accent/80 text-sm font-medium underline-offset-4 hover:underline"
+									className="text-orange hover:text-orange/80 text-sm font-medium underline-offset-4 hover:underline"
 								>
 									Ask on Discord
 								</Link>

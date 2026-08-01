@@ -17,7 +17,9 @@ import { isSavingAtom } from '../../../../lib/stores/publisher-config-store'
 import { AccordionItem, AccordionTrigger } from '../accordion-components'
 import { sidebarContentVariants } from '../animation'
 import { usePublishSidebarContext } from './publish-sidebar-context'
+import { DeliverySummary } from './sections/delivery-summary'
 import { EmbedOptions } from './sections/embed-options'
+import { OptimizationOptions } from './sections/optimization-options'
 import { PublishOptions } from './sections/publish-options'
 import { SaveOptions } from './sections/save-options'
 import { ScenePreview } from './sections/scene-preview'
@@ -54,7 +56,6 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 		projectId,
 		userId,
 		onOpenOptimizationDrawer,
-		canReoptimize,
 		viewModel,
 		saveAvailability,
 		onRequireAuth,
@@ -93,7 +94,7 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 			>
 				{!hideHeader && (
 					<>
-						<CardHeader className="py-6">
+						<CardHeader className="px-4 py-4">
 							<CardTitle>Publish Your Scene</CardTitle>
 							<CardDescription>
 								Save, publish, and share your 3D scene with the world
@@ -104,140 +105,132 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 					</>
 				)}
 
-				{showSceneInfo && (
-					<div className="px-4 pb-2 pt-4">
-						<div className="flex items-center justify-between">
-							<p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
-								Scene Size
-							</p>
-							<div className="flex items-center gap-2">
-								{sizeReductionPercent !== null && sizeDeltaLabel ? (
-									<span className="text-primary bg-primary/15 rounded-full px-2 py-0.5 text-xs font-semibold">
-										-{sizeReductionPercent}% • {sizeDeltaLabel}
-									</span>
-								) : null}
-								<span className="text-sm font-medium">
-									{currentSceneBytes != null
-										? formatFileSize(currentSceneBytes)
-										: '-'}
-								</span>
-							</div>
-						</div>
-					</div>
-				)}
-
-				{canAccessPublishFeatures && <ScenePreview />}
-
-				<Accordion type="single" collapsible className="space-y-2 p-4">
-					<AccordionItem value="save">
-						<AccordionTrigger>
-							<Save className="inline" size={14} />
-							Download
-						</AccordionTrigger>
-						<AccordionContent>
-							<SaveOptions />
-						</AccordionContent>
-					</AccordionItem>
-
-					{!isAuthenticated && (
-						<div className="px-4 pb-3">
-							<p className="text-muted-foreground mb-2 text-xs">
-								Sign up and save this scene once to unlock Publish and Embed.
-							</p>
-							<Button
-								type="button"
-								size="sm"
-								className="w-full"
-								onClick={() => void onRequireAuth?.()}
-							>
-								Sign In or Sign Up to Save
-							</Button>
-						</div>
+				{/*
+				  One column owns the sidebar's gutter and rhythm. The sections used
+				  to each carry their own padding, which had drifted to six different
+				  vertical values and two different left edges, so the top half of the
+				  sidebar did not line up with the accordion below it.
+				*/}
+				<div className="flex flex-col gap-3 p-4">
+					{showSceneInfo && (
+						<DeliverySummary
+							sceneBytes={currentSceneBytes}
+							sizeReductionPercent={sizeReductionPercent}
+							sizeDeltaLabel={sizeDeltaLabel}
+							onOpenOptimization={onOpenOptimizationDrawer}
+						/>
 					)}
 
-					{!hasSavedScene && isAuthenticated && (
-						<div className="my-4 pb-2">
-							<p className="text-muted-foreground mb-2 text-xs">
-								Save this scene once to unlock Publish and Embed.
-							</p>
-							<Button
-								type="button"
-								size="sm"
-								className="w-full"
-								disabled={isSaveDisabled}
-								onClick={() => void handleSaveScene()}
-							>
-								{isSaving ? (
-									<>
-										<LoadingSpinner />
-										Saving...
-									</>
-								) : (
-									'Save Scene'
-								)}
-							</Button>
-						</div>
-					)}
+					{canAccessPublishFeatures && <ScenePreview />}
 
-					{isSaveDisabled &&
-						saveAvailability?.reason === 'requires-size-reduction' && (
-							<div className="my-4 pb-2">
+					<Accordion
+						type="single"
+						collapsible
+						className="flex flex-col gap-3"
+					>
+						{/*
+						  First in the list because it comes first in the workflow: what
+						  ships is decided here, before anything below it matters.
+						*/}
+						<AccordionItem value="optimize">
+							<AccordionTrigger>
+								<Sparkles />
+								Optimization
+							</AccordionTrigger>
+							<AccordionContent>
+								<OptimizationOptions />
+							</AccordionContent>
+						</AccordionItem>
+
+						<AccordionItem value="save">
+							<AccordionTrigger>
+								<Save />
+								Download
+							</AccordionTrigger>
+							<AccordionContent>
+								<SaveOptions />
+							</AccordionContent>
+						</AccordionItem>
+
+						{!isAuthenticated && (
+							<div>
 								<p className="text-muted-foreground mb-2 text-xs">
-									This scene is over your plan's max scene size. Optimize to
-									reduce it below the limit to enable saving and publishing.
+									Sign up and save this scene once to unlock Publish and Embed.
 								</p>
+								<Button
+									type="button"
+									size="sm"
+									className="w-full"
+									onClick={() => void onRequireAuth?.()}
+								>
+									Sign In or Sign Up to Save
+								</Button>
 							</div>
 						)}
 
-					{canAccessPublishFeatures && (
-						<>
-							<AccordionItem value="publish">
-								<AccordionTrigger>
-									<Globe className="inline" size={14} />
-									Publish
-								</AccordionTrigger>
-								<AccordionContent>
-									<PublishOptions
-										sceneId={sceneId}
-										publishState={publishState}
-										saveSceneSettings={saveSceneSettings}
-									/>
-								</AccordionContent>
-							</AccordionItem>
+						{!hasSavedScene && isAuthenticated && (
+							<div>
+								<p className="text-muted-foreground mb-2 text-xs">
+									Save this scene once to unlock Publish and Embed.
+								</p>
+								<Button
+									type="button"
+									size="sm"
+									className="w-full"
+									disabled={isSaveDisabled}
+									onClick={() => void handleSaveScene()}
+								>
+									{isSaving ? (
+										<>
+											<LoadingSpinner />
+											Saving...
+										</>
+									) : (
+										'Save Scene'
+									)}
+								</Button>
+							</div>
+						)}
 
-							{publishState.status === 'published' && (
-								<AccordionItem value="embed">
+						{isSaveDisabled &&
+							saveAvailability?.reason === 'requires-size-reduction' && (
+								<p className="text-muted-foreground text-xs">
+									This scene is over your plan's max scene size. Optimize to
+									reduce it below the limit to enable saving and publishing.
+								</p>
+							)}
+
+						{canAccessPublishFeatures && (
+							<>
+								<AccordionItem value="publish">
 									<AccordionTrigger>
-										<Code className="inline" size={14} />
-										Embed
+										<Globe />
+										Publish
 									</AccordionTrigger>
 									<AccordionContent>
-										<EmbedOptions sceneId={sceneId} projectId={projectId} />
+										<PublishOptions
+											sceneId={sceneId}
+											publishState={publishState}
+											saveSceneSettings={saveSceneSettings}
+										/>
 									</AccordionContent>
 								</AccordionItem>
-							)}
-						</>
-					)}
-				</Accordion>
 
-				{canAccessPublishFeatures && canReoptimize && (
-					<div className="space-y-3 p-4">
-						<p className="text-muted-foreground text-xs">
-							Need another pass? Continue composing first, then re-optimize if
-							you need a final tuning run before publishing.
-						</p>
-						<Button
-							type="button"
-							size="sm"
-							variant="secondary"
-							className="w-full"
-							onClick={() => onOpenOptimizationDrawer?.()}
-						>
-							<Sparkles size={14} className="mr-2" />
-							Re-optimize Scene
-						</Button>
-					</div>
-				)}
+								{publishState.status === 'published' && (
+									<AccordionItem value="embed">
+										<AccordionTrigger>
+											<Code />
+											Embed
+										</AccordionTrigger>
+										<AccordionContent>
+											<EmbedOptions sceneId={sceneId} projectId={projectId} />
+										</AccordionContent>
+									</AccordionItem>
+								)}
+							</>
+						)}
+					</Accordion>
+				</div>
 			</motion.div>
 		</div>
 	)

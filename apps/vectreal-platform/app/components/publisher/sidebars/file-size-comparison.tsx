@@ -43,7 +43,7 @@ export const FileSizeComparison: FC<FileSizeComparisonProps> = ({
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.5 }}
 				>
-					<div className="text-accent text-3xl font-medium tracking-tight">
+					<div className="text-orange text-3xl font-medium tracking-tight">
 						{formatValue(initialFileSize)}
 					</div>
 					<div className="text-muted-foreground text-sm">Before</div>

@@ -19,7 +19,10 @@ import { useSceneModelEvents } from './scene-loader/use-scene-model-events'
 import { useSceneParamsSync } from './scene-loader/use-scene-params-sync'
 import { useSceneSaveFlow } from './scene-loader/use-scene-save-flow'
 import { useConsent } from '../components/consent/consent-context'
-import { optimizationPresets } from '../constants/optimizations'
+import {
+	DEFAULT_PRESET_ID,
+	optimizationPresets
+} from '../constants/optimizations'
 import {
 	defaultBoundsOptions,
 	defaultCameraOptions,
@@ -39,7 +42,9 @@ import {
 	getSceneNameFromFileName,
 	serializeSceneAssetData
 } from '../lib/domain/scene'
+import { resolveDefaultSceneCameraId } from '../lib/domain/scene/scene-camera'
 import {
+	clearOriginalSceneModel,
 	clearPendingSceneDraft,
 	saveOriginalSceneModel
 } from '../lib/persistence/pending-scene-idb'
@@ -326,11 +331,10 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		}
 
 		try {
-			// Get the default/first scene camera ID to capture from
-			const defaultCameraId =
-				camera.cameras?.find((c) => !c.kind || c.kind === 'scene')?.cameraId ??
-				camera.cameras?.[0]?.cameraId ??
-				undefined
+			// Always the camera the scene opens on, so the automatic capture agrees
+			// with the manual "set opening view" action rather than framing something
+			// the viewer will never see.
+			const defaultCameraId = resolveDefaultSceneCameraId(camera.cameras)
 
 			return await requestSceneScreenshot({
 				...DEFAULT_THUMBNAIL_CAPTURE_OPTIONS,
@@ -615,7 +619,7 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 				setOptimizationState,
 				setOptimizationRuntime,
 				optimizationRuntimeInitialState,
-				mediumOptimizations: optimizationPresets.medium
+				defaultOptimizations: optimizationPresets[DEFAULT_PRESET_ID]
 			})
 		},
 		[
@@ -787,10 +791,20 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	// Using load-start (not file?.model) because applyOptimization() also changes
 	// file.model after each optimization pass - we must NOT reset the guard then,
 	// or the save effect would re-fire and overwrite IDB with an optimized snapshot.
+	//
+	// The same event invalidates both IDB entries the previous model left behind.
+	// They are keyed per tab, not per model, so without this the optimization
+	// pass could reload the *previous* model's snapshot into the viewer during
+	// the window before the new snapshot finishes being written. Only
+	// useLoadModel's load()/reset() emit these events - the optimization pass
+	// goes through useOptimizeModel and emits neither, so this cannot fire
+	// mid-pass and strand it without a snapshot.
 	useEffect(() => {
 		const handleLoadStart = () => {
 			originalSavedRef.current = false
 			loadStartTimeRef.current = Date.now()
+			void clearOriginalSceneModel()
+			void clearPendingSceneDraft()
 		}
 		on('load-start', handleLoadStart)
 		on('load-reset', handleLoadStart)

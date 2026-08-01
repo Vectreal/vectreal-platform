@@ -164,7 +164,7 @@ function MobileNav({
 					)}
 
 					{/* Nav links */}
-					<div className="flex flex-1 flex-col gap-1 py-4">
+					<div className="flex flex-1 flex-col gap-1 px-4 py-4">
 						{allDrawerItems.map((item, i) => {
 							const isActive =
 								item.to === '/'
@@ -183,18 +183,12 @@ function MobileNav({
 										className={cn(
 											'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
 											isActive
-												? 'bg-accent bg-opacity-10 text-accent'
+												? 'bg-orange/10 text-orange'
 												: 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
 										)}
 									>
 										{item.icon}
 										{item.label}
-										{isActive && (
-											<motion.div
-												className="bg-accent ml-auto h-1.5 w-1.5 rounded-full"
-												layoutId="mobile-active-dot"
-											/>
-										)}
 									</Link>
 								</motion.div>
 							)

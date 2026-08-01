@@ -98,6 +98,25 @@ describe('scene save state', () => {
 		).toBe(false)
 	})
 
+	// A `data:` URL can only come from the user capturing one in this session —
+	// the server never returns one — so it is a real unsaved change.
+	it('detects a manually captured thumbnail as a change', () => {
+		expect(
+			hasSceneMetaChanged(
+				{
+					name: 'Scene A',
+					description: 'Primary scene',
+					thumbnailUrl: 'data:image/webp;base64,AAAA'
+				},
+				{
+					name: 'Scene A',
+					description: 'Primary scene',
+					thumbnailUrl: '/api/scenes/1/thumbnail/old'
+				}
+			)
+		).toBe(true)
+	})
+
 	it('still detects editable scene meta changes', () => {
 		expect(
 			hasSceneMetaChanged(

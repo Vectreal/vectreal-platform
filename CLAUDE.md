@@ -24,6 +24,10 @@ pnpm nx affected --target=test          # only affected projects
 # Type-check
 pnpm nx typecheck vectreal-platform     # runs react-router typegen + tsc --noEmit
 
+# Storybook (one workspace-wide instance, aggregates shared/components + packages/viewer)
+pnpm nx storybook storybook             # dev server
+pnpm nx build-storybook storybook       # static build for Chromatic
+
 # Drizzle migrations
 pnpm nx run vectreal-platform:drizzle-generate
 
@@ -50,6 +54,8 @@ packages/
 shared/
   components/              # Shared Radix UI / shadcn-based component library
   utils/                   # Shared utility functions
+storybook/                 # Standalone Storybook host — owns no stories, aggregates
+                           # shared/components and packages/viewer into one instance
 terraform/                 # GCP Cloud Run, CDN, IAM (Terraform — storage migrated to Supabase)
 ```
 

@@ -62,7 +62,7 @@ export function CinematicHero() {
 							className="bg-surface-1/70 border-surface-border inline-flex items-center gap-2 rounded-full border px-3 py-1.5 backdrop-blur-sm"
 						>
 							<span
-								className="bg-accent h-1.5 w-1.5 animate-pulse rounded-full"
+								className="bg-orange h-1.5 w-1.5 animate-pulse rounded-full"
 								aria-hidden="true"
 							/>
 							<span className="text-eyebrow text-muted-foreground">
@@ -76,7 +76,7 @@ export function CinematicHero() {
 						>
 							<span>Upload.</span>
 							<span>Prepare.</span>
-							<span className="text-accent">Publish.</span>
+							<span className="text-orange">Publish.</span>
 						</motion.h1>
 
 						<motion.p
@@ -95,7 +95,7 @@ export function CinematicHero() {
 							<Button
 								asChild
 								size="lg"
-								className="group bg-accent hover:bg-accent/90 rounded-xl px-7 text-white shadow-[0_8px_30px_-8px_var(--surface-glow)]"
+								className="group bg-orange hover:bg-orange/90 text-white shadow-[0_8px_30px_-8px_var(--surface-glow)]"
 							>
 								<Link to="/publisher">
 									Publish Your First Model
@@ -107,7 +107,7 @@ export function CinematicHero() {
 								asChild
 								size="lg"
 								variant="ghost"
-								className="text-muted-foreground hover:text-foreground rounded-xl px-5"
+								className="text-muted-foreground hover:text-foreground"
 							>
 								<Link
 									to="https://github.com/vectreal/vectreal-platform"
@@ -150,7 +150,7 @@ export function CinematicHero() {
 						<div className="border-surface-border/50 absolute aspect-square w-full max-w-[680px] rounded-full border" />
 						<div className="border-surface-border/75 absolute aspect-square w-1/2 max-w-[360px] rounded-full border" />
 						<div className="animate-spin-slow absolute aspect-square w-3/4 max-w-[540px]">
-							<span className="bg-accent absolute top-0 left-1/2 size-2 -translate-y-1/2 rounded-full shadow-[0_0_12px_2px_var(--accent)]" />
+							<span className="bg-orange absolute top-0 left-1/2 size-2 -translate-y-1/2 rounded-full shadow-[0_0_12px_2px_var(--orange)]" />
 						</div>
 					</div>
 

@@ -13,7 +13,7 @@ import {
 function ChapterContent({ chapter }: { chapter: Chapter }) {
 	return (
 		<>
-			<p className="text-accent/80 text-[10px] font-semibold tracking-[0.22em] uppercase">
+			<p className="text-orange/80 text-[10px] font-semibold tracking-[0.22em] uppercase">
 				{chapter.label}
 			</p>
 
@@ -36,7 +36,7 @@ function ChapterContent({ chapter }: { chapter: Chapter }) {
 						<p className="text-foreground/25 text-[10px] tracking-[0.18em] uppercase">
 							Coupe · 4.0L Flat-6 · 510 HP · Jet Black Metallic
 						</p>
-						<p className="text-accent mt-1 text-2xl font-bold tracking-tight">
+						<p className="text-orange mt-1 text-2xl font-bold tracking-tight">
 							$182,900
 						</p>
 					</div>

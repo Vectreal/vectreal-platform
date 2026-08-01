@@ -25,16 +25,13 @@ export const defaultCameraOptions: CameraProps = {
 			initial: true
 		}
 	],
+	// Linear rather than object avoidance. The avoidance path solves a curve
+	// around the model and still produces unpredictable framing on some scenes,
+	// so it is opt-in from the camera panel instead of the default everyone gets.
 	sceneTransition: {
-		type: 'object_avoidance',
+		type: 'linear',
 		duration: 1000,
-		easing: 'ease_in_out',
-		objectAvoidance: {
-			clearance: 2,
-			arcHeight: 2,
-			samples: 64,
-			tension: 0.5
-		}
+		easing: 'ease_in_out'
 	}
 }
 export const defaultControlsOptions: ControlsProps = {

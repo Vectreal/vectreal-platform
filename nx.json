@@ -1,5 +1,5 @@
 {
-	"useDaemonProcess": false,
+	"useDaemonProcess": true,
 	"namedInputs": {
 		"default": ["{projectRoot}/**/*"],
 		"production": [

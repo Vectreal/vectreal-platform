@@ -59,12 +59,7 @@ export function GradientCtaBlock({
 			>
 				<motion.h2
 					variants={prefersReducedMotion ? undefined : fadeUp}
-					className="text-foreground font-medium text-balance"
-					style={{
-						fontSize: 'var(--text-headline)',
-						letterSpacing: 'var(--tracking-headline)',
-						lineHeight: 1.05
-					}}
+					className="text-headline text-foreground"
 				>
 					{headline}
 				</motion.h2>
@@ -83,7 +78,7 @@ export function GradientCtaBlock({
 					<Button
 						asChild
 						size="lg"
-						className="bg-accent hover:bg-accent/90 rounded-xl px-8 text-white"
+						className="bg-orange hover:bg-orange/90 rounded-xl px-8 text-white"
 					>
 						<Link to={primaryCta.to}>{primaryCta.label}</Link>
 					</Button>

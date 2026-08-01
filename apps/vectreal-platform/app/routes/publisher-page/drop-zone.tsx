@@ -129,7 +129,7 @@ export const DropZone = ({ isMobile }: Props) => {
 												<div
 													className={cn(
 														'bg-muted/50 mb-6 flex h-20 w-20 items-center justify-center rounded-full transition-all duration-300',
-														isDragActive ? 'bg-accent' : ''
+														isDragActive ? 'bg-orange' : ''
 													)}
 												>
 													<FolderUp
@@ -170,7 +170,7 @@ export const DropZone = ({ isMobile }: Props) => {
 								<Button
 									variant="ghost"
 									asChild
-									className="hover:bg-accent/50 flex h-auto w-full grow items-center justify-start gap-3 rounded-xl p-3"
+									className="hover:bg-orange/50 flex h-auto w-full grow items-center justify-start gap-3 rounded-xl p-3"
 								>
 									<Link to="/docs/getting-started/first-model" viewTransition>
 										<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md">
@@ -188,7 +188,7 @@ export const DropZone = ({ isMobile }: Props) => {
 								<Button
 									variant="ghost"
 									asChild
-									className="hover:bg-accent/50 flex h-auto w-full grow items-center justify-start gap-3 rounded-xl p-3"
+									className="hover:bg-orange/50 flex h-auto w-full grow items-center justify-start gap-3 rounded-xl p-3"
 								>
 									<Link to="/docs/guides/upload" viewTransition>
 										<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md">
@@ -206,7 +206,7 @@ export const DropZone = ({ isMobile }: Props) => {
 								<Button
 									variant="ghost"
 									asChild
-									className="hover:bg-accent/50 flex h-auto w-full grow items-center justify-start gap-3 rounded-xl p-3"
+									className="hover:bg-orange/50 flex h-auto w-full grow items-center justify-start gap-3 rounded-xl p-3"
 								>
 									<Link to="/docs" viewTransition>
 										<div className="bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-md">

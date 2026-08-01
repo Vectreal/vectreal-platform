@@ -14,6 +14,16 @@
 	/* Brand palette */
 	--orange: #fc6c18;
 	--dark-orange: #f54703;
+	/*
+	  Channel form of --orange, for `rgb(var(--orange-rgb) / <alpha>)`.
+
+	  --orange is a hex, so there is no valid way to apply an alpha to it inline;
+	  `hsl(var(--orange)/0.14)` was tried once and silently killed a gradient for
+	  months. color-mix works but degrades badly: lightningcss emits a no-alpha
+	  fallback for browsers that lack it, turning a 14% wash into solid brand
+	  orange. This spelling needs no fallback. Keep the two in sync.
+	*/
+	--orange-rgb: 252 108 24;
 
 	/* Semantic tokens - light theme */
 	--background: oklch(1 0 0);
@@ -28,7 +38,13 @@
 	--secondary-foreground: oklch(0.205 0 0);
 	--muted: oklch(0.97 0 0);
 	--muted-foreground: oklch(0.556 0 0);
-	--accent: var(--orange);
+	/*
+	  The hover/focus background for menus, options, and ghost controls, not a
+	  brand colour. It used to point at --orange, which made every dropdown item
+	  and ghost hover a solid brand block. Reach for --orange (or bg-orange /
+	  text-orange) when you want the brand.
+	*/
+	--accent: oklch(0.97 0 0);
 	--accent-foreground: oklch(0.205 0 0);
 	--destructive: oklch(0.637 0.237 25.331);
 	--destructive-foreground: oklch(0.985 0 0);
@@ -57,14 +73,28 @@
 	--chart-3: oklch(0.769 0.188 70.08);
 	--chart-4: oklch(0.627 0.265 303.9);
 	--chart-5: oklch(0.645 0.246 16.439);
-	--radius: 0.625rem;
 
-	/* Motion tokens */
-	--duration-instant: 80ms;
-	--duration-fast: 150ms;
-	--duration-base: 250ms;
-	--duration-slow: 400ms;
-	--duration-cinematic: 700ms;
+	/*
+	  Corner radii - confidently rounded, never tight.
+
+	  One knob. The rest of the scale is derived in `@theme` below, so the steps
+	  cannot drift apart. Do not re-declare `--radius-sm`/`-md`/`-xl`/`-2xl`
+	  here: those names are also Tailwind theme keys, and declaring them in both
+	  places is what previously made them self-referential.
+	*/
+	--radius: 1rem;
+
+	/*
+	  Pair radius with padding. `--radius-2xl` is 28px, so a `rounded-2xl` panel
+	  padded `p-4` (16px) crowds its content into the curve. Panels want `p-5` or
+	  more; `rounded-xl` inner blocks are comfortable at `p-3`.
+	*/
+
+	/*
+	  Motion tokens. The durations live in `@theme` below for the same reason the
+	  radius scale does: `--duration-*` is a Tailwind theme namespace, so
+	  declaring the names here too made them self-referential.
+	*/
 
 	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 	--ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
@@ -77,12 +107,50 @@
 	--surface-border: oklch(0.28 0 0 / 0.6);
 	--surface-glow: oklch(0.55 0.22 40 / 0.1);
 
-	/* Display typography scale */
-	--text-display: clamp(3.5rem, 8vw, 7rem);
+	/* Landing surface depth scale - light register */
+	--surface-0-light: oklch(0.99 0 0);
+	--surface-1-light: oklch(0.97 0 0);
+	--surface-2-light: oklch(0.94 0 0);
+	--surface-border-light: oklch(0.88 0 0 / 0.7);
+	--surface-glow-light: oklch(0.75 0.14 40 / 0.14);
+
+	/*
+	  Typography scale, mirroring `tokens/typography.css` in the Vectreal Design
+	  System. The `.text-*` classes further down consume these rather than
+	  restating the numbers.
+
+	  Deliberately plain custom properties and NOT `@theme` keys: `--text-*`,
+	  `--tracking-*`, `--font-*`, `--space-*` and `--container-*` are all Tailwind
+	  theme namespaces, and declaring a name in both places makes it
+	  self-referential. See the radius note above.
+	*/
+	--text-display: clamp(2.75rem, 6.4vw, 5.5rem);
 	--text-headline: clamp(2rem, 4vw, 3.5rem);
+	--text-h2: clamp(1.75rem, 2.8vw, 2.5rem);
+	--text-h3: clamp(1.35rem, 2vw, 1.75rem);
+	--text-stat: clamp(3rem, 5.5vw, 4.25rem);
+	--text-body-lg: 1.125rem;
 	--text-label-xs: 0.6875rem;
-	--tracking-display: -0.04em;
+	--tracking-display: -0.038em;
 	--tracking-headline: -0.025em;
+	--tracking-h2: -0.025em;
+	--tracking-h3: -0.02em;
+	--tracking-eyebrow: 0.14em;
+
+	/* Spacing scale and page measure, from `tokens/spacing.css`. */
+	--space-1: 0.25rem;
+	--space-2: 0.5rem;
+	--space-3: 0.75rem;
+	--space-4: 1rem;
+	--space-5: 1.25rem;
+	--space-6: 1.5rem;
+	--space-8: 2rem;
+	--space-10: 2.5rem;
+	--space-12: 3rem;
+	--space-16: 4rem;
+	--space-24: 6rem;
+	--space-36: 9rem;
+	--container-max: 80rem;
 
 	/* Sidebar tokens */
 	--sidebar: oklch(0.985 0 0);
@@ -118,8 +186,9 @@
 	--secondary-foreground: oklch(0.985 0 0);
 	--muted: oklch(0.269 0 0);
 	--muted-foreground: oklch(0.708 0 0);
-	--accent: var(--orange);
-	--accent-foreground: oklch(0.269 0 0);
+	/* Neutral hover/focus surface, matching --muted. See the light block above. */
+	--accent: oklch(0.269 0 0);
+	--accent-foreground: oklch(0.985 0 0);
 	--destructive: oklch(0.637 0.237 25.331);
 	--destructive-foreground: oklch(0.985 0 0);
 	--border: oklch(0.269 0 0);
@@ -200,18 +269,39 @@
 	--color-surface-2: var(--surface-2);
 	--color-surface-border: var(--surface-border);
 	--color-surface-glow: var(--surface-glow);
+	--color-surface-0-light: var(--surface-0-light);
+	--color-surface-1-light: var(--surface-1-light);
+	--color-surface-2-light: var(--surface-2-light);
+	--color-surface-border-light: var(--surface-border-light);
+	--color-surface-glow-light: var(--surface-glow-light);
 
-	/* Motion duration utilities */
-	--duration-instant: var(--duration-instant);
-	--duration-fast: var(--duration-fast);
-	--duration-base: var(--duration-base);
-	--duration-slow: var(--duration-slow);
-	--duration-cinematic: var(--duration-cinematic);
+	/*
+	  `--font-sans` is a Tailwind namespace, so it is set here rather than in
+	  `:root`, where it would have collided with Tailwind's own default stack.
+	*/
+	--font-sans: 'DM Sans Variable', sans-serif;
 
-	--radius-sm: calc(var(--radius) - 4px);
-	--radius-md: calc(var(--radius) - 2px);
+	/* Motion duration utilities: `duration-fast`, `duration-cinematic`, etc. */
+	--duration-instant: 80ms;
+	--duration-fast: 150ms;
+	--duration-base: 250ms;
+	--duration-slow: 400ms;
+	--duration-cinematic: 700ms;
+
+	/*
+	  Derived from the single `--radius` above rather than restating it. These
+	  used to read `--radius-sm: var(--radius-sm)`, which resolved against the
+	  identically named `:root` declaration and made the property cyclic. A
+	  cyclic custom property is invalid at computed-value time, so every
+	  `rounded-sm`/`-md`/`-xl`/`-2xl` collapsed to a square corner once the
+	  stylesheet finished applying. `rounded-lg` escaped only because
+	  `--radius-lg` reads `--radius`, a different name.
+	*/
+	--radius-sm: calc(var(--radius) - 6px);
+	--radius-md: calc(var(--radius) - 4px);
 	--radius-lg: var(--radius);
 	--radius-xl: calc(var(--radius) + 4px);
+	--radius-2xl: calc(var(--radius) + 12px);
 	--color-sidebar: var(--sidebar);
 	--color-sidebar-foreground: var(--sidebar-foreground);
 	--color-sidebar-primary: var(--sidebar-primary);
@@ -244,7 +334,7 @@
 	}
 
 	html {
-		font-family: 'DM Sans Variable', sans-serif;
+		font-family: var(--font-sans);
 		font-optical-sizing: auto;
 	}
 
@@ -260,45 +350,216 @@
 }
 
 @layer components {
+	/* ---- Surface elevation ----
+	  Vectreal separates surfaces by value, not by outlines: "matte flat
+	  surfaces, no hard borders". A 1px border at app-chrome contrast reads as a
+	  drawn box; a few percent of foreground mixed into the background reads as
+	  depth.
+
+	  These are theme-aware by construction, unlike the `--surface-0/1/2` tokens,
+	  which are fixed dark values for the always-dark marketing sections. Mixing
+	  against `--foreground` means the same class lifts in dark mode and settles
+	  in light mode without a second definition.
+
+	  raised  - cards, table containers, anything sitting on the page
+	  overlay - popovers, menus, and rows hovered on top of `raised`
+	  sunken  - wells and inputs that should recede instead of lift
+
+	  A note on the built output, so nobody spends an afternoon on it twice.
+	  Each of these compiles to two declarations:
+
+	      .ds-raised { background-color: var(--foreground) }
+	      .ds-raised { background-color: color-mix(...) }
+
+	  The first is not a browser-support fallback. lightningcss cannot resolve a
+	  `color-mix()` whose colours are `var()` references, so it emits the first
+	  colour as a best-effort value. It is not removable by declaring browser
+	  targets - a `browserslist` covering only browsers with `color-mix` changes
+	  the output not at all, because support was never the reason.
+
+	  It is also not fixable by writing your own fallback first: lightningcss
+	  re-inserts its own after yours, so yours is overridden.
+
+	  Left as is, deliberately. The `color-mix` declaration comes second and wins
+	  everywhere the function is understood, which is every browser that can run
+	  this platform's WebGL. Only a pre-2023 engine would take the first value
+	  and paint the surface solid `--foreground`, and it could not render the
+	  viewer regardless. Removing the two-declaration output would mean giving up
+	  deriving the whole ladder from one `--foreground`, which is worth more than
+	  the dead bytes cost.
+	*/
+	.ds-raised {
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 4%,
+			var(--background)
+		);
+	}
+	.ds-overlay {
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 8%,
+			var(--background)
+		);
+	}
+	.ds-sunken {
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 2.5%,
+			var(--background)
+		);
+	}
+	/*
+	  The ladder self-corrects when it nests. A raised block inside a raised
+	  block steps up on its own, rather than resolving to the same mix as its
+	  parent and vanishing.
+
+	  Without this, elevation is only correct when every call site knows what it
+	  is sitting on - which is not knowable for a shared component. `Card` is
+	  `ds-raised`, so a card dropped onto a raised panel had no edge at all.
+
+	  Same-class nesting only. `ds-overlay` inside `ds-raised` is already an
+	  explicit, deliberate pairing and keeps its value.
+	*/
+	.ds-raised .ds-raised {
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 8%,
+			var(--background)
+		);
+	}
+	.ds-raised .ds-raised .ds-raised,
+	.ds-overlay .ds-overlay {
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 12%,
+			var(--background)
+		);
+	}
+
+	/* Only where a divider genuinely carries meaning. Never to draw a box. */
+	.ds-divider {
+		background-color: color-mix(in oklch, var(--foreground) 10%, transparent);
+	}
+
+	/*
+	  Interactive surfaces. Hover lifts the surface exactly one step up the
+	  ladder, so a raised row hovers to overlay. Use these rather than pairing a
+	  `ds-*` class with a hand-written `hover:bg-foreground/N`: call sites had
+	  drifted to 6%, 8%, 12% and 14%, so equivalent rows hovered to different
+	  values in the same view.
+	*/
+	.ds-raised-interactive {
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 4%,
+			var(--background)
+		);
+		transition: background-color var(--duration-fast) var(--ease-out);
+	}
+	.ds-raised-interactive:hover {
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 8%,
+			var(--background)
+		);
+	}
+	.ds-overlay-interactive {
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 8%,
+			var(--background)
+		);
+		transition: background-color var(--duration-fast) var(--ease-out);
+	}
+	.ds-overlay-interactive:hover {
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 12%,
+			var(--background)
+		);
+	}
+
 	/* ---- Type scale (single source of truth) ---- */
 	.text-eyebrow {
-		font-size: 0.6875rem;
+		font-size: var(--text-label-xs);
 		font-weight: 500;
 		line-height: 1;
-		letter-spacing: 0.14em;
+		letter-spacing: var(--tracking-eyebrow);
 		text-transform: uppercase;
 	}
 	.text-display {
-		font-size: clamp(2.75rem, 6.4vw, 5.5rem);
+		font-size: var(--text-display);
 		font-weight: 500;
 		line-height: 1.02;
-		letter-spacing: -0.038em;
+		letter-spacing: var(--tracking-display);
+		text-wrap: balance;
+	}
+	/*
+	  `--text-headline` sits between display and h2 and had no class, so the two
+	  call sites that wanted it reached for an inline
+	  `style={{ fontSize: 'var(--text-headline)' }}` and got none of the weight,
+	  leading or tracking that go with it.
+	*/
+	.text-headline {
+		font-size: var(--text-headline);
+		font-weight: 500;
+		line-height: 1.06;
+		letter-spacing: var(--tracking-headline);
 		text-wrap: balance;
 	}
 	.text-h2 {
-		font-size: clamp(1.75rem, 2.8vw, 2.5rem);
+		font-size: var(--text-h2);
 		font-weight: 500;
 		line-height: 1.1;
-		letter-spacing: -0.025em;
+		letter-spacing: var(--tracking-h2);
 		text-wrap: balance;
 	}
 	.text-h3 {
-		font-size: clamp(1.35rem, 2vw, 1.75rem);
+		font-size: var(--text-h3);
 		font-weight: 500;
 		line-height: 1.18;
-		letter-spacing: -0.02em;
+		letter-spacing: var(--tracking-h3);
 	}
 	.text-stat {
-		font-size: clamp(3rem, 5.5vw, 4.25rem);
+		font-size: var(--text-stat);
 		font-weight: 500;
 		line-height: 1;
 		letter-spacing: -0.04em;
 		font-variant-numeric: tabular-nums;
 	}
 	.text-body-lg {
-		font-size: 1.125rem;
+		font-size: var(--text-body-lg);
 		line-height: 1.6;
 		text-wrap: pretty;
+	}
+	/*
+	  The plain micro-label size. `.text-eyebrow` is this size plus uppercase and
+	  wide tracking; most of the 40-odd `text-[11px]` call sites are not eyebrows
+	  and only ever wanted the size.
+	*/
+	.text-label-xs {
+		font-size: var(--text-label-xs);
+		line-height: 1.4;
+	}
+
+	/* ---- Layout ---- */
+	/*
+	  The page measure. `--container-max` is 80rem, the same as `max-w-7xl`, which
+	  was hardcoded at 15 sites — each of them then choosing its own gutter, so a
+	  hero at `px-6` sat above a body at `px-4` and the content jogged sideways at
+	  the seam. The gutter belongs to the measure, not to the caller.
+	*/
+	.container-page {
+		width: 100%;
+		max-width: var(--container-max);
+		margin-inline: auto;
+		padding-inline: var(--space-4);
+	}
+	@media (min-width: 48rem) {
+		.container-page {
+			padding-inline: var(--space-6);
+		}
 	}
 
 	.highlight-card {
@@ -320,12 +581,35 @@
 		@apply bg-shell-surface border-shell-border-soft rounded-xl border shadow-xl backdrop-blur-xl;
 	}
 
-	.publisher-shell-floating {
-		@apply bg-shell-overlay border-shell-border-soft rounded-2xl border shadow-2xl backdrop-blur-2xl;
+	/*
+	  A block nested inside a publisher shell panel.
+
+	  Deliberately not `ds-raised`. The `ds-*` ladder mixes against `--background`
+	  because it describes surfaces sitting on the page; a shell panel does not —
+	  it floats over the 3D canvas at its own opacity, and in dark mode it is
+	  lighter than the page background. Mixing against `--background` there put a
+	  nested block *below* the panel it sits on.
+
+	  So it uses the ladder's mechanism (a value tint, never a border) against a
+	  transparent base, which separates from whatever the panel resolves to in
+	  either theme. It also stacks: a block nested inside a nested block reaches
+	  the next step up on its own, the same way the `ds-*` ladder self-corrects.
+
+	  Radius is left to the caller. Panels take `rounded-2xl` and inner blocks
+	  `rounded-xl`, and baking one in meant call sites had to override it with
+	  another utility from the same layer — a precedence coin-flip.
+	*/
+	.publisher-shell-nested {
+		background-color: color-mix(in oklch, var(--foreground) 5%, transparent);
 	}
 
-	.publisher-shell-nested {
-		@apply bg-shell-surface-soft rounded-xl shadow-sm;
+	/* Same surface, for blocks that are themselves the control. */
+	.publisher-shell-nested-interactive {
+		background-color: color-mix(in oklch, var(--foreground) 5%, transparent);
+		transition: background-color var(--duration-fast) var(--ease-out);
+	}
+	.publisher-shell-nested-interactive:hover {
+		background-color: color-mix(in oklch, var(--foreground) 9%, transparent);
 	}
 
 	.publisher-shell-focus {
@@ -362,14 +646,20 @@
 	}
 }
 
-@keyframes skeleton-fade {
-	0% {
-		opacity: 0;
-		transform: translateY(4px);
-	}
+/*
+  Skeletons need a loop, not an entrance. This replaces `skeleton-fade`, which
+  ran once with `forwards`, so a skeleton settled into a static grey block and
+  read as empty content rather than pending content. A staggered
+  `animation-delay` now offsets the phase of this loop, which turns the stagger
+  into a travelling wave.
+*/
+@keyframes skeleton-pulse {
+	0%,
 	100% {
 		opacity: 1;
-		transform: translateY(0);
+	}
+	50% {
+		opacity: 0.4;
 	}
 }
 
@@ -448,8 +738,8 @@
 	animation: loading-shimmer 1.5s ease-in-out infinite;
 }
 
-.animate-skeleton-fade {
-	animation: skeleton-fade 0.4s ease-out forwards;
+.animate-skeleton-pulse {
+	animation: skeleton-pulse 1.6s ease-in-out infinite;
 }
 
 .animate-aurora {
@@ -472,33 +762,10 @@
 	.animate-aurora,
 	.animate-aurora-2,
 	.animate-float-y,
-	.animate-spin-slow {
+	.animate-spin-slow,
+	.animate-skeleton-pulse {
 		animation: none;
 	}
-}
-
-.animation-delay-75 {
-	animation-delay: 75ms;
-}
-
-.animation-delay-150 {
-	animation-delay: 150ms;
-}
-
-.animation-delay-225 {
-	animation-delay: 225ms;
-}
-
-.animation-delay-300 {
-	animation-delay: 300ms;
-}
-
-.animation-delay-375 {
-	animation-delay: 375ms;
-}
-
-.animation-delay-450 {
-	animation-delay: 450ms;
 }
 
 .animate-glow-pulse {

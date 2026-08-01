@@ -46,7 +46,7 @@ const SettingSlider = ({
 				<Label htmlFor={id}>{label}</Label>
 				{tooltip && <InfoTooltip content={tooltip} />}
 			</div>
-			<span className="text-accent text-sm font-medium">
+			<span className="text-orange text-sm font-medium">
 				{formatValue(value)}
 			</span>
 		</div>

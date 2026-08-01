@@ -36,16 +36,41 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import { ModelOptimizer } from '@vctrl/core/model-optimizer'
 
+import { GEOMETRY_STEP_ORDER } from './optimization.worker.types'
+
 import type {
+	GeometryOptimizationKey,
 	WorkerOptimizationOptions,
 	WorkerInputMessage,
 	WorkerOutputMessage
 } from './optimization.worker.types'
+import type { DracoCompressionReport } from '@vctrl/core'
 
 export type {
 	WorkerOptimizationOptions,
 	WorkerInputMessage,
 	WorkerOutputMessage
+}
+
+/**
+ * How each step is run. Options pass straight through — they are already the
+ * glTF-Transform shapes, minus the `enabled` flag the main thread strips.
+ *
+ * Draco is the odd one out: it measures rather than mutates, so it returns a
+ * report. The working document stays uncompressed, which keeps the main thread
+ * from having to decode it back and lets compression happen once, at export.
+ */
+const STEP_RUNNERS: {
+	[Key in GeometryOptimizationKey]: (
+		optimizer: ModelOptimizer,
+		options: NonNullable<WorkerOptimizationOptions[Key]>
+	) => Promise<DracoCompressionReport | void>
+} = {
+	simplification: (optimizer, options) => optimizer.simplify(options),
+	dedup: (optimizer, options) => optimizer.deduplicate(options),
+	quantize: (optimizer, options) => optimizer.quantize(options),
+	normals: (optimizer, options) => optimizer.optimizeNormals(options),
+	draco: (optimizer, options) => optimizer.measureDracoCompression(options)
 }
 
 function post(msg: WorkerOutputMessage, transfer?: Transferable[]) {
@@ -63,69 +88,53 @@ self.onmessage = async (event: MessageEvent<WorkerInputMessage>) => {
 
 	const optimizer = new ModelOptimizer()
 
+	// The optimizer emits fine-grained progress inside each step. Relay it under
+	// whichever step is running so long steps (Draco especially) show movement
+	// instead of jumping 0 → 100.
+	let activeStep: GeometryOptimizationKey | null = null
+	optimizer.onProgress(({ progress }) => {
+		if (activeStep) post({ type: 'progress', step: activeStep, progress })
+	})
+
 	try {
 		await optimizer.loadFromBuffer(new Uint8Array(buffer))
 
-		if (options.simplify?.enabled) {
-			post({ type: 'progress', step: 'Mesh simplification', progress: 0 })
-			await optimizer.simplify({
-				ratio: options.simplify.ratio,
-				error: options.simplify.error
-			})
-			post({ type: 'progress', step: 'Mesh simplification', progress: 100 })
-		}
+		let dracoReport: DracoCompressionReport | undefined
 
-		if (options.dedup?.enabled) {
-			post({ type: 'progress', step: 'Duplicate removal', progress: 0 })
-			await optimizer.deduplicate({
-				textures: options.dedup.textures,
-				materials: options.dedup.materials,
-				meshes: options.dedup.meshes,
-				accessors: options.dedup.accessors
-			})
-			post({ type: 'progress', step: 'Duplicate removal', progress: 100 })
-		}
+		for (const step of GEOMETRY_STEP_ORDER) {
+			const stepOptions = options[step]
+			if (!stepOptions) continue
 
-		if (options.quantize?.enabled) {
-			post({ type: 'progress', step: 'Vertex quantization', progress: 0 })
-			await optimizer.quantize({
-				quantizePosition: options.quantize.quantizePosition,
-				quantizeNormal: options.quantize.quantizeNormal,
-				quantizeColor: options.quantize.quantizeColor,
-				quantizeTexcoord: options.quantize.quantizeTexcoord
-			})
-			post({ type: 'progress', step: 'Vertex quantization', progress: 100 })
-		}
+			activeStep = step
+			post({ type: 'progress', step, progress: 0 })
+			try {
+				const result = await (
+					STEP_RUNNERS[step] as (
+						optimizer: ModelOptimizer,
+						options: typeof stepOptions
+					) => Promise<DracoCompressionReport | void>
+				)(optimizer, stepOptions)
 
-		if (options.normals?.enabled) {
-			post({ type: 'progress', step: 'Normal refinement', progress: 0 })
-			await optimizer.optimizeNormals({
-				overwrite: options.normals.overwrite
-			})
-			post({ type: 'progress', step: 'Normal refinement', progress: 100 })
-		}
-
-		// Runs last: compresses whatever geometry the earlier steps produced.
-		if (options.draco?.enabled) {
-			post({ type: 'progress', step: 'Draco compression', progress: 0 })
-			await optimizer.compressGeometry({
-				method: options.draco.method,
-				encodeSpeed: options.draco.encodeSpeed,
-				decodeSpeed: options.draco.decodeSpeed,
-				quantizePosition: options.draco.quantizePosition,
-				quantizeNormal: options.draco.quantizeNormal,
-				quantizeColor: options.draco.quantizeColor,
-				quantizeTexcoord: options.draco.quantizeTexcoord,
-				quantizeGeneric: options.draco.quantizeGeneric
-			})
-			post({ type: 'progress', step: 'Draco compression', progress: 100 })
+				if (step === 'draco' && result) {
+					dracoReport = result
+				}
+			} finally {
+				activeStep = null
+			}
+			post({ type: 'progress', step, progress: 100 })
 		}
 
 		const result = await optimizer.export()
 		// Transfer ownership of the underlying ArrayBuffer to avoid copying
-		post({ type: 'done', buffer: result.buffer as ArrayBuffer }, [
-			result.buffer as ArrayBuffer
-		])
+		post(
+			{
+				type: 'done',
+				buffer: result.buffer as ArrayBuffer,
+				appliedOptimizations: optimizer.getAppliedOptimizations(),
+				dracoReport
+			},
+			[result.buffer as ArrayBuffer]
+		)
 	} catch (err) {
 		post({
 			type: 'error',

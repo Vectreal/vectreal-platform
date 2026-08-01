@@ -1,3 +1,4 @@
 export { default as BasicCard } from './basic-card'
-export { default as FloatingPillWrapper } from './floating-pill-wrapper'
+export { InlineNotice } from './inline-notice'
 export { default as PageHero } from './page-hero'
+export { StatGrid, StatTile } from './stat-tile'

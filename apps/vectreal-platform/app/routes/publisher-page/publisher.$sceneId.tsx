@@ -306,7 +306,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 							animate={{ opacity: 1 }}
 							exit={{ opacity: 0, transition: { duration: 0.4 } }}
 							transition={{ duration: 0.75, delay: 1 }}
-							className="bg-muted/50 flex h-full w-full"
+							className="bg-muted/50 relative flex h-full w-full"
 						>
 							<ClientVectrealViewer
 								model={file?.model}
