@@ -231,7 +231,14 @@ const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 							</AnimatePresence>
 							<span className="relative">
 								<Separator />
-								<p className="ds-raised text-muted-foreground absolute left-1/2 -translate-x-1/2 -translate-y-3 px-2">
+								{/*
+									Paint the chip with the panel's base raised surface (4% mix)
+									so it masks the separator seamlessly. Not `ds-raised`: nested
+									inside the ds-raised panel it steps up to 8% (see
+									`.ds-raised .ds-raised` in globals.css) and reads as a darker
+									box, most visibly in light mode.
+								*/}
+								<p className="text-muted-foreground absolute left-1/2 -translate-x-1/2 -translate-y-3 bg-[color-mix(in_oklch,var(--foreground)_4%,var(--background))] px-2">
 									or
 								</p>
 							</span>
