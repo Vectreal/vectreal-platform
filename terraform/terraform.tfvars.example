@@ -7,3 +7,7 @@ cloudflare_zone_id            = ""
 turnstile_production_hostname = "vectreal.com"
 turnstile_staging_hostname    = "staging.vectreal.com"
 supabase_project_ref_prod     = ""
+
+# TXT value for _acme-challenge.api.vectreal.com, from `supabase domains create` output.
+# Leave empty until that command has been run; the ACME record is only created once set.
+supabase_custom_domain_acme_challenge = ""

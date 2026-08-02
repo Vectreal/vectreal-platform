@@ -34,13 +34,13 @@ variable "turnstile_staging_hostname" {
 }
 
 variable "supabase_project_ref_prod" {
-  description = "Production Supabase project ref (the <ref> in <ref>.supabase.co), used as the custom domain CNAME target"
+  description = "Production Supabase project ref (the <ref> in <ref>.supabase.co). Used as the CNAME target for the api.vectreal.com custom domain, which fronts the entire Supabase API (auth, REST, storage, realtime, functions)."
   type        = string
   default     = ""
 }
 
 variable "supabase_custom_domain_acme_challenge" {
-  description = "TXT value for _acme-challenge.auth.vectreal.com, from `supabase domains create` output. Leave empty until that command has been run."
+  description = "TXT value for _acme-challenge.api.vectreal.com, from `supabase domains create` output. Leave empty until that command has been run."
   type        = string
   default     = ""
 }
@@ -374,7 +374,7 @@ resource "cloudflare_record" "supabase_custom_domain_cname" {
   count           = local.enable_cloudflare && var.cloudflare_zone_id != "" && var.supabase_project_ref_prod != "" ? 1 : 0
   zone_id         = var.cloudflare_zone_id
   allow_overwrite = true
-  name            = "auth"
+  name            = "api"
   type            = "CNAME"
   content         = "${var.supabase_project_ref_prod}.supabase.co"
   proxied         = false
@@ -384,7 +384,7 @@ resource "cloudflare_record" "supabase_custom_domain_acme_challenge" {
   count           = local.enable_cloudflare && var.cloudflare_zone_id != "" && var.supabase_custom_domain_acme_challenge != "" ? 1 : 0
   zone_id         = var.cloudflare_zone_id
   allow_overwrite = true
-  name            = "_acme-challenge.auth"
+  name            = "_acme-challenge.api"
   type            = "TXT"
   content         = var.supabase_custom_domain_acme_challenge
   proxied         = false
