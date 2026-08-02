@@ -56,7 +56,7 @@ Vectreal uses cookies and similar storage mechanisms for core operation and, wit
 - **Strictly necessary:** always enabled; required for authentication, CSRF protection, storing your consent choice, and core platform operation.
 - **Functional:** remembers preferences such as your theme and UI settings.
 - **Analytics and performance:** enables product analytics (PostHog) when opted in.
-- **Marketing and personalization:** optional category reserved for future marketing features.
+- **Marketing and personalization:** optional category covering campaign and referral attribution (such as the `vr_referral` entry described below), and reserved for future marketing features.
 
 ### Cookies and Local Storage We Use
 
@@ -67,9 +67,9 @@ Vectreal uses cookies and similar storage mechanisms for core operation and, wit
 | `consent_prefs` | Strictly necessary | Stores your cookie consent choices (up to 1 year) | Cookie |
 | `theming` | Functional | Remembers your theme preference (up to 1 week) | Cookie |
 | `ph_*` | Analytics | PostHog product analytics; set only after analytics consent | Cookie and local storage |
-| `vr_referral` | Attribution | Remembers how you arrived (referrer, campaign source) for attribution | Local storage |
+| `vr_referral` | Marketing | Remembers how you arrived (referrer, campaign source) for attribution; set only after marketing consent | Local storage |
 
-Before you grant analytics consent, PostHog runs in a memory-only mode that does not store identifiers on your device, and page-view capture is disabled.
+Before you grant analytics consent, PostHog runs in a memory-only mode that does not store identifiers on your device, and page-view capture is disabled. Referral and campaign attribution (`vr_referral`) is written only after you grant marketing consent, and is removed if you withdraw it.
 
 ### How Consent Works in the App
 
