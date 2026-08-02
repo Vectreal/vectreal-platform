@@ -3,7 +3,7 @@
 	"name": "@vctrl/core",
 	"description": "vctrl/core is the foundational package providing server-side 3D model processing capabilities. It contains the core classes for loading, optimizing, and exporting 3D models using glTF-Transform and Three.js, designed for Node.js environments.",
 	"bugs": {
-		"url": "https://github.com/vectreal/vectreal-platform/issues"
+		"url": "https://github.com/Vectreal/vectreal-platform/issues"
 	},
 	"homepage": "https://vectreal.com",
 	"keywords": [
@@ -21,7 +21,7 @@
 	],
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/vectreal/vectreal-platform.git"
+		"url": "git+https://github.com/Vectreal/vectreal-platform.git"
 	},
 	"license": "AGPL-3.0-only",
 	"types": "./index.d.ts",

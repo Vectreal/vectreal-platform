@@ -3,7 +3,7 @@
 	"name": "@vctrl/viewer",
 	"description": "vctrl/viewer is a React component library for rendering and interacting with 3D models. It's part of the vectreal ecosystem and is designed to work seamlessly with the vctrl/hooks package for model loading and management.",
 	"bugs": {
-		"url": "https://github.com/vectreal/vectreal-platform/issues"
+		"url": "https://github.com/Vectreal/vectreal-platform/issues"
 	},
 	"homepage": "https://vectreal.com",
 	"keywords": [
@@ -24,7 +24,7 @@
 	],
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/vectreal/vectreal-platform.git"
+		"url": "git+https://github.com/Vectreal/vectreal-platform.git"
 	},
 	"license": "AGPL-3.0-only",
 	"main": "./index.js",
