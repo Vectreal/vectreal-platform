@@ -3,7 +3,7 @@
 	"name": "@vctrl/embed",
 	"description": "Framework-agnostic JavaScript SDK for controlling Vectreal embedded 3D scene previews via postMessage.",
 	"bugs": {
-		"url": "https://github.com/vectreal/vectreal-platform/issues"
+		"url": "https://github.com/Vectreal/vectreal-platform/issues"
 	},
 	"homepage": "https://vectreal.com",
 	"keywords": [
@@ -19,7 +19,7 @@
 	],
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/vectreal/vectreal-platform.git"
+		"url": "git+https://github.com/Vectreal/vectreal-platform.git"
 	},
 	"license": "AGPL-3.0-only",
 	"main": "./index.cjs",
