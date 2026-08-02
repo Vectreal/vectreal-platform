@@ -718,7 +718,7 @@ const SignupPage = ({ loaderData, actionData }: Route.ComponentProps) => {
 							>
 								I agree to the{' '}
 								<Link
-									to="/legal/terms"
+									to="/terms-of-service"
 									target="_blank"
 									rel="noopener noreferrer"
 									className="text-foreground underline-offset-2 hover:underline"
@@ -727,7 +727,7 @@ const SignupPage = ({ loaderData, actionData }: Route.ComponentProps) => {
 								</Link>{' '}
 								and{' '}
 								<Link
-									to="/legal/privacy"
+									to="/privacy-policy"
 									target="_blank"
 									rel="noopener noreferrer"
 									className="text-foreground underline-offset-2 hover:underline"
