@@ -112,7 +112,9 @@ jobs:
     # root "." component bumps. The linked-versions plugin keeps @vctrl/* in sync,
     # but a release can bump the packages without a root change — gating on the
     # root previously skipped publishing entirely (npm stalled at 0.18.0).
-    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
+    # Also run on manual workflow_dispatch to (re)publish the current versions;
+    # the per-package idempotency check below skips anything already on npm.
+    if: ${{ needs.release-please.outputs.releases_created == 'true' || github.event_name == 'workflow_dispatch' }}
     environment: packages-releasing
     runs-on: ubuntu-22.04
     permissions:
@@ -132,6 +134,22 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
+          # NOTE: intentionally NO `registry-url`. setup-node's registry-url writes
+          # a `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}` line into ~/.npmrc;
+          # with no real token that resolves to `_authToken=` (empty), which npm reads
+          # as "auth configured" and SKIPS the OIDC exchange, breaking trusted
+          # publishing. OIDC needs no .npmrc token line — default registry is npmjs.org.
+
+      - name: Ensure OIDC-capable npm
+        shell: bash
+        run: |
+          set -euo pipefail
+          # OIDC trusted publishing needs npm >= 11.5.1. pnpm 10 has no native
+          # OIDC and delegates `pnpm publish` to the npm CLI on PATH, so we pin
+          # a recent npm here for both the pnpm-delegated publish and any direct
+          # npm calls to mint the OIDC token.
+          npm install -g npm@latest
+          npm --version
 
       - name: Enforce trusted publishing auth mode
         shell: bash
@@ -173,19 +191,25 @@ jobs:
         run: npx nx report
         shell: bash
 
-      - name: Build released packages
-        run: pnpm nx run-many -t build -p vctrl/core vctrl/hooks vctrl/viewer vctrl/embed
+      - name: Prepare released packages for publish
+        # prepare-publish chains build -> copy-md -> rewrite-manifest, so this
+        # builds all four packages AND rewrites their built manifests: strips
+        # devDependencies and resolves `workspace:*` @vctrl/* deps to `^<version>`.
+        # The leak-guard below then runs on already-rewritten manifests.
+        run: pnpm nx run-many -t prepare-publish -p vctrl/core vctrl/hooks vctrl/viewer vctrl/embed
         shell: bash
 
       - name: Guard - no workspace specifiers in built manifests
         shell: bash
         run: |
           set -euo pipefail
-          # release-please's node-workspace plugin must rewrite every `workspace:*`
-          # specifier to a real version before release. If any survive into a built
-          # manifest's consumer-facing fields, the published package is broken
-          # (uninstallable, or pnpm silently drops the dep). Fail loudly here rather
-          # than ship it. devDependencies are exempt: consumers never install them.
+          # Safety net for the prepare-publish rewrite. release-please v4 does NOT
+          # rewrite the `workspace:` protocol (by design), so tools/publish/rewrite-manifest.mjs
+          # (run by the prepare-publish step above) resolves every `workspace:*` @vctrl/*
+          # dep to a real version. If any survive into a built manifest's consumer-facing
+          # fields, the published package is broken (uninstallable, or pnpm silently drops
+          # the dep). Fail loudly here rather than ship it. devDependencies are stripped by
+          # the rewrite, so they cannot leak.
           node -e '
             const fs = require("fs");
             const manifests = [
@@ -265,58 +289,27 @@ jobs:
           npm view @vctrl/hooks name --json || true
           npm view @vctrl/viewer name --json || true
 
-      - name: Preflight pack @vctrl/core
-        run: |
-          npx nx run vctrl/core:copy-md
-          cd build/packages/vctrl/core
-          npm pack --dry-run
-        shell: bash
-
-      - name: Publish @vctrl/core
-        run: npx nx run vctrl/core:publish
+      - name: Publish packages to npm (idempotent, OIDC + provenance)
+        # Publish core first so its version exists for hooks' `^<version>` dep.
+        # Each package is skipped if that exact version is already on npm, so
+        # this is safe to re-run and to trigger manually via workflow_dispatch.
+        # `pnpm publish` (nx publish target) delegates to npm on pnpm 10, so the
+        # OIDC handshake and provenance are performed by the pinned npm CLI.
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
-
-      - name: Preflight pack @vctrl/hooks
         run: |
-          npx nx run vctrl/hooks:copy-md
-          cd build/packages/vctrl/hooks
-          npm pack --dry-run
-        shell: bash
-
-      - name: Publish @vctrl/hooks
-        run: npx nx run vctrl/hooks:publish
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_PROVENANCE: 'true'
-
-      - name: Preflight pack @vctrl/viewer
-        run: |
-          npx nx run vctrl/viewer:copy-md
-          cd build/packages/vctrl/viewer
-          npm pack --dry-run
-        shell: bash
-
-      - name: Publish @vctrl/viewer
-        run: npx nx run vctrl/viewer:publish
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_PROVENANCE: 'true'
-
-      - name: Preflight pack @vctrl/embed
-        run: |
-          npx nx run vctrl/embed:copy-md
-          cd build/packages/vctrl/embed
-          npm pack --dry-run
-        shell: bash
-
-      - name: Publish @vctrl/embed
-        run: npx nx run vctrl/embed:publish
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_PROVENANCE: 'true'
+          set -euo pipefail
+          for p in core hooks viewer embed; do
+            dir="build/packages/vctrl/$p"
+            name=$(node -p "require('./$dir/package.json').name")
+            version=$(node -p "require('./$dir/package.json').version")
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "✓ $name@$version already on npm — skipping"
+              continue
+            fi
+            echo "→ Publishing $name@$version"
+            ( cd "$dir" && npm pack --dry-run )
+            npx nx run "vctrl/$p:publish"
+          done
