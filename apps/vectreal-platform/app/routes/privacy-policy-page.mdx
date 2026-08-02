@@ -45,7 +45,7 @@ Vectreal uses cookies and similar storage mechanisms for core operation and opti
 - Strictly necessary: always enabled; required for authentication, CSRF protection, and core platform operation.
 - Functional: remembers preferences such as UI settings.
 - Analytics and performance: enables product analytics (PostHog) when opted in.
-- Marketing and personalisation: optional category for future marketing features.
+- Marketing and personalisation: optional category covering campaign and referral attribution, such as the `vr_referral` entry that stores the page referrer and `utm_source` in your browser's local storage. Also reserved for future marketing features.
 
 ### How Consent Works in the App
 
@@ -57,6 +57,7 @@ Vectreal uses cookies and similar storage mechanisms for core operation and opti
 ### Current Tracking State
 
 - Analytics events are processed through PostHog only when analytics consent is enabled.
+- Referral and campaign attribution (`vr_referral`) is stored only when marketing consent is enabled, and is cleared if you withdraw that consent.
 - We do not currently provide a separate /cookies page; this Privacy Policy is the authoritative cookie and consent notice.
 
 ## 5. Legal Bases for Processing

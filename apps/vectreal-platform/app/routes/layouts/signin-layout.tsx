@@ -9,10 +9,12 @@ import { Link, Outlet, useLocation, useNavigate, useSubmit } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signin-layout'
+import { useConsent } from '../../components/consent/consent-context'
 import { AuthErrorBoundary } from '../../components/errors'
 import HeroScene from '../../components/home/hero-scene'
 import { TurnstileWidget } from '../../components/turnstile-widget'
 import {
+	clearReferralAttribution,
 	getReferralAttribution,
 	saveReferralAttribution
 } from '../../lib/domain/analytics/referral-attribution'
@@ -56,9 +58,22 @@ const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 
 	const isSignUp = location.pathname.endsWith('/sign-up')
 
+	const { consent } = useConsent()
+
+	// Referral/campaign attribution (referrer + utm_source) is non-essential and
+	// governed by the marketing consent category, mirroring how PostHog analytics
+	// is gated in ConsentProvider.
+	// null = no decision yet → write nothing (ePrivacy/GDPR-safe).
+	// granted → persist attribution from the current page.
+	// withdrawn → clear any previously stored attribution.
 	useEffect(() => {
-		saveReferralAttribution()
-	}, [])
+		if (consent === null) return
+		if (consent.marketing) {
+			saveReferralAttribution()
+		} else {
+			clearReferralAttribution()
+		}
+	}, [consent?.marketing, consent])
 
 	const [loadingProvider, setLoadingProvider] = useState<
 		null | 'google' | 'github'
