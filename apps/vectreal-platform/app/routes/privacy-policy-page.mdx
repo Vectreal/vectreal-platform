@@ -1,8 +1,8 @@
 # Privacy Policy
 
-**Last updated: April 8, 2026**
+**Last Updated: August 2, 2026**
 
-This Privacy Policy explains how Vectreal collects, uses, and protects personal data when you use our services.
+This Privacy Policy explains how Vectreal collects, uses, shares, and protects personal data when you use our services. It also serves as our cookie notice: we do not maintain a separate cookies page, and Section 4 is the authoritative description of the cookies and similar technologies we use.
 
 If you have questions, contact us at [info@vectreal.com](mailto:info@vectreal.com).
 
@@ -10,92 +10,122 @@ If you have questions, contact us at [info@vectreal.com](mailto:info@vectreal.co
 
 Vectreal provides tooling for preparing, managing, and publishing 3D content for the web.
 
+The controller responsible for your personal data is:
+
+Moritz Becker
+Wandsbeker Stieg 31, 22087 Hamburg, Germany
+Email: [info@vectreal.com](mailto:info@vectreal.com)
+
+Further details are available in our [Imprint](/imprint).
+
 ## 2. Data We Collect
 
 We collect the following categories of data, depending on how you use the platform:
 
-- Account and profile data: name, email address, account identifiers.
-- Authentication data: session and identity data processed through Supabase Auth (including optional Google sign-in).
-- Billing and subscription data: billing status, plan, and payment-related metadata. Payment processing is handled by Stripe.
-- Workspace and content data: projects, scenes, uploads, optimization-related metadata, and related logs.
-- Contact and support data: information you submit through the contact form, including message content and your email address.
-- Consent and preference data: consent choices for functional, analytics, and marketing categories; policy version; anonymous identifier where applicable.
-- Technical and security data: IP-derived country, user agent, request metadata, and security/session tokens required to operate the service.
+- **Account and profile data:** name, email address, and account identifiers.
+- **Onboarding data:** optional information you provide during onboarding, such as your role, use case, company name, and how you heard about Vectreal.
+- **Authentication data:** session and identity data processed through Supabase Auth, including sign-in with email and password, magic link, one-time passcode (OTP), or optional Google or GitHub single sign-on.
+- **Billing and subscription data:** plan, billing status, and payment-related identifiers (such as Stripe customer and subscription IDs). Card payments are processed by Stripe; we do not store full card numbers.
+- **Workspace and content data:** organizations and memberships, projects, scenes, uploaded 3D models and related assets, optimization metadata, thumbnails, and related logs. Uploaded assets are stored in private storage and served through our application with permission checks.
+- **API keys:** keys you generate to access or embed content are stored in hashed form together with a short non-sensitive preview.
+- **Contact and support data:** information you submit through the contact form, including your name, email address, inquiry type, and message. This contact data is encrypted at rest.
+- **Consent and preference data:** your consent choices for functional, analytics, and marketing categories, the consent policy version, a country derived from your IP address, your browser user agent, and an anonymous identifier where applicable.
+- **Technical and security data:** IP address and request metadata used transiently for security, rate limiting, and bot protection, and session and CSRF tokens required to operate the service. We do not persist your full IP address for consent records; we store only the derived country.
 
-We do not intentionally collect sensitive personal data unless you choose to provide it in free-text fields.
+We do not intentionally collect special categories of data. Please do not submit sensitive personal data in free-text fields.
 
 ## 3. How We Use Data
 
 We process data to:
 
 - Provide, maintain, and secure the platform.
-- Authenticate users and manage access.
+- Authenticate users and manage accounts, organizations, and access.
 - Deliver billing and subscription functionality.
-- Operate and improve core features.
-- Respond to support and contact requests.
+- Store, process, optimize, publish, and serve your 3D content as you instruct.
+- Send transactional and support emails, such as sign-in links, account notifications, and replies.
+- Protect the service against abuse, fraud, and automated attacks (including bot protection and rate limiting).
 - Measure product usage and performance where analytics consent is granted.
 - Comply with legal obligations and enforce our terms.
 
 ## 4. Cookies, Consent, and Tracking
 
-Vectreal uses cookies and similar storage mechanisms for core operation and optional features.
+Vectreal uses cookies and similar storage mechanisms for core operation and, with your consent, for optional features. We load product analytics (PostHog) only after you opt in.
 
 ### Consent Categories
 
-- Strictly necessary: always enabled; required for authentication, CSRF protection, and core platform operation.
-- Functional: remembers preferences such as UI settings.
-- Analytics and performance: enables product analytics (PostHog) when opted in.
-- Marketing and personalisation: optional category for future marketing features.
+- **Strictly necessary:** always enabled; required for authentication, CSRF protection, storing your consent choice, and core platform operation.
+- **Functional:** remembers preferences such as your theme and UI settings.
+- **Analytics and performance:** enables product analytics (PostHog) when opted in.
+- **Marketing and personalization:** optional category reserved for future marketing features.
+
+### Cookies and Local Storage We Use
+
+| Name | Type | Purpose | Storage |
+| --- | --- | --- | --- |
+| `sb-<project>-auth-token` | Strictly necessary | Supabase authentication session | Cookie |
+| `csrf` | Strictly necessary | Cross-site request forgery protection | Cookie |
+| `consent_prefs` | Strictly necessary | Stores your cookie consent choices (up to 1 year) | Cookie |
+| `theming` | Functional | Remembers your theme preference (up to 1 week) | Cookie |
+| `ph_*` | Analytics | PostHog product analytics; set only after analytics consent | Cookie and local storage |
+| `vr_referral` | Attribution | Remembers how you arrived (referrer, campaign source) for attribution | Local storage |
+
+Before you grant analytics consent, PostHog runs in a memory-only mode that does not store identifiers on your device, and page-view capture is disabled.
 
 ### How Consent Works in the App
 
 - On first visit, users are shown a consent banner.
 - Users can choose Accept all, Reject all, or Manage preferences.
-- Preferences can be updated later from dashboard settings.
-- Consent choices are stored server-side and associated with either a user account or anonymous identifier.
-
-### Current Tracking State
-
-- Analytics events are processed through PostHog only when analytics consent is enabled.
-- We do not currently provide a separate /cookies page; this Privacy Policy is the authoritative cookie and consent notice.
+- Preferences can be updated later from the footer "Cookie Preferences" control or from dashboard settings.
+- Consent choices are stored server-side and associated with either your account or an anonymous identifier, together with the policy version, derived country, and user agent, so we can demonstrate valid consent.
+- If we materially change our consent categories, we increment the consent policy version (currently 1.0.0) and ask you again.
 
 ## 5. Legal Bases for Processing
 
-Where required by law, we rely on one or more of:
+Where the GDPR applies, we rely on one or more of the following:
 
-- Contractual necessity.
-- Legitimate interests (for security, reliability, and product operations).
-- Consent (for optional categories such as analytics/marketing).
-- Legal obligations.
-
-You can withdraw optional consent at any time through in-app consent controls.
+- **Contractual necessity** (Art. 6(1)(b)): to provide the platform, accounts, and billing you request.
+- **Legitimate interests** (Art. 6(1)(f)): for security, reliability, abuse prevention, and product operations, balanced against your rights.
+- **Consent** (Art. 6(1)(a)): for optional categories such as analytics and marketing. You can withdraw consent at any time through the in-app consent controls, without affecting prior lawful processing.
+- **Legal obligations** (Art. 6(1)(c)): for example, tax and accounting requirements.
 
 ## 6. Sharing With Service Providers
 
-We share data only as needed with processors that help us run the service, such as:
+We share personal data only as needed with processors and service providers ("subprocessors") that help us run the service. Each acts under a data processing agreement and processes data only on our instructions, except where they act as independent controllers for their own operations.
 
-- Supabase (authentication and data platform services).
-- Stripe (billing and payments).
-- Cloudflare and hosting/network infrastructure providers.
-- PostHog (analytics, subject to consent).
-- Email delivery providers used for support/contact workflows.
+| Provider | Purpose | Data involved |
+| --- | --- | --- |
+| Supabase | Authentication, database, and file storage | Account, content, and most platform data |
+| Stripe | Billing and payment processing | Billing identifiers and payment data you enter at checkout |
+| Cloudflare | Network delivery and bot protection (Turnstile) | IP address and request metadata |
+| Fly.io | Application hosting | Data processed while operating the service |
+| PostHog | Product analytics (only with consent) | Usage events and, for signed-in users, user ID, email, and name |
+| Resend | Transactional and support email delivery | Recipient email, name, and message content |
+| Google / GitHub | Optional single sign-on | Identity data you authorize during sign-in |
 
-We do not sell personal data.
+We do not sell personal data, and we do not use your content to train third-party generative AI models.
 
 ## 7. Data Retention
 
-We retain data for as long as necessary to provide services, comply with legal obligations, resolve disputes, and enforce agreements. Retention periods vary by data type and business/legal requirements.
+We retain data for as long as necessary to provide the service, comply with legal obligations, resolve disputes, and enforce agreements. Account and content data is retained while your account is active and for a limited period afterward for backups. Consent records are retained to demonstrate compliance. Billing records are retained for the periods required by tax and commercial law. Retention periods otherwise vary by data type and legal requirements.
 
 ## 8. International Transfers
 
-Your data may be processed in countries other than your own, depending on where our providers operate. We use appropriate safeguards where required.
+We host and process data primarily within the EU: our application runs on Fly.io in Frankfurt, analytics use PostHog's EU region, and our database and storage are provided by Supabase. Some providers (such as Stripe, Google, and GitHub) may process data outside the EU, including in the United States. Where data is transferred outside the EEA, we rely on appropriate safeguards such as the European Commission's Standard Contractual Clauses or an adequacy decision.
 
-## 9. Your Rights
+## 9. Security
 
-Depending on your jurisdiction, you may have rights to access, correct, delete, or export your data, and to object to or restrict certain processing.
+We take technical and organizational measures to protect personal data, including encryption in transit (TLS), encryption at rest for sensitive contact submissions, hashing of API keys, access controls on stored files, and CSRF and bot protection. No system is perfectly secure, but we work to protect your data against unauthorized access, loss, or misuse.
 
-To make a privacy request, contact [info@vectreal.com](mailto:info@vectreal.com).
+## 10. Your Rights
 
-## 10. Changes to This Policy
+Depending on your jurisdiction, you may have rights to access, correct, delete, or export your data, to object to or restrict certain processing, and to withdraw consent. Where processing is based on consent or contract and carried out by automated means, you may also have a right to data portability.
 
-We may update this policy from time to time. Material updates will be reflected by updating the date at the top of this page.
+To make a privacy request, contact [info@vectreal.com](mailto:info@vectreal.com). If you are in the EEA and believe we have not handled your data lawfully, you may lodge a complaint with your local supervisory authority. Our lead authority is the Hamburg Commissioner for Data Protection and Freedom of Information (Der Hamburgische Beauftragte für Datenschutz und Informationsfreiheit).
+
+## 11. Children
+
+The Service is not directed to children under 16, and we do not knowingly collect their personal data. If you believe a child has provided us personal data, contact us and we will delete it.
+
+## 12. Changes to This Policy
+
+We may update this policy from time to time. Material updates will be reflected by updating the date at the top of this page and, where appropriate, through an in-app notice.
