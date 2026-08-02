@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.24.1](https://github.com/Vectreal/vectreal-platform/compare/core-v0.24.0...core-v0.24.1) (2026-08-02)
+
+
+### Bug Fixes
+
+* **ci:** resolve workspace protocol at publish time and publish via OIDC ([07e4b62](https://github.com/Vectreal/vectreal-platform/commit/07e4b628be16b61f3ddea9c91cc36c052d60bc8f))
+* **ci:** resolve workspace protocol at publish time and publish via OIDC ([03b9305](https://github.com/Vectreal/vectreal-platform/commit/03b9305719b1cf67548f62730493ca6e3a84c823))
+
 ## [0.24.0](https://github.com/Vectreal/vectreal-platform/compare/core-v0.23.0...core-v0.24.0) (2026-08-01)
 
 
