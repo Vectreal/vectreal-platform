@@ -53,6 +53,7 @@ import {
 	deleteAssets,
 	downloadAsset,
 	downloadAssets,
+	selectUnreferencedAssetIds,
 	uploadSceneAssets
 } from '../../asset/asset-storage.server'
 
@@ -352,7 +353,9 @@ class SceneSettingsService {
 		}
 
 		// Post-commit so storage deletes stay out of the DB transaction.
-		await this.garbageCollectUnreferencedAssets(saveResult.removedAssetIds ?? [])
+		await this.garbageCollectUnreferencedAssets(
+			saveResult.removedAssetIds ?? []
+		)
 
 		return saveResult.savedSettings
 	}
@@ -367,13 +370,10 @@ class SceneSettingsService {
 		if (candidateAssetIds.length === 0) return
 
 		try {
-			const stillReferenced = await this.db
-				.select({ assetId: sceneAssets.assetId })
-				.from(sceneAssets)
-				.where(inArray(sceneAssets.assetId, candidateAssetIds))
-
-			const referenced = new Set(stillReferenced.map((row) => row.assetId))
-			const orphaned = candidateAssetIds.filter((id) => !referenced.has(id))
+			// Asks every reference path, not just `scene_assets`. Checking that one
+			// alone is what deleted scene thumbnails: they are referenced by
+			// `scenes.thumbnail_url`, which joins to nothing.
+			const orphaned = await selectUnreferencedAssetIds(candidateAssetIds)
 
 			if (orphaned.length > 0) {
 				await deleteAssets(orphaned)
