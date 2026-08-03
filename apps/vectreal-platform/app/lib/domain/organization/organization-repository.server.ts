@@ -5,6 +5,7 @@ import { organizationMemberships } from '../../../db/schema/core/organization-me
 import { organizations } from '../../../db/schema/core/organizations'
 import { users } from '../../../db/schema/core/users'
 import { projects } from '../../../db/schema/project/projects'
+import { assertDashboardPermission } from '../dashboard/dashboard-permissions.server'
 
 const db = getDbClient()
 
@@ -70,14 +71,6 @@ async function getMembershipCountByRole(
 	return rows[0]?.count ?? 0
 }
 
-function ensureAdminOrOwner(
-	membership: typeof organizationMemberships.$inferSelect
-) {
-	if (!['admin', 'owner'].includes(membership.role)) {
-		throw new Error('Insufficient permissions')
-	}
-}
-
 export async function getOrganizationDetailForUser(
 	organizationId: string,
 	userId: string
@@ -134,7 +127,9 @@ export async function updateOrganizationName(
 	name: string
 ): Promise<typeof organizations.$inferSelect> {
 	const detail = await getOrganizationDetailForUser(organizationId, userId)
-	ensureAdminOrOwner(detail.membership)
+	assertDashboardPermission('organization:update', {
+		role: detail.membership.role
+	})
 
 	const [updatedOrganization] = await db
 		.update(organizations)
@@ -159,7 +154,9 @@ export async function inviteOrganizationMember(
 	role: Exclude<MembershipRole, 'owner'>
 ): Promise<typeof organizationMemberships.$inferSelect> {
 	const detail = await getOrganizationDetailForUser(organizationId, actorUserId)
-	ensureAdminOrOwner(detail.membership)
+	assertDashboardPermission('organization-member:invite', {
+		role: detail.membership.role
+	})
 
 	const existing = await db
 		.select()
@@ -197,7 +194,9 @@ export async function updateOrganizationMemberRole(
 	nextRole: MembershipRole
 ): Promise<typeof organizationMemberships.$inferSelect> {
 	const detail = await getOrganizationDetailForUser(organizationId, actorUserId)
-	ensureAdminOrOwner(detail.membership)
+	assertDashboardPermission('organization-member:update', {
+		role: detail.membership.role
+	})
 
 	const [targetMembership] = await db
 		.select()
@@ -241,7 +240,9 @@ export async function removeOrganizationMember(
 	targetUserId: string
 ): Promise<void> {
 	const detail = await getOrganizationDetailForUser(organizationId, actorUserId)
-	ensureAdminOrOwner(detail.membership)
+	assertDashboardPermission('organization-member:remove', {
+		role: detail.membership.role
+	})
 
 	const [targetMembership] = await db
 		.select()
@@ -307,9 +308,9 @@ export async function deleteOrganization(
 	userId: string
 ): Promise<void> {
 	const detail = await getOrganizationDetailForUser(organizationId, userId)
-	if (detail.membership.role !== 'owner') {
-		throw new Error('Only organization owners can delete organizations')
-	}
+	assertDashboardPermission('organization:delete', {
+		role: detail.membership.role
+	})
 
 	const projectsTotal = await getOrganizationProjectsTotal(
 		organizationId,

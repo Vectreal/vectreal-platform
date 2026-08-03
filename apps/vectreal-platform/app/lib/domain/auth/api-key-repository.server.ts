@@ -14,6 +14,7 @@ import {
 } from '../billing/entitlement-service.server'
 import { QuotaExceededError } from '../billing/quota-exceeded-error'
 import { checkQuota } from '../billing/usage-service.server'
+import { assertDashboardPermission } from '../dashboard/dashboard-permissions.server'
 
 const db = getDbClient()
 
@@ -42,9 +43,7 @@ async function verifyOrganizationAdminAccess(
 		throw new Error('User does not have access to this organization')
 	}
 
-	if (!['admin', 'owner'].includes(membership[0].role)) {
-		throw new Error('Insufficient permissions. Admin or owner role required.')
-	}
+	assertDashboardPermission('api-key:create', { role: membership[0].role })
 
 	return membership[0]
 }
@@ -205,10 +204,7 @@ export async function getApiKeyById(
 
 	const { apiKey, creator, organization, membership } = keyData[0]
 
-	// Verify user has admin/owner access
-	if (!['admin', 'owner'].includes(membership.role)) {
-		throw new Error('Insufficient permissions to view this API key')
-	}
+	assertDashboardPermission('api-key:read', { role: membership.role })
 
 	// Get associated projects
 	const projectMappings = await db
