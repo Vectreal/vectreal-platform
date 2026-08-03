@@ -2,10 +2,16 @@ import { randomUUID } from 'crypto'
 import { createHash } from 'node:crypto'
 
 import { createClient } from '@supabase/supabase-js'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm'
 
 import { getDbClient } from '../../../db/client'
-import { assets, folders } from '../../../db/schema'
+import {
+	assets,
+	folders,
+	sceneAssets,
+	scenePublished,
+	scenes
+} from '../../../db/schema'
 
 import type { SceneAssetBinaryDataMap } from '../../../types/api'
 
@@ -344,6 +350,65 @@ export async function downloadAssets(
  *
  * Missing assets are treated as non-fatal and logged as warnings.
  */
+
+/**
+ * Narrows a set of asset ids to the ones nothing points at any more.
+ *
+ * There are three ways an asset is still in use, and every caller that deletes
+ * assets has to respect all of them:
+ *
+ *  1. `scene_assets` - anything a scene's settings link to.
+ *  2. `scene_published` - the live GLB.
+ *  3. `scenes.thumbnail_url` - the scene thumbnail.
+ *
+ * The third is the one that bit us. A thumbnail is referenced by a *URL* rather
+ * than a foreign key, so it joins to nothing, and the save-path GC only ever
+ * asked `scene_assets`. A save unlinks the thumbnail from the scene's asset set,
+ * the GC finds no remaining `scene_assets` row, and deletes the file that
+ * `thumbnail_url` still points at - which is why a freshly published scene lost
+ * its thumbnail. Some thumbnails are not in `scene_assets` at all, so for those
+ * a single GC pass was enough to lose them.
+ *
+ * Uploads are content-addressed and reused, so an asset is frequently shared;
+ * this must run *after* the rows that reference it are gone, and anything still
+ * pointing at it belongs to somebody else.
+ */
+export async function selectUnreferencedAssetIds(
+	assetIds: string[]
+): Promise<string[]> {
+	if (assetIds.length === 0) {
+		return []
+	}
+
+	// The id is the last path segment of `/api/scenes/:sceneId/thumbnail/:assetId`.
+	const thumbnailAssetId = sql<string>`regexp_replace(${scenes.thumbnailUrl}, '^.*/', '')`
+
+	const [attached, published, thumbnails] = await Promise.all([
+		db
+			.selectDistinct({ assetId: sceneAssets.assetId })
+			.from(sceneAssets)
+			.where(inArray(sceneAssets.assetId, assetIds)),
+		db
+			.selectDistinct({ assetId: scenePublished.assetId })
+			.from(scenePublished)
+			.where(inArray(scenePublished.assetId, assetIds)),
+		db
+			.select({ assetId: thumbnailAssetId })
+			.from(scenes)
+			.where(
+				and(isNotNull(scenes.thumbnailUrl), inArray(thumbnailAssetId, assetIds))
+			)
+	])
+
+	const referenced = new Set([
+		...attached.map((row) => row.assetId),
+		...published.map((row) => row.assetId),
+		...thumbnails.map((row) => row.assetId)
+	])
+
+	return assetIds.filter((assetId) => !referenced.has(assetId))
+}
+
 export async function deleteAssets(assetIds: string[]): Promise<void> {
 	await ensureStorageBucketOnce()
 
