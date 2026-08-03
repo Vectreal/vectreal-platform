@@ -25,7 +25,6 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
-import { Textarea } from '@shared/components/ui/textarea'
 import { slugify } from '@shared/utils'
 import { useSetAtom } from 'jotai/react'
 import { AlertCircle, Plus, X } from 'lucide-react'
@@ -48,7 +47,7 @@ import {
 	getQuotaLimit,
 	getRecommendedUpgrade
 } from '../../../lib/domain/billing/entitlement-service.server'
-import { computeProjectCreationCapabilities } from '../../../lib/domain/dashboard/dashboard-stats.server'
+import { buildDashboardCapabilities } from '../../../lib/domain/dashboard/dashboard-capabilities'
 import {
 	createProject,
 	getUserProjects
@@ -75,8 +74,7 @@ const projectFormSchema = z.object({
 			/^[a-z0-9]+(?:-[a-z0-9]+)*$/,
 			'Slug must be lowercase letters, numbers, and hyphens only'
 		),
-	organizationId: z.string().min(1, 'Organization is required'),
-	description: z.string().optional()
+	organizationId: z.string().min(1, 'Organization is required')
 })
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>
@@ -128,7 +126,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	)
 
 	// Compute project creation capabilities
-	const projectCreationCapabilities = computeProjectCreationCapabilities(
+	const projectCreationCapabilities = buildDashboardCapabilities(
 		organizations,
 		projectQuotaByOrganization
 	)
@@ -233,8 +231,7 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 			organizationId:
 				organizations.length === 1
 					? organizations[0].organization.id
-					: organizations[0]?.organization.id || '',
-			description: ''
+					: organizations[0]?.organization.id || ''
 		}
 	})
 
@@ -263,7 +260,8 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	// Get selected organization ID and check if user can create projects in it
 	const selectedOrgId = form.watch('organizationId')
 	const canCreateInSelectedOrg =
-		selectedOrgId && projectCreationCapabilities[selectedOrgId]?.canCreate
+		selectedOrgId &&
+		projectCreationCapabilities[selectedOrgId]?.canCreateProject
 	const selectedOrgQuota = selectedOrgId
 		? projectCreationCapabilities[selectedOrgId]
 		: null
@@ -275,7 +273,7 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	// Check if user has any organization where they can create projects
 	const hasAnyCreatePermission = Object.values(
 		projectCreationCapabilities
-	).some((cap) => cap.canCreate)
+	).some((cap) => cap.canCreateProject)
 	const hasAnyRolePermission = organizations.some(({ membership }) =>
 		['owner', 'admin', 'member'].includes(membership.role)
 	)
@@ -503,40 +501,6 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 											<FormDescription>
 												Used in URLs and must be unique. Auto-generated from
 												name.
-											</FormDescription>
-										)}
-									</FormItem>
-								)}
-							/>
-
-							{/* Description (optional) */}
-							<FormField
-								control={form.control}
-								name="description"
-								render={({ field, fieldState }) => (
-									<FormItem>
-										<FormLabel>
-											Description{' '}
-											<span className="text-muted-foreground font-normal">
-												(Optional)
-											</span>
-										</FormLabel>
-										<FormControl>
-											<Textarea
-												{...field}
-												onChange={(e) => {
-													form.clearErrors('description')
-													field.onChange(e)
-												}}
-												placeholder="Describe your project..."
-												className="min-h-32"
-											/>
-										</FormControl>
-										{fieldState.error ? (
-											<FormMessage />
-										) : (
-											<FormDescription>
-												Help your team understand the project's purpose
 											</FormDescription>
 										)}
 									</FormItem>

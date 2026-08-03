@@ -19,6 +19,7 @@ interface ParamRevalidationArgs {
 const DASHBOARD_OVERLAY_ROUTE_PATTERNS = [
 	/^\/dashboard\/projects\/new$/,
 	/^\/dashboard\/projects\/[^/]+\/edit$/,
+	/^\/dashboard\/projects\/edit\/[^/]+$/,
 	/^\/dashboard\/api-keys\/new$/,
 	/^\/dashboard\/api-keys\/[^/]+\/edit$/,
 	/^\/dashboard\/organizations\/[^/]+$/,

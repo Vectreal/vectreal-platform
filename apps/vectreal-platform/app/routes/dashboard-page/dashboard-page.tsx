@@ -1,18 +1,21 @@
 import { useSetAtom } from 'jotai/react'
+import { useMemo } from 'react'
 import { data, Link } from 'react-router'
 
 import { Route } from './+types/dashboard-page'
 import {
+	createSceneColumns,
 	DashboardOverview,
 	DataTable,
-	sceneColumns,
 	type SceneRow
 } from '../../components/dashboard'
 import { DashboardSkeleton } from '../../components/skeletons'
+import { useDashboardMutationStatus } from '../../hooks/use-dashboard-mutations'
 import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import { loadOrgUsage } from '../../lib/domain/billing/billing-dashboard-loader.server'
 import { getOrgSubscription } from '../../lib/domain/billing/entitlement-service.server'
+import { toSceneRef } from '../../lib/domain/dashboard/dashboard-confirmation'
 import {
 	computeProjectStats,
 	computeSceneStats,
@@ -20,12 +23,16 @@ import {
 } from '../../lib/domain/dashboard/dashboard-stats.server'
 import { getUserProjects } from '../../lib/domain/project/project-repository.server'
 import { getProjectsScenes } from '../../lib/domain/scene/server/scene-folder-repository.server'
-import { deleteDialogAtom } from '../../lib/stores/dashboard-management-store'
+import {
+	deleteDialogAtom,
+	moveDialogAtom
+} from '../../lib/stores/dashboard-management-store'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user, userWithDefaults, headers } = await loadAuthenticatedUser(request)
+	const { user, userWithDefaults, headers } =
+		await loadAuthenticatedUser(request)
 
 	const userProjects = await getUserProjects(user.id)
 
@@ -117,6 +124,8 @@ export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors
 const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
 	const { projects, recentScenes, overview, usage, plan } = loaderData
 	const setDeleteDialog = useSetAtom(deleteDialogAtom)
+	const setMoveDialog = useSetAtom(moveDialogAtom)
+	const { isBusy: isTableBusy } = useDashboardMutationStatus()
 	const sceneTableState = useDashboardTableState({
 		namespace: 'dashboard-scenes'
 	})
@@ -131,11 +140,32 @@ const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
 			description: scene.description ?? undefined,
 			projectId: scene.projectId,
 			projectName: sceneProject?.project.name || 'Unknown',
+			// Carried so `toSceneRef` reports the real location. This used to be
+			// hardcoded to null at the delete call site.
+			folderId: scene.folderId,
 			status: scene.status,
 			thumbnailUrl: scene.thumbnailUrl ?? undefined,
 			updatedAt: scene.updatedAt
 		}
 	})
+
+	const sceneColumns = useMemo(
+		() =>
+			createSceneColumns({
+				isActionsDisabled: isTableBusy,
+				onMoveItem: (row) => {
+					setMoveDialog({
+						open: true,
+						items: [toSceneRef(row)],
+						projectId: row.projectId
+					})
+				},
+				onDeleteItem: (row) => {
+					setDeleteDialog({ open: true, items: [toSceneRef(row)] })
+				}
+			}),
+		[isTableBusy, setDeleteDialog, setMoveDialog]
+	)
 
 	return (
 		<div className="space-y-8 p-6">
@@ -156,9 +186,17 @@ const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
 							View all projects →
 						</Link>
 					</div>
+					{/*
+					  No bulk Move here. This table spans every project, and a move is
+					  intra-project by design, so a multi-project selection has no single
+					  valid destination. Move lives on the row menu, where the project is
+					  unambiguous.
+					*/}
 					<DataTable
 						columns={sceneColumns}
 						data={sceneTableData}
+						isUpdating={isTableBusy}
+						disableSelectionActions={isTableBusy}
 						searchKey="name"
 						searchPlaceholder="Search recent scenes..."
 						searchValue={sceneTableState.searchValue}
@@ -172,13 +210,7 @@ const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
 						onDelete={(selectedRows) => {
 							setDeleteDialog({
 								open: true,
-								items: (selectedRows as SceneRow[]).map((row) => ({
-									id: row.id,
-									type: 'scene',
-									name: row.name,
-									projectId: row.projectId,
-									folderId: null
-								}))
+								items: (selectedRows as SceneRow[]).map(toSceneRef)
 							})
 						}}
 					/>

@@ -40,6 +40,7 @@ import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
 import { getOrgSubscription } from '../../lib/domain/billing/entitlement-service.server'
+import { buildDashboardCapabilities } from '../../lib/domain/dashboard/dashboard-capabilities'
 import { getSidebarProjects } from '../../lib/domain/project/project-repository.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 import {
@@ -80,7 +81,13 @@ export async function loader({ request }: Route.LoaderArgs) {
 		? await getOrgSubscription(primaryOrgId)
 		: { plan: 'free' as const }
 
-	return data({ user, sidebarProjects, plan }, { headers })
+	// Role-only, deliberately without project quota: every dashboard route needs
+	// to know what the user may do, but only the projects routes gate on quota,
+	// and looking it up here would cost two round trips per organization on
+	// every dashboard page.
+	const capabilities = buildDashboardCapabilities(orgs)
+
+	return data({ user, sidebarProjects, plan, capabilities }, { headers })
 }
 
 /**
@@ -163,7 +170,11 @@ const DashboardLayout = () => {
 
 	// Helper to extract dashboard project subroutes
 	const projectDetailRegex = /^\/dashboard\/projects\/([^/]+)$/
-	const projectEditRegex = /^\/dashboard\/projects\/([^/]+)\/edit$/
+	// Both drawer shapes: the nested one, and the list-scoped
+	// `/dashboard/projects/edit/:projectId`, which `sceneDetailRegex` below
+	// would otherwise claim as a scene.
+	const projectEditRegex =
+		/^\/dashboard\/projects\/(?:([^/]+)\/edit|edit\/([^/]+))$/
 	const folderDetailRegex = /^\/dashboard\/projects\/([^/]+)\/folder\/([^/]+)$/
 	const sceneDetailRegex = /^\/dashboard\/projects\/([^/]+)\/([^/]+)$/
 	const newProjectRegex = /^\/dashboard\/projects\/new$/

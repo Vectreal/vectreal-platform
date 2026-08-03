@@ -26,8 +26,8 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 import { Textarea } from '@shared/components/ui/textarea'
-import { Save, X } from 'lucide-react'
-import { useEffect } from 'react'
+import { Save, Trash2, X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import {
 	data,
@@ -40,7 +40,18 @@ import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { z, ZodError } from 'zod'
 
 import { Route } from './+types/projects-edit'
+import {
+	isListScopedProjectEditPath,
+	isProjectEditPath
+} from '../../../components/dashboard/utils'
+import { ConfirmDestructiveDialog } from '../../../components/shared/confirm-destructive-dialog'
+import { useDashboardMutations } from '../../../hooks/use-dashboard-mutations'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
+import { buildDashboardCapabilities } from '../../../lib/domain/dashboard/dashboard-capabilities'
+import {
+	planDeleteConfirmation,
+	toProjectRef
+} from '../../../lib/domain/dashboard/dashboard-confirmation'
 import { validateAllowedDomainInput } from '../../../lib/domain/embed/embed-domain-policy'
 import {
 	getProject,
@@ -64,7 +75,6 @@ const projectEditSchema = z.object({
 			/^[a-z0-9]+(?:-[a-z0-9]+)*$/,
 			'Slug must be lowercase letters, numbers, and hyphens only'
 		),
-	description: z.string().optional(),
 	allowedEmbedDomains: z.string().optional()
 })
 
@@ -88,7 +98,32 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Project not found', { status: 404 })
 	}
 
-	return data({ project, organizations }, { headers })
+	const capabilities = buildDashboardCapabilities(organizations)
+
+	return data(
+		{
+			project,
+			organizations,
+			canDelete: capabilities[project.organizationId]?.canDeleteProject ?? false
+		},
+		{ headers }
+	)
+}
+
+/**
+ * Where to land after a successful save.
+ *
+ * Client-supplied, so it is matched against the two shapes we actually issue
+ * rather than trusted - an open redirect here would be reachable by anyone who
+ * can craft a form post.
+ */
+function resolveReturnTo(raw: FormDataEntryValue | null, projectId: string) {
+	const fallback = `/dashboard/projects/${projectId}`
+	if (typeof raw !== 'string') {
+		return fallback
+	}
+
+	return raw === '/dashboard/projects' || raw === fallback ? raw : fallback
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -138,7 +173,9 @@ export async function action({ request, params }: Route.ActionArgs) {
 			user.id
 		)
 
-		return redirect(`/dashboard/projects/${projectId}`, { headers })
+		return redirect(resolveReturnTo(formData.get('returnTo'), projectId), {
+			headers
+		})
 	} catch (error) {
 		if (error instanceof ZodError) {
 			const fieldErrors: Record<string, string> = {}
@@ -171,17 +208,42 @@ export async function action({ request, params }: Route.ActionArgs) {
 export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
 
 const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
-	const { project, organizations } = loaderData
+	const { project, organizations, canDelete } = loaderData
 	const csrfToken = useAuthenticityToken()
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+
+	const deletePlan = useMemo(
+		() =>
+			planDeleteConfirmation([
+				toProjectRef({ id: project.id, name: project.name })
+			]),
+		[project.id, project.name]
+	)
+
+	const deleteMutation = useDashboardMutations({
+		onSuccess: () => {
+			navigate('/dashboard/projects', { replace: true })
+		}
+	})
 
 	const location = useLocation()
 	const navigate = useNavigate()
 
-	const isOpen = location.pathname === `/dashboard/projects/${project.id}/edit`
+	const isOpen = isProjectEditPath(location.pathname, project.id)
+
+	/*
+	  Closing returns you to wherever you opened the drawer from. Opened from a
+	  card, that is the list; opened from the project header, the project. It used
+	  to always navigate to the project, so editing from the list quietly moved
+	  you into it.
+	*/
+	const closeTo = isListScopedProjectEditPath(location.pathname)
+		? '/dashboard/projects'
+		: `/dashboard/projects/${project.id}`
 
 	const handleOpenChange = (open: boolean) => {
 		if (!open) {
-			navigate(`/dashboard/projects/${project.id}`)
+			navigate(closeTo)
 		}
 	}
 
@@ -192,7 +254,6 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 		defaultValues: {
 			name: project.name,
 			slug: project.slug,
-			description: '',
 			allowedEmbedDomains: project.allowedEmbedDomains ?? ''
 		}
 	})
@@ -240,6 +301,7 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 					<Form {...form}>
 						<RemixForm method="post" className="space-y-6">
 							<input type="hidden" name="csrf" value={csrfToken} />
+							<input type="hidden" name="returnTo" value={closeTo} />
 							{/* Organization (read-only) */}
 							<FormItem>
 								<FormLabel>Organization</FormLabel>
@@ -324,40 +386,6 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 								)}
 							/>
 
-							{/* Description (optional) */}
-							<FormField
-								control={form.control}
-								name="description"
-								render={({ field, fieldState }) => (
-									<FormItem>
-										<FormLabel>
-											Description{' '}
-											<span className="text-muted-foreground font-normal">
-												(Optional)
-											</span>
-										</FormLabel>
-										<FormControl>
-											<Textarea
-												{...field}
-												onChange={(e) => {
-													form.clearErrors('description')
-													field.onChange(e)
-												}}
-												placeholder="Describe your project..."
-												className="min-h-32"
-											/>
-										</FormControl>
-										{fieldState.error ? (
-											<FormMessage />
-										) : (
-											<FormDescription>
-												Help your team understand the project&apos;s purpose
-											</FormDescription>
-										)}
-									</FormItem>
-								)}
-							/>
-
 							<FormField
 								control={form.control}
 								name="allowedEmbedDomains"
@@ -422,6 +450,55 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 							</div>
 						</RemixForm>
 					</Form>
+
+					{/*
+					  Outside the form on purpose: a nested <button> submits its form,
+					  so a delete button inside would save the project on the way to
+					  destroying it.
+					*/}
+					<section className="border-destructive/40 mt-8 space-y-3 rounded-2xl border p-4">
+						<h3 className="text-destructive text-sm font-semibold">
+							Danger zone
+						</h3>
+						<p className="text-muted-foreground text-sm">
+							Deleting this project removes every scene, folder and published
+							embed inside it.
+						</p>
+						<Button
+							type="button"
+							variant="destructive"
+							disabled={!canDelete}
+							onClick={() => setDeleteDialogOpen(true)}
+						>
+							<Trash2 className="mr-2 h-4 w-4" />
+							Delete project
+						</Button>
+						{!canDelete ? (
+							<p className="text-muted-foreground text-xs">
+								Only organization owners can delete a project.
+							</p>
+						) : null}
+					</section>
+
+					<ConfirmDestructiveDialog
+						open={deleteDialogOpen}
+						onOpenChange={(open) => {
+							if (!open && deleteMutation.state !== 'idle') {
+								return
+							}
+							setDeleteDialogOpen(open)
+						}}
+						plan={deletePlan}
+						isPending={deleteMutation.state !== 'idle'}
+						errorMessage={deleteMutation.lastError}
+						onConfirm={(confirmationText) => {
+							deleteMutation.submit({
+								verb: 'delete',
+								targets: [{ type: 'project', id: project.id }],
+								confirmationText
+							})
+						}}
+					/>
 				</div>
 			</DrawerContent>
 		</Drawer>
