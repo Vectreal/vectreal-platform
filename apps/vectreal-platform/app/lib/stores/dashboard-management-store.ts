@@ -1,21 +1,7 @@
 import { atom } from 'jotai'
 import { createStore } from 'jotai/vanilla'
 
-export interface DashboardContentRowSelection {
-	id: string
-	type: 'scene' | 'folder'
-	name: string
-	projectId: string
-	folderId?: string | null
-}
-
-export interface DashboardTableState {
-	search: string
-	pageIndex: number
-	pageSize: number
-	sortBy: string | null
-	sortDirection: 'asc' | 'desc' | null
-}
+import type { DashboardEntityRef } from '../domain/dashboard/dashboard-confirmation'
 
 export interface DashboardCreateFolderDialogState {
 	open: boolean
@@ -27,21 +13,20 @@ export interface DashboardCreateFolderDialogState {
 
 export interface DashboardRenameDialogState {
 	open: boolean
-	item: DashboardContentRowSelection | null
+	item: DashboardEntityRef | null
 	name: string
 }
 
 export interface DashboardDeleteDialogState {
 	open: boolean
-	items: DashboardContentRowSelection[]
+	items: DashboardEntityRef[]
 }
 
-const defaultTableState: DashboardTableState = {
-	search: '',
-	pageIndex: 0,
-	pageSize: 10,
-	sortBy: null,
-	sortDirection: null
+export interface DashboardMoveDialogState {
+	open: boolean
+	items: DashboardEntityRef[]
+	/** The project the move is confined to; moves never cross projects. */
+	projectId: string | null
 }
 
 const defaultCreateFolderDialogState: DashboardCreateFolderDialogState = {
@@ -63,7 +48,13 @@ const defaultDeleteDialogState: DashboardDeleteDialogState = {
 	items: []
 }
 
-const selectedRowsAtom = atom<DashboardContentRowSelection[]>([])
+const defaultMoveDialogState: DashboardMoveDialogState = {
+	open: false,
+	items: [],
+	projectId: null
+}
+
+const selectedRowsAtom = atom<DashboardEntityRef[]>([])
 const createFolderDialogAtom = atom<DashboardCreateFolderDialogState>(
 	defaultCreateFolderDialogState
 )
@@ -73,25 +64,15 @@ const renameDialogAtom = atom<DashboardRenameDialogState>(
 const deleteDialogAtom = atom<DashboardDeleteDialogState>(
 	defaultDeleteDialogState
 )
-const tableStatesAtom = atom<Record<string, DashboardTableState>>({})
+const moveDialogAtom = atom<DashboardMoveDialogState>(defaultMoveDialogState)
 
 const dashboardManagementStore = createStore()
 
-dashboardManagementStore.set(selectedRowsAtom, [])
-dashboardManagementStore.set(
-	createFolderDialogAtom,
-	defaultCreateFolderDialogState
-)
-dashboardManagementStore.set(renameDialogAtom, defaultRenameDialogState)
-dashboardManagementStore.set(deleteDialogAtom, defaultDeleteDialogState)
-dashboardManagementStore.set(tableStatesAtom, {})
-
 export {
-	defaultTableState,
 	selectedRowsAtom,
 	createFolderDialogAtom,
 	renameDialogAtom,
 	deleteDialogAtom,
-	tableStatesAtom,
+	moveDialogAtom,
 	dashboardManagementStore
 }
