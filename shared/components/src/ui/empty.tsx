@@ -61,7 +61,8 @@ function EmptyTitle({ className, ...props }: React.ComponentProps<'div'>) {
 	return (
 		<div
 			data-slot="empty-title"
-			className={cn('text-lg font-medium tracking-tight', className)}
+			// The h3 rung, matching every other panel-level title.
+			className={cn('text-h3', className)}
 			{...props}
 		/>
 	)

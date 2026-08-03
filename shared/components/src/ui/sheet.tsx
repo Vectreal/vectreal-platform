@@ -3,6 +3,8 @@ import { cn } from '@shared/utils'
 import { XIcon } from 'lucide-react'
 import * as React from 'react'
 
+import { OVERLAY_CLOSE_CLASSNAME } from './overlay-close'
+
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
 	return <SheetPrimitive.Root data-slot="sheet" {...props} />
 }
@@ -69,12 +71,7 @@ function SheetContent({
 				{...props}
 			>
 				{children}
-				{/*
-				  A 16px icon was the whole hit target, on a `rounded-xs` corner that
-				  matched nothing else in the system. Now a proper 36px round target
-				  that grows a surface on hover.
-				*/}
-				<SheetPrimitive.Close className="ring-offset-background focus-visible:ring-ring hover:bg-foreground/8 absolute top-4 right-4 flex size-9 items-center justify-center rounded-full opacity-70 transition-[opacity,background-color] hover:opacity-100 focus-visible:ring-2 focus-visible:outline-hidden disabled:pointer-events-none">
+				<SheetPrimitive.Close className={OVERLAY_CLOSE_CLASSNAME}>
 					<XIcon className="size-4" />
 					<span className="sr-only">Close</span>
 				</SheetPrimitive.Close>
@@ -111,13 +108,12 @@ function SheetTitle({
 		<SheetPrimitive.Title
 			data-slot="sheet-title"
 			/*
-			  Sized for the same reason as `DrawerTitle` - Radix renders an `<h2>`,
-			  and a bare `h2` picks up `--text-h2` (28px) from the base layer.
+			  The h3 rung, for the same reasons as `DrawerTitle`: Radix renders an
+			  `<h2>`, a bare `h2` picks up `--text-h2` (28px) from the base layer,
+			  and `text-lg font-semibold` is a shadcn default the type scale does
+			  not recognize.
 			*/
-			className={cn(
-				'text-foreground text-lg leading-none font-semibold',
-				className
-			)}
+			className={cn('text-foreground text-h3', className)}
 			{...props}
 		/>
 	)

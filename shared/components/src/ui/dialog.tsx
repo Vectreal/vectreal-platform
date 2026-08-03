@@ -3,6 +3,8 @@ import { cn } from '@shared/utils'
 import { XIcon } from 'lucide-react'
 import * as React from 'react'
 
+import { OVERLAY_CLOSE_CLASSNAME } from './overlay-close'
+
 function Dialog({
 	...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -66,9 +68,9 @@ function DialogContent({
 				{showCloseButton && (
 					<DialogPrimitive.Close
 						data-slot="dialog-close"
-						className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+						className={OVERLAY_CLOSE_CLASSNAME}
 					>
-						<XIcon />
+						<XIcon className="size-4" />
 						<span className="sr-only">Close</span>
 					</DialogPrimitive.Close>
 				)}
@@ -81,7 +83,19 @@ function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
 	return (
 		<div
 			data-slot="dialog-header"
-			className={cn('flex flex-col gap-2 text-center sm:text-left', className)}
+			/*
+			  Left-aligned at every width. The shadcn default centers below `sm`,
+			  which put a centered title above left-aligned body copy in every
+			  dialog that has a list or a form under it - and had call sites
+			  overriding it back.
+			*/
+			/*
+			  `pr-8` reserves the close button's corner - it is positioned against
+			  the content rather than laid out in the header, so a long title ran
+			  underneath it. Now that the target is 36px instead of a bare glyph,
+			  the old `pr-6` at call sites was no longer enough.
+			*/
+			className={cn('flex flex-col gap-2 pr-8 text-left', className)}
 			{...props}
 		/>
 	)
@@ -107,7 +121,14 @@ function DialogTitle({
 	return (
 		<DialogPrimitive.Title
 			data-slot="dialog-title"
-			className={cn('text-lg leading-none font-semibold', className)}
+			/*
+			  The h3 rung, the same as `DrawerTitle` and `SheetTitle`. A modal, a
+			  drawer and a sheet are the same thing wearing different animations, so
+			  their titles should not have been three different sizes. This was
+			  `text-lg font-semibold` - a shadcn default, and a pairing the type
+			  scale does not contain.
+			*/
+			className={cn('text-h3', className)}
 			{...props}
 		/>
 	)

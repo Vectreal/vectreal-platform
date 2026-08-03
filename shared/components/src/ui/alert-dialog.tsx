@@ -70,7 +70,13 @@ function AlertDialogHeader({
 	return (
 		<div
 			data-slot="alert-dialog-header"
-			className={cn('flex flex-col gap-2 text-center sm:text-left', className)}
+			/*
+			  Left-aligned at every width. The shadcn default centers below `sm`,
+			  which put a centered title above left-aligned body copy in every
+			  dialog that has a list or a form under it - and had call sites
+			  overriding it back.
+			*/
+			className={cn('flex flex-col gap-2 text-left', className)}
 			{...props}
 		/>
 	)
@@ -99,7 +105,14 @@ function AlertDialogTitle({
 	return (
 		<AlertDialogPrimitive.Title
 			data-slot="alert-dialog-title"
-			className={cn('text-lg font-semibold', className)}
+			/*
+			  The h3 rung, the same as `DrawerTitle` and `SheetTitle`. A modal, a
+			  drawer and a sheet are the same thing wearing different animations, so
+			  their titles should not have been three different sizes. This was
+			  `text-lg font-semibold` - a shadcn default, and a pairing the type
+			  scale does not contain.
+			*/
+			className={cn('text-h3', className)}
 			{...props}
 		/>
 	)
