@@ -8,7 +8,10 @@ import { sceneFolders } from '../../../../db/schema/project/scene-folders'
 import { scenePublished } from '../../../../db/schema/project/scene-published'
 import { sceneSettings } from '../../../../db/schema/project/scene-settings'
 import { scenes } from '../../../../db/schema/project/scenes'
-import { deleteAssets } from '../../asset/asset-storage.server'
+import {
+	deleteAssets,
+	selectUnreferencedAssetIds
+} from '../../asset/asset-storage.server'
 import {
 	getQuotaLimit,
 	getRecommendedUpgrade
@@ -798,43 +801,6 @@ async function collectSceneAssetIds(sceneId: string): Promise<string[]> {
 }
 
 /**
- * Narrows candidate assets to the ones nothing points at any more.
- *
- * Uploads are content-addressed and reused - `prepareSceneUpload` hands back an
- * existing asset when the filename and content hash match - so a scene's assets
- * are frequently *other scenes'* assets too. Deleting by association would take
- * the shared ones with it and break every scene still using them.
- *
- * Run this after the scene row is gone: its own join rows have cascaded away by
- * then, so anything still referencing an asset is somebody else.
- */
-async function selectUnreferencedAssets(
-	candidateIds: string[]
-): Promise<string[]> {
-	if (candidateIds.length === 0) {
-		return []
-	}
-
-	const [stillAttached, stillPublished] = await Promise.all([
-		db
-			.selectDistinct({ assetId: sceneAssets.assetId })
-			.from(sceneAssets)
-			.where(inArray(sceneAssets.assetId, candidateIds)),
-		db
-			.selectDistinct({ assetId: scenePublished.assetId })
-			.from(scenePublished)
-			.where(inArray(scenePublished.assetId, candidateIds))
-	])
-
-	const referenced = new Set([
-		...stillAttached.map((row) => row.assetId),
-		...stillPublished.map((row) => row.assetId)
-	])
-
-	return candidateIds.filter((assetId) => !referenced.has(assetId))
-}
-
-/**
  * @param options.deferAssetCleanup Skip the storage call and hand the orphaned
  * asset ids back instead. Bulk callers set this and delete once at the end:
  * `deleteAssets` is a network round trip, so doing it per scene inside a loop
@@ -858,7 +824,7 @@ export async function deleteScene(
 
 	await db.delete(scenes).where(eq(scenes.id, sceneId))
 
-	const orphanedAssetIds = await selectUnreferencedAssets(candidateAssetIds)
+	const orphanedAssetIds = await selectUnreferencedAssetIds(candidateAssetIds)
 
 	if (orphanedAssetIds.length > 0 && !options.deferAssetCleanup) {
 		try {
