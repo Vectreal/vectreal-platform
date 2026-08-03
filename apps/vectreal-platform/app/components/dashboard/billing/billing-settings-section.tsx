@@ -204,7 +204,7 @@ export function BillingSettingsSection({
 				<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 					<div className="min-w-0 space-y-1">
 						<div className="flex flex-wrap items-center gap-2">
-							<h2 className="text-xl font-medium tracking-tight">{planLabel}</h2>
+							<h2 className="text-h3">{planLabel}</h2>
 							<Badge
 								variant={stateConfig.variant}
 								className="flex items-center gap-1"

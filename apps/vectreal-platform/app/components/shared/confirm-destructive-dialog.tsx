@@ -80,15 +80,19 @@ export function ConfirmDestructiveDialog({
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			{/*
-			  `gap-5` and a left-aligned header rather than the defaults. The shared
-			  content applies one uniform gap to every child, which made the title,
-			  the summary, the consequences, the confirm field and the footer read as
-			  five slabs of equal weight. Here they are two groups - what is being
-			  destroyed, and what you have to do about it - so the spacing says so.
+			  `gap-5` rather than the default. The shared content applies one uniform
+			  gap to every child, which made the title, the summary, the
+			  consequences, the confirm field and the footer read as five slabs of
+			  equal weight. Here they are two groups - what is being destroyed, and
+			  what you have to do about it - so the spacing says so.
+
+			  The header no longer needs a `text-left`: the primitive is left-aligned
+			  now, since a centered title over a left-aligned list was wrong in every
+			  dialog, not just this one.
 			*/}
 			<DialogContent className="gap-5">
-				<DialogHeader className="gap-1.5 text-left">
-					<DialogTitle className="pr-6">{plan.title}</DialogTitle>
+				<DialogHeader className="gap-1.5">
+					<DialogTitle>{plan.title}</DialogTitle>
 					<DialogDescription>{plan.description}</DialogDescription>
 				</DialogHeader>
 
@@ -134,7 +138,7 @@ export function ConfirmDestructiveDialog({
 							autoCorrect="off"
 							autoCapitalize="off"
 							spellCheck={false}
-							className="rounded-lg font-mono"
+							className="font-mono"
 						/>
 					</div>
 				) : null}

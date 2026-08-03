@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { MemoryRouter } from 'react-router'
 
+import { InlineEditableMetadataField } from './inline-editable-metadata-field'
 import { ProjectCard } from './project-card'
 import { SceneThumbnail } from './scene-thumbnail'
 import { StatusBreakdown } from './status-breakdown'
@@ -50,7 +52,12 @@ export const UsageMeters: Story = {
 			</UsageMeterGrid>
 
 			<div className="max-w-sm space-y-3">
-				<UsageMeter variant="row" label="Scenes (total)" current={4} limit={10} />
+				<UsageMeter
+					variant="row"
+					label="Scenes (total)"
+					current={4}
+					limit={10}
+				/>
 				<UsageMeter
 					variant="row"
 					label="API requests"
@@ -148,4 +155,50 @@ export const ProjectCards: Story = {
 			</div>
 		</MemoryRouter>
 	)
+}
+
+/**
+ * The scene header's inline-editable title and description, in the panel they
+ * actually live in.
+ *
+ * The radii were the problem: the panel is `rounded-2xl` (28px) with 16px of
+ * padding, so a concentric inner corner is 12px - but both field states used the
+ * Input/Textarea default of `rounded-xl` (20px), which curves faster than the box
+ * around it. Rendered here inside the real `ds-raised rounded-2xl` panel so the
+ * two arcs can be compared directly.
+ */
+export const InlineEditableFields: Story = {
+	render: function InlineFieldsStory() {
+		const [title, setTitle] = useState('Porsche GT3')
+		const [description, setDescription] = useState('')
+
+		return (
+			<section className="ds-raised space-y-6 rounded-2xl px-4 py-4 sm:px-5">
+				<div className="min-w-0 grow space-y-2">
+					<InlineEditableMetadataField
+						ariaLabel="Scene title"
+						value={title}
+						onChange={setTitle}
+						onCommit={async () => {}}
+						titleStyle="title"
+						placeholder="Scene Title"
+						isUnsaved
+						isSaving={false}
+						isSaved={false}
+					/>
+					<InlineEditableMetadataField
+						ariaLabel="Scene description"
+						multiline
+						value={description}
+						onChange={setDescription}
+						onCommit={async () => {}}
+						placeholder="Scene Description"
+						isUnsaved={false}
+						isSaving={false}
+						isSaved={false}
+					/>
+				</div>
+			</section>
+		)
+	}
 }

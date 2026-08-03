@@ -123,7 +123,7 @@ const OrganizationsPage = () => {
 
 			{primaryOrganization && (
 				<section className="space-y-3">
-					<h2 className="text-lg font-semibold">Primary organization</h2>
+					<h2 className="text-h4">Primary organization</h2>
 					<DashboardCard
 						title={primaryOrganization.organization.name}
 						description="Your default workspace and ownership context"
@@ -158,7 +158,7 @@ const OrganizationsPage = () => {
 			)}
 
 			<section className="space-y-3">
-				<h2 className="text-lg font-semibold">All organizations</h2>
+				<h2 className="text-h4">All organizations</h2>
 				{organizations.length === 0 ? (
 					<Empty>
 						<EmptyHeader>

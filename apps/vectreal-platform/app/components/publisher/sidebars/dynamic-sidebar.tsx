@@ -1,12 +1,11 @@
-import { Button } from '@shared/components/ui/button'
 import {
 	Drawer,
-	DrawerClose,
 	DrawerContent,
 	DrawerDescription,
 	DrawerHeader,
 	DrawerTitle
 } from '@shared/components/ui/drawer'
+import { OVERLAY_CLOSE_APPEARANCE } from '@shared/components/ui/overlay-close'
 import { cn } from '@shared/utils'
 import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import { X } from 'lucide-react'
@@ -99,6 +98,7 @@ export const DynamicSidebar = ({
 				}}
 			>
 				<DrawerContent
+					showCloseButton={!closeDisabled}
 					className="flex max-h-[95svh] flex-col"
 					onOpenAutoFocus={(e) => {
 						// Explicitly move focus into the first interactive element inside
@@ -120,22 +120,11 @@ export const DynamicSidebar = ({
 					  drawer, and its content is not padded `p-6`.
 					*/}
 					{showMobileHeader && (
-						<DrawerHeader className="border-shell-border-soft shrink-0 border-b p-4 pb-3">
-							<div className="flex items-start justify-between gap-2">
-								<div>
-									<DrawerTitle>{title}</DrawerTitle>
-									{description && (
-										<DrawerDescription>{description}</DrawerDescription>
-									)}
-								</div>
-								{!closeDisabled && (
-									<DrawerClose asChild>
-										<Button variant="ghost" size="icon" className="shrink-0">
-											<X className="h-4 w-4" />
-										</Button>
-									</DrawerClose>
-								)}
-							</div>
+						<DrawerHeader className="border-shell-border-soft shrink-0 border-b p-4 pr-14 pb-3">
+							<DrawerTitle>{title}</DrawerTitle>
+							{description && (
+								<DrawerDescription>{description}</DrawerDescription>
+							)}
 						</DrawerHeader>
 					)}
 
@@ -178,24 +167,34 @@ export const DynamicSidebar = ({
 						)}
 					>
 						{showDesktopHeader && (
-							<div className="border-shell-border-soft flex shrink-0 items-start justify-between border-b px-4 py-4">
-								<div>
-									<p className="text-lg font-medium">{title}</p>
+							/*
+							  The mobile drawer header, rebuilt for the desktop panel - so
+							  it is held to the same tokens. It used to hand-roll all three
+							  parts: a `<p className="text-lg font-medium">` for the title,
+							  a `text-xs` description where the drawer uses `text-sm`, and
+							  a ghost icon button that was a fourth close treatment.
+							*/
+							<div className="border-shell-border-soft flex shrink-0 items-start justify-between gap-2 border-b p-4">
+								<div className="min-w-0">
+									<h2 className="text-foreground text-h3">{title}</h2>
 									{description && (
-										<p className="text-muted-foreground text-xs">
+										<p className="text-muted-foreground text-sm">
 											{description}
 										</p>
 									)}
 								</div>
 								{!closeDisabled && (
-									<Button
-										variant="ghost"
-										size="icon"
-										className="publisher-shell-focus shrink-0"
+									<button
+										type="button"
+										aria-label="Close"
+										className={cn(
+											OVERLAY_CLOSE_APPEARANCE,
+											'publisher-shell-focus'
+										)}
 										onClick={handleClose}
 									>
-										<X className="h-4 w-4" />
-									</Button>
+										<X className="size-4" />
+									</button>
 								)}
 							</div>
 						)}

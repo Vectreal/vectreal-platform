@@ -8,7 +8,6 @@ import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import {
 	Drawer,
-	DrawerClose,
 	DrawerContent,
 	DrawerDescription,
 	DrawerHeader,
@@ -24,8 +23,7 @@ import {
 	Info,
 	Radio,
 	Rocket,
-	Trash2,
-	X
+	Trash2
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { data, Link, useNavigate } from 'react-router'
@@ -233,7 +231,7 @@ function DrawerAssetsSection({
 
 	return (
 		<section className="space-y-3">
-			<h3 className="text-sm font-semibold tracking-tight">Assets</h3>
+			<h3 className="text-h4">Assets</h3>
 			{assets.length === 0 ? (
 				<p className="text-muted-foreground text-sm">No linked assets found.</p>
 			) : (
@@ -531,7 +529,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 				<main className="flex min-h-0 flex-col gap-4">
 					{sceneLoadError && !file?.model ? (
 						<section className="ds-raised space-y-3 rounded-2xl p-5">
-							<h2 className="text-base font-semibold">Unable to Load Scene</h2>
+							<h2 className="text-h4">Unable to Load Scene</h2>
 							<p className="text-muted-foreground text-sm">{sceneLoadError}</p>
 							<div className="flex flex-wrap gap-2">
 								<Button type="button" onClick={retrySceneLoad}>
@@ -554,7 +552,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							loadingThumbnail={loadingThumbnail}
 						/>
 					</section>
-					<section className="ds-raised space-y-6 rounded-2xl px-4 py-4 sm:px-5">
+					<section className="ds-raised space-y-6 rounded-2xl p-5">
 						<header className="flex flex-col items-start gap-6 md:flex-row">
 							{/*
 						  `min-w-0` is what stops a long scene name from pushing the
@@ -620,7 +618,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							onClick={() => setDrawerOpen(true)}
 							title="Open details panel"
 							aria-label="Open details panel"
-							className="ds-raised hover:bg-foreground/8 group relative flex w-full flex-col gap-6 rounded-2xl p-4 text-left transition-colors duration-300"
+							className="ds-raised hover:bg-foreground/8 group relative flex w-full flex-col gap-6 rounded-2xl p-5 text-left transition-colors duration-300"
 						>
 							<Info className="text-muted-foreground absolute top-3 right-3 h-4 w-4 opacity-25 transition-opacity duration-300 group-hover:opacity-100" />
 							<div className="space-y-2">
@@ -667,13 +665,11 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 					</section>
 				</main>
 
-				<aside className="ds-raised hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-4 xl:flex">
+				<aside className="ds-raised hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-5 xl:flex">
 					<section className="space-y-3">
 						<div>
 							<p className="text-muted-foreground text-eyebrow">At a Glance</p>
-							<h2 className="mt-1 text-base leading-tight font-medium tracking-tight">
-								Scene Metrics
-							</h2>
+							<h2 className="text-h4 mt-1">Scene Metrics</h2>
 						</div>
 						<StatGrid>
 							<StatTile
@@ -772,30 +768,15 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 			<Drawer open={drawerOpen} onOpenChange={setDrawerOpen} direction="right">
 				<DrawerContent className="max-w-xl! border-0">
 					<DrawerHeader>
-						<div className="flex items-start justify-between gap-3">
-							<div>
-								<DrawerTitle>Scene Details</DrawerTitle>
-								<DrawerDescription>
-									Detailed stats, assets, collaboration, and embed options.
-								</DrawerDescription>
-							</div>
-							<DrawerClose asChild>
-								<Button
-									size="icon"
-									variant="ghost"
-									aria-label="Close details drawer"
-								>
-									<X className="h-4 w-4" />
-								</Button>
-							</DrawerClose>
-						</div>
+						<DrawerTitle>Scene Details</DrawerTitle>
+						<DrawerDescription>
+							Detailed stats, assets, collaboration, and embed options.
+						</DrawerDescription>
 					</DrawerHeader>
 
 					<div className="space-y-6 overflow-y-auto p-6">
 						<section className="space-y-3">
-							<h3 className="text-sm font-semibold tracking-tight">
-								Scene Stats
-							</h3>
+							<h3 className="text-h4">Scene Stats</h3>
 							<StatGrid>
 								<StatTile
 									label="Current Size"
@@ -827,9 +808,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						<Separator />
 
 						<section className="space-y-3">
-							<h3 className="text-sm font-semibold tracking-tight">
-								Publishing
-							</h3>
+							<h3 className="text-h4">Publishing</h3>
 							<ScenePublishStateControl
 								publishState={publishState}
 								onPublish={openPublisherForPublishing}
@@ -841,9 +820,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							/>
 							{publishState.status === 'published' && (
 								<div className="space-y-3 pt-1">
-									<h4 className="text-sm font-semibold tracking-tight">
-										Embed
-									</h4>
+									<h4 className="text-h4">Embed</h4>
 									<EmbedOptionsPanel
 										sceneId={sceneState.id}
 										projectId={project.id}
@@ -855,9 +832,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						<Separator />
 
 						<section className="space-y-3">
-							<h3 className="text-sm font-semibold tracking-tight">
-								Collaboration
-							</h3>
+							<h3 className="text-h4">Collaboration</h3>
 							<div className="flex items-center justify-between gap-3">
 								<div className="flex items-center gap-2">
 									<Avatar className="h-8 w-8">
@@ -896,9 +871,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						<Separator />
 
 						<section className="space-y-3">
-							<h3 className="text-sm font-semibold tracking-tight">
-								Danger Zone
-							</h3>
+							<h3 className="text-h4">Danger Zone</h3>
 							<Button
 								variant="destructive"
 								size="sm"

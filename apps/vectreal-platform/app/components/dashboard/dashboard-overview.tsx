@@ -91,7 +91,7 @@ function ResumeBand({ scene }: { scene: ResumeScene }) {
 				<div className="min-w-0 space-y-3">
 					<div className="min-w-0 space-y-1">
 						<p className="text-muted-foreground text-eyebrow">Jump back in</p>
-						<h2 className="truncate text-xl font-medium">{scene.name}</h2>
+						<h2 className="text-h3 truncate">{scene.name}</h2>
 						<p className="text-muted-foreground truncate text-sm">
 							{scene.projectName ? `${scene.projectName} · ` : ''}
 							{formatEdited(scene.updatedAt)}

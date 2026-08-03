@@ -6,7 +6,7 @@ import { InfoTooltip } from '../../info-tooltip'
 /**
  * Unified section header for sidebar panels.
  * Provides consistent visual hierarchy with:
- * - Clear, prominent section heading (text-sm font-semibold)
+ * - Section heading on the shared `text-h4` rung
  * - Optional tooltip for context
  * - Separator line
  * - Proper spacing and breathing room
@@ -33,9 +33,15 @@ export const SidebarSection = memo(
 			{title && (
 				<>
 					<div className="flex items-center justify-between gap-2">
-						<h3 className="text-foreground! text-sm! font-semibold! tracking-tight!">
-							{title}
-						</h3>
+						{/*
+						  The h4 rung, the same one every other in-panel section heading
+						  uses. This was `text-sm font-semibold tracking-tight` with an
+						  `!important` on each property - off-scale, and impossible for a
+						  consumer to correct. The importants were beating an unlayered
+						  rule that no longer exists: heading defaults live in `@layer
+						  base` now, which any utility already outranks.
+						*/}
+						<h3 className="text-foreground text-h4">{title}</h3>
 						{tooltip && <InfoTooltip content={tooltip} />}
 					</div>
 
