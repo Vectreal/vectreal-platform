@@ -46,10 +46,23 @@ function AlertDialogOverlay({
 
 function AlertDialogContent({
 	className,
+	container,
 	...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Content>) {
+}: React.ComponentProps<typeof AlertDialogPrimitive.Content> & {
+	/**
+	 * Portal target, matching `DialogContent` and `HoverCardContent`. The content
+	 * mounts on `document.body` by default, which puts it outside any themed
+	 * subtree - so an alert opened from inside a `.dark` container renders with
+	 * light tokens. Pass the themed element to keep it in scope.
+	 *
+	 * The content is `fixed`, so the target also has to establish a containing
+	 * block - a transform, for instance - or it will centre on the viewport
+	 * rather than on the container.
+	 */
+	container?: HTMLElement | null
+}) {
 	return (
-		<AlertDialogPortal>
+		<AlertDialogPortal container={container}>
 			<AlertDialogOverlay />
 			<AlertDialogPrimitive.Content
 				data-slot="alert-dialog-content"

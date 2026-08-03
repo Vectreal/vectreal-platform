@@ -2,6 +2,16 @@ import { cn } from '@shared/utils'
 import { useState } from 'react'
 
 import { Alert, AlertDescription, AlertTitle } from './alert'
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle
+} from './alert-dialog'
 import { Button } from './button'
 import {
 	Command,
@@ -105,20 +115,19 @@ export const HoverCardOnPanel: Story = {
 }
 
 /**
- * A drawer on its own themed surface, light above dark.
+ * An overlay on its own themed surface, light above dark.
  *
- * These two stories opt out of the global dual-theme decorator and build the
- * pair themselves, because `DrawerContent` is `fixed` and portals to
- * `document.body`. Under the decorator it escaped both themed wrappers, pinned
- * itself to the viewport's right edge, and drew a light drawer across the dark
- * column - so the one story that needed to show a drawer against both themes
- * showed it against neither.
+ * The stories below opt out of the global dual-theme decorator and build the
+ * pair themselves, because these overlays are `fixed` and portal to
+ * `document.body`. Under the decorator they escaped both themed wrappers and
+ * rendered in light tokens over the dark column - so the stories that existed
+ * to show an overlay against both themes showed it against neither.
  *
- * vaul takes a portal `container`, and an element with a transform becomes the
- * containing block for `fixed` descendants, so `transform-gpu` on the stage is
- * what actually pins the drawer inside it.
+ * Each primitive takes a portal `container`, and an element with a transform
+ * becomes the containing block for `fixed` descendants, so `transform-gpu` on
+ * the stage is what actually pins the overlay inside it.
  */
-function DrawerStage({
+function ThemedStage({
 	theme,
 	children
 }: {
@@ -158,7 +167,7 @@ export const DrawerHeading: Story = {
 	render: () => (
 		<>
 			{(['light', 'dark'] as const).map((theme) => (
-				<DrawerStage key={theme} theme={theme}>
+				<ThemedStage key={theme} theme={theme}>
 					{(container) => (
 						<Drawer open modal={false} direction="right" container={container}>
 							<DrawerContent className="max-w-sm!">
@@ -188,7 +197,7 @@ export const DrawerHeading: Story = {
 							</DrawerContent>
 						</Drawer>
 					)}
-				</DrawerStage>
+				</ThemedStage>
 			))}
 		</>
 	)
@@ -207,7 +216,7 @@ export const DrawerActions: Story = {
 	render: () => (
 		<>
 			{(['light', 'dark'] as const).map((theme) => (
-				<DrawerStage key={theme} theme={theme}>
+				<ThemedStage key={theme} theme={theme}>
 					{(container) => (
 						<Drawer open modal={false} direction="right" container={container}>
 							<DrawerContent className="max-w-sm!">
@@ -230,7 +239,43 @@ export const DrawerActions: Story = {
 							</DrawerContent>
 						</Drawer>
 					)}
-				</DrawerStage>
+				</ThemedStage>
+			))}
+		</>
+	)
+}
+
+/**
+ * `AlertDialogContent`, which portals the same way `DialogContent` does and had
+ * the same gap: opened from inside a `.dark` subtree it rendered light. It takes
+ * a `container` now, so the two agree.
+ *
+ * This is the story that proves it. Both halves render the same alert; if the
+ * portal escapes its theme again, the lower one comes back white.
+ */
+export const AlertDialogThemed: Story = {
+	parameters: { dualTheme: false },
+	render: () => (
+		<>
+			{(['light', 'dark'] as const).map((theme) => (
+				<ThemedStage key={theme} theme={theme}>
+					{(container) => (
+						<AlertDialog open>
+							<AlertDialogContent container={container}>
+								<AlertDialogHeader>
+									<AlertDialogTitle>Discard changes?</AlertDialogTitle>
+									<AlertDialogDescription>
+										Your edits to this scene have not been saved.
+									</AlertDialogDescription>
+								</AlertDialogHeader>
+								<AlertDialogFooter>
+									<AlertDialogCancel>Keep editing</AlertDialogCancel>
+									<AlertDialogAction>Discard</AlertDialogAction>
+								</AlertDialogFooter>
+							</AlertDialogContent>
+						</AlertDialog>
+					)}
+				</ThemedStage>
 			))}
 		</>
 	)
