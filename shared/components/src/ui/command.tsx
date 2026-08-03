@@ -118,7 +118,21 @@ function CommandGroup({
 		<CommandPrimitive.Group
 			data-slot="command-group"
 			className={cn(
-				'text-foreground [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:text-label-xs overflow-hidden p-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:font-medium',
+				/*
+				  The size arrives as the raw token rather than `.text-label-xs`.
+
+				  `--text-*` are plain custom properties here, deliberately not
+				  `@theme` keys, so `text-label-xs` is a hand-written class in
+				  `@layer components` and not a utility Tailwind owns - which means
+				  it cannot be composed through an arbitrary variant. Written as
+				  `[&_[cmdk-group-heading]]:text-label-xs` it produced no CSS at all
+				  and the heading inherited 16px from the palette root.
+
+				  cmdk renders this heading itself from the `heading` prop, so a
+				  variant is the only way to reach it. Reading the token through an
+				  arbitrary value keeps it on the scale without restating 0.6875rem.
+				*/
+				'text-foreground [&_[cmdk-group-heading]]:text-muted-foreground overflow-hidden p-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[length:var(--text-label-xs)] [&_[cmdk-group-heading]]:font-medium',
 				className
 			)}
 			{...props}
@@ -147,7 +161,12 @@ function CommandItem({
 		<CommandPrimitive.Item
 			data-slot="command-item"
 			className={cn(
-				"data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+				// `rounded-lg`, concentric with the palette around it: the container is
+				// `rounded-xl` (20px) and the group insets an item by `p-1` (4px), so
+				// the matching inner arc is 16px. At `rounded-sm` (10px) the item
+				// curved twice as fast as the corner it sat in. This is the pairing
+				// `dropdown-menu` already uses.
+				"data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex cursor-default items-center gap-2 rounded-lg px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 				className
 			)}
 			{...props}

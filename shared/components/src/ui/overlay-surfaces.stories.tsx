@@ -1,3 +1,4 @@
+import { cn } from '@shared/utils'
 import { useState } from 'react'
 
 import { Alert, AlertDescription, AlertTitle } from './alert'
@@ -104,6 +105,43 @@ export const HoverCardOnPanel: Story = {
 }
 
 /**
+ * A drawer on its own themed surface, light above dark.
+ *
+ * These two stories opt out of the global dual-theme decorator and build the
+ * pair themselves, because `DrawerContent` is `fixed` and portals to
+ * `document.body`. Under the decorator it escaped both themed wrappers, pinned
+ * itself to the viewport's right edge, and drew a light drawer across the dark
+ * column - so the one story that needed to show a drawer against both themes
+ * showed it against neither.
+ *
+ * vaul takes a portal `container`, and an element with a transform becomes the
+ * containing block for `fixed` descendants, so `transform-gpu` on the stage is
+ * what actually pins the drawer inside it.
+ */
+function DrawerStage({
+	theme,
+	children
+}: {
+	theme: 'light' | 'dark'
+	children: (container: HTMLElement | null) => React.ReactNode
+}) {
+	const [stage, setStage] = useState<HTMLDivElement | null>(null)
+
+	return (
+		<div
+			ref={setStage}
+			className={cn(
+				'bg-background text-foreground relative h-96 transform-gpu overflow-hidden p-8',
+				theme === 'dark' && 'dark'
+			)}
+		>
+			<p className="text-eyebrow text-muted-foreground">{theme}</p>
+			{children(stage)}
+		</div>
+	)
+}
+
+/**
  * The drawer header, which had two things wrong with it at once.
  *
  * `DrawerTitle` declared no font-size, and Radix renders it as an `<h2>`, so it
@@ -113,36 +151,46 @@ export const HoverCardOnPanel: Story = {
  * the h4 rung that the scale was missing.
  *
  * Pinned open with `modal={false}` so the rungs are readable without an overlay
- * over them. `DrawerContent` is `fixed`, so it sits against the viewport edge
- * here exactly as it does in the app rather than inside a story panel.
+ * over them.
  */
 export const DrawerHeading: Story = {
+	parameters: { dualTheme: false },
 	render: () => (
-		<Drawer open modal={false} direction="right">
-			<DrawerContent className="max-w-sm!">
-				<DrawerHeader className="border-b">
-					<DrawerTitle>Edit Project</DrawerTitle>
-					<DrawerDescription>
-						Update the details for Configurator
-					</DrawerDescription>
-				</DrawerHeader>
-				<div className="space-y-6 p-6">
-					<section className="space-y-1">
-						<h3 className="text-h4">Danger zone</h3>
-						<p className="text-muted-foreground text-sm">
-							A section heading on the h4 rung, above body copy. This is the
-							step the scale was missing.
-						</p>
-					</section>
-					<section className="space-y-1">
-						<p className="text-muted-foreground text-eyebrow">Micro label</p>
-						<p className="text-muted-foreground text-sm">
-							The rung below, for labels above a value.
-						</p>
-					</section>
-				</div>
-			</DrawerContent>
-		</Drawer>
+		<>
+			{(['light', 'dark'] as const).map((theme) => (
+				<DrawerStage key={theme} theme={theme}>
+					{(container) => (
+						<Drawer open modal={false} direction="right" container={container}>
+							<DrawerContent className="max-w-sm!">
+								<DrawerHeader className="border-b">
+									<DrawerTitle>Edit Project</DrawerTitle>
+									<DrawerDescription>
+										Update the details for Studio Showcase
+									</DrawerDescription>
+								</DrawerHeader>
+								<div className="space-y-6 p-6">
+									<section className="space-y-1">
+										<h3 className="text-h4">Danger zone</h3>
+										<p className="text-muted-foreground text-sm">
+											A section heading on the h4 rung, above body copy. This is
+											the step the scale was missing.
+										</p>
+									</section>
+									<section className="space-y-1">
+										<p className="text-muted-foreground text-eyebrow">
+											Micro label
+										</p>
+										<p className="text-muted-foreground text-sm">
+											The rung below, for labels above a value.
+										</p>
+									</section>
+								</div>
+							</DrawerContent>
+						</Drawer>
+					)}
+				</DrawerStage>
+			))}
+		</>
 	)
 }
 
@@ -155,26 +203,35 @@ export const DrawerHeading: Story = {
  * `DialogFooter`, so all four use the primitive and agree.
  */
 export const DrawerActions: Story = {
+	parameters: { dualTheme: false },
 	render: () => (
-		<Drawer open modal={false} direction="right">
-			<DrawerContent className="max-w-sm!">
-				<DrawerHeader className="border-b">
-					<DrawerTitle>Edit API Key</DrawerTitle>
-					<DrawerDescription>
-						Update the name, description, or project access
-					</DrawerDescription>
-				</DrawerHeader>
-				<div className="flex-1 p-6">
-					<p className="text-muted-foreground text-sm">
-						Body copy, padded to the same edge as the header above and the
-						actions below.
-					</p>
-				</div>
-				<DrawerFooter className="border-t">
-					<Button variant="outline">Cancel</Button>
-					<Button>Save Changes</Button>
-				</DrawerFooter>
-			</DrawerContent>
-		</Drawer>
+		<>
+			{(['light', 'dark'] as const).map((theme) => (
+				<DrawerStage key={theme} theme={theme}>
+					{(container) => (
+						<Drawer open modal={false} direction="right" container={container}>
+							<DrawerContent className="max-w-sm!">
+								<DrawerHeader className="border-b">
+									<DrawerTitle>Edit API Key</DrawerTitle>
+									<DrawerDescription>
+										Update the name, description, or project access
+									</DrawerDescription>
+								</DrawerHeader>
+								<div className="flex-1 p-6">
+									<p className="text-muted-foreground text-sm">
+										Body copy, padded to the same edge as the header above and
+										the actions below.
+									</p>
+								</div>
+								<DrawerFooter className="border-t">
+									<Button variant="outline">Cancel</Button>
+									<Button>Save Changes</Button>
+								</DrawerFooter>
+							</DrawerContent>
+						</Drawer>
+					)}
+				</DrawerStage>
+			))}
+		</>
 	)
 }

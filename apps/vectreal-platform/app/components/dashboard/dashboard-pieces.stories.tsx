@@ -161,19 +161,26 @@ export const ProjectCards: Story = {
  * The scene header's inline-editable title and description, in the panel they
  * actually live in.
  *
- * The radii were the problem: the panel is `rounded-2xl` (28px) with 16px of
- * padding, so a concentric inner corner is 12px - but both field states used the
- * Input/Textarea default of `rounded-xl` (20px), which curves faster than the box
- * around it. Rendered here inside the real `ds-raised rounded-2xl` panel so the
- * two arcs can be compared directly.
+ * The field used to sit inside an `overflow-x-auto` wrapper that it filled
+ * exactly. A scroll container clips at its padding box on both axes, so the
+ * focus ring - drawn as a box-shadow outside the border box - was cut away on
+ * all four sides, and the field read as a shape with its edge sliced off. The
+ * scroll now lives on the field itself, which has a surface to clip against.
+ *
+ * Both fields carry the unsaved indicator here so their widths match. In the
+ * app the indicator mounts and unmounts with save state, which shortens the
+ * field by the dot plus its gap each time - visible as a reflow while typing,
+ * and worth reserving space for separately.
  */
 export const InlineEditableFields: Story = {
 	render: function InlineFieldsStory() {
-		const [title, setTitle] = useState('Porsche GT3')
+		const [title, setTitle] = useState('Studio Showcase')
 		const [description, setDescription] = useState('')
 
+		// `p-5`, the padding the real panel uses: `--radius-2xl` is 28px, so `p-4`
+		// crowds the content into the curve.
 		return (
-			<section className="ds-raised space-y-6 rounded-2xl px-4 py-4 sm:px-5">
+			<section className="ds-raised space-y-6 rounded-2xl p-5">
 				<div className="min-w-0 grow space-y-2">
 					<InlineEditableMetadataField
 						ariaLabel="Scene title"
@@ -193,7 +200,7 @@ export const InlineEditableFields: Story = {
 						onChange={setDescription}
 						onCommit={async () => {}}
 						placeholder="Scene Description"
-						isUnsaved={false}
+						isUnsaved
 						isSaving={false}
 						isSaved={false}
 					/>

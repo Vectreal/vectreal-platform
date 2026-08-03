@@ -80,7 +80,16 @@ export function InlineEditableMetadataField({
 
 	return (
 		<div className={cn('group flex items-start gap-3', className)}>
-			<div className="min-w-0 flex-1 overflow-x-auto">
+			{/*
+			  No `overflow-x-auto` here. A scroll container clips at its padding
+			  box on both axes, and both states fill it exactly - so the focus
+			  ring, which the input draws as a box-shadow outside its border box,
+			  was cut away on all four sides and the field read as a shape with
+			  its edge sliced off. The horizontal scroll a long single-line value
+			  needs belongs on the button below, which has its own surface to clip
+			  against.
+			*/}
+			<div className="min-w-0 flex-1">
 				{isEditing ? (
 					multiline ? (
 						<MotionTextarea
@@ -136,7 +145,10 @@ export function InlineEditableMetadataField({
 						onClick={() => setIsEditing(true)}
 						aria-label={`Edit ${ariaLabel}`}
 						className={cn(
-							'focus-visible:ring-ring bg-muted/25 w-full rounded-lg px-2 py-1 text-left leading-snug! whitespace-pre transition-colors focus-visible:ring-2 focus-visible:outline-none',
+							// `overflow-x-auto` sits here rather than on the wrapper: a
+							// long single-line value scrolls inside the field's own
+							// surface, which is the thing that should clip it.
+							'focus-visible:ring-ring bg-muted/25 w-full overflow-x-auto rounded-lg px-2 py-1 text-left leading-snug! whitespace-pre transition-colors focus-visible:ring-2 focus-visible:outline-none',
 							value.trim().length > 0
 								? multiline
 									? 'text-foreground text-sm leading-relaxed'

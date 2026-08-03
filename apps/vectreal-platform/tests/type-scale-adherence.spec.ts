@@ -11,7 +11,7 @@
  * copied in from shadcn should fail here rather than in review.
  */
 
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -147,5 +147,43 @@ describe('type scale adherence', () => {
 				`.${rung} {`
 			)
 		}
+	})
+
+	it('never reaches a rung through a variant', () => {
+		/*
+		  The failure this exists for is silent, which is what makes it worth a
+		  test. `--text-*` are plain custom properties rather than `@theme` keys,
+		  so a rung is a hand-written class in `@layer components` and not a
+		  utility Tailwind owns - and Tailwind only composes variants with
+		  utilities it generates. Prefix one and it emits no CSS whatsoever: no
+		  build error, no lint error, just an element quietly inheriting its
+		  parent's size.
+
+		  It shipped once, in `command`, where `[&_[cmdk-group-heading]]:` on the
+		  label rung took the palette's group heading from 12px to 16px. Reach the
+		  token through an arbitrary value instead - `text-[length:var(--text-…)]`
+		  - which does compose, and holds for `sm:` and `hover:` just as much as
+		  for an arbitrary selector.
+		*/
+		const offenders: string[] = []
+
+		for (const file of readdirSync(UI_DIR).filter((n) => n.endsWith('.tsx'))) {
+			// Comments are stripped first: the explanations of this very rule spell
+			// out the broken form, and matching prose would make the guard useless.
+			const source = readFileSync(join(UI_DIR, file), 'utf8')
+				.replace(/\/\*[\s\S]*?\*\//g, '')
+				.replace(/\/\/[^\n]*/g, '')
+
+			for (const rung of SCALE_CLASSES) {
+				// Any variant separator: a `:` closing a word (`sm:`), a bracket
+				// (`[&_x]:`) or a group (`(…):`) directly before the rung.
+				const throughVariant = new RegExp(`[\\w\\]\\)]:${rung}\\b`)
+				if (throughVariant.test(source)) {
+					offenders.push(`${file} applies ${rung} through a variant`)
+				}
+			}
+		}
+
+		expect(offenders, offenders.join('\n')).toEqual([])
 	})
 })
