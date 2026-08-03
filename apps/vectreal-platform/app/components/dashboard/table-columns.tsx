@@ -23,6 +23,7 @@ import {
 	Clock,
 	Ellipsis,
 	FilePenLine,
+	FolderInput,
 	FolderOpen,
 	KeyRound,
 	Pencil,
@@ -32,12 +33,13 @@ import {
 	Rocket,
 	ArrowRight
 } from 'lucide-react'
-import { memo, useEffect, useState } from 'react'
+import { memo } from 'react'
 import { Link } from 'react-router'
 
 import { createCheckboxColumn, SortableHeader } from './data-table'
 import { SceneThumbnail } from './scene-thumbnail'
 import { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
+import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
 
 import type { ColumnDef } from '@tanstack/react-table'
 
@@ -63,83 +65,98 @@ export interface ProjectRow {
 	updatedAt: Date | null
 }
 
-export const projectColumns: ColumnDef<ProjectRow>[] = [
-	createCheckboxColumn<ProjectRow>(),
-	{
-		accessorKey: 'name',
-		header: ({ column }) => (
-			<SortableHeader column={column}>Name</SortableHeader>
-		),
-		cell: ({ row }) => (
-			<Link
-				to={`/dashboard/projects/${row.original.id}`}
-				state={{
-					name: row.original.name,
-					description: `Slug: ${row.original.name}`,
-					type: 'project' as const
-				}}
-				viewTransition
-				className="group flex items-center gap-2 font-medium hover:underline"
-			>
-				<FolderOpen className="text-primary/60 group-hover:text-primary h-4 w-4 transition-colors" />
-				{row.getValue('name')}
-			</Link>
-		)
-	},
-	{
-		accessorKey: 'organizationName',
-		header: ({ column }) => (
-			<SortableHeader column={column}>Organization</SortableHeader>
-		),
-		cell: ({ row }) => (
-			<span className="text-muted-foreground text-sm">
-				{row.getValue('organizationName')}
-			</span>
-		)
-	},
-	{
-		accessorKey: 'sceneCount',
-		header: ({ column }) => (
-			<SortableHeader column={column}>Scenes</SortableHeader>
-		),
-		// Sorts on the count, reads as the breakdown. "12 scenes" never answered
-		// the question people have about a project, which is how much of it is live.
-		cell: ({ row }) => <StatusBreakdown counts={row.original.counts} verbose />
-	},
-	{
-		accessorKey: 'updatedAt',
-		header: ({ column }) => (
-			<SortableHeader column={column}>Last Updated</SortableHeader>
-		),
-		cell: ({ row }) => {
-			const date = row.original.updatedAt
+interface ProjectColumnsOptions {
+	onDeleteItem?: (row: ProjectRow) => void
+	isActionsDisabled?: boolean
+}
 
-			return (
+/**
+ * A factory rather than a constant, matching `createContentColumns`, because
+ * the actions cell now needs handlers from the route. The two idioms sitting
+ * side by side was the reason project rows had no delete at all.
+ */
+export function createProjectColumns({
+	onDeleteItem,
+	isActionsDisabled
+}: ProjectColumnsOptions = {}): ColumnDef<ProjectRow>[] {
+	return [
+		createCheckboxColumn<ProjectRow>(),
+		{
+			accessorKey: 'name',
+			header: ({ column }) => (
+				<SortableHeader column={column}>Name</SortableHeader>
+			),
+			cell: ({ row }) => (
+				<Link
+					to={`/dashboard/projects/${row.original.id}`}
+					state={{
+						name: row.original.name,
+						description: `Slug: ${row.original.name}`,
+						type: 'project' as const
+					}}
+					viewTransition
+					className="group flex items-center gap-2 font-medium hover:underline"
+				>
+					<FolderOpen className="text-primary/60 group-hover:text-primary h-4 w-4 transition-colors" />
+					{row.getValue('name')}
+				</Link>
+			)
+		},
+		{
+			accessorKey: 'organizationName',
+			header: ({ column }) => (
+				<SortableHeader column={column}>Organization</SortableHeader>
+			),
+			cell: ({ row }) => (
 				<span className="text-muted-foreground text-sm">
-					{date
-						? new Date(date).toLocaleDateString('en-US', {
-								month: 'short',
-								day: 'numeric',
-								year: 'numeric'
-							})
-						: 'Never'}
+					{row.getValue('organizationName')}
 				</span>
 			)
+		},
+		{
+			accessorKey: 'sceneCount',
+			header: ({ column }) => (
+				<SortableHeader column={column}>Scenes</SortableHeader>
+			),
+			// Sorts on the count, reads as the breakdown. "12 scenes" never answered
+			// the question people have about a project, which is how much of it is live.
+			cell: ({ row }) => (
+				<StatusBreakdown counts={row.original.counts} verbose />
+			)
+		},
+		{
+			accessorKey: 'updatedAt',
+			header: ({ column }) => (
+				<SortableHeader column={column}>Last Updated</SortableHeader>
+			),
+			cell: ({ row }) => {
+				const date = row.original.updatedAt
+
+				return (
+					<span className="text-muted-foreground text-sm">
+						{date
+							? new Date(date).toLocaleDateString('en-US', {
+									month: 'short',
+									day: 'numeric',
+									year: 'numeric'
+								})
+							: 'Never'}
+					</span>
+				)
+			}
+		},
+		{
+			id: 'actions',
+			cell: ({ row }) => (
+				<ProjectActionsCell
+					row={row.original}
+					onDeleteItem={onDeleteItem}
+					isActionsDisabled={isActionsDisabled}
+				/>
+			)
 		}
-	},
-	{
-		id: 'actions',
-		cell: ({ row }) => (
-			<div className="flex items-center justify-end gap-1">
-				<Link to={`/dashboard/projects/${row.original.id}/edit`}>
-					<Button variant="ghost" size="sm" aria-label="Edit project">
-						<Pencil className="h-4 w-4" />
-					</Button>
-				</Link>
-			</div>
-		)
-	}
-]
+	]
+}
 
 /**
  * Scene table columns
@@ -150,9 +167,17 @@ export interface SceneRow {
 	description?: string
 	projectId: string
 	projectName: string
+	/** Where the scene sits in its project. Null is the project root. */
+	folderId?: string | null
 	status: string
 	thumbnailUrl?: string
 	updatedAt: Date
+}
+
+interface SceneColumnsOptions {
+	onMoveItem?: (row: SceneRow) => void
+	onDeleteItem?: (row: SceneRow) => void
+	isActionsDisabled?: boolean
 }
 
 export interface ContentRow {
@@ -164,108 +189,139 @@ export interface ContentRow {
 	projectName: string
 	folderId?: string | null
 	status?: string
+	/** Folders only: contained scenes plus subfolders. Drives the delete tier. */
+	childCount?: number
 	updatedAt: Date
 }
 
 interface ContentColumnsOptions {
 	onRenameItem?: (row: ContentRow) => void
+	onMoveItem?: (row: ContentRow) => void
 	onDeleteItem?: (row: ContentRow) => void
 	pendingItemIds?: ReadonlySet<string>
 	isActionsDisabled?: boolean
 }
 
-export const sceneColumns: ColumnDef<SceneRow>[] = [
-	createCheckboxColumn<SceneRow>(),
-	{
-		accessorKey: 'name',
-		header: ({ column }) => (
-			<SortableHeader column={column}>Name</SortableHeader>
-		),
-		cell: ({ row }) => (
-			<Link
-				to={`/dashboard/projects/${row.original.projectId}/${row.original.id}`}
-				state={{
-					name: row.original.name,
-					description: row.original.description || undefined,
-					projectName: row.original.projectName,
-					type: 'scene' as const
-				}}
-				viewTransition
-				className="group flex items-center gap-2.5 font-medium"
-			>
-				{/*
+/**
+ * A factory rather than a module constant so the recent-scenes table can offer
+ * the same row actions as every other table. It used to be navigation-only, so
+ * `/dashboard` was the one place where deleting a scene meant selecting it
+ * first.
+ */
+export function createSceneColumns(
+	options: SceneColumnsOptions = {}
+): ColumnDef<SceneRow>[] {
+	return [
+		createCheckboxColumn<SceneRow>(),
+		{
+			accessorKey: 'name',
+			header: ({ column }) => (
+				<SortableHeader column={column}>Name</SortableHeader>
+			),
+			cell: ({ row }) => (
+				<Link
+					to={`/dashboard/projects/${row.original.projectId}/${row.original.id}`}
+					state={{
+						name: row.original.name,
+						description: row.original.description || undefined,
+						projectName: row.original.projectName,
+						type: 'scene' as const
+					}}
+					viewTransition
+					className="group flex items-center gap-2.5 font-medium"
+				>
+					{/*
 				  `SceneRow` has carried `thumbnailUrl` all along and no column ever
 				  rendered it, so every scene looked the same in the list.
 				*/}
-				<SceneThumbnail src={row.original.thumbnailUrl} size="sm" />
-				<span className="group-hover:underline">{row.getValue('name')}</span>
-			</Link>
-		)
-	},
-	{
-		accessorKey: 'description',
-		header: 'Description',
-		cell: ({ row }) => (
-			<span className="text-muted-foreground line-clamp-1 text-sm">
-				{row.getValue('description') || 'No description'}
-			</span>
-		)
-	},
-	{
-		accessorKey: 'projectName',
-		header: ({ column }) => (
-			<SortableHeader column={column}>Project</SortableHeader>
-		),
-		cell: ({ row }) => (
-			<span className="text-muted-foreground text-sm">
-				{row.getValue('projectName')}
-			</span>
-		)
-	},
-	{
-		accessorKey: 'status',
-		header: ({ column }) => (
-			<SortableHeader column={column}>Status</SortableHeader>
-		),
-		cell: ({ row }) => {
-			const status = row.getValue('status') as string
-			return (
-				<Badge variant={status === 'published' ? 'default' : 'secondary'}>
-					{status}
-				</Badge>
+					<SceneThumbnail src={row.original.thumbnailUrl} size="sm" />
+					<span className="group-hover:underline">{row.getValue('name')}</span>
+				</Link>
 			)
-		}
-	},
-	{
-		accessorKey: 'updatedAt',
-		header: ({ column }) => (
-			<SortableHeader column={column}>Last Updated</SortableHeader>
-		),
-		cell: ({ row }) => {
-			const date = row.getValue('updatedAt') as Date
-			return (
-				<span className="text-muted-foreground text-sm">
-					{new Date(date).toLocaleDateString('en-US', {
-						month: 'short',
-						day: 'numeric',
-						year: 'numeric'
-					})}
+		},
+		{
+			accessorKey: 'description',
+			header: 'Description',
+			cell: ({ row }) => (
+				<span className="text-muted-foreground line-clamp-1 text-sm">
+					{row.getValue('description') || 'No description'}
 				</span>
 			)
+		},
+		{
+			accessorKey: 'projectName',
+			header: ({ column }) => (
+				<SortableHeader column={column}>Project</SortableHeader>
+			),
+			cell: ({ row }) => (
+				<span className="text-muted-foreground text-sm">
+					{row.getValue('projectName')}
+				</span>
+			)
+		},
+		{
+			accessorKey: 'status',
+			header: ({ column }) => (
+				<SortableHeader column={column}>Status</SortableHeader>
+			),
+			cell: ({ row }) => {
+				const status = row.getValue('status') as string
+				return (
+					<Badge variant={status === 'published' ? 'default' : 'secondary'}>
+						{status}
+					</Badge>
+				)
+			}
+		},
+		{
+			accessorKey: 'updatedAt',
+			header: ({ column }) => (
+				<SortableHeader column={column}>Last Updated</SortableHeader>
+			),
+			cell: ({ row }) => {
+				const date = row.getValue('updatedAt') as Date
+				return (
+					<span className="text-muted-foreground text-sm">
+						{new Date(date).toLocaleDateString('en-US', {
+							month: 'short',
+							day: 'numeric',
+							year: 'numeric'
+						})}
+					</span>
+				)
+			}
+		},
+		{
+			id: 'actions',
+			cell: ({ row }) => (
+				<SceneActionsCell
+					row={row.original}
+					onMoveItem={options.onMoveItem}
+					onDeleteItem={options.onDeleteItem}
+					isActionsDisabled={options.isActionsDisabled}
+				/>
+			)
 		}
-	},
-	{
-		id: 'actions',
-		cell: ({ row }) => <SceneActionsCell row={row.original} />
-	}
-]
+	]
+}
 
-const SceneActionsCell = memo(({ row }: { row: SceneRow }) => {
-	const [isClientMounted, setIsClientMounted] = useState(false)
-	useEffect(() => setIsClientMounted(true), [])
+const SceneActionsCell = memo(function SceneActionsCell({
+	row,
+	onMoveItem,
+	onDeleteItem,
+	isActionsDisabled
+}: {
+	row: SceneRow
+} & SceneColumnsOptions) {
+	const isClientMounted = useIsClientMounted()
 
 	const trigger = (
-		<Button variant="ghost" size="sm" aria-label="Scene actions" disabled={!isClientMounted}>
+		<Button
+			variant="ghost"
+			size="sm"
+			aria-label="Scene actions"
+			disabled={!isClientMounted || isActionsDisabled}
+		>
 			<Ellipsis className="h-4 w-4" />
 		</Button>
 	)
@@ -318,6 +374,25 @@ const SceneActionsCell = memo(({ row }: { row: SceneRow }) => {
 								Preview Scene
 							</Link>
 						</DropdownMenuItem>
+						{onMoveItem ? (
+							<DropdownMenuItem
+								disabled={isActionsDisabled}
+								onClick={() => onMoveItem(row)}
+							>
+								<FolderInput className="mr-2 h-4 w-4" />
+								Move to...
+							</DropdownMenuItem>
+						) : null}
+						{onDeleteItem ? (
+							<DropdownMenuItem
+								disabled={isActionsDisabled}
+								onClick={() => onDeleteItem(row)}
+								className={DESTRUCTIVE_MENU_ITEM}
+							>
+								<Trash2 className="mr-2 h-4 w-4" />
+								Delete
+							</DropdownMenuItem>
+						) : null}
 					</DropdownMenuContent>
 				</DropdownMenu>
 			) : (
@@ -330,18 +405,92 @@ const SceneActionsCell = memo(({ row }: { row: SceneRow }) => {
 interface ContentActionsCellProps {
 	row: ContentRow
 	onRenameItem?: (row: ContentRow) => void
+	onMoveItem?: (row: ContentRow) => void
 	onDeleteItem?: (row: ContentRow) => void
 	isActionsDisabled?: boolean
 }
 
+const ProjectActionsCell = memo(function ProjectActionsCell({
+	row,
+	onDeleteItem,
+	isActionsDisabled
+}: {
+	row: ProjectRow
+	onDeleteItem?: (row: ProjectRow) => void
+	isActionsDisabled?: boolean
+}) {
+	const isClientMounted = useIsClientMounted()
+
+	// `ProjectRow` has carried `canDelete` all along; the old cell ignored it and
+	// offered no delete to anyone.
+	const canDelete = row.canDelete && Boolean(onDeleteItem)
+
+	const trigger = (
+		<Button
+			variant="ghost"
+			size="sm"
+			aria-label="Project actions"
+			disabled={!isClientMounted || isActionsDisabled}
+		>
+			<Ellipsis className="h-4 w-4" />
+		</Button>
+	)
+
+	return (
+		<div className="flex items-center justify-end gap-1">
+			{isClientMounted ? (
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">
+						<DropdownMenuItem asChild>
+							<Link
+								to={`/dashboard/projects/edit/${row.id}`}
+								className="flex w-full items-center gap-2"
+							>
+								<Pencil className="mr-2 h-4 w-4" />
+								Edit project
+							</Link>
+						</DropdownMenuItem>
+						<DropdownMenuItem
+							disabled={!canDelete || isActionsDisabled}
+							onClick={() => onDeleteItem?.(row)}
+							className={DESTRUCTIVE_MENU_ITEM}
+						>
+							<Trash2 className="mr-2 h-4 w-4" />
+							Delete project
+						</DropdownMenuItem>
+						{!row.canDelete ? (
+							<p className="text-muted-foreground px-2 py-1.5 text-xs">
+								Only organization owners can delete a project.
+							</p>
+						) : null}
+					</DropdownMenuContent>
+				</DropdownMenu>
+			) : (
+				trigger
+			)}
+		</div>
+	)
+})
+
+/**
+ * Destructive dropdown item styling.
+ *
+ * Previously `text-destructive-foreground` (near-white) on a transparent
+ * background, which is unreadable in light mode. `text-destructive` is the
+ * token meant for destructive text; the tint only appears on focus.
+ */
+const DESTRUCTIVE_MENU_ITEM =
+	'text-destructive focus:bg-destructive/10 focus:text-destructive'
+
 const ContentActionsCell = memo(function ContentActionsCell({
 	row,
 	onRenameItem,
+	onMoveItem,
 	onDeleteItem,
 	isActionsDisabled
 }: ContentActionsCellProps) {
-	const [isClientMounted, setIsClientMounted] = useState(false)
-	useEffect(() => setIsClientMounted(true), [])
+	const isClientMounted = useIsClientMounted()
 	const trigger = (
 		<Button
 			variant="ghost"
@@ -365,12 +514,21 @@ const ContentActionsCell = memo(function ContentActionsCell({
 							<FilePenLine className="mr-2 h-4 w-4" />
 							Rename
 						</DropdownMenuItem>
+						{onMoveItem ? (
+							<DropdownMenuItem
+								disabled={isActionsDisabled}
+								onClick={() => onMoveItem(row)}
+							>
+								<FolderInput className="mr-2 h-4 w-4" />
+								Move to...
+							</DropdownMenuItem>
+						) : null}
 						<DropdownMenuItem
 							disabled={isActionsDisabled}
 							onClick={() => onDeleteItem?.(row)}
-							className="text-destructive-foreground hover:bg-destructive/50 focus:bg-destructive/50"
+							className={DESTRUCTIVE_MENU_ITEM}
 						>
-							<Trash2 className="mr-2 h-4 w-4 text-inherit" />
+							<Trash2 className="mr-2 h-4 w-4" />
 							Delete
 						</DropdownMenuItem>
 					</DropdownMenuContent>
@@ -393,8 +551,7 @@ const ApiKeyActionsCell = memo(function ApiKeyActionsCell({
 	onEdit,
 	onRevoke
 }: ApiKeyActionsCellProps) {
-	const [isClientMounted, setIsClientMounted] = useState(false)
-	useEffect(() => setIsClientMounted(true), [])
+	const isClientMounted = useIsClientMounted()
 	const trigger = (
 		<Button
 			variant="ghost"
@@ -418,7 +575,7 @@ const ApiKeyActionsCell = memo(function ApiKeyActionsCell({
 						<DropdownMenuItem
 							disabled={Boolean(row.revokedAt)}
 							onClick={() => onRevoke(row.id)}
-							className="text-destructive-foreground hover:bg-destructive/50 focus:bg-destructive/50"
+							className={DESTRUCTIVE_MENU_ITEM}
 						>
 							<KeyRound className="mr-2 h-4 w-4 text-inherit" />
 							Revoke
@@ -523,6 +680,7 @@ export function createContentColumns(
 				<ContentActionsCell
 					row={row.original}
 					onRenameItem={options.onRenameItem}
+					onMoveItem={options.onMoveItem}
 					onDeleteItem={options.onDeleteItem}
 					isActionsDisabled={options.isActionsDisabled}
 				/>

@@ -31,17 +31,12 @@ import {
 	ArrowUpDown,
 	ChevronLeft,
 	ChevronRight,
+	FolderInput,
 	Search,
 	TextCursor,
 	Trash2
 } from 'lucide-react'
 import { useEffect, useMemo, type ReactNode } from 'react'
-
-export interface DataTableSelectionAction<TData> {
-	label: string
-	onClick: (selectedRows: TData[]) => void
-	disabled?: (selectedRows: TData[]) => boolean
-}
 
 interface DataTableProps<TData, TValue> {
 	columns: ColumnDef<TData, TValue>[]
@@ -57,7 +52,8 @@ interface DataTableProps<TData, TValue> {
 	rowSelection: RowSelectionState
 	onRowSelectionChange: (updater: Updater<RowSelectionState>) => void
 	onDelete?: (selectedRows: TData[]) => void
-	onRename?: (selectedRows: TData) => void
+	onRename?: (row: TData) => void
+	onMove?: (selectedRows: TData[]) => void
 	onSelectionChange?: (selectedRows: TData[]) => void
 	getRowCanSelect?: (row: TData) => boolean
 	isUpdating?: boolean
@@ -80,6 +76,7 @@ export function DataTable<TData, TValue>({
 	onRowSelectionChange,
 	onDelete,
 	onRename,
+	onMove,
 	onSelectionChange,
 	getRowCanSelect,
 	isUpdating = false,
@@ -165,7 +162,7 @@ export function DataTable<TData, TValue>({
 					</div>
 				)}
 
-				{hasSelection && (onDelete || onRename) && (
+				{hasSelection && (onDelete || onRename || onMove) && (
 					<div className="ml-auto flex items-center gap-2">
 						<span className="text-muted-foreground text-sm">
 							{selectedRows.length} selected
@@ -176,18 +173,32 @@ export function DataTable<TData, TValue>({
 						  passes only `onDelete` - offered a Rename button that did
 						  nothing at all when clicked.
 						*/}
+						{/*
+						  None of these clear the selection on click. They used to, before
+						  the dialog they open had been answered - so cancelling a bulk
+						  delete lost everything you had picked. The routes clear it when
+						  the mutation actually succeeds.
+						*/}
 						{onRename ? (
 							<Button
 								disabled={disableSelectionActions || selectedRows.length !== 1}
 								variant="outline"
 								size="sm"
-								onClick={() => {
-									onRename(selectedRows.at(0)!)
-									onRowSelectionChange({})
-								}}
+								onClick={() => onRename(selectedRows.at(0)!)}
 							>
 								<TextCursor className="mr-2 h-4 w-4" />
 								Rename
+							</Button>
+						) : null}
+						{onMove ? (
+							<Button
+								disabled={disableSelectionActions}
+								variant="outline"
+								size="sm"
+								onClick={() => onMove(selectedRows)}
+							>
+								<FolderInput className="mr-2 h-4 w-4" />
+								Move
 							</Button>
 						) : null}
 						{onDelete ? (
@@ -195,10 +206,7 @@ export function DataTable<TData, TValue>({
 								variant="destructive"
 								size="sm"
 								disabled={disableSelectionActions}
-								onClick={() => {
-									onDelete(selectedRows)
-									onRowSelectionChange({})
-								}}
+								onClick={() => onDelete(selectedRows)}
 							>
 								<Trash2 className="mr-2 h-4 w-4" />
 								Delete

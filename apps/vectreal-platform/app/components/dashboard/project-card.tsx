@@ -1,10 +1,17 @@
 import { Button } from '@shared/components/ui/button'
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger
+} from '@shared/components/ui/dropdown-menu'
 import { cn } from '@shared/utils'
-import { Pencil } from 'lucide-react'
+import { Ellipsis, Pencil, Trash2 } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { SceneThumbnail } from './scene-thumbnail'
 import { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
+import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
 
 export interface ProjectCardData {
 	id: string
@@ -24,6 +31,9 @@ export interface ProjectCardData {
 interface ProjectCardProps {
 	project: ProjectCardData
 	className?: string
+	/** Omit to render the card without an actions menu at all. */
+	onDelete?: (project: ProjectCardData) => void
+	canDelete?: boolean
 }
 
 function formatUpdated(updatedAt: Date | null) {
@@ -50,7 +60,14 @@ function formatUpdated(updatedAt: Date | null) {
  * project's most recent scene, and how its scenes divide across draft and
  * published. Both come from data the loader already had in hand.
  */
-export function ProjectCard({ project, className }: ProjectCardProps) {
+export function ProjectCard({
+	project,
+	className,
+	onDelete,
+	canDelete = false
+}: ProjectCardProps) {
+	const isClientMounted = useIsClientMounted()
+
 	return (
 		<div className={cn('group/card relative', className)}>
 			<Link
@@ -58,10 +75,7 @@ export function ProjectCard({ project, className }: ProjectCardProps) {
 				viewTransition
 				className="ds-raised-interactive block overflow-hidden rounded-2xl"
 			>
-				<SceneThumbnail
-					src={project.thumbnailUrl}
-					className="rounded-none"
-				/>
+				<SceneThumbnail src={project.thumbnailUrl} className="rounded-none" />
 
 				<div className="space-y-2 p-4">
 					<div className="min-w-0">
@@ -82,18 +96,48 @@ export function ProjectCard({ project, className }: ProjectCardProps) {
 			{/*
 			  Outside the card link rather than inside it: nesting an anchor in an
 			  anchor is invalid, and the browser resolves it by dropping one of them.
+
+			  A menu rather than the bare pencil this used to be: the card had no way
+			  to delete a project at all, and two hover-revealed icon buttons in one
+			  corner is already crowded before adding a destructive one.
 			*/}
-			<Button
-				variant="ghost"
-				size="icon"
-				asChild
-				className="absolute top-2 right-2 opacity-0 transition-opacity group-hover/card:opacity-100 focus-visible:opacity-100"
-			>
-				<Link to={`/dashboard/projects/${project.id}/edit`}>
-					<Pencil className="size-4" />
-					<span className="sr-only">Edit {project.name}</span>
-				</Link>
-			</Button>
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button
+						variant="ghost"
+						size="icon"
+						disabled={!isClientMounted}
+						aria-label={`Actions for ${project.name}`}
+						className="absolute top-2 right-2 opacity-0 transition-opacity group-hover/card:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+					>
+						<Ellipsis className="size-4" />
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end">
+					<DropdownMenuItem asChild>
+						<Link
+							to={`/dashboard/projects/edit/${project.id}`}
+							className="flex w-full items-center gap-2"
+						>
+							<Pencil className="mr-2 size-4" />
+							Edit project
+						</Link>
+					</DropdownMenuItem>
+					<DropdownMenuItem
+						disabled={!canDelete || !onDelete}
+						onClick={() => onDelete?.(project)}
+						className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+					>
+						<Trash2 className="mr-2 size-4" />
+						Delete project
+					</DropdownMenuItem>
+					{!canDelete ? (
+						<p className="text-muted-foreground px-2 py-1.5 text-xs">
+							Only organization owners can delete a project.
+						</p>
+					) : null}
+				</DropdownMenuContent>
+			</DropdownMenu>
 		</div>
 	)
 }
