@@ -11,7 +11,13 @@
  * preventing that.
  */
 
-/** Matches `MAX_FOLDER_ANCESTRY_DEPTH` in the scene folder repository. */
+/**
+ * The deepest a folder tree may nest.
+ *
+ * Reads throw past this, so anything nested deeper becomes unreadable and takes
+ * the tree view with it. Create and move both enforce it, and the scene folder
+ * repository imports this rather than keeping its own copy.
+ */
 export const MAX_FOLDER_DEPTH = 50
 
 export type FolderMoveRejection =
@@ -38,17 +44,24 @@ export interface FolderMoveInput {
 	targetIsCrossProject?: boolean
 }
 
-const MESSAGES: Record<FolderMoveRejection, string> = {
+/**
+ * Exported so folder *creation* can reject an over-deep nesting in the same
+ * words the move path uses. Two rules that share a limit should share a message,
+ * or users get told two different things about one constraint.
+ */
+export const FOLDER_RULE_MESSAGES: Record<FolderMoveRejection, string> = {
 	'same-parent': 'This folder is already here',
 	'self-parent': 'A folder cannot be moved into itself',
 	'descendant-parent':
 		'A folder cannot be moved into one of its own subfolders',
 	'cross-project': 'Folders cannot move between projects',
-	'too-deep': `Moving here would nest folders more than ${MAX_FOLDER_DEPTH} levels deep`
+	// Phrased for both callers: create hits this too, and "moving here" would be
+	// wrong there.
+	'too-deep': `Folders cannot nest more than ${MAX_FOLDER_DEPTH} levels deep`
 }
 
 function reject(reason: FolderMoveRejection): FolderMoveValidation {
-	return { ok: false, reason, message: MESSAGES[reason] }
+	return { ok: false, reason, message: FOLDER_RULE_MESSAGES[reason] }
 }
 
 /**

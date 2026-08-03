@@ -111,11 +111,16 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 }
 
 /**
- * Where to land after a successful save.
+ * Where to send the user after a successful save.
  *
- * Client-supplied, so it is matched against the two shapes we actually issue
- * rather than trusted - an open redirect here would be reachable by anyone who
- * can craft a form post.
+ * The value is client-supplied, so it is matched against the two shapes this
+ * drawer actually issues rather than prefix-tested - `/dashboard/projects` is a
+ * prefix of `/dashboard/projects.evil.example`, and a prefix test would also let
+ * a protocol-relative `//host` through.
+ *
+ * The query string is preserved but never inspected: the list keeps its view,
+ * search, sort and page there, and dropping it returned the user to a default
+ * grid instead of the table they were reading.
  */
 function resolveReturnTo(raw: FormDataEntryValue | null, projectId: string) {
 	const fallback = `/dashboard/projects/${projectId}`
@@ -123,7 +128,21 @@ function resolveReturnTo(raw: FormDataEntryValue | null, projectId: string) {
 		return fallback
 	}
 
-	return raw === '/dashboard/projects' || raw === fallback ? raw : fallback
+	// A CR or LF in a Location header is header injection, so refuse outright
+	// rather than trying to sanitize it.
+	if (/[\u0000-\u001f\u007f]/.test(raw)) {
+		return fallback
+	}
+
+	const queryIndex = raw.indexOf('?')
+	const pathname = queryIndex === -1 ? raw : raw.slice(0, queryIndex)
+	const search = queryIndex === -1 ? '' : raw.slice(queryIndex)
+
+	if (pathname !== '/dashboard/projects' && pathname !== fallback) {
+		return fallback
+	}
+
+	return `${pathname}${search}`
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -236,9 +255,13 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	  card, that is the list; opened from the project header, the project. It used
 	  to always navigate to the project, so editing from the list quietly moved
 	  you into it.
+
+	  The search string travels with it. The list keeps its view, search, sort and
+	  page in URL params, so dropping the query returned you to a default grid
+	  rather than the table you were reading.
 	*/
 	const closeTo = isListScopedProjectEditPath(location.pathname)
-		? '/dashboard/projects'
+		? `/dashboard/projects${location.search}`
 		: `/dashboard/projects/${project.id}`
 
 	const handleOpenChange = (open: boolean) => {

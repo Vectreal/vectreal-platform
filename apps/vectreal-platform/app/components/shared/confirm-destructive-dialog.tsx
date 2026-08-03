@@ -79,18 +79,30 @@ export function ConfirmDestructiveDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent>
-				<DialogHeader>
-					<DialogTitle>{plan.title}</DialogTitle>
+			{/*
+			  `gap-5` and a left-aligned header rather than the defaults. The shared
+			  content applies one uniform gap to every child, which made the title,
+			  the summary, the consequences, the confirm field and the footer read as
+			  five slabs of equal weight. Here they are two groups - what is being
+			  destroyed, and what you have to do about it - so the spacing says so.
+			*/}
+			<DialogContent className="gap-5">
+				<DialogHeader className="gap-1.5 text-left">
+					<DialogTitle className="pr-6">{plan.title}</DialogTitle>
 					<DialogDescription>{plan.description}</DialogDescription>
 				</DialogHeader>
 
 				{plan.consequences.length > 0 ? (
-					<ul className="text-muted-foreground space-y-1.5 text-sm">
+					// A quiet block rather than loose bullets: at the same size and
+					// color as the description above, the itemization read as more of
+					// the same sentence instead of a list of outcomes.
+					<ul className="ds-sunken text-muted-foreground space-y-2 rounded-xl p-4 text-sm">
 						{plan.consequences.map((consequence) => (
-							<li key={consequence} className="flex gap-2">
-								<span aria-hidden="true">&bull;</span>
-								<span>{consequence}</span>
+							<li key={consequence} className="flex gap-2.5">
+								<span aria-hidden="true" className="text-muted-foreground/60">
+									&bull;
+								</span>
+								<span className="leading-snug">{consequence}</span>
 							</li>
 						))}
 					</ul>
@@ -100,7 +112,7 @@ export function ConfirmDestructiveDialog({
 					<div className="space-y-2">
 						<label
 							htmlFor="destructive-confirmation"
-							className="text-muted-foreground text-sm"
+							className="text-muted-foreground block text-sm"
 						>
 							Type{' '}
 							<span className="text-foreground font-mono font-semibold">
@@ -108,16 +120,21 @@ export function ConfirmDestructiveDialog({
 							</span>{' '}
 							to confirm.
 						</label>
+						{/*
+						  A tighter radius than the global `--radius: 1rem`. At full
+						  width that default made the confirm field the heaviest shape
+						  on screen, which is not where the eye should land.
+						*/}
 						<Input
 							id="destructive-confirmation"
 							value={typedText}
 							onChange={(event) => setTypedText(event.target.value)}
-							placeholder={plan.token}
 							disabled={isPending || Boolean(blockedReason)}
 							autoComplete="off"
 							autoCorrect="off"
 							autoCapitalize="off"
 							spellCheck={false}
+							className="rounded-lg font-mono"
 						/>
 					</div>
 				) : null}

@@ -34,7 +34,7 @@ import {
 	ArrowRight
 } from 'lucide-react'
 import { memo } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 
 import { createCheckboxColumn, SortableHeader } from './data-table'
 import { SceneThumbnail } from './scene-thumbnail'
@@ -420,6 +420,7 @@ const ProjectActionsCell = memo(function ProjectActionsCell({
 	isActionsDisabled?: boolean
 }) {
 	const isClientMounted = useIsClientMounted()
+	const location = useLocation()
 
 	// `ProjectRow` has carried `canDelete` all along; the old cell ignored it and
 	// offered no delete to anyone.
@@ -444,7 +445,15 @@ const ProjectActionsCell = memo(function ProjectActionsCell({
 					<DropdownMenuContent align="end">
 						<DropdownMenuItem asChild>
 							<Link
-								to={`/dashboard/projects/edit/${row.id}`}
+								/*
+								  The search carries the list's view, filters and page. A bare
+								  pathname here dropped all of it, so opening the drawer from
+								  the table flipped the list behind it back to cards.
+								*/
+								to={{
+									pathname: `/dashboard/projects/edit/${row.id}`,
+									search: location.search
+								}}
 								className="flex w-full items-center gap-2"
 							>
 								<Pencil className="mr-2 h-4 w-4" />

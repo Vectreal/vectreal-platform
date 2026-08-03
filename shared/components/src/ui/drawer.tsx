@@ -73,7 +73,12 @@ function DrawerHeader({ className, ...props }: React.ComponentProps<'div'>) {
 	return (
 		<div
 			data-slot="drawer-header"
-			className={cn('flex flex-col gap-1.5 p-4', className)}
+			/*
+			  `p-6` to match the drawer bodies. Every consumer in the app pads its
+			  content `p-6` against a `p-4` header, so the heading and the content
+			  beneath it did not share a left edge in any of them.
+			*/
+			className={cn('flex flex-col gap-1.5 p-6', className)}
 			{...props}
 		/>
 	)
@@ -96,7 +101,17 @@ function DrawerTitle({
 	return (
 		<DrawerPrimitive.Title
 			data-slot="drawer-title"
-			className={cn('text-foreground font-semibold', className)}
+			/*
+			  `text-lg` is load-bearing, not decoration. Radix renders this as an
+			  `<h2>`, and the base layer gives a bare `h2` `--text-h2` - 28px here.
+			  Without a size class every drawer heading in the app rendered at 28px
+			  semibold instead of the 16-18px this styling was written for. Dialog
+			  and AlertDialog titles declare their size for the same reason.
+			*/
+			className={cn(
+				'text-foreground text-lg leading-none font-semibold',
+				className
+			)}
 			{...props}
 		/>
 	)

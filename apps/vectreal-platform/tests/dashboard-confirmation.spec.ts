@@ -61,12 +61,19 @@ describe('destructive confirmation tiers', () => {
 			expect(plan.token).toBe(DASHBOARD_CONFIRMATION_TOKEN)
 		})
 
-		it('tells the user that embeds break', () => {
+		it('tells the user that embeds break and storage is reclaimed', () => {
 			const plan = planDeleteConfirmation([scene({ sceneStatus: 'published' })])
 
 			expect(plan.title).toContain('Hero Shot')
 			expect(plan.consequences.join(' ')).toContain('embed')
-			expect(plan.consequences.join(' ')).toContain('published GLB')
+			/*
+			  This used to promise only that the published GLB went. Deletion now
+			  collects every asset the scene owns, so the copy covers all of them -
+			  and says the shared ones stay, because reference-counted cleanup
+			  deliberately keeps an upload another scene still uses.
+			*/
+			expect(plan.consequences.join(' ')).toContain('removed from storage')
+			expect(plan.consequences.join(' ')).toContain('unless another scene')
 		})
 
 		it('treats an unknown status as not published', () => {

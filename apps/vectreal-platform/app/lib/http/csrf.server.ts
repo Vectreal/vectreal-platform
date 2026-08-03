@@ -130,3 +130,41 @@ export async function ensureValidCsrfFormData(
 		return ApiResponse.forbidden('Invalid CSRF token')
 	}
 }
+
+/**
+ * Token CSRF for handlers that have already consumed the request body.
+ *
+ * `ensureValidCsrfFormData` needs the `FormData` itself, but a route parsed with
+ * `parseActionRequest` no longer has one - the body is read once and comes back
+ * as a plain record, and a `Request` body cannot be read twice. This validates
+ * the same token taken from that record.
+ *
+ * Origin checking still runs first, so this is strictly stronger than the
+ * origin-only check it is meant to replace - that one passes when both `Origin`
+ * and `Referer` are absent.
+ */
+export async function ensureValidCsrfToken(
+	request: Request,
+	token: unknown
+): Promise<Response | null> {
+	const sameOriginCheck = ensureSameOriginMutation(request)
+	if (sameOriginCheck) {
+		return sameOriginCheck
+	}
+
+	if (typeof token !== 'string' || token.length === 0) {
+		return ApiResponse.forbidden('Missing CSRF token')
+	}
+
+	// `csrfSession` reads the token out of a `FormData` under `formDataKey`, so
+	// hand it one holding just that field.
+	const carrier = new FormData()
+	carrier.set('csrf', token)
+
+	try {
+		await csrfSession.validate(carrier, request.headers)
+		return null
+	} catch {
+		return ApiResponse.forbidden('Invalid CSRF token')
+	}
+}

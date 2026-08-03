@@ -27,7 +27,10 @@ import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-pr
 import * as sceneSettingsOps from '../../lib/domain/scene/server/scene-settings.operations.server'
 import { SceneSettingsParser } from '../../lib/domain/scene/server/scene-settings.parser.server'
 import { getAuthUser } from '../../lib/http/auth.server'
-import { ensureSameOriginMutation } from '../../lib/http/csrf.server'
+import {
+	ensureSameOriginMutation,
+	ensureValidCsrfToken
+} from '../../lib/http/csrf.server'
 import { ensurePost, parseActionRequest } from '../../lib/http/requests.server'
 
 import type { SceneSettingsAction } from '../../types/api'
@@ -532,6 +535,19 @@ export async function action({ request, params }: ActionFunctionArgs) {
 	}
 
 	if (action === 'update-scene-metadata') {
+		/*
+		  Token CSRF, not just the route's origin check.
+
+		  This was the last dashboard mutation posting without a token at all, and
+		  `ensureSameOriginMutation` passes when both `Origin` and `Referer` are
+		  absent. Scoped to this action rather than the whole route: the other
+		  actions here have their own callers to migrate.
+		*/
+		const tokenCheck = await ensureValidCsrfToken(request, actionRequest.csrf)
+		if (tokenCheck) {
+			return withAdditionalHeaders(tokenCheck, authHeaders)
+		}
+
 		if (!routeSceneId) {
 			return withAdditionalHeaders(
 				ApiResponse.badRequest('Scene ID is required'),

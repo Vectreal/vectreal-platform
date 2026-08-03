@@ -124,7 +124,9 @@ function planSingleScene(ref: DashboardEntityRef): DashboardConfirmationPlan {
 				'This scene is live. Deleting it takes the published model offline immediately.',
 			consequences: [
 				'Every embed of this scene stops rendering, on every site using it',
-				'The published GLB and its storage object are deleted',
+				// Accurate as of the reference-counted cleanup in `deleteScene`:
+				// uploads shared with another scene are deliberately kept.
+				'Its uploaded files are removed from storage, unless another scene uses them',
 				'Scene settings and optimization history are deleted',
 				IRREVERSIBLE
 			],
@@ -138,7 +140,10 @@ function planSingleScene(ref: DashboardEntityRef): DashboardConfirmationPlan {
 		title: `Delete "${ref.name}"?`,
 		description:
 			'This scene and its saved settings will be removed. This cannot be undone.',
-		consequences: ['Scene settings and optimization history are deleted'],
+		consequences: [
+			'Scene settings and optimization history are deleted',
+			'Its uploaded files are removed from storage, unless another scene uses them'
+		],
 		confirmLabel: 'Delete scene',
 		token: null
 	}

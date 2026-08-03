@@ -7,7 +7,7 @@ import {
 } from '@shared/components/ui/dropdown-menu'
 import { cn } from '@shared/utils'
 import { Ellipsis, Pencil, Trash2 } from 'lucide-react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 
 import { SceneThumbnail } from './scene-thumbnail'
 import { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
@@ -67,6 +67,7 @@ export function ProjectCard({
 	canDelete = false
 }: ProjectCardProps) {
 	const isClientMounted = useIsClientMounted()
+	const location = useLocation()
 
 	return (
 		<div className={cn('group/card relative', className)}>
@@ -108,7 +109,13 @@ export function ProjectCard({
 						size="icon"
 						disabled={!isClientMounted}
 						aria-label={`Actions for ${project.name}`}
-						className="absolute top-2 right-2 opacity-0 transition-opacity group-hover/card:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+						/*
+						  Always present, on its own scrim. This used to be `opacity-0`
+						  until hover, sitting bare on the thumbnail - against a light
+						  image it was invisible even while hovered, and hover-reveal has
+						  no touch equivalent, so on a tablet the menu was unreachable.
+						*/
+						className="bg-background/70 hover:bg-background focus-visible:bg-background data-[state=open]:bg-background absolute top-2 right-2 backdrop-blur-sm transition-colors"
 					>
 						<Ellipsis className="size-4" />
 					</Button>
@@ -116,7 +123,11 @@ export function ProjectCard({
 				<DropdownMenuContent align="end">
 					<DropdownMenuItem asChild>
 						<Link
-							to={`/dashboard/projects/edit/${project.id}`}
+							// Carries the list's view and filters - see the table's edit link.
+							to={{
+								pathname: `/dashboard/projects/edit/${project.id}`,
+								search: location.search
+							}}
 							className="flex w-full items-center gap-2"
 						>
 							<Pencil className="mr-2 size-4" />

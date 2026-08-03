@@ -3,10 +3,17 @@ import { and, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { getDbClient } from '../../../../db/client'
 import { organizationMemberships } from '../../../../db/schema/core/organization-memberships'
 import { projects } from '../../../../db/schema/project/projects'
+import { sceneAssets } from '../../../../db/schema/project/scene-assets'
 import { sceneFolders } from '../../../../db/schema/project/scene-folders'
 import { scenePublished } from '../../../../db/schema/project/scene-published'
+import { sceneSettings } from '../../../../db/schema/project/scene-settings'
 import { scenes } from '../../../../db/schema/project/scenes'
 import { deleteAssets } from '../../asset/asset-storage.server'
+import {
+	getQuotaLimit,
+	getRecommendedUpgrade
+} from '../../billing/entitlement-service.server'
+import { QuotaExceededError } from '../../billing/quota-exceeded-error'
 import {
 	assertDashboardPermission,
 	resolveProjectMembership,
@@ -14,6 +21,8 @@ import {
 	resolveSceneMembership
 } from '../../dashboard/dashboard-permissions.server'
 import {
+	FOLDER_RULE_MESSAGES,
+	MAX_FOLDER_DEPTH,
 	validateFolderMove,
 	validateSceneMove
 } from '../../dashboard/folder-move'
@@ -24,7 +33,6 @@ import type {
 } from '../../../../types/api'
 
 const db = getDbClient()
-const MAX_FOLDER_ANCESTRY_DEPTH = 50
 
 type DbClient = typeof db
 
@@ -297,7 +305,7 @@ export async function getSceneFolderAncestry(
 		currentFolderId = folder.parentFolderId
 		depth += 1
 
-		if (depth > MAX_FOLDER_ANCESTRY_DEPTH) {
+		if (depth > MAX_FOLDER_DEPTH) {
 			throw new Error('Folder hierarchy exceeds supported depth')
 		}
 	}
@@ -333,7 +341,7 @@ export async function getSceneFolderDescendantIds(
 			select child.id, parent.depth + 1
 			from scene_folders child
 			join descendants parent on child.parent_folder_id = parent.id
-			where parent.depth < ${MAX_FOLDER_ANCESTRY_DEPTH}
+			where parent.depth < ${MAX_FOLDER_DEPTH}
 		)
 		select distinct id from descendants
 	`)
@@ -426,6 +434,49 @@ export async function getAccessibleSceneFolders(
 	return rows.map(({ folder }) => folder)
 }
 
+/**
+ * Rejects folder creation once an organization is at its plan limit.
+ *
+ * Counts rows rather than going through `checkQuota`. That helper reads
+ * `org_usage_counters`, and nothing in the app calls `incrementUsage` or
+ * `decrementUsage` - every counter except a leftover `optimization_runs_per_month`
+ * sits at zero, so `checkQuota` can never report an exceeded limit. Routing this
+ * through it would look like enforcement and enforce nothing.
+ *
+ * `getQuotaLimit` is used as-is: the limit side reads plan config and per-org
+ * overrides, and works. It is only the usage side that is inert.
+ */
+async function assertFolderQuota(organizationId: string): Promise<void> {
+	const { limit, effectivePlan } = await getQuotaLimit(
+		organizationId,
+		'folders_total'
+	)
+
+	if (limit === null) {
+		return
+	}
+
+	const [row] = await db
+		.select({ total: count() })
+		.from(sceneFolders)
+		.innerJoin(projects, eq(projects.id, sceneFolders.projectId))
+		.where(eq(projects.organizationId, organizationId))
+
+	const current = row?.total ?? 0
+	if (current + 1 <= limit) {
+		return
+	}
+
+	throw new QuotaExceededError({
+		limitKey: 'folders_total',
+		currentValue: current,
+		limit,
+		plan: effectivePlan,
+		upgradeTo: getRecommendedUpgrade(effectivePlan),
+		message: `Folder limit reached for your plan (${limit}). Delete a folder or upgrade to create more.`
+	})
+}
+
 export async function createSceneFolder(params: {
 	projectId: string
 	userId: string
@@ -447,6 +498,8 @@ export async function createSceneFolder(params: {
 	}
 	assertDashboardPermission('scene-folder:create', membership)
 
+	await assertFolderQuota(membership.organizationId)
+
 	if (params.parentFolderId) {
 		const parentFolder = await getSceneFolder(
 			params.parentFolderId,
@@ -458,6 +511,21 @@ export async function createSceneFolder(params: {
 
 		if (parentFolder.projectId !== params.projectId) {
 			throw new Error('Parent folder must belong to the same project')
+		}
+
+		/*
+		  Create was the one path that could deepen the tree without a limit, while
+		  reads throw past the cap - so a folder nested past it became unreadable
+		  and took the whole tree view down with it. Move has always validated this;
+		  now both use the same rule and the same message.
+		*/
+		const tree = await getSceneFolderTree(params.projectId, params.userId)
+		const parentDepth = tree.find(
+			(entry) => entry.id === params.parentFolderId
+		)?.depth
+		const resultingDepth = (parentDepth ?? 0) + 1
+		if (resultingDepth > MAX_FOLDER_DEPTH) {
+			throw new Error(FOLDER_RULE_MESSAGES['too-deep'])
 		}
 	}
 
@@ -696,6 +764,77 @@ export async function moveSceneFolder(
 }
 
 /**
+ * Every asset this scene points at, from both directions.
+ *
+ * Assets reach a scene two ways: through `scene_settings -> scene_assets` for
+ * everything it uploaded, and through `scene_published` for the live GLB. Both
+ * join rows cascade away with the scene, so this has to run *before* the delete
+ * or there is nothing left to look up.
+ *
+ * These are candidates, not orphans - see `selectUnreferencedAssets`.
+ */
+async function collectSceneAssetIds(sceneId: string): Promise<string[]> {
+	const [attached, published] = await Promise.all([
+		db
+			.selectDistinct({ assetId: sceneAssets.assetId })
+			.from(sceneAssets)
+			.innerJoin(
+				sceneSettings,
+				eq(sceneSettings.id, sceneAssets.sceneSettingsId)
+			)
+			.where(eq(sceneSettings.sceneId, sceneId)),
+		db
+			.select({ assetId: scenePublished.assetId })
+			.from(scenePublished)
+			.where(eq(scenePublished.sceneId, sceneId))
+	])
+
+	return [
+		...new Set([
+			...attached.map((row) => row.assetId),
+			...published.map((row) => row.assetId)
+		])
+	]
+}
+
+/**
+ * Narrows candidate assets to the ones nothing points at any more.
+ *
+ * Uploads are content-addressed and reused - `prepareSceneUpload` hands back an
+ * existing asset when the filename and content hash match - so a scene's assets
+ * are frequently *other scenes'* assets too. Deleting by association would take
+ * the shared ones with it and break every scene still using them.
+ *
+ * Run this after the scene row is gone: its own join rows have cascaded away by
+ * then, so anything still referencing an asset is somebody else.
+ */
+async function selectUnreferencedAssets(
+	candidateIds: string[]
+): Promise<string[]> {
+	if (candidateIds.length === 0) {
+		return []
+	}
+
+	const [stillAttached, stillPublished] = await Promise.all([
+		db
+			.selectDistinct({ assetId: sceneAssets.assetId })
+			.from(sceneAssets)
+			.where(inArray(sceneAssets.assetId, candidateIds)),
+		db
+			.selectDistinct({ assetId: scenePublished.assetId })
+			.from(scenePublished)
+			.where(inArray(scenePublished.assetId, candidateIds))
+	])
+
+	const referenced = new Set([
+		...stillAttached.map((row) => row.assetId),
+		...stillPublished.map((row) => row.assetId)
+	])
+
+	return candidateIds.filter((assetId) => !referenced.has(assetId))
+}
+
+/**
  * @param options.deferAssetCleanup Skip the storage call and hand the orphaned
  * asset ids back instead. Bulk callers set this and delete once at the end:
  * `deleteAssets` is a network round trip, so doing it per scene inside a loop
@@ -712,21 +851,14 @@ export async function deleteScene(
 	}
 	assertDashboardPermission('scene:delete', membership)
 
-	// Capture the published asset before the cascade removes the row that
-	// points at it. `scene_published` cascades on scene delete, but the `assets`
-	// row and its storage object do not - deleting a published scene used to
-	// leave the GLB behind, still costing storage and still reachable by URL.
-	const [publishedRecord] = await db
-		.select({ assetId: scenePublished.assetId })
-		.from(scenePublished)
-		.where(eq(scenePublished.sceneId, sceneId))
-		.limit(1)
+	// Before the delete: the join rows that name these assets are about to
+	// cascade away. Deleting a scene used to leave every one of them behind,
+	// still costing storage, and the published GLB still reachable by URL.
+	const candidateAssetIds = await collectSceneAssetIds(sceneId)
 
 	await db.delete(scenes).where(eq(scenes.id, sceneId))
 
-	const orphanedAssetIds = publishedRecord?.assetId
-		? [publishedRecord.assetId]
-		: []
+	const orphanedAssetIds = await selectUnreferencedAssets(candidateAssetIds)
 
 	if (orphanedAssetIds.length > 0 && !options.deferAssetCleanup) {
 		try {
@@ -737,7 +869,7 @@ export async function deleteScene(
 			await deleteAssets(orphanedAssetIds)
 		} catch (error) {
 			console.error(
-				`Failed to clean up published asset for scene ${sceneId}:`,
+				`Failed to clean up orphaned assets for scene ${sceneId}:`,
 				error
 			)
 		}

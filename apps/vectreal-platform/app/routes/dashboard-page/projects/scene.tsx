@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { data, Link, useNavigate } from 'react-router'
+import { useAuthenticityToken } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/scene'
 import CenteredSpinner from '../../../components/centered-spinner'
@@ -296,6 +297,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 	const { scene, project, user, sceneDetails, publishState } = loaderData
 	const sceneId = scene.id
 	const navigate = useNavigate()
+	const csrfToken = useAuthenticityToken()
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
 	// Use sceneId as key to create a new hook instance per scene
@@ -411,6 +413,10 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 			formData.append('action', 'update-scene-metadata')
 			formData.append('name', trimmedName)
 			formData.append('description', sceneDescriptionDraft)
+			// This request bypasses React Router, so nothing attaches the token for
+			// it. Without this the endpoint fell back to an origin-only check that
+			// passes when a client sends neither `Origin` nor `Referer`.
+			formData.append('csrf', csrfToken)
 
 			const response = await fetch(`/api/scenes/${sceneState.id}`, {
 				method: 'POST',

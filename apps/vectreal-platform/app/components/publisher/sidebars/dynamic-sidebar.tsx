@@ -114,8 +114,13 @@ export const DynamicSidebar = ({
 						first?.focus()
 					}}
 				>
+					{/*
+					  The header is pinned to the tighter `p-4` the shared component used
+					  to default to. This is a publisher sidebar rather than a dashboard
+					  drawer, and its content is not padded `p-6`.
+					*/}
 					{showMobileHeader && (
-						<DrawerHeader className="border-shell-border-soft shrink-0 border-b pb-3">
+						<DrawerHeader className="border-shell-border-soft shrink-0 border-b p-4 pb-3">
 							<div className="flex items-start justify-between gap-2">
 								<div>
 									<DrawerTitle>{title}</DrawerTitle>

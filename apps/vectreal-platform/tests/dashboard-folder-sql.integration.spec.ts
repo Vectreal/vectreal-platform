@@ -20,6 +20,11 @@ import { randomUUID } from 'node:crypto'
 import { eq, inArray } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
+import {
+	FOLDER_RULE_MESSAGES,
+	MAX_FOLDER_DEPTH
+} from '../app/lib/domain/dashboard/folder-move'
+
 const shouldRun = Boolean(process.env.DASHBOARD_DB_SMOKE)
 
 type Schema = typeof import('../app/db/schema')
@@ -314,7 +319,112 @@ describe.skipIf(!shouldRun)('folder SQL against a real database', () => {
 		})
 	})
 
-	describe('deleteScene', () => {
+	describe('createSceneFolder guards', () => {
+		it('allows a child below the cap', async () => {
+			const created = await repository.createSceneFolder({
+				projectId,
+				userId: ownerId,
+				name: 'shallow child',
+				parentFolderId: rootId
+			})
+
+			expect(created.parentFolderId).toBe(rootId)
+			await db
+				.delete(schema.sceneFolders)
+				.where(eq(schema.sceneFolders.id, created.id))
+		})
+
+		it('rejects a child that would nest past the limit', async () => {
+			// The chain alone exceeds the free plan's folder allowance, and the
+			// quota is checked first, so raise it for this org - otherwise this
+			// asserts the quota message and never reaches the depth rule.
+			await db.insert(schema.orgLimitOverrides).values({
+				organizationId,
+				limitKey: 'folders_total',
+				limitValue: 10_000
+			})
+
+			// Root-level is depth 0, so a chain of `MAX + 1` folders puts the last
+			// one *at* the cap and any child of it one past.
+			const chain: string[] = []
+			let parentId: string | null = null
+			for (let depth = 0; depth <= MAX_FOLDER_DEPTH; depth++) {
+				const id = randomUUID()
+				chain.push(id)
+				await db.insert(schema.sceneFolders).values({
+					id,
+					projectId,
+					name: `chain-${depth}`,
+					ownerId,
+					parentFolderId: parentId
+				})
+				parentId = id
+			}
+
+			try {
+				await expect(
+					repository.createSceneFolder({
+						projectId,
+						userId: ownerId,
+						name: 'one too deep',
+						parentFolderId: chain[chain.length - 1]
+					})
+				).rejects.toThrow(FOLDER_RULE_MESSAGES['too-deep'])
+			} finally {
+				// In a finally: a failed assertion above would otherwise leave 50
+				// folders behind and break every later case in this file.
+				await db
+					.delete(schema.sceneFolders)
+					.where(inArray(schema.sceneFolders.id, chain))
+			}
+		})
+
+		it('rejects creation once the plan folder allowance is used up', async () => {
+			await db
+				.delete(schema.orgLimitOverrides)
+				.where(eq(schema.orgLimitOverrides.organizationId, organizationId))
+			await db.insert(schema.orgLimitOverrides).values({
+				organizationId,
+				limitKey: 'folders_total',
+				limitValue: 1
+			})
+
+			await expect(
+				repository.createSceneFolder({
+					projectId,
+					userId: ownerId,
+					name: 'over quota'
+				})
+			).rejects.toThrow(/Folder limit reached/)
+
+			await db
+				.delete(schema.orgLimitOverrides)
+				.where(eq(schema.orgLimitOverrides.organizationId, organizationId))
+		})
+	})
+
+	describe('self-reference constraint', () => {
+		it('is refused by the database, not just the application', async () => {
+			// The app guards multi-hop cycles; this single-row case is the part a
+			// CHECK can express, so a bug bypassing `validateFolderMove` still fails.
+			let constraint: string | undefined
+			try {
+				await db
+					.update(schema.sceneFolders)
+					.set({ parentFolderId: siblingId })
+					.where(eq(schema.sceneFolders.id, siblingId))
+			} catch (error) {
+				// The driver wraps the Postgres error, so the constraint name is on
+				// the cause rather than the message.
+				constraint = (error as { cause?: { constraint_name?: string } }).cause
+					?.constraint_name
+			}
+
+			expect(constraint).toBe('scene_folders_parent_not_self')
+		})
+	})
+
+	describe('deleteScene asset cleanup', () => {
 		it('hands back the published asset instead of stranding it', async () => {
 			const { orphanedAssetIds } = await repository.deleteScene(
 				publishedSceneId,
@@ -329,6 +439,58 @@ describe.skipIf(!shouldRun)('folder SQL against a real database', () => {
 				.from(schema.scenes)
 				.where(eq(schema.scenes.id, publishedSceneId))
 			expect(remaining).toHaveLength(0)
+		})
+
+		it('keeps an asset a second scene still uses, and collects it once that goes', async () => {
+			/*
+			  The case a blind cascade gets wrong. Uploads are content-addressed and
+			  reused across scenes, so deleting scene A must not take an asset scene B
+			  is still rendering.
+			*/
+			const sharedAssetId = randomUUID()
+			const sceneA = randomUUID()
+			const sceneB = randomUUID()
+			const settingsA = randomUUID()
+			const settingsB = randomUUID()
+
+			await db.insert(schema.assets).values({
+				id: sharedAssetId,
+				folderId: assetFolderId,
+				name: 'shared.glb',
+				type: 'model',
+				filePath: `smoke/${sharedAssetId}.glb`,
+				ownerId
+			})
+			await db.insert(schema.scenes).values([
+				{ id: sceneA, projectId, folderId: null, name: 'scene a' },
+				{ id: sceneB, projectId, folderId: null, name: 'scene b' }
+			])
+			await db.insert(schema.sceneSettings).values([
+				{ id: settingsA, sceneId: sceneA, createdBy: ownerId },
+				{ id: settingsB, sceneId: sceneB, createdBy: ownerId }
+			])
+			await db.insert(schema.sceneAssets).values([
+				{ sceneSettingsId: settingsA, assetId: sharedAssetId },
+				{ sceneSettingsId: settingsB, assetId: sharedAssetId }
+			])
+
+			const first = await repository.deleteScene(sceneA, ownerId, {
+				deferAssetCleanup: true
+			})
+			expect(first.orphanedAssetIds).toEqual([])
+
+			const stillThere = await db
+				.select({ id: schema.assets.id })
+				.from(schema.assets)
+				.where(eq(schema.assets.id, sharedAssetId))
+			expect(stillThere).toHaveLength(1)
+
+			const second = await repository.deleteScene(sceneB, ownerId, {
+				deferAssetCleanup: true
+			})
+			expect(second.orphanedAssetIds).toEqual([sharedAssetId])
+
+			await db.delete(schema.assets).where(eq(schema.assets.id, sharedAssetId))
 		})
 	})
 

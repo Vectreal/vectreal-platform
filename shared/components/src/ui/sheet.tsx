@@ -110,7 +110,14 @@ function SheetTitle({
 	return (
 		<SheetPrimitive.Title
 			data-slot="sheet-title"
-			className={cn('text-foreground font-semibold', className)}
+			/*
+			  Sized for the same reason as `DrawerTitle` - Radix renders an `<h2>`,
+			  and a bare `h2` picks up `--text-h2` (28px) from the base layer.
+			*/
+			className={cn(
+				'text-foreground text-lg leading-none font-semibold',
+				className
+			)}
 			{...props}
 		/>
 	)
