@@ -10,6 +10,7 @@ import {
 } from '../billing/entitlement-service.server'
 import { QuotaExceededError } from '../billing/quota-exceeded-error'
 import { checkQuota } from '../billing/usage-service.server'
+import { assertDashboardPermission } from '../dashboard/dashboard-permissions.server'
 
 const db = getDbClient()
 
@@ -180,9 +181,7 @@ export async function updateProject(
 		throw new Error('Project not found or access denied')
 	}
 
-	if (!['admin', 'owner'].includes(membership.role)) {
-		throw new Error('Insufficient permissions to edit this project')
-	}
+	assertDashboardPermission('project:update', { role: membership.role })
 
 	const [updatedProject] = await db
 		.update(projects)
@@ -204,9 +203,7 @@ export async function deleteProject(
 		throw new Error('Project not found or access denied')
 	}
 
-	if (membership.role !== 'owner') {
-		throw new Error('Only organization owners can delete projects')
-	}
+	assertDashboardPermission('project:delete', { role: membership.role })
 
 	await db.delete(projects).where(eq(projects.id, projectId))
 }

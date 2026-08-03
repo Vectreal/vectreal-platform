@@ -37,14 +37,13 @@ import {
 } from '@shared/components/ui/select'
 import { Textarea } from '@shared/components/ui/textarea'
 import { useSetAtom } from 'jotai/react'
-import { AlertCircle, CheckCircle2, Copy, KeyRound, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Copy, KeyRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import {
 	data,
 	Form as RemixForm,
 	useLocation,
-	useNavigate,
 	useNavigation
 } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
@@ -57,6 +56,7 @@ import {
 	type ProjectOption
 } from '../../components/dashboard'
 import { FeatureUnavailablePanel } from '../../components/upgrade/feature-unavailable-panel'
+import { useRouteDrawer } from '../../hooks/use-route-drawer'
 import { createApiKey } from '../../lib/domain/auth/api-key-repository.server'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import {
@@ -341,7 +341,7 @@ function OneTimeKeyDialog({
 					</Alert>
 
 					<div className="space-y-2">
-						<label className="text-sm font-medium">API Key</label>
+						<label className="text-h4">API Key</label>
 						<div className="flex gap-2">
 							<div className="text-muted-foreground bg-muted flex-1 rounded-md border p-3 font-mono text-sm break-all">
 								{apiKey.plaintext}
@@ -367,7 +367,7 @@ function OneTimeKeyDialog({
 					</div>
 
 					<div className="bg-muted space-y-2 rounded-md p-4">
-						<h4 className="text-sm font-medium">Next Steps</h4>
+						<h4 className="text-h4">Next Steps</h4>
 						<ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
 							<li>Copy the API key above to a secure location</li>
 							<li>Use it in your application's authorization header</li>
@@ -396,7 +396,6 @@ export default function ApiKeysNewPage({
 	const { organizations, userProjects, apiKeysAccessByOrg } = loaderData
 	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 	const location = useLocation()
-	const navigate = useNavigate()
 
 	const navigation = useNavigation()
 	const isSubmitting = navigation.state !== 'idle'
@@ -451,7 +450,8 @@ export default function ApiKeysNewPage({
 			slug: p.project.slug
 		}))
 
-	const isCreateDisabled = isSubmitting || showKeyDialog || !selectedOrgAccess?.granted
+	const isCreateDisabled =
+		isSubmitting || showKeyDialog || !selectedOrgAccess?.granted
 
 	// Reset project selection when organization changes
 	useEffect(() => {
@@ -489,44 +489,32 @@ export default function ApiKeysNewPage({
 		}
 	}, [actionData, form, setUpgradeModal])
 
-	const handleClose = () => {
-		navigate('/dashboard/api-keys')
-	}
+	const drawer = useRouteDrawer({ isOpen, closeTo: '/dashboard/api-keys' })
 
 	const handleKeyDialogClose = () => {
 		setShowKeyDialog(false)
 		setCreatedKey(null)
-		handleClose()
-	}
-
-	const handleOpenChange = (open: boolean) => {
-		if (!open) {
-			handleClose()
-		}
+		drawer.close()
 	}
 
 	return (
 		<>
-			<Drawer open={isOpen} onOpenChange={handleOpenChange} direction="right">
+			<Drawer
+				open={drawer.open}
+				onOpenChange={drawer.onOpenChange}
+				onAnimationEnd={drawer.onAnimationEnd}
+				direction="right"
+			>
 				<DrawerContent className="max-w-lg!">
 					<DrawerHeader className="border-b">
-						<div className="flex items-start justify-between">
-							<div>
-								<DrawerTitle>Create API Key</DrawerTitle>
-								<DrawerDescription>
-									Create a key for secure embed token access across selected
-									projects
-								</DrawerDescription>
-							</div>
-							<DrawerClose asChild>
-								<Button variant="ghost" size="icon">
-									<X className="h-4 w-4" />
-								</Button>
-							</DrawerClose>
-						</div>
+						<DrawerTitle>Create API Key</DrawerTitle>
+						<DrawerDescription>
+							Create a key for secure embed token access across selected
+							projects
+						</DrawerDescription>
 					</DrawerHeader>
 
-					<div className="space-y-3 overflow-y-auto p-6">
+					<div className="space-y-6 overflow-y-auto p-6">
 						{!hasAnyApiKeyAccess && organizations[0] && (
 							<FeatureUnavailablePanel
 								title="API key creation is temporarily unavailable"
@@ -716,12 +704,13 @@ export default function ApiKeysNewPage({
 										</Alert>
 									)}
 
-								<DrawerFooter className="px-0 pt-2">
-									<Button
-										type="submit"
-										disabled={isCreateDisabled}
-										className="w-full"
-									>
+								<DrawerFooter className="px-0 pt-4 pb-0">
+									<DrawerClose asChild>
+										<Button type="button" variant="outline">
+											Cancel
+										</Button>
+									</DrawerClose>
+									<Button type="submit" disabled={isCreateDisabled}>
 										{isSubmitting ? (
 											<>Creating...</>
 										) : (
@@ -731,11 +720,6 @@ export default function ApiKeysNewPage({
 											</>
 										)}
 									</Button>
-									<DrawerClose asChild>
-										<Button type="button" variant="outline" className="w-full">
-											Cancel
-										</Button>
-									</DrawerClose>
 								</DrawerFooter>
 							</RemixForm>
 						</Form>

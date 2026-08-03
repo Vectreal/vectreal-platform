@@ -1,21 +1,4 @@
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle
-} from '@shared/components/ui/alert-dialog'
 import { Badge } from '@shared/components/ui/badge'
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle
-} from '@shared/components/ui/card'
 import {
 	Empty,
 	EmptyDescription,
@@ -47,6 +30,7 @@ import {
 	createApiKeyColumns,
 	type ApiKeyRow
 } from '../../components/dashboard'
+import { ConfirmDestructiveDialog } from '../../components/shared/confirm-destructive-dialog'
 import { FeatureUnavailablePanel } from '../../components/upgrade/feature-unavailable-panel'
 import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
 import {
@@ -64,6 +48,7 @@ import { getUserOrganizations } from '../../lib/domain/user/user-repository.serv
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { shouldRevalidateWithinScope } from '../../lib/navigation/dashboard-route-behavior'
 
+import type { DashboardConfirmationPlan } from '../../lib/domain/dashboard/dashboard-confirmation'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -311,16 +296,17 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 
 	if (organizations.length === 0) {
 		return (
-			<div className="container max-w-6xl py-8">
-				<Card>
-					<CardHeader>
-						<CardTitle>No Organizations</CardTitle>
-						<CardDescription>
-							You need to be an admin or owner of an organization to manage API
-							keys.
-						</CardDescription>
-					</CardHeader>
-				</Card>
+			<div className="space-y-6 p-6">
+				<Empty>
+					<EmptyMedia>
+						<KeyRound className="text-muted-foreground h-24 w-24" />
+					</EmptyMedia>
+					<EmptyHeader>No organizations</EmptyHeader>
+					<EmptyDescription>
+						You need to be an admin or owner of an organization to manage API
+						keys.
+					</EmptyDescription>
+				</Empty>
 			</div>
 		)
 	}
@@ -328,47 +314,73 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 	const defaultOrgId = organizations[0]?.organization.id
 	const keyToRevoke = keyToRevokeId ? keysById.get(keyToRevokeId) : null
 
+	/*
+	  Revoking is destructive but recoverable by issuing a new key, so it sits at
+	  the acknowledge tier rather than asking the user to type anything. It is
+	  built by hand rather than by `planDeleteConfirmation` because an API key is
+	  not one of the entity types that endpoint owns.
+	*/
+	const revokePlan: DashboardConfirmationPlan = {
+		tier: 'acknowledge',
+		title: keyToRevoke
+			? `Revoke "${keyToRevoke.apiKey.name}"?`
+			: 'Revoke API key?',
+		description: keyToRevoke
+			? `Key ending ${keyToRevoke.apiKey.keyPreview} stops working immediately.`
+			: 'This key stops working immediately.',
+		consequences: [
+			'Any application still using this key loses access at once',
+			'This cannot be undone - issue a new key to restore access'
+		],
+		confirmLabel: 'Revoke key',
+		token: null
+	}
+
 	return (
 		<>
-			<div className="container max-w-6xl py-8">
+			<div className="space-y-6 p-6">
 				{organizations.length === 1 ? (
-					<Card className="mb-4">
-						<CardHeader>
-							<CardTitle>{organizations[0].organization.name}</CardTitle>
-							<CardDescription>
+					/*
+					  A section heading over the table, matching every other dashboard
+					  route. This used to be a `Card` wrapping `DataTable`, which
+					  renders its own raised panel - so the table sat on a surface
+					  inside a surface.
+					*/
+					<section className="space-y-4">
+						<div>
+							<h2 className="text-h4">{organizations[0].organization.name}</h2>
+							<p className="text-muted-foreground text-sm">
 								{keysByOrg[organizations[0].organization.id]?.length || 0} API{' '}
 								{keysByOrg[organizations[0].organization.id]?.length === 1
 									? 'key'
 									: 'keys'}{' '}
 								configured for secure embed and preview access
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							{apiKeysAccessByOrg[organizations[0].organization.id]?.granted ? (
-								<OrgApiKeysTable
-									namespace={`api-keys-${organizations[0].organization.id}`}
-									rows={buildApiKeyRows(
-										keysByOrg[organizations[0].organization.id] || []
-									)}
-									onEdit={handleEdit}
-									onRevoke={handleRevoke}
-								/>
-							) : (
-								<FeatureUnavailablePanel
-									title="API key management is temporarily unavailable"
-									description="This organization currently cannot manage API keys. Check billing state or organization access and try again."
-									plan={
-										apiKeysAccessByOrg[organizations[0].organization.id]?.plan
-									}
-									upgradeTo={
-										apiKeysAccessByOrg[organizations[0].organization.id]
-											?.upgradeTo ?? null
-									}
-									actionAttempted="api_keys_view"
-								/>
-							)}
-						</CardContent>
-					</Card>
+							</p>
+						</div>
+						{apiKeysAccessByOrg[organizations[0].organization.id]?.granted ? (
+							<OrgApiKeysTable
+								namespace={`api-keys-${organizations[0].organization.id}`}
+								rows={buildApiKeyRows(
+									keysByOrg[organizations[0].organization.id] || []
+								)}
+								onEdit={handleEdit}
+								onRevoke={handleRevoke}
+							/>
+						) : (
+							<FeatureUnavailablePanel
+								title="API key management is temporarily unavailable"
+								description="This organization currently cannot manage API keys. Check billing state or organization access and try again."
+								plan={
+									apiKeysAccessByOrg[organizations[0].organization.id]?.plan
+								}
+								upgradeTo={
+									apiKeysAccessByOrg[organizations[0].organization.id]
+										?.upgradeTo ?? null
+								}
+								actionAttempted="api_keys_view"
+							/>
+						)}
+					</section>
 				) : (
 					<Tabs defaultValue={defaultOrgId}>
 						<TabsList className="mb-4">
@@ -390,65 +402,44 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 								key={org.organization.id}
 								value={org.organization.id}
 							>
-								<Card>
-									<CardHeader>
-										<CardDescription>
-											API keys for {org.organization.name}
-										</CardDescription>
-									</CardHeader>
-									<CardContent>
-										{apiKeysAccessByOrg[org.organization.id]?.granted ? (
-											<OrgApiKeysTable
-												namespace={`api-keys-${org.organization.id}`}
-												rows={buildApiKeyRows(
-													keysByOrg[org.organization.id] || []
-												)}
-												onEdit={handleEdit}
-												onRevoke={handleRevoke}
-											/>
-										) : (
-											<FeatureUnavailablePanel
-												title="API key management is temporarily unavailable"
-												description="This organization currently cannot manage API keys. Check billing state or organization access and try again."
-												plan={apiKeysAccessByOrg[org.organization.id]?.plan}
-												upgradeTo={
-													apiKeysAccessByOrg[org.organization.id]?.upgradeTo ??
-													null
-												}
-												actionAttempted="api_keys_view"
-											/>
-										)}
-									</CardContent>
-								</Card>
+								<section className="space-y-4">
+									<p className="text-muted-foreground text-sm">
+										API keys for {org.organization.name}
+									</p>
+									{apiKeysAccessByOrg[org.organization.id]?.granted ? (
+										<OrgApiKeysTable
+											namespace={`api-keys-${org.organization.id}`}
+											rows={buildApiKeyRows(
+												keysByOrg[org.organization.id] || []
+											)}
+											onEdit={handleEdit}
+											onRevoke={handleRevoke}
+										/>
+									) : (
+										<FeatureUnavailablePanel
+											title="API key management is temporarily unavailable"
+											description="This organization currently cannot manage API keys. Check billing state or organization access and try again."
+											plan={apiKeysAccessByOrg[org.organization.id]?.plan}
+											upgradeTo={
+												apiKeysAccessByOrg[org.organization.id]?.upgradeTo ??
+												null
+											}
+											actionAttempted="api_keys_view"
+										/>
+									)}
+								</section>
 							</TabsContent>
 						))}
 					</Tabs>
 				)}
 
-				<AlertDialog open={revokeDialogOpen} onOpenChange={setRevokeDialogOpen}>
-					<AlertDialogContent>
-						<AlertDialogHeader>
-							<AlertDialogTitle>Revoke API Key?</AlertDialogTitle>
-							<AlertDialogDescription>
-								Are you sure you want to revoke "{keyToRevoke?.apiKey.name}" (
-								...
-								{keyToRevoke?.apiKey.keyPreview})? This action cannot be undone
-								and any applications using this key will immediately lose
-								access.
-							</AlertDialogDescription>
-						</AlertDialogHeader>
-						<AlertDialogFooter>
-							<AlertDialogCancel>Cancel</AlertDialogCancel>
-							<AlertDialogAction
-								onClick={confirmRevoke}
-								disabled={isRevoking}
-								className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-							>
-								Revoke Key
-							</AlertDialogAction>
-						</AlertDialogFooter>
-					</AlertDialogContent>
-				</AlertDialog>
+				<ConfirmDestructiveDialog
+					open={revokeDialogOpen}
+					onOpenChange={setRevokeDialogOpen}
+					plan={revokePlan}
+					isPending={isRevoking}
+					onConfirm={confirmRevoke}
+				/>
 			</div>
 
 			<Outlet />

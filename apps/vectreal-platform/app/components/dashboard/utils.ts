@@ -150,11 +150,30 @@ export const extractRouteData = (
  * @param params - Parsed route parameters
  * @returns Route context discriminated union
  */
+/** `/dashboard/projects/edit/:projectId` - the drawer opened from the list. */
+export const isListScopedProjectEditPath = (pathname: string) =>
+	/^\/dashboard\/projects\/edit\/[^/]+$/.test(pathname)
+
+/** True for either edit-drawer shape, list-scoped or nested under the project. */
+export const isProjectEditPath = (pathname: string, projectId: string) =>
+	pathname === `/dashboard/projects/edit/${projectId}` ||
+	pathname === `/dashboard/projects/${projectId}/edit`
+
 export const getRouteContext = (
 	pathname: string,
 	params: RouteParams
 ): RouteContext => {
 	const { view, projectId, routeType, routeId } = params
+
+	/*
+	  The list-scoped edit drawer, checked before anything positional.
+	  `parseRouteParams` reads segments by index, so this path otherwise parses
+	  as projectId='edit' with a UUID routeType and resolves as 'scene-detail',
+	  taking the breadcrumb and header with it.
+	*/
+	if (isListScopedProjectEditPath(pathname)) {
+		return 'project-list'
+	}
 
 	// Scene route: /dashboard/projects/:projectId/:sceneId
 	if (
@@ -244,4 +263,5 @@ export const identifyDrawerRoute = (pathname: string) =>
 	pathname === '/dashboard/projects/new' ||
 	pathname === '/dashboard/api-keys/new' ||
 	/^\/dashboard\/projects\/[^/]+\/edit$/.test(pathname) ||
+	isListScopedProjectEditPath(pathname) ||
 	/^\/dashboard\/api-keys\/[^/]+\/edit$/.test(pathname)

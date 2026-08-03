@@ -46,10 +46,23 @@ function AlertDialogOverlay({
 
 function AlertDialogContent({
 	className,
+	container,
 	...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Content>) {
+}: React.ComponentProps<typeof AlertDialogPrimitive.Content> & {
+	/**
+	 * Portal target, matching `DialogContent` and `HoverCardContent`. The content
+	 * mounts on `document.body` by default, which puts it outside any themed
+	 * subtree - so an alert opened from inside a `.dark` container renders with
+	 * light tokens. Pass the themed element to keep it in scope.
+	 *
+	 * The content is `fixed`, so the target also has to establish a containing
+	 * block - a transform, for instance - or it will centre on the viewport
+	 * rather than on the container.
+	 */
+	container?: HTMLElement | null
+}) {
 	return (
-		<AlertDialogPortal>
+		<AlertDialogPortal container={container}>
 			<AlertDialogOverlay />
 			<AlertDialogPrimitive.Content
 				data-slot="alert-dialog-content"
@@ -70,7 +83,13 @@ function AlertDialogHeader({
 	return (
 		<div
 			data-slot="alert-dialog-header"
-			className={cn('flex flex-col gap-2 text-center sm:text-left', className)}
+			/*
+			  Left-aligned at every width. The shadcn default centers below `sm`,
+			  which put a centered title above left-aligned body copy in every
+			  dialog that has a list or a form under it - and had call sites
+			  overriding it back.
+			*/
+			className={cn('flex flex-col gap-2 text-left', className)}
 			{...props}
 		/>
 	)
@@ -99,7 +118,14 @@ function AlertDialogTitle({
 	return (
 		<AlertDialogPrimitive.Title
 			data-slot="alert-dialog-title"
-			className={cn('text-lg font-semibold', className)}
+			/*
+			  The h3 rung, the same as `DrawerTitle` and `SheetTitle`. A modal, a
+			  drawer and a sheet are the same thing wearing different animations, so
+			  their titles should not have been three different sizes. This was
+			  `text-lg font-semibold` - a shadcn default, and a pairing the type
+			  scale does not contain.
+			*/
+			className={cn('text-h3', className)}
 			{...props}
 		/>
 	)

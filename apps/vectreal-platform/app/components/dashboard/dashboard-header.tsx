@@ -24,7 +24,13 @@ export const DashboardHeader = memo(() => {
 			<div className="space-y-8 p-6">
 				<div className="flex grow flex-col items-start justify-between gap-4 md:flex-row">
 					<div className="space-y-2">
-						<h1 className="text-5xl font-normal">{title}</h1>
+						{/*
+					  The h2 rung rather than a raw `text-5xl`. This was the last
+					  heading in the dashboard sizing itself outside the scale, and at
+					  a fixed 48px it did not respond to viewport width the way every
+					  other heading does.
+					*/}
+					<h1 className="text-h2">{title}</h1>
 						<span className="text-primary/50">{description}</span>
 					</div>
 

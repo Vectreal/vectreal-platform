@@ -18,12 +18,14 @@ import {
 	type ContentRow
 } from '../../../components/dashboard'
 import { FolderContentSkeleton } from '../../../components/skeletons'
-import { useDashboardSceneActions } from '../../../hooks/use-dashboard-scene-actions'
+import { useDashboardMutationStatus } from '../../../hooks/use-dashboard-mutations'
 import { useDashboardTableState } from '../../../hooks/use-dashboard-table-state'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
+import { toContentRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
 import {
 	getChildFolders,
+	getSceneFolderChildCounts,
 	getFolderScenes,
 	getSceneFolder,
 	getSceneFolderAncestry
@@ -31,7 +33,9 @@ import {
 import { shouldRevalidateForRouteParams } from '../../../lib/navigation/dashboard-route-behavior'
 import {
 	deleteDialogAtom,
-	renameDialogAtom
+	moveDialogAtom,
+	renameDialogAtom,
+	selectedRowsAtom
 } from '../../../lib/stores/dashboard-management-store'
 
 import type { ShouldRevalidateFunction } from 'react-router'
@@ -67,13 +71,20 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		getSceneFolderAncestry(folderId, user.id)
 	])
 
+	const subfolderChildCounts = await getSceneFolderChildCounts(
+		subfolders.map((subfolder) => subfolder.id)
+	)
+
 	return data(
 		{
 			user,
 			project,
 			folder,
 			folderPath,
-			subfolders,
+			subfolders: subfolders.map((subfolder) => ({
+				...subfolder,
+				childCount: subfolderChildCounts.get(subfolder.id) ?? 0
+			})),
 			scenes
 		},
 		{ headers }
@@ -105,10 +116,11 @@ export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/err
 
 const FolderPage = ({ loaderData }: Route.ComponentProps) => {
 	const { project, subfolders, scenes } = loaderData
-	const { setSelectedRows, isTableBusy, pendingItemIds } =
-		useDashboardSceneActions()
+	const setSelectedRows = useSetAtom(selectedRowsAtom)
+	const { isBusy: isTableBusy, pendingIds } = useDashboardMutationStatus()
 	const setRenameDialog = useSetAtom(renameDialogAtom)
 	const setDeleteDialog = useSetAtom(deleteDialogAtom)
+	const setMoveDialog = useSetAtom(moveDialogAtom)
 	const projectId = project.id
 	const tableState = useDashboardTableState({
 		namespace: 'folder-content'
@@ -118,10 +130,6 @@ const FolderPage = ({ loaderData }: Route.ComponentProps) => {
 		subfolders,
 		scenes
 	}
-	const pendingItemIdSet = useMemo(
-		() => new Set(pendingItemIds),
-		[pendingItemIds]
-	)
 
 	const contentRows = useMemo<ContentRow[]>(() => {
 		const folderRows: ContentRow[] = subfolders.map((subfolder) => ({
@@ -131,6 +139,7 @@ const FolderPage = ({ loaderData }: Route.ComponentProps) => {
 			description: subfolder.description || undefined,
 			projectId,
 			projectName: project.name,
+			childCount: subfolder.childCount,
 			updatedAt: subfolder.updatedAt
 		}))
 
@@ -152,37 +161,30 @@ const FolderPage = ({ loaderData }: Route.ComponentProps) => {
 	const contentColumns = useMemo(
 		() =>
 			createContentColumns({
-				pendingItemIds: pendingItemIdSet,
+				pendingItemIds: pendingIds,
 				isActionsDisabled: isTableBusy,
 				onRenameItem: (row) => {
 					setRenameDialog({
 						open: true,
-						item: {
-							id: row.id,
-							type: row.type,
-							name: row.name,
-							projectId: row.projectId,
-							folderId: row.folderId
-						},
+						item: toContentRef(row),
 						name: row.name
+					})
+				},
+				onMoveItem: (row) => {
+					setMoveDialog({
+						open: true,
+						items: [toContentRef(row)],
+						projectId: row.projectId
 					})
 				},
 				onDeleteItem: (row) => {
 					setDeleteDialog({
 						open: true,
-						items: [
-							{
-								id: row.id,
-								type: row.type,
-								name: row.name,
-								projectId: row.projectId,
-								folderId: row.folderId
-							}
-						]
+						items: [toContentRef(row)]
 					})
 				}
 			}),
-		[isTableBusy, pendingItemIdSet, setDeleteDialog, setRenameDialog]
+		[isTableBusy, pendingIds, setDeleteDialog, setMoveDialog, setRenameDialog]
 	)
 
 	useEffect(() => {
@@ -215,38 +217,25 @@ const FolderPage = ({ loaderData }: Route.ComponentProps) => {
 						onRename={(selectedRow) => {
 							setRenameDialog({
 								open: true,
-								item: {
-									id: selectedRow.id,
-									type: selectedRow.type,
-									name: selectedRow.name,
-									projectId: selectedRow.projectId,
-									folderId: selectedRow.folderId
-								},
+								item: toContentRef(selectedRow),
 								name: selectedRow.name
+							})
+						}}
+						onMove={(selectedRows) => {
+							setMoveDialog({
+								open: true,
+								items: (selectedRows as ContentRow[]).map(toContentRef),
+								projectId
 							})
 						}}
 						onDelete={(selectedRows) => {
 							setDeleteDialog({
 								open: true,
-								items: (selectedRows as ContentRow[]).map((row) => ({
-									id: row.id,
-									type: row.type,
-									name: row.name,
-									projectId: row.projectId,
-									folderId: row.folderId
-								}))
+								items: (selectedRows as ContentRow[]).map(toContentRef)
 							})
 						}}
 						onSelectionChange={(selectedRows) => {
-							setSelectedRows(
-								(selectedRows as ContentRow[]).map((row) => ({
-									id: row.id,
-									type: row.type,
-									name: row.name,
-									projectId: row.projectId,
-									folderId: row.folderId
-								}))
-							)
+							setSelectedRows((selectedRows as ContentRow[]).map(toContentRef))
 						}}
 						getRowCanSelect={() => true}
 					/>

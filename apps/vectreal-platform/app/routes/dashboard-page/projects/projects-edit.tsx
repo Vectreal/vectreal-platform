@@ -2,9 +2,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@shared/components/ui/button'
 import {
 	Drawer,
-	DrawerClose,
 	DrawerContent,
 	DrawerDescription,
+	DrawerFooter,
 	DrawerHeader,
 	DrawerTitle
 } from '@shared/components/ui/drawer'
@@ -26,8 +26,8 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 import { Textarea } from '@shared/components/ui/textarea'
-import { Save, X } from 'lucide-react'
-import { useEffect } from 'react'
+import { Save, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import {
 	data,
@@ -40,7 +40,19 @@ import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { z, ZodError } from 'zod'
 
 import { Route } from './+types/projects-edit'
+import {
+	isListScopedProjectEditPath,
+	isProjectEditPath
+} from '../../../components/dashboard/utils'
+import { ConfirmDestructiveDialog } from '../../../components/shared/confirm-destructive-dialog'
+import { useDashboardMutations } from '../../../hooks/use-dashboard-mutations'
+import { useRouteDrawer } from '../../../hooks/use-route-drawer'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
+import { buildDashboardCapabilities } from '../../../lib/domain/dashboard/dashboard-capabilities'
+import {
+	planDeleteConfirmation,
+	toProjectRef
+} from '../../../lib/domain/dashboard/dashboard-confirmation'
 import { validateAllowedDomainInput } from '../../../lib/domain/embed/embed-domain-policy'
 import {
 	getProject,
@@ -64,7 +76,6 @@ const projectEditSchema = z.object({
 			/^[a-z0-9]+(?:-[a-z0-9]+)*$/,
 			'Slug must be lowercase letters, numbers, and hyphens only'
 		),
-	description: z.string().optional(),
 	allowedEmbedDomains: z.string().optional()
 })
 
@@ -88,7 +99,51 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Project not found', { status: 404 })
 	}
 
-	return data({ project, organizations }, { headers })
+	const capabilities = buildDashboardCapabilities(organizations)
+
+	return data(
+		{
+			project,
+			organizations,
+			canDelete: capabilities[project.organizationId]?.canDeleteProject ?? false
+		},
+		{ headers }
+	)
+}
+
+/**
+ * Where to send the user after a successful save.
+ *
+ * The value is client-supplied, so it is matched against the two shapes this
+ * drawer actually issues rather than prefix-tested - `/dashboard/projects` is a
+ * prefix of `/dashboard/projects.evil.example`, and a prefix test would also let
+ * a protocol-relative `//host` through.
+ *
+ * The query string is preserved but never inspected: the list keeps its view,
+ * search, sort and page there, and dropping it returned the user to a default
+ * grid instead of the table they were reading.
+ */
+function resolveReturnTo(raw: FormDataEntryValue | null, projectId: string) {
+	const fallback = `/dashboard/projects/${projectId}`
+	if (typeof raw !== 'string') {
+		return fallback
+	}
+
+	// A CR or LF in a Location header is header injection, so refuse outright
+	// rather than trying to sanitize it.
+	if (/[\u0000-\u001f\u007f]/.test(raw)) {
+		return fallback
+	}
+
+	const queryIndex = raw.indexOf('?')
+	const pathname = queryIndex === -1 ? raw : raw.slice(0, queryIndex)
+	const search = queryIndex === -1 ? '' : raw.slice(queryIndex)
+
+	if (pathname !== '/dashboard/projects' && pathname !== fallback) {
+		return fallback
+	}
+
+	return `${pathname}${search}`
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -138,7 +193,9 @@ export async function action({ request, params }: Route.ActionArgs) {
 			user.id
 		)
 
-		return redirect(`/dashboard/projects/${projectId}`, { headers })
+		return redirect(resolveReturnTo(formData.get('returnTo'), projectId), {
+			headers
+		})
 	} catch (error) {
 		if (error instanceof ZodError) {
 			const fieldErrors: Record<string, string> = {}
@@ -171,19 +228,44 @@ export async function action({ request, params }: Route.ActionArgs) {
 export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
 
 const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
-	const { project, organizations } = loaderData
+	const { project, organizations, canDelete } = loaderData
 	const csrfToken = useAuthenticityToken()
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+
+	const deletePlan = useMemo(
+		() =>
+			planDeleteConfirmation([
+				toProjectRef({ id: project.id, name: project.name })
+			]),
+		[project.id, project.name]
+	)
+
+	const deleteMutation = useDashboardMutations({
+		onSuccess: () => {
+			navigate('/dashboard/projects', { replace: true })
+		}
+	})
 
 	const location = useLocation()
 	const navigate = useNavigate()
 
-	const isOpen = location.pathname === `/dashboard/projects/${project.id}/edit`
+	const isOpen = isProjectEditPath(location.pathname, project.id)
 
-	const handleOpenChange = (open: boolean) => {
-		if (!open) {
-			navigate(`/dashboard/projects/${project.id}`)
-		}
-	}
+	/*
+	  Closing returns you to wherever you opened the drawer from. Opened from a
+	  card, that is the list; opened from the project header, the project. It used
+	  to always navigate to the project, so editing from the list quietly moved
+	  you into it.
+
+	  The search string travels with it. The list keeps its view, search, sort and
+	  page in URL params, so dropping the query returned you to a default grid
+	  rather than the table you were reading.
+	*/
+	const closeTo = isListScopedProjectEditPath(location.pathname)
+		? `/dashboard/projects${location.search}`
+		: `/dashboard/projects/${project.id}`
+
+	const drawer = useRouteDrawer({ isOpen, closeTo })
 
 	const form = useForm<ProjectEditFormValues>({
 		resolver: zodResolver(projectEditSchema),
@@ -192,7 +274,6 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 		defaultValues: {
 			name: project.name,
 			slug: project.slug,
-			description: '',
 			allowedEmbedDomains: project.allowedEmbedDomains ?? ''
 		}
 	})
@@ -218,28 +299,25 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	)
 
 	return (
-		<Drawer open={isOpen} onOpenChange={handleOpenChange} direction="right">
+		<Drawer
+			open={drawer.open}
+			onOpenChange={drawer.onOpenChange}
+			onAnimationEnd={drawer.onAnimationEnd}
+			direction="right"
+		>
 			<DrawerContent className="max-w-lg!">
 				<DrawerHeader className="border-b">
-					<div className="flex items-start justify-between">
-						<div>
-							<DrawerTitle>Edit Project</DrawerTitle>
-							<DrawerDescription>
-								Update the details for {project.name}
-							</DrawerDescription>
-						</div>
-						<DrawerClose asChild>
-							<Button variant="ghost" size="icon">
-								<X className="h-4 w-4" />
-							</Button>
-						</DrawerClose>
-					</div>
+					<DrawerTitle>Edit Project</DrawerTitle>
+					<DrawerDescription>
+						Update the details for {project.name}
+					</DrawerDescription>
 				</DrawerHeader>
 
 				<div className="overflow-y-auto p-6">
 					<Form {...form}>
 						<RemixForm method="post" className="space-y-6">
 							<input type="hidden" name="csrf" value={csrfToken} />
+							<input type="hidden" name="returnTo" value={closeTo} />
 							{/* Organization (read-only) */}
 							<FormItem>
 								<FormLabel>Organization</FormLabel>
@@ -324,40 +402,6 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 								)}
 							/>
 
-							{/* Description (optional) */}
-							<FormField
-								control={form.control}
-								name="description"
-								render={({ field, fieldState }) => (
-									<FormItem>
-										<FormLabel>
-											Description{' '}
-											<span className="text-muted-foreground font-normal">
-												(Optional)
-											</span>
-										</FormLabel>
-										<FormControl>
-											<Textarea
-												{...field}
-												onChange={(e) => {
-													form.clearErrors('description')
-													field.onChange(e)
-												}}
-												placeholder="Describe your project..."
-												className="min-h-32"
-											/>
-										</FormControl>
-										{fieldState.error ? (
-											<FormMessage />
-										) : (
-											<FormDescription>
-												Help your team understand the project&apos;s purpose
-											</FormDescription>
-										)}
-									</FormItem>
-								)}
-							/>
-
 							<FormField
 								control={form.control}
 								name="allowedEmbedDomains"
@@ -390,12 +434,8 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 							/>
 
 							{/* Action buttons */}
-							<div className="flex justify-end gap-3 pt-4">
-								<Button
-									type="button"
-									variant="outline"
-									onClick={() => handleOpenChange(false)}
-								>
+							<DrawerFooter className="px-0 pt-4 pb-0">
+								<Button type="button" variant="outline" onClick={drawer.close}>
 									Cancel
 								</Button>
 								<Button
@@ -419,9 +459,56 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 										</>
 									)}
 								</Button>
-							</div>
+							</DrawerFooter>
 						</RemixForm>
 					</Form>
+
+					{/*
+					  Outside the form on purpose: a nested <button> submits its form,
+					  so a delete button inside would save the project on the way to
+					  destroying it.
+					*/}
+					<section className="border-destructive/40 mt-8 space-y-3 rounded-2xl border p-4">
+						<h3 className="text-destructive text-h4">Danger zone</h3>
+						<p className="text-muted-foreground text-sm">
+							Deleting this project removes every scene, folder and published
+							embed inside it.
+						</p>
+						<Button
+							type="button"
+							variant="destructive"
+							disabled={!canDelete}
+							onClick={() => setDeleteDialogOpen(true)}
+						>
+							<Trash2 className="mr-2 h-4 w-4" />
+							Delete project
+						</Button>
+						{!canDelete ? (
+							<p className="text-muted-foreground text-xs">
+								Only organization owners can delete a project.
+							</p>
+						) : null}
+					</section>
+
+					<ConfirmDestructiveDialog
+						open={deleteDialogOpen}
+						onOpenChange={(open) => {
+							if (!open && deleteMutation.state !== 'idle') {
+								return
+							}
+							setDeleteDialogOpen(open)
+						}}
+						plan={deletePlan}
+						isPending={deleteMutation.state !== 'idle'}
+						errorMessage={deleteMutation.lastError}
+						onConfirm={(confirmationText) => {
+							deleteMutation.submit({
+								verb: 'delete',
+								targets: [{ type: 'project', id: project.id }],
+								confirmationText
+							})
+						}}
+					/>
 				</div>
 			</DrawerContent>
 		</Drawer>

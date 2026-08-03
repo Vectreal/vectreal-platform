@@ -163,9 +163,14 @@ async function validateSaveLocationTarget(
 		throw new Error('Target folder must belong to the selected project')
 	}
 
-	if (folder.parentFolderId !== null) {
-		throw new Error('Only root-level folders are allowed')
-	}
+	/*
+	  Nested folders used to be rejected here with "Only root-level folders are
+	  allowed", while the publisher's location picker rendered the whole tree
+	  with depth indentation - so picking a subfolder produced a 500. Folders are
+	  hierarchical by design, `getSceneFolderTree` reports depth, and the
+	  dashboard now moves scenes into subfolders freely, so the restriction was
+	  the odd one out rather than the rule.
+	*/
 }
 
 export async function prepareSceneUpload(

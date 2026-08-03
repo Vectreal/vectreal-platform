@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 import {
 	AnyPgColumn,
+	check,
 	index,
 	pgPolicy,
 	pgTable,
@@ -46,6 +47,22 @@ export const sceneFolders = pgTable(
 		index('scene_folders_project_id_idx').on(table.projectId),
 		index('scene_folders_owner_id_idx').on(table.ownerId),
 		index('scene_folders_parent_folder_id_idx').on(table.parentFolderId),
+		/*
+		  A folder cannot be its own parent.
+
+		  This is the only part of the cycle guard a constraint can express.
+		  Catching a longer cycle (A -> B -> A) needs a recursive lookup, which
+		  means a trigger, which cannot be generated from this schema - so
+		  multi-hop cycles stay the application's job, in `validateFolderMove`.
+		  That is the only code that writes `parent_folder_id` after creation.
+
+		  A cycle here is not a cosmetic problem: `getSceneFolderAncestry` throws
+		  when it walks one, which takes the whole folder tree down.
+		*/
+		check(
+			'scene_folders_parent_not_self',
+			sql`${table.parentFolderId} is null or ${table.parentFolderId} <> ${table.id}`
+		),
 		pgPolicy('scene_folders_select_project_member', {
 			for: 'select',
 			to: authenticatedRole,

@@ -7,14 +7,17 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
-import { ToggleGroup, ToggleGroupItem } from '@shared/components/ui/toggle-group'
+import {
+	ToggleGroup,
+	ToggleGroupItem
+} from '@shared/components/ui/toggle-group'
 import { LayoutGrid, Rows3, Search } from 'lucide-react'
 import { useMemo } from 'react'
 
 import { DataTable } from './data-table'
 import { ProjectCard } from './project-card'
 import { type SceneStatusCounts } from './status-breakdown'
-import { projectColumns, type ProjectRow } from './table-columns'
+import { createProjectColumns, type ProjectRow } from './table-columns'
 
 import type { DashboardView } from '../../hooks/use-dashboard-table-state'
 import type { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
@@ -43,6 +46,20 @@ const STATUS_FILTERS: Array<{ value: StatusFilter; label: string }> = [
 	{ value: 'draft', label: 'Has drafts' },
 	{ value: 'archived', label: 'Has archived' }
 ]
+
+/** One shape for both layouts, so a grid delete and a table delete agree. */
+function toProjectRow(item: ProjectBrowseItem): ProjectRow {
+	return {
+		id: item.id,
+		name: item.name,
+		organizationName: item.organizationName,
+		canDelete: item.canDelete,
+		sceneCount: item.sceneCount,
+		counts: item.counts,
+		createdAt: item.updatedAt,
+		updatedAt: item.updatedAt
+	}
+}
 
 interface ProjectsBrowserProps {
 	items: ProjectBrowseItem[]
@@ -106,18 +123,17 @@ export function ProjectsBrowser({
 	)
 
 	const rows: ProjectRow[] = useMemo(
-		() =>
-			filtered.map((item) => ({
-				id: item.id,
-				name: item.name,
-				organizationName: item.organizationName,
-				canDelete: item.canDelete,
-				sceneCount: item.sceneCount,
-				counts: item.counts,
-				createdAt: item.updatedAt,
-				updatedAt: item.updatedAt
-			})),
+		() => filtered.map(toProjectRow),
 		[filtered]
+	)
+
+	const columns = useMemo(
+		() =>
+			createProjectColumns({
+				isActionsDisabled: isUpdating,
+				onDeleteItem: (row) => onDelete([row])
+			}),
+		[isUpdating, onDelete]
 	)
 
 	const clearFilters = () => {
@@ -241,12 +257,17 @@ export function ProjectsBrowser({
 								thumbnailUrl: item.thumbnailUrl,
 								updatedAt: item.updatedAt
 							}}
+							canDelete={item.canDelete}
+							// The grid gets the same delete path as the table, which is
+							// what it was missing: deletion used to require switching to
+							// table view and multi-selecting.
+							onDelete={() => onDelete([toProjectRow(item)])}
 						/>
 					))}
 				</div>
 			) : (
 				<DataTable
-					columns={projectColumns}
+					columns={columns}
 					data={rows}
 					isUpdating={isUpdating}
 					disableSelectionActions={isUpdating}

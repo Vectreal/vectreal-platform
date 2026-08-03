@@ -20,50 +20,20 @@ import {
 	buildSceneManifestEtag
 } from '../../lib/domain/scene/server/scene-aggregate.server'
 import {
-	createSceneFolder,
-	deleteSceneFolder,
-	deleteScene,
 	getScene,
-	renameSceneFolder,
-	renameScene,
 	updateSceneMetadata
 } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import * as sceneSettingsOps from '../../lib/domain/scene/server/scene-settings.operations.server'
 import { SceneSettingsParser } from '../../lib/domain/scene/server/scene-settings.parser.server'
 import { getAuthUser } from '../../lib/http/auth.server'
-import { ensureSameOriginMutation } from '../../lib/http/csrf.server'
+import {
+	ensureSameOriginMutation,
+	ensureValidCsrfToken
+} from '../../lib/http/csrf.server'
 import { ensurePost, parseActionRequest } from '../../lib/http/requests.server'
 
-import type {
-	ContentActionResponse,
-	ContentActionResult,
-	ContentItemType,
-	SceneSettingsAction
-} from '../../types/api'
-
-function parseActionItems(value: unknown): Array<{ type: string; id: string }> {
-	if (Array.isArray(value)) {
-		return value.filter(
-			(item): item is { type: string; id: string } =>
-				typeof item === 'object' &&
-				item !== null &&
-				typeof (item as { type?: unknown }).type === 'string' &&
-				typeof (item as { id?: unknown }).id === 'string'
-		)
-	}
-
-	if (typeof value === 'string') {
-		try {
-			const parsed = JSON.parse(value)
-			return parseActionItems(parsed)
-		} catch {
-			return []
-		}
-	}
-
-	return []
-}
+import type { SceneSettingsAction } from '../../types/api'
 
 function withNoStoreHeaders(response: Response): Response {
 	const headers = new Headers(response.headers)
@@ -361,7 +331,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 						etag
 					)
 				}
-				return withManifestCacheHeaders(new Response(null, { status: 304 }), etag)
+				return withManifestCacheHeaders(
+					new Response(null, { status: 304 }),
+					etag
+				)
 			}
 
 			if (authContext.mode === 'session') {
@@ -538,217 +511,43 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	const authHeaders = authResult.headers
 
-	if (action === 'create-folder') {
-		const projectIdRaw = actionRequest.projectId
-		const nameRaw = actionRequest.name
-		const descriptionRaw = actionRequest.description
-		const parentFolderIdRaw = actionRequest.parentFolderId
+	/*
+	  Create, rename, delete and move moved to POST /api/dashboard/mutations,
+	  which speaks one contract for projects, folders and scenes and validates a
+	  CSRF token rather than only an origin header.
 
-		const projectId =
-			typeof projectIdRaw === 'string' ? projectIdRaw.trim() : ''
-		const name = typeof nameRaw === 'string' ? nameRaw.trim() : ''
-		const description =
-			typeof descriptionRaw === 'string' ? descriptionRaw.trim() : ''
-		const parentFolderId =
-			typeof parentFolderIdRaw === 'string' && parentFolderIdRaw.trim()
-				? parentFolderIdRaw.trim()
-				: null
-
-		if (!projectId) {
-			return withAdditionalHeaders(
-				ApiResponse.badRequest('Project ID is required'),
-				authHeaders
-			)
-		}
-
-		if (!name) {
-			return withAdditionalHeaders(
-				ApiResponse.badRequest('Folder name is required'),
-				authHeaders
-			)
-		}
-
-		try {
-			const folder = await createSceneFolder({
-				projectId,
-				userId: authResult.user.id,
-				name,
-				description,
-				parentFolderId
-			})
-
-			return withAdditionalHeaders(
-				ApiResponse.success({
-					success: true,
-					action,
-					folder
-				}),
-				authHeaders
-			)
-		} catch (error) {
-			return withAdditionalHeaders(
-				ApiResponse.serverError(
-					error instanceof Error ? error.message : 'Failed to create folder'
-				),
-				authHeaders
-			)
-		}
-	}
-
-	if (action === 'delete' || action === 'rename') {
-		if (routeSceneId === 'bulk') {
-			const items = parseActionItems(actionRequest.items)
-			if (items.length === 0) {
-				return withAdditionalHeaders(
-					ApiResponse.badRequest('At least one item is required'),
-					authHeaders
-				)
-			}
-
-			const results: ContentActionResult[] = []
-			const name =
-				typeof actionRequest.name === 'string' ? actionRequest.name : ''
-
-			for (const item of items) {
-				if (item.type !== 'scene' && item.type !== 'folder') {
-					results.push({
-						type: 'scene',
-						id: item.id,
-						success: false,
-						error: 'Unsupported item type'
-					})
-					continue
-				}
-
-				try {
-					if (action === 'delete') {
-						if (item.type === 'scene') {
-							await deleteScene(item.id, authResult.user.id)
-						} else {
-							await deleteSceneFolder(item.id, authResult.user.id)
-						}
-					}
-
-					if (action === 'rename') {
-						if (!name.trim()) {
-							throw new Error('Name is required for rename')
-						}
-
-						if (item.type === 'scene') {
-							await renameScene(item.id, authResult.user.id, name)
-						} else {
-							await renameSceneFolder(item.id, authResult.user.id, name)
-						}
-					}
-
-					results.push({
-						type: item.type as ContentItemType,
-						id: item.id,
-						success: true
-					})
-				} catch (error) {
-					results.push({
-						type: item.type as ContentItemType,
-						id: item.id,
-						success: false,
-						error: error instanceof Error ? error.message : 'Action failed'
-					})
-				}
-			}
-
-			const succeeded = results.filter((result) => result.success).length
-			const response: ContentActionResponse = {
-				success: succeeded > 0,
-				action,
-				results,
-				summary: {
-					total: results.length,
-					succeeded,
-					failed: results.length - succeeded
-				}
-			}
-
-			return withAdditionalHeaders(ApiResponse.success(response), authHeaders)
-		}
-
-		if (!routeSceneId) {
-			return withAdditionalHeaders(
-				ApiResponse.badRequest('Scene ID is required'),
-				authHeaders
-			)
-		}
-
-		const scene = await getScene(routeSceneId, authResult.user.id)
-		if (!scene) {
-			return withAdditionalHeaders(
-				ApiResponse.notFound(`Scene not found with ID: ${routeSceneId}`),
-				authHeaders
-			)
-		}
-
-		try {
-			if (action === 'delete') {
-				await deleteScene(routeSceneId, authResult.user.id)
-			}
-
-			if (action === 'rename') {
-				const name =
-					typeof actionRequest.name === 'string' ? actionRequest.name : ''
-				if (!name.trim()) {
-					return withAdditionalHeaders(
-						ApiResponse.badRequest('Name is required for rename'),
-						authHeaders
-					)
-				}
-				await renameScene(routeSceneId, authResult.user.id, name)
-			}
-
-			return withAdditionalHeaders(
-				ApiResponse.success({
-					success: true,
-					action,
-					sceneId: routeSceneId
-				}),
-				authHeaders
-			)
-		} catch (error) {
-			return withAdditionalHeaders(
-				ApiResponse.serverError(
-					error instanceof Error ? error.message : 'Action failed'
-				),
-				authHeaders
-			)
-		}
-	}
-
-	if (action === 'duplicate') {
-		if (!routeSceneId) {
-			return withAdditionalHeaders(
-				ApiResponse.badRequest('Scene ID is required'),
-				authHeaders
-			)
-		}
-
-		const scene = await getScene(routeSceneId, authResult.user.id)
-		if (!scene) {
-			return withAdditionalHeaders(
-				ApiResponse.notFound(`Scene not found with ID: ${routeSceneId}`),
-				authHeaders
-			)
-		}
-
+	  This stub exists for the deploy window: a tab opened before the release
+	  still posts here, and without it the request would fall through to the
+	  scene settings parser and fail in a way nobody can act on.
+	*/
+	if (
+		routeSceneId === 'bulk' ||
+		action === 'create-folder' ||
+		action === 'delete' ||
+		action === 'rename'
+	) {
 		return withAdditionalHeaders(
-			ApiResponse.success({
-				success: true,
-				message: `${action} action accepted`,
-				action,
-				sceneId: routeSceneId
-			}),
+			ApiResponse.badRequest(
+				'This action moved to /api/dashboard/mutations. Reload the page and try again.'
+			),
 			authHeaders
 		)
 	}
 
 	if (action === 'update-scene-metadata') {
+		/*
+		  Token CSRF, not just the route's origin check.
+
+		  This was the last dashboard mutation posting without a token at all, and
+		  `ensureSameOriginMutation` passes when both `Origin` and `Referer` are
+		  absent. Scoped to this action rather than the whole route: the other
+		  actions here have their own callers to migrate.
+		*/
+		const tokenCheck = await ensureValidCsrfToken(request, actionRequest.csrf)
+		if (tokenCheck) {
+			return withAdditionalHeaders(tokenCheck, authHeaders)
+		}
+
 		if (!routeSceneId) {
 			return withAdditionalHeaders(
 				ApiResponse.badRequest('Scene ID is required'),

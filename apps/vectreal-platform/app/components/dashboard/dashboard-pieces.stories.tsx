@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { MemoryRouter } from 'react-router'
 
+import { InlineEditableMetadataField } from './inline-editable-metadata-field'
 import { ProjectCard } from './project-card'
 import { SceneThumbnail } from './scene-thumbnail'
 import { StatusBreakdown } from './status-breakdown'
@@ -50,7 +52,12 @@ export const UsageMeters: Story = {
 			</UsageMeterGrid>
 
 			<div className="max-w-sm space-y-3">
-				<UsageMeter variant="row" label="Scenes (total)" current={4} limit={10} />
+				<UsageMeter
+					variant="row"
+					label="Scenes (total)"
+					current={4}
+					limit={10}
+				/>
 				<UsageMeter
 					variant="row"
 					label="API requests"
@@ -148,4 +155,57 @@ export const ProjectCards: Story = {
 			</div>
 		</MemoryRouter>
 	)
+}
+
+/**
+ * The scene header's inline-editable title and description, in the panel they
+ * actually live in.
+ *
+ * The field used to sit inside an `overflow-x-auto` wrapper that it filled
+ * exactly. A scroll container clips at its padding box on both axes, so the
+ * focus ring - drawn as a box-shadow outside the border box - was cut away on
+ * all four sides, and the field read as a shape with its edge sliced off. The
+ * scroll now lives on the field itself, which has a surface to clip against.
+ *
+ * Both fields carry the unsaved indicator here so their widths match. In the
+ * app the indicator mounts and unmounts with save state, which shortens the
+ * field by the dot plus its gap each time - visible as a reflow while typing,
+ * and worth reserving space for separately.
+ */
+export const InlineEditableFields: Story = {
+	render: function InlineFieldsStory() {
+		const [title, setTitle] = useState('Studio Showcase')
+		const [description, setDescription] = useState('')
+
+		// `p-5`, the padding the real panel uses: `--radius-2xl` is 28px, so `p-4`
+		// crowds the content into the curve.
+		return (
+			<section className="ds-raised space-y-6 rounded-2xl p-5">
+				<div className="min-w-0 grow space-y-2">
+					<InlineEditableMetadataField
+						ariaLabel="Scene title"
+						value={title}
+						onChange={setTitle}
+						onCommit={async () => {}}
+						titleStyle="title"
+						placeholder="Scene Title"
+						isUnsaved
+						isSaving={false}
+						isSaved={false}
+					/>
+					<InlineEditableMetadataField
+						ariaLabel="Scene description"
+						multiline
+						value={description}
+						onChange={setDescription}
+						onCommit={async () => {}}
+						placeholder="Scene Description"
+						isUnsaved
+						isSaving={false}
+						isSaved={false}
+					/>
+				</div>
+			</section>
+		)
+	}
 }

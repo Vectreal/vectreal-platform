@@ -8,7 +8,6 @@ import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import {
 	Drawer,
-	DrawerClose,
 	DrawerContent,
 	DrawerDescription,
 	DrawerHeader,
@@ -16,7 +15,6 @@ import {
 } from '@shared/components/ui/drawer'
 import { SceneLoadResult, useLoadModel } from '@vctrl/hooks/use-load-model'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useSetAtom } from 'jotai/react'
 import {
 	ChevronDown,
 	ChevronRight,
@@ -25,11 +23,11 @@ import {
 	Info,
 	Radio,
 	Rocket,
-	Trash2,
-	X
+	Trash2
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { data, Link, useNavigate } from 'react-router'
+import { useAuthenticityToken } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/scene'
 import CenteredSpinner from '../../../components/centered-spinner'
@@ -42,8 +40,13 @@ import { EmbedOptionsPanel } from '../../../components/embed/embed-options-panel
 import { StatGrid, StatTile } from '../../../components/layout-components'
 import { ScenePublishStateControl } from '../../../components/publishing/scene-publish-state-control'
 import SceneEmbedViewer from '../../../components/scene-embed/scene-embed-viewer'
-import { useDashboardSceneActions } from '../../../hooks/use-dashboard-scene-actions'
+import { ConfirmDestructiveDialog } from '../../../components/shared/confirm-destructive-dialog'
+import { useDashboardMutations } from '../../../hooks/use-dashboard-mutations'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
+import {
+	planDeleteConfirmation,
+	toSceneRef
+} from '../../../lib/domain/dashboard/dashboard-confirmation'
 import { buildInternalPreviewPath } from '../../../lib/domain/embed/embed-snippet'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
 import { loadSceneFromApi } from '../../../lib/domain/scene/client/load-scene-from-api.client'
@@ -55,7 +58,6 @@ import {
 import { getPublishedScenePreview } from '../../../lib/domain/scene/server/scene-preview-repository.server'
 import { sceneSettingsService } from '../../../lib/domain/scene/server/scene-settings-service.server'
 import { shouldRevalidateForRouteParams } from '../../../lib/navigation/dashboard-route-behavior'
-import { deleteDialogAtom } from '../../../lib/stores/dashboard-management-store'
 import { toViewerLoadingThumbnail } from '../../../lib/viewer/viewer-loading-thumbnail'
 
 import type {
@@ -229,7 +231,7 @@ function DrawerAssetsSection({
 
 	return (
 		<section className="space-y-3">
-			<h3 className="text-sm font-semibold tracking-tight">Assets</h3>
+			<h3 className="text-h4">Assets</h3>
 			{assets.length === 0 ? (
 				<p className="text-muted-foreground text-sm">No linked assets found.</p>
 			) : (
@@ -293,8 +295,8 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 	const { scene, project, user, sceneDetails, publishState } = loaderData
 	const sceneId = scene.id
 	const navigate = useNavigate()
-	const setDeleteDialog = useSetAtom(deleteDialogAtom)
-	const { actionData, actionState } = useDashboardSceneActions()
+	const csrfToken = useAuthenticityToken()
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
 	// Use sceneId as key to create a new hook instance per scene
 	const { file, loadFromServer } = useLoadModel()
@@ -307,7 +309,10 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 	// re-render it on every keystroke in the metadata fields below.
 	const loadingThumbnail = useMemo(
 		() =>
-			toViewerLoadingThumbnail(sceneState.thumbnailUrl, 'Scene thumbnail preview'),
+			toViewerLoadingThumbnail(
+				sceneState.thumbnailUrl,
+				'Scene thumbnail preview'
+			),
 		[sceneState.thumbnailUrl]
 	)
 
@@ -351,40 +356,37 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		setMetadataStatus('idle')
 	}, [scene])
 
-	useEffect(() => {
-		if (
-			actionState !== 'idle' ||
-			!actionData ||
-			actionData.action !== 'delete'
-		) {
-			return
+	/*
+	  This page owns its own delete rather than going through the shared dialog
+	  atom, because succeeding means navigating away - and that is knowledge only
+	  this route has.
+	*/
+	const deleteRef = useMemo(
+		() =>
+			toSceneRef({
+				...sceneState,
+				// The route knows the publish state two ways and used to pass
+				// neither. `publishState` comes from a join on `scene_published` and
+				// is the more reliable of the two when they disagree.
+				status:
+					publishState.status === 'published' ? 'published' : sceneState.status
+			}),
+		[publishState.status, sceneState]
+	)
+
+	const deletePlan = useMemo(
+		() => planDeleteConfirmation([deleteRef]),
+		[deleteRef]
+	)
+
+	const deleteMutation = useDashboardMutations({
+		onSuccess: () => {
+			navigate(`/dashboard/projects/${project.id}`, { replace: true })
 		}
-
-		const deletedCurrentScene = actionData.results.some(
-			(result) =>
-				result.type === 'scene' && result.id === sceneId && result.success
-		)
-
-		if (!deletedCurrentScene) {
-			return
-		}
-
-		navigate(`/dashboard/projects/${project.id}`, { replace: true })
-	}, [actionData, actionState, navigate, project.id, sceneId])
+	})
 
 	function handleDeleteClick() {
-		setDeleteDialog({
-			open: true,
-			items: [
-				{
-					id: sceneState.id,
-					type: 'scene',
-					name: sceneState.name,
-					projectId: sceneState.projectId,
-					folderId: sceneState.folderId
-				}
-			]
-		})
+		setDeleteDialogOpen(true)
 	}
 
 	async function handleSaveMetadata() {
@@ -409,6 +411,10 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 			formData.append('action', 'update-scene-metadata')
 			formData.append('name', trimmedName)
 			formData.append('description', sceneDescriptionDraft)
+			// This request bypasses React Router, so nothing attaches the token for
+			// it. Without this the endpoint fell back to an origin-only check that
+			// passes when a client sends neither `Origin` nor `Referer`.
+			formData.append('csrf', csrfToken)
 
 			const response = await fetch(`/api/scenes/${sceneState.id}`, {
 				method: 'POST',
@@ -523,7 +529,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 				<main className="flex min-h-0 flex-col gap-4">
 					{sceneLoadError && !file?.model ? (
 						<section className="ds-raised space-y-3 rounded-2xl p-5">
-							<h2 className="text-base font-semibold">Unable to Load Scene</h2>
+							<h2 className="text-h4">Unable to Load Scene</h2>
 							<p className="text-muted-foreground text-sm">{sceneLoadError}</p>
 							<div className="flex flex-wrap gap-2">
 								<Button type="button" onClick={retrySceneLoad}>
@@ -539,14 +545,14 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							</div>
 						</section>
 					) : null}
-					<section className="relative min-h-64 flex-1 overflow-hidden rounded-2xl ds-sunken">
+					<section className="ds-sunken relative min-h-64 flex-1 overflow-hidden rounded-2xl">
 						<SceneEmbedViewer
 							file={file}
 							sceneData={sceneData}
 							loadingThumbnail={loadingThumbnail}
 						/>
 					</section>
-					<section className="ds-raised space-y-6 rounded-2xl px-4 py-4 sm:px-5">
+					<section className="ds-raised space-y-6 rounded-2xl p-5">
 						<header className="flex flex-col items-start gap-6 md:flex-row">
 							{/*
 						  `min-w-0` is what stops a long scene name from pushing the
@@ -554,7 +560,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						  min-width:auto, so its content dictates the floor rather than
 						  the container.
 						*/}
-						<div className="min-w-0 grow space-y-2 max-md:w-full">
+							<div className="min-w-0 grow space-y-2 max-md:w-full">
 								<InlineEditableMetadataField
 									ariaLabel="Scene title"
 									value={sceneNameDraft}
@@ -612,7 +618,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							onClick={() => setDrawerOpen(true)}
 							title="Open details panel"
 							aria-label="Open details panel"
-							className="ds-raised hover:bg-foreground/8 group relative flex w-full flex-col gap-6 rounded-2xl p-4 text-left transition-colors duration-300"
+							className="ds-raised hover:bg-foreground/8 group relative flex w-full flex-col gap-6 rounded-2xl p-5 text-left transition-colors duration-300"
 						>
 							<Info className="text-muted-foreground absolute top-3 right-3 h-4 w-4 opacity-25 transition-opacity duration-300 group-hover:opacity-100" />
 							<div className="space-y-2">
@@ -659,15 +665,11 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 					</section>
 				</main>
 
-				<aside className="ds-raised hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-4 xl:flex">
+				<aside className="ds-raised hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-5 xl:flex">
 					<section className="space-y-3">
 						<div>
-							<p className="text-muted-foreground text-eyebrow">
-								At a Glance
-							</p>
-							<h2 className="mt-1 text-base leading-tight font-medium tracking-tight">
-								Scene Metrics
-							</h2>
+							<p className="text-muted-foreground text-eyebrow">At a Glance</p>
+							<h2 className="text-h4 mt-1">Scene Metrics</h2>
 						</div>
 						<StatGrid>
 							<StatTile
@@ -693,9 +695,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 					</section>
 
 					<section className="space-y-2 overflow-y-auto">
-						<p className="text-muted-foreground text-eyebrow">
-							Assets Preview
-						</p>
+						<p className="text-muted-foreground text-eyebrow">Assets Preview</p>
 						{sceneDetails.assets.length === 0 ? (
 							<p className="text-muted-foreground ds-sunken rounded-xl p-3 text-sm">
 								No linked assets.
@@ -768,30 +768,15 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 			<Drawer open={drawerOpen} onOpenChange={setDrawerOpen} direction="right">
 				<DrawerContent className="max-w-xl! border-0">
 					<DrawerHeader>
-						<div className="flex items-start justify-between gap-3">
-							<div>
-								<DrawerTitle>Scene Details</DrawerTitle>
-								<DrawerDescription>
-									Detailed stats, assets, collaboration, and embed options.
-								</DrawerDescription>
-							</div>
-							<DrawerClose asChild>
-								<Button
-									size="icon"
-									variant="ghost"
-									aria-label="Close details drawer"
-								>
-									<X className="h-4 w-4" />
-								</Button>
-							</DrawerClose>
-						</div>
+						<DrawerTitle>Scene Details</DrawerTitle>
+						<DrawerDescription>
+							Detailed stats, assets, collaboration, and embed options.
+						</DrawerDescription>
 					</DrawerHeader>
 
 					<div className="space-y-6 overflow-y-auto p-6">
 						<section className="space-y-3">
-							<h3 className="text-sm font-semibold tracking-tight">
-								Scene Stats
-							</h3>
+							<h3 className="text-h4">Scene Stats</h3>
 							<StatGrid>
 								<StatTile
 									label="Current Size"
@@ -823,9 +808,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						<Separator />
 
 						<section className="space-y-3">
-							<h3 className="text-sm font-semibold tracking-tight">
-								Publishing
-							</h3>
+							<h3 className="text-h4">Publishing</h3>
 							<ScenePublishStateControl
 								publishState={publishState}
 								onPublish={openPublisherForPublishing}
@@ -837,9 +820,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							/>
 							{publishState.status === 'published' && (
 								<div className="space-y-3 pt-1">
-									<h4 className="text-sm font-semibold tracking-tight">
-										Embed
-									</h4>
+									<h4 className="text-h4">Embed</h4>
 									<EmbedOptionsPanel
 										sceneId={sceneState.id}
 										projectId={project.id}
@@ -851,9 +832,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						<Separator />
 
 						<section className="space-y-3">
-							<h3 className="text-sm font-semibold tracking-tight">
-								Collaboration
-							</h3>
+							<h3 className="text-h4">Collaboration</h3>
 							<div className="flex items-center justify-between gap-3">
 								<div className="flex items-center gap-2">
 									<Avatar className="h-8 w-8">
@@ -892,9 +871,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						<Separator />
 
 						<section className="space-y-3">
-							<h3 className="text-sm font-semibold tracking-tight">
-								Danger Zone
-							</h3>
+							<h3 className="text-h4">Danger Zone</h3>
 							<Button
 								variant="destructive"
 								size="sm"
@@ -904,6 +881,25 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 								<Trash2 className="mr-2 h-3.5 w-3.5" />
 								Delete Scene
 							</Button>
+							<ConfirmDestructiveDialog
+								open={deleteDialogOpen}
+								onOpenChange={(open) => {
+									if (!open && deleteMutation.state !== 'idle') {
+										return
+									}
+									setDeleteDialogOpen(open)
+								}}
+								plan={deletePlan}
+								isPending={deleteMutation.state !== 'idle'}
+								errorMessage={deleteMutation.lastError}
+								onConfirm={(confirmationText) => {
+									deleteMutation.submit({
+										verb: 'delete',
+										targets: [{ type: 'scene', id: sceneId }],
+										confirmationText
+									})
+								}}
+							/>
 						</section>
 					</div>
 				</DrawerContent>

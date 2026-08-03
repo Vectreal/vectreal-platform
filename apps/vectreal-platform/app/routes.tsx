@@ -26,6 +26,7 @@ export default [
 	),
 	route('api/scenes/:sceneId?', './routes/api/scenes.$sceneId.ts'),
 	route('api/scene-location-options', './routes/api/scene-location-options.ts'),
+	route('api/dashboard/mutations', './routes/api/dashboard.mutations.ts'),
 
 	// Auth api
 	route('auth/session', './routes/api/auth/session.ts'),
@@ -155,7 +156,10 @@ export default [
 
 	// Internal preview: session only, reachable from the dashboard
 	layout('./routes/layouts/preview-layout.tsx', [
-		route('preview/:projectId/:sceneId', './routes/preview-page/preview-scene.tsx')
+		route(
+			'preview/:projectId/:sceneId',
+			'./routes/preview-page/preview-scene.tsx'
+		)
 	]),
 
 	// Embeds published before the /embed split still point here
@@ -170,10 +174,24 @@ export default [
 			index('./routes/dashboard-page/dashboard-page.tsx'),
 			...prefix('projects', [
 				route('/', './routes/dashboard-page/projects/projects.tsx', [
-					route('new', './routes/dashboard-page/projects/projects-new.tsx')
+					route('new', './routes/dashboard-page/projects/projects-new.tsx'),
+					/*
+					  The same drawer, registered a second time as a child of the list.
+					  Opening it from a card used to mount the project detail page
+					  behind it and leave you there on close, because the only edit
+					  route was nested under `:projectId`. Both entries carry an
+					  explicit id so neither takes the implicit path-derived default.
+					*/
+					route(
+						'edit/:projectId',
+						'./routes/dashboard-page/projects/projects-edit.tsx',
+						{ id: 'projects-list-edit' }
+					)
 				]),
 				route(':projectId', './routes/dashboard-page/projects/project.tsx', [
-					route('edit', './routes/dashboard-page/projects/projects-edit.tsx'),
+					route('edit', './routes/dashboard-page/projects/projects-edit.tsx', {
+						id: 'project-detail-edit'
+					}),
 					route(
 						'folder/:folderId',
 						'./routes/dashboard-page/projects/folder.tsx'

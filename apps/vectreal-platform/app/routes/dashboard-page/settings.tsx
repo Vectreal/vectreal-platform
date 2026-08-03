@@ -44,7 +44,7 @@ import { z, ZodError } from 'zod'
 
 import { Route } from './+types/settings'
 import { useConsent } from '../../components/consent/consent-context'
-import { WrittenConfirmationModal } from '../../components/shared/written-confirmation-modal'
+import { ConfirmDestructiveDialog } from '../../components/shared/confirm-destructive-dialog'
 import { applyTheme, isForceDarkRoute } from '../../components/theme'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import { cancelStripeSubscriptionsForOrganization } from '../../lib/domain/billing/stripe-subscription-sync.server'
@@ -62,6 +62,7 @@ import {
 	parseThemeCookieHeader
 } from '../../lib/theme/theme-cookie'
 
+import type { DashboardConfirmationPlan } from '../../lib/domain/dashboard/dashboard-confirmation'
 import type { SettingsLoaderData } from '../../lib/domain/dashboard/dashboard-types'
 
 const profileSettingsSchema = z.object({
@@ -97,6 +98,26 @@ type SettingsActionData = {
 
 type ThemeModeValue = 'system' | 'light' | 'dark'
 
+/**
+ * Account deletion keeps its own, longer token rather than the dashboard-wide
+ * `DELETE`. It is heavier than any entity delete - it cancels billing and
+ * removes the user - and the extra typing is the point. The server mirrors this
+ * exact string in `accountDeletionSchema`.
+ */
+const ACCOUNT_DELETION_PLAN: DashboardConfirmationPlan = {
+	tier: 'typed',
+	title: 'Delete account',
+	description:
+		'This permanently deletes your account and all related platform data.',
+	consequences: [
+		'Any active paid subscription is canceled immediately, with no further charges',
+		'Every organization, project and scene you solely own is deleted',
+		'This cannot be undone'
+	],
+	confirmLabel: 'Delete account',
+	token: 'DELETE MY ACCOUNT'
+}
+
 export async function loader({ request }: Route.LoaderArgs) {
 	const { user, userWithDefaults, headers } =
 		await loadAuthenticatedUser(request)
@@ -112,8 +133,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	const { user: authenticatedUser, userWithDefaults, headers } =
-		await loadAuthenticatedUser(request)
+	const {
+		user: authenticatedUser,
+		userWithDefaults,
+		headers
+	} = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
 	if (csrfCheck) {
@@ -324,19 +348,16 @@ export default function SettingsPage({
 
 	return (
 		<div className="space-y-6 p-6">
-			<WrittenConfirmationModal
+			<ConfirmDestructiveDialog
 				open={deleteModalOpen}
 				onOpenChange={setDeleteModalOpen}
-				title="Delete account"
-				description="This permanently deletes your account and all related platform data. Any active paid subscription will be immediately canceled - no further charges will be made. This action cannot be undone."
-				confirmationText="DELETE MY ACCOUNT"
-				confirmLabel="Delete account"
+				plan={ACCOUNT_DELETION_PLAN}
 				isPending={isDeleteSubmitting}
 				onConfirm={(typedText) => {
 					submit(
 						{
 							intent: 'delete-account',
-							confirmationText: typedText,
+							confirmationText: typedText ?? '',
 							csrf: csrfToken
 						},
 						{ method: 'post' }

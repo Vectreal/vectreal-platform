@@ -47,7 +47,7 @@ export const SceneDetailsSkeleton = () => {
 					</div>
 				</main>
 
-				<aside className="ds-raised hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-4 xl:flex">
+				<aside className="ds-raised hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-5 xl:flex">
 					<Skeleton className="h-5 w-32" />
 					<div className="grid grid-cols-2 gap-2">
 						{Array.from({ length: 6 }, (_, index) => (

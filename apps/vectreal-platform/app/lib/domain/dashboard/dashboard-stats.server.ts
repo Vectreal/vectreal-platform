@@ -1,4 +1,3 @@
-import type { Plan } from '../../../constants/plan-config'
 import type {
 	organizationMemberships,
 	organizations,
@@ -144,97 +143,9 @@ export function getRecentScenes(
 		.slice(0, limit)
 }
 
-/**
- * Checks if a user can create projects in an organization.
+/*
+ * Project capability predicates used to live here. They now come from
+ * `buildDashboardCapabilities` in `./dashboard-capabilities`, which derives
+ * them from the shared permission table rather than restating the rules - and,
+ * being client-safe, can be read by the components that gate on them.
  */
-export function canCreateProjectsInOrganization(
-	role: 'owner' | 'admin' | 'member'
-): boolean {
-	return ['owner', 'admin', 'member'].includes(role)
-}
-
-/**
- * Checks if a user can edit projects in an organization.
- */
-export function canEditProjectsInOrganization(
-	role: 'owner' | 'admin' | 'member'
-): boolean {
-	return ['owner', 'admin'].includes(role)
-}
-
-/**
- * Checks if a user can delete projects in an organization.
- */
-export function canDeleteProjectsInOrganization(
-	role: 'owner' | 'admin' | 'member'
-): boolean {
-	return role === 'owner'
-}
-
-/**
- * Computes project creation capabilities for all user organizations.
- */
-export function computeProjectCreationCapabilities(
-	userOrganizations: Array<{
-		organization: typeof organizations.$inferSelect
-		membership: typeof organizationMemberships.$inferSelect
-	}>,
-	quotaByOrganization: Record<
-		string,
-		{
-			projectsTotal: number
-			projectsLimit: number | null
-			plan?: Plan
-			upgradeTo?: Plan | null
-		}
-	> = {}
-): Record<
-	string,
-	{
-		canCreate: boolean
-		canEdit: boolean
-		canDelete: boolean
-		projectsTotal: number
-		projectsLimit: number | null
-		quotaExceeded: boolean
-		plan: Plan | null
-		upgradeTo: Plan | null
-	}
-> {
-	const capabilities: Record<
-		string,
-		{
-			canCreate: boolean
-			canEdit: boolean
-			canDelete: boolean
-			projectsTotal: number
-			projectsLimit: number | null
-			quotaExceeded: boolean
-			plan: Plan | null
-			upgradeTo: Plan | null
-		}
-	> = {}
-
-	for (const { organization, membership } of userOrganizations) {
-		const quota = quotaByOrganization[organization.id] ?? {
-			projectsTotal: 0,
-			projectsLimit: null
-		}
-		const quotaExceeded =
-			quota.projectsLimit !== null && quota.projectsTotal >= quota.projectsLimit
-
-		capabilities[organization.id] = {
-			canCreate:
-				canCreateProjectsInOrganization(membership.role) && !quotaExceeded,
-			canEdit: canEditProjectsInOrganization(membership.role),
-			canDelete: canDeleteProjectsInOrganization(membership.role),
-			projectsTotal: quota.projectsTotal,
-			projectsLimit: quota.projectsLimit,
-			quotaExceeded,
-			plan: quota.plan ?? null,
-			upgradeTo: quota.upgradeTo ?? null
-		}
-	}
-
-	return capabilities
-}

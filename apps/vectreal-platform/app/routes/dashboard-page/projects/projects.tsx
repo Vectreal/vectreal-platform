@@ -5,18 +5,10 @@ import {
 	EmptyDescription,
 	EmptyHeader
 } from '@shared/components/ui/empty'
+import { useSetAtom } from 'jotai/react'
 import { Plus } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-	data,
-	Link,
-	Outlet,
-	useFetcher,
-	useNavigate,
-	useRevalidator,
-	useSearchParams
-} from 'react-router'
-import { useAuthenticityToken } from 'remix-utils/csrf/react'
+import { useCallback, useMemo, useState } from 'react'
+import { data, Link, Outlet, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 
 import { Route } from './+types/projects'
@@ -26,28 +18,28 @@ import {
 	type ProjectRow,
 	type StatusFilter
 } from '../../../components/dashboard'
-import { WrittenConfirmationModal } from '../../../components/shared/written-confirmation-modal'
+import { ConfirmDestructiveDialog } from '../../../components/shared/confirm-destructive-dialog'
 import { ProjectsGridSkeleton } from '../../../components/skeletons'
+import { useDashboardMutations } from '../../../hooks/use-dashboard-mutations'
 import { useDashboardTableState } from '../../../hooks/use-dashboard-table-state'
-import {
-	loadAuthenticatedSession,
-	loadAuthenticatedUser
-} from '../../../lib/domain/auth/auth-loader.server'
+import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import {
 	getOrgSubscription,
 	getQuotaLimit,
 	getRecommendedUpgrade
 } from '../../../lib/domain/billing/entitlement-service.server'
-import { computeProjectCreationCapabilities } from '../../../lib/domain/dashboard/dashboard-stats.server'
+import { buildDashboardCapabilities } from '../../../lib/domain/dashboard/dashboard-capabilities'
 import {
-	deleteProject,
-	getUserProjects
-} from '../../../lib/domain/project/project-repository.server'
+	planDeleteConfirmation,
+	toProjectRef
+} from '../../../lib/domain/dashboard/dashboard-confirmation'
+import { getUserProjects } from '../../../lib/domain/project/project-repository.server'
 import { getProjectsScenes } from '../../../lib/domain/scene/server/scene-folder-repository.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
-import { ensureValidCsrfFormData } from '../../../lib/http/csrf.server'
 import { shouldRevalidateWithinScope } from '../../../lib/navigation/dashboard-route-behavior'
+import { renameDialogAtom } from '../../../lib/stores/dashboard-management-store'
 
+import type { DashboardEntityRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -103,7 +95,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	)
 
 	// Compute server-side
-	const projectCreationCapabilities = computeProjectCreationCapabilities(
+	const projectCreationCapabilities = buildDashboardCapabilities(
 		organizations,
 		projectQuotaByOrganization
 	)
@@ -114,139 +106,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 			scenes,
 			projectCreationCapabilities
 		},
-		{ headers }
-	)
-}
-
-interface ProjectDeleteResult {
-	id: string
-	success: boolean
-	error?: string
-}
-
-interface ProjectDeleteActionResponse {
-	success: boolean
-	summary: {
-		total: number
-		succeeded: number
-		failed: number
-	}
-	results: ProjectDeleteResult[]
-	error?: string
-}
-
-export async function action({ request }: Route.ActionArgs) {
-	const { user, headers } = await loadAuthenticatedUser(request)
-	const formData = await request.formData()
-	const csrfCheck = await ensureValidCsrfFormData(request, formData)
-	if (csrfCheck) {
-		return csrfCheck
-	}
-	const intent = formData.get('intent')
-
-	if (intent !== 'bulk-delete') {
-		return data(
-			{
-				success: false,
-				error: 'Invalid intent',
-				summary: {
-					total: 0,
-					succeeded: 0,
-					failed: 0
-				},
-				results: []
-			} satisfies ProjectDeleteActionResponse,
-			{ headers }
-		)
-	}
-
-	const projectIdsRaw = formData.get('projectIds')
-	if (typeof projectIdsRaw !== 'string' || !projectIdsRaw.trim()) {
-		return data(
-			{
-				success: false,
-				error: 'Project IDs are required',
-				summary: {
-					total: 0,
-					succeeded: 0,
-					failed: 0
-				},
-				results: []
-			} satisfies ProjectDeleteActionResponse,
-			{ headers }
-		)
-	}
-
-	let projectIds: string[]
-	try {
-		const parsed = JSON.parse(projectIdsRaw)
-		if (
-			!Array.isArray(parsed) ||
-			!parsed.every((id) => typeof id === 'string')
-		) {
-			throw new Error('Invalid project IDs payload')
-		}
-		projectIds = parsed
-	} catch {
-		return data(
-			{
-				success: false,
-				error: 'Invalid project IDs payload',
-				summary: {
-					total: 0,
-					succeeded: 0,
-					failed: 0
-				},
-				results: []
-			} satisfies ProjectDeleteActionResponse,
-			{ headers }
-		)
-	}
-
-	if (projectIds.length === 0) {
-		return data(
-			{
-				success: false,
-				error: 'At least one project must be selected',
-				summary: {
-					total: 0,
-					succeeded: 0,
-					failed: 0
-				},
-				results: []
-			} satisfies ProjectDeleteActionResponse,
-			{ headers }
-		)
-	}
-
-	const results: ProjectDeleteResult[] = []
-
-	for (const projectId of projectIds) {
-		try {
-			await deleteProject(projectId, user.id)
-			results.push({ id: projectId, success: true })
-		} catch (error) {
-			results.push({
-				id: projectId,
-				success: false,
-				error:
-					error instanceof Error ? error.message : 'Failed to delete project'
-			})
-		}
-	}
-
-	const succeeded = results.filter((result) => result.success).length
-
-	return data(
-		{
-			success: succeeded > 0,
-			summary: {
-				total: results.length,
-				succeeded,
-				failed: results.length - succeeded
-			},
-			results
-		} satisfies ProjectDeleteActionResponse,
 		{ headers }
 	)
 }
@@ -308,18 +167,30 @@ const EmptyProjectsState = ({
 const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 	const { organizations, projects, projectCreationCapabilities, scenes } =
 		loaderData
-	const fetcher = useFetcher<typeof action>()
-	const csrfToken = useAuthenticityToken()
-	const revalidator = useRevalidator()
-	const navigate = useNavigate()
-	const lastHandledResponseRef = useRef<string | null>(null)
+	const setRenameDialog = useSetAtom(renameDialogAtom)
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-	const [projectIdsToDelete, setProjectIdsToDelete] = useState<string[]>([])
+	// Refs rather than ids: the confirmation copy needs each project's scene and
+	// published counts to say what deleting it actually costs.
+	const [projectsToDelete, setProjectsToDelete] = useState<
+		DashboardEntityRef[]
+	>([])
 	const tableState = useDashboardTableState({
 		namespace: 'projects-list'
 	})
 	const [searchParams, setSearchParams] = useSearchParams()
-	const isDeletingProjects = fetcher.state !== 'idle'
+
+	const mutations = useDashboardMutations({
+		onSuccess: () => {
+			setDeleteDialogOpen(false)
+			setProjectsToDelete([])
+		}
+	})
+	const isDeletingProjects = mutations.state !== 'idle'
+
+	const deletePlan = useMemo(
+		() => planDeleteConfirmation(projectsToDelete),
+		[projectsToDelete]
+	)
 
 	/*
 	  Both filters live in the URL beside the rest of the table state, under the
@@ -348,54 +219,19 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 		[setSearchParams]
 	)
 
-	useEffect(() => {
-		if (fetcher.state !== 'idle' || !fetcher.data) {
+	const confirmDeleteProjects = (confirmationText: string | null) => {
+		if (projectsToDelete.length === 0 || isDeletingProjects) {
 			return
 		}
 
-		const signature = JSON.stringify(fetcher.data)
-		if (lastHandledResponseRef.current === signature) {
-			return
-		}
-		lastHandledResponseRef.current = signature
-
-		if (!fetcher.data.success) {
-			const errorMessage =
-				'error' in fetcher.data && typeof fetcher.data.error === 'string'
-					? fetcher.data.error
-					: 'Failed to delete projects'
-			toast.error(errorMessage)
-			return
-		}
-
-		if (fetcher.data.summary.failed > 0) {
-			toast.warning(
-				`${fetcher.data.summary.succeeded}/${fetcher.data.summary.total} projects deleted, ${fetcher.data.summary.failed} failed`
-			)
-		} else {
-			toast.success(`${fetcher.data.summary.succeeded} project(s) deleted`)
-		}
-
-		if (fetcher.data.summary.succeeded > 0) {
-			setDeleteDialogOpen(false)
-			setProjectIdsToDelete([])
-			revalidator.revalidate()
-		}
-	}, [fetcher.state, fetcher.data, revalidator])
-
-	const confirmDeleteProjects = () => {
-		if (projectIdsToDelete.length === 0 || isDeletingProjects) {
-			return
-		}
-
-		fetcher.submit(
-			{
-				intent: 'bulk-delete',
-				projectIds: JSON.stringify(projectIdsToDelete),
-				csrf: csrfToken
-			},
-			{ method: 'post' }
-		)
+		mutations.submit({
+			verb: 'delete',
+			targets: projectsToDelete.map((project) => ({
+				type: 'project' as const,
+				id: project.id
+			})),
+			confirmationText
+		})
 	}
 
 	/*
@@ -447,7 +283,8 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 							({ organization }) => organization.id === organizationId
 						)?.organization.name || 'Unknown',
 					canDelete:
-						projectCreationCapabilities[organizationId]?.canDelete ?? false,
+						projectCreationCapabilities[organizationId]?.canDeleteProject ??
+						false,
 					sceneCount: projectScenes.length,
 					counts,
 					thumbnailUrl,
@@ -469,7 +306,7 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 	)
 
 	const canCreateProjects = Object.values(projectCreationCapabilities).some(
-		(cap) => cap.canCreate
+		(cap) => cap.canCreateProject
 	)
 
 	return (
@@ -489,21 +326,26 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 							setFilterParam('projects-list-status', value)
 						}
 						isUpdating={isDeletingProjects}
-						// Rename opens the edit dialog that already exists at this route's
-						// `/edit` child. The button used to render with nothing behind it,
-						// because the page never passed a handler.
+						/*
+						  The same inline dialog scenes and folders use. Renaming a
+						  project used to open the whole edit drawer, whose save then
+						  redirected into the project - so renaming from the list moved
+						  you off it. The drawer still owns slug and embed domains.
+						*/
 						onRename={(row: ProjectRow) =>
-							navigate(`/dashboard/projects/${row.id}/edit`)
+							setRenameDialog({
+								open: true,
+								item: toProjectRef(row),
+								name: row.name
+							})
 						}
 						onDelete={(selectedRows: ProjectRow[]) => {
-							const projectIds = selectedRows.map((row) => row.id)
-
-							if (projectIds.length === 0) {
+							if (selectedRows.length === 0) {
 								toast.error('Select at least one project first')
 								return
 							}
 
-							setProjectIdsToDelete(projectIds)
+							setProjectsToDelete(selectedRows.map(toProjectRef))
 							setDeleteDialogOpen(true)
 						}}
 					/>
@@ -511,26 +353,21 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 					<EmptyProjectsState showCreateLink={canCreateProjects} />
 				)}
 			</div>
-			<WrittenConfirmationModal
+			<ConfirmDestructiveDialog
 				open={deleteDialogOpen}
 				onOpenChange={(open) => {
+					if (!open && isDeletingProjects) {
+						return
+					}
 					setDeleteDialogOpen(open)
-					if (!open && !isDeletingProjects) {
-						setProjectIdsToDelete([])
+					if (!open) {
+						setProjectsToDelete([])
 					}
 				}}
-				title="Delete Projects"
-				description={
-					projectIdsToDelete.length === 1
-						? 'Delete this project and all nested data? This action cannot be undone.'
-						: `Delete ${projectIdsToDelete.length} selected projects and all nested data? This action cannot be undone.`
-				}
-				confirmationText="DELETE"
-				confirmLabel="Delete"
+				plan={deletePlan}
 				isPending={isDeletingProjects}
-				onConfirm={() => {
-					confirmDeleteProjects()
-				}}
+				errorMessage={mutations.lastError}
+				onConfirm={confirmDeleteProjects}
 			/>
 			<Outlet />
 		</>

@@ -226,6 +226,7 @@ export type LimitKey =
 	| 'scenes_total'
 	| 'scenes_published_concurrent'
 	| 'projects_total'
+	| 'folders_total'
 	| 'org_seats'
 	| 'api_requests_per_minute'
 	| 'api_requests_per_month'
@@ -244,6 +245,7 @@ export const PLAN_LIMITS: Record<Plan, Record<LimitKey, number | null>> = {
 		scenes_total: 10,
 		scenes_published_concurrent: 3,
 		projects_total: 1,
+		folders_total: 25,
 		org_seats: 1,
 		api_requests_per_minute: 30,
 		api_requests_per_month: 5_000,
@@ -257,6 +259,7 @@ export const PLAN_LIMITS: Record<Plan, Record<LimitKey, number | null>> = {
 		scenes_total: 200,
 		scenes_published_concurrent: 50,
 		projects_total: 20,
+		folders_total: 500,
 		org_seats: 1,
 		api_requests_per_minute: 300,
 		api_requests_per_month: 100_000,
@@ -270,6 +273,7 @@ export const PLAN_LIMITS: Record<Plan, Record<LimitKey, number | null>> = {
 		scenes_total: 2_000,
 		scenes_published_concurrent: 500,
 		projects_total: 200,
+		folders_total: 5_000,
 		org_seats: 10,
 		api_requests_per_minute: 1_000,
 		api_requests_per_month: 1_000_000,
@@ -283,6 +287,7 @@ export const PLAN_LIMITS: Record<Plan, Record<LimitKey, number | null>> = {
 		scenes_total: null, // Unlimited
 		scenes_published_concurrent: null, // Unlimited
 		projects_total: null, // Unlimited
+		folders_total: null, // Unlimited
 		org_seats: null, // Custom
 		api_requests_per_minute: null, // Custom
 		api_requests_per_month: null, // Custom

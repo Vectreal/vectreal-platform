@@ -1,0 +1,1 @@
+ALTER TABLE "scene_folders" ADD CONSTRAINT "scene_folders_parent_not_self" CHECK ("scene_folders"."parent_folder_id" is null or "scene_folders"."parent_folder_id" <> "scene_folders"."id");

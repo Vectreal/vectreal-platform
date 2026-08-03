@@ -1,13 +1,3 @@
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle
-} from '@shared/components/ui/alert-dialog'
 import { Button } from '@shared/components/ui/button'
 import {
 	Dialog,
@@ -20,28 +10,61 @@ import {
 import { Input } from '@shared/components/ui/input'
 import { Textarea } from '@shared/components/ui/textarea'
 import { useAtom } from 'jotai/react'
+import { useMemo } from 'react'
 
-import { useDashboardSceneActions } from '../../hooks/use-dashboard-scene-actions'
+import { MoveItemsDialog } from './move-items-dialog'
+import { useDashboardMutations } from '../../hooks/use-dashboard-mutations'
+import { planDeleteConfirmation } from '../../lib/domain/dashboard/dashboard-confirmation'
 import {
 	createFolderDialogAtom,
 	deleteDialogAtom,
+	moveDialogAtom,
 	renameDialogAtom
 } from '../../lib/stores/dashboard-management-store'
+import { ConfirmDestructiveDialog } from '../shared/confirm-destructive-dialog'
 
+/**
+ * The dashboard's create / rename / delete dialogs, mounted once by the
+ * dashboard layout and driven from anywhere via jotai atoms.
+ */
 export const DashboardManagementDialogs = () => {
 	const [createFolderDialog, setCreateFolderDialog] = useAtom(
 		createFolderDialogAtom
 	)
 	const [renameDialog, setRenameDialog] = useAtom(renameDialogAtom)
 	const [deleteDialog, setDeleteDialog] = useAtom(deleteDialogAtom)
-	const { runContentAction, actionState } = useDashboardSceneActions()
+	const [moveDialog, setMoveDialog] = useAtom(moveDialogAtom)
 
-	const deleteLabel =
-		deleteDialog.items.length === 1
-			? deleteDialog.items[0].type === 'folder'
-				? 'Folder'
-				: 'Scene'
-			: 'Items'
+	const mutations = useDashboardMutations({
+		onSuccess: (response) => {
+			// Closed only once the server confirms, so a rejection leaves the
+			// dialog open with its error rather than silently discarding it.
+			if (response.verb === 'delete') {
+				setDeleteDialog({ open: false, items: [] })
+			}
+			if (response.verb === 'rename') {
+				setRenameDialog({ open: false, item: null, name: '' })
+			}
+			if (response.verb === 'move') {
+				setMoveDialog({ open: false, items: [], projectId: null })
+			}
+			if (response.verb === 'create-folder') {
+				setCreateFolderDialog((prev) => ({
+					...prev,
+					open: false,
+					name: '',
+					description: ''
+				}))
+			}
+		}
+	})
+
+	const deletePlan = useMemo(
+		() => planDeleteConfirmation(deleteDialog.items),
+		[deleteDialog.items]
+	)
+
+	const isBusy = mutations.state !== 'idle'
 
 	return (
 		<>
@@ -81,6 +104,7 @@ export const DashboardManagementDialogs = () => {
 					<DialogFooter>
 						<Button
 							variant="outline"
+							disabled={isBusy}
 							onClick={() => {
 								setCreateFolderDialog((prev) => ({
 									...prev,
@@ -93,20 +117,15 @@ export const DashboardManagementDialogs = () => {
 							Cancel
 						</Button>
 						<Button
-							disabled={actionState !== 'idle'}
+							disabled={isBusy || !createFolderDialog.name.trim()}
 							onClick={() => {
-								runContentAction('create-folder', {
+								mutations.submit({
+									verb: 'create-folder',
 									projectId: createFolderDialog.projectId,
-									parentFolderId: createFolderDialog.parentFolderId,
-									name: createFolderDialog.name,
-									description: createFolderDialog.description
+									name: createFolderDialog.name.trim(),
+									description: createFolderDialog.description.trim() || null,
+									parentFolderId: createFolderDialog.parentFolderId
 								})
-								setCreateFolderDialog((prev) => ({
-									...prev,
-									open: false,
-									name: '',
-									description: ''
-								}))
 							}}
 						>
 							Create
@@ -118,19 +137,14 @@ export const DashboardManagementDialogs = () => {
 			<Dialog
 				open={renameDialog.open}
 				onOpenChange={(open) => {
-					if (!open) {
-						setRenameDialog({ open: false, item: null, name: '' })
-					}
+					setRenameDialog((prev) => ({ ...prev, open }))
 				}}
 			>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>
-							Rename {renameDialog.item?.type === 'folder' ? 'Folder' : 'Scene'}
-						</DialogTitle>
+						<DialogTitle>Rename</DialogTitle>
 						<DialogDescription>
-							Update the{' '}
-							{renameDialog.item?.type === 'folder' ? 'folder' : 'scene'} name.
+							Enter a new name for this item.
 						</DialogDescription>
 					</DialogHeader>
 					<Input
@@ -139,11 +153,12 @@ export const DashboardManagementDialogs = () => {
 							const name = event.target.value
 							setRenameDialog((prev) => ({ ...prev, name }))
 						}}
-						placeholder="Item name"
+						placeholder="Name"
 					/>
 					<DialogFooter>
 						<Button
 							variant="outline"
+							disabled={isBusy}
 							onClick={() =>
 								setRenameDialog({ open: false, item: null, name: '' })
 							}
@@ -151,16 +166,21 @@ export const DashboardManagementDialogs = () => {
 							Cancel
 						</Button>
 						<Button
+							disabled={
+								isBusy || !renameDialog.name.trim() || !renameDialog.item
+							}
 							onClick={() => {
 								if (!renameDialog.item) {
 									return
 								}
-
-								runContentAction('rename', {
-									items: [renameDialog.item],
-									name: renameDialog.name
+								mutations.submit({
+									verb: 'rename',
+									target: {
+										type: renameDialog.item.type,
+										id: renameDialog.item.id
+									},
+									name: renameDialog.name.trim()
 								})
-								setRenameDialog({ open: false, item: null, name: '' })
 							}}
 						>
 							Save
@@ -169,38 +189,55 @@ export const DashboardManagementDialogs = () => {
 				</DialogContent>
 			</Dialog>
 
-			<AlertDialog
+			<ConfirmDestructiveDialog
 				open={deleteDialog.open}
 				onOpenChange={(open) => {
-					if (!open) {
+					if (!open && !isBusy) {
 						setDeleteDialog({ open: false, items: [] })
 					}
 				}}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Delete {deleteLabel}</AlertDialogTitle>
-						<AlertDialogDescription>
-							{deleteDialog.items.length === 1
-								? `Delete "${deleteDialog.items[0].name}"? This action cannot be undone.`
-								: `Delete ${deleteDialog.items.length} selected items? This action cannot be undone.`}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={() => {
-								runContentAction('delete', {
-									items: deleteDialog.items
-								})
-								setDeleteDialog({ open: false, items: [] })
-							}}
-						>
-							Delete
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+				plan={deletePlan}
+				isPending={isBusy}
+				errorMessage={mutations.lastError}
+				onConfirm={(confirmationText) => {
+					mutations.submit({
+						verb: 'delete',
+						targets: deleteDialog.items.map((item) => ({
+							type: item.type,
+							id: item.id
+						})),
+						confirmationText
+					})
+				}}
+			/>
+
+			<MoveItemsDialog
+				open={moveDialog.open}
+				onOpenChange={(open) => {
+					if (!open && !isBusy) {
+						setMoveDialog({ open: false, items: [], projectId: null })
+					}
+				}}
+				items={moveDialog.items}
+				projectId={moveDialog.projectId}
+				isPending={isBusy}
+				errorMessage={mutations.lastError}
+				onConfirm={(targetFolderId) => {
+					mutations.submit({
+						verb: 'move',
+						targets: moveDialog.items
+							.filter((item) => item.type !== 'project')
+							.map((item) => ({
+								type: item.type as 'scene' | 'folder',
+								id: item.id
+							})),
+						moveTarget:
+							targetFolderId === null
+								? { kind: 'root' }
+								: { kind: 'folder', folderId: targetFolderId }
+					})
+				}}
+			/>
 		</>
 	)
 }

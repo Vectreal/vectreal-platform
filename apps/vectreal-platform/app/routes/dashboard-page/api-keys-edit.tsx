@@ -22,7 +22,7 @@ import {
 import { Input } from '@shared/components/ui/input'
 import { Textarea } from '@shared/components/ui/textarea'
 import { useSetAtom } from 'jotai/react'
-import { AlertCircle, Save, X } from 'lucide-react'
+import { AlertCircle, Save } from 'lucide-react'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import {
@@ -30,7 +30,6 @@ import {
 	Form as RemixForm,
 	redirect,
 	useLocation,
-	useNavigate,
 	useParams
 } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
@@ -43,6 +42,7 @@ import {
 	type ProjectOption
 } from '../../components/dashboard'
 import { FeatureUnavailablePanel } from '../../components/upgrade/feature-unavailable-panel'
+import { useRouteDrawer } from '../../hooks/use-route-drawer'
 import {
 	getApiKeyById,
 	updateApiKey
@@ -220,7 +220,6 @@ export default function ApiKeysEditPage({
 	const { apiKeyData, userProjects, apiKeyAccess } = loaderData
 	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 	const location = useLocation()
-	const navigate = useNavigate()
 	const params = useParams()
 
 	// Control drawer open state based on route
@@ -280,33 +279,21 @@ export default function ApiKeysEditPage({
 		}
 	}, [actionData, setUpgradeModal])
 
-	const handleClose = () => {
-		navigate('/dashboard/api-keys')
-	}
-
-	const handleOpenChange = (open: boolean) => {
-		if (!open) {
-			handleClose()
-		}
-	}
+	const drawer = useRouteDrawer({ isOpen, closeTo: '/dashboard/api-keys' })
 
 	return (
-		<Drawer open={isOpen} onOpenChange={handleOpenChange} direction="right">
+		<Drawer
+			open={drawer.open}
+			onOpenChange={drawer.onOpenChange}
+			onAnimationEnd={drawer.onAnimationEnd}
+			direction="right"
+		>
 			<DrawerContent className="max-w-lg!">
 				<DrawerHeader className="border-b">
-					<div className="flex items-start justify-between">
-						<div>
-							<DrawerTitle>Edit API Key</DrawerTitle>
-							<DrawerDescription>
-								Update the name, description, or project access for this API key
-							</DrawerDescription>
-						</div>
-						<DrawerClose asChild>
-							<Button variant="ghost" size="icon">
-								<X className="h-4 w-4" />
-							</Button>
-						</DrawerClose>
-					</div>
+					<DrawerTitle>Edit API Key</DrawerTitle>
+					<DrawerDescription>
+						Update the name, description, or project access for this API key
+					</DrawerDescription>
 					<div className="bg-muted text-muted-foreground mt-2 rounded-md px-3 py-2 text-sm">
 						<span className="font-medium">{apiKeyData.apiKey.name}</span>
 						<code className="ml-2 font-mono text-xs">
@@ -415,13 +402,17 @@ export default function ApiKeysEditPage({
 									</Alert>
 								)}
 
-							<DrawerFooter className="px-0 pt-2">
+							<DrawerFooter className="px-0 pt-4 pb-0">
+								<DrawerClose asChild>
+									<Button type="button" variant="outline">
+										Cancel
+									</Button>
+								</DrawerClose>
 								<Button
 									type="submit"
 									disabled={
 										form.formState.isSubmitting || !apiKeyAccess.granted
 									}
-									className="w-full"
 								>
 									{form.formState.isSubmitting ? (
 										<>Saving...</>
@@ -432,11 +423,6 @@ export default function ApiKeysEditPage({
 										</>
 									)}
 								</Button>
-								<DrawerClose asChild>
-									<Button type="button" variant="outline" className="w-full">
-										Cancel
-									</Button>
-								</DrawerClose>
 							</DrawerFooter>
 						</RemixForm>
 					</Form>
