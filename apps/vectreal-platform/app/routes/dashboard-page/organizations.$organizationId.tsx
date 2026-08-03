@@ -34,17 +34,24 @@ import {
 	Trash2,
 	Users
 } from 'lucide-react'
-import { data, Form as RemixForm } from 'react-router'
-import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
+import { useState } from 'react'
+import { data, Form as RemixForm, useSubmit } from 'react-router'
+import {
+	AuthenticityTokenInput,
+	useAuthenticityToken
+} from 'remix-utils/csrf/react'
 import { z, ZodError } from 'zod'
 
 import { Route } from './+types/organizations.$organizationId'
+import { ConfirmDestructiveDialog } from '../../components/shared/confirm-destructive-dialog'
 import { isBillingStateReadOnly } from '../../constants/plan-config'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import {
 	getOrgSubscription,
 	hasEntitlement
 } from '../../lib/domain/billing/entitlement-service.server'
+import { DASHBOARD_CONFIRMATION_TOKEN } from '../../lib/domain/dashboard/dashboard-confirmation'
+import { canPerformDashboardOperation } from '../../lib/domain/dashboard/dashboard-operations'
 import {
 	deleteOrganization,
 	getOrganizationDetailForUser,
@@ -58,6 +65,8 @@ import {
 } from '../../lib/domain/organization/organization-repository.server'
 import { getUserByEmail } from '../../lib/domain/user/user-repository.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
+
+import type { DashboardConfirmationPlan } from '../../lib/domain/dashboard/dashboard-confirmation'
 
 const updateOrganizationSchema = z.object({
 	name: z
@@ -79,6 +88,70 @@ const updateRoleSchema = z.object({
 const removeMemberSchema = z.object({
 	targetUserId: z.string().uuid('Invalid member id')
 })
+
+/**
+ * A destructive organization action waiting on confirmation: the copy to show,
+ * and the form fields to post once the user agrees.
+ */
+interface PendingOrganizationAction {
+	plan: DashboardConfirmationPlan
+	fields: Record<string, string>
+}
+
+const LEAVE_ORGANIZATION_ACTION: PendingOrganizationAction = {
+	plan: {
+		tier: 'acknowledge',
+		title: 'Leave this organization?',
+		description: 'You lose access to everything inside it.',
+		consequences: [
+			'Its projects, scenes and API keys stop appearing in your dashboard',
+			'Rejoining requires an invitation from an owner or admin'
+		],
+		confirmLabel: 'Leave organization',
+		token: null
+	},
+	fields: { intent: 'leave-organization' }
+}
+
+function removeMemberAction(
+	targetUserId: string,
+	displayName: string
+): PendingOrganizationAction {
+	return {
+		plan: {
+			tier: 'acknowledge',
+			title: `Remove ${displayName}?`,
+			description: 'They lose access to this organization immediately.',
+			consequences: [
+				'Their projects and scenes stay with the organization',
+				'You can invite them back at any time'
+			],
+			confirmLabel: 'Remove member',
+			token: null
+		},
+		fields: { intent: 'remove-member', targetUserId }
+	}
+}
+
+function deleteOrganizationAction(
+	organizationName: string
+): PendingOrganizationAction {
+	return {
+		plan: {
+			tier: 'typed',
+			title: `Delete organization "${organizationName}"?`,
+			description: 'This removes the organization and every membership in it.',
+			consequences: [
+				'Every member loses access immediately',
+				'API keys scoped to this organization stop working',
+				'This cannot be undone'
+			],
+			confirmLabel: 'Delete organization',
+			token: DASHBOARD_CONFIRMATION_TOKEN
+		},
+		fields: { intent: 'delete-organization' }
+	}
+}
 
 function statusVariantFromBillingState(
 	billingState: string
@@ -285,6 +358,24 @@ export async function action({ request, params }: Route.ActionArgs) {
 		}
 
 		if (intent === 'remove-member') {
+			// The UI hides this behind `canManageMembers`, which folds in the
+			// multi-member entitlement - but the action only checked the role, so a
+			// direct POST bypassed the plan gate that every sibling intent enforces.
+			const memberEntitlement = await hasEntitlement(
+				organizationId,
+				'org_multi_member'
+			)
+			if (!memberEntitlement.granted) {
+				return data(
+					{
+						error:
+							'Team members are not available for this organization on the current plan.',
+						intent
+					},
+					{ status: 403, headers }
+				)
+			}
+
 			const validated = removeMemberSchema.parse({
 				targetUserId: formData.get('targetUserId')
 			})
@@ -321,7 +412,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 	} catch (error) {
 		if (error instanceof ZodError) {
 			const fieldErrors: Record<string, string> = {}
-				error.issues.forEach((err) => {
+			error.issues.forEach((err) => {
 				if (err.path.length > 0) {
 					fieldErrors[err.path[0] as string] = err.message
 				}
@@ -363,11 +454,34 @@ export default function OrganizationDetailPage({
 		user
 	} = loaderData
 
-	const canManageOrg =
-		membership.role === 'owner' || membership.role === 'admin'
-	const canDeleteOrg = membership.role === 'owner'
+	const canManageOrg = canPerformDashboardOperation('organization:update', {
+		role: membership.role
+	})
+	const canDeleteOrg = canPerformDashboardOperation('organization:delete', {
+		role: membership.role
+	})
 	const canManageMembers = canManageOrg && entitlements.orgMultiMember
 	const canManageRoles = canManageOrg && entitlements.orgRoles
+
+	/*
+	  All three of these used to be bare submit buttons: one click removed a
+	  teammate, left the organization, or deleted it outright. They now route
+	  through the shared confirmation, with deletion at the typed tier because it
+	  is the only one of the three that cannot be undone by re-inviting someone.
+	*/
+	const submit = useSubmit()
+	const csrfToken = useAuthenticityToken()
+	const [pendingAction, setPendingAction] =
+		useState<PendingOrganizationAction | null>(null)
+
+	const confirmPendingAction = () => {
+		if (!pendingAction) {
+			return
+		}
+
+		submit({ ...pendingAction.fields, csrf: csrfToken }, { method: 'post' })
+		setPendingAction(null)
+	}
 	const actionError =
 		actionData && 'error' in actionData ? actionData.error : undefined
 	const actionSuccess =
@@ -608,26 +722,23 @@ export default function OrganizationDetailPage({
 													{canManageMembers &&
 														!isReadOnlyBillingState &&
 														!isCurrentUser && (
-															<RemixForm method="post">
-																<AuthenticityTokenInput />
-																<input
-																	type="hidden"
-																	name="intent"
-																	value="remove-member"
-																/>
-																<input
-																	type="hidden"
-																	name="targetUserId"
-																	value={member.user.id}
-																/>
-																<Button
-																	size="sm"
-																	variant="destructive"
-																	type="submit"
-																>
-																	Remove
-																</Button>
-															</RemixForm>
+															<Button
+																size="sm"
+																variant="destructive"
+																type="button"
+																onClick={() =>
+																	setPendingAction(
+																		removeMemberAction(
+																			member.user.id,
+																			member.user.name ||
+																				member.user.email ||
+																				'this member'
+																		)
+																	)
+																}
+															>
+																Remove
+															</Button>
 														)}
 												</div>
 											</TableCell>
@@ -648,37 +759,46 @@ export default function OrganizationDetailPage({
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="grid gap-3 md:grid-cols-2">
-					<RemixForm method="post" className="space-y-2">
-						<AuthenticityTokenInput />
-						<input type="hidden" name="intent" value="leave-organization" />
-						<Button
-							className="w-full"
-							type="submit"
-							variant="outline"
-							disabled={isReadOnlyBillingState}
-						>
-							Leave organization
-						</Button>
-					</RemixForm>
+					<Button
+						className="w-full"
+						type="button"
+						variant="outline"
+						disabled={isReadOnlyBillingState}
+						onClick={() => setPendingAction(LEAVE_ORGANIZATION_ACTION)}
+					>
+						Leave organization
+					</Button>
 
-					<RemixForm method="post" className="space-y-2">
-						<AuthenticityTokenInput />
-						<input type="hidden" name="intent" value="delete-organization" />
-						<Button
-							className="w-full"
-							type="submit"
-							variant="destructive"
-							disabled={!canDeleteOrg || isReadOnlyBillingState}
-						>
-							<Trash2 className="mr-2 h-4 w-4" />
-							Delete organization
-						</Button>
-					</RemixForm>
+					<Button
+						className="w-full"
+						type="button"
+						variant="destructive"
+						disabled={!canDeleteOrg || isReadOnlyBillingState}
+						onClick={() =>
+							setPendingAction(deleteOrganizationAction(organization.name))
+						}
+					>
+						<Trash2 className="mr-2 h-4 w-4" />
+						Delete organization
+					</Button>
 				</CardContent>
 				<CardFooter className="text-muted-foreground text-xs">
 					Organization deletion is only available when no projects remain.
 				</CardFooter>
 			</Card>
+
+			{pendingAction ? (
+				<ConfirmDestructiveDialog
+					open
+					onOpenChange={(open) => {
+						if (!open) {
+							setPendingAction(null)
+						}
+					}}
+					plan={pendingAction.plan}
+					onConfirm={confirmPendingAction}
+				/>
+			) : null}
 		</div>
 	)
 }

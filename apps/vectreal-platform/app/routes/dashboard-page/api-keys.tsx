@@ -1,13 +1,3 @@
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle
-} from '@shared/components/ui/alert-dialog'
 import { Badge } from '@shared/components/ui/badge'
 import {
 	Card,
@@ -47,6 +37,7 @@ import {
 	createApiKeyColumns,
 	type ApiKeyRow
 } from '../../components/dashboard'
+import { ConfirmDestructiveDialog } from '../../components/shared/confirm-destructive-dialog'
 import { FeatureUnavailablePanel } from '../../components/upgrade/feature-unavailable-panel'
 import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
 import {
@@ -64,6 +55,7 @@ import { getUserOrganizations } from '../../lib/domain/user/user-repository.serv
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { shouldRevalidateWithinScope } from '../../lib/navigation/dashboard-route-behavior'
 
+import type { DashboardConfirmationPlan } from '../../lib/domain/dashboard/dashboard-confirmation'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -328,6 +320,28 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 	const defaultOrgId = organizations[0]?.organization.id
 	const keyToRevoke = keyToRevokeId ? keysById.get(keyToRevokeId) : null
 
+	/*
+	  Revoking is destructive but recoverable by issuing a new key, so it sits at
+	  the acknowledge tier rather than asking the user to type anything. It is
+	  built by hand rather than by `planDeleteConfirmation` because an API key is
+	  not one of the entity types that endpoint owns.
+	*/
+	const revokePlan: DashboardConfirmationPlan = {
+		tier: 'acknowledge',
+		title: keyToRevoke
+			? `Revoke "${keyToRevoke.apiKey.name}"?`
+			: 'Revoke API key?',
+		description: keyToRevoke
+			? `Key ending ${keyToRevoke.apiKey.keyPreview} stops working immediately.`
+			: 'This key stops working immediately.',
+		consequences: [
+			'Any application still using this key loses access at once',
+			'This cannot be undone - issue a new key to restore access'
+		],
+		confirmLabel: 'Revoke key',
+		token: null
+	}
+
 	return (
 		<>
 			<div className="container max-w-6xl py-8">
@@ -425,30 +439,13 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 					</Tabs>
 				)}
 
-				<AlertDialog open={revokeDialogOpen} onOpenChange={setRevokeDialogOpen}>
-					<AlertDialogContent>
-						<AlertDialogHeader>
-							<AlertDialogTitle>Revoke API Key?</AlertDialogTitle>
-							<AlertDialogDescription>
-								Are you sure you want to revoke "{keyToRevoke?.apiKey.name}" (
-								...
-								{keyToRevoke?.apiKey.keyPreview})? This action cannot be undone
-								and any applications using this key will immediately lose
-								access.
-							</AlertDialogDescription>
-						</AlertDialogHeader>
-						<AlertDialogFooter>
-							<AlertDialogCancel>Cancel</AlertDialogCancel>
-							<AlertDialogAction
-								onClick={confirmRevoke}
-								disabled={isRevoking}
-								className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-							>
-								Revoke Key
-							</AlertDialogAction>
-						</AlertDialogFooter>
-					</AlertDialogContent>
-				</AlertDialog>
+				<ConfirmDestructiveDialog
+					open={revokeDialogOpen}
+					onOpenChange={setRevokeDialogOpen}
+					plan={revokePlan}
+					isPending={isRevoking}
+					onConfirm={confirmRevoke}
+				/>
 			</div>
 
 			<Outlet />

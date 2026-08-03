@@ -85,7 +85,19 @@ React Router v7 in framework mode with SSR. Route config lives in `app/routes.ts
 
 ### Auth pattern
 
-`loadAuthenticatedUser(request)` returns `{ user, userWithDefaults, headers }`. Current org is at `userWithDefaults.organization.id`. Role check: `getUserOrganizations(user.id)` → find membership → check `owner | admin`.
+`loadAuthenticatedUser(request)` returns `{ user, userWithDefaults, headers }`. Current org is at `userWithDefaults.organization.id`.
+
+**Authorization**: never hand-roll a role check. `app/lib/domain/dashboard/dashboard-operations.ts` holds the single role → operation table.
+
+- Server: resolve the actor with `resolveProjectMembership` / `resolveSceneMembership` / `resolveSceneFolderMembership` (`dashboard-permissions.server.ts`), then `assertDashboardPermission('scene:delete', membership)`.
+- Client: the module is pure and client-safe, so components call `canPerformDashboardOperation` directly to gate affordances. Loaders ship a `DashboardCapabilityMap` from `buildDashboardCapabilities`.
+- Adding an operation means adding it to `DashboardOperation` and the table; a missing rule is a compile error.
+
+Note that Postgres RLS is **inert for app traffic** — `db/client.ts` connects with a plain connection string and no `set local role`, so `auth.uid()` is null and every policy is bypassed. This table is the only authorization that runs.
+
+### Dashboard mutations
+
+Create, rename, move and delete for projects, folders and scenes go through `POST /api/dashboard/mutations` (`dashboard-mutations.ts` for the contract, `dashboard-mutations.server.ts` for execution). Client side, use `useDashboardMutations`. Destructive confirmations come from `planDeleteConfirmation` and render via `ConfirmDestructiveDialog` — the server recomputes the required tier itself, so client-supplied state is never trusted.
 
 ### Billing architecture
 

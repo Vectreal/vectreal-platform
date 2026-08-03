@@ -135,53 +135,12 @@ export type SceneSettingsAction =
 	| 'upload-scene-gltf'
 	| 'upload-published-glb'
 
-export type ContentItemType = 'scene' | 'folder'
-
-export type ContentMutationAction = 'rename' | 'delete' | 'create-folder'
-export type SceneMutationAction = Exclude<
-	ContentMutationAction,
-	'create-folder'
->
-
-export interface ContentActionItem {
-	readonly type: ContentItemType
-	readonly id: string
-}
-
-export interface ContentActionRequest {
-	readonly action: SceneMutationAction
-	readonly items: ContentActionItem[]
-	readonly name?: string
-}
-
-export interface ContentActionResult {
-	readonly type: ContentItemType
-	readonly id: string
-	readonly success: boolean
-	readonly error?: string
-}
-
-export interface ContentActionSummary {
-	readonly total: number
-	readonly succeeded: number
-	readonly failed: number
-}
-
-export interface ContentActionResponse {
-	readonly success: boolean
-	readonly action: SceneMutationAction
-	readonly results: ContentActionResult[]
-	readonly summary: ContentActionSummary
-}
-
-export interface CreateFolderActionResponse {
-	readonly success: boolean
-	readonly action: 'create-folder'
-	readonly folder: {
-		readonly id: string
-		readonly name: string
-	}
-}
+/*
+ * The content-mutation types that lived here moved to
+ * `lib/domain/dashboard/dashboard-mutations`, which is the contract both the
+ * client hook and the endpoint import - so the request side is typed too,
+ * rather than hand-built FormData on one end and hand-parsed on the other.
+ */
 
 /** Aggregate scene response returned by GET /api/scenes/:sceneId. */
 export interface SceneAggregateResponse {
