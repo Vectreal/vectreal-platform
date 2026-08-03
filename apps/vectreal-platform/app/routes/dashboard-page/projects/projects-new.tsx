@@ -2,9 +2,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@shared/components/ui/button'
 import {
 	Drawer,
-	DrawerClose,
 	DrawerContent,
 	DrawerDescription,
+	DrawerFooter,
 	DrawerHeader,
 	DrawerTitle
 } from '@shared/components/ui/drawer'
@@ -27,20 +27,15 @@ import {
 } from '@shared/components/ui/select'
 import { slugify } from '@shared/utils'
 import { useSetAtom } from 'jotai/react'
-import { AlertCircle, Plus, X } from 'lucide-react'
+import { AlertCircle, Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import {
-	data,
-	redirect,
-	Form as RemixForm,
-	useLocation,
-	useNavigate
-} from 'react-router'
+import { data, redirect, Form as RemixForm, useLocation } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { z, ZodError } from 'zod'
 
 import { Route } from './+types/projects-new'
+import { useRouteDrawer } from '../../../hooks/use-route-drawer'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import {
 	getOrgSubscription,
@@ -209,17 +204,12 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	const csrfToken = useAuthenticityToken()
 
 	const location = useLocation()
-	const navigate = useNavigate()
 	const [isGeneratingSlug, setIsGeneratingSlug] = useState(false)
 
 	// Control drawer open state based on route
 	const isOpen = location.pathname === '/dashboard/projects/new'
 
-	const handleOpenChange = (open: boolean) => {
-		if (!open) {
-			navigate('/dashboard/projects')
-		}
-	}
+	const drawer = useRouteDrawer({ isOpen, closeTo: '/dashboard/projects' })
 
 	const form = useForm<ProjectFormValues>({
 		resolver: zodResolver(projectFormSchema),
@@ -311,22 +301,18 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	)
 
 	return (
-		<Drawer open={isOpen} onOpenChange={handleOpenChange} direction="right">
+		<Drawer
+			open={drawer.open}
+			onOpenChange={drawer.onOpenChange}
+			onAnimationEnd={drawer.onAnimationEnd}
+			direction="right"
+		>
 			<DrawerContent className="max-w-lg!">
 				<DrawerHeader className="border-b">
-					<div className="flex items-start justify-between">
-						<div>
-							<DrawerTitle>Create New Project</DrawerTitle>
-							<DrawerDescription>
-								Add a new project to your organization
-							</DrawerDescription>
-						</div>
-						<DrawerClose asChild>
-							<Button variant="ghost" size="icon">
-								<X className="h-4 w-4" />
-							</Button>
-						</DrawerClose>
-					</div>
+					<DrawerTitle>Create New Project</DrawerTitle>
+					<DrawerDescription>
+						Add a new project to your organization
+					</DrawerDescription>
 				</DrawerHeader>
 
 				<div className="overflow-y-auto p-6">
@@ -508,12 +494,8 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 							/>
 
 							{/* Action button */}
-							<div className="flex justify-end gap-3 pt-4">
-								<Button
-									type="button"
-									variant="outline"
-									onClick={() => handleOpenChange(false)}
-								>
+							<DrawerFooter className="px-0 pt-4 pb-0">
+								<Button type="button" variant="outline" onClick={drawer.close}>
 									Cancel
 								</Button>
 								<Button
@@ -540,7 +522,7 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 										</>
 									)}
 								</Button>
-							</div>
+							</DrawerFooter>
 						</RemixForm>
 					</Form>
 				</div>

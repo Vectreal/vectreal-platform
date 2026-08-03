@@ -2,9 +2,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@shared/components/ui/button'
 import {
 	Drawer,
-	DrawerClose,
 	DrawerContent,
 	DrawerDescription,
+	DrawerFooter,
 	DrawerHeader,
 	DrawerTitle
 } from '@shared/components/ui/drawer'
@@ -26,7 +26,7 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 import { Textarea } from '@shared/components/ui/textarea'
-import { Save, Trash2, X } from 'lucide-react'
+import { Save, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import {
@@ -46,6 +46,7 @@ import {
 } from '../../../components/dashboard/utils'
 import { ConfirmDestructiveDialog } from '../../../components/shared/confirm-destructive-dialog'
 import { useDashboardMutations } from '../../../hooks/use-dashboard-mutations'
+import { useRouteDrawer } from '../../../hooks/use-route-drawer'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
 import { buildDashboardCapabilities } from '../../../lib/domain/dashboard/dashboard-capabilities'
 import {
@@ -264,11 +265,7 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 		? `/dashboard/projects${location.search}`
 		: `/dashboard/projects/${project.id}`
 
-	const handleOpenChange = (open: boolean) => {
-		if (!open) {
-			navigate(closeTo)
-		}
-	}
+	const drawer = useRouteDrawer({ isOpen, closeTo })
 
 	const form = useForm<ProjectEditFormValues>({
 		resolver: zodResolver(projectEditSchema),
@@ -302,22 +299,18 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	)
 
 	return (
-		<Drawer open={isOpen} onOpenChange={handleOpenChange} direction="right">
+		<Drawer
+			open={drawer.open}
+			onOpenChange={drawer.onOpenChange}
+			onAnimationEnd={drawer.onAnimationEnd}
+			direction="right"
+		>
 			<DrawerContent className="max-w-lg!">
 				<DrawerHeader className="border-b">
-					<div className="flex items-start justify-between">
-						<div>
-							<DrawerTitle>Edit Project</DrawerTitle>
-							<DrawerDescription>
-								Update the details for {project.name}
-							</DrawerDescription>
-						</div>
-						<DrawerClose asChild>
-							<Button variant="ghost" size="icon">
-								<X className="h-4 w-4" />
-							</Button>
-						</DrawerClose>
-					</div>
+					<DrawerTitle>Edit Project</DrawerTitle>
+					<DrawerDescription>
+						Update the details for {project.name}
+					</DrawerDescription>
 				</DrawerHeader>
 
 				<div className="overflow-y-auto p-6">
@@ -441,12 +434,8 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 							/>
 
 							{/* Action buttons */}
-							<div className="flex justify-end gap-3 pt-4">
-								<Button
-									type="button"
-									variant="outline"
-									onClick={() => handleOpenChange(false)}
-								>
+							<DrawerFooter className="px-0 pt-4 pb-0">
+								<Button type="button" variant="outline" onClick={drawer.close}>
 									Cancel
 								</Button>
 								<Button
@@ -470,7 +459,7 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 										</>
 									)}
 								</Button>
-							</div>
+							</DrawerFooter>
 						</RemixForm>
 					</Form>
 
@@ -480,9 +469,7 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 					  destroying it.
 					*/}
 					<section className="border-destructive/40 mt-8 space-y-3 rounded-2xl border p-4">
-						<h3 className="text-destructive text-sm font-semibold">
-							Danger zone
-						</h3>
+						<h3 className="text-destructive text-h4">Danger zone</h3>
 						<p className="text-muted-foreground text-sm">
 							Deleting this project removes every scene, folder and published
 							embed inside it.
