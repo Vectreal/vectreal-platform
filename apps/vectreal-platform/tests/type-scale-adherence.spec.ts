@@ -139,6 +139,43 @@ describe('type scale adherence', () => {
 		})
 	})
 
+	describe('themed portals', () => {
+		/*
+		  An overlay that portals to `document.body` leaves any themed subtree
+		  behind, so one opened inside `.dark` renders in light tokens. The
+		  failure is invisible in the light theme, which is how it survived until
+		  somebody opened a dialog from the dark column of a Storybook page.
+
+		  Each of these forwards a `container` to its own portal. `drawer` is
+		  absent deliberately: vaul takes the target on the root rather than the
+		  content, so it has nothing to forward here.
+		*/
+		const PORTAL_OWNERS = [
+			'dialog.tsx',
+			'alert-dialog.tsx',
+			'hover-card.tsx'
+		] as const
+
+		it.each(PORTAL_OWNERS)('%s accepts a portal container', (file) => {
+			const source = readFileSync(join(UI_DIR, file), 'utf8')
+
+			expect(source, `${file} does not declare a container prop`).toMatch(
+				/container\?: HTMLElement \| null/
+			)
+		})
+
+		it.each(PORTAL_OWNERS)('%s forwards it to the portal', (file) => {
+			const source = readFileSync(join(UI_DIR, file), 'utf8')
+
+			// Declaring the prop and dropping it on the floor is the regression
+			// that would look identical to never having added it.
+			expect(
+				source,
+				`${file} declares a container but never passes it on`
+			).toMatch(/container=\{container\}/)
+		})
+	})
+
 	it('defines every rung it claims to define', () => {
 		const css = readFileSync(join(UI_DIR, '../styles/globals.css'), 'utf8')
 

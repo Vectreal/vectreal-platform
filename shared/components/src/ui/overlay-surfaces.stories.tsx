@@ -10,7 +10,8 @@ import {
 	AlertDialogDescription,
 	AlertDialogFooter,
 	AlertDialogHeader,
-	AlertDialogTitle
+	AlertDialogTitle,
+	AlertDialogTrigger
 } from './alert-dialog'
 import { Button } from './button'
 import {
@@ -245,13 +246,51 @@ export const DrawerActions: Story = {
 	)
 }
 
+/*
+  Closed at rest, and it has to be.
+
+  Radix declares `AlertDialogProps extends Omit<DialogProps, 'modal'>`: an alert
+  dialog is always modal, with no opt-out. Left open it pins
+  `overflow: hidden; pointer-events: none` on `document.body` and hides the rest
+  of the tree from assistive tech, which froze the entire Storybook page rather
+  than just this story - two of them open at once, fighting over the focus trap.
+  The drawers above can sit open because vaul accepts `modal={false}`.
+
+  So this one opens on click. The theming contract it used to assert visually is
+  covered by `type-scale-adherence` instead, which reads the sources and cannot
+  be broken by a snapshot nobody looks at closely.
+*/
+function TriggeredAlert({ container }: { container: HTMLElement | null }) {
+	const [open, setOpen] = useState(false)
+
+	return (
+		<AlertDialog open={open} onOpenChange={setOpen}>
+			<AlertDialogTrigger asChild>
+				<Button variant="outline">Discard changes</Button>
+			</AlertDialogTrigger>
+			<AlertDialogContent container={container}>
+				<AlertDialogHeader>
+					<AlertDialogTitle>Discard changes?</AlertDialogTitle>
+					<AlertDialogDescription>
+						Your edits to this scene have not been saved.
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogCancel>Keep editing</AlertDialogCancel>
+					<AlertDialogAction>Discard</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	)
+}
+
 /**
  * `AlertDialogContent`, which portals the same way `DialogContent` does and had
  * the same gap: opened from inside a `.dark` subtree it rendered light. It takes
  * a `container` now, so the two agree.
  *
- * This is the story that proves it. Both halves render the same alert; if the
- * portal escapes its theme again, the lower one comes back white.
+ * Open the lower one to check it. If the portal escapes its theme again it comes
+ * back white on the dark stage.
  */
 export const AlertDialogThemed: Story = {
 	parameters: { dualTheme: false },
@@ -259,22 +298,7 @@ export const AlertDialogThemed: Story = {
 		<>
 			{(['light', 'dark'] as const).map((theme) => (
 				<ThemedStage key={theme} theme={theme}>
-					{(container) => (
-						<AlertDialog open>
-							<AlertDialogContent container={container}>
-								<AlertDialogHeader>
-									<AlertDialogTitle>Discard changes?</AlertDialogTitle>
-									<AlertDialogDescription>
-										Your edits to this scene have not been saved.
-									</AlertDialogDescription>
-								</AlertDialogHeader>
-								<AlertDialogFooter>
-									<AlertDialogCancel>Keep editing</AlertDialogCancel>
-									<AlertDialogAction>Discard</AlertDialogAction>
-								</AlertDialogFooter>
-							</AlertDialogContent>
-						</AlertDialog>
-					)}
+					{(container) => <TriggeredAlert container={container} />}
 				</ThemedStage>
 			))}
 		</>
