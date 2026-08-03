@@ -1,3 +1,6 @@
+import { Button } from '@shared/components/ui/button'
+import { useState } from 'react'
+
 import { ConfirmDestructiveDialog } from './confirm-destructive-dialog'
 import {
 	planDeleteConfirmation,
@@ -8,6 +11,8 @@ import {
 
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
+const noop = () => {}
+
 /**
  * The one destructive confirmation in the dashboard, in each tier the policy
  * can produce.
@@ -16,26 +21,44 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
  * prop object, so these stories fail the same way the product would if the tier
  * ladder changed - the copy is data, and this renders the real data.
  *
- * Rendered inline rather than through the dialog's own portal so all the states
- * are visible at once; `open` stays true and the callbacks are inert.
+ * Each story is a trigger and a closable dialog rather than one pinned open.
+ * `Dialog` portals to `document.body` and the docs page renders every story on
+ * one canvas, so hard-coding `open` stacked all eight on top of each other with
+ * inert callbacks: nothing legible, and no way out of any of them.
+ *
+ * Confirm is still a no-op, which is the component's actual contract - it does
+ * not close itself, so a server rejection stays on screen next to the input that
+ * caused it. Cancel, Escape and the close button are what dismiss it.
  */
 const meta = {
 	title: 'Dashboard/Confirm destructive',
 	component: ConfirmDestructiveDialog,
-	parameters: { layout: 'centered' }
+	parameters: { layout: 'centered' },
+	args: { open: false, onOpenChange: noop, onConfirm: noop },
+	render: function ConfirmStory(args) {
+		const [open, setOpen] = useState(false)
+
+		return (
+			<>
+				<Button variant="outline" onClick={() => setOpen(true)}>
+					{args.plan.confirmLabel}
+				</Button>
+				<ConfirmDestructiveDialog
+					{...args}
+					open={open}
+					onOpenChange={setOpen}
+				/>
+			</>
+		)
+	}
 } satisfies Meta<typeof ConfirmDestructiveDialog>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
-const noop = () => {}
-
 /** A draft scene: nothing is live, so one click is proportionate. */
 export const Acknowledge: Story = {
 	args: {
-		open: true,
-		onOpenChange: noop,
-		onConfirm: noop,
 		plan: planDeleteConfirmation([
 			toSceneRef({
 				id: 'scene-1',
@@ -53,13 +76,10 @@ export const Acknowledge: Story = {
  */
 export const TypedPublishedScene: Story = {
 	args: {
-		open: true,
-		onOpenChange: noop,
-		onConfirm: noop,
 		plan: planDeleteConfirmation([
 			toSceneRef({
 				id: 'scene-2',
-				name: 'Porsche 911',
+				name: 'Product Hero',
 				projectId: 'project-1',
 				status: 'published'
 			})
@@ -70,9 +90,6 @@ export const TypedPublishedScene: Story = {
 /** A folder with contents. The count drives the tier, so it is stated. */
 export const TypedNonEmptyFolder: Story = {
 	args: {
-		open: true,
-		onOpenChange: noop,
-		onConfirm: noop,
 		plan: planDeleteConfirmation([
 			toFolderRef({
 				id: 'folder-1',
@@ -87,13 +104,10 @@ export const TypedNonEmptyFolder: Story = {
 /** The longest copy the ladder produces - the layout has to hold at this size. */
 export const TypedProject: Story = {
 	args: {
-		open: true,
-		onOpenChange: noop,
-		onConfirm: noop,
 		plan: planDeleteConfirmation([
 			toProjectRef({
 				id: 'project-1',
-				name: 'Configurator',
+				name: 'Studio Showcase',
 				sceneCount: 24,
 				counts: { published: 6 }
 			})
@@ -104,9 +118,6 @@ export const TypedProject: Story = {
 /** Bulk crosses the threshold on count alone, regardless of what is in it. */
 export const TypedBulk: Story = {
 	args: {
-		open: true,
-		onOpenChange: noop,
-		onConfirm: noop,
 		plan: planDeleteConfirmation(
 			Array.from({ length: 6 }, (_, index) =>
 				toSceneRef({
@@ -123,12 +134,9 @@ export const TypedBulk: Story = {
 /** Confirm is disabled and says why, rather than failing after the request. */
 export const Blocked: Story = {
 	args: {
-		open: true,
-		onOpenChange: noop,
-		onConfirm: noop,
 		blockedReason: 'Only organization owners can delete a project.',
 		plan: planDeleteConfirmation([
-			toProjectRef({ id: 'project-1', name: 'Configurator' })
+			toProjectRef({ id: 'project-1', name: 'Studio Showcase' })
 		])
 	}
 }
@@ -139,14 +147,11 @@ export const Blocked: Story = {
  */
 export const ServerError: Story = {
 	args: {
-		open: true,
-		onOpenChange: noop,
-		onConfirm: noop,
 		errorMessage: 'This deletion requires typing DELETE to confirm.',
 		plan: planDeleteConfirmation([
 			toSceneRef({
 				id: 'scene-2',
-				name: 'Porsche 911',
+				name: 'Product Hero',
 				projectId: 'project-1',
 				status: 'published'
 			})
@@ -157,9 +162,6 @@ export const ServerError: Story = {
 /** Mid-flight: confirm is disabled and both buttons are inert. */
 export const Pending: Story = {
 	args: {
-		open: true,
-		onOpenChange: noop,
-		onConfirm: noop,
 		isPending: true,
 		plan: planDeleteConfirmation([
 			toSceneRef({
