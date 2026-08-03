@@ -49,12 +49,26 @@ function DialogContent({
 	className,
 	children,
 	showCloseButton = true,
+	container,
 	...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
 	showCloseButton?: boolean
+	/**
+	 * Portal target, matching `HoverCardContent`. The content mounts on
+	 * `document.body` by default, which puts it outside any themed subtree - so
+	 * a dialog opened from inside a `.dark` container renders with light tokens.
+	 * Pass the themed element to keep it in scope. Storybook's side-by-side
+	 * themes need this; so does any app region that themes a subtree rather than
+	 * the document.
+	 *
+	 * The content is `fixed`, so the target also has to establish a containing
+	 * block - a transform, for instance - or it will centre on the viewport
+	 * rather than on the container.
+	 */
+	container?: HTMLElement | null
 }) {
 	return (
-		<DialogPortal data-slot="dialog-portal">
+		<DialogPortal data-slot="dialog-portal" container={container}>
 			<DialogOverlay />
 			<DialogPrimitive.Content
 				data-slot="dialog-content"

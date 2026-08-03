@@ -24,6 +24,8 @@ interface ConfirmDestructiveDialogProps {
 	/** A failed attempt, shown in place rather than as a toast that outlives the dialog. */
 	errorMessage?: string | null
 	cancelLabel?: string
+	/** Portal target, for a region that themes a subtree rather than the document. */
+	container?: HTMLElement | null
 	onConfirm: (confirmationText: string | null) => void
 }
 
@@ -51,6 +53,7 @@ export function ConfirmDestructiveDialog({
 	blockedReason = null,
 	errorMessage = null,
 	cancelLabel = 'Cancel',
+	container,
 	onConfirm
 }: ConfirmDestructiveDialogProps) {
 	const [typedText, setTypedText] = useState('')
@@ -90,7 +93,7 @@ export function ConfirmDestructiveDialog({
 			  now, since a centered title over a left-aligned list was wrong in every
 			  dialog, not just this one.
 			*/}
-			<DialogContent className="gap-5">
+			<DialogContent className="gap-5" container={container}>
 				<DialogHeader className="gap-1.5">
 					<DialogTitle>{plan.title}</DialogTitle>
 					<DialogDescription>{plan.description}</DialogDescription>

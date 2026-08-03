@@ -1,5 +1,6 @@
 import { Button } from '@shared/components/ui/button'
-import { useState } from 'react'
+import { cn } from '@shared/utils'
+import { useState, type ComponentProps, type ReactNode } from 'react'
 
 import { ConfirmDestructiveDialog } from './confirm-destructive-dialog'
 import {
@@ -12,6 +13,64 @@ import {
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 const noop = () => {}
+
+/*
+  Each theme gets a stage, and the dialog portals into it.
+
+  The global decorator renders a story twice, in a light wrapper and a `.dark`
+  one, but `Dialog` mounts on `document.body` - outside both of them. The dark
+  column's trigger opened a light dialog, every time. `transform-gpu` is what
+  makes the stage a containing block for the `fixed` content, so it centres on
+  the column instead of the viewport.
+*/
+function ThemedStage({
+	theme,
+	children
+}: {
+	theme: 'light' | 'dark'
+	children: (container: HTMLElement | null) => ReactNode
+}) {
+	const [stage, setStage] = useState<HTMLDivElement | null>(null)
+
+	return (
+		<div
+			ref={setStage}
+			className={cn(
+				// Tall enough for the longest tier - the dialog is `fixed`, so it
+				// adds nothing to the stage's own height and a short stage would
+				// crop it against `overflow-hidden`.
+				'bg-background text-foreground relative grid min-h-[36rem] transform-gpu place-items-center overflow-hidden p-8',
+				theme === 'dark' && 'dark'
+			)}
+		>
+			{children(stage)}
+		</div>
+	)
+}
+
+function TriggeredDialog({
+	args,
+	container
+}: {
+	args: ComponentProps<typeof ConfirmDestructiveDialog>
+	container: HTMLElement | null
+}) {
+	const [open, setOpen] = useState(false)
+
+	return (
+		<>
+			<Button variant="outline" onClick={() => setOpen(true)}>
+				{args.plan.confirmLabel}
+			</Button>
+			<ConfirmDestructiveDialog
+				{...args}
+				open={open}
+				onOpenChange={setOpen}
+				container={container}
+			/>
+		</>
+	)
+}
 
 /**
  * The one destructive confirmation in the dashboard, in each tier the policy
@@ -33,24 +92,19 @@ const noop = () => {}
 const meta = {
 	title: 'Dashboard/Confirm destructive',
 	component: ConfirmDestructiveDialog,
-	parameters: { layout: 'centered' },
+	// The light/dark pair is built below rather than by the decorator, so each
+	// dialog can portal into the theme its trigger belongs to.
+	parameters: { layout: 'fullscreen', dualTheme: false },
 	args: { open: false, onOpenChange: noop, onConfirm: noop },
-	render: function ConfirmStory(args) {
-		const [open, setOpen] = useState(false)
-
-		return (
-			<>
-				<Button variant="outline" onClick={() => setOpen(true)}>
-					{args.plan.confirmLabel}
-				</Button>
-				<ConfirmDestructiveDialog
-					{...args}
-					open={open}
-					onOpenChange={setOpen}
-				/>
-			</>
-		)
-	}
+	render: (args) => (
+		<>
+			{(['light', 'dark'] as const).map((theme) => (
+				<ThemedStage key={theme} theme={theme}>
+					{(container) => <TriggeredDialog args={args} container={container} />}
+				</ThemedStage>
+			))}
+		</>
+	)
 } satisfies Meta<typeof ConfirmDestructiveDialog>
 
 export default meta
