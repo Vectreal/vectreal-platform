@@ -556,7 +556,8 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		paramSceneId,
 		sceneMeta,
 		initialSceneAggregate,
-		lastSavedSceneId
+		lastSavedSceneId,
+		shouldRestorePendingDraft
 	}
 
 	const routeSyncActions = {
