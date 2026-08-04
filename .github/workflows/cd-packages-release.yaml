@@ -163,7 +163,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@v6.0.9
 
       - name: Get pnpm store directory
         id: pnpm-cache
