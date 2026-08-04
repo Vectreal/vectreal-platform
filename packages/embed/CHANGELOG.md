@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.25.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v0.24.1...embed-v0.25.0) (2026-08-04)
+
+
+### Bug Fixes
+
+* **packages:** match repository.url org casing for npm provenance ([455caa9](https://github.com/Vectreal/vectreal-platform/commit/455caa927ff7a668ea2b6af6a633d9057d69f203))
+* **packages:** match repository.url org casing for npm provenance ([7289fdc](https://github.com/Vectreal/vectreal-platform/commit/7289fdcbc5678588acccaf5b650d62a4d70a7e10))
+
 ## [0.24.1](https://github.com/Vectreal/vectreal-platform/compare/embed-v0.24.0...embed-v0.24.1) (2026-08-02)
 
 
