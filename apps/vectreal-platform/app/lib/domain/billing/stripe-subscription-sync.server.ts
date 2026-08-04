@@ -11,7 +11,7 @@
  *     `vectreal_plan` (e.g., `pro`).  If the metadata is absent the function
  *     falls back to the existing plan stored locally so that a misconfigured
  *     product does not silently downgrade a paying customer.
- *   - State mapping follows prd/04-billing-states.md §Webhook Events.
+ *   - State mapping is defined by BillingState in app/constants/plan-config.ts.
  *   - All writes are upserts so the function is safe to call repeatedly
  *     (idempotent at the record level).
  */

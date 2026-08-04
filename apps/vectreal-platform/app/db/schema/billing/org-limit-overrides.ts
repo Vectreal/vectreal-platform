@@ -17,7 +17,7 @@ import { isOrganizationAdmin, isOrganizationMember } from '../rls'
  * Each row overrides one limit key for one organisation.
  * A NULL value for `limit_value` means "Unlimited".
  *
- * Limit keys are defined in prd/02-limits-and-quotas.md.
+ * Limit keys are defined by LimitKey in app/constants/plan-config.ts.
  */
 export const orgLimitOverrides = pgTable(
 	'org_limit_overrides',

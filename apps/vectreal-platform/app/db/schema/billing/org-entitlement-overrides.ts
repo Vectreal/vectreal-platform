@@ -16,7 +16,7 @@ import { isOrganizationAdmin, isOrganizationMember } from '../rls'
  * Per-organisation entitlement overrides - used for enterprise add-ons
  * or manual capability grants that differ from the plan baseline.
  *
- * Entitlement keys are defined in prd/03-entitlements.md.
+ * Entitlement keys are defined by EntitlementKey in app/constants/plan-config.ts.
  */
 export const orgEntitlementOverrides = pgTable(
 	'org_entitlement_overrides',

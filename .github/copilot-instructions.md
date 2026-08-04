@@ -14,25 +14,23 @@ It is a **pnpm + Nx monorepo** containing:
 | Platform app     | `apps/vectreal-platform/` | Full-stack React Router v7 app (SSR, auth, dashboard, publisher, preview) |
 | Viewer package   | `packages/viewer/`        | `@vctrl/viewer` React 3D viewer component                                 |
 | Hooks package    | `packages/hooks/`         | `@vctrl/hooks` browser-side loading, optimisation, and export hooks       |
-| Core package     | `packages/core/`          | `@vctrl/core` server-side model processing pipeline                       |
+| Core package     | `packages/core/`          | `@vctrl/core` isomorphic model processing pipeline                        |
 | Shared libraries | `shared/`                 | Shared UI components and utilities                                        |
-| Infrastructure   | `terraform/`              | Google Cloud Run, CDN, IAM, and storage Terraform config                  |
+| Infrastructure   | `terraform/`              | Cloudflare DNS, Turnstile widgets, cache rules, and page rules            |
 
 ---
 
 ## Productization Context
 
-All productization decisions live under **`prd/`** at the repository root.
-Read the relevant document before implementing any feature that touches:
+There is no PRD directory. Productization decisions live in code, and these files are the source of truth:
 
-- plans or tiers → [`prd/01-plans-and-tiers.md`](prd/01-plans-and-tiers.md)
-- resource limits or quotas → [`prd/02-limits-and-quotas.md`](prd/02-limits-and-quotas.md)
-- feature flags or entitlements → [`prd/03-entitlements.md`](prd/03-entitlements.md)
-- billing, subscriptions, or payment states → [`prd/04-billing-states.md`](prd/04-billing-states.md)
-- cookies, consent, or privacy → [`prd/05-consent-categories.md`](prd/05-consent-categories.md)
-- analytics events, tracking, or telemetry → [`prd/06-analytics-event-taxonomy.md`](prd/06-analytics-event-taxonomy.md)
+- plans, tiers, entitlement keys, limit keys, billing states → [`apps/vectreal-platform/app/constants/plan-config.ts`](../apps/vectreal-platform/app/constants/plan-config.ts)
+- user-facing product claims, plan copy, supported formats → [`apps/vectreal-platform/app/constants/product-copy.ts`](../apps/vectreal-platform/app/constants/product-copy.ts)
+- role → operation authorization → [`apps/vectreal-platform/app/lib/domain/dashboard/dashboard-operations.ts`](../apps/vectreal-platform/app/lib/domain/dashboard/dashboard-operations.ts)
+- cookies and consent categories → [`apps/vectreal-platform/app/lib/consent/consent-cookie.ts`](../apps/vectreal-platform/app/lib/consent/consent-cookie.ts)
+- analytics events → the `capture` call sites themselves; there is no separate registry
 
-**Canonical identifiers** (plan ids, entitlement keys, billing state ids, consent categories, event names) defined in the PRD are the **only** accepted string literals in code. Do not invent new identifiers without updating the PRD first.
+**Canonical identifiers** (plan ids, entitlement keys, billing state ids, consent categories) come from the types in those files. Adding one means adding it to the type, so a missing case is a compile error. Do not invent string literals that no type admits.
 
 ---
 
@@ -56,7 +54,7 @@ Read the relevant document before implementing any feature that touches:
 
 ### Testing
 
-- Unit tests: Jest (`nx run <project>:test`).
+- Unit tests: Vitest (`nx run <project>:test`), with the config in each project's `vite.config.ts` `test` block.
 - E2E tests: Playwright (`nx run <project>:e2e`).
 
 ---

@@ -15,7 +15,7 @@ Reduce ambiguity to near-zero before coding, then deliver in short verified loop
 
 - Map current behavior and failure surfaces before proposing fixes.
 - Identify unknowns explicitly and convert each into a concrete question.
-- Validate assumptions against repository conventions, PRD constraints, and existing architecture patterns.
+- Validate assumptions against repository conventions, the plan/entitlement types in `app/constants/plan-config.ts`, and existing architecture patterns.
 
 2. Alignment
 
@@ -39,7 +39,7 @@ Reduce ambiguity to near-zero before coding, then deliver in short verified loop
 
 - Run project-level checks through Nx only.
 - Validate runtime behavior in the exact user surfaces being fixed.
-- Confirm no policy/PRD identifier drift.
+- Confirm no plan/entitlement/consent identifier drift.
 - Run explicit negative-path checks (error, empty, timeout, retry, permission, offline where relevant).
 - Verify diagnostics state (type, lint, editor warnings for touched files) before closing the loop.
 
@@ -75,7 +75,7 @@ Before closing a loop, check all applicable items:
 4. Runtime failure-path validation in each modified surface.
 5. Diagnostics clean for touched files (including editor warnings).
 6. Import/order/style rules satisfied in touched files.
-7. PRD canonical identifiers unchanged unless explicitly intended.
+7. Canonical plan/entitlement/consent identifiers unchanged unless explicitly intended.
 8. Security/infra blast radius reviewed for infra/auth/config changes.
 9. User-facing recovery paths verified (retry/fallback/actionable copy).
 10. Residual risks and follow-ups documented.
@@ -142,7 +142,7 @@ If evidence is incomplete, report as in-progress instead of done.
 - Jumping to implementation while ambiguity is still implicit.
 - Solving with broad refactors when a focused vertical slice is sufficient.
 - Reporting success based on type-check alone without runtime failure-path validation.
-- Introducing new identifiers that conflict with PRD canonical values.
+- Introducing new identifiers that conflict with the canonical values in `app/constants/plan-config.ts`.
 
 ## Done Criteria
 
