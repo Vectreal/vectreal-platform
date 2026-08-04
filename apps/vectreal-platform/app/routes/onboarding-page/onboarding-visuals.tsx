@@ -321,7 +321,7 @@ export const PublishVisual: ComponentType = () => {
 												border: '1px solid rgb(var(--orange-rgb) / 0.2)'
 											}}
 										>
-											cdn.vectreal.com/...
+											vectreal.com/embed/...
 										</div>
 									</motion.div>
 								)}
@@ -390,7 +390,7 @@ export const DashboardVisual: ComponentType = () => {
 							</span>
 						</div>
 						<div className="rounded-md bg-black/30 px-2 py-1.5 font-mono text-[8px] text-white/25">
-							{'<iframe src="cdn.vectreal.com/..." />'}
+							{'<iframe src="vectreal.com/embed/..." />'}
 						</div>
 					</div>
 				</div>
