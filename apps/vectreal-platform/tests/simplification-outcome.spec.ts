@@ -50,6 +50,22 @@ describe('resolveSimplificationOutcome', () => {
 		).toBe(false)
 	})
 
+	// The shape a re-baselined report has: syncing the geometry worker's output
+	// back onto the main-thread optimizer used to re-derive the baseline from the
+	// already-optimized buffer, so `before` equalled `after` and every run was
+	// reported as "stopped at 0%" no matter how well it did. The optimizer now
+	// preserves the pristine baseline across that sync, so a report like this
+	// means the simplifier genuinely changed nothing.
+	it('reports a run that removed nothing as falling short, not as a success', () => {
+		const outcome = resolveSimplificationOutcome(
+			reportWith(77_987, 77_987),
+			0.5
+		)
+
+		expect(outcome?.achievedKeepRatio).toBe(1)
+		expect(outcome?.fellShort).toBe(true)
+	})
+
 	it('returns null when there is nothing to measure', () => {
 		expect(resolveSimplificationOutcome(null, 0.5)).toBeNull()
 		expect(resolveSimplificationOutcome(reportWith(0, 0), 0.5)).toBeNull()

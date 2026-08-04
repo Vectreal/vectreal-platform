@@ -441,6 +441,32 @@ export class ModelOptimizer {
 	}
 
 	/**
+	 * Read the pristine baseline captured at load time, so a caller that is about
+	 * to replace this document with an already-optimized version of itself can
+	 * put it back afterwards. Pairs with `setBaseline`.
+	 */
+	public getBaseline(): { size: number; report: InspectReport | null } {
+		return { size: this.originalSize, report: this.originalReport }
+	}
+
+	/**
+	 * Restore a baseline captured by `getBaseline`.
+	 *
+	 * Every `loadFrom*` re-derives the baseline from the bytes it was handed,
+	 * which is right for a genuine load and wrong for a sync: transplanting the
+	 * geometry worker's output back onto this instance would otherwise re-baseline
+	 * on the already-optimized document, making every `before` in the report equal
+	 * its `after`.
+	 */
+	public setBaseline(baseline: {
+		size: number
+		report: InspectReport | null
+	}): void {
+		this.originalSize = baseline.size
+		this.originalReport = baseline.report
+	}
+
+	/**
 	 * Compress textures using an injectable encoder.
 	 *
 	 * In Node.js the Sharp library is used by default. In browser or edge

@@ -53,7 +53,8 @@ export interface OptimizationPassDeps {
 			meta: {
 				appliedOptimizations: string[]
 				dracoReport?: DracoCompressionReport
-			}
+			},
+			options?: { preserveBaseline?: boolean }
 		) => Promise<unknown>
 		getModel: () => Promise<Uint8Array | null | undefined>
 		texturesOptimization: (options: Optimizations['texture']) => Promise<unknown>
@@ -209,10 +210,18 @@ async function runGeometryPhase(
 	// when the texture phase starts.
 	steps.begin(LOAD_GEOMETRY_STEP)
 	await withTimeout(
-		model.loadFromGlbBuffer(result.buffer, {
-			appliedOptimizations: result.appliedOptimizations,
-			dracoReport: result.dracoReport
-		}),
+		model.loadFromGlbBuffer(
+			result.buffer,
+			{
+				appliedOptimizations: result.appliedOptimizations,
+				dracoReport: result.dracoReport
+			},
+			// A sync of the worker's output, not a load of a new model. Without
+			// this the baseline is re-derived from the already-optimized buffer,
+			// so every `before` in the report equals its `after` and the panel
+			// claims mesh reduction achieved 0% however well it actually did.
+			{ preserveBaseline: true }
+		),
 		MODEL_SYNC_TIMEOUT_MS,
 		'Worker result sync'
 	)
