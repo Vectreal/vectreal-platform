@@ -441,11 +441,17 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 					...currentSettings
 				})
 
+				// Replace rather than merge. A dropped file is a new unsaved scene
+				// (see setCurrentSceneId(null) above), so carrying the previous
+				// scene's description and thumbnailUrl forward is wrong twice over:
+				// the stale thumbnail stays on screen, and it also makes the save
+				// flow's `needsThumbnail` check false, so the previous scene's
+				// thumbnail asset gets persisted onto this one.
 				const initialSceneName = getSceneNameFromFileName(data.name)
-				setSceneMetaState((prev) => ({
-					...prev,
+				setSceneMetaState({
+					...sceneMetaInitialState,
 					name: initialSceneName
-				}))
+				})
 			}
 
 			setProcess((prev) => ({
