@@ -58,10 +58,12 @@ import {
 } from '../lib/stores/publisher-config-store'
 import {
 	optimizationAtom,
+	optimizationInitialState,
 	optimizationRuntimeAtom,
 	optimizationRuntimeInitialState
 } from '../lib/stores/scene-optimization-store'
 import {
+	activeHotspotIdAtom,
 	bakedShadowSourceAtom,
 	boundsAtom,
 	cameraAtom,
@@ -71,6 +73,7 @@ import {
 	interactionsAtom,
 	normalizationAtom,
 	rawModelDiagonalAtom,
+	selectedCameraIdAtom,
 	shadowsAtom
 } from '../lib/stores/scene-settings-store'
 
@@ -242,6 +245,8 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	const [normalization, setNormalization] = useAtom(normalizationAtom)
 	const setBakedShadowSource = useSetAtom(bakedShadowSourceAtom)
 	const setRawModelDiagonal = useSetAtom(rawModelDiagonalAtom)
+	const setSelectedCameraId = useSetAtom(selectedCameraIdAtom)
+	const setActiveHotspotId = useSetAtom(activeHotspotIdAtom)
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 
 	// Process state atom - use full atom access for reading and writing
@@ -389,6 +394,20 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setShadows(defaultShadowOptions)
 		setNormalization(defaultNormalizationOptions)
 		setHotspots([])
+		// Every atom the scene owns, not just the ones with a visible fallback.
+		// Each of these is absorbed downstream today (a dangling camera id misses
+		// and falls through to `initial`, a stale bake is skipped while shadows are
+		// off), so leaving them set is survivable rather than correct - and it puts
+		// the reset one defensive fallback away from leaking again.
+		setSelectedCameraId(
+			defaultCameraOptions.activeCameraId ??
+				defaultCameraOptions.cameras?.[0]?.cameraId ??
+				'default'
+		)
+		setActiveHotspotId(null)
+		setBakedShadowSource(null)
+		setRawModelDiagonal(0)
+		setOptimizationState(optimizationInitialState)
 		setSceneMetaState(sceneMetaInitialState)
 		setLastSavedSettings(null)
 		setLastSavedSceneMeta(null)
@@ -406,6 +425,11 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setShadows,
 		setNormalization,
 		setHotspots,
+		setSelectedCameraId,
+		setActiveHotspotId,
+		setBakedShadowSource,
+		setRawModelDiagonal,
+		setOptimizationState,
 		setSceneMetaState,
 		setLastSavedSettings,
 		setLastSavedSceneMeta,
