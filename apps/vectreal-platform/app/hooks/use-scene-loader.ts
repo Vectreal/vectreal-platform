@@ -873,28 +873,40 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		originalSavedRef.current = true
 
 		void (async () => {
-			const gltfJson = await prepareGltfRef.current()
-			if (!gltfJson || typeof gltfJson !== 'object') return
+			// The guard above is claimed before the write starts, so any failure
+			// path has to release it. Otherwise no original is ever stored for this
+			// upload and every later "Re-apply Preset" silently stacks instead of
+			// starting over, for the rest of the session.
+			try {
+				const gltfJson = await prepareGltfRef.current()
+				if (!gltfJson || typeof gltfJson !== 'object') {
+					originalSavedRef.current = false
+					return
+				}
 
-			const gltfData = (gltfJson as { data?: unknown }).data ?? gltfJson
-			const gltfAssets = (gltfJson as { assets?: unknown }).assets
-			const assetData = await serializeSceneAssetData(gltfData, gltfAssets)
+				const gltfData = (gltfJson as { data?: unknown }).data ?? gltfJson
+				const gltfAssets = (gltfJson as { assets?: unknown }).assets
+				const assetData = await serializeSceneAssetData(gltfData, gltfAssets)
 
-			const meta = sceneMetaRef.current
-			const settings = settingsRef.current
+				const meta = sceneMetaRef.current
+				const settings = settingsRef.current
 
-			const sceneData: ServerSceneData = {
-				meta: {
-					name: meta.name,
-					description: meta.description,
-					thumbnailUrl: meta.thumbnailUrl
-				},
-				gltfJson: gltfData as ServerSceneData['gltfJson'],
-				assetData,
-				...settings
+				const sceneData: ServerSceneData = {
+					meta: {
+						name: meta.name,
+						description: meta.description,
+						thumbnailUrl: meta.thumbnailUrl
+					},
+					gltfJson: gltfData as ServerSceneData['gltfJson'],
+					assetData,
+					...settings
+				}
+
+				await saveOriginalSceneModel({ sceneData })
+			} catch (error) {
+				originalSavedRef.current = false
+				console.warn('Failed to persist the original scene to IDB:', error)
 			}
-
-			await saveOriginalSceneModel({ sceneData })
 		})()
 	}, [optimizer?.isReady, paramSceneId, initialSceneAggregate])
 
