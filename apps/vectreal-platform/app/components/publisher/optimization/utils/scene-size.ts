@@ -84,9 +84,22 @@ export function useSceneSizeCalculator(
 
 			const workingSceneBytes =
 				typeof updatedSceneBytes === 'number' ? updatedSceneBytes : null
-			const publishedSceneBytes = dracoReport?.isWorthApplying
-				? dracoReport.projectedGlbBytes
-				: workingSceneBytes
+			// The Draco report is measured in the geometry worker, before the
+			// texture phase runs, so `projectedGlbBytes` still carries the original
+			// images and using it directly erases every byte of texture saving from
+			// the headline. Only the whole-file Draco delta survives the texture
+			// phase: `uncompressedGlbBytes` and `projectedGlbBytes` are both a
+			// `writeBinary` of the same document, so their textures cancel out.
+			// Deliberately not `geometryBytesBefore - geometryBytesAfterCompression`
+			// - those two count shared accessors differently (per-mesh vs. once
+			// globally), and `dedup` runs right before `draco` in every preset.
+			const dracoSaving = dracoReport
+				? dracoReport.uncompressedGlbBytes - dracoReport.projectedGlbBytes
+				: 0
+			const publishedSceneBytes =
+				dracoReport?.isWorthApplying && workingSceneBytes != null
+					? Math.max(0, workingSceneBytes - dracoSaving)
+					: workingSceneBytes
 
 			setOptimizationRuntime((prev) => ({
 				...prev,
