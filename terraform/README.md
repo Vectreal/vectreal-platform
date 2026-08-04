@@ -28,7 +28,7 @@ There are no GCP resources (Cloud Run, GCS buckets, Artifact Registry, IAM, serv
 ### Prerequisites
 
 - [Terraform](https://www.terraform.io/downloads.html) >= 1.0
-- A Cloudflare account managing the `vectreal.com` zone, with an API token that has `Turnstile:Edit` and DNS edit permissions
+- A Cloudflare account managing the `vectreal.com` zone, with an API token that can edit Turnstile, DNS, zone rulesets (the cache ruleset), and page rules
 - A populated `.env.development` at the repo root (for the Fly.io secret sync)
 
 ### 1. Configure variables
@@ -37,7 +37,7 @@ There are no GCP resources (Cloud Run, GCS buckets, Artifact Registry, IAM, serv
 cp terraform.tfvars.example terraform.tfvars
 # Fill in:
 #   cloudflare_account_id
-#   cloudflare_api_token   (>= 20 chars, or Turnstile/DNS provisioning stays disabled)
+#   cloudflare_api_token
 #   cloudflare_zone_id     (required for DNS records)
 ```
 
@@ -63,7 +63,7 @@ pnpm nx run terraform:verify-fly-secrets      # read-only check
 | Variable                        | Default                | Description                                                        |
 | ------------------------------- | ---------------------- | ------------------------------------------------------------------ |
 | `cloudflare_account_id`         | `""`                   | Cloudflare account ID. Empty disables all Cloudflare provisioning. |
-| `cloudflare_api_token`          | `""`                   | API token (min 20 chars) with Turnstile + DNS edit permissions.    |
+| `cloudflare_api_token`          | `""`                   | API token with Turnstile, DNS, ruleset, and page rule edit permissions. |
 | `cloudflare_zone_id`            | `""`                   | Zone ID for `vectreal.com`. Required for DNS records.              |
 | `turnstile_production_hostname` | `vectreal.com`         | Allowed hostname for the production Turnstile widget.              |
 | `turnstile_staging_hostname`    | `staging.vectreal.com` | Allowed hostname for the staging Turnstile widget.                 |

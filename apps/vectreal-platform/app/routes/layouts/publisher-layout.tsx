@@ -7,6 +7,7 @@ import { data, Outlet, type MetaFunction } from 'react-router'
 
 import { Route } from './+types/publisher-layout'
 import { ControlsOverlay } from '../../components'
+import { useConsent } from '../../components/consent/consent-context'
 import { PublisherViewerCaptureProvider } from '../../components/publisher/publisher-viewer-capture-context'
 import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
@@ -196,6 +197,7 @@ const PublisherLayoutContent = ({
 	loaderData: PublisherLoaderData
 }) => {
 	const showSidebar = useAtomValue(showSidebarAtom)
+	const { consent } = useConsent()
 	const setProcessState = useSetAtom(processAtom)
 	const setCurrentLocation = useSetAtom(currentLocationAtom)
 	const setSaveLocation = useSetAtom(saveLocationAtom)
@@ -230,7 +232,11 @@ const PublisherLayoutContent = ({
 	)
 
 	return (
-		<SidebarProvider open={showSidebar} onOpenChange={handleOpenChange}>
+		<SidebarProvider
+			open={showSidebar}
+			onOpenChange={handleOpenChange}
+			persistState={consent?.functional === true}
+		>
 			<PublisherViewerCaptureProvider>
 				{/*
 				  Three rows: header, canvas stage, footer. The canvas is handed to

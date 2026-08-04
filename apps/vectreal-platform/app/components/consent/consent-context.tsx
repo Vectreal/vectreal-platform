@@ -82,7 +82,8 @@ export function ConsentProvider({ children }: ConsentProviderProps) {
 	}, [fetcher.state, fetcher.data])
 
 	// Sync PostHog persistence and opt-in/out whenever analytics consent changes.
-	// null = first visit, no decision yet - stay in memory mode (DSGVO-safe).
+	// null = first visit, no decision yet - entry.client opts out by default, so
+	//   leaving it alone keeps capturing off until the banner is answered.
 	// accepted → switch to localStorage+cookie persistence so the session
 	//   persists across pages, then opt in.
 	// rejected → stay in memory mode and opt out.
@@ -104,21 +105,20 @@ export function ConsentProvider({ children }: ConsentProviderProps) {
 
 	const saveConsent = useCallback(
 		(choices: Omit<ConsentChoices, 'necessary'>) => {
-			// Fire before switching persistence so the event is always captured
-			// in memory mode - no cookies required, DSGVO-safe.
-			if (typeof window !== 'undefined') {
+			// Record the decision only when analytics was accepted, and only after
+			// opting in: PostHog is opted out by default, so anything captured
+			// before opt_in_capturing() is dropped. A rejection is deliberately not
+			// captured - we have no consent to send an event about it.
+			if (typeof window !== 'undefined' && choices.analytics) {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const ph = (window as any).posthog
 				if (ph) {
-					ph.capture(
-						choices.analytics
-							? 'cookie_consent_accepted'
-							: 'cookie_consent_rejected',
-						{
-							functional: choices.functional,
-							marketing: choices.marketing
-						}
-					)
+					ph.set_config({ persistence: 'localStorage+cookie' })
+					ph.opt_in_capturing()
+					ph.capture('cookie_consent_accepted', {
+						functional: choices.functional,
+						marketing: choices.marketing
+					})
 				}
 			}
 

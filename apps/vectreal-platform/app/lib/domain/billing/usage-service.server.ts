@@ -3,7 +3,7 @@
  *
  * Provides atomic increment/decrement operations for per-organisation usage
  * counters and integrates with the quota-limit checks defined in
- * prd/02-limits-and-quotas.md.
+ * app/constants/plan-config.ts (PLAN_LIMITS).
  *
  * Design notes:
  *   - All mutations use database-level atomic updates to prevent double-

@@ -1,5 +1,6 @@
 import { data } from 'react-router'
 
+import { hasFunctionalConsent } from '../../lib/consent/consent-cookie'
 import { ensureSameOriginMutation } from '../../lib/http/csrf.server'
 import { buildThemeSetCookie, isThemeMode } from '../../lib/theme/theme-cookie'
 
@@ -16,6 +17,13 @@ export async function action({ request }: Route.ActionArgs) {
 
 	if (!isThemeMode(themeMode)) {
 		return data({ error: 'Invalid theme mode' }, { status: 400 })
+	}
+
+	// The theme cookie is a Functional-category preference. Without that consent
+	// the toggle still works for the session (the client applies the class
+	// immediately), it just is not remembered across reloads.
+	if (!hasFunctionalConsent(request)) {
+		return data({ themeMode }, { headers: { 'Cache-Control': 'no-store' } })
 	}
 
 	return data(

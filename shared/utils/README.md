@@ -52,4 +52,4 @@ return ApiResponse.success({ classes, sizeText })
 
 ## License
 
-See LICENSE.md in this package.
+AGPL-3.0-only, covered by the repository-root [LICENSE.md](../../LICENSE.md).

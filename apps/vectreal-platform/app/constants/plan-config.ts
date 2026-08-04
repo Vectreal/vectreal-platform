@@ -1,9 +1,9 @@
 /**
  * Static plan entitlement and quota-limit configuration.
  *
- * These maps are the runtime counterparts of:
- *   - prd/03-entitlements.md (entitlement keys per plan)
- *   - prd/02-limits-and-quotas.md (numeric limits per plan)
+ * This file is the source of truth for entitlement keys and numeric limits per
+ * plan. It used to mirror a set of PRD documents; those were stale and have
+ * been removed, so change plans here and nowhere else.
  *
  * Values are intentionally NOT hard-coded in guard logic - callers should
  * use the entitlement-service or usage-service helpers instead.

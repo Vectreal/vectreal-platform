@@ -44,7 +44,7 @@ You are about to ship a Vectreal embed to production. Your security reviewer wan
 
 ### Before You Begin
 
-Vectreal API keys are managed in your dashboard at [vectreal.com/dashboard/api-keys](https://vectreal.com/dashboard/api-keys). You need to be an **admin** or **owner** of the organization to create or revoke keys - members and viewers can use embeds that depend on a key, but they cannot mint new ones.
+Vectreal API keys are managed in your dashboard at [vectreal.com/dashboard/api-keys](https://vectreal.com/dashboard/api-keys). You need to be an **admin** or **owner** of the organization to create or revoke keys - members can use embeds that depend on a key, but they cannot mint new ones.
 
 If you have not connected an organization yet, the [Vectreal Publisher walkthrough](https://vectreal.com/news-room/the-vectreal-publisher-walkthrough) covers project setup. For framework integration after this post, see [React Viewer Integration](https://vectreal.com/news-room/react-viewer-integration).
 
@@ -144,15 +144,17 @@ Treat that screen as the only chance you will get. After you close it the platfo
 Vectreal API keys travel in the standard HTTP `Authorization` header as Bearer tokens:
 
 ```http
-GET /api/scenes/<scene-id> HTTP/1.1
+GET /api/scenes/<scene-id>?preview=1&projectId=<project-id> HTTP/1.1
 Host: vectreal.com
 Authorization: Bearer vctrl_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
+Both `preview=1` and `projectId` are required: without them the route falls through to session authentication and your key is ignored.
+
 On the server side, three checks happen on every request:
 
-1. **Format** - token must start with `vctrl_` and parse cleanly.
-2. **Domain** - the request's `Origin` (or `Referer`) must match the project's allowed-domain patterns. Localhost is allowed by default for development; production hosts must be added explicitly.
+1. **Lookup** - the token is hashed and matched against the stored key hashes.
+2. **Domain** - the request's `Origin` (or `Referer`) must match the project's allowed-domain patterns. Every host must be added explicitly, including `localhost`; an empty allowlist rejects everything.
 3. **Project membership** - the scene the request is for must belong to a project this key was scoped to at creation.
 
 A failure on any layer rejects the request, and repeated failures from the same client identifier are rate-limited (60 attempts per minute per origin IP).
@@ -235,7 +237,7 @@ If you have shipped any of these, do not panic. Go to **API keys**, revoke the o
 
 **Can a member without admin/owner role create or revoke keys?** No. Both actions require the admin or owner role within the organization.
 
-**Where do I see who created a key?** The API keys table shows the creator's name (or email) and creation date in the row metadata.
+**Where do I see who created a key?** The API keys table has a **Created By** column showing the creator's name or email, alongside **Last Used**.
 
 **What does "revoke" do exactly?** It marks the key inactive, immediately. Any application using it loses access on the next request. The action cannot be undone - you cannot un-revoke a key, only create a new one.
 
@@ -243,7 +245,7 @@ If you have shipped any of these, do not panic. Go to **API keys**, revoke the o
 
 **Are there usage analytics per key?** The dashboard shows last-used timestamp per key today. Per-key request counts and per-domain breakdowns are on the roadmap.
 
-**Does the platform record API key activity for audit?** Audit logs are an entitlement available on Business and Enterprise plans (`org_audit_log`). On Free and Pro plans you have the dashboard's last-used timestamp.
+**Does the platform record API key activity for audit?** Not yet. `org_audit_log` exists as an Enterprise entitlement key, but nothing implements it today. What you have now is the dashboard's last-used timestamp per key.
 
 ---
 

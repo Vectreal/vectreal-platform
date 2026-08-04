@@ -67,7 +67,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 	}
 
 	const posthog = (context as PostHogContext).posthog
-	captureServerEvent(posthog, userData.user.id, {
+	captureServerEvent(posthog, request, userData.user.id, {
 		name: 'user_signed_in',
 		props: { method: 'oauth' }
 	})
@@ -75,7 +75,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 	if (userWithDefaults.isNewUser) {
 		const referrer = requestUrl.searchParams.get('referrer')
 		const utm_source = requestUrl.searchParams.get('utm_source')
-		captureServerEvent(posthog, userData.user.id, {
+		captureServerEvent(posthog, request, userData.user.id, {
 			name: 'user_signed_up',
 			props: {
 				method: 'oauth',

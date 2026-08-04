@@ -86,7 +86,6 @@ chore(ci): update staging deploy workflow timeout
 pnpm nx affected --target=test
 
 # Single project
-pnpm nx test vctrl/viewer
 pnpm nx test vectreal-platform
 
 # Linting
@@ -119,7 +118,7 @@ To add a new docs page:
 
 ## Releasing packages
 
-Package versions are managed with [Nx Release](https://nx.dev/recipes/nx-release/get-started-with-nx-release). Maintainers handle releases - contributors don't need to worry about versioning.
+Package versions are managed with [Release Please](https://github.com/googleapis/release-please), driven by `release-please-config.json` and `.release-please-manifest.json` and run from the release workflow. Maintainers handle releases - contributors don't need to worry about versioning, but Conventional Commit messages are what Release Please reads to decide the next version.
 
 ---
 

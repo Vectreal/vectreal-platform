@@ -12,7 +12,7 @@ import { authUid, authenticatedRole } from 'drizzle-orm/supabase'
 import { users } from '../core/users'
 
 /**
- * Consent records - kept in sync with prd/05-consent-categories.md
+ * Consent records - kept in sync with app/lib/consent/consent-cookie.ts
  *
  * Stores one row per consent interaction. For authenticated users the row is
  * tied to `user_id`; for anonymous visitors `anonymous_id` is used instead.

@@ -30,24 +30,6 @@
 		},
 		{
 			"text": "Use Drizzle ORM for all database access. Schemas are under apps/vectreal-platform/app/db/schema/. Use RLS helpers from apps/vectreal-platform/app/db/schema/rls.ts."
-		},
-		{
-			"file": "prd/01-plans-and-tiers.md"
-		},
-		{
-			"file": "prd/02-limits-and-quotas.md"
-		},
-		{
-			"file": "prd/03-entitlements.md"
-		},
-		{
-			"file": "prd/04-billing-states.md"
-		},
-		{
-			"file": "prd/05-consent-categories.md"
-		},
-		{
-			"file": "prd/06-analytics-event-taxonomy.md"
 		}
 	]
 }

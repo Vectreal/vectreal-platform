@@ -58,6 +58,7 @@ function SidebarProvider({
 	defaultOpen = true,
 	open: openProp,
 	onOpenChange: setOpenProp,
+	persistState = true,
 	className,
 	style,
 	children,
@@ -66,6 +67,12 @@ function SidebarProvider({
 	defaultOpen?: boolean
 	open?: boolean
 	onOpenChange?: (open: boolean) => void
+	/**
+	 * Whether the expanded/collapsed state may be written to a cookie. Set false
+	 * to keep it in memory for the session only, e.g. when the host app's cookie
+	 * consent does not cover preference cookies.
+	 */
+	persistState?: boolean
 }) {
 	const isMobile = useIsMobile()
 	const [openMobile, setOpenMobile] = React.useState(false)
@@ -84,9 +91,11 @@ function SidebarProvider({
 			}
 
 			// This sets the cookie to keep the sidebar state.
-			document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+			if (persistState) {
+				document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+			}
 		},
-		[setOpenProp, open]
+		[setOpenProp, open, persistState]
 	)
 
 	// Helper to toggle the sidebar.

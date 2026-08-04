@@ -2,7 +2,7 @@
  * Stripe webhook event processor.
  *
  * Implements idempotent, resilient processing for the Stripe events listed in
- * prd/04-billing-states.md §Webhook Events.
+ * See ./stripe-subscription-sync.server.ts for the state mapping.
  *
  * Processing contract:
  *   1. Verify Stripe signature before touching the database.
