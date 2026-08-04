@@ -1,5 +1,5 @@
 import { CONSENT_POLICY_VERSION } from '../../constants/consent-policy'
-import { buildSetCookie, readClientCookie } from '../http/cookies'
+import { buildSetCookie, readClientCookie, readRawCookie } from '../http/cookies'
 
 export { CONSENT_POLICY_VERSION }
 
@@ -77,6 +77,35 @@ function decodeConsentCookieValue(
  */
 export function readConsentCookie(): ConsentCookieData | null {
 	return decodeConsentCookieValue(readClientCookie(CONSENT_COOKIE_NAME))
+}
+
+/**
+ * Server side: read consent from an incoming request's Cookie header.
+ * Returns null when the visitor has not answered the banner yet.
+ */
+export function readConsentFromRequest(
+	request: Request
+): ConsentCookieData | null {
+	return decodeConsentCookieValue(
+		readRawCookie(request.headers.get('cookie'), CONSENT_COOKIE_NAME)
+	)
+}
+
+/**
+ * Server side: true only when the visitor has actively granted analytics
+ * consent. Absent or unparseable cookie means no consent, never assume yes.
+ */
+export function hasAnalyticsConsent(request: Request): boolean {
+	return readConsentFromRequest(request)?.choices.analytics === true
+}
+
+/**
+ * Server side: true only when the visitor has actively granted functional
+ * consent. Gates preference cookies (theme, sidebar state) that are convenience
+ * rather than necessity, so declining leaves them in-memory for the session.
+ */
+export function hasFunctionalConsent(request: Request): boolean {
+	return readConsentFromRequest(request)?.choices.functional === true
 }
 
 /**

@@ -204,7 +204,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 		// skip the confirm-pending gate and go straight to onboarding.
 		if (signupData.user.email_confirmed_at) {
 			const posthog = (context as PostHogContext).posthog
-			captureServerEvent(posthog, signupData.user.id, {
+			captureServerEvent(posthog, request, signupData.user.id, {
 				name: 'user_signed_up',
 				props: {
 					method: 'email',

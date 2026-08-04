@@ -20,6 +20,7 @@ import {
 } from 'react-router'
 
 import { Route } from './+types/dashboard-layout'
+import { useConsent } from '../../components/consent/consent-context'
 import { PostHogIdentify } from '../../components/consent/posthog-identify'
 import {
 	DashboardHeader,
@@ -118,6 +119,7 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 
 const DashboardLayout = () => {
 	const { user, sidebarProjects, plan } = useLoaderData<typeof loader>()
+	const { consent } = useConsent()
 	const posthog = usePostHog()
 	const location = useLocation()
 	const navigation = useNavigation()
@@ -245,6 +247,7 @@ const DashboardLayout = () => {
 					className="h-svh overflow-hidden"
 					open={sidebarOpen}
 					onOpenChange={handleSidebarOpenChange}
+					persistState={consent?.functional === true}
 				>
 					<LogoSidebar>
 						<DashboardSidebarContent
