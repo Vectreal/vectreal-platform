@@ -1,7 +1,7 @@
 # @vctrl/viewer
 
 [![NPM Downloads](https://img.shields.io/npm/dm/%40vctrl%2Fviewer?logo=npm&logoColor=%23fc6c18&label=%40vctrl%2Fviewer%20%7C%20NPM%20Downloads&color=%23fc6c18)](https://www.npmjs.com/package/@vctrl/viewer)
-[![Storybook](https://img.shields.io/badge/Storybook-Docs-fc6c18?logo=storybook&logoColor=%23fc6c18)](https://main--672b9522ee5bda25942a731c.chromatic.com/?path=/docs/vectrealviewer--docs)
+[![Storybook](https://img.shields.io/badge/Storybook-Docs-fc6c18?logo=storybook&logoColor=%23fc6c18)](https://main--672b9522ee5bda25942a731c.chromatic.com/?path=/docs/viewer-vectreal-viewer--docs)
 
 A ready-to-use React component for rendering and interacting with 3D models. Built on top of [Three.js](https://threejs.org) and [React Three Fiber](https://docs.pmnd.rs/react-three-fiber/getting-started/introduction).
 
@@ -40,7 +40,7 @@ function App() {
 
 | Prop                           | Type                                                    | Required | Description                                                                      |
 | ------------------------------ | ------------------------------------------------------- | -------- | -------------------------------------------------------------------------------- |
-| `model`                        | `Object3D`                                              | No\*     | The Three.js scene to display. Optional when using the `use-load-model` context. |
+| `model`                        | `Object3D`                                              | No\*     | The Three.js scene to display. Optional only if you supply scene content via `children`; with neither, nothing renders. |
 | `className`                    | `string`                                                | No       | Additional CSS classes for the viewer container                                  |
 | `theme`                        | `'light' \| 'dark' \| 'system'`                         | No       | Viewer theme, default is `system`                                                |
 | `enableViewportRendering`      | `boolean`                                               | No       | Render only while in viewport, default `true`                                    |
@@ -221,7 +221,7 @@ function ViewerRuntimeExample({ model }: { model: object }) {
 
 ## Environment options (`EnvironmentProps`)
 
-Configures the [@react-three/drei `Stage`](https://github.com/pmndrs/drei#stage) and [@react-three/drei `Environment`](https://github.com/pmndrs/drei#environment) components.
+Configures the [@react-three/drei `Environment`](https://github.com/pmndrs/drei#environment) component. The viewer does not use Drei's `Stage`; framing is handled by `SceneBounds` and `SceneCamera`.
 
 `envOptions` supports a typed preset system from `@vctrl/core`:
 
@@ -255,7 +255,7 @@ Configures the [@react-three/drei `Stage`](https://github.com/pmndrs/drei#stage)
 | Prop             | Type           | Summary                                              |
 | ---------------- | -------------- | ---------------------------------------------------- |
 | `boundsOptions`  | `BoundsProps`  | Pass-through to Drei `Bounds` behavior               |
-| `shadowsOptions` | `ShadowsProps` | Union of `accumulative` and `contact` shadow configs |
+| `shadowsOptions` | `ShadowsProps` | Baked accumulative shadow, with an optional contact pass |
 
 ### boundsOptions (`BoundsProps`)
 
@@ -263,16 +263,21 @@ Configures the [@react-three/drei `Stage`](https://github.com/pmndrs/drei#stage)
 
 | Option        | Default |
 | ------------- | ------- |
-| `fit`         | `true`  |
-| `clip`        | `true`  |
+| `clip`        | `false` |
 | `margin`      | `1.5`   |
 | `maxDuration` | `0`     |
+
+`clip` is `false` because near/far planes are managed per frame in `SceneModel`, so
+Drei's `Bounds` is deliberately kept from writing them.
+
+`fit` is accepted for API compatibility but ignored: `SceneBounds` always passes
+`fit={false}` to Drei's `Bounds` because `SceneCamera` drives fitting imperatively
+via `bounds.reset().fit()`.
 
 ```tsx
 <VectrealViewer
 	boundsOptions={{
-		fit: true,
-		clip: true,
+		clip: false,
 		margin: 1.25,
 		maxDuration: 300
 	}}
@@ -281,91 +286,83 @@ Configures the [@react-three/drei `Stage`](https://github.com/pmndrs/drei#stage)
 
 ### shadowsOptions (`ShadowsProps`)
 
-`ShadowsProps` is a discriminated union using `type`.
+**Shadows are off by default.** `enabled` defaults to `false`, so every example below
+needs `enabled: true` to render anything.
 
-#### Contact shadows (`type: 'contact'`)
+The `ShadowsProps` type is a `type`-discriminated union (`'accumulative' | 'contact'`),
+but the viewer does not branch on it: whatever you pass is merged over the accumulative
+defaults and rendered as Drei `AccumulativeShadows`. A contact shadow is not a separate
+mode, it is an opt-in extra pass configured under the nested `contact` key.
 
-Viewer defaults:
-
-| Option    | Default     |
-| --------- | ----------- |
-| `type`    | `'contact'` |
-| `opacity` | `0.4`       |
-| `blur`    | `0.1`       |
-| `scale`   | `5`         |
-| `color`   | `'#000000'` |
-| `smooth`  | `true`      |
-
-Commonly used ContactShadows fields:
-
-| Option       | Type                         |
-| ------------ | ---------------------------- |
-| `opacity`    | `number`                     |
-| `blur`       | `number`                     |
-| `scale`      | `number \| [number, number]` |
-| `far`        | `number`                     |
-| `resolution` | `number`                     |
-| `color`      | `string`                     |
-| `frames`     | `number`                     |
-
-```tsx
-<VectrealViewer
-	shadowsOptions={{
-		type: 'contact',
-		opacity: 0.45,
-		blur: 1.8,
-		scale: 6,
-		far: 12,
-		resolution: 1024,
-		color: '#111111'
-	}}
-/>
-```
-
-#### Accumulative shadows (`type: 'accumulative'`)
+Several numeric options are expressed **relative to the model's measured size**, not in
+world units: `scale` is a multiple of the model footprint, and `light.radius` and
+`light.position` are in model-size units. This keeps the bake proportioned for any model.
 
 Viewer defaults:
 
-| Option       | Default          |
-| ------------ | ---------------- |
-| `type`       | `'accumulative'` |
-| `temporal`   | `false`          |
-| `frames`     | `30`             |
-| `alphaTest`  | `0.35`           |
-| `opacity`    | `1`              |
-| `scale`      | `10`             |
-| `resolution` | `1024`           |
-| `colorBlend` | `2`              |
-| `color`      | `'#000000'`      |
+| Option        | Default          |
+| ------------- | ---------------- |
+| `type`        | `'accumulative'` |
+| `enabled`     | `false`          |
+| `temporal`    | `true`           |
+| `frames`      | `48`             |
+| `alphaTest`   | `3.0`            |
+| `cutoffScale` | `1`              |
+| `opacity`     | `0.9`            |
+| `scale`       | `2.5`            |
+| `resolution`  | `1024`           |
+| `colorBlend`  | `2`              |
+| `color`       | `'#000000'`      |
+| `ao`          | `false`          |
+| `aoIntensity` | `1.4`            |
+
+`alphaTest` is not a discard threshold. In Drei's `SoftShadowMaterial` the shadow alpha
+is `max(0, 1 - planeBrightness / alphaTest) * opacity`, so it sits between the shadowed
+and lit brightness of the bake plane. Shadow depth is driven by `light.ambient`, not by
+`alphaTest`. `ao` enables screen-space crevice occlusion (N8AO), which runs every frame
+and is opt-in for that reason.
 
 Nested light defaults (`shadowsOptions.light`):
 
-| Option      | Default                                           |
-| ----------- | ------------------------------------------------- |
-| `intensity` | `1`                                               |
-| `amount`    | `5`                                               |
-| `radius`    | `7.5`                                             |
-| `ambient`   | `0.5`                                             |
-| `position`  | `[5, 10, 5]` or auto-calculated from scene bounds |
+| Option      | Default       |
+| ----------- | ------------- |
+| `intensity` | `Math.PI * 2` |
+| `amount`    | `8`           |
+| `radius`    | `0.8`         |
+| `ambient`   | `0.3`         |
+| `position`  | `[0, 2.5, 0]` |
+| `bias`      | `0.001`       |
+
+Nested contact defaults (`shadowsOptions.contact`), an optional soft ground pass baked
+once under the directional bake:
+
+| Option    | Default |
+| --------- | ------- |
+| `enabled` | `false` |
+| `opacity` | `0.6`   |
+| `blur`    | `3`     |
+| `scale`   | `1.5`   |
+| `reach`   | `0.35`  |
 
 ```tsx
 <VectrealViewer
 	shadowsOptions={{
-		type: 'accumulative',
+		enabled: true,
 		temporal: true,
-		frames: 40,
-		alphaTest: 0.4,
-		opacity: 0.95,
-		scale: 12,
+		frames: 48,
+		opacity: 0.9,
+		scale: 2.5,
 		resolution: 1024,
-		colorBlend: 2,
-		color: '#000000',
 		light: {
-			amount: 6,
-			radius: 7,
-			ambient: 0.5,
-			intensity: 1,
-			bias: 0.0001
+			amount: 8,
+			radius: 0.8,
+			ambient: 0.3,
+			position: [1, 2.5, 1]
+		},
+		contact: {
+			enabled: true,
+			opacity: 0.6,
+			blur: 3
 		}
 	}}
 />
@@ -396,15 +393,21 @@ The callback types are exported from `@vctrl/viewer` as `SceneScreenshotCapture`
 
 ## Integration with `@vctrl/hooks`
 
-The viewer is designed to be used alongside [`@vctrl/hooks`](https://vectreal.com/docs/packages/hooks). When you wrap your app with the `ModelProvider` context from `@vctrl/hooks`, the viewer can render with no explicit `model` prop:
+The viewer is designed to be used alongside [`@vctrl/hooks`](https://vectreal.com/docs/packages/hooks), but it does not read from any hooks context. `VectrealViewer` renders whatever you give it through `model` or `children` and nothing otherwise, so the model always has to be passed explicitly.
+
+`ModelProvider` and `useModelContext` are still the convenient way to share one loader across a component tree. Read the model out of the context and hand it to the viewer:
 
 ```tsx
-import { ModelProvider } from '@vctrl/hooks/use-load-model'
+import { ModelProvider, useModelContext } from '@vctrl/hooks/use-load-model'
 import { VectrealViewer } from '@vctrl/viewer'
 import '@vctrl/viewer/css'
 
 function Scene() {
-	return <VectrealViewer />
+	const { file } = useModelContext()
+
+	if (!file?.model) return null
+
+	return <VectrealViewer model={file.model} />
 }
 
 export default function App() {
@@ -422,8 +425,12 @@ export default function App() {
 
 ```bash
 pnpm nx build vctrl/viewer
-pnpm nx test vctrl/viewer
+pnpm nx lint vctrl/viewer
+pnpm nx typecheck vctrl/viewer
 ```
+
+The viewer has no unit-test target. Its behavior is covered by the Playwright suite
+in `packages/viewer-e2e`.
 
 The viewer's stories live in the workspace-wide Storybook, alongside the shared
 design system:

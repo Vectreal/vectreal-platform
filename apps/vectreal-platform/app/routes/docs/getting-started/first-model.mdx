@@ -7,7 +7,7 @@ End-to-end walkthrough: upload a 3D file, optimize it in the Publisher, save it 
 ## What you'll need
 
 - A running local dev stack (see [Installation](/docs/getting-started/installation))
-- A 3D file - GLB, glTF + bin + textures, OBJ, or USDZ
+- A 3D file - GLB, glTF + bin + textures, or USDZ
 - A Vectreal account (create one at `/sign-up`)
 
 > **No account needed to try the Publisher.** Anonymous sessions allow you to upload and configure a model - you'll be prompted to save when you create an account.
@@ -16,7 +16,7 @@ End-to-end walkthrough: upload a 3D file, optimize it in the Publisher, save it 
 
 ## Step 1 - Open the Publisher
 
-Navigate to [/publisher](/publisher) (or click **Start Publishing** in the top navigation).
+Navigate to [/publisher](/publisher) (or click **Publisher** in the top navigation).
 
 The publisher opens with an empty canvas and an upload prompt.
 
@@ -24,7 +24,7 @@ The publisher opens with an empty canvas and an upload prompt.
 
 ## Step 2 - Upload a model
 
-Drag your 3D file onto the canvas, or click the upload area to open the file picker.
+Drag your 3D file onto the upload area, or click it to open the system folder picker.
 
 **glTF bundles**: drag the entire folder (containing the `.gltf`, `.bin`, and texture files) onto the upload area to upload them together.
 
@@ -36,7 +36,6 @@ The model will appear in the 3D viewport once parsed. The loading indicator show
 |---|---|---|
 | glTF | `.gltf` + `.bin` + textures | Preferred format for full fidelity |
 | GLB | `.glb` | Self-contained binary glTF |
-| OBJ | `.obj` | Material (`.mtl`) loaded automatically if in same directory |
 | USDZ | `.usdz` | Limited support - work in progress |
 
 ---
@@ -45,9 +44,9 @@ The model will appear in the 3D viewport once parsed. The loading indicator show
 
 Use the **right sidebar** to adjust:
 
-- **Quality preset** - raw, high, medium, low (controls mesh simplification and texture compression)
+- **Quality preset** - Maximum quality, Balanced, or Smallest (controls texture resize and compression quality; mesh simplification stays off unless you enable it in the advanced panel)
 - **Lighting** - environment preset, intensity, and shadow settings
-- **Camera** - field of view, initial position, auto-rotate
+- **Camera** - field of view, captured view, auto rotate
 
 Changes apply to the viewport in real time.
 
@@ -79,19 +78,19 @@ After publishing, copy the embed snippet from the **Embed** section in the publi
 The snippet looks like:
 
 ```html
-<div style="position:relative;padding-top:56.25%;width:100%">
+<div style="width: 100%; max-width: 100%; height: 400px;">
   <iframe
     src="https://vectreal.com/embed/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
-    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
-    allow="autoplay"
-    loading="lazy"
+    style="width: 100%; height: 100%; border: 0;"
+    allow="autoplay; xr-spatial-tracking"
+    allowfullscreen
   ></iframe>
 </div>
 ```
 
 Paste this into any HTML page. The embedded viewer loads your published model.
 
-> A **preview API key** is required for external iframe access. Create one in [Dashboard → API Keys](/dashboard/api-keys).
+> A **preview API key** is required for external iframe access, and the embedding domain must be on that key's allowlist - a key with an empty allowlist rejects every external host. Create and configure one in [Dashboard → API Keys](/dashboard/api-keys).
 
 ---
 

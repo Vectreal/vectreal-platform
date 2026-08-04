@@ -120,7 +120,7 @@ export default function App() {
 
 ## `useOptimizeModel`
 
-Runs mesh simplification, deduplication, quantization, and normals optimization using [glTF-Transform](https://gltf-transform.dev) — geometry passes run in a Web Worker. Texture compression runs in the main thread via browser-native OffscreenCanvas encoding.
+Runs mesh simplification, deduplication, quantization, and normals optimization using [glTF-Transform](https://gltf-transform.dev), plus texture compression via browser-native OffscreenCanvas encoding. Every pass runs on the calling thread: this package spawns no Web Worker. If you need the work off the main thread, run the hook inside a worker you own, as the Vectreal Platform does.
 
 ```tsx
 import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
@@ -181,7 +181,7 @@ Texture compression runs browser-native via `OffscreenCanvas`. No server call is
 
 ## `useExportModel`
 
-Exports the current scene from `ModelProvider` context to a downloadable file.
+Exports a `ModelFile` to a downloadable file. The hook takes optional `onSaved` and `onError` callbacks; the model itself is passed to the export method as an argument, not read from `ModelProvider` context.
 
 ```tsx
 import { useExportModel } from '@vctrl/hooks/use-export-model'

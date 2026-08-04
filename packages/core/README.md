@@ -12,7 +12,7 @@ npm install @vctrl/core
 pnpm add @vctrl/core
 ```
 
-> **Texture compression is encoder-injectable.** In Node.js, [Sharp](https://sharp.pixelplumbing.com) is used by default. In browser environments, pass `createBrowserTextureEncoder()` from `@vctrl/hooks` via `TextureCompressOptions.encoder` — it uses OffscreenCanvas and requires no native build or server call.
+> **Texture compression is encoder-injectable.** In Node.js, [Sharp](https://sharp.pixelplumbing.com) is used by default. In browser environments, pass your own `TextureCompressOptions.encoder` (anything matching the sharp constructor API: `(buffer) => { resize, webp, jpeg, png, toBuffer, metadata }`) so sharp is never imported. `@vctrl/hooks` ships an `OffscreenCanvas`-based encoder and injects it for you inside `useOptimizeModel`; it is not exported for direct use.
 
 ---
 
@@ -46,7 +46,7 @@ const resultFromBuffer = await loader.loadFromBuffer(
 const sceneResult = await loader.loadToThreeJS('model.glb')
 ```
 
-### Export methods
+### `ModelLoader` methods
 
 | Method                                                    | Description                                           |
 | --------------------------------------------------------- | ----------------------------------------------------- |
@@ -214,7 +214,7 @@ const zip = await exporter.createZIPArchive(gltf, 'model')
 
 ## Use in API routes
 
-`@vctrl/core` is used by the Vectreal Platform server-side optimization endpoint. A minimal API route example:
+The Vectreal Platform itself runs this pipeline in a browser Web Worker, not on the server; its server modules import only types and constants from `@vctrl/core`. The package works the same way in a Node.js route if that suits your app better. A minimal API route example:
 
 ```ts
 import { ModelOptimizer } from '@vctrl/core/model-optimizer'
@@ -246,7 +246,7 @@ export async function POST(request: Request) {
 | ----------- | ----------- |
 | Node.js     | 18 or later |
 
-`sharp` is an **optional** dependency, not a hard requirement. Install it yourself (`npm install sharp`, tested against `^0.34`) to enable native server-side texture compression. When `sharp` is not installed, `compressTextures()` falls back to basic glTF-Transform optimization (deduplication and pruning). In the browser, pass a custom encoder such as `createBrowserTextureEncoder()` from `@vctrl/hooks` instead.
+`sharp` is an **optional** dependency, not a hard requirement. Install it yourself (`npm install sharp`; this workspace tracks `^0.35.3`) to enable native server-side texture compression. When `sharp` is not installed, `compressTextures()` falls back to basic glTF-Transform optimization (deduplication and pruning). In the browser, supply your own `encoder` instead.
 
 ---
 

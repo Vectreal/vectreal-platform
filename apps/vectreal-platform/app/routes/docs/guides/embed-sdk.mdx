@@ -26,10 +26,10 @@ Two integration paths are available:
 npm install @vctrl/embed
 ```
 
-Or include the CDN script before your page code:
+Or include the UMD build from an npm CDN before your page code. The entry point uses named exports, so the global is a namespace object: use `new VectrealEmbed.VectrealEmbed(iframe)` instead of the `import` in Step 3. For production, pin a version (`@vctrl/embed@<version>`) and add a Subresource Integrity hash for it.
 
 ```html
-<script src="https://cdn.vectreal.com/embed/latest/vectreal-embed.umd.js"></script>
+<script src="https://unpkg.com/@vctrl/embed/vectreal-embed.umd.js"></script>
 ```
 
 **Step 2 - Add the iframe**

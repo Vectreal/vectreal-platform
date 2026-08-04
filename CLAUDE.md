@@ -31,9 +31,11 @@ pnpm nx build-storybook storybook       # static build for Chromatic
 # Drizzle migrations
 pnpm nx run vectreal-platform:drizzle-generate
 
-# Supabase (local) — includes DB, Auth, Storage, and Edge Function runtime
-pnpm supabase start
-pnpm supabase functions serve                    # serve Edge Functions at :54321/functions/v1/
+# Supabase (local) — DB, Auth, Storage, Studio
+# The Supabase project lives at apps/vectreal-platform/supabase/, so go through the
+# Nx target: the CLI would not find config.toml from the repo root.
+# There are no Edge Functions in this repo.
+pnpm nx run vectreal-platform:supabase-start
 pnpm nx run vectreal-platform:supabase-db-reset
 
 # Deploy DB schema
@@ -56,7 +58,7 @@ shared/
   utils/                   # Shared utility functions
 storybook/                 # Standalone Storybook host — owns no stories, aggregates
                            # shared/components and packages/viewer into one instance
-terraform/                 # GCP Cloud Run, CDN, IAM (Terraform — storage migrated to Supabase)
+terraform/                 # Cloudflare only: DNS, Turnstile widgets, cache rules, page rules
 ```
 
 Internal package dependencies use `workspace:*` and must not be pinned to registry versions.
@@ -76,7 +78,7 @@ React Router v7 in framework mode with SSR. Route config lives in `app/routes.ts
 | `app/routes/layouts/`        | Shared layout wrappers                                                    |
 | `app/routes/dashboard-page/` | Dashboard routes (projects, billing, settings, etc.)                      |
 | `app/lib/domain/`            | Business logic (auth, billing, asset, organization, project, scene, user) |
-| `app/lib/sessions/`          | Cookie-based session helpers (auth, CSRF, consent, theme)                 |
+| `app/lib/sessions/`          | Auth cookie and CSRF session helpers (consent lives in `app/lib/consent/`, theme in `app/lib/theme/`) |
 | `app/lib/http/`              | Request parsing and response utilities                                    |
 | `app/db/`                    | Drizzle ORM client (`client.ts`) and schema (`schema/`)                   |
 | `app/constants/`             | Plan config (`plan-config.ts`), feature flags, etc.                       |
@@ -106,7 +108,7 @@ Create, rename, move and delete for projects, folders and scenes go through `POS
 - Checkout flow (`app/routes/api/billing/checkout.ts`): if `billingState === 'active'` and `stripeSubscriptionId` exists → `stripe.subscriptions.update()` (proration); otherwise → Stripe Checkout session.
 - Response field: `{ redirectUrl }`.
 - Success page (`billing-upgrade-success.tsx`): `?session_id=xxx` → Stripe Checkout path (calls `syncCompletedCheckout()`); `?plan_id=xxx&billing_period=xxx&from_plan=xxx` → direct-update path (DB already synced).
-- Stripe webhooks handled in `app/lib/domain/billing/stripe-subscription-sync.server.ts` as async fallback.
+- Stripe webhooks arrive at `app/routes/api/billing/webhook.ts`, which delegates to `processStripeWebhookEvent` in `app/lib/domain/billing/stripe-webhook-processor.server.ts` as async fallback.
 - Plans: `free | pro | business | enterprise`. Entitlements/limits defined in `app/constants/plan-config.ts`.
 
 ### Database
@@ -115,13 +117,13 @@ Drizzle ORM over Supabase PostgreSQL. Schema modules under `app/db/schema/` (aut
 
 ### Shared UI
 
-Components are in `shared/components/ui/` (shadcn-based, Radix UI primitives). Import as `@shared/components/ui/*`.
+Components are in `shared/components/src/ui/` (shadcn-based, Radix UI primitives). Import as `@shared/components/ui/*`.
 
 ## Conventions
 
 - **Commits**: Follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 - **Versioning**: Managed by Release Please. Do not use `nx release`. Use `workspace:*` for internal deps.
-- **Docs pages**: MDX files in `app/routes/docs/`. Adding a new page also requires a nav entry in the docs layout.
+- **Docs pages**: MDX files in `app/routes/docs/`. Adding a new page also requires a route in `app/routes.tsx` and an entry in the `docsPages` array in `app/lib/docs/docs-manifest.ts`, which is what `DocsTreeNav` renders.
 - **Server-only modules**: Files that must not be bundled client-side are named `*.server.ts`.
 
 <!-- nx configuration start-->

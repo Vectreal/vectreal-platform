@@ -86,7 +86,7 @@ The packages that power Vectreal are published on npm and available in full on G
 
 - `@vctrl/viewer` - a React component for rendering 3D scenes, built on Three.js and React Three Fiber.
 - `@vctrl/hooks` - browser-side hooks for loading, optimizing, and exporting 3D models.
-- `@vctrl/core` - server-side model processing for Node.js: loading, optimization, and export.
+- `@vctrl/core` - isomorphic model processing for Node.js and the browser: loading, optimization, and export.
 - `@vctrl/embed` - the SDK for controlling a published scene from the page that hosts it.
 
 
@@ -140,14 +140,14 @@ Browser-side React hooks for the 3D pipeline - the runtime counterpart to `@vctr
 Three primary hooks:
 
 - **`useLoadModel`** - parse glTF, GLB, and USDZ files from file lists, dropped directories, or server endpoints. Supports both context mode (via `ModelProvider`) and direct mode.
-- **`useOptimizeModel`** - run glTF-Transform optimization passes in a Web Worker: mesh simplification, deduplication, quantization, normals normalization, and texture compression.
+- **`useOptimizeModel`** - run glTF-Transform optimization passes: mesh simplification, deduplication, quantization, normals normalization, and texture compression.
 - **`useExportModel`** - export the current scene to `.glb` or a zipped glTF bundle.
 
-Peer dependencies: React `^18 || ^19`. Three.js (`^0.177.0`) is bundled as a direct dependency.
+Peer dependencies: React `^18 || ^19`. Three.js (`^0.177.0`) and React (`^18 || ^19`) are peer dependencies, so install Three.js alongside.
 
 #### `@vctrl/core`
 
-Server-side 3D model processing for Node.js. Requires Node.js 18 or later. Uses [Sharp](https://sharp.pixelplumbing.com) (`^0.34`) for server-side texture compression - Sharp requires a native build, so it is not browser-compatible.
+Isomorphic 3D model processing for Node.js and the browser. Uses [Sharp](https://sharp.pixelplumbing.com) (`^0.35`) for server-side texture compression, resolved at runtime rather than bundled. Sharp requires a native build, so browser and edge callers inject their own encoder instead.
 
 When Sharp is unavailable, `compressTextures` falls back to basic texture optimization using deduplication and pruning rather than throwing an error.
 

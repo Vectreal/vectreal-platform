@@ -6,15 +6,15 @@ The Publisher sidebar gives you full control over how your model looks and perfo
 
 ## Quality presets
 
-Quality presets apply a combination of mesh simplification and texture compression to reduce file size. Choose the preset that matches your use case:
+Quality presets apply a combination of Draco geometry compression, duplicate removal, and texture compression to reduce file size. Choose the preset that matches your use case:
 
 | Preset | Texture resolution | Texture quality | Use when |
 |---|---|---|---|
-| **Base** | 2K WebP | 90% | High-fidelity previews and final renders |
+| **Maximum quality** | 2K WebP | 90% | High-fidelity previews and final renders |
 | **Balanced** | 1K WebP | 80% | Recommended for most web experiences |
-| **Performance** | 512px WebP | 70% | Smallest file size, mobile and low-end hardware |
+| **Smallest** | 512px WebP | 70% | Smallest file size, mobile and low-end hardware |
 
-All three presets apply mesh simplification, texture optimization, and vertex quantization; the **Performance** preset additionally removes duplicate data.
+All three presets share the same geometry pipeline: duplicate removal and Draco compression, both always on. They differ only in texture resolution and quality. Mesh simplification and vertex quantization are off in every preset - simplification is destructive and opt-in from the advanced panel, and quantization is redundant because Draco quantizes vertex attributes itself.
 
 Preset changes update the current optimized output for the scene. Until scene version history ships, treat optimization changes as mutable scene edits.
 
@@ -22,15 +22,15 @@ Preset changes update the current optimized output for the scene. Until scene ve
 
 ## Mesh simplification
 
-Under the hood, mesh simplification uses the [glTF-Transform](https://gltf-transform.dev) `simplify` function. The **ratio** controls the fraction of triangles retained (1.0 = no simplification, 0.5 = 50% reduction).
+Mesh simplification is off in every preset and is opt-in from the advanced settings panel, because it changes topology and can leave holes and shading seams.
 
-You can override the preset ratio manually in the advanced settings panel.
+Under the hood it uses the [glTF-Transform](https://gltf-transform.dev) `simplify` function. The **ratio** is the fraction of vertices retained (1.0 = no simplification, 0.5 = keep half), offered as Light (keep 75%), Moderate (keep 50%), and Aggressive (keep 25%). A separate deviation limit (Strict, Balanced, Relaxed) stops the simplifier early, so the actual reduction is often smaller than the target.
 
 ---
 
 ## Texture compression
 
-Textures are re-encoded in the browser using `OffscreenCanvas` (hardware-accelerated where available). The target format is WebP by default (JPEG and PNG are also supported), and the **quality** value maps to the encoder quality in the `0`-`1` range.
+Textures are re-encoded in the browser using `OffscreenCanvas` (hardware-accelerated where available). The target format is WebP by default (JPEG and PNG are also supported), and the **quality** value is an encoder quality percentage in the `0`-`100` range (the presets use 90, 80, and 70).
 
 > Texture compression runs in the browser with no server round-trip. The viewport preview uses the uncompressed original while compression runs.
 
@@ -42,29 +42,25 @@ Textures are re-encoded in the browser using `OffscreenCanvas` (hardware-acceler
 
 Choose from a set of HDR environment presets that determine ambient lighting, reflections, and image-based lighting (IBL). Presets are grouped into four categories: **Studio** (`studio-key`, `studio-natural`, `studio-soft`), **Nature** (`nature-moonlit`, `nature-park`, `nature-park-overcast`, `nature-snow`), **Night** (`night-building`, `night-city`, `night-pure-sky`, `night-stars`), and **Outdoor** (`outdoor-golden-hour`, `outdoor-noon`, `outdoor-overcast`, `outdoor-sky`).
 
-### Stage settings
+### Background
 
-The `Stage` component from [@react-three/drei](https://github.com/pmndrs/drei) automatically positions the model and adjusts the camera to fit. Use **adjustCamera** to control how tightly the camera frames the model (higher = tighter crop).
-
-### Background color
-
-Override the transparent background with a solid color using the background color picker in the environment section.
+Toggle **Show as background** to render the HDR environment map behind the model, then tune **Background Blur** and **Background Brightness**. With the toggle off the background stays transparent. There is no solid background color setting; set the page background behind the embed instead.
 
 ---
 
 ## Camera
 
-### Initial position
+### Initial view
 
-Set the camera's starting world-space position (`x, y, z`). The camera will animate to this position when the scene loads.
+There are no x/y/z inputs. Orbit the viewport to the framing you want, then click **Set camera to current view** to capture it onto the selected camera. The stored position, rotation, target, and FoV are what the scene opens on.
 
 ### Field of view (FoV)
 
-Adjust the perspective camera's FoV in degrees. Wider FoV (e.g. 90°) exaggerates depth; narrower (e.g. 30°) produces a more orthographic feel.
+Adjust the perspective camera's FoV in degrees, either from the presets or the numeric input. Wider FoV (e.g. 90°) exaggerates depth; narrower (e.g. 30°) produces a more orthographic feel.
 
-### Auto-rotate
+### Auto Rotate
 
-Enable auto-rotate to continuously orbit the model. Configure the speed and the pause delay after user interaction (`controlsTimeout` in milliseconds).
+Enable **Auto Rotate** in the interaction controls to continuously orbit the model, and set **Auto Rotate Speed** to control how fast it turns.
 
 ---
 

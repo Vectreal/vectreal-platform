@@ -1,6 +1,6 @@
 # @vctrl/core
 
-Server-side 3D model processing for Node.js. This package provides the shared loading, optimization, and export pipeline used by other Vectreal packages.
+Isomorphic 3D model processing. This package provides the shared loading, optimization, and export pipeline used by other Vectreal packages, and runs in Node.js, browsers, and Web Workers alike.
 
 ---
 
@@ -103,7 +103,7 @@ const optimizedBuffer = await optimizer.export()
 | `deduplicate(opts)` | `DedupOptions` | Remove duplicate geometry/material data |
 | `quantize(opts)` | `QuantizeOptions` | Reduce precision to reduce size |
 | `optimizeNormals(opts)` | `NormalsOptions` | Recompute/normalize normal data |
-| `compressTextures(opts)` | `TextureCompressOptions` | Server-side texture compression |
+| `compressTextures(opts)` | `TextureCompressOptions` | Texture compression via an injectable encoder (Sharp on Node.js by default) |
 | `optimizeAll(opts)` | `{ simplify?, dedup?, quantize?, normals?, textures? }` | Run batch optimization passes |
 | `getReport()` | - | Return before/after optimization metrics |
 | `export()` / `exportJSON()` | - | Export optimized GLB or JSON glTF document |
@@ -144,16 +144,16 @@ const optimizedBuffer = await optimizer.export()
 
 #### `compressTextures(options?: TextureCompressOptions)`
 
+`TextureCompressOptions` has exactly four fields:
+
 | Option | Type | Current behavior |
 |---|---|---|
-| `resize` | `[number, number]` | Passed to `compressTexture()` |
-| `targetFormat` | `'webp' | 'jpeg' | 'png'` | Passed to `compressTexture()` |
-| `quality` | `number` | Passed to `compressTexture()` |
-| `requestTimeoutMs` | `number` | Present in type but not consumed by current `ModelOptimizer` implementation |
-| `maxTextureUploadBytes` | `number` | Present in type but not consumed by current `ModelOptimizer` implementation |
-| `maxRetries` | `number` | Present in type but not consumed by current `ModelOptimizer` implementation |
-| `maxConcurrentRequests` | `number` | Present in type but not consumed by current `ModelOptimizer` implementation |
-| `serverOptions` | `ServerOptions` | Accepted in type but stripped before local Sharp compression |
+| `encoder` | `unknown` | Custom image encoder matching the Sharp constructor API. When provided, Sharp is never imported, which is what makes browser and edge use possible |
+| `resize` | `[number, number]` | Maximum texture size |
+| `targetFormat` | `'webp' \| 'jpeg' \| 'png'` | Target texture format |
+| `quality` | `number` | Encoder quality |
+
+There is no server round-trip in this path and no `serverOptions`: compression happens in-process using whichever encoder is in play.
 
 When Sharp is unavailable, `compressTextures` falls back to basic texture optimization (`dedup` + `prune`) instead of throwing.
 
@@ -230,7 +230,7 @@ const zip = await exporter.createZIPArchive(gltf, 'model')
 
 ## Use in API routes
 
-`@vctrl/core` is used by the Vectreal Platform's server-side optimization endpoint. Here's a minimal example of using it in a Node.js API route:
+The Vectreal Platform runs this pipeline in a browser Web Worker, not on the server; its server modules import only types and constants from `@vctrl/core`. The package works the same way in a Node.js route if that suits your app better. A minimal example:
 
 ```typescript
 import { ModelOptimizer } from '@vctrl/core/model-optimizer'
@@ -262,7 +262,7 @@ export async function POST(request: Request) {
 |---|---|
 | Node.js | 18 or later |
 
-`sharp` (`^0.34`) is **optional**, not required. Install it only to enable native server-side texture compression; without it, `compressTextures` falls back to basic optimization (see the note at the top of this page). Browser and edge callers inject their own encoder and need no native build.
+`sharp` is **optional**, not required (this workspace tracks `^0.35.3`). Install it only to enable native server-side texture compression; without it, `compressTextures` falls back to basic optimization (see the note at the top of this page). Browser and edge callers inject their own encoder and need no native build.
 
 ---
 
@@ -274,6 +274,6 @@ Full source and README in [`packages/core/`](https://github.com/Vectreal/vectrea
 
 ## Related docs
 
-- [Deployment](/docs/operations/deployment) - where `@vctrl/core` powers server-side build/runtime flows
+- [Deployment](/docs/operations/deployment) - how the platform that consumes `@vctrl/core` is built and shipped
 - [Publishing & Embedding](/docs/guides/publish-embed) - preview and serving model output
 - [@vctrl/hooks](/docs/packages/hooks) - browser/runtime companion API

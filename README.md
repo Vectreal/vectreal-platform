@@ -41,7 +41,7 @@ Built on [Three.js](https://github.com/mrdoob/three.js), [React Three Fiber](htt
 | Platform app     | `apps/vectreal-platform/` | Full-stack React Router v7 app with SSR, auth, dashboard, publisher, and preview routes |
 | Viewer package   | `packages/viewer/`        | `@vctrl/viewer` React 3D viewer component                                               |
 | Hooks package    | `packages/hooks/`         | `@vctrl/hooks` browser-side loading, optimization, and export hooks                     |
-| Core package     | `packages/core/`          | `@vctrl/core` server-side model processing pipeline                                     |
+| Core package     | `packages/core/`          | `@vctrl/core` isomorphic model processing pipeline (Node.js, browser, Web Worker)       |
 | Embed package    | `packages/embed/`         | `@vctrl/embed` framework-agnostic SDK for controlling embedded 3D scenes                 |
 | Shared libraries | `shared/`                 | Shared UI components and utilities                                                      |
 | Infrastructure   | `terraform/`              | Cloudflare DNS, Turnstile widgets, and Fly.io secret sync scripts                       |
@@ -52,7 +52,7 @@ Built on [Three.js](https://github.com/mrdoob/three.js), [React Three Fiber](htt
 | -------------------------------------------------------------- | --------------------------------------------------------------- |
 | [Getting Started](https://vectreal.com/docs/getting-started)   | Local setup, prerequisites, and a first-model walkthrough       |
 | [Guides](https://vectreal.com/docs/guides/upload)              | Upload, optimize, publish, and embed workflows                  |
-| [Package Reference](https://vectreal.com/docs/packages/viewer) | API docs for `@vctrl/viewer`, `@vctrl/hooks`, and `@vctrl/core` |
+| [Package Reference](https://vectreal.com/docs/packages/viewer) | API docs for `@vctrl/viewer`, `@vctrl/hooks`, `@vctrl/core`, and `@vctrl/embed` |
 | [Operations](https://vectreal.com/docs/operations/deployment)  | Fly.io deployment, Terraform, and CI/CD                          |
 | [Contributing](https://vectreal.com/docs/contributing)         | Branching, commits, testing, and PR process                     |
 
@@ -105,11 +105,13 @@ Model assets are stored in Supabase Storage (the `assets` bucket), which is crea
 ### 4. Start the local Supabase stack
 
 ```bash
-pnpm supabase start
+pnpm nx run vectreal-platform:supabase-start
 pnpm nx run vectreal-platform:supabase-db-reset
 ```
 
 This starts local Postgres, Auth, Storage, and Studio, then applies the baseline schema.
+
+The Supabase project lives at `apps/vectreal-platform/supabase/`, so go through the Nx target rather than calling the CLI from the repo root, where it would not find `config.toml`.
 
 ### 5. Start the platform app
 
@@ -131,7 +133,7 @@ Open [http://localhost:4200](http://localhost:4200).
 The documented end-to-end workflow is:
 
 1. Open the Publisher at [https://vectreal.com/publisher](https://vectreal.com/publisher).
-2. Upload a GLB, glTF bundle, OBJ, or USDZ model.
+2. Upload a GLB, glTF bundle, or USDZ model.
 3. Adjust quality, lighting, and camera settings.
 4. Save the scene to your account.
 5. Publish it to generate a stable embed URL.

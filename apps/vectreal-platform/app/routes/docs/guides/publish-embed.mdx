@@ -9,10 +9,10 @@ Turn a saved scene into a publicly embeddable iframe.
 Publishing transitions a scene from **draft** to **published** status. Only published scenes can be accessed by external iframe embeds.
 
 1. Open the scene in the Publisher or from the Dashboard scene detail page.
-2. In the **Publish** sidebar section, click **Publish**.
+2. In the **Publish** sidebar section, click **Publish Scene** and confirm.
 3. The scene status changes to `published` and a stable embed URL is generated.
 
-To revert to draft, click **Unpublish**.
+To revert to draft, click **Revoke publication** and confirm.
 
 > **Draft scenes are never accessible to external embed principals.** They remain viewable only by authenticated collaborators with project access.
 
@@ -47,7 +47,7 @@ Authorization: Bearer YOUR_PREVIEW_API_KEY
 
 ## Allowed embed domains
 
-To prevent hotlinking, you can restrict which domains are allowed to embed a scene.
+Every external embed is checked against the owning project's allowed domain list. The list is not an optional hardening step: a project with no entries rejects **all** third-party pages with `403`, even when the request carries a valid preview API key. Add the domain that will host the iframe before you ship it.
 
 1. Open [Dashboard → Projects](/dashboard/projects) and select the project.
 2. Click **Edit** and add entries to **Allowed embed domains**.
@@ -61,7 +61,7 @@ Supported domain patterns:
 
 Requests from unlisted domains receive a `403 Forbidden` response.
 
-> **Local development** - `localhost` and `127.0.0.1` are always allowed regardless of the domain list.
+> **Local development** - there is no blanket localhost exemption. The automatic fallback only applies when the request carries no `Referer` and no `Origin` **and** the Vectreal instance being embedded is itself running on a localhost-like host. To embed `https://vectreal.com` from a local dev server, add `localhost` or `127.0.0.1` to the allowed domains.
 
 ---
 
@@ -71,30 +71,30 @@ After publishing, copy the embed snippet from the **Embed** section in the publi
 
 The hosted preview iframe can also be controlled from the parent page over `postMessage`. Use the standard snippet first, then add the advanced host-page control flow described below if you need synchronized camera changes, scroll-driven scenes, or temporary controls locking.
 
-**Responsive 16:9 snippet:**
+**Generated snippet** (what the Embed section copies, with the width and height you set there):
+
+```html
+<div style="width: 100%; max-width: 100%; height: 400px;">
+  <iframe
+    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
+    style="width: 100%; height: 100%; border: 0;"
+    allow="autoplay; xr-spatial-tracking"
+    allowfullscreen
+  ></iframe>
+</div>
+```
+
+**Responsive 16:9 variant** (hand-written, if you want the box to scale with its column):
 
 ```html
 <div style="position:relative;padding-top:56.25%;width:100%">
   <iframe
     src="https://vectreal.com/embed/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
     style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
-    allow="autoplay"
-    loading="lazy"
+    allow="autoplay; xr-spatial-tracking"
+    allowfullscreen
   ></iframe>
 </div>
-```
-
-**Fixed size snippet:**
-
-```html
-<iframe
-  src="https://vectreal.com/embed/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
-  width="800"
-  height="450"
-  style="border:0"
-  allow="autoplay"
-  loading="lazy"
-></iframe>
 ```
 
 ---
@@ -114,6 +114,7 @@ Hosted preview iframes support a small `postMessage` protocol layered on top of 
 
 | Type | Payload | Effect |
 |---|---|---|
+| `ping` | none | Announces the host origin so the iframe can start delivering messages, and asks for a `pong` |
 | `viewer_command` | `command: { type: 'activate_camera', cameraId: string }` | Activates one persisted scene camera |
 | `viewer_command` | `command: { type: 'set_controls_enabled', enabled: boolean }` | Temporarily enables or disables viewer orbit interaction |
 | `host_scroll_progress` | `progress: number` | Reports normalized host scroll progress used by persisted `host_scroll_progress` interactions |
@@ -123,6 +124,7 @@ Hosted preview iframes support a small `postMessage` protocol layered on top of 
 
 | Type | Payload | Meaning |
 |---|---|---|
+| `pong` | `sceneId`, `cameras` | Reply to `ping`; carries the scene's camera descriptors |
 | `viewer_event` | `event: { type: 'viewer_ready' }` | The hosted preview is ready to receive viewer commands |
 | `viewer_event` | `event: { type: 'initial_framing_completed', cameraId: string \| null }` | Initial framing and stabilization has completed |
 | `viewer_event` | `event: { type: 'camera_changed', cameraId: string }` | The active scene camera changed |
@@ -145,9 +147,26 @@ Hosted preview iframes support a small `postMessage` protocol layered on top of 
   const iframe = document.getElementById('vectreal-preview')
   const targetOrigin = 'https://vectreal.com'
 
+  // The iframe cannot address the parent until the parent speaks first, so it
+  // queues every outbound event (including `viewer_ready`) until then. Ping it
+  // until `pong` arrives, otherwise a listen-only page receives nothing.
+  let handshake
+  const ping = () =>
+    iframe.contentWindow?.postMessage(
+      { source: 'vectreal-host', type: 'ping' },
+      targetOrigin
+    )
+
+  iframe.addEventListener('load', () => {
+    ping()
+    handshake = setInterval(ping, 250)
+  })
+
   window.addEventListener('message', (event) => {
     if (event.origin !== targetOrigin) return
     if (event.data?.source !== 'vectreal-preview') return
+
+    if (event.data.type === 'pong') clearInterval(handshake)
 
     console.log('Vectreal preview event', event.data)
   })
@@ -223,7 +242,7 @@ existing embeds keep their token and camera parameters.
 | Rate limited token validation | `429 Too Many Requests` |
 | Disallowed embed domain | `403 Forbidden` |
 | Draft or non-existent scene (external access) | `404 Not Found` |
-| Invalid or revoked API key | `403 Forbidden` |
+| Invalid, revoked, expired, or cross-project API key | `404 Not Found` |
 
 ---
 

@@ -48,9 +48,8 @@ Drag your 3D file onto the Publisher canvas. The parser identifies the format, r
 | GLB | `.glb` | Self-contained binary glTF - easiest to share, single file |
 | glTF | `.gltf` + `.bin` + textures | Full material and animation support; preferred format |
 | USDZ | `.usdz` | Limited support - textures and some material types may not render correctly. Work in progress. |
-| USDA | `.usda` | Supported |
 
-Those four are the whole list. OBJ, FBX and STL do not load, so convert to glTF or GLB first.
+Those three are the whole list. OBJ, FBX and STL do not load, so convert to glTF or GLB first.
 
 **glTF bundles:** glTF separates geometry, binaries, and textures into multiple files. To upload a full bundle, drag the **entire folder** onto the upload area, or select all files at once in the file picker. The parser identifies the `.gltf` root and resolves all referenced `.bin` and texture files automatically.
 
@@ -74,20 +73,21 @@ Once your model is in the viewport, the right sidebar shows the quality presets.
 
 **Quality presets:**
 
-| Preset | Mesh ratio | Texture quality | Use when |
+| Preset | Texture resolution | Texture quality | Use when |
 |---|---|---|---|
-| Raw | 100% | Lossless | Archival or downstream processing |
-| High | 90% | 90% | High-fidelity product display |
-| Medium | 70% | 75% | Balanced web experience |
-| Low | 50% | 60% | Maximum performance, lightweight pages |
+| Maximum quality | 2048 px | 90 | High-fidelity product display |
+| Balanced | 1024 px | 80 | Recommended for most web experiences |
+| Smallest | 512 px | 70 | Maximum performance, lightweight pages |
 
-Presets are **non-destructive**: switching between them re-processes from the original uploaded file. Nothing is lost. Advanced users can override the preset ratio and texture quality values manually in the settings panel.
+All three share the same geometry pipeline: duplicate removal plus Draco compression, both always on. The only thing a preset changes is texture resolution and quality.
+
+Presets are **non-destructive**: switching between them re-processes from the original uploaded file. Nothing is lost. Advanced users can override texture values, and opt into mesh simplification, in the settings panel.
 
 **What is happening under the hood:**
 
-*Mesh simplification* uses the [glTF-Transform](https://gltf-transform.dev) `simplify` function. The ratio controls the fraction of triangles retained - 1.0 means no simplification, 0.5 means 50% of triangles are kept.
+*Mesh simplification* uses the [glTF-Transform](https://gltf-transform.dev) `simplify` function, where the ratio is the fraction of vertices retained. It is **off in every preset** and opt-in from the advanced panel only, because it changes topology and can leave holes and shading seams.
 
-*Texture compression* uses the KTX2 / Basis Universal pipeline, running **asynchronously in a Web Worker**. The viewport preview uses the uncompressed original while compression runs in the background, so you can keep working without waiting.
+*Texture compression* re-encodes textures to WebP through `OffscreenCanvas`, hardware-accelerated where available. The viewport preview uses the uncompressed original while compression runs, so you can keep working without waiting.
 
 For server-side optimization (via `@vctrl/core`), Sharp is used for texture compression. When Sharp is unavailable, the pipeline falls back to deduplication and pruning rather than failing.
 
@@ -101,15 +101,15 @@ Beyond file size, the Publisher gives you full control over how the scene looks 
 
 #### Lighting and Environment
 
-Choose from a set of HDR environment presets - including studio, sunset, and warehouse options - that determine ambient lighting, reflections, and image-based lighting (IBL). You can adjust environment intensity and background blurriness, and optionally override the transparent background with a solid color using the background color picker.
+Choose from a set of HDR environment presets - including studio, golden hour, and overcast options - that determine ambient lighting, reflections, and image-based lighting (IBL). You can adjust lighting strength, toggle **Show as background**, and tune **Background Blur** and **Background Brightness**. With the background toggle off, the background stays transparent; there is no solid background color setting.
 
-The viewer uses Drei's `Bounds` component to automatically fit the camera to the loaded model. The **Bounds margin** setting controls how tightly the camera frames the model - a smaller margin crops tighter, a larger value leaves more space around it.
+The viewer fits the camera to the loaded model automatically via its bounds logic. There is no user-facing margin control.
 
 #### Camera
 
-Set the camera's starting world-space position (`x, y, z`). The camera will animate to this position when the scene loads. Adjust field of view in degrees: wider (e.g. 90°) exaggerates depth; narrower (e.g. 30°) produces a flatter, more orthographic feel.
+There are no x/y/z position inputs. Frame the shot in the viewport, then click **Set camera to current view** to capture the position, rotation, target, and field of view onto the selected camera. Field of view is a three-way preset: Wide (90°), Standard (60°), Telephoto (35°).
 
-**Auto-rotate:** enable continuous orbit around the model. Configure the rotation speed and the pause delay after user interaction (in milliseconds) - so the model stops rotating when a visitor interacts with it, and resumes after they stop.
+**Auto Rotate:** in the **Interaction** tool, enable continuous orbit around the model and set the rotation speed. There is no pause-on-interaction delay.
 
 #### Shadows
 
@@ -174,7 +174,7 @@ To prevent hotlinking from unauthorized domains, open **Dashboard → Projects**
 | `example.com` | Exact host only |
 | `*.example.com` | All subdomains of `example.com` |
 
-Requests from unlisted domains receive a `403 Forbidden` response. Note: `localhost` and `127.0.0.1` are always allowed regardless of the domain allowlist, so local development always works.
+Requests from unlisted domains receive a `403 Forbidden` response. The allowlist is not optional: an **empty** list rejects every external host, so add the domain that will host the iframe before you ship. `localhost` and `127.0.0.1` are valid entries but must be added explicitly if you want to test the embed locally.
 
 ---
 
@@ -232,7 +232,7 @@ Worth bookmarking for debugging:
 | Rate limited token validation | `429 Too Many Requests` |
 | Disallowed embed domain | `403 Forbidden` |
 | Draft or non-existent scene (external access) | `404 Not Found` |
-| Invalid or revoked API key | `403 Forbidden` |
+| Invalid or revoked API key | `404 Not Found` |
 
 ---
 

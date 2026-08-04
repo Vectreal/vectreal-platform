@@ -57,7 +57,7 @@ Everything else people argue about - load speed, file size - is mostly downstrea
 
 Vectreal takes both. GLB uploads as the single file it is. A glTF bundle uploads as the whole set - the `.gltf`, its `.bin`, and its textures - and the parser identifies the `.gltf` root and resolves the referenced `.bin` and texture files automatically. You can drag and drop, use the file picker, or drop a full glTF folder; no account is needed to try it.
 
-glTF with its separate files is the preferred input, with full material support. GLB works too, as a self-contained single file. USDZ and USDA load as well, though USDZ support is partial right now (textures and some material types may not render correctly) and I would not reach for it for the web yet. Those four are the whole list: OBJ, FBX and STL do not load, so convert to glTF or GLB first.
+glTF with its separate files is the preferred input, with full material support. GLB works too, as a self-contained single file. USDZ loads as well, though support is partial right now (textures and some material types may not render correctly) and I would not reach for it for the web yet. Those three are the whole list: OBJ, FBX, STL and USDA do not load, so convert to glTF or GLB first.
 
 One honest note on size: there is no limit enforced at upload or preview, so you can drop a large file and look at it. A cap does apply when you save a published scene. And a genuinely large file - above roughly 500 MB - can slow the browser down while it parses, regardless of format. This is a pre-1.0 project; I would rather tell you where the edges are than let you find them.
 
