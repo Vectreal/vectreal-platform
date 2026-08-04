@@ -2,12 +2,13 @@
  * Canonical marketing copy and product claims.
  *
  * Single source of truth for all user-facing business-side strings: plan names,
- * taglines, feature labels, pricing-page copy, and format claims. Mirrors the
- * PRD directory — see prd/00-product-overview.md, prd/01-plans-and-tiers.md,
- * prd/02-limits-and-quotas.md, and prd/03-entitlements.md.
+ * taglines, feature labels, pricing-page copy, and format claims. This file
+ * used to mirror a PRD directory; those documents were stale and have been
+ * removed, so this is now the only place these strings live.
  *
- * Rule: every change here must be reflected in the corresponding PRD file, and
- * vice versa. Do not inline any of these strings in components.
+ * Rule: keep every claim here checkable against code. Plan and limit shapes come
+ * from ./plan-config; supported formats come from the loader and the file-input
+ * accept pattern. Do not inline any of these strings in components.
  *
  * Prices are intentionally absent: they are Stripe-managed and loaded
  * dynamically. Point users to /pricing for current rates.
@@ -17,7 +18,6 @@ import type { EntitlementKey, LimitKey, Plan } from './plan-config'
 
 // ---------------------------------------------------------------------------
 // Platform description strings
-// Source: prd/00-product-overview.md § "Platform Description Strings"
 // ---------------------------------------------------------------------------
 
 export const PLATFORM_TAGLINE =
@@ -36,19 +36,21 @@ export const PLATFORM_SOCIAL_DESCRIPTION =
 // Do not claim support for formats not listed here.
 // ---------------------------------------------------------------------------
 
+// NOTE: `.usda` is in the file-input accept pattern but the loader's
+// ModelFileTypes enum is gltf | glb | usdz only, so a .usda upload is rejected
+// with "Unsupported model format". It is therefore not claimed here.
 export const SUPPORTED_UPLOAD_FORMATS = [
 	'GLB (.glb) — recommended single-file format',
 	'glTF (.gltf + .bin + textures) — multi-file upload; all assets must be included',
-	'USDZ (.usdz) — Apple AR QuickLook format',
-	'USDA (.usda) — USD ASCII format'
+	'USDZ (.usdz) — Apple AR QuickLook format'
 ] as const
 
-// Short format names for use in prose (e.g. "GLB, glTF, USDZ, USDA")
-export const SUPPORTED_FORMAT_NAMES = ['GLB', 'glTF', 'USDZ', 'USDA'] as const
+// Short format names for use in prose (e.g. "GLB, glTF, USDZ")
+export const SUPPORTED_FORMAT_NAMES = ['GLB', 'glTF', 'USDZ'] as const
 
 // ---------------------------------------------------------------------------
 // Open-source packages
-// Source: packages/*/README.md, prd/00-product-overview.md
+// Source: packages/*/README.md
 // ---------------------------------------------------------------------------
 
 export const OPEN_SOURCE_PACKAGES = [
@@ -84,30 +86,28 @@ export const OPEN_SOURCE_PACKAGES = [
 
 // ---------------------------------------------------------------------------
 // Feature list for schema.org WebApplication.featureList
-// Source: prd/03-entitlements.md
 // ---------------------------------------------------------------------------
 
+// Shipped features only. This list is emitted as schema.org
+// WebApplication.featureList, so anything here is a public claim about what the
+// product does today. Several plan entitlements in ./plan-config exist as
+// pricing/gating keys without an implementation behind them yet
+// (scene_version_history, embed_ar_mode, optimization_priority_queue,
+// data_residency_eu, org_sso, org_audit_log); those stay out until they ship.
 export const PLATFORM_FEATURE_LIST = [
-	'Upload GLB, glTF, USDZ, and USDA 3D models',
+	'Upload GLB, glTF, and USDZ 3D models',
 	'Automated 3D model optimization with Draco compression',
-	'Low, medium, and high optimization presets',
+	'Maximum quality, Balanced, and Smallest optimization presets',
 	'Embeddable 3D viewer via iframe — no WebGL framework required on embedding page',
-	'Scene version history',
-	'Viewer customization: colors, lighting, camera presets, and branding removal',
-	'Per-embed analytics',
-	'AR mode (iOS USDZ / Android WebXR)',
+	'Viewer customization: environment lighting, shadows, and camera presets',
+	'JavaScript embed SDK for camera control, scroll interactions, and events',
 	'Domain allowlist for embed security',
-	'REST API with API key authentication',
-	'Team collaboration with role-based access',
-	'Priority optimization queue',
-	'EU data residency',
-	'SAML/OIDC single sign-on',
-	'Audit log export'
+	'API key authentication for external embeds',
+	'Team collaboration with role-based access'
 ] as const
 
 // ---------------------------------------------------------------------------
 // Plan names and per-plan copy
-// Source: prd/01-plans-and-tiers.md
 // ---------------------------------------------------------------------------
 
 // Canonical display names — used wherever a plan ID maps to a human label.
@@ -153,7 +153,6 @@ export const PLAN_HIGHLIGHTED: Record<Plan, boolean> = {
 // ---------------------------------------------------------------------------
 // Fallback prices (USD) displayed when Stripe is unreachable.
 // Keep in sync with the Stripe product configuration.
-// Source: prd/01-plans-and-tiers.md § "Pricing anchors"
 // ---------------------------------------------------------------------------
 
 export const PLAN_FALLBACK_PRICES: Partial<
@@ -171,7 +170,6 @@ export const PAYMENT_TRUST_COPY = 'Secured by Stripe · Cancel anytime'
 
 // ---------------------------------------------------------------------------
 // Plan offer descriptions for schema.org WebApplication.offers and llms.txt
-// Source: prd/01-plans-and-tiers.md, prd/02-limits-and-quotas.md
 // ---------------------------------------------------------------------------
 
 export const PLAN_OFFER_DESCRIPTIONS: Record<Plan, string> = {
@@ -185,7 +183,6 @@ export const PLAN_OFFER_DESCRIPTIONS: Record<Plan, string> = {
 
 // ---------------------------------------------------------------------------
 // Pricing page copy
-// Source: prd/01-plans-and-tiers.md
 // ---------------------------------------------------------------------------
 
 export const PRICING_PAGE_COPY = {
@@ -199,7 +196,6 @@ export const PRICING_PAGE_COPY = {
 
 // ---------------------------------------------------------------------------
 // Entitlement display labels
-// Source: prd/03-entitlements.md
 // Canonical human-readable label for each entitlement key.
 // Used in: feature comparison grid, upgrade flow unlocked-features list,
 //          upgrade success page, and any other entitlement-keyed UI.
@@ -356,7 +352,6 @@ export const ENTITLEMENT_FEATURE_GROUPS: Array<{
 
 // ---------------------------------------------------------------------------
 // Limit display config
-// Source: prd/02-limits-and-quotas.md
 // Keys shown on plan cards, in display order.
 // ---------------------------------------------------------------------------
 
@@ -399,7 +394,7 @@ export const STORAGE_USAGE_HINT =
 
 // ---------------------------------------------------------------------------
 // Upgrade success page: entitlement keys to highlight post-upgrade, in priority
-// order. Source: prd/03-entitlements.md § "Upgrade highlights"
+// order.
 // ---------------------------------------------------------------------------
 
 export const UPGRADE_FEATURE_HIGHLIGHT_KEYS = [

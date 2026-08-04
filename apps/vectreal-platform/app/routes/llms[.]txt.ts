@@ -13,9 +13,9 @@ import type { LoaderFunctionArgs } from 'react-router'
 /**
  * llms.txt endpoint.
  *
- * GEO support for LLM-powered retrieval systems. All product claims here
- * are derived from app/constants/product-copy.ts, which is kept in sync
- * with prd/00-product-overview.md. Do not add inline claims.
+ * GEO support for LLM-powered retrieval systems. All product claims here are
+ * derived from app/constants/product-copy.ts, which is the single source of
+ * truth for user-facing claims. Do not add inline claims.
  */
 export async function loader({ request }: LoaderFunctionArgs) {
 	const origin = new URL(request.url).origin
@@ -50,7 +50,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		PLATFORM_SHORT_DESCRIPTION,
 		'',
 		'## Supported Upload Formats',
-		`${SUPPORTED_FORMAT_NAMES.join(', ')}. See prd/00-product-overview.md for per-format notes.`,
+		`${SUPPORTED_FORMAT_NAMES.join(', ')}. See [/docs/guides/upload](${origin}/docs/guides/upload) for per-format notes.`,
 		'',
 		'## Pricing',
 		...planLines,
