@@ -72,12 +72,24 @@ export const useOptimizationProcess = () => {
 			setOptimizationRuntime
 		)
 
+	// `optimizedSceneBytes` only ever describes a pass run in this browser
+	// session, and reopening a saved scene explicitly nulls it during hydration -
+	// so on its own it answered "did you optimize in this tab" rather than "is
+	// this scene optimized". `appliedOptimizations` is the persisted signal, and
+	// it accrues only from real optimization operations (a publish-time Draco
+	// repack never touches it), so a scene that was uploaded and published but
+	// never optimized still reads as false.
+	const hasCompletedOptimizationPass =
+		typeof optimizationRuntime.optimizedSceneBytes === 'number' ||
+		(latestSceneStats?.appliedOptimizations?.length ?? 0) > 0
+
 	const runPass = useCallback(
 		async (fromOriginal: boolean): Promise<boolean> => {
 			if (isPending || isPreparing || !isReady) return false
 
 			const { documentChanged, dracoReport } = await runOptimizationPass({
 				fromOriginal,
+				documentMayBeOptimized: hasCompletedOptimizationPass,
 				optimizations: plannedOptimizations,
 				steps: stepsController,
 				model: {
@@ -110,6 +122,7 @@ export const useOptimizationProcess = () => {
 			isPending,
 			isPreparing,
 			isReady,
+			hasCompletedOptimizationPass,
 			plannedOptimizations,
 			stepsController,
 			reset,
@@ -203,8 +216,7 @@ export const useOptimizationProcess = () => {
 		isOptimizerPreparing: isPreparing,
 		isOptimizerReady: isReady,
 		hasImproved: resolvedMetrics.hasImproved,
-		hasCompletedOptimizationPass:
-			typeof optimizationRuntime.optimizedSceneBytes === 'number',
+		hasCompletedOptimizationPass,
 		sizeInfo,
 		optimizingStep,
 		handleOptimizeClick,
