@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.25.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.24.1...workspace-v0.25.0) (2026-08-04)
+
+
+### Features
+
+* **dashboard:** add pure contracts for permissions, confirmation and mutations ([7bc958e](https://github.com/Vectreal/vectreal-platform/commit/7bc958e010126ee51be505960a5ef9543c6b2326))
+* **dashboard:** consistent row actions, delete affordances and a move UI ([8407d4b](https://github.com/Vectreal/vectreal-platform/commit/8407d4b91c6bf2009aa0fc8c4a3c50be0a8d8421))
+* **dashboard:** require owner or admin to delete scenes and folders ([378b295](https://github.com/Vectreal/vectreal-platform/commit/378b2953ba2361c79b288f2be700e8f5749a27e1))
+* **dashboard:** unify CRUD behind one permission table, one dialog and one endpoint ([c3368bc](https://github.com/Vectreal/vectreal-platform/commit/c3368bcabb32171e7e73b3d52397cd0477a411df))
+
+
+### Bug Fixes
+
+* **assets:** stop garbage collection from deleting scene thumbnails ([37b8dab](https://github.com/Vectreal/vectreal-platform/commit/37b8dab06274b387bd5de995048a0b29834a3e1f))
+* **assets:** stop garbage collection from deleting scene thumbnails ([c15f104](https://github.com/Vectreal/vectreal-platform/commit/c15f104b68959ce40649f9909ef2d7154be7e64f))
+* **assets:** stop garbage collection from deleting scene thumbnails ([e4d3f43](https://github.com/Vectreal/vectreal-platform/commit/e4d3f4395f3231c94938c84ed5cff995b82ab04c))
+* **consent:** honor the opt-in promise the privacy policy makes ([2fd9b0e](https://github.com/Vectreal/vectreal-platform/commit/2fd9b0e7b2f6cc7a3f81b84e4133459419ee42ee))
+* **dashboard:** close route-bound drawers through their exit animation ([6e6becb](https://github.com/Vectreal/vectreal-platform/commit/6e6becbba01f5a6555759bbab221ac5f86b32ce9))
+* **dashboard:** correct drawer headings, list state and asset cleanup ([a05269b](https://github.com/Vectreal/vectreal-platform/commit/a05269b5ac0cdb1e013bc70af7b10c0cb1308c10))
+* **dashboard:** match the inline field's two states and let the story dialogs close ([fa3258b](https://github.com/Vectreal/vectreal-platform/commit/fa3258b046f16142f94bee03008f76cb1f209bd1))
+* **dashboard:** scope the project edit drawer to the list it opened from ([b93dbb3](https://github.com/Vectreal/vectreal-platform/commit/b93dbb379ffa42242649ca38ba3eee6ee1b6d593))
+* **embed:** serve the SDK snippet from a CDN that exists ([ef0c1f1](https://github.com/Vectreal/vectreal-platform/commit/ef0c1f1abb51d278f8e758c4db2713c8ef394427))
+* **packages:** match repository.url org casing for npm provenance ([455caa9](https://github.com/Vectreal/vectreal-platform/commit/455caa927ff7a668ea2b6af6a633d9057d69f203))
+* **packages:** match repository.url org casing for npm provenance ([7289fdc](https://github.com/Vectreal/vectreal-platform/commit/7289fdcbc5678588acccaf5b650d62a4d70a7e10))
+* **seo:** stop advertising unshipped features in structured data ([d3689fe](https://github.com/Vectreal/vectreal-platform/commit/d3689fe6ecdb7de296ced7e13e3931b3f601d1fb))
+* **ui:** correct the command palette, field clipping and drawer stories ([4ab6c97](https://github.com/Vectreal/vectreal-platform/commit/4ab6c97fb74142e48b6196823e62f90557447976))
+* **ui:** give the alert dialog the same themed portal as the dialog ([5677659](https://github.com/Vectreal/vectreal-platform/commit/56776599b660932c7e43975de891aee45c1581a9))
+* **ui:** let a dialog portal into the theme it was opened from ([d19936b](https://github.com/Vectreal/vectreal-platform/commit/d19936b47821559027b03629cb11204db1e62669))
+* **ui:** put overlay titles and controls on the shared type and radius scale ([9b5e8c3](https://github.com/Vectreal/vectreal-platform/commit/9b5e8c33c2bf849e1f3f872ef8c72310086e5bda))
+* **ui:** stop the alert dialog story locking the Storybook page ([d1d6dd5](https://github.com/Vectreal/vectreal-platform/commit/d1d6dd5dbd3909056384b9ebc50ad6a1651ea22f))
+
 ## [0.24.1](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.24.0...workspace-v0.24.1) (2026-08-02)
 
 
