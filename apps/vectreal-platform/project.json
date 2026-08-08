@@ -10,7 +10,18 @@
 			"outputs": [],
 			"options": {
 				"cwd": "apps/vectreal-platform",
-				"command": "react-router typegen && tsc -p tsconfig.app.json --noEmit"
+				"command": "react-router typegen && tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.spec.json --noEmit"
+			}
+		},
+		"test-integration": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"command": "vitest run --config vitest.integration.config.ts",
+				"env": {
+					"DATABASE_URL": "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+				}
 			}
 		},
 		"build": {
@@ -63,7 +74,11 @@
 					"apps/vectreal-platform/app/**/*.ts",
 					"apps/vectreal-platform/app/**/*.tsx",
 					"apps/vectreal-platform/app/**/*.js",
-					"apps/vectreal-platform/app/**/*.jsx"
+					"apps/vectreal-platform/app/**/*.jsx",
+					"apps/vectreal-platform/tests/**/*.ts",
+					"apps/vectreal-platform/tests/**/*.tsx",
+					"apps/vectreal-platform/vitest.config.ts",
+					"apps/vectreal-platform/vitest.integration.config.ts"
 				]
 			}
 		},

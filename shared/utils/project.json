@@ -20,7 +20,7 @@
 			"executor": "nx:run-commands",
 			"outputs": [],
 			"options": {
-				"command": "tsc --noEmit -p shared/utils/tsconfig.json"
+				"command": "tsc --noEmit -p shared/utils/tsconfig.json && tsc --noEmit -p shared/utils/tsconfig.spec.json"
 			}
 		},
 		"build": {

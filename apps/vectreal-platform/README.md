@@ -118,7 +118,8 @@ Drizzle schema modules live in `app/db/schema/`. Generate migrations from schema
 pnpm nx dev vectreal-platform                # Dev server (http://localhost:4200)
 pnpm nx run vectreal-platform:dev-react-compiler # Experimental dev server with React Compiler enabled
 pnpm nx build vectreal-platform              # Production build
-pnpm nx test vectreal-platform               # Unit tests
+pnpm nx test vectreal-platform               # Unit tests (coverage lands in coverage/)
+pnpm nx run vectreal-platform:test-integration  # DB integration tests (pnpm supabase start first)
 pnpm nx lint vectreal-platform               # ESLint
 pnpm nx run vectreal-platform:drizzle-generate  # Generate DB migration SQL
 pnpm nx run vectreal-platform:supabase-db-reset # Reset local DB

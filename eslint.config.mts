@@ -126,7 +126,10 @@ export default defineConfig(tseslint.configs.recommended, [
 			// must inline their hex.
 			'**/lib/email/templates/**',
 			// Stories deliberately show raw values beside their tokens.
-			'**/*.stories.tsx'
+			'**/*.stories.tsx',
+			// Specs assert on literal class strings.
+			'**/*.spec.ts',
+			'**/*.spec.tsx'
 		],
 		rules: {
 			'no-restricted-syntax': [

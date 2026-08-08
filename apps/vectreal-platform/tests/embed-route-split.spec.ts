@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { loader as legacyEmbedRedirectLoader } from '../app/routes/embed-page/legacy-embed-redirect'
 import {
 	buildEmbedPath,
 	buildInternalPreviewPath
 } from '../app/lib/domain/embed/embed-snippet'
 import { parseSceneRouteParams } from '../app/lib/domain/scene/scene-route-params'
+import { loader as legacyEmbedRedirectLoader } from '../app/routes/embed-page/legacy-embed-redirect'
 
 const PROJECT_ID = 'proj-1'
 const SCENE_ID = 'scene-1'

@@ -1,15 +1,17 @@
 {
 	"useDaemonProcess": true,
 	"namedInputs": {
-		"default": ["{projectRoot}/**/*"],
+		"sharedGlobals": ["{workspaceRoot}/vitest.shared.ts"],
+		"default": ["{projectRoot}/**/*", "sharedGlobals"],
 		"production": [
-			"!{projectRoot}/**/*.spec.tsx",
 			"!{projectRoot}/**/*.stories.@(js|jsx|ts|tsx|mdx)",
 			"!{projectRoot}/.storybook/**/*",
 			"!{projectRoot}/tsconfig.storybook.json",
 			"!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
 			"!{projectRoot}/tsconfig.spec.json",
-			"!{projectRoot}/src/test-setup.[jt]s"
+			"!{projectRoot}/vitest.config.ts",
+			"!{projectRoot}/vitest.integration.config.ts",
+			"!{projectRoot}/tests/**"
 		]
 	},
 	"targetDefaults": {

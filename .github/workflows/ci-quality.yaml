@@ -7,8 +7,10 @@ on:
     paths:
       - 'apps/vectreal-platform/**'
       - 'packages/core/**'
+      - 'packages/embed/**'
       - 'packages/hooks/**'
       - 'packages/viewer/**'
+      - 'packages/viewer-e2e/**'
       - 'shared/**'
       - 'storybook/**'
       - 'package.json'
@@ -16,7 +18,7 @@ on:
       - 'pnpm-workspace.yaml'
       - 'nx.json'
       - 'eslint.config.mts'
-      - 'jest.config.ts'
+      - 'vitest.shared.ts'
       - 'tsconfig.base.json'
       - '.github/workflows/ci-quality.yaml'
       - '.github/workflows/cd-platform-staging.yaml'
@@ -30,8 +32,10 @@ on:
     paths:
       - 'apps/vectreal-platform/**'
       - 'packages/core/**'
+      - 'packages/embed/**'
       - 'packages/hooks/**'
       - 'packages/viewer/**'
+      - 'packages/viewer-e2e/**'
       - 'shared/**'
       - 'storybook/**'
       - 'package.json'
@@ -39,7 +43,7 @@ on:
       - 'pnpm-workspace.yaml'
       - 'nx.json'
       - 'eslint.config.mts'
-      - 'jest.config.ts'
+      - 'vitest.shared.ts'
       - 'tsconfig.base.json'
       - '.github/workflows/ci-quality.yaml'
       - '.github/workflows/cd-platform-staging.yaml'
@@ -124,3 +128,12 @@ jobs:
       - name: Run full quality targets
         if: ${{ steps.affected-range.outputs.has_range != 'true' }}
         run: npx nx run-many -t lint,typecheck,test,build-ci
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+          if-no-files-found: ignore
