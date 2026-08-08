@@ -31,7 +31,7 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 				const referrer = searchParams.get('referrer') || undefined
 				const utm_source = searchParams.get('utm_source') || undefined
 				const posthog = (context as PostHogContext).posthog
-				captureServerEvent(posthog, data.user.id, {
+				captureServerEvent(posthog, request, data.user.id, {
 					name: 'user_signed_up',
 					props: { method: 'email', referrer, utm_source }
 				})

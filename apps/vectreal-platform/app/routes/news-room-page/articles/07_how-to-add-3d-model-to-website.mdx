@@ -109,13 +109,13 @@ Vectreal is worth treating as its own category because it spans the spectrum tha
 
 **The no-code path (Publisher → iframe)**
 
-Open the [Vectreal Publisher](https://vectreal.com/publisher). Drag in a GLB, glTF, USDZ, or USDA file. The platform optimizes it automatically - mesh simplification, KTX2/Basis Universal texture compression, scene graph cleanup - all in the same pipeline used by production deployments. Configure the camera angle, environment lighting, and background. Set which domains are allowed to display the embed. Publish.
+Open the [Vectreal Publisher](https://vectreal.com/publisher). Drag in a GLB, glTF, or USDZ file. The platform optimizes it automatically - WebP texture compression, duplicate removal, and Draco geometry compression at publish time - all in the same pipeline used by production deployments. Configure the camera angle, environment lighting, and background. Set which domains are allowed to display the embed. Publish.
 
 What comes back is a stable scene URL and an iframe snippet:
 
 ```html
 <iframe
-  src="https://vectreal.com/preview/[scene-id]?key=[api-key]"
+  src="https://vectreal.com/embed/[project-id]/[scene-id]?token=[preview-api-key]"
   width="100%"
   height="500"
   frameborder="0"
@@ -137,12 +137,16 @@ For teams that need the viewer inside the React component tree - sharing context
 import { VectrealViewer } from '@vctrl/viewer'
 import '@vctrl/viewer/css'
 
-export function ProductViewer({ sceneUrl }: { sceneUrl: string }) {
+export function ProductViewer({ model }: { model: Object3D }) {
   return (
     <VectrealViewer
-      src={sceneUrl}
-      camera={{ position: [0, 1, 4] }}
-      environment="studio"
+      model={model}
+      cameraOptions={{
+        cameras: [
+          { cameraId: 'default', name: 'Default', initial: true, position: [0, 1, 4] }
+        ]
+      }}
+      envOptions={{ preset: 'studio-natural' }}
     />
   )
 }

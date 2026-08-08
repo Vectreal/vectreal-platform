@@ -101,7 +101,7 @@ This is where the large savings happen. Textures in a typical DCC export are PNG
 
 **WebP** is the practical choice for server-side pipelines. It achieves 25-40% smaller file sizes than JPEG at comparable visual quality, with broad browser support. A PBR material set that ships as 18 MB of PNG arrives as roughly 4-6 MB of WebP at 85% quality - a reduction that dwarfs any mesh simplification savings on a typical scene.
 
-**KTX2 / Basis Universal** is the GPU-native option. Unlike PNG or WebP (which are decompressed before the GPU sees them), KTX2 stays compressed in GPU memory, transcoding at load time to whatever format the local GPU supports best - BC7 on desktop, ASTC on mobile, ETC2 as a broad fallback. The result is faster upload to the GPU, lower sustained memory pressure, and better frame rate at high texture density. The Vectreal Publisher uses this path in its browser-side optimization pipeline.
+**KTX2 / Basis Universal** is the GPU-native option. Unlike PNG or WebP (which are decompressed before the GPU sees them), KTX2 stays compressed in GPU memory, transcoding at load time to whatever format the local GPU supports best - BC7 on desktop, ASTC on mobile, ETC2 as a broad fallback. The result is faster upload to the GPU, lower sustained memory pressure, and better frame rate at high texture density. The Vectreal Publisher does not take this path; it re-encodes to WebP via `OffscreenCanvas` instead.
 
 The quality tradeoff is real but manageable. High-quality conversion (quality setting around 85-90%) is visually indistinguishable from the source texture for the vast majority of materials. Medium quality (70-75%) introduces faint compression artifacts on close inspection of high-frequency detail - fine weaves, brushed metal, text rendered as a texture. The right quality setting is the lowest one that still looks correct for the specific scene, evaluated at the specific viewing distance and device profile that matters.
 
@@ -191,9 +191,9 @@ Vectreal's optimization pipeline runs the same gltf-transform operations the CLI
 
 **Via the Publisher (no code required)**
 
-Open the [Vectreal Publisher](https://vectreal.com/publisher). Upload the GLB or glTF. The platform runs the inspect pass automatically and displays the before stats: file size, triangle count, texture sizes. Switch between the four optimization presets - Raw, High, Medium, Low - and the viewport re-renders from the original uploaded file each time. The stats panel updates with the after numbers. When the right tradeoff is found, publish.
+Open the [Vectreal Publisher](https://vectreal.com/publisher). Upload the GLB or glTF. The platform runs the inspect pass automatically and displays the before stats: file size, triangle count, texture sizes. Switch between the three optimization presets - Maximum quality, Balanced, Smallest - and the viewport re-renders from the original uploaded file each time. The stats panel updates with the after numbers. When the right tradeoff is found, publish.
 
-The presets are pre-tuned recipes on top of the same three-technique pipeline. High applies 90% mesh ratio and 90% texture quality. Medium applies 70% and 75%. Low applies 50% and 60%. The specific tradeoffs behind each preset, including when to override the defaults for specific material types, are covered in [Optimization Presets Demystified](https://vectreal.com/news-room/optimization-presets-and-texture-compression).
+The presets differ only in how hard they push textures: Maximum quality caps them at 2048 px and quality 90, Balanced at 1024/80, Smallest at 512/70. Geometry handling is identical in all three - duplicate removal plus Draco at publish - and mesh simplification stays off unless you enable it yourself in the advanced panel. The specific tradeoffs behind each preset, including when to override the defaults for specific material types, are covered in [Optimization Presets Demystified](https://vectreal.com/news-room/optimization-presets-and-texture-compression).
 
 No account is required to upload, optimize, and preview. Sign in to save and publish. The non-destructive architecture means switching presets re-processes from the original - the original file is never overwritten and no choices are permanent until publish.
 
@@ -250,7 +250,7 @@ To make the numbers concrete: a representative product model - a consumer electr
 | After graph cleanup | 36.1 MB | 412,000 | Orphan nodes and unused animation clips removed |
 | After mesh simplification (75%) | 33.8 MB | 309,000 | Quadric error simplification, no visible change at viewing distance |
 | After texture compression (WebP, 85%) | 4.6 MB | 309,000 | Three PBR material sets at 2K, visual quality intact |
-| Publisher Medium preset (all three techniques) | 3.1 MB | 288,000 | Combined pass at Medium settings |
+| Publisher Balanced preset, plus simplification enabled manually | 3.1 MB | 309,000 | Preset texture pass on top of the simplification above |
 
 The final 3.1 MB file loads in under two seconds on standard broadband and under four seconds on LTE. The original 38.4 MB file does not reliably finish loading before a typical visitor's patience expires.
 

@@ -1,7 +1,7 @@
 /**
  * Entitlement resolution service.
  *
- * Implements the resolution logic defined in prd/03-entitlements.md:
+ * Resolves entitlements from app/constants/plan-config.ts (PLAN_ENTITLEMENTS):
  *
  *   hasEntitlement(orgId, entitlementKey):
  *     1. Resolve org's current plan (considering billing state)
@@ -11,7 +11,7 @@
  *     4. Check for org-level overrides (enterprise add-ons) → merge
  *     5. Return resolved boolean
  *
- * And the quota limit logic defined in prd/02-limits-and-quotas.md.
+ * And the quota limits from the same file (PLAN_LIMITS).
  */
 
 import { and, eq } from 'drizzle-orm'

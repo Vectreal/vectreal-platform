@@ -14,6 +14,38 @@ type UpdateRuntime = (
 ) => void
 
 /**
+ * The size the scene will actually be published at, given the post-pass export
+ * and what Draco is projected to save.
+ *
+ * `projectedGlbBytes` cannot be used directly: it is measured inside the
+ * geometry worker, before the texture phase runs, so its image payload is still
+ * the original textures and taking it as the headline erases every byte of
+ * texture saving. Only the whole-file Draco delta survives the texture phase,
+ * because `uncompressedGlbBytes` and `projectedGlbBytes` are both a
+ * `writeBinary` of the same document and their identical textures cancel out.
+ *
+ * Deliberately not `geometryBytesBefore - geometryBytesAfterCompression`: those
+ * two count shared accessors differently (per-mesh versus once globally), and
+ * `dedup` runs immediately before `draco` in every shipped preset, so the
+ * difference would overstate the saving.
+ */
+export const resolvePublishedSceneBytes = (
+	workingSceneBytes: number | null,
+	dracoReport?: DracoCompressionReport | null
+): number | null => {
+	if (!dracoReport?.isWorthApplying || workingSceneBytes == null) {
+		return workingSceneBytes
+	}
+
+	const dracoSaving =
+		dracoReport.uncompressedGlbBytes - dracoReport.projectedGlbBytes
+
+	// Guards against GLB padding noise only; a negative saving cannot reach here
+	// because `isWorthApplying` is `projected < uncompressed`.
+	return Math.max(0, workingSceneBytes - dracoSaving)
+}
+
+/**
  * Sub-hook that encapsulates the three scene/texture size calculation callbacks.
  * Extracted to reduce the size of useOptimizationProcess.
  */
@@ -72,6 +104,11 @@ export function useSceneSizeCalculator(
 	 */
 	const refreshOptimizedSizeInfo = useCallback(
 		async (dracoReport?: DracoCompressionReport | null) => {
+			// Deliberately does not raise `isSceneSizeLoading` to cover this window.
+			// `useSceneSizeInitializer` force-clears that flag whenever
+			// `clientSceneBytes` is a number and keeps the flag in its own dep array,
+			// so setting it here only wakes the effect that unsets it. Covering the
+			// post-pass measurement needs a field that initializer does not manage.
 			const [sceneResult, textureResult] = await Promise.allSettled([
 				calculateSceneBytes(),
 				calculateOptimizedTextureBytes()
@@ -84,9 +121,10 @@ export function useSceneSizeCalculator(
 
 			const workingSceneBytes =
 				typeof updatedSceneBytes === 'number' ? updatedSceneBytes : null
-			const publishedSceneBytes = dracoReport?.isWorthApplying
-				? dracoReport.projectedGlbBytes
-				: workingSceneBytes
+			const publishedSceneBytes = resolvePublishedSceneBytes(
+				workingSceneBytes,
+				dracoReport
+			)
 
 			setOptimizationRuntime((prev) => ({
 				...prev,

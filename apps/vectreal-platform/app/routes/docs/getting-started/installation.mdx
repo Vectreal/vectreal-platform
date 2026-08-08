@@ -19,7 +19,7 @@ cd vectreal-platform
 pnpm install
 ```
 
-pnpm workspaces will install dependencies for all apps and packages in a single pass.
+Every dependency is declared in the root `package.json`, so a single install covers all apps and packages. Internal packages resolve through TypeScript path mappings rather than pnpm workspace links.
 
 ---
 
@@ -39,7 +39,8 @@ The key variables you must configure for local development:
 | `SUPABASE_KEY` | Supabase anon key (from `supabase status`) |
 | `SUPABASE_SECRET_KEY` | Supabase service-role key, used server-side for asset storage |
 | `DATABASE_URL` | PostgreSQL connection string (default uses local Supabase port) |
-| `CSRF_SECRET` | Long random string for CSRF token signing |
+| `SEND_EMAIL_HOOK_SECRET` | Auth email hook secret in the form `v1,whsec_<base64>`. Ships blank in the example file and `supabase start` will not come up without it |
+| `CSRF_SECRET` | Long random string for CSRF token signing. Not in the example file and optional locally (the code falls back to a dev value); required in production |
 
 > Model assets are stored in Supabase Storage (the `assets` bucket), which is created automatically on first upload. No separate storage provider is required for local development - the local Supabase stack in the next step provides Storage.
 
@@ -48,10 +49,10 @@ The key variables you must configure for local development:
 ## 4. Start the local Supabase stack
 
 ```bash
-pnpm supabase start
+pnpm nx run vectreal-platform:supabase-start
 ```
 
-This starts a local Supabase instance (Postgres, Auth, Storage, Studio) via Docker.
+This starts a local Supabase instance (Postgres, Auth, Storage, Studio) via Docker. The Supabase project lives at `apps/vectreal-platform/supabase/`, so run it through the Nx target rather than calling the CLI from the repo root, which would not find `config.toml`.
 
 After first start, run:
 
@@ -91,7 +92,7 @@ The monorepo uses Nx. To run any project:
 ```bash
 pnpm nx run <project-name>:<target>
 # e.g. pnpm nx run vectreal-platform:build
-# e.g. pnpm nx run vctrl/viewer:storybook
+# e.g. pnpm nx run storybook:storybook
 ```
 
 To list all available targets for a project:
@@ -116,4 +117,4 @@ pnpm nx show project vectreal-platform --web
 
 - [Your First Model](/docs/getting-started/first-model) - upload, optimize, and publish a 3D model
 - [Guides](/docs/guides/upload) - deep-dive into individual platform features
-- [Package Reference](/docs/packages/viewer) - jump to `@vctrl/viewer`, `@vctrl/hooks`, and `@vctrl/core` APIs
+- [Package Reference](/docs/packages/viewer) - jump to `@vctrl/viewer`, `@vctrl/hooks`, `@vctrl/core`, and `@vctrl/embed` APIs

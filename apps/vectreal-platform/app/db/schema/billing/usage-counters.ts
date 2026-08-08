@@ -21,7 +21,7 @@ import { isOrganizationAdmin, isOrganizationMember } from '../rls'
  * The current window row is identified as the row where window_start is the
  * most recent period boundary for that counter.
  *
- * Counter keys correspond to limit keys in prd/02-limits-and-quotas.md,
+ * Counter keys correspond to LimitKey in app/constants/plan-config.ts,
  * e.g. "api_requests_per_month", "embed_bandwidth_gb_per_month".
  */
 export const orgUsageCounters = pgTable(

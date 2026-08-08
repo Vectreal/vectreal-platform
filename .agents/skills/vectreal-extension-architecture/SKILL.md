@@ -101,7 +101,7 @@ Build new features in ways that preserve Vectreal's layout semantics, domain mod
 
 - Cookie/session/secret handling stays server-side only.
 
-## PRD and Identifier Discipline
+## Identifier Discipline
 
 1. Do not invent new literal identifiers for:
 
@@ -111,7 +111,7 @@ Build new features in ways that preserve Vectreal's layout semantics, domain mod
 - Consent categories
 - Analytics event names
 
-2. If a new identifier is required, update PRD first, then code.
+2. If a new identifier is required, add it to the owning type in `app/constants/plan-config.ts` (or `app/lib/consent/consent-cookie.ts` for consent) first, so every missing case becomes a compile error, then code against it.
 
 ## Nx and Execution Discipline
 
@@ -137,9 +137,9 @@ Build new features in ways that preserve Vectreal's layout semantics, domain mod
 
 - Replace with nested layout structure that matches true semantic shells.
 
-5. Anti-pattern: Hardcoded PRD identifiers in ad-hoc strings.
+5. Anti-pattern: Hardcoded plan/entitlement/consent identifiers in ad-hoc strings.
 
-- Replace with canonical constants/maps aligned to PRD docs.
+- Replace with the canonical constants and maps exported from `app/constants/plan-config.ts`.
 
 ## Practical Extension Recipes
 
@@ -169,7 +169,7 @@ Build new features in ways that preserve Vectreal's layout semantics, domain mod
 2. Are loader/action typed and used instead of ad-hoc client fetch for route-owned data?
 3. Is server-only code isolated in .server.ts?
 4. Are DB queries in repositories and workflows in services?
-5. Are PRD identifiers canonical and unchanged?
+5. Are plan/entitlement/consent identifiers canonical and unchanged?
 6. Were commands run via pnpm nx only?
 7. Did this change avoid unnecessary new abstraction layers?
 
@@ -180,9 +180,6 @@ Build new features in ways that preserve Vectreal's layout semantics, domain mod
 - CLAUDE.md
 - apps/vectreal-platform/app/routes.tsx
 - apps/vectreal-platform/app/db/schema/rls.ts
-- prd/01-plans-and-tiers.md
-- prd/02-limits-and-quotas.md
-- prd/03-entitlements.md
-- prd/04-billing-states.md
-- prd/05-consent-categories.md
-- prd/06-analytics-event-taxonomy.md
+- apps/vectreal-platform/app/constants/plan-config.ts
+- apps/vectreal-platform/app/constants/product-copy.ts
+- apps/vectreal-platform/app/lib/domain/dashboard/dashboard-operations.ts

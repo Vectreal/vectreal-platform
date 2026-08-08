@@ -144,7 +144,12 @@ describe('runOptimizationPass', () => {
 		expect(runGeometryOptimizationsInWorker).toHaveBeenCalledOnce()
 		expect(model.loadFromGlbBuffer).toHaveBeenCalledWith(
 			expect.any(Uint8Array),
-			{ appliedOptimizations: ['deduplication'], dracoReport: undefined }
+			{ appliedOptimizations: ['deduplication'], dracoReport: undefined },
+			// This is a sync of the worker's output, not a load of a new model, so
+			// the optimizer must keep the baseline it captured from the pristine
+			// upload. Re-deriving it from this already-optimized buffer would make
+			// every `before` in the report equal its `after`.
+			{ preserveBaseline: true }
 		)
 		expect(model.applyOptimization).toHaveBeenCalledOnce()
 		expect(result.documentChanged).toBe(true)

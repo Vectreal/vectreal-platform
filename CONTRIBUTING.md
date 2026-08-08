@@ -30,11 +30,13 @@ pnpm install
 
 # 3. Copy the environment template
 cp .env.development.example .env.development
-# Set at minimum: CSRF_SECRET (any long random string)
+# Set at minimum: SEND_EMAIL_HOOK_SECRET (ships blank; Supabase will not start without it)
 # SUPABASE_URL and SUPABASE_KEY will be filled after step 4
 
 # 4. Start local Supabase (requires Docker)
-pnpm supabase start
+# The Supabase project lives at apps/vectreal-platform/supabase/, so use the Nx
+# target: the CLI would not find config.toml from the repo root.
+pnpm nx run vectreal-platform:supabase-start
 # Copy the printed anon key and API URL into .env.development
 
 # 5. Apply DB migrations

@@ -10,8 +10,9 @@ Everything you need to know about getting 3D files into the Vectreal Publisher.
 |---|---|---|
 | **glTF** | `.gltf` + `.bin` + textures | Preferred - full material and animation support |
 | **GLB** | `.glb` | Self-contained binary glTF. Single file, easiest to share. |
-| **OBJ** | `.obj` (+ `.mtl`) | Legacy format. MTL file and textures resolved automatically if in the same directory. |
 | **USDZ** | `.usdz` | Limited support - textures and some material types may not render correctly. Work in progress. |
+
+Anything else is rejected with "Unsupported model format". Convert other formats (OBJ, FBX, STL) to glTF or GLB before uploading.
 
 ---
 
@@ -19,18 +20,18 @@ Everything you need to know about getting 3D files into the Vectreal Publisher.
 
 ### Drag and drop
 
-Drag one or more files directly onto the Publisher canvas. The model loads as soon as the files are parsed.
+Drag one or more files directly onto the upload area. The model loads as soon as the files are parsed.
 
-### File picker
+### Folder picker
 
-Click the upload area to open the system file picker. Select one or more files.
+Click the upload area to open the system picker. It selects a whole folder rather than individual files, so put the model and everything it references in one directory first.
 
 ### glTF bundles (folder upload)
 
 glTF separates geometry, binaries, and textures into multiple files. To upload a full bundle:
 
 1. Drag the **entire folder** onto the upload area, or
-2. Select all files at once in the file picker (Ctrl/Cmd + click each file).
+2. Click the upload area and pick the containing folder.
 
 The parser identifies the `.gltf` root and resolves all referenced `.bin` and texture files automatically.
 
@@ -38,7 +39,7 @@ The parser identifies the `.gltf` root and resolves all referenced `.bin` and te
 
 ## File size and limits
 
-There are no hard limits enforced by the Publisher UI. Very large files (>500 MB) may slow parsing in the browser. For production-grade assets, run optimization first (see [Optimizing & Configuring](/docs/guides/optimize)).
+The Publisher enforces your plan's maximum scene size: 50 MB on Free, 200 MB on Pro, 500 MB on Business, and a custom limit on Enterprise. While a scene is over the limit the Save button becomes **Optimize to Save**, the optimizer opens automatically, and the server rejects the save until the scene fits. Run optimization first for production-grade assets (see [Optimizing & Configuring](/docs/guides/optimize)).
 
 ---
 
@@ -46,15 +47,14 @@ There are no hard limits enforced by the Publisher UI. Very large files (>500 MB
 
 | Error | Likely cause | Resolution |
 |---|---|---|
-| "Unsupported file format" | File extension not in the supported list | Convert to GLB or glTF before uploading |
-| "Failed to parse file" | Corrupt file or missing references | Verify the file opens in a local viewer (e.g. [three.js editor](https://threejs.org/editor/)) |
-| "Missing binary or texture" | Uploaded `.gltf` without the associated `.bin`/textures | Upload the full folder as a bundle |
+| "Unsupported model format. Upload a .gltf, .glb, or .usdz file." | File extension not in the supported list | Convert to GLB or glTF before uploading |
+| "Model references missing assets. Upload the full model folder (including textures/buffers) and retry." | Uploaded `.gltf` without the associated `.bin`/textures | Upload the full folder as a bundle |
 
 ---
 
-## Replacing a model in an existing scene
+## Starting a new upload
 
-Open the scene from the Dashboard or Publisher and drag a new file onto the canvas. The new file replaces the current model while preserving all camera, lighting, and publish settings.
+The upload area is only rendered while no model is loaded, so there is no drop target inside a scene that already has one. Open the Publisher without a scene (`/publisher`) to upload a new file. Swapping the model inside an existing scene is not supported.
 
 ---
 

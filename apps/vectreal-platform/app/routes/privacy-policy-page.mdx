@@ -24,12 +24,12 @@ We collect the following categories of data, depending on how you use the platfo
 
 - **Account and profile data:** name, email address, and account identifiers.
 - **Onboarding data:** optional information you provide during onboarding, such as your role, use case, company name, and how you heard about Vectreal.
-- **Authentication data:** session and identity data processed through Supabase Auth, including sign-in with email and password, magic link, one-time passcode (OTP), or optional Google or GitHub single sign-on.
+- **Authentication data:** session and identity data processed through Supabase Auth, including sign-in with email and password or optional Google or GitHub single sign-on.
 - **Billing and subscription data:** plan, billing status, and payment-related identifiers (such as Stripe customer and subscription IDs). Card payments are processed by Stripe; we do not store full card numbers.
 - **Workspace and content data:** organizations and memberships, projects, scenes, uploaded 3D models and related assets, optimization metadata, thumbnails, and related logs. Uploaded assets are stored in private storage and served through our application with permission checks.
 - **API keys:** keys you generate to access or embed content are stored in hashed form together with a short non-sensitive preview.
-- **Contact and support data:** information you submit through the contact form, including your name, email address, inquiry type, and message. This contact data is encrypted at rest.
-- **Consent and preference data:** your consent choices for functional, analytics, and marketing categories, the consent policy version, a country derived from your IP address, your browser user agent, and an anonymous identifier where applicable.
+- **Contact and support data:** information you submit through the contact form, including your name, email address, inquiry type, and message. Your name, email address, and message are encrypted at rest; the inquiry type is stored in plain text.
+- **Consent and preference data:** your consent choices for functional, analytics, and marketing categories, the consent policy version, a country derived from your IP address, and your browser user agent. This record is stored only if you have an account. If you are not signed in, your consent choices stay in the `consent_prefs` cookie on your device and no server-side record is created.
 - **Technical and security data:** IP address and request metadata used transiently for security, rate limiting, and bot protection, and session and CSRF tokens required to operate the service. We do not persist your full IP address for consent records; we store only the derived country.
 
 We do not intentionally collect special categories of data. Please do not submit sensitive personal data in free-text fields.
@@ -66,10 +66,17 @@ Vectreal uses cookies and similar storage mechanisms for core operation and, wit
 | `csrf` | Strictly necessary | Cross-site request forgery protection | Cookie |
 | `consent_prefs` | Strictly necessary | Stores your cookie consent choices (up to 1 year) | Cookie |
 | `theming` | Functional | Remembers your theme preference (up to 1 week) | Cookie |
+| `sidebar_state` | Functional | Remembers whether the dashboard sidebar is expanded (up to 1 week) | Cookie |
+| `vectreal-publisher-tab-id` | Strictly necessary | Distinguishes Publisher browser tabs so in-progress work is not mixed between them | Session storage |
+| `vectreal-publisher` | Strictly necessary | Holds an in-progress upload locally until you save or discard it | IndexedDB |
 | `ph_*` | Analytics | PostHog product analytics; set only after analytics consent | Cookie and local storage |
 | `vr_referral` | Marketing | Remembers how you arrived (referrer, campaign source) for attribution; set only after marketing consent | Local storage |
 
-Before you grant analytics consent, PostHog runs in a memory-only mode that does not store identifiers on your device, and page-view capture is disabled. Referral and campaign attribution (`vr_referral`) is written only after you grant marketing consent, and is removed if you withdraw it.
+Before you grant analytics consent, the PostHog SDK is loaded but opted out: it sends no events, and it runs in a memory-only mode that stores no identifiers on your device. This applies to events raised by our servers as well, including sign-in, sign-up, and contact form events. If you are signed in, your user ID, email address, and name are sent to PostHog only after you grant analytics consent; being signed in is not by itself treated as consent. If you decline, nothing is sent at all.
+
+Referral and campaign attribution (`vr_referral`) is written only after you grant marketing consent, and is removed if you withdraw it.
+
+Functional preferences (`theming`, `sidebar_state`) are written only after you grant functional consent. If you decline, those settings still work for the current session but are not remembered when you return.
 
 ### How Consent Works in the App
 

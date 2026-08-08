@@ -1,5 +1,20 @@
 export const PREVIEW_API_KEY_PLACEHOLDER = 'YOUR_PREVIEW_API_KEY'
 
+/**
+ * CDN URL for the `@vctrl/embed` UMD build used by the generated SDK snippet.
+ *
+ * This used to point at `cdn.vectreal.com`, a host that has never existed - no
+ * DNS record for it is provisioned in `terraform/cloudflare.tf` and nothing
+ * uploads build output to a CDN. The UMD bundle only ever ships inside the npm
+ * tarball, so the snippet serves it from an npm CDN instead.
+ *
+ * Deliberately unversioned: unpkg resolves the bare specifier to the latest
+ * published version, so there is no version here to drift out of step with
+ * `packages/embed/package.json`.
+ */
+export const EMBED_SDK_CDN_URL =
+	'https://unpkg.com/@vctrl/embed/vectreal-embed.umd.js'
+
 export const EMBED_COPY = {
 	unavailableUntilSaved:
 		'Embedding is unavailable until this scene is saved and linked to a project.',
@@ -92,7 +107,7 @@ export function buildSdkEmbedSnippet(options: EmbedSnippetOptions): string {
 	const height = options.height?.trim() || DEFAULT_HEIGHT
 
 	return `<!-- 1. Include the SDK (or: npm install @vctrl/embed) -->
-<script src="https://cdn.vectreal.com/embed/latest/vectreal-embed.umd.js"></script>
+<script src="${EMBED_SDK_CDN_URL}"></script>
 
 <!-- 2. Your iframe -->
 <div style="width: ${width}; max-width: 100%; height: ${height};">
@@ -107,7 +122,9 @@ export function buildSdkEmbedSnippet(options: EmbedSnippetOptions): string {
 
 <!-- 3. Control it -->
 <script>
-  const embed = new VectrealEmbed(
+  // The UMD build exposes named exports on the global, so the class is
+  // reached as VectrealEmbed.VectrealEmbed.
+  const embed = new VectrealEmbed.VectrealEmbed(
     document.getElementById('vectreal-scene')
   )
 

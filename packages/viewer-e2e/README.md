@@ -18,7 +18,7 @@ regression that unit tests and Storybook miss:
 1. Boots an ephemeral [Verdaccio](https://verdaccio.org/) registry that proxies
    npmjs for transitive deps (`src/registry/config.yaml`).
 2. Builds and publishes `@vctrl/core`, `@vctrl/hooks`, and `@vctrl/viewer` to it
-   via `nx run <pkg>:copy-md` + `npm publish`.
+   via `nx run <pkg>:copy-md` + `pnpm publish`.
 3. Scaffolds a throwaway Vite + React consumer app from `src/consumer-template`
    into a temp dir and `npm install`s `@vctrl/viewer` (plus peer deps) **from
    the local registry** (no monorepo path aliases, the real tarball).

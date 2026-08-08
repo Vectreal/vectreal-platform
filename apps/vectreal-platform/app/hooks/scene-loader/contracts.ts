@@ -114,6 +114,13 @@ export interface SceneRouteSyncState {
 	sceneMeta: null | SceneMetaState
 	initialSceneAggregate: null | SceneManifestResponse
 	lastSavedSceneId: string | null
+	/**
+	 * True while returning from the sign-in round trip with a persisted draft to
+	 * restore. The draft's own hydration re-applies the model, meta and
+	 * optimization state but not the viewer settings, so the params sync must not
+	 * reset those atoms out from under it.
+	 */
+	shouldRestorePendingDraft: boolean
 }
 
 export interface SceneRouteSyncActions {

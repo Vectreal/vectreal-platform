@@ -33,12 +33,14 @@ The main Vectreal Platform application — a full-stack React Router v7 app with
 # 1. Install dependencies (from repo root)
 pnpm install
 
-# 2. Copy and configure environment
-cp ../../.env.development.example ../../.env.development
+# 2. Copy and configure environment (paths are relative to the repo root)
+cp .env.development.example .env.development
 # Edit .env.development — see "Environment variables" below
 
 # 3. Start local Supabase
-pnpm supabase start
+# The Supabase project lives at apps/vectreal-platform/supabase/, so use the Nx
+# target: the CLI would not find config.toml from the repo root.
+pnpm nx run vectreal-platform:supabase-start
 
 # 4. Apply migrations
 pnpm nx run vectreal-platform:supabase-db-reset
@@ -60,7 +62,8 @@ See [`../../.env.development.example`](../../.env.development.example) for the f
 | `SUPABASE_KEY`        | Supabase anon key (from `supabase status`)          |
 | `SUPABASE_SECRET_KEY` | Supabase service-role key, used server-side for the `assets` storage bucket |
 | `DATABASE_URL`        | PostgreSQL connection string                        |
-| `CSRF_SECRET`         | Long random string for CSRF token signing           |
+| `SEND_EMAIL_HOOK_SECRET` | Auth email hook secret (`v1,whsec_<base64>`); ships blank and Supabase will not start without it |
+| `CSRF_SECRET`         | Long random string for CSRF token signing. Not in the example file and optional locally (falls back to a dev value); required in production |
 
 ---
 
@@ -68,11 +71,12 @@ See [`../../.env.development.example`](../../.env.development.example) for the f
 
 ```text
 app/
-├── routes/                  # React Router routes (file-based config in routes.tsx)
+├── routes/                  # Route modules; the route tree is declared explicitly in app/routes.tsx
 │   ├── docs/                # MDX documentation pages
 │   ├── dashboard-page/      # Authenticated dashboard
 │   ├── publisher-page/      # 3D model publisher
-│   ├── preview-page/        # Embeddable scene viewer
+│   ├── embed-page/          # External embeds, preview API key auth only
+│   ├── preview-page/        # Internal preview, session auth, reached from the dashboard
 │   ├── onboarding-page/     # First-run onboarding wizard
 │   ├── layouts/             # Layout wrappers (nav, dashboard, docs, signin, mdx)
 │   └── api/                 # Server-only API routes (auth, billing, scenes, consent, contact, theme)
@@ -85,7 +89,7 @@ app/
 ├── db/
 │   ├── schema/              # Drizzle schema definitions
 │   └── client.ts            # Drizzle DB client
-└── styles/                  # CSS modules (global, MDX prose, etc.)
+└── styles/                  # mdx.module.css (MDX prose); global CSS comes from @shared/components
 ```
 
 ---
@@ -151,13 +155,14 @@ See the [Deployment docs](https://vectreal.com/docs/operations/deployment) or [`
 
 ## Onboarding
 
-New users are redirected to `/onboarding` after their first sign-in. The onboarding wizard walks through:
+New users are redirected to `/onboarding` after their first sign-in. The wizard is a four-step profile questionnaire, not a product tour, and every step is skippable:
 
-1. Platform welcome + beta QA checklist
-2. Uploading a model in the Publisher
-3. Optimizing and configuring the scene
-4. Managing scenes in the Dashboard
-5. Publishing and embedding
+1. Role (`role`)
+2. Intended use case (`useCase`)
+3. Team or company name (`companyName`)
+4. Referral source (`referralSource`)
+
+Steps are defined in `app/routes/onboarding-page/onboarding-steps.tsx`.
 
 ---
 

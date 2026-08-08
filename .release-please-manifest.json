@@ -1,7 +1,7 @@
 {
-	".": "0.24.1",
-	"packages/core": "0.24.1",
-	"packages/hooks": "0.24.1",
-	"packages/viewer": "0.24.1",
-	"packages/embed": "0.24.1"
+	".": "0.25.0",
+	"packages/core": "0.25.0",
+	"packages/hooks": "0.25.0",
+	"packages/viewer": "0.25.0",
+	"packages/embed": "0.25.0"
 }

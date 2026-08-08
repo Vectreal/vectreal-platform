@@ -82,9 +82,9 @@ This is the lever, and Vectreal gives you a full keyboard for it.
 | Section | What it does | Where the visitor feels it |
 |---|---|---|
 | Camera Manager | Save multiple named cameras per scene; switch between them at runtime. | "Oh, there are presets - I can see different angles." |
-| Camera Settings | Per-camera field of view (20°–120°). | The whole composition. Wide vs. tight. |
+| Camera Settings | Per-camera field of view: Wide (90°), Standard (60°), Telephoto (35°). | The whole composition. Wide vs. tight. |
 | Camera Transition | How switching to a camera animates: Instant, Linear, or Smart. | The moment between angles. Feels professional or jittery. |
-| Camera Controls | Zoom on/off, auto-rotate on/off, speeds, vertical limit. | Whether dragging the model feels good. |
+| Interaction | Zoom on/off, auto-rotate on/off, speeds, vertical limit. A separate sidebar tool from Camera. | Whether dragging the model feels good. |
 
 These four panels, working together, are the difference between "loaded a 3D file" and "shipped a presentation."
 
@@ -146,16 +146,17 @@ If you only had time to set up one extra camera, **set up Hero**. The first fram
    Crop: Three equal-width tiles in a single image, 1200x600 final.
    Output: /public/assets/images/newsroom/05/03-fov-comparison.jpeg */}
 
-The Vectreal Publisher exposes **field of view from 20° to 120°**, set per camera. This number is doing more work than most teams realize.
+The Vectreal Publisher exposes **three per-camera field-of-view presets**. This number is doing more work than most teams realize.
 
-| FOV | Feel | Best for |
+| Preset | Feel | Best for |
 |---|---|---|
-| 20°–35° | Tight, telephoto. Compresses depth. Distortion-free at edges. | Product close-ups; detail shots; when you want the silhouette to read flat and graphic. |
-| 40°–60° | Natural. The default range. | Hero shots; most product photography; architectural exteriors at distance. |
-| 65°–85° | Wide. Begins to distort straight lines at the edges. | Architectural interiors; immersive scenes; when you want the visitor to feel inside the model. |
-| 90°–120° | Very wide. Strong edge distortion. | Establishing shots; specific stylistic effects (game cameras, VR feel). |
+| Telephoto (35°) | Tight. Compresses depth. Distortion-free at edges. | Product close-ups; detail shots; when you want the silhouette to read flat and graphic. |
+| Standard (60°) | Natural. The default. | Hero shots; most product photography; architectural exteriors at distance. |
+| Wide (90°) | Wide. Begins to distort straight lines at the edges. | Architectural interiors; immersive scenes; when you want the visitor to feel inside the model. |
 
-A common mistake is leaving every camera at the same FOV. **Vary it deliberately:** Hero at 50°, Detail at 30° (tighter, less distortion on close geometry), Context at 70° (slightly wider to show scale).
+A common mistake is leaving every camera on the same preset. **Vary it deliberately:** Standard for the hero, Telephoto for detail shots, Wide for context.
+
+If you need an arbitrary angle rather than one of the three, set `fov` per camera through `cameraOptions` in [`@vctrl/viewer`](/docs/packages/viewer); the Publisher UI only offers the presets.
 
 ---
 
@@ -205,7 +206,7 @@ A cut. No animation. The camera teleports to the new position on the next frame.
 
 #### Linear
 
-The default. The camera lerps from its current position to the saved camera in a configurable duration (0–5000 ms) with a configurable easing curve.
+The default. The camera lerps from its current position to the saved camera over a chosen duration with a configurable easing curve. The Publisher offers three durations: Instant (0 ms), Quick (500 ms) and Slow (2000 ms).
 
 **Easing options:**
 
@@ -216,7 +217,7 @@ The default. The camera lerps from its current position to the saved camera in a
 | Ease Out | Fast start, slow end. | Arrival into a hero shot - gives the destination weight. |
 | Smooth (ease_in_out) | Slow start, slow end, fast middle. | Almost always the right answer for camera moves. |
 
-The default duration is **1000 ms** (one second). For most product scenes that's the right number. Bump to 1500–2000 ms for architectural interiors where the visitor needs more time to read the new space. Drop below 500 ms and the move starts to feel rushed.
+Scenes default to **1000 ms** (one second), which is what a saved scene carries until you pick a preset. For most product scenes that's the right number. Reach for Slow (2000 ms) on architectural interiors where the visitor needs more time to read the new space; Instant (0 ms) cuts with no animation at all.
 
 #### Smart (object_avoidance)
 
@@ -255,8 +256,8 @@ Two toggles and a handful of sliders, but each one shifts how the embed feels in
 |---|---|---|
 | Enable Zoom | on/off | Whether scroll-zoom is allowed. Off for kiosks. On for everything else. |
 | Auto Rotate | on/off | Whether the camera spins idly when the visitor is not interacting. Useful for marketing pages where the embed is in the visitor's peripheral vision. |
-| Rotation Speed | 0.1–10 | Auto-rotate speed. **Default 1.0.** Above 3 starts to feel showroom-spinny. |
-| Movement Smoothness | 0.01–1 | Damping factor - how quickly the camera decelerates after the visitor lets go. Lower = floatier. Higher = snappier. |
+| Rotation Speed | 0.1–10 | Auto-rotate speed. **Default 0.25.** Above 3 starts to feel showroom-spinny. |
+| Movement Feel | Floaty / Balanced / Snappy | Damping preset - how quickly the camera decelerates after the visitor lets go. Floaty drifts; Snappy stops short. |
 | Zoom Speed | 0.1–5 | Scroll-zoom step size. |
 | Orbit Speed | 0.1–3 | Drag-rotation speed. |
 | Pan Speed | 0.1–3 | Right-click pan speed. |
@@ -272,16 +273,16 @@ You can think of all of the above as a kit, and reach into it differently depend
 
 #### E-commerce product (single object on a "stage")
 
-**Cameras:** Hero (3/4 front, FOV 50°), Detail (closeup of the most-photographed feature, FOV 30°), Context (pulled back, FOV 60°).
-**Transitions:** Linear, Smooth easing, 1000 ms.
-**Controls:** Zoom on. Auto-rotate **off** (it competes with intentional product photography). Vertical Limit 90°. Movement Smoothness 0.1 for a soft-floating feel.
+**Cameras:** Hero (3/4 front, Standard 60°), Detail (closeup of the most-photographed feature, Telephoto 35°), Context (pulled back, Wide 90°).
+**Transitions:** Linear, Smooth easing, Quick (500 ms).
+**Controls:** Zoom on. Auto-rotate **off** (it competes with intentional product photography). Vertical Limit 90°. Movement Feel: Balanced.
 
 The visitor lands on Hero, can drag to inspect, can switch to Detail to see the feature that closes the sale.
 
 #### Architectural interior
 
-**Cameras:** Entry (wide, FOV 75°), Living Area (FOV 60°), Detail (FOV 40° on a finish or fixture).
-**Transitions:** Smart, with Path Height 3, Obstacle Margin 2, Path Smoothness 32. Duration 1500–2000 ms - interiors need time to read.
+**Cameras:** Entry (Wide 90°), Living Area (Standard 60°), Detail (Telephoto 35° on a finish or fixture).
+**Transitions:** Smart, with Path Height 3, Obstacle Margin 2, Path Smoothness 32. Duration Slow (2000 ms) - interiors need time to read.
 **Controls:** Zoom on. Auto-rotate off. Pan on. Vertical Limit 100° to allow looking slightly down at floor finishes.
 
 Smart transitions are doing real work here - without them, switching between cameras inside a building cuts straight through walls.
@@ -289,7 +290,7 @@ Smart transitions are doing real work here - without them, switching between cam
 #### Guided product demo (presentation mode)
 
 **Cameras:** an ordered tour - `01 - Open`, `02 - Top`, `03 - Inside`, `04 - Detail`, `05 - Closeout`. Each numbered for predictable iteration.
-**Transitions:** Linear or Smart depending on geometry. Smooth easing. **Duration 1500 ms** to give each step room to breathe.
+**Transitions:** Linear or Smart depending on geometry. Smooth easing. **Duration Slow (2000 ms)** to give each step room to breathe.
 **Controls:** Zoom off. Auto-rotate off. Pan off. The visitor's job is to **press Next**, not to free-fly.
 
 This is the layout that turns a 3D embed into a slide deck. Combined with a few buttons in your surrounding UI to trigger camera switches, it becomes a presentation people watch start to finish.
@@ -310,7 +311,7 @@ If you have shipped a Vectreal scene and want to upgrade it before doing anythin
 1. Open the scene in the Publisher.
 2. Frame a Hero camera. Save it. Rename it. Set FOV to 50°.
 3. Set Vertical Limit to 90°.
-4. Set transition to Linear, Smooth easing, 1000 ms.
+4. Set transition to Linear, Smooth easing, Quick (500 ms).
 5. Re-publish.
 
 That's it. Five minutes. The first frame is now intentional, the visitor cannot fall through the floor, and any future camera switch animates instead of teleporting. The visible quality jump is significant.

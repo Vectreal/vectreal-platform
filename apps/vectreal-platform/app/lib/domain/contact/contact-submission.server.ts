@@ -152,7 +152,7 @@ function fireEvent(
 	const posthog = (context as PostHogContext).posthog
 	const distinctId =
 		request.headers.get('X-POSTHOG-DISTINCT-ID') ?? 'contact-anonymous'
-	captureServerEvent(posthog, distinctId, event)
+	captureServerEvent(posthog, request, distinctId, event)
 }
 
 export async function submitContactForm(args: {

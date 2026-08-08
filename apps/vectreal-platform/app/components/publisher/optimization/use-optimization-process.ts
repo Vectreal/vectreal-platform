@@ -72,12 +72,24 @@ export const useOptimizationProcess = () => {
 			setOptimizationRuntime
 		)
 
+	// `optimizedSceneBytes` only ever describes a pass run in this browser
+	// session, and reopening a saved scene explicitly nulls it during hydration -
+	// so on its own it answered "did you optimize in this tab" rather than "is
+	// this scene optimized". `appliedOptimizations` is the persisted signal, and
+	// it accrues only from real optimization operations (a publish-time Draco
+	// repack never touches it), so a scene that was uploaded and published but
+	// never optimized still reads as false.
+	const hasCompletedOptimizationPass =
+		typeof optimizationRuntime.optimizedSceneBytes === 'number' ||
+		(latestSceneStats?.appliedOptimizations?.length ?? 0) > 0
+
 	const runPass = useCallback(
 		async (fromOriginal: boolean): Promise<boolean> => {
 			if (isPending || isPreparing || !isReady) return false
 
 			const { documentChanged, dracoReport } = await runOptimizationPass({
 				fromOriginal,
+				documentMayBeOptimized: hasCompletedOptimizationPass,
 				optimizations: plannedOptimizations,
 				steps: stepsController,
 				model: {
@@ -110,6 +122,7 @@ export const useOptimizationProcess = () => {
 			isPending,
 			isPreparing,
 			isReady,
+			hasCompletedOptimizationPass,
 			plannedOptimizations,
 			stepsController,
 			reset,
@@ -175,17 +188,30 @@ export const useOptimizationProcess = () => {
 		isInitialMetricsHydrating: resolvedMetrics.isInitialMetricsHydrating
 	}
 
-	// Measured, not projected — and only when simplification was actually asked
-	// for, since otherwise there is no target to compare against.
+	// Keyed on what the displayed run actually did, not on the settings currently
+	// staged for the next one. `plannedOptimizations` is the live atom the preset
+	// cards and the advanced panel write, and the results panel renders beside
+	// both, so gating on it made an already-finished result restate itself: flip
+	// mesh reduction on and an untouched triangle count started reading as a
+	// failed reduction, pick a preset after a simplifying pass and the reduction
+	// that just happened disappeared. The persisted stats carry the answer for a
+	// reopened scene, whose in-memory report has no applied steps of its own.
+	const didSimplify =
+		(report?.appliedOptimizations?.includes('simplification') ?? false) ||
+		(latestSceneStats?.appliedOptimizations?.includes('simplification') ??
+			false)
+
+	// Measured, not projected. The ratio is still read from the live settings as
+	// the "requested" figure to compare against.
 	const simplificationOutcome = useMemo(
 		() =>
-			plannedOptimizations.simplification?.enabled
+			didSimplify
 				? resolveSimplificationOutcome(
 						report,
-						plannedOptimizations.simplification.ratio
+						plannedOptimizations.simplification?.ratio
 					)
 				: null,
-		[report, plannedOptimizations.simplification]
+		[report, didSimplify, plannedOptimizations.simplification]
 	)
 
 	return {
@@ -203,8 +229,7 @@ export const useOptimizationProcess = () => {
 		isOptimizerPreparing: isPreparing,
 		isOptimizerReady: isReady,
 		hasImproved: resolvedMetrics.hasImproved,
-		hasCompletedOptimizationPass:
-			typeof optimizationRuntime.optimizedSceneBytes === 'number',
+		hasCompletedOptimizationPass,
 		sizeInfo,
 		optimizingStep,
 		handleOptimizeClick,

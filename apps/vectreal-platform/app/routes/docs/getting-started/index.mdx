@@ -6,10 +6,10 @@ This section walks you through setting up the Vectreal Platform monorepo locally
 
 | Tool | Version | Notes |
 |---|---|---|
-| Node.js | 18 or later | LTS recommended |
-| pnpm | 9 or later | Used as the workspace package manager |
+| Node.js | 21 or later | Required by `engines` in the root `package.json` |
+| pnpm | 10 or later | Pinned via `packageManager` in the root `package.json` |
 | Docker | Latest | Required for the local Supabase stack |
-| Supabase CLI | Latest | `npm i -g supabase` |
+| Supabase CLI | Bundled | Installed by `pnpm install`; a global install is not supported |
 
 ## Repository structure
 
@@ -19,11 +19,12 @@ vectreal-platform/
 ├── packages/
 │   ├── viewer/               # @vctrl/viewer
 │   ├── hooks/                # @vctrl/hooks
-│   └── core/                 # @vctrl/core
+│   ├── core/                 # @vctrl/core
+│   └── embed/                # @vctrl/embed
 ├── shared/
 │   ├── components/           # Shared UI component library
 │   └── utils/                # Shared utilities
-└── terraform/                # Infrastructure as code (GCP)
+└── terraform/                # Infrastructure as code (Cloudflare)
 ```
 
 ## Next steps

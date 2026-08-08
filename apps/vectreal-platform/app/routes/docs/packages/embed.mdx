@@ -10,11 +10,13 @@ Framework-agnostic JavaScript SDK for controlling Vectreal embedded previews fro
 npm install @vctrl/embed
 ```
 
-**CDN (UMD):**
+**CDN (UMD):** the package ships a UMD build that any npm CDN can serve. The entry point uses named exports, so the global is a namespace object and the class is reached as `VectrealEmbed.VectrealEmbed`.
 
 ```html
-<script src="https://cdn.vectreal.com/embed/latest/vectreal-embed.umd.js"></script>
+<script src="https://unpkg.com/@vctrl/embed/vectreal-embed.umd.js"></script>
 ```
+
+For production, pin a version (`@vctrl/embed@<version>`) and add a Subresource Integrity hash for it.
 
 ---
 

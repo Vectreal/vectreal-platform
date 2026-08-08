@@ -10,6 +10,8 @@ import { startTransition } from 'react'
 import { hydrateRoot } from 'react-dom/client'
 import { HydratedRouter } from 'react-router/dom'
 
+import { readConsentCookie } from './lib/consent/consent-cookie'
+
 if (
 	!import.meta.env.DEV ||
 	import.meta.env.VITE_PUBLIC_POSTHOG_ENABLED === 'true'
@@ -21,15 +23,35 @@ if (
 		defaults: '2026-01-30',
 		// Add tracing headers so server-side middleware can correlate events.
 		__add_tracing_headers: [window.location.host, 'localhost'],
-		// Start in memory-only mode - no cookies or localStorage until the user
-		// grants analytics consent. Basic anonymous traffic (pageviews) is still
-		// captured without storing anything on the device (DSGVO-compliant).
-		// ConsentProvider switches persistence to 'localStorage+cookie' once the
-		// user accepts analytics.
+		// Nothing is sent to PostHog until the user grants analytics consent.
+		// posthog-js defaults `opt_out_capturing_by_default` to false, which would
+		// leave capturing live from init: on a first visit ConsentProvider has no
+		// decision to apply yet, so it never calls opt_out_capturing() and events
+		// would flow before the banner is answered. Opting out here is what makes
+		// the "only after you opt in" promise in the privacy policy true.
+		opt_out_capturing_by_default: true,
+		// Memory-only until consent, so nothing is written to the device either.
+		// ConsentProvider switches persistence to 'localStorage+cookie' and calls
+		// opt_in_capturing() once the user accepts analytics.
 		persistence: 'memory',
 		capture_pageview: false
 	})
 	posthog.register({ client_type: 'web' })
+
+	// Apply stored consent synchronously, before hydration.
+	//
+	// ConsentProvider also applies consent, but from an effect, and PageViewTracker
+	// is a sibling that mounts ahead of it in root.tsx - so its first `$pageview`
+	// would fire while still opted out and be dropped. That would cost returning
+	// consenters the landing pageview of every full page load. The cookie is
+	// readable right here, so there is no reason to wait for React.
+	//
+	// Only ever opts IN: with no cookie, or analytics declined, the opt-out above
+	// stands. ConsentProvider stays responsible for reacting to changes.
+	if (readConsentCookie()?.choices.analytics) {
+		posthog.set_config({ persistence: 'localStorage+cookie' })
+		posthog.opt_in_capturing()
+	}
 
 	// Expose posthog globally so ConsentProvider can call opt_in/opt_out
 	// without importing posthog-js directly in every component.

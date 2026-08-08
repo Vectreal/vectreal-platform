@@ -186,7 +186,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 	if (authData?.user && authData.session) {
 		const posthog = (context as PostHogContext).posthog
-		captureServerEvent(posthog, authData.user.id, {
+		captureServerEvent(posthog, request, authData.user.id, {
 			name: 'user_signed_in',
 			props: { method: 'email' }
 		})
