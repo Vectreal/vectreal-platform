@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.25.1](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.25.0...hooks-v0.25.1) (2026-08-08)
+
+
+### Bug Fixes
+
+* **core:** keep the pristine baseline when syncing the worker's output ([a2e5654](https://github.com/Vectreal/vectreal-platform/commit/a2e5654f6a2acd8dc95cb2e9dace3c32436fc826))
+* **publisher:** stale scene state across navigation and nonsensical optimization stats ([4152ab1](https://github.com/Vectreal/vectreal-platform/commit/4152ab146770f86930a53b892900978a163ae167))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 0.25.1
+
 ## [0.25.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.24.1...hooks-v0.25.0) (2026-08-04)
 
 
