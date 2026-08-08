@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.25.1](https://github.com/Vectreal/vectreal-platform/compare/embed-v0.25.0...embed-v0.25.1) (2026-08-08)
+
+
+### Miscellaneous Chores
+
+* **embed:** Synchronize vectreal-monorepo versions
+
 ## [0.25.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v0.24.1...embed-v0.25.0) (2026-08-04)
 
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.25.1](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.25.0...workspace-v0.25.1) (2026-08-08)
+
+
+### Bug Fixes
+
+* **core:** keep the pristine baseline when syncing the worker's output ([a2e5654](https://github.com/Vectreal/vectreal-platform/commit/a2e5654f6a2acd8dc95cb2e9dace3c32436fc826))
+* **publisher:** base the optimization result on the post-texture export ([310a10c](https://github.com/Vectreal/vectreal-platform/commit/310a10cbb7c4fc800c57899814156fdee2a8eb89))
+* **publisher:** clear every atom the scene owns on reset ([a41d618](https://github.com/Vectreal/vectreal-platform/commit/a41d6182bc623bc4e77b76e5e005332cc5107af2))
+* **publisher:** describe the run that happened, not the one staged next ([5de7e23](https://github.com/Vectreal/vectreal-platform/commit/5de7e238ebfbbd2078fc10bbdb0325396790aa66))
+* **publisher:** let the original-scene snapshot be retried after a failure ([135544a](https://github.com/Vectreal/vectreal-platform/commit/135544a5eeab96d78f3715af5aaabcd1b474960a))
+* **publisher:** reset scene state when landing fresh on the base route ([78697ce](https://github.com/Vectreal/vectreal-platform/commit/78697ce56b953823cd2c7a4f5444c7edb227f325))
+* **publisher:** show re-apply based on the scene, not the session ([92555b5](https://github.com/Vectreal/vectreal-platform/commit/92555b5e82b72bb19968bb7e3967ee19847a5b26))
+* **publisher:** stale scene state across navigation and nonsensical optimization stats ([4152ab1](https://github.com/Vectreal/vectreal-platform/commit/4152ab146770f86930a53b892900978a163ae167))
+* **publisher:** start a dropped model from empty scene meta ([8fc4d9d](https://github.com/Vectreal/vectreal-platform/commit/8fc4d9d20bc2ee1eb72f31cbc136520c15fba27e))
+
 ## [0.25.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.24.1...workspace-v0.25.0) (2026-08-04)
 
 
