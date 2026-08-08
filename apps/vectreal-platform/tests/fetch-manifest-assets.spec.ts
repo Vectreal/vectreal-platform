@@ -47,7 +47,7 @@ describe('fetchManifestAssetData', () => {
 		}
 
 		const fractions: number[] = []
-		let resolveUnsized: (value?: any) => void = () => {}
+		let resolveUnsized: () => void = () => {}
 
 		vi.stubGlobal('fetch', vi.fn((url: string) => {
 			if (url.includes('sized')) {

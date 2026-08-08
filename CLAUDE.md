@@ -18,7 +18,8 @@ pnpm nx lint vectreal-platform
 pnpm nx affected --target=lint          # only affected projects
 
 # Tests
-pnpm nx test vectreal-platform          # run all tests for the platform app
+pnpm nx test vectreal-platform          # unit tests (coverage always written to coverage/)
+pnpm nx run vectreal-platform:test-integration  # DB integration tests; needs `pnpm supabase start`
 pnpm nx affected --target=test          # only affected projects
 
 # Type-check
