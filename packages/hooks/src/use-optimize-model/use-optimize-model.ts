@@ -212,10 +212,24 @@ const useOptimizeModel = () => {
 	 * instance before the report is built.
 	 */
 	const loadFromGlbBuffer = useCallback(
-		async (buffer: Uint8Array, meta?: WorkerResultMeta): Promise<void> => {
+		async (
+			buffer: Uint8Array,
+			meta?: WorkerResultMeta,
+			options?: { preserveBaseline?: boolean }
+		): Promise<void> => {
 			dispatch({ type: 'LOAD_START' })
 			try {
+				// Explicit rather than inferred from `meta`: this is also the
+				// fresh-model load path, where re-deriving the baseline is correct.
+				const baseline = options?.preserveBaseline
+					? optimizerRef.current.getBaseline()
+					: null
+
 				await optimizerRef.current.loadFromBuffer(buffer)
+
+				if (baseline) {
+					optimizerRef.current.setBaseline(baseline)
+				}
 
 				// Always written, never conditionally: this optimizer instance is
 				// long-lived, so a load without meta (a fresh model, or a plain byte

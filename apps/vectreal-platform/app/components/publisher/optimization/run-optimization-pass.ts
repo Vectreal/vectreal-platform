@@ -36,6 +36,13 @@ export interface OptimizationPassDeps {
 	 * another pass on the current state.
 	 */
 	fromOriginal: boolean
+	/**
+	 * Whether the current document may already carry optimizations, so falling
+	 * back to it is a meaningful difference worth telling the user about. False
+	 * for a first pass on a fresh upload, where the current document *is* the
+	 * pristine original and the IDB snapshot is merely still being written.
+	 */
+	documentMayBeOptimized?: boolean
 	optimizations: Optimizations
 	steps: OptimizationStepsController
 	model: {
@@ -46,7 +53,8 @@ export interface OptimizationPassDeps {
 			meta: {
 				appliedOptimizations: string[]
 				dracoReport?: DracoCompressionReport
-			}
+			},
+			options?: { preserveBaseline?: boolean }
 		) => Promise<unknown>
 		getModel: () => Promise<Uint8Array | null | undefined>
 		texturesOptimization: (options: Optimizations['texture']) => Promise<unknown>
@@ -202,10 +210,18 @@ async function runGeometryPhase(
 	// when the texture phase starts.
 	steps.begin(LOAD_GEOMETRY_STEP)
 	await withTimeout(
-		model.loadFromGlbBuffer(result.buffer, {
-			appliedOptimizations: result.appliedOptimizations,
-			dracoReport: result.dracoReport
-		}),
+		model.loadFromGlbBuffer(
+			result.buffer,
+			{
+				appliedOptimizations: result.appliedOptimizations,
+				dracoReport: result.dracoReport
+			},
+			// A sync of the worker's output, not a load of a new model. Without
+			// this the baseline is re-derived from the already-optimized buffer,
+			// so every `before` in the report equals its `after` and the panel
+			// claims mesh reduction achieved 0% however well it actually did.
+			{ preserveBaseline: true }
+		),
 		MODEL_SYNC_TIMEOUT_MS,
 		'Worker result sync'
 	)
@@ -253,7 +269,14 @@ async function runTexturePhase(deps: OptimizationPassDeps): Promise<boolean> {
 export async function runOptimizationPass(
 	deps: OptimizationPassDeps
 ): Promise<OptimizationPassResult> {
-	const { fromOriginal, optimizations, steps, model, setRuntime } = deps
+	const {
+		fromOriginal,
+		documentMayBeOptimized,
+		optimizations,
+		steps,
+		model,
+		setRuntime
+	} = deps
 
 	// Clear the previous pass's Draco measurement up front — this run may not
 	// include Draco at all, and a stale report would keep advertising a saving
@@ -277,9 +300,24 @@ export async function runOptimizationPass(
 				model.reset()
 				await model.loadFromServerSceneData(original.sceneData)
 			} else {
+				// The pristine original is only written to IDB for freshly uploaded
+				// scenes, so a scene reopened from the server has none. Re-applying
+				// would silently stack a second pass on the already-optimized
+				// document instead of starting over, and the numbers it reported
+				// would be measured against the wrong baseline. Say so rather than
+				// letting the result quietly mean something else.
 				console.warn(
 					'[optimization] No original scene in IDB; optimizing from current document state.'
 				)
+				// Only when falling back actually changes the meaning of the result.
+				// On a first pass the snapshot write races the optimizer becoming
+				// ready, so a missing record there means the document is still the
+				// pristine upload and this pass is starting over after all.
+				if (documentMayBeOptimized) {
+					toast.info(
+						'The original upload is not available in this session, so this pass builds on the current model instead of starting over.'
+					)
+				}
 			}
 		}
 

@@ -92,11 +92,23 @@ export const OptimizationResults: FC<OptimizationResultsProps> = ({
 					</MetricRow>
 				) : null}
 
+				{/*
+				  Mesh simplification is the only step that changes the triangle
+				  count, and it is off in every shipped preset, so a before/after pair
+				  here reads as a failed reduction when nothing was ever asked to
+				  reduce. Show the plain count unless simplification actually ran.
+				*/}
 				<MetricRow label="Triangles">
-					<BeforeAfter
-						before={formatCount(resolvedMetrics.primitives.initial)}
-						after={formatCount(resolvedMetrics.primitives.current)}
-					/>
+					{simplificationOutcome ? (
+						<BeforeAfter
+							before={formatCount(resolvedMetrics.primitives.initial)}
+							after={formatCount(resolvedMetrics.primitives.current)}
+						/>
+					) : (
+						<span className="text-muted-foreground">
+							{formatCount(resolvedMetrics.primitives.current)}
+						</span>
+					)}
 				</MetricRow>
 
 				{/*

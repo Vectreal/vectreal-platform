@@ -1,5 +1,4 @@
 import { atom } from 'jotai'
-import { atomWithStorage } from 'jotai/utils'
 import { selectAtom } from 'jotai/utils'
 import { createStore } from 'jotai/vanilla'
 
@@ -25,10 +24,12 @@ const sceneMetaInitialState: SceneMetaState = {
 	thumbnailUrl: ''
 }
 const processAtom = atom<ProcessState>(processInitialState)
-const sceneMetaAtom = atomWithStorage<SceneMetaState>(
-	'publisher-scene-meta',
-	sceneMetaInitialState
-)
+// Deliberately not persisted. `atomWithStorage` bought nothing here: the
+// `publisherConfigStore.set` below runs at module evaluation and wipes the key
+// before any render, so nothing ever survived a reload anyway. What it did buy
+// was a cross-tab hazard, since a second publisher tab's module evaluation
+// fires a storage event that blanks the first tab's name and thumbnail mid-edit.
+const sceneMetaAtom = atom<SceneMetaState>(sceneMetaInitialState)
 
 // Last-saved baselines - persisted in Jotai atoms (not React state) so they
 // survive route transitions within the same publisher session without remounting.

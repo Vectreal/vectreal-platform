@@ -91,8 +91,11 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 	}, [isOverSizeLimit, maxSceneBytes, isPending, sizeInfo.currentSceneBytes])
 
 	const resolvedDashboardHref = dashboardHref ?? DASHBOARD_ROUTES.DASHBOARD
+	// Over the limit, "Continue to Composition" points away from the only action
+	// that unblocks saving, so an already-optimized scene that is still too large
+	// keeps the single-action layout and re-optimizing stays the primary CTA.
 	const shouldShowCompletionActions =
-		!isPending && hasCompletedOptimizationPass
+		!isPending && hasCompletedOptimizationPass && !isOverSizeLimit
 
 	return (
 		<DynamicSidebar
@@ -253,7 +256,7 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 									onOptimize={handleOptimizeClick}
 									onStackOptimize={handleStackOptimizeClick}
 									isPending={isPending}
-									mode="apply"
+									mode={hasCompletedOptimizationPass ? 'optimize-more' : 'apply'}
 									isPreparing={isOptimizerPreparing}
 								/>
 							</div>

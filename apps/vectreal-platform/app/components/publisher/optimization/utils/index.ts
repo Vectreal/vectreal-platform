@@ -7,4 +7,4 @@ export {
 } from './geometry-worker'
 export type { GeometryOptimizationResult } from './geometry-worker'
 
-export { useSceneSizeCalculator } from './scene-size'
+export { resolvePublishedSceneBytes, useSceneSizeCalculator } from './scene-size'

@@ -18,8 +18,13 @@ export const useSceneParamsSync = ({
 	routeState,
 	actions
 }: UseSceneParamsSyncArgs) => {
-	const { paramSceneId, sceneMeta, initialSceneAggregate, lastSavedSceneId } =
-		routeState
+	const {
+		paramSceneId,
+		sceneMeta,
+		initialSceneAggregate,
+		lastSavedSceneId,
+		shouldRestorePendingDraft
+	} = routeState
 	const {
 		resetSceneState,
 		setCurrentSceneId,
@@ -33,12 +38,33 @@ export const useSceneParamsSync = ({
 	} = actions
 
 	const setOptimizationModal = useSetAtom(optimizationModalAtom)
-	const previousParamSceneIdRef = useRef<null | string>(null)
+	// `undefined` means "this hook has not run yet", which `paramSceneId` can
+	// never be (it is `params.sceneId?.trim() || null`). Initializing to `null`
+	// instead made a fresh mount at bare /publisher indistinguishable from
+	// "already on the base route", so the reset below was skipped - and because
+	// the publisher's Jotai stores are module singletons that outlive the
+	// layout's unmount, a /publisher/<id> -> /dashboard -> /publisher round trip
+	// kept the previous scene's camera, environment and shadows.
+	const previousParamSceneIdRef = useRef<null | string | undefined>(undefined)
 
 	useEffect(() => {
 		const isNewUploadFlow = !paramSceneId && !initialSceneAggregate
-		const hasSceneChanged = previousParamSceneIdRef.current !== paramSceneId
-		const shouldResetForNewUpload = isNewUploadFlow && hasSceneChanged
+		const isFirstSync = previousParamSceneIdRef.current === undefined
+		// Deliberately keeps the original null baseline so every downstream use of
+		// `hasSceneChanged` (the hydration branch below, and `shouldInitializeScene`)
+		// behaves exactly as before. Only the reset decision consults `isFirstSync`.
+		const previousParamSceneId = isFirstSync
+			? null
+			: previousParamSceneIdRef.current
+		const hasSceneChanged = previousParamSceneId !== paramSceneId
+		// A first sync on bare /publisher needs the reset too: the stores may still
+		// hold the scene the user came from. The draft restore path also lands
+		// here, but its hydration re-applies only the model, meta and optimization
+		// state, so resetting would silently drop the user's compose work.
+		const shouldResetForNewUpload =
+			isNewUploadFlow &&
+			(hasSceneChanged || isFirstSync) &&
+			!shouldRestorePendingDraft
 
 		// Detect navigation to the scene that was just saved (null → newId after
 		// first save). In this case the save flow already established correct
@@ -120,6 +146,7 @@ export const useSceneParamsSync = ({
 		setCurrentSceneId,
 		lastSavedSceneId,
 		setLastSavedSceneId,
-		setOptimizationModal
+		setOptimizationModal,
+		shouldRestorePendingDraft
 	])
 }

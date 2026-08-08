@@ -58,10 +58,12 @@ import {
 } from '../lib/stores/publisher-config-store'
 import {
 	optimizationAtom,
+	optimizationInitialState,
 	optimizationRuntimeAtom,
 	optimizationRuntimeInitialState
 } from '../lib/stores/scene-optimization-store'
 import {
+	activeHotspotIdAtom,
 	bakedShadowSourceAtom,
 	boundsAtom,
 	cameraAtom,
@@ -71,6 +73,7 @@ import {
 	interactionsAtom,
 	normalizationAtom,
 	rawModelDiagonalAtom,
+	selectedCameraIdAtom,
 	shadowsAtom
 } from '../lib/stores/scene-settings-store'
 
@@ -242,6 +245,8 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 	const [normalization, setNormalization] = useAtom(normalizationAtom)
 	const setBakedShadowSource = useSetAtom(bakedShadowSourceAtom)
 	const setRawModelDiagonal = useSetAtom(rawModelDiagonalAtom)
+	const setSelectedCameraId = useSetAtom(selectedCameraIdAtom)
+	const setActiveHotspotId = useSetAtom(activeHotspotIdAtom)
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 
 	// Process state atom - use full atom access for reading and writing
@@ -389,6 +394,20 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setShadows(defaultShadowOptions)
 		setNormalization(defaultNormalizationOptions)
 		setHotspots([])
+		// Every atom the scene owns, not just the ones with a visible fallback.
+		// Each of these is absorbed downstream today (a dangling camera id misses
+		// and falls through to `initial`, a stale bake is skipped while shadows are
+		// off), so leaving them set is survivable rather than correct - and it puts
+		// the reset one defensive fallback away from leaking again.
+		setSelectedCameraId(
+			defaultCameraOptions.activeCameraId ??
+				defaultCameraOptions.cameras?.[0]?.cameraId ??
+				'default'
+		)
+		setActiveHotspotId(null)
+		setBakedShadowSource(null)
+		setRawModelDiagonal(0)
+		setOptimizationState(optimizationInitialState)
 		setSceneMetaState(sceneMetaInitialState)
 		setLastSavedSettings(null)
 		setLastSavedSceneMeta(null)
@@ -406,6 +425,11 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		setShadows,
 		setNormalization,
 		setHotspots,
+		setSelectedCameraId,
+		setActiveHotspotId,
+		setBakedShadowSource,
+		setRawModelDiagonal,
+		setOptimizationState,
 		setSceneMetaState,
 		setLastSavedSettings,
 		setLastSavedSceneMeta,
@@ -441,11 +465,17 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 					...currentSettings
 				})
 
+				// Replace rather than merge. A dropped file is a new unsaved scene
+				// (see setCurrentSceneId(null) above), so carrying the previous
+				// scene's description and thumbnailUrl forward is wrong twice over:
+				// the stale thumbnail stays on screen, and it also makes the save
+				// flow's `needsThumbnail` check false, so the previous scene's
+				// thumbnail asset gets persisted onto this one.
 				const initialSceneName = getSceneNameFromFileName(data.name)
-				setSceneMetaState((prev) => ({
-					...prev,
+				setSceneMetaState({
+					...sceneMetaInitialState,
 					name: initialSceneName
-				}))
+				})
 			}
 
 			setProcess((prev) => ({
@@ -550,7 +580,8 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		paramSceneId,
 		sceneMeta,
 		initialSceneAggregate,
-		lastSavedSceneId
+		lastSavedSceneId,
+		shouldRestorePendingDraft
 	}
 
 	const routeSyncActions = {
@@ -842,28 +873,40 @@ export function useSceneLoader(params: UseSceneLoaderParams | null = null) {
 		originalSavedRef.current = true
 
 		void (async () => {
-			const gltfJson = await prepareGltfRef.current()
-			if (!gltfJson || typeof gltfJson !== 'object') return
+			// The guard above is claimed before the write starts, so any failure
+			// path has to release it. Otherwise no original is ever stored for this
+			// upload and every later "Re-apply Preset" silently stacks instead of
+			// starting over, for the rest of the session.
+			try {
+				const gltfJson = await prepareGltfRef.current()
+				if (!gltfJson || typeof gltfJson !== 'object') {
+					originalSavedRef.current = false
+					return
+				}
 
-			const gltfData = (gltfJson as { data?: unknown }).data ?? gltfJson
-			const gltfAssets = (gltfJson as { assets?: unknown }).assets
-			const assetData = await serializeSceneAssetData(gltfData, gltfAssets)
+				const gltfData = (gltfJson as { data?: unknown }).data ?? gltfJson
+				const gltfAssets = (gltfJson as { assets?: unknown }).assets
+				const assetData = await serializeSceneAssetData(gltfData, gltfAssets)
 
-			const meta = sceneMetaRef.current
-			const settings = settingsRef.current
+				const meta = sceneMetaRef.current
+				const settings = settingsRef.current
 
-			const sceneData: ServerSceneData = {
-				meta: {
-					name: meta.name,
-					description: meta.description,
-					thumbnailUrl: meta.thumbnailUrl
-				},
-				gltfJson: gltfData as ServerSceneData['gltfJson'],
-				assetData,
-				...settings
+				const sceneData: ServerSceneData = {
+					meta: {
+						name: meta.name,
+						description: meta.description,
+						thumbnailUrl: meta.thumbnailUrl
+					},
+					gltfJson: gltfData as ServerSceneData['gltfJson'],
+					assetData,
+					...settings
+				}
+
+				await saveOriginalSceneModel({ sceneData })
+			} catch (error) {
+				originalSavedRef.current = false
+				console.warn('Failed to persist the original scene to IDB:', error)
 			}
-
-			await saveOriginalSceneModel({ sceneData })
 		})()
 	}, [optimizer?.isReady, paramSceneId, initialSceneAggregate])
 
