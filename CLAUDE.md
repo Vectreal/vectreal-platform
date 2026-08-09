@@ -126,6 +126,7 @@ Components are in `shared/components/src/ui/` (shadcn-based, Radix UI primitives
 - **Versioning**: Managed by Release Please. Do not use `nx release`. Use `workspace:*` for internal deps.
 - **Docs pages**: MDX files in `app/routes/docs/`. Adding a new page also requires a route in `app/routes.tsx` and an entry in the `docsPages` array in `app/lib/docs/docs-manifest.ts`, which is what `DocsTreeNav` renders.
 - **Server-only modules**: Files that must not be bundled client-side are named `*.server.ts`.
+- **Viewport height**: Size full-viewport surfaces with `h-dvh` / `min-h-dvh` — or `h-svh` where a shell owns the height and scrolls its own content, as `dashboard-layout.tsx` does. Never Tailwind's `screen` height utilities: they compile to `100vh`, the *large* viewport, which overhangs persistent mobile browser chrome — pushing bottom-anchored UI behind the bar and leaving the page scrolled with no way back when a canvas holds `touch-action: none`. (Spelling those class names out here would be self-defeating: the Tailwind scanner reads this file and would re-emit the very utilities the codebase dropped.)
 
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->

@@ -129,12 +129,12 @@ const SceneEmbedPage = ({
 	)
 
 	if (isLoadingScene && !file?.model) {
-		return <CenteredSpinner className="h-screen" text="Loading scene..." />
+		return <CenteredSpinner className="h-dvh" text="Loading scene..." />
 	}
 
 	if (loadError && !file?.model) {
 		return (
-			<div className="bg-background flex h-screen w-full items-center justify-center p-6">
+			<div className="bg-background flex h-dvh w-full items-center justify-center p-6">
 				<div className="border-border bg-card w-full max-w-lg space-y-4 rounded-2xl border p-6">
 					<h1 className="text-lg font-semibold">Unable to Load Scene Preview</h1>
 					<p className="text-muted-foreground text-sm">{loadError.message}</p>
@@ -156,7 +156,23 @@ const SceneEmbedPage = ({
 	}
 
 	return (
-		<div className="relative h-screen w-full">
+		/*
+		  `dvh`, never `vh`. `100vh` is the *large* viewport - the height the page
+		  would have with the browser toolbars retracted - so on any browser with
+		  persistent bottom chrome (Arc mobile, Safari iOS, Chrome Android) this box
+		  overhangs the visible area by exactly the bar height. Everything anchored
+		  to its bottom edge, which is the whole preview chrome, lands behind the
+		  bar, and the overhang makes `<body>` scrollable.
+
+		  That body scroll is unrecoverable: the canvas fills this box and
+		  OrbitControls sets `touch-action: none` on it, so every touch is consumed
+		  as an orbit gesture and never reaches the page. The user is left stuck
+		  mid-scroll with the controls clipped off.
+
+		  `overflow-hidden` is the backstop - this surface never scrolls, so no
+		  child can reintroduce the trap.
+		*/
+		<div className="relative h-dvh w-full overflow-hidden">
 			<SceneEmbedViewer
 				file={file}
 				sceneData={sceneData}

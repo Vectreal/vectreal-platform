@@ -227,7 +227,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 	}
 
 	return (
-		<div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
+		<div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-8">
 			<h1 className="text-2xl font-semibold">Something went wrong</h1>
 			<pre className="text-muted-foreground max-w-lg text-sm break-words whitespace-pre-wrap">
 				{errorMessage}

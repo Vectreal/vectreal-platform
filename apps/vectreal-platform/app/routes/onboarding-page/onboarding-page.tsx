@@ -241,7 +241,7 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 					name={user.user_metadata?.full_name}
 				/>
 			)}
-			<div className="bg-background flex h-screen w-screen overflow-hidden">
+			<div className="bg-background flex h-dvh w-full overflow-hidden">
 				{/* ── Left panel: animated visual ────────────────────────────── */}
 				<div className="relative hidden flex-3 overflow-hidden md:flex">
 					<WelcomeVisual />

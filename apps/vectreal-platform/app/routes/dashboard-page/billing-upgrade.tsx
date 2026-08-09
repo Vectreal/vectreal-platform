@@ -256,7 +256,7 @@ function BillingUpgradeContent({
 
 	return (
 		<>
-			<div className="relative mx-auto max-h-screen w-full max-w-7xl space-y-10 overflow-auto px-6 py-6 pb-44 md:max-h-[80vh]">
+			<div className="relative mx-auto max-h-dvh w-full max-w-7xl space-y-10 overflow-auto px-6 py-6 pb-44 md:max-h-[80dvh]">
 				<PricingCardsSection
 					period={billingPeriod}
 					onPeriodChange={setBillingPeriod}

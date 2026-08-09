@@ -36,7 +36,7 @@ export function AuthErrorBoundary() {
 	}
 
 	return (
-		<div className="flex min-h-screen items-center justify-center p-6">
+		<div className="flex min-h-dvh items-center justify-center p-6">
 			<div className="w-full max-w-lg rounded-2xl border p-6 text-center">
 				<div className="bg-destructive/10 mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full">
 					<AlertCircle className="text-destructive h-7 w-7" />
