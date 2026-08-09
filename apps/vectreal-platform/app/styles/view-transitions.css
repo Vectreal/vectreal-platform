@@ -1,0 +1,78 @@
+/*
+ * Shared-element morph: newsroom featured card ⇄ article hero.
+ *
+ * The names are per-slug, so they are built in TypeScript (see
+ * `lib/news/article-view-transition.ts`) and land on elements as inline
+ * `view-transition-name`. The *classes* below are static, which is what makes
+ * the groups selectable from CSS at all - there is no way to write a selector
+ * for a name that only exists at runtime.
+ *
+ * `view-transition-class` is Baseline newly available (Chrome 125, Safari 18.2,
+ * Firefox 144). Anywhere it is missing these rules simply do not match and the
+ * morph runs on the browser's default 250ms group animation, which is still a
+ * morph - just a plainer one.
+ */
+
+.vt-news-plate {
+	view-transition-class: news-morph news-plate;
+}
+
+.vt-news-image {
+	view-transition-class: news-morph news-image;
+}
+
+.vt-news-text {
+	view-transition-class: news-morph news-text;
+}
+
+::view-transition-group(.news-morph),
+::view-transition-old(.news-morph),
+::view-transition-new(.news-morph) {
+	animation-duration: var(--duration-slow);
+	animation-timing-function: var(--ease-out);
+}
+
+/*
+ * Flat surface and the scrim gradient: stretch to the tweening box so the
+ * hairline border stays on the edge and the gradient stays vertical.
+ */
+::view-transition-old(.news-plate),
+::view-transition-new(.news-plate) {
+	block-size: 100%;
+	inline-size: 100%;
+	object-fit: fill;
+}
+
+/* The scene is `object-cover` live; crop it the same way mid-flight. */
+::view-transition-old(.news-image),
+::view-transition-new(.news-image) {
+	block-size: 100%;
+	inline-size: 100%;
+	object-fit: cover;
+}
+
+/*
+ * Type never scales. Both sides sit on the same rung of the scale, so the
+ * snapshots ride at their natural size, pinned to the group's start corner,
+ * and only the group travels. Stretching them instead would smear the
+ * headline across the whole flight.
+ */
+::view-transition-old(.news-text),
+::view-transition-new(.news-text) {
+	block-size: auto;
+	inline-size: auto;
+}
+
+/*
+ * App-wide, not just this morph. `viewTransition` links are spread across the
+ * dashboard, docs and sign-in, and none of them honoured a reduced-motion
+ * preference before this file existed - there was no view-transition CSS in
+ * the repo at all.
+ */
+@media (prefers-reduced-motion: reduce) {
+	::view-transition-group(*),
+	::view-transition-old(*),
+	::view-transition-new(*) {
+		animation: none;
+	}
+}
