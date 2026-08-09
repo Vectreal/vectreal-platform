@@ -1,17 +1,17 @@
 import mdx from '@mdx-js/rollup'
-import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin'
 import remarkFrontmatter from 'remark-frontmatter'
 import remarkGfm from 'remark-gfm'
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter'
+import tsconfigPaths from 'vite-tsconfig-paths'
 import { configDefaults, defineConfig, mergeConfig } from 'vitest/config'
 
-import sharedConfig from '../../vitest.shared'
+import sharedConfig from '../../vitest.shared.mts'
 
 export default mergeConfig(
 	sharedConfig,
 	defineConfig({
 		plugins: [
-			nxViteTsPaths(),
+			tsconfigPaths(),
 			// Must mirror vite.config.ts. Without the frontmatter plugins the MDX
 			// modules compile but export no `frontmatter`, so the news and docs
 			// manifests resolve to zero entries and any test over them passes

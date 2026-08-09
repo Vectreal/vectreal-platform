@@ -1,12 +1,12 @@
-import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin'
+import tsconfigPaths from 'vite-tsconfig-paths'
 import { defineConfig, mergeConfig } from 'vitest/config'
 
-import sharedConfig from '../../vitest.shared'
+import sharedConfig from '../../vitest.shared.mts'
 
 export default mergeConfig(
 	sharedConfig,
 	defineConfig({
-		plugins: [nxViteTsPaths()],
+		plugins: [tsconfigPaths()],
 		test: {
 			environment: 'node',
 			include: ['tests/integration/**/*.spec.{ts,tsx}'],

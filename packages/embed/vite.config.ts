@@ -1,17 +1,17 @@
 import * as path from 'path'
 
-import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
+import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
-	root: __dirname,
+	root: import.meta.dirname,
 	cacheDir: '../../node_modules/.vite/packages/@vctrl/embed',
 	plugins: [
-		nxViteTsPaths(),
+		tsconfigPaths(),
 		dts({
 			entryRoot: 'src',
-			tsconfigPath: path.join(__dirname, 'tsconfig.lib.json')
+			tsconfigPath: path.join(import.meta.dirname, 'tsconfig.lib.json')
 		})
 	],
 

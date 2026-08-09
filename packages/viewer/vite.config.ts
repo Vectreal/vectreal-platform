@@ -1,21 +1,21 @@
 import path from 'path'
 
-import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
+import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
-	root: __dirname,
+	root: import.meta.dirname,
 	cacheDir: '../../node_modules/.vite/packages/@vctrl/viewer',
 	plugins: [
 		tailwindcss(),
 		react(),
-		nxViteTsPaths(),
+		tsconfigPaths(),
 		dts({
 			entryRoot: 'src',
-			tsconfigPath: path.join(__dirname, 'tsconfig.lib.json')
+			tsconfigPath: path.join(import.meta.dirname, 'tsconfig.lib.json')
 		})
 	],
 

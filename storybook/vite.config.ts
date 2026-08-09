@@ -1,7 +1,7 @@
-import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
+import tsconfigPaths from 'vite-tsconfig-paths'
 
 /**
  * Vite config for the workspace Storybook.
@@ -12,7 +12,7 @@ import { defineConfig } from 'vite'
  * since the stylesheets are what is actually under test here.
  */
 export default defineConfig(() => ({
-	root: __dirname,
+	root: import.meta.dirname,
 	cacheDir: '../node_modules/.vite/storybook',
-	plugins: [react(), nxViteTsPaths(), tailwindcss()]
+	plugins: [react(), tsconfigPaths(), tailwindcss()]
 }))

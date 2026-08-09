@@ -1,24 +1,22 @@
 import * as path from 'path'
 
-import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin'
-import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
+import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig(() => ({
-	root: __dirname,
+	root: import.meta.dirname,
 	cacheDir: '../../node_modules/.vite/shared/utils',
 	plugins: [
-		nxViteTsPaths(),
-		nxCopyAssetsPlugin(['*.md']),
+		tsconfigPaths(),
 		dts({
 			entryRoot: 'src',
-			tsconfigPath: path.join(__dirname, 'tsconfig.lib.json')
+			tsconfigPath: path.join(import.meta.dirname, 'tsconfig.lib.json')
 		})
 	],
 	// Uncomment this if you are using workers.
 	// worker: {
-	//  plugins: [ nxViteTsPaths() ],
+	//  plugins: [ tsconfigPaths() ],
 	// },
 	// Configuration for building your library.
 	// See: https://vitejs.dev/guide/build.html#library-mode

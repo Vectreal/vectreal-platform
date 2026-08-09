@@ -2,6 +2,9 @@
 	"extends": "./tsconfig.json",
 	"compilerOptions": {
 		"outDir": "../../dist/out-tsc",
+		// See shared/utils/tsconfig.spec.json - the vitest configs import
+		// ../../vitest.shared.mts by its real extension.
+		"allowImportingTsExtensions": true,
 		"lib": ["dom", "dom.iterable", "esnext"],
 		"types": [
 			"vitest/globals",
@@ -18,7 +21,7 @@
 		"vite.config.ts",
 		"vitest.config.ts",
 		"vitest.integration.config.ts",
-		"../../vitest.shared.ts",
+		"../../vitest.shared.mts",
 		"app/**/*.spec.ts",
 		"app/**/*.spec.tsx",
 		"tests/**/*.ts",
