@@ -1,11 +1,6 @@
 import { usePostHog } from '@posthog/react'
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
-import {
-	HoverCard,
-	HoverCardContent,
-	HoverCardTrigger
-} from '@shared/components/ui/hover-card'
 import { ScrollArea } from '@shared/components/ui/scroll-area'
 import { cn } from '@shared/utils'
 import { ArrowRight, ChevronLeft, Copy } from 'lucide-react'
@@ -19,7 +14,7 @@ import {
 	AdjacentPager,
 	ArticleCard,
 	ArticleMeta,
-	AuthorChip,
+	AuthorCard,
 	BasicCard,
 	CtaPanel
 } from '../../components/layout-components'
@@ -40,19 +35,6 @@ import styles from '../../styles/mdx.module.css'
 
 import type { Route } from './+types/news-room-article-page'
 
-
-function githubHandle(url: string | undefined): string | null {
-	if (!url) {
-		return null
-	}
-
-	const match = url.match(/github\.com\/([^/?#]+)/i)
-	if (!match?.[1]) {
-		return null
-	}
-
-	return `@${match[1]}`
-}
 
 export async function loader({ params }: Route.LoaderArgs) {
 	const slug = params.slug ?? ''
@@ -157,7 +139,6 @@ export default function NewsRoomArticlePage({
 	const startedAtRef = useRef(Date.now())
 	const { headings, activeId } = useDocToc(contentRef, article.slug)
 	const [copied, setCopied] = useState(false)
-	const authorGithubHandle = githubHandle(article.author.xUrl)
 
 	useEffect(() => {
 		if (!consent?.analytics || viewTrackedRef.current) {
@@ -310,37 +291,7 @@ export default function NewsRoomArticlePage({
 				</BasicCard>
 
 				<div className="mb-8 flex flex-wrap items-center gap-3 pt-4 md:mb-16">
-					<HoverCard openDelay={130} closeDelay={120}>
-						<HoverCardTrigger asChild>
-							<Button variant="ghost" className="h-[unset] gap-2 text-left">
-								<AuthorChip author={article.author} />
-							</Button>
-						</HoverCardTrigger>
-						<HoverCardContent
-							align="start"
-							sideOffset={10}
-							className="w-80 p-4"
-						>
-							<div className="flex flex-col gap-3">
-								<AuthorChip author={article.author} />
-								<div className="min-w-0 flex-1">
-									<p className="text-muted-foreground text-xs leading-relaxed">
-										{article.author.bio ?? 'Author at Vectreal.'}
-									</p>
-									{article.author.xUrl ? (
-										<a
-											href={article.author.xUrl}
-											target="_blank"
-											rel="noreferrer"
-											className="text-orange mt-2 inline-block text-xs font-medium hover:underline"
-										>
-											{authorGithubHandle ?? 'GitHub Profile'}
-										</a>
-									) : null}
-								</div>
-							</div>
-						</HoverCardContent>
-					</HoverCard>
+					<AuthorCard author={article.author} />
 					<div className="ml-auto flex items-center gap-2">
 						<Button variant="secondary" size="sm" onClick={copyArticleLink}>
 							<Copy className="mr-2 h-3.5 w-3.5" />

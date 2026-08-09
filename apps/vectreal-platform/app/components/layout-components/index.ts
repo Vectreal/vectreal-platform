@@ -1,6 +1,7 @@
 export { AdjacentPager } from './adjacent-pager'
 export { ArticleCard } from './article-card'
 export { ArticleMeta } from './article-meta'
+export { AuthorCard } from './author-card'
 export { AuthorChip } from './author-chip'
 export { default as BasicCard } from './basic-card'
 export { CtaPanel } from './cta-panel'
