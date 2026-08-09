@@ -42,7 +42,7 @@ export function DashboardErrorBoundary() {
 	}
 
 	return (
-		<div className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-6">
+		<div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center p-6">
 			<div className="w-full max-w-md space-y-6 text-center">
 				{/* Error Icon */}
 				<div className="bg-destructive/10 mx-auto flex h-20 w-20 items-center justify-center rounded-full">

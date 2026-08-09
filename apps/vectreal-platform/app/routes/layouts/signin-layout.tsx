@@ -163,8 +163,8 @@ const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 	}
 
 	return (
-		<main className="h-full min-h-screen w-full overflow-hidden">
-			<section className="flex min-h-screen w-full flex-col overflow-hidden">
+		<main className="h-full min-h-dvh w-full overflow-hidden">
+			<section className="flex min-h-dvh w-full flex-col overflow-hidden">
 				<div className="grid grow overflow-hidden md:grid-cols-[1fr_1fr]">
 					<div className="ds-raised relative flex flex-col justify-center p-8 shadow-2xl">
 						<div className="mx-auto flex max-w-md flex-col gap-8 py-16">

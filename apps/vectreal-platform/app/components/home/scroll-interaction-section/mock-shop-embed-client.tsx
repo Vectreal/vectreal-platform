@@ -437,7 +437,7 @@ export default function MockShopEmbedClient({
 				typeof document !== 'undefined' &&
 				createPortal(
 					<div className="fixed inset-0 z-60 bg-black/95">
-						<div className="relative h-[100dvh] w-screen overflow-hidden">
+						<div className="relative h-[100dvh] w-full overflow-hidden">
 							{viewerFrame}
 							<div
 								className="pointer-events-none absolute inset-x-0 bottom-0 h-28"

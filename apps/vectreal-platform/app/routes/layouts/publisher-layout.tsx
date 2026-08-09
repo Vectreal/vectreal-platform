@@ -244,7 +244,7 @@ const PublisherLayoutContent = ({
 				  can bound the sidebars instead of them floating over the whole
 				  viewport.
 				*/}
-				<main className="flex h-screen w-full flex-col overflow-hidden">
+				<main className="flex h-dvh w-full flex-col overflow-hidden">
 					<UpgradeModal />
 					<ControlsOverlay {...loaderData}>
 						<Outlet />
