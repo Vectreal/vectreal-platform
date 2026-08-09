@@ -31,9 +31,5 @@ export default {
 	routeDiscovery: {
 		mode: 'initial'
 	},
-
-	future: {
-		v8_viteEnvironmentApi: true,
-		v8_middleware: true
-	}
+	splitRouteModules: true
 } satisfies Config

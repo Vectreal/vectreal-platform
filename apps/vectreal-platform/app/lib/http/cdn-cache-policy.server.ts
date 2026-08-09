@@ -36,8 +36,18 @@ export const CDN_PROTECTED_PREFIXES = [
 const CRAWL_FILE_PATHS = new Set(['/robots.txt', '/sitemap.xml', '/llms.txt'])
 const PUBLIC_EXACT_PATHS = new Set<string>(CDN_PUBLIC_EXACT_PATHS)
 
-/** React Router single-fetch path normalizer for `*.data` requests. */
+/**
+ * React Router single-fetch path normalizer for `*.data` requests. React Router
+ * 8 is trailing-slash aware: a path ending in `/` gets `_.data` appended
+ * (`/` → `/_.data`, `/docs/` → `/docs/_.data`), everything else gets `.data`.
+ * Stripping only the bare suffix would leave `/_` and drop the root document out
+ * of the allowlist.
+ */
 export function normalizePathForCachePolicy(pathname: string): string {
+	if (pathname.endsWith('/_.data')) {
+		return pathname.slice(0, -'_.data'.length)
+	}
+
 	return pathname.endsWith('.data')
 		? pathname.slice(0, -'.data'.length)
 		: pathname
@@ -61,4 +71,4 @@ export function isProtectedRouteFamilyPath(pathname: string): boolean {
 /** Exact public paths that require explicit .data variants in Cloudflare Rule 2. */
 export const CDN_PUBLIC_EXACT_DATA_VARIANTS = CDN_PUBLIC_EXACT_PATHS.filter(
 	(path) => !CRAWL_FILE_PATHS.has(path)
-).map((path) => (path === '/' ? '/.data' : `${path}.data`))
+).map((path) => (path === '/' ? '/_.data' : `${path}.data`))

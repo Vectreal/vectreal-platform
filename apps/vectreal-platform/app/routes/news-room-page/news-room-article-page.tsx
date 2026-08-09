@@ -62,8 +62,8 @@ export async function loader({ params }: Route.LoaderArgs) {
 	})
 }
 
-export function meta({ data }: Route.MetaArgs) {
-	if (!data) {
+export function meta({ loaderData }: Route.MetaArgs) {
+	if (!loaderData) {
 		return buildPageMeta({
 			title: 'Article not found - Vectreal',
 			description: 'This news article is no longer available.',
@@ -71,9 +71,9 @@ export function meta({ data }: Route.MetaArgs) {
 		})
 	}
 
-	const title = `${data.article.title} - Vectreal News Room`
-	const description = data.article.excerpt
-	const canonical = `/news-room/${data.article.slug}`
+	const title = `${loaderData.article.title} - Vectreal News Room`
+	const description = loaderData.article.excerpt
+	const canonical = `/news-room/${loaderData.article.slug}`
 
 	return buildPageMeta(
 		{
@@ -81,41 +81,41 @@ export function meta({ data }: Route.MetaArgs) {
 			description,
 			canonical,
 			type: 'article',
-			image: data.article.coverImage,
-			imageAlt: data.article.title,
-			publishedTime: data.article.publishedAt,
-			modifiedTime: data.article.updatedAt ?? data.article.publishedAt,
-			articleAuthor: data.article.author.name,
-			articleSection: data.article.category,
+			image: loaderData.article.coverImage,
+			imageAlt: loaderData.article.title,
+			publishedTime: loaderData.article.publishedAt,
+			modifiedTime: loaderData.article.updatedAt ?? loaderData.article.publishedAt,
+			articleAuthor: loaderData.article.author.name,
+			articleSection: loaderData.article.category,
 			structuredData: [
 				buildNewsArticleJsonLd({
-					title: data.article.title,
+					title: loaderData.article.title,
 					description,
 					canonicalPath: canonical,
-					publishedAt: data.article.publishedAt,
-					updatedAt: data.article.updatedAt,
-					image: data.article.coverImage,
-					authorName: data.article.author.name,
-					authorRole: data.article.author.role,
-					authorXUrl: data.article.author.xUrl,
-					authorLinkedinUrl: data.article.author.linkedinUrl
+					publishedAt: loaderData.article.publishedAt,
+					updatedAt: loaderData.article.updatedAt,
+					image: loaderData.article.coverImage,
+					authorName: loaderData.article.author.name,
+					authorRole: loaderData.article.author.role,
+					authorXUrl: loaderData.article.author.xUrl,
+					authorLinkedinUrl: loaderData.article.author.linkedinUrl
 				}),
 				buildAuthorPersonJsonLd({
-					name: data.article.author.name,
-					role: data.article.author.role,
-					xUrl: data.article.author.xUrl,
-					linkedinUrl: data.article.author.linkedinUrl
+					name: loaderData.article.author.name,
+					role: loaderData.article.author.role,
+					xUrl: loaderData.article.author.xUrl,
+					linkedinUrl: loaderData.article.author.linkedinUrl
 				}),
 				buildBreadcrumbListJsonLd([
 					{ name: 'Home', item: SITE_URL },
 					{ name: 'News Room', item: `${SITE_URL}/news-room` },
-					{ name: data.article.title }
+					{ name: loaderData.article.title }
 				])
 			]
 		},
 		undefined,
 		// Article cover images are 1200x630, so use the large card format.
-		{ twitterCard: data.article.coverImage ? 'summary_large_image' : undefined }
+		{ twitterCard: loaderData.article.coverImage ? 'summary_large_image' : undefined }
 	)
 }
 
