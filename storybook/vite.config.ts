@@ -1,3 +1,5 @@
+import path from 'path'
+
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
@@ -14,5 +16,16 @@ import tsconfigPaths from 'vite-tsconfig-paths'
 export default defineConfig(() => ({
 	root: import.meta.dirname,
 	cacheDir: '../node_modules/.vite/storybook',
-	plugins: [react(), tsconfigPaths(), tailwindcss()]
+	plugins: [
+		react(),
+		// Stories live in other projects (shared/components, packages/viewer) and
+		// those projects' own tsconfigs declare `include: []`, so crawling finds no
+		// matcher covering the story files and the workspace aliases fail to
+		// resolve. tsconfig.base.json declares the `paths` and has no `include`,
+		// so it covers the whole repo.
+		tsconfigPaths({
+			projects: [path.resolve(import.meta.dirname, '../tsconfig.base.json')]
+		}),
+		tailwindcss()
+	]
 }))
