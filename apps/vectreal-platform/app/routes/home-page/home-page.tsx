@@ -1,4 +1,3 @@
-import { useIsMobile } from '@shared/components'
 import { GithubLogo } from '@shared/components/assets/icons/github-logo'
 import {
 	Accordion,
@@ -31,7 +30,6 @@ import {
 	buildOrganizationJsonLd,
 	PUBLIC_SEO_PAGES
 } from '../../lib/seo-registry'
-import { identifyMobileRequest } from '../../lib/utils/identify-mobile-request'
 
 /*
   Literal colours, deliberately outside the token system.
@@ -52,11 +50,6 @@ const SYNTAX = {
 	component: '#e0af68',
 	attribute: '#9ece6a'
 } as const
-
-export async function loader({ request }: Route.LoaderArgs) {
-	const isMobile = identifyMobileRequest(request)
-	return { isMobile }
-}
 
 export function meta(_: Route.MetaArgs) {
 	return buildPageMeta(PUBLIC_SEO_PAGES.home, undefined, {
@@ -164,8 +157,7 @@ const FAQ_ITEMS: { value: string; q: string; a: string }[] = [
 		a: 'Yes. Once published, you can generate embed snippets and configure domain/API constraints for controlled integration into product pages and apps.'
 	}
 ]
-const HomePage = ({ loaderData }: Route.ComponentProps) => {
-	const isMobile = useIsMobile(loaderData.isMobile)
+const HomePage = () => {
 
 	return (
 		<main className="bg-background overflow-x-clip">
@@ -189,7 +181,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 					<HowItWorksShowcase />
 				</div>
 
-				<GridBg isMobile={isMobile} />
+				<GridBg />
 			</Section>
 
 			{/* 5. Optimization value prop */}
@@ -281,7 +273,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 					</SnapRow>
 				</div>
 
-				<GridBg isMobile={isMobile} />
+				<GridBg />
 			</Section>
 
 			{/* 7. Format carousel */}
@@ -400,7 +392,7 @@ const HomePage = ({ loaderData }: Route.ComponentProps) => {
 					</div>
 				</div>
 
-				<GridBg isMobile={isMobile} />
+				<GridBg />
 			</Section>
 
 			{/* 9. FAQ */}

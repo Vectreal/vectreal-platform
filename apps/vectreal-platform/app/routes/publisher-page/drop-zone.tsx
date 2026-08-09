@@ -80,13 +80,9 @@ export const DropZone = ({ isMobile }: Props) => {
 			>
 				<div className="w-full max-w-6xl p-4">
 					<header className="mb-8 text-left">
-						<p className="text-muted-foreground mb-2 text-xs font-semibold tracking-[0.22em] uppercase">
-							Publisher
-						</p>
-						<h1 className="max-w-4xl text-4xl leading-[1.02] font-medium tracking-tight text-balance md:text-6xl">
-							Upload Your 3D Assets
-						</h1>
-						<p className="text-muted-foreground mt-2 max-w-3xl text-base leading-relaxed md:text-lg">
+						<p className="text-eyebrow text-muted-foreground mb-2">Publisher</p>
+						<h1 className="text-headline max-w-4xl">Upload Your 3D Assets</h1>
+						<p className="text-body-lg text-muted-foreground mt-2 max-w-3xl">
 							Drop your files here to optimize them for web and AR viewing
 						</p>
 					</header>
@@ -142,7 +138,13 @@ export const DropZone = ({ isMobile }: Props) => {
 													/>
 												</div>
 
-												<h2 className="mb-2 text-xl! font-semibold md:text-2xl!">
+												{/*
+												  No `!` flags here. They dated from when the app's
+												  unlayered CSS-module heading rules beat every
+												  Tailwind size; those defaults now live in `base` and
+												  lose to any utility the markup asks for.
+												*/}
+												<h2 className="text-h3 mb-2">
 													{isDragActive
 														? 'Drop to Start Processing'
 														: 'Drop Your 3D Files Anywhere'}
@@ -177,8 +179,8 @@ export const DropZone = ({ isMobile }: Props) => {
 											<Book className="h-4 w-4" />
 										</div>
 										<div className="text-left">
-											<div className="font-medium">Your First Model Guide</div>
-											<div className="text-muted-foreground text-xs">
+											<div className="text-h4">Your First Model Guide</div>
+											<div className="text-label-xs text-muted-foreground">
 												Step-by-step upload to publish walkthrough
 											</div>
 										</div>
@@ -195,8 +197,8 @@ export const DropZone = ({ isMobile }: Props) => {
 											<FileQuestion className="h-4 w-4" />
 										</div>
 										<div className="text-left">
-											<div className="font-medium">Upload Format Guide</div>
-											<div className="text-muted-foreground text-xs">
+											<div className="text-h4">Upload Format Guide</div>
+											<div className="text-label-xs text-muted-foreground">
 												Supported file types, bundles, and tips
 											</div>
 										</div>
@@ -213,8 +215,8 @@ export const DropZone = ({ isMobile }: Props) => {
 											<ExternalLink className="h-4 w-4" />{' '}
 										</div>
 										<div className="overflow-hidden text-left">
-											<div className="font-medium">Documentation Hub</div>
-											<div className="text-muted-foreground text-xs whitespace-break-spaces">
+											<div className="text-h4">Documentation Hub</div>
+											<div className="text-label-xs text-muted-foreground whitespace-break-spaces">
 												Full guides, package references, and deployment docs
 											</div>
 										</div>

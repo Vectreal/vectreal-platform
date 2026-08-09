@@ -1,3 +1,4 @@
+import { useIsMobile } from '@shared/components/hooks/use-mobile'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtomValue, useSetAtom } from 'jotai/react'
 import posthog from 'posthog-js'
@@ -15,7 +16,7 @@ import { PublisherHeader } from './shell/publisher-header'
 import { PUBLISHER_LAYER } from './shell/shell-layout'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import { useOptimizationModalFlow, useSceneLoader } from '../../hooks'
-import { Navigation } from '../navigation'
+import { useHideGlobalNav } from '../navigation/global-nav-visibility'
 import PublishSidebarContent from './sidebars/publish-sidebar/publish-sidebar-content'
 import { PublishSidebarProvider } from './sidebars/publish-sidebar/publish-sidebar-context'
 import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
@@ -52,6 +53,13 @@ const OverlayControls = ({
 }: PublisherLoaderData & { children: ReactNode }) => {
 	const navigate = useNavigate()
 	const submit = useSubmit()
+	/*
+	  The request hint only seeds the first paint. `/publisher` is `no-store` and
+	  never prerendered, so the user-agent is a real signal here — but it answers
+	  the wrong question after that, since the sidebars swap to drawers on a 768px
+	  breakpoint, not on a device class. A narrow desktop window wants drawers too.
+	*/
+	const isMobile = useIsMobile(isMobileRequest)
 	const { file, isFileLoading, optimizer } = useModelContext(true)
 	const { step, showPublishPanel } = useAtomValue(controlsOverlayStateAtom)
 	const arePublisherActionsDisabled = useAtomValue(
@@ -110,6 +118,19 @@ const OverlayControls = ({
 	})
 
 	const isUploadStep = !file?.model && step === 'uploading'
+
+	/*
+	  Pre-upload with no scene: there is nothing to frame yet, so the site nav
+	  stands in for the header. Everywhere else the publisher owns the top of the
+	  viewport, so the nav (owned by nav-layout) steps aside.
+
+	  `routePageChrome` already covers this for `/publisher/:sceneId` at SSR. The
+	  case only this can catch is a model dropped at `/publisher`, which swaps the
+	  nav for the header without navigating.
+	*/
+	const showSiteNav = isUploadStep && !sceneId
+	useHideGlobalNav(!showSiteNav)
+
 	const sceneDetailsHref =
 		sceneId && projectId
 			? DASHBOARD_ROUTES.SCENE_DETAIL(projectId, sceneId)
@@ -274,15 +295,10 @@ const OverlayControls = ({
 		[setProcessState]
 	)
 
-	// Pre-upload with no scene: there is nothing to frame yet, so the marketing
-	// nav stands in for the header and the stage chrome has nothing to show.
-	if (isUploadStep && !sceneId) {
-		return (
-			<>
-				<Navigation user={user} isMobileRequest={isMobileRequest} />
-				<div className="relative flex min-h-0 flex-1 flex-col">{children}</div>
-			</>
-		)
+	// Pre-upload with no scene: the site nav (kept mounted by nav-layout) stands
+	// in for the header, and the stage chrome has nothing to show.
+	if (showSiteNav) {
+		return <div className="relative flex min-h-0 flex-1 flex-col">{children}</div>
 	}
 
 	return (
@@ -310,7 +326,7 @@ const OverlayControls = ({
 			<div className="relative flex min-h-0 flex-1 flex-col">
 				{children}
 
-<ToolSidebar user={user} isMobile={isMobileRequest} />
+				<ToolSidebar user={user} isMobile={isMobile} />
 
 				<PublishCard
 					sceneBytes={currentSceneBytes}
@@ -326,7 +342,7 @@ const OverlayControls = ({
 					open={showPublishPanel}
 					onOpenChange={handlePublishPanelChange}
 					zIndexClassName={PUBLISHER_LAYER.sidebar}
-					isMobile={isMobileRequest}
+					isMobile={isMobile}
 					direction="right"
 					title="Scene Info & Publish"
 					description="Save, publish, and embed your latest scene."
@@ -343,7 +359,7 @@ const OverlayControls = ({
 					isOverSizeLimit={requiresSizeReduction}
 					maxSceneBytes={maxSceneBytes}
 					dashboardHref={sceneDetailsHref ?? '/dashboard'}
-					isMobile={isMobileRequest}
+					isMobile={isMobile}
 				/>
 
 				<PreviewModeBadge />

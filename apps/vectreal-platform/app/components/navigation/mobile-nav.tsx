@@ -1,4 +1,5 @@
 import { VectrealLogoAnimated } from '@shared/components/assets/icons/vectreal-logo-animated'
+import { useIsMobile } from '@shared/components/hooks/use-mobile'
 import { Button } from '@shared/components/ui/button'
 import { Separator } from '@shared/components/ui/separator'
 import {
@@ -22,6 +23,7 @@ import {
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 
+import { isNavItemActive } from './nav-items'
 import { ThemeToggleButton } from '../theme-toggle-button'
 import { UserMenu } from '../user-menu'
 import { NavItem } from './types'
@@ -32,6 +34,7 @@ interface MobileNavProps {
 	onLogout: () => void
 	isHomePage: boolean
 	isAuthPage: boolean
+	className?: string
 }
 
 const drawerItemVariants = {
@@ -53,15 +56,31 @@ function MobileNav({
 	navItems,
 	onLogout,
 	isHomePage,
-	isAuthPage
+	isAuthPage,
+	className
 }: MobileNavProps) {
 	const { pathname } = useLocation()
+	const isMobile = useIsMobile()
 	const [drawerOpen, setDrawerOpen] = useState(false)
 
 	// Close drawer on route change
 	useEffect(() => {
 		setDrawerOpen(false)
 	}, [pathname])
+
+	/*
+	  This nav hides itself at the desktop breakpoint with `md:hidden`, but the
+	  drawer cannot: `SheetContent` renders `SheetOverlay` as a sibling inside its
+	  portal and does not forward `className` to it, so hiding the panel alone
+	  would strand a full-screen scrim over the desktop layout. Close it instead.
+
+	  Reading the viewport here does not reintroduce the hydration flip this
+	  component's `md:hidden` exists to fix — the drawer is always closed at first
+	  paint, so there is nothing for server and client to disagree about.
+	*/
+	useEffect(() => {
+		if (!isMobile) setDrawerOpen(false)
+	}, [isMobile])
 
 	const allDrawerItems: NavItem[] = [
 		...(user
@@ -80,7 +99,10 @@ function MobileNav({
 	return (
 		<>
 			<nav
-				className="fixed top-0 right-0 left-0 z-50 flex items-center justify-between p-2"
+				className={cn(
+					'fixed top-0 right-0 left-0 z-50 items-center justify-between p-2',
+					className
+				)}
 				aria-label="Main navigation"
 			>
 				<div
@@ -166,10 +188,7 @@ function MobileNav({
 					{/* Nav links */}
 					<div className="flex flex-1 flex-col gap-1 px-4 py-4">
 						{allDrawerItems.map((item, i) => {
-							const isActive =
-								item.to === '/'
-									? pathname === '/' || pathname === '/home'
-									: pathname.startsWith(item.to)
+							const isActive = isNavItemActive(item, pathname)
 							return (
 								<motion.div
 									key={item.to}
