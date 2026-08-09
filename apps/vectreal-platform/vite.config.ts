@@ -10,7 +10,6 @@ import remarkGfm from 'remark-gfm'
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter'
 import { defineConfig, type PluginOption, type Rolldown } from 'vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
-import tsconfigPaths from 'vite-tsconfig-paths'
 
 const prettyCodeOptions = {
 	theme: 'github-dark',
@@ -103,9 +102,9 @@ export default defineConfig(({ command }) => {
 			host: 'localhost'
 		},
 		assetsInclude: ['**/*.gltf', '**/*.glb', '**/*.hdr'],
+		resolve: { tsconfigPaths: true },
 		plugins: [
 			tailwindcss(),
-			tsconfigPaths(),
 			mdx({
 				format: 'mdx',
 				remarkPlugins: [remarkGfm, remarkFrontmatter, remarkMdxFrontmatter],
@@ -135,9 +134,6 @@ export default defineConfig(({ command }) => {
 			!process.env.VITEST && reactRouter(),
 			reactCompilerPlugin(reactCompilerEnabled)
 		],
-		// worker: {
-		//  plugins: [ tsconfigPaths() ],
-		// },
 		// Removed 'ssr.external' because it's incompatible with Cloudflare Vite plugin
 		// Externals are now only handled in rolldownOptions.external
 		ssr: {

@@ -2,22 +2,17 @@ import * as path from 'path'
 
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
-import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig(() => ({
 	root: import.meta.dirname,
 	cacheDir: '../../node_modules/.vite/shared/utils',
+	resolve: { tsconfigPaths: true },
 	plugins: [
-		tsconfigPaths(),
 		dts({
 			entryRoot: 'src',
 			tsconfigPath: path.join(import.meta.dirname, 'tsconfig.lib.json')
 		})
 	],
-	// Uncomment this if you are using workers.
-	// worker: {
-	//  plugins: [ tsconfigPaths() ],
-	// },
 	// Configuration for building your library.
 	// See: https://vitejs.dev/guide/build.html#library-mode
 	build: {

@@ -1,9 +1,47 @@
-import path from 'path'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
-import tsconfigPaths from 'vite-tsconfig-paths'
+
+const workspaceRoot = path.resolve(import.meta.dirname, '..')
+
+/**
+ * Workspace aliases, derived from tsconfig.base.json.
+ *
+ * Every other project resolves these through Vite's native
+ * `resolve.tsconfigPaths`, which matches each importer against the tsconfig
+ * nearest to it. Storybook is the exception: it compiles stories that live
+ * inside *other* projects, and those projects' root tsconfigs are
+ * solution-style (`"include": []` plus `references`), so the lookup finds
+ * nothing declaring `paths` and the cross-project imports fail to resolve.
+ *
+ * Reading the base config keeps this derived from the one source of truth
+ * rather than restating the alias table here.
+ */
+function workspaceAliases() {
+	const base = JSON.parse(
+		readFileSync(path.join(workspaceRoot, 'tsconfig.base.json'), 'utf8')
+	) as { compilerOptions: { paths: Record<string, string[]> } }
+
+	const escape = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+	return Object.entries(base.compilerOptions.paths).map(
+		([pattern, [target]]) => {
+			const wildcard = pattern.endsWith('/*')
+
+			return {
+				find: new RegExp(
+					wildcard ? `^${escape(pattern.slice(0, -2))}/(.*)$` : `^${escape(pattern)}$`
+				),
+				replacement: wildcard
+					? path.join(workspaceRoot, target.slice(0, -2), '$1')
+					: path.join(workspaceRoot, target)
+			}
+		}
+	)
+}
 
 /**
  * Vite config for the workspace Storybook.
@@ -16,16 +54,6 @@ import tsconfigPaths from 'vite-tsconfig-paths'
 export default defineConfig(() => ({
 	root: import.meta.dirname,
 	cacheDir: '../node_modules/.vite/storybook',
-	plugins: [
-		react(),
-		// Stories live in other projects (shared/components, packages/viewer) and
-		// those projects' own tsconfigs declare `include: []`, so crawling finds no
-		// matcher covering the story files and the workspace aliases fail to
-		// resolve. tsconfig.base.json declares the `paths` and has no `include`,
-		// so it covers the whole repo.
-		tsconfigPaths({
-			projects: [path.resolve(import.meta.dirname, '../tsconfig.base.json')]
-		}),
-		tailwindcss()
-	]
+	resolve: { alias: workspaceAliases() },
+	plugins: [react(), tailwindcss()]
 }))

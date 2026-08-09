@@ -175,7 +175,6 @@
 		"vite": "^8.2.1",
 		"vite-plugin-devtools-json": "^1.1.0",
 		"vite-plugin-dts": "5.0.3",
-		"vite-tsconfig-paths": "^6.1.1",
 		"vitest": "4.1.10"
 	},
 	"nx": {

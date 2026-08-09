@@ -1,4 +1,3 @@
-import tsconfigPaths from 'vite-tsconfig-paths'
 import { defineConfig, mergeConfig } from 'vitest/config'
 
 import sharedConfig from '../../vitest.shared.mts'
@@ -6,7 +5,8 @@ import sharedConfig from '../../vitest.shared.mts'
 export default mergeConfig(
 	sharedConfig,
 	defineConfig({
-		plugins: [tsconfigPaths()],
+		plugins: [],
+		resolve: { tsconfigPaths: true },
 		test: {
 			environment: 'node',
 			include: ['tests/integration/**/*.spec.{ts,tsx}'],

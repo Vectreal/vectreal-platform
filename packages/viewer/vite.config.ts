@@ -4,15 +4,14 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
-import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
 	root: import.meta.dirname,
 	cacheDir: '../../node_modules/.vite/packages/@vctrl/viewer',
+	resolve: { tsconfigPaths: true },
 	plugins: [
 		tailwindcss(),
 		react(),
-		tsconfigPaths(),
 		dts({
 			entryRoot: 'src',
 			tsconfigPath: path.join(import.meta.dirname, 'tsconfig.lib.json')
