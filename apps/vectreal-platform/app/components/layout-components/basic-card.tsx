@@ -1,10 +1,16 @@
 import { Card } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
-import { ComponentProps } from 'react'
+import { ComponentProps, CSSProperties } from 'react'
 
 interface BasicCardProps extends ComponentProps<'div'> {
 	className?: string
 	cardClassName?: string
+	/**
+	 * Inline styles for the inner `Card`. Unknown props spread onto the outer
+	 * wrapper, so a plain `style` would sit *behind* the card surface rather
+	 * than on it.
+	 */
+	cardStyle?: CSSProperties
 	highlight?: boolean
 	as?: 'div' | 'article' | 'section' | 'header'
 }
@@ -30,6 +36,7 @@ const BasicCard = ({
 	children,
 	className,
 	cardClassName,
+	cardStyle,
 	highlight,
 	as: Component = 'div',
 	...props
@@ -53,7 +60,10 @@ const BasicCard = ({
 					highlightClasses
 				)}
 			/>
-			<Card className={cn('relative h-full rounded-2xl', cardClassName)}>
+			<Card
+				className={cn('relative h-full rounded-2xl', cardClassName)}
+				style={cardStyle}
+			>
 				{children}
 			</Card>
 		</Component>

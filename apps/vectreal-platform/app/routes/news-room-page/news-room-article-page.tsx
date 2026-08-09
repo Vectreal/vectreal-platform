@@ -18,14 +18,12 @@ import { PublicErrorBoundary } from '../../components/errors'
 import {
 	AdjacentPager,
 	ArticleCard,
-	ArticleMeta,
+	ArticleHero,
 	AuthorChip,
-	BasicCard,
 	CtaPanel
 } from '../../components/layout-components'
 import { useDocToc } from '../../hooks/use-doc-toc'
 import {
-	formatNewsDate,
 	getAdjacentNewsArticles,
 	getNewsArticle,
 	getRelatedNewsArticles
@@ -278,9 +276,6 @@ export default function NewsRoomArticlePage({
 
 				<div className="mt-4 mb-6 -ml-1 flex flex-wrap items-center justify-between gap-2 px-2 md:mt-16">
 					<div className="flex items-center gap-2">
-						<Badge variant="secondary" className="capitalize">
-							{article.category}
-						</Badge>
 						<Badge variant="secondary">
 							{article.readingTimeMinutes} min read
 						</Badge>
@@ -292,22 +287,19 @@ export default function NewsRoomArticlePage({
 					</div>
 				</div>
 
-				<BasicCard as="header" cardClassName="flex flex-col gap-4 p-6 md:p-8">
-					<h1 className="text-headline max-w-4xl">{article.title}</h1>
+				<ArticleHero
+					slug={article.slug}
+					title={article.title}
+					category={article.category}
+					publishedAt={article.publishedAt}
+					{...(article.updatedAt ? { updatedAt: article.updatedAt } : {})}
+					{...(article.sceneImage ? { sceneImage: article.sceneImage } : {})}
+					{...(article.heroImage ? { heroImage: article.heroImage } : {})}
+				/>
 
-					<ArticleMeta
-						items={[
-							formatNewsDate(article.publishedAt),
-							...(article.updatedAt
-								? [`Updated ${formatNewsDate(article.updatedAt)}`]
-								: [])
-						]}
-					/>
-
-					<p className="text-muted-foreground text-body-lg max-w-3xl leading-relaxed">
-						{article.excerpt}
-					</p>
-				</BasicCard>
+				<p className="text-muted-foreground text-body-lg mt-6 max-w-3xl px-2 leading-relaxed">
+					{article.excerpt}
+				</p>
 
 				<div className="mb-8 flex flex-wrap items-center gap-3 pt-4 md:mb-16">
 					<HoverCard openDelay={130} closeDelay={120}>
@@ -410,7 +402,7 @@ export default function NewsRoomArticlePage({
 						</h2>
 						<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 							{related.map((item) => (
-								<ArticleCard key={item.slug} article={item} variant="compact" />
+								<ArticleCard key={item.slug} article={item} />
 							))}
 						</div>
 					</section>

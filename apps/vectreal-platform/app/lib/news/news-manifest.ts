@@ -24,8 +24,16 @@ export interface NewsArticleFrontmatter {
 	author: NewsAuthor
 	/** WebP used as the og:image / SEO social card (mosaic + text panel). */
 	coverImage?: string
-	/** WebP used as the visual card image on the listing page (pure mosaic). */
-	thumbnailImage?: string
+	/**
+	 * The generated scene as a 1200x630 WebP, with no text baked in. One file
+	 * serves both the article hero and the listing's featured block; `coverImage`
+	 * is the same scene with the og text composited on top.
+	 */
+	sceneImage?: string
+	/** Overrides the slug-derived scene seed. Set by hand from /__scenes. */
+	heroSeed?: number
+	/** Replaces the generated hero with a real image. Use sparingly - see the spec. */
+	heroImage?: string
 	draft?: boolean
 }
 
@@ -45,8 +53,16 @@ export interface NewsArticle {
 	author: NewsAuthor
 	/** WebP used as the og:image / SEO social card (mosaic + text panel). */
 	coverImage?: string
-	/** WebP used as the visual card image on the listing page (pure mosaic). */
-	thumbnailImage?: string
+	/**
+	 * The generated scene as a 1200x630 WebP, with no text baked in. One file
+	 * serves both the article hero and the listing's featured block; `coverImage`
+	 * is the same scene with the og text composited on top.
+	 */
+	sceneImage?: string
+	/** Overrides the slug-derived scene seed. Set by hand from /__scenes. */
+	heroSeed?: number
+	/** Replaces the generated hero with a real image. Use sparingly - see the spec. */
+	heroImage?: string
 	draft: boolean
 	readingTimeMinutes: number
 	sourcePath: string
@@ -310,7 +326,13 @@ const allArticles: NewsArticle[] = Object.entries(articleModules)
 				linkedinUrl: module.frontmatter?.author?.linkedinUrl
 			},
 			coverImage: module.frontmatter?.coverImage,
-			thumbnailImage: module.frontmatter?.thumbnailImage,
+			sceneImage: module.frontmatter?.sceneImage,
+			...(typeof module.frontmatter?.heroSeed === 'number'
+				? { heroSeed: module.frontmatter.heroSeed }
+				: {}),
+			...(module.frontmatter?.heroImage
+				? { heroImage: module.frontmatter.heroImage }
+				: {}),
 			draft: Boolean(module.frontmatter?.draft),
 			readingTimeMinutes: calculateReadingTimeMinutes(readingTimeSource),
 			sourcePath,
