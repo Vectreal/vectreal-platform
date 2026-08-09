@@ -98,6 +98,17 @@ export default [
 		// loads, which is a better trade than an untyped route.
 		route('__scenes', './routes/news-room-page/newsroom-scene-preview.tsx'),
 
+		// Publisher. Nested here, rather than in its own top-level branch, so the
+		// nav survives navigating into it instead of being torn down and rebuilt.
+		// It suppresses the footer (and, once there is a scene to frame, the nav)
+		// through routePageChrome.
+		layout('./routes/layouts/publisher-layout.tsx', [
+			route(
+				'publisher/:sceneId?',
+				'./routes/publisher-page/publisher.$sceneId.tsx'
+			)
+		]),
+
 		// News room page
 		layout('./routes/layouts/news-room-layout.tsx', [
 			route('news-room', './routes/news-room-page/news-room-page.tsx'),
@@ -151,14 +162,6 @@ export default [
 
 	// First-run onboarding (standalone page, no nav layout)
 	route('onboarding', './routes/onboarding-page/onboarding-page.tsx'),
-
-	// Publisher
-	layout('./routes/layouts/publisher-layout.tsx', [
-		route(
-			'publisher/:sceneId?',
-			'./routes/publisher-page/publisher.$sceneId.tsx'
-		)
-	]),
 
 	// External embeds: preview API key only, never internal chrome
 	layout('./routes/layouts/embed-layout.tsx', [

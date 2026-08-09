@@ -1,59 +1,36 @@
 import { usePostHog } from '@posthog/react'
-import { useIsMobile } from '@shared/components/hooks/use-mobile'
-import { Rocket, DollarSign, BookOpen, Newspaper, Mail } from 'lucide-react'
 import { useCallback } from 'react'
 import { useFetcher, useLocation } from 'react-router'
 
 import DesktopNav from './desktop-nav'
 import MobileNav from './mobile-nav'
+import { MARKETING_ITEMS } from './nav-items'
+import { useCurrentUser } from '../../hooks/use-current-user'
 
-import type { NavItem, NavigationProps } from './types'
-
-type NavContext = 'marketing' | 'docs' | 'auth'
-
-function getNavContext(pathname: string): NavContext {
-	if (pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up')) {
-		return 'auth'
-	}
-	if (pathname.startsWith('/docs')) {
-		return 'docs'
-	}
-	return 'marketing'
+function isAuthPath(pathname: string): boolean {
+	return pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up')
 }
 
-const MARKETING_ITEMS: NavItem[] = [
-	{
-		label: 'Publisher',
-		to: '/publisher',
-		icon: <Rocket className="size-4" />
-	},
-	{
-		label: 'Pricing',
-		to: '/pricing',
-		icon: <DollarSign className="size-4" />
-	},
-	{ label: 'Docs', to: '/docs', icon: <BookOpen className="size-4" /> },
-	{
-		label: 'Newsroom',
-		to: '/news-room',
-		icon: <Newspaper className="size-4" />
-	},
-	{
-		label: 'Contact',
-		to: '/contact',
-		icon: <Mail className="size-4" />
-	}
-]
-
-export const Navigation = ({ user, isMobileRequest }: NavigationProps) => {
-	const isMobile = useIsMobile(isMobileRequest)
+/**
+ * Both shells render; media queries pick one.
+ *
+ * Branching on a device class in JS is what made the desktop bar paint on mobile
+ * and flip after hydration: the seed came from a user-agent sniff, and public
+ * pages are prerendered at build time (no request, so no user-agent) and cached
+ * at the edge without `Vary: User-Agent`. A user-agent also answers the wrong
+ * question — the branch is a 768px breakpoint, not a device.
+ *
+ * `md` is Tailwind's default 48rem, which matches `MOBILE_BREAKPOINT` exactly, so
+ * `hidden md:flex` and `flex md:hidden` are a precise complement.
+ */
+export const Navigation = () => {
+	const { user } = useCurrentUser()
 	const { submit } = useFetcher()
 	const posthog = usePostHog()
 	const { pathname } = useLocation()
 
-	const context = getNavContext(pathname)
 	const isHomePage = pathname === '/' || pathname === '/home'
-	const isAuthPage = context === 'auth'
+	const isAuthPage = isAuthPath(pathname)
 
 	const handleLogout = useCallback(async () => {
 		posthog?.reset()
@@ -63,24 +40,23 @@ export const Navigation = ({ user, isMobileRequest }: NavigationProps) => {
 		})
 	}, [posthog, submit])
 
-	if (isMobile) {
-		return (
+	return (
+		<>
+			<DesktopNav
+				className="hidden md:flex"
+				user={user}
+				navItems={MARKETING_ITEMS}
+				onLogout={handleLogout}
+				isAuthPage={isAuthPage}
+			/>
 			<MobileNav
+				className="flex md:hidden"
 				user={user}
 				navItems={MARKETING_ITEMS}
 				onLogout={handleLogout}
 				isHomePage={isHomePage}
 				isAuthPage={isAuthPage}
 			/>
-		)
-	}
-
-	return (
-		<DesktopNav
-			user={user}
-			navItems={MARKETING_ITEMS}
-			onLogout={handleLogout}
-			isAuthPage={isAuthPage}
-		/>
+		</>
 	)
 }

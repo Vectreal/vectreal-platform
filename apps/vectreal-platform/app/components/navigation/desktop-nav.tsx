@@ -2,9 +2,9 @@ import { VectrealLogoAnimated } from '@shared/components/assets/icons/vectreal-l
 import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
 import { LayoutDashboard, LogIn, Rocket } from 'lucide-react'
-import { useRef } from 'react'
 import { useLocation, Link } from 'react-router'
 
+import { isNavItemActive } from './nav-items'
 import { UserMenu } from '../user-menu'
 import { NavItem } from './types'
 
@@ -14,25 +14,25 @@ interface DesktopNavProps {
 	user: User | null
 	navItems: NavItem[]
 	onLogout: () => void
-
 	isAuthPage: boolean
+	className?: string
 }
 
-function getActiveIndex(items: NavItem[], pathname: string): number {
-	return items.findIndex((item) => {
-		if (item.to === '/') return pathname === '/' || pathname === '/home'
-		return pathname.startsWith(item.to)
-	})
-}
-
-function DesktopNav({ user, navItems, onLogout, isAuthPage }: DesktopNavProps) {
+function DesktopNav({
+	user,
+	navItems,
+	onLogout,
+	isAuthPage,
+	className
+}: DesktopNavProps) {
 	const { pathname } = useLocation()
-	const containerRef = useRef<HTMLDivElement>(null)
-	const activeIndex = getActiveIndex(navItems, pathname)
 
 	return (
 		<nav
-			className="fixed top-0 right-0 left-0 z-50 flex items-center justify-center p-4"
+			className={cn(
+				'fixed top-0 right-0 left-0 z-50 items-center justify-center p-4',
+				className
+			)}
 			aria-label="Main navigation"
 		>
 			<div className="from-background absolute inset-0 z-0 h-16 bg-linear-to-b to-transparent backdrop-blur-sm" />
@@ -46,19 +46,16 @@ function DesktopNav({ user, navItems, onLogout, isAuthPage }: DesktopNavProps) {
 					<VectrealLogoAnimated className="text-muted-foreground h-6" colored />
 				</Link>
 
-				{/* Center nav links with sliding pill */}
+				{/* Center nav links */}
 				{navItems.length > 0 && (
-					<div
-						ref={containerRef}
-						className="relative flex items-center gap-0.5"
-					>
-						{navItems.map((item, i) => (
+					<div className="relative flex items-center gap-0.5">
+						{navItems.map((item) => (
 							<Link
 								key={item.to}
 								to={item.to}
 								className={cn(
 									'relative z-10 rounded-xl px-3 py-1.5 text-sm font-medium transition-colors',
-									activeIndex === i
+									isNavItemActive(item, pathname)
 										? 'text-foreground'
 										: 'text-muted-foreground hover:text-foreground'
 								)}
