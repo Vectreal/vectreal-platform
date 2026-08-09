@@ -265,7 +265,7 @@
 			"outputs": ["{projectRoot}/public/assets/images/newsroom"],
 			"options": {
 				"cwd": "apps/vectreal-platform",
-				"command": "node scripts/truchet-thumbnail-gen.mjs"
+				"command": "pnpm exec tsx scripts/gen-newsroom-thumbnails.ts"
 			}
 		},
 		"email-preview": {
