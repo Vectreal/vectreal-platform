@@ -2,13 +2,12 @@ import * as path from 'path'
 
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
-import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
 	root: import.meta.dirname,
 	cacheDir: '../../node_modules/.vite/packages/@vctrl/embed',
+	resolve: { tsconfigPaths: true },
 	plugins: [
-		tsconfigPaths(),
 		dts({
 			entryRoot: 'src',
 			tsconfigPath: path.join(import.meta.dirname, 'tsconfig.lib.json')
