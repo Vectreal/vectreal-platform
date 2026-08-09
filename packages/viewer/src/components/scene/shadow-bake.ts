@@ -92,7 +92,7 @@ export const computeBakeSignature = (
 		`at:${options.alphaTest}`,
 		`cb:${options.colorBlend}`,
 		`ct:${options.cutoffScale}`,
-		`lp:${(light.position ?? []).map((n) => n.toFixed(3)).join(',')}`,
+		`lp:${(light.position ?? []).map((n) => (n ?? 0).toFixed(3)).join(',')}`,
 		`lr:${light.radius}`,
 		`la:${light.ambient}`,
 		`ln:${light.amount}`,
