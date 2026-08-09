@@ -44,6 +44,12 @@ describe('isAnonymousCacheableRequest', () => {
 		)
 	})
 
+	it('caches the trailing-slash `_.data` variant React Router 8 emits', () => {
+		expect(isAnonymousCacheableRequest(req('https://x.test/_.data'))).toBe(true)
+		expect(normalizePathForCachePolicy('/_.data')).toBe('/')
+		expect(normalizePathForCachePolicy('/docs/_.data')).toBe('/docs/')
+	})
+
 	it('does NOT cache when the Supabase auth cookie is present', () => {
 		expect(
 			isAnonymousCacheableRequest(

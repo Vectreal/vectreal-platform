@@ -1,18 +1,18 @@
 import * as path from 'path'
 
-import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
+import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
-	root: __dirname,
+	root: import.meta.dirname,
 	cacheDir: '../../node_modules/.vite/packages/@vctrl/core',
 
 	plugins: [
-		nxViteTsPaths(),
+		tsconfigPaths(),
 		dts({
 			entryRoot: 'src',
-			tsconfigPath: path.join(__dirname, 'tsconfig.lib.json')
+			tsconfigPath: path.join(import.meta.dirname, 'tsconfig.lib.json')
 		})
 	],
 
@@ -23,13 +23,13 @@ export default defineConfig({
 		reportCompressedSize: true,
 		lib: {
 			entry: {
-				index: path.resolve(__dirname, 'src/index.ts'),
-				'model-loader': path.resolve(__dirname, 'src/model-loader/index.ts'),
+				index: path.resolve(import.meta.dirname, 'src/index.ts'),
+				'model-loader': path.resolve(import.meta.dirname, 'src/model-loader/index.ts'),
 				'model-optimizer': path.resolve(
-					__dirname,
+					import.meta.dirname,
 					'src/model-optimizer/index.ts'
 				),
-				'model-exporter': path.resolve(__dirname, 'src/model-exporter/index.ts')
+				'model-exporter': path.resolve(import.meta.dirname, 'src/model-exporter/index.ts')
 			},
 			name: '@vctrl/core',
 			formats: ['es', 'cjs'],

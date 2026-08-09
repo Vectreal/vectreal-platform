@@ -1,6 +1,5 @@
 import { transformAsync } from '@babel/core'
 import mdx from '@mdx-js/rollup'
-import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin'
 import { reactRouter } from '@react-router/dev/vite'
 import tailwindcss from '@tailwindcss/vite'
 import rehypeAutolinkHeadings from 'rehype-autolink-headings'
@@ -9,8 +8,9 @@ import rehypeSlug from 'rehype-slug'
 import remarkFrontmatter from 'remark-frontmatter'
 import remarkGfm from 'remark-gfm'
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter'
-import { defineConfig, type PluginOption } from 'vite'
+import { defineConfig, type PluginOption, type Rolldown } from 'vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
+import tsconfigPaths from 'vite-tsconfig-paths'
 
 const prettyCodeOptions = {
 	theme: 'github-dark',
@@ -63,7 +63,9 @@ const reactCompilerPlugin = (enabled: boolean): PluginOption => {
 
 			return {
 				code: result.code ?? code,
-				map: result.map
+				// Babel 8 types the map's array fields as readonly, which Vite's
+				// `SourceMapInput` rejects. The runtime shape is identical.
+				map: result.map as Rolldown.SourceMapInput | null
 			}
 		}
 	}
@@ -87,7 +89,7 @@ export default defineConfig(({ command }) => {
 	const reactCompilerEnabled = shouldEnableReactCompiler(command)
 
 	return {
-		root: __dirname,
+		root: import.meta.dirname,
 		cacheDir: '../../node_modules/.vite/apps/vectreal-platform',
 
 		server: {
@@ -103,7 +105,7 @@ export default defineConfig(({ command }) => {
 		assetsInclude: ['**/*.gltf', '**/*.glb', '**/*.hdr'],
 		plugins: [
 			tailwindcss(),
-			nxViteTsPaths(),
+			tsconfigPaths(),
 			mdx({
 				format: 'mdx',
 				remarkPlugins: [remarkGfm, remarkFrontmatter, remarkMdxFrontmatter],
@@ -128,13 +130,13 @@ export default defineConfig(({ command }) => {
 				]
 			}),
 			devtoolsJson({
-				projectRoot: __dirname
+				projectRoot: import.meta.dirname
 			}),
 			!process.env.VITEST && reactRouter(),
 			reactCompilerPlugin(reactCompilerEnabled)
 		],
 		// worker: {
-		//  plugins: [ nxViteTsPaths() ],
+		//  plugins: [ tsconfigPaths() ],
 		// },
 		// Removed 'ssr.external' because it's incompatible with Cloudflare Vite plugin
 		// Externals are now only handled in rolldownOptions.external

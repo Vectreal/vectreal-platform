@@ -283,7 +283,9 @@ const SceneModel = memo((props: ModelProps) => {
 							Array.isArray(targetCameraConfig.position) &&
 							targetCameraConfig.position.length >= 3
 						) {
-							activeCamera.position.fromArray(targetCameraConfig.position)
+							activeCamera.position.fromArray(
+								targetCameraConfig.position as [number, number, number]
+							)
 						}
 
 						// Apply target camera's rotation if available

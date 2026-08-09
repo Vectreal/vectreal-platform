@@ -19,9 +19,9 @@ import {
 import type { RenderToPipeableStreamOptions } from 'react-dom/server'
 import type {
 	ActionFunctionArgs,
-	AppLoadContext,
 	EntryContext,
-	LoaderFunctionArgs
+	LoaderFunctionArgs,
+	RouterContextProvider
 } from 'react-router'
 
 export const streamTimeout = 5_000
@@ -71,7 +71,7 @@ export default function handleRequest(
 	responseStatusCode: number,
 	responseHeaders: Headers,
 	routerContext: EntryContext,
-	_loadContext: AppLoadContext
+	_loadContext: RouterContextProvider
 ) {
 	return new Promise((resolve, reject) => {
 		let shellRendered = false

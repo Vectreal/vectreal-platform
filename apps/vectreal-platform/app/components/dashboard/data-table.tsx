@@ -15,18 +15,25 @@ import {
 	TableRow
 } from '@shared/components/ui/table'
 import {
-	type ColumnDef,
 	flexRender,
+	type PaginationState,
+	type RowSelectionState,
+	type SortingState,
+	type RowData,
+	type Updater
+} from '@tanstack/react-table'
+// TanStack Table v9 replaced `useReactTable` and the `get*RowModel` factories
+// with an explicit, tree-shakeable feature registry. `/legacy` is the upstream
+// compatibility layer that keeps the v8 option shape; moving to the native
+// `useTable` API is a separate piece of work.
+import {
 	getCoreRowModel,
 	getFilteredRowModel,
 	getPaginationRowModel,
 	getSortedRowModel,
-	type PaginationState,
-	type RowSelectionState,
-	type SortingState,
-	type Updater,
-	useReactTable
-} from '@tanstack/react-table'
+	type LegacyColumnDef as ColumnDef,
+	useLegacyTable
+} from '@tanstack/react-table/legacy'
 import {
 	ArrowUpDown,
 	ChevronLeft,
@@ -38,8 +45,8 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, type ReactNode } from 'react'
 
-interface DataTableProps<TData, TValue> {
-	columns: ColumnDef<TData, TValue>[]
+interface DataTableProps<TData extends RowData> {
+	columns: ColumnDef<TData>[]
 	data: TData[]
 	searchKey?: string
 	searchPlaceholder?: string
@@ -61,7 +68,7 @@ interface DataTableProps<TData, TValue> {
 	disableSelectionActions?: boolean
 }
 
-export function DataTable<TData, TValue>({
+export function DataTable<TData extends RowData>({
 	columns,
 	data,
 	searchKey,
@@ -82,13 +89,13 @@ export function DataTable<TData, TValue>({
 	isUpdating = false,
 	updatingLabel = 'Updating content...',
 	disableSelectionActions = false
-}: DataTableProps<TData, TValue>) {
+}: DataTableProps<TData>) {
 	const columnFilters = useMemo(
 		() => (searchKey ? [{ id: searchKey, value: searchValue }] : []),
 		[searchKey, searchValue]
 	)
 
-	const table = useReactTable({
+	const table = useLegacyTable({
 		data,
 		columns,
 		getRowId: (row, index) => {
@@ -344,7 +351,7 @@ export function SortableHeader({
 /**
  * Helper function to create a checkbox column
  */
-export function createCheckboxColumn<TData>(): ColumnDef<TData> {
+export function createCheckboxColumn<TData extends RowData>(): ColumnDef<TData> {
 	return {
 		id: 'select',
 		header: ({ table }) => (
