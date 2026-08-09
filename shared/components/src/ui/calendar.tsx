@@ -5,71 +5,72 @@ import { DayPicker } from 'react-day-picker'
 
 import { buttonVariants } from './button'
 
+import type { ChevronProps } from 'react-day-picker'
+
+/**
+ * The class name keys below are react-day-picker v10's. Selection and day-state
+ * modifiers (`selected`, `today`, `range_*`, ...) land on the day cell itself,
+ * so the inner button is reached with `[&>button]` rather than the
+ * `[&:has([aria-selected])]` selectors the pre-v9 keys needed.
+ */
 function Calendar({
 	className,
 	classNames,
 	showOutsideDays = true,
 	...props
 }: React.ComponentProps<typeof DayPicker>) {
+	const navButton = cn(
+		buttonVariants({ variant: 'outline' }),
+		'size-7 bg-transparent p-0 opacity-50 hover:opacity-100'
+	)
+
 	return (
 		<DayPicker
 			showOutsideDays={showOutsideDays}
-			className={cn('p-3', className)}
+			// `w-fit` keeps the absolutely-positioned nav pinned to the grid's edges
+			// rather than to whatever width the calendar happens to sit in.
+			className={cn('w-fit p-3', className)}
 			classNames={{
-				months: 'flex flex-col sm:flex-row gap-2',
+				// v10 renders `nav` as a sibling of `month` inside `months`, not
+				// inside the caption - so `months` is what the nav buttons anchor to.
+				months: 'relative flex flex-col gap-2 sm:flex-row',
 				month: 'flex flex-col gap-4',
-				caption: 'flex justify-center pt-1 relative items-center w-full',
+				month_caption: 'flex h-7 w-full items-center justify-center',
 				caption_label: 'text-sm font-medium',
 				nav: 'flex items-center gap-1',
-				nav_button: cn(
-					buttonVariants({ variant: 'outline' }),
-					'size-7 bg-transparent p-0 opacity-50 hover:opacity-100'
-				),
-				nav_button_previous: 'absolute left-1',
-				nav_button_next: 'absolute right-1',
-				table: 'w-full border-collapse space-x-1',
-				head_row: 'flex',
-				head_cell:
-					'text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]',
-				row: 'flex w-full mt-2',
-				cell: cn(
-					'relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-primary/12 [&:has([aria-selected].day-range-end)]:rounded-r-md',
-					props.mode === 'range'
-						? '[&:has(>.day-range-end)]:rounded-r-md [&:has(>.day-range-start)]:rounded-l-md first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md'
-						: '[&:has([aria-selected])]:rounded-md'
-				),
-				day: cn(
+				button_previous: cn(navButton, 'absolute top-0 left-0 z-10'),
+				button_next: cn(navButton, 'absolute top-0 right-0 z-10'),
+				month_grid: 'w-full border-collapse',
+				weekdays: 'flex',
+				weekday:
+					'text-muted-foreground w-8 rounded-md text-[0.8rem] font-normal',
+				week: 'mt-2 flex w-full',
+				day: 'relative size-8 p-0 text-center text-sm focus-within:relative focus-within:z-20',
+				day_button: cn(
 					buttonVariants({ variant: 'ghost' }),
-					'size-8 p-0 font-normal aria-selected:opacity-100'
+					'size-8 p-0 font-normal'
 				),
-				day_range_start:
-					'day-range-start aria-selected:bg-primary aria-selected:text-primary-foreground',
-				day_range_end:
-					'day-range-end aria-selected:bg-primary aria-selected:text-primary-foreground',
-				day_selected:
-					'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
-				day_today: 'ds-overlay text-foreground font-medium',
-				day_outside:
-					'day-outside text-muted-foreground aria-selected:text-muted-foreground',
-				day_disabled: 'text-muted-foreground opacity-50',
-				day_range_middle:
-					'aria-selected:bg-primary/12 aria-selected:text-foreground',
-				day_hidden: 'invisible',
+				selected:
+					'[&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary [&>button]:hover:text-primary-foreground',
+				today: '[&>button]:ds-overlay [&>button]:text-foreground [&>button]:font-medium',
+				outside: '[&>button]:text-muted-foreground',
+				disabled: '[&>button]:text-muted-foreground [&>button]:opacity-50',
+				range_start: 'bg-primary/12 rounded-l-md',
+				// A day inside a range carries both `selected` and `range_middle`, and
+				// the two `[&>button]` rules have equal specificity - so the winner
+				// would otherwise come down to Tailwind's utility ordering. Force it,
+				// or the band renders near-white text on a near-white background.
+				range_middle:
+					'bg-primary/12 [&>button]:bg-transparent! [&>button]:text-foreground! [&>button]:hover:bg-transparent',
+				range_end: 'bg-primary/12 rounded-r-md',
+				hidden: 'invisible',
 				...classNames
 			}}
 			components={{
-				Chevron: ({
-					className,
-					orientation,
-					...iconProps
-				}: React.ComponentProps<typeof ChevronLeft> & {
-					orientation?: 'left' | 'right' | 'up' | 'down'
-				}) =>
-					orientation === 'left' ? (
-						<ChevronLeft className={cn('size-4', className)} {...iconProps} />
-					) : (
-						<ChevronRight className={cn('size-4', className)} {...iconProps} />
-					)
+				Chevron: ({ className, orientation, ...iconProps }: ChevronProps) => {
+					const Icon = orientation === 'left' ? ChevronLeft : ChevronRight
+					return <Icon className={cn('size-4', className)} {...iconProps} />
+				}
 			}}
 			{...props}
 		/>
