@@ -9,7 +9,7 @@ import rehypeSlug from 'rehype-slug'
 import remarkFrontmatter from 'remark-frontmatter'
 import remarkGfm from 'remark-gfm'
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter'
-import { defineConfig, type PluginOption } from 'vite'
+import { defineConfig, type PluginOption, type Rolldown } from 'vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
 
 const prettyCodeOptions = {
@@ -63,7 +63,9 @@ const reactCompilerPlugin = (enabled: boolean): PluginOption => {
 
 			return {
 				code: result.code ?? code,
-				map: result.map
+				// Babel 8 types the map's array fields as readonly, which Vite's
+				// `SourceMapInput` rejects. The runtime shape is identical.
+				map: result.map as Rolldown.SourceMapInput | null
 			}
 		}
 	}
