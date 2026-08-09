@@ -35,7 +35,7 @@ import {
 	buildWebApplicationJsonLd,
 	buildWebSiteJsonLd
 } from './lib/seo-registry'
-import { csrfSession } from './lib/sessions/csrf-session.server'
+import { commitValidCsrfToken } from './lib/sessions/csrf-session.server'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 import '@shared/components/styles/globals.css'
@@ -81,7 +81,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		}
 	}
 
-	const [csrf, cookieHeader] = await csrfSession.commitToken(request)
+	const [csrf, cookieHeader] = await commitValidCsrfToken(request)
 
 	const loaderData = {
 		csrf,

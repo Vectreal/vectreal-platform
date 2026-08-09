@@ -1,6 +1,6 @@
 import { ApiResponse } from '@shared/utils'
 
-import { csrfSession } from '../sessions/csrf-session.server'
+import { buildCsrfCarrier, csrfSession } from '../sessions/csrf-session.server'
 
 function parseOrigin(value: null | string): null | string {
 	if (!value) {
@@ -158,11 +158,8 @@ export async function ensureValidCsrfToken(
 
 	// `csrfSession` reads the token out of a `FormData` under `formDataKey`, so
 	// hand it one holding just that field.
-	const carrier = new FormData()
-	carrier.set('csrf', token)
-
 	try {
-		await csrfSession.validate(carrier, request.headers)
+		await csrfSession.validate(buildCsrfCarrier(token), request.headers)
 		return null
 	} catch {
 		return ApiResponse.forbidden('Invalid CSRF token')
