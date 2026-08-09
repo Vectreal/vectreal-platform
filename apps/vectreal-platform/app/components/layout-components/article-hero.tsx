@@ -2,6 +2,7 @@ import { cn } from '@shared/utils'
 
 import { ArticleMeta } from './article-meta'
 import BasicCard from './basic-card'
+import { newsroomMorphNames } from '../../lib/news/article-view-transition'
 import { formatNewsDate } from '../../lib/news/news-manifest'
 import { SCENE_SURFACE } from '../../lib/newsroom-thumbnail/palette'
 
@@ -34,8 +35,15 @@ interface ArticleHeroProps {
  * The fixed dark surface is deliberate: the scene is near-white hairlines and
  * would be invisible on a light-theme card, so the hero pins its own background
  * and type colours and reads identically in both themes.
+ *
+ * The `view-transition-name`s pair this header with the listing's featured
+ * card, so arriving from the newsroom index grows the card into the hero
+ * instead of cross-fading. The names sit on `cardStyle`, which BasicCard
+ * forwards to the inner `Card` - the element that actually carries the
+ * background, border and radius. See `lib/news/article-view-transition.ts`.
  */
 export function ArticleHero({
+	slug,
 	title,
 	category,
 	publishedAt,
@@ -45,29 +53,41 @@ export function ArticleHero({
 	className
 }: ArticleHeroProps) {
 	const image = heroImage ?? sceneImage
+	const morph = newsroomMorphNames(slug)
 
 	return (
 		<BasicCard
 			as="header"
 			cardClassName={cn(
-				'relative isolate overflow-hidden border-white/10 p-0',
+				'vt-news-plate relative isolate overflow-hidden border-white/10 p-0',
 				className
 			)}
-			cardStyle={{ backgroundColor: SCENE_SURFACE.background }}
+			cardStyle={{
+				backgroundColor: SCENE_SURFACE.background,
+				viewTransitionName: morph.card
+			}}
 		>
 			<div className="relative z-20 flex min-h-[20rem] flex-col justify-end p-6 md:min-h-[26rem] md:p-9">
-				<p className="text-orange text-eyebrow mb-3">{category}</p>
+				<p
+					className="text-orange text-eyebrow vt-news-text mb-3"
+					style={{ viewTransitionName: morph.eyebrow }}
+				>
+					{category}
+				</p>
 
 				<h1
-					className="text-headline max-w-3xl text-balance"
-					style={{ color: SCENE_SURFACE.text }}
+					className="text-headline vt-news-text max-w-3xl text-balance"
+					style={{ color: SCENE_SURFACE.text, viewTransitionName: morph.title }}
 				>
 					{title}
 				</h1>
 
 				<ArticleMeta
-					className="mt-4"
-					style={{ color: SCENE_SURFACE.mutedText }}
+					className="vt-news-text mt-4"
+					style={{
+						color: SCENE_SURFACE.mutedText,
+						viewTransitionName: morph.meta
+					}}
 					items={[
 						formatNewsDate(publishedAt),
 						...(updatedAt ? [`Updated ${formatNewsDate(updatedAt)}`] : [])
@@ -77,9 +97,10 @@ export function ArticleHero({
 
 			<div
 				aria-hidden
-				className="absolute inset-0 z-10"
+				className="vt-news-plate absolute inset-0 z-10 rounded-2xl"
 				style={{
-					background: `linear-gradient(to top, ${SCENE_SURFACE.background} 4%, rgba(8, 8, 10, 0.72) 42%, rgba(8, 8, 10, 0) 82%)`
+					background: `linear-gradient(to top, ${SCENE_SURFACE.background} 4%, rgba(8, 8, 10, 0.72) 42%, rgba(8, 8, 10, 0) 82%)`,
+					viewTransitionName: morph.scrim
 				}}
 			/>
 
@@ -91,7 +112,8 @@ export function ArticleHero({
 					width={1200}
 					height={630}
 					fetchPriority="high"
-					className="absolute inset-0 z-0 h-full w-full object-cover object-center"
+					className="vt-news-image absolute inset-0 z-0 h-full w-full rounded-2xl object-cover object-center"
+					style={{ viewTransitionName: morph.scene }}
 				/>
 			) : null}
 		</BasicCard>

@@ -39,6 +39,7 @@ import { commitValidCsrfToken } from './lib/sessions/csrf-session.server'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 import '@shared/components/styles/globals.css'
+import './styles/view-transitions.css'
 
 export const meta: MetaFunction = () => [
 	...buildMeta([], undefined, {
