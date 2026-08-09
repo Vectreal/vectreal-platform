@@ -26,6 +26,7 @@ import {
 	ThemeController,
 	ThemeScript
 } from './components/theme'
+import { shouldRenderConsentUi } from './lib/consent/consent-surfaces'
 import { isAnonymousCacheableRequest } from './lib/http/cacheable-public-paths.server'
 import { posthogMiddleware } from './lib/posthog/posthog-middleware'
 import { buildMeta } from './lib/seo'
@@ -236,12 +237,23 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 }
 
 export default function App({ loaderData }: Route.ComponentProps) {
+	const { pathname } = useLocation()
+
+	// The provider still wraps everything so consent state resolves (denied by
+	// default) everywhere. Only the visible chrome is suppressed, and only where
+	// we are rendering inside somebody else's page.
+	const consentUiAllowed = shouldRenderConsentUi(pathname)
+
 	return (
 		<AuthenticityTokenProvider token={loaderData?.csrf}>
 			<ConsentProvider>
 				<Outlet />
-				<ConsentBanner />
-				<ConsentPreferencesDialog />
+				{consentUiAllowed ? (
+					<>
+						<ConsentBanner />
+						<ConsentPreferencesDialog />
+					</>
+				) : null}
 			</ConsentProvider>
 		</AuthenticityTokenProvider>
 	)

@@ -87,6 +87,17 @@ export default [
 			route('imprint', './routes/imprint-page.mdx')
 		]),
 
+		// Dev-only newsroom scene contact sheet. Mounted at the top level rather
+		// than under news-room/ so it can never collide with news-room/:slug.
+		// Its loader 404s outside DEV, and it is absent from prerender paths and
+		// the sitemap because both derive from the article manifest.
+		//
+		// Registered unconditionally on purpose: gating it on NODE_ENV stops
+		// `react-router typegen` emitting its +types module, so the route loses
+		// type safety. It compiles to its own lazy chunk that production never
+		// loads, which is a better trade than an untyped route.
+		route('__scenes', './routes/news-room-page/newsroom-scene-preview.tsx'),
+
 		// News room page
 		layout('./routes/layouts/news-room-layout.tsx', [
 			route('news-room', './routes/news-room-page/news-room-page.tsx'),

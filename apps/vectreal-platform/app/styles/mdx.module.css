@@ -95,6 +95,19 @@
 		opacity: 0.8;
 	}
 
+	/*
+	  Markdown wraps a lone image in a paragraph, so the 0.8 above was washing
+	  out every figure in an article. Opacity composites the whole element as a
+	  group, which means a child can never be more opaque than its parent - an
+	  `img { opacity: 1 }` rule cannot undo it, so the exception has to sit on
+	  the paragraph itself.
+	*/
+	p:has(> img),
+	p:has(> video),
+	p:has(> picture) {
+		opacity: 1;
+	}
+
 	a {
 		color: var(--color-orange);
 		text-underline-offset: 4px;

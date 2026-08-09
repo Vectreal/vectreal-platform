@@ -7,8 +7,9 @@ import { data, Form, Link } from 'react-router'
 
 import { useConsent } from '../../components/consent/consent-context'
 import {
-	ArticleCard,
+	ArticleRow,
 	CtaPanel,
+	FeaturedArticle,
 	PageHero
 } from '../../components/layout-components'
 import {
@@ -328,13 +329,13 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 					) : (
 						<>
 							{featuredArticle ? (
-								<ArticleCard article={featuredArticle} variant="featured" />
+								<FeaturedArticle article={featuredArticle} />
 							) : null}
 
 							{remainingArticles.length > 0 ? (
-								<div className="grid gap-4 md:grid-cols-2">
+								<div className="border-border/60 mt-10 border-t">
 									{remainingArticles.map((article) => (
-										<ArticleCard key={article.slug} article={article} />
+										<ArticleRow key={article.slug} article={article} />
 									))}
 								</div>
 							) : null}

@@ -1,12 +1,14 @@
 import { cn } from '@shared/utils'
 
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 interface ArticleMetaProps {
 	/** Rendered first, in the accent colour, when present. */
 	category?: string
 	items: ReactNode[]
 	className?: string
+	/** For surfaces that must not follow the theme, such as the article hero. */
+	style?: CSSProperties
 }
 
 /**
@@ -19,13 +21,19 @@ interface ArticleMetaProps {
  * for never appeared. Brand orange is `text-orange`, as the docs route already
  * had it.
  */
-export function ArticleMeta({ category, items, className }: ArticleMetaProps) {
+export function ArticleMeta({
+	category,
+	items,
+	className,
+	style
+}: ArticleMetaProps) {
 	return (
 		<div
 			className={cn(
 				'text-muted-foreground text-label-xs flex flex-wrap items-center gap-1.5',
 				className
 			)}
+			style={style}
 		>
 			{category ? (
 				<span className="text-orange text-eyebrow">{category}</span>
