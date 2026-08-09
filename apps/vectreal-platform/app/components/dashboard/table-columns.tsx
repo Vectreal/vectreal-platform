@@ -41,7 +41,7 @@ import { SceneThumbnail } from './scene-thumbnail'
 import { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
 import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
 
-import type { ColumnDef } from '@tanstack/react-table'
+import type { LegacyColumnDef as ColumnDef } from '@tanstack/react-table/legacy'
 
 /**
  * Project table columns
