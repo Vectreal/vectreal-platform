@@ -9,7 +9,6 @@ export interface NewsAuthor {
 	role: string
 	bio?: string
 	avatar?: string
-	xUrl?: string
 	linkedinUrl?: string
 }
 
@@ -322,7 +321,6 @@ const allArticles: NewsArticle[] = Object.entries(articleModules)
 				role: module.frontmatter?.author?.role?.trim() ?? '',
 				bio: module.frontmatter?.author?.bio,
 				avatar: module.frontmatter?.author?.avatar,
-				xUrl: module.frontmatter?.author?.xUrl,
 				linkedinUrl: module.frontmatter?.author?.linkedinUrl
 			},
 			coverImage: module.frontmatter?.coverImage,

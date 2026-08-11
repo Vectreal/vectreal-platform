@@ -95,15 +95,11 @@ export function meta({ loaderData }: Route.MetaArgs) {
 					publishedAt: loaderData.article.publishedAt,
 					updatedAt: loaderData.article.updatedAt,
 					image: loaderData.article.coverImage,
-					authorName: loaderData.article.author.name,
-					authorRole: loaderData.article.author.role,
-					authorXUrl: loaderData.article.author.xUrl,
-					authorLinkedinUrl: loaderData.article.author.linkedinUrl
+					authorName: loaderData.article.author.name
 				}),
 				buildAuthorPersonJsonLd({
 					name: loaderData.article.author.name,
 					role: loaderData.article.author.role,
-					xUrl: loaderData.article.author.xUrl,
 					linkedinUrl: loaderData.article.author.linkedinUrl
 				}),
 				buildBreadcrumbListJsonLd([
