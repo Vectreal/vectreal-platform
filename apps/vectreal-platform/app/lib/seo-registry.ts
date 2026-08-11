@@ -13,10 +13,9 @@ interface NewsArticleStructuredDataInput {
 	publishedAt: string
 	updatedAt?: string
 	image?: string
+	/** Only the name is read: the Article node references the author by @id,
+	 * and the author's details live on the Person node. */
 	authorName: string
-	authorRole?: string
-	authorXUrl?: string
-	authorLinkedinUrl?: string
 }
 
 export interface BreadcrumbItem {
@@ -179,10 +178,9 @@ function nameToSlug(name: string): string {
 export function buildAuthorPersonJsonLd(author: {
 	name: string
 	role?: string
-	xUrl?: string
 	linkedinUrl?: string
 }) {
-	const sameAs = [author.xUrl, author.linkedinUrl].filter(Boolean) as string[]
+	const sameAs = author.linkedinUrl ? [author.linkedinUrl] : []
 	return {
 		'@context': 'https://schema.org',
 		'@type': 'Person',
