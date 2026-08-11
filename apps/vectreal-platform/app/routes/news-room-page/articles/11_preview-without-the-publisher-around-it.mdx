@@ -1,0 +1,58 @@
+---
+title: "Preview a scene without the Publisher around it"
+slug: "preview-without-the-publisher-around-it"
+excerpt: "Preview mode takes the editing tools off the canvas, and any saved scene can be opened full screen on a page of its own, with the model on it and very little else. It is for looking at what you composed without the Publisher in the frame, and for handing that view to someone else on the project."
+publishedAt: "2026-08-10"
+updatedAt: "2026-08-10"
+category: "releases"
+tags:
+  - "publisher"
+  - "embed"
+  - "camera"
+author:
+    name: "Vectreal"
+    role: "Team"
+    bio: "Open infrastructure for publishing 3D on the web."
+    avatar: "/assets/images/logo-192.png"
+    linkedinUrl: "https://www.linkedin.com/company/vectreal"
+draft: true
+thumbnailImage: "/assets/images/newsroom/11/thumbnail-preview-without-the-publisher-around-it.webp"
+coverImage: "/assets/images/newsroom/og-preview-without-the-publisher-around-it.webp"
+
+voice: B
+author_persona: vectreal-team
+type: "Product Update"
+premise: capability
+pillar: Open Source
+seo_cluster: "3D on the web / add 3D model to website"
+cta: https://vectreal.com/publisher
+sceneImage: "/assets/images/newsroom/scene-preview-without-the-publisher-around-it.webp"
+---
+
+Preview mode now takes the editing tools off the canvas, and any saved scene can be opened full screen on a page of its own, with the model on it and very little else. We shipped both on 1 August 2026.
+
+<video src="/assets/images/newsroom/11/preview-mode-enter.mp4" autoPlay muted loop playsInline aria-label="A black Porsche GT3 on the canvas in the Vectreal Publisher, with the Camera panel open. Preview mode is switched on, the tool rail on the left and the publish card on the right clear off to leave the model alone on screen, a Preview badge appears where the rail was, and the camera switcher along the bottom steps from Default Camera through to the interior camera before preview mode is closed again."></video>
+
+## In the Publisher
+
+Enter preview mode from the **Preview Mode** block in the **Camera Controls** tool. The tool rail and the publish card clear off, both sidebars close, and a **Preview** badge takes the rail's place at the top left carrying the way out. Save stays disabled until you leave.
+
+This is the one to reach for while you are still composing. It runs on the scene in front of you, unsaved changes and all, so it answers whether the framing works before there is anything on disk to look at.
+
+The camera switcher stays, and it lost its dropdown in the same change. Arrows step through, the camera name sits between them with a position counter, and a list appears only above three cameras, where stepping through stops being the faster way to get somewhere.
+
+## On its own page
+
+In the same block, **Open full preview** opens the saved scene in a new tab and leaves the Publisher untouched behind it, unsaved work included. It stays disabled until the scene has been saved, and says so on hover. **What opens is the saved scene**, so anything you changed and did not save is not in it. That is the trade between the two: in the canvas you review what is in front of you, on the page you review what you actually saved. The scene's page in the dashboard has a **Preview** button that goes to the same place.
+
+That page carries the badge, the camera switcher, and a control that hides both. `H` toggles them, `Escape` leaves, and hiding them leaves a restore button on screen at a quarter opacity so they cannot be lost entirely.
+
+Leaving always lands on the scene's page in the dashboard. We would rather send you to the scene than to wherever you came from, because someone opening that link out of a message has nothing behind them to go back to.
+
+<video src="/assets/images/newsroom/11/full-preview-chrome.mp4" autoPlay muted loop playsInline aria-label="A black Porsche GT3 on the full preview page, with a Preview badge at the top left, a hide control at the top right and the camera switcher along the bottom. Pressing H hides all three, leaving one faint restore button at the top right that brightens under the pointer, and pressing H again brings them back."></video>
+
+**It is not a share link.** The page opens for you and for anyone else in the project, and returns "Scene not found" to everybody else. Putting a scene in front of someone outside it is still an embed, and an embed still needs its preview API key.
+
+The project is pre-1.0, which is worth knowing before you build a review workflow on top of either of these.
+
+Try it, no account needed: [vectreal.com/publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=preview-without-the-publisher-around-it)
