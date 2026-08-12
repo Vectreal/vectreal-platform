@@ -1,0 +1,61 @@
+---
+title: "Preview a scene the way it will be embedded"
+slug: "preview-a-scene-the-way-it-will-be-embedded"
+excerpt: "Once you have set your cameras, shadows and interactions, preview mode shows you that configuration with the editor gone, on the same page an embed renders. So you can check the work before the scene is published anywhere."
+publishedAt: "2026-08-12"
+updatedAt: "2026-08-12"
+category: "releases"
+tags:
+  - "publisher"
+  - "embed"
+  - "camera"
+author:
+    name: "Vectreal"
+    role: "Team"
+    bio: "Open infrastructure for publishing 3D on the web."
+    avatar: "/assets/images/logo-192.png"
+    linkedinUrl: "https://www.linkedin.com/company/vectreal"
+draft: false
+coverImage: "/assets/images/newsroom/og-preview-a-scene-the-way-it-will-be-embedded.webp"
+
+voice: B
+author_persona: vectreal-team
+type: "Product Update"
+premise: capability
+pillar: Quality
+seo_cluster: "3D on the web / add 3D model to website"
+cta: https://vectreal.com/publisher
+sceneImage: "/assets/images/newsroom/scene-preview-a-scene-the-way-it-will-be-embedded.webp"
+---
+
+You set up a scene across several tools. Cameras, shadows, the environment, hotspots, how the model responds to a drag. Preview mode takes the editor off the canvas and shows you what all of that adds up to, before the scene is published anywhere.
+
+<video src="/assets/images/newsroom/11/preview-mode-enter.mp4" autoPlay muted loop playsInline aria-label="A black Porsche GT3 in the Vectreal Publisher, surrounded by tool rails, panels and a publish card. Preview mode switches on and the editing surface clears away, leaving the car alone on a dark page with a small Preview badge and a camera switcher along the bottom."></video>
+
+## Why it is worth a second look
+
+Nothing about the scene changes in preview. Same renderer, same settings, same everything. What changes is that the scene gets the whole viewport, with nothing around it.
+
+That turns out to matter for the decisions you have been making, because you made them in a canvas taking up part of a window, with a tool rail down one side and a panel open over it. Shadow darkness and ambient occlusion carry differently when the model fills the frame instead of two thirds of it. A camera transition timed against a small canvas can feel slow across a full page. Movement smoothness that felt controlled while you were dragging inside a panel layout can feel loose without one. A camera sequence you stepped through one at a time is a different experience when somebody walks it end to end.
+
+That is the pass preview mode is for. Not a first look at something you just uploaded, but a look at the setup you actually built.
+
+## What you are looking at is the embed
+
+The page a preview opens is the page an embed renders. One component behind two routes, differing in how the request is authenticated rather than in what appears on screen. Press `H` and the preview badge and camera switcher go too, leaving one faint restore button in the corner and, apart from it, exactly what a visitor gets.
+
+So the check you do here is the check. If a camera clips into the model in preview, it clips on someone's product page, and there is nothing to confirm again after publishing.
+
+## Two ways in
+
+**From the canvas.** The **Preview Mode** block in **Camera Controls** clears the editing surface and leaves the scene in front of you, unsaved changes included. Save stays disabled until you leave. This is the one to reach for mid-adjustment, because it runs on the configuration you are still working on rather than the one on disk.
+
+**On its own page.** **Open full preview**, in the same block, opens in a new tab and leaves the Publisher untouched behind it. The **Preview** button on the scene's page in the dashboard goes to the same place. Either way you are looking at the saved scene, so this is the one that answers whether what you committed is what you meant to commit.
+
+<video src="/assets/images/newsroom/11/full-preview-chrome.mp4" autoPlay muted loop playsInline aria-label="A black Porsche GT3 on the full preview page, with a Preview badge at the top left, a hide control at the top right and the camera switcher along the bottom. Pressing H hides all three, leaving one faint restore button at the top right that brightens under the pointer, and pressing H again brings them back."></video>
+
+Leaving always lands on the scene's page in the dashboard rather than wherever you came from. We would rather put you next to the thing you were just looking at than behind it.
+
+The project is pre-1.0.
+
+Try it, no account needed: [vectreal.com/publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=preview-a-scene-the-way-it-will-be-embedded)
