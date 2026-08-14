@@ -5,12 +5,18 @@ import { reconcileSceneAnimation } from './reconcile-scene-animation'
 
 import type { AnimationClipConfig, AnimationSettings } from '../types'
 
+const model = (...names: string[]) =>
+	describeAnimationClips(names.map((name) => ({ name, duration: 1 })))
+
+/** Ids are opaque, so tests derive them the same way production does. */
+const idOf = (name: string): string => model(name)[0]?.clipId as string
+
 const clip = (
-	clipId: string,
+	name: string,
 	overrides: Partial<AnimationClipConfig> = {}
 ): AnimationClipConfig => ({
-	clipId,
-	sourceName: clipId,
+	clipId: idOf(name),
+	sourceName: name,
 	sourceIndex: 0,
 	enabled: true,
 	order: 0,
@@ -29,21 +35,22 @@ const settings = (clips: AnimationClipConfig[]): AnimationSettings => ({
 	clips
 })
 
-const model = (...names: string[]) =>
-	describeAnimationClips(names.map((name) => ({ name, duration: 1 })))
-
 describe('reconcileSceneAnimation', () => {
 	it('initializes from a model when nothing is saved', () => {
 		const result = reconcileSceneAnimation(undefined, model('Spin', 'Idle'))
 
 		expect(result.settings.clips.map((entry) => entry.clipId)).toEqual([
-			'spin',
-			'idle'
+			idOf('Spin'),
+			idOf('Idle')
 		])
 		expect(result.settings.clips.every((entry) => entry.enabled)).toBe(true)
-		expect(result.added).toEqual(['spin', 'idle'])
+		expect(result.added).toEqual([idOf('Spin'), idOf('Idle')])
 		expect(result.dropped).toEqual([])
 		expect(result.remapped).toEqual([])
+	})
+
+	it('treats null like nothing saved rather than failing', () => {
+		expect(() => reconcileSceneAnimation(null, model('Spin'))).not.toThrow()
 	})
 
 	it('enables animation only when the model actually has clips', () => {
@@ -57,13 +64,13 @@ describe('reconcileSceneAnimation', () => {
 
 	it('is a no-op for an unchanged model', () => {
 		const saved = settings([
-			clip('spin', { sourceIndex: 0, order: 0, timeScale: 2 }),
-			clip('idle', { sourceIndex: 1, order: 1 })
+			clip('Spin', { sourceIndex: 0, order: 0, timeScale: 2 }),
+			clip('Idle', { sourceIndex: 1, order: 1 })
 		])
 
 		const result = reconcileSceneAnimation(saved, model('Spin', 'Idle'))
 
-		expect(result.matched).toEqual(['spin', 'idle'])
+		expect(result.matched).toEqual([idOf('Spin'), idOf('Idle')])
 		expect(result.added).toEqual([])
 		expect(result.dropped).toEqual([])
 		expect(result.remapped).toEqual([])
@@ -72,31 +79,33 @@ describe('reconcileSceneAnimation', () => {
 
 	it('drops a config whose clip is gone and renumbers order densely', () => {
 		const saved = settings([
-			clip('spin', { sourceIndex: 0, order: 0 }),
-			clip('wave', { sourceIndex: 1, order: 1 }),
-			clip('idle', { sourceIndex: 2, order: 2 })
+			clip('Spin', { sourceIndex: 0, order: 0 }),
+			clip('Wave', { sourceIndex: 1, order: 1 }),
+			clip('Idle', { sourceIndex: 2, order: 2 })
 		])
 
-		// 'Wave' removed, and 'Idle' has moved up a slot as a result.
+		// 'Wave' removed. 'Idle' now sits at index 1, but its id is name-derived so
+		// the exact pass still finds it and the positional fallback never runs.
 		const result = reconcileSceneAnimation(saved, model('Spin', 'Idle'))
 
-		expect(result.dropped.map((entry) => entry.clipId)).toEqual(['wave'])
+		expect(result.dropped.map((entry) => entry.clipId)).toEqual([idOf('Wave')])
+		expect(result.remapped).toEqual([])
 		expect(result.settings.clips.map((entry) => entry.clipId)).toEqual([
-			'spin',
-			'idle'
+			idOf('Spin'),
+			idOf('Idle')
 		])
 		expect(result.settings.clips.map((entry) => entry.order)).toEqual([0, 1])
 	})
 
 	it('appends a new clip with defaults after the survivors', () => {
-		const saved = settings([clip('spin', { sourceIndex: 0, order: 0 })])
+		const saved = settings([clip('Spin', { sourceIndex: 0, order: 0 })])
 
 		const result = reconcileSceneAnimation(saved, model('Spin', 'Jump'))
 
-		expect(result.added).toEqual(['jump'])
+		expect(result.added).toEqual([idOf('Jump')])
 		expect(result.settings.clips.map((entry) => entry.clipId)).toEqual([
-			'spin',
-			'jump'
+			idOf('Spin'),
+			idOf('Jump')
 		])
 		expect(result.settings.clips[1]).toMatchObject({
 			enabled: true,
@@ -107,104 +116,202 @@ describe('reconcileSceneAnimation', () => {
 		})
 	})
 
-	it('re-attaches a renamed clip by position and keeps its tuning', () => {
-		const saved = settings([
-			clip('spin', { sourceIndex: 0, order: 0, timeScale: 0.5, startOffset: 2 })
-		])
+	describe('the positional fallback', () => {
+		it('re-attaches a renamed clip and keeps its tuning', () => {
+			const saved = settings([
+				clip('Spin', {
+					sourceIndex: 0,
+					order: 0,
+					timeScale: 0.5,
+					startOffset: 2
+				})
+			])
 
-		const result = reconcileSceneAnimation(saved, model('Rotate'))
+			const result = reconcileSceneAnimation(saved, model('Rotate'))
 
-		expect(result.remapped).toEqual([
-			{ clipId: 'rotate', previousClipId: 'spin', sourceName: 'Rotate' }
-		])
-		expect(result.dropped).toEqual([])
-		expect(result.settings.clips[0]).toMatchObject({
-			clipId: 'rotate',
-			sourceName: 'Rotate',
-			timeScale: 0.5,
-			startOffset: 2
+			expect(result.remapped).toEqual([
+				{
+					clipId: idOf('Rotate'),
+					previousClipId: idOf('Spin'),
+					sourceName: 'Rotate'
+				}
+			])
+			expect(result.dropped).toEqual([])
+			expect(result.settings.clips[0]).toMatchObject({
+				clipId: idOf('Rotate'),
+				sourceName: 'Rotate',
+				timeScale: 0.5,
+				startOffset: 2
+			})
+		})
+
+		it('uses the config sourceIndex, not the first clip', () => {
+			// Pins that the fallback reads `sourceIndex`. With a single-clip model
+			// this is indistinguishable from `model[0]`, so the renamed clip has to
+			// sit somewhere other than the front.
+			const saved = settings([
+				clip('Spin', { sourceIndex: 0, order: 0 }),
+				clip('Wave', { sourceIndex: 2, order: 1, timeScale: 3 })
+			])
+
+			const result = reconcileSceneAnimation(
+				saved,
+				model('Spin', 'Idle', 'Renamed')
+			)
+
+			expect(result.remapped).toEqual([
+				{
+					clipId: idOf('Renamed'),
+					previousClipId: idOf('Wave'),
+					sourceName: 'Renamed'
+				}
+			])
+			expect(
+				result.settings.clips.find(
+					(entry) => entry.clipId === idOf('Renamed')
+				)?.timeScale
+			).toBe(3)
+		})
+
+		it('keeps a remapped clip in its authored sequence position', () => {
+			// The positional pass runs after the exact pass, so its matches are
+			// appended. Without a re-sort a renamed first clip would be shoved to
+			// the end of the chain the author built.
+			const saved = settings([
+				clip('Wave', { sourceIndex: 0, order: 0, timeScale: 4 }),
+				clip('Spin', { sourceIndex: 1, order: 1 })
+			])
+
+			const result = reconcileSceneAnimation(saved, model('Renamed', 'Spin'))
+
+			expect(result.settings.clips.map((entry) => entry.clipId)).toEqual([
+				idOf('Renamed'),
+				idOf('Spin')
+			])
+			expect(result.settings.clips[0]?.timeScale).toBe(4)
+		})
+
+		it('refreshes sourceIndex so the next reconciliation measures correctly', () => {
+			const first = reconcileSceneAnimation(
+				settings([clip('Spin', { sourceIndex: 0, order: 0, timeScale: 7 })]),
+				model('Idle', 'Spin')
+			)
+
+			// Exact match moved it to index 1; that has to be written back.
+			expect(first.settings.clips[0]?.sourceIndex).toBe(1)
+
+			// A later rename at that index must now resolve through the fallback.
+			const second = reconcileSceneAnimation(
+				first.settings,
+				model('Idle', 'Renamed')
+			)
+
+			expect(second.remapped.map((entry) => entry.sourceName)).toEqual([
+				'Renamed'
+			])
+			expect(
+				second.settings.clips.find(
+					(entry) => entry.clipId === idOf('Renamed')
+				)?.timeScale
+			).toBe(7)
 		})
 	})
 
 	it('matches by id when clips are reordered in the file', () => {
 		const saved = settings([
-			clip('spin', { sourceIndex: 0, order: 0, timeScale: 3 }),
-			clip('idle', { sourceIndex: 1, order: 1 })
+			clip('Spin', { sourceIndex: 0, order: 0, timeScale: 3 }),
+			clip('Idle', { sourceIndex: 1, order: 1 })
 		])
 
-		// Same two clips, swapped positions in the source file.
 		const result = reconcileSceneAnimation(saved, model('Idle', 'Spin'))
 
 		expect(result.remapped).toEqual([])
 		expect(result.dropped).toEqual([])
 		// Saved authoring order wins over the file's new order.
 		expect(result.settings.clips.map((entry) => entry.clipId)).toEqual([
-			'spin',
-			'idle'
+			idOf('Spin'),
+			idOf('Idle')
 		])
-		// sourceIndex is refreshed to where the clip now actually lives.
 		expect(result.settings.clips[0]).toMatchObject({
-			clipId: 'spin',
+			clipId: idOf('Spin'),
 			sourceIndex: 1,
 			timeScale: 3
 		})
 	})
 
-	it('matches by id first when two clips swap names', () => {
+	it('keeps tuning with the name when two clips swap names', () => {
+		// Two clips genuinely exchanging names is indistinguishable from a reorder
+		// once ids are name-derived, which is the intended behavior: tuning follows
+		// the name the author tuned, not the slot.
 		const saved = settings([
-			clip('spin', { sourceIndex: 0, order: 0, timeScale: 2 }),
-			clip('idle', { sourceIndex: 1, order: 1, timeScale: 4 })
+			clip('Spin', { sourceIndex: 0, order: 0, timeScale: 2 }),
+			clip('Idle', { sourceIndex: 1, order: 1, timeScale: 4 })
 		])
 
 		const result = reconcileSceneAnimation(saved, model('Idle', 'Spin'))
 
-		// Both ids still exist, so the exact pass consumes them and the positional
-		// fallback never runs. Tuning follows the name, not the slot.
-		expect(result.matched).toEqual(['spin', 'idle'])
+		expect(result.matched).toEqual([idOf('Spin'), idOf('Idle')])
 		expect(result.settings.clips[0]).toMatchObject({
-			clipId: 'spin',
+			clipId: idOf('Spin'),
 			timeScale: 2
 		})
 	})
 
-	it('reconciles positionally when every clip is unnamed', () => {
+	it('reconciles unnamed clips positionally, which is all they have', () => {
+		const [first, second] = model('', '')
 		const saved = settings([
-			clip('clip-0', { sourceIndex: 0, order: 0, timeScale: 2 }),
-			clip('clip-1', { sourceIndex: 1, order: 1 })
+			{ ...clip(''), clipId: first?.clipId as string, sourceIndex: 0, order: 0, timeScale: 2 },
+			{ ...clip(''), clipId: second?.clipId as string, sourceIndex: 1, order: 1 }
 		])
 
 		const result = reconcileSceneAnimation(saved, model('', ''))
 
-		expect(result.matched).toEqual(['clip-0', 'clip-1'])
+		expect(result.matched).toEqual([first?.clipId, second?.clipId])
 		expect(result.settings.clips[0]?.timeScale).toBe(2)
 	})
 
 	it('drops everything when the model has no clips at all', () => {
-		const saved = settings([clip('spin', { sourceIndex: 0, order: 0 })])
+		const saved = settings([clip('Spin', { sourceIndex: 0, order: 0 })])
 
 		const result = reconcileSceneAnimation(saved, model())
 
 		expect(result.settings.clips).toEqual([])
-		expect(result.dropped.map((entry) => entry.clipId)).toEqual(['spin'])
+		expect(result.dropped.map((entry) => entry.clipId)).toEqual([idOf('Spin')])
 	})
 
 	it('never re-attaches two configs to the same clip', () => {
-		// Both configs point at index 0 after their names stopped matching.
 		const saved = settings([
-			clip('gone-a', { sourceIndex: 0, order: 0 }),
-			clip('gone-b', { sourceIndex: 0, order: 1 })
+			clip('GoneA', { sourceIndex: 0, order: 0 }),
+			clip('GoneB', { sourceIndex: 0, order: 1 })
 		])
 
 		const result = reconcileSceneAnimation(saved, model('Renamed'))
 
 		expect(result.remapped).toHaveLength(1)
-		expect(result.dropped.map((entry) => entry.clipId)).toEqual(['gone-b'])
+		expect(result.dropped.map((entry) => entry.clipId)).toEqual([idOf('GoneB')])
 		expect(result.settings.clips).toHaveLength(1)
+	})
+
+	it('normalizes a partially-written saved config instead of passing it through', () => {
+		// The realistic producer is persisted JSON. A config missing `enabled`,
+		// `loop` or `timeScale` used to be spread straight into the result and
+		// reached the mixer as undefined.
+		const result = reconcileSceneAnimation(
+			{ clips: [{ clipId: idOf('Spin') }] } as unknown as AnimationSettings,
+			model('Spin')
+		)
+
+		expect(result.settings.clips[0]).toMatchObject({
+			enabled: true,
+			loop: 'repeat',
+			timeScale: 1,
+			startOffset: 0
+		})
 	})
 
 	it('preserves scene-level settings across reconciliation', () => {
 		const saved: AnimationSettings = {
-			...settings([clip('spin', { sourceIndex: 0, order: 0 })]),
+			...settings([clip('Spin', { sourceIndex: 0, order: 0 })]),
 			mode: 'sequence',
 			loopSequence: true,
 			showControls: true,

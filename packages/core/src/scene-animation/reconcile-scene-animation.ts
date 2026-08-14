@@ -1,3 +1,5 @@
+import { normalizeSceneAnimation } from './normalize-scene-animation'
+
 import type { AnimationClipDescriptor } from './describe-animation-clips'
 import type {
 	AnimationClipConfig,
@@ -63,10 +65,15 @@ function createDefaultClipConfig(
  * what it can and ignores the rest, so it can never fail on drift.
  */
 export function reconcileSceneAnimation(
-	saved: AnimationSettings | undefined,
+	saved: AnimationSettings | null | undefined,
 	model: readonly AnimationClipDescriptor[]
 ): AnimationReconciliation {
-	const savedClips = saved?.clips ?? []
+	// The realistic producer of `saved` is persisted JSON, whatever the static
+	// type claims. Without this, a half-written config was spread straight into
+	// the result and could emit clips with no `enabled`, `loop` or `timeScale` —
+	// which then reached three as `undefined` and became NaN in the mixer.
+	const settings = normalizeSceneAnimation(saved)
+	const savedClips = settings?.clips ?? []
 	const byId = new Map(model.map((descriptor) => [descriptor.clipId, descriptor]))
 	const consumed = new Set<number>()
 
@@ -139,11 +146,11 @@ export function reconcileSceneAnimation(
 			// With no saved config, a model that has clips should animate rather
 			// than sit still with nothing explaining why. A model with no clips
 			// leaves the feature off.
-			enabled: saved?.enabled ?? model.length > 0,
-			mode: saved?.mode ?? 'simultaneous',
-			autoplay: saved?.autoplay ?? true,
-			loopSequence: saved?.loopSequence ?? false,
-			showControls: saved?.showControls ?? false,
+			enabled: settings?.enabled ?? model.length > 0,
+			mode: settings?.mode ?? 'simultaneous',
+			autoplay: settings?.autoplay ?? true,
+			loopSequence: settings?.loopSequence ?? false,
+			showControls: settings?.showControls ?? false,
 			clips
 		},
 		matched,

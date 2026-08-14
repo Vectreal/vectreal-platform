@@ -36,13 +36,22 @@ export const defaultAnimationOptions: AnimationSettings = {
 /**
  * Ceiling on the per-frame step handed to the mixer.
  *
- * Not defensive padding. `CanvasWrapper` parks the render loop with
- * `frameloop="never"` while the tab is hidden, so the first delta after the tab
- * comes back can be many seconds. Fed straight to the mixer that would fire
- * `finished` on a short clip immediately, or run a whole sequence to its end,
- * in a single frame.
+ * A guard against outlier frames only — a long GC pause, a debugger break, a
+ * tab that stalled without the render loop being parked. Fed straight through,
+ * a multi-second step would fire `finished` on a short clip immediately, or run
+ * a whole sequence to its end, in one frame.
+ *
+ * Deliberately generous. Clamping trades wall-clock accuracy for continuity, so
+ * any frame slower than the ceiling plays in slow motion; at a tight bound that
+ * would mean a low-end device quietly running every animation at the wrong
+ * speed. Four frames per second is well below anything worth preserving timing
+ * for, and well above normal jank.
+ *
+ * Note it is NOT needed for tab visibility: `CanvasWrapper` parks the loop with
+ * `frameloop="never"`, and r3f's `setFrameloop` stops and restarts the clock,
+ * which resets `oldTime`. The first delta after returning is an ordinary frame.
  */
-const MAX_FRAME_DELTA = 1 / 15
+const MAX_FRAME_DELTA = 0.25
 
 /** The slice of playback the viewer shell needs in order to render. */
 export interface AnimationPlaybackStatus {
@@ -147,6 +156,31 @@ const SceneAnimation = (props: SceneAnimationProps) => {
 	const onPlaybackStatusChangeRef = useRef(onPlaybackStatusChange)
 	onPlaybackStatusChangeRef.current = onPlaybackStatusChange
 
+	/**
+	 * Resolves a clip id to a mixer action, creating and registering it if needed.
+	 *
+	 * Returns null when the id does not correspond to a currently-configured
+	 * clip, which happens whenever settings drift from the loaded model.
+	 */
+	const bindClip = useCallback(
+		(clipId: string): AnimationAction | null => {
+			const configured = stateRef.current.clips.find(
+				(entry) => entry.clipId === clipId
+			)
+			if (!configured) return null
+
+			const clip = animationsRef.current[configured.clipIndex]
+			if (!clip) return null
+
+			const action = mixer.clipAction(clip)
+			actionsRef.current.set(clipId, action)
+			clipIdByActionRef.current.set(action, clipId)
+
+			return action
+		},
+		[mixer]
+	)
+
 	const applyEffect = useCallback(
 		(effect: PlaybackEffect) => {
 			const actions = actionsRef.current
@@ -218,7 +252,10 @@ const SceneAnimation = (props: SceneAnimationProps) => {
 				}
 
 				case 'seek': {
-					const action = actions.get(effect.clipId)
+					// Bind lazily. Seeking is an authoring affordance and the common
+					// case is a scene with autoplay off, where no action exists yet;
+					// requiring one would have made every scrub a silent no-op.
+					const action = actions.get(effect.clipId) ?? bindClip(effect.clipId)
 					if (!action) return
 
 					action.time = Math.min(
@@ -232,7 +269,7 @@ const SceneAnimation = (props: SceneAnimationProps) => {
 				}
 			}
 		},
-		[mixer]
+		[bindClip, mixer]
 	)
 
 	const dispatch = useCallback(
@@ -276,7 +313,19 @@ const SceneAnimation = (props: SceneAnimationProps) => {
 		// Distinguishing a structural change from a tuning change is what keeps the
 		// authoring panel usable: without it, every frame of a speed-slider drag
 		// would restart playback.
-		const key = `${mode}|${loopSequence}|${clips.map((clip) => clip.clipId).join(',')}`
+		// Anything `retune` cannot apply to a live action has to be structural, or
+		// changing it would appear to do nothing until the next restart. `setLoop`
+		// does not re-run three's ending calculation on a running action, and
+		// nothing re-seeks a clip in flight, so loop shape and start offset both
+		// belong here. `clipIndex` too: ids are name-derived, so a swapped
+		// `animations` array can keep every id while pointing at different clips.
+		const key = clips
+			.map(
+				(clip) =>
+					`${clip.clipId}@${clip.clipIndex}:${clip.loop}:${clip.repetitions ?? '*'}:${clip.startOffset}`
+			)
+			.join(',')
+			.concat(`|${mode}|${loopSequence}`)
 
 		if (configureKeyRef.current === key) {
 			dispatch({ type: 'retune', clips })
@@ -297,6 +346,12 @@ const SceneAnimation = (props: SceneAnimationProps) => {
 		const handleFinished = (event: { action: AnimationAction }) => {
 			const clipId = clipIdByActionRef.current.get(event.action)
 			if (!clipId) return
+
+			// three re-fires `finished` for a clamped clip whenever it is unpaused
+			// at its end, which happens to every completed clip on resume. The
+			// reducer already ignores the repeat; suppress it here too so external
+			// consumers do not see a clip finish twice.
+			if (stateRef.current.completed.includes(clipId)) return
 
 			onInteractionEventRef.current?.({
 				type: 'animation_clip_finished',
@@ -358,6 +413,11 @@ const SceneAnimation = (props: SceneAnimationProps) => {
 	}, [executeViewerCommand, onCommandExecutorReady])
 
 	useFrame((_, delta) => {
+		// Skip entirely when nothing is running. A paused action already resolves
+		// to a zero step, but the mixer still walks every interpolant and rewrites
+		// the held pose onto the scene graph each frame to get there.
+		if (!isProgramActive(stateRef.current)) return
+
 		mixer.update(Math.min(delta, MAX_FRAME_DELTA))
 	})
 

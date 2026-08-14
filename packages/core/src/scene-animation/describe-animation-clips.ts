@@ -35,7 +35,7 @@ export function describeAnimationClips(
 	const seen = new Map<string, number>()
 
 	return clips.map((clip, index) => ({
-		clipId: deriveAnimationClipId(clip.name, index, seen),
+		clipId: deriveAnimationClipId(clip.name, seen),
 		name: clip.name ?? '',
 		index,
 		duration: clip.duration

@@ -170,6 +170,51 @@ describe('reducePlayback', () => {
 		})
 	})
 
+	describe('restart', () => {
+		it('replays a finished program from the top', () => {
+			const { state, effects } = run([
+				configure([clip('a', { loop: 'once' })], { autoplay: true }),
+				{ type: 'clip_finished', clipId: 'a' },
+				{ type: 'restart' }
+			])
+
+			expect(effects).toEqual([
+				{ type: 'stop_all' },
+				{ type: 'start', clip: clip('a', { loop: 'once' }) }
+			])
+			expect(state.isComplete).toBe(false)
+			expect(state.isPlaying).toBe(true)
+		})
+
+		it('returns a mid-sequence program to the first clip', () => {
+			const { state, effects } = run([
+				configure([clip('a'), clip('b')], { mode: 'sequence', autoplay: true }),
+				{ type: 'clip_finished', clipId: 'a' },
+				{ type: 'restart' }
+			])
+
+			expect(state.activeIndex).toBe(0)
+			expect(effects).toEqual([
+				{ type: 'stop_all' },
+				{ type: 'start', clip: clip('a') }
+			])
+		})
+
+		it('starts a program that was configured without autoplay', () => {
+			const { state } = run([configure([clip('a')]), { type: 'restart' }])
+
+			expect(state.isPlaying).toBe(true)
+			expect(state.hasStarted).toBe(true)
+		})
+
+		it('tears down and stays idle when there are no clips', () => {
+			const { state, effects } = run([configure([]), { type: 'restart' }])
+
+			expect(effects).toEqual([{ type: 'stop_all' }])
+			expect(state.isPlaying).toBe(false)
+		})
+	})
+
 	describe('sequence advancement', () => {
 		it('stops the finished clip and starts the next', () => {
 			const { state, effects } = run([
@@ -253,16 +298,17 @@ describe('reducePlayback', () => {
 			expect(second.state.isPlaying).toBe(false)
 		})
 
-		it('never completes when a clip loops forever', () => {
-			// An infinite clip never emits `finished`, so 'b' below simply never
-			// reports and the program stays live indefinitely.
+		it('never completes while one clip has not reported', () => {
+			// An infinite clip never emits `finished` at all — the reducer never
+			// inspects `repetitions`, it simply never hears from that clip. What is
+			// pinned here is that a partial set of reports cannot complete a program.
 			const { state } = run([
-				configure([clip('a'), clip('b', { repetitions: undefined })], {
-					autoplay: true
-				}),
-				{ type: 'clip_finished', clipId: 'a' }
+				configure([clip('a'), clip('b'), clip('c')], { autoplay: true }),
+				{ type: 'clip_finished', clipId: 'a' },
+				{ type: 'clip_finished', clipId: 'c' }
 			])
 
+			expect(state.completed).toEqual(['a', 'c'])
 			expect(state.isComplete).toBe(false)
 			expect(state.isPlaying).toBe(true)
 		})
@@ -298,7 +344,13 @@ describe('reducePlayback', () => {
 				}
 			])
 
-			expect(effects.every((effect) => effect.type === 'retune')).toBe(true)
+			// `every` on an empty array is true, so assert the contents: this is the
+			// only path that pushes new tuning onto a live action, and it could stop
+			// emitting entirely without a length check noticing.
+			expect(effects).toEqual([
+				{ type: 'retune', clip: clip('a', { timeScale: 3 }) },
+				{ type: 'retune', clip: clip('b', { timeScale: 3 }) }
+			])
 			expect(state.clips[0]?.timeScale).toBe(3)
 			expect(state.isPlaying).toBe(true)
 		})

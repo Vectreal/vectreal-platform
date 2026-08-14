@@ -113,61 +113,46 @@ describe('normalizeSceneAnimation', () => {
 		])
 	})
 
-	describe('the sequence stall guard', () => {
-		it('forces every non-terminal clip to a finite repeat count', () => {
-			const result = withClips(
-				[
-					{ clipId: 'a', order: 0, loop: 'repeat' },
-					{ clipId: 'b', order: 1, loop: 'ping_pong' },
-					{ clipId: 'c', order: 2, loop: 'repeat' }
-				],
-				{ mode: 'sequence' }
-			)
+	it('leaves repeat counts exactly as the author set them', () => {
+		// The sequence-stall guard deliberately lives in the runtime projection,
+		// not here: writing a repeat count back over saved data meant a later
+		// switch to simultaneous mode inherited a clip that no longer looped.
+		const result = withClips(
+			[
+				{ clipId: 'a', order: 0 },
+				{ clipId: 'b', order: 1 }
+			],
+			{ mode: 'sequence' }
+		)
 
-			expect(result?.clips.map((entry) => entry.repetitions)).toEqual([
-				1,
-				1,
-				undefined
-			])
+		expect(result?.clips.map((entry) => entry.repetitions)).toEqual([
+			undefined,
+			undefined
+		])
+	})
+
+	describe('booleans', () => {
+		it('treats null as absent rather than malformed', () => {
+			// The field round-trips through a JSON column, where a stored null is an
+			// ordinary way to say "nothing saved".
+			expect(normalizeSceneAnimation(null)).toBeUndefined()
 		})
 
-		it('leaves an explicit repeat count alone', () => {
-			const result = withClips(
-				[
-					{ clipId: 'a', order: 0, repetitions: 3 },
-					{ clipId: 'b', order: 1 }
-				],
-				{ mode: 'sequence' }
+		it.each(['enabled', 'autoplay', 'loopSequence', 'showControls'])(
+			'rejects a non-boolean %s rather than coercing it',
+			(field) => {
+				// Coercing meant a client stringifying its booleans silently turned
+				// the whole feature off instead of being told the shape was wrong.
+				expect(() => normalize({ [field]: 'true' })).toThrow(
+					`animation.${field} must be a boolean`
+				)
+			}
+		)
+
+		it('rejects a non-boolean clip enabled flag', () => {
+			expect(() => withClips([{ clipId: 'a', enabled: 'yes' }])).toThrow(
+				'animation.clips[0].enabled must be a boolean'
 			)
-
-			expect(result?.clips[0]?.repetitions).toBe(3)
-		})
-
-		it('treats the last enabled clip as terminal, ignoring disabled ones', () => {
-			const result = withClips(
-				[
-					{ clipId: 'a', order: 0 },
-					{ clipId: 'b', order: 1 },
-					{ clipId: 'c', order: 2, enabled: false }
-				],
-				{ mode: 'sequence' }
-			)
-
-			// 'b' is the last clip that actually plays, so it may loop forever.
-			expect(result?.clips.map((entry) => entry.repetitions)).toEqual([
-				1,
-				undefined,
-				undefined
-			])
-		})
-
-		it('does not apply in simultaneous mode', () => {
-			const result = withClips([{ clipId: 'a' }, { clipId: 'b' }])
-
-			expect(result?.clips.map((entry) => entry.repetitions)).toEqual([
-				undefined,
-				undefined
-			])
 		})
 	})
 })

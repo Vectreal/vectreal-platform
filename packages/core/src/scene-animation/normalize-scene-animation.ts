@@ -34,8 +34,23 @@ function isRecord(value: unknown): value is AnimationRecord {
 	return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function normalizeBoolean(value: unknown, fallback: boolean): boolean {
-	return typeof value === 'boolean' ? value : fallback
+/**
+ * Absent takes the fallback; present-but-not-a-boolean is an error.
+ *
+ * Coercing here would mean a client that stringifies its booleans silently
+ * turns the whole feature off instead of being told it sent the wrong shape.
+ */
+function normalizeBoolean(
+	value: unknown,
+	fallback: boolean,
+	label: string
+): boolean {
+	if (typeof value === 'undefined') return fallback
+	if (typeof value !== 'boolean') {
+		throw new Error(`${label} must be a boolean`)
+	}
+
+	return value
 }
 
 /**
@@ -124,7 +139,7 @@ function normalizeClip(
 		clipId: clip.clipId.trim(),
 		sourceName: typeof clip.sourceName === 'string' ? clip.sourceName : '',
 		sourceIndex,
-		enabled: normalizeBoolean(clip.enabled, true),
+		enabled: normalizeBoolean(clip.enabled, true, `${label}.enabled`),
 		order,
 		loop,
 		...(typeof repetitions === 'undefined' ? {} : { repetitions }),
@@ -134,44 +149,18 @@ function normalizeClip(
 }
 
 /**
- * Forces every non-terminal clip in a sequence to end.
- *
- * A clip with infinite repetitions never emits three's `finished` event, so a
- * sequence parked on one stalls with no way to advance and no error to explain
- * it. This is the worst failure mode in the feature, so it is closed off here
- * as well as in the authoring UI.
- *
- * Only enabled clips are considered, because a disabled clip is not part of the
- * chain and so cannot be the one that has to hand off.
- */
-function clampNonTerminalRepetitions(
-	clips: AnimationClipConfig[]
-): AnimationClipConfig[] {
-	const enabledOrder = clips
-		.map((clip, index) => ({ clip, index }))
-		.filter((entry) => entry.clip.enabled)
-		.sort((a, b) => a.clip.order - b.clip.order)
-
-	const lastEnabledIndex = enabledOrder.at(-1)?.index
-
-	return clips.map((clip, index) => {
-		if (!clip.enabled || index === lastEnabledIndex) return clip
-		if (clip.loop === 'once' || typeof clip.repetitions === 'number') return clip
-
-		return { ...clip, repetitions: 1 }
-	})
-}
-
-/**
  * Returns a canonical animation config suitable for persistence and hydration.
  *
  * Intentionally strict, because settings can arrive from untyped JSON even when
  * the call site is statically typed. Mirrors `normalizeSceneInteractions`.
  */
 export function normalizeSceneAnimation(
-	animation?: AnimationSettings
+	animation?: AnimationSettings | null
 ): AnimationSettings | undefined {
-	if (typeof animation === 'undefined') {
+	// `null` is treated as absent, not as malformed: this field round-trips
+	// through a JSON column, where a stored null is an ordinary way to say
+	// "nothing saved" and must not turn into a 400.
+	if (typeof animation === 'undefined' || animation === null) {
 		return undefined
 	}
 
@@ -224,11 +213,16 @@ export function normalizeSceneAnimation(
 
 	return {
 		// Absent means off: a malformed payload must never start motion on its own.
-		enabled: normalizeBoolean(animation.enabled, false),
+		enabled: normalizeBoolean(animation.enabled, false, 'animation.enabled'),
 		mode,
-		autoplay: normalizeBoolean(animation.autoplay, true),
-		loopSequence: normalizeBoolean(animation.loopSequence, false),
-		showControls: normalizeBoolean(animation.showControls, false),
-		clips: mode === 'sequence' ? clampNonTerminalRepetitions(ordered) : ordered
+		autoplay: normalizeBoolean(animation.autoplay, true, 'animation.autoplay'),
+		loopSequence: normalizeBoolean(animation.loopSequence, false, 'animation.loopSequence'),
+		showControls: normalizeBoolean(animation.showControls, false, 'animation.showControls'),
+		// The sequence-stall guard deliberately does not live here. It is a
+		// property of how a program is played, not of what the author saved, and
+		// writing a repeat count back over their input meant a later switch to
+		// simultaneous mode silently inherited a clip that no longer looped.
+		// `resolvePlaybackClips` applies it as a projection instead.
+		clips: ordered
 	}
 }

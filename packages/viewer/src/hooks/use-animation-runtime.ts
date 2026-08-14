@@ -61,6 +61,16 @@ export function useAnimationRuntime({
 	const registerExecutor = useCallback(
 		(executor: null | ViewerCommandExecutor) => {
 			executorRef.current = executor
+
+			// Reset on unregister, which is the runtime going away: the canvas
+			// unmounted on scroll, the author disabled animation, or the clips
+			// changed. Without this the last known status outlives the runtime, and
+			// it cannot self-heal on remount — a fresh runtime reports its state
+			// only when it *differs* from the one it seeded, so a remount straight
+			// back into "idle" is silent. That left the play button stuck showing
+			// pause with no way to clear it, and pinned the shadow system to its
+			// moving-geometry fallback indefinitely.
+			if (!executor) setStatus(IDLE_STATUS)
 		},
 		[]
 	)
