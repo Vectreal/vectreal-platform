@@ -51,6 +51,17 @@ describe('deriveAnimationClipId', () => {
 		const names = ['Spin', '', 'Spin', 'Idle']
 		expect(idsFor(names)).toEqual(idsFor(names))
 	})
+
+	it('stays linear on a long run of separators', () => {
+		// Clip names come from an uploaded file, so they are untrusted. Slugifying
+		// is a single pass with no backtracking; this pins that down rather than
+		// leaving it to be reasoned about.
+		const pathological = `${'-'.repeat(100_000)}Spin${'-'.repeat(100_000)}`
+
+		const startedAt = performance.now()
+		expect(idsFor([pathological])).toEqual(['spin'])
+		expect(performance.now() - startedAt).toBeLessThan(1000)
+	})
 })
 
 describe('describeAnimationClips', () => {

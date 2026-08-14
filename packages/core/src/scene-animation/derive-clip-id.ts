@@ -5,13 +5,34 @@
  * entirely of punctuation or non-latin script reduces to an empty string. That
  * is deliberate: such a name carries no usable identity, and the caller falls
  * back to a positional id rather than inventing one.
+ *
+ * Written as a single pass rather than with `replace` and a trimming pattern.
+ * Clip names arrive from an uploaded file, so they are untrusted, and a
+ * trailing-run pattern like `-+$` backtracks quadratically. Emitting the
+ * separator lazily is linear by construction and needs no such argument.
  */
 function slugifyClipName(name: string): string {
-	return name
-		.trim()
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, '-')
-		.replace(/^-+|-+$/g, '')
+	let slug = ''
+	let separatorPending = false
+
+	for (const character of name.toLowerCase()) {
+		const isSlugCharacter =
+			(character >= 'a' && character <= 'z') ||
+			(character >= '0' && character <= '9')
+
+		if (!isSlugCharacter) {
+			// Held back rather than appended, so a run of separators collapses and
+			// neither a leading nor a trailing dash can ever be emitted.
+			separatorPending = true
+			continue
+		}
+
+		if (separatorPending && slug) slug += '-'
+		separatorPending = false
+		slug += character
+	}
+
+	return slug
 }
 
 /**
