@@ -34,6 +34,14 @@ export type EmbedEventMap = {
 	model_loaded: void
 	camera_changed: { cameraId: string }
 	auto_rotate_changed: { enabled: boolean }
+	animation_state_changed: {
+		playing: boolean
+		/** The clip driving a sequence; null in simultaneous mode. */
+		activeClipId: string | null
+		/** True once the program has run to its end without looping. */
+		complete: boolean
+	}
+	animation_clip_finished: { clipId: string }
 	interaction_event: {
 		interactionId?: string
 		eventName: string
@@ -181,6 +189,16 @@ export class VectrealEmbed {
 	/** Toggle right-click pan. */
 	setPanEnabled(enabled: boolean): void {
 		this.sendCommand({ type: 'set_controls_options', pan: enabled })
+	}
+
+	/** Start or suspend playback of the scene's animation clips. */
+	setAnimationPlaying(playing: boolean): void {
+		this.sendCommand({ type: 'set_animation_playing', playing })
+	}
+
+	/** Play the animation program again from the beginning. */
+	restartAnimation(): void {
+		this.sendCommand({ type: 'restart_animation' })
 	}
 
 	/**
@@ -352,6 +370,16 @@ export class VectrealEmbed {
 				break
 			case 'auto_rotate_changed':
 				this.emit('auto_rotate_changed', { enabled: event.enabled })
+				break
+			case 'animation_state_changed':
+				this.emit('animation_state_changed', {
+					playing: event.playing,
+					activeClipId: event.activeClipId,
+					complete: event.complete
+				})
+				break
+			case 'animation_clip_finished':
+				this.emit('animation_clip_finished', { clipId: event.clipId })
 				break
 			case 'initial_framing_completed':
 				// Translate to model_loaded for embed consumers - signals scene is visible

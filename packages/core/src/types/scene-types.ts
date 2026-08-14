@@ -26,6 +26,7 @@ import type {
 	SimplifyOptions,
 	TextureCompressOptions
 } from '../model-optimizer'
+import type { AnimationSettings } from './animation-types'
 import type { SceneInteractionDefinition } from './interaction-types'
 import type {
 	AccumulativeShadowsProps as ThreeAccumulativeShadowsProps,
@@ -382,6 +383,8 @@ export interface HotspotDefinition {
  * Used for persisting and restoring scene appearance and behavior.
  */
 export interface SceneSettings {
+	/** Playback configuration for animation clips carried by the model. */
+	animation?: AnimationSettings
 	/** Bounds settings */
 	bounds?: BoundsProps
 	/** Camera settings */

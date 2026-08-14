@@ -96,7 +96,12 @@ const loadBinaryModel = async (
 	try {
 		const result = await modelLoader.loadToThreeJS(file)
 		loaded = {
-			file: { model: result.scene, type: fileType, name: file.name }
+			file: {
+				model: result.scene,
+				animations: result.animations,
+				type: fileType,
+				name: file.name
+			}
 		}
 	} catch (error) {
 		throw normalizeLocalLoadError(error, 'binary_load_failed', {
@@ -140,6 +145,7 @@ const loadGltfModel = async (
 		loaded = {
 			file: {
 				model: result.scene,
+				animations: result.animations,
 				type: ModelFileTypes.gltf,
 				name: gltfFile.name,
 				sourcePackageBytes,

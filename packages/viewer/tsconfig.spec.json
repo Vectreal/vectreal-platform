@@ -1,0 +1,12 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"outDir": "../../dist/out-tsc",
+		"types": ["vitest/globals", "vitest/importMeta", "vite/client", "node"],
+		"moduleResolution": "bundler",
+		// vitest.config.ts imports the shared base by its real `.mts` path so Vite's
+		// native config loader can resolve it; type-checking is noEmit here.
+		"allowImportingTsExtensions": true
+	},
+	"include": ["vitest.config.ts", "src/**/*.spec.ts", "src/**/*.d.ts"]
+}

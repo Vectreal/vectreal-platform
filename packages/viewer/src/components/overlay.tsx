@@ -11,6 +11,8 @@ interface OverlayProps {
 	loadingState: LoadingState
 	onLoaderFadeOutComplete?: () => void
 	popover?: React.ReactNode
+	/** Playback controls, when the scene author has opted into them. */
+	animationControls?: React.ReactNode
 	loader?: React.ReactNode
 	loadingThumbnail?: ViewerLoadingThumbnail
 }
@@ -19,6 +21,7 @@ const Overlay = ({
 	loadingState,
 	onLoaderFadeOutComplete,
 	popover,
+	animationControls,
 	loader,
 	loadingThumbnail
 }: OverlayProps) => {
@@ -69,6 +72,8 @@ const Overlay = ({
 					</div>
 				</div>
 			)}
+			{/* After the loader so the controls never fade in over it. */}
+			{!showLoader && animationControls}
 			{popover}
 		</>
 	)

@@ -1,3 +1,8 @@
+export {
+	default as SceneAnimation,
+	defaultAnimationOptions,
+	type AnimationPlaybackStatus
+} from './scene-animation'
 export { default as SceneBounds, defaultBoundsOptions } from './scene-bounds'
 export { default as SceneCamera, defaultCameraOptions } from './scene-camera'
 export {

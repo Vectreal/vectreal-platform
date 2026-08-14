@@ -15,7 +15,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 import { ModelFileTypes } from '@vctrl/core/model-loader'
-import { Object3D } from 'three'
+import { AnimationClip, Object3D } from 'three'
 
 import { useOptimizeModel } from '../use-optimize-model'
 
@@ -45,6 +45,8 @@ export type InputFileOrDirectory = (File | FileSystemDirectoryHandle)[]
 export interface ModelFile {
 	/** The Three.js Object3D scene containing the loaded model */
 	model: Object3D
+	/** Animation clips carried by the model. Absent or empty when it has none. */
+	animations?: AnimationClip[]
 	/** The file type/format of the model (GLTF, GLB, USDZ) */
 	type: ModelFileTypes
 	/** The original filename of the model */

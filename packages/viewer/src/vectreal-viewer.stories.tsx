@@ -1,4 +1,12 @@
 import { fn } from 'storybook/test'
+import {
+	AnimationClip,
+	BoxGeometry,
+	Mesh,
+	MeshStandardMaterial,
+	NumberKeyframeTrack,
+	VectorKeyframeTrack
+} from 'three'
 
 import {
 	InfoPopover,
@@ -58,6 +66,67 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
+
+/**
+ * Built in code rather than loaded from a fixture: there is no animated model
+ * anywhere in `packages/`, and committing a binary to drive one story is a poor
+ * trade. Module scope keeps the identity stable, which matters because the
+ * runtime rebuilds its mixer whenever the model changes.
+ */
+const animatedModel = new Mesh(
+	new BoxGeometry(1.2, 1.2, 1.2),
+	new MeshStandardMaterial({ color: '#60a5fa', metalness: 0.3, roughness: 0.4 })
+)
+animatedModel.name = 'AnimatedCube'
+
+const spinClip = new AnimationClip('Spin', 4, [
+	new NumberKeyframeTrack('.rotation[y]', [0, 4], [0, Math.PI * 2])
+])
+const hoverClip = new AnimationClip('Hover', 2, [
+	new VectorKeyframeTrack('.position', [0, 1, 2], [0, 0, 0, 0, 0.6, 0, 0, 0, 0])
+])
+
+export const Animated: Story = {
+	args: {
+		model: animatedModel,
+		animations: [spinClip, hoverClip],
+		animationOptions: {
+			enabled: true,
+			mode: 'simultaneous',
+			autoplay: true,
+			loopSequence: false,
+			showControls: true,
+			clips: [
+				{
+					clipId: 'spin',
+					sourceName: 'Spin',
+					sourceIndex: 0,
+					enabled: true,
+					order: 0,
+					loop: 'repeat',
+					timeScale: 1,
+					startOffset: 0
+				},
+				{
+					clipId: 'hover',
+					sourceName: 'Hover',
+					sourceIndex: 1,
+					enabled: true,
+					order: 1,
+					loop: 'ping_pong',
+					timeScale: 1,
+					startOffset: 0
+				}
+			]
+		}
+	},
+	render: (args) => (
+		<VectrealViewer {...args}>
+			<ambientLight intensity={0.8} />
+			<directionalLight position={[3, 4, 2]} intensity={1.4} />
+		</VectrealViewer>
+	)
+}
 
 export const WithPopover: Story = {
 	args: {
