@@ -10,7 +10,10 @@ import { PublisherEditorScene } from '../../components/publisher/publisher-edito
 import { usePublisherViewerCapture } from '../../components/publisher/publisher-viewer-capture-context'
 import { useAutomaticOpeningView } from '../../components/publisher/shell/use-opening-view'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
-import { sceneMetaAtom, toolSidebarStateAtom } from '../../lib/stores/publisher-config-store'
+import {
+	sceneMetaAtom,
+	toolSidebarStateAtom
+} from '../../lib/stores/publisher-config-store'
 import {
 	bakedShadowSourceAtom,
 	rawModelDiagonalAtom,

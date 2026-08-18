@@ -137,9 +137,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	const publishedMeta = await getPublishedScenePreview(projectId, sceneId)
 
 	const additionalMetrics = stats?.additionalMetrics as
-		| SceneAdditionalMetrics
-		| null
-		| undefined
+		SceneAdditionalMetrics | null | undefined
 
 	const sceneDetails: SceneDetailsSummary = {
 		fileSizeBytes: stats?.currentSceneBytes ?? stats?.initialSceneBytes ?? null,
@@ -475,7 +473,6 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 	const retrySceneLoad = useCallback(() => {
 		if (sceneSource) void load(sceneSource)
 	}, [load, sceneSource])
-
 
 	return (
 		/*

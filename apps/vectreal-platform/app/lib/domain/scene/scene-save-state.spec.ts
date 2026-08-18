@@ -108,7 +108,11 @@ describe('scene save state', () => {
 				isLoading: false,
 				currentSettings,
 				lastSavedSettings: null,
-				sceneMetaState: { name: 'New scene', description: '', thumbnailUrl: '' },
+				sceneMetaState: {
+					name: 'New scene',
+					description: '',
+					thumbnailUrl: ''
+				},
 				lastSavedSceneMeta: null,
 				reportSignature: null,
 				lastSavedReportSignature: null,

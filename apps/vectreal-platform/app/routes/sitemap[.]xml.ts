@@ -6,13 +6,7 @@ interface SitemapEntry {
 	path: string
 	lastmod?: string
 	changefreq:
-		| 'always'
-		| 'hourly'
-		| 'daily'
-		| 'weekly'
-		| 'monthly'
-		| 'yearly'
-		| 'never'
+		'always' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'never'
 	priority: string
 }
 

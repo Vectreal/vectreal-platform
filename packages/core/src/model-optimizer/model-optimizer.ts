@@ -41,7 +41,10 @@ import { MeshoptSimplifier } from 'meshoptimizer'
 import { Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
-import { canLoadDracoInBrowser, loadDracoModule } from '../draco/load-draco-module'
+import {
+	canLoadDracoInBrowser,
+	loadDracoModule
+} from '../draco/load-draco-module'
 import { OperationProgress } from '../types'
 import {
 	loadFromThreeJS as _loadFromThreeJS,
@@ -328,7 +331,8 @@ export class ModelOptimizer {
 		await this.ensureDracoEncoderRegistered()
 
 		const geometryBytesBefore = calculateMeshSize(inspect(document))
-		const uncompressedGlbBytes = (await this.io.writeBinary(document)).byteLength
+		const uncompressedGlbBytes = (await this.io.writeBinary(document))
+			.byteLength
 
 		this.emitProgress('Compressing geometry with Draco', 40)
 

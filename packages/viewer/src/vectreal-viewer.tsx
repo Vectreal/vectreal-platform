@@ -343,7 +343,10 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 				setControlsEnabledOverride(command.enabled)
 				break
 			case 'set_auto_rotate':
-				setAutoRotateOverride({ enabled: command.enabled, speed: command.speed })
+				setAutoRotateOverride({
+					enabled: command.enabled,
+					speed: command.speed
+				})
 				break
 			case 'set_controls_options':
 				setControlsOptionsOverride((prev) => ({ ...prev, ...command }))

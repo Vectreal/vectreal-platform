@@ -25,8 +25,7 @@ export function useOptimizerIntegration(
 	const applyOptimization = useCallback(
 		async <TOptions>(
 			optimizationFunction?:
-				| ((options?: TOptions) => Promise<void>)
-				| undefined,
+				((options?: TOptions) => Promise<void>) | undefined,
 			options?: TOptions
 		) => {
 			if (!instance) {

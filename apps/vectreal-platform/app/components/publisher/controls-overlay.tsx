@@ -20,7 +20,7 @@ import { PublishSidebarProvider } from './sidebars/publish-sidebar/publish-sideb
 import { buildPublishSidebarViewModel } from './sidebars/publish-sidebar/publish-sidebar-view-model'
 import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
-import { useOptimizationModalFlow, usePublisherScene } from '../../hooks'
+import { useOptimizationDrawerFlow, usePublisherScene } from '../../hooks'
 import { useLocationChangeState } from '../../hooks/use-location-change-state'
 import { resolveSceneMetrics } from '../../lib/domain/scene'
 import { resolvePublisherSurface } from '../../lib/publisher/publisher-surface'
@@ -33,7 +33,7 @@ import {
 	showPublishPanelAtom
 } from '../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
-import { PublisherLoaderData, SceneManifestResponse } from '../../types/api'
+import { PublisherLoaderData } from '../../types/api'
 import { useHideGlobalNav } from '../navigation/global-nav-visibility'
 
 /**
@@ -92,6 +92,8 @@ const OverlayControls = ({
 	const { hasUnsavedLocationChange } = useLocationChangeState()
 
 	const {
+		openSceneId,
+		isRestoringDraft,
 		uploadFiles,
 		retrySceneLoad,
 		saveSceneSettings,
@@ -100,7 +102,7 @@ const OverlayControls = ({
 	} = usePublisherScene({
 		sceneId,
 		userId: user?.id,
-		sceneManifest: sceneAggregate as SceneManifestResponse | null
+		sceneManifest: sceneAggregate
 	})
 
 	const {
@@ -113,7 +115,7 @@ const OverlayControls = ({
 		// on the way to publishing.
 		handleOpenOptimizationDrawer,
 		openReoptimizeDrawer
-	} = useOptimizationModalFlow({
+	} = useOptimizationDrawerFlow({
 		saveAvailability,
 		hasUnsavedLocationChange
 	})
@@ -125,12 +127,14 @@ const OverlayControls = ({
 	const navigation = useNavigation()
 	const surface = resolvePublisherSurface({
 		status,
-		hasScene: Boolean(sceneId && sceneAggregate),
+		hasScene: Boolean(openSceneId),
 		// Navigating within the publisher (to a scene just saved, or between
-		// scenes) is a load as far as the stage is concerned.
+		// scenes) is a load, and so is reading a signed-in draft back out of
+		// IndexedDB: in both, a model is on its way and the stage should wait.
 		isNavigating:
-			navigation.state === 'loading' &&
-			Boolean(navigation.location?.pathname?.startsWith('/publisher'))
+			isRestoringDraft ||
+			(navigation.state === 'loading' &&
+				Boolean(navigation.location?.pathname?.startsWith('/publisher')))
 	})
 
 	/*
@@ -196,11 +200,13 @@ const OverlayControls = ({
 			return
 		}
 
-		const nextPathBase = sceneId ? `/publisher/${sceneId}` : '/publisher'
+		const nextPathBase = openSceneId
+			? `/publisher/${openSceneId}`
+			: '/publisher'
 		const nextPath = `${nextPathBase}?restore_draft=1&draft_id=${encodeURIComponent(draftId)}`
 		const authPath = `/sign-in?next=${encodeURIComponent(nextPath)}&scene_saved=true`
 		navigate(authPath)
-	}, [persistPendingSceneDraft, sceneId, navigate])
+	}, [persistPendingSceneDraft, openSceneId, navigate])
 
 	const publishSidebarViewModel = useMemo(
 		() =>
@@ -238,7 +244,7 @@ const OverlayControls = ({
 			saveSceneSettings,
 			saveAvailability: effectiveSaveAvailability,
 			viewModel: publishSidebarViewModel,
-			onOpenOptimizationDrawer: openReoptimizeDrawer,
+			onOpenOptimizationDrawer: openReoptimizeDrawer
 		}),
 		[
 			sceneId,
@@ -346,7 +352,10 @@ const OverlayControls = ({
 				{surface === 'viewer' ? (
 					children
 				) : (
-					<PublisherSurfaceFallback surface={surface} onRetry={retrySceneLoad} />
+					<PublisherSurfaceFallback
+						surface={surface}
+						onRetry={retrySceneLoad}
+					/>
 				)}
 
 				<ToolSidebar user={user} isMobile={isMobile} />

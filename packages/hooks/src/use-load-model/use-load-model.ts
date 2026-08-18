@@ -137,9 +137,7 @@ function useLoadModel<
 	}, [])
 
 	const replaceModel = useCallback((file: LoadedModel['file']) => {
-		setState((prev) =>
-			prev.status === 'ready' ? { ...prev, file } : prev
-		)
+		setState((prev) => (prev.status === 'ready' ? { ...prev, file } : prev))
 	}, [])
 
 	const optimizerIntegration = useOptimizerIntegration(

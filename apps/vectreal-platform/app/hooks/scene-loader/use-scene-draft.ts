@@ -1,6 +1,6 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtomValue, useSetAtom } from 'jotai/react'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
@@ -85,28 +85,31 @@ export function useSceneDraft() {
 	 * "Re-apply preset" restores this, so without it every later pass would stack
 	 * on the previous result instead of starting over.
 	 */
-	const snapshotOriginalModel = useCallback(async (uploadedFile: ModelFile) => {
-		try {
-			const gltfJson = await prepareGltfDocument(uploadedFile)
-			if (!gltfJson || typeof gltfJson !== 'object') return
+	const snapshotOriginalModel = useCallback(
+		async (uploadedFile: ModelFile) => {
+			try {
+				const gltfJson = await prepareGltfDocument(uploadedFile)
+				if (!gltfJson || typeof gltfJson !== 'object') return
 
-			const gltfData = (gltfJson as { data?: unknown }).data ?? gltfJson
-			const gltfAssets = (gltfJson as { assets?: unknown }).assets
+				const gltfData = (gltfJson as { data?: unknown }).data ?? gltfJson
+				const gltfAssets = (gltfJson as { assets?: unknown }).assets
 
-			await saveOriginalSceneModel({
-				sceneData: {
-					gltfJson: gltfData as ServerSceneData['gltfJson'],
-					assetData: await serializeSceneAssetData(gltfData, gltfAssets)
-				} as ServerSceneData
-			})
-		} catch (error) {
-			console.warn('Failed to persist the original scene to IDB:', error)
-		}
-	}, [prepareGltfDocument])
+				await saveOriginalSceneModel({
+					sceneData: {
+						gltfJson: gltfData as ServerSceneData['gltfJson'],
+						assetData: await serializeSceneAssetData(gltfData, gltfAssets)
+					} as ServerSceneData
+				})
+			} catch (error) {
+				console.warn('Failed to persist the original scene to IDB:', error)
+			}
+		},
+		[prepareGltfDocument]
+	)
 
-	useRestorePendingDraft()
+	const isRestoringDraft = useRestorePendingDraft()
 
-	return { persistPendingSceneDraft, snapshotOriginalModel }
+	return { isRestoringDraft, persistPendingSceneDraft, snapshotOriginalModel }
 }
 
 /**
@@ -115,8 +118,13 @@ export function useSceneDraft() {
  * This is the one load the publisher triggers from a URL rather than from a
  * user action, because that is exactly what it is: `?restore_draft=1` is the
  * sign-in flow handing the scene back.
+ *
+ * The URL is the trigger, not the state. The id is captured on the first
+ * render and the restore reports itself as in progress until it settles, so
+ * clearing the parameters cannot hand the route's own scene a window to load
+ * over the draft, and the shell does not show an upload prompt during it.
  */
-function useRestorePendingDraft() {
+function useRestorePendingDraft(): boolean {
 	const { load } = useModelContext()
 	const location = useLocation()
 	const navigate = useNavigate()
@@ -125,11 +133,14 @@ function useRestorePendingDraft() {
 	const setOptimizationState = useSetAtom(optimizationAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
 
-	const searchParams = new URLSearchParams(location.search)
-	const draftId =
-		searchParams.get('restore_draft') === '1'
+	// Captured once: the effect below clears these parameters when it is done.
+	const [draftId] = useState(() => {
+		const searchParams = new URLSearchParams(location.search)
+		return searchParams.get('restore_draft') === '1'
 			? searchParams.get('draft_id')
 			: null
+	})
+	const [hasSettled, setHasSettled] = useState(false)
 	const restoredRef = useRef(false)
 
 	const { pathname, search } = location
@@ -194,6 +205,7 @@ function useRestorePendingDraft() {
 				console.error('Failed to restore pending scene draft:', error)
 				toast.error('Failed to restore your saved draft')
 			} finally {
+				setHasSettled(true)
 				clearRestoreParams()
 			}
 		})()
@@ -208,4 +220,6 @@ function useRestorePendingDraft() {
 		setOptimizationState,
 		setSceneMetaState
 	])
+
+	return Boolean(draftId) && !hasSettled
 }

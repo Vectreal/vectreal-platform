@@ -100,7 +100,9 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 											<FolderUp
 												className={cn(
 													'h-10 w-10 transition-all duration-300',
-													isDragActive ? 'text-primary' : 'text-muted-foreground'
+													isDragActive
+														? 'text-primary'
+														: 'text-muted-foreground'
 												)}
 											/>
 										</div>

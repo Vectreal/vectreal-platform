@@ -4,16 +4,16 @@ import { resolvePublisherSurface } from './publisher-surface'
 
 describe('resolvePublisherSurface', () => {
 	it('asks for a file only when there is no scene to show', () => {
-		expect(
-			resolvePublisherSurface({ status: 'empty', hasScene: false })
-		).toBe('drop-zone')
+		expect(resolvePublisherSurface({ status: 'empty', hasScene: false })).toBe(
+			'drop-zone'
+		)
 	})
 
 	it('never shows the drop zone once a scene is being shown', () => {
 		for (const status of ['empty', 'loading', 'ready', 'error'] as const) {
-			expect(
-				resolvePublisherSurface({ status, hasScene: true })
-			).not.toBe('drop-zone')
+			expect(resolvePublisherSurface({ status, hasScene: true })).not.toBe(
+				'drop-zone'
+			)
 		}
 	})
 
@@ -24,9 +24,9 @@ describe('resolvePublisherSurface', () => {
 	})
 
 	it('keeps a rejected upload on the drop zone, where the next attempt happens', () => {
-		expect(
-			resolvePublisherSurface({ status: 'error', hasScene: false })
-		).toBe('drop-zone')
+		expect(resolvePublisherSurface({ status: 'error', hasScene: false })).toBe(
+			'drop-zone'
+		)
 	})
 
 	it('reports a scene that failed to load as an error', () => {
@@ -36,9 +36,9 @@ describe('resolvePublisherSurface', () => {
 	})
 
 	it('shows the model as soon as the loader has one', () => {
-		expect(
-			resolvePublisherSurface({ status: 'ready', hasScene: false })
-		).toBe('viewer')
+		expect(resolvePublisherSurface({ status: 'ready', hasScene: false })).toBe(
+			'viewer'
+		)
 		expect(resolvePublisherSurface({ status: 'ready', hasScene: true })).toBe(
 			'viewer'
 		)

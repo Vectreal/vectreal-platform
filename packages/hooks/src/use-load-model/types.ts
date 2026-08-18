@@ -252,8 +252,7 @@ export type OptimizerIntegrationReturn<HasOptimizer extends boolean = false> =
 				 */
 				applyOptimization: <TOptions>(
 					optimizationFunction?:
-						| ((options?: TOptions) => Promise<void>)
-						| undefined,
+						((options?: TOptions) => Promise<void>) | undefined,
 					options?: TOptions
 				) => Promise<void>
 			}

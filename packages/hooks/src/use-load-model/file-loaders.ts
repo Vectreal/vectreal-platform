@@ -1,6 +1,9 @@
 import { ModelFileTypes } from '@vctrl/core/model-loader'
 
-import { createStructuredLoadError, normalizeLocalLoadError } from './error-helpers'
+import {
+	createStructuredLoadError,
+	normalizeLocalLoadError
+} from './error-helpers'
 import { ingestIntoOptimizer } from './optimizer-ingest'
 import { buildSceneDataFromLocalFiles } from './scene-data-builder'
 import { InputFileOrDirectory, LoadedModel } from './types'
@@ -154,37 +157,39 @@ const loadGltfModel = async (
 	publish(loaded)
 
 	if (optimizer) {
-		await ingestIntoOptimizer(async () => {
-			try {
-				const localSceneData = await buildSceneDataFromLocalFiles(
-					gltfFile,
-					otherFiles
-				)
-				await optimizer.loadFromServerSceneData(localSceneData)
-			} catch (optimizerError) {
-				console.warn(
-					'Failed to initialize optimizer from source GLTF payload; trying direct asset load.',
-					optimizerError
-				)
+		await ingestIntoOptimizer(
+			async () => {
+				try {
+					const localSceneData = await buildSceneDataFromLocalFiles(
+						gltfFile,
+						otherFiles
+					)
+					await optimizer.loadFromServerSceneData(localSceneData)
+				} catch (optimizerError) {
+					console.warn(
+						'Failed to initialize optimizer from source GLTF payload; trying direct asset load.',
+						optimizerError
+					)
 
-				if (!('loadFromGLTFWithAssets' in optimizer)) {
-					throw new Error('loadFromGLTFWithAssets not available')
-				}
-
-				const gltfBytes = new Uint8Array(await gltfFile.arrayBuffer())
-				const assetMap = new Map<string, Uint8Array>()
-				for (const assetFile of otherFiles) {
-					const bytes = new Uint8Array(await assetFile.arrayBuffer())
-					assetMap.set(assetFile.name, bytes)
-					if (assetFile.webkitRelativePath) {
-						assetMap.set(assetFile.webkitRelativePath, bytes)
+					if (!('loadFromGLTFWithAssets' in optimizer)) {
+						throw new Error('loadFromGLTFWithAssets not available')
 					}
+
+					const gltfBytes = new Uint8Array(await gltfFile.arrayBuffer())
+					const assetMap = new Map<string, Uint8Array>()
+					for (const assetFile of otherFiles) {
+						const bytes = new Uint8Array(await assetFile.arrayBuffer())
+						assetMap.set(assetFile.name, bytes)
+						if (assetFile.webkitRelativePath) {
+							assetMap.set(assetFile.webkitRelativePath, bytes)
+						}
+					}
+					await optimizer.loadFromGLTFWithAssets(gltfBytes, assetMap)
 				}
-				await optimizer.loadFromGLTFWithAssets(gltfBytes, assetMap)
-			}
-		}, () => optimizer.load(loaded.file.model))
+			},
+			() => optimizer.load(loaded.file.model)
+		)
 	}
 
 	return loaded
 }
-

@@ -29,8 +29,8 @@ import type {
 } from '@vctrl/hooks/use-load-model'
 
 interface UseSceneUploadArgs {
-	/** The scene the route is on, if any. */
-	sceneId: null | string
+	/** The scene open in the publisher, if the upload is replacing its model. */
+	openSceneId: null | string
 	/** Snapshots the freshly loaded model to IndexedDB for re-optimization. */
 	snapshotOriginalModel: (uploadedFile: ModelFile) => Promise<void>
 }
@@ -44,7 +44,7 @@ interface UseSceneUploadArgs {
  * have cleared the loading flag. Here the order is the order you read.
  */
 export function useSceneUpload({
-	sceneId,
+	openSceneId,
 	snapshotOriginalModel
 }: UseSceneUploadArgs) {
 	const { load } = useModelContext()
@@ -70,9 +70,9 @@ export function useSceneUpload({
 				isSceneSizeLoading: true
 			})
 
-			// On a scene route the upload replaces the model of the scene being
-			// edited, so its composition stays. On the base route it is a new scene.
-			if (!sceneId) {
+			// Replacing the model of an open scene keeps its composition. Anywhere
+			// else the upload starts a new, unsaved scene.
+			if (!openSceneId) {
 				resetSceneState()
 				setCurrentSceneId(null)
 			}
@@ -98,8 +98,8 @@ export function useSceneUpload({
 				// save flow re-link it onto this model. Editing an existing scene
 				// keeps its name; a new one takes it from the file.
 				...sceneMetaInitialState,
-				description: sceneId ? previous.description : '',
-				name: sceneId
+				description: openSceneId ? previous.description : '',
+				name: openSceneId
 					? previous.name || getSceneNameFromFileName(result.file.name)
 					: getSceneNameFromFileName(result.file.name)
 			}))
@@ -123,9 +123,9 @@ export function useSceneUpload({
 		[
 			consent?.analytics,
 			load,
+			openSceneId,
 			posthog,
 			resetSceneState,
-			sceneId,
 			setCurrentSceneId,
 			setOptimizationRuntime,
 			setSceneMeta,

@@ -90,12 +90,6 @@ export function useOptimizationDrawerFlow({
 		isOptimizationDrawerOpen: optimizationDrawer.isOpen,
 		handleOptimizationDrawerChange,
 		handleOpenOptimizationDrawer,
-		openReoptimizeDrawer,
-		isOptimizationModalOpen: optimizationDrawer.isOpen,
-		handleOptimizationModalChange: handleOptimizationDrawerChange,
-		handleOpenOptimizationModal: handleOpenOptimizationDrawer,
-		openReoptimizeModal: openReoptimizeDrawer
+		openReoptimizeDrawer
 	}
 }
-
-export const useOptimizationModalFlow = useOptimizationDrawerFlow

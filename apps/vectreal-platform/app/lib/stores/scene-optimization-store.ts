@@ -46,7 +46,6 @@ const optimizationModalAtom = atomWithReset<SceneOptimizationModalState>(
 	optimizationModalInitialState
 )
 
-
 export {
 	optimizationModalAtom,
 	optimizationModalInitialState,

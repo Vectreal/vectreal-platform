@@ -57,7 +57,9 @@ interface ExecuteSceneSaveOrchestratorParams {
 // (`/api/scenes/:sceneId/thumbnail/:assetId`). Used to re-link the current
 // thumbnail on every save so it isn't garbage-collected, and so a superseded one
 // becomes an unlinked GC candidate.
-const extractThumbnailAssetId = (thumbnailUrl?: string | null): string | null => {
+const extractThumbnailAssetId = (
+	thumbnailUrl?: string | null
+): string | null => {
 	if (!thumbnailUrl) return null
 	// Anchor to the end so only the final `/thumbnail/<id>` segment is taken.
 	const match = thumbnailUrl.match(/\/thumbnail\/([^/?#]+)$/)
@@ -128,7 +130,10 @@ export const executeSceneSaveOrchestrator = async ({
 	}
 
 	if (typeof options?.currentSceneBytes === 'number') {
-		prepareFormData.append('currentSceneBytes', String(options.currentSceneBytes))
+		prepareFormData.append(
+			'currentSceneBytes',
+			String(options.currentSceneBytes)
+		)
 	}
 
 	const prepared = await toJsonOrThrow(
@@ -141,8 +146,7 @@ export const executeSceneSaveOrchestrator = async ({
 	const preparedSceneId = prepared.sceneId as string
 	const preparedProjectId = prepared.projectId as string | undefined
 	const existingAssets = prepared.existingAssets as
-		| Record<string, { assetId: string; contentHash: string }>
-		| undefined
+		Record<string, { assetId: string; contentHash: string }> | undefined
 
 	// The thumbnail is the placeholder shown while the scene loads, so it has to
 	// match the frame the default camera opens on. Comparing the signature rather
@@ -249,7 +253,10 @@ export const executeSceneSaveOrchestrator = async ({
 						uploadBakeFormData.append('projectId', preparedProjectId)
 					}
 					if (options?.targetProjectId) {
-						uploadBakeFormData.append('targetProjectId', options.targetProjectId)
+						uploadBakeFormData.append(
+							'targetProjectId',
+							options.targetProjectId
+						)
 					}
 					uploadBakeFormData.append('kind', 'image')
 					uploadBakeFormData.append('file', bakeFile)
@@ -416,7 +423,9 @@ export const executeSceneSaveOrchestrator = async ({
 	// tracked as a scene asset: this keeps it from being GC'd and lets a superseded
 	// thumbnail become an unlinked GC candidate. It is excluded from the aggregate's
 	// inlined render data server-side (served by URL, not rendered).
-	const thumbnailAssetId = extractThumbnailAssetId(sceneMetaForSave.thumbnailUrl)
+	const thumbnailAssetId = extractThumbnailAssetId(
+		sceneMetaForSave.thumbnailUrl
+	)
 	if (thumbnailAssetId) {
 		sceneAssetIds.push(thumbnailAssetId)
 	}

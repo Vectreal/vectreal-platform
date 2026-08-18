@@ -36,7 +36,12 @@ interface ShadowFieldProps {
 	onChange: (key: string, value: number) => void
 }
 
-const ShadowField = ({ field, idPrefix, value, onChange }: ShadowFieldProps) => (
+const ShadowField = ({
+	field,
+	idPrefix,
+	value,
+	onChange
+}: ShadowFieldProps) => (
 	<EnhancedSettingSlider
 		id={`${idPrefix}-${field.key}`}
 		sliderProps={{

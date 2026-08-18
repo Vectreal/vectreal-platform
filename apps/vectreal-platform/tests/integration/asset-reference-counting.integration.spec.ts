@@ -44,13 +44,11 @@ describe('asset reference counting', () => {
 			await import('../../app/lib/domain/asset/asset-storage.server'))
 		db = (await import('../../app/db/client')).getDbClient()
 
-		await db
-			.insert(schema.users)
-			.values({
-				id: ownerId,
-				email: `owner-${ownerId}@smoke.test`,
-				name: 'Owner'
-			})
+		await db.insert(schema.users).values({
+			id: ownerId,
+			email: `owner-${ownerId}@smoke.test`,
+			name: 'Owner'
+		})
 		await db
 			.insert(schema.organizations)
 			.values({ id: organizationId, name: `smoke-${organizationId}`, ownerId })
@@ -157,14 +155,12 @@ describe('asset reference counting', () => {
 			filePath: `smoke/${assetId}.glb`,
 			ownerId
 		})
-		await db
-			.insert(schema.scenes)
-			.values({
-				id: sceneId,
-				projectId,
-				folderId: null,
-				name: 'attached scene'
-			})
+		await db.insert(schema.scenes).values({
+			id: sceneId,
+			projectId,
+			folderId: null,
+			name: 'attached scene'
+		})
 		await db
 			.insert(schema.sceneSettings)
 			.values({ id: settingsId, sceneId, createdBy: ownerId })

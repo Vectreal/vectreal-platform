@@ -21,7 +21,10 @@ import JSZip from 'jszip'
 import { Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
-import { canLoadDracoInBrowser, loadDracoModule } from '../draco/load-draco-module'
+import {
+	canLoadDracoInBrowser,
+	loadDracoModule
+} from '../draco/load-draco-module'
 import { OperationProgress } from '../types'
 import {
 	ExportResult,
@@ -267,9 +270,8 @@ export class ModelExporter {
 		this.emitProgress('Exporting Three.js object to USDZ', 0)
 
 		try {
-			const { USDZExporter } = await import(
-				'three/examples/jsm/exporters/USDZExporter.js'
-			)
+			const { USDZExporter } =
+				await import('three/examples/jsm/exporters/USDZExporter.js')
 			const exporter = new USDZExporter()
 
 			this.emitProgress('Serializing Three.js scene', 40)

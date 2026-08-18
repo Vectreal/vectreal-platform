@@ -21,7 +21,6 @@ import type {
 } from '@vctrl/core'
 import type { BakedShadow } from '@vctrl/viewer'
 
-
 const boundsAtom = atom<BoundsProps>(defaultBoundsOptions)
 const cameraAtom = atom<CameraProps>(defaultCameraOptions)
 const selectedCameraIdAtom = atom<string>(
@@ -53,7 +52,6 @@ const sceneViewerSettingsAtom = atom((get) => ({
 	normalization: get(normalizationAtom),
 	hotspots: get(hotspotsAtom)
 }))
-
 
 export {
 	// Vectreal viewer settings atoms

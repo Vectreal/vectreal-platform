@@ -135,7 +135,9 @@ export const loadModelFromSceneData = async (
 	publish(loaded)
 
 	if (optimizer) {
-		await ingestIntoOptimizer(() => optimizer.loadFromServerSceneData(sceneData))
+		await ingestIntoOptimizer(() =>
+			optimizer.loadFromServerSceneData(sceneData)
+		)
 	}
 
 	return loaded

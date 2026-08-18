@@ -44,8 +44,7 @@ export const meta: MetaFunction<undefined, { root: RootLoader }> = (args) =>
 
 		const slugParts = slug.split('/').filter(Boolean)
 		const categorySlug = slugParts[0] as
-			| keyof typeof DOC_CATEGORY_LABELS
-			| undefined
+			keyof typeof DOC_CATEGORY_LABELS | undefined
 		const categoryLabel = categorySlug
 			? DOC_CATEGORY_LABELS[categorySlug]
 			: undefined
@@ -109,8 +108,7 @@ export default function DocsLayout() {
 
 	const slugParts = slug.split('/').filter(Boolean)
 	const categorySlug = slugParts[0] as
-		| keyof typeof DOC_CATEGORY_LABELS
-		| undefined
+		keyof typeof DOC_CATEGORY_LABELS | undefined
 	const categoryLabel = categorySlug
 		? DOC_CATEGORY_LABELS[categorySlug]
 		: undefined

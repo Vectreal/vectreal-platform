@@ -46,64 +46,66 @@ export function useOpeningViewCapture() {
 
 	const setOpeningView = useCallback(
 		async ({ announce = true }: { announce?: boolean } = {}) => {
-		if (isCapturing) return
-		setIsCapturing(true)
+			if (isCapturing) return
+			setIsCapturing(true)
 
-		try {
-			// Both reads come from the same frame, before anything is written back,
-			// so the pose and the image cannot describe different views.
-			const [snapshot, dataUrl] = await Promise.all([
-				requestSceneCameraSnapshot(),
-				requestSceneScreenshot(OPENING_VIEW_CAPTURE_OPTIONS)
-			])
+			try {
+				// Both reads come from the same frame, before anything is written back,
+				// so the pose and the image cannot describe different views.
+				const [snapshot, dataUrl] = await Promise.all([
+					requestSceneCameraSnapshot(),
+					requestSceneScreenshot(OPENING_VIEW_CAPTURE_OPTIONS)
+				])
 
-			if (!dataUrl) {
-				if (announce) {
-					toast.error(
-						'Could not capture the viewport. Try again once the scene has finished loading.'
-					)
-				}
-				return
-			}
-
-			if (snapshot) {
-				setCamera((previous) => {
-					const defaultCameraId = resolveDefaultSceneCameraId(previous.cameras)
-					if (!defaultCameraId) return previous
-
-					return {
-						...previous,
-						cameras: previous.cameras?.map((entry) =>
-							entry.cameraId === defaultCameraId
-								? {
-										...entry,
-										position: snapshot.position,
-										rotation: snapshot.rotation,
-										target: snapshot.target,
-										fov: snapshot.fov
-									}
-								: entry
+				if (!dataUrl) {
+					if (announce) {
+						toast.error(
+							'Could not capture the viewport. Try again once the scene has finished loading.'
 						)
 					}
-				})
-			}
+					return
+				}
 
-			// Writing the meta is enough to mark the scene dirty: a `data:` URL only
-			// ever comes from a capture in this session, which the change detection
-			// treats as an unsaved edit.
-			setSceneMeta((previous) => ({ ...previous, thumbnailUrl: dataUrl }))
-			if (announce) {
-				toast.success('Opening view updated. Save to keep it.')
+				if (snapshot) {
+					setCamera((previous) => {
+						const defaultCameraId = resolveDefaultSceneCameraId(
+							previous.cameras
+						)
+						if (!defaultCameraId) return previous
+
+						return {
+							...previous,
+							cameras: previous.cameras?.map((entry) =>
+								entry.cameraId === defaultCameraId
+									? {
+											...entry,
+											position: snapshot.position,
+											rotation: snapshot.rotation,
+											target: snapshot.target,
+											fov: snapshot.fov
+										}
+									: entry
+							)
+						}
+					})
+				}
+
+				// Writing the meta is enough to mark the scene dirty: a `data:` URL only
+				// ever comes from a capture in this session, which the change detection
+				// treats as an unsaved edit.
+				setSceneMeta((previous) => ({ ...previous, thumbnailUrl: dataUrl }))
+				if (announce) {
+					toast.success('Opening view updated. Save to keep it.')
+				}
+			} catch (error) {
+				console.error('Opening view capture failed:', error)
+				if (announce) {
+					toast.error('Could not capture the viewport.')
+				}
+			} finally {
+				setIsCapturing(false)
 			}
-		} catch (error) {
-			console.error('Opening view capture failed:', error)
-			if (announce) {
-				toast.error('Could not capture the viewport.')
-			}
-		} finally {
-			setIsCapturing(false)
-		}
-	},
+		},
 		[
 			isCapturing,
 			requestSceneCameraSnapshot,

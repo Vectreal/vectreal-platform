@@ -335,9 +335,9 @@ const SceneShadows = memo(
 	}: SceneShadowsProps) => {
 		const { footprint, radius, height, vertexCount, measured } =
 			useModelMetrics(model, normalizationOptions)
-		const apiRef = useRef<React.ComponentRef<typeof AccumulativeShadows> | null>(
-			null
-		)
+		const apiRef = useRef<React.ComponentRef<
+			typeof AccumulativeShadows
+		> | null>(null)
 		// While the light handle is dragged, bake a coarse, fast preview so the
 		// shadow tracks the light, then settle to full quality on release.
 		const [previewing, setPreviewing] = useState(false)
@@ -462,7 +462,8 @@ const SceneShadows = memo(
 		// floor keeps the camera from degenerating on near-flat models.
 		const contactShadow = useMemo(() => {
 			if (!options.contact.enabled) return null
-			const reach = options.contact.reach ?? defaultShadowsOptions.contact!.reach!
+			const reach =
+				options.contact.reach ?? defaultShadowsOptions.contact!.reach!
 			return (
 				<ContactShadows
 					frames={1}

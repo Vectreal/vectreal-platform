@@ -19,7 +19,10 @@ import {
 	processAtom,
 	sceneMetaAtom
 } from '../lib/stores/publisher-config-store'
-import { optimizationRuntimeAtom, optimizationAtom } from '../lib/stores/scene-optimization-store'
+import {
+	optimizationRuntimeAtom,
+	optimizationAtom
+} from '../lib/stores/scene-optimization-store'
 import { sceneViewerSettingsAtom } from '../lib/stores/scene-settings-store'
 
 import type { SceneManifestResponse } from '../types/api'
@@ -29,6 +32,23 @@ interface UsePublisherSceneArgs {
 	sceneId: null | string
 	userId?: string
 	sceneManifest: SceneManifestResponse | null
+}
+
+export interface PublisherScene {
+	/**
+	 * The scene the publisher actually has open. A route id with no manifest
+	 * behind it (signed out, expired session) is not one, and treating it as one
+	 * is how an upload used to inherit a scene it had nothing to do with.
+	 */
+	openSceneId: null | string
+	isRestoringDraft: boolean
+	uploadFiles: ReturnType<typeof useSceneUpload>['uploadFiles']
+	retrySceneLoad: () => void
+	saveSceneSettings: ReturnType<typeof useSceneSaveFlow>['saveSceneSettings']
+	saveAvailability: ReturnType<typeof useSceneSaveFlow>['saveAvailability']
+	persistPendingSceneDraft: ReturnType<
+		typeof useSceneDraft
+	>['persistPendingSceneDraft']
 }
 
 /**
@@ -43,16 +63,22 @@ export function usePublisherScene({
 	sceneId,
 	userId,
 	sceneManifest
-}: UsePublisherSceneArgs) {
+}: UsePublisherSceneArgs): PublisherScene {
 	const { status } = useModelContext()
 	const revalidator = useRevalidator()
 	const { requestSceneScreenshot, requestShadowBake } =
 		usePublisherViewerCapture()
 
-	const { retry: retrySceneLoad } = useSceneSource({ sceneId, sceneManifest })
+	const openSceneId = sceneManifest ? sceneId : null
 
-	const { persistPendingSceneDraft, snapshotOriginalModel } = useSceneDraft()
-	const { uploadFiles } = useSceneUpload({ sceneId, snapshotOriginalModel })
+	const { isRestoringDraft, persistPendingSceneDraft, snapshotOriginalModel } =
+		useSceneDraft()
+	const { retry: retrySceneLoad } = useSceneSource({
+		openSceneId,
+		sceneManifest,
+		isRestoringDraft
+	})
+	const { uploadFiles } = useSceneUpload({ openSceneId, snapshotOriginalModel })
 
 	const [currentSceneId, setCurrentSceneId] = useAtom(currentSceneIdAtom)
 	const [sceneMetaState, setSceneMetaState] = useAtom(sceneMetaAtom)
@@ -155,6 +181,8 @@ export function usePublisherScene({
 	})
 
 	return {
+		openSceneId,
+		isRestoringDraft,
 		uploadFiles,
 		retrySceneLoad,
 		saveSceneSettings,

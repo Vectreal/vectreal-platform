@@ -52,10 +52,7 @@ export type CameraTransitionType = 'linear' | 'object_avoidance' | 'none'
  * Optional easing presets for serializable transition definitions.
  */
 export type CameraTransitionEasing =
-	| 'linear'
-	| 'ease_in'
-	| 'ease_out'
-	| 'ease_in_out'
+	'linear' | 'ease_in' | 'ease_out' | 'ease_in_out'
 
 /**
  * Object-avoidance transition parameters.
@@ -486,12 +483,7 @@ export interface TextureOptimization
 	extends BaseOptimization, TextureCompressOptions {}
 
 export type OptimizationNames =
-	| 'simplification'
-	| 'texture'
-	| 'quantize'
-	| 'dedup'
-	| 'normals'
-	| 'draco'
+	'simplification' | 'texture' | 'quantize' | 'dedup' | 'normals' | 'draco'
 
 /**
  * `enabled` is the only field every optimization shares. There is deliberately
@@ -512,8 +504,7 @@ export interface QuantizeOptimization
 
 export interface DedupOptimization extends BaseOptimization, DedupOptions {}
 
-export interface NormalsOptimization
-	extends BaseOptimization, NormalsOptions {}
+export interface NormalsOptimization extends BaseOptimization, NormalsOptions {}
 
 export interface DracoCompressOptimization
 	extends BaseOptimization, DracoOptions {}

@@ -1,4 +1,3 @@
-
 import type { FieldConfig } from '../../../../../types/settings-field'
 
 export type { FieldConfig }
@@ -55,7 +54,8 @@ export const SHADOW_PRIMARY_FIELDS: FieldConfig[] = [
 		min: 0,
 		max: 3,
 		step: 0.05,
-		tooltip: 'Shadow softness. Higher values create softer, more diffuse edges.',
+		tooltip:
+			'Shadow softness. Higher values create softer, more diffuse edges.',
 		formatValue: (value) => value.toFixed(2)
 	}
 ]
@@ -68,7 +68,11 @@ export interface ShadowPreset {
 	description: string
 	values: {
 		opacity: number
-		light: { ambient: number; radius: number; position: [number, number, number] }
+		light: {
+			ambient: number
+			radius: number
+			position: [number, number, number]
+		}
 	}
 }
 
@@ -199,4 +203,3 @@ export const SHADOW_CONTACT_FIELDS: FieldConfig[] = [
 		formatValue: (value) => `${Math.round(value * 100)}%`
 	}
 ]
-

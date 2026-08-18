@@ -1,7 +1,6 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useSetAtom } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
-import { useLocation } from 'react-router'
 import { toast } from 'sonner'
 
 import { useApplySceneSettings, useResetSceneState } from './use-scene-settings'
@@ -36,8 +35,15 @@ import type { SceneManifestResponse } from '../../types/api'
 import type { ModelSource, ModelState } from '@vctrl/hooks/use-load-model'
 
 interface UseSceneSourceArgs {
-	sceneId: null | string
+	/**
+	 * The scene actually open in the publisher: a route id the loader shipped a
+	 * manifest for. An id alone is not one, since a signed-out or expired
+	 * session leaves the id in the URL with nothing behind it.
+	 */
+	openSceneId: null | string
 	sceneManifest: SceneManifestResponse | null
+	/** True while a signed-in draft is being read back from IndexedDB. */
+	isRestoringDraft: boolean
 }
 
 /**
@@ -53,7 +59,11 @@ interface UseSceneSourceArgs {
  * manifest for the same scene, and re-applying saved state then would overwrite
  * whatever the user has changed since.
  */
-export function useSceneSource({ sceneId, sceneManifest }: UseSceneSourceArgs) {
+export function useSceneSource({
+	openSceneId,
+	sceneManifest,
+	isRestoringDraft
+}: UseSceneSourceArgs) {
 	const model = useModelContext()
 	const applySceneSettings = useApplySceneSettings()
 	const resetSceneState = useResetSceneState()
@@ -64,42 +74,40 @@ export function useSceneSource({ sceneId, sceneManifest }: UseSceneSourceArgs) {
 	const setBakedShadowSource = useSetAtom(bakedShadowSourceAtom)
 	const setOptimizationState = useSetAtom(optimizationAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
-	const { search } = useLocation()
-
 	const { reset: resetModel } = model
-	const previousSceneIdRef = useRef<null | string>(sceneId)
+	const previousSceneIdRef = useRef<null | string>(openSceneId)
 
 	useEffect(() => {
 		const previousSceneId = previousSceneIdRef.current
-		previousSceneIdRef.current = sceneId
+		previousSceneIdRef.current = openSceneId
 
-		setCurrentSceneId(sceneId)
+		setCurrentSceneId(openSceneId)
 		// The just-saved marker is consumed by the navigation it was written for.
 		// Anything else means the route moved on and it no longer applies.
 		setLastSavedSceneId((previous) =>
-			previous === sceneId ? previous : null
+			previous === openSceneId ? previous : null
 		)
 
 		// Leaving a scene for the base route is the one publisher transition that
 		// unmounts nothing: /publisher and /publisher/:sceneId are one route. Without
 		// this the previous scene stays on screen where an upload should be.
-		if (previousSceneId && !sceneId) {
+		if (previousSceneId && !openSceneId) {
 			resetModel()
 			resetSceneState()
 		}
 	}, [
+		openSceneId,
 		resetModel,
 		resetSceneState,
-		sceneId,
 		setCurrentSceneId,
 		setLastSavedSceneId
 	])
 
-	// One saved scene, one identity. `settingsUpdatedAt` moves only when the
-	// scene is genuinely re-saved.
-	const savedSceneKey = sceneManifest
-		? `${sceneId}:${sceneManifest.settingsUpdatedAt ?? ''}`
-		: null
+	// Keyed on the scene, not on the manifest object and not on its version. The
+	// layout revalidates on tab focus and after every save, and a save publishes
+	// its own baselines, so re-applying here would overwrite whatever the user
+	// changed in the meantime.
+	const savedSceneKey = sceneManifest ? openSceneId : null
 	const manifestRef = useRef(sceneManifest)
 	manifestRef.current = sceneManifest
 
@@ -138,22 +146,20 @@ export function useSceneSource({ sceneId, sceneManifest }: UseSceneSourceArgs) {
 	// The first save navigates /publisher -> /publisher/<newId> while the model
 	// that produced the scene is already on screen. Fetching and parsing it back
 	// would tear down the viewer to rebuild what it is showing.
-	const isJustSavedScene = Boolean(sceneId) && sceneId === lastSavedSceneId
-	// A draft restore is the route asking for a different model entirely, so the
-	// manifest must not race it.
-	const isRestoringDraft =
-		new URLSearchParams(search).get('restore_draft') === '1'
+	const isJustSavedScene =
+		Boolean(openSceneId) && openSceneId === lastSavedSceneId
 
 	const source = useMemo<ModelSource | null>(() => {
-		if (!sceneId || !sceneManifest) return null
+		if (!openSceneId || !sceneManifest) return null
+		// A draft restore is the route asking for a different model entirely.
 		if (isJustSavedScene || isRestoringDraft) return null
 
 		return {
 			kind: 'scene-data',
-			sceneId,
+			sceneId: openSceneId,
 			sceneData: toSceneSourcePayload(sceneManifest)
 		}
-	}, [isJustSavedScene, isRestoringDraft, sceneManifest, sceneId])
+	}, [isJustSavedScene, isRestoringDraft, openSceneId, sceneManifest])
 
 	const onSettled = useCallback(
 		(state: ModelState) => {
@@ -168,7 +174,9 @@ export function useSceneSource({ sceneId, sceneManifest }: UseSceneSourceArgs) {
 				) ?? null
 			)
 
-			toast.success(`Loaded scene: ${state.sceneData?.meta?.name || state.file.name}`)
+			toast.success(
+				`Loaded scene: ${state.sceneData?.meta?.name || state.file.name}`
+			)
 		},
 		[setBakedShadowSource]
 	)

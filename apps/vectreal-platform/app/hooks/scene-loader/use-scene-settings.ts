@@ -10,6 +10,7 @@ import {
 	defaultShadowsOptions,
 	normalizeShadowOptions
 } from '../../constants/viewer-defaults'
+import { resolveDefaultSceneCameraId } from '../../lib/domain/scene/scene-camera'
 import {
 	lastSavedSceneIdAtom,
 	lastSavedSceneMetaAtom,
@@ -43,6 +44,10 @@ import type { SceneSettings } from '@vctrl/core'
 /**
  * Writes a scene's saved settings into the atoms the viewer renders from, and
  * records them as the save baseline.
+ *
+ * Covers the same atoms `useResetSceneState` does, deliberately: a scene that
+ * opens without resetting first (scene to scene, base route to scene) would
+ * otherwise keep the previous scene's selected camera and open hotspot.
  */
 export function useApplySceneSettings() {
 	const setBounds = useSetAtom(boundsAtom)
@@ -53,7 +58,8 @@ export function useApplySceneSettings() {
 	const setShadows = useSetAtom(shadowsAtom)
 	const setNormalization = useSetAtom(normalizationAtom)
 	const setHotspots = useSetAtom(hotspotsAtom)
-	const setRawModelDiagonal = useSetAtom(rawModelDiagonalAtom)
+	const setSelectedCameraId = useSetAtom(selectedCameraIdAtom)
+	const setActiveHotspotId = useSetAtom(activeHotspotIdAtom)
 	const setLastSavedSettings = useSetAtom(lastSavedSettingsAtom)
 
 	return useCallback(
@@ -63,7 +69,8 @@ export function useApplySceneSettings() {
 			const camera = settings.camera ?? defaultCameraOptions
 			const controls = settings.controls ?? defaultControlsOptions
 			const shadows = normalizeShadowOptions(settings.shadows)
-			const normalization = settings.normalization ?? defaultNormalizationOptions
+			const normalization =
+				settings.normalization ?? defaultNormalizationOptions
 
 			setBounds(bounds)
 			setEnv(environment)
@@ -73,7 +80,12 @@ export function useApplySceneSettings() {
 			setShadows(shadows)
 			setNormalization(normalization)
 			setHotspots(settings.hotspots ?? [])
-			setRawModelDiagonal(0)
+			setSelectedCameraId(
+				resolveDefaultSceneCameraId(camera.cameras) ??
+					defaultCameraOptions.activeCameraId ??
+					'default'
+			)
+			setActiveHotspotId(null)
 			setLastSavedSettings({
 				bounds,
 				environment,
@@ -86,6 +98,7 @@ export function useApplySceneSettings() {
 			})
 		},
 		[
+			setActiveHotspotId,
 			setBounds,
 			setCamera,
 			setControls,
@@ -94,7 +107,7 @@ export function useApplySceneSettings() {
 			setInteractions,
 			setLastSavedSettings,
 			setNormalization,
-			setRawModelDiagonal,
+			setSelectedCameraId,
 			setShadows
 		]
 	)

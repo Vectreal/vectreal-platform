@@ -3,9 +3,7 @@ import { atom } from 'jotai'
 import type { Plan } from '../../constants/plan-config'
 
 export type UpgradeModalDenialReason =
-	| 'quota_exceeded'
-	| 'feature_not_available'
-	| 'plan_inactive'
+	'quota_exceeded' | 'feature_not_available' | 'plan_inactive'
 
 export interface UpgradeModalState {
 	open: boolean

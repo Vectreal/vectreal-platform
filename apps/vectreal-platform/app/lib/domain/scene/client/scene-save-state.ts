@@ -1,8 +1,5 @@
 export type SaveAvailabilityReason =
-	| 'ready'
-	| 'no-user'
-	| 'no-unsaved-changes'
-	| 'requires-size-reduction'
+	'ready' | 'no-user' | 'no-unsaved-changes' | 'requires-size-reduction'
 
 export interface SaveAvailabilityState {
 	canSave: boolean
