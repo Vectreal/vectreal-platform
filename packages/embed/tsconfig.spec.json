@@ -8,14 +8,6 @@
 		// native config loader can resolve it; type-checking is noEmit here.
 		"allowImportingTsExtensions": true
 	},
-	// `exclude` is inherited and beats a child's `include`, and the base config
-	// excludes spec files. Without clearing it this config resolves to zero
-	// spec files and silently checks nothing.
 	"exclude": [],
-	"include": [
-		"vite.config.ts",
-		"vitest.config.ts",
-		"src/**/*.spec.ts",
-		"src/**/*.d.ts"
-	]
+	"include": ["vitest.config.ts", "src/**/*.spec.ts", "src/**/*.d.ts"]
 }

@@ -36,7 +36,8 @@
 			"executor": "nx:run-commands",
 			"outputs": [],
 			"options": {
-				"command": "tsc --noEmit -p packages/viewer/tsconfig.json"
+				"cwd": "packages/viewer",
+				"command": "tsc --noEmit -p tsconfig.lib.json && tsc --noEmit -p tsconfig.spec.json"
 			}
 		},
 		"publish": {
