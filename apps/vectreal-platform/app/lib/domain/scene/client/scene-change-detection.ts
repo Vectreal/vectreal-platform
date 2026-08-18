@@ -40,7 +40,7 @@ const toComparableSceneMeta = ({
  * user framed and captured a new thumbnail" from "the server changed the URL",
  * and only the former should count as an unsaved change.
  */
-const isLocallyCapturedThumbnail = (thumbnailUrl?: string): boolean =>
+export const isLocallyCapturedThumbnail = (thumbnailUrl?: string): boolean =>
 	typeof thumbnailUrl === 'string' && thumbnailUrl.startsWith('data:')
 
 export const buildOptimizationReportSignature = (

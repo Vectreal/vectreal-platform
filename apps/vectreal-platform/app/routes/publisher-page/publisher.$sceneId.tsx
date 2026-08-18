@@ -8,6 +8,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import CenteredSpinner from '../../components/centered-spinner'
 import { PublisherEditorScene } from '../../components/publisher/publisher-editor-scene'
 import { usePublisherViewerCapture } from '../../components/publisher/publisher-viewer-capture-context'
+import { useAutomaticOpeningView } from '../../components/publisher/shell/use-opening-view'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import { sceneMetaAtom, toolSidebarStateAtom } from '../../lib/stores/publisher-config-store'
 import {
@@ -163,6 +164,7 @@ const PublisherPage = () => {
 	// (a data URL, no separate request). The viewer ignores it once the bake inputs
 	// change during editing (signature mismatch) and re-bakes live.
 	const bakedShadow = useAtomValue(bakedShadowSourceAtom) ?? undefined
+	const handleInteractionEvent = useAutomaticOpeningView()
 
 	// Memoized: a fresh object here re-creates the viewer's screenshot capture on
 	// every render, which would de-register it for the frame a save runs in.
@@ -200,6 +202,7 @@ const PublisherPage = () => {
 					onCameraSnapshotCaptureReady={registerSceneCameraSnapshotCapture}
 					onCommandExecutorReady={registerCommandExecutor}
 					onRawDiagonalComputed={setRawDiagonal}
+					onInteractionEvent={handleInteractionEvent}
 					fallback={<CenteredSpinner text="Loading Publisher..." />}
 				>
 					{file?.model && <PublisherEditorScene />}

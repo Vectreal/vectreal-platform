@@ -90,10 +90,12 @@ export function useSceneUpload({
 			}
 
 			setSceneMeta((previous) => ({
-				// Replace rather than merge: a dropped file is a new model, so keeping
-				// the previous description or thumbnail would both show the wrong
-				// image and let the save flow persist it onto this model.
+				// Replace rather than merge. A dropped file is new content, so keeping
+				// the previous thumbnail would both show the wrong image and let the
+				// save flow re-link it onto this model. Editing an existing scene
+				// keeps its name; a new one takes it from the file.
 				...sceneMetaInitialState,
+				description: sceneId ? previous.description : '',
 				name: sceneId
 					? previous.name || getSceneNameFromFileName(result.file.name)
 					: getSceneNameFromFileName(result.file.name)

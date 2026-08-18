@@ -9,7 +9,7 @@ import { useSceneSaveFlow } from './scene-loader/use-scene-save-flow'
 import { useSceneSource } from './scene-loader/use-scene-source'
 import { useSceneUpload } from './scene-loader/use-scene-upload'
 import { usePublisherViewerCapture } from '../components/publisher/publisher-viewer-capture-context'
-import { resolveDefaultSceneCameraId } from '../lib/domain/scene/scene-camera'
+import { OPENING_VIEW_CAPTURE_OPTIONS } from '../components/publisher/shell/use-opening-view'
 import { clearPendingSceneDraft } from '../lib/persistence/pending-scene-idb'
 import {
 	currentSceneIdAtom,
@@ -24,15 +24,6 @@ import { sceneViewerSettingsAtom } from '../lib/stores/scene-settings-store'
 
 import type { SceneManifestResponse } from '../types/api'
 import type { SceneSettings } from '@vctrl/core'
-import type { SceneScreenshotOptions } from '@vctrl/viewer'
-
-const THUMBNAIL_CAPTURE_OPTIONS: SceneScreenshotOptions = {
-	width: 1280,
-	height: 720,
-	mimeType: 'image/webp',
-	quality: 0.86,
-	mode: 'auto-fit'
-}
 
 interface UsePublisherSceneArgs {
 	sceneId: null | string
@@ -104,20 +95,19 @@ export function useSceneLoader({
 		[setProcess]
 	)
 
+	/**
+	 * The fallback for a scene that reaches save without a thumbnail: the same
+	 * live frame the opening-view capture takes, so both produce the same image
+	 * and the placeholder always matches the view the scene resolves into.
+	 */
 	const captureSceneThumbnail = useCallback(async () => {
 		try {
-			// Always the camera the scene opens on, so the automatic capture agrees
-			// with the manual "set opening view" action rather than framing
-			// something the viewer will never see.
-			return await requestSceneScreenshot({
-				...THUMBNAIL_CAPTURE_OPTIONS,
-				targetCameraId: resolveDefaultSceneCameraId(currentSettings.camera?.cameras)
-			})
+			return await requestSceneScreenshot(OPENING_VIEW_CAPTURE_OPTIONS)
 		} catch (error) {
 			console.warn('[scene-settings] thumbnail capture failed', error)
 			return null
 		}
-	}, [currentSettings.camera?.cameras, requestSceneScreenshot])
+	}, [requestSceneScreenshot])
 
 	const captureShadowBake = useCallback(async () => {
 		try {

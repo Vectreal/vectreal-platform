@@ -1,11 +1,15 @@
-import { useSetAtom } from 'jotai/react'
-import { useCallback, useState } from 'react'
+import { useModelContext } from '@vctrl/hooks/use-load-model'
+import { useAtomValue, useSetAtom } from 'jotai/react'
+import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { resolveDefaultSceneCameraId } from '../../../lib/domain/scene/scene-camera'
 import { sceneMetaAtom } from '../../../lib/stores/publisher-config-store'
 import { cameraAtom } from '../../../lib/stores/scene-settings-store'
 import { usePublisherViewerCapture } from '../publisher-viewer-capture-context'
+
+import type { ModelFile } from '@vctrl/hooks/use-load-model'
+import type { ViewerInteractionEvent } from '@vctrl/viewer'
 
 /**
  * Capture settings for the opening view.
@@ -16,7 +20,7 @@ import { usePublisherViewerCapture } from '../publisher-viewer-capture-context'
  * capture waits only two frames — shooting mid-transition and returning the
  * environment with the model still out of frame.
  */
-const OPENING_VIEW_CAPTURE_OPTIONS = {
+export const OPENING_VIEW_CAPTURE_OPTIONS = {
 	width: 1280,
 	height: 720,
 	mimeType: 'image/webp' as const,
@@ -40,7 +44,8 @@ export function useOpeningViewCapture() {
 	const setCamera = useSetAtom(cameraAtom)
 	const [isCapturing, setIsCapturing] = useState(false)
 
-	const setOpeningView = useCallback(async () => {
+	const setOpeningView = useCallback(
+		async ({ announce = true }: { announce?: boolean } = {}) => {
 		if (isCapturing) return
 		setIsCapturing(true)
 
@@ -53,9 +58,11 @@ export function useOpeningViewCapture() {
 			])
 
 			if (!dataUrl) {
-				toast.error(
-					'Could not capture the viewport. Try again once the scene has finished loading.'
-				)
+				if (announce) {
+					toast.error(
+						'Could not capture the viewport. Try again once the scene has finished loading.'
+					)
+				}
 				return
 			}
 
@@ -85,20 +92,57 @@ export function useOpeningViewCapture() {
 			// ever comes from a capture in this session, which the change detection
 			// treats as an unsaved edit.
 			setSceneMeta((previous) => ({ ...previous, thumbnailUrl: dataUrl }))
-			toast.success('Opening view updated. Save to keep it.')
+			if (announce) {
+				toast.success('Opening view updated. Save to keep it.')
+			}
 		} catch (error) {
 			console.error('Opening view capture failed:', error)
-			toast.error('Could not capture the viewport.')
+			if (announce) {
+				toast.error('Could not capture the viewport.')
+			}
 		} finally {
 			setIsCapturing(false)
 		}
-	}, [
-		isCapturing,
-		requestSceneCameraSnapshot,
-		requestSceneScreenshot,
-		setCamera,
-		setSceneMeta
-	])
+	},
+		[
+			isCapturing,
+			requestSceneCameraSnapshot,
+			requestSceneScreenshot,
+			setCamera,
+			setSceneMeta
+		]
+	)
 
 	return { setOpeningView, isCapturing }
+}
+
+/**
+ * Gives a freshly uploaded model its opening view without being asked.
+ *
+ * An upload has no thumbnail and no saved camera, so the frame the viewer
+ * settles on is the only opening view it has. Capturing it here means the same
+ * code path produces it as when the user sets one deliberately, and it happens
+ * at the one moment the frame is meaningful: the viewer reports that its
+ * initial framing has stabilized.
+ *
+ * Returns the viewer's `onInteractionEvent` handler. Saved scenes keep the
+ * opening view they were saved with.
+ */
+export function useAutomaticOpeningView() {
+	const { file, source } = useModelContext()
+	const { thumbnailUrl } = useAtomValue(sceneMetaAtom)
+	const { setOpeningView } = useOpeningViewCapture()
+	const capturedForRef = useRef<ModelFile | null>(null)
+
+	return useCallback(
+		(event: ViewerInteractionEvent) => {
+			if (event.type !== 'initial_framing_completed') return
+			if (!file || source !== 'files' || thumbnailUrl) return
+			if (capturedForRef.current === file) return
+
+			capturedForRef.current = file
+			void setOpeningView({ announce: false })
+		},
+		[file, setOpeningView, source, thumbnailUrl]
+	)
 }

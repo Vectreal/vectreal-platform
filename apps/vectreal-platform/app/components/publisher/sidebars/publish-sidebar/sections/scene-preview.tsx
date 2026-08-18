@@ -53,7 +53,7 @@ export const ScenePreview: FC = () => {
 				size="sm"
 				className="w-full"
 				disabled={isCapturing}
-				onClick={setOpeningView}
+				onClick={() => void setOpeningView()}
 			>
 				{isCapturing ? (
 					<Loader2 className="h-3.5 w-3.5 animate-spin" />

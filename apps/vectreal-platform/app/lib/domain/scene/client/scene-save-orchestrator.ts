@@ -1,6 +1,8 @@
 import { PERSISTED_BAKE_FILENAME, SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
+import { toast } from 'sonner'
 
 import { createFileFromDataUrl } from './scene-draft-serialization'
+import { planThumbnailForSave } from './scene-thumbnail-save'
 import {
 	buildImageMimeLookup,
 	buildSceneUploadFileDescriptor
@@ -40,6 +42,7 @@ interface ExecuteSceneSaveOrchestratorParams {
 	currentSceneId: null | string
 	currentSettings: SceneSettings
 	sceneMetaState: SceneMetaState
+	lastSavedSceneMeta: SceneMetaState | null
 	lastSavedSettings: SceneSettings | null
 	optimizationSettings: unknown
 	optimizationReport: null | unknown
@@ -85,6 +88,7 @@ export const executeSceneSaveOrchestrator = async ({
 	currentSceneId,
 	currentSettings,
 	sceneMetaState,
+	lastSavedSceneMeta,
 	lastSavedSettings,
 	optimizationSettings,
 	optimizationReport,
@@ -143,15 +147,25 @@ export const executeSceneSaveOrchestrator = async ({
 	// The thumbnail is the placeholder shown while the scene loads, so it has to
 	// match the frame the default camera opens on. Comparing the signature rather
 	// than just the camera id means nudging the default camera's pose also
-	// triggers a recapture — otherwise the saved thumbnail keeps showing the old
+	// triggers a recapture - otherwise the saved thumbnail keeps showing the old
 	// framing and the load transition visibly jumps.
 	const defaultCameraChanged =
 		buildDefaultCameraSignature(currentSettings.camera?.cameras) !==
 		buildDefaultCameraSignature(lastSavedSettings?.camera?.cameras)
-	const needsThumbnail = !sceneMetaState.thumbnailUrl || defaultCameraChanged
+	const { capturedThumbnail, needsCapture, fallbackThumbnailUrl } =
+		planThumbnailForSave({
+			sceneMetaState,
+			lastSavedSceneMeta,
+			defaultCameraChanged
+		})
 
-	const thumbnailDataUrl = needsThumbnail ? await captureSceneThumbnail() : null
-	let sceneMetaForSave = sceneMetaState
+	const thumbnailDataUrl =
+		capturedThumbnail ?? (needsCapture ? await captureSceneThumbnail() : null)
+
+	let sceneMetaForSave = {
+		...sceneMetaState,
+		thumbnailUrl: fallbackThumbnailUrl
+	}
 
 	if (thumbnailDataUrl) {
 		const thumbnailFile = createFileFromDataUrl(
@@ -185,7 +199,7 @@ export const executeSceneSaveOrchestrator = async ({
 				)
 
 				sceneMetaForSave = {
-					...sceneMetaState,
+					...sceneMetaForSave,
 					thumbnailUrl: `/api/scenes/${preparedSceneId}/thumbnail/${uploadedThumbnail.assetId}`
 				}
 			} catch (error) {
@@ -196,6 +210,9 @@ export const executeSceneSaveOrchestrator = async ({
 							? error.message
 							: 'Unknown thumbnail upload error'
 				})
+				toast.error(
+					'The scene was saved, but its preview image could not be uploaded.'
+				)
 			}
 		}
 	}
