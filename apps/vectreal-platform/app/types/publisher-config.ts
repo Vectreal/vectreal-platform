@@ -12,13 +12,10 @@ export interface SceneMetaState {
         thumbnailUrl: string
 }
 export interface ProcessState {
-        step: 'uploading' | 'preparing'
         mode: SidebarMode
         activeComposeTool: ComposeTool
         showSidebar: boolean
         showPublishPanel: boolean
-        isInitializing: boolean
-        isLoading: boolean
         isSaving: boolean
         hasUnsavedChanges: boolean
 }

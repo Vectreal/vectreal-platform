@@ -120,7 +120,7 @@ export const hasOptimizationChanges = ({
 }
 
 interface UnsavedChangesArgs {
-	isInitializing: boolean
+	isLoading: boolean
 	currentSettings: SceneSettings
 	lastSavedSettings: SceneSettings | null
 	sceneMetaState: SceneMetaState
@@ -133,7 +133,7 @@ interface UnsavedChangesArgs {
 }
 
 export const hasUnsavedSceneChanges = ({
-	isInitializing,
+	isLoading,
 	currentSettings,
 	lastSavedSettings,
 	sceneMetaState,
@@ -144,7 +144,7 @@ export const hasUnsavedSceneChanges = ({
 	optimizedSceneBytes,
 	latestSceneStats
 }: UnsavedChangesArgs): boolean => {
-	if (isInitializing) {
+	if (isLoading) {
 		return false
 	}
 

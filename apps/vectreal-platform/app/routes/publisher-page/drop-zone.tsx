@@ -3,7 +3,6 @@ import { Button } from '@shared/components/ui/button'
 import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
 import { InputFileOrDirectory } from '@vctrl/hooks/use-load-model'
-import { useModelContext } from '@vctrl/hooks/use-load-model'
 import {
 	Book,
 	ExternalLink,
@@ -11,14 +10,9 @@ import {
 	FolderUp,
 	Upload
 } from 'lucide-react'
-import {
-	ComponentProps,
-	SyntheticEvent,
-	useCallback,
-	useTransition
-} from 'react'
+import { ComponentProps, SyntheticEvent, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Link, useNavigation } from 'react-router'
+import { Link } from 'react-router'
 
 import BasicCard from '../../components/layout-components/basic-card'
 
@@ -32,22 +26,13 @@ declare module 'react' {
 
 interface Props {
 	isMobile?: boolean
+	/** Loads the dropped files and takes care of everything a new scene needs. */
+	onUpload: (files: InputFileOrDirectory) => Promise<unknown>
+	isLoading?: boolean
 }
 
-export const DropZone = ({ isMobile }: Props) => {
+export const DropZone = ({ isMobile, onUpload, isLoading = false }: Props) => {
 	const acceptPattern = useAcceptPattern(isMobile)
-	const { load } = useModelContext()
-
-	const [isPending, startTransition] = useTransition()
-	const navigation = useNavigation()
-
-	// Show a loading state when files are being processed or when navigating
-	// within the publisher (e.g. to a newly created scene route).
-	const isNavigationLoading =
-		navigation.state === 'loading' &&
-		Boolean(navigation.location?.pathname?.startsWith('/publisher'))
-
-	const isLoading = isPending || isNavigationLoading
 
 	const handleDrop = useCallback(
 		(files: File[]) => {
@@ -55,11 +40,9 @@ export const DropZone = ({ isMobile }: Props) => {
 				return
 			}
 
-			startTransition(async () => {
-				await load(files as InputFileOrDirectory)
-			})
+			void onUpload(files as InputFileOrDirectory)
 		},
-		[load, startTransition]
+		[onUpload]
 	)
 
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -115,9 +98,7 @@ export const DropZone = ({ isMobile }: Props) => {
 											<div className="flex flex-col items-center justify-center gap-3">
 												<LoadingSpinner className="h-10 w-10" />
 												<p className="text-muted-foreground text-sm">
-													{isPending
-														? 'Processing files...'
-														: 'Preparing Publisher...'}
+													Processing files...
 												</p>
 											</div>
 										) : (

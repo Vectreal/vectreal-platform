@@ -1,4 +1,4 @@
-import { atom, createStore } from 'jotai'
+import { atom } from 'jotai'
 
 import {
 	defaultBoundsOptions,
@@ -21,7 +21,6 @@ import type {
 } from '@vctrl/core'
 import type { BakedShadow } from '@vctrl/viewer'
 
-const sceneSettingsStore = createStore()
 
 const boundsAtom = atom<BoundsProps>(defaultBoundsOptions)
 const cameraAtom = atom<CameraProps>(defaultCameraOptions)
@@ -55,23 +54,6 @@ const sceneViewerSettingsAtom = atom((get) => ({
 	hotspots: get(hotspotsAtom)
 }))
 
-sceneSettingsStore.set(boundsAtom, defaultBoundsOptions)
-sceneSettingsStore.set(cameraAtom, defaultCameraOptions)
-sceneSettingsStore.set(
-	selectedCameraIdAtom,
-	defaultCameraOptions.activeCameraId ??
-		defaultCameraOptions.cameras?.[0]?.cameraId ??
-		'default'
-)
-sceneSettingsStore.set(controlsAtom, defaultControlsOptions)
-sceneSettingsStore.set(environmentAtom, defaultEnvOptions)
-sceneSettingsStore.set(interactionsAtom, undefined)
-sceneSettingsStore.set(shadowsAtom, defaultShadowOptions)
-sceneSettingsStore.set(normalizationAtom, defaultNormalizationOptions)
-sceneSettingsStore.set(rawModelDiagonalAtom, 0)
-sceneSettingsStore.set(hotspotsAtom, [])
-sceneSettingsStore.set(activeHotspotIdAtom, null)
-sceneSettingsStore.set(bakedShadowSourceAtom, null)
 
 export {
 	// Vectreal viewer settings atoms
@@ -87,8 +69,5 @@ export {
 	rawModelDiagonalAtom,
 	selectedCameraIdAtom,
 	sceneViewerSettingsAtom,
-	shadowsAtom,
-
-	// store
-	sceneSettingsStore
+	shadowsAtom
 }

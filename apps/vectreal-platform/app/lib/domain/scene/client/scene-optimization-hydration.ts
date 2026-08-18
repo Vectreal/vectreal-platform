@@ -1,6 +1,6 @@
 import { DEFAULT_PRESET_ID } from '../../../../constants/optimizations'
 
-import type { SceneAggregateResponse } from '../../../../types/api'
+import type { SceneManifestResponse } from '../../../../types/api'
 import type {
 	OptimizationPreset,
 	OptimizationState,
@@ -14,9 +14,9 @@ interface AggregateByteMetrics {
 }
 
 interface ExecuteOptimizationStateHydrationParams {
-	aggregate: SceneAggregateResponse | null
+	aggregate: SceneManifestResponse | null
 	calculateAggregateReferencedBytes: (
-		aggregate: SceneAggregateResponse | null
+		aggregate: SceneManifestResponse | null
 	) => AggregateByteMetrics
 	inferOptimizationPreset: (optimizations: Optimizations) => OptimizationPreset
 	setOptimizationState: (

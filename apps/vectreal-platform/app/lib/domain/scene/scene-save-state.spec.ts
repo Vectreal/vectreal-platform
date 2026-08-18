@@ -139,7 +139,7 @@ describe('scene save state', () => {
 
 		expect(
 			hasUnsavedSceneChanges({
-				isInitializing: false,
+				isLoading: false,
 				currentSettings,
 				lastSavedSettings: null,
 				sceneMetaState: { name: 'New scene', description: '', thumbnailUrl: '' },
@@ -158,7 +158,7 @@ describe('scene save state', () => {
 
 		expect(
 			hasUnsavedSceneChanges({
-				isInitializing: false,
+				isLoading: false,
 				currentSettings: settings,
 				lastSavedSettings: settings,
 				sceneMetaState: sceneMeta,

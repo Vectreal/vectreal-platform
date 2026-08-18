@@ -1,36 +1,15 @@
-import { useIsMobile } from '@shared/components/hooks/use-mobile'
 import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { SpinnerWrapper } from '@shared/components/ui/spinner-wrapper'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { AnimatePresence } from 'framer-motion'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useAtomValue, useSetAtom } from 'jotai/react'
-import { RESET } from 'jotai/utils'
-import {
-	memo,
-	Suspense,
-	useCallback,
-	useEffect,
-	useRef,
-	useState,
-	type FC
-} from 'react'
-import { useNavigation, useParams } from 'react-router'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { Route } from './+types/publisher.$sceneId'
-import { DropZone } from './drop-zone'
 import CenteredSpinner from '../../components/centered-spinner'
 import { PublisherEditorScene } from '../../components/publisher/publisher-editor-scene'
 import { usePublisherViewerCapture } from '../../components/publisher/publisher-viewer-capture-context'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
-import {
-	processInitialState,
-	publisherLoadingStateAtom,
-	processAtom,
-	sceneMetaAtom,
-	toolSidebarStateAtom
-} from '../../lib/stores/publisher-config-store'
-import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
+import { sceneMetaAtom, toolSidebarStateAtom } from '../../lib/stores/publisher-config-store'
 import {
 	bakedShadowSourceAtom,
 	rawModelDiagonalAtom,
@@ -38,22 +17,9 @@ import {
 	selectedCameraIdAtom,
 	shadowsAtom
 } from '../../lib/stores/scene-settings-store'
-import { identifyMobileRequest } from '../../lib/utils/identify-mobile-request'
 import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbnail'
 
-import type {
-	SceneCameraSnapshotCapture,
-	SceneScreenshotCapture,
-	ShadowBakeCapture,
-	ViewerCommandExecutor
-} from '@vctrl/viewer'
 import type { ShouldRevalidateFunction } from 'react-router'
-
-export async function loader({ request }: Route.LoaderArgs) {
-	return {
-		isMobile: identifyMobileRequest(request)
-	}
-}
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({
 	currentUrl,
@@ -130,25 +96,15 @@ const LoadingScreen = memo(() => {
 	)
 })
 
-const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
-	const isMobile = useIsMobile(loaderData.isMobile)
-	const params = useParams()
-	const routeSceneId = params.sceneId ?? null
-
-	// Get model and settings from context/atoms
-	const { file, isFileLoading, reset } = useModelContext()
-	const { isDownloading, isInitializing } = useAtomValue(
-		publisherLoadingStateAtom
-	)
-	const navigation = useNavigation()
-	// True when React Router is loading a publisher route - covers navigating
-	// between scene IDs within the publisher layout (e.g. after a new scene
-	// is saved and the URL moves from /publisher to /publisher/<id>).
-	const isNavigationLoading =
-		navigation.state === 'loading' &&
-		Boolean(navigation.location?.pathname?.startsWith('/publisher'))
-	const setProcess = useSetAtom(processAtom)
-	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
+/**
+ * The publisher's canvas.
+ *
+ * It renders the loaded model and nothing else: the shell decides whether this
+ * surface is the one on screen, so there is no "what if there is no model yet"
+ * branch here to disagree with it.
+ */
+const PublisherPage = () => {
+	const { file } = useModelContext()
 	const setRawDiagonal = useSetAtom(rawModelDiagonalAtom)
 	const setShadows = useSetAtom(shadowsAtom)
 	const { bounds, camera, controls, env, shadows, normalization } =
@@ -184,6 +140,7 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 		},
 		[]
 	)
+
 	const selectedCameraId = useAtomValue(selectedCameraIdAtom)
 	const sceneMeta = useAtomValue(sceneMetaAtom)
 	const { activeComposeTool, showSidebar } = useAtomValue(toolSidebarStateAtom)
@@ -195,7 +152,6 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 		sceneMeta.thumbnailUrl,
 		'Scene thumbnail preview'
 	)
-	const previousRouteSceneIdRef = useRef<null | string>(routeSceneId)
 	const {
 		registerSceneScreenshotCapture,
 		registerSceneCameraSnapshotCapture,
@@ -203,152 +159,52 @@ const PublisherPage: FC<Route.ComponentProps> = ({ loaderData }) => {
 		registerCommandExecutor
 	} = usePublisherViewerCapture()
 
-	// Persisted shadow bake resolved from the loaded aggregate's inlined asset data
+	// Persisted shadow bake resolved from the loaded scene's inlined asset data
 	// (a data URL, no separate request). The viewer ignores it once the bake inputs
 	// change during editing (signature mismatch) and re-bakes live.
 	const bakedShadow = useAtomValue(bakedShadowSourceAtom) ?? undefined
 
-	const handleScreenshotCaptureReady = useCallback(
-		(capture: null | SceneScreenshotCapture) => {
-			registerSceneScreenshotCapture(capture)
-		},
-		[registerSceneScreenshotCapture]
+	// Memoized: a fresh object here re-creates the viewer's screenshot capture on
+	// every render, which would de-register it for the frame a save runs in.
+	const cameraOptions = useMemo(
+		() => ({
+			...camera,
+			activeCameraId: selectedCameraId ?? camera.activeCameraId
+		}),
+		[camera, selectedCameraId]
 	)
-
-	const handleCameraSnapshotCaptureReady = useCallback(
-		(capture: null | SceneCameraSnapshotCapture) => {
-			registerSceneCameraSnapshotCapture(capture)
-		},
-		[registerSceneCameraSnapshotCapture]
-	)
-
-	const handleCommandExecutorReady = useCallback(
-		(executor: null | ViewerCommandExecutor) => {
-			registerCommandExecutor(executor)
-		},
-		[registerCommandExecutor]
-	)
-
-	const handleShadowBakeReady = useCallback(
-		(capture: null | ShadowBakeCapture) => {
-			registerShadowBakeCapture(capture)
-		},
-		[registerShadowBakeCapture]
-	)
-
-	// Cleanup on unmount
-	useEffect(() => {
-		const previousRouteSceneId = previousRouteSceneIdRef.current
-		const navigatedFromSceneToBase =
-			Boolean(previousRouteSceneId) && !routeSceneId
-
-		if (navigatedFromSceneToBase) {
-			registerSceneScreenshotCapture(null)
-			registerSceneCameraSnapshotCapture(null)
-			reset()
-			setProcess(processInitialState)
-			setOptimizationRuntime(RESET)
-		}
-
-		previousRouteSceneIdRef.current = routeSceneId
-	}, [
-		routeSceneId,
-		registerSceneCameraSnapshotCapture,
-		registerSceneScreenshotCapture,
-		reset,
-		setOptimizationRuntime,
-		setProcess
-	])
-
-	useEffect(() => {
-		return () => {
-			registerSceneScreenshotCapture(null)
-			registerSceneCameraSnapshotCapture(null)
-			reset()
-			setProcess(processInitialState)
-			setOptimizationRuntime(RESET)
-		}
-	}, [
-		registerSceneCameraSnapshotCapture,
-		registerSceneScreenshotCapture,
-		setOptimizationRuntime,
-		setProcess,
-		reset
-	])
-
-	const isLoading = isInitializing || isDownloading || isFileLoading
 
 	return (
 		<div className="z-0 grow overflow-clip">
-			<Suspense fallback={<CenteredSpinner text="Loading Publisher..." />}>
-				<AnimatePresence mode="wait">
-					{!file?.model && (isDownloading || isNavigationLoading) ? (
-						<motion.div
-							key="idb-rehydration-spinner"
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							exit={{ opacity: 0 }}
-							transition={{ duration: 0.25 }}
-							className="relative flex h-full w-full items-center justify-center"
-						>
-							<CenteredSpinner
-								text={
-									isNavigationLoading
-										? 'Preparing Publisher...'
-										: 'Loading Scene...'
-								}
-							/>
-						</motion.div>
-					) : file?.model || isLoading ? (
-						<motion.div
-							key="model-viewer"
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							exit={{ opacity: 0, transition: { duration: 0.4 } }}
-							transition={{ duration: 0.75, delay: 1 }}
-							className="bg-muted/50 relative flex h-full w-full"
-						>
-							<ClientVectrealViewer
-								model={file?.model}
-								key="model-viewer"
-								cameraOptions={{
-									...camera,
-									activeCameraId: selectedCameraId ?? camera.activeCameraId
-								}}
-								controlsOptions={controls}
-								envOptions={env}
-								shadowsOptions={shadows}
-								bakedShadow={bakedShadow}
-								onShadowBakeReady={handleShadowBakeReady}
-								shadowLightEditable={isShadowToolActive}
-								onShadowLightChange={handleShadowLightChange}
-								normalizationOptions={normalization}
-								boundsOptions={bounds}
-								loadingThumbnail={loadingThumbnail}
-								loader={<LoadingScreen />}
-								onScreenshotCaptureReady={handleScreenshotCaptureReady}
-								onCameraSnapshotCaptureReady={handleCameraSnapshotCaptureReady}
-								onCommandExecutorReady={handleCommandExecutorReady}
-								onRawDiagonalComputed={setRawDiagonal}
-								fallback={<LoadingScreen />}
-							>
-								{file?.model && <PublisherEditorScene />}
-							</ClientVectrealViewer>
-						</motion.div>
-					) : (
-						<motion.div
-							key="drop-zone"
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							exit={{ opacity: 0 }}
-							transition={{ duration: 0.3 }}
-							className="relative flex h-full w-full items-center justify-center"
-						>
-							<DropZone key="drop-zone" isMobile={isMobile} />
-						</motion.div>
-					)}
-				</AnimatePresence>
-			</Suspense>
+			<motion.div
+				initial={{ opacity: 0 }}
+				animate={{ opacity: 1 }}
+				transition={{ duration: 0.4 }}
+				className="bg-muted/50 relative flex h-full w-full"
+			>
+				<ClientVectrealViewer
+					model={file?.model}
+					cameraOptions={cameraOptions}
+					controlsOptions={controls}
+					envOptions={env}
+					shadowsOptions={shadows}
+					bakedShadow={bakedShadow}
+					onShadowBakeReady={registerShadowBakeCapture}
+					shadowLightEditable={isShadowToolActive}
+					onShadowLightChange={handleShadowLightChange}
+					normalizationOptions={normalization}
+					boundsOptions={bounds}
+					loadingThumbnail={loadingThumbnail}
+					loader={<LoadingScreen />}
+					onScreenshotCaptureReady={registerSceneScreenshotCapture}
+					onCameraSnapshotCaptureReady={registerSceneCameraSnapshotCapture}
+					onCommandExecutorReady={registerCommandExecutor}
+					onRawDiagonalComputed={setRawDiagonal}
+					fallback={<CenteredSpinner text="Loading Publisher..." />}
+				>
+					{file?.model && <PublisherEditorScene />}
+				</ClientVectrealViewer>
+			</motion.div>
 		</div>
 	)
 }

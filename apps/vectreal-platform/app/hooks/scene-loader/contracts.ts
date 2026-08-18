@@ -1,26 +1,13 @@
-import type {
-	SceneManifestResponse,
-	SceneStatsData
-} from '../../types/api'
+import type { SceneStatsData } from '../../types/api'
 import type { SceneMetaState } from '../../types/publisher-config'
 import type { SaveLocationTarget } from '../../types/publisher-scene'
-import type {
-	OptimizationPreset,
-	OptimizationState,
-	SceneOptimizationRuntimeState
-} from '../../types/scene-optimization'
+import type { SceneOptimizationRuntimeState } from '../../types/scene-optimization'
 import type {
 	OptimizationReport,
 	Optimizations,
 	SceneSettings
 } from '@vctrl/core'
-import type { EventHandler, EventTypes } from '@vctrl/hooks/use-load-model'
-import type {
-	SceneDataLoadOptions,
-	SceneLoadResult
-} from '@vctrl/hooks/use-load-model'
 import type { ShadowBakeResult } from '@vctrl/viewer'
-import type { MutableRefObject } from 'react'
 
 export interface ScenePersistenceState {
 	userId?: string
@@ -37,7 +24,8 @@ export interface ScenePersistenceState {
 	setLastSavedSceneMeta: (sceneMetaState: SceneMetaState | null) => void
 	lastSavedSceneId: string | null
 	setLastSavedSceneId: (sceneId: string | null) => void
-	isInitializing: boolean
+	/** True while the route's scene is still loading. */
+	isLoading: boolean
 }
 
 export interface SceneOptimizationSaveState {
@@ -68,117 +56,6 @@ export interface UseSceneSaveFlowArgs {
 	scenePersistence: ScenePersistenceState
 	optimizationState: SceneOptimizationSaveState
 	actions: SceneSaveFlowActions
-}
-
-export interface DraftRestoreRequest {
-	pendingSceneHydratedRef: MutableRefObject<boolean>
-	shouldRestorePendingDraft: boolean
-	/** Optional draft ID embedded in the URL, enables cross-tab restoration after OAuth. */
-	draftId?: string | null
-	paramSceneId: null | string
-	initialSceneAggregate: null | SceneManifestResponse
-	fileModel: unknown
-	isFileLoading: boolean
-	locationPathname: string
-}
-
-export interface DraftHydrationActions {
-	setIsDownloading: (loading: boolean) => void
-	loadFromData: (params: SceneDataLoadOptions) => Promise<SceneLoadResult>
-	setSceneMetaState: (sceneMeta: SceneMetaState) => void
-	setLastSavedSceneMeta: (sceneMeta: SceneMetaState) => void
-	/** Invoked after a restore attempt settles (success or failure). */
-	onRestoreHandled?: () => void
-}
-
-export interface DraftOptimizationActions {
-	inferOptimizationPreset: (optimizations: Optimizations) => OptimizationPreset
-	setOptimizationState: (
-		updater: (prev: OptimizationState) => OptimizationState
-	) => void
-	setOptimizationRuntime: (
-		updater: (
-			prev: SceneOptimizationRuntimeState
-		) => SceneOptimizationRuntimeState
-	) => void
-}
-
-export interface UseSceneDraftRehydrationArgs {
-	restoreRequest: DraftRestoreRequest
-	hydrationActions: DraftHydrationActions
-	optimizationActions: DraftOptimizationActions
-}
-
-export interface SceneRouteSyncState {
-	paramSceneId: null | string
-	sceneMeta: null | SceneMetaState
-	initialSceneAggregate: null | SceneManifestResponse
-	lastSavedSceneId: string | null
-	/**
-	 * True while returning from the sign-in round trip with a persisted draft to
-	 * restore. The draft's own hydration re-applies the model, meta and
-	 * optimization state but not the viewer settings, so the params sync must not
-	 * reset those atoms out from under it.
-	 */
-	shouldRestorePendingDraft: boolean
-}
-
-export interface SceneRouteSyncActions {
-	resetSceneState: () => void
-	setCurrentSceneId: (sceneId: null | string) => void
-	setSceneMetaState: (
-		next: SceneMetaState | ((prev: SceneMetaState) => SceneMetaState)
-	) => void
-	setLastSavedSettings: (settings: SceneSettings | null) => void
-	setLastSavedSceneMeta: (sceneMetaState: null | SceneMetaState) => void
-	setIsInitializing: (initializing: boolean) => void
-	setHasUnsavedChanges: (hasChanges: boolean) => void
-	setOptimizationRuntime: (
-		next:
-			| SceneOptimizationRuntimeState
-			| ((prev: SceneOptimizationRuntimeState) => SceneOptimizationRuntimeState)
-	) => void
-	setLastSavedSceneId: (sceneId: string | null) => void
-}
-
-export interface UseSceneParamsSyncArgs {
-	routeState: SceneRouteSyncState
-	actions: SceneRouteSyncActions
-}
-
-export interface SceneAggregateBootstrapState {
-	sceneLoadAttemptedRef: MutableRefObject<boolean>
-	paramSceneId: null | string
-	initialSceneAggregate: null | SceneManifestResponse
-	fileModel: unknown
-	isFileLoading: boolean
-}
-
-export interface SceneAggregateBootstrapActions {
-	setIsInitializing: (initializing: boolean) => void
-	loadSceneFromAggregate: (
-		sceneId: string,
-		manifest: SceneManifestResponse
-	) => Promise<void>
-}
-
-export interface UseSceneAggregateBootstrapArgs {
-	bootstrapState: SceneAggregateBootstrapState
-	actions: SceneAggregateBootstrapActions
-}
-
-export interface SceneModelEventBindings {
-	on: <TEventName extends EventTypes>(
-		eventName: TEventName,
-		handler: EventHandler<TEventName>
-	) => void
-	off: <TEventName extends EventTypes>(
-		eventName: TEventName,
-		handler: EventHandler<TEventName>
-	) => void
-	handleNotLoadedFiles: EventHandler<'not-loaded-files'>
-	handleLoadComplete: EventHandler<'load-complete'>
-	handleLoadError: EventHandler<'load-error'>
 }
 
 export type SceneSaveRequest = SaveLocationTarget | undefined

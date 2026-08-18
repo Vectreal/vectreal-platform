@@ -47,7 +47,7 @@ export const useSceneSaveFlow = ({
 		setLastSavedSceneMeta,
 		lastSavedSceneId,
 		setLastSavedSceneId,
-		isInitializing
+		isLoading
 	} = scenePersistence
 	const {
 		optimizationSettings,
@@ -349,9 +349,8 @@ export const useSceneSaveFlow = ({
 				setLastSavedSettings(settingsSnapshot)
 				setLastSavedSceneMeta(savedSceneMeta)
 
-				// Mark which scene was just saved. useSceneParamsSync reads this to
-				// distinguish "navigated to new scene after save" from a genuine user
-				// scene change, and skips destructive resets in that case.
+				// Mark which scene was just saved, so the publish panel can act on the
+				// new scene during the window before the route param catches up.
 				const persistedSceneId = result.sceneId || currentSceneId
 				setLastSavedSceneId(persistedSceneId ?? null)
 				setOptimisticSaveBaseline({
@@ -426,7 +425,7 @@ export const useSceneSaveFlow = ({
 	const hasChanges = useMemo(
 		() =>
 			hasUnsavedSceneChanges({
-				isInitializing,
+				isLoading,
 				currentSettings,
 				lastSavedSettings: effectiveLastSavedSettings,
 				sceneMetaState,
@@ -438,7 +437,7 @@ export const useSceneSaveFlow = ({
 				latestSceneStats
 			}),
 		[
-			isInitializing,
+			isLoading,
 			currentSettings,
 			effectiveLastSavedSettings,
 			sceneMetaState,
@@ -452,12 +451,12 @@ export const useSceneSaveFlow = ({
 	)
 
 	useEffect(() => {
-		if (isInitializing) {
+		if (isLoading) {
 			return
 		}
 
 		setHasUnsavedChanges(hasChanges)
-	}, [isInitializing, hasChanges, setHasUnsavedChanges])
+	}, [isLoading, hasChanges, setHasUnsavedChanges])
 
 	const saveAvailability: SaveAvailabilityState = useMemo(
 		() =>

@@ -1,5 +1,4 @@
 import { atomWithReset } from 'jotai/utils'
-import { createStore } from 'jotai/vanilla'
 
 import {
 	DEFAULT_PRESET_ID,
@@ -47,14 +46,6 @@ const optimizationModalAtom = atomWithReset<SceneOptimizationModalState>(
 	optimizationModalInitialState
 )
 
-const sceneOptimizationStore = createStore()
-
-sceneOptimizationStore.set(optimizationAtom, optimizationInitialState)
-sceneOptimizationStore.set(
-	optimizationRuntimeAtom,
-	optimizationRuntimeInitialState
-)
-sceneOptimizationStore.set(optimizationModalAtom, optimizationModalInitialState)
 
 export {
 	optimizationModalAtom,
@@ -62,6 +53,5 @@ export {
 	optimizationAtom,
 	optimizationInitialState,
 	optimizationRuntimeAtom,
-	optimizationRuntimeInitialState,
-	sceneOptimizationStore
+	optimizationRuntimeInitialState
 }

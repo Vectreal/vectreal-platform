@@ -11,7 +11,6 @@ import type {
 	Optimizations,
 	OptimizationReport,
 	SceneAssetRefMap,
-	SerializedSceneAssetDataMap,
 	SceneSettings,
 	SerializedGLTFExportResult
 } from '@vctrl/core'
@@ -142,22 +141,16 @@ export type SceneSettingsAction =
  * rather than hand-built FormData on one end and hand-parsed on the other.
  */
 
-/** Aggregate scene response returned by GET /api/scenes/:sceneId. */
-export interface SceneAggregateResponse {
-	readonly sceneId: string
-	readonly meta: SceneMetaState | null
-	readonly stats: SceneStatsData | null
-	readonly gltfJson: ExtendedGLTFDocument | null
-	readonly assetData: SerializedSceneAssetDataMap | null
-	readonly assets: SceneAssetRecord[] | null
-	readonly settings?: SceneSettings | null
-	readonly id?: string
-	readonly createdAt?: Date
-	readonly createdBy?: string
-	readonly updatedAt?: Date
-}
-
-/** Lean scene manifest returned by GET /api/scenes/:sceneId and SSR loaders. */
+/**
+ * A saved scene as every client surface receives it: settings and glTF JSON
+ * inline, binary assets by reference.
+ *
+ * There used to be a second, near-identical `SceneAggregateResponse` carrying
+ * `assetData` instead of `assetRefs`. It described the same scene one step
+ * later, after the client had downloaded those assets, and only the client
+ * itself ever built one. Resolving references is the loader's job now, so the
+ * app has one scene shape again.
+ */
 export interface SceneManifestResponse {
 	readonly sceneId: string
 	readonly meta: SceneMetaState | null

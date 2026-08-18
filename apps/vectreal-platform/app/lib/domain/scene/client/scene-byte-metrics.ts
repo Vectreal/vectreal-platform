@@ -1,6 +1,6 @@
-import { buildAssetLookupKeys, getSerializedAssetByteSize } from '@vctrl/core'
+import { buildAssetLookupKeys } from '@vctrl/core'
 
-import type { SceneAggregateResponse } from '../../../../types/api'
+import type { SceneManifestResponse } from '../../../../types/api'
 
 interface AggregateReferencedBytes {
 	sourcePackageBytes: null | number
@@ -47,20 +47,26 @@ const extractGltfDocument = (
 	return null
 }
 
+/**
+ * Byte totals for a saved scene, read from the manifest's asset references.
+ *
+ * The references carry their own sizes, so the size bar is accurate before a
+ * single asset has been downloaded.
+ */
 export const calculateAggregateReferencedBytes = (
-	aggregate: SceneAggregateResponse | null
+	manifest: SceneManifestResponse | null
 ): AggregateReferencedBytes => {
-	if (!aggregate?.gltfJson && !aggregate?.assetData) {
+	const gltfJson = manifest?.gltfJson
+	if (!gltfJson) {
 		return {
 			sourcePackageBytes: null,
 			textureBytes: null
 		}
 	}
 
-	const gltfJson = aggregate.gltfJson
-	const assets = Object.values(aggregate.assetData ?? {}).map((asset) => ({
+	const assets = Object.values(manifest?.assetRefs ?? {}).map((asset) => ({
 		fileName: asset.fileName,
-		size: getSerializedAssetByteSize(asset.data)
+		size: asset.byteSize ?? 0
 	}))
 
 	const resolveAssetSize = (uri: string) => {
@@ -80,13 +86,6 @@ export const calculateAggregateReferencedBytes = (
 
 	const imageUris = new Set<string>()
 	const bufferUris = new Set<string>()
-
-	if (!gltfJson) {
-		return {
-			sourcePackageBytes: null,
-			textureBytes: null
-		}
-	}
 
 	const gltfDocument = extractGltfDocument(gltfJson)
 

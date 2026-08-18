@@ -5,11 +5,8 @@ import {
 	type ServerSceneData
 } from '@vctrl/core'
 
-import { resolveBakedShadowSource } from './baked-shadow-source'
-
-import type { SceneAggregateResponse } from '../../../../types/api'
-import type { SceneMetaState } from '../../../../types/publisher-config'
-import type { BakedShadow } from '@vctrl/viewer'
+import type { SceneManifestResponse } from '../../../../types/api'
+import type { ServerScenePayload } from '@vctrl/core'
 
 export const getSceneNameFromFileName = (fileName: string): string => {
 	const trimmedFileName = fileName.trim()
@@ -28,7 +25,7 @@ export const getSceneNameFromFileName = (fileName: string): string => {
 }
 
 export const getSettingsFromAggregate = (
-	aggregate: SceneAggregateResponse | null
+	aggregate: SceneManifestResponse | null
 ): SceneSettings | null => {
 	if (!aggregate) {
 		return null
@@ -46,7 +43,7 @@ export const getSettingsFromAggregate = (
 		}
 	}
 
-	const fallbackSettings = aggregate as SceneAggregateResponse & {
+	const fallbackSettings = aggregate as SceneManifestResponse & {
 		camera?: SceneSettings['camera']
 		interactions?: SceneSettings['interactions']
 		environment?: SceneSettings['environment']
@@ -82,7 +79,7 @@ export const getSettingsFromAggregate = (
 }
 
 const toNormalizedAggregateGltfJson = (
-	aggregate: SceneAggregateResponse
+	aggregate: SceneManifestResponse
 ): ServerSceneData['gltfJson'] => {
 	if (
 		typeof aggregate.gltfJson === 'object' &&
@@ -98,68 +95,19 @@ const toNormalizedAggregateGltfJson = (
 	return aggregate.gltfJson as ServerSceneData['gltfJson']
 }
 
-interface ExecuteAggregateSceneHydrationParams {
-	sceneId: string
-	aggregate: SceneAggregateResponse
-	hydrateOptimizationState: (aggregate: SceneAggregateResponse) => void
-	applySceneSettings: (settings: SceneSettings) => void
-	applyBakedShadowSource: (source: BakedShadow | null) => void
-	setSceneMetaState: (sceneMeta: SceneMetaState) => void
-	setLastSavedSceneMeta: (sceneMeta: SceneMetaState) => void
-	loadFromData: (params: {
-		sceneId: string
-		sceneData: ServerSceneData
-	}) => Promise<unknown>
-}
-
-export const executeAggregateSceneHydration = async ({
-	sceneId,
-	aggregate,
-	hydrateOptimizationState,
-	applySceneSettings,
-	applyBakedShadowSource,
-	setSceneMetaState,
-	setLastSavedSceneMeta,
-	loadFromData
-}: ExecuteAggregateSceneHydrationParams): Promise<string> => {
-	hydrateOptimizationState(aggregate)
-
-	const settings = getSettingsFromAggregate(aggregate)
-	if (settings) {
-		applySceneSettings(settings)
-	}
-
-	// Resolve the persisted shadow bake from the aggregate's inlined asset data so
-	// the viewer renders the stored shadow with no extra request (null clears any
-	// previous scene's bake).
-	applyBakedShadowSource(
-		resolveBakedShadowSource(settings?.shadows, aggregate.assetData) ?? null
-	)
-
-	if (aggregate.meta) {
-		setSceneMetaState(aggregate.meta)
-		setLastSavedSceneMeta(aggregate.meta)
-	}
-
-	if (aggregate.gltfJson && aggregate.assetData) {
-		const sceneData: ServerSceneData = {
-			meta: aggregate.meta
-				? {
-						name: aggregate.meta.name,
-						description: aggregate.meta.description,
-						thumbnailUrl: aggregate.meta.thumbnailUrl
-					}
-				: undefined,
-			gltfJson: toNormalizedAggregateGltfJson(aggregate),
-			assetData: aggregate.assetData,
-			...settings
-		}
-
-		await loadFromData({
-			sceneId,
-			sceneData
-		})
-	}
-
-	return aggregate.meta?.name || sceneId
-}
+/**
+ * The payload the loader needs to put a saved scene on screen.
+ *
+ * The route manifest ships the glTF JSON inline and its binary assets by
+ * reference; the loader resolves those references itself, so this is a shape
+ * conversion, not a fetch.
+ */
+export const toSceneSourcePayload = (
+	manifest: SceneManifestResponse
+): ServerScenePayload => ({
+	meta: manifest.meta ?? undefined,
+	settings: getSettingsFromAggregate(manifest),
+	gltfJson: toNormalizedAggregateGltfJson(manifest),
+	assetData: null,
+	assetRefs: manifest.assetRefs
+})

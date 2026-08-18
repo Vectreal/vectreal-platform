@@ -9,30 +9,32 @@ import { toast } from 'sonner'
 import { DynamicSidebar, ToolSidebar } from '.'
 import OptimizationDrawer from './optimization/optimization-drawer'
 import PreviewCameraControls from './preview-camera-controls'
-import { usePublisherViewerCapture } from './publisher-viewer-capture-context'
 import { PreviewModeBadge } from './shell/preview-mode-badge'
 import { PublishCard } from './shell/publish-card'
 import { PublisherHeader } from './shell/publisher-header'
+import { PublisherSurfaceFallback } from './shell/publisher-surface-fallback'
 import { PUBLISHER_LAYER } from './shell/shell-layout'
-import { DASHBOARD_ROUTES } from '../../constants/dashboard'
-import { useOptimizationModalFlow, useSceneLoader } from '../../hooks'
-import { useHideGlobalNav } from '../navigation/global-nav-visibility'
 import PublishSidebarContent from './sidebars/publish-sidebar/publish-sidebar-content'
 import { PublishSidebarProvider } from './sidebars/publish-sidebar/publish-sidebar-context'
+import { buildPublishSidebarViewModel } from './sidebars/publish-sidebar/publish-sidebar-view-model'
 import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
+import { DASHBOARD_ROUTES } from '../../constants/dashboard'
+import { useOptimizationModalFlow, useSceneLoader } from '../../hooks'
 import { useLocationChangeState } from '../../hooks/use-location-change-state'
 import { resolveSceneMetrics } from '../../lib/domain/scene'
+import { resolvePublisherSurface } from '../../lib/publisher/publisher-surface'
 import {
 	arePublisherActionsDisabledAtom,
-	controlsOverlayStateAtom,
 	isPreviewModeAtom,
 	lastSavedSceneIdAtom,
 	processAtom,
-	saveLocationAtom
+	saveLocationAtom,
+	showPublishPanelAtom
 } from '../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
+import { DropZone } from '../../routes/publisher-page/drop-zone'
 import { PublisherLoaderData, SceneManifestResponse } from '../../types/api'
-import { buildPublishSidebarViewModel } from './sidebars/publish-sidebar/publish-sidebar-view-model'
+import { useHideGlobalNav } from '../navigation/global-nav-visibility'
 
 /**
  * The publisher shell: a three-row grid of header, canvas stage, and footer.
@@ -60,8 +62,8 @@ const OverlayControls = ({
 	  breakpoint, not on a device class. A narrow desktop window wants drawers too.
 	*/
 	const isMobile = useIsMobile(isMobileRequest)
-	const { file, isFileLoading, optimizer } = useModelContext(true)
-	const { step, showPublishPanel } = useAtomValue(controlsOverlayStateAtom)
+	const { status, optimizer } = useModelContext(true)
+	const showPublishPanel = useAtomValue(showPublishPanelAtom)
 	const arePublisherActionsDisabled = useAtomValue(
 		arePublisherActionsDisabledAtom
 	)
@@ -88,19 +90,18 @@ const OverlayControls = ({
 	// gap until the route param updates to the new scene id post-navigation.
 	const sessionSavedSceneId = useAtomValue(lastSavedSceneIdAtom)
 	const { hasUnsavedLocationChange } = useLocationChangeState()
-	const { requestSceneScreenshot, requestShadowBake } =
-		usePublisherViewerCapture()
 
-	// Centralized scene loader - single source of truth (must be inside ModelProvider)
-	const { saveSceneSettings, saveAvailability, persistPendingSceneDraft } =
-		useSceneLoader({
-			sceneId,
-			userId: user?.id,
-			initialSceneAggregate: sceneAggregate as SceneManifestResponse | null,
-			sceneMeta: sceneAggregate?.meta ?? null,
-			requestSceneScreenshot,
-			requestShadowBake
-		})
+	const {
+		uploadFiles,
+		retrySceneLoad,
+		saveSceneSettings,
+		saveAvailability,
+		persistPendingSceneDraft
+	} = useSceneLoader({
+		sceneId,
+		userId: user?.id,
+		sceneManifest: sceneAggregate as SceneManifestResponse | null
+	})
 
 	const {
 		effectiveSaveAvailability,
@@ -117,18 +118,25 @@ const OverlayControls = ({
 		hasUnsavedLocationChange
 	})
 
-	const isUploadStep = !file?.model && step === 'uploading'
+	/*
+	  The one place that decides what the publisher is showing. The canvas stage
+	  below and the chrome around it both read it, so they cannot disagree.
+	*/
+	const surface = resolvePublisherSurface({
+		status,
+		hasSceneId: Boolean(sceneId)
+	})
 
 	/*
-	  Pre-upload with no scene: there is nothing to frame yet, so the site nav
-	  stands in for the header. Everywhere else the publisher owns the top of the
+	  Waiting for an upload: there is nothing to frame yet, so the site nav stands
+	  in for the header. Everywhere else the publisher owns the top of the
 	  viewport, so the nav (owned by nav-layout) steps aside.
 
 	  `routePageChrome` already covers this for `/publisher/:sceneId` at SSR. The
 	  case only this can catch is a model dropped at `/publisher`, which swaps the
 	  nav for the header without navigating.
 	*/
-	const showSiteNav = isUploadStep && !sceneId
+	const showSiteNav = surface === 'drop-zone'
 	useHideGlobalNav(!showSiteNav)
 
 	const sceneDetailsHref =
@@ -136,11 +144,12 @@ const OverlayControls = ({
 			? DASHBOARD_ROUTES.SCENE_DETAIL(projectId, sceneId)
 			: undefined
 	const isOptimizerPreparing = optimizer.isPreparing
-	const optimizerStatusText = isFileLoading
-		? 'Reading model in the background...'
-		: isOptimizerPreparing
-			? 'Preparing optimizer...'
-			: null
+	const optimizerStatusText =
+		status === 'loading'
+			? 'Reading model in the background...'
+			: isOptimizerPreparing
+				? 'Preparing optimizer...'
+				: null
 	const resolvedSceneMetrics = useMemo(
 		() =>
 			resolveSceneMetrics({
@@ -298,7 +307,11 @@ const OverlayControls = ({
 	// Pre-upload with no scene: the site nav (kept mounted by nav-layout) stands
 	// in for the header, and the stage chrome has nothing to show.
 	if (showSiteNav) {
-		return <div className="relative flex min-h-0 flex-1 flex-col">{children}</div>
+		return (
+			<div className="relative flex min-h-0 flex-1 flex-col">
+				<DropZone isMobile={isMobile} onUpload={uploadFiles} />
+			</div>
+		)
 	}
 
 	return (
@@ -324,7 +337,11 @@ const OverlayControls = ({
 			  is what keeps them from spilling over the header.
 			*/}
 			<div className="relative flex min-h-0 flex-1 flex-col">
-				{children}
+				{surface === 'viewer' ? (
+					children
+				) : (
+					<PublisherSurfaceFallback surface={surface} onRetry={retrySceneLoad} />
+				)}
 
 				<ToolSidebar user={user} isMobile={isMobile} />
 

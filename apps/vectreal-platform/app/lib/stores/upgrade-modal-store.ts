@@ -1,5 +1,4 @@
 import { atom } from 'jotai'
-import { createStore } from 'jotai/vanilla'
 
 import type { Plan } from '../../constants/plan-config'
 
@@ -37,10 +36,6 @@ export const DEFAULT_UPGRADE_MODAL_STATE: UpgradeModalState = {
 export const upgradeModalAtom = atom<UpgradeModalState>(
 	DEFAULT_UPGRADE_MODAL_STATE
 )
-
-export const upgradeModalStore = createStore()
-
-upgradeModalStore.set(upgradeModalAtom, DEFAULT_UPGRADE_MODAL_STATE)
 
 export function buildUpgradeModalState(
 	overrides: Partial<Omit<UpgradeModalState, 'open'>>

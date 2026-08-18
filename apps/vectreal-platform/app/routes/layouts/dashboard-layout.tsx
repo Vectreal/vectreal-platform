@@ -49,8 +49,6 @@ import {
 	shouldRevalidateWithinScope
 } from '../../lib/navigation/dashboard-route-behavior'
 import { buildMeta } from '../../lib/seo'
-import { dashboardManagementStore } from '../../lib/stores/dashboard-management-store'
-import { upgradeModalStore } from '../../lib/stores/upgrade-modal-store'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 
@@ -230,9 +228,14 @@ const DashboardLayout = () => {
 
 	const skeleton = useMemo(getNavigationSkeleton, [showSkeleton, path])
 
+	/*
+	  One store per mount. Jotai creates it here, so dashboard UI state
+	  (selection, dialogs, the upgrade modal) starts empty on every entry
+	  instead of surviving in a module singleton.
+	*/
 	return (
-		<Provider store={dashboardManagementStore}>
-			<Provider store={upgradeModalStore}>
+		<Provider>
+			<>
 				<PostHogIdentify
 					userId={user.id}
 					email={user.email}
@@ -299,7 +302,7 @@ const DashboardLayout = () => {
 						</div>
 					</SidebarInset>
 				</SidebarProvider>
-			</Provider>
+			</>
 		</Provider>
 	)
 }

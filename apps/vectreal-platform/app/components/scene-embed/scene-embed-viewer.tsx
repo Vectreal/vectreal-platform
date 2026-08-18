@@ -5,13 +5,13 @@ import { resolveBakedShadowSource } from '../../lib/domain/scene/client/baked-sh
 import CenteredSpinner from '../centered-spinner'
 import { ClientVectrealViewer } from '../viewer/client-vectreal-viewer'
 
-import type { ModelFile, SceneLoadResult } from '@vctrl/hooks/use-load-model'
+import type { ModelFile, ServerSceneData } from '@vctrl/hooks/use-load-model'
 import type { VectrealViewerProps, ViewerLoadingThumbnail } from '@vctrl/viewer'
 import type { ReactNode } from 'react'
 
 export interface SceneEmbedViewerProps {
 	file: ModelFile | null
-	sceneData?: SceneLoadResult
+	sceneData?: ServerSceneData
 	/** Sizing for the wrapper. The viewer always fills it. */
 	className?: string
 	loadingThumbnail?: ViewerLoadingThumbnail

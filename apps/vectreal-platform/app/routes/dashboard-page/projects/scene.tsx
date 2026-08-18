@@ -13,7 +13,7 @@ import {
 	DrawerHeader,
 	DrawerTitle
 } from '@shared/components/ui/drawer'
-import { SceneLoadResult, useLoadModel } from '@vctrl/hooks/use-load-model'
+import { useLoadModel } from '@vctrl/hooks/use-load-model'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
 	ChevronDown,
@@ -49,7 +49,7 @@ import {
 } from '../../../lib/domain/dashboard/dashboard-confirmation'
 import { buildInternalPreviewPath } from '../../../lib/domain/embed/embed-snippet'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
-import { loadSceneFromApi } from '../../../lib/domain/scene/client/load-scene-from-api.client'
+import { useSceneModel } from '../../../lib/domain/scene/client/use-scene-model'
 import { getDashboardSceneLoadErrorMessage } from '../../../lib/domain/scene/scene-load-error-messages'
 import {
 	getScene,
@@ -298,12 +298,21 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 	const csrfToken = useAuthenticityToken()
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
-	// Use sceneId as key to create a new hook instance per scene
-	const { file, loadFromServer } = useLoadModel()
-
-	const [isLoadingScene, setIsLoadingScene] = useState(false)
-	const [sceneData, setSceneData] = useState<SceneLoadResult>()
-	const [sceneLoadError, setSceneLoadError] = useState<string | null>(null)
+	const model = useLoadModel()
+	const { file, sceneData, load } = model
+	const sceneSource = useMemo(
+		() =>
+			sceneId
+				? ({
+						kind: 'server',
+						sceneId,
+						serverOptions: { endpoint: `/api/scenes/${sceneId}` },
+						parseMode: 'direct'
+					} as const)
+				: null,
+		[sceneId]
+	)
+	useSceneModel(model, sceneSource)
 	const [sceneState, setSceneState] = useState(scene)
 	// Memoized because the viewer is memoized: a fresh object every render would
 	// re-render it on every keystroke in the metadata fields below.
@@ -464,56 +473,9 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 	}, [navigate, sceneState.id])
 
 	const retrySceneLoad = useCallback(() => {
-		setSceneLoadError(null)
-		setSceneData(undefined)
-	}, [])
+		if (sceneSource) void load(sceneSource)
+	}, [load, sceneSource])
 
-	useEffect(() => {
-		if (!sceneId || sceneData?.sceneId === sceneId) {
-			return
-		}
-
-		let cancelled = false
-
-		const loadSceneSettings = async () => {
-			try {
-				setIsLoadingScene(true)
-				setSceneLoadError(null)
-
-				const loadedSceneData = await loadSceneFromApi({
-					sceneId,
-					endpoint: `/api/scenes/${sceneId}`,
-					loadFromServer,
-					parseMode: 'direct'
-				})
-
-				if (cancelled) {
-					return
-				}
-
-				setSceneData(loadedSceneData)
-			} catch (error) {
-				console.error('Failed to load scene:', error)
-				if (!cancelled) {
-					setSceneLoadError(getDashboardSceneLoadErrorMessage(error))
-					setIsLoadingScene(false)
-				}
-			}
-		}
-
-		void loadSceneSettings()
-
-		return () => {
-			cancelled = true
-		}
-	}, [loadFromServer, sceneData?.sceneId, sceneId])
-
-	// Stop loading state once file is actually loaded
-	useEffect(() => {
-		if (file?.model && isLoadingScene) {
-			setIsLoadingScene(false)
-		}
-	}, [file, isLoadingScene])
 
 	return (
 		/*
@@ -527,10 +489,12 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 			) : null}
 			<div className="grid h-full min-h-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
 				<main className="flex min-h-0 flex-col gap-4">
-					{sceneLoadError && !file?.model ? (
+					{model.status === 'error' ? (
 						<section className="ds-raised space-y-3 rounded-2xl p-5">
 							<h2 className="text-h4">Unable to Load Scene</h2>
-							<p className="text-muted-foreground text-sm">{sceneLoadError}</p>
+							<p className="text-muted-foreground text-sm">
+								{getDashboardSceneLoadErrorMessage(model.error)}
+							</p>
 							<div className="flex flex-wrap gap-2">
 								<Button type="button" onClick={retrySceneLoad}>
 									Retry

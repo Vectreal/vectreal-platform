@@ -26,13 +26,9 @@ import {
 	currentLocationAtom,
 	maxSceneBytesAtom,
 	processAtom,
-	publisherConfigStore,
 	saveLocationAtom,
 	showSidebarAtom
 } from '../../lib/stores/publisher-config-store'
-import { sceneOptimizationStore } from '../../lib/stores/scene-optimization-store'
-import { sceneSettingsStore } from '../../lib/stores/scene-settings-store'
-import { upgradeModalStore } from '../../lib/stores/upgrade-modal-store'
 import { createSupabaseClient } from '../../lib/supabase.server'
 import { identifyMobileRequest } from '../../lib/utils/identify-mobile-request'
 
@@ -259,16 +255,19 @@ const Layout = ({ loaderData }: Route.ComponentProps) => {
 	const optimizer = useOptimizeModel()
 	const resolvedLoaderData = loaderData as PublisherLoaderData
 
+	/*
+	  One store, created on mount by Jotai itself.
+
+	  These atoms used to live in four module-level stores, which outlived the
+	  layout: a round trip to the dashboard came back to the previous session's
+	  camera, preview mode and optimization state, and every hook downstream
+	  carried reset code to paper over it. A fresh store per mount is what makes
+	  entering the publisher mean the same thing every time.
+	*/
 	return (
 		<ModelProvider optimizer={optimizer}>
-			<Provider store={upgradeModalStore}>
-				<Provider store={publisherConfigStore}>
-					<Provider store={sceneOptimizationStore}>
-						<Provider store={sceneSettingsStore}>
-							<PublisherLayoutContent loaderData={resolvedLoaderData} />
-						</Provider>
-					</Provider>
-				</Provider>
+			<Provider>
+				<PublisherLayoutContent loaderData={resolvedLoaderData} />
 			</Provider>
 		</ModelProvider>
 	)
