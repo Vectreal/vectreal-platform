@@ -5,26 +5,27 @@ import morgan from 'morgan'
 import { existsSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 
-import { toSinglePathForm } from './server-url-form.mjs'
-
 /**
  * Production server.
  *
- * This replaces `react-router-serve` for one reason: a page's URL must have a
- * single form. `react-router-serve` mounts `express.static` with its default
- * directory handling, and prerendered pages are emitted as `<route>/index.html`,
- * so a request for `/docs` is treated as a directory and answered with
- * `301 -> /docs/`. Server-rendered routes have no such directory and answer at
- * `/pricing` directly. The result is two conventions on one site, decided by
- * which routes happen to be prerendered.
+ * This replaces `react-router-serve` for one reason: the URL a page is
+ * advertised at has to be the URL that answers. `react-router-serve` mounts
+ * `express.static` with its default directory handling, and prerendered pages
+ * are emitted as `<route>/index.html`, so a request for `/docs` was treated as
+ * a directory and answered with `301 -> /docs/`.
  *
  * That split is what broke indexing: the sitemap and `<link rel="canonical">`
  * both declare the no-slash form, so crawlers reached a redirect at the URL we
  * advertise, then found a canonical pointing back at that redirect from the URL
  * they were sent to. Neither form could be indexed.
  *
- * Here the no-slash form is the only form: the trailing-slash variant redirects
- * to it, and prerendered HTML is resolved by path rather than by directory.
+ * Resolving prerendered HTML by path rather than by directory is what fixes
+ * that: the advertised URL answers 200 and its canonical points at itself.
+ *
+ * The trailing-slash spelling still answers too, and deliberately is not
+ * redirected. Normalizing it would mean handing a request-derived value to a
+ * browser in a `Location` header, and the canonical tag already tells crawlers
+ * which of the two spellings counts.
  */
 
 const ROOT = path.join(import.meta.dirname, '..', '..')
@@ -70,31 +71,6 @@ function collectPrerenderedRoutes(dir, base = '') {
 }
 
 const PRERENDERED_ROUTES = collectPrerenderedRoutes(CLIENT_DIR)
-
-// One URL form. `/docs/` is not a second address for `/docs`.
-app.use((req, res, next) => {
-	if (req.method !== 'GET' && req.method !== 'HEAD') return next()
-
-	const [pathname, search = ''] = req.url.split('?')
-	const target = toSinglePathForm(pathname)
-
-	// The guard is written out here, at the sink, rather than called from
-	// server-url-form.mjs. `toSinglePathForm` already guarantees it, but this is
-	// the line that hands a value to a browser, and a reader (or a scanner)
-	// checking whether that value can name another host should be able to see
-	// the answer without following a call into another file. One leading slash,
-	// and the next character cannot start a host or a scheme.
-	const isLocalPath =
-		target.startsWith('/') &&
-		!target.startsWith('//') &&
-		!target.startsWith('/\\')
-
-	if (target !== pathname && isLocalPath) {
-		return res.redirect(301, search ? `${target}?${search}` : target)
-	}
-
-	next()
-})
 
 // Resolve prerendered pages by path, so `/docs` serves `docs/index.html`
 // without express.static ever seeing a directory to redirect to.
