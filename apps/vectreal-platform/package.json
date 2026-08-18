@@ -52,6 +52,6 @@
 		"@react-router/express": "8.3.0",
 		"compression": "^1.8.1",
 		"express": "^5.2.1",
-		"morgan": "^1.10.1"
+		"morgan": "^1.11.0"
 	}
 }
