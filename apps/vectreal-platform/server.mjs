@@ -2,8 +2,10 @@ import { createRequestHandler } from '@react-router/express'
 import compression from 'compression'
 import express from 'express'
 import morgan from 'morgan'
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import path from 'node:path'
+
+import { toSinglePathForm } from './server-url-form.mjs'
 
 /**
  * Production server.
@@ -38,12 +40,45 @@ const app = express()
 app.disable('x-powered-by')
 app.use(compression())
 
+/**
+ * Every route that was prerendered, collected once at boot.
+ *
+ * Reading the filesystem per request would answer the same question every time
+ * (the build output cannot change while the server runs) and would let a
+ * stream of requests for made-up paths drive a stat call each. The set is
+ * small: one entry per prerendered page.
+ */
+function collectPrerenderedRoutes(dir, base = '') {
+	const routes = new Set()
+
+	for (const entry of readdirSync(dir, { withFileTypes: true })) {
+		if (!entry.isDirectory()) continue
+
+		const route = `${base}/${entry.name}`
+
+		if (existsSync(path.join(dir, entry.name, 'index.html'))) routes.add(route)
+
+		for (const nested of collectPrerenderedRoutes(
+			path.join(dir, entry.name),
+			route
+		)) {
+			routes.add(nested)
+		}
+	}
+
+	return routes
+}
+
+const PRERENDERED_ROUTES = collectPrerenderedRoutes(CLIENT_DIR)
+
 // One URL form. `/docs/` is not a second address for `/docs`.
 app.use((req, res, next) => {
-	const [pathname, search = ''] = req.url.split('?')
+	if (req.method !== 'GET' && req.method !== 'HEAD') return next()
 
-	if (pathname.length > 1 && pathname.endsWith('/')) {
-		const target = pathname.replace(/\/+$/, '') || '/'
+	const [pathname, search = ''] = req.url.split('?')
+	const target = toSinglePathForm(pathname)
+
+	if (target !== pathname) {
 		return res.redirect(301, search ? `${target}?${search}` : target)
 	}
 
@@ -57,15 +92,11 @@ app.use((req, res, next) => {
 
 	const [pathname, search = ''] = req.url.split('?')
 
-	if (pathname === '/' || path.extname(pathname)) return next()
+	if (!PRERENDERED_ROUTES.has(pathname)) return next()
 
-	const candidate = path.join(CLIENT_DIR, pathname, 'index.html')
-
-	if (candidate.startsWith(CLIENT_DIR) && existsSync(candidate)) {
-		req.url = search
-			? `${pathname}/index.html?${search}`
-			: `${pathname}/index.html`
-	}
+	req.url = search
+		? `${pathname}/index.html?${search}`
+		: `${pathname}/index.html`
 
 	next()
 })
