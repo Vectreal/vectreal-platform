@@ -43,9 +43,6 @@
 		},
 		"./css": "./style.css"
 	},
-	"scripts": {
-		"type-check": "tsc --noEmit"
-	},
 	"dependencies": {
 		"@react-three/drei": "catalog:",
 		"@react-three/fiber": "catalog:",

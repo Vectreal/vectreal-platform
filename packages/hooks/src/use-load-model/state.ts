@@ -16,60 +16,63 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 import { ModelFileTypes } from '@vctrl/core/model-loader'
 
-import { Action, LoadData } from './types'
+import {
+	LoadedModel,
+	ModelSourceKind,
+	ModelState,
+	StructuredLoadError
+} from './types'
+
+/** Model formats the loader accepts. */
+export const supportedFileTypes: ModelFileTypes[] = [
+	ModelFileTypes.gltf,
+	ModelFileTypes.glb,
+	ModelFileTypes.usdz
+]
 
 /**
- * Initial state for the useReadModelFiles hook
- *
- * @property file - Currently loaded file
- * @property isFileLoading - Flag indicating if a file is currently being loaded
- * @property progress - Current loading progress (0-100)
- * @property supportedFileTypes - List of supported file types
+ * The four states a load can be in. Building them here rather than spreading
+ * partial updates is what keeps `status`, `file` and `error` from drifting apart.
  */
-export const initialState: LoadData = {
-	/**
-	 * Currently loaded file
-	 */
+export const emptyModelState: ModelState = {
+	status: 'empty',
 	file: null,
-	/**
-	 * Flag indicating if a file is currently being loaded
-	 */
-	isFileLoading: false,
-	/**
-	 * Current loading progress (0-100)
-	 */
-	progress: 0,
-	/**
-	 * List of supported file types
-	 * @type {ModelFileTypes[]}
-	 */
-	supportedFileTypes: [
-		ModelFileTypes.gltf,
-		ModelFileTypes.glb,
-		ModelFileTypes.usdz
-	]
+	error: null,
+	source: null,
+	progress: 0
 }
 
-/**
- * Reducer function for the useReadModelFiles hook
- *
- * @param state - The current state of the reducer
- * @param action - The action to be performed
- * @returns The updated state
- */
-function reducer(state: LoadData, action: Action): LoadData {
-	switch (action.type) {
-		case 'set-file':
-			return { ...state, file: action.payload }
-		case 'set-file-loading':
-			return { ...state, isFileLoading: action.payload }
-		case 'set-progress':
-			return { ...state, progress: action.payload }
-		case 'reset-state':
-			return { ...initialState }
-		default:
-			return state
-	}
-}
+export const loadingModelState = (
+	source: ModelSourceKind,
+	progress = 0
+): ModelState => ({
+	status: 'loading',
+	file: null,
+	error: null,
+	source,
+	progress
+})
 
-export default reducer
+export const readyModelState = (
+	source: ModelSourceKind,
+	loaded: LoadedModel
+): ModelState => ({
+	status: 'ready',
+	file: loaded.file,
+	error: null,
+	source,
+	progress: 100,
+	sceneId: loaded.sceneId,
+	sceneData: loaded.sceneData
+})
+
+export const errorModelState = (
+	source: ModelSourceKind,
+	error: StructuredLoadError
+): ModelState => ({
+	status: 'error',
+	file: null,
+	error,
+	source,
+	progress: 0
+})

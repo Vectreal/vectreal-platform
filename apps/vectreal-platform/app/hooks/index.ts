@@ -3,4 +3,4 @@ export * from './use-dashboard-content'
 
 // Scene management hooks
 export * from './use-optimization-drawer-flow'
-export * from './use-scene-loader'
+export * from './use-publisher-scene'

@@ -7,7 +7,7 @@ vi.mock('./scene-settings-service.server', () => ({
 	sceneSettingsService: {}
 }))
 
-import { toAssetRefs } from './scene-aggregate.server'
+import { toAssetRefs } from './scene-manifest.server'
 
 const asset = (overrides: Record<string, unknown>) => ({
 	id: 'a1',

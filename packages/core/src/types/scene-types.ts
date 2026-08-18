@@ -14,16 +14,9 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 import { JSONDocument } from '@gltf-transform/core'
-import {
-	AccumulativeShadowsProps as ThreeAccumulativeShadowsProps,
-	OrbitControlsProps,
-	RandomizedLightProps,
-	BoundsProps as ThreeBoundsProps,
-	ContactShadowsProps as ThreeContactShadowsProps,
-	EnvironmentProps as ThreeEnvironmentProps,
-	GridProps as ThreeGridProps
-} from '@react-three/drei'
-import { PerspectiveCameraProps } from '@react-three/drei'
+
+// Type-only, and deliberately so: nothing in this package executes drei, which
+// is what lets a Node consumer install it without a React 3D library.
 
 import type {
 	DedupOptions,
@@ -34,6 +27,14 @@ import type {
 	TextureCompressOptions
 } from '../model-optimizer'
 import type { SceneInteractionDefinition } from './interaction-types'
+import type {
+	AccumulativeShadowsProps as ThreeAccumulativeShadowsProps,
+	OrbitControlsProps,
+	PerspectiveCameraProps,
+	RandomizedLightProps,
+	BoundsProps as ThreeBoundsProps,
+	EnvironmentProps as ThreeEnvironmentProps
+} from '@react-three/drei'
 
 /**
  * Camera classification used for inspector grouping and publish filtering.
@@ -51,10 +52,7 @@ export type CameraTransitionType = 'linear' | 'object_avoidance' | 'none'
  * Optional easing presets for serializable transition definitions.
  */
 export type CameraTransitionEasing =
-	| 'linear'
-	| 'ease_in'
-	| 'ease_out'
-	| 'ease_in_out'
+	'linear' | 'ease_in' | 'ease_out' | 'ease_in_out'
 
 /**
  * Object-avoidance transition parameters.
@@ -139,21 +137,6 @@ export interface ControlsProps extends OrbitControlsProps {
 }
 
 /**
- * Props for the SceneGrid component, extending ThreeGridProps from '@react-three/drei'.
- */
-export interface GridProps extends ThreeGridProps {
-	/**
-	 * Whether to show the grid.
-	 */
-	showGrid?: boolean
-
-	/**
-	 * Snap grid position to bottom of scene bounding box (y axis).
-	 */
-	snapToBottom?: boolean
-}
-
-/**
  * The environment key is mapped to the categories and label used as naming
  * for environment files in the resource bucket.
  */
@@ -220,24 +203,6 @@ export interface EnvironmentProps extends InheritedEnvProps {
 	environmentResolution?: EnvironmentResolution
 }
 
-export type ShadowType = 'contact' | 'accumulative'
-
-/**
- * Base interface for shadow properties.
- */
-export interface ShadowTypePropBase {
-	type: ShadowType
-	enabled?: boolean
-}
-
-/**
- * Props for Contact Shadows.
- */
-export interface ContactShadowProps
-	extends ShadowTypePropBase, ThreeContactShadowsProps {
-	type: 'contact'
-}
-
 /**
  * Light configuration for accumulative shadows (a drei `RandomizedLight`).
  */
@@ -300,14 +265,18 @@ export interface ContactShadowConfig {
 }
 
 /**
- * Props for Accumulative Shadows — high quality baked soft shadows for a static
- * subject. Camera auto-rotate orbits the camera (not the model), so the bake
- * stays valid while rotating; the viewer falls back to contact shadows only
- * while a model's geometry is actually animating.
+ * Scene shadow configuration.
+ *
+ * There is one shadow mode: a high quality baked soft shadow (drei
+ * `AccumulativeShadows`) for a static subject, optionally layered over a ground
+ * pool configured under {@link contact}. Camera auto-rotate orbits the camera
+ * (not the model), so the bake stays valid while rotating; the viewer swaps in
+ * cheap live contact shadows on its own, only while a model's geometry is
+ * actually animating.
  */
-export interface AccumulativeShadowsProps
-	extends ShadowTypePropBase, ThreeAccumulativeShadowsProps {
-	type: 'accumulative'
+export interface ShadowsProps extends ThreeAccumulativeShadowsProps {
+	/** Whether shadows are rendered at all. Defaults to false. */
+	enabled?: boolean
 	light?: AccumulativeShadowLight
 	/**
 	 * Manual trim on the auto-calibrated shadow cutoff. The viewer measures the
@@ -343,11 +312,6 @@ export interface AccumulativeShadowsProps
 	 */
 	baked?: BakedShadowRef
 }
-
-/**
- * Shadow configuration props. Extend `ShadowType` to add future shadow variants.
- */
-export type ShadowsProps = ContactShadowProps | AccumulativeShadowsProps
 
 /**
  * Options for runtime model size normalization.
@@ -519,12 +483,7 @@ export interface TextureOptimization
 	extends BaseOptimization, TextureCompressOptions {}
 
 export type OptimizationNames =
-	| 'simplification'
-	| 'texture'
-	| 'quantize'
-	| 'dedup'
-	| 'normals'
-	| 'draco'
+	'simplification' | 'texture' | 'quantize' | 'dedup' | 'normals' | 'draco'
 
 /**
  * `enabled` is the only field every optimization shares. There is deliberately
@@ -545,8 +504,7 @@ export interface QuantizeOptimization
 
 export interface DedupOptimization extends BaseOptimization, DedupOptions {}
 
-export interface NormalsOptimization
-	extends BaseOptimization, NormalsOptions {}
+export interface NormalsOptimization extends BaseOptimization, NormalsOptions {}
 
 export interface DracoCompressOptimization
 	extends BaseOptimization, DracoOptions {}

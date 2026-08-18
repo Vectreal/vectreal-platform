@@ -8,11 +8,7 @@ import {
 	InfoPopoverTrigger,
 	InfoPopoverVectrealFooter
 } from './components'
-import {
-	defaultControlsOptions,
-	defaultEnvOptions,
-	defaultGridOptions
-} from './components/scene'
+import { defaultControlsOptions, defaultEnvOptions } from './components/scene'
 import VectrealViewer from './vectreal-viewer'
 
 import type { Meta, StoryObj } from '@storybook/react-vite'
@@ -43,8 +39,7 @@ const meta = {
 		onCommandExecutorReady: fn(),
 		theme: 'system',
 		controlsOptions: { ...defaultControlsOptions, autoRotate: false },
-		envOptions: defaultEnvOptions,
-		gridOptions: defaultGridOptions
+		envOptions: defaultEnvOptions
 	},
 	render: (args) => (
 		<VectrealViewer {...args}>

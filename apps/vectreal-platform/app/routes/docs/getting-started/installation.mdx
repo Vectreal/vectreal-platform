@@ -107,7 +107,7 @@ pnpm nx show project vectreal-platform --web
 
 **`supabase start` fails** - make sure Docker Desktop is running and you have at least 4 GB of RAM allocated to Docker.
 
-**`Database URL` connection errors** - check that `SUPABASE_DB_PORT` in `.env.development` matches the port shown in `supabase status`.
+**`Database URL` connection errors** - `supabase/config.toml` fixes the local database port at 54322, and `DATABASE_URL` builds itself from `SUPABASE_DB_PORT` in your env file. If you changed that variable, the two no longer agree; compare both against `supabase status`.
 
 **Asset upload or storage errors** - confirm `SUPABASE_URL` and `SUPABASE_SECRET_KEY` are set. The server uses the service-role key to create and write to the `assets` storage bucket; the anon key alone is not sufficient.
 

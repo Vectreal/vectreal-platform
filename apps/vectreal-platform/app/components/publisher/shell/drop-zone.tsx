@@ -1,9 +1,7 @@
 import { useAcceptPattern } from '@shared/components/hooks/use-accept-pattern'
 import { Button } from '@shared/components/ui/button'
-import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
 import { InputFileOrDirectory } from '@vctrl/hooks/use-load-model'
-import { useModelContext } from '@vctrl/hooks/use-load-model'
 import {
 	Book,
 	ExternalLink,
@@ -11,16 +9,11 @@ import {
 	FolderUp,
 	Upload
 } from 'lucide-react'
-import {
-	ComponentProps,
-	SyntheticEvent,
-	useCallback,
-	useTransition
-} from 'react'
+import { ComponentProps, SyntheticEvent, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Link, useNavigation } from 'react-router'
+import { Link } from 'react-router'
 
-import BasicCard from '../../components/layout-components/basic-card'
+import BasicCard from '../../layout-components/basic-card'
 
 declare module 'react' {
 	interface InputHTMLAttributes<T> extends HTMLAttributes<T> {
@@ -32,22 +25,20 @@ declare module 'react' {
 
 interface Props {
 	isMobile?: boolean
+	/** Loads the dropped files and takes care of everything a new scene needs. */
+	onUpload: (files: InputFileOrDirectory) => Promise<unknown>
 }
 
-export const DropZone = ({ isMobile }: Props) => {
+/**
+ * The publisher with nothing in it yet.
+ *
+ * One of the surfaces `resolvePublisherSurface` picks between, which is why it
+ * sits beside the others rather than in the route: the shell decides what is on
+ * screen, and a load in flight is the shell's loading surface, not a spinner in
+ * here.
+ */
+export const DropZone = ({ isMobile, onUpload }: Props) => {
 	const acceptPattern = useAcceptPattern(isMobile)
-	const { load } = useModelContext()
-
-	const [isPending, startTransition] = useTransition()
-	const navigation = useNavigation()
-
-	// Show a loading state when files are being processed or when navigating
-	// within the publisher (e.g. to a newly created scene route).
-	const isNavigationLoading =
-		navigation.state === 'loading' &&
-		Boolean(navigation.location?.pathname?.startsWith('/publisher'))
-
-	const isLoading = isPending || isNavigationLoading
 
 	const handleDrop = useCallback(
 		(files: File[]) => {
@@ -55,11 +46,9 @@ export const DropZone = ({ isMobile }: Props) => {
 				return
 			}
 
-			startTransition(async () => {
-				await load(files as InputFileOrDirectory)
-			})
+			void onUpload(files as InputFileOrDirectory)
 		},
-		[load, startTransition]
+		[onUpload]
 	)
 
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -90,77 +79,54 @@ export const DropZone = ({ isMobile }: Props) => {
 						{/* <div className="flex flex-col gap-4 md:flex-row lg:grid lg:grid-cols-[2fr_1fr]"> */}
 						<div className="flex h-full flex-col gap-4" onClick={onClick}>
 							{isMobile ? (
-								<Button
-									className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 transition-all duration-300"
-									disabled={isLoading}
-								>
-									{isLoading ? (
-										<LoadingSpinner className="h-4 w-4" />
-									) : (
-										<Upload className="h-4 w-4" />
-									)}
-									{isLoading ? 'Processing...' : 'Choose Files'}
+								<Button className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 transition-all duration-300">
+									<Upload className="h-4 w-4" />
+									Choose Files
 								</Button>
 							) : (
 								<BasicCard highlight>
 									<div
 										className={cn(
 											'relative flex h-full flex-col items-center justify-center rounded-lg p-4 transition-all duration-300',
-											isDragActive && !isLoading
-												? 'scale-[0.98] opacity-90'
-												: 'scale-100'
+											isDragActive ? 'scale-[0.98] opacity-90' : 'scale-100'
 										)}
 									>
-										{isLoading ? (
-											<div className="flex flex-col items-center justify-center gap-3">
-												<LoadingSpinner className="h-10 w-10" />
-												<p className="text-muted-foreground text-sm">
-													{isPending
-														? 'Processing files...'
-														: 'Preparing Publisher...'}
-												</p>
-											</div>
-										) : (
-											<>
-												<div
-													className={cn(
-														'bg-muted/50 mb-6 flex h-20 w-20 items-center justify-center rounded-full transition-all duration-300',
-														isDragActive ? 'bg-orange' : ''
-													)}
-												>
-													<FolderUp
-														className={cn(
-															'h-10 w-10 transition-all duration-300',
-															isDragActive
-																? 'text-primary'
-																: 'text-muted-foreground'
-														)}
-													/>
-												</div>
+										<div
+											className={cn(
+												'bg-muted/50 mb-6 flex h-20 w-20 items-center justify-center rounded-full transition-all duration-300',
+												isDragActive ? 'bg-orange' : ''
+											)}
+										>
+											<FolderUp
+												className={cn(
+													'h-10 w-10 transition-all duration-300',
+													isDragActive
+														? 'text-primary'
+														: 'text-muted-foreground'
+												)}
+											/>
+										</div>
 
-												{/*
-												  No `!` flags here. They dated from when the app's
-												  unlayered CSS-module heading rules beat every
-												  Tailwind size; those defaults now live in `base` and
-												  lose to any utility the markup asks for.
-												*/}
-												<h2 className="text-h3 mb-2">
-													{isDragActive
-														? 'Drop to Start Processing'
-														: 'Drop Your 3D Files Anywhere'}
-												</h2>
+										{/*
+										  No `!` flags here. They dated from when the app's
+										  unlayered CSS-module heading rules beat every Tailwind
+										  size; those defaults now live in `base` and lose to any
+										  utility the markup asks for.
+										*/}
+										<h2 className="text-h3 mb-2">
+											{isDragActive
+												? 'Drop to Start Processing'
+												: 'Drop Your 3D Files Anywhere'}
+										</h2>
 
-												<p className="text-muted-foreground mb-6 max-w-md text-center">
-													Your files stay on your device until you choose to
-													publish
-												</p>
+										<p className="text-muted-foreground mb-6 max-w-md text-center">
+											Your files stay on your device until you choose to publish
+										</p>
 
-												<Button className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 transition-all duration-300">
-													<Upload className="h-4 w-4" />
-													Choose Files
-												</Button>
-											</>
-										)}
+										<Button className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 transition-all duration-300">
+											<Upload className="h-4 w-4" />
+											Choose Files
+										</Button>
 									</div>
 								</BasicCard>
 							)}

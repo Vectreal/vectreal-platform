@@ -1,5 +1,4 @@
-// app/utils/csrf.server.ts
-import { createCookie } from 'react-router' // or cloudflare/deno
+import { createCookie } from 'react-router'
 import { CSRF } from 'remix-utils/csrf/server'
 
 const csrfSecret = process.env.CSRF_SECRET ?? process.env.SESSION_SECRET
@@ -14,11 +13,6 @@ export const cookie = createCookie('csrf', {
 	path: '/',
 	httpOnly: true,
 	secure: process.env.NODE_ENV === 'production',
-	//   secure: process.env.NODE_ENV === "production",
-	//   domain:
-	//     process.env.NODE_ENV === "production"
-	//       ? "mlb-highlights-app-213367242213.us-central1.run.app"
-	//       : "localhost",
 	sameSite: 'lax',
 	secrets: [resolvedCsrfSecret]
 })

@@ -49,19 +49,16 @@ function resolveSecret(): Buffer {
 	if (!raw || !raw.trim()) {
 		throw new Error(
 			'SEND_EMAIL_HOOK_SECRET is not set. ' +
-				'Store only the base64 payload (without the "v1,whsec_" prefix) - ' +
-				'the comma in the Supabase dashboard format is corrupted by Cloud Run env var injection.'
+				'Copy the signing secret from the Supabase dashboard; the ' +
+				'"v1,whsec_" prefix is optional.'
 		)
 	}
 
-	// Strip known prefixes, trim whitespace that may bleed in during CI/CD
-	// injection, then normalise URL-safe base64 (- → +, _ → /) so Node's
-	// Buffer decoder handles both standard and URL-safe variants correctly.
-	//
-	// IMPORTANT: the GitHub secret must be stored WITHOUT the "v1,whsec_"
-	// prefix because Cloud Run uses comma as its env var delimiter - a value
-	// like "v1,whsec_abc" is silently truncated to "v1" at runtime. Store
-	// only the base64 payload; this function handles both forms defensively.
+	// Accept the secret in any of the forms it is copied in: with the Supabase
+	// dashboard's "v1,whsec_" prefix, with a bare "whsec_" prefix, or as the raw
+	// base64 payload. Whitespace can bleed in during CI/CD injection, and some
+	// sources emit URL-safe base64, so normalize that too (- → +, _ → /) before
+	// handing it to Node's Buffer decoder.
 	const base64 = raw
 		.trim()
 		.replace(/^v1,whsec_/, '')
@@ -75,8 +72,8 @@ function resolveSecret(): Buffer {
 	if (decoded.length < 16) {
 		throw new Error(
 			`SEND_EMAIL_HOOK_SECRET decoded to only ${decoded.length} bytes - ` +
-				'the value is likely truncated. Ensure the GitHub secret contains ' +
-				'only the base64 payload (no "v1,whsec_" prefix).'
+				'the value is likely truncated. Copy the whole secret from the ' +
+				'Supabase dashboard.'
 		)
 	}
 
@@ -84,7 +81,7 @@ function resolveSecret(): Buffer {
 }
 
 // The webhook-signature header contains space-separated "v1,<base64sig>" tokens.
-// Normalise URL-safe base64 (- → +, _ → /) before decoding so both standard
+// Normalize URL-safe base64 (- → +, _ → /) before decoding so both standard
 // and URL-safe encodings from Supabase are handled correctly.
 function extractV1Signatures(header: string): Buffer[] {
 	return header

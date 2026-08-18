@@ -1,7 +1,8 @@
 import { data, type LoaderFunctionArgs } from 'react-router'
 
 /**
- * Health check endpoint for Cloud Run and monitoring systems.
+ * Health check endpoint. Polled by the Fly.io machine check declared in
+ * `fly.toml` (`[checks.health]` → GET /health) and by external monitoring.
  * Returns 200 OK if the application is running and healthy.
  */
 export async function loader({ request: _request }: LoaderFunctionArgs) {

@@ -1,5 +1,30 @@
 import type { StructuredLoadError } from '@vctrl/hooks/use-load-model'
 
+/**
+ * What the publisher says when a model the user just picked will not load.
+ *
+ * Keyed on the error code rather than the loader's raw message so the copy stays
+ * actionable: every one of these tells the user what to do next.
+ */
+export function getUploadLoadErrorMessage(
+	error: StructuredLoadError | null
+): string {
+	switch (error?.code) {
+		case 'missing_assets':
+			return 'Model references missing assets. Upload the full model folder (including textures/buffers) and retry.'
+		case 'unsupported_format':
+			return 'Unsupported model format. Upload a .gltf, .glb, or .usdz file.'
+		case 'multiple_models':
+			return 'Multiple models found. Upload one model at a time.'
+		case 'quota_exceeded':
+			return 'Upload limit reached for this plan. Upgrade to continue uploading models.'
+		case 'not_found':
+			return 'Scene could not be found. Refresh and try again.'
+		default:
+			return error?.message || 'Failed to load model'
+	}
+}
+
 function isStructuredLoadError(error: unknown): error is StructuredLoadError {
 	if (!error || typeof error !== 'object') {
 		return false

@@ -33,7 +33,6 @@
 			"@vctrl/hooks/use-optimize-model": [
 				"packages/hooks/src/use-optimize-model/index.ts"
 			],
-			"@vctrl/official-website/*": ["apps/official-website/src/*"],
 			"@vctrl/viewer": ["packages/viewer/src/index.ts"],
 			"@vctrl/core": ["packages/core/src/index.ts"],
 			"@vctrl/core/model-loader": ["packages/core/src/model-loader/index.ts"],

@@ -1,6 +1,13 @@
 import { useBounds } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import {
+	memo,
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef
+} from 'react'
 import {
 	Box3,
 	Euler,
@@ -92,8 +99,7 @@ function solveAutoFitFraming(
 	// non-square viewport. getEffectiveFOV folds in camera.zoom, which is what
 	// three actually renders with — `fov` alone would over-frame a zoomed camera.
 	const verticalFov = (camera.getEffectiveFOV() * Math.PI) / 180
-	const horizontalFov =
-		2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect)
+	const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect)
 	const limitingFov = Math.min(verticalFov, horizontalFov)
 	const distance = (sphere.radius / Math.sin(limitingFov / 2)) * AUTO_FIT_MARGIN
 
@@ -162,7 +168,9 @@ const buildScreenshotDataUrl = async (
 }
 
 /**
- * SceneModel component that renders a 3D model in a `Stage`.
+ * Renders the loaded model, applies runtime size normalization, and owns the
+ * per-frame near/far plane management and screenshot capture. Framing is handled
+ * by `SceneBounds` and `SceneCamera`; the viewer does not use Drei's `Stage`.
  */
 const SceneModel = memo((props: ModelProps) => {
 	const {
@@ -172,7 +180,7 @@ const SceneModel = memo((props: ModelProps) => {
 		onScreenshotCaptureReady,
 		enableShadows = false,
 		normalizationOptions,
-		onRawDiagonalComputed,
+		onRawDiagonalComputed
 	} = props
 	const bounds = useBounds()
 	const { camera, controls, gl, invalidate, scene } = useThree((state) => ({
@@ -312,8 +320,7 @@ const SceneModel = memo((props: ModelProps) => {
 						) {
 							const targetPosition = (targetCameraConfig.target ??
 								targetCameraConfig.lookAt) as
-								| [number, number, number]
-								| undefined
+								[number, number, number] | undefined
 							if (targetPosition) {
 								controls.target.fromArray(targetPosition)
 							}
@@ -373,7 +380,16 @@ const SceneModel = memo((props: ModelProps) => {
 				invalidate()
 			}
 		},
-		[camera, cameraOptions, controls, gl, invalidate, object, onScreenshot, scene]
+		[
+			camera,
+			cameraOptions,
+			controls,
+			gl,
+			invalidate,
+			object,
+			onScreenshot,
+			scene
+		]
 	)
 
 	useLayoutEffect(() => {

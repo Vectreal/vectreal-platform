@@ -118,7 +118,7 @@ terraform/
 Cloudflare Rule 2 literals are intentionally static in Terraform, but they are validated against the application cache policy source of truth:
 
 - Policy source: `apps/vectreal-platform/app/lib/http/cdn-cache-policy.server.ts`
-- Parity guard: `apps/vectreal-platform/tests/cloudflare-cache-parity.test.ts`
+- Parity guard: `apps/vectreal-platform/app/lib/http/cloudflare-cache-parity.spec.ts`
 
 Update the policy module first, then align `terraform/cloudflare.tf` Rule 2, and run the parity test through Nx before applying infrastructure changes.
 

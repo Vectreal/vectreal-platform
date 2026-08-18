@@ -41,7 +41,10 @@ import { MeshoptSimplifier } from 'meshoptimizer'
 import { Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
-import { canLoadDracoInBrowser, loadDracoModule } from '../draco/load-draco-module'
+import {
+	canLoadDracoInBrowser,
+	loadDracoModule
+} from '../draco/load-draco-module'
 import { OperationProgress } from '../types'
 import {
 	loadFromThreeJS as _loadFromThreeJS,
@@ -328,7 +331,8 @@ export class ModelOptimizer {
 		await this.ensureDracoEncoderRegistered()
 
 		const geometryBytesBefore = calculateMeshSize(inspect(document))
-		const uncompressedGlbBytes = (await this.io.writeBinary(document)).byteLength
+		const uncompressedGlbBytes = (await this.io.writeBinary(document))
+			.byteLength
 
 		this.emitProgress('Compressing geometry with Draco', 40)
 
@@ -499,9 +503,15 @@ export class ModelOptimizer {
 	}
 
 	/**
-	 * Apply all standard optimizations in sequence.
+	 * Apply all standard optimizations in sequence. Every pass runs with its own
+	 * defaults unless you set it to `false`.
 	 *
-	 * @param options - Combined optimization options
+	 * That includes texture compression, which needs an encoder. Outside Node.js,
+	 * pass one as `textures.encoder` (see {@link compressTextures}) or set
+	 * `textures: false`. Without one, the pass warns and falls back to a dedup and
+	 * prune of the texture set.
+	 *
+	 * @param options - Per-pass options, or `false` to skip that pass
 	 */
 	public async optimizeAll(
 		options: {
@@ -509,7 +519,7 @@ export class ModelOptimizer {
 			dedup?: DedupOptions | false
 			quantize?: QuantizeOptions | false
 			normals?: NormalsOptions | false
-			textures?: TextureCompressOptions
+			textures?: TextureCompressOptions | false
 		} = {}
 	): Promise<void> {
 		this.ensureModelLoaded()
@@ -525,8 +535,10 @@ export class ModelOptimizer {
 			operations.push(() =>
 				this.optimizeNormals(options.normals as NormalsOptions)
 			)
-		if (options.textures)
-			operations.push(() => this.compressTextures(options.textures))
+		if (options.textures !== false)
+			operations.push(() =>
+				this.compressTextures(options.textures as TextureCompressOptions)
+			)
 
 		for (let i = 0; i < operations.length; i++) {
 			const progress = Math.round((i / operations.length) * 100)
@@ -806,10 +818,16 @@ export class ModelOptimizer {
 		this.appliedOptimizations = [...optimizations]
 	}
 
-	public ensureModelLoaded(): Document {
+	/**
+	 * The guard every pass runs first. Private on purpose: it answers a question
+	 * callers can ask directly with `hasModel()`, and throwing from it is how a
+	 * pass reports being called too early.
+	 */
+	private ensureModelLoaded(): Document {
 		if (!this._document) {
 			throw new Error(
-				'No model loaded. Call loadFromThreeJS(), loadFromBuffer(), or loadFromFile() first.'
+				'No model loaded. Call loadFromThreeJS(), loadFromBuffer(), loadFromFile(), ' +
+					'loadFromJSON() or loadFromGLTFWithAssets() first.'
 			)
 		}
 

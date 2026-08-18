@@ -72,7 +72,7 @@ export interface DracoOptions {
 export interface TextureCompressOptions {
 	/**
 	 * Custom image encoder compatible with the sharp constructor API.
-	 * When provided, sharp is not imported — enabling use in browser and edge
+	 * When provided, sharp is not imported, enabling use in browser and edge
 	 * environments. Must implement:
 	 * `(buffer) => { resize, webp, jpeg, png, toBuffer, metadata }`.
 	 *
@@ -109,7 +109,7 @@ export interface TextureBinaryPayload {
  * Conventions:
  * - `textures` holds texture payload bytes.
  * - `texturesCount` holds the number of texture assets.
- * - `vertices`, `triangles`, `meshes`, `materials`, `nodes` are all counts.
+ * - `vertices`, `triangles`, `meshes`, `materials` are all counts.
  */
 export interface OptimizationStats {
 	vertices: BeforeAfterMetric
@@ -124,13 +124,12 @@ export interface OptimizationStats {
 		after: string[]
 	}
 	meshes: BeforeAfterMetric
-	nodes: BeforeAfterMetric
 }
 
 /**
  * Draco geometry-compression metrics, from `measureDracoCompression`. Distinct
  * from `OptimizationStats.meshes`, which always reflects uncompressed geometry
- * byte size — Draco compression is deferred until write time, so `inspect()`
+ * byte size. Draco compression is deferred until write time, so `inspect()`
  * can't see it.
  */
 export interface DracoCompressionReport {
@@ -146,7 +145,7 @@ export interface DracoCompressionReport {
 	uncompressedGlbBytes: number
 	/**
 	 * False when compression produced a larger (or equal) GLB than leaving the
-	 * geometry uncompressed — small or texture-dominated models, mostly. The
+	 * geometry uncompressed: small or texture-dominated models, mostly. The
 	 * caller should skip compressing on export and tell the user why.
 	 */
 	isWorthApplying: boolean

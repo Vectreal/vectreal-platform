@@ -1,24 +1,21 @@
 //// Process state
 export type SidebarMode = 'optimize' | 'compose'
 export type ComposeTool =
-        | 'environment'
-        | 'shadow'
-        | 'camera-controls'
-        | 'interaction-controls'
-        | 'hotspots'
+	| 'environment'
+	| 'shadow'
+	| 'camera-controls'
+	| 'interaction-controls'
+	| 'hotspots'
 export interface SceneMetaState {
-        name: string
-        description: string
-        thumbnailUrl: string
+	name: string
+	description: string
+	thumbnailUrl: string
 }
 export interface ProcessState {
-        step: 'uploading' | 'preparing'
-        mode: SidebarMode
-        activeComposeTool: ComposeTool
-        showSidebar: boolean
-        showPublishPanel: boolean
-        isInitializing: boolean
-        isLoading: boolean
-        isSaving: boolean
-        hasUnsavedChanges: boolean
+	mode: SidebarMode
+	activeComposeTool: ComposeTool
+	showSidebar: boolean
+	showPublishPanel: boolean
+	isSaving: boolean
+	hasUnsavedChanges: boolean
 }

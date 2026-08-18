@@ -40,7 +40,7 @@ const toComparableSceneMeta = ({
  * user framed and captured a new thumbnail" from "the server changed the URL",
  * and only the former should count as an unsaved change.
  */
-const isLocallyCapturedThumbnail = (thumbnailUrl?: string): boolean =>
+export const isLocallyCapturedThumbnail = (thumbnailUrl?: string): boolean =>
 	typeof thumbnailUrl === 'string' && thumbnailUrl.startsWith('data:')
 
 export const buildOptimizationReportSignature = (
@@ -120,7 +120,7 @@ export const hasOptimizationChanges = ({
 }
 
 interface UnsavedChangesArgs {
-	isInitializing: boolean
+	isLoading: boolean
 	currentSettings: SceneSettings
 	lastSavedSettings: SceneSettings | null
 	sceneMetaState: SceneMetaState
@@ -133,7 +133,7 @@ interface UnsavedChangesArgs {
 }
 
 export const hasUnsavedSceneChanges = ({
-	isInitializing,
+	isLoading,
 	currentSettings,
 	lastSavedSettings,
 	sceneMetaState,
@@ -144,7 +144,7 @@ export const hasUnsavedSceneChanges = ({
 	optimizedSceneBytes,
 	latestSceneStats
 }: UnsavedChangesArgs): boolean => {
-	if (isInitializing) {
+	if (isLoading) {
 		return false
 	}
 

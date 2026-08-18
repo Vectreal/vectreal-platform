@@ -1,20 +1,21 @@
 import { atom } from 'jotai'
 import { selectAtom } from 'jotai/utils'
-import { createStore } from 'jotai/vanilla'
 
 import type { SceneCurrentLocation } from '../../types/api'
 import type { ProcessState, SceneMetaState } from '../../types/publisher-config'
 import type { SaveLocationTarget } from '../../types/publisher-scene'
 import type { SceneSettings } from '@vctrl/core'
 
+/**
+ * Publisher UI preferences. Deliberately holds no load lifecycle: whether a
+ * model is on screen, arriving, or failed is the loader's `status`, and keeping
+ * a second copy here is what used to let the chrome and the canvas disagree.
+ */
 const processInitialState: ProcessState = {
-	step: 'uploading',
 	mode: 'optimize',
 	activeComposeTool: 'environment',
 	showSidebar: false,
 	showPublishPanel: false,
-	isInitializing: false,
-	isLoading: false,
 	isSaving: false,
 	hasUnsavedChanges: false
 }
@@ -24,32 +25,25 @@ const sceneMetaInitialState: SceneMetaState = {
 	thumbnailUrl: ''
 }
 const processAtom = atom<ProcessState>(processInitialState)
-// Deliberately not persisted. `atomWithStorage` bought nothing here: the
-// `publisherConfigStore.set` below runs at module evaluation and wipes the key
-// before any render, so nothing ever survived a reload anyway. What it did buy
-// was a cross-tab hazard, since a second publisher tab's module evaluation
-// fires a storage event that blanks the first tab's name and thumbnail mid-edit.
+// Deliberately not persisted. A second publisher tab writing the same storage
+// key would blank this tab's name and thumbnail mid-edit.
 const sceneMetaAtom = atom<SceneMetaState>(sceneMetaInitialState)
 
-// Last-saved baselines - persisted in Jotai atoms (not React state) so they
-// survive route transitions within the same publisher session without remounting.
-// Cleared explicitly on full scene reset or on post-save navigation.
+// Last-saved baselines. Atoms rather than component state so they survive a
+// route transition between /publisher and /publisher/:sceneId, which does not
+// remount the page.
 const lastSavedSettingsAtom = atom<SceneSettings | null>(null)
 const lastSavedSceneMetaAtom = atom<SceneMetaState | null>(null)
 
-// Tracks the scene ID that was most recently committed to the DB. Used by
-// useSceneParamsSync to distinguish "post-save navigation to newId" from a
-// genuine user-initiated scene change, so it can skip destructive resets.
+// The scene ID most recently committed to the DB. The publish panel reads it so
+// its actions target the just-saved scene during the window before the route
+// param catches up, rather than triggering a second save.
 const lastSavedSceneIdAtom = atom<string | null>(null)
 
-// Create a store to manage the state of the atoms
-const publisherConfigStore = createStore()
-
-publisherConfigStore.set(processAtom, processInitialState)
-publisherConfigStore.set(sceneMetaAtom, sceneMetaInitialState)
-publisherConfigStore.set(lastSavedSettingsAtom, null)
-publisherConfigStore.set(lastSavedSceneMetaAtom, null)
-publisherConfigStore.set(lastSavedSceneIdAtom, null)
+// The scene the publisher is editing. Seeded from the route and cleared when a
+// dropped file starts a new unsaved scene, which is what keeps first-save
+// gating deterministic after a previous upload was saved.
+const currentSceneIdAtom = atom<string | null>(null)
 
 // Save location atoms - not persisted to storage, initialized from loader data each session
 const saveLocationAtom = atom<SaveLocationTarget>({
@@ -70,16 +64,6 @@ const currentLocationAtom = atom<SceneCurrentLocation>({
  */
 const maxSceneBytesAtom = atom<number | null>(null)
 
-const publisherLoadingStateAtom = selectAtom(
-	processAtom,
-	(state) => ({
-		isDownloading: state.isLoading,
-		isInitializing: state.isInitializing
-	}),
-	(a, b) =>
-		a.isDownloading === b.isDownloading && b.isInitializing === a.isInitializing
-)
-
 const showSidebarAtom = selectAtom(processAtom, (state) => state.showSidebar)
 
 const toolSidebarStateAtom = selectAtom(
@@ -95,13 +79,9 @@ const toolSidebarStateAtom = selectAtom(
 		a.showSidebar === b.showSidebar
 )
 
-const controlsOverlayStateAtom = selectAtom(
+const showPublishPanelAtom = selectAtom(
 	processAtom,
-	(state) => ({
-		step: state.step,
-		showPublishPanel: state.showPublishPanel
-	}),
-	(a, b) => a.step === b.step && a.showPublishPanel === b.showPublishPanel
+	(state) => state.showPublishPanel
 )
 
 const isSavingAtom = selectAtom(processAtom, (state) => state.isSaving)
@@ -121,14 +101,14 @@ const canEditCameraSettingsAtom = atom(
 export {
 	// atoms
 	processAtom,
+	currentSceneIdAtom,
 	sceneMetaAtom,
 	saveLocationAtom,
 	currentLocationAtom,
 	maxSceneBytesAtom,
-	publisherLoadingStateAtom,
 	showSidebarAtom,
 	toolSidebarStateAtom,
-	controlsOverlayStateAtom,
+	showPublishPanelAtom,
 	isSavingAtom,
 	hasUnsavedChangesAtom,
 	isPreviewModeAtom,
@@ -139,8 +119,5 @@ export {
 	lastSavedSceneMetaAtom,
 	lastSavedSceneIdAtom,
 	processInitialState,
-	sceneMetaInitialState,
-
-	// store
-	publisherConfigStore
+	sceneMetaInitialState
 }

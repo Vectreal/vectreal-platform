@@ -12,7 +12,7 @@ import {
 	type WebGLRenderer
 } from 'three'
 
-import type { AccumulativeShadowsProps } from '@vctrl/core'
+import type { ShadowsProps } from '@vctrl/core'
 
 /**
  * Resolution (px, square) of the persisted shadow-density PNG. Independent of the
@@ -68,7 +68,7 @@ const fnv1aHex = (input: string): string => {
  */
 export const computeBakeSignature = (
 	options: Pick<
-		AccumulativeShadowsProps,
+		ShadowsProps,
 		| 'light'
 		| 'frames'
 		| 'scale'

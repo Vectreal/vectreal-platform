@@ -40,9 +40,9 @@ export const PLATFORM_SOCIAL_DESCRIPTION =
 // ModelFileTypes enum is gltf | glb | usdz only, so a .usda upload is rejected
 // with "Unsupported model format". It is therefore not claimed here.
 export const SUPPORTED_UPLOAD_FORMATS = [
-	'GLB (.glb) — recommended single-file format',
-	'glTF (.gltf + .bin + textures) — multi-file upload; all assets must be included',
-	'USDZ (.usdz) — Apple AR QuickLook format'
+	'GLB (.glb), the recommended single-file format',
+	'glTF (.gltf + .bin + textures), a multi-file upload; all assets must be included',
+	'USDZ (.usdz), the Apple AR QuickLook format'
 ] as const
 
 // Short format names for use in prose (e.g. "GLB, glTF, USDZ")
@@ -98,7 +98,7 @@ export const PLATFORM_FEATURE_LIST = [
 	'Upload GLB, glTF, and USDZ 3D models',
 	'Automated 3D model optimization with Draco compression',
 	'Maximum quality, Balanced, and Smallest optimization presets',
-	'Embeddable 3D viewer via iframe — no WebGL framework required on embedding page',
+	'Embeddable 3D viewer via iframe, with no WebGL framework required on the embedding page',
 	'Viewer customization: environment lighting, shadows, and camera presets',
 	'JavaScript embed SDK for camera control, scroll interactions, and events',
 	'Domain allowlist for embed security',
@@ -110,7 +110,7 @@ export const PLATFORM_FEATURE_LIST = [
 // Plan names and per-plan copy
 // ---------------------------------------------------------------------------
 
-// Canonical display names — used wherever a plan ID maps to a human label.
+// Canonical display names, used wherever a plan ID maps to a human label.
 export const PLAN_DISPLAY_NAMES: Record<Plan, string> = {
 	free: 'Free',
 	pro: 'Pro',

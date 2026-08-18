@@ -21,16 +21,16 @@ export { default as useOptimizeModel } from './use-optimize-model/use-optimize-m
 
 // Export utilities
 export { reconstructGltfFiles } from './use-load-model/utils/reconstruct-files'
+export { createBrowserTextureEncoder } from './use-optimize-model/utils'
 
 // Re-export types for convenience
 export type {
-	EventTypes,
-	EventHandler,
 	ModelFile,
-	LoadData,
+	ModelSource,
+	ModelSourceKind,
+	ModelState,
+	OptimizerIntegrationReturn,
 	UseLoadModelReturn,
-	SceneDataLoadOptions,
-	SceneLoadOptions,
 	ServerSceneData,
 	SceneLoadResult
 } from './use-load-model/types'

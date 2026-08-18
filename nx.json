@@ -1,7 +1,7 @@
 {
 	"useDaemonProcess": true,
 	"namedInputs": {
-		"sharedGlobals": ["{workspaceRoot}/vitest.shared.ts"],
+		"sharedGlobals": ["{workspaceRoot}/vitest.shared.mts"],
 		"default": ["{projectRoot}/**/*", "sharedGlobals"],
 		"production": [
 			"!{projectRoot}/**/*.stories.@(js|jsx|ts|tsx|mdx)",

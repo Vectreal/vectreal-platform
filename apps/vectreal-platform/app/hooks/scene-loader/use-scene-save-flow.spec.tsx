@@ -28,9 +28,9 @@ vi.mock('jotai/react', async () => {
 })
 
 vi.mock('../../lib/domain/scene', async () => {
-	const actual = await vi.importActual<
-		typeof import('../../lib/domain/scene')
-	>('../../lib/domain/scene')
+	const actual = await vi.importActual<typeof import('../../lib/domain/scene')>(
+		'../../lib/domain/scene'
+	)
 
 	return {
 		...actual,
@@ -121,7 +121,7 @@ function SceneSaveFlowHarness({
 		setLastSavedSceneMeta,
 		lastSavedSceneId,
 		setLastSavedSceneId,
-		isInitializing: false
+		isLoading: false
 	}
 
 	const { saveSceneSettings } = useSceneSaveFlow({

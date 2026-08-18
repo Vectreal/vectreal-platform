@@ -37,6 +37,11 @@ const embed = new VectrealEmbed(iframeElement, options?)
 | `iframeOrigin` | `string` | Detected from `iframe.src` | Override the expected iframe origin for postMessage security. |
 | `readyTimeout` | `number` | `15000` | Milliseconds before `ready()` rejects. |
 
+The constructor throws when it cannot determine a target origin, which happens when
+`iframeOrigin` is omitted and the iframe's `src` is empty or unparseable. Construct the
+SDK after the `src` is set, or pass `iframeOrigin` explicitly. Inbound messages from any
+other origin are dropped.
+
 ### Methods
 
 | Method | Returns | Description |
@@ -53,6 +58,14 @@ const embed = new VectrealEmbed(iframeElement, options?)
 | `on(type, handler)` | `() => void` | Subscribe to an event. Returns unsubscribe. |
 | `off(type, handler)` | `void` | Remove a specific handler. |
 | `destroy()` | `void` | Remove all listeners and stop processing messages. |
+
+#### Calls made before the viewer is ready
+
+The camera and controls methods are queued and flushed once the viewer reports ready, so
+you can call them immediately after constructing the SDK. `sendScrollProgress` and
+`sendMessage` are not queued: they post straight to the iframe, and a call made before
+the viewer is ready is silently dropped. Await `ready()` before wiring a scroll handler
+or sending a host message. `destroy()` discards anything still queued.
 
 ---
 
@@ -102,6 +115,10 @@ type EmbedEventMap = {
   }
 }
 ```
+
+`model_loaded` is translated from the viewer's `initial_framing_completed`, so it fires
+once per load, when the scene is actually visible rather than when the file finishes
+downloading. `auto_rotate_changed` is declared but the viewer does not currently emit it.
 
 ---
 

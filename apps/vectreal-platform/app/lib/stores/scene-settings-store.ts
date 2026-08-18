@@ -1,4 +1,4 @@
-import { atom, createStore } from 'jotai'
+import { atom } from 'jotai'
 
 import {
 	defaultBoundsOptions,
@@ -6,7 +6,7 @@ import {
 	defaultControlsOptions,
 	defaultEnvOptions,
 	defaultNormalizationOptions,
-	defaultShadowOptions
+	defaultShadowsOptions
 } from '../../constants/viewer-defaults'
 
 import type {
@@ -21,8 +21,6 @@ import type {
 } from '@vctrl/core'
 import type { BakedShadow } from '@vctrl/viewer'
 
-const sceneSettingsStore = createStore()
-
 const boundsAtom = atom<BoundsProps>(defaultBoundsOptions)
 const cameraAtom = atom<CameraProps>(defaultCameraOptions)
 const selectedCameraIdAtom = atom<string>(
@@ -33,14 +31,14 @@ const selectedCameraIdAtom = atom<string>(
 const controlsAtom = atom<ControlsProps>(defaultControlsOptions)
 const environmentAtom = atom<EnvironmentProps>(defaultEnvOptions)
 const interactionsAtom = atom<SceneSettings['interactions']>(undefined)
-const shadowsAtom = atom<ShadowsProps>(defaultShadowOptions)
+const shadowsAtom = atom<ShadowsProps>(defaultShadowsOptions)
 const normalizationAtom = atom<NormalizationOptions>(
 	defaultNormalizationOptions
 )
 const rawModelDiagonalAtom = atom<number>(0)
 const hotspotsAtom = atom<HotspotDefinition[]>([])
 const activeHotspotIdAtom = atom<string | null>(null)
-// Persisted shadow bake resolved from the loaded scene aggregate (a data URL +
+// Persisted shadow bake resolved from the loaded scene manifest (a data URL +
 // signature), or null when the scene has none. Set during hydration so the viewer
 // can render the stored shadow instead of recomputing the bake.
 const bakedShadowSourceAtom = atom<BakedShadow | null>(null)
@@ -54,24 +52,6 @@ const sceneViewerSettingsAtom = atom((get) => ({
 	normalization: get(normalizationAtom),
 	hotspots: get(hotspotsAtom)
 }))
-
-sceneSettingsStore.set(boundsAtom, defaultBoundsOptions)
-sceneSettingsStore.set(cameraAtom, defaultCameraOptions)
-sceneSettingsStore.set(
-	selectedCameraIdAtom,
-	defaultCameraOptions.activeCameraId ??
-		defaultCameraOptions.cameras?.[0]?.cameraId ??
-		'default'
-)
-sceneSettingsStore.set(controlsAtom, defaultControlsOptions)
-sceneSettingsStore.set(environmentAtom, defaultEnvOptions)
-sceneSettingsStore.set(interactionsAtom, undefined)
-sceneSettingsStore.set(shadowsAtom, defaultShadowOptions)
-sceneSettingsStore.set(normalizationAtom, defaultNormalizationOptions)
-sceneSettingsStore.set(rawModelDiagonalAtom, 0)
-sceneSettingsStore.set(hotspotsAtom, [])
-sceneSettingsStore.set(activeHotspotIdAtom, null)
-sceneSettingsStore.set(bakedShadowSourceAtom, null)
 
 export {
 	// Vectreal viewer settings atoms
@@ -87,8 +67,5 @@ export {
 	rawModelDiagonalAtom,
 	selectedCameraIdAtom,
 	sceneViewerSettingsAtom,
-	shadowsAtom,
-
-	// store
-	sceneSettingsStore
+	shadowsAtom
 }

@@ -8,7 +8,7 @@
  *
  * Opt-in, because it writes to whatever `DATABASE_URL` points at:
  *
- *   pnpm supabase start
+ *   pnpm nx run vectreal-platform:supabase-start
  *   pnpm nx run vectreal-platform:test-integration
  *
  * Every row it creates is namespaced by a run id and dropped in `afterAll`.

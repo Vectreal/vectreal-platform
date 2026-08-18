@@ -35,14 +35,12 @@ import type { InputFileOrDirectory, ServerSceneData } from '../types'
  *
  * @example
  * ```typescript
- * // Load scene data from server
- * const sceneData = await ServerCommunicationService.loadScene('scene-123')
+ * const { load } = useLoadModel()
  *
- * // Reconstruct files
+ * // `sceneData` is a ServerSceneData payload, e.g. from a route loader
  * const files = reconstructGltfFiles(sceneData)
  *
- * // Load into the viewer
- * await modelLoader.load(files)
+ * await load({ kind: 'files', files })
  * ```
  */
 export function reconstructGltfFiles(

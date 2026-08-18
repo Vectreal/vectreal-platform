@@ -1,6 +1,8 @@
 import { PERSISTED_BAKE_FILENAME, SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
+import { toast } from 'sonner'
 
 import { createFileFromDataUrl } from './scene-draft-serialization'
+import { planThumbnailForSave } from './scene-thumbnail-save'
 import {
 	buildImageMimeLookup,
 	buildSceneUploadFileDescriptor
@@ -40,6 +42,7 @@ interface ExecuteSceneSaveOrchestratorParams {
 	currentSceneId: null | string
 	currentSettings: SceneSettings
 	sceneMetaState: SceneMetaState
+	lastSavedSceneMeta: SceneMetaState | null
 	lastSavedSettings: SceneSettings | null
 	optimizationSettings: unknown
 	optimizationReport: null | unknown
@@ -54,7 +57,9 @@ interface ExecuteSceneSaveOrchestratorParams {
 // (`/api/scenes/:sceneId/thumbnail/:assetId`). Used to re-link the current
 // thumbnail on every save so it isn't garbage-collected, and so a superseded one
 // becomes an unlinked GC candidate.
-const extractThumbnailAssetId = (thumbnailUrl?: string | null): string | null => {
+const extractThumbnailAssetId = (
+	thumbnailUrl?: string | null
+): string | null => {
 	if (!thumbnailUrl) return null
 	// Anchor to the end so only the final `/thumbnail/<id>` segment is taken.
 	const match = thumbnailUrl.match(/\/thumbnail\/([^/?#]+)$/)
@@ -85,6 +90,7 @@ export const executeSceneSaveOrchestrator = async ({
 	currentSceneId,
 	currentSettings,
 	sceneMetaState,
+	lastSavedSceneMeta,
 	lastSavedSettings,
 	optimizationSettings,
 	optimizationReport,
@@ -124,7 +130,10 @@ export const executeSceneSaveOrchestrator = async ({
 	}
 
 	if (typeof options?.currentSceneBytes === 'number') {
-		prepareFormData.append('currentSceneBytes', String(options.currentSceneBytes))
+		prepareFormData.append(
+			'currentSceneBytes',
+			String(options.currentSceneBytes)
+		)
 	}
 
 	const prepared = await toJsonOrThrow(
@@ -137,21 +146,30 @@ export const executeSceneSaveOrchestrator = async ({
 	const preparedSceneId = prepared.sceneId as string
 	const preparedProjectId = prepared.projectId as string | undefined
 	const existingAssets = prepared.existingAssets as
-		| Record<string, { assetId: string; contentHash: string }>
-		| undefined
+		Record<string, { assetId: string; contentHash: string }> | undefined
 
 	// The thumbnail is the placeholder shown while the scene loads, so it has to
 	// match the frame the default camera opens on. Comparing the signature rather
 	// than just the camera id means nudging the default camera's pose also
-	// triggers a recapture — otherwise the saved thumbnail keeps showing the old
+	// triggers a recapture - otherwise the saved thumbnail keeps showing the old
 	// framing and the load transition visibly jumps.
 	const defaultCameraChanged =
 		buildDefaultCameraSignature(currentSettings.camera?.cameras) !==
 		buildDefaultCameraSignature(lastSavedSettings?.camera?.cameras)
-	const needsThumbnail = !sceneMetaState.thumbnailUrl || defaultCameraChanged
+	const { capturedThumbnail, needsCapture, fallbackThumbnailUrl } =
+		planThumbnailForSave({
+			sceneMetaState,
+			lastSavedSceneMeta,
+			defaultCameraChanged
+		})
 
-	const thumbnailDataUrl = needsThumbnail ? await captureSceneThumbnail() : null
-	let sceneMetaForSave = sceneMetaState
+	const thumbnailDataUrl =
+		capturedThumbnail ?? (needsCapture ? await captureSceneThumbnail() : null)
+
+	let sceneMetaForSave = {
+		...sceneMetaState,
+		thumbnailUrl: fallbackThumbnailUrl
+	}
 
 	if (thumbnailDataUrl) {
 		const thumbnailFile = createFileFromDataUrl(
@@ -185,7 +203,7 @@ export const executeSceneSaveOrchestrator = async ({
 				)
 
 				sceneMetaForSave = {
-					...sceneMetaState,
+					...sceneMetaForSave,
 					thumbnailUrl: `/api/scenes/${preparedSceneId}/thumbnail/${uploadedThumbnail.assetId}`
 				}
 			} catch (error) {
@@ -196,6 +214,9 @@ export const executeSceneSaveOrchestrator = async ({
 							? error.message
 							: 'Unknown thumbnail upload error'
 				})
+				toast.error(
+					'The scene was saved, but its preview image could not be uploaded.'
+				)
 			}
 		}
 	}
@@ -210,11 +231,11 @@ export const executeSceneSaveOrchestrator = async ({
 	//    the scene re-bakes live next load and re-persists once it settles.
 	// Best-effort: any failure leaves the scene to re-bake live next load. The bake
 	// asset id (fresh or kept) is linked into the scene's asset set (below) so it
-	// rides the aggregate on load.
+	// rides the manifest on load.
 	let settingsForSave = currentSettings
 	let bakedShadowAssetId: string | null = null
 	const currentShadows = currentSettings.shadows
-	if (captureShadowBake && currentShadows?.type === 'accumulative') {
+	if (captureShadowBake && currentShadows) {
 		let bakedRef: typeof currentShadows.baked | undefined
 		try {
 			const bake = await captureShadowBake()
@@ -232,7 +253,10 @@ export const executeSceneSaveOrchestrator = async ({
 						uploadBakeFormData.append('projectId', preparedProjectId)
 					}
 					if (options?.targetProjectId) {
-						uploadBakeFormData.append('targetProjectId', options.targetProjectId)
+						uploadBakeFormData.append(
+							'targetProjectId',
+							options.targetProjectId
+						)
 					}
 					uploadBakeFormData.append('kind', 'image')
 					uploadBakeFormData.append('file', bakeFile)
@@ -389,7 +413,7 @@ export const executeSceneSaveOrchestrator = async ({
 	sceneAssetIds.push(gltfAssetId)
 
 	// Link the persisted shadow bake into the scene's asset set so the server
-	// downloads it into the aggregate (base64-inlined alongside the model assets)
+	// downloads it into the manifest (base64-inlined alongside the model assets)
 	// and every surface loads it in parallel, with no separate request.
 	if (bakedShadowAssetId) {
 		sceneAssetIds.push(bakedShadowAssetId)
@@ -397,9 +421,11 @@ export const executeSceneSaveOrchestrator = async ({
 
 	// Link the current thumbnail (newly uploaded or the existing one) so it is
 	// tracked as a scene asset: this keeps it from being GC'd and lets a superseded
-	// thumbnail become an unlinked GC candidate. It is excluded from the aggregate's
+	// thumbnail become an unlinked GC candidate. It is excluded from the manifest's
 	// inlined render data server-side (served by URL, not rendered).
-	const thumbnailAssetId = extractThumbnailAssetId(sceneMetaForSave.thumbnailUrl)
+	const thumbnailAssetId = extractThumbnailAssetId(
+		sceneMetaForSave.thumbnailUrl
+	)
 	if (thumbnailAssetId) {
 		sceneAssetIds.push(thumbnailAssetId)
 	}

@@ -21,6 +21,13 @@ The package re-exports UI modules from `shared/components/src/ui/*`, including:
 - Layout/navigation components (`sidebar`, `tabs`, `breadcrumb`, `navigation-menu`, `card`)
 - Data/feedback components (`table`, `progress`, `skeleton`, `sonner`, `alert`)
 
+### Motion
+
+`@shared/components/motion` is a separate entry point holding the shared Framer Motion
+vocabulary: the `fadeUp`, `fadeIn`, `scaleIn`, `slideReveal` and `staggerContainer`
+variants, the `springConfig` and `cinematicConfig` transitions, and the
+`useInViewAnimation` hook.
+
 ## Usage
 
 ```tsx

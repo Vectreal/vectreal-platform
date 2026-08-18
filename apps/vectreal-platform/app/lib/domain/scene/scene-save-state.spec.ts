@@ -1,46 +1,12 @@
 import {
 	hasSceneMetaChanged,
 	hasUnsavedSceneChanges,
-	resolveSaveAvailability,
-	shouldInitializeScene
+	resolveSaveAvailability
 } from '.'
 
 import type { SceneSettings } from '@vctrl/core'
 
 describe('scene save state', () => {
-	it('does not initialize on same-scene revalidation', () => {
-		expect(
-			shouldInitializeScene({
-				hasSceneChanged: false,
-				paramSceneId: 'scene-1',
-				initialSceneAggregate: { sceneId: 'scene-1' } as never,
-				isPostSaveNavigation: false
-			})
-		).toBe(false)
-	})
-
-	it('does not initialize on post-save navigation', () => {
-		expect(
-			shouldInitializeScene({
-				hasSceneChanged: true,
-				paramSceneId: 'scene-1',
-				initialSceneAggregate: { sceneId: 'scene-1' } as never,
-				isPostSaveNavigation: true
-			})
-		).toBe(false)
-	})
-
-	it('initializes on real scene loads', () => {
-		expect(
-			shouldInitializeScene({
-				hasSceneChanged: true,
-				paramSceneId: 'scene-1',
-				initialSceneAggregate: { sceneId: 'scene-1' } as never,
-				isPostSaveNavigation: false
-			})
-		).toBe(true)
-	})
-
 	it('blocks save with no user', () => {
 		expect(
 			resolveSaveAvailability({
@@ -139,10 +105,14 @@ describe('scene save state', () => {
 
 		expect(
 			hasUnsavedSceneChanges({
-				isInitializing: false,
+				isLoading: false,
 				currentSettings,
 				lastSavedSettings: null,
-				sceneMetaState: { name: 'New scene', description: '', thumbnailUrl: '' },
+				sceneMetaState: {
+					name: 'New scene',
+					description: '',
+					thumbnailUrl: ''
+				},
 				lastSavedSceneMeta: null,
 				reportSignature: null,
 				lastSavedReportSignature: null,
@@ -158,7 +128,7 @@ describe('scene save state', () => {
 
 		expect(
 			hasUnsavedSceneChanges({
-				isInitializing: false,
+				isLoading: false,
 				currentSettings: settings,
 				lastSavedSettings: settings,
 				sceneMetaState: sceneMeta,

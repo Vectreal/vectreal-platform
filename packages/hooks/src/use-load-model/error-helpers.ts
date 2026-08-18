@@ -1,5 +1,18 @@
 import { StructuredLoadError } from './types'
 
+/**
+ * A failure that already describes itself. The loaders throw these deliberately,
+ * so normalizing one again would flatten its code and message into "unknown".
+ */
+export const isStructuredLoadError = (
+	error: unknown
+): error is StructuredLoadError =>
+	typeof error === 'object' &&
+	error !== null &&
+	'code' in error &&
+	'recoverable' in error &&
+	'source' in error
+
 export const createStructuredLoadError = ({
 	code,
 	message,
@@ -33,6 +46,8 @@ export const normalizeLocalLoadError = (
 	code: StructuredLoadError['code'],
 	context?: Record<string, unknown>
 ): StructuredLoadError => {
+	if (isStructuredLoadError(error)) return error
+
 	const message = toErrorMessage(error)
 	const derivedCode = message.includes('missing required referenced assets')
 		? 'missing_assets'
@@ -52,6 +67,8 @@ export const normalizeServerLoadError = (
 	error: unknown,
 	sceneId: string
 ): StructuredLoadError => {
+	if (isStructuredLoadError(error)) return error
+
 	const message = toErrorMessage(error)
 
 	let code: StructuredLoadError['code'] = 'server_load_failed'

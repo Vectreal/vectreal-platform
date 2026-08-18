@@ -1,5 +1,4 @@
 import { atom } from 'jotai'
-import { createStore } from 'jotai/vanilla'
 
 import type { DashboardEntityRef } from '../domain/dashboard/dashboard-confirmation'
 
@@ -66,13 +65,10 @@ const deleteDialogAtom = atom<DashboardDeleteDialogState>(
 )
 const moveDialogAtom = atom<DashboardMoveDialogState>(defaultMoveDialogState)
 
-const dashboardManagementStore = createStore()
-
 export {
 	selectedRowsAtom,
 	createFolderDialogAtom,
 	renameDialogAtom,
 	deleteDialogAtom,
-	moveDialogAtom,
-	dashboardManagementStore
+	moveDialogAtom
 }

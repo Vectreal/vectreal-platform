@@ -49,8 +49,6 @@ import {
 	shouldRevalidateWithinScope
 } from '../../lib/navigation/dashboard-route-behavior'
 import { buildMeta } from '../../lib/seo'
-import { dashboardManagementStore } from '../../lib/stores/dashboard-management-store'
-import { upgradeModalStore } from '../../lib/stores/upgrade-modal-store'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 
@@ -230,76 +228,77 @@ const DashboardLayout = () => {
 
 	const skeleton = useMemo(getNavigationSkeleton, [showSkeleton, path])
 
+	/*
+	  One store per mount. Jotai creates it here, so dashboard UI state
+	  (selection, dialogs, the upgrade modal) starts empty on every entry
+	  instead of surviving in a module singleton.
+	*/
 	return (
-		<Provider store={dashboardManagementStore}>
-			<Provider store={upgradeModalStore}>
-				<PostHogIdentify
-					userId={user.id}
-					email={user.email}
-					name={user.user_metadata?.full_name as string | undefined}
-				/>
-				{/*
+		<Provider>
+			<PostHogIdentify
+				userId={user.id}
+				email={user.email}
+				name={user.user_metadata?.full_name as string | undefined}
+			/>
+			{/*
 				  The shell owns the viewport height so the inset can scroll its own
 				  content. Without this the wrapper grows with the page and the inset's
 				  rounded frame scrolls away with it.
 				*/}
-				<SidebarProvider
-					className="h-svh overflow-hidden"
-					open={sidebarOpen}
-					onOpenChange={handleSidebarOpenChange}
-					persistState={consent?.functional === true}
-				>
-					<LogoSidebar>
-						<DashboardSidebarContent
-							user={user}
-							sidebarProjects={sidebarProjects}
-							plan={plan}
-						/>
-					</LogoSidebar>
-					{/*
+			<SidebarProvider
+				className="h-svh overflow-hidden"
+				open={sidebarOpen}
+				onOpenChange={handleSidebarOpenChange}
+				persistState={consent?.functional === true}
+			>
+				<LogoSidebar>
+					<DashboardSidebarContent
+						user={user}
+						sidebarProjects={sidebarProjects}
+						plan={plan}
+					/>
+				</LogoSidebar>
+				{/*
 					  Two rows: the breadcrumb bar, then everything else. The bar used to
 					  be `fixed w-dvw`, which spanned the whole viewport — across the
 					  sidebar and past the inset's rounded corners — and needed an `mt-14`
 					  on the content to compensate. As a grid row it is bounded by the
 					  inset by construction, and the content scrolls beneath it.
 					*/}
-					<SidebarInset className="relative grid min-w-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
-						<DashboardManagementDialogs />
-						<UpgradeModal />
+				<SidebarInset className="relative grid min-w-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
+					<DashboardManagementDialogs />
+					<UpgradeModal />
 
-						{/*
+					{/*
 						  Rows are pinned explicitly because the dialogs above are also
 						  children of this grid. They portal their content and so occupy no
 						  row today, but nothing about the layout should depend on that.
 						*/}
-						<div className="row-start-1 flex min-w-0 items-center gap-3 px-4 py-3">
-							<SidebarTrigger className="shrink-0" />
-							{/*
+					<div className="row-start-1 flex min-w-0 items-center gap-3 px-4 py-3">
+						<SidebarTrigger className="shrink-0" />
+						{/*
 							  `min-w-0` lets the breadcrumb shrink below its content width,
 							  which is what lets it scroll instead of pushing the bar wider.
 							*/}
-							<div className="flex min-w-0 flex-1 items-center gap-2">
-								<DynamicBreadcrumb />
-								{isBackgroundRefreshing && (
-									<Loader2 className="text-muted-foreground h-3.5 w-3.5 shrink-0 animate-spin" />
-								)}
-							</div>
-						</div>
-
-						<div className="row-start-2 min-h-0 overflow-y-auto">
-							{!(isSceneDetailRoute && willBePublisherRoute) &&
-								!(isSceneDetailRoute || willBeSceneDetail) && (
-									<DashboardHeader />
-								)}
-							{isContentNavigationLoading && !willBeOverlayRoute ? (
-								skeleton
-							) : (
-								<Outlet />
+						<div className="flex min-w-0 flex-1 items-center gap-2">
+							<DynamicBreadcrumb />
+							{isBackgroundRefreshing && (
+								<Loader2 className="text-muted-foreground h-3.5 w-3.5 shrink-0 animate-spin" />
 							)}
 						</div>
-					</SidebarInset>
-				</SidebarProvider>
-			</Provider>
+					</div>
+
+					<div className="row-start-2 min-h-0 overflow-y-auto">
+						{!(isSceneDetailRoute && willBePublisherRoute) &&
+							!(isSceneDetailRoute || willBeSceneDetail) && <DashboardHeader />}
+						{isContentNavigationLoading && !willBeOverlayRoute ? (
+							skeleton
+						) : (
+							<Outlet />
+						)}
+					</div>
+				</SidebarInset>
+			</SidebarProvider>
 		</Provider>
 	)
 }

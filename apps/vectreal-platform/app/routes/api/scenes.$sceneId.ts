@@ -16,13 +16,13 @@ import {
 	reserveIdempotentSceneRequest
 } from '../../lib/domain/scene/server/scene-action-guard.server'
 import {
-	buildSceneManifest,
-	buildSceneManifestEtag
-} from '../../lib/domain/scene/server/scene-aggregate.server'
-import {
 	getScene,
 	updateSceneMetadata
 } from '../../lib/domain/scene/server/scene-folder-repository.server'
+import {
+	buildSceneManifest,
+	buildSceneManifestEtag
+} from '../../lib/domain/scene/server/scene-manifest.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import * as sceneSettingsOps from '../../lib/domain/scene/server/scene-settings.operations.server'
 import { SceneSettingsParser } from '../../lib/domain/scene/server/scene-settings.parser.server'

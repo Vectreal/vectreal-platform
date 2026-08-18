@@ -22,7 +22,6 @@ export type SceneStatsSnapshot = {
 	meshesCount?: number
 	texturesCount?: number
 	materialsCount?: number
-	nodesCount?: number
 }
 
 /**

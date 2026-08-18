@@ -20,10 +20,15 @@ import type { LoaderFunctionArgs } from 'react-router'
 export async function loader({ request }: LoaderFunctionArgs) {
 	const origin = new URL(request.url).origin
 
-	const docsLinks = docsPages.map((page) => {
-		const url = `${origin}${page.slug ? `/docs/${page.slug}` : '/docs'}`
-		return `- [${page.title}](${url})${page.description ? ': ' + page.description : ''}`
-	})
+	// The landing page is not a manifest entry (it has no MDX source and no place
+	// in the sidebar), but it is where a reader should start.
+	const docsLinks = [
+		`- [Documentation](${origin}/docs): Guides, package references and operations docs for the Vectreal platform.`,
+		...docsPages.map((page) => {
+			const url = `${origin}/docs/${page.slug}`
+			return `- [${page.title}](${url})${page.description ? ': ' + page.description : ''}`
+		})
+	]
 
 	const articleLinks = getNewsArticles()
 		.filter((article) => !article.draft)

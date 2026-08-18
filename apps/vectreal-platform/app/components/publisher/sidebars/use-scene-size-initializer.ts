@@ -1,175 +1,80 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom } from 'jotai/react'
-import { useCallback, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { optimizationRuntimeAtom } from '../../../lib/stores/scene-optimization-store'
 
+import type { Object3D } from 'three'
+
 /**
- * Runs scene-size calculation effects unconditionally so the bottom bar can
- * show the loaded scene's size before the tool sidebar is ever opened.
+ * Fills in the scene's byte size so the bottom bar is populated before the tool
+ * sidebar is ever opened.
  *
- * Call this hook from a component that is always mounted while the publisher
- * scene view is active (e.g. OverlayControls).
+ * The loader reports the size of what it loaded, and a saved scene's manifest
+ * carries it too, so this only has to cover the one case neither can: a model
+ * whose source bytes are unknown, which has to be measured by exporting it.
  */
 export function useSceneSizeInitializer() {
-	const { optimizer, file, on, off } = useModelContext(true)
-	const [optimizationRuntime, setOptimizationRuntime] = useAtom(
+	const { file, optimizer } = useModelContext(true)
+	const [{ clientSceneBytes }, setOptimizationRuntime] = useAtom(
 		optimizationRuntimeAtom
 	)
-	const {
-		isPending,
-		isSceneSizeLoading,
-		clientSceneBytes,
-		clientTextureBytes
-	} = optimizationRuntime
 
-	const isSceneSizeCalculationInFlightRef = useRef(false)
+	// `useOptimizerIntegration` rebuilds its object every render, so the effect
+	// below keys off the model it would measure instead. Measuring is also
+	// attempted once per model: a null result must not re-trigger through the
+	// state it writes.
+	const optimizerRef = useRef(optimizer)
+	optimizerRef.current = optimizer
+	const measuredModelRef = useRef<Object3D | null>(null)
 
-	const { isReady } = optimizer
-
-	const calculateSceneBytes = useCallback(async () => {
-		if (!isReady) {
-			return null
-		}
-
-		const exportedGlb = await optimizer.getModel()
-		if (!exportedGlb) return null
-		return exportedGlb.byteLength
-	}, [isReady, optimizer])
-
-	// If the file already carries a known byte-length, use it directly.
+	// Sizes the loader already knows. Keyed on the size as well as the model, so
+	// an upload's own reset landing after this has run refills it rather than
+	// leaving the card blank until the next save.
 	useEffect(() => {
-		if (typeof clientSceneBytes === 'number') {
-			if (!isSceneSizeLoading) {
-				return
-			}
+		if (!file || typeof clientSceneBytes === 'number') return
 
-			setOptimizationRuntime((prev) => ({
-				...prev,
-				isSceneSizeLoading: false
-			}))
-			return
-		}
+		// A size that went back to null is a size to measure again.
+		measuredModelRef.current = null
 
-		if (typeof file?.sourcePackageBytes !== 'number') {
-			return
-		}
-
-		setOptimizationRuntime((prev) => ({
-			...prev,
-			isSceneSizeLoading: false,
-			clientSceneBytes: file.sourcePackageBytes ?? null
+		setOptimizationRuntime((previous) => ({
+			...previous,
+			isSceneSizeLoading: typeof file.sourcePackageBytes !== 'number',
+			clientSceneBytes: file.sourcePackageBytes ?? null,
+			clientTextureBytes:
+				previous.clientTextureBytes ?? file.sourceTextureBytes ?? null
 		}))
-	}, [
-		clientSceneBytes,
-		file?.sourcePackageBytes,
-		isSceneSizeLoading,
-		setOptimizationRuntime
-	])
+	}, [clientSceneBytes, file, setOptimizationRuntime])
 
-	// Same shortcut for texture bytes.
+	// The fallback: measure by exporting what the optimizer holds.
 	useEffect(() => {
-		if (typeof clientTextureBytes === 'number') {
-			return
-		}
-
-		if (typeof file?.sourceTextureBytes !== 'number') {
-			return
-		}
-
-		setOptimizationRuntime((prev) => ({
-			...prev,
-			clientTextureBytes: file.sourceTextureBytes ?? null
-		}))
-	}, [clientTextureBytes, file?.sourceTextureBytes, setOptimizationRuntime])
-
-	// Reset optimization/runtime state for real source-load flows.
-	// `load-start` is emitted by useLoadModel.load() before user/server model
-	// loading, and is not emitted by applyOptimization() internal model swaps.
-	useEffect(() => {
-		const handleLoadStart = () => {
-			isSceneSizeCalculationInFlightRef.current = false
-			setOptimizationRuntime((prev) => ({
-				...prev,
-				isPending: false,
-				isSceneSizeLoading: true,
-				optimizedSceneBytes: null,
-				clientSceneBytes: null,
-				optimizedTextureBytes: null,
-				clientTextureBytes: null,
-				lastSavedReportSignature: null,
-				latestSceneStats: null
-			}))
-		}
-
-		on('load-start', handleLoadStart)
-		return () => {
-			off('load-start', handleLoadStart)
-		}
-	}, [off, on, setOptimizationRuntime])
-
-	useEffect(() => {
-		const handleLoadComplete = () => {
-			setOptimizationRuntime((prev) =>
-				prev.isPending ? { ...prev, isPending: false } : prev
-			)
-		}
-
-		on('load-complete', handleLoadComplete)
-		return () => {
-			off('load-complete', handleLoadComplete)
-		}
-	}, [off, on, setOptimizationRuntime])
-
-	// Fall back to calculating the size via the optimizer export when no
-	// pre-computed byte count is available.
-	useEffect(() => {
+		const model = file?.model
 		if (
-			!file?.model ||
-			isPending ||
+			!model ||
 			typeof clientSceneBytes === 'number' ||
-			isSceneSizeCalculationInFlightRef.current
+			!optimizer.isReady ||
+			measuredModelRef.current === model
 		) {
 			return
 		}
 
-		isSceneSizeCalculationInFlightRef.current = true
-		setOptimizationRuntime((prev) => ({
-			...prev,
-			isSceneSizeLoading: true
-		}))
+		measuredModelRef.current = model
 
-		void calculateSceneBytes()
-			.then((computedSceneBytes) => {
-				if (typeof computedSceneBytes !== 'number') {
-					setOptimizationRuntime((prev) => ({
-						...prev,
-						isSceneSizeLoading: false
-					}))
-					return
-				}
-
-				setOptimizationRuntime((prev) => ({
-					...prev,
+		void optimizerRef.current
+			.getModel()
+			.then((exportedGlb) => {
+				setOptimizationRuntime((previous) => ({
+					...previous,
 					isSceneSizeLoading: false,
-					clientSceneBytes: computedSceneBytes
+					clientSceneBytes: exportedGlb?.byteLength ?? previous.clientSceneBytes
 				}))
 			})
 			.catch((error) => {
 				console.error('Failed to calculate scene size:', error)
-				setOptimizationRuntime((prev) => ({
-					...prev,
+				setOptimizationRuntime((previous) => ({
+					...previous,
 					isSceneSizeLoading: false
 				}))
 			})
-			.finally(() => {
-				isSceneSizeCalculationInFlightRef.current = false
-			})
-	}, [
-		file?.model,
-		isPending,
-		clientSceneBytes,
-		calculateSceneBytes,
-		setOptimizationRuntime
-	])
+	}, [clientSceneBytes, file?.model, optimizer.isReady, setOptimizationRuntime])
 }

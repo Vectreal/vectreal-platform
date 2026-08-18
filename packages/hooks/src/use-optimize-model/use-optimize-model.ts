@@ -59,18 +59,21 @@ export interface WorkerResultMeta {
  * - Progress tracking and error handling
  * - Optimization reports with before/after metrics
  *
+ * Every method runs on the calling thread. To move the geometry passes off the main
+ * thread, run this hook inside a worker you own and hand the result back through
+ * `loadFromGlbBuffer(bytes, meta)`, as the Vectreal Platform does.
+ *
  * @example
  * const optimizer = useOptimizeModel()
  *
  * // Load a GLB into the optimizer
  * await optimizer.loadFromGlbBuffer(glbBytes)
  *
- * // Geometry optimizations run via Web Worker (use-optimization-process.ts)
- * // Texture compression runs browser-native via texturesOptimization()
- * await optimizer.texturesOptimization({ targetFormat: 'webp', quality: 0.8 })
+ * // quality is a 0-100 scale
+ * await optimizer.texturesOptimization({ targetFormat: 'webp', quality: 80 })
  *
- * // Sync result back to the Three.js viewer
- * await optimizer.applyOptimization()
+ * // Syncing the result back into the viewer is `applyOptimization`, which lives on
+ * // the object useLoadModel(optimizer) returns, not on this hook.
  *
  * @returns Object containing optimization methods, state, and report data
  */
@@ -277,7 +280,7 @@ const useOptimizeModel = () => {
 	 *
 	 * @param options - Configuration options for simplification
 	 * @param options.ratio - Target ratio of triangles to keep (0.0-1.0). Default: 0.5
-	 * @param options.error - Maximum allowed error threshold. Default: 0.01
+	 * @param options.error - Maximum allowed error threshold. Default: 0.001
 	 * @returns Promise that resolves when simplification is complete
 	 */
 	const simplifyOptimization = useCallback(
@@ -341,8 +344,9 @@ const useOptimizeModel = () => {
 	 * Quantizes vertex attributes (positions, normals, UVs) to use fewer bits.
 	 * Reduces file size with minimal visual quality loss by storing data with lower precision.
 	 *
-	 * @param options - Configuration options for quantization
-	 * @param options.bits - Number of bits to use for quantization. Default: 14
+	 * @param options - Per-attribute bit depths: `quantizePosition`, `quantizeNormal`,
+	 * `quantizeColor`, `quantizeTexcoord`. Defaults come from glTF-Transform `quantize()`
+	 * (position 14, normal 10, color 8, texcoord 12).
 	 * @returns Promise that resolves when quantization is complete
 	 */
 	const quantizeOptimization = useCallback(

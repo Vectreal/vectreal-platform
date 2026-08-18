@@ -1,17 +1,18 @@
 import { cn } from '@shared/utils'
 import { memo, useMemo } from 'react'
 
+import { normalizeShadowOptions } from '../../constants/viewer-defaults'
 import { resolveBakedShadowSource } from '../../lib/domain/scene/client/baked-shadow-source'
 import CenteredSpinner from '../centered-spinner'
 import { ClientVectrealViewer } from '../viewer/client-vectreal-viewer'
 
-import type { ModelFile, SceneLoadResult } from '@vctrl/hooks/use-load-model'
+import type { ModelFile, ServerSceneData } from '@vctrl/hooks/use-load-model'
 import type { VectrealViewerProps, ViewerLoadingThumbnail } from '@vctrl/viewer'
 import type { ReactNode } from 'react'
 
 export interface SceneEmbedViewerProps {
 	file: ModelFile | null
-	sceneData?: SceneLoadResult
+	sceneData?: ServerSceneData
 	/** Sizing for the wrapper. The viewer always fills it. */
 	className?: string
 	loadingThumbnail?: ViewerLoadingThumbnail
@@ -39,11 +40,19 @@ const SceneEmbedViewer = memo(
 		onCommandExecutorReady,
 		onInteractionEvent
 	}: SceneEmbedViewerProps) => {
+		// Stored rows predate the current shadow shape, so they go through the same
+		// normalization the publisher applies. Without it a scene composed in the
+		// publisher and the same scene embedded would light differently.
+		const shadowsOptions = useMemo(
+			() => normalizeShadowOptions(sceneData?.shadows),
+			[sceneData?.shadows]
+		)
+
 		// The persisted bake from the scene's inlined asset data, so a scene renders
 		// its stored shadow alongside the model instead of re-baking on load.
 		const bakedShadow = useMemo(
-			() => resolveBakedShadowSource(sceneData?.shadows, sceneData?.assetData),
-			[sceneData?.shadows, sceneData?.assetData]
+			() => resolveBakedShadowSource(shadowsOptions, sceneData?.assetData),
+			[shadowsOptions, sceneData?.assetData]
 		)
 
 		return (
@@ -55,7 +64,7 @@ const SceneEmbedViewer = memo(
 					controlsOptions={sceneData?.controls}
 					envOptions={sceneData?.environment}
 					normalizationOptions={sceneData?.normalization}
-					shadowsOptions={sceneData?.shadows}
+					shadowsOptions={shadowsOptions}
 					staticShadowBake
 					bakedShadow={bakedShadow}
 					loadingThumbnail={loadingThumbnail}

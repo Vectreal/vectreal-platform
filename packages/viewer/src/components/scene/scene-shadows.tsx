@@ -27,7 +27,7 @@ import {
 import ShadowLightGizmo from './shadow-light-gizmo'
 
 import type { BakedShadow, ShadowBakeCapture } from '../../types/viewer-types'
-import type { AccumulativeShadowsProps, NormalizationOptions } from '@vctrl/core'
+import type { NormalizationOptions, ShadowsProps } from '@vctrl/core'
 
 // Accumulative shadows: high-quality baked soft shadows for a static subject.
 // The shadow is baked into the receiving plane's UV space from the
@@ -41,8 +41,7 @@ import type { AccumulativeShadowsProps, NormalizationOptions } from '@vctrl/core
 // This keeps the bake correctly proportioned for any model — the shadow geometry
 // is otherwise fixed in world units while model normalization is off by default,
 // so a small model would cast a shadow far too tiny to survive the alpha cutoff.
-export const defaultShadowsOptions: AccumulativeShadowsProps = {
-	type: 'accumulative',
+export const defaultShadowsOptions: ShadowsProps = {
 	enabled: false,
 	// Spread the bake across frames so it fades in smoothly rather than hitching
 	// the first frame. Fewer frames settle faster (quicker to appear, more
@@ -126,10 +125,9 @@ const defaultContactFallback = {
 	color: '#000000'
 }
 
-// The rendered variant is chosen by `isModelAnimating`, not the stored `type`,
-// and the app normalizes any stored config to a valid accumulative one before it
-// reaches here, so all fields are optional.
-type SceneShadowsProps = Partial<AccumulativeShadowsProps> & {
+// Every field is optional: the caller's config is merged over
+// `defaultShadowsOptions` below, so a partial config is always valid.
+type SceneShadowsProps = Partial<ShadowsProps> & {
 	/**
 	 * The loaded model. Used only to measure the subject's world-space size so the
 	 * bake can be proportioned to it.
@@ -337,16 +335,16 @@ const SceneShadows = memo(
 	}: SceneShadowsProps) => {
 		const { footprint, radius, height, vertexCount, measured } =
 			useModelMetrics(model, normalizationOptions)
-		const apiRef = useRef<React.ComponentRef<typeof AccumulativeShadows> | null>(
-			null
-		)
+		const apiRef = useRef<React.ComponentRef<
+			typeof AccumulativeShadows
+		> | null>(null)
 		// While the light handle is dragged, bake a coarse, fast preview so the
 		// shadow tracks the light, then settle to full quality on release.
 		const [previewing, setPreviewing] = useState(false)
 
-		// Merge incoming params over the defaults (defaults fill any gaps). The app
-		// normalizes stored shadow settings to a valid accumulative config before
-		// they reach here, so the props are trusted directly.
+		// Merge incoming params over the defaults, which fill any gaps. Callers
+		// reading persisted settings normalize them first, so a partially
+		// populated stored row still arrives as a complete config.
 		const options = {
 			...defaultShadowsOptions,
 			...props,
@@ -464,7 +462,8 @@ const SceneShadows = memo(
 		// floor keeps the camera from degenerating on near-flat models.
 		const contactShadow = useMemo(() => {
 			if (!options.contact.enabled) return null
-			const reach = options.contact.reach ?? defaultShadowsOptions.contact!.reach!
+			const reach =
+				options.contact.reach ?? defaultShadowsOptions.contact!.reach!
 			return (
 				<ContactShadows
 					frames={1}

@@ -14,27 +14,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-import { GLTF } from '@gltf-transform/core'
-
 import type { SerializedAsset } from '../types'
-
-export type ModifiedTextureResources = {
-	images: GLTF.IImage[]
-	textures: GLTF.ITexture[]
-}
-
-/**
- * Options for exporting 3D models.
- *
- * @property textureFormats - Mapping of texture image names to desired export formats (MIME types).
- */
-export interface ExportOptions {
-	modifiedTextureResources?: ModifiedTextureResources
-}
-
-export interface ExportModelOptions extends ExportOptions {
-	format?: 'glb' | 'gltf'
-}
 
 export interface GLBExportResult {
 	/** Exported binary data for GLB */
@@ -90,4 +70,5 @@ export interface USDZExportResult {
 	exportTime: number
 }
 
-export type ExportResult = GLBExportResult | GLTFExportResult
+/** Any result `ModelExporter#saveToFile` can persist. */
+export type ExportResult = GLBExportResult | GLTFExportResult | USDZExportResult

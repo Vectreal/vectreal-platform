@@ -23,11 +23,24 @@ Shared utility helpers and API types for the Vectreal platform workspace.
 - `ApiResponse.notFound(message?, options?)`
 - `ApiResponse.serverError(message?)`
 - `ApiResponse.created(data, options?)`
+- `ApiResponse.paymentRequired(message, quota?)`
+- `ApiResponse.quotaExceeded(message, quota)`
+
+`paymentRequired` and `quotaExceeded` attach the plan and limit context (`limitKey`,
+`currentValue`, `limit`, `plan`, `upgradeTo`) the dashboard needs to render an upgrade
+prompt.
 
 ### Formatting
 
 - `formatFileSize(bytes)`
   - Formats bytes into `bytes`, `KB`, or `MB` strings.
+
+### Slugs
+
+- `slugify(name, fallback?)`
+  - Converts a human-readable name into a URL and code-safe slug.
+- `deriveUniqueSlug(name, existingIds, options?)`
+  - Slugifies a name and appends a counter until it no longer collides with `existingIds`. Pass `options.excludeId` so a rename ignores the entry's own id.
 
 ### Types
 
