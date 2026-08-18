@@ -330,10 +330,6 @@ export function buildMeta(
 	)
 }
 
-export function buildRootMeta(): MetaDescriptor[] {
-	return buildMeta([], undefined, { canonical: SITE_URL })
-}
-
 export function buildPageMeta(
 	page: SeoPageDefinition,
 	rootMeta?: MetaDescriptor[],

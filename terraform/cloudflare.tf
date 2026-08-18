@@ -189,6 +189,24 @@ resource "cloudflare_record" "core" {
   proxied         = true
 }
 
+# www serves the same Fly app as the apex, so without a redirect every page has
+# two addresses. That redirect exists today as a dashboard-only rule: invisible
+# here, and lost on a zone rebuild. Declaring it makes the apex the single host,
+# matching every canonical tag the app emits.
+resource "cloudflare_page_rule" "www_redirect" {
+  count    = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
+  zone_id  = var.cloudflare_zone_id
+  target   = "www.vectreal.com/*"
+  priority = 2
+
+  actions {
+    forwarding_url {
+      url         = "https://vectreal.com/$1"
+      status_code = 301
+    }
+  }
+}
+
 resource "cloudflare_page_rule" "core_redirect" {
   count    = local.enable_cloudflare && var.cloudflare_zone_id != "" ? 1 : 0
   zone_id  = var.cloudflare_zone_id
