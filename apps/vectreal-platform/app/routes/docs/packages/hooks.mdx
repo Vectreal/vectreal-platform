@@ -62,11 +62,12 @@ what is on screen.
 `load` never rejects. It resolves to the terminal state, and for every source
 but `files` that is also the state you are rendering from.
 
-A rejected `files` load is the exception, on purpose: it leaves the model
-already on screen exactly as it was, so dropping the wrong file does not cost
-the user their scene, and reports the failure only through the resolved value.
-Branch on what `load` returns to react to an upload that did not take.
-`reset()` is how you clear a model deliberately.
+A rejected `files` load is the exception, on purpose: when a model was already
+on screen it stays exactly as it was, so dropping the wrong file does not cost
+the user their scene, and the failure is reported only through the resolved
+value. With nothing on screen there is nothing to protect, and the state is the
+error as usual. Branch on what `load` returns to react to an upload that did
+not take; `reset()` is how you clear a model deliberately.
 
 A newer `load` supersedes an older one, so a slow response can never overwrite
 the load that replaced it.

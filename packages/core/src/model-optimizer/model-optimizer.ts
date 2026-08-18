@@ -818,6 +818,11 @@ export class ModelOptimizer {
 		this.appliedOptimizations = [...optimizations]
 	}
 
+	/**
+	 * The guard every pass runs first. Private on purpose: it answers a question
+	 * callers can ask directly with `hasModel()`, and throwing from it is how a
+	 * pass reports being called too early.
+	 */
 	private ensureModelLoaded(): Document {
 		if (!this._document) {
 			throw new Error(

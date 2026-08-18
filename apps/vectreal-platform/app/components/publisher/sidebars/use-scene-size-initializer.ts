@@ -28,21 +28,23 @@ export function useSceneSizeInitializer() {
 	optimizerRef.current = optimizer
 	const measuredModelRef = useRef<Object3D | null>(null)
 
-	// Sizes the loader already knows.
+	// Sizes the loader already knows. Keyed on the size as well as the model, so
+	// an upload's own reset landing after this has run refills it rather than
+	// leaving the card blank until the next save.
 	useEffect(() => {
-		if (!file) return
+		if (!file || typeof clientSceneBytes === 'number') return
+
+		// A size that went back to null is a size to measure again.
+		measuredModelRef.current = null
 
 		setOptimizationRuntime((previous) => ({
 			...previous,
-			isSceneSizeLoading:
-				previous.clientSceneBytes === null &&
-				typeof file.sourcePackageBytes !== 'number',
-			clientSceneBytes:
-				previous.clientSceneBytes ?? file.sourcePackageBytes ?? null,
+			isSceneSizeLoading: typeof file.sourcePackageBytes !== 'number',
+			clientSceneBytes: file.sourcePackageBytes ?? null,
 			clientTextureBytes:
 				previous.clientTextureBytes ?? file.sourceTextureBytes ?? null
 		}))
-	}, [file, setOptimizationRuntime])
+	}, [clientSceneBytes, file, setOptimizationRuntime])
 
 	// The fallback: measure by exporting what the optimizer holds.
 	useEffect(() => {

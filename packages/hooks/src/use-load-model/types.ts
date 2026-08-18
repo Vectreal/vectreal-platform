@@ -181,9 +181,10 @@ export type UseLoadModelReturn<HasOptimizer extends boolean> = ModelState & {
 	 * Never rejects: it resolves to the terminal state, and for every source but
 	 * `files` that is also the state consumers render from.
 	 *
-	 * A rejected `files` load is the exception. It leaves the model already on
-	 * screen exactly as it was, so dropping the wrong file does not cost the
-	 * user their scene, and reports the failure only through the resolved value.
+	 * A rejected `files` load is the exception. When a model was already on
+	 * screen it stays exactly as it was, so dropping the wrong file does not
+	 * cost the user their scene, and the failure is reported only through the
+	 * resolved value. With nothing on screen the state is the error as usual.
 	 * `reset()` is how you clear a model deliberately.
 	 *
 	 * A newer `load` supersedes an older one, so an in-flight load can never

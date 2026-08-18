@@ -116,9 +116,11 @@ export function useApplySceneSettings() {
 /**
  * Returns the scene to its defaults.
  *
- * The publisher's stores are created per mount, so this is not about cleaning up
- * after a previous visit. It is for the one case that happens inside a single
- * visit: dropping a new model while a scene is already open.
+ * The publisher's stores are created per mount, so this is not about cleaning
+ * up after a previous visit. It is for the two transitions inside one visit
+ * that leave a scene behind without unmounting anything: an upload, which
+ * always starts a new unsaved scene, and going from /publisher/:sceneId back
+ * to /publisher, which is the same route.
  */
 export function useResetSceneState() {
 	const setBounds = useSetAtom(boundsAtom)

@@ -51,10 +51,11 @@ import type { OperationProgress } from '@vctrl/core'
  * resolves to the terminal state.
  *
  * One case separates the resolved value from the state. A rejected upload
- * leaves the model already on screen exactly as it was, because dropping the
- * wrong file should not cost the user their scene, so the failure is reported
- * only through the value `load` resolves to. Every other source replaces what
- * is on screen, and its failure is the state.
+ * leaves a model that was already on screen exactly as it was, because dropping
+ * the wrong file should not cost the user their scene, so that failure is
+ * reported only through the value `load` resolves to. With nothing on screen,
+ * and for every other source, which replaces what is there, the failure is the
+ * state.
  *
  * @template T - The type of the optimizer parameter (inferred automatically)
  * @param optimizer - Optional optimizer hook returned from useOptimizeModel

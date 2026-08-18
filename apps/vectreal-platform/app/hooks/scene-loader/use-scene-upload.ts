@@ -18,10 +18,6 @@ import {
 	sceneMetaAtom,
 	sceneMetaInitialState
 } from '../../lib/stores/publisher-config-store'
-import {
-	optimizationRuntimeAtom,
-	optimizationRuntimeInitialState
-} from '../../lib/stores/scene-optimization-store'
 
 import type {
 	InputFileOrDirectory,
@@ -48,7 +44,6 @@ export function useSceneUpload({ snapshotOriginalModel }: UseSceneUploadArgs) {
 	const resetSceneState = useResetSceneState()
 	const setSceneMeta = useSetAtom(sceneMetaAtom)
 	const setCurrentSceneId = useSetAtom(currentSceneIdAtom)
-	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
 
 	const uploadFiles = useCallback(
 		async (files: InputFileOrDirectory) => {
@@ -80,9 +75,6 @@ export function useSceneUpload({ snapshotOriginalModel }: UseSceneUploadArgs) {
 			// leave re-optimization without its pristine baseline.
 			await clearOriginalSceneModel()
 			await clearPendingSceneDraft()
-			// `isSceneSizeLoading` is left to useSceneSizeInitializer, which derives
-			// it from the model that just arrived.
-			setOptimizationRuntime(optimizationRuntimeInitialState)
 			resetSceneState()
 			setCurrentSceneId(null)
 
@@ -116,7 +108,6 @@ export function useSceneUpload({ snapshotOriginalModel }: UseSceneUploadArgs) {
 			posthog,
 			resetSceneState,
 			setCurrentSceneId,
-			setOptimizationRuntime,
 			setSceneMeta,
 			snapshotOriginalModel
 		]
