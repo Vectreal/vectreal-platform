@@ -1,5 +1,6 @@
 import { docsPages } from '../lib/docs/docs-manifest'
 import { getNewsArticles } from '../lib/news/news-manifest'
+import { SITE_URL } from '../lib/seo'
 
 interface SitemapEntry {
 	path: string
@@ -55,7 +56,7 @@ function buildXml(entries: SitemapEntry[], baseUrl: string): string {
  * background for up to 24 hours.
  */
 export async function loader() {
-	const origin = 'https://vectreal.com'
+	const origin = SITE_URL
 
 	// ── 1. Static marketing / content pages ────────────────────────────────
 	const staticEntries: SitemapEntry[] = [

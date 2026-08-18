@@ -95,7 +95,12 @@ export const LEGAL_PAGE_SEO_BY_PATH: Record<string, SeoPageDefinition> = {
 export function getLegalPageSeo(
 	pathname: string
 ): SeoPageDefinition | undefined {
-	return LEGAL_PAGE_SEO_BY_PATH[pathname]
+	// Prerendered document requests arrive as `/about/`, so an exact lookup
+	// misses every entry in this table and the page silently falls back to the
+	// generic site title and description.
+	const key = pathname.replace(/(.)\/+$/, '$1')
+
+	return LEGAL_PAGE_SEO_BY_PATH[key]
 }
 
 export function buildDocsPageSeo(args: {

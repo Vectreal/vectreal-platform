@@ -81,6 +81,7 @@ RUN addgroup -g 1001 -S nodejs && \
 COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=deps --chown=nodejs:nodejs /app/package.json ./package.json
 COPY --from=build --chown=nodejs:nodejs /app/build/apps/vectreal-platform ./build/apps/vectreal-platform
+COPY --chown=nodejs:nodejs apps/vectreal-platform/server.mjs ./apps/vectreal-platform/server.mjs
 
 USER nodejs
 
@@ -89,8 +90,7 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
     CMD node -e "require('http').get('http://localhost:8080/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# react-router.config.ts sets buildDirectory: '../../build/apps/vectreal-platform'
-# relative to apps/vectreal-platform/. The server bundle stores assetsBuildDirectory
-# as that same relative path, so react-router-serve must run from this directory.
+# server.mjs resolves the build directory relative to its own location, so the
+# working directory only needs to place it beside the repo root.
 WORKDIR /app/apps/vectreal-platform
-CMD ["../../node_modules/.bin/react-router-serve", "../../build/apps/vectreal-platform/server/index.js"]
+CMD ["node", "server.mjs"]

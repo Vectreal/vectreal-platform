@@ -95,13 +95,37 @@ export interface SeoPageDefinition {
 	articleSection?: string
 }
 
-/** Build an absolute canonical URL from a path or full URL. */
+/** Build an absolute URL from a path or full URL. */
 function toAbsoluteUrl(path: string): string {
 	if (path.startsWith('http://') || path.startsWith('https://')) {
 		return path
 	}
 
 	return `${SITE_URL}${path.startsWith('/') ? path : `/${path}`}`
+}
+
+/**
+ * The one place a page's address is decided.
+ *
+ * A page has a single URL, and it is the form without a trailing slash. Callers
+ * cannot be trusted to hand one over: React Router's prerenderer issues its
+ * document requests with a forced trailing slash, so every canonical derived
+ * from `location.pathname` arrives here as `/about/` while the sitemap and every
+ * internal link say `/about`. Advertising both is what makes a page unindexable
+ * — the crawler is sent to one form and told the real address is the other.
+ *
+ * Query and hash are dropped for the same reason: `?ref=`, `?utm_source=` and
+ * `?category=` are ways of reaching a page, not addresses of their own.
+ */
+export function toCanonicalUrl(pathOrUrl: string): string {
+	const url = new URL(toAbsoluteUrl(pathOrUrl))
+	const withoutTrailingSlash = url.pathname.replace(/\/+$/, '')
+
+	url.pathname = withoutTrailingSlash === '' ? '/' : withoutTrailingSlash
+	url.search = ''
+	url.hash = ''
+
+	return url.toString()
 }
 
 /**
@@ -247,7 +271,7 @@ export function buildMeta(
 	}
 
 	if (options.canonical) {
-		const absoluteCanonical = toAbsoluteUrl(options.canonical)
+		const absoluteCanonical = toCanonicalUrl(options.canonical)
 		// <link rel="canonical"> - the primary crawlability signal
 		metaItems.push({
 			tagName: 'link',

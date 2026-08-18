@@ -62,7 +62,7 @@
 			"options": {
 				"cwd": "apps/vectreal-platform",
 				"envFile": ".env.development",
-				"command": "react-router-serve ../../build/apps/vectreal-platform/server/index.js"
+				"command": "node server.mjs"
 			},
 			"dependsOn": ["build"]
 		},
