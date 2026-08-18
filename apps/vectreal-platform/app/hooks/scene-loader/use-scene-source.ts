@@ -1,9 +1,10 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useSetAtom } from 'jotai/react'
-import { useCallback, useEffect, useMemo } from 'react'
+import { useAtom, useSetAtom } from 'jotai/react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useLocation } from 'react-router'
 import { toast } from 'sonner'
 
-import { useApplySceneSettings } from './use-scene-settings'
+import { useApplySceneSettings, useResetSceneState } from './use-scene-settings'
 import {
 	DEFAULT_PRESET_ID,
 	optimizationPresets
@@ -19,6 +20,7 @@ import {
 import { resolveBakedShadowSource } from '../../lib/domain/scene/client/baked-shadow-source'
 import {
 	currentSceneIdAtom,
+	lastSavedSceneIdAtom,
 	lastSavedSceneMetaAtom,
 	sceneMetaAtom,
 	sceneMetaInitialState
@@ -45,36 +47,78 @@ interface UseSceneSourceArgs {
  * state come straight from the route's manifest, so the viewer is configured
  * before any bytes arrive. The model itself is a load like any other, described
  * as a source and handed to the loader.
+ *
+ * Both halves key off the saved scene rather than off the manifest object. The
+ * layout revalidates on tab focus and after every save, which produces a new
+ * manifest for the same scene, and re-applying saved state then would overwrite
+ * whatever the user has changed since.
  */
 export function useSceneSource({ sceneId, sceneManifest }: UseSceneSourceArgs) {
 	const model = useModelContext()
 	const applySceneSettings = useApplySceneSettings()
+	const resetSceneState = useResetSceneState()
 	const setSceneMeta = useSetAtom(sceneMetaAtom)
 	const setLastSavedSceneMeta = useSetAtom(lastSavedSceneMetaAtom)
 	const setCurrentSceneId = useSetAtom(currentSceneIdAtom)
+	const [lastSavedSceneId, setLastSavedSceneId] = useAtom(lastSavedSceneIdAtom)
 	const setBakedShadowSource = useSetAtom(bakedShadowSourceAtom)
 	const setOptimizationState = useSetAtom(optimizationAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
+	const { search } = useLocation()
+
+	const { reset: resetModel } = model
+	const previousSceneIdRef = useRef<null | string>(sceneId)
 
 	useEffect(() => {
+		const previousSceneId = previousSceneIdRef.current
+		previousSceneIdRef.current = sceneId
+
 		setCurrentSceneId(sceneId)
-	}, [sceneId, setCurrentSceneId])
+		// The just-saved marker is consumed by the navigation it was written for.
+		// Anything else means the route moved on and it no longer applies.
+		setLastSavedSceneId((previous) =>
+			previous === sceneId ? previous : null
+		)
+
+		// Leaving a scene for the base route is the one publisher transition that
+		// unmounts nothing: /publisher and /publisher/:sceneId are one route. Without
+		// this the previous scene stays on screen where an upload should be.
+		if (previousSceneId && !sceneId) {
+			resetModel()
+			resetSceneState()
+		}
+	}, [
+		resetModel,
+		resetSceneState,
+		sceneId,
+		setCurrentSceneId,
+		setLastSavedSceneId
+	])
+
+	// One saved scene, one identity. `settingsUpdatedAt` moves only when the
+	// scene is genuinely re-saved.
+	const savedSceneKey = sceneManifest
+		? `${sceneId}:${sceneManifest.settingsUpdatedAt ?? ''}`
+		: null
+	const manifestRef = useRef(sceneManifest)
+	manifestRef.current = sceneManifest
 
 	// Saved state, applied from the manifest the route already fetched.
 	useEffect(() => {
-		if (!sceneManifest) return
+		const manifest = manifestRef.current
+		if (!savedSceneKey || !manifest) return
 
-		const settings = getSettingsFromAggregate(sceneManifest)
+		const settings = getSettingsFromAggregate(manifest)
 		if (settings) {
 			applySceneSettings(settings)
 		}
 
-		const meta = sceneManifest.meta ?? sceneMetaInitialState
+		const meta = manifest.meta ?? sceneMetaInitialState
 		setSceneMeta(meta)
 		setLastSavedSceneMeta(meta)
 
 		executeOptimizationStateHydration({
-			aggregate: sceneManifest,
+			aggregate: manifest,
 			calculateAggregateReferencedBytes,
 			inferOptimizationPreset,
 			setOptimizationState,
@@ -84,22 +128,32 @@ export function useSceneSource({ sceneId, sceneManifest }: UseSceneSourceArgs) {
 		})
 	}, [
 		applySceneSettings,
-		sceneManifest,
+		savedSceneKey,
 		setLastSavedSceneMeta,
 		setOptimizationRuntime,
 		setOptimizationState,
 		setSceneMeta
 	])
 
+	// The first save navigates /publisher -> /publisher/<newId> while the model
+	// that produced the scene is already on screen. Fetching and parsing it back
+	// would tear down the viewer to rebuild what it is showing.
+	const isJustSavedScene = Boolean(sceneId) && sceneId === lastSavedSceneId
+	// A draft restore is the route asking for a different model entirely, so the
+	// manifest must not race it.
+	const isRestoringDraft =
+		new URLSearchParams(search).get('restore_draft') === '1'
+
 	const source = useMemo<ModelSource | null>(() => {
 		if (!sceneId || !sceneManifest) return null
+		if (isJustSavedScene || isRestoringDraft) return null
 
 		return {
 			kind: 'scene-data',
 			sceneId,
 			sceneData: toSceneSourcePayload(sceneManifest)
 		}
-	}, [sceneManifest, sceneId])
+	}, [isJustSavedScene, isRestoringDraft, sceneManifest, sceneId])
 
 	const onSettled = useCallback(
 		(state: ModelState) => {

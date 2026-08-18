@@ -3,12 +3,13 @@ import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtomValue, useSetAtom } from 'jotai/react'
 import posthog from 'posthog-js'
 import { useCallback, useEffect, useMemo, type ReactNode } from 'react'
-import { useNavigate, useSubmit } from 'react-router'
+import { useNavigate, useNavigation, useSubmit } from 'react-router'
 import { toast } from 'sonner'
 
 import { DynamicSidebar, ToolSidebar } from '.'
 import OptimizationDrawer from './optimization/optimization-drawer'
 import PreviewCameraControls from './preview-camera-controls'
+import { DropZone } from './shell/drop-zone'
 import { PreviewModeBadge } from './shell/preview-mode-badge'
 import { PublishCard } from './shell/publish-card'
 import { PublisherHeader } from './shell/publisher-header'
@@ -19,7 +20,7 @@ import { PublishSidebarProvider } from './sidebars/publish-sidebar/publish-sideb
 import { buildPublishSidebarViewModel } from './sidebars/publish-sidebar/publish-sidebar-view-model'
 import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
-import { useOptimizationModalFlow, useSceneLoader } from '../../hooks'
+import { useOptimizationModalFlow, usePublisherScene } from '../../hooks'
 import { useLocationChangeState } from '../../hooks/use-location-change-state'
 import { resolveSceneMetrics } from '../../lib/domain/scene'
 import { resolvePublisherSurface } from '../../lib/publisher/publisher-surface'
@@ -32,7 +33,6 @@ import {
 	showPublishPanelAtom
 } from '../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
-import { DropZone } from '../../routes/publisher-page/drop-zone'
 import { PublisherLoaderData, SceneManifestResponse } from '../../types/api'
 import { useHideGlobalNav } from '../navigation/global-nav-visibility'
 
@@ -97,7 +97,7 @@ const OverlayControls = ({
 		saveSceneSettings,
 		saveAvailability,
 		persistPendingSceneDraft
-	} = useSceneLoader({
+	} = usePublisherScene({
 		sceneId,
 		userId: user?.id,
 		sceneManifest: sceneAggregate as SceneManifestResponse | null
@@ -122,9 +122,15 @@ const OverlayControls = ({
 	  The one place that decides what the publisher is showing. The canvas stage
 	  below and the chrome around it both read it, so they cannot disagree.
 	*/
+	const navigation = useNavigation()
 	const surface = resolvePublisherSurface({
 		status,
-		hasSceneId: Boolean(sceneId)
+		hasScene: Boolean(sceneId && sceneAggregate),
+		// Navigating within the publisher (to a scene just saved, or between
+		// scenes) is a load as far as the stage is concerned.
+		isNavigating:
+			navigation.state === 'loading' &&
+			Boolean(navigation.location?.pathname?.startsWith('/publisher'))
 	})
 
 	/*

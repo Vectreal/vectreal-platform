@@ -26,6 +26,7 @@ import {
 import { sceneViewerSettingsAtom } from '../../lib/stores/scene-settings-store'
 
 import type { ServerSceneData } from '@vctrl/core'
+import type { ModelFile } from '@vctrl/hooks/use-load-model'
 
 /**
  * The publisher's IndexedDB side: the draft that survives an auth redirect, and
@@ -84,9 +85,9 @@ export function useSceneDraft() {
 	 * "Re-apply preset" restores this, so without it every later pass would stack
 	 * on the previous result instead of starting over.
 	 */
-	const snapshotOriginalModel = useCallback(async () => {
+	const snapshotOriginalModel = useCallback(async (uploadedFile: ModelFile) => {
 		try {
-			const gltfJson = await prepareGltfDocument()
+			const gltfJson = await prepareGltfDocument(uploadedFile)
 			if (!gltfJson || typeof gltfJson !== 'object') return
 
 			const gltfData = (gltfJson as { data?: unknown }).data ?? gltfJson

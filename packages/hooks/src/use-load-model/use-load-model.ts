@@ -32,19 +32,12 @@ import {
 	LoadedModel,
 	ModelSource,
 	ModelState,
-	StructuredLoadError,
 	UseLoadModelReturn
 } from './types'
 
 import type { LoadContext } from './load-context'
 import type { useOptimizeModel } from '../use-optimize-model'
 import type { OperationProgress } from '@vctrl/core'
-
-const isStructuredLoadError = (error: unknown): error is StructuredLoadError =>
-	typeof error === 'object' &&
-	error !== null &&
-	'code' in error &&
-	'recoverable' in error
 
 /**
  * Loads and holds one 3D model, from files, from a scene payload, or from the API.
@@ -97,11 +90,16 @@ function useLoadModel<
 				return next
 			}
 
+			// The loaders publish as soon as the model is parsed, before the
+			// optimizer has ingested it, so the viewer never waits on that.
+			let published: ModelState | null = null
+
 			const context: LoadContext = {
 				modelLoader,
 				optimizer: optimizerRef.current,
-				publish: (loaded: LoadedModel) =>
-					commit(readyModelState(source.kind, loaded)),
+				publish: (loaded: LoadedModel) => {
+					published = commit(readyModelState(source.kind, loaded))
+				},
 				onProgress: (progress: number) => {
 					if (isCurrent()) {
 						setState((prev) =>
@@ -121,11 +119,9 @@ function useLoadModel<
 							? await loadModelFromSceneData(source, context)
 							: await loadModelFromServer(source, context)
 
-				return commit(readyModelState(source.kind, loaded))
+				return published ?? commit(readyModelState(source.kind, loaded))
 			} catch (error) {
-				const structured = isStructuredLoadError(error)
-					? error
-					: normalizeLocalLoadError(error, 'unknown')
+				const structured = normalizeLocalLoadError(error, 'unknown')
 
 				console.error(`Model load failed (${source.kind}):`, structured)
 				return commit(errorModelState(source.kind, structured))

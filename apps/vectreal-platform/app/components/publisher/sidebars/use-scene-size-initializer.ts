@@ -4,6 +4,8 @@ import { useEffect, useRef } from 'react'
 
 import { optimizationRuntimeAtom } from '../../../lib/stores/scene-optimization-store'
 
+import type { Object3D } from 'three'
+
 /**
  * Fills in the scene's byte size so the bottom bar is populated before the tool
  * sidebar is ever opened.
@@ -18,7 +20,13 @@ export function useSceneSizeInitializer() {
 		optimizationRuntimeAtom
 	)
 
-	const measurementInFlightRef = useRef(false)
+	// `useOptimizerIntegration` rebuilds its object every render, so the effect
+	// below keys off the model it would measure instead. Measuring is also
+	// attempted once per model: a null result must not re-trigger through the
+	// state it writes.
+	const optimizerRef = useRef(optimizer)
+	optimizerRef.current = optimizer
+	const measuredModelRef = useRef<Object3D | null>(null)
 
 	// Sizes the loader already knows.
 	useEffect(() => {
@@ -38,18 +46,19 @@ export function useSceneSizeInitializer() {
 
 	// The fallback: measure by exporting what the optimizer holds.
 	useEffect(() => {
+		const model = file?.model
 		if (
-			!file?.model ||
+			!model ||
 			typeof clientSceneBytes === 'number' ||
 			!optimizer.isReady ||
-			measurementInFlightRef.current
+			measuredModelRef.current === model
 		) {
 			return
 		}
 
-		measurementInFlightRef.current = true
+		measuredModelRef.current = model
 
-		void optimizer
+		void optimizerRef.current
 			.getModel()
 			.then((exportedGlb) => {
 				setOptimizationRuntime((previous) => ({
@@ -65,8 +74,5 @@ export function useSceneSizeInitializer() {
 					isSceneSizeLoading: false
 				}))
 			})
-			.finally(() => {
-				measurementInFlightRef.current = false
-			})
-	}, [clientSceneBytes, file?.model, optimizer, setOptimizationRuntime])
+	}, [clientSceneBytes, file?.model, optimizer.isReady, setOptimizationRuntime])
 }

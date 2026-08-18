@@ -13,8 +13,12 @@ export type PublisherSurface = 'drop-zone' | 'loading' | 'viewer' | 'error'
 interface PublisherSurfaceInput {
 	/** The loader's status. */
 	status: ModelState['status']
-	/** Whether the route points at a saved scene (`/publisher/:sceneId`). */
-	hasSceneId: boolean
+	/**
+	 * Whether there is a saved scene to put on screen. A scene id in the URL is
+	 * not enough: the loader only ships a manifest for a scene the viewer is
+	 * allowed to read, and without one there is nothing to wait for.
+	 */
+	hasScene: boolean
 	/** Whether React Router is navigating within the publisher. */
 	isNavigating?: boolean
 }
@@ -33,12 +37,12 @@ interface PublisherSurfaceInput {
  */
 export function resolvePublisherSurface({
 	status,
-	hasSceneId,
+	hasScene,
 	isNavigating = false
 }: PublisherSurfaceInput): PublisherSurface {
 	if (status === 'ready') return 'viewer'
-	if (status === 'error') return hasSceneId ? 'error' : 'drop-zone'
+	if (status === 'error') return hasScene ? 'error' : 'drop-zone'
 	if (status === 'loading' || isNavigating) return 'loading'
 
-	return hasSceneId ? 'loading' : 'drop-zone'
+	return hasScene ? 'loading' : 'drop-zone'
 }

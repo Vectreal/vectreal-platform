@@ -35,11 +35,9 @@ const sceneSourceKey = (source: ModelSource): string => {
  * A `null` source means "nothing to load here" (a fresh upload, an unresolved
  * route), not "clear the model".
  *
- * Cancellation is deliberately absent: `load` retires superseded loads itself,
- * so a stale response can never overwrite a newer one.
- *
- * `onSettled` runs once per load with its terminal state, for the work that
- * belongs to the load rather than to the render (a toast, an analytics event).
+ * The loader retires a superseded load's state on its own, so nothing here
+ * cancels the request. `onSettled` is the exception: it runs outside the
+ * loader's state, so a load the route has moved past must not reach it.
  */
 export function useSceneModel(
 	{ load }: SceneModelLoader,
@@ -56,6 +54,14 @@ export function useSceneModel(
 		const current = sourceRef.current
 		if (!key || !current) return
 
-		void load(current).then((state) => onSettledRef.current?.(state))
+		let isCurrentSource = true
+
+		void load(current).then((state) => {
+			if (isCurrentSource) onSettledRef.current?.(state)
+		})
+
+		return () => {
+			isCurrentSource = false
+		}
 	}, [key, load])
 }

@@ -23,13 +23,16 @@ import {
 	optimizationRuntimeInitialState
 } from '../../lib/stores/scene-optimization-store'
 
-import type { InputFileOrDirectory } from '@vctrl/hooks/use-load-model'
+import type {
+	InputFileOrDirectory,
+	ModelFile
+} from '@vctrl/hooks/use-load-model'
 
 interface UseSceneUploadArgs {
 	/** The scene the route is on, if any. */
 	sceneId: null | string
 	/** Snapshots the freshly loaded model to IndexedDB for re-optimization. */
-	snapshotOriginalModel: () => Promise<void>
+	snapshotOriginalModel: (uploadedFile: ModelFile) => Promise<void>
 }
 
 /**
@@ -44,7 +47,7 @@ export function useSceneUpload({
 	sceneId,
 	snapshotOriginalModel
 }: UseSceneUploadArgs) {
-	const { load, status } = useModelContext()
+	const { load } = useModelContext()
 	const posthog = usePostHog()
 	const { consent } = useConsent()
 	const resetSceneState = useResetSceneState()
@@ -113,7 +116,7 @@ export function useSceneUpload({
 
 			// The optimizer has the model by now (the load awaits its ingest), so the
 			// pre-optimization snapshot can be taken without waiting on a render.
-			await snapshotOriginalModel()
+			await snapshotOriginalModel(result.file)
 
 			return result
 		},
@@ -130,5 +133,5 @@ export function useSceneUpload({
 		]
 	)
 
-	return { uploadFiles, isUploading: status === 'loading' }
+	return { uploadFiles }
 }

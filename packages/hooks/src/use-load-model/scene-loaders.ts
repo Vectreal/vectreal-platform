@@ -21,6 +21,20 @@ type SceneDataSource = Extract<ModelSource, { kind: 'scene-data' }>
 type ServerSource = Extract<ModelSource, { kind: 'server' }>
 
 /**
+ * Where a scene is read from, resolved once so the manifest request and the
+ * asset requests that follow it cannot end up authenticating differently.
+ */
+const resolveSceneEndpoint = ({ sceneId, serverOptions }: ServerSource) => ({
+	endpoint: serverOptions?.endpoint ?? `/api/scenes/${sceneId}`,
+	headers: serverOptions?.apiKey
+		? {
+				Authorization: `Bearer ${serverOptions.apiKey}`,
+				...serverOptions.headers
+			}
+		: { ...serverOptions?.headers }
+})
+
+/**
  * Loads a scene payload the caller already holds: a route aggregate, an IndexedDB
  * draft, or the response of a server fetch.
  *
@@ -35,7 +49,8 @@ type ServerSource = Extract<ModelSource, { kind: 'server' }>
  */
 export const loadModelFromSceneData = async (
 	{ sceneId, sceneData: payload, parseMode }: SceneDataSource,
-	{ modelLoader, optimizer, publish, onProgress }: LoadContext
+	{ modelLoader, optimizer, publish, onProgress }: LoadContext,
+	assetHeaders?: HeadersInit
 ): Promise<LoadedModel> => {
 	if (!payload.gltfJson) {
 		throw createStructuredLoadError({
@@ -52,6 +67,7 @@ export const loadModelFromSceneData = async (
 			? {
 					...payload,
 					assetData: await fetchManifestAssetData(payload.assetRefs, {
+						headers: assetHeaders,
 						onProgress: (fraction) => onProgress(Math.round(fraction * 40))
 					})
 				}
@@ -133,19 +149,12 @@ export const loadModelFromServer = async (
 	source: ServerSource,
 	ctx: LoadContext
 ): Promise<LoadedModel> => {
-	const { sceneId, serverOptions, parseMode } = source
+	const { sceneId, parseMode } = source
 	const { onProgress } = ctx
+	const { endpoint, headers } = resolveSceneEndpoint(source)
 
 	try {
 		onProgress(0)
-
-		const endpoint = serverOptions?.endpoint ?? `/api/scenes/${sceneId}`
-		const headers: HeadersInit = serverOptions?.apiKey
-			? {
-					Authorization: `Bearer ${serverOptions.apiKey}`,
-					...serverOptions.headers
-				}
-			: { ...serverOptions?.headers }
 
 		const scenePayload =
 			(await fetchManifestPayload(endpoint, headers)) ??
@@ -153,7 +162,8 @@ export const loadModelFromServer = async (
 
 		return await loadModelFromSceneData(
 			{ kind: 'scene-data', sceneId, sceneData: scenePayload, parseMode },
-			ctx
+			ctx,
+			headers
 		)
 	} catch (error) {
 		throw normalizeServerLoadError(error, sceneId)

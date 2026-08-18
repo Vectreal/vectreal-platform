@@ -183,7 +183,10 @@ export type UseLoadModelReturn<HasOptimizer extends boolean> = ModelState & {
 	 * for callers that need to branch on the outcome right away.
 	 *
 	 * A newer `load` supersedes an older one, so an in-flight load can never
-	 * overwrite the state of the load that replaced it.
+	 * overwrite the state of the load that replaced it. The superseded call
+	 * still resolves, with the state it would have produced, so a caller that
+	 * acts on the result rather than on the state should check that its load is
+	 * still the current one.
 	 *
 	 * @example
 	 * ```tsx

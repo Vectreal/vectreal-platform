@@ -3,43 +3,43 @@ import { describe, expect, it } from 'vitest'
 import { resolvePublisherSurface } from './publisher-surface'
 
 describe('resolvePublisherSurface', () => {
-	it('asks for a file only on the base route', () => {
+	it('asks for a file only when there is no scene to show', () => {
 		expect(
-			resolvePublisherSurface({ status: 'empty', hasSceneId: false })
+			resolvePublisherSurface({ status: 'empty', hasScene: false })
 		).toBe('drop-zone')
 	})
 
-	it('never shows the drop zone on a scene route', () => {
+	it('never shows the drop zone once a scene is being shown', () => {
 		for (const status of ['empty', 'loading', 'ready', 'error'] as const) {
 			expect(
-				resolvePublisherSurface({ status, hasSceneId: true })
+				resolvePublisherSurface({ status, hasScene: true })
 			).not.toBe('drop-zone')
 		}
 	})
 
-	it('waits rather than accusing when a scene route has not started loading', () => {
-		expect(resolvePublisherSurface({ status: 'empty', hasSceneId: true })).toBe(
+	it('waits rather than accusing when a scene has not started loading', () => {
+		expect(resolvePublisherSurface({ status: 'empty', hasScene: true })).toBe(
 			'loading'
 		)
 	})
 
 	it('keeps a rejected upload on the drop zone, where the next attempt happens', () => {
 		expect(
-			resolvePublisherSurface({ status: 'error', hasSceneId: false })
+			resolvePublisherSurface({ status: 'error', hasScene: false })
 		).toBe('drop-zone')
 	})
 
 	it('reports a scene that failed to load as an error', () => {
-		expect(resolvePublisherSurface({ status: 'error', hasSceneId: true })).toBe(
+		expect(resolvePublisherSurface({ status: 'error', hasScene: true })).toBe(
 			'error'
 		)
 	})
 
 	it('shows the model as soon as the loader has one', () => {
 		expect(
-			resolvePublisherSurface({ status: 'ready', hasSceneId: false })
+			resolvePublisherSurface({ status: 'ready', hasScene: false })
 		).toBe('viewer')
-		expect(resolvePublisherSurface({ status: 'ready', hasSceneId: true })).toBe(
+		expect(resolvePublisherSurface({ status: 'ready', hasScene: true })).toBe(
 			'viewer'
 		)
 	})
@@ -48,7 +48,7 @@ describe('resolvePublisherSurface', () => {
 		expect(
 			resolvePublisherSurface({
 				status: 'empty',
-				hasSceneId: false,
+				hasScene: false,
 				isNavigating: true
 			})
 		).toBe('loading')
@@ -58,7 +58,7 @@ describe('resolvePublisherSurface', () => {
 		expect(
 			resolvePublisherSurface({
 				status: 'ready',
-				hasSceneId: true,
+				hasScene: true,
 				isNavigating: true
 			})
 		).toBe('viewer')

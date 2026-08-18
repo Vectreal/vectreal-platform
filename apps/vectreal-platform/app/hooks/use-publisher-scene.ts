@@ -39,7 +39,7 @@ interface UsePublisherSceneArgs {
  * round trip, and the save flow writes back. They share state through the
  * publisher's atoms rather than through each other.
  */
-export function useSceneLoader({
+export function usePublisherScene({
 	sceneId,
 	userId,
 	sceneManifest

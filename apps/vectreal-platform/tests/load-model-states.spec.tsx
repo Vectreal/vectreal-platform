@@ -111,6 +111,21 @@ describe('useLoadModel state', () => {
 		await waitFor(() => expect(result.current.file).toBeNull())
 	})
 
+	it('lets the newer load win when two overlap', async () => {
+		const { result } = renderHook(() => useLoadModel())
+
+		const [first, second] = await act(() =>
+			Promise.all([
+				result.current.load({ kind: 'files', files: [file('first.glb')] }),
+				result.current.load({ kind: 'files', files: [file('second.glb')] })
+			])
+		)
+
+		expect(first.status).toBe('ready')
+		expect(second.status).toBe('ready')
+		await waitFor(() => expect(result.current.file?.name).toBe('second.glb'))
+	})
+
 	it('clears the model on reset', async () => {
 		const { result } = renderHook(() => useLoadModel())
 
