@@ -63,11 +63,17 @@ discriminated union on `status`. `status === 'ready'` and a non-null `file` are
 the same fact, so there is no separate loading flag to fall out of step with
 what is on screen.
 
-`load` never rejects. A failure resolves to the `error` state, which is also the
-state you are already rendering from, so a call site cannot forget to handle it.
-It returns the terminal state as well, for callers that need to branch right
-away. A newer `load` supersedes an older one, so a slow response can never
-overwrite the load that replaced it.
+`load` never rejects. It resolves to the terminal state, and for every source
+but `files` that is also the state you are rendering from.
+
+A rejected `files` load is the exception, on purpose: it leaves the model
+already on screen exactly as it was, so dropping the wrong file does not cost
+the user their scene, and reports the failure only through the resolved value.
+Branch on what `load` returns to react to an upload that did not take.
+`reset()` is how you clear a model deliberately.
+
+A newer `load` supersedes an older one, so a slow response can never overwrite
+the load that replaced it.
 
 ### Sources
 

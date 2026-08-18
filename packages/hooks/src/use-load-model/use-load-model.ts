@@ -47,8 +47,14 @@ import type { OperationProgress } from '@vctrl/core'
  *
  * There is a single entry point, `load(source)`, and a single state value. The
  * state is a discriminated union, so "a model is on screen" and "loading
- * finished" are the same fact and cannot disagree. `load` never rejects: the
- * failure is the state, which every consumer already renders from.
+ * finished" are the same fact and cannot disagree. `load` never rejects: it
+ * resolves to the terminal state.
+ *
+ * One case separates the resolved value from the state. A rejected upload
+ * leaves the model already on screen exactly as it was, because dropping the
+ * wrong file should not cost the user their scene, so the failure is reported
+ * only through the value `load` resolves to. Every other source replaces what
+ * is on screen, and its failure is the state.
  *
  * @template T - The type of the optimizer parameter (inferred automatically)
  * @param optimizer - Optional optimizer hook returned from useOptimizeModel
@@ -91,8 +97,13 @@ function useLoadModel<
 		async (source: ModelSource): Promise<ModelState> => {
 			const token = ++loadTokenRef.current
 			const isCurrent = () => loadTokenRef.current === token
+			// Only an upload is an attempt to *add* a model; a scene source replaces
+			// the one on screen, so its failure has to be visible as one rather than
+			// leaving the previous scene's geometry under the new scene's name.
 			const modelOnScreen =
-				stateRef.current.status === 'ready' ? stateRef.current : null
+				source.kind === 'files' && stateRef.current.status === 'ready'
+					? stateRef.current
+					: null
 
 			const commit = (next: ModelState): ModelState => {
 				if (isCurrent()) setState(next)

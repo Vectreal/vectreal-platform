@@ -29,8 +29,6 @@ import type {
 } from '@vctrl/hooks/use-load-model'
 
 interface UseSceneUploadArgs {
-	/** The scene open in the publisher, if the upload is replacing its model. */
-	openSceneId: null | string
 	/** Snapshots the freshly loaded model to IndexedDB for re-optimization. */
 	snapshotOriginalModel: (uploadedFile: ModelFile) => Promise<void>
 }
@@ -43,10 +41,7 @@ interface UseSceneUploadArgs {
  * supported file, two models in one folder) simply skipped the ones that would
  * have cleared the loading flag. Here the order is the order you read.
  */
-export function useSceneUpload({
-	openSceneId,
-	snapshotOriginalModel
-}: UseSceneUploadArgs) {
+export function useSceneUpload({ snapshotOriginalModel }: UseSceneUploadArgs) {
 	const { load } = useModelContext()
 	const posthog = usePostHog()
 	const { consent } = useConsent()
@@ -75,36 +70,29 @@ export function useSceneUpload({
 			}
 
 			// Everything below replaces what the previous model left behind, and none
-			// of it runs until there is a model to replace it with: a folder with two
-			// models in it, or with none, must not cost the user the scene they had
-			// open. Both IndexedDB snapshots are keyed per tab rather than per model,
-			// so a stale one could otherwise be restored over this upload during a
-			// later re-optimization.
-			void clearOriginalSceneModel()
-			void clearPendingSceneDraft()
-			setOptimizationRuntime({
-				...optimizationRuntimeInitialState,
-				isSceneSizeLoading: true
-			})
+			// of it runs until there is a model to replace it with, so a folder with
+			// two models in it, or with none, costs nothing.
+			//
+			// A drop always starts a new unsaved scene: the drop zone is only on
+			// screen when there is no scene open, so there is nothing to merge with.
+			// Both IndexedDB snapshots are keyed per tab rather than per model, and
+			// the clear is awaited so it cannot land after the snapshot below and
+			// leave re-optimization without its pristine baseline.
+			await clearOriginalSceneModel()
+			await clearPendingSceneDraft()
+			// `isSceneSizeLoading` is left to useSceneSizeInitializer, which derives
+			// it from the model that just arrived.
+			setOptimizationRuntime(optimizationRuntimeInitialState)
+			resetSceneState()
+			setCurrentSceneId(null)
 
-			// Replacing the model of an open scene keeps its composition. Anywhere
-			// else the upload starts a new, unsaved scene.
-			if (!openSceneId) {
-				resetSceneState()
-				setCurrentSceneId(null)
-			}
-
-			setSceneMeta((previous) => ({
-				// Replace rather than merge. A dropped file is new content, so keeping
-				// the previous thumbnail would both show the wrong image and let the
-				// save flow re-link it onto this model. Editing an existing scene
-				// keeps its name; a new one takes it from the file.
+			// Replace rather than merge: a dropped file is new content, so keeping
+			// the previous thumbnail would both show the wrong image and let the
+			// save flow re-link it onto this model.
+			setSceneMeta({
 				...sceneMetaInitialState,
-				description: openSceneId ? previous.description : '',
-				name: openSceneId
-					? previous.name || getSceneNameFromFileName(result.file.name)
-					: getSceneNameFromFileName(result.file.name)
-			}))
+				name: getSceneNameFromFileName(result.file.name)
+			})
 
 			toast.success(`Loaded ${result.file.name}`)
 
@@ -125,7 +113,6 @@ export function useSceneUpload({
 		[
 			consent?.analytics,
 			load,
-			openSceneId,
 			posthog,
 			resetSceneState,
 			setCurrentSceneId,

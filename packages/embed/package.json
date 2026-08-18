@@ -24,6 +24,7 @@
 	"license": "AGPL-3.0-only",
 	"main": "./index.cjs",
 	"module": "./index.js",
+	"browser": "./vectreal-embed.umd.js",
 	"types": "./index.d.ts",
 	"type": "module",
 	"sideEffects": false,

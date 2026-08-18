@@ -79,7 +79,7 @@ export function usePublisherScene({
 		sceneManifest,
 		isRestoringDraft
 	})
-	const { uploadFiles } = useSceneUpload({ openSceneId, snapshotOriginalModel })
+	const { uploadFiles } = useSceneUpload({ snapshotOriginalModel })
 
 	const [currentSceneId, setCurrentSceneId] = useAtom(currentSceneIdAtom)
 	const [sceneMetaState, setSceneMetaState] = useAtom(sceneMetaAtom)

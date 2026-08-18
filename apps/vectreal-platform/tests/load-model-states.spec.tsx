@@ -110,7 +110,7 @@ describe('useLoadModel state', () => {
 		expect(failed.file).toBeNull()
 	})
 
-	it('leaves the model that was on screen alone when a load fails', async () => {
+	it('leaves the model that was on screen alone when an upload fails', async () => {
 		const { result } = renderHook(() => useLoadModel())
 
 		await act(() =>
@@ -126,6 +126,28 @@ describe('useLoadModel state', () => {
 			expect(result.current.status).toBe('ready')
 			expect(result.current.file?.name).toBe('model.glb')
 		})
+	})
+
+	it('surfaces a failed scene load rather than leaving the previous scene up', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => ({ ok: false, status: 500, statusText: 'Server Error' }))
+		)
+
+		const { result } = renderHook(() => useLoadModel())
+
+		await act(() =>
+			result.current.load({ kind: 'files', files: [file('model.glb')] })
+		)
+		// A scene replaces what is on screen, so its failure has to be visible:
+		// the alternative is the previous scene's geometry under the new scene's
+		// name, settings and save target.
+		await act(() => result.current.load({ kind: 'server', sceneId: 'scene-1' }))
+
+		await waitFor(() => expect(result.current.status).toBe('error'))
+		expect(result.current.file).toBeNull()
+
+		vi.unstubAllGlobals()
 	})
 
 	it('lets the newer load win when two overlap', async () => {
