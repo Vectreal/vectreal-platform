@@ -72,6 +72,27 @@ ranges while packing, which is why no manifest-rewriting script exists. Each pub
 package points pnpm at its build output with `publishConfig.directory`; publishing from the
 build directory itself would fail, because that directory is not a workspace member.
 
+### Project manifests
+
+Every project's `package.json` must list what its own source imports, at the version the
+workspace installs. This is not bookkeeping: pnpm resolves an undeclared import by walking
+up to the root `node_modules`, so a manifest can be wrong for years and everything still
+builds, which is how `@vctrl/core` came to publish `three@^0.177.0` while the repo built
+against 0.185.1.
+
+The `@nx/dependency-checks` ESLint rule enforces it, running over every `package.json`
+through the projects' `lintFilePatterns`. It reports undeclared imports, declared packages
+nothing imports, and versions that disagree with what is installed, and `--fix` writes the
+correction, including `catalog:` where the catalog owns that version. Trust it over
+hand-editing.
+
+It reads imports, not bundler config, so a package that deliberately bundles a dependency
+has to say so. `packages/viewer` bundles `@vctrl/core` and `@shared/*`, and
+`packages/embed` uses `@vctrl/viewer` only for types that `vite-plugin-dts` inlines; both
+are listed as `ignoredDependencies` in `eslint.config.mts` with the reason. Anything
+externalized in a `vite.config.ts` is the opposite case and must be declared: that is what
+a consumer installs.
+
 ## Platform App Architecture (`apps/vectreal-platform/`)
 
 ### Framework
@@ -80,19 +101,19 @@ React Router v7 in framework mode with SSR. Route config lives in `app/routes.ts
 
 ### Key directories
 
-| Path                         | Purpose                                                                   |
-| ---------------------------- | ------------------------------------------------------------------------- |
-| `app/routes/`                | All route modules (pages + API routes)                                    |
-| `app/routes/api/`            | Server-only API endpoints (auth, billing, scenes, etc.)                   |
-| `app/routes/layouts/`        | Shared layout wrappers                                                    |
-| `app/routes/dashboard-page/` | Dashboard routes (projects, billing, settings, etc.)                      |
-| `app/lib/domain/`            | Business logic (auth, billing, asset, organization, project, scene, user) |
+| Path                         | Purpose                                                                                               |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `app/routes/`                | All route modules (pages + API routes)                                                                |
+| `app/routes/api/`            | Server-only API endpoints (auth, billing, scenes, etc.)                                               |
+| `app/routes/layouts/`        | Shared layout wrappers                                                                                |
+| `app/routes/dashboard-page/` | Dashboard routes (projects, billing, settings, etc.)                                                  |
+| `app/lib/domain/`            | Business logic (auth, billing, asset, organization, project, scene, user)                             |
 | `app/lib/sessions/`          | Auth cookie and CSRF session helpers (consent lives in `app/lib/consent/`, theme in `app/lib/theme/`) |
-| `app/lib/http/`              | Request parsing and response utilities                                    |
-| `app/db/`                    | Drizzle ORM client (`client.ts`) and schema (`schema/`)                   |
-| `app/constants/`             | Plan config (`plan-config.ts`), feature flags, etc.                       |
-| `app/components/`            | App-level React components                                                |
-| `app/hooks/`                 | App-level React hooks                                                     |
+| `app/lib/http/`              | Request parsing and response utilities                                                                |
+| `app/db/`                    | Drizzle ORM client (`client.ts`) and schema (`schema/`)                                               |
+| `app/constants/`             | Plan config (`plan-config.ts`), feature flags, etc.                                                   |
+| `app/components/`            | App-level React components                                                                            |
+| `app/hooks/`                 | App-level React hooks                                                                                 |
 
 ### Auth pattern
 
@@ -134,7 +155,7 @@ Components are in `shared/components/src/ui/` (shadcn-based, Radix UI primitives
 - **Versioning**: Managed by Release Please. Do not use `nx release`. Internal deps use `workspace:*`; shared third-party versions use `catalog:` and are declared in `pnpm-workspace.yaml`.
 - **Docs pages**: MDX files in `app/routes/docs/`. Adding a new page also requires a route in `app/routes.tsx` and an entry in the `docsPages` array in `app/lib/docs/docs-manifest.ts`, which is what `DocsTreeNav` renders.
 - **Server-only modules**: Files that must not be bundled client-side are named `*.server.ts`.
-- **Viewport height**: Size full-viewport surfaces with `h-dvh` / `min-h-dvh` — or `h-svh` where a shell owns the height and scrolls its own content, as `dashboard-layout.tsx` does. Never Tailwind's `screen` height utilities: they compile to `100vh`, the *large* viewport, which overhangs persistent mobile browser chrome — pushing bottom-anchored UI behind the bar and leaving the page scrolled with no way back when a canvas holds `touch-action: none`. (Spelling those class names out here would be self-defeating: the Tailwind scanner reads this file and would re-emit the very utilities the codebase dropped.)
+- **Viewport height**: Size full-viewport surfaces with `h-dvh` / `min-h-dvh` — or `h-svh` where a shell owns the height and scrolls its own content, as `dashboard-layout.tsx` does. Never Tailwind's `screen` height utilities: they compile to `100vh`, the _large_ viewport, which overhangs persistent mobile browser chrome — pushing bottom-anchored UI behind the bar and leaving the page scrolled with no way back when a canvas holds `touch-action: none`. (Spelling those class names out here would be self-defeating: the Tailwind scanner reads this file and would re-emit the very utilities the codebase dropped.)
 
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->

@@ -111,8 +111,9 @@ function toAbsoluteUrl(path: string): string {
  * cannot be trusted to hand one over: React Router's prerenderer issues its
  * document requests with a forced trailing slash, so every canonical derived
  * from `location.pathname` arrives here as `/about/` while the sitemap and every
- * internal link say `/about`. Advertising both is what makes a page unindexable
- * — the crawler is sent to one form and told the real address is the other.
+ * internal link say `/about`. Advertising both is what makes a page
+ * unindexable: the crawler is sent to one form and told the real address is
+ * the other.
  *
  * Query and hash are dropped for the same reason: `?ref=`, `?utm_source=` and
  * `?category=` are ways of reaching a page, not addresses of their own.

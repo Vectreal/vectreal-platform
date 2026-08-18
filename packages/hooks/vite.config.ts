@@ -59,6 +59,10 @@ export default defineConfig({
 				'react/jsx-runtime',
 				'file-saver',
 				'jszip',
+				// @vctrl/core externalizes @gltf-transform/core, so bundling a
+				// second copy here would give consumers two Document classes and
+				// break every instanceof across the two packages.
+				/^@gltf-transform\/core(\/.*)?$/,
 				/^@vctrl\/core(\/.*)?$/
 			],
 			output: {

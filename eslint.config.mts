@@ -1,11 +1,26 @@
 import js from '@eslint/js'
 import json from '@eslint/json'
 import markdown from '@eslint/markdown'
+import nx from '@nx/eslint-plugin'
 import { defineConfig } from 'eslint/config'
+import * as jsoncParser from 'jsonc-eslint-parser'
 import pluginImport from 'eslint-plugin-import-x'
 import pluginReact from 'eslint-plugin-react'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
+
+// Build tooling and test/story files are not part of what a consumer installs.
+const dependencyCheckOptions = {
+	buildTargets: ['build', 'build-ci'],
+	ignoredFiles: [
+		'{projectRoot}/vite.config.ts',
+		'{projectRoot}/vitest.config.ts',
+		'{projectRoot}/vitest.integration.config.ts',
+		'{projectRoot}/react-router.config.ts',
+		'{projectRoot}/**/*.stories.tsx',
+		'{projectRoot}/**/*.spec.{ts,tsx}'
+	]
+}
 
 export default defineConfig(tseslint.configs.recommended, [
 	{
@@ -168,6 +183,65 @@ export default defineConfig(tseslint.configs.recommended, [
 						'Literal[value=/(bg|text|border|from|via|to|fill|stroke|shadow|ring|outline|decoration|accent|caret)-\\[#[0-9a-fA-F]{3,8}/]',
 					message:
 						'Raw hex in a Tailwind class. Use a design token (bg-orange, text-muted-foreground, ds-raised) or, for a colour that must not follow the theme, a named constant with a comment saying why.'
+				}
+			]
+		}
+	},
+	{
+		// A project's manifest has to list what its source actually imports, and
+		// name the version the workspace installs. Nothing else enforces that:
+		// pnpm resolves an undeclared import by walking up to the root
+		// node_modules, so a manifest can be wrong for years and still build.
+		// This rule is also catalog-aware: it reports a hardcoded range when the
+		// catalog already owns that package, and offers `catalog:` as the fix.
+		files: ['**/package.json'],
+		ignores: [
+			'**/node_modules/**',
+			'**/dist/**',
+			'**/build/**',
+			// Leading slash anchors this to the repo root: the workspace's own
+			// manifest is not a project. Without it, flat config treats the
+			// pattern like a gitignore entry and skips every package.json.
+			'/package.json'
+		],
+		plugins: { '@nx': nx },
+		languageOptions: { parser: jsoncParser },
+		rules: {
+			'@nx/dependency-checks': ['error', dependencyCheckOptions]
+		}
+	},
+	{
+		// The viewer bundles these instead of externalizing them, so a consumer
+		// installs nothing for them. @shared/* are private workspace libraries
+		// that could not be installed even if they were declared.
+		files: ['packages/viewer/package.json'],
+		rules: {
+			'@nx/dependency-checks': [
+				'error',
+				{
+					...dependencyCheckOptions,
+					ignoredDependencies: [
+						'@vctrl/core',
+						'@shared/components',
+						'@shared/utils'
+					]
+				}
+			]
+		}
+	},
+	{
+		// @vctrl/embed imports only types from @vctrl/viewer, and vite-plugin-dts
+		// inlines them into the emitted declarations. A consumer of the SDK needs
+		// nothing from the viewer at runtime or at type-check time, so declaring
+		// it as a dependency would pull three and the whole renderer into every
+		// install of a package whose point is to be framework-agnostic.
+		files: ['packages/embed/package.json'],
+		rules: {
+			'@nx/dependency-checks': [
+				'error',
+				{
+					...dependencyCheckOptions,
+					ignoredDependencies: ['@vctrl/viewer']
 				}
 			]
 		}

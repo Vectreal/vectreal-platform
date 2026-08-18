@@ -63,6 +63,7 @@
 		"three": "catalog:"
 	},
 	"dependencies": {
+		"@gltf-transform/core": "catalog:",
 		"@vctrl/core": "workspace:^",
 		"file-saver": "catalog:"
 	},
