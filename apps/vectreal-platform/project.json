@@ -78,7 +78,8 @@
 					"apps/vectreal-platform/tests/**/*.ts",
 					"apps/vectreal-platform/tests/**/*.tsx",
 					"apps/vectreal-platform/vitest.config.ts",
-					"apps/vectreal-platform/vitest.integration.config.ts"
+					"apps/vectreal-platform/vitest.integration.config.ts",
+					"apps/vectreal-platform/package.json"
 				]
 			}
 		},

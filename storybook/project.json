@@ -17,14 +17,43 @@
 			"dependsOn": [
 				"typecheck",
 				{
-					"projects": ["vctrl/viewer"],
+					"projects": [
+						"vctrl/viewer"
+					],
 					"target": "typecheck-storybook"
 				}
 			],
-			"outputs": ["{projectRoot}/storybook-static"],
+			"outputs": [
+				"{projectRoot}/storybook-static"
+			],
 			"options": {
 				"command": "storybook build --stats-json",
 				"cwd": "storybook"
+			}
+		},
+		"lint": {
+			"executor": "@nx/eslint:lint",
+			"outputs": [
+				"{options.outputFile}"
+			],
+			"options": {
+				"lintFilePatterns": [
+					"storybook/**/*.{ts,tsx,js,jsx}",
+					"storybook/package.json"
+				]
+			}
+		},
+		"lint-fix": {
+			"executor": "@nx/eslint:lint",
+			"outputs": [
+				"{options.outputFile}"
+			],
+			"options": {
+				"fix": true,
+				"lintFilePatterns": [
+					"storybook/**/*.{ts,tsx,js,jsx}",
+					"storybook/package.json"
+				]
 			}
 		}
 	}

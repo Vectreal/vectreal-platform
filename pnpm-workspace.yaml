@@ -1,3 +1,35 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+  - 'shared/*'
+  - 'storybook'
+
+# One version per dependency, for the whole repo.
+#
+# Every manifest that needs one of these references `catalog:` instead of
+# naming a range, so a bump happens here and nowhere else. `pnpm publish`
+# and `pnpm pack` substitute the real range, which is also what removes the
+# need for a custom manifest rewriter before publishing.
+#
+# Only dependencies shared by more than one manifest belong here. Anything a
+# single package owns stays in that package's own manifest.
+catalog:
+  '@gltf-transform/core': ^4.4.2
+  '@gltf-transform/extensions': ^4.4.2
+  '@gltf-transform/functions': ^4.4.2
+  '@nx/vite': 23.1.1
+  '@react-three/drei': ^10.7.8
+  '@react-three/fiber': ^9.7.0
+  '@react-three/postprocessing': ^3.0.4
+  '@vitejs/plugin-react': ^6.0.5
+  file-saver: ^2.0.5
+  jszip: ^3.10.1
+  meshoptimizer: ^1.2.0
+  postprocessing: ^6.39.4
+  three: ^0.185.1
+  vite: ^8.2.1
+  vite-plugin-dts: 5.0.3
+
 onlyBuiltDependencies:
   - '@swc/core'
   - '@tailwindcss/oxide'

@@ -7,7 +7,21 @@
 	"targets": {
 		"lint": {
 			"executor": "@nx/eslint:lint",
-			"outputs": ["{options.outputFile}"],
+			"outputs": [
+				"{options.outputFile}"
+			],
+			"options": {
+				"lintFilePatterns": [
+					"packages/hooks/**/*.{ts,tsx,js,jsx}",
+					"packages/hooks/package.json"
+				]
+			}
+		},
+		"lint-fix": {
+			"executor": "@nx/eslint:lint",
+			"outputs": [
+				"{options.outputFile}"
+			],
 			"options": {
 				"fix": true,
 				"lintFilePatterns": [
@@ -17,16 +31,20 @@
 			}
 		},
 		"publish": {
-			"dependsOn": ["prepare-publish"],
+			"dependsOn": [
+				"copy-md"
+			],
 			"executor": "nx:run-commands",
 			"outputs": [],
 			"options": {
 				"command": "pnpm publish --no-git-checks --access public",
-				"cwd": "build/packages/vctrl/hooks"
+				"cwd": "packages/hooks"
 			}
 		},
 		"copy-md": {
-			"dependsOn": ["build"],
+			"dependsOn": [
+				"build"
+			],
 			"executor": "nx:run-commands",
 			"outputs": [],
 			"options": {
@@ -35,17 +53,11 @@
 				]
 			}
 		},
-		"prepare-publish": {
-			"dependsOn": ["copy-md"],
-			"executor": "nx:run-commands",
-			"outputs": [],
-			"options": {
-				"command": "node tools/publish/rewrite-manifest.mjs --dir build/packages/vctrl/hooks"
-			}
-		},
 		"build": {
 			"executor": "@nx/vite:build",
-			"outputs": ["{options.outputPath}"],
+			"outputs": [
+				"{options.outputPath}"
+			],
 			"options": {
 				"outputPath": "build/packages/vctrl/hooks",
 				"configFile": "packages/hooks/vite.config.ts"
@@ -53,7 +65,9 @@
 		},
 		"build-ci": {
 			"executor": "@nx/vite:build",
-			"outputs": ["{options.outputPath}"],
+			"outputs": [
+				"{options.outputPath}"
+			],
 			"options": {
 				"outputPath": "build/packages/vctrl/hooks",
 				"configFile": "packages/hooks/vite.config.ts"

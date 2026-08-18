@@ -140,6 +140,8 @@ pnpm nx reset
 3. Nx is used to run build and publish targets only. Do not use `nx release` in this repository.
 4. Internal dependencies between co-developed packages must use `workspace:*` unless there is a documented exception.
 5. The app at `apps/vectreal-platform` uses `workspace:*` for `@vctrl/*` dependencies to stay lockstep with local package development.
+6. A third-party version shared by more than one manifest belongs in the `catalog:` block of `pnpm-workspace.yaml`, referenced as `"catalog:"`. Do not repeat the range in a package manifest.
+7. `pnpm publish` resolves `workspace:` and `catalog:` while packing. Publish from the package source directory, never from `build/`. `publishConfig.directory` points pnpm at the built output.
 
 ---
 

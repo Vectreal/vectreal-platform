@@ -79,6 +79,9 @@ RUN addgroup -g 1001 -S nodejs && \
 
 # Copy runtime dependencies and application artifacts from build stages.
 COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+# The repo is a pnpm workspace, so a dependency declared by the app installs
+# into the app's own node_modules rather than the root one.
+COPY --from=deps --chown=nodejs:nodejs /app/apps/vectreal-platform/node_modules ./apps/vectreal-platform/node_modules
 COPY --from=deps --chown=nodejs:nodejs /app/package.json ./package.json
 COPY --from=build --chown=nodejs:nodejs /app/build/apps/vectreal-platform ./build/apps/vectreal-platform
 COPY --chown=nodejs:nodejs apps/vectreal-platform/server.mjs ./apps/vectreal-platform/server.mjs

@@ -191,49 +191,42 @@ jobs:
         run: npx nx report
         shell: bash
 
-      - name: Prepare released packages for publish
-        # prepare-publish chains build -> copy-md -> rewrite-manifest, so this
-        # builds all four packages AND rewrites their built manifests: strips
-        # devDependencies and resolves `workspace:*` @vctrl/* deps to `^<version>`.
-        # The leak-guard below then runs on already-rewritten manifests.
-        run: pnpm nx run-many -t prepare-publish -p vctrl/core vctrl/hooks vctrl/viewer vctrl/embed
+      - name: Build released packages
+        # copy-md chains build, so this produces the publishable output for all
+        # four packages. Each package's publishConfig.directory points pnpm at
+        # that output, and `pnpm publish` substitutes the `workspace:` and
+        # `catalog:` specifiers itself.
+        run: pnpm nx run-many -t copy-md -p vctrl/core vctrl/hooks vctrl/viewer vctrl/embed
         shell: bash
 
-      - name: Guard - no workspace specifiers in built manifests
+      - name: Guard - no unresolved specifiers in the packed tarballs
         shell: bash
         run: |
           set -euo pipefail
-          # Safety net for the prepare-publish rewrite. release-please v4 does NOT
-          # rewrite the `workspace:` protocol (by design), so tools/publish/rewrite-manifest.mjs
-          # (run by the prepare-publish step above) resolves every `workspace:*` @vctrl/*
-          # dep to a real version. If any survive into a built manifest's consumer-facing
-          # fields, the published package is broken (uninstallable, or pnpm silently drops
-          # the dep). Fail loudly here rather than ship it. devDependencies are stripped by
-          # the rewrite, so they cannot leak.
-          node -e '
-            const fs = require("fs");
-            const manifests = [
-              "build/packages/vctrl/core/package.json",
-              "build/packages/vctrl/hooks/package.json",
-              "build/packages/vctrl/viewer/package.json",
-              "build/packages/vctrl/embed/package.json"
-            ];
-            const fields = ["dependencies", "peerDependencies", "optionalDependencies"];
-            let bad = false;
-            for (const m of manifests) {
-              const pkg = JSON.parse(fs.readFileSync(m, "utf8"));
+          # `pnpm publish` substitutes `workspace:` and `catalog:` while packing,
+          # so the built manifest still carries them and only the tarball shows
+          # what consumers receive. Pack each package and read that.
+          for p in core hooks viewer embed; do
+            rm -rf /tmp/packcheck && mkdir -p /tmp/packcheck
+            ( cd "packages/$p" && pnpm pack --pack-destination /tmp/packcheck >/dev/null )
+            tar -xzf /tmp/packcheck/*.tgz -C /tmp/packcheck
+            node -e '
+              const fs = require("fs");
+              const pkg = JSON.parse(fs.readFileSync("/tmp/packcheck/package/package.json", "utf8"));
+              const fields = ["dependencies", "peerDependencies", "optionalDependencies"];
+              let bad = false;
               for (const f of fields) {
                 for (const [name, spec] of Object.entries(pkg[f] || {})) {
-                  if (typeof spec === "string" && spec.startsWith("workspace:")) {
-                    console.error(`LEAK: ${m} ${f}.${name} = ${spec}`);
+                  if (typeof spec === "string" && /^(workspace|catalog):/.test(spec)) {
+                    console.error(`LEAK: ${pkg.name} ${f}.${name} = ${spec}`);
                     bad = true;
                   }
                 }
               }
-            }
-            if (bad) { console.error("Refusing to publish: unrewritten workspace specifiers."); process.exit(1); }
-            console.log("OK: no workspace specifiers in consumer-facing fields.");
-          '
+              if (bad) { console.error("Refusing to publish: unresolved specifiers."); process.exit(1); }
+              console.log(`OK: ${pkg.name}`);
+            '
+          done
 
       - name: Diagnostics - npm trusted publishing context
         shell: bash

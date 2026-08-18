@@ -29,7 +29,8 @@
 	"type": "module",
 	"sideEffects": false,
 	"publishConfig": {
-		"access": "public"
+		"access": "public",
+		"directory": "../../build/packages/vctrl/embed"
 	},
 	"exports": {
 		".": {
@@ -37,5 +38,8 @@
 			"import": "./index.js",
 			"require": "./index.cjs"
 		}
+	},
+	"devDependencies": {
+		"@vctrl/viewer": "workspace:^"
 	}
 }
