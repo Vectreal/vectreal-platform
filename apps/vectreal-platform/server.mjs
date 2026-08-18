@@ -5,7 +5,7 @@ import morgan from 'morgan'
 import { existsSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 
-import { toSinglePathForm } from './server-url-form.mjs'
+import { isSafeRedirectPath, toSinglePathForm } from './server-url-form.mjs'
 
 /**
  * Production server.
@@ -78,7 +78,7 @@ app.use((req, res, next) => {
 	const [pathname, search = ''] = req.url.split('?')
 	const target = toSinglePathForm(pathname)
 
-	if (target !== pathname) {
+	if (target !== pathname && isSafeRedirectPath(target)) {
 		return res.redirect(301, search ? `${target}?${search}` : target)
 	}
 
