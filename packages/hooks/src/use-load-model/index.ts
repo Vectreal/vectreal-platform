@@ -6,6 +6,7 @@ export {
 	type ModelSource,
 	type ModelSourceKind,
 	type ModelState,
+	type OptimizerIntegrationReturn,
 	type SceneLoadResult,
 	type ServerSceneData,
 	type StructuredLoadError,

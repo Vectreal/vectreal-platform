@@ -237,10 +237,6 @@ export function buildOptimizationReport(
 			meshes: {
 				before: originalReport ? calculateMeshSize(originalReport) : 0,
 				after: calculateMeshSize(currentInspectReport)
-			},
-			nodes: {
-				before: 0, // Node count not available in inspect report
-				after: 0
 			}
 		}
 	}

@@ -18,7 +18,7 @@ on:
       - 'pnpm-workspace.yaml'
       - 'nx.json'
       - 'eslint.config.mts'
-      - 'vitest.shared.ts'
+      - 'vitest.shared.mts'
       - 'tsconfig.base.json'
       - '.github/workflows/ci-quality.yaml'
       - '.github/workflows/cd-platform-staging.yaml'

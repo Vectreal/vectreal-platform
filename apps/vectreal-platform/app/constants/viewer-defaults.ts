@@ -1,5 +1,4 @@
 import type {
-	AccumulativeShadowsProps,
 	BoundsProps,
 	CameraProps,
 	ControlsProps,
@@ -57,8 +56,7 @@ export const defaultEnvOptions: EnvironmentProps = {
 	backgroundBlurriness: 0.5
 }
 
-export const defaultShadowOptions: AccumulativeShadowsProps = {
-	type: 'accumulative',
+export const defaultShadowsOptions: ShadowsProps = {
 	enabled: false,
 	temporal: true,
 	// Fewer frames settle faster / appear sooner (see scene-shadows.tsx).
@@ -101,25 +99,41 @@ export const defaultShadowOptions: AccumulativeShadowsProps = {
 }
 
 /**
- * Coerces stored shadow settings to a valid accumulative config. Contact shadows
- * are now an internal animating-only fallback (never user-selected), so legacy
- * `contact` or partial configs are normalized to the accumulative defaults while
- * preserving `enabled`. Accumulative configs are merged over the defaults so a
- * partial save still fills in any missing fields.
+ * Shadow settings as they may appear in a stored scene. Scenes saved before
+ * shadows collapsed to a single configuration carry a `type` tag; current saves
+ * carry none. (`ShadowsProps` inherits an unrelated `type` from three's
+ * `Object3D` via drei, so the legacy tag is spelled out here rather than
+ * borrowed from it.)
  */
-export const normalizeShadowOptions = (stored?: ShadowsProps): ShadowsProps => {
-	if (stored?.type === 'accumulative') {
+type StoredShadowSettings = Partial<Omit<ShadowsProps, 'type'>> & {
+	/** `'accumulative'` or `'contact'` on legacy rows, absent on current saves. */
+	type?: string
+}
+
+/**
+ * Coerces stored shadow settings into a valid config, merging over the defaults
+ * so a partial save still fills in any missing fields.
+ *
+ * A legacy `'contact'` tag described a mode the viewer no longer has, so only
+ * its enabled flag survives. The tag itself is dropped either way.
+ */
+export const normalizeShadowOptions = (
+	stored?: StoredShadowSettings
+): ShadowsProps => {
+	if (!stored || stored.type === 'contact') {
 		return {
-			...defaultShadowOptions,
-			...stored,
-			light: { ...defaultShadowOptions.light, ...stored.light },
-			contact: { ...defaultShadowOptions.contact, ...stored.contact }
+			...defaultShadowsOptions,
+			enabled: stored?.enabled ?? defaultShadowsOptions.enabled
 		}
 	}
 
+	const { type: _legacyType, ...settings } = stored
+
 	return {
-		...defaultShadowOptions,
-		enabled: stored?.enabled ?? defaultShadowOptions.enabled
+		...defaultShadowsOptions,
+		...settings,
+		light: { ...defaultShadowsOptions.light, ...settings.light },
+		contact: { ...defaultShadowsOptions.contact, ...settings.contact }
 	}
 }
 

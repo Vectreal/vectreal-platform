@@ -16,10 +16,12 @@ export interface OptimizationInfo {
 
 /**
  * Interface representing the state of the model optimizer.
+ *
+ * `OptimizationInfo` is not part of it: it is derived from `report` on every
+ * render by `useCalcOptimizationInfo`, never stored.
  */
 export interface OptimizationState {
 	report: OptimizationReport | null
-	info: OptimizationInfo | null
 	error: Error | null
 	loading: boolean
 }

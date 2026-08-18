@@ -1,6 +1,6 @@
 # Vectreal Platform App
 
-The main Vectreal Platform application — a full-stack React Router v7 app with SSR, Supabase auth, Drizzle ORM, and Supabase Storage.
+The main Vectreal Platform application: a full-stack React Router v7 app with SSR, Supabase auth, Drizzle ORM, and Supabase Storage.
 
 > **Full documentation**: [vectreal.com/docs](https://vectreal.com/docs)
 
@@ -14,7 +14,7 @@ The main Vectreal Platform application — a full-stack React Router v7 app with
 | Auth        | Supabase Auth (email/password + Google/GitHub OAuth) |
 | Database    | PostgreSQL via Supabase + Drizzle ORM                |
 | Storage     | Supabase Storage (`assets` bucket)                   |
-| 3D pipeline | `@vctrl/hooks` (browser) + `@vctrl/core` (server)    |
+| 3D pipeline | `@vctrl/hooks` (React hooks) + `@vctrl/core` (isomorphic) |
 | UI          | Radix UI + Tailwind CSS v4 (`@shared/components`)    |
 | Build       | Vite + Nx                                            |
 
@@ -24,8 +24,8 @@ The main Vectreal Platform application — a full-stack React Router v7 app with
 
 ### Prerequisites
 
-- Node.js 21+, pnpm 10+, Docker (for local Supabase)
-- Supabase CLI: `npm i -g supabase`
+- Node.js 22.22+, pnpm 10+, Docker (for local Supabase)
+- The Supabase CLI is installed by `pnpm install`; a global install is not supported
 
 ### Quick start
 
@@ -35,7 +35,7 @@ pnpm install
 
 # 2. Copy and configure environment (paths are relative to the repo root)
 cp .env.development.example .env.development
-# Edit .env.development — see "Environment variables" below
+# Edit .env.development, see "Environment variables" below
 
 # 3. Start local Supabase
 # The Supabase project lives at apps/vectreal-platform/supabase/, so use the Nx
@@ -96,7 +96,7 @@ app/
 
 ## Database migrations
 
-This app uses a **Supabase-first migration flow** — Drizzle generates SQL, Supabase CLI applies it.
+This app uses a **Supabase-first migration flow**: Drizzle generates SQL, the Supabase CLI applies it.
 
 ```bash
 # Generate SQL from schema changes
@@ -123,7 +123,7 @@ pnpm nx dev vectreal-platform                # Dev server (http://localhost:4200
 pnpm nx run vectreal-platform:dev-react-compiler # Experimental dev server with React Compiler enabled
 pnpm nx build vectreal-platform              # Production build
 pnpm nx test vectreal-platform               # Unit tests (coverage lands in coverage/)
-pnpm nx run vectreal-platform:test-integration  # DB integration tests (pnpm supabase start first)
+pnpm nx run vectreal-platform:test-integration  # DB integration tests (run supabase-start first)
 pnpm nx lint vectreal-platform               # ESLint
 pnpm nx run vectreal-platform:drizzle-generate  # Generate DB migration SQL
 pnpm nx run vectreal-platform:supabase-db-reset # Reset local DB
@@ -186,4 +186,4 @@ To add a new docs page:
 
 ## License
 
-AGPL-3.0-only — see [`../../LICENSE.md`](../../LICENSE.md).
+AGPL-3.0-only, see [`../../LICENSE.md`](../../LICENSE.md).

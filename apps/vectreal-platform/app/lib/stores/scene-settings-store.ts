@@ -6,7 +6,7 @@ import {
 	defaultControlsOptions,
 	defaultEnvOptions,
 	defaultNormalizationOptions,
-	defaultShadowOptions
+	defaultShadowsOptions
 } from '../../constants/viewer-defaults'
 
 import type {
@@ -32,7 +32,7 @@ const selectedCameraIdAtom = atom<string>(
 const controlsAtom = atom<ControlsProps>(defaultControlsOptions)
 const environmentAtom = atom<EnvironmentProps>(defaultEnvOptions)
 const interactionsAtom = atom<SceneSettings['interactions']>(undefined)
-const shadowsAtom = atom<ShadowsProps>(defaultShadowOptions)
+const shadowsAtom = atom<ShadowsProps>(defaultShadowsOptions)
 const normalizationAtom = atom<NormalizationOptions>(
 	defaultNormalizationOptions
 )

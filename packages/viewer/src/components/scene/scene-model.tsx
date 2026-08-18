@@ -162,7 +162,9 @@ const buildScreenshotDataUrl = async (
 }
 
 /**
- * SceneModel component that renders a 3D model in a `Stage`.
+ * Renders the loaded model, applies runtime size normalization, and owns the
+ * per-frame near/far plane management and screenshot capture. Framing is handled
+ * by `SceneBounds` and `SceneCamera`; the viewer does not use Drei's `Stage`.
  */
 const SceneModel = memo((props: ModelProps) => {
 	const {

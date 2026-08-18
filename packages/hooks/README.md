@@ -105,7 +105,7 @@ files so the optimizer can ingest exactly what the viewer renders.
 | `source`       | `'files' \| 'scene-data' \| 'server' \| null`     | What the current state came from                                  |
 | `load(source)` | `Promise<ModelState>`                             | Load a model; resolves to the terminal state                      |
 | `reset`        | `() => void`                                      | Clear the current model and retire any load in flight             |
-| `optimizer`    | `OptimizerIntegrationReturn \| null`              | Populated when the hook is called with `useOptimizeModel()`       |
+| `optimizer`    | `OptimizerIntegrationReturn<true> \| null`        | Populated when the hook is called with `useOptimizeModel()`       |
 
 ### Error codes
 
@@ -200,20 +200,28 @@ function ExportButton({ file }: { file: ModelFile | null }) {
 
 ### Methods
 
-| Method                                                         | Description                                                         |
-| -------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `handleThreeGltfExport(file, binary)`                          | Export a loaded Three.js model to `.glb` or a zipped `.gltf` bundle |
-| `handleDocumentGltfExport(document, file, binary?, download?)` | Export from a glTF-Transform `Document`                             |
+| Method                                                         | Description                                                            |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `handleThreeGltfExport(file, binary)`                          | Export a loaded Three.js model to `.glb` or a zipped `.gltf` bundle    |
+| `handleThreeUsdzExport(file)`                                  | Export a loaded Three.js model to `.usdz` for AR QuickLook             |
+| `handleDocumentGltfExport(document, file, binary?, download?)` | Export from a glTF-Transform `Document`                                |
+| `handleDocumentGlbDracoExport(document, file)`                 | Export a `Document` to `.glb` with Draco geometry compression          |
 
-`binary = true` writes `.glb`; `binary = false` writes a zipped `.gltf` package.
+`binary = true` writes `.glb`; `binary = false` writes a zipped `.gltf` package. Pass
+`download = false` to `handleDocumentGltfExport` to get the `GLTFExportResult` back
+instead of saving a file.
 
 ---
 
 ## Additional exports
 
-- `reconstructGltfFiles` from `@vctrl/hooks`
+- `reconstructGltfFiles` and `createBrowserTextureEncoder` from `@vctrl/hooks`
 - `ModelProvider` and `useModelContext` from `@vctrl/hooks/use-load-model`
-- Shared types such as `ModelFile`, `SceneLoadResult`, and `ServerSceneData`
+- Shared types such as `ModelFile`, `SceneLoadResult`, `ServerSceneData`, and `OptimizerIntegrationReturn`
+
+`createBrowserTextureEncoder()` returns the `OffscreenCanvas` encoder the hook injects
+into `texturesOptimization`. Pass it to `@vctrl/core`'s `compressTextures({ encoder })`
+when driving the optimizer directly.
 
 ---
 
@@ -222,7 +230,12 @@ function ExportButton({ file }: { file: ModelFile | null }) {
 | Package | Version        |
 | ------- | -------------- |
 | `react` | `^18 \|\| ^19` |
-| `three` | `^0.177`       |
+| `three` | see below      |
+
+Install `three` yourself and declare it explicitly in your own `package.json`, so your
+project resolves exactly one copy: Three.js uses global singletons internally and
+duplicate instances produce subtle rendering bugs. Let your package manager resolve the
+version against the declared peer range rather than pinning one from this document.
 
 ---
 

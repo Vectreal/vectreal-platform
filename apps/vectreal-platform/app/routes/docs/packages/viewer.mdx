@@ -41,6 +41,7 @@ function App() {
 | Prop | Type | Required | Description |
 |---|---|---|---|
 | `model` | `Object3D` | No* | The Three.js scene to display. *Optional when rendering via `children` instead. |
+| `children` | `React.ReactNode` | No | Scene content rendered inside the canvas, alongside or instead of `model` |
 | `className` | `string` | No | Additional CSS classes for the viewer container |
 | `theme` | `'light' \| 'dark' \| 'system'` | No | Viewer theme, default is `system` |
 | `enableViewportRendering` | `boolean` | No | Render only while in viewport (default `true`) |
@@ -50,6 +51,10 @@ function App() {
 | `controlsOptions` | `ControlsProps` | No | OrbitControls configuration |
 | `envOptions` | `EnvironmentProps` | No | Drei `Environment` configuration |
 | `shadowsOptions` | `ShadowsProps` | No | Shadow behavior configuration |
+| `normalizationOptions` | `NormalizationOptions` | No | Clamps the model's bounding-box diagonal at runtime, without touching the model data |
+| `shadowLightEditable` | `boolean` | No | Renders an in-scene draggable handle for aiming the shadow light. Editing surfaces only |
+| `staticShadowBake` | `boolean` | No | Bakes the accumulative shadow in one pass on mount instead of fading it in (default `false`) |
+| `bakedShadow` | `BakedShadow` | No | A persisted shadow bake to render instead of recomputing one |
 | `popover` | `React.ReactNode` | No | Optional info popover slot |
 | `loader` | `React.ReactNode` | No | Custom loading UI |
 | `loadingThumbnail` | `ViewerLoadingThumbnail` | No | Optional blurred loading thumbnail |
@@ -58,11 +63,15 @@ function App() {
 | `onCameraSnapshotCaptureReady` | `(capture: SceneCameraSnapshotCapture \| null) => void` | No | Receives a capture function for the current camera pose |
 | `onInteractionEvent` | `(event: ViewerInteractionEvent) => void` | No | Receives viewer lifecycle and runtime interaction events |
 | `onCommandExecutorReady` | `(executor: ViewerCommandExecutor \| null) => void` | No | Receives a minimal imperative runtime command executor |
+| `onShadowBakeReady` | `(capture: ShadowBakeCapture \| null) => void` | No | Receives a function that captures the settled shadow bake as a density PNG |
+| `onShadowLightChange` | `(position: [number, number, number]) => void` | No | Called with a new shadow light position, in model-size units, while the handle is dragged |
+| `onRawDiagonalComputed` | `(diagonal: number) => void` | No | Called with the pre-normalization bounding-box diagonal whenever the model changes |
 
 ### Notes on content source
 
-- `model` is optional because you can also render scene content via `children`.
-- Grid options are currently typed but not active in render output.
+`model` is optional because you can also render scene content via `children`. With neither, nothing renders.
+
+The editor affordances (`shadowLightEditable`, `staticShadowBake`, `bakedShadow`, `onShadowBakeReady`, `onShadowLightChange`) exist for editing surfaces such as the Publisher. Public and embedded viewers omit them.
 
 ---
 
@@ -206,7 +215,7 @@ Example:
 
 **Shadows are off by default** (`enabled` defaults to `false`), so every example below needs `enabled: true` to render anything.
 
-The `ShadowsProps` type is a `type`-discriminated union (`'accumulative' | 'contact'`), but the viewer does not branch on it: whatever you pass is merged over the accumulative defaults and rendered as Drei `AccumulativeShadows`. A contact shadow is not a separate mode, it is an opt-in extra pass configured under the nested `contact` key.
+Whatever you pass is merged over the defaults below and rendered as Drei `AccumulativeShadows`. The soft ground pool is not a separate mode, it is an opt-in extra pass configured under the nested `contact` key.
 
 Several numeric options are relative to the model's measured size rather than world units: `scale` is a multiple of the model footprint, and `light.radius` and `light.position` are in model-size units. This keeps the bake proportioned for any model.
 
@@ -214,7 +223,6 @@ Viewer defaults:
 
 | Option | Default |
 |---|---|
-| `type` | `'accumulative'` |
 | `enabled` | `false` |
 | `temporal` | `true` |
 | `frames` | `48` |
@@ -290,13 +298,14 @@ The callback types are exported from `@vctrl/viewer` as `SceneScreenshotCapture`
 
 `SceneScreenshotOptions`:
 
-| Option | Type | Description |
-|---|---|---|
-| `width` | `number` | Output width in pixels |
-| `height` | `number` | Output height in pixels |
-| `mimeType` | `'image/jpeg' \| 'image/webp'` | Output format |
-| `quality` | `number` | Image quality hint for lossy output |
-| `mode` | `'auto-fit' \| 'viewport'` | Capture strategy |
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `width` | `number` | `1280` | Output width in pixels |
+| `height` | `number` | `720` | Output height in pixels |
+| `mimeType` | `'image/jpeg' \| 'image/webp'` | `'image/webp'` | Output format |
+| `quality` | `number` | `0.86` | Image quality hint for lossy output |
+| `mode` | `'auto-fit' \| 'viewport'` | `'auto-fit'` | Capture strategy |
+| `targetCameraId` | `string` | none | Transition to this camera, capture, then return to the original camera |
 
 ---
 
@@ -328,13 +337,15 @@ Current commands:
 
 ### Events
 
-`onInteractionEvent(event)` emits the current viewer runtime events:
+`onInteractionEvent(event)` receives a `ViewerInteractionEvent`. The runtime emits three of them:
 
 | Event | Payload | Meaning |
 |---|---|---|
 | `viewer_ready` | none | Viewer runtime is ready to accept commands |
 | `initial_framing_completed` | `{ cameraId: string \| null }` | Initial framing and stabilization completed |
 | `camera_changed` | `{ cameraId: string }` | Active camera changed |
+
+`ViewerInteractionEvent` also declares `model_loaded` and `auto_rotate_changed`. Both belong to the union a handler has to narrow, and neither is emitted by the current runtime.
 
 ### Example
 
@@ -384,6 +395,36 @@ function ViewerRuntimeExample({ model }: { model: object }) {
 }
 ```
 
+## Scene components and defaults
+
+`@vctrl/viewer` also exports the scene components `VectrealViewer` composes, each with the
+default options object it merges over. Import them to build a custom canvas, or to start
+from a viewer default and override a field:
+
+| Export | Default options |
+|---|---|
+| `SceneBounds` | `defaultBoundsOptions` |
+| `SceneCamera` | `defaultCameraOptions` |
+| `SceneControls` | `defaultControlsOptions` |
+| `SceneEnvironment` | `defaultEnvOptions` |
+| `SceneShadows` | `defaultShadowsOptions` |
+| `SceneModel` | none |
+| `ScenePostProcessing` | none |
+
+```tsx
+import { defaultControlsOptions, VectrealViewer } from '@vctrl/viewer'
+
+<VectrealViewer
+  controlsOptions={{ ...defaultControlsOptions, autoRotate: true }}
+/>
+```
+
+The info popover slot is built from `InfoPopover`, `InfoPopoverTrigger`,
+`InfoPopoverContent`, `InfoPopoverText`, `InfoPopoverCloseButton` and
+`InfoPopoverVectrealFooter`, all exported from the same entry point.
+
+---
+
 ## Integration with `@vctrl/hooks`
 
 The viewer is designed to be used alongside [`@vctrl/hooks`](/docs/packages/hooks). Wrap your app with `ModelProvider` and consume the loaded model via `useModelContext`, then pass it to the `model` prop:
@@ -426,12 +467,6 @@ pnpm nx storybook storybook
 ```
 
 The viewer has no unit-test target. Its behavior is covered by the Playwright suite in `packages/viewer-e2e`.
-
----
-
-## Notes
-
-- Grid configuration is not currently active in `VectrealViewer` render flow.
 
 ---
 

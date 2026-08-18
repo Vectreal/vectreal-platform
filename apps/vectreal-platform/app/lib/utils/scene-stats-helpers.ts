@@ -129,10 +129,7 @@ function buildSceneStatsSnapshot(
 			: report.stats.texturesCount.after,
 		materialsCount: isBaseline
 			? report.stats.materials.before
-			: report.stats.materials.after,
-		nodesCount: isBaseline
-			? report.stats.nodes.before
-			: report.stats.nodes.after
+			: report.stats.materials.after
 	}
 }
 

@@ -19,20 +19,20 @@ pnpm nx affected --target=lint          # only affected projects
 
 # Tests
 pnpm nx test vectreal-platform          # unit tests (coverage always written to coverage/)
-pnpm nx run vectreal-platform:test-integration  # DB integration tests; needs `pnpm supabase start`
+pnpm nx run vectreal-platform:test-integration  # DB integration tests; needs the supabase-start target below
 pnpm nx affected --target=test          # only affected projects
 
 # Type-check
 pnpm nx typecheck vectreal-platform     # runs react-router typegen + tsc --noEmit
 
-# Storybook (one workspace-wide instance, aggregates shared/components + packages/viewer)
+# Storybook (one workspace-wide instance; see Monorepo Structure for what it aggregates)
 pnpm nx storybook storybook             # dev server
 pnpm nx build-storybook storybook       # static build for Chromatic
 
 # Drizzle migrations
 pnpm nx run vectreal-platform:drizzle-generate
 
-# Supabase (local) — DB, Auth, Storage, Studio
+# Supabase (local): DB, Auth, Storage, Studio
 # The Supabase project lives at apps/vectreal-platform/supabase/, so go through the
 # Nx target: the CLI would not find config.toml from the repo root.
 # There are no Edge Functions in this repo.
@@ -51,14 +51,16 @@ Always run tasks via `nx` rather than the underlying tool (e.g. use `nx lint`, n
 ```
 apps/vectreal-platform/    # Full-stack React Router v7 SSR app
 packages/
-  viewer/                  # @vctrl/viewer — React 3D viewer component
-  hooks/                   # @vctrl/hooks — browser-side model loading/optimization
-  core/                    # @vctrl/core — Isomorphic 3D model processing (Node.js + browser/Web Worker)
+  viewer/                  # @vctrl/viewer: React 3D viewer component
+  hooks/                   # @vctrl/hooks: browser-side model loading/optimization
+  core/                    # @vctrl/core: isomorphic 3D model processing (Node.js + browser/Web Worker)
+  embed/                   # @vctrl/embed: framework-agnostic SDK for embedded previews
 shared/
   components/              # Shared Radix UI / shadcn-based component library
   utils/                   # Shared utility functions
-storybook/                 # Standalone Storybook host — owns no stories, aggregates
-                           # shared/components and packages/viewer into one instance
+storybook/                 # Standalone Storybook host; owns no stories, aggregates
+                           # shared/components, packages/viewer and the platform
+                           # app's app/components into one instance
 terraform/                 # Cloudflare only: DNS, Turnstile widgets, cache rules, page rules
 ```
 
@@ -125,11 +127,11 @@ React Router v7 in framework mode with SSR. Route config lives in `app/routes.ts
 - Client: the module is pure and client-safe, so components call `canPerformDashboardOperation` directly to gate affordances. Loaders ship a `DashboardCapabilityMap` from `buildDashboardCapabilities`.
 - Adding an operation means adding it to `DashboardOperation` and the table; a missing rule is a compile error.
 
-Note that Postgres RLS is **inert for app traffic** — `db/client.ts` connects with a plain connection string and no `set local role`, so `auth.uid()` is null and every policy is bypassed. This table is the only authorization that runs.
+Note that Postgres RLS is **inert for app traffic**: `db/client.ts` connects with a plain connection string and no `set local role`, so `auth.uid()` is null and every policy is bypassed. This table is the only authorization that runs.
 
 ### Dashboard mutations
 
-Create, rename, move and delete for projects, folders and scenes go through `POST /api/dashboard/mutations` (`dashboard-mutations.ts` for the contract, `dashboard-mutations.server.ts` for execution). Client side, use `useDashboardMutations`. Destructive confirmations come from `planDeleteConfirmation` and render via `ConfirmDestructiveDialog` — the server recomputes the required tier itself, so client-supplied state is never trusted.
+Create, rename, move and delete for projects, folders and scenes go through `POST /api/dashboard/mutations` (`dashboard-mutations.ts` for the contract, `dashboard-mutations.server.ts` for execution). Client side, use `useDashboardMutations`. Destructive confirmations come from `planDeleteConfirmation` and render via `ConfirmDestructiveDialog`. The server recomputes the required tier itself, so client-supplied state is never trusted.
 
 ### Billing architecture
 
@@ -155,7 +157,7 @@ Components are in `shared/components/src/ui/` (shadcn-based, Radix UI primitives
 - **Versioning**: Managed by Release Please. Do not use `nx release`. Internal deps use `workspace:*`; shared third-party versions use `catalog:` and are declared in `pnpm-workspace.yaml`.
 - **Docs pages**: MDX files in `app/routes/docs/`. Adding a new page also requires a route in `app/routes.tsx` and an entry in the `docsPages` array in `app/lib/docs/docs-manifest.ts`, which is what `DocsTreeNav` renders.
 - **Server-only modules**: Files that must not be bundled client-side are named `*.server.ts`.
-- **Viewport height**: Size full-viewport surfaces with `h-dvh` / `min-h-dvh` — or `h-svh` where a shell owns the height and scrolls its own content, as `dashboard-layout.tsx` does. Never Tailwind's `screen` height utilities: they compile to `100vh`, the _large_ viewport, which overhangs persistent mobile browser chrome — pushing bottom-anchored UI behind the bar and leaving the page scrolled with no way back when a canvas holds `touch-action: none`. (Spelling those class names out here would be self-defeating: the Tailwind scanner reads this file and would re-emit the very utilities the codebase dropped.)
+- **Viewport height**: Size full-viewport surfaces with `h-dvh` / `min-h-dvh`, or `h-svh` where a shell owns the height and scrolls its own content, as `dashboard-layout.tsx` does. Never Tailwind's `screen` height utilities: they compile to `100vh`, the *large* viewport, which overhangs persistent mobile browser chrome, pushing bottom-anchored UI behind the bar and leaving the page scrolled with no way back when a canvas holds `touch-action: none`. (Spelling those class names out here would be self-defeating: the Tailwind scanner reads this file and would re-emit the very utilities the codebase dropped.)
 
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->

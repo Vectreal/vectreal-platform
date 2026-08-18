@@ -1,7 +1,7 @@
 {
 	"version": "0.25.1",
 	"name": "@vctrl/core",
-	"description": "vctrl/core is the foundational package providing server-side 3D model processing capabilities. It contains the core classes for loading, optimizing, and exporting 3D models using glTF-Transform and Three.js, designed for Node.js environments.",
+	"description": "vctrl/core is the foundational package providing isomorphic 3D model processing capabilities. It contains the core classes for loading, optimizing, and exporting 3D models using glTF-Transform and Three.js, and runs in Node.js, browsers and Web Workers alike.",
 	"bugs": {
 		"url": "https://github.com/Vectreal/vectreal-platform/issues"
 	},
@@ -15,7 +15,7 @@
 		"usdz",
 		"optimization",
 		"three",
-		"server-side",
+		"isomorphic",
 		"node",
 		"gltf-transform"
 	],

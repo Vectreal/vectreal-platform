@@ -16,10 +16,7 @@ export const PublisherViewCube = () => {
 	// on. At priority 2 the Hud skips that scene re-render and just overlays the
 	// cube on top of the composed frame. Mirror the viewer's AO gate so the cube
 	// and postprocessing coexist; without AO there's no composer, so 1 is correct.
-	const aoEnabled =
-		(shadows?.enabled ?? false) &&
-		shadows?.type === 'accumulative' &&
-		(shadows.ao ?? false)
+	const aoEnabled = (shadows?.enabled ?? false) && (shadows?.ao ?? false)
 
 	return (
 		<GizmoHelper

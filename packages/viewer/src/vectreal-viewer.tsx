@@ -18,12 +18,10 @@ import { Center } from '@react-three/drei'
 import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
 import {
-	AccumulativeShadowsProps,
 	BoundsProps,
 	CameraProps,
 	ControlsProps,
 	EnvironmentProps,
-	GridProps,
 	NormalizationOptions,
 	ShadowsProps
 } from '@vctrl/core'
@@ -148,11 +146,6 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * Does not modify the underlying model data.
 	 */
 	normalizationOptions?: NormalizationOptions
-
-	/**
-	 * Options for the grid.
-	 */
-	gridOptions?: GridProps
 
 	// --- Editor affordances ---
 	// Editing-surface features (e.g. the publisher). Public/embedded viewers omit
@@ -282,7 +275,6 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		envOptions,
 		shadowsOptions,
 		normalizationOptions,
-		// gridOptions,
 		// Editor affordances
 		shadowLightEditable,
 		staticShadowBake = false,
@@ -386,11 +378,9 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		isInitialFramingComplete
 	)
 	const shadowsEnabled = shadowsOptions?.enabled ?? false
-	// AO config lives on the accumulative shadow settings. It's gated on shadows
-	// being enabled so toggling shadows off also tears down the AO composer.
-	const accumulativeShadows =
-		shadowsOptions?.type === 'accumulative' ? shadowsOptions : undefined
-	const aoEnabled = shadowsEnabled && (accumulativeShadows?.ao ?? false)
+	// AO is gated on shadows being enabled so toggling shadows off also tears
+	// down the AO composer.
+	const aoEnabled = shadowsEnabled && (shadowsOptions?.ao ?? false)
 	return (
 		<Suspense fallback={loader}>
 			<Canvas
@@ -420,13 +410,12 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 				<Suspense fallback={null}>
 					{hasContent && (
 						<>
-							{/* <SceneGrid {...gridOptions} /> */}
 							<SceneEnvironment {...envOptions} />
 							{/* <Perf /> */}
 							{enablePostProcessing ? (
 								<ScenePostProcessing
 									ao={aoEnabled}
-									aoIntensity={accumulativeShadows?.aoIntensity}
+									aoIntensity={shadowsOptions?.aoIntensity}
 									model={model}
 								/>
 							) : null}
@@ -479,7 +468,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 								<SceneShadows
 									model={model}
 									normalizationOptions={normalizationOptions}
-									{...(shadowsOptions as Partial<AccumulativeShadowsProps>)}
+									{...shadowsOptions}
 									lightEditable={shadowLightEditable}
 									onLightChange={onShadowLightChange}
 									staticBake={staticShadowBake}

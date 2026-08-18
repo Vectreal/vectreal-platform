@@ -105,6 +105,11 @@ const embed = new VectrealEmbed(iframe, {
 })
 ```
 
+The constructor throws when it cannot determine a target origin, which happens when
+`iframeOrigin` is omitted and the iframe's `src` is empty or unparseable. Construct the
+SDK after the `src` is set, or pass `iframeOrigin` explicitly. Inbound messages from any
+other origin are dropped.
+
 ### Methods
 
 | Method | Signature | Description |
@@ -122,14 +127,22 @@ const embed = new VectrealEmbed(iframe, {
 | `off` | `(type, handler) => void` | Remove a specific handler. |
 | `destroy` | `() => void` | Remove all listeners and stop processing messages. |
 
+#### Calls made before the viewer is ready
+
+The camera and controls methods are queued and flushed once the viewer reports ready, so
+you can call them immediately after constructing the SDK. `sendScrollProgress` and
+`sendMessage` are not queued: they post straight to the iframe, and a call made before
+the viewer is ready is silently dropped. Await `ready()` before wiring a scroll handler
+or sending a host message. `destroy()` discards anything still queued.
+
 ### Events
 
 | Event type | Payload | When |
 |---|---|---|
 | `viewer_ready` | `void` | The viewer command surface is registered and ready. |
-| `model_loaded` | `void` | The model has finished loading and initial framing is complete. |
+| `model_loaded` | `void` | The model has finished loading and initial framing is complete. Fires once per load. |
 | `camera_changed` | `{ cameraId: string }` | The active camera changed. |
-| `auto_rotate_changed` | `{ enabled: boolean }` | Auto-rotate state changed. |
+| `auto_rotate_changed` | `{ enabled: boolean }` | Declared, but the viewer does not currently emit it. |
 | `interaction_event` | `{ eventName, interactionId?, payload? }` | A Publisher-configured `emit_custom_event` interaction fired. |
 
 ### `SetTransitionOptions`

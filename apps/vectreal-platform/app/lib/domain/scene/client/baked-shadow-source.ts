@@ -29,7 +29,7 @@ export const resolveBakedShadowSource = (
 	shadows: SceneSettings['shadows'] | undefined,
 	assetData: SerializedSceneAssetDataMap | null | undefined
 ): BakedShadow | undefined => {
-	if (!shadows || shadows.type !== 'accumulative' || !shadows.baked) {
+	if (!shadows?.baked) {
 		return undefined
 	}
 	if (!assetData) {

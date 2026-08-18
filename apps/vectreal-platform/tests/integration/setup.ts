@@ -2,8 +2,9 @@ const url = process.env.DATABASE_URL
 
 if (!url) {
 	throw new Error(
-		'DATABASE_URL is not set. Start the local stack with `pnpm supabase start`, ' +
-			'then run `pnpm nx run vectreal-platform:test-integration`.',
+		'DATABASE_URL is not set. Start the local stack with ' +
+			'`pnpm nx run vectreal-platform:supabase-start`, then run ' +
+			'`pnpm nx run vectreal-platform:test-integration`.',
 	)
 }
 

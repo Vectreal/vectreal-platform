@@ -340,7 +340,6 @@ export interface SceneStatsSnapshot {
 	// Texture asset count, not texture bytes.
 	readonly texturesCount?: number | null
 	readonly materialsCount?: number | null
-	readonly nodesCount?: number | null
 }
 
 /** Detail payload for scene stats refresh events. */

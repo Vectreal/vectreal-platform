@@ -32,7 +32,7 @@ const useExportModel = (
 
 				if (binary) {
 					// Export as GLB
-					const result = await exporter.exportThreeJSGLB(scene, {})
+					const result = await exporter.exportThreeJSGLB(scene)
 					if (!(result.data instanceof Uint8Array)) {
 						throw new Error('Expected GLB export to return Uint8Array')
 					}

@@ -122,11 +122,10 @@ const PublisherPage = () => {
 				clearTimeout(shadowLightCommitTimer.current)
 			}
 			shadowLightCommitTimer.current = setTimeout(() => {
-				setShadows((prev) =>
-					prev.type === 'accumulative'
-						? { ...prev, light: { ...prev.light, position } }
-						: prev
-				)
+				setShadows((prev) => ({
+					...prev,
+					light: { ...prev.light, position }
+				}))
 			}, SHADOW_LIGHT_COMMIT_DEBOUNCE_MS)
 		},
 		[setShadows]

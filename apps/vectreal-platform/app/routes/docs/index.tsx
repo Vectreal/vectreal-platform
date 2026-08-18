@@ -28,7 +28,8 @@ const DOCS_SECTIONS = [
 	{
 		icon: Code2,
 		title: 'Package Reference',
-		description: 'API docs for @vctrl/viewer, @vctrl/hooks, and @vctrl/core.',
+		description:
+			'API docs for @vctrl/embed, @vctrl/viewer, @vctrl/hooks, and @vctrl/core.',
 		href: '/docs/packages/viewer'
 	},
 	{

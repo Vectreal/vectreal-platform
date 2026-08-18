@@ -91,7 +91,7 @@ const HeroSceneClient = ({ vertical }: HeroSceneClientProps) => {
 				loader={<CenteredSpinner text="Loading model..." />}
 				controlsOptions={{ enabled: false }}
 				envOptions={{ preset: 'studio-key' }}
-				shadowsOptions={{ type: 'contact', opacity: 0 }}
+				shadowsOptions={{ enabled: false }}
 				boundsOptions={{ margin: 0.9 }}
 			>
 				<group rotation={vertical ? [0, 0, Math.PI / 4] : [0, 0, 0]}>

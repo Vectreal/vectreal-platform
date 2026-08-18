@@ -1,4 +1,3 @@
-import { defaultShadowOptions } from '../../../../../constants/viewer-defaults'
 
 import type { FieldConfig } from '../../../../../types/settings-field'
 
@@ -201,4 +200,3 @@ export const SHADOW_CONTACT_FIELDS: FieldConfig[] = [
 	}
 ]
 
-export { defaultShadowOptions }

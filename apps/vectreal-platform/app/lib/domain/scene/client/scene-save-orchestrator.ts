@@ -231,7 +231,7 @@ export const executeSceneSaveOrchestrator = async ({
 	let settingsForSave = currentSettings
 	let bakedShadowAssetId: string | null = null
 	const currentShadows = currentSettings.shadows
-	if (captureShadowBake && currentShadows?.type === 'accumulative') {
+	if (captureShadowBake && currentShadows) {
 		let bakedRef: typeof currentShadows.baked | undefined
 		try {
 			const bake = await captureShadowBake()

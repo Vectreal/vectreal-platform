@@ -4,7 +4,6 @@ import { Action, OptimizationState } from './types'
  * Initial state for the reducer.
  */
 export const initialState: OptimizationState = {
-	info: null,
 	error: null,
 	loading: false,
 	report: null

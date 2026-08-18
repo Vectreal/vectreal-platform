@@ -135,18 +135,14 @@ export async function loader() {
 		}))
 
 	// ── 3. Documentation pages ──────────────────────────────────────────────
+	// The docs root `/docs` is not a manifest entry; it is in staticEntries.
 	const docsEntries: SitemapEntry[] = docsPages.map((page) => ({
-		path: page.slug ? `/docs/${page.slug}` : '/docs',
+		path: `/docs/${page.slug}`,
 		changefreq: 'weekly' as const,
 		priority: '0.6'
 	}))
 
-	// Deduplicate by path (docs root `/docs` is already in staticEntries)
-	const allEntries = [
-		...staticEntries,
-		...newsEntries,
-		...docsEntries.filter((e) => e.path !== '/docs')
-	]
+	const allEntries = [...staticEntries, ...newsEntries, ...docsEntries]
 
 	const xml = buildXml(allEntries, origin)
 

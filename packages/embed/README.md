@@ -79,15 +79,25 @@ For production, pin a version (`@vctrl/embed@<version>`) and add a [Subresource 
 | `off(type, handler)`             | Remove a specific handler.                                     |
 | `destroy()`                      | Remove all listeners and stop processing messages.             |
 
+The camera and controls methods are queued and flushed once the viewer reports ready, so
+you can call them immediately after constructing the SDK. `sendScrollProgress` and
+`sendMessage` are not queued: they post straight to the iframe, and a call made before
+the viewer is ready is silently dropped. Await `ready()` before wiring a scroll handler
+or sending a host message. `destroy()` discards anything still queued.
+
+The constructor throws when it cannot determine a target origin, which happens when
+`iframeOrigin` is omitted and the iframe's `src` is empty or unparseable. Construct the
+SDK after the `src` is set, or pass `iframeOrigin` explicitly.
+
 ### Events
 
-| Type                  | Payload                                   | When                                                    |
-| --------------------- | ----------------------------------------- | ------------------------------------------------------- |
-| `viewer_ready`        | `void`                                    | Viewer command surface is registered.                   |
-| `model_loaded`        | `void`                                    | Model finished loading and initial framing is complete. |
-| `camera_changed`      | `{ cameraId }`                            | Active camera changed.                                  |
-| `auto_rotate_changed` | `{ enabled }`                             | Auto-rotate state changed.                              |
-| `interaction_event`   | `{ eventName, interactionId?, payload? }` | Publisher custom event fired.                           |
+| Type                  | Payload                                   | When                                                                         |
+| --------------------- | ----------------------------------------- | ---------------------------------------------------------------------------- |
+| `viewer_ready`        | `void`                                    | Viewer command surface is registered.                                        |
+| `model_loaded`        | `void`                                    | Model finished loading and initial framing is complete. Fires once per load. |
+| `camera_changed`      | `{ cameraId }`                            | Active camera changed.                                                       |
+| `auto_rotate_changed` | `{ enabled }`                             | Declared, but the viewer does not currently emit it.                         |
+| `interaction_event`   | `{ eventName, interactionId?, payload? }` | Publisher custom event fired.                                                |
 
 ## URL parameter shorthand
 
@@ -105,6 +115,6 @@ Full guide and examples: [vectreal.com/docs/guides/embed-sdk](https://vectreal.c
 
 ## License
 
-AGPL-3.0-only — see [LICENSE](https://github.com/vectreal/vectreal-platform/blob/main/LICENSE).
+AGPL-3.0-only. See [LICENSE.md](https://github.com/Vectreal/vectreal-platform/blob/main/LICENSE.md).
 
 Part of the [Vectreal Platform](https://github.com/vectreal/vectreal-platform) monorepo.

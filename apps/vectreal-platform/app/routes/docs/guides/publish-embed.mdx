@@ -117,8 +117,16 @@ Hosted preview iframes support a small `postMessage` protocol layered on top of 
 | `ping` | none | Announces the host origin so the iframe can start delivering messages, and asks for a `pong` |
 | `viewer_command` | `command: { type: 'activate_camera', cameraId: string }` | Activates one persisted scene camera |
 | `viewer_command` | `command: { type: 'set_controls_enabled', enabled: boolean }` | Temporarily enables or disables viewer orbit interaction |
+| `viewer_command` | `command: { type: 'set_transition', transitionType: 'none' \| 'linear' \| 'object_avoidance', duration?: number, easing?: string }` | Overrides the transition used by subsequent camera switches |
+| `viewer_command` | `command: { type: 'set_auto_rotate', enabled: boolean, speed?: number }` | Toggles and configures auto-rotation |
+| `viewer_command` | `command: { type: 'set_controls_options', zoom?: boolean, pan?: boolean }` | Enables or disables zoom and pan at runtime |
 | `host_scroll_progress` | `progress: number` | Reports normalized host scroll progress used by persisted `host_scroll_progress` interactions |
 | `host_message` | `message: string` | Triggers persisted `host_message` interactions by message name |
+
+Two field names differ between the SDK and the wire. `setTransition({ type })` sends
+`transitionType`, because `type` is already taken by the command envelope.
+`setZoomEnabled(enabled)` and `setPanEnabled(enabled)` both send `set_controls_options`,
+each carrying only its own field (`zoom` or `pan`), so a partial payload is normal.
 
 ### Preview to host messages
 

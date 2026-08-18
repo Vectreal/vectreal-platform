@@ -56,9 +56,7 @@ export const meta: MetaFunction<undefined, { root: RootLoader }> = (args) =>
 			...(categoryLabel && categorySlug !== slug
 				? [{ name: categoryLabel, item: `${SITE_URL}/docs/${categorySlug}` }]
 				: []),
-			...(page && page.title !== 'Documentation' && page.title !== categoryLabel
-				? [{ name: page.title }]
-				: [])
+			...(page && page.title !== categoryLabel ? [{ name: page.title }] : [])
 		]
 
 		if (!page) {
@@ -168,16 +166,14 @@ export default function DocsLayout() {
 									</BreadcrumbItem>
 								</>
 							)}
-							{page?.title &&
-								page.title !== categoryLabel &&
-								page.title !== 'Documentation' && (
-									<>
-										<BreadcrumbSeparator />
-										<BreadcrumbItem>
-											<BreadcrumbPage>{page.title}</BreadcrumbPage>
-										</BreadcrumbItem>
-									</>
-								)}
+							{page?.title && page.title !== categoryLabel && (
+								<>
+									<BreadcrumbSeparator />
+									<BreadcrumbItem>
+										<BreadcrumbPage>{page.title}</BreadcrumbPage>
+									</BreadcrumbItem>
+								</>
+							)}
 						</BreadcrumbList>
 					</Breadcrumb>
 				</div>

@@ -12,7 +12,7 @@ npm install @vctrl/core
 pnpm add @vctrl/core
 ```
 
-> `@vctrl/core` runs in Node.js, browsers, and edge runtimes. For server-side texture compression it can use [Sharp](https://sharp.pixelplumbing.com), but Sharp is an optional add-on rather than a hard dependency: install it yourself (`npm install sharp`) to enable the native path. Without it, `compressTextures` falls back to a basic optimization, and browser/edge callers inject their own encoder, so no native build is required for those targets.
+> **Texture compression is encoder-injectable.** `@vctrl/core` runs in Node.js, browsers, and edge runtimes. In Node.js it uses [Sharp](https://sharp.pixelplumbing.com) when you install it (`npm install sharp`); Sharp is an optional add-on, not a hard dependency. Elsewhere, pass your own `TextureCompressOptions.encoder`, so Sharp is never imported. `@vctrl/hooks` ships an `OffscreenCanvas`-based one as `createBrowserTextureEncoder()`, injects it for you inside `useOptimizeModel`, and exports it for direct use. With no encoder and no Sharp, `compressTextures` falls back to a basic optimization.
 
 ---
 
@@ -23,7 +23,7 @@ pnpm add @vctrl/core
 | `ModelLoader` | `@vctrl/core/model-loader` | Load model files into glTF-Transform `Document` or Three.js scenes |
 | `ModelOptimizer` | `@vctrl/core/model-optimizer` | Run optimization passes and export optimized output |
 | `ModelExporter` | `@vctrl/core/model-exporter` | Export `Document` or Three.js objects to GLB/GLTF |
-| `SceneAsset` | `@vctrl/core` | Scene asset serialization helpers and shared server payload types |
+| Scene asset helpers | `@vctrl/core` | Free functions for asset URI, MIME type and base64 handling, plus the shared server payload types |
 
 ---
 
@@ -91,23 +91,59 @@ await optimizer.compressTextures({ quality: 80 })
 const optimizedBuffer = await optimizer.export()
 ```
 
-### Methods
+### Loading
+
+| Method | Description |
+|---|---|
+| `loadFromThreeJS(model)` | Load a Three.js `Object3D` |
+| `loadFromBuffer(buffer)` | Load GLB binary data |
+| `loadFromFile(path)` | Load a GLB from a file path (Node) |
+| `loadFromJSON(json)` | Load a glTF `JSONDocument` with its resources |
+| `loadFromGLTFWithAssets(gltfBytes, assets)` | Load `.gltf` bytes plus a URI-to-bytes asset map, bypassing Three.js so the original texture URIs survive |
+
+### Optimization passes
 
 | Method | Options | Description |
 |---|---|---|
-| `loadFromThreeJS(model)` | - | Load a Three.js scene into optimizer |
-| `loadFromBuffer(buf)` | - | Load GLB binary data |
-| `loadFromFile(path)` | - | Load from file path |
-| `loadFromJSON(json)` | - | Load serialized glTF JSON/resources |
-| `simplify(opts)` | `{ ratio: number }` | Mesh simplification (0.0–1.0) |
-| `deduplicate(opts)` | `DedupOptions` | Remove duplicate geometry/material data |
-| `quantize(opts)` | `QuantizeOptions` | Reduce precision to reduce size |
+| `simplify(opts)` | `SimplifyOptions` | Mesh simplification |
+| `deduplicate(opts)` | `DedupOptions` | Remove duplicate accessors, meshes, textures and materials |
+| `quantize(opts)` | `QuantizeOptions` | Reduce vertex attribute precision |
 | `optimizeNormals(opts)` | `NormalsOptions` | Recompute/normalize normal data |
 | `compressTextures(opts)` | `TextureCompressOptions` | Texture compression via an injectable encoder (Sharp on Node.js by default) |
-| `optimizeAll(opts)` | `{ simplify?, dedup?, quantize?, normals?, textures? }` | Run batch optimization passes |
-| `getReport()` | - | Return before/after optimization metrics |
-| `export()` / `exportJSON()` | - | Export optimized GLB or JSON glTF document |
-| `hasModel()` / `reset()` | - | Model state utilities |
+| `compressGeometry(opts)` | `DracoOptions` | Replace the loaded document with a Draco-compressed copy |
+| `optimizeAll(opts)` | see below | Run every pass above except Draco, in a fixed order |
+
+### Draco measurement
+
+| Method | Description |
+|---|---|
+| `measureDracoCompression(opts)` | Draco-encode a throwaway clone and return a `DracoCompressionReport`, leaving the loaded document untouched |
+| `setDracoReport(report)` | Adopt a measurement produced elsewhere, for example inside the geometry Web Worker. `null` clears it |
+
+`compressGeometry` skips the swap and warns when the measurement's `isWorthApplying` is
+false, which happens on small or texture-dominated models where Draco produces a larger
+GLB than leaving the geometry uncompressed.
+
+### Textures
+
+| Method | Description |
+|---|---|
+| `listTextureDescriptors()` | `TextureDescriptor[]`: index, canonical file name, name, MIME type, byte length |
+| `getTexturePayload(index)` | `TextureBinaryPayload`: the descriptor plus the image bytes |
+| `replaceTexturePayload(index, image, mimeType, fileName?)` | Swap one texture's bytes and re-sync its URI and name |
+| `normalizeAllTextureURIs(doc?)` | Canonicalize every texture URI and name. Passing a document also adopts it as the loaded one |
+
+### Report and state
+
+| Method | Description |
+|---|---|
+| `getReport()` | Before/after optimization metrics |
+| `getBaseline()` / `setBaseline(baseline)` | Read or restore the load-time baseline the report is measured against. Restoring matters after a worker hands back optimized bytes, so the baseline is not re-taken on them |
+| `getAppliedOptimizations()` / `addAppliedOptimization(name)` / `setAppliedOptimizations(names)` | The list of applied steps carried in the report |
+| `export()` / `exportJSON()` | Export the optimized GLB or glTF JSON document |
+| `hasModel()` / `reset()` | Model state utilities |
+| `document` | The loaded glTF-Transform `Document`. Throws if nothing is loaded |
+| `onProgress(callback)` | Receive `OperationProgress` updates from every pass |
 
 ### Optimization options reference
 
@@ -120,12 +156,7 @@ const optimizedBuffer = await optimizer.export()
 
 #### `deduplicate(options?: DedupOptions)`
 
-| Option | Type | Notes |
-|---|---|---|
-| `textures` | `boolean` | Forwarded to glTF-Transform `dedup()` |
-| `materials` | `boolean` | Forwarded to glTF-Transform `dedup()` |
-| `meshes` | `boolean` | Forwarded to glTF-Transform `dedup()` |
-| `accessors` | `boolean` | Forwarded to glTF-Transform `dedup()` |
+Removes duplicate accessors, meshes, textures and materials via glTF-Transform `dedup()`.
 
 #### `quantize(options?: QuantizeOptions)`
 
@@ -141,6 +172,22 @@ const optimizedBuffer = await optimizer.export()
 | Option | Type | Notes |
 |---|---|---|
 | `overwrite` | `boolean` | Recompute normals even when normals already exist |
+
+#### `compressGeometry(options?: DracoOptions)` and `measureDracoCompression(options?: DracoOptions)`
+
+| Option | Type | Default | Notes |
+|---|---|---|---|
+| `method` | `'edgebreaker' \| 'sequential'` | `'edgebreaker'` | Draco encoding method |
+| `encodeSpeed` | `number` | `5` | 0 to 10. Slower encoding produces smaller output |
+| `decodeSpeed` | `number` | `5` | 0 to 10 |
+| `quantizePosition` | `number` | `14` | Position quantization bits |
+| `quantizeNormal` | `number` | `10` | Normal quantization bits |
+| `quantizeColor` | `number` | `8` | Color quantization bits |
+| `quantizeTexcoord` | `number` | `12` | Texture coordinate quantization bits |
+| `quantizeGeneric` | `number` | `12` | Generic attribute quantization bits |
+
+Defaults come from glTF-Transform's `draco()`. Draco encoding requires a browser or Web
+Worker environment.
 
 #### `compressTextures(options?: TextureCompressOptions)`
 
@@ -175,9 +222,15 @@ Execution order is fixed:
 2. `deduplicate` (unless `false`)
 3. `quantize` (unless `false`)
 4. `optimizeNormals` (unless `false`)
-5. `compressTextures` (only when `textures` is provided)
+5. `compressTextures` (unless `false`)
 
-Calling `optimizeAll()` with no arguments runs simplify, dedup, quantize, and normals. Texture compression is opt-in.
+Every pass runs with its own defaults unless you set it to `false`, so `optimizeAll()`
+with no arguments runs all five. Draco is not part of `optimizeAll`: call
+`compressGeometry` for it.
+
+Texture compression needs an encoder. Outside Node.js, pass one as `textures.encoder` or
+set `textures: false`; without one the pass warns and falls back to a dedup and prune of
+the texture set.
 
 ### `getReport()` return structure
 
@@ -186,7 +239,8 @@ Calling `optimizeAll()` with no arguments runs simplify, dedup, quantize, and no
 - `originalSize`, `optimizedSize`
 - `compressionRatio` (`originalSize / optimizedSize`)
 - `appliedOptimizations`
-- `stats` before/after metrics for vertices, triangles, materials, texture size in bytes (`textures`), texture asset count (`texturesCount`), `textureResolutions`, meshes, and nodes
+- `stats` before/after metrics for vertices, triangles, materials, texture size in bytes (`textures`), texture asset count (`texturesCount`), `textureResolutions`, and mesh payload size in bytes (`meshes`)
+- `draco`, a `DracoCompressionReport`, only when a Draco measurement has been recorded. Draco compression is deferred until write time, so `stats.meshes` always reflects uncompressed geometry
 
 ```typescript
 const report = await optimizer.getReport()
@@ -204,7 +258,7 @@ import { ModelExporter } from '@vctrl/core/model-exporter'
 const exporter = new ModelExporter()
 
 // Export Three.js scene as binary GLB
-const glb = await exporter.exportThreeJSGLB(scene, {})
+const glb = await exporter.exportThreeJSGLB(scene)
 
 // Export Three.js scene as glTF + assets map
 const gltf = await exporter.exportThreeJSGLTF(scene)
@@ -218,13 +272,13 @@ const zip = await exporter.createZIPArchive(gltf, 'model')
 | Method | Description |
 |---|---|
 | `exportDocumentGLB(document)` | Export glTF-Transform `Document` to GLB |
+| `exportDocumentGLBDraco(document, options?)` | Export `Document` to GLB with Draco geometry compression |
 | `exportDocumentGLTF(document)` | Export `Document` to GLTF JSON + assets |
-| `exportThreeJSGLB(object, options)` | Export Three.js object to GLB |
+| `exportThreeJSGLB(object)` | Export Three.js object to GLB |
+| `exportThreeJSUSDZ(object)` | Export Three.js object to USDZ |
 | `exportThreeJSGLTF(object)` | Export Three.js object to GLTF JSON + assets |
 | `createZIPArchive(result, baseName?)` | Bundle GLTF + assets into zip |
-| `saveToFile(result, filePath)` | Persist export result on Node filesystem |
-
-`exportThreeJSGLB(object, options)` accepts `modifiedTextureResources` in its options type, but that field is currently ignored for direct Three.js GLB export.
+| `saveToFile(result, filePath)` | Persist any export result on the Node filesystem |
 
 ---
 
@@ -258,11 +312,10 @@ export async function POST(request: Request) {
 
 ## Requirements
 
-| Requirement | Version |
-|---|---|
-| Node.js | 18 or later |
+`@vctrl/core` declares no `engines` field. The Vectreal workspace it is developed in
+requires Node.js 22.22 or later.
 
-`sharp` is **optional**, not required (this workspace tracks `^0.35.3`). Install it only to enable native server-side texture compression; without it, `compressTextures` falls back to basic optimization (see the note at the top of this page). Browser and edge callers inject their own encoder and need no native build.
+`sharp` is **optional**, not required (this workspace tracks `^0.35.3`). Install it only to enable native server-side texture compression; without it, `compressTextures` falls back to basic optimization (see the note at the top of this page). Browser and edge callers inject their own encoder, `createBrowserTextureEncoder()` from `@vctrl/hooks` being the ready-made one, and need no native build.
 
 ---
 

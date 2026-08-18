@@ -43,7 +43,7 @@ If you read [the Publisher walkthrough](https://vectreal.com/news-room/the-vectr
 
 But most of the people who reach for Vectreal next are React developers who want the scene inside their own app - sharing layout, state, theming, and routing with the rest of the product. That is what `@vctrl/viewer` is for. It is the same renderer the Publisher itself uses, packaged as a React component you can import, configure, and ship.
 
-This guide takes you from a fresh React project to a viewer rendering in production. Every snippet is verified against `@vctrl/viewer` version 0.24.1. The package is pre-1.0 and under active development, so we will flag what is stable and what may move.
+This guide takes you from a fresh React project to a viewer rendering in production. Every snippet is verified against `@vctrl/viewer` version 0.25.1. The package is pre-1.0 and under active development, so we will flag what is stable and what may move.
 
 {/*
 HERO IMAGE BRIEF - inline, top of "Why This Guide Exists"
@@ -70,9 +70,8 @@ A short, honest list:
 
 | Requirement | Version | Notes |
 |---|---|---|
-| Node.js | 20 or newer | Required by the underlying tooling |
 | React | 18 or 19 | Declared as a peer dependency |
-| Three.js | 0.177.x | Declared as a peer dependency - install alongside `@vctrl/viewer` |
+| Three.js | latest matching the peer range | Declared as a peer dependency; install it alongside `@vctrl/viewer` so your project resolves one copy |
 | A published Vectreal scene | - | If you don't have one yet, [the Publisher walkthrough](https://vectreal.com/news-room/the-vectreal-publisher-walkthrough) gets you there in a few minutes |
 
 The viewer ships its own CSS bundle, which you import once. There is no Tailwind dependency, no global stylesheet collision risk, and no required theme provider - though the viewer respects a light/dark/system theme prop if you want it to follow yours.
@@ -145,7 +144,7 @@ Content: Browser window showing the minimal viewer rendering a model - neutral e
 
 The minimum example assumed a model was already in context. In production you will more often load a Vectreal-hosted published scene by its scene ID - the identifier displayed after you click **Publish** in the Publisher.
 
-`useLoadModel` exposes `loadFromServer`, which fetches a scene from the Vectreal API by ID, resolves the GLTF payload and settings, and loads the result into the viewer.
+`useLoadModel` exposes a single `load(source)`. Pass it a `{ kind: 'server', sceneId }` source and it fetches the scene from the Vectreal API by ID, resolves the GLTF payload and settings, and loads the result into the viewer.
 
 ```tsx
 import { useEffect } from 'react'
@@ -156,14 +155,15 @@ import '@vctrl/viewer/css'
 const SCENE_ID = 'your-scene-id'
 
 function Scene() {
-  const { loadFromServer, file } = useLoadModel()
+  const { load, file } = useLoadModel()
 
   useEffect(() => {
-    void loadFromServer({
+    void load({
+      kind: 'server',
       sceneId: SCENE_ID,
       serverOptions: { endpoint: `/api/scenes/${SCENE_ID}` }
     })
-  }, [loadFromServer])
+  }, [load])
 
   return <VectrealViewer model={file?.model} />
 }
@@ -177,7 +177,7 @@ export default function App() {
 }
 ```
 
-> `loadFromServer` is designed for the Vectreal scene API and expects a structured JSON response with the GLTF payload and scene settings. If you want to load a model from an arbitrary CDN URL, fetch the file yourself and pass it to `load([file])` instead. For private scenes that require an API key, see the [API keys guide](https://vectreal.com/news-room/api-keys-101) - pass the key via `serverOptions.apiKey`.
+> The `'server'` source is designed for the Vectreal scene API and expects a structured JSON response with the GLTF payload and scene settings. To load a model from an arbitrary CDN URL, fetch the file yourself and pass it as `load({ kind: 'files', files: [file] })` instead. For private scenes that require an API key, see the [API keys guide](https://vectreal.com/news-room/api-keys-101) - pass the key via `serverOptions.apiKey`.
 
 ---
 
@@ -214,14 +214,15 @@ import '@vctrl/viewer/css'
 import { useEffect } from 'react'
 
 function Scene({ sceneId }: { sceneId: string }) {
-  const { loadFromServer, file } = useLoadModel()
+  const { load, file } = useLoadModel()
 
   useEffect(() => {
-    void loadFromServer({
+    void load({
+      kind: 'server',
       sceneId,
       serverOptions: { endpoint: `/api/scenes/${sceneId}` }
     })
-  }, [loadFromServer, sceneId])
+  }, [load, sceneId])
 
   return <VectrealViewer model={file?.model} />
 }
@@ -415,14 +416,15 @@ import { VectrealViewer } from '@vctrl/viewer'
 import '@vctrl/viewer/css'
 
 function Scene({ sceneId }: { sceneId: string }) {
-  const { loadFromServer, file } = useLoadModel()
+  const { load, file } = useLoadModel()
 
   useEffect(() => {
-    void loadFromServer({
+    void load({
+      kind: 'server',
       sceneId,
       serverOptions: { endpoint: `/api/scenes/${sceneId}` }
     })
-  }, [loadFromServer, sceneId])
+  }, [load, sceneId])
 
   return (
     <VectrealViewer
@@ -485,10 +487,9 @@ A short, honest list of what you should know before shipping:
 | Topic | Status |
 |---|---|
 | React 18 / 19 | Both supported |
-| Three.js peer dep | `^0.177.0` - install alongside `@vctrl/viewer` |
+| Three.js peer dep | Install alongside `@vctrl/viewer`, one copy per project |
 | SSR | Supported via the client-only pattern shown above |
 | WebXR / AR | Three.js supports WebXR, but a first-class viewer prop is on the roadmap, not yet shipped |
-| Grid configuration | Typed but not currently active in the render flow |
 | Custom HDR files | Supported via `envOptions.files` |
 | Screenshot capture | Supported via `onScreenshot` and `onScreenshotCaptureReady` callbacks |
 | Versioning | Pre-1.0 - minor versions may include breaking changes; pin in production |

@@ -7,7 +7,7 @@ import {
 	defaultControlsOptions,
 	defaultEnvOptions,
 	defaultNormalizationOptions,
-	defaultShadowOptions,
+	defaultShadowsOptions,
 	normalizeShadowOptions
 } from '../../constants/viewer-defaults'
 import {
@@ -133,7 +133,7 @@ export function useResetSceneState() {
 		setInteractions(undefined)
 		setCamera(defaultCameraOptions)
 		setControls(defaultControlsOptions)
-		setShadows(defaultShadowOptions)
+		setShadows(defaultShadowsOptions)
 		setNormalization(defaultNormalizationOptions)
 		setHotspots([])
 		setSelectedCameraId(

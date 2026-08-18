@@ -26,15 +26,14 @@ export function editOnGithubUrl(sourcePath: string): string {
 
 /** Top-level groupings shown in the sidebar. */
 export type DocCategory =
-	| 'overview'
-	| 'getting-started'
-	| 'guides'
-	| 'packages'
-	| 'operations'
-	| 'contributing'
+	'getting-started' | 'guides' | 'packages' | 'operations' | 'contributing'
 
 export interface DocPage {
-	/** URL segment after /docs (e.g. "getting-started/installation") */
+	/**
+	 * URL segment after /docs (e.g. "getting-started/installation"), never empty.
+	 * The /docs landing page is not a manifest entry: it renders outside the docs
+	 * layout, so it has no sidebar, no Edit on GitHub link and no prev/next.
+	 */
 	slug: string
 	/** Human-readable title used in the sidebar and <title>. */
 	title: string
@@ -58,7 +57,6 @@ export interface DocPage {
 }
 
 export const DOC_CATEGORY_LABELS: Record<DocCategory, string> = {
-	overview: 'Overview',
 	'getting-started': 'Getting Started',
 	guides: 'Guides',
 	packages: 'Package Reference',
@@ -68,7 +66,6 @@ export const DOC_CATEGORY_LABELS: Record<DocCategory, string> = {
 
 /** Ordered list of categories as they appear in the sidebar. */
 export const DOC_CATEGORY_ORDER: DocCategory[] = [
-	'overview',
 	'getting-started',
 	'guides',
 	'packages',
@@ -77,20 +74,6 @@ export const DOC_CATEGORY_ORDER: DocCategory[] = [
 ]
 
 export const docsPages: DocPage[] = [
-	// ──────────────────────────────────────────────────────────────────────────
-	// Overview
-	// ──────────────────────────────────────────────────────────────────────────
-	{
-		slug: '',
-		title: 'Documentation',
-		description:
-			'Everything you need to build with the Vectreal Platform and its open-source packages.',
-		sourcePath: 'apps/vectreal-platform/app/routes/docs/index.mdx',
-		category: 'overview',
-		order: 0,
-		version: 'latest'
-	},
-
 	// ──────────────────────────────────────────────────────────────────────────
 	// Getting Started
 	// ──────────────────────────────────────────────────────────────────────────
@@ -135,7 +118,7 @@ export const docsPages: DocPage[] = [
 		slug: 'guides/upload',
 		title: 'Uploading Models',
 		description:
-			'Supported file formats, drag-and-drop behaviour, and multi-file glTF bundles.',
+			'Supported file formats, drag-and-drop behavior, and multi-file glTF bundles.',
 		sourcePath: 'apps/vectreal-platform/app/routes/docs/guides/upload.mdx',
 		category: 'guides',
 		order: 0,
@@ -200,7 +183,7 @@ export const docsPages: DocPage[] = [
 		slug: 'packages/hooks',
 		title: '@vctrl/hooks',
 		description:
-			'React hooks for loading, optimising, and exporting 3D models in the browser.',
+			'React hooks for loading, optimizing, and exporting 3D models in the browser.',
 		sourcePath: 'apps/vectreal-platform/app/routes/docs/packages/hooks.mdx',
 		category: 'packages',
 		order: 2,
@@ -210,7 +193,7 @@ export const docsPages: DocPage[] = [
 		slug: 'packages/core',
 		title: '@vctrl/core',
 		description:
-			'Server-side 3D model processing - loader, optimizer, and exporter for Node.js.',
+			'Isomorphic 3D model processing - loader, optimizer, and exporter for Node.js and the browser.',
 		sourcePath: 'apps/vectreal-platform/app/routes/docs/packages/core.mdx',
 		category: 'packages',
 		order: 3,
@@ -224,7 +207,7 @@ export const docsPages: DocPage[] = [
 		slug: 'operations/deployment',
 		title: 'Deployment',
 		description:
-			'GCP Cloud Run deployment with Terraform and GitHub Actions CI/CD.',
+			'Fly.io deployment with Cloudflare edge configuration and GitHub Actions CI/CD.',
 		sourcePath:
 			'apps/vectreal-platform/app/routes/docs/operations/deployment.mdx',
 		category: 'operations',

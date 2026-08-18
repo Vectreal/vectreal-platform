@@ -70,16 +70,9 @@ export function useOptimizerIntegration(
 
 	if (!instance) return null as OptimizerIntegrationReturn<boolean>
 
-	const isReady = instance.isReady
-	const isPreparing = Boolean(file?.model) && !isReady
-
 	return {
 		...instance,
-		isReady,
-		isPreparing,
-		applyOptimization,
-		reset: instance?.reset,
-		error: instance?.error,
-		loading: instance?.loading
+		isPreparing: Boolean(file?.model) && !instance.isReady,
+		applyOptimization
 	} as OptimizerIntegrationReturn<boolean>
 }

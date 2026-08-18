@@ -24,7 +24,6 @@ import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 import { canLoadDracoInBrowser, loadDracoModule } from '../draco/load-draco-module'
 import { OperationProgress } from '../types'
 import {
-	ExportOptions,
 	ExportResult,
 	GLBExportResult,
 	GLTFExportResult,
@@ -91,7 +90,6 @@ export class ModelExporter {
 	 * Export a glTF-Transform document as GLB binary.
 	 *
 	 * @param document - The glTF-Transform document
-	 * @param options - Export options
 	 * @returns Promise resolving to the export result
 	 */
 	public async exportDocumentGLB(document: Document): Promise<GLBExportResult> {
@@ -171,7 +169,6 @@ export class ModelExporter {
 	 * Export a glTF-Transform document as GLTF JSON with separate assets.
 	 *
 	 * @param document - The glTF-Transform document
-	 * @param options - Export options
 	 * @returns Promise resolving to the export result
 	 */
 	public async exportDocumentGLTF(
@@ -224,13 +221,9 @@ export class ModelExporter {
 	 * Export a Three.js Object3D as GLB binary.
 	 *
 	 * @param object - The Three.js Object3D
-	 * @param options - Export options
 	 * @returns Promise resolving to the export result
 	 */
-	public async exportThreeJSGLB(
-		object: Object3D,
-		options: ExportOptions
-	): Promise<GLBExportResult> {
+	public async exportThreeJSGLB(object: Object3D): Promise<GLBExportResult> {
 		const startTime = Date.now()
 		this.emitProgress('Exporting Three.js object to GLB', 0)
 		try {
@@ -248,12 +241,6 @@ export class ModelExporter {
 			const exportTime = Date.now() - startTime
 
 			this.emitProgress('Export completed', 100)
-
-			if (options.modifiedTextureResources) {
-				console.warn(
-					'modifiedTextureResources is ignored for direct Three.js GLB export'
-				)
-			}
 
 			return {
 				data: binary,
@@ -392,8 +379,8 @@ export class ModelExporter {
 
 			this.emitProgress('Saving to file system', 0)
 
-			if (result.format === 'glb') {
-				// Save GLB file
+			if (result.format === 'glb' || result.format === 'usdz') {
+				// Save the binary payload as-is
 				await fs.writeFile(filePath, result.data as Uint8Array)
 			} else {
 				// Save GLTF with assets

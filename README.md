@@ -98,9 +98,11 @@ The main variables required for local development are:
 | `SUPABASE_KEY`       | Supabase anon key from `supabase status`                     |
 | `SUPABASE_SECRET_KEY`| Supabase service-role key, used server-side for asset storage |
 | `DATABASE_URL`       | PostgreSQL connection string for the local Supabase database |
-| `CSRF_SECRET`        | Long random string for CSRF token signing                    |
+| `SEND_EMAIL_HOOK_SECRET` | Auth email hook secret. Ships blank in the example file and Supabase will not start without it |
 
-Model assets are stored in Supabase Storage (the `assets` bucket), which is created automatically on first upload. Values above are printed by `pnpm supabase start`.
+`CSRF_SECRET` is not in the example file and is optional locally: outside production the app falls back to a development value. Set it in production.
+
+Model assets are stored in Supabase Storage (the `assets` bucket), which is created automatically on first upload. `SUPABASE_URL`, `SUPABASE_KEY` and `SUPABASE_SECRET_KEY` are printed by the `supabase-start` target in the next step.
 
 ### 4. Start the local Supabase stack
 
@@ -143,16 +145,16 @@ Full walkthrough: [Your First Model](https://vectreal.com/docs/getting-started/f
 
 ## Architecture Overview
 
-The monorepo is organised into three layers:
+The monorepo is organized into three layers:
 
 ```text
 vectreal-platform/
 ├── apps/vectreal-platform/   # Full-stack React Router v7 app (this site)
 ├── packages/
-│   ├── viewer/               # @vctrl/viewer — React 3D viewer component
-│   ├── hooks/                # @vctrl/hooks — browser-side loading and optimisation hooks
-│   ├── core/                 # @vctrl/core — isomorphic model processing
-│   └── embed/                # @vctrl/embed — SDK for controlling embedded scenes
+│   ├── viewer/               # @vctrl/viewer: React 3D viewer component
+│   ├── hooks/                # @vctrl/hooks: browser-side loading and optimization hooks
+│   ├── core/                 # @vctrl/core: isomorphic model processing
+│   └── embed/                # @vctrl/embed: SDK for controlling embedded scenes
 ├── shared/
 │   ├── components/           # Shared Radix UI component library
 │   └── utils/                # Shared utility functions

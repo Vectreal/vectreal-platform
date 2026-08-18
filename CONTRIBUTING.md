@@ -6,13 +6,14 @@ Thank you for your interest in contributing! This guide will get you from zero t
 
 ## Prerequisites
 
-| Tool         | Minimum version | Install                            |
-| ------------ | --------------- | ---------------------------------- |
-| Node.js      | >= 21.0.0       | [nodejs.org](https://nodejs.org)   |
-| pnpm         | >= 10.x         | `npm i -g pnpm`                    |
-| Docker       | any recent      | [docker.com](https://docker.com)   |
-| Supabase CLI | latest          | `npm i -g supabase`                |
-| Git          | any recent      | [git-scm.com](https://git-scm.com) |
+| Tool    | Minimum version | Install                            |
+| ------- | --------------- | ---------------------------------- |
+| Node.js | >= 22.22.0      | [nodejs.org](https://nodejs.org)   |
+| pnpm    | >= 10.x         | `npm i -g pnpm`                    |
+| Docker  | any recent      | [docker.com](https://docker.com)   |
+| Git     | any recent      | [git-scm.com](https://git-scm.com) |
+
+The Supabase CLI is installed by `pnpm install`; a global install is not supported.
 
 Optional but recommended: [Nx Console](https://marketplace.visualstudio.com/items?itemName=nrwl.angular-console) extension for VS Code.
 

@@ -29,8 +29,6 @@ import { CollapsibleSectionTrigger } from '../../accordion-components'
 import type { FieldConfig } from '../../../../../types/settings-field'
 import type { ShadowsProps } from '@vctrl/core'
 
-type AccumulativeShadowConfig = Extract<ShadowsProps, { type: 'accumulative' }>
-
 interface ShadowFieldProps {
 	field: FieldConfig
 	idPrefix: string
@@ -103,17 +101,16 @@ const ShadowSettingsPanel = () => {
 	// debounce) for a single, snappy re-bake.
 	const handleApplyPreset = (preset: ShadowPreset) => {
 		if (commitTimer.current) clearTimeout(commitTimer.current)
-		const accumulative = draft as AccumulativeShadowConfig
-		const next = {
+		const next: ShadowsProps = {
 			...draft,
 			opacity: preset.values.opacity,
 			light: {
-				...accumulative.light,
+				...draft.light,
 				ambient: preset.values.light.ambient,
 				radius: preset.values.light.radius,
 				position: preset.values.light.position
 			}
-		} as ShadowsProps
+		}
 		setDraft(next)
 		setShadows(next)
 	}
@@ -122,14 +119,13 @@ const ShadowSettingsPanel = () => {
 	// no per-tick re-bake to debounce.
 	const handleToggleAo = (value: boolean) => {
 		if (commitTimer.current) clearTimeout(commitTimer.current)
-		const accumulative = draft as AccumulativeShadowConfig
-		const next = {
+		const next: ShadowsProps = {
 			...draft,
 			ao: value,
 			// Seed a sensible strength the first time AO is turned on so its slider
 			// (min 0.5) isn't left below range on scenes saved before AO existed.
-			...(value && accumulative.aoIntensity == null ? { aoIntensity: 1.4 } : {})
-		} as ShadowsProps
+			...(value && draft.aoIntensity == null ? { aoIntensity: 1.4 } : {})
+		}
 		setDraft(next)
 		setShadows(next)
 	}
@@ -137,36 +133,33 @@ const ShadowSettingsPanel = () => {
 	// The ground (contact) shadow's enabled flag is nested under `contact`.
 	const handleToggleContact = (value: boolean) => {
 		if (commitTimer.current) clearTimeout(commitTimer.current)
-		const accumulative = draft as AccumulativeShadowConfig
-		const next = {
+		const next: ShadowsProps = {
 			...draft,
-			contact: { ...accumulative.contact, enabled: value }
-		} as ShadowsProps
+			contact: { ...draft.contact, enabled: value }
+		}
 		setDraft(next)
 		setShadows(next)
 	}
 
-	const current = draft as AccumulativeShadowConfig
 	const activePresetId =
 		SHADOW_PRESETS.find(
 			(preset) =>
-				preset.values.opacity === current.opacity &&
-				preset.values.light.ambient === current.light?.ambient &&
-				preset.values.light.radius === current.light?.radius
+				preset.values.opacity === draft.opacity &&
+				preset.values.light.ambient === draft.light?.ambient &&
+				preset.values.light.radius === draft.light?.radius
 		)?.id ?? null
 
 	const handleFieldChange = (key: string, value: number | string) => {
 		// "Darkness" is a virtual control: it drives the bake light's ambient fill
 		// (inverted — more darkness = less fill = a deeper shadow core).
 		if (key === SHADOW_DARKNESS_KEY) {
-			const accumulative = draft as AccumulativeShadowConfig
 			scheduleCommit({
 				...draft,
 				light: {
-					...accumulative.light,
+					...draft.light,
 					ambient: darknessToAmbient(value as number)
 				}
-			} as ShadowsProps)
+			})
 			return
 		}
 
@@ -174,50 +167,45 @@ const ShadowSettingsPanel = () => {
 		// the accumulative shadow's light config; everything else is a top-level prop.
 		if (key.startsWith('light.')) {
 			const lightKey = key.slice('light.'.length)
-			const accumulative = draft as AccumulativeShadowConfig
 			scheduleCommit({
 				...draft,
-				light: { ...accumulative.light, [lightKey]: value }
-			} as ShadowsProps)
+				light: { ...draft.light, [lightKey]: value }
+			})
 			return
 		}
 
 		// Nested contact/ground-shadow params (e.g. "contact.blur").
 		if (key.startsWith('contact.')) {
 			const contactKey = key.slice('contact.'.length)
-			const accumulative = draft as AccumulativeShadowConfig
 			scheduleCommit({
 				...draft,
-				contact: { ...accumulative.contact, [contactKey]: value }
-			} as ShadowsProps)
+				contact: { ...draft.contact, [contactKey]: value }
+			})
 			return
 		}
 
-		scheduleCommit({ ...draft, [key]: value } as ShadowsProps)
+		scheduleCommit({ ...draft, [key]: value })
 	}
 
 	const getFieldValue = (key: string) => {
 		if (key === SHADOW_DARKNESS_KEY) {
-			const accumulative = draft as AccumulativeShadowConfig
-			return ambientToDarkness(accumulative.light?.ambient ?? 0.3)
+			return ambientToDarkness(draft.light?.ambient ?? 0.3)
 		}
 
 		if (key.startsWith('light.')) {
 			const lightKey = key.slice('light.'.length)
-			const accumulative = draft as AccumulativeShadowConfig
 			return (
-				(accumulative.light?.[
-					lightKey as keyof NonNullable<typeof accumulative.light>
+				(draft.light?.[
+					lightKey as keyof NonNullable<ShadowsProps['light']>
 				] as number) ?? 0
 			)
 		}
 
 		if (key.startsWith('contact.')) {
 			const contactKey = key.slice('contact.'.length)
-			const accumulative = draft as AccumulativeShadowConfig
 			return (
-				(accumulative.contact?.[
-					contactKey as keyof NonNullable<typeof accumulative.contact>
+				(draft.contact?.[
+					contactKey as keyof NonNullable<ShadowsProps['contact']>
 				] as number) ?? 0
 			)
 		}
@@ -306,12 +294,12 @@ const ShadowSettingsPanel = () => {
 							</div>
 							<Switch
 								id="shadow-ground-toggle"
-								checked={current.contact?.enabled ?? false}
+								checked={draft.contact?.enabled ?? false}
 								onCheckedChange={handleToggleContact}
 							/>
 						</div>
 
-						{(current.contact?.enabled ?? false) &&
+						{(draft.contact?.enabled ?? false) &&
 							SHADOW_CONTACT_FIELDS.map((field) => (
 								<ShadowField
 									key={field.key}
@@ -347,12 +335,12 @@ const ShadowSettingsPanel = () => {
 								</div>
 								<Switch
 									id="shadow-ao-toggle"
-									checked={current.ao ?? false}
+									checked={draft.ao ?? false}
 									onCheckedChange={handleToggleAo}
 								/>
 							</div>
 
-							{(current.ao ?? false) && (
+							{(draft.ao ?? false) && (
 								<ShadowField
 									field={SHADOW_AO_INTENSITY_FIELD}
 									idPrefix="shadow-adv"

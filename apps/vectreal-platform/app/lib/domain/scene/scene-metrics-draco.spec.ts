@@ -23,8 +23,7 @@ const buildReport = (
 		textures: { before: 2_000_000, after: 2_000_000 },
 		texturesCount: { before: 4, after: 4 },
 		textureResolutions: { before: [], after: [] },
-		meshes: { before: 6_000_000, after: 3_000_000 },
-		nodes: { before: 0, after: 0 }
+		meshes: { before: 6_000_000, after: 3_000_000 }
 	},
 	...overrides
 })
