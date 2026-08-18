@@ -1,4 +1,4 @@
-import type { LoaderFunctionArgs } from 'react-router'
+import { SITE_URL } from '../lib/seo'
 
 /**
  * robots.txt endpoint.
@@ -9,9 +9,13 @@ import type { LoaderFunctionArgs } from 'react-router'
  *
  * The Sitemap directive points crawlers to the XML sitemap so they can
  * discover all canonical URLs in one request.
+ *
+ * The origin comes from `SITE_URL` rather than the request. This route is
+ * prerendered, so the request origin at build time is the prerenderer's
+ * throwaway localhost port, and that is what would ship to production.
  */
-export async function loader({ request }: LoaderFunctionArgs) {
-	const origin = new URL(request.url).origin
+export async function loader() {
+	const origin = SITE_URL
 
 	const robotsTxt = [
 		'User-agent: *',
