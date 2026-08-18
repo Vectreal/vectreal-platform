@@ -11,7 +11,7 @@ import tseslint from 'typescript-eslint'
 
 // Build tooling and test/story files are not part of what a consumer installs.
 const dependencyCheckOptions = {
-	buildTargets: ['build', 'build-ci'],
+	buildTargets: ['build', 'build-ci', 'build-storybook'],
 	ignoredFiles: [
 		'{projectRoot}/vite.config.ts',
 		'{projectRoot}/vitest.config.ts',

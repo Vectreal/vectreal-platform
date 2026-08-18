@@ -7,7 +7,22 @@
 	"targets": {
 		"lint": {
 			"executor": "@nx/eslint:lint",
-			"outputs": ["{options.outputFile}"],
+			"outputs": [
+				"{options.outputFile}"
+			],
+			"options": {
+				"lintFilePatterns": [
+					"packages/embed/src/**/*.{ts,js}",
+					"packages/embed/vite.config.ts",
+					"packages/embed/package.json"
+				]
+			}
+		},
+		"lint-fix": {
+			"executor": "@nx/eslint:lint",
+			"outputs": [
+				"{options.outputFile}"
+			],
 			"options": {
 				"fix": true,
 				"lintFilePatterns": [
@@ -26,7 +41,9 @@
 		},
 		"build": {
 			"executor": "@nx/vite:build",
-			"outputs": ["{options.outputPath}"],
+			"outputs": [
+				"{options.outputPath}"
+			],
 			"options": {
 				"outputPath": "build/packages/vctrl/embed",
 				"configFile": "packages/embed/vite.config.ts"
@@ -34,14 +51,18 @@
 		},
 		"build-ci": {
 			"executor": "@nx/vite:build",
-			"outputs": ["{options.outputPath}"],
+			"outputs": [
+				"{options.outputPath}"
+			],
 			"options": {
 				"outputPath": "build/packages/vctrl/embed",
 				"configFile": "packages/embed/vite.config.ts"
 			}
 		},
 		"copy-md": {
-			"dependsOn": ["build"],
+			"dependsOn": [
+				"build"
+			],
 			"executor": "nx:run-commands",
 			"outputs": [],
 			"options": {
@@ -51,7 +72,9 @@
 			}
 		},
 		"publish": {
-			"dependsOn": ["copy-md"],
+			"dependsOn": [
+				"copy-md"
+			],
 			"executor": "nx:run-commands",
 			"outputs": [],
 			"options": {
