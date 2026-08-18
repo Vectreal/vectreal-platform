@@ -18,10 +18,12 @@ import { ModelFileTypes } from '@vctrl/core/model-loader'
 import { Object3D } from 'three'
 
 import { useOptimizeModel } from '../use-optimize-model'
-import eventSystem from './event-system'
-import { initialState } from './state'
 
-import type { ServerOptions, ServerSceneData } from '@vctrl/core'
+import type {
+	ServerOptions,
+	ServerSceneData,
+	ServerScenePayload
+} from '@vctrl/core'
 
 export type {
 	ExtendedGLTFDocument,
@@ -54,31 +56,83 @@ export interface ModelFile {
 }
 
 /**
- * Configuration options for loading a scene from the server.
+ * Where a model comes from. Every load in the platform is one of these three,
+ * and they all go through the single `load(source)` entry point.
  */
-export interface SceneLoadOptions {
-	/** The unique identifier of the scene to load */
-	sceneId: string
-	/** Server configuration (endpoint, auth, headers) */
-	serverOptions?: ServerOptions
-	/** Whether to automatically apply scene settings (default: true) */
-	applySettings?: boolean
-	/** 'direct' parses glTF JSON straight with GLTFLoader (view-only fast path). */
-	parseMode?: 'document' | 'direct'
-}
+export type ModelSource =
+	/** Files or folders picked by the user (GLTF + assets, GLB, or USDZ). */
+	| { kind: 'files'; files: InputFileOrDirectory }
+	/**
+	 * A scene payload the caller already has in memory (route aggregate, IDB
+	 * draft). Binary assets may be referenced rather than inlined; the loader
+	 * fetches them.
+	 */
+	| {
+			kind: 'scene-data'
+			sceneId?: string
+			sceneData: ServerScenePayload
+			/** 'direct' parses glTF JSON straight with GLTFLoader (view-only fast path). */
+			parseMode?: 'document' | 'direct'
+	  }
+	/** A scene fetched from the API by id. */
+	| {
+			kind: 'server'
+			sceneId: string
+			serverOptions?: ServerOptions
+			parseMode?: 'document' | 'direct'
+	  }
+
+export type ModelSourceKind = ModelSource['kind']
 
 /**
- * Configuration options for loading an already-resolved scene payload.
+ * The loader's state, as one value.
+ *
+ * `status === 'ready'` and `file !== null` are the same fact by construction, so
+ * a consumer cannot end up rendering "no model" and "finished loading" at once.
+ * `file` and `error` are present on every variant so callers can read them
+ * without narrowing; only their types change.
  */
-export interface SceneDataLoadOptions {
-	/** Optional scene identifier for resolved payloads. */
+interface ModelStateShape {
+	progress: number
+	/** The scene payload the model came from, for sources that have one. */
+	sceneData?: ServerSceneData
 	sceneId?: string
-	/** Resolved server scene payload */
-	sceneData: ServerSceneData
-	/** Whether to automatically apply scene settings (default: true) */
-	applySettings?: boolean
-	/** 'direct' parses glTF JSON straight with GLTFLoader (view-only fast path). */
-	parseMode?: 'document' | 'direct'
+}
+
+export type ModelState =
+	| (ModelStateShape & {
+			status: 'empty'
+			file: null
+			error: null
+			source: null
+	  })
+	| (ModelStateShape & {
+			status: 'loading'
+			file: null
+			error: null
+			source: ModelSourceKind
+	  })
+	| (ModelStateShape & {
+			status: 'ready'
+			file: ModelFile
+			error: null
+			source: ModelSourceKind
+	  })
+	| (ModelStateShape & {
+			status: 'error'
+			file: null
+			error: StructuredLoadError
+			source: ModelSourceKind
+	  })
+
+/**
+ * A model parsed into Three.js, plus whatever scene payload produced it.
+ * Internal hand-off between the per-source loaders and the hook.
+ */
+export interface LoadedModel {
+	file: ModelFile
+	sceneId?: string
+	sceneData?: ServerSceneData
 }
 
 /**
@@ -92,49 +146,9 @@ export interface SceneLoadResult extends ServerSceneData {
 	sceneId?: string
 }
 
-/**
- * State interface for model loading data.
- * Contains the current loaded file, loading status, and progress information.
- */
-export interface LoadData {
-	/** The currently loaded model file, or null if no model is loaded */
-	file: ModelFile | null
-	/** Whether a file is currently being loaded */
-	isFileLoading: boolean
-	/** Loading progress percentage (0-100) */
-	progress: number
-	/** List of supported model file types */
-	supportedFileTypes: ModelFileTypes[]
-}
-
-/**
- * Action types for the model loading reducer.
- * Defines all possible state mutations for model loading operations.
- */
-export type Action =
-	| { type: 'set-file'; payload: ModelFile }
-	| { type: 'set-file-loading'; payload: boolean }
-	| { type: 'set-progress'; payload: number }
-	| { type: 'reset-state' }
-
-/**
- * Available event types emitted by the model loading system.
- * Used for subscribing to various stages of the loading process.
- */
-export type EventTypes =
-	| 'multiple-models' // Emitted when multiple model files are detected in upload
-	| 'not-loaded-files' // Emitted when no supported files are found
-	| 'load-start' // Emitted when loading begins
-	| 'load-progress' // Emitted during loading progress updates
-	| 'load-complete' // Emitted when loading successfully completes
-	| 'load-reset' // Emitted when the state is reset
-	| 'load-error' // Emitted when an error occurs during loading
-	| 'server-load-start' // Emitted when server-based scene loading begins
-	| 'server-load-complete' // Emitted when server-based scene loading completes
-	| 'server-load-error' // Emitted when server-based scene loading fails
-
 export type ViewerLoadErrorCode =
 	| 'unsupported_format'
+	| 'multiple_models'
 	| 'binary_load_failed'
 	| 'gltf_load_failed'
 	| 'missing_assets'
@@ -153,103 +167,44 @@ export interface StructuredLoadError {
 }
 
 /**
- * Maps event types to their corresponding data payloads.
- * Ensures type safety when handling events.
- */
-export type EventData = {
-	/** Array of model files when multiple are detected */
-	'multiple-models': File[]
-	/** Array of unsupported files */
-	'not-loaded-files': File[]
-	/** No data for load start event */
-	'load-start': null
-	/** Progress value (0-100) */
-	'load-progress': number
-	/** The loaded model file data */
-	'load-complete': LoadData['file']
-	/** No data for reset event */
-	'load-reset': null
-	/** Normalized error payload when loading fails */
-	'load-error': StructuredLoadError | Error | unknown
-	/** Scene ID being loaded from server */
-	'server-load-start': string
-	/** Complete scene load result */
-	'server-load-complete': SceneLoadResult
-	/** Normalized error payload during server scene loading */
-	'server-load-error': StructuredLoadError | Error | unknown
-}
-
-/**
- * Type-safe event handler function.
- * @template T - The event type being handled
- */
-export type EventHandler<T extends EventTypes> = (data?: EventData[T]) => void
-
-/**
  * Return type for the useLoadModel hook.
  * Conditionally includes optimizer integration based on whether an optimizer was provided.
  *
  * @template HasOptimizer - Boolean indicating if optimizer integration is included
  */
-export type UseLoadModelReturn<HasOptimizer extends boolean> =
-	typeof initialState & {
-		/**
-		 * Subscribe to model loading events.
-		 * @param event - The event type to listen for
-		 * @param handler - Callback function to handle the event
-		 */
-		on: typeof eventSystem.on
-		/**
-		 * Unsubscribe from model loading events.
-		 * @param event - The event type to stop listening for
-		 * @param handler - The callback function to remove
-		 */
-		off: typeof eventSystem.off
-		/**
-		 * Load 3D model files from File objects or directory handles.
-		 * Supports GLTF, GLB, and USDZ formats with associated assets.
-		 */
-		load: (filesOrDirectories: InputFileOrDirectory) => Promise<void>
-		/**
-		 * Load a scene from already-resolved scene data.
-		 * Preserves original asset payload semantics and bypasses upload-style file processing.
-		 */
-		loadFromData: (options: SceneDataLoadOptions) => Promise<SceneLoadResult>
-		/**
-		 * Load a scene from the server by scene ID.
-		 * Fetches both the model and scene settings, applies them automatically.
-		 *
-		 * @param options - Scene loading configuration
-		 * @returns Promise resolving to the loaded scene data
-		 *
-		 * @example
-		 * ```tsx
-		 * const model = useLoadModel()
-		 *
-		 * // Load a scene from the server
-		 * const scene = await model.loadFromServer({
-		 *   sceneId: 'abc-123',
-		 *   serverOptions: {
-		 *     endpoint: '/api/load-scene',
-		 *     apiKey: 'optional-auth-token'
-		 *   }
-		 * })
-		 * ```
-		 */
-		loadFromServer: (options: SceneLoadOptions) => Promise<SceneLoadResult>
-		/**
-		 * Reset the model loading state and clear any loaded models.
-		 */
-		reset: () => void
-		/**
-		 * Optimizer integration object.
-		 * - When optimizer is provided: Contains full optimization methods and state
-		 * - When no optimizer: null
-		 */
-		optimizer: HasOptimizer extends true
-			? OptimizerIntegrationReturn<true>
-			: null
-	}
+export type UseLoadModelReturn<HasOptimizer extends boolean> = ModelState & {
+	/** List of supported model file types */
+	supportedFileTypes: ModelFileTypes[]
+	/**
+	 * Load a model from any source.
+	 *
+	 * Never rejects: a failure is the returned `error` state, which is also the
+	 * state every consumer already renders from. The terminal state is returned
+	 * for callers that need to branch on the outcome right away.
+	 *
+	 * A newer `load` supersedes an older one, so an in-flight load can never
+	 * overwrite the state of the load that replaced it.
+	 *
+	 * @example
+	 * ```tsx
+	 * const model = useLoadModel()
+	 *
+	 * await model.load({ kind: 'files', files })
+	 * await model.load({ kind: 'server', sceneId: 'abc-123' })
+	 * ```
+	 */
+	load: (source: ModelSource) => Promise<ModelState>
+	/**
+	 * Reset the model loading state and clear any loaded models.
+	 */
+	reset: () => void
+	/**
+	 * Optimizer integration object.
+	 * - When optimizer is provided: Contains full optimization methods and state
+	 * - When no optimizer: null
+	 */
+	optimizer: HasOptimizer extends true ? OptimizerIntegrationReturn<true> : null
+}
 
 /**
  * Return type of the useOptimizeModel hook.
@@ -291,11 +246,6 @@ export type OptimizerIntegrationReturn<HasOptimizer extends boolean = false> =
 				 *   optimizer.simplifyOptimization,
 				 *   { ratio: 0.5 }
 				 * )
-				 *
-				 * @example
-				 * // Apply multiple optimizations in sequence
-				 * await optimizer.applyOptimization(optimizer.dedupOptimization)
-				 * await optimizer.applyOptimization(optimizer.quantizeOptimization, { bits: 12 })
 				 */
 				applyOptimization: <TOptions>(
 					optimizationFunction?:

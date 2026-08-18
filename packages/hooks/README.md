@@ -34,15 +34,16 @@ Loads 3D files and exposes the parsed Three.js `Object3D` scene.
 import { ModelProvider, useLoadModel } from '@vctrl/hooks/use-load-model'
 
 function Uploader() {
-	const { load, file, isFileLoading } = useLoadModel()
+	const { load, status, file, error } = useLoadModel()
 
 	const handleDrop = (e: React.DragEvent) => {
 		e.preventDefault()
-		void load(Array.from(e.dataTransfer.files))
+		void load({ kind: 'files', files: Array.from(e.dataTransfer.files) })
 	}
 
-	if (isFileLoading) return <p>Loading...</p>
-	if (file?.model) return <p>Model loaded: {file.name}</p>
+	if (status === 'loading') return <p>Loading...</p>
+	if (status === 'error') return <p>{error.message}</p>
+	if (status === 'ready') return <p>Model loaded: {file.name}</p>
 
 	return (
 		<div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
@@ -60,6 +61,31 @@ export default function App() {
 }
 ```
 
+### One entry point, one state
+
+`load(source)` handles every way a model arrives, and the hook's state is a
+discriminated union on `status`. `status === 'ready'` and a non-null `file` are
+the same fact, so there is no separate loading flag to fall out of step with
+what is on screen.
+
+`load` never rejects. A failure resolves to the `error` state, which is also the
+state you are already rendering from, so a call site cannot forget to handle it.
+It returns the terminal state as well, for callers that need to branch right
+away. A newer `load` supersedes an older one, so a slow response can never
+overwrite the load that replaced it.
+
+### Sources
+
+| `kind`       | Fields                                                        | Use                                                                                              |
+| ------------ | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `files`      | `files: (File \| FileSystemDirectoryHandle)[]`                 | A user upload: GLB, USDZ, or glTF with its sibling assets                                        |
+| `scene-data` | `sceneData: ServerScenePayload`, `sceneId?`, `parseMode?`      | A payload you already hold. Binary assets may be referenced rather than inlined; the loader fetches them |
+| `server`     | `sceneId: string`, `serverOptions?`, `parseMode?`              | Fetch a scene from an API endpoint by id                                                         |
+
+`parseMode: 'direct'` parses the glTF JSON with its assets in memory and skips
+the optimizer: the read-only fast path for viewers. The default reconstructs
+files so the optimizer can ingest exactly what the viewer renders.
+
 ### Context and direct usage
 
 `useLoadModel` can be used in two ways:
@@ -69,52 +95,26 @@ export default function App() {
 
 ### Return values
 
-| Value                      | Type                                 | Description                                                 |
-| -------------------------- | ------------------------------------ | ----------------------------------------------------------- |
-| `file`                     | `ModelFile \| null`                  | Loaded file metadata and Three.js model                     |
-| `isFileLoading`            | `boolean`                            | True while loading and parsing                              |
-| `progress`                 | `number`                             | Progress value from 0 to 100                                |
-| `load(filesOrDirectories)` | `Promise<void>`                      | Load files or dropped `FileSystemDirectoryHandle` entries   |
-| `loadFromData(options)`    | `Promise<SceneLoadResult>`           | Load already-resolved server scene payload                  |
-| `loadFromServer(options)`  | `Promise<SceneLoadResult>`           | Fetch and load scene from an API endpoint                   |
-| `reset`                    | `() => void`                         | Clear the current model                                     |
-| `on` / `off`               | Event helpers                        | Subscribe and unsubscribe to loader lifecycle events        |
-| `optimizer`                | `OptimizerIntegrationReturn \| null` | Populated when the hook is called with `useOptimizeModel()` |
+| Value          | Type                                              | Description                                                       |
+| -------------- | ------------------------------------------------- | ----------------------------------------------------------------- |
+| `status`       | `'empty' \| 'loading' \| 'ready' \| 'error'`      | The load, as one value                                            |
+| `file`         | `ModelFile \| null`                               | Loaded file metadata and Three.js model. Non-null exactly when `status` is `'ready'` |
+| `error`        | `StructuredLoadError \| null`                     | Non-null exactly when `status` is `'error'`                       |
+| `sceneData`    | `ServerSceneData \| undefined`                    | The resolved payload, for scene sources                           |
+| `progress`     | `number`                                          | Progress value from 0 to 100                                      |
+| `source`       | `'files' \| 'scene-data' \| 'server' \| null`     | What the current state came from                                  |
+| `load(source)` | `Promise<ModelState>`                             | Load a model; resolves to the terminal state                      |
+| `reset`        | `() => void`                                      | Clear the current model and retire any load in flight             |
+| `optimizer`    | `OptimizerIntegrationReturn \| null`              | Populated when the hook is called with `useOptimizeModel()`       |
 
-### `useLoadModel` events
+### Error codes
 
-`on` and `off` support these typed events:
-
-| Event                  | Payload             |
-| ---------------------- | ------------------- |
-| `multiple-models`      | `File[]`            |
-| `not-loaded-files`     | `File[]`            |
-| `load-start`           | `null`              |
-| `load-progress`        | `number`            |
-| `load-complete`        | `ModelFile \| null` |
-| `load-reset`           | `null`              |
-| `load-error`           | `Error \| unknown`  |
-| `server-load-start`    | `string`            |
-| `server-load-complete` | `SceneLoadResult`   |
-| `server-load-error`    | `Error \| unknown`  |
-
-### Scene loading option types
-
-`loadFromServer(options)` uses:
-
-| Field           | Type            | Description                                   |
-| --------------- | --------------- | --------------------------------------------- |
-| `sceneId`       | `string`        | Scene identifier to fetch                     |
-| `serverOptions` | `ServerOptions` | Endpoint, auth, and header configuration      |
-| `applySettings` | `boolean`       | Whether scene settings are applied after load |
-
-`loadFromData(options)` uses:
-
-| Field           | Type                  | Description                                                    |
-| --------------- | --------------------- | -------------------------------------------------------------- |
-| `sceneId`       | `string \| undefined` | Optional scene identifier                                      |
-| `sceneData`     | `ServerSceneData`     | Already-resolved payload containing glTF, settings, and assets |
-| `applySettings` | `boolean`             | Whether scene settings are applied after load                  |
+`error.code` is one of `unsupported_format`, `multiple_models`,
+`binary_load_failed`, `gltf_load_failed`, `missing_assets`,
+`server_load_failed`, `not_found`, `quota_exceeded`, `unknown`. Optimizer
+ingest is deliberately not among them: the model is already on screen by then,
+so a failure there costs the optimize step and is reported on
+`optimizer.error`.
 
 ---
 

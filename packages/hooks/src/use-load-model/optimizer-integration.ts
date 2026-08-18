@@ -1,8 +1,7 @@
 import { ModelFileTypes, ModelLoader } from '@vctrl/core/model-loader'
 import { useCallback } from 'react'
-import React from 'react'
 
-import { Action, ModelFile, OptimizerIntegrationReturn } from './types'
+import { ModelFile, OptimizerIntegrationReturn } from './types'
 
 import type { useOptimizeModel } from '../use-optimize-model'
 
@@ -13,13 +12,13 @@ import type { useOptimizeModel } from '../use-optimize-model'
  * 1. Runs an optional optimization function
  * 2. Exports the optimized model as GLB
  * 3. Reloads it into Three.js
- * 4. Updates the model state
+ * 4. Swaps it into the loaded model, leaving the load state itself untouched
  *
  * Returns `null` when no optimizer instance is provided.
  */
 export function useOptimizerIntegration(
 	instance: ReturnType<typeof useOptimizeModel> | undefined,
-	dispatch: React.Dispatch<Action>,
+	replaceModel: (file: ModelFile) => void,
 	file: ModelFile | null,
 	modelLoader: ModelLoader
 ): OptimizerIntegrationReturn<boolean> {
@@ -57,19 +56,16 @@ export function useOptimizerIntegration(
 
 				const result = await modelLoader.loadToThreeJS(optimizedFile)
 
-				dispatch({
-					type: 'set-file',
-					payload: {
-						model: result.scene,
-						type: ModelFileTypes.glb,
-						name: optimizedFile.name
-					}
+				replaceModel({
+					model: result.scene,
+					type: ModelFileTypes.glb,
+					name: optimizedFile.name
 				})
 			} catch (error) {
 				console.error('Optimization failed:', error)
 			}
 		},
-		[instance, modelLoader, file, dispatch]
+		[instance, modelLoader, file, replaceModel]
 	)
 
 	if (!instance) return null as OptimizerIntegrationReturn<boolean>

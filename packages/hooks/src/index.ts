@@ -24,13 +24,11 @@ export { reconstructGltfFiles } from './use-load-model/utils/reconstruct-files'
 
 // Re-export types for convenience
 export type {
-	EventTypes,
-	EventHandler,
 	ModelFile,
-	LoadData,
+	ModelSource,
+	ModelSourceKind,
+	ModelState,
 	UseLoadModelReturn,
-	SceneDataLoadOptions,
-	SceneLoadOptions,
 	ServerSceneData,
 	SceneLoadResult
 } from './use-load-model/types'
