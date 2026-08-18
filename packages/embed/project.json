@@ -50,21 +50,13 @@
 				]
 			}
 		},
-		"prepare-publish": {
+		"publish": {
 			"dependsOn": ["copy-md"],
 			"executor": "nx:run-commands",
 			"outputs": [],
 			"options": {
-				"command": "node tools/publish/rewrite-manifest.mjs --dir build/packages/vctrl/embed"
-			}
-		},
-		"publish": {
-			"dependsOn": ["prepare-publish"],
-			"executor": "nx:run-commands",
-			"outputs": [],
-			"options": {
 				"command": "pnpm publish --no-git-checks --access public",
-				"cwd": "build/packages/vctrl/embed"
+				"cwd": "packages/embed"
 			}
 		}
 	}

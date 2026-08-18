@@ -62,7 +62,15 @@ storybook/                 # Standalone Storybook host — owns no stories, aggr
 terraform/                 # Cloudflare only: DNS, Turnstile widgets, cache rules, page rules
 ```
 
-Internal package dependencies use `workspace:*` and must not be pinned to registry versions.
+This is a real pnpm workspace: `pnpm-workspace.yaml` lists every project under
+`packages:`, so internal dependencies declared `workspace:*` resolve to the local source.
+
+Third-party versions live once, in the `catalog:` block of `pnpm-workspace.yaml`. Any
+manifest needing one of those packages writes `"catalog:"` instead of a range, so a bump
+happens in one place. `pnpm publish` substitutes both `workspace:` and `catalog:` with real
+ranges while packing, which is why no manifest-rewriting script exists. Each published
+package points pnpm at its build output with `publishConfig.directory`; publishing from the
+build directory itself would fail, because that directory is not a workspace member.
 
 ## Platform App Architecture (`apps/vectreal-platform/`)
 
@@ -123,7 +131,7 @@ Components are in `shared/components/src/ui/` (shadcn-based, Radix UI primitives
 ## Conventions
 
 - **Commits**: Follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
-- **Versioning**: Managed by Release Please. Do not use `nx release`. Use `workspace:*` for internal deps.
+- **Versioning**: Managed by Release Please. Do not use `nx release`. Internal deps use `workspace:*`; shared third-party versions use `catalog:` and are declared in `pnpm-workspace.yaml`.
 - **Docs pages**: MDX files in `app/routes/docs/`. Adding a new page also requires a route in `app/routes.tsx` and an entry in the `docsPages` array in `app/lib/docs/docs-manifest.ts`, which is what `DocsTreeNav` renders.
 - **Server-only modules**: Files that must not be bundled client-side are named `*.server.ts`.
 - **Viewport height**: Size full-viewport surfaces with `h-dvh` / `min-h-dvh` — or `h-svh` where a shell owns the height and scrolls its own content, as `dashboard-layout.tsx` does. Never Tailwind's `screen` height utilities: they compile to `100vh`, the *large* viewport, which overhangs persistent mobile browser chrome — pushing bottom-anchored UI behind the bar and leaving the page scrolled with no way back when a canvas holds `touch-action: none`. (Spelling those class names out here would be self-defeating: the Tailwind scanner reads this file and would re-emit the very utilities the codebase dropped.)

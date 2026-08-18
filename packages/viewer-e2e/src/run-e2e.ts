@@ -18,7 +18,6 @@ import {
 	cpSync,
 	mkdirSync,
 	mkdtempSync,
-	readFileSync,
 	rmSync,
 	writeFileSync
 } from 'node:fs'
@@ -45,9 +44,9 @@ function resolveVerdaccioBin(): string {
 // at build time, but core + hooks are published too so the registry mirrors a
 // real release and any future external dependency would resolve.
 const PACKAGES = [
-	{ project: 'vctrl/core', dir: 'build/packages/vctrl/core' },
-	{ project: 'vctrl/hooks', dir: 'build/packages/vctrl/hooks' },
-	{ project: 'vctrl/viewer', dir: 'build/packages/vctrl/viewer' }
+	{ project: 'vctrl/core', dir: 'packages/core' },
+	{ project: 'vctrl/hooks', dir: 'packages/hooks' },
+	{ project: 'vctrl/viewer', dir: 'packages/viewer' }
 ]
 
 const cleanups: Array<() => void> = []
@@ -158,42 +157,6 @@ async function startVerdaccio(storageDir: string): Promise<string> {
 	return registry
 }
 
-// Rewrite `workspace:*` specifiers in a built package.json to the package's own
-// version, faithfully simulating what release-please's `node-workspace` plugin
-// produces at release time (all @vctrl/* packages share one linked version).
-// This makes the e2e publish the REAL released shape — so a stray `workspace:*`
-// in a consumer-facing field (dependencies / peerDependencies) that points at an
-// unpublished package surfaces as an install failure instead of being masked.
-// `devDependencies` are intentionally left untouched: consumers never install
-// them, and unpublished internal libs (@shared/*) legitimately live there.
-function rewriteWorkspaceSpecifiers(pkgPath: string) {
-	const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as Record<
-		string,
-		unknown
-	> & { version?: string }
-	const linkedVersion = pkg.version ?? '0.0.0'
-	let changed = false
-	for (const field of [
-		'dependencies',
-		'peerDependencies',
-		'optionalDependencies',
-		// devDependencies hold bundled internal libs (@vctrl/core types, @shared/*).
-		// Consumers never install them, but rewrite here too so pnpm publish from the
-		// detached build dir doesn't trip on an unresolved workspace: specifier.
-		'devDependencies'
-	]) {
-		const deps = pkg[field] as Record<string, string> | undefined
-		if (!deps) continue
-		for (const [name, spec] of Object.entries(deps)) {
-			if (typeof spec === 'string' && spec.startsWith('workspace:')) {
-				deps[name] = `^${linkedVersion}`
-				changed = true
-			}
-		}
-	}
-	if (changed) writeFileSync(pkgPath, JSON.stringify(pkg, null, '\t') + '\n')
-}
-
 // Publish a built package to the local registry using a throwaway userconfig so
 // the developer's ~/.npmrc is never touched.
 async function publishPackage(
@@ -208,10 +171,6 @@ async function publishPackage(
 	// pipeline); only the consumer install below uses npm, to prove the published
 	// package is installable for a plain third-party npm consumer.
 	await run('pnpm', ['nx', 'run', `${project}:copy-md`])
-
-	// Match the released manifest: rewrite `workspace:*` to the linked version
-	// exactly as release-please's node-workspace plugin does on the release PR.
-	rewriteWorkspaceSpecifiers(join(workspaceRoot, dir, 'package.json'))
 
 	const token = Buffer.from('e2e:e2e').toString('base64')
 	writeFileSync(

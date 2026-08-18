@@ -95,6 +95,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check catalog usage
+        run: node tools/check-catalog-usage.mjs
+
       - name: Resolve affected range
         id: affected-range
         shell: bash

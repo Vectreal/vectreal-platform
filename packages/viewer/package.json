@@ -32,7 +32,8 @@
 	"types": "./index.d.ts",
 	"type": "module",
 	"publishConfig": {
-		"access": "public"
+		"access": "public",
+		"directory": "../../build/packages/vctrl/viewer"
 	},
 	"exports": {
 		".": {
@@ -46,13 +47,13 @@
 		"type-check": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@react-three/drei": "^10.0.7",
-		"@react-three/fiber": "^9.1.2",
-		"@react-three/postprocessing": "^3.0.4",
-		"postprocessing": "^6.37.3"
+		"@react-three/drei": "catalog:",
+		"@react-three/fiber": "catalog:",
+		"@react-three/postprocessing": "catalog:",
+		"postprocessing": "catalog:"
 	},
 	"peerDependencies": {
-		"three": "^0.177.0",
+		"three": "catalog:",
 		"react": "^18.0.0 || ^19.0.0"
 	},
 	"devDependencies": {
