@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 // @ts-expect-error - plain JS module, shared with the node server which has no build step
-import { isSafeRedirectPath, toSinglePathForm } from '../server-url-form.mjs'
+import { toSinglePathForm } from '../server-url-form.mjs'
 
 /**
  * The server redirects any other spelling of a path to this form, so whatever
@@ -53,52 +53,31 @@ describe('toSinglePathForm', () => {
 })
 
 /**
- * The guard on the `Location` header. Rewriting a path is a weaker claim than
- * checking it, and this is the check: a value that fails it is never redirected
- * to, so a browser can only ever resolve the header against this host.
+ * server.mjs writes the same three conditions out at the redirect itself, so a
+ * reader of the line that hands a value to a browser can see that it cannot
+ * name another host. This asserts the normalizer already satisfies them, which
+ * is what makes that inline guard a second line of defence rather than the only
+ * one.
  */
-describe('isSafeRedirectPath', () => {
-	it('accepts the paths this site serves', () => {
-		for (const path of [
-			'/',
-			'/docs',
-			'/pricing',
-			'/docs/guides/upload',
-			'/news-room/api-keys-101'
-		]) {
-			expect(isSafeRedirectPath(path)).toBe(true)
-		}
-	})
-
-	it('rejects anything that could name another host', () => {
-		for (const path of [
+describe('the guarantee the redirect relies on', () => {
+	it('passes the checks written at the sink', () => {
+		for (const input of [
+			'//evil.com/',
 			'//evil.com',
-			'//evil.com/',
-			'///evil.com',
-			'/\\evil.com',
-			'/\\\\evil.com',
-			'\\\\evil.com',
-			'https://evil.com',
-			'//evil.com/docs'
-		]) {
-			expect(isSafeRedirectPath(path)).toBe(false)
-		}
-	})
-
-	it('agrees with the normalizer on every attack shape', () => {
-		for (const attack of [
-			'//evil.com/',
+			'///evil.com/',
 			'/\\evil.com/',
-			'///evil.com',
-			'//\\/evil.com/'
+			'/\\\\evil.com',
+			'//\\/evil.com/',
+			'\\\\evil.com/',
+			'/docs/',
+			'/pricing/',
+			'/'
 		]) {
-			// Either the normalizer produced a local path, or the guard blocks it.
-			// Both together are what makes the redirect safe.
-			const normalized = toSinglePathForm(attack)
+			const target = toSinglePathForm(input)
 
-			expect(isSafeRedirectPath(normalized)).toBe(true)
-			expect(normalized).not.toContain('evil.com/')
-			expect(normalized.startsWith('//')).toBe(false)
+			expect(target.startsWith('/')).toBe(true)
+			expect(target.startsWith('//')).toBe(false)
+			expect(target.startsWith('/\\')).toBe(false)
 		}
 	})
 })

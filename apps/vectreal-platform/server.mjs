@@ -5,7 +5,7 @@ import morgan from 'morgan'
 import { existsSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 
-import { isSafeRedirectPath, toSinglePathForm } from './server-url-form.mjs'
+import { toSinglePathForm } from './server-url-form.mjs'
 
 /**
  * Production server.
@@ -78,7 +78,18 @@ app.use((req, res, next) => {
 	const [pathname, search = ''] = req.url.split('?')
 	const target = toSinglePathForm(pathname)
 
-	if (target !== pathname && isSafeRedirectPath(target)) {
+	// The guard is written out here, at the sink, rather than called from
+	// server-url-form.mjs. `toSinglePathForm` already guarantees it, but this is
+	// the line that hands a value to a browser, and a reader (or a scanner)
+	// checking whether that value can name another host should be able to see
+	// the answer without following a call into another file. One leading slash,
+	// and the next character cannot start a host or a scheme.
+	const isLocalPath =
+		target.startsWith('/') &&
+		!target.startsWith('//') &&
+		!target.startsWith('/\\')
+
+	if (target !== pathname && isLocalPath) {
 		return res.redirect(301, search ? `${target}?${search}` : target)
 	}
 
