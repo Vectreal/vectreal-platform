@@ -96,7 +96,7 @@ describe('useLoadModel state', () => {
 		})
 	})
 
-	it('does not report the previous model after a failed load', async () => {
+	it('reports the failure without reporting the previous model as loaded', async () => {
 		const { result } = renderHook(() => useLoadModel())
 
 		await act(() =>
@@ -108,7 +108,24 @@ describe('useLoadModel state', () => {
 
 		expect(failed.status).toBe('error')
 		expect(failed.file).toBeNull()
-		await waitFor(() => expect(result.current.file).toBeNull())
+	})
+
+	it('leaves the model that was on screen alone when a load fails', async () => {
+		const { result } = renderHook(() => useLoadModel())
+
+		await act(() =>
+			result.current.load({ kind: 'files', files: [file('model.glb')] })
+		)
+		await act(() =>
+			result.current.load({ kind: 'files', files: [file('notes.txt')] })
+		)
+
+		// Dropping the wrong file onto an open scene must not cost the user the
+		// model, and everything the app hangs off it, that was already there.
+		await waitFor(() => {
+			expect(result.current.status).toBe('ready')
+			expect(result.current.file?.name).toBe('model.glb')
+		})
 	})
 
 	it('lets the newer load win when two overlap', async () => {

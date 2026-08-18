@@ -59,24 +59,6 @@ export function useSceneUpload({
 		async (files: InputFileOrDirectory) => {
 			const startedAt = Date.now()
 
-			// A dropped file always supersedes whatever the previous one left behind,
-			// in the stores and in IndexedDB alike. Both snapshots are keyed per tab
-			// rather than per model, so a stale one could otherwise be restored over
-			// the new upload during a later re-optimization.
-			void clearOriginalSceneModel()
-			void clearPendingSceneDraft()
-			setOptimizationRuntime({
-				...optimizationRuntimeInitialState,
-				isSceneSizeLoading: true
-			})
-
-			// Replacing the model of an open scene keeps its composition. Anywhere
-			// else the upload starts a new, unsaved scene.
-			if (!openSceneId) {
-				resetSceneState()
-				setCurrentSceneId(null)
-			}
-
 			const result = await load({ kind: 'files', files })
 
 			if (result.status !== 'ready') {
@@ -90,6 +72,26 @@ export function useSceneUpload({
 					)
 				}
 				return result
+			}
+
+			// Everything below replaces what the previous model left behind, and none
+			// of it runs until there is a model to replace it with: a folder with two
+			// models in it, or with none, must not cost the user the scene they had
+			// open. Both IndexedDB snapshots are keyed per tab rather than per model,
+			// so a stale one could otherwise be restored over this upload during a
+			// later re-optimization.
+			void clearOriginalSceneModel()
+			void clearPendingSceneDraft()
+			setOptimizationRuntime({
+				...optimizationRuntimeInitialState,
+				isSceneSizeLoading: true
+			})
+
+			// Replacing the model of an open scene keeps its composition. Anywhere
+			// else the upload starts a new, unsaved scene.
+			if (!openSceneId) {
+				resetSceneState()
+				setCurrentSceneId(null)
 			}
 
 			setSceneMeta((previous) => ({

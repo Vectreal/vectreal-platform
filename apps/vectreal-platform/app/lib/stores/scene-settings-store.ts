@@ -38,7 +38,7 @@ const normalizationAtom = atom<NormalizationOptions>(
 const rawModelDiagonalAtom = atom<number>(0)
 const hotspotsAtom = atom<HotspotDefinition[]>([])
 const activeHotspotIdAtom = atom<string | null>(null)
-// Persisted shadow bake resolved from the loaded scene aggregate (a data URL +
+// Persisted shadow bake resolved from the loaded scene manifest (a data URL +
 // signature), or null when the scene has none. Set during hydration so the viewer
 // can render the stored shadow instead of recomputing the bake.
 const bakedShadowSourceAtom = atom<BakedShadow | null>(null)

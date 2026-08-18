@@ -18,7 +18,7 @@ const bytesToBase64 = (bytes: Uint8Array): string => {
 /**
  * Resolves the persisted shadow bake from a scene's in-memory asset data into a
  * `BakedShadow` the viewer can render, with no extra network request: the density
- * PNG already rides in the aggregate's `assetData`, so this turns it into a data
+ * PNG already rides in the manifest's `assetData`, so this turns it into a data
  * URL the shadow plane consumes directly.
  *
  * Looks the bake up by its stable filename ({@link PERSISTED_BAKE_FILENAME})

@@ -13,11 +13,11 @@ import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
 import { getQuotaLimit } from '../../lib/domain/billing/entitlement-service.server'
 import { getProject } from '../../lib/domain/project/project-repository.server'
-import { buildSceneManifest } from '../../lib/domain/scene/server/scene-aggregate.server'
 import {
 	getScene,
 	getSceneFolder
 } from '../../lib/domain/scene/server/scene-folder-repository.server'
+import { buildSceneManifest } from '../../lib/domain/scene/server/scene-manifest.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import { getOrCreateDefaultOrganization } from '../../lib/domain/user/user-repository.server'
 import { buildMeta } from '../../lib/seo'
@@ -96,7 +96,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	let currentFolderId: string | null = null
 	let currentFolderName: string | null = null
 
-	let sceneAggregate: SceneManifestResponse | null = null
+	let sceneManifest: SceneManifestResponse | null = null
 	let publishedMeta: PublishedSceneMetaResponse | null = null
 
 	if (sceneId && user?.id) {
@@ -108,7 +108,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		projectId = scene.projectId
 		currentFolderId = scene.folderId
 
-		const [project, folder, aggregate, scenePublishedMeta] = await Promise.all([
+		const [project, folder, manifest, scenePublishedMeta] = await Promise.all([
 			getProject(scene.projectId, user.id),
 			scene.folderId
 				? getSceneFolder(scene.folderId, user.id)
@@ -122,7 +122,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 
 		currentProjectName = project?.name ?? null
 		currentFolderName = folder?.name ?? null
-		sceneAggregate = aggregate
+		sceneManifest = manifest
 		publishedMeta = scenePublishedMeta
 	} else if (!sceneId && user?.id) {
 		// New scene - read project/folder context from URL search params
@@ -163,7 +163,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 			folderId: currentFolderId,
 			folderName: currentFolderName
 		},
-		sceneAggregate,
+		sceneManifest,
 		publishedMeta,
 		maxSceneBytes
 	}

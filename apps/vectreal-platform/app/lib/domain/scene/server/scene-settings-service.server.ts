@@ -482,9 +482,9 @@ class SceneSettingsService {
 
 		const { settings, assets: sceneAssetsData } = result
 
-		// Extract asset IDs to download into the aggregate. The thumbnail is tracked
+		// Extract asset IDs to download into the manifest. The thumbnail is tracked
 		// as a scene asset (for GC) but served by URL, not rendered, so it is excluded
-		// from the inlined render data to keep the aggregate lean.
+		// from the inlined render data to keep the manifest lean.
 		const assetIds = sceneAssetsData
 			.filter((asset) => asset.name !== SCENE_THUMBNAIL_FILENAME)
 			.map((asset) => asset.id)

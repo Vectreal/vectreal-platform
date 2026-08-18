@@ -8,16 +8,16 @@ import type {
 } from '../../../../types/scene-optimization'
 import type { Optimizations } from '@vctrl/core'
 
-interface AggregateByteMetrics {
+interface ManifestByteMetrics {
 	sourcePackageBytes: null | number
 	textureBytes: null | number
 }
 
 interface ExecuteOptimizationStateHydrationParams {
-	aggregate: SceneManifestResponse | null
-	calculateAggregateReferencedBytes: (
-		aggregate: SceneManifestResponse | null
-	) => AggregateByteMetrics
+	manifest: SceneManifestResponse | null
+	calculateManifestReferencedBytes: (
+		manifest: SceneManifestResponse | null
+	) => ManifestByteMetrics
 	inferOptimizationPreset: (optimizations: Optimizations) => OptimizationPreset
 	setOptimizationState: (
 		updater: (prev: OptimizationState) => OptimizationState
@@ -32,18 +32,18 @@ interface ExecuteOptimizationStateHydrationParams {
 }
 
 export const executeOptimizationStateHydration = ({
-	aggregate,
-	calculateAggregateReferencedBytes,
+	manifest,
+	calculateManifestReferencedBytes,
 	inferOptimizationPreset,
 	setOptimizationState,
 	setOptimizationRuntime,
 	optimizationRuntimeInitialState,
 	defaultOptimizations
 }: ExecuteOptimizationStateHydrationParams) => {
-	const persistedOptimizationSettings = aggregate?.stats?.optimizationSettings
-	const latestSceneStats = aggregate?.stats ?? null
+	const persistedOptimizationSettings = manifest?.stats?.optimizationSettings
+	const latestSceneStats = manifest?.stats ?? null
 	const { sourcePackageBytes, textureBytes } =
-		calculateAggregateReferencedBytes(aggregate)
+		calculateManifestReferencedBytes(manifest)
 
 	if (!persistedOptimizationSettings) {
 		setOptimizationState((prev) => ({

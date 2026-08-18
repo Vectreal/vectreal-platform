@@ -74,6 +74,7 @@ export function usePublisherScene({
 	const { isRestoringDraft, persistPendingSceneDraft, snapshotOriginalModel } =
 		useSceneDraft()
 	const { retry: retrySceneLoad } = useSceneSource({
+		routeSceneId: sceneId,
 		openSceneId,
 		sceneManifest,
 		isRestoringDraft

@@ -31,7 +31,7 @@ pnpm add @vctrl/hooks
 Loads 3D files and exposes the parsed Three.js `Object3D` scene.
 
 ```tsx
-import { ModelProvider, useLoadModel } from '@vctrl/hooks/use-load-model'
+import { useLoadModel } from '@vctrl/hooks/use-load-model'
 
 function Uploader() {
 	const { load, status, file, error } = useLoadModel()
@@ -51,15 +51,10 @@ function Uploader() {
 		</div>
 	)
 }
-
-export default function App() {
-	return (
-		<ModelProvider>
-			<Uploader />
-		</ModelProvider>
-	)
-}
 ```
+
+`useLoadModel` holds its own model. To share one across a tree, mount
+`ModelProvider` and read it with `useModelContext`; see below.
 
 ### One entry point, one state
 
@@ -220,8 +215,8 @@ instead of saving a file.
 - Shared types such as `ModelFile`, `SceneLoadResult`, `ServerSceneData`, and `OptimizerIntegrationReturn`
 
 `createBrowserTextureEncoder()` returns the `OffscreenCanvas` encoder the hook injects
-into `texturesOptimization`. Pass it to `@vctrl/core`'s `compressTextures({ encoder })`
-when driving the optimizer directly.
+into `texturesOptimization`. Pass it as `ModelOptimizer#compressTextures`'s
+`encoder` option when driving the optimizer directly.
 
 ---
 

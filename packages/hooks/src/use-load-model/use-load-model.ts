@@ -17,7 +17,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 import { ModelLoader } from '@vctrl/core/model-loader'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
-import { normalizeLocalLoadError } from './error-helpers'
+import {
+	normalizeLocalLoadError,
+	normalizeServerLoadError
+} from './error-helpers'
 import { loadModelFromFiles } from './file-loaders'
 import { useOptimizerIntegration } from './optimizer-integration'
 import { loadModelFromSceneData, loadModelFromServer } from './scene-loaders'
@@ -80,10 +83,16 @@ function useLoadModel<
 		return loader
 	}, [])
 
+	// Read inside `load` so a failure can put back what was on screen.
+	const stateRef = useRef(state)
+	stateRef.current = state
+
 	const load = useCallback(
 		async (source: ModelSource): Promise<ModelState> => {
 			const token = ++loadTokenRef.current
 			const isCurrent = () => loadTokenRef.current === token
+			const modelOnScreen =
+				stateRef.current.status === 'ready' ? stateRef.current : null
 
 			const commit = (next: ModelState): ModelState => {
 				if (isCurrent()) setState(next)
@@ -121,10 +130,18 @@ function useLoadModel<
 
 				return published ?? commit(readyModelState(source.kind, loaded))
 			} catch (error) {
-				const structured = normalizeLocalLoadError(error, 'unknown')
+				const structured =
+					source.kind === 'files'
+						? normalizeLocalLoadError(error, 'unknown')
+						: normalizeServerLoadError(error, source.sceneId ?? '')
 
 				console.error(`Model load failed (${source.kind}):`, structured)
-				return commit(errorModelState(source.kind, structured))
+
+				// A load that fails takes nothing with it. Dropping the wrong file
+				// onto an open scene reports the problem; it does not clear the model
+				// the user was working on.
+				commit(modelOnScreen ?? errorModelState(source.kind, structured))
+				return errorModelState(source.kind, structured)
 			}
 		},
 		[modelLoader]

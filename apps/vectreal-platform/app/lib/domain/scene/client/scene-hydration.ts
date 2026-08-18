@@ -24,26 +24,26 @@ export const getSceneNameFromFileName = (fileName: string): string => {
 	return withoutPath.slice(0, extensionIndex)
 }
 
-export const getSettingsFromAggregate = (
-	aggregate: SceneManifestResponse | null
+export const getSettingsFromManifest = (
+	manifest: SceneManifestResponse | null
 ): SceneSettings | null => {
-	if (!aggregate) {
+	if (!manifest) {
 		return null
 	}
 
-	if (aggregate.settings) {
-		const normalizedCamera = normalizeCameraSettings(aggregate.settings.camera)
+	if (manifest.settings) {
+		const normalizedCamera = normalizeCameraSettings(manifest.settings.camera)
 		return {
-			...aggregate.settings,
+			...manifest.settings,
 			camera: normalizedCamera,
 			interactions: normalizeSceneInteractions(
-				aggregate.settings.interactions,
+				manifest.settings.interactions,
 				{ camera: normalizedCamera }
 			)
 		}
 	}
 
-	const fallbackSettings = aggregate as SceneManifestResponse & {
+	const fallbackSettings = manifest as SceneManifestResponse & {
 		camera?: SceneSettings['camera']
 		interactions?: SceneSettings['interactions']
 		environment?: SceneSettings['environment']
@@ -78,21 +78,21 @@ export const getSettingsFromAggregate = (
 	return null
 }
 
-const toNormalizedAggregateGltfJson = (
-	aggregate: SceneManifestResponse
+const toNormalizedManifestGltfJson = (
+	manifest: SceneManifestResponse
 ): ServerSceneData['gltfJson'] => {
 	if (
-		typeof aggregate.gltfJson === 'object' &&
-		aggregate.gltfJson !== null &&
-		'json' in aggregate.gltfJson &&
-		typeof (aggregate.gltfJson as { json?: unknown }).json === 'object' &&
-		(aggregate.gltfJson as { json?: unknown }).json !== null
+		typeof manifest.gltfJson === 'object' &&
+		manifest.gltfJson !== null &&
+		'json' in manifest.gltfJson &&
+		typeof (manifest.gltfJson as { json?: unknown }).json === 'object' &&
+		(manifest.gltfJson as { json?: unknown }).json !== null
 	) {
-		return (aggregate.gltfJson as { json: unknown })
+		return (manifest.gltfJson as { json: unknown })
 			.json as ServerSceneData['gltfJson']
 	}
 
-	return aggregate.gltfJson as ServerSceneData['gltfJson']
+	return manifest.gltfJson as ServerSceneData['gltfJson']
 }
 
 /**
@@ -106,8 +106,8 @@ export const toSceneSourcePayload = (
 	manifest: SceneManifestResponse
 ): ServerScenePayload => ({
 	meta: manifest.meta ?? undefined,
-	settings: getSettingsFromAggregate(manifest),
-	gltfJson: toNormalizedAggregateGltfJson(manifest),
+	settings: getSettingsFromManifest(manifest),
+	gltfJson: toNormalizedManifestGltfJson(manifest),
 	assetData: null,
 	assetRefs: manifest.assetRefs
 })

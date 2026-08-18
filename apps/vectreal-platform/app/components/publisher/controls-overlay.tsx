@@ -48,7 +48,7 @@ const OverlayControls = ({
 	user,
 	sceneId,
 	projectId,
-	sceneAggregate,
+	sceneManifest,
 	publishedMeta,
 	maxSceneBytes,
 	children
@@ -102,7 +102,7 @@ const OverlayControls = ({
 	} = usePublisherScene({
 		sceneId,
 		userId: user?.id,
-		sceneManifest: sceneAggregate
+		sceneManifest
 	})
 
 	const {

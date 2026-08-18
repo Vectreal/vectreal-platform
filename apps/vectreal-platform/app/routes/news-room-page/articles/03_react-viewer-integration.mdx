@@ -105,28 +105,21 @@ Optional alt: a static screenshot if GIF weight is a concern.
 Here is the minimum working example. It renders a scene from a model you have loaded into the `@vctrl/hooks` context.
 
 ```tsx
-import { ModelProvider, useLoadModel } from '@vctrl/hooks/use-load-model'
+import { ModelProvider, useModelContext } from '@vctrl/hooks/use-load-model'
 import { VectrealViewer } from '@vctrl/viewer'
 import '@vctrl/viewer/css'
 
 function Scene() {
-  const { file } = useLoadModel()
+  const { file } = useModelContext()
   return <VectrealViewer model={file?.model} />
 }
 
-export default function App() {
-  return (
-    <ModelProvider>
-      <Scene />
-    </ModelProvider>
-  )
-}
 ```
 
 Three things are doing the work:
 
 1. **`ModelProvider`** wraps the part of the tree where the viewer lives. It owns the loaded model and exposes loading state via context.
-2. **`useLoadModel()`** reads from that context. Pull `file.model` out of the returned object and pass it to the `model` prop - there is no automatic bridge between the hooks context and the viewer.
+2. **`useModelContext()`** reads from that context, and `useLoadModel()` is the same hook without one, holding a model of its own. Either way, pull `file.model` out of the returned object and pass it to the `model` prop - there is no automatic bridge between the hooks context and the viewer.
 3. **`import '@vctrl/viewer/css'`** is required. The viewer renders a Three.js canvas inside a positioned container; without the stylesheet, layout will collapse and you will see nothing.
 
 That's the whole core. Everything that follows is layered on top.
@@ -148,7 +141,7 @@ The minimum example assumed a model was already in context. In production you wi
 
 ```tsx
 import { useEffect } from 'react'
-import { ModelProvider, useLoadModel } from '@vctrl/hooks/use-load-model'
+import { useLoadModel } from '@vctrl/hooks/use-load-model'
 import { VectrealViewer } from '@vctrl/viewer'
 import '@vctrl/viewer/css'
 
@@ -168,13 +161,6 @@ function Scene() {
   return <VectrealViewer model={file?.model} />
 }
 
-export default function App() {
-  return (
-    <ModelProvider>
-      <Scene />
-    </ModelProvider>
-  )
-}
 ```
 
 > The `'server'` source is designed for the Vectreal scene API and expects a structured JSON response with the GLTF payload and scene settings. To load a model from an arbitrary CDN URL, fetch the file yourself and pass it as `load({ kind: 'files', files: [file] })` instead. For private scenes that require an API key, see the [API keys guide](https://vectreal.com/news-room/api-keys-101) - pass the key via `serverOptions.apiKey`.
@@ -208,7 +194,7 @@ export function ViewerClient(props: { sceneId: string }) {
 
 ```tsx
 // app/components/viewer-impl.tsx
-import { ModelProvider, useLoadModel } from '@vctrl/hooks/use-load-model'
+import { useLoadModel } from '@vctrl/hooks/use-load-model'
 import { VectrealViewer } from '@vctrl/viewer'
 import '@vctrl/viewer/css'
 import { useEffect } from 'react'
@@ -228,11 +214,7 @@ function Scene({ sceneId }: { sceneId: string }) {
 }
 
 export default function ViewerImpl({ sceneId }: { sceneId: string }) {
-  return (
-    <ModelProvider>
-      <Scene sceneId={sceneId} />
-    </ModelProvider>
-  )
+  return <Scene sceneId={sceneId} />
 }
 ```
 
@@ -249,7 +231,7 @@ This pattern is what the Vectreal Platform itself uses internally to render the 
 DIAGRAM BRIEF - SSR data-flow diagram
 Filename: /assets/images/newsroom/react-viewer-integration/step-4-ssr-flow.svg
 Format: SVG, brand colors (#0a0a0a background, #FC6C18 accent on active path, #EAEAEA for nodes).
-Content: A simple horizontal flow. Left to right: "Server Render" → "ViewerClient returns null" → "Client Hydrate" → "lazy() loads chunk" → "ModelProvider mounts" → "VectrealViewer renders".
+Content: A simple horizontal flow. Left to right: "Server Render" → "ViewerClient returns null" → "Client Hydrate" → "lazy() loads chunk" → "useLoadModel loads the scene" → "VectrealViewer renders".
 Style: Each step is a rounded rectangle. Arrows are thin and brand orange. No clipart, no icons inside the boxes - just the labels in DM Sans.
 Caption: "Where the viewer enters the page lifecycle in an SSR app."
 */}
@@ -411,7 +393,7 @@ export function ViewerClient({ sceneId }: { sceneId: string }) {
 ```tsx
 // app/components/viewer-impl.tsx
 import { useEffect } from 'react'
-import { ModelProvider, useLoadModel } from '@vctrl/hooks/use-load-model'
+import { useLoadModel } from '@vctrl/hooks/use-load-model'
 import { VectrealViewer } from '@vctrl/viewer'
 import '@vctrl/viewer/css'
 
@@ -450,11 +432,7 @@ function Scene({ sceneId }: { sceneId: string }) {
 }
 
 export default function ViewerImpl({ sceneId }: { sceneId: string }) {
-  return (
-    <ModelProvider>
-      <Scene sceneId={sceneId} />
-    </ModelProvider>
-  )
+  return <Scene sceneId={sceneId} />
 }
 ```
 

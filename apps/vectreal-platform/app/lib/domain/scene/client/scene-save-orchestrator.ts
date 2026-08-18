@@ -231,7 +231,7 @@ export const executeSceneSaveOrchestrator = async ({
 	//    the scene re-bakes live next load and re-persists once it settles.
 	// Best-effort: any failure leaves the scene to re-bake live next load. The bake
 	// asset id (fresh or kept) is linked into the scene's asset set (below) so it
-	// rides the aggregate on load.
+	// rides the manifest on load.
 	let settingsForSave = currentSettings
 	let bakedShadowAssetId: string | null = null
 	const currentShadows = currentSettings.shadows
@@ -413,7 +413,7 @@ export const executeSceneSaveOrchestrator = async ({
 	sceneAssetIds.push(gltfAssetId)
 
 	// Link the persisted shadow bake into the scene's asset set so the server
-	// downloads it into the aggregate (base64-inlined alongside the model assets)
+	// downloads it into the manifest (base64-inlined alongside the model assets)
 	// and every surface loads it in parallel, with no separate request.
 	if (bakedShadowAssetId) {
 		sceneAssetIds.push(bakedShadowAssetId)
@@ -421,7 +421,7 @@ export const executeSceneSaveOrchestrator = async ({
 
 	// Link the current thumbnail (newly uploaded or the existing one) so it is
 	// tracked as a scene asset: this keeps it from being GC'd and lets a superseded
-	// thumbnail become an unlinked GC candidate. It is excluded from the aggregate's
+	// thumbnail become an unlinked GC candidate. It is excluded from the manifest's
 	// inlined render data server-side (served by URL, not rendered).
 	const thumbnailAssetId = extractThumbnailAssetId(
 		sceneMetaForSave.thumbnailUrl

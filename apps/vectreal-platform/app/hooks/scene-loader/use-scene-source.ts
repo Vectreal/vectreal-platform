@@ -9,9 +9,9 @@ import {
 	optimizationPresets
 } from '../../constants/optimizations'
 import {
-	calculateAggregateReferencedBytes,
+	calculateManifestReferencedBytes,
 	executeOptimizationStateHydration,
-	getSettingsFromAggregate,
+	getSettingsFromManifest,
 	inferOptimizationPreset,
 	toSceneSourcePayload,
 	useSceneModel
@@ -35,6 +35,8 @@ import type { SceneManifestResponse } from '../../types/api'
 import type { ModelSource, ModelState } from '@vctrl/hooks/use-load-model'
 
 interface UseSceneSourceArgs {
+	/** The scene the URL points at, whether or not it could be read. */
+	routeSceneId: null | string
 	/**
 	 * The scene actually open in the publisher: a route id the loader shipped a
 	 * manifest for. An id alone is not one, since a signed-out or expired
@@ -60,6 +62,7 @@ interface UseSceneSourceArgs {
  * whatever the user has changed since.
  */
 export function useSceneSource({
+	routeSceneId,
 	openSceneId,
 	sceneManifest,
 	isRestoringDraft
@@ -75,11 +78,14 @@ export function useSceneSource({
 	const setOptimizationState = useSetAtom(optimizationAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
 	const { reset: resetModel } = model
-	const previousSceneIdRef = useRef<null | string>(openSceneId)
+	// Keyed on the URL, not on the manifest. Leaving a scene is something the
+	// user did; a manifest that stops arriving is a session going stale, and
+	// tearing the open scene down for that would lose their work on a blip.
+	const previousRouteSceneIdRef = useRef<null | string>(routeSceneId)
 
 	useEffect(() => {
-		const previousSceneId = previousSceneIdRef.current
-		previousSceneIdRef.current = openSceneId
+		const previousRouteSceneId = previousRouteSceneIdRef.current
+		previousRouteSceneIdRef.current = routeSceneId
 
 		setCurrentSceneId(openSceneId)
 		// The just-saved marker is consumed by the navigation it was written for.
@@ -91,7 +97,7 @@ export function useSceneSource({
 		// Leaving a scene for the base route is the one publisher transition that
 		// unmounts nothing: /publisher and /publisher/:sceneId are one route. Without
 		// this the previous scene stays on screen where an upload should be.
-		if (previousSceneId && !openSceneId) {
+		if (previousRouteSceneId && !routeSceneId) {
 			resetModel()
 			resetSceneState()
 		}
@@ -99,6 +105,7 @@ export function useSceneSource({
 		openSceneId,
 		resetModel,
 		resetSceneState,
+		routeSceneId,
 		setCurrentSceneId,
 		setLastSavedSceneId
 	])
@@ -116,7 +123,7 @@ export function useSceneSource({
 		const manifest = manifestRef.current
 		if (!savedSceneKey || !manifest) return
 
-		const settings = getSettingsFromAggregate(manifest)
+		const settings = getSettingsFromManifest(manifest)
 		if (settings) {
 			applySceneSettings(settings)
 		}
@@ -126,8 +133,8 @@ export function useSceneSource({
 		setLastSavedSceneMeta(meta)
 
 		executeOptimizationStateHydration({
-			aggregate: manifest,
-			calculateAggregateReferencedBytes,
+			manifest,
+			calculateManifestReferencedBytes,
 			inferOptimizationPreset,
 			setOptimizationState,
 			setOptimizationRuntime,

@@ -7,7 +7,7 @@ vi.mock('./scene-settings-service.server', () => ({
 	sceneSettingsService: {}
 }))
 
-import { buildSceneManifestEtag } from './scene-aggregate.server'
+import { buildSceneManifestEtag } from './scene-manifest.server'
 
 describe('buildSceneManifestEtag', () => {
 	it('builds a weak etag from scene id and settings timestamp', () => {

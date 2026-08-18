@@ -1,5 +1,5 @@
 export * from './scene-action-guard.server'
-export * from './scene-aggregate.server'
+export * from './scene-manifest.server'
 export * from './scene-folder-repository.server'
 export * from './scene-preview-repository.server'
 export * from './scene-settings-assets.server'

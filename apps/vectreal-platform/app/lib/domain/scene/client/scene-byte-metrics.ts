@@ -2,7 +2,7 @@ import { buildAssetLookupKeys } from '@vctrl/core'
 
 import type { SceneManifestResponse } from '../../../../types/api'
 
-interface AggregateReferencedBytes {
+interface ManifestReferencedBytes {
 	sourcePackageBytes: null | number
 	textureBytes: null | number
 }
@@ -53,9 +53,9 @@ const extractGltfDocument = (
  * The references carry their own sizes, so the size bar is accurate before a
  * single asset has been downloaded.
  */
-export const calculateAggregateReferencedBytes = (
+export const calculateManifestReferencedBytes = (
 	manifest: SceneManifestResponse | null
-): AggregateReferencedBytes => {
+): ManifestReferencedBytes => {
 	const gltfJson = manifest?.gltfJson
 	if (!gltfJson) {
 		return {

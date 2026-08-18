@@ -31,7 +31,7 @@ export type GLTFExportResult = SerializedGLTFExportResult
 /* Database record type for assets associated with scenes. */
 export type SceneAssetRecord = typeof assets.$inferSelect
 
-/** Binary asset payload returned from scene aggregate endpoints before serialization. */
+/** Binary asset payload returned from scene endpoints before serialization. */
 export interface SceneAssetBinaryData {
 	readonly data: Uint8Array
 	readonly mimeType: string
@@ -253,7 +253,7 @@ export interface PublisherLoaderData {
 	readonly sceneId: string | null
 	readonly projectId: string | null
 	readonly currentLocation: SceneCurrentLocation
-	readonly sceneAggregate: SceneManifestResponse | null
+	readonly sceneManifest: SceneManifestResponse | null
 	readonly publishedMeta: PublishedSceneMetaResponse | null
 	readonly maxSceneBytes: number | null
 }
