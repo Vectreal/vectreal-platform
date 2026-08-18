@@ -112,7 +112,22 @@ export function isViewerCommand(value: unknown): value is ViewerCommand {
 					value.transitionType as string
 				)
 			)
+		case 'set_animation_playing':
+			return typeof value.playing === 'boolean'
+		case 'restart_animation':
+			return true
+		case 'seek_animation_clip':
+			return (
+				typeof value.clipId === 'string' &&
+				value.clipId.trim().length > 0 &&
+				typeof value.time === 'number' &&
+				Number.isFinite(value.time) &&
+				value.time >= 0
+			)
 		default:
+			// Any command without a case above is dropped here, silently and with
+			// no error on either side of the iframe. A new command type must be
+			// added to this switch or it will simply never arrive.
 			return false
 	}
 }

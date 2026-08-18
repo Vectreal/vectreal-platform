@@ -15,7 +15,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import type { Document } from '@gltf-transform/core'
-import type { Object3D } from 'three'
+import type { AnimationClip, Object3D } from 'three'
 
 export enum ModelFileTypes {
 	gltf = 'gltf',
@@ -39,6 +39,8 @@ export interface ModelLoadResult {
 export interface ThreeJSModelResult extends Omit<ModelLoadResult, 'data'> {
 	/** The loaded Three.js scene */
 	scene: Object3D
+	/** Animation clips carried by the model. Empty when it has none. */
+	animations: AnimationClip[]
 	/** Original document data */
 	document: Document
 }

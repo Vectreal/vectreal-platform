@@ -26,7 +26,7 @@ import { getThreeDracoLoader } from './draco-three-loader'
 import { resolveModifiedUrl } from './resolve-modified-url'
 import { ModelFileTypes, ModelLoadResult, ThreeJSModelResult } from './types'
 
-import type { Object3D } from 'three'
+import type { AnimationClip, Object3D } from 'three'
 
 const DEFAULT_DRACO_DECODER_PATH = '/draco/'
 
@@ -528,8 +528,14 @@ export class ModelLoader {
 					glbBuffer.buffer as ArrayBuffer,
 					'',
 					(gltf) => {
+						// three reads clips off the root when none are passed
+						// explicitly, so mirroring them here keeps the idiomatic
+						// path working for callers that take only the Object3D.
+						gltf.scene.animations = gltf.animations ?? []
+
 						resolve({
 							scene: gltf.scene,
+							animations: gltf.animations ?? [],
 							document: document,
 							type: modelResult.type,
 							size: modelResult.size,
@@ -567,7 +573,12 @@ export class ModelLoader {
 	public async parseGLTFJsonToThreeJS(
 		gltfJson: unknown,
 		assets: Map<string, Uint8Array>
-	): Promise<{ scene: Object3D; size: number; loadTime: number }> {
+	): Promise<{
+		scene: Object3D
+		animations: AnimationClip[]
+		size: number
+		loadTime: number
+	}> {
 		const startTime = Date.now()
 		this.emitProgress('Parsing model data', 25)
 
@@ -596,7 +607,10 @@ export class ModelLoader {
 		totalSize += gltfText.length
 
 		try {
-			const gltf = await new Promise<{ scene: Object3D }>((resolve, reject) => {
+			const gltf = await new Promise<{
+				scene: Object3D
+				animations: AnimationClip[]
+			}>((resolve, reject) => {
 				loader.parse(gltfText, '', resolve, (error) =>
 					reject(
 						error instanceof Error
@@ -608,8 +622,14 @@ export class ModelLoader {
 
 			this.emitProgress('Model loaded successfully', 100)
 
+			// Safe to hand back past the finally below: an AnimationClip holds
+			// plain keyframe arrays and references none of the object URLs that
+			// are about to be revoked.
+			gltf.scene.animations = gltf.animations ?? []
+
 			return {
 				scene: gltf.scene,
+				animations: gltf.animations ?? [],
 				size: totalSize,
 				loadTime: Date.now() - startTime
 			}

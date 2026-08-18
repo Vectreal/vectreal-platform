@@ -18,6 +18,7 @@ import { Center } from '@react-three/drei'
 import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
 import {
+	AnimationSettings,
 	BoundsProps,
 	CameraProps,
 	ControlsProps,
@@ -35,10 +36,11 @@ import {
 	useRef,
 	useState
 } from 'react'
-import { Object3D } from 'three'
+import { AnimationClip, Object3D } from 'three'
 
-import { Canvas, Overlay } from './components'
+import { AnimationControls, Canvas, Overlay } from './components'
 import {
+	SceneAnimation,
 	SceneBounds,
 	SceneCamera,
 	SceneControls,
@@ -47,6 +49,7 @@ import {
 	ScenePostProcessing,
 	SceneShadows
 } from './components/scene'
+import { useAnimationRuntime } from './hooks/use-animation-runtime'
 import { useViewerLoading } from './hooks/use-viewer-loading'
 
 import type {
@@ -81,6 +84,18 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * The 3D model to render in the viewer. (three.js `Object3D`)
 	 */
 	model?: Object3D
+
+	/**
+	 * Animation clips belonging to `model`, as parsed from the same glTF.
+	 * Without these no animation runtime is mounted.
+	 */
+	animations?: AnimationClip[]
+
+	/**
+	 * Playback configuration for `animations`.
+	 * Absent, or `enabled: false`, leaves the model on its rest pose.
+	 */
+	animationOptions?: AnimationSettings
 
 	// --- Container & appearance ---
 
@@ -262,6 +277,8 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	const {
 		// Content
 		children,
+		animations,
+		animationOptions,
 		// Container & appearance
 		className,
 		theme = 'system',
@@ -319,6 +336,11 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		CameraProps['sceneTransition'] | null
 	>(null)
 	const cameraCommandExecutorRef = useRef<null | ViewerCommandExecutor>(null)
+	const animation = useAnimationRuntime({
+		animations,
+		options: animationOptions,
+		hasContent
+	})
 
 	useEffect(() => {
 		if (!hasContent) {
@@ -333,6 +355,8 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	const handleInitialFramingComplete = useCallback(() => {
 		setIsInitialFramingComplete(true)
 	}, [])
+
+	const { forwardCommand: forwardAnimationCommand } = animation
 
 	const executeViewerCommand = useCallback((command: ViewerCommand) => {
 		switch (command.type) {
@@ -358,8 +382,13 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					easing: command.easing
 				})
 				break
+			case 'restart_animation':
+			case 'seek_animation_clip':
+			case 'set_animation_playing':
+				forwardAnimationCommand(command)
+				break
 		}
-	}, [])
+	}, [forwardAnimationCommand])
 
 	const handleSceneCameraExecutorReady = useCallback(
 		(executor: null | ViewerCommandExecutor) => {
@@ -399,6 +428,16 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 						loadingState={loadingState}
 						onLoaderFadeOutComplete={completeLoadingTransition}
 						popover={popover}
+						animationControls={
+							animation.showControls ? (
+								<AnimationControls
+									playing={animation.status.playing}
+									complete={animation.status.complete}
+									onToggle={animation.toggle}
+									onRestart={animation.restart}
+								/>
+							) : null
+						}
 						loader={loader}
 						loadingThumbnail={loadingThumbnail}
 					/>
@@ -455,6 +494,16 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									onInitialFramingComplete={handleInitialFramingComplete}
 									onInteractionEvent={onInteractionEvent}
 								/>
+								{model && animations && animation.shouldMount && (
+									<SceneAnimation
+										model={model}
+										animations={animations}
+										options={animationOptions}
+										onCommandExecutorReady={animation.registerExecutor}
+										onInteractionEvent={onInteractionEvent}
+										onPlaybackStatusChange={animation.setStatus}
+									/>
+								)}
 								<Center top>
 									{model && (
 										<SceneModel
@@ -472,6 +521,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									model={model}
 									normalizationOptions={normalizationOptions}
 									{...shadowsOptions}
+									isModelAnimating={animation.status.active}
 									lightEditable={shadowLightEditable}
 									onLightChange={onShadowLightChange}
 									staticBake={staticShadowBake}

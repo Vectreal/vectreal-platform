@@ -57,6 +57,11 @@ export function useOptimizerIntegration(
 
 				replaceModel({
 					model: result.scene,
+					// Re-read from the optimized model rather than carrying the
+					// previous clips over: optimization can legitimately change
+					// what survives, and a stale clip would be bound against a
+					// scene graph that no longer matches it.
+					animations: result.animations,
 					type: ModelFileTypes.glb,
 					name: optimizedFile.name
 				})

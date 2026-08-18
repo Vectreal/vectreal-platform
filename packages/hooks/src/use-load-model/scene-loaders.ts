@@ -96,6 +96,7 @@ export const loadModelFromSceneData = async (
 		const loaded: LoadedModel = {
 			file: {
 				model: result.scene,
+				animations: result.animations,
 				type: ModelFileTypes.gltf,
 				name: sceneData.meta?.name || 'scene',
 				sourcePackageBytes,
@@ -123,6 +124,7 @@ export const loadModelFromSceneData = async (
 	const loaded: LoadedModel = {
 		file: {
 			model: result.scene,
+			animations: result.animations,
 			type: ModelFileTypes.gltf,
 			name: gltfFile.name,
 			sourcePackageBytes,

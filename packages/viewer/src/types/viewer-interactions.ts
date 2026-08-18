@@ -32,9 +32,36 @@ export interface SetControlsOptionsViewerCommand {
 	pan?: boolean
 }
 
+/** Command that plays the animation program from the beginning. */
+export interface RestartAnimationViewerCommand {
+	type: 'restart_animation'
+}
+
+/**
+ * Command that moves a single clip to a time offset.
+ *
+ * An authoring affordance. There is deliberately no equivalent for the whole
+ * program: with several clips of differing length and rate, a global position
+ * has no well-defined meaning.
+ */
+export interface SeekAnimationClipViewerCommand {
+	type: 'seek_animation_clip'
+	clipId: string
+	time: number
+}
+
+/** Command that starts or suspends animation playback. */
+export interface SetAnimationPlayingViewerCommand {
+	type: 'set_animation_playing'
+	playing: boolean
+}
+
 /** Minimal imperative command surface currently supported by the viewer runtime. */
 export type ViewerCommand =
 	| ActivateCameraViewerCommand
+	| RestartAnimationViewerCommand
+	| SeekAnimationClipViewerCommand
+	| SetAnimationPlayingViewerCommand
 	| SetAutoRotateViewerCommand
 	| SetControlsEnabledViewerCommand
 	| SetControlsOptionsViewerCommand
@@ -68,8 +95,26 @@ export interface AutoRotateChangedInteractionEvent {
 	enabled: boolean
 }
 
+/** Emitted whenever a single animation clip runs to its end. */
+export interface AnimationClipFinishedInteractionEvent {
+	type: 'animation_clip_finished'
+	clipId: string
+}
+
+/** Emitted whenever the animation program starts, stops or advances. */
+export interface AnimationStateChangedInteractionEvent {
+	type: 'animation_state_changed'
+	playing: boolean
+	/** The clip driving a sequence; null in simultaneous mode. */
+	activeClipId: null | string
+	/** True once the program has run to its end without looping. */
+	complete: boolean
+}
+
 /** Minimal event surface currently emitted by the viewer runtime. */
 export type ViewerInteractionEvent =
+	| AnimationClipFinishedInteractionEvent
+	| AnimationStateChangedInteractionEvent
 	| AutoRotateChangedInteractionEvent
 	| CameraChangedInteractionEvent
 	| InitialFramingCompletedInteractionEvent
