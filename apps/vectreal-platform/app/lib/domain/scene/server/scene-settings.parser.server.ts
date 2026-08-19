@@ -424,9 +424,13 @@ export class SceneSettingsParser {
 			return ApiResponse.badRequest('hotspots must be an array')
 		}
 
-		const VALID_STYLE_PRESETS = new Set(['dot', 'image'])
+		// Must stay in step with HotspotStylePreset in @vctrl/core and with the
+		// publisher's STYLE_PRESET_OPTIONS. This set omitted 'svg' while both of
+		// those offered it, so choosing SVG rejected the entire scene save.
+		const VALID_STYLE_PRESETS = new Set(['dot', 'image', 'svg'])
 		const cameraIds = new Set(cameras.map((c) => c.cameraId))
 		const seenSequenceIndices = new Set<number>()
+		const seenIds = new Set<string>()
 
 		for (const [i, hotspot] of hotspots.entries()) {
 			if (!isRecord(hotspot)) {
@@ -435,6 +439,17 @@ export class SceneSettingsParser {
 			if (typeof hotspot.id !== 'string' || !hotspot.id.trim()) {
 				return ApiResponse.badRequest(`hotspots[${i}].id is required`)
 			}
+			// The id lands in a uuid primary key. Checking it here turns a
+			// stale client still minting the old `hotspot-<timestamp>` format
+			// into a legible 400, rather than a Postgres cast error that fails
+			// the whole scene save without naming a cause.
+			if (!UUID_REGEX.test(hotspot.id)) {
+				return ApiResponse.badRequest(`hotspots[${i}].id must be a UUID`)
+			}
+			if (seenIds.has(hotspot.id)) {
+				return ApiResponse.badRequest(`hotspots has duplicate id ${hotspot.id}`)
+			}
+			seenIds.add(hotspot.id)
 			if (typeof hotspot.name !== 'string' || !hotspot.name.trim()) {
 				return ApiResponse.badRequest(`hotspots[${i}].name is required`)
 			}
@@ -461,7 +476,15 @@ export class SceneSettingsParser {
 			}
 			if (!VALID_STYLE_PRESETS.has(hotspot.stylePreset as string)) {
 				return ApiResponse.badRequest(
-					`hotspots[${i}].stylePreset must be 'dot' or 'image'`
+					`hotspots[${i}].stylePreset must be 'dot', 'image' or 'svg'`
+				)
+			}
+			if (
+				hotspot.occlusionEnabled !== undefined &&
+				typeof hotspot.occlusionEnabled !== 'boolean'
+			) {
+				return ApiResponse.badRequest(
+					`hotspots[${i}].occlusionEnabled must be a boolean`
 				)
 			}
 			if (

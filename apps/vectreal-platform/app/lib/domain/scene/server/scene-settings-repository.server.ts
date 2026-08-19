@@ -171,7 +171,8 @@ export async function getHotspotsBySceneSettingsId(
 		internalOnly: r.internalOnly,
 		sequenceIndex: r.sequenceIndex ?? undefined,
 		stylePreset: r.stylePreset,
-		payloadUrl: r.payloadUrl ?? undefined
+		payloadUrl: r.payloadUrl ?? undefined,
+		occlusionEnabled: r.occlusionEnabled
 	}))
 }
 
@@ -199,7 +200,8 @@ export async function replaceHotspots(
 			internalOnly: h.internalOnly,
 			sequenceIndex: h.sequenceIndex ?? null,
 			stylePreset: h.stylePreset,
-			payloadUrl: h.payloadUrl ?? null
+			payloadUrl: h.payloadUrl ?? null,
+			occlusionEnabled: h.occlusionEnabled ?? true
 		}))
 	)
 }

@@ -56,10 +56,12 @@ import {
 	selectUnreferencedAssetIds,
 	uploadSceneAssets
 } from '../../asset/asset-storage.server'
+import { haveHotspotsChanged } from '../scene-hotspot-comparison'
 
 import type { SceneMetaState } from '../../../../types/publisher-config'
 import type {
 	ExtendedGLTFDocument,
+	HotspotDefinition,
 	OptimizationReport,
 	Optimizations,
 	SceneSettings
@@ -190,8 +192,12 @@ class SceneSettingsService {
 				? await getSceneAssetIds(tx, existingSettings.id)
 				: []
 
+			const existingHotspots = existingSettings
+				? await getHotspotsBySceneSettingsId(tx, existingSettings.id)
+				: []
+
 			const settingsChanged = existingSettings
-				? this.compareSceneSettings(settings, existingSettings)
+				? this.compareSceneSettings(settings, existingSettings, existingHotspots)
 				: true
 			const { assetsChanged, reusableAssetIds } =
 				await this.determineAssetReuse(gltfJson, existingAssetIds, tx)
@@ -296,8 +302,12 @@ class SceneSettingsService {
 			const existingAssetIds = existingSettings
 				? await getSceneAssetIds(tx, existingSettings.id)
 				: []
+			const existingHotspots = existingSettings
+				? await getHotspotsBySceneSettingsId(tx, existingSettings.id)
+				: []
+
 			const settingsChanged = existingSettings
-				? this.compareSceneSettings(settings, existingSettings)
+				? this.compareSceneSettings(settings, existingSettings, existingHotspots)
 				: true
 			const assetsChanged = compareAssetIds(sceneAssetIds, existingAssetIds)
 
@@ -896,9 +906,15 @@ class SceneSettingsService {
 	 */
 	private compareSceneSettings(
 		current: SceneSettings,
-		existing: typeof sceneSettings.$inferSelect
+		existing: typeof sceneSettings.$inferSelect,
+		existingHotspots: HotspotDefinition[]
 	): boolean {
 		return (
+			// Hotspots are their own table, so they are compared against the
+			// separately loaded list rather than a field on the settings row.
+			// Without this a hotspot-only edit reaches the `unchanged` return
+			// above and never gets written.
+			haveHotspotsChanged(current.hotspots, existingHotspots) ||
 			JSON.stringify(current.bounds) !== JSON.stringify(existing.bounds) ||
 			JSON.stringify(current.camera) !== JSON.stringify(existing.camera) ||
 			JSON.stringify(current.controls) !== JSON.stringify(existing.controls) ||

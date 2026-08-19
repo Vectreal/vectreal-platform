@@ -14,6 +14,10 @@ import { useAtom } from 'jotai/react'
 import { Crosshair, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo } from 'react'
 
+import {
+	assignSequenceIndex,
+	removeHotspot
+} from '../../../../lib/domain/scene/scene-hotspot-edits'
 import { isClickToPlaceActiveAtom } from '../../../../lib/stores/publisher-config-store'
 import {
 	activeHotspotIdAtom,
@@ -31,8 +35,15 @@ import {
 import type { ToggleButtonGroupOption } from '../../settings-components'
 import type { HotspotDefinition, HotspotStylePreset } from '@vctrl/core'
 
+/**
+ * `scene_hotspots.id` is a uuid primary key, so this has to mint a real uuid.
+ * It previously produced `hotspot-<timestamp>-<random>`, which Postgres
+ * rejected on insert, and because that insert shares a transaction with the
+ * settings and asset writes it failed the entire scene save rather than just
+ * the hotspot.
+ */
 function createHotspotId(): string {
-	return `hotspot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+	return crypto.randomUUID()
 }
 
 function createDefaultHotspot(): HotspotDefinition {
@@ -97,6 +108,10 @@ const HotspotsSettingsPanel = memo(() => {
 				...(prev.cameras ?? []),
 				{
 					cameraId: pairedCameraId,
+					// Without this the camera reads as a scene camera to
+					// isSceneCamera and can be picked as the scene's default
+					// view, which is not a frame anyone composed.
+					kind: 'hotspot' as const,
 					name: `${next.name} Camera`,
 					fov: 60
 				}
@@ -105,21 +120,36 @@ const HotspotsSettingsPanel = memo(() => {
 		setSelectedId(next.id)
 	}, [setCamera, setHotspots])
 
+	/**
+	 * Deleting a hotspot also retires its paired camera, and both leave
+	 * references behind that the server rejects. A hotspot still pointing at
+	 * the removed camera fails validation, and so does a gap-free sequence
+	 * requirement, so one delete could block every subsequent save of the
+	 * scene with an error naming neither the hotspot nor the camera.
+	 */
 	const handleDelete = useCallback(
 		(id: string) => {
 			const hotspot = hotspots.find((h) => h.id === id)
-			setHotspots((prev) => prev.filter((h) => h.id !== id))
-			if (hotspot?.linkedCameraId) {
+			const removedCameraId = hotspot?.linkedCameraId
+
+			setHotspots((prev) => removeHotspot(prev, id))
+
+			if (removedCameraId) {
 				setCamera((prev) => ({
 					...prev,
+					// The scene must not keep opening on a camera that is gone.
+					activeCameraId:
+						prev.activeCameraId === removedCameraId
+							? undefined
+							: prev.activeCameraId,
 					cameras: (prev.cameras ?? []).filter(
-						(c) => c.cameraId !== hotspot.linkedCameraId
+						(c) => c.cameraId !== removedCameraId
 					)
 				}))
 			}
 			setSelectedId((prev) => (prev === id ? null : prev))
 		},
-		[hotspots, setCamera, setHotspots]
+		[hotspots, setCamera, setHotspots, setSelectedId]
 	)
 
 	const handlePositionChange = useCallback(
@@ -134,6 +164,31 @@ const HotspotsSettingsPanel = memo(() => {
 			updateHotspot(selectedHotspot.id, { worldPosition: next })
 		},
 		[selectedHotspot, updateHotspot]
+	)
+
+	/**
+	 * The server rejects duplicate sequence indices outright, with a message
+	 * naming the number and neither hotspot. Typing an index another hotspot
+	 * already holds swaps the two rather than creating that collision, which
+	 * is also what someone reordering a sequence expects.
+	 */
+	const handleSequenceChange = useCallback(
+		(raw: string) => {
+			if (!selectedHotspot) return
+
+			if (raw === '') {
+				updateHotspot(selectedHotspot.id, { sequenceIndex: undefined })
+				return
+			}
+
+			const parsed = parseInt(raw, 10)
+			if (isNaN(parsed) || parsed < 0) return
+
+			setHotspots((prev) =>
+				assignSequenceIndex(prev, selectedHotspot.id, parsed)
+			)
+		},
+		[selectedHotspot, setHotspots, updateHotspot]
 	)
 
 	return (
@@ -352,19 +407,7 @@ const HotspotsSettingsPanel = memo(() => {
 										? selectedHotspot.sequenceIndex
 										: ''
 								}
-								onChange={(e) => {
-									const raw = e.target.value
-									if (raw === '') {
-										updateHotspot(selectedHotspot.id, {
-											sequenceIndex: undefined
-										})
-										return
-									}
-									const parsed = parseInt(raw, 10)
-									if (!isNaN(parsed) && parsed >= 0) {
-										updateHotspot(selectedHotspot.id, { sequenceIndex: parsed })
-									}
-								}}
+								onChange={(e) => handleSequenceChange(e.target.value)}
 								className="h-8 font-mono text-sm"
 							/>
 						</SettingRow>

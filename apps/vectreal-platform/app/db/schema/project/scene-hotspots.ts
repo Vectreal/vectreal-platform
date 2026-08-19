@@ -44,6 +44,11 @@ export const sceneHotspots = pgTable(
 		visible: boolean('visible').notNull().default(true),
 		internalOnly: boolean('internal_only').notNull().default(false),
 
+		// Whether the marker dims when geometry occludes it. Defaults true to
+		// match the authoring default, so rows written before this column
+		// existed read back as the behaviour their author saw.
+		occlusionEnabled: boolean('occlusion_enabled').notNull().default(true),
+
 		// 0-based sequence position; null means not in any sequence.
 		sequenceIndex: integer('sequence_index'),
 

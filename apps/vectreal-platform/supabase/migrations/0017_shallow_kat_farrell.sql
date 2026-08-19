@@ -1,0 +1,1 @@
+ALTER TABLE "scene_hotspots" ADD COLUMN "occlusion_enabled" boolean DEFAULT true NOT NULL;
