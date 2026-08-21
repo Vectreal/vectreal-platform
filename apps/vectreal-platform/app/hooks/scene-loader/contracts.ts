@@ -24,8 +24,12 @@ export interface ScenePersistenceState {
 	setLastSavedSceneMeta: (sceneMetaState: SceneMetaState | null) => void
 	lastSavedSceneId: string | null
 	setLastSavedSceneId: (sceneId: string | null) => void
-	/** True while the route's scene is still loading. */
-	isLoading: boolean
+	/**
+	 * True while dirty detection has to stay suppressed: either the route's scene
+	 * is still loading, or a route-opened scene's saved baseline has not hydrated
+	 * yet.
+	 */
+	suppressDirtyDetection: boolean
 }
 
 export interface SceneOptimizationSaveState {

@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, eq, notInArray, sql } from 'drizzle-orm'
 
 import * as dbSchema from '../../../../db/schema'
 import { assets, sceneAssets, sceneHotspots, sceneSettings } from '../../../../db/schema'
@@ -6,6 +6,7 @@ import {
 	SceneSettingsUpsertInput,
 	SceneSettingsWithAssets
 } from '../../../../types/api'
+import { columnBackedSceneSettings } from '../scene-settings-comparison'
 
 import type { HotspotDefinition, SceneSettings } from '@vctrl/core'
 import type { ExtractTablesWithRelations } from 'drizzle-orm'
@@ -79,13 +80,10 @@ export async function getSceneSettingsWithAssetsRow(
 }
 
 function buildSceneSettingsValues(params: SceneSettingsUpsertInput) {
-	// hotspots are managed separately via replaceHotspots — exclude them here.
-	// All other SceneSettings fields map 1:1 to columns and flow through automatically.
-	const { hotspots: _hotspots, ...columnSettings } = params.settings
 	return {
 		sceneId: params.sceneId,
 		createdBy: params.createdBy,
-		...columnSettings
+		...columnBackedSceneSettings(params.settings)
 	}
 }
 
@@ -160,7 +158,13 @@ export async function getHotspotsBySceneSettingsId(
 		.select()
 		.from(sceneHotspots)
 		.where(eq(sceneHotspots.sceneSettingsId, sceneSettingsId))
-		.orderBy(sceneHotspots.sequenceIndex, sceneHotspots.createdAt)
+		// `id` only breaks the tie between hotspots authored in the same write,
+		// so a list can never reshuffle itself between two reads.
+		.orderBy(
+			sceneHotspots.sequenceIndex,
+			sceneHotspots.createdAt,
+			sceneHotspots.id
+		)
 
 	return rows.map((r) => ({
 		id: r.id,
@@ -181,27 +185,73 @@ export async function replaceHotspots(
 	sceneSettingsId: string,
 	hotspots: HotspotDefinition[]
 ): Promise<void> {
+	const scopedToScene = eq(sceneHotspots.sceneSettingsId, sceneSettingsId)
+	const survivingIds = hotspots.map((h) => h.id)
+
+	// Rows that survive the save are updated in place rather than deleted and
+	// reinserted, so `createdAt` keeps recording when the hotspot was authored,
+	// which is what unsequenced hotspots are ordered by. notInArray rejects an
+	// empty list, and a save that keeps nothing is a full clear anyway.
 	await tx
 		.delete(sceneHotspots)
-		.where(eq(sceneHotspots.sceneSettingsId, sceneSettingsId))
+		.where(
+			survivingIds.length === 0
+				? scopedToScene
+				: and(scopedToScene, notInArray(sceneHotspots.id, survivingIds))
+		)
 
 	if (hotspots.length === 0) return
 
-	await tx.insert(sceneHotspots).values(
-		hotspots.map((h) => ({
-			id: h.id,
-			sceneSettingsId,
-			name: h.name,
-			worldPositionX: h.worldPosition[0],
-			worldPositionY: h.worldPosition[1],
-			worldPositionZ: h.worldPosition[2],
-			linkedCameraId: h.linkedCameraId ?? null,
-			visible: h.visible,
-			internalOnly: h.internalOnly,
-			sequenceIndex: h.sequenceIndex ?? null,
-			stylePreset: h.stylePreset,
-			payloadUrl: h.payloadUrl ?? null,
-			occlusionEnabled: h.occlusionEnabled ?? true
-		}))
-	)
+	const written = await tx
+		.insert(sceneHotspots)
+		.values(
+			hotspots.map((h) => ({
+				id: h.id,
+				sceneSettingsId,
+				name: h.name,
+				worldPositionX: h.worldPosition[0],
+				worldPositionY: h.worldPosition[1],
+				worldPositionZ: h.worldPosition[2],
+				linkedCameraId: h.linkedCameraId ?? null,
+				visible: h.visible,
+				internalOnly: h.internalOnly,
+				sequenceIndex: h.sequenceIndex ?? null,
+				stylePreset: h.stylePreset,
+				payloadUrl: h.payloadUrl ?? null,
+				occlusionEnabled: h.occlusionEnabled ?? true
+			}))
+		)
+		.onConflictDoUpdate({
+			target: sceneHotspots.id,
+			// `id` is the global primary key, so a conflict can land on a row the
+			// scene-scoped delete never saw because it belongs to another scene.
+			// Postgres evaluates setWhere under the same row lock as the conflict
+			// resolution, which a pre-check select could not; a row it blocks is
+			// left untouched and omitted from `returning`.
+			setWhere: scopedToScene,
+			set: {
+				name: sql`excluded.name`,
+				worldPositionX: sql`excluded.world_position_x`,
+				worldPositionY: sql`excluded.world_position_y`,
+				worldPositionZ: sql`excluded.world_position_z`,
+				linkedCameraId: sql`excluded.linked_camera_id`,
+				visible: sql`excluded.visible`,
+				internalOnly: sql`excluded.internal_only`,
+				sequenceIndex: sql`excluded.sequence_index`,
+				stylePreset: sql`excluded.style_preset`,
+				payloadUrl: sql`excluded.payload_url`,
+				occlusionEnabled: sql`excluded.occlusion_enabled`,
+				updatedAt: new Date()
+			}
+		})
+		.returning({ id: sceneHotspots.id })
+
+	if (written.length !== hotspots.length) {
+		const writtenIds = new Set(written.map((row) => row.id))
+		const collidedIds = survivingIds.filter((id) => !writtenIds.has(id))
+
+		throw new Error(
+			`Hotspot id(s) already belong to a different scene: ${collidedIds.join(', ')}`
+		)
+	}
 }

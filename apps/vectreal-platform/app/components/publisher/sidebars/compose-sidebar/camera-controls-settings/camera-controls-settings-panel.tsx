@@ -38,7 +38,15 @@ import {
 	type FieldConfig
 } from './constants'
 import { buildInternalPreviewPath } from '../../../../../lib/domain/embed/embed-snippet'
-import { resolveDefaultSceneCameraId } from '../../../../../lib/domain/scene/scene-camera'
+import {
+	applyDefaultCameraFlag,
+	isLastSceneCamera,
+	resolveDefaultSceneCameraId
+} from '../../../../../lib/domain/scene/scene-camera'
+import {
+	removeCamera,
+	repointHotspotLinks
+} from '../../../../../lib/domain/scene/scene-hotspot-camera-links'
 import {
 	canEditCameraSettingsAtom,
 	currentLocationAtom,
@@ -201,19 +209,6 @@ function getNormalizedTransition(
 	}
 }
 
-/**
- * Which camera gets `initial: true`, and therefore the frame the scene opens
- * on.
- *
- * This used to return `cameras[0]` regardless of kind, despite its name. With a
- * hotspot sitting first in the array it marked the hotspot as initial while the
- * thumbnail was captured from the first *scene* camera, so the load placeholder
- * and the frame it resolved into were of different views.
- */
-function resolveFirstSceneCameraId(cameras: CameraEntry[]): string {
-	return resolveDefaultSceneCameraId(cameras) ?? ''
-}
-
 function resolveEditorTargetCameraId(
 	normalizedCamera: CameraProps,
 	selectedCameraId?: string
@@ -226,15 +221,8 @@ function resolveEditorTargetCameraId(
 	)
 }
 
-function withImplicitFirstCameraDefault(camera: CameraProps): CameraProps {
-	const firstSceneCameraId = resolveFirstSceneCameraId(camera.cameras ?? [])
-	return {
-		...camera,
-		cameras: (camera.cameras ?? []).map((entry) => ({
-			...entry,
-			initial: entry.cameraId === firstSceneCameraId
-		}))
-	}
+function withDefaultCameraFlag(camera: CameraProps): CameraProps {
+	return { ...camera, cameras: applyDefaultCameraFlag(camera.cameras ?? []) }
 }
 
 function normalizeCameraState(camera: CameraProps): CameraProps {
@@ -277,15 +265,10 @@ function normalizeCameraState(camera: CameraProps): CameraProps {
 		normalizedCameras.find((entry) => entry.initial)?.cameraId ??
 		fallbackCamera.cameraId
 
-	const effectiveDefaultId = resolveFirstSceneCameraId(normalizedCameras)
-
-	return withImplicitFirstCameraDefault({
+	return withDefaultCameraFlag({
 		...camera,
 		activeCameraId,
-		cameras: normalizedCameras.map((entry) => ({
-			...entry,
-			initial: entry.cameraId === effectiveDefaultId
-		}))
+		cameras: normalizedCameras
 	})
 }
 
@@ -379,9 +362,20 @@ const CameraControlsSettingsPanel = memo(() => {
 	)
 
 	const resolvedDefaultCameraId = useMemo(
-		() => resolveFirstSceneCameraId(normalizedCamera.cameras ?? []),
+		() => resolveDefaultSceneCameraId(normalizedCamera.cameras),
 		[normalizedCamera.cameras]
 	)
+
+	const editorTargetCameraId = resolveEditorTargetCameraId(
+		normalizedCamera,
+		selectedCameraId
+	)
+
+	// Greying the button out is courtesy; `removeCamera` is what enforces both
+	// floors, since the panel is not the only thing that can reach the atom.
+	const canDeleteSelectedCamera =
+		(normalizedCamera.cameras?.length ?? 0) > 1 &&
+		!isLastSceneCamera(normalizedCamera.cameras, editorTargetCameraId)
 
 	const isCameraEditingLocked = !canEditCameraSettings
 
@@ -414,7 +408,7 @@ const CameraControlsSettingsPanel = memo(() => {
 					return normalized
 				}
 
-				return withImplicitFirstCameraDefault({
+				return withDefaultCameraFlag({
 					...normalized,
 					cameras: (normalized.cameras ?? []).map((cameraEntry) => {
 						if (cameraEntry.cameraId !== targetCameraId) {
@@ -443,8 +437,7 @@ const CameraControlsSettingsPanel = memo(() => {
 	}, [requestSceneCameraSnapshot])
 
 	const isEditingDefaultCamera =
-		resolveDefaultSceneCameraId(normalizedCamera.cameras) ===
-		resolveEditorTargetCameraId(normalizedCamera, selectedCameraId)
+		resolvedDefaultCameraId === editorTargetCameraId
 
 	const handleSelectCamera = useCallback(
 		(nextCameraId: string) => {
@@ -489,13 +482,17 @@ const CameraControlsSettingsPanel = memo(() => {
 					snapshot
 				),
 				cameraId: newCameraId,
-				name: newName
+				name: newName,
+				// The source camera is whichever one the editor was on, which can be a
+				// hotspot's. Inheriting that kind would leave the new camera unable to
+				// ever become the default, with the pin button silently doing nothing.
+				kind: 'scene'
 			}
 
 			// The new camera adopts the current view as its initial pose, but existing
 			// cameras are left untouched — only the explicit "Set camera to current
 			// view" button overwrites a saved camera with the live viewport.
-			return withImplicitFirstCameraDefault({
+			return withDefaultCameraFlag({
 				...normalized,
 				activeCameraId: newCameraId,
 				cameras: [...(normalized.cameras ?? []), newCamera]
@@ -510,72 +507,72 @@ const CameraControlsSettingsPanel = memo(() => {
 	])
 
 	const handleDeleteCamera = useCallback(() => {
-		setCamera((prev) => {
-			const normalized = normalizeCameraState(prev)
-			const cameras = normalized.cameras ?? []
-			if (cameras.length <= 1) {
-				return normalized
-			}
+		const next = removeCamera(
+			{ camera: normalizedCamera, hotspots },
+			resolveEditorTargetCameraId(normalizedCamera, selectedCameraId)
+		)
+		if (!next) return
 
-			const targetId = resolveEditorTargetCameraId(normalized, selectedCameraId)
-			const remainingCameras = cameras.filter(
-				(cameraEntry) => cameraEntry.cameraId !== targetId
-			)
-			const nextActiveCameraId = remainingCameras[0]?.cameraId
-			if (!nextActiveCameraId) {
-				return normalized
-			}
+		// Landing on the first survivor would select a hotspot's camera whenever
+		// one sits ahead of the remaining scene cameras, and the editor treats
+		// whatever is selected as the camera "Set camera to current view" writes.
+		const nextCamera = {
+			...next.camera,
+			activeCameraId: resolveDefaultSceneCameraId(next.camera.cameras)
+		}
 
-			setSelectedCameraId(nextActiveCameraId)
-			return withImplicitFirstCameraDefault({
-				...normalized,
-				activeCameraId: nextActiveCameraId,
-				cameras: remainingCameras
-			})
-		})
-	}, [selectedCameraId, setCamera, setSelectedCameraId])
+		setCamera(nextCamera)
+		setHotspots(next.hotspots)
+		setSelectedCameraId(nextCamera.activeCameraId ?? '')
+	}, [
+		hotspots,
+		normalizedCamera,
+		selectedCameraId,
+		setCamera,
+		setHotspots,
+		setSelectedCameraId
+	])
 
 	const handleRenameCamera = useCallback(
 		(nextName: string) => {
 			const oldId = selectedCamera?.cameraId
 			if (!oldId) return
 
-			setCamera((prev) => {
-				const normalized = normalizeCameraState(prev)
-				const existingIds = (normalized.cameras ?? []).map((c) => c.cameraId)
-				const newId = deriveUniqueSlug(nextName, existingIds, {
-					excludeId: oldId,
-					fallback: 'camera'
-				})
+			const newId = deriveUniqueSlug(
+				nextName,
+				allCameras.map((entry) => entry.cameraId),
+				{ excludeId: oldId, fallback: 'camera' }
+			)
 
-				const updatedCameras = (normalized.cameras ?? []).map((entry) =>
-					entry.cameraId === oldId
-						? { ...entry, cameraId: newId, name: nextName }
-						: entry
-				)
-
-				const updatedActiveCameraId =
-					normalized.activeCameraId === oldId
-						? newId
-						: normalized.activeCameraId
-
-				if (newId !== oldId) {
-					setSelectedCameraId(newId)
-					setHotspots((prev) =>
-						prev.map((h) =>
-							h.linkedCameraId === oldId ? { ...h, linkedCameraId: newId } : h
-						)
+			setCamera(
+				withDefaultCameraFlag({
+					...normalizedCamera,
+					activeCameraId:
+						normalizedCamera.activeCameraId === oldId
+							? newId
+							: normalizedCamera.activeCameraId,
+					cameras: allCameras.map((entry) =>
+						entry.cameraId === oldId
+							? { ...entry, cameraId: newId, name: nextName }
+							: entry
 					)
-				}
-
-				return withImplicitFirstCameraDefault({
-					...normalized,
-					activeCameraId: updatedActiveCameraId,
-					cameras: updatedCameras
 				})
-			})
+			)
+
+			if (newId !== oldId) {
+				setSelectedCameraId(newId)
+				setHotspots(repointHotspotLinks(hotspots, oldId, newId))
+			}
 		},
-		[selectedCamera?.cameraId, setCamera, setHotspots, setSelectedCameraId]
+		[
+			allCameras,
+			hotspots,
+			normalizedCamera,
+			selectedCamera?.cameraId,
+			setCamera,
+			setHotspots,
+			setSelectedCameraId
+		]
 	)
 
 	const handleCommitCameraName = useCallback(() => {
@@ -604,7 +601,7 @@ const CameraControlsSettingsPanel = memo(() => {
 				)
 			]
 
-			return withImplicitFirstCameraDefault({
+			return withDefaultCameraFlag({
 				...normalized,
 				cameras: reorderedCameras
 			})
@@ -647,7 +644,7 @@ const CameraControlsSettingsPanel = memo(() => {
 	const handleTransitionUpdate = useCallback(
 		(nextTransition: CameraTransitionConfig) => {
 			setCamera((prev) =>
-				withImplicitFirstCameraDefault({
+				withDefaultCameraFlag({
 					...normalizeCameraState(prev),
 					sceneTransition: nextTransition
 				})
@@ -999,10 +996,7 @@ const CameraControlsSettingsPanel = memo(() => {
 									size="icon"
 									className="h-9 w-9"
 									onClick={handleDeleteCamera}
-									disabled={
-										isCameraEditingLocked ||
-										(normalizedCamera.cameras?.length ?? 0) <= 1
-									}
+									disabled={isCameraEditingLocked || !canDeleteSelectedCamera}
 									title="Delete camera"
 								>
 									<Trash2 className="h-4 w-4" />

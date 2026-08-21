@@ -56,15 +56,13 @@ import {
 	selectUnreferencedAssetIds,
 	uploadSceneAssets
 } from '../../asset/asset-storage.server'
-import { haveHotspotsChanged } from '../scene-hotspot-comparison'
+import { haveSceneSettingsChanged } from '../scene-settings-comparison'
 
 import type { SceneMetaState } from '../../../../types/publisher-config'
 import type {
 	ExtendedGLTFDocument,
-	HotspotDefinition,
 	OptimizationReport,
-	Optimizations,
-	SceneSettings
+	Optimizations
 } from '@vctrl/core'
 
 /**
@@ -197,7 +195,7 @@ class SceneSettingsService {
 				: []
 
 			const settingsChanged = existingSettings
-				? this.compareSceneSettings(settings, existingSettings, existingHotspots)
+				? haveSceneSettingsChanged(settings, existingSettings, existingHotspots)
 				: true
 			const { assetsChanged, reusableAssetIds } =
 				await this.determineAssetReuse(gltfJson, existingAssetIds, tx)
@@ -307,7 +305,7 @@ class SceneSettingsService {
 				: []
 
 			const settingsChanged = existingSettings
-				? this.compareSceneSettings(settings, existingSettings, existingHotspots)
+				? haveSceneSettingsChanged(settings, existingSettings, existingHotspots)
 				: true
 			const assetsChanged = compareAssetIds(sceneAssetIds, existingAssetIds)
 
@@ -899,31 +897,6 @@ class SceneSettingsService {
 			assetsChanged,
 			reusableAssetIds: assetsChanged ? [] : existingAssetIds
 		}
-	}
-
-	/**
-	 * Compares two scene settings objects for changes.
-	 */
-	private compareSceneSettings(
-		current: SceneSettings,
-		existing: typeof sceneSettings.$inferSelect,
-		existingHotspots: HotspotDefinition[]
-	): boolean {
-		return (
-			// Hotspots are their own table, so they are compared against the
-			// separately loaded list rather than a field on the settings row.
-			// Without this a hotspot-only edit reaches the `unchanged` return
-			// above and never gets written.
-			haveHotspotsChanged(current.hotspots, existingHotspots) ||
-			JSON.stringify(current.bounds) !== JSON.stringify(existing.bounds) ||
-			JSON.stringify(current.camera) !== JSON.stringify(existing.camera) ||
-			JSON.stringify(current.controls) !== JSON.stringify(existing.controls) ||
-			JSON.stringify(current.environment) !==
-				JSON.stringify(existing.environment) ||
-			JSON.stringify(current.interactions) !==
-				JSON.stringify(existing.interactions) ||
-			JSON.stringify(current.shadows) !== JSON.stringify(existing.shadows)
-		)
 	}
 
 	/**

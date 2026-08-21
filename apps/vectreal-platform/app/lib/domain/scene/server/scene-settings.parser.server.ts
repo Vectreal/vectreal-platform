@@ -9,7 +9,10 @@ import {
 
 import { UUID_REGEX } from '../../../../constants/utility-constants'
 import { parseActionRequest } from '../../../http/requests.server'
-import { resolveDefaultSceneCameraId } from '../scene-camera'
+import {
+	applyDefaultCameraFlag,
+	resolveDefaultSceneCameraId
+} from '../scene-camera'
 
 import type { SceneSettingsRequest } from '../../../../types/api'
 import type { SceneMetaState } from '../../../../types/publisher-config'
@@ -387,25 +390,19 @@ export class SceneSettingsParser {
 			})
 		}
 
-		const firstSceneCameraId = resolveDefaultSceneCameraId(normalizedCameras)
+		const defaultSceneCameraId = resolveDefaultSceneCameraId(normalizedCameras)
 
-		if (!firstSceneCameraId) {
+		if (!defaultSceneCameraId) {
 			return ApiResponse.badRequest(
 				'camera.cameras must contain at least one scene camera'
 			)
 		}
 
-		// Enforce implicit first-camera default:
-		// - activeCameraId always points to first scene camera
-		// - initial flag is set on first scene camera only
 		const normalizedWithDefault = {
 			...camera,
 			// Always use first scene camera as the active camera
-			activeCameraId: firstSceneCameraId,
-			cameras: normalizedCameras.map((cameraEntry) => ({
-				...cameraEntry,
-				initial: cameraEntry.cameraId === firstSceneCameraId
-			}))
+			activeCameraId: defaultSceneCameraId,
+			cameras: applyDefaultCameraFlag(normalizedCameras)
 		}
 
 		// Apply canonical normalization (which will re-enforce the implicit default)

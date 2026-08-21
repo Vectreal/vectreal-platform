@@ -1,18 +1,14 @@
 /**
  * Deciding whether a scene's hotspots differ from what is already stored.
  *
- * The save path short-circuits on `unchanged` when nothing it compares has
- * moved, and returns before it reaches `replaceHotspots`. Hotspots were not in
- * that comparison, so renaming a hotspot, moving it, toggling its visibility or
- * reordering its sequence was dropped and answered with a success response.
- * Adding one happened to survive, but only because the panel also mints a
- * paired camera and that dirtied `camera`.
- *
  * Hotspots live in their own table rather than on the settings row, so the
- * comparison takes the separately loaded list instead of reading a field.
- *
- * Isomorphic and dependency-free, so it can be exercised without the database
- * client that every `*.server.ts` module pulls in.
+ * comparison takes the separately loaded list instead of reading a field. That
+ * separation is also what made them easy to miss: while they were absent from
+ * the comparison, renaming a hotspot, moving it, toggling its visibility or
+ * reordering its sequence was dropped and answered with a success response.
+ * Adding one happened to survive, which is why the gap went unnoticed for so
+ * long, but only because the panel also mints a paired camera and that dirtied
+ * `camera`.
  */
 
 /**
@@ -83,9 +79,6 @@ const sameHotspot = (a: HotspotLike, b: HotspotLike): boolean =>
 	samePosition(a.worldPosition, b.worldPosition)
 
 /**
- * True when the incoming hotspots differ from the stored ones in any way that
- * persists.
- *
  * Matched by id rather than by array position: list order is not stored, so
  * reordering the array without touching `sequenceIndex` is not a change.
  */

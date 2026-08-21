@@ -47,7 +47,7 @@ export const useSceneSaveFlow = ({
 		setLastSavedSceneMeta,
 		lastSavedSceneId,
 		setLastSavedSceneId,
-		isLoading
+		suppressDirtyDetection
 	} = scenePersistence
 	const {
 		optimizationSettings,
@@ -427,7 +427,7 @@ export const useSceneSaveFlow = ({
 	const hasChanges = useMemo(
 		() =>
 			hasUnsavedSceneChanges({
-				isLoading,
+				suppressDirtyDetection,
 				currentSettings,
 				lastSavedSettings: effectiveLastSavedSettings,
 				sceneMetaState,
@@ -439,7 +439,7 @@ export const useSceneSaveFlow = ({
 				latestSceneStats
 			}),
 		[
-			isLoading,
+			suppressDirtyDetection,
 			currentSettings,
 			effectiveLastSavedSettings,
 			sceneMetaState,
@@ -453,12 +453,12 @@ export const useSceneSaveFlow = ({
 	)
 
 	useEffect(() => {
-		if (isLoading) {
+		if (suppressDirtyDetection) {
 			return
 		}
 
 		setHasUnsavedChanges(hasChanges)
-	}, [isLoading, hasChanges, setHasUnsavedChanges])
+	}, [suppressDirtyDetection, hasChanges, setHasUnsavedChanges])
 
 	const saveAvailability: SaveAvailabilityState = useMemo(
 		() =>

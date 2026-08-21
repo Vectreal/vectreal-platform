@@ -120,7 +120,7 @@ export const hasOptimizationChanges = ({
 }
 
 interface UnsavedChangesArgs {
-	isLoading: boolean
+	suppressDirtyDetection: boolean
 	currentSettings: SceneSettings
 	lastSavedSettings: SceneSettings | null
 	sceneMetaState: SceneMetaState
@@ -133,7 +133,7 @@ interface UnsavedChangesArgs {
 }
 
 export const hasUnsavedSceneChanges = ({
-	isLoading,
+	suppressDirtyDetection,
 	currentSettings,
 	lastSavedSettings,
 	sceneMetaState,
@@ -144,7 +144,7 @@ export const hasUnsavedSceneChanges = ({
 	optimizedSceneBytes,
 	latestSceneStats
 }: UnsavedChangesArgs): boolean => {
-	if (isLoading) {
+	if (suppressDirtyDetection) {
 		return false
 	}
 

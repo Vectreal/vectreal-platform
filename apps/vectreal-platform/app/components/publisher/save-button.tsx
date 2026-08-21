@@ -1,11 +1,6 @@
 import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
-import {
-	AnimatePresence,
-	motion,
-	Transition,
-	useReducedMotion
-} from 'framer-motion'
+import { useReducedMotion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
 import {
 	Check,
@@ -108,17 +103,16 @@ const SaveButton = ({
 								icon: <CircleFadingArrowUp size={16} className="inline" />
 							}
 
-	const contentTransition: Transition = shouldReduceMotion
-		? { duration: 0 }
-		: { duration: 0.18, ease: [0.2, 1, 0.3, 1] }
-
-	const contentMotion = shouldReduceMotion
+	/**
+	 * The swap is a keyed remount with a CSS enter animation rather than an
+	 * `AnimatePresence` cross-fade: presence animations hold the outgoing content
+	 * until an exit lands on framer's rAF loop, and a throttled loop (background
+	 * tab, a heavy frame) left the button reading "Save" while it was already
+	 * disabled. What the button says has to follow from its state alone.
+	 */
+	const contentAnimation = shouldReduceMotion
 		? undefined
-		: {
-				initial: { opacity: 0, y: 3 },
-				animate: { opacity: 1, y: 0 },
-				exit: { opacity: 0, y: -3 }
-			}
+		: 'animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-[cubic-bezier(0.2,1,0.3,1)]'
 
 	return (
 		<Button
@@ -134,32 +128,21 @@ const SaveButton = ({
 			onClick={handleSaveScene}
 		>
 			<span className="relative flex h-4 w-4 shrink-0 items-center justify-center overflow-hidden">
-				<AnimatePresence initial={false} mode="wait">
-					<motion.span
-						key={saveVisual.key}
-						className="absolute inset-0 flex items-center justify-center"
-						transition={contentTransition}
-						{...(contentMotion ?? {})}
-					>
-						{saveVisual.icon}
-					</motion.span>
-				</AnimatePresence>
+				<span
+					key={saveVisual.key}
+					className={cn(
+						'absolute inset-0 flex items-center justify-center',
+						contentAnimation
+					)}
+				>
+					{saveVisual.icon}
+				</span>
 			</span>
-			<motion.span
-				layout="position"
-				className="hidden min-w-0 flex-1 overflow-hidden text-left sm:grid"
-			>
-				<AnimatePresence initial={false} mode="wait">
-					<motion.span
-						key={saveVisual.key}
-						className="truncate"
-						transition={contentTransition}
-						{...(contentMotion ?? {})}
-					>
-						{saveVisual.label}
-					</motion.span>
-				</AnimatePresence>
-			</motion.span>
+			<span className="hidden min-w-0 flex-1 overflow-hidden text-left sm:grid">
+				<span key={saveVisual.key} className={cn('truncate', contentAnimation)}>
+					{saveVisual.label}
+				</span>
+			</span>
 		</Button>
 	)
 }
