@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-	isPairedHotspotCameraId,
-	redactSettingsForEmbed
-} from '../app/lib/domain/scene/embed-settings-policy'
+import { redactSettingsForEmbed } from '../app/lib/domain/scene/embed-settings-policy'
 
 import type { SceneSettings } from '@vctrl/core'
 
@@ -102,31 +99,6 @@ function buildSettings(overrides: Partial<SceneSettings> = {}): SceneSettings {
 
 const redact = (settings: SceneSettings, bakeAssetId: string | null = BAKE_ASSET_ID) =>
 	redactSettingsForEmbed(settings, { bakeAssetId })
-
-describe('paired hotspot camera ids', () => {
-	it('recognizes the shape the publisher mints', () => {
-		expect(isPairedHotspotCameraId('hotspot-camera-1755123456789-a1b2')).toBe(
-			true
-		)
-		expect(isPairedHotspotCameraId('hotspot-camera-1755123456789-a')).toBe(true)
-	})
-
-	/**
-	 * Ordinary camera ids are slugified from the user's camera name, so the bare
-	 * prefix is not a safe test - these are all names someone might type.
-	 */
-	it('does not claim ids that merely slugify to the same prefix', () => {
-		for (const cameraId of [
-			'hotspot-camera-1',
-			'hotspot-camera-2',
-			'hotspot-camera-view',
-			'hotspot-camera',
-			'hotspot-camera-front-detail'
-		]) {
-			expect(isPairedHotspotCameraId(cameraId), cameraId).toBe(false)
-		}
-	})
-})
 
 describe('embed settings policy', () => {
 	it('drops internalOnly hotspots', () => {

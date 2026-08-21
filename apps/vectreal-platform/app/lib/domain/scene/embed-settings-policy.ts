@@ -1,4 +1,4 @@
-import { isSceneCamera } from './scene-camera'
+import { isPairedHotspotCamera, isSceneCamera } from './scene-camera'
 
 import type { SceneSettings } from '@vctrl/core'
 
@@ -18,35 +18,6 @@ import type { SceneSettings } from '@vctrl/core'
  * Pure - no database import and no `.server` suffix - so the rule is testable
  * on its own rather than only through a route.
  */
-
-/**
- * Id prefix the publisher mints every hotspot-paired camera with.
- *
- * Exported so the panel that mints them and the policy that recognizes them
- * share one literal. Only the prefix is shared; the full minted shape is
- * asserted separately by {@link PAIRED_HOTSPOT_CAMERA_ID}, which is a fallback
- * for scenes saved before paired cameras carried `kind: 'hotspot'` - current
- * ones are classified by the tag and never reach it.
- */
-export const PAIRED_HOTSPOT_CAMERA_ID_PREFIX = 'hotspot-camera-'
-
-/**
- * The full minted shape: `hotspot-camera-<epoch-millis>-<base36 suffix>`.
- *
- * Matching the whole shape rather than the bare prefix, because ordinary camera
- * ids are slugified from the user's own camera name (`deriveUniqueSlug` in
- * `@shared/utils`). Someone renaming a camera to "Hotspot Camera 1" gets the id
- * `hotspot-camera-1`, and a prefix test would classify that perfectly ordinary
- * camera as a hotspot pair and drop it from the embed - visible nowhere else,
- * since the publisher, the dashboard and `/preview` all classify by `kind`.
- * A slugified name cannot produce a 13-digit epoch and a base36 suffix.
- */
-const PAIRED_HOTSPOT_CAMERA_ID = /^hotspot-camera-\d{10,}-[a-z0-9]{1,8}$/
-
-/** Whether a camera id was minted by the publisher as a hotspot pair. */
-export function isPairedHotspotCameraId(cameraId: string): boolean {
-	return PAIRED_HOTSPOT_CAMERA_ID.test(cameraId)
-}
 
 /**
  * Removes everything an embed must not see from a scene's settings.
@@ -81,34 +52,18 @@ export function redactSettingsForEmbed(
 	const visibleHotspotLinks = linkedCameraIds(visibleHotspots)
 
 	/*
-	  What makes a camera a hotspot camera: its tag, or the id the publisher
-	  minted it with.
-
-	  The publisher only started writing `kind: 'hotspot'` on paired cameras
-	  recently, so every scene saved before that has an untagged one - and
-	  `isSceneCamera` reads a missing `kind` as "scene". Trusting the tag alone
-	  would keep exactly the cameras this redaction exists to remove, for exactly
-	  the scenes already in the database.
-
-	  The minted id is the reliable second signal - the whole shape, not the bare
-	  prefix, for the reason on `PAIRED_HOTSPOT_CAMERA_ID`.
-
-	  Linkage deliberately is NOT the signal. A hotspot may link any camera the
-	  author picks, including the scene's own default - the picker offers every
-	  camera and the server validates only that the id exists. Promoting a camera
-	  on linkage alone would let one internal hotspot delete the scene's default
-	  view from the embed. That camera is a scene camera in its own right and its
-	  pose is public regardless; only the hotspot has to disappear.
+	  Linkage deliberately is NOT what makes a camera a hotspot camera. A hotspot
+	  may link any camera the author picks, including the scene's own default -
+	  the picker offers every camera and the server validates only that the id
+	  exists. Promoting a camera on linkage alone would let one internal hotspot
+	  delete the scene's opening view from the embed. That camera is a scene
+	  camera in its own right and its pose is public regardless; only the hotspot
+	  has to disappear.
 	*/
 	const isVisibleCamera = (camera: { cameraId?: string; kind?: string }) => {
 		const cameraId = camera.cameraId
-		const isHotspotCamera =
-			camera.kind === 'hotspot' ||
-			(camera.kind === undefined &&
-				cameraId !== undefined &&
-				isPairedHotspotCameraId(cameraId))
 
-		if (isHotspotCamera) {
+		if (isPairedHotspotCamera(camera)) {
 			return cameraId !== undefined && visibleHotspotLinks.has(cameraId)
 		}
 
