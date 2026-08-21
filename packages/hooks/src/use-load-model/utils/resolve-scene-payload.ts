@@ -158,3 +158,25 @@ export function resolveServerSceneDataContract(
 		...toSceneSettings(payload)
 	}
 }
+
+/**
+ * Resolves an embed manifest, which carries a published GLB instead of a glTF
+ * document.
+ *
+ * Same settings normalization as {@link resolveServerSceneDataContract}, minus
+ * the referenced-asset cross-check: a GLB is self-contained, so there are no
+ * external URIs to reconcile against the asset map.
+ */
+export function resolvePublishedSceneDataContract(
+	payload: ServerScenePayload
+): ServerSceneData {
+	const assetData = payload.assetData ?? {}
+	validateAssetDataMap(assetData)
+
+	return {
+		meta: payload.meta,
+		gltfJson: null,
+		assetData,
+		...toSceneSettings(payload)
+	}
+}

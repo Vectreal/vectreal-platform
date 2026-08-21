@@ -3,6 +3,7 @@ import { ModelFileTypes } from '@vctrl/core/model-loader'
 
 import {
 	createStructuredLoadError,
+	isStructuredLoadError,
 	normalizeServerLoadError
 } from './error-helpers'
 import { ingestIntoOptimizer } from './optimizer-ingest'
@@ -10,12 +11,17 @@ import { LoadedModel, ModelSource } from './types'
 import {
 	calculateReferencedBytesFromServerScene,
 	reconstructGltfFiles,
+	resolvePublishedSceneDataContract,
 	resolveServerSceneDataContract
 } from './utils'
 import { fetchManifestAssetData } from './utils/fetch-manifest-assets'
 
 import type { LoadContext } from './load-context'
-import type { ApiEnvelope, ServerScenePayload } from '@vctrl/core'
+import type {
+	ApiEnvelope,
+	SceneAssetRef,
+	ServerScenePayload
+} from '@vctrl/core'
 
 type SceneDataSource = Extract<ModelSource, { kind: 'scene-data' }>
 type ServerSource = Extract<ModelSource, { kind: 'server' }>
@@ -47,11 +53,105 @@ const resolveSceneEndpoint = ({ sceneId, serverOptions }: ServerSource) => ({
  * the dashboard. The default path reconstructs real files so the optimizer can
  * ingest the same bytes the viewer renders.
  */
-export const loadModelFromSceneData = async (
-	{ sceneId, sceneData: payload, parseMode }: SceneDataSource,
-	{ modelLoader, optimizer, publish, onProgress }: LoadContext,
+/**
+ * Key the published GLB borrows inside the asset map while it is fetched.
+ *
+ * Riding along with the real asset refs is what buys byte-weighted progress
+ * across the model and the bake together, one abort controller, and one set of
+ * auth headers. It is removed again before the map becomes `assetData`, so it
+ * never reaches the viewer.
+ */
+const PUBLISHED_MODEL_KEY = '__vctrl_published_model__'
+
+/**
+ * Loads a scene from its published, optimized GLB.
+ *
+ * This is the external embed path. A GLB is self-contained, so there is no
+ * glTF document and no separate buffers or textures - only assets that live
+ * outside the model, which today means the persisted shadow bake.
+ */
+const loadPublishedSceneModel = async (
+	sceneId: string | undefined,
+	payload: ServerScenePayload,
+	publishedModel: SceneAssetRef,
+	{ modelLoader, publish, onProgress }: LoadContext,
 	assetHeaders?: HeadersInit
 ): Promise<LoadedModel> => {
+	const fetched = await fetchManifestAssetData(
+		{ ...(payload.assetRefs ?? {}), [PUBLISHED_MODEL_KEY]: publishedModel },
+		{
+			headers: assetHeaders,
+			onProgress: (fraction) => onProgress(Math.round(fraction * 60))
+		}
+	)
+
+	const modelEntry = fetched[PUBLISHED_MODEL_KEY]
+	delete fetched[PUBLISHED_MODEL_KEY]
+
+	if (!modelEntry) {
+		throw createStructuredLoadError({
+			code: 'missing_assets',
+			message: 'This scene has no published model to load.',
+			recoverable: false,
+			source: 'server-load',
+			context: { sceneId }
+		})
+	}
+
+	const sceneData = resolvePublishedSceneDataContract({
+		...payload,
+		assetData: fetched
+	})
+
+	onProgress(70)
+
+	const modelBytes = toSerializedAssetBytes(modelEntry)
+	const blobBytes = new Uint8Array(modelBytes.byteLength)
+	blobBytes.set(modelBytes)
+	const blob = new Blob([blobBytes], { type: publishedModel.mimeType })
+
+	// The same entry point a dropped `.glb` takes, so the Draco decoder is
+	// attached exactly as it is everywhere else.
+	const result = await modelLoader.loadToThreeJS(
+		new File([blob], publishedModel.fileName, { type: publishedModel.mimeType })
+	)
+
+	const loaded: LoadedModel = {
+		file: {
+			model: result.scene,
+			animations: result.animations,
+			type: ModelFileTypes.glb,
+			name: sceneData.meta?.name || publishedModel.fileName,
+			// Texture bytes are unknowable from outside a GLB; leaving it undefined
+			// is honest, whereas reporting the package size twice is not.
+			sourcePackageBytes: publishedModel.byteSize ?? undefined
+		},
+		sceneId,
+		sceneData
+	}
+
+	publish(loaded)
+	return loaded
+}
+
+export const loadModelFromSceneData = async (
+	source: SceneDataSource,
+	ctx: LoadContext,
+	assetHeaders?: HeadersInit
+): Promise<LoadedModel> => {
+	const { sceneId, sceneData: payload, parseMode } = source
+	const { modelLoader, optimizer, publish, onProgress } = ctx
+
+	if (payload.publishedModel) {
+		return loadPublishedSceneModel(
+			sceneId,
+			payload,
+			payload.publishedModel,
+			ctx,
+			assetHeaders
+		)
+	}
+
 	if (!payload.gltfJson) {
 		throw createStructuredLoadError({
 			code: 'missing_assets',
@@ -174,6 +274,13 @@ export const loadModelFromServer = async (
 	}
 }
 
+/**
+ * Statuses that describe the request itself rather than the manifest's shape.
+ * Falling back to the legacy POST for these only fails a second time, doubling
+ * the requests and flattening a precise auth failure into a generic one.
+ */
+const NON_RECOVERABLE_MANIFEST_STATUSES = new Set([401, 403, 404])
+
 async function fetchManifestPayload(
 	endpoint: string,
 	headers: HeadersInit
@@ -183,17 +290,36 @@ async function fetchManifestPayload(
 			method: 'GET',
 			headers: { Accept: 'application/json', ...headers }
 		})
+
+		if (NON_RECOVERABLE_MANIFEST_STATUSES.has(res.status)) {
+			throw createStructuredLoadError({
+				code: res.status === 404 ? 'not_found' : 'server_load_failed',
+				message: `Server responded with ${res.status} ${res.statusText}`,
+				recoverable: false,
+				source: 'server-load',
+				context: { endpoint, status: res.status }
+			})
+		}
+
 		if (!res.ok) return null
 
 		const envelope = (await res.json()) as ApiEnvelope<ServerScenePayload>
 		const candidate = (envelope.data ?? envelope) as ServerScenePayload
 
 		if (!candidate || typeof candidate !== 'object') return null
+
+		// A published-GLB manifest is complete on its own: no glTF document, and
+		// an empty `assetRefs` when the scene has no shadow bake. Without this
+		// arm the embed manifest would fail the shape check below and the loader
+		// would silently re-acquire the whole editor payload over the legacy POST.
+		if (candidate.publishedModel) return candidate
+
 		if (!candidate.gltfJson) return null
 		if (!candidate.assetRefs && !candidate.assetData) return null
 
 		return candidate
-	} catch {
+	} catch (error) {
+		if (isStructuredLoadError(error)) throw error
 		return null
 	}
 }

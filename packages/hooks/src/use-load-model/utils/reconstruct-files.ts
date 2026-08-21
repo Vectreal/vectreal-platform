@@ -75,6 +75,12 @@ export function reconstructGltfFiles(
 	}
 
 	// Create GLTF file from JSON structure
+	if (!data.gltfJson) {
+		throw new Error(
+			'Cannot reconstruct glTF files: this scene has no glTF document.'
+		)
+	}
+
 	const gltfJsonString = JSON.stringify(data.gltfJson)
 	const gltfBlob = new Blob([gltfJsonString], { type: 'model/gltf+json' })
 

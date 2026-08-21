@@ -470,14 +470,29 @@ export interface ServerScenePayload {
 	assetData: SerializedSceneAssetDataMap | null
 	/** Asset references for manifest-based loading (bytes fetched separately). */
 	assetRefs?: SceneAssetRefMap | null
+	/**
+	 * The published, optimized GLB. Present only on the embed manifest, which
+	 * serves a self-contained model instead of the editor's glTF document plus
+	 * its separate buffers and textures. When this is set, {@link gltfJson} is
+	 * null and {@link assetRefs} carries only assets that live outside the GLB
+	 * (today: the persisted shadow bake).
+	 */
+	publishedModel?: SceneAssetRef | null
 }
 
 /** Resolved scene data contract consumed by loaders and viewer clients. */
 export interface ServerSceneData extends SceneSettings {
 	/** Optional scene metadata payload. */
 	meta?: SceneMetaData
-	/** The GLTF JSON structure. */
-	gltfJson: ExtendedGLTFDocument
+	/**
+	 * The GLTF JSON structure, or null for a scene loaded from a published GLB.
+	 *
+	 * Nullable on purpose. The embed path has no editor document at all, and a
+	 * non-null type here would be a lie that every consumer silently trusts -
+	 * which is how the disjoint-asset-set bug got written in the first place.
+	 * The optimizer and file-reconstruction paths guard on it.
+	 */
+	gltfJson: ExtendedGLTFDocument | null
 	/** Binary asset data keyed by asset identifier. */
 	assetData: SerializedSceneAssetDataMap
 }

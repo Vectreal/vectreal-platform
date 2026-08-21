@@ -537,7 +537,16 @@ class SceneSettingsService {
 	 * Downloads just the glTF JSON asset; binary assets are served by
 	 * reference through the scene asset endpoint instead of being inlined.
 	 */
-	async getSceneSettingsWithAssetRefs(sceneId: string) {
+	/**
+	 * `includeGltfJson` is opt-out because the embed manifest never sends the
+	 * editor glTF document, and downloading plus parsing it would be a storage
+	 * round-trip per embed load for bytes that are then discarded.
+	 */
+	async getSceneSettingsWithAssetRefs(
+		sceneId: string,
+		options: { includeGltfJson?: boolean } = {}
+	) {
+		const { includeGltfJson = true } = options
 		let result: Awaited<ReturnType<typeof getSceneSettingsWithAssetsRow>>
 		let hotspots: import('@vctrl/core').HotspotDefinition[] = []
 
@@ -562,9 +571,9 @@ class SceneSettingsService {
 		const { settings, assets: sceneAssetsData } = result
 
 		let gltfJson: ExtendedGLTFDocument | null = null
-		const gltfAsset = sceneAssetsData.find(
-			(asset) => asset.mimeType === 'model/gltf+json'
-		)
+		const gltfAsset = includeGltfJson
+			? sceneAssetsData.find((asset) => asset.mimeType === 'model/gltf+json')
+			: undefined
 
 		if (gltfAsset) {
 			try {
