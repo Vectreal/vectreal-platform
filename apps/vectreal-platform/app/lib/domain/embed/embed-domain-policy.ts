@@ -1,6 +1,12 @@
 const LOCALHOST_HOSTS = new Set(['localhost', '127.0.0.1', '::1'])
 
-function normalizeHost(host: string): string {
+/**
+ * Exported because the embed access decision needs the identical rule.
+ * `preview-api-key-auth.server.ts` carried its own byte-identical copy, so the
+ * host comparison that decides whether a site may embed was defined twice with
+ * nothing keeping them in step.
+ */
+export function normalizeHost(host: string): string {
 	return host.toLowerCase().trim().replace(/\.+$/, '')
 }
 
@@ -15,7 +21,9 @@ function normalizeHostInput(value: string): string {
 		const parsed = new URL(maybeUrl)
 		return normalizeHost(parsed.hostname)
 	} catch {
-		return normalizeHost(trimmed.replace(/^\*\./, ''))
+		// Genuinely unparseable input only. Callers strip any leading `*.`
+		// before calling, so this never sees a wildcard.
+		return normalizeHost(trimmed)
 	}
 }
 
@@ -52,7 +60,20 @@ export function normalizeDomainPattern(value: string): string | null {
 		return null
 	}
 
-	const hostname = normalizeHostInput(trimmed)
+	/*
+	  Strip the wildcard before parsing rather than letting `new URL` reject it.
+
+	  This used to pass the raw `*.example.com` to `normalizeHostInput` and rely
+	  on `new URL('https://*.example.com')` throwing, so that a catch block could
+	  strip the prefix. URL parsing accepts the asterisk and reports the hostname
+	  verbatim, so that catch was never reached: `isValidHostname` then saw a `*`
+	  label and rejected it. The result was that no wildcard could be saved at
+	  all, while `isAllowedEmbedHost` matched them correctly and the validator's
+	  own error message advertised them as supported. `*.myshopify.com` is the
+	  pattern every Shopify storefront needs.
+	*/
+	const hostPart = hasWildcard ? trimmed.slice(2) : trimmed
+	const hostname = normalizeHostInput(hostPart)
 	if (!isValidHostname(hostname)) {
 		return null
 	}
