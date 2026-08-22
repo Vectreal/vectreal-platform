@@ -121,7 +121,7 @@ function SceneSaveFlowHarness({
 		setLastSavedSceneMeta,
 		lastSavedSceneId,
 		setLastSavedSceneId,
-		isLoading: false
+		suppressDirtyDetection: false
 	}
 
 	const { saveSceneSettings } = useSceneSaveFlow({

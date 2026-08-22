@@ -77,7 +77,7 @@ const HotspotDot: FC<HotspotDotProps> = memo(
 		useFrame(() => {
 			if (!wrapperRef.current) return
 
-			if (!hotspot.occlusionEnabled) {
+			if (hotspot.occlusionEnabled === false) {
 				wrapperRef.current.style.opacity = '1'
 				return
 			}

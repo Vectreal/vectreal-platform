@@ -105,7 +105,7 @@ describe('scene save state', () => {
 
 		expect(
 			hasUnsavedSceneChanges({
-				isLoading: false,
+				suppressDirtyDetection: false,
 				currentSettings,
 				lastSavedSettings: null,
 				sceneMetaState: {
@@ -128,7 +128,7 @@ describe('scene save state', () => {
 
 		expect(
 			hasUnsavedSceneChanges({
-				isLoading: false,
+				suppressDirtyDetection: false,
 				currentSettings: settings,
 				lastSavedSettings: settings,
 				sceneMetaState: sceneMeta,

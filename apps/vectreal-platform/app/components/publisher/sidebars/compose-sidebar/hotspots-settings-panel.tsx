@@ -10,15 +10,25 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 import { Switch } from '@shared/components/ui/switch'
-import { useAtom } from 'jotai/react'
+import { cn } from '@shared/utils'
+import { useAtom, useSetAtom } from 'jotai/react'
 import { Crosshair, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo } from 'react'
 
+import { resolveDefaultSceneCameraId } from '../../../../lib/domain/scene/scene-camera'
+import {
+	addHotspot,
+	relinkHotspot,
+	removeHotspot,
+	renameHotspot
+} from '../../../../lib/domain/scene/scene-hotspot-camera-links'
+import { assignSequenceIndex } from '../../../../lib/domain/scene/scene-hotspot-sequence'
 import { isClickToPlaceActiveAtom } from '../../../../lib/stores/publisher-config-store'
 import {
 	activeHotspotIdAtom,
 	cameraAtom,
-	hotspotsAtom
+	hotspotsAtom,
+	selectedCameraIdAtom
 } from '../../../../lib/stores/scene-settings-store'
 import { ToggleButtonGroup } from '../../settings-components'
 import {
@@ -29,22 +39,40 @@ import {
 } from '../sidebar-section'
 
 import type { ToggleButtonGroupOption } from '../../settings-components'
-import type { HotspotDefinition, HotspotStylePreset } from '@vctrl/core'
+import type {
+	CameraProps,
+	HotspotDefinition,
+	HotspotStylePreset
+} from '@vctrl/core'
 
-function createHotspotId(): string {
-	return `hotspot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-}
+/**
+ * `scene_hotspots.id` is a uuid primary key, so the hotspot id has to be a real
+ * uuid. It was once minted as `hotspot-<timestamp>-<random>`, which Postgres
+ * rejected on insert, and because that insert shares a transaction with the
+ * settings and asset writes it failed the entire scene save rather than just
+ * the hotspot.
+ */
+const mintHotspotIds = () => ({
+	hotspotId: crypto.randomUUID(),
+	cameraId: `hotspot-camera-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+})
 
-function createDefaultHotspot(): HotspotDefinition {
-	return {
-		id: createHotspotId(),
-		name: 'New Hotspot',
-		worldPosition: [0, 0, 0],
-		visible: true,
-		internalOnly: false,
-		occlusionEnabled: true,
-		stylePreset: 'dot'
+/**
+ * Where the editor sits once retiring a hotspot's camera has taken the one it
+ * was on.
+ *
+ * The viewer is pointed by `selectedCameraId`, so a selection naming a camera
+ * that is gone aims it at nothing until the Camera tool is opened and runs its
+ * own reconcile. Landing on the scene default is the answer that tool gives.
+ */
+const survivingSelectedCameraId = (
+	cameras: CameraProps['cameras'],
+	selectedCameraId: string
+): string => {
+	if (cameras?.some((entry) => entry.cameraId === selectedCameraId)) {
+		return selectedCameraId
 	}
+	return resolveDefaultSceneCameraId(cameras) ?? selectedCameraId
 }
 
 const STYLE_PRESET_OPTIONS: ToggleButtonGroupOption<HotspotStylePreset>[] = [
@@ -57,6 +85,7 @@ const HotspotsSettingsPanel = memo(() => {
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 	const [camera, setCamera] = useAtom(cameraAtom)
 	const [selectedId, setSelectedId] = useAtom(activeHotspotIdAtom)
+	const setSelectedCameraId = useSetAtom(selectedCameraIdAtom)
 	const [isClickToPlaceActive, setIsClickToPlaceActive] = useAtom(
 		isClickToPlaceActiveAtom
 	)
@@ -85,41 +114,56 @@ const HotspotsSettingsPanel = memo(() => {
 	)
 
 	const handleAdd = useCallback(() => {
-		const pairedCameraId = `hotspot-camera-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
-		const next: HotspotDefinition = {
-			...createDefaultHotspot(),
-			linkedCameraId: pairedCameraId
-		}
-		setHotspots((prev) => [...prev, next])
-		setCamera((prev) => ({
-			...prev,
-			cameras: [
-				...(prev.cameras ?? []),
-				{
-					cameraId: pairedCameraId,
-					name: `${next.name} Camera`,
-					fov: 60
-				}
-			]
-		}))
-		setSelectedId(next.id)
-	}, [setCamera, setHotspots])
+		const ids = mintHotspotIds()
+		const next = addHotspot({ camera, hotspots }, ids)
+
+		setHotspots(next.hotspots)
+		setCamera(next.camera)
+		setSelectedId(ids.hotspotId)
+	}, [camera, hotspots, setCamera, setHotspots, setSelectedId])
 
 	const handleDelete = useCallback(
 		(id: string) => {
-			const hotspot = hotspots.find((h) => h.id === id)
-			setHotspots((prev) => prev.filter((h) => h.id !== id))
-			if (hotspot?.linkedCameraId) {
-				setCamera((prev) => ({
-					...prev,
-					cameras: (prev.cameras ?? []).filter(
-						(c) => c.cameraId !== hotspot.linkedCameraId
-					)
-				}))
-			}
+			const next = removeHotspot({ camera, hotspots }, id)
+
+			setHotspots(next.hotspots)
+			setCamera(next.camera)
+			setSelectedCameraId((prev) =>
+				survivingSelectedCameraId(next.camera.cameras, prev)
+			)
 			setSelectedId((prev) => (prev === id ? null : prev))
 		},
-		[hotspots, setCamera, setHotspots]
+		[
+			camera,
+			hotspots,
+			setCamera,
+			setHotspots,
+			setSelectedCameraId,
+			setSelectedId
+		]
+	)
+
+	const handleRename = useCallback(
+		(id: string, name: string) => {
+			const next = renameHotspot({ camera, hotspots }, id, name)
+
+			setHotspots(next.hotspots)
+			setCamera(next.camera)
+		},
+		[camera, hotspots, setCamera, setHotspots]
+	)
+
+	const handleRelink = useCallback(
+		(id: string, linkedCameraId: string | undefined) => {
+			const next = relinkHotspot({ camera, hotspots }, id, linkedCameraId)
+
+			setHotspots(next.hotspots)
+			setCamera(next.camera)
+			setSelectedCameraId((prev) =>
+				survivingSelectedCameraId(next.camera.cameras, prev)
+			)
+		},
+		[camera, hotspots, setCamera, setHotspots, setSelectedCameraId]
 	)
 
 	const handlePositionChange = useCallback(
@@ -134,6 +178,33 @@ const HotspotsSettingsPanel = memo(() => {
 			updateHotspot(selectedHotspot.id, { worldPosition: next })
 		},
 		[selectedHotspot, updateHotspot]
+	)
+
+	/**
+	 * The server rejects duplicate sequence indices outright, with a message
+	 * naming the number and neither hotspot. Typing an index another hotspot
+	 * already holds swaps the two rather than creating that collision, which
+	 * is also what someone reordering a sequence expects.
+	 */
+	const handleSequenceChange = useCallback(
+		(raw: string) => {
+			if (!selectedHotspot) return
+
+			if (raw === '') {
+				setHotspots((prev) =>
+					assignSequenceIndex(prev, selectedHotspot.id, undefined)
+				)
+				return
+			}
+
+			const parsed = parseInt(raw, 10)
+			if (isNaN(parsed) || parsed < 0) return
+
+			setHotspots((prev) =>
+				assignSequenceIndex(prev, selectedHotspot.id, parsed)
+			)
+		},
+		[selectedHotspot, setHotspots]
 	)
 
 	return (
@@ -165,11 +236,12 @@ const HotspotsSettingsPanel = memo(() => {
 							{hotspots.map((hotspot) => (
 								<div
 									key={hotspot.id}
-									className={`flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 transition-colors ${
+									className={cn(
+										'flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 transition-colors',
 										selectedId === hotspot.id
 											? 'bg-orange/80'
 											: 'hover:bg-orange/40'
-									}`}
+									)}
 									onClick={() =>
 										setSelectedId((prev) =>
 											prev === hotspot.id ? null : hotspot.id
@@ -255,7 +327,7 @@ const HotspotsSettingsPanel = memo(() => {
 							<Input
 								value={selectedHotspot.name}
 								onChange={(e) =>
-									updateHotspot(selectedHotspot.id, { name: e.target.value })
+									handleRename(selectedHotspot.id, e.target.value)
 								}
 								placeholder="Hotspot name"
 								className="text-sm"
@@ -318,12 +390,10 @@ const HotspotsSettingsPanel = memo(() => {
 							label="Linked Camera"
 							description="Viewers transition to this camera when clicking the hotspot"
 						>
-										<Select
+							<Select
 								value={selectedHotspot.linkedCameraId ?? 'none'}
 								onValueChange={(v) =>
-									updateHotspot(selectedHotspot.id, {
-										linkedCameraId: v === 'none' ? undefined : v
-									})
+									handleRelink(selectedHotspot.id, v === 'none' ? undefined : v)
 								}
 							>
 								<SelectTrigger className="w-full">
@@ -352,19 +422,7 @@ const HotspotsSettingsPanel = memo(() => {
 										? selectedHotspot.sequenceIndex
 										: ''
 								}
-								onChange={(e) => {
-									const raw = e.target.value
-									if (raw === '') {
-										updateHotspot(selectedHotspot.id, {
-											sequenceIndex: undefined
-										})
-										return
-									}
-									const parsed = parseInt(raw, 10)
-									if (!isNaN(parsed) && parsed >= 0) {
-										updateHotspot(selectedHotspot.id, { sequenceIndex: parsed })
-									}
-								}}
+								onChange={(e) => handleSequenceChange(e.target.value)}
 								className="h-8 font-mono text-sm"
 							/>
 						</SettingRow>

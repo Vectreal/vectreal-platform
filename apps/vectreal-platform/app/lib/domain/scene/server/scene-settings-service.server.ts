@@ -56,13 +56,13 @@ import {
 	selectUnreferencedAssetIds,
 	uploadSceneAssets
 } from '../../asset/asset-storage.server'
+import { haveSceneSettingsChanged } from '../scene-settings-comparison'
 
 import type { SceneMetaState } from '../../../../types/publisher-config'
 import type {
 	ExtendedGLTFDocument,
 	OptimizationReport,
-	Optimizations,
-	SceneSettings
+	Optimizations
 } from '@vctrl/core'
 
 /**
@@ -190,8 +190,12 @@ class SceneSettingsService {
 				? await getSceneAssetIds(tx, existingSettings.id)
 				: []
 
+			const existingHotspots = existingSettings
+				? await getHotspotsBySceneSettingsId(tx, existingSettings.id)
+				: []
+
 			const settingsChanged = existingSettings
-				? this.compareSceneSettings(settings, existingSettings)
+				? haveSceneSettingsChanged(settings, existingSettings, existingHotspots)
 				: true
 			const { assetsChanged, reusableAssetIds } =
 				await this.determineAssetReuse(gltfJson, existingAssetIds, tx)
@@ -296,8 +300,12 @@ class SceneSettingsService {
 			const existingAssetIds = existingSettings
 				? await getSceneAssetIds(tx, existingSettings.id)
 				: []
+			const existingHotspots = existingSettings
+				? await getHotspotsBySceneSettingsId(tx, existingSettings.id)
+				: []
+
 			const settingsChanged = existingSettings
-				? this.compareSceneSettings(settings, existingSettings)
+				? haveSceneSettingsChanged(settings, existingSettings, existingHotspots)
 				: true
 			const assetsChanged = compareAssetIds(sceneAssetIds, existingAssetIds)
 
@@ -889,25 +897,6 @@ class SceneSettingsService {
 			assetsChanged,
 			reusableAssetIds: assetsChanged ? [] : existingAssetIds
 		}
-	}
-
-	/**
-	 * Compares two scene settings objects for changes.
-	 */
-	private compareSceneSettings(
-		current: SceneSettings,
-		existing: typeof sceneSettings.$inferSelect
-	): boolean {
-		return (
-			JSON.stringify(current.bounds) !== JSON.stringify(existing.bounds) ||
-			JSON.stringify(current.camera) !== JSON.stringify(existing.camera) ||
-			JSON.stringify(current.controls) !== JSON.stringify(existing.controls) ||
-			JSON.stringify(current.environment) !==
-				JSON.stringify(existing.environment) ||
-			JSON.stringify(current.interactions) !==
-				JSON.stringify(existing.interactions) ||
-			JSON.stringify(current.shadows) !== JSON.stringify(existing.shadows)
-		)
 	}
 
 	/**

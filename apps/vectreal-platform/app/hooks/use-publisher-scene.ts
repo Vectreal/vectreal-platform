@@ -145,6 +145,15 @@ export function usePublisherScene({
 		}
 	}, [requestShadowBake])
 
+	/**
+	 * An open scene's baseline is written from the manifest in a passive effect,
+	 * so the server-rendered markup and the first commit have nothing to diff
+	 * against yet. That is the baseline being unknown, not the scene being dirty,
+	 * and without this the publisher armed the navigation guard on every open.
+	 */
+	const isAwaitingSavedBaseline =
+		openSceneId !== null && lastSavedSettings === null
+
 	const { saveSceneSettings, saveAvailability } = useSceneSaveFlow({
 		scenePersistence: {
 			userId,
@@ -159,7 +168,7 @@ export function usePublisherScene({
 			setLastSavedSceneMeta,
 			lastSavedSceneId,
 			setLastSavedSceneId,
-			isLoading: status === 'loading'
+			suppressDirtyDetection: status === 'loading' || isAwaitingSavedBaseline
 		},
 		optimizationState: {
 			optimizationSettings,
