@@ -1,5 +1,41 @@
 # Changelog
 
+## [1.0.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.25.1...hooks-v1.0.0) (2026-08-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* **publisher:** `@vctrl/core` makes `ModelOptimizer.ensureModelLoaded` private (`hasModel()` answers the same question) and widens `ExportResult` to include `USDZExportResult`, which an exhaustive consumer switch will notice. `@vctrl/hooks` drops `info` from `OptimizationState`; `useOptimizeModel` still returns it, derived.
+* **hooks:** `ShadowsProps` is a plain interface rather than a union discriminated on `type`, so a consumer still passing `type: 'accumulative'` is passing an unknown property.
+* **publisher:** `@vctrl/viewer` reads `ao` off the shadow options directly rather than only when they were tagged accumulative, so a consumer passing `{ enabled: true, ao: true }` gains the ambient-occlusion pass and its per-frame cost.
+* **publisher:** `@vctrl/core` removes `GridProps`, `ShadowType`, `ShadowTypePropBase`, `ContactShadowProps`, `AccumulativeShadowsProps`, `ExportOptions`, `ExportModelOptions`, `ModifiedTextureResources` and `OptimizationStats.nodes`; `exportThreeJSGLB` takes only the object; `optimizeAll` compresses textures unless `textures: false`. `@vctrl/viewer` removes the `gridOptions` prop, `SceneGrid` and `defaultGridOptions`, and renames `defaultShadowOptions` to `defaultShadowsOptions`. `@vctrl/hooks` replaces `load(files)`, `loadFromData` and `loadFromServer` with a single `load(source)`, replaces `isFileLoading` with a `status` union, and removes the `on`/`off` event bus along with `EventTypes`, `EventHandler`, `LoadData`, `SceneLoadOptions` and `SceneDataLoadOptions`.
+
+### Features
+
+* **viewer:** play glTF animation clips ([035b217](https://github.com/Vectreal/vectreal-platform/commit/035b217448803f9008d136f1c12836189d0c2898))
+* **viewer:** play glTF animation clips ([11ff088](https://github.com/Vectreal/vectreal-platform/commit/11ff0880eb32ef0bda03196fe74de4955452d2f1))
+
+
+### Bug Fixes
+
+* **embed:** serve embeds the published GLB instead of the editor's assets ([#734](https://github.com/Vectreal/vectreal-platform/issues/734)) ([e5a0bf5](https://github.com/Vectreal/vectreal-platform/commit/e5a0bf5a77d1288abe08303ec5b547416a0ffd32))
+* **hooks:** keep a failed upload from hiding a failed scene load ([5e9676f](https://github.com/Vectreal/vectreal-platform/commit/5e9676f01f61aa53ab74ec3e3fb2d78283fe7045))
+* **publisher:** a failed load costs nothing ([90cf7be](https://github.com/Vectreal/vectreal-platform/commit/90cf7be0f81dbc9e897192c4333f85ec06cf7d25))
+* **publisher:** apply a saved scene once, not on every revalidation ([d903e6d](https://github.com/Vectreal/vectreal-platform/commit/d903e6db95d6876f1c369042fffc8cb5dd6ae860))
+* **publisher:** one answer to which scene is open ([cbcc863](https://github.com/Vectreal/vectreal-platform/commit/cbcc8632e8137e9aba446293367d6d90f1796146))
+
+
+### Code Refactoring
+
+* **publisher:** leave each write to the one place that owns it ([0b04d08](https://github.com/Vectreal/vectreal-platform/commit/0b04d08075d455d3a963be1553d2f2e52d5c61dc))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 1.0.0
+
 ## [0.25.1](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.25.0...hooks-v0.25.1) (2026-08-08)
 
 
