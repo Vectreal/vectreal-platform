@@ -89,6 +89,123 @@ describe('className must be built with cn()', () => {
 	})
 })
 
+describe('z-index must come from the named scale', () => {
+	it('rejects a bare value at the chrome tier', async () => {
+		const messages = await messagesFor(
+			'export const A = () => <div className="fixed top-0 z-50" />\n'
+		)
+
+		expect(messages).toHaveLength(1)
+		expect(messages[0].message).toContain('z-page-chrome')
+	})
+
+	it('rejects an arbitrary value at any height', async () => {
+		const messages = await messagesFor(
+			'export const A = () => <div className="z-[45]" />\n'
+		)
+
+		expect(messages).toHaveLength(1)
+	})
+
+	it('rejects the escape hatches Tailwind spells differently', async () => {
+		/*
+		  Three spellings of the same hole. `z-(--x)` is the one most likely to be
+		  reached for here, because the tiers are real custom properties and this
+		  codebase already writes `origin-(--radix-...)` everywhere; a leading `!`
+		  is the worst, since it makes the resulting conflict harder to unpick.
+		*/
+		const messages = await messagesFor(
+			'export const A = () => (\n' +
+				'\t<div className="fixed !z-50">\n' +
+				'\t\t<span className="z-(--anything)" />\n' +
+				'\t\t<span className="md:!z-60" />\n' +
+				'\t</div>\n)\n'
+		)
+
+		expect(messages).toHaveLength(3)
+	})
+
+	it('rejects a value carried by a variant', async () => {
+		/*
+		  One message per string, not per class: the selector matches the `Literal`
+		  node, so a second offender in the same attribute is already covered by
+		  the first report. Separate elements to see both.
+		*/
+		const messages = await messagesFor(
+			'export const A = () => (\n' +
+				'\t<div className="md:z-60">\n' +
+				'\t\t<span className="group-data-[state=open]:z-70" />\n' +
+				'\t</div>\n)\n'
+		)
+
+		expect(messages).toHaveLength(2)
+	})
+
+	it('rejects one parked in a lookup table', async () => {
+		/*
+		  The shape `PUBLISHER_LAYER` has. Nothing about it looks like a class
+		  until it reaches a `className`, by which point the number is three files
+		  away from the element it stacks against.
+		*/
+		const messages = await messagesFor(
+			"export const LAYER = { header: 'z-90' } as const\n"
+		)
+
+		expect(messages).toHaveLength(1)
+	})
+
+	it('rejects one written as a template literal', async () => {
+		/*
+		  The `cn()` rules above only reach a template literal used as a className
+		  or passed to `cn()`. A backtick string in a `const` evades both, and the
+		  `Literal` selector does not match template nodes at all.
+		*/
+		const messages = await messagesFor('export const LAYER = `z-90`\n')
+
+		expect(messages).toHaveLength(1)
+	})
+
+	it('accepts a tier name and local ordering below the chrome', async () => {
+		const messages = await messagesFor(
+			'export const A = () => (\n' +
+				'\t<div className="fixed z-nav">\n' +
+				'\t\t<span className="relative z-10" />\n' +
+				'\t\t<span className="absolute z-45" />\n' +
+				'\t\t<span className="!z-tooltip" />\n' +
+				'\t</div>\n)\n'
+		)
+
+		expect(messages).toEqual([])
+	})
+
+	it('leaves other utilities whose names end in z- alone', async () => {
+		/*
+		  `translate-z-*` and `rotate-z-*` are unrelated axes. The selector anchors
+		  on whitespace, a variant colon, or the start of the string precisely so
+		  the hyphen in front of these keeps them out.
+		*/
+		const messages = await messagesFor(
+			'export const A = () => <div className="translate-z-50 md:rotate-z-70" />\n'
+		)
+
+		expect(messages).toEqual([])
+	})
+
+	it('does not reach a negative value or a concatenated one', async () => {
+		/*
+		  Both gaps are deliberate and pinned here so they stay decisions. A
+		  negative z-index paints behind its stacking context and cannot compete
+		  with the chrome the rule protects; a concatenated one would need constant
+		  folding to see, which the sibling cn() rules do not do either.
+		*/
+		const messages = await messagesFor(
+			'export const A = "-z-50"\n' + "export const B = 'z-' + '90'\n"
+		)
+
+		expect(messages).toEqual([])
+	})
+})
+
 describe('SVG must live in an icon component', () => {
 	const INLINE_SVG =
 		'export const A = () => (\n' +

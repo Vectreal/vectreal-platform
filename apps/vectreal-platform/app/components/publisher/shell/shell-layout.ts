@@ -3,11 +3,16 @@
  *
  * ## Stacking
  *
- * **Everything here must stay below `z-50`.** Radix portals its overlays
- * (dialog, alert-dialog, sheet, drawer) to the document body at `z-50`, and the
- * publisher's surfaces are ordinary in-page elements in the same root stacking
- * context. Anything at or above 50 paints over confirmation modals and their
- * backdrops, which is how the sidebars at `z-[70]` ended up covering them.
+ * **Everything here must stay below the overlay tier.** Radix portals its
+ * overlays (dialog, alert-dialog, sheet, drawer) to the document body at
+ * `--z-index-overlay`, which is 50, and the publisher's surfaces are ordinary
+ * in-page elements in the same root stacking context. Anything at or above 50
+ * paints over confirmation modals and their backdrops, which is how the
+ * sidebars, then sitting at 70, ended up covering them.
+ *
+ * These stay literal rather than joining the tier scale in `globals.css`: the
+ * scale names layers the whole app shares, and this is one surface ordering its
+ * own parts underneath all of them.
  *
  * Within the shell the order is bottom-up by how much a surface should
  * interrupt: the card sits under the tools it sits beside, sidebars cover the
@@ -26,7 +31,7 @@ export const PUBLISHER_LAYER = {
 	/** Sliding panels: publish sidebar, compose sidebar, optimization drawer. */
 	sidebar: 'z-40',
 	/** Header row. Above the sidebars so its location dropdown is never clipped. */
-	header: 'z-[45]'
+	header: 'z-45'
 } as const
 
 /**

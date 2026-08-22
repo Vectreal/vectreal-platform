@@ -195,7 +195,15 @@ Components are in `shared/components/src/ui/` (shadcn-based, Radix UI primitives
 - **Versioning**: Managed by Release Please. Do not use `nx release`. Internal deps use `workspace:*`; shared third-party versions use `catalog:` and are declared in `pnpm-workspace.yaml`.
 - **Docs pages**: MDX files in `app/routes/docs/`. Adding a new page also requires a route in `app/routes.tsx` and an entry in the `docsPages` array in `app/lib/docs/docs-manifest.ts`, which is what `DocsTreeNav` renders.
 - **Server-only modules**: Files that must not be bundled client-side are named `*.server.ts`.
-- **Viewport height**: Size full-viewport surfaces with `h-dvh` / `min-h-dvh`, or `h-svh` where a shell owns the height and scrolls its own content, as `dashboard-layout.tsx` does. Never Tailwind's `screen` height utilities: they compile to `100vh`, the *large* viewport, which overhangs persistent mobile browser chrome, pushing bottom-anchored UI behind the bar and leaving the page scrolled with no way back when a canvas holds `touch-action: none`. (Spelling those class names out here would be self-defeating: the Tailwind scanner reads this file and would re-emit the very utilities the codebase dropped.)
+- **Stacking**: App-global layers are named tiers in `globals.css`
+  (`--z-index-page-chrome`, `-nav`, `-overlay`, `-above-nav`, `-tooltip`,
+  `-overlay-raised`, `-select`), each carrying a comment about what belongs
+  there. Use the tier utility rather than a number: ESLint rejects a bare
+  z-index at or above 50, and any arbitrary bracket value, because 50 is where
+  the site nav and Radix's portal layer already sit in the root stacking
+  context. Ordering siblings inside one component's own stacking context stays
+  a plain low number.
+- **Viewport height**: Size full-viewport surfaces with `h-dvh` / `min-h-dvh`, or `h-svh` where a shell owns the height and scrolls its own content, as `dashboard-layout.tsx` does. Never Tailwind's `screen` height utilities: they compile to `100vh`, the *large* viewport, which overhangs persistent mobile browser chrome, pushing bottom-anchored UI behind the bar and leaving the page scrolled with no way back when a canvas holds `touch-action: none`. (The class names are left unspelled from when this file was scanned by Tailwind and naming them re-emitted them; markdown is excluded now, but the same hazard is live in any `.ts` or `.tsx` comment.)
 
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->

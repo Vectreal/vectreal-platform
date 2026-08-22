@@ -21,7 +21,7 @@ const SceneEmbedInfoPopover = ({
 	title,
 	description
 }: SceneEmbedInfoPopoverProps) => (
-	<InfoPopover className="z-100">
+	<InfoPopover>
 		<InfoPopoverTrigger />
 		<InfoPopoverContent>
 			<InfoPopoverCloseButton />

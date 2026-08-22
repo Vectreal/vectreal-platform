@@ -228,6 +228,64 @@ export default defineConfig(tseslint.configs.recommended, [
 				},
 				{
 					/*
+					  A z-index outside the named scale.
+
+					  The tiers live in `globals.css` as `--z-index-*` and compile to
+					  `z-page-chrome`, `z-nav`, `z-overlay`, `z-above-nav`, `z-tooltip`,
+					  `z-overlay-raised` and `z-select`, each with a comment saying what
+					  belongs there.
+
+					  The line sits at 50 because 50 is where the app's chrome starts:
+					  the site nav and Radix's portal layer both live there, in the root
+					  stacking context, so any new number at or above it is competing
+					  with them and needs a name. That is not hypothetical. The nav and
+					  the route loading bar were both fixed to the top of the viewport
+					  at 50, nothing recorded that they overlapped, and DOM order quietly
+					  decided the loading bar painted underneath the header.
+
+					  Below 50 is left alone on purpose. Ordering siblings inside one
+					  component's own stacking context is local, and a plain z-10 says
+					  that more honestly than a tier name would.
+
+					  Every escape hatch is rejected whatever its value, because an
+					  escape hatch is exactly how 45, 70, 100 and 120 each arrived
+					  without anyone choosing them together. Tailwind v4 spells one
+					  three ways and the rule has to know all three: the bracket, the
+					  `z-(--custom-property)` shorthand this codebase already uses
+					  freely for Radix's popper variables, and a leading `!`, which is
+					  the worst of them because it makes a stacking conflict harder to
+					  unpick rather than easier.
+
+					  Two forms are deliberately not matched, rather than overlooked.
+					  A negative z-index paints behind its stacking context and so
+					  cannot compete with the chrome this rule protects. And a value
+					  assembled by concatenation, `'z-' + n`, would need constant
+					  folding to see; the sibling `cn()` rules have the same limit, and
+					  `eslint-house-rules.spec.ts` pins both so the gap stays a decision
+					  rather than a surprise.
+					*/
+					selector:
+						'Literal[value=/(^|[\\s:\'"])!?z-(\\[|\\(|[5-9][0-9]|[1-9][0-9]{2,})/]',
+					message:
+						'z-index outside the named scale. Use a tier from globals.css (z-page-chrome, z-nav, z-overlay, z-above-nav, z-tooltip, z-overlay-raised, z-select), or stay below 50 if this is ordering siblings inside one component. Anything at or above 50 shares the root stacking context with the site nav and Radix overlays, so it needs a name rather than a number.'
+				},
+				{
+					/*
+					  The same value written in a backtick string.
+
+					  The two `cn()` rules above only reach a template literal used
+					  directly as a className or passed to `cn()`, so a class string
+					  parked in a `const` or in a lookup table - which is exactly the
+					  shape `PUBLISHER_LAYER` has - would slip past both of them and
+					  past the `Literal` selector, which does not match template nodes.
+					*/
+					selector:
+						'TemplateElement[value.raw=/(^|[\\s:\'"])!?z-(\\[|\\(|[5-9][0-9]|[1-9][0-9]{2,})/]',
+					message:
+						'z-index outside the named scale, written as a template literal. Use a tier from globals.css (z-page-chrome, z-nav, z-overlay, z-above-nav, z-tooltip, z-overlay-raised, z-select), or stay below 50 if this is ordering siblings inside one component.'
+				},
+				{
+					/*
 					  An SVG pasted into a feature component.
 
 					  Icons belong in `shared/components/src/assets/icons` as named

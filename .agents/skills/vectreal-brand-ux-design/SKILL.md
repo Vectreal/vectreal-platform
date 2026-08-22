@@ -50,6 +50,31 @@ only.
 truth. Setting `style={{ fontSize: 'var(--text-headline)' }}` gets the size and
 none of the weight, tracking or leading, which is why `text-headline` exists.
 
+## Stacking: the `--z-index-*` tiers
+
+Named tiers in `globals.css`, each with a comment saying what belongs there.
+They generate the matching utilities, so a call site names a layer instead of
+picking a number.
+
+| Tier | Value | What sits there |
+| --- | --- | --- |
+| `z-page-chrome` | 20 | Chrome owned by one route: the docs breadcrumb bar, the internal preview overlay, a sticky summary card |
+| `z-nav` | 50 | Site chrome fixed for the whole session: desktop and mobile nav, consent banner |
+| `z-overlay` | 50 | Radix's portal layer: dialog, alert dialog, sheet, drawer, menus, popovers, hover cards |
+| `z-above-nav` | 60 | Must cover the nav: the route loading bar, an embed viewer gone fullscreen |
+| `z-tooltip` | 80 | Tooltips, above the overlay layer so they still show inside a dialog |
+| `z-overlay-raised` | 100 | One overlay that has to clear another |
+| `z-select` | 120 | The select listbox, top of the ladder |
+
+The nav and the overlay layer tie at 50 deliberately. Both land in the root
+stacking context, and Radix portals its overlays to the end of the document
+body, so the tie resolves in their favor. That is also why the publisher shell
+keeps every surface of its own below 50, in its own ladder in
+`shell-layout.ts`: at or above it they paint over confirmation modals.
+
+Below 50 is component-local ordering and stays a plain number. Giving it a tier
+name would claim a relationship with the site chrome that it does not have.
+
 ## Motion
 
 Durations: `--duration-instant` 80ms, `--duration-fast` 150ms, `--duration-base`
@@ -78,6 +103,15 @@ guessing. Each rule carries a comment explaining the failure it prevents.
 4. **Inline `<svg>`.** Extract to `shared/components/src/assets/icons` as a named
    component. A component that exists to draw a graphic rather than an icon
    disables the rule on the line with a reason.
+5. **A z-index at or above 50, and every escape hatch below it.** 50 is where
+   the site nav and Radix's portal layer live, in the root stacking context, so
+   a number there is competing with them and needs a tier name. Tailwind v4
+   spells the escape hatch three ways and all three are rejected: the bracket,
+   the `z-` custom-property shorthand in parentheses, and a leading `!`.
+   This is the rule the route loading bar needed: it and the header were both
+   fixed to the top of the viewport at 50, nothing recorded that they
+   overlapped, and DOM order decided the bar painted underneath, on every
+   navigation.
 
 ## Viewport height
 
@@ -87,14 +121,23 @@ owns the height and scrolls its own content, as `dashboard-layout.tsx` does.
 Never Tailwind's screen-height utilities. They compile to `100vh`, the *large*
 viewport, which overhangs persistent mobile browser chrome: bottom-anchored UI
 goes behind the bar and the page is left scrolled with no way back when a canvas
-holds `touch-action: none`. Those class names are deliberately not spelled out
-here, because of the next section.
+holds `touch-action: none`.
 
-## Tailwind scans this file
+## Tailwind scans more than markup
 
-`globals.css` declares `@source '../../../../'`, the repository root. Any string
-anywhere in the repo that looks like a utility, markdown included, is compiled
-into the bundle. Do not write speculative class names in documentation.
+`globals.css` declares `@source '../../../../'`, the repository root, so any
+string that looks like a utility is compiled into the bundle whether or not it
+was ever meant to render.
+
+Specs, config files and markdown are excluded, so prose in this file and in a
+README costs nothing. Comments and strings inside `.ts` and `.tsx` are still
+scanned, and cannot be excluded, because those files also hold the real markup.
+A JSDoc example, a commented-out block of JSX, and plain English both ways: the
+word "ordinal" in a sentence about clip ids compiles to Tailwind's `ordinal`
+utility. Roughly fifteen rules in the bundle today come from comments alone.
+
+So the rule survives where it still bites: do not name a utility in a code
+comment unless the file actually uses it.
 
 ## Verify in a browser, not in your head
 
@@ -125,7 +168,7 @@ a hover step or a snap point survived is to look at it.
 
 ## Verified claims
 
-Executed by `apps/vectreal-platform/tests/agent-skill-claims.spec.ts` on every
+Executed by `apps/vectreal-platform/tests/documented-claims.spec.ts` on every
 CI run. The `absent` line is the load-bearing one: it fails the build the day
 someone points `--accent` back at the brand.
 
@@ -140,6 +183,14 @@ present  shared/components/src/styles/globals.css                              .
 present  shared/components/src/styles/globals.css                              .ds-divider
 present  shared/components/src/styles/globals.css                              .text-headline
 present  shared/components/src/styles/globals.css                              @source '../../../../'
+present  shared/components/src/styles/globals.css                              @source not '../../../../**/*.md'
+present  shared/utils/src/lib/styling.utils.ts                                 extendTailwindMerge
+present  shared/components/src/styles/globals.css                              --z-index-nav: 50
+present  shared/components/src/styles/globals.css                              --z-index-overlay: 50
+present  shared/components/src/styles/globals.css                              --z-index-above-nav: 60
+present  shared/components/src/styles/globals.css                              --z-index-select: 120
+present  eslint.config.mts                                                     z-index outside the named scale
+exists   apps/vectreal-platform/tests/documented-claims.spec.ts
 present  eslint.config.mts                                                     Build className with cn()
 present  eslint.config.mts                                                     Inline SVG
 present  apps/vectreal-platform/app/routes/layouts/dashboard-layout.tsx        h-svh

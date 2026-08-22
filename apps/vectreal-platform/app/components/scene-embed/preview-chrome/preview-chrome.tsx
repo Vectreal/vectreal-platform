@@ -57,7 +57,7 @@ const PreviewChrome = ({
 	const offset = prefersReducedMotion ? 0 : 8
 
 	return (
-		<div className="pointer-events-none absolute inset-0 z-50">
+		<div className="pointer-events-none absolute inset-0 z-page-chrome">
 			<AnimatePresence initial={false}>
 				{isVisible ? (
 					<motion.div

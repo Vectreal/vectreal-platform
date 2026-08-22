@@ -30,7 +30,7 @@ function DesktopNav({
 	return (
 		<nav
 			className={cn(
-				'fixed top-0 right-0 left-0 z-50 items-center justify-center p-4',
+				'fixed top-0 right-0 left-0 z-nav items-center justify-center p-4',
 				className
 			)}
 			aria-label="Main navigation"
