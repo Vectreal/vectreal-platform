@@ -236,10 +236,12 @@ tests fail, say so with the output; if a step was skipped, say that.
 
 ## Verified claims
 
-Executed by `apps/vectreal-platform/tests/agent-skill-claims.spec.ts` on every
+Executed by `apps/vectreal-platform/tests/documented-claims.spec.ts` on every
 CI run.
 
 ```claims
+exists   .agents/hooks/skills-plan-gate.mjs
+present  .claude/settings.json                                  skills-plan-gate.mjs
 present  .github/workflows/ci-quality.yaml                     build-ci
 present  .github/pull_request_template.md                       Root cause
 present  apps/vectreal-platform/vitest.config.ts               tests/**/*.spec.{ts,tsx}

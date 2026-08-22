@@ -160,7 +160,7 @@ Integration tests need `pnpm nx run vectreal-platform:supabase-start` first, the
 
 ## Verified claims
 
-Executed by `apps/vectreal-platform/tests/agent-skill-claims.spec.ts` on every
+Executed by `apps/vectreal-platform/tests/documented-claims.spec.ts` on every
 CI run. If one fails, either the code moved and this skill is now lying, or the
 invariant genuinely broke. Both need a human.
 

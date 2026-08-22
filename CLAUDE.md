@@ -2,6 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Skills
+
+**IMPORTANT: invoke the matching skill before starting work, not after getting stuck.** They
+live in `.agents/skills/` and are symlinked into `.claude/skills/`. `AGENTS.md`
+lists them too, but Claude Code does not auto-load that file, which is why this
+section exists.
+
+| Skill | Invoke when |
+| --- | --- |
+| `vectreal-extension-architecture` | Adding or changing a route, loader, action, resource route, domain module, repository, service, permission, or the client/server boundary. |
+| `vectreal-brand-ux-design` | Any change a user can see: component styling, layout, tokens, type scale, elevation, motion, empty/loading/error states, responsive or accessibility work. |
+| `vectreal-iterative-delivery` | Scoping ambiguous or cross-cutting work, and shipping any PR. It owns the review loop, which is never skipped. |
+| `react-router-framework-mode` (global) | Framework-mode API questions: route config, loaders, actions, fetchers, pending UI, error boundaries, type generation. Carries 12 reference files. |
+
+`.agents/hooks/` keeps this table in front of you: `skills-remind.mjs` lists the
+skills this session has not used yet, and `skills-plan-gate.mjs` refuses
+`ExitPlanMode` until `vectreal-iterative-delivery` has run. Neither can block on
+an error: an unreadable transcript or a bad payload lets work continue. The gate
+denies only when it can positively see the skill did not run.
+
 ## Before you edit product code
 
 **Write the root cause first.** One sentence: what is broken, where the rule that
@@ -25,20 +45,6 @@ expensive. `docs/guides/publish-embed` documented `*.example.com` as a supported
 allowed-domain pattern; no such pattern could be saved at all until it was fixed.
 
 `vectreal-iterative-delivery` owns the operational detail.
-
-## Skills
-
-Invoke these before starting the matching work, not after getting stuck. They
-live in `.agents/skills/` and are symlinked into `.claude/skills/`. `AGENTS.md`
-lists them too, but Claude Code does not auto-load that file, which is why this
-section exists.
-
-| Skill | Invoke when |
-| --- | --- |
-| `vectreal-extension-architecture` | Adding or changing a route, loader, action, resource route, domain module, repository, service, permission, or the client/server boundary. |
-| `vectreal-brand-ux-design` | Any change a user can see: component styling, layout, tokens, type scale, elevation, motion, empty/loading/error states, responsive or accessibility work. |
-| `vectreal-iterative-delivery` | Scoping ambiguous or cross-cutting work, and shipping any PR. It owns the review loop, which is never skipped. |
-| `react-router-framework-mode` (global) | Framework-mode API questions: route config, loaders, actions, fetchers, pending UI, error boundaries, type generation. Carries 12 reference files. |
 
 ## Commands
 

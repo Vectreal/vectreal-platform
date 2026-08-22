@@ -9,5 +9,37 @@
 	},
 	"enabledPlugins": {
 		"nx@nx-claude-plugins": true
+	},
+	"hooks": {
+		"UserPromptSubmit": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "node",
+						"args": [
+							"${CLAUDE_PROJECT_DIR}/.agents/hooks/skills-remind.mjs"
+						],
+						"timeout": 15
+					}
+				]
+			}
+		],
+		"PreToolUse": [
+			{
+				"matcher": "ExitPlanMode",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "node",
+						"args": [
+							"${CLAUDE_PROJECT_DIR}/.agents/hooks/skills-plan-gate.mjs"
+						],
+						"timeout": 15,
+						"statusMessage": "Checking the plan-mode skill gate"
+					}
+				]
+			}
+		]
 	}
 }

@@ -8,6 +8,11 @@ Use agent skills available and helpful for the task at hand. When working on the
 - Design and branding: use [vectreal-brand-ux-design](.agents/skills/vectreal-brand-ux-design/SKILL.md) for tokens, the `ds-*` elevation ladder, the `text-*` type scale, motion, responsive and accessibility work, and the styling rules ESLint already enforces.
 - Iterative delivery: use [vectreal-iterative-delivery](.agents/skills/vectreal-iterative-delivery/SKILL.md) for scoping ambiguous work and for shipping any PR. It owns the mandatory review loop, the mutation gate for tests, the git and worktree rules, and the evidence block required before claiming completion.
 
+These are not merely suggested: `.agents/hooks/` (wired from
+`.claude/settings.json`) reminds you which of them you have not used yet, and
+refuses to let you leave plan mode until `vectreal-iterative-delivery` has run.
+Neither hook can block on an error. See the Skills section of `CLAUDE.md`.
+
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->
 
