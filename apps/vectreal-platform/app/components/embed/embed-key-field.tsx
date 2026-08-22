@@ -135,12 +135,13 @@ export const EmbedKeyField: FC<EmbedKeyFieldProps> = ({ api }) => {
 			</div>
 
 			{/*
-			  Not just "no keys yet": a failed load also reports zero keys, and a
-			  member who may open this panel but may not read keys would otherwise
-			  be told the project has none directly above the 403 saying they are
-			  not allowed to know.
+			  Only once an answer is in. Zero keys is what a project with none, a
+			  request still in flight, a request never dispatched, and a refused
+			  request all look like from here - and a member who may open this
+			  panel but may not read keys would otherwise be told the project has
+			  none, directly above the 403 saying they are not allowed to know.
 			*/}
-			{api.keys.length === 0 && !api.loading && !api.loadError && (
+			{api.keys.length === 0 && api.hasLoaded && !api.loadError && (
 				<p className="text-muted-foreground text-xs">
 					{EMBED_COPY.keyPickerEmpty}
 				</p>

@@ -166,13 +166,15 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 							</Link>
 						</div>
 						{/*
-						  Silent unless the list is known to be empty. Both a load in
-						  flight and a refused one report zero domains, and this notice
-						  states as fact that the project refuses every third-party site
-						  - which is alarming, actionable, and wrong in both cases.
+						  Silent unless the list is known to be empty. A load in flight,
+						  a load never dispatched (this panel is server-rendered, and the
+						  request goes out from an effect) and a refused load all report
+						  zero domains, and this notice states as fact that the project
+						  refuses every third-party site - alarming, actionable, and
+						  wrong in all three.
 						*/}
 						{keysApi.allowedDomains.length === 0 ? (
-							!keysApi.loading && !keysApi.loadError ? (
+							keysApi.hasLoaded && !keysApi.loadError ? (
 								<InlineNotice>{EMBED_COPY.allowedDomainsEmpty}</InlineNotice>
 							) : null
 						) : (

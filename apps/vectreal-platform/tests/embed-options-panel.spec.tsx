@@ -17,7 +17,7 @@ import { EMBED_COPY } from '../app/lib/domain/embed/embed-snippet'
 const load = vi.fn()
 
 let token = ''
-let loading = false
+let hasLoaded = true
 let loadError: string | null = null
 let allowedDomains: string[] = ['shop.example.com']
 
@@ -28,7 +28,7 @@ let allowedDomains: string[] = ['shop.example.com']
 */
 beforeEach(() => {
 	token = ''
-	loading = false
+	hasLoaded = true
 	loadError = null
 	allowedDomains = ['shop.example.com']
 })
@@ -38,7 +38,7 @@ vi.mock('../app/components/embed/use-embed-api-keys', () => ({
 		keys: [],
 		allowedDomains,
 		canCreateKey: true,
-		loading,
+		hasLoaded,
 		loadError,
 		token,
 		setToken: vi.fn(),
@@ -123,13 +123,14 @@ describe('the allowed-domains readout', () => {
 		expect(screen.getByText(EMBED_COPY.allowedDomainsEmpty)).not.toBeNull()
 	})
 
-	it('claims nothing while the list is still loading', () => {
+	it('claims nothing before an answer has arrived', () => {
 		/*
-		  The window this notice was wrong in on every single mount: a request in
-		  flight reports zero domains, exactly like a project that really has none.
+		  The window this notice was wrong in on every render, server included: a
+		  request in flight - or not yet dispatched - reports zero domains, exactly
+		  like a project that really has none.
 		*/
 		allowedDomains = []
-		loading = true
+		hasLoaded = false
 		renderPanel()
 
 		expect(screen.queryByText(EMBED_COPY.allowedDomainsEmpty)).toBeNull()

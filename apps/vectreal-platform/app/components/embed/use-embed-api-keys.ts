@@ -36,7 +36,20 @@ export interface EmbedApiKeysApi {
 	keys: EmbedApiKeyOption[]
 	allowedDomains: string[]
 	canCreateKey: boolean
-	loading: boolean
+	/**
+	 * Whether an answer has actually come back.
+	 *
+	 * Not the inverse of a spinner. `listFetcher.state` is `'idle'` both after a
+	 * request finishes *and* before one is ever dispatched, and the request is
+	 * dispatched from an effect - which never runs on the server. So a
+	 * state-derived "loading" flag reads `false` during server rendering, and
+	 * every empty-state message gated on it renders into the SSR'd HTML as a
+	 * confident statement of fact about data nobody has fetched yet.
+	 *
+	 * Presence of `data` is the honest signal: it is set once, by a response,
+	 * success or failure alike.
+	 */
+	hasLoaded: boolean
 	loadError: string | null
 	/** Held in React state only: never persisted, never sent to analytics. */
 	token: string
@@ -160,7 +173,7 @@ export function useEmbedApiKeys(params: {
 		keys: payload?.keys ?? EMPTY_KEYS,
 		allowedDomains: payload?.allowedDomains ?? EMPTY_DOMAINS,
 		canCreateKey: payload?.canCreateKey ?? false,
-		loading: listFetcher.state !== 'idle',
+		hasLoaded: listFetcher.data !== undefined,
 		loadError:
 			listFetcher.data && !listFetcher.data.success
 				? (listFetcher.data.error ?? 'Could not load API keys.')

@@ -116,6 +116,29 @@ describe('loading the key list', () => {
 		])
 	})
 
+	it('reports nothing known before a response arrives', () => {
+		/*
+		  The state that produced this: `listFetcher.state` is `'idle'` both after
+		  a request settles and before one is dispatched, and dispatch happens in
+		  an effect - which never runs during server rendering. A flag derived
+		  from `state` therefore says "not loading" in the SSR'd HTML, and every
+		  empty-state message gated on it renders as fact about unfetched data.
+		*/
+		const probe = mount({ projectId: 'p1', enabled: true })
+
+		expect(probe.latest().hasLoaded).toBe(false)
+		expect(probe.latest().keys).toEqual([])
+		expect(probe.latest().allowedDomains).toEqual([])
+		expect(probe.latest().loadError).toBeNull()
+	})
+
+	it('knows an answer arrived, including a refusal', () => {
+		fetchers[0] = { state: 'idle', data: { success: false, error: 'nope' } }
+		expect(mount({ projectId: 'p1', enabled: true }).latest().hasLoaded).toBe(
+			true
+		)
+	})
+
 	it('surfaces a refusal instead of reporting an empty project', () => {
 		fetchers[0] = {
 			state: 'idle',
@@ -148,6 +171,7 @@ describe('loading the key list', () => {
 		expect(api.keys).toHaveLength(1)
 		expect(api.allowedDomains).toEqual(['shop.example.com'])
 		expect(api.canCreateKey).toBe(true)
+		expect(api.hasLoaded).toBe(true)
 		expect(api.loadError).toBeNull()
 	})
 })
