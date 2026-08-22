@@ -158,7 +158,7 @@
 		"jsonc-eslint-parser": "^3.3.0",
 		"nx": "23.1.1",
 		"prettier": "^3.9.6",
-		"prettier-plugin-tailwindcss": "^0.6.14",
+		"prettier-plugin-tailwindcss": "^0.8.1",
 		"rehype-autolink-headings": "^7.1.0",
 		"rehype-pretty-code": "^0.14.3",
 		"rehype-slug": "^6.0.0",
