@@ -5,6 +5,36 @@ description: 'Use when scoping ambiguous or cross-cutting Vectreal work, and whe
 
 # Vectreal Iterative Delivery
 
+## Investigate before editing
+
+Before the first edit to product code, write the root cause: what is broken,
+where the rule governing it lives, and why the fix belongs there rather than at
+the call site. It goes in the PR body under "Root cause".
+
+This is deliberately aimed at the artifact rather than at a planning mode. A mode
+binds one tool; a written root cause binds every contributor and can be checked
+in review.
+
+**Code is truth. Documentation is a hypothesis.** Verify any claim a doc makes
+before planning on it. `publish-embed.mdx` listed `*.example.com` as a supported
+allowed-domain pattern from the day the feature was written, and no wildcard
+could be saved at all, so a plan built on that page was wrong before it started.
+Stale docs are worse than absent docs because they read as authoritative.
+
+**Two triggers.**
+
+1. If the root cause will not fit in one sentence, you do not understand it yet.
+   Keep investigating. This is the depth control: cost scales with the real
+   difficulty of the problem, not with a fixed ceremony.
+2. If the fix adds a check rather than removing a cause, go one level deeper. The
+   wildcard fix is the positive case: the `try`/`catch` was being used as a branch
+   for a case that never throws, so the branch was deleted rather than
+   special-cased around.
+
+**What this is not.** It is not a licence to investigate indefinitely. The
+statement is the deliverable, and for most changes it is one line written in
+seconds.
+
 ## Two dials, not one tradeoff
 
 How to **cut** work and how much **effort** to spend on it are separate
@@ -211,6 +241,7 @@ CI run.
 
 ```claims
 present  .github/workflows/ci-quality.yaml                     build-ci
+present  .github/pull_request_template.md                       Root cause
 present  apps/vectreal-platform/vitest.config.ts               tests/**/*.spec.{ts,tsx}
 exists   apps/vectreal-platform/vitest.integration.config.ts
 exists   .agents/skills/vectreal-extension-architecture/SKILL.md
