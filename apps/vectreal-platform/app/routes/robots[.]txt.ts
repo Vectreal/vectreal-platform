@@ -26,6 +26,19 @@ export async function loader() {
 		'Disallow: /dashboard',
 		'Disallow: /onboarding',
 		'Disallow: /preview',
+		/*
+		  `/embed` is deliberately absent, and adding it would make things worse.
+
+		  Those URLs carry an API key in the query string, so keeping them out of
+		  search results matters. Disallowing a path stops the crawl, not the
+		  indexing: a URL discovered elsewhere can still be listed, with no
+		  snippet, and Google cannot see the `noindex` it was told to obey because
+		  it is no longer allowed to fetch the page and read it.
+
+		  `/embed` answers every request with `X-Robots-Tag: noindex, nofollow`
+		  (`embed-response-headers.ts`) and renders the matching meta tag. Both
+		  require the crawler to be allowed in.
+		*/
 		'',
 		'# API and auth endpoints',
 		'Disallow: /api/',

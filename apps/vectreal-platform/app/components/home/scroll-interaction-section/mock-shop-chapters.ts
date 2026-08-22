@@ -1,6 +1,19 @@
 // Scene chapters for the home-page mock-shop scrollytell section, plus the pure
 // helpers that map scroll progress onto chapters and the filmstrip transform.
 
+/*
+  The token below is public, by construction rather than by accident.
+
+  `VITE_PUBLIC_*` is inlined at build time, so this value ships in the client
+  bundle to every visitor. That is not a mistake to be corrected by moving it
+  server-side: an embed authenticates by a token in its URL, because an iframe
+  cannot set request headers, so the value lands in the page source either way.
+  Every customer's embed carries theirs the same way.
+
+  What keeps it from being a free pass is the owning project's allowed-domain
+  list, checked on every embed request. Treat that list as the control, and keep
+  this key scoped to a project that allows only vectreal.com.
+*/
 export const DEMO_SCENE_URL =
 	typeof import.meta !== 'undefined' &&
 	(import.meta.env.VITE_PUBLIC_DEMO_SCENE_URL as string | undefined)
