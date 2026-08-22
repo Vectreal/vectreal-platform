@@ -2,6 +2,30 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Before you edit product code
+
+**Write the root cause first.** One sentence: what is broken, where the rule that
+governs it lives, and why the fix belongs there rather than at the call site. It
+goes in the PR body under "Root cause", so it binds contributors and agents
+alike rather than depending on a tool's planning mode.
+
+The rule is cheap when the answer is obvious ("the word is misspelled") and
+expensive only when the problem is. Two triggers keep it calibrated:
+
+1. **If you cannot write it in one sentence, you do not understand it yet.**
+   Keep investigating rather than starting to edit.
+2. **If the fix adds a check rather than removing a cause, go one level deeper.**
+   A guard placed around a broken path preserves the break.
+
+**Code is truth. Documentation is a hypothesis.** Any claim taken from a doc into
+a plan gets verified against the code before the plan is final. Docs that
+describe behavior go stale silently and read as authoritative, which poisons a
+plan before implementation starts and surfaces mid-session where it is most
+expensive. `docs/guides/publish-embed` documented `*.example.com` as a supported
+allowed-domain pattern; no such pattern could be saved at all until it was fixed.
+
+`vectreal-iterative-delivery` owns the operational detail.
+
 ## Skills
 
 Invoke these before starting the matching work, not after getting stuck. They

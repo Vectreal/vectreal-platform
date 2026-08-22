@@ -4,6 +4,16 @@
 
 Closes #<!-- issue number -->
 
+## Root cause
+
+<!--
+  Required for any change to product code. One sentence: what is broken, where
+  the rule governing it lives, and why the fix belongs there rather than at the
+  call site. If it will not fit in a sentence, investigate further before
+  editing. If the fix adds a check rather than removing a cause, go one level
+  deeper. For docs, tooling or a pure addition, write "n/a" and why.
+-->
+
 ## Changes
 
 <!-- Bullet list of the key changes made. -->
