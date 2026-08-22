@@ -20,6 +20,13 @@ on:
       - 'eslint.config.mts'
       - 'vitest.shared.mts'
       - 'tsconfig.base.json'
+      # Agent instructions carry claims about this code that
+      # documented-claims.spec.ts executes. Without these the spec never runs
+      # on the PRs most likely to invalidate it.
+      - '.agents/**'
+      - 'CLAUDE.md'
+      - 'AGENTS.md'
+      - '.github/pull_request_template.md'
       - '.github/workflows/ci-quality.yaml'
       - '.github/workflows/cd-platform-staging.yaml'
       - '.github/workflows/cd-platform-production.yaml'

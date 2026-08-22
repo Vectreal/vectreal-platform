@@ -275,6 +275,9 @@
 				"cwd": "apps/vectreal-platform",
 				"command": "pnpm dlx react-email dev --dir app/lib/email/templates --port 3000"
 			}
+		},
+		"test": {
+			"inputs": ["default", "^production", "agentInstructions"]
 		}
 	}
 }

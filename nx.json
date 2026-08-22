@@ -12,6 +12,11 @@
 			"!{projectRoot}/vitest.config.ts",
 			"!{projectRoot}/vitest.integration.config.ts",
 			"!{projectRoot}/tests/**"
+		],
+		"agentInstructions": [
+			"{workspaceRoot}/.agents/skills/**/*",
+			"{workspaceRoot}/CLAUDE.md",
+			"{workspaceRoot}/AGENTS.md"
 		]
 	},
 	"targetDefaults": {
