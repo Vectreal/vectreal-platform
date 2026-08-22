@@ -1,6 +1,7 @@
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
 
 import { generateApiKey } from './api-key-generator.server'
+import { resolveApiKeyState } from './api-key-lifecycle'
 import { getDbClient } from '../../../db/client'
 import { apiKeyProjects } from '../../../db/schema/auth/api-key-projects'
 import { apiKeys } from '../../../db/schema/auth/api-keys'
@@ -416,6 +417,99 @@ export async function updateApiKey(
 	}
 
 	return updatedKey
+}
+
+/**
+ * Replace the secret behind an existing key, keeping the row.
+ *
+ * This is the only way to fix a key that has leaked without breaking every
+ * embed at once: the id, name, description, project links and expiry all
+ * survive, so the owner updates one snippet rather than re-minting and
+ * re-scoping a key everywhere it was pasted. Before this existed the only
+ * remedy was revoke-and-recreate, which is why a token published in the
+ * marketing bundle sat unrotated.
+ *
+ * Refused on any key that is not live. A revoked key must stay dead, and a
+ * rotated-but-expired key would hand back a fresh secret that still cannot
+ * authorize anything.
+ */
+export async function rotateApiKey(params: {
+	apiKeyId: string
+	userId: string
+}): Promise<ApiKeyWithDetails & { plaintext: string }> {
+	const { apiKeyId, userId } = params
+
+	const existingKey = await getApiKeyById(apiKeyId, userId)
+	if (!existingKey) {
+		throw new Error('API key not found or access denied')
+	}
+
+	await verifyOrganizationAdminAccess(
+		db,
+		existingKey.organization.id,
+		userId,
+		'api-key:rotate'
+	)
+
+	const state = resolveApiKeyState(existingKey.apiKey, new Date())
+	if (state !== 'active') {
+		throw new Error(
+			`This API key is ${state} and cannot be rotated. Create a new key instead.`
+		)
+	}
+
+	const { plaintext, hashed, preview } = generateApiKey()
+
+	/*
+	  A compare-and-swap on the secret that was read, not a blind write by id.
+
+	  Two things can land between the read above and this write, and both would
+	  otherwise be reported to the caller as a successful rotation:
+
+	    - a revoke, leaving a fresh secret on a row its owner just killed;
+	    - another rotation, after which only the last writer's plaintext is live
+	      while every earlier caller has already been handed one that authorizes
+	      nothing. Two admins reacting to the same leaked key, or one
+	      double-submitted form, is enough.
+
+	  Matching on the old `hashedKey` makes the loser update zero rows, so it
+	  raises instead of returning a dead secret.
+	*/
+	const rotated = await db
+		.update(apiKeys)
+		.set({
+			hashedKey: hashed,
+			keyPreview: preview,
+			rotatedAt: new Date(),
+			/*
+			  The old secret's usage history does not describe the new one. Left
+			  alone it would read as "already in use" the moment the key is minted,
+			  and that field is exactly what an owner checks to confirm the
+			  storefront picked the new key up.
+			*/
+			lastUsedAt: null
+		})
+		.where(
+			and(
+				eq(apiKeys.id, apiKeyId),
+				eq(apiKeys.hashedKey, existingKey.apiKey.hashedKey),
+				isNull(apiKeys.revokedAt)
+			)
+		)
+		.returning({ id: apiKeys.id })
+
+	if (rotated.length === 0) {
+		throw new Error(
+			'This API key changed while it was being rotated - it was revoked, or rotated somewhere else. Reload and check its state before trying again.'
+		)
+	}
+
+	const updatedKey = await getApiKeyById(apiKeyId, userId)
+	if (!updatedKey) {
+		throw new Error('Failed to retrieve rotated API key')
+	}
+
+	return { ...updatedKey, plaintext }
 }
 
 /**

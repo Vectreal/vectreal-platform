@@ -13,7 +13,7 @@ import {
 	TabsTrigger
 } from '@shared/components/ui/tabs'
 import { KeyRound } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
 	data,
 	Outlet,
@@ -26,6 +26,10 @@ import { toast } from 'sonner'
 
 import { Route } from './+types/api-keys'
 import {
+	OneTimeKeyDialog,
+	type OneTimeKeyValue
+} from '../../components/api-keys/one-time-key-dialog'
+import {
 	DataTable,
 	createApiKeyColumns,
 	type ApiKeyRow
@@ -33,9 +37,11 @@ import {
 import { ConfirmDestructiveDialog } from '../../components/shared/confirm-destructive-dialog'
 import { FeatureUnavailablePanel } from '../../components/upgrade/feature-unavailable-panel'
 import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
+import { useOncePerFetcherResponse } from '../../hooks/use-once-per-fetcher-response'
 import {
 	getAllUserApiKeys,
 	revokeApiKey,
+	rotateApiKey,
 	type ApiKeyWithDetails
 } from '../../lib/domain/auth/api-key-repository.server'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
@@ -102,6 +108,22 @@ export async function loader({ request }: Route.LoaderArgs) {
 	)
 }
 
+/**
+ * One shape for every outcome of this action.
+ *
+ * Returning a different object per branch left the client narrowing a union
+ * with `in`, which resolved `rotatedKey` to `{}` and lost the one value that
+ * cannot be fetched again. A single optional-field contract is also what the
+ * component already assumes when it probes with `'success' in fetcher.data`.
+ */
+interface ApiKeysActionResult {
+	success?: true
+	message?: string
+	error?: string
+	/** Present only after a rotation, and only in that one response. */
+	rotatedKey?: OneTimeKeyValue
+}
+
 export async function action({ request }: Route.ActionArgs) {
 	const { user, headers } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
@@ -113,23 +135,55 @@ export async function action({ request }: Route.ActionArgs) {
 	const intent = formData.get('intent') as string
 
 	try {
-		if (intent === 'revoke') {
-			const apiKeyId = formData.get('apiKeyId') as string
+		const apiKeyId = formData.get('apiKeyId') as string
 
+		if (intent === 'revoke') {
 			if (!apiKeyId) {
-				return data({ error: 'API key ID is required' }, { headers })
+				return data<ApiKeysActionResult>(
+					{ error: 'API key ID is required' },
+					{ headers }
+				)
 			}
 
 			await revokeApiKey(apiKeyId, user.id)
-			return data(
+			return data<ApiKeysActionResult>(
 				{ success: true, message: 'API key revoked successfully' },
 				{ headers }
 			)
 		}
 
-		return data({ error: 'Invalid intent' }, { headers })
+		if (intent === 'rotate') {
+			if (!apiKeyId) {
+				return data<ApiKeysActionResult>(
+					{ error: 'API key ID is required' },
+					{ headers }
+				)
+			}
+
+			const rotated = await rotateApiKey({ apiKeyId, userId: user.id })
+
+			/*
+			  The plaintext leaves the server exactly here and is never persisted in
+			  the clear, so the client has one chance to show it. It is deliberately
+			  not put in the flash message: toasts disappear on a timer.
+			*/
+			return data<ApiKeysActionResult>(
+				{
+					success: true,
+					message: 'API key rotated.',
+					rotatedKey: {
+						plaintext: rotated.plaintext,
+						preview: rotated.apiKey.keyPreview,
+						name: rotated.apiKey.name
+					}
+				},
+				{ headers }
+			)
+		}
+
+		return data<ApiKeysActionResult>({ error: 'Invalid intent' }, { headers })
 	} catch (error) {
-		return data(
+		return data<ApiKeysActionResult>(
 			{ error: error instanceof Error ? error.message : 'An error occurred' },
 			{ headers }
 		)
@@ -166,7 +220,8 @@ function buildApiKeyRows(keys: ApiKeyWithDetails[]): ApiKeyRow[] {
 		lastUsedAt: key.apiKey.lastUsedAt,
 		active: key.apiKey.active,
 		expiresAt: key.apiKey.expiresAt,
-		revokedAt: key.apiKey.revokedAt
+		revokedAt: key.apiKey.revokedAt,
+		rotatedAt: key.apiKey.rotatedAt
 	}))
 }
 
@@ -174,12 +229,14 @@ function OrgApiKeysTable({
 	namespace,
 	rows,
 	onEdit,
-	onRevoke
+	onRevoke,
+	onRotate
 }: {
 	namespace: string
 	rows: ApiKeyRow[]
 	onEdit: (keyId: string) => void
 	onRevoke: (keyId: string) => void
+	onRotate: (keyId: string) => void
 }) {
 	const tableState = useDashboardTableState({ namespace })
 
@@ -187,9 +244,10 @@ function OrgApiKeysTable({
 		() =>
 			createApiKeyColumns({
 				onEdit,
-				onRevoke
+				onRevoke,
+				onRotate
 			}),
-		[onEdit, onRevoke]
+		[onEdit, onRevoke, onRotate]
 	)
 
 	if (rows.length === 0) {
@@ -232,10 +290,24 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 	const navigate = useNavigate()
 	const fetcher = useFetcher<typeof action>()
 	const revalidator = useRevalidator()
-	const lastHandledResponseRef = useRef<string | null>(null)
 	const [revokeDialogOpen, setRevokeDialogOpen] = useState(false)
 	const [keyToRevokeId, setKeyToRevokeId] = useState<string | null>(null)
-	const isRevoking = fetcher.state !== 'idle'
+	const [rotateDialogOpen, setRotateDialogOpen] = useState(false)
+	const [keyToRotateId, setKeyToRotateId] = useState<string | null>(null)
+	const [rotatedKey, setRotatedKey] = useState<OneTimeKeyValue | null>(null)
+	const isMutating = fetcher.state !== 'idle'
+
+	/**
+	 * Whether the in-flight request is the one this dialog would confirm.
+	 *
+	 * Both dialogs share one fetcher, so a plain `fetcher.state !== 'idle'`
+	 * marks a dialog the user just opened for a different key as already
+	 * submitting - rendering its confirm button as "Working..." and disabling
+	 * Cancel, so it cannot even be dismissed until an unrelated request
+	 * finishes.
+	 */
+	const isSubmittingFor = (keyId: string | null) =>
+		isMutating && keyId !== null && fetcher.formData?.get('apiKeyId') === keyId
 
 	const allKeys = useMemo(
 		() => Object.values(keysByOrg).flatMap((items) => items),
@@ -247,27 +319,26 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 		[allKeys]
 	)
 
-	useEffect(() => {
-		if (fetcher.state !== 'idle' || !fetcher.data) {
-			return
-		}
+	useOncePerFetcherResponse(fetcher, (result) => {
+		if ('success' in result && result.success) {
+			/*
+			  A rotation's plaintext exists only in this response. Capture it into
+			  state before the toast, because revalidating replaces `fetcher.data`
+			  and the value is unrecoverable once it is gone.
+			*/
+			if ('rotatedKey' in result && result.rotatedKey) {
+				setRotatedKey(result.rotatedKey)
+			}
 
-		const signature = JSON.stringify(fetcher.data)
-		if (lastHandledResponseRef.current === signature) {
-			return
-		}
-		lastHandledResponseRef.current = signature
-
-		if ('success' in fetcher.data && fetcher.data.success) {
-			toast.success(fetcher.data.message || 'API key revoked successfully')
+			toast.success(result.message || 'API key revoked successfully')
 			revalidator.revalidate()
 			return
 		}
 
-		if ('error' in fetcher.data && fetcher.data.error) {
-			toast.error(fetcher.data.error)
+		if ('error' in result && result.error) {
+			toast.error(result.error)
 		}
-	}, [fetcher.state, fetcher.data, revalidator])
+	})
 
 	const handleEdit = (keyId: string) => {
 		navigate(`/dashboard/api-keys/${keyId}/edit`)
@@ -279,7 +350,7 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 	}
 
 	const confirmRevoke = () => {
-		if (!keyToRevokeId || isRevoking) return
+		if (!keyToRevokeId || isMutating) return
 
 		fetcher.submit(
 			{
@@ -292,6 +363,27 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 
 		setRevokeDialogOpen(false)
 		setKeyToRevokeId(null)
+	}
+
+	const handleRotate = (keyId: string) => {
+		setKeyToRotateId(keyId)
+		setRotateDialogOpen(true)
+	}
+
+	const confirmRotate = () => {
+		if (!keyToRotateId || isMutating) return
+
+		fetcher.submit(
+			{
+				intent: 'rotate',
+				apiKeyId: keyToRotateId,
+				csrf: csrfToken
+			},
+			{ method: 'post' }
+		)
+
+		setRotateDialogOpen(false)
+		setKeyToRotateId(null)
 	}
 
 	if (organizations.length === 0) {
@@ -313,6 +405,30 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 
 	const defaultOrgId = organizations[0]?.organization.id
 	const keyToRevoke = keyToRevokeId ? keysById.get(keyToRevokeId) : null
+	const keyToRotate = keyToRotateId ? keysById.get(keyToRotateId) : null
+
+	/*
+	  Acknowledge rather than typed, matching revoke: rotating is recoverable by
+	  rotating again, and the irreversible part is not the key, it is the minutes
+	  the embed is broken until the snippet is updated. That is what the
+	  consequences below have to say out loud.
+	*/
+	const rotatePlan: DashboardConfirmationPlan = {
+		tier: 'acknowledge',
+		title: keyToRotate
+			? `Rotate "${keyToRotate.apiKey.name}"?`
+			: 'Rotate API key?',
+		description: keyToRotate
+			? `Key ending ${keyToRotate.apiKey.keyPreview} is replaced by a new one immediately.`
+			: 'The current key is replaced by a new one immediately.',
+		consequences: [
+			'Every embed still carrying the current key is refused until you paste in the new one',
+			'The new key is shown once, right after rotating, and cannot be recovered later',
+			'The name, projects and expiry stay as they are'
+		],
+		confirmLabel: 'Rotate key',
+		token: null
+	}
 
 	/*
 	  Revoking is destructive but recoverable by issuing a new key, so it sits at
@@ -365,6 +481,7 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 								)}
 								onEdit={handleEdit}
 								onRevoke={handleRevoke}
+								onRotate={handleRotate}
 							/>
 						) : (
 							<FeatureUnavailablePanel
@@ -414,6 +531,7 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 											)}
 											onEdit={handleEdit}
 											onRevoke={handleRevoke}
+											onRotate={handleRotate}
 										/>
 									) : (
 										<FeatureUnavailablePanel
@@ -437,8 +555,23 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 					open={revokeDialogOpen}
 					onOpenChange={setRevokeDialogOpen}
 					plan={revokePlan}
-					isPending={isRevoking}
+					isPending={isSubmittingFor(keyToRevokeId)}
 					onConfirm={confirmRevoke}
+				/>
+
+				<ConfirmDestructiveDialog
+					open={rotateDialogOpen}
+					onOpenChange={setRotateDialogOpen}
+					plan={rotatePlan}
+					isPending={isSubmittingFor(keyToRotateId)}
+					onConfirm={confirmRotate}
+				/>
+
+				<OneTimeKeyDialog
+					open={rotatedKey !== null}
+					onClose={() => setRotatedKey(null)}
+					apiKey={rotatedKey}
+					reason="rotated"
 				/>
 			</div>
 

@@ -31,6 +31,15 @@ export const apiKeys = pgTable(
 		lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
 		expiresAt: timestamp('expires_at', { withTimezone: true }),
 		revokedAt: timestamp('revoked_at', { withTimezone: true }),
+		/*
+		  When the secret behind this row last changed. Null means never rotated.
+
+		  Read next to `lastUsedAt`, it answers the question that follows every
+		  rotation: rotated three days ago but last used five days ago means the
+		  embed still carrying the old key was never updated, and that storefront
+		  is broken right now.
+		*/
+		rotatedAt: timestamp('rotated_at', { withTimezone: true }),
 		createdAt: timestamp('created_at', { withTimezone: true })
 			.defaultNow()
 			.notNull()

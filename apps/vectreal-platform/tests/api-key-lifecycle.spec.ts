@@ -145,6 +145,32 @@ describe('api key lifecycle', () => {
 		})
 	})
 
+	/*
+	  A static pin, not a behavioural test, and deliberately labelled as one.
+
+	  `validatePreviewApiKeyForProject` records `lastUsedAt` with a timestamp
+	  captured before its lookup. Keyed on the row id alone, a slow request that
+	  authenticated with a since-rotated secret can land that stale timestamp
+	  after a rotation cleared the column and a newer request refilled it -
+	  dragging `lastUsedAt` back behind `rotatedAt` and making the dashboard
+	  report a healthy key as "Unused since rotating".
+
+	  Reproducing that needs three requests interleaved around a rotation in a
+	  specific order, which nothing here can arrange deterministically. So this
+	  asserts the guard is still in the predicate, which at least fails when
+	  someone simplifies it away. It does not prove the runtime behaviour.
+	*/
+	it('still guards the lastUsedAt write on the secret that authenticated', () => {
+		const normalized = authSource.replace(/\s+/g, '')
+
+		expect(
+			normalized.includes(
+				'.set({lastUsedAt:now}).where(and(eq(apiKeys.id,decision.apiKeyId),eq(apiKeys.hashedKey,hashedToken)))'
+			),
+			'The lastUsedAt write is no longer predicated on the hash that authenticated the request. A stale write from a superseded key can now overwrite a newer one, which is what "Unused since rotating" reads.'
+		).toBe(true)
+	})
+
 	describe('isApiKeyLive agrees with the query on every row shape', () => {
 		it.each(ALL_ROWS.map((row) => [describeRow(row), row] as const))(
 			'%s',

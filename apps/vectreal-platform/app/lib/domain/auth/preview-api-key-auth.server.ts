@@ -95,11 +95,12 @@ export async function validatePreviewApiKeyForProject(params: {
 
 	const token = getPreviewTokenFromRequest(request)
 	const now = new Date()
+	const hashedToken = token ? hashApiToken(token) : null
 
 	// No token means no lookup: an absent token can match no key, and querying
 	// for one would let an unauthenticated caller drive database load.
-	const match = token
-		? await findLiveKeyForProject(hashApiToken(token), projectId, now)
+	const match = hashedToken
+		? await findLiveKeyForProject(hashedToken, projectId, now)
 		: null
 
 	const decision = decideEmbedAccess({ request, token, match })
@@ -109,10 +110,32 @@ export async function validatePreviewApiKeyForProject(params: {
 		return decision
 	}
 
-	await db
-		.update(apiKeys)
-		.set({ lastUsedAt: now })
-		.where(eq(apiKeys.id, decision.apiKeyId))
+	/*
+	  Written only while the secret this request authenticated with is still the
+	  one on the row.
+
+	  `now` is captured before the lookup, so a slow request can reach this write
+	  long after a rotation has cleared `lastUsedAt` and a newer request has set
+	  it. Keyed on the id alone, that stale write lands and drags the column back
+	  behind `rotatedAt`, which is exactly the comparison the dashboard uses to
+	  say "Unused since rotating". The indicator would then report a key nobody
+	  had updated as one nobody had updated - by accident, for a key that was
+	  fine.
+	*/
+	// A decision can only be `ok` when a row matched, which can only happen when
+	// a token was present and hashed. The guard is here to say that in types
+	// rather than to handle a reachable case.
+	if (hashedToken) {
+		await db
+			.update(apiKeys)
+			.set({ lastUsedAt: now })
+			.where(
+				and(
+					eq(apiKeys.id, decision.apiKeyId),
+					eq(apiKeys.hashedKey, hashedToken)
+				)
+			)
+	}
 
 	return decision
 }
