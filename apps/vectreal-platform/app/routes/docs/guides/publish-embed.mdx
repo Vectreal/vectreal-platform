@@ -24,24 +24,32 @@ External iframe embeds require a **preview API key** scoped to the project that 
 
 ### Creating a key
 
+The quickest route is the **Embed** section of a published scene: paste a key you already saved, or click **Create a key for this project** to mint one scoped to that project alone. The snippet below it is then already correct, and there is nothing left to substitute by hand.
+
+To create a key with your own name, description or expiry instead:
+
 1. Go to [Dashboard → API Keys](/dashboard/api-keys).
 2. Click **New API Key**.
 3. Select the project(s) the key should have access to.
 4. Copy the key - it is shown only once.
+
+> A key is stored hashed, so it cannot be read back later. The **Embed** panel's key picker shows each key's name and last four characters, which is enough to tell which of your saved keys a project expects, but not enough to recover one you did not save.
 
 ### Using the key
 
 Pass the key as the `token` query parameter in the embed URL:
 
 ```
-/embed/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY
+/embed/<projectId>/<sceneId>?token=vctrl_your_key_here
 ```
 
 Or as a `Bearer` token in the `Authorization` header for API requests:
 
 ```http
-Authorization: Bearer YOUR_PREVIEW_API_KEY
+Authorization: Bearer vctrl_your_key_here
 ```
+
+> **Do not paste a quoted key into the snippet.** `?token="vctrl_..."` closes the `src` attribute at the first quote, so the browser requests an empty token and the embed answers `404` with nothing to indicate why. Copy the snippet from the **Embed** panel with the key already filled in, rather than editing the URL in place.
 
 ---
 
@@ -76,7 +84,7 @@ The hosted preview iframe can also be controlled from the parent page over `post
 ```html
 <div style="width: 100%; max-width: 100%; height: 400px;">
   <iframe
-    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
+    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=vctrl_your_key_here"
     style="width: 100%; height: 100%; border: 0;"
     allow="autoplay; xr-spatial-tracking"
     allowfullscreen
@@ -89,7 +97,7 @@ The hosted preview iframe can also be controlled from the parent page over `post
 ```html
 <div style="position:relative;padding-top:56.25%;width:100%">
   <iframe
-    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
+    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=vctrl_your_key_here"
     style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
     allow="autoplay; xr-spatial-tracking"
     allowfullscreen
@@ -144,7 +152,7 @@ each carrying only its own field (`zoom` or `pan`), so a partial payload is norm
 <div style="position:relative;padding-top:56.25%;width:100%">
   <iframe
     id="vectreal-preview"
-    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=YOUR_PREVIEW_API_KEY"
+    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=vctrl_your_key_here"
     style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
     allow="autoplay; xr-spatial-tracking"
     loading="lazy"
