@@ -32,6 +32,35 @@
 	  `@layer components` and is not a Tailwind utility, so `@apply` cannot
 	  reach it. Same for every `.text-*` and `.ds-*` in the design system.
 	*/
+	/*
+	  `rehype-autolink-headings` appends `<a class="heading-anchor">#</a>` to every
+	  heading (see the plugin config in vite.config.ts). Nothing styled it, so a
+	  literal orange "#" rendered beside every title on every docs, legal and
+	  newsroom page.
+
+	  `:global` is required. The class name is injected by the rehype plugin at
+	  build time and never passes through this CSS module, so a bare
+	  `.heading-anchor` would be mangled into a name that matches nothing.
+
+	  Revealed on hover rather than deleted, because it is the permalink affordance.
+	  No focus rule: the plugin sets `tabIndex: -1` and `aria-hidden`, so the anchor
+	  is out of both the tab order and the accessibility tree, and a `:focus-visible`
+	  rule here would be dead code.
+	*/
+	:global(.heading-anchor) {
+		@apply ml-2 no-underline;
+		color: var(--color-orange);
+		opacity: 0;
+		transition: opacity var(--duration-fast) var(--ease-out);
+	}
+
+	h1:hover :global(.heading-anchor),
+	h2:hover :global(.heading-anchor),
+	h3:hover :global(.heading-anchor),
+	h4:hover :global(.heading-anchor) {
+		opacity: 1;
+	}
+
 	h1 {
 		@apply max-w-4xl text-balance;
 		font-size: var(--text-headline);

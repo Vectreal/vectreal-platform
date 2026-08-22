@@ -132,7 +132,7 @@ export default function DocsLayout() {
 							<BreadcrumbItem>
 								<BreadcrumbLink asChild>
 									<span>
-										<Link className="max-md:hidden" to="/docs" viewTransition>
+										<Link className="max-lg:hidden" to="/docs" viewTransition>
 											Docs
 										</Link>
 
