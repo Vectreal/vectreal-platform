@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.0.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.25.1...viewer-v1.0.0) (2026-08-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* **publisher:** `@vctrl/core` removes `GridProps`, `ShadowType`, `ShadowTypePropBase`, `ContactShadowProps`, `AccumulativeShadowsProps`, `ExportOptions`, `ExportModelOptions`, `ModifiedTextureResources` and `OptimizationStats.nodes`; `exportThreeJSGLB` takes only the object; `optimizeAll` compresses textures unless `textures: false`. `@vctrl/viewer` removes the `gridOptions` prop, `SceneGrid` and `defaultGridOptions`, and renames `defaultShadowOptions` to `defaultShadowsOptions`. `@vctrl/hooks` replaces `load(files)`, `loadFromData` and `loadFromServer` with a single `load(source)`, replaces `isFileLoading` with a `status` union, and removes the `on`/`off` event bus along with `EventTypes`, `EventHandler`, `LoadData`, `SceneLoadOptions` and `SceneDataLoadOptions`.
+
+### Features
+
+* **viewer:** play glTF animation clips ([035b217](https://github.com/Vectreal/vectreal-platform/commit/035b217448803f9008d136f1c12836189d0c2898))
+* **viewer:** play glTF animation clips ([11ff088](https://github.com/Vectreal/vectreal-platform/commit/11ff0880eb32ef0bda03196fe74de4955452d2f1))
+
+
+### Bug Fixes
+
+* **animation:** close correctness gaps found in review ([715971d](https://github.com/Vectreal/vectreal-platform/commit/715971d27727cef07c04d6eeca4c7bbddfae7eb0))
+* **build:** make the package typecheck gates actually compile something ([#723](https://github.com/Vectreal/vectreal-platform/issues/723)) ([38c6487](https://github.com/Vectreal/vectreal-platform/commit/38c64879a00c1774df970effa09cff38396233ec))
+* **publisher:** one answer to which scene is open ([cbcc863](https://github.com/Vectreal/vectreal-platform/commit/cbcc8632e8137e9aba446293367d6d90f1796146))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @vctrl/core bumped to 1.0.0
+
 ## [0.25.1](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.25.0...viewer-v0.25.1) (2026-08-08)
 
 
