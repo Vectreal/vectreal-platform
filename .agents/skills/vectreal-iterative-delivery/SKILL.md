@@ -1,155 +1,218 @@
 ---
 name: vectreal-iterative-delivery
-description: 'Use when requests are ambiguous or cross-cutting and require iterative execution with explicit alignment gates. Triggers: ambiguous scope, architecture+UX+infra changes, phased rollout, verification-first development, uncertainty reduction, autonomous review loops.'
+description: 'Use when scoping ambiguous or cross-cutting Vectreal work, and when shipping any PR. Owns the mandatory review loop, the mutation gate for tests, and the git and worktree rules. Triggers: plan, scope, phased rollout, ship, PR, pull request, review, code review, verify, test coverage, commit, branch, worktree, done, ready to merge.'
 ---
 
 # Vectreal Iterative Delivery
 
-## Mission
+## Two dials, not one tradeoff
 
-Reduce ambiguity to near-zero before coding, then deliver in short verified loops that optimize correctness, DX, UX, and operational overhead.
+How to **cut** work and how much **effort** to spend on it are separate
+decisions. Conflating them produces both failure modes: sprawling tasks that
+need seven review rounds, and days spent perfecting something nobody depends on.
 
-## Core Loop
+**Cut by concern. Always.** One concern per task, per PR, per subagent. Review
+rounds track the number of concerns in a diff, not its size. Measured on this
+workstream:
 
-1. Discovery
+| PR | Concerns | Files | Review rounds |
+| --- | --- | --- | --- |
+| #736 eslint rules | 1 | 7 | 1 |
+| #732 hotspot fixes + module split + comparison | 3 | 20 | 3 |
+| #734 server manifest + client loader | 2 | 20 | 5 |
+| #735 route + hook + panel + dialog + key options + snippet | 6 | 14 | 7 |
+| embed domain policy | 1 | 2 | 0 |
 
-- Map current behavior and failure surfaces before proposing fixes.
-- Identify unknowns explicitly and convert each into a concrete question.
-- Validate assumptions against repository conventions, the plan/entitlement types in `app/constants/plan-config.ts`, and existing architecture patterns.
+Twenty files with two concerns cost more rounds than seven files with one.
+Splitting is close to free; mixing is not.
 
-2. Alignment
+**Spend by tier.** Distance from the funnel sets depth, and only depth.
 
-- Summarize intended outcomes, non-goals, and ownership boundaries (app vs package vs infra).
-- Confirm acceptance criteria and rollout order before implementation.
-- Resolve conflicts (security vs speed, UX vs scope, local unblock vs long-term architecture).
+| Tier | What | Depth |
+| --- | --- | --- |
+| 1 | On the funnel: save a scene, publish it, mint a key, allow a domain, copy the snippet, authorize the request, serve the manifest and assets | Full loop. Mutation gate. A test of the invariant *between* contract halves, not each half. Integration coverage. |
+| 2 | Supports the funnel: dashboard, billing, auth UI, publisher | One review pass. Escalate to the loop only if it finds something. |
+| 3 | Off the funnel: marketing, docs, tooling, skills, this file | Gates green and one read-through. No loop. |
 
-3. Design
+`apps/vectreal-platform/tests/critical-path.spec.ts` holds the funnel as data and
+fails when a step loses its guard. It is the tier-1 list.
 
-- Plan by phase with dependencies and explicit verification checkpoints.
-- Prefer minimal viable slice first, then progressive hardening.
-- Keep public APIs stable unless change is deliberate and documented.
+So the grid is:
 
-4. Implementation
+|  | Narrow scope | Wide scope |
+| --- | --- | --- |
+| **Deep** | Tier 1, correct | #735: seven rounds for one feature |
+| **Shallow** | Tier 3, correct | how the wildcard bug shipped |
 
-- Execute one vertical slice at a time (code + tests/checks + docs where needed).
-- Preserve existing behavior outside target scope.
-- Use Nx project targets for workflows and automation.
+Hyperfixation is not caused by narrow scope. It is deep effort spent on a tier-3
+concern. On 2026-08-22 three agent skill files were rewritten and verified with
+tier-1 rigour while a tier-1 bug (`*.myshopify.com` could not be saved at all)
+sat filed and untouched from the day before. Narrow was right; deep was wrong.
 
-5. Verification
+**Drift triggers.** Both are checkable mid-task:
 
-- Run project-level checks through Nx only.
-- Validate runtime behavior in the exact user surfaces being fixed.
-- Confirm no plan/entitlement/consent identifier drift.
-- Run explicit negative-path checks (error, empty, timeout, retry, permission, offline where relevant).
-- Verify diagnostics state (type, lint, editor warnings for touched files) before closing the loop.
+1. **One PR, one sentence, no "and".** If the description needs a conjunction it
+   is two PRs. #735's needed five.
+2. **If the diff touches a file the scope line did not name**, stop. Either
+   rename the scope out loud, or file the finding and leave the file alone.
 
-6. Autonomous Review
+## The loop, which is never skipped
 
-- Perform self-review for regressions, error paths, and maintainability.
-- Identify residual risks and classify follow-up work separately from done work.
+Findings are not the deliverable. **A clean review round is.**
 
-7. Plan Alignment
+1. **Review** - several subagents in parallel, each on one distinct dimension.
+2. **Map** - one subagent consolidates into a fix spec: dedupe, decide, and name
+   the single owner of each rule.
+3. **Fix** - subagents implement the spec on disjoint files so they cannot
+   collide.
+4. **Verify** - the Nx gates below, plus live verification in the surface that
+   changed.
+5. **Repeat from 1** until a round comes back with nothing.
 
-- Report deltas from original plan, not full restatements.
-- Re-open ambiguity only where evidence indicates mismatch.
-- Iterate until acceptance criteria are objectively met.
+**Phases are barriers.** Readers and writers never run at the same time. Every
+agent in a phase finishes before the next starts. A reviewer reading a tree a
+fixer is mid-edit reports against a state that never existed. Parallelism lives
+inside a phase, never across one.
 
-## Iteration Contract (Mandatory)
+Serial single-resource work stays with the main agent: the browser pane, the dev
+server, the local database. Only reading, mapping and editing fan out.
 
-Every implementation loop must include all four phases in order:
+Subagent reports are evidence, not verdicts. They are confidently wrong often
+enough that a finding gets checked against the code before it becomes a fix.
 
-1. Implementation
-2. Verification
-3. Autonomous review
-4. Plan alignment
+## The mutation gate
 
-No phase may be skipped. If time or scope is constrained, reduce slice size, not gate coverage.
+**For every guard you add, mutate the production line and confirm a test goes
+red.** Run this while implementing, not after review asks for it.
 
-## Exhaustive Verification Checklist (Per Loop)
+This is the single highest-value habit here. On PR #735 the review loop ran seven
+rounds; three separate rounds found a test of mine that could not fail, and one
+was directly beneath a comment I had written warning about that exact failure
+mode. The mutation check catches all of them in seconds and takes rounds off the
+loop.
 
-Before closing a loop, check all applicable items:
+Named failure modes it catches:
 
-1. Build and type checks for touched projects via Nx.
-2. Tests for touched projects via Nx.
-3. Runtime happy-path validation in each modified surface.
-4. Runtime failure-path validation in each modified surface.
-5. Diagnostics clean for touched files (including editor warnings).
-6. Import/order/style rules satisfied in touched files.
-7. Canonical plan/entitlement/consent identifiers unchanged unless explicitly intended.
-8. Security/infra blast radius reviewed for infra/auth/config changes.
-9. User-facing recovery paths verified (retry/fallback/actionable copy).
-10. Residual risks and follow-ups documented.
+- **The tautological assertion.** A regex capture group that can never match what
+  it claims (`[^"]*` will not contain a quote), or asserting attribute names
+  while the payload injects sibling elements. Parse with `DOMParser` and assert
+  an exact element list rather than pattern-matching a string.
+- **The untested guard.** Delete the guard; if the suite is still green, the test
+  was never testing it.
+- **The test that pins the bug.** Write the failing test first when fixing a
+  defect, and watch it fail for the stated reason before fixing.
 
-If any applicable item fails, continue iterating; do not report completion.
+## Stop symptom-patching
 
-## Sub-Agent Coverage Policy
+When you fix what looks like the same defect at a **third** call site, stop and
+find the cause. "Zero results means confirmed empty" was patched in three places
+before round six found the real cause: a `loading` flag derived from
+`fetcher.state`, which reads `idle` before dispatch too, and dispatch is an effect
+that never runs during SSR, so both empty-state claims were baked into the server
+HTML.
 
-Use a sub-agent in iterative loops when it can reduce blind spots or speed up coverage.
+Two patches of one symptom is a coincidence. Three is a missing root cause.
 
-Required triggers:
+## Scope discipline
 
-1. Cross-cutting changes across app + package + infra.
-2. Searching for dispersed call sites, configs, or invariants across the workspace.
-3. Validation sweeps where independent read-only confirmation improves confidence.
+Out-of-scope findings become a catalogue row (Notion **Vectreal Work Items**) or
+a GitHub issue. They never become lines in the diff and never become a report
+handed back for triage. Say plainly in the PR what was filed rather than fixed,
+and why.
 
-Execution rule:
+Deliver the whole scope that was asked for. If part is blocked, finish everything
+else in full and say what was left out. Scaling the work down is the user's call.
 
-- After each substantial implementation slice, run at least one focused sub-agent pass for exploration or verification when any required trigger applies.
-- Treat sub-agent output as additional evidence, then still perform final local verification gates.
+## Git rules
 
-## Loop Evidence Block (Required)
+- **Never write git history unless asked.** Commit, push, merge, rebase and tag
+  all count. A plan that authorizes PRs for named phases authorizes those phases
+  and nothing else.
+- **No self-attribution anywhere.** Not in commit messages, not in PR titles or
+  bodies, not in branch names. Branches take a conventional prefix describing the
+  change: `feat/`, `fix/`, `chore/`, `test/`, `docs/`, `refactor/`, `perf/`,
+  `ci/`. A `PreToolUse` hook blocks the common cases, but the hook is a backstop,
+  not the rule.
+- **Use `git -C <path>` on every git call. Never `cd`.** A `git checkout -b` that
+  ran in a worktree while the edits sat in the main repo put a commit on an
+  unrelated branch, and it was caught only because `gh pr create` failed.
+- **Conventional Commits** for messages. Versioning is Release Please; never
+  `nx release`.
 
-Any completion/update that claims a loop or phase is done must include a compact evidence block.
+## Worktree rules
 
-Required fields:
+Worktrees keep pre-bump `node_modules` that disagree with `pnpm-lock.yaml`.
+Reinstall before trusting any test result on a dependency-regression bug.
 
-1. Commands run (Nx commands only).
-2. Touched surfaces validated (route/page/hook/module names).
-3. Failure paths tested (what failed path was exercised and outcome).
-4. Diagnostics status for touched files.
-5. Residual risks and follow-ups.
+## Merge-order and staleness
 
-If evidence is incomplete, report as in-progress instead of done.
+- To test whether a branch still holds unique work, use `git merge-tree
+  --write-tree` plus GitHub's merged-PR head-ref list. `git diff main...branch`
+  is three-dot and measures from the merge base, so it reports every
+  squash-merged branch as full of unique work.
+- Stacked PRs: merge the base, rebase the child, then merge the child. Merging
+  both back to back conflicts.
 
-## Required Gates
+## Gates
 
-1. Ambiguity gate
+```bash
+pnpm nx run-many --target=typecheck,lint -p vctrl/core,vctrl/hooks,vctrl/viewer,vectreal-platform
+```
 
-- No coding begins until unresolved questions are listed and either answered or intentionally deferred.
+```bash
+npx vitest run --root .
+```
 
-2. Safety gate
+Integration tests need `pnpm nx run vectreal-platform:supabase-start` first, then
+`pnpm nx run vectreal-platform:test-integration`.
 
-- Security-sensitive or infrastructure-changing work requires explicit blast-radius acknowledgment and rollback approach.
+CI runs `build-ci`, not `build`, plus job-level env vars, so `nx build` passing
+locally is not the gate.
 
-3. Verification gate
+**`nx run-many -p <name>` exits 0 when the name matches nothing.** It prints
+"No tasks were run" and succeeds, so a typo turns a gate into a no-op that reads
+as a pass. The project names are `vectreal-platform`, `shared/components`,
+`shared/utils`, `vctrl/core`, `vctrl/hooks`, `vctrl/viewer`, `vctrl/embed`,
+`storybook`, `terraform`. Note the slashes: `shared-components` is not a project
+and silently covers nothing. Check the task count in the summary against the
+number of projects times targets.
 
-- Each phase closes only after command-level validation and behavior confirmation.
-- Each iteration closes only after the Exhaustive Verification Checklist is satisfied for all applicable items.
+After the PR is open, verify the PR and not just the working tree: the diff
+contains only the files this step names, and CI is green on the actual PR head.
 
-4. UX/DX gate
+## Evidence block
 
-- User-facing failure states must have actionable feedback and retry/recovery paths.
-- Developer workflows must be one-command where practical and documented in-repo.
+Any claim that a phase is done carries:
 
-## Ownership Heuristic
+1. Commands run, with their result.
+2. Surfaces validated, including the failure path exercised.
+3. What was filed rather than fixed.
+4. Residual risk.
 
-- Package layer: normalize technical error signals and event contracts.
-- App layer: map signals to user messaging, recovery UX, and route-specific fallback UI.
-- Infra layer: local bootstrap reliability, least-privilege defaults, and reproducible targets.
+If the evidence is incomplete, report in progress. Report outcomes faithfully: if
+tests fail, say so with the output; if a step was skipped, say that.
 
-## Anti-Patterns
+## Anti-patterns
 
-- Jumping to implementation while ambiguity is still implicit.
-- Solving with broad refactors when a focused vertical slice is sufficient.
-- Reporting success based on type-check alone without runtime failure-path validation.
-- Introducing new identifiers that conflict with the canonical values in `app/constants/plan-config.ts`.
+| Anti-pattern | Replacement |
+| --- | --- |
+| Review round skipped because the change looks small | Run the loop; #735's worst defect was in a 3-line hook |
+| Test written after the guard, never mutated | Mutate the line, watch it go red |
+| Third patch of one symptom | Find the cause |
+| Reviewers and fixers running concurrently | Phase barrier |
+| Subagent finding applied without checking the code | Verify, then fix |
+| Success reported from a passing type-check | Runtime failure-path check in the changed surface |
+| Out-of-scope fix folded into the diff | Catalogue row, named in the PR |
 
-## Done Criteria
+## Verified claims
 
-A phase is done only when all are true:
+Executed by `apps/vectreal-platform/tests/agent-skill-claims.spec.ts` on every
+CI run.
 
-1. Code changes are merged for the scoped slice.
-2. Relevant Nx checks pass.
-3. Runtime path works for success and failure states.
-4. Docs/config updates reflect the new workflow.
-5. Residual risks and next steps are explicit.
+```claims
+present  .github/workflows/ci-quality.yaml                     build-ci
+present  apps/vectreal-platform/vitest.config.ts               tests/**/*.spec.{ts,tsx}
+exists   apps/vectreal-platform/vitest.integration.config.ts
+exists   .agents/skills/vectreal-extension-architecture/SKILL.md
+exists   .agents/skills/vectreal-brand-ux-design/SKILL.md
+```

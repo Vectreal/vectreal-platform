@@ -4,9 +4,9 @@ Use agent skills available and helpful for the task at hand. When working on the
 
 ## Project Skills
 
-- Architecture extensions: use [vectreal-extension-architecture](.agents/skills/vectreal-extension-architecture/SKILL.md) for route/layout semantics, modularization, client/server boundaries, Drizzle access patterns, and React Router framework-mode conventions.
-- Design and branding: use [vectreal-brand-ux-design](.agents/skills/vectreal-brand-ux-design/SKILL.md) for token-based styling, brand alignment, intentional UX flows, accessibility, responsive behavior, and high-polish UI execution.
-- Iterative delivery: use [vectreal-iterative-delivery](.agents/skills/vectreal-iterative-delivery/SKILL.md) for ambiguity elimination, phased implementation, mandatory implementation→verification→autonomous review→plan alignment loops, exhaustive per-iteration validation, sub-agent-assisted coverage when changes are cross-cutting, and required loop evidence blocks before claiming completion.
+- Architecture extensions: use [vectreal-extension-architecture](.agents/skills/vectreal-extension-architecture/SKILL.md) for routes, loaders, actions, resource routes, domain modules, repositories, services, the client/server boundary, and authorization. Read its first section before writing any access check: RLS is inert for app traffic, so the role table in `dashboard-operations.ts` is the only authorization that runs.
+- Design and branding: use [vectreal-brand-ux-design](.agents/skills/vectreal-brand-ux-design/SKILL.md) for tokens, the `ds-*` elevation ladder, the `text-*` type scale, motion, responsive and accessibility work, and the styling rules ESLint already enforces.
+- Iterative delivery: use [vectreal-iterative-delivery](.agents/skills/vectreal-iterative-delivery/SKILL.md) for scoping ambiguous work and for shipping any PR. It owns the mandatory review loop, the mutation gate for tests, the git and worktree rules, and the evidence block required before claiming completion.
 
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->

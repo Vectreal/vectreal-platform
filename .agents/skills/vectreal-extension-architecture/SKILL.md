@@ -1,185 +1,185 @@
 ---
 name: vectreal-extension-architecture
-description: 'Use when extending Vectreal platform architecture, adding routes/loaders/actions, introducing domain modules, changing DB access patterns, or refactoring client/server boundaries in React Router v7 framework mode. Triggers: architecture, layout tree, route structure, modularization, separation of concerns, DRY, clean code, server/client split, loader action, Drizzle repository, RLS, Nx conventions.'
+description: 'Use when extending the Vectreal platform: adding or changing routes, loaders, actions, resource routes, domain modules, repositories, services, permissions, or the client/server boundary in React Router v7 framework mode. Triggers: route, loader, action, fetcher, resource route, API endpoint, authorization, permission, role check, Drizzle, repository, service, .server.ts, RLS, client/server split, Nx target.'
 ---
 
 # Vectreal Extension Architecture
 
-## Mission
+## Authorization: read this before writing any access check
 
-Build new features in ways that preserve Vectreal's layout semantics, domain modularity, and framework-mode data flow without introducing unnecessary abstraction overhead.
+**Postgres RLS is inert for application traffic.** `app/db/client.ts` connects
+with a plain `DATABASE_URL` and never issues `set local role`, so `auth.uid()`
+is null on every app query and every policy is bypassed.
 
-## Non-Negotiables
+The policies are real. They are declared with `pgPolicy` across
+`app/db/schema/**` and built from predicate helpers in `app/db/schema/rls.ts`:
+`isUserSelf`, `isOrganizationMember`, `isOrganizationAdmin`, `canAccessProject`.
+Those names read exactly like the authorization helpers you are looking for,
+which is the trap. They compile to SQL that never runs for a request. Calling one
+from application code produces a check that always passes.
 
-1. Keep route and file structure aligned with layout semantics and user journey.
-2. Use React Router v7 framework mode patterns (loaders, actions, Route.LoaderArgs, Route.ActionArgs, Route.ComponentProps).
-3. Separate server-only code into .server.ts modules and never import server modules into client runtime.
-4. Keep data access in domain repositories/services, not directly in route UI modules.
-5. Use canonical identifiers from prd documents for plans, entitlements, billing states, consent, and analytics events.
-6. Run tasks through Nx via pnpm nx; do not call underlying tooling directly.
+An access check written against RLS is therefore not an access check. The single
+authorization mechanism that runs is the role table in
+`app/lib/domain/dashboard/dashboard-operations.ts`.
 
-## Architectural Principles
+Server side, resolve the actor and assert:
 
-1. Layout-driven tree semantics
+```ts
+const membership = await resolveSceneMembership(user.id, sceneId)  // .server.ts
+assertDashboardPermission('scene:delete', membership)
+```
 
-- Route composition must reflect UX and access boundaries first, file placement second.
-- Nested layouts must represent real shared concerns (auth shell, dashboard shell, docs shell), not convenience wrappers.
-- Prefer explicit route tree clarity over clever dynamic routing.
+`resolveProjectMembership`, `resolveSceneMembership` and
+`resolveSceneFolderMembership` live in `dashboard-permissions.server.ts`
+alongside `assertDashboardPermission`.
 
-2. Modularization without overhead
+Client side, `dashboard-operations.ts` is pure and client-safe, so components
+call `canPerformDashboardOperation` directly to gate affordances. Loaders ship a
+`DashboardCapabilityMap` built by `buildDashboardCapabilities`
+(`dashboard-capabilities.ts`).
 
-- Organize by domain responsibility, not arbitrary technical layering.
-- Extract modules when they reduce duplication or isolate volatile logic.
-- Avoid speculative abstraction: no new shared layers unless at least two concrete callers benefit now.
+Adding an operation means adding it to the `DashboardOperation` union **and** to
+`DASHBOARD_OPERATION_ROLES`. That map is a total `Record`, so a missing rule is a
+compile error rather than a silent allow. Never hand-roll a role comparison.
 
-3. Clean code and DRY by intent
+**Report a non-member as 404, not 403,** on anything keyed by an id the actor
+may not know. A 403 confirms the id exists, which turns the endpoint into an id
+oracle. This is not yet uniform in the repo: `ApiResponse.forbidden` has 16 call
+sites, correctly for CSRF and cross-origin rejection (which reveal no id) and
+questionably on a few scene routes. Follow the rule on new code; do not copy the
+nearest existing example.
 
-- DRY means deduplicating business meaning, not forcing all similar code into generic helpers.
-- Keep orchestrators explicit when domain workflows differ.
-- Favor small, composable functions with clear names over generic utility buckets.
+## Non-negotiables
 
-4. Strict client/server boundary
+1. Server-only modules end in `.server.ts` and are never imported from a client
+   component, a shared hook, or anything that reaches the browser bundle.
+2. Drizzle queries live in repository modules. Cross-repository workflows live
+   in services. Route modules stay thin: parse, authorize, call, respond.
+3. Route composition follows access and layout boundaries first, file
+   convenience second. Routes are declared in `app/routes.tsx`, not file-based.
+4. Plan, entitlement, billing-state and consent identifiers come from
+   `app/constants/plan-config.ts` (consent: `app/lib/consent/consent-cookie.ts`).
+   Add to the owning type first so every missing case fails to compile.
+5. Run every task through `pnpm nx`. Never call `eslint`, `tsc` or `vitest`
+   directly.
+6. Migrations come only from `pnpm nx run vectreal-platform:drizzle-generate`
+   after a schema edit. Hand-authoring one desynchronizes the meta snapshot.
 
-- Server concerns: auth, db, secrets, stripe/webhooks, RLS-sensitive queries, request validation.
-- Client concerns: rendering, interaction state, optimistic UX, purely visual transforms.
-- Crossing boundary must happen through loaders/actions/API routes only.
+## Framework-mode traps that have cost real time here
 
-## Route and Layout Workflow
+**`fetcher.state === 'idle'` does not mean "finished".** It is also the state
+before any request is dispatched. If dispatch happens in an effect, it never runs
+during SSR, so a `loading` flag derived from `state` is false in the server HTML
+and any "no results" branch behind it gets baked into the response. Derive
+loaded-ness from the data instead:
 
-1. Start from route intent
+```ts
+const hasLoaded = fetcher.data !== undefined
+```
 
-- Identify destination layout and access level first.
-- Place route module where tree semantics remain obvious to future maintainers.
+This shipped three separate symptom fixes before the cause was found. When you
+patch the same defect at a third call site, stop and find the cause.
 
-2. Implement loader/action contract
+**StrictMode double-invokes mount effects**, not update effects. A ref guard
+around a load-once or submit-once effect exists for that reason alone. Say so in
+a comment, or the next reader deletes it.
 
-- Use typed args from generated +types.
-- Loader returns data for read path; action handles mutation path.
-- Keep parsing/validation close to action entry or delegated to domain parser module.
+**A route module cannot be imported by a test.** `getDbClient()` runs at module
+scope and throws `Missing DATABASE_URL`. Put logic a test needs to reach in a
+pure module with no db import and no `.server` suffix, and have the route call
+it. `app/lib/domain/scene/scene-route-params.ts` is the pattern.
 
-3. Compose UI from stable boundaries
+## Recipe: a new resource route
 
-- Route module orchestrates calls to domain functions and UI composition.
-- Reusable UI belongs in shared/components or app/components based on scope.
+1. Register it in `app/routes.tsx` under the API block:
+   `route('api/projects/:projectId/api-keys', './routes/api/projects.$projectId.api-keys.ts')`
+2. Loader: `getAuthUser` or `loadAuthenticatedUser` → `resolveProjectMembership`
+   → `canPerformDashboardOperation` / `assertDashboardPermission`.
+3. Action: `ensureValidCsrfFormData` (`app/lib/http/csrf.server.ts`) before any
+   mutation.
+4. Respond through `ApiResponse.*` from `@shared/utils`. The envelope is
+   `{ success: true, data }` or `{ success: false, error, quota? }`.
+5. Merge auth headers with `append`, not `set`. Supabase can rotate more than one
+   cookie in a single response and `set` drops all but the last.
 
-## Domain and Data Workflow
+## Recipe: a dashboard mutation
 
-1. Put queries in repository modules
+Create, rename, move and delete for projects, folders and scenes already have a
+home: `POST /api/dashboard/mutations`. The contract is in
+`dashboard-mutations.ts`, execution in `dashboard-mutations.server.ts`, the
+client hook is `useDashboardMutations`. The server recomputes the required tier
+itself, so nothing client-supplied is trusted. Destructive confirmations come
+from `planDeleteConfirmation` rendered by `ConfirmDestructiveDialog`.
 
-- Repositories own Drizzle query shape and joins.
-- Reuse RLS helpers where access checks are required.
+Do not add a parallel endpoint for a fifth verb on these entities. Extend the
+contract.
 
-2. Put workflow rules in service modules
+## Project manifests
 
-- Services orchestrate cross-repository behavior and external integrations.
-- Services expose explicit domain operations, not low-level transport details.
+Every project's `package.json` must declare what its own source imports, at the
+installed version. pnpm resolves an undeclared import by walking up to the root
+`node_modules`, so a wrong manifest still builds, which is how `@vctrl/core` came
+to publish `three@^0.177.0` while the repo built against 0.185.1.
 
-3. Keep route modules thin
+`@nx/dependency-checks` enforces this and `--fix` writes the correction,
+including `catalog:`. Trust it over hand-editing. A package that deliberately
+bundles a dependency declares that as an `ignoredDependencies` entry in
+`eslint.config.mts` with a reason.
 
-- Route modules should validate input, call domain operations, and produce HTTP/UI responses.
+## Anti-patterns
 
-## React Router v7 Framework Mode Rules
+| Anti-pattern | Replacement |
+| --- | --- |
+| Access check that relies on RLS, `auth.uid()`, or a hand-written role comparison | `assertDashboardPermission` against the operation table |
+| 403 for a resource the actor cannot see | 404, so ids cannot be enumerated |
+| Drizzle query inside a route module | Repository function, called through a service when it spans repositories |
+| Shared abstraction created for one current caller | Explicit local code until a second caller exists |
+| `loading` derived from `fetcher.state` | `hasLoaded` derived from `fetcher.data !== undefined` |
+| Logic a test needs, placed in a route or `.server.ts` module | Pure module with no db import |
+| New endpoint for an entity `/api/dashboard/mutations` already owns | Extend the mutation contract |
 
-1. Prefer loader/action over ad-hoc client fetch for route-owned data.
-2. Keep mutation operations in actions or API route actions.
-3. Use generated route types; avoid hand-rolled duplicate route typing.
-4. Use scoped error boundaries per layout tier when behavior differs between public/auth/dashboard contexts.
+## Gates
 
-## Client and Server Separation Rules
+```bash
+pnpm nx run-many --target=typecheck,lint -p vctrl/core,vctrl/hooks,vctrl/viewer,vectreal-platform
+```
 
-1. Server-only files
+Unit tests: `npx vitest run --root .` (or `pnpm nx test vectreal-platform`).
+Integration tests need `pnpm nx run vectreal-platform:supabase-start` first, then
+`pnpm nx run vectreal-platform:test-integration`.
 
-- Use .server.ts naming for server-only modules.
-- Never import .server.ts into client components, shared client hooks, or browser bundles.
+## Source of truth
 
-2. API routes
+- `CLAUDE.md`
+- `apps/vectreal-platform/app/routes.tsx`
+- `apps/vectreal-platform/app/lib/domain/dashboard/dashboard-operations.ts`
+- `apps/vectreal-platform/app/lib/domain/dashboard/dashboard-permissions.server.ts`
+- `apps/vectreal-platform/app/constants/plan-config.ts`
+- `apps/vectreal-platform/app/db/client.ts` (read it before trusting any claim
+  about RLS)
 
-- Keep API route modules server-only and response-focused.
-- Centralize auth and CSRF checks with existing helpers.
+## Verified claims
 
-3. Sessions and secrets
+Executed by `apps/vectreal-platform/tests/agent-skill-claims.spec.ts` on every
+CI run. If one fails, either the code moved and this skill is now lying, or the
+invariant genuinely broke. Both need a human.
 
-- Cookie/session/secret handling stays server-side only.
-
-## Identifier Discipline
-
-1. Do not invent new literal identifiers for:
-
-- Plans
-- Entitlements
-- Billing states
-- Consent categories
-- Analytics event names
-
-2. If a new identifier is required, add it to the owning type in `app/constants/plan-config.ts` (or `app/lib/consent/consent-cookie.ts` for consent) first, so every missing case becomes a compile error, then code against it.
-
-## Nx and Execution Discipline
-
-1. Run lint/test/build/typecheck/migrations through Nx using pnpm nx.
-2. Prefer nx run and nx affected workflows consistent with repository conventions.
-3. Do not bypass Nx cache/task graph by calling underlying toolchains directly.
-
-## Anti-Patterns and Replacements
-
-1. Anti-pattern: Direct Drizzle queries in route UI module.
-
-- Replace with repository function in domain layer and call through service when needed.
-
-2. Anti-pattern: Shared abstraction created for a single current caller.
-
-- Replace with local explicit code; extract only with proven second use-case.
-
-3. Anti-pattern: Client component importing server utility.
-
-- Replace with loader/action mediated data flow.
-
-4. Anti-pattern: Route tree flattened for convenience.
-
-- Replace with nested layout structure that matches true semantic shells.
-
-5. Anti-pattern: Hardcoded plan/entitlement/consent identifiers in ad-hoc strings.
-
-- Replace with the canonical constants and maps exported from `app/constants/plan-config.ts`.
-
-## Practical Extension Recipes
-
-1. Add a new authenticated dashboard feature
-
-- Add/adjust route in route tree under dashboard layout.
-- Add loader for read data and action for mutations.
-- Place domain queries in repository, orchestrate with service, keep route thin.
-- Reuse shared UI primitives and existing error boundary semantics.
-
-2. Add a new API mutation endpoint
-
-- Create server route action under routes/api.
-- Validate payload and auth/CSRF up front.
-- Call service operation; return consistent JSON shape.
-
-3. Add a new domain capability with DB persistence
-
-- Add schema/type updates where required.
-- Add repository methods for data access.
-- Add service methods for business logic.
-- Wire through route action/loader.
-
-## Review Checklist
-
-1. Does the route placement reflect layout semantics and access boundaries?
-2. Are loader/action typed and used instead of ad-hoc client fetch for route-owned data?
-3. Is server-only code isolated in .server.ts?
-4. Are DB queries in repositories and workflows in services?
-5. Are plan/entitlement/consent identifiers canonical and unchanged?
-6. Were commands run via pnpm nx only?
-7. Did this change avoid unnecessary new abstraction layers?
-
-## Source-of-Truth References
-
-- AGENTS.md
-- .github/copilot-instructions.md
-- CLAUDE.md
-- apps/vectreal-platform/app/routes.tsx
-- apps/vectreal-platform/app/db/schema/rls.ts
-- apps/vectreal-platform/app/constants/plan-config.ts
-- apps/vectreal-platform/app/constants/product-copy.ts
-- apps/vectreal-platform/app/lib/domain/dashboard/dashboard-operations.ts
+```claims
+absent   apps/vectreal-platform/app/db/client.ts                                            set local role
+present  apps/vectreal-platform/app/db/client.ts                                            Missing DATABASE_URL
+present  apps/vectreal-platform/app/db/schema/rls.ts                                        isOrganizationMember
+present  apps/vectreal-platform/app/db/schema/rls.ts                                        canAccessProject
+present  apps/vectreal-platform/app/lib/domain/dashboard/dashboard-permissions.server.ts    assertDashboardPermission
+present  apps/vectreal-platform/app/lib/domain/dashboard/dashboard-permissions.server.ts    resolveProjectMembership
+present  apps/vectreal-platform/app/lib/domain/dashboard/dashboard-permissions.server.ts    resolveSceneMembership
+present  apps/vectreal-platform/app/lib/domain/dashboard/dashboard-permissions.server.ts    resolveSceneFolderMembership
+present  apps/vectreal-platform/app/lib/domain/dashboard/dashboard-operations.ts            canPerformDashboardOperation
+present  apps/vectreal-platform/app/lib/domain/dashboard/dashboard-operations.ts            DASHBOARD_OPERATION_ROLES
+present  apps/vectreal-platform/app/lib/domain/dashboard/dashboard-capabilities.ts          buildDashboardCapabilities
+present  apps/vectreal-platform/app/lib/domain/dashboard/dashboard-capabilities.ts          DashboardCapabilityMap
+present  apps/vectreal-platform/app/lib/http/csrf.server.ts                                 ensureValidCsrfFormData
+present  shared/utils/src/lib/api.utils.ts                                                  success: true, data
+exists   apps/vectreal-platform/app/lib/domain/scene/scene-route-params.ts
+present  apps/vectreal-platform/app/routes.tsx                                              api/dashboard/mutations
+present  eslint.config.mts                                                                  dependency-checks
+```
