@@ -11,6 +11,7 @@ import {
 	TooltipContent,
 	TooltipTrigger
 } from '@shared/components/ui/tooltip'
+import { cn } from '@shared/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronDownIcon, SparklesIcon } from 'lucide-react'
 
@@ -57,7 +58,7 @@ export const OptimizeButton: FC<OptimizeButtonProps> = ({
 
 	if (resolvedMode === 'optimize-more' && onStackOptimize) {
 		const splitButton = (
-			<div className={`flex grow ${buttonClassName ?? ''}`.trim()}>
+			<div className={cn('flex grow', buttonClassName)}>
 				<Button
 					type="button"
 					variant={resolvedVariant}
@@ -135,7 +136,7 @@ export const OptimizeButton: FC<OptimizeButtonProps> = ({
 		<Button
 			type="button"
 			variant={resolvedVariant}
-			className={`grow ${buttonClassName ?? ''}`.trim()}
+			className={cn('grow', buttonClassName)}
 			onClick={onOptimize}
 			disabled={isDisabled}
 		>

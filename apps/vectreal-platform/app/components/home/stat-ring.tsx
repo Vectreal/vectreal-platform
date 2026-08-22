@@ -82,6 +82,7 @@ export function StatRing({
 				className="relative"
 				style={{ width: SIZE, height: SIZE }}
 			>
+				{/* eslint-disable-next-line no-restricted-syntax -- a ring chart drawn from computed geometry, not an icon */}
 				<svg
 					width={SIZE}
 					height={SIZE}

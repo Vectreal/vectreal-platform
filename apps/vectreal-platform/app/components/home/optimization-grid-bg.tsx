@@ -60,6 +60,7 @@ export function OptimizationGridBg({ className }: OptimizationGridBgProps) {
 			}}
 			aria-hidden="true"
 		>
+			{/* eslint-disable-next-line no-restricted-syntax -- a generated background pattern, not an icon */}
 			<svg
 				className="h-full w-full"
 				viewBox={`0 0 ${WIDTH} ${HEIGHT}`}

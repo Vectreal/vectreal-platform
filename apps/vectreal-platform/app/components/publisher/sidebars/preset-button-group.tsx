@@ -1,4 +1,5 @@
 import { Button } from '@shared/components'
+import { cn } from '@shared/utils'
 import { AnimatePresence, motion, Variants } from 'framer-motion'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { memo, ReactNode, useState } from 'react'
@@ -39,7 +40,7 @@ export const PresetButtonGroup = memo(
 		}
 
 		return (
-			<div className={`space-y-2.5 ${className}`}>
+			<div className={cn('space-y-2.5', className)}>
 				<div className="flex flex-col gap-0.5">
 					<label className="text-muted-foreground text-xs font-medium">
 						{label}

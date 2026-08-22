@@ -1,4 +1,5 @@
 import { Separator } from '@shared/components/ui/separator'
+import { cn } from '@shared/utils'
 import { ReactNode, memo } from 'react'
 
 import { InfoTooltip } from '../../info-tooltip'
@@ -28,7 +29,7 @@ interface SidebarSectionProps {
 
 export const SidebarSection = memo(
 	({ title, tooltip, children, className = '' }: SidebarSectionProps) => (
-		<div className={`space-y-4 ${className}`}>
+		<div className={cn('space-y-4', className)}>
 			{/* Section Header with Heading */}
 			{title && (
 				<>
@@ -70,7 +71,7 @@ interface SidebarSectionContentProps {
 
 export const SidebarSectionContent = memo(
 	({ children, className = '' }: SidebarSectionContentProps) => (
-		<div className={`space-y-4 ${className}`}>{children}</div>
+		<div className={cn('space-y-4', className)}>{children}</div>
 	)
 )
 
@@ -90,7 +91,7 @@ interface SettingRowProps {
 
 export const SettingRow = memo(
 	({ label, children, className = '' }: SettingRowProps) => (
-		<div className={`space-y-2 ${className}`}>
+		<div className={cn('space-y-2', className)}>
 			{label && (
 				<label className="text-muted-foreground text-xs font-medium">
 					{label}
@@ -117,7 +118,7 @@ interface SettingGroupProps {
 
 export const SettingGroup = memo(
 	({ label, description, children, className = '' }: SettingGroupProps) => (
-		<div className={`space-y-2 ${className}`}>
+		<div className={cn('space-y-2', className)}>
 			<div className="flex items-center justify-between gap-2">
 				<label className="text-muted-foreground text-xs font-medium">
 					{label}

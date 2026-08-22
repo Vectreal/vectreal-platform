@@ -4,6 +4,7 @@ interface LoadingSpinnerProps {
 
 export const LoadingSpinner = ({ className }: LoadingSpinnerProps) => {
 	return (
+		// eslint-disable-next-line no-restricted-syntax -- this component IS the reusable spinner primitive
 		<svg
 			className={className}
 			width="24"
