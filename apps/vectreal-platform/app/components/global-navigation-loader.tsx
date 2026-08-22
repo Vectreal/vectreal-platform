@@ -21,7 +21,18 @@ export function GlobalNavigationLoader() {
 	if (!isVisible) return null
 
 	return (
-		<div className="pointer-events-none fixed top-0 left-0 z-50 w-full">
+		/*
+		  Above the nav, which is also fixed at top-0 and also z-50 (see
+		  `desktop-nav.tsx` and `mobile-nav.tsx`). Equal z-index is resolved by DOM
+		  order, and the nav renders later, so the bar was painted underneath it: the
+		  1px strip sat behind a 52px header and showed only as a smear through the
+		  header's own backdrop.
+
+		  z-60 is the tier this repo already uses for "above the nav". Transient
+		  surfaces stay higher on purpose - tooltips at 80, dropdowns and popovers at
+		  100 - because a progress strip behind an open menu is correct.
+		*/
+		<div className="pointer-events-none fixed top-0 left-0 z-60 w-full">
 			<div
 				className={cn(
 					'bg-orange h-1 w-full origin-left transition-all duration-300',
