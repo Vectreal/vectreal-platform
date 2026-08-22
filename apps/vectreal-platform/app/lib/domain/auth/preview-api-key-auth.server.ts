@@ -7,6 +7,10 @@ import { apiKeyProjects } from '../../../db/schema/auth/api-key-projects'
 import { apiKeys } from '../../../db/schema/auth/api-keys'
 import { projects } from '../../../db/schema/project/projects'
 import {
+	checkRateLimit,
+	recordRateLimitAttempt
+} from '../../http/rate-limit.server'
+import {
 	decideEmbedAccess,
 	getPreviewTokenFromRequest,
 	type EmbedAccessDecision,
@@ -21,59 +25,19 @@ import {
 
 const db = getDbClient()
 
-const WINDOW_MS = 60_000
-const MAX_ATTEMPTS = 60
+/*
+  Failures only, and 60 in a minute.
 
-type AttemptWindow = {
-	count: number
-	windowEndsAt: number
-}
-
-const attemptWindows = new Map<string, AttemptWindow>()
-
-function getClientIdentifier(request: Request): string {
-	const forwardedFor = request.headers
-		.get('x-forwarded-for')
-		?.split(',')[0]
-		?.trim()
-	if (forwardedFor) return forwardedFor
-
-	const realIp = request.headers.get('x-real-ip')?.trim()
-	if (realIp) return realIp
-
-	return 'unknown'
-}
-
-function isRateLimited(clientIdentifier: string): boolean {
-	const now = Date.now()
-	const currentWindow = attemptWindows.get(clientIdentifier)
-
-	if (!currentWindow || currentWindow.windowEndsAt <= now) {
-		attemptWindows.set(clientIdentifier, {
-			count: 0,
-			windowEndsAt: now + WINDOW_MS
-		})
-		return false
-	}
-
-	return currentWindow.count >= MAX_ATTEMPTS
-}
-
-function trackFailedAttempt(clientIdentifier: string) {
-	const now = Date.now()
-	const currentWindow = attemptWindows.get(clientIdentifier)
-
-	if (!currentWindow || currentWindow.windowEndsAt <= now) {
-		attemptWindows.set(clientIdentifier, {
-			count: 1,
-			windowEndsAt: now + WINDOW_MS
-		})
-		return
-	}
-
-	currentWindow.count += 1
-	attemptWindows.set(clientIdentifier, currentWindow)
-}
+  A storefront page with several embeds makes many legitimate successful
+  requests, so counting every request against one per-IP limit would break the
+  page it is meant to protect. Counting refusals is what actually distinguishes
+  a visitor from something probing tokens.
+*/
+const EMBED_RATE_LIMIT = {
+	bucket: 'embed-auth',
+	maxRequests: 60,
+	windowMs: 60_000
+} as const
 
 /** Stays here rather than in the policy module: it needs `node:crypto`. */
 export function hashApiToken(token: string): string {
@@ -124,9 +88,8 @@ export async function validatePreviewApiKeyForProject(params: {
 	projectId: string
 }): Promise<PreviewApiKeyValidationResult> {
 	const { request, projectId } = params
-	const clientIdentifier = getClientIdentifier(request)
 
-	if (isRateLimited(clientIdentifier)) {
+	if (checkRateLimit(request, EMBED_RATE_LIMIT).limited) {
 		return { ok: false, error: 'rate_limited' }
 	}
 
@@ -142,7 +105,7 @@ export async function validatePreviewApiKeyForProject(params: {
 	const decision = decideEmbedAccess({ request, token, match })
 
 	if (!decision.ok) {
-		trackFailedAttempt(clientIdentifier)
+		recordRateLimitAttempt(request, EMBED_RATE_LIMIT)
 		return decision
 	}
 

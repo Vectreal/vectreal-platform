@@ -22,8 +22,8 @@ import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { Route } from './+types/confirm-pending'
 import { AuthErrorBoundary } from '../components/errors'
 import { clearReferralAttribution } from '../lib/domain/analytics/referral-attribution'
-import { checkAuthRateLimit } from '../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../lib/http/csrf.server'
+import { recordRateLimitAttempt } from '../lib/http/rate-limit.server'
 import { buildMeta } from '../lib/seo'
 import { createSupabaseClient } from '../lib/supabase.server'
 
@@ -83,7 +83,7 @@ export async function action({ request }: Route.ActionArgs) {
 		)
 	}
 
-	const rateLimitResult = checkAuthRateLimit(request, {
+	const rateLimitResult = recordRateLimitAttempt(request, {
 		bucket: 'auth-email-resend',
 		maxRequests: 3,
 		keyParts: [email.trim().toLowerCase()]
