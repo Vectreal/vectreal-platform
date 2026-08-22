@@ -53,13 +53,9 @@ describe('EmbedCreatedKeyDialog', () => {
 		  sets no `maskTextSelector` - so without this class the live key would be
 		  readable in any recording of this dialog.
 		*/
-		const { container } = render(
-			<EmbedCreatedKeyDialog plaintext={PLAINTEXT} onDismiss={vi.fn()} />
-		)
-		const block = screen.getByText(PLAINTEXT)
+		render(<EmbedCreatedKeyDialog plaintext={PLAINTEXT} onDismiss={vi.fn()} />)
 
-		expect(block.closest('.ph-no-capture')).not.toBeNull()
-		expect(container).toBeDefined()
+		expect(screen.getByText(PLAINTEXT).closest('.ph-no-capture')).not.toBeNull()
 	})
 
 	it('asks before closing when the key has not been copied', () => {

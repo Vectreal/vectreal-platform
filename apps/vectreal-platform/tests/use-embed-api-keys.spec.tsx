@@ -40,10 +40,7 @@ vi.mock('remix-utils/csrf/react', () => ({
 	useAuthenticityToken: () => 'csrf-token'
 }))
 
-vi.mock('jotai', () => ({
-	atom: vi.fn(),
-	useSetAtom: () => setUpgradeModal
-}))
+vi.mock('jotai/react', () => ({ useSetAtom: () => setUpgradeModal }))
 
 let callIndex = 0
 
@@ -185,23 +182,32 @@ describe('creating a key', () => {
 		expect(load).toHaveBeenCalledTimes(2)
 	})
 
-	it('applies one response once, however often the effect re-runs', () => {
-		const created = {
+	it('applies a second key, rather than blocking everything after the first', () => {
+		/*
+		  The mount-time test above proves the identity guard *checks*. This one
+		  proves it does not over-block: `if (handledCreateRef.current) return`
+		  would swallow every key after the first, and three rerenders with
+		  unchanged props - which is what stood here - cannot tell the difference,
+		  because an unchanged dependency array never re-runs the effect either way.
+		*/
+		const response = (id: string, plaintext: string) => ({
 			success: true,
-			data: {
-				key: { id: 'new', name: 'Embed key', keyPreview: 'ab3x' },
-				plaintext: 'vctrl_secretab3x'
-			}
-		}
+			data: { key: { id, name: 'Embed key', keyPreview: 'ab3x' }, plaintext }
+		})
 		const probe = mount({ projectId: 'p1', enabled: true })
 
-		fetchers[1] = { state: 'idle', data: created }
+		fetchers[1] = { state: 'idle', data: response('first', 'vctrl_firstab3x') }
 		act(() => probe.rerender({ projectId: 'p1', enabled: true }))
-		act(() => probe.rerender({ projectId: 'p1', enabled: true }))
+		expect(probe.latest().token).toBe('vctrl_firstab3x')
+
+		act(() => probe.latest().dismissCreatedKey())
+
+		fetchers[1] = { state: 'idle', data: response('second', 'vctrl_second9zQ1') }
 		act(() => probe.rerender({ projectId: 'p1', enabled: true }))
 
-		// One refresh for the create, on top of the initial load.
-		expect(load).toHaveBeenCalledTimes(2)
+		expect(probe.latest().token).toBe('vctrl_second9zQ1')
+		expect(probe.latest().selectedKeyId).toBe('second')
+		expect(probe.latest().createdPlaintext).toBe('vctrl_second9zQ1')
 	})
 
 	it('applies a response already present at mount exactly once', () => {

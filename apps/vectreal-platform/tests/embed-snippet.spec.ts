@@ -144,7 +144,9 @@ describe('the width and height fields cannot break the snippet', () => {
 		'100%"><script>alert(1)</script><div style="',
 		'100%" onmouseover="alert(1)',
 		'400px"><img src=x onerror=alert(1)>',
-		"100%' onload='alert(1)"
+		// Injects the tag the snippet legitimately contains: caught by counting
+		// elements, invisible to a `querySelector('iframe')` check.
+		'100%"><iframe src="https://evil.example"></iframe><div style="'
 	]
 
 	/**

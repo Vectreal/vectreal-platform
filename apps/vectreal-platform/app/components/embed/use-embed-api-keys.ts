@@ -1,4 +1,4 @@
-import { useSetAtom } from 'jotai'
+import { useSetAtom } from 'jotai/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFetcher } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
