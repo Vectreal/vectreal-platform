@@ -23,7 +23,7 @@
 		"drizzle-kit": "^0.31.10",
 		"drizzle-orm": "^0.45.2",
 		"framer-motion": "^13.0.0",
-		"isbot": "^5.1.39",
+		"isbot": "^5.2.1",
 		"jotai": "^2.20.2",
 		"lucide-react": "^1.30.0",
 		"postgres": "^3.4.9",
