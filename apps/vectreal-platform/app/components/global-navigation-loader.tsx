@@ -22,17 +22,19 @@ export function GlobalNavigationLoader() {
 
 	return (
 		/*
-		  Above the nav, which is also fixed at top-0 and also z-50 (see
-		  `desktop-nav.tsx` and `mobile-nav.tsx`). Equal z-index is resolved by DOM
-		  order, and the nav renders later, so the bar was painted underneath it: the
-		  1px strip sat behind a 52px header and showed only as a smear through the
-		  header's own backdrop.
+		  Above the nav, which is also fixed to the top of the viewport and also on
+		  the nav tier (see `desktop-nav.tsx` and `mobile-nav.tsx`). An equal
+		  z-index is resolved by DOM order, and the nav renders later, so the bar
+		  was painted underneath it: the 1px strip sat behind a 52px header and
+		  showed only as a smear through the header's own backdrop.
 
-		  z-60 is the tier this repo already uses for "above the nav". Transient
-		  surfaces stay higher on purpose - tooltips at 80, dropdowns and popovers at
-		  100 - because a progress strip behind an open menu is correct.
+		  `z-above-nav` is the tier for exactly this, defined in `globals.css`
+		  beside the rest of the ladder. Tooltips and everything above them stay
+		  higher, so a transient surface is never cut by a progress strip. The base
+		  overlay layer ties with the nav underneath, which costs it the one pixel
+		  the bar occupies.
 		*/
-		<div className="pointer-events-none fixed top-0 left-0 z-60 w-full">
+		<div className="pointer-events-none fixed top-0 left-0 z-above-nav w-full">
 			<div
 				className={cn(
 					/*

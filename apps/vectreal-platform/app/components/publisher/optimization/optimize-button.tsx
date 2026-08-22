@@ -106,7 +106,7 @@ export const OptimizeButton: FC<OptimizeButtonProps> = ({
 							<ChevronDownIcon className="h-4 w-4" />
 						</Button>
 					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end" sideOffset={6} className="z-100">
+					<DropdownMenuContent align="end" sideOffset={6} className="z-overlay-raised">
 						<DropdownMenuItem onClick={onStackOptimize}>
 							<SparklesIcon className="h-4 w-4" />
 							Optimize Further

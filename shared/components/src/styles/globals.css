@@ -1,5 +1,39 @@
 /* Design system - token-based light/dark themes */
 @source '../../../../';
+/*
+  Three kinds of file that never render markup, all of which were being compiled
+  into the bundle anyway.
+
+  A spec asserts on class strings deliberately built to be wrong:
+  `eslint-house-rules.spec.ts` names the exact z-index values the house rules
+  reject, so every one of them shipped. A config file documents them: the `ds-*`
+  rule in `eslint.config.mts` names a replacement utility in its message, and
+  the scanner compiled that prose into a perfectly valid `hover:` color-mix
+  rule for a variant nothing in the app uses. Markdown explains them: a `cn()`
+  example in `shared/utils/README.md` shipped a bare `ring-2`, and the motion
+  table in the brand skill pulled three `--duration-*` tokens into `:root` that
+  nothing references.
+
+  `.mdx` is deliberately still scanned. Those are the docs pages, and they do
+  render.
+
+  The scanner cannot tell a fixture or an example from a component, and asking
+  every future comment and README to avoid naming a utility is a rule nobody can
+  follow for long, so the file kinds that never render are excluded instead.
+
+  That does not close the hole, only the part of it that can be closed. Comments
+  inside `.ts` and `.tsx` are still scanned, because those files also hold the
+  real markup, and about fifteen rules in the bundle come from JSDoc examples,
+  commented-out JSX, and one sentence containing the word "ordinal". Naming a
+  utility in a comment is still a cost; it is just a cost no glob can refund.
+
+  One trap for whoever extends this: `.claude/skills/` symlinks to
+  `.agents/skills/`, so a skill file is walked under both paths and an exclusion
+  naming only one of them removes nothing.
+*/
+@source not '../../../../**/*.spec.{ts,tsx}';
+@source not '../../../../**/*.config.{ts,cts,mts,js,cjs,mjs}';
+@source not '../../../../**/*.md';
 
 @import 'tailwindcss';
 @import 'tw-animate-css';
@@ -338,6 +372,77 @@
 	--color-error-bg: var(--error-bg);
 	--color-error-border: var(--error-border);
 	--color-error-foreground: var(--error-foreground);
+}
+
+/*
+  Stacking tiers.
+
+  A plain `@theme` rather than the `inline` one above, so every tier lands in
+  `:root` as a real custom property as well as generating its utility. Raw CSS
+  and inline styles can then read `var(--z-index-nav)` without restating the
+  number.
+
+  The values are exactly what the app already computed to. The names are the new
+  part. Ten different z-indexes were in use with nothing recording what any of
+  them meant, so two unrelated fixed elements both picked 50 and DOM order
+  decided which one painted: the nav and the route loading bar were both pinned
+  to the top of the viewport, and the loading bar lost, on every navigation.
+
+  Only app-global stacking belongs here. Ordering two siblings inside a single
+  component's own stacking context is local, and stays a plain `z-0` / `z-10`;
+  giving it a tier name would claim a relationship with the site chrome that it
+  does not have. ESLint draws that line at 50, because 50 is where the chrome
+  starts.
+*/
+@theme {
+	/*
+	  Chrome belonging to one route rather than to the site: the docs breadcrumb
+	  bar, the internal preview overlay, the sticky summary card in the billing
+	  upgrade flow. Below the nav on purpose, which stays reachable over it.
+	*/
+	--z-index-page-chrome: 20;
+
+	/*
+	  Site chrome fixed to the viewport for the whole session: the desktop and
+	  mobile nav, and the consent banner anchored opposite it.
+	*/
+	--z-index-nav: 50;
+
+	/*
+	  Radix's portal layer: dialog, alert dialog, sheet, drawer, and the menu,
+	  popover and hover-card surfaces that default to it.
+
+	  Ties with the nav, and does so knowingly. Both are 50 and both land in the
+	  root stacking context, but Radix portals this one to the end of `<body>`,
+	  so the tie resolves in its favor. That is also why the publisher shell
+	  keeps every surface of its own below 50: at or above it they paint over
+	  confirmation modals and their backdrops, which is how sidebars once covered
+	  the dialog asking whether to discard a scene.
+	*/
+	--z-index-overlay: 50;
+
+	/*
+	  Must cover the nav: the route loading bar, and an embed viewer that has
+	  gone fullscreen.
+	*/
+	--z-index-above-nav: 60;
+
+	/* Tooltips, above the overlay layer so they still show inside a dialog. */
+	--z-index-tooltip: 80;
+
+	/*
+	  One overlay that has to clear another. Only the publisher's optimize menu
+	  reaches for it, because it opens from inside the optimization drawer.
+	  Anything portaled to the body already clears the page it opened from, so
+	  use `--z-index-overlay` first and step up only if you can see it clipped.
+	*/
+	--z-index-overlay-raised: 100;
+
+	/*
+	  The select listbox, top of the ladder. A select is the one overlay that
+	  routinely opens from inside another one.
+	*/
+	--z-index-select: 120;
 }
 
 @layer base {

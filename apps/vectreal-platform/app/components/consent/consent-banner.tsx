@@ -26,7 +26,7 @@ export function ConsentBanner() {
 					animate={{ y: 0, opacity: 1 }}
 					exit={{ y: 80, opacity: 0 }}
 					transition={{ duration: 0.25, ease: 'easeOut' }}
-					className="ds-overlay fixed right-0 bottom-0 left-0 z-50 border-t px-4 py-4 shadow-lg backdrop-blur-sm sm:px-6"
+					className="ds-overlay fixed right-0 bottom-0 left-0 z-nav border-t px-4 py-4 shadow-lg backdrop-blur-sm sm:px-6"
 					role="dialog"
 					aria-modal="false"
 					aria-label="Cookie consent"

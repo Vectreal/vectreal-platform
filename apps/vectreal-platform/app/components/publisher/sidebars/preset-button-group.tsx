@@ -66,7 +66,7 @@ export const PresetButtonGroup = memo(
 					<Button
 						variant="secondary"
 						size="sm"
-						className="z-100 w-full px-3 py-1"
+						className="w-full px-3 py-1"
 						onClick={toggleSlider}
 					>
 						<span className="text-muted-foreground flex items-center text-xs font-medium">

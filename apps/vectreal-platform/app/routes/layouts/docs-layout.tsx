@@ -126,7 +126,7 @@ export default function DocsLayout() {
 			</aside>
 
 			<main className="min-w-0 flex-1 lg:px-8">
-				<div className="ds-overlay fixed top-12 left-0 z-20 mb-4 flex w-dvw items-center justify-between gap-3 px-4 py-1 md:top-16">
+				<div className="ds-overlay fixed top-12 left-0 z-page-chrome mb-4 flex w-dvw items-center justify-between gap-3 px-4 py-1 md:top-16">
 					<Breadcrumb aria-label="Docs breadcrumb">
 						<BreadcrumbList>
 							<BreadcrumbItem>

@@ -283,7 +283,7 @@ function BillingUpgradeContent({
 					</div>
 				)}
 
-				<Card className="border-primary/20 bg-muted/75 sticky top-0 left-0 z-50 w-full py-0 shadow-lg backdrop-blur-md">
+				<Card className="border-primary/20 bg-muted/75 sticky top-0 left-0 z-page-chrome w-full py-0 shadow-lg backdrop-blur-md">
 					<CardContent className="space-y-3 p-4">
 						{checkoutError && (
 							<div className="bg-destructive/5 border-destructive/20 flex items-start gap-2 rounded-lg border p-3">
