@@ -14,9 +14,10 @@ import { SKILLS, skillsInvoked, readPayload } from './skills-invoked.mjs'
 
 try {
 	const payload = await readPayload()
-	const missing = Object.entries(SKILLS).filter(
-		([name]) => !skillsInvoked(payload.transcript_path).has(name),
-	)
+	// Scan once. Calling this inside the filter re-read the whole transcript
+	// per skill, on the hottest hook in the set.
+	const used = skillsInvoked(payload.transcript_path) ?? new Set()
+	const missing = Object.entries(SKILLS).filter(([name]) => !used.has(name))
 	if (missing.length) {
 		const rows = missing.map(([name, when]) => `| ${name} | ${when} |`).join('\n')
 		console.log(

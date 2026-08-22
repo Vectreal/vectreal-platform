@@ -15,8 +15,10 @@ const REQUIRED = 'vectreal-iterative-delivery'
 
 try {
 	const payload = await readPayload()
-	if (payload.tool_name === 'ExitPlanMode' &&
-		!skillsInvoked(payload.transcript_path).has(REQUIRED)) {
+	// `null` means the transcript could not be read, which is not the same as
+	// "no skill invoked". Denying on it would be unescapable.
+	const used = skillsInvoked(payload.transcript_path)
+	if (payload.tool_name === 'ExitPlanMode' && used && !used.has(REQUIRED)) {
 		console.log(
 			JSON.stringify({
 				hookSpecificOutput: {

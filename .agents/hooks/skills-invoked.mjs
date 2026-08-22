@@ -22,32 +22,80 @@ export const SKILLS = {
 		'scoping ambiguous or cross-cutting work, and shipping any PR (owns the review loop)',
 }
 
+// `/vectreal-iterative-delivery` loads the skill without ever producing a Skill
+// tool_use, so counting only tool calls denied people who had read it.
+const SLASH_COMMAND = /<command-name>\/?(vectreal-[a-z-]+)<\/command-name>/g
+
+function collectSlashCommands(text, into) {
+	if (typeof text !== 'string') return
+	for (const [, name] of text.matchAll(SLASH_COMMAND)) {
+		if (Object.hasOwn(SKILLS, name)) into.add(name)
+	}
+}
+
+/**
+ * @returns a Set of skill names, or `null` when the transcript cannot be read.
+ * `null` means "cannot tell", which callers must not treat as "none invoked":
+ * an unreadable transcript would otherwise deny forever, and invoking the skill
+ * could never clear it because the deny does not depend on the skill.
+ */
 export function skillsInvoked(transcriptPath) {
-	const used = new Set()
-	if (!transcriptPath) return used
+	if (!transcriptPath) return null
 	let raw
 	try {
 		raw = readFileSync(transcriptPath, 'utf8')
 	} catch {
-		return used // no transcript yet: treat as nothing invoked
+		return null
 	}
+
+	// A tool_use block is written before the tool runs; failure shows up later as
+	// a separate tool_result with is_error. Pair them, or a Skill call the user
+	// rejected would satisfy the gate.
+	const attempted = new Map()
+	const failed = new Set()
+	const used = new Set()
+
 	for (const line of raw.split('\n')) {
-		// Cheap reject before parsing; transcripts reach megabytes.
-		if (!line.includes('"Skill"')) continue
+		// Cheap reject before parsing; transcripts reach megabytes. `is_error`
+		// has to survive it, or the tool_result that marks a Skill call failed
+		// is skipped and a rejected call still satisfies the gate.
+		if (
+			!line.includes('"Skill"') &&
+			!line.includes('<command-name>') &&
+			!line.includes('is_error')
+		) {
+			continue
+		}
 		let record
 		try {
 			record = JSON.parse(line)
 		} catch {
 			continue
 		}
-		for (const block of record.message?.content ?? []) {
-			if (block.type !== 'tool_use' || block.name !== 'Skill') continue
-			// Plugin skills arrive as `plugin:skill`; compare the bare name so a
-			// glob can never match a neighbour like vectreal-marketing.
-			const name = String(block.input?.skill ?? '').split(':').pop()
-			if (name in SKILLS) used.add(name)
+		const content = record.message?.content
+		if (typeof content === 'string') {
+			collectSlashCommands(content, used)
+			continue
+		}
+		if (!Array.isArray(content)) continue
+		for (const block of content) {
+			if (!block || typeof block !== 'object') continue
+			if (block.type === 'tool_use' && block.name === 'Skill') {
+				// Exact match on the bare name. Taking the last `:` segment would
+				// have let any plugin shipping `anything:vectreal-…` satisfy this.
+				const skill = block.input?.skill
+				if (typeof skill === 'string' && Object.hasOwn(SKILLS, skill)) {
+					attempted.set(block.id, skill)
+				}
+			} else if (block.type === 'tool_result' && block.is_error) {
+				failed.add(block.tool_use_id)
+			} else if (block.type === 'text') {
+				collectSlashCommands(block.text, used)
+			}
 		}
 	}
+
+	for (const [id, skill] of attempted) if (!failed.has(id)) used.add(skill)
 	return used
 }
 
