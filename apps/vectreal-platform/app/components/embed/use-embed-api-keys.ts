@@ -1,7 +1,14 @@
+import { useSetAtom } from 'jotai'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFetcher } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 
+import {
+	buildUpgradeModalState,
+	upgradeModalAtom
+} from '../../lib/stores/upgrade-modal-store'
+
+import type { Plan } from '../../constants/plan-config'
 import type { EmbedApiKeyOption } from '../../lib/domain/embed/embed-key-options'
 import type {
 	EmbedApiKeyCreatedPayload,
@@ -10,9 +17,20 @@ import type {
 
 /**
  * `ApiResponse.success` wraps the payload; `ApiResponse.error` returns a bare
- * `{ success: false, error }`.
+ * `{ success: false, error }`. `ApiResponse.quotaExceeded` adds `quota`, which
+ * is what the upgrade modal needs to name the limit that was hit.
  */
-type Envelope<T> = { success: true; data: T } | { success: false; error?: string }
+interface QuotaEnvelope {
+	limitKey: string
+	currentValue: number
+	limit: number | null
+	plan: Plan
+	upgradeTo?: Plan | null
+}
+
+type Envelope<T> =
+	| { success: true; data: T }
+	| { success: false; error?: string; quota?: QuotaEnvelope }
 
 export interface EmbedApiKeysApi {
 	keys: EmbedApiKeyOption[]
@@ -59,6 +77,7 @@ export function useEmbedApiKeys(params: {
 	const listFetcher = useFetcher<Envelope<EmbedApiKeysPayload>>()
 	const createFetcher = useFetcher<Envelope<EmbedApiKeyCreatedPayload>>()
 	const csrfToken = useAuthenticityToken()
+	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 
 	const [token, setToken] = useState('')
 	const [selectedKeyId, setSelectedKeyId] = useState('')
@@ -85,14 +104,33 @@ export function useEmbedApiKeys(params: {
 		if (handledCreateRef.current === createFetcher.data) return
 		handledCreateRef.current = createFetcher.data
 
-		if (!createFetcher.data.success || !endpoint) return
+		if (!createFetcher.data.success) {
+			// The org is out of API keys on its plan. The route forwards what the
+			// upgrade prompt needs, so route it there rather than leaving the user
+			// with an error string and no way forward - this is what the full
+			// create-key form does for the same error.
+			const { quota, error } = createFetcher.data
+			if (quota) {
+				setUpgradeModal(
+					buildUpgradeModalState({
+						reason: 'quota_exceeded',
+						message: error ?? 'API key limit reached for your plan.',
+						...quota,
+						actionAttempted: 'api_key_create'
+					})
+				)
+			}
+			return
+		}
+
+		if (!endpoint) return
 
 		const { key, plaintext } = createFetcher.data.data
 		setCreatedPlaintext(plaintext)
 		setToken(plaintext)
 		setSelectedKeyId(key.id)
 		listFetcher.load(endpoint)
-	}, [createFetcher.state, createFetcher.data, endpoint])
+	}, [createFetcher.state, createFetcher.data, endpoint, setUpgradeModal])
 
 	const createKey = useCallback(() => {
 		if (!endpoint) return
@@ -130,7 +168,9 @@ export function useEmbedApiKeys(params: {
 		createKey,
 		creating: createFetcher.state !== 'idle',
 		createError:
-			createFetcher.data && !createFetcher.data.success
+			createFetcher.data &&
+			!createFetcher.data.success &&
+			!createFetcher.data.quota
 				? (createFetcher.data.error ?? null)
 				: null
 	}

@@ -147,6 +147,21 @@ describe('the width and height fields cannot break the snippet', () => {
 		"100%' onload='alert(1)"
 	]
 
+	/**
+	 * Every element the snippet produces, in tree order.
+	 *
+	 * The whole document, not `body`: a parser hoists a leading `<script>` into
+	 * `<head>`, so scoping this to the body would stop looking exactly where an
+	 * injected element could land unseen.
+	 */
+	const STRUCTURAL = new Set(['html', 'head', 'body'])
+	const elementsOf = (snippet: string) =>
+		Array.from(
+			new DOMParser().parseFromString(snippet, 'text/html').querySelectorAll('*')
+		)
+			.map((element) => element.tagName.toLowerCase())
+			.filter((tag) => !STRUCTURAL.has(tag))
+
 	for (const value of HOSTILE) {
 		it(`survives a width of ${JSON.stringify(value)}`, () => {
 			const snippet = buildResponsiveEmbedSnippet({
@@ -155,11 +170,22 @@ describe('the width and height fields cannot break the snippet', () => {
 			})
 			const doc = new DOMParser().parseFromString(snippet, 'text/html')
 
-			expect(doc.querySelector('script')).toBeNull()
-			expect(doc.querySelector('img')).toBeNull()
+			/*
+			  The whole element list, not a hunt for specific tags. Payloads break
+			  out in ways that move different counters - one opens a sibling
+			  `<script>`, one nests an `<img>` inside the wrapper without changing
+			  any `div` or `script` count, one adds only an attribute and changes
+			  no element at all. Pinning the exact set the builder is supposed to
+			  emit catches every shape, including ones nobody thought to list.
 
-			const wrapper = doc.body.firstElementChild as HTMLElement
-			expect(wrapper.tagName).toBe('DIV')
+			  Deliberately not asserting the absence of the string `alert(1)`:
+			  escaping leaves it sitting inertly inside the `style` value, so a
+			  correctly escaped snippet still contains those characters. What
+			  matters is that the parser reads them as text, not as markup.
+			*/
+			expect(elementsOf(snippet)).toEqual(['div', 'iframe'])
+
+			const wrapper = doc.querySelector('div') as HTMLElement
 			expect(wrapper.getAttributeNames()).toEqual(['style'])
 			expect(wrapper.style.width).toBe('')
 		})
@@ -171,9 +197,22 @@ describe('the width and height fields cannot break the snippet', () => {
 			})
 			const doc = new DOMParser().parseFromString(snippet, 'text/html')
 
-			expect(doc.querySelector('img')).toBeNull()
+			/*
+			  Counting, not absence. This snippet ships two legitimate `<script>`
+			  tags, so `querySelector('script')` is useless here - and asserting
+			  only the wrapper's attribute list is worse than useless, because a
+			  payload that breaks out opens *sibling* elements rather than adding
+			  attributes, leaving that assertion green with `alert(1)` live in the
+			  document.
+			*/
+			expect(elementsOf(snippet)).toEqual([
+				'script',
+				'div',
+				'iframe',
+				'script'
+			])
 			expect(
-				doc.querySelectorAll('div')[0].getAttributeNames()
+				(doc.querySelector('div') as HTMLElement).getAttributeNames()
 			).toEqual(['style'])
 		})
 	}
