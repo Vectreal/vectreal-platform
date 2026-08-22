@@ -51,6 +51,17 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 	const clipboard = useClipboardCopy()
 	const keysApi = useEmbedApiKeys({ projectId, enabled: canEmbed })
 
+	/*
+	  A snippet without a token is not a partial snippet, it is a broken one:
+	  `buildEmbedUrl` omits the parameter rather than failing, so the result
+	  looks finished and 404s on every site. Handing that to someone who scrolled
+	  past the notice and clicked Copy puts them exactly where this whole change
+	  started, so the copy actions wait for a key the same way the test button
+	  already did.
+	*/
+	const hasToken = Boolean(keysApi.token.trim())
+	const canCopySnippet = canEmbed && hasToken
+
 	const embedUrl = useMemo(() => {
 		if (!canEmbed || !origin) return ''
 
@@ -154,9 +165,9 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 								{EMBED_COPY.editProject}
 							</Link>
 						</div>
-						{keysApi.allowedDomains.length === 0 ? (
+						{keysApi.allowedDomains.length === 0 && !keysApi.loadError ? (
 							<InlineNotice>{EMBED_COPY.allowedDomainsEmpty}</InlineNotice>
-						) : (
+						) : keysApi.allowedDomains.length === 0 ? null : (
 							<div className="flex flex-wrap gap-1">
 								{keysApi.allowedDomains.map((domain) => (
 									<code
@@ -210,7 +221,8 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 						variant="secondary"
 						size="sm"
 						onClick={handleCopyUrl}
-						disabled={!canEmbed}
+						disabled={!canCopySnippet}
+						title={hasToken ? undefined : EMBED_COPY.copyNeedsToken}
 					>
 						<Link2 className="mr-2 h-3.5 w-3.5" />
 						{clipboard.copiedId === 'url'
@@ -316,7 +328,8 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 									failure: EMBED_COPY.copyEmbedFailure
 								})
 							}
-							disabled={!canEmbed}
+							disabled={!canCopySnippet}
+							title={hasToken ? undefined : EMBED_COPY.copyNeedsToken}
 						>
 							<Copy className="mr-1 h-3 w-3" />
 							{clipboard.copiedId === 'embed'
@@ -347,7 +360,8 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 									failure: EMBED_COPY.copySdkFailure
 								})
 							}
-							disabled={!canEmbed}
+							disabled={!canCopySnippet}
+							title={hasToken ? undefined : EMBED_COPY.copyNeedsToken}
 						>
 							<Copy className="mr-1 h-3 w-3" />
 							{clipboard.copiedId === 'sdk'

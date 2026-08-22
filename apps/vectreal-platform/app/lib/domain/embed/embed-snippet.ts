@@ -22,6 +22,8 @@ export const EMBED_COPY = {
 		'The snippet below carries this key. A key cannot be read back after it is created, so paste the one you saved or create a new key for this project.',
 	tokenMissingNotice:
 		'Add an API key to generate a snippet that works. Without one the embed answers "not found" on every site.',
+	copyNeedsToken:
+		'Add an API key first - a snippet without one answers "not found" on every site.',
 	tokenReveal: 'Show key',
 	tokenHide: 'Hide key',
 	tokenMismatch:
@@ -34,6 +36,7 @@ export const EMBED_COPY = {
 	keyRevokedSuffix: 'revoked',
 	keyExpiredSuffix: 'expired',
 	createKey: 'Create a key for this project',
+	createKeyShort: 'Create key',
 	createKeyPending: 'Creating...',
 	createKeyFailure: 'Could not create an API key.',
 	createKeyDialogTitle: 'API key created',
@@ -42,6 +45,7 @@ export const EMBED_COPY = {
 	createKeyDialogDismiss: 'Done',
 	createKeyDismissWithoutCopyConfirm:
 		'You have not copied the key. It cannot be shown again. Close anyway?',
+	createKeyExpiresPrefix: 'This key stops working on',
 	copyKey: 'Copy key',
 	copyKeySuccess: 'API key copied.',
 	copyKeyFailure: 'Failed to copy the API key.',

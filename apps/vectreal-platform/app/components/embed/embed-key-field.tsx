@@ -126,7 +126,8 @@ export const EmbedKeyField: FC<EmbedKeyFieldProps> = ({ api }) => {
 						) : (
 							<>
 								<Plus className="mr-1 h-3.5 w-3.5" />
-								<KeyRound className="h-3.5 w-3.5" />
+								<KeyRound className="mr-1 h-3.5 w-3.5" />
+								{EMBED_COPY.createKeyShort}
 							</>
 						)}
 					</Button>
@@ -156,6 +157,7 @@ export const EmbedKeyField: FC<EmbedKeyFieldProps> = ({ api }) => {
 
 			<EmbedCreatedKeyDialog
 				plaintext={api.createdPlaintext}
+				expiresAt={api.createdKeyExpiresAt}
 				onDismiss={api.dismissCreatedKey}
 			/>
 		</div>

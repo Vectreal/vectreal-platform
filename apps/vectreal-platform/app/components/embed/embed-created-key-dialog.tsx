@@ -15,6 +15,7 @@ import { EMBED_COPY } from '../../lib/domain/embed/embed-snippet'
 
 interface EmbedCreatedKeyDialogProps {
 	plaintext: string | null
+	expiresAt: string | null
 	onDismiss: () => void
 }
 
@@ -34,6 +35,7 @@ interface EmbedCreatedKeyDialogProps {
  */
 export const EmbedCreatedKeyDialog: FC<EmbedCreatedKeyDialogProps> = ({
 	plaintext,
+	expiresAt,
 	onDismiss
 }) => {
 	const [copied, setCopied] = useState(false)
@@ -87,6 +89,19 @@ export const EmbedCreatedKeyDialog: FC<EmbedCreatedKeyDialogProps> = ({
 				<div className="ph-no-capture bg-muted rounded-xl p-3 font-mono text-xs break-all">
 					{plaintext}
 				</div>
+
+				{/*
+				  Said here rather than left to be discovered. This key is about to
+				  be pasted into a production storefront, and an embed that stops
+				  working in three months with no warning is the expensive version
+				  of this conversation.
+				*/}
+				{expiresAt && (
+					<p className="text-muted-foreground text-xs">
+						{EMBED_COPY.createKeyExpiresPrefix}{' '}
+						{new Date(expiresAt).toLocaleDateString()}
+					</p>
+				)}
 
 				<DialogFooter className="gap-2 sm:justify-between">
 					<Button variant="secondary" onClick={handleCopy}>
