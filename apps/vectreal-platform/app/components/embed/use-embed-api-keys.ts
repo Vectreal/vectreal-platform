@@ -1,0 +1,130 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useFetcher } from 'react-router'
+import { useAuthenticityToken } from 'remix-utils/csrf/react'
+
+import type { EmbedApiKeyOption } from '../../lib/domain/embed/embed-key-options'
+import type {
+	EmbedApiKeyCreatedPayload,
+	EmbedApiKeysPayload
+} from '../../routes/api/projects.$projectId.api-keys'
+
+/**
+ * `ApiResponse.success` wraps the payload; `ApiResponse.error` returns a bare
+ * `{ success: false, error }`.
+ */
+type Envelope<T> = { success: true; data: T } | { success: false; error?: string }
+
+export interface EmbedApiKeysApi {
+	keys: EmbedApiKeyOption[]
+	allowedDomains: string[]
+	canCreateKey: boolean
+	loading: boolean
+	loadError: string | null
+	/** Held in React state only: never persisted, never sent to analytics. */
+	token: string
+	setToken: (value: string) => void
+	selectedKeyId: string
+	selectKey: (keyId: string) => void
+	/** Set once, when a key is minted here. The only time a key is readable. */
+	createdPlaintext: string | null
+	createKey: () => void
+	creating: boolean
+	createError: string | null
+}
+
+const EMPTY_KEYS: EmbedApiKeyOption[] = []
+const EMPTY_DOMAINS: string[] = []
+
+/**
+ * The embed panel's API key state.
+ *
+ * Lives outside the panel because it is most of what the panel does: two
+ * fetchers, the token the snippet is built from, and the one-shot plaintext a
+ * freshly created key returns. Leaving it inline made the panel a component
+ * with more state than markup.
+ *
+ * The token deliberately has no persistence. Writing it to `localStorage` would
+ * leave a working embed credential in the browser of anyone who opens this
+ * panel on a shared machine, and it is cheap to paste again.
+ */
+export function useEmbedApiKeys(params: {
+	projectId?: string
+	enabled: boolean
+}): EmbedApiKeysApi {
+	const { projectId, enabled } = params
+	const endpoint = projectId ? `/api/projects/${projectId}/api-keys` : null
+
+	const listFetcher = useFetcher<Envelope<EmbedApiKeysPayload>>()
+	const createFetcher = useFetcher<Envelope<EmbedApiKeyCreatedPayload>>()
+	const csrfToken = useAuthenticityToken()
+
+	const [token, setToken] = useState('')
+	const [selectedKeyId, setSelectedKeyId] = useState('')
+	const [createdPlaintext, setCreatedPlaintext] = useState<string | null>(null)
+
+	const requestedEndpointRef = useRef<string | null>(null)
+	const handledCreateRef = useRef<unknown>(null)
+
+	useEffect(() => {
+		if (!enabled || !endpoint) return
+		if (requestedEndpointRef.current === endpoint) return
+
+		requestedEndpointRef.current = endpoint
+		listFetcher.load(endpoint)
+		// `listFetcher` is deliberately not a dependency: it is a new object every
+		// render, so depending on it re-fires the request on each one. The ref is
+		// what makes this run once per endpoint.
+	}, [enabled, endpoint])
+
+	// A newly minted key is the one the user wants selected and pasted, and the
+	// list it has to appear in was fetched before it existed.
+	useEffect(() => {
+		if (createFetcher.state !== 'idle' || !createFetcher.data) return
+		if (handledCreateRef.current === createFetcher.data) return
+		handledCreateRef.current = createFetcher.data
+
+		if (!createFetcher.data.success || !endpoint) return
+
+		const { key, plaintext } = createFetcher.data.data
+		setCreatedPlaintext(plaintext)
+		setToken(plaintext)
+		setSelectedKeyId(key.id)
+		listFetcher.load(endpoint)
+	}, [createFetcher.state, createFetcher.data, endpoint])
+
+	const createKey = useCallback(() => {
+		if (!endpoint) return
+		createFetcher.submit(
+			{ intent: 'create', csrf: csrfToken },
+			{ method: 'post', action: endpoint }
+		)
+	}, [createFetcher, csrfToken, endpoint])
+
+	const selectKey = useCallback((keyId: string) => {
+		setSelectedKeyId(keyId)
+	}, [])
+
+	const payload = listFetcher.data?.success ? listFetcher.data.data : null
+
+	return {
+		keys: payload?.keys ?? EMPTY_KEYS,
+		allowedDomains: payload?.allowedDomains ?? EMPTY_DOMAINS,
+		canCreateKey: payload?.canCreateKey ?? false,
+		loading: listFetcher.state !== 'idle',
+		loadError:
+			listFetcher.data && !listFetcher.data.success
+				? (listFetcher.data.error ?? 'Could not load API keys.')
+				: null,
+		token,
+		setToken,
+		selectedKeyId,
+		selectKey,
+		createdPlaintext,
+		createKey,
+		creating: createFetcher.state !== 'idle',
+		createError:
+			createFetcher.data && !createFetcher.data.success
+				? (createFetcher.data.error ?? null)
+				: null
+	}
+}

@@ -27,6 +27,10 @@ export default [
 	route('api/scenes/:sceneId?', './routes/api/scenes.$sceneId.ts'),
 	route('api/scene-location-options', './routes/api/scene-location-options.ts'),
 	route('api/dashboard/mutations', './routes/api/dashboard.mutations.ts'),
+	route(
+		'api/projects/:projectId/api-keys',
+		'./routes/api/projects.$projectId.api-keys.ts'
+	),
 
 	// Auth api
 	route('auth/session', './routes/api/auth/session.ts'),

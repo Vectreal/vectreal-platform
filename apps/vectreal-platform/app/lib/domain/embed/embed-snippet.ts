@@ -1,5 +1,3 @@
-export const PREVIEW_API_KEY_PLACEHOLDER = 'YOUR_PREVIEW_API_KEY'
-
 /**
  * CDN URL for the `@vctrl/embed` UMD build used by the generated SDK snippet.
  *
@@ -18,11 +16,42 @@ export const EMBED_SDK_CDN_URL =
 export const EMBED_COPY = {
 	unavailableUntilSaved:
 		'Embedding is unavailable until this scene is saved and linked to a project.',
-	draftWarningPrefix:
-		'External embeds stay protected. Publish first, then replace',
-	draftWarningSuffix:
-		'with a valid preview API key token. Signed-in dashboard users can preview via session auth.',
-	previewUrlLabel: 'Embed Preview URL',
+	tokenLabel: 'API key',
+	tokenPlaceholder: 'vctrl_...',
+	tokenHelp:
+		'The snippet below carries this key. A key cannot be read back after it is created, so paste the one you saved or create a new key for this project.',
+	tokenMissingNotice:
+		'Add an API key to generate a snippet that works. Without one the embed answers "not found" on every site.',
+	tokenReveal: 'Show key',
+	tokenHide: 'Hide key',
+	tokenMismatch:
+		'This does not look like the selected key: the last four characters do not match.',
+	keyPickerLabel: 'Key for this project',
+	keyPickerPlaceholder: 'Which key are you using?',
+	keyPickerEmpty: 'No API keys are scoped to this project yet.',
+	keyPickerHint:
+		'Picking a key here only labels the field below - the full value was shown once, when the key was created.',
+	keyRevokedSuffix: 'revoked',
+	keyExpiredSuffix: 'expired',
+	createKey: 'Create a key for this project',
+	createKeyPending: 'Creating...',
+	createKeyFailure: 'Could not create an API key.',
+	createKeyOnce:
+		'This is the only time the full key is shown. Copy it, or copy the snippet below, before you leave this page.',
+	copyKey: 'Copy key',
+	copyKeySuccess: 'API key copied.',
+	copyKeyFailure: 'Failed to copy the API key.',
+	allowedDomainsLabel: 'Allowed domains',
+	allowedDomainsEmpty:
+		'This project allows no domains, so every third-party site is refused - even with a valid key. Add the site you are embedding on before you ship.',
+	allowedDomainsHelp:
+		'Only these sites may load the embed. Vectreal itself is always permitted, which is why the test button below cannot check this list for you.',
+	editProject: 'Project settings',
+	identifiersLabel: 'Identifiers',
+	projectIdLabel: 'Project ID',
+	sceneIdLabel: 'Scene ID',
+	copyIdSuccess: 'Copied.',
+	previewUrlLabel: 'Embed URL',
 	previewUrlPlaceholder: 'Save scene to generate URL',
 	embedCodeLabel: 'Embed Code',
 	embedCodeHelp:
@@ -38,15 +67,20 @@ export const EMBED_COPY = {
 	copyEmbedFailure: 'Failed to copy embed code.',
 	copySdkSuccess: 'SDK snippet copied.',
 	copySdkFailure: 'Failed to copy SDK snippet.',
-	copyUrlSuccess: 'Preview URL copied.',
-	copyUrlFailure: 'Failed to copy preview URL.',
+	copyUrlSuccess: 'Embed URL copied.',
+	copyUrlFailure: 'Failed to copy embed URL.',
 	clipboardUnavailable: 'Clipboard is not available in this browser.',
 	missingSceneForEmbed: 'Save this scene first to generate an embed snippet.',
-	missingSceneForUrl: 'Save this scene first to generate a preview URL.',
+	missingSceneForUrl: 'Save this scene first to generate an embed URL.',
 	embedCodeUnavailable:
 		'<!-- Save this scene before generating an embed snippet -->',
 	sdkCodeUnavailable: '// Save this scene before generating an SDK snippet',
 	openPreview: 'Open preview',
+	openPreviewHelp:
+		'Opens the internal preview, which authenticates with your dashboard session. It always works for you, and so proves nothing about the embed.',
+	testEmbedUrl: 'Test embed URL',
+	testEmbedUrlHelp:
+		'Opens the real embed URL carrying the key above. This checks the key and the published scene, but not the domain list: a request from this site is always permitted, so a visitor on your own site can still be refused. Needs a key.',
 	tabHtml: 'HTML',
 	tabSdk: 'SDK'
 } as const
@@ -76,14 +110,61 @@ export function buildInternalPreviewPath(params: {
 	return `/preview/${params.projectId}/${params.sceneId}`
 }
 
-export function addPreviewTokenPlaceholder(previewPath: string): string {
-	const url = new URL(previewPath, 'http://localhost')
-	url.searchParams.set('token', PREVIEW_API_KEY_PLACEHOLDER)
-	return `${url.pathname}${url.search}`
-}
-
 export function toAbsoluteEmbedUrl(path: string, origin: string): string {
 	return new URL(path, origin).toString()
+}
+
+/**
+ * The embed URL a visitor loads, token included.
+ *
+ * Built through `URLSearchParams` rather than string concatenation so the token
+ * is percent-encoded. The panel used to emit a literal `YOUR_PREVIEW_API_KEY`
+ * for the user to substitute by hand inside an HTML attribute, and the obvious
+ * substitution - pasting a quoted key - closed the attribute early:
+ *
+ *     src="https://vectreal.com/embed/p/s?token="vctrl_abc"   style="..."
+ *
+ * The browser then requested `?token=`, and an empty token is a 404. Nothing
+ * about that failure points at the quoting, which is why the placeholder is
+ * gone and the real token is interpolated here instead.
+ */
+export function buildEmbedUrl(params: {
+	origin: string
+	projectId: string
+	sceneId: string
+	token?: string
+}): string {
+	const url = new URL(
+		buildEmbedPath({ projectId: params.projectId, sceneId: params.sceneId }),
+		params.origin
+	)
+
+	const token = params.token?.trim()
+	if (token) {
+		url.searchParams.set('token', token)
+	}
+
+	return url.toString()
+}
+
+/**
+ * Escapes a value for interpolation into a quoted HTML attribute.
+ *
+ * `&` has to go first, or the escapes emitted below get double-escaped. Both
+ * quote characters are covered so the result is safe in either quoting style
+ * rather than only in the one the snippet builders happen to use today.
+ *
+ * A multi-parameter embed URL is the case that needs this: `URLSearchParams`
+ * percent-encodes the values but joins them with a bare `&`, which is invalid
+ * inside an attribute and silently truncates the URL in strict parsers.
+ */
+export function escapeHtmlAttributeValue(value: string): string {
+	return value
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;')
 }
 
 export function buildResponsiveEmbedSnippet(
@@ -91,10 +172,11 @@ export function buildResponsiveEmbedSnippet(
 ): string {
 	const width = options.width?.trim() || DEFAULT_WIDTH
 	const height = options.height?.trim() || DEFAULT_HEIGHT
+	const src = escapeHtmlAttributeValue(options.src)
 
 	return `<div style="width: ${width}; max-width: 100%; height: ${height};">
   <iframe
-    src="${options.src}"
+    src="${src}"
     style="width: 100%; height: 100%; border: 0;"
     allow="autoplay; xr-spatial-tracking"
     allowfullscreen
@@ -105,6 +187,7 @@ export function buildResponsiveEmbedSnippet(
 export function buildSdkEmbedSnippet(options: EmbedSnippetOptions): string {
 	const width = options.width?.trim() || DEFAULT_WIDTH
 	const height = options.height?.trim() || DEFAULT_HEIGHT
+	const src = escapeHtmlAttributeValue(options.src)
 
 	return `<!-- 1. Include the SDK (or: npm install @vctrl/embed) -->
 <script src="${EMBED_SDK_CDN_URL}"></script>
@@ -113,7 +196,7 @@ export function buildSdkEmbedSnippet(options: EmbedSnippetOptions): string {
 <div style="width: ${width}; max-width: 100%; height: ${height};">
   <iframe
     id="vectreal-scene"
-    src="${options.src}"
+    src="${src}"
     style="width: 100%; height: 100%; border: 0;"
     allow="autoplay; xr-spatial-tracking"
     allowfullscreen

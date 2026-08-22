@@ -1,0 +1,178 @@
+import { Button } from '@shared/components/ui/button'
+import { Input } from '@shared/components/ui/input'
+import { Label } from '@shared/components/ui/label'
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue
+} from '@shared/components/ui/select'
+import { Copy, Eye, EyeOff, KeyRound, Plus } from 'lucide-react'
+import { useState, type FC } from 'react'
+
+import {
+	matchesKeyPreview,
+	type EmbedApiKeyOption
+} from '../../lib/domain/embed/embed-key-options'
+import { EMBED_COPY } from '../../lib/domain/embed/embed-snippet'
+import { InfoTooltip } from '../info-tooltip'
+import { InlineNotice } from '../layout-components'
+
+import type { EmbedApiKeysApi } from './use-embed-api-keys'
+import type { ClipboardCopyApi } from '../../hooks/use-clipboard-copy'
+
+/** `name ...ab3x (expired)` - enough to recognize a key you saved elsewhere. */
+function describeKey(option: EmbedApiKeyOption): string {
+	const suffix = option.revoked
+		? ` (${EMBED_COPY.keyRevokedSuffix})`
+		: option.expired
+			? ` (${EMBED_COPY.keyExpiredSuffix})`
+			: ''
+
+	return `${option.name} ...${option.keyPreview}${suffix}`
+}
+
+interface EmbedKeyFieldProps {
+	api: EmbedApiKeysApi
+	clipboard: ClipboardCopyApi
+}
+
+export const EmbedKeyField: FC<EmbedKeyFieldProps> = ({ api, clipboard }) => {
+	const [revealed, setRevealed] = useState(false)
+
+	const createdPlaintext = api.createdPlaintext
+	const selectedKey = api.keys.find((key) => key.id === api.selectedKeyId)
+	const previewMismatch = Boolean(
+		selectedKey &&
+			api.token.trim() &&
+			!matchesKeyPreview(api.token, selectedKey.keyPreview)
+	)
+
+	return (
+		<div className="space-y-2">
+			{!api.token && (
+				<InlineNotice>{EMBED_COPY.tokenMissingNotice}</InlineNotice>
+			)}
+
+			<div className="flex items-center gap-2">
+				<Label htmlFor="embed-token" className="text-sm">
+					{EMBED_COPY.tokenLabel}
+				</Label>
+				<InfoTooltip content={EMBED_COPY.tokenHelp} />
+			</div>
+
+			<div className="flex items-center gap-2">
+				<Input
+					id="embed-token"
+					type={revealed ? 'text' : 'password'}
+					autoComplete="off"
+					spellCheck={false}
+					value={api.token}
+					onChange={(event) => api.setToken(event.target.value)}
+					placeholder={EMBED_COPY.tokenPlaceholder}
+				/>
+				<Button
+					variant="ghost"
+					size="sm"
+					onClick={() => setRevealed((current) => !current)}
+					title={revealed ? EMBED_COPY.tokenHide : EMBED_COPY.tokenReveal}
+					aria-label={revealed ? EMBED_COPY.tokenHide : EMBED_COPY.tokenReveal}
+				>
+					{revealed ? (
+						<EyeOff className="h-3.5 w-3.5" />
+					) : (
+						<Eye className="h-3.5 w-3.5" />
+					)}
+				</Button>
+			</div>
+
+			{previewMismatch && (
+				<p className="text-warning-foreground text-xs">
+					{EMBED_COPY.tokenMismatch}
+				</p>
+			)}
+
+			<div className="flex items-center gap-2">
+				<Label className="text-sm">{EMBED_COPY.keyPickerLabel}</Label>
+				<InfoTooltip content={EMBED_COPY.keyPickerHint} />
+			</div>
+
+			<div className="flex items-center gap-2">
+				<Select
+					value={api.selectedKeyId}
+					onValueChange={api.selectKey}
+					disabled={api.keys.length === 0}
+				>
+					<SelectTrigger className="flex-1">
+						<SelectValue placeholder={EMBED_COPY.keyPickerPlaceholder} />
+					</SelectTrigger>
+					<SelectContent>
+						{api.keys.map((option) => (
+							<SelectItem key={option.id} value={option.id}>
+								{describeKey(option)}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+				{api.canCreateKey && (
+					<Button
+						variant="secondary"
+						size="sm"
+						onClick={api.createKey}
+						disabled={api.creating}
+						title={EMBED_COPY.createKey}
+					>
+						{api.creating ? (
+							EMBED_COPY.createKeyPending
+						) : (
+							<>
+								<Plus className="mr-1 h-3.5 w-3.5" />
+								<KeyRound className="h-3.5 w-3.5" />
+							</>
+						)}
+					</Button>
+				)}
+			</div>
+
+			{api.keys.length === 0 && !api.loading && (
+				<p className="text-muted-foreground text-xs">
+					{EMBED_COPY.keyPickerEmpty}
+				</p>
+			)}
+
+			{api.loadError && (
+				<InlineNotice tone="error">{api.loadError}</InlineNotice>
+			)}
+			{api.createError && (
+				<InlineNotice tone="error">
+					{EMBED_COPY.createKeyFailure} {api.createError}
+				</InlineNotice>
+			)}
+
+			{createdPlaintext && (
+				<InlineNotice>
+					<div className="flex items-start justify-between gap-2">
+						<span>{EMBED_COPY.createKeyOnce}</span>
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={() =>
+								clipboard.copy('key', createdPlaintext, {
+									success: EMBED_COPY.copyKeySuccess,
+									failure: EMBED_COPY.copyKeyFailure,
+									unavailable: EMBED_COPY.clipboardUnavailable
+								})
+							}
+						>
+							<Copy className="mr-1 h-3 w-3" />
+							{clipboard.copiedId === 'key'
+								? EMBED_COPY.copied
+								: EMBED_COPY.copyKey}
+						</Button>
+					</div>
+				</InlineNotice>
+			)}
+		</div>
+	)
+}
