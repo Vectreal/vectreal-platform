@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 /**
- * Executes the factual claims the agent skills make about this repository.
+ * Executes the factual claims that documentation makes about this repository.
  *
  * The skills in `.agents/skills/` tell an agent which function to call, which
  * token holds the brand colour, and which invariants hold. Those are assertions
@@ -15,7 +15,13 @@ import { describe, expect, it } from 'vitest'
  * codebase where `db/client.ts` never issues `set local role`, so every policy is
  * bypassed and that advice generates security holes.
  *
- * So each SKILL.md carries a fenced ```claims block, and this spec runs it. The
+ * Public docs fail the same way, and worse, because an agent reads them as
+ * ground truth while planning. `docs/guides/publish-embed` listed
+ * `*.example.com` as a supported allowed-domain pattern from the day the feature
+ * was written, and no wildcard could be saved at all until #737. A plan built on
+ * that page was wrong before implementation started.
+ *
+ * So each file carries a claims block, and this spec runs it. The
  * claim and the prose that depends on it live in the same file, which is the
  * point: they cannot drift apart, because there is only one artifact. Renaming
  * `assertDashboardPermission` fails here and names the skill that has to change.
@@ -29,6 +35,11 @@ import { describe, expect, it } from 'vitest'
  * Paths are relative to the repository root. Literals are matched verbatim, not
  * as patterns, so a claim cannot accidentally widen into something that always
  * passes.
+ *
+ * Markdown carries the block as a ```claims fence. MDX cannot: it is compiled as
+ * JSX, raw HTML comments are not valid outside a code fence, and a visible fence
+ * would render the block to readers on the public docs site. MDX therefore uses
+ * an expression comment, `{/* claims ... *\/}`, which compiles away.
  */
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
@@ -41,6 +52,9 @@ type Claim = {
 	line: number
 }
 
+const BLOCK_START = /^(?:```claims|\{\/\*\s*claims)\s*$/
+const BLOCK_END = /^(?:```|\*\/\})\s*$/
+
 function parseClaims(markdown: string): Claim[] {
 	const claims: Claim[] = []
 	const lines = markdown.split('\n')
@@ -49,11 +63,11 @@ function parseClaims(markdown: string): Claim[] {
 	lines.forEach((raw, index) => {
 		const line = raw.trim()
 
-		if (line.startsWith('```claims')) {
+		if (!inBlock && BLOCK_START.test(line)) {
 			inBlock = true
 			return
 		}
-		if (inBlock && line.startsWith('```')) {
+		if (inBlock && BLOCK_END.test(line)) {
 			inBlock = false
 			return
 		}
@@ -69,19 +83,32 @@ function parseClaims(markdown: string): Claim[] {
 	return claims
 }
 
-const skillNames = readdirSync(SKILLS_DIR).filter((name) =>
-	existsSync(join(SKILLS_DIR, name, 'SKILL.md'))
-)
+const skillFiles = readdirSync(SKILLS_DIR)
+	.filter((name) => existsSync(join(SKILLS_DIR, name, 'SKILL.md')))
+	.map((name) => `.agents/skills/${name}/SKILL.md`)
 
-describe('agent skill claims', () => {
+/**
+ * Docs required to carry at least one claim.
+ *
+ * A ratchet rather than "every doc": most pages have nothing mechanically
+ * checkable, and demanding a block everywhere would produce filler. Adding a
+ * page here is a visible diff, and so is removing one.
+ */
+const CLAIM_CARRYING_DOCS = [
+	'apps/vectreal-platform/app/routes/docs/guides/publish-embed.mdx'
+]
+
+const documentFiles = [...skillFiles, ...CLAIM_CARRYING_DOCS]
+
+describe('documented claims', () => {
 	it('finds the skills directory and at least one skill', () => {
-		expect(skillNames.length).toBeGreaterThan(0)
+		expect(skillFiles.length).toBeGreaterThan(0)
 	})
 
-	describe.each(skillNames)('%s', (skillName) => {
-		const skillPath = join(SKILLS_DIR, skillName, 'SKILL.md')
-		const markdown = readFileSync(skillPath, 'utf8')
+	describe.each(documentFiles)('%s', (documentPath) => {
+		const markdown = readFileSync(join(REPO_ROOT, documentPath), 'utf8')
 		const claims = parseClaims(markdown)
+		const documentName = documentPath.split('/').slice(-2).join('/')
 
 		/*
 		  Without this, a skill whose claims block was deleted or renamed would
@@ -99,7 +126,7 @@ describe('agent skill claims', () => {
 
 				expect(
 					existsSync(target),
-					`${skillName}/SKILL.md line ${claim.line}: ${claim.path} does not exist`
+					`${documentName} line ${claim.line}: ${claim.path} does not exist`
 				).toBe(true)
 
 				if (claim.op === 'exists') return
@@ -109,12 +136,12 @@ describe('agent skill claims', () => {
 				if (claim.op === 'present') {
 					expect(
 						contents.includes(claim.literal),
-						`${skillName}/SKILL.md line ${claim.line} claims ${claim.path} contains "${claim.literal}". It does not. Fix the code or fix the skill.`
+						`${documentName} line ${claim.line} claims ${claim.path} contains "${claim.literal}". It does not. Fix the code, or fix the documentation.`
 					).toBe(true)
 				} else {
 					expect(
 						contents.includes(claim.literal),
-						`${skillName}/SKILL.md line ${claim.line} claims ${claim.path} does NOT contain "${claim.literal}". It does. The skill's reasoning may no longer hold.`
+						`${documentName} line ${claim.line} claims ${claim.path} does NOT contain "${claim.literal}". It does. The reasoning behind that page may no longer hold.`
 					).toBe(false)
 				}
 			}

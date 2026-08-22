@@ -69,6 +69,12 @@ Supported domain patterns:
 
 Requests from unlisted domains receive a `403 Forbidden` response.
 
+{/* claims
+present  apps/vectreal-platform/app/lib/domain/embed/embed-domain-policy.ts   trimmed.slice(2)
+present  apps/vectreal-platform/app/lib/domain/embed/embed-domain-policy.ts   patterns.length === 0
+present  apps/vectreal-platform/app/lib/domain/embed/embed-access-policy.ts   isLocalhostLike(applicationHost)
+*/}
+
 > **Local development** - there is no blanket localhost exemption. The automatic fallback only applies when the request carries no `Referer` and no `Origin` **and** the Vectreal instance being embedded is itself running on a localhost-like host. To embed `https://vectreal.com` from a local dev server, add `localhost` or `127.0.0.1` to the allowed domains.
 
 ---
