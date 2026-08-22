@@ -40,6 +40,25 @@ section exists.
 | `vectreal-iterative-delivery` | Scoping ambiguous or cross-cutting work, and shipping any PR. It owns the review loop, which is never skipped. |
 | `react-router-framework-mode` (global) | Framework-mode API questions: route config, loaders, actions, fetchers, pending UI, error boundaries, type generation. Carries 12 reference files. |
 
+Two hooks in `.agents/hooks/`, wired from `.claude/settings.json`, keep this
+table in front of agents, because a table that is only read at session start
+loses to a growing context:
+
+- `skills-remind.mjs` (`UserPromptSubmit`) lists the skills this session has
+  **not** used yet. Rows disappear as skills are invoked, so it costs less the
+  longer you work and goes silent once all three have run.
+- `skills-plan-gate.mjs` (`PreToolUse`) refuses `ExitPlanMode` until
+  `vectreal-iterative-delivery` has run, since that skill owns scoping and the
+  tier model the plan depends on.
+
+Both read the session transcript rather than any state file, both are plain
+Node (the repo already requires it, unlike `jq`), and both fail open and silent:
+if a hook cannot run, work continues unhindered. Nothing else is blocked. An
+earlier version gated edits by top-level directory, which covered 1027 of 1109
+tracked files and demanded a routing skill to fix a typo in a docs page; that
+was reverted. Per-file enforcement, if you want it, belongs in your own
+`~/.claude` config, not here.
+
 ## Commands
 
 All commands run from the repository root using `pnpm` and `nx`.
