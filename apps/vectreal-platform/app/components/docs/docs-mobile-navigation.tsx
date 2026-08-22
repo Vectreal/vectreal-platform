@@ -7,7 +7,6 @@ import {
 	SheetTitle,
 	SheetTrigger
 } from '@shared/components/ui/sheet'
-import { BookText } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { DocsPageToc } from './docs-page-toc'
@@ -39,10 +38,7 @@ export function DocsMobileNavigation({
 				<SheetTrigger asChild>{children}</SheetTrigger>
 				<SheetContent side="left" className="w-[90vw] max-w-sm">
 					<SheetHeader>
-						<SheetTitle className="flex items-center gap-2">
-							<BookText className="h-4 w-4" aria-hidden="true" />
-							Documentation
-						</SheetTitle>
+						<SheetTitle>Documentation</SheetTitle>
 						<SheetDescription>
 							Navigate pages and jump to sections.
 						</SheetDescription>
