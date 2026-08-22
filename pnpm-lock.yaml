@@ -297,8 +297,8 @@ importers:
         specifier: ^2.0.8
         version: 2.0.8(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       stripe:
-        specifier: ^20.4.1
-        version: 20.4.1(@types/node@22.19.17)
+        specifier: ^22.5.0
+        version: 22.5.0(@types/node@22.19.17)
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
@@ -700,8 +700,8 @@ importers:
         specifier: ^2.0.8
         version: 2.0.8(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       stripe:
-        specifier: ^20.4.1
-        version: 20.4.1(@types/node@22.20.1)
+        specifier: ^22.5.0
+        version: 22.5.0(@types/node@22.20.1)
       three:
         specifier: 'catalog:'
         version: 0.185.1
@@ -9599,6 +9599,10 @@ packages:
     resolution: {integrity: sha512-zSkVu3t18r39pw4ixfBKvfZi3y2UOqr7d4WYwcj3m8nXpEQK4rPO6GLzs/CExoRgmX3y9EjmmcXqv6jq0SK46g==}
     engines: {node: '>= 0.8.0'}
 
+  morgan@1.11.0:
+    resolution: {integrity: sha512-zSkVu3t18r39pw4ixfBKvfZi3y2UOqr7d4WYwcj3m8nXpEQK4rPO6GLzs/CExoRgmX3y9EjmmcXqv6jq0SK46g==}
+    engines: {node: '>= 0.8.0'}
+
   motion-dom@13.0.0:
     resolution: {integrity: sha512-Xk+SJas70uMAUIApg+m3lZDShxI3LBFHq7mFGbBKoRXc2PVPDyAKmzN64Bbzt4CZdP/CItTiJxWtn4TA0v53Ng==}
 
@@ -11102,11 +11106,11 @@ packages:
     resolution: {integrity: sha512-4gB8na07fecVVkOI6Rs4e7T6NOTki5EmL7TUduTs6bu3EdnSycntVJ4re8kgZA+wx9IueI2Y11bfbgwtzuE0KQ==}
     engines: {node: '>=0.10.0'}
 
-  stripe@20.4.1:
-    resolution: {integrity: sha512-axCguHItc8Sxt0HC6aSkdVRPffjYPV7EQqZRb2GkIa8FzWDycE7nHJM19C6xAIynH1Qp1/BHiopSi96jGBxT0w==}
-    engines: {node: '>=16'}
+  stripe@22.5.0:
+    resolution: {integrity: sha512-QVwMwriC0bbySx6R4dpsvJ0W//GojC1kwWVS6rPSoVqDUIZX4Hy3TaUrd2AZeXEAaKbfWIjQjvo3vKAReHZ0vQ==}
+    engines: {node: '>=18'}
     peerDependencies:
-      '@types/node': '>=16'
+      '@types/node': '>=18'
     peerDependenciesMeta:
       '@types/node':
         optional: true
@@ -21435,6 +21439,17 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  morgan@1.11.0:
+    dependencies:
+      basic-auth: 2.0.1
+      debug: 2.6.9
+      depd: 2.0.0
+      on-finished: 2.4.1
+      on-headers: 1.1.0
+    transitivePeerDependencies:
+      - supports-color
+    optional: true
+
   motion-dom@13.0.0:
     dependencies:
       motion-utils: 13.0.0
@@ -23464,11 +23479,11 @@ snapshots:
   strip-json-comments@2.0.1:
     optional: true
 
-  stripe@20.4.1(@types/node@22.19.17):
+  stripe@22.5.0(@types/node@22.19.17):
     optionalDependencies:
       '@types/node': 22.19.17
 
-  stripe@20.4.1(@types/node@22.20.1):
+  stripe@22.5.0(@types/node@22.20.1):
     optionalDependencies:
       '@types/node': 22.20.1
 
