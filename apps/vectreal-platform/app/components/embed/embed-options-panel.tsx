@@ -165,9 +165,17 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 								{EMBED_COPY.editProject}
 							</Link>
 						</div>
-						{keysApi.allowedDomains.length === 0 && !keysApi.loadError ? (
-							<InlineNotice>{EMBED_COPY.allowedDomainsEmpty}</InlineNotice>
-						) : keysApi.allowedDomains.length === 0 ? null : (
+						{/*
+						  Silent unless the list is known to be empty. Both a load in
+						  flight and a refused one report zero domains, and this notice
+						  states as fact that the project refuses every third-party site
+						  - which is alarming, actionable, and wrong in both cases.
+						*/}
+						{keysApi.allowedDomains.length === 0 ? (
+							!keysApi.loading && !keysApi.loadError ? (
+								<InlineNotice>{EMBED_COPY.allowedDomainsEmpty}</InlineNotice>
+							) : null
+						) : (
 							<div className="flex flex-wrap gap-1">
 								{keysApi.allowedDomains.map((domain) => (
 									<code

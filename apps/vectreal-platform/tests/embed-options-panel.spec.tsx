@@ -9,7 +9,7 @@
  */
 
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { EmbedOptionsPanel } from '../app/components/embed/embed-options-panel'
 import { EMBED_COPY } from '../app/lib/domain/embed/embed-snippet'
@@ -17,15 +17,28 @@ import { EMBED_COPY } from '../app/lib/domain/embed/embed-snippet'
 const load = vi.fn()
 
 let token = ''
+let loading = false
 let loadError: string | null = null
 let allowedDomains: string[] = ['shop.example.com']
+
+/*
+  Reset between tests. These are module-level so the mock factory can read them,
+  which means a test that forgets to set one silently inherits the previous
+  test's value and can pass for the wrong reason.
+*/
+beforeEach(() => {
+	token = ''
+	loading = false
+	loadError = null
+	allowedDomains = ['shop.example.com']
+})
 
 vi.mock('../app/components/embed/use-embed-api-keys', () => ({
 	useEmbedApiKeys: () => ({
 		keys: [],
 		allowedDomains,
 		canCreateKey: true,
-		loading: false,
+		loading,
 		loadError,
 		token,
 		setToken: vi.fn(),
@@ -75,7 +88,6 @@ function renderPanel() {
 
 describe('the copy actions wait for a key', () => {
 	it('refuses to copy anything while there is no token', () => {
-		token = ''
 		renderPanel()
 
 		expect(button(EMBED_COPY.testEmbedUrl)).toHaveProperty('disabled', true)
@@ -105,12 +117,22 @@ describe('the copy actions wait for a key', () => {
 
 describe('the allowed-domains readout', () => {
 	it('says the project allows none only when it actually knows that', () => {
-		token = ''
 		allowedDomains = []
-		loadError = null
 		renderPanel()
 
 		expect(screen.getByText(EMBED_COPY.allowedDomainsEmpty)).not.toBeNull()
+	})
+
+	it('claims nothing while the list is still loading', () => {
+		/*
+		  The window this notice was wrong in on every single mount: a request in
+		  flight reports zero domains, exactly like a project that really has none.
+		*/
+		allowedDomains = []
+		loading = true
+		renderPanel()
+
+		expect(screen.queryByText(EMBED_COPY.allowedDomainsEmpty)).toBeNull()
 	})
 
 	it('claims nothing about domains it could not load', () => {
@@ -119,7 +141,6 @@ describe('the allowed-domains readout', () => {
 		  keys that their project allows none - directly under the notice saying
 		  they are not allowed to know - is a false statement, not an empty state.
 		*/
-		token = ''
 		allowedDomains = []
 		loadError = 'You do not have permission to view API keys'
 		renderPanel()
