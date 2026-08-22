@@ -72,15 +72,23 @@ const FUNNEL: FunnelStep[] = [
 /*
   Steps with no test that imports them, each for the same structural reason:
   the decision is entangled with the database lookup inside a `.server.ts`, so
-  nothing can import it without Postgres. The fix is the one `embed-asset-policy`
-  already demonstrates - lift the decision into a pure module and leave the
-  lookup behind - not a mock.
+  nothing can import it without Postgres. There are two ways out, and both have
+  now been used: lift the decision into a pure module and leave the lookup
+  behind, as `embed-asset-policy` did, or exercise the lookup for real from
+  `tests/integration`, as `api-key-lifecycle.integration.spec.ts` did for key
+  minting and rotation. A mock is neither.
+
+  One caveat on the integration route out, because this file otherwise reads as
+  a stronger guarantee than it is: `ci-quality.yaml` runs `lint,typecheck,test,
+  build-ci` and never `test-integration`, and the unit config excludes
+  `tests/integration/**`. So a module can leave this set on the strength of a
+  spec no pull request actually executes. The spec is real and does exercise the
+  module - it just has to be run deliberately, with a local database.
 
   Removing an entry is the only way this list is allowed to change.
 */
 const KNOWN_UNGUARDED = new Set([
-	'app/lib/domain/scene/server/scene-settings.operations.server.ts',
-	'app/lib/domain/auth/api-key-repository.server.ts'
+	'app/lib/domain/scene/server/scene-settings.operations.server.ts'
 ])
 
 function collectSpecFiles(dir: string): string[] {

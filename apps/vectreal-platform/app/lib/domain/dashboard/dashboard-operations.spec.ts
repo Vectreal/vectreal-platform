@@ -35,7 +35,8 @@ const EXPECTED: Record<DashboardOperation, MembershipRole[]> = {
 	'api-key:create': ['owner', 'admin'],
 	'api-key:read': ['owner', 'admin'],
 	'api-key:update': ['owner', 'admin'],
-	'api-key:revoke': ['owner', 'admin']
+	'api-key:revoke': ['owner', 'admin'],
+	'api-key:rotate': ['owner', 'admin']
 }
 
 describe('dashboard operation permissions', () => {

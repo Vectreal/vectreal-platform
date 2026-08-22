@@ -2,14 +2,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Alert, AlertDescription } from '@shared/components/ui/alert'
 import { Button } from '@shared/components/ui/button'
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle
-} from '@shared/components/ui/dialog'
-import {
 	Drawer,
 	DrawerClose,
 	DrawerContent,
@@ -37,7 +29,7 @@ import {
 } from '@shared/components/ui/select'
 import { Textarea } from '@shared/components/ui/textarea'
 import { useSetAtom } from 'jotai/react'
-import { AlertCircle, CheckCircle2, Copy, KeyRound } from 'lucide-react'
+import { AlertCircle, KeyRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import {
@@ -51,6 +43,7 @@ import { toast } from 'sonner'
 import { z, ZodError } from 'zod'
 
 import { Route } from './+types/api-keys-new'
+import { OneTimeKeyDialog } from '../../components/api-keys/one-time-key-dialog'
 import {
 	ProjectMultiSelect,
 	type ProjectOption
@@ -273,121 +266,6 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
-
-function OneTimeKeyDialog({
-	open,
-	onClose,
-	apiKey
-}: {
-	open: boolean
-	onClose: () => void
-	apiKey: { plaintext: string; preview: string; name: string } | null
-}) {
-	const [copied, setCopied] = useState(false)
-
-	const handleCopy = async () => {
-		if (!apiKey) return
-
-		try {
-			await navigator.clipboard.writeText(apiKey.plaintext)
-			setCopied(true)
-			toast.success('API key copied to clipboard')
-			setTimeout(() => setCopied(false), 2000)
-		} catch (_error) {
-			toast.error('Failed to copy to clipboard')
-		}
-	}
-
-	const handleClose = () => {
-		if (!copied) {
-			// Warn user if they haven't copied yet
-			const confirmed = window.confirm(
-				'Have you copied your API key? This is the only time it will be displayed.'
-			)
-			if (!confirmed) return
-		}
-		onClose()
-	}
-
-	if (!apiKey) return null
-
-	return (
-		<Dialog open={open} onOpenChange={(open) => !open && handleClose()}>
-			<DialogContent
-				className="max-w-2xl"
-				onEscapeKeyDown={(e) => e.preventDefault()}
-			>
-				<DialogHeader>
-					<DialogTitle className="flex items-center gap-2">
-						<CheckCircle2 className="text-success size-5" />
-						API Key Created Successfully
-					</DialogTitle>
-					<DialogDescription>
-						Save this key now. For security reasons, it won't be shown again.
-					</DialogDescription>
-				</DialogHeader>
-
-				<div className="space-y-4">
-					<Alert
-						variant="default"
-						className="border-warning-border bg-warning-bg"
-					>
-						<AlertCircle className="text-warning size-4" />
-						<AlertDescription className="text-warning-muted-foreground">
-							<strong>Important:</strong> Copy this key now. Once you close this
-							dialog, the full key will no longer be accessible. You'll only see
-							the preview (...{apiKey.preview}).
-						</AlertDescription>
-					</Alert>
-
-					<div className="space-y-2">
-						<label className="text-h4">API Key</label>
-						<div className="flex gap-2">
-							<div className="text-muted-foreground bg-muted flex-1 rounded-md border p-3 font-mono text-sm break-all">
-								{apiKey.plaintext}
-							</div>
-							<Button
-								type="button"
-								variant={copied ? 'default' : 'outline'}
-								size="icon"
-								className="shrink-0"
-								onClick={handleCopy}
-							>
-								{copied ? (
-									<CheckCircle2 className="size-4" />
-								) : (
-									<Copy className="size-4" />
-								)}
-							</Button>
-						</div>
-						<p className="text-muted-foreground text-xs">
-							Key preview:{' '}
-							<code className="font-mono">...{apiKey.preview}</code>
-						</p>
-					</div>
-
-					<div className="bg-muted space-y-2 rounded-md p-4">
-						<h4 className="text-h4">Next Steps</h4>
-						<ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
-							<li>Copy the API key above to a secure location</li>
-							<li>Use it in your application's authorization header</li>
-							<li>
-								Format:{' '}
-								<code className="text-xs">Authorization: Bearer vctrl_...</code>
-							</li>
-						</ul>
-					</div>
-				</div>
-
-				<DialogFooter>
-					<Button onClick={handleClose} className="w-full">
-						I've Saved My Key
-					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
-	)
-}
 
 export default function ApiKeysNewPage({
 	actionData,
@@ -731,6 +609,7 @@ export default function ApiKeysNewPage({
 				open={showKeyDialog}
 				onClose={handleKeyDialogClose}
 				apiKey={createdKey}
+				reason="created"
 			/>
 		</>
 	)

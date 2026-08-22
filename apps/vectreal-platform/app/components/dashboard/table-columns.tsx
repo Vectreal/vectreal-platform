@@ -27,6 +27,7 @@ import {
 	FolderOpen,
 	KeyRound,
 	Pencil,
+	RefreshCw,
 	Trash2,
 	XCircle,
 	Eye,
@@ -558,12 +559,14 @@ interface ApiKeyActionsCellProps {
 	row: ApiKeyRow
 	onEdit: (keyId: string) => void
 	onRevoke: (keyId: string) => void
+	onRotate: (keyId: string) => void
 }
 
 const ApiKeyActionsCell = memo(function ApiKeyActionsCell({
 	row,
 	onEdit,
-	onRevoke
+	onRevoke,
+	onRotate
 }: ApiKeyActionsCellProps) {
 	const isClientMounted = useIsClientMounted()
 	const trigger = (
@@ -587,6 +590,20 @@ const ApiKeyActionsCell = memo(function ApiKeyActionsCell({
 							Edit
 						</DropdownMenuItem>
 						{/*
+						  Rotate is offered only on a live key. `rotateApiKey` refuses any
+						  other state anyway, so enabling it here would just surface a
+						  server error where a disabled item explains itself.
+						*/}
+						<DropdownMenuItem
+							disabled={
+								resolveApiKeyState(toLifecycleRow(row), new Date()) !== 'active'
+							}
+							onClick={() => onRotate(row.id)}
+						>
+							<RefreshCw className="mr-2 h-4 w-4" />
+							Rotate
+						</DropdownMenuItem>
+						{/*
 						  Only an already-revoked key hides the action. An expired key
 						  keeps it on purpose: revoking one is how an owner records that
 						  it is dead deliberately rather than by lapsing, and it is the
@@ -594,7 +611,8 @@ const ApiKeyActionsCell = memo(function ApiKeyActionsCell({
 						*/}
 						<DropdownMenuItem
 							disabled={
-								resolveApiKeyState(toLifecycleRow(row), new Date()) === 'revoked'
+								resolveApiKeyState(toLifecycleRow(row), new Date()) ===
+								'revoked'
 							}
 							onClick={() => onRevoke(row.id)}
 							className={DESTRUCTIVE_MENU_ITEM}
@@ -726,11 +744,27 @@ export interface ApiKeyRow {
 	active: boolean | null
 	expiresAt: Date | null
 	revokedAt: Date | null
+	rotatedAt: Date | null
 }
 
 interface ApiKeyColumnsOptions {
 	onEdit: (keyId: string) => void
 	onRevoke: (keyId: string) => void
+	onRotate: (keyId: string) => void
+}
+
+/**
+ * Whether a rotated key has authenticated anything since it was rotated.
+ *
+ * This is the question that follows every rotation, and the answer is the only
+ * way to tell from the dashboard that an embed somewhere is still carrying the
+ * old key and being refused right now.
+ */
+function isUnusedSinceRotation(row: ApiKeyRow): boolean {
+	if (!row.rotatedAt) return false
+	if (!row.lastUsedAt) return true
+
+	return new Date(row.lastUsedAt) <= new Date(row.rotatedAt)
 }
 
 /**
@@ -877,9 +911,16 @@ export function createApiKeyColumns(
 			),
 			accessorFn: (row) => row.lastUsedAt ?? new Date(0),
 			cell: ({ row }) => (
-				<span className="text-muted-foreground text-sm">
-					{formatRelativeTime(row.original.lastUsedAt)}
-				</span>
+				<div className="flex flex-col">
+					<span className="text-muted-foreground text-sm">
+						{formatRelativeTime(row.original.lastUsedAt)}
+					</span>
+					{isUnusedSinceRotation(row.original) && (
+						<span className="text-warning text-xs">
+							Unused since rotating {formatRelativeTime(row.original.rotatedAt)}
+						</span>
+					)}
+				</div>
 			)
 		},
 		{
@@ -906,6 +947,7 @@ export function createApiKeyColumns(
 					row={row.original}
 					onEdit={options.onEdit}
 					onRevoke={options.onRevoke}
+					onRotate={options.onRotate}
 				/>
 			)
 		}

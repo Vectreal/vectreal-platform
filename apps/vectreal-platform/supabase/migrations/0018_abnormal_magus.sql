@@ -1,0 +1,1 @@
+ALTER TABLE "api_keys" ADD COLUMN "rotated_at" timestamp with time zone;

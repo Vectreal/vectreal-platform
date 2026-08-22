@@ -127,6 +127,13 @@
       "when": 1787169099333,
       "tag": "0017_shallow_kat_farrell",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1787406189506,
+      "tag": "0018_abnormal_magus",
+      "breakpoints": true
     }
   ]
 }

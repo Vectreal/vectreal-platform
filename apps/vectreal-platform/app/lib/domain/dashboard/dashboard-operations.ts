@@ -40,6 +40,7 @@ export type DashboardOperation =
 	| 'api-key:read'
 	| 'api-key:update'
 	| 'api-key:revoke'
+	| 'api-key:rotate'
 
 /**
  * Operations a folder's creator may perform on it regardless of their role.
@@ -99,7 +100,13 @@ export const DASHBOARD_OPERATION_ROLES: Record<
 	'api-key:create': ['owner', 'admin'],
 	'api-key:read': ['owner', 'admin'],
 	'api-key:update': ['owner', 'admin'],
-	'api-key:revoke': ['owner', 'admin']
+	'api-key:revoke': ['owner', 'admin'],
+	/**
+	 * Same roles as revoke, and for the same reason: rotating replaces the
+	 * secret, so every embed still carrying the old one stops working. It is
+	 * revoke plus a replacement, not a lesser action.
+	 */
+	'api-key:rotate': ['owner', 'admin']
 }
 
 export interface DashboardActorContext {
@@ -156,7 +163,8 @@ const OPERATION_SUBJECTS: Record<DashboardOperation, string> = {
 	'api-key:create': 'create API keys',
 	'api-key:read': 'view API keys',
 	'api-key:update': 'edit API keys',
-	'api-key:revoke': 'revoke API keys'
+	'api-key:revoke': 'revoke API keys',
+	'api-key:rotate': 'rotate API keys'
 }
 
 /**

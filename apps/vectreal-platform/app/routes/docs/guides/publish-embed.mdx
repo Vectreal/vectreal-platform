@@ -35,6 +35,28 @@ To create a key with your own name, description or expiry instead:
 
 > A key is stored hashed, so it cannot be read back later. The **Embed** panel's key picker shows each key's name and last four characters, which is enough to tell which of your saved keys a project expects, but not enough to recover one you did not save.
 
+### Replacing a key that leaked
+
+If a key ends up somewhere it should not be, **rotate** it rather than revoking it. Rotating issues a new secret for the same key, keeping its name, description, projects and expiry, so only the snippet has to change:
+
+1. Go to [Dashboard → API Keys](/dashboard/api-keys).
+2. Open the row menu on the key and choose **Rotate**.
+3. Copy the new key - like creation, it is shown only once.
+4. Paste it into every embed that carried the old one.
+
+The old secret stops working the instant the new one is issued, so **every embed still carrying it is refused until you update it**. Plan the rotation for when you can update the embedding pages, not before.
+
+The **Last Used** column is how you confirm the update landed: it is cleared by the rotation and stays empty until something authenticates with the new key. A key showing _Unused since rotating_ has an embed somewhere that is still sending the old value and being refused.
+
+Rotation is offered only on an active key. A revoked key stays revoked, and an expired one cannot be brought back this way - create a new key instead.
+
+{/* claims
+present apps/vectreal-platform/app/lib/domain/auth/api-key-repository.server.ts rotatedAt: new Date()
+present apps/vectreal-platform/app/lib/domain/auth/api-key-repository.server.ts lastUsedAt: null
+present apps/vectreal-platform/app/lib/domain/auth/api-key-repository.server.ts state !== 'active'
+present apps/vectreal-platform/app/components/dashboard/table-columns.tsx Unused since rotating
+*/}
+
 ### Using the key
 
 Pass the key as the `token` query parameter in the embed URL:
@@ -62,17 +84,17 @@ Every external embed is checked against the owning project's allowed domain list
 
 Supported domain patterns:
 
-| Pattern | Matches |
-|---|---|
-| `example.com` | Exact host only |
+| Pattern         | Matches                         |
+| --------------- | ------------------------------- |
+| `example.com`   | Exact host only                 |
 | `*.example.com` | All subdomains of `example.com` |
 
 Requests from unlisted domains receive a `403 Forbidden` response.
 
 {/* claims
-present  apps/vectreal-platform/app/lib/domain/embed/embed-domain-policy.ts   trimmed.slice(2)
-present  apps/vectreal-platform/app/lib/domain/embed/embed-domain-policy.ts   patterns.length === 0
-present  apps/vectreal-platform/app/lib/domain/embed/embed-access-policy.ts   isLocalhostLike(applicationHost)
+present apps/vectreal-platform/app/lib/domain/embed/embed-domain-policy.ts trimmed.slice(2)
+present apps/vectreal-platform/app/lib/domain/embed/embed-domain-policy.ts patterns.length === 0
+present apps/vectreal-platform/app/lib/domain/embed/embed-access-policy.ts isLocalhostLike(applicationHost)
 */}
 
 > **Local development** - there is no blanket localhost exemption. The automatic fallback only applies when the request carries no `Referer` and no `Origin` **and** the Vectreal instance being embedded is itself running on a localhost-like host. To embed `https://vectreal.com` from a local dev server, add `localhost` or `127.0.0.1` to the allowed domains.
@@ -89,12 +111,12 @@ The hosted preview iframe can also be controlled from the parent page over `post
 
 ```html
 <div style="width: 100%; max-width: 100%; height: 400px;">
-  <iframe
-    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=vctrl_your_key_here"
-    style="width: 100%; height: 100%; border: 0;"
-    allow="autoplay; xr-spatial-tracking"
-    allowfullscreen
-  ></iframe>
+	<iframe
+		src="https://vectreal.com/embed/<projectId>/<sceneId>?token=vctrl_your_key_here"
+		style="width: 100%; height: 100%; border: 0;"
+		allow="autoplay; xr-spatial-tracking"
+		allowfullscreen
+	></iframe>
 </div>
 ```
 
@@ -102,12 +124,12 @@ The hosted preview iframe can also be controlled from the parent page over `post
 
 ```html
 <div style="position:relative;padding-top:56.25%;width:100%">
-  <iframe
-    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=vctrl_your_key_here"
-    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
-    allow="autoplay; xr-spatial-tracking"
-    allowfullscreen
-  ></iframe>
+	<iframe
+		src="https://vectreal.com/embed/<projectId>/<sceneId>?token=vctrl_your_key_here"
+		style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
+		allow="autoplay; xr-spatial-tracking"
+		allowfullscreen
+	></iframe>
 </div>
 ```
 
@@ -119,23 +141,23 @@ Hosted preview iframes support a small `postMessage` protocol layered on top of 
 
 ### Message sources
 
-| Source | Direction | Meaning |
-|---|---|---|
-| `vectreal-host` | Parent page → iframe | A trusted host page command or trigger update |
+| Source             | Direction            | Meaning                                               |
+| ------------------ | -------------------- | ----------------------------------------------------- |
+| `vectreal-host`    | Parent page → iframe | A trusted host page command or trigger update         |
 | `vectreal-preview` | Iframe → parent page | A viewer lifecycle event or emitted interaction event |
 
 ### Host to preview messages
 
-| Type | Payload | Effect |
-|---|---|---|
-| `ping` | none | Announces the host origin so the iframe can start delivering messages, and asks for a `pong` |
-| `viewer_command` | `command: { type: 'activate_camera', cameraId: string }` | Activates one persisted scene camera |
-| `viewer_command` | `command: { type: 'set_controls_enabled', enabled: boolean }` | Temporarily enables or disables viewer orbit interaction |
-| `viewer_command` | `command: { type: 'set_transition', transitionType: 'none' \| 'linear' \| 'object_avoidance', duration?: number, easing?: string }` | Overrides the transition used by subsequent camera switches |
-| `viewer_command` | `command: { type: 'set_auto_rotate', enabled: boolean, speed?: number }` | Toggles and configures auto-rotation |
-| `viewer_command` | `command: { type: 'set_controls_options', zoom?: boolean, pan?: boolean }` | Enables or disables zoom and pan at runtime |
-| `host_scroll_progress` | `progress: number` | Reports normalized host scroll progress used by persisted `host_scroll_progress` interactions |
-| `host_message` | `message: string` | Triggers persisted `host_message` interactions by message name |
+| Type                   | Payload                                                                                                                             | Effect                                                                                        |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `ping`                 | none                                                                                                                                | Announces the host origin so the iframe can start delivering messages, and asks for a `pong`  |
+| `viewer_command`       | `command: { type: 'activate_camera', cameraId: string }`                                                                            | Activates one persisted scene camera                                                          |
+| `viewer_command`       | `command: { type: 'set_controls_enabled', enabled: boolean }`                                                                       | Temporarily enables or disables viewer orbit interaction                                      |
+| `viewer_command`       | `command: { type: 'set_transition', transitionType: 'none' \| 'linear' \| 'object_avoidance', duration?: number, easing?: string }` | Overrides the transition used by subsequent camera switches                                   |
+| `viewer_command`       | `command: { type: 'set_auto_rotate', enabled: boolean, speed?: number }`                                                            | Toggles and configures auto-rotation                                                          |
+| `viewer_command`       | `command: { type: 'set_controls_options', zoom?: boolean, pan?: boolean }`                                                          | Enables or disables zoom and pan at runtime                                                   |
+| `host_scroll_progress` | `progress: number`                                                                                                                  | Reports normalized host scroll progress used by persisted `host_scroll_progress` interactions |
+| `host_message`         | `message: string`                                                                                                                   | Triggers persisted `host_message` interactions by message name                                |
 
 Two field names differ between the SDK and the wire. `setTransition({ type })` sends
 `transitionType`, because `type` is already taken by the command envelope.
@@ -144,87 +166,87 @@ each carrying only its own field (`zoom` or `pan`), so a partial payload is norm
 
 ### Preview to host messages
 
-| Type | Payload | Meaning |
-|---|---|---|
-| `pong` | `sceneId`, `cameras` | Reply to `ping`; carries the scene's camera descriptors |
-| `viewer_event` | `event: { type: 'viewer_ready' }` | The hosted preview is ready to receive viewer commands |
-| `viewer_event` | `event: { type: 'initial_framing_completed', cameraId: string \| null }` | Initial framing and stabilization has completed |
-| `viewer_event` | `event: { type: 'camera_changed', cameraId: string }` | The active scene camera changed |
-| `interaction_event` | `eventName`, optional `payload`, optional `interactionId` | A persisted `emit_custom_event` interaction fired |
+| Type                | Payload                                                                  | Meaning                                                 |
+| ------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------- |
+| `pong`              | `sceneId`, `cameras`                                                     | Reply to `ping`; carries the scene's camera descriptors |
+| `viewer_event`      | `event: { type: 'viewer_ready' }`                                        | The hosted preview is ready to receive viewer commands  |
+| `viewer_event`      | `event: { type: 'initial_framing_completed', cameraId: string \| null }` | Initial framing and stabilization has completed         |
+| `viewer_event`      | `event: { type: 'camera_changed', cameraId: string }`                    | The active scene camera changed                         |
+| `interaction_event` | `eventName`, optional `payload`, optional `interactionId`                | A persisted `emit_custom_event` interaction fired       |
 
 ### Plain HTML example
 
 ```html
 <div style="position:relative;padding-top:56.25%;width:100%">
-  <iframe
-    id="vectreal-preview"
-    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=vctrl_your_key_here"
-    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
-    allow="autoplay; xr-spatial-tracking"
-    loading="lazy"
-  ></iframe>
+	<iframe
+		id="vectreal-preview"
+		src="https://vectreal.com/embed/<projectId>/<sceneId>?token=vctrl_your_key_here"
+		style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
+		allow="autoplay; xr-spatial-tracking"
+		loading="lazy"
+	></iframe>
 </div>
 
 <script>
-  const iframe = document.getElementById('vectreal-preview')
-  const targetOrigin = 'https://vectreal.com'
+	const iframe = document.getElementById('vectreal-preview')
+	const targetOrigin = 'https://vectreal.com'
 
-  // The iframe cannot address the parent until the parent speaks first, so it
-  // queues every outbound event (including `viewer_ready`) until then. Ping it
-  // until `pong` arrives, otherwise a listen-only page receives nothing.
-  let handshake
-  const ping = () =>
-    iframe.contentWindow?.postMessage(
-      { source: 'vectreal-host', type: 'ping' },
-      targetOrigin
-    )
+	// The iframe cannot address the parent until the parent speaks first, so it
+	// queues every outbound event (including `viewer_ready`) until then. Ping it
+	// until `pong` arrives, otherwise a listen-only page receives nothing.
+	let handshake
+	const ping = () =>
+		iframe.contentWindow?.postMessage(
+			{ source: 'vectreal-host', type: 'ping' },
+			targetOrigin
+		)
 
-  iframe.addEventListener('load', () => {
-    ping()
-    handshake = setInterval(ping, 250)
-  })
+	iframe.addEventListener('load', () => {
+		ping()
+		handshake = setInterval(ping, 250)
+	})
 
-  window.addEventListener('message', (event) => {
-    if (event.origin !== targetOrigin) return
-    if (event.data?.source !== 'vectreal-preview') return
+	window.addEventListener('message', (event) => {
+		if (event.origin !== targetOrigin) return
+		if (event.data?.source !== 'vectreal-preview') return
 
-    if (event.data.type === 'pong') clearInterval(handshake)
+		if (event.data.type === 'pong') clearInterval(handshake)
 
-    console.log('Vectreal preview event', event.data)
-  })
+		console.log('Vectreal preview event', event.data)
+	})
 
-  function activateCamera(cameraId) {
-    iframe.contentWindow?.postMessage(
-      {
-        source: 'vectreal-host',
-        type: 'viewer_command',
-        command: { type: 'activate_camera', cameraId }
-      },
-      targetOrigin
-    )
-  }
+	function activateCamera(cameraId) {
+		iframe.contentWindow?.postMessage(
+			{
+				source: 'vectreal-host',
+				type: 'viewer_command',
+				command: { type: 'activate_camera', cameraId }
+			},
+			targetOrigin
+		)
+	}
 
-  function setControlsEnabled(enabled) {
-    iframe.contentWindow?.postMessage(
-      {
-        source: 'vectreal-host',
-        type: 'viewer_command',
-        command: { type: 'set_controls_enabled', enabled }
-      },
-      targetOrigin
-    )
-  }
+	function setControlsEnabled(enabled) {
+		iframe.contentWindow?.postMessage(
+			{
+				source: 'vectreal-host',
+				type: 'viewer_command',
+				command: { type: 'set_controls_enabled', enabled }
+			},
+			targetOrigin
+		)
+	}
 
-  function reportScrollProgress(progress) {
-    iframe.contentWindow?.postMessage(
-      {
-        source: 'vectreal-host',
-        type: 'host_scroll_progress',
-        progress
-      },
-      targetOrigin
-    )
-  }
+	function reportScrollProgress(progress) {
+		iframe.contentWindow?.postMessage(
+			{
+				source: 'vectreal-host',
+				type: 'host_scroll_progress',
+				progress
+			},
+			targetOrigin
+		)
+	}
 </script>
 ```
 
@@ -240,8 +262,8 @@ each carrying only its own field (`zoom` or `pan`), so a partial payload is norm
 
 ## Embed route
 
-| Route | URL | Description |
-|---|---|---|
+| Route     | URL                          | Description                         |
+| --------- | ---------------------------- | ----------------------------------- |
 | **Embed** | `/embed/:projectId/:sceneId` | Full viewport, immersive experience |
 
 Supports the `token` query param and `Authorization: Bearer` authentication. A
@@ -256,15 +278,15 @@ existing embeds keep their token and camera parameters.
 
 ## Status code reference
 
-| Scenario | Status |
-|---|---|
-| Missing `projectId` or `sceneId` | `400 Bad Request` |
-| No `token` or `Authorization` header | `404 Not Found` |
-| Legacy `/preview/fullscreen/...` URL | `301 Moved Permanently` |
-| Rate limited token validation | `429 Too Many Requests` |
-| Disallowed embed domain | `403 Forbidden` |
-| Draft or non-existent scene (external access) | `404 Not Found` |
-| Invalid, revoked, expired, or cross-project API key | `404 Not Found` |
+| Scenario                                            | Status                  |
+| --------------------------------------------------- | ----------------------- |
+| Missing `projectId` or `sceneId`                    | `400 Bad Request`       |
+| No `token` or `Authorization` header                | `404 Not Found`         |
+| Legacy `/preview/fullscreen/...` URL                | `301 Moved Permanently` |
+| Rate limited token validation                       | `429 Too Many Requests` |
+| Disallowed embed domain                             | `403 Forbidden`         |
+| Draft or non-existent scene (external access)       | `404 Not Found`         |
+| Invalid, revoked, expired, or cross-project API key | `404 Not Found`         |
 
 ---
 
