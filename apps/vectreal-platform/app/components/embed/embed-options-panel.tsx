@@ -139,7 +139,7 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 
 			{canEmbed && (
 				<>
-					<EmbedKeyField api={keysApi} clipboard={clipboard} />
+					<EmbedKeyField api={keysApi} />
 
 					<div className="space-y-1">
 						<div className="flex items-center gap-2">
@@ -201,6 +201,7 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 				<Label className="text-sm">{EMBED_COPY.previewUrlLabel}</Label>
 				<div className="flex items-center gap-2">
 					<Input
+						className="ph-no-capture"
 						readOnly
 						value={embedUrl}
 						placeholder={EMBED_COPY.previewUrlPlaceholder}
@@ -322,7 +323,7 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 								? EMBED_COPY.copied
 								: EMBED_COPY.copyEmbed}
 						</Button>
-						<div className="bg-muted no-scrollbar relative overflow-x-auto rounded-2xl p-3 font-mono text-xs">
+						<div className="ph-no-capture bg-muted no-scrollbar relative overflow-x-auto rounded-2xl p-3 font-mono text-xs">
 							<pre>{embedCode}</pre>
 						</div>
 					</div>
@@ -353,7 +354,7 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 								? EMBED_COPY.copied
 								: EMBED_COPY.copySdk}
 						</Button>
-						<div className="bg-muted no-scrollbar relative overflow-x-auto rounded-2xl p-3 font-mono text-xs">
+						<div className="ph-no-capture bg-muted no-scrollbar relative overflow-x-auto rounded-2xl p-3 font-mono text-xs">
 							<pre>{sdkCode}</pre>
 						</div>
 					</div>

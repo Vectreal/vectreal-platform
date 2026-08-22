@@ -36,8 +36,12 @@ export const EMBED_COPY = {
 	createKey: 'Create a key for this project',
 	createKeyPending: 'Creating...',
 	createKeyFailure: 'Could not create an API key.',
+	createKeyDialogTitle: 'API key created',
 	createKeyOnce:
-		'This is the only time the full key is shown. Copy it, or copy the snippet below, before you leave this page.',
+		'This is the only time the full key is shown. It is stored hashed, so it cannot be read back. Copy it now, or copy the finished snippet behind this dialog.',
+	createKeyDialogDismiss: 'Done',
+	createKeyDismissWithoutCopyConfirm:
+		'You have not copied the key. It cannot be shown again. Close anyway?',
 	copyKey: 'Copy key',
 	copyKeySuccess: 'API key copied.',
 	copyKeyFailure: 'Failed to copy the API key.',
@@ -167,12 +171,32 @@ export function escapeHtmlAttributeValue(value: string): string {
 		.replace(/'/g, '&#39;')
 }
 
+/**
+ * Every value either builder interpolates, escaped.
+ *
+ * `width` and `height` are free text from the panel's own inputs and land in a
+ * quoted `style` attribute, so a value ending in a quote breaks out of it
+ * exactly the way the old `?token=` placeholder broke out of `src`. Escaping
+ * rather than validating: the only caller is the panel, the only author is the
+ * scene's owner, and the goal is a snippet that parses - not a policy about
+ * which CSS lengths are allowed, which would silently discard `calc(...)`.
+ */
+function escapeSnippetValues(options: EmbedSnippetOptions): {
+	width: string
+	height: string
+	src: string
+} {
+	return {
+		width: escapeHtmlAttributeValue(options.width?.trim() || DEFAULT_WIDTH),
+		height: escapeHtmlAttributeValue(options.height?.trim() || DEFAULT_HEIGHT),
+		src: escapeHtmlAttributeValue(options.src)
+	}
+}
+
 export function buildResponsiveEmbedSnippet(
 	options: EmbedSnippetOptions
 ): string {
-	const width = options.width?.trim() || DEFAULT_WIDTH
-	const height = options.height?.trim() || DEFAULT_HEIGHT
-	const src = escapeHtmlAttributeValue(options.src)
+	const { width, height, src } = escapeSnippetValues(options)
 
 	return `<div style="width: ${width}; max-width: 100%; height: ${height};">
   <iframe
@@ -185,9 +209,7 @@ export function buildResponsiveEmbedSnippet(
 }
 
 export function buildSdkEmbedSnippet(options: EmbedSnippetOptions): string {
-	const width = options.width?.trim() || DEFAULT_WIDTH
-	const height = options.height?.trim() || DEFAULT_HEIGHT
-	const src = escapeHtmlAttributeValue(options.src)
+	const { width, height, src } = escapeSnippetValues(options)
 
 	return `<!-- 1. Include the SDK (or: npm install @vctrl/embed) -->
 <script src="${EMBED_SDK_CDN_URL}"></script>

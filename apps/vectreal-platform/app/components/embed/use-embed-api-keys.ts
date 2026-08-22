@@ -27,6 +27,8 @@ export interface EmbedApiKeysApi {
 	selectKey: (keyId: string) => void
 	/** Set once, when a key is minted here. The only time a key is readable. */
 	createdPlaintext: string | null
+	/** Closes the one-time key dialog. The value is unrecoverable afterwards. */
+	dismissCreatedKey: () => void
 	createKey: () => void
 	creating: boolean
 	createError: string | null
@@ -104,6 +106,10 @@ export function useEmbedApiKeys(params: {
 		setSelectedKeyId(keyId)
 	}, [])
 
+	const dismissCreatedKey = useCallback(() => {
+		setCreatedPlaintext(null)
+	}, [])
+
 	const payload = listFetcher.data?.success ? listFetcher.data.data : null
 
 	return {
@@ -120,6 +126,7 @@ export function useEmbedApiKeys(params: {
 		selectedKeyId,
 		selectKey,
 		createdPlaintext,
+		dismissCreatedKey,
 		createKey,
 		creating: createFetcher.state !== 'idle',
 		createError:

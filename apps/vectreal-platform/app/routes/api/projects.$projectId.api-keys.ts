@@ -33,6 +33,27 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router'
 /** Matches the 90-day default the full API key form offers. */
 const DEFAULT_EXPIRY_DAYS = 90
 
+/**
+ * Re-attaches the auth headers to a response that could not carry them.
+ *
+ * `getAuthUser` returns a `Set-Cookie` whenever Supabase rotates the session,
+ * and dropping it leaves the browser holding a token the server has already
+ * replaced. Most `ApiResponse` statics take `options.headers`, but
+ * `badRequest` and `quotaExceeded` do not, so the error paths need this.
+ * `dashboard.mutations.ts` carries the same helper for the same reason.
+ */
+function withHeaders(response: Response, headers: Headers): Response {
+	const merged = new Headers(response.headers)
+	headers.forEach((value, key) => {
+		merged.append(key, value)
+	})
+
+	return new Response(response.body, {
+		status: response.status,
+		headers: merged
+	})
+}
+
 export interface EmbedApiKeysPayload {
 	projectId: string
 	projectName: string
@@ -122,16 +143,16 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		return csrfCheck
 	}
 
-	if (formData.get('intent') !== 'create') {
-		return ApiResponse.badRequest('Unsupported intent')
-	}
-
 	const access = await resolveProjectAccess(request, params.projectId)
 	if ('error' in access) {
 		return access.error
 	}
 
 	const { userId, headers, membership } = access
+
+	if (formData.get('intent') !== 'create') {
+		return withHeaders(ApiResponse.badRequest('Unsupported intent'), headers)
+	}
 
 	if (!canPerformDashboardOperation('api-key:create', membership)) {
 		return ApiResponse.forbidden(
@@ -174,17 +195,23 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		return ApiResponse.created(payload, { headers })
 	} catch (error) {
 		if (error instanceof QuotaExceededError) {
-			return ApiResponse.quotaExceeded(error.message, {
-				limitKey: error.limitKey,
-				currentValue: error.currentValue,
-				limit: error.limit,
-				plan: error.plan,
-				upgradeTo: error.upgradeTo
-			})
+			return withHeaders(
+				ApiResponse.quotaExceeded(error.message, {
+					limitKey: error.limitKey,
+					currentValue: error.currentValue,
+					limit: error.limit,
+					plan: error.plan,
+					upgradeTo: error.upgradeTo
+				}),
+				headers
+			)
 		}
 
-		return ApiResponse.badRequest(
-			error instanceof Error ? error.message : 'Could not create an API key'
+		return withHeaders(
+			ApiResponse.badRequest(
+				error instanceof Error ? error.message : 'Could not create an API key'
+			),
+			headers
 		)
 	}
 }

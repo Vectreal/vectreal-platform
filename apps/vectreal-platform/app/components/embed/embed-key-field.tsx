@@ -8,9 +8,10 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
-import { Copy, Eye, EyeOff, KeyRound, Plus } from 'lucide-react'
+import { Eye, EyeOff, KeyRound, Plus } from 'lucide-react'
 import { useState, type FC } from 'react'
 
+import { EmbedCreatedKeyDialog } from './embed-created-key-dialog'
 import {
 	matchesKeyPreview,
 	type EmbedApiKeyOption
@@ -20,7 +21,6 @@ import { InfoTooltip } from '../info-tooltip'
 import { InlineNotice } from '../layout-components'
 
 import type { EmbedApiKeysApi } from './use-embed-api-keys'
-import type { ClipboardCopyApi } from '../../hooks/use-clipboard-copy'
 
 /** `name ...ab3x (expired)` - enough to recognize a key you saved elsewhere. */
 function describeKey(option: EmbedApiKeyOption): string {
@@ -35,13 +35,11 @@ function describeKey(option: EmbedApiKeyOption): string {
 
 interface EmbedKeyFieldProps {
 	api: EmbedApiKeysApi
-	clipboard: ClipboardCopyApi
 }
 
-export const EmbedKeyField: FC<EmbedKeyFieldProps> = ({ api, clipboard }) => {
+export const EmbedKeyField: FC<EmbedKeyFieldProps> = ({ api }) => {
 	const [revealed, setRevealed] = useState(false)
 
-	const createdPlaintext = api.createdPlaintext
 	const selectedKey = api.keys.find((key) => key.id === api.selectedKeyId)
 	const previewMismatch = Boolean(
 		selectedKey &&
@@ -62,7 +60,7 @@ export const EmbedKeyField: FC<EmbedKeyFieldProps> = ({ api, clipboard }) => {
 				<InfoTooltip content={EMBED_COPY.tokenHelp} />
 			</div>
 
-			<div className="flex items-center gap-2">
+			<div className="ph-no-capture flex items-center gap-2">
 				<Input
 					id="embed-token"
 					type={revealed ? 'text' : 'password'}
@@ -150,29 +148,10 @@ export const EmbedKeyField: FC<EmbedKeyFieldProps> = ({ api, clipboard }) => {
 				</InlineNotice>
 			)}
 
-			{createdPlaintext && (
-				<InlineNotice>
-					<div className="flex items-start justify-between gap-2">
-						<span>{EMBED_COPY.createKeyOnce}</span>
-						<Button
-							variant="secondary"
-							size="sm"
-							onClick={() =>
-								clipboard.copy('key', createdPlaintext, {
-									success: EMBED_COPY.copyKeySuccess,
-									failure: EMBED_COPY.copyKeyFailure,
-									unavailable: EMBED_COPY.clipboardUnavailable
-								})
-							}
-						>
-							<Copy className="mr-1 h-3 w-3" />
-							{clipboard.copiedId === 'key'
-								? EMBED_COPY.copied
-								: EMBED_COPY.copyKey}
-						</Button>
-					</div>
-				</InlineNotice>
-			)}
+			<EmbedCreatedKeyDialog
+				plaintext={api.createdPlaintext}
+				onDismiss={api.dismissCreatedKey}
+			/>
 		</div>
 	)
 }

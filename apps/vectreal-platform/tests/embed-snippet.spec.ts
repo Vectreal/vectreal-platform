@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -14,21 +15,26 @@ const ORIGIN = 'https://vectreal.com'
 const PROJECT_ID = '08db6be1-f87b-4278-abfc-d80ef549e3a7'
 const SCENE_ID = '1ee4f724-2ee5-4162-9804-2de08bcb0eca'
 
-/** The `src` attribute value of the first iframe in a snippet. */
-function readSrcAttribute(snippet: string): string {
-	const match = snippet.match(/<iframe[\s\S]*?\ssrc="([^"]*)"/)
-	expect(match, 'snippet has an iframe src').not.toBeNull()
-	return match![1]
+/**
+ * The iframe a real HTML parser finds in a snippet.
+ *
+ * Deliberately `DOMParser` rather than a regex over the string: the question
+ * these tests exist to answer is what a *browser* reads back out of the
+ * generated markup, and the reported bug was precisely that the markup parsed
+ * differently than it looked. A regex capturing `[^"]*` cannot contain a quote
+ * by construction, so any assertion made through one holds whether or not the
+ * escaping works.
+ */
+function parseIframe(snippet: string): HTMLIFrameElement {
+	const doc = new DOMParser().parseFromString(snippet, 'text/html')
+	const iframe = doc.querySelector('iframe')
+	expect(iframe, 'snippet parses to markup containing an iframe').not.toBeNull()
+	return iframe as HTMLIFrameElement
 }
 
-/** Reverses `escapeHtmlAttributeValue`, the way a browser's parser would. */
-function decodeHtmlEntities(value: string): string {
-	return value
-		.replace(/&lt;/g, '<')
-		.replace(/&gt;/g, '>')
-		.replace(/&quot;/g, '"')
-		.replace(/&#39;/g, "'")
-		.replace(/&amp;/g, '&')
+/** The `src` a browser resolves, entity references already decoded for us. */
+function readParsedSrc(snippet: string): string {
+	return parseIframe(snippet).getAttribute('src') ?? ''
 }
 
 describe('buildEmbedUrl', () => {
@@ -96,9 +102,7 @@ describe('token round trip through a generated snippet', () => {
 						token
 					})
 
-					const parsed = new URL(
-						decodeHtmlEntities(readSrcAttribute(builder({ src })))
-					)
+					const parsed = new URL(readParsedSrc(builder({ src })))
 
 					expect(parsed.searchParams.get('token')).toBe(token)
 					expect(parsed.pathname).toBe(
@@ -114,24 +118,77 @@ describe('token round trip through a generated snippet', () => {
 		const snippet = buildResponsiveEmbedSnippet({ src })
 
 		expect(snippet).toContain('&amp;camera=front')
-		expect(snippet).not.toMatch(/src="[^"]*[^;]&camera/)
 
-		const parsed = new URL(decodeHtmlEntities(readSrcAttribute(snippet)))
+		const parsed = new URL(readParsedSrc(snippet))
 		expect(parsed.searchParams.get('camera')).toBe('front')
 		expect(parsed.searchParams.get('autoRotate')).toBe('1')
 	})
 
-	it('leaves no attribute-closing quote in the emitted src', () => {
-		const src = buildEmbedUrl({
-			origin: ORIGIN,
-			projectId: PROJECT_ID,
-			sceneId: SCENE_ID,
-			token: 'vctrl_"injected" style="display:none'
+	it('cannot be made to inject an attribute through the src', () => {
+		const src = `${ORIGIN}/embed/p/s?token=vctrl_" onload="alert(1)`
+		const iframe = parseIframe(buildResponsiveEmbedSnippet({ src }))
+
+		expect(iframe.getAttribute('src')).toBe(src)
+		expect(iframe.getAttribute('onload')).toBeNull()
+	})
+})
+
+describe('the width and height fields cannot break the snippet', () => {
+	/*
+	  Both are free text in the panel and land in a quoted `style` attribute, so
+	  they are the same breakout the token placeholder was - one field over. A
+	  parser is what settles it: the wrapper keeps exactly one attribute, and no
+	  element appears that the builder did not write.
+	*/
+	const HOSTILE = [
+		'100%"><script>alert(1)</script><div style="',
+		'100%" onmouseover="alert(1)',
+		'400px"><img src=x onerror=alert(1)>',
+		"100%' onload='alert(1)"
+	]
+
+	for (const value of HOSTILE) {
+		it(`survives a width of ${JSON.stringify(value)}`, () => {
+			const snippet = buildResponsiveEmbedSnippet({
+				src: `${ORIGIN}/embed/p/s`,
+				width: value
+			})
+			const doc = new DOMParser().parseFromString(snippet, 'text/html')
+
+			expect(doc.querySelector('script')).toBeNull()
+			expect(doc.querySelector('img')).toBeNull()
+
+			const wrapper = doc.body.firstElementChild as HTMLElement
+			expect(wrapper.tagName).toBe('DIV')
+			expect(wrapper.getAttributeNames()).toEqual(['style'])
+			expect(wrapper.style.width).toBe('')
 		})
 
-		expect(readSrcAttribute(buildResponsiveEmbedSnippet({ src }))).not.toContain(
-			'"'
-		)
+		it(`survives a height of ${JSON.stringify(value)}`, () => {
+			const snippet = buildSdkEmbedSnippet({
+				src: `${ORIGIN}/embed/p/s`,
+				height: value
+			})
+			const doc = new DOMParser().parseFromString(snippet, 'text/html')
+
+			expect(doc.querySelector('img')).toBeNull()
+			expect(
+				doc.querySelectorAll('div')[0].getAttributeNames()
+			).toEqual(['style'])
+		})
+	}
+
+	it('still passes an ordinary CSS length through untouched', () => {
+		const snippet = buildResponsiveEmbedSnippet({
+			src: `${ORIGIN}/embed/p/s`,
+			width: 'calc(100% - 20px)',
+			height: '640px'
+		})
+		const wrapper = new DOMParser().parseFromString(snippet, 'text/html').body
+			.firstElementChild as HTMLElement
+
+		expect(wrapper.style.width).toBe('calc(100% - 20px)')
+		expect(wrapper.style.height).toBe('640px')
 	})
 })
 
@@ -142,9 +199,14 @@ describe('escapeHtmlAttributeValue', () => {
 		expect(escapeHtmlAttributeValue('a"b')).toBe('a&quot;b')
 	})
 
-	it('is reversible for a value carrying every escaped character', () => {
+	it('round-trips every escaped character through a real parser', () => {
 		const raw = `&<>"'`
-		expect(decodeHtmlEntities(escapeHtmlAttributeValue(raw))).toBe(raw)
+		const doc = new DOMParser().parseFromString(
+			`<i data-v="${escapeHtmlAttributeValue(raw)}"></i>`,
+			'text/html'
+		)
+
+		expect(doc.querySelector('i')?.getAttribute('data-v')).toBe(raw)
 	})
 })
 
