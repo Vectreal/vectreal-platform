@@ -2,6 +2,24 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Skills
+
+**IMPORTANT: invoke the matching skill before starting work, not after getting stuck.** They
+live in `.agents/skills/` and are symlinked into `.claude/skills/`. `AGENTS.md`
+lists them too, but Claude Code does not auto-load that file, which is why this
+section exists.
+
+| Skill | Invoke when |
+| --- | --- |
+| `vectreal-extension-architecture` | Adding or changing a route, loader, action, resource route, domain module, repository, service, permission, or the client/server boundary. |
+| `vectreal-brand-ux-design` | Any change a user can see: component styling, layout, tokens, type scale, elevation, motion, empty/loading/error states, responsive or accessibility work. |
+| `vectreal-iterative-delivery` | Scoping ambiguous or cross-cutting work, and shipping any PR. It owns the review loop, which is never skipped. |
+| `react-router-framework-mode` (global) | Framework-mode API questions: route config, loaders, actions, fetchers, pending UI, error boundaries, type generation. Carries 12 reference files. |
+
+`.agents/hooks/` keeps this table in front of you: `skills-remind.mjs` lists the
+skills this session has not used yet, and `skills-plan-gate.mjs` refuses
+`ExitPlanMode` until `vectreal-iterative-delivery` has run. Both fail open.
+
 ## Before you edit product code
 
 **Write the root cause first.** One sentence: what is broken, where the rule that
@@ -25,39 +43,6 @@ expensive. `docs/guides/publish-embed` documented `*.example.com` as a supported
 allowed-domain pattern; no such pattern could be saved at all until it was fixed.
 
 `vectreal-iterative-delivery` owns the operational detail.
-
-## Skills
-
-Invoke these before starting the matching work, not after getting stuck. They
-live in `.agents/skills/` and are symlinked into `.claude/skills/`. `AGENTS.md`
-lists them too, but Claude Code does not auto-load that file, which is why this
-section exists.
-
-| Skill | Invoke when |
-| --- | --- |
-| `vectreal-extension-architecture` | Adding or changing a route, loader, action, resource route, domain module, repository, service, permission, or the client/server boundary. |
-| `vectreal-brand-ux-design` | Any change a user can see: component styling, layout, tokens, type scale, elevation, motion, empty/loading/error states, responsive or accessibility work. |
-| `vectreal-iterative-delivery` | Scoping ambiguous or cross-cutting work, and shipping any PR. It owns the review loop, which is never skipped. |
-| `react-router-framework-mode` (global) | Framework-mode API questions: route config, loaders, actions, fetchers, pending UI, error boundaries, type generation. Carries 12 reference files. |
-
-Two hooks in `.agents/hooks/`, wired from `.claude/settings.json`, keep this
-table in front of agents, because a table that is only read at session start
-loses to a growing context:
-
-- `skills-remind.mjs` (`UserPromptSubmit`) lists the skills this session has
-  **not** used yet. Rows disappear as skills are invoked, so it costs less the
-  longer you work and goes silent once all three have run.
-- `skills-plan-gate.mjs` (`PreToolUse`) refuses `ExitPlanMode` until
-  `vectreal-iterative-delivery` has run, since that skill owns scoping and the
-  tier model the plan depends on.
-
-Both read the session transcript rather than any state file, both are plain
-Node (the repo already requires it, unlike `jq`), and both fail open and silent:
-if a hook cannot run, work continues unhindered. Nothing else is blocked. An
-earlier version gated edits by top-level directory, which covered 1027 of 1109
-tracked files and demanded a routing skill to fix a typo in a docs page; that
-was reverted. Per-file enforcement, if you want it, belongs in your own
-`~/.claude` config, not here.
 
 ## Commands
 
