@@ -138,6 +138,16 @@ const useOptimizeModel = () => {
 		async (sceneData: ServerSceneData): Promise<void> => {
 			dispatch({ type: 'LOAD_START' })
 
+			// A scene loaded from a published GLB carries no editor glTF document.
+			// The optimizer works on that document, so there is nothing to ingest -
+			// and the casts below would otherwise turn null into an opaque failure
+			// deep inside glTF-Transform.
+			if (!sceneData.gltfJson) {
+				throw new Error(
+					'Cannot optimize a scene loaded from a published GLB: it has no glTF document.'
+				)
+			}
+
 			try {
 				const optimizer = optimizerRef.current
 

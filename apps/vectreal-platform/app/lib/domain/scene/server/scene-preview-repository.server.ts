@@ -5,6 +5,8 @@ import { assets } from '../../../../db/schema/project/assets'
 import { scenePublished } from '../../../../db/schema/project/scene-published'
 import { scenes } from '../../../../db/schema/project/scenes'
 
+import type { PublishedModelRow } from '../embed-asset-policy'
+
 const db = getDbClient()
 
 export async function getPublishedScenePreview(
@@ -18,7 +20,9 @@ export async function getPublishedScenePreview(
 			status: scenes.status,
 			publishedAssetId: scenePublished.assetId,
 			publishedAt: scenePublished.publishedAt,
-			publishedAssetSizeBytes: assets.fileSize
+			publishedAssetSizeBytes: assets.fileSize,
+			publishedAssetName: assets.name,
+			publishedAssetMimeType: assets.mimeType
 		})
 		.from(scenes)
 		.innerJoin(scenePublished, eq(scenePublished.sceneId, scenes.id))
@@ -35,4 +39,20 @@ export async function getPublishedScenePreview(
 	}
 
 	return rows[0]
+}
+
+export type PublishedScenePreview = NonNullable<
+	Awaited<ReturnType<typeof getPublishedScenePreview>>
+>
+
+/** Adapts the query row to the shape `embed-asset-policy` reasons about. */
+export function toPublishedModelRow(
+	preview: PublishedScenePreview
+): PublishedModelRow {
+	return {
+		assetId: preview.publishedAssetId,
+		fileName: preview.publishedAssetName,
+		mimeType: preview.publishedAssetMimeType,
+		byteSize: preview.publishedAssetSizeBytes
+	}
 }

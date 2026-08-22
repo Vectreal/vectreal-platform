@@ -20,10 +20,14 @@ import {
 	updateSceneMetadata
 } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import {
+	buildEmbedSceneManifest,
 	buildSceneManifest,
 	buildSceneManifestEtag
 } from '../../lib/domain/scene/server/scene-manifest.server'
-import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
+import {
+	getPublishedScenePreview,
+	toPublishedModelRow
+} from '../../lib/domain/scene/server/scene-preview-repository.server'
 import * as sceneSettingsOps from '../../lib/domain/scene/server/scene-settings.operations.server'
 import { SceneSettingsParser } from '../../lib/domain/scene/server/scene-settings.parser.server'
 import { getAuthUser } from '../../lib/http/auth.server'
@@ -33,6 +37,7 @@ import {
 } from '../../lib/http/csrf.server'
 import { ensurePost, parseActionRequest } from '../../lib/http/requests.server'
 
+import type { PublishedModelRow } from '../../lib/domain/scene/embed-asset-policy'
 import type { SceneSettingsAction } from '../../types/api'
 
 function withNoStoreHeaders(response: Response): Response {
@@ -292,6 +297,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			return authContext
 		}
 
+		let publishedModelRow: PublishedModelRow | null = null
+
 		if (authContext.mode === 'apiKey') {
 			const previewScene = await getPublishedScenePreview(
 				previewProjectId,
@@ -300,6 +307,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			if (!previewScene) {
 				return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 			}
+			publishedModelRow = toPublishedModelRow(previewScene)
 		} else {
 			const scene = await getScene(sceneId, authContext.userId)
 			if (!scene || scene.projectId !== previewProjectId) {
@@ -318,8 +326,18 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		}
 
 		try {
-			const manifest = await buildSceneManifest(sceneId, buildPreviewAssetUrl)
-			const etag = buildSceneManifestEtag(sceneId, manifest.settingsUpdatedAt)
+			const manifest = publishedModelRow
+				? await buildEmbedSceneManifest(
+						sceneId,
+						publishedModelRow,
+						buildPreviewAssetUrl
+					)
+				: await buildSceneManifest(sceneId, buildPreviewAssetUrl)
+			const etag = buildSceneManifestEtag(
+				sceneId,
+				manifest.settingsUpdatedAt,
+				publishedModelRow ? 'embed' : 'session'
+			)
 
 			if (etag && request.headers.get('If-None-Match') === etag) {
 				if (authContext.mode === 'session') {
@@ -458,15 +476,21 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		const previewSessionHeaders =
 			authContext.mode === 'session' ? authContext.headers : undefined
 
+		/*
+		  Token callers get the GET manifest and nothing else.
+
+		  `getSceneSettings` returns every editor asset base64-inlined plus the
+		  full glTF document, which is exactly what the embed manifest is built
+		  to withhold. The client's `fetchManifestPayload` falls back to this
+		  POST whenever a manifest fails its shape check, so leaving it open to
+		  an API key would let the embed quietly re-acquire the editor payload
+		  the moment the manifest stopped carrying it.
+		*/
 		if (authContext.mode === 'apiKey') {
-			const previewScene = await getPublishedScenePreview(
-				previewProjectId,
-				routeSceneId
-			)
-			if (!previewScene) {
-				return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
-			}
-		} else {
+			return withNoStoreHeaders(ApiResponse.forbidden('Forbidden'))
+		}
+
+		{
 			const scene = await getScene(routeSceneId, authContext.userId)
 			if (!scene || scene.projectId !== previewProjectId) {
 				return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
@@ -482,12 +506,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		}
 
 		const effectiveSceneId = parsedRequest.sceneId?.trim() || routeSceneId
-		const requestScope =
-			authContext.mode === 'apiKey'
-				? `preview-api-key-${previewProjectId}`
-				: `preview-session-${authContext.userId}`
 		const requestKey = getSceneSettingsRequestKey(
-			requestScope,
+			`preview-session-${authContext.userId}`,
 			effectiveSceneId
 		)
 

@@ -5,8 +5,13 @@ import { getDbClient } from '../../db/client'
 import { sceneAssets, sceneSettings } from '../../db/schema'
 import { downloadAsset } from '../../lib/domain/asset/asset-storage.server'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
+import {
+	isEmbedServableAssetId,
+	selectEmbedServableAssets
+} from '../../lib/domain/scene/embed-asset-policy'
 import { getScene } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
+import { sceneSettingsService } from '../../lib/domain/scene/server/scene-settings-service.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 
 const db = getDbClient()
@@ -129,7 +134,31 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		}
 
 		const previewScene = await getPublishedScenePreview(projectId, sceneId)
-		if (!previewScene || previewScene.publishedAssetId !== assetId) {
+		if (!previewScene) {
+			return new Response('Asset not found', {
+				status: 404,
+				headers: withNoStoreHeaders()
+			})
+		}
+
+		/*
+		  The servable set is computed by the same module the embed manifest
+		  builds its refs from. This gate used to be an equality against
+		  `publishedAssetId` alone - an id `uploadPublishedGlb` never links into
+		  `scene_assets`, and therefore an id the manifest never referenced. The
+		  two sets were disjoint, so every asset an embed asked for 404'd.
+		*/
+		const settingsData =
+			await sceneSettingsService.getSceneSettingsWithAssetRefs(sceneId, {
+				includeGltfJson: false
+			})
+		const servable = selectEmbedServableAssets({
+			publishedAssetId: previewScene.publishedAssetId,
+			sceneAssets: settingsData?.assets ?? [],
+			bakedShadowAssetId: settingsData?.settings?.shadows?.baked?.assetId
+		})
+
+		if (!isEmbedServableAssetId(assetId, servable)) {
 			return new Response('Asset not found', {
 				status: 404,
 				headers: withNoStoreHeaders()

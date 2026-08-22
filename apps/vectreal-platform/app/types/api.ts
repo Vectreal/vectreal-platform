@@ -10,6 +10,7 @@ import type {
 	ExtendedGLTFDocument,
 	Optimizations,
 	OptimizationReport,
+	SceneAssetRef,
 	SceneAssetRefMap,
 	SceneSettings,
 	SerializedGLTFExportResult
@@ -159,6 +160,23 @@ export interface SceneManifestResponse {
 	readonly assetRefs: SceneAssetRefMap | null
 	readonly assets: SceneAssetRecord[] | null
 	readonly settings?: SceneSettings | null
+	readonly settingsUpdatedAt: string | null
+}
+
+/**
+ * The manifest an external embed receives. Not a `Partial` of
+ * {@link SceneManifestResponse}: the fields it omits are omitted on purpose
+ * (see `buildEmbedSceneManifest`), and a shared optional type would let one of
+ * them be added back without anyone noticing.
+ */
+export interface SceneEmbedManifestResponse {
+	readonly sceneId: string
+	readonly meta: SceneMetaState | null
+	/** The optimized, published GLB. The only model an embed ever loads. */
+	readonly publishedModel: SceneAssetRef
+	/** The persisted shadow bake, which lives outside the GLB. Often empty. */
+	readonly assetRefs: SceneAssetRefMap
+	readonly settings: SceneSettings | null
 	readonly settingsUpdatedAt: string | null
 }
 

@@ -15,7 +15,10 @@ import { useAtom, useSetAtom } from 'jotai/react'
 import { Crosshair, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo } from 'react'
 
-import { resolveDefaultSceneCameraId } from '../../../../lib/domain/scene/scene-camera'
+import {
+	PAIRED_HOTSPOT_CAMERA_ID_PREFIX,
+	resolveDefaultSceneCameraId
+} from '../../../../lib/domain/scene/scene-camera'
 import {
 	addHotspot,
 	relinkHotspot,
@@ -54,7 +57,7 @@ import type {
  */
 const mintHotspotIds = () => ({
 	hotspotId: crypto.randomUUID(),
-	cameraId: `hotspot-camera-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+	cameraId: `${PAIRED_HOTSPOT_CAMERA_ID_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 })
 
 /**

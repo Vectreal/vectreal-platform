@@ -99,6 +99,12 @@ export function calculateReferencedBytesFromServerScene(
 	data: ServerSceneData
 ): ReferencedBytes {
 	const gltfJson = data.gltfJson
+	if (!gltfJson) {
+		// A published GLB is one opaque package: nothing is referenced by URI, so
+		// there is nothing to attribute to buffers or textures.
+		return { sourcePackageBytes: 0, textureBytes: 0 }
+	}
+
 	const assets = Object.values(data.assetData || {}).map((asset) => ({
 		fileName: asset.fileName,
 		size: getSerializedAssetByteSize(asset.data)

@@ -4,7 +4,10 @@ export {
 	calculateReferencedBytesFromFiles,
 	calculateReferencedBytesFromServerScene
 } from './calculate-referenced-bytes'
-export { resolveServerSceneDataContract } from './resolve-scene-payload'
+export {
+	resolvePublishedSceneDataContract,
+	resolveServerSceneDataContract
+} from './resolve-scene-payload'
 export {
 	fetchManifestAssetData,
 	type FetchManifestAssetsOptions
