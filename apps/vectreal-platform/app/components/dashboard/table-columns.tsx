@@ -40,6 +40,11 @@ import { createCheckboxColumn, SortableHeader } from './data-table'
 import { SceneThumbnail } from './scene-thumbnail'
 import { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
 import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
+import {
+	resolveApiKeyState,
+	type ApiKeyLifecycleRow,
+	type ApiKeyState
+} from '../../lib/domain/auth/api-key-lifecycle'
 
 import type { LegacyColumnDef as ColumnDef } from '@tanstack/react-table/legacy'
 
@@ -581,8 +586,16 @@ const ApiKeyActionsCell = memo(function ApiKeyActionsCell({
 							<Pencil className="mr-2 h-4 w-4" />
 							Edit
 						</DropdownMenuItem>
+						{/*
+						  Only an already-revoked key hides the action. An expired key
+						  keeps it on purpose: revoking one is how an owner records that
+						  it is dead deliberately rather than by lapsing, and it is the
+						  step before deleting it.
+						*/}
 						<DropdownMenuItem
-							disabled={Boolean(row.revokedAt)}
+							disabled={
+								resolveApiKeyState(toLifecycleRow(row), new Date()) === 'revoked'
+							}
 							onClick={() => onRevoke(row.id)}
 							className={DESTRUCTIVE_MENU_ITEM}
 						>
@@ -720,24 +733,43 @@ interface ApiKeyColumnsOptions {
 	onRevoke: (keyId: string) => void
 }
 
-function getApiKeyStatus(row: ApiKeyRow): {
-	label: string
-	variant: 'default' | 'secondary' | 'destructive' | 'outline'
-	icon: 'revoked' | 'expired' | 'active' | 'inactive'
-} {
-	if (row.revokedAt) {
-		return { label: 'Revoked', variant: 'destructive', icon: 'revoked' }
+/**
+ * A table row in the shape `api-key-lifecycle` reads.
+ *
+ * The dates are re-wrapped rather than passed through: loader data reaches this
+ * file after serialization, and `formatRelativeTime` below has always guarded
+ * the same way.
+ */
+function toLifecycleRow(row: ApiKeyRow): ApiKeyLifecycleRow {
+	return {
+		active: row.active,
+		expiresAt: row.expiresAt ? new Date(row.expiresAt) : null,
+		revokedAt: row.revokedAt ? new Date(row.revokedAt) : null
 	}
+}
 
-	if (row.expiresAt && new Date(row.expiresAt) < new Date()) {
-		return { label: 'Expired', variant: 'outline', icon: 'expired' }
+/**
+ * How each lifecycle state is presented. A total `Record`, so a new state is a
+ * compile error here rather than a row that silently renders as Inactive.
+ */
+const API_KEY_STATUS_PRESENTATION: Record<
+	ApiKeyState,
+	{
+		label: string
+		variant: 'default' | 'secondary' | 'destructive' | 'outline'
+		Icon: typeof XCircle
 	}
+> = {
+	revoked: { label: 'Revoked', variant: 'destructive', Icon: XCircle },
+	expired: { label: 'Expired', variant: 'outline', Icon: Clock },
+	active: { label: 'Active', variant: 'default', Icon: CheckCircle2 },
+	inactive: { label: 'Inactive', variant: 'secondary', Icon: Ban }
+}
 
-	if (row.active) {
-		return { label: 'Active', variant: 'default', icon: 'active' }
-	}
-
-	return { label: 'Inactive', variant: 'secondary', icon: 'inactive' }
+function getApiKeyStatus(row: ApiKeyRow) {
+	return API_KEY_STATUS_PRESENTATION[
+		resolveApiKeyState(toLifecycleRow(row), new Date())
+	]
 }
 
 function formatRelativeTime(date: Date | null): string {
@@ -857,20 +889,12 @@ export function createApiKeyColumns(
 			),
 			accessorFn: (row) => getApiKeyStatus(row).label,
 			cell: ({ row }) => {
-				const status = getApiKeyStatus(row.original)
-				const StatusIcon =
-					status.icon === 'revoked'
-						? XCircle
-						: status.icon === 'expired'
-							? Clock
-							: status.icon === 'active'
-								? CheckCircle2
-								: Ban
+				const { label, variant, Icon } = getApiKeyStatus(row.original)
 
 				return (
-					<Badge variant={status.variant} className="gap-1">
-						<StatusIcon className="size-3" />
-						{status.label}
+					<Badge variant={variant} className="gap-1">
+						<Icon className="size-3" />
+						{label}
 					</Badge>
 				)
 			}

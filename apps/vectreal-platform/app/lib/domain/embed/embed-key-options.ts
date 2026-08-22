@@ -4,7 +4,12 @@
  * Pure - no database import and no `.server` suffix - so the rules below are
  * testable directly rather than only through a route, and so the client can
  * import the option type without pulling the db client in.
+ *
+ * Whether a key still works is not decided here. `api-key-lifecycle.ts` owns
+ * that, and this module only shapes its answer for the picker.
  */
+
+import { resolveApiKeyState } from '../auth/api-key-lifecycle'
 
 /** One row in the embed panel's key picker. Never carries a key's plaintext. */
 export interface EmbedApiKeyOption {
@@ -14,7 +19,16 @@ export interface EmbedApiKeyOption {
 	keyPreview: string
 	expiresAt: string | null
 	lastUsedAt: string | null
+	/** Revoked, or otherwise unusable for a reason the owner caused. */
 	revoked: boolean
+	/**
+	 * Aged out, and not revoked.
+	 *
+	 * Mutually exclusive with `revoked` rather than independent of it: these are
+	 * two views of one state, and a revoked key reports only that it was revoked,
+	 * which is the fact its owner acted on. Read them in that order, as
+	 * `embed-key-field.tsx` does.
+	 */
 	expired: boolean
 }
 
@@ -49,18 +63,26 @@ export function toEmbedApiKeyOptions(
 ): EmbedApiKeyOption[] {
 	return keys
 		.filter((key) => key.projects.some((project) => project.id === projectId))
-		.map((key) => ({
-			id: key.apiKey.id,
-			name: key.apiKey.name,
-			keyPreview: key.apiKey.keyPreview,
-			expiresAt: key.apiKey.expiresAt?.toISOString() ?? null,
-			lastUsedAt: key.apiKey.lastUsedAt?.toISOString() ?? null,
-			revoked: key.apiKey.revokedAt !== null || key.apiKey.active === false,
-			expired:
-				key.apiKey.expiresAt !== null &&
-				key.apiKey.expiresAt.getTime() <= now.getTime(),
-			createdAt: key.apiKey.createdAt.getTime()
-		}))
+		.map((key) => {
+			const state = resolveApiKeyState(key.apiKey, now)
+
+			return {
+				id: key.apiKey.id,
+				name: key.apiKey.name,
+				keyPreview: key.apiKey.keyPreview,
+				expiresAt: key.apiKey.expiresAt?.toISOString() ?? null,
+				lastUsedAt: key.apiKey.lastUsedAt?.toISOString() ?? null,
+				/*
+				  `inactive` counts as revoked here on purpose. The picker's job is to
+				  say whether a key still works, and both states mean it does not.
+				  This used to ask `active === false`, which let a null-`active` row
+				  read as usable in the picker and then 404 at the embed.
+				*/
+				revoked: state === 'revoked' || state === 'inactive',
+				expired: state === 'expired',
+				createdAt: key.apiKey.createdAt.getTime()
+			}
+		})
 		.sort((a, b) => {
 			const byUsable =
 				Number(a.revoked || a.expired) - Number(b.revoked || b.expired)

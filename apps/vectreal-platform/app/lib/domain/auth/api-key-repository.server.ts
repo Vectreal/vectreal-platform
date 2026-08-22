@@ -14,19 +14,32 @@ import {
 } from '../billing/entitlement-service.server'
 import { QuotaExceededError } from '../billing/quota-exceeded-error'
 import { checkQuota } from '../billing/usage-service.server'
+import { type DashboardOperation } from '../dashboard/dashboard-operations'
 import { assertDashboardPermission } from '../dashboard/dashboard-permissions.server'
 
 const db = getDbClient()
 
 type DbClient = typeof db
 
+/** The operations this module is allowed to assert. */
+type ApiKeyOperation = Extract<DashboardOperation, `api-key:${string}`>
+
 /**
- * Verify user is an admin or owner of the organization
+ * Verify the actor may perform `operation` in this organization.
+ *
+ * The operation is a parameter rather than a constant because this function
+ * used to assert `api-key:create` for create, update *and* revoke. That was
+ * inert only because the three role lists happen to be identical: the moment
+ * one of them tightened, `dashboard-operations.ts` would have described a rule
+ * this path does not enforce, and that table is the only authorization that
+ * runs in this app - `db/client.ts` connects without `set local role`, so every
+ * RLS policy is bypassed.
  */
 async function verifyOrganizationAdminAccess(
 	dbClient: DbClient,
 	organizationId: string,
-	userId: string
+	userId: string,
+	operation: ApiKeyOperation
 ): Promise<typeof organizationMemberships.$inferSelect> {
 	const membership = await dbClient
 		.select()
@@ -43,7 +56,7 @@ async function verifyOrganizationAdminAccess(
 		throw new Error('User does not have access to this organization')
 	}
 
-	assertDashboardPermission('api-key:create', { role: membership[0].role })
+	assertDashboardPermission(operation, { role: membership[0].role })
 
 	return membership[0]
 }
@@ -247,7 +260,12 @@ export async function createApiKey(
 		params
 
 	// Verify user is admin/owner of organization
-	await verifyOrganizationAdminAccess(db, organizationId, userId)
+	await verifyOrganizationAdminAccess(
+		db,
+		organizationId,
+		userId,
+		'api-key:create'
+	)
 
 	const quotaCheck = await checkQuota(organizationId, 'api_keys_per_org')
 	if (quotaCheck.outcome === 'hard_limit_exceeded') {
@@ -352,8 +370,12 @@ export async function updateApiKey(
 		throw new Error('API key not found or access denied')
 	}
 
-	// Verify user is admin/owner
-	await verifyOrganizationAdminAccess(db, existingKey.organization.id, userId)
+	await verifyOrganizationAdminAccess(
+		db,
+		existingKey.organization.id,
+		userId,
+		'api-key:update'
+	)
 
 	// If projectIds provided, verify they belong to organization
 	if (projectIds && projectIds.length > 0) {
@@ -409,8 +431,12 @@ export async function revokeApiKey(
 		throw new Error('API key not found or access denied')
 	}
 
-	// Verify user is admin/owner
-	await verifyOrganizationAdminAccess(db, existingKey.organization.id, userId)
+	await verifyOrganizationAdminAccess(
+		db,
+		existingKey.organization.id,
+		userId,
+		'api-key:revoke'
+	)
 
 	// Set revokedAt timestamp
 	await db

@@ -57,11 +57,18 @@ describe('toEmbedApiKeyOptions', () => {
 		])
 	})
 
-	it('marks a revoked key by either signal the schema uses', () => {
+	it('marks a revoked key by every signal the schema allows', () => {
 		const options = toEmbedApiKeyOptions(
 			[
 				makeKey({ id: 'timestamp', revokedAt: new Date('2026-05-01') }),
 				makeKey({ id: 'flag', active: false }),
+				/*
+				  `active` is nullable, and the embed query requires `active = true`,
+				  so a null-`active` key authorizes nothing. This asked
+				  `active === false` until 2026-08-22, which offered exactly this key
+				  in the picker as usable and then 404'd at the embed.
+				*/
+				makeKey({ id: 'null-flag', active: null }),
 				makeKey({ id: 'live' })
 			],
 			PROJECT_ID,
@@ -71,7 +78,12 @@ describe('toEmbedApiKeyOptions', () => {
 		const revoked = Object.fromEntries(
 			options.map((option) => [option.id, option.revoked])
 		)
-		expect(revoked).toEqual({ timestamp: true, flag: true, live: false })
+		expect(revoked).toEqual({
+			timestamp: true,
+			flag: true,
+			'null-flag': true,
+			live: false
+		})
 	})
 
 	it('treats expiry as of the given instant, boundary inclusive', () => {
