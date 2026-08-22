@@ -11,6 +11,7 @@ import { hydrateRoot } from 'react-dom/client'
 import { HydratedRouter } from 'react-router/dom'
 
 import { readConsentCookie } from './lib/consent/consent-cookie'
+import { redactEmbedTokenFromProperties } from './lib/posthog/redact-embed-token'
 
 if (
 	!import.meta.env.DEV ||
@@ -34,7 +35,33 @@ if (
 		// ConsentProvider switches persistence to 'localStorage+cookie' and calls
 		// opt_in_capturing() once the user accepts analytics.
 		persistence: 'memory',
-		capture_pageview: false
+		capture_pageview: false,
+		/*
+		  An embed authenticates by a `token` query parameter, so on `/embed` the
+		  page URL contains a live API key - and PostHog attaches `$current_url`
+		  to every event, not just `$pageview`. Without this, each captured event
+		  from an embed carried the key out to a third party.
+
+		  Here rather than at a capture site: this runs for every event, including
+		  the properties PostHog adds itself, so there is no list of call sites to
+		  keep in step and no way for a new event to miss it.
+		*/
+		before_send: (event) => {
+			if (!event) return event
+
+			/*
+			  Session replay is excluded, and not because it is safe. A `$snapshot`
+			  carries a whole rrweb payload, and walking one on every snapshot
+			  would cost far more than the rest of this does on a normal event.
+			  Redacting inside a replay is a different problem with a different
+			  tool - PostHog's own masking - so it is filed rather than half-done
+			  here. Replay is remote-config controlled and not enabled in this
+			  file, so whether it is on at all has to be checked in the project.
+			*/
+			if (event.event === '$snapshot') return event
+
+			return redactEmbedTokenFromProperties(event)
+		}
 	})
 	posthog.register({ client_type: 'web' })
 
