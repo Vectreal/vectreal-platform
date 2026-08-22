@@ -7,11 +7,17 @@ import { apiKeyProjects } from '../../../db/schema/auth/api-key-projects'
 import { apiKeys } from '../../../db/schema/auth/api-keys'
 import { projects } from '../../../db/schema/project/projects'
 import {
-	extractHostFromHeader,
-	isAllowedEmbedHost,
-	isLocalhostLike,
-	parseAllowedDomainPatterns
-} from '../embed/embed-domain-policy'
+	decideEmbedAccess,
+	getPreviewTokenFromRequest,
+	type EmbedAccessDecision,
+	type EmbedKeyMatch
+} from '../embed/embed-access-policy'
+
+/**
+ * Lookup and rate limiting for embed access. The decision itself lives in
+ * `embed/embed-access-policy.ts`, which has no database import and is therefore
+ * testable; this module exists to feed it a row and to record the outcome.
+ */
 
 const db = getDbClient()
 
@@ -24,16 +30,6 @@ type AttemptWindow = {
 }
 
 const attemptWindows = new Map<string, AttemptWindow>()
-
-function parseBearerToken(authorizationHeader: string | null): string | null {
-	if (!authorizationHeader) return null
-	const [scheme, token] = authorizationHeader.split(' ')
-	if (!scheme || !token) return null
-	if (scheme.toLowerCase() !== 'bearer') return null
-
-	const trimmed = token.trim()
-	return trimmed.length > 0 ? trimmed : null
-}
 
 function getClientIdentifier(request: Request): string {
 	const forwardedFor = request.headers
@@ -79,85 +75,31 @@ function trackFailedAttempt(clientIdentifier: string) {
 	attemptWindows.set(clientIdentifier, currentWindow)
 }
 
+/** Stays here rather than in the policy module: it needs `node:crypto`. */
 export function hashApiToken(token: string): string {
 	return createHash('sha256').update(token).digest('hex')
 }
 
-export function getPreviewTokenFromRequest(request: Request): string | null {
-	const url = new URL(request.url)
-	const queryToken = url.searchParams.get('token')?.trim()
-	if (queryToken) return queryToken
+export type PreviewApiKeyValidationResult = EmbedAccessDecision
 
-	return parseBearerToken(request.headers.get('authorization'))
-}
-
-export type PreviewApiKeyValidationResult =
-	| {
-			ok: true
-			apiKeyId: string
-			projectId: string
-			userId: string
-	  }
-	| {
-			ok: false
-			error:
-				| 'missing_token'
-				| 'invalid_token'
-				| 'rate_limited'
-				| 'domain_not_allowed'
-	  }
-
-type RequestHostContext = {
-	host: string | null
-	source: 'referer' | 'origin' | 'missing'
-}
-
-function normalizeHost(host: string): string {
-	return host.toLowerCase().trim().replace(/\.+$/, '')
-}
-
-function getRequestHostContext(request: Request): RequestHostContext {
-	const refererHost = extractHostFromHeader(request.headers.get('referer'))
-	if (refererHost) {
-		return { host: refererHost, source: 'referer' }
-	}
-
-	const originHost = extractHostFromHeader(request.headers.get('origin'))
-	if (originHost) {
-		return { host: originHost, source: 'origin' }
-	}
-
-	return { host: null, source: 'missing' }
-}
-
-export async function validatePreviewApiKeyForProject(params: {
-	request: Request
-	projectId: string
-}): Promise<PreviewApiKeyValidationResult> {
-	const { request, projectId } = params
-	const clientIdentifier = getClientIdentifier(request)
-
-	if (isRateLimited(clientIdentifier)) {
-		return { ok: false, error: 'rate_limited' }
-	}
-
-	const token = getPreviewTokenFromRequest(request)
-	if (!token) {
-		trackFailedAttempt(clientIdentifier)
-		return { ok: false, error: 'missing_token' }
-	}
-
-	const hashedToken = hashApiToken(token)
-	const now = new Date()
-
-	// Validate API key and ensure organization matches
+/**
+ * The one live key for this project matching the hash, or null.
+ *
+ * Revoked, deactivated and expired keys are excluded in SQL rather than after
+ * the fact, so a caller cannot forget the check.
+ */
+async function findLiveKeyForProject(
+	hashedToken: string,
+	projectId: string,
+	now: Date
+): Promise<EmbedKeyMatch | null> {
 	const matches = await db
 		.select({
 			apiKeyId: apiKeys.id,
 			projectId: apiKeyProjects.projectId,
 			userId: apiKeys.userId,
-			apiKeyOrgId: apiKeys.organizationId,
-			projectOrgId: projects.organizationId,
+			apiKeyOrganizationId: apiKeys.organizationId,
+			projectOrganizationId: projects.organizationId,
 			allowedEmbedDomains: projects.allowedEmbedDomains
 		})
 		.from(apiKeys)
@@ -174,49 +116,40 @@ export async function validatePreviewApiKeyForProject(params: {
 		)
 		.limit(1)
 
-	if (matches.length === 0) {
-		trackFailedAttempt(clientIdentifier)
-		return { ok: false, error: 'invalid_token' }
+	return matches[0] ?? null
+}
+
+export async function validatePreviewApiKeyForProject(params: {
+	request: Request
+	projectId: string
+}): Promise<PreviewApiKeyValidationResult> {
+	const { request, projectId } = params
+	const clientIdentifier = getClientIdentifier(request)
+
+	if (isRateLimited(clientIdentifier)) {
+		return { ok: false, error: 'rate_limited' }
 	}
 
-	// Extra security: Verify API key's org matches project's org
-	if (matches[0].apiKeyOrgId !== matches[0].projectOrgId) {
+	const token = getPreviewTokenFromRequest(request)
+	const now = new Date()
+
+	// No token means no lookup: an absent token can match no key, and querying
+	// for one would let an unauthenticated caller drive database load.
+	const match = token
+		? await findLiveKeyForProject(hashApiToken(token), projectId, now)
+		: null
+
+	const decision = decideEmbedAccess({ request, token, match })
+
+	if (!decision.ok) {
 		trackFailedAttempt(clientIdentifier)
-		return { ok: false, error: 'invalid_token' }
-	}
-
-	const allowedDomains = parseAllowedDomainPatterns(
-		matches[0].allowedEmbedDomains
-	)
-	const { host: requesterHost, source: requesterHostSource } =
-		getRequestHostContext(request)
-	const applicationHost = normalizeHost(new URL(request.url).hostname)
-
-	const allowByLocalhostFallback =
-		requesterHostSource === 'missing' && isLocalhostLike(applicationHost)
-
-	const allowByInternalHost =
-		requesterHost !== null && requesterHost === applicationHost
-
-	const allowByAllowedDomain =
-		requesterHost !== null && isAllowedEmbedHost(requesterHost, allowedDomains)
-
-	if (
-		!(allowByLocalhostFallback || allowByInternalHost || allowByAllowedDomain)
-	) {
-		trackFailedAttempt(clientIdentifier)
-		return { ok: false, error: 'domain_not_allowed' }
+		return decision
 	}
 
 	await db
 		.update(apiKeys)
 		.set({ lastUsedAt: now })
-		.where(eq(apiKeys.id, matches[0].apiKeyId))
+		.where(eq(apiKeys.id, decision.apiKeyId))
 
-	return {
-		ok: true,
-		apiKeyId: matches[0].apiKeyId,
-		projectId: matches[0].projectId,
-		userId: matches[0].userId
-	}
+	return decision
 }
