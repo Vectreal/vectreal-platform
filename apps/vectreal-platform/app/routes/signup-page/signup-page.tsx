@@ -26,8 +26,8 @@ import { Route } from './+types/signup-page'
 import { AuthErrorBoundary } from '../../components/errors'
 import { getReferralAttribution } from '../../lib/domain/analytics/referral-attribution'
 import { captureServerEvent } from '../../lib/domain/analytics/server-events.server'
-import { checkAuthRateLimit } from '../../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
+import { recordRateLimitAttempt } from '../../lib/http/rate-limit.server'
 import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
@@ -127,7 +127,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 	}
 
 	const normalizedEmail = email.trim().toLowerCase()
-	const rateLimitResult = checkAuthRateLimit(request, {
+	const rateLimitResult = recordRateLimitAttempt(request, {
 		bucket: 'auth-signup',
 		maxRequests: 5,
 		keyParts: [normalizedEmail]

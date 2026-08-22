@@ -22,8 +22,8 @@ import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signin-page'
 import { captureServerEvent } from '../../lib/domain/analytics/server-events.server'
-import { checkAuthRateLimit } from '../../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
+import { recordRateLimitAttempt } from '../../lib/http/rate-limit.server'
 import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
@@ -129,7 +129,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 	}
 
 	const normalizedEmail = email.trim().toLowerCase()
-	const rateLimitResult = checkAuthRateLimit(request, {
+	const rateLimitResult = recordRateLimitAttempt(request, {
 		bucket: 'auth-signin',
 		maxRequests: 10,
 		keyParts: [normalizedEmail]

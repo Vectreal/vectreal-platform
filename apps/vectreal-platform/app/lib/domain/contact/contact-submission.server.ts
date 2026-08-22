@@ -15,13 +15,19 @@ import {
 	sendInternalContactNotification,
 	sendSubmitterConfirmation,
 } from '../../email/contact-email-sender.server'
+import { recordRateLimitAttempt } from '../../http/rate-limit.server'
 import { encryptSensitiveValue } from '../../security/pii-encryption.server'
 import { captureServerEvent, type ServerAnalyticsEvent } from '../analytics/server-events.server'
 
+
 import type { PostHogContext } from '../../posthog/posthog-middleware'
 
-const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000
-const RATE_LIMIT_MAX_REQUESTS = 5
+/** Five submissions per address per ten minutes, as before. */
+const CONTACT_RATE_LIMIT = {
+	bucket: 'contact-form',
+	maxRequests: 5,
+	windowMs: 10 * 60 * 1000
+} as const
 
 const validInquiryTypes: ContactInquiryType[] = [
 	'support',
@@ -29,10 +35,6 @@ const validInquiryTypes: ContactInquiryType[] = [
 	'partnership',
 	'other'
 ]
-
-const rateLimiter = new Map<string, number[]>()
-let rateLimiterEvictCounter = 0
-const RATE_LIMITER_EVICT_EVERY = 50
 
 export interface ContactSubmitResult {
 	status: number
@@ -65,46 +67,6 @@ function parseInquiryType(
 	return validInquiryTypes.includes(input as ContactInquiryType)
 		? (input as ContactInquiryType)
 		: 'support'
-}
-
-function getClientIp(request: Request): string {
-	const cfIp = request.headers.get('cf-connecting-ip')
-	if (cfIp) {
-		return cfIp
-	}
-
-	const forwarded = request.headers.get('x-forwarded-for')
-	if (forwarded) {
-		return forwarded.split(',')[0]?.trim() || 'unknown'
-	}
-
-	return 'unknown'
-}
-
-function isRateLimited(key: string): boolean {
-	const now = Date.now()
-	const windowStart = now - RATE_LIMIT_WINDOW_MS
-	const attempts = rateLimiter.get(key) ?? []
-	const recentAttempts = attempts.filter((timestamp) => timestamp > windowStart)
-
-	recentAttempts.push(now)
-	rateLimiter.set(key, recentAttempts)
-
-	// Periodically evict expired entries to prevent unbounded Map growth.
-	rateLimiterEvictCounter += 1
-	if (rateLimiterEvictCounter >= RATE_LIMITER_EVICT_EVERY) {
-		rateLimiterEvictCounter = 0
-		for (const [k, timestamps] of rateLimiter) {
-			const fresh = timestamps.filter((t) => t > windowStart)
-			if (fresh.length === 0) {
-				rateLimiter.delete(k)
-			} else {
-				rateLimiter.set(k, fresh)
-			}
-		}
-	}
-
-	return recentAttempts.length > RATE_LIMIT_MAX_REQUESTS
 }
 
 export function buildContactSource(request: Request): ContactSource {
@@ -226,9 +188,14 @@ export async function submitContactForm(args: {
 		}
 	}
 
-	const clientIp = getClientIp(args.request)
-	const rateLimitKey = `${clientIp}:${email}`
-	if (isRateLimited(rateLimitKey)) {
+	// Keyed on the address as well as the caller, as it was before: one person
+	// legitimately writing about two things should not be blocked by their own
+	// first message.
+	const rateLimit = recordRateLimitAttempt(args.request, {
+		...CONTACT_RATE_LIMIT,
+		keyParts: [email]
+	})
+	if (rateLimit.limited) {
 		fireEvent(args.context, args.request, {
 			name: 'contact_form_blocked',
 			props: { block_reason: 'rate_limit', inquiry_type: inquiryType }

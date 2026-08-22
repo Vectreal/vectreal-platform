@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
+import { resolveClientIp, UNKNOWN_CLIENT } from './client-identity'
+
 interface TurnstileVerificationResponse {
 	success: boolean
 	hostname?: string
@@ -8,20 +10,6 @@ interface TurnstileVerificationResponse {
 
 const TURNSTILE_VERIFY_URL =
 	'https://challenges.cloudflare.com/turnstile/v0/siteverify'
-
-function getClientIp(request: Request): string | null {
-	const cfIp = request.headers.get('cf-connecting-ip')?.trim()
-	if (cfIp) {
-		return cfIp
-	}
-
-	const forwarded = request.headers.get('x-forwarded-for')?.trim()
-	if (forwarded) {
-		return forwarded.split(',')[0]?.trim() || null
-	}
-
-	return null
-}
 
 export async function verifyTurnstileToken(
 	token: string,
@@ -53,8 +41,14 @@ export async function verifyTurnstileToken(
 			idempotency_key: randomUUID()
 		})
 
-		const clientIp = request ? getClientIp(request) : null
-		if (clientIp) {
+		/*
+		  `remoteip` is optional to Cloudflare, and omitting it is better than
+		  sending something untrue. `resolveClientIp` reports `unknown` where the
+		  local copy this replaced reported null, so the sentinel has to be
+		  filtered out rather than forwarded as if it were an address.
+		*/
+		const clientIp = request ? resolveClientIp(request.headers) : null
+		if (clientIp && clientIp !== UNKNOWN_CLIENT) {
 			requestBody.set('remoteip', clientIp)
 		}
 

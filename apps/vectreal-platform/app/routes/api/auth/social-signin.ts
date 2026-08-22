@@ -2,8 +2,8 @@ import { ApiResponse } from '@shared/utils'
 import { redirect } from 'react-router'
 
 import { Route } from './+types/social-signin'
-import { checkAuthRateLimit } from '../../../lib/domain/auth/auth-rate-limit.server'
 import { ensureValidCsrfFormData } from '../../../lib/http/csrf.server'
+import { recordRateLimitAttempt } from '../../../lib/http/rate-limit.server'
 import { verifyTurnstileToken } from '../../../lib/http/turnstile.server'
 import { createSupabaseClient } from '../../../lib/supabase.server'
 
@@ -35,7 +35,7 @@ export async function action({ request }: Route.ActionArgs) {
 	const applicationUrl = String(appOrigin)
 
 	// Rate-limit before provider validation so invalid-provider probes are throttled too.
-	const rateLimitResult = checkAuthRateLimit(request, {
+	const rateLimitResult = recordRateLimitAttempt(request, {
 		bucket: 'auth-social-signin',
 		maxRequests: 30,
 		windowMs: 60 * 1000,
