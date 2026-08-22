@@ -144,7 +144,9 @@ export default defineConfig(tseslint.configs.recommended, [
 			'**/*.stories.tsx',
 			// Specs assert on literal class strings.
 			'**/*.spec.ts',
-			'**/*.spec.tsx'
+			'**/*.spec.tsx',
+			// The icon components are where inline SVG is supposed to live.
+			'**/assets/icons/**'
 		],
 		rules: {
 			'no-restricted-syntax': [
@@ -183,6 +185,65 @@ export default defineConfig(tseslint.configs.recommended, [
 						'Literal[value=/(bg|text|border|from|via|to|fill|stroke|shadow|ring|outline|decoration|accent|caret)-\\[#[0-9a-fA-F]{3,8}/]',
 					message:
 						'Raw hex in a Tailwind class. Use a design token (bg-orange, text-muted-foreground, ds-raised) or, for a colour that must not follow the theme, a named constant with a comment saying why.'
+				},
+				{
+					/*
+					  A className built by interpolation instead of `cn()`.
+
+					  `cn()` is clsx plus tailwind-merge, and the merge is the point:
+					  `cn('p-2', className)` lets a caller pass `p-4` and actually win,
+					  where `` `p-2 ${className}` `` emits both and leaves the winner to
+					  whichever CSS rule sorts last. That is invisible until someone
+					  tries to override a default and cannot. Interpolation also drops
+					  the falsy handling - `` `space-y-4 ${className}` `` renders the
+					  literal string "undefined" as a class when the prop is omitted.
+					*/
+					selector:
+						'JSXAttribute[name.name="className"] > JSXExpressionContainer > TemplateLiteral[expressions.length>0]',
+					message:
+						'Build className with cn() rather than a template literal: cn() merges conflicting Tailwind classes so a caller can override a default, and drops falsy values instead of rendering "undefined" as a class.'
+				},
+				{
+					/*
+					  Interpolation moved inside `cn()`.
+
+					  `cn('p-2', className)` and `` cn(`p-2 ${className}`) `` are not the
+					  same call: the first hands clsx two arguments and it drops the
+					  falsy one, the second hands it a single pre-joined string and
+					  clsx has nothing left to drop - so an undefined prop still lands
+					  in the markup as the class `undefined`. tailwind-merge cannot
+					  resolve a conflict it can no longer see either. Pass the parts as
+					  separate arguments.
+					*/
+					selector:
+						'CallExpression[callee.name="cn"] > TemplateLiteral[expressions.length>0]',
+					message:
+						'Pass the parts to cn() as separate arguments rather than pre-joining them in a template literal: cn() can only drop falsy values and merge conflicts it can see as distinct arguments.'
+				},
+				{
+					selector:
+						'JSXAttribute[name.name="className"] > JSXExpressionContainer > BinaryExpression[operator="+"]',
+					message:
+						'Build className with cn() rather than string concatenation: cn() merges conflicting Tailwind classes so a caller can override a default, and drops falsy values.'
+				},
+				{
+					/*
+					  An SVG pasted into a feature component.
+
+					  Icons belong in `shared/components/src/assets/icons` as named
+					  components, which is what makes them reusable, themable through
+					  `currentColor`, and countable - the footer and the YouTube
+					  placeholder shipped byte-identical copies of the same YouTube
+					  mark, and nothing could see it while both were inline.
+
+					  A component whose whole purpose is drawing a graphic - a ring
+					  chart, a background pattern, the loading spinner - is not an icon
+					  and is a legitimate exception. Disable this rule on that line with
+					  a comment saying which it is.
+					*/
+					selector: 'JSXOpeningElement[name.name="svg"]',
+					message:
+						'Inline SVG. Extract it to shared/components/src/assets/icons as a named component and import it. If this component exists to draw a graphic rather than an icon, disable this rule on the line with a comment saying so.'
 				}
 			]
 		}
