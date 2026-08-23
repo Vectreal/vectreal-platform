@@ -44,8 +44,7 @@ vi.mock('../app/components/embed/use-embed-api-keys', () => ({
 		setToken: vi.fn(),
 		selectedKeyId: '',
 		selectKey: vi.fn(),
-		createdPlaintext: null,
-		createdKeyExpiresAt: null,
+		createdKey: null,
 		dismissCreatedKey: vi.fn(),
 		createKey: vi.fn(),
 		creating: false,
@@ -81,9 +80,7 @@ const copyButtons = () => {
 }
 
 function renderPanel() {
-	return render(
-		<EmbedOptionsPanel projectId={PROJECT_ID} sceneId={SCENE_ID} />
-	)
+	return render(<EmbedOptionsPanel projectId={PROJECT_ID} sceneId={SCENE_ID} />)
 }
 
 describe('the copy actions wait for a key', () => {

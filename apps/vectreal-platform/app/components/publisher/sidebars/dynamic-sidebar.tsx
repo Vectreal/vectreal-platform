@@ -162,7 +162,7 @@ export const DynamicSidebar = ({
 						variants={variants}
 						transition={{ type: 'tween', ease: 'easeInOut', duration: 0.3 }}
 						className={cn(
-							'publisher-shell-panel pointer-events-auto relative z-20 flex h-full w-[23rem] flex-col overflow-hidden',
+							'publisher-shell-panel w-detail-panel pointer-events-auto relative z-20 flex h-full flex-col overflow-hidden',
 							className
 						)}
 					>

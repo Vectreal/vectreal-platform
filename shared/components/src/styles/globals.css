@@ -125,9 +125,12 @@
 	*/
 
 	/*
-	  Motion tokens. The durations live in `@theme` below for the same reason the
-	  radius scale does: `--duration-*` is a Tailwind theme namespace, so
-	  declaring the names here too made them self-referential.
+	  Motion tokens. The durations live in `@theme` below, declared once there
+	  and read from `:root` like any other custom property. Not for the radius
+	  scale's reason: `--duration-*` is not a Tailwind theme namespace at all -
+	  Tailwind ships only `--default-transition-duration` - so no name collision
+	  is possible and no `duration-fast` utility is generated either. See the
+	  block itself, further down, for what that second half costs.
 	*/
 
 	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -155,8 +158,12 @@
 
 	  Deliberately plain custom properties and NOT `@theme` keys: `--text-*`,
 	  `--tracking-*`, `--font-*`, `--space-*` and `--container-*` are all Tailwind
-	  theme namespaces, and declaring a name in both places makes it
+	  theme namespaces, and declaring the same name in both places makes it
 	  self-referential. See the radius note above.
+
+	  The rule is one place per name, not "never `@theme`". A name that belongs
+	  in `@theme` - because a utility should generate from it, as
+	  `--container-detail-panel` further down does - goes there and only there.
 	*/
 	--text-display: clamp(2.75rem, 6.4vw, 5.5rem);
 	--text-headline: clamp(2rem, 4vw, 3.5rem);
@@ -327,7 +334,16 @@
 	*/
 	--font-sans: 'DM Sans Variable', sans-serif;
 
-	/* Motion duration utilities: `duration-fast`, `duration-cinematic`, etc. */
+	/*
+	  Motion durations, for `var(--duration-fast)` in a rule - which is how the
+	  `ds-*-interactive` transitions below read them.
+
+	  NOT utilities. `--duration-*` is not a Tailwind theme namespace, so no
+	  `duration-fast` class is generated and one in markup silently applies
+	  nothing: `transition-*` falls through to `--default-transition-duration`,
+	  which is 150ms, so a wrong name looks right wherever fast was wanted and
+	  wrong everywhere else. Markup uses the numeric scale, `duration-150`.
+	*/
 	--duration-instant: 80ms;
 	--duration-fast: 150ms;
 	--duration-base: 250ms;
@@ -443,6 +459,32 @@
 	  routinely opens from inside another one.
 	*/
 	--z-index-select: 120;
+}
+
+/*
+  Panel geometry.
+
+  A plain `@theme` for the same reason the tiers above are: the value lands in
+  `:root` as a real custom property as well as generating its utilities, so a
+  measurement in raw CSS reads the same number the markup does.
+*/
+@theme {
+	/*
+	  The one width for a detail panel: the dashboard's Scene Details drawer and
+	  the publisher's publish sidebar. Both host `EmbedOptionsPanel`, so a spread
+	  between them shows up directly as controls that fit in one and squeeze in
+	  the other. Read it as `w-detail-panel` or `max-w-detail-panel`.
+
+	  26rem is set by the tighter of the two. The publish sidebar floats over the
+	  3D canvas and has to leave the model visible beside it, so it cannot take
+	  the 36rem the drawer was using; the drawer is a right-edge sheet over a
+	  page nobody is working in, so it can give the difference back. The two were
+	  picked independently at 23rem and 36rem, a 1.57x spread for one layout.
+	  This is the sidebar's 23rem plus the three rems that stop the embed
+	  panel's button rows wrapping - not a midpoint, which at 29.5rem would take
+	  more of the canvas than the sidebar can afford.
+	*/
+	--container-detail-panel: 26rem;
 }
 
 @layer base {

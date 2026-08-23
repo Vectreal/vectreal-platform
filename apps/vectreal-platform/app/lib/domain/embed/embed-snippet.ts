@@ -39,16 +39,14 @@ export const EMBED_COPY = {
 	createKeyShort: 'Create key',
 	createKeyPending: 'Creating...',
 	createKeyFailure: 'Could not create an API key.',
-	createKeyDialogTitle: 'API key created',
-	createKeyOnce:
-		'This is the only time the full key is shown. It is stored hashed, so it cannot be read back. Copy it now, or copy the finished snippet behind this dialog.',
-	createKeyDialogDismiss: 'Done',
-	createKeyDismissWithoutCopyConfirm:
-		'You have not copied the key. It cannot be shown again. Close anyway?',
-	createKeyExpiresPrefix: 'This key stops working on',
-	copyKey: 'Copy key',
-	copyKeySuccess: 'API key copied.',
-	copyKeyFailure: 'Failed to copy the API key.',
+	/*
+	  The show-once dialog's copy is deliberately not here. It moved to
+	  `components/api-keys/one-time-key-dialog.tsx`, which is now the only such
+	  dialog in the app: the dashboard opens it too, and it could not read its
+	  words from a module that describes the embed snippet without the dashboard
+	  taking a dependency on the embed domain. That was the reason two dialogs
+	  existed.
+	*/
 	allowedDomainsLabel: 'Allowed domains',
 	allowedDomainsEmpty:
 		'This project allows no domains, so every third-party site is refused - even with a valid key. Add the site you are embedding on before you ship.',

@@ -1,12 +1,6 @@
 import { Accordion, AccordionContent } from '@shared/components/ui/accordion'
 import { Button } from '@shared/components/ui/button'
-import {
-	CardDescription,
-	CardHeader,
-	CardTitle
-} from '@shared/components/ui/card'
 import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
-import { Separator } from '@shared/components/ui/separator'
 import { formatFileSize } from '@shared/utils'
 import { motion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
@@ -26,8 +20,14 @@ import { ScenePreview } from './sections/scene-preview'
 
 import type { FC } from 'react'
 
+/**
+ * The panel header is not here. `DynamicSidebar` renders it - title,
+ * description and the one close control - for both the desktop panel and the
+ * mobile sheet. This component carried a second one behind a `hideHeader`
+ * prop that its only consumer always passed, so the branch could not run: a
+ * `Card`/`CardHeader` copy of the same three parts, kept in step with nothing.
+ */
 interface PublishSidebarContentProps {
-	hideHeader?: boolean
 	showSceneInfo?: boolean
 }
 
@@ -48,7 +48,6 @@ const getSizeDeltaLabel = (deltaBytes?: number | null) => {
 }
 
 const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
-	hideHeader = false,
 	showSceneInfo = false
 }) => {
 	const {
@@ -92,19 +91,6 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 				exit="exit"
 				key="publish-sidebar"
 			>
-				{!hideHeader && (
-					<>
-						<CardHeader className="px-4 py-4">
-							<CardTitle>Publish Your Scene</CardTitle>
-							<CardDescription>
-								Save, publish, and share your 3D scene with the world
-							</CardDescription>
-						</CardHeader>
-
-						<Separator />
-					</>
-				)}
-
 				{/*
 				  One column owns the sidebar's gutter and rhythm. The sections used
 				  to each carry their own padding, which had drifted to six different
@@ -123,11 +109,7 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 
 					{canAccessPublishFeatures && <ScenePreview />}
 
-					<Accordion
-						type="single"
-						collapsible
-						className="flex flex-col gap-3"
-					>
+					<Accordion type="single" collapsible className="flex flex-col gap-3">
 						{/*
 						  First in the list because it comes first in the workflow: what
 						  ships is decided here, before anything below it matters.
