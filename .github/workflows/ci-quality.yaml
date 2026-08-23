@@ -124,3 +124,76 @@ jobs:
           path: coverage/
           retention-days: 7
           if-no-files-found: ignore
+
+  # The integration suite exists because the unit tests could not have caught the
+  # two defects that reached production: the embed manifest and the asset gate
+  # disagreed about which assets an embed may fetch, and `*.myshopify.com` could
+  # not be saved at all. Both live in the seam between a decision and the rows it
+  # reads, which only a real database exercises.
+  #
+  # Until now nothing ran it. `vitest.config.ts` excludes `tests/integration/**`
+  # and the quality gate runs `lint,typecheck,test,build-ci`, so the suite was
+  # opt-in on a developer's machine and `critical-path.spec.ts` was letting
+  # modules leave KNOWN_UNGUARDED on the strength of specs no pull request
+  # executed.
+  #
+  # Separate job because a service container is job-scoped, and unconditional for
+  # the same reason ci-quality has no paths filter: a skipped job reports nothing,
+  # so a required check would wait on it forever.
+  integration:
+    name: Integration Tests
+    permissions:
+      contents: read
+    runs-on: ubuntu-22.04
+    env:
+      NX_DAEMON: 'false'
+    services:
+      # Supabase's own image, not stock postgres. The migrations create policies
+      # `TO authenticated` over `auth.uid()`, and Postgres resolves both at
+      # CREATE POLICY time, so a stock image needs a hand-written bootstrap of
+      # roles and an auth schema - a second description of the database that can
+      # drift from the one `supabase start` gives developers. This image already
+      # carries them. The tag tracks `[db] major_version` in supabase/config.toml.
+      postgres:
+        image: supabase/postgres:17.4.1.075
+        env:
+          POSTGRES_PASSWORD: postgres
+        # 54322 is the port `supabase start` publishes and the port the
+        # test-integration target already points DATABASE_URL at.
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Apply migrations
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          cd apps/vectreal-platform/supabase/migrations
+          for migration in $(ls -1 *.sql | sort); do
+            echo "→ $migration"
+            psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+              -q -f "$migration"
+          done
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run integration tests
+        run: pnpm nx run vectreal-platform:test-integration

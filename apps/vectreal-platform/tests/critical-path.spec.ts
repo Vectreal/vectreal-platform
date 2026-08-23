@@ -78,12 +78,20 @@ const FUNNEL: FunnelStep[] = [
   `tests/integration`, as `api-key-lifecycle.integration.spec.ts` did for key
   minting and rotation. A mock is neither.
 
-  One caveat on the integration route out, because this file otherwise reads as
-  a stronger guarantee than it is: `ci-quality.yaml` runs `lint,typecheck,test,
-  build-ci` and never `test-integration`, and the unit config excludes
-  `tests/integration/**`. So a module can leave this set on the strength of a
-  spec no pull request actually executes. The spec is real and does exercise the
-  module - it just has to be run deliberately, with a local database.
+  That second route out used to be worth less than it looked. `ci-quality.yaml`
+  ran `lint,typecheck,test,build-ci` and never `test-integration`, and the unit
+  config excludes `tests/integration/**`, so a module could leave this set on
+  the strength of a spec no pull request executed. It now has an Integration
+  Tests job that runs the suite against a supabase/postgres service on every
+  pull request, so those specs are a gate rather than a note.
+
+  That does not move `scene-settings.operations.server.ts`, and running the
+  suite in CI was never going to: no spec imports it at all. It is 669 lines
+  orchestrating quota checks, entitlements, asset upload and four tables, and
+  `uploadSceneAssets` puts Supabase Storage on the path beside Postgres, which
+  is why it did not fall out of the same work that closed
+  `api-key-repository.server`. Closing it needs a spec that drives
+  `saveSceneSettings` end to end, and storage in the job to run it against.
 
   Removing an entry is the only way this list is allowed to change.
 */
