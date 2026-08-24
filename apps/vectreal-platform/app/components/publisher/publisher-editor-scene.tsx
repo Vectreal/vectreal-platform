@@ -1,11 +1,26 @@
 import { Html, TransformControls } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
+import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue } from 'jotai/react'
-import { memo, useCallback, useEffect, useRef, useState, type FC } from 'react'
+import {
+	memo,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	type FC
+} from 'react'
 import * as THREE from 'three'
 
 import { PublisherViewCube } from './publisher-view-cube'
 import { usePublisherViewerCapture } from './publisher-viewer-capture-context'
+import {
+	isHotspotOccluded,
+	isHotspotPlacementGesture,
+	prepareHotspotRaycaster,
+	resolveHotspotAnchor
+} from '../../lib/domain/scene/scene-hotspot-placement'
 import {
 	isClickToPlaceActiveAtom,
 	processAtom
@@ -17,6 +32,7 @@ import {
 } from '../../lib/stores/scene-settings-store'
 
 import type { HotspotDefinition } from '@vctrl/core'
+import type { Object3D } from 'three'
 
 // ---------------------------------------------------------------------------
 // Inject CSS keyframes for the pulsing dot animation (once per document)
@@ -50,6 +66,7 @@ interface HotspotDotProps {
 	isSelected: boolean
 	isHotspotToolActive: boolean
 	activeCameraId?: string
+	modelRoot: Object3D | null
 	onSelect: (id: string) => void
 	onActivateCamera: (cameraId: string) => void
 }
@@ -60,13 +77,21 @@ const HotspotDot: FC<HotspotDotProps> = memo(
 		isSelected,
 		isHotspotToolActive,
 		activeCameraId,
+		modelRoot,
 		onSelect,
 		onActivateCamera
 	}) => {
 		const [hovered, setHovered] = useState(false)
 		const wrapperRef = useRef<HTMLDivElement>(null)
 		const posVec = useRef(new THREE.Vector3(...hotspot.worldPosition))
-		const { camera, raycaster, scene } = useThree()
+		const { camera } = useThree()
+		// Private, so the per-frame occlusion test cannot leave R3F's own pointer
+		// raycaster aimed at a hotspot.
+		const occlusionRay = useMemo(
+			() => prepareHotspotRaycaster(new THREE.Raycaster()),
+			[]
+		)
+		const occlusionDir = useRef(new THREE.Vector3())
 
 		// Keep position in sync with atom changes (e.g. after gizmo drag or click-to-place)
 		useEffect(() => {
@@ -84,18 +109,14 @@ const HotspotDot: FC<HotspotDotProps> = memo(
 
 			const origin = camera.position
 			const target = posVec.current
-			const dist = origin.distanceTo(target)
-			const dir = new THREE.Vector3().subVectors(target, origin).normalize()
+			const distance = origin.distanceTo(target)
 
-			raycaster.set(origin, dir)
+			occlusionRay.set(
+				origin,
+				occlusionDir.current.subVectors(target, origin).normalize()
+			)
 
-			const meshes: THREE.Mesh[] = []
-			scene.traverse((o) => {
-				if (o instanceof THREE.Mesh && !o.userData.editorOverlay) meshes.push(o)
-			})
-
-			const hits = raycaster.intersectObjects(meshes, true)
-			const occluded = hits.length > 0 && hits[0].distance < dist - 0.05
+			const occluded = isHotspotOccluded(occlusionRay, modelRoot, distance)
 			wrapperRef.current.style.opacity = occluded ? '0.18' : '1'
 		})
 
@@ -195,77 +216,87 @@ HotspotDot.displayName = 'HotspotDot'
 
 interface HotspotGizmoProps {
 	hotspot: HotspotDefinition
+	/**
+	 * Set when a press lands on a translate handle, so `ClickToPlace` can tell a
+	 * gizmo nudge from a click on the model. three-stdlib stops neither the event
+	 * nor its propagation, and a nudge shorter than the drag tolerance otherwise
+	 * reads as a placement aimed at whatever the arrow tip covers.
+	 */
+	grabbedRef: React.MutableRefObject<boolean>
 	onMove: (id: string, position: [number, number, number]) => void
 }
 
-const HotspotGizmo = memo(({ hotspot, onMove }: HotspotGizmoProps) => {
-	const meshRef = useRef<THREE.Mesh>(null)
-	const isDraggingRef = useRef(false)
-	const { commandExecutor } = usePublisherViewerCapture()
-	// TransformControls `object` prop requires the mesh to already be in the scene
-	const [meshMounted, setMeshMounted] = useState(false)
+const HotspotGizmo = memo(
+	({ hotspot, grabbedRef, onMove }: HotspotGizmoProps) => {
+		const meshRef = useRef<THREE.Mesh>(null)
+		const isDraggingRef = useRef(false)
+		const { commandExecutor } = usePublisherViewerCapture()
+		// TransformControls `object` prop requires the mesh to already be in the scene
+		const [meshMounted, setMeshMounted] = useState(false)
 
-	// Imperatively sync position when the atom changes (e.g. after click-to-place).
-	// Guarded so we don't fight TransformControls while the user is dragging.
-	useEffect(() => {
-		if (meshRef.current && !isDraggingRef.current) {
-			const [x, y, z] = hotspot.worldPosition
-			meshRef.current.position.set(x, y, z)
-		}
-	}, [hotspot.worldPosition])
+		// Imperatively sync position when the atom changes (e.g. after click-to-place).
+		// Guarded so we don't fight TransformControls while the user is dragging.
+		useEffect(() => {
+			if (meshRef.current && !isDraggingRef.current) {
+				const [x, y, z] = hotspot.worldPosition
+				meshRef.current.position.set(x, y, z)
+			}
+		}, [hotspot.worldPosition])
 
-	const handleDragStart = useCallback(() => {
-		isDraggingRef.current = true
-		commandExecutor.current?.execute({
-			type: 'set_controls_enabled',
-			enabled: false
-		})
-	}, [commandExecutor])
+		const handleDragStart = useCallback(() => {
+			isDraggingRef.current = true
+			grabbedRef.current = true
+			commandExecutor.current?.execute({
+				type: 'set_controls_enabled',
+				enabled: false
+			})
+		}, [commandExecutor, grabbedRef])
 
-	const handleDragEnd = useCallback(() => {
-		isDraggingRef.current = false
-		commandExecutor.current?.execute({
-			type: 'set_controls_enabled',
-			enabled: true
-		})
-		if (meshRef.current) {
+		const handleDragEnd = useCallback(() => {
+			isDraggingRef.current = false
+			commandExecutor.current?.execute({
+				type: 'set_controls_enabled',
+				enabled: true
+			})
+			if (meshRef.current) {
+				const p = meshRef.current.position
+				onMove(hotspot.id, [p.x, p.y, p.z])
+			}
+		}, [commandExecutor, hotspot.id, onMove])
+
+		const handleObjectChange = useCallback(() => {
+			if (!meshRef.current || !isDraggingRef.current) return
 			const p = meshRef.current.position
 			onMove(hotspot.id, [p.x, p.y, p.z])
-		}
-	}, [commandExecutor, hotspot.id, onMove])
+		}, [hotspot.id, onMove])
 
-	const handleObjectChange = useCallback(() => {
-		if (!meshRef.current || !isDraggingRef.current) return
-		const p = meshRef.current.position
-		onMove(hotspot.id, [p.x, p.y, p.z])
-	}, [hotspot.id, onMove])
+		return (
+			<>
+				<mesh
+					ref={(node) => {
+						;(meshRef as React.MutableRefObject<THREE.Mesh | null>).current =
+							node
+						if (node && !meshMounted) setMeshMounted(true)
+					}}
+					position={hotspot.worldPosition as [number, number, number]}
+				>
+					<sphereGeometry args={[0.001, 1, 1]} />
+					<meshBasicMaterial visible={false} />
+				</mesh>
 
-	return (
-		<>
-			<mesh
-				ref={(node) => {
-					;(meshRef as React.MutableRefObject<THREE.Mesh | null>).current = node
-					if (node && !meshMounted) setMeshMounted(true)
-				}}
-				position={hotspot.worldPosition as [number, number, number]}
-				userData={{ editorOverlay: true }}
-			>
-				<sphereGeometry args={[0.001, 1, 1]} />
-				<meshBasicMaterial visible={false} />
-			</mesh>
-
-			{meshMounted && meshRef.current && (
-				<TransformControls
-					object={meshRef.current}
-					mode="translate"
-					onMouseDown={handleDragStart}
-					onMouseUp={handleDragEnd}
-					onObjectChange={handleObjectChange}
-				/>
-			)}
-		</>
-	)
-})
+				{meshMounted && meshRef.current && (
+					<TransformControls
+						object={meshRef.current}
+						mode="translate"
+						onMouseDown={handleDragStart}
+						onMouseUp={handleDragEnd}
+						onObjectChange={handleObjectChange}
+					/>
+				)}
+			</>
+		)
+	}
+)
 HotspotGizmo.displayName = 'HotspotGizmo'
 
 // ---------------------------------------------------------------------------
@@ -275,45 +306,106 @@ HotspotGizmo.displayName = 'HotspotGizmo'
 interface ClickToPlaceProps {
 	isActive: boolean
 	activeHotspotId: string | null
+	modelRoot: Object3D | null
+	gizmoGrabbedRef: React.MutableRefObject<boolean>
 	onPlace: (id: string, position: [number, number, number]) => void
 }
 
+/**
+ * Places the armed hotspot where a click lands on the model.
+ *
+ * The gesture is resolved on pointerup rather than pointerdown because
+ * OrbitControls shares this canvas: a press is only a placement once it has
+ * ended without having turned into an orbit.
+ *
+ * The release is read off the window rather than the canvas: a drag that ends
+ * outside it still reports, and correctly fails the distance test rather than
+ * leaving the press half-open. Nothing here captures the pointer, so nothing
+ * can be released out from under a co-tenant mid-drag.
+ */
 function ClickToPlace({
 	isActive,
 	activeHotspotId,
+	modelRoot,
+	gizmoGrabbedRef,
 	onPlace
 }: ClickToPlaceProps) {
-	const { raycaster, camera, scene, gl } = useThree()
+	const { camera, gl } = useThree()
+	const placementRay = useMemo(
+		() => prepareHotspotRaycaster(new THREE.Raycaster()),
+		[]
+	)
 
 	useEffect(() => {
 		if (!isActive || !activeHotspotId) return
 
-		const handlePointerDown = (e: PointerEvent) => {
-			const canvas = gl.domElement
-			const rect = canvas.getBoundingClientRect()
-			const x = ((e.clientX - rect.left) / rect.width) * 2 - 1
-			const y = -((e.clientY - rect.top) / rect.height) * 2 + 1
+		const canvas = gl.domElement
+		let pressed: { button: number; x: number; y: number } | null = null
+		// The gizmo outlives this effect: it stays mounted while the tool is
+		// disarmed, which is exactly where auto-disarm leaves the author after every
+		// placement. A grab recorded back then would be consumed by the first click
+		// of the next armed session, silently swallowing it.
+		gizmoGrabbedRef.current = false
 
-			raycaster.setFromCamera(new THREE.Vector2(x, y), camera)
-
-			const meshes: THREE.Object3D[] = []
-			scene.traverse((obj) => {
-				if (obj instanceof THREE.Mesh && !obj.userData.editorOverlay) {
-					meshes.push(obj)
-				}
-			})
-
-			const hits = raycaster.intersectObjects(meshes, false)
-			if (hits.length > 0) {
-				const p = hits[0].point
-				onPlace(activeHotspotId, [p.x, p.y, p.z])
-			}
+		const handlePointerDown = (event: PointerEvent) => {
+			pressed = { button: event.button, x: event.clientX, y: event.clientY }
 		}
 
-		gl.domElement.addEventListener('pointerdown', handlePointerDown)
-		return () =>
-			gl.domElement.removeEventListener('pointerdown', handlePointerDown)
-	}, [isActive, activeHotspotId, camera, scene, raycaster, gl, onPlace])
+		const handlePointerUp = (event: PointerEvent) => {
+			const down = pressed
+			pressed = null
+			// Consumed here rather than cleared on the next press: the gizmo and this
+			// handler both listen on the canvas, and their registration order is not
+			// ours to decide.
+			const grabbedGizmo = gizmoGrabbedRef.current
+			gizmoGrabbedRef.current = false
+			if (!down) return
+
+			const isPlacement = isHotspotPlacementGesture({
+				button: down.button,
+				downX: down.x,
+				downY: down.y,
+				upX: event.clientX,
+				upY: event.clientY,
+				grabbedGizmo
+			})
+			if (!isPlacement) return
+
+			const rect = canvas.getBoundingClientRect()
+			placementRay.setFromCamera(
+				new THREE.Vector2(
+					((event.clientX - rect.left) / rect.width) * 2 - 1,
+					-((event.clientY - rect.top) / rect.height) * 2 + 1
+				),
+				camera
+			)
+
+			const anchor = resolveHotspotAnchor(placementRay, modelRoot)
+			if (anchor) onPlace(activeHotspotId, anchor)
+		}
+
+		const handlePointerCancel = () => {
+			pressed = null
+			gizmoGrabbedRef.current = false
+		}
+
+		canvas.addEventListener('pointerdown', handlePointerDown)
+		window.addEventListener('pointerup', handlePointerUp)
+		window.addEventListener('pointercancel', handlePointerCancel)
+		return () => {
+			canvas.removeEventListener('pointerdown', handlePointerDown)
+			window.removeEventListener('pointerup', handlePointerUp)
+			window.removeEventListener('pointercancel', handlePointerCancel)
+		}
+	}, [
+		isActive,
+		activeHotspotId,
+		camera,
+		gizmoGrabbedRef,
+		gl,
+		modelRoot,
+		onPlace
+	])
 
 	return null
 }
@@ -327,10 +419,17 @@ export const PublisherEditorScene = memo(() => {
 
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 	const [activeHotspotId, setActiveHotspotId] = useAtom(activeHotspotIdAtom)
-	const isClickToPlaceActive = useAtomValue(isClickToPlaceActiveAtom)
+	const [isClickToPlaceActive, setIsClickToPlaceActive] = useAtom(
+		isClickToPlaceActiveAtom
+	)
 	const process = useAtomValue(processAtom)
 	const [selectedCameraId, setSelectedCameraId] = useAtom(selectedCameraIdAtom)
 	const isHotspotToolActive = process.activeComposeTool === 'hotspots'
+	const isPlacementArmed = isClickToPlaceActive && isHotspotToolActive
+	// The object the viewer renders, and the only thing a hotspot anchors to.
+	const { file } = useModelContext()
+	const modelRoot = file?.model ?? null
+	const gizmoGrabbedRef = useRef(false)
 
 	const handleSelectHotspot = useCallback(
 		(id: string) => {
@@ -355,13 +454,19 @@ export const PublisherEditorScene = memo(() => {
 		[setHotspots]
 	)
 
+	/**
+	 * Disarms on success. Placing is one deliberate act, and leaving the tool
+	 * armed meant every later click on the canvas moved the hotspot again -
+	 * including clicks the author made to orbit or to pick a different one.
+	 */
 	const handlePlaceHotspot = useCallback(
 		(id: string, position: [number, number, number]) => {
 			setHotspots((prev) =>
 				prev.map((h) => (h.id === id ? { ...h, worldPosition: position } : h))
 			)
+			setIsClickToPlaceActive(false)
 		},
-		[setHotspots]
+		[setHotspots, setIsClickToPlaceActive]
 	)
 
 	const activeHotspot = hotspots.find((h) => h.id === activeHotspotId) ?? null
@@ -375,6 +480,7 @@ export const PublisherEditorScene = memo(() => {
 					isSelected={hotspot.id === activeHotspotId}
 					isHotspotToolActive={isHotspotToolActive}
 					activeCameraId={selectedCameraId ?? undefined}
+					modelRoot={modelRoot}
 					onSelect={handleSelectHotspot}
 					onActivateCamera={handleActivateHotspotCamera}
 				/>
@@ -384,17 +490,29 @@ export const PublisherEditorScene = memo(() => {
 				<HotspotGizmo
 					key={activeHotspot.id}
 					hotspot={activeHotspot}
+					grabbedRef={gizmoGrabbedRef}
 					onMove={handleMoveHotspot}
 				/>
 			)}
 
 			<ClickToPlace
-				isActive={isClickToPlaceActive && isHotspotToolActive}
+				isActive={isPlacementArmed}
 				activeHotspotId={activeHotspotId}
+				modelRoot={modelRoot}
+				gizmoGrabbedRef={gizmoGrabbedRef}
 				onPlace={handlePlaceHotspot}
 			/>
 
-			<PublisherViewCube />
+			{/*
+			 * Withdrawn while a placement is armed. drei's GizmoViewcube guards its
+			 * faces with R3F's `stopPropagation`, which halts R3F's own traversal
+			 * and never touches the native event, so the cube cannot stop the
+			 * native listener above from reading a click on it as a placement -
+			 * relocating the hotspot to whatever geometry sits behind that corner
+			 * and disarming, so the affordance vanishes in the same moment. Taking
+			 * the cube off screen removes the overlap rather than guarding it.
+			 */}
+			{!isPlacementArmed && <PublisherViewCube />}
 		</>
 	)
 })
