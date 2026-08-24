@@ -25,6 +25,36 @@
 	--vctrl-active-bg: #d1d5db;
 	--vctrl-text: #1f2937;
 	--vctrl-border: #181818;
+
+	/*
+	  One hotspot accent for every scene, not a per-scene setting. Vectreal
+	  orange, because a hotspot is the one piece of Vectreal a visitor touches
+	  inside someone else's page, and one recognizable colour is worth more there
+	  than per-scene freedom.
+
+	  The accent alone does not carry the marker: #fc6c18 is 2.6:1 against the
+	  light viewer ground and 2.9:1 against white, so every preset also draws the
+	  white-inner/dark-outer ring in `hotspot-marker.tsx`, and the step number
+	  uses dark ink (6.6:1) rather than white (2.9:1).
+
+	  Declared on `.viewer` rather than `:root`: this stylesheet is loaded by a
+	  dynamic import into a host application, and a `:root` token would be a
+	  viewer package writing into that application's theme (the radius block
+	  above records the afternoon that cost). A host that needs a different accent
+	  overrides all three of these on the viewer container - the `-rgb` mirror
+	  included, or the pulse ring keeps the old colour. That container is the seam
+	  the host-side presentation config will use.
+
+	  `--vctrl-hotspot-accent-rgb` mirrors the hex because a hex has no valid
+	  inline alpha form; the pulse below needs one and would otherwise silently
+	  render nothing. The value is the platform's `--orange` / `--orange-rgb` from
+	  `shared/components/src/styles/globals.css`, copied because a viewer package
+	  must not read the host's tokens - keep the two in step by hand.
+	*/
+	--vctrl-hotspot-accent: #fc6c18;
+	--vctrl-hotspot-accent-rgb: 252 108 24;
+	--vctrl-hotspot-on-accent: #131313;
+
 	font-family: 'DM Sans Variable', sans-serif;
 }
 
@@ -50,6 +80,47 @@
 	--vctrl-active-bg: #d1d5db;
 	--vctrl-text: #1f2937;
 	--vctrl-border: #181818;
+}
+
+/*
+  A slow expanding ring around the marker.
+
+  Animated with `transform` and `opacity` on a dedicated element, never with
+  `box-shadow` spread: shadow spread is not compositor-accelerated, so every
+  marker would force a paint on every frame of an infinite loop, on top of a
+  canvas that already renders continuously.
+
+  The ring is drawn by the element's own border and starts outside the marker's
+  own white/dark ring, so switching the animation off leaves it visible at rest
+  rather than hiding it under the artwork. That matters: the ring is what marks a
+  dot over a 3D scene as something to touch, and a visitor who asked for reduced
+  motion still needs to be told.
+*/
+@keyframes vctrl-hotspot-pulse {
+	0% {
+		transform: scale(1);
+		opacity: 0.6;
+	}
+	70% {
+		transform: scale(2);
+		opacity: 0;
+	}
+	100% {
+		transform: scale(2);
+		opacity: 0;
+	}
+}
+
+.vctrl-hotspot-pulse {
+	border: 2px solid rgb(var(--vctrl-hotspot-accent-rgb) / 0.55);
+	border-radius: 9999px;
+	animation: vctrl-hotspot-pulse 2.4s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.vctrl-hotspot-pulse {
+		animation: none;
+	}
 }
 
 @media (prefers-color-scheme: dark) {
