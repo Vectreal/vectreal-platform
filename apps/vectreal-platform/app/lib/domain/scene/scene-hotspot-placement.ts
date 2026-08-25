@@ -15,10 +15,11 @@
  *
  * This sits in the flat `domain/scene` tier with the rest of the
  * `scene-hotspot-*` family rather than in `client/`, even though the settings
- * parser will never share it. `three` is imported for types only, so the module
- * stays runtime-dependency-free and runs under the node test environment like
- * its siblings.
+ * parser will never share it. Nothing here touches the DOM or a renderer, so it
+ * runs under the node test environment like its siblings.
  */
+
+import { Box3, Vector3 } from 'three'
 
 import type { Object3D, Raycaster } from 'three'
 
@@ -35,14 +36,61 @@ export const HOTSPOT_PLACEMENT_DRAG_TOLERANCE_PX = 4
 
 /**
  * How far in front of a marker geometry has to be before it counts as covering
- * it.
+ * it, as a fraction of the model's bounding-box diagonal.
  *
- * A ray hits triangles rather than the ideal surface, so an anchor resolved by
- * `resolveHotspotAnchor` comes back a faceting error *inside* the model. Without
- * the slack every marker would read as occluded by the very face it was placed
- * on.
+ * What it forgives is drift, not geometry: `resolveHotspotAnchor` returns an
+ * exact point on a triangle, so a clean round trip is exact. A stored position
+ * moves off the surface for three reasons, in ascending size. `scene_hotspots`
+ * holds it in `real` columns, worth about 1e-7 of the value. Draco re-quantizes
+ * vertices on the next save, worth about 1e-4 of the model. And an author can
+ * nudge a marker inward with the gizmo, which is the term that actually sets
+ * this floor - it is a screen-space gesture, so unlike the other two it does
+ * not scale with the model at all. Without the slack a marker would read as
+ * occluded by the very face it sits on.
+ *
+ * Measured against the model because nothing bounds the size a scene arrives
+ * at: runtime normalization is off by default. The literal this replaced was
+ * 0.05 world units, a tenth of a half-unit model and a ten-thousandth of a
+ * 500-unit one - the same setting meaning "forgive the surface" on one scene
+ * and "ignore the model" on another.
+ *
+ * Camera distance would be the easier reference and is the wrong one: nothing
+ * bounds the dolly, so zooming out would widen the slack until markers behind
+ * real geometry stopped dimming.
+ *
+ * The diagonal is the same measure the viewer normalizes on. It is
+ * axis-aligned, so rotating a model changes it somewhat - which is tolerable
+ * because this is a floor under a rounding error, not a threshold anything is
+ * calibrated to.
  */
-export const HOTSPOT_OCCLUSION_TOLERANCE = 0.05
+export const HOTSPOT_OCCLUSION_TOLERANCE_FRACTION = 0.005
+
+/**
+ * The slack in world units for a given model, for a caller to hold and refresh.
+ *
+ * Separate from `isHotspotOccluded` because that runs once per marker per frame
+ * and this walks the whole model. It has to be recomputed when the model
+ * changes and when anything rescales it: normalization moves an ancestor group,
+ * so the size this reads changes without the model itself doing so. Read it
+ * after the transform is live - a render-phase memo runs before React commits
+ * the new scale, and would measure the previous one.
+ */
+export function resolveHotspotOcclusionTolerance(
+	modelRoot: Object3D | null
+): number {
+	if (!modelRoot) return 0
+
+	modelRoot.updateWorldMatrix(true, false)
+
+	// Size rather than bounding sphere: `Box3.getSize` answers zero for a root
+	// with no geometry in it, where `getBoundingSphere` answers a radius of -1
+	// and would hand back negative slack, widening the occlusion test instead of
+	// narrowing it.
+	return (
+		new Box3().setFromObject(modelRoot).getSize(new Vector3()).length() *
+		HOTSPOT_OCCLUSION_TOLERANCE_FRACTION
+	)
+}
 
 export interface HotspotPlacementGesture {
 	/** `PointerEvent.button`: 0 is the primary button. */
@@ -137,7 +185,7 @@ export function isHotspotOccluded(
 	raycaster: Raycaster,
 	modelRoot: Object3D | null,
 	distance: number,
-	tolerance: number = HOTSPOT_OCCLUSION_TOLERANCE
+	tolerance: number
 ): boolean {
 	if (!modelRoot) return false
 

@@ -19,7 +19,8 @@ import {
 	isHotspotOccluded,
 	isHotspotPlacementGesture,
 	prepareHotspotRaycaster,
-	resolveHotspotAnchor
+	resolveHotspotAnchor,
+	resolveHotspotOcclusionTolerance
 } from '../../lib/domain/scene/scene-hotspot-placement'
 import {
 	isClickToPlaceActiveAtom,
@@ -28,6 +29,7 @@ import {
 import {
 	activeHotspotIdAtom,
 	hotspotsAtom,
+	normalizationAtom,
 	selectedCameraIdAtom
 } from '../../lib/stores/scene-settings-store'
 
@@ -57,6 +59,18 @@ function useHotspotStyles() {
 	}, [])
 }
 
+/**
+ * The gizmo's live position during a drag, shared with the marker that follows
+ * it.
+ *
+ * Refs rather than state on purpose: a drag emits a position every frame, and
+ * routing that through React is what this exists to stop.
+ */
+interface HotspotDragState {
+	hotspotId: React.MutableRefObject<null | string>
+	position: React.MutableRefObject<THREE.Vector3>
+}
+
 // ---------------------------------------------------------------------------
 // 2-D hotspot dot rendered via drei Html (no 3-D geometry)
 // ---------------------------------------------------------------------------
@@ -67,6 +81,18 @@ interface HotspotDotProps {
 	isHotspotToolActive: boolean
 	activeCameraId?: string
 	modelRoot: Object3D | null
+	/**
+	 * World-unit occlusion slack for this model, held by the owner and refreshed
+	 * when the model or its transform changes.
+	 */
+	occlusionTolerance: React.MutableRefObject<number>
+	/**
+	 * Where the gizmo is while a drag is in flight, and whose drag it is. The
+	 * dragged marker reads this instead of its stored position, so the drag can
+	 * keep the marker glued to the gizmo without writing the scene settings on
+	 * every frame.
+	 */
+	drag: HotspotDragState
 	onSelect: (id: string) => void
 	onActivateCamera: (cameraId: string) => void
 }
@@ -78,11 +104,14 @@ const HotspotDot: FC<HotspotDotProps> = memo(
 		isHotspotToolActive,
 		activeCameraId,
 		modelRoot,
+		occlusionTolerance,
+		drag,
 		onSelect,
 		onActivateCamera
 	}) => {
 		const [hovered, setHovered] = useState(false)
 		const wrapperRef = useRef<HTMLDivElement>(null)
+		const anchorRef = useRef<THREE.Group>(null)
 		const posVec = useRef(new THREE.Vector3(...hotspot.worldPosition))
 		const { camera } = useThree()
 		// Private, so the per-frame occlusion test cannot leave R3F's own pointer
@@ -96,10 +125,23 @@ const HotspotDot: FC<HotspotDotProps> = memo(
 		// Keep position in sync with atom changes (e.g. after gizmo drag or click-to-place)
 		useEffect(() => {
 			posVec.current.set(...hotspot.worldPosition)
+			anchorRef.current?.position.copy(posVec.current)
 		}, [hotspot.worldPosition])
 
-		// Occlusion: raycast from camera toward hotspot every frame, mutate opacity directly
+		// Occlusion: raycast from camera toward hotspot every frame, mutate opacity
+		// directly. Priority -1 so this writes the group's position before drei's
+		// `Html` projects from it: at equal priority `Html` subscribes first, being
+		// a child, and the marker would trail the gizmo by a frame. Negative
+		// priorities sort early without taking rendering over, which only `> 0` does.
 		useFrame(() => {
+			// A drag moves the gizmo directly and commits once, on release, so the
+			// dragged marker tracks the gizmo from here rather than from a stored
+			// position that is deliberately not being rewritten yet.
+			if (drag.hotspotId.current === hotspot.id) {
+				posVec.current.copy(drag.position.current)
+				anchorRef.current?.position.copy(posVec.current)
+			}
+
 			if (!wrapperRef.current) return
 
 			if (hotspot.occlusionEnabled === false) {
@@ -116,9 +158,14 @@ const HotspotDot: FC<HotspotDotProps> = memo(
 				occlusionDir.current.subVectors(target, origin).normalize()
 			)
 
-			const occluded = isHotspotOccluded(occlusionRay, modelRoot, distance)
+			const occluded = isHotspotOccluded(
+				occlusionRay,
+				modelRoot,
+				distance,
+				occlusionTolerance.current
+			)
 			wrapperRef.current.style.opacity = occluded ? '0.18' : '1'
-		})
+		}, -1)
 
 		const isLinkedCameraActive =
 			!isHotspotToolActive &&
@@ -136,75 +183,75 @@ const HotspotDot: FC<HotspotDotProps> = memo(
 		const showLabel = isSelected || hovered
 
 		return (
-			<Html
-				center
+			<group
+				ref={anchorRef}
 				position={hotspot.worldPosition as [number, number, number]}
-				zIndexRange={[100, 0]}
-				style={{ pointerEvents: 'none' }}
 			>
-				<div
-					ref={wrapperRef}
-					style={{
-						pointerEvents: 'auto',
-						transition: 'opacity 0.35s ease',
-						position: 'relative',
-						display: 'flex',
-						alignItems: 'center',
-						justifyContent: 'center'
-					}}
-					onClick={(e) => {
-						e.stopPropagation()
-						if (isHotspotToolActive) {
-							onSelect(hotspot.id)
-						} else if (hotspot.linkedCameraId) {
-							onActivateCamera(hotspot.linkedCameraId)
-						}
-					}}
-					onMouseEnter={() => setHovered(true)}
-					onMouseLeave={() => setHovered(false)}
-				>
-					{/* Pulsing circle */}
+				<Html center zIndexRange={[100, 0]} style={{ pointerEvents: 'none' }}>
 					<div
-						className={isSelected ? 'vctrl-hp-selected' : 'vctrl-hp'}
+						ref={wrapperRef}
 						style={{
-							width: 13,
-							height: 13,
-							borderRadius: '50%',
-							background: accentColor,
-							color: accentColor,
-							border: '2px solid rgba(255,255,255,0.55)',
-							boxSizing: 'border-box',
-							cursor: 'pointer',
-							flexShrink: 0
+							pointerEvents: 'auto',
+							transition: 'opacity 0.35s ease',
+							position: 'relative',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center'
 						}}
-					/>
-
-					{/* Floating label above the dot */}
-					{showLabel && (
+						onClick={(e) => {
+							e.stopPropagation()
+							if (isHotspotToolActive) {
+								onSelect(hotspot.id)
+							} else if (hotspot.linkedCameraId) {
+								onActivateCamera(hotspot.linkedCameraId)
+							}
+						}}
+						onMouseEnter={() => setHovered(true)}
+						onMouseLeave={() => setHovered(false)}
+					>
+						{/* Pulsing circle */}
 						<div
+							className={isSelected ? 'vctrl-hp-selected' : 'vctrl-hp'}
 							style={{
-								position: 'absolute',
-								bottom: 'calc(100% + 7px)',
-								left: '50%',
-								transform: 'translateX(-50%)',
-								fontSize: 11,
-								lineHeight: 1.4,
-								padding: '2px 8px',
-								whiteSpace: 'nowrap',
-								borderRadius: 4,
-								background: 'rgba(0,0,0,0.82)',
-								color: '#fff',
-								backdropFilter: 'blur(6px)',
-								border: '1px solid rgba(255,255,255,0.13)',
-								pointerEvents: 'none',
-								userSelect: 'none'
+								width: 13,
+								height: 13,
+								borderRadius: '50%',
+								background: accentColor,
+								color: accentColor,
+								border: '2px solid rgba(255,255,255,0.55)',
+								boxSizing: 'border-box',
+								cursor: 'pointer',
+								flexShrink: 0
 							}}
-						>
-							{hotspot.name || 'Hotspot'}
-						</div>
-					)}
-				</div>
-			</Html>
+						/>
+
+						{/* Floating label above the dot */}
+						{showLabel && (
+							<div
+								style={{
+									position: 'absolute',
+									bottom: 'calc(100% + 7px)',
+									left: '50%',
+									transform: 'translateX(-50%)',
+									fontSize: 11,
+									lineHeight: 1.4,
+									padding: '2px 8px',
+									whiteSpace: 'nowrap',
+									borderRadius: 4,
+									background: 'rgba(0,0,0,0.82)',
+									color: '#fff',
+									backdropFilter: 'blur(6px)',
+									border: '1px solid rgba(255,255,255,0.13)',
+									pointerEvents: 'none',
+									userSelect: 'none'
+								}}
+							>
+								{hotspot.name || 'Hotspot'}
+							</div>
+						)}
+					</div>
+				</Html>
+			</group>
 		)
 	}
 )
@@ -223,11 +270,12 @@ interface HotspotGizmoProps {
 	 * reads as a placement aimed at whatever the arrow tip covers.
 	 */
 	grabbedRef: React.MutableRefObject<boolean>
+	drag: HotspotDragState
 	onMove: (id: string, position: [number, number, number]) => void
 }
 
 const HotspotGizmo = memo(
-	({ hotspot, grabbedRef, onMove }: HotspotGizmoProps) => {
+	({ hotspot, grabbedRef, drag, onMove }: HotspotGizmoProps) => {
 		const meshRef = useRef<THREE.Mesh>(null)
 		const isDraggingRef = useRef(false)
 		const { commandExecutor } = usePublisherViewerCapture()
@@ -246,14 +294,21 @@ const HotspotGizmo = memo(
 		const handleDragStart = useCallback(() => {
 			isDraggingRef.current = true
 			grabbedRef.current = true
+			// Seeded before the id is published. three-stdlib dispatches `mouseDown`
+			// with no `objectChange` - the first of those comes from a pointermove,
+			// many frames later - so a marker that began following an unseeded
+			// vector would sit at the world origin until the pointer moved.
+			if (meshRef.current) drag.position.current.copy(meshRef.current.position)
+			drag.hotspotId.current = hotspot.id
 			commandExecutor.current?.execute({
 				type: 'set_controls_enabled',
 				enabled: false
 			})
-		}, [commandExecutor, grabbedRef])
+		}, [commandExecutor, drag, grabbedRef, hotspot.id])
 
 		const handleDragEnd = useCallback(() => {
 			isDraggingRef.current = false
+			drag.hotspotId.current = null
 			commandExecutor.current?.execute({
 				type: 'set_controls_enabled',
 				enabled: true
@@ -262,13 +317,79 @@ const HotspotGizmo = memo(
 				const p = meshRef.current.position
 				onMove(hotspot.id, [p.x, p.y, p.z])
 			}
-		}, [commandExecutor, hotspot.id, onMove])
+		}, [commandExecutor, drag, hotspot.id, onMove])
 
+		/**
+		 * Publishes the drag rather than committing it.
+		 *
+		 * Committing here wrote `hotspotsAtom` on every frame, and the settings
+		 * object rebuilt from that atom is the memo key for the unsaved-changes
+		 * check - two full canonical serializations of every scene setting, twice
+		 * per frame at 60fps, while every marker and the sidebar re-rendered. The
+		 * position reaches the marker through a ref instead, and the atom is
+		 * written once, on release.
+		 */
 		const handleObjectChange = useCallback(() => {
 			if (!meshRef.current || !isDraggingRef.current) return
-			const p = meshRef.current.position
-			onMove(hotspot.id, [p.x, p.y, p.z])
-		}, [hotspot.id, onMove])
+			drag.position.current.copy(meshRef.current.position)
+		}, [drag])
+
+		/**
+		 * Finishes a drag the gizmo is about to be torn away from.
+		 *
+		 * Switching compose tools unmounts the gizmo mid-drag, and only
+		 * `handleDragEnd` commits the edit and turns orbiting back on. Without this
+		 * the position lives in a mesh about to be discarded and the camera stays
+		 * locked. While the drag committed on every frame neither mattered.
+		 */
+		const finishInterruptedDrag = useCallback(() => {
+			if (!isDraggingRef.current) return
+			isDraggingRef.current = false
+			drag.hotspotId.current = null
+			commandExecutor.current?.execute({
+				type: 'set_controls_enabled',
+				enabled: true
+			})
+			// Read the mesh, as `handleDragEnd` does: the published vector is a frame
+			// old at best and never written at worst.
+			const p = meshRef.current?.position
+			if (p) onMove(hotspot.id, [p.x, p.y, p.z])
+		}, [commandExecutor, drag, hotspot.id, onMove])
+
+		/**
+		 * Hands the gizmo the release it is waiting for when a gesture is cancelled.
+		 *
+		 * three-stdlib's `TransformControls` listens for `pointerup` on the document
+		 * and does not listen for `pointercancel` at all, so a cancelled touch or
+		 * pen gesture leaves it dragging: it clears that flag only inside its own
+		 * `pointerUp`, and its document-level `pointermove` admits a buttonless
+		 * move, so the mesh keeps translating under the bare cursor and the next
+		 * click commits somewhere the author never dragged to.
+		 *
+		 * Replaying the release rather than writing its state directly, because its
+		 * `pointerUp` is what drops the axis and fires `mouseUp` - and `mouseUp` is
+		 * `handleDragEnd`, which already commits and re-enables orbiting. It takes
+		 * no pointer capture, so nothing is left holding the pointer either.
+		 */
+		const handlePointerCancel = useCallback((event: PointerEvent) => {
+			if (!isDraggingRef.current) return
+			document.dispatchEvent(
+				new PointerEvent('pointerup', {
+					bubbles: true,
+					button: 0,
+					pointerId: event.pointerId,
+					pointerType: event.pointerType
+				})
+			)
+		}, [])
+
+		useEffect(() => {
+			window.addEventListener('pointercancel', handlePointerCancel)
+			return () => {
+				window.removeEventListener('pointercancel', handlePointerCancel)
+				finishInterruptedDrag()
+			}
+		}, [finishInterruptedDrag, handlePointerCancel])
 
 		return (
 			<>
@@ -430,6 +551,45 @@ export const PublisherEditorScene = memo(() => {
 	const { file } = useModelContext()
 	const modelRoot = file?.model ?? null
 	const gizmoGrabbedRef = useRef(false)
+	const dragHotspotIdRef = useRef<null | string>(null)
+	const dragPositionRef = useRef(new THREE.Vector3())
+	const drag = useMemo<HotspotDragState>(
+		() => ({ hotspotId: dragHotspotIdRef, position: dragPositionRef }),
+		[]
+	)
+	/**
+	 * Walks the whole model, so it is resolved once here rather than per marker
+	 * per frame - and in a frame rather than in a memo.
+	 *
+	 * Normalization rescales an ancestor group without touching the model, so the
+	 * size this measures changes without `modelRoot` doing so. A render-phase
+	 * `useMemo` keyed on the normalization settings looks like it covers that and
+	 * does not: R3F applies the new scale in the commit phase, after every
+	 * render-phase memo in the same update, so the memo measures the previous
+	 * scale and nothing recomputes it afterwards. On a large model clamped to a
+	 * small one that leaves a slack wider than the whole model, and occlusion
+	 * stops firing entirely. `SceneModel` solves its clipping sphere the same way,
+	 * one file over.
+	 *
+	 * Priority -2 so the refresh lands before the markers read it at -1.
+	 */
+	const normalization = useAtomValue(normalizationAtom)
+	const occlusionTolerance = useRef(0)
+	const occlusionToleranceStale = useRef(true)
+
+	useEffect(() => {
+		occlusionToleranceStale.current = true
+	}, [modelRoot, normalization])
+
+	useFrame(() => {
+		if (!occlusionToleranceStale.current) return
+		const tolerance = resolveHotspotOcclusionTolerance(modelRoot)
+		// Zero means the model has no geometry in the graph yet. Leave the slack as
+		// it was and try again next frame rather than latching onto nothing.
+		if (tolerance <= 0) return
+		occlusionTolerance.current = tolerance
+		occlusionToleranceStale.current = false
+	}, -2)
 
 	const handleSelectHotspot = useCallback(
 		(id: string) => {
@@ -481,6 +641,8 @@ export const PublisherEditorScene = memo(() => {
 					isHotspotToolActive={isHotspotToolActive}
 					activeCameraId={selectedCameraId ?? undefined}
 					modelRoot={modelRoot}
+					occlusionTolerance={occlusionTolerance}
+					drag={drag}
 					onSelect={handleSelectHotspot}
 					onActivateCamera={handleActivateHotspotCamera}
 				/>
@@ -491,6 +653,7 @@ export const PublisherEditorScene = memo(() => {
 					key={activeHotspot.id}
 					hotspot={activeHotspot}
 					grabbedRef={gizmoGrabbedRef}
+					drag={drag}
 					onMove={handleMoveHotspot}
 				/>
 			)}
