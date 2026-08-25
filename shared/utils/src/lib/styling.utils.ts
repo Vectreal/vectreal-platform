@@ -36,19 +36,28 @@ const Z_INDEX_TIERS = [
  * publisher's tool sidebar is exactly that call - a component defaulting to the
  * detail-panel width, overridden to 21rem by one consumer.
  *
+ * Registered below as a `theme` key rather than as a list of class groups.
+ * `container` is a theme namespace tailwind-merge already understands, and the
+ * five groups that read it - `w`, `max-w`, `min-w`, `basis` and `columns` - are
+ * its business, not ours. Enumerating them was the first attempt and it shipped
+ * wrong twice in one sitting: `basis` was missed, then `columns` after it. A
+ * list of someone else's internals is a list that drifts, and each gap is
+ * invisible until two classes meet and the stylesheet's emission order decides.
+ *
  * Only names the app declares. Tailwind's own `--container-*` defaults
  * (`w-md`, `max-w-xl`) are already in the built-in groups.
  */
 const CONTAINER_SCALE = ['detail-panel']
 
+/*
+  The tiers stay a class group. `--z-index-*` is a Tailwind namespace, but
+  tailwind-merge has no `z` theme key to hang them on, so the group is the only
+  place they fit.
+*/
 const twMerge = extendTailwindMerge({
 	extend: {
-		classGroups: {
-			z: [{ z: Z_INDEX_TIERS }],
-			w: [{ w: CONTAINER_SCALE }],
-			'max-w': [{ 'max-w': CONTAINER_SCALE }],
-			'min-w': [{ 'min-w': CONTAINER_SCALE }]
-		}
+		classGroups: { z: [{ z: Z_INDEX_TIERS }] },
+		theme: { container: CONTAINER_SCALE }
 	}
 })
 

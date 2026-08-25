@@ -29,9 +29,20 @@ const GLOBALS = join(REPO_ROOT, 'shared/components/src/styles/globals.css')
  */
 function containersDeclaredInTheme() {
 	const css = readFileSync(GLOBALS, 'utf8')
-	const themeBlocks = [...css.matchAll(/@theme\s*\{([\s\S]*?)\n\}/g)].map(
-		([, body]) => body
-	)
+	/*
+	  Any modifier, not a named one. `@theme` takes `inline`, `static`,
+	  `default` and `reference`, alone or combined, and every spelling generates
+	  the same utilities from a `--container-*` key. Listing them was the first
+	  attempt here and it is the same mistake the `cn()` registration made:
+	  enumerating someone else's grammar leaves a hole shaped like whichever
+	  spelling was forgotten.
+
+	  Deliberately not `@theme\b[^{]*\{`, which reads through prose and matches
+	  the three comments in this stylesheet that mention `@theme`.
+	*/
+	const themeBlocks = [
+		...css.matchAll(/@theme(?:[ \t]+[a-z]+)*[ \t]*\{([\s\S]*?)\n\}/g)
+	].map(([, body]) => body)
 
 	return themeBlocks.flatMap((body) =>
 		/*
@@ -76,5 +87,21 @@ describe('container scale', () => {
 		expect(cn('w-detail-panel', 'max-w-detail-panel')).toBe(
 			'w-detail-panel max-w-detail-panel'
 		)
+	})
+
+	it('covers every group the namespace feeds, not just the ones with a caller', () => {
+		/*
+		  Tailwind generates five utilities from one `--container-*` key, and
+		  `basis-*` and `columns-*` have no caller in the app today. That is
+		  precisely why they are pinned here: an unregistered group is
+		  indistinguishable from a registered one until two classes meet, and the
+		  first two attempts at this registration enumerated the groups by hand
+		  and missed one each time.
+		*/
+		expect(cn('basis-detail-panel', 'basis-1/2')).toBe('basis-1/2')
+		expect(cn('basis-1/2', 'basis-detail-panel')).toBe('basis-detail-panel')
+		expect(cn('basis-full', 'basis-detail-panel')).toBe('basis-detail-panel')
+		expect(cn('columns-2', 'columns-detail-panel')).toBe('columns-detail-panel')
+		expect(cn('columns-detail-panel', 'columns-2')).toBe('columns-2')
 	})
 })
