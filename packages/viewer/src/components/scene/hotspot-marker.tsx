@@ -71,21 +71,10 @@ const markerClasses = {
 	dot: `flex shrink-0 items-center justify-center rounded-full bg-[var(--vctrl-hotspot-fill)] font-[600] text-[var(--vctrl-hotspot-ink)] ${RING_SHADOW}`,
 	dotPlain: 'h-3 w-3',
 	dotStep: 'h-5 w-5 text-[10px]',
-	/*
-	  Optical centring for the numeral, and the reason it is not simply
-	  `items-center`.
-
-	  Flex centres the text's box, not its ink. DM Sans reports ascent 10 and
-	  descent 3, and a digit has no ink below the baseline, so the drawn glyph
-	  ends up half its descent above the middle of the disc - measured at 0.50px
-	  on the 20px step disc and 0.50px on the 16px badge, which is visible on a
-	  shape that small.
-
-	  In `em` rather than pixels so it holds if either size changes, and applied
-	  to a wrapper so the disc itself does not move. Font-specific by nature: it
-	  is the metric asymmetry of DM Sans, which `styles.css` sets for the viewer.
-	*/
-	numeral: 'block translate-y-[0.05em]',
+	// Centring lives in styles.css, where `text-box` can read the rendered
+	// font's own cap metric instead of a constant calibrated to a font this
+	// package names but does not ship.
+	numeral: 'vctrl-hotspot-numeral',
 	// A raster payload is someone's photograph or icon: it needs its own ground
 	// to read against arbitrary scene colour behind it. `max-w-none` because a
 	// host application's CSS reset caps images at their container width, which

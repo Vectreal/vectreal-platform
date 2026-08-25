@@ -82,6 +82,38 @@
 }
 
 /*
+  Optical centring for the step numeral.
+
+  Flex centres the text's *box*, and that box runs from the font's ascender to
+  its descender while a digit's ink runs from the cap height to the baseline.
+  The two are not concentric, so a numeral centred by flex alone sits high -
+  measured at 0.50px on the 20px step disc, which is visible on a shape that
+  small.
+
+  `text-box` trims the box to the cap/baseline edges, so what flex centres is
+  the ink. The browser reads the metric out of whatever font actually rendered,
+  which is the whole point: this package names DM Sans but does not ship it, so
+  a consumer's fallback font decides those metrics, and any constant written
+  here would be calibrated to a font that may never load.
+
+  The fallback is a fixed nudge for engines without `text-box` (Firefox as of
+  this writing). It is DM Sans's asymmetry specifically, and it is deliberately
+  a last resort rather than the primary mechanism: a sub-pixel transform is also
+  at the mercy of the renderer's hinting, so the same 0.05em lands differently
+  on a hinted Linux rasterizer than on macOS.
+*/
+.vctrl-hotspot-numeral {
+	display: block;
+	text-box: trim-both cap alphabetic;
+}
+
+@supports not (text-box: trim-both cap alphabetic) {
+	.vctrl-hotspot-numeral {
+		transform: translateY(0.05em);
+	}
+}
+
+/*
   A slow expanding ring around the marker.
 
   Animated with `transform` and `opacity` on a dedicated element, never with
