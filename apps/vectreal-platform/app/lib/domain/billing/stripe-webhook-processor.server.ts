@@ -38,6 +38,7 @@ import {
 import { getDbClient } from '../../../db/client'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { billingWebhookEvents } from '../../../db/schema/billing/webhook-events'
+import { reportServerError } from '../../observability/report-server-error.server'
 import {
 	getStripeClient,
 	resolveStripeWebhookSecret
@@ -211,10 +212,13 @@ async function handleCheckoutSessionCompleted(
 				{ oldSubscriptionId, newSubscriptionId: subscriptionId, organizationId }
 			)
 		} catch (err) {
-			console.error('[stripe-webhook] Failed to cancel replaced subscription', {
-				oldSubscriptionId,
-				newSubscriptionId: subscriptionId,
-				err
+			// The customer is now billed for two live subscriptions.
+			reportServerError(err, {
+				properties: {
+					oldSubscriptionId,
+					newSubscriptionId: subscriptionId,
+					organizationId
+				}
 			})
 		}
 	}

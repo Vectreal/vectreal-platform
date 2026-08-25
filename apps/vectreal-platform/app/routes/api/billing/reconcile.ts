@@ -27,6 +27,7 @@ import { ApiResponse } from '@shared/utils'
 
 import { Route } from './+types/reconcile'
 import { reconcileStripeSubscriptions } from '../../../lib/domain/billing/stripe-reconciliation.server'
+import { reportServerError } from '../../../lib/observability/report-server-error.server'
 
 // ---------------------------------------------------------------------------
 // Auth guard
@@ -117,7 +118,7 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 		return ApiResponse.success(report)
 	} catch (err) {
 		const message = err instanceof Error ? err.message : 'Reconciliation failed'
-		console.error('[billing/reconcile] fatal error', { message })
+		reportServerError(err, { request })
 		return ApiResponse.serverError(message)
 	}
 }

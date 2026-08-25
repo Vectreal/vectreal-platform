@@ -6,6 +6,7 @@ import { assets } from '../../db/schema'
 import { downloadAsset } from '../../lib/domain/asset/asset-storage.server'
 import { getScene } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import { getAuthUser } from '../../lib/http/auth.server'
+import { reportServerError } from '../../lib/observability/report-server-error.server'
 
 const db = getDbClient()
 
@@ -115,11 +116,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			})()
 		})
 	} catch (error) {
-		console.error('Failed to stream thumbnail asset', {
-			sceneId,
-			assetId,
-			userId: auth.user.id,
-			error
+		reportServerError(error, {
+			request,
+			properties: { sceneId, assetId, userId: auth.user.id }
 		})
 		return new Response('Failed to load thumbnail', { status: 500, headers })
 	}

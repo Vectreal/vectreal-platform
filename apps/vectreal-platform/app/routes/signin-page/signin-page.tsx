@@ -24,6 +24,7 @@ import { Route } from './+types/signin-page'
 import { captureServerEvent } from '../../lib/domain/analytics/server-events.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { recordRateLimitAttempt } from '../../lib/http/rate-limit.server'
+import { reportServerError } from '../../lib/observability/report-server-error.server'
 import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
@@ -171,10 +172,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 		authData = response.data
 		authError = response.error
 	} catch (error) {
-		console.error('[auth/sign-in] unexpected sign-in error', {
-			error,
-			email: normalizedEmail
-		})
+		reportServerError(error, { request })
 		return data<SigninActionData>(
 			{
 				formError: AUTH_ERROR_MESSAGES.unknown,
@@ -212,10 +210,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 				: 'unknown'
 
 		if (!invalidCredentials && !captchaFailed) {
-			console.error('[auth/sign-in] sign-in failed', {
-				message: authError.message,
-				email: normalizedEmail
-			})
+			reportServerError(authError, { request })
 		}
 
 		return data<SigninActionData>(

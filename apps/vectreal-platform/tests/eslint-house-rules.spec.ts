@@ -18,16 +18,31 @@ const ROOT = resolve(__dirname, '../../..')
 /** A path inside the glob the rules are scoped to (`apps/**`, `shared/**`). */
 const IN_SCOPE = resolve(ROOT, 'apps/vectreal-platform/app/components/probe.tsx')
 
+/** A server-only module, where console.error is banned outright. */
+const SERVER_MODULE = resolve(
+	ROOT,
+	'apps/vectreal-platform/app/lib/domain/probe/probe.server.ts'
+)
+
+/** A route module, where the ban applies to the loader and action only. */
+const ROUTE_MODULE = resolve(
+	ROOT,
+	'apps/vectreal-platform/app/routes/probe-page/probe.tsx'
+)
+
 let eslint: ESLint
 
 beforeAll(() => {
 	eslint = new ESLint({ cwd: ROOT })
 })
 
+/** The house rules, whichever rule id each one is implemented as. */
+const HOUSE_RULES = new Set(['no-restricted-syntax', 'no-console'])
+
 async function messagesFor(code: string, filePath = IN_SCOPE) {
 	const [result] = await eslint.lintText(code, { filePath })
 	return result.messages.filter(
-		(message) => message.ruleId === 'no-restricted-syntax'
+		(message) => message.ruleId && HOUSE_RULES.has(message.ruleId)
 	)
 }
 
@@ -234,5 +249,156 @@ describe('SVG must live in an icon component', () => {
 		)
 
 		expect(messages).toEqual([])
+	})
+})
+
+
+/**
+ * `console.error` is not a reporting strategy.
+ *
+ * Every server-side failure that gets caught and turned into a response, a
+ * fallback or an empty list is invisible to `handleError`, which only sees what
+ * is thrown past it. Thirty-odd call sites each answered that with a
+ * `console.error` into a stream with no grouping or alerting -
+ * `stripe-subscription-sync.server.ts` used one to ask an operator to reconcile
+ * a subscription still billing a deleted account.
+ *
+ * Both directions are asserted. A selector that matched nothing would leave
+ * lint green, which is indistinguishable from compliance.
+ */
+describe('server code reports rather than logs', () => {
+	it('rejects console.error in a server-only module', async () => {
+		const messages = await messagesFor(
+			'export function save() {\n' +
+				'\ttry {\n\t\treturn 1\n\t} catch (error) {\n' +
+				'\t\tconsole.error("failed", error)\n\t\treturn null\n\t}\n}\n',
+			SERVER_MODULE
+		)
+
+		expect(messages).toHaveLength(1)
+		/*
+		  `no-console` has a fixed message, so unlike the route rule below this
+		  one cannot name `reportServerError` in the lint output. That is the
+		  price of using a different rule id, which is what stops this block
+		  displacing the design-system selectors. The message still names the
+		  call and says which console methods remain allowed.
+		*/
+		expect(messages[0].message).toContain('console')
+	})
+
+	it('accepts reportServerError in a server-only module', async () => {
+		const messages = await messagesFor(
+			'import { reportServerError } from "../../observability/report-server-error.server"\n' +
+				'export function save() {\n\ttry {\n\t\treturn 1\n\t} catch (error) {\n' +
+				'\t\treportServerError(error)\n\t\treturn null\n\t}\n}\n',
+			SERVER_MODULE
+		)
+
+		expect(messages).toEqual([])
+	})
+
+	/*
+	  A malformed request body or an expired OAuth code answers with a 4xx and is
+	  the product working - the same judgement `buildErrorReport` makes at its
+	  status floor. Reporting those would bury real failures under client noise,
+	  so `console.warn` stays available and this asserts the rule leaves it alone.
+	*/
+	it('leaves console.warn alone', async () => {
+		const messages = await messagesFor(
+			'export function parse() {\n\ttry {\n\t\treturn 1\n\t} catch (error) {\n' +
+				'\t\tconsole.warn("bad input", error)\n\t\treturn null\n\t}\n}\n',
+			SERVER_MODULE
+		)
+
+		expect(messages).toEqual([])
+	})
+
+	it('rejects console.error inside a route loader', async () => {
+		const messages = await messagesFor(
+			'export async function loader() {\n\ttry {\n\t\treturn 1\n\t} catch (error) {\n' +
+				'\t\tconsole.error("failed", error)\n\t\treturn null\n\t}\n}\n',
+			ROUTE_MODULE
+		)
+
+		expect(messages).toHaveLength(1)
+	})
+
+	it('rejects console.error inside a route action', async () => {
+		const messages = await messagesFor(
+			'export async function action() {\n\ttry {\n\t\treturn 1\n\t} catch (error) {\n' +
+				'\t\tconsole.error("failed", error)\n\t\treturn null\n\t}\n}\n',
+			ROUTE_MODULE
+		)
+
+		expect(messages).toHaveLength(1)
+	})
+
+	/*
+	  The arrow form is not what this repo writes today, and that is exactly why
+	  it is pinned: a rule that only understands the current spelling stops
+	  working on the refactor that changes it, silently.
+	*/
+	it('rejects console.error in an arrow-function loader', async () => {
+		const messages = await messagesFor(
+			'export const loader = async () => {\n\ttry {\n\t\treturn 1\n\t} catch (error) {\n' +
+				'\t\tconsole.error("failed", error)\n\t\treturn null\n\t}\n}\n',
+			ROUTE_MODULE
+		)
+
+		expect(messages).toHaveLength(1)
+	})
+
+	/*
+	  The component half of a route runs in the browser, where the reporting path
+	  is `useErrorReport` and `error-boundary-reporting.spec.ts` is the ratchet.
+	  Banning it here would push people to disable the rule rather than move the
+	  call.
+	*/
+	it('leaves the component half of a route alone', async () => {
+		const messages = await messagesFor(
+			'export default function Page() {\n\tconsole.error("client side")\n\treturn null\n}\n',
+			ROUTE_MODULE
+		)
+
+		expect(messages).toEqual([])
+	})
+})
+
+
+/**
+ * The rules reach route modules too, and adding one did not turn the others off.
+ *
+ * This is a regression test for a defect in the change that added the
+ * `console.error` ban. Flat config does not merge rule options: the last
+ * matching block replaces them. Scoping a second `no-restricted-syntax` block
+ * to `apps/vectreal-platform/app/routes/**` therefore disabled cn(), the
+ * z-index scale and the inline-SVG ban for every route file, and lint stayed
+ * green because the only probe path in this file was under `app/components/`.
+ *
+ * A rule that has been switched off is indistinguishable from a codebase that
+ * complies, which is why the check is per-scope rather than global.
+ */
+describe('house rules apply in every scope', () => {
+	const CN_VIOLATION =
+		'export const A = ({ className }: { className?: string }) => (\n' +
+		'\t<div className={`space-y-4 ${className}`} />\n)\n'
+
+	it.each([
+		['a component', IN_SCOPE],
+		['a route module', ROUTE_MODULE]
+	])('still enforces cn() in %s', async (_, filePath) => {
+		expect(await messagesFor(CN_VIOLATION, filePath)).toHaveLength(1)
+	})
+
+	it.each([
+		['a component', IN_SCOPE],
+		['a route module', ROUTE_MODULE]
+	])('still enforces the z-index scale in %s', async (_, filePath) => {
+		const messages = await messagesFor(
+			'export const A = () => <div className="z-[999]" />\n',
+			filePath
+		)
+
+		expect(messages.length).toBeGreaterThanOrEqual(1)
 	})
 })

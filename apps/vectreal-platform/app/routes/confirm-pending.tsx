@@ -24,6 +24,7 @@ import { AuthErrorBoundary } from '../components/errors'
 import { clearReferralAttribution } from '../lib/domain/analytics/referral-attribution'
 import { ensureValidCsrfFormData } from '../lib/http/csrf.server'
 import { recordRateLimitAttempt } from '../lib/http/rate-limit.server'
+import { reportServerError } from '../lib/observability/report-server-error.server'
 import { buildMeta } from '../lib/seo'
 import { createSupabaseClient } from '../lib/supabase.server'
 
@@ -127,9 +128,12 @@ export async function action({ request }: Route.ActionArgs) {
 	})
 
 	if (error) {
-		console.error('[auth/confirm-pending] resend failed', {
-			message: error.message
-		})
+		/*
+		  The response still says `sent: true`, because telling a visitor which
+		  addresses exist is an enumeration oracle. That makes this failure
+		  invisible from the outside as well as the inside unless it is reported.
+		*/
+		reportServerError(error, { request })
 	}
 
 	return data<ActionData>({ sent: true }, { headers })

@@ -11,6 +11,7 @@ import { getDbClient } from '../../../../db/client'
 import { projects } from '../../../../db/schema/project/projects'
 import { scenePublished } from '../../../../db/schema/project/scene-published'
 import { scenes } from '../../../../db/schema/project/scenes'
+import { reportServerError } from '../../../observability/report-server-error.server'
 import { uploadSceneAssets } from '../../asset/asset-storage.server'
 import {
 	hasEntitlement,
@@ -449,11 +450,12 @@ export async function saveSceneSettings(
 		}
 		return ApiResponse.success(result)
 	} catch (error) {
-		console.error('Failed to save scene settings:', {
-			requestId: request.requestId,
-			userId,
-			sceneId: request.sceneId || null,
-			error
+		reportServerError(error, {
+			properties: {
+				requestId: request.requestId,
+				userId,
+				sceneId: request.sceneId || null
+			}
 		})
 		return ApiResponse.serverError(
 			error instanceof Error ? error.message : 'Failed to save scene settings'
@@ -514,7 +516,9 @@ export async function getSceneSettings(
 
 		return ApiResponse.success({ ...finalResult, meta, assetData: serialized })
 	} catch (error) {
-		console.error('Failed to get scene settings:', error)
+		reportServerError(error, {
+			properties: { sceneId: request.sceneId || null }
+		})
 		return ApiResponse.serverError(
 			error instanceof Error ? error.message : 'Failed to get scene settings'
 		)
@@ -625,7 +629,9 @@ export async function publishScene(
 
 		return ApiResponse.success({ ...result, sceneId, stats })
 	} catch (error) {
-		console.error('Failed to publish scene:', error)
+		reportServerError(error, {
+			properties: { sceneId: request.sceneId || null }
+		})
 		return ApiResponse.serverError(
 			error instanceof Error ? error.message : 'Failed to publish scene'
 		)
@@ -659,7 +665,9 @@ export async function revokeScenePublish(
 
 		return ApiResponse.success(result)
 	} catch (error) {
-		console.error('Failed to revoke scene publish state:', error)
+		reportServerError(error, {
+			properties: { sceneId: request.sceneId || null }
+		})
 		return ApiResponse.serverError(
 			error instanceof Error
 				? error.message

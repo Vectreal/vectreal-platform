@@ -36,6 +36,7 @@ import {
 	ensureValidCsrfToken
 } from '../../lib/http/csrf.server'
 import { ensurePost, parseActionRequest } from '../../lib/http/requests.server'
+import { reportServerError } from '../../lib/observability/report-server-error.server'
 
 import type { PublishedModelRow } from '../../lib/domain/scene/embed-asset-policy'
 import type { SceneSettingsAction } from '../../types/api'
@@ -366,10 +367,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
 			return withManifestCacheHeaders(ApiResponse.success(manifest), etag)
 		} catch (error) {
-			console.error('Failed to load preview scene manifest:', {
-				sceneId,
-				projectId: previewProjectId,
-				error
+			reportServerError(error, {
+				request,
+				properties: { sceneId, projectId: previewProjectId }
 			})
 			return withNoStoreHeaders(ApiResponse.serverError('Failed to load scene'))
 		}
@@ -418,10 +418,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			etag
 		)
 	} catch (error) {
-		console.error('Failed to load scene manifest:', {
-			sceneId,
-			userId: authResult.user.id,
-			error
+		reportServerError(error, {
+			request,
+			properties: { sceneId, userId: authResult.user.id }
 		})
 		return ApiResponse.error(
 			error instanceof Error ? error.message : 'Failed to load scene',
@@ -905,12 +904,14 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			)
 		}
 
-		console.error('Scene operation failed:', {
-			action,
-			requestId: requestData.requestId,
-			userId: authResult.user.id,
-			sceneId: requestData.sceneId || null,
-			error
+		reportServerError(error, {
+			request,
+			properties: {
+				action,
+				requestId: requestData.requestId,
+				userId: authResult.user.id,
+				sceneId: requestData.sceneId || null
+			}
 		})
 		return withAdditionalHeaders(
 			ApiResponse.serverError(

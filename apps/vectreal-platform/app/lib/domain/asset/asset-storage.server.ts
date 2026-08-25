@@ -12,6 +12,7 @@ import {
 	scenePublished,
 	scenes
 } from '../../../db/schema'
+import { reportServerError } from '../../observability/report-server-error.server'
 
 import type { SceneAssetBinaryDataMap } from '../../../types/api'
 
@@ -255,7 +256,6 @@ export async function uploadSceneAssets(
 				mimeType: asset.mimeType
 			})
 		} catch (error) {
-			console.error(`Failed to upload asset ${fileName}:`, error)
 			throw new Error(
 				`Failed to upload asset ${fileName}: ${getErrorMessage(error)}`,
 				error instanceof Error ? { cause: error } : undefined
@@ -303,7 +303,6 @@ export async function downloadAsset(assetId: string): Promise<{
 			fileName: asset.name
 		}
 	} catch (error) {
-		console.error(`Failed to download asset ${assetId}:`, error)
 		throw new Error(
 			`Failed to download asset ${assetId}: ${getErrorMessage(error)}`,
 			error instanceof Error ? { cause: error } : undefined
@@ -336,10 +335,9 @@ export async function downloadAssets(
 			continue
 		}
 
-		console.error(
-			`Failed to download asset ${assetId}:`,
-			getErrorMessage(outcome.reason)
-		)
+		// Dropped from the results rather than failing the batch, so the caller
+		// gets a short list and no indication that it is short.
+		reportServerError(outcome.reason, { properties: { assetId } })
 	}
 
 	return results
@@ -444,10 +442,7 @@ export async function deleteAssets(assetIds: string[]): Promise<void> {
 
 			await db.delete(assets).where(eq(assets.id, assetId))
 		} catch (error) {
-			console.error(
-				`Failed to delete asset ${assetId}:`,
-				getErrorMessage(error)
-			)
+			reportServerError(error, { properties: { assetId } })
 		}
 	}
 }

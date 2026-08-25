@@ -9,6 +9,10 @@ import pluginReact from 'eslint-plugin-react'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
+/** `console.error(...)`, wherever it appears. Shared by the rules below. */
+const CONSOLE_ERROR_SELECTOR =
+	'CallExpression[callee.object.name="console"][callee.property.name="error"]'
+
 // Build tooling and test/story files are not part of what a consumer installs.
 const dependencyCheckOptions = {
 	buildTargets: ['build', 'build-ci', 'build-storybook'],
@@ -286,6 +290,37 @@ export default defineConfig(tseslint.configs.recommended, [
 				},
 				{
 					/*
+					  `console.error` in a route's server half.
+
+					  Route modules are not `.server.ts` - a page's loader, action
+					  and component share one file - so this is scoped by where the
+					  call sits rather than by filename, and lives in this array
+					  rather than its own block so it cannot displace the rules
+					  above. Both declaration forms are matched: `export async
+					  function loader` is what this repo writes today, and the arrow
+					  form is one refactor away from being right.
+
+					  A `console.error` in the component half is deliberately left
+					  alone. That runs in the browser, where the reporting path is
+					  `useErrorReport` and `error-boundary-reporting.spec.ts` is the
+					  ratchet.
+					*/
+					selector:
+						'ExportNamedDeclaration > FunctionDeclaration[id.name=/^(loader|action)$/] ' +
+						CONSOLE_ERROR_SELECTOR,
+					message:
+						'console.error inside a route loader or action. Call reportServerError(error, { request, properties }) from lib/observability instead - it logs and reports through one path. If this is a client mistake answered with a 4xx, use console.warn.'
+				},
+				{
+					/** The same rule for `export const loader = async () => {}`. */
+					selector:
+						'ExportNamedDeclaration > VariableDeclaration > VariableDeclarator[id.name=/^(loader|action)$/] ' +
+						CONSOLE_ERROR_SELECTOR,
+					message:
+						'console.error inside a route loader or action. Call reportServerError(error, { request, properties }) from lib/observability instead - it logs and reports through one path. If this is a client mistake answered with a 4xx, use console.warn.'
+				},
+				{
+					/*
 					  An SVG pasted into a feature component.
 
 					  Icons belong in `shared/components/src/assets/icons` as named
@@ -303,6 +338,49 @@ export default defineConfig(tseslint.configs.recommended, [
 					message:
 						'Inline SVG. Extract it to shared/components/src/assets/icons as a named component and import it. If this component exists to draw a graphic rather than an icon, disable this rule on the line with a comment saying so.'
 				}
+			]
+		}
+	},
+	{
+		/*
+		  Server-only modules do not get to invent their own error reporting.
+
+		  `handleError` in `entry.server.tsx` only ever sees what is thrown past
+		  it, so a service that catches its own failure and returns a fallback,
+		  an empty list or a 5xx envelope has consumed the error - and before
+		  this rule, 30-odd of them each answered that with a `console.error` of
+		  their own design, into a stream with no grouping, alerting or
+		  retention. `stripe-subscription-sync.server.ts` used one to ask an
+		  operator to reconcile a subscription that was still billing a deleted
+		  account, and no operator was ever told.
+
+		  `reportServerError` from `lib/observability` is the one path. It logs
+		  too, with the call site's own structured context, so nothing is lost by
+		  not writing the log by hand.
+
+		  `no-console` rather than a `no-restricted-syntax` selector, and that is
+		  load-bearing rather than taste. Flat config does not merge rule options
+		  - the last matching block replaces them - so a second
+		  `no-restricted-syntax` block over a subset of `apps/**` silently drops
+		  the design-system selectors for those files. The first version of this
+		  rule did exactly that and turned off cn(), the z-index scale and the
+		  inline-SVG ban for every route module while lint stayed green.
+
+		  The cost is the message: `no-console` has a fixed one, so the lint
+		  output here cannot name `reportServerError` the way the route rule
+		  below does. Worth it - a rule that fires with a plain message beats
+		  three rules that stopped firing with good ones.
+
+		  Everything except `error` stays allowed. `console.warn` is the right
+		  call for a malformed request body or an expired OAuth code: those
+		  answer with a 4xx and are the product working, which is the same
+		  judgement `buildErrorReport` makes at its status floor.
+		*/
+		files: ['apps/vectreal-platform/app/**/*.server.ts'],
+		rules: {
+			'no-console': [
+				'error',
+				{ allow: ['warn', 'log', 'info', 'debug', 'trace'] }
 			]
 		}
 	},

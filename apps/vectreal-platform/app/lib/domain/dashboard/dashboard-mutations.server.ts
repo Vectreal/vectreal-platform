@@ -30,6 +30,7 @@ import {
 	renameOperationFor
 } from './dashboard-operations'
 import { assertDashboardPermission } from './dashboard-permissions.server'
+import { reportServerError } from '../../observability/report-server-error.server'
 import { deleteAssets } from '../asset/asset-storage.server'
 import {
 	deleteProject,
@@ -162,7 +163,7 @@ async function runDelete(
 			// nothing. A stranded object is the cheaper outcome.
 			await deleteAssets(orphanedAssetIds)
 		} catch (error) {
-			console.error('Failed to clean up published assets after delete:', error)
+			reportServerError(error)
 		}
 	}
 

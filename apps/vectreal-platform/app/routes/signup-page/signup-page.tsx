@@ -28,6 +28,7 @@ import { getReferralAttribution } from '../../lib/domain/analytics/referral-attr
 import { captureServerEvent } from '../../lib/domain/analytics/server-events.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { recordRateLimitAttempt } from '../../lib/http/rate-limit.server'
+import { reportServerError } from '../../lib/observability/report-server-error.server'
 import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
@@ -186,10 +187,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 		signupData = response.data
 		signupError = response.error
 	} catch (err) {
-		console.error('[auth/sign-up] unexpected error', {
-			err,
-			email: normalizedEmail
-		})
+		reportServerError(err, { request })
 		return data<SignupActionData>(
 			{
 				formError: 'Unable to create your account right now. Please try again.',
@@ -238,10 +236,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 			message.includes('password')
 
 		if (!isClientError) {
-			console.error('[auth/sign-up] signup failed', {
-				message: signupError.message,
-				email: normalizedEmail
-			})
+			reportServerError(signupError, { request })
 		}
 
 		return data<SignupActionData>(

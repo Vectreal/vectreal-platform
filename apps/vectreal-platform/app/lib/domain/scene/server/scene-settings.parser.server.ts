@@ -45,7 +45,7 @@ export class SceneSettingsParser {
 			const requestData = await parseActionRequest(request)
 			return this.parseSceneSettingsRequestData(requestData)
 		} catch (error) {
-			console.error('Failed to parse scene settings request:', error)
+			console.warn('Failed to parse scene settings request:', error)
 			return ApiResponse.badRequest('Invalid request format')
 		}
 	}
@@ -228,7 +228,7 @@ export class SceneSettingsParser {
 				currentSceneBytes
 			}
 		} catch (error) {
-			console.error('Failed to parse scene settings request:', error)
+			console.warn('Failed to parse scene settings request:', error)
 			return ApiResponse.badRequest('Invalid request format')
 		}
 	}
@@ -267,7 +267,7 @@ export class SceneSettingsParser {
 				try {
 					settings = JSON.parse(requestData.settings)
 				} catch (error) {
-					console.error('Failed to parse settings:', error)
+					console.warn('Failed to parse settings:', error)
 					return ApiResponse.badRequest('Invalid settings data format')
 				}
 			} else if (
@@ -284,7 +284,7 @@ export class SceneSettingsParser {
 				try {
 					settings = JSON.parse(requestData.settingsData)
 				} catch (error) {
-					console.error('Failed to parse settingsData:', error)
+					console.warn('Failed to parse settingsData:', error)
 					return ApiResponse.badRequest('Invalid settings data format')
 				}
 			} else if (
@@ -297,7 +297,7 @@ export class SceneSettingsParser {
 
 		// Validate that we have a valid settings object
 		if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
-			console.error('Invalid settings format:', settings)
+			console.warn('Invalid settings format:', settings)
 			return ApiResponse.badRequest('Settings must be a valid object')
 		}
 
@@ -656,7 +656,7 @@ export class SceneSettingsParser {
 						return ApiResponse.badRequest('Invalid gltfJson format')
 					}
 				} catch (error) {
-					console.error('Failed to parse gltfJson:', error)
+					console.warn('Failed to parse gltfJson:', error)
 					return ApiResponse.badRequest('Invalid gltfJson format')
 				}
 			}
@@ -685,7 +685,7 @@ export class SceneSettingsParser {
 			try {
 				payload = JSON.parse(payload)
 			} catch (error) {
-				console.error('Failed to parse scene meta:', error)
+				console.warn('Failed to parse scene meta:', error)
 				return ApiResponse.badRequest('Invalid scene metadata format')
 			}
 		}
@@ -727,7 +727,7 @@ export class SceneSettingsParser {
 				}
 				return parsed
 			} catch (error) {
-				console.error('Failed to parse optimizationReport:', error)
+				console.warn('Failed to parse optimizationReport:', error)
 				return ApiResponse.badRequest('Invalid optimization report format')
 			}
 		}
@@ -755,7 +755,7 @@ export class SceneSettingsParser {
 
 				return parsed as Optimizations
 			} catch (error) {
-				console.error('Failed to parse optimizationSettings:', error)
+				console.warn('Failed to parse optimizationSettings:', error)
 				return ApiResponse.badRequest('Invalid optimization settings format')
 			}
 		}

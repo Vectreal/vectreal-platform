@@ -8,6 +8,7 @@ import { sceneFolders } from '../../../../db/schema/project/scene-folders'
 import { scenePublished } from '../../../../db/schema/project/scene-published'
 import { sceneSettings } from '../../../../db/schema/project/scene-settings'
 import { scenes } from '../../../../db/schema/project/scenes'
+import { reportServerError } from '../../../observability/report-server-error.server'
 import {
 	deleteAssets,
 	selectUnreferencedAssetIds
@@ -834,10 +835,9 @@ export async function deleteScene(
 			// reporting a completed delete as a failure.
 			await deleteAssets(orphanedAssetIds)
 		} catch (error) {
-			console.error(
-				`Failed to clean up orphaned assets for scene ${sceneId}:`,
-				error
-			)
+			// The delete is reported to the user as complete; the objects stay in
+			// storage and are billed for.
+			reportServerError(error, { properties: { sceneId } })
 		}
 	}
 

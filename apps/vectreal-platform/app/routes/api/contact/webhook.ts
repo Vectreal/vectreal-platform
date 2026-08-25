@@ -5,6 +5,7 @@ import {
 	processResendWebhookEvent,
 	verifyResendWebhook
 } from '../../../lib/domain/contact/resend-webhook-processor.server'
+import { reportServerError } from '../../../lib/observability/report-server-error.server'
 
 export async function action({ request }: Route.ActionArgs): Promise<Response> {
 	if (request.method !== 'POST') {
@@ -57,9 +58,9 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 	} catch (err) {
 		const message =
 			err instanceof Error ? err.message : 'Internal processing error'
-		console.error('[contact/webhook] processing failed', {
-			eventType: event.type,
-			message
+		reportServerError(err, {
+			request,
+			properties: { eventType: event.type }
 		})
 		return ApiResponse.serverError(message)
 	}

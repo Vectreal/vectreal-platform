@@ -53,6 +53,7 @@ import {
 	updateUserProfile
 } from '../../lib/domain/user/user-repository.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
+import { reportServerError } from '../../lib/observability/report-server-error.server'
 import {
 	createSupabaseAdminClient,
 	createSupabaseClient
@@ -209,13 +210,16 @@ export async function action({ request }: Route.ActionArgs) {
 			const { error: deleteAuthError } =
 				await adminClient.auth.admin.deleteUser(authenticatedUser.id)
 			if (deleteAuthError) {
-				console.error(
-					'[settings] failed to delete auth account after user data deletion',
-					{
-						userId: authenticatedUser.id,
-						error: deleteAuthError
-					}
-				)
+				/*
+				  Reported here rather than left to the throw below: that throw
+				  carries a message written for the user, so the provider's own
+				  error - the only thing that says why the delete failed - would
+				  not survive it.
+				*/
+				reportServerError(deleteAuthError, {
+					request,
+					properties: { userId: authenticatedUser.id }
+				})
 				throw new Error(
 					'Your account data was deleted, but we could not fully remove your sign-in account. Please contact support.'
 				)

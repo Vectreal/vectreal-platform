@@ -1,6 +1,7 @@
 import { SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 
 import { sceneSettingsService } from './scene-settings-service.server'
+import { reportServerError } from '../../../observability/report-server-error.server'
 import {
 	buildEmbedAssetRefs,
 	buildPublishedModelRef,
@@ -52,10 +53,9 @@ export async function buildSceneManifest(
 		])
 
 	if (settingsResult.status === 'rejected') {
-		console.error('Failed to load scene manifest segment:', {
-			sceneId,
-			error: settingsResult.reason
-		})
+		// The manifest is still returned, one segment short, so an embed renders
+		// something incomplete rather than failing visibly.
+		reportServerError(settingsResult.reason, { properties: { sceneId } })
 	}
 
 	const sceneMeta =

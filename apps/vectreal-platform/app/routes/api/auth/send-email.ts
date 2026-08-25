@@ -20,6 +20,7 @@ import { ApiResponse } from '@shared/utils'
 
 import { sendAuthEmail } from '../../../lib/email/auth-email-sender.server'
 import { verifyAuthHookRequest } from '../../../lib/email/auth-hook-verifier.server'
+import { reportServerError } from '../../../lib/observability/report-server-error.server'
 
 import type { Route } from './+types/send-email'
 
@@ -56,8 +57,7 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 		await sendAuthEmail(payload)
 		return ApiResponse.success({ ok: true })
 	} catch (err) {
-		const message = err instanceof Error ? err.message : 'Unknown error'
-		console.error('[auth/send-email] failed to deliver auth email', { message })
+		reportServerError(err, { request })
 		return ApiResponse.serverError('Failed to deliver auth email')
 	}
 }
