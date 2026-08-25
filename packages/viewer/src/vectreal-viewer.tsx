@@ -176,6 +176,22 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 */
 	hotspots?: HotspotDefinition[]
 
+	/**
+	 * Overrides the hotspot marker fill. Any CSS colour.
+	 *
+	 * The default is a neutral white disc with dark ink, deliberately not the
+	 * Vectreal accent: a marker sits on top of somebody's product, and a
+	 * saturated one competes with the thing the scene exists to show. Pass a
+	 * colour where the hotspots are meant to carry a brand rather than get out
+	 * of the way.
+	 *
+	 * The ink stays dark whatever you pass, so a dark or saturated fill needs
+	 * `--vctrl-hotspot-ink` overridden on the viewer container to keep the step
+	 * numeral readable: white on `#18181b` navy is 1.8:1, against 18:1 for the
+	 * default pale fill.
+	 */
+	hotspotColor?: string
+
 	// --- Editor affordances ---
 	// Editing-surface features (e.g. the publisher). Public/embedded viewers omit
 	// these. See the package README for the slim-embed surface.
@@ -320,6 +336,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		shadowsOptions,
 		normalizationOptions,
 		hotspots,
+		hotspotColor,
 		// Editor affordances
 		shadowLightEditable,
 		showInternalHotspots = false,
@@ -571,6 +588,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									hotspots={hotspots}
 									model={model}
 									includeInternal={showInternalHotspots}
+									color={hotspotColor}
 									onActivateCamera={handleActivateHotspotCamera}
 								/>
 								{children}

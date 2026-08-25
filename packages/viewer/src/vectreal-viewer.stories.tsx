@@ -267,6 +267,15 @@ export const HotspotStyles: Story = {
 	render: hotspotRender
 }
 
+/**
+ * Colour is opt-in. The default marker is neutral so it does not compete with
+ * the product; a caller that wants the hotspots to carry a brand passes one.
+ */
+export const HotspotColor: Story = {
+	args: { hotspots: styleHotspots, hotspotColor: '#fc6c18' },
+	render: hotspotRender
+}
+
 /** The publisher's view of the same scene: the internal-only hotspot appears. */
 export const HotspotsOnAnEditingSurface: Story = {
 	args: { hotspots: styleHotspots, showInternalHotspots: true },

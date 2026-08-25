@@ -24,6 +24,8 @@ export interface SceneHotspotsProps {
 	model?: Object3D
 	/** Draws `internalOnly` hotspots. Editing surfaces only. */
 	includeInternal?: boolean
+	/** Overrides the marker fill for every hotspot in this viewer. */
+	color?: string
 	onActivateCamera?: (cameraId: string) => void
 }
 
@@ -46,6 +48,7 @@ const SceneHotspots = ({
 	hotspots,
 	model,
 	includeInternal,
+	color,
 	onActivateCamera
 }: SceneHotspotsProps) => {
 	const camera = useThree((state) => state.camera)
@@ -146,6 +149,7 @@ const SceneHotspots = ({
 					key={marker.id}
 					marker={marker}
 					occluded={occludedIds.has(marker.id)}
+					color={color}
 					onActivate={onActivateCamera}
 				/>
 			))}

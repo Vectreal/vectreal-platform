@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { resolveHotspotInteraction } from './hotspot-interaction'
 
 import type { HotspotMarker as HotspotMarkerModel } from './resolve-hotspot-markers'
-import type { PointerEvent as ReactPointerEvent } from 'react'
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 
 /**
  * Under the viewer's own overlay chrome, which sits at 100 (the animation
@@ -26,23 +26,28 @@ const HOTSPOT_Z_INDEX_RANGE = [40, 0]
 const TOUCH_LABEL_DURATION_MS = 2500
 
 /**
- * A white inner ring and a dark outer one, on every preset.
+ * A hairline edge and a soft shadow, on every preset.
  *
- * The brand accent alone does not carry a hotspot: `#fc6c18` is 2.6:1 against
- * the viewer's light ground and 2.9:1 against white, both under the 3:1 that a
- * non-text indicator needs, and a white-only ring disappears against exactly
- * the pale product shots where the accent is already weakest. The pair holds on
- * either ground, which is why it is not simply a border.
+ * One pixel of dark edge is all a white disc needs to separate from a pale
+ * product, and it is the whole reason the fill can be neutral. A heavier ring
+ * turns the marker into a badge stuck onto the render; this reads as part of
+ * the viewer. The shadow does the lifting on dark scenes, where the edge itself
+ * disappears and the fill carries.
+ *
+ * The edge carries the marker alone on a white product, where a white fill has
+ * no contrast of its own, so its alpha is the one number here that is a
+ * legibility floor rather than a taste call - measured at 1.6:1 over white at
+ * 0.18, which was too weak to see.
  */
 const RING_SHADOW =
-	'shadow-[0_0_0_1.5px_rgba(255,255,255,0.9),0_0_0_2.5px_rgba(0,0,0,0.4),0_1px_4px_rgba(0,0,0,0.35)]'
+	'shadow-[0_0_0_1px_rgba(0,0,0,0.3),0_1px_3px_rgba(0,0,0,0.3)]'
 
 /**
- * A white ring inside a dark halo, for the same reason, and independent of the
- * accent so the focused marker is distinguishable from the marker itself.
+ * A white ring inside a dark halo, and independent of the fill so a focused
+ * marker is distinguishable from the marker itself whatever colour it is.
  */
 const FOCUS_RING =
-	'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white focus-visible:shadow-[0_0_0_5px_rgba(0,0,0,0.55)]'
+	'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white focus-visible:shadow-[0_0_0_4px_rgba(0,0,0,0.5)]'
 
 const markerClasses = {
 	root: 'vctrl-viewer-hotspot pointer-events-none relative flex items-center justify-center opacity-100 transition-opacity duration-300 ease-out',
@@ -54,7 +59,7 @@ const markerClasses = {
 	pulse:
 		'vctrl-hotspot-pulse pointer-events-none absolute -inset-1 rounded-full',
 	// A 24px floor on the box that takes the pointer, which then grows to fit
-	// whatever is inside it. The plain dot is 14px: under the minimum target
+	// whatever is inside it. The plain dot is 12px: well under the minimum target
 	// size, and missed by a thumb on a touch screen.
 	body: 'relative m-0 flex min-h-6 min-w-6 appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 leading-none',
 	live: 'pointer-events-auto',
@@ -63,19 +68,34 @@ const markerClasses = {
 	// `font-[600]` and `leading-[1.4]` rather than the named scale: a named value
 	// registers its theme variable in the published stylesheet's `:root, :host`
 	// block, which lands in a host application after hydration. See styles.css.
-	dot: `flex shrink-0 items-center justify-center rounded-full bg-[var(--vctrl-hotspot-accent)] font-[600] text-[var(--vctrl-hotspot-on-accent)] ${RING_SHADOW}`,
-	dotPlain: 'h-3.5 w-3.5',
+	dot: `flex shrink-0 items-center justify-center rounded-full bg-[var(--vctrl-hotspot-fill)] font-[600] text-[var(--vctrl-hotspot-ink)] ${RING_SHADOW}`,
+	dotPlain: 'h-3 w-3',
 	dotStep: 'h-5 w-5 text-[10px]',
+	/*
+	  Optical centring for the numeral, and the reason it is not simply
+	  `items-center`.
+
+	  Flex centres the text's box, not its ink. DM Sans reports ascent 10 and
+	  descent 3, and a digit has no ink below the baseline, so the drawn glyph
+	  ends up half its descent above the middle of the disc - measured at 0.50px
+	  on the 20px step disc and 0.50px on the 16px badge, which is visible on a
+	  shape that small.
+
+	  In `em` rather than pixels so it holds if either size changes, and applied
+	  to a wrapper so the disc itself does not move. Font-specific by nature: it
+	  is the metric asymmetry of DM Sans, which `styles.css` sets for the viewer.
+	*/
+	numeral: 'block translate-y-[0.05em]',
 	// A raster payload is someone's photograph or icon: it needs its own ground
 	// to read against arbitrary scene colour behind it. `max-w-none` because a
 	// host application's CSS reset caps images at their container width, which
 	// would squeeze the artwork back down to the 24px target floor.
-	image: `h-8 w-8 max-w-none shrink-0 rounded-full bg-white object-cover ${RING_SHADOW}`,
+	image: `h-7 w-7 max-w-none shrink-0 rounded-full bg-white object-cover ${RING_SHADOW}`,
 	// A vector payload is drawn to sit on the scene directly. A frame would fight
 	// the artwork, so it gets a drop shadow for separation instead.
 	svg: 'h-7 w-7 max-w-none shrink-0 object-contain drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)]',
 	// Offset clear of the artwork rather than overlapping its corner.
-	badge: `absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--vctrl-hotspot-accent)] text-[10px] font-[600] text-[var(--vctrl-hotspot-on-accent)] ${RING_SHADOW}`,
+	badge: `absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--vctrl-hotspot-fill)] text-[10px] font-[600] text-[var(--vctrl-hotspot-ink)] ${RING_SHADOW}`,
 	// `rounded-full`, never `rounded`: this package clears Tailwind's radius
 	// namespace (see styles.css), so every named radius but `full` compiles to
 	// nothing once the package is consumed from npm.
@@ -87,6 +107,8 @@ export interface HotspotMarkerProps {
 	marker: HotspotMarkerModel
 	/** Computed by `SceneHotspots`, which owns the depth test for every marker. */
 	occluded: boolean
+	/** Overrides the marker fill. Any CSS colour; undefined keeps the default. */
+	color?: string
 	/** Runs when a hotspot carrying a `linkedCameraId` is activated. */
 	onActivate?: (cameraId: string) => void
 }
@@ -102,6 +124,7 @@ export interface HotspotMarkerProps {
 const HotspotMarker = ({
 	marker,
 	occluded,
+	color,
 	onActivate
 }: HotspotMarkerProps) => {
 	const [labelVisible, setLabelVisible] = useState(false)
@@ -162,6 +185,14 @@ const HotspotMarker = ({
 		}
 	}, [interaction.activatable, marker.linkedCameraId, onActivate])
 
+	// Set on the marker root rather than the viewer container: drei portals every
+	// Html separately, so there is no shared ancestor inside the marker layer.
+	// Omitted entirely when no colour was passed, so the default path emits no
+	// inline style at all.
+	const colorStyle = color
+		? ({ '--vctrl-hotspot-fill': color } as CSSProperties)
+		: undefined
+
 	const bodyClasses = cn(
 		markerClasses.body,
 		interaction.pointerEvents === 'auto'
@@ -177,7 +208,7 @@ const HotspotMarker = ({
 					marker.step === null ? markerClasses.dotPlain : markerClasses.dotStep
 				)}
 			>
-				{marker.step}
+				<span className={markerClasses.numeral}>{marker.step}</span>
 			</span>
 		) : (
 			<>
@@ -189,7 +220,9 @@ const HotspotMarker = ({
 					}
 				/>
 				{marker.step !== null && (
-					<span className={markerClasses.badge}>{marker.step}</span>
+					<span className={markerClasses.badge}>
+						<span className={markerClasses.numeral}>{marker.step}</span>
+					</span>
 				)}
 			</>
 		)
@@ -198,6 +231,7 @@ const HotspotMarker = ({
 		<Html center position={marker.position} zIndexRange={HOTSPOT_Z_INDEX_RANGE}>
 			<div
 				className={cn(markerClasses.root, occluded && markerClasses.occluded)}
+				style={colorStyle}
 				onPointerEnter={handlePointerEnter}
 				onPointerLeave={handlePointerLeave}
 			>
