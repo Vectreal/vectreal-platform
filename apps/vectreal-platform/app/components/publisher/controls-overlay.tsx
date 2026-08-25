@@ -381,7 +381,7 @@ const OverlayControls = ({
 					showDesktopHeader
 				>
 					<PublishSidebarProvider value={publishSidebarValue}>
-						<PublishSidebarContent hideHeader showSceneInfo />
+						<PublishSidebarContent showSceneInfo />
 					</PublishSidebarProvider>
 				</DynamicSidebar>
 

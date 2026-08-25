@@ -37,7 +37,11 @@ import {
 	SceneAssetListItem
 } from '../../../components/dashboard'
 import { EmbedOptionsPanel } from '../../../components/embed/embed-options-panel'
-import { StatGrid, StatTile } from '../../../components/layout-components'
+import {
+	DetailPanelSection,
+	StatGrid,
+	StatTile
+} from '../../../components/layout-components'
 import { ScenePublishStateControl } from '../../../components/publishing/scene-publish-state-control'
 import SceneEmbedViewer from '../../../components/scene-embed/scene-embed-viewer'
 import { ConfirmDestructiveDialog } from '../../../components/shared/confirm-destructive-dialog'
@@ -228,8 +232,7 @@ function DrawerAssetsSection({
 	)
 
 	return (
-		<section className="space-y-3">
-			<h3 className="text-h4">Assets</h3>
+		<DetailPanelSection title="Assets">
 			{assets.length === 0 ? (
 				<p className="text-muted-foreground text-sm">No linked assets found.</p>
 			) : (
@@ -285,7 +288,7 @@ function DrawerAssetsSection({
 					)}
 				</div>
 			)}
-		</section>
+		</DetailPanelSection>
 	)
 }
 
@@ -487,11 +490,18 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 			<div className="grid h-full min-h-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
 				<main className="flex min-h-0 flex-col gap-4">
 					{model.status === 'error' ? (
-						<section className="ds-raised space-y-3 rounded-2xl p-5">
-							<h2 className="text-h4">Unable to Load Scene</h2>
-							<p className="text-muted-foreground text-sm">
-								{getDashboardSceneLoadErrorMessage(model.error)}
-							</p>
+						<DetailPanelSection
+							surface="raised"
+							title="Unable to Load Scene"
+							/*
+							  `h2`, because this page renders no `h1`:
+							  `dashboard-layout.tsx` suppresses `DashboardHeader` on the
+							  scene-detail route, so the section headings here are the top
+							  of the document outline rather than a rung inside it.
+							*/
+							headingLevel="h2"
+							description={getDashboardSceneLoadErrorMessage(model.error)}
+						>
 							<div className="flex flex-wrap gap-2">
 								<Button type="button" onClick={retrySceneLoad}>
 									Retry
@@ -504,7 +514,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 									Open in Publisher
 								</Button>
 							</div>
-						</section>
+						</DetailPanelSection>
 					) : null}
 					<section className="ds-sunken relative min-h-64 flex-1 overflow-hidden rounded-2xl">
 						<SceneEmbedViewer
@@ -513,7 +523,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							loadingThumbnail={loadingThumbnail}
 						/>
 					</section>
-					<section className="ds-raised space-y-6 rounded-2xl p-5">
+					<DetailPanelSection surface="raised" contentClassName="space-y-6">
 						<header className="flex flex-col items-start gap-6 md:flex-row">
 							{/*
 						  `min-w-0` is what stops a long scene name from pushing the
@@ -579,9 +589,9 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							onClick={() => setDrawerOpen(true)}
 							title="Open details panel"
 							aria-label="Open details panel"
-							className="ds-raised hover:bg-foreground/8 group relative flex w-full flex-col gap-6 rounded-2xl p-5 text-left transition-colors duration-300"
+							className="ds-overlay-interactive group relative flex w-full flex-col gap-6 rounded-2xl p-5 text-left"
 						>
-							<Info className="text-muted-foreground absolute top-3 right-3 h-4 w-4 opacity-25 transition-opacity duration-300 group-hover:opacity-100" />
+							<Info className="text-muted-foreground absolute top-3 right-3 h-4 w-4 opacity-25 transition-opacity duration-150 group-hover:opacity-100" />
 							<div className="space-y-2">
 								<p className="text-muted-foreground text-eyebrow">
 									Scene Workspace
@@ -623,15 +633,15 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 								)}
 							</div>
 						</button>
-					</section>
+					</DetailPanelSection>
 				</main>
 
 				<aside className="ds-raised hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-5 xl:flex">
-					<section className="space-y-3">
-						<div>
-							<p className="text-muted-foreground text-eyebrow">At a Glance</p>
-							<h2 className="text-h4 mt-1">Scene Metrics</h2>
-						</div>
+					<DetailPanelSection
+						eyebrow="At a Glance"
+						title="Scene Metrics"
+						headingLevel="h2"
+					>
 						<StatGrid>
 							<StatTile
 								label="Size"
@@ -653,10 +663,13 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 								value={sceneDetails.meshesCount ?? '-'}
 							/>
 						</StatGrid>
-					</section>
+					</DetailPanelSection>
 
-					<section className="space-y-2 overflow-y-auto">
-						<p className="text-muted-foreground text-eyebrow">Assets Preview</p>
+					<DetailPanelSection
+						eyebrow="Assets Preview"
+						className="overflow-y-auto"
+						contentClassName="space-y-2"
+					>
 						{sceneDetails.assets.length === 0 ? (
 							<p className="text-muted-foreground ds-sunken rounded-xl p-3 text-sm">
 								No linked assets.
@@ -674,7 +687,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 									<button
 										type="button"
 										onClick={() => setDrawerOpen(true)}
-										className="ds-overlay hover:bg-foreground/12 flex w-full items-center justify-between gap-3 rounded-xl p-3 text-left transition-colors duration-300"
+										className="ds-overlay-interactive flex w-full items-center justify-between gap-3 rounded-xl p-3 text-left"
 									>
 										<p className="text-muted-foreground text-sm">
 											…and {sceneDetails.assets.length - 4} more.
@@ -684,7 +697,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 								)}
 							</div>
 						)}
-					</section>
+					</DetailPanelSection>
 
 					<section className="ds-sunken rounded-xl p-3">
 						<div className="flex items-center gap-2">
@@ -727,7 +740,16 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 			</div>
 
 			<Drawer open={drawerOpen} onOpenChange={setDrawerOpen} direction="right">
-				<DrawerContent className="max-w-xl! border-0">
+				{/*
+				  The same width as the publisher's publish sidebar, because both host
+				  `EmbedOptionsPanel`. See `--container-detail-panel`.
+
+				  The `p-6` body below stays as it is: `DrawerHeader` is `p-6`, and a
+				  tighter body would put the heading and the content beneath it on
+				  different left edges - the misalignment `drawer.tsx` records having
+				  already fixed once.
+				*/}
+				<DrawerContent className="max-w-detail-panel! border-0">
 					<DrawerHeader>
 						<DrawerTitle>Scene Details</DrawerTitle>
 						<DrawerDescription>
@@ -736,8 +758,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 					</DrawerHeader>
 
 					<div className="space-y-6 overflow-y-auto p-6">
-						<section className="space-y-3">
-							<h3 className="text-h4">Scene Stats</h3>
+						<DetailPanelSection title="Scene Stats">
 							<StatGrid>
 								<StatTile
 									label="Current Size"
@@ -759,7 +780,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 									value={`${sceneDetails.meshesCount ?? '-'} / ${sceneDetails.verticesCount ?? '-'}`}
 								/>
 							</StatGrid>
-						</section>
+						</DetailPanelSection>
 
 						<DrawerAssetsSection
 							assets={sceneDetails.assets}
@@ -768,8 +789,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 
 						<Separator />
 
-						<section className="space-y-3">
-							<h3 className="text-h4">Publishing</h3>
+						<DetailPanelSection title="Publishing">
 							<ScenePublishStateControl
 								publishState={publishState}
 								onPublish={openPublisherForPublishing}
@@ -780,20 +800,22 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 								revokeDialogDescription="This deletes the published GLB asset and returns this scene to draft state."
 							/>
 							{publishState.status === 'published' && (
-								<div className="space-y-3 pt-1">
-									<h4 className="text-h4">Embed</h4>
+								<DetailPanelSection
+									title="Embed"
+									headingLevel="h4"
+									className="pt-1"
+								>
 									<EmbedOptionsPanel
 										sceneId={sceneState.id}
 										projectId={project.id}
 									/>
-								</div>
+								</DetailPanelSection>
 							)}
-						</section>
+						</DetailPanelSection>
 
 						<Separator />
 
-						<section className="space-y-3">
-							<h3 className="text-h4">Collaboration</h3>
+						<DetailPanelSection title="Collaboration">
 							<div className="flex items-center justify-between gap-3">
 								<div className="flex items-center gap-2">
 									<Avatar className="h-8 w-8">
@@ -827,12 +849,11 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 									{copiedLink ? 'Copied' : 'Copy Link'}
 								</Button>
 							</div>
-						</section>
+						</DetailPanelSection>
 
 						<Separator />
 
-						<section className="space-y-3">
-							<h3 className="text-h4">Danger Zone</h3>
+						<DetailPanelSection title="Danger Zone">
 							<Button
 								variant="destructive"
 								size="sm"
@@ -861,7 +882,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 									})
 								}}
 							/>
-						</section>
+						</DetailPanelSection>
 					</div>
 				</DrawerContent>
 			</Drawer>

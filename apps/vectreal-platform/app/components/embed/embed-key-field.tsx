@@ -11,12 +11,12 @@ import {
 import { Eye, EyeOff, KeyRound, Plus } from 'lucide-react'
 import { useState, type FC } from 'react'
 
-import { EmbedCreatedKeyDialog } from './embed-created-key-dialog'
 import {
 	matchesKeyPreview,
 	type EmbedApiKeyOption
 } from '../../lib/domain/embed/embed-key-options'
 import { EMBED_COPY } from '../../lib/domain/embed/embed-snippet'
+import { OneTimeKeyDialog } from '../api-keys/one-time-key-dialog'
 import { InfoTooltip } from '../info-tooltip'
 import { InlineNotice } from '../layout-components'
 
@@ -43,8 +43,8 @@ export const EmbedKeyField: FC<EmbedKeyFieldProps> = ({ api }) => {
 	const selectedKey = api.keys.find((key) => key.id === api.selectedKeyId)
 	const previewMismatch = Boolean(
 		selectedKey &&
-			api.token.trim() &&
-			!matchesKeyPreview(api.token, selectedKey.keyPreview)
+		api.token.trim() &&
+		!matchesKeyPreview(api.token, selectedKey.keyPreview)
 	)
 
 	return (
@@ -156,10 +156,18 @@ export const EmbedKeyField: FC<EmbedKeyFieldProps> = ({ api }) => {
 				</InlineNotice>
 			)}
 
-			<EmbedCreatedKeyDialog
-				plaintext={api.createdPlaintext}
-				expiresAt={api.createdKeyExpiresAt}
-				onDismiss={api.dismissCreatedKey}
+			{/*
+			  A modal rather than a notice inside the panel: in the publisher this
+			  panel lives in a `type="single"` accordion, so opening any other
+			  section unmounts it and takes the key with it. The user would not
+			  have left the page - they would have clicked a heading - and the key
+			  would be gone for good.
+			*/}
+			<OneTimeKeyDialog
+				open={api.createdKey !== null}
+				apiKey={api.createdKey}
+				reason="created"
+				onClose={api.dismissCreatedKey}
 			/>
 		</div>
 	)

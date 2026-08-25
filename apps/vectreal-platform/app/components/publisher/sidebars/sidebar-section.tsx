@@ -1,16 +1,17 @@
-import { Separator } from '@shared/components/ui/separator'
 import { cn } from '@shared/utils'
 import { ReactNode, memo } from 'react'
 
 import { InfoTooltip } from '../../info-tooltip'
+import { DetailPanelSection } from '../../layout-components'
 
 /**
- * Unified section header for sidebar panels.
- * Provides consistent visual hierarchy with:
- * - Section heading on the shared `text-h4` rung
- * - Optional tooltip for context
- * - Separator line
- * - Proper spacing and breathing room
+ * A section inside a publisher sidebar panel.
+ *
+ * The heading rung, the tooltip slot and the rule beneath them are
+ * `DetailPanelSection`'s, shared with the dashboard's Scene Details drawer;
+ * this is the publisher's name for it, kept because its call sites pass a
+ * `tooltip` string rather than a node and expect the sidebar's wider
+ * `space-y-4` rhythm.
  *
  * Usage:
  * <SidebarSection title="Camera Settings" tooltip="Configure camera properties">
@@ -29,31 +30,15 @@ interface SidebarSectionProps {
 
 export const SidebarSection = memo(
 	({ title, tooltip, children, className = '' }: SidebarSectionProps) => (
-		<div className={cn('space-y-4', className)}>
-			{/* Section Header with Heading */}
-			{title && (
-				<>
-					<div className="flex items-center justify-between gap-2">
-						{/*
-						  The h4 rung, the same one every other in-panel section heading
-						  uses. This was `text-sm font-semibold tracking-tight` with an
-						  `!important` on each property - off-scale, and impossible for a
-						  consumer to correct. The importants were beating an unlayered
-						  rule that no longer exists: heading defaults live in `@layer
-						  base` now, which any utility already outranks.
-						*/}
-						<h3 className="text-foreground text-h4">{title}</h3>
-						{tooltip && <InfoTooltip content={tooltip} />}
-					</div>
-
-					{/* Visual Separator */}
-					<Separator />
-				</>
-			)}
-
-			{/* Content */}
+		<DetailPanelSection
+			title={title}
+			action={title && tooltip ? <InfoTooltip content={tooltip} /> : undefined}
+			divider={Boolean(title)}
+			className={cn('space-y-4', className)}
+			contentClassName="space-y-4"
+		>
 			{children}
-		</div>
+		</DetailPanelSection>
 	)
 )
 

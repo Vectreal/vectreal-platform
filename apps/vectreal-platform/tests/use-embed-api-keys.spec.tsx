@@ -142,7 +142,10 @@ describe('loading the key list', () => {
 	it('surfaces a refusal instead of reporting an empty project', () => {
 		fetchers[0] = {
 			state: 'idle',
-			data: { success: false, error: 'You do not have permission to view API keys' }
+			data: {
+				success: false,
+				error: 'You do not have permission to view API keys'
+			}
 		}
 		const probe = mount({ projectId: 'p1', enabled: true })
 
@@ -201,7 +204,7 @@ describe('creating a key', () => {
 		act(() => probe.rerender({ projectId: 'p1', enabled: true }))
 
 		expect(probe.latest().token).toBe('vctrl_secretab3x')
-		expect(probe.latest().createdPlaintext).toBe('vctrl_secretab3x')
+		expect(probe.latest().createdKey?.plaintext).toBe('vctrl_secretab3x')
 		expect(probe.latest().selectedKeyId).toBe('new')
 		expect(load).toHaveBeenCalledTimes(2)
 	})
@@ -226,12 +229,15 @@ describe('creating a key', () => {
 
 		act(() => probe.latest().dismissCreatedKey())
 
-		fetchers[1] = { state: 'idle', data: response('second', 'vctrl_second9zQ1') }
+		fetchers[1] = {
+			state: 'idle',
+			data: response('second', 'vctrl_second9zQ1')
+		}
 		act(() => probe.rerender({ projectId: 'p1', enabled: true }))
 
 		expect(probe.latest().token).toBe('vctrl_second9zQ1')
 		expect(probe.latest().selectedKeyId).toBe('second')
-		expect(probe.latest().createdPlaintext).toBe('vctrl_second9zQ1')
+		expect(probe.latest().createdKey?.plaintext).toBe('vctrl_second9zQ1')
 	})
 
 	it('applies a response already present at mount exactly once', () => {
@@ -298,7 +304,7 @@ describe('creating a key', () => {
 
 		act(() => probe.latest().dismissCreatedKey())
 
-		expect(probe.latest().createdPlaintext).toBeNull()
+		expect(probe.latest().createdKey).toBeNull()
 		// The token stays: the user still needs it to build a snippet.
 		expect(probe.latest().token).toBe('vctrl_secretab3x')
 	})

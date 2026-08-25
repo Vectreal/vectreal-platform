@@ -14,6 +14,7 @@ import type {
 	EmbedApiKeyCreatedPayload,
 	EmbedApiKeysPayload
 } from '../../routes/api/projects.$projectId.api-keys'
+import type { OneTimeKeyValue } from '../api-keys/one-time-key-dialog'
 
 /**
  * `ApiResponse.success` wraps the payload; `ApiResponse.error` returns a bare
@@ -56,10 +57,13 @@ export interface EmbedApiKeysApi {
 	setToken: (value: string) => void
 	selectedKeyId: string
 	selectKey: (keyId: string) => void
-	/** Set once, when a key is minted here. The only time a key is readable. */
-	createdPlaintext: string | null
-	/** Expiry of that key, so the dialog can say when the embed will stop. */
-	createdKeyExpiresAt: string | null
+	/**
+	 * Set once, when a key is minted here. The only time a key is readable.
+	 *
+	 * Carries the expiry as well, so the dialog can say when the embed will
+	 * stop working.
+	 */
+	createdKey: OneTimeKeyValue | null
 	/** Closes the one-time key dialog. The value is unrecoverable afterwards. */
 	dismissCreatedKey: () => void
 	createKey: () => void
@@ -96,10 +100,7 @@ export function useEmbedApiKeys(params: {
 
 	const [token, setToken] = useState('')
 	const [selectedKeyId, setSelectedKeyId] = useState('')
-	const [createdPlaintext, setCreatedPlaintext] = useState<string | null>(null)
-	const [createdKeyExpiresAt, setCreatedKeyExpiresAt] = useState<string | null>(
-		null
-	)
+	const [createdKey, setCreatedKey] = useState<OneTimeKeyValue | null>(null)
 
 	const requestedEndpointRef = useRef<string | null>(null)
 	const handledCreateRef = useRef<unknown>(null)
@@ -144,8 +145,12 @@ export function useEmbedApiKeys(params: {
 		if (!endpoint) return
 
 		const { key, plaintext } = createFetcher.data.data
-		setCreatedPlaintext(plaintext)
-		setCreatedKeyExpiresAt(key.expiresAt)
+		setCreatedKey({
+			plaintext,
+			preview: key.keyPreview,
+			name: key.name,
+			expiresAt: key.expiresAt
+		})
 		setToken(plaintext)
 		setSelectedKeyId(key.id)
 		listFetcher.load(endpoint)
@@ -164,7 +169,7 @@ export function useEmbedApiKeys(params: {
 	}, [])
 
 	const dismissCreatedKey = useCallback(() => {
-		setCreatedPlaintext(null)
+		setCreatedKey(null)
 	}, [])
 
 	const payload = listFetcher.data?.success ? listFetcher.data.data : null
@@ -182,8 +187,7 @@ export function useEmbedApiKeys(params: {
 		setToken,
 		selectedKeyId,
 		selectKey,
-		createdPlaintext,
-		createdKeyExpiresAt,
+		createdKey,
 		dismissCreatedKey,
 		createKey,
 		creating: createFetcher.state !== 'idle',
