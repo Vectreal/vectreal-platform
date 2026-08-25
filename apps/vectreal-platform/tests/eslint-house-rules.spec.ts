@@ -16,13 +16,32 @@ import { beforeAll, describe, expect, it } from 'vitest'
 const ROOT = resolve(__dirname, '../../..')
 
 /** A path inside the glob the rules are scoped to (`apps/**`, `shared/**`). */
-const IN_SCOPE = resolve(ROOT, 'apps/vectreal-platform/app/components/probe.tsx')
+const IN_SCOPE = resolve(
+	ROOT,
+	'apps/vectreal-platform/app/components/probe.tsx'
+)
 
 let eslint: ESLint
 
-beforeAll(() => {
+/*
+  The warm-up is the point of the timeout argument.
+
+  `new ESLint()` is cheap; the first `lintText` is not. It resolves the flat
+  config, which imports `eslint.config.mts` and every plugin it pulls in, and
+  that lands on whichever test happens to run first. Measured on an idle
+  machine it is about a second; measured while the rest of the suite runs in
+  parallel it has exceeded the 5s per-test budget and failed outright. So the
+  first test in this file failed for want of time rather than for anything it
+  asserts, and passed when run alone - which reads as a flaky rule instead of
+  a misplaced cost.
+
+  Paying it here moves it out of every test's budget and into a hook with a
+  budget of its own, so each test times only the assertion it makes.
+*/
+beforeAll(async () => {
 	eslint = new ESLint({ cwd: ROOT })
-})
+	await eslint.lintText('export const warmUp = 1\n', { filePath: IN_SCOPE })
+}, 120_000)
 
 async function messagesFor(code: string, filePath = IN_SCOPE) {
 	const [result] = await eslint.lintText(code, { filePath })

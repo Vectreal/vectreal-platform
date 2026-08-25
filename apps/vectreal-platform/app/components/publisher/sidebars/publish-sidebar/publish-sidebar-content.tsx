@@ -20,17 +20,6 @@ import { ScenePreview } from './sections/scene-preview'
 
 import type { FC } from 'react'
 
-/**
- * The panel header is not here. `DynamicSidebar` renders it - title,
- * description and the one close control - for both the desktop panel and the
- * mobile sheet. This component carried a second one behind a `hideHeader`
- * prop that its only consumer always passed, so the branch could not run: a
- * `Card`/`CardHeader` copy of the same three parts, kept in step with nothing.
- */
-interface PublishSidebarContentProps {
-	showSceneInfo?: boolean
-}
-
 const getSizeDeltaLabel = (deltaBytes?: number | null) => {
 	if (typeof deltaBytes !== 'number') {
 		return null
@@ -47,9 +36,22 @@ const getSizeDeltaLabel = (deltaBytes?: number | null) => {
 	return 'No size change'
 }
 
-const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
-	showSceneInfo = false
-}) => {
+/**
+ * The publish sidebar's body. It takes no props.
+ *
+ * It had two booleans, `hideHeader` and `showSceneInfo`, and its one consumer
+ * always passed both, so neither could ever be false and every branch reading
+ * them was unreachable. `hideHeader` guarded a second panel header that
+ * `DynamicSidebar` already renders for the desktop panel and the mobile sheet
+ * alike; `showSceneInfo` guarded the delivery summary and the two size figures
+ * it needs.
+ *
+ * A prop with one caller and one value is not configuration - it is a claim
+ * that the component supports a mode nobody has ever rendered, which someone
+ * eventually has to read the whole tree to disprove.
+ */
+
+const PublishSidebarContent: FC = () => {
 	const {
 		sceneId,
 		projectId,
@@ -71,11 +73,7 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 		? isSaving || !saveAvailability?.canSave
 		: isSaving
 
-	const sizeReductionPercent = showSceneInfo
-		? viewModel.sizeReductionPercent
-		: null
-	const sizeDeltaBytes = showSceneInfo ? viewModel.sizeDeltaBytes : null
-	const sizeDeltaLabel = getSizeDeltaLabel(sizeDeltaBytes)
+	const sizeDeltaLabel = getSizeDeltaLabel(viewModel.sizeDeltaBytes)
 	const currentSceneBytes = viewModel.publishMetricSizeInfo.currentSceneBytes
 	const isAuthenticated = viewModel.isAuthenticated
 	const hasSavedScene = viewModel.hasSavedScene
@@ -98,14 +96,12 @@ const PublishSidebarContent: FC<PublishSidebarContentProps> = ({
 				  sidebar did not line up with the accordion below it.
 				*/}
 				<div className="flex flex-col gap-3 p-4">
-					{showSceneInfo && (
-						<DeliverySummary
-							sceneBytes={currentSceneBytes}
-							sizeReductionPercent={sizeReductionPercent}
-							sizeDeltaLabel={sizeDeltaLabel}
-							onOpenOptimization={onOpenOptimizationDrawer}
-						/>
-					)}
+					<DeliverySummary
+						sceneBytes={currentSceneBytes}
+						sizeReductionPercent={viewModel.sizeReductionPercent}
+						sizeDeltaLabel={sizeDeltaLabel}
+						onOpenOptimization={onOpenOptimizationDrawer}
+					/>
 
 					{canAccessPublishFeatures && <ScenePreview />}
 
