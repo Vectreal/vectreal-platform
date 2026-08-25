@@ -95,12 +95,26 @@ const HotspotsSettingsPanel = memo(() => {
 
 	const allCameras = camera.cameras ?? []
 
-	// Auto-disable click-to-place when deselecting a hotspot
+	/**
+	 * Click-to-place is armed from this panel, so it is disarmed here too: when
+	 * the hotspot it was aimed at is deselected, and when the panel goes away.
+	 *
+	 * The cleanup is the load-bearing half. Switching compose tools unmounts the
+	 * panel without deselecting anything, and the atom outlives it, so the
+	 * canvas stayed armed under a tool that shows no placement affordance at all.
+	 */
 	useEffect(() => {
 		if (!selectedId) {
 			setIsClickToPlaceActive(false)
 		}
 	}, [selectedId, setIsClickToPlaceActive])
+
+	useEffect(
+		() => () => {
+			setIsClickToPlaceActive(false)
+		},
+		[setIsClickToPlaceActive]
+	)
 
 	const selectedHotspot = useMemo(
 		() => hotspots.find((h) => h.id === selectedId) ?? null,
