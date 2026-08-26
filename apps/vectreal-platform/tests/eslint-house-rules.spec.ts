@@ -1,13 +1,22 @@
 /**
- * The house rules in `eslint.config.mts`, proven to fire.
+ * The house rules in `eslint.config.mts`, proven to fire and proven to be on.
  *
  * A `no-restricted-syntax` selector is a string. Nothing type-checks it, and a
  * subtly wrong one silently matches nothing while lint stays green - which
  * looks exactly like compliance. These lint real snippets through the repo's
  * own config and assert both directions: the violation is caught, and the
  * correct form is not.
+ *
+ * That covers a rule being wrong. It does not cover a rule being *absent*,
+ * which is a separate failure with the same symptom, and the one that actually
+ * shipped: flat config replaces rule options rather than merging them, so a
+ * second block re-declaring a rule over a subset of files turns the first
+ * block's rules off for that subset. The final describe checks the resolved
+ * config for every file in scope, because everything above lints at one
+ * hardcoded path and a hardcoded path is what the regression slipped past.
  */
 
+import { globSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { ESLint } from 'eslint'
@@ -366,39 +375,121 @@ describe('server code reports rather than logs', () => {
 
 
 /**
- * The rules reach route modules too, and adding one did not turn the others off.
+ * Every file a house rule is scoped to actually has it.
  *
- * This is a regression test for a defect in the change that added the
- * `console.error` ban. Flat config does not merge rule options: the last
- * matching block replaces them. Scoping a second `no-restricted-syntax` block
- * to `apps/vectreal-platform/app/routes/**` therefore disabled cn(), the
- * z-index scale and the inline-SVG ban for every route file, and lint stayed
- * green because the only probe path in this file was under `app/components/`.
+ * This is a regression test, and the bug it pins shipped in the change that
+ * added the `console.error` ban. Flat config does not merge rule options: when
+ * two blocks configure the same rule and both match a file, the later one
+ * *replaces* the earlier. Scoping a second `no-restricted-syntax` block to
+ * `apps/vectreal-platform/app/routes/**` therefore left route files with only
+ * that block's two selectors and silently dropped cn(), the z-index scale and
+ * the inline-SVG ban across every page and API route.
  *
- * A rule that has been switched off is indistinguishable from a codebase that
- * complies, which is why the check is per-scope rather than global.
+ * Lint stayed green, because a rule that is switched off reports nothing and so
+ * does a codebase that complies. The tests above stayed green too: they lint
+ * snippets at one hardcoded path, which proves a rule *exists* but not that it
+ * is *active* where it is scoped.
+ *
+ * So this asks ESLint to resolve the real config for every source file in scope
+ * and checks the shape of the answer, rather than guessing which scopes are
+ * worth probing. Guessing is what left the hole: the probe path was under
+ * `app/components/`, and the block that broke things did not match it.
  */
-describe('house rules apply in every scope', () => {
-	const CN_VIOLATION =
-		'export const A = ({ className }: { className?: string }) => (\n' +
-		'\t<div className={`space-y-4 ${className}`} />\n)\n'
-
-	it.each([
-		['a component', IN_SCOPE],
-		['a route module', ROUTE_MODULE]
-	])('still enforces cn() in %s', async (_, filePath) => {
-		expect(await messagesFor(CN_VIOLATION, filePath)).toHaveLength(1)
+describe('house rules survive config resolution', () => {
+	/*
+	  Resolved per file rather than sampled. 701 files take under a second,
+	  because ESLint caches resolution per directory - cheap enough that there is
+	  no reason to check a subset and hope it was representative.
+	*/
+	const SOURCES = globSync(['apps/**/*.{ts,tsx}', 'shared/**/*.{ts,tsx}'], {
+		cwd: ROOT,
+		exclude: (path) =>
+			path.includes('node_modules') ||
+			path.includes('/build/') ||
+			path.includes('/dist/')
 	})
 
-	it.each([
-		['a component', IN_SCOPE],
-		['a route module', ROUTE_MODULE]
-	])('still enforces the z-index scale in %s', async (_, filePath) => {
-		const messages = await messagesFor(
-			'export const A = () => <div className="z-[999]" />\n',
-			filePath
+	/**
+	 * The four exceptions `eslint.config.mts` declares through `ignores`, as
+	 * shapes.
+	 *
+	 * Duplicated from the config on purpose, and the duplication is what makes
+	 * the check sound: without it, a block that resolved a subset of files to
+	 * *zero* selectors would be indistinguishable from a file the config
+	 * deliberately exempts. The assertion below fails if this list goes stale in
+	 * either direction.
+	 */
+	const DECLARED_EXCEPTIONS: [string, RegExp][] = [
+		['specs assert on literal class strings', /\.spec\.tsx?$/],
+		['stories show raw values beside their tokens', /\.stories\.tsx?$/],
+		['mail clients do not resolve custom properties', /\/lib\/email\/templates\//],
+		['icons are where inline SVG is supposed to live', /\/assets\/icons\//]
+	]
+
+	let resolved: { file: string; selectors: number }[]
+
+	beforeAll(async () => {
+		resolved = []
+		for (const file of SOURCES) {
+			const config = await eslint.calculateConfigForFile(resolve(ROOT, file))
+			const rule = config.rules?.['no-restricted-syntax']
+			// [severity, ...selectors]
+			resolved.push({
+				file,
+				selectors: Array.isArray(rule) ? rule.length - 1 : 0
+			})
+		}
+	})
+
+	it('finds the files it is supposed to be checking', () => {
+		expect(SOURCES.length).toBeGreaterThan(400)
+	})
+
+	/*
+	  The assertion that would have caught the regression. A clobbered file keeps
+	  the overriding block's selectors and loses the rest, so it lands strictly
+	  between "fully exempt" and "fully covered" - a state nothing else produces.
+	*/
+	it('gives every file either the full rule set or none of it', () => {
+		const full = Math.max(...resolved.map((entry) => entry.selectors))
+		const partial = resolved.filter(
+			(entry) => entry.selectors > 0 && entry.selectors < full
 		)
 
-		expect(messages.length).toBeGreaterThanOrEqual(1)
+		expect(
+			partial.map((entry) => `${entry.file} (${entry.selectors}/${full})`),
+			'These files resolved to some house rules but not all of them, which means a config block re-declared no-restricted-syntax over a subset and replaced the rest. Flat config does not merge rule options. Add the selectors to the existing array instead of opening a new block, or use a different rule id.'
+		).toEqual([])
+	})
+
+	/*
+	  The other half. Without this, switching a subset off entirely would read as
+	  "these files are exempt" and pass the assertion above.
+	*/
+	it('exempts only what the config says it exempts', () => {
+		const unexplained = resolved
+			.filter((entry) => entry.selectors === 0)
+			.filter(({ file }) =>
+				DECLARED_EXCEPTIONS.every(([, pattern]) => !pattern.test(file))
+			)
+			.map((entry) => entry.file)
+
+		expect(
+			unexplained,
+			'These files have no house rules and are not one of the exceptions eslint.config.mts declares. Either the ignores grew and this list needs the new reason, or a config block turned the rules off by accident.'
+		).toEqual([])
+	})
+
+	/*
+	  The ratchet turns one way. An exception that no longer exempts anything is a
+	  claim about the config that has stopped being true, and leaving it here
+	  would let the list above quietly stop meaning anything.
+	*/
+	it.each(DECLARED_EXCEPTIONS)('%s: still exempts something', (_, pattern) => {
+		expect(
+			resolved.some(
+				(entry) => pattern.test(entry.file) && entry.selectors === 0
+			)
+		).toBe(true)
 	})
 })
