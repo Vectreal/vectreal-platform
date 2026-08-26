@@ -23,6 +23,7 @@ import {
 	CameraProps,
 	ControlsProps,
 	EnvironmentProps,
+	HotspotDefinition,
 	NormalizationOptions,
 	ShadowsProps
 } from '@vctrl/core'
@@ -45,6 +46,7 @@ import {
 	SceneCamera,
 	SceneControls,
 	SceneEnvironment,
+	SceneHotspots,
 	SceneModel,
 	ScenePostProcessing,
 	SceneShadows
@@ -162,6 +164,34 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 */
 	normalizationOptions?: NormalizationOptions
 
+	/**
+	 * Point-of-interest hotspots to draw over the model, straight from
+	 * `SceneSettings.hotspots`.
+	 *
+	 * Drawn in navigation-sequence order, and a sequenced hotspot carries its
+	 * step number. A hotspot the author hid (`visible: false`) is never drawn,
+	 * and neither is one marked `internalOnly` unless `showInternalHotspots`
+	 * says this is an editing surface. Clicking a hotspot that names a
+	 * `linkedCameraId` activates that camera.
+	 */
+	hotspots?: HotspotDefinition[]
+
+	/**
+	 * Overrides the hotspot marker fill. Any CSS colour.
+	 *
+	 * The default is a neutral white disc with dark ink, deliberately not the
+	 * Vectreal accent: a marker sits on top of somebody's product, and a
+	 * saturated one competes with the thing the scene exists to show. Pass a
+	 * colour where the hotspots are meant to carry a brand rather than get out
+	 * of the way.
+	 *
+	 * The ink stays dark whatever you pass, so a dark or saturated fill needs
+	 * `--vctrl-hotspot-ink` overridden on the viewer container to keep the step
+	 * numeral readable: white on `#18181b` navy is 1.8:1, against 18:1 for the
+	 * default pale fill.
+	 */
+	hotspotColor?: string
+
 	// --- Editor affordances ---
 	// Editing-surface features (e.g. the publisher). Public/embedded viewers omit
 	// these. See the package README for the slim-embed surface.
@@ -171,6 +201,19 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * Intended for editing surfaces (e.g. the publisher), not public viewers.
 	 */
 	shadowLightEditable?: boolean
+
+	/**
+	 * When true, hotspots marked `internalOnly` are drawn as well. Intended for
+	 * the publisher, where those hotspots are authored.
+	 *
+	 * Public and embedded surfaces leave this off. `internalOnly` is a
+	 * visibility contract, and the published payload is already stripped of
+	 * these server-side; this is the viewer's own half of it, which matters
+	 * because a consumer of this package can hand it any settings object,
+	 * including one that never passed through that redaction.
+	 * Default: false.
+	 */
+	showInternalHotspots?: boolean
 
 	/**
 	 * When true, the accumulative shadow bakes in a single pass on mount instead of
@@ -292,8 +335,11 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		envOptions,
 		shadowsOptions,
 		normalizationOptions,
+		hotspots,
+		hotspotColor,
 		// Editor affordances
 		shadowLightEditable,
+		showInternalHotspots = false,
 		staticShadowBake = false,
 		bakedShadow,
 		onShadowBakeReady,
@@ -389,6 +435,16 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 				break
 		}
 	}, [forwardAnimationCommand])
+
+	// A hotspot's linked camera goes through the same command path an external
+	// `activate_camera` takes, so a hotspot click and a host calling the embed
+	// API land on one implementation of "fly to this viewpoint".
+	const handleActivateHotspotCamera = useCallback(
+		(cameraId: string) => {
+			executeViewerCommand({ type: 'activate_camera', cameraId })
+		},
+		[executeViewerCommand]
+	)
 
 	const handleSceneCameraExecutorReady = useCallback(
 		(executor: null | ViewerCommandExecutor) => {
@@ -527,6 +583,13 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									staticBake={staticShadowBake}
 									bakedShadow={bakedShadow}
 									onShadowBakeReady={onShadowBakeReady}
+								/>
+								<SceneHotspots
+									hotspots={hotspots}
+									model={model}
+									includeInternal={showInternalHotspots}
+									color={hotspotColor}
+									onActivateCamera={handleActivateHotspotCamera}
 								/>
 								{children}
 							</SceneBounds>

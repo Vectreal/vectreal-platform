@@ -25,6 +25,35 @@
 	--vctrl-active-bg: #d1d5db;
 	--vctrl-text: #1f2937;
 	--vctrl-border: #181818;
+
+	/*
+	  The hotspot marker's own colours, and deliberately not the brand accent.
+
+	  A hotspot sits on top of somebody's product. Vectreal orange there competes
+	  with the thing the scene exists to show, and on photographic content it
+	  reads as a sticker rather than as part of the viewer. The default is a
+	  neutral white disc with dark ink: it belongs to no palette, so it never
+	  clashes with the product, and it leaves the only strong colour on screen to
+	  the model itself.
+
+	  It also holds on both grounds without the accent's contrast problem. White
+	  carries a dark scene on its own; on a light or white product the hairline
+	  dark ring in `hotspot-marker.tsx` is what separates it. Dark ink on white is
+	  17:1, so the step numeral is legible at 10px with no special pleading.
+
+	  Colour is opt-in: `hotspotColor` on `VectrealViewer` replaces the fill per
+	  viewer, and both tokens can be overridden on the container directly. The ink
+	  does not follow the fill, so a dark or saturated one needs the ink token
+	  lightened alongside it.
+
+	  Declared on `.viewer` rather than `:root`: this stylesheet is loaded by a
+	  dynamic import into a host application, and a `:root` token would be a
+	  viewer package writing into that application's theme (the radius block above
+	  records the afternoon that cost).
+	*/
+	--vctrl-hotspot-fill: #ffffff;
+	--vctrl-hotspot-ink: #18181b;
+
 	font-family: 'DM Sans Variable', sans-serif;
 }
 
@@ -50,6 +79,87 @@
 	--vctrl-active-bg: #d1d5db;
 	--vctrl-text: #1f2937;
 	--vctrl-border: #181818;
+}
+
+/*
+  Optical centring for the step numeral.
+
+  Flex centres the text's *box*, and that box runs from the font's ascender to
+  its descender while a digit's ink runs from the cap height to the baseline.
+  The two are not concentric, so a numeral centred by flex alone sits high -
+  measured at 0.50px on the 20px step disc, which is visible on a shape that
+  small.
+
+  `text-box` trims the box to the cap/baseline edges, so what flex centres is
+  the ink. The browser reads the metric out of whatever font actually rendered,
+  which is the whole point: this package names DM Sans but does not ship it, so
+  a consumer's fallback font decides those metrics, and any constant written
+  here would be calibrated to a font that may never load.
+
+  The fallback is a fixed nudge for engines without `text-box` (Firefox as of
+  this writing). It is DM Sans's asymmetry specifically, and it is deliberately
+  a last resort rather than the primary mechanism: a sub-pixel transform is also
+  at the mercy of the renderer's hinting, so the same 0.05em lands differently
+  on a hinted Linux rasterizer than on macOS.
+*/
+.vctrl-hotspot-numeral {
+	display: block;
+	text-box: trim-both cap alphabetic;
+}
+
+@supports not (text-box: trim-both cap alphabetic) {
+	.vctrl-hotspot-numeral {
+		transform: translateY(0.05em);
+	}
+}
+
+/*
+  A slow expanding ring around the marker.
+
+  Animated with `transform` and `opacity` on a dedicated element, never with
+  `box-shadow` spread: shadow spread is not compositor-accelerated, so every
+  marker would force a paint on every frame of an infinite loop, on top of a
+  canvas that already renders continuously.
+
+  The ring is drawn by the element's own border and starts outside the marker's
+  own white/dark ring, so switching the animation off leaves it visible at rest
+  rather than hiding it under the artwork. That matters: the ring is what marks a
+  dot over a 3D scene as something to touch, and a visitor who asked for reduced
+  motion still needs to be told.
+
+  `currentColor` plus a base `opacity`, never an alpha channel baked into the
+  border colour: that is what lets the fill be any CSS colour, including one a
+  caller passes at runtime that this stylesheet cannot decompose.
+
+  `color` is bound here rather than by a utility class on the element. The ring
+  is a sibling of the marker body, so it inherits nothing from it, and left to
+  plain `currentColor` it would pick up whatever colour the *host page* happens
+  to cascade into drei's portal - a ring that changes with the embedding site.
+*/
+@keyframes vctrl-hotspot-pulse {
+	0% {
+		transform: scale(1);
+		opacity: 0.4;
+	}
+	70%,
+	100% {
+		transform: scale(1.75);
+		opacity: 0;
+	}
+}
+
+.vctrl-hotspot-pulse {
+	color: var(--vctrl-hotspot-fill);
+	border: 1px solid currentColor;
+	border-radius: 9999px;
+	opacity: 0.4;
+	animation: vctrl-hotspot-pulse 3s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.vctrl-hotspot-pulse {
+		animation: none;
+	}
 }
 
 @media (prefers-color-scheme: dark) {

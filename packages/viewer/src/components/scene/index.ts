@@ -13,6 +13,11 @@ export {
 	default as SceneEnvironment,
 	defaultEnvOptions
 } from './scene-environment'
+export { default as SceneHotspots } from './scene-hotspots'
+export {
+	resolveHotspotMarkers,
+	type HotspotMarker
+} from './resolve-hotspot-markers'
 export { default as SceneModel } from './scene-model'
 export { default as ScenePostProcessing } from './scene-postprocessing'
 export { default as SceneShadows, defaultShadowsOptions } from './scene-shadows'
