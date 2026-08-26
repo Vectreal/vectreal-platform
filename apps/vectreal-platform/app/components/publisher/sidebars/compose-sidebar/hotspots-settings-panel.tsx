@@ -1,7 +1,19 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
+import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger
+} from '@shared/components/ui/collapsible'
+import {
+	Empty,
+	EmptyContent,
+	EmptyDescription,
+	EmptyHeader,
+	EmptyMedia,
+	EmptyTitle
+} from '@shared/components/ui/empty'
 import { Input } from '@shared/components/ui/input'
-import { Label } from '@shared/components/ui/label'
 import {
 	Select,
 	SelectContent,
@@ -9,11 +21,23 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
-import { Switch } from '@shared/components/ui/switch'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import { cn } from '@shared/utils'
+import { resolveHotspotMarkers } from '@vctrl/viewer'
+import { AnimatePresence, Reorder, motion, useDragControls, useReducedMotion } from 'framer-motion'
 import { useAtom, useSetAtom } from 'jotai/react'
-import { Crosshair, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
-import { memo, useCallback, useEffect, useMemo } from 'react'
+import {
+	ChevronDown,
+	Crosshair,
+	EyeOff,
+	GripVertical,
+	Locate,
+	Plus,
+	SquarePen,
+	Trash2
+} from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+
 
 import {
 	PAIRED_HOTSPOT_CAMERA_ID_PREFIX,
@@ -25,7 +49,10 @@ import {
 	removeHotspot,
 	renameHotspot
 } from '../../../../lib/domain/scene/scene-hotspot-camera-links'
-import { assignSequenceIndex } from '../../../../lib/domain/scene/scene-hotspot-sequence'
+import {
+	reorderSequence,
+	setSequenceMembership
+} from '../../../../lib/domain/scene/scene-hotspot-sequence'
 import { isClickToPlaceActiveAtom } from '../../../../lib/stores/publisher-config-store'
 import {
 	activeHotspotIdAtom,
@@ -33,13 +60,9 @@ import {
 	hotspotsAtom,
 	selectedCameraIdAtom
 } from '../../../../lib/stores/scene-settings-store'
-import { ToggleButtonGroup } from '../../settings-components'
-import {
-	SidebarSection,
-	SidebarSectionContent,
-	SettingRow,
-	SettingGroup
-} from '../sidebar-section'
+import { InlineNotice } from '../../../layout-components'
+import { SettingToggle, ToggleButtonGroup } from '../../settings-components'
+import { SidebarSection, SidebarSectionContent, SettingGroup } from '../sidebar-section'
 
 import type { ToggleButtonGroupOption } from '../../settings-components'
 import type {
@@ -47,6 +70,8 @@ import type {
 	HotspotDefinition,
 	HotspotStylePreset
 } from '@vctrl/core'
+import type { DragControls } from 'framer-motion'
+import type { ReactNode } from 'react'
 
 /**
  * `scene_hotspots.id` is a uuid primary key, so the hotspot id has to be a real
@@ -84,6 +109,284 @@ const STYLE_PRESET_OPTIONS: ToggleButtonGroupOption<HotspotStylePreset>[] = [
 	{ value: 'svg', label: 'SVG' }
 ]
 
+const AXES = ['X', 'Y', 'Z'] as const
+
+const sequencedFirst = (hotspots: readonly HotspotDefinition[]) => {
+	const inSequence = hotspots
+		.filter((hotspot) => hotspot.sequenceIndex !== undefined)
+		.sort((a, b) => (a.sequenceIndex as number) - (b.sequenceIndex as number))
+
+	return {
+		inSequence,
+		rest: hotspots.filter((hotspot) => hotspot.sequenceIndex === undefined)
+	}
+}
+
+/**
+ * One axis of the world-space position.
+ *
+ * The label is a prefix inside the well rather than a line above it: three
+ * stacked label lines cost about 54px in a 304px column where everything below
+ * the style presets is already off screen. The focus ring moves to the well so
+ * the affordance still reads at the size the input ends up.
+ *
+ * `SettingRow`'s label is a sibling with no `htmlFor`, so it names nothing to a
+ * screen reader. Until that is fixed in its owner, every field here carries its
+ * own `aria-label`.
+ */
+const AxisField = memo(
+	({
+		axis,
+		value,
+		onChange
+	}: {
+		axis: (typeof AXES)[number]
+		value: number
+		onChange: (raw: string) => void
+	}) => (
+		<div className="publisher-shell-nested focus-within:ring-ring flex items-center rounded-lg pl-2 focus-within:ring-2">
+			<span
+				aria-hidden
+				className="text-muted-foreground text-label-xs w-3 shrink-0 font-medium"
+			>
+				{axis}
+			</span>
+			<Input
+				type="number"
+				step="0.1"
+				aria-label={`${axis} position`}
+				value={value}
+				onChange={(event) => onChange(event.target.value)}
+				className="h-8 border-0 bg-transparent px-2 font-mono text-xs shadow-none focus-visible:ring-0"
+			/>
+		</div>
+	)
+)
+
+AxisField.displayName = 'AxisField'
+
+interface HotspotRowProps {
+	hotspot: HotspotDefinition
+	/** The step a visitor is shown, or null when this marker is outside the sequence. */
+	step: number | null
+	isOpen: boolean
+	reduceMotion: boolean
+	/** Present only for a marker in the sequence, which is the only one that reorders. */
+	dragControls?: DragControls
+	onOpenChange: (open: boolean) => void
+	onDelete: () => void
+	onMove?: (delta: number | 'first' | 'last') => void
+	children: ReactNode
+}
+
+/**
+ * One marker: a header row that is always visible, and its editor underneath.
+ *
+ * Being open *is* being selected. The panel used to fill the selected row with
+ * brand at 80% and print its coordinates on top in `--muted-foreground`, around
+ * 1.1:1 in dark. Expressing selection by disclosure instead means the state
+ * needs no colour at all, which is also what the surface ladder asks for:
+ * `globals.css` separates surfaces by value, never by an outline.
+ */
+const HotspotRow = memo(
+	({
+		hotspot,
+		step,
+		isOpen,
+		reduceMotion,
+		dragControls,
+		onOpenChange,
+		onDelete,
+		onMove,
+		children
+	}: HotspotRowProps) => {
+		const name = hotspot.name || 'Unnamed hotspot'
+		const hiddenFromViewers = !hotspot.visible || hotspot.internalOnly
+
+		return (
+			<Collapsible
+				open={isOpen}
+				onOpenChange={onOpenChange}
+				className="overflow-hidden rounded-xl"
+			>
+				<div className="publisher-shell-nested-interactive flex items-center gap-1 pr-1">
+					{dragControls && onMove ? (
+						<button
+							type="button"
+							aria-label={`Reorder ${name}`}
+							aria-keyshortcuts="ArrowUp ArrowDown Home End"
+							onPointerDown={(event) => dragControls.start(event)}
+							onKeyDown={(event) => {
+								const move = {
+									ArrowUp: -1,
+									ArrowDown: 1,
+									Home: 'first',
+									End: 'last'
+								}[event.key] as number | 'first' | 'last' | undefined
+
+								if (move === undefined) return
+								event.preventDefault()
+								onMove(move)
+							}}
+							className="publisher-shell-focus text-muted-foreground hover:text-foreground ml-1 flex size-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-md active:cursor-grabbing"
+						>
+							<GripVertical aria-hidden className="size-3.5" />
+						</button>
+					) : (
+						<span aria-hidden className="ml-1 size-6 shrink-0" />
+					)}
+
+					{step === null ? (
+						<span
+							aria-hidden
+							className="text-muted-foreground/60 text-label-xs flex size-5 shrink-0 items-center justify-center"
+						>
+							&mdash;
+						</span>
+					) : (
+						<Badge
+							variant="secondary"
+							aria-hidden
+							className="text-label-xs flex size-5 shrink-0 justify-center px-0 tabular-nums"
+						>
+							{step}
+						</Badge>
+					)}
+
+					<CollapsibleTrigger asChild>
+						<button
+							type="button"
+							className="publisher-shell-focus flex min-w-0 flex-1 items-center gap-2 rounded-lg py-2 pr-1 pl-1 text-left"
+						>
+							<span className="min-w-0 flex-1">
+							<span
+								className={cn(
+									'block truncate text-sm leading-tight font-medium',
+									hiddenFromViewers && 'opacity-60'
+								)}
+							>
+								{name}
+							</span>
+							<span className="text-muted-foreground text-label-xs block font-mono tabular-nums">
+								{hotspot.worldPosition.map((axis) => axis.toFixed(2)).join(', ')}
+							</span>
+							<span className="sr-only">
+								{step === null ? ', not in the sequence' : `, step ${step}`}
+								{hotspot.internalOnly
+									? ', editor only'
+									: hotspot.visible
+										? ''
+										: ', hidden from viewers'}
+							</span>
+							</span>
+							<ChevronDown
+								aria-hidden
+								className={cn(
+									'text-muted-foreground size-3.5 shrink-0 transition-transform duration-150',
+									isOpen && 'rotate-180',
+									reduceMotion && 'transition-none'
+								)}
+							/>
+						</button>
+					</CollapsibleTrigger>
+
+					{!hotspot.visible && (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<EyeOff
+									aria-hidden
+									className="text-muted-foreground size-3.5 shrink-0"
+								/>
+							</TooltipTrigger>
+							<TooltipContent>Hidden from viewers</TooltipContent>
+						</Tooltip>
+					)}
+					{hotspot.internalOnly && (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<SquarePen
+									aria-hidden
+									className="text-muted-foreground size-3.5 shrink-0"
+								/>
+							</TooltipTrigger>
+							<TooltipContent>Editor only</TooltipContent>
+						</Tooltip>
+					)}
+
+					<Button
+						variant="ghost"
+						size="icon"
+						aria-label={`Delete ${name}`}
+						onClick={onDelete}
+						className="publisher-shell-focus text-muted-foreground hover:text-destructive size-7 shrink-0"
+					>
+						<Trash2 aria-hidden className="size-3.5" />
+					</Button>
+
+				</div>
+
+				<CollapsibleContent
+					className={cn(
+						'publisher-shell-nested overflow-hidden',
+						'data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down',
+						'motion-reduce:animate-none'
+					)}
+				>
+					<div className="space-y-4 px-3 pt-3 pb-4">{children}</div>
+				</CollapsibleContent>
+			</Collapsible>
+		)
+	}
+)
+
+HotspotRow.displayName = 'HotspotRow'
+
+/**
+ * A marker in the sequence, wrapped so it can be dragged.
+ *
+ * `useDragControls` is a hook, so it cannot be called inside the `map` that
+ * renders the list; one row owning one controller is what lets the drag start
+ * from the handle alone rather than from anywhere on the row, which would make
+ * the row impossible to click.
+ */
+const SequencedRow = ({
+	id,
+	reduceMotion,
+	onDragStart,
+	onDragEnd,
+	...rowProps
+}: Omit<HotspotRowProps, 'dragControls'> & {
+	id: string
+	onDragStart: () => void
+	onDragEnd: () => void
+}) => {
+	const dragControls = useDragControls()
+
+	return (
+		<Reorder.Item
+			value={id}
+			dragListener={false}
+			dragControls={dragControls}
+			onDragStart={onDragStart}
+			onDragEnd={onDragEnd}
+			layout={reduceMotion ? undefined : 'position'}
+			transition={
+				reduceMotion
+					? { duration: 0 }
+					: { type: 'spring', stiffness: 600, damping: 40 }
+			}
+			whileDrag={reduceMotion ? undefined : { scale: 1.02 }}
+			className="rounded-xl"
+		>
+			<HotspotRow
+				{...rowProps}
+				reduceMotion={reduceMotion}
+				dragControls={dragControls}
+			/>
+		</Reorder.Item>
+	)
+}
+
 const HotspotsSettingsPanel = memo(() => {
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 	const [camera, setCamera] = useAtom(cameraAtom)
@@ -93,6 +396,8 @@ const HotspotsSettingsPanel = memo(() => {
 		isClickToPlaceActiveAtom
 	)
 
+	const reduceMotion = useReducedMotion() ?? false
+	const [announcement, setAnnouncement] = useState('')
 	const allCameras = camera.cameras ?? []
 
 	/**
@@ -109,11 +414,104 @@ const HotspotsSettingsPanel = memo(() => {
 		}
 	}, [selectedId, setIsClickToPlaceActive])
 
+	/**
+	 * Both pieces of canvas state this panel takes are handed back when it goes.
+	 *
+	 * The selection is not bookkeeping: `activeHotspotIdAtom` is what puts the
+	 * transform gizmo on the model, and `DynamicSidebar` unmounts the panel when
+	 * the drawer closes. Keeping it left a gizmo floating over the scene with no
+	 * panel to explain it and nothing to dismiss it with, under a tool that was
+	 * no longer open.
+	 */
 	useEffect(
 		() => () => {
 			setIsClickToPlaceActive(false)
+			setSelectedId(null)
 		},
-		[setIsClickToPlaceActive]
+		[setIsClickToPlaceActive, setSelectedId]
+	)
+
+	const { inSequence, rest } = useMemo(
+		() => sequencedFirst(hotspots),
+		[hotspots]
+	)
+
+	/**
+	 * The step a visitor is actually shown.
+	 *
+	 * `resolveHotspotMarkers` owns this rule in `@vctrl/viewer`, and it ranks
+	 * among reachable markers rather than printing `sequenceIndex + 1`. Computing
+	 * an ordinal here instead would put a number on the row that nobody browsing
+	 * the published scene ever sees — a hidden marker holding a slot shifts every
+	 * step after it.
+	 */
+	const stepById = useMemo(() => {
+		const steps = new Map<string, number>()
+		for (const marker of resolveHotspotMarkers(hotspots)) {
+			if (marker.step !== null) steps.set(marker.id, marker.step)
+		}
+		return steps
+	}, [hotspots])
+
+	/**
+	 * The order the list shows while a drag is in flight.
+	 *
+	 * `Reorder.Group` fires `onReorder` on every adjacent swap, and `hotspotsAtom`
+	 * is read by the editor scene, so committing each one would re-render the 3D
+	 * view for every pixel of the drag. The atom is written once, on release —
+	 * the same shape `shadow-settings-panel` uses for its sliders, and the one
+	 * the hotspot gizmo itself landed on.
+	 */
+	const sequencedIds = useMemo(
+		() => inSequence.map((hotspot) => hotspot.id),
+		[inSequence]
+	)
+	const [draftOrder, setDraftOrder] = useState<string[]>(sequencedIds)
+	const isDraggingRef = useRef(false)
+
+	useEffect(() => {
+		if (isDraggingRef.current) return
+		setDraftOrder(sequencedIds)
+	}, [sequencedIds])
+
+	const commitOrder = useCallback(
+		(order: string[], movedId: string, movedName: string) => {
+			setHotspots((prev) => reorderSequence(prev, order))
+			setAnnouncement(
+				`${movedName} moved to step ${order.indexOf(movedId) + 1} of ${order.length}.`
+			)
+		},
+		[setHotspots]
+	)
+
+	const handleReorderEnd = useCallback(
+		(id: string, name: string) => {
+			isDraggingRef.current = false
+			commitOrder(draftOrder, id, name)
+		},
+		[commitOrder, draftOrder]
+	)
+
+	const handleKeyboardMove = useCallback(
+		(id: string, name: string, delta: number | 'first' | 'last') => {
+			const from = draftOrder.indexOf(id)
+			if (from < 0) return
+
+			const to =
+				delta === 'first'
+					? 0
+					: delta === 'last'
+						? draftOrder.length - 1
+						: from + delta
+
+			if (to < 0 || to >= draftOrder.length || to === from) return
+
+			const next = [...draftOrder]
+			next.splice(to, 0, ...next.splice(from, 1))
+			setDraftOrder(next)
+			commitOrder(next, id, name)
+		},
+		[commitOrder, draftOrder]
 	)
 
 	const selectedHotspot = useMemo(
@@ -139,11 +537,21 @@ const HotspotsSettingsPanel = memo(() => {
 		setSelectedId(ids.hotspotId)
 	}, [camera, hotspots, setCamera, setHotspots, setSelectedId])
 
+	/**
+	 * Deleting renumbers what is left.
+	 *
+	 * Removing step 2 of 3 used to leave indices 0 and 2. That was invisible
+	 * while a number field owned the display; now that the list *is* the order,
+	 * a gap would show as steps 1 and 3 with nothing between them.
+	 */
 	const handleDelete = useCallback(
 		(id: string) => {
 			const next = removeHotspot({ camera, hotspots }, id)
+			const survivingOrder = sequencedFirst(next.hotspots).inSequence.map(
+				(hotspot) => hotspot.id
+			)
 
-			setHotspots(next.hotspots)
+			setHotspots(reorderSequence(next.hotspots, survivingOrder))
 			setCamera(next.camera)
 			setSelectedCameraId((prev) =>
 				survivingSelectedCameraId(next.camera.cameras, prev)
@@ -197,296 +605,297 @@ const HotspotsSettingsPanel = memo(() => {
 		[selectedHotspot, updateHotspot]
 	)
 
-	/**
-	 * The server rejects duplicate sequence indices outright, with a message
-	 * naming the number and neither hotspot. Typing an index another hotspot
-	 * already holds swaps the two rather than creating that collision, which
-	 * is also what someone reordering a sequence expects.
-	 */
-	const handleSequenceChange = useCallback(
-		(raw: string) => {
-			if (!selectedHotspot) return
-
-			if (raw === '') {
-				setHotspots((prev) =>
-					assignSequenceIndex(prev, selectedHotspot.id, undefined)
-				)
-				return
-			}
-
-			const parsed = parseInt(raw, 10)
-			if (isNaN(parsed) || parsed < 0) return
-
-			setHotspots((prev) =>
-				assignSequenceIndex(prev, selectedHotspot.id, parsed)
-			)
+	const handleMembershipChange = useCallback(
+		(id: string, memberOfSequence: boolean) => {
+			setHotspots((prev) => setSequenceMembership(prev, id, memberOfSequence))
 		},
-		[selectedHotspot, setHotspots]
+		[setHotspots]
 	)
 
-	return (
-		<div className="space-y-8">
-			{/* Hotspots List */}
-			<SidebarSection
-				title="Hotspots"
-				tooltip="Hotspots mark interactive points in 3D space. They can trigger camera transitions or display custom overlays."
-			>
-				<SidebarSectionContent>
-					{hotspots.length === 0 ? (
-						<div className="py-6 text-center">
-							<p className="text-muted-foreground text-sm">No hotspots yet.</p>
-							<p className="text-muted-foreground mt-1 mb-4 text-xs">
-								Add one to create a point of interest for viewers.
-							</p>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={handleAdd}
-								className="gap-1.5"
-							>
-								<Plus className="h-3.5 w-3.5" />
-								Add Hotspot
-							</Button>
-						</div>
-					) : (
-						<div className="space-y-1.5">
-							{hotspots.map((hotspot) => (
-								<div
-									key={hotspot.id}
-									className={cn(
-										'flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 transition-colors',
-										selectedId === hotspot.id
-											? 'bg-orange/80'
-											: 'hover:bg-orange/40'
-									)}
-									onClick={() =>
-										setSelectedId((prev) =>
-											prev === hotspot.id ? null : hotspot.id
-										)
-									}
-								>
-									<div className="min-w-0 flex-1">
-										<p className="truncate text-sm leading-tight font-medium">
-											{hotspot.name || 'Unnamed Hotspot'}
-										</p>
-										<p className="text-muted-foreground font-mono text-xs">
-											{hotspot.worldPosition
-												.map((v) => v.toFixed(2))
-												.join(', ')}
-										</p>
-									</div>
-									<div className="flex shrink-0 items-center gap-1.5">
-										{hotspot.internalOnly && (
-											<Badge variant="secondary" className="text-xs">
-												Editor only
-											</Badge>
-										)}
-										{!hotspot.visible && (
-											<EyeOff className="text-muted-foreground h-3.5 w-3.5" />
-										)}
-										<Button
-											variant="ghost"
-											size="icon"
-											className="h-6 w-6"
-											onClick={(e) => {
-												e.stopPropagation()
-												handleDelete(hotspot.id)
-											}}
-											title="Delete hotspot"
-										>
-											<Trash2 className="h-3.5 w-3.5" />
-										</Button>
-									</div>
-								</div>
-							))}
-							<Button
-								variant="outline"
-								size="sm"
-								className="mt-3 w-full gap-1.5"
-								onClick={handleAdd}
-								title="Add hotspot"
-							>
-								<Plus className="h-3.5 w-3.5" />
-								Add Hotspot
-							</Button>
-						</div>
-					)}
-				</SidebarSectionContent>
-			</SidebarSection>
+	const renderEditor = useCallback(
+		(hotspot: HotspotDefinition) => (
+			<>
+				<InlineNotice tone={isClickToPlaceActive ? 'warning' : 'neutral'}>
+					{isClickToPlaceActive
+						? 'Click anywhere on the model to move this marker there.'
+						: 'Drag the marker in the scene, or place it from here.'}
+				</InlineNotice>
 
-			{/* Selected Hotspot Editor */}
-			{selectedHotspot && (
-				<SidebarSection title={`Edit: ${selectedHotspot.name || 'Unnamed'}`}>
-					<SidebarSectionContent>
-						{/* Click to Place Info */}
-						{isClickToPlaceActive && (
-							<div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2">
-								<p className="text-xs text-amber-700 dark:text-amber-400">
-									Click anywhere on the model to move this hotspot there.
-								</p>
-							</div>
+				<Button
+					variant={isClickToPlaceActive ? 'secondary' : 'outline'}
+					size="sm"
+					aria-pressed={isClickToPlaceActive}
+					onClick={() => setIsClickToPlaceActive((active) => !active)}
+					className="publisher-shell-focus w-full gap-1.5"
+				>
+					<Crosshair
+						aria-hidden
+						className={cn(
+							'size-3.5',
+							isClickToPlaceActive && 'animate-pulse motion-reduce:animate-none'
 						)}
+					/>
+					{isClickToPlaceActive ? 'Click the model…' : 'Place on model'}
+				</Button>
 
-						{/* Click to Place Button */}
-						<Button
-							variant={isClickToPlaceActive ? 'default' : 'outline'}
-							size="sm"
-							className="w-full gap-1.5"
-							onClick={() => setIsClickToPlaceActive((v) => !v)}
-							title="Click on the model to move this hotspot"
-						>
-							<Crosshair className="h-3.5 w-3.5" />
-							{isClickToPlaceActive ? 'Placing...' : 'Click to Place'}
-						</Button>
-
-						{/* Name */}
-						<SettingRow label="Name">
-							<Input
-								value={selectedHotspot.name}
-								onChange={(e) =>
-									handleRename(selectedHotspot.id, e.target.value)
-								}
-								placeholder="Hotspot name"
-								className="text-sm"
-							/>
-						</SettingRow>
-
-						{/* World Position */}
-						<SettingGroup
-							label="World Position"
-							description="3D world-space coordinates (X, Y, Z)"
-						>
-							<div className="grid grid-cols-3 gap-1.5">
-								{(['X', 'Y', 'Z'] as const).map((axis, idx) => (
-									<div key={axis} className="space-y-1">
-										<Label className="text-muted-foreground text-xs font-medium">
-											{axis}
-										</Label>
-										<Input
-											type="number"
-											step="0.1"
-											value={selectedHotspot.worldPosition[idx]}
-											onChange={(e) =>
-												handlePositionChange(idx as 0 | 1 | 2, e.target.value)
-											}
-											className="h-8 font-mono text-xs"
-										/>
-									</div>
-								))}
-							</div>
-						</SettingGroup>
-
-						{/* Style Preset */}
-						<SettingGroup label="Style">
-							<ToggleButtonGroup
-								options={STYLE_PRESET_OPTIONS}
-								value={selectedHotspot.stylePreset}
-								onChange={(v) =>
-									updateHotspot(selectedHotspot.id, { stylePreset: v })
+				<SettingGroup label="Position">
+					<div className="grid grid-cols-3 gap-1.5">
+						{AXES.map((axis, index) => (
+							<AxisField
+								key={axis}
+								axis={axis}
+								value={hotspot.worldPosition[index]}
+								onChange={(raw) =>
+									handlePositionChange(index as 0 | 1 | 2, raw)
 								}
 							/>
-						</SettingGroup>
+						))}
+					</div>
+				</SettingGroup>
 
-						{selectedHotspot.stylePreset !== 'dot' && (
-							<SettingRow label="Asset URL">
+				<SettingGroup label="Name">
+					<Input
+						aria-label="Marker name"
+						value={hotspot.name}
+						onChange={(event) => handleRename(hotspot.id, event.target.value)}
+						placeholder="Hotspot name"
+						className="text-sm"
+					/>
+				</SettingGroup>
+
+				<SettingGroup label="Style">
+					<ToggleButtonGroup
+						options={STYLE_PRESET_OPTIONS}
+						value={hotspot.stylePreset}
+						onChange={(preset) =>
+							updateHotspot(hotspot.id, { stylePreset: preset })
+						}
+					/>
+				</SettingGroup>
+
+				<AnimatePresence initial={false}>
+					{hotspot.stylePreset !== 'dot' && (
+						<motion.div
+							key="payload-url"
+							initial={{ height: 0, opacity: 0 }}
+							animate={{ height: 'auto', opacity: 1 }}
+							exit={{ height: 0, opacity: 0 }}
+							transition={{ duration: reduceMotion ? 0 : 0.15 }}
+							className="overflow-hidden"
+						>
+							<SettingGroup label="Asset URL">
 								<Input
-									value={selectedHotspot.payloadUrl ?? ''}
-									onChange={(e) =>
-										updateHotspot(selectedHotspot.id, {
-											payloadUrl: e.target.value || undefined
+									aria-label="Asset URL"
+									value={hotspot.payloadUrl ?? ''}
+									onChange={(event) =>
+										updateHotspot(hotspot.id, {
+											payloadUrl: event.target.value || undefined
 										})
 									}
 									placeholder="https://…"
 									className="text-sm"
 								/>
-							</SettingRow>
-						)}
+							</SettingGroup>
+						</motion.div>
+					)}
+				</AnimatePresence>
 
-						{/* Linked Camera */}
-						<SettingGroup
-							label="Linked Camera"
-							description="Viewers transition to this camera when clicking the hotspot"
+				<SettingGroup
+					label="Linked camera"
+					description="Viewers transition to this camera when they click the marker."
+				>
+					<Select
+						value={hotspot.linkedCameraId ?? 'none'}
+						onValueChange={(value) =>
+							handleRelink(hotspot.id, value === 'none' ? undefined : value)
+						}
+					>
+						<SelectTrigger aria-label="Linked camera" className="w-full">
+							<SelectValue placeholder="None" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="none">None</SelectItem>
+							{allCameras.map((entry) => (
+								<SelectItem key={entry.cameraId} value={entry.cameraId}>
+									{entry.name || entry.cameraId}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</SettingGroup>
+
+				<SettingToggle
+					enabled={hotspot.sequenceIndex !== undefined}
+					onToggle={(enabled) => handleMembershipChange(hotspot.id, enabled)}
+					title="In the sequence"
+					description="Include this marker in the order viewers step through."
+				/>
+
+				<SettingToggle
+					enabled={hotspot.visible}
+					onToggle={(enabled) =>
+						updateHotspot(hotspot.id, { visible: enabled })
+					}
+					title="Visible to viewers"
+					description="Show this marker in the published scene."
+				/>
+
+				<SettingToggle
+					enabled={hotspot.internalOnly}
+					onToggle={(enabled) =>
+						updateHotspot(hotspot.id, { internalOnly: enabled })
+					}
+					title="Editor only"
+					description="Keep the marker in the publisher and leave it out of the embed."
+				/>
+
+				<SettingToggle
+					enabled={hotspot.occlusionEnabled ?? true}
+					onToggle={(enabled) =>
+						updateHotspot(hotspot.id, { occlusionEnabled: enabled })
+					}
+					title="Hide behind geometry"
+					description="Fade the marker when part of the model is in front of it."
+				/>
+			</>
+		),
+		[
+			allCameras,
+			handleMembershipChange,
+			handlePositionChange,
+			handleRelink,
+			handleRename,
+			isClickToPlaceActive,
+			reduceMotion,
+			setIsClickToPlaceActive,
+			updateHotspot
+		]
+	)
+
+	if (hotspots.length === 0) {
+		return (
+			<Empty className="publisher-shell-nested gap-4 rounded-xl px-4 py-8">
+				<EmptyHeader>
+					<EmptyMedia variant="icon">
+						<Locate aria-hidden />
+					</EmptyMedia>
+					<EmptyTitle className="text-h4">No markers yet</EmptyTitle>
+					<EmptyDescription>
+						Add one, then click the model to place it.
+					</EmptyDescription>
+				</EmptyHeader>
+				<EmptyContent>
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={handleAdd}
+						className="gap-1.5"
+					>
+						<Plus aria-hidden className="size-3.5" />
+						Add marker
+					</Button>
+				</EmptyContent>
+			</Empty>
+		)
+	}
+
+	const rowProps = (hotspot: HotspotDefinition) => ({
+		hotspot,
+		step: stepById.get(hotspot.id) ?? null,
+		isOpen: selectedId === hotspot.id,
+		reduceMotion,
+		onOpenChange: (open: boolean) => setSelectedId(open ? hotspot.id : null),
+		onDelete: () => handleDelete(hotspot.id)
+	})
+
+	return (
+		<SidebarSection
+			title="Markers"
+			tooltip="Markers call out a point on the model. Drag one to set the order viewers step through; a marker without a number is not in that order."
+			action={
+				<Button
+					variant="ghost"
+					size="sm"
+					onClick={handleAdd}
+					className="publisher-shell-focus -my-1 h-7 gap-1.5 px-2"
+				>
+					<Plus aria-hidden className="size-3.5" />
+					Add
+				</Button>
+			}
+		>
+			<SidebarSectionContent>
+				<span role="status" aria-live="polite" className="sr-only">
+					{announcement}
+				</span>
+				<p id="hotspot-reorder-hint" className="sr-only">
+					Use the up and down arrow keys to move a marker through the sequence.
+				</p>
+
+				<div className="space-y-1">
+					<p className="text-muted-foreground text-label-xs px-1">
+						In the sequence
+					</p>
+					{inSequence.length === 0 ? (
+						<p className="text-muted-foreground/75 text-label-xs px-1 pb-1">
+							Turn on “In the sequence” for a marker below to add it.
+						</p>
+					) : (
+						<Reorder.Group
+							axis="y"
+							role="list"
+							values={draftOrder}
+							onReorder={setDraftOrder}
+							className="space-y-1"
 						>
-							<Select
-								value={selectedHotspot.linkedCameraId ?? 'none'}
-								onValueChange={(v) =>
-									handleRelink(selectedHotspot.id, v === 'none' ? undefined : v)
-								}
-							>
-								<SelectTrigger className="w-full">
-									<SelectValue placeholder="None" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="none">None</SelectItem>
-									{allCameras.map((c) => (
-										<SelectItem key={c.cameraId} value={c.cameraId}>
-											{c.name || c.cameraId}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</SettingGroup>
+							{draftOrder.map((id) => {
+								const hotspot = inSequence.find((entry) => entry.id === id)
+								if (!hotspot) return null
+								return (
+									<SequencedRow
+										key={id}
+										id={id}
+										onDragStart={() => {
+											isDraggingRef.current = true
+										}}
+										onDragEnd={() =>
+											handleReorderEnd(id, hotspot.name || 'Unnamed hotspot')
+										}
+										onMove={(delta) =>
+											handleKeyboardMove(
+												id,
+												hotspot.name || 'Unnamed hotspot',
+												delta
+											)
+										}
+										{...rowProps(hotspot)}
+									>
+										{renderEditor(hotspot)}
+									</SequencedRow>
+								)
+							})}
+						</Reorder.Group>
+					)}
+				</div>
 
-						{/* Sequence Index */}
-						<SettingRow label="Sequence Order">
-							<Input
-								type="number"
-								min={0}
-								step={1}
-								placeholder="Not in sequence"
-								value={
-									selectedHotspot.sequenceIndex !== undefined
-										? selectedHotspot.sequenceIndex
-										: ''
-								}
-								onChange={(e) => handleSequenceChange(e.target.value)}
-								className="h-8 font-mono text-sm"
-							/>
-						</SettingRow>
-
-						{/* Toggles */}
-						<div className="space-y-3 border-t pt-4">
-							<div className="flex items-center justify-between">
-								<div className="flex items-center gap-2">
-									<Label className="text-sm font-medium">
-										{selectedHotspot.visible ? (
-											<Eye className="mr-1 inline h-4 w-4" />
-										) : (
-											<EyeOff className="mr-1 inline h-4 w-4" />
-										)}
-										Visible
-									</Label>
-								</div>
-								<Switch
-									checked={selectedHotspot.visible}
-									onCheckedChange={(v) =>
-										updateHotspot(selectedHotspot.id, { visible: v })
-									}
-								/>
-							</div>
-							<div className="flex items-center justify-between">
-								<Label className="text-sm font-medium">Editor Only</Label>
-								<Switch
-									checked={selectedHotspot.internalOnly}
-									onCheckedChange={(v) =>
-										updateHotspot(selectedHotspot.id, { internalOnly: v })
-									}
-								/>
-							</div>
-							<div className="flex items-center justify-between">
-								<Label className="text-sm font-medium">Depth Occlusion</Label>
-								<Switch
-									checked={selectedHotspot.occlusionEnabled ?? true}
-									onCheckedChange={(v) =>
-										updateHotspot(selectedHotspot.id, { occlusionEnabled: v })
-									}
-								/>
-							</div>
-						</div>
-					</SidebarSectionContent>
-				</SidebarSection>
-			)}
-		</div>
+				{rest.length > 0 && (
+					<div className="space-y-1">
+						<p className="text-muted-foreground text-label-xs px-1">
+							Not in the sequence
+						</p>
+						<ul role="list" className="space-y-1">
+							{rest.map((hotspot) => (
+								<li key={hotspot.id}>
+									<HotspotRow {...rowProps(hotspot)}>
+										{renderEditor(hotspot)}
+									</HotspotRow>
+								</li>
+							))}
+						</ul>
+					</div>
+				)}
+			</SidebarSectionContent>
+		</SidebarSection>
 	)
 })
 

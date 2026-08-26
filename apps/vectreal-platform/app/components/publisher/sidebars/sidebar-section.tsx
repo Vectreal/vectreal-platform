@@ -24,15 +24,30 @@ import { DetailPanelSection } from '../../layout-components'
 interface SidebarSectionProps {
 	title?: string
 	tooltip?: string
+	/**
+	 * A control belonging to the section as a whole, sitting on the heading row
+	 * beside the tooltip: an Add button, the switch that turns the section off.
+	 *
+	 * It follows `tooltip` in needing a title, because a heading row that draws
+	 * no heading has nowhere to put it.
+	 */
+	action?: ReactNode
 	children: ReactNode
 	className?: string
 }
 
 export const SidebarSection = memo(
-	({ title, tooltip, children, className = '' }: SidebarSectionProps) => (
+	({ title, tooltip, action, children, className = '' }: SidebarSectionProps) => (
 		<DetailPanelSection
 			title={title}
-			action={title && tooltip ? <InfoTooltip content={tooltip} /> : undefined}
+			action={
+				title && (tooltip || action) ? (
+					<div className="flex items-center gap-2">
+						{tooltip && <InfoTooltip content={tooltip} />}
+						{action}
+					</div>
+				) : undefined
+			}
 			divider={Boolean(title)}
 			className={cn('space-y-4', className)}
 			contentClassName="space-y-4"
@@ -97,17 +112,32 @@ SettingRow.displayName = 'SettingRow'
 interface SettingGroupProps {
 	label: string
 	description?: string
+	/**
+	 * A control for the group as a whole, on the label row.
+	 *
+	 * The row was already a `justify-between` wrapping a single child — a slot
+	 * drawn and never wired, which is why Shadow's per-group switches sat in
+	 * hand-rolled rows beside it instead.
+	 */
+	action?: ReactNode
 	children: ReactNode
 	className?: string
 }
 
 export const SettingGroup = memo(
-	({ label, description, children, className = '' }: SettingGroupProps) => (
+	({
+		label,
+		description,
+		action,
+		children,
+		className = ''
+	}: SettingGroupProps) => (
 		<div className={cn('space-y-2', className)}>
 			<div className="flex items-center justify-between gap-2">
 				<label className="text-muted-foreground text-xs font-medium">
 					{label}
 				</label>
+				{action}
 			</div>
 			{description && (
 				<p className="text-muted-foreground/75 text-xs">{description}</p>
