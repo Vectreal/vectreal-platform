@@ -15,11 +15,13 @@ import {
 	isAnonymousCacheableRequest,
 	PUBLIC_CACHE_CONTROL
 } from './lib/http/cacheable-public-paths.server'
+import { reportServerError } from './lib/observability/report-server-error.server'
 
 import type { RenderToPipeableStreamOptions } from 'react-dom/server'
 import type {
 	ActionFunctionArgs,
 	EntryContext,
+	HandleErrorFunction,
 	LoaderFunctionArgs,
 	RouterContextProvider
 } from 'react-router'
@@ -66,6 +68,21 @@ export function handleDataRequest(
 	return response
 }
 
+/**
+ * Every unhandled server-side error, in one place.
+ *
+ * React Router calls this for loader, action, resource-route and
+ * document-render failures. It does *not* call it for a thrown `Response` that
+ * carries no underlying error, so deliberate 404s and 403s never arrive here -
+ * the framework filters them before we see them.
+ *
+ * Exporting this replaces React Router's built-in handler, which logged to
+ * stdout and did nothing else. `reportServerError` keeps the log.
+ */
+export const handleError: HandleErrorFunction = (error, { request }) => {
+	reportServerError(error, { request })
+}
+
 export default function handleRequest(
 	request: Request,
 	responseStatusCode: number,
@@ -109,11 +126,14 @@ export default function handleRequest(
 				},
 				onError(error: unknown) {
 					responseStatusCode = 500
-					// Log streaming rendering errors from inside the shell.  Don't log
-					// errors encountered during initial shell rendering since they'll
-					// reject and get logged in handleDocumentRequest.
+					/*
+					  Report streaming rendering errors from inside the shell. Errors
+					  during initial shell rendering are left alone: those reject the
+					  render, and the rejection reaches `handleError` above, so
+					  reporting them here as well would double every one of them.
+					*/
 					if (shellRendered) {
-						console.error(error)
+						reportServerError(error, { request })
 					}
 				}
 			}

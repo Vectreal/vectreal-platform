@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
+import { CRITICAL_FLOWS } from '../app/lib/observability/critical-flows'
+
 /**
  * The funnel this product exists to serve, and a ratchet that keeps it guarded.
  *
@@ -26,48 +28,18 @@ import { describe, expect, it } from 'vitest'
  * the set or this fails, and a new unguarded module on the funnel fails
  * immediately. The gaps stay visible and countable instead of being discovered
  * by a customer.
+ *
+ * The list itself moved to `app/lib/observability/critical-flows.ts` when error
+ * reporting started tagging exceptions with the step they happened on. It is
+ * the same array, read by both: the set of flows that is test-guarded and the
+ * set that is observable have to be one set, and two copies of a list are how
+ * they stop being.
  */
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 const APP = 'apps/vectreal-platform'
 
-type FunnelStep = {
-	/** What the user is doing. */
-	step: string
-	/** The module that owns the decision for this step, relative to the app. */
-	module: string
-}
-
-const FUNNEL: FunnelStep[] = [
-	{
-		step: 'save a scene',
-		module: 'app/lib/domain/scene/server/scene-settings.operations.server.ts'
-	},
-	{
-		step: 'publish it, and decide what an embed may fetch',
-		module: 'app/lib/domain/scene/embed-asset-policy.ts'
-	},
-	{
-		step: 'mint an API key scoped to the project',
-		module: 'app/lib/domain/auth/api-key-repository.server.ts'
-	},
-	{
-		step: 'allow the storefront domain',
-		module: 'app/lib/domain/embed/embed-domain-policy.ts'
-	},
-	{
-		step: 'copy a snippet that carries the key',
-		module: 'app/lib/domain/embed/embed-snippet.ts'
-	},
-	{
-		step: 'authorize the third-party request',
-		module: 'app/lib/domain/embed/embed-access-policy.ts'
-	},
-	{
-		step: 'serve the embed manifest',
-		module: 'app/lib/domain/scene/server/scene-manifest.server.ts'
-	}
-]
+const FUNNEL = CRITICAL_FLOWS
 
 /*
   Steps with no test that imports them, each for the same structural reason:

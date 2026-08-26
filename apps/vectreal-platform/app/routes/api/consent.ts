@@ -8,6 +8,7 @@ import {
 } from '../../lib/consent/consent-cookie'
 import { upsertConsent } from '../../lib/domain/consent/consent-repository.server'
 import { ensureSameOriginMutation } from '../../lib/http/csrf.server'
+import { reportServerError } from '../../lib/observability/report-server-error.server'
 import { createSupabaseClient } from '../../lib/supabase.server'
 
 function parseChoices(body: unknown): ConsentChoices | null {
@@ -82,7 +83,12 @@ export async function action({ request }: Route.ActionArgs) {
 			})
 		}
 	} catch (err) {
-		console.error('[consent] DB persist failed (non-fatal):', err)
+		/*
+		  Non-fatal for the visitor - their choice is still applied by cookie -
+		  but the row is lost, so the record of consent and the behaviour it
+		  governs have silently diverged. That is worth knowing about.
+		*/
+		reportServerError(err, { request })
 	}
 
 	return data(

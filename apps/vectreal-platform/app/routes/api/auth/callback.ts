@@ -7,6 +7,7 @@ import {
 	getSafeNextPath
 } from '../../../lib/domain/auth/auth-redirect.server'
 import { initializeUserDefaults } from '../../../lib/domain/user/user-repository.server'
+import { reportServerError } from '../../../lib/observability/report-server-error.server'
 import { createSupabaseClient } from '../../../lib/supabase.server'
 
 import type { PostHogContext } from '../../../lib/posthog/posthog-middleware'
@@ -24,7 +25,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 	const { error } = await client.auth.exchangeCodeForSession(code)
 
 	if (error) {
-		console.error('[auth/callback] code exchange failed', {
+		console.warn('[auth/callback] code exchange failed', {
 			message: error.message
 		})
 		return redirect(
@@ -47,10 +48,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 	try {
 		userWithDefaults = await initializeUserDefaults(userData.user)
 	} catch (dbError) {
-		console.error('[auth/callback] user initialization failed', {
-			error: dbError,
-			userId: userData.user.id,
-			userEmail: userData.user.email
+		reportServerError(dbError, {
+			request,
+			properties: { userId: userData.user.id }
 		})
 
 		try {

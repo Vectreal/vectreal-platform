@@ -13,6 +13,7 @@ import { getScene } from '../../lib/domain/scene/server/scene-folder-repository.
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import { sceneSettingsService } from '../../lib/domain/scene/server/scene-settings-service.server'
 import { getAuthUser } from '../../lib/http/auth.server'
+import { reportServerError } from '../../lib/observability/report-server-error.server'
 
 const db = getDbClient()
 
@@ -169,10 +170,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			const assetData = await downloadAsset(assetId)
 			return assetResponse(assetData.data, assetData.mimeType)
 		} catch (error) {
-			console.error('Failed to stream preview scene asset', {
-				sceneId,
-				assetId,
-				error
+			reportServerError(error, {
+				request,
+				properties: { sceneId, assetId }
 			})
 			return new Response('Failed to load asset', {
 				status: 500,
@@ -214,11 +214,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		const assetData = await downloadAsset(assetId)
 		return assetResponse(assetData.data, assetData.mimeType, authHeaders)
 	} catch (error) {
-		console.error('Failed to stream scene asset', {
-			sceneId,
-			assetId,
-			userId: auth.user.id,
-			error
+		reportServerError(error, {
+			request,
+			properties: { sceneId, assetId, userId: auth.user.id }
 		})
 		return new Response('Failed to load asset', {
 			status: 500,

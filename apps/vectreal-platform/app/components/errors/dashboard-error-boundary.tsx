@@ -2,12 +2,18 @@ import { Button } from '@shared/components/ui/button'
 import { AlertCircle, Home, RefreshCw } from 'lucide-react'
 import { isRouteErrorResponse, Link, useRouteError } from 'react-router'
 
+import { useErrorReport } from '../../lib/observability/use-error-report'
+
 /**
  * Error boundary component for dashboard routes.
  * Displays user-friendly error messages with retry/navigation options.
+ *
+ * Re-exported as `ErrorBoundary` by every dashboard route, so this one call is
+ * what makes those routes report rather than swallow.
  */
 export function DashboardErrorBoundary() {
 	const error = useRouteError()
+	useErrorReport(error)
 
 	let errorMessage = 'An unexpected error occurred'
 	let errorDetails: string | undefined

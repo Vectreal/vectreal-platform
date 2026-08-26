@@ -44,6 +44,7 @@ import {
 	SaveSceneSettingsParams,
 	UpdateSceneSettingsParams
 } from '../../../../types/api'
+import { reportServerError } from '../../../observability/report-server-error.server'
 import {
 	createSceneStatsFromReport,
 	resolveSceneByteMetricsScope,
@@ -479,10 +480,7 @@ class SceneSettingsService {
 				return row
 			})
 		} catch (error) {
-			console.error('Failed to query scene settings with assets:', {
-				sceneId,
-				error
-			})
+			reportServerError(error, { properties: { sceneId } })
 			return null
 		}
 
@@ -518,8 +516,9 @@ class SceneSettingsService {
 					}
 				}
 			} catch (error) {
-				console.error('Failed to download some assets:', error)
-				// Continue without asset data rather than failing completely
+				// Continues without asset data rather than failing completely, so
+				// the caller renders a scene that is quietly missing pieces.
+				reportServerError(error, { properties: { sceneId } })
 			}
 		}
 
@@ -559,10 +558,7 @@ class SceneSettingsService {
 				return row
 			})
 		} catch (error) {
-			console.error('Failed to query scene settings with asset refs:', {
-				sceneId,
-				error
-			})
+			reportServerError(error, { properties: { sceneId } })
 			return null
 		}
 
@@ -582,10 +578,8 @@ class SceneSettingsService {
 					new TextDecoder().decode(gltfAssetData.data)
 				) as ExtendedGLTFDocument
 			} catch (error) {
-				console.error('Failed to download glTF JSON asset:', {
-					sceneId,
-					assetId: gltfAsset.id,
-					error
+				reportServerError(error, {
+					properties: { sceneId, assetId: gltfAsset.id }
 				})
 			}
 		}
@@ -607,7 +601,7 @@ class SceneSettingsService {
 			)
 			return result?.assets ?? []
 		} catch (error) {
-			console.error('Failed to query scene asset records:', { sceneId, error })
+			reportServerError(error, { properties: { sceneId } })
 			return []
 		}
 	}

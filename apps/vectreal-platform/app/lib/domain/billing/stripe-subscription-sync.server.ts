@@ -22,6 +22,7 @@ import Stripe from 'stripe'
 import { type BillingState, type Plan } from '../../../constants/plan-config'
 import { getDbClient } from '../../../db/client'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
+import { reportServerError } from '../../observability/report-server-error.server'
 import { getStripeClient } from '../../stripe.server'
 
 // ---------------------------------------------------------------------------
@@ -267,10 +268,17 @@ export async function cancelStripeSubscriptionsForOrganization(
 			{ organizationId, stripeSubscriptionId: row.stripeSubscriptionId }
 		)
 	} catch (err) {
-		// Non-blocking: log the failure so operators can reconcile manually.
-		console.error(
-			'[billing] Failed to cancel Stripe subscription during account deletion - subscription may require manual cleanup',
-			{ organizationId, stripeSubscriptionId: row.stripeSubscriptionId, err }
-		)
+		/*
+		  Non-blocking, and it needs a human: the account is gone while the Stripe
+		  subscription keeps billing. This used to say "log the failure so
+		  operators can reconcile manually" into a stream with no alerting on it,
+		  which meant no operator was ever told.
+		*/
+		reportServerError(err, {
+			properties: {
+				organizationId,
+				stripeSubscriptionId: row.stripeSubscriptionId
+			}
+		})
 	}
 }

@@ -5,6 +5,7 @@ import { Route } from './+types/social-signin'
 import { ensureValidCsrfFormData } from '../../../lib/http/csrf.server'
 import { recordRateLimitAttempt } from '../../../lib/http/rate-limit.server'
 import { verifyTurnstileToken } from '../../../lib/http/turnstile.server'
+import { reportServerError } from '../../../lib/observability/report-server-error.server'
 import { createSupabaseClient } from '../../../lib/supabase.server'
 
 const OAUTH_PROVIDERS = new Set(['google', 'github'])
@@ -92,10 +93,7 @@ export async function action({ request }: Route.ActionArgs) {
 	})
 
 	if (error) {
-		console.error('[auth/social-signin] OAuth initialization failed', {
-			provider,
-			message: error.message
-		})
+		reportServerError(error, { request, properties: { provider } })
 		return ApiResponse.serverError(
 			'Authentication provider is temporarily unavailable'
 		)
@@ -107,11 +105,9 @@ export async function action({ request }: Route.ActionArgs) {
 		})
 	}
 
-	console.error(
-		'[auth/social-signin] OAuth initialization returned no redirect URL',
-		{
-			provider
-		}
+	reportServerError(
+		new Error('OAuth initialization returned no redirect URL'),
+		{ request, properties: { provider } }
 	)
 
 	return ApiResponse.serverError(

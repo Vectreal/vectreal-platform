@@ -2,8 +2,11 @@ import { Button } from '@shared/components/ui/button'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { isRouteErrorResponse, useRouteError } from 'react-router'
 
+import { useErrorReport } from '../../lib/observability/use-error-report'
+
 export function PublicErrorBoundary() {
 	const error = useRouteError()
+	useErrorReport(error)
 
 	let statusCode: number | undefined
 	let title = 'Something went wrong'

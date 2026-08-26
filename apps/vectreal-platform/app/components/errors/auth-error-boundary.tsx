@@ -7,8 +7,11 @@ import {
 	useRouteError
 } from 'react-router'
 
+import { useErrorReport } from '../../lib/observability/use-error-report'
+
 export function AuthErrorBoundary() {
 	const error = useRouteError()
+	useErrorReport(error)
 	const location = useLocation()
 
 	let statusCode: number | undefined

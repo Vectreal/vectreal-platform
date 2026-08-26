@@ -1,40 +1,11 @@
-import { PostHog } from 'posthog-node'
+import { getPosthogClient } from './posthog-client.server'
 
 import type { Route } from '../../+types/root'
+import type { PostHog } from 'posthog-node'
 import type { RouterContextProvider } from 'react-router'
 
 export interface PostHogContext extends RouterContextProvider {
 	posthog?: PostHog
-}
-
-let sharedPosthogClient: null | PostHog = null
-let shutdownHookRegistered = false
-
-function getPosthogClient(): null | PostHog {
-	const token = process.env.VITE_PUBLIC_POSTHOG_TOKEN
-	const host = process.env.VITE_PUBLIC_POSTHOG_HOST
-
-	if (!token || !host) {
-		return null
-	}
-
-	if (!sharedPosthogClient) {
-		sharedPosthogClient = new PostHog(token, {
-			host,
-			// Batch events and flush on interval to keep requests non-blocking.
-			flushAt: 20,
-			flushInterval: 10_000
-		})
-	}
-
-	if (!shutdownHookRegistered) {
-		shutdownHookRegistered = true
-		process.once('beforeExit', () => {
-			sharedPosthogClient?.shutdown().catch(() => {})
-		})
-	}
-
-	return sharedPosthogClient
 }
 
 /**

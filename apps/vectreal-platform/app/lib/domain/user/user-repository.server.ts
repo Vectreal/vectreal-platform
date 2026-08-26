@@ -257,12 +257,6 @@ export async function ensureUserExists(
 		const { user } = await ensureUserExistsDb(db, supabaseUser)
 		return user
 	} catch (error) {
-		console.error('Database error in ensureUserExists:', {
-			error,
-			userId: supabaseUser.id,
-			userEmail: supabaseUser.email,
-			userName: supabaseUser.user_metadata?.name
-		})
 		throw error
 	}
 }

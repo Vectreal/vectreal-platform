@@ -28,6 +28,7 @@ import {
 } from './components/theme'
 import { shouldRenderConsentUi } from './lib/consent/consent-surfaces'
 import { isAnonymousCacheableRequest } from './lib/http/cacheable-public-paths.server'
+import { useErrorReport } from './lib/observability/use-error-report'
 import { posthogMiddleware } from './lib/posthog/posthog-middleware'
 import { buildMeta } from './lib/seo'
 import {
@@ -146,6 +147,16 @@ const CriticalStyles = () => (
 
 export function Layout({ children }: { children: ReactNode }) {
 	const error = useRouteError()
+	/*
+	  Reporting lives here, not only in `ErrorBoundary` below, because this is the
+	  branch that actually runs. React Router composes the root error element as
+	  `<Layout><ErrorBoundary/></Layout>`, and the branch below returns its own
+	  fallback without ever rendering `children` - so for a root-level error the
+	  `ErrorBoundary` element is created and then discarded, and every
+	  `captureException` written inside it was unreachable. `useErrorReport`
+	  ignores an absent error, so the normal render path is unaffected.
+	*/
+	useErrorReport(error)
 	const rootLoaderData = useLoaderData<RootLoader>()
 	// Only route-derived force-dark is known at render time; the visitor's own
 	// preference is applied before paint by ThemeScript (reads the cookie), so it
@@ -153,8 +164,6 @@ export function Layout({ children }: { children: ReactNode }) {
 	const forceDarkTheme = Boolean(rootLoaderData?.forceDarkTheme)
 
 	if (error) {
-		console.error('Error in root layout:', error)
-
 		// Extract error message safely
 		let errorMessage = 'An unexpected error occurred'
 		if (error instanceof Error) {
@@ -216,9 +225,18 @@ export function Layout({ children }: { children: ReactNode }) {
 	)
 }
 
+/**
+ * The root fallback.
+ *
+ * `Layout` above short-circuits before rendering this for any error it can see,
+ * so in practice this renders only if that changes. It reports through the same
+ * hook regardless: a boundary whose reporting depends on which of two branches
+ * ran is exactly the arrangement this change exists to remove. The two cannot
+ * both report one error, because the branch that renders this is the branch
+ * that does not render its own fallback.
+ */
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-	const posthog = usePostHog()
-	posthog?.captureException(error as Error)
+	useErrorReport(error)
 
 	let errorMessage = 'An unexpected error occurred'
 	if (error instanceof Error) {

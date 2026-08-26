@@ -25,6 +25,7 @@ import { orgSubscriptions } from '../../db/schema/billing/subscriptions'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import { syncSubscriptionFromStripe } from '../../lib/domain/billing/stripe-subscription-sync.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
+import { reportServerError } from '../../lib/observability/report-server-error.server'
 import { getStripeClient } from '../../lib/stripe.server'
 
 import type { Route } from './+types/billing-upgrade-success'
@@ -163,10 +164,17 @@ async function syncCompletedCheckout(
 		try {
 			await stripe.subscriptions.cancel(oldSubscriptionId)
 		} catch (err) {
-			console.error(
-				'[billing] Failed to cancel previous subscription after switch',
-				{ oldSubscriptionId, newSubscriptionId: subscription.id, err }
-			)
+			/*
+			  The customer now holds two live Stripe subscriptions and is billed
+			  for both. No request in scope here - this runs from a helper - so
+			  the report carries the ids instead.
+			*/
+			reportServerError(err, {
+				properties: {
+					oldSubscriptionId,
+					newSubscriptionId: subscription.id
+				}
+			})
 		}
 	}
 
@@ -220,8 +228,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 	try {
 		checkoutData = await syncCompletedCheckout(sessionId, organizationId)
 	} catch (error) {
-		// Non-critical - Stripe unavailable, continue gracefully
-		console.error('[billing] Failed to sync checkout session', error)
+		// Non-critical for the page, which still renders: the subscription is
+		// reconciled by the webhook. Reported because "the webhook will fix it"
+		// is a claim nobody is checking.
+		reportServerError(error, { request })
 	}
 
 	return data(checkoutData, { headers })

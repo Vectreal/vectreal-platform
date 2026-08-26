@@ -1,13 +1,22 @@
 /**
- * The house rules in `eslint.config.mts`, proven to fire.
+ * The house rules in `eslint.config.mts`, proven to fire and proven to be on.
  *
  * A `no-restricted-syntax` selector is a string. Nothing type-checks it, and a
  * subtly wrong one silently matches nothing while lint stays green - which
  * looks exactly like compliance. These lint real snippets through the repo's
  * own config and assert both directions: the violation is caught, and the
  * correct form is not.
+ *
+ * That covers a rule being wrong. It does not cover a rule being *absent*,
+ * which is a separate failure with the same symptom, and the one that actually
+ * shipped: flat config replaces rule options rather than merging them, so a
+ * second block re-declaring a rule over a subset of files turns the first
+ * block's rules off for that subset. The final describe checks the resolved
+ * config for every file in scope, because everything above lints at one
+ * hardcoded path and a hardcoded path is what the regression slipped past.
  */
 
+import { globSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { ESLint } from 'eslint'
@@ -19,6 +28,18 @@ const ROOT = resolve(__dirname, '../../..')
 const IN_SCOPE = resolve(
 	ROOT,
 	'apps/vectreal-platform/app/components/probe.tsx'
+)
+
+/** A server-only module, where console.error is banned outright. */
+const SERVER_MODULE = resolve(
+	ROOT,
+	'apps/vectreal-platform/app/lib/domain/probe/probe.server.ts'
+)
+
+/** A route module, where the ban applies to the loader and action only. */
+const ROUTE_MODULE = resolve(
+	ROOT,
+	'apps/vectreal-platform/app/routes/probe-page/probe.tsx'
 )
 
 let eslint: ESLint
@@ -43,10 +64,13 @@ beforeAll(async () => {
 	await eslint.lintText('export const warmUp = 1\n', { filePath: IN_SCOPE })
 }, 120_000)
 
+/** The house rules, whichever rule id each one is implemented as. */
+const HOUSE_RULES = new Set(['no-restricted-syntax', 'no-console'])
+
 async function messagesFor(code: string, filePath = IN_SCOPE) {
 	const [result] = await eslint.lintText(code, { filePath })
 	return result.messages.filter(
-		(message) => message.ruleId === 'no-restricted-syntax'
+		(message) => message.ruleId && HOUSE_RULES.has(message.ruleId)
 	)
 }
 
@@ -253,5 +277,238 @@ describe('SVG must live in an icon component', () => {
 		)
 
 		expect(messages).toEqual([])
+	})
+})
+
+
+/**
+ * `console.error` is not a reporting strategy.
+ *
+ * Every server-side failure that gets caught and turned into a response, a
+ * fallback or an empty list is invisible to `handleError`, which only sees what
+ * is thrown past it. Thirty-odd call sites each answered that with a
+ * `console.error` into a stream with no grouping or alerting -
+ * `stripe-subscription-sync.server.ts` used one to ask an operator to reconcile
+ * a subscription still billing a deleted account.
+ *
+ * Both directions are asserted. A selector that matched nothing would leave
+ * lint green, which is indistinguishable from compliance.
+ */
+describe('server code reports rather than logs', () => {
+	it('rejects console.error in a server-only module', async () => {
+		const messages = await messagesFor(
+			'export function save() {\n' +
+				'\ttry {\n\t\treturn 1\n\t} catch (error) {\n' +
+				'\t\tconsole.error("failed", error)\n\t\treturn null\n\t}\n}\n',
+			SERVER_MODULE
+		)
+
+		expect(messages).toHaveLength(1)
+		/*
+		  `no-console` has a fixed message, so unlike the route rule below this
+		  one cannot name `reportServerError` in the lint output. That is the
+		  price of using a different rule id, which is what stops this block
+		  displacing the design-system selectors. The message still names the
+		  call and says which console methods remain allowed.
+		*/
+		expect(messages[0].message).toContain('console')
+	})
+
+	it('accepts reportServerError in a server-only module', async () => {
+		const messages = await messagesFor(
+			'import { reportServerError } from "../../observability/report-server-error.server"\n' +
+				'export function save() {\n\ttry {\n\t\treturn 1\n\t} catch (error) {\n' +
+				'\t\treportServerError(error)\n\t\treturn null\n\t}\n}\n',
+			SERVER_MODULE
+		)
+
+		expect(messages).toEqual([])
+	})
+
+	/*
+	  A malformed request body or an expired OAuth code answers with a 4xx and is
+	  the product working - the same judgement `buildErrorReport` makes at its
+	  status floor. Reporting those would bury real failures under client noise,
+	  so `console.warn` stays available and this asserts the rule leaves it alone.
+	*/
+	it('leaves console.warn alone', async () => {
+		const messages = await messagesFor(
+			'export function parse() {\n\ttry {\n\t\treturn 1\n\t} catch (error) {\n' +
+				'\t\tconsole.warn("bad input", error)\n\t\treturn null\n\t}\n}\n',
+			SERVER_MODULE
+		)
+
+		expect(messages).toEqual([])
+	})
+
+	it('rejects console.error inside a route loader', async () => {
+		const messages = await messagesFor(
+			'export async function loader() {\n\ttry {\n\t\treturn 1\n\t} catch (error) {\n' +
+				'\t\tconsole.error("failed", error)\n\t\treturn null\n\t}\n}\n',
+			ROUTE_MODULE
+		)
+
+		expect(messages).toHaveLength(1)
+	})
+
+	it('rejects console.error inside a route action', async () => {
+		const messages = await messagesFor(
+			'export async function action() {\n\ttry {\n\t\treturn 1\n\t} catch (error) {\n' +
+				'\t\tconsole.error("failed", error)\n\t\treturn null\n\t}\n}\n',
+			ROUTE_MODULE
+		)
+
+		expect(messages).toHaveLength(1)
+	})
+
+	/*
+	  The arrow form is not what this repo writes today, and that is exactly why
+	  it is pinned: a rule that only understands the current spelling stops
+	  working on the refactor that changes it, silently.
+	*/
+	it('rejects console.error in an arrow-function loader', async () => {
+		const messages = await messagesFor(
+			'export const loader = async () => {\n\ttry {\n\t\treturn 1\n\t} catch (error) {\n' +
+				'\t\tconsole.error("failed", error)\n\t\treturn null\n\t}\n}\n',
+			ROUTE_MODULE
+		)
+
+		expect(messages).toHaveLength(1)
+	})
+
+	/*
+	  The component half of a route runs in the browser, where the reporting path
+	  is `useErrorReport` and `error-boundary-reporting.spec.ts` is the ratchet.
+	  Banning it here would push people to disable the rule rather than move the
+	  call.
+	*/
+	it('leaves the component half of a route alone', async () => {
+		const messages = await messagesFor(
+			'export default function Page() {\n\tconsole.error("client side")\n\treturn null\n}\n',
+			ROUTE_MODULE
+		)
+
+		expect(messages).toEqual([])
+	})
+})
+
+
+/**
+ * Every file a house rule is scoped to actually has it.
+ *
+ * This is a regression test, and the bug it pins shipped in the change that
+ * added the `console.error` ban. Flat config does not merge rule options: when
+ * two blocks configure the same rule and both match a file, the later one
+ * *replaces* the earlier. Scoping a second `no-restricted-syntax` block to
+ * `apps/vectreal-platform/app/routes/**` therefore left route files with only
+ * that block's two selectors and silently dropped cn(), the z-index scale and
+ * the inline-SVG ban across every page and API route.
+ *
+ * Lint stayed green, because a rule that is switched off reports nothing and so
+ * does a codebase that complies. The tests above stayed green too: they lint
+ * snippets at one hardcoded path, which proves a rule *exists* but not that it
+ * is *active* where it is scoped.
+ *
+ * So this asks ESLint to resolve the real config for every source file in scope
+ * and checks the shape of the answer, rather than guessing which scopes are
+ * worth probing. Guessing is what left the hole: the probe path was under
+ * `app/components/`, and the block that broke things did not match it.
+ */
+describe('house rules survive config resolution', () => {
+	/*
+	  Resolved per file rather than sampled. 701 files take under a second,
+	  because ESLint caches resolution per directory - cheap enough that there is
+	  no reason to check a subset and hope it was representative.
+	*/
+	const SOURCES = globSync(['apps/**/*.{ts,tsx}', 'shared/**/*.{ts,tsx}'], {
+		cwd: ROOT,
+		exclude: (path) =>
+			path.includes('node_modules') ||
+			path.includes('/build/') ||
+			path.includes('/dist/')
+	})
+
+	/**
+	 * The four exceptions `eslint.config.mts` declares through `ignores`, as
+	 * shapes.
+	 *
+	 * Duplicated from the config on purpose, and the duplication is what makes
+	 * the check sound: without it, a block that resolved a subset of files to
+	 * *zero* selectors would be indistinguishable from a file the config
+	 * deliberately exempts. The assertion below fails if this list goes stale in
+	 * either direction.
+	 */
+	const DECLARED_EXCEPTIONS: [string, RegExp][] = [
+		['specs assert on literal class strings', /\.spec\.tsx?$/],
+		['stories show raw values beside their tokens', /\.stories\.tsx?$/],
+		['mail clients do not resolve custom properties', /\/lib\/email\/templates\//],
+		['icons are where inline SVG is supposed to live', /\/assets\/icons\//]
+	]
+
+	let resolved: { file: string; selectors: number }[]
+
+	beforeAll(async () => {
+		resolved = []
+		for (const file of SOURCES) {
+			const config = await eslint.calculateConfigForFile(resolve(ROOT, file))
+			const rule = config.rules?.['no-restricted-syntax']
+			// [severity, ...selectors]
+			resolved.push({
+				file,
+				selectors: Array.isArray(rule) ? rule.length - 1 : 0
+			})
+		}
+	})
+
+	it('finds the files it is supposed to be checking', () => {
+		expect(SOURCES.length).toBeGreaterThan(400)
+	})
+
+	/*
+	  The assertion that would have caught the regression. A clobbered file keeps
+	  the overriding block's selectors and loses the rest, so it lands strictly
+	  between "fully exempt" and "fully covered" - a state nothing else produces.
+	*/
+	it('gives every file either the full rule set or none of it', () => {
+		const full = Math.max(...resolved.map((entry) => entry.selectors))
+		const partial = resolved.filter(
+			(entry) => entry.selectors > 0 && entry.selectors < full
+		)
+
+		expect(
+			partial.map((entry) => `${entry.file} (${entry.selectors}/${full})`),
+			'These files resolved to some house rules but not all of them, which means a config block re-declared no-restricted-syntax over a subset and replaced the rest. Flat config does not merge rule options. Add the selectors to the existing array instead of opening a new block, or use a different rule id.'
+		).toEqual([])
+	})
+
+	/*
+	  The other half. Without this, switching a subset off entirely would read as
+	  "these files are exempt" and pass the assertion above.
+	*/
+	it('exempts only what the config says it exempts', () => {
+		const unexplained = resolved
+			.filter((entry) => entry.selectors === 0)
+			.filter(({ file }) =>
+				DECLARED_EXCEPTIONS.every(([, pattern]) => !pattern.test(file))
+			)
+			.map((entry) => entry.file)
+
+		expect(
+			unexplained,
+			'These files have no house rules and are not one of the exceptions eslint.config.mts declares. Either the ignores grew and this list needs the new reason, or a config block turned the rules off by accident.'
+		).toEqual([])
+	})
+
+	/*
+	  The ratchet turns one way. An exception that no longer exempts anything is a
+	  claim about the config that has stopped being true, and leaving it here
+	  would let the list above quietly stop meaning anything.
+	*/
+	it.each(DECLARED_EXCEPTIONS)('%s: still exempts something', (_, pattern) => {
+		expect(
+			resolved.some(
+				(entry) => pattern.test(entry.file) && entry.selectors === 0
+			)
+		).toBe(true)
 	})
 })

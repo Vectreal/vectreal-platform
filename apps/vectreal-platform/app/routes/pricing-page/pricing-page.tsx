@@ -11,18 +11,24 @@ import {
 import { BasicCard, PageHero } from '../../components/layout-components'
 import { PRICING_PAGE_COPY } from '../../constants/product-copy'
 import { getCheckoutOptions } from '../../lib/domain/billing/billing-dashboard-loader.server'
+import { reportServerError } from '../../lib/observability/report-server-error.server'
 import { buildPageMeta } from '../../lib/seo'
 import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
 
 import type { Route } from './+types/pricing-page'
 
-export async function loader(_: Route.LoaderArgs) {
+export async function loader({ request }: Route.LoaderArgs) {
 	try {
 		const prices = await getCheckoutOptions()
 		return data({ prices })
 	} catch (error) {
-		// Stripe may not be configured in all environments - graceful fallback
-		console.error('Failed to load checkout options for pricing page.', error)
+		/*
+		  Degrades to a page with no prices on it. Stripe genuinely may not be
+		  configured outside production, which is why this is a fallback rather
+		  than a throw - and also why it needs reporting: in production the same
+		  branch means the pricing page is quietly selling nothing.
+		*/
+		reportServerError(error, { request })
 		return data({ prices: null })
 	}
 }

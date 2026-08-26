@@ -30,6 +30,7 @@ import {
 } from '../lib/domain/contact/contact-submission.server'
 import { ensureValidCsrfFormData } from '../lib/http/csrf.server'
 import { verifyTurnstileToken } from '../lib/http/turnstile.server'
+import { reportServerError } from '../lib/observability/report-server-error.server'
 import { buildPageMeta } from '../lib/seo'
 import { LEGAL_PAGE_SEO_BY_PATH } from '../lib/seo-registry'
 import { createSupabaseClient } from '../lib/supabase.server'
@@ -101,10 +102,9 @@ export async function action({ request, context }: Route.ActionArgs) {
 			source
 		})
 	} catch (error) {
-		console.error('[contact/action] failed to process contact submission', {
-			error,
-			source,
-			isAuthenticated: Boolean(user)
+		reportServerError(error, {
+			request,
+			properties: { source, isAuthenticated: Boolean(user) }
 		})
 
 		result = {

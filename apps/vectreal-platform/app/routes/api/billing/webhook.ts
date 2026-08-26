@@ -32,6 +32,7 @@ import {
 	constructStripeEvent,
 	processStripeWebhookEvent
 } from '../../../lib/domain/billing/stripe-webhook-processor.server'
+import { reportServerError } from '../../../lib/observability/report-server-error.server'
 
 // ---------------------------------------------------------------------------
 // Action
@@ -87,10 +88,9 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 	} catch (err) {
 		const message =
 			err instanceof Error ? err.message : 'Internal processing error'
-		console.error('[billing/webhook] processing failed', {
-			eventId: event.id,
-			eventType: event.type,
-			message
+		reportServerError(err, {
+			request,
+			properties: { eventId: event.id, eventType: event.type }
 		})
 		// Return 500 so Stripe will retry the event
 		return ApiResponse.serverError(message)

@@ -1,6 +1,7 @@
 import { redirect } from 'react-router'
 
 import { getAuthUser } from '../../http/auth.server'
+import { reportServerError } from '../../observability/report-server-error.server'
 import { hasSupabaseAuthCookie } from '../../sessions/supabase-auth-cookie'
 import { createSupabaseClient } from '../../supabase.server'
 import {
@@ -106,7 +107,7 @@ export async function loadAuthenticatedUser(
 		}
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error)
-		console.error('Failed to initialize user:', error)
+		reportServerError(error, { request })
 
 		if (message.startsWith('email_conflict:')) {
 			const { client, headers: signOutHeaders } =
