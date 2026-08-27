@@ -59,7 +59,7 @@ export const SceneNormalizationNotice: FC = () => {
 				<>
 					<div className="flex items-center gap-2">
 						<Label className="text-sm font-medium">Extreme model size</Label>
-						<InfoTooltip content="This model's dimensions are outside a workable range. Normalizing scales it uniformly so shadows, camera framing, and other features work correctly." />
+						<InfoTooltip content="This model's dimensions are outside a workable range. Normalizing scales it uniformly so shadows and camera framing work correctly." />
 					</div>
 					<Button
 						variant="outline"

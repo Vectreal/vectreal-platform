@@ -75,6 +75,28 @@ keeps every surface of its own below 50, in its own ladder in
 Below 50 is component-local ordering and stays a plain number. Giving it a tier
 name would claim a relationship with the site chrome that it does not have.
 
+## Tooltip copy: 140 characters
+
+`TooltipContent` is `max-w-80` at `text-xs`, so 140 characters is three lines
+and a glance. Past that a tooltip becomes a paragraph hanging over the control
+the reader was trying to use; one optimization-catalog entry had reached 367
+characters, nine lines of it.
+
+`apps/vectreal-platform/tests/tooltip-copy-length.spec.ts` enforces the ceiling
+over every tooltip string in `app/`. It reads source rather than a render tree,
+so it only sees string literals, and a new prop name carrying help text has to
+be added to its `ATTRIBUTES` list.
+
+When copy no longer fits, the answer is a visible caption beside the control,
+the way the embed options panel resolved it, not a taller tooltip. Several
+controls already have that slot: the optimization catalog gives every step a
+`description` rendered under its label, so the tooltip only has to carry what
+the caption does not.
+
+The trigger is a real `<button>`, not the icon. Radix's `TooltipTrigger` adds no
+tabIndex of its own under `asChild`, and an `<svg>` is not a tab stop, so an
+icon handed straight to it cannot be reached or opened by keyboard at all.
+
 ## Motion
 
 Durations: `--duration-instant` 80ms, `--duration-fast` 150ms, `--duration-base`
@@ -191,6 +213,8 @@ present  shared/components/src/styles/globals.css                              -
 present  shared/components/src/styles/globals.css                              --z-index-select: 120
 present  eslint.config.mts                                                     z-index outside the named scale
 exists   apps/vectreal-platform/tests/documented-claims.spec.ts
+exists   apps/vectreal-platform/tests/tooltip-copy-length.spec.ts
+exists   apps/vectreal-platform/tests/info-tooltip.spec.tsx
 present  eslint.config.mts                                                     Build className with cn()
 present  eslint.config.mts                                                     Inline SVG
 present  apps/vectreal-platform/app/routes/layouts/dashboard-layout.tsx        h-svh

@@ -138,7 +138,7 @@ export const SHADOW_ADVANCED_FIELDS: FieldConfig[] = [
 		max: 1.1,
 		step: 0.01,
 		tooltip:
-			'Advanced: nudge the auto cutoff. The shadow threshold is calibrated to the environment automatically; lower this to deepen, raise to lighten if the ground hazes.',
+			'Nudges the auto cutoff. The threshold is calibrated to the environment; lower it to deepen the shadow, raise it if the ground hazes.',
 		formatValue: (value) => `${Math.round(value * 100)}%`
 	}
 ]
@@ -199,7 +199,7 @@ export const SHADOW_CONTACT_FIELDS: FieldConfig[] = [
 		max: 1.5,
 		step: 0.05,
 		tooltip:
-			'How far up from the floor the shadow reaches. Lower confines it to where the model is closest to the ground (tighter, more accurate ambient occlusion — e.g. only under the wheels); higher reaches up the model for a broad grounding pool.',
+			'How far up from the floor the shadow reaches. Lower is tighter and more accurate; higher reaches up the model for a broad grounding pool.',
 		formatValue: (value) => `${Math.round(value * 100)}%`
 	}
 ]

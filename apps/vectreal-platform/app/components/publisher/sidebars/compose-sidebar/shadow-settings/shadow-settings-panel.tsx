@@ -295,7 +295,7 @@ const ShadowSettingsPanel = () => {
 							label="Ground shadow"
 							action={
 								<div className="flex items-center gap-2">
-									<InfoTooltip content="A soft shadow pooled under the model that approximates the ambient occlusion it casts on the floor. It's independent of the directional light, so the model stays grounded even when the main shadow is cast off to the side. Raise Softness to keep it diffuse." />
+									<InfoTooltip content="A soft pool under the model approximating the ambient occlusion it casts on the floor. Independent of the light, so it stays grounded." />
 									<Switch
 										id="shadow-ground-toggle"
 										aria-label="Enable ground shadow"
@@ -337,7 +337,7 @@ const ShadowSettingsPanel = () => {
 										<Label htmlFor="shadow-ao-toggle" className="text-sm">
 											Ambient occlusion
 										</Label>
-										<InfoTooltip content="Darkens crevices and tight gaps on the model itself (screen-space). Higher quality but runs every frame, so it costs GPU — best for hero shots on capable devices." />
+										<InfoTooltip content="Darkens crevices and tight gaps on the model itself. Higher quality, but it runs every frame, so it costs GPU. Best for hero shots." />
 									</div>
 									<Switch
 										id="shadow-ao-toggle"
