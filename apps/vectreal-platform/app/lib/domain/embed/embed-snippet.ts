@@ -13,82 +13,87 @@
 export const EMBED_SDK_CDN_URL =
 	'https://unpkg.com/@vctrl/embed/vectreal-embed.umd.js'
 
+/**
+ * The embedding guide, which is where the detail this panel used to inline
+ * lives now.
+ *
+ * A path rather than a literal at the call site, so `embed-snippet.spec.ts` can
+ * check it against `docsPages` - a link into the docs that no longer resolves is
+ * invisible from the panel it is rendered in.
+ */
+export const EMBED_DOCS_PATH = '/docs/guides/publish-embed'
+
+/*
+  A working panel explains itself; this module is what is left when it cannot.
+
+  The panel used to declare 757 characters of prose and render 415 of them with
+  nothing wrong, because it was built around pasting a key: two hint lines
+  saying which of two controls filled the field, a notice for the empty field, a
+  warning for a mismatched one, and a caption under every group. The key is
+  selected now, so the happy path renders none of these - every string below is
+  conditional on a state the user needs told about.
+
+  `embed-snippet.spec.ts` caps each one at 80 characters, with a named
+  exemption map for the notices that are read once in place. It caps every
+  string rather than the ones whose names end in `Help`: a cap a rename can
+  escape is not a cap.
+*/
 export const EMBED_COPY = {
 	unavailableUntilSaved:
 		'Embedding is unavailable until this scene is saved and linked to a project.',
-	tokenLabel: 'API key',
-	tokenPlaceholder: 'vctrl_...',
-	tokenHelp:
-		'The snippet below carries this key. A key cannot be read back after it is created, so paste the one you saved or create a new key for this project.',
-	tokenMissingNotice:
-		'Add an API key to generate a snippet that works. Without one the embed answers "not found" on every site.',
-	copyNeedsToken:
-		'Add an API key first - a snippet without one answers "not found" on every site.',
-	tokenReveal: 'Show key',
-	tokenHide: 'Hide key',
-	tokenMismatch:
-		'This does not look like the selected key: the last four characters do not match.',
-	keyPickerLabel: 'Key for this project',
-	keyPickerPlaceholder: 'Which key are you using?',
-	keyPickerEmpty: 'No API keys are scoped to this project yet.',
-	keyPickerHint:
-		'Picking a key here only labels the field below - the full value was shown once, when the key was created.',
+	accessTitle: 'Access',
+	keyLabel: 'API key',
+	keyPickerPlaceholder: 'Select a key',
+	/*
+	  Said once, above the picker, rather than once per row. Reaching this state
+	  means every row is suffixed with the reason it cannot be used, so repeating
+	  those reasons in a sentence adds nothing the list is not already showing.
+	*/
+	keyNoneUsable: 'No key here can build a snippet yet.',
 	keyRevokedSuffix: 'revoked',
 	keyExpiredSuffix: 'expired',
-	createKey: 'Create a key for this project',
-	createKeyShort: 'Create key',
-	createKeyPending: 'Creating...',
-	createKeyFailure: 'Could not create an API key.',
 	/*
-	  The show-once dialog's copy is deliberately not here. It moved to
-	  `components/api-keys/one-time-key-dialog.tsx`, which is now the only such
-	  dialog in the app: the dashboard opens it too, and it could not read its
-	  words from a module that describes the embed snippet without the dashboard
-	  taking a dependency on the embed domain. That was the reason two dialogs
-	  existed.
+	  Not "rotate to fix". Rotation is refused for a revoked or expired key -
+	  `rotateApiKey` throws unless the key is active - so this suffix belongs to
+	  the third case only: a live key whose stored value cannot be read back.
 	*/
+	keyRotateSuffix: 'rotate to use',
+	createKey: 'Create a key',
+	createKeyPending: 'Creating...',
+	/*
+	  The whole message, not a prefix on the server's.
+
+	  This briefly rendered `createError` alone, on the reasoning that the route
+	  already returns a sentence. It does not: that string is only the fallback
+	  for a non-`Error` throw, and every realistic failure is an `Error`, so
+	  `error.message` went straight to the user - "database is down" from the
+	  route's own spec, or the name of an organization they cannot see.
+	*/
+	createKeyFailure: 'Could not create an API key. Try again in a moment.',
+	retry: 'Try again',
+	retryPending: 'Trying...',
 	allowedDomainsLabel: 'Allowed domains',
 	allowedDomainsEmpty:
 		'This project allows no domains, so every third-party site is refused - even with a valid key. Add the site you are embedding on before you ship.',
-	allowedDomainsHelp:
-		'Only these sites may load the embed. Vectreal itself is always permitted, which is why the test button below cannot check this list for you.',
 	editProject: 'Project settings',
-	identifiersLabel: 'Identifiers',
-	projectIdLabel: 'Project ID',
-	sceneIdLabel: 'Scene ID',
-	copyIdSuccess: 'Copied.',
-	previewUrlLabel: 'Embed URL',
-	previewUrlPlaceholder: 'Save scene to generate URL',
+	docsLink: 'Embedding guide',
 	embedCodeLabel: 'Embed Code',
-	embedCodeHelp:
-		'Embed with a plain iframe or use the JavaScript SDK for runtime control - camera switching, scroll interactions, and event callbacks.',
-	sdkCodeLabel: 'JavaScript SDK',
-	sdkCodeHelp:
-		'Include the SDK to control the embed from your page: switch cameras, listen to events, trigger scroll interactions, and more. Install via npm or use the CDN script tag.',
-	copyUrl: 'Copy URL',
-	copyEmbed: 'Copy Embed',
+	copyHtml: 'Copy HTML',
 	copySdk: 'Copy SDK',
+	copyUrl: 'Copy URL',
+	copyOptions: 'Copy options',
 	copied: 'Copied',
-	copyEmbedSuccess: 'Embed code copied.',
-	copyEmbedFailure: 'Failed to copy embed code.',
+	copyHtmlSuccess: 'HTML snippet copied.',
+	copyHtmlFailure: 'Failed to copy the HTML snippet.',
 	copySdkSuccess: 'SDK snippet copied.',
 	copySdkFailure: 'Failed to copy SDK snippet.',
 	copyUrlSuccess: 'Embed URL copied.',
 	copyUrlFailure: 'Failed to copy embed URL.',
 	clipboardUnavailable: 'Clipboard is not available in this browser.',
-	missingSceneForEmbed: 'Save this scene first to generate an embed snippet.',
-	missingSceneForUrl: 'Save this scene first to generate an embed URL.',
-	embedCodeUnavailable:
-		'<!-- Save this scene before generating an embed snippet -->',
-	sdkCodeUnavailable: '// Save this scene before generating an SDK snippet',
-	openPreview: 'Open preview',
-	openPreviewHelp:
-		'Opens the internal preview, which authenticates with your dashboard session. It always works for you, and so proves nothing about the embed.',
 	testEmbedUrl: 'Test embed URL',
-	testEmbedUrlHelp:
-		'Opens the real embed URL carrying the key above. This checks the key and the published scene, but not the domain list: a request from this site is always permitted, so a visitor on your own site can still be refused. Needs a key.',
 	tabHtml: 'HTML',
-	tabSdk: 'SDK'
+	tabSdk: 'SDK',
+	tabUrl: 'URL'
 } as const
 
 type EmbedSnippetOptions = {
@@ -114,10 +119,6 @@ export function buildInternalPreviewPath(params: {
 	sceneId: string
 }): string {
 	return `/preview/${params.projectId}/${params.sceneId}`
-}
-
-export function toAbsoluteEmbedUrl(path: string, origin: string): string {
-	return new URL(path, origin).toString()
 }
 
 /**
@@ -176,12 +177,14 @@ export function escapeHtmlAttributeValue(value: string): string {
 /**
  * Every value either builder interpolates, escaped.
  *
- * `width` and `height` are free text from the panel's own inputs and land in a
- * quoted `style` attribute, so a value ending in a quote breaks out of it
- * exactly the way the old `?token=` placeholder broke out of `src`. Escaping
- * rather than validating: the only caller is the panel, the only author is the
- * scene's owner, and the goal is a snippet that parses - not a policy about
- * which CSS lengths are allowed, which would silently discard `calc(...)`.
+ * `width` and `height` are builder options that default to the box below; the
+ * panel no longer offers fields for them, because the values are visible and
+ * editable in the snippet it hands over. They still land in a quoted `style`
+ * attribute, so a value ending in a quote breaks out of it exactly the way the
+ * old `?token=` placeholder broke out of `src`, and any caller that passes one
+ * gets the same escaping. Escaping rather than validating: the goal is a
+ * snippet that parses, not a policy about which CSS lengths are allowed, which
+ * would silently discard `calc(...)`.
  */
 function escapeSnippetValues(options: EmbedSnippetOptions): {
 	width: string

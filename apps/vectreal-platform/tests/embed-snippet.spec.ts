@@ -1,6 +1,11 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import { describe, expect, it } from 'vitest'
 
+import { docsPages } from '../app/lib/docs/docs-manifest'
 import {
 	buildEmbedPath,
 	buildEmbedUrl,
@@ -8,6 +13,7 @@ import {
 	buildResponsiveEmbedSnippet,
 	buildSdkEmbedSnippet,
 	EMBED_COPY,
+	EMBED_DOCS_PATH,
 	escapeHtmlAttributeValue
 } from '../app/lib/domain/embed/embed-snippet'
 
@@ -45,7 +51,9 @@ describe('buildEmbedUrl', () => {
 			sceneId: SCENE_ID
 		})
 
-		expect(url).toBe(`${ORIGIN}${buildEmbedPath({ projectId: PROJECT_ID, sceneId: SCENE_ID })}`)
+		expect(url).toBe(
+			`${ORIGIN}${buildEmbedPath({ projectId: PROJECT_ID, sceneId: SCENE_ID })}`
+		)
 		expect(new URL(url).searchParams.has('token')).toBe(false)
 	})
 
@@ -133,12 +141,16 @@ describe('token round trip through a generated snippet', () => {
 	})
 })
 
-describe('the width and height fields cannot break the snippet', () => {
+describe('the width and height options cannot break the snippet', () => {
 	/*
-	  Both are free text in the panel and land in a quoted `style` attribute, so
-	  they are the same breakout the token placeholder was - one field over. A
-	  parser is what settles it: the wrapper keeps exactly one attribute, and no
-	  element appears that the builder did not write.
+	  Both land in a quoted `style` attribute, so they are the same breakout the
+	  token placeholder was - one attribute over. A parser is what settles it: the
+	  wrapper keeps exactly one attribute, and no element appears that the builder
+	  did not write.
+
+	  The panel no longer renders fields for these - the values are visible and
+	  editable in the snippet it hands over - but they are still builder options,
+	  and the escaping has to hold for whatever the next caller passes.
 	*/
 	const HOSTILE = [
 		'100%"><script>alert(1)</script><div style="',
@@ -159,7 +171,9 @@ describe('the width and height fields cannot break the snippet', () => {
 	const STRUCTURAL = new Set(['html', 'head', 'body'])
 	const elementsOf = (snippet: string) =>
 		Array.from(
-			new DOMParser().parseFromString(snippet, 'text/html').querySelectorAll('*')
+			new DOMParser()
+				.parseFromString(snippet, 'text/html')
+				.querySelectorAll('*')
 		)
 			.map((element) => element.tagName.toLowerCase())
 			.filter((tag) => !STRUCTURAL.has(tag))
@@ -207,12 +221,7 @@ describe('the width and height fields cannot break the snippet', () => {
 			  attributes, leaving that assertion green with `alert(1)` live in the
 			  document.
 			*/
-			expect(elementsOf(snippet)).toEqual([
-				'script',
-				'div',
-				'iframe',
-				'script'
-			])
+			expect(elementsOf(snippet)).toEqual(['script', 'div', 'iframe', 'script'])
 			expect(
 				(doc.querySelector('div') as HTMLElement).getAttributeNames()
 			).toEqual(['style'])
@@ -277,12 +286,146 @@ describe('no hand-substituted placeholder survives anywhere', () => {
 	})
 })
 
+describe('help text stays readable at a glance', () => {
+	/*
+	  Six of these had grown past 130 characters, one to 229, because a tooltip is
+	  where an explanation goes when nothing else owns it - and nobody reads a
+	  paragraph that appears on hover and vanishes on the way to the control it
+	  describes.
+
+	  The cap is on EVERY string, with the long-form exceptions named below. The
+	  first version of this test filtered by a `/Help$|Hint$/` name and was worth
+	  much less than it looked: it exempted the three longest strings in the
+	  module, and renaming a key was enough to slip the ceiling and delete the
+	  assertion with it, silently.
+	*/
+	const LIMIT = 80
+
+	/**
+	 * Strings that are prose by design, and why each one earns it.
+	 *
+	 * An inline notice is read once, in place, when something is already wrong -
+	 * a different job from a qualifier sitting beside a control. Adding a key
+	 * here is a visible edit; that is the point.
+	 */
+	const LONG_FORM: Partial<Record<keyof typeof EMBED_COPY, string>> = {
+		allowedDomainsEmpty: 'InlineNotice: every third-party site is refused'
+	}
+
+	for (const [key, value] of Object.entries(EMBED_COPY)) {
+		if (key in LONG_FORM) continue
+
+		it(`${key} fits in ${LIMIT} characters`, () => {
+			expect(value.length, `EMBED_COPY.${key}: ${value}`).toBeLessThanOrEqual(
+				LIMIT
+			)
+		})
+	}
+
+	it('exempts nothing that has since been shortened', () => {
+		/*
+		  An exemption outliving its reason is how the list stops meaning
+		  anything. Every name here has to still need the room.
+		*/
+		for (const key of Object.keys(LONG_FORM)) {
+			const value = EMBED_COPY[key as keyof typeof EMBED_COPY]
+
+			expect(
+				value.length,
+				`EMBED_COPY.${key} no longer needs an exemption`
+			).toBeGreaterThan(LIMIT)
+		}
+	})
+})
+
+describe('the docs link the panel offers', () => {
+	/*
+	  The detail cut from those qualifiers moved to this page, so the link is the
+	  only place it can be read now.
+
+	  Checked against `routes.tsx`, not only against `docsPages`. The two lists
+	  are maintained by hand and nothing keeps them in step: deleting the route
+	  while leaving the manifest entry leaves this link landing on the docs
+	  catch-all, and the manifest is the weaker of the two - it also feeds
+	  `sitemap.xml`, so a manifest-only entry advertises a URL that does not
+	  exist. The first version of this test checked only the manifest and stayed
+	  green with the route deleted.
+	*/
+	const ROUTES = readFileSync(
+		join(dirname(fileURLToPath(import.meta.url)), '../app/routes.tsx'),
+		'utf8'
+	)
+
+	it('resolves to a page the docs manifest lists', () => {
+		expect(EMBED_DOCS_PATH.startsWith('/docs/')).toBe(true)
+		expect(docsPages.map((page) => page.slug)).toContain(
+			EMBED_DOCS_PATH.replace(/^\/docs\//, '')
+		)
+	})
+
+	it('resolves to a page the route table actually serves', () => {
+		/*
+		  The URL segment and the module together, not the module alone. Renaming
+		  the segment - `route('embedding', './routes/docs/guides/publish-embed.mdx')`
+		  - leaves the module path untouched while `EMBED_DOCS_PATH` falls through
+		  to the docs catch-all, which is the same shape of miss this test was
+		  rewritten to close.
+
+		  A pattern rather than a whitespace-collapsed substring. The first attempt
+		  collapsed runs of whitespace and claimed in its own comment to survive a
+		  Prettier wrap; it does not, because collapsing `route(\n\t'a',\n\t'b'\n)`
+		  leaves spaces inside the parens. The sibling `installation` route is
+		  already wrapped that way and this line is 75 of Prettier's 80 columns, so
+		  the false failure was one slug rename away.
+		*/
+		const slug = EMBED_DOCS_PATH.replace(/^\/docs\//, '')
+		const segment = slug.split('/').pop() as string
+
+		expect(ROUTES).toMatch(
+			new RegExp(
+				`route\\(\\s*'${segment}',\\s*'\\./routes/docs/${slug}\\.mdx'\\s*\\)`
+			)
+		)
+	})
+})
+
+describe('the docs page and the builder agree on the default box', () => {
+	/*
+	  The guide states the default width and height in prose, above a fence
+	  repeating the whole snippet. Nothing tied either to the builder, which is
+	  the shape the `*.example.com` drift had: a page that reads as authoritative
+	  and describes behavior the code stopped having. The panel now links users
+	  straight to it, so the two are pinned.
+	*/
+	const GUIDE = readFileSync(
+		join(
+			dirname(fileURLToPath(import.meta.url)),
+			'../app/routes/docs/guides/publish-embed.mdx'
+		),
+		'utf8'
+	)
+
+	it('quotes the box the snippet is actually generated with', () => {
+		const wrapper = buildResponsiveEmbedSnippet({
+			src: `${ORIGIN}/embed/p/s`
+		}).split('\n')[0]
+
+		expect(wrapper).toBe(
+			'<div style="width: 100%; max-width: 100%; height: 400px;">'
+		)
+		expect(GUIDE).toContain(wrapper)
+		expect(GUIDE).toContain('The box is `100%` wide and `400px` tall')
+	})
+})
+
 describe('the two link targets stay distinct', () => {
 	/*
 	  "Open preview" used to open the token-authenticated `/embed` URL with no
-	  token, so it 404'd every time. The panel now opens `/preview` there, which
-	  is session-authenticated, and offers `/embed` separately as the visitor's
-	  view. The bug returns the moment these two agree.
+	  token, so it 404'd every time. The panel no longer has that button at all -
+	  both hosts already offer a Preview of their own - but the two paths are
+	  still built from this module and still have to differ: `scene.tsx` and the
+	  publisher's camera panel both open the session-authenticated one. The bug
+	  returns the moment these two agree.
 	*/
 	it('preview is session-authenticated and carries no token', () => {
 		const preview = buildInternalPreviewPath({

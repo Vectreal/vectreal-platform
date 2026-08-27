@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-	matchesKeyPreview,
+	isEmbedKeyUsable,
 	toEmbedApiKeyOptions,
+	type EmbedApiKeyOption,
 	type EmbedApiKeySource
 } from '../app/lib/domain/embed/embed-key-options'
 
@@ -171,20 +172,44 @@ describe('toEmbedApiKeyOptions', () => {
 	})
 })
 
-describe('matchesKeyPreview', () => {
-	it('matches on the last four characters, ignoring pasted whitespace', () => {
-		expect(matchesKeyPreview('vctrl_longvalueab3x', 'ab3x')).toBe(true)
-		expect(matchesKeyPreview('  vctrl_longvalueab3x \n', 'ab3x')).toBe(true)
+describe('isEmbedKeyUsable', () => {
+	/*
+	  The rule the picker disables a row with, the panel auto-selects by, and
+	  `toEmbedApiKeyOptions` sorts on - one function, so "first in the list" and
+	  "selectable" cannot drift apart.
+
+	  It replaced `matchesKeyPreview`, which compared a pasted token against the
+	  last four characters of the selected key. That comparison only ever existed
+	  because the key could not be read back, and there is nothing left to paste.
+	*/
+	const row = (overrides: Partial<EmbedApiKeyOption>): EmbedApiKeyOption => ({
+		id: 'k',
+		name: 'Embed key',
+		keyPreview: 'ab3x',
+		value: 'vctrl_realkeyab3x',
+		expiresAt: null,
+		lastUsedAt: null,
+		revoked: false,
+		expired: false,
+		...overrides
 	})
 
-	it('rejects a different key and a value too short to hold the preview', () => {
-		expect(matchesKeyPreview('vctrl_longvalue9zQ1', 'ab3x')).toBe(false)
-		expect(matchesKeyPreview('ab', 'ab3x')).toBe(false)
-		expect(matchesKeyPreview('', 'ab3x')).toBe(false)
+	it('accepts a live key with a recoverable value', () => {
+		expect(isEmbedKeyUsable(row({}))).toBe(true)
 	})
 
-	it('is case sensitive, because the preview is a base62 slice', () => {
-		expect(matchesKeyPreview('vctrl_valueAB3X', 'ab3x')).toBe(false)
+	it('refuses an expired key even though its value reads back', () => {
+		/*
+		  The case that cannot be inferred from `value`: expiry never clears the
+		  ciphertext, so the key decrypts, looks selectable, and 404s at the embed
+		  because `isApiKeyLive` refuses it.
+		*/
+		expect(isEmbedKeyUsable(row({ expired: true }))).toBe(false)
+	})
+
+	it('refuses a revoked key and a key whose value cannot be read', () => {
+		expect(isEmbedKeyUsable(row({ revoked: true, value: null }))).toBe(false)
+		expect(isEmbedKeyUsable(row({ value: null }))).toBe(false)
 	})
 })
 
