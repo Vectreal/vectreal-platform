@@ -13,10 +13,19 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 /**
- * The one moment a key's plaintext exists outside the database.
+ * The moment a freshly minted key is put in front of its owner.
  *
- * Keys are stored hashed, so this dialog is the only place the full value is
- * ever shown, and it is the only one: the embed panel used to render a second
+ * The copy here says only what a user can observe: this is where the value is
+ * shown, and the key lists elsewhere show four characters.
+ *
+ * It deliberately makes no claim about storage. It used to say the key was
+ * "stored hashed, so it cannot be read back", which stopped being true when a
+ * decryptable copy was added, and telling someone a value is unrecoverable when
+ * it is not teaches them to distrust the next warning that is real. The
+ * opposite promise - that some other screen will show it to them again - is not
+ * made either, because no screen does that yet.
+ *
+ * This is still the only such dialog: the embed panel used to render a second
  * dialog for the same event, written to its own spec, and the two diverged
  * exactly where it mattered. That one carried `ph-no-capture`, without which
  * the live key is readable in any session replay; this one re-arms the copy
@@ -55,7 +64,7 @@ const COPY_FAILURE = 'Failed to copy the API key.'
 const COPY_SUCCESS = 'API key copied to clipboard'
 const CLIPBOARD_UNAVAILABLE = 'Clipboard is not available in this browser.'
 const DISMISS_WITHOUT_COPY_CONFIRM =
-	'Have you copied your API key? This is the only time it will be displayed.'
+	'Have you copied your API key? It is not displayed again on this screen.'
 
 const REASON_COPY: Record<
 	OneTimeKeyReason,
@@ -64,7 +73,7 @@ const REASON_COPY: Record<
 	created: {
 		title: 'API key created',
 		description:
-			'This is the only time the full key is shown. It is stored hashed, so it cannot be read back.',
+			'Copy it now. Key lists only ever show the last four characters.',
 		nextSteps: [
 			'Copy the key above to a secure location',
 			'Paste it into the embed snippet, or into your own request headers',
@@ -189,19 +198,17 @@ export function OneTimeKeyDialog({
 					>
 						<AlertCircle className="text-warning size-4" />
 						{/*
-						  Scoped to what is true on both surfaces. "Once you close this
-						  dialog the full key is no longer accessible" held on the
-						  dashboard and not in the embed panel, where `use-embed-api-keys`
-						  puts the plaintext into the token field, behind a reveal toggle,
-						  for as long as that panel stays mounted. Stating the server-side
-						  fact instead is true wherever this dialog opens, and it is the
-						  one that costs money to learn late.
+						  A claim about this page, not about storage. "Once you close this
+						  dialog the full key is no longer accessible" describes the
+						  database, and `encrypted_key` now holds a readable copy - so it
+						  had stopped being true. What is true here is narrow and
+						  checkable: the lists on this page show the preview and nothing
+						  more.
 						*/}
 						<AlertDescription className="text-warning-muted-foreground">
-							<strong>Important:</strong> Copy this key now. It is stored
-							hashed, so it can never be read back from Vectreal - once you
-							leave this page, the preview (...{apiKey.preview}) is all that
-							remains.
+							<strong>Important:</strong> Copy this key now. Once you leave
+							this dialog, the key lists show only the preview
+							(...{apiKey.preview}).
 						</AlertDescription>
 					</Alert>
 

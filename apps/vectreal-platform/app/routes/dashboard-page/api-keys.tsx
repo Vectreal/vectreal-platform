@@ -57,6 +57,38 @@ import { shouldRevalidateWithinScope } from '../../lib/navigation/dashboard-rout
 import type { DashboardConfirmationPlan } from '../../lib/domain/dashboard/dashboard-confirmation'
 import type { ShouldRevalidateFunction } from 'react-router'
 
+/**
+ * One stored key, reduced to what this page renders.
+ *
+ * An explicit field list rather than a spread, so a column added to `api_keys`
+ * has to be named here before it reaches the browser.
+ *
+ * Both fields this drops make the case, in different directions. `encryptedKey`
+ * is the column-added-later story. `hashedKey` is the worse one: it was in the
+ * table from the first migration, a week before this page was written, and went
+ * to the browser on every render from the day it shipped. Nothing catches that
+ * without a list someone has to write.
+ *
+ * The discipline, not this function, is what holds - `api-keys-edit.tsx` names
+ * its fields the same way for the same reason. `api-keys-page-payload.spec.ts`
+ * pins both, because a list is only a guarantee while someone maintains it.
+ */
+function toApiKeyRow(key: ApiKeyWithDetails): ApiKeyRow {
+	return {
+		id: key.apiKey.id,
+		name: key.apiKey.name,
+		description: key.apiKey.description,
+		keyPreview: key.apiKey.keyPreview,
+		createdBy: key.creator.name || key.creator.email || 'Unknown',
+		projects: key.projects,
+		lastUsedAt: key.apiKey.lastUsedAt,
+		active: key.apiKey.active,
+		expiresAt: key.apiKey.expiresAt,
+		revokedAt: key.apiKey.revokedAt,
+		rotatedAt: key.apiKey.rotatedAt
+	}
+}
+
 export async function loader({ request }: Route.LoaderArgs) {
 	const { user, headers } = await loadAuthenticatedUser(request)
 
@@ -65,13 +97,23 @@ export async function loader({ request }: Route.LoaderArgs) {
 		getUserOrganizations(user.id)
 	])
 
-	const keysByOrg = new Map<string, ApiKeyWithDetails[]>()
+	/*
+	  Narrowed here, not in the component.
+
+	  `ApiKeyWithDetails` carries the row as stored, which means `hashedKey` and
+	  the `encryptedKey` ciphertext. Returning it whole put both into the SSR
+	  payload and into every revalidation response, for a page that renders
+	  neither. The audience is the same either way - this route is already
+	  gated to org owners and admins - so this is not a leak being closed, it is
+	  a payload not being sent.
+	*/
+	const keysByOrg = new Map<string, ApiKeyRow[]>()
 	for (const keyData of apiKeys) {
 		const orgId = keyData.organization.id
 		if (!keysByOrg.has(orgId)) {
 			keysByOrg.set(orgId, [])
 		}
-		keysByOrg.get(orgId)!.push(keyData)
+		keysByOrg.get(orgId)!.push(toApiKeyRow(keyData))
 	}
 
 	const adminOrgs = organizations.filter((o) =>
@@ -112,9 +154,9 @@ export async function loader({ request }: Route.LoaderArgs) {
  * One shape for every outcome of this action.
  *
  * Returning a different object per branch left the client narrowing a union
- * with `in`, which resolved `rotatedKey` to `{}` and lost the one value that
- * cannot be fetched again. A single optional-field contract is also what the
- * component already assumes when it probes with `'success' in fetcher.data`.
+ * with `in`, which resolved `rotatedKey` to `{}` and dropped the freshly minted
+ * key before it could be shown. A single optional-field contract is also what
+ * the component already assumes when it probes with `'success' in fetcher.data`.
  */
 interface ApiKeysActionResult {
 	success?: true
@@ -163,9 +205,11 @@ export async function action({ request }: Route.ActionArgs) {
 			const rotated = await rotateApiKey({ apiKeyId, userId: user.id })
 
 			/*
-			  The plaintext leaves the server exactly here and is never persisted in
-			  the clear, so the client has one chance to show it. It is deliberately
-			  not put in the flash message: toasts disappear on a timer.
+			  Carried as its own field rather than in the flash message, because a
+			  toast disappears on a timer and this is the one screen that shows the
+			  key in full. It is on the row too, encrypted, but nothing here reads
+			  it back - that would be a round trip to re-fetch what this response
+			  already holds.
 			*/
 			return data<ApiKeysActionResult>(
 				{
@@ -208,22 +252,6 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
-
-function buildApiKeyRows(keys: ApiKeyWithDetails[]): ApiKeyRow[] {
-	return keys.map((key) => ({
-		id: key.apiKey.id,
-		name: key.apiKey.name,
-		description: key.apiKey.description,
-		keyPreview: key.apiKey.keyPreview,
-		createdBy: key.creator.name || key.creator.email || 'Unknown',
-		projects: key.projects,
-		lastUsedAt: key.apiKey.lastUsedAt,
-		active: key.apiKey.active,
-		expiresAt: key.apiKey.expiresAt,
-		revokedAt: key.apiKey.revokedAt,
-		rotatedAt: key.apiKey.rotatedAt
-	}))
-}
 
 function OrgApiKeysTable({
 	namespace,
@@ -315,16 +343,26 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 	)
 
 	const keysById = useMemo(
-		() => new Map(allKeys.map((item) => [item.apiKey.id, item])),
+		() => new Map(allKeys.map((item) => [item.id, item])),
 		[allKeys]
 	)
 
 	useOncePerFetcherResponse(fetcher, (result) => {
 		if ('success' in result && result.success) {
 			/*
-			  A rotation's plaintext exists only in this response. Capture it into
-			  state before the toast, because revalidating replaces `fetcher.data`
-			  and the value is unrecoverable once it is gone.
+			  Captured into state because `fetcher.data` is the wrong owner of it.
+
+			  Not, as this comment twice claimed, because revalidation clears it:
+			  it does not. A fetcher that submitted is removed from
+			  `fetchLoadMatches` before its action runs, so it is never in the
+			  revalidation set, and `use-once-per-fetcher-response.ts` opens by
+			  saying the same thing - a settled fetcher's `data` outlives the
+			  render that produced it.
+
+			  That persistence is the actual problem: rendering the dialog straight
+			  off the response leaves `onClose` with nothing to set, and this
+			  dialog deliberately swallows Escape. Owning it as state is what makes
+			  closing it possible at all.
 			*/
 			if ('rotatedKey' in result && result.rotatedKey) {
 				setRotatedKey(result.rotatedKey)
@@ -415,15 +453,13 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 	*/
 	const rotatePlan: DashboardConfirmationPlan = {
 		tier: 'acknowledge',
-		title: keyToRotate
-			? `Rotate "${keyToRotate.apiKey.name}"?`
-			: 'Rotate API key?',
+		title: keyToRotate ? `Rotate "${keyToRotate.name}"?` : 'Rotate API key?',
 		description: keyToRotate
-			? `Key ending ${keyToRotate.apiKey.keyPreview} is replaced by a new one immediately.`
+			? `Key ending ${keyToRotate.keyPreview} is replaced by a new one immediately.`
 			: 'The current key is replaced by a new one immediately.',
 		consequences: [
 			'Every embed still carrying the current key is refused until you paste in the new one',
-			'The new key is shown once, right after rotating, and cannot be recovered later',
+			'The new key is shown right after rotating; this list shows only its last four characters',
 			'The name, projects and expiry stay as they are'
 		],
 		confirmLabel: 'Rotate key',
@@ -438,11 +474,9 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 	*/
 	const revokePlan: DashboardConfirmationPlan = {
 		tier: 'acknowledge',
-		title: keyToRevoke
-			? `Revoke "${keyToRevoke.apiKey.name}"?`
-			: 'Revoke API key?',
+		title: keyToRevoke ? `Revoke "${keyToRevoke.name}"?` : 'Revoke API key?',
 		description: keyToRevoke
-			? `Key ending ${keyToRevoke.apiKey.keyPreview} stops working immediately.`
+			? `Key ending ${keyToRevoke.keyPreview} stops working immediately.`
 			: 'This key stops working immediately.',
 		consequences: [
 			'Any application still using this key loses access at once',
@@ -476,9 +510,7 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 						{apiKeysAccessByOrg[organizations[0].organization.id]?.granted ? (
 							<OrgApiKeysTable
 								namespace={`api-keys-${organizations[0].organization.id}`}
-								rows={buildApiKeyRows(
-									keysByOrg[organizations[0].organization.id] || []
-								)}
+								rows={keysByOrg[organizations[0].organization.id] || []}
 								onEdit={handleEdit}
 								onRevoke={handleRevoke}
 								onRotate={handleRotate}
@@ -526,9 +558,7 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 									{apiKeysAccessByOrg[org.organization.id]?.granted ? (
 										<OrgApiKeysTable
 											namespace={`api-keys-${org.organization.id}`}
-											rows={buildApiKeyRows(
-												keysByOrg[org.organization.id] || []
-											)}
+											rows={keysByOrg[org.organization.id] || []}
 											onEdit={handleEdit}
 											onRevoke={handleRevoke}
 											onRotate={handleRotate}

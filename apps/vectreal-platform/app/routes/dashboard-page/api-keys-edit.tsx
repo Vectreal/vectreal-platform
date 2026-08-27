@@ -101,8 +101,32 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	return data(
 		{
-			user,
-			apiKeyData,
+			/*
+			  `user` is deliberately not here. It was, and nothing on this page ever
+			  read it - the full Supabase user carries email, phone, both metadata
+			  bags and the `identities[]` array with per-provider data, which is a
+			  larger payload than the two secret columns this narrowing removed.
+			  Returning the actor "in case" is how a loader grows past its page.
+			*/
+			/*
+			  The fields this form reads, named one by one.
+
+			  `getApiKeyById` returns the row as stored, so returning it whole put
+			  `hashedKey` and the `encryptedKey` ciphertext into the payload for a
+			  page that renders a name, a description, a preview and a project
+			  list. Same audience either way - this route is gated to org owners
+			  and admins - so nothing here was reachable that is not still
+			  reachable; it simply stops being sent.
+			*/
+			apiKeyData: {
+				apiKey: {
+					name: apiKeyData.apiKey.name,
+					description: apiKeyData.apiKey.description,
+					keyPreview: apiKeyData.apiKey.keyPreview
+				},
+				organization: { id: apiKeyData.organization.id },
+				projects: apiKeyData.projects
+			},
 			userProjects,
 			apiKeyAccess: {
 				granted: entitlement.granted,

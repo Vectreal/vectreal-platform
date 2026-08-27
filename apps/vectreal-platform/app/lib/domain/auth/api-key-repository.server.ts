@@ -9,6 +9,7 @@ import { organizationMemberships } from '../../../db/schema/core/organization-me
 import { organizations } from '../../../db/schema/core/organizations'
 import { users } from '../../../db/schema/core/users'
 import { projects } from '../../../db/schema/project/projects'
+import { encryptEmbedToken } from '../../security/embed-token-cipher.server'
 import {
 	getOrgSubscription,
 	getRecommendedUpgrade
@@ -252,7 +253,8 @@ export interface CreateApiKeyParams {
 
 /**
  * Create a new API key
- * @returns The created key details with plaintext key (only time it's accessible)
+ * @returns The created key details with the plaintext key. Also stored, encrypted,
+ * on the row itself, so the embed panel can offer this key again later.
  */
 export async function createApiKey(
 	params: CreateApiKeyParams
@@ -298,6 +300,7 @@ export async function createApiKey(
 			name,
 			description: description || null,
 			hashedKey: hashed,
+			encryptedKey: encryptEmbedToken(plaintext),
 			keyPreview: preview,
 			active: true,
 			expiresAt: expiresAt || null
@@ -345,7 +348,7 @@ export async function createApiKey(
 		creator,
 		organization,
 		projects: projectDetails,
-		plaintext // Only returned on creation
+		plaintext
 	}
 }
 
@@ -479,6 +482,12 @@ export async function rotateApiKey(params: {
 		.update(apiKeys)
 		.set({
 			hashedKey: hashed,
+			/*
+			  Rewritten, not left behind. A stale value here would hand the panel
+			  the secret this rotation just replaced, which authorizes nothing -
+			  the exact failure rotation exists to end.
+			*/
+			encryptedKey: encryptEmbedToken(plaintext),
 			keyPreview: preview,
 			rotatedAt: new Date(),
 			/*
@@ -537,7 +546,14 @@ export async function revokeApiKey(
 		.update(apiKeys)
 		.set({
 			revokedAt: new Date(),
-			active: false
+			active: false,
+			/*
+			  Dropped, not kept. Someone revoking a leaked key expects the value to
+			  stop being retrievable, and this row's copy authorizes nothing once
+			  `revokedAt` is set - so keeping it around only contradicts what the
+			  action means.
+			*/
+			encryptedKey: null
 		})
 		.where(eq(apiKeys.id, apiKeyId))
 }

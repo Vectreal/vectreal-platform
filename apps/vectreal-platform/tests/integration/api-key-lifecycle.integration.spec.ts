@@ -25,6 +25,7 @@ type Repository =
 	typeof import('../../app/lib/domain/auth/api-key-repository.server')
 type PreviewAuth =
 	typeof import('../../app/lib/domain/auth/preview-api-key-auth.server')
+type Cipher = typeof import('../../app/lib/security/embed-token-cipher.server')
 type Db = ReturnType<typeof import('../../app/db/client').getDbClient>
 
 /**
@@ -49,6 +50,7 @@ describe('api key rotation', () => {
 	let rotateApiKey: Repository['rotateApiKey']
 	let revokeApiKey: Repository['revokeApiKey']
 	let validatePreviewApiKeyForProject: PreviewAuth['validatePreviewApiKeyForProject']
+	let decryptEmbedToken: Cipher['decryptEmbedToken']
 	let db: Db
 
 	const ownerId = randomUUID()
@@ -66,6 +68,8 @@ describe('api key rotation', () => {
 			await import('../../app/lib/domain/auth/api-key-repository.server'))
 		;({ validatePreviewApiKeyForProject } =
 			await import('../../app/lib/domain/auth/preview-api-key-auth.server'))
+		;({ decryptEmbedToken } =
+			await import('../../app/lib/security/embed-token-cipher.server'))
 		db = (await import('../../app/db/client')).getDbClient()
 
 		await db.insert(schema.users).values({
@@ -122,6 +126,38 @@ describe('api key rotation', () => {
 		expect(decision.ok).toBe(true)
 	})
 
+	it('stores the same secret twice, in the two forms that need it', async () => {
+		/*
+		  The invariant between the halves, and the reason this lives here rather
+		  than beside the cipher.
+
+		  `hashedKey` is what an embed request is matched against; `encryptedKey`
+		  is what the panel shows an owner so they can pick a key they already
+		  made. Those are two representations of one secret, written by one
+		  insert, and nothing in the type system says they describe the same
+		  value. If a later change writes a different token into one of them - or
+		  stops writing one - every unit test still passes and the panel starts
+		  handing out a snippet that authorizes nothing.
+
+		  So this reads the stored ciphertext out of the database, decrypts it,
+		  and puts the result through the same function `/embed` calls.
+		*/
+		const [row] = await db
+			.select({ encryptedKey: schema.apiKeys.encryptedKey })
+			.from(schema.apiKeys)
+			.where(eq(schema.apiKeys.id, apiKeyId))
+
+		/*
+		  Exact equality against the minted plaintext is the whole assertion. An
+		  earlier version also pushed `stored` through
+		  `validatePreviewApiKeyForProject` and asserted it authorized, which
+		  reads as the load-bearing half and cannot fail independently: `stored`
+		  is already proven identical to `originalPlaintext`, and the test above
+		  already proved that value authorizes. Two ways of saying one thing.
+		*/
+		expect(decryptEmbedToken(row.encryptedKey)).toBe(originalPlaintext)
+	})
+
 	it('hands back a new secret and keeps everything else', async () => {
 		const rotated = await rotateApiKey({ apiKeyId, userId: ownerId })
 		rotatedPlaintext = rotated.plaintext
@@ -140,6 +176,22 @@ describe('api key rotation', () => {
 		  what an owner checks to confirm the storefront picked the new key up.
 		*/
 		expect(rotated.apiKey.lastUsedAt).toBeNull()
+	})
+
+	it('rewrites the stored value on rotation rather than leaving the old one', async () => {
+		/*
+		  A stale `encryptedKey` here is worse than an absent one: the panel would
+		  confidently hand out the secret this rotation just replaced, which is
+		  the exact failure rotation exists to end, and the key would look fine in
+		  every listing while every snippet built from it 404s.
+		*/
+		const [row] = await db
+			.select({ encryptedKey: schema.apiKeys.encryptedKey })
+			.from(schema.apiKeys)
+			.where(eq(schema.apiKeys.id, apiKeyId))
+
+		expect(decryptEmbedToken(row.encryptedKey)).toBe(rotatedPlaintext)
+		expect(decryptEmbedToken(row.encryptedKey)).not.toBe(originalPlaintext)
 	})
 
 	it('refuses the key that was in the old snippet', async () => {
@@ -189,7 +241,9 @@ describe('api key rotation', () => {
 		])
 
 		const winners = results.filter(
-			(result): result is PromiseFulfilledResult<
+			(
+				result
+			): result is PromiseFulfilledResult<
 				Awaited<ReturnType<typeof rotateApiKey>>
 			> => result.status === 'fulfilled'
 		)

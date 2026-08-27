@@ -44,15 +44,18 @@ import { QuotaExceededError } from '../app/lib/domain/billing/quota-exceeded-err
 import { resolveProjectMembership } from '../app/lib/domain/dashboard/dashboard-permissions.server'
 import { getProject } from '../app/lib/domain/project/project-repository.server'
 import { getAuthUser } from '../app/lib/http/auth.server'
+import * as embedTokenCipher from '../app/lib/security/embed-token-cipher.server'
+import { encryptEmbedToken } from '../app/lib/security/embed-token-cipher.server'
 import { action, loader } from '../app/routes/api/projects.$projectId.api-keys'
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router'
 
 /** Route handlers take a router context this spec has no use for. */
 const routeArgs = (request: Request) =>
-	({ request, params: { projectId: PROJECT_ID } }) as unknown as LoaderFunctionArgs &
-		ActionFunctionArgs
-
+	({
+		request,
+		params: { projectId: PROJECT_ID }
+	}) as unknown as LoaderFunctionArgs & ActionFunctionArgs
 
 /** The rotated Supabase cookie every response has to carry back. */
 const SESSION_COOKIE = 'sb-access-token=rotated; Path=/'
@@ -106,9 +109,130 @@ function createRequest() {
 
 const submitCreate = () => action(routeArgs(createRequest()))
 
+/**
+ * Watched, not replaced: the same tests need the real `encryptEmbedToken` to
+ * build the rows they hand the loader, so a module mock would defeat itself.
+ */
+const decryptSpy = vi.spyOn(embedTokenCipher, 'decryptEmbedToken')
+
 beforeEach(() => {
 	vi.clearAllMocks()
 	vi.mocked(getAllUserApiKeys).mockResolvedValue([])
+})
+
+/**
+ * A stored key row, as `getAllUserApiKeys` hands it over.
+ *
+ * `encryptedKey` is real ciphertext produced by the cipher this route decrypts
+ * with, not a stand-in: a fake string would make the route's decrypt call
+ * indistinguishable from no decrypt call at all.
+ */
+function storedKey(encryptedKey: string | null) {
+	return {
+		apiKey: {
+			id: 'key-1',
+			name: 'Embed key for Storefront',
+			keyPreview: 'ab3x',
+			encryptedKey,
+			active: true,
+			expiresAt: null,
+			revokedAt: null,
+			lastUsedAt: null,
+			createdAt: new Date('2026-01-01T00:00:00.000Z')
+		},
+		projects: [{ id: PROJECT_ID }]
+	}
+}
+
+describe('the key value the picker needs', () => {
+	/*
+	  The whole point of the storage change: the panel could never offer a key
+	  the owner already had, because the only stored form was a one-way hash.
+	  These pin that the value comes back, that it comes back only to someone
+	  allowed to read keys, and that a row which cannot produce one says so
+	  rather than being hidden or faked.
+	*/
+	const keysFrom = async (response: Response) =>
+		(await response.json()).data.keys as Array<{ value: string | null }>
+
+	it('returns the decrypted token to a member who may read keys', async () => {
+		authenticateAs('admin')
+		vi.mocked(getAllUserApiKeys).mockResolvedValue([
+			storedKey(encryptEmbedToken('vctrl_realkeyab3x'))
+		] as unknown as Awaited<ReturnType<typeof getAllUserApiKeys>>)
+
+		const response = (await loadKeys()) as Response
+		const body = await response.clone().text()
+		const keys = await keysFrom(response)
+
+		expect(keys[0].value).toBe('vctrl_realkeyab3x')
+
+		/*
+		  The decrypted value, and only that. The row it came from carries the
+		  ciphertext too, and a refactor that spread the source row through the
+		  mapper would publish the envelope beside the plaintext without any
+		  other assertion here noticing.
+		*/
+		expect(body).not.toContain('enc:v1')
+
+		expect(response.headers.get('Cache-Control')).toBe('no-store')
+	})
+
+	it('decrypts only the keys scoped to this project', async () => {
+		/*
+		  `getAllUserApiKeys` returns every key in every org this actor
+		  administers, and `toEmbedApiKeyOptions` filters by project afterwards -
+		  so without a filter ahead of the decrypt, the route spends AES on rows
+		  it is about to discard and holds their plaintext in memory for nothing.
+		  The response is byte-identical either way, which is why this counts
+		  calls rather than reading the body.
+		*/
+		authenticateAs('admin')
+		const otherProject = {
+			...storedKey(encryptEmbedToken('vctrl_otherprojab3x')),
+			projects: [{ id: 'project-elsewhere' }]
+		}
+		vi.mocked(getAllUserApiKeys).mockResolvedValue([
+			storedKey(encryptEmbedToken('vctrl_realkeyab3x')),
+			otherProject
+		] as unknown as Awaited<ReturnType<typeof getAllUserApiKeys>>)
+
+		await loadKeys()
+
+		expect(decryptSpy).toHaveBeenCalledTimes(1)
+	})
+
+	it('reports null for a row written before the value was stored', async () => {
+		authenticateAs('admin')
+		vi.mocked(getAllUserApiKeys).mockResolvedValue([
+			storedKey(null)
+		] as unknown as Awaited<ReturnType<typeof getAllUserApiKeys>>)
+
+		const keys = await keysFrom((await loadKeys()) as Response)
+
+		expect(keys).toHaveLength(1)
+		expect(keys[0].value).toBeNull()
+	})
+
+	it('is never even decrypted for an actor who may not read keys', async () => {
+		/*
+		  The 403 itself is already pinned next door. What is new here is the
+		  ordering: the refusal happens before anything is decrypted, rather than
+		  after, with the value filtered out of a payload that was already built.
+		  Asserting the body has no `vctrl_` in it cannot fail - the refusal body
+		  is a fixed literal - so this watches the cipher instead.
+		*/
+		authenticateAs('member')
+		vi.mocked(getAllUserApiKeys).mockResolvedValue([
+			storedKey(encryptEmbedToken('vctrl_realkeyab3x'))
+		] as unknown as Awaited<ReturnType<typeof getAllUserApiKeys>>)
+
+		const response = (await loadKeys()) as Response
+
+		expect(response.status).toBe(403)
+		expect(vi.mocked(getAllUserApiKeys)).not.toHaveBeenCalled()
+		expect(decryptSpy).not.toHaveBeenCalled()
+	})
 })
 
 describe('loader', () => {
@@ -181,7 +305,9 @@ describe('loader', () => {
 
 		const body = await ((await loadKeys()) as Response).json()
 
-		expect(body.data.keys.map((key: { id: string }) => key.id)).toEqual(['mine'])
+		expect(body.data.keys.map((key: { id: string }) => key.id)).toEqual([
+			'mine'
+		])
 	})
 })
 
@@ -221,6 +347,14 @@ describe('action', () => {
 		})
 		expect(body.data.plaintext).toBe('vctrl_secretab3x')
 		expect(body.data.key.keyPreview).toBe('ab3x')
+
+		/*
+		  The primary flow of the whole feature: mint a key from the panel and get
+		  back an option that can build a snippet. The option was previously
+		  asserted one field short of this, so returning a key with no value -
+		  which is exactly the state that cannot produce a snippet - passed.
+		*/
+		expect(body.data.key.value).toBe('vctrl_secretab3x')
 	})
 
 	it('refuses a member and never reaches the repository', async () => {

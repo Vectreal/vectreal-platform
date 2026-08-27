@@ -7,8 +7,10 @@
  * fetches for itself against this route rather than either mount site growing
  * props it cannot supply.
  *
- * No plaintext key is ever read back here. `createApiKey` returns one exactly
- * once, on creation, and that response is the only place it appears.
+ * The loader reads a key's value back, decrypted, for anyone who passes
+ * `api-key:read`. That is the point of `encrypted_key`: this token ships inside
+ * an `iframe src` on the customer's public page, so refusing to show it to the
+ * owner who minted it bought nothing and cost them the interaction.
  */
 
 import { ApiResponse } from '@shared/utils'
@@ -26,6 +28,7 @@ import { getProject } from '../../lib/domain/project/project-repository.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { ensurePost } from '../../lib/http/requests.server'
+import { decryptEmbedToken } from '../../lib/security/embed-token-cipher.server'
 
 import type { EmbedApiKeyOption } from '../../lib/domain/embed/embed-key-options'
 import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router'
@@ -64,7 +67,14 @@ export interface EmbedApiKeysPayload {
 
 export interface EmbedApiKeyCreatedPayload {
 	key: EmbedApiKeyOption
-	/** The only time this value is ever sent. Not persisted in the clear. */
+	/**
+	 * The freshly minted value.
+	 *
+	 * No longer the only time it is sent - the loader returns it too, from
+	 * `encrypted_key` - and no longer a claim about storage. It stays on this
+	 * payload because a create response should not need a second round trip to
+	 * become usable.
+	 */
 	plaintext: string
 }
 
@@ -123,9 +133,44 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		projectId: project.id,
 		projectName: project.name,
 		allowedDomains: parseAllowedDomainPatterns(project.allowedEmbedDomains),
-		keys: toEmbedApiKeyOptions(allKeys, project.id, new Date()),
+		/*
+		  Decryption happens here, on the server, behind the `api-key:read` check
+		  above. `toEmbedApiKeyOptions` is pure and client-safe, so it takes the
+		  value already resolved rather than importing the cipher.
+		*/
+		keys: toEmbedApiKeyOptions(
+			/*
+			  Filtered before decrypting, not after. `getAllUserApiKeys` returns
+			  every key in every organization this actor administers, and
+			  `toEmbedApiKeyOptions` keeps only the ones scoped to this project -
+			  so decrypting first spends AES on rows about to be discarded, and
+			  puts their plaintext in memory for no reason.
+			*/
+			allKeys
+				.filter((key) =>
+					key.projects.some((scoped) => scoped.id === project.id)
+				)
+				.map((key) => ({
+					...key,
+					value: decryptEmbedToken(key.apiKey.encryptedKey)
+				})),
+			project.id,
+			new Date()
+		),
 		canCreateKey: canPerformDashboardOperation('api-key:create', membership)
 	}
+
+	/*
+	  `no-store`, explicitly. This payload now carries usable embed keys, and
+	  `ApiResponse.success` sets no cache directive of its own - only
+	  `ApiResponse.error` does. React Router's `handleDataRequest` hook, which
+	  stamps one elsewhere, runs for `.data` paths and skips resource routes
+	  entirely, so nothing else on this response says anything about caching.
+	  Cloudflare's fail-closed catch-all covers the edge, but that leaves the
+	  protection living in a Terraform rule instead of the response, and does
+	  nothing about the browser's own disk cache.
+	*/
+	headers.set('Cache-Control', 'no-store')
 
 	return ApiResponse.success(payload, 200, { headers })
 }
@@ -181,8 +226,19 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			expiresAt
 		})
 
+		/*
+		  The plaintext straight from the mint, not a decrypt of what was just
+		  written. Same value either way, and reading it back would only add a
+		  round trip through the cipher for a row this request created.
+		*/
 		const [option] = toEmbedApiKeyOptions(
-			[{ apiKey: created.apiKey, projects: [{ id: project.id }] }],
+			[
+				{
+					apiKey: created.apiKey,
+					projects: [{ id: project.id }],
+					value: created.plaintext
+				}
+			],
 			project.id,
 			new Date()
 		)

@@ -134,6 +134,13 @@
       "when": 1787406189506,
       "tag": "0018_abnormal_magus",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787738787455,
+      "tag": "0019_shocking_scorpion",
+      "breakpoints": true
     }
   ]
 }

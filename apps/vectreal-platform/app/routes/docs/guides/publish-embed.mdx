@@ -33,7 +33,7 @@ To create a key with your own name, description or expiry instead:
 3. Select the project(s) the key should have access to.
 4. Copy the key - it is shown only once.
 
-> A key is stored hashed, so it cannot be read back later. The **Embed** panel's key picker shows each key's name and last four characters, which is enough to tell which of your saved keys a project expects, but not enough to recover one you did not save.
+> A key is stored two ways now: hashed, which is the only form an embed request is ever checked against, and encrypted alongside it. Nothing reads that second copy back yet - the API Keys list and the **Embed** panel's key picker both still show only a name and the last four characters - so copy the full value while it is on screen.
 
 ### Replacing a key that leaked
 
@@ -55,6 +55,9 @@ present apps/vectreal-platform/app/lib/domain/auth/api-key-repository.server.ts 
 present apps/vectreal-platform/app/lib/domain/auth/api-key-repository.server.ts lastUsedAt: null
 present apps/vectreal-platform/app/lib/domain/auth/api-key-repository.server.ts state !== 'active'
 present apps/vectreal-platform/app/components/dashboard/table-columns.tsx Unused since rotating
+present apps/vectreal-platform/app/db/schema/auth/api-keys.ts encryptedKey: text('encrypted_key')
+present apps/vectreal-platform/app/lib/domain/auth/api-key-repository.server.ts encryptedKey: encryptEmbedToken(plaintext)
+present apps/vectreal-platform/app/lib/domain/auth/api-key-repository.server.ts encryptedKey: null
 */}
 
 ### Using the key
