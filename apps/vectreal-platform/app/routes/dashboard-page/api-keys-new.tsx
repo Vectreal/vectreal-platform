@@ -203,7 +203,7 @@ export async function action({ request }: Route.ActionArgs) {
 			expiresAt
 		})
 
-		// Return the plaintext key (only time it will be accessible)
+		// Return the plaintext key so the dialog can show it once
 		return data(
 			{
 				success: true,

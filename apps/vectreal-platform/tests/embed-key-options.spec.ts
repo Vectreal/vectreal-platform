@@ -11,9 +11,11 @@ const NOW = new Date('2026-08-22T12:00:00.000Z')
 
 function makeKey(
 	overrides: Partial<EmbedApiKeySource['apiKey']> & { id: string },
-	projectIds: string[] = [PROJECT_ID]
+	projectIds: string[] = [PROJECT_ID],
+	value: string | null = `vctrl_${overrides.id}`
 ): EmbedApiKeySource {
 	return {
+		value,
 		apiKey: {
 			name: `key ${overrides.id}`,
 			keyPreview: 'ab3x',
@@ -43,7 +45,20 @@ describe('toEmbedApiKeyOptions', () => {
 		expect(options.map((option) => option.id)).toEqual(['mine', 'both'])
 	})
 
-	it('never carries anything beyond the four-character preview', () => {
+	it('carries exactly the fields the picker is allowed to see', () => {
+		/*
+		  This asserted that nothing beyond the four-character preview ever left
+		  the server, which was true while the token existed only as a hash and
+		  the panel asked people to paste one back. That is the constraint this
+		  change removed: the embed token is published in an `iframe src` on the
+		  customer's own page, so withholding it from the owner who minted it
+		  bought nothing and cost the whole interaction.
+
+		  The list is still pinned, and still exact, because the reason it was
+		  pinned has not changed - an option is serialized to the client, so a
+		  field added here is a field published. `value` is on it deliberately;
+		  anything else appearing is not.
+		*/
 		const [option] = toEmbedApiKeyOptions([makeKey({ id: 'k' })], PROJECT_ID, NOW)
 
 		expect(Object.keys(option).sort()).toEqual([
@@ -53,7 +68,8 @@ describe('toEmbedApiKeyOptions', () => {
 			'keyPreview',
 			'lastUsedAt',
 			'name',
-			'revoked'
+			'revoked',
+			'value'
 		])
 	})
 
@@ -169,5 +185,46 @@ describe('matchesKeyPreview', () => {
 
 	it('is case sensitive, because the preview is a base62 slice', () => {
 		expect(matchesKeyPreview('vctrl_valueAB3X', 'ab3x')).toBe(false)
+	})
+})
+
+describe('a key with no recoverable value', () => {
+	/*
+	  Rows written before the token was stored decryptably, and rows whose stored
+	  value no longer decrypts. They are still live keys and still explain an
+	  embed that is failing, so they stay in the list - but they cannot build a
+	  snippet, so they must not sit at the top of it as the obvious choice.
+	*/
+	it('carries the value through when there is one', () => {
+		const [option] = toEmbedApiKeyOptions(
+			[makeKey({ id: 'k' }, [PROJECT_ID], 'vctrl_realvalue')],
+			PROJECT_ID,
+			NOW
+		)
+
+		expect(option.value).toBe('vctrl_realvalue')
+	})
+
+	it('reports null rather than inventing one', () => {
+		const [option] = toEmbedApiKeyOptions(
+			[makeKey({ id: 'k' }, [PROJECT_ID], null)],
+			PROJECT_ID,
+			NOW
+		)
+
+		expect(option.value).toBeNull()
+	})
+
+	it('sorts below a usable key of the same age', () => {
+		const options = toEmbedApiKeyOptions(
+			[
+				makeKey({ id: 'legacy' }, [PROJECT_ID], null),
+				makeKey({ id: 'usable' }, [PROJECT_ID], 'vctrl_usable')
+			],
+			PROJECT_ID,
+			NOW
+		)
+
+		expect(options.map((option) => option.id)).toEqual(['usable', 'legacy'])
 	})
 })

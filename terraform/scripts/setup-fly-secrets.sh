@@ -119,6 +119,7 @@ REQUIRED_STAGING=(
   "CLOUDFLARE_TURNSTILE_SITE_KEY_STAGING"
   "CLOUDFLARE_TURNSTILE_SECRET_KEY_STAGING"
   "RESEND_API_KEY_STAGING"
+  "EMBED_TOKEN_ENCRYPTION_KEY_STAGING"
 )
 REQUIRED_PROD=(
   "SUPABASE_PROJECT_REF_PROD"
@@ -133,6 +134,7 @@ REQUIRED_PROD=(
   "CLOUDFLARE_TURNSTILE_SITE_KEY_PROD"
   "CLOUDFLARE_TURNSTILE_SECRET_KEY_PROD"
   "RESEND_API_KEY_PROD"
+  "EMBED_TOKEN_ENCRYPTION_KEY_PROD"
 )
 
 MISSING=()
@@ -178,6 +180,7 @@ if [[ "$MODE" == "verify" ]]; then
                  CSRF_SECRET STRIPE_SECRET_KEY APPLICATION_URL SEND_EMAIL_HOOK_SECRET \
                  CLOUDFLARE_TURNSTILE_SITE_KEY CLOUDFLARE_TURNSTILE_SECRET_KEY \
                  RESEND_API_KEY CONTACT_DATA_ENCRYPTION_KEY RESEND_WEBHOOK_SECRET \
+                 EMBED_TOKEN_ENCRYPTION_KEY \
                  CONTACT_INBOX_EMAIL FROM_EMAIL; do
       check_fly_secret "$app" "$field"
     done
@@ -218,6 +221,7 @@ sync_fly_secrets() {
   local hook_raw; hook_raw="$(eval echo "\${SEND_EMAIL_HOOK_SECRET_${ENV}}")"
   local hook; hook="$(strip_hook_prefix "$hook_raw")"
   local enc_key;  enc_key="$(eval echo "\${CONTACT_DATA_ENCRYPTION_KEY_${ENV}:-}")"
+  local emb_key;  emb_key="$(eval echo "\${EMBED_TOKEN_ENCRYPTION_KEY_${ENV}}")"
   local resend_wh; resend_wh="$(eval echo "\${RESEND_WEBHOOK_SECRET_${ENV}:-}")"
 
   if fly secrets set \
@@ -237,6 +241,7 @@ sync_fly_secrets() {
       NODE_ENV=production \
       ENVIRONMENT="$env" \
       ${enc_key:+CONTACT_DATA_ENCRYPTION_KEY="$enc_key"} \
+      EMBED_TOKEN_ENCRYPTION_KEY="$emb_key" \
       ${resend_wh:+RESEND_WEBHOOK_SECRET="$resend_wh"} \
       --app "$app" 2>/dev/null; then
     SECRETS_SET+=("$app")
