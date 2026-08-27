@@ -62,8 +62,8 @@ export const MeshReductionField: FC = () => {
 					</div>
 					<p className="text-muted-foreground text-sm leading-relaxed">
 						Destructive. Changes topology and can leave holes or shading seams.
-						Use it when the triangle count is the problem — geometry
-						compression already shrinks the download without touching the mesh.
+						Use it when the triangle count is the problem — geometry compression
+						already shrinks the download without touching the mesh.
 					</p>
 				</div>
 				<Switch
@@ -102,7 +102,7 @@ export const MeshReductionField: FC = () => {
 					<div className="flex items-center justify-between gap-2">
 						<div className="flex items-center gap-2">
 							<p className="text-sm font-semibold">Deviation limit</p>
-							<InfoTooltip content="The maximum shape deviation allowed. The simplifier stops as soon as further collapses would exceed this, even if the target has not been reached." />
+							<InfoTooltip content="The largest shape change allowed. Simplification stops as soon as a further collapse would exceed it, even if the target is unmet." />
 						</div>
 						<span className="text-orange text-xs font-medium">
 							{getClosestValue(DEVIATION_PRESETS, error).toFixed(3)}

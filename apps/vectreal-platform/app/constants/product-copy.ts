@@ -390,7 +390,7 @@ export const LIMIT_DISPLAY_LABELS: Partial<Record<LimitKey, string>> = {
 export const STORAGE_USAGE_LABEL = 'Scene storage'
 
 export const STORAGE_USAGE_HINT =
-	'What your scenes keep, not what visitors download. Each scene stores an editable copy at full precision, plus the compressed file served when you publish, its thumbnail, and any baked shadow. The size shown in the publisher is the published file alone, so it is the smaller of the two.'
+	'What your scenes keep, not what visitors download: the editable copy, the published file, its thumbnail, and any baked shadow.'
 
 // ---------------------------------------------------------------------------
 // Upgrade success page: entitlement keys to highlight post-upgrade, in priority

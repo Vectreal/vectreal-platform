@@ -52,7 +52,7 @@ export const OPTIMIZATION_CATALOG: readonly OptimizationDefinition[] = [
 		title: 'Reduce polygon count',
 		description: 'Collapses triangles to lower the draw cost at runtime',
 		tooltip:
-			'Removes triangles until the mesh hits your target or the deviation limit stops it, whichever comes first. This rewrites topology: it can leave holes, shading seams, and distorted UVs, especially on hard-surface models. Reach for it when the triangle count itself is the problem, not the file size — geometry compression shrinks the download without touching the mesh.',
+			'Removes triangles until the mesh hits your target or the deviation limit stops it, whichever comes first. UVs and shading can distort.',
 		isDestructive: true
 	},
 	{
@@ -72,7 +72,7 @@ export const OPTIMIZATION_CATALOG: readonly OptimizationDefinition[] = [
 		title: 'Quantize vertices',
 		description: 'Stores vertex attributes at lower precision',
 		tooltip:
-			'Reduces the number of bits used to store vertex positions and attributes, producing smaller files at the cost of minor visual artifacts. Redundant when geometry compression is on, since Draco quantizes on its own.',
+			'Fewer bits per vertex position and attribute: smaller files, minor artifacts. Redundant when Draco is on, since it quantizes on its own.',
 		isDestructive: false
 	},
 	{
@@ -82,7 +82,7 @@ export const OPTIMIZATION_CATALOG: readonly OptimizationDefinition[] = [
 		title: 'Optimize normals',
 		description: 'Recomputes normal vectors for cleaner shading',
 		tooltip:
-			'Recalculates normal vectors to improve lighting appearance. Helpful on models exported with missing or broken normals; unnecessary otherwise.',
+			'Helpful on models exported with missing or broken normals; unnecessary otherwise.',
 		isDestructive: false
 	},
 	{
@@ -92,7 +92,7 @@ export const OPTIMIZATION_CATALOG: readonly OptimizationDefinition[] = [
 		title: 'Compress geometry (Draco)',
 		description: 'The largest size saving available, without altering the mesh',
 		tooltip:
-			'Applies Draco mesh compression, typically the single largest reduction in file size. Topology is preserved — only precision is reduced — so the model keeps its shape. Compression is applied when you publish, so the scene you edit stays at full precision. Draco quantizes vertex attributes itself, which is why "Quantize vertices" turns off alongside it.',
+			'Applied when you publish, so the scene you edit stays at full precision. Draco quantizes vertices itself, so Quantize vertices turns off.',
 		isDestructive: false
 	},
 	{
@@ -102,7 +102,7 @@ export const OPTIMIZATION_CATALOG: readonly OptimizationDefinition[] = [
 		title: 'Texture optimization',
 		description: 'Resizes and re-encodes images',
 		tooltip:
-			'Resizes and compresses textures to reduce file size. On texture-heavy models this usually outweighs every geometry saving combined. Smaller dimensions and lower quality reduce visual fidelity.',
+			'On texture-heavy models this usually outweighs every geometry saving combined. Smaller dimensions and lower quality cost visual fidelity.',
 		isDestructive: false
 	}
 ]
@@ -157,7 +157,5 @@ export function listEnabledGeometryKeys(
 export function listEnabledKeys(
 	optimizations: Optimizations
 ): OptimizationKey[] {
-	return OPTIMIZATION_KEYS.filter((key) =>
-		Boolean(optimizations[key]?.enabled)
-	)
+	return OPTIMIZATION_KEYS.filter((key) => Boolean(optimizations[key]?.enabled))
 }
