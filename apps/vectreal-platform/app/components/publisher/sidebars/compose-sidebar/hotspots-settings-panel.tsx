@@ -21,10 +21,15 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/components/ui/tooltip'
 import { cn } from '@shared/utils'
-import { resolveHotspotMarkers } from '@vctrl/viewer'
-import { AnimatePresence, Reorder, motion, useDragControls, useReducedMotion } from 'framer-motion'
+import { resolveHotspotMarkers } from '@vctrl/viewer/hotspots'
+import {
+	AnimatePresence,
+	Reorder,
+	motion,
+	useDragControls,
+	useReducedMotion
+} from 'framer-motion'
 import { useAtom, useSetAtom } from 'jotai/react'
 import {
 	ChevronDown,
@@ -38,7 +43,6 @@ import {
 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-
 import {
 	PAIRED_HOTSPOT_CAMERA_ID_PREFIX,
 	resolveDefaultSceneCameraId
@@ -50,6 +54,7 @@ import {
 	renameHotspot
 } from '../../../../lib/domain/scene/scene-hotspot-camera-links'
 import {
+	applySequenceMove,
 	reorderSequence,
 	setSequenceMembership
 } from '../../../../lib/domain/scene/scene-hotspot-sequence'
@@ -62,8 +67,13 @@ import {
 } from '../../../../lib/stores/scene-settings-store'
 import { InlineNotice } from '../../../layout-components'
 import { SettingToggle, ToggleButtonGroup } from '../../settings-components'
-import { SidebarSection, SidebarSectionContent, SettingGroup } from '../sidebar-section'
+import {
+	SidebarSection,
+	SidebarSectionContent,
+	SettingGroup
+} from '../sidebar-section'
 
+import type { SequenceMove } from '../../../../lib/domain/scene/scene-hotspot-sequence'
 import type { ToggleButtonGroupOption } from '../../settings-components'
 import type {
 	CameraProps,
@@ -147,7 +157,7 @@ const AxisField = memo(
 		<div className="publisher-shell-nested focus-within:ring-ring flex items-center rounded-lg pl-2 focus-within:ring-2">
 			<span
 				aria-hidden
-				className="text-muted-foreground text-label-xs w-3 shrink-0 font-medium"
+				className="text-muted-foreground w-3 shrink-0 text-xs font-medium"
 			>
 				{axis}
 			</span>
@@ -215,6 +225,7 @@ const HotspotRow = memo(
 							type="button"
 							aria-label={`Reorder ${name}`}
 							aria-keyshortcuts="ArrowUp ArrowDown Home End"
+							aria-describedby="hotspot-reorder-hint"
 							onPointerDown={(event) => dragControls.start(event)}
 							onKeyDown={(event) => {
 								const move = {
@@ -239,7 +250,7 @@ const HotspotRow = memo(
 					{step === null ? (
 						<span
 							aria-hidden
-							className="text-muted-foreground/60 text-label-xs flex size-5 shrink-0 items-center justify-center"
+							className="text-muted-foreground text-label-xs flex size-5 shrink-0 items-center justify-center"
 						>
 							&mdash;
 						</span>
@@ -259,25 +270,40 @@ const HotspotRow = memo(
 							className="publisher-shell-focus flex min-w-0 flex-1 items-center gap-2 rounded-lg py-2 pr-1 pl-1 text-left"
 						>
 							<span className="min-w-0 flex-1">
-							<span
-								className={cn(
-									'block truncate text-sm leading-tight font-medium',
-									hiddenFromViewers && 'opacity-60'
-								)}
-							>
-								{name}
-							</span>
-							<span className="text-muted-foreground text-label-xs block font-mono tabular-nums">
-								{hotspot.worldPosition.map((axis) => axis.toFixed(2)).join(', ')}
-							</span>
-							<span className="sr-only">
-								{step === null ? ', not in the sequence' : `, step ${step}`}
-								{hotspot.internalOnly
-									? ', editor only'
-									: hotspot.visible
-										? ''
-										: ', hidden from viewers'}
-							</span>
+								<span
+									className={cn(
+										'block truncate text-sm leading-tight font-medium',
+										hiddenFromViewers && 'opacity-60'
+									)}
+								>
+									{name}
+								</span>
+								<span className="text-muted-foreground text-label-xs block font-mono tabular-nums">
+									{hotspot.worldPosition
+										.map((axis) => axis.toFixed(2))
+										.join(', ')}
+								</span>
+								{/*
+							  Membership and step are two different facts. A marker the
+							  author hid is still in the sequence, but
+							  `resolveHotspotMarkers` ranks steps over the markers a
+							  visitor can reach, so it carries no step - which is why
+							  the badge shows a dash. Announcing that as "not in the
+							  sequence" contradicted both the group it sits in and its
+							  own switch.
+							*/}
+								<span className="sr-only">
+									{hotspot.sequenceIndex === undefined
+										? ', not in the sequence'
+										: step === null
+											? ', in the sequence, no step in the published scene'
+											: `, step ${step}`}
+									{hotspot.internalOnly
+										? ', editor only'
+										: hotspot.visible
+											? ''
+											: ', hidden from viewers'}
+								</span>
 							</span>
 							<ChevronDown
 								aria-hidden
@@ -290,27 +316,26 @@ const HotspotRow = memo(
 						</button>
 					</CollapsibleTrigger>
 
+					{/*
+					  Bare glyphs, not tooltip triggers. Radix `asChild` merged the
+					  trigger onto a lucide `<svg>`, which takes no focus and is
+					  `aria-hidden`, so the tooltip was unreachable by keyboard and
+					  dead on touch - and its `aria-describedby` landed on a node
+					  outside the accessibility tree. Both states are already in the
+					  trigger's own `sr-only` text, so the icon is the visual cue and
+					  nothing is missing.
+					*/}
 					{!hotspot.visible && (
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<EyeOff
-									aria-hidden
-									className="text-muted-foreground size-3.5 shrink-0"
-								/>
-							</TooltipTrigger>
-							<TooltipContent>Hidden from viewers</TooltipContent>
-						</Tooltip>
+						<EyeOff
+							aria-hidden
+							className="text-muted-foreground size-3.5 shrink-0"
+						/>
 					)}
 					{hotspot.internalOnly && (
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<SquarePen
-									aria-hidden
-									className="text-muted-foreground size-3.5 shrink-0"
-								/>
-							</TooltipTrigger>
-							<TooltipContent>Editor only</TooltipContent>
-						</Tooltip>
+						<SquarePen
+							aria-hidden
+							className="text-muted-foreground size-3.5 shrink-0"
+						/>
 					)}
 
 					<Button
@@ -322,7 +347,6 @@ const HotspotRow = memo(
 					>
 						<Trash2 aria-hidden className="size-3.5" />
 					</Button>
-
 				</div>
 
 				<CollapsibleContent
@@ -369,7 +393,18 @@ const SequencedRow = ({
 			dragControls={dragControls}
 			onDragStart={onDragStart}
 			onDragEnd={onDragEnd}
-			layout={reduceMotion ? undefined : 'position'}
+			/*
+			  `layout` stays on whatever the motion preference is, and the
+			  preference is honoured by the transition instead.
+
+			  `undefined` was the bug: framer defaults the prop to `true`, so the
+			  reduced-motion branch was asking for *more* animation than the other
+			  one. `Reorder.Item` also registers with its group only from
+			  `onLayoutMeasure`, so turning layout off here is not obviously safe
+			  either - and there is no reason to, since the transition already
+			  carries the preference.
+			*/
+			layout="position"
 			transition={
 				reduceMotion
 					? { duration: 0 }
@@ -397,7 +432,32 @@ const HotspotsSettingsPanel = memo(() => {
 	)
 
 	const reduceMotion = useReducedMotion() ?? false
-	const [announcement, setAnnouncement] = useState('')
+	/**
+	 * Two regions, used alternately, so a message can repeat.
+	 *
+	 * A live region speaks when its content changes, and React bails out of an
+	 * identical `setState`, so saying the same thing twice produced no DOM change
+	 * and no announcement - which is how "already first" spoke on the first
+	 * ArrowUp at the top of the list and went quiet on every one after it.
+	 *
+	 * Alternating a trailing zero-width space was the first attempt and does not
+	 * work: it saturates on the third repeat, and even before that it only
+	 * mutates one text node, which some screen readers report as an insertion of
+	 * the delta - here, an inaudible character. Writing each message into a region
+	 * that was empty makes every announcement an unambiguous insertion, which is
+	 * the technique `react-aria`'s announcer settled on for the same reason.
+	 */
+	const [announcement, setAnnouncement] = useState<{
+		message: string
+		slot: 0 | 1
+	}>({ message: '', slot: 0 })
+
+	const announce = useCallback((message: string) => {
+		setAnnouncement((previous) => ({
+			message,
+			slot: previous.slot === 0 ? 1 : 0
+		}))
+	}, [])
 	const allCameras = camera.cameras ?? []
 
 	/**
@@ -467,29 +527,83 @@ const HotspotsSettingsPanel = memo(() => {
 		[inSequence]
 	)
 	const [draftOrder, setDraftOrder] = useState<string[]>(sequencedIds)
-	const isDraggingRef = useRef(false)
+	const draftOrderRef = useRef(sequencedIds)
+	/**
+	 * State, not a ref, so the re-seed below can see a drag end.
+	 *
+	 * As a ref it was invisible to the effect's dependencies: a write to the
+	 * store during a drag - the canvas gizmo under a second touch point, or a
+	 * scene load - ran the effect once, hit the guard, and nothing afterwards
+	 * could make it run again, so the draft stayed diverged from the store for
+	 * the life of the panel. One render at drag start is the whole cost.
+	 */
+	const [isDragging, setIsDragging] = useState(false)
+
+	/** Keeps the ref beside the state, so a commit outside React can read it. */
+	const applyDraftOrder = useCallback((order: string[]) => {
+		draftOrderRef.current = order
+		setDraftOrder(order)
+	}, [])
 
 	useEffect(() => {
-		if (isDraggingRef.current) return
+		if (isDragging) return
+		draftOrderRef.current = sequencedIds
 		setDraftOrder(sequencedIds)
-	}, [sequencedIds])
+	}, [isDragging, sequencedIds])
 
+	/**
+	 * Writes a new order, and says so once it is actually new.
+	 *
+	 * "Position" rather than "step": the step on a row is what a visitor is
+	 * shown, and `resolveHotspotMarkers` ranks that over the markers a visitor
+	 * can reach. This list is the authoring order and counts hidden members too,
+	 * so calling both of them "step" would announce a number that appears
+	 * nowhere on screen.
+	 */
 	const commitOrder = useCallback(
 		(order: string[], movedId: string, movedName: string) => {
-			setHotspots((prev) => reorderSequence(prev, order))
-			setAnnouncement(
-				`${movedName} moved to step ${order.indexOf(movedId) + 1} of ${order.length}.`
+			/*
+			  The annotated return type is load-bearing. TypeScript cannot see the
+			  updater run, so a value captured from inside it narrows to `never`
+			  after its own null guard and the announcement below silently stops
+			  being type-checked. Declaring the type at the boundary keeps it.
+
+			  Capturing at all is safe because `hotspotsAtom` is a jotai primitive:
+			  its write runs the updater once, synchronously, before the next
+			  statement. A derived atom would break that, which is why the whole
+			  decision lives in `applySequenceMove` rather than here. Do not copy
+			  the shape to a React `useState` updater, which StrictMode invokes
+			  twice in development - an impure one would then run twice too.
+
+			  If the assumption ever does break, `applied` stays null and only the
+			  announcement is skipped; the reorder still commits.
+			*/
+			const move = ((): SequenceMove | null => {
+				let applied: SequenceMove | null = null
+
+				setHotspots((prev) => {
+					applied = applySequenceMove(prev, order, movedId)
+					return applied ? applied.hotspots : prev
+				})
+
+				return applied
+			})()
+
+			if (!move) return
+
+			announce(
+				`${movedName} moved to position ${move.position} of ${move.total}.`
 			)
 		},
-		[setHotspots]
+		[announce, setHotspots]
 	)
 
 	const handleReorderEnd = useCallback(
 		(id: string, name: string) => {
-			isDraggingRef.current = false
-			commitOrder(draftOrder, id, name)
+			setIsDragging(false)
+			commitOrder(draftOrderRef.current, id, name)
 		},
-		[commitOrder, draftOrder]
+		[commitOrder]
 	)
 
 	const handleKeyboardMove = useCallback(
@@ -504,19 +618,23 @@ const HotspotsSettingsPanel = memo(() => {
 						? draftOrder.length - 1
 						: from + delta
 
-			if (to < 0 || to >= draftOrder.length || to === from) return
+			// Silence at the ends is indistinguishable from a key that does
+			// nothing, so a refused move is announced rather than swallowed.
+			if (to < 0 || to >= draftOrder.length || to === from) {
+				// Named from the direction asked for, not from the index it started
+				// at: in a one-marker sequence `from` is always 0, so reading the
+				// index announced "already first" for a press asking to go last.
+				const towardsEnd = delta === 'last' || delta === 1
+				announce(`${name} is already ${towardsEnd ? 'last' : 'first'}.`)
+				return
+			}
 
 			const next = [...draftOrder]
 			next.splice(to, 0, ...next.splice(from, 1))
-			setDraftOrder(next)
+			applyDraftOrder(next)
 			commitOrder(next, id, name)
 		},
-		[commitOrder, draftOrder]
-	)
-
-	const selectedHotspot = useMemo(
-		() => hotspots.find((h) => h.id === selectedId) ?? null,
-		[hotspots, selectedId]
+		[applyDraftOrder, commitOrder, draftOrder]
 	)
 
 	const updateHotspot = useCallback(
@@ -545,7 +663,7 @@ const HotspotsSettingsPanel = memo(() => {
 	 * a gap would show as steps 1 and 3 with nothing between them.
 	 */
 	const handleDelete = useCallback(
-		(id: string) => {
+		(id: string, name: string) => {
 			const next = removeHotspot({ camera, hotspots }, id)
 			const survivingOrder = sequencedFirst(next.hotspots).inSequence.map(
 				(hotspot) => hotspot.id
@@ -557,8 +675,25 @@ const HotspotsSettingsPanel = memo(() => {
 				survivingSelectedCameraId(next.camera.cameras, prev)
 			)
 			setSelectedId((prev) => (prev === id ? null : prev))
+
+			/*
+			  Deleting is the loudest thing this panel does and it was the only one
+			  that said nothing: the row goes, focus falls to the document body,
+			  and every later step silently renumbers. A reorder one row up
+			  announces itself, so this looked like an oversight rather than a
+			  decision - because it was.
+			*/
+			const wasSequenced = hotspots.some(
+				(hotspot) => hotspot.id === id && hotspot.sequenceIndex !== undefined
+			)
+			announce(
+				wasSequenced
+					? `${name} deleted. ${survivingOrder.length} ${survivingOrder.length === 1 ? 'marker' : 'markers'} left in the sequence.`
+					: `${name} deleted.`
+			)
 		},
 		[
+			announce,
 			camera,
 			hotspots,
 			setCamera,
@@ -591,18 +726,28 @@ const HotspotsSettingsPanel = memo(() => {
 		[camera, hotspots, setCamera, setHotspots, setSelectedCameraId]
 	)
 
+	/**
+	 * Takes the hotspot it is editing, like every other handler here.
+	 *
+	 * Reading the selection instead was wrong for as long as two editors are
+	 * mounted at once, which is the whole of a row's collapse animation: Radix
+	 * keeps closing content mounted until it finishes, so for those ~200ms the
+	 * outgoing row still shows live fields that would have written to the
+	 * incoming one.
+	 */
 	const handlePositionChange = useCallback(
-		(axis: 0 | 1 | 2, raw: string) => {
-			if (!selectedHotspot) return
+		(hotspot: HotspotDefinition, axis: 0 | 1 | 2, raw: string) => {
 			const value = parseFloat(raw)
 			if (isNaN(value)) return
-			const next: [number, number, number] = [
-				...selectedHotspot.worldPosition
-			] as [number, number, number]
+			const next: [number, number, number] = [...hotspot.worldPosition] as [
+				number,
+				number,
+				number
+			]
 			next[axis] = value
-			updateHotspot(selectedHotspot.id, { worldPosition: next })
+			updateHotspot(hotspot.id, { worldPosition: next })
 		},
-		[selectedHotspot, updateHotspot]
+		[updateHotspot]
 	)
 
 	const handleMembershipChange = useCallback(
@@ -646,7 +791,7 @@ const HotspotsSettingsPanel = memo(() => {
 								axis={axis}
 								value={hotspot.worldPosition[index]}
 								onChange={(raw) =>
-									handlePositionChange(index as 0 | 1 | 2, raw)
+									handlePositionChange(hotspot, index as 0 | 1 | 2, raw)
 								}
 							/>
 						))}
@@ -805,7 +950,7 @@ const HotspotsSettingsPanel = memo(() => {
 		isOpen: selectedId === hotspot.id,
 		reduceMotion,
 		onOpenChange: (open: boolean) => setSelectedId(open ? hotspot.id : null),
-		onDelete: () => handleDelete(hotspot.id)
+		onDelete: () => handleDelete(hotspot.id, hotspot.name || 'Unnamed hotspot')
 	})
 
 	return (
@@ -826,10 +971,14 @@ const HotspotsSettingsPanel = memo(() => {
 		>
 			<SidebarSectionContent>
 				<span role="status" aria-live="polite" className="sr-only">
-					{announcement}
+					{announcement.slot === 0 ? announcement.message : ''}
+				</span>
+				<span role="status" aria-live="polite" className="sr-only">
+					{announcement.slot === 1 ? announcement.message : ''}
 				</span>
 				<p id="hotspot-reorder-hint" className="sr-only">
-					Use the up and down arrow keys to move a marker through the sequence.
+					Use the up and down arrow keys to move a marker through the sequence,
+					or Home and End to send it to either end.
 				</p>
 
 				<div className="space-y-1">
@@ -837,7 +986,7 @@ const HotspotsSettingsPanel = memo(() => {
 						In the sequence
 					</p>
 					{inSequence.length === 0 ? (
-						<p className="text-muted-foreground/75 text-label-xs px-1 pb-1">
+						<p className="text-muted-foreground text-label-xs px-1 pb-1">
 							Turn on “In the sequence” for a marker below to add it.
 						</p>
 					) : (
@@ -845,7 +994,7 @@ const HotspotsSettingsPanel = memo(() => {
 							axis="y"
 							role="list"
 							values={draftOrder}
-							onReorder={setDraftOrder}
+							onReorder={applyDraftOrder}
 							className="space-y-1"
 						>
 							{draftOrder.map((id) => {
@@ -855,9 +1004,7 @@ const HotspotsSettingsPanel = memo(() => {
 									<SequencedRow
 										key={id}
 										id={id}
-										onDragStart={() => {
-											isDraggingRef.current = true
-										}}
+										onDragStart={() => setIsDragging(true)}
 										onDragEnd={() =>
 											handleReorderEnd(id, hotspot.name || 'Unnamed hotspot')
 										}

@@ -167,9 +167,15 @@ export function removeCamera(
 /**
  * Retires the camera the hotspot owns along with it.
  *
- * Sequence indices are left exactly as the author set them: the server takes
- * any distinct non-negative integers, gaps included, so closing the order up
- * would rewrite numbers nobody asked to change.
+ * Sequence indices are left exactly as the author set them, because the server
+ * takes any distinct non-negative integers, gaps included.
+ *
+ * That makes this function's output legal but not necessarily what an author
+ * should see. The publisher's list *is* the playback order now, so a gap there
+ * would read as a missing step; the hotspot panel pipes the survivors through
+ * `reorderSequence` after calling this. Renumbering here instead would put the
+ * decision in the wrong place: this module owns the hotspot/camera link, and a
+ * caller that does not display the order has no reason to have it rewritten.
  */
 export function removeHotspot(
 	state: CameraHotspotState,

@@ -1,4 +1,9 @@
-import { reorderSequence, setSequenceMembership } from './scene-hotspot-sequence'
+import {
+	applySequenceMove,
+	reorderSequence,
+	resolveSequenceOrder,
+	setSequenceMembership
+} from './scene-hotspot-sequence'
 
 import type { HotspotDefinition } from '@vctrl/core'
 
@@ -173,5 +178,152 @@ describe('setSequenceMembership', () => {
 		expect(indices(setSequenceMembership(list, 'gone', true))).toEqual([
 			['a', 0]
 		])
+	})
+})
+
+describe('applySequenceMove', () => {
+	const stored = () => [
+		hotspot('a', { sequenceIndex: 0 }),
+		hotspot('b', { sequenceIndex: 1 }),
+		hotspot('c', { sequenceIndex: 2 })
+	]
+
+	it('renumbers and reports where the marker landed', () => {
+		const move = applySequenceMove(stored(), ['c', 'a', 'b'], 'a')
+
+		expect(move).not.toBeNull()
+		expect(indices(move!.hotspots)).toEqual([
+			['a', 1],
+			['b', 2],
+			['c', 0]
+		])
+		expect(move!.position).toBe(2)
+		expect(move!.total).toBe(3)
+	})
+
+	/**
+	 * A drag released where it began. Applying it is harmless, announcing it is
+	 * not: it tells a screen reader something moved when nothing did.
+	 */
+	it('refuses an order that resolves to the sequence already stored', () => {
+		expect(applySequenceMove(stored(), ['a', 'b', 'c'], 'a')).toBeNull()
+	})
+
+	/**
+	 * The order a drag was holding when the panel went away, against whatever
+	 * scene loaded after it. Applying it would clear a sequence nobody touched.
+	 */
+	it('refuses an order naming no hotspot in the list', () => {
+		expect(
+			applySequenceMove(stored(), ['gone', 'also-gone'], 'gone')
+		).toBeNull()
+	})
+
+	/**
+	 * The position announced has to come from the order actually assigned, not
+	 * from the raw list: a stale id left in would say "position 4 of 4" for a
+	 * three-marker sequence.
+	 */
+	it('counts positions from the order it assigned, not the order it was given', () => {
+		const move = applySequenceMove(stored(), ['b', 'ghost', 'c', 'a'], 'a')
+
+		expect(move!.position).toBe(3)
+		expect(move!.total).toBe(3)
+		expect(indices(move!.hotspots)).toEqual([
+			['a', 2],
+			['b', 0],
+			['c', 1]
+		])
+	})
+
+	/**
+	 * The mirror of leaving, and the case an element-wise comparison gets wrong
+	 * without a length check: every stored id still matches by position, so the
+	 * order reads as unchanged and the join is refused.
+	 */
+	it('accepts a marker joining the sequence', () => {
+		const list = [hotspot('a', { sequenceIndex: 0 }), hotspot('b')]
+		const move = applySequenceMove(list, ['a', 'b'], 'b')
+
+		expect(move).not.toBeNull()
+		expect(indices(move!.hotspots)).toEqual([
+			['a', 0],
+			['b', 1]
+		])
+		expect(move!.position).toBe(2)
+		expect(move!.total).toBe(2)
+	})
+
+	it('accepts a marker leaving the sequence', () => {
+		const move = applySequenceMove(stored(), ['a', 'b'], 'a')
+
+		expect(indices(move!.hotspots)).toEqual([
+			['a', 0],
+			['b', 1],
+			['c', undefined]
+		])
+	})
+
+	/**
+	 * The marker being dragged, deleted from elsewhere before the drop. The rest
+	 * may genuinely have moved, but there is nothing left to announce and the
+	 * position would read as zero.
+	 */
+	it('refuses a move whose own marker is no longer in the order', () => {
+		expect(applySequenceMove(stored(), ['c', 'b'], 'a')).toBeNull()
+	})
+
+	it('does not mutate the input', () => {
+		const list = stored()
+		applySequenceMove(list, ['c', 'b', 'a'], 'c')
+
+		expect(indices(list)).toEqual([
+			['a', 0],
+			['b', 1],
+			['c', 2]
+		])
+	})
+})
+
+describe('resolveSequenceOrder', () => {
+	it('keeps the ids that name a hotspot, in the order given', () => {
+		const list = [hotspot('a'), hotspot('b')]
+
+		expect(resolveSequenceOrder(list, ['b', 'a'])).toEqual(['b', 'a'])
+	})
+
+	/**
+	 * A drag list can name a hotspot deleted since it was built. Letting it
+	 * through inflates every position the panel announces: "position 3 of 3" for
+	 * a two-member sequence, alongside a commit that changed nothing.
+	 */
+	it('drops an id naming no hotspot', () => {
+		const list = [hotspot('a'), hotspot('b')]
+
+		expect(resolveSequenceOrder(list, ['a', 'ghost', 'b'])).toEqual(['a', 'b'])
+	})
+
+	it('drops a repeated id', () => {
+		const list = [hotspot('a'), hotspot('b')]
+
+		expect(resolveSequenceOrder(list, ['a', 'a', 'b'])).toEqual(['a', 'b'])
+	})
+
+	/** What `reorderSequence` assigns and what this returns cannot disagree. */
+	it('agrees with the indices reorderSequence assigns', () => {
+		const list = [hotspot('a'), hotspot('b')]
+		const order = ['b', 'ghost', 'a', 'b']
+
+		const assigned = reorderSequence(list, order)
+			.filter((h) => h.sequenceIndex !== undefined)
+			.sort((a, b) => (a.sequenceIndex as number) - (b.sequenceIndex as number))
+			.map((h) => h.id)
+
+		expect(assigned).toEqual(resolveSequenceOrder(list, order))
+	})
+
+	/** A stale order naming nothing must not read as a legal empty sequence. */
+	it('is empty when no id names a hotspot', () => {
+		expect(resolveSequenceOrder([hotspot('a')], ['gone'])).toEqual([])
 	})
 })

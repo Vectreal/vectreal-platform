@@ -41,6 +41,11 @@
 			"import": "./index.js",
 			"require": "./index.cjs"
 		},
+		"./hotspots": {
+			"types": "./hotspots.d.ts",
+			"import": "./hotspots.js",
+			"require": "./hotspots.cjs"
+		},
 		"./css": "./style.css"
 	},
 	"dependencies": {

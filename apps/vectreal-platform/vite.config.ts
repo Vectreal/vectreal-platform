@@ -215,6 +215,48 @@ export default defineConfig(({ command }) => {
 						}
 
 						if (id.includes('/packages/viewer/')) {
+							/*
+							  The hotspot list rules are the one part of the viewer a
+							  surface can want without the viewer.
+
+							  `@vctrl/viewer/hotspots` exists so the publisher's sidebar
+							  can number sequence steps the same way the renderer does
+							  without importing React, three and drei behind it. That
+							  buys nothing here unless this predicate agrees: it buckets
+							  by path, so a dependency-free module under `packages/viewer`
+							  still lands in a chunk that statically imports
+							  `vendor-react-three`, which imports `vendor-postprocessing`.
+							  Left in, one `resolveHotspotMarkers` call in a compose panel
+							  put the 62KB viewer chunk into the shared `components-*`
+							  chunk, which the marketing home page imports statically.
+
+							  Measured on the emitted graph, not estimated. Note what it
+							  does *not* fix: three, R3F and postprocessing are eager on
+							  `/` regardless, through `components-*` →
+							  `vendor-three-examples` → `vendor-postprocessing`, which
+							  `@vctrl/core`'s glTF exporter pulls in. That is a separate
+							  and much larger problem, filed on its own.
+
+							  Its own bucket rather than none: the module is imported by
+							  the viewer's own barrel too, so leaving it unbucketed lets
+							  rollup hoist the shared copy straight back into the chunk
+							  this is trying to keep it out of.
+							*/
+							/*
+							  Matched exactly. A looser `includes` would also catch a
+							  future `src/hotspots/` directory or a `.tsx` of the same
+							  name, and quietly put an R3F-importing module into the
+							  bucket the marketing home page imports eagerly.
+							*/
+							if (
+								id.endsWith('/packages/viewer/src/hotspots.ts') ||
+								id.endsWith(
+									'/packages/viewer/src/components/scene/resolve-hotspot-markers.ts'
+								)
+							) {
+								return 'vendor-vectreal-hotspots'
+							}
+
 							return 'vendor-vectreal-viewer'
 						}
 					}

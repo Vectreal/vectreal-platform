@@ -63,10 +63,23 @@ const sequence = (count: number): HotspotDefinition[] =>
 	}))
 
 const orderOfNames = () =>
-	store.get(hotspotsAtom)
+	store
+		.get(hotspotsAtom)
 		.filter((entry) => entry.sequenceIndex !== undefined)
 		.sort((a, b) => (a.sequenceIndex as number) - (b.sequenceIndex as number))
 		.map((entry) => entry.name)
+
+/**
+ * The live announcement. Two regions are rendered and used alternately so a
+ * repeated message still counts as a change, so the live one is whichever has
+ * text.
+ */
+const announcement = () =>
+	screen
+		.getAllByRole('status')
+		.map((region) => region.textContent)
+		.filter(Boolean)
+		.join('')
 
 const handleFor = (name: string) =>
 	screen.getByRole('button', { name: `Reorder ${name}` })
@@ -231,7 +244,11 @@ describe('HotspotsSettingsPanel ordering', () => {
 		expect(orderOfNames()).toEqual(['Marker 1', 'Marker 3', 'Marker 2'])
 	})
 
-	it('leaves the order alone at the ends', () => {
+	/**
+	 * Silence at an end is indistinguishable from a key that does nothing, so
+	 * the refusal is spoken rather than swallowed.
+	 */
+	it('refuses a move at the ends, and says so', () => {
 		store.set(hotspotsAtom, sequence(3))
 		render(<HotspotsSettingsPanel />)
 
@@ -240,7 +257,25 @@ describe('HotspotsSettingsPanel ordering', () => {
 		})
 
 		expect(orderOfNames()).toEqual(['Marker 1', 'Marker 2', 'Marker 3'])
-		expect(screen.getByRole('status').textContent).toBe('')
+		expect(announcement()).toBe('Marker 1 is already first.')
+	})
+
+	/**
+	 * "Position", not "step". The badge on a row is what a visitor is shown, and
+	 * `resolveHotspotMarkers` ranks that over the markers a visitor can reach.
+	 * This list is the authoring order and counts hidden members too, so one
+	 * word for both would announce a number that is on screen nowhere.
+	 */
+	it('announces a move in authoring positions, not visitor steps', () => {
+		const [first, second, third] = sequence(3)
+		store.set(hotspotsAtom, [{ ...first, visible: false }, second, third])
+		render(<HotspotsSettingsPanel />)
+
+		act(() => {
+			fireEvent.keyDown(handleFor('Marker 3'), { key: 'ArrowUp' })
+		})
+
+		expect(announcement()).toBe('Marker 3 moved to position 2 of 3.')
 	})
 
 	it('sends a marker to the end of the sequence', () => {
@@ -281,9 +316,109 @@ describe('HotspotsSettingsPanel ordering', () => {
 			fireEvent.keyDown(handleFor('Marker 1'), { key: 'ArrowDown' })
 		})
 
-		expect(screen.getByRole('status').textContent).toBe(
-			'Marker 1 moved to step 2 of 3.'
-		)
+		expect(announcement()).toBe('Marker 1 moved to position 2 of 3.')
+	})
+
+	/**
+	 * A hidden marker is still in the sequence; it just carries no step, which
+	 * is why its badge is a dash. Announcing that as "not in the sequence"
+	 * contradicted both the group it sits in and its own switch.
+	 */
+	it('keeps a hidden marker in the sequence it belongs to', () => {
+		const [first, second] = sequence(2)
+		store.set(hotspotsAtom, [{ ...first, visible: false }, second])
+		render(<HotspotsSettingsPanel />)
+
+		const rows = screen.getAllByRole('listitem')
+
+		expect(
+			within(rows[0]).getByText(
+				/in the sequence, no step in the published scene/
+			)
+		).toBeTruthy()
+		expect(within(rows[0]).queryByText(/, not in the sequence/)).toBeNull()
+	})
+
+	/**
+	 * "Hidden" is not the only reason a step is withheld: `resolveHotspotMarkers`
+	 * also drops an editor-only marker. Saying "while hidden" for one whose
+	 * "Visible to viewers" switch is on contradicts the switch.
+	 */
+	it('does not call an editor-only marker hidden', () => {
+		const [first, second] = sequence(2)
+		store.set(hotspotsAtom, [{ ...first, internalOnly: true }, second])
+		render(<HotspotsSettingsPanel />)
+
+		const rows = screen.getAllByRole('listitem')
+
+		expect(within(rows[0]).getByText(/editor only/)).toBeTruthy()
+		expect(within(rows[0]).queryByText(/hidden/)).toBeNull()
+	})
+
+	/**
+	 * A live region speaks on mutation, and React bails out of an identical
+	 * `setState`, so a refusal repeated verbatim used to speak once and then go
+	 * quiet - the silence the refusal message exists to remove.
+	 */
+	it('repeats a refusal rather than falling silent', () => {
+		store.set(hotspotsAtom, sequence(3))
+		render(<HotspotsSettingsPanel />)
+
+		const slots = () =>
+			screen.getAllByRole('status').map((region) => region.textContent)
+
+		// Three, not two: the first attempt at this alternated a trailing
+		// zero-width space, which saturates on the third repeat and goes silent
+		// again. A two-press test could not see that.
+		const seen: string[][] = []
+		for (let press = 0; press < 3; press += 1) {
+			act(() => {
+				fireEvent.keyDown(handleFor('Marker 1'), { key: 'ArrowUp' })
+			})
+			seen.push(slots())
+			expect(announcement()).toBe('Marker 1 is already first.')
+		}
+
+		// Each press must land in a region that was empty, so every one of them
+		// is an insertion rather than an unchanged node.
+		expect(seen[0]).not.toEqual(seen[1])
+		expect(seen[1]).not.toEqual(seen[2])
+	})
+
+	/**
+	 * With one member `from` is always 0, so reading the end off the index
+	 * announced "already first" for a press asking to go last.
+	 */
+	it('names the end the press was aiming for', () => {
+		store.set(hotspotsAtom, sequence(1))
+		render(<HotspotsSettingsPanel />)
+
+		act(() => {
+			fireEvent.keyDown(handleFor('Marker 1'), { key: 'ArrowDown' })
+		})
+
+		expect(announcement()).toBe('Marker 1 is already last.')
+	})
+
+	/**
+	 * Two genuine moves that happen to cancel out. Both are edits, so both are
+	 * announced - the drag-released-where-it-began case, which is not reachable
+	 * from the keyboard, is pinned on `applySequenceMove` instead.
+	 */
+	it('returns a marker to where it started, announcing each leg', () => {
+		store.set(hotspotsAtom, sequence(3))
+		render(<HotspotsSettingsPanel />)
+
+		act(() => {
+			fireEvent.keyDown(handleFor('Marker 1'), { key: 'ArrowDown' })
+		})
+		expect(announcement()).toBe('Marker 1 moved to position 2 of 3.')
+
+		act(() => {
+			fireEvent.keyDown(handleFor('Marker 1'), { key: 'ArrowUp' })
+		})
+		expect(announcement()).toBe('Marker 1 moved to position 1 of 3.')
+		expect(orderOfNames()).toEqual(['Marker 1', 'Marker 2', 'Marker 3'])
 	})
 
 	/**
@@ -303,20 +438,34 @@ describe('HotspotsSettingsPanel ordering', () => {
 		expect(within(rows[1]).getByText('1')).toBeTruthy()
 	})
 
+	/**
+	 * Deleting removes a row, drops focus and renumbers every later step. A
+	 * reorder one row up announces itself; saying nothing here read as an
+	 * oversight rather than a decision.
+	 */
+	it('announces a deletion and what it left behind', () => {
+		store.set(hotspotsAtom, sequence(3))
+		render(<HotspotsSettingsPanel />)
+
+		act(() => {
+			fireEvent.click(screen.getByRole('button', { name: 'Delete Marker 2' }))
+		})
+
+		expect(announcement()).toBe(
+			'Marker 2 deleted. 2 markers left in the sequence.'
+		)
+	})
+
 	it('closes the gap a deleted marker leaves in the sequence', () => {
 		store.set(hotspotsAtom, sequence(3))
 		render(<HotspotsSettingsPanel />)
 
 		act(() => {
-			fireEvent.click(
-				screen.getByRole('button', { name: 'Delete Marker 2' })
-			)
+			fireEvent.click(screen.getByRole('button', { name: 'Delete Marker 2' }))
 		})
 
 		expect(
-			store
-				.get(hotspotsAtom)
-				.map((entry) => [entry.name, entry.sequenceIndex])
+			store.get(hotspotsAtom).map((entry) => [entry.name, entry.sequenceIndex])
 		).toEqual([
 			['Marker 1', 0],
 			['Marker 3', 1]
