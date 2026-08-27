@@ -2,19 +2,25 @@ import {
 	Collapsible,
 	CollapsibleContent
 } from '@shared/components/ui/collapsible'
-import { Separator } from '@shared/components/ui/separator'
 import { useAtom } from 'jotai/react'
 import { memo, useCallback, useState } from 'react'
 
 import { controlsAtom } from '../../../../lib/stores/scene-settings-store'
-import { InfoTooltip } from '../../../info-tooltip'
 import {
 	EnhancedSettingSlider,
-	SettingToggle
+	SettingToggle,
+	ToggleButtonGroup
 } from '../../settings-components'
-import { PresetButton } from '../../settings-components/preset-button'
 import { CollapsibleSectionTrigger } from '../accordion-components'
-import { CAMERA_CONTROLS_FIELDS, defaultControlsOptions } from './camera-controls-settings/constants'
+import {
+	SettingGroup,
+	SidebarSection,
+	SidebarSectionContent
+} from '../sidebar-section'
+import {
+	CAMERA_CONTROLS_FIELDS,
+	defaultControlsOptions
+} from './camera-controls-settings/constants'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -76,121 +82,68 @@ const InteractionControlsSettingsPanel = memo(() => {
 	return (
 		<div className="space-y-6">
 			{/* ── Enable toggles ──────────────────────────────────────── */}
-			<div className="space-y-3">
-				<div className="flex items-center gap-2">
-					<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-						Controls
-					</p>
-					<InfoTooltip content="Configure which interactions viewers can use with the 3D scene." />
-				</div>
-				<Separator />
+			<SidebarSection
+				title="Controls"
+				tooltip="Configure which interactions viewers can use with the 3D scene."
+			>
+				<SidebarSectionContent>
+					<SettingToggle
+						enabled={!!controls.enableZoom}
+						onToggle={(enabled) => handleToggle('enableZoom', enabled)}
+						title="Enable Zoom"
+						description="Allow viewers to zoom in and out."
+					/>
 
-				<SettingToggle
-					enabled={!!controls.enableZoom}
-					onToggle={(enabled) => handleToggle('enableZoom', enabled)}
-					title="Enable Zoom"
-					description="Allow viewers to zoom in and out."
-				/>
-
-				<SettingToggle
-					enabled={!!controls.autoRotate}
-					onToggle={(enabled) => handleToggle('autoRotate', enabled)}
-					title="Auto Rotate"
-					description="Continuously orbit the camera around the model."
-				/>
-			</div>
+					<SettingToggle
+						enabled={!!controls.autoRotate}
+						onToggle={(enabled) => handleToggle('autoRotate', enabled)}
+						title="Auto Rotate"
+						description="Continuously orbit the camera around the model."
+					/>
+				</SidebarSectionContent>
+			</SidebarSection>
 
 			{/* ── Movement feel ───────────────────────────────────────── */}
-			<div className="space-y-3">
-				<div className="flex items-center gap-2">
-					<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-						Feel
-					</p>
-					<InfoTooltip content="Controls how the camera decelerates when you release the mouse. Lower values feel floatier; higher values snap to a stop." />
-				</div>
-				<Separator />
-
-				<div className="space-y-1.5">
-					<p className="text-xs text-muted-foreground">Movement Feel</p>
-					<div className="grid grid-cols-3 gap-1.5">
-						{SMOOTHNESS_PRESETS.map((preset) => (
-							<PresetButton
-								key={preset.label}
-								label={preset.label}
-								isActive={closestSmoothness === preset.value}
-								onClick={() => handleUpdate('dampingFactor', preset.value)}
-							/>
-						))}
-					</div>
-				</div>
-			</div>
+			<SidebarSection
+				title="Feel"
+				tooltip="Controls how the camera decelerates when you release the mouse. Lower values feel floatier; higher values snap to a stop."
+			>
+				<SidebarSectionContent>
+					<SettingGroup label="Movement Feel">
+						<ToggleButtonGroup
+							options={SMOOTHNESS_PRESETS}
+							isActive={(value) => closestSmoothness === value}
+							onChange={(value) => handleUpdate('dampingFactor', value)}
+						/>
+					</SettingGroup>
+				</SidebarSectionContent>
+			</SidebarSection>
 
 			{/* ── Interaction speeds ──────────────────────────────────── */}
-			<div className="space-y-3">
-				<div className="flex items-center gap-2">
-					<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-						Speeds
-					</p>
-					<InfoTooltip content="Fine-tune the speed of each interaction type. Speeds for disabled controls are greyed out." />
-				</div>
-				<Separator />
+			<SidebarSection
+				title="Speeds"
+				tooltip="Fine-tune the speed of each interaction type. Speeds for disabled controls are greyed out."
+			>
+				<SidebarSectionContent>
+					{speedFields.map((config) => {
+						const isEnabled =
+							config.key === 'autoRotateSpeed'
+								? !!controls.autoRotate
+								: config.key === 'zoomSpeed'
+									? !!controls.enableZoom
+									: true
 
-				{speedFields.map((config) => {
-					const isEnabled =
-						config.key === 'autoRotateSpeed'
-							? !!controls.autoRotate
-							: config.key === 'zoomSpeed'
-								? !!controls.enableZoom
-								: true
-
-					return (
-						<EnhancedSettingSlider
-							key={config.key}
-							enabled={isEnabled}
-							id={config.key}
-							sliderProps={{
-								min: config.min,
-								max: config.max,
-								step: config.step,
-								value:
-									(controls[
-										config.key as keyof typeof controls
-									] as number) ??
-									(defaultControlsOptions[
-										config.key as keyof typeof defaultControlsOptions
-									] as number),
-								onChange: (value) => handleUpdate(config.key, value)
-							}}
-							label={config.label}
-							tooltip={config.tooltip}
-							labelProps={{
-								low: `${config.min} – Slow`,
-								high: `${config.max} – Fast`
-							}}
-							formatValue={config.formatValue}
-							valueMapping={config.valueMapping}
-							allowDirectInput
-						/>
-					)
-				})}
-
-				<Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-					<CollapsibleSectionTrigger isOpen={advancedOpen}>
-						Advanced
-					</CollapsibleSectionTrigger>
-					<CollapsibleContent className="space-y-4 pt-3">
-						{advancedFields.map((config) => (
+						return (
 							<EnhancedSettingSlider
 								key={config.key}
+								enabled={isEnabled}
 								id={config.key}
 								sliderProps={{
 									min: config.min,
 									max: config.max,
 									step: config.step,
 									value:
-										(controls[
-											config.key as keyof typeof controls
-										] as number) ??
+										(controls[config.key as keyof typeof controls] as number) ??
 										(defaultControlsOptions[
 											config.key as keyof typeof defaultControlsOptions
 										] as number),
@@ -199,21 +152,58 @@ const InteractionControlsSettingsPanel = memo(() => {
 								label={config.label}
 								tooltip={config.tooltip}
 								labelProps={{
-									low: `${config.min}`,
-									high: `${((config.max * 180) / Math.PI).toFixed(0)}°`
+									low: `${config.min} – Slow`,
+									high: `${config.max} – Fast`
 								}}
 								formatValue={config.formatValue}
 								valueMapping={config.valueMapping}
 								allowDirectInput
 							/>
-						))}
-					</CollapsibleContent>
-				</Collapsible>
-			</div>
+						)
+					})}
+
+					<Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+						<CollapsibleSectionTrigger isOpen={advancedOpen}>
+							Advanced
+						</CollapsibleSectionTrigger>
+						<CollapsibleContent className="space-y-4 pt-3">
+							{advancedFields.map((config) => (
+								<EnhancedSettingSlider
+									key={config.key}
+									id={config.key}
+									sliderProps={{
+										min: config.min,
+										max: config.max,
+										step: config.step,
+										value:
+											(controls[
+												config.key as keyof typeof controls
+											] as number) ??
+											(defaultControlsOptions[
+												config.key as keyof typeof defaultControlsOptions
+											] as number),
+										onChange: (value) => handleUpdate(config.key, value)
+									}}
+									label={config.label}
+									tooltip={config.tooltip}
+									labelProps={{
+										low: `${config.min}`,
+										high: `${((config.max * 180) / Math.PI).toFixed(0)}°`
+									}}
+									formatValue={config.formatValue}
+									valueMapping={config.valueMapping}
+									allowDirectInput
+								/>
+							))}
+						</CollapsibleContent>
+					</Collapsible>
+				</SidebarSectionContent>
+			</SidebarSection>
 		</div>
 	)
 })
 
-InteractionControlsSettingsPanel.displayName = 'InteractionControlsSettingsPanel'
+InteractionControlsSettingsPanel.displayName =
+	'InteractionControlsSettingsPanel'
 
 export default InteractionControlsSettingsPanel

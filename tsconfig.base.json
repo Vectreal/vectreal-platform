@@ -34,6 +34,7 @@
 				"packages/hooks/src/use-optimize-model/index.ts"
 			],
 			"@vctrl/viewer": ["packages/viewer/src/index.ts"],
+			"@vctrl/viewer/hotspots": ["packages/viewer/src/hotspots.ts"],
 			"@vctrl/core": ["packages/core/src/index.ts"],
 			"@vctrl/core/model-loader": ["packages/core/src/model-loader/index.ts"],
 			"@vctrl/core/model-optimizer": [

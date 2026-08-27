@@ -1,12 +1,9 @@
-import { Button } from '@shared/components/ui/button'
 import {
 	Collapsible,
 	CollapsibleContent
 } from '@shared/components/ui/collapsible'
 import { Label } from '@shared/components/ui/label'
-import { Separator } from '@shared/components/ui/separator'
 import { Switch } from '@shared/components/ui/switch'
-import { cn } from '@shared/utils'
 import { useAtom } from 'jotai/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -23,10 +20,38 @@ import {
 } from './constants'
 import { shadowsAtom } from '../../../../../lib/stores/scene-settings-store'
 import { InfoTooltip } from '../../../../info-tooltip'
-import { EnhancedSettingSlider } from '../../../settings-components'
+import { InlineNotice } from '../../../../layout-components'
+import {
+	EnhancedSettingSlider,
+	SettingToggle,
+	ToggleButtonGroup
+} from '../../../settings-components'
 import { CollapsibleSectionTrigger } from '../../accordion-components'
+import {
+	SettingGroup,
+	SidebarSection,
+	SidebarSectionContent
+} from '../../sidebar-section'
+
+/**
+ * The presets as `ToggleButtonGroup` wants them.
+ *
+ * The grid these replaced expressed "active" as a solid `bg-primary` fill — a
+ * fourth selection language in the compose panels, and the same defect as the
+ * hotspot row this change started from. `description` was a `title=` hover
+ * tooltip, invisible on touch and to the keyboard; as `subLabel` it is simply
+ * on screen.
+ */
+const PRESET_OPTIONS: ToggleButtonGroupOption<string>[] = SHADOW_PRESETS.map(
+	(preset) => ({
+		value: preset.id,
+		label: preset.label,
+		subLabel: preset.description
+	})
+)
 
 import type { FieldConfig } from '../../../../../types/settings-field'
+import type { ToggleButtonGroupOption } from '../../../settings-components'
 import type { ShadowsProps } from '@vctrl/core'
 
 interface ShadowFieldProps {
@@ -219,145 +244,122 @@ const ShadowSettingsPanel = () => {
 	}
 
 	return (
-		<div className="space-y-4">
-			<div className="flex items-center justify-between gap-2">
-				<p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-					Shadows
-				</p>
-				<div className="flex items-center gap-2">
-					<InfoTooltip content="Configure shadow quality in your scene." />
-					<Label htmlFor="shadows-enabled-toggle" className="text-sm">
-						Enabled
-					</Label>
-					<Switch
-						id="shadows-enabled-toggle"
-						checked={shadowsEnabled}
-						onCheckedChange={handleToggleShadows}
-					/>
-				</div>
-			</div>
-			<Separator />
+		/*
+		  Titleless on purpose. `DynamicSidebar` already draws "Shadows" and the
+		  tool's description above this panel, so a section of the same name printed
+		  the word twice - the defect the Hotspots panel was rebuilt to remove.
+		  The master switch is a setting rather than section chrome, so it says so.
+		*/
+		<SidebarSection>
+			<SidebarSectionContent>
+				<SettingToggle
+					enabled={shadowsEnabled}
+					onToggle={handleToggleShadows}
+					title="Cast shadows"
+					description="Ground the model with a directional shadow."
+					info="Configure shadow quality in your scene."
+				/>
 
-			{!shadowsEnabled && (
-				<p className="text-muted-foreground py-2 text-xs">
-					Enable shadows to configure shadow quality.
-				</p>
-			)}
+				{!shadowsEnabled && (
+					<InlineNotice tone="neutral">
+						Turn on shadows to configure their quality.
+					</InlineNotice>
+				)}
 
-			{shadowsEnabled && (
-				<div className="space-y-4">
-					<div className="space-y-2">
-						<p className="text-muted-foreground text-xs font-medium">Presets</p>
-						<div className="grid grid-cols-3 gap-2">
-							{SHADOW_PRESETS.map((preset) => (
-								<Button
-									key={preset.id}
-									type="button"
-									variant={
-										activePresetId === preset.id ? 'default' : 'secondary'
-									}
-									size="sm"
-									className={cn(
-										'h-auto py-2 text-xs font-medium',
-										activePresetId !== preset.id && 'text-muted-foreground'
-									)}
-									title={preset.description}
-									onClick={() => handleApplyPreset(preset)}
-								>
-									{preset.label}
-								</Button>
-							))}
-						</div>
-					</div>
-
-					<Separator />
-
+				{shadowsEnabled && (
 					<div className="space-y-4">
-						<p className="text-muted-foreground text-xs font-medium">
-							Directional shadow
-						</p>
-						{SHADOW_PRIMARY_FIELDS.map((field) => (
-							<ShadowField
-								key={field.key}
-								field={field}
-								idPrefix="shadow"
-								value={getFieldValue(field.key)}
-								onChange={handleFieldChange}
+						<SettingGroup label="Presets">
+							<ToggleButtonGroup
+								options={PRESET_OPTIONS}
+								isActive={(id) => activePresetId === id}
+								onChange={(id) => {
+									const preset = SHADOW_PRESETS.find((entry) => entry.id === id)
+									if (preset) handleApplyPreset(preset)
+								}}
 							/>
-						))}
-					</div>
+						</SettingGroup>
 
-					<Separator />
-
-					<div className="space-y-4">
-						<div className="flex items-center justify-between gap-2">
-							<div className="flex items-center gap-2">
-								<p className="text-muted-foreground text-xs font-medium">
-									Ground shadow
-								</p>
-								<InfoTooltip content="A soft shadow pooled under the model that approximates the ambient occlusion it casts on the floor. It's independent of the directional light, so the model stays grounded even when the main shadow is cast off to the side. Raise Softness to keep it diffuse." />
-							</div>
-							<Switch
-								id="shadow-ground-toggle"
-								checked={draft.contact?.enabled ?? false}
-								onCheckedChange={handleToggleContact}
-							/>
-						</div>
-
-						{(draft.contact?.enabled ?? false) &&
-							SHADOW_CONTACT_FIELDS.map((field) => (
+						<SettingGroup label="Directional shadow">
+							{SHADOW_PRIMARY_FIELDS.map((field) => (
 								<ShadowField
 									key={field.key}
 									field={field}
-									idPrefix="shadow-contact"
+									idPrefix="shadow"
 									value={getFieldValue(field.key)}
 									onChange={handleFieldChange}
 								/>
 							))}
-					</div>
+						</SettingGroup>
 
-					<Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-						<CollapsibleSectionTrigger isOpen={advancedOpen}>
-							Advanced
-						</CollapsibleSectionTrigger>
-						<CollapsibleContent className="space-y-4 pt-3">
-							{SHADOW_ADVANCED_FIELDS.map((field) => (
-								<ShadowField
-									key={field.key}
-									field={field}
-									idPrefix="shadow-adv"
-									value={getFieldValue(field.key)}
-									onChange={handleFieldChange}
-								/>
-							))}
-
-							<div className="flex items-center justify-between gap-2">
+						<SettingGroup
+							label="Ground shadow"
+							action={
 								<div className="flex items-center gap-2">
-									<Label htmlFor="shadow-ao-toggle" className="text-sm">
-										Ambient occlusion
-									</Label>
-									<InfoTooltip content="Darkens crevices and tight gaps on the model itself (screen-space). Higher quality but runs every frame, so it costs GPU — best for hero shots on capable devices." />
+									<InfoTooltip content="A soft shadow pooled under the model that approximates the ambient occlusion it casts on the floor. It's independent of the directional light, so the model stays grounded even when the main shadow is cast off to the side. Raise Softness to keep it diffuse." />
+									<Switch
+										id="shadow-ground-toggle"
+										aria-label="Enable ground shadow"
+										checked={draft.contact?.enabled ?? false}
+										onCheckedChange={handleToggleContact}
+									/>
 								</div>
-								<Switch
-									id="shadow-ao-toggle"
-									checked={draft.ao ?? false}
-									onCheckedChange={handleToggleAo}
-								/>
-							</div>
+							}
+						>
+							{(draft.contact?.enabled ?? false) &&
+								SHADOW_CONTACT_FIELDS.map((field) => (
+									<ShadowField
+										key={field.key}
+										field={field}
+										idPrefix="shadow-contact"
+										value={getFieldValue(field.key)}
+										onChange={handleFieldChange}
+									/>
+								))}
+						</SettingGroup>
 
-							{(draft.ao ?? false) && (
-								<ShadowField
-									field={SHADOW_AO_INTENSITY_FIELD}
-									idPrefix="shadow-adv"
-									value={getFieldValue(SHADOW_AO_INTENSITY_FIELD.key)}
-									onChange={handleFieldChange}
-								/>
-							)}
-						</CollapsibleContent>
-					</Collapsible>
-				</div>
-			)}
-		</div>
+						<Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+							<CollapsibleSectionTrigger isOpen={advancedOpen}>
+								Advanced
+							</CollapsibleSectionTrigger>
+							<CollapsibleContent className="space-y-4 pt-3">
+								{SHADOW_ADVANCED_FIELDS.map((field) => (
+									<ShadowField
+										key={field.key}
+										field={field}
+										idPrefix="shadow-adv"
+										value={getFieldValue(field.key)}
+										onChange={handleFieldChange}
+									/>
+								))}
+
+								<div className="flex items-center justify-between gap-2">
+									<div className="flex items-center gap-2">
+										<Label htmlFor="shadow-ao-toggle" className="text-sm">
+											Ambient occlusion
+										</Label>
+										<InfoTooltip content="Darkens crevices and tight gaps on the model itself (screen-space). Higher quality but runs every frame, so it costs GPU — best for hero shots on capable devices." />
+									</div>
+									<Switch
+										id="shadow-ao-toggle"
+										checked={draft.ao ?? false}
+										onCheckedChange={handleToggleAo}
+									/>
+								</div>
+
+								{(draft.ao ?? false) && (
+									<ShadowField
+										field={SHADOW_AO_INTENSITY_FIELD}
+										idPrefix="shadow-adv"
+										value={getFieldValue(SHADOW_AO_INTENSITY_FIELD.key)}
+										onChange={handleFieldChange}
+									/>
+								)}
+							</CollapsibleContent>
+						</Collapsible>
+					</div>
+				)}
+			</SidebarSectionContent>
+		</SidebarSection>
 	)
 }
 

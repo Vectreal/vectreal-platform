@@ -27,9 +27,17 @@ export default defineConfig({
 		},
 
 		lib: {
-			entry: 'src/index.ts',
+			entry: {
+				index: path.resolve(import.meta.dirname, 'src/index.ts'),
+				// Dependency-free, so a consumer that only needs the hotspot list
+				// rules does not pull React, three and drei in behind them.
+				hotspots: path.resolve(import.meta.dirname, 'src/hotspots.ts')
+			},
 			name: '@vctrl/viewer',
-			fileName: 'index',
+			// Spelled out rather than taking the default, which appends the format
+			// to every name: `index.js` and `index.cjs` are what `exports` already
+			// points at, and renaming them would break every installed consumer.
+			fileName: (format, entry) => `${entry}.${format === 'es' ? 'js' : 'cjs'}`,
 			cssFileName: 'style',
 			// Don't forget to update your package.json as well.
 			formats: ['es', 'cjs']
