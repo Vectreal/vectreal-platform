@@ -86,9 +86,35 @@ sat filed and untouched from the day before. Narrow was right; deep was wrong.
 2. **If the diff touches a file the scope line did not name**, stop. Either
    rename the scope out loud, or file the finding and leave the file alone.
 
+## When the loop does not run
+
+**A change whose whole purpose is to satisfy a mechanical gate - lint,
+typecheck, formatting, a renamed import - is reviewed by that gate.** One pass to
+confirm the gate is green and the change is minimal, then ship. No loop.
+
+The loop exists for changes where behavior is in question. Running it on a
+one-line lint fix does not make the fix safer; it makes the diff bigger, because
+each round has to find something and the only thing left to find is the prose the
+previous round produced.
+
 ## The loop, which is never skipped
 
 Findings are not the deliverable. **A clean review round is.**
+
+**What counts as a finding.** Something that changes what the code does, changes
+what a test can catch, or would lead the next reader to make a wrong change. That
+is the whole list. A comment that is merely less precise than it could be is not
+a finding - leave it. Reviewers asked to audit prose will always return
+something, so the loop only terminates if the bar is behavior.
+
+**A review round may not grow the diff.** A finding in a file the change does not
+already touch, a test for a gap that predates the change, a rewrite of code that
+was already reviewed: all of these are catalogue rows, not edits. A round that
+adds files or tests has created its own next round.
+
+**Two consecutive rounds that produce only comment rewrites means stop.** That is
+the signature of reviewing your own writing rather than the code, and it does not
+converge. Ship, and file whatever is left.
 
 1. **Review** - several subagents in parallel, each on one distinct dimension.
 2. **Map** - one subagent consolidates into a fix spec: dedupe, decide, and name
@@ -227,6 +253,9 @@ tests fail, say so with the output; if a step was skipped, say that.
 | Anti-pattern | Replacement |
 | --- | --- |
 | Review round skipped because the change looks small | Run the loop; #735's worst defect was in a 3-line hook |
+| The loop run on a change with no behavior in question | The gate is the review; one pass, then ship |
+| A round's findings are rewrites of the previous round's comments | Stop. Prose has no clean state; only behavior does |
+| A round fixes a pre-existing gap it happened to notice | Catalogue row. The round may not grow the diff |
 | Test written after the guard, never mutated | Mutate the line, watch it go red |
 | Third patch of one symptom | Find the cause |
 | Reviewers and fixers running concurrently | Phase barrier |
