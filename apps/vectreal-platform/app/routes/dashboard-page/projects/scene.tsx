@@ -799,12 +799,17 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 								revokeDialogTitle="Revoke scene publication?"
 								revokeDialogDescription="This deletes the published GLB asset and returns this scene to draft state."
 							/>
+							{/*
+							  Untitled on purpose. `EmbedOptionsPanel` titles itself - Access
+							  and Embed Code - and this wrapper's own "Embed" was a third
+							  label for the same block. Worse, both rungs are `h4`, so the
+							  outline read `h4 Embed / h4 Access / h4 Embed Code`: the parts
+							  announced as peers of their own container, and a section that
+							  sounded empty to anyone moving by heading. The wrapper stays
+							  for the spacing it carries.
+							*/}
 							{publishState.status === 'published' && (
-								<DetailPanelSection
-									title="Embed"
-									headingLevel="h4"
-									className="pt-1"
-								>
+								<DetailPanelSection className="pt-1">
 									<EmbedOptionsPanel
 										sceneId={sceneState.id}
 										projectId={project.id}

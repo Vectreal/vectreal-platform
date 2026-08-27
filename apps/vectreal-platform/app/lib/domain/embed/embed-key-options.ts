@@ -28,7 +28,8 @@ export interface EmbedApiKeyOption {
 	 * failing, but none can build a snippet. Rotation is the way back for the
 	 * first two only - `rotateApiKey` refuses anything that is not active, so a
 	 * revoked key is replaced rather than recovered. Read `revoked` before this
-	 * field when deciding what to tell someone.
+	 * field when deciding what to tell someone, and see `isEmbedKeyUsable` for
+	 * the full order.
 	 *
 	 * Decrypted by the route before it reaches this module, which stays free of
 	 * any server import so the client can hold this type.
@@ -44,7 +45,7 @@ export interface EmbedApiKeyOption {
 	 * Mutually exclusive with `revoked` rather than independent of it: these are
 	 * two views of one state, and a revoked key reports only that it was revoked,
 	 * which is the fact its owner acted on. Read them in that order, as
-	 * `embed-key-field.tsx` does.
+	 * `embed-key-select.tsx` does.
 	 */
 	expired: boolean
 }
@@ -110,33 +111,30 @@ export function toEmbedApiKeyOptions(
 			  snippet - which is what the picker is for, so it must not sit at the
 			  top as the obvious choice.
 
+			  Same predicate the picker disables a row with, and the same one the
+			  panel auto-selects by, so "first in the list" and "selectable" cannot
+			  drift apart.
 			*/
-			const usable = (option: typeof a) =>
-				Number(option.revoked || option.expired || option.value === null)
+			const byUsable =
+				Number(isEmbedKeyUsable(b)) - Number(isEmbedKeyUsable(a))
 
-			const byUsable = usable(a) - usable(b)
 			return byUsable !== 0 ? byUsable : b.createdAt - a.createdAt
 		})
 		.map(({ createdAt: _createdAt, ...option }) => option)
 }
 
 /**
- * Whether a pasted token could be the selected key.
+ * Whether this row can build a working snippet.
  *
- * A comparison against the preview, not against the key: it catches pasting the
- * wrong key of several and cannot confirm the right one. Advisory, never a gate
- * - a false negative here must not stop someone shipping a key that works.
+ * Three conditions, read in the order `EmbedApiKeyOption` documents. `revoked`
+ * and `expired` come first because they are the reasons a key is dead, and
+ * `value` is null for a revoked key as a consequence rather than a cause.
  *
- * This was the whole check available while the last four characters were the
- * only part stored in the clear. `EmbedApiKeyOption.value` now carries the key
- * itself where there is one, so a caller holding an option can compare exactly;
- * this remains for the case that has no option to compare against.
+ * `expired` is the one that cannot be inferred from `value`: an aged-out key
+ * keeps its stored ciphertext, so it decrypts, looks selectable, and 404s at
+ * the embed. `isApiKeyLive` refuses it long after the panel has handed over a
+ * snippet built from it.
  */
-export function matchesKeyPreview(token: string, keyPreview: string): boolean {
-	const trimmed = token.trim()
-	if (trimmed.length < keyPreview.length) {
-		return false
-	}
-
-	return trimmed.slice(-keyPreview.length) === keyPreview
+export function isEmbedKeyUsable(option: EmbedApiKeyOption): boolean {
+	return !option.revoked && !option.expired && option.value !== null
 }

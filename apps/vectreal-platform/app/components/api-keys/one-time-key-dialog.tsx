@@ -199,11 +199,12 @@ export function OneTimeKeyDialog({
 						<AlertCircle className="text-warning size-4" />
 						{/*
 						  A claim about this page, not about storage. "Once you close this
-						  dialog the full key is no longer accessible" describes the
-						  database, and `encrypted_key` now holds a readable copy - so it
-						  had stopped being true. What is true here is narrow and
-						  checkable: the lists on this page show the preview and nothing
-						  more.
+						  dialog the full key is no longer accessible" was never true of
+						  the key itself - `encrypted_key` holds it, and the embed panel
+						  reads it back to fill a snippet - and it is not true of the
+						  dashboard either once someone rotates. What is true here is
+						  narrow and checkable: the lists on this page show the preview
+						  and nothing more.
 						*/}
 						<AlertDescription className="text-warning-muted-foreground">
 							<strong>Important:</strong> Copy this key now. Once you leave
