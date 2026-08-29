@@ -61,19 +61,25 @@ const PATTERNS: { code: SignupFailureCode; match: RegExp }[] = [
 
 	  `config.toml` enables `[auth.hook.send_email]` against `/auth/send-email`,
 	  so GoTrue never runs its own mailer and never emits "Error sending
-	  confirmation email". Our route answers a Resend failure with a 500, and
-	  GoTrue reads the hook's body only on 2xx - so the message it returns is its
-	  own: "Unexpected status code returned from hook: 500". Its siblings are
-	  "Invalid payload sent to hook", "Hook requires authorization token",
-	  "Service currently unavailable due to hook" and `hook_timeout`. The single
-	  word they share is the one that classifies them.
+	  confirmation email".
+
+	  `delivery failed` is our own wording, and the usual case. The hook route
+	  answers a Resend failure with GoTrue's error envelope on a 200, which is
+	  the only shape GoTrue reads a reason out of, so what arrives here is our
+	  message rather than a status-code sentence.
+
+	  `hook` still covers GoTrue's own failures, which never reach our route's
+	  catch and so carry its wording instead: "Invalid payload sent to hook",
+	  "Hook requires authorization token", "Service currently unavailable due to
+	  hook", `hook_timeout`, and "Unexpected status code returned from hook" if
+	  the route ever throws before it can answer.
 
 	  The SMTP wording stays because `[auth.email.smtp]` is still configured and
 	  would take over if the hook were ever disabled.
 	*/
 	{
 		code: 'email_send_failed',
-		match: /error sending|failed to send|smtp|hook/
+		match: /delivery failed|error sending|failed to send|smtp|hook/
 	},
 	{
 		code: 'email_rate_limited',
@@ -112,10 +118,10 @@ const MESSAGES: Record<SignupFailureCode, string> = {
 
 	  GoTrue wraps `signupNewUser` and the confirmation send in one transaction
 	  and returns the send error from inside it, so a failed send rolls the user
-	  back and there is no account to sign in to. Even where one did exist,
-	  `signin-page` has no branch for an unconfirmed account: GoTrue answers
-	  "Email not confirmed" and the route falls through to its generic message
-	  and a 500. Signing up again is the path that works either way.
+	  back: there is no account to sign in to, and signing in would answer
+	  "Invalid email or password". Sign-in does now route an unconfirmed account
+	  to the resend gate, but that is a different state from this one - it needs
+	  an account that exists.
 	*/
 	email_send_failed:
 		'We could not send your confirmation email. Please try signing up again in a moment.',

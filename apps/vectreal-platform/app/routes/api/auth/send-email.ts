@@ -19,6 +19,10 @@
 import { ApiResponse } from '@shared/utils'
 
 import { sendAuthEmail } from '../../../lib/email/auth-email-sender.server'
+import {
+	buildHookErrorMessage,
+	hookErrorResponse
+} from '../../../lib/email/auth-hook-response'
 import { verifyAuthHookRequest } from '../../../lib/email/auth-hook-verifier.server'
 import { reportServerError } from '../../../lib/observability/report-server-error.server'
 
@@ -58,6 +62,12 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 		return ApiResponse.success({ ok: true })
 	} catch (err) {
 		reportServerError(err, { request })
-		return ApiResponse.serverError('Failed to deliver auth email')
+		/*
+		  Not `ApiResponse.serverError`. GoTrue reads a hook's body only on 2xx,
+		  and only when `error` is an object - so the envelope below is the one
+		  shape that carries a reason back to the sign-up action. A plain 500 got
+		  reported there as "Unexpected status code returned from hook: 500".
+		*/
+		return hookErrorResponse(buildHookErrorMessage(err))
 	}
 }
