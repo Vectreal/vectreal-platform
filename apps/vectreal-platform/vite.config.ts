@@ -92,8 +92,8 @@ export default defineConfig(({ command }) => {
 		cacheDir: '../../node_modules/.vite/apps/vectreal-platform',
 
 		server: {
-			port: 4210,
-			host: "localhost",
+			port: 4200,
+			host: 'localhost',
 			// Allow Supabase Docker containers to call back via host.docker.internal
 			allowedHosts: ['host.docker.internal']
 		},

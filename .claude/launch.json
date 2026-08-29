@@ -1,25 +1,17 @@
 {
-  "version": "0.0.1",
-  "configurations": [
-    {
-      "name": "vectreal-platform",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "nx",
-        "dev",
-        "vectreal-platform"
-      ],
-      "port": 4210
-    },
-    {
-      "name": "storybook",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "nx",
-        "storybook",
-        "storybook"
-      ],
-      "port": 6006
-    }
-  ]
+	"version": "0.0.1",
+	"configurations": [
+		{
+			"name": "vectreal-platform",
+			"runtimeExecutable": "pnpm",
+			"runtimeArgs": ["nx", "dev", "vectreal-platform"],
+			"port": 4200
+		},
+		{
+			"name": "storybook",
+			"runtimeExecutable": "pnpm",
+			"runtimeArgs": ["nx", "storybook", "storybook"],
+			"port": 6006
+		}
+	]
 }
