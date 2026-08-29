@@ -13,6 +13,7 @@ export {
 	default as SceneEnvironment,
 	defaultEnvOptions
 } from './scene-environment'
+export { resolveHotspotCameraTargets } from './resolve-hotspot-camera-targets'
 export { default as SceneHotspots } from './scene-hotspots'
 export type { HotspotPositionSetter } from './scene-hotspots'
 export {

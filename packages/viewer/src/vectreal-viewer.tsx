@@ -34,6 +34,7 @@ import {
 	Suspense,
 	useCallback,
 	useEffect,
+	useMemo,
 	useRef,
 	useState
 } from 'react'
@@ -46,6 +47,7 @@ import {
 	SceneCamera,
 	SceneControls,
 	SceneEnvironment,
+	resolveHotspotCameraTargets,
 	SceneHotspots,
 	SceneModel,
 	ScenePostProcessing,
@@ -483,6 +485,18 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	// A hotspot's linked camera goes through the same command path an external
 	// `activate_camera` takes, so a hotspot click and a host calling the embed
 	// API land on one implementation of "fly to this viewpoint".
+	/*
+	  A hotspot camera aims at its hotspot unless the author framed it by hand.
+
+	  Applied here rather than baked into the saved settings, so it follows a
+	  marker that moves, needs no migration for scenes already saved, and holds on
+	  every surface rather than only where the publisher wrote it.
+	*/
+	const aimedCameras = useMemo(
+		() => resolveHotspotCameraTargets(cameraOptions?.cameras, hotspots),
+		[cameraOptions?.cameras, hotspots]
+	)
+
 	const handleActivateHotspotCamera = useCallback(
 		(cameraId: string) => {
 			executeViewerCommand({ type: 'activate_camera', cameraId })
@@ -584,6 +598,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 							<SceneBounds {...boundsOptions} enable={boundsEnabled}>
 								<SceneCamera
 									{...cameraOptions}
+									cameras={aimedCameras}
 									sceneTransition={
 										transitionOverride ?? cameraOptions?.sceneTransition
 									}
