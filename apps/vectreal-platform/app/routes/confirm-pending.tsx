@@ -23,6 +23,7 @@ import { Route } from './+types/confirm-pending'
 import { AuthErrorBoundary } from '../components/errors'
 import { useResendCooldown } from '../hooks/use-resend-cooldown'
 import { clearReferralAttribution } from '../lib/domain/analytics/referral-attribution'
+import { resendCooldownFor } from '../lib/domain/auth/resend-cooldown'
 import { ensureValidCsrfFormData } from '../lib/http/csrf.server'
 import { recordRateLimitAttempt } from '../lib/http/rate-limit.server'
 import {
@@ -161,8 +162,6 @@ function maskEmail(email: string): string {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const RESEND_COOLDOWN_SECONDS = 60
-
 export default function ConfirmPending() {
 	const { email, referrer, utm_source } = useLoaderData<typeof loader>()
 	const fetcher = useFetcher<ActionData>()
@@ -172,19 +171,7 @@ export default function ConfirmPending() {
 		clearReferralAttribution()
 	}, [])
 
-	/*
-	  A rate limit holds the button too, and for as long as the server said. It
-	  used to fall straight through: only `sent` started a cooldown, so the
-	  fourth press in a window answered "Too many requests" and then re-enabled
-	  the button as soon as a fresh captcha token landed - the same rapid-retry
-	  hole this hook exists to close, on the other branch.
-	*/
-	const cooldown = useResendCooldown(fetcher, (result) => {
-		if (result.sent) return RESEND_COOLDOWN_SECONDS
-		if (result.rateLimited)
-			return result.retryAfterSeconds ?? RESEND_COOLDOWN_SECONDS
-		return null
-	})
+	const cooldown = useResendCooldown(fetcher, resendCooldownFor)
 
 	const isSending = fetcher.state !== 'idle'
 	const wasSent = fetcher.data?.sent === true

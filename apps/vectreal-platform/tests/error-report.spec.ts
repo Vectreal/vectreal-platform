@@ -48,7 +48,10 @@ describe('critical flow attribution', () => {
 	})
 
 	it.each([
-		['/api/scenes/abc', ['save-scene', 'publish-scene', 'authorize-embed', 'serve-manifest']],
+		[
+			'/api/scenes/abc',
+			['save-scene', 'publish-scene', 'authorize-embed', 'serve-manifest']
+		],
 		['/api/scenes/abc/assets/xyz', ['publish-scene', 'authorize-embed']],
 		['/api/scenes/abc/thumbnail/xyz', ['publish-scene']],
 		['/api/projects/p1/api-keys', ['mint-api-key', 'allow-domain']],
@@ -76,12 +79,12 @@ describe('critical flow attribution', () => {
 		expect(criticalFlowsForPathname('/dashboard/projects/p1/s1')).toEqual([
 			'copy-snippet'
 		])
-		expect(criticalFlowsForPathname('/dashboard/projects/edit/p1')).not.toContain(
-			'copy-snippet'
-		)
-		expect(criticalFlowsForPathname('/dashboard/projects/p1/edit')).not.toContain(
-			'copy-snippet'
-		)
+		expect(
+			criticalFlowsForPathname('/dashboard/projects/edit/p1')
+		).not.toContain('copy-snippet')
+		expect(
+			criticalFlowsForPathname('/dashboard/projects/p1/edit')
+		).not.toContain('copy-snippet')
 	})
 })
 
@@ -223,5 +226,30 @@ describe('buildErrorReport', () => {
 			expect(report?.error.name).toBe('TypeError')
 			expect(report?.error.stack).toBe(original.stack)
 		})
+	})
+})
+
+/*
+  Single fetch is how every real submission arrives. With JavaScript running the
+  sign-up form posts to `/sign-up.data`, not `/sign-up`, and `reportServerError`
+  reads the pathname straight off the request - so matching the raw path tagged
+  no flow at all on the one route whose only entry is a form action.
+*/
+describe('critical flows on single-fetch paths', () => {
+	it('tags the sign-up action however the browser submitted it', () => {
+		expect(criticalFlowsForPathname('/sign-up')).toContain('create-account')
+		expect(criticalFlowsForPathname('/sign-up.data')).toContain(
+			'create-account'
+		)
+	})
+
+	it('tags a trailing-slash route, which gets the `_.data` spelling', () => {
+		expect(criticalFlowsForPathname('/publisher.data')).toContain(
+			'serve-manifest'
+		)
+	})
+
+	it('still tags nothing for a path off the funnel', () => {
+		expect(criticalFlowsForPathname('/pricing.data')).toEqual([])
 	})
 })

@@ -12,6 +12,8 @@
  * spec that checks the patterns below - can import it directly.
  */
 
+import { stripSingleFetchSuffix } from '../http/single-fetch-path'
+
 export type CriticalFlowRoute = {
 	/**
 	 * The route module, exactly as `app/routes.tsx` registers it.
@@ -198,7 +200,15 @@ export const CRITICAL_FLOWS: CriticalFlow[] = [
  * length; the ids are for narrowing once an alert has fired.
  */
 export function criticalFlowsForPathname(pathname: string): string[] {
+	/*
+	  Normalized first. With JavaScript running, the sign-up form does not post
+	  to `/sign-up` - React Router's single fetch posts to `/sign-up.data`, and
+	  `reportServerError` reads the pathname straight off the request. Matching
+	  the raw path tagged every real sign-up failure with no flow at all, which
+	  is precisely the alert `create-account` was added to raise.
+	*/
+	const routePath = stripSingleFetchSuffix(pathname)
 	return CRITICAL_FLOWS.filter((flow) =>
-		flow.routes.some((route) => route.pattern.test(pathname))
+		flow.routes.some((route) => route.pattern.test(routePath))
 	).map((flow) => flow.id)
 }

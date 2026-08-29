@@ -120,11 +120,13 @@ describe('classifySigninFailure', () => {
 	*/
 	it('gives every code a message the loader can render', () => {
 		/*
-		  The whole table, not just the codes this module classifies. The five it
-		  does not - `provider_exchange_failed`, `user_init_failed`,
-		  `email_conflict`, `missing_code`, `session_missing` - reach the loader
-		  only as `?error=` in a URL, from the OAuth callback and the confirm
-		  route, and are exactly the ones iterating the classified cases misses.
+		  A weak assertion, deliberately kept: `Record<AuthErrorCode, string>`
+		  already makes a *missing* code a compile error, so the only thing left
+		  to catch at runtime is an entry emptied to `''`. What it does cover is
+		  the five codes this module never classifies -
+		  `provider_exchange_failed`, `user_init_failed`, `email_conflict`,
+		  `missing_code`, `session_missing` - which reach the loader only as
+		  `?error=` in a URL and so have no other test.
 		*/
 		for (const code of Object.keys(AUTH_ERROR_MESSAGES) as AuthErrorCode[]) {
 			expect(AUTH_ERROR_MESSAGES[code], `${code} needs a message`).toBeTruthy()

@@ -58,10 +58,11 @@ const SignupModel = () => {
 			<div className="absolute right-0 bottom-0 z-10 max-w-2/3 px-8 pb-10">
 				{/*
 					The three `!important` markers this used to carry were vestigial.
-					They were needed when the `section p` defaults lived unlayered in
-					`global.module.css`, where nothing layered could override them. Those
-					rules are in `@layer base` now, so a utility beats them on layer
-					order alone and the markers were overriding nothing.
+					Colour and weight had a reason once: the `section p` defaults that set
+					them lived unlayered in `global.module.css`, where nothing layered
+					could override them. Those rules are in `@layer base` now, so a
+					utility beats them on layer order alone. The size never had a reason
+					at all - `section p` sets no font-size.
 				*/}
 				<p className="text-body-lg text-primary/75 text-right font-extralight">
 					Join our community and start creating amazing{' '}
@@ -89,8 +90,8 @@ const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 	  and the two password screens - used to inherit the whole apparatus anyway:
 	  a heading reading "Sign In", the Google and GitHub buttons, the "or"
 	  separator, a switch offering to sign up to someone who just did, and a
-	  second copy of the legal footer beneath their own. So the confirmation
-	  screen, which is on the account-creation funnel, read as broken.
+	  legal footer about continuing. So the confirmation screen, which is on the
+	  account-creation funnel, read as broken.
 
 	  Naming the three cases rather than adding a second boolean beside
 	  `isSignUp`, because the question the chrome asks is not "is this sign-up"

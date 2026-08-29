@@ -24,6 +24,7 @@ import {
 	hookErrorResponse
 } from '../../../lib/email/auth-hook-response'
 import { verifyAuthHookRequest } from '../../../lib/email/auth-hook-verifier.server'
+import { recordRateLimitAttempt } from '../../../lib/http/rate-limit.server'
 import { reportServerError } from '../../../lib/observability/report-server-error.server'
 
 import type { Route } from './+types/send-email'
@@ -51,17 +52,39 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 			}
 		})
 	} catch (err) {
+		const message =
+			err instanceof Error ? err.message : 'Invalid webhook signature'
+		console.warn('[auth/send-email] signature verification failed', { message })
+
 		/*
-		  Reported, not just logged. A rotated or mistyped `SEND_EMAIL_HOOK_SECRET`
-		  rejects every auth email, and GoTrue turns the 401 into "Hook requires
-		  authorization token", which the sign-up classifier reads as a delivery
-		  failure and answers with "try signing up again in a moment". Retrying
-		  cannot help, so without a report the only trace was stdout.
+		  Reported, but bounded, and the bound is the point.
+
+		  A rotated or mistyped `SEND_EMAIL_HOOK_SECRET` rejects every auth email,
+		  and GoTrue turns the 401 into "Hook requires authorization token", which
+		  the sign-up classifier reads as a delivery failure and answers with "try
+		  signing up again in a moment". Retrying cannot help, so with only a
+		  stdout line the outage is invisible where anyone would look for it.
+
+		  But this route is public and unauthenticated by construction - the
+		  signature *is* the authentication, so anything that runs before it
+		  verifies runs for strangers too. Reporting every rejection would let a
+		  stranger mint one billed exception per request, under a `distinct_id`
+		  they choose via `X-POSTHOG-DISTINCT-ID`, and bury the real outage in the
+		  noise. A handful per client per window is enough to raise a real outage -
+		  Supabase calls from a stable set of addresses - and bounds what any one
+		  caller can spend.
 		*/
-		reportServerError(err, {
-			request,
-			properties: { auth_hook_stage: 'signature_verification' }
+		const reportBudget = recordRateLimitAttempt(request, {
+			bucket: 'auth-hook-signature-failure',
+			maxRequests: 5
 		})
+		if (!reportBudget.limited) {
+			reportServerError(err, {
+				request,
+				properties: { auth_hook_stage: 'signature_verification' }
+			})
+		}
+
 		return ApiResponse.unauthorized('Unauthorized')
 	}
 
