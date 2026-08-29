@@ -123,9 +123,10 @@ describe('useSpendTurnstileToken', () => {
 
 	/*
 	  With no site key the sign-up and sign-in forms still render the hidden
-	  input, so they post an empty string while the live token is null. Rejected
-	  by the token comparison rather than the emptiness check - it is the case
-	  below, with no field at all, that pins guard 3.
+	  input, so they post an empty string while the live token is null. Both
+	  guards reject it - the emptiness check first, and the token comparison
+	  would anyway - so this does not pin guard 3 on its own. The case below,
+	  with no field at all, is the one that does.
 	*/
 	it('ignores the empty token an unconfigured Turnstile posts', () => {
 		const onSpend = vi.fn()

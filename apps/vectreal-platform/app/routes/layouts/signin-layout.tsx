@@ -58,11 +58,12 @@ const SignupModel = () => {
 			<div className="absolute right-0 bottom-0 z-10 max-w-2/3 px-8 pb-10">
 				{/*
 					The three `!important` markers this used to carry were vestigial.
-					Colour and weight had a reason once: the `section p` defaults that set
-					them lived unlayered in `global.module.css`, where nothing layered
-					could override them. Those rules are in `@layer base` now, so a
-					utility beats them on layer order alone. The size never had a reason
-					at all - `section p` sets no font-size.
+					Each had a reason once: `section p` sets colour, weight and
+					line-height, and a size utility carries a line-height of its own, so
+					all three collided. Those defaults lived unlayered in
+					`global.module.css`, where nothing layered could override them. They
+					are in `@layer base` now, so a utility beats them on layer order
+					alone and the markers were doing nothing.
 				*/}
 				<p className="text-body-lg text-primary/75 text-right font-extralight">
 					Join our community and start creating amazing{' '}

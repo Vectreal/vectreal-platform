@@ -199,15 +199,30 @@ export const CRITICAL_FLOWS: CriticalFlow[] = [
  * Callers that only need "was this on the funnel at all" should read the
  * length; the ids are for narrowing once an alert has fired.
  */
+function normalizeRoutePath(pathname: string): string {
+	const withoutSuffix = stripSingleFetchSuffix(pathname).toLowerCase()
+	// `/` has no trailing slash to strip - it is the slash.
+	return withoutSuffix.length > 1
+		? withoutSuffix.replace(/\/+$/, '')
+		: withoutSuffix
+}
+
 export function criticalFlowsForPathname(pathname: string): string[] {
 	/*
-	  Normalized first. With JavaScript running, the sign-up form does not post
-	  to `/sign-up` - React Router's single fetch posts to `/sign-up.data`, and
-	  `reportServerError` reads the pathname straight off the request. Matching
-	  the raw path tagged every real sign-up failure with no flow at all, which
-	  is precisely the alert `create-account` was added to raise.
+	  Normalized to the route React Router would match, in three steps, because
+	  the patterns below are anchored and case-sensitive while the router is
+	  neither.
+
+	  The suffix first: with JavaScript running the sign-up form does not post to
+	  `/sign-up`, single fetch posts to `/sign-up.data`, and `reportServerError`
+	  reads the pathname straight off the request. Then case and a trailing
+	  slash, because the router compiles every path with a trailing `\/*$` and
+	  matches case-insensitively - so `/sign-up/` and `/SIGN-UP` both serve the
+	  sign-up page, and `/sign-up/` is also what the `_.data` spelling decodes
+	  to. Matching the raw path tagged every real sign-up failure with no flow at
+	  all, which is precisely the alert `create-account` was added to raise.
 	*/
-	const routePath = stripSingleFetchSuffix(pathname)
+	const routePath = normalizeRoutePath(pathname)
 	return CRITICAL_FLOWS.filter((flow) =>
 		flow.routes.some((route) => route.pattern.test(routePath))
 	).map((flow) => flow.id)

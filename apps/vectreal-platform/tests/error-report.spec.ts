@@ -243,9 +243,21 @@ describe('critical flows on single-fetch paths', () => {
 		)
 	})
 
-	it('tags a trailing-slash route, which gets the `_.data` spelling', () => {
-		expect(criticalFlowsForPathname('/publisher.data')).toContain(
-			'serve-manifest'
+	/*
+	  React Router appends `_.data` rather than `.data` when the path already
+	  ends in a slash, and it matches routes case-insensitively - so both of
+	  these serve the sign-up page and both must tag the flow.
+	*/
+	it('tags the `_.data` spelling a trailing slash produces', () => {
+		expect(criticalFlowsForPathname('/sign-up/_.data')).toContain(
+			'create-account'
+		)
+		expect(criticalFlowsForPathname('/sign-up/')).toContain('create-account')
+	})
+
+	it('tags a route reached with different casing', () => {
+		expect(criticalFlowsForPathname('/SIGN-UP.data')).toContain(
+			'create-account'
 		)
 	})
 
