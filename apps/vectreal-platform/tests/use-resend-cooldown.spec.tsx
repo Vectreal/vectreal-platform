@@ -85,6 +85,21 @@ describe('useResendCooldown', () => {
 		expect(probe.remaining).toBe(57)
 	})
 
+	/*
+	  Bounds the interval from below as well. Asserting only that it ticks leaves
+	  any interval under a second passing - at 1ms a sixty second cooldown drains
+	  in sixty.
+	*/
+	it('has not ticked yet a millisecond before the second is up', () => {
+		const probe = renderWith(sent())
+
+		act(() => {
+			vi.advanceTimersByTime(999)
+		})
+
+		expect(probe.remaining).toBe(60)
+	})
+
 	it('stops at zero rather than going negative', () => {
 		const probe = renderWith(sent(), 2)
 
@@ -93,11 +108,22 @@ describe('useResendCooldown', () => {
 		expect(probe.remaining).toBe(0)
 	})
 
-	it('does not restart while a re-render delivers the same response', () => {
+	/*
+	  A submission that produces no new response still round-trips the state:
+	  React Router carries the previous `data` through `submitting` and back to
+	  `idle`, so the effect re-runs with the same object. Only the identity guard
+	  stops that counting as a fresh send and handing out a new sixty seconds.
+
+	  Re-rendering with `idle` alone would not test this - React skips the effect
+	  when neither dependency changed, so the guard never runs and the test would
+	  be pinning the dependency array instead.
+	*/
+	it('does not restart when a submission returns the same response object', () => {
 		const response = { sent: true }
 		const probe = renderWith({ state: 'idle', data: response })
 
 		tick(4)
+		probe.settle({ state: 'submitting', data: response })
 		probe.settle({ state: 'idle', data: response })
 
 		expect(probe.remaining).toBe(56)

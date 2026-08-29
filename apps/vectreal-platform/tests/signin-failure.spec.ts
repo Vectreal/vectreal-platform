@@ -34,6 +34,24 @@ describe('classifySigninFailure', () => {
 	})
 
 	/*
+	  Nothing else reads `.message` off a classification, and it is what the route
+	  renders. Wire every code to `unknown`'s sentence and the suite was otherwise
+	  green while every failed sign-in read "Unable to sign in right now" - which
+	  is the regression this module exists to undo.
+	*/
+	it('gives each code its own sentence, not the generic one', () => {
+		expect(classifySigninFailure('Email not confirmed').message).toBe(
+			AUTH_ERROR_MESSAGES.email_not_confirmed
+		)
+		expect(classifySigninFailure('Invalid login credentials').message).toBe(
+			AUTH_ERROR_MESSAGES.invalid_credentials
+		)
+		expect(classifySigninFailure('a message with no pattern').message).toBe(
+			AUTH_ERROR_MESSAGES.unknown
+		)
+	})
+
+	/*
 	  The regression that mattered: an unconfirmed account is a normal state, not
 	  a server fault. Reporting it filed a false alert for every affected person,
 	  and answering 500 told the browser our side had broken.
@@ -75,6 +93,10 @@ describe('classifySigninFailure', () => {
 		expect(classifySigninFailure('a message with no pattern').status).toBe(500)
 	})
 
+	it('answers a rate limit with 429, which goes out on the wire', () => {
+		expect(classifySigninFailure('Request rate limit reached').status).toBe(429)
+	})
+
 	/*
 	  A captcha rejection used to answer 500, because the old branch sent
 	  everything but a wrong password down the server-error path.
@@ -97,7 +119,14 @@ describe('classifySigninFailure', () => {
 	  nothing there would render `undefined`.
 	*/
 	it('gives every code a message the loader can render', () => {
-		for (const [, code] of CASES) {
+		/*
+		  The whole table, not just the codes this module classifies. The five it
+		  does not - `provider_exchange_failed`, `user_init_failed`,
+		  `email_conflict`, `missing_code`, `session_missing` - reach the loader
+		  only as `?error=` in a URL, from the OAuth callback and the confirm
+		  route, and are exactly the ones iterating the classified cases misses.
+		*/
+		for (const code of Object.keys(AUTH_ERROR_MESSAGES) as AuthErrorCode[]) {
 			expect(AUTH_ERROR_MESSAGES[code], `${code} needs a message`).toBeTruthy()
 		}
 		expect(AUTH_ERROR_MESSAGES.email_not_confirmed).toMatch(/confirm/i)

@@ -42,10 +42,14 @@ describe('hookErrorResponse', () => {
 		expect(body.error).toEqual({ http_code: 500, message: 'boom' })
 	})
 
-	it('carries a caller-chosen status inside the envelope', async () => {
-		const body = await hookErrorResponse('nope', 503).json()
+	/*
+	  GoTrue defaults a missing or zero `http_code` to 500, so an envelope that
+	  omitted it would still work - but it would stop saying what happened.
+	*/
+	it('states the status inside the envelope rather than relying on a default', async () => {
+		const body = await hookErrorResponse('nope').json()
 
-		expect(body.error.http_code).toBe(503)
+		expect(body.error.http_code).toBe(500)
 	})
 })
 
@@ -91,6 +95,27 @@ describe('buildHookErrorMessage', () => {
 
 		expect(long.length).toBeLessThanOrEqual(
 			'Auth email delivery failed: '.length + 200
+		)
+	})
+
+	/*
+	  And bounds it from below. Resend's real messages run to about a hundred
+	  characters - "The domain is not verified. Please add and verify your domain
+	  on https://resend.com/domains" - so a cap tight enough to chop one would
+	  otherwise pass.
+	*/
+	it('keeps a realistic provider message intact', () => {
+		const reason =
+			'The domain is not verified. Please add and verify your domain on https://resend.com/domains'
+
+		expect(buildHookErrorMessage(new Error(reason))).toBe(
+			`Auth email delivery failed: ${reason}`
+		)
+	})
+
+	it('trims a padded reason rather than embedding the whitespace', () => {
+		expect(buildHookErrorMessage(new Error('  Invalid API key  '))).toBe(
+			'Auth email delivery failed: Invalid API key'
 		)
 	})
 })

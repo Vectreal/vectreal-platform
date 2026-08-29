@@ -70,13 +70,14 @@ export interface SigninFailure {
 }
 
 /*
-  Ordered, first match wins. `captcha` leads because a replayed Turnstile token
-  is the failure most likely to be our fault rather than the visitor's, and it
-  must not be swallowed by a broader pattern.
+  Ordered, first match wins. No two of these overlap on any message GoTrue
+  actually emits, so the order is a precaution rather than something load
+  bearing - unlike `signup-failure`, where "Error sending password reset email"
+  genuinely matches two patterns and the order decides.
 */
 const PATTERNS: { code: AuthErrorCode; match: RegExp }[] = [
 	{ code: 'verification_failed', match: /captcha|turnstile/ },
-	{ code: 'email_not_confirmed', match: /not confirmed|email not confirmed/ },
+	{ code: 'email_not_confirmed', match: /not confirmed/ },
 	{ code: 'invalid_credentials', match: /invalid login credentials/ },
 	{ code: 'rate_limited', match: /rate limit|too many requests/ }
 ]

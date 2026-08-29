@@ -47,9 +47,14 @@ export function buildHookErrorMessage(reason: unknown): string {
 /**
  * HTTP 200 carrying a failure verdict, which is the only way GoTrue reads it.
  */
-export function hookErrorResponse(message: string, httpCode = 500): Response {
+export function hookErrorResponse(message: string): Response {
 	const body: HookErrorEnvelope = {
-		error: { http_code: httpCode, message }
+		/*
+		  Fixed at 500. The only caller is a delivery failure, and GoTrue defaults
+		  a missing or zero `http_code` to 500 anyway - a parameter here would be
+		  a knob no call site turns.
+		*/
+		error: { http_code: 500, message }
 	}
 	return new Response(JSON.stringify(body), {
 		status: 200,
