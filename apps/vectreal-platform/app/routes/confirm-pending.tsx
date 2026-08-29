@@ -7,7 +7,7 @@
 import { Button } from '@shared/components/ui/button'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Loader2, Mail, RotateCcw } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import {
 	data,
 	Link,
@@ -21,6 +21,7 @@ import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/confirm-pending'
 import { AuthErrorBoundary } from '../components/errors'
+import { useResendCooldown } from '../hooks/use-resend-cooldown'
 import { clearReferralAttribution } from '../lib/domain/analytics/referral-attribution'
 import { ensureValidCsrfFormData } from '../lib/http/csrf.server'
 import { recordRateLimitAttempt } from '../lib/http/rate-limit.server'
@@ -163,30 +164,16 @@ export default function ConfirmPending() {
 	const fetcher = useFetcher<ActionData>()
 	const { turnstileToken, hasTurnstile } = useOutletContext<AuthLayoutContext>()
 
-	const [cooldown, setCooldown] = useState(0)
-
 	useEffect(() => {
 		clearReferralAttribution()
 	}, [])
+
+	const cooldown = useResendCooldown(fetcher, RESEND_COOLDOWN_SECONDS)
 
 	const isSending = fetcher.state !== 'idle'
 	const wasSent = fetcher.data?.sent === true
 	const sendError = fetcher.data?.error
 	const isRateLimited = fetcher.data?.rateLimited
-
-	// Start cooldown after a successful send. The token the send spent was
-	// already invalidated at submit time by the layout, which owns it.
-	useEffect(() => {
-		if (!wasSent) return
-		setCooldown(RESEND_COOLDOWN_SECONDS)
-	}, [wasSent])
-
-	// Countdown tick
-	useEffect(() => {
-		if (cooldown <= 0) return
-		const id = setTimeout(() => setCooldown((c) => c - 1), 1000)
-		return () => clearTimeout(id)
-	}, [cooldown])
 
 	// When Turnstile is configured, block resend until the token is ready.
 	const turnstileReady = !hasTurnstile || !!turnstileToken
