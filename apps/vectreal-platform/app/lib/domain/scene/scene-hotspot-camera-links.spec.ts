@@ -3,6 +3,7 @@ import {
 	relinkHotspot,
 	removeCamera,
 	removeHotspot,
+	placeHotspot,
 	renameHotspot,
 	repointHotspotLinks
 } from './scene-hotspot-camera-links'
@@ -340,6 +341,123 @@ describe('relinkHotspot', () => {
 		relinkHotspot(state, 'a', 'default')
 		expect(cameraIds(state)).toEqual(['default', 'empty', 'framed', 'aimed'])
 		expect(state.hotspots[0].linkedCameraId).toBe('empty')
+	})
+})
+
+describe('placeHotspot', () => {
+	const cameras = [sceneCamera, legacyCamera, cameraA]
+	const AT: [number, number, number] = [1, 2, 3]
+
+	it('moves the hotspot', () => {
+		const result = placeHotspot(
+			{ camera: { cameras }, hotspots: [hotspot('a')] },
+			'a',
+			AT
+		)
+
+		expect(result.hotspots[0].worldPosition).toEqual(AT)
+	})
+
+	it('takes the camera the hotspot owns along with it', () => {
+		const result = placeHotspot(
+			{
+				camera: { cameras },
+				hotspots: [hotspot('a', { linkedCameraId: 'cam-a' })]
+			},
+			'a',
+			AT
+		)
+
+		expect(
+			result.camera.cameras?.find((c) => c.cameraId === 'cam-a')?.target
+		).toEqual(AT)
+	})
+
+	it('leaves where the camera stands, and only where it looks', () => {
+		// Moving a marker says where the point of interest is, not where the author
+		// wants to stand to see it.
+		const framed = camera('cam-a', {
+			kind: 'hotspot',
+			position: [5, 5, 5],
+			target: [0, 0, 0]
+		})
+		const result = placeHotspot(
+			{
+				camera: { cameras: [framed] },
+				hotspots: [hotspot('a', { linkedCameraId: 'cam-a' })]
+			},
+			'a',
+			AT
+		)
+
+		expect(result.camera.cameras?.[0].position).toEqual([5, 5, 5])
+		expect(result.camera.cameras?.[0].target).toEqual(AT)
+	})
+
+	it('never re-aims a camera the author composed', () => {
+		// The Linked Camera picker offers every camera in the scene, so a hotspot
+		// can point at the opening frame. Moving the marker must not turn it.
+		const result = placeHotspot(
+			{
+				camera: { cameras },
+				hotspots: [hotspot('a', { linkedCameraId: 'default' })]
+			},
+			'a',
+			AT
+		)
+
+		expect(
+			result.camera.cameras?.find((c) => c.cameraId === 'default')?.target
+		).toBeUndefined()
+	})
+
+	it('never re-aims a camera another hotspot also points at', () => {
+		const result = placeHotspot(
+			{
+				camera: { cameras },
+				hotspots: [
+					hotspot('a', { linkedCameraId: 'cam-a' }),
+					hotspot('b', { linkedCameraId: 'cam-a' })
+				]
+			},
+			'a',
+			AT
+		)
+
+		expect(
+			result.camera.cameras?.find((c) => c.cameraId === 'cam-a')?.target
+		).toBeUndefined()
+	})
+
+	it('leaves every other hotspot and camera untouched', () => {
+		const result = placeHotspot(
+			{
+				camera: { cameras },
+				hotspots: [
+					hotspot('a', { linkedCameraId: 'cam-a' }),
+					hotspot('b', { worldPosition: [7, 7, 7] })
+				]
+			},
+			'a',
+			AT
+		)
+
+		expect(result.hotspots[1].worldPosition).toEqual([7, 7, 7])
+		expect(cameraIds(result)).toEqual(['default', 'legacy', 'cam-a'])
+	})
+
+	it('moves a hotspot that owns no camera at all', () => {
+		const result = placeHotspot(
+			{ camera: { cameras }, hotspots: [hotspot('a')] },
+			'a',
+			AT
+		)
+
+		expect(result.hotspots[0].worldPosition).toEqual(AT)
+		expect(result.camera).toBe(result.camera)
+		expect(result.camera.cameras?.every((c) => c.target === undefined)).toBe(
+			true
+		)
 	})
 })
 

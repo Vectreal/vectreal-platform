@@ -235,6 +235,57 @@ export function relinkHotspot(
  * stopped at the hotspot would leave every hotspot camera in the scene sharing
  * one label with no way to tell them apart.
  */
+/**
+ * Moves a hotspot, and takes the camera it owns along with it.
+ *
+ * A hotspot camera exists to look at its hotspot, so a marker that moves and a
+ * viewpoint that stays behind is a scene that quietly stops making sense: the
+ * author drags a marker onto the handle and the camera keeps framing where it
+ * used to be. Placement is the moment the author says where the point of
+ * interest is, so it is the moment the aim follows.
+ *
+ * Only the camera the hotspot owns. The Linked Camera picker offers every
+ * camera in the scene, so a hotspot can point at the opening frame or at
+ * another hotspot's camera, and re-aiming one of those would rewrite a
+ * viewpoint the author composed by moving something else entirely.
+ *
+ * Position is left alone here too - this decides where the camera looks, not
+ * where it stands, so a viewpoint the author framed keeps its framing and
+ * merely turns to follow the marker.
+ *
+ * Distinct from the viewer's `resolveHotspotCameraTargets`, and both are wanted.
+ * That one is a runtime default for a camera nobody ever framed, and it stops
+ * applying the moment a target exists. This one is the authoring edit: it moves
+ * a target that is already there, which is the case the default cannot reach.
+ */
+export function placeHotspot(
+	state: CameraHotspotState,
+	hotspotId: string,
+	worldPosition: [number, number, number]
+): CameraHotspotState {
+	const hotspots = state.hotspots.map((h) =>
+		h.id === hotspotId ? { ...h, worldPosition } : h
+	)
+	const ownedCameraId = resolveOwnedHotspotCameraId(
+		state.hotspots,
+		state.camera.cameras,
+		hotspotId
+	)
+	if (!ownedCameraId) return { camera: state.camera, hotspots }
+
+	return {
+		camera: {
+			...state.camera,
+			cameras: (state.camera.cameras ?? []).map((entry) =>
+				entry.cameraId === ownedCameraId
+					? { ...entry, target: worldPosition }
+					: entry
+			)
+		},
+		hotspots
+	}
+}
+
 export function renameHotspot(
 	state: CameraHotspotState,
 	hotspotId: string,
