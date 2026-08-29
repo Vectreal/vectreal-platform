@@ -79,6 +79,29 @@ const toolSidebarStateAtom = selectAtom(
 		a.showSidebar === b.showSidebar
 )
 
+/**
+ * The compose tool whose panel is actually open, or null when none is.
+ *
+ * `activeComposeTool` on its own answers a different question: which tool is
+ * *selected*. It is never null, it defaults to `environment` before the author
+ * has opened anything, and closing a drawer flips `showSidebar` while leaving it
+ * exactly where it was. So a scene affordance that reads it directly stays live
+ * after the tool that owns it has closed - the tool rail stops highlighting the
+ * button while the canvas goes on offering the tool's gizmo.
+ *
+ * That predicate already existed twice, written by hand: the rail's own
+ * `value === activeComposeTool && showSidebar`, and the shadow light handle's
+ * copy of it. The hotspot editor wrote a third version that omitted
+ * `showSidebar`, which is exactly the drift a shared derivation prevents. Scene
+ * affordances read this; nothing reads `activeComposeTool` to mean "active".
+ *
+ * `mode` is in the test because these are *compose* tools: leaving optimize mode
+ * showing a compose tool's in-scene handles is the same category of leak.
+ */
+const activeComposeToolAtom = selectAtom(processAtom, (state) =>
+	state.mode === 'compose' && state.showSidebar ? state.activeComposeTool : null
+)
+
 const showPublishPanelAtom = selectAtom(
 	processAtom,
 	(state) => state.showPublishPanel
@@ -108,6 +131,7 @@ export {
 	maxSceneBytesAtom,
 	showSidebarAtom,
 	toolSidebarStateAtom,
+	activeComposeToolAtom,
 	showPublishPanelAtom,
 	isSavingAtom,
 	hasUnsavedChangesAtom,
