@@ -70,9 +70,18 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 		  verifies runs for strangers too. Reporting every rejection would let a
 		  stranger mint one billed exception per request, under a `distinct_id`
 		  they choose via `X-POSTHOG-DISTINCT-ID`, and bury the real outage in the
-		  noise. A handful per client per window is enough to raise a real outage -
-		  Supabase calls from a stable set of addresses - and bounds what any one
-		  caller can spend.
+		  noise. A handful per client per window bounds what any one caller can
+		  spend while still raising a real outage, because Supabase's calls get a
+		  bucket of their own: `setup-fly-secrets.sh` points the hook at
+		  `APPLICATION_URL`, which is the proxied apex, so they arrive with a
+		  `cf-connecting-ip` Cloudflare sets and refuses to accept from a caller.
+		  A stranger cannot land in that bucket from the proxied path.
+
+		  What they can still do is reach `<app>.fly.dev`, which stays public and
+		  where nothing strips the header - the residual `client-identity.ts`
+		  documents and files. It applies to every limiter in the app, not to this
+		  one especially, and the fix is an origin-side check against Cloudflare's
+		  ranges rather than anything here.
 		*/
 		const reportBudget = recordRateLimitAttempt(request, {
 			bucket: 'auth-hook-signature-failure',
