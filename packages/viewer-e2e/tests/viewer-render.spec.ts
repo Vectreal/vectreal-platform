@@ -44,6 +44,16 @@ test('viewer mounts without a runtime crash', async ({ page }) => {
 	const hooksFlag = await page.evaluate(() => window.__HOOKS_E2E__)
 	expect(hooksFlag?.status, hooksFlag?.error).toBe('ok')
 
+	// Hotspots, in a real browser, from the published tarball. The seam test in
+	// the platform app asserts which props are handed over; this asserts what the
+	// package actually draws when it gets them - and that the two markers a
+	// visitor must never see are not among them.
+	const markers = page.locator('.vctrl-viewer-hotspot')
+	await expect(markers).toHaveCount(1)
+	await expect(page.getByRole('img', { name: 'Public marker' })).toBeVisible()
+	await expect(page.getByLabel('Internal marker')).toHaveCount(0)
+	await expect(page.getByLabel('Hidden marker')).toHaveCount(0)
+
 	expect(pageErrors, pageErrors.join('\n')).toEqual([])
 })
 

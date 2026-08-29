@@ -171,6 +171,40 @@ export const CRITICAL_FLOWS: CriticalFlow[] = [
 				pattern: /^\/publisher(\/[^/]+)?$/
 			}
 		]
+	},
+	{
+		/*
+		  The funnel used to stop at "serve the manifest", and that gap is exactly
+		  how a finished hotspot renderer shipped with nothing calling it: the
+		  server had been handing the settings over correctly for months while the
+		  component that turns them into pixels was never given them. Serving a
+		  payload nobody draws is not a served scene, so the last hop belongs on
+		  the list too.
+		*/
+		id: 'render-embed-scene',
+		step: 'draw the published scene the manifest described',
+		module: 'app/components/scene-embed/scene-embed-viewer.tsx',
+		routes: [
+			{
+				file: './routes/embed-page/embed-scene.tsx',
+				pattern: /^\/embed\/[^/]+\/[^/]+$/
+			},
+			{
+				file: './routes/preview-page/preview-scene.tsx',
+				pattern: /^\/preview\/[^/]+\/[^/]+$/
+			},
+			/*
+			  The dashboard's scene detail panel renders this component as well, so
+			  it belongs here by the rule this list is built on: routes come from the
+			  module's actual importers, not from what the step sounds like it should
+			  serve. Same lookaheads as `copy-snippet` above, and for the same reason
+			  - the edit drawer shares this URL shape.
+			*/
+			{
+				file: './routes/dashboard-page/projects/scene.tsx',
+				pattern: /^\/dashboard\/projects\/(?!edit\/)[^/]+\/(?!edit$)[^/]+$/
+			}
+		]
 	}
 ]
 

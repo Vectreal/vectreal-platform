@@ -14,9 +14,11 @@ export {
 	defaultEnvOptions
 } from './scene-environment'
 export { default as SceneHotspots } from './scene-hotspots'
+export type { HotspotPositionSetter } from './scene-hotspots'
 export {
 	resolveHotspotMarkers,
-	type HotspotMarker
+	type HotspotMarker,
+	type ResolveHotspotMarkersOptions
 } from './resolve-hotspot-markers'
 export { default as SceneModel } from './scene-model'
 export { default as ScenePostProcessing } from './scene-postprocessing'

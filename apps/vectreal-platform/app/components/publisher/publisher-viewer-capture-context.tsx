@@ -9,6 +9,7 @@ import {
 } from 'react'
 
 import type {
+	HotspotPositionSetter,
 	SceneCameraSnapshot,
 	SceneCameraSnapshotCapture,
 	SceneScreenshotCapture,
@@ -33,6 +34,16 @@ interface PublisherViewerCaptureContextValue {
 	requestShadowBake: () => Promise<null | ShadowBakeResult>
 	registerCommandExecutor: (executor: null | ViewerCommandExecutor) => void
 	commandExecutor: MutableRefObject<null | ViewerCommandExecutor>
+	/**
+	 * The viewer's handle for moving a hotspot marker during a drag.
+	 *
+	 * Here for the same reason `commandExecutor` is: the prop lives on the route,
+	 * and the only consumer is the transform gizmo, which mounts inside the
+	 * Canvas. A ref rather than state because a drag publishes a position every
+	 * frame and none of them may re-render anything.
+	 */
+	registerHotspotPositionSetter: (setter: null | HotspotPositionSetter) => void
+	hotspotPositionSetter: MutableRefObject<null | HotspotPositionSetter>
 }
 
 const PublisherViewerCaptureContext =
@@ -46,6 +57,7 @@ export function PublisherViewerCaptureProvider({
 		null
 	)
 	const commandExecutorRef = useRef<null | ViewerCommandExecutor>(null)
+	const hotspotPositionSetterRef = useRef<null | HotspotPositionSetter>(null)
 
 	const registerSceneScreenshotCapture = useCallback(
 		(capture: null | SceneScreenshotCapture) => {
@@ -96,6 +108,13 @@ export function PublisherViewerCaptureProvider({
 		[]
 	)
 
+	const registerHotspotPositionSetter = useCallback(
+		(setter: null | HotspotPositionSetter) => {
+			hotspotPositionSetterRef.current = setter
+		},
+		[]
+	)
+
 	const value = useMemo<PublisherViewerCaptureContextValue>(
 		() => ({
 			registerSceneScreenshotCapture,
@@ -105,7 +124,9 @@ export function PublisherViewerCaptureProvider({
 			registerShadowBakeCapture,
 			requestShadowBake,
 			registerCommandExecutor,
-			commandExecutor: commandExecutorRef
+			commandExecutor: commandExecutorRef,
+			registerHotspotPositionSetter,
+			hotspotPositionSetter: hotspotPositionSetterRef
 		}),
 		[
 			registerSceneScreenshotCapture,
@@ -114,7 +135,8 @@ export function PublisherViewerCaptureProvider({
 			requestSceneCameraSnapshot,
 			registerShadowBakeCapture,
 			requestShadowBake,
-			registerCommandExecutor
+			registerCommandExecutor,
+			registerHotspotPositionSetter
 		]
 	)
 

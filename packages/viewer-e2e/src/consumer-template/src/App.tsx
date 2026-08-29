@@ -2,6 +2,43 @@ import { useLoadModel } from '@vctrl/hooks'
 import { VectrealViewer } from '@vctrl/viewer'
 import { Component, useEffect, type ReactNode } from 'react'
 
+/*
+  Three hotspots covering the visibility contract, so a real browser proves what
+  a jsdom seam test only asserts: a public marker draws, and the two a visitor
+  must never see do not. `showInternalHotspots` is deliberately not passed - the
+  viewer's own gate is the second of two, and it is the only one a consumer of
+  this package gets, since nothing here went through the platform's redaction.
+*/
+const E2E_HOTSPOTS = [
+	{
+		id: 'public-hotspot',
+		name: 'Public marker',
+		worldPosition: [1.5, 0, 0] as [number, number, number],
+		visible: true,
+		internalOnly: false,
+		stylePreset: 'dot' as const,
+		occlusionEnabled: false
+	},
+	{
+		id: 'internal-hotspot',
+		name: 'Internal marker',
+		worldPosition: [-1.5, 0, 0] as [number, number, number],
+		visible: true,
+		internalOnly: true,
+		stylePreset: 'dot' as const,
+		occlusionEnabled: false
+	},
+	{
+		id: 'hidden-hotspot',
+		name: 'Hidden marker',
+		worldPosition: [0, 1.5, 0] as [number, number, number],
+		visible: false,
+		internalOnly: false,
+		stylePreset: 'dot' as const,
+		occlusionEnabled: false
+	}
+]
+
 // Reusable error boundary: a render-time crash would otherwise be swallowed by
 // React. We mirror it onto a window flag the e2e polls, and swap in a marker node.
 class CrashBoundary extends Component<
@@ -59,6 +96,7 @@ export default function App() {
 				<VectrealViewer
 					theme="dark"
 					controlsOptions={{ autoRotate: false }}
+					hotspots={E2E_HOTSPOTS}
 					onCommandExecutorReady={() => {
 						// Viewer scene graph is live and the imperative API is wired up.
 						window.__VIEWER_E2E__ = { status: 'mounted' }

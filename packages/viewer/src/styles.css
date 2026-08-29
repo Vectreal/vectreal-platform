@@ -53,6 +53,13 @@
 	*/
 	--vctrl-hotspot-fill: #ffffff;
 	--vctrl-hotspot-ink: #18181b;
+	/*
+	  A hotspot the author switched off, drawn only where somebody can switch it
+	  back on. Grey rather than a faded copy of the fill, because opacity is
+	  already spoken for here - occlusion owns it - and a hidden marker sitting
+	  behind the model has to be able to say both things at once.
+	*/
+	--vctrl-hotspot-hidden-fill: #a1a1aa;
 
 	font-family: 'DM Sans Variable', sans-serif;
 }
@@ -160,6 +167,73 @@
 	.vctrl-hotspot-pulse {
 		animation: none;
 	}
+}
+
+/*
+  The marker an editing surface has picked out.
+
+  A ring rather than a colour, and that is not a taste call: `hotspotColor`
+  writes `--vctrl-hotspot-fill` as an inline style on the marker root, and an
+  inline declaration beats any stylesheet rule for the same property on the same
+  element - so a colour-based selection would simply not exist on a viewer that
+  had been given a brand. A ring composes with any fill at all.
+
+  Never the accent (`#f97316` is what this replaced when the platform's publisher
+  stopped drawing its own marker). The argument the fill tokens make above holds
+  twice as hard for a state the author stares at while dragging: a hotspot sits
+  on top of somebody's product.
+
+  White inside a dark halo, so it carries on a dark scene and on a light one.
+
+  This rule outranks the focus utility's own `box-shadow`, so the focused case
+  is spelled out separately below rather than left to the cascade - without it a
+  marker that was both selected and focused lost the dark halo entirely and the
+  focus outline landed exactly where that halo used to be.
+*/
+.vctrl-viewer-hotspot[data-selected] .vctrl-hotspot-body {
+	border-radius: 9999px;
+	box-shadow:
+		0 0 0 2px #ffffff,
+		0 0 0 4px rgb(0 0 0 / 0.55);
+}
+
+/*
+  Selected *and* focused. The selection ring keeps the inner 2px; the halo moves
+  out past the focus outline (2px wide at `outline-offset: 2px`) instead of
+  sitting under it, so the marker reads as a white band with a dark edge around
+  it rather than as a white band alone.
+*/
+.vctrl-viewer-hotspot[data-selected] .vctrl-hotspot-body:focus-visible {
+	box-shadow:
+		0 0 0 2px #ffffff,
+		0 0 0 6px rgb(0 0 0 / 0.5);
+}
+
+/* Faster, not different - and killed outright by the reduced-motion rule above,
+   which the ring deliberately does not depend on. */
+.vctrl-viewer-hotspot[data-selected] .vctrl-hotspot-pulse {
+	animation-duration: 1.4s;
+}
+
+/*
+  A hotspot the author hid. Declared on the body rather than the root so it wins
+  over a `hotspotColor` inherited from the root.
+
+  The pulse stops and goes dashed: a moving ring means "touch this", and nobody
+  browsing the published scene ever will - this marker exists so its author can
+  find it again. `filter` carries the image and svg presets, whose artwork no
+  token here can reach.
+*/
+.vctrl-viewer-hotspot[data-hidden] .vctrl-hotspot-body {
+	--vctrl-hotspot-fill: var(--vctrl-hotspot-hidden-fill);
+	--vctrl-hotspot-ink: #18181b;
+	filter: grayscale(1);
+}
+
+.vctrl-viewer-hotspot[data-hidden] .vctrl-hotspot-pulse {
+	color: var(--vctrl-hotspot-hidden-fill);
+	border-style: dashed;
+	animation: none;
 }
 
 @media (prefers-color-scheme: dark) {

@@ -2,7 +2,7 @@ import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { SpinnerWrapper } from '@shared/components/ui/spinner-wrapper'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useAtomValue, useSetAtom } from 'jotai/react'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import CenteredSpinner from '../../components/centered-spinner'
@@ -15,6 +15,7 @@ import {
 	toolSidebarStateAtom
 } from '../../lib/stores/publisher-config-store'
 import {
+	activeHotspotIdAtom,
 	bakedShadowSourceAtom,
 	rawModelDiagonalAtom,
 	sceneViewerSettingsAtom,
@@ -23,6 +24,7 @@ import {
 } from '../../lib/stores/scene-settings-store'
 import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbnail'
 
+import type { ViewerInteractionEvent } from '@vctrl/viewer'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({
@@ -111,7 +113,7 @@ const PublisherPage = () => {
 	const { file } = useModelContext()
 	const setRawDiagonal = useSetAtom(rawModelDiagonalAtom)
 	const setShadows = useSetAtom(shadowsAtom)
-	const { bounds, camera, controls, env, shadows, normalization } =
+	const { bounds, camera, controls, env, shadows, normalization, hotspots } =
 		useAtomValue(sceneViewerSettingsAtom)
 
 	// Persist drags of the in-scene shadow light handle. Debounced so a drag
@@ -144,7 +146,8 @@ const PublisherPage = () => {
 		[]
 	)
 
-	const selectedCameraId = useAtomValue(selectedCameraIdAtom)
+	const [selectedCameraId, setSelectedCameraId] = useAtom(selectedCameraIdAtom)
+	const [activeHotspotId, setActiveHotspotId] = useAtom(activeHotspotIdAtom)
 	const sceneMeta = useAtomValue(sceneMetaAtom)
 	const { activeComposeTool, showSidebar } = useAtomValue(toolSidebarStateAtom)
 	// The in-scene light handle only belongs to the shadow tool, so show it only
@@ -159,14 +162,55 @@ const PublisherPage = () => {
 		registerSceneScreenshotCapture,
 		registerSceneCameraSnapshotCapture,
 		registerShadowBakeCapture,
-		registerCommandExecutor
+		registerCommandExecutor,
+		registerHotspotPositionSetter
 	} = usePublisherViewerCapture()
 
 	// Persisted shadow bake resolved from the loaded scene's inlined asset data
 	// (a data URL, no separate request). The viewer ignores it once the bake inputs
 	// change during editing (signature mismatch) and re-bakes live.
 	const bakedShadow = useAtomValue(bakedShadowSourceAtom) ?? undefined
-	const handleInteractionEvent = useAutomaticOpeningView()
+	const captureOpeningView = useAutomaticOpeningView()
+
+	/**
+	 * Mirrors the viewer's own camera changes back into the atom the sidebar
+	 * reads.
+	 *
+	 * Clicking a hotspot activates its linked camera inside the viewer, through
+	 * the same command path an embed uses, and that path writes the viewer's
+	 * internal selection directly. Without this the atom never learns: the camera
+	 * sidebar would highlight the wrong entry, and the next unrelated edit to the
+	 * camera list would see the two disagree and fly the camera back to the stale
+	 * value.
+	 *
+	 * It cannot loop. The write re-runs the viewer's selection effect, which
+	 * recomputes the identical key and signature the command path already stored
+	 * and returns before animating or re-emitting. `selectedCameraIdAtom` is not
+	 * part of `sceneViewerSettingsAtom`, so it also cannot mark the scene dirty.
+	 */
+	const handleInteractionEvent = useCallback(
+		(event: ViewerInteractionEvent) => {
+			if (event.type === 'camera_changed' && event.cameraId) {
+				setSelectedCameraId(event.cameraId)
+			}
+			captureOpeningView(event)
+		},
+		[captureOpeningView, setSelectedCameraId]
+	)
+
+	/**
+	 * Selection is offered only while the hotspot tool is armed, and passing it is
+	 * exactly what makes a marker select rather than fly its camera. Outside the
+	 * tool the publisher wants the embed's behaviour, so it passes nothing.
+	 */
+	const handleHotspotSelect = useMemo(
+		() =>
+			activeComposeTool === 'hotspots'
+				? (id: string) =>
+						setActiveHotspotId((previous) => (previous === id ? null : id))
+				: undefined,
+		[activeComposeTool, setActiveHotspotId]
+	)
 
 	// Memoized: a fresh object here re-creates the viewer's screenshot capture on
 	// every render, which would de-register it for the frame a save runs in.
@@ -195,6 +239,26 @@ const PublisherPage = () => {
 					bakedShadow={bakedShadow}
 					onShadowBakeReady={registerShadowBakeCapture}
 					shadowLightEditable={isShadowToolActive}
+					hotspots={hotspots}
+					/*
+					  The publisher is the surface those two flags exist for: it is where
+					  `internalOnly` hotspots are authored, and where a hidden one has to
+					  stay findable so it can be switched back on. Neither changes a step
+					  number - the viewer ranks those over the published set - so the
+					  numbers here are the numbers a visitor gets.
+					*/
+					showInternalHotspots
+					showHiddenHotspots
+					/*
+					  Gated on the tool, like `onHotspotSelect` below it. Left ungated
+					  the ring stayed on after switching to the shadow or camera tool,
+					  where there is no gizmo and no way to clear it from the canvas.
+					*/
+					selectedHotspotId={
+						activeComposeTool === 'hotspots' ? activeHotspotId : null
+					}
+					onHotspotSelect={handleHotspotSelect}
+					onHotspotPositionSetterReady={registerHotspotPositionSetter}
 					onShadowLightChange={handleShadowLightChange}
 					normalizationOptions={normalization}
 					boundsOptions={bounds}

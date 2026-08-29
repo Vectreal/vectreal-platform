@@ -215,7 +215,15 @@ const styleHotspots: StoryHotspot[] = [
 		...base('no-payload', 'Image preset, no artwork yet', [-1.1, 0.15, 0.7]),
 		stylePreset: 'image'
 	},
-	{ ...base('hidden', 'Hidden by the author', [0, 0.6, 0.7]), visible: false },
+	{
+		// Sequenced *and* hidden, which is what makes the numbering rule visible:
+		// an editing surface draws it between steps 1 and 2, and it still takes no
+		// number, so the steps either side of it read the same as they do for a
+		// visitor.
+		...base('hidden', 'Hidden by the author', [0, 0.6, 0.7]),
+		visible: false,
+		sequenceIndex: 2
+	},
 	{ ...base('internal', 'Internal only', [0, -0.35, 0.7]), internalOnly: true }
 ]
 
@@ -270,15 +278,62 @@ export const HotspotStyles: Story = {
 /**
  * Colour is opt-in. The default marker is neutral so it does not compete with
  * the product; a caller that wants the hotspots to carry a brand passes one.
+ *
+ * One marker is also drawn as selected, because this is the story that proves
+ * selection had to be a ring rather than a colour: `hotspotColor` writes the
+ * fill as an inline style on the marker root, and an inline declaration beats
+ * any stylesheet rule for the same property on the same element, so a
+ * colour-based selection would simply not exist on a branded viewer.
  */
 export const HotspotColor: Story = {
-	args: { hotspots: styleHotspots, hotspotColor: '#fc6c18' },
+	args: {
+		hotspots: styleHotspots,
+		hotspotColor: '#fc6c18',
+		// `selectedHotspotId` alone, deliberately: passing a select handler as well
+		// would make every marker here a button, and this story is the published
+		// product view.
+		selectedHotspotId: 'step-2'
+	},
 	render: hotspotRender
 }
 
-/** The publisher's view of the same scene: the internal-only hotspot appears. */
+/**
+ * The publisher's view of the same scene, with the props it actually passes.
+ *
+ * Two extra markers appear: the internal-only one, and the hidden one - greyed,
+ * with its ring dashed and still, because nobody browsing the published scene
+ * will ever touch it. Neither takes a step number. The hidden marker sits
+ * between steps 1 and 2 in the sequence and the numerals either side of it are
+ * unchanged, which is the whole rule: an author composes against the numbers a
+ * visitor gets.
+ */
 export const HotspotsOnAnEditingSurface: Story = {
-	args: { hotspots: styleHotspots, showInternalHotspots: true },
+	args: {
+		hotspots: styleHotspots,
+		showInternalHotspots: true,
+		showHiddenHotspots: true
+	},
+	render: hotspotRender
+}
+
+/**
+ * One marker picked out, as the publisher draws it while its hotspot tool is
+ * armed.
+ *
+ * A ring rather than a colour, and neutral rather than brand. Both are
+ * deliberate: `hotspotColor` writes the fill as an inline style, so a
+ * colour-based selection would vanish on a branded viewer, and a saturated
+ * marker sitting on somebody's product competes with the thing the scene exists
+ * to show. Compare with `HotspotColor` - the ring survives there too.
+ */
+export const HotspotSelection: Story = {
+	args: {
+		hotspots: styleHotspots,
+		showInternalHotspots: true,
+		showHiddenHotspots: true,
+		selectedHotspotId: 'step-2',
+		onHotspotSelect: () => {}
+	},
 	render: hotspotRender
 }
 
