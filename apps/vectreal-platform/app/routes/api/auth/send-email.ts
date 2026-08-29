@@ -51,9 +51,17 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 			}
 		})
 	} catch (err) {
-		const message =
-			err instanceof Error ? err.message : 'Invalid webhook signature'
-		console.warn('[auth/send-email] signature verification failed', { message })
+		/*
+		  Reported, not just logged. A rotated or mistyped `SEND_EMAIL_HOOK_SECRET`
+		  rejects every auth email, and GoTrue turns the 401 into "Hook requires
+		  authorization token", which the sign-up classifier reads as a delivery
+		  failure and answers with "try signing up again in a moment". Retrying
+		  cannot help, so without a report the only trace was stdout.
+		*/
+		reportServerError(err, {
+			request,
+			properties: { auth_hook_stage: 'signature_verification' }
+		})
 		return ApiResponse.unauthorized('Unauthorized')
 	}
 

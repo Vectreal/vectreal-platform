@@ -13,12 +13,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useResendCooldown } from '../app/hooks/use-resend-cooldown'
 
-type Fetcher = { state: string; data: { sent?: boolean } | undefined }
+type Result = {
+	sent?: boolean
+	rateLimited?: boolean
+	retryAfterSeconds?: number
+}
+type Fetcher = { state: string; data: Result | undefined }
+
+/*
+  The route's own policy, so the spec exercises what ships rather than a
+  simplification of it: a send holds the button for a minute, a rate limit for
+  as long as the server said, anything else leaves it alone.
+*/
+const routePolicy =
+	(seconds: number) =>
+	(result: Result): number | null => {
+		if (result.sent) return seconds
+		if (result.rateLimited) return result.retryAfterSeconds ?? seconds
+		return null
+	}
 
 function renderWith(fetcher: Fetcher, seconds = 60) {
 	let current = 0
 	function Probe({ value }: { value: Fetcher }) {
-		current = useResendCooldown(value, seconds)
+		current = useResendCooldown(value, routePolicy(seconds))
 		return null
 	}
 	const view = render(<Probe value={fetcher} />)
@@ -127,6 +145,26 @@ describe('useResendCooldown', () => {
 		probe.settle({ state: 'idle', data: response })
 
 		expect(probe.remaining).toBe(56)
+	})
+
+	/*
+	  A rate limit locks the button too. Without this the fourth press in a
+	  window answered "Too many requests" and then re-enabled as soon as a fresh
+	  captcha token landed, which is the hole this hook exists to close.
+	*/
+	it('holds for as long as the server said when rate limited', () => {
+		const probe = renderWith({
+			state: 'idle',
+			data: { rateLimited: true, retryAfterSeconds: 42 }
+		})
+
+		expect(probe.remaining).toBe(42)
+	})
+
+	it('falls back to the default hold when no retry-after is given', () => {
+		const probe = renderWith({ state: 'idle', data: { rateLimited: true } })
+
+		expect(probe.remaining).toBe(60)
 	})
 
 	it('ignores a response that reports nothing was sent', () => {

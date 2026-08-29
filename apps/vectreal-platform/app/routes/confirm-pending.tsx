@@ -69,11 +69,15 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	const url = new URL(request.url)
 	const email = url.searchParams.get('email') ?? ''
-	const next = url.searchParams.get('next') ?? '/onboarding'
 	const referrer = url.searchParams.get('referrer') ?? ''
 	const utm_source = url.searchParams.get('utm_source') ?? ''
 
-	return data({ email, next, referrer, utm_source }, { headers })
+	/*
+	  No `next`. It was carried into loader data that nothing read, while the
+	  resend action hardcodes `/onboarding` as the confirmation destination - so
+	  the screen looked like it honoured a return path and did not.
+	*/
+	return data({ email, referrer, utm_source }, { headers })
 }
 
 // ─── Action ───────────────────────────────────────────────────────────────────
@@ -168,7 +172,19 @@ export default function ConfirmPending() {
 		clearReferralAttribution()
 	}, [])
 
-	const cooldown = useResendCooldown(fetcher, RESEND_COOLDOWN_SECONDS)
+	/*
+	  A rate limit holds the button too, and for as long as the server said. It
+	  used to fall straight through: only `sent` started a cooldown, so the
+	  fourth press in a window answered "Too many requests" and then re-enabled
+	  the button as soon as a fresh captcha token landed - the same rapid-retry
+	  hole this hook exists to close, on the other branch.
+	*/
+	const cooldown = useResendCooldown(fetcher, (result) => {
+		if (result.sent) return RESEND_COOLDOWN_SECONDS
+		if (result.rateLimited)
+			return result.retryAfterSeconds ?? RESEND_COOLDOWN_SECONDS
+		return null
+	})
 
 	const isSending = fetcher.state !== 'idle'
 	const wasSent = fetcher.data?.sent === true

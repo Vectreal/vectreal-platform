@@ -1,3 +1,5 @@
+import type { AuthErrorCode } from './signin-failure'
+
 export const SAFE_NEXT_PATH_PREFIXES = [
 	'/dashboard',
 	'/publisher',
@@ -22,8 +24,15 @@ export function getSafeNextPath(next: string | null): string {
 	return '/dashboard'
 }
 
+/*
+  `AuthErrorCode`, not `string`. Sign-in resolves `?error=` against
+  `AUTH_ERROR_MESSAGES`, and a code absent from that table resolves to null - so
+  a visitor bounced back from a failed OAuth round trip would land on a bare
+  form with no banner explaining why. Typing it makes that a compile error at
+  the emitter instead of silence at the destination.
+*/
 export function buildSigninErrorRedirect(
-	errorCode: string,
+	errorCode: AuthErrorCode,
 	next: string
 ): string {
 	const params = new URLSearchParams({ error: errorCode, next })

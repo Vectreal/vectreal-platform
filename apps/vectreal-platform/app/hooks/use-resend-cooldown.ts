@@ -20,14 +20,21 @@ import { useOncePerFetcherResponse } from './use-once-per-fetcher-response'
  * Lives here rather than in the route because a route module cannot be
  * imported by a test - `getDbClient()` throws at module scope.
  */
-export function useResendCooldown<TData extends { sent?: boolean }>(
+export function useResendCooldown<TData>(
 	fetcher: { state: string; data: TData | undefined },
-	seconds: number
+	/**
+	 * Seconds to hold for, or null to leave the button alone. The policy lives
+	 * with the caller because only it knows which of its responses should lock
+	 * the button, and for how long - a rejected send and a rate limit both
+	 * should, and they do not agree on the duration.
+	 */
+	cooldownFor: (data: TData) => number | null
 ): number {
 	const [remaining, setRemaining] = useState(0)
 
 	useOncePerFetcherResponse(fetcher, (data) => {
-		if (data.sent) setRemaining(seconds)
+		const seconds = cooldownFor(data)
+		if (seconds !== null && seconds > 0) setRemaining(seconds)
 	})
 
 	useEffect(() => {
