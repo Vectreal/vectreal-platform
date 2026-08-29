@@ -97,6 +97,27 @@ beforeEach(() => {
 })
 
 describe('HotspotsSettingsPanel arming', () => {
+	/**
+	 * Typing a coordinate is placing the marker, exactly as dragging it is, so it
+	 * goes through the same paired edit: the hotspot moves and the camera it owns
+	 * turns to keep looking at it. This was the last placement path that wrote
+	 * only the hotspot, which would have left the sidebar quietly disagreeing
+	 * with the canvas about where a viewpoint points.
+	 */
+	it('turns the hotspot’s own camera when an axis is typed', () => {
+		arrange()
+		render(<HotspotsSettingsPanel />)
+
+		act(() => {
+			fireEvent.change(screen.getByLabelText('X position'), {
+				target: { value: '9' }
+			})
+		})
+
+		expect(store.get(hotspotsAtom)[0].worldPosition).toEqual([9, 2, 3])
+		expect(store.get(cameraAtom).cameras?.[0].target).toEqual([9, 2, 3])
+	})
+
 	it('disarms click-to-place when the panel unmounts', () => {
 		arrange()
 		const { unmount } = render(<HotspotsSettingsPanel />)
