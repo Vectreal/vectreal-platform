@@ -56,7 +56,14 @@ const SignupModel = () => {
 				thirds keeps it to two.
 			*/}
 			<div className="absolute right-0 bottom-0 z-10 max-w-2/3 px-8 pb-10">
-				<p className="text-primary/75! text-right text-xl! font-extralight!">
+				{/*
+					The three `!important` markers this used to carry were vestigial.
+					They were needed when the `section p` defaults lived unlayered in
+					`global.module.css`, where nothing layered could override them. Those
+					rules are in `@layer base` now, so a utility beats them on layer
+					order alone and the markers were overriding nothing.
+				*/}
+				<p className="text-body-lg text-primary/75 text-right font-extralight">
 					Join our community and start creating amazing{' '}
 					<strong className="text-primary">
 						3D experiences with Vectreal.
