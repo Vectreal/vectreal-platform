@@ -12,7 +12,7 @@ import { createStore } from 'jotai'
 import { describe, expect, it } from 'vitest'
 
 import {
-	activeComposeToolAtom,
+	openComposeToolAtom,
 	processAtom,
 	processInitialState
 } from './publisher-config-store'
@@ -25,7 +25,7 @@ const storeWith = (overrides: Partial<ProcessState>) => {
 	return store
 }
 
-describe('activeComposeToolAtom', () => {
+describe('openComposeToolAtom', () => {
 	it('names the tool whose panel is open', () => {
 		const store = storeWith({
 			mode: 'compose',
@@ -33,7 +33,7 @@ describe('activeComposeToolAtom', () => {
 			showSidebar: true
 		})
 
-		expect(store.get(activeComposeToolAtom)).toBe('hotspots')
+		expect(store.get(openComposeToolAtom)).toBe('hotspots')
 	})
 
 	it('goes null when the drawer closes, though the tool stays selected', () => {
@@ -46,7 +46,7 @@ describe('activeComposeToolAtom', () => {
 		})
 
 		expect(store.get(processAtom).activeComposeTool).toBe('hotspots')
-		expect(store.get(activeComposeToolAtom)).toBeNull()
+		expect(store.get(openComposeToolAtom)).toBeNull()
 	})
 
 	it('goes null outside compose mode', () => {
@@ -56,7 +56,7 @@ describe('activeComposeToolAtom', () => {
 			showSidebar: true
 		})
 
-		expect(store.get(activeComposeToolAtom)).toBeNull()
+		expect(store.get(openComposeToolAtom)).toBeNull()
 	})
 
 	it('names no tool before the author has opened one', () => {
@@ -64,7 +64,7 @@ describe('activeComposeToolAtom', () => {
 		const store = createStore()
 
 		expect(processInitialState.activeComposeTool).toBe('environment')
-		expect(store.get(activeComposeToolAtom)).toBeNull()
+		expect(store.get(openComposeToolAtom)).toBeNull()
 	})
 
 	it('follows the author from one tool to the next', () => {
@@ -78,6 +78,6 @@ describe('activeComposeToolAtom', () => {
 			activeComposeTool: 'shadow'
 		}))
 
-		expect(store.get(activeComposeToolAtom)).toBe('shadow')
+		expect(store.get(openComposeToolAtom)).toBe('shadow')
 	})
 })

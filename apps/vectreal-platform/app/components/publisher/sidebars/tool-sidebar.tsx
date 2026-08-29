@@ -20,12 +20,10 @@ import {
 	arePublisherActionsDisabledAtom,
 	isPreviewModeAtom,
 	processAtom,
+	openComposeToolAtom,
 	toolSidebarStateAtom
 } from '../../../lib/stores/publisher-config-store'
-import {
-	PUBLISHER_EDGE_INSET,
-	PUBLISHER_LAYER
-} from '../shell/shell-layout'
+import { PUBLISHER_EDGE_INSET, PUBLISHER_LAYER } from '../shell/shell-layout'
 
 import type { ComposeTool } from '../../../types/publisher-config'
 
@@ -38,6 +36,9 @@ export const ToolSidebar = memo(
 	({ user: _user, isMobile = false }: ToolSidebarProps) => {
 		const { activeComposeTool, showSidebar } =
 			useAtomValue(toolSidebarStateAtom)
+		// The same derivation every in-scene affordance uses, so the rail's
+		// highlight and a tool's canvas UI can never disagree about what is open.
+		const openComposeTool = useAtomValue(openComposeToolAtom)
 		const arePublisherActionsDisabled = useAtomValue(
 			arePublisherActionsDisabledAtom
 		)
@@ -82,9 +83,7 @@ export const ToolSidebar = memo(
 				<motion.div
 					// Editing tools have no meaning in preview mode, so the rail leaves
 					// instead of sitting there disabled.
-					animate={
-						isPreviewMode ? { opacity: 0, x: -8 } : { opacity: 1, x: 0 }
-					}
+					animate={isPreviewMode ? { opacity: 0, x: -8 } : { opacity: 1, x: 0 }}
 					transition={{ duration: 0.24, ease: [0.4, 0, 0.2, 1] }}
 					aria-hidden={isPreviewMode}
 					className={cn(
@@ -95,7 +94,7 @@ export const ToolSidebar = memo(
 					)}
 				>
 					{COMPOSE_TOOL_DEFINITIONS.map(({ value, icon: Icon, shortLabel }) => {
-						const isActive = value === activeComposeTool && showSidebar
+						const isActive = value === openComposeTool
 						return (
 							<Tooltip key={value}>
 								<TooltipTrigger asChild>

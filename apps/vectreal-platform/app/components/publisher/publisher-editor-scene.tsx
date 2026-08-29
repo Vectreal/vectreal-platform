@@ -13,7 +13,7 @@ import {
 	resolveHotspotAnchor
 } from '../../lib/domain/scene/scene-hotspot-placement'
 import {
-	activeComposeToolAtom,
+	openComposeToolAtom,
 	isClickToPlaceActiveAtom
 } from '../../lib/stores/publisher-config-store'
 import {
@@ -350,10 +350,10 @@ export const PublisherEditorScene = memo(() => {
 	const [isClickToPlaceActive, setIsClickToPlaceActive] = useAtom(
 		isClickToPlaceActiveAtom
 	)
-	const activeComposeTool = useAtomValue(activeComposeToolAtom)
+	const openComposeTool = useAtomValue(openComposeToolAtom)
 	// The tool whose panel is open, never the one merely selected: closing the
 	// drawer has to take the gizmo and click-to-place with it.
-	const isHotspotToolActive = activeComposeTool === 'hotspots'
+	const isHotspotToolActive = openComposeTool === 'hotspots'
 	const isPlacementArmed = isClickToPlaceActive && isHotspotToolActive
 	// The object the viewer renders, and the only thing a hotspot anchors to.
 	const { file } = useModelContext()

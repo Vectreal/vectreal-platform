@@ -98,7 +98,7 @@ const toolSidebarStateAtom = selectAtom(
  * `mode` is in the test because these are *compose* tools: leaving optimize mode
  * showing a compose tool's in-scene handles is the same category of leak.
  */
-const activeComposeToolAtom = selectAtom(processAtom, (state) =>
+const openComposeToolAtom = selectAtom(processAtom, (state) =>
 	state.mode === 'compose' && state.showSidebar ? state.activeComposeTool : null
 )
 
@@ -131,7 +131,7 @@ export {
 	maxSceneBytesAtom,
 	showSidebarAtom,
 	toolSidebarStateAtom,
-	activeComposeToolAtom,
+	openComposeToolAtom,
 	showPublishPanelAtom,
 	isSavingAtom,
 	hasUnsavedChangesAtom,
