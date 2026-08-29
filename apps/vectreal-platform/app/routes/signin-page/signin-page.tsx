@@ -27,6 +27,11 @@ import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signin-page'
 import { captureServerEvent } from '../../lib/domain/analytics/server-events.server'
+import {
+	AUTH_ERROR_MESSAGES,
+	classifySigninFailure,
+	type AuthErrorCode
+} from '../../lib/domain/auth/signin-failure'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { recordRateLimitAttempt } from '../../lib/http/rate-limit.server'
 import { duration, ease, STAGGER_STEP } from '../../lib/motion/motion-tokens'
@@ -36,34 +41,6 @@ import { createSupabaseClient } from '../../lib/supabase.server'
 
 import type { PostHogContext } from '../../lib/posthog/posthog-middleware'
 import type { AuthLayoutContext } from '../layouts/signin-layout'
-
-type AuthErrorCode =
-	| 'verification_failed'
-	| 'provider_exchange_failed'
-	| 'user_init_failed'
-	| 'email_conflict'
-	| 'missing_code'
-	| 'session_missing'
-	| 'rate_limited'
-	| 'invalid_credentials'
-	| 'unknown'
-
-const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
-	verification_failed:
-		'We could not verify your email link. Please request a new one and try again.',
-	provider_exchange_failed:
-		'Authentication provider sign-in failed. Please try again.',
-	user_init_failed:
-		'Your account was authenticated, but setup could not be completed. Please try signing in again.',
-	email_conflict:
-		'An account with this email already exists. Please sign in with your existing method (e.g. Google or GitHub).',
-	missing_code:
-		'Missing authentication code. Please restart the sign-in flow and try again.',
-	session_missing: 'Session creation failed. Please sign in again.',
-	rate_limited: 'Too many sign-in attempts. Please try again shortly.',
-	invalid_credentials: 'Invalid email or password.',
-	unknown: 'Unable to sign in right now. Please try again.'
-}
 
 interface SigninActionData {
 	errors?: Record<string, string>
@@ -204,27 +181,39 @@ export async function action({ request, context }: Route.ActionArgs) {
 	}
 
 	if (authError) {
-		const message = authError.message.toLowerCase()
-		const invalidCredentials = message.includes('invalid login credentials')
-		const captchaFailed =
-			message.includes('captcha') || message.includes('turnstile')
+		const failure = classifySigninFailure(authError.message)
 
-		const errorCode: AuthErrorCode = captchaFailed
-			? 'verification_failed'
-			: invalidCredentials
-				? 'invalid_credentials'
-				: 'unknown'
+		if (failure.report) {
+			reportServerError(authError, {
+				request,
+				properties: {
+					signin_failure_code: failure.code,
+					supabase_message: authError.message
+				}
+			})
+		}
 
-		if (!invalidCredentials && !captchaFailed) {
-			reportServerError(authError, { request })
+		/*
+		  The one failure with a screen that can fix it. GoTrue only reports a
+		  missing confirmation once the password has already checked out, so this
+		  redirect cannot tell a stranger anything - and the resend gate was
+		  otherwise reachable only from a successful sign-up, which is no help to
+		  someone whose confirmation email never arrived.
+		*/
+		if (failure.code === 'email_not_confirmed') {
+			const confirmPendingUrl = new URL(
+				'/auth/confirm-pending',
+				new URL(request.url).origin
+			)
+			confirmPendingUrl.searchParams.set('email', normalizedEmail)
+			return redirect(confirmPendingUrl.toString(), {
+				headers: new Headers(headers)
+			})
 		}
 
 		return data<SigninActionData>(
-			{
-				formError: AUTH_ERROR_MESSAGES[errorCode],
-				errorCode
-			},
-			{ status: invalidCredentials ? 401 : 500, headers }
+			{ formError: failure.message, errorCode: failure.code },
+			{ status: failure.status, headers }
 		)
 	}
 
