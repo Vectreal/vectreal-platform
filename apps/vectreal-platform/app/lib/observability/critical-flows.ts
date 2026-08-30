@@ -59,6 +59,22 @@ const API_PROJECT_KEYS = {
 }
 
 export const CRITICAL_FLOWS: CriticalFlow[] = [
+	/*
+	  Step zero. Everything below it assumes an account, and for a while creating
+	  one was reliably broken while this list said the funnel started at "save a
+	  scene" - the route reported nothing at all on the branch that was firing.
+	*/
+	{
+		id: 'create-account',
+		step: 'create an account',
+		module: 'app/lib/domain/auth/signup-failure.ts',
+		routes: [
+			{
+				file: './routes/signup-page/signup-page.tsx',
+				pattern: /^\/sign-up$/
+			}
+		]
+	},
 	{
 		id: 'save-scene',
 		step: 'save a scene',

@@ -9,7 +9,17 @@ const alertVariants = cva(
 			variant: {
 				default: 'ds-raised text-card-foreground',
 				destructive:
-					'text-destructive ds-raised [&>svg]:text-current *:data-[slot=alert-description]:text-destructive/90'
+					'text-destructive ds-raised [&>svg]:text-current *:data-[slot=alert-description]:text-destructive/90',
+				/*
+				  Elevation comes from the ladder, as in `destructive`, so a success
+				  alert nested on a raised panel keeps the same edge as every other
+				  alert. The icon differs from `destructive` on purpose: it takes the
+				  saturated hue while the text takes the `-foreground` role, because
+				  the saturated green only just clears the 3:1 non-text floor on a
+				  light raised surface and would fail outright behind body copy.
+				*/
+				success:
+					'text-success-foreground ds-raised [&>svg]:text-success *:data-[slot=alert-description]:text-success-foreground/80'
 			}
 		},
 		defaultVariants: {

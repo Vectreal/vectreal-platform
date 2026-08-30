@@ -1,3 +1,4 @@
+import { Alert, AlertDescription } from '@shared/components/ui/alert'
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
 import { data, redirect, useNavigation, type MetaFunction } from 'react-router'
@@ -93,7 +94,7 @@ export default function ResetPasswordPage({
 
 	return (
 		<div className="w-full max-w-md">
-			<h1 className="mb-2 text-2xl font-semibold">Set a new password</h1>
+			<h1 className="text-h3 mb-2">Set a new password</h1>
 			<p className="text-muted-foreground mb-8 text-sm leading-relaxed">
 				Choose a new password for your account.
 			</p>
@@ -102,13 +103,9 @@ export default function ResetPasswordPage({
 				<AuthenticityTokenInput />
 
 				{formError && (
-					<div
-						className="border-destructive/50 bg-destructive/10 text-destructive rounded-lg border p-4 text-sm"
-						role="alert"
-						aria-live="assertive"
-					>
-						{formError}
-					</div>
+					<Alert variant="destructive" aria-live="assertive">
+						<AlertDescription>{formError}</AlertDescription>
+					</Alert>
 				)}
 
 				<div>

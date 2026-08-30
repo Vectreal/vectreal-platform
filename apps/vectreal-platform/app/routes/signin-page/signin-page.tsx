@@ -1,3 +1,8 @@
+import {
+	Alert,
+	AlertDescription,
+	AlertTitle
+} from '@shared/components/ui/alert'
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
 import {
@@ -8,7 +13,7 @@ import {
 } from '@shared/components/ui/tooltip'
 import { AnimatePresence, motion, Variants } from 'framer-motion'
 import { Eye, EyeClosed, ExternalLink, Save } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
 	data,
 	Form,
@@ -24,6 +29,7 @@ import { Route } from './+types/signin-page'
 import { captureServerEvent } from '../../lib/domain/analytics/server-events.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { recordRateLimitAttempt } from '../../lib/http/rate-limit.server'
+import { duration, ease, STAGGER_STEP } from '../../lib/motion/motion-tokens'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
 import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
@@ -277,13 +283,7 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	const formError =
 		typedActionData?.formError ?? loaderData?.authErrorMessage ?? null
 
-	const { turnstileToken, resetTurnstile, hasTurnstile } =
-		useOutletContext<AuthLayoutContext>()
-
-	useEffect(() => {
-		if (!typedActionData) return
-		resetTurnstile()
-	}, [typedActionData, resetTurnstile])
+	const { turnstileToken, hasTurnstile } = useOutletContext<AuthLayoutContext>()
 
 	const isSubmitting = navigation.state === 'submitting'
 
@@ -292,7 +292,11 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 		visible: (i: number) => ({
 			opacity: 1,
 			y: 0,
-			transition: { delay: i * 0.06, duration: 0.22, ease: 'easeOut' }
+			transition: {
+				delay: i * STAGGER_STEP,
+				duration: duration.base,
+				ease: ease.out
+			}
 		})
 	}
 
@@ -306,40 +310,40 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 						initial={{ opacity: 0, y: -6 }}
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: -6 }}
-						transition={{ duration: 0.2 }}
-						className="border-error-border bg-error-bg text-error-foreground mb-6 rounded-lg border p-4 text-sm"
+						transition={{ duration: duration.fast, ease: ease.out }}
+						className="mb-6"
 					>
-						{formError}
+						<Alert variant="destructive" aria-live="assertive">
+							<AlertDescription>{formError}</AlertDescription>
+						</Alert>
 					</motion.div>
 				)}
 			</AnimatePresence>
 
 			{loaderData?.sceneSaved && (
-				<div className="border-success/50 bg-success/25 text-success-foreground/80 mb-6 space-y-2 rounded-lg border p-4 text-sm">
-					<span className="flex gap-2">
-						<Save className="h-4 w-4 text-inherit" aria-hidden="true" />
-						<p className="font-medium! text-inherit!">
-							Scene Saved Temporarily!
+				<Alert variant="success" role="status" className="mb-6">
+					<Save aria-hidden="true" />
+					<AlertTitle>Scene saved temporarily</AlertTitle>
+					<AlertDescription>
+						<p>
+							Your scene configuration has been saved. Sign up with Google or
+							GitHub to convert to a permanent account and access your scene.
 						</p>
-					</span>
-					<p className="text-success-foreground/60!">
-						Your scene configuration has been saved. Sign up with Google or
-						GitHub to convert to a permanent account and access your scene.
-					</p>
-					{loaderData.nextPath && (
-						<Button
-							asChild
-							size="sm"
-							variant="outline"
-							className="border-success/50 text-success-foreground/80 hover:bg-success/20 hover:text-success-foreground mt-1 w-full"
-						>
-							<Link to={loaderData.nextPath}>
-								<ExternalLink className="mr-1 h-3 w-3" />
-								Open Publisher to restore draft
-							</Link>
-						</Button>
-					)}
-				</div>
+						{loaderData.nextPath && (
+							<Button
+								asChild
+								size="sm"
+								variant="outline"
+								className="mt-2 w-full"
+							>
+								<Link to={loaderData.nextPath}>
+									<ExternalLink className="mr-1 h-3 w-3" />
+									Open Publisher to restore draft
+								</Link>
+							</Button>
+						)}
+					</AlertDescription>
+				</Alert>
 			)}
 
 			<Form className="w-full" method="post" action="/sign-in">
