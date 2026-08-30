@@ -40,6 +40,12 @@ const CASES: [string, SignupFailureCode][] = [
 	  email" above is therefore unreachable while the hook is on - it is kept
 	  because `[auth.email.smtp]` would take over if the hook were disabled.
 	*/
+	// Our own wording, via the hook's error envelope on a 200.
+	[
+		'Auth email delivery failed: Resend rejected the request',
+		'email_send_failed'
+	],
+	['Auth email delivery failed', 'email_send_failed'],
 	['Unexpected status code returned from hook: 500', 'email_send_failed'],
 	['Invalid payload sent to hook', 'email_send_failed'],
 	['Hook requires authorization token', 'email_send_failed'],
@@ -113,8 +119,8 @@ describe('classifySignupFailure', () => {
 
 	/*
 	  Must not claim the account exists: GoTrue rolls the user back with the
-	  failed send, both being inside one transaction. And it must not send anyone
-	  to sign in, which has no branch for an unconfirmed account.
+	  failed send, both being inside one transaction. So it must not send anyone
+	  to sign in either - there is no account there to find.
 	*/
 	it('advises the one recovery path that exists when the email fails', () => {
 		const { message } = classifySignupFailure(

@@ -123,7 +123,10 @@ describe('useSpendTurnstileToken', () => {
 
 	/*
 	  With no site key the sign-up and sign-in forms still render the hidden
-	  input, so they post an empty string while the live token is null.
+	  input, so they post an empty string while the live token is null. Both
+	  guards reject it - the emptiness check first, and the token comparison
+	  would anyway - so this does not pin guard 3 on its own. The case below,
+	  with no field at all, is the one that does.
 	*/
 	it('ignores the empty token an unconfigured Turnstile posts', () => {
 		const onSpend = vi.fn()
@@ -169,10 +172,7 @@ describe('useSpendTurnstileToken', () => {
 		expect(onSpend).not.toHaveBeenCalled()
 
 		// The widget minted tok-2, and the resend fetcher carries it.
-		rerender(
-			[{ formData: oauth.formData }, submissionWith('tok-2')],
-			'tok-2'
-		)
+		rerender([{ formData: oauth.formData }, submissionWith('tok-2')], 'tok-2')
 
 		expect(onSpend).toHaveBeenCalledOnce()
 		expect(onSpend).toHaveBeenCalledWith('tok-2')

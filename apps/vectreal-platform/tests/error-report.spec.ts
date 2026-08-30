@@ -231,3 +231,40 @@ describe('buildErrorReport', () => {
 		})
 	})
 })
+
+/*
+  Single fetch is how every real submission arrives. With JavaScript running the
+  sign-up form posts to `/sign-up.data`, not `/sign-up`, and `reportServerError`
+  reads the pathname straight off the request - so matching the raw path tagged
+  no flow at all on the one route whose only entry is a form action.
+*/
+describe('critical flows on single-fetch paths', () => {
+	it('tags the sign-up action however the browser submitted it', () => {
+		expect(criticalFlowsForPathname('/sign-up')).toContain('create-account')
+		expect(criticalFlowsForPathname('/sign-up.data')).toContain(
+			'create-account'
+		)
+	})
+
+	/*
+	  React Router appends `_.data` rather than `.data` when the path already
+	  ends in a slash, and it matches routes case-insensitively - so both of
+	  these serve the sign-up page and both must tag the flow.
+	*/
+	it('tags the `_.data` spelling a trailing slash produces', () => {
+		expect(criticalFlowsForPathname('/sign-up/_.data')).toContain(
+			'create-account'
+		)
+		expect(criticalFlowsForPathname('/sign-up/')).toContain('create-account')
+	})
+
+	it('tags a route reached with different casing', () => {
+		expect(criticalFlowsForPathname('/SIGN-UP.data')).toContain(
+			'create-account'
+		)
+	})
+
+	it('still tags nothing for a path off the funnel', () => {
+		expect(criticalFlowsForPathname('/pricing.data')).toEqual([])
+	})
+})

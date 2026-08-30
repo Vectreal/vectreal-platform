@@ -7,7 +7,7 @@
 import { Button } from '@shared/components/ui/button'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Loader2, Mail, RotateCcw } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import {
 	data,
 	Link,
@@ -21,7 +21,9 @@ import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/confirm-pending'
 import { AuthErrorBoundary } from '../components/errors'
+import { useResendCooldown } from '../hooks/use-resend-cooldown'
 import { clearReferralAttribution } from '../lib/domain/analytics/referral-attribution'
+import { resendCooldownFor } from '../lib/domain/auth/resend-cooldown'
 import { ensureValidCsrfFormData } from '../lib/http/csrf.server'
 import { recordRateLimitAttempt } from '../lib/http/rate-limit.server'
 import {
@@ -68,11 +70,15 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	const url = new URL(request.url)
 	const email = url.searchParams.get('email') ?? ''
-	const next = url.searchParams.get('next') ?? '/onboarding'
 	const referrer = url.searchParams.get('referrer') ?? ''
 	const utm_source = url.searchParams.get('utm_source') ?? ''
 
-	return data({ email, next, referrer, utm_source }, { headers })
+	/*
+	  No `next`. It was carried into loader data that nothing read, while the
+	  resend action hardcodes `/onboarding` as the confirmation destination - so
+	  the screen looked like it honoured a return path and did not.
+	*/
+	return data({ email, referrer, utm_source }, { headers })
 }
 
 // ─── Action ───────────────────────────────────────────────────────────────────
@@ -156,37 +162,21 @@ function maskEmail(email: string): string {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const RESEND_COOLDOWN_SECONDS = 60
-
 export default function ConfirmPending() {
 	const { email, referrer, utm_source } = useLoaderData<typeof loader>()
 	const fetcher = useFetcher<ActionData>()
 	const { turnstileToken, hasTurnstile } = useOutletContext<AuthLayoutContext>()
 
-	const [cooldown, setCooldown] = useState(0)
-
 	useEffect(() => {
 		clearReferralAttribution()
 	}, [])
+
+	const cooldown = useResendCooldown(fetcher, resendCooldownFor)
 
 	const isSending = fetcher.state !== 'idle'
 	const wasSent = fetcher.data?.sent === true
 	const sendError = fetcher.data?.error
 	const isRateLimited = fetcher.data?.rateLimited
-
-	// Start cooldown after a successful send. The token the send spent was
-	// already invalidated at submit time by the layout, which owns it.
-	useEffect(() => {
-		if (!wasSent) return
-		setCooldown(RESEND_COOLDOWN_SECONDS)
-	}, [wasSent])
-
-	// Countdown tick
-	useEffect(() => {
-		if (cooldown <= 0) return
-		const id = setTimeout(() => setCooldown((c) => c - 1), 1000)
-		return () => clearTimeout(id)
-	}, [cooldown])
 
 	// When Turnstile is configured, block resend until the token is ready.
 	const turnstileReady = !hasTurnstile || !!turnstileToken

@@ -1,3 +1,5 @@
+import { stripSingleFetchSuffix } from './single-fetch-path'
+
 /**
  * Single source of truth for CDN/public cache eligibility by route family.
  * Keep this file aligned with terraform/cloudflare.tf Rule 2 expression.
@@ -37,21 +39,11 @@ const CRAWL_FILE_PATHS = new Set(['/robots.txt', '/sitemap.xml', '/llms.txt'])
 const PUBLIC_EXACT_PATHS = new Set<string>(CDN_PUBLIC_EXACT_PATHS)
 
 /**
- * React Router single-fetch path normalizer for `*.data` requests. React Router
- * 8 is trailing-slash aware: a path ending in `/` gets `_.data` appended
- * (`/` → `/_.data`, `/docs/` → `/docs/_.data`), everything else gets `.data`.
- * Stripping only the bare suffix would leave `/_` and drop the root document out
- * of the allowlist.
+ * Re-exported so the existing call sites and spec keep their name. The
+ * implementation moved to a pure module because `critical-flows.ts` needs it
+ * too and cannot import a `.server` file.
  */
-export function normalizePathForCachePolicy(pathname: string): string {
-	if (pathname.endsWith('/_.data')) {
-		return pathname.slice(0, -'_.data'.length)
-	}
-
-	return pathname.endsWith('.data')
-		? pathname.slice(0, -'.data'.length)
-		: pathname
-}
+export const normalizePathForCachePolicy = stripSingleFetchSuffix
 
 export function isPublicCacheablePath(pathname: string): boolean {
 	const normalized = normalizePathForCachePolicy(pathname)

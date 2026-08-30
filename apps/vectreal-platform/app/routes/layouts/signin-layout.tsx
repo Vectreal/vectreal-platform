@@ -56,7 +56,16 @@ const SignupModel = () => {
 				thirds keeps it to two.
 			*/}
 			<div className="absolute right-0 bottom-0 z-10 max-w-2/3 px-8 pb-10">
-				<p className="text-primary/75! text-right text-xl! font-extralight!">
+				{/*
+					The three `!important` markers this used to carry were vestigial.
+					Each had a reason once: `section p` sets colour, weight and
+					line-height, and a size utility carries a line-height of its own, so
+					all three collided. Those defaults lived unlayered in
+					`global.module.css`, where nothing layered could override them. They
+					are in `@layer base` now, so a utility beats them on layer order
+					alone and the markers were doing nothing.
+				*/}
+				<p className="text-body-lg text-primary/75 text-right font-extralight">
 					Join our community and start creating amazing{' '}
 					<strong className="text-primary">
 						3D experiences with Vectreal.
@@ -82,8 +91,8 @@ const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 	  and the two password screens - used to inherit the whole apparatus anyway:
 	  a heading reading "Sign In", the Google and GitHub buttons, the "or"
 	  separator, a switch offering to sign up to someone who just did, and a
-	  second copy of the legal footer beneath their own. So the confirmation
-	  screen, which is on the account-creation funnel, read as broken.
+	  legal footer about continuing. So the confirmation screen, which is on the
+	  account-creation funnel, read as broken.
 
 	  Naming the three cases rather than adding a second boolean beside
 	  `isSignUp`, because the question the chrome asks is not "is this sign-up"
