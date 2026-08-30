@@ -43,18 +43,10 @@ need seven review rounds, and days spent perfecting something nobody depends on.
 
 **Cut by concern. Always.** One concern per task, per PR, per subagent. Review
 rounds track the number of concerns in a diff, not its size. Measured on this
-workstream:
-
-| PR | Concerns | Files | Review rounds |
-| --- | --- | --- | --- |
-| #736 eslint rules | 1 | 7 | 1 |
-| #732 hotspot fixes + module split + comparison | 3 | 20 | 3 |
-| #734 server manifest + client loader | 2 | 20 | 5 |
-| #735 route + hook + panel + dialog + key options + snippet | 6 | 14 | 7 |
-| embed domain policy | 1 | 2 | 0 |
-
-Twenty files with two concerns cost more rounds than seven files with one.
-Splitting is close to free; mixing is not.
+workstream: #736 carried one concern across seven files and needed one round;
+#735 carried six concerns across fourteen files and needed seven. Twenty files
+with two concerns cost more rounds than seven files with one. Splitting is close
+to free; mixing is not.
 
 **Spend by tier.** Distance from the funnel sets depth, and only depth.
 
@@ -67,12 +59,11 @@ Splitting is close to free; mixing is not.
 `apps/vectreal-platform/tests/critical-path.spec.ts` holds the funnel as data and
 fails when a step loses its guard. It is the tier-1 list.
 
-So the grid is:
-
-|  | Narrow scope | Wide scope |
-| --- | --- | --- |
-| **Deep** | Tier 1, correct | #735: seven rounds for one feature |
-| **Shallow** | Tier 3, correct | how the wildcard bug shipped |
+Below every tier: a change whose only purpose is to satisfy a mechanical gate -
+lint, typecheck, formatting, a renamed import - is reviewed by that gate. One
+pass that it is green and minimal, then ship. Running the loop there only grows
+the diff, because each round has to find something and the only thing left is the
+prose the last round wrote.
 
 Hyperfixation is not caused by narrow scope. It is deep effort spent on a tier-3
 concern. On 2026-08-22 three agent skill files were rewritten and verified with
@@ -85,17 +76,6 @@ sat filed and untouched from the day before. Narrow was right; deep was wrong.
    is two PRs. #735's needed five.
 2. **If the diff touches a file the scope line did not name**, stop. Either
    rename the scope out loud, or file the finding and leave the file alone.
-
-## When the loop does not run
-
-**A change whose whole purpose is to satisfy a mechanical gate - lint,
-typecheck, formatting, a renamed import - is reviewed by that gate.** One pass to
-confirm the gate is green and the change is minimal, then ship. No loop.
-
-The loop exists for changes where behavior is in question. Running it on a
-one-line lint fix does not make the fix safer; it makes the diff bigger, because
-each round has to find something and the only thing left to find is the prose the
-previous round produced.
 
 ## The loop, which is never skipped
 
@@ -141,22 +121,26 @@ enough that a finding gets checked against the code before it becomes a fix.
 **For every guard you add, mutate the production line and confirm a test goes
 red.** Run this while implementing, not after review asks for it.
 
-This is the single highest-value habit here. On PR #735 the review loop ran seven
-rounds; three separate rounds found a test of mine that could not fail, and one
-was directly beneath a comment I had written warning about that exact failure
-mode. The mutation check catches all of them in seconds and takes rounds off the
-loop.
+The mutation names what you actually verified, and whatever survives it was never
+covered however green the suite. On PR #735 three separate review rounds each
+found a test of mine that could not fail; every one would have died to a
+five-second mutation instead of a round.
 
-Named failure modes it catches:
+So mutate the line that would really break:
 
-- **The tautological assertion.** A regex capture group that can never match what
-  it claims (`[^"]*` will not contain a quote), or asserting attribute names
-  while the payload injects sibling elements. Parse with `DOMParser` and assert
-  an exact element list rather than pattern-matching a string.
-- **The untested guard.** Delete the guard; if the suite is still green, the test
-  was never testing it.
-- **The test that pins the bug.** Write the failing test first when fixing a
-  defect, and watch it fail for the stated reason before fixing.
+- **The call, not only the rule.** Tests cluster around the interesting logic,
+  which is exactly where the wiring is not, so a well-tested module that nothing
+  reaches type-checks cleanly and breaks no suite. #755 shipped a complete
+  renderer no surface called.
+- **The guard itself.** Delete it; a still-green suite was never testing it.
+- **The assertion's shape.** `[^"]*` cannot contain a quote, so a regex built on
+  it passes for reasons unrelated to the behaviour. Assert a parsed result.
+- **The defect, before the fix.** Watch the test fail for the stated reason.
+
+Environments ask the same question and cannot automate it: a check that only ever
+ran on your machine has not been run. When the surface will not run locally, show
+the obstacle is not yours (try `main`), move the proof into a gate that runs
+without you, and name what stayed unverified.
 
 ## Stop symptom-patching
 
@@ -168,6 +152,8 @@ that never runs during SSR, so both empty-state claims were baked into the serve
 HTML.
 
 Two patches of one symptom is a coincidence. Three is a missing root cause.
+Count shapes rather than files: a guard you keep re-applying somewhere new is
+itself the symptom.
 
 ## Scope discipline
 
@@ -242,8 +228,9 @@ Any claim that a phase is done carries:
 
 1. Commands run, with their result.
 2. Surfaces validated, including the failure path exercised.
-3. What was filed rather than fixed.
-4. Residual risk.
+3. What could not be verified, and what stands in for it.
+4. What was filed rather than fixed.
+5. Residual risk.
 
 If the evidence is incomplete, report in progress. Report outcomes faithfully: if
 tests fail, say so with the output; if a step was skipped, say that.
@@ -260,7 +247,7 @@ tests fail, say so with the output; if a step was skipped, say that.
 | Third patch of one symptom | Find the cause |
 | Reviewers and fixers running concurrently | Phase barrier |
 | Subagent finding applied without checking the code | Verify, then fix |
-| Success reported from a passing type-check | Runtime failure-path check in the changed surface |
+| Done declared from a green suite | Evidence it is reached, and runs where it ships |
 | Out-of-scope fix folded into the diff | Catalogue row, named in the PR |
 
 ## Verified claims

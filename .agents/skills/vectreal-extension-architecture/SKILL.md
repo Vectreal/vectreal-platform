@@ -80,6 +80,12 @@ const hasLoaded = fetcher.data !== undefined
 This shipped three separate symptom fixes before the cause was found. When you
 patch the same defect at a third call site, stop and find the cause.
 
+**State that records a *choice* rarely answers whether that choice is in
+effect.** `activeComposeTool` is never null and does not change when its panel
+closes, so three call sites combined it with `showSidebar` by hand and a fourth
+forgot - leaving an editing gizmo live after its tool had closed. Derive the
+question once, and name the derivation for the question rather than the field.
+
 **StrictMode double-invokes mount effects**, not update effects. A ref guard
 around a load-once or submit-once effect exists for that reason alone. Say so in
 a comment, or the next reader deletes it.
@@ -140,13 +146,8 @@ bundles a dependency declares that as an `ignoredDependencies` entry in
 
 ## Gates
 
-```bash
-pnpm nx run-many --target=typecheck,lint -p vctrl/core,vctrl/hooks,vctrl/viewer,vectreal-platform
-```
-
-Unit tests: `npx vitest run --root .` (or `pnpm nx test vectreal-platform`).
-Integration tests need `pnpm nx run vectreal-platform:supabase-start` first, then
-`pnpm nx run vectreal-platform:test-integration`.
+`vectreal-iterative-delivery` owns them, including the trap: a project name
+matching nothing still exits 0, so a typo turns a gate into a silent pass.
 
 ## Source of truth
 
