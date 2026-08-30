@@ -63,16 +63,19 @@ const BOUNDARIES: [string, ComponentType][] = [
 ]
 
 describe('a rendered boundary reports', () => {
-	it.each(BOUNDARIES)('%s captures the error it catches', async (_, Boundary) => {
-		const posthog = renderThrowing(Boundary, new Error('render blew up'))
+	it.each(BOUNDARIES)(
+		'%s captures the error it catches',
+		async (_, Boundary) => {
+			const posthog = renderThrowing(Boundary, new Error('render blew up'))
 
-		await waitFor(() => {
-			expect(posthog.captureException).toHaveBeenCalledTimes(1)
-		})
-		expect(posthog.captureException.mock.calls[0][0]).toMatchObject({
-			message: 'render blew up'
-		})
-	})
+			await waitFor(() => {
+				expect(posthog.captureException).toHaveBeenCalledTimes(1)
+			})
+			expect(posthog.captureException.mock.calls[0][0]).toMatchObject({
+				message: 'render blew up'
+			})
+		}
+	)
 
 	it('still renders its fallback', async () => {
 		renderThrowing(DashboardErrorBoundary, new Error('render blew up'))
@@ -91,7 +94,9 @@ describe('a rendered boundary reports', () => {
 		expect(posthog.captureException.mock.calls[0][1]).toMatchObject({
 			error_source: 'client-boundary',
 			on_critical_path: true,
-			critical_flows: ['copy-snippet']
+			// The scene detail panel offers the embed snippet and draws the scene,
+			// so a boundary there is attributable to both funnel steps.
+			critical_flows: ['copy-snippet', 'render-embed-scene']
 		})
 	})
 

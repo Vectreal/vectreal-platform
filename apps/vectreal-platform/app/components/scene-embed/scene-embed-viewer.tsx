@@ -64,6 +64,21 @@ const SceneEmbedViewer = memo(
 					controlsOptions={sceneData?.controls}
 					envOptions={sceneData?.environment}
 					normalizationOptions={sceneData?.normalization}
+					/*
+					  Straight from the scene's own settings, and never with
+					  `showInternalHotspots` or `showHiddenHotspots` beside it.
+
+					  That omission is load-bearing rather than tidy. Two of the three
+					  surfaces rendering this component are served the *unredacted*
+					  manifest - the dashboard's scene detail panel, and `/preview` of a
+					  scene that has no published model row yet - so hotspots the author
+					  marked `internalOnly` genuinely do arrive in this array, and the
+					  viewer's own default is the only thing that stops them being
+					  drawn. On the published `/embed` path `redactSettingsForEmbed` has
+					  already stripped them server-side; these are two independent
+					  gates, and this surface must never open either.
+					*/
+					hotspots={sceneData?.hotspots}
 					shadowsOptions={shadowsOptions}
 					staticShadowBake
 					bakedShadow={bakedShadow}

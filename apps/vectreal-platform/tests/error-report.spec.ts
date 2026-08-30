@@ -48,15 +48,18 @@ describe('critical flow attribution', () => {
 	})
 
 	it.each([
-		['/api/scenes/abc', ['save-scene', 'publish-scene', 'authorize-embed', 'serve-manifest']],
+		[
+			'/api/scenes/abc',
+			['save-scene', 'publish-scene', 'authorize-embed', 'serve-manifest']
+		],
 		['/api/scenes/abc/assets/xyz', ['publish-scene', 'authorize-embed']],
 		['/api/scenes/abc/thumbnail/xyz', ['publish-scene']],
 		['/api/projects/p1/api-keys', ['mint-api-key', 'allow-domain']],
 		['/dashboard/api-keys/new', ['mint-api-key']],
 		['/dashboard/projects/edit/p1', ['allow-domain']],
 		['/dashboard/projects/p1/edit', ['allow-domain']],
-		['/embed/p1/s1', ['authorize-embed']],
-		['/preview/p1/s1', ['copy-snippet']],
+		['/embed/p1/s1', ['authorize-embed', 'render-embed-scene']],
+		['/preview/p1/s1', ['copy-snippet', 'render-embed-scene']],
 		['/publisher/s1', ['serve-manifest']],
 		// Off the funnel entirely. Reported, but not as a critical-path failure.
 		['/pricing', []],
@@ -73,15 +76,18 @@ describe('critical flow attribution', () => {
 	  wrong attribution, which is worse than none because it is believed.
 	*/
 	it('does not confuse the scene page with the edit drawer', () => {
+		// The scene detail panel both offers the snippet and draws the scene, so
+		// an error there is attributable to either step.
 		expect(criticalFlowsForPathname('/dashboard/projects/p1/s1')).toEqual([
-			'copy-snippet'
+			'copy-snippet',
+			'render-embed-scene'
 		])
-		expect(criticalFlowsForPathname('/dashboard/projects/edit/p1')).not.toContain(
-			'copy-snippet'
-		)
-		expect(criticalFlowsForPathname('/dashboard/projects/p1/edit')).not.toContain(
-			'copy-snippet'
-		)
+		expect(
+			criticalFlowsForPathname('/dashboard/projects/edit/p1')
+		).not.toContain('copy-snippet')
+		expect(
+			criticalFlowsForPathname('/dashboard/projects/p1/edit')
+		).not.toContain('copy-snippet')
 	})
 })
 

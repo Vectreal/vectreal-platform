@@ -1,5 +1,4 @@
 import {
-	BoxGeometry,
 	BufferGeometry,
 	DoubleSide,
 	Float32BufferAttribute,
@@ -20,11 +19,9 @@ import { describe, expect, it } from 'vitest'
 
 import {
 	HOTSPOT_PLACEMENT_DRAG_TOLERANCE_PX,
-	isHotspotOccluded,
 	isHotspotPlacementGesture,
 	prepareHotspotRaycaster,
-	resolveHotspotAnchor,
-	resolveHotspotOcclusionTolerance
+	resolveHotspotAnchor
 } from './scene-hotspot-placement'
 
 const WIDTH = 800
@@ -101,24 +98,11 @@ function editorScene() {
 		return raycaster
 	}
 
-	const rayTowards = (marker: Vector3) => {
-		camera.updateMatrixWorld(true)
-		scene.updateMatrixWorld(true)
-		const raycaster = prepareHotspotRaycaster(new Raycaster())
-		raycaster.set(
-			camera.position,
-			marker.clone().sub(camera.position).normalize()
-		)
-		return raycaster
-	}
-
 	return {
-		camera,
 		model,
 		normalizationScale,
 		parkGizmoAt,
 		rayThrough,
-		rayTowards,
 		scene
 	}
 }
@@ -244,181 +228,6 @@ describe('resolveHotspotAnchor', () => {
 
 		expect(anchor).not.toBeNull()
 		expect(distanceFromModelSurface(anchor!)).toBeLessThan(ON_THE_SURFACE)
-	})
-})
-
-describe('isHotspotOccluded', () => {
-	it('reports occluded when the root is widened past the model', () => {
-		const { model, parkGizmoAt, rayTowards, scene } = editorScene()
-
-		const marker = new Vector3(0, 1, 1)
-		// The gizmo belongs to another hotspot, one the author dragged off to the
-		// side. It is three units clear of this marker and still covers it, because
-		// the plane is 100,000 units wide - which is why every marker in the scene
-		// dimmed no matter where the gizmo sat.
-		parkGizmoAt(new Vector3(3, 1, 2))
-		const distance = 4
-		const tolerance = resolveHotspotOcclusionTolerance(model)
-
-		expect(
-			isHotspotOccluded(rayTowards(marker), scene, distance, tolerance)
-		).toBe(true)
-		expect(
-			isHotspotOccluded(rayTowards(marker), model, distance, tolerance)
-		).toBe(false)
-	})
-
-	/**
-	 * Pins the tolerance's lower bound. Half a percent of the radius stands in for
-	 * the gizmo nudge, the largest of the three drifts the slack exists for and
-	 * the one that sets this bound - storage rounding and Draco re-quantization
-	 * are orders of magnitude smaller. Without slack the face the marker sits on
-	 * reads as covering it.
-	 */
-	it('does not dim a marker sitting just inside the face it was placed on', () => {
-		const { camera, model, rayThrough, rayTowards } = editorScene()
-
-		const placed = resolveHotspotAnchor(rayThrough(...OVER_THE_MODEL), model)!
-		const marker = new Vector3(...placed).lerp(new Vector3(0, 1, 0), 0.005)
-
-		expect(
-			isHotspotOccluded(
-				rayTowards(marker),
-				model,
-				camera.position.distanceTo(marker),
-				resolveHotspotOcclusionTolerance(model)
-			)
-		).toBe(false)
-	})
-
-	/**
-	 * Pins the ceiling. A twentieth of the radius behind the near face is sunk,
-	 * not seated, and slack wide enough to forgive that would stop a marker
-	 * dimming when it is genuinely inside the model.
-	 */
-	it('dims a marker sunk a twentieth of the radius behind the near face', () => {
-		const { camera, model, rayTowards } = editorScene()
-
-		const marker = new Vector3(0, 1, 0.95)
-
-		expect(
-			isHotspotOccluded(
-				rayTowards(marker),
-				model,
-				camera.position.distanceTo(marker),
-				resolveHotspotOcclusionTolerance(model)
-			)
-		).toBe(true)
-	})
-
-	it('still reports geometry that genuinely covers the marker', () => {
-		const { camera, model, rayTowards } = editorScene()
-
-		// The far side of the sphere: the near face is in the way.
-		const marker = new Vector3(0, 1, -1)
-
-		expect(
-			isHotspotOccluded(
-				rayTowards(marker),
-				model,
-				camera.position.distanceTo(marker),
-				resolveHotspotOcclusionTolerance(model)
-			)
-		).toBe(true)
-	})
-
-	/**
-	 * `modelRoot` is `file?.model ?? null` and is genuinely null until the model
-	 * loads. Answering `true` there would dim every marker permanently.
-	 */
-	it('reports nothing occluded before a model is loaded', () => {
-		const { rayTowards } = editorScene()
-
-		expect(
-			isHotspotOccluded(rayTowards(new Vector3(0, 1, 1)), null, 4, 0.01)
-		).toBe(false)
-	})
-})
-
-describe('resolveHotspotOcclusionTolerance', () => {
-	it('is nothing before a model is loaded', () => {
-		expect(resolveHotspotOcclusionTolerance(null)).toBe(0)
-	})
-
-	/**
-	 * A root carrying no geometry measures as an empty box, whose min is
-	 * +Infinity and max -Infinity. Left alone that yields a negative slack, which
-	 * widens the occlusion test instead of narrowing it.
-	 */
-	it('is nothing for a root with no geometry in it', () => {
-		expect(resolveHotspotOcclusionTolerance(new Group())).toBe(0)
-	})
-
-	/**
-	 * Pins the measure itself, not just how it scales. Without this the suite
-	 * cannot tell the bounding-box diagonal from twice or half of it.
-	 */
-	it('is a fixed fraction of the bounding-box diagonal', () => {
-		const cube = new Group()
-		cube.add(new Mesh(new BoxGeometry(2, 4, 4), new MeshBasicMaterial()))
-
-		// 2 x 4 x 4 has a diagonal of 6, and the slack is half a percent of it.
-		// Spelled as a literal: writing the constant on both sides would pin the
-		// shape of the measure while saying nothing about its value, and the two
-		// behavioural tests either side only bracket it within a factor of ten.
-		expect(resolveHotspotOcclusionTolerance(cube)).toBeCloseTo(0.03, 10)
-	})
-
-	it('measures the model as the world sees it, through every ancestor', () => {
-		const { model, normalizationScale } = editorScene()
-
-		const unscaled = resolveHotspotOcclusionTolerance(model)
-		normalizationScale.scale.setScalar(3)
-
-		expect(resolveHotspotOcclusionTolerance(model)).toBeCloseTo(unscaled * 3, 8)
-	})
-
-	/**
-	 * The reason the slack is derived from the model rather than written in world
-	 * units. Nothing bounds the size a scene arrives at - runtime normalization is
-	 * off by default - so a constant that seats a marker on a unit model swallows
-	 * a tenth of a model a tenth that size.
-	 */
-	it('scales with the model, so a tenth-size scene judges the same', () => {
-		const small = editorScene()
-		small.normalizationScale.scale.setScalar(0.1)
-		small.camera.position.set(0, 1, 0.5)
-		small.camera.lookAt(0, 1, 0)
-
-		const tolerance = resolveHotspotOcclusionTolerance(small.model)
-		expect(tolerance).toBeCloseTo(
-			resolveHotspotOcclusionTolerance(editorScene().model) * 0.1,
-			6
-		)
-
-		const seated = new Vector3(
-			...resolveHotspotAnchor(small.rayThrough(...OVER_THE_MODEL), small.model)!
-		).lerp(new Vector3(0, 1, 0), 0.005)
-		// A twentieth of this model's radius, which is a two-hundredth of a unit.
-		const sunk = new Vector3(0, 1, 0.095)
-
-		expect(
-			isHotspotOccluded(
-				small.rayTowards(seated),
-				small.model,
-				small.camera.position.distanceTo(seated),
-				tolerance
-			)
-		).toBe(false)
-
-		expect(
-			isHotspotOccluded(
-				small.rayTowards(sunk),
-				small.model,
-				small.camera.position.distanceTo(sunk),
-				tolerance
-			)
-		).toBe(true)
 	})
 })
 

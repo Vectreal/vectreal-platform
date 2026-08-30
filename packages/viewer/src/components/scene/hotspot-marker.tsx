@@ -6,6 +6,7 @@ import { resolveHotspotInteraction } from './hotspot-interaction'
 
 import type { HotspotMarker as HotspotMarkerModel } from './resolve-hotspot-markers'
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
+import type { Group } from 'three'
 
 /**
  * Under the viewer's own overlay chrome, which sits at 100 (the animation
@@ -24,6 +25,9 @@ const HOTSPOT_Z_INDEX_RANGE = [40, 0]
  * read it.
  */
 const TOUCH_LABEL_DURATION_MS = 2500
+
+/** Hoisted so drei's `styles` memo is not defeated by a fresh object per render. */
+const HTML_WRAPPER_STYLE = { pointerEvents: 'none' } as const
 
 /**
  * A hairline edge and a soft shadow, on every preset.
@@ -61,7 +65,12 @@ const markerClasses = {
 	// A 24px floor on the box that takes the pointer, which then grows to fit
 	// whatever is inside it. The plain dot is 12px: well under the minimum target
 	// size, and missed by a thumb on a touch screen.
-	body: 'relative m-0 flex min-h-6 min-w-6 appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 leading-none',
+	// `vctrl-hotspot-body` carries no styles of its own. It is the hook the
+	// selected and hidden rules in styles.css reach for, and they have to land on
+	// a descendant of the root: `hotspotColor` writes `--vctrl-hotspot-fill` as an
+	// inline style on the root itself, and an inline declaration beats any
+	// stylesheet rule for the same property on the same element.
+	body: 'vctrl-hotspot-body relative m-0 flex min-h-6 min-w-6 appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 leading-none',
 	live: 'pointer-events-auto',
 	inert: 'pointer-events-none',
 	interactive: 'cursor-pointer',
@@ -96,10 +105,19 @@ export interface HotspotMarkerProps {
 	marker: HotspotMarkerModel
 	/** Computed by `SceneHotspots`, which owns the depth test for every marker. */
 	occluded: boolean
+	/** Drawn as the one an editing surface has picked out. */
+	selected?: boolean
 	/** Overrides the marker fill. Any CSS colour; undefined keeps the default. */
 	color?: string
 	/** Runs when a hotspot carrying a `linkedCameraId` is activated. */
 	onActivate?: (cameraId: string) => void
+	/** Runs when a marker is picked on a surface that selects rather than flies. */
+	onSelect?: (id: string) => void
+	/**
+	 * Hands `SceneHotspots` the anchor group it moves during a drag, and `null`
+	 * on unmount. See the group below.
+	 */
+	onAnchorRef: (id: string, node: Group | null) => void
 }
 
 /**
@@ -113,16 +131,31 @@ export interface HotspotMarkerProps {
 const HotspotMarker = ({
 	marker,
 	occluded,
+	selected = false,
 	color,
-	onActivate
+	onActivate,
+	onSelect,
+	onAnchorRef
 }: HotspotMarkerProps) => {
 	const [labelVisible, setLabelVisible] = useState(false)
 	const touchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
 	const interaction = resolveHotspotInteraction(marker, {
 		occluded,
-		canActivate: !!onActivate
+		canActivate: !!onActivate,
+		canSelect: !!onSelect
 	})
+
+	// A block body, not a concise one. React 19 treats a *function* returned from
+	// a callback ref as its cleanup and then stops calling `ref(null)`, so a
+	// concise body forwarding the registrar's return value is one refactor of that
+	// registrar away from silently leaking every anchor. Nothing warns.
+	const anchorRef = useCallback(
+		(node: Group | null) => {
+			onAnchorRef(marker.id, node)
+		},
+		[marker.id, onAnchorRef]
+	)
 
 	const clearTouchTimeout = () => {
 		if (touchTimeout.current !== null) {
@@ -169,10 +202,18 @@ const HotspotMarker = ({
 	)
 
 	const handleClick = useCallback(() => {
-		if (interaction.activatable && marker.linkedCameraId) {
+		if (interaction.action === 'select') {
+			onSelect?.(marker.id)
+		} else if (interaction.action === 'activate' && marker.linkedCameraId) {
 			onActivate?.(marker.linkedCameraId)
 		}
-	}, [interaction.activatable, marker.linkedCameraId, onActivate])
+	}, [
+		interaction.action,
+		marker.id,
+		marker.linkedCameraId,
+		onActivate,
+		onSelect
+	])
 
 	// Set on the marker root rather than the viewer container: drei portals every
 	// Html separately, so there is no shared ancestor inside the marker layer.
@@ -217,47 +258,81 @@ const HotspotMarker = ({
 		)
 
 	return (
-		<Html center position={marker.position} zIndexRange={HOTSPOT_Z_INDEX_RANGE}>
-			<div
-				className={cn(markerClasses.root, occluded && markerClasses.occluded)}
-				style={colorStyle}
-				onPointerEnter={handlePointerEnter}
-				onPointerLeave={handlePointerLeave}
+		/*
+		  The anchor `SceneHotspots` writes to while this marker is being dragged.
+		  drei's `Html` renders a group of its own and does not forward a ref to it,
+		  so following a gizmo at 60fps needs a group of ours to mutate.
+
+		  Unconditional, never gated on whether an editing surface is attached:
+		  wrapping conditionally would remount the `Html` the moment editing turned
+		  on, tearing down drei's portal and dropping keyboard focus with it. The
+		  `position` prop stays here so a marker is correct with zero frames
+		  elapsed - a consumer may be running `frameloop="demand"` - and so React
+		  keeps handling every update that is not a drag.
+		*/
+		<group ref={anchorRef} position={marker.position}>
+			{/*
+			  `pointerEvents: 'none'` on the wrapper, not just on the body.
+
+			  drei's non-transform branch renders `{position, transform, ...style}`
+			  and nothing else, so without this its div defaults to `auto` and
+			  shrink-wraps the marker - a 24px box that takes the pointer even when
+			  the body inside it has refused it. Two things break without it: the
+			  `pointerEvents: 'none'` an occluded marker asks for is overruled one
+			  level up, so a marker faded to 15% still swallows clicks and blocks an
+			  orbit started on top of it; and an authoring surface listening on the
+			  canvas never sees a press that lands here at all. Its `pointerEvents`
+			  prop is no use - that one only reaches the inner div in transform mode.
+			*/}
+			<Html
+				center
+				zIndexRange={HOTSPOT_Z_INDEX_RANGE}
+				style={HTML_WRAPPER_STYLE}
 			>
-				<span aria-hidden="true" className={markerClasses.pulse} />
+				<div
+					className={cn(markerClasses.root, occluded && markerClasses.occluded)}
+					style={colorStyle}
+					data-selected={selected || undefined}
+					data-hidden={marker.hidden || undefined}
+					onPointerEnter={handlePointerEnter}
+					onPointerLeave={handlePointerLeave}
+				>
+					<span aria-hidden="true" className={markerClasses.pulse} />
 
-				{interaction.role === 'button' ? (
-					<button
-						type="button"
-						className={cn(
-							bodyClasses,
-							FOCUS_RING,
-							interaction.activatable && markerClasses.interactive
-						)}
-						aria-label={marker.accessibleName}
-						aria-disabled={interaction.activatable ? undefined : true}
-						tabIndex={interaction.focusable ? undefined : -1}
-						onClick={handleClick}
-						onFocus={showLabel}
-						onBlur={hideLabel}
-					>
-						{body}
-					</button>
-				) : (
-					<div
-						className={bodyClasses}
-						role="img"
-						aria-label={marker.accessibleName}
-					>
-						{body}
-					</div>
-				)}
+					{interaction.role === 'button' ? (
+						<button
+							type="button"
+							className={cn(
+								bodyClasses,
+								FOCUS_RING,
+								interaction.action !== 'none' && markerClasses.interactive
+							)}
+							aria-label={marker.accessibleName}
+							aria-pressed={interaction.toggles ? selected : undefined}
+							aria-disabled={interaction.action === 'none' ? true : undefined}
+							tabIndex={interaction.focusable ? undefined : -1}
+							onClick={handleClick}
+							onFocus={showLabel}
+							onBlur={hideLabel}
+						>
+							{body}
+						</button>
+					) : (
+						<div
+							className={bodyClasses}
+							role="img"
+							aria-label={marker.accessibleName}
+						>
+							{body}
+						</div>
+					)}
 
-				{labelVisible && (
-					<span className={markerClasses.label}>{marker.name}</span>
-				)}
-			</div>
-		</Html>
+					{labelVisible && (
+						<span className={markerClasses.label}>{marker.name}</span>
+					)}
+				</div>
+			</Html>
+		</group>
 	)
 }
 

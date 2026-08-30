@@ -54,6 +54,7 @@ import {
 import { useAnimationRuntime } from './hooks/use-animation-runtime'
 import { useViewerLoading } from './hooks/use-viewer-loading'
 
+import type { HotspotPositionSetter } from './components/scene'
 import type {
 	BakedShadow,
 	SceneCameraSnapshotCapture,
@@ -216,6 +217,42 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	showInternalHotspots?: boolean
 
 	/**
+	 * When true, hotspots the author hid (`visible: false`) are drawn greyed, so
+	 * they can be found and switched back on. Editing surfaces only.
+	 *
+	 * Changes no step number: a marker a visitor would not see is never numbered
+	 * or counted, whichever of these flags drew it. Default: false.
+	 */
+	showHiddenHotspots?: boolean
+
+	/**
+	 * The hotspot to draw as the current one, with a selection ring. Neutral,
+	 * never a brand colour - see `styles.css`.
+	 */
+	selectedHotspotId?: string | null
+
+	/**
+	 * Runs when a marker is clicked on a surface that selects rather than
+	 * navigates. Passing it is what makes selection possible at all, and a marker
+	 * that could do either selects: selecting is local and reversible, while
+	 * activating a linked camera throws away the viewpoint the author was working
+	 * from. A surface that wants the camera instead simply does not pass this.
+	 */
+	onHotspotSelect?: (id: string) => void
+
+	/**
+	 * Hands back a setter that moves a marker without moving the hotspot, or
+	 * `null` on teardown - the same shape as `onCommandExecutorReady` and the
+	 * capture callbacks beside it.
+	 *
+	 * A setter rather than a viewer command because a drag emits a position every
+	 * frame and none of them may reach React: the command bus routes through
+	 * state, so a `set_hotspot_position` command would re-render every marker
+	 * sixty times a second, which is the whole cost this exists to avoid.
+	 */
+	onHotspotPositionSetterReady?: (setter: null | HotspotPositionSetter) => void
+
+	/**
 	 * When true, the accumulative shadow bakes in a single pass on mount instead of
 	 * fading in across frames, so it is present immediately when a scene opens.
 	 * Intended for read-only/preview surfaces; the editor leaves this off to keep
@@ -340,6 +377,10 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		// Editor affordances
 		shadowLightEditable,
 		showInternalHotspots = false,
+		showHiddenHotspots = false,
+		selectedHotspotId = null,
+		onHotspotSelect,
+		onHotspotPositionSetterReady,
 		staticShadowBake = false,
 		bakedShadow,
 		onShadowBakeReady,
@@ -404,37 +445,40 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 
 	const { forwardCommand: forwardAnimationCommand } = animation
 
-	const executeViewerCommand = useCallback((command: ViewerCommand) => {
-		switch (command.type) {
-			case 'activate_camera':
-				cameraCommandExecutorRef.current?.execute(command)
-				break
-			case 'set_controls_enabled':
-				setControlsEnabledOverride(command.enabled)
-				break
-			case 'set_auto_rotate':
-				setAutoRotateOverride({
-					enabled: command.enabled,
-					speed: command.speed
-				})
-				break
-			case 'set_controls_options':
-				setControlsOptionsOverride((prev) => ({ ...prev, ...command }))
-				break
-			case 'set_transition':
-				setTransitionOverride({
-					type: command.transitionType,
-					duration: command.duration,
-					easing: command.easing
-				})
-				break
-			case 'restart_animation':
-			case 'seek_animation_clip':
-			case 'set_animation_playing':
-				forwardAnimationCommand(command)
-				break
-		}
-	}, [forwardAnimationCommand])
+	const executeViewerCommand = useCallback(
+		(command: ViewerCommand) => {
+			switch (command.type) {
+				case 'activate_camera':
+					cameraCommandExecutorRef.current?.execute(command)
+					break
+				case 'set_controls_enabled':
+					setControlsEnabledOverride(command.enabled)
+					break
+				case 'set_auto_rotate':
+					setAutoRotateOverride({
+						enabled: command.enabled,
+						speed: command.speed
+					})
+					break
+				case 'set_controls_options':
+					setControlsOptionsOverride((prev) => ({ ...prev, ...command }))
+					break
+				case 'set_transition':
+					setTransitionOverride({
+						type: command.transitionType,
+						duration: command.duration,
+						easing: command.easing
+					})
+					break
+				case 'restart_animation':
+				case 'seek_animation_clip':
+				case 'set_animation_playing':
+					forwardAnimationCommand(command)
+					break
+			}
+		},
+		[forwardAnimationCommand]
+	)
 
 	// A hotspot's linked camera goes through the same command path an external
 	// `activate_camera` takes, so a hotspot click and a host calling the embed
@@ -588,8 +632,12 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									hotspots={hotspots}
 									model={model}
 									includeInternal={showInternalHotspots}
+									includeHidden={showHiddenHotspots}
 									color={hotspotColor}
+									selectedId={selectedHotspotId}
 									onActivateCamera={handleActivateHotspotCamera}
+									onSelect={onHotspotSelect}
+									onPositionSetterReady={onHotspotPositionSetterReady}
 								/>
 								{children}
 							</SceneBounds>

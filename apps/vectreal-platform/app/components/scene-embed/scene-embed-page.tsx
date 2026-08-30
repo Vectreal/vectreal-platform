@@ -18,7 +18,11 @@ import type { ReactNode } from 'react'
 
 /** What an overlay needs from the running viewer. */
 export interface SceneEmbedViewerControl {
-	/** Scene cameras only; hotspots and the like are navigational. */
+	/**
+	 * Scene cameras only. A hotspot's own camera is reachable by clicking its
+	 * marker, which the viewer draws, so listing it here as well would put the
+	 * same viewpoint in the chrome's switcher twice.
+	 */
 	cameras: { cameraId: string; name?: null | string }[]
 	activeCameraId: null | string
 	activateCamera: (cameraId: string) => void
@@ -136,7 +140,9 @@ const SceneEmbedPage = ({
 		return (
 			<div className="bg-background flex h-dvh w-full items-center justify-center p-6">
 				<div className="border-border bg-card w-full max-w-lg space-y-4 rounded-2xl border p-6">
-					<h1 className="text-lg font-semibold">Unable to Load Scene Preview</h1>
+					<h1 className="text-lg font-semibold">
+						Unable to Load Scene Preview
+					</h1>
 					<p className="text-muted-foreground text-sm">{loadError.message}</p>
 					<div className="flex gap-2">
 						<Button type="button" onClick={() => void retrySceneLoad()}>

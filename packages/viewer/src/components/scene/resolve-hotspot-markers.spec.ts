@@ -304,6 +304,139 @@ describe('resolveHotspotMarkers', () => {
 		})
 	})
 
+	describe('an editing surface drawing more than a visitor sees', () => {
+		it('draws a hotspot the author hid, and marks it as hidden', () => {
+			const markers = resolveHotspotMarkers(
+				[hotspot({ id: 'shown' }), hotspot({ id: 'hidden', visible: false })],
+				{ includeHidden: true }
+			)
+
+			expect(ids(markers)).toEqual(['shown', 'hidden'])
+			expect(markers.map((marker) => marker.hidden)).toEqual([false, true])
+		})
+
+		it('still drops a hidden hotspot when nobody asked for it', () => {
+			const markers = resolveHotspotMarkers([
+				hotspot({ id: 'shown' }),
+				hotspot({ id: 'hidden', visible: false })
+			])
+
+			expect(ids(markers)).toEqual(['shown'])
+		})
+
+		it('gives a hidden marker no step number', () => {
+			const markers = resolveHotspotMarkers(
+				[
+					hotspot({ id: 'a', sequenceIndex: 0 }),
+					hotspot({ id: 'b', sequenceIndex: 1, visible: false }),
+					hotspot({ id: 'c', sequenceIndex: 2 })
+				],
+				{ includeHidden: true }
+			)
+
+			expect(ids(markers)).toEqual(['a', 'b', 'c'])
+			expect(markers.map((marker) => marker.step)).toEqual([1, null, 2])
+		})
+
+		it('gives an internalOnly marker no step number either', () => {
+			const markers = resolveHotspotMarkers(
+				[
+					hotspot({ id: 'internal', sequenceIndex: 0, internalOnly: true }),
+					hotspot({ id: 'public', sequenceIndex: 1 })
+				],
+				{ includeInternal: true }
+			)
+
+			expect(markers.map((marker) => marker.step)).toEqual([null, 1])
+		})
+
+		it('leaves every step number exactly where the visitor sees it', () => {
+			// The rule this pins: an author composes against these numbers in the
+			// sidebar, which ranks over the published set. If drawing extra markers
+			// on the canvas renumbered them, the canvas and the sidebar would
+			// disagree from the first hidden hotspot onwards.
+			const stored = [
+				hotspot({ id: 'a', sequenceIndex: 0 }),
+				hotspot({ id: 'hidden', sequenceIndex: 1, visible: false }),
+				hotspot({ id: 'internal', sequenceIndex: 2, internalOnly: true }),
+				hotspot({ id: 'b', sequenceIndex: 3 })
+			]
+
+			const visitor = new Map(
+				resolveHotspotMarkers(stored).map((marker) => [marker.id, marker.step])
+			)
+			const editor = resolveHotspotMarkers(stored, {
+				includeHidden: true,
+				includeInternal: true
+			})
+
+			expect(visitor).toEqual(
+				new Map([
+					['a', 1],
+					['b', 2]
+				])
+			)
+			for (const marker of editor) {
+				expect([marker.id, marker.step]).toEqual([
+					marker.id,
+					visitor.get(marker.id) ?? null
+				])
+				expect(marker.stepCount).toBe(2)
+			}
+		})
+
+		it('resolves a duplicate id the same way on every surface', () => {
+			// The id is claimed before any option is consulted, so drawing extra
+			// markers cannot change which of two hotspots sharing an id survives.
+			// While it was claimed after the filters, the hidden one won in the
+			// editor and the published one won for a visitor, and the two surfaces
+			// disagreed about both the marker and its step.
+			const stored = [
+				hotspot({
+					id: 'x',
+					name: 'Hidden X',
+					sequenceIndex: 0,
+					visible: false
+				}),
+				hotspot({ id: 'x', name: 'Public X', sequenceIndex: 1 }),
+				hotspot({ id: 'y', name: 'Y', sequenceIndex: 2 })
+			]
+
+			const editor = resolveHotspotMarkers(stored, {
+				includeHidden: true,
+				includeInternal: true
+			})
+
+			expect(editor.map((m) => [m.name, m.step])).toEqual([
+				['Public X', 1],
+				['Y', 2]
+			])
+			expect(
+				resolveHotspotMarkers(stored).map((m) => [m.name, m.step])
+			).toEqual(editor.map((m) => [m.name, m.step]))
+		})
+
+		it('lets a published hotspot take a duplicate id from a hidden one', () => {
+			// Claiming strictly-first would drop the published hotspot entirely and
+			// cost a visitor a marker they had been seeing.
+			const markers = resolveHotspotMarkers([
+				hotspot({ id: 'x', name: 'Hidden X', visible: false }),
+				hotspot({ id: 'x', name: 'Public X' })
+			])
+
+			expect(markers.map((m) => m.name)).toEqual(['Public X'])
+		})
+
+		it('announces that a marker is hidden', () => {
+			const markers = resolveHotspotMarkers(
+				[hotspot({ id: 'a', name: 'Handle', visible: false })],
+				{ includeHidden: true }
+			)
+
+			expect(markers[0].accessibleName).toBe('Handle, hidden')
+		})
+	})
+
 	it('does not mutate the settings it was given', () => {
 		const stored = [
 			hotspot({ id: 'b', sequenceIndex: 1 }),
