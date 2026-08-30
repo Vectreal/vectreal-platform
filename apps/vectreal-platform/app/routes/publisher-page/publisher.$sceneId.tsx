@@ -12,7 +12,7 @@ import { useAutomaticOpeningView } from '../../components/publisher/shell/use-op
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import {
 	sceneMetaAtom,
-	toolSidebarStateAtom
+	openComposeToolAtom
 } from '../../lib/stores/publisher-config-store'
 import {
 	activeHotspotIdAtom,
@@ -149,11 +149,13 @@ const PublisherPage = () => {
 	const [selectedCameraId, setSelectedCameraId] = useAtom(selectedCameraIdAtom)
 	const [activeHotspotId, setActiveHotspotId] = useAtom(activeHotspotIdAtom)
 	const sceneMeta = useAtomValue(sceneMetaAtom)
-	const { activeComposeTool, showSidebar } = useAtomValue(toolSidebarStateAtom)
+	// The tool whose panel is open, not the one merely selected. Every in-scene
+	// affordance below scopes to it, so no tool's handles outlive its drawer.
+	const openComposeTool = useAtomValue(openComposeToolAtom)
 	// The in-scene light handle only belongs to the shadow tool, so show it only
 	// while that tool's panel is open (and shadows are on).
 	const isShadowToolActive =
-		showSidebar && activeComposeTool === 'shadow' && (shadows?.enabled ?? false)
+		openComposeTool === 'shadow' && (shadows?.enabled ?? false)
 	const loadingThumbnail = toViewerLoadingThumbnail(
 		sceneMeta.thumbnailUrl,
 		'Scene thumbnail preview'
@@ -199,17 +201,18 @@ const PublisherPage = () => {
 	)
 
 	/**
-	 * Selection is offered only while the hotspot tool is armed, and passing it is
-	 * exactly what makes a marker select rather than fly its camera. Outside the
-	 * tool the publisher wants the embed's behaviour, so it passes nothing.
+	 * Selection is offered only while the hotspot tool's panel is open, and
+	 * passing it is exactly what makes a marker select rather than fly its camera.
+	 * Outside the tool the publisher wants the visitor's behaviour - a click
+	 * activates the linked camera - so it passes nothing at all.
 	 */
 	const handleHotspotSelect = useMemo(
 		() =>
-			activeComposeTool === 'hotspots'
+			openComposeTool === 'hotspots'
 				? (id: string) =>
 						setActiveHotspotId((previous) => (previous === id ? null : id))
 				: undefined,
-		[activeComposeTool, setActiveHotspotId]
+		[openComposeTool, setActiveHotspotId]
 	)
 
 	// Memoized: a fresh object here re-creates the viewer's screenshot capture on
@@ -255,7 +258,7 @@ const PublisherPage = () => {
 					  where there is no gizmo and no way to clear it from the canvas.
 					*/
 					selectedHotspotId={
-						activeComposeTool === 'hotspots' ? activeHotspotId : null
+						openComposeTool === 'hotspots' ? activeHotspotId : null
 					}
 					onHotspotSelect={handleHotspotSelect}
 					onHotspotPositionSetterReady={registerHotspotPositionSetter}
