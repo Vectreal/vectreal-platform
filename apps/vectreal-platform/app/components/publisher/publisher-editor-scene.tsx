@@ -1,12 +1,13 @@
 import { TransformControls } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtom, useAtomValue } from 'jotai/react'
+import { useAtom, useAtomValue, useStore } from 'jotai/react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 
 import { PublisherViewCube } from './publisher-view-cube'
 import { usePublisherViewerCapture } from './publisher-viewer-capture-context'
+import { applyHotspotPlacement } from '../../lib/domain/scene/client/apply-hotspot-placement'
 import {
 	isHotspotPlacementGesture,
 	prepareHotspotRaycaster,
@@ -345,7 +346,9 @@ function ClickToPlace({
  * cube out of the way while placement is armed.
  */
 export const PublisherEditorScene = memo(() => {
-	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
+	// Read for rendering; every write goes through the store below, so the pair
+	// of atoms a placement touches stays one edit.
+	const hotspots = useAtomValue(hotspotsAtom)
 	const activeHotspotId = useAtomValue(activeHotspotIdAtom)
 	const [isClickToPlaceActive, setIsClickToPlaceActive] = useAtom(
 		isClickToPlaceActiveAtom
@@ -359,14 +362,28 @@ export const PublisherEditorScene = memo(() => {
 	const { file } = useModelContext()
 	const modelRoot = file?.model ?? null
 	const gizmoGrabbedRef = useRef(false)
+	/*
+	  The edit needs both atoms at once - which camera a hotspot owns is a fact
+	  about the two together - and this callback has to keep a stable identity:
+	  it reaches `HotspotGizmo` as `onMove`, whose unmount cleanup commits an
+	  interrupted drag, so a new identity mid-drag would re-run that effect and
+	  commit the drag out from under the author. Reading through the store keeps
+	  both properties; putting `hotspots` in the dependency list would lose the
+	  second.
+	*/
+	const store = useStore()
 
+	/**
+	 * Both ways of placing a marker go through here, because both are the author
+	 * saying where the point of interest is, and the camera the hotspot owns has
+	 * to end up looking at it either way. `placeHotspot` owns that pairing so
+	 * neither this file nor the sidebar has to know the ownership rule.
+	 */
 	const handleMoveHotspot = useCallback(
 		(id: string, position: [number, number, number]) => {
-			setHotspots((prev) =>
-				prev.map((h) => (h.id === id ? { ...h, worldPosition: position } : h))
-			)
+			applyHotspotPlacement(store, id, position)
 		},
-		[setHotspots]
+		[store]
 	)
 
 	/**
@@ -376,12 +393,10 @@ export const PublisherEditorScene = memo(() => {
 	 */
 	const handlePlaceHotspot = useCallback(
 		(id: string, position: [number, number, number]) => {
-			setHotspots((prev) =>
-				prev.map((h) => (h.id === id ? { ...h, worldPosition: position } : h))
-			)
+			handleMoveHotspot(id, position)
 			setIsClickToPlaceActive(false)
 		},
-		[setHotspots, setIsClickToPlaceActive]
+		[handleMoveHotspot, setIsClickToPlaceActive]
 	)
 
 	const activeHotspot = hotspots.find((h) => h.id === activeHotspotId) ?? null

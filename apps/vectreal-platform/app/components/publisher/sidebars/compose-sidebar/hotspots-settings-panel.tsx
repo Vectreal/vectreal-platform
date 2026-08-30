@@ -30,7 +30,7 @@ import {
 	useDragControls,
 	useReducedMotion
 } from 'framer-motion'
-import { useAtom, useSetAtom } from 'jotai/react'
+import { useAtom, useSetAtom, useStore } from 'jotai/react'
 import {
 	ChevronDown,
 	Crosshair,
@@ -43,6 +43,7 @@ import {
 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { applyHotspotPlacement } from '../../../../lib/domain/scene/client/apply-hotspot-placement'
 import {
 	PAIRED_HOTSPOT_CAMERA_ID_PREFIX,
 	resolveDefaultSceneCameraId
@@ -423,6 +424,7 @@ const SequencedRow = ({
 }
 
 const HotspotsSettingsPanel = memo(() => {
+	const store = useStore()
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 	const [camera, setCamera] = useAtom(cameraAtom)
 	const [selectedId, setSelectedId] = useAtom(activeHotspotIdAtom)
@@ -745,9 +747,13 @@ const HotspotsSettingsPanel = memo(() => {
 				number
 			]
 			next[axis] = value
-			updateHotspot(hotspot.id, { worldPosition: next })
+			// The same paired edit the canvas makes: a marker moves and the camera
+			// it owns turns to keep looking at it. Typing a coordinate is placing
+			// the marker just as much as dragging it is, so it cannot be the one
+			// path that leaves the viewpoint behind.
+			applyHotspotPlacement(store, hotspot.id, next)
 		},
-		[updateHotspot]
+		[store]
 	)
 
 	const handleMembershipChange = useCallback(
