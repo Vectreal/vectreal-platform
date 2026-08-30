@@ -16,6 +16,9 @@ import {
 	Vector3Tuple
 } from 'three'
 
+import { cameraSelectionSignature } from './camera-selection-signature'
+
+import type { CameraSelectionSignature } from './camera-selection-signature'
 import type {
 	ViewerCommand,
 	ViewerCommandExecutor,
@@ -343,7 +346,9 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const stabilizationStartedAt = useRef<number | null>(null)
 	const transitionRuntime = useRef<CameraTransitionRuntime | null>(null)
 	const previousSelectionKey = useRef<string | null>(null)
-	const previousSelectionSignature = useRef<string | null>(null)
+	const previousSelectionSignature = useRef<CameraSelectionSignature | null>(
+		null
+	)
 
 	const captureCameraSnapshot =
 		useCallback<SceneCameraSnapshotCapture>(async () => {
@@ -466,17 +471,11 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 
 			startTransition(nextSelection)
 			previousSelectionKey.current = nextSelection.cameraId
-			previousSelectionSignature.current = JSON.stringify({
-				position: nextSelection.targetPosition.toArray(),
-				target: nextSelection.targetLookAt.toArray(),
-				rotation: [
-					nextSelection.targetRotation.x,
-					nextSelection.targetRotation.y,
-					nextSelection.targetRotation.z
-				],
-				fov: nextSelection.targetFov,
-				transition: nextSelection.transition
-			})
+			previousSelectionSignature.current = cameraSelectionSignature(
+				cameras,
+				nextSelection.cameraId,
+				nextSelection.transition
+			)
 			onInteractionEvent?.({
 				type: 'camera_changed',
 				cameraId: nextSelection.cameraId
@@ -530,17 +529,11 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 
 			initializedCameraPosition.current = true
 			previousSelectionKey.current = selection.cameraId
-			previousSelectionSignature.current = JSON.stringify({
-				position: selection.targetPosition.toArray(),
-				target: selection.targetLookAt.toArray(),
-				rotation: [
-					selection.targetRotation.x,
-					selection.targetRotation.y,
-					selection.targetRotation.z
-				],
-				fov: selection.targetFov,
-				transition: selection.transition
-			})
+			previousSelectionSignature.current = cameraSelectionSignature(
+				cameras,
+				selection.cameraId,
+				selection.transition
+			)
 		},
 		[
 			activeCameraId,
@@ -576,17 +569,11 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			sceneTransition
 		)
 		const selectionKey = selection.cameraId
-		const signature = JSON.stringify({
-			position: selection.targetPosition.toArray(),
-			target: selection.targetLookAt.toArray(),
-			rotation: [
-				selection.targetRotation.x,
-				selection.targetRotation.y,
-				selection.targetRotation.z
-			],
-			fov: selection.targetFov,
-			transition: selection.transition
-		})
+		const signature = cameraSelectionSignature(
+			cameras,
+			selection.cameraId,
+			selection.transition
+		)
 
 		if (
 			previousSelectionKey.current === selectionKey &&
