@@ -48,15 +48,47 @@ pnpm nx run terraform:plan-infrastructure    # init + validate + plan
 pnpm nx run terraform:apply-infrastructure   # runs scripts/apply-infrastructure.sh
 ```
 
-### 3. Sync Fly.io app secrets
+### 3. Sync Fly.io app secrets and the Supabase hook
 
-`scripts/setup-fly-secrets.sh` reads `.env.development` and (a) sets Fly.io app secrets via `fly secrets set` and (b) syncs the Supabase `send_email` hook via the Management API:
+`scripts/setup-fly-secrets.sh` (a) sets Fly.io app secrets via `fly secrets set`
+and (b) syncs the Supabase `send_email` hook URI and signing secret through the
+Management API.
+
+**Prefer the workflow.** `CD - Sync Platform Secrets`
+(`.github/workflows/cd-platform-secrets.yaml`) runs it against one environment
+at a time, reading values from that GitHub Environment rather than from anyone's
+laptop, and inheriting whatever protection rules the Environment carries.
+
+| Mode | What it does |
+| --- | --- |
+| `stage` | Writes the secrets with `--stage`. The app keeps running the old values until the next deploy applies them. The default, because a routine rotation should not bounce production. |
+| `immediate` | Writes and restarts now. For an urgent rotation, such as a leaked key. |
+| `verify` | Read-only, and a gate: exits non-zero when a secret is missing, when the `send_email` hook is disabled, or when its live URI does not match `APPLICATION_URL`. |
+
+Rotating a value is: change it in the GitHub Environment, run the workflow.
+Adding one is a PR - the name goes in the script's `REQUIRED_PER_ENV` list and
+the workflow's `env:` block - then the value goes in the Environment.
+
+The local path still works and is unchanged:
 
 ```bash
 pnpm nx run terraform:setup-fly-secrets-staging
 pnpm nx run terraform:setup-fly-secrets-prod
-pnpm nx run terraform:verify-fly-secrets      # read-only check
+pnpm nx run terraform:verify-fly-secrets      # now exits non-zero on drift
 ```
+
+Names are looked up suffixed first (`DATABASE_URL_PROD`, which is how
+`.env.development` namespaces both environments in one file) and then bare
+(`DATABASE_URL`, which is what a per-environment GitHub secret holds), so both
+callers read the same script.
+
+**What this is not.** The repo owns the mapping - which value reaches which app
+under which name - and GitHub Environments own the values. There is no state
+file and no plan, and `verify` can only prove a Fly secret *exists*: `fly
+secrets list` reports digests, never values. The hook URI is the one thing
+checked against its expected value, because it is editable in the Supabase
+dashboard, invisible to this repo, and decides whether any auth email is
+delivered at all.
 
 ## Variables
 

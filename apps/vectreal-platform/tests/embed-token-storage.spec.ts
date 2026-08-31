@@ -79,22 +79,32 @@ describe('the deployment that has to configure it', () => {
 		const script = read('terraform/scripts/setup-fly-secrets.sh')
 
 		expect(script).toContain(`${ENV_VAR}="$emb_key"`)
-		expect(script).toContain(`${ENV_VAR}_${'${ENV}'}`)
+		// Resolved per environment, so staging and production get their own.
+		expect(script).toContain(`resolve ${ENV_VAR} "$ENV"`)
 	})
 
 	it('fails the run when it is missing, rather than deploying without it', () => {
 		/*
-		  `REQUIRED_STAGING` / `REQUIRED_PROD` are the only lists that `exit 1`.
-		  The verify-mode check list only warns and then exits 0, and the earlier
-		  `${emb_key:+...}` form skipped a missing value without comment - so a
-		  forgotten key produced a *successful* deploy that minted keys nobody
-		  could ever be shown, which is the failure this whole change exists to
-		  end.
+		  `REQUIRED_PER_ENV` is the list that `exit 1`s, and it is checked once
+		  per environment - so the bare name appearing there covers both. The
+		  earlier `${emb_key:+...}` form skipped a missing value without comment,
+		  so a forgotten key produced a *successful* deploy that minted keys
+		  nobody could ever be shown, which is the failure this whole change
+		  exists to end.
 		*/
 		const script = read('terraform/scripts/setup-fly-secrets.sh')
 
+		const required = script.slice(
+			script.indexOf('REQUIRED_PER_ENV=('),
+			script.indexOf('MISSING=()')
+		)
+		expect(required).toContain(`"${ENV_VAR}"`)
+
+		// Checked for staging and for prod, not just once overall.
 		for (const env of ['STAGING', 'PROD']) {
-			expect(script, env).toContain(`"${ENV_VAR}_${env}"`)
+			expect(script, env).toContain(
+				`check_env_vars ${env} "\${REQUIRED_PER_ENV[@]}"`
+			)
 		}
 
 		expect(script).toContain(`${ENV_VAR}="$emb_key"`)
@@ -109,6 +119,23 @@ describe('the deployment that has to configure it', () => {
 		)
 
 		expect(checkList).toContain(ENV_VAR)
+	})
+
+	/*
+	  Verify used to `warn` and exit 0, so it could report this key missing and
+	  still pass. It is a gate now, which is the only reason the check above is
+	  worth anything in CI.
+	*/
+	it('makes verify mode a gate rather than a report', () => {
+		const script = read('terraform/scripts/setup-fly-secrets.sh')
+		const verifyMode = script.slice(
+			script.indexOf('if [[ "$MODE" == "verify" ]]; then'),
+			script.indexOf('# SYNC MODE')
+		)
+
+		expect(verifyMode).toContain('VERIFY_FAILED+=')
+		expect(verifyMode).toMatch(/VERIFY_FAILED\[@\]}\s*-gt 0/)
+		expect(verifyMode).toContain('exit 1')
 	})
 
 	it('is documented for both deployed environments', () => {

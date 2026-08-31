@@ -7,12 +7,21 @@
 #   ./setup-fly-secrets.sh --env staging # sync staging only
 #   ./setup-fly-secrets.sh --env prod    # sync production only
 #   ./setup-fly-secrets.sh --verify      # read-only: check current state
+#   ./setup-fly-secrets.sh --stage       # stage secrets, apply on next deploy
 #   ./setup-fly-secrets.sh --help        # show this help
 #
-# Reads from .env.development at the repo root.
+# Values come from .env.development at the repo root when it exists, and from
+# the process environment when it does not - which is how CI supplies them.
+# Each name is looked up suffixed first (DATABASE_URL_PROD, the local file's
+# convention) and then bare (DATABASE_URL, what a GitHub Environment holds), so
+# both callers read the same script.
+#
 # Syncs:
 #   1. Fly.io app secrets (fly secrets set)
 #   2. Supabase send_email hook URI + secret (via Management API)
+#
+# --verify is a gate, not a report: it exits non-zero when a secret is missing
+# or the live hook URI does not match APPLICATION_URL.
 # =============================================================================
 
 RED='\033[0;31m'
@@ -34,6 +43,9 @@ HOOKS_FAILED=()
 
 MODE="sync"
 ENV_FILTER=""
+# Staged secrets land on the app without restarting it; the next deploy applies
+# them. Keeps a routine rotation from bouncing production.
+STAGE_ONLY=false
 
 show_help() {
   grep '^#' "$0" | grep -v '^#!/' | sed 's/^# \{0,2\}//'
@@ -43,6 +55,7 @@ show_help() {
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --verify) MODE="verify"; shift ;;
+    --stage)  STAGE_ONLY=true; shift ;;
     --env)
       shift
       case "$1" in
@@ -81,68 +94,86 @@ fi
 
 section "Fly.io authentication"
 if ! fly auth whoami &>/dev/null; then
+  # `fly auth login` opens a browser and blocks. There is nobody to answer it in
+  # CI, so fail with the thing that would have fixed it instead of hanging.
+  if [[ -n "${CI:-}" ]] || [[ ! -t 0 ]]; then
+    err "Not authenticated and no terminal to log in from."
+    printf "\n  Set FLY_API_TOKEN in the environment.\n"
+    exit 1
+  fi
   warn "Not authenticated - launching fly auth login..."
   fly auth login || { err "Authentication failed"; exit 1; }
 fi
 ok "Authenticated: $(fly auth whoami)"
 
 ENV_FILE="$REPO_ROOT/.env.development"
-section "Environment file"
-if [[ ! -f "$ENV_FILE" ]]; then
-  err "$ENV_FILE not found"
-  printf "\n  Create it: cp .env.development.example .env.development\n"
-  exit 1
+section "Values"
+if [[ -f "$ENV_FILE" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  set +a
+  ok "$ENV_FILE loaded"
+else
+  # Not an error. CI has no such file and supplies the values directly, which is
+  # the whole point of moving this into a workflow.
+  ok "no .env.development - reading the process environment"
 fi
-set -a
-# shellcheck disable=SC1090
-source "$ENV_FILE"
-set +a
-ok "$ENV_FILE loaded"
+
+# Suffixed first, then bare. The local file namespaces every value by
+# environment in one flat file; a GitHub Environment does the namespacing
+# itself and holds the bare name. Shared values have no suffix either way.
+resolve() {
+  local name="$1" env_upper="${2:-}"
+  local suffixed="${name}_${env_upper}"
+  if [[ -n "$env_upper" && -n "${!suffixed:-}" ]]; then
+    printf '%s' "${!suffixed}"
+  else
+    printf '%s' "${!name:-}"
+  fi
+}
 
 section "Validating required variables"
 
+# Logical names, not spellings. `resolve` decides whether a value arrives as
+# DATABASE_URL_PROD or as DATABASE_URL in a production Environment.
 REQUIRED_SHARED=(
   "FROM_EMAIL"
   "CONTACT_INBOX_EMAIL"
   "SUPABASE_ACCESS_TOKEN"
 )
-REQUIRED_STAGING=(
-  "SUPABASE_PROJECT_REF_STAGING"
-  "DATABASE_URL_STAGING"
-  "SUPABASE_URL_STAGING"
-  "SUPABASE_KEY_STAGING"
-  "SUPABASE_SECRET_KEY_STAGING"
-  "APPLICATION_URL_STAGING"
-  "CSRF_SECRET_STAGING"
-  "STRIPE_SECRET_KEY_STAGING"
-  "SEND_EMAIL_HOOK_SECRET_STAGING"
-  "CLOUDFLARE_TURNSTILE_SITE_KEY_STAGING"
-  "CLOUDFLARE_TURNSTILE_SECRET_KEY_STAGING"
-  "RESEND_API_KEY_STAGING"
-  "EMBED_TOKEN_ENCRYPTION_KEY_STAGING"
-)
-REQUIRED_PROD=(
-  "SUPABASE_PROJECT_REF_PROD"
-  "DATABASE_URL_PROD"
-  "SUPABASE_URL_PROD"
-  "SUPABASE_KEY_PROD"
-  "SUPABASE_SECRET_KEY_PROD"
-  "APPLICATION_URL_PROD"
-  "CSRF_SECRET_PROD"
-  "STRIPE_SECRET_KEY_PROD"
-  "SEND_EMAIL_HOOK_SECRET_PROD"
-  "CLOUDFLARE_TURNSTILE_SITE_KEY_PROD"
-  "CLOUDFLARE_TURNSTILE_SECRET_KEY_PROD"
-  "RESEND_API_KEY_PROD"
-  "EMBED_TOKEN_ENCRYPTION_KEY_PROD"
+REQUIRED_PER_ENV=(
+  "SUPABASE_PROJECT_REF"
+  "DATABASE_URL"
+  "SUPABASE_URL"
+  "SUPABASE_KEY"
+  "SUPABASE_SECRET_KEY"
+  "APPLICATION_URL"
+  "CSRF_SECRET"
+  "STRIPE_SECRET_KEY"
+  "SEND_EMAIL_HOOK_SECRET"
+  "CLOUDFLARE_TURNSTILE_SITE_KEY"
+  "CLOUDFLARE_TURNSTILE_SECRET_KEY"
+  "RESEND_API_KEY"
+  "EMBED_TOKEN_ENCRYPTION_KEY"
 )
 
 MISSING=()
-check_vars() { for var in "$@"; do [[ -z "${!var}" ]] && MISSING+=("$var"); done; }
+check_shared() {
+  for var in "$@"; do [[ -z "$(resolve "$var")" ]] && MISSING+=("$var"); done
+}
+check_env_vars() {
+  local env_upper="$1"; shift
+  for var in "$@"; do
+    [[ -z "$(resolve "$var" "$env_upper")" ]] && MISSING+=("${var} (${env_upper})")
+  done
+}
 
-check_vars "${REQUIRED_SHARED[@]}"
-[[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && check_vars "${REQUIRED_STAGING[@]}"
-[[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod"    ]] && check_vars "${REQUIRED_PROD[@]}"
+check_shared "${REQUIRED_SHARED[@]}"
+[[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && \
+  check_env_vars STAGING "${REQUIRED_PER_ENV[@]}"
+[[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod"    ]] && \
+  check_env_vars PROD "${REQUIRED_PER_ENV[@]}"
 
 if [[ ${#MISSING[@]} -gt 0 ]]; then
   err "Missing required variables:"
@@ -161,21 +192,24 @@ strip_hook_prefix() {
 # VERIFY MODE
 # ===========================================================================
 if [[ "$MODE" == "verify" ]]; then
+  VERIFY_FAILED=()
+
   section "Fly.io secrets (existence check)"
 
+  # Presence only. `fly secrets list` reports digests, never values, so nothing
+  # here can tell a correct secret from a wrong one - only a missing one.
   check_fly_secret() {
     local app="$1" name="$2"
     if fly secrets list --app "$app" 2>/dev/null | grep -qw "$name"; then
       ok "$app / $name"
     else
-      warn "$app / $name NOT FOUND"
+      err "$app / $name NOT FOUND"
+      VERIFY_FAILED+=("$app/$name")
     fi
   }
 
   check_env_secrets() {
     local env="$1" app="$2"
-    local ENV
-    ENV=$(printf '%s' "$env" | tr '[:lower:]' '[:upper:]')
     for field in DATABASE_URL SUPABASE_URL SUPABASE_KEY SUPABASE_SECRET_KEY \
                  CSRF_SECRET STRIPE_SECRET_KEY APPLICATION_URL SEND_EMAIL_HOOK_SECRET \
                  CLOUDFLARE_TURNSTILE_SITE_KEY CLOUDFLARE_TURNSTILE_SECRET_KEY \
@@ -191,7 +225,66 @@ if [[ "$MODE" == "verify" ]]; then
   [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]] && \
     check_env_secrets prod "vectreal-platform"
 
-  printf "\n${GREEN}Verify complete. No changes made.${NC}\n\n"
+  section "Supabase auth hook (live value)"
+
+  # The one thing here that is a real drift check rather than a presence check.
+  # The hook URI is what decides whether confirmation emails are delivered at
+  # all, and it lives in Supabase's project config - editable in a dashboard,
+  # invisible to this repo. Reading it back is the only way the repo learns that
+  # someone changed it.
+  check_hook_uri() {
+    local project_ref="$1" expected_url="$2" label="$3"
+    local expected="${expected_url}/auth/send-email"
+
+    if [[ -z "$project_ref" || -z "$expected_url" ]]; then
+      err "$label - cannot check: project ref or APPLICATION_URL is unset"
+      VERIFY_FAILED+=("$label/hook-inputs")
+      return
+    fi
+
+    local response http_code body
+    response=$(curl -s -w "\n%{http_code}" \
+      "https://api.supabase.com/v1/projects/${project_ref}/config/auth" \
+      -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" 2>&1)
+    http_code=$(printf '%s' "$response" | tail -n1)
+    body=$(printf '%s' "$response" | sed '$d')
+
+    if [[ ! "$http_code" =~ ^2 ]]; then
+      err "$label - HTTP ${http_code} reading auth config"
+      VERIFY_FAILED+=("$label/hook-read")
+      return
+    fi
+
+    local enabled actual
+    enabled=$(printf '%s' "$body" | jq -r '.hook_send_email_enabled // false')
+    actual=$(printf '%s' "$body" | jq -r '.hook_send_email_uri // ""')
+
+    if [[ "$enabled" != "true" ]]; then
+      err "$label - send_email hook is DISABLED; no auth email is delivered"
+      VERIFY_FAILED+=("$label/hook-disabled")
+    elif [[ "$actual" != "$expected" ]]; then
+      err "$label - hook URI drifted"
+      printf "      expected: %s\n      actual:   %s\n" "$expected" "$actual"
+      VERIFY_FAILED+=("$label/hook-uri")
+    else
+      ok "$label - $actual"
+    fi
+  }
+
+  [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && \
+    check_hook_uri "$(resolve SUPABASE_PROJECT_REF STAGING)" \
+      "$(resolve APPLICATION_URL STAGING)" "staging"
+  [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]] && \
+    check_hook_uri "$(resolve SUPABASE_PROJECT_REF PROD)" \
+      "$(resolve APPLICATION_URL PROD)" "prod"
+
+  printf "\n"
+  if [[ ${#VERIFY_FAILED[@]} -gt 0 ]]; then
+    err "Verify failed: ${VERIFY_FAILED[*]}"
+    printf "\n"
+    exit 1
+  fi
+  printf "${GREEN}Verify passed. No changes made.${NC}\n\n"
   exit 0
 fi
 
@@ -208,21 +301,27 @@ sync_fly_secrets() {
   env_title="$(printf '%s' "$env" | sed 's/\(.\)/\u\1/')"
   section "${env_title} → $app"
 
-  local db_url; db_url="$(eval echo "\${DATABASE_URL_${ENV}}")"
-  local sb_url; sb_url="$(eval echo "\${SUPABASE_URL_${ENV}}")"
-  local sb_key; sb_key="$(eval echo "\${SUPABASE_KEY_${ENV}}")"
-  local sb_secret_key; sb_secret_key="$(eval echo "\${SUPABASE_SECRET_KEY_${ENV}}")"
-  local app_url; app_url="$(eval echo "\${APPLICATION_URL_${ENV}}")"
-  local csrf;    csrf="$(eval echo "\${CSRF_SECRET_${ENV}}")"
-  local stripe;  stripe="$(eval echo "\${STRIPE_SECRET_KEY_${ENV}}")"
-  local ts_site; ts_site="$(eval echo "\${CLOUDFLARE_TURNSTILE_SITE_KEY_${ENV}}")"
-  local ts_sec;  ts_sec="$(eval echo "\${CLOUDFLARE_TURNSTILE_SECRET_KEY_${ENV}}")"
-  local resend;  resend="$(eval echo "\${RESEND_API_KEY_${ENV}}")"
-  local hook_raw; hook_raw="$(eval echo "\${SEND_EMAIL_HOOK_SECRET_${ENV}}")"
+  local db_url;   db_url="$(resolve DATABASE_URL "$ENV")"
+  local sb_url;   sb_url="$(resolve SUPABASE_URL "$ENV")"
+  local sb_key;   sb_key="$(resolve SUPABASE_KEY "$ENV")"
+  local sb_secret_key; sb_secret_key="$(resolve SUPABASE_SECRET_KEY "$ENV")"
+  local app_url;  app_url="$(resolve APPLICATION_URL "$ENV")"
+  local csrf;     csrf="$(resolve CSRF_SECRET "$ENV")"
+  local stripe;   stripe="$(resolve STRIPE_SECRET_KEY "$ENV")"
+  local ts_site;  ts_site="$(resolve CLOUDFLARE_TURNSTILE_SITE_KEY "$ENV")"
+  local ts_sec;   ts_sec="$(resolve CLOUDFLARE_TURNSTILE_SECRET_KEY "$ENV")"
+  local resend;   resend="$(resolve RESEND_API_KEY "$ENV")"
+  local hook_raw; hook_raw="$(resolve SEND_EMAIL_HOOK_SECRET "$ENV")"
   local hook; hook="$(strip_hook_prefix "$hook_raw")"
-  local enc_key;  enc_key="$(eval echo "\${CONTACT_DATA_ENCRYPTION_KEY_${ENV}:-}")"
-  local emb_key;  emb_key="$(eval echo "\${EMBED_TOKEN_ENCRYPTION_KEY_${ENV}}")"
-  local resend_wh; resend_wh="$(eval echo "\${RESEND_WEBHOOK_SECRET_${ENV}:-}")"
+  local enc_key;  enc_key="$(resolve CONTACT_DATA_ENCRYPTION_KEY "$ENV")"
+  local emb_key;  emb_key="$(resolve EMBED_TOKEN_ENCRYPTION_KEY "$ENV")"
+  local resend_wh; resend_wh="$(resolve RESEND_WEBHOOK_SECRET "$ENV")"
+
+  local stage_flag=()
+  if [[ "$STAGE_ONLY" == "true" ]]; then
+    stage_flag=(--stage)
+    warn "staged only - the next deploy applies these"
+  fi
 
   if fly secrets set \
       DATABASE_URL="$db_url" \
@@ -243,6 +342,7 @@ sync_fly_secrets() {
       ${enc_key:+CONTACT_DATA_ENCRYPTION_KEY="$enc_key"} \
       EMBED_TOKEN_ENCRYPTION_KEY="$emb_key" \
       ${resend_wh:+RESEND_WEBHOOK_SECRET="$resend_wh"} \
+      "${stage_flag[@]}" \
       --app "$app" 2>/dev/null; then
     SECRETS_SET+=("$app")
     ok "Secrets set for $app"
@@ -279,11 +379,13 @@ sync_supabase_hook() {
 
 section "Supabase auth hook sync"
 [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && \
-  sync_supabase_hook "$SUPABASE_PROJECT_REF_STAGING" \
-    "$SEND_EMAIL_HOOK_SECRET_STAGING" "$APPLICATION_URL_STAGING" "staging"
+  sync_supabase_hook "$(resolve SUPABASE_PROJECT_REF STAGING)" \
+    "$(resolve SEND_EMAIL_HOOK_SECRET STAGING)" \
+    "$(resolve APPLICATION_URL STAGING)" "staging"
 [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]] && \
-  sync_supabase_hook "$SUPABASE_PROJECT_REF_PROD" \
-    "$SEND_EMAIL_HOOK_SECRET_PROD" "$APPLICATION_URL_PROD" "prod"
+  sync_supabase_hook "$(resolve SUPABASE_PROJECT_REF PROD)" \
+    "$(resolve SEND_EMAIL_HOOK_SECRET PROD)" \
+    "$(resolve APPLICATION_URL PROD)" "prod"
 
 printf "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
 printf "  Fly.io apps updated: ${GREEN}%d${NC}\n" "${#SECRETS_SET[@]}"
