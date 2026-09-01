@@ -23,7 +23,13 @@ import { useEffect, useRef } from 'react'
  * comparing the reference asks the question that was actually being asked.
  */
 export function useOncePerFetcherResponse<TData>(
-	fetcher: { state: string; data: TData | undefined },
+	/*
+	  `data` admits null because React Router puts one there, whatever its own
+	  types say: `fetcher.reset()` settles the fetcher with `getDoneFetcher(null)`.
+	  Declaring only `undefined` would let a reset through to `handle` as a
+	  response.
+	*/
+	fetcher: { state: string; data: TData | undefined | null },
 	handle: (data: TData) => void
 ): void {
 	const lastHandled = useRef<TData | undefined>(undefined)
@@ -36,7 +42,7 @@ export function useOncePerFetcherResponse<TData>(
 	handleRef.current = handle
 
 	useEffect(() => {
-		if (fetcher.state !== 'idle' || fetcher.data === undefined) {
+		if (fetcher.state !== 'idle' || fetcher.data == null) {
 			return
 		}
 

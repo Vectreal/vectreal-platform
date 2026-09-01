@@ -13,7 +13,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { useOncePerFetcherResponse } from '../app/hooks/use-once-per-fetcher-response'
 
-type Fetcher<T> = { state: string; data: T | undefined }
+type Fetcher<T> = { state: string; data: T | undefined | null }
 
 function renderWith<T>(fetcher: Fetcher<T>, handle: (data: T) => void) {
 	function Probe({ value }: { value: Fetcher<T> }) {
@@ -108,6 +108,22 @@ describe('useOncePerFetcherResponse', () => {
 		settle(csrf())
 
 		expect(handle).toHaveBeenCalledTimes(3)
+	})
+
+	/*
+	  Defect 4: `fetcher.reset()` settles with `getDoneFetcher(null)`, not
+	  `undefined`, so a guard written against `undefined` alone hands the reset
+	  to the handler as though it were a response. No caller resets today; the
+	  guard is what keeps that true for the one that does.
+	*/
+	it('ignores a fetcher reset after it has answered', () => {
+		const handle = vi.fn()
+		const { settle } = renderWith(idle({ ok: true }), handle)
+		expect(handle).toHaveBeenCalledOnce()
+
+		settle({ state: 'idle', data: null })
+
+		expect(handle).toHaveBeenCalledOnce()
 	})
 
 	it('does not re-run when only the handler identity changes', () => {
