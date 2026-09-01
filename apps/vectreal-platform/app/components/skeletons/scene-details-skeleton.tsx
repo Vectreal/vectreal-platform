@@ -20,7 +20,9 @@ export const SceneDetailsSkeleton = () => {
 			aria-label="Loading scene"
 		>
 			<div className="grid grid-cols-1 gap-4 xl:h-full xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_auto]">
-				<main className="flex flex-col gap-4 xl:min-h-0">
+				{/* A `div` for the reason `scene.tsx` records: `SidebarInset` owns
+				    this page's only `main` landmark. */}
+				<div className="flex flex-col gap-4 xl:min-h-0">
 					<Skeleton className="h-[55svh] min-h-64 shrink-0 rounded-2xl xl:h-auto xl:min-h-0 xl:flex-1" />
 
 					<div className="ds-raised space-y-4 rounded-2xl px-4 py-4 sm:px-5">
@@ -44,7 +46,7 @@ export const SceneDetailsSkeleton = () => {
 							<Skeleton className="h-4 w-56" />
 						</div>
 					</div>
-				</main>
+				</div>
 
 				{/*
 				  The `xl` column only, mirroring `SceneFactsPanel`. Below `xl` the
