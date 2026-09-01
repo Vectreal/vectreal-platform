@@ -90,6 +90,18 @@ export function calculateTextureResolutions(
 	return Array.from(resolutions)
 }
 
+/**
+ * How many meshes the document has.
+ *
+ * The count that did not exist, which is why `meshesCount` everywhere
+ * downstream was fed from `calculateMeshSize` instead and reported a byte size
+ * as a quantity.
+ */
+export function calculateMeshCount(inspectReport: InspectReport): number {
+	return inspectReport.meshes?.properties?.length ?? 0
+}
+
+/** Summed mesh payload size in bytes. Not a count - see `calculateMeshCount`. */
 export function calculateMeshSize(inspectReport: InspectReport): number {
 	let totalSize = 0
 	if (inspectReport.meshes?.properties) {
@@ -237,6 +249,10 @@ export function buildOptimizationReport(
 			meshes: {
 				before: originalReport ? calculateMeshSize(originalReport) : 0,
 				after: calculateMeshSize(currentInspectReport)
+			},
+			meshesCount: {
+				before: originalReport ? calculateMeshCount(originalReport) : 0,
+				after: calculateMeshCount(currentInspectReport)
 			}
 		}
 	}

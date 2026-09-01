@@ -33,7 +33,9 @@ function getSnapshotFromReport(
 	return {
 		verticesCount: report.stats.vertices.after ?? 0,
 		primitivesCount: report.stats.triangles.after ?? 0,
-		meshesCount: report.stats.meshes.after ?? 0,
+		// `stats.meshes` is a byte size; `stats.meshesCount` is the quantity. This
+		// read the former and called it a count.
+		meshesCount: report.stats.meshesCount.after ?? 0,
 		textureAssetCount: report.stats.texturesCount.after ?? 0,
 		materialsCount: report.stats.materials.after ?? 0,
 		sceneBytes: report.optimizedSize ?? 0

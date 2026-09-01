@@ -23,7 +23,10 @@ const buildReport = (
 		textures: { before: 2_000_000, after: 2_000_000 },
 		texturesCount: { before: 4, after: 4 },
 		textureResolutions: { before: [], after: [] },
-		meshes: { before: 6_000_000, after: 3_000_000 }
+		// Bytes, per `OptimizationStats`. The count is its own field, which is the
+		// distinction this fixture predates.
+		meshes: { before: 6_000_000, after: 3_000_000 },
+		meshesCount: { before: 12, after: 12 }
 	},
 	...overrides
 })
