@@ -128,7 +128,7 @@ describe('a published scene', () => {
 		  Date and size in one line. The size is what a visitor pays to load it,
 		  which is the number this product exists to keep small.
 		*/
-		expect(container.textContent).toContain('2.10 MB')
+		expect(container.textContent).toContain('2.1 MB')
 		expect(container.textContent).toMatch(/Published\s/)
 	})
 

@@ -1,32 +1,8 @@
+import { formatFileSize } from '@shared/utils'
+
 import { DetailPanelSection, StatGrid, StatTile } from '../../layout-components'
 
 import type { SceneDetailsSummary } from '../../../types/dashboard'
-
-/**
- * Bytes as a scene page says them.
- *
- * Not `formatFileSize` from `@shared/utils`, and not the copy inside
- * `scene-asset-list-item.tsx`: all three round differently, and swapping one for
- * another here would change every figure on this surface for no reason anybody
- * asked for. The three are a real duplication and are filed as their own row.
- */
-function formatBytes(bytes: number | null | undefined): string {
-	if (bytes == null || Number.isNaN(bytes)) {
-		return '-'
-	}
-
-	if (bytes === 0) {
-		return '0 B'
-	}
-
-	const units = ['B', 'KB', 'MB', 'GB']
-	const index = Math.min(
-		Math.floor(Math.log(bytes) / Math.log(1024)),
-		units.length - 1
-	)
-	const size = bytes / 1024 ** index
-	return `${size >= 100 ? Math.round(size) : size.toFixed(size < 10 ? 1 : 0)} ${units[index]}`
-}
 
 /**
  * Texture weight, or the count when the weight was never recorded.
@@ -38,7 +14,7 @@ function formatBytes(bytes: number | null | undefined): string {
  */
 function describeTextures(details: SceneDetailsSummary): string {
 	if (details.textureBytes != null) {
-		return formatBytes(details.textureBytes)
+		return formatFileSize(details.textureBytes)
 	}
 
 	if (details.textureCount != null) {
@@ -84,7 +60,7 @@ export function SceneMetricsSection({
 	return (
 		<DetailPanelSection title="Scene Metrics" headingLevel={headingLevel}>
 			<StatGrid>
-				<StatTile label="Size" value={formatBytes(details.fileSizeBytes)} />
+				<StatTile label="Size" value={formatFileSize(details.fileSizeBytes)} />
 				<StatTile label="Assets" value={details.assetCount} />
 				<StatTile label="Texture Size" value={describeTextures(details)} />
 				<StatTile

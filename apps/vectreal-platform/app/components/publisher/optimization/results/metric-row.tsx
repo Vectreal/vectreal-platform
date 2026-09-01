@@ -1,13 +1,9 @@
-import { formatFileSize } from '@shared/utils'
 import { ArrowRight } from 'lucide-react'
 
 import type { FC, ReactNode } from 'react'
 
 export const formatCount = (value: number | null | undefined) =>
 	typeof value === 'number' ? value.toLocaleString() : '-'
-
-export const formatBytes = (value: number | null | undefined) =>
-	typeof value === 'number' ? formatFileSize(value) : '-'
 
 interface MetricRowProps {
 	label: string

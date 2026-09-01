@@ -1,17 +1,9 @@
 import { Badge } from '@shared/components/ui/badge'
-import { cn } from '@shared/utils'
+import { cn, formatFileSize } from '@shared/utils'
 import { toSerializedAssetBytes } from '@vctrl/core'
 
 import type { SerializedSceneAssetDataMap } from '../../types/api'
 import type { SceneAssetSummary } from '../../types/dashboard'
-
-function formatBytes(bytes: number | null | undefined): string {
-	if (bytes == null || Number.isNaN(bytes)) return '-'
-	if (bytes === 0) return '0 B'
-	const units = ['B', 'KB', 'MB', 'GB']
-	const i = Math.floor(Math.log(bytes) / Math.log(1024))
-	return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`
-}
 
 type TextureAssetProps = {
 	asset: SceneAssetSummary & { type: 'texture' }
@@ -102,7 +94,7 @@ export function SceneAssetListItem({
 					</Badge>
 				</div>
 				<p className="text-muted-foreground mt-1 text-xs">
-					{formatBytes(asset.fileSize)}
+					{formatFileSize(asset.fileSize)}
 					{asset.mimeType ? ` • ${asset.mimeType}` : ''}
 				</p>
 			</div>
