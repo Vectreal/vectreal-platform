@@ -29,7 +29,11 @@ import type {
 const router = vi.hoisted(() => ({
 	fetcher: { state: 'idle', data: undefined as unknown },
 	revalidation: 'idle' as 'idle' | 'loading',
-	revalidate: vi.fn()
+	revalidate: vi.fn(),
+	submissions: [] as Array<{
+		body: Record<string, string>
+		options: { method: string; action: string }
+	}>
 }))
 
 vi.mock('react-router', () => {
@@ -40,7 +44,10 @@ vi.mock('react-router', () => {
 		useFetcher: () => ({
 			state: router.fetcher.state,
 			data: router.fetcher.data,
-			submit: () => {}
+			submit: (
+				body: Record<string, string>,
+				options: { method: string; action: string }
+			) => router.submissions.push({ body, options })
 		}),
 		useFetchers: () => [],
 		/*
@@ -78,12 +85,13 @@ vi.mock('sonner', () => ({
 
 const handled: DashboardMutationResponse[] = []
 
-function mount() {
+function mount(options?: { silent?: boolean }) {
 	let api!: DashboardMutationsApi
 
 	function Probe() {
 		api = useDashboardMutations({
-			onSuccess: (response) => handled.push(response)
+			onSuccess: (response) => handled.push(response),
+			silent: options?.silent
 		})
 		return null
 	}
@@ -143,11 +151,55 @@ beforeEach(() => {
 	router.fetcher = { state: 'idle', data: undefined }
 	router.revalidation = 'idle'
 	router.revalidate.mockClear()
+	router.submissions = []
 	toasts.length = 0
 	handled.length = 0
 })
 
 describe('useDashboardMutations', () => {
+	/*
+	  The request half. Every field here is one the endpoint parses by name, so
+	  a rename to `target` or a dropped csrf token is a 400 at runtime and
+	  nothing at compile time.
+	*/
+	it('posts the serialized request and the csrf token to the endpoint', () => {
+		const probe = mount()
+
+		probe.submit(deleteScene)
+
+		expect(router.submissions).toHaveLength(1)
+		const [{ body, options }] = router.submissions
+		expect(options).toEqual({ method: 'post', action: '/api/dashboard/mutations' })
+		expect(body).toEqual({
+			verb: 'delete',
+			targets: JSON.stringify([{ type: 'scene', id: 'scene-1' }]),
+			csrf: 'csrf-token'
+		})
+	})
+
+	/*
+	  A rename carries one `target`, and the wire field is `targets` holding an
+	  array of it. That is not cosmetic: `useDashboardMutationStatus` finds a
+	  row's pending id by JSON-parsing `targets` off the in-flight form data, so
+	  a rename that serialized its target under any other name would submit
+	  correctly and leave the row with no spinner.
+	*/
+	it('serializes a rename into the targets field the status hook reads', () => {
+		const probe = mount()
+
+		probe.submit({
+			verb: 'rename',
+			target: { type: 'folder', id: 'folder-9' },
+			name: 'Archive'
+		})
+
+		const [{ body }] = router.submissions
+		expect(body.name).toBe('Archive')
+		expect(JSON.parse(body.targets)).toEqual([
+			{ type: 'folder', id: 'folder-9' }
+		])
+	})
+
 	it('handles a settled response once', () => {
 		const probe = mount()
 
@@ -257,6 +309,45 @@ describe('useDashboardMutations', () => {
 		expect(toasts).toEqual(['error:Invalid CSRF token'])
 		expect(probe.api.lastError).toBe('Invalid CSRF token')
 		expect(router.revalidate).not.toHaveBeenCalled()
+	})
+
+	it('falls back to a generic message when a rejection carries none', () => {
+		const probe = mount()
+
+		probe.submit(deleteScene)
+		probe.submitting()
+		probe.settle({ success: false as const })
+
+		expect(toasts).toEqual(['error:Action failed'])
+		expect(probe.api.lastError).toBe('Action failed')
+	})
+
+	/*
+	  `silent` is for callers rendering their own feedback; it must suppress the
+	  toast without suppressing anything else the response drives.
+	*/
+	it('suppresses toasts but not the response when silent', () => {
+		const probe = mount({ silent: true })
+
+		probe.submit(deleteScene)
+		probe.submitting()
+		const response = deleted()
+		probe.settle(response)
+
+		expect(toasts).toHaveLength(0)
+		expect(handled).toEqual([response.data])
+		expect(router.revalidate).toHaveBeenCalledOnce()
+	})
+
+	it('suppresses a rejection toast but still reports the error when silent', () => {
+		const probe = mount({ silent: true })
+
+		probe.submit(deleteScene)
+		probe.submitting()
+		probe.settle(rejected())
+
+		expect(toasts).toHaveLength(0)
+		expect(probe.api.lastError).toBe('Invalid CSRF token')
 	})
 
 	it('does not revalidate when every target failed', () => {
