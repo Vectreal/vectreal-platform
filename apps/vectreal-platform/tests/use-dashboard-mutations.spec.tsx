@@ -152,8 +152,6 @@ describe('useDashboardMutations', () => {
 		const probe = mount()
 
 		probe.submit(deleteScene)
-		expect(probe.api.pendingIds).toEqual(new Set(['scene-1']))
-
 		probe.submitting()
 		const response = deleted()
 		probe.settle(response)
@@ -161,8 +159,6 @@ describe('useDashboardMutations', () => {
 		expect(handled).toEqual([response.data])
 		expect(handled[0]).toBe(response.data)
 		expect(toasts).toEqual(['success:Item deleted'])
-		expect(probe.api.lastResponse).toBe(response.data)
-		expect(probe.api.pendingIds.size).toBe(0)
 		expect(router.revalidate).toHaveBeenCalledOnce()
 	})
 
@@ -217,7 +213,6 @@ describe('useDashboardMutations', () => {
 		probe.revalidation('idle')
 
 		expect(handled).toHaveLength(1)
-		expect(probe.api.pendingIds).toEqual(new Set(['scene-1']))
 	})
 
 	/*
@@ -251,7 +246,7 @@ describe('useDashboardMutations', () => {
 		expect(router.revalidate).toHaveBeenCalledOnce()
 	})
 
-	it('surfaces a rejection and clears the pending ids', () => {
+	it('surfaces a rejection', () => {
 		const probe = mount()
 
 		probe.submit(deleteScene)
@@ -261,7 +256,6 @@ describe('useDashboardMutations', () => {
 		expect(handled).toHaveLength(0)
 		expect(toasts).toEqual(['error:Invalid CSRF token'])
 		expect(probe.api.lastError).toBe('Invalid CSRF token')
-		expect(probe.api.pendingIds.size).toBe(0)
 		expect(router.revalidate).not.toHaveBeenCalled()
 	})
 

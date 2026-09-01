@@ -22,12 +22,9 @@ type MutationEnvelope =
 
 export interface DashboardMutationsApi {
 	submit: (request: DashboardMutationRequest) => void
-	/** Idle until a response arrives, then the last response or its error. */
 	state: 'idle' | 'submitting' | 'loading'
-	isBusy: boolean
-	lastResponse: DashboardMutationResponse | null
+	/** The last rejection, for a dialog to render in place. Cleared on submit. */
 	lastError: string | null
-	pendingIds: ReadonlySet<string>
 }
 
 function describeOutcome(response: DashboardMutationResponse): {
@@ -85,9 +82,6 @@ export function useDashboardMutations(options?: {
 	const revalidator = useRevalidator()
 	const csrfToken = useAuthenticityToken()
 
-	const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set())
-	const [lastResponse, setLastResponse] =
-		useState<DashboardMutationResponse | null>(null)
 	const [lastError, setLastError] = useState<string | null>(null)
 
 	const onSuccessRef = useRef(options?.onSuccess)
@@ -99,14 +93,6 @@ export function useDashboardMutations(options?: {
 		(request: DashboardMutationRequest) => {
 			setLastError(null)
 
-			const targetIds =
-				request.verb === 'rename'
-					? [request.target.id]
-					: request.verb === 'create-folder'
-						? []
-						: request.targets.map((target) => target.id)
-			setPendingIds(new Set(targetIds))
-
 			fetcher.submit(
 				{ ...serializeDashboardMutationRequest(request), csrf: csrfToken },
 				{ method: 'post', action: ENDPOINT }
@@ -116,8 +102,6 @@ export function useDashboardMutations(options?: {
 	)
 
 	useOncePerFetcherResponse(fetcher, (envelope) => {
-		setPendingIds(new Set())
-
 		if (!envelope.success) {
 			const message = envelope.error ?? 'Action failed'
 			setLastError(message)
@@ -128,7 +112,6 @@ export function useDashboardMutations(options?: {
 		}
 
 		const response = envelope.data
-		setLastResponse(response)
 
 		if (!silentRef.current) {
 			const outcome = describeOutcome(response)
@@ -141,14 +124,7 @@ export function useDashboardMutations(options?: {
 		}
 	})
 
-	return {
-		submit,
-		state: fetcher.state,
-		isBusy: fetcher.state !== 'idle' || revalidator.state !== 'idle',
-		lastResponse,
-		lastError,
-		pendingIds
-	}
+	return { submit, state: fetcher.state, lastError }
 }
 
 export interface DashboardMutationStatus {
