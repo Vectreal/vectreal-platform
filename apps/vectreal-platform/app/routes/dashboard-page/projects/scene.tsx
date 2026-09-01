@@ -10,7 +10,8 @@ import CenteredSpinner from '../../../components/centered-spinner'
 import {
 	InlineEditableMetadataField,
 	SceneFactsPanel,
-	SceneHeaderActions
+	SceneHeaderActions,
+	SceneSummaryBar
 } from '../../../components/dashboard'
 import { DetailPanelSection } from '../../../components/layout-components'
 import SceneEmbedViewer from '../../../components/scene-embed/scene-embed-viewer'
@@ -220,20 +221,24 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 
 	return (
 		/*
-		  `h-full` rather than a `100dvh` calculation: the dashboard shell now gives
-		  this row a definite height, so subtracting an assumed header height would
-		  overshoot it and produce a second scrollbar.
+		  No height and no scroller of its own below `xl`, deliberately.
 
-		  Below `xl` the facts panel has no column to sit in, so it flows underneath
-		  the main column and this container scrolls. From `xl` up the grid fills
-		  the shell's height and each column owns its own overflow, as before.
+		  `dashboard-layout.tsx` already gives its content row a bounded height and
+		  its own vertical scroll, so the shell is this page's scroller. This
+		  element used to add a second scroller *and* pin itself to the full height
+		  of that row, which is the pair that guarantees neither scrolls: the grid
+		  below could not grow past the viewport, so its second row was clipped
+		  with nothing able to reach it.
+
+		  From `xl` up the height is real - two columns share the shell's row and
+		  each owns its own overflow - so it is taken back there and only there.
 		*/
-		<div className="h-full overflow-y-auto px-5 pt-1 pb-5 xl:overflow-hidden xl:px-6">
+		<div className="px-5 pt-1 pb-5 xl:h-full xl:overflow-hidden xl:px-6">
 			{sceneState.thumbnailUrl ? (
 				<link rel="preload" as="image" href={sceneState.thumbnailUrl} />
 			) : null}
-			<div className="grid h-full min-h-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">
-				<main className="flex min-h-0 flex-col gap-4">
+			<div className="grid grid-cols-1 gap-4 xl:h-full xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_auto]">
+				<main className="flex flex-col gap-4 xl:min-h-0">
 					{model.status === 'error' ? (
 						<DetailPanelSection
 							surface="raised"
@@ -267,7 +272,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 					  large viewport overhangs mobile browser chrome, and this element
 					  holds a canvas with `touch-action: none`.
 					*/}
-					<section className="ds-sunken relative h-[55svh] min-h-64 shrink-0 overflow-hidden rounded-2xl xl:h-auto xl:flex-1">
+					<section className="ds-sunken relative h-[55svh] min-h-64 shrink-0 overflow-hidden rounded-2xl xl:h-auto xl:min-h-0 xl:flex-1">
 						<SceneEmbedViewer
 							file={file}
 							sceneData={sceneData}
@@ -275,14 +280,16 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						/>
 					</section>
 					<DetailPanelSection surface="raised" contentClassName="space-y-6">
-						<header className="flex flex-col items-start gap-6 md:flex-row">
+						<header className="space-y-4">
 							{/*
-						  `min-w-0` is what stops a long scene name from pushing the
-						  action column off to the side: a flex item defaults to
-						  min-width:auto, so its content dictates the floor rather than
-						  the container.
-						*/}
-							<div className="min-w-0 grow space-y-2 max-md:w-full">
+							  The two calls to action get a row of their own beneath the
+							  description. They used to be a column beside it, which set the
+							  header's height from the tallest thing in it - four stacked
+							  buttons - while the title and description next to them were
+							  two lines. That is where the void under the description came
+							  from.
+							*/}
+							<div className="space-y-2">
 								<InlineEditableMetadataField
 									ariaLabel="Scene title"
 									value={metadata.nameDraft}
@@ -313,16 +320,10 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 									}
 								/>
 							</div>
+
 							<SceneHeaderActions
 								previewPath={previewPath}
 								publisherPath={publisherPath}
-								sceneId={sceneState.id}
-								projectId={project.id}
-								publishState={publishState}
-								onPublish={openPublisherForPublishing}
-								deleteRef={deleteRef}
-								canDelete={canDeleteScene}
-								onDeleted={handleDeleted}
 							/>
 						</header>
 
@@ -358,9 +359,35 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 					</DetailPanelSection>
 				</main>
 
+				{/*
+				  Two hosts, one for each side of `xl`, and exactly one of them is
+				  ever visible. The aside is the column; the summary bar is what a
+				  viewport with no column gets - two figures and two doors, because
+				  flowing the full asset list into the page is what made it taller
+				  than the shell could scroll.
+				*/}
 				<SceneFactsPanel
 					details={sceneDetails}
 					assetData={sceneData?.assetData}
+					sceneId={sceneState.id}
+					projectId={project.id}
+					publishState={publishState}
+					onPublish={openPublisherForPublishing}
+					deleteRef={deleteRef}
+					canDelete={canDeleteScene}
+					onDeleted={handleDeleted}
+				/>
+				<SceneSummaryBar
+					className="xl:hidden"
+					details={sceneDetails}
+					assetData={sceneData?.assetData}
+					sceneId={sceneState.id}
+					projectId={project.id}
+					publishState={publishState}
+					onPublish={openPublisherForPublishing}
+					deleteRef={deleteRef}
+					canDelete={canDeleteScene}
+					onDeleted={handleDeleted}
 				/>
 			</div>
 		</div>

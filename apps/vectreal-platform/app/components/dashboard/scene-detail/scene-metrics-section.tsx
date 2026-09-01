@@ -50,6 +50,16 @@ function describeTextures(details: SceneDetailsSummary): string {
 
 interface SceneMetricsSectionProps {
 	details: SceneDetailsSummary
+	/**
+	 * The rung this sits on in its host's outline.
+	 *
+	 * `h2` in the aside, which is the top of this page's outline because
+	 * `dashboard-layout.tsx` suppresses `DashboardHeader` on the scene route.
+	 * `h3` inside the details sheet, whose `DrawerTitle` Radix renders as the
+	 * `h2` above it - without this the section would announce as a peer of its
+	 * own container.
+	 */
+	headingLevel?: 'h2' | 'h3'
 }
 
 /**
@@ -59,17 +69,19 @@ interface SceneMetricsSectionProps {
  * drifted apart on labels for identical numbers: `Size` against `Current Size`,
  * `Meshes` against `Meshes / Vertices`. This is the surviving label set.
  *
- * `headingLevel="h2"` is hardcoded rather than offered as a prop. The scene
- * route renders no `h1` at all - `dashboard-layout.tsx` suppresses
- * `DashboardHeader` on it - so `h2` is the top of this document's outline, and
- * there is exactly one host.
+ * Two hosts now: the aside, and the details sheet that stands in for it below
+ * `xl`. They sit at different depths, which is why `headingLevel` is a prop and
+ * not the constant it was while the aside was the only host.
  */
-export function SceneMetricsSection({ details }: SceneMetricsSectionProps) {
+export function SceneMetricsSection({
+	details,
+	headingLevel = 'h2'
+}: SceneMetricsSectionProps) {
 	return (
 		<DetailPanelSection
 			eyebrow="At a Glance"
 			title="Scene Metrics"
-			headingLevel="h2"
+			headingLevel={headingLevel}
 		>
 			<StatGrid>
 				<StatTile label="Size" value={formatBytes(details.fileSizeBytes)} />

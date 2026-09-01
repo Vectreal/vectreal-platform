@@ -1,33 +1,54 @@
 import { cn } from '@shared/utils'
 
 import { SceneAssetsSection } from './scene-assets-section'
+import { SceneDeleteButton } from './scene-delete-button'
 import { SceneMetricsSection } from './scene-metrics-section'
+import { SceneShareDrawer } from './scene-share-drawer'
 
+import type { DashboardEntityRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
+import type { ScenePublishStateResponse } from '../../../types/api'
 import type { SerializedSceneAssetDataMap } from '../../../types/api'
 import type { SceneDetailsSummary } from '../../../types/dashboard'
 
 interface SceneFactsPanelProps {
 	details: SceneDetailsSummary
 	assetData?: SerializedSceneAssetDataMap | null
+	sceneId: string
+	projectId: string
+	publishState: ScenePublishStateResponse
+	onPublish: () => void
+	deleteRef: DashboardEntityRef
+	canDelete: boolean
+	onDeleted: () => void
 	className?: string
 }
 
 /**
  * What the scene *is*: what it weighs, and what it is made of.
  *
- * One element, rendered once. At `xl` it is the aside column and owns its own
- * scroll, because the page there has a definite height it must not exceed.
- * Below `xl` there is no column to be, so it flows into the page and the page
- * scrolls - which is also the first time this content has been reachable on a
- * phone without opening a drawer.
+ * The `xl` column, and only that. Below `xl` this content is reached through
+ * `SceneSummaryBar` instead: flowing the full list into the page made it taller
+ * than the shell could scroll and left it clipped.
  *
- * `w-detail-panel` from `xl` up, the same token the publish drawer and the
- * publisher sidebar read. The 20rem this column used to be was a bare bracket
- * value that agreed with nothing.
+ * Three surfaces, in the order the questions get asked - what it weighs, what
+ * it is made of, and what you can do with it. The asset list takes the space
+ * between the other two and scrolls inside it, so the door at the foot stays
+ * on screen however many assets a scene has.
+ *
+ * `w-detail-panel`, the same token the publish drawer and the publisher sidebar
+ * read. The 20rem this column used to be was a bare bracket value that agreed
+ * with nothing.
  */
 export function SceneFactsPanel({
 	details,
 	assetData,
+	sceneId,
+	projectId,
+	publishState,
+	onPublish,
+	deleteRef,
+	canDelete,
+	onDeleted,
 	className
 }: SceneFactsPanelProps) {
 	return (
@@ -39,16 +60,38 @@ export function SceneFactsPanel({
 		<aside
 			aria-label="Scene details"
 			className={cn(
-				'ds-raised flex flex-col gap-3 rounded-2xl p-5',
-				'xl:w-detail-panel xl:min-h-0 xl:overflow-hidden',
+				'ds-raised hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-5',
+				'w-detail-panel xl:flex',
 				className
 			)}
 		>
 			<SceneMetricsSection details={details} />
+			{/*
+			  `min-h-0` is what lets this shrink below its content and scroll rather
+			  than pushing the trigger below it out of the panel: a flex item's floor
+			  is its content height until something says otherwise.
+			*/}
 			<SceneAssetsSection
 				assets={details.assets}
 				assetData={assetData}
-				className="xl:min-h-0 xl:overflow-y-auto"
+				className="min-h-0 overflow-y-auto"
+			/>
+			<SceneShareDrawer
+				sceneId={sceneId}
+				projectId={projectId}
+				publishState={publishState}
+				onPublish={onPublish}
+			/>
+			{/*
+			  Under the doors, and quieter than any of them. Delete is not what this
+			  surface is for; it just has to live somewhere findable that is not the
+			  header, where it read as a fourth call to action.
+			*/}
+			<SceneDeleteButton
+				sceneId={sceneId}
+				deleteRef={deleteRef}
+				canDelete={canDelete}
+				onDeleted={onDeleted}
 			/>
 		</aside>
 	)

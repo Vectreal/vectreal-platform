@@ -17,6 +17,8 @@ const COLLAPSED_LIMIT = 6
 interface SceneAssetsSectionProps {
 	assets: SceneAssetSummary[]
 	assetData?: SerializedSceneAssetDataMap | null
+	/** `h2` in the aside, `h3` under the details sheet's own title. */
+	headingLevel?: 'h2' | 'h3'
 	className?: string
 }
 
@@ -31,6 +33,7 @@ interface SceneAssetsSectionProps {
 export function SceneAssetsSection({
 	assets,
 	assetData,
+	headingLevel = 'h2',
 	className
 }: SceneAssetsSectionProps) {
 	const [expanded, setExpanded] = useState(false)
@@ -52,7 +55,11 @@ export function SceneAssetsSection({
 	)
 
 	return (
-		<DetailPanelSection title="Assets" headingLevel="h2" className={className}>
+		<DetailPanelSection
+			title="Assets"
+			headingLevel={headingLevel}
+			className={className}
+		>
 			{assets.length === 0 ? (
 				<p className="text-muted-foreground ds-sunken rounded-xl p-3 text-sm">
 					No linked assets.

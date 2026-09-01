@@ -184,11 +184,19 @@ export function ScenePublishStateControl({
 	}, [draftActionMode, handleConfirmPublish])
 
 	return (
-		<motion.div
-			layout
-			className={className ?? 'space-y-3'}
-			transition={{ duration: 0.2, ease: 'easeOut' }}
-		>
+		/*
+		  A plain element, deliberately. This was a `motion.div` with `layout`,
+		  which animates a box change by measuring before and after and transforming
+		  the difference - and both of this control's hosts are themselves mid
+		  transform when it mounts: the dashboard's surface drawer slides in, and
+		  the publisher's accordion animates its own height.
+
+		  The projection therefore measured against a moving ancestor, so the
+		  control settled into place a beat *after* the drawer had finished opening,
+		  dragging its own layout with it. The height change it was smoothing is one
+		  line appearing, and that line already fades itself in below.
+		*/
+		<div className={className ?? 'space-y-3'}>
 			<div className="flex items-center justify-between gap-2">
 				<div className="space-y-1">
 					<p className="text-muted-foreground text-xs">{publishedAtText}</p>
@@ -293,6 +301,6 @@ export function ScenePublishStateControl({
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
-		</motion.div>
+		</div>
 	)
 }

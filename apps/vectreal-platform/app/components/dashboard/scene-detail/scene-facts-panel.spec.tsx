@@ -12,10 +12,39 @@
  */
 
 import { fireEvent, render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { SceneFactsPanel } from './scene-facts-panel'
 
+/*
+  Stubbed. The panel gained a Publish & Embed door at its foot, which pulls in
+  the publish fetcher and the whole embed panel; this file is about the two
+  content surfaces above it, and a failure in either of those should not read as
+  a failure of the metrics. `scene-share-drawer.spec.tsx` covers the door.
+*/
+vi.mock('./scene-share-drawer', () => ({
+	SceneShareDrawer: () => <button type="button">Publish &amp; Embed</button>
+}))
+
+/*
+  Stubbed too. It reaches `useFetcher`, which needs a data router; the delete
+  path is driven end to end in `scene-delete-button.spec.tsx`, and here it only
+  has to occupy its place.
+*/
+vi.mock('./scene-delete-button', () => ({
+	SceneDeleteButton: () => <button type="button">Delete scene</button>
+}))
+
+const PUBLISH_STATE: ScenePublishStateResponse = {
+	sceneId: 'scene-1',
+	status: 'draft',
+	publishedAt: null,
+	publishedAssetId: null,
+	publishedAssetSizeBytes: null
+}
+
+import type { DashboardEntityRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
+import type { ScenePublishStateResponse } from '../../../types/api'
 import type {
 	SceneAssetSummary,
 	SceneDetailsSummary
@@ -57,6 +86,31 @@ function details(
  * except that one - and `Size` went with it. Both then read whichever field a
  * typo pointed them at with nothing failing.
  */
+
+const DELETE_REF: DashboardEntityRef = {
+	type: 'scene',
+	id: 'scene-1',
+	name: 'Porsche',
+	projectId: 'project-1',
+	sceneStatus: 'draft'
+}
+
+/** Only `details` ever varies; the rest is what the route always passes. */
+function renderPanel(details: SceneDetailsSummary) {
+	return render(
+		<SceneFactsPanel
+			details={details}
+			sceneId="scene-1"
+			projectId="project-1"
+			publishState={PUBLISH_STATE}
+			onPublish={vi.fn()}
+			deleteRef={DELETE_REF}
+			canDelete
+			onDeleted={vi.fn()}
+		/>
+	)
+}
+
 const tileValue = (label: string) => {
 	const section = screen
 		.getByRole('heading', { name: 'Scene Metrics' })
@@ -76,17 +130,15 @@ describe('scene metrics', () => {
 		  three, so the Assets tile could read either one and the mutation swapping
 		  them survived. No two numbers here collide.
 		*/
-		render(
-			<SceneFactsPanel
-				details={details({
-					assets: [asset(1), asset(2), asset(3)],
-					fileSizeBytes: 4_194_304,
-					textureBytes: 1_048_576,
-					textureCount: 7,
-					meshesCount: 12,
-					verticesCount: 48_000
-				})}
-			/>
+		renderPanel(
+			details({
+				assets: [asset(1), asset(2), asset(3)],
+				fileSizeBytes: 4_194_304,
+				textureBytes: 1_048_576,
+				textureCount: 7,
+				meshesCount: 12,
+				verticesCount: 48_000
+			})
 		)
 
 		expect(tileValue('Size')).toBe('4.0 MB')
@@ -96,7 +148,7 @@ describe('scene metrics', () => {
 	})
 
 	it('renders one label set, not two', () => {
-		render(<SceneFactsPanel details={details()} />)
+		renderPanel(details())
 
 		expect(screen.getAllByRole('heading').map((h) => h.textContent)).toEqual([
 			'Scene Metrics',
@@ -112,11 +164,11 @@ describe('scene metrics', () => {
 	})
 
 	it('reports texture weight when it is known and the count when it is not', () => {
-		const { unmount } = render(<SceneFactsPanel details={details()} />)
+		const { unmount } = renderPanel(details())
 		expect(tileValue('Texture Size')).toBe('1.0 MB')
 		unmount()
 
-		render(<SceneFactsPanel details={details({ textureBytes: null })} />)
+		renderPanel(details({ textureBytes: null }))
 		/*
 		  Not a dash. A scene saved before `currentTextureBytes` existed has only a
 		  count, and the count is true where the dash is not.
@@ -125,16 +177,14 @@ describe('scene metrics', () => {
 	})
 
 	it('falls back to a dash rather than printing null', () => {
-		render(
-			<SceneFactsPanel
-				details={details({
-					fileSizeBytes: null,
-					textureBytes: null,
-					textureCount: null,
-					meshesCount: null,
-					verticesCount: null
-				})}
-			/>
+		renderPanel(
+			details({
+				fileSizeBytes: null,
+				textureBytes: null,
+				textureCount: null,
+				meshesCount: null,
+				verticesCount: null
+			})
 		)
 
 		expect(tileValue('Size')).toBe('-')
@@ -145,25 +195,30 @@ describe('scene metrics', () => {
 
 describe('the asset list', () => {
 	it('says so when there are none', () => {
-		render(<SceneFactsPanel details={details()} />)
+		renderPanel(details())
 
 		expect(screen.getByText('No linked assets.')).not.toBeNull()
-		expect(screen.queryByRole('button')).toBeNull()
+		/*
+		  The expand toggle by name, not "no buttons at all". The panel now ends in
+		  a Publish & Embed door, so an unnamed query matches that instead and the
+		  three assertions this shape appears in stopped being about the list.
+		*/
+		expect(screen.queryByRole('button', { name: /show/i })).toBeNull()
 	})
 
 	it('shows every asset when the list is short enough to fit', () => {
 		const assets = [asset(1), asset(2), asset(3)]
-		render(<SceneFactsPanel details={details({ assets })} />)
+		renderPanel(details({ assets }))
 
 		for (const item of assets) {
 			expect(screen.getByText(item.name)).not.toBeNull()
 		}
-		expect(screen.queryByRole('button')).toBeNull()
+		expect(screen.queryByRole('button', { name: /show/i })).toBeNull()
 	})
 
 	it('collapses past six and expands on demand', () => {
 		const assets = Array.from({ length: 9 }, (_, index) => asset(index))
-		render(<SceneFactsPanel details={details({ assets })} />)
+		renderPanel(details({ assets }))
 
 		/*
 		  The seventh, not "some are hidden": an off-by-one in the slice renders
@@ -189,21 +244,21 @@ describe('the asset list', () => {
 		  cases below pass either way.
 		*/
 		const assets = Array.from({ length: 6 }, (_, index) => asset(index))
-		render(<SceneFactsPanel details={details({ assets })} />)
+		renderPanel(details({ assets }))
 
 		expect(screen.getByText('asset-5.png')).not.toBeNull()
-		expect(screen.queryByRole('button')).toBeNull()
+		expect(screen.queryByRole('button', { name: /show/i })).toBeNull()
 	})
 
 	it('counts the hidden rows, not the whole list', () => {
 		const assets = Array.from({ length: 7 }, (_, index) => asset(index))
-		render(<SceneFactsPanel details={details({ assets })} />)
+		renderPanel(details({ assets }))
 
 		expect(screen.getByRole('button', { name: 'Show 1 more' })).not.toBeNull()
 	})
 
 	it('keeps the two sections in one landmark', () => {
-		render(<SceneFactsPanel details={details({ assets: [asset(1)] })} />)
+		renderPanel(details({ assets: [asset(1)] }))
 
 		const panel = screen.getByRole('complementary')
 		expect(within(panel).getAllByRole('heading')).toHaveLength(2)
