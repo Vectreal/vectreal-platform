@@ -1,5 +1,6 @@
 import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
+import { motion, useReducedMotion } from 'framer-motion'
 import { ExternalLink } from 'lucide-react'
 import { useEffect, useMemo, useState, type FC } from 'react'
 import { Link } from 'react-router'
@@ -25,7 +26,6 @@ import { DetailPanelSection, InlineNotice } from '../layout-components'
  * foreground keep it from competing with the `text-h4` title beside it.
  */
 const HEADING_LINK_CLASS = 'text-muted-foreground hover:text-foreground text-xs'
-
 
 interface EmbedOptionsPanelProps {
 	sceneId?: string
@@ -63,6 +63,7 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 	// collapsed and unmounted on first paint.
 	const [origin, setOrigin] = useState('')
 	useEffect(() => setOrigin(window.location.origin), [])
+	const reduceMotion = useReducedMotion()
 
 	const canEmbed = Boolean(sceneId && projectId)
 	const keysApi = useEmbedApiKeys({ projectId, enabled: canEmbed })
@@ -83,6 +84,12 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 	  `buildEmbedUrl` omits the parameter rather than failing, so the result
 	  looks finished and 404s on every site. Nothing is offered to copy until
 	  there is a key behind it.
+
+	  That rule used to be enforced only *inside* `EmbedSnippetCard`, by disabling
+	  its controls - so the section still rendered its heading, its tabs, a
+	  toolbar of three dead buttons and an empty box, and read as broken rather
+	  than as not yet applicable. The rule is unchanged; it decides the section
+	  now, and the card keeps its own guards for the state a section cannot see.
 	*/
 	const ready = Boolean(embedUrl)
 
@@ -106,6 +113,19 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 		if (!embedUrl) return
 		window.open(embedUrl, '_blank', 'noopener')
 	}
+
+	/*
+	  Fade in, and deliberately no exit. An exit animation has to keep the section
+	  mounted while `ready` is false, which is the empty frame again for the
+	  length of the transition.
+	*/
+	const appear = reduceMotion
+		? {}
+		: {
+				initial: { opacity: 0, y: -4 },
+				animate: { opacity: 1, y: 0 },
+				transition: { duration: 0.15, ease: 'easeOut' as const }
+			}
 
 	if (!canEmbed) {
 		return (
@@ -194,30 +214,56 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 					))}
 			</DetailPanelSection>
 
-			<DetailPanelSection
-				title={EMBED_COPY.embedCodeLabel}
-				headingLevel="h4"
-				action={
-					/*
-					  `target="_blank"`, like the link above it. In the publisher this
-					  panel sits inside an unsaved composition; navigating away from it
-					  in the same tab loses that work.
-					*/
-					<Button
-						variant="ghost"
-						size="sm"
-						asChild
-						className={HEADING_LINK_CLASS}
+			{/*
+			  Absent until there is a snippet, rather than present and empty.
+
+			  Nothing stands in its place, and no sentence explains it: the Access
+			  section directly above is already saying whichever of the four things
+			  is true - no key yet and here is the button, a refused load and here is
+			  the retry, every key unusable and here is why. A heading over a void
+			  was the fourth statement, and the only one that said nothing.
+			*/}
+			{ready && (
+				<motion.div {...appear}>
+					<DetailPanelSection
+						title={EMBED_COPY.embedCodeLabel}
+						headingLevel="h4"
+						action={
+							/*
+							  `target="_blank"`, like the link above it. In the publisher this
+							  panel sits inside an unsaved composition; navigating away from
+							  it in the same tab loses that work.
+							*/
+							<Button
+								variant="ghost"
+								size="sm"
+								asChild
+								className={HEADING_LINK_CLASS}
+							>
+								<Link to={EMBED_DOCS_PATH} target="_blank" rel="noreferrer">
+									{EMBED_COPY.docsLink}
+									<ExternalLink />
+								</Link>
+							</Button>
+						}
 					>
-						<Link to={EMBED_DOCS_PATH} target="_blank" rel="noreferrer">
-							{EMBED_COPY.docsLink}
-							<ExternalLink />
-						</Link>
-					</Button>
-				}
-			>
-				<EmbedSnippetCard code={code} ready={ready} onTest={openEmbedUrl} />
-			</DetailPanelSection>
+						{/*
+						  `ready` is still passed, and the card still guards on the value it
+						  is about to copy - but not because this gate leaves a gap. It does
+						  not: a portalled Radix menu is a React child, so when a key
+						  revoked in another tab lands on a revalidation the whole section
+						  unmounts and takes the open menu with it. That was the failure the
+						  card's guards were written for, and this gate now prevents it on
+						  the panel's own path.
+
+						  They stay as the card's own contract, for a caller that mounts it
+						  unready. `embed-snippet-card.spec.tsx` is what holds them, because
+						  from here they can no longer be reached.
+						*/}
+						<EmbedSnippetCard code={code} ready={ready} onTest={openEmbedUrl} />
+					</DetailPanelSection>
+				</motion.div>
+			)}
 		</div>
 	)
 }

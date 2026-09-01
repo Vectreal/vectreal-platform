@@ -251,12 +251,15 @@ export const EmbedSnippetCard: FC<EmbedSnippetCardProps> = ({
 					*/
 					<TabsContent key={candidate.id} value={candidate.id} tabIndex={-1}>
 						{/*
-						  Empty rather than explained when there is no key. Whatever the
-						  reason - no answer yet, a refused load, no keys at all, none
-						  usable - the Access section directly above is already saying it,
-						  and the sentence that stood here ("Select a key...") was an
-						  instruction the user could not act on in three of those four
-						  states.
+						  Nothing at all when there is no key, not an empty box.
+
+						  `EmbedOptionsPanel` no longer mounts this section unready, so on
+						  the panel's own path this branch does not render. It stays
+						  because `ready` does: this card is what guards the value being
+						  copied, and one that drew an empty `pre` for a caller who got
+						  the gate wrong would be back to handing over a broken snippet.
+						  The `min-h-20` spacer that used to sit here existed only to hold
+						  open the height of a frame that was permanently on screen.
 						*/}
 						{ready ? (
 							<pre
@@ -294,9 +297,7 @@ export const EmbedSnippetCard: FC<EmbedSnippetCardProps> = ({
 							>
 								<code>{code[candidate.id]}</code>
 							</pre>
-						) : (
-							<div className="min-h-20" />
-						)}
+						) : null}
 					</TabsContent>
 				))}
 			</div>

@@ -179,17 +179,18 @@ describe('the copy actions wait for a key', () => {
 	it('offers nothing to copy while no key is selected', () => {
 		renderPanel()
 
-		expect(button(EMBED_COPY.testEmbedUrl)).toHaveProperty('disabled', true)
-		expect(button(EMBED_COPY.copyHtml)).toHaveProperty('disabled', true)
-		expect(button(EMBED_COPY.copyOptions)).toHaveProperty('disabled', true)
-
 		/*
-		  And shows an empty surface rather than a placeholder that looks like
-		  output. The panel used to print `<!-- Save this scene ... -->` into the
-		  `pre`, which reads as a snippet and copies as one; the sentence that
-		  briefly replaced it ("Select a key...") was an instruction the user
-		  cannot act on here, since there is no key to select.
+		  The whole section, not three disabled controls inside it.
+
+		  Disabling was the previous enforcement, and it left a heading, a tab row,
+		  a toolbar and an empty box on screen - the rule was right and the surface
+		  read as broken. Asserting only on `pre` passes with all of that still
+		  rendered, which is exactly the state this replaced, so the chrome is
+		  named here too.
 		*/
+		expect(screen.queryByText(EMBED_COPY.embedCodeLabel)).toBeNull()
+		expect(screen.queryAllByRole('tab')).toHaveLength(0)
+		expect(screen.queryByRole('button', { name: /copy/i })).toBeNull()
 		expect(document.querySelector('pre')).toBeNull()
 	})
 
@@ -197,6 +198,7 @@ describe('the copy actions wait for a key', () => {
 		withLiveKey()
 		renderPanel()
 
+		expect(screen.getByText(EMBED_COPY.embedCodeLabel)).not.toBeNull()
 		expect(button(EMBED_COPY.testEmbedUrl)).toHaveProperty('disabled', false)
 		expect(button(EMBED_COPY.copyHtml)).toHaveProperty('disabled', false)
 		expect(button(EMBED_COPY.copyOptions)).toHaveProperty('disabled', false)
@@ -221,7 +223,14 @@ describe('the copy actions wait for a key', () => {
 		selectedKeyId = LIVE_KEY.id
 		renderPanel()
 
-		expect(button(EMBED_COPY.copyHtml)).toHaveProperty('disabled', true)
+		/*
+		  Anchored to what the panel still renders. Re-anchoring this test from
+		  disabled controls to an absent section left it holding two negatives, and
+		  two negatives are satisfied by a panel that returns null for this state -
+		  which is not the fix, it is a different bug.
+		*/
+		expect(screen.getByText(EMBED_COPY.accessTitle)).not.toBeNull()
+		expect(screen.queryByText(EMBED_COPY.embedCodeLabel)).toBeNull()
 		expect(document.querySelector('pre')).toBeNull()
 	})
 })
@@ -311,18 +320,24 @@ describe('the split copy button', () => {
 		expect(copied).not.toContain('<iframe')
 	})
 
-	it('goes dead if the key stops working while the menu is open', () => {
+	it('takes the whole menu away when the key stops working', () => {
 		/*
-		  Radix keeps an open menu mounted whatever its trigger does, so disabling
-		  only the trigger left three live items over an empty snippet: a key
-		  revoked in another tab lands on the next revalidation, `token` goes
-		  empty, and `writeText('')` resolves - so the toast said "copied" and the
-		  clipboard held nothing.
+		  This used to assert only that nothing was copied, and after the Embed Code
+		  section became conditional it could no longer fail: the section unmounts,
+		  the portalled menu goes with it, and a detached element takes no click -
+		  so deleting the value guard in `copyView` left it green. The clipboard
+		  half of the claim moved to `embed-snippet-card.spec.tsx`, where the card
+		  stays mounted and the guard can actually be reached.
+
+		  What is asserted here is the panel's own half, which nothing held: a key
+		  revoked in another tab arrives on a revalidation and the surface offering
+		  a snippet has to go, not merely stop responding.
 		*/
 		withLiveKey()
 		const view = renderPanel()
 
 		const items = openCopyMenu()
+		expect(items[0].isConnected).toBe(true)
 
 		keys = [{ ...LIVE_KEY, revoked: true, value: null }]
 		act(() => {
@@ -331,13 +346,8 @@ describe('the split copy button', () => {
 			)
 		})
 
-		/*
-		  Clicked directly, which is the point: `disabled` on a menu item is
-		  `aria-disabled` plus `pointer-events-none`, so it stops a real pointer
-		  and nothing else. The guard has to live where the value is read.
-		*/
-		fireEvent.click(items[0])
-
+		expect(items[0].isConnected).toBe(false)
+		expect(screen.queryByText(EMBED_COPY.embedCodeLabel)).toBeNull()
 		expect(writeText).not.toHaveBeenCalled()
 	})
 
@@ -366,6 +376,7 @@ describe('the panel groups what it offers', () => {
 		within(container).getAllByRole('heading')
 
 	it('titles the two sections it is made of', () => {
+		withLiveKey()
 		const { container } = renderPanel()
 
 		expect(headingsOf(container).map((h) => h.textContent)).toEqual([
@@ -374,7 +385,16 @@ describe('the panel groups what it offers', () => {
 		])
 	})
 
+	it('is one section until a key can build a snippet', () => {
+		const { container } = renderPanel()
+
+		expect(headingsOf(container).map((h) => h.textContent)).toEqual([
+			EMBED_COPY.accessTitle
+		])
+	})
+
 	it('puts every section on the rung both hosts leave open', () => {
+		withLiveKey()
 		/*
 		  h4 in both: the publisher nests the panel under an accordion trigger that
 		  Radix wraps in an h3, and the drawer nests it under `h3 Publishing` in a
@@ -390,6 +410,9 @@ describe('the panel groups what it offers', () => {
 	})
 
 	it('sends the detail it no longer inlines to the embedding guide', () => {
+		// With a key: the guide sits on the Embed Code heading row, and that row
+		// only exists once there is code beneath it.
+		withLiveKey()
 		renderPanel()
 
 		const guide = screen.getByRole('link', { name: EMBED_COPY.docsLink })
