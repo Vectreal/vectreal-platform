@@ -2,8 +2,8 @@ import { Badge } from '@shared/components/ui/badge'
 import { cn } from '@shared/utils'
 import { toSerializedAssetBytes } from '@vctrl/core'
 
-import type { SceneAssetSummary } from '../../routes/dashboard-page/projects/scene'
 import type { SerializedSceneAssetDataMap } from '../../types/api'
+import type { SceneAssetSummary } from '../../types/dashboard'
 
 function formatBytes(bytes: number | null | undefined): string {
 	if (bytes == null || Number.isNaN(bytes)) return '-'

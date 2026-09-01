@@ -107,3 +107,30 @@ export interface BreadcrumbItem {
 	to?: string
 	isLast?: boolean
 }
+
+/**
+ * One row of the scene detail asset list.
+ *
+ * Declared in the scene route until the detail surfaces were extracted, which
+ * left `scene-asset-list-item.tsx` importing a type from a route module - so a
+ * component could not be read, tested or moved without the route it happened to
+ * be born in.
+ */
+export interface SceneAssetSummary {
+	id: string
+	name: string
+	type: string
+	fileSize: number | null
+	mimeType: string | null
+}
+
+/** Everything the "what this scene is" surface renders, as the loader ships it. */
+export interface SceneDetailsSummary {
+	fileSizeBytes: number | null
+	assetCount: number
+	textureBytes: number | null
+	textureCount: number | null
+	meshesCount: number | null
+	verticesCount: number | null
+	assets: SceneAssetSummary[]
+}

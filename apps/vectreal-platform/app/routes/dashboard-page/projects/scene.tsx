@@ -1,51 +1,23 @@
-import { Separator } from '@shared/components'
-import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
-import {
-	Drawer,
-	DrawerContent,
-	DrawerDescription,
-	DrawerHeader,
-	DrawerTitle
-} from '@shared/components/ui/drawer'
 import { useLoadModel } from '@vctrl/hooks/use-load-model'
-import { AnimatePresence, motion } from 'framer-motion'
-import {
-	ChevronDown,
-	ChevronRight,
-	Cloud,
-	Eye,
-	Info,
-	Radio,
-	Rocket,
-	Trash2
-} from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { data, Link, useNavigate } from 'react-router'
-import { useAuthenticityToken } from 'remix-utils/csrf/react'
+import { useCallback, useMemo } from 'react'
+import { data, useNavigate } from 'react-router'
 
 import { Route } from './+types/scene'
 import CenteredSpinner from '../../../components/centered-spinner'
 import {
-	buildAssetListItemProps,
 	InlineEditableMetadataField,
-	SceneAssetListItem
+	SceneFactsPanel,
+	ScenePreviewOverlay,
+	SceneSummaryBar
 } from '../../../components/dashboard'
-import { EmbedOptionsPanel } from '../../../components/embed/embed-options-panel'
-import {
-	DetailPanelSection,
-	StatGrid,
-	StatTile
-} from '../../../components/layout-components'
-import { ScenePublishStateControl } from '../../../components/publishing/scene-publish-state-control'
+import { DetailPanelSection } from '../../../components/layout-components'
 import SceneEmbedViewer from '../../../components/scene-embed/scene-embed-viewer'
-import { ConfirmDestructiveDialog } from '../../../components/shared/confirm-destructive-dialog'
-import { useDashboardMutations } from '../../../hooks/use-dashboard-mutations'
+import { useSceneMetadata } from '../../../hooks/use-scene-metadata'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
-import {
-	planDeleteConfirmation,
-	toSceneRef
-} from '../../../lib/domain/dashboard/dashboard-confirmation'
+import { toSceneRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
+import { canPerformDashboardOperation } from '../../../lib/domain/dashboard/dashboard-operations'
+import { resolveSceneMembership } from '../../../lib/domain/dashboard/dashboard-permissions.server'
 import { buildInternalPreviewPath } from '../../../lib/domain/embed/embed-snippet'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
 import { useSceneModel } from '../../../lib/domain/scene/client/use-scene-model'
@@ -59,47 +31,9 @@ import { sceneSettingsService } from '../../../lib/domain/scene/server/scene-set
 import { shouldRevalidateForRouteParams } from '../../../lib/navigation/dashboard-route-behavior'
 import { toViewerLoadingThumbnail } from '../../../lib/viewer/viewer-loading-thumbnail'
 
-import type {
-	SceneAdditionalMetrics,
-	SerializedSceneAssetDataMap
-} from '../../../types/api'
+import type { SceneAdditionalMetrics } from '../../../types/api'
+import type { SceneDetailsSummary } from '../../../types/dashboard'
 import type { ShouldRevalidateFunction } from 'react-router'
-
-export type SceneAssetSummary = {
-	id: string
-	name: string
-	type: string
-	fileSize: number | null
-	mimeType: string | null
-}
-
-type SceneDetailsSummary = {
-	fileSizeBytes: number | null
-	assetCount: number
-	textureBytes: number | null
-	textureCount: number | null
-	meshesCount: number | null
-	verticesCount: number | null
-	assets: SceneAssetSummary[]
-}
-
-function formatBytes(bytes: number | null | undefined): string {
-	if (bytes == null || Number.isNaN(bytes)) {
-		return '-'
-	}
-
-	if (bytes === 0) {
-		return '0 B'
-	}
-
-	const units = ['B', 'KB', 'MB', 'GB']
-	const index = Math.min(
-		Math.floor(Math.log(bytes) / Math.log(1024)),
-		units.length - 1
-	)
-	const size = bytes / 1024 ** index
-	return `${size >= 100 ? Math.round(size) : size.toFixed(size < 10 ? 1 : 0)} ${units[index]}`
-}
 
 export async function loader({ request, params }: Route.LoaderArgs) {
 	const projectId = params.projectId
@@ -125,12 +59,19 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Scene not found', { status: 404 })
 	}
 
-	const [folderPath, stats, sceneAssets] = await Promise.all([
+	const [folderPath, stats, sceneAssets, membership] = await Promise.all([
 		scene.folderId
 			? getSceneFolderAncestry(scene.folderId, user.id)
 			: Promise.resolve([]),
 		sceneSettingsService.getSceneStats(sceneId).catch(() => null),
-		sceneSettingsService.getSceneAssetRecords(sceneId)
+		sceneSettingsService.getSceneAssetRecords(sceneId),
+		/*
+		  Scene-scoped rather than `buildDashboardCapabilities` over every
+		  organization the user belongs to: this page gates exactly one affordance,
+		  and this is the resolver `CLAUDE.md` names for a scene actor. The table it
+		  feeds is the same one the mutation endpoint enforces with.
+		*/
+		resolveSceneMembership(sceneId, user.id)
 	])
 
 	const publishedMeta = await getPublishedScenePreview(projectId, sceneId)
@@ -172,7 +113,11 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 				publishedAssetSizeBytes: publishedMeta?.publishedAssetSizeBytes ?? null
 			},
 			folderPath,
-			sceneDetails
+			sceneDetails,
+			// Absent membership is no membership, which is no.
+			canDeleteScene: membership
+				? canPerformDashboardOperation('scene:delete', membership)
+				: false
 		},
 		{ headers }
 	)
@@ -201,97 +146,11 @@ export function HydrateFallback() {
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
 
-const ASSETS_COLLAPSED_LIMIT = 6
-
-function DrawerAssetsSection({
-	assets,
-	assetData
-}: {
-	assets: SceneAssetSummary[]
-	assetData?: SerializedSceneAssetDataMap | null
-}) {
-	const [expanded, setExpanded] = useState(false)
-	const hasMore = assets.length > ASSETS_COLLAPSED_LIMIT
-	const initial = assets.slice(0, ASSETS_COLLAPSED_LIMIT)
-	const extra = assets.slice(ASSETS_COLLAPSED_LIMIT)
-	const assetPropsById = useMemo(
-		() =>
-			new Map(
-				assets.map((asset) => [
-					asset.id,
-					buildAssetListItemProps(asset, assetData)
-				])
-			),
-		[assets, assetData]
-	)
-
-	return (
-		<DetailPanelSection title="Assets">
-			{assets.length === 0 ? (
-				<p className="text-muted-foreground text-sm">No linked assets found.</p>
-			) : (
-				<div className="space-y-2">
-					{initial.map((asset) => (
-						<SceneAssetListItem
-							key={asset.id}
-							className="ds-raised"
-							{...(assetPropsById.get(asset.id) ||
-								buildAssetListItemProps(asset, assetData))}
-						/>
-					))}
-
-					<AnimatePresence initial={false}>
-						{expanded && (
-							<motion.div
-								key="extra-assets"
-								initial={{ opacity: 0, height: 0 }}
-								animate={{ opacity: 1, height: 'auto' }}
-								exit={{ opacity: 0, height: 0 }}
-								transition={{ duration: 0.3, ease: 'easeInOut' }}
-								className="space-y-2 overflow-hidden"
-							>
-								{extra.map((asset) => (
-									<SceneAssetListItem
-										key={asset.id}
-										className="ds-raised"
-										{...(assetPropsById.get(asset.id) ||
-											buildAssetListItemProps(asset, assetData))}
-									/>
-								))}
-							</motion.div>
-						)}
-					</AnimatePresence>
-
-					{hasMore && (
-						<button
-							type="button"
-							onClick={() => setExpanded((prev) => !prev)}
-							className="text-muted-foreground hover:text-foreground flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-xs transition-colors duration-200"
-						>
-							<motion.span
-								animate={{ rotate: expanded ? 180 : 0 }}
-								transition={{ duration: 0.25, ease: 'easeInOut' }}
-								className="inline-flex"
-							>
-								<ChevronDown className="h-3.5 w-3.5" />
-							</motion.span>
-							{expanded
-								? 'Show fewer'
-								: `Show ${assets.length - ASSETS_COLLAPSED_LIMIT} more`}
-						</button>
-					)}
-				</div>
-			)}
-		</DetailPanelSection>
-	)
-}
-
 const ScenePage = ({ loaderData }: Route.ComponentProps) => {
-	const { scene, project, sceneDetails, publishState } = loaderData
+	const { scene, project, sceneDetails, publishState, canDeleteScene } =
+		loaderData
 	const sceneId = scene.id
 	const navigate = useNavigate()
-	const csrfToken = useAuthenticityToken()
-	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
 	const model = useLoadModel()
 	const { file, sceneData, load } = model
@@ -308,7 +167,10 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		[sceneId]
 	)
 	useSceneModel(model, sceneSource)
-	const [sceneState, setSceneState] = useState(scene)
+
+	const metadata = useSceneMetadata(scene)
+	const sceneState = metadata.scene
+
 	// Memoized because the viewer is memoized: a fresh object every render would
 	// re-render it on every keystroke in the metadata fields below.
 	const loadingThumbnail = useMemo(
@@ -320,49 +182,12 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		[sceneState.thumbnailUrl]
 	)
 
-	const [sceneNameDraft, setSceneNameDraft] = useState(scene.name)
-	const [sceneDescriptionDraft, setSceneDescriptionDraft] = useState(
-		scene.description || ''
-	)
-	const [isSavingMetadata, setIsSavingMetadata] = useState(false)
-	const [metadataStatus, setMetadataStatus] = useState<
-		'idle' | 'saved' | 'error'
-	>('idle')
-	const [drawerOpen, setDrawerOpen] = useState(false)
-
-	const metadataResetTimerRef = useRef<number | null>(null)
-
 	const previewPath = buildInternalPreviewPath({
 		projectId: project.id,
 		sceneId: sceneState.id
 	})
-	const sceneNameTrimmed = sceneNameDraft.trim()
-	const sceneDescriptionCurrent = sceneState.description || ''
-	const isTitleUnsaved =
-		sceneNameTrimmed.length > 0 && sceneNameTrimmed !== sceneState.name
-	const isDescriptionUnsaved = sceneDescriptionDraft !== sceneDescriptionCurrent
-	const isMetadataUnsaved = isTitleUnsaved || isDescriptionUnsaved
+	const publisherPath = `/publisher/${sceneState.id}`
 
-	useEffect(() => {
-		return () => {
-			if (metadataResetTimerRef.current) {
-				window.clearTimeout(metadataResetTimerRef.current)
-			}
-		}
-	}, [])
-
-	useEffect(() => {
-		setSceneState(scene)
-		setSceneNameDraft(scene.name)
-		setSceneDescriptionDraft(scene.description || '')
-		setMetadataStatus('idle')
-	}, [scene])
-
-	/*
-	  This page owns its own delete rather than going through the shared dialog
-	  atom, because succeeding means navigating away - and that is knowledge only
-	  this route has.
-	*/
 	const deleteRef = useMemo(
 		() =>
 			toSceneRef({
@@ -376,80 +201,17 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		[publishState.status, sceneState]
 	)
 
-	const deletePlan = useMemo(
-		() => planDeleteConfirmation([deleteRef]),
-		[deleteRef]
-	)
-
-	const deleteMutation = useDashboardMutations({
-		onSuccess: () => {
-			navigate(`/dashboard/projects/${project.id}`, { replace: true })
-		}
-	})
-
-	function handleDeleteClick() {
-		setDeleteDialogOpen(true)
-	}
-
-	async function handleSaveMetadata() {
-		const trimmedName = sceneNameTrimmed
-		if (!trimmedName || isSavingMetadata) {
-			return
-		}
-
-		const hasChanges =
-			trimmedName !== sceneState.name ||
-			sceneDescriptionDraft !== sceneDescriptionCurrent
-
-		if (!hasChanges) {
-			return
-		}
-
-		setIsSavingMetadata(true)
-		setMetadataStatus('idle')
-
-		try {
-			const formData = new FormData()
-			formData.append('action', 'update-scene-metadata')
-			formData.append('name', trimmedName)
-			formData.append('description', sceneDescriptionDraft)
-			// This request bypasses React Router, so nothing attaches the token for
-			// it. Without this the endpoint fell back to an origin-only check that
-			// passes when a client sends neither `Origin` nor `Referer`.
-			formData.append('csrf', csrfToken)
-
-			const response = await fetch(`/api/scenes/${sceneState.id}`, {
-				method: 'POST',
-				body: formData
-			})
-
-			const payload = await response.json()
-			if (!response.ok || payload.error || !payload?.data?.scene) {
-				throw new Error(payload?.error || 'Failed to update scene metadata')
-			}
-
-			const updatedScene = payload.data.scene as typeof scene
-			setSceneState(updatedScene)
-			setSceneNameDraft(updatedScene.name)
-			setSceneDescriptionDraft(updatedScene.description || '')
-			setMetadataStatus('saved')
-		} catch (error) {
-			console.error('Failed to update scene metadata:', error)
-			setMetadataStatus('error')
-		} finally {
-			setIsSavingMetadata(false)
-			if (metadataResetTimerRef.current) {
-				window.clearTimeout(metadataResetTimerRef.current)
-			}
-			metadataResetTimerRef.current = window.setTimeout(() => {
-				setMetadataStatus('idle')
-			}, 2200)
-		}
-	}
+	/*
+	  Deleting succeeds by leaving this page, which is knowledge only the route
+	  has - so the menu that owns the dialog takes this rather than the router.
+	*/
+	const handleDeleted = useCallback(() => {
+		navigate(`/dashboard/projects/${project.id}`, { replace: true })
+	}, [navigate, project.id])
 
 	const openPublisherForPublishing = useCallback(() => {
-		navigate(`/publisher/${sceneState.id}`)
-	}, [navigate, sceneState.id])
+		navigate(publisherPath)
+	}, [navigate, publisherPath])
 
 	const retrySceneLoad = useCallback(() => {
 		if (sceneSource) void load(sceneSource)
@@ -457,16 +219,24 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 
 	return (
 		/*
-		  `h-full` rather than a `100dvh` calculation: the dashboard shell now gives
-		  this row a definite height, so subtracting an assumed header height would
-		  overshoot it and produce a second scrollbar.
+		  No height and no scroller of its own below `xl`, deliberately.
+
+		  `dashboard-layout.tsx` already gives its content row a bounded height and
+		  its own vertical scroll, so the shell is this page's scroller. This
+		  element used to add a second scroller *and* pin itself to the full height
+		  of that row, which is the pair that guarantees neither scrolls: the grid
+		  below could not grow past the viewport, so its second row was clipped
+		  with nothing able to reach it.
+
+		  From `xl` up the height is real - two columns share the shell's row and
+		  each owns its own overflow - so it is taken back there and only there.
 		*/
-		<div className="h-full overflow-hidden px-5 pt-1 pb-5 xl:px-6">
+		<div className="px-5 pt-1 pb-5 xl:h-full xl:overflow-hidden xl:px-6">
 			{sceneState.thumbnailUrl ? (
 				<link rel="preload" as="image" href={sceneState.thumbnailUrl} />
 			) : null}
-			<div className="grid h-full min-h-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
-				<main className="flex min-h-0 flex-col gap-4">
+			<div className="grid grid-cols-1 gap-4 xl:h-full xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_auto]">
+				<main className="flex flex-col gap-4 xl:min-h-0">
 					{model.status === 'error' ? (
 						<DetailPanelSection
 							surface="raised"
@@ -494,305 +264,120 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							</div>
 						</DetailPanelSection>
 					) : null}
-					<section className="ds-sunken relative min-h-64 flex-1 overflow-hidden rounded-2xl">
+					{/*
+					  A bounded height where the page scrolls, and the remaining height
+					  where it does not. `svh` rather than a `100vh`-based utility: the
+					  large viewport overhangs mobile browser chrome, and this element
+					  holds a canvas with `touch-action: none`.
+					*/}
+					<section className="ds-sunken relative h-[55svh] min-h-64 shrink-0 overflow-hidden rounded-2xl xl:h-auto xl:min-h-0 xl:flex-1">
 						<SceneEmbedViewer
 							file={file}
 							sceneData={sceneData}
 							loadingThumbnail={loadingThumbnail}
 						/>
+						<ScenePreviewOverlay previewPath={previewPath} />
 					</section>
 					<DetailPanelSection surface="raised" contentClassName="space-y-6">
-						<header className="flex flex-col items-start gap-6 md:flex-row">
+						<header className="space-y-4">
 							{/*
-						  `min-w-0` is what stops a long scene name from pushing the
-						  action column off to the side: a flex item defaults to
-						  min-width:auto, so its content dictates the floor rather than
-						  the container.
-						*/}
-							<div className="min-w-0 grow space-y-2 max-md:w-full">
+							  The two calls to action get a row of their own beneath the
+							  description. They used to be a column beside it, which set the
+							  header's height from the tallest thing in it - four stacked
+							  buttons - while the title and description next to them were
+							  two lines. That is where the void under the description came
+							  from.
+							*/}
+							<div className="space-y-2">
 								<InlineEditableMetadataField
 									ariaLabel="Scene title"
-									value={sceneNameDraft}
-									onChange={setSceneNameDraft}
-									onCommit={handleSaveMetadata}
+									value={metadata.nameDraft}
+									onChange={metadata.setNameDraft}
+									onCommit={metadata.save}
 									titleStyle="title"
 									placeholder="Scene Title"
 									indicatorTitle="Scene title save status"
-									isUnsaved={isTitleUnsaved}
-									isSaving={isSavingMetadata && isMetadataUnsaved}
-									isSaved={metadataStatus === 'saved' && !isTitleUnsaved}
+									isUnsaved={metadata.isTitleUnsaved}
+									isSaving={metadata.isSaving && metadata.isUnsaved}
+									isSaved={
+										metadata.status === 'saved' && !metadata.isTitleUnsaved
+									}
 								/>
 								<InlineEditableMetadataField
 									ariaLabel="Scene description"
 									multiline
-									value={sceneDescriptionDraft}
-									onChange={setSceneDescriptionDraft}
-									onCommit={handleSaveMetadata}
+									value={metadata.descriptionDraft}
+									onChange={metadata.setDescriptionDraft}
+									onCommit={metadata.save}
 									placeholder="Scene Description"
 									indicatorTitle="Scene description save status"
-									isUnsaved={isDescriptionUnsaved}
-									isSaving={isSavingMetadata && isMetadataUnsaved}
-									isSaved={metadataStatus === 'saved' && !isDescriptionUnsaved}
+									isUnsaved={metadata.isDescriptionUnsaved}
+									isSaving={metadata.isSaving && metadata.isUnsaved}
+									isSaved={
+										metadata.status === 'saved' &&
+										!metadata.isDescriptionUnsaved
+									}
 								/>
-							</div>
-							<div className="flex shrink-0 flex-col gap-3 max-md:w-full xl:justify-end">
-								{/*
-								  Stacked actions, so both are left-aligned rather than
-								  centred: centring puts each icon at a different x because
-								  the labels differ in width, and the icons stop reading as a
-								  column.
-								*/}
-								<Button asChild className="w-full justify-start">
-									<Link viewTransition to={previewPath}>
-										<Eye className="mr-2 h-4 w-4 shrink-0" />
-										Preview
-									</Link>
-								</Button>
-
-								<Button
-									variant="secondary"
-									asChild
-									className="w-full justify-start"
-								>
-									<Link viewTransition to={`/publisher/${sceneState.id}`}>
-										<Rocket className="mr-2 h-4 w-4 shrink-0" />
-										Open in Publisher
-									</Link>
-								</Button>
 							</div>
 						</header>
 
-						<button
-							type="button"
-							onClick={() => setDrawerOpen(true)}
-							title="Open details panel"
-							aria-label="Open details panel"
-							className="ds-overlay-interactive group relative flex w-full flex-col gap-6 rounded-2xl p-5 text-left"
-						>
-							<Info className="text-muted-foreground absolute top-3 right-3 h-4 w-4 opacity-25 transition-opacity duration-150 group-hover:opacity-100" />
-							<div className="space-y-2">
-								<p className="text-muted-foreground text-eyebrow">
-									Scene Workspace
-								</p>
+						{/*
+						  Facts about the scene rather than a control. This was a button
+						  opening the details drawer - one of three that did - and it also
+						  restated the size and asset count the facts panel now owns.
 
-								<div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
-									<Badge
-										variant={
-											sceneState.status === 'published'
-												? 'default'
-												: 'secondary'
-										}
-									>
-										{sceneState.status === 'published' ? (
-											<Radio className="mr-1 h-3 w-3" />
-										) : (
-											<Cloud className="mr-1 h-3 w-3" />
-										)}
-										<span className="capitalize">{sceneState.status}</span>
-									</Badge>
-									<Badge variant="secondary">
-										Size {formatBytes(sceneDetails.fileSizeBytes)}
-									</Badge>
-									<Badge variant="secondary">
-										{sceneDetails.assetCount} Assets
-									</Badge>
-								</div>
-							</div>
+						  The publication chip is gone from here too. It was the third
+						  place this page stated publish state, and the quietest of the
+						  three; `ScenePublishPanel` says it once, at the top of the
+						  column, with the date and the size beside it.
+						*/}
+						<div className="text-muted-foreground flex flex-wrap items-center gap-3 text-xs">
+							<p>Updated {new Date(sceneState.updatedAt).toLocaleString()}</p>
 
-							<div className="text-muted-foreground flex flex-col gap-3 text-xs md:flex-row md:items-center">
-								<p>Updated {new Date(sceneState.updatedAt).toLocaleString()}</p>
+							<small className="font-mono">ID {sceneState.id}</small>
 
-								<small className="font-mono">ID {sceneState.id}</small>
-
-								{metadataStatus === 'error' && (
-									<span className="text-destructive">
-										Save failed. Try again.
-									</span>
-								)}
-							</div>
-						</button>
+							{metadata.status === 'error' && (
+								<span className="text-destructive">
+									Save failed. Try again.
+								</span>
+							)}
+						</div>
 					</DetailPanelSection>
 				</main>
 
-				<aside className="ds-raised hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-5 xl:flex">
-					<DetailPanelSection
-						eyebrow="At a Glance"
-						title="Scene Metrics"
-						headingLevel="h2"
-					>
-						<StatGrid>
-							<StatTile
-								label="Size"
-								value={formatBytes(sceneDetails.fileSizeBytes)}
-							/>
-							<StatTile label="Assets" value={sceneDetails.assetCount} />
-							<StatTile
-								label="Texture Size"
-								value={
-									sceneDetails.textureBytes != null
-										? formatBytes(sceneDetails.textureBytes)
-										: sceneDetails.textureCount != null
-											? `${sceneDetails.textureCount} textures`
-											: '-'
-								}
-							/>
-							<StatTile
-								label="Meshes"
-								value={sceneDetails.meshesCount ?? '-'}
-							/>
-						</StatGrid>
-					</DetailPanelSection>
-
-					<DetailPanelSection
-						eyebrow="Assets Preview"
-						className="overflow-y-auto"
-						contentClassName="space-y-2"
-					>
-						{sceneDetails.assets.length === 0 ? (
-							<p className="text-muted-foreground ds-sunken rounded-xl p-3 text-sm">
-								No linked assets.
-							</p>
-						) : (
-							<div className="space-y-2">
-								{sceneDetails.assets.slice(0, 4).map((asset) => (
-									<SceneAssetListItem
-										key={asset.id}
-										{...buildAssetListItemProps(asset, sceneData?.assetData)}
-										className="ds-sunken"
-									/>
-								))}
-								{sceneDetails.assets.length > 4 && (
-									<button
-										type="button"
-										onClick={() => setDrawerOpen(true)}
-										className="ds-overlay-interactive flex w-full items-center justify-between gap-3 rounded-xl p-3 text-left"
-									>
-										<p className="text-muted-foreground text-sm">
-											…and {sceneDetails.assets.length - 4} more.
-										</p>
-										<ChevronRight className="text-muted-foreground h-4 w-4" />
-									</button>
-								)}
-							</div>
-						)}
-					</DetailPanelSection>
-				</aside>
-			</div>
-
-			<Drawer open={drawerOpen} onOpenChange={setDrawerOpen} direction="right">
 				{/*
-				  The same width as the publisher's publish sidebar, because both host
-				  `EmbedOptionsPanel`. See `--container-detail-panel`.
-
-				  The `p-6` body below stays as it is: `DrawerHeader` is `p-6`, and a
-				  tighter body would put the heading and the content beneath it on
-				  different left edges - the misalignment `drawer.tsx` records having
-				  already fixed once.
+				  Two hosts, one for each side of `xl`, and exactly one of them is
+				  ever visible. The aside is the column; the summary bar is what a
+				  viewport with no column gets - two figures and two doors, because
+				  flowing the full asset list into the page is what made it taller
+				  than the shell could scroll.
 				*/}
-				<DrawerContent className="max-w-detail-panel! border-0">
-					<DrawerHeader>
-						<DrawerTitle>Scene Details</DrawerTitle>
-						<DrawerDescription>
-							Detailed stats, assets, publishing, and embed options.
-						</DrawerDescription>
-					</DrawerHeader>
-
-					<div className="space-y-6 overflow-y-auto p-6">
-						<DetailPanelSection title="Scene Stats">
-							<StatGrid>
-								<StatTile
-									label="Current Size"
-									value={formatBytes(sceneDetails.fileSizeBytes)}
-								/>
-								<StatTile label="Assets" value={sceneDetails.assetCount} />
-								<StatTile
-									label="Texture Size"
-									value={
-										sceneDetails.textureBytes != null
-											? formatBytes(sceneDetails.textureBytes)
-											: sceneDetails.textureCount != null
-												? `${sceneDetails.textureCount} textures`
-												: '-'
-									}
-								/>
-								<StatTile
-									label="Meshes / Vertices"
-									value={`${sceneDetails.meshesCount ?? '-'} / ${sceneDetails.verticesCount ?? '-'}`}
-								/>
-							</StatGrid>
-						</DetailPanelSection>
-
-						<DrawerAssetsSection
-							assets={sceneDetails.assets}
-							assetData={sceneData?.assetData}
-						/>
-
-						<Separator />
-
-						<DetailPanelSection title="Publishing">
-							<ScenePublishStateControl
-								publishState={publishState}
-								onPublish={openPublisherForPublishing}
-								draftActionMode="immediate"
-								publishButtonText="Open Publisher to Publish"
-								publishDisabledReason="Publishing is managed in the Publisher workflow to ensure optimized output and texture consistency."
-								revokeDialogTitle="Revoke scene publication?"
-								revokeDialogDescription="This deletes the published GLB asset and returns this scene to draft state."
-							/>
-							{/*
-							  Untitled on purpose. `EmbedOptionsPanel` titles itself - Access
-							  and Embed Code - and this wrapper's own "Embed" was a third
-							  label for the same block. Worse, both rungs are `h4`, so the
-							  outline read `h4 Embed / h4 Access / h4 Embed Code`: the parts
-							  announced as peers of their own container, and a section that
-							  sounded empty to anyone moving by heading. The wrapper stays
-							  for the spacing it carries.
-							*/}
-							{publishState.status === 'published' && (
-								<DetailPanelSection className="pt-1">
-									<EmbedOptionsPanel
-										sceneId={sceneState.id}
-										projectId={project.id}
-									/>
-								</DetailPanelSection>
-							)}
-						</DetailPanelSection>
-
-						<Separator />
-
-						<DetailPanelSection title="Danger Zone">
-							<Button
-								variant="destructive"
-								size="sm"
-								onClick={handleDeleteClick}
-								className="w-full"
-							>
-								<Trash2 className="mr-2 h-3.5 w-3.5" />
-								Delete Scene
-							</Button>
-							<ConfirmDestructiveDialog
-								open={deleteDialogOpen}
-								onOpenChange={(open) => {
-									if (!open && deleteMutation.state !== 'idle') {
-										return
-									}
-									setDeleteDialogOpen(open)
-								}}
-								plan={deletePlan}
-								isPending={deleteMutation.state !== 'idle'}
-								errorMessage={deleteMutation.lastError}
-								onConfirm={(confirmationText) => {
-									deleteMutation.submit({
-										verb: 'delete',
-										targets: [{ type: 'scene', id: sceneId }],
-										confirmationText
-									})
-								}}
-							/>
-						</DetailPanelSection>
-					</div>
-				</DrawerContent>
-			</Drawer>
+				<SceneFactsPanel
+					details={sceneDetails}
+					assetData={sceneData?.assetData}
+					sceneId={sceneState.id}
+					projectId={project.id}
+					publishState={publishState}
+					publisherPath={publisherPath}
+					onPublish={openPublisherForPublishing}
+					deleteRef={deleteRef}
+					canDelete={canDeleteScene}
+					onDeleted={handleDeleted}
+				/>
+				<SceneSummaryBar
+					className="xl:hidden"
+					details={sceneDetails}
+					assetData={sceneData?.assetData}
+					sceneId={sceneState.id}
+					projectId={project.id}
+					publishState={publishState}
+					publisherPath={publisherPath}
+					onPublish={openPublisherForPublishing}
+					deleteRef={deleteRef}
+					canDelete={canDeleteScene}
+					onDeleted={handleDeleted}
+				/>
+			</div>
 		</div>
 	)
 }

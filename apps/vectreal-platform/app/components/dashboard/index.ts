@@ -29,6 +29,17 @@ export {
 	SceneAssetListItem,
 	buildAssetListItemProps
 } from './scene-asset-list-item'
+export { SceneAssetsSection } from './scene-detail/scene-assets-section'
+export { SceneFactsPanel } from './scene-detail/scene-facts-panel'
+export { SceneDetailsSheet } from './scene-detail/scene-details-sheet'
+export { SceneSurfaceDrawer } from './scene-detail/scene-surface-drawer'
+export { ScenePreviewOverlay } from './scene-detail/scene-preview-overlay'
+export { SceneDeleteButton } from './scene-detail/scene-delete-button'
+export { SceneSummaryBar } from './scene-detail/scene-summary-bar'
+export { SceneTriggerCard } from './scene-detail/scene-trigger-card'
+export { SceneMetricsSection } from './scene-detail/scene-metrics-section'
+export { ScenePublishPanel } from './scene-detail/scene-publish-panel'
+export { SceneShareDrawer } from './scene-detail/scene-share-drawer'
 export { BillingSettingsSection } from './billing/billing-settings-section'
 export { FeatureCompareGrid } from './billing/feature-compare-grid'
 export {

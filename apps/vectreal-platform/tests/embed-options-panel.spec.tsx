@@ -416,23 +416,29 @@ describe('the drawer host does not label the panel a fourth time', () => {
 	/*
 	  Scraped from the host, because the outline this pins is one neither side can
 	  see alone: the panel renders its own `h4`s, the drawer wrapped them in
-	  another, and both files are individually correct. Rendering `scene.tsx` here
-	  would mean standing up a route module, a loader and a viewer to assert one
-	  prop.
+	  another, and both files are individually correct. Rendering the drawer here
+	  would mean standing up a portal, a publish fetcher and the route's loader
+	  data to assert one prop.
+
+	  The host used to be `scene.tsx` itself. When the scene detail page was split
+	  into its two surfaces the panel moved to the drawer component, and this
+	  assertion is why that move could not happen quietly: the `toBeGreaterThan`
+	  below failed the build rather than passing over a file that no longer
+	  mentions the panel.
 	*/
-	const SCENE = readFileSync(
+	const HOST = readFileSync(
 		join(
 			dirname(fileURLToPath(import.meta.url)),
-			'../app/routes/dashboard-page/projects/scene.tsx'
+			'../app/components/dashboard/scene-detail/scene-share-drawer.tsx'
 		),
 		'utf8'
 	)
 
 	it('wraps the panel in an untitled section', () => {
-		const usage = SCENE.indexOf('<EmbedOptionsPanel')
-		expect(usage, 'scene.tsx still hosts the panel').toBeGreaterThan(-1)
+		const usage = HOST.indexOf('<EmbedOptionsPanel')
+		expect(usage, 'the share drawer still hosts the panel').toBeGreaterThan(-1)
 
-		const before = SCENE.slice(0, usage)
+		const before = HOST.slice(0, usage)
 		const wrapperStart = before.lastIndexOf('<DetailPanelSection')
 		expect(
 			wrapperStart,
