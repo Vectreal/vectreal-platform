@@ -57,6 +57,15 @@ vi.mock('./scene-delete-button', () => ({
 	SceneDeleteButton: () => <button type="button">Delete scene</button>
 }))
 
+/*
+  And the publish panel, which reaches the share drawer and through it a
+  fetcher. `scene-publish-panel.spec.tsx` drives its two states directly; here
+  it only has to hold its place at the top of the column.
+*/
+vi.mock('./scene-publish-panel', () => ({
+	ScenePublishPanel: () => <button type="button">Publishing</button>
+}))
+
 const PUBLISH_STATE: ScenePublishStateResponse = {
 	sceneId: 'scene-1',
 	status: 'draft',
@@ -96,6 +105,7 @@ function renderBar(details: SceneDetailsSummary = DETAILS) {
 			sceneId="scene-1"
 			projectId="project-1"
 			publishState={PUBLISH_STATE}
+			publisherPath="/publisher/scene-1"
 			onPublish={vi.fn()}
 			deleteRef={DELETE_REF}
 			canDelete
@@ -137,16 +147,17 @@ describe('what stays on screen', () => {
 		renderBar()
 
 		/*
-		  Named, in order, and counted. The count is what holds the rule this
-		  surface exists for - two doors, with Delete beneath them as the quietest
-		  thing here - and a third door added beside them would pass any assertion
-		  that only checked the two were present.
+		  Named, in order, and counted. The order is the claim: publishing first,
+		  because getting the scene onto someone else's site is what this page is
+		  for; then what the scene is made of; then, quietest, the way to delete
+		  it. A surface added anywhere in that sequence fails here, which an
+		  assertion that merely checked each one was present would not.
 		*/
 		expect(
 			screen.getAllByRole('button').map((control) => control.textContent)
 		).toEqual([
+			'Publishing',
 			expect.stringContaining('Scene details'),
-			'Publish & Embed',
 			'Delete scene'
 		])
 	})

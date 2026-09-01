@@ -35,6 +35,15 @@ vi.mock('./scene-delete-button', () => ({
 	SceneDeleteButton: () => <button type="button">Delete scene</button>
 }))
 
+/*
+  And the publish panel, which reaches the share drawer and through it a
+  fetcher. `scene-publish-panel.spec.tsx` drives its two states directly; here
+  it only has to hold its place at the top of the column.
+*/
+vi.mock('./scene-publish-panel', () => ({
+	ScenePublishPanel: () => <button type="button">Publishing</button>
+}))
+
 const PUBLISH_STATE: ScenePublishStateResponse = {
 	sceneId: 'scene-1',
 	status: 'draft',
@@ -103,6 +112,7 @@ function renderPanel(details: SceneDetailsSummary) {
 			sceneId="scene-1"
 			projectId="project-1"
 			publishState={PUBLISH_STATE}
+			publisherPath="/publisher/scene-1"
 			onPublish={vi.fn()}
 			deleteRef={DELETE_REF}
 			canDelete

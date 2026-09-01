@@ -3,7 +3,7 @@ import { cn } from '@shared/utils'
 import { SceneAssetsSection } from './scene-assets-section'
 import { SceneDeleteButton } from './scene-delete-button'
 import { SceneMetricsSection } from './scene-metrics-section'
-import { SceneShareDrawer } from './scene-share-drawer'
+import { ScenePublishPanel } from './scene-publish-panel'
 
 import type { DashboardEntityRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
 import type { ScenePublishStateResponse } from '../../../types/api'
@@ -16,6 +16,7 @@ interface SceneFactsPanelProps {
 	sceneId: string
 	projectId: string
 	publishState: ScenePublishStateResponse
+	publisherPath: string
 	onPublish: () => void
 	deleteRef: DashboardEntityRef
 	canDelete: boolean
@@ -45,6 +46,7 @@ export function SceneFactsPanel({
 	sceneId,
 	projectId,
 	publishState,
+	publisherPath,
 	onPublish,
 	deleteRef,
 	canDelete,
@@ -65,6 +67,19 @@ export function SceneFactsPanel({
 				className
 			)}
 		>
+			{/*
+			  Publishing leads the column. It was a quiet door at the foot, under
+			  the metrics and the asset list, which is the wrong order for a page
+			  whose whole purpose is getting a scene onto someone else's site.
+			*/}
+			<ScenePublishPanel
+				sceneId={sceneId}
+				projectId={projectId}
+				publishState={publishState}
+				publisherPath={publisherPath}
+				onPublish={onPublish}
+			/>
+
 			<SceneMetricsSection details={details} />
 			{/*
 			  `min-h-0` is what lets this shrink below its content and scroll rather
@@ -76,16 +91,10 @@ export function SceneFactsPanel({
 				assetData={assetData}
 				className="min-h-0 overflow-y-auto"
 			/>
-			<SceneShareDrawer
-				sceneId={sceneId}
-				projectId={projectId}
-				publishState={publishState}
-				onPublish={onPublish}
-			/>
 			{/*
-			  Under the doors, and quieter than any of them. Delete is not what this
-			  surface is for; it just has to live somewhere findable that is not the
-			  header, where it read as a fourth call to action.
+			  Last and quietest. Delete is not what this surface is for; it just has
+			  to live somewhere findable that is not the header, where it read as a
+			  fourth call to action.
 			*/}
 			<SceneDeleteButton
 				sceneId={sceneId}

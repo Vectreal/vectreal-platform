@@ -15,34 +15,15 @@ interface SceneShareDrawerProps {
 }
 
 /**
- * What the door says before it is opened.
- *
- * The date only, not a time: this is one line on a card, and the drawer behind
- * it renders the full timestamp.
- */
-function describePublishState(publishState: ScenePublishStateResponse): string {
-	if (publishState.status !== 'published') {
-		return 'Draft · not published yet'
-	}
-
-	const publishedAt = publishState.publishedAt
-		? new Date(publishState.publishedAt)
-		: null
-
-	if (!publishedAt || Number.isNaN(publishedAt.getTime())) {
-		return 'Published'
-	}
-
-	return `Published · ${publishedAt.toLocaleDateString()}`
-}
-
-/**
  * What you *do* with the scene: publish it, and put it on someone else's site.
  *
  * A door rather than a call to action. This was a `Button` in the header's
  * action stack, which put it beside Preview and Open in Publisher as though it
- * were a third navigation, made four controls out of two, and said nothing
- * about the state it leads to.
+ * were a third navigation, and said nothing about the state it leads to.
+ *
+ * The state is `ScenePublishPanel`'s job now - it sits directly above this door
+ * and says whether the scene is live - so the summary here describes what is
+ * behind the door instead of repeating what the card already shows.
  *
  * It opens from the same edge as the scene details surface at any given width,
  * because both are `SceneSurfaceDrawer` - see there for why the direction
@@ -60,7 +41,7 @@ export function SceneShareDrawer({
 	return (
 		<SceneSurfaceDrawer
 			label="Publish & Embed"
-			summary={describePublishState(publishState)}
+			summary="Snippet, allowed domains and publication"
 			description="Publication state, access, and the snippet for this scene."
 			triggerClassName={className}
 		>

@@ -2,7 +2,7 @@ import { cn, formatFileSize } from '@shared/utils'
 
 import { SceneDeleteButton } from './scene-delete-button'
 import { SceneDetailsSheet } from './scene-details-sheet'
-import { SceneShareDrawer } from './scene-share-drawer'
+import { ScenePublishPanel } from './scene-publish-panel'
 import { StatGrid, StatTile } from '../../layout-components'
 
 import type { DashboardEntityRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
@@ -16,6 +16,7 @@ interface SceneSummaryBarProps {
 	sceneId: string
 	projectId: string
 	publishState: ScenePublishStateResponse
+	publisherPath: string
 	onPublish: () => void
 	deleteRef: DashboardEntityRef
 	canDelete: boolean
@@ -41,6 +42,7 @@ export function SceneSummaryBar({
 	sceneId,
 	projectId,
 	publishState,
+	publisherPath,
 	onPublish,
 	deleteRef,
 	canDelete,
@@ -52,6 +54,18 @@ export function SceneSummaryBar({
 			aria-label="Scene summary"
 			className={cn('ds-raised flex flex-col gap-3 rounded-2xl p-5', className)}
 		>
+			{/*
+			  Publishing first here too. On a phone this is the first thing under the
+			  scene itself, which is the order the workflow actually has.
+			*/}
+			<ScenePublishPanel
+				sceneId={sceneId}
+				projectId={projectId}
+				publishState={publishState}
+				publisherPath={publisherPath}
+				onPublish={onPublish}
+			/>
+
 			{/*
 			  `StatTile` at full weight rather than a text row. These two are the
 			  page's headline figures on a phone, and the tile is what the aside uses
@@ -70,13 +84,7 @@ export function SceneSummaryBar({
 			</StatGrid>
 
 			<SceneDetailsSheet details={details} assetData={assetData} />
-			<SceneShareDrawer
-				sceneId={sceneId}
-				projectId={projectId}
-				publishState={publishState}
-				onPublish={onPublish}
-			/>
-			{/* Under the doors, and quieter than either. See the facts panel. */}
+			{/* Last and quietest. See the facts panel. */}
 			<SceneDeleteButton
 				sceneId={sceneId}
 				deleteRef={deleteRef}

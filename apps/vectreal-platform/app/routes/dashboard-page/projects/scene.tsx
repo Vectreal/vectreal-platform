@@ -1,7 +1,5 @@
-import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import { useLoadModel } from '@vctrl/hooks/use-load-model'
-import { Cloud, Radio } from 'lucide-react'
 import { useCallback, useMemo } from 'react'
 import { data, useNavigate } from 'react-router'
 
@@ -321,31 +319,20 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 								/>
 							</div>
 
-							<SceneHeaderActions
-								previewPath={previewPath}
-								publisherPath={publisherPath}
-							/>
+							<SceneHeaderActions previewPath={previewPath} />
 						</header>
 
 						{/*
 						  Facts about the scene rather than a control. This was a button
 						  opening the details drawer - one of three that did - and it also
 						  restated the size and asset count the facts panel now owns.
+
+						  The publication chip is gone from here too. It was the third
+						  place this page stated publish state, and the quietest of the
+						  three; `ScenePublishPanel` says it once, at the top of the
+						  column, with the date and the size beside it.
 						*/}
 						<div className="text-muted-foreground flex flex-wrap items-center gap-3 text-xs">
-							<Badge
-								variant={
-									sceneState.status === 'published' ? 'default' : 'secondary'
-								}
-							>
-								{sceneState.status === 'published' ? (
-									<Radio className="mr-1 h-3 w-3" />
-								) : (
-									<Cloud className="mr-1 h-3 w-3" />
-								)}
-								<span className="capitalize">{sceneState.status}</span>
-							</Badge>
-
 							<p>Updated {new Date(sceneState.updatedAt).toLocaleString()}</p>
 
 							<small className="font-mono">ID {sceneState.id}</small>
@@ -372,6 +359,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 					sceneId={sceneState.id}
 					projectId={project.id}
 					publishState={publishState}
+					publisherPath={publisherPath}
 					onPublish={openPublisherForPublishing}
 					deleteRef={deleteRef}
 					canDelete={canDeleteScene}
@@ -384,6 +372,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 					sceneId={sceneState.id}
 					projectId={project.id}
 					publishState={publishState}
+					publisherPath={publisherPath}
 					onPublish={openPublisherForPublishing}
 					deleteRef={deleteRef}
 					canDelete={canDeleteScene}
