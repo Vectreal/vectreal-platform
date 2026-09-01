@@ -16,8 +16,8 @@ import SceneEmbedViewer from '../../../components/scene-embed/scene-embed-viewer
 import { useSceneMetadata } from '../../../hooks/use-scene-metadata'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import { toSceneRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
-import { canPerformDashboardOperation } from '../../../lib/domain/dashboard/dashboard-operations'
 import { resolveSceneMembership } from '../../../lib/domain/dashboard/dashboard-permissions.server'
+import { canDeleteScene } from '../../../lib/domain/dashboard/scene-detail-capabilities'
 import { buildInternalPreviewPath } from '../../../lib/domain/embed/embed-snippet'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
 import { useSceneModel } from '../../../lib/domain/scene/client/use-scene-model'
@@ -114,10 +114,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 			},
 			folderPath,
 			sceneDetails,
-			// Absent membership is no membership, which is no.
-			canDeleteScene: membership
-				? canPerformDashboardOperation('scene:delete', membership)
-				: false
+			canDeleteScene: canDeleteScene(membership)
 		},
 		{ headers }
 	)
