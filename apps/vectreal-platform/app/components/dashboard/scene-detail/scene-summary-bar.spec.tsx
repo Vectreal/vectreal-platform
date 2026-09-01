@@ -121,13 +121,7 @@ describe('what stays on screen', () => {
 	it('keeps the two figures that drive the page', () => {
 		renderBar()
 
-		/*
-		  Two decimals is what `formatFileSize` renders today. The unification that
-		  makes it adaptive stacks on top of this branch and declares the shift to
-		  `618 KB` as its own visible change; this asserts the current truth rather
-		  than a future one.
-		*/
-		expect(tileValue('Size')).toBe('618.00 KB')
+		expect(tileValue('Size')).toBe('618 KB')
 		expect(tileValue('Assets')).toBe('7')
 	})
 
@@ -169,7 +163,7 @@ describe('the scene details door', () => {
 
 		expect(
 			screen.getByRole('button', { name: /scene details/i }).textContent
-		).toContain('7 assets · 618.00 KB')
+		).toContain('7 assets · 618 KB')
 	})
 
 	it('speaks of one asset in the singular', () => {

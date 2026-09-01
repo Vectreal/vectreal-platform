@@ -2,7 +2,7 @@ import { formatFileSize } from '@shared/utils'
 import { motion } from 'framer-motion'
 import { useMemo } from 'react'
 
-import { BeforeAfter, MetricRow, formatBytes, formatCount } from './metric-row'
+import { BeforeAfter, MetricRow, formatCount } from './metric-row'
 import { FileSizeComparison } from '../../sidebars/file-size-comparison'
 
 import type { resolveSceneMetrics } from '../../../../lib/domain/scene'
@@ -72,8 +72,8 @@ export const OptimizationResults: FC<OptimizationResultsProps> = ({
 					<MetricRow label="Geometry (Draco)">
 						{dracoReport.isWorthApplying ? (
 							<BeforeAfter
-								before={formatBytes(dracoReport.geometryBytesBefore)}
-								after={formatBytes(dracoReport.geometryBytesAfterCompression)}
+								before={formatFileSize(dracoReport.geometryBytesBefore)}
+								after={formatFileSize(dracoReport.geometryBytesAfterCompression)}
 								suffix={`(-${Math.round(dracoReport.reductionPercent)}%)`}
 							/>
 						) : (
@@ -87,7 +87,7 @@ export const OptimizationResults: FC<OptimizationResultsProps> = ({
 				{sizeInfo.workingSceneBytes != null ? (
 					<MetricRow label="Before Draco">
 						<span className="text-muted-foreground">
-							{formatBytes(sizeInfo.workingSceneBytes)}
+							{formatFileSize(sizeInfo.workingSceneBytes)}
 						</span>
 					</MetricRow>
 				) : null}
@@ -129,8 +129,8 @@ export const OptimizationResults: FC<OptimizationResultsProps> = ({
 
 				<MetricRow label="Texture size">
 					<BeforeAfter
-						before={formatBytes(resolvedMetrics.textureBytes.initial)}
-						after={formatBytes(resolvedMetrics.textureBytes.current)}
+						before={formatFileSize(resolvedMetrics.textureBytes.initial)}
+						after={formatFileSize(resolvedMetrics.textureBytes.current)}
 					/>
 				</MetricRow>
 			</div>

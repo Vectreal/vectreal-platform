@@ -1,6 +1,7 @@
+import { formatFileSize } from '@shared/utils'
 import { motion } from 'framer-motion'
 
-import { formatBytes, formatCount } from './metric-row'
+import { formatCount } from './metric-row'
 
 import type { SizeInfo } from '../use-optimization-process'
 import type { FC } from 'react'
@@ -19,7 +20,7 @@ export const PreOptimizationSummary: FC<PreOptimizationSummaryProps> = ({
 }) => {
 	const metrics = [
 		{ label: 'Triangles', value: formatCount(primitivesCount) },
-		{ label: 'File size', value: formatBytes(sizeInfo.initialSceneBytes) },
+		{ label: 'File size', value: formatFileSize(sizeInfo.initialSceneBytes) },
 		{ label: 'Textures', value: formatCount(texturesCount) }
 	]
 
