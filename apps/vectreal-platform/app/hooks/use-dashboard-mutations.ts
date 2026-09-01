@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useFetcher, useFetchers, useRevalidator } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { toast } from 'sonner'
 
+import { useOncePerFetcherResponse } from './use-once-per-fetcher-response'
 import {
 	serializeDashboardMutationRequest,
 	type DashboardMutationRequest,
@@ -69,6 +70,11 @@ function describeOutcome(response: DashboardMutationResponse): {
  *
  * The fetcher is unkeyed for the same reason: a shared key made every mount
  * observe every other mount's response.
+ *
+ * Which response has been handled is `useOncePerFetcherResponse`'s question,
+ * and it is the fourth call site to ask it. The three before it each keyed on
+ * the response body and each shipped the same pair of defects; see that hook
+ * for why identity is the only thing that answers it.
  */
 export function useDashboardMutations(options?: {
 	onSuccess?: (response: DashboardMutationResponse) => void
@@ -84,7 +90,6 @@ export function useDashboardMutations(options?: {
 		useState<DashboardMutationResponse | null>(null)
 	const [lastError, setLastError] = useState<string | null>(null)
 
-	const handledSignatureRef = useRef<string | null>(null)
 	const onSuccessRef = useRef(options?.onSuccess)
 	const silentRef = useRef(options?.silent)
 	onSuccessRef.current = options?.onSuccess
@@ -92,7 +97,6 @@ export function useDashboardMutations(options?: {
 
 	const submit = useCallback(
 		(request: DashboardMutationRequest) => {
-			handledSignatureRef.current = null
 			setLastError(null)
 
 			const targetIds =
@@ -111,21 +115,11 @@ export function useDashboardMutations(options?: {
 		[csrfToken, fetcher]
 	)
 
-	useEffect(() => {
-		if (fetcher.state !== 'idle' || !fetcher.data) {
-			return
-		}
-
-		const signature = JSON.stringify(fetcher.data)
-		if (handledSignatureRef.current === signature) {
-			return
-		}
-		handledSignatureRef.current = signature
-
+	useOncePerFetcherResponse(fetcher, (envelope) => {
 		setPendingIds(new Set())
 
-		if (!fetcher.data.success) {
-			const message = fetcher.data.error ?? 'Action failed'
+		if (!envelope.success) {
+			const message = envelope.error ?? 'Action failed'
 			setLastError(message)
 			if (!silentRef.current) {
 				toast.error(message)
@@ -133,7 +127,7 @@ export function useDashboardMutations(options?: {
 			return
 		}
 
-		const response = fetcher.data.data
+		const response = envelope.data
 		setLastResponse(response)
 
 		if (!silentRef.current) {
@@ -145,7 +139,7 @@ export function useDashboardMutations(options?: {
 			onSuccessRef.current?.(response)
 			revalidator.revalidate()
 		}
-	}, [fetcher.data, fetcher.state, revalidator])
+	})
 
 	return {
 		submit,
