@@ -1,6 +1,6 @@
 import { Button } from '@shared/components/ui/button'
 import { cn, formatFileSize } from '@shared/utils'
-import { Rocket } from 'lucide-react'
+import { ExternalLink, Rocket } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { SceneShareDrawer } from './scene-share-drawer'
@@ -67,11 +67,44 @@ export function ScenePublishPanel({
 
 	return (
 		<DetailPanelSection
-			eyebrow="Publishing"
+			title="Publishing"
+			/*
+			  `h2`, the rung Scene Metrics sits on beside it: the scene route renders
+			  no `h1`, because `dashboard-layout.tsx` suppresses `DashboardHeader` on
+			  it, so these sections are the top of the document's outline.
+
+			  A real title rather than the bare eyebrow this had. `DetailPanelSection`
+			  puts its `action` on the title row, so the eyebrow left the Publisher
+			  link stranded on a centred row of its own below the door - and this was
+			  the only section in the column without a heading.
+			*/
+			headingLevel="h2"
+			action={
+				isPublished ? (
+					/*
+					  The house idiom for a link on a section's heading row - a ghost
+					  button at `text-xs` and muted, the shape `EmbedOptionsPanel` uses
+					  for `Project settings`. Only when live: a draft's whole surface is
+					  the invitation to publish, and the button below says so louder
+					  than this could.
+					*/
+					<Button
+						variant="ghost"
+						size="sm"
+						asChild
+						className="text-muted-foreground hover:text-foreground text-xs"
+					>
+						<Link viewTransition to={publisherPath}>
+							Open in Publisher
+							<ExternalLink />
+						</Link>
+					</Button>
+				) : null
+			}
 			className={className}
 			contentClassName="space-y-3"
 		>
-			<p className="flex items-center gap-2">
+			<p className="flex items-center gap-2 pt-1">
 				{/*
 				  The one piece of colour. Brand orange for a draft, because a draft is
 				  the state with something to do about it; `--success` once it is live,
@@ -108,22 +141,6 @@ export function ScenePublishPanel({
 						publishState={publishState}
 						onPublish={onPublish}
 					/>
-
-					{/*
-					  Quiet, because editing a live scene is the rarer errand. It is
-					  still here because the header's call to action was folded into
-					  this surface, and the Publisher has to stay reachable from it.
-					*/}
-					<Button
-						variant="ghost"
-						size="sm"
-						asChild
-						className="text-muted-foreground hover:text-foreground w-full"
-					>
-						<Link viewTransition to={publisherPath}>
-							Open in Publisher
-						</Link>
-					</Button>
 				</>
 			) : (
 				<>

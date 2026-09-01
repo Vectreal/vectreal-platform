@@ -72,7 +72,13 @@ export function SceneFactsPanel({
 			  the metrics and the asset list, which is the wrong order for a page
 			  whose whole purpose is getting a scene onto someone else's site.
 			*/}
+			{/*
+			  `mb-3` on top of the column's own `gap-3`: a full step of air under
+			  publishing, so the column reads as two groups - what you do with the
+			  scene, then what the scene is - rather than one undifferentiated stack.
+			*/}
 			<ScenePublishPanel
+				className="mb-3"
 				sceneId={sceneId}
 				projectId={projectId}
 				publishState={publishState}

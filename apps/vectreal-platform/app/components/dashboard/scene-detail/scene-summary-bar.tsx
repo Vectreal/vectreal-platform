@@ -58,7 +58,13 @@ export function SceneSummaryBar({
 			  Publishing first here too. On a phone this is the first thing under the
 			  scene itself, which is the order the workflow actually has.
 			*/}
+			{/*
+			  `mb-3` on top of the column's own `gap-3`: a full step of air under
+			  publishing, so the column reads as two groups - what you do with the
+			  scene, then what the scene is - rather than one undifferentiated stack.
+			*/}
 			<ScenePublishPanel
+				className="mb-3"
 				sceneId={sceneId}
 				projectId={projectId}
 				publishState={publishState}

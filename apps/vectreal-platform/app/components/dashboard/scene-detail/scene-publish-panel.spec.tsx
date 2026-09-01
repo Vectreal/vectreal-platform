@@ -80,6 +80,17 @@ describe('a draft', () => {
 		expect(action.getAttribute('href')).toBe('/publisher/scene-1')
 	})
 
+	it('does not offer the heading-row Publisher link', () => {
+		/*
+		  A draft's whole surface is the invitation to publish, and the button below
+		  says so louder than a muted link on the heading row could. Two routes to
+		  one place on one card is what this panel was built to end.
+		*/
+		renderPanel(DRAFT)
+
+		expect(screen.getAllByRole('link')).toHaveLength(1)
+	})
+
 	it('offers no door onto an empty drawer', () => {
 		/*
 		  There is nothing behind it while the scene is a draft: no snippet, no
@@ -130,19 +141,40 @@ describe('a published scene', () => {
 		expect(screen.queryByText('Not live')).toBeNull()
 	})
 
-	it('keeps the Publisher reachable, quietly', () => {
+	it('keeps the Publisher reachable, on the heading row', () => {
 		/*
 		  The header's call to action was folded into this panel, so this is now the
 		  only route to the Publisher for a live scene. Losing it strands anyone who
 		  wants to recompose one.
+
+		  On the heading row rather than under the door, which is where it was: a
+		  centred ghost link with air on both sides, reading as something stranded
+		  rather than as part of the section.
 		*/
 		renderPanel(PUBLISHED)
 
-		expect(
-			screen
-				.getByRole('link', { name: /open in publisher/i })
-				.getAttribute('href')
-		).toBe('/publisher/scene-1')
+		const link = screen.getByRole('link', { name: /open in publisher/i })
+		expect(link.getAttribute('href')).toBe('/publisher/scene-1')
+
+		/*
+		  Inside the header that `DetailPanelSection` draws, which is the slot the
+		  `action` prop fills - not loose in the content below it.
+		*/
+		const heading = screen.getByRole('heading', { name: 'Publishing' })
+		expect(heading.parentElement?.contains(link)).toBe(true)
+	})
+
+	it('names the section, so it is not the only one without a heading', () => {
+		/*
+		  It was a bare eyebrow. Every other section in this column has a heading,
+		  and `DetailPanelSection` puts its `action` on the title row - so without
+		  one there was nowhere for the Publisher link to sit.
+		*/
+		renderPanel(PUBLISHED)
+
+		expect(screen.getByRole('heading', { name: 'Publishing' }).tagName).toBe(
+			'H2'
+		)
 	})
 })
 

@@ -46,10 +46,7 @@ vi.mock('../../../hooks/use-dashboard-mutations', () => ({
 		return {
 			submit,
 			state: mutationState,
-			isBusy: mutationState !== 'idle',
-			lastResponse: null,
-			lastError: mutationError,
-			pendingIds: new Set<string>()
+			lastError: mutationError
 		}
 	}
 }))

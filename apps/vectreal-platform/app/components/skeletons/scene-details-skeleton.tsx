@@ -55,8 +55,7 @@ export const SceneDetailsSkeleton = () => {
 					aria-label="Scene details"
 					className="ds-raised hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-5 xl:flex"
 				>
-					{/* Two rungs: the `At a Glance` eyebrow and the `Scene Metrics` h2. */}
-					<Skeleton className="h-3 w-20" />
+					{/* One rung: the `Scene Metrics` heading. */}
 					<Skeleton className="h-5 w-32" />
 					<div className="grid grid-cols-2 gap-2">
 						{Array.from({ length: 4 }, (_, index) => (

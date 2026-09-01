@@ -72,17 +72,17 @@ interface SceneMetricsSectionProps {
  * Two hosts now: the aside, and the details sheet that stands in for it below
  * `xl`. They sit at different depths, which is why `headingLevel` is a prop and
  * not the constant it was while the aside was the only host.
+ *
+ * No eyebrow. `At a Glance` labelled the section as a category above its own
+ * name, which said nothing the heading did not - and it was the last kicker in
+ * the column once Publishing gained a real title.
  */
 export function SceneMetricsSection({
 	details,
 	headingLevel = 'h2'
 }: SceneMetricsSectionProps) {
 	return (
-		<DetailPanelSection
-			eyebrow="At a Glance"
-			title="Scene Metrics"
-			headingLevel={headingLevel}
-		>
+		<DetailPanelSection title="Scene Metrics" headingLevel={headingLevel}>
 			<StatGrid>
 				<StatTile label="Size" value={formatBytes(details.fileSizeBytes)} />
 				<StatTile label="Assets" value={details.assetCount} />

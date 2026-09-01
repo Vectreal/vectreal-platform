@@ -8,7 +8,7 @@ import CenteredSpinner from '../../../components/centered-spinner'
 import {
 	InlineEditableMetadataField,
 	SceneFactsPanel,
-	SceneHeaderActions,
+	ScenePreviewOverlay,
 	SceneSummaryBar
 } from '../../../components/dashboard'
 import { DetailPanelSection } from '../../../components/layout-components'
@@ -276,6 +276,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							sceneData={sceneData}
 							loadingThumbnail={loadingThumbnail}
 						/>
+						<ScenePreviewOverlay previewPath={previewPath} />
 					</section>
 					<DetailPanelSection surface="raised" contentClassName="space-y-6">
 						<header className="space-y-4">
@@ -318,8 +319,6 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 									}
 								/>
 							</div>
-
-							<SceneHeaderActions previewPath={previewPath} />
 						</header>
 
 						{/*
