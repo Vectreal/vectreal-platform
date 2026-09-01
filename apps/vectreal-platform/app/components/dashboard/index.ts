@@ -29,6 +29,11 @@ export {
 	SceneAssetListItem,
 	buildAssetListItemProps
 } from './scene-asset-list-item'
+export { SceneAssetsSection } from './scene-detail/scene-assets-section'
+export { SceneFactsPanel } from './scene-detail/scene-facts-panel'
+export { SceneHeaderActions } from './scene-detail/scene-header-actions'
+export { SceneMetricsSection } from './scene-detail/scene-metrics-section'
+export { SceneShareDrawer } from './scene-detail/scene-share-drawer'
 export { BillingSettingsSection } from './billing/billing-settings-section'
 export { FeatureCompareGrid } from './billing/feature-compare-grid'
 export {
