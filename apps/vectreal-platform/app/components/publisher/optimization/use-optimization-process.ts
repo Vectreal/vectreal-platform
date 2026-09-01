@@ -68,7 +68,7 @@ export const useOptimizationProcess = () => {
 			optimizer,
 			file ?? null,
 			isReady,
-			report?.stats.textures.after,
+			report?.stats.textureBytes.after,
 			setOptimizationRuntime
 		)
 
@@ -106,7 +106,7 @@ export const useOptimizationProcess = () => {
 					sourcePackageBytes: file?.sourcePackageBytes,
 					sourceTextureBytes: file?.sourceTextureBytes,
 					statsSceneBytes: latestSceneStats?.currentSceneBytes,
-					reportTextureBytesBefore: report?.stats.textures.before,
+					reportTextureBytesBefore: report?.stats.textureBytes.before,
 					calculateSceneBytes
 				},
 				setRuntime: setOptimizationRuntime
@@ -136,7 +136,7 @@ export const useOptimizationProcess = () => {
 			file?.sourcePackageBytes,
 			file?.sourceTextureBytes,
 			latestSceneStats?.currentSceneBytes,
-			report?.stats.textures.before,
+			report?.stats.textureBytes.before,
 			calculateSceneBytes,
 			setOptimizationRuntime,
 			refreshOptimizedSizeInfo

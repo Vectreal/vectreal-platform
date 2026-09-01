@@ -4,7 +4,7 @@ import type { OptimizationReport } from '@vctrl/core'
 
 const reportWith = (before: number, after: number) =>
 	({
-		stats: { vertices: { before, after } }
+		stats: { verticesCount: { before, after } }
 	}) as unknown as OptimizationReport
 
 describe('resolveSimplificationOutcome', () => {

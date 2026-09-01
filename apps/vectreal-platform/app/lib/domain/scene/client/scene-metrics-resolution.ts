@@ -165,8 +165,8 @@ export const resolveSceneMetrics = ({
 	const vertices = resolvePair({
 		persistedInitial: stats?.baseline?.verticesCount,
 		persistedCurrent: stalePersistCurrent ?? stats?.optimized?.verticesCount,
-		reportInitial: allowReportBaseline ? report?.stats.vertices.before : null,
-		reportCurrent: allowReportCurrent ? report?.stats.vertices.after : null,
+		reportInitial: allowReportBaseline ? report?.stats.verticesCount.before : null,
+		reportCurrent: allowReportCurrent ? report?.stats.verticesCount.after : null,
 		infoInitial: info?.initial.verticesCount,
 		infoCurrent: info?.optimized.verticesCount,
 		allowInfo
@@ -175,8 +175,8 @@ export const resolveSceneMetrics = ({
 	const primitives = resolvePair({
 		persistedInitial: stats?.baseline?.primitivesCount,
 		persistedCurrent: stalePersistCurrent ?? stats?.optimized?.primitivesCount,
-		reportInitial: allowReportBaseline ? report?.stats.triangles.before : null,
-		reportCurrent: allowReportCurrent ? report?.stats.triangles.after : null,
+		reportInitial: allowReportBaseline ? report?.stats.primitivesCount.before : null,
+		reportCurrent: allowReportCurrent ? report?.stats.primitivesCount.after : null,
 		infoInitial: info?.initial.primitivesCount,
 		infoCurrent: info?.optimized.primitivesCount,
 		allowInfo
@@ -185,8 +185,8 @@ export const resolveSceneMetrics = ({
 	const meshes = resolvePair({
 		persistedInitial: stats?.baseline?.meshesCount,
 		persistedCurrent: stalePersistCurrent ?? stats?.optimized?.meshesCount,
-		reportInitial: allowReportBaseline ? report?.stats.meshes.before : null,
-		reportCurrent: allowReportCurrent ? report?.stats.meshes.after : null,
+		reportInitial: allowReportBaseline ? report?.stats.meshBytes.before : null,
+		reportCurrent: allowReportCurrent ? report?.stats.meshBytes.after : null,
 		infoInitial: info?.initial.meshesCount,
 		infoCurrent: info?.optimized.meshesCount,
 		allowInfo
@@ -211,8 +211,8 @@ export const resolveSceneMetrics = ({
 		persistedCurrent: stats?.additionalMetrics?.currentTextureBytes,
 		runtimeInitial: normalizedRuntime.initialTextureBytes,
 		runtimeCurrent: normalizedRuntime.currentTextureBytes,
-		reportInitial: allowReportBaseline ? report?.stats.textures.before : null,
-		reportCurrent: allowReportCurrent ? report?.stats.textures.after : null,
+		reportInitial: allowReportBaseline ? report?.stats.textureBytes.before : null,
+		reportCurrent: allowReportCurrent ? report?.stats.textureBytes.after : null,
 		allowInfo: false
 	})
 

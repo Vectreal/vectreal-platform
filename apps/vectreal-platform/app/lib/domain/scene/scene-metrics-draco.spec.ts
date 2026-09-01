@@ -17,15 +17,13 @@ const buildReport = (
 	compressionRatio: 1.6,
 	appliedOptimizations: ['simplification', 'draco compression'],
 	stats: {
-		vertices: { before: 100_000, after: 60_000 },
-		triangles: { before: 50_000, after: 30_000 },
-		materials: { before: 3, after: 3 },
-		textures: { before: 2_000_000, after: 2_000_000 },
+		verticesCount: { before: 100_000, after: 60_000 },
+		primitivesCount: { before: 50_000, after: 30_000 },
+		materialsCount: { before: 3, after: 3 },
+		textureBytes: { before: 2_000_000, after: 2_000_000 },
 		texturesCount: { before: 4, after: 4 },
 		textureResolutions: { before: [], after: [] },
-		// Bytes, per `OptimizationStats`. The count is its own field, which is the
-		// distinction this fixture predates.
-		meshes: { before: 6_000_000, after: 3_000_000 },
+		meshBytes: { before: 6_000_000, after: 3_000_000 },
 		meshesCount: { before: 12, after: 12 }
 	},
 	...overrides
