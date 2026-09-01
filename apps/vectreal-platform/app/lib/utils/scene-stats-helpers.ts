@@ -120,9 +120,12 @@ function buildSceneStatsSnapshot(
 		primitivesCount: isBaseline
 			? report.stats.triangles.before
 			: report.stats.triangles.after,
+		// `stats.meshes` is the mesh payload in bytes; the count is its own field.
+		// Persisting the former under this name is what put 2,902,308 in the
+		// scene detail page's mesh count.
 		meshesCount: isBaseline
-			? report.stats.meshes.before
-			: report.stats.meshes.after,
+			? report.stats.meshesCount.before
+			: report.stats.meshesCount.after,
 		// Texture asset count, not byte size.
 		texturesCount: isBaseline
 			? report.stats.texturesCount.before

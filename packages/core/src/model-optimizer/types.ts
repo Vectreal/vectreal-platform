@@ -106,10 +106,19 @@ export interface TextureBinaryPayload {
 /**
  * Canonical optimization metrics payload used by OptimizationReport.
  *
- * Conventions:
- * - `textures` holds texture payload bytes.
- * - `texturesCount` holds the number of texture assets.
- * - `vertices`, `triangles`, `meshes`, `materials` are all counts.
+ * Conventions, and read them: this shape mixes byte sizes and counts under
+ * names that do not all say which they are.
+ * - `vertices`, `triangles`, `materials`, `texturesCount` and `meshesCount` are
+ *   counts.
+ * - `textures` and `meshes` are byte sizes.
+ *
+ * `meshes` is the trap. It is the summed byte size of the mesh payload, and the
+ * comment here used to list it among the counts while the comment ten lines
+ * below correctly called it a size - two contradictory statements about one
+ * field, in one file. Consumers believed the wrong one: `meshesCount` in the
+ * stored scene stats and in `use-calc-optimization-info` were both fed from it,
+ * so a shoe with twelve meshes reported 2,902,308 of them, which was the byte
+ * size of its geometry buffer.
  */
 export interface OptimizationStats {
 	vertices: BeforeAfterMetric
@@ -123,7 +132,16 @@ export interface OptimizationStats {
 		before: string[]
 		after: string[]
 	}
+	/**
+	 * Mesh payload size in bytes (before/after) - NOT a number of meshes.
+	 *
+	 * Kept under this name because `scene-metrics-resolution` reads it as one
+	 * half of a "did anything shrink" test, where a byte size is a valid signal.
+	 * Anything wanting a quantity wants `meshesCount`.
+	 */
 	meshes: BeforeAfterMetric
+	/** Number of meshes (before/after). */
+	meshesCount: BeforeAfterMetric
 }
 
 /**
