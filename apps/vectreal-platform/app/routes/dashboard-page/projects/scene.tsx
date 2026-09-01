@@ -1,9 +1,4 @@
 import { Separator } from '@shared/components'
-import {
-	Avatar,
-	AvatarFallback,
-	AvatarImage
-} from '@shared/components/ui/avatar'
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import {
@@ -167,7 +162,6 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	return data(
 		{
-			user,
 			project,
 			scene,
 			publishState: {
@@ -293,7 +287,7 @@ function DrawerAssetsSection({
 }
 
 const ScenePage = ({ loaderData }: Route.ComponentProps) => {
-	const { scene, project, user, sceneDetails, publishState } = loaderData
+	const { scene, project, sceneDetails, publishState } = loaderData
 	const sceneId = scene.id
 	const navigate = useNavigate()
 	const csrfToken = useAuthenticityToken()
@@ -335,7 +329,6 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		'idle' | 'saved' | 'error'
 	>('idle')
 	const [drawerOpen, setDrawerOpen] = useState(false)
-	const [copiedLink, setCopiedLink] = useState(false)
 
 	const metadataResetTimerRef = useRef<number | null>(null)
 
@@ -343,7 +336,6 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		projectId: project.id,
 		sceneId: sceneState.id
 	})
-	const dashboardPath = `/dashboard/projects/${project.id}/${sceneState.id}`
 	const sceneNameTrimmed = sceneNameDraft.trim()
 	const sceneDescriptionCurrent = sceneState.description || ''
 	const isTitleUnsaved =
@@ -453,20 +445,6 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 				setMetadataStatus('idle')
 			}, 2200)
 		}
-	}
-
-	async function handleCopyDashboardLink() {
-		if (!navigator?.clipboard) {
-			return
-		}
-
-		const absoluteLink = new URL(
-			dashboardPath,
-			window.location.origin
-		).toString()
-		await navigator.clipboard.writeText(absoluteLink)
-		setCopiedLink(true)
-		window.setTimeout(() => setCopiedLink(false), 1500)
 	}
 
 	const openPublisherForPublishing = useCallback(() => {
@@ -698,44 +676,6 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							</div>
 						)}
 					</DetailPanelSection>
-
-					<section className="ds-sunken rounded-xl p-3">
-						<div className="flex items-center gap-2">
-							<Avatar className="h-8 w-8">
-								<AvatarImage
-									src={user.user_metadata?.avatar_url || ''}
-									alt={user.user_metadata?.full_name || user.email || 'User'}
-								/>
-								<AvatarFallback>
-									{(user.user_metadata?.full_name || user.email || 'U')
-										.charAt(0)
-										.toUpperCase()}
-								</AvatarFallback>
-							</Avatar>
-							<div>
-								<p className="text-sm font-medium">Workspace Collaborators</p>
-								<p className="text-muted-foreground text-xs">
-									Managed in publisher settings.
-								</p>
-							</div>
-						</div>
-						<div className="mt-3 flex items-center gap-2">
-							<Button
-								variant="secondary"
-								size="sm"
-								onClick={handleCopyDashboardLink}
-							>
-								{copiedLink ? 'Copied' : 'Copy Link'}
-							</Button>
-							<Button
-								variant="ghost"
-								size="sm"
-								onClick={() => setDrawerOpen(true)}
-							>
-								Open Details
-							</Button>
-						</div>
-					</section>
 				</aside>
 			</div>
 
@@ -753,7 +693,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 					<DrawerHeader>
 						<DrawerTitle>Scene Details</DrawerTitle>
 						<DrawerDescription>
-							Detailed stats, assets, collaboration, and embed options.
+							Detailed stats, assets, publishing, and embed options.
 						</DrawerDescription>
 					</DrawerHeader>
 
@@ -816,44 +756,6 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 									/>
 								</DetailPanelSection>
 							)}
-						</DetailPanelSection>
-
-						<Separator />
-
-						<DetailPanelSection title="Collaboration">
-							<div className="flex items-center justify-between gap-3">
-								<div className="flex items-center gap-2">
-									<Avatar className="h-8 w-8">
-										<AvatarImage
-											src={user.user_metadata?.avatar_url || ''}
-											alt={
-												user.user_metadata?.full_name || user.email || 'User'
-											}
-										/>
-										<AvatarFallback>
-											{(user.user_metadata?.full_name || user.email || 'U')
-												.charAt(0)
-												.toUpperCase()}
-										</AvatarFallback>
-									</Avatar>
-									<div>
-										<p className="text-sm font-medium">
-											Workspace collaborators
-										</p>
-										<p className="text-muted-foreground text-xs">
-											Detailed access controls are handled in
-											publisher/settings.
-										</p>
-									</div>
-								</div>
-								<Button
-									variant="secondary"
-									size="sm"
-									onClick={handleCopyDashboardLink}
-								>
-									{copiedLink ? 'Copied' : 'Copy Link'}
-								</Button>
-							</div>
 						</DetailPanelSection>
 
 						<Separator />
