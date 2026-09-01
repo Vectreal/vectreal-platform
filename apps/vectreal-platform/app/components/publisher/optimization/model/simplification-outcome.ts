@@ -43,8 +43,8 @@ export function resolveSimplificationOutcome(
 	report: OptimizationReport | null | undefined,
 	requestedKeepRatio: number | undefined
 ): SimplificationOutcome | null {
-	const verticesBefore = report?.stats.vertices.before
-	const verticesAfter = report?.stats.vertices.after
+	const verticesBefore = report?.stats.verticesCount.before
+	const verticesAfter = report?.stats.verticesCount.after
 
 	if (
 		typeof verticesBefore !== 'number' ||

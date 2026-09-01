@@ -31,13 +31,13 @@ function getSnapshotFromReport(
 	}
 
 	return {
-		verticesCount: report.stats.vertices.after ?? 0,
-		primitivesCount: report.stats.triangles.after ?? 0,
-		// `stats.meshes` is a byte size; `stats.meshesCount` is the quantity. This
-		// read the former and called it a count.
+		verticesCount: report.stats.verticesCount.after ?? 0,
+		primitivesCount: report.stats.primitivesCount.after ?? 0,
+		// The quantity, not `stats.meshBytes`. This read the size and called it a
+		// count, and the improvement below then subtracted two byte sizes.
 		meshesCount: report.stats.meshesCount.after ?? 0,
 		textureAssetCount: report.stats.texturesCount.after ?? 0,
-		materialsCount: report.stats.materials.after ?? 0,
+		materialsCount: report.stats.materialsCount.after ?? 0,
 		sceneBytes: report.optimizedSize ?? 0
 	}
 }
@@ -52,7 +52,9 @@ export const useCalcOptimizationInfo = (
 ): OptimizationInfoData => {
 	// State (not ref) so that capturing the initial report triggers a re-render,
 	// allowing the memo below to recompute info.initial with the real values.
-	const [initialReport, setInitialReport] = useState<OptimizationReport | null>(null)
+	const [initialReport, setInitialReport] = useState<OptimizationReport | null>(
+		null
+	)
 	const report = state.report
 
 	useEffect(() => {

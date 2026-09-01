@@ -1,11 +1,12 @@
 /**
  * What gets persisted as a mesh count.
  *
- * `OptimizationStats` carries both a mesh payload size and a mesh count, and
- * their names do not both say which is which: `meshes` is bytes, `meshesCount`
- * is the quantity. This snapshot was built from the first and stored under the
- * second, so the scene detail page reported a shoe as having 2,902,308 meshes -
- * the byte size of its geometry buffer.
+ * `OptimizationStats` carries both a mesh payload size and a mesh count. This
+ * snapshot was built from the size and stored under the count, so the scene
+ * detail page reported a shoe as having 2,902,308 meshes - the byte size of its
+ * geometry buffer. Both fields say their unit in their name now
+ * (`meshBytes` / `meshesCount`), which is what makes the swap below a mistake
+ * someone would see rather than one they would make.
  *
  * Nothing held that. The two fields are both numbers, both plausible, and the
  * only place the difference is visible is a tile four layers downstream.
@@ -28,15 +29,13 @@ const REPORT = {
 	compressionRatio: 1.6,
 	appliedOptimizations: ['draco compression'],
 	stats: {
-		vertices: { before: 100_000, after: 60_000 },
-		triangles: { before: 50_000, after: 30_000 },
-		materials: { before: 3, after: 3 },
-		textures: { before: 2_000_000, after: 1_000_000 },
+		verticesCount: { before: 100_000, after: 60_000 },
+		primitivesCount: { before: 50_000, after: 30_000 },
+		materialsCount: { before: 3, after: 3 },
+		textureBytes: { before: 2_000_000, after: 1_000_000 },
 		texturesCount: { before: 4, after: 4 },
 		textureResolutions: { before: [], after: [] },
-		/** Bytes. */
-		meshes: { before: 6_000_000, after: 3_000_000 },
-		/** Meshes. */
+		meshBytes: { before: 6_000_000, after: 3_000_000 },
 		meshesCount: { before: 12, after: 9 }
 	}
 } as unknown as OptimizationReport
@@ -52,7 +51,7 @@ describe('the persisted mesh count', () => {
 	it('never stores the byte size under that name', () => {
 		/*
 		  Stated as its own assertion because it is the bug, not a restatement of
-		  the one above: a snapshot fed from `stats.meshes` produces 6,000,000 and
+		  the one above: a snapshot fed from `stats.meshBytes` produces 6,000,000 and
 		  3,000,000, and both are perfectly valid numbers to a type checker and to
 		  every screen that renders them.
 		*/

@@ -52,10 +52,10 @@ export function resolveTextureByteMetricsScope(
 	existingAdditionalMetrics?: TextureByteMetrics | null
 ): TextureByteMetrics | null {
 	const initialTextureBytes =
-		asNonNegativeNumber(report?.stats.textures.before) ??
+		asNonNegativeNumber(report?.stats.textureBytes.before) ??
 		asNonNegativeNumber(existingAdditionalMetrics?.initialTextureBytes)
 	const currentTextureBytes =
-		asNonNegativeNumber(report?.stats.textures.after) ??
+		asNonNegativeNumber(report?.stats.textureBytes.after) ??
 		asNonNegativeNumber(existingAdditionalMetrics?.currentTextureBytes)
 
 	if (initialTextureBytes == null && currentTextureBytes == null) {
@@ -115,14 +115,14 @@ function buildSceneStatsSnapshot(
 
 	return {
 		verticesCount: isBaseline
-			? report.stats.vertices.before
-			: report.stats.vertices.after,
+			? report.stats.verticesCount.before
+			: report.stats.verticesCount.after,
 		primitivesCount: isBaseline
-			? report.stats.triangles.before
-			: report.stats.triangles.after,
-		// `stats.meshes` is the mesh payload in bytes; the count is its own field.
-		// Persisting the former under this name is what put 2,902,308 in the
-		// scene detail page's mesh count.
+			? report.stats.primitivesCount.before
+			: report.stats.primitivesCount.after,
+		// The count, not `stats.meshBytes` beside it. Persisting the payload size
+		// under this name is what put 2,902,308 in the scene detail page's mesh
+		// count, back when the size was called `meshes`.
 		meshesCount: isBaseline
 			? report.stats.meshesCount.before
 			: report.stats.meshesCount.after,
@@ -131,8 +131,8 @@ function buildSceneStatsSnapshot(
 			? report.stats.texturesCount.before
 			: report.stats.texturesCount.after,
 		materialsCount: isBaseline
-			? report.stats.materials.before
-			: report.stats.materials.after
+			? report.stats.materialsCount.before
+			: report.stats.materialsCount.after
 	}
 }
 

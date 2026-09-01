@@ -106,48 +106,53 @@ export interface TextureBinaryPayload {
 /**
  * Canonical optimization metrics payload used by OptimizationReport.
  *
- * Conventions, and read them: this shape mixes byte sizes and counts under
- * names that do not all say which they are.
- * - `vertices`, `triangles`, `materials`, `texturesCount` and `meshesCount` are
- *   counts.
- * - `textures` and `meshes` are byte sizes.
+ * Every field states its unit in its name: `*Count` is a quantity, `*Bytes` is
+ * a size. This is the vocabulary `ModelTotals` in `@vctrl/hooks` already used,
+ * so the two published shapes now agree rather than describing the same
+ * measurements three ways.
  *
- * `meshes` is the trap. It is the summed byte size of the mesh payload, and the
- * comment here used to list it among the counts while the comment ten lines
- * below correctly called it a size - two contradictory statements about one
- * field, in one file. Consumers believed the wrong one: `meshesCount` in the
- * stored scene stats and in `use-calc-optimization-info` were both fed from it,
- * so a shoe with twelve meshes reported 2,902,308 of them, which was the byte
- * size of its geometry buffer.
+ * It did not, and that is what made a bug rather than an inconvenience. Five
+ * fields were bare plurals: `vertices`, `triangles` and `materials` held counts
+ * while `textures` and `meshes` held byte sizes, with nothing in any name to
+ * separate them. `types.ts` then said both things about `meshes` ten lines
+ * apart. Two consumers believed the wrong one and stored a geometry buffer's
+ * byte size as a mesh count, so a shoe with twelve meshes reported 2,902,308.
+ *
+ * Reading the wrong meaning out of the old shape was not carelessness; the
+ * shape offered no way to read it right.
  */
 export interface OptimizationStats {
-	vertices: BeforeAfterMetric
-	triangles: BeforeAfterMetric
-	materials: BeforeAfterMetric
+	/** Number of vertices (before/after). */
+	verticesCount: BeforeAfterMetric
+	/**
+	 * Number of GL primitives - triangles, for triangle-mode meshes.
+	 *
+	 * Named for `mesh.glPrimitives`, which is what it is summed from, and for the
+	 * `primitivesCount` every consumer downstream already called it. It was
+	 * `triangles` here and `primitivesCount` everywhere else: one quantity under
+	 * two names, renamed silently at each boundary it crossed.
+	 */
+	primitivesCount: BeforeAfterMetric
+	/** Number of materials (before/after). */
+	materialsCount: BeforeAfterMetric
 	/** Texture payload size in bytes (before/after). */
-	textures: BeforeAfterMetric
+	textureBytes: BeforeAfterMetric
 	/** Number of texture assets (before/after). */
 	texturesCount: BeforeAfterMetric
 	textureResolutions: {
 		before: string[]
 		after: string[]
 	}
-	/**
-	 * Mesh payload size in bytes (before/after) - NOT a number of meshes.
-	 *
-	 * Kept under this name because `scene-metrics-resolution` reads it as one
-	 * half of a "did anything shrink" test, where a byte size is a valid signal.
-	 * Anything wanting a quantity wants `meshesCount`.
-	 */
-	meshes: BeforeAfterMetric
+	/** Mesh payload size in bytes (before/after). */
+	meshBytes: BeforeAfterMetric
 	/** Number of meshes (before/after). */
 	meshesCount: BeforeAfterMetric
 }
 
 /**
  * Draco geometry-compression metrics, from `measureDracoCompression`. Distinct
- * from `OptimizationStats.meshes`, which always reflects uncompressed geometry
- * byte size. Draco compression is deferred until write time, so `inspect()`
+ * from `OptimizationStats.meshBytes`, which always reflects uncompressed
+ * geometry byte size. Draco compression is deferred until write time, so `inspect()`
  * can't see it.
  */
 export interface DracoCompressionReport {

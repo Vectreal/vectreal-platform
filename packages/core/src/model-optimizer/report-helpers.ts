@@ -220,19 +220,19 @@ export function buildOptimizationReport(
 		appliedOptimizations: [...appliedOptimizations],
 		...(dracoReport ? { draco: dracoReport } : {}),
 		stats: {
-			vertices: {
+			verticesCount: {
 				before: originalCounts.vertices,
 				after: currentCounts.vertices
 			},
-			triangles: {
+			primitivesCount: {
 				before: originalCounts.primitives,
 				after: currentCounts.primitives
 			},
-			materials: {
+			materialsCount: {
 				before: originalReport?.materials?.properties?.length ?? 0,
 				after: currentInspectReport.materials?.properties?.length ?? 0
 			},
-			textures: {
+			textureBytes: {
 				before: originalReport ? calculateTextureSize(originalReport) : 0,
 				after: calculateTextureSize(currentInspectReport)
 			},
@@ -246,7 +246,7 @@ export function buildOptimizationReport(
 					: [],
 				after: calculateTextureResolutions(currentInspectReport)
 			},
-			meshes: {
+			meshBytes: {
 				before: originalReport ? calculateMeshSize(originalReport) : 0,
 				after: calculateMeshSize(currentInspectReport)
 			},
