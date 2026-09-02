@@ -502,7 +502,17 @@ describe('the snippet without the size fields', () => {
 		  first version of this test.
 		*/
 		expect(snippet).toContain(
-			'<div style="width: 100%; max-width: 100%; height: 400px;">'
+			'<div class="vctrl-embed" style="width: 100%; max-width: 100%; height: 400px;">'
+		)
+
+		/*
+		  The stylesheet that lets the box fill a flex parent is part of what the
+		  panel hands over, not decoration on top of it. Copying the wrapper
+		  without it reproduces the 300px Shopify collapse, so a snippet that lost
+		  it here would look correct in this assertion and be broken in a theme.
+		*/
+		expect(snippet).toContain(
+			'div:not([class]):not([style]):has(> .vctrl-embed) { flex-grow: 1; }'
 		)
 	})
 

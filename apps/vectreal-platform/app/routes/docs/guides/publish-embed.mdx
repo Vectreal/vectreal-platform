@@ -130,7 +130,11 @@ The hosted preview iframe can also be controlled from the parent page over `post
 **Generated snippet** (what the Embed section copies). The box is `100%` wide and `400px` tall; both are plain inline styles, so edit them in the snippet after pasting it:
 
 ```html
-<div style="width: 100%; max-width: 100%; height: 400px;">
+<style>
+	/* Lets the embed fill a bare flex parent, such as a Shopify Custom Liquid block. */
+	@layer { div:not([class]):not([style]):has(> .vctrl-embed) { flex-grow: 1; } }
+</style>
+<div class="vctrl-embed" style="width: 100%; max-width: 100%; height: 400px;">
 	<iframe
 		src="https://vectreal.com/embed/<projectId>/<sceneId>?token=vctrl_your_key_here"
 		style="width: 100%; height: 100%; border: 0;"
@@ -140,10 +144,59 @@ The hosted preview iframe can also be controlled from the parent page over `post
 </div>
 ```
 
-**Responsive 16:9 variant** (hand-written, if you want the box to scale with its column):
+### Why the snippet ships a stylesheet
+
+`width: 100%` only resolves against a parent with a definite width, and the snippet does not own its parent. Where a host drops it into a flex row, that parent sizes to its content instead, and the only content-derived width an iframe has is the 300px every iframe defaults to. The embed then renders 300px wide inside a full-width section, and no edit to the snippet's own box changes it, because the element that needs fixing is the one above it.
+
+A parent can only be reached from a stylesheet, which is why the rule is a `<style>` element rather than one more inline style.
+
+Two things keep a rule aimed at an element the snippet does not own from doing harm. **`@layer` puts it in an anonymous cascade layer**, which loses to every unlayered declaration on the page whatever its specificity, so a theme that sizes this element keeps its own value and the rule applies only where the theme said nothing. **`:not([class]):not([style])`** then skips any wrapper the theme marked up directly. Both fail closed, on whatever the page already did: the theme's own width where it set one, 300px where it did not. Either way the failure is visible and documented, rather than a quiet resize of part of your page. So does a theme that puts another element between the flex item and the snippet, which defeats the child combinator. The one gap is a theme rule inside its own named layer, since the snippet's layer is declared later and wins.
+
+Measured in a 900px-wide container, the embed's parent a bare `<div>`, and the sibling where there is one a fixed 100px block. Parent width, before and after:
+
+| Parent's layout context             | Without the rule | With it           |
+| ----------------------------------- | ---------------- | ----------------- |
+| Flex row, embed alone               | 300px            | 900px             |
+| Flex row, one 100px sibling         | 300px            | 800px             |
+| Flex row, parent sized by the theme | 220px            | 220px, left alone |
+| Flex column, height from content    | 900px            | 900px             |
+| Grid, `1fr 1fr`                     | 450px            | 450px             |
+| Block                               | 900px            | 900px             |
+
+A flex column is where the rule is least useful, in both directions. `flex-grow` acts on the main axis, so in a column **with a definite height** it grows the parent's height rather than its width: in a 600px-tall shell the parent went from 400px to 500px beside that 100px sibling, or to 600px alone, leaving blank space under the embed. Horizon is in scope for this, because `layout-panel-flex` sets `height: 100%` and only the row direction resets it to `auto`, so a column-direction panel keeps that height at every viewport width.
+
+And a column only escapes the width collapse through `align-items: stretch`, its default. Where a theme sets `flex-start` or `center` the parent is 300px wide exactly as in a row, and this rule does not fix it, because in a column the width is the cross axis. `align-self: stretch` is what fixes that one - see below.
+
+`flex-grow` is the whole rule on purpose. An earlier version also set `min-width: 0`, which does nothing for this bug, because a growing item never reaches its automatic minimum. It is not free either. `min-width` is not initially `0` on a grid item, and that automatic minimum is what lets a `1fr` track widen to hold its content. Setting it to `0` gives that up: widen the wrapper to `700px` in a `1fr 1fr` grid and the track holds at 450px, so the box renders at the 450px its `max-width: 100%` clamps it to rather than the width you asked for. Nothing overflows and nothing is clipped - the size you set is just silently ignored.
+
+To make the embed match the height of the row rather than its own box, change the wrapper's `height` to `100%`. That needs the parent stretched, which is the default; where a theme sets `align-items` to something else, add `align-self: stretch` to the rule you already pasted rather than to the element:
+
+```css
+@layer {
+	div:not([class]):not([style]):has(> .vctrl-embed) {
+		flex-grow: 1;
+		align-self: stretch;
+	}
+}
+```
+
+Putting it on the element directly would mean giving that element a `class` or a `style`, which is what the selector skips, so the width fix would stop applying at the same time.
+
+### Shopify: pasting into a Custom Liquid block
+
+Horizon renders a Custom Liquid **block** into a `<div>` with no attributes at all. Where the section's direction is set to Horizontal, that `<div>` is a row flex item and the collapse applies; `column` is the default, and in that direction there is nothing to fix. Paste the generated snippet unmodified either way.
+
+The Custom Liquid **section** is a different element. Horizon gives that one a class and an inline style of its own, so it is full width already and the rule correctly passes it over. Dawn wraps the same setting in ordinary block-level divs, where nothing collapses either. The block, in a horizontal section, is the case that needs the stylesheet.
+
+Two things that do not work from inside that box:
+
+- **`{{ section.id }}` is unavailable.** Shopify's [input settings reference](https://shopify.dev/docs/storefronts/themes/architecture/settings/input-settings) (accessed 2026-09-02) lists `section` among what a `liquid` setting cannot access, so you cannot scope CSS by section ID from there. That entry links to the `section` _tag_ rather than the object, so treat the exact boundary as unverified and test it before relying on it. The snippet's rule needs no ID, which is why it takes the form it does.
+- **Unclosed tags are rewritten.** Shopify closes them when the setting is saved, and warns the result may not match your intended formatting - which is worth knowing for a snippet with nested elements. The field also caps at 50kb.
+
+**Responsive 16:9 variant** (hand-written, if you want the box to scale with its column). Keep the `<style>` rule above if you paste this into a theme: in a flex row this box collapses to 0px rather than 300px, because an absolutely positioned iframe contributes no intrinsic width at all, so it disappears outright.
 
 ```html
-<div style="position:relative;padding-top:56.25%;width:100%">
+<div class="vctrl-embed" style="position:relative;padding-top:56.25%;width:100%">
 	<iframe
 		src="https://vectreal.com/embed/<projectId>/<sceneId>?token=vctrl_your_key_here"
 		style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
