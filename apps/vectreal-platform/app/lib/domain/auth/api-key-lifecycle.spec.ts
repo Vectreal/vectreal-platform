@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 import {
+	EXPIRY_WARNING_MS,
+	isApiKeyExpiringSoon,
 	isApiKeyLive,
 	resolveApiKeyState,
 	type ApiKeyLifecycleRow
@@ -233,6 +235,77 @@ describe('api key lifecycle', () => {
 					NOW
 				)
 			).toBe('active')
+		})
+	})
+
+	describe('isApiKeyExpiringSoon', () => {
+		const inDays = (days: number) =>
+			new Date(NOW.getTime() + days * 24 * 60 * 60 * 1000)
+
+		it('warns inside the window and stays quiet outside it', () => {
+			expect(
+				isApiKeyExpiringSoon(
+					{ active: true, expiresAt: inDays(3), revokedAt: null },
+					NOW
+				)
+			).toBe(true)
+			expect(
+				isApiKeyExpiringSoon(
+					{ active: true, expiresAt: inDays(30), revokedAt: null },
+					NOW
+				)
+			).toBe(false)
+		})
+
+		it('says nothing about a key that has no expiry', () => {
+			expect(
+				isApiKeyExpiringSoon(
+					{ active: true, expiresAt: null, revokedAt: null },
+					NOW
+				)
+			).toBe(false)
+		})
+
+		it('is asked only of a key that still works', () => {
+			/*
+			  The reason this is a separate predicate rather than a fifth
+			  `ApiKeyState`. Each of these rows is inside the warning window by
+			  date, and each is already dead - "expires in 3 days" over a Revoked
+			  badge is a contradiction, and the Status column has already said the
+			  useful thing.
+			*/
+			for (const dead of [
+				{ active: true, expiresAt: inDays(3), revokedAt: NOW },
+				{ active: false, expiresAt: inDays(3), revokedAt: null },
+				{ active: null, expiresAt: inDays(3), revokedAt: null }
+			]) {
+				expect(isApiKeyExpiringSoon(dead, NOW), JSON.stringify(dead)).toBe(
+					false
+				)
+			}
+		})
+
+		it('does not disagree with the state machine at the boundary', () => {
+			/*
+			  A key exactly at its expiry instant is already `expired`, because the
+			  SQL keeps one live while `expires_at > now`. So the warning has to stop
+			  before the state changes, not after - otherwise there is an instant
+			  where the row reads Expired and "expires today" at once.
+			*/
+			const atExpiry = { active: true, expiresAt: NOW, revokedAt: null }
+
+			expect(resolveApiKeyState(atExpiry, NOW)).toBe('expired')
+			expect(isApiKeyExpiringSoon(atExpiry, NOW)).toBe(false)
+		})
+
+		it('takes the window as an argument, defaulting to the shared one', () => {
+			const row = { active: true, expiresAt: inDays(20), revokedAt: null }
+
+			expect(isApiKeyExpiringSoon(row, NOW)).toBe(false)
+			expect(isApiKeyExpiringSoon(row, NOW, 30 * 24 * 60 * 60 * 1000)).toBe(
+				true
+			)
+			expect(EXPIRY_WARNING_MS).toBe(14 * 24 * 60 * 60 * 1000)
 		})
 	})
 })

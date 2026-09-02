@@ -324,4 +324,67 @@ describe('ApiKeyNameCell', () => {
 		expect(screen.getByText('Storefront key')).not.toBeNull()
 		expect(screen.getByText('Pasted into a page')).not.toBeNull()
 	})
+
+	it('warns on the Status cell when a key is close to expiry', () => {
+		/*
+		  Rendered through the real column, not the cell helper, because the
+		  warning lives in the Status column and the wiring is the part that can
+		  silently not happen.
+		*/
+		const columns = createApiKeyColumns({
+			onEdit: vi.fn(),
+			onRevoke: vi.fn(),
+			onRotate: vi.fn()
+		})
+		const status = columns.find(
+			(column) => 'id' in column && column.id === 'status'
+		)
+
+		const soon = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+		render(
+			(
+				status!.cell as (context: {
+					row: { original: ApiKeyRow }
+				}) => ReactElement
+			)({ row: { original: row({ expiresAt: soon }) } })
+		)
+
+		expect(screen.getByText(/expires in 3 days/i)).not.toBeNull()
+	})
+
+	it('says nothing about expiry on a key that is already dead', () => {
+		/*
+		  The contradiction the separate predicate exists to prevent: this row is
+		  inside the warning window by date and revoked, so the badge already says
+		  the useful thing and "expires in 3 days" would argue with it.
+		*/
+		const columns = createApiKeyColumns({
+			onEdit: vi.fn(),
+			onRevoke: vi.fn(),
+			onRotate: vi.fn()
+		})
+		const status = columns.find(
+			(column) => 'id' in column && column.id === 'status'
+		)
+
+		const soon = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+		render(
+			(
+				status!.cell as (context: {
+					row: { original: ApiKeyRow }
+				}) => ReactElement
+			)({
+				row: {
+					original: row({
+						expiresAt: soon,
+						revokedAt: new Date('2026-02-01T00:00:00.000Z'),
+						active: false,
+						value: { readable: false, reason: 'revoked' }
+					})
+				}
+			})
+		)
+
+		expect(screen.queryByText(/expires in/i)).toBeNull()
+	})
 })
