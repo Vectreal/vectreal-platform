@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto'
 import { createHash } from 'node:crypto'
 
 import { createClient } from '@supabase/supabase-js'
-import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
 
 import { getDbClient } from '../../../db/client'
 import {
@@ -135,6 +135,13 @@ async function ensureAssetFolder(projectId: string) {
 }
 
 /**
+ * How many same-bytes rows to consider before giving up on reuse. Duplicates
+ * are the pathology this lookup exists to stop creating, so the list is short
+ * by design.
+ */
+const REUSE_CANDIDATE_LIMIT = 25
+
+/**
  * Computes a deterministic content hash used for de-duplication.
  */
 export function computeAssetHash(data: Uint8Array): string {
@@ -142,29 +149,67 @@ export function computeAssetHash(data: Uint8Array): string {
 }
 
 /**
- * Finds an existing asset with the same project folder + filename and validates
- * it against the content hash stored in metadata.
+ * Finds an already-uploaded asset in this project's folder holding these exact
+ * bytes, which some scene already references.
+ *
+ * Two rules, and both are load-bearing.
+ *
+ * The content hash is the identity, so it belongs in the predicate. Matching on
+ * `(folderId, name)` and checking the hash afterwards looks equivalent but is
+ * not: the asset folder is one per project, so every scene writes `scene.gltf`
+ * and `scene-thumbnail.webp` into it. Once two rows share a name, an unordered
+ * `limit(1)` returns an arbitrary one, the hash check fails against a row that
+ * was never the right candidate, and another duplicate is written - which makes
+ * the next lookup likelier to miss. That is how one folder came to hold 103
+ * rows named `scene.gltf`.
+ *
+ * An unreferenced row is never reused, even when its bytes match. Such a row
+ * belongs to an upload batch that has not committed yet, and handing it to a
+ * second batch puts one row under two owners: whichever batch fails first
+ * reclaims it, deleting an asset the other is about to link, and because
+ * `scene_assets.asset_id` cascades the loser can end up returning success with
+ * its glTF silently unlinked. No grace window fixes that, because the two
+ * batches overlap for as long as the slower one takes. Sharing only what is
+ * already referenced removes that case: a referenced row is one
+ * `selectUnreferencedAssetIds` will never let anything delete.
+ *
+ * It narrows rather than eliminates. A row referenced when it is handed out can
+ * lose its last reference before the reusing batch commits - re-save the scene
+ * that held it, or delete that scene - and then it is collectable again. That
+ * window needs a concurrent unlink of the same asset and costs a failed save
+ * that succeeds on retry, where the shared-in-flight case cost a silently
+ * unlinked scene. Closing it needs the reuse to take a reference rather than
+ * observe one, which is a schema change and is filed, not done here.
+ *
+ * The cost is a duplicate row when two saves upload identical new bytes at the
+ * same time, which is rare and self-correcting. The common case - re-saving a
+ * scene whose assets are already linked - still deduplicates.
  */
 async function findExistingAsset(
 	hash: string,
 	fileName: string,
 	folderId: string
 ): Promise<typeof assets.$inferSelect | null> {
-	const existingAssets = await db
+	const matches = await db
 		.select()
 		.from(assets)
-		.where(and(eq(assets.folderId, folderId), eq(assets.name, fileName)))
-		.limit(1)
+		.where(
+			and(
+				eq(assets.folderId, folderId),
+				eq(assets.name, fileName),
+				sql`${assets.metadata}->>'contentHash' = ${hash}`
+			)
+		)
+		.orderBy(desc(assets.createdAt))
+		.limit(REUSE_CANDIDATE_LIMIT)
 
-	if (existingAssets.length > 0) {
-		const asset = existingAssets[0]
-		const metadata = asset.metadata as { contentHash?: string } | null
-		if (metadata?.contentHash === hash) {
-			return asset
-		}
-	}
+	if (matches.length === 0) return null
 
-	return null
+	const unreferenced = new Set(
+		await selectUnreferencedAssetIds(matches.map((asset) => asset.id))
+	)
+
+	return matches.find((asset) => !unreferenced.has(asset.id)) ?? null
 }
 
 function getErrorMessage(error: unknown): string {
