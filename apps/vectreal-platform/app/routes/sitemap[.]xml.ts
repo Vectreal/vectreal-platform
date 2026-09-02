@@ -1,6 +1,9 @@
+import {
+	isCanonicalDeployment,
+	resolveDeploymentOrigin
+} from '../lib/deployment-origin'
 import { docsPages } from '../lib/docs/docs-manifest'
 import { getNewsArticles } from '../lib/news/news-manifest'
-import { SITE_URL } from '../lib/seo'
 
 interface SitemapEntry {
 	path: string
@@ -48,9 +51,34 @@ function buildXml(entries: SitemapEntry[], baseUrl: string): string {
  *
  * Cached at the CDN layer for one hour (s-maxage=3600) and revalidated in the
  * background for up to 24 hours.
+ *
+ * Not prerendered, for the same reason as robots.txt: the origin has to be the
+ * one this deployment actually answers on, so that a mirror's sitemap describes
+ * the mirror rather than claiming production's URLs as its own.
  */
 export async function loader() {
-	const origin = SITE_URL
+	const origin = resolveDeploymentOrigin()
+
+	/*
+	  A mirror lists nothing. Its robots.txt already answers `Disallow: /`, so
+	  anything obeying robots would never fetch this - but the sibling route
+	  spends a paragraph on why that is not the protection it looks like:
+	  disallowing a path stops the crawl, not the indexing, and a URL handed
+	  over by other means still gets listed. A populated sitemap is exactly
+	  those other means, at scale and in machine-readable form, for every
+	  scraper that skips robots.txt and every hand-submission to Search Console.
+
+	  Empty rather than 404, so the document stays valid for anything that has
+	  already been told the URL exists.
+	*/
+	if (!isCanonicalDeployment(origin)) {
+		return new Response(buildXml([], origin), {
+			headers: {
+				'Content-Type': 'application/xml; charset=utf-8',
+				'Cache-Control': 'public, max-age=3600, s-maxage=3600'
+			}
+		})
+	}
 
 	// ── 1. Static marketing / content pages ────────────────────────────────
 	const staticEntries: SitemapEntry[] = [

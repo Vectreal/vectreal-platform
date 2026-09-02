@@ -9,12 +9,23 @@ import type { MetaArgs, MetaDescriptor } from 'react-router'
 /**
  * Canonical base URL for the Vectreal platform.
  * Used to build absolute canonical links and og:url tags.
- * Falls back to the production URL when no env var is set.
+ *
+ * A constant on purpose, and always production. A canonical tag names the URL
+ * that should rank, which does not change with the host that happened to serve
+ * the page - staging pointing at production is what stops a mirror competing
+ * with the site as duplicate content.
+ *
+ * It used to read `VITE_PUBLIC_SITE_URL` and then `VITE_APPLICATION_URL` before
+ * this literal. Neither name was set anywhere - not the Dockerfile, the secrets
+ * script, the workflows or `.env.development.example` - so both branches were
+ * dead and every build resolved here anyway. They are gone rather than
+ * provisioned, because there is no environment that should answer differently.
+ *
+ * For the value that *is* per-environment, see `deployment-origin.ts`. That
+ * distinction is the whole of the bug this replaced: `robots.txt` was built
+ * from this constant and so told crawlers the same thing everywhere.
  */
-export const SITE_URL =
-	import.meta.env.VITE_PUBLIC_SITE_URL ||
-	import.meta.env.VITE_APPLICATION_URL ||
-	'https://vectreal.com'
+export const SITE_URL = 'https://vectreal.com'
 
 const DEFAULT_SITE_NAME = 'Vectreal'
 const DEFAULT_TITLE =
