@@ -322,5 +322,11 @@ export async function deleteOrganization(
 		)
 	}
 
+	// No storage cleanup here, and this guard is why. Assets reach an
+	// organization only through `projects -> folders -> assets`, so an
+	// organization with no projects owns no assets, and `deleteProject` has
+	// already removed the objects for each project on the way out. Remove this
+	// check and organization deletion starts stranding storage that nothing can
+	// name afterwards.
 	await db.delete(organizations).where(eq(organizations.id, organizationId))
 }

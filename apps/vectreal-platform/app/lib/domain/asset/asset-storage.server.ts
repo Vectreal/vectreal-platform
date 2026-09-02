@@ -407,6 +407,44 @@ export async function selectUnreferencedAssetIds(
 	return assetIds.filter((assetId) => !referenced.has(assetId))
 }
 
+/**
+ * Removes objects from the bucket by path, with no asset row involved.
+ *
+ * `deleteAssets` cannot serve every caller, because it reads the row to find
+ * the path. When a delete cascades - `organizations -> projects -> folders ->
+ * assets` is cascading the whole way down - the rows are gone before anything
+ * can react, and `file_path` goes with them. After that the objects cannot be
+ * located at all, so the paths have to be read before the delete and handed
+ * here after it.
+ *
+ * Chunked because Supabase caps the number of keys per `remove` call. Missing
+ * objects are not an error: the point is that the bucket ends up without them.
+ */
+export async function deleteStorageObjects(filePaths: string[]): Promise<void> {
+	if (filePaths.length === 0) return
+
+	await ensureStorageBucketOnce()
+
+	const storage = getStorageClient()
+	const CHUNK_SIZE = 100
+
+	for (let i = 0; i < filePaths.length; i += CHUNK_SIZE) {
+		const chunk = filePaths.slice(i, i + CHUNK_SIZE)
+
+		try {
+			const { error } = await storage.from(STORAGE_BUCKET).remove(chunk)
+
+			if (error && !/not found/i.test(error.message)) {
+				throw new Error(error.message)
+			}
+		} catch (error) {
+			reportServerError(error, {
+				properties: { objectCount: chunk.length, firstPath: chunk[0] }
+			})
+		}
+	}
+}
+
 export async function deleteAssets(assetIds: string[]): Promise<void> {
 	await ensureStorageBucketOnce()
 

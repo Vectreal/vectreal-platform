@@ -2,7 +2,10 @@ import { and, asc, eq } from 'drizzle-orm'
 
 import { getDbClient } from '../../../db/client'
 import { organizationMemberships } from '../../../db/schema/core/organization-memberships'
+import { assets } from '../../../db/schema/project/assets'
+import { folders } from '../../../db/schema/project/folders'
 import { projects } from '../../../db/schema/project/projects'
+import { deleteStorageObjects } from '../asset/asset-storage.server'
 import {
 	getOrgSubscription,
 	getQuotaLimit,
@@ -205,5 +208,21 @@ export async function deleteProject(
 
 	assertDashboardPermission('project:delete', { role: membership.role })
 
+	// Read before the delete, because there is nothing to read after it.
+	// `projects -> folders -> assets` cascades, so the asset rows - and the
+	// `file_path` on each of them - are gone the moment the project row is, and
+	// the objects they name become unreachable: no query can find them again and
+	// no later cleanup can name them.
+	const assetPaths = await db
+		.select({ filePath: assets.filePath })
+		.from(assets)
+		.innerJoin(folders, eq(folders.id, assets.folderId))
+		.where(eq(folders.projectId, projectId))
+
 	await db.delete(projects).where(eq(projects.id, projectId))
+
+	// After the delete and outside any transaction: a storage failure must not
+	// resurrect a project the user has already been told is gone. A stranded
+	// object is recoverable, a half-deleted project is not.
+	await deleteStorageObjects(assetPaths.map((row) => row.filePath))
 }
