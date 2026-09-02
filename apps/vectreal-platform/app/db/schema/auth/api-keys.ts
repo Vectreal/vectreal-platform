@@ -2,6 +2,7 @@ import {
 	pgPolicy,
 	boolean,
 	index,
+	pgEnum,
 	pgTable,
 	text,
 	timestamp,
@@ -12,6 +13,22 @@ import { authenticatedRole } from 'drizzle-orm/supabase'
 import { organizations } from '../core/organizations'
 import { users } from '../core/users'
 import { canManageOrgApiKeys } from '../rls'
+
+/**
+ * What a key is for, which decides whether its owner may read it back.
+ *
+ * One value today, and the enum exists because of the second one. Every row in
+ * this table is an embed token: published by design into an `iframe src` on a
+ * customer's page, restricted by the allowed-domain list rather than by
+ * secrecy, and therefore safe to hand back to the owner who minted it.
+ *
+ * A key with write scope would not be. Without this column the default for such
+ * a row is whatever the reveal path happens to do - which is "show it" - and
+ * nothing would force the person adding that kind to notice. With it, adding a
+ * value is a migration and `api-key-disclosure.server.ts` is a compile-time
+ * stop, so the choice has to be made out loud.
+ */
+export const apiKeyKindEnum = pgEnum('api_key_kind', ['embed'])
 
 export const apiKeys = pgTable(
 	'api_keys',
@@ -25,6 +42,16 @@ export const apiKeys = pgTable(
 			.references(() => users.id, { onDelete: 'cascade' }),
 		name: text('name').notNull(),
 		description: text('description'),
+		/*
+		  Defaulted so the rows that predate this column are what they have always
+		  been. Every one of them is an embed token, minted by a form that could
+		  create nothing else, so backfilling them as `embed` states a fact rather
+		  than guessing one.
+
+		  `createApiKey` still passes it explicitly. A default is for existing
+		  rows; a mint site should say what it is minting.
+		*/
+		kind: apiKeyKindEnum('kind').notNull().default('embed'),
 		hashedKey: text('hashed_key').notNull(),
 		/*
 		  The same secret, kept readable, so the embed panel can offer a key the

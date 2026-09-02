@@ -139,6 +139,7 @@ function storedKey() {
 			name: 'Storefront key',
 			description: 'Pasted into a product page',
 			keyPreview: 'ab3x',
+			kind: 'embed' as const,
 			hashedKey: HASHED_KEY,
 			encryptedKey: ENCRYPTED_KEY,
 			active: true,
@@ -399,6 +400,31 @@ describe('the api keys loader payload', () => {
 			readable: false,
 			reason: 'undecryptable'
 		})
+	})
+
+	it('withholds the value of a kind that must not be disclosed', async () => {
+		/*
+		  Unreachable today - every row is an `embed` key - and asserted anyway,
+		  because the whole point of the `kind` column is that the day a
+		  write-scoped key exists, showing it has to be a decision rather than the
+		  default this loader would otherwise apply.
+
+		  Note it is withheld *before* the cipher runs: a key that must not be
+		  disclosed should not have its plaintext put in memory to then be
+		  discarded.
+		*/
+		vi.mocked(getAllUserApiKeys).mockResolvedValue([
+			{
+				...storedKey(),
+				apiKey: { ...storedKey().apiKey, kind: 'server-write' }
+			}
+		] as unknown as Awaited<ReturnType<typeof getAllUserApiKeys>>)
+
+		expect(firstRow((await load()).data)?.value).toEqual({
+			readable: false,
+			reason: 'withheld'
+		})
+		expect(decryptEmbedToken).not.toHaveBeenCalled()
 	})
 
 	it('still reads back an expired key', async () => {

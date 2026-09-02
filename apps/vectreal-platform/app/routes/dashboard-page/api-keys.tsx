@@ -39,6 +39,7 @@ import { ConfirmDestructiveDialog } from '../../components/shared/confirm-destru
 import { FeatureUnavailablePanel } from '../../components/upgrade/feature-unavailable-panel'
 import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
 import { useOncePerFetcherResponse } from '../../hooks/use-once-per-fetcher-response'
+import { isApiKeyKindDisclosable } from '../../lib/domain/auth/api-key-disclosure'
 import { resolveApiKeyState } from '../../lib/domain/auth/api-key-lifecycle'
 import {
 	getAllUserApiKeys,
@@ -87,6 +88,17 @@ function resolveRowValue(
 	now: Date
 ): ApiKeyRowValue {
 	if (!canReadValue) {
+		return { readable: false, reason: 'withheld' }
+	}
+
+	/*
+	  Asked before anything is decrypted, because it is a different question from
+	  the three below it: those are reasons a value cannot be produced, this is a
+	  reason it must not be. Today it never fires - every row is an `embed` key -
+	  and it exists so that the day a write-scoped kind is added, showing it is a
+	  decision someone has to make rather than the default.
+	*/
+	if (!isApiKeyKindDisclosable(key.apiKey.kind)) {
 		return { readable: false, reason: 'withheld' }
 	}
 
