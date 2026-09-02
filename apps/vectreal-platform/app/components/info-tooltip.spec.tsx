@@ -13,7 +13,7 @@
 import { act, render, screen } from '@testing-library/react'
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { InfoTooltip } from '../app/components/info-tooltip'
+import { InfoTooltip } from './info-tooltip'
 
 beforeAll(() => {
 	// Radix's popper measures the trigger with a ResizeObserver, which jsdom

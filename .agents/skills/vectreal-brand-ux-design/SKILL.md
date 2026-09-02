@@ -7,11 +7,11 @@ description: 'Use for any change a user can see in Vectreal: component styling, 
 
 ## Tokens: the three that are most often confused
 
-| Want | Use | Never |
-| --- | --- | --- |
-| The brand color | `--orange` (`#fc6c18`), or `bg-orange` / `text-orange` | `--accent`, `--primary` |
-| Brand at partial alpha | `rgb(var(--orange-rgb) / <alpha>)` | `hsl(var(--orange)/…)`, `color-mix` with `--orange` |
-| Hover/focus background for menus, options, ghost controls | `--accent` | a hand-picked gray |
+| Want                                                      | Use                                                    | Never                                               |
+| --------------------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------- |
+| The brand color                                           | `--orange` (`#fc6c18`), or `bg-orange` / `text-orange` | `--accent`, `--primary`                             |
+| Brand at partial alpha                                    | `rgb(var(--orange-rgb) / <alpha>)`                     | `hsl(var(--orange)/…)`, `color-mix` with `--orange` |
+| Hover/focus background for menus, options, ghost controls | `--accent`                                             | a hand-picked gray                                  |
 
 `--accent` is **not** the brand. It is the hover/focus background, near-white in
 light mode and dark gray in dark mode. It used to point at `--orange`, which made
@@ -56,15 +56,15 @@ Named tiers in `globals.css`, each with a comment saying what belongs there.
 They generate the matching utilities, so a call site names a layer instead of
 picking a number.
 
-| Tier | Value | What sits there |
-| --- | --- | --- |
-| `z-page-chrome` | 20 | Chrome owned by one route: the docs breadcrumb bar, the internal preview overlay, a sticky summary card |
-| `z-nav` | 50 | Site chrome fixed for the whole session: desktop and mobile nav, consent banner |
-| `z-overlay` | 50 | Radix's portal layer: dialog, alert dialog, sheet, drawer, menus, popovers, hover cards |
-| `z-above-nav` | 60 | Must cover the nav: the route loading bar, an embed viewer gone fullscreen |
-| `z-tooltip` | 80 | Tooltips, above the overlay layer so they still show inside a dialog |
-| `z-overlay-raised` | 100 | One overlay that has to clear another |
-| `z-select` | 120 | The select listbox, top of the ladder |
+| Tier               | Value | What sits there                                                                                         |
+| ------------------ | ----- | ------------------------------------------------------------------------------------------------------- |
+| `z-page-chrome`    | 20    | Chrome owned by one route: the docs breadcrumb bar, the internal preview overlay, a sticky summary card |
+| `z-nav`            | 50    | Site chrome fixed for the whole session: desktop and mobile nav, consent banner                         |
+| `z-overlay`        | 50    | Radix's portal layer: dialog, alert dialog, sheet, drawer, menus, popovers, hover cards                 |
+| `z-above-nav`      | 60    | Must cover the nav: the route loading bar, an embed viewer gone fullscreen                              |
+| `z-tooltip`        | 80    | Tooltips, above the overlay layer so they still show inside a dialog                                    |
+| `z-overlay-raised` | 100   | One overlay that has to clear another                                                                   |
+| `z-select`         | 120   | The select listbox, top of the ladder                                                                   |
 
 The nav and the overlay layer tie at 50 deliberately. Both land in the root
 stacking context, and Radix portals its overlays to the end of the document
@@ -140,7 +140,7 @@ guessing. Each rule carries a comment explaining the failure it prevents.
 Size full-viewport surfaces with `h-dvh` / `min-h-dvh`, or `h-svh` where a shell
 owns the height and scrolls its own content, as `dashboard-layout.tsx` does.
 
-Never Tailwind's screen-height utilities. They compile to `100vh`, the *large*
+Never Tailwind's screen-height utilities. They compile to `100vh`, the _large_
 viewport, which overhangs persistent mobile browser chrome: bottom-anchored UI
 goes behind the bar and the page is left scrolled with no way back when a canvas
 holds `touch-action: none`.
@@ -171,14 +171,14 @@ a hover step or a snap point survived is to look at it.
 
 ## Anti-patterns
 
-| Anti-pattern | Replacement |
-| --- | --- |
-| `--accent` or `--primary` used to mean "brand" | `--orange` / `bg-orange` / `text-orange` |
-| Alpha applied to `--orange` inline | `rgb(var(--orange-rgb) / <alpha>)` |
-| Hand-written hover background beside a `ds-*` class | `ds-raised-interactive` / `ds-overlay-interactive` |
-| Font size set inline from a `--text-*` token | The matching `text-*` class |
-| Loading, empty and error states added last | Designed with the happy path |
-| Accessibility retrofitted after review | Keyboard, focus ring, contrast, labels from the start |
+| Anti-pattern                                        | Replacement                                           |
+| --------------------------------------------------- | ----------------------------------------------------- |
+| `--accent` or `--primary` used to mean "brand"      | `--orange` / `bg-orange` / `text-orange`              |
+| Alpha applied to `--orange` inline                  | `rgb(var(--orange-rgb) / <alpha>)`                    |
+| Hand-written hover background beside a `ds-*` class | `ds-raised-interactive` / `ds-overlay-interactive`    |
+| Font size set inline from a `--text-*` token        | The matching `text-*` class                           |
+| Loading, empty and error states added last          | Designed with the happy path                          |
+| Accessibility retrofitted after review              | Keyboard, focus ring, contrast, labels from the start |
 
 ## Source of truth
 
@@ -214,7 +214,7 @@ present  shared/components/src/styles/globals.css                              -
 present  eslint.config.mts                                                     z-index outside the named scale
 exists   apps/vectreal-platform/tests/documented-claims.spec.ts
 exists   apps/vectreal-platform/tests/tooltip-copy-length.spec.ts
-exists   apps/vectreal-platform/tests/info-tooltip.spec.tsx
+exists   apps/vectreal-platform/app/components/info-tooltip.spec.tsx
 present  eslint.config.mts                                                     Build className with cn()
 present  eslint.config.mts                                                     Inline SVG
 present  apps/vectreal-platform/app/routes/layouts/dashboard-layout.tsx        h-svh

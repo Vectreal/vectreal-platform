@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest'
 import {
 	EMBED_RESPONSE_HEADERS,
 	withEmbedResponseHeaders
-} from '../app/lib/domain/embed/embed-response-headers'
+} from './embed-response-headers'
 
 /**
  * An embed URL carries its API key in the query string, so the response must
@@ -102,7 +102,10 @@ describe('embed response headers', () => {
 	  into nothing.
 	*/
 	describe('the routes that use them actually propagate them', () => {
-		const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+		const APP_ROOT = resolve(
+			dirname(fileURLToPath(import.meta.url)),
+			'../../../..'
+		)
 
 		function collectRouteFiles(dir: string): string[] {
 			return readdirSync(dir).flatMap((entry) => {

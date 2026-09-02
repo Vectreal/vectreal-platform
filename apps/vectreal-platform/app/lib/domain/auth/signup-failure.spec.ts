@@ -9,10 +9,7 @@
 
 import { describe, expect, it } from 'vitest'
 
-import {
-	classifySignupFailure,
-	type SignupFailureCode
-} from '../app/lib/domain/auth/signup-failure'
+import { classifySignupFailure, type SignupFailureCode } from './signup-failure'
 
 const CASES: [string, SignupFailureCode][] = [
 	// Cloudflare's own wording, via GoTrue, for a replayed or expired token.

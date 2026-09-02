@@ -19,7 +19,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
 	useSpendTurnstileToken,
 	type TokenBearingSubmission
-} from '../app/hooks/use-spend-turnstile-token'
+} from './use-spend-turnstile-token'
 
 function submissionWith(token: string): TokenBearingSubmission {
 	const formData = new FormData()

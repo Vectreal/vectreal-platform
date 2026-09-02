@@ -18,13 +18,13 @@
 import { act, render } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useDashboardMutations } from '../app/hooks/use-dashboard-mutations'
+import { useDashboardMutations } from './use-dashboard-mutations'
 
-import type { DashboardMutationsApi } from '../app/hooks/use-dashboard-mutations'
+import type { DashboardMutationsApi } from './use-dashboard-mutations'
 import type {
 	DashboardMutationRequest,
 	DashboardMutationResponse
-} from '../app/lib/domain/dashboard/dashboard-mutations'
+} from '../lib/domain/dashboard/dashboard-mutations'
 
 const router = vi.hoisted(() => ({
 	fetcher: { state: 'idle', data: undefined as unknown },
@@ -145,7 +145,10 @@ const deleted = () => ({
 	}
 })
 
-const rejected = () => ({ success: false as const, error: 'Invalid CSRF token' })
+const rejected = () => ({
+	success: false as const,
+	error: 'Invalid CSRF token'
+})
 
 beforeEach(() => {
 	router.fetcher = { state: 'idle', data: undefined }
@@ -169,7 +172,10 @@ describe('useDashboardMutations', () => {
 
 		expect(router.submissions).toHaveLength(1)
 		const [{ body, options }] = router.submissions
-		expect(options).toEqual({ method: 'post', action: '/api/dashboard/mutations' })
+		expect(options).toEqual({
+			method: 'post',
+			action: '/api/dashboard/mutations'
+		})
 		expect(body).toEqual({
 			verb: 'delete',
 			targets: JSON.stringify([{ type: 'scene', id: 'scene-1' }]),

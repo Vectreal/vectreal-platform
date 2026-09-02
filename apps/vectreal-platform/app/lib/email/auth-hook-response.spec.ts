@@ -14,7 +14,7 @@ import {
 	buildHookErrorMessage,
 	hookErrorResponse,
 	redactAddresses
-} from '../app/lib/email/auth-hook-response'
+} from './auth-hook-response'
 
 describe('hookErrorResponse', () => {
 	/*

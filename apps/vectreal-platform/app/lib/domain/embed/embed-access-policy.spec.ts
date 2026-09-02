@@ -6,7 +6,7 @@ import {
 	isEmbedRequestHostAllowed,
 	resolveRequestHostContext,
 	type EmbedKeyMatch
-} from '../app/lib/domain/embed/embed-access-policy'
+} from './embed-access-policy'
 
 /**
  * The decision that lets a third-party page load a published scene.

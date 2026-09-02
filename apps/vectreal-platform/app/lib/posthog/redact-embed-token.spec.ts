@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest'
 import {
 	redactEmbedTokenFromProperties,
 	redactEmbedToken
-} from '../app/lib/posthog/redact-embed-token'
+} from './redact-embed-token'
 
 /**
  * A live API key must not leave the browser inside an analytics event.
@@ -18,7 +18,7 @@ import {
  * wrote, and any added later.
  */
 
-const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 
 const EMBED_URL =
 	'https://vectreal.com/embed/395a09f0-9340/488bd4a1-46d3?token=vctrl_liveSecretab3x'

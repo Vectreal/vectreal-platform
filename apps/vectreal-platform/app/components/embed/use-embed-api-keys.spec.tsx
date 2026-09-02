@@ -13,10 +13,10 @@ import { act, render } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useEmbedApiKeys } from '../app/components/embed/use-embed-api-keys'
+import { useEmbedApiKeys } from './use-embed-api-keys'
 
-import type { EmbedApiKeysApi } from '../app/components/embed/use-embed-api-keys'
-import type { EmbedApiKeyOption } from '../app/lib/domain/embed/embed-key-options'
+import type { EmbedApiKeysApi } from './use-embed-api-keys'
+import type { EmbedApiKeyOption } from '../../lib/domain/embed/embed-key-options'
 
 const { load, submit, setUpgradeModal, fetchers } = vi.hoisted(() => ({
 	load: vi.fn(),
@@ -70,7 +70,9 @@ vi.mock('jotai/react', () => ({ useSetAtom: () => setUpgradeModal }))
  * describes a row the loader cannot produce, and passes tests the real payload
  * would fail.
  */
-const option = (overrides: Partial<EmbedApiKeyOption> = {}): EmbedApiKeyOption =>
+const option = (
+	overrides: Partial<EmbedApiKeyOption> = {}
+): EmbedApiKeyOption =>
 	({
 		id: 'k1',
 		name: 'Embed key',
@@ -386,7 +388,9 @@ describe('recovering from a refused load', () => {
 		  was added to remove.
 		*/
 		fetchers[0] = { state: 'loading', data: { success: false, error: 'Boom' } }
-		expect(mount({ projectId: 'p1', enabled: true }).latest().loading).toBe(true)
+		expect(mount({ projectId: 'p1', enabled: true }).latest().loading).toBe(
+			true
+		)
 
 		fetchers[0] = { state: 'idle', data: { success: false, error: 'Boom' } }
 		expect(mount({ projectId: 'p2', enabled: true }).latest().loading).toBe(
@@ -562,7 +566,9 @@ describe('creating a key', () => {
 		const probe = mount({ projectId: 'p1', enabled: true })
 		expect(probe.latest().selectedKeyId).toBe('existing')
 
-		fetchers[1] = createPayload(option({ id: 'fresh', value: 'vctrl_freshab3x' }))
+		fetchers[1] = createPayload(
+			option({ id: 'fresh', value: 'vctrl_freshab3x' })
+		)
 		act(() => probe.rerender({ projectId: 'p1', enabled: true }))
 
 		expect(probe.latest().selectedKeyId).toBe('fresh')

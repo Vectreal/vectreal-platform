@@ -15,17 +15,17 @@ import { fileURLToPath } from 'node:url'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { EmbedOptionsPanel } from '../app/components/embed/embed-options-panel'
+import { EmbedOptionsPanel } from './embed-options-panel'
 import {
 	isEmbedKeyUsable,
 	type EmbedApiKeyOption
-} from '../app/lib/domain/embed/embed-key-options'
+} from '../../lib/domain/embed/embed-key-options'
 import {
 	EMBED_COPY,
 	EMBED_DOCS_PATH
-} from '../app/lib/domain/embed/embed-snippet'
+} from '../../lib/domain/embed/embed-snippet'
 
-import type { EmbedApiKeysApi } from '../app/components/embed/use-embed-api-keys'
+import type { EmbedApiKeysApi } from './use-embed-api-keys'
 
 /*
   Radix's menu needs three browser APIs jsdom does not ship. Without them the
@@ -86,7 +86,7 @@ beforeEach(() => {
 	writeText.mockClear()
 })
 
-vi.mock('../app/components/embed/use-embed-api-keys', () => ({
+vi.mock('./use-embed-api-keys', () => ({
 	/*
 	  Return type annotated on purpose: without it a field added to the hook and
 	  read by the panel arrives `undefined` here with no type error, and every
@@ -452,7 +452,7 @@ describe('the drawer host does not label the panel a fourth time', () => {
 	const HOST = readFileSync(
 		join(
 			dirname(fileURLToPath(import.meta.url)),
-			'../app/components/dashboard/scene-detail/scene-share-drawer.tsx'
+			'../dashboard/scene-detail/scene-share-drawer.tsx'
 		),
 		'utf8'
 	)

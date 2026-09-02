@@ -13,7 +13,7 @@ import {
 	AUTH_ERROR_MESSAGES,
 	classifySigninFailure,
 	type AuthErrorCode
-} from '../app/lib/domain/auth/signin-failure'
+} from './signin-failure'
 
 const CASES: [string, AuthErrorCode][] = [
 	// The exact string from supabase/auth `internal/api/token.go`.

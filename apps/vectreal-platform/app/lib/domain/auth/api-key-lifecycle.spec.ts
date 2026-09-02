@@ -8,7 +8,7 @@ import {
 	isApiKeyLive,
 	resolveApiKeyState,
 	type ApiKeyLifecycleRow
-} from '../app/lib/domain/auth/api-key-lifecycle'
+} from './api-key-lifecycle'
 
 /**
  * The contract between the two halves that decide whether an API key works.
@@ -23,7 +23,7 @@ import {
  * transcription over every combination of the three columns involved.
  */
 
-const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..')
 const AUTH_MODULE = join(
 	APP_ROOT,
 	'app/lib/domain/auth/preview-api-key-auth.server.ts'
@@ -76,9 +76,10 @@ function extractWhereClause(source: string): string {
 
 	const start = source.indexOf('.where(', fn)
 	const end = source.indexOf('.limit(', start)
-	expect(start, 'findLiveKeyForProject no longer has a .where(').toBeGreaterThan(
-		-1
-	)
+	expect(
+		start,
+		'findLiveKeyForProject no longer has a .where('
+	).toBeGreaterThan(-1)
 	expect(end, 'findLiveKeyForProject no longer has a .limit(').toBeGreaterThan(
 		start
 	)

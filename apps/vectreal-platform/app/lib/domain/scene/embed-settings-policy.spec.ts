@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { redactSettingsForEmbed } from '../app/lib/domain/scene/embed-settings-policy'
+import { redactSettingsForEmbed } from './embed-settings-policy'
 
 import type { SceneSettings } from '@vctrl/core'
 
@@ -38,7 +38,11 @@ function buildSettings(overrides: Partial<SceneSettings> = {}): SceneSettings {
 					position: [8, 8, 8],
 					target: [0, 0, 0]
 				},
-				{ cameraId: 'cam-orphan', name: 'Orphaned hotspot cam', kind: 'hotspot' }
+				{
+					cameraId: 'cam-orphan',
+					name: 'Orphaned hotspot cam',
+					kind: 'hotspot'
+				}
 			]
 		},
 		hotspots: [
@@ -97,8 +101,10 @@ function buildSettings(overrides: Partial<SceneSettings> = {}): SceneSettings {
 	} as SceneSettings
 }
 
-const redact = (settings: SceneSettings, bakeAssetId: string | null = BAKE_ASSET_ID) =>
-	redactSettingsForEmbed(settings, { bakeAssetId })
+const redact = (
+	settings: SceneSettings,
+	bakeAssetId: string | null = BAKE_ASSET_ID
+) => redactSettingsForEmbed(settings, { bakeAssetId })
 
 describe('embed settings policy', () => {
 	it('drops internalOnly hotspots', () => {
@@ -188,7 +194,9 @@ describe('embed settings policy', () => {
 
 	describe('baked shadow pointer', () => {
 		it('keeps the pointer the asset gate authorized', () => {
-			expect(redact(buildSettings()).shadows?.baked?.assetId).toBe(BAKE_ASSET_ID)
+			expect(redact(buildSettings()).shadows?.baked?.assetId).toBe(
+				BAKE_ASSET_ID
+			)
 		})
 
 		/**

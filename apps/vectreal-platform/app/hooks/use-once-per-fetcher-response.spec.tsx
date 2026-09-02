@@ -11,7 +11,7 @@
 import { render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { useOncePerFetcherResponse } from '../app/hooks/use-once-per-fetcher-response'
+import { useOncePerFetcherResponse } from './use-once-per-fetcher-response'
 
 type Fetcher<T> = { state: string; data: T | undefined | null }
 
