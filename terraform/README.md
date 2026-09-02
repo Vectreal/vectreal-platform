@@ -63,11 +63,24 @@ laptop, and inheriting whatever protection rules the Environment carries.
 | --- | --- |
 | `stage` | Writes the secrets with `--stage`. The app keeps running the old values until the next deploy applies them. The default, because a routine rotation should not bounce production. |
 | `immediate` | Writes and restarts now. For an urgent rotation, such as a leaked key. |
-| `verify` | Read-only, and a gate: exits non-zero when a secret is missing, when the `send_email` hook is disabled, or when its live URI does not match `APPLICATION_URL`. |
+| `verify` | Read-only, and a gate: exits non-zero when a *required* secret is missing, when the `send_email` hook is disabled, or when its live URI does not match `APPLICATION_URL`. An optional secret that is unset warns and passes, matching what the sync does with it. |
 
 Rotating a value is: change it in the GitHub Environment, run the workflow.
-Adding one is a PR - the name goes in the script's `REQUIRED_PER_ENV` list and
-the workflow's `env:` block - then the value goes in the Environment.
+
+Adding one is a PR, and the name goes in two places:
+
+1. `FLY_SECRETS_REQUIRED` or `FLY_SECRETS_OPTIONAL` in the manifest at the top
+   of `scripts/setup-fly-secrets.sh`. Validation, `--verify` and the sync all
+   read those arrays, so one entry covers all three.
+2. The `env:` block of `.github/workflows/cd-platform-secrets.yaml`, because a
+   GitHub Actions job only sees the secrets it maps by hand.
+
+Then the value goes in the Environment, for staging **and** production.
+
+Do not add a new array. A name in an array no loop reads is never validated,
+never verified and never sent, which is the failure this manifest exists to
+prevent - three secrets the app read at runtime reached production unset that
+way.
 
 The local path still works and is unchanged:
 

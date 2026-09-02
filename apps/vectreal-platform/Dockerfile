@@ -67,11 +67,21 @@ ENV NODE_ENV=${NODE_ENV}
 ENV PORT=8080
 ENV NODE_OPTIONS="--heapsnapshot-near-heap-limit=2"
 
-# Runtime secrets are injected by Fly.io (set via setup-fly-secrets.sh).
-# Required: DATABASE_URL, SUPABASE_URL, SUPABASE_KEY, STRIPE_SECRET_KEY,
-#           CSRF_SECRET, APPLICATION_URL, CLOUDFLARE_TURNSTILE_SITE_KEY,
-#           CLOUDFLARE_TURNSTILE_SECRET_KEY, RESEND_API_KEY, FROM_EMAIL,
-#           CONTACT_INBOX_EMAIL, SEND_EMAIL_HOOK_SECRET
+# Runtime secrets are injected by Fly.io. The authoritative list is the manifest
+# at the top of terraform/scripts/setup-fly-secrets.sh, and is deliberately not
+# repeated here: the copy that used to sit at this line named twelve while the
+# manifest requires seventeen, and nothing compared the two.
+#
+# What this stage does NOT inherit is the point. `build` is `FROM deps` and
+# `deps` is `FROM base`; `runner` is `FROM base` directly, so it is off that
+# branch entirely and inherits none of build's ENV - neither the VITE_PUBLIC_*
+# values Vite bakes into the client bundle nor the throwaway placeholders that
+# keep server-module env validation from throwing mid-build.
+#
+# So a name that appears as a build ARG above is not thereby available to the
+# running server: anything read from process.env at runtime has to be a Fly
+# secret in its own right. VITE_PUBLIC_POSTHOG_TOKEN is both, for two unrelated
+# reasons; the manifest explains what having only the build half cost.
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
