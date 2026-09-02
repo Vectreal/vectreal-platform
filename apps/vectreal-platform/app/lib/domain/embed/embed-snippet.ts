@@ -105,6 +105,68 @@ type EmbedSnippetOptions = {
 const DEFAULT_WIDTH = '100%'
 const DEFAULT_HEIGHT = '400px'
 
+/** Marks the wrapper so the rule below can find it, and only it. */
+const EMBED_WRAPPER_CLASS = 'vctrl-embed'
+
+/**
+ * The one rule the snippet needs that an inline style cannot express.
+ *
+ * `width: 100%` on the wrapper only resolves against a parent with a definite
+ * width, and the snippet does not own its parent. Shopify's Horizon renders a
+ * Custom Liquid *block* into a `<div>` with no attributes at all. Where the
+ * merchant has set that section's direction to Horizontal - `row` is the
+ * option, `column` the default - that `<div>` is a row flex item, and a flex
+ * item sizes to its content. The only content-derived width an iframe has is
+ * the 300px every iframe defaults to, so the scene renders 300px wide inside a
+ * full-width section. (Horizon's Custom Liquid *section* is a different
+ * element, carrying a class and an inline style, and never had this problem.)
+ *
+ * Only that parent can fix it, and only a stylesheet can reach a parent, which
+ * is why this is a `<style>` element rather than one more attribute.
+ *
+ * Two things keep a rule aimed at an element we do not own from doing harm.
+ *
+ * `@layer` puts it in an anonymous cascade layer, which loses to every
+ * unlayered declaration on the page regardless of specificity. Measured, a
+ * theme's own `.row > div { flex: 0 0 220px }` keeps its 220px, so the rule
+ * applies only where the theme said nothing. The gap is a theme rule inside its
+ * own named layer, since ours is declared later and wins; Horizon's layered
+ * sizing targets classed elements, which the selector below skips anyway.
+ *
+ * `div:not([class]):not([style])` skips any wrapper the theme marked up itself.
+ * Both filters fail closed - the embed stays 300px, which is visible and
+ * documented, rather than quietly resizing part of somebody's page. So does a
+ * host interposing another element, which defeats the child combinator.
+ *
+ * `flex-grow` alone: growing never reaches the automatic minimum, so the
+ * `min-width: 0` this once carried did nothing for the bug while changing grid
+ * items, where `min-width` is not initially `0`.
+ *
+ * Measured in a 900px container, parent width before and after: a bare parent
+ * in a row 300 to 900, or 300 to 800 beside a 100px sibling. A theme-sized
+ * parent, a column at content height, a grid track and a block parent are all
+ * unchanged. The residual is that `flex-grow` acts on the main axis, so a
+ * column parent with a definite height grows in HEIGHT instead - 400 to 500 in
+ * a 600px shell beside a 100px sibling, 400 to 600 alone. Horizon is in scope:
+ * `layout-panel-flex` sets `height: 100%` and only the row direction resets it
+ * to `auto`, so a column panel keeps that height at every viewport width. A
+ * column also only escapes the width collapse through the default
+ * `align-items: stretch`; under `flex-start` or `center` the parent is 300px
+ * wide and this rule cannot help, the width being the cross axis there.
+ *
+ * Nothing here is interpolated, deliberately. `width` and `height` stay in the
+ * `style` attribute below, where `escapeHtmlAttributeValue` is the correct
+ * escaper; `<style>` is a raw-text element and needs a different one, so no
+ * caller-controlled value may reach it.
+ *
+ * A browser without `:has()` or `@layer` drops the rule and renders what it
+ * rendered before.
+ */
+const EMBED_PARENT_FIX = `<style>
+  /* Lets the embed fill a bare flex parent, such as a Shopify Custom Liquid block. */
+  @layer { div:not([class]):not([style]):has(> .${EMBED_WRAPPER_CLASS}) { flex-grow: 1; } }
+</style>`
+
 /** External embed target. Token-authenticated, never renders internal chrome. */
 export function buildEmbedPath(params: {
 	projectId: string
@@ -203,7 +265,8 @@ export function buildResponsiveEmbedSnippet(
 ): string {
 	const { width, height, src } = escapeSnippetValues(options)
 
-	return `<div style="width: ${width}; max-width: 100%; height: ${height};">
+	return `${EMBED_PARENT_FIX}
+<div class="${EMBED_WRAPPER_CLASS}" style="width: ${width}; max-width: 100%; height: ${height};">
   <iframe
     src="${src}"
     style="width: 100%; height: 100%; border: 0;"
@@ -219,8 +282,9 @@ export function buildSdkEmbedSnippet(options: EmbedSnippetOptions): string {
 	return `<!-- 1. Include the SDK (or: npm install @vctrl/embed) -->
 <script src="${EMBED_SDK_CDN_URL}"></script>
 
-<!-- 2. Your iframe -->
-<div style="width: ${width}; max-width: 100%; height: ${height};">
+<!-- 2. Your iframe, and the rule that lets it fill a flex parent -->
+${EMBED_PARENT_FIX}
+<div class="${EMBED_WRAPPER_CLASS}" style="width: ${width}; max-width: 100%; height: ${height};">
   <iframe
     id="vectreal-scene"
     src="${src}"

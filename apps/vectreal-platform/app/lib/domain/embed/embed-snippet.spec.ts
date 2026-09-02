@@ -43,6 +43,28 @@ function readParsedSrc(snippet: string): string {
 	return parseIframe(snippet).getAttribute('src') ?? ''
 }
 
+/**
+ * Every element the snippet produces, in tree order.
+ *
+ * The whole document, not `body`: a parser hoists a leading `<script>` into
+ * `<head>`, so scoping this to the body would stop looking exactly where an
+ * injected element could land unseen.
+
+ */
+const STRUCTURAL = new Set(['html', 'head', 'body'])
+const elementsOf = (snippet: string) =>
+	Array.from(
+		new DOMParser().parseFromString(snippet, 'text/html').querySelectorAll('*')
+	)
+		.map((element) => element.tagName.toLowerCase())
+		.filter((tag) => !STRUCTURAL.has(tag))
+
+/** What each builder is supposed to emit, so a breakout shows up as an extra tag. */
+const EXPECTED_ELEMENTS: Record<string, string[]> = {
+	buildResponsiveEmbedSnippet: ['style', 'div', 'iframe'],
+	buildSdkEmbedSnippet: ['script', 'style', 'div', 'iframe', 'script']
+}
+
 describe('buildEmbedUrl', () => {
 	it('omits the token parameter entirely when there is no token', () => {
 		const url = buildEmbedUrl({
@@ -158,25 +180,16 @@ describe('the width and height options cannot break the snippet', () => {
 		'400px"><img src=x onerror=alert(1)>',
 		// Injects the tag the snippet legitimately contains: caught by counting
 		// elements, invisible to a `querySelector('iframe')` check.
-		'100%"><iframe src="https://evil.example"></iframe><div style="'
+		'100%"><iframe src="https://evil.example"></iframe><div style="',
+		/*
+		  Raw-text breakout. `escapeHtmlAttributeValue` replaces `<` and `>`, so
+		  this arrives as `&lt;/style&gt;` and cannot be markup in any position -
+		  which is the point: it is the only payload here that goes red when a
+		  caller value reaches the stylesheet unescaped. The four above cannot,
+		  because inside a `<style>` element none of them are markup at all.
+		*/
+		'100%</style><img src=x onerror=alert(1)><style>'
 	]
-
-	/**
-	 * Every element the snippet produces, in tree order.
-	 *
-	 * The whole document, not `body`: a parser hoists a leading `<script>` into
-	 * `<head>`, so scoping this to the body would stop looking exactly where an
-	 * injected element could land unseen.
-	 */
-	const STRUCTURAL = new Set(['html', 'head', 'body'])
-	const elementsOf = (snippet: string) =>
-		Array.from(
-			new DOMParser()
-				.parseFromString(snippet, 'text/html')
-				.querySelectorAll('*')
-		)
-			.map((element) => element.tagName.toLowerCase())
-			.filter((tag) => !STRUCTURAL.has(tag))
 
 	for (const value of HOSTILE) {
 		it(`survives a width of ${JSON.stringify(value)}`, () => {
@@ -199,10 +212,12 @@ describe('the width and height options cannot break the snippet', () => {
 			  correctly escaped snippet still contains those characters. What
 			  matters is that the parser reads them as text, not as markup.
 			*/
-			expect(elementsOf(snippet)).toEqual(['div', 'iframe'])
+			expect(elementsOf(snippet)).toEqual(
+				EXPECTED_ELEMENTS.buildResponsiveEmbedSnippet
+			)
 
 			const wrapper = doc.querySelector('div') as HTMLElement
-			expect(wrapper.getAttributeNames()).toEqual(['style'])
+			expect(wrapper.getAttributeNames()).toEqual(['class', 'style'])
 			expect(wrapper.style.width).toBe('')
 		})
 
@@ -221,10 +236,12 @@ describe('the width and height options cannot break the snippet', () => {
 			  attributes, leaving that assertion green with `alert(1)` live in the
 			  document.
 			*/
-			expect(elementsOf(snippet)).toEqual(['script', 'div', 'iframe', 'script'])
+			expect(elementsOf(snippet)).toEqual(
+				EXPECTED_ELEMENTS.buildSdkEmbedSnippet
+			)
 			expect(
 				(doc.querySelector('div') as HTMLElement).getAttributeNames()
-			).toEqual(['style'])
+			).toEqual(['class', 'style'])
 		})
 	}
 
@@ -406,16 +423,131 @@ describe('the docs page and the builder agree on the default box', () => {
 	)
 
 	it('quotes the box the snippet is actually generated with', () => {
+		/*
+		  Found by prefix rather than by line index. The snippet now opens with the
+		  parent-fix stylesheet, and `split('\n')[0]` silently became a test that
+		  the guide contains the string `<style>`, which every page with a fence
+		  does.
+		*/
 		const wrapper = buildResponsiveEmbedSnippet({
 			src: `${ORIGIN}/embed/p/s`
-		}).split('\n')[0]
+		})
+			.split('\n')
+			.find((line) => line.startsWith('<div '))
 
 		expect(wrapper).toBe(
-			'<div style="width: 100%; max-width: 100%; height: 400px;">'
+			'<div class="vctrl-embed" style="width: 100%; max-width: 100%; height: 400px;">'
 		)
 		expect(GUIDE).toContain(wrapper)
 		expect(GUIDE).toContain('The box is `100%` wide and `400px` tall')
 	})
+
+	it('quotes the parent fix the snippet actually ships', () => {
+		/*
+		  The guide explains the Shopify case in prose. If the rule changes and the
+		  page does not, the page teaches a selector the panel no longer emits -
+		  the `*.example.com` drift, one file over.
+		*/
+		const rule = buildResponsiveEmbedSnippet({ src: `${ORIGIN}/embed/p/s` })
+			.split('\n')
+			.find((line) => line.includes(':has('))
+
+		expect(rule?.trim()).toBe(
+			'@layer { div:not([class]):not([style]):has(> .vctrl-embed) { flex-grow: 1; } }'
+		)
+		expect(GUIDE).toContain(rule?.trim())
+
+		/*
+		  Matched by line, so the fence could lose the element around it and still
+		  satisfy the line above - leaving a bare CSS declaration inside an `html`
+		  fence for a reader to copy. Pin the wrapper too.
+		*/
+		const open = GUIDE.indexOf('<style>')
+		const close = GUIDE.indexOf('</style>', open)
+		expect(open, 'the guide fence opens a <style> element').toBeGreaterThan(-1)
+		expect(close, 'and closes it').toBeGreaterThan(open)
+
+		expect(GUIDE.slice(open, close)).toContain(rule?.trim())
+	})
+})
+
+describe('the parent fix and the wrapper it targets cannot drift apart', () => {
+	/*
+	  The rule and the class are written in two places in one module, and nothing
+	  about a rename fails to compile. Renaming either half alone leaves a snippet
+	  that parses, renders, passes every assertion above, and quietly stops doing
+	  the one thing it was added for - which is invisible until someone pastes it
+	  into a flex layout.
+
+	  So this reads the class back out of the selector the snippet ships and
+	  checks the wrapper actually carries it, rather than asserting either
+	  literal twice.
+	*/
+	for (const builder of [buildResponsiveEmbedSnippet, buildSdkEmbedSnippet]) {
+		it(`${builder.name} targets the class its own wrapper carries`, () => {
+			const doc = new DOMParser().parseFromString(
+				builder({ src: `${ORIGIN}/embed/p/s` }),
+				'text/html'
+			)
+
+			const selector = doc.querySelector('style')?.textContent ?? ''
+			const targeted = selector.match(/:has\(>\s*\.([\w-]+)\)/)?.[1]
+
+			expect(targeted, 'the stylesheet targets a class').toBeDefined()
+			expect(
+				(doc.querySelector('div') as HTMLElement).classList.contains(
+					targeted as string
+				)
+			).toBe(true)
+		})
+
+		it(`${builder.name} keeps every caller value out of the stylesheet`, () => {
+			/*
+			  `<style>` is a raw-text element, so the attribute escaper that guards
+			  `width` and `height` does not apply inside it. The fix is that nothing
+			  interpolated ever lands there; this is what says so out loud.
+			*/
+			const snippet = builder({
+				src: `${ORIGIN}/embed/p/s?token=SRC_MARKER`,
+				width: 'WIDTH_MARKER',
+				height: 'HEIGHT_MARKER'
+			})
+			const doc = new DOMParser().parseFromString(snippet, 'text/html')
+
+			const stylesheet = doc.querySelector('style')
+			expect(stylesheet, 'the snippet ships a stylesheet').not.toBeNull()
+
+			/*
+			  Against the raw string, not the parsed element's `textContent`.
+			  A `<style>` element ends at the first `</style>`, so a value that
+			  really breaks out of the raw-text context lands OUTSIDE the element
+			  this test would otherwise inspect: reading `textContent` reported a
+			  clean stylesheet while a live `<img onerror>` sat in the document
+			  next to it. The element list below is what catches that shape; the
+			  markers here catch the quieter case of a value interpolated into the
+			  rule without escaping anything at all.
+			*/
+			/*
+			  Anchored on `<style`, not `<style>`, and asserted before slicing.
+			  `indexOf` returns -1 for any other spelling of the open tag, and
+			  `slice(-1, end)` then yields the empty string, which satisfies every
+			  `not.toMatch` below - so adding an attribute to the tag was enough to
+			  retire this guard silently while a caller value sat live inside it.
+			*/
+			const open = snippet.indexOf('<style')
+			const close = snippet.indexOf('</style>')
+			expect(
+				open,
+				'the raw snippet carries a <style> open tag'
+			).toBeGreaterThan(-1)
+			expect(close, 'and closes it').toBeGreaterThan(open)
+
+			const stylesheetSource = snippet.slice(open, close)
+
+			expect(stylesheetSource).not.toMatch(/(WIDTH|HEIGHT|SRC)_MARKER/)
+			expect(elementsOf(snippet)).toEqual(EXPECTED_ELEMENTS[builder.name])
+		})
+	}
 })
 
 describe('the two link targets stay distinct', () => {
