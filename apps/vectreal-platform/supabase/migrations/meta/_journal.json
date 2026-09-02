@@ -148,6 +148,13 @@
       "when": 1788348972192,
       "tag": "0020_dazzling_kang",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1788368674707,
+      "tag": "0021_youthful_rawhide_kid",
+      "breakpoints": true
     }
   ]
 }
