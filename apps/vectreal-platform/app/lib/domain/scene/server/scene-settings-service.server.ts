@@ -697,8 +697,16 @@ class SceneSettingsService {
 
 		await this.assertAssetsBelongToProject([publishedAssetId], projectId)
 
-		return await this.db.transaction(async (tx) => {
+		const published = await this.db.transaction(async (tx) => {
 			const latestSettings = await getSceneSettingsBySceneId(tx, sceneId)
+
+			// Captured before the delete: once the row is gone the outgoing GLB has
+			// no reference left anywhere, so nothing would ever collect it.
+			const [outgoing] = await tx
+				.select({ assetId: scenePublished.assetId })
+				.from(scenePublished)
+				.where(eq(scenePublished.sceneId, sceneId))
+				.limit(1)
 
 			await tx.delete(scenePublished).where(eq(scenePublished.sceneId, sceneId))
 
@@ -733,10 +741,21 @@ class SceneSettingsService {
 				.limit(1)
 
 			return {
-				...publishedRecord,
-				asset: assetRecord ?? null
+				record: { ...publishedRecord, asset: assetRecord ?? null },
+				previousAssetId: outgoing?.assetId ?? null
 			}
 		})
+
+		// No same-id special case: republishing byte-identical content dedupes to
+		// the row we just re-published, so `selectUnreferencedAssetIds` sees the
+		// new `scene_published` row and reports it as still referenced. Guarding
+		// on `previousAssetId !== publishedAssetId` here would put a second copy
+		// of that rule in front of the one function that owns it.
+		if (published.previousAssetId) {
+			await this.garbageCollectUnreferencedAssets([published.previousAssetId])
+		}
+
+		return published.record
 	}
 
 	async revokeScenePublication(params: { sceneId: string; userId: string }) {

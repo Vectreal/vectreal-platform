@@ -1,10 +1,10 @@
 /**
- * Asks a real Postgres whether revoking a publish collects the right asset.
+ * Asks a real Postgres whether the publish lifecycle collects the right assets.
  *
- * This is a reference-counting question, and reference counting is three joins
- * over a column that holds a URL rather than a foreign key. A mocked
- * `selectUnreferencedAssetIds` would only prove the mock agrees with itself, so
- * it runs for real against the local database.
+ * Both behaviours here are reference-counting questions, and reference counting
+ * is three joins over a column that holds a URL rather than a foreign key. A
+ * mocked `selectUnreferencedAssetIds` would only prove the mock agrees with
+ * itself, so it runs for real against the local database.
  *
  * `deleteAssets` is spied rather than executed: it is the one step that leaves
  * Postgres for Supabase Storage, and what these tests need to observe is which
@@ -51,7 +51,7 @@ type Db = ReturnType<typeof import('../../app/db/client').getDbClient>
 type Service =
 	typeof import('../../app/lib/domain/scene/server/scene-settings-service.server')
 
-describe('publish revocation', () => {
+describe('publish asset lifecycle', () => {
 	let schema: Schema
 	let db: Db
 	let sceneSettingsService: Service['sceneSettingsService']
@@ -170,4 +170,43 @@ describe('publish revocation', () => {
 		expect(deleteAssetsSpy).toHaveBeenCalledWith([assetId])
 	})
 
+	it('collects the superseded GLB when a scene is republished', async () => {
+		const firstAssetId = await makeAsset('v1.glb')
+		const secondAssetId = await makeAsset('v2.glb')
+		const sceneId = await makeScene('republished')
+		await publishRow(sceneId, firstAssetId)
+
+		await sceneSettingsService.publishSceneFromAssetId({
+			sceneId,
+			projectId,
+			userId: ownerId,
+			publishedAssetId: secondAssetId
+		})
+
+		expect(deleteAssetsSpy).toHaveBeenCalledWith([firstAssetId])
+	})
+
+	it('keeps the GLB when a republish dedupes to the same asset row', async () => {
+		// Republishing byte-identical content returns the existing row, so the
+		// outgoing and incoming ids are the same. Collecting it would delete the
+		// GLB that was just published.
+		const assetId = await makeAsset('stable.glb')
+		const sceneId = await makeScene('stable')
+		await publishRow(sceneId, assetId)
+
+		await sceneSettingsService.publishSceneFromAssetId({
+			sceneId,
+			projectId,
+			userId: ownerId,
+			publishedAssetId: assetId
+		})
+
+		expect(deleteAssetsSpy).not.toHaveBeenCalled()
+
+		const stillPublished = await db
+			.select({ assetId: schema.scenePublished.assetId })
+			.from(schema.scenePublished)
+			.where(eq(schema.scenePublished.sceneId, sceneId))
+		expect(stillPublished).toEqual([{ assetId }])
+	})
 })
