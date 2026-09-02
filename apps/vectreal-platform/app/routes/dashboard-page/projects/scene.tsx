@@ -233,7 +233,14 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 				<link rel="preload" as="image" href={sceneState.thumbnailUrl} />
 			) : null}
 			<div className="grid grid-cols-1 gap-4 xl:h-full xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_auto]">
-				<main className="flex flex-col gap-4 xl:min-h-0">
+				{/*
+				  A `div`, not a `main`. `SidebarInset` renders the dashboard's `main`
+				  landmark and every route renders inside it, so a `main` here is a
+				  second one nested in the first - which HTML forbids and axe reports
+				  as `landmark-no-duplicate-main`. This element is a layout column,
+				  and the column beside it is the `aside` that `SceneFactsPanel` draws.
+				*/}
+				<div className="flex flex-col gap-4 xl:min-h-0">
 					{model.status === 'error' ? (
 						<DetailPanelSection
 							surface="raised"
@@ -340,7 +347,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							)}
 						</div>
 					</DetailPanelSection>
-				</main>
+				</div>
 
 				{/*
 				  Two hosts, one for each side of `xl`, and exactly one of them is
