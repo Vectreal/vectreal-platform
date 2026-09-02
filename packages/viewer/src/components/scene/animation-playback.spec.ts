@@ -31,10 +31,13 @@ const run = (
 	actions: PlaybackAction[],
 	from: PlaybackState = initialPlaybackState()
 ) =>
-	actions.reduce<{ state: PlaybackState; effects: ReturnType<typeof reducePlayback>['effects'] }>(
-		(acc, action) => reducePlayback(acc.state, action),
-		{ state: from, effects: [] }
-	)
+	actions.reduce<{
+		state: PlaybackState
+		effects: ReturnType<typeof reducePlayback>['effects']
+	}>((acc, action) => reducePlayback(acc.state, action), {
+		state: from,
+		effects: []
+	})
 
 const configure = (
 	clips: PlaybackClip[],
@@ -60,7 +63,9 @@ describe('reducePlayback', () => {
 				configure([clip('a'), clip('b')], { autoplay: true })
 			])
 
-			expect(effects.filter((effect) => effect.type === 'start')).toHaveLength(2)
+			expect(effects.filter((effect) => effect.type === 'start')).toHaveLength(
+				2
+			)
 			expect(state.isPlaying).toBe(true)
 			expect(state.activeIndex).toBe(-1)
 		})
@@ -153,10 +158,14 @@ describe('reducePlayback', () => {
 
 		it('is inert when already playing or already paused', () => {
 			const playing = run([configure([clip('a')], { autoplay: true })])
-			expect(reducePlayback(playing.state, { type: 'play' }).effects).toEqual([])
+			expect(reducePlayback(playing.state, { type: 'play' }).effects).toEqual(
+				[]
+			)
 
 			const paused = reducePlayback(playing.state, { type: 'pause' })
-			expect(reducePlayback(paused.state, { type: 'pause' }).effects).toEqual([])
+			expect(reducePlayback(paused.state, { type: 'pause' }).effects).toEqual(
+				[]
+			)
 		})
 
 		it('toggles between play and pause', () => {
@@ -378,9 +387,7 @@ describe('reducePlayback', () => {
 				time: 1.5
 			})
 
-			expect(seeked.effects).toEqual([
-				{ type: 'seek', clipId: 'a', time: 1.5 }
-			])
+			expect(seeked.effects).toEqual([{ type: 'seek', clipId: 'a', time: 1.5 }])
 			expect(seeked.state).toBe(playing.state)
 		})
 	})

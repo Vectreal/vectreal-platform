@@ -3,11 +3,18 @@ import { hasAnalyticsConsent } from '../../consent/consent-cookie'
 import type { PostHog } from 'posthog-node'
 
 export type ServerAnalyticsEvent =
-  | { name: 'user_signed_up';             props: { method: 'email' | 'oauth'; referrer?: string; utm_source?: string } }
-  | { name: 'user_signed_in';             props: { method: 'email' | 'oauth' } }
-  | { name: 'contact_form_submitted';     props: Record<string, unknown> }
-  | { name: 'contact_form_submit_failed'; props: Record<string, unknown> }
-  | { name: 'contact_form_blocked';       props: Record<string, unknown> }
+	| {
+			name: 'user_signed_up'
+			props: {
+				method: 'email' | 'oauth'
+				referrer?: string
+				utm_source?: string
+			}
+	  }
+	| { name: 'user_signed_in'; props: { method: 'email' | 'oauth' } }
+	| { name: 'contact_form_submitted'; props: Record<string, unknown> }
+	| { name: 'contact_form_submit_failed'; props: Record<string, unknown> }
+	| { name: 'contact_form_blocked'; props: Record<string, unknown> }
 
 /**
  * Send a server-side analytics event, but only with the visitor's consent.
@@ -21,16 +28,16 @@ export type ServerAnalyticsEvent =
  * banner is never reported on.
  */
 export function captureServerEvent(
-  posthog: PostHog | undefined,
-  request: Request,
-  distinctId: string,
-  event: ServerAnalyticsEvent
+	posthog: PostHog | undefined,
+	request: Request,
+	distinctId: string,
+	event: ServerAnalyticsEvent
 ): void {
-  if (!hasAnalyticsConsent(request)) return
+	if (!hasAnalyticsConsent(request)) return
 
-  posthog?.capture({
-    distinctId,
-    event: event.name,
-    properties: { client_type: 'web', ...event.props },
-  })
+	posthog?.capture({
+		distinctId,
+		event: event.name,
+		properties: { client_type: 'web', ...event.props }
+	})
 }

@@ -56,9 +56,7 @@ export const OptimizationResults: FC<OptimizationResultsProps> = ({
 			transition={{ duration: 0.3 }}
 			className="publisher-shell-nested space-y-1 rounded-xl px-4 pt-3 pb-1"
 		>
-			<p className="text-muted-foreground text-eyebrow">
-				Optimization result
-			</p>
+			<p className="text-muted-foreground text-eyebrow">Optimization result</p>
 
 			<FileSizeComparison
 				sizeInfo={sizeInfo}
@@ -73,7 +71,9 @@ export const OptimizationResults: FC<OptimizationResultsProps> = ({
 						{dracoReport.isWorthApplying ? (
 							<BeforeAfter
 								before={formatFileSize(dracoReport.geometryBytesBefore)}
-								after={formatFileSize(dracoReport.geometryBytesAfterCompression)}
+								after={formatFileSize(
+									dracoReport.geometryBytesAfterCompression
+								)}
 								suffix={`(-${Math.round(dracoReport.reductionPercent)}%)`}
 							/>
 						) : (

@@ -69,9 +69,7 @@ export const PublishCard: FC<PublishCardProps> = ({
 			// Preview mode is about seeing the scene, so the card leaves rather than
 			// dimming. `animate` (not `exit`) keeps it mounted, so its own publish
 			// state survives the round trip.
-			animate={
-				isPreviewMode ? { opacity: 0, y: 12 } : { opacity: 1, y: 0 }
-			}
+			animate={isPreviewMode ? { opacity: 0, y: 12 } : { opacity: 1, y: 0 }}
 			transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
 			aria-hidden={isPreviewMode}
 			className={cn(

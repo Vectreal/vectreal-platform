@@ -351,7 +351,9 @@ export function SortableHeader({
 /**
  * Helper function to create a checkbox column
  */
-export function createCheckboxColumn<TData extends RowData>(): ColumnDef<TData> {
+export function createCheckboxColumn<
+	TData extends RowData
+>(): ColumnDef<TData> {
 	return {
 		id: 'select',
 		header: ({ table }) => (

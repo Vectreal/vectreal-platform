@@ -128,32 +128,34 @@ describe('documented claims', () => {
 			expect(claims.length).toBeGreaterThan(0)
 		})
 
-		it.each(claims.map((claim) => [`${claim.op} ${claim.path} ${claim.literal}`.trim(), claim] as const))(
-			'%s',
-			(_label, claim) => {
-				const target = join(REPO_ROOT, claim.path)
+		it.each(
+			claims.map(
+				(claim) =>
+					[`${claim.op} ${claim.path} ${claim.literal}`.trim(), claim] as const
+			)
+		)('%s', (_label, claim) => {
+			const target = join(REPO_ROOT, claim.path)
 
+			expect(
+				existsSync(target),
+				`${documentName} line ${claim.line}: ${claim.path} does not exist`
+			).toBe(true)
+
+			if (claim.op === 'exists') return
+
+			const contents = readFileSync(target, 'utf8')
+
+			if (claim.op === 'present') {
 				expect(
-					existsSync(target),
-					`${documentName} line ${claim.line}: ${claim.path} does not exist`
+					contents.includes(claim.literal),
+					`${documentName} line ${claim.line} claims ${claim.path} contains "${claim.literal}". It does not. Fix the code, or fix the documentation.`
 				).toBe(true)
-
-				if (claim.op === 'exists') return
-
-				const contents = readFileSync(target, 'utf8')
-
-				if (claim.op === 'present') {
-					expect(
-						contents.includes(claim.literal),
-						`${documentName} line ${claim.line} claims ${claim.path} contains "${claim.literal}". It does not. Fix the code, or fix the documentation.`
-					).toBe(true)
-				} else {
-					expect(
-						contents.includes(claim.literal),
-						`${documentName} line ${claim.line} claims ${claim.path} does NOT contain "${claim.literal}". It does. The reasoning behind that page may no longer hold.`
-					).toBe(false)
-				}
+			} else {
+				expect(
+					contents.includes(claim.literal),
+					`${documentName} line ${claim.line} claims ${claim.path} does NOT contain "${claim.literal}". It does. The reasoning behind that page may no longer hold.`
+				).toBe(false)
 			}
-		)
+		})
 	})
 })

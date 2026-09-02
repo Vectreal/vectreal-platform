@@ -30,10 +30,10 @@ export default mergeConfig(
 				exclude: [
 					'app/**/*.d.ts',
 					'app/**/*.stories.tsx',
-					'app/**/*.spec.{ts,tsx}',
+					'app/**/*.spec.{ts,tsx}'
 				],
-				reportsDirectory: '../../coverage/apps/vectreal-platform',
-			},
-		},
-	}),
+				reportsDirectory: '../../coverage/apps/vectreal-platform'
+			}
+		}
+	})
 )

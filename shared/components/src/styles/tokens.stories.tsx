@@ -55,7 +55,9 @@ export const Radius: Story = {
 			{RADII.map((cls) => (
 				<div key={cls} className="space-y-2">
 					<div className={`ds-overlay size-24 ${cls}`} />
-					<p className="text-muted-foreground text-label-xs font-mono">.{cls}</p>
+					<p className="text-muted-foreground text-label-xs font-mono">
+						.{cls}
+					</p>
 				</div>
 			))}
 		</div>

@@ -23,9 +23,12 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 		const { error, data } = await client.auth.verifyOtp({ type, token_hash })
 		if (!error) {
 			if (type === 'signup' && !data.user) {
-				console.warn('[auth/confirm] signup OTP verified but no user returned', {
-					token_hash_prefix: token_hash.slice(0, 8)
-				})
+				console.warn(
+					'[auth/confirm] signup OTP verified but no user returned',
+					{
+						token_hash_prefix: token_hash.slice(0, 8)
+					}
+				)
 			}
 			if (type === 'signup' && data.user) {
 				const referrer = searchParams.get('referrer') || undefined

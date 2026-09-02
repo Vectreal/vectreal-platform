@@ -38,7 +38,7 @@ export type GeometryOptimizationKey = Exclude<keyof Optimizations, 'texture'>
  * should run.
  */
 export type WorkerOptimizationOptions = {
-  [Key in GeometryOptimizationKey]?: Omit<Optimizations[Key], 'enabled'>
+	[Key in GeometryOptimizationKey]?: Omit<Optimizations[Key], 'enabled'>
 }
 
 /**
@@ -52,50 +52,50 @@ export type WorkerOptimizationOptions = {
  * asserts the two orders agree.
  */
 export const GEOMETRY_STEP_ORDER = [
-  'simplification',
-  'dedup',
-  'quantize',
-  'normals',
-  'draco'
+	'simplification',
+	'dedup',
+	'quantize',
+	'normals',
+	'draco'
 ] as const satisfies readonly GeometryOptimizationKey[]
 
 /** Message sent TO the worker. The buffer ArrayBuffer should be transferred. */
 export interface WorkerInputMessage {
-  type: 'optimize'
-  /** GLB file bytes (ArrayBuffer transferred to worker for zero-copy). */
-  buffer: ArrayBuffer
-  options: WorkerOptimizationOptions
+	type: 'optimize'
+	/** GLB file bytes (ArrayBuffer transferred to worker for zero-copy). */
+	buffer: ArrayBuffer
+	options: WorkerOptimizationOptions
 }
 
 /** Messages received FROM the worker. */
 export type WorkerOutputMessage =
-  | {
-      type: 'progress'
-      /**
-       * Which step is reporting. A key rather than a label, so UI copy stays on
-       * the main thread and the worker has nothing to keep in sync with it.
-       */
-      step: GeometryOptimizationKey
-      /** 0–100 completion percentage for the current step. */
-      progress: number
-    }
-  | {
-      type: 'done'
-      /**
-       * Optimized GLB as ArrayBuffer (transferred back for zero-copy).
-       * Always uncompressed — Draco is applied at export time, not here.
-       */
-      buffer: ArrayBuffer
-      /**
-       * Steps the worker's optimizer actually kept. Without this the main
-       * thread can't tell an applied pass from a reverted one, since it only
-       * ever sees the resulting bytes.
-       */
-      appliedOptimizations: string[]
-      /** Draco measurement, when Draco compression was requested. */
-      dracoReport?: DracoCompressionReport
-    }
-  | {
-      type: 'error'
-      message: string
-    }
+	| {
+			type: 'progress'
+			/**
+			 * Which step is reporting. A key rather than a label, so UI copy stays on
+			 * the main thread and the worker has nothing to keep in sync with it.
+			 */
+			step: GeometryOptimizationKey
+			/** 0–100 completion percentage for the current step. */
+			progress: number
+	  }
+	| {
+			type: 'done'
+			/**
+			 * Optimized GLB as ArrayBuffer (transferred back for zero-copy).
+			 * Always uncompressed — Draco is applied at export time, not here.
+			 */
+			buffer: ArrayBuffer
+			/**
+			 * Steps the worker's optimizer actually kept. Without this the main
+			 * thread can't tell an applied pass from a reverted one, since it only
+			 * ever sees the resulting bytes.
+			 */
+			appliedOptimizations: string[]
+			/** Draco measurement, when Draco compression was requested. */
+			dracoReport?: DracoCompressionReport
+	  }
+	| {
+			type: 'error'
+			message: string
+	  }

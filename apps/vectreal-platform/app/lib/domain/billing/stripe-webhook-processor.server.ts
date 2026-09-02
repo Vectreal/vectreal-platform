@@ -93,8 +93,7 @@ export function constructStripeEvent(
 // ---------------------------------------------------------------------------
 
 type EventRegistrationResult =
-	| { alreadySeen: true }
-	| { alreadySeen: false; rowId: string }
+	{ alreadySeen: true } | { alreadySeen: false; rowId: string }
 
 /**
  * Attempts to register the event in the idempotency table.
@@ -405,8 +404,7 @@ async function dispatchEvent(event: Stripe.Event): Promise<void> {
 			const prevAttrs =
 				event.type === 'customer.subscription.updated'
 					? (event.data.previous_attributes as
-							| Record<string, unknown>
-							| undefined)
+							Record<string, unknown> | undefined)
 					: undefined
 			await handleSubscriptionUpdated(
 				event.data.object as Stripe.Subscription,

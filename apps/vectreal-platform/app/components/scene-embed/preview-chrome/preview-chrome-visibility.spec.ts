@@ -7,7 +7,9 @@ import {
 } from './use-chrome-visibility'
 
 function key(
-	overrides: Partial<Pick<KeyboardEvent, 'key' | 'altKey' | 'ctrlKey' | 'metaKey'>>
+	overrides: Partial<
+		Pick<KeyboardEvent, 'key' | 'altKey' | 'ctrlKey' | 'metaKey'>
+	>
 ) {
 	return {
 		key: 'a',
@@ -42,7 +44,9 @@ describe('resolveChromeKeyAction', () => {
 	})
 
 	it('ignores modified Escape', () => {
-		expect(resolveChromeKeyAction(key({ key: 'Escape', metaKey: true }))).toBeNull()
+		expect(
+			resolveChromeKeyAction(key({ key: 'Escape', metaKey: true }))
+		).toBeNull()
 	})
 })
 

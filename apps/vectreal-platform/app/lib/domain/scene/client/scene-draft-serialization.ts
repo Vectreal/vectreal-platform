@@ -5,7 +5,6 @@ import {
 
 import type { SerializedSceneAssetDataMap } from '@vctrl/core'
 
-
 export const createFileFromDataUrl = (
 	dataUrl: string,
 	fileName: string

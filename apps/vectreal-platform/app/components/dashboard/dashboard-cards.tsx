@@ -48,8 +48,7 @@ const cardHeaderVariants = cva('relative flex items-center', {
 })
 
 interface DashboardCardProps
-	extends PropsWithChildren,
-		VariantProps<typeof dashboardCardVariants> {
+	extends PropsWithChildren, VariantProps<typeof dashboardCardVariants> {
 	linkTo: string
 	title: string
 	description: string

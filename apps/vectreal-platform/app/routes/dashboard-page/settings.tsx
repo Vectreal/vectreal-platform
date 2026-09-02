@@ -301,8 +301,7 @@ export default function SettingsPage({
 	const actionMessage = normalizedActionData.message
 	const actionIntent = normalizedActionData.intent
 	const actionThemeMode = normalizedActionData.themeMode as
-		| ThemeModeValue
-		| undefined
+		ThemeModeValue | undefined
 	const fieldErrors = normalizedActionData.fieldErrors
 
 	const profileForm = useForm<ProfileFormValues>({

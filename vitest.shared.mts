@@ -15,7 +15,7 @@ export default defineConfig({
 			enabled: true,
 			provider: 'v8',
 			reporter: ['text', 'html', 'lcov', 'json-summary'],
-			reportOnFailure: true,
-		},
-	},
+			reportOnFailure: true
+		}
+	}
 })

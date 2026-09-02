@@ -6,7 +6,10 @@ import {
 	listEnabledGeometryKeys,
 	listEnabledKeys
 } from '.'
-import { balancedPreset, optimizationPresets } from '../../../../constants/optimizations'
+import {
+	balancedPreset,
+	optimizationPresets
+} from '../../../../constants/optimizations'
 import { GEOMETRY_STEP_ORDER } from '../../../../workers/optimization.worker.types'
 
 import type { Optimizations } from '@vctrl/core'

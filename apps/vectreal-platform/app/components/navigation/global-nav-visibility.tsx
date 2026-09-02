@@ -15,9 +15,9 @@ import { createContext, useContext, useEffect, type ReactNode } from 'react'
  * Single-consumer by design too: `controls-overlay` is the only caller, so there
  * is no reference counting. Add it when a second consumer actually exists.
  */
-const HideGlobalNavContext = createContext<
-	((hidden: boolean) => void) | null
->(null)
+const HideGlobalNavContext = createContext<((hidden: boolean) => void) | null>(
+	null
+)
 
 export function GlobalNavVisibilityProvider({
 	onHiddenChange,

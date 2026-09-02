@@ -11,7 +11,7 @@ export default mergeConfig(
 			environment: 'node',
 			include: ['tests/integration/**/*.spec.{ts,tsx}'],
 			setupFiles: ['tests/integration/setup.ts'],
-			coverage: { enabled: false },
-		},
-	}),
+			coverage: { enabled: false }
+		}
+	})
 )

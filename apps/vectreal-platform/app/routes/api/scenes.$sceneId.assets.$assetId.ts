@@ -57,7 +57,7 @@ const PASSIVE_MIME_TYPES = new Set([
 	'image/avif',
 	'model/gltf-binary',
 	'model/gltf+json',
-	'application/octet-stream',
+	'application/octet-stream'
 ])
 
 function sanitizeMimeType(mimeType: string | undefined | null): string {

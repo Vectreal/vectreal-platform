@@ -370,7 +370,7 @@ export default function MockShopEmbedClient({
 										'md:hover:bg-muted/50 md:cursor-pointer md:hover:scale-[1.015]',
 									interactiveMode &&
 										!isMobileViewport &&
-										'fixed inset-0 z-above-nav aspect-auto rounded-none md:relative md:inset-auto md:z-auto md:aspect-4/3 md:rounded-2xl',
+										'z-above-nav fixed inset-0 aspect-auto rounded-none md:relative md:inset-auto md:z-auto md:aspect-4/3 md:rounded-2xl',
 									shouldUseMobileOverlay && 'pointer-events-none opacity-0'
 								)}
 							>
@@ -436,7 +436,7 @@ export default function MockShopEmbedClient({
 			{shouldUseMobileOverlay &&
 				typeof document !== 'undefined' &&
 				createPortal(
-					<div className="fixed inset-0 z-above-nav bg-black/95">
+					<div className="z-above-nav fixed inset-0 bg-black/95">
 						<div className="relative h-[100dvh] w-full overflow-hidden">
 							{viewerFrame}
 							<div

@@ -74,7 +74,9 @@ export function reconcileSceneAnimation(
 	// which then reached three as `undefined` and became NaN in the mixer.
 	const settings = normalizeSceneAnimation(saved)
 	const savedClips = settings?.clips ?? []
-	const byId = new Map(model.map((descriptor) => [descriptor.clipId, descriptor]))
+	const byId = new Map(
+		model.map((descriptor) => [descriptor.clipId, descriptor])
+	)
 	const consumed = new Set<number>()
 
 	const matched: string[] = []

@@ -47,7 +47,10 @@ export function useClipboardCopy(): ClipboardCopyApi {
 				await navigator.clipboard.writeText(value)
 				setCopiedId(id)
 				if (timeoutRef.current) clearTimeout(timeoutRef.current)
-				timeoutRef.current = setTimeout(() => setCopiedId(null), CONFIRMATION_MS)
+				timeoutRef.current = setTimeout(
+					() => setCopiedId(null),
+					CONFIRMATION_MS
+				)
 				toast.success(messages.success)
 			} catch (error) {
 				console.error('Failed to copy to clipboard:', error)

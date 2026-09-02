@@ -13,12 +13,14 @@ import { getDbClient } from '../../../db/client'
 import { contactSubmissions } from '../../../db/schema'
 import {
 	sendInternalContactNotification,
-	sendSubmitterConfirmation,
+	sendSubmitterConfirmation
 } from '../../email/contact-email-sender.server'
 import { recordRateLimitAttempt } from '../../http/rate-limit.server'
 import { encryptSensitiveValue } from '../../security/pii-encryption.server'
-import { captureServerEvent, type ServerAnalyticsEvent } from '../analytics/server-events.server'
-
+import {
+	captureServerEvent,
+	type ServerAnalyticsEvent
+} from '../analytics/server-events.server'
 
 import type { PostHogContext } from '../../posthog/posthog-middleware'
 

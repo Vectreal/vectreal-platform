@@ -37,7 +37,13 @@ interface SidebarSectionProps {
 }
 
 export const SidebarSection = memo(
-	({ title, tooltip, action, children, className = '' }: SidebarSectionProps) => (
+	({
+		title,
+		tooltip,
+		action,
+		children,
+		className = ''
+	}: SidebarSectionProps) => (
 		<DetailPanelSection
 			title={title}
 			action={

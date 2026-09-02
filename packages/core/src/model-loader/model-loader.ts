@@ -17,8 +17,10 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 import { Document, GLTF, WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 
-
-import { canLoadDracoInBrowser, loadDracoModule } from '../draco/load-draco-module'
+import {
+	canLoadDracoInBrowser,
+	loadDracoModule
+} from '../draco/load-draco-module'
 import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extension'
 import { buildAssetLookupKeys } from '../scene-asset'
 import { OperationProgress } from '../types'
@@ -582,18 +584,22 @@ export class ModelLoader {
 		const startTime = Date.now()
 		this.emitProgress('Parsing model data', 25)
 
-		const [{ GLTFLoader }, { LoadingManager }, dracoLoader] = await Promise.all([
-			import('three/examples/jsm/loaders/GLTFLoader.js'),
-			import('three'),
-			getThreeDracoLoader(this.dracoDecoderPath)
-		])
+		const [{ GLTFLoader }, { LoadingManager }, dracoLoader] = await Promise.all(
+			[
+				import('three/examples/jsm/loaders/GLTFLoader.js'),
+				import('three'),
+				getThreeDracoLoader(this.dracoDecoderPath)
+			]
+		)
 
 		const urlMap = new Map<string, string>()
 		let totalSize = 0
 
 		for (const [name, bytes] of assets.entries()) {
 			totalSize += bytes.byteLength
-			const objectUrl = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>]))
+			const objectUrl = URL.createObjectURL(
+				new Blob([bytes as Uint8Array<ArrayBuffer>])
+			)
 			for (const key of buildAssetLookupKeys(name)) {
 				urlMap.set(key, objectUrl)
 			}

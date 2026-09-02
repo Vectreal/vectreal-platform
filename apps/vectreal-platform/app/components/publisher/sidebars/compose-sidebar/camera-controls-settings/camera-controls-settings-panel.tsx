@@ -1008,10 +1008,10 @@ const CameraControlsSettingsPanel = memo(() => {
 						variant="secondary"
 						disabled={isCameraEditingLocked}
 						className={cn(
-						'w-full transition-colors duration-300',
-						capturedView &&
-							'bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400'
-					)}
+							'w-full transition-colors duration-300',
+							capturedView &&
+								'bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400'
+						)}
 						onClick={() => {
 							void handleCaptureCurrentView()
 						}}
@@ -1020,15 +1020,15 @@ const CameraControlsSettingsPanel = memo(() => {
 						<span className="relative h-4 w-4 shrink-0">
 							<Camera
 								className={cn(
-								'absolute inset-0 h-4 w-4 transition-all duration-200',
-								capturedView ? 'scale-50 opacity-0' : 'scale-100 opacity-100'
-							)}
+									'absolute inset-0 h-4 w-4 transition-all duration-200',
+									capturedView ? 'scale-50 opacity-0' : 'scale-100 opacity-100'
+								)}
 							/>
 							<Check
 								className={cn(
-								'absolute inset-0 h-4 w-4 transition-all duration-200',
-								capturedView ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
-							)}
+									'absolute inset-0 h-4 w-4 transition-all duration-200',
+									capturedView ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
+								)}
 							/>
 						</span>
 						<span className="transition-all duration-200">

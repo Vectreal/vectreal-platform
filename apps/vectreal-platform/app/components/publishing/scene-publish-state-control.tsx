@@ -32,9 +32,7 @@ type MutationEnvelope = {
 interface ScenePublishStateControlProps {
 	publishState: ScenePublishStateResponse
 	onPublish: () =>
-		| Promise<ScenePublishStateResponse | void>
-		| ScenePublishStateResponse
-		| void
+		Promise<ScenePublishStateResponse | void> | ScenePublishStateResponse | void
 	publishButtonText?: string
 	publishDialogTitle?: string
 	publishDialogDescription?: string

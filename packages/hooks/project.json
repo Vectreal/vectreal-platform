@@ -7,9 +7,7 @@
 	"targets": {
 		"lint": {
 			"executor": "@nx/eslint:lint",
-			"outputs": [
-				"{options.outputFile}"
-			],
+			"outputs": ["{options.outputFile}"],
 			"options": {
 				"lintFilePatterns": [
 					"packages/hooks/**/*.{ts,tsx,js,jsx}",
@@ -19,9 +17,7 @@
 		},
 		"lint-fix": {
 			"executor": "@nx/eslint:lint",
-			"outputs": [
-				"{options.outputFile}"
-			],
+			"outputs": ["{options.outputFile}"],
 			"options": {
 				"fix": true,
 				"lintFilePatterns": [
@@ -31,9 +27,7 @@
 			}
 		},
 		"publish": {
-			"dependsOn": [
-				"copy-md"
-			],
+			"dependsOn": ["copy-md"],
 			"executor": "nx:run-commands",
 			"outputs": [],
 			"options": {
@@ -42,9 +36,7 @@
 			}
 		},
 		"copy-md": {
-			"dependsOn": [
-				"build"
-			],
+			"dependsOn": ["build"],
 			"executor": "nx:run-commands",
 			"outputs": [],
 			"options": {
@@ -55,9 +47,7 @@
 		},
 		"build": {
 			"executor": "@nx/vite:build",
-			"outputs": [
-				"{options.outputPath}"
-			],
+			"outputs": ["{options.outputPath}"],
 			"options": {
 				"outputPath": "build/packages/vctrl/hooks",
 				"configFile": "packages/hooks/vite.config.ts"
@@ -65,9 +55,7 @@
 		},
 		"build-ci": {
 			"executor": "@nx/vite:build",
-			"outputs": [
-				"{options.outputPath}"
-			],
+			"outputs": ["{options.outputPath}"],
 			"options": {
 				"outputPath": "build/packages/vctrl/hooks",
 				"configFile": "packages/hooks/vite.config.ts"

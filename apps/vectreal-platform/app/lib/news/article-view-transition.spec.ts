@@ -32,7 +32,9 @@ const ARTICLE_SOURCES = ['components/layout-components/article-hero.tsx']
 const LISTING_ONLY_KEYS = ['excerpt']
 
 function read(paths: string[]): string {
-	return paths.map((path) => readFileSync(join(APP_DIR, path), 'utf8')).join('\n')
+	return paths
+		.map((path) => readFileSync(join(APP_DIR, path), 'utf8'))
+		.join('\n')
 }
 
 const MORPH_KEYS = Object.keys(newsroomMorphNames('x')) as Array<

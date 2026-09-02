@@ -70,7 +70,12 @@ function getUnlockedFeatures(
 			const k = key as keyof typeof selectedEntitlements
 			return selectedEntitlements[k] && !currentEntitlements[k]
 		})
-		.map((key) => ENTITLEMENT_DISPLAY_LABELS[key as keyof typeof ENTITLEMENT_DISPLAY_LABELS] ?? key)
+		.map(
+			(key) =>
+				ENTITLEMENT_DISPLAY_LABELS[
+					key as keyof typeof ENTITLEMENT_DISPLAY_LABELS
+				] ?? key
+		)
 		.filter((label) => !seen.has(label) && !!seen.add(label))
 		.slice(0, 6)
 }
@@ -283,7 +288,7 @@ function BillingUpgradeContent({
 					</div>
 				)}
 
-				<Card className="border-primary/20 bg-muted/75 sticky top-0 left-0 z-page-chrome w-full py-0 shadow-lg backdrop-blur-md">
+				<Card className="border-primary/20 bg-muted/75 z-page-chrome sticky top-0 left-0 w-full py-0 shadow-lg backdrop-blur-md">
 					<CardContent className="space-y-3 p-4">
 						{checkoutError && (
 							<div className="bg-destructive/5 border-destructive/20 flex items-start gap-2 rounded-lg border p-3">

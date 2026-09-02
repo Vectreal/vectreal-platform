@@ -13,10 +13,7 @@
 import type { DashboardEntityType } from './dashboard-operations'
 
 export type DashboardMutationVerb =
-	| 'create-folder'
-	| 'rename'
-	| 'move'
-	| 'delete'
+	'create-folder' | 'rename' | 'move' | 'delete'
 
 export interface DashboardMutationTarget {
 	type: DashboardEntityType
@@ -53,11 +50,7 @@ export type DashboardMutationRequest =
 	  }
 
 export type DashboardMutationErrorCode =
-	| 'not-found'
-	| 'forbidden'
-	| 'invalid-target'
-	| 'conflict'
-	| 'failed'
+	'not-found' | 'forbidden' | 'invalid-target' | 'conflict' | 'failed'
 
 export interface DashboardMutationResult {
 	type: DashboardEntityType
@@ -98,8 +91,7 @@ const ENTITY_TYPES: readonly DashboardEntityType[] = [
 const MAX_TARGETS = 200
 
 export type ParseResult<T> =
-	| { ok: true; value: T }
-	| { ok: false; error: string }
+	{ ok: true; value: T } | { ok: false; error: string }
 
 function readString(source: Record<string, unknown>, key: string): string {
 	const raw = source[key]

@@ -33,7 +33,6 @@ import styles from '../../styles/mdx.module.css'
 
 import type { Route } from './+types/news-room-article-page'
 
-
 export async function loader({ params }: Route.LoaderArgs) {
 	const slug = params.slug ?? ''
 	const article = getNewsArticle(slug)
@@ -84,7 +83,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
 			image: loaderData.article.coverImage,
 			imageAlt: loaderData.article.title,
 			publishedTime: loaderData.article.publishedAt,
-			modifiedTime: loaderData.article.updatedAt ?? loaderData.article.publishedAt,
+			modifiedTime:
+				loaderData.article.updatedAt ?? loaderData.article.publishedAt,
 			articleAuthor: loaderData.article.author.name,
 			articleSection: loaderData.article.category,
 			structuredData: [
@@ -111,7 +111,11 @@ export function meta({ loaderData }: Route.MetaArgs) {
 		},
 		undefined,
 		// Article cover images are 1200x630, so use the large card format.
-		{ twitterCard: loaderData.article.coverImage ? 'summary_large_image' : undefined }
+		{
+			twitterCard: loaderData.article.coverImage
+				? 'summary_large_image'
+				: undefined
+		}
 	)
 }
 
@@ -337,16 +341,17 @@ export default function NewsRoomArticlePage({
 					}
 					next={
 						adjacent.next
-							? { to: `/news-room/${adjacent.next.slug}`, title: adjacent.next.title }
+							? {
+									to: `/news-room/${adjacent.next.slug}`,
+									title: adjacent.next.title
+								}
 							: null
 					}
 				/>
 
 				{related.length > 0 && (
 					<section className="mt-32">
-						<h2 className="text-h3 mb-6! ml-2">
-							More from the newsroom
-						</h2>
+						<h2 className="text-h3 mb-6! ml-2">More from the newsroom</h2>
 						<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 							{related.map((item) => (
 								<ArticleCard key={item.slug} article={item} />

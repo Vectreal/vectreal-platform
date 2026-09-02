@@ -30,18 +30,15 @@ vi.mock('./dashboard-entity-loader.server', () => ({
 	loadDashboardEntityRefs: vi.fn()
 }))
 
-vi.mock(
-	'../scene/server/scene-folder-repository.server',
-	() => ({
-		createSceneFolder: vi.fn(),
-		deleteScene: vi.fn(async () => ({ orphanedAssetIds: [] })),
-		deleteSceneFolder: vi.fn(),
-		moveScene: vi.fn(),
-		moveSceneFolder: vi.fn(),
-		renameScene: vi.fn(),
-		renameSceneFolder: vi.fn()
-	})
-)
+vi.mock('../scene/server/scene-folder-repository.server', () => ({
+	createSceneFolder: vi.fn(),
+	deleteScene: vi.fn(async () => ({ orphanedAssetIds: [] })),
+	deleteSceneFolder: vi.fn(),
+	moveScene: vi.fn(),
+	moveSceneFolder: vi.fn(),
+	renameScene: vi.fn(),
+	renameSceneFolder: vi.fn()
+}))
 
 vi.mock('../project/project-repository.server', () => ({
 	deleteProject: vi.fn(),

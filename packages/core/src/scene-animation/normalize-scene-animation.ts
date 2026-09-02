@@ -70,7 +70,10 @@ function normalizeClip(
 		throw new Error(`${label}.clipId must be a non-empty string`)
 	}
 
-	if (typeof clip.loop !== 'undefined' && !LOOP_MODES.has(clip.loop as string)) {
+	if (
+		typeof clip.loop !== 'undefined' &&
+		!LOOP_MODES.has(clip.loop as string)
+	) {
 		throw new Error(`${label}.loop must be one of once, repeat, ping_pong`)
 	}
 	const loop = (clip.loop as AnimationLoopMode | undefined) ?? 'repeat'
@@ -106,7 +109,10 @@ function normalizeClip(
 
 	let repetitions: number | undefined
 	if (typeof clip.repetitions !== 'undefined') {
-		if (!Number.isInteger(clip.repetitions) || (clip.repetitions as number) < 1) {
+		if (
+			!Number.isInteger(clip.repetitions) ||
+			(clip.repetitions as number) < 1
+		) {
 			throw new Error(`${label}.repetitions must be an integer of at least 1`)
 		}
 		repetitions = clip.repetitions as number
@@ -121,7 +127,10 @@ function normalizeClip(
 
 	let sourceIndex = index
 	if (typeof clip.sourceIndex !== 'undefined') {
-		if (!Number.isInteger(clip.sourceIndex) || (clip.sourceIndex as number) < 0) {
+		if (
+			!Number.isInteger(clip.sourceIndex) ||
+			(clip.sourceIndex as number) < 0
+		) {
 			throw new Error(`${label}.sourceIndex must be a non-negative integer`)
 		}
 		sourceIndex = clip.sourceIndex as number
@@ -177,7 +186,10 @@ export function normalizeSceneAnimation(
 	const mode =
 		(animation.mode as AnimationPlaybackMode | undefined) ?? 'simultaneous'
 
-	if (typeof animation.clips !== 'undefined' && !Array.isArray(animation.clips)) {
+	if (
+		typeof animation.clips !== 'undefined' &&
+		!Array.isArray(animation.clips)
+	) {
 		throw new Error('animation.clips must be an array')
 	}
 
@@ -216,8 +228,16 @@ export function normalizeSceneAnimation(
 		enabled: normalizeBoolean(animation.enabled, false, 'animation.enabled'),
 		mode,
 		autoplay: normalizeBoolean(animation.autoplay, true, 'animation.autoplay'),
-		loopSequence: normalizeBoolean(animation.loopSequence, false, 'animation.loopSequence'),
-		showControls: normalizeBoolean(animation.showControls, false, 'animation.showControls'),
+		loopSequence: normalizeBoolean(
+			animation.loopSequence,
+			false,
+			'animation.loopSequence'
+		),
+		showControls: normalizeBoolean(
+			animation.showControls,
+			false,
+			'animation.showControls'
+		),
 		// The sequence-stall guard deliberately does not live here. It is a
 		// property of how a program is played, not of what the author saved, and
 		// writing a repeat count back over their input meant a later switch to

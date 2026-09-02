@@ -56,7 +56,7 @@ export const FileSizeComparison: FC<FileSizeComparisonProps> = ({
 					transition={{ duration: 0.4, delay: 0.15 }}
 				>
 					{showReduction && (
-						<span className="text-primary text-sm font-semibold leading-none">
+						<span className="text-primary text-sm leading-none font-semibold">
 							-{reductionPercent}%
 						</span>
 					)}

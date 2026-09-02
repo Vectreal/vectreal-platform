@@ -1,7 +1,4 @@
-import type {
-	SceneAssetRefMap,
-	SerializedSceneAssetDataMap
-} from '@vctrl/core'
+import type { SceneAssetRefMap, SerializedSceneAssetDataMap } from '@vctrl/core'
 
 export interface FetchManifestAssetsOptions {
 	headers?: HeadersInit

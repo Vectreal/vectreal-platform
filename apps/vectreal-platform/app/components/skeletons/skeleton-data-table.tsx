@@ -31,10 +31,7 @@ export function SkeletonDataTable({
 
 			<div className="ds-raised rounded-2xl p-2">
 				<div
-					className={cn(
-						'grid h-11 items-center gap-4 px-3',
-						COLUMN_TEMPLATE
-					)}
+					className={cn('grid h-11 items-center gap-4 px-3', COLUMN_TEMPLATE)}
 				>
 					<Skeleton className="size-4 rounded" />
 					<Skeleton className="h-3 w-24" />
@@ -49,10 +46,7 @@ export function SkeletonDataTable({
 				{Array.from({ length: rows }, (_, index) => (
 					<div
 						key={index}
-						className={cn(
-							'grid items-center gap-4 px-3 py-3',
-							COLUMN_TEMPLATE
-						)}
+						className={cn('grid items-center gap-4 px-3 py-3', COLUMN_TEMPLATE)}
 					>
 						<Skeleton
 							className="size-4 rounded"

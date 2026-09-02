@@ -131,7 +131,11 @@ describe('useLoadModel state', () => {
 	it('surfaces a failed scene load rather than leaving the previous scene up', async () => {
 		vi.stubGlobal(
 			'fetch',
-			vi.fn(async () => ({ ok: false, status: 500, statusText: 'Server Error' }))
+			vi.fn(async () => ({
+				ok: false,
+				status: 500,
+				statusText: 'Server Error'
+			}))
 		)
 
 		const { result } = renderHook(() => useLoadModel())

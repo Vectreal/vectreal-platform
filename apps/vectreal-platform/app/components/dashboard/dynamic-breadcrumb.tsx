@@ -132,7 +132,10 @@ export const DynamicBreadcrumb = memo(() => {
 							</BreadcrumbItem>
 							<BreadcrumbSeparator />
 							<BreadcrumbItem>
-								<Skeleton className="h-4 w-16" style={{ animationDelay: '90ms' }} />
+								<Skeleton
+									className="h-4 w-16"
+									style={{ animationDelay: '90ms' }}
+								/>
 							</BreadcrumbItem>
 							<BreadcrumbSeparator />
 							<BreadcrumbItem>

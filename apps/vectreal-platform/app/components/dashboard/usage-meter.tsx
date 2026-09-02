@@ -187,12 +187,7 @@ interface UsageMeterGridProps {
 /** Responsive grid for `UsageMeter` tiles. */
 export function UsageMeterGrid({ children, className }: UsageMeterGridProps) {
 	return (
-		<div
-			className={cn(
-				'grid grid-cols-2 gap-3 lg:grid-cols-4',
-				className
-			)}
-		>
+		<div className={cn('grid grid-cols-2 gap-3 lg:grid-cols-4', className)}>
 			{children}
 		</div>
 	)

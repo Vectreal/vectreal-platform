@@ -25,10 +25,7 @@ import {
  */
 
 export type EmbedAccessFailure =
-	| 'missing_token'
-	| 'invalid_token'
-	| 'rate_limited'
-	| 'domain_not_allowed'
+	'missing_token' | 'invalid_token' | 'rate_limited' | 'domain_not_allowed'
 
 /** The row the key lookup returns, or null when no live key matched. */
 export type EmbedKeyMatch = {
@@ -74,7 +71,9 @@ export function getPreviewTokenFromRequest(request: Request): string | null {
  * is a real case rather than an error: `window.open(url, 'noopener,noreferrer')`
  * strips `Referer`, and so does a `no-referrer` policy on the embedding page.
  */
-export function resolveRequestHostContext(request: Request): RequestHostContext {
+export function resolveRequestHostContext(
+	request: Request
+): RequestHostContext {
 	const refererHost = extractHostFromHeader(request.headers.get('referer'))
 	if (refererHost) {
 		return { host: refererHost, source: 'referer' }

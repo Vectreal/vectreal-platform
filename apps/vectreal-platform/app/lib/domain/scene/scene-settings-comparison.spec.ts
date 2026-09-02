@@ -74,7 +74,10 @@ describe('haveSceneSettingsChanged', () => {
 	// SceneSettings is compared from the moment it exists rather than the day
 	// someone remembers to add it here.
 	it('compares a field the comparison was never told about', () => {
-		const current = { ...settings(), somethingNew: { size: 2 } } as SceneSettings
+		const current = {
+			...settings(),
+			somethingNew: { size: 2 }
+		} as SceneSettings
 
 		expect(
 			haveSceneSettingsChanged(current, row({ somethingNew: { size: 2 } }), [])
@@ -120,11 +123,9 @@ describe('haveSceneSettingsChanged', () => {
 
 	it('reports no change when the hotspots match', () => {
 		expect(
-			haveSceneSettingsChanged(
-				settings({ hotspots: [hotspot('a')] }),
-				row(),
-				[hotspot('a')]
-			)
+			haveSceneSettingsChanged(settings({ hotspots: [hotspot('a')] }), row(), [
+				hotspot('a')
+			])
 		).toBe(false)
 	})
 

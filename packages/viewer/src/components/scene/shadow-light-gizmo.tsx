@@ -125,7 +125,11 @@ const ShadowLightGizmo = ({
 			onPointerOut={() => setHovered(false)}
 		>
 			<sphereGeometry args={[markerRadius, 16, 16]} />
-			<meshBasicMaterial color={markerColor} toneMapped={false} depthTest={false} />
+			<meshBasicMaterial
+				color={markerColor}
+				toneMapped={false}
+				depthTest={false}
+			/>
 		</mesh>
 	)
 

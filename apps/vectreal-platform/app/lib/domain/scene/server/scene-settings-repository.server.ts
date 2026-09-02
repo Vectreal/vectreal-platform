@@ -1,7 +1,12 @@
 import { and, eq, notInArray, sql } from 'drizzle-orm'
 
 import * as dbSchema from '../../../../db/schema'
-import { assets, sceneAssets, sceneHotspots, sceneSettings } from '../../../../db/schema'
+import {
+	assets,
+	sceneAssets,
+	sceneHotspots,
+	sceneSettings
+} from '../../../../db/schema'
 import {
 	SceneSettingsUpsertInput,
 	SceneSettingsWithAssets
@@ -43,7 +48,7 @@ export function rowToSceneSettings(
 		interactions: row.interactions ?? undefined,
 		normalization: row.normalization ?? undefined,
 		shadows: row.shadows ?? undefined,
-		hotspots: hotspots.length > 0 ? hotspots : undefined,
+		hotspots: hotspots.length > 0 ? hotspots : undefined
 	}
 }
 
@@ -169,7 +174,11 @@ export async function getHotspotsBySceneSettingsId(
 	return rows.map((r) => ({
 		id: r.id,
 		name: r.name,
-		worldPosition: [r.worldPositionX, r.worldPositionY, r.worldPositionZ] as [number, number, number],
+		worldPosition: [r.worldPositionX, r.worldPositionY, r.worldPositionZ] as [
+			number,
+			number,
+			number
+		],
 		linkedCameraId: r.linkedCameraId ?? undefined,
 		visible: r.visible,
 		internalOnly: r.internalOnly,

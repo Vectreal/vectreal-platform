@@ -7,10 +7,6 @@
 		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": true
 	},
-	"exclude": [
-		"src/**/*.spec.ts",
-		"src/**/*.test.ts",
-		"**/*.stories.ts"
-	],
+	"exclude": ["src/**/*.spec.ts", "src/**/*.test.ts", "**/*.stories.ts"],
 	"include": ["src/**/*.ts"]
 }

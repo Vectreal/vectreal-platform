@@ -26,7 +26,7 @@ export function SnapRow({
 		<Tag
 			style={{ WebkitOverflowScrolling: 'touch' }}
 			className={cn(
-				'no-scrollbar -mx-6 flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-pl-6 px-6 pb-1',
+				'no-scrollbar -mx-6 flex snap-x snap-mandatory scroll-pl-6 gap-6 overflow-x-auto px-6 pb-1',
 				gridClassName,
 				className
 			)}

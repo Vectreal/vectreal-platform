@@ -86,7 +86,10 @@ describe('resolvePlaybackClips', () => {
 
 	it('returns nothing when animation is disabled', () => {
 		expect(
-			resolvePlaybackClips(settings([config('Spin')], { enabled: false }), model)
+			resolvePlaybackClips(
+				settings([config('Spin')], { enabled: false }),
+				model
+			)
 		).toEqual([])
 	})
 
@@ -134,10 +137,7 @@ describe('resolvePlaybackClips', () => {
 	it('sorts by author order rather than clip order', () => {
 		expect(
 			resolvePlaybackClips(
-				settings([
-					config('Spin', { order: 5 }),
-					config('Idle', { order: 1 })
-				]),
+				settings([config('Spin', { order: 5 }), config('Idle', { order: 1 })]),
 				model
 			).map((entry) => entry.clipId)
 		).toEqual([idOf('Idle'), idOf('Spin')])
@@ -157,10 +157,9 @@ describe('resolvePlaybackClips', () => {
 		// a chain parked on one stalls forever with nothing to explain it.
 		it('forces every clip but the last to end', () => {
 			const resolved = resolvePlaybackClips(
-				settings(
-					[config('Spin', { order: 0 }), config('Idle', { order: 1 })],
-					{ mode: 'sequence' }
-				),
+				settings([config('Spin', { order: 0 }), config('Idle', { order: 1 })], {
+					mode: 'sequence'
+				}),
 				model
 			)
 

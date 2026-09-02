@@ -44,8 +44,7 @@ interface ModelProviderPropsWithoutOptimizer extends React.PropsWithChildren {
  * ensuring type safety for both scenarios.
  */
 type ModelProviderProps =
-	| ModelProviderPropsWithOptimizer
-	| ModelProviderPropsWithoutOptimizer
+	ModelProviderPropsWithOptimizer | ModelProviderPropsWithoutOptimizer
 
 /**
  * Context for model loading with optimizer integration.
@@ -154,7 +153,7 @@ function useModelContext(requireOptimizer: true): UseLoadModelReturn<true>
  * @param requireOptimizer - Set to false to explicitly indicate no optimizer
  */
 function useModelContext(requireOptimizer: false): UseLoadModelReturn<false>
- 
+
 function useModelContext(_?: boolean): UseLoadModelReturn<boolean> {
 	// Check both contexts - only one will have a value based on how ModelProvider was configured
 	const withOptimizer = useContext(ModelContextWithOptimizer)

@@ -145,7 +145,7 @@ describe('reportServerError', () => {
 	  The call sites this replaced logged `{ sceneId, assetId, userId }` beside
 	  the error, and that context is the difference between a stack and a lead.
 	*/
-	it('carries the call site\'s own context', () => {
+	it("carries the call site's own context", () => {
 		reportServerError(new Error('boom'), {
 			...serving('https://vectreal.io/api/scenes/s1'),
 			properties: { sceneId: 's1', assetId: 'a1' }
@@ -218,11 +218,9 @@ describe('reportServerError', () => {
 		)
 
 		const [error, , properties] = captureException.mock.calls[0]
-		expect(JSON.stringify([error.message, error.stack, properties])).not.toContain(
-			'vk_live_secret'
-		)
-		expect(JSON.stringify(logged.mock.calls)).not.toContain(
-			'vk_live_secret'
-		)
+		expect(
+			JSON.stringify([error.message, error.stack, properties])
+		).not.toContain('vk_live_secret')
+		expect(JSON.stringify(logged.mock.calls)).not.toContain('vk_live_secret')
 	})
 })

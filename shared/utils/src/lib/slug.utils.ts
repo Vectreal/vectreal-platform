@@ -8,7 +8,8 @@ export function slugify(name: string, fallback = 'item'): string {
 			.toLowerCase()
 			.trim()
 			.replace(/[^a-z0-9]+/g, '-')
-			.replace(/^-/, '').replace(/-$/, '') || fallback
+			.replace(/^-/, '')
+			.replace(/-$/, '') || fallback
 	)
 }
 

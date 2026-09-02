@@ -35,8 +35,7 @@ const GridBackground = () => (
 	<div
 		className="absolute inset-0 opacity-25"
 		style={{
-			backgroundImage:
-				`radial-gradient(circle, ${TINT.dots} 1px, transparent 1px)`,
+			backgroundImage: `radial-gradient(circle, ${TINT.dots} 1px, transparent 1px)`,
 			backgroundSize: '24px 24px'
 		}}
 	/>
@@ -116,8 +115,7 @@ export const WelcomeVisual: ComponentType = () => {
 				<div
 					className="absolute bottom-8 -left-16 h-48 w-48 rounded-full"
 					style={{
-						background:
-							`radial-gradient(circle, ${TINT.hairline}, transparent 70%)`,
+						background: `radial-gradient(circle, ${TINT.hairline}, transparent 70%)`,
 						filter: 'blur(36px)'
 					}}
 				/>
@@ -274,7 +272,10 @@ export const PublishVisual: ComponentType = () => {
 						<div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
 							<motion.div
 								className="h-full rounded-full"
-								animate={{ width: `${quality}%`, backgroundColor: 'var(--orange)' }}
+								animate={{
+									width: `${quality}%`,
+									backgroundColor: 'var(--orange)'
+								}}
 								transition={{ type: 'spring', stiffness: 80, damping: 20 }}
 							/>
 						</div>

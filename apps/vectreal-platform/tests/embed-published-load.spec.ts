@@ -50,7 +50,11 @@ function stubFetch(manifestBody: unknown, manifestStatus = 200) {
 		calls.push({ url, method: init?.method ?? 'GET' })
 
 		if (url === MODEL_URL) {
-			return { ok: true, status: 200, arrayBuffer: async () => GLB_BYTES.buffer }
+			return {
+				ok: true,
+				status: 200,
+				arrayBuffer: async () => GLB_BYTES.buffer
+			}
 		}
 		if (url === BAKE_URL) {
 			return {

@@ -88,7 +88,7 @@ const PillGroup = ({
 					className={cn(
 						'rounded-full border px-4 py-1.5 text-sm font-medium transition-all duration-150',
 						active
-							? 'border-[rgb(var(--orange-rgb)/0.6)] bg-[rgb(var(--orange-rgb)/0.12)] text-orange'
+							? 'text-orange border-[rgb(var(--orange-rgb)/0.6)] bg-[rgb(var(--orange-rgb)/0.12)]'
 							: 'text-primary/55 hover:border-primary/25 hover:text-primary/80 border-primary/12 bg-primary/4'
 					)}
 				>

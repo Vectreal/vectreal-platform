@@ -49,9 +49,7 @@ export const usePublisherSaveAction = ({
 
 		try {
 			const result = (await saveSceneSettings(saveLocationTarget)) as
-				| SaveSceneResult
-				| { unchanged: true }
-				| undefined
+				SaveSceneResult | { unchanged: true } | undefined
 
 			if (result) {
 				if (result.unchanged) {

@@ -65,7 +65,12 @@ function getUnlockedHighlights(
 			const k = key as keyof typeof planEntitlements
 			return planEntitlements[k] && !baseEntitlements[k]
 		})
-		.map((key) => ENTITLEMENT_DISPLAY_LABELS[key as keyof typeof ENTITLEMENT_DISPLAY_LABELS] ?? key)
+		.map(
+			(key) =>
+				ENTITLEMENT_DISPLAY_LABELS[
+					key as keyof typeof ENTITLEMENT_DISPLAY_LABELS
+				] ?? key
+		)
 		.slice(0, 5)
 }
 

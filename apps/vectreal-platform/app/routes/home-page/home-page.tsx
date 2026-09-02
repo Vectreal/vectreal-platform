@@ -158,7 +158,6 @@ const FAQ_ITEMS: { value: string; q: string; a: string }[] = [
 	}
 ]
 const HomePage = () => {
-
 	return (
 		<main className="bg-background overflow-x-clip">
 			{/* 1. Cinematic hero */}
@@ -382,7 +381,9 @@ const HomePage = () => {
 								<span style={{ color: SYNTAX.keyword }}>{'from'}</span>
 								<span className="text-orange">{" '@vctrl/viewer'\n\n"}</span>
 								<span className="text-foreground">{'<'}</span>
-								<span style={{ color: SYNTAX.component }}>{'VectrealViewer'}</span>
+								<span style={{ color: SYNTAX.component }}>
+									{'VectrealViewer'}
+								</span>
 								<span style={{ color: SYNTAX.attribute }}>{' src'}</span>
 								<span className="text-foreground">{'='}</span>
 								<span className="text-orange">{'{modelUrl}'}</span>

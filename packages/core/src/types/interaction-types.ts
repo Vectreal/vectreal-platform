@@ -26,9 +26,7 @@ export interface HostMessageTrigger {
 
 /** Serializable trigger contract persisted with scene settings. */
 export type SceneInteractionTrigger =
-	| HostMessageTrigger
-	| HostScrollProgressTrigger
-	| ViewerReadyTrigger
+	HostMessageTrigger | HostScrollProgressTrigger | ViewerReadyTrigger
 
 /** Imperatively activates one of the persisted scene cameras. */
 export interface ActivateCameraAction {
@@ -51,9 +49,7 @@ export interface EmitCustomEventAction {
 
 /** Serializable action contract persisted with scene settings. */
 export type SceneInteractionAction =
-	| ActivateCameraAction
-	| EmitCustomEventAction
-	| SetControlsEnabledAction
+	ActivateCameraAction | EmitCustomEventAction | SetControlsEnabledAction
 
 /** One ordered, optionally disabled interaction rule persisted with a scene. */
 export interface SceneInteractionDefinition {

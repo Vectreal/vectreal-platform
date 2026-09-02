@@ -90,9 +90,7 @@ describe('normalizeSceneAnimation', () => {
 	})
 
 	it('strips repetitions from a clip that plays once', () => {
-		const result = withClips([
-			{ clipId: 'spin', loop: 'once', repetitions: 4 }
-		])
+		const result = withClips([{ clipId: 'spin', loop: 'once', repetitions: 4 }])
 
 		expect(result?.clips[0]).not.toHaveProperty('repetitions')
 	})
@@ -104,9 +102,7 @@ describe('normalizeSceneAnimation', () => {
 			{ clipId: 'b', order: 20 }
 		])
 
-		expect(
-			result?.clips.map((entry) => [entry.clipId, entry.order])
-		).toEqual([
+		expect(result?.clips.map((entry) => [entry.clipId, entry.order])).toEqual([
 			['c', 2],
 			['a', 0],
 			['b', 1]

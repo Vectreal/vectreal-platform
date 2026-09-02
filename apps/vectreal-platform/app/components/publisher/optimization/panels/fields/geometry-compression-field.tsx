@@ -48,9 +48,7 @@ export const GeometryCompressionField: FC = () => {
 						<Label className="text-sm font-semibold">Compression method</Label>
 						<ToggleButtonGroup
 							options={METHOD_OPTIONS}
-							isActive={(value) =>
-								(draco?.method ?? 'edgebreaker') === value
-							}
+							isActive={(value) => (draco?.method ?? 'edgebreaker') === value}
 							onChange={(method) => update('draco', { method })}
 						/>
 					</div>

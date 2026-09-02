@@ -256,7 +256,9 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 									onOptimize={handleOptimizeClick}
 									onStackOptimize={handleStackOptimizeClick}
 									isPending={isPending}
-									mode={hasCompletedOptimizationPass ? 'optimize-more' : 'apply'}
+									mode={
+										hasCompletedOptimizationPass ? 'optimize-more' : 'apply'
+									}
 									isPreparing={isOptimizerPreparing}
 								/>
 							</div>

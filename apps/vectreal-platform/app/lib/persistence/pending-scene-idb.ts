@@ -100,7 +100,10 @@ const deleteExpiredDrafts = async () => {
 	const now = Date.now()
 	const db = await getPendingSceneDB()
 
-	for (const storeName of [PENDING_SCENE_STORE_NAME, ORIGINAL_SCENE_STORE_NAME]) {
+	for (const storeName of [
+		PENDING_SCENE_STORE_NAME,
+		ORIGINAL_SCENE_STORE_NAME
+	]) {
 		const tx = db.transaction(storeName, 'readwrite')
 		let cursor = await tx.objectStore(storeName).openCursor()
 
@@ -175,8 +178,7 @@ export const loadPendingSceneDraft = async (
 		const db = await getPendingSceneDB()
 		const resolvedId = draftId ?? getTabDraftId()
 		const draft = (await db.get(PENDING_SCENE_STORE_NAME, resolvedId)) as
-			| PendingSceneDraft
-			| undefined
+			PendingSceneDraft | undefined
 
 		if (!draft) {
 			return null
@@ -235,7 +237,10 @@ export const saveOriginalSceneModel = async (
 		await db.put(ORIGINAL_SCENE_STORE_NAME, entry)
 		return id
 	} catch (error) {
-		console.warn('[pending-scene-idb] failed to save original scene model', error)
+		console.warn(
+			'[pending-scene-idb] failed to save original scene model',
+			error
+		)
 		return false
 	}
 }
@@ -260,8 +265,7 @@ export const loadOriginalSceneModel = async (
 		const db = await getPendingSceneDB()
 		const resolvedId = draftId ?? getTabDraftId()
 		const entry = (await db.get(ORIGINAL_SCENE_STORE_NAME, resolvedId)) as
-			| OriginalSceneModel
-			| undefined
+			OriginalSceneModel | undefined
 
 		if (!entry) {
 			return null
@@ -274,7 +278,10 @@ export const loadOriginalSceneModel = async (
 
 		return entry
 	} catch (error) {
-		console.warn('[pending-scene-idb] failed to load original scene model', error)
+		console.warn(
+			'[pending-scene-idb] failed to load original scene model',
+			error
+		)
 		return null
 	}
 }

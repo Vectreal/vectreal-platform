@@ -167,9 +167,8 @@ describe('reconcileSceneAnimation', () => {
 				}
 			])
 			expect(
-				result.settings.clips.find(
-					(entry) => entry.clipId === idOf('Renamed')
-				)?.timeScale
+				result.settings.clips.find((entry) => entry.clipId === idOf('Renamed'))
+					?.timeScale
 			).toBe(3)
 		})
 
@@ -210,9 +209,8 @@ describe('reconcileSceneAnimation', () => {
 				'Renamed'
 			])
 			expect(
-				second.settings.clips.find(
-					(entry) => entry.clipId === idOf('Renamed')
-				)?.timeScale
+				second.settings.clips.find((entry) => entry.clipId === idOf('Renamed'))
+					?.timeScale
 			).toBe(7)
 		})
 	})
@@ -260,8 +258,19 @@ describe('reconcileSceneAnimation', () => {
 	it('reconciles unnamed clips positionally, which is all they have', () => {
 		const [first, second] = model('', '')
 		const saved = settings([
-			{ ...clip(''), clipId: first?.clipId as string, sourceIndex: 0, order: 0, timeScale: 2 },
-			{ ...clip(''), clipId: second?.clipId as string, sourceIndex: 1, order: 1 }
+			{
+				...clip(''),
+				clipId: first?.clipId as string,
+				sourceIndex: 0,
+				order: 0,
+				timeScale: 2
+			},
+			{
+				...clip(''),
+				clipId: second?.clipId as string,
+				sourceIndex: 1,
+				order: 1
+			}
 		])
 
 		const result = reconcileSceneAnimation(saved, model('', ''))
