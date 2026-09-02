@@ -1,0 +1,193 @@
+---
+title: "3D on a Shopify product page: three slots, and what each one costs"
+slug: "3d-on-a-shopify-product-page"
+excerpt: "A model can go in three places on a Shopify product page. Two of them I ran in a test store: upload a GLB as product media, or paste an embed into a Custom Liquid section below the product details. The third is the gallery itself, which the theme editor will not hand to your own viewer, and which Shopify's own documentation says a theme edit can."
+publishedAt: "2026-08-18"
+updatedAt: "2026-08-19"
+category: "guides"
+tags:
+  - "glb"
+  - "embed"
+  - "viewer"
+  - "optimization"
+author:
+    name: "Moritz Becker"
+    role: "Founder at Vectreal"
+    bio: "Building open infrastructure for practical 3D on the web."
+    avatar: "/assets/images/author-image.jpeg"
+    linkedinUrl: "https://www.linkedin.com/in/moritz-becker-5751851a1"
+draft: false
+coverImage: "/assets/images/newsroom/og-3d-on-a-shopify-product-page.webp"
+
+voice: A
+author_persona: moritz
+type: "Integration Guide"
+premise: capability
+pillar: Quality
+seo_cluster: "3D on the web / shopify 3d model product page"
+cta: https://vectreal.com/publisher
+sceneImage: "/assets/images/newsroom/scene-3d-on-a-shopify-product-page.webp"
+---
+
+You have a model of a product and a Shopify product page. There are three places the model can go, and they cost a file upload, a paste, and a theme edit.
+
+<video src="/assets/images/newsroom/12/shopify-gallery-glb.mp4" autoPlay muted loop playsInline aria-label="A shop product gallery showing a still product photo, which gives way to the same product as a 3D model being turned by hand, then returns to the photo."></video>
+
+| Slot | What renders it | What it takes |
+| --- | --- | --- |
+| The product media gallery | Shopify's own viewer | A GLB uploaded as product media |
+| Any section below the product details | Your Vectreal embed | A Custom Liquid section holding an iframe |
+| The product media gallery, with your viewer in it | Your Vectreal embed | An edit to the theme's Liquid |
+
+I ran the first two in a test store. The third I have only read my way to, and I say so again in that section, because it is the one people want and it is the one I have not done.
+
+## Slot one: hand Shopify's gallery a GLB
+
+Shopify accepts `GLB` and `USDZ` as product media, up to 500 MB, and it optimizes anything over 15 MB on upload ([Shopify Help Center, product media types](https://help.shopify.com/en/manual/products/product-media/product-media-types), accessed 2026-08-14). Shopify's own modelling checklist tells the people making these files to land at "about 4 MB" total ([3D modelling checklist](https://help.shopify.com/en/partners/resources/creating-media/3d-models/creating-3d-models/3d-modeling-checklist), accessed 2026-08-14).
+
+Two orders of magnitude between what the platform accepts and what it advises. What matters in that spread is the 15 MB line, because above it Shopify decides what to throw away and below it you do.
+
+So export the file yourself. In the [Publisher](https://vectreal.com/publisher), the publish sidebar's Download panel offers four formats:
+
+- **GLB (Binary)**, a single file with textures included
+- **GLTF (ZIP)**, JSON plus separate assets
+- **GLB (Draco-compressed)**, described in the panel as the smallest download
+- **USDZ**, which the panel labels for AR Quick Look on iOS and macOS
+
+Pick `GLB (Draco-compressed)`, download it, and upload it to the product's Media section in the Shopify admin the same way you would upload a photo. Shopify renders it in the gallery, click to interact, alongside the stills.
+
+That is the whole first slot. No app, no code, no iframe. It is also the slot that matters most, because the gallery is where a shopper goes looking for product photos, so a model landing there replaces one.
+
+Two limits worth knowing before you plan around this slot, both Shopify's:
+
+**A 3D model cannot be variant media.** Shopify's docs are explicit that 3D models and videos cannot be attached to a product variant ([adding product media](https://help.shopify.com/en/manual/products/product-media/add-media), accessed 2026-08-14). A model per colourway, switching when the shopper picks a swatch, is not something this slot does.
+
+**The theme has to support 3D media.** Shopify's own guidance is that a theme needs to support 3D models to display them, and that some older supported themes may need updating first ([adding product media](https://help.shopify.com/en/manual/products/product-media/add-media), accessed 2026-08-14). Check your theme before you spend an afternoon on the file.
+
+## Slot two: your own embed, below the product details
+
+Everything a scene has been configured with lives here. Cameras, framing, environment, the interactions you set up. Shopify's gallery viewer does not know about any of that, because it is rendering a file rather than a scene.
+
+Publish the scene, then in the theme editor open the product template and add a **Custom Liquid** element. Horizon offers it two ways: as a section of its own under **Add section**, and as a block inside an existing section under **Add block**. Take the block if the scene belongs beside existing content rather than in a full-width band.
+
+Then copy the snippet out of the Publisher's **Embed** section and paste it in whole. It looks like this:
+
+```html
+<style>
+  /* Lets the embed fill a bare flex parent, such as a Shopify Custom Liquid block. */
+  @layer { div:not([class]):not([style]):has(> .vctrl-embed) { flex-grow: 1; } }
+</style>
+<div class="vctrl-embed" style="width: 100%; max-width: 100%; height: 400px;">
+  <iframe
+    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=vctrl_your_key_here"
+    style="width: 100%; height: 100%; border: 0;"
+    allow="autoplay; xr-spatial-tracking"
+    allowfullscreen
+  ></iframe>
+</div>
+```
+
+Copy it rather than retyping it. The panel fills in the project, the scene and a real key, and a key pasted by hand into that `src` with quotes around it closes the attribute at the first quote, so the browser requests an empty token and the embed answers `404` with nothing to say why.
+
+The `height` is a plain inline style, so change it once it is in. The stylesheet above it earns its place on the **block** specifically: Horizon renders a Custom Liquid block into a bare `<div>` and lays it out as a flex item, and a flex item sizes to its content, so `width: 100%` inside it resolves against the 300px every iframe defaults to. The scene comes out 300px wide in a full-width section, and nothing you change inside the snippet's own box fixes it, because the element that needs fixing is the one Shopify wrapped around it. The Custom Liquid **section** carries a class and sizing of its own and never had the problem. The rule sits in an anonymous cascade layer and skips any parent the theme marked up, so where your theme has an opinion about that element, your theme wins.
+
+![A Shopify theme editor with a Custom Liquid block selected, its code panel open beside the storefront preview, where the 3D scene fills the left half of a split section on the product page.](/assets/images/newsroom/12/custom-liquid-section.webp)
+
+Drag it to where you want it. Below the product details is where I put it, so the gallery does its job at the top of the page and the configured scene is what a shopper meets on the way down.
+
+<video src="/assets/images/newsroom/12/shopify-embed-below-details.mp4" autoPlay muted loop playsInline aria-label="A product page scrolling down past price and description to a full-width 3D scene, where the product turns under a set camera before the page scrolls back up."></video>
+
+### The step that will otherwise look broken
+
+**Add your store's domains to the project's allowed embed domains before you save the section**, or the iframe will not render your scene and nothing on the page will tell you which host was refused.
+
+![A project settings panel with an Allowed Embed Domains field listing six patterns one per line, including a leading-wildcard entry for myshopify.com stores.](/assets/images/newsroom/12/allowed-embed-domains.webp)
+
+The embed route authenticates by preview API key and nothing else. A request with no token gets a 404 rather than falling back to your session, which is deliberate: it means a signed-in visitor and an anonymous one see exactly the same thing. Then the key is checked against the project's allowed domain list, matched on the requesting page's host, and **an empty list matches nothing**. A request coming from vectreal.com itself still resolves, which is exactly why this does not bite while you are testing and then refuses everything the moment the iframe is on your store.
+
+Patterns are exact hosts, or a leading wildcard:
+
+```
+your-store.myshopify.com
+shop.example.com
+*.example.com
+```
+
+A leading wildcard covers subdomains and not the bare domain, so `*.example.com` does not match `example.com`. List every host your storefront actually answers on, which for a Shopify store usually means both the `myshopify.com` host and your custom domain.
+
+That domain list is why the token in the snippet above can sit in public page source. The key is stored hashed, scoped to its project, checked against the list on every request, and revocable, so the same iframe pasted onto somebody else's site is refused.
+
+### Driving it from the page
+
+The embed speaks a structured postMessage protocol, and [`@vctrl/embed`](https://vectreal.com/docs/guides/embed-sdk) wraps it in a promise-based API for switching cameras, toggling controls and subscribing to viewer events. Static configuration needs no JavaScript at all: `?camera=hero` on the iframe `src` activates a named camera once the viewer is ready.
+
+## Slot three: the gallery itself, which is a theme edit
+
+I went into the test store wanting this one and came out without it. I could not find a setting anywhere in the theme editor that hands the gallery to anything but Shopify's own viewer.
+
+That turns out to be the wrong place to have been looking.
+
+**Everything in this section comes from Shopify's documentation and from reading the source of Dawn and Horizon. I have not run it.** When I do, this section gets rewritten with what actually happened, which is usually different. Read it as a map rather than a report.
+
+### Liquid hands you the file
+
+This is the part I did not expect, and it is what makes the rest worth doing.
+
+Shopify's `model_source` object has three properties: `url`, described in the docs as "the CDN URL of the model source file", plus `format` and `mime_type` ([Liquid reference, model_source](https://shopify.dev/docs/api/liquid/objects/model_source), accessed 2026-08-18). It is reached through `product.media`, whose entries carry a `media_type` of `image`, `model`, `video` or `external_video`, and a `model` exposes `sources` ([media](https://shopify.dev/docs/api/liquid/objects/media) and [model](https://shopify.dev/docs/api/liquid/objects/model), both accessed 2026-08-18). So a theme can ask for the model the merchant already uploaded:
+
+```liquid
+{% assign model = product.media | where: 'media_type', 'model' | first %}
+{% assign glb = model.sources | where: 'format', 'glb' | first %}
+{{ glb.url }}
+```
+
+Both formats are there, because Shopify derives the USDZ from the GLB that was uploaded ([Admin API, Model3dSource](https://shopify.dev/docs/api/admin-graphql/latest/objects/Model3dSource), accessed 2026-08-18), so `format` picks whichever you want.
+
+What that means in practice: a replacement viewer does not need the model hosted twice. The file in Shopify's gallery and the file in your viewer are the same file, and the merchant goes on managing it in the admin the way they manage photos.
+
+### The rendering is one filter, and a theme can decline to call it
+
+`model_viewer_tag` emits Google's `<model-viewer>` element ([Liquid reference, model_viewer_tag](https://shopify.dev/docs/api/liquid/filters/model_viewer_tag), accessed 2026-08-18). `media_tag` is the polymorphic version that picks a tag per media type ([media_tag](https://shopify.dev/docs/api/liquid/filters/media_tag), accessed 2026-08-18). Both are ordinary output filters. I could find nothing in Shopify's documentation that requires a theme to call either one, so as far as the docs go a theme can emit its own iframe instead.
+
+Where that call sits depends on the theme:
+
+- **Dawn** renders `product-media-gallery` as a snippet from `sections/main-product.liquid`, and the per-media switch is in `snippets/product-thumbnail.liquid`.
+- **Horizon**, one of the free themes Shopify [shipped in May 2025](https://changelog.shopify.com/posts/horizon-10-new-free-themes-by-shopify) (accessed 2026-08-18), renders the gallery as a static theme block from `sections/product-information.liquid`, and the per-media switch is in `snippets/product-media.liquid`.
+
+Both read from `Shopify/dawn` and `Shopify/horizon` at `main` on 2026-08-18, Dawn at theme version 16.0.0. Theme files move, so check yours rather than trusting a path out of an article.
+
+Both come down to one render call and a new file of your own. Shopify's theme updater carries non-conflicting code edits through an update and tells you when it could not ([updating themes](https://help.shopify.com/en/manual/online-store/themes/managing-themes/updating-themes), accessed 2026-08-18), so a one-line swap plus a file the theme has never seen is the shape most likely to survive one. Editing the gallery snippet in place is the shape least likely to.
+
+### What you would be giving up
+
+Shopify's AR launcher, the "View in your space" button, is a separate library that the theme opts into by calling `Shopify.loadFeatures` and then `ShopifyXR.addModels` ([support product media](https://shopify.dev/docs/storefronts/themes/product-merchandising/media/support-media), accessed 2026-08-18). A theme that does not call it does not get the button. You can call `ShopifyXR.launchXR()` from a button of your own, or skip the library and point an `<a rel="ar">` at the USDZ that `model.sources` already handed you.
+
+There is also `Shopify.ModelViewerUI`, the poster and play controls wrapped around `<model-viewer>` in Dawn. I could not find a reference page for it anywhere on shopify.dev, so I would treat it as internal and not build on it.
+
+The buy button looks unaffected. I could find nothing in Shopify's documentation connecting product media to the payment button, and Dawn's `buy-buttons.liquid` does not mention media.
+
+### Why this cannot be an app, which is the actually interesting part
+
+The obvious move, once the slot turns out to be reachable, is to ship it as an app: a merchant installs it and the gallery is yours. That door is shut, and it is shut by policy rather than by anything technical.
+
+An app block only renders where the theme author put a door. The section schema has to declare `{"type": "@app"}` and the markup has to render through `{% content_for 'blocks' %}` ([app blocks for themes](https://shopify.dev/docs/storefronts/themes/architecture/blocks/app-blocks), accessed 2026-08-18). Neither reference theme does that inside the gallery, on the same reading of both as above. Horizon's gallery is a statically rendered block, and Shopify's documentation states that app blocks are not supported in statically rendered sections ([static blocks](https://shopify.dev/docs/storefronts/themes/architecture/blocks/theme-blocks/static-blocks), accessed 2026-08-18). Dawn's gallery is a snippet, and the block mechanism in Shopify's documentation belongs to sections and theme blocks rather than to snippets.
+
+Both product sections do declare `@app` elsewhere, which is slot two with a nicer install.
+
+Writing the theme file directly is out too. Asset writes have needed the `write_themes` scope since Admin API 2023-04, public apps need an exemption, and the published exemption categories are page builders that replace the whole layout, backups, Liquid inside repeating blocks, and platform tooling ([the Asset API, legacy](https://shopify.dev/docs/apps/build/online-store/asset-legacy), accessed 2026-08-18). Replacing one component is the partial modification that the page-builder category explicitly excludes. The App Store requirements put it plainly: "If your app modifies the merchant's theme, you need to use theme app extensions. You or merchants should not make any code changes to the theme" ([app store requirements](https://shopify.dev/docs/apps/launch/shopify-app-store/app-store-requirements), accessed 2026-08-18).
+
+Read that last sentence twice. It says merchants too, which reaches an app that ships theme-edit instructions in its onboarding. How strictly that is enforced I do not know, and the documentation does not say.
+
+So the third slot is a developer's edit to one store's theme, and that is what it stays. Not a checkbox, and not something anybody installs.
+
+## Which slot to reach for
+
+Do the gallery slot first, every time, in the version that costs nothing: one export, one upload, and the model is where shoppers already go looking for product photos.
+
+Then the embed slot, for the parts a bare file cannot carry. Cameras, framing, environment and interactions are scene configuration, and a GLB handed to Shopify arrives without any of it.
+
+The useful part is that both come out of the same scene. You upload the model once, optimize it once, set it up once, and then one export feeds Shopify's gallery while the published scene feeds the iframe further down. Neither of those steps needs a developer, and keeping them in sync is not a job you have taken on, because there is only one thing to change.
+
+The third slot is worth it when the gallery is the whole point and Shopify's viewer is not enough: a configurator, or a scene that has to react to the rest of the page. That is a project, on one store, by somebody who edits Liquid. It is also the thing I most want to test next, and when I have, it gets its own write-up rather than a section here.
+
+Either way you need the file first. Upload a model to the [Publisher](https://vectreal.com/publisher), let it optimize, and export the Draco-compressed GLB. That single file is the whole of slot one, the starting point of slot two, and what the third one reaches for out of Shopify's own CDN.
