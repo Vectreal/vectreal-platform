@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, or } from 'drizzle-orm'
 
 export interface ProfileUpdateData {
 	role?: string | null
@@ -12,7 +12,10 @@ import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { organizationMemberships } from '../../../db/schema/core/organization-memberships'
 import { organizations } from '../../../db/schema/core/organizations'
 import { users } from '../../../db/schema/core/users'
+import { assets } from '../../../db/schema/project/assets'
+import { folders } from '../../../db/schema/project/folders'
 import { projects } from '../../../db/schema/project/projects'
+import { deleteStorageObjects } from '../asset/asset-storage.server'
 
 import type { User } from '@supabase/supabase-js'
 
@@ -456,6 +459,17 @@ export async function updateUserProfile(
 }
 
 export async function deleteUserAndRelatedData(userId: string): Promise<void> {
+	// Two cascades reach assets from a user: `assets.owner_id` directly, and
+	// `organizations.owner_id -> projects -> folders -> assets`. Both drop the
+	// rows that hold `file_path`, so the paths are read while they still exist.
+	const assetPaths = await db
+		.selectDistinct({ filePath: assets.filePath })
+		.from(assets)
+		.leftJoin(folders, eq(folders.id, assets.folderId))
+		.leftJoin(projects, eq(projects.id, folders.projectId))
+		.leftJoin(organizations, eq(organizations.id, projects.organizationId))
+		.where(or(eq(assets.ownerId, userId), eq(organizations.ownerId, userId)))
+
 	const deletedUsers = await db.transaction(async (tx) => {
 		// `organization_memberships.invited_by` intentionally uses NO ACTION to
 		// preserve invite history, so clear references before deleting the user.
@@ -473,4 +487,9 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
 	if (deletedUsers.length === 0) {
 		throw new Error('User account not found')
 	}
+
+	// Outside the transaction and never fatal: the caller goes on to delete the
+	// Supabase auth user, and a half-deleted account is worse than a stranded
+	// object.
+	await deleteStorageObjects(assetPaths.map((row) => row.filePath))
 }
