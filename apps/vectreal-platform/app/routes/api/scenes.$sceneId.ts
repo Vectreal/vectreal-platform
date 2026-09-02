@@ -530,29 +530,6 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	const authHeaders = authResult.headers
 
-	/*
-	  Create, rename, delete and move moved to POST /api/dashboard/mutations,
-	  which speaks one contract for projects, folders and scenes and validates a
-	  CSRF token rather than only an origin header.
-
-	  This stub exists for the deploy window: a tab opened before the release
-	  still posts here, and without it the request would fall through to the
-	  scene settings parser and fail in a way nobody can act on.
-	*/
-	if (
-		routeSceneId === 'bulk' ||
-		action === 'create-folder' ||
-		action === 'delete' ||
-		action === 'rename'
-	) {
-		return withAdditionalHeaders(
-			ApiResponse.badRequest(
-				'This action moved to /api/dashboard/mutations. Reload the page and try again.'
-			),
-			authHeaders
-		)
-	}
-
 	if (action === 'update-scene-metadata') {
 		/*
 		  Token CSRF, not just the route's origin check.

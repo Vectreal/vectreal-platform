@@ -1,7 +1,4 @@
-import {
-	buildDashboardCapabilities,
-	capabilitiesFor
-} from './dashboard-capabilities'
+import { buildDashboardCapabilities } from './dashboard-capabilities'
 
 const OWNED_ORG = 'org-owned'
 const MEMBER_ORG = 'org-member'
@@ -75,21 +72,6 @@ describe('dashboard capabilities', () => {
 			})
 
 			expect(capabilities[MEMBER_ORG].quotaExceeded).toBe(false)
-		})
-	})
-
-	describe('capabilitiesFor', () => {
-		it('returns null for an organization the user is not in', () => {
-			const capabilities = buildDashboardCapabilities(MEMBERSHIPS)
-
-			expect(capabilitiesFor(capabilities, 'org-stranger')).toBeNull()
-		})
-
-		it('returns null for a missing organization id', () => {
-			const capabilities = buildDashboardCapabilities(MEMBERSHIPS)
-
-			expect(capabilitiesFor(capabilities, null)).toBeNull()
-			expect(capabilitiesFor(capabilities, undefined)).toBeNull()
 		})
 	})
 })

@@ -1,7 +1,5 @@
 import { randomUUID } from 'node:crypto'
 
-import { eq } from 'drizzle-orm'
-
 import { getDbClient } from '../../../db/client'
 import { consentRecords } from '../../../db/schema/consent/consent-records'
 import {
@@ -103,37 +101,4 @@ export async function upsertConsent(
 
 		return { ...row, anonymousId: resolvedAnonymousId } as ConsentState
 	}
-}
-
-/**
- * Read the most recent consent record for a user or anonymous visitor.
- * Returns null if no record exists (banner not yet shown / answered).
- */
-export async function getConsent(
-	userId: string | null,
-	anonymousId: string | null
-): Promise<ConsentState | null> {
-	const db = getDbClient()
-
-	if (userId) {
-		const rows = await db
-			.select()
-			.from(consentRecords)
-			.where(eq(consentRecords.userId, userId))
-			.limit(1)
-
-		return (rows[0] as ConsentState | undefined) ?? null
-	}
-
-	if (anonymousId) {
-		const rows = await db
-			.select()
-			.from(consentRecords)
-			.where(eq(consentRecords.anonymousId, anonymousId))
-			.limit(1)
-
-		return (rows[0] as ConsentState | undefined) ?? null
-	}
-
-	return null
 }

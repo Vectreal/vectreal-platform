@@ -112,23 +112,6 @@ export function computeOrganizationStats(
 }
 
 /**
- * Gets the most recent projects.
- * Note: Projects table doesn't have updatedAt, so we return projects as-is (in DB order)
- */
-export function getRecentProjects(
-	userProjects: Array<{
-		project: typeof projects.$inferSelect
-		organizationId: string
-	}>,
-	limit = 5
-): Array<{
-	project: typeof projects.$inferSelect
-	organizationId: string
-}> {
-	return userProjects.slice(0, limit)
-}
-
-/**
  * Gets the most recent scenes (by updatedAt).
  */
 export function getRecentScenes(

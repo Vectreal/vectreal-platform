@@ -79,19 +79,6 @@ async function verifyProjectAccess(
 	}
 }
 
-export async function getProjectScenes(
-	projectId: string,
-	userId: string
-): Promise<Array<typeof scenes.$inferSelect>> {
-	await verifyProjectAccess(db, projectId, userId)
-
-	return await db
-		.select()
-		.from(scenes)
-		.where(eq(scenes.projectId, projectId))
-		.orderBy(desc(scenes.updatedAt))
-}
-
 export async function getProjectsScenes(
 	projectIds: string[],
 	userId: string
@@ -419,23 +406,6 @@ export async function getChildFolders(
 		.from(sceneFolders)
 		.where(eq(sceneFolders.parentFolderId, parentFolderId))
 		.orderBy(desc(sceneFolders.updatedAt))
-}
-
-export async function getAccessibleSceneFolders(
-	userId: string
-): Promise<Array<typeof sceneFolders.$inferSelect>> {
-	const rows = await db
-		.select({ folder: sceneFolders })
-		.from(sceneFolders)
-		.innerJoin(projects, eq(projects.id, sceneFolders.projectId))
-		.innerJoin(
-			organizationMemberships,
-			eq(organizationMemberships.organizationId, projects.organizationId)
-		)
-		.where(eq(organizationMemberships.userId, userId))
-		.orderBy(desc(sceneFolders.updatedAt))
-
-	return rows.map(({ folder }) => folder)
 }
 
 /**

@@ -18,9 +18,6 @@ import { getDbClient } from '../../../../db/client'
 import {
 	assets,
 	folders,
-	organizations,
-	permissions,
-	projects,
 	sceneAssets,
 	sceneFolders,
 	scenePublished,
@@ -549,51 +546,6 @@ class SceneSettingsService {
 			status: 'draft' as const,
 			revoked: true as const
 		}
-	}
-
-	/**
-	 * Checks if user has permission for a scene.
-	 * @param sceneId - The scene ID
-	 * @param userId - The user ID
-	 * @param permission - Required permission level
-	 * @returns Whether user has the permission
-	 */
-	async hasScenePermission(
-		sceneId: string,
-		userId: string,
-		permission: 'read' | 'write' | 'admin' | 'delete'
-	): Promise<boolean> {
-		// Get the scene and its project
-		const scene = await this.db
-			.select({
-				scene: scenes,
-				project: projects,
-				organization: organizations
-			})
-			.from(scenes)
-			.leftJoin(projects, eq(scenes.projectId, projects.id))
-			.leftJoin(organizations, eq(projects.organizationId, organizations.id))
-			.where(eq(scenes.id, sceneId))
-			.limit(1)
-
-		if (scene.length === 0) return false
-
-		// Check explicit permissions
-		const userPermission = await this.db
-			.select()
-			.from(permissions)
-			.where(
-				and(
-					eq(permissions.resourceType, 'scene'),
-					eq(permissions.resourceId, sceneId),
-					eq(permissions.entityType, 'user'),
-					eq(permissions.entityId, userId),
-					eq(permissions.permission, permission)
-				)
-			)
-			.limit(1)
-
-		return userPermission.length > 0
 	}
 
 	/**
