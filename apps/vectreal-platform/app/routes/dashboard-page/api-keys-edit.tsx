@@ -318,7 +318,7 @@ export default function ApiKeysEditPage({
 					<DrawerDescription>
 						Update the name, description, or project access for this API key
 					</DrawerDescription>
-					<div className="bg-muted text-muted-foreground mt-2 rounded-md px-3 py-2 text-sm">
+					<div className="bg-muted text-muted-foreground mt-2 rounded-xl px-3 py-2 text-sm">
 						<span className="font-medium">{apiKeyData.apiKey.name}</span>
 						<code className="ml-2 font-mono text-xs">
 							...{apiKeyData.apiKey.keyPreview}
