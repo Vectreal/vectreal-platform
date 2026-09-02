@@ -4,10 +4,8 @@ import Stripe from 'stripe'
 import { getOrgSubscription, getQuotaLimit } from './entitlement-service.server'
 import { getCurrentUsage } from './usage-service.server'
 import { getDbClient } from '../../../db/client'
-import { assets, scenePublished } from '../../../db/schema'
+import { assets, folders, projects, scenePublished } from '../../../db/schema'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
-import { sceneAssets } from '../../../db/schema/project/scene-assets'
-import { sceneSettings } from '../../../db/schema/project/scene-settings'
 import { getStripeClient } from '../../stripe.server'
 import { loadAuthenticatedUser } from '../auth/auth-loader.server'
 import { getUserProjects } from '../project/project-repository.server'
@@ -169,20 +167,27 @@ export async function loadOrgUsage(
 	  billing page and anywhere else it was shown. Summing `assets.file_size`
 	  reports what is actually stored, the same way published scenes are counted
 	  from `scene_published` rather than from a counter.
+
+	  Measured by ownership rather than through `scene_assets`, which got two
+	  things wrong. It could not see an asset that no scene links - a published
+	  GLB lives in `scene_published`, and an upload whose commit failed lives in
+	  neither - so real bytes in the bucket were reported as zero. And because
+	  the sum ran over join rows, an asset shared by several scenes (uploads are
+	  content-addressed and deduplicated per project, so sharing is normal) was
+	  counted once per scene.
+
+	  Walking `assets -> folders -> projects` fixes both at once, and needs no
+	  `distinct` to do it: an asset has exactly one folder and a folder exactly
+	  one project, so every row appears once by construction. The duplicate was
+	  never a property of the asset, only of the join that used to be here.
 	*/
-	const storageRows =
-		allSceneIds.length > 0
-			? await db
-					.select({ total: sql<null | string>`sum(${assets.fileSize})` })
-					.from(assets)
-					.innerJoin(sceneAssets, eq(sceneAssets.assetId, assets.id))
-					.innerJoin(
-						sceneSettings,
-						eq(sceneSettings.id, sceneAssets.sceneSettingsId)
-					)
-					.where(inArray(sceneSettings.sceneId, allSceneIds))
-			: []
-	const storageBytesTotalUsage = Number(storageRows[0]?.total ?? 0)
+	const [storageRow] = await db
+		.select({ total: sql<null | string>`sum(${assets.fileSize})` })
+		.from(assets)
+		.innerJoin(folders, eq(folders.id, assets.folderId))
+		.innerJoin(projects, eq(projects.id, folders.projectId))
+		.where(eq(projects.organizationId, organizationId))
+	const storageBytesTotalUsage = Number(storageRow?.total ?? 0)
 
 	// Published is counted from `scene_published`, not `scenes.status`. The two
 	// can disagree, and the quota is enforced against this table.
