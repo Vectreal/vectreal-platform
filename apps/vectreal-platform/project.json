@@ -269,6 +269,14 @@
 				"command": "pnpm exec tsx scripts/gen-newsroom-thumbnails.ts"
 			}
 		},
+		"purge-orphaned-assets": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"command": "pnpm exec tsx scripts/purge-orphaned-assets.ts"
+			}
+		},
 		"email-preview": {
 			"executor": "nx:run-commands",
 			"options": {
