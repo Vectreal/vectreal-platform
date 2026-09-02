@@ -1,4 +1,3 @@
-import { Alert, AlertDescription } from '@shared/components/ui/alert'
 import { Button } from '@shared/components/ui/button'
 import {
 	Dialog,
@@ -8,34 +7,32 @@ import {
 	DialogHeader,
 	DialogTitle
 } from '@shared/components/ui/dialog'
-import { AlertCircle, CheckCircle2, Copy } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
-import { toast } from 'sonner'
+import { CheckCircle2, Copy } from 'lucide-react'
+import { useId, type FC } from 'react'
+
+import { useClipboardCopy } from '../../hooks/use-clipboard-copy'
 
 /**
  * The moment a freshly minted key is put in front of its owner.
  *
- * The copy here says only what a user can observe: this is where the value is
- * shown, and the key lists elsewhere show four characters.
+ * It makes no claim about secrecy, and there is no warning to dismiss. The
+ * embed token is public by construction - `buildEmbedUrl` puts it in an
+ * `iframe src` on the customer's own page - and it is stored decryptably, so
+ * the API keys list and the embed panel both show it back on demand. This
+ * dialog is a confirmation that the key exists and an offer to copy it, not a
+ * last chance.
  *
- * It deliberately makes no claim about storage. It used to say the key was
- * "stored hashed, so it cannot be read back", which stopped being true when a
- * decryptable copy was added, and telling someone a value is unrecoverable when
- * it is not teaches them to distrust the next warning that is real. The
- * opposite promise - that some other screen will show it to them again - is not
- * made either, because no screen does that yet.
+ * It used to be exactly that last chance: an amber alert, a "copy it now"
+ * instruction, and a `window.confirm` on dismissal asking whether the key had
+ * been copied, with Escape disabled so the question could not be skipped. Every
+ * one of those was protecting a value the next screen hands over anyway, and
+ * warning someone about a loss that cannot happen teaches them to click through
+ * the next warning that is real.
  *
- * This is still the only such dialog: the embed panel used to render a second
- * dialog for the same event, written to its own spec, and the two diverged
- * exactly where it mattered. That one carried `ph-no-capture`, without which
- * the live key is readable in any session replay; this one re-arms the copy
- * check on the plaintext itself, so a key that replaces another without a
- * dismissal in between - which is what rotating twice does - cannot inherit
- * its predecessor's checkmark. Both rules are here now.
- *
- * Creation and rotation share it because they differ only in what the user has
- * to do next - and after a rotation that difference is the whole point: every
- * embed still carrying the previous secret is broken until it is updated.
+ * Creation and rotation share it because they differ only in what has to happen
+ * next - and after a rotation that difference is the whole point: every embed
+ * still carrying the previous secret is broken until it is updated. That is the
+ * one warning here, and it is about breakage rather than disclosure.
  *
  * The copy lives here rather than in `lib/domain/embed/embed-snippet.ts`. That
  * module describes the embed snippet, and a dialog the dashboard also opens
@@ -46,8 +43,18 @@ export type OneTimeKeyReason = 'created' | 'rotated'
 
 export interface OneTimeKeyValue {
 	plaintext: string
-	preview: string
 	name: string
+	/**
+	 * Whether this key was stored in a form the API keys page can read back.
+	 *
+	 * Not a formality. `embed-token-cipher.server.ts` is built to tolerate an
+	 * unset `EMBED_TOKEN_ENCRYPTION_KEY` rather than fail every mint, so on a
+	 * deployment that never configured it `createApiKey` writes a null
+	 * ciphertext and the value genuinely cannot be shown again. Promising recall
+	 * there would lose someone a working key, which is the one loss the warning
+	 * this dialog used to carry was actually protecting against.
+	 */
+	recoverable: boolean
 	/**
 	 * When the key stops working, if it ever does.
 	 *
@@ -60,11 +67,26 @@ export interface OneTimeKeyValue {
 	expiresAt?: string | null
 }
 
-const COPY_FAILURE = 'Failed to copy the API key.'
-const COPY_SUCCESS = 'API key copied to clipboard'
-const CLIPBOARD_UNAVAILABLE = 'Clipboard is not available in this browser.'
-const DISMISS_WITHOUT_COPY_CONFIRM =
-	'Have you copied your API key? It is not displayed again on this screen.'
+const COPY_MESSAGES = {
+	success: 'API key copied to clipboard',
+	failure: 'Failed to copy the API key.',
+	unavailable: 'Clipboard is not available in this browser.'
+}
+
+/**
+ * The one sentence that changes with `recoverable`, and the step that goes with
+ * it. Everything else this dialog says is true either way.
+ */
+const RECALL_COPY = {
+	recoverable: {
+		description: 'You can see it again on the API keys page.',
+		step: null
+	},
+	unrecoverable: {
+		description: 'Copy it now - this key cannot be shown again.',
+		step: 'Copy the key above to a secure location'
+	}
+} as const
 
 const REASON_COPY: Record<
 	OneTimeKeyReason,
@@ -72,10 +94,8 @@ const REASON_COPY: Record<
 > = {
 	created: {
 		title: 'API key created',
-		description:
-			'Copy it now. Key lists only ever show the last four characters.',
+		description: 'Ready to paste into an embed.',
 		nextSteps: [
-			'Copy the key above to a secure location',
 			'Paste it into the embed snippet, or into your own request headers',
 			'Add the site that will host the embed to the allowed domains for this project'
 		]
@@ -85,134 +105,55 @@ const REASON_COPY: Record<
 		description:
 			'The previous key stopped working the moment this one was issued.',
 		nextSteps: [
-			'Copy the key above to a secure location',
 			'Replace the old key everywhere it is already deployed - every embed still carrying it is refused right now',
 			'The Last Used column stays empty until something authenticates with the new key, which is how you confirm the update landed'
 		]
 	}
 }
 
-export function OneTimeKeyDialog({
-	open,
-	onClose,
-	apiKey,
-	reason
-}: {
+export const OneTimeKeyDialog: FC<{
 	open: boolean
 	onClose: () => void
 	apiKey: OneTimeKeyValue | null
 	reason: OneTimeKeyReason
-}) {
-	/*
-	  Two facts, deliberately separate.
-
-	  `copied` is whether the key has been copied at all, and it is what
-	  suppresses the "are you sure?" on dismissal. `flashCopied` is only the
-	  button's checkmark, which reverts after two seconds so the control reads
-	  as pressable again.
-
-	  One flag served both, and the timer cleared it: copy the key, spend three
-	  seconds pasting it somewhere, then close - and the dialog asked whether it
-	  had been copied, having watched it happen.
-	*/
-	const [copied, setCopied] = useState(false)
-	const [flashCopied, setFlashCopied] = useState(false)
-	const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+}> = ({ open, onClose, apiKey, reason }) => {
 	const labelId = useId()
-	const copy = REASON_COPY[reason]
-
-	/*
-	  `copied` is per-key, and this component is never remounted between keys:
-	  the parent renders it continuously and only swaps `apiKey`, so state
-	  survives every open and close.
-
-	  Left alone, the copy button's 2-second "copied" window carries into the
-	  next key. That key's dialog then opens already showing a checkmark, and
-	  `handleClose` skips the "have you copied it?" confirmation because `copied`
-	  is true - dismissing a plaintext that was never copied and cannot be shown
-	  again. Rotating twice in quick succession is two clicks and a round trip.
-	*/
-	useEffect(() => {
-		setCopied(false)
-		setFlashCopied(false)
-
-		// The previous key's checkmark timer, which would otherwise land inside
-		// this key's two seconds and clear a checkmark it never set.
-		return () => {
-			if (flashTimer.current) clearTimeout(flashTimer.current)
-		}
-	}, [apiKey?.plaintext])
-
-	const handleCopy = async () => {
-		if (!apiKey) return
-
-		if (!navigator?.clipboard) {
-			toast.error(CLIPBOARD_UNAVAILABLE)
-			return
-		}
-
-		try {
-			await navigator.clipboard.writeText(apiKey.plaintext)
-			setCopied(true)
-			setFlashCopied(true)
-			toast.success(COPY_SUCCESS)
-
-			// Copying twice restarts the two seconds rather than letting the first
-			// timer cut the second checkmark short.
-			if (flashTimer.current) clearTimeout(flashTimer.current)
-			flashTimer.current = setTimeout(() => setFlashCopied(false), 2000)
-		} catch (error) {
-			console.error('Failed to copy the API key:', error)
-			toast.error(COPY_FAILURE)
-		}
-	}
-
-	const handleClose = () => {
-		if (!copied) {
-			const confirmed = window.confirm(DISMISS_WITHOUT_COPY_CONFIRM)
-			if (!confirmed) return
-		}
-		onClose()
-	}
+	const { copy, copiedId } = useClipboardCopy()
+	const content = REASON_COPY[reason]
 
 	if (!apiKey) return null
 
+	/*
+	  Keyed on the plaintext, which is what makes a per-key reset unnecessary.
+	  This component is never remounted between keys - the parent renders it
+	  continuously and only swaps `apiKey` - so a `copiedId` keyed on anything
+	  constant would carry the checkmark into the next key's dialog. Rotating
+	  twice in quick succession is two clicks and a round trip.
+
+	  Not the preview: four characters, and two keys sharing them would re-arm
+	  the checkmark for a value that was never copied.
+	*/
+	const copied = copiedId === apiKey.plaintext
+	const recall =
+		RECALL_COPY[apiKey.recoverable ? 'recoverable' : 'unrecoverable']
+	const nextSteps = recall.step
+		? [recall.step, ...content.nextSteps]
+		: content.nextSteps
+
 	return (
-		<Dialog open={open} onOpenChange={(next) => !next && handleClose()}>
-			<DialogContent
-				className="max-w-2xl"
-				onEscapeKeyDown={(event) => event.preventDefault()}
-			>
+		<Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+			<DialogContent className="max-w-2xl">
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2">
 						<CheckCircle2 className="text-success size-5" />
-						{copy.title}
+						{content.title}
 					</DialogTitle>
-					<DialogDescription>{copy.description}</DialogDescription>
+					<DialogDescription>
+						{content.description} {recall.description}
+					</DialogDescription>
 				</DialogHeader>
 
 				<div className="space-y-4">
-					<Alert
-						variant="default"
-						className="border-warning-border bg-warning-bg"
-					>
-						<AlertCircle className="text-warning size-4" />
-						{/*
-						  A claim about this page, not about storage. "Once you close this
-						  dialog the full key is no longer accessible" was never true of
-						  the key itself - `encrypted_key` holds it, and the embed panel
-						  reads it back to fill a snippet - and it is not true of the
-						  dashboard either once someone rotates. What is true here is
-						  narrow and checkable: the lists on this page show the preview
-						  and nothing more.
-						*/}
-						<AlertDescription className="text-warning-muted-foreground">
-							<strong>Important:</strong> Copy this key now. Once you leave
-							this dialog, the key lists show only the preview
-							(...{apiKey.preview}).
-						</AlertDescription>
-					</Alert>
-
 					<div className="space-y-2">
 						<p className="text-h4" id={labelId}>
 							{apiKey.name}
@@ -220,13 +161,14 @@ export function OneTimeKeyDialog({
 						<div className="flex gap-2">
 							{/*
 							  `ph-no-capture` keeps the key out of PostHog session replay.
-							  Replay masks input values by default but not ordinary DOM
-							  text, and this app sets no `maskTextSelector`, so an unmarked
-							  block renders the live key straight into any recording.
+							  `entry.client.tsx` returns `$snapshot` events from
+							  `before_send` unmodified, so replay applies no redaction of
+							  its own and this class is the only thing between a live key
+							  and a recording.
 							*/}
 							<div
 								aria-labelledby={labelId}
-								className="ph-no-capture text-muted-foreground bg-muted flex-1 rounded-md border p-3 font-mono text-sm break-all"
+								className="ph-no-capture text-muted-foreground bg-muted flex-1 rounded-xl border p-3 font-mono text-sm break-all"
 							>
 								{apiKey.plaintext}
 							</div>
@@ -234,28 +176,26 @@ export function OneTimeKeyDialog({
 							  The label carries the state, because the icon is the only
 							  other thing that reports it and an icon is not announced. It
 							  is also what makes the checkmark testable: with a constant
-							  label, `flashCopied` could be deleted outright and every test
-							  in the spec would still pass.
+							  label the copied state could be deleted outright and every
+							  test in the spec would still pass.
 							*/}
 							<Button
 								type="button"
-								variant={flashCopied ? 'default' : 'outline'}
+								variant={copied ? 'default' : 'outline'}
 								size="icon"
-								aria-label={flashCopied ? 'API key copied' : 'Copy API key'}
+								aria-label={copied ? 'API key copied' : 'Copy API key'}
 								className="shrink-0"
-								onClick={handleCopy}
+								onClick={() =>
+									void copy(apiKey.plaintext, apiKey.plaintext, COPY_MESSAGES)
+								}
 							>
-								{flashCopied ? (
+								{copied ? (
 									<CheckCircle2 className="size-4" />
 								) : (
 									<Copy className="size-4" />
 								)}
 							</Button>
 						</div>
-						<p className="text-muted-foreground text-xs">
-							Key preview:{' '}
-							<code className="font-mono">...{apiKey.preview}</code>
-						</p>
 						{apiKey.expiresAt && (
 							<p className="text-muted-foreground text-xs">
 								This key stops working on{' '}
@@ -264,10 +204,10 @@ export function OneTimeKeyDialog({
 						)}
 					</div>
 
-					<div className="bg-muted space-y-2 rounded-md p-4">
+					<div className="bg-muted space-y-2 rounded-xl p-4">
 						<h4 className="text-h4">Next steps</h4>
 						<ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
-							{copy.nextSteps.map((step) => (
+							{nextSteps.map((step) => (
 								<li key={step}>{step}</li>
 							))}
 						</ul>
@@ -275,8 +215,14 @@ export function OneTimeKeyDialog({
 				</div>
 
 				<DialogFooter>
-					<Button onClick={handleClose} className="w-full">
-						I have saved my key
+					{/*
+					  "Done", not "Close": `DialogContent` renders its own close control
+					  with an sr-only "Close" label, and two buttons answering to the
+					  same name is ambiguous to a screen reader reading the dialog and
+					  to anything querying it by role.
+					*/}
+					<Button onClick={onClose} className="w-full">
+						Done
 					</Button>
 				</DialogFooter>
 			</DialogContent>

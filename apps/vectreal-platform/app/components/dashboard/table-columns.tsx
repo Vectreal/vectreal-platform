@@ -21,6 +21,7 @@ import {
 	Ban,
 	CheckCircle2,
 	Clock,
+	Copy,
 	Ellipsis,
 	FilePenLine,
 	FolderInput,
@@ -40,6 +41,7 @@ import { Link, useLocation } from 'react-router'
 import { createCheckboxColumn, SortableHeader } from './data-table'
 import { SceneThumbnail } from './scene-thumbnail'
 import { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
+import { useClipboardCopy } from '../../hooks/use-clipboard-copy'
 import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
 import {
 	resolveApiKeyState,
@@ -729,11 +731,42 @@ export function createContentColumns(
 	]
 }
 
+/**
+ * Why a key's value cannot be put in front of its owner.
+ *
+ * Four reasons, and the loader is the only place three of them are
+ * distinguishable at all: `decryptEmbedToken` returns null both for a row that
+ * never stored a value and for one whose ciphertext no longer authenticates,
+ * and only the server holds the row that separates them. Resolving this in the
+ * cell would collapse two different instructions - "rotate to get one" and
+ * "the encryption key changed" - into one shrug.
+ */
+export type ApiKeyValueUnavailableReason =
+	'revoked' | 'never-stored' | 'undecryptable' | 'withheld'
+
+/**
+ * The key itself, or the reason it is missing.
+ *
+ * A union rather than `string | null` so the reason survives the trip to the
+ * browser. The value is public by construction - it ships in an `iframe src` on
+ * the customer's own page - so showing it to the owner who minted it is the
+ * point; see `api-keys.tsx`, which resolves this field.
+ */
+export type ApiKeyRowValue =
+	| { readable: true; value: string }
+	| { readable: false; reason: ApiKeyValueUnavailableReason }
+
 export interface ApiKeyRow {
 	id: string
 	name: string
 	description?: string | null
+	/**
+	 * Last four characters. Still here, and still rendered, because it is what
+	 * names a key whose value cannot be read back.
+	 */
 	keyPreview: string
+	/** Resolved server-side; see `ApiKeyRowValue`. */
+	value: ApiKeyRowValue
 	createdBy: string
 	projects: Array<{
 		id: string
@@ -822,6 +855,197 @@ function formatRelativeTime(date: Date | null): string {
 	return 'Just now'
 }
 
+/**
+ * Why the value is missing. The cause only - never what to do about it.
+ *
+ * Declared here rather than imported from `EMBED_COPY`. The dashboard must not
+ * depend on the embed domain for its copy - `one-time-key-dialog.tsx` records
+ * the same rule - and four short strings is the accepted cost of that.
+ *
+ * The advice is deliberately not baked in. Two of these causes are fixed by
+ * rotating and two are not, but that is not a property of the cause: it is a
+ * property of the key's lifecycle state, because `rotateApiKey` refuses
+ * anything that is not active. An expired key with no stored value has a
+ * recoverable *cause* and no way to act on it, and telling its owner to rotate
+ * points at a menu item that is disabled and a server call that throws. See
+ * `rotateAdvice` below.
+ *
+ * `withheld` names no mechanism for the same reason: it is reached both from a
+ * role the permission table refuses and from an organization without the
+ * entitlement, so naming either one would be wrong half the time.
+ */
+const VALUE_UNAVAILABLE_COPY: Record<ApiKeyValueUnavailableReason, string> = {
+	revoked: 'the value was cleared when this key was revoked',
+	'never-stored': 'no value was stored for this key',
+	undecryptable: 'the stored value is no longer readable',
+	withheld: 'the value is not available for this organization'
+}
+
+/**
+ * The recoverable causes - the ones a fresh secret would fix.
+ *
+ * `revoked` is not among them: rotation refuses a revoked key, and its owner
+ * replaces it rather than recovering it. `withheld` is not either, because
+ * nothing about that row is broken.
+ */
+const ROTATABLE_REASONS: ReadonlySet<ApiKeyValueUnavailableReason> = new Set([
+	'never-stored',
+	'undecryptable'
+])
+
+/**
+ * Whether to tell this row's owner that rotating would give them a value.
+ *
+ * Both halves are required. The cause has to be one rotation fixes, *and* the
+ * key has to still be rotatable - `rotateApiKey` throws for any state but
+ * `active`, and the Rotate menu item on this same row is disabled by exactly
+ * this predicate.
+ */
+function rotateAdvice(row: ApiKeyRow, reason: ApiKeyValueUnavailableReason) {
+	if (!ROTATABLE_REASONS.has(reason)) return null
+
+	return resolveApiKeyState(toLifecycleRow(row), new Date()) === 'active'
+		? 'rotate it to get a value you can copy'
+		: null
+}
+
+const KEY_COPY_MESSAGES = {
+	success: 'API key copied to clipboard',
+	failure: 'Failed to copy the API key.',
+	unavailable: 'Clipboard is not available in this browser.'
+}
+
+/**
+ * The name cell: what the key is called, and the key itself.
+ *
+ * A component rather than an inline `cell` render, because it calls
+ * `useClipboardCopy` and `createApiKeyColumns` is a plain function.
+ *
+ * The value lives here rather than in a column of its own on purpose.
+ * `DataTable` puts `title={getCellTitle(cell.getValue())}` on every cell, so a
+ * string accessor would publish the key into a `title` attribute - a native
+ * tooltip, and something PostHog autocapture serializes into `$elements`.
+ * Inside this cell the accessor stays `name` and the value is never a cell
+ * value at all.
+ */
+export function ApiKeyNameCell({ row }: { row: ApiKeyRow }) {
+	const { copy, copiedId } = useClipboardCopy()
+	/*
+	  Compared against the row id even though each cell owns its own hook
+	  instance, which makes the comparison currently redundant - no test can
+	  distinguish it from `copiedId !== null`, and none pretends to.
+
+	  It is here because the redundancy is the fragile part, not the comparison:
+	  `useClipboardCopy` carries a single `copiedId` precisely so one hook can
+	  serve many affordances, and the day someone lifts it to the table to stop
+	  paying for a hook per row, a boolean would light up every row at once.
+	*/
+	const copied = copiedId === row.id
+	/*
+	  Bound to a const so the narrowing survives into the copy handler. Narrowing
+	  a property access does not reach inside a closure - TypeScript cannot know
+	  the object was not reassigned - so `row.value.value` fails to compile there
+	  while reading fine in the JSX two lines above.
+	*/
+	const keyValue = row.value
+	const advice = keyValue.readable ? null : rotateAdvice(row, keyValue.reason)
+
+	return (
+		<div className="flex min-w-0 flex-col gap-1">
+			<span className="font-medium">{row.name}</span>
+			{keyValue.readable ? (
+				/*
+				  `ph-no-capture` on the wrapper, not on the code alone, and it is a
+				  guard rather than a nicety: `entry.client.tsx` returns `$snapshot`
+				  events from `before_send` unmodified, so session replay applies no
+				  redaction of its own and this class is the only thing keeping a live
+				  key out of a recording. On the wrapper it also drops the copy click
+				  from autocapture, which would otherwise ship the element chain.
+
+				  Named, because otherwise a screen reader moving through this cell
+				  reads the key's name and then 38 unannounced characters. The dialog
+				  labels its copy of this value; the row had nothing.
+				*/
+				<div
+					className="ph-no-capture flex items-start gap-1.5"
+					role="group"
+					aria-label={`API key ${row.name}`}
+				>
+					{/*
+					  `break-all`, not `truncate` or `whitespace-nowrap`. 38 characters of
+					  mono at `text-xs` is ~270px, and a nowrap floor on a seven-column
+					  table pushes the whole thing into horizontal scroll on a laptop.
+					  Wrapping is what `one-time-key-dialog` and `embed-snippet-card`
+					  already do with this same value.
+					*/}
+					{/*
+					  `text-foreground`, not `text-muted-foreground`. Muted on `bg-muted`
+					  measures 4.34:1 in light mode - under the 4.5:1 AA floor for text
+					  this size. It was tolerable while these classes dressed a
+					  four-character decoration; this is now the payload the feature
+					  exists to deliver.
+
+					  `rounded-sm` because bare `rounded` is not on this repo's scale at
+					  all: Tailwind inlines its own 0.25rem default rather than reading
+					  `--radius`, so it renders 4px beside a 16px button and a 20px cell
+					  corner. `rounded-sm` is the 10px step.
+
+					  `max-w-[24ch]` bounds what the column asks for. `break-all` sets
+					  min-content to one character so nothing overflows, but max-content
+					  is the full 38 characters, and under `table-layout: auto` that
+					  preference is taken from the six sibling columns - which do
+					  truncate.
+					*/}
+					<code className="text-foreground bg-muted max-w-[24ch] min-w-0 rounded-sm px-1.5 py-0.5 font-mono text-xs break-all">
+						{keyValue.value}
+					</code>
+					{/*
+					  The label carries the copied state, because the icon is the only
+					  other thing reporting it and an icon is not announced.
+					*/}
+					<Button
+						type="button"
+						variant="ghost"
+						size="icon"
+						className="size-6 shrink-0"
+						/*
+						  Named by preview as well as name, because `api_keys.name` has
+						  no unique constraint: two keys called "Production" would
+						  otherwise give two buttons with one name.
+						*/
+						aria-label={
+							copied
+								? `API key ${row.name} ...${row.keyPreview} copied`
+								: `Copy API key ${row.name} ...${row.keyPreview}`
+						}
+						onClick={() => void copy(row.id, keyValue.value, KEY_COPY_MESSAGES)}
+					>
+						{/*
+						  Unsized: `buttonVariants` carries `[&_svg]:size-4`, which is a
+						  descendant selector and outranks a `size-*` on the icon itself,
+						  so an authored `size-3` here renders at 16px anyway.
+						*/}
+						{copied ? <CheckCircle2 /> : <Copy />}
+					</Button>
+				</div>
+			) : (
+				<div className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
+					<code className="bg-muted rounded-sm px-1.5 py-0.5 font-mono">
+						...{row.keyPreview}
+					</code>
+					<span>
+						{VALUE_UNAVAILABLE_COPY[keyValue.reason]}
+						{advice ? ` - ${advice}` : ''}
+					</span>
+				</div>
+			)}
+			{row.description && (
+				<span className="text-muted-foreground text-sm">{row.description}</span>
+			)}
+		</div>
+	)
+}
+
 export function createApiKeyColumns(
 	options: ApiKeyColumnsOptions
 ): ColumnDef<ApiKeyRow>[] {
@@ -832,21 +1056,40 @@ export function createApiKeyColumns(
 			header: ({ column }) => (
 				<SortableHeader column={column}>Name</SortableHeader>
 			),
-			cell: ({ row }) => (
-				<div className="flex min-w-0 flex-col gap-1">
-					<div className="flex items-center gap-2">
-						<span className="font-medium">{row.original.name}</span>
-						<code className="text-muted-foreground bg-muted rounded px-1.5 py-0.5 font-mono text-xs">
-							...{row.original.keyPreview}
-						</code>
-					</div>
-					{row.original.description && (
-						<span className="text-muted-foreground text-sm">
-							{row.original.description}
-						</span>
-					)}
-				</div>
-			)
+			cell: ({ row }) => <ApiKeyNameCell row={row.original} />,
+			/*
+			  Also match the key preview, not only the name.
+
+			  The workflow this serves is a support one: an embed is failing, and
+			  its owner has the key from the page source in front of them. Against a
+			  name-only filter, searching for any part of that key returns nothing.
+
+			  The last four characters and not the whole value, deliberately - but
+			  be clear about what that does and does not buy.
+
+			  The search box writes through to the URL: `use-dashboard-table-state`
+			  puts the raw typed string in a `?<namespace>-q=` param before any
+			  filter runs, so a pasted key reaches `$current_url`, history and the
+			  access logs whatever this function matches on. `redact-embed-token.ts`
+			  rewrites `token=` parameters and would not touch that one. Matching
+			  here cannot prevent it, and the leak has to be fixed where the value
+			  reaches the URL.
+
+			  What this does buy is not *rewarding* the paste: the last four
+			  characters are what the placeholder asks for, they identify the row,
+			  and they are not a credential.
+			*/
+			filterFn: (row, _columnId, filterValue) => {
+				const needle = String(filterValue).trim().toLowerCase()
+				if (!needle) return true
+
+				const key = row.original
+
+				return (
+					key.name.toLowerCase().includes(needle) ||
+					key.keyPreview.toLowerCase().includes(needle)
+				)
+			}
 		},
 		{
 			accessorKey: 'createdBy',

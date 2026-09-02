@@ -32,12 +32,14 @@ import {
 import {
 	DataTable,
 	createApiKeyColumns,
-	type ApiKeyRow
+	type ApiKeyRow,
+	type ApiKeyRowValue
 } from '../../components/dashboard'
 import { ConfirmDestructiveDialog } from '../../components/shared/confirm-destructive-dialog'
 import { FeatureUnavailablePanel } from '../../components/upgrade/feature-unavailable-panel'
 import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
 import { useOncePerFetcherResponse } from '../../hooks/use-once-per-fetcher-response'
+import { resolveApiKeyState } from '../../lib/domain/auth/api-key-lifecycle'
 import {
 	getAllUserApiKeys,
 	revokeApiKey,
@@ -50,35 +52,89 @@ import {
 	hasEntitlement,
 	getRecommendedUpgrade
 } from '../../lib/domain/billing/entitlement-service.server'
+import { canPerformDashboardOperation } from '../../lib/domain/dashboard/dashboard-operations'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { shouldRevalidateWithinScope } from '../../lib/navigation/dashboard-route-behavior'
+import { decryptEmbedToken } from '../../lib/security/embed-token-cipher.server'
 
 import type { DashboardConfirmationPlan } from '../../lib/domain/dashboard/dashboard-confirmation'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 /**
+ * Whether this key's value can be put in front of its owner, and if not, why.
+ *
+ * The embed token is public by construction - `buildEmbedUrl` puts it in an
+ * `iframe src` on the customer's own page - so the question this answers is
+ * "can it be read back", not "may it be seen". `encrypted_key` exists for
+ * exactly this, and `/api/projects/:projectId/api-keys` has been answering the
+ * same question for the embed panel since #760.
+ *
+ * `revoked` is read first, and not as a synonym for a null ciphertext.
+ * `revokeApiKey` clears the ciphertext on purpose, so both branches would fire
+ * for a revoked row - and `never-stored` tells its owner to rotate, which
+ * `rotateApiKey` refuses for anything that is not active. Wrong order is a
+ * wrong instruction, not a cosmetic slip.
+ *
+ * Expired and inactive keys still return their value. This field is not asking
+ * whether the key works; the Status column already does that, from the same
+ * `resolveApiKeyState`. An expired key's value is still what identifies it in a
+ * page that has started 404ing.
+ */
+function resolveRowValue(
+	key: ApiKeyWithDetails,
+	canReadValue: boolean,
+	now: Date
+): ApiKeyRowValue {
+	if (!canReadValue) {
+		return { readable: false, reason: 'withheld' }
+	}
+
+	if (resolveApiKeyState(key.apiKey, now) === 'revoked') {
+		return { readable: false, reason: 'revoked' }
+	}
+
+	if (key.apiKey.encryptedKey === null) {
+		return { readable: false, reason: 'never-stored' }
+	}
+
+	/*
+	  `decryptEmbedToken` returns null for a ciphertext that no longer
+	  authenticates as well as for one that was never there, and this is the only
+	  place the two are still separable - the branch above has already taken the
+	  second case. Past this point they would be one indistinguishable null.
+	*/
+	const value = decryptEmbedToken(key.apiKey.encryptedKey)
+
+	return value === null
+		? { readable: false, reason: 'undecryptable' }
+		: { readable: true, value }
+}
+
+/**
  * One stored key, reduced to what this page renders.
  *
  * An explicit field list rather than a spread, so a column added to `api_keys`
- * has to be named here before it reaches the browser.
+ * has to be named here before it reaches the browser. `hashedKey` is why: it
+ * was in the table from the first migration, a week before this page was
+ * written, and went to the browser on every render from the day it shipped.
+ * Nothing catches that without a list someone maintains.
  *
- * Both fields this drops make the case, in different directions. `encryptedKey`
- * is the column-added-later story. `hashedKey` is the worse one: it was in the
- * table from the first migration, a week before this page was written, and went
- * to the browser on every render from the day it shipped. Nothing catches that
- * without a list someone has to write.
+ * What the list now sends deliberately includes the key itself, decrypted, and
+ * still never `hashedKey` or the `encryptedKey` ciphertext. The plaintext is
+ * the value the owner needs; the hash is the only thing an embed request is
+ * matched against and has no reader here at all.
  *
- * The discipline, not this function, is what holds - `api-keys-edit.tsx` names
- * its fields the same way for the same reason. `api-keys-page-payload.spec.ts`
- * pins both, because a list is only a guarantee while someone maintains it.
+ * `api-keys.spec.ts` pins both halves, because a list is only a guarantee while
+ * someone maintains it.
  */
-function toApiKeyRow(key: ApiKeyWithDetails): ApiKeyRow {
+function toApiKeyRow(key: ApiKeyWithDetails, value: ApiKeyRowValue): ApiKeyRow {
 	return {
 		id: key.apiKey.id,
 		name: key.apiKey.name,
 		description: key.apiKey.description,
 		keyPreview: key.apiKey.keyPreview,
+		value,
 		createdBy: key.creator.name || key.creator.email || 'Unknown',
 		projects: key.projects,
 		lastUsedAt: key.apiKey.lastUsedAt,
@@ -96,25 +152,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 		getAllUserApiKeys(user.id),
 		getUserOrganizations(user.id)
 	])
-
-	/*
-	  Narrowed here, not in the component.
-
-	  `ApiKeyWithDetails` carries the row as stored, which means `hashedKey` and
-	  the `encryptedKey` ciphertext. Returning it whole put both into the SSR
-	  payload and into every revalidation response, for a page that renders
-	  neither. The audience is the same either way - this route is already
-	  gated to org owners and admins - so this is not a leak being closed, it is
-	  a payload not being sent.
-	*/
-	const keysByOrg = new Map<string, ApiKeyRow[]>()
-	for (const keyData of apiKeys) {
-		const orgId = keyData.organization.id
-		if (!keysByOrg.has(orgId)) {
-			keysByOrg.set(orgId, [])
-		}
-		keysByOrg.get(orgId)!.push(toApiKeyRow(keyData))
-	}
 
 	const adminOrgs = organizations.filter((o) =>
 		['admin', 'owner'].includes(o.membership.role)
@@ -140,6 +177,79 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	const apiKeysAccessByOrg = Object.fromEntries(apiKeyEntitlementEntries)
 
+	/*
+	  The organizations this page actually draws a table for.
+
+	  `getAllUserApiKeys` returns every key in every org the actor administers,
+	  but the component only ever reads `keysByOrg[org.organization.id]` for the
+	  orgs in `organizations`. A row outside that set was rendered nowhere and
+	  cost a preview; now it would cost a live key in the payload of a page that
+	  never draws it.
+	*/
+	const renderedOrgIds = new Set(adminOrgs.map((o) => o.organization.id))
+
+	/*
+	  Where the value may be resolved, decided per organization.
+
+	  `canPerformDashboardOperation` and not `assertDashboardPermission`: this
+	  page renders one tab per organization, so throwing would 500 all of them
+	  over one. As a filter the check is load-bearing and can be mutation-tested;
+	  as an assert it would be unreachable and prove nothing.
+
+	  It is also not redundant with the `adminOrgs` filter above, which only
+	  chooses tabs. The restriction that actually runs today is a hardcoded
+	  `inArray(role, ['admin', 'owner'])` inside `getAllUserApiKeys` - a second
+	  copy of this rule written in SQL that never consults the table. Before this
+	  line, tightening `api-key:read` changed nothing on this page.
+
+	  The entitlement term is the same argument as the embed route's project
+	  filter: an organization without `org_api_keys` renders
+	  `FeatureUnavailablePanel` instead of a table, so decrypting its keys spends
+	  AES on markup that does not exist and puts plaintext in memory for nobody.
+	*/
+	const valueReadableOrgIds = new Set(
+		adminOrgs
+			.filter((o) =>
+				canPerformDashboardOperation('api-key:read', {
+					role: o.membership.role
+				})
+			)
+			.filter((o) => apiKeysAccessByOrg[o.organization.id]?.granted)
+			.map((o) => o.organization.id)
+	)
+
+	const now = new Date()
+	const keysByOrg = new Map<string, ApiKeyRow[]>()
+	for (const keyData of apiKeys) {
+		const orgId = keyData.organization.id
+		if (!renderedOrgIds.has(orgId)) continue
+
+		if (!keysByOrg.has(orgId)) {
+			keysByOrg.set(orgId, [])
+		}
+		keysByOrg
+			.get(orgId)!
+			.push(
+				toApiKeyRow(
+					keyData,
+					resolveRowValue(keyData, valueReadableOrgIds.has(orgId), now)
+				)
+			)
+	}
+
+	/*
+	  No `Cache-Control` here, and deliberately, because the omission reads as an
+	  oversight beside `/api/projects/:projectId/api-keys`, which sets one by
+	  hand.
+
+	  That route is a resource route, which `handleDataRequest` never sees. This
+	  one is not: `applyDefaultCacheHeaders` stamps `no-store` on the document and
+	  `handleDataRequest` stamps it on the `.data` response, both through the same
+	  predicate, and `/dashboard` is a protected prefix so neither can take the
+	  cacheable branch. Setting it in this loader would not even reach the `.data`
+	  response - React Router does not propagate a loader's `headers` onto one,
+	  which is the whole reason that hook exists.
+	*/
 	return data(
 		{
 			keysByOrg: Object.fromEntries(keysByOrg),
@@ -217,8 +327,15 @@ export async function action({ request }: Route.ActionArgs) {
 					message: 'API key rotated.',
 					rotatedKey: {
 						plaintext: rotated.plaintext,
-						preview: rotated.apiKey.keyPreview,
-						name: rotated.apiKey.name
+						name: rotated.apiKey.name,
+						/*
+						  Read off what was actually written, not assumed. The cipher
+						  returns null rather than throwing when
+						  `EMBED_TOKEN_ENCRYPTION_KEY` is unset, so a rotation can
+						  succeed and still leave nothing to read back - and the dialog
+						  has to say so instead of promising this list will show it.
+						*/
+						recoverable: rotated.apiKey.encryptedKey !== null
 					}
 				},
 				{ headers }
@@ -299,7 +416,7 @@ function OrgApiKeysTable({
 			columns={columns}
 			data={rows}
 			searchKey="name"
-			searchPlaceholder="Search API keys..."
+			searchPlaceholder="Search by name or last 4 characters..."
 			searchValue={tableState.searchValue}
 			onSearchValueChange={tableState.setSearchValue}
 			sorting={tableState.sorting}
@@ -360,9 +477,15 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 			  render that produced it.
 
 			  That persistence is the actual problem: rendering the dialog straight
-			  off the response leaves `onClose` with nothing to set, and this
-			  dialog deliberately swallows Escape. Owning it as state is what makes
-			  closing it possible at all.
+			  off the response leaves `onClose` with nothing to set, so it would
+			  reopen on every render for as long as the fetcher holds its answer.
+			  Owning it as state is what makes closing it possible at all.
+
+			  This used to add "and the dialog deliberately swallows Escape", which
+			  is no longer true - that handler existed to stop Escape bypassing a
+			  copy confirmation this change removes, and `one-time-key-dialog.spec`
+			  now asserts Escape closes. The conclusion is unchanged; only that
+			  reason for it is gone.
 			*/
 			if ('rotatedKey' in result && result.rotatedKey) {
 				setRotatedKey(result.rotatedKey)
@@ -459,7 +582,7 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 			: 'The current key is replaced by a new one immediately.',
 		consequences: [
 			'Every embed still carrying the current key is refused until you paste in the new one',
-			'The new key is shown right after rotating; this list shows only its last four characters',
+			'The new key is shown right after rotating, and appears in this list as soon as the rotation completes',
 			'The name, projects and expiry stay as they are'
 		],
 		confirmLabel: 'Rotate key',
