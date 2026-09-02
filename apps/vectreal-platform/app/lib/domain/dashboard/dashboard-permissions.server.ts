@@ -144,24 +144,6 @@ export async function resolveSceneFolderMembership(
 	}
 }
 
-export async function resolveOrganizationMembership(
-	organizationId: string,
-	userId: string
-): Promise<MembershipRole | null> {
-	const [row] = await db
-		.select({ role: organizationMemberships.role })
-		.from(organizationMemberships)
-		.where(
-			and(
-				eq(organizationMemberships.organizationId, organizationId),
-				eq(organizationMemberships.userId, userId)
-			)
-		)
-		.limit(1)
-
-	return row?.role ?? null
-}
-
 /**
  * Throws unless the actor may perform the operation.
  *

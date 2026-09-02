@@ -253,26 +253,6 @@ async function getOrCreateDefaultProjectDb(
 	return project
 }
 
-export async function ensureUserExists(
-	supabaseUser: User
-): Promise<typeof users.$inferSelect> {
-	try {
-		const { user } = await ensureUserExistsDb(db, supabaseUser)
-		return user
-	} catch (error) {
-		throw error
-	}
-}
-
-export async function createOrganization(
-	userId: string,
-	name: string
-): Promise<typeof organizations.$inferSelect> {
-	return db.transaction(async (tx) => {
-		return await createOrganizationDb(tx as DbClient, userId, name)
-	})
-}
-
 export async function getOrCreateDefaultOrganization(
 	userId: string
 ): Promise<typeof organizations.$inferSelect> {
@@ -299,41 +279,6 @@ export async function getUserOrganizations(userId: string): Promise<
 		)
 		.where(eq(organizationMemberships.userId, userId))
 		.orderBy(organizationMemberships.joinedAt)
-}
-
-export async function getUserOrganizationMembership(
-	userId: string,
-	organizationId: string
-): Promise<typeof organizationMemberships.$inferSelect | null> {
-	return await getUserOrganizationMembershipDb(db, userId, organizationId)
-}
-
-export async function addUserToOrganization(
-	userId: string,
-	organizationId: string,
-	role: 'owner' | 'admin' | 'member' = 'member',
-	invitedBy?: string
-): Promise<typeof organizationMemberships.$inferSelect> {
-	const existingMembership = await getUserOrganizationMembership(
-		userId,
-		organizationId
-	)
-
-	if (existingMembership) {
-		throw new Error('User is already a member of this organization')
-	}
-
-	const [membership] = await db
-		.insert(organizationMemberships)
-		.values({
-			userId,
-			organizationId,
-			role,
-			invitedBy
-		})
-		.returning()
-
-	return membership
 }
 
 export async function getOrCreateDefaultProject(
@@ -381,26 +326,6 @@ export async function initializeUserDefaults(
 			isNewUser
 		}
 	})
-}
-
-export async function getUserWithDefaultProject(
-	userId: string
-): Promise<{ user: typeof users.$inferSelect; projectId: string } | null> {
-	const user = await db
-		.select()
-		.from(users)
-		.where(eq(users.id, userId))
-		.limit(1)
-		.then((rows) => rows[0])
-
-	if (!user) return null
-
-	const project = await getOrCreateDefaultProject(userId)
-
-	return {
-		user,
-		projectId: project.id
-	}
 }
 
 export async function userExists(userId: string): Promise<boolean> {

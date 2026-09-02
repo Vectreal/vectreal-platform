@@ -107,18 +107,6 @@ export async function getSidebarProjects(
 		.limit(limit)
 }
 
-export async function getOrganizationProjects(
-	organizationId: string,
-	userId: string
-): Promise<Array<typeof projects.$inferSelect>> {
-	await verifyOrganizationAccess(db, organizationId, userId)
-
-	return await db
-		.select()
-		.from(projects)
-		.where(eq(projects.organizationId, organizationId))
-}
-
 export async function getProject(
 	projectId: string,
 	userId: string

@@ -100,16 +100,6 @@ export function parseAllowedDomainPatterns(
 	return Array.from(new Set(normalized))
 }
 
-export function serializeAllowedDomainPatterns(
-	patterns: string[]
-): string | null {
-	if (patterns.length === 0) {
-		return null
-	}
-
-	return patterns.join('\n')
-}
-
 export function validateAllowedDomainInput(
 	rawValue: string | null | undefined
 ):

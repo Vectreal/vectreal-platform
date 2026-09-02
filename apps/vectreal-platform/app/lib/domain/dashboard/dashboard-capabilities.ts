@@ -92,14 +92,3 @@ export function buildDashboardCapabilities(
 	return capabilities
 }
 
-/** Absent organization means no membership, which means no. */
-export function capabilitiesFor(
-	capabilities: DashboardCapabilityMap,
-	organizationId: string | null | undefined
-): DashboardOrganizationCapabilities | null {
-	if (!organizationId) {
-		return null
-	}
-
-	return capabilities[organizationId] ?? null
-}
