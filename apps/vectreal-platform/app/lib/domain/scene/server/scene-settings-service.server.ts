@@ -762,8 +762,12 @@ class SceneSettingsService {
 			return publishedRecord?.assetId ?? null
 		})
 
+		// Reference-checked, because uploads are content-addressed and reused: the
+		// GLB this scene published can be the same row another scene published.
+		// `scene_published.asset_id` is ON DELETE CASCADE, so deleting it
+		// unconditionally would cascade that scene's publish row away with it.
 		if (publishedAssetId) {
-			await deleteAssets([publishedAssetId])
+			await this.garbageCollectUnreferencedAssets([publishedAssetId])
 		}
 
 		return {
