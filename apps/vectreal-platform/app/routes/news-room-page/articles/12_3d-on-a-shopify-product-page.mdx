@@ -68,13 +68,18 @@ Two limits worth knowing before you plan around this slot, both Shopify's:
 
 Everything a scene has been configured with lives here. Cameras, framing, environment, the interactions you set up. Shopify's gallery viewer does not know about any of that, because it is rendering a file rather than a scene.
 
-Publish the scene, then in the theme editor open the product template, **Add section**, and choose **Custom Liquid**. Paste the iframe:
+Publish the scene, then in the theme editor open the product template and add a **Custom Liquid** element. Horizon offers it two ways: as a section of its own under **Add section**, and as a block inside an existing section under **Add block**. Take the block if the scene belongs beside existing content rather than in a full-width band.
+
+Then copy the snippet out of the Publisher's **Embed** section and paste it in whole. It looks like this:
 
 ```html
-<div style="width: 100%; height: 500px;">
+<style>
+  /* Lets the embed fill a bare flex parent, such as a Shopify Custom Liquid block. */
+  @layer { div:not([class]):not([style]):has(> .vctrl-embed) { flex-grow: 1; } }
+</style>
+<div class="vctrl-embed" style="width: 100%; max-width: 100%; height: 400px;">
   <iframe
-    id="vectreal-scene"
-    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=<your-preview-api-key>"
+    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=vctrl_your_key_here"
     style="width: 100%; height: 100%; border: 0;"
     allow="autoplay; xr-spatial-tracking"
     allowfullscreen
@@ -82,9 +87,13 @@ Publish the scene, then in the theme editor open the product template, **Add sec
 </div>
 ```
 
-![A Shopify theme editor with a Custom Liquid section selected, an iframe snippet in the settings panel, and the 3D scene it produces rendering in the storefront preview beside it.](/assets/images/newsroom/12/custom-liquid-section.webp)
+Copy it rather than retyping it. The panel fills in the project, the scene and a real key, and a key pasted by hand into that `src` with quotes around it closes the attribute at the first quote, so the browser requests an empty token and the embed answers `404` with nothing to say why.
 
-Drag the section to where you want it. Below the product details is where I put it, so the gallery does its job at the top of the page and the configured scene is what a shopper meets on the way down.
+The `height` is a plain inline style, so change it once it is in. The stylesheet above it earns its place on the **block** specifically: Horizon renders a Custom Liquid block into a bare `<div>` and lays it out as a flex item, and a flex item sizes to its content, so `width: 100%` inside it resolves against the 300px every iframe defaults to. The scene comes out 300px wide in a full-width section, and nothing you change inside the snippet's own box fixes it, because the element that needs fixing is the one Shopify wrapped around it. The Custom Liquid **section** carries a class and sizing of its own and never had the problem. The rule sits in an anonymous cascade layer and skips any parent the theme marked up, so where your theme has an opinion about that element, your theme wins.
+
+![A Shopify theme editor with a Custom Liquid block selected, the embed snippet in its settings panel, and the 3D scene it produces filling the width of the section in the storefront preview beside it.](/assets/images/newsroom/12/custom-liquid-section.webp)
+
+Drag it to where you want it. Below the product details is where I put it, so the gallery does its job at the top of the page and the configured scene is what a shopper meets on the way down.
 
 <video src="/assets/images/newsroom/12/shopify-embed-below-details.mp4" autoPlay muted loop playsInline aria-label="A product page scrolling down past price and description to a full-width 3D scene, where the product turns under a set camera before the page scrolls back up."></video>
 
