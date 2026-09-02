@@ -16,7 +16,7 @@ author:
     bio: "Building open infrastructure for practical 3D on the web."
     avatar: "/assets/images/author-image.jpeg"
     linkedinUrl: "https://www.linkedin.com/in/moritz-becker-5751851a1"
-draft: true
+draft: false
 coverImage: "/assets/images/newsroom/og-3d-on-a-shopify-product-page.webp"
 
 voice: A
@@ -91,7 +91,7 @@ Copy it rather than retyping it. The panel fills in the project, the scene and a
 
 The `height` is a plain inline style, so change it once it is in. The stylesheet above it earns its place on the **block** specifically: Horizon renders a Custom Liquid block into a bare `<div>` and lays it out as a flex item, and a flex item sizes to its content, so `width: 100%` inside it resolves against the 300px every iframe defaults to. The scene comes out 300px wide in a full-width section, and nothing you change inside the snippet's own box fixes it, because the element that needs fixing is the one Shopify wrapped around it. The Custom Liquid **section** carries a class and sizing of its own and never had the problem. The rule sits in an anonymous cascade layer and skips any parent the theme marked up, so where your theme has an opinion about that element, your theme wins.
 
-![A Shopify theme editor with a Custom Liquid block selected, the embed snippet in its settings panel, and the 3D scene it produces filling the width of the section in the storefront preview beside it.](/assets/images/newsroom/12/custom-liquid-section.webp)
+![A Shopify theme editor with a Custom Liquid block selected, its code panel open beside the storefront preview, where the 3D scene fills the left half of a split section on the product page.](/assets/images/newsroom/12/custom-liquid-section.webp)
 
 Drag it to where you want it. Below the product details is where I put it, so the gallery does its job at the top of the page and the configured scene is what a shopper meets on the way down.
 
@@ -101,7 +101,7 @@ Drag it to where you want it. Below the product details is where I put it, so th
 
 **Add your store's domains to the project's allowed embed domains before you save the section**, or the iframe will not render your scene and nothing on the page will tell you which host was refused.
 
-![A project settings field listing two permitted embed domains, a myshopify.com store host and a custom shop domain, one per line.](/assets/images/newsroom/12/allowed-embed-domains.webp)
+![A project settings panel with an Allowed Embed Domains field listing six patterns one per line, including a leading-wildcard entry for myshopify.com stores.](/assets/images/newsroom/12/allowed-embed-domains.webp)
 
 The embed route authenticates by preview API key and nothing else. A request with no token gets a 404 rather than falling back to your session, which is deliberate: it means a signed-in visitor and an anonymous one see exactly the same thing. Then the key is checked against the project's allowed domain list, matched on the requesting page's host, and **an empty list matches nothing**. A request coming from vectreal.com itself still resolves, which is exactly why this does not bite while you are testing and then refuses everything the moment the iframe is on your store.
 
