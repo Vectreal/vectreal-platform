@@ -1,3 +1,4 @@
+import { createSceneRequestId } from './scene-request-id'
 import { buildSceneUploadFileDescriptor } from './scene-upload-manifest'
 import { createBillingLimitErrorFromResponse } from '../../billing/client/billing-limit-error'
 
@@ -37,9 +38,17 @@ export async function publishSceneFromGlb({
 	glbData,
 	currentSceneBytes
 }: PublishSceneFromGlbInput): Promise<PublishSceneFromGlbResult> {
+	// One id for the upload and the commit. It gives the server a scope for
+	// reclaiming the GLB when the commit is refused on entitlement or quota, and
+	// it is also what makes the write lock and the idempotency record specific to
+	// this publish: without it the lock holder key falls back to a per-user
+	// constant that a second concurrent publish matches.
+	const requestId = createSceneRequestId()
+
 	const uploadFormData = new FormData()
 	uploadFormData.append('action', 'upload-published-glb')
 	uploadFormData.append('sceneId', sceneId)
+	uploadFormData.append('requestId', requestId)
 	const uploadDescriptor = buildSceneUploadFileDescriptor(
 		`${baseFileName}.glb`,
 		glbData
@@ -85,6 +94,7 @@ export async function publishSceneFromGlb({
 	const publishFormData = new FormData()
 	publishFormData.append('action', 'commit-scene-publish')
 	publishFormData.append('sceneId', sceneId)
+	publishFormData.append('requestId', requestId)
 	publishFormData.append('publishedAssetId', uploadedAsset.assetId)
 	if (Number.isFinite(currentSceneBytes)) {
 		publishFormData.append('currentSceneBytes', String(currentSceneBytes))

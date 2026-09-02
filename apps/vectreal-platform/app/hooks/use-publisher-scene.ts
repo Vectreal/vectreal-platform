@@ -10,6 +10,7 @@ import { useSceneSource } from './scene-loader/use-scene-source'
 import { useSceneUpload } from './scene-loader/use-scene-upload'
 import { usePublisherViewerCapture } from '../components/publisher/publisher-viewer-capture-context'
 import { OPENING_VIEW_CAPTURE_OPTIONS } from '../components/publisher/shell/use-opening-view'
+import { createSceneRequestId as createRequestId } from '../lib/domain/scene/client/scene-request-id'
 import { clearPendingSceneDraft } from '../lib/persistence/pending-scene-idb'
 import {
 	currentSceneIdAtom,
@@ -200,8 +201,3 @@ export function usePublisherScene({
 		persistPendingSceneDraft
 	}
 }
-
-const createRequestId = () =>
-	typeof crypto !== 'undefined' && 'randomUUID' in crypto
-		? crypto.randomUUID()
-		: `save-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
