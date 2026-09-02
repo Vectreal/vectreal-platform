@@ -15,30 +15,14 @@
 import { describe, expect, it } from 'vitest'
 
 import { createSceneStatsFromReport } from './scene-stats-helpers'
-
-import type { OptimizationReport } from '@vctrl/core'
+import { buildOptimizationReport } from '../../../tests/fixtures/optimization-report'
 
 /*
-  Deliberately far apart in magnitude. A fixture where the count and the byte
-  size are close would let the two be swapped without the assertions moving,
-  which is the whole failure being pinned.
+  The shared fixture, which keeps every size far from every count on purpose: a
+  fixture where the two were close would let them be swapped with the assertions
+  below still passing, and that is the exact defect this file pins.
 */
-const REPORT = {
-	originalSize: 8_000_000,
-	optimizedSize: 5_000_000,
-	compressionRatio: 1.6,
-	appliedOptimizations: ['draco compression'],
-	stats: {
-		verticesCount: { before: 100_000, after: 60_000 },
-		primitivesCount: { before: 50_000, after: 30_000 },
-		materialsCount: { before: 3, after: 3 },
-		textureBytes: { before: 2_000_000, after: 1_000_000 },
-		texturesCount: { before: 4, after: 4 },
-		textureResolutions: { before: [], after: [] },
-		meshBytes: { before: 6_000_000, after: 3_000_000 },
-		meshesCount: { before: 12, after: 9 }
-	}
-} as unknown as OptimizationReport
+const REPORT = buildOptimizationReport()
 
 describe('the persisted mesh count', () => {
 	it('stores the count, not the payload size', () => {
