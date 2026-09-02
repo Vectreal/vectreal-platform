@@ -41,9 +41,11 @@ To create a key with your own name, description or expiry instead:
 >
 > Do not rotate a key just to recover it. Rotation issues a fresh secret and refuses the old one from that moment, so it breaks every embed still carrying the previous value. Rotate a live key you cannot read back; create a replacement for one that is revoked or expired, because rotation refuses both.
 
-### Replacing a key that leaked
+### Replacing a key you want out of circulation
 
-If a key ends up somewhere it should not be, **rotate** it rather than revoking it. Rotating issues a new secret for the same key, keeping its name, description, projects and expiry, so only the snippet has to change:
+A preview key appearing somewhere public is not, by itself, a breach: it is in the `src` of every embed already, so being readable is how it works. What restricts it is the owning project's allowed domain list - but that list is enforced by the browser sending a `Referer`, not by the server proving one, so it does not stop a determined holder of the key from reading the published scenes it points at. Replace a key when you want the old value refused, not merely because it was seen.
+
+So the reason to replace one is that you want the old value refused - not that it was seen. **Rotate** rather than revoke: rotating issues a new secret for the same key, keeping its name, description, projects and expiry, so only the snippet has to change:
 
 1. Go to [Dashboard → API Keys](/dashboard/api-keys).
 2. Open the row menu on the key and choose **Rotate**.

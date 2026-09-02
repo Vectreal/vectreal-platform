@@ -90,7 +90,7 @@ The snippet looks like:
 
 Paste this into any HTML page. The embedded viewer loads your published model.
 
-> A **preview API key** is required for external iframe access, and the embedding domain must be on that key's allowlist - a key with an empty allowlist rejects every external host. Create and configure one in [Dashboard → API Keys](/dashboard/api-keys).
+> A **preview API key** is required for external iframe access, and the embedding site must be on the **owning project's** allowed domain list - the list belongs to the project, not to the key, so every key scoped to that project shares it. A project with an empty list rejects every external host. Create a key in [Dashboard → API Keys](/dashboard/api-keys) and set the domains in [Dashboard → Projects](/dashboard/projects).
 
 ---
 
