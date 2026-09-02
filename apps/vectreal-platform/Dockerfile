@@ -37,7 +37,9 @@ ARG BUILD_SUPABASE_URL=https://build.invalid
 ARG BUILD_SUPABASE_KEY=build-only-supabase-key
 ARG BUILD_STRIPE_SECRET_KEY=sk_test_build_only
 ARG BUILD_VITE_PUBLIC_POSTHOG_TOKEN=
-ARG BUILD_VITE_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
+# The ingestion proxy, not the PostHog origin. Only reached when the workflow
+# passes no value; the real one comes from the repo secret of the same name.
+ARG BUILD_VITE_PUBLIC_POSTHOG_HOST=https://go.vectreal.com
 ARG BUILD_VITE_PUBLIC_POSTHOG_UI_HOST=https://eu.posthog.com
 ARG BUILD_VITE_PUBLIC_VECTREAL_API_KEY_PROD=
 ARG BUILD_VITE_PUBLIC_DEMO_SCENE_URL=
