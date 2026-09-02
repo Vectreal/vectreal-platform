@@ -203,14 +203,17 @@ export async function action({ request }: Route.ActionArgs) {
 			expiresAt
 		})
 
-		// Return the plaintext key so the dialog can show it once
+		// The plaintext, for the dialog. The list shows it too, from
+		// `encrypted_key`, so this is a convenience rather than the only chance.
 		return data(
 			{
 				success: true,
 				apiKey: {
 					plaintext: result.plaintext,
-					preview: result.apiKey.keyPreview,
-					name: result.apiKey.name
+					name: result.apiKey.name,
+					// See the same field on the rotate path: an unset
+					// `EMBED_TOKEN_ENCRYPTION_KEY` mints a key with nothing to read back.
+					recoverable: result.apiKey.encryptedKey !== null
 				}
 			},
 			{ headers }
@@ -281,8 +284,8 @@ export default function ApiKeysNewPage({
 	const [showKeyDialog, setShowKeyDialog] = useState(false)
 	const [createdKey, setCreatedKey] = useState<{
 		plaintext: string
-		preview: string
 		name: string
+		recoverable: boolean
 	} | null>(null)
 
 	// Control drawer open state based on route
