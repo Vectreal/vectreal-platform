@@ -627,7 +627,7 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 								{keysByOrg[organizations[0].organization.id]?.length === 1
 									? 'key'
 									: 'keys'}{' '}
-								configured for secure embed and preview access
+								for embed and preview access
 							</p>
 						</div>
 						{apiKeysAccessByOrg[organizations[0].organization.id]?.granted ? (

@@ -967,7 +967,7 @@ export function ApiKeyNameCell({ row }: { row: ApiKeyRow }) {
 				  labels its copy of this value; the row had nothing.
 				*/
 				<div
-					className="ph-no-capture flex items-start gap-1.5"
+					className="ph-no-capture flex max-w-[22rem] items-start gap-1.5"
 					role="group"
 					aria-label={`API key ${row.name}`}
 				>
@@ -990,13 +990,17 @@ export function ApiKeyNameCell({ row }: { row: ApiKeyRow }) {
 					  `--radius`, so it renders 4px beside a 16px button and a 20px cell
 					  corner. `rounded-sm` is the 10px step.
 
-					  `max-w-[24ch]` bounds what the column asks for. `break-all` sets
-					  min-content to one character so nothing overflows, but max-content
-					  is the full 38 characters, and under `table-layout: auto` that
-					  preference is taken from the six sibling columns - which do
-					  truncate.
+					  `flex-1 min-w-0`, and the cap on the wrapper rather than on this
+					  element. A `max-width` here bounded the box and nothing else: the
+					  cell sits in an auto-layout table, so it sizes to this item's
+					  max-content, the flex item keeps claiming that width, and the text
+					  runs straight out of its own 24ch box and under the copy button.
+
+					  `flex-1` sets the basis to zero so the item stops asking for
+					  max-content, `min-w-0` lets it shrink past min-content, and only
+					  then does `break-all` have a narrower line box to wrap into.
 					*/}
-					<code className="text-foreground bg-muted max-w-[24ch] min-w-0 rounded-sm px-1.5 py-0.5 font-mono text-xs break-all">
+					<code className="text-foreground bg-muted min-w-0 flex-1 rounded-sm px-1.5 py-0.5 font-mono text-xs break-all">
 						{keyValue.value}
 					</code>
 					{/*
