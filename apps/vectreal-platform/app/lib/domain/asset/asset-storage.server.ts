@@ -2,7 +2,17 @@ import { randomUUID } from 'crypto'
 import { createHash } from 'node:crypto'
 
 import { createClient } from '@supabase/supabase-js'
-import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
+import {
+	and,
+	asc,
+	desc,
+	eq,
+	inArray,
+	isNotNull,
+	lt,
+	not,
+	sql
+} from 'drizzle-orm'
 
 import { getDbClient } from '../../../db/client'
 import {
@@ -101,6 +111,27 @@ async function ensureStorageBucketOnce() {
 	}
 
 	await ensureBucketPromise
+}
+
+/**
+ * Looks up the project's scene-asset folder without creating it.
+ *
+ * Exported so callers that only read assets (the reclaim sweep) share this
+ * module's `(projectId, ASSET_FOLDER_NAME)` lookup instead of repeating the
+ * folder name literal.
+ */
+export async function findAssetFolderId(
+	projectId: string
+): Promise<string | null> {
+	const [folder] = await db
+		.select({ id: folders.id })
+		.from(folders)
+		.where(
+			and(eq(folders.projectId, projectId), eq(folders.name, ASSET_FOLDER_NAME))
+		)
+		.limit(1)
+
+	return folder?.id ?? null
 }
 
 /**
@@ -230,7 +261,8 @@ export async function uploadSceneAssets(
 	sceneId: string,
 	userId: string,
 	projectId: string,
-	gltfAssets: GLTFAssetData[]
+	gltfAssets: GLTFAssetData[],
+	requestId?: string
 ): Promise<AssetUploadResult[]> {
 	await ensureStorageBucketOnce()
 
@@ -250,6 +282,9 @@ export async function uploadSceneAssets(
 		)
 
 		if (existingAsset) {
+			// No metadata rewrite here. This row is referenced by something, so it
+			// is outside every reclaim scope already, and re-stamping it with this
+			// batch's request id would drag it into one.
 			results.push({
 				assetId: existingAsset.id,
 				fileName: existingAsset.name,
@@ -288,7 +323,8 @@ export async function uploadSceneAssets(
 					sceneId,
 					originalFileName: fileName,
 					assetType: asset.type,
-					contentHash
+					contentHash,
+					requestId
 				},
 				ownerId: userId
 			})
@@ -488,6 +524,58 @@ export async function deleteStorageObjects(filePaths: string[]): Promise<void> {
 			})
 		}
 	}
+}
+
+/**
+ * The three ways an asset is still in use, as SQL predicates.
+ *
+ * `selectUnreferencedAssetIds` and `selectUnreferencedAssetIdsInFolder` answer
+ * the same question at different scales, and they share this so the answer
+ * cannot drift between them. Splitting the rule is what produced the thumbnail
+ * bug described above: a collector that asked only `scene_assets` deleted the
+ * file `scenes.thumbnail_url` still pointed at.
+ */
+function isReferencedSql() {
+	return sql`(
+		exists (select 1 from ${sceneAssets} where ${sceneAssets.assetId} = ${assets.id})
+		or exists (select 1 from ${scenePublished} where ${scenePublished.assetId} = ${assets.id})
+		or exists (
+			select 1 from ${scenes}
+			where ${scenes.thumbnailUrl} is not null
+				and regexp_replace(${scenes.thumbnailUrl}, '^.*/', '') = ${assets.id}::text
+		)
+	)`
+}
+
+/**
+ * A bounded page of assets in one folder that nothing references.
+ *
+ * The bound is why the reference test has to be in the query rather than
+ * applied to the rows afterwards. Filtering a `limit`ed page of *all* aged rows
+ * would stall: the oldest assets in a healthy project belong to its
+ * longest-lived scene and are referenced forever, so the same referenced prefix
+ * would come back on every call and a newer orphan behind it would never be
+ * reached.
+ */
+export async function selectUnreferencedAssetIdsInFolder(params: {
+	folderId: string
+	createdBefore: Date
+	limit: number
+}): Promise<string[]> {
+	const rows = await db
+		.select({ id: assets.id })
+		.from(assets)
+		.where(
+			and(
+				eq(assets.folderId, params.folderId),
+				lt(assets.createdAt, params.createdBefore),
+				not(isReferencedSql())
+			)
+		)
+		.orderBy(asc(assets.createdAt))
+		.limit(params.limit)
+
+	return rows.map((row) => row.id)
 }
 
 export async function deleteAssets(assetIds: string[]): Promise<void> {

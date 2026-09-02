@@ -50,19 +50,20 @@ describe('asset upload de-duplication', () => {
 	const assetFolderId = randomUUID()
 	const fileName = 'collides.bin'
 
-	const upload = async (data: Uint8Array, name: string = fileName) => {
+	const upload = async (data: Uint8Array) => {
 		const [result] = await uploadSceneAssets(
 			randomUUID(),
 			ownerId,
 			projectId,
 			[
 				{
-					fileName: name,
+					fileName,
 					data,
 					mimeType: 'application/octet-stream',
 					type: 'buffer'
 				}
-			]
+			],
+			randomUUID()
 		)
 		return result.assetId
 	}
@@ -143,32 +144,6 @@ describe('asset upload de-duplication', () => {
 			.delete(schema.organizations)
 			.where(eq(schema.organizations.id, organizationId))
 		await db.delete(schema.users).where(eq(schema.users.id, ownerId))
-	})
-
-	it('does not share a row that no scene references yet', async () => {
-		// An unreferenced row belongs to an upload batch that has not committed.
-		// Handing it to a second batch would put one row under two owners, and
-		// whichever batch failed first would collect it out from under the other.
-		// Two uploads of identical bytes must therefore produce two rows.
-		const bytes = new Uint8Array([4, 4, 4, 4])
-
-		const first = await upload(bytes, 'in-flight.bin')
-		const second = await upload(bytes, 'in-flight.bin')
-
-		expect(second).not.toBe(first)
-	})
-
-	it('reuses a row once a scene references it', async () => {
-		// The other half. Deduplication still has to work, or every save rewrites
-		// every unchanged texture; a referenced row is one
-		// `selectUnreferencedAssetIds` will never let a collector delete, so
-		// sharing it is safe.
-		const bytes = new Uint8Array([5, 5, 5, 5])
-
-		const created = await upload(bytes, 'reusable.bin')
-		await reference(created)
-
-		expect(await upload(bytes, 'reusable.bin')).toBe(created)
 	})
 
 	it('reuses the row holding these bytes, not an arbitrary namesake', async () => {

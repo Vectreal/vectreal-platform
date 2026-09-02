@@ -58,19 +58,19 @@ const FUNNEL = CRITICAL_FLOWS
   Tests job that runs the suite against a supabase/postgres service on every
   pull request, so those specs are a gate rather than a note.
 
-  That does not move `scene-settings.operations.server.ts`, and running the
-  suite in CI was never going to: no spec imports it at all. It is 669 lines
-  orchestrating quota checks, entitlements, asset upload and four tables, and
-  `uploadSceneAssets` puts Supabase Storage on the path beside Postgres, which
-  is why it did not fall out of the same work that closed
-  `api-key-repository.server`. Closing it needs a spec that drives
-  `saveSceneSettings` end to end, and storage in the job to run it against.
+  `scene-settings.operations.server.ts` was the last entry, and it closed the
+  way this block asked it to: `asset-reclaim.integration.spec.ts` drives
+  `saveSceneSettings` end to end against real Postgres, on the rejection path
+  where a commit fails after its uploads have already landed. Supabase Storage
+  was the reason it stayed - it sits on the path beside Postgres - and it is
+  faked at the `createClient` boundary, which leaves every query, constraint and
+  cascade the module depends on running for real.
 
-  Removing an entry is the only way this list is allowed to change.
+  The set is empty, and that is the point: an entry may only ever be removed.
+  Adding one back means a module on the funnel lost its last spec, which is a
+  regression to fix rather than a line to append here.
 */
-const KNOWN_UNGUARDED = new Set([
-	'app/lib/domain/scene/server/scene-settings.operations.server.ts'
-])
+const KNOWN_UNGUARDED = new Set<string>([])
 
 function collectSpecFiles(dir: string): string[] {
 	return readdirSync(dir).flatMap((entry) => {

@@ -12,6 +12,10 @@ import { projects } from '../../../../db/schema/project/projects'
 import { scenePublished } from '../../../../db/schema/project/scene-published'
 import { scenes } from '../../../../db/schema/project/scenes'
 import { reportServerError } from '../../../observability/report-server-error.server'
+import {
+	reclaimStaleProjectAssets,
+	reclaimUploadBatch
+} from '../../asset/asset-reclaim.server'
 import { uploadSceneAssets } from '../../asset/asset-storage.server'
 import {
 	hasEntitlement,
@@ -273,14 +277,20 @@ export async function uploadSceneAsset(
 		const { sceneId, projectId } = await prepareSceneUpload(request, userId)
 		const bytes = new Uint8Array(await file.arrayBuffer())
 
-		const [uploadResult] = await uploadSceneAssets(sceneId, userId, projectId, [
-			{
-				fileName: file.name,
-				data: bytes,
-				mimeType: file.type || 'application/octet-stream',
-				type: kind
-			}
-		])
+		const [uploadResult] = await uploadSceneAssets(
+			sceneId,
+			userId,
+			projectId,
+			[
+				{
+					fileName: file.name,
+					data: bytes,
+					mimeType: file.type || 'application/octet-stream',
+					type: kind
+				}
+			],
+			request.requestId
+		)
 
 		return ApiResponse.success({
 			sceneId,
@@ -305,14 +315,20 @@ export async function uploadSceneGltf(
 		const { sceneId, projectId } = await prepareSceneUpload(request, userId)
 		const bytes = new Uint8Array(await file.arrayBuffer())
 
-		const [uploadResult] = await uploadSceneAssets(sceneId, userId, projectId, [
-			{
-				fileName: file.name || 'scene.gltf',
-				data: bytes,
-				mimeType: file.type || 'model/gltf+json',
-				type: 'buffer'
-			}
-		])
+		const [uploadResult] = await uploadSceneAssets(
+			sceneId,
+			userId,
+			projectId,
+			[
+				{
+					fileName: file.name || 'scene.gltf',
+					data: bytes,
+					mimeType: file.type || 'model/gltf+json',
+					type: 'buffer'
+				}
+			],
+			request.requestId
+		)
 
 		return ApiResponse.success({
 			sceneId,
@@ -337,14 +353,20 @@ export async function uploadPublishedGlb(
 		const { sceneId, projectId } = await prepareSceneUpload(request, userId)
 		const bytes = new Uint8Array(await file.arrayBuffer())
 
-		const [uploadResult] = await uploadSceneAssets(sceneId, userId, projectId, [
-			{
-				fileName: file.name || 'scene.glb',
-				data: bytes,
-				mimeType: file.type || 'model/gltf-binary',
-				type: 'buffer'
-			}
-		])
+		const [uploadResult] = await uploadSceneAssets(
+			sceneId,
+			userId,
+			projectId,
+			[
+				{
+					fileName: file.name || 'scene.glb',
+					data: bytes,
+					mimeType: file.type || 'model/gltf-binary',
+					type: 'buffer'
+				}
+			],
+			request.requestId
+		)
 
 		return ApiResponse.success({
 			sceneId,
@@ -364,6 +386,8 @@ export async function saveSceneSettings(
 	request: SceneSettingsRequest,
 	userId: string
 ): Promise<Response> {
+	let reclaimProjectId: string | null = null
+
 	try {
 		console.info('[scene-settings] save operation started', {
 			requestId: request.requestId,
@@ -394,6 +418,9 @@ export async function saveSceneSettings(
 			request.targetProjectId,
 			request.projectId
 		)
+		// Held outside the try so a rejected save can still reclaim what its
+		// uploads already wrote.
+		reclaimProjectId = projectId
 
 		await validateSaveLocationTarget(request, userId, projectId)
 
@@ -421,6 +448,18 @@ export async function saveSceneSettings(
 			projectId,
 			unchanged: Boolean((saveResult as { unchanged?: boolean }).unchanged)
 		})
+
+		// Anything this batch uploaded that the commit did not link is
+		// unreachable from here on: it is in no link table, so no later save or
+		// delete would ever list it as a candidate.
+		await reclaimUploadBatch({
+			requestId: request.requestId,
+			projectId,
+			keepAssetIds: validationResult.sceneAssetIds
+		})
+		// Backstop for batches that never reached any commit, so no request ever
+		// carries their id. A successful save is the only in-band trigger there is.
+		await reclaimStaleProjectAssets({ projectId })
 
 		const [stats, savedScene] = await Promise.all([
 			sceneSettingsService.getSceneStats(finalSceneId),
@@ -457,6 +496,14 @@ export async function saveSceneSettings(
 				sceneId: request.sceneId || null
 			}
 		})
+		// The uploads are already committed to storage by the time the save is
+		// rejected. Nothing linked them, so this is the last chance to find them.
+		if (reclaimProjectId) {
+			await reclaimUploadBatch({
+				requestId: request.requestId,
+				projectId: reclaimProjectId
+			})
+		}
 		return ApiResponse.serverError(
 			error instanceof Error ? error.message : 'Failed to save scene settings'
 		)
@@ -529,6 +576,13 @@ export async function publishScene(
 	request: SceneSettingsRequest,
 	userId: string
 ): Promise<Response> {
+	// The GLB is uploaded in its own request, before any of the checks below run,
+	// so an entitlement refusal, a quota refusal or a thrown error all leave it
+	// in storage linked to nothing. Reclaiming in `finally` covers every exit
+	// from this function with one call site rather than four.
+	let reclaimProjectId: string | null = null
+	let keepAssetIds: string[] = []
+
 	try {
 		const { sceneId, publishedAssetId, currentSceneBytes } =
 			request as PublishSceneRequest
@@ -550,6 +604,7 @@ export async function publishScene(
 		}
 
 		const projectId = await getSceneProjectId(sceneId)
+		reclaimProjectId = projectId
 		const project = await getProject(projectId, userId)
 		if (!project) {
 			throw new Error('Project not found or access denied')
@@ -625,6 +680,9 @@ export async function publishScene(
 			publishedAssetId,
 			currentSceneBytes
 		})
+		// Only reached when the publish landed, so this is the one asset the
+		// reclaim must leave alone.
+		keepAssetIds = [publishedAssetId]
 		const stats = await sceneSettingsService.getSceneStats(sceneId)
 
 		return ApiResponse.success({ ...result, sceneId, stats })
@@ -635,6 +693,14 @@ export async function publishScene(
 		return ApiResponse.serverError(
 			error instanceof Error ? error.message : 'Failed to publish scene'
 		)
+	} finally {
+		if (reclaimProjectId) {
+			await reclaimUploadBatch({
+				requestId: request.requestId,
+				projectId: reclaimProjectId,
+				keepAssetIds
+			})
+		}
 	}
 }
 
