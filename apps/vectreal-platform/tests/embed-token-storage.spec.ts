@@ -75,50 +75,87 @@ describe('the deployment that has to configure it', () => {
 	*/
 	const ENV_VAR = 'EMBED_TOKEN_ENCRYPTION_KEY'
 
-	it('is set by the script that provisions Fly secrets', () => {
-		const script = read('terraform/scripts/setup-fly-secrets.sh')
+	/*
+	  These used to pin the shape of the script - a local named `emb_key`, an
+	  array named `REQUIRED_PER_ENV`, a `for field in` list - which is why they
+	  broke when the four hand-written name lists became one manifest, even
+	  though the rule they exist to protect never moved. They pin the manifest
+	  now: membership in FLY_SECRETS_REQUIRED is the whole rule, and validation,
+	  --verify and sync all read it, so one assertion covers all three.
+	*/
+	const script = () => read('terraform/scripts/setup-fly-secrets.sh')
+	const manifestSection = (from: string, to: string) => {
+		const source = script()
+		return source.slice(source.indexOf(from), source.indexOf(to))
+	}
 
-		expect(script).toContain(`${ENV_VAR}="$emb_key"`)
+	it('is set by the script that provisions Fly secrets', () => {
+		expect(
+			manifestSection('FLY_SECRETS_REQUIRED=(', 'FLY_SECRETS_OPTIONAL=(')
+		).toContain(`"${ENV_VAR}"`)
+
+		/*
+		  A name in the manifest is only worth asserting if the *sync* reads it -
+		  the old hand-written argument list is exactly how a name could sit in a
+		  REQUIRED_ array and never reach `fly secrets set`.
+
+		  Scoped to sync_fly_secrets rather than searched for in the whole file,
+		  because --verify opens its loop with the same words plus a second
+		  array. An unscoped `toContain` here passes on that line instead, and a
+		  mutation replacing the sync loop's array with a literal survived it.
+		*/
+		const sync = manifestSection('sync_fly_secrets()', 'sync_supabase_hook()')
+
+		expect(sync).toContain('for name in "${FLY_SECRETS_REQUIRED[@]}"; do')
 		// Resolved per environment, so staging and production get their own.
-		expect(script).toContain(`resolve ${ENV_VAR} "$ENV"`)
+		expect(sync).toContain('value="$(resolve "$name" "$ENV")"')
+		expect(sync).toContain('args+=("${name}=${value}")')
 	})
 
 	it('fails the run when it is missing, rather than deploying without it', () => {
 		/*
-		  `REQUIRED_PER_ENV` is the list that `exit 1`s, and it is checked once
-		  per environment - so the bare name appearing there covers both. The
-		  earlier `${emb_key:+...}` form skipped a missing value without comment,
-		  so a forgotten key produced a *successful* deploy that minted keys
-		  nobody could ever be shown, which is the failure this whole change
-		  exists to end.
+		  Optional entries are skipped when they resolve to nothing. For this key
+		  that would be a *successful* deploy which mints keys nobody can ever be
+		  shown - the failure this whole change exists to end - so the assertion
+		  worth making is that it is not on that list.
 		*/
-		const script = read('terraform/scripts/setup-fly-secrets.sh')
-
-		const required = script.slice(
-			script.indexOf('REQUIRED_PER_ENV=('),
-			script.indexOf('MISSING=()')
-		)
-		expect(required).toContain(`"${ENV_VAR}"`)
+		expect(
+			manifestSection('FLY_SECRETS_OPTIONAL=(', 'FLY_SECRETS_SHARED=(')
+		).not.toContain(`"${ENV_VAR}"`)
 
 		// Checked for staging and for prod, not just once overall.
 		for (const env of ['STAGING', 'PROD']) {
-			expect(script, env).toContain(
-				`check_env_vars ${env} "\${REQUIRED_PER_ENV[@]}"`
+			expect(script(), env).toContain(
+				`check_env_vars ${env} "\${FLY_SECRETS_REQUIRED[@]}"`
 			)
 		}
-
-		expect(script).toContain(`${ENV_VAR}="$emb_key"`)
-		expect(script).not.toContain(`\${emb_key:+`)
 	})
 
 	it('is checked by verify mode too', () => {
-		const script = read('terraform/scripts/setup-fly-secrets.sh')
-		const checkList = script.slice(
-			script.indexOf('check_env_secrets()'),
-			script.indexOf('check_fly_secret "$app" "$field"')
+		/*
+		  Required names go through `check_fly_secret`, which records a failure;
+		  optional ones go through `warn_fly_secret`, which deliberately does
+		  not. Membership decides which, so the pair of assertions below is what
+		  makes this key's absence fail the gate rather than print a warning.
+		*/
+		const verify = manifestSection(
+			'check_env_secrets()',
+			'section "Supabase auth hook'
 		)
 
-		expect(checkList).toContain(ENV_VAR)
+		/*
+		  The two have to be asserted as a pair. Two independent `toContain`s
+		  both stay green when the loop bodies are swapped - required routed
+		  through `warn_fly_secret`, optional through `check_fly_secret` - which
+		  is precisely the state this test exists to catch, since it turns this
+		  key's absence into a warning that passes the gate.
+		*/
+		expect(verify).toMatch(
+			/for name in "\$\{FLY_SECRETS_REQUIRED\[@\]\}"[^\n]*\n\s*check_fly_secret "\$app" "\$name"/
+		)
+		expect(verify).toMatch(
+			/for name in "\$\{FLY_SECRETS_OPTIONAL\[@\]\}"[^\n]*\n\s*warn_fly_secret "\$app" "\$name"/
+		)
 	})
 
 	/*

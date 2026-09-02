@@ -37,7 +37,9 @@ ARG BUILD_SUPABASE_URL=https://build.invalid
 ARG BUILD_SUPABASE_KEY=build-only-supabase-key
 ARG BUILD_STRIPE_SECRET_KEY=sk_test_build_only
 ARG BUILD_VITE_PUBLIC_POSTHOG_TOKEN=
-ARG BUILD_VITE_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
+# The ingestion proxy, not the PostHog origin. Only reached when the workflow
+# passes no value; the real one comes from the repo secret of the same name.
+ARG BUILD_VITE_PUBLIC_POSTHOG_HOST=https://go.vectreal.com
 ARG BUILD_VITE_PUBLIC_POSTHOG_UI_HOST=https://eu.posthog.com
 ARG BUILD_VITE_PUBLIC_VECTREAL_API_KEY_PROD=
 ARG BUILD_VITE_PUBLIC_DEMO_SCENE_URL=
@@ -67,11 +69,21 @@ ENV NODE_ENV=${NODE_ENV}
 ENV PORT=8080
 ENV NODE_OPTIONS="--heapsnapshot-near-heap-limit=2"
 
-# Runtime secrets are injected by Fly.io (set via setup-fly-secrets.sh).
-# Required: DATABASE_URL, SUPABASE_URL, SUPABASE_KEY, STRIPE_SECRET_KEY,
-#           CSRF_SECRET, APPLICATION_URL, CLOUDFLARE_TURNSTILE_SITE_KEY,
-#           CLOUDFLARE_TURNSTILE_SECRET_KEY, RESEND_API_KEY, FROM_EMAIL,
-#           CONTACT_INBOX_EMAIL, SEND_EMAIL_HOOK_SECRET
+# Runtime secrets are injected by Fly.io. The authoritative list is the manifest
+# at the top of terraform/scripts/setup-fly-secrets.sh, and is deliberately not
+# repeated here: the copy that used to sit at this line named twelve while the
+# manifest requires seventeen, and nothing compared the two.
+#
+# What this stage does NOT inherit is the point. `build` is `FROM deps` and
+# `deps` is `FROM base`; `runner` is `FROM base` directly, so it is off that
+# branch entirely and inherits none of build's ENV - neither the VITE_PUBLIC_*
+# values Vite bakes into the client bundle nor the throwaway placeholders that
+# keep server-module env validation from throwing mid-build.
+#
+# So a name that appears as a build ARG above is not thereby available to the
+# running server: anything read from process.env at runtime has to be a Fly
+# secret in its own right. VITE_PUBLIC_POSTHOG_TOKEN is both, for two unrelated
+# reasons; the manifest explains what having only the build half cost.
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \

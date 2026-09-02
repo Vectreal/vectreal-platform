@@ -20,8 +20,9 @@
 #   1. Fly.io app secrets (fly secrets set)
 #   2. Supabase send_email hook URI + secret (via Management API)
 #
-# --verify is a gate, not a report: it exits non-zero when a secret is missing
-# or the live hook URI does not match APPLICATION_URL.
+# --verify is a gate, not a report: it exits non-zero when a *required* secret
+# is missing or the live hook URI does not match APPLICATION_URL. An optional
+# one that is unset warns and passes, which is what the sync does with it.
 # =============================================================================
 
 RED='\033[0;31m'
@@ -135,15 +136,38 @@ resolve() {
 
 section "Validating required variables"
 
+# ---------------------------------------------------------------------------
+# The manifest
+# ---------------------------------------------------------------------------
+# Every runtime secret is named once, here. Validation, --verify and sync all
+# read these arrays, so a name added here reaches all three at once.
+#
+# It used to be four hand-written lists - two REQUIRED_* arrays, the --verify
+# field list, and the arguments to `fly secrets set` - and nothing compared them
+# to each other or to what the app reads. That is how STRIPE_WEBHOOK_SECRET,
+# VITE_PUBLIC_POSTHOG_TOKEN and BILLING_RECONCILE_SECRET reached production
+# unset: the app read all three at runtime, no list here mentioned any of them,
+# so validation had nothing to require and --verify had nothing to check. The
+# lists had drifted from each other too - --verify hard-failed on
+# CONTACT_DATA_ENCRYPTION_KEY and RESEND_WEBHOOK_SECRET while sync treated both
+# as optional.
+#
 # Logical names, not spellings. `resolve` decides whether a value arrives as
 # DATABASE_URL_PROD or as DATABASE_URL in a production Environment.
-REQUIRED_SHARED=(
-  "FROM_EMAIL"
-  "CONTACT_INBOX_EMAIL"
-  "SUPABASE_ACCESS_TOKEN"
-)
-REQUIRED_PER_ENV=(
-  "SUPABASE_PROJECT_REF"
+#
+# One enumeration this cannot absorb: the `env:` block in
+# cd-platform-secrets.yaml, because a GitHub Actions job only sees the secrets
+# it maps by hand. For a required name that drift is loud - `resolve` returns
+# empty and validation exits 1 - but for an optional one it is silent, so a
+# name added to FLY_SECRETS_OPTIONAL needs a line there in the same change.
+#
+# This file is the authoritative list. The Dockerfile and .env.development.example
+# point here rather than restating it, because the copy that used to live in the
+# Dockerfile went stale and nothing compared them.
+
+# Sent to Fly. Resolved per environment, and the sync refuses to run without
+# them.
+FLY_SECRETS_REQUIRED=(
   "DATABASE_URL"
   "SUPABASE_URL"
   "SUPABASE_KEY"
@@ -151,11 +175,58 @@ REQUIRED_PER_ENV=(
   "APPLICATION_URL"
   "CSRF_SECRET"
   "STRIPE_SECRET_KEY"
+  # Without this the webhook route rejects every delivery with a 400, and
+  # `billing_state` loses every backward transition - cancellation, payment
+  # failure, dunning, expiry. Nothing else carries them automatically:
+  # cancelSubscription is called only from the webhook processor, and the one
+  # other writer, reconcileStripeSubscriptions, is reachable only through
+  # /api/billing/reconcile, which needs BILLING_RECONCILE_SECRET below and has
+  # therefore never run. Unset in production until 2026-09, over which time
+  # `billing_webhook_events` recorded zero rows.
+  "STRIPE_WEBHOOK_SECRET"
   "SEND_EMAIL_HOOK_SECRET"
   "CLOUDFLARE_TURNSTILE_SITE_KEY"
   "CLOUDFLARE_TURNSTILE_SECRET_KEY"
   "RESEND_API_KEY"
   "EMBED_TOKEN_ENCRYPTION_KEY"
+  # Read at runtime by posthog-client.server.ts. The VITE_ prefix is a
+  # misnomer here and reads like a build-time-only name, which is part of why
+  # these were never provisioned: the Dockerfile sets them as build-stage ENV
+  # for the client bundle, the runner stage does not inherit that, and without
+  # them getPosthogClient() returns null - taking the server error sink, all
+  # server analytics and the billing-checkout kill switch down with it.
+  "VITE_PUBLIC_POSTHOG_TOKEN"
+  "VITE_PUBLIC_POSTHOG_HOST"
+)
+
+# Sent to Fly when a value exists, skipped when it does not, and --verify warns
+# rather than failing on one. This list is the sync's existing behaviour made
+# explicit, not a judgement that absence is harmless - it is per-secret:
+FLY_SECRETS_OPTIONAL=(
+  # Genuinely degrades: pii-encryption.server.ts falls back to CSRF_SECRET.
+  "CONTACT_DATA_ENCRYPTION_KEY"
+  # Does NOT degrade. resend-webhook-processor.server.ts throws when it is
+  # unset, so the route breaks rather than switching off. Optional only because
+  # the sync has always treated it that way; promoting it to required would
+  # fail the next run for any environment that has never had a value.
+  "RESEND_WEBHOOK_SECRET"
+  # Genuinely degrades: /api/billing/reconcile is fail-closed and 401s
+  # everything, which leaves the drift detector off but breaks nothing.
+  "BILLING_RECONCILE_SECRET"
+)
+
+# Sent to Fly. One value covers both environments.
+FLY_SECRETS_SHARED=(
+  "CONTACT_INBOX_EMAIL"
+  "FROM_EMAIL"
+)
+
+# Required by this script, never sent to Fly.
+SCRIPT_ONLY_SHARED=(
+  "SUPABASE_ACCESS_TOKEN"
+)
+SCRIPT_ONLY_PER_ENV=(
+  "SUPABASE_PROJECT_REF"
 )
 
 MISSING=()
@@ -169,11 +240,11 @@ check_env_vars() {
   done
 }
 
-check_shared "${REQUIRED_SHARED[@]}"
+check_shared "${FLY_SECRETS_SHARED[@]}" "${SCRIPT_ONLY_SHARED[@]}"
 [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && \
-  check_env_vars STAGING "${REQUIRED_PER_ENV[@]}"
+  check_env_vars STAGING "${FLY_SECRETS_REQUIRED[@]}" "${SCRIPT_ONLY_PER_ENV[@]}"
 [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod"    ]] && \
-  check_env_vars PROD "${REQUIRED_PER_ENV[@]}"
+  check_env_vars PROD "${FLY_SECRETS_REQUIRED[@]}" "${SCRIPT_ONLY_PER_ENV[@]}"
 
 if [[ ${#MISSING[@]} -gt 0 ]]; then
   err "Missing required variables:"
@@ -196,11 +267,20 @@ if [[ "$MODE" == "verify" ]]; then
 
   section "Fly.io secrets (existence check)"
 
+  # One listing per app, held for the whole check. This used to make a network
+  # round trip per secret name, and the manifest is longer than the list it
+  # replaced.
+  FLY_SECRETS_LISTING=""
+
   # Presence only. `fly secrets list` reports digests, never values, so nothing
   # here can tell a correct secret from a wrong one - only a missing one.
+  #
+  # `$app` is for the message. The answer comes from FLY_SECRETS_LISTING, which
+  # check_env_secrets loads for the app it is about to check, so these two must
+  # not be called from anywhere that has not just set it.
   check_fly_secret() {
     local app="$1" name="$2"
-    if fly secrets list --app "$app" 2>/dev/null | grep -qw "$name"; then
+    if printf '%s' "$FLY_SECRETS_LISTING" | grep -qw "$name"; then
       ok "$app / $name"
     else
       err "$app / $name NOT FOUND"
@@ -208,22 +288,41 @@ if [[ "$MODE" == "verify" ]]; then
     fi
   }
 
+  # Optional secrets are reported but never fail the gate. Their absence turns a
+  # feature off by design; treating that as a failure is what made the old list
+  # disagree with the sync it was supposed to be checking.
+  warn_fly_secret() {
+    local app="$1" name="$2"
+    if printf '%s' "$FLY_SECRETS_LISTING" | grep -qw "$name"; then
+      ok "$app / $name"
+    else
+      warn "$app / $name not set - optional in the manifest; see its entry there for what that costs"
+    fi
+  }
+
   check_env_secrets() {
-    local env="$1" app="$2"
-    for field in DATABASE_URL SUPABASE_URL SUPABASE_KEY SUPABASE_SECRET_KEY \
-                 CSRF_SECRET STRIPE_SECRET_KEY APPLICATION_URL SEND_EMAIL_HOOK_SECRET \
-                 CLOUDFLARE_TURNSTILE_SITE_KEY CLOUDFLARE_TURNSTILE_SECRET_KEY \
-                 RESEND_API_KEY CONTACT_DATA_ENCRYPTION_KEY RESEND_WEBHOOK_SECRET \
-                 EMBED_TOKEN_ENCRYPTION_KEY \
-                 CONTACT_INBOX_EMAIL FROM_EMAIL; do
-      check_fly_secret "$app" "$field"
+    local app="$1"
+    local name
+
+    FLY_SECRETS_LISTING="$(fly secrets list --app "$app" 2>/dev/null)"
+    if [[ -z "$FLY_SECRETS_LISTING" ]]; then
+      err "$app - could not read the secret list"
+      VERIFY_FAILED+=("$app/listing")
+      return
+    fi
+
+    for name in "${FLY_SECRETS_REQUIRED[@]}" "${FLY_SECRETS_SHARED[@]}"; do
+      check_fly_secret "$app" "$name"
+    done
+    for name in "${FLY_SECRETS_OPTIONAL[@]}"; do
+      warn_fly_secret "$app" "$name"
     done
   }
 
   [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && \
-    check_env_secrets staging "vectreal-platform-staging"
+    check_env_secrets "vectreal-platform-staging"
   [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]] && \
-    check_env_secrets prod "vectreal-platform"
+    check_env_secrets "vectreal-platform"
 
   section "Supabase auth hook (live value)"
 
@@ -301,47 +400,44 @@ sync_fly_secrets() {
   env_title="$(printf '%s' "$env" | sed 's/\(.\)/\u\1/')"
   section "${env_title} → $app"
 
-  local db_url;   db_url="$(resolve DATABASE_URL "$ENV")"
-  local sb_url;   sb_url="$(resolve SUPABASE_URL "$ENV")"
-  local sb_key;   sb_key="$(resolve SUPABASE_KEY "$ENV")"
-  local sb_secret_key; sb_secret_key="$(resolve SUPABASE_SECRET_KEY "$ENV")"
-  local app_url;  app_url="$(resolve APPLICATION_URL "$ENV")"
-  local csrf;     csrf="$(resolve CSRF_SECRET "$ENV")"
-  local stripe;   stripe="$(resolve STRIPE_SECRET_KEY "$ENV")"
-  local ts_site;  ts_site="$(resolve CLOUDFLARE_TURNSTILE_SITE_KEY "$ENV")"
-  local ts_sec;   ts_sec="$(resolve CLOUDFLARE_TURNSTILE_SECRET_KEY "$ENV")"
-  local resend;   resend="$(resolve RESEND_API_KEY "$ENV")"
-  local hook_raw; hook_raw="$(resolve SEND_EMAIL_HOOK_SECRET "$ENV")"
-  local hook; hook="$(strip_hook_prefix "$hook_raw")"
-  local enc_key;  enc_key="$(resolve CONTACT_DATA_ENCRYPTION_KEY "$ENV")"
-  local emb_key;  emb_key="$(resolve EMBED_TOKEN_ENCRYPTION_KEY "$ENV")"
-  local resend_wh; resend_wh="$(resolve RESEND_WEBHOOK_SECRET "$ENV")"
-
   local stage_flag=()
   if [[ "$STAGE_ONLY" == "true" ]]; then
     stage_flag=(--stage)
     warn "staged only - the next deploy applies these"
   fi
 
+  # Built from the manifest rather than spelled out a second time. A name added
+  # up there is validated, verified and set without another edit down here,
+  # which is the only reason the three can no longer disagree.
+  local args=()
+  local name value
+  for name in "${FLY_SECRETS_REQUIRED[@]}"; do
+    value="$(resolve "$name" "$ENV")"
+    case "$name" in
+      # Supabase issues this one as "v1,whsec_…" and Fly reads a comma as its
+      # own argument delimiter, so the prefix comes off before it is sent.
+      SEND_EMAIL_HOOK_SECRET) value="$(strip_hook_prefix "$value")" ;;
+    esac
+    args+=("${name}=${value}")
+  done
+  for name in "${FLY_SECRETS_SHARED[@]}"; do
+    args+=("${name}=$(resolve "$name")")
+  done
+  for name in "${FLY_SECRETS_OPTIONAL[@]}"; do
+    value="$(resolve "$name" "$ENV")"
+    if [[ -n "$value" ]]; then
+      args+=("${name}=${value}")
+    else
+      warn "$name has no value - skipping; see its manifest entry for what that costs"
+    fi
+  done
+
+  # Derived here rather than resolved: neither is a secret, and ENVIRONMENT is
+  # this script's own label for which app it is writing to.
+  args+=("NODE_ENV=production" "ENVIRONMENT=${env}")
+
   if fly secrets set \
-      DATABASE_URL="$db_url" \
-      SUPABASE_URL="$sb_url" \
-      SUPABASE_KEY="$sb_key" \
-      SUPABASE_SECRET_KEY="$sb_secret_key" \
-      APPLICATION_URL="$app_url" \
-      CSRF_SECRET="$csrf" \
-      STRIPE_SECRET_KEY="$stripe" \
-      CLOUDFLARE_TURNSTILE_SITE_KEY="$ts_site" \
-      CLOUDFLARE_TURNSTILE_SECRET_KEY="$ts_sec" \
-      RESEND_API_KEY="$resend" \
-      SEND_EMAIL_HOOK_SECRET="$hook" \
-      CONTACT_INBOX_EMAIL="$CONTACT_INBOX_EMAIL" \
-      FROM_EMAIL="$FROM_EMAIL" \
-      NODE_ENV=production \
-      ENVIRONMENT="$env" \
-      ${enc_key:+CONTACT_DATA_ENCRYPTION_KEY="$enc_key"} \
-      EMBED_TOKEN_ENCRYPTION_KEY="$emb_key" \
-      ${resend_wh:+RESEND_WEBHOOK_SECRET="$resend_wh"} \
+      "${args[@]}" \
       "${stage_flag[@]}" \
       --app "$app" 2>/dev/null; then
     SECRETS_SET+=("$app")
