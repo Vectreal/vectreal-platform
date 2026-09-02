@@ -5,7 +5,7 @@ import {
 	normalizeDomainPattern,
 	parseAllowedDomainPatterns,
 	validateAllowedDomainInput
-} from '../app/lib/domain/embed/embed-domain-policy'
+} from './embed-domain-policy'
 
 /**
  * This module decides who may embed a published scene, so it is the security
@@ -104,7 +104,9 @@ describe('embed domain policy', () => {
 		})
 
 		it('reports an invalid entry rather than silently dropping it', () => {
-			const result = validateAllowedDomainInput('example.com\nfoo.*.example.com')
+			const result = validateAllowedDomainInput(
+				'example.com\nfoo.*.example.com'
+			)
 			expect(result.ok).toBe(false)
 		})
 	})

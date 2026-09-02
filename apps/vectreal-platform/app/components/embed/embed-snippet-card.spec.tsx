@@ -18,8 +18,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { EmbedSnippetCard } from '../app/components/embed/embed-snippet-card'
-import { EMBED_COPY } from '../app/lib/domain/embed/embed-snippet'
+import { EmbedSnippetCard } from './embed-snippet-card'
+import { EMBED_COPY } from '../../lib/domain/embed/embed-snippet'
 
 globalThis.ResizeObserver ??= class {
 	observe() {}

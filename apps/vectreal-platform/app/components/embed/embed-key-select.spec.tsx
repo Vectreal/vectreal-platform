@@ -17,16 +17,13 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import {
-	describeKeyOption,
-	EmbedKeySelect
-} from '../app/components/embed/embed-key-select'
-import { DASHBOARD_OPERATION_ROLES } from '../app/lib/domain/dashboard/dashboard-operations'
-import { isEmbedKeyUsable } from '../app/lib/domain/embed/embed-key-options'
-import { EMBED_COPY } from '../app/lib/domain/embed/embed-snippet'
+import { describeKeyOption, EmbedKeySelect } from './embed-key-select'
+import { DASHBOARD_OPERATION_ROLES } from '../../lib/domain/dashboard/dashboard-operations'
+import { isEmbedKeyUsable } from '../../lib/domain/embed/embed-key-options'
+import { EMBED_COPY } from '../../lib/domain/embed/embed-snippet'
 
-import type { EmbedApiKeysApi } from '../app/components/embed/use-embed-api-keys'
-import type { EmbedApiKeyOption } from '../app/lib/domain/embed/embed-key-options'
+import type { EmbedApiKeysApi } from './use-embed-api-keys'
+import type { EmbedApiKeyOption } from '../../lib/domain/embed/embed-key-options'
 
 /*
   Radix needs three browser APIs jsdom does not ship before a `Select` will
@@ -84,8 +81,7 @@ function apiWith(overrides: Partial<EmbedApiKeysApi> = {}): EmbedApiKeysApi {
 		  selection - a payload the hook cannot produce - and the docblock above
 		  claimed fidelity it did not have.
 		*/
-		token:
-			selected && isEmbedKeyUsable(selected) ? (selected.value ?? '') : ''
+		token: selected && isEmbedKeyUsable(selected) ? (selected.value ?? '') : ''
 	}
 }
 

@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { validateSignup } from '../app/lib/domain/auth/signup-validation'
+import { validateSignup } from './signup-validation'
 
 function form(fields: Record<string, string>): FormData {
 	const data = new FormData()

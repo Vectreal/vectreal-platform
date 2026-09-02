@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
+import { isModuleGuarded } from './critical-path-guard'
 import { CRITICAL_FLOWS } from '../app/lib/observability/critical-flows'
 
 /**
@@ -92,32 +93,26 @@ const SPEC_SOURCES = [
 	  The first draft did exactly that.
 	*/
 	.filter((file) => !file.endsWith('critical-path.spec.ts'))
-	.map((file) => readFileSync(file, 'utf8'))
+	/*
+	  The directory is kept alongside the source, because a colocated spec names
+	  its subject relatively - `./embed-access-policy` - and that string says
+	  nothing about which module it is until it is resolved against the spec's
+	  own location.
+	*/
+	.map((file) => ({
+		dir: dirname(file),
+		source: readFileSync(file, 'utf8')
+	}))
 
 /**
  * A module counts as guarded when a spec actually imports it.
  *
- * Two things deliberately do not count. A filename that merely resembles the
- * module's proves nothing about what is exercised. And `vi.mock('...')` replaces
- * the module with a stub, so a spec that mocks a module is testing its caller,
- * not the module - `api-key-repository.server` is mocked by the key route spec
- * and has no test of its own.
+ * The rule lives in `critical-path-guard.ts` so it can be tested directly:
+ * it is what decides whether the funnel reads as covered, and a matcher that
+ * says yes too readily is worse than no check at all.
  */
 function isGuarded(modulePath: string): boolean {
-	const importPath = modulePath.replace(/^app\//, '').replace(/\.tsx?$/, '')
-	const escaped = importPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-	const realImport = new RegExp(
-		`(?:from|import\\()\\s*['"][^'"]*${escaped}['"]`
-	)
-	/*
-	  A spec that mocks the module still imports it, to configure the stub. The
-	  key route spec does exactly that, so importing alone would have counted a
-	  module with no test of its own as guarded.
-	*/
-	const mocked = new RegExp(`vi\\.mock\\(\\s*['"][^'"]*${escaped}['"]`)
-	return SPEC_SOURCES.some(
-		(source) => realImport.test(source) && !mocked.test(source)
-	)
+	return isModuleGuarded(modulePath, SPEC_SOURCES, join(REPO_ROOT, APP))
 }
 
 describe('critical path', () => {

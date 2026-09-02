@@ -12,7 +12,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { DetailPanelSection } from '../app/components/layout-components/detail-panel-section'
+import { DetailPanelSection } from './detail-panel-section'
 
 const sectionOf = (child: HTMLElement) => child.closest('section')
 

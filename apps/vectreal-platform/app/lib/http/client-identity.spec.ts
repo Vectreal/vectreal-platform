@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-	resolveClientIp,
-	UNKNOWN_CLIENT
-} from '../app/lib/http/client-identity'
+import { resolveClientIp, UNKNOWN_CLIENT } from './client-identity'
 
 /**
  * Every assertion here is about not trusting the caller.

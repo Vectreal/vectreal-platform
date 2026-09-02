@@ -5,7 +5,7 @@ import {
 	toEmbedApiKeyOptions,
 	type EmbedApiKeyOption,
 	type EmbedApiKeySource
-} from '../app/lib/domain/embed/embed-key-options'
+} from './embed-key-options'
 
 const PROJECT_ID = 'project-a'
 const NOW = new Date('2026-08-22T12:00:00.000Z')
@@ -60,7 +60,11 @@ describe('toEmbedApiKeyOptions', () => {
 		  field added here is a field published. `value` is on it deliberately;
 		  anything else appearing is not.
 		*/
-		const [option] = toEmbedApiKeyOptions([makeKey({ id: 'k' })], PROJECT_ID, NOW)
+		const [option] = toEmbedApiKeyOptions(
+			[makeKey({ id: 'k' })],
+			PROJECT_ID,
+			NOW
+		)
 
 		expect(Object.keys(option).sort()).toEqual([
 			'expired',
@@ -106,9 +110,15 @@ describe('toEmbedApiKeyOptions', () => {
 	it('treats expiry as of the given instant, boundary inclusive', () => {
 		const options = toEmbedApiKeyOptions(
 			[
-				makeKey({ id: 'past', expiresAt: new Date('2026-08-22T11:59:59.000Z') }),
+				makeKey({
+					id: 'past',
+					expiresAt: new Date('2026-08-22T11:59:59.000Z')
+				}),
 				makeKey({ id: 'exactly', expiresAt: NOW }),
-				makeKey({ id: 'future', expiresAt: new Date('2026-08-22T12:00:01.000Z') }),
+				makeKey({
+					id: 'future',
+					expiresAt: new Date('2026-08-22T12:00:01.000Z')
+				}),
 				makeKey({ id: 'never', expiresAt: null })
 			],
 			PROJECT_ID,

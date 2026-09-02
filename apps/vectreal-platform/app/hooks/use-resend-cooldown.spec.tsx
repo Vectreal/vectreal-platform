@@ -11,11 +11,11 @@
 import { act, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useResendCooldown } from '../app/hooks/use-resend-cooldown'
+import { useResendCooldown } from './use-resend-cooldown'
 import {
 	RESEND_COOLDOWN_SECONDS,
 	resendCooldownFor
-} from '../app/lib/domain/auth/resend-cooldown'
+} from '../lib/domain/auth/resend-cooldown'
 
 type Result = {
 	sent?: boolean

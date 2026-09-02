@@ -4,11 +4,8 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
-import {
-	CRITICAL_FLOWS,
-	criticalFlowsForPathname
-} from '../app/lib/observability/critical-flows'
-import { buildErrorReport } from '../app/lib/observability/error-report'
+import { CRITICAL_FLOWS, criticalFlowsForPathname } from './critical-flows'
+import { buildErrorReport } from './error-report'
 
 /**
  * What the reporting rules actually do, tested without a PostHog client.
@@ -20,7 +17,10 @@ import { buildErrorReport } from '../app/lib/observability/error-report'
  * this file. Flows are referred to by id below for that reason.
  */
 
-const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
+const REPO_ROOT = resolve(
+	dirname(fileURLToPath(import.meta.url)),
+	'../../../../..'
+)
 
 describe('critical flow attribution', () => {
 	it('has a unique id per step', () => {

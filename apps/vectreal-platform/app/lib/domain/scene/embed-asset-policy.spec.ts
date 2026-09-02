@@ -7,7 +7,7 @@ import {
 	isEmbedServableAssetId,
 	selectEmbedServableAssets,
 	type EmbedAssetRow
-} from '../app/lib/domain/scene/embed-asset-policy'
+} from './embed-asset-policy'
 
 /**
  * The production shape that broke embeds: `scene_published.asset_id` is written
@@ -170,9 +170,9 @@ describe('embed asset policy', () => {
 			})
 
 			expect(servable.bakeAssetId).toBeNull()
-			expect(buildEmbedAssetRefs(servable, SCENE_ASSETS, buildAssetUrl)).toEqual(
-				{}
-			)
+			expect(
+				buildEmbedAssetRefs(servable, SCENE_ASSETS, buildAssetUrl)
+			).toEqual({})
 		})
 	})
 

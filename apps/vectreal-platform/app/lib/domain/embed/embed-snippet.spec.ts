@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
-import { docsPages } from '../app/lib/docs/docs-manifest'
 import {
 	buildEmbedPath,
 	buildEmbedUrl,
@@ -15,7 +14,8 @@ import {
 	EMBED_COPY,
 	EMBED_DOCS_PATH,
 	escapeHtmlAttributeValue
-} from '../app/lib/domain/embed/embed-snippet'
+} from './embed-snippet'
+import { docsPages } from '../../docs/docs-manifest'
 
 const ORIGIN = 'https://vectreal.com'
 const PROJECT_ID = '08db6be1-f87b-4278-abfc-d80ef549e3a7'
@@ -352,7 +352,7 @@ describe('the docs link the panel offers', () => {
 	  green with the route deleted.
 	*/
 	const ROUTES = readFileSync(
-		join(dirname(fileURLToPath(import.meta.url)), '../app/routes.tsx'),
+		join(dirname(fileURLToPath(import.meta.url)), '../../../routes.tsx'),
 		'utf8'
 	)
 
@@ -400,7 +400,7 @@ describe('the docs page and the builder agree on the default box', () => {
 	const GUIDE = readFileSync(
 		join(
 			dirname(fileURLToPath(import.meta.url)),
-			'../app/routes/docs/guides/publish-embed.mdx'
+			'../../../routes/docs/guides/publish-embed.mdx'
 		),
 		'utf8'
 	)
