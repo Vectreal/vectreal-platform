@@ -95,7 +95,16 @@ const skillFiles = readdirSync(SKILLS_DIR)
  * page here is a visible diff, and so is removing one.
  */
 const CLAIM_CARRYING_DOCS = [
-	'apps/vectreal-platform/app/routes/docs/guides/publish-embed.mdx'
+	'apps/vectreal-platform/app/routes/docs/guides/publish-embed.mdx',
+	/*
+	  The SDK page's Security section makes the load-bearing claims about what a
+	  preview key is: that it rides in the iframe `src`, that `Bearer` is the
+	  server-side alternative, that the allowed-domain list lives on the project
+	  and not on the key, that the app's own host is exempt from it, and that the
+	  editor payload is refused to a key. Each of those is a sentence a reader
+	  acts on, and each has a line of code that decides it.
+	*/
+	'apps/vectreal-platform/app/routes/docs/guides/embed-sdk.mdx'
 ]
 
 const documentFiles = [...skillFiles, ...CLAIM_CARRYING_DOCS]

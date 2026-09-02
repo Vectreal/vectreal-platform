@@ -265,8 +265,19 @@ If you prefer zero dependencies, you can implement the protocol directly. Both s
 ## Security
 
 - **Origin validation** - the bridge accepts messages only from the first origin that successfully contacts it. The SDK uses `new URL(iframe.src).origin` as `targetOrigin` automatically; never `'*'`.
-- **Token privacy** - keep the key server-side or in environment variables. Tokens are validated against the project's allowed domain list on every request.
+- **What the key is** - in an embed, a preview key is public by design. It travels in the iframe `src`, so it is in the page source of every site that embeds your scene, and no placement changes that for an iframe: the frame cannot set request headers. Treat the embedded key as an identifier, not a credential. Server-to-server calls are the exception - those can send it as `Authorization: Bearer` and keep it off the page entirely.
+- **What restricts it** - the owning project's allowed domain list, checked against `Referer`/`Origin` on every request. Two things to know about it. It is browser-enforced rather than an authorization boundary: a non-browser client sets those headers freely, so anyone holding the key can read the published scenes it points at. And your own host is exempt - a request whose referer is the Vectreal app itself is allowed whatever the list says, which is why testing an embed from the dashboard proves nothing about your domains.
+- **What it cannot do** - a preview key is read-only and reaches published scenes only. It cannot modify your scenes or project data, and requests carrying one are refused on every mutating endpoint - including the editor payload, which is refused even on a read.
 - **Domain allowlist** - configure which external origins can load your preview at [Dashboard → Projects](/dashboard/projects). Requests from unlisted domains receive `403 Forbidden`.
+
+{/* claims
+present apps/vectreal-platform/app/lib/domain/embed/embed-snippet.ts url.searchParams.set('token', token)
+present apps/vectreal-platform/app/lib/domain/embed/embed-access-policy.ts scheme.toLowerCase() !== 'bearer'
+present apps/vectreal-platform/app/db/schema/project/projects.ts allowed_embed_domains
+absent apps/vectreal-platform/app/db/schema/auth/api-keys.ts allowed_embed_domains
+present apps/vectreal-platform/app/lib/domain/embed/embed-access-policy.ts requesterHost === applicationHost
+present apps/vectreal-platform/app/routes/api/scenes.$sceneId.ts authContext.mode === 'apiKey'
+*/}
 
 ---
 
