@@ -9,6 +9,7 @@ import {
 
 import { UUID_REGEX } from '../../../../constants/utility-constants'
 import { parseActionRequest } from '../../../http/requests.server'
+import { parseOptimizationReport } from '../optimization-report-guard'
 import {
 	applyDefaultCameraFlag,
 	resolveDefaultSceneCameraId
@@ -710,7 +711,17 @@ export class SceneSettingsParser {
 	}
 
 	/**
-	 * Parses optimization report from request.
+	 * Parses the optimization report from the request, and checks it.
+	 *
+	 * This payload comes from the browser and is persisted into `scene_stats`
+	 * verbatim. The object branch used to accept it on `typeof === 'object'` and
+	 * cast, and the string branch checked only that `JSON.parse` returned a
+	 * non-null object - so a truncated body reached
+	 * `createSceneStatsFromReport`, which dereferences two levels deep, and came
+	 * back as a 500 rather than a 400.
+	 *
+	 * Both branches now go through the same guard, because they were two spellings
+	 * of one payload and only one of them was ever checked.
 	 */
 	private static parseOptimizationReport(
 		requestData: Record<string, unknown>
@@ -719,24 +730,24 @@ export class SceneSettingsParser {
 			return undefined
 		}
 
-		if (typeof requestData.optimizationReport === 'string') {
+		let payload: unknown = requestData.optimizationReport
+
+		if (typeof payload === 'string') {
 			try {
-				const parsed = JSON.parse(requestData.optimizationReport)
-				if (typeof parsed !== 'object' || parsed === null) {
-					return ApiResponse.badRequest('Invalid optimization report format')
-				}
-				return parsed
+				payload = JSON.parse(payload)
 			} catch (error) {
 				console.warn('Failed to parse optimizationReport:', error)
 				return ApiResponse.badRequest('Invalid optimization report format')
 			}
 		}
 
-		if (typeof requestData.optimizationReport === 'object') {
-			return requestData.optimizationReport as OptimizationReport
+		const report = parseOptimizationReport(payload)
+
+		if (!report) {
+			return ApiResponse.badRequest('Invalid optimization report format')
 		}
 
-		return undefined
+		return report
 	}
 
 	private static parseOptimizationSettings(
