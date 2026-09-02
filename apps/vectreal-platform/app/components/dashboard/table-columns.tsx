@@ -44,6 +44,7 @@ import { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
 import { useClipboardCopy } from '../../hooks/use-clipboard-copy'
 import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
 import {
+	isApiKeyExpiringSoon,
 	resolveApiKeyState,
 	type ApiKeyLifecycleRow,
 	type ApiKeyState
@@ -793,6 +794,26 @@ interface ApiKeyColumnsOptions {
  * way to tell from the dashboard that an embed somewhere is still carrying the
  * old key and being refused right now.
  */
+/**
+ * How long until a deadline, in the same register as `formatRelativeTime`.
+ *
+ * A separate function rather than a sign flip on that one: it reads dates in
+ * the past and answers "3d ago", and feeding it a future date produces a
+ * negative that formats as "0m ago". The two are not the same sentence.
+ */
+function formatRelativeDeadline(deadline: Date | null): string {
+	if (!deadline) return 'soon'
+
+	const days = Math.ceil(
+		(new Date(deadline).getTime() - Date.now()) / (24 * 60 * 60 * 1000)
+	)
+
+	if (days <= 0) return 'today'
+	if (days === 1) return 'tomorrow'
+
+	return `in ${days} days`
+}
+
 function isUnusedSinceRotation(row: ApiKeyRow): boolean {
 	if (!row.rotatedAt) return false
 	if (!row.lastUsedAt) return true
@@ -807,7 +828,7 @@ function isUnusedSinceRotation(row: ApiKeyRow): boolean {
  * file after serialization, and `formatRelativeTime` below has always guarded
  * the same way.
  */
-function toLifecycleRow(row: ApiKeyRow): ApiKeyLifecycleRow {
+export function toLifecycleRow(row: ApiKeyRow): ApiKeyLifecycleRow {
 	return {
 		active: row.active,
 		expiresAt: row.expiresAt ? new Date(row.expiresAt) : null,
@@ -992,9 +1013,10 @@ export function ApiKeyNameCell({ row }: { row: ApiKeyRow }) {
 
 					  `flex-1 min-w-0`, and the cap on the wrapper rather than on this
 					  element. A `max-width` here bounded the box and nothing else: the
-					  cell sits in an auto-layout table, so it sizes to this item's
-					  max-content, the flex item keeps claiming that width, and the text
-					  runs straight out of its own 24ch box and under the copy button.
+					  cell sits in an auto-layout table, so the column sizes to this
+					  item's max-content, the flex item keeps claiming that width, and
+					  the value ran straight out of its own box and under the copy
+					  button.
 
 					  `flex-1` sets the basis to zero so the item stops asking for
 					  max-content, `min-w-0` lets it shrink past min-content, and only
@@ -1180,10 +1202,24 @@ export function createApiKeyColumns(
 				const { label, variant, Icon } = getApiKeyStatus(row.original)
 
 				return (
-					<Badge variant={variant} className="gap-1">
-						<Icon className="size-3" />
-						{label}
-					</Badge>
+					<div className="flex flex-col items-start gap-1">
+						<Badge variant={variant} className="gap-1">
+							<Icon className="size-3" />
+							{label}
+						</Badge>
+						{/*
+						  A line under the badge rather than a fifth `ApiKeyState`. The
+						  key is still Active - Postgres says so, and `isApiKeyLive` has
+						  to keep agreeing with it - so this says how much longer rather
+						  than something else about now. Same shape the Last Used column
+						  uses for "Unused since rotating".
+						*/}
+						{isApiKeyExpiringSoon(toLifecycleRow(row.original), new Date()) && (
+							<span className="text-warning text-xs">
+								Expires {formatRelativeDeadline(row.original.expiresAt)}
+							</span>
+						)}
+					</div>
 				)
 			}
 		},

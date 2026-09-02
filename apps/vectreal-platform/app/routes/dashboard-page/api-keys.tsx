@@ -26,12 +26,18 @@ import { toast } from 'sonner'
 
 import { Route } from './+types/api-keys'
 import {
+	matchesApiKeyStatusFilter,
+	STATUS_FILTER_LABELS,
+	type ApiKeyStatusFilter
+} from './api-key-status-filter'
+import {
 	OneTimeKeyDialog,
 	type OneTimeKeyValue
 } from '../../components/api-keys/one-time-key-dialog'
 import {
 	DataTable,
 	createApiKeyColumns,
+	toLifecycleRow,
 	type ApiKeyRow,
 	type ApiKeyRowValue
 } from '../../components/dashboard'
@@ -370,6 +376,49 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
+/**
+ * Which keys the table is showing.
+ *
+ * Three buckets rather than one per `ApiKeyState`: the question someone brings
+ * to this page is whether a key still works, and revoked, expired and inactive
+ * are three spellings of "no". The Status column still names which one.
+ *
+ * Counts on the first two only. "Revoked & expired" is the remainder, and
+ * showing its size next to it invites reading the page as an inventory of dead
+ * keys rather than a list of live ones.
+ */
+function ApiKeyStatusFilterTabs({
+	value,
+	onValueChange,
+	counts
+}: {
+	value: ApiKeyStatusFilter
+	onValueChange: (next: ApiKeyStatusFilter) => void
+	counts: { all: number; active: number }
+}) {
+	return (
+		<Tabs
+			value={value}
+			onValueChange={(next) => onValueChange(next as ApiKeyStatusFilter)}
+		>
+			<TabsList>
+				{(Object.keys(STATUS_FILTER_LABELS) as ApiKeyStatusFilter[]).map(
+					(option) => (
+						<TabsTrigger key={option} value={option}>
+							{STATUS_FILTER_LABELS[option]}
+							{option !== 'inactive' && (
+								<Badge variant="secondary" className="ml-2">
+									{option === 'all' ? counts.all : counts.active}
+								</Badge>
+							)}
+						</TabsTrigger>
+					)
+				)}
+			</TabsList>
+		</Tabs>
+	)
+}
+
 function OrgApiKeysTable({
 	namespace,
 	rows,
@@ -384,6 +433,26 @@ function OrgApiKeysTable({
 	onRotate: (keyId: string) => void
 }) {
 	const tableState = useDashboardTableState({ namespace })
+	const [statusFilter, setStatusFilter] = useState<ApiKeyStatusFilter>('all')
+
+	/*
+	  Filtered here rather than through `DataTable`, which derives its
+	  `columnFilters` from `searchKey`/`searchValue` alone and has no second slot.
+	  Adding one would change a component every dashboard table uses, for a
+	  control only this one needs.
+
+	  `resolveApiKeyState` decides it, so the filter and the Status badge cannot
+	  disagree about what "revoked" means - and `inactive` counts as revoked here
+	  for the same reason the embed picker folds it in: to the person looking, a
+	  key that does not authorize anything is one bucket.
+	*/
+	const visibleRows = useMemo(() => {
+		const now = new Date()
+
+		return rows.filter((row) =>
+			matchesApiKeyStatusFilter(toLifecycleRow(row), statusFilter, now)
+		)
+	}, [rows, statusFilter])
 
 	const columns = useMemo(
 		() =>
@@ -412,20 +481,33 @@ function OrgApiKeysTable({
 	}
 
 	return (
-		<DataTable
-			columns={columns}
-			data={rows}
-			searchKey="name"
-			searchPlaceholder="Search by name or last 4 characters..."
-			searchValue={tableState.searchValue}
-			onSearchValueChange={tableState.setSearchValue}
-			sorting={tableState.sorting}
-			onSortingChange={tableState.onSortingChange}
-			pagination={tableState.pagination}
-			onPaginationChange={tableState.onPaginationChange}
-			rowSelection={tableState.rowSelection}
-			onRowSelectionChange={tableState.onRowSelectionChange}
-		/>
+		<div className="space-y-3">
+			<ApiKeyStatusFilterTabs
+				value={statusFilter}
+				onValueChange={setStatusFilter}
+				counts={{
+					all: rows.length,
+					active: rows.filter(
+						(row) =>
+							resolveApiKeyState(toLifecycleRow(row), new Date()) === 'active'
+					).length
+				}}
+			/>
+			<DataTable
+				columns={columns}
+				data={visibleRows}
+				searchKey="name"
+				searchPlaceholder="Search by name or last 4 characters..."
+				searchValue={tableState.searchValue}
+				onSearchValueChange={tableState.setSearchValue}
+				sorting={tableState.sorting}
+				onSortingChange={tableState.onSortingChange}
+				pagination={tableState.pagination}
+				onPaginationChange={tableState.onPaginationChange}
+				rowSelection={tableState.rowSelection}
+				onRowSelectionChange={tableState.onRowSelectionChange}
+			/>
+		</div>
 	)
 }
 

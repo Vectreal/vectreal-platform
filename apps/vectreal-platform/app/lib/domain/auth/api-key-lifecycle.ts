@@ -71,3 +71,38 @@ export function resolveApiKeyState(
 export function isApiKeyLive(row: ApiKeyLifecycleRow, now: Date): boolean {
 	return resolveApiKeyState(row, now) === 'active'
 }
+
+/**
+ * How long before expiry a key starts warning.
+ *
+ * Fourteen days because the action it prompts is not instant: rotating refuses
+ * the old secret immediately, so the owner has to schedule the swap for when
+ * they can update the embedding pages. A warning that arrives the morning it
+ * dies is a warning about an outage rather than one that prevents it.
+ */
+export const EXPIRY_WARNING_MS = 14 * 24 * 60 * 60 * 1000
+
+/**
+ * Whether this key still works but is close enough to expiry to say so.
+ *
+ * Deliberately *not* a member of `ApiKeyState`. That union is pinned against
+ * the `WHERE` clause of `findLiveKeyForProject` - `isApiKeyLive` has to agree
+ * with what Postgres does, row for row, and `api-key-lifecycle.spec.ts` asserts
+ * exactly that. Splitting `active` would break the equivalence by construction,
+ * and it would also make `rotateApiKey` refuse the key its owner most needs to
+ * rotate, because that guard reads `state !== 'active'`.
+ *
+ * So this is a second, independent question asked of a key that is already
+ * active: not "does it work" but "for how much longer". A key that is revoked,
+ * expired, inactive, or has no expiry at all answers false.
+ */
+export function isApiKeyExpiringSoon(
+	row: ApiKeyLifecycleRow,
+	now: Date,
+	withinMs: number = EXPIRY_WARNING_MS
+): boolean {
+	if (resolveApiKeyState(row, now) !== 'active') return false
+	if (row.expiresAt === null) return false
+
+	return row.expiresAt.getTime() - now.getTime() <= withinMs
+}
