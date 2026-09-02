@@ -61,13 +61,11 @@ describe('planOptimizationSteps', () => {
 	})
 
 	it('omits the geometry reload row when no geometry step runs', () => {
-		const { allSteps } = planOptimizationSteps(enable(balancedPreset, ['texture']))
+		const { allSteps } = planOptimizationSteps(
+			enable(balancedPreset, ['texture'])
+		)
 
-		expect(allSteps).toEqual([
-			PREPARE_STEP,
-			'Texture optimization',
-			SYNC_STEP
-		])
+		expect(allSteps).toEqual([PREPARE_STEP, 'Texture optimization', SYNC_STEP])
 	})
 
 	it('labels an entry that carries no `name`', () => {

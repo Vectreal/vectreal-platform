@@ -145,7 +145,10 @@ export const PresetPanel: FC = () => {
 										</p>
 										<div className="flex flex-col gap-1.5">
 											{techniques.map((technique) => (
-												<div key={technique} className="flex items-center gap-2">
+												<div
+													key={technique}
+													className="flex items-center gap-2"
+												>
 													<Check className="text-orange h-3 w-3 shrink-0" />
 													<span className="text-foreground/75 text-xs">
 														{technique}

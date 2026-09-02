@@ -24,6 +24,8 @@ describe('resolveModifiedUrl', () => {
 		expect(resolveModifiedUrl(map, 'data:image/png;base64,xx')).toBe(
 			'data:image/png;base64,xx'
 		)
-		expect(resolveModifiedUrl(map, 'https://cdn/x.png')).toBe('https://cdn/x.png')
+		expect(resolveModifiedUrl(map, 'https://cdn/x.png')).toBe(
+			'https://cdn/x.png'
+		)
 	})
 })

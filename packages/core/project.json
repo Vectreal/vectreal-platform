@@ -7,9 +7,7 @@
 	"targets": {
 		"lint": {
 			"executor": "@nx/eslint:lint",
-			"outputs": [
-				"{options.outputFile}"
-			],
+			"outputs": ["{options.outputFile}"],
 			"options": {
 				"lintFilePatterns": [
 					"packages/core/**/*.{ts,tsx,js,jsx}",
@@ -19,9 +17,7 @@
 		},
 		"lint-fix": {
 			"executor": "@nx/eslint:lint",
-			"outputs": [
-				"{options.outputFile}"
-			],
+			"outputs": ["{options.outputFile}"],
 			"options": {
 				"fix": true,
 				"lintFilePatterns": [
@@ -40,9 +36,7 @@
 		},
 		"build": {
 			"executor": "@nx/vite:build",
-			"outputs": [
-				"{options.outputPath}"
-			],
+			"outputs": ["{options.outputPath}"],
 			"defaultConfiguration": "production",
 			"options": {
 				"outputPath": "build/packages/vctrl/core"
@@ -58,9 +52,7 @@
 		},
 		"build-ci": {
 			"executor": "@nx/vite:build",
-			"outputs": [
-				"{options.outputPath}"
-			],
+			"outputs": ["{options.outputPath}"],
 			"defaultConfiguration": "production",
 			"options": {
 				"outputPath": "build/packages/vctrl/core"
@@ -75,9 +67,7 @@
 			}
 		},
 		"publish": {
-			"dependsOn": [
-				"copy-md"
-			],
+			"dependsOn": ["copy-md"],
 			"executor": "nx:run-commands",
 			"outputs": [],
 			"options": {
@@ -86,15 +76,11 @@
 			}
 		},
 		"copy-md": {
-			"dependsOn": [
-				"build"
-			],
+			"dependsOn": ["build"],
 			"executor": "nx:run-commands",
 			"outputs": [],
 			"options": {
-				"commands": [
-					"rsync -rat packages/core/*.md build/packages/vctrl/core/"
-				]
+				"commands": ["rsync -rat packages/core/*.md build/packages/vctrl/core/"]
 			}
 		}
 	}

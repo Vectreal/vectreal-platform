@@ -47,10 +47,7 @@ export function StatRing({
 	const progress = useMotionValue(prefersReducedMotion ? value / 100 : 0)
 	const count = useMotionValue(prefersReducedMotion ? value : 0)
 	const rounded = useTransform(count, (v) => Math.round(v))
-	const dashoffset = useTransform(
-		progress,
-		(p) => CIRCUMFERENCE * (1 - p)
-	)
+	const dashoffset = useTransform(progress, (p) => CIRCUMFERENCE * (1 - p))
 
 	useEffect(() => {
 		if (!isInView || prefersReducedMotion) return
@@ -78,10 +75,7 @@ export function StatRing({
 				className
 			)}
 		>
-			<div
-				className="relative"
-				style={{ width: SIZE, height: SIZE }}
-			>
+			<div className="relative" style={{ width: SIZE, height: SIZE }}>
 				{/* eslint-disable-next-line no-restricted-syntax -- a ring chart drawn from computed geometry, not an icon */}
 				<svg
 					width={SIZE}

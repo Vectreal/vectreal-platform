@@ -1,7 +1,4 @@
-import {
-	getSerializedAssetByteSize,
-	toSerializedAssetBytes
-} from '@vctrl/core'
+import { getSerializedAssetByteSize, toSerializedAssetBytes } from '@vctrl/core'
 
 describe('toSerializedAssetBytes', () => {
 	it('returns Uint8Array data unchanged', () => {

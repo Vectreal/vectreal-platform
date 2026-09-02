@@ -1,4 +1,8 @@
-import { buildSetCookie, readClientCookie, readRawCookie } from '../http/cookies'
+import {
+	buildSetCookie,
+	readClientCookie,
+	readRawCookie
+} from '../http/cookies'
 
 export const THEME_COOKIE_NAME = 'theming'
 const THEME_COOKIE_MAX_AGE = 60 * 60 * 24 * 7 // 1 week

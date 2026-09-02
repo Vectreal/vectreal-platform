@@ -19,7 +19,9 @@ export function docsNavItemClasses(
 	return cn(
 		'block rounded-lg px-2 py-1.5 text-sm transition-colors',
 		'hover:bg-accent hover:text-foreground',
-		isActive ? 'bg-accent text-foreground font-medium' : 'text-muted-foreground',
+		isActive
+			? 'bg-accent text-foreground font-medium'
+			: 'text-muted-foreground',
 		className
 	)
 }

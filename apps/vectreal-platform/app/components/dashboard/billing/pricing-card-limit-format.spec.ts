@@ -12,9 +12,9 @@ describe('formatLimitValue', () => {
 	})
 
 	it('still formats storage_bytes_total as GB when >= 1 GB', () => {
-		expect(formatLimitValue('storage_bytes_total', 10 * 1024 * 1024 * 1024)).toBe(
-			'10 GB'
-		)
+		expect(
+			formatLimitValue('storage_bytes_total', 10 * 1024 * 1024 * 1024)
+		).toBe('10 GB')
 	})
 
 	it('formats count limits plainly and null as Unlimited', () => {

@@ -8,7 +8,9 @@ describe('seedFromSlug', () => {
 	})
 
 	it('differs between slugs', () => {
-		expect(seedFromSlug('camera-presets')).not.toBe(seedFromSlug('api-keys-101'))
+		expect(seedFromSlug('camera-presets')).not.toBe(
+			seedFromSlug('api-keys-101')
+		)
 	})
 
 	it('returns a non-negative 32-bit integer', () => {

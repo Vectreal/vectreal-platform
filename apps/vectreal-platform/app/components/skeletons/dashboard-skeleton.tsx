@@ -19,13 +19,31 @@ export function DashboardSkeleton() {
 					<div className="grid gap-5 sm:grid-cols-[minmax(0,14rem)_1fr] sm:items-center">
 						<Skeleton className="aspect-video w-full rounded-xl" />
 						<div className="space-y-3">
-							<Skeleton className="h-3 w-24" style={{ animationDelay: '40ms' }} />
-							<Skeleton className="h-6 w-56" style={{ animationDelay: '80ms' }} />
-							<Skeleton className="h-4 w-40" style={{ animationDelay: '120ms' }} />
+							<Skeleton
+								className="h-3 w-24"
+								style={{ animationDelay: '40ms' }}
+							/>
+							<Skeleton
+								className="h-6 w-56"
+								style={{ animationDelay: '80ms' }}
+							/>
+							<Skeleton
+								className="h-4 w-40"
+								style={{ animationDelay: '120ms' }}
+							/>
 							<div className="flex gap-2 pt-1">
-								<Skeleton className="h-8 w-20 rounded-lg" style={{ animationDelay: '160ms' }} />
-								<Skeleton className="h-8 w-36 rounded-lg" style={{ animationDelay: '200ms' }} />
-								<Skeleton className="h-8 w-24 rounded-lg" style={{ animationDelay: '240ms' }} />
+								<Skeleton
+									className="h-8 w-20 rounded-lg"
+									style={{ animationDelay: '160ms' }}
+								/>
+								<Skeleton
+									className="h-8 w-36 rounded-lg"
+									style={{ animationDelay: '200ms' }}
+								/>
+								<Skeleton
+									className="h-8 w-24 rounded-lg"
+									style={{ animationDelay: '240ms' }}
+								/>
 							</div>
 						</div>
 					</div>

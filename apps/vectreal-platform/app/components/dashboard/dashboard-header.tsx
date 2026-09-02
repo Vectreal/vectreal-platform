@@ -10,7 +10,6 @@ import { DashboardActions } from './dashboard-actions'
 import { useDashboardHeaderData } from '../../hooks/use-dashboard-content'
 import { ACTION_VARIANT } from '../../types/dashboard'
 
-
 /**
  * DashboardHeader component renders the main page header
  * with dynamic title, description, and contextual actions
@@ -30,7 +29,7 @@ export const DashboardHeader = memo(() => {
 					  a fixed 48px it did not respond to viewport width the way every
 					  other heading does.
 					*/}
-					<h1 className="text-h2">{title}</h1>
+						<h1 className="text-h2">{title}</h1>
 						<span className="text-primary/50">{description}</span>
 					</div>
 

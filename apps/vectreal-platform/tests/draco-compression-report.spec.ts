@@ -30,7 +30,10 @@ function buildGlb(json: unknown): Uint8Array {
 
 	glb.set(jsonBytes, GLB_HEADER_BYTES + GLB_CHUNK_HEADER_BYTES)
 	// Spec requires the JSON chunk be space-padded to a 4-byte boundary.
-	glb.fill(0x20, GLB_HEADER_BYTES + GLB_CHUNK_HEADER_BYTES + jsonBytes.byteLength)
+	glb.fill(
+		0x20,
+		GLB_HEADER_BYTES + GLB_CHUNK_HEADER_BYTES + jsonBytes.byteLength
+	)
 
 	return glb
 }
@@ -83,7 +86,11 @@ describe('readGlbJsonChunk', () => {
 		// v1 put contentLength/contentFormat where v2 puts the chunk header, so
 		// reading it as v2 would misinterpret every offset that follows.
 		const glb = buildGlb(dracoJson)
-		new DataView(glb.buffer, glb.byteOffset, glb.byteLength).setUint32(4, 1, true)
+		new DataView(glb.buffer, glb.byteOffset, glb.byteLength).setUint32(
+			4,
+			1,
+			true
+		)
 
 		expect(() => readGlbJsonChunk(glb)).toThrow(/Unsupported GLB version 1/)
 	})

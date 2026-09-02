@@ -33,7 +33,9 @@ function workspaceAliases() {
 
 			return {
 				find: new RegExp(
-					wildcard ? `^${escape(pattern.slice(0, -2))}/(.*)$` : `^${escape(pattern)}$`
+					wildcard
+						? `^${escape(pattern.slice(0, -2))}/(.*)$`
+						: `^${escape(pattern)}$`
 				),
 				replacement: wildcard
 					? path.join(workspaceRoot, target.slice(0, -2), '$1')

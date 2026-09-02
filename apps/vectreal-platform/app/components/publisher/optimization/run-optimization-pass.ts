@@ -57,7 +57,9 @@ export interface OptimizationPassDeps {
 			options?: { preserveBaseline?: boolean }
 		) => Promise<unknown>
 		getModel: () => Promise<Uint8Array | null | undefined>
-		texturesOptimization: (options: Optimizations['texture']) => Promise<unknown>
+		texturesOptimization: (
+			options: Optimizations['texture']
+		) => Promise<unknown>
 		applyOptimization: () => Promise<unknown>
 	}
 	baseline: {
@@ -137,7 +139,9 @@ async function establishBaselines({
 		setRuntime((prev) => ({
 			...prev,
 			isSceneSizeLoading: false,
-			...(typeof sceneBytes === 'number' ? { clientSceneBytes: sceneBytes } : {})
+			...(typeof sceneBytes === 'number'
+				? { clientSceneBytes: sceneBytes }
+				: {})
 		}))
 	}
 

@@ -21,7 +21,7 @@ const PASSIVE_MIME_TYPES = new Set([
 	'image/avif',
 	'model/gltf-binary',
 	'model/gltf+json',
-	'application/octet-stream',
+	'application/octet-stream'
 ])
 
 function sanitizeMimeType(mimeType: string | undefined | null): string {
@@ -105,11 +105,11 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 					'Content-Type',
 					sanitizeMimeType(assetData.mimeType)
 				)
-				responseHeaders.set('Cache-Control', 'private, max-age=31536000, immutable')
 				responseHeaders.set(
-					'Last-Modified',
-					asset.updatedAt.toUTCString()
+					'Cache-Control',
+					'private, max-age=31536000, immutable'
 				)
+				responseHeaders.set('Last-Modified', asset.updatedAt.toUTCString())
 				responseHeaders.set('X-Content-Type-Options', 'nosniff')
 				responseHeaders.set('Content-Security-Policy', 'sandbox')
 				return responseHeaders

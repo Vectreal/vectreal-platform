@@ -144,9 +144,9 @@ const CameraSwitcherPill = ({
 										onClick={() => handleSelect(camera.cameraId)}
 										className={cn(
 											// A neutral tint rather than `bg-accent`: this is a glass
-									// surface floating over the scene, and the row should
-									// separate from it by value alone.
-									'hover:bg-foreground/10 focus-visible:bg-foreground/10 focus-visible:ring-ring flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none',
+											// surface floating over the scene, and the row should
+											// separate from it by value alone.
+											'hover:bg-foreground/10 focus-visible:bg-foreground/10 focus-visible:ring-ring flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none',
 											// The active row is marked, not filled. A solid accent
 											// block here fights the matte surface it sits on.
 											isActive && 'text-primary font-medium'

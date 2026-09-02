@@ -197,8 +197,7 @@ export function useEmbedApiKeys(params: {
 	  appears the panel renders nothing rather than the wrong project's keys.
 	*/
 	const payload =
-		listFetcher.data?.success &&
-		listFetcher.data.data.projectId === projectId
+		listFetcher.data?.success && listFetcher.data.data.projectId === projectId
 			? listFetcher.data.data
 			: null
 
@@ -341,7 +340,6 @@ export function useEmbedApiKeys(params: {
 	const selectKey = useCallback((keyId: string) => {
 		setSelectedKeyId(keyId)
 	}, [])
-
 
 	const selected = keys.find((key) => key.id === selectedKeyId)
 

@@ -108,7 +108,8 @@ export function redactSettingsForEmbed(
 		? {
 				...settings.shadows,
 				baked:
-					settings.shadows.baked && settings.shadows.baked.assetId === bakeAssetId
+					settings.shadows.baked &&
+					settings.shadows.baked.assetId === bakeAssetId
 						? settings.shadows.baked
 						: undefined
 			}

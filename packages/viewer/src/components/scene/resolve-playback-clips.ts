@@ -25,7 +25,8 @@ function clampHandoffRepetitions(
 	return clips.map((clip, index) => {
 		const mustEnd = loopSequence || index < clips.length - 1
 		if (!mustEnd) return clip
-		if (clip.loop === 'once' || typeof clip.repetitions === 'number') return clip
+		if (clip.loop === 'once' || typeof clip.repetitions === 'number')
+			return clip
 
 		return { ...clip, repetitions: 1 }
 	})

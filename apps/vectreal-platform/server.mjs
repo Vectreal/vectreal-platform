@@ -32,9 +32,7 @@ const ROOT = path.join(import.meta.dirname, '..', '..')
 const BUILD_DIR = path.join(ROOT, 'build', 'apps', 'vectreal-platform')
 const CLIENT_DIR = path.join(BUILD_DIR, 'client')
 
-const build = await import(
-	path.join(BUILD_DIR, 'server', 'index.js')
-)
+const build = await import(path.join(BUILD_DIR, 'server', 'index.js'))
 
 const app = express()
 

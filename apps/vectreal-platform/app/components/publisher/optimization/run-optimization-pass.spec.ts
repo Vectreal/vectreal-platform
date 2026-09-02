@@ -1,10 +1,6 @@
 import { beforeEach, vi } from 'vitest'
 
-import {
-	LOAD_GEOMETRY_STEP,
-	PREPARE_STEP,
-	SYNC_STEP
-} from './model'
+import { LOAD_GEOMETRY_STEP, PREPARE_STEP, SYNC_STEP } from './model'
 import { runOptimizationPass } from './run-optimization-pass'
 import { balancedPreset } from '../../../constants/optimizations'
 
@@ -19,14 +15,11 @@ const { loadOriginalSceneModel } = vi.hoisted(() => ({
 	loadOriginalSceneModel: vi.fn()
 }))
 
-vi.mock(
-	'./utils/geometry-worker',
-	() => ({
-		OPTIMIZATION_STEP_TIMEOUT_MS: 90_000,
-		MODEL_SYNC_TIMEOUT_MS: 60_000,
-		runGeometryOptimizationsInWorker
-	})
-)
+vi.mock('./utils/geometry-worker', () => ({
+	OPTIMIZATION_STEP_TIMEOUT_MS: 90_000,
+	MODEL_SYNC_TIMEOUT_MS: 60_000,
+	runGeometryOptimizationsInWorker
+}))
 
 vi.mock('../../../lib/persistence/pending-scene-idb', () => ({
 	loadOriginalSceneModel
@@ -217,7 +210,9 @@ describe('runOptimizationPass', () => {
 				clientSceneBytes: null,
 				calculateSceneBytes: vi
 					.fn()
-					.mockRejectedValue(new Error('Baseline scene size calculation timed out'))
+					.mockRejectedValue(
+						new Error('Baseline scene size calculation timed out')
+					)
 			}
 		)
 
@@ -226,9 +221,9 @@ describe('runOptimizationPass', () => {
 		expect(result.documentChanged).toBe(true)
 		expect(model.applyOptimization).toHaveBeenCalled()
 		// The spinner stops even though the number never arrived.
-		expect(
-			runtime.some((state) => state.isSceneSizeLoading === false)
-		).toBe(true)
+		expect(runtime.some((state) => state.isSceneSizeLoading === false)).toBe(
+			true
+		)
 	})
 
 	it('carries the Draco measurement out of the worker', async () => {

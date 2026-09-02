@@ -184,9 +184,7 @@ describe('buildDefaultCameraSignature', () => {
 
 	it('treats `lookAt` as the target when no explicit target is set', () => {
 		expect(
-			buildDefaultCameraSignature([
-				{ cameraId: 'main', lookAt: [1, 2, 3] }
-			])
+			buildDefaultCameraSignature([{ cameraId: 'main', lookAt: [1, 2, 3] }])
 		).toBe(
 			buildDefaultCameraSignature([{ cameraId: 'main', target: [1, 2, 3] }])
 		)
@@ -200,10 +198,12 @@ describe('buildDefaultCameraSignature', () => {
 
 describe('isPairedHotspotCamera', () => {
 	it('takes the tag whenever it is there', () => {
-		expect(isPairedHotspotCamera({ cameraId: 'anything', kind: 'hotspot' })).toBe(
-			true
+		expect(
+			isPairedHotspotCamera({ cameraId: 'anything', kind: 'hotspot' })
+		).toBe(true)
+		expect(isPairedHotspotCamera({ cameraId: 'main', kind: 'scene' })).toBe(
+			false
 		)
-		expect(isPairedHotspotCamera({ cameraId: 'main', kind: 'scene' })).toBe(false)
 	})
 
 	// Every scene saved before paired cameras carried `kind` has an untagged
@@ -212,9 +212,9 @@ describe('isPairedHotspotCamera', () => {
 		expect(
 			isPairedHotspotCamera({ cameraId: 'hotspot-camera-1755123456789-a1b2' })
 		).toBe(true)
-		expect(isPairedHotspotCamera({ cameraId: 'hotspot-camera-1755123456789-a' })).toBe(
-			true
-		)
+		expect(
+			isPairedHotspotCamera({ cameraId: 'hotspot-camera-1755123456789-a' })
+		).toBe(true)
 	})
 
 	// Ordinary camera ids are slugified from the camera's name, so the bare

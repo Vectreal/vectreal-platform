@@ -36,10 +36,9 @@ export const getSettingsFromManifest = (
 		return {
 			...manifest.settings,
 			camera: normalizedCamera,
-			interactions: normalizeSceneInteractions(
-				manifest.settings.interactions,
-				{ camera: normalizedCamera }
-			)
+			interactions: normalizeSceneInteractions(manifest.settings.interactions, {
+				camera: normalizedCamera
+			})
 		}
 	}
 

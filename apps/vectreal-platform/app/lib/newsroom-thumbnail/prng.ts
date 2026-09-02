@@ -24,7 +24,7 @@ export function seedFromSlug(slug: string): number {
 
 /** Numerical Recipes LCG. Stateful; call repeatedly for a stream in [0, 1). */
 export function makePrng(seed: number): () => number {
-	let state = (seed >>> 0) || 1
+	let state = seed >>> 0 || 1
 
 	return () => {
 		state = (Math.imul(state, 1664525) + 1013904223) >>> 0

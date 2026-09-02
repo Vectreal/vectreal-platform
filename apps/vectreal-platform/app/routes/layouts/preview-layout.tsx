@@ -54,9 +54,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		Boolean(request.headers.get('authorization')?.trim())
 
 	if (hasTokenCredential) {
-		return redirect(
-			`${buildEmbedPath({ projectId, sceneId })}${url.search}`
-		)
+		return redirect(`${buildEmbedPath({ projectId, sceneId })}${url.search}`)
 	}
 
 	const sessionAuth = await getAuthUser(request)
@@ -74,10 +72,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 	}
 
-	return data(
-		{ projectId, sceneId },
-		{ headers: sessionAuth.headers ?? {} }
-	)
+	return data({ projectId, sceneId }, { headers: sessionAuth.headers ?? {} })
 }
 
 const PreviewLayout = () => {

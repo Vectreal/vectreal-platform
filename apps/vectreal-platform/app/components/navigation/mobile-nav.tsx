@@ -100,7 +100,7 @@ function MobileNav({
 		<>
 			<nav
 				className={cn(
-					'fixed top-0 right-0 left-0 z-nav items-center justify-between p-2',
+					'z-nav fixed top-0 right-0 left-0 items-center justify-between p-2',
 					className
 				)}
 				aria-label="Main navigation"

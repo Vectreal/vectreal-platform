@@ -34,7 +34,7 @@ export function GlobalNavigationLoader() {
 		  overlay layer ties with the nav underneath, which costs it the one pixel
 		  the bar occupies.
 		*/
-		<div className="pointer-events-none fixed top-0 left-0 z-above-nav w-full">
+		<div className="z-above-nav pointer-events-none fixed top-0 left-0 w-full">
 			<div
 				className={cn(
 					/*

@@ -102,10 +102,7 @@ function getCounterWindow(
 // ---------------------------------------------------------------------------
 
 export type UsageCheckOutcome =
-	| 'allowed'
-	| 'soft_limit_warning'
-	| 'hard_limit_exceeded'
-	| 'unlimited'
+	'allowed' | 'soft_limit_warning' | 'hard_limit_exceeded' | 'unlimited'
 
 export interface UsageCheckResult {
 	outcome: UsageCheckOutcome

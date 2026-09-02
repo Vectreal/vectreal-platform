@@ -52,7 +52,8 @@ function Calendar({
 				),
 				selected:
 					'[&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary [&>button]:hover:text-primary-foreground',
-				today: '[&>button]:ds-overlay [&>button]:text-foreground [&>button]:font-medium',
+				today:
+					'[&>button]:ds-overlay [&>button]:text-foreground [&>button]:font-medium',
 				outside: '[&>button]:text-muted-foreground',
 				disabled: '[&>button]:text-muted-foreground [&>button]:opacity-50',
 				range_start: 'bg-primary/12 rounded-l-md',

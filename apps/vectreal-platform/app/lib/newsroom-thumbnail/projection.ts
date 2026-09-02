@@ -114,7 +114,7 @@ export function projectCameraSpace(
 	viewport: Viewport
 ): ProjectedPoint {
 	const depth = -point.z
-	const focal = 1 / Math.tan(((camera.fov * Math.PI) / 180) / 2)
+	const focal = 1 / Math.tan((camera.fov * Math.PI) / 180 / 2)
 	const aspect = viewport.width / viewport.height
 
 	return {

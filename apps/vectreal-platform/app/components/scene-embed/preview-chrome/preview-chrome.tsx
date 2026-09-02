@@ -57,7 +57,7 @@ const PreviewChrome = ({
 	const offset = prefersReducedMotion ? 0 : 8
 
 	return (
-		<div className="pointer-events-none absolute inset-0 z-page-chrome">
+		<div className="z-page-chrome pointer-events-none absolute inset-0">
 			<AnimatePresence initial={false}>
 				{isVisible ? (
 					<motion.div
@@ -76,10 +76,7 @@ const PreviewChrome = ({
 						>
 							{/* Same badge the publisher's in-canvas preview uses, so
 							    leaving a preview looks the same wherever you are. */}
-							<PreviewExitBadge
-								exitLabel="Back to scene"
-								onExit={handleExit}
-							/>
+							<PreviewExitBadge exitLabel="Back to scene" onExit={handleExit} />
 						</motion.div>
 
 						<motion.div

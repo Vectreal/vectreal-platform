@@ -112,7 +112,9 @@ export function UpgradeModal() {
 	const Icon = config.icon
 
 	const currentPlanLabel = state.plan ? PLAN_DISPLAY_NAMES[state.plan] : null
-	const upgradeToLabel = state.upgradeTo ? PLAN_DISPLAY_NAMES[state.upgradeTo] : null
+	const upgradeToLabel = state.upgradeTo
+		? PLAN_DISPLAY_NAMES[state.upgradeTo]
+		: null
 
 	const usagePercent =
 		state.limit != null && state.currentValue != null

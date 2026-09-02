@@ -137,7 +137,11 @@ async function writeFrontmatterField(
 	)
 }
 
-function wrapTitle(title: string, maxChars: number, maxLines: number): string[] {
+function wrapTitle(
+	title: string,
+	maxChars: number,
+	maxLines: number
+): string[] {
 	const lines: string[] = []
 	let current = ''
 

@@ -280,7 +280,6 @@ describe('SVG must live in an icon component', () => {
 	})
 })
 
-
 /**
  * `console.error` is not a reporting strategy.
  *
@@ -392,7 +391,6 @@ describe('server code reports rather than logs', () => {
 	})
 })
 
-
 /**
  * Every file a house rule is scoped to actually has it.
  *
@@ -441,7 +439,10 @@ describe('house rules survive config resolution', () => {
 	const DECLARED_EXCEPTIONS: [string, RegExp][] = [
 		['specs assert on literal class strings', /\.spec\.tsx?$/],
 		['stories show raw values beside their tokens', /\.stories\.tsx?$/],
-		['mail clients do not resolve custom properties', /\/lib\/email\/templates\//],
+		[
+			'mail clients do not resolve custom properties',
+			/\/lib\/email\/templates\//
+		],
 		['icons are where inline SVG is supposed to live', /\/assets\/icons\//]
 	]
 

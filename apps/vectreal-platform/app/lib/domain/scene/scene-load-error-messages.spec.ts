@@ -38,6 +38,8 @@ describe('getDashboardSceneLoadErrorMessage', () => {
 	})
 
 	it('falls back to default for unknown values', () => {
-		expect(getDashboardSceneLoadErrorMessage(null)).toBe('Failed to load scene.')
+		expect(getDashboardSceneLoadErrorMessage(null)).toBe(
+			'Failed to load scene.'
+		)
 	})
 })

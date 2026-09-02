@@ -44,10 +44,14 @@ export function getContactSubmissionView(
 
 	const hasFieldErrors = Boolean(
 		actionData.fieldErrors &&
-			Object.values(actionData.fieldErrors).some((error) => Boolean(error))
+		Object.values(actionData.fieldErrors).some((error) => Boolean(error))
 	)
 
-	if (actionData.status === 'error' && actionData.formError && !hasFieldErrors) {
+	if (
+		actionData.status === 'error' &&
+		actionData.formError &&
+		!hasFieldErrors
+	) {
 		return 'error'
 	}
 

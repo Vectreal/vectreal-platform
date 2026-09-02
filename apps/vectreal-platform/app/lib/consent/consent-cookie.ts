@@ -1,5 +1,9 @@
 import { CONSENT_POLICY_VERSION } from '../../constants/consent-policy'
-import { buildSetCookie, readClientCookie, readRawCookie } from '../http/cookies'
+import {
+	buildSetCookie,
+	readClientCookie,
+	readRawCookie
+} from '../http/cookies'
 
 export { CONSENT_POLICY_VERSION }
 

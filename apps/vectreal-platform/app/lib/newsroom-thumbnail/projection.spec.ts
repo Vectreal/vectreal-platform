@@ -129,8 +129,26 @@ describe('sortByDepth', () => {
 
 	it('does not mutate its input', () => {
 		const segments: DepthSegment[] = [
-			{ x1: 0, y1: 0, x2: 1, y2: 1, opacity: 1, width: 0.55, accent: false, depth: 5 },
-			{ x1: 0, y1: 0, x2: 1, y2: 1, opacity: 1, width: 0.55, accent: false, depth: 40 }
+			{
+				x1: 0,
+				y1: 0,
+				x2: 1,
+				y2: 1,
+				opacity: 1,
+				width: 0.55,
+				accent: false,
+				depth: 5
+			},
+			{
+				x1: 0,
+				y1: 0,
+				x2: 1,
+				y2: 1,
+				opacity: 1,
+				width: 0.55,
+				accent: false,
+				depth: 40
+			}
 		]
 
 		sortByDepth(segments)

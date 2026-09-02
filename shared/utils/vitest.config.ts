@@ -13,8 +13,8 @@ export default mergeConfig(
 			coverage: {
 				include: ['src/**/*.ts'],
 				exclude: ['src/**/*.d.ts', 'src/**/*.spec.ts'],
-				reportsDirectory: '../../coverage/shared/utils',
-			},
-		},
-	}),
+				reportsDirectory: '../../coverage/shared/utils'
+			}
+		}
+	})
 )

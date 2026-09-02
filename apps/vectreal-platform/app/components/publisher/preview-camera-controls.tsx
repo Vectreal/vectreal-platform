@@ -38,7 +38,7 @@ const PreviewCameraControls: React.FC = () => {
 					exit={{ opacity: 0, y: 20 }}
 					transition={{ type: 'spring', stiffness: 320, damping: 28 }}
 					className={cn(
-						"pointer-events-none absolute inset-x-0 bottom-3 flex justify-center px-3",
+						'pointer-events-none absolute inset-x-0 bottom-3 flex justify-center px-3',
 						PUBLISHER_LAYER.previewControls
 					)}
 				>

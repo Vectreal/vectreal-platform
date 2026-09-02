@@ -179,4 +179,3 @@ export function buildSceneManifestEtag(
 	const prefix = shape === 'embed' ? 'scene-embed' : 'scene'
 	return `W/"${prefix}-${sceneId}-${settingsUpdatedAt}"`
 }
-

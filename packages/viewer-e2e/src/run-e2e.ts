@@ -14,13 +14,7 @@
  */
 import { type ChildProcess, spawn } from 'node:child_process'
 import { once } from 'node:events'
-import {
-	cpSync,
-	mkdirSync,
-	mkdtempSync,
-	rmSync,
-	writeFileSync
-} from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -261,7 +255,13 @@ async function main() {
 	// Playwright + browsers live in the workspace root install, so run it there.
 	await run(
 		'pnpm',
-		['exec', 'playwright', 'test', '--config', join(here, '..', 'playwright.config.ts')],
+		[
+			'exec',
+			'playwright',
+			'test',
+			'--config',
+			join(here, '..', 'playwright.config.ts')
+		],
 		{ env: { E2E_BASE_URL: baseURL, ...(ci ? { CI: 'true' } : {}) } }
 	)
 

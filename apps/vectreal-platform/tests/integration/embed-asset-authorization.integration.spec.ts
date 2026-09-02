@@ -65,15 +65,12 @@ describe('embed asset authorization', () => {
 
 	beforeAll(async () => {
 		schema = await import('../../app/db/schema')
-		;({ buildEmbedSceneManifest } = await import(
-			'../../app/lib/domain/scene/server/scene-manifest.server'
-		))
-		;({ getPublishedScenePreview, toPublishedModelRow } = await import(
-			'../../app/lib/domain/scene/server/scene-preview-repository.server'
-		))
-		;({ sceneSettingsService } = await import(
-			'../../app/lib/domain/scene/server/scene-settings-service.server'
-		))
+		;({ buildEmbedSceneManifest } =
+			await import('../../app/lib/domain/scene/server/scene-manifest.server'))
+		;({ getPublishedScenePreview, toPublishedModelRow } =
+			await import('../../app/lib/domain/scene/server/scene-preview-repository.server'))
+		;({ sceneSettingsService } =
+			await import('../../app/lib/domain/scene/server/scene-settings-service.server'))
 		db = (await import('../../app/db/client')).getDbClient()
 
 		await db.insert(schema.users).values({
@@ -366,9 +363,9 @@ describe('embed asset authorization', () => {
 			buildAssetUrl
 		)
 
-		expect(manifest.settings?.hotspots?.map((hotspot) => hotspot.name)).toEqual([
-			'Sole'
-		])
+		expect(manifest.settings?.hotspots?.map((hotspot) => hotspot.name)).toEqual(
+			['Sole']
+		)
 		expect(
 			manifest.settings?.camera?.cameras?.map((camera) => camera.cameraId)
 		).toEqual(['cam-scene', 'cam-sole'])
@@ -376,7 +373,9 @@ describe('embed asset authorization', () => {
 		expect(manifest.settings?.interactions).toEqual([])
 		// Nothing anywhere in the payload should name either hidden viewpoint.
 		expect(JSON.stringify(manifest)).not.toContain('cam-backstage')
-		expect(JSON.stringify(manifest)).not.toContain('hotspot-camera-1755123456789-a1b2')
+		expect(JSON.stringify(manifest)).not.toContain(
+			'hotspot-camera-1755123456789-a1b2'
+		)
 		expect(JSON.stringify(manifest)).not.toContain('Legacy backstage rig')
 
 		await db

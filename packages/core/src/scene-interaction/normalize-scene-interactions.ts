@@ -7,11 +7,9 @@ import type {
 
 type InteractionRecord = Record<string, unknown>
 type SceneInteractionActionInput =
-	| InteractionRecord
-	| SceneInteractionDefinition['actions'][number]
+	InteractionRecord | SceneInteractionDefinition['actions'][number]
 type SceneInteractionTriggerInput =
-	| InteractionRecord
-	| SceneInteractionDefinition['trigger']
+	InteractionRecord | SceneInteractionDefinition['trigger']
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value)

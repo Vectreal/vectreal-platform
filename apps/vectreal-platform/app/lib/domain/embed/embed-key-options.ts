@@ -115,8 +115,7 @@ export function toEmbedApiKeyOptions(
 			  panel auto-selects by, so "first in the list" and "selectable" cannot
 			  drift apart.
 			*/
-			const byUsable =
-				Number(isEmbedKeyUsable(b)) - Number(isEmbedKeyUsable(a))
+			const byUsable = Number(isEmbedKeyUsable(b)) - Number(isEmbedKeyUsable(a))
 
 			return byUsable !== 0 ? byUsable : b.createdAt - a.createdAt
 		})

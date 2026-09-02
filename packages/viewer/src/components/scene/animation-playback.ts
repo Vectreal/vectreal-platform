@@ -208,7 +208,8 @@ export function reducePlayback(
 			return {
 				state: {
 					...next,
-					activeIndex: action.mode === 'sequence' && action.clips.length ? 0 : -1
+					activeIndex:
+						action.mode === 'sequence' && action.clips.length ? 0 : -1
 				},
 				effects: [{ type: 'stop_all' }]
 			}
@@ -295,9 +296,7 @@ export function reducePlayback(
 		case 'seek_clip':
 			return {
 				state,
-				effects: [
-					{ type: 'seek', clipId: action.clipId, time: action.time }
-				]
+				effects: [{ type: 'seek', clipId: action.clipId, time: action.time }]
 			}
 
 		default:

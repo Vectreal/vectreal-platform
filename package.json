@@ -179,5 +179,9 @@
 	},
 	"nx": {
 		"includedScripts": []
+	},
+	"scripts": {
+		"format": "prettier --write .",
+		"format:check": "prettier --check ."
 	}
 }

@@ -28,8 +28,7 @@ export type FolderMoveRejection =
 	| 'too-deep'
 
 export type FolderMoveValidation =
-	| { ok: true }
-	| { ok: false; reason: FolderMoveRejection; message: string }
+	{ ok: true } | { ok: false; reason: FolderMoveRejection; message: string }
 
 export interface FolderMoveInput {
 	folderId: string

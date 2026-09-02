@@ -45,7 +45,15 @@ describe('renderSvg', () => {
 	it('separates accent segments onto their own paths', () => {
 		const svg = renderSvg(
 			[
-				{ x1: 0, y1: 0, x2: 10, y2: 10, opacity: 1, width: 0.55, accent: false },
+				{
+					x1: 0,
+					y1: 0,
+					x2: 10,
+					y2: 10,
+					opacity: 1,
+					width: 0.55,
+					accent: false
+				},
 				{ x1: 0, y1: 0, x2: 20, y2: 20, opacity: 1, width: 0.55, accent: true }
 			],
 			{ viewport: VIEWPORT }

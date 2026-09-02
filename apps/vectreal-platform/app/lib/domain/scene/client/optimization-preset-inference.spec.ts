@@ -61,7 +61,12 @@ describe('inferOptimizationPreset', () => {
 	// They are preserved as-is rather than migrated, so they must read as custom.
 	it('reports custom for settings saved under the old pipeline', () => {
 		const legacy = {
-			simplification: { name: 'simplification', enabled: true, ratio: 0.6, error: 0.005 },
+			simplification: {
+				name: 'simplification',
+				enabled: true,
+				ratio: 0.6,
+				error: 0.005
+			},
 			texture: {
 				name: 'texture',
 				enabled: true,

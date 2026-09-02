@@ -42,9 +42,7 @@ function initials(name: string) {
 export function AuthorChip({ author, compact, className }: AuthorChipProps) {
 	if (compact) {
 		return (
-			<div
-				className={cn('text-label-xs flex items-center gap-1.5', className)}
-			>
+			<div className={cn('text-label-xs flex items-center gap-1.5', className)}>
 				<span className="font-medium">{author.name}</span>
 				{author.role ? (
 					<span className="text-muted-foreground">{author.role}</span>

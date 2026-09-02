@@ -108,6 +108,14 @@ jobs:
             echo "has_range=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # Repo-wide, not `nx affected`: formatting is a property of the tree, not
+      # of a project graph, and the files most likely to drift belong to no
+      # project at all. A step inside this job rather than a job of its own -
+      # a new required check has to exist on main before it can be required, or
+      # every open pull request waits on a status that never arrives.
+      - name: Check formatting
+        run: npx prettier --check .
+
       - name: Run affected quality targets
         if: ${{ steps.affected-range.outputs.has_range == 'true' }}
         run: npx nx affected -t lint,typecheck,test,build-ci --base=${{ steps.affected-range.outputs.base }} --head=${{ steps.affected-range.outputs.head }}

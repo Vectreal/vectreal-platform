@@ -23,12 +23,18 @@ export default defineConfig({
 		lib: {
 			entry: {
 				index: path.resolve(import.meta.dirname, 'src/index.ts'),
-				'model-loader': path.resolve(import.meta.dirname, 'src/model-loader/index.ts'),
+				'model-loader': path.resolve(
+					import.meta.dirname,
+					'src/model-loader/index.ts'
+				),
 				'model-optimizer': path.resolve(
 					import.meta.dirname,
 					'src/model-optimizer/index.ts'
 				),
-				'model-exporter': path.resolve(import.meta.dirname, 'src/model-exporter/index.ts')
+				'model-exporter': path.resolve(
+					import.meta.dirname,
+					'src/model-exporter/index.ts'
+				)
 			},
 			name: '@vctrl/core',
 			formats: ['es', 'cjs'],
