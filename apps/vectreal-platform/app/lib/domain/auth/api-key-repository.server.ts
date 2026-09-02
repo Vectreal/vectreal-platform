@@ -299,6 +299,13 @@ export async function createApiKey(
 			organizationId,
 			name,
 			description: description || null,
+			/*
+			  Stated, not defaulted. The column carries a default so existing rows
+			  are correct, but this is the only place a key is minted and it is the
+			  place that knows what it is minting - a kind added later has to come
+			  through here and say so.
+			*/
+			kind: 'embed',
 			hashedKey: hashed,
 			encryptedKey: encryptEmbedToken(plaintext),
 			keyPreview: preview,
