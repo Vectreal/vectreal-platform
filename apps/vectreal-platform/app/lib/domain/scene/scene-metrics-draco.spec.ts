@@ -1,6 +1,5 @@
 import { resolveSceneMetrics } from '.'
-
-import type { OptimizationReport } from '@vctrl/core'
+import { buildOptimizationReport } from '../../../../tests/fixtures/optimization-report'
 
 /**
  * Regression cover for the worker boundary: the geometry worker's optimizer is
@@ -9,25 +8,7 @@ import type { OptimizationReport } from '@vctrl/core'
  * geometry-only pass produced an empty `appliedOptimizations`, which silently
  * disabled every report-derived baseline below.
  */
-const buildReport = (
-	overrides: Partial<OptimizationReport> = {}
-): OptimizationReport => ({
-	originalSize: 8_000_000,
-	optimizedSize: 5_000_000,
-	compressionRatio: 1.6,
-	appliedOptimizations: ['simplification', 'draco compression'],
-	stats: {
-		verticesCount: { before: 100_000, after: 60_000 },
-		primitivesCount: { before: 50_000, after: 30_000 },
-		materialsCount: { before: 3, after: 3 },
-		textureBytes: { before: 2_000_000, after: 2_000_000 },
-		texturesCount: { before: 4, after: 4 },
-		textureResolutions: { before: [], after: [] },
-		meshBytes: { before: 6_000_000, after: 3_000_000 },
-		meshesCount: { before: 12, after: 12 }
-	},
-	...overrides
-})
+const buildReport = buildOptimizationReport
 
 describe('resolveSceneMetrics with worker-sourced optimizations', () => {
 	it('uses report baselines once the worker result carries applied steps', () => {

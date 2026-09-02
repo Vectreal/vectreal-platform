@@ -1,11 +1,21 @@
 import { resolveSimplificationOutcome } from '.'
+import {
+	buildOptimizationReport,
+	buildOptimizationStats
+} from '../../../../../tests/fixtures/optimization-report'
 
-import type { OptimizationReport } from '@vctrl/core'
-
+/**
+ * Only the vertex counts matter here; everything else is the shared fixture.
+ *
+ * This used to cast a two-field object through `as unknown as
+ * OptimizationReport`, which hid it from the compiler entirely - renaming
+ * `vertices` to `verticesCount` in `@vctrl/core` was not a type error here, and
+ * only the suite caught it.
+ */
 const reportWith = (before: number, after: number) =>
-	({
-		stats: { verticesCount: { before, after } }
-	}) as unknown as OptimizationReport
+	buildOptimizationReport({
+		stats: buildOptimizationStats({ verticesCount: { before, after } })
+	})
 
 describe('resolveSimplificationOutcome', () => {
 	it('measures what actually happened rather than projecting from the ratio', () => {
