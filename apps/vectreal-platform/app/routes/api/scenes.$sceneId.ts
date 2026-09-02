@@ -530,7 +530,6 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	const authHeaders = authResult.headers
 
-
 	if (action === 'update-scene-metadata') {
 		/*
 		  Token CSRF, not just the route's origin check.

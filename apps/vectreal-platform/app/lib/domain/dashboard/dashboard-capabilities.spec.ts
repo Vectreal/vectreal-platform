@@ -1,6 +1,4 @@
-import {
-	buildDashboardCapabilities
-} from './dashboard-capabilities'
+import { buildDashboardCapabilities } from './dashboard-capabilities'
 
 const OWNED_ORG = 'org-owned'
 const MEMBER_ORG = 'org-member'
@@ -76,5 +74,4 @@ describe('dashboard capabilities', () => {
 			expect(capabilities[MEMBER_ORG].quotaExceeded).toBe(false)
 		})
 	})
-
 })

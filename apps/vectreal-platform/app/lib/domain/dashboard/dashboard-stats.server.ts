@@ -111,7 +111,6 @@ export function computeOrganizationStats(
 	}
 }
 
-
 /**
  * Gets the most recent scenes (by updatedAt).
  */

@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto'
 
-
 import { getDbClient } from '../../../db/client'
 import { consentRecords } from '../../../db/schema/consent/consent-records'
 import {
@@ -103,4 +102,3 @@ export async function upsertConsent(
 		return { ...row, anonymousId: resolvedAnonymousId } as ConsentState
 	}
 }
-

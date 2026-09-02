@@ -548,7 +548,6 @@ class SceneSettingsService {
 		}
 	}
 
-
 	/**
 	 * Retrieves scene stats for a specific scene.
 	 * @param sceneId - The scene ID
