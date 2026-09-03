@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, count, eq } from 'drizzle-orm'
 
 import { getDbClient } from '../../../db/client'
 import { organizationMemberships } from '../../../db/schema/core/organization-memberships'
@@ -6,13 +6,7 @@ import { assets } from '../../../db/schema/project/assets'
 import { folders } from '../../../db/schema/project/folders'
 import { projects } from '../../../db/schema/project/projects'
 import { deleteStorageObjects } from '../asset/asset-storage.server'
-import {
-	getOrgSubscription,
-	getQuotaLimit,
-	getRecommendedUpgrade
-} from '../billing/entitlement-service.server'
-import { QuotaExceededError } from '../billing/quota-exceeded-error'
-import { checkQuota } from '../billing/usage-service.server'
+import { assertWithinQuota } from '../billing/quota-enforcement.server'
 import { assertDashboardPermission } from '../dashboard/dashboard-permissions.server'
 
 const db = getDbClient()
@@ -123,28 +117,21 @@ export async function createProject(
 ): Promise<typeof projects.$inferSelect> {
 	await verifyOrganizationAccess(db, organizationId, userId)
 
-	const quotaCheck = await checkQuota(organizationId, 'projects_total')
-	if (quotaCheck.outcome === 'hard_limit_exceeded') {
-		const [{ plan: subscriptionPlan }, { effectivePlan }] = await Promise.all([
-			getOrgSubscription(organizationId),
-			getQuotaLimit(organizationId, 'projects_total')
-		])
-		const upgradeTo = getRecommendedUpgrade(effectivePlan)
-		const message =
-			effectivePlan === 'free'
-				? subscriptionPlan === 'free'
-					? 'Free plan limit reached: you can have one project. Delete an existing project or upgrade to create another.'
-					: 'Project creation is currently limited to free-tier quotas. Delete an existing project or restore full access to create another.'
-				: 'Project limit reached for your plan. Upgrade to create more projects.'
-		throw new QuotaExceededError({
-			limitKey: 'projects_total',
-			currentValue: quotaCheck.currentValue,
-			limit: quotaCheck.limit,
-			plan: effectivePlan,
-			upgradeTo,
-			message
-		})
-	}
+	await assertWithinQuota({
+		organizationId,
+		limitKey: 'projects_total',
+		measure: async () => {
+			const [row] = await db
+				.select({ total: count() })
+				.from(projects)
+				.where(eq(projects.organizationId, organizationId))
+			return row?.total ?? 0
+		},
+		message: ({ limit }) =>
+			limit === 1
+				? 'Free plan limit reached: you can have one project. Delete an existing project or upgrade to create another.'
+				: `Project limit reached for your plan (${limit}). Delete a project or upgrade to create more.`
+	})
 
 	const [newProject] = await db
 		.insert(projects)
