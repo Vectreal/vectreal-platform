@@ -18,6 +18,10 @@ import {
 } from '../../asset/asset-reclaim.server'
 import { uploadSceneAssets } from '../../asset/asset-storage.server'
 import {
+	EntitlementRequiredError,
+	isRoutableDomainError
+} from '../../billing/entitlement-required-error'
+import {
 	hasEntitlement,
 	getRecommendedUpgrade,
 	getOrgSubscription,
@@ -33,6 +37,7 @@ import {
 } from '../../user/user-repository.server'
 import { isSceneOverSizeLimit } from '../scene-size-limit'
 
+import type { EntitlementKey } from '../../../../constants/plan-config'
 import type { SceneSettingsRequest } from '../../../../types/api'
 import type { SceneMetaState } from '../../../../types/publisher-config'
 
@@ -181,24 +186,90 @@ async function validateSaveLocationTarget(
 /**
  * The organization whose plan governs a scene save.
  *
- * `targetProjectId` wins when the client names one, because that project may
- * belong to an organization the caller was invited into rather than their own.
- * Falls back to the caller's default organization, which is what an ordinary
- * save from the publisher uses.
+ * Resolves the same destination `resolveSceneAndProject` will, in the same
+ * order, because a guard that grades a different organization from the one that
+ * ends up holding the row is worse than no guard: it lets a lapsed organization
+ * through whenever the caller has a healthy one, and refuses paid work whenever
+ * they do not.
+ *
+ * `targetProjectId` first, then the scene's own project, then `projectId` for a
+ * scene whose row does not exist yet. A scene id that resolves to none of those
+ * is rejected here exactly as the resolver rejects it.
+ *
+ * The caller's default organization is reached only by a save that names no
+ * scene and no project, which is the one shape that legitimately creates one.
  */
 async function resolveOwningOrganizationId(
 	request: SceneSettingsRequest,
 	userId: string
 ): Promise<string> {
-	if (!request.targetProjectId) {
-		return (await getOrCreateDefaultOrganization(userId)).id
+	if (request.targetProjectId) {
+		const project = await getProject(request.targetProjectId, userId)
+		if (!project) {
+			throw new Error('Target project not found or access denied')
+		}
+		return project.organizationId
 	}
 
-	const project = await getProject(request.targetProjectId, userId)
-	if (!project) {
-		throw new Error('Target project not found or access denied')
+	/*
+	  An existing scene already has a home, and it may be in an organization the
+	  caller was invited to rather than their own. Falling straight through to
+	  the caller's default organization graded the wrong tenant in both
+	  directions: a read-only invited organization kept uploading, and legitimate
+	  work in a paid one was refused because the caller's personal organization
+	  had lapsed. `upload-published-glb` never sends `targetProjectId`, so that
+	  was the ordinary path rather than a corner of it.
+	*/
+	const sceneId = request.sceneId?.trim()
+	if (sceneId) {
+		const scenesProjectId =
+			await sceneSettingsService.getProjectIdFromScene(sceneId)
+		if (scenesProjectId) {
+			const project = await getProject(scenesProjectId, userId)
+			if (!project) {
+				throw new Error('Scene project not found or access denied')
+			}
+			return project.organizationId
+		}
+
+		/*
+		  A scene id with no row yet, which is not a rare shape: `prepareSceneUpload`
+		  mints the id for a new scene and nothing writes the row until
+		  `commit-scene-save`, so every upload of a first save carries one. This
+		  mirrors `resolveSceneAndProject`, which falls back to `projectId` in
+		  exactly this arm - and only in this arm. With no scene id at all it
+		  ignores `projectId` entirely and creates the scene in the caller's own
+		  default project, so reading the field out here would grade an
+		  organization the scene never reaches, in both directions.
+		*/
+		if (request.projectId) {
+			const project = await getProject(request.projectId, userId)
+			if (!project) {
+				throw new Error('Project not found or access denied')
+			}
+			return project.organizationId
+		}
+
+		/*
+		  A scene id with no row and no project named anywhere. This is the shape
+		  `resolveSceneAndProject` rejects, so reject it identically rather than
+		  falling through: the fallback below would resolve the caller's default
+		  organization - creating one, for anyone who renamed theirs - on the way
+		  to a request that cannot succeed.
+		*/
+		throw new Error(`Scene not found with ID: ${sceneId}`)
 	}
-	return project.organizationId
+
+	/*
+	  Only a save naming neither a scene nor a project reaches here, which is the
+	  one case where creating the caller's default organization is the right
+	  answer rather than a side effect. Keeping the upload actions out of it
+	  matters:
+	  `getOrCreateDefaultOrganization` matches on the literal name
+	  'My Organization', so for anyone who renamed theirs it inserts a fresh one -
+	  and the guard then grades an organization that is empty and always grants.
+	*/
+	return (await getOrCreateDefaultOrganization(userId)).id
 }
 
 export async function prepareSceneUpload(
@@ -213,6 +284,36 @@ export async function prepareSceneUpload(
 	}
 
 	const isNewScene = !request.sceneId?.trim()
+
+	/*
+	  `scene_upload` has sat in `READ_ONLY_BLOCKED_ENTITLEMENTS` since that set
+	  was written, and this file's header describes it as blocking uploads, but
+	  no call site ever passed it - so an organization whose billing went
+	  `unpaid` or `paused` kept uploading freely while its sibling
+	  `scene_publish` correctly refused. It is `true` on every plan, so this can
+	  only ever deny on billing state; there is no upgrade that grants it.
+
+	  Every upload action reaches this function, which is why the check is here
+	  rather than at each of the three.
+	*/
+	// Named once. Written twice, the key consulted and the key reported could
+	// disagree, and the error would name an entitlement nothing checked.
+	const uploadEntitlementKey: EntitlementKey = 'scene_upload'
+	const uploadEntitlement = await hasEntitlement(
+		await resolveOwningOrganizationId(request, userId),
+		uploadEntitlementKey
+	)
+	if (!uploadEntitlement.granted) {
+		throw new EntitlementRequiredError({
+			entitlementKey: uploadEntitlementKey,
+			plan: uploadEntitlement.effectivePlan,
+			billingState: uploadEntitlement.billingState,
+			upgradeTo: getRecommendedUpgrade(uploadEntitlement.effectivePlan),
+			message: isBillingStateReadOnly(uploadEntitlement.billingState)
+				? 'Uploads are unavailable: payment required to restore access.'
+				: 'Uploads are not available on your current plan.'
+		})
+	}
 
 	/*
 	  The organization whose limits apply is the one that will own the scene, not
@@ -342,13 +443,12 @@ export async function uploadSceneAsset(
 		})
 	} catch (error) {
 		/*
-		  A quota refusal is not a server error. These three actions are the only
-		  ones that write bytes, so they are the only ones that can raise the
-		  storage limit, and flattening it here would reach the client as a 500
-		  carrying a quota message - no upgrade prompt, no limit, no plan. The
-		  route's own handler maps it to `ApiResponse.quotaExceeded`.
+		  A quota or entitlement refusal is not a server error. Flattening one
+		  here reaches the client as a 500 carrying its message and none of its
+		  meaning - no limit, no plan, no upgrade prompt, no payment prompt. The
+		  route's own handler maps both.
 		*/
-		if (error instanceof QuotaExceededError) {
+		if (isRoutableDomainError(error)) {
 			throw error
 		}
 		return ApiResponse.serverError(
@@ -390,13 +490,12 @@ export async function uploadSceneGltf(
 		})
 	} catch (error) {
 		/*
-		  A quota refusal is not a server error. These three actions are the only
-		  ones that write bytes, so they are the only ones that can raise the
-		  storage limit, and flattening it here would reach the client as a 500
-		  carrying a quota message - no upgrade prompt, no limit, no plan. The
-		  route's own handler maps it to `ApiResponse.quotaExceeded`.
+		  A quota or entitlement refusal is not a server error. Flattening one
+		  here reaches the client as a 500 carrying its message and none of its
+		  meaning - no limit, no plan, no upgrade prompt, no payment prompt. The
+		  route's own handler maps both.
 		*/
-		if (error instanceof QuotaExceededError) {
+		if (isRoutableDomainError(error)) {
 			throw error
 		}
 		return ApiResponse.serverError(
@@ -438,13 +537,12 @@ export async function uploadPublishedGlb(
 		})
 	} catch (error) {
 		/*
-		  A quota refusal is not a server error. These three actions are the only
-		  ones that write bytes, so they are the only ones that can raise the
-		  storage limit, and flattening it here would reach the client as a 500
-		  carrying a quota message - no upgrade prompt, no limit, no plan. The
-		  route's own handler maps it to `ApiResponse.quotaExceeded`.
+		  A quota or entitlement refusal is not a server error. Flattening one
+		  here reaches the client as a 500 carrying its message and none of its
+		  meaning - no limit, no plan, no upgrade prompt, no payment prompt. The
+		  route's own handler maps both.
 		*/
-		if (error instanceof QuotaExceededError) {
+		if (isRoutableDomainError(error)) {
 			throw error
 		}
 		return ApiResponse.serverError(

@@ -1,7 +1,9 @@
 import { ApiResponse } from '@shared/utils'
 import { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router'
 
+import { isBillingStateReadOnly } from '../../constants/plan-config'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
+import { EntitlementRequiredError } from '../../lib/domain/billing/entitlement-required-error'
 import { QuotaExceededError } from '../../lib/domain/billing/quota-exceeded-error'
 import { getProject } from '../../lib/domain/project/project-repository.server'
 import { parseSceneBytes } from '../../lib/domain/scene/scene-size-limit'
@@ -686,6 +688,20 @@ export async function action({ request, params }: ActionFunctionArgs) {
 						authHeaders
 					)
 				} catch (err) {
+					if (err instanceof EntitlementRequiredError) {
+						/*
+						  Read-only billing is a payment, not an upgrade: the plan still
+						  grants the entitlement and the account has simply stopped paying
+						  for it. Sending 403 there tells the owner to buy something they
+						  already own.
+						*/
+						return withAdditionalHeaders(
+							isBillingStateReadOnly(err.billingState)
+								? ApiResponse.paymentRequired(err.message)
+								: ApiResponse.forbidden(err.message),
+							authHeaders
+						)
+					}
 					if (err instanceof QuotaExceededError) {
 						return withAdditionalHeaders(
 							ApiResponse.quotaExceeded(err.message, {
@@ -868,6 +884,20 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				)
 		}
 	} catch (error) {
+		if (error instanceof EntitlementRequiredError) {
+			/*
+			  Read-only billing is a payment, not an upgrade: the plan still
+			  grants the entitlement and the account has simply stopped paying
+			  for it. Sending 403 there tells the owner to buy something they
+			  already own.
+			*/
+			return withAdditionalHeaders(
+				isBillingStateReadOnly(error.billingState)
+					? ApiResponse.paymentRequired(error.message)
+					: ApiResponse.forbidden(error.message),
+				authHeaders
+			)
+		}
 		if (error instanceof QuotaExceededError) {
 			return withAdditionalHeaders(
 				ApiResponse.quotaExceeded(error.message, {
