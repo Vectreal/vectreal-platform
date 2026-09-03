@@ -11,7 +11,7 @@
  *
  * The guard lives at the single insert site now, where the lengths are the
  * server's own and the content hash already says which bytes are new. That is
- * what the second test below is for: a re-save of unchanged assets has to pass
+ * what the third test below is for: a re-save of unchanged assets has to pass
  * with the organization sitting exactly on its limit.
  *
  * Storage is faked at the `createClient` boundary; nothing here depends on
@@ -110,6 +110,13 @@ describe('the storage allowance, at the place bytes become rows', () => {
 			.from(schema.assets)
 			.innerJoin(schema.folders, eq(schema.folders.id, schema.assets.folderId))
 			.where(eq(schema.folders.projectId, projectId))
+	const folderCount = async () =>
+		(
+			await db
+				.select({ id: schema.folders.id })
+				.from(schema.folders)
+				.where(eq(schema.folders.projectId, projectId))
+		).length
 
 	const setStorageLimit = async (value: number) => {
 		await db
@@ -182,6 +189,12 @@ describe('the storage allowance, at the place bytes become rows', () => {
 		)
 
 		expect(await assetCount()).toBe(before)
+		/*
+		  The folder counts as a write too. Reuse resolution used to create it
+		  ahead of the guard, so a refused request left a row behind and "writes
+		  nothing" held only for the assets.
+		*/
+		expect(await folderCount()).toBe(0)
 	})
 
 	it('lets bytes through while the allowance has room', async () => {
@@ -217,8 +230,9 @@ describe('the storage allowance, at the place bytes become rows', () => {
 		const [existing] = await upload('reused.bin', reused)
 		await reference(existing.assetId)
 
+		const before = await storedBytes()
 		// Room for the new file alone, not for the new file plus the reused one.
-		await setStorageLimit((await storedBytes()) + 300)
+		await setStorageLimit(before + 300)
 
 		const results = await uploadSceneAssets(
 			randomUUID(),
@@ -243,5 +257,11 @@ describe('the storage allowance, at the place bytes become rows', () => {
 
 		expect(results).toHaveLength(2)
 		expect(results[0].assetId).toBe(existing.assetId)
+		/*
+		  Both halves, or a regression that reused the second entry as well would
+		  return two results, skip the quota block entirely and still pass.
+		*/
+		expect(results[1].assetId).not.toBe(existing.assetId)
+		expect(await storedBytes()).toBe(before + 250)
 	})
 })

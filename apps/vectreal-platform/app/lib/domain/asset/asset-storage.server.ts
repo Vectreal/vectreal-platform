@@ -287,12 +287,13 @@ export async function uploadSceneAssets(
 	requestId?: string
 ): Promise<AssetUploadResult[]> {
 	/*
-	  The folder first, the bucket last. Reuse resolution and the quota check
-	  below need the folder; neither needs storage, and a request that is about
-	  to be refused should not create a bucket or open a client on the way to
-	  being told no.
+	  Reads first, writes last. Reuse resolution and the quota check below only
+	  need to know which folder to look in, not that one exists, so a request
+	  that is about to be refused writes nothing on the way to being told no:
+	  no folder row, no bucket, no client. A null id is a project with no folder
+	  yet, so there is nothing to reuse and every entry counts as new bytes.
 	*/
-	const folder = await ensureAssetFolder(projectId)
+	const existingFolderId = await findAssetFolderId(projectId)
 	const results: AssetUploadResult[] = []
 
 	/*
@@ -317,11 +318,13 @@ export async function uploadSceneAssets(
 			return {
 				asset,
 				contentHash,
-				existingAsset: await findExistingAsset(
-					contentHash,
-					asset.fileName,
-					folder.id
-				)
+				existingAsset: existingFolderId
+					? await findExistingAsset(
+							contentHash,
+							asset.fileName,
+							existingFolderId
+						)
+					: null
 			}
 		})
 	)
@@ -354,6 +357,7 @@ export async function uploadSceneAssets(
 
 	await ensureStorageBucketOnce()
 	const storage = getStorageClient()
+	const folder = await ensureAssetFolder(projectId)
 
 	for (const { asset, contentHash, existingAsset } of resolved) {
 		const fileName = asset.fileName
