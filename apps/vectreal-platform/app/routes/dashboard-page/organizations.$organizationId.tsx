@@ -50,6 +50,7 @@ import {
 	getOrgSubscription,
 	hasEntitlement
 } from '../../lib/domain/billing/entitlement-service.server'
+import { QuotaExceededError } from '../../lib/domain/billing/quota-exceeded-error'
 import { DASHBOARD_CONFIRMATION_TOKEN } from '../../lib/domain/dashboard/dashboard-confirmation'
 import { canPerformDashboardOperation } from '../../lib/domain/dashboard/dashboard-operations'
 import {
@@ -410,6 +411,28 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 		return data({ error: 'Unknown action', intent }, { status: 400, headers })
 	} catch (error) {
+		/*
+		  A seat refusal is not a server error. `inviteOrganizationMember` began
+		  throwing `QuotaExceededError` when `org_seats` moved off the inert
+		  `checkQuota` and onto a real row count; before that the throw was
+		  unreachable, so this catch had never needed a branch for it. A business
+		  organization inviting an eleventh member got a 500 carrying the sentence
+		  "Seat limit reached for your plan (10)".
+
+		  403 matches how the `org_multi_member` and `org_roles` refusals in this
+		  same action already answer, and the message reaches the same alert.
+
+		  No quota envelope: this page reads `error`, `success`, `message`,
+		  `intent` and `fieldErrors` off the action and nothing else, so the extra
+		  fields would be returned and dropped. Turning the refusal into the
+		  upgrade dialog `api-keys-new.tsx` opens means teaching the component
+		  `upgradeModalAtom`, which is a change to the page rather than to what
+		  this action answers. Filed.
+		*/
+		if (error instanceof QuotaExceededError) {
+			return data({ error: error.message, intent }, { status: 403, headers })
+		}
+
 		if (error instanceof ZodError) {
 			const fieldErrors: Record<string, string> = {}
 			error.issues.forEach((err) => {

@@ -177,6 +177,14 @@ None of these guards shares a transaction with the insert it protects, so a test
 that only asserts the thrown message passes just as happily when the row was
 written anyway. Assert the count too.
 
+**A guard that starts working needs its caller checked.** `QuotaExceededError`
+was unthrowable while the guards ran on `checkQuota`, so callers were written
+without a branch for it and nothing noticed. When `org_seats` began counting
+rows, the invite route's catch fell through to its generic handler and answered
+a seat refusal with 500 and no upgrade path. Any route that reaches a guard has
+to map the refusal: `ApiResponse.quotaExceeded` on an API route, a 403 with the
+quota fields on a page action.
+
 ## Anti-patterns
 
 | Anti-pattern | Replacement |
@@ -237,4 +245,5 @@ present  apps/vectreal-platform/app/lib/domain/scene/server/scene-settings.opera
 absent   apps/vectreal-platform/app/lib/domain/project/project-repository.server.ts       await checkQuota(
 absent   apps/vectreal-platform/app/lib/domain/organization/organization-repository.server.ts  await checkQuota(
 absent   apps/vectreal-platform/app/lib/domain/scene/server/scene-settings.operations.server.ts  await checkQuota(
+present  apps/vectreal-platform/app/routes/dashboard-page/organizations.$organizationId.tsx  error instanceof QuotaExceededError
 ```
