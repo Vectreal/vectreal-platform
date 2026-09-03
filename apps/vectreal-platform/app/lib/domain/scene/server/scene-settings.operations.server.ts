@@ -23,8 +23,8 @@ import {
 	getOrgSubscription,
 	getQuotaLimit
 } from '../../billing/entitlement-service.server'
+import { assertWithinQuota } from '../../billing/quota-enforcement.server'
 import { QuotaExceededError } from '../../billing/quota-exceeded-error'
-import { checkQuota } from '../../billing/usage-service.server'
 import { getProject } from '../../project/project-repository.server'
 import {
 	getOrCreateDefaultOrganization,
@@ -178,6 +178,29 @@ async function validateSaveLocationTarget(
 	*/
 }
 
+/**
+ * The organization whose plan governs a scene save.
+ *
+ * `targetProjectId` wins when the client names one, because that project may
+ * belong to an organization the caller was invited into rather than their own.
+ * Falls back to the caller's default organization, which is what an ordinary
+ * save from the publisher uses.
+ */
+async function resolveOwningOrganizationId(
+	request: SceneSettingsRequest,
+	userId: string
+): Promise<string> {
+	if (!request.targetProjectId) {
+		return (await getOrCreateDefaultOrganization(userId)).id
+	}
+
+	const project = await getProject(request.targetProjectId, userId)
+	if (!project) {
+		throw new Error('Target project not found or access denied')
+	}
+	return project.organizationId
+}
+
 export async function prepareSceneUpload(
 	request: SceneSettingsRequest,
 	userId: string
@@ -189,45 +212,63 @@ export async function prepareSceneUpload(
 		)
 	}
 
-	// Enforce scenes_total quota when a new scene is being created (no existing sceneId)
 	const isNewScene = !request.sceneId?.trim()
+
+	/*
+	  The organization whose limits apply is the one that will own the scene, not
+	  necessarily the caller's own: `targetProjectId` can name a project in an org
+	  they were invited into. Counting their personal org would enforce the wrong
+	  tenant in both directions - theirs refusing a scene it will never hold, the
+	  target's never enforced at all.
+
+	  Resolved only when a guard below actually needs it. It was briefly hoisted,
+	  which put `getOrCreateDefaultOrganization` - a transaction that *creates* an
+	  organization when its name lookup misses - on the per-asset upload calls,
+	  which need no guard at all.
+	*/
 	if (isNewScene) {
-		const organization = await getOrCreateDefaultOrganization(userId)
-		const quotaCheck = await checkQuota(organization.id, 'scenes_total')
-		if (quotaCheck.outcome === 'hard_limit_exceeded') {
-			const { plan } = await getOrgSubscription(organization.id)
-			const upgradeTo = getRecommendedUpgrade(plan)
-			throw new QuotaExceededError({
-				limitKey: 'scenes_total',
-				currentValue: quotaCheck.currentValue,
-				limit: quotaCheck.limit,
-				plan,
-				upgradeTo,
-				message:
-					'Scene limit reached for your plan. Upgrade to create more scenes.'
-			})
-		}
+		const organizationId = await resolveOwningOrganizationId(request, userId)
+		await assertWithinQuota({
+			organizationId,
+			limitKey: 'scenes_total',
+			measure: async () => {
+				const [row] = await getDbClient()
+					.select({ total: count() })
+					.from(scenes)
+					.innerJoin(projects, eq(projects.id, scenes.projectId))
+					.where(eq(projects.organizationId, organizationId))
+				return row?.total ?? 0
+			},
+			message: ({ limit }) =>
+				`Scene limit reached for your plan (${limit}). Delete a scene or upgrade to create more.`
+		})
 	}
 
-	// Enforce per-scene size limit against the reported final (post-optimization)
-	// scene size. currentSceneBytes is client-reported (same value used for scene
-	// stats); this is a plan gate, not a security boundary. storage_bytes_total
-	// and the storage bucket file-size limit remain hard backstops.
+	/*
+	  Enforced against the reported final (post-optimization) scene size.
+	  `currentSceneBytes` is client-reported - the same value that feeds scene
+	  stats - so this is a plan gate, not a security boundary. The storage
+	  bucket's own per-file limit is the boundary.
+
+	  This comment used to name `storage_bytes_total` as a second hard backstop.
+	  It was not one, and it still is not: nothing enforces it. Enforcing it here
+	  was tried and reverted, because the figure arrives from the same client
+	  value and is absent from every path that actually writes bytes.
+	*/
 	if (typeof request.currentSceneBytes === 'number') {
-		const organization = await getOrCreateDefaultOrganization(userId)
+		const organizationId = await resolveOwningOrganizationId(request, userId)
 		const { limit } = await getQuotaLimit(
-			organization.id,
+			organizationId,
 			'storage_bytes_per_scene'
 		)
 		if (isSceneOverSizeLimit(request.currentSceneBytes, limit)) {
-			const { plan } = await getOrgSubscription(organization.id)
-			const upgradeTo = getRecommendedUpgrade(plan)
+			const { plan } = await getOrgSubscription(organizationId)
 			throw new QuotaExceededError({
 				limitKey: 'storage_bytes_per_scene',
 				currentValue: request.currentSceneBytes,
 				limit,
 				plan,
-				upgradeTo,
+				upgradeTo: getRecommendedUpgrade(plan),
 				message:
 					'Scene exceeds the maximum size for your plan. Optimize further or upgrade.'
 			})
@@ -650,20 +691,23 @@ export async function publishScene(
 						.innerJoin(projects, eq(projects.id, scenes.projectId))
 						.where(eq(projects.organizationId, project.organizationId))
 
-			const quotaCheck = await checkQuota(
+			/*
+			  `getQuotaLimit`, not `checkQuota`. The count above already is the
+			  usage, and checkQuota's usage side reads counters nothing writes, so
+			  the `hard_limit_exceeded` branch that used to be OR'd in here could
+			  never fire. This gate worked only because of the row count.
+			*/
+			const { limit } = await getQuotaLimit(
 				project.organizationId,
-				'scenes_published_concurrent',
-				1
+				'scenes_published_concurrent'
 			)
-			const wouldExceedLimit =
-				quotaCheck.limit !== null && totalPublished >= quotaCheck.limit
 
-			if (quotaCheck.outcome === 'hard_limit_exceeded' || wouldExceedLimit) {
+			if (limit !== null && totalPublished >= limit) {
 				const upgradeTo = getRecommendedUpgrade(effectivePlan)
 				throw new QuotaExceededError({
 					limitKey: 'scenes_published_concurrent',
 					currentValue: totalPublished,
-					limit: quotaCheck.limit,
+					limit,
 					plan: effectivePlan,
 					upgradeTo,
 					message: useProjectScopedLimit

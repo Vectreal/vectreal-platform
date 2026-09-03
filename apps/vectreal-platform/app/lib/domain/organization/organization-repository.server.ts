@@ -1,10 +1,11 @@
-import { and, asc, eq, sql } from 'drizzle-orm'
+import { and, asc, count, eq, sql } from 'drizzle-orm'
 
 import { getDbClient } from '../../../db/client'
 import { organizationMemberships } from '../../../db/schema/core/organization-memberships'
 import { organizations } from '../../../db/schema/core/organizations'
 import { users } from '../../../db/schema/core/users'
 import { projects } from '../../../db/schema/project/projects'
+import { assertWithinQuota } from '../billing/quota-enforcement.server'
 import { assertDashboardPermission } from '../dashboard/dashboard-permissions.server'
 
 const db = getDbClient()
@@ -172,6 +173,20 @@ export async function inviteOrganizationMember(
 	if (existing.length > 0) {
 		throw new Error('User is already a member of this organization')
 	}
+
+	await assertWithinQuota({
+		organizationId,
+		limitKey: 'org_seats',
+		measure: async () => {
+			const [row] = await db
+				.select({ total: count() })
+				.from(organizationMemberships)
+				.where(eq(organizationMemberships.organizationId, organizationId))
+			return row?.total ?? 0
+		},
+		message: ({ limit }) =>
+			`Seat limit reached for your plan (${limit}). Remove a member or upgrade to invite more.`
+	})
 
 	const [membership] = await db
 		.insert(organizationMemberships)

@@ -235,6 +235,29 @@ describe('api key rotation', () => {
 		  updates match and both return success, leaving one admin holding a
 		  plaintext that authorizes nothing - presented as the new live key.
 		*/
+		/*
+		  Establish two pooled connections before racing. postgres.js opens them
+		  lazily, so the second caller spends its first moments on a connect-and-
+		  auth handshake while the first completes all four of its round trips on
+		  the already-warm socket. The second then reads the secret the first just
+		  wrote, its compare-and-swap matches, and both report success - which is
+		  not the guard failing, it is the race never happening.
+
+		  This test passed for a while on nothing but luck: enough earlier queries
+		  happened to leave two sockets warm. Removing a couple of queries
+		  elsewhere in the suite was enough to undo that and turn the assertion
+		  red, which is how the dependency surfaced.
+
+		  `reserve()` waits for an established connection rather than inferring one
+		  from a query that happens to need it, so this states the precondition
+		  instead of relying on a side effect.
+		*/
+		const pool = (
+			db as unknown as { $client: { reserve(): Promise<{ release(): void }> } }
+		).$client
+		const reserved = await Promise.all([pool.reserve(), pool.reserve()])
+		reserved.forEach((connection) => connection.release())
+
 		const results = await Promise.allSettled([
 			rotateApiKey({ apiKeyId, userId: ownerId }),
 			rotateApiKey({ apiKeyId, userId: ownerId })
@@ -249,6 +272,17 @@ describe('api key rotation', () => {
 		)
 
 		expect(winners).toHaveLength(1)
+
+		/*
+		  And the loser lost for the stated reason. Filtering on `status` alone
+		  accepts any failure - a dropped connection, a permission throw, a raw
+		  serialization error - so a compare-and-swap replaced by something that
+		  fails less usefully would still pass.
+		*/
+		const loser = results.find((result) => result.status === 'rejected')
+		expect(String((loser as PromiseRejectedResult).reason)).toMatch(
+			/changed while it was being rotated/
+		)
 
 		rotatedPlaintext = winners[0].value.plaintext
 		const decision = await validatePreviewApiKeyForProject({

@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from 'drizzle-orm'
+import { and, count, eq, inArray, isNull } from 'drizzle-orm'
 
 import { generateApiKey } from './api-key-generator.server'
 import { resolveApiKeyState } from './api-key-lifecycle'
@@ -10,12 +10,7 @@ import { organizations } from '../../../db/schema/core/organizations'
 import { users } from '../../../db/schema/core/users'
 import { projects } from '../../../db/schema/project/projects'
 import { encryptEmbedToken } from '../../security/embed-token-cipher.server'
-import {
-	getOrgSubscription,
-	getRecommendedUpgrade
-} from '../billing/entitlement-service.server'
-import { QuotaExceededError } from '../billing/quota-exceeded-error'
-import { checkQuota } from '../billing/usage-service.server'
+import { assertWithinQuota } from '../billing/quota-enforcement.server'
 import { type DashboardOperation } from '../dashboard/dashboard-operations'
 import { assertDashboardPermission } from '../dashboard/dashboard-permissions.server'
 
@@ -270,20 +265,24 @@ export async function createApiKey(
 		'api-key:create'
 	)
 
-	const quotaCheck = await checkQuota(organizationId, 'api_keys_per_org')
-	if (quotaCheck.outcome === 'hard_limit_exceeded') {
-		const { plan } = await getOrgSubscription(organizationId)
-		const upgradeTo = getRecommendedUpgrade(plan)
-		throw new QuotaExceededError({
-			limitKey: 'api_keys_per_org',
-			currentValue: quotaCheck.currentValue,
-			limit: quotaCheck.limit,
-			plan,
-			upgradeTo,
-			message:
-				'API key limit reached for your plan. Upgrade to create more API keys.'
-		})
-	}
+	await assertWithinQuota({
+		organizationId,
+		limitKey: 'api_keys_per_org',
+		measure: async () => {
+			const [row] = await db
+				.select({ total: count() })
+				.from(apiKeys)
+				.where(
+					and(
+						eq(apiKeys.organizationId, organizationId),
+						isNull(apiKeys.revokedAt)
+					)
+				)
+			return row?.total ?? 0
+		},
+		message: ({ limit }) =>
+			`API key limit reached for your plan (${limit}). Revoke a key or upgrade to create more.`
+	})
 
 	// Verify all projects belong to organization
 	await verifyProjectsInOrganization(db, projectIds, organizationId)
