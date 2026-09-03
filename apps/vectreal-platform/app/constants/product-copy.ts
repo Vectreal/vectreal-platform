@@ -90,10 +90,37 @@ export const OPEN_SOURCE_PACKAGES = [
 
 // Shipped features only. This list is emitted as schema.org
 // WebApplication.featureList, so anything here is a public claim about what the
-// product does today. Several plan entitlements in ./plan-config exist as
-// pricing/gating keys without an implementation behind them yet
-// (scene_version_history, embed_ar_mode, optimization_priority_queue,
-// data_residency_eu, org_sso, org_audit_log); those stay out until they ship.
+// product does today.
+//
+// This list used to be the only honest surface. ./plan-config carried keys for
+// features with no implementation, and this comment named six of them so they
+// would stay out of here. Those keys are gone, so the exception list is empty
+// and every EntitlementKey names something that exists.
+//
+// Two rules came out of removing them, and they pull in opposite directions:
+//
+//   1. A key naming a feature that does not exist is deleted.
+//   2. A key naming a feature that DOES exist stays, set to what is true.
+//      Several were `false` on free while the feature shipped ungated to
+//      everyone - the optimization presets, the advanced parameters panel,
+//      viewer customization. There the lie was the `false`, not the key, so
+//      the fix is the value and deleting them would have dropped a true row.
+//
+// `scene_preview_private` and `data_export` were deleted under rule 1, and both
+// turn on which reading you take. An authenticated owner-only preview route
+// exists and a per-scene model export exists, both ungated; a shareable secret
+// preview link and an organization-wide compliance export do not. On a pricing
+// page those labels read as the second thing, which is why they went.
+//
+// The four support_* keys are the exception neither rule can decide, and they
+// are kept on that basis rather than because the code backs them. Support is
+// delivered by people, so no plan-aware code path is expected or present:
+// contact-submission.server.ts branches on inquiry type alone, and there is one
+// queue for everyone. `support_email` is true on every plan because
+// contact-page.tsx already promises anyone a reply within one business day.
+// `support_priority` and `support_dedicated` are true only if the business
+// honors them. That is a commitment to keep, not a claim this file can check -
+// which is also why the SLA hours came out of the labels.
 export const PLATFORM_FEATURE_LIST = [
 	'Upload GLB, glTF, and USDZ 3D models',
 	'Automated 3D model optimization with Draco compression',
@@ -121,9 +148,9 @@ export const PLAN_DISPLAY_NAMES: Record<Plan, string> = {
 // One-line value proposition per tier shown on pricing cards.
 export const PLAN_TAGLINES: Record<Plan, string> = {
 	free: 'For hobbyists and open-source projects',
-	pro: 'For independent creators and small studios',
+	pro: 'For independent creators who need more room',
 	business: 'For growing teams and agencies',
-	enterprise: 'Custom SLA and dedicated support'
+	enterprise: 'Custom limits and a dedicated support channel'
 }
 
 // Primary CTA button text for each plan on the public pricing page.
@@ -174,11 +201,11 @@ export const PAYMENT_TRUST_COPY = 'Secured by Stripe · Cancel anytime'
 
 export const PLAN_OFFER_DESCRIPTIONS: Record<Plan, string> = {
 	free: '10 scenes, 500 MB storage, 3 concurrent published scenes. API access and community support included. No credit card required.',
-	pro: '200 scenes, 10 GB storage, 50 concurrent published scenes. Adds analytics, AR mode, branding removal, version history, and email support.',
+	pro: '200 scenes, 10 GB storage, 50 concurrent published scenes, 20 projects. More room to publish; the feature set matches Free.',
 	business:
-		'2,000 scenes, 100 GB storage, 500 concurrent published scenes. Adds team collaboration (up to 10 seats), priority optimization queue, EU data residency, and priority support.',
+		'2,000 scenes, 100 GB storage, 500 concurrent published scenes. Adds team collaboration with role-based access (up to 10 seats) and priority support.',
 	enterprise:
-		'Unlimited scenes and storage, custom seats, SSO, audit log, custom data residency, and dedicated support. Custom pricing via sales.'
+		'Unlimited scenes, published scenes, projects and seats, with storage sized to your needs. Adds a dedicated support channel. Custom pricing via sales.'
 }
 
 // ---------------------------------------------------------------------------
@@ -191,7 +218,7 @@ export const PRICING_PAGE_COPY = {
 		'Start for free. Upgrade when you need more. Every plan includes the core 3D publishing workflow - no hidden fees.',
 	enterpriseHeading: 'Need a custom setup?',
 	enterpriseDescription:
-		'Enterprise plans include custom data residency, dedicated support, audit log export, and bespoke SLA agreements. Talk to us.'
+		'Enterprise plans set your limits to whatever you need and add a dedicated support channel. Talk to us.'
 } as const
 
 // ---------------------------------------------------------------------------
@@ -206,29 +233,17 @@ export const ENTITLEMENT_DISPLAY_LABELS: Record<EntitlementKey, string> = {
 	scene_optimize: 'Optimization pipeline',
 	scene_publish: 'Publish to CDN',
 	scene_embed: 'Embed snippet',
-	scene_preview_private: 'Private preview link',
-	scene_version_history: 'Version history',
-	optimization_preset_low: 'Low / medium presets',
-	optimization_preset_medium: 'Low / medium presets',
-	optimization_preset_high: 'High-quality optimization preset',
+	optimization_preset_low: 'Balanced and Smallest presets',
+	optimization_preset_high: 'Maximum quality preset',
 	optimization_custom_params: 'Custom optimization parameters',
-	optimization_priority_queue: 'Priority optimization queue',
 	embed_domain_allowlist: 'Domain allowlist',
-	embed_branding_removal: 'Remove Vectreal branding',
 	embed_viewer_customisation: 'Viewer customization',
-	embed_analytics: 'Embed analytics',
-	embed_ar_mode: 'AR / WebXR mode',
 	org_multi_member: 'Multi-member workspace',
 	org_roles: 'Role-based access',
 	org_api_keys: 'API keys',
-	org_sso: 'SAML / OIDC SSO',
-	org_audit_log: 'Audit log export',
-	data_export: 'Data export',
-	data_residency_eu: 'EU data residency',
-	data_residency_custom: 'Custom data residency',
 	support_community: 'Community & Discord',
-	support_email: 'Email support (48 h SLA)',
-	support_priority: 'Priority support (8 h SLA)',
+	support_email: 'Email support',
+	support_priority: 'Priority support',
 	support_dedicated: 'Dedicated support channel'
 }
 
@@ -246,15 +261,7 @@ export const ENTITLEMENT_FEATURE_GROUPS: Array<{
 				label: ENTITLEMENT_DISPLAY_LABELS.scene_optimize
 			},
 			{ key: 'scene_publish', label: ENTITLEMENT_DISPLAY_LABELS.scene_publish },
-			{ key: 'scene_embed', label: ENTITLEMENT_DISPLAY_LABELS.scene_embed },
-			{
-				key: 'scene_preview_private',
-				label: ENTITLEMENT_DISPLAY_LABELS.scene_preview_private
-			},
-			{
-				key: 'scene_version_history',
-				label: ENTITLEMENT_DISPLAY_LABELS.scene_version_history
-			}
+			{ key: 'scene_embed', label: ENTITLEMENT_DISPLAY_LABELS.scene_embed }
 		]
 	},
 	{
@@ -271,10 +278,6 @@ export const ENTITLEMENT_FEATURE_GROUPS: Array<{
 			{
 				key: 'optimization_custom_params',
 				label: ENTITLEMENT_DISPLAY_LABELS.optimization_custom_params
-			},
-			{
-				key: 'optimization_priority_queue',
-				label: ENTITLEMENT_DISPLAY_LABELS.optimization_priority_queue
 			}
 		]
 	},
@@ -286,18 +289,9 @@ export const ENTITLEMENT_FEATURE_GROUPS: Array<{
 				label: ENTITLEMENT_DISPLAY_LABELS.embed_domain_allowlist
 			},
 			{
-				key: 'embed_branding_removal',
-				label: ENTITLEMENT_DISPLAY_LABELS.embed_branding_removal
-			},
-			{
 				key: 'embed_viewer_customisation',
 				label: ENTITLEMENT_DISPLAY_LABELS.embed_viewer_customisation
-			},
-			{
-				key: 'embed_analytics',
-				label: ENTITLEMENT_DISPLAY_LABELS.embed_analytics
-			},
-			{ key: 'embed_ar_mode', label: ENTITLEMENT_DISPLAY_LABELS.embed_ar_mode }
+			}
 		]
 	},
 	{
@@ -308,23 +302,7 @@ export const ENTITLEMENT_FEATURE_GROUPS: Array<{
 				label: ENTITLEMENT_DISPLAY_LABELS.org_multi_member
 			},
 			{ key: 'org_roles', label: ENTITLEMENT_DISPLAY_LABELS.org_roles },
-			{ key: 'org_api_keys', label: ENTITLEMENT_DISPLAY_LABELS.org_api_keys },
-			{ key: 'org_sso', label: ENTITLEMENT_DISPLAY_LABELS.org_sso },
-			{ key: 'org_audit_log', label: ENTITLEMENT_DISPLAY_LABELS.org_audit_log }
-		]
-	},
-	{
-		label: 'Data & Compliance',
-		features: [
-			{ key: 'data_export', label: ENTITLEMENT_DISPLAY_LABELS.data_export },
-			{
-				key: 'data_residency_eu',
-				label: ENTITLEMENT_DISPLAY_LABELS.data_residency_eu
-			},
-			{
-				key: 'data_residency_custom',
-				label: ENTITLEMENT_DISPLAY_LABELS.data_residency_custom
-			}
+			{ key: 'org_api_keys', label: ENTITLEMENT_DISPLAY_LABELS.org_api_keys }
 		]
 	},
 	{
@@ -397,18 +375,8 @@ export const STORAGE_USAGE_HINT =
 // order.
 // ---------------------------------------------------------------------------
 
-export const UPGRADE_FEATURE_HIGHLIGHT_KEYS = [
-	'scene_preview_private',
-	'scene_version_history',
-	'optimization_preset_high',
-	'optimization_custom_params',
-	'optimization_priority_queue',
-	'embed_branding_removal',
-	'embed_viewer_customisation',
-	'embed_analytics',
-	'embed_ar_mode',
+export const UPGRADE_FEATURE_HIGHLIGHT_KEYS: readonly EntitlementKey[] = [
 	'org_multi_member',
 	'org_roles',
-	'support_email',
 	'support_priority'
-] as const
+]

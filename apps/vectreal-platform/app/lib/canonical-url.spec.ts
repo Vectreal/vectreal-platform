@@ -282,9 +282,12 @@ describe('deployment origin resolution', () => {
 		['an unparseable origin', 'vectreal.com'],
 		['a non-http scheme', 'ftp://vectreal.com'],
 		['an empty string', '']
-	])('counts %s as the canonical site rather than a mirror', (_label, value) => {
-		expect(isCanonicalDeployment(value)).toBe(true)
-	})
+	])(
+		'counts %s as the canonical site rather than a mirror',
+		(_label, value) => {
+			expect(isCanonicalDeployment(value)).toBe(true)
+		}
+	)
 
 	it.each([
 		['a different host', 'https://staging.vectreal.com'],

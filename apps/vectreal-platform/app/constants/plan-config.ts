@@ -35,30 +35,17 @@ export type EntitlementKey =
 	| 'scene_optimize'
 	| 'scene_publish'
 	| 'scene_embed'
-	| 'scene_preview_private'
-	| 'scene_version_history'
 	// Optimization
 	| 'optimization_preset_low'
-	| 'optimization_preset_medium'
 	| 'optimization_preset_high'
 	| 'optimization_custom_params'
-	| 'optimization_priority_queue'
 	// Embed & Viewer
 	| 'embed_domain_allowlist'
-	| 'embed_branding_removal'
 	| 'embed_viewer_customisation'
-	| 'embed_analytics'
-	| 'embed_ar_mode'
 	// Organisation & Collaboration
 	| 'org_multi_member'
 	| 'org_roles'
 	| 'org_api_keys'
-	| 'org_sso'
-	| 'org_audit_log'
-	// Data & Compliance
-	| 'data_export'
-	| 'data_residency_eu'
-	| 'data_residency_custom'
 	// Support
 	| 'support_community'
 	| 'support_email'
@@ -76,33 +63,20 @@ export const PLAN_ENTITLEMENTS: Record<
 		scene_optimize: true,
 		scene_publish: true,
 		scene_embed: true,
-		scene_preview_private: false,
-		scene_version_history: false,
 		// Optimization
 		optimization_preset_low: true,
-		optimization_preset_medium: true,
-		optimization_preset_high: false,
-		optimization_custom_params: false,
-		optimization_priority_queue: false,
+		optimization_preset_high: true,
+		optimization_custom_params: true,
 		// Embed & Viewer
 		embed_domain_allowlist: true,
-		embed_branding_removal: false,
-		embed_viewer_customisation: false,
-		embed_analytics: false,
-		embed_ar_mode: false,
+		embed_viewer_customisation: true,
 		// Organisation & Collaboration
 		org_multi_member: false,
 		org_roles: false,
 		org_api_keys: true,
-		org_sso: false,
-		org_audit_log: false,
-		// Data & Compliance
-		data_export: false,
-		data_residency_eu: false,
-		data_residency_custom: false,
 		// Support
 		support_community: true,
-		support_email: false,
+		support_email: true,
 		support_priority: false,
 		support_dedicated: false
 	},
@@ -112,30 +86,17 @@ export const PLAN_ENTITLEMENTS: Record<
 		scene_optimize: true,
 		scene_publish: true,
 		scene_embed: true,
-		scene_preview_private: true,
-		scene_version_history: true,
 		// Optimization
 		optimization_preset_low: true,
-		optimization_preset_medium: true,
 		optimization_preset_high: true,
 		optimization_custom_params: true,
-		optimization_priority_queue: false,
 		// Embed & Viewer
 		embed_domain_allowlist: true,
-		embed_branding_removal: true,
 		embed_viewer_customisation: true,
-		embed_analytics: true,
-		embed_ar_mode: true,
 		// Organisation & Collaboration
 		org_multi_member: false,
 		org_roles: false,
 		org_api_keys: true,
-		org_sso: false,
-		org_audit_log: false,
-		// Data & Compliance
-		data_export: true,
-		data_residency_eu: false,
-		data_residency_custom: false,
 		// Support
 		support_community: true,
 		support_email: true,
@@ -148,30 +109,17 @@ export const PLAN_ENTITLEMENTS: Record<
 		scene_optimize: true,
 		scene_publish: true,
 		scene_embed: true,
-		scene_preview_private: true,
-		scene_version_history: true,
 		// Optimization
 		optimization_preset_low: true,
-		optimization_preset_medium: true,
 		optimization_preset_high: true,
 		optimization_custom_params: true,
-		optimization_priority_queue: true,
 		// Embed & Viewer
 		embed_domain_allowlist: true,
-		embed_branding_removal: true,
 		embed_viewer_customisation: true,
-		embed_analytics: true,
-		embed_ar_mode: true,
 		// Organisation & Collaboration
 		org_multi_member: true,
 		org_roles: true,
 		org_api_keys: true,
-		org_sso: false,
-		org_audit_log: false,
-		// Data & Compliance
-		data_export: true,
-		data_residency_eu: true,
-		data_residency_custom: false,
 		// Support
 		support_community: true,
 		support_email: true,
@@ -184,30 +132,17 @@ export const PLAN_ENTITLEMENTS: Record<
 		scene_optimize: true,
 		scene_publish: true,
 		scene_embed: true,
-		scene_preview_private: true,
-		scene_version_history: true,
 		// Optimization
 		optimization_preset_low: true,
-		optimization_preset_medium: true,
 		optimization_preset_high: true,
 		optimization_custom_params: true,
-		optimization_priority_queue: true,
 		// Embed & Viewer
 		embed_domain_allowlist: true,
-		embed_branding_removal: true,
 		embed_viewer_customisation: true,
-		embed_analytics: true,
-		embed_ar_mode: true,
 		// Organisation & Collaboration
 		org_multi_member: true,
 		org_roles: true,
 		org_api_keys: true,
-		org_sso: true,
-		org_audit_log: true,
-		// Data & Compliance
-		data_export: true,
-		data_residency_eu: true,
-		data_residency_custom: true,
 		// Support
 		support_community: true,
 		support_email: true,
