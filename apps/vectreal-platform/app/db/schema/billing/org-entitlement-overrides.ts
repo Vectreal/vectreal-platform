@@ -25,7 +25,7 @@ export const orgEntitlementOverrides = pgTable(
 		organizationId: uuid('organization_id')
 			.notNull()
 			.references(() => organizations.id, { onDelete: 'cascade' }),
-		/** Canonical entitlement key, e.g. "embed_branding_removal". */
+		/** Canonical entitlement key, e.g. "org_multi_member". */
 		entitlementKey: text('entitlement_key').notNull(),
 		/** true = grant, false = revoke (overrides plan baseline). */
 		granted: boolean('granted').notNull(),
