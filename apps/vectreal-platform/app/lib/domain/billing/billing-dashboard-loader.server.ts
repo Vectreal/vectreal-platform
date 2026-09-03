@@ -1,4 +1,4 @@
-import { count, eq, inArray, sql } from 'drizzle-orm'
+import { count, eq, sql } from 'drizzle-orm'
 import Stripe from 'stripe'
 
 import { getOrgSubscription, getQuotaLimit } from './entitlement-service.server'
@@ -8,13 +8,12 @@ import {
 	folders,
 	projects,
 	sceneFolders,
-	scenePublished
+	scenePublished,
+	scenes
 } from '../../../db/schema'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { getStripeClient } from '../../stripe.server'
 import { loadAuthenticatedUser } from '../auth/auth-loader.server'
-import { getUserProjects } from '../project/project-repository.server'
-import { getProjectsScenes } from '../scene/server/scene-folder-repository.server'
 
 import type {
 	BillingCheckoutOption,
@@ -123,16 +122,24 @@ export async function getCheckoutOptions(): Promise<BillingCheckoutOptions> {
 }
 
 /**
- * Usage and limits for one organization, given its projects and scenes.
+ * Usage and limits for one organization.
  *
- * Takes them as arguments rather than fetching them so callers that already
- * have them - the dashboard index loads every scene row to compute its own
- * stats - do not pay for the same two queries twice.
+ * Every figure is counted for `organizationId` and nothing else. It used to
+ * take the caller's projects and scenes as arguments, to save two queries the
+ * dashboard index had already run - but those come from `getUserProjects`,
+ * which joins `organization_memberships` on the user alone and so spans every
+ * organization they belong to. The limits beside them, and all four guards that
+ * enforce them, are per-organization.
+ *
+ * The result was a usage panel where scenes, published scenes and projects were
+ * counted across every organization the viewer belonged to while their limits,
+ * folders and storage were counted for one: a free user who also sat in a
+ * colleague's Business organization read "Projects 21 / 1" in red while project
+ * creation worked fine. Two saved queries were not worth a meter that disagrees
+ * with the guard beside it.
  */
 export async function loadOrgUsage(
-	organizationId: string,
-	userProjects: Array<unknown>,
-	allScenes: Array<{ id: string }>
+	organizationId: string
 ): Promise<BillingSettingsData['usage']> {
 	const db = getDbClient()
 
@@ -166,7 +173,22 @@ export async function loadOrgUsage(
 		.where(eq(projects.organizationId, organizationId))
 	const foldersTotalUsage = folderRow?.total ?? 0
 
-	const allSceneIds = allScenes.map((scene) => scene.id)
+	/*
+	  Counted here rather than taken from the caller, and joined through
+	  `projects` the way `createProject` and the `scenes_total` guard count.
+	*/
+	const [projectRow] = await db
+		.select({ total: count() })
+		.from(projects)
+		.where(eq(projects.organizationId, organizationId))
+	const projectsTotalUsage = projectRow?.total ?? 0
+
+	const [sceneRow] = await db
+		.select({ total: count() })
+		.from(scenes)
+		.innerJoin(projects, eq(projects.id, scenes.projectId))
+		.where(eq(projects.organizationId, organizationId))
+	const scenesTotalUsage = sceneRow?.total ?? 0
 
 	/*
 	  Storage is measured, not counted.
@@ -200,23 +222,30 @@ export async function loadOrgUsage(
 		.where(eq(projects.organizationId, organizationId))
 	const storageBytesTotalUsage = Number(storageRow?.total ?? 0)
 
-	// Published is counted from `scene_published`, not `scenes.status`. The two
-	// can disagree, and the quota is enforced against this table.
-	let publishedCount = 0
-	if (allSceneIds.length > 0) {
-		const publishedRows = await db
-			.select({ sceneId: scenePublished.sceneId })
-			.from(scenePublished)
-			.where(inArray(scenePublished.sceneId, allSceneIds))
-		publishedCount = publishedRows.length
-	}
+	/*
+	  Published is counted from `scene_published`, not `scenes.status`. The two
+	  can disagree, and the quota is enforced against this table.
+
+	  Counted in the database rather than by shipping every scene id into an `IN`
+	  list, which is what this did while the caller handed the ids over. That
+	  list was as long as the organization's scene count - two thousand on
+	  business, unbounded on enterprise - and neither figure needed the ids
+	  themselves.
+	*/
+	const [publishedRow] = await db
+		.select({ total: count() })
+		.from(scenePublished)
+		.innerJoin(scenes, eq(scenes.id, scenePublished.sceneId))
+		.innerJoin(projects, eq(projects.id, scenes.projectId))
+		.where(eq(projects.organizationId, organizationId))
+	const publishedCount = publishedRow?.total ?? 0
 
 	return {
-		scenesTotal: allScenes.length,
+		scenesTotal: scenesTotalUsage,
 		sceneLimit: sceneQuota.limit,
 		publishedScenes: publishedCount,
 		publishedSceneLimit: publishedSceneQuota.limit,
-		projectsTotal: userProjects.length,
+		projectsTotal: projectsTotalUsage,
 		projectsLimit: projectsQuota.limit,
 		foldersTotal: foldersTotalUsage,
 		foldersLimit: folderQuota.limit,
@@ -247,13 +276,10 @@ export async function loadBillingDashboardData(
 
 	const { plan, billingState } = await getOrgSubscription(organizationId)
 
-	const userProjects = await getUserProjects(user.id)
-	const projectIds = userProjects.map(({ project }) => project.id)
-	const scenesByProject = await getProjectsScenes(projectIds, user.id)
-	const allScenes = Array.from(scenesByProject.values()).flat()
-
+	// `loadOrgUsage` fetches what it counts now, so the two queries that used to
+	// feed it from the caller's whole membership set are gone with it.
 	const [usage, checkoutOptions] = await Promise.all([
-		loadOrgUsage(organizationId, userProjects, allScenes),
+		loadOrgUsage(organizationId),
 		includeCheckoutOptions ? getCheckoutOptions() : Promise.resolve(undefined)
 	])
 

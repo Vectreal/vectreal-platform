@@ -48,12 +48,16 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const sceneStats = computeSceneStats(scenes)
 	const mostRecentScene = recentScenes[0]
 
-	// `loadOrgUsage` takes the projects and scenes already in hand rather than
-	// re-fetching them, which is why it is a separate function from
-	// `loadBillingDashboardData`.
+	/*
+	  `loadOrgUsage` counts for itself. It used to take the projects and scenes
+	  above, which come from `getUserProjects` and span every organization the
+	  viewer belongs to, so three of its five figures were measured across all of
+	  them against one organization's limits. The two extra reads here are the
+	  price of the meter matching the guard beside it.
+	*/
 	const organizationId = userWithDefaults.organization.id
 	const [usage, { plan }] = await Promise.all([
-		loadOrgUsage(organizationId, userProjects, scenes),
+		loadOrgUsage(organizationId),
 		getOrgSubscription(organizationId)
 	])
 

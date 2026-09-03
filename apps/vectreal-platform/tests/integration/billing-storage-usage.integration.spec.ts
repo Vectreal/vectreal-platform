@@ -150,6 +150,29 @@ describe('organization storage usage', () => {
 			name: 'Scene Assets'
 		})
 		await addAsset('elsewhere.bin', OTHER_ORG_BYTES, otherFolderId)
+
+		/*
+		  And a scene, so the scene count has something to leak. Without this the
+		  other organization holds only assets, and dropping the organization
+		  filter from the scene count changes no number - the test would pass
+		  against the defect it exists to catch.
+		*/
+		const otherSceneId = randomUUID()
+		await db.insert(schema.scenes).values({
+			id: otherSceneId,
+			projectId: otherProjectId,
+			folderId: null,
+			name: 'other org scene'
+		})
+		/*
+		  Published too, so the published count is pinned directly rather than
+		  only through the scene count it used to be derived from.
+		*/
+		await db.insert(schema.scenePublished).values({
+			sceneId: otherSceneId,
+			assetId: await addAsset('other-published.glb', 1, otherFolderId),
+			publishedBy: ownerId
+		})
 	})
 
 	afterAll(async () => {
@@ -163,16 +186,31 @@ describe('organization storage usage', () => {
 	})
 
 	it('counts every stored byte once', async () => {
-		const usage = await loadOrgUsage(
-			organizationId,
-			[{}],
-			sceneIds.map((id) => ({ id }))
-		)
+		const usage = await loadOrgUsage(organizationId)
 
 		// The other organization's asset is deliberately far larger than the
 		// total, so leaking it in cannot be mistaken for a rounding difference.
 		expect(usage.storageBytesTotal).toBe(
 			SHARED_BYTES + PUBLISHED_BYTES + ORPHAN_BYTES
 		)
+	})
+
+	it('counts scenes and projects for this organization alone', async () => {
+		/*
+		  These two used to be handed in by the caller, from `getUserProjects`,
+		  which joins memberships on the user and so spans every organization they
+		  belong to - while the limits beside them, and the guards enforcing those
+		  limits, count one. A member of two organizations saw the sum of both
+		  measured against one organization's allowance, in red, while creation
+		  went on working.
+
+		  The fixture's owner is a member of both organizations, so a regression
+		  to the caller-supplied counts shows up here as inflated numbers.
+		*/
+		const usage = await loadOrgUsage(organizationId)
+
+		expect(usage.scenesTotal).toBe(sceneIds.length)
+		expect(usage.projectsTotal).toBe(1)
+		expect(usage.publishedScenes).toBe(1)
 	})
 })
