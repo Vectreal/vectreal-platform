@@ -163,11 +163,7 @@ export type LimitKey =
 	| 'projects_total'
 	| 'folders_total'
 	| 'org_seats'
-	| 'api_requests_per_minute'
-	| 'api_requests_per_month'
 	| 'api_keys_per_org'
-	| 'embed_bandwidth_gb_per_month'
-	| 'preview_loads_per_month'
 
 /**
  * Numeric quota limits per plan.
@@ -182,11 +178,7 @@ export const PLAN_LIMITS: Record<Plan, Record<LimitKey, number | null>> = {
 		projects_total: 1,
 		folders_total: 25,
 		org_seats: 1,
-		api_requests_per_minute: 30,
-		api_requests_per_month: 5_000,
-		api_keys_per_org: 2,
-		embed_bandwidth_gb_per_month: 5,
-		preview_loads_per_month: 10_000
+		api_keys_per_org: 2
 	},
 	pro: {
 		storage_bytes_total: 10_240 * 1024 * 1024, // 10 GB
@@ -196,11 +188,7 @@ export const PLAN_LIMITS: Record<Plan, Record<LimitKey, number | null>> = {
 		projects_total: 20,
 		folders_total: 500,
 		org_seats: 1,
-		api_requests_per_minute: 300,
-		api_requests_per_month: 100_000,
-		api_keys_per_org: 10,
-		embed_bandwidth_gb_per_month: 100,
-		preview_loads_per_month: 500_000
+		api_keys_per_org: 10
 	},
 	business: {
 		storage_bytes_total: 102_400 * 1024 * 1024, // 100 GB
@@ -210,11 +198,7 @@ export const PLAN_LIMITS: Record<Plan, Record<LimitKey, number | null>> = {
 		projects_total: 200,
 		folders_total: 5_000,
 		org_seats: 10,
-		api_requests_per_minute: 1_000,
-		api_requests_per_month: 1_000_000,
-		api_keys_per_org: 50,
-		embed_bandwidth_gb_per_month: 1_000,
-		preview_loads_per_month: null // Unlimited
+		api_keys_per_org: 50
 	},
 	enterprise: {
 		storage_bytes_total: null, // Custom
@@ -224,11 +208,7 @@ export const PLAN_LIMITS: Record<Plan, Record<LimitKey, number | null>> = {
 		projects_total: null, // Unlimited
 		folders_total: null, // Unlimited
 		org_seats: null, // Custom
-		api_requests_per_minute: null, // Custom
-		api_requests_per_month: null, // Custom
-		api_keys_per_org: null, // Unlimited
-		embed_bandwidth_gb_per_month: null, // Custom
-		preview_loads_per_month: null // Unlimited
+		api_keys_per_org: null // Unlimited
 	}
 }
 

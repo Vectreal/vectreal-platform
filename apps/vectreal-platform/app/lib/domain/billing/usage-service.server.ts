@@ -8,10 +8,10 @@
  * Design notes:
  *   - All mutations use database-level atomic updates to prevent double-
  *     counting under concurrent request load.
- *   - Counter windows are key-aware:
- *       - Monthly counters use calendar-month windows in UTC.
- *       - Per-minute counters use UTC minute windows.
- *       - Cumulative counters use a non-expiring window.
+ *   - Counter windows were key-aware: monthly counters used calendar-month
+ *     windows in UTC, per-minute counters used UTC minute windows, and
+ *     cumulative counters a non-expiring one. Both keyed sets are empty now, so
+ *     every key takes the non-expiring window and neither branch is reachable.
  *   - Soft-limit warnings fire at 80 % of the hard limit.
  *   - When a quota is `null` (unlimited) the action is always allowed.
  */
@@ -34,15 +34,20 @@ const SOFT_LIMIT_THRESHOLD = 0.8
 const NON_EXPIRING_WINDOW_START = new Date('1970-01-01T00:00:00.000Z')
 const NON_EXPIRING_WINDOW_END = new Date('9999-12-31T23:59:59.999Z')
 
-const MONTHLY_COUNTER_KEYS: ReadonlySet<LimitKey> = new Set([
-	'api_requests_per_month',
-	'embed_bandwidth_gb_per_month',
-	'preview_loads_per_month'
-])
+/*
+  Both key sets are empty. Every monthly and per-minute limit was removed as a
+  claim nothing measured: `incrementUsage` has never had a caller, so those
+  counters could only ever read zero, and the meters built on them rendered
+  `0 / limit` forever.
 
-const MINUTE_COUNTER_KEYS: ReadonlySet<LimitKey> = new Set([
-	'api_requests_per_minute'
-])
+  They are kept as empty sets rather than deleted because `getCounterWindow`
+  still branches on them, and this module's own collapse is a separate change -
+  `checkQuota` already has no callers, and `getCurrentUsage` loses its last
+  three here.
+*/
+const MONTHLY_COUNTER_KEYS: ReadonlySet<LimitKey> = new Set([])
+
+const MINUTE_COUNTER_KEYS: ReadonlySet<LimitKey> = new Set([])
 
 /**
  * Returns the UTC start and end of the current calendar month window.

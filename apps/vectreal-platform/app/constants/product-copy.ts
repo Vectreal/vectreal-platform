@@ -333,21 +333,37 @@ export const ENTITLEMENT_FEATURE_GROUPS: Array<{
 // Keys shown on plan cards, in display order.
 // ---------------------------------------------------------------------------
 
-export const PLAN_CARD_LIMIT_KEYS = [
+export const PLAN_CARD_LIMIT_KEYS: readonly LimitKey[] = [
 	'storage_bytes_total',
 	'scenes_total',
 	'scenes_published_concurrent',
 	'projects_total',
+	'folders_total',
 	'storage_bytes_per_scene',
+	'api_keys_per_org',
 	'org_seats'
-] as const
+]
 
-export const LIMIT_DISPLAY_LABELS: Partial<Record<LimitKey, string>> = {
+/*
+  A total record, not a partial one. Six of the twelve limits had no label, for
+  two different reasons: four were claims nothing measured, and two were real
+  limits nobody had got around to showing. The four are deleted and the two are
+  below, so every surviving limit is one a customer can be shown, and a limit
+  added without a label is now a compile error rather than a blank row.
+
+  `folders_total` and `api_keys_per_org` are new here. Both are enforced - the
+  folder limit is the oldest working one in the codebase - and neither had ever
+  appeared on a plan card, so an organization could be refused a folder or a key
+  it was never told it was near.
+*/
+export const LIMIT_DISPLAY_LABELS: Record<LimitKey, string> = {
 	storage_bytes_total: 'Storage',
 	scenes_total: 'Scenes',
 	scenes_published_concurrent: 'Published scenes',
 	projects_total: 'Projects',
+	folders_total: 'Folders',
 	storage_bytes_per_scene: 'Max scene size',
+	api_keys_per_org: 'API keys',
 	org_seats: 'Team seats'
 }
 
