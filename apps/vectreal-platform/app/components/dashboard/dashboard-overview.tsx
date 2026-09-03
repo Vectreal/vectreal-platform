@@ -14,6 +14,7 @@ import {
 import {
 	PLAN_DISPLAY_NAMES,
 	STORAGE_USAGE_HINT,
+	LIMIT_DISPLAY_LABELS,
 	STORAGE_USAGE_LABEL
 } from '../../constants/product-copy'
 import {
@@ -205,17 +206,17 @@ function AccountHealthBand({
 
 			<UsageMeterGrid>
 				<UsageMeter
-					label="Scenes"
+					label={LIMIT_DISPLAY_LABELS.scenes_total}
 					current={usage.scenesTotal}
 					limit={usage.sceneLimit}
 				/>
 				<UsageMeter
-					label="Published"
+					label={LIMIT_DISPLAY_LABELS.scenes_published_concurrent}
 					current={usage.publishedScenes}
 					limit={usage.publishedSceneLimit}
 				/>
 				<UsageMeter
-					label="Projects"
+					label={LIMIT_DISPLAY_LABELS.projects_total}
 					current={usage.projectsTotal}
 					limit={usage.projectsLimit}
 				/>

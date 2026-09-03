@@ -167,14 +167,10 @@ export interface BillingSettingsData {
 		publishedSceneLimit: number | null
 		projectsTotal: number
 		projectsLimit: number | null
-		apiRequestsMonth: number
-		apiRequestsMonthLimit: number | null
+		foldersTotal: number
+		foldersLimit: number | null
 		storageBytesTotal: number
 		storageLimit: number | null
-		embedBandwidthMonth: number
-		embedBandwidthLimit: number | null
-		previewLoadsMonth: number
-		previewLoadsMonthLimit: number | null
 	}
 }
 

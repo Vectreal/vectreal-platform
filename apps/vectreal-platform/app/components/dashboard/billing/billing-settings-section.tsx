@@ -17,6 +17,7 @@ import { DASHBOARD_ROUTES } from '../../../constants/dashboard'
 import {
 	PLAN_DISPLAY_NAMES,
 	STORAGE_USAGE_HINT,
+	LIMIT_DISPLAY_LABELS,
 	STORAGE_USAGE_LABEL
 } from '../../../constants/product-copy'
 import {
@@ -143,8 +144,8 @@ export function BillingSettingsSection({
 	/*
 	  Same pressure reading as the dashboard band, from the same function.
 
-	  This page listed seven meters and drew attention to none of them, so the
-	  one at 96% looked exactly like the one at 4%. The nudge appears only when
+	  This page listed its meters and drew attention to none of them, so the one
+	  at 96% looked exactly like the one at 4%. The nudge appears only when
 	  something is actually close to a limit, which is what makes it worth
 	  reading when it does.
 	*/
@@ -152,10 +153,8 @@ export function BillingSettingsSection({
 		readUsage(usage.scenesTotal, usage.sceneLimit),
 		readUsage(usage.publishedScenes, usage.publishedSceneLimit),
 		readUsage(usage.projectsTotal, usage.projectsLimit),
-		readUsage(usage.storageBytesTotal, usage.storageLimit),
-		readUsage(usage.apiRequestsMonth, usage.apiRequestsMonthLimit),
-		readUsage(usage.embedBandwidthMonth, usage.embedBandwidthLimit),
-		readUsage(usage.previewLoadsMonth, usage.previewLoadsMonthLimit)
+		readUsage(usage.foldersTotal, usage.foldersLimit),
+		readUsage(usage.storageBytesTotal, usage.storageLimit)
 	])
 
 	const handleOpenPortal = () => {
@@ -270,16 +269,17 @@ export function BillingSettingsSection({
 			</section>
 
 			{/*
-			  Seven readings, each shown once.
+			  Five readings, each shown once, and each measured.
 
 			  Scenes, Projects and Published were rendered twice - as tiles at the
 			  top and again as rows below - so a third of the page repeated itself
-			  while the storage and delivery figures got a single line each.
+			  while the storage figure got a single line.
 
-			  The two groups are what you keep and what you serve. Splitting them
-			  that way also collects every per-month limit in one place, instead of
-			  scattering "/mo" across three headings, and retires the
-			  "API & processing" group that existed to head a single row.
+			  There were seven readings and two groups, "what you keep" and "what
+			  you serve". The serving side is gone: embed bandwidth, preview loads
+			  and API requests were all read from counters nothing increments, so
+			  all three showed zero against a plan number forever. With one group
+			  left, the split and its eyebrows had nothing to separate.
 			*/}
 			<section className="ds-raised space-y-5 rounded-2xl p-5">
 				<div className="flex flex-wrap items-center justify-between gap-2">
@@ -306,64 +306,57 @@ export function BillingSettingsSection({
 					) : null}
 				</div>
 
-				<div className="grid gap-x-10 gap-y-6 md:grid-cols-2">
-					<div className="space-y-3">
-						<p className="text-muted-foreground text-eyebrow">Stored</p>
-						<UsageMeter
-							variant="row"
-							label="Scenes"
-							current={usage.scenesTotal}
-							limit={usage.sceneLimit}
-						/>
-						<UsageMeter
-							variant="row"
-							label="Published scenes"
-							current={usage.publishedScenes}
-							limit={usage.publishedSceneLimit}
-						/>
-						<UsageMeter
-							variant="row"
-							label="Projects"
-							current={usage.projectsTotal}
-							limit={usage.projectsLimit}
-						/>
-						<UsageMeter
-							variant="row"
-							label={`${STORAGE_USAGE_LABEL} (MB)`}
-							hint={STORAGE_USAGE_HINT}
-							current={Math.round(usage.storageBytesTotal / (1024 * 1024))}
-							limit={
-								usage.storageLimit !== null
-									? Math.round(usage.storageLimit / (1024 * 1024))
-									: null
-							}
-						/>
-					</div>
+				{/*
+				  Every meter here is measured from rows that exist. A second column
+				  used to sit beside this one headed "Served" - embed bandwidth,
+				  preview loads and API requests - all three backed by counters
+				  nothing has ever incremented, so all three rendered `0 / limit`
+				  forever. The limits behind them are gone, so the grouping and its
+				  eyebrows went with them.
 
-					<div className="space-y-3">
-						<p className="text-muted-foreground text-eyebrow">Served</p>
-						<UsageMeter
-							variant="row"
-							label="Embed bandwidth (GB)"
-							current={usage.embedBandwidthMonth}
-							limit={usage.embedBandwidthLimit}
-							monthly
-						/>
-						<UsageMeter
-							variant="row"
-							label="Preview loads"
-							current={usage.previewLoadsMonth}
-							limit={usage.previewLoadsMonthLimit}
-							monthly
-						/>
-						<UsageMeter
-							variant="row"
-							label="API requests"
-							current={usage.apiRequestsMonth}
-							limit={usage.apiRequestsMonthLimit}
-							monthly
-						/>
-					</div>
+				  One column, not the two-column grid the pair of groups needed.
+				  Five cells across two columns leave the last meter alone beside an
+				  empty one, and the row variant drops its rail entirely on an
+				  unlimited limit (`usage-meter.tsx`), which in a grid row would show
+				  as a gap under whichever neighbour still had one. A list has
+				  neither problem.
+				*/}
+				<div className="space-y-3">
+					<UsageMeter
+						variant="row"
+						label={LIMIT_DISPLAY_LABELS.scenes_total}
+						current={usage.scenesTotal}
+						limit={usage.sceneLimit}
+					/>
+					<UsageMeter
+						variant="row"
+						label={LIMIT_DISPLAY_LABELS.scenes_published_concurrent}
+						current={usage.publishedScenes}
+						limit={usage.publishedSceneLimit}
+					/>
+					<UsageMeter
+						variant="row"
+						label={LIMIT_DISPLAY_LABELS.projects_total}
+						current={usage.projectsTotal}
+						limit={usage.projectsLimit}
+					/>
+					<UsageMeter
+						variant="row"
+						label={LIMIT_DISPLAY_LABELS.folders_total}
+						current={usage.foldersTotal}
+						limit={usage.foldersLimit}
+					/>
+					<UsageMeter
+						variant="row"
+						label={`${STORAGE_USAGE_LABEL} (MB)`}
+						hint={STORAGE_USAGE_HINT}
+						current={Math.round(usage.storageBytesTotal / (1024 * 1024))}
+						limit={
+							usage.storageLimit !== null
+								? Math.round(usage.storageLimit / (1024 * 1024))
+								: null
+						}
+					/>
 				</div>
 			</section>
 

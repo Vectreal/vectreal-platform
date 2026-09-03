@@ -1,10 +1,15 @@
-import { eq, inArray, sql } from 'drizzle-orm'
+import { count, eq, inArray, sql } from 'drizzle-orm'
 import Stripe from 'stripe'
 
 import { getOrgSubscription, getQuotaLimit } from './entitlement-service.server'
-import { getCurrentUsage } from './usage-service.server'
 import { getDbClient } from '../../../db/client'
-import { assets, folders, projects, scenePublished } from '../../../db/schema'
+import {
+	assets,
+	folders,
+	projects,
+	sceneFolders,
+	scenePublished
+} from '../../../db/schema'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { getStripeClient } from '../../stripe.server'
 import { loadAuthenticatedUser } from '../auth/auth-loader.server'
@@ -135,25 +140,31 @@ export async function loadOrgUsage(
 		sceneQuota,
 		projectsQuota,
 		publishedSceneQuota,
-		apiRequestsMonthQuota,
 		storageQuota,
-		embedBandwidthQuota,
-		previewLoadsQuota,
-		apiRequestsMonthUsage,
-		embedBandwidthUsage,
-		previewLoadsUsage
+		folderQuota
 	] = await Promise.all([
 		getQuotaLimit(organizationId, 'scenes_total'),
 		getQuotaLimit(organizationId, 'projects_total'),
 		getQuotaLimit(organizationId, 'scenes_published_concurrent'),
-		getQuotaLimit(organizationId, 'api_requests_per_month'),
 		getQuotaLimit(organizationId, 'storage_bytes_total'),
-		getQuotaLimit(organizationId, 'embed_bandwidth_gb_per_month'),
-		getQuotaLimit(organizationId, 'preview_loads_per_month'),
-		getCurrentUsage(organizationId, 'api_requests_per_month'),
-		getCurrentUsage(organizationId, 'embed_bandwidth_gb_per_month'),
-		getCurrentUsage(organizationId, 'preview_loads_per_month')
+		getQuotaLimit(organizationId, 'folders_total')
 	])
+
+	/*
+	  Counted from `scene_folders`, the table `assertFolderQuota` enforces
+	  against - not the `folders` table the storage sum below walks. They are two
+	  different things with one word between them: `folders` holds assets,
+	  `scene_folders` is the dashboard tree the plan limit applies to.
+
+	  This limit was enforced and never displayed, so an organization could be
+	  refused a folder it was never told it was near.
+	*/
+	const [folderRow] = await db
+		.select({ total: count() })
+		.from(sceneFolders)
+		.innerJoin(projects, eq(projects.id, sceneFolders.projectId))
+		.where(eq(projects.organizationId, organizationId))
+	const foldersTotalUsage = folderRow?.total ?? 0
 
 	const allSceneIds = allScenes.map((scene) => scene.id)
 
@@ -207,14 +218,10 @@ export async function loadOrgUsage(
 		publishedSceneLimit: publishedSceneQuota.limit,
 		projectsTotal: userProjects.length,
 		projectsLimit: projectsQuota.limit,
-		apiRequestsMonth: apiRequestsMonthUsage,
-		apiRequestsMonthLimit: apiRequestsMonthQuota.limit,
+		foldersTotal: foldersTotalUsage,
+		foldersLimit: folderQuota.limit,
 		storageBytesTotal: storageBytesTotalUsage,
-		storageLimit: storageQuota.limit,
-		embedBandwidthMonth: embedBandwidthUsage,
-		embedBandwidthLimit: embedBandwidthQuota.limit,
-		previewLoadsMonth: previewLoadsUsage,
-		previewLoadsMonthLimit: previewLoadsQuota.limit
+		storageLimit: storageQuota.limit
 	}
 }
 
