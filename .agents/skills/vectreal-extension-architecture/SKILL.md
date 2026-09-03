@@ -132,11 +132,57 @@ including `catalog:`. Trust it over hand-editing. A package that deliberately
 bundles a dependency declares that as an `ignoredDependencies` entry in
 `eslint.config.mts` with a reason.
 
+## Plan limits: count rows, never `checkQuota`
+
+`checkQuota` reads `org_usage_counters`. Nothing in the app has ever called
+`incrementUsage`, so every counter sits at zero and `hard_limit_exceeded` cannot
+be returned for any organization. Four guards were written against it and none
+of them refused anything: a free organization created its second project by
+submitting the ordinary form again.
+
+Enforce with `assertWithinQuota` (`app/lib/domain/billing/quota-enforcement.server.ts`),
+which takes a `measure` callback and counts the rows the limit describes:
+
+```ts
+await assertWithinQuota({
+	organizationId,
+	limitKey: 'projects_total',
+	measure: async () => {
+		const [row] = await db
+			.select({ total: count() })
+			.from(projects)
+			.where(eq(projects.organizationId, organizationId))
+		return row?.total ?? 0
+	},
+	message: ({ limit }) => `Project limit reached for your plan (${limit}).`
+})
+```
+
+`getQuotaLimit` is the half that always worked: it reads plan config and merges
+`org_limit_overrides`, and a `null` result means unlimited. Only the usage side
+was inert.
+
+Three things the guards get wrong when written from memory:
+
+1. **Measure the organization that will own the row**, not the caller's own.
+   `targetProjectId` can name a project in an organization the caller was
+   invited into.
+2. **Filter what the limit means.** `api_keys_per_org` counts keys where
+   `revoked_at is null`, or an organization stays at its ceiling forever after a
+   rotation.
+3. **The guard and the meter must run the same query.** `folders_total` counts
+   `scene_folders`; the storage sum walks `folders`. Two tables, one word apart.
+
+None of these guards shares a transaction with the insert it protects, so a test
+that only asserts the thrown message passes just as happily when the row was
+written anyway. Assert the count too.
+
 ## Anti-patterns
 
 | Anti-pattern | Replacement |
 | --- | --- |
 | Access check that relies on RLS, `auth.uid()`, or a hand-written role comparison | `assertDashboardPermission` against the operation table |
+| Quota guard routed through `checkQuota` | `assertWithinQuota`, counting the rows the limit describes |
 | 403 for a resource the actor cannot see | 404, so ids cannot be enumerated |
 | Drizzle query inside a route module | Repository function, called through a service when it spans repositories |
 | Shared abstraction created for one current caller | Explicit local code until a second caller exists |
@@ -183,4 +229,12 @@ present  shared/utils/src/lib/api.utils.ts                                      
 exists   apps/vectreal-platform/app/lib/domain/scene/scene-route-params.ts
 present  apps/vectreal-platform/app/routes.tsx                                              api/dashboard/mutations
 present  eslint.config.mts                                                                  dependency-checks
+present  apps/vectreal-platform/app/lib/domain/billing/quota-enforcement.server.ts        export async function assertWithinQuota
+present  apps/vectreal-platform/app/lib/domain/scene/server/scene-folder-repository.server.ts  assertFolderQuota
+present  apps/vectreal-platform/app/lib/domain/project/project-repository.server.ts       limitKey: 'projects_total'
+present  apps/vectreal-platform/app/lib/domain/organization/organization-repository.server.ts  limitKey: 'org_seats'
+present  apps/vectreal-platform/app/lib/domain/scene/server/scene-settings.operations.server.ts  limitKey: 'scenes_total'
+absent   apps/vectreal-platform/app/lib/domain/project/project-repository.server.ts       await checkQuota(
+absent   apps/vectreal-platform/app/lib/domain/organization/organization-repository.server.ts  await checkQuota(
+absent   apps/vectreal-platform/app/lib/domain/scene/server/scene-settings.operations.server.ts  await checkQuota(
 ```

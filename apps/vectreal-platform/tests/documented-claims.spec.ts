@@ -104,7 +104,16 @@ const CLAIM_CARRYING_DOCS = [
 	  editor payload is refused to a key. Each of those is a sentence a reader
 	  acts on, and each has a line of code that decides it.
 	*/
-	'apps/vectreal-platform/app/routes/docs/guides/embed-sdk.mdx'
+	'apps/vectreal-platform/app/routes/docs/guides/embed-sdk.mdx',
+	/*
+	  Both of these state plan numbers in prose, hardcoded, with no link to
+	  `plan-config.ts`. Both are prerendered and public. They were accurate when
+	  written, which is the whole problem: nothing would have gone red if a plan
+	  changed underneath them, and nothing did go red through the audit that
+	  found four limits nobody measured and twelve entitlements nobody shipped.
+	*/
+	'apps/vectreal-platform/app/routes/docs/guides/upload.mdx',
+	'apps/vectreal-platform/app/routes/news-room-page/articles/04_api-keys-101.mdx'
 ]
 
 const documentFiles = [...skillFiles, ...CLAIM_CARRYING_DOCS]

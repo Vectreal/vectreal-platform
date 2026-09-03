@@ -214,6 +214,27 @@ You are building a SaaS product where each of your customers gets their own Vect
 
 This is the layout most likely to grow past plan limits. The current per-org limits are **2 keys (Free), 10 (Pro), 50 (Business), unlimited (Enterprise)**. If you are crossing those thresholds at customer growth scale, the conversation is about tier rather than security model.
 
+{/* claims
+  # The four numbers in the paragraph above, tied to the config they came from.
+  # They were correct when written and nothing would have noticed if a plan
+  # changed underneath them - this article is prerendered and public.
+  #
+  # A literal is matched as a substring, so `api_keys_per_org: 2` would also
+  # match a future `: 25`. It still catches a rename, a deletion, and any new
+  # value that does not share the old one's prefix.
+  present  apps/vectreal-platform/app/constants/plan-config.ts   api_keys_per_org: 2
+  present  apps/vectreal-platform/app/constants/plan-config.ts   api_keys_per_org: 10
+  present  apps/vectreal-platform/app/constants/plan-config.ts   api_keys_per_org: 50
+  present  apps/vectreal-platform/app/constants/plan-config.ts   api_keys_per_org: null
+
+  # And that the limit is enforced by counting rows, which is what makes the
+  # sentence "most likely to grow past plan limits" mean anything. It ran
+  # through `checkQuota` until 2026-09-03, and that helper reads a counter
+  # nothing increments, so the ceiling did not exist.
+  present  apps/vectreal-platform/app/lib/domain/auth/api-key-repository.server.ts   limitKey: 'api_keys_per_org'
+  absent   apps/vectreal-platform/app/lib/domain/auth/api-key-repository.server.ts   await checkQuota(
+*/}
+
 ---
 
 ### The Three Mistakes We See Most Often

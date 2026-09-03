@@ -41,6 +41,19 @@ The parser identifies the `.gltf` root and resolves all referenced `.bin` and te
 
 The Publisher enforces your plan's maximum scene size: 50 MB on Free, 200 MB on Pro, 500 MB on Business, and a custom limit on Enterprise. While a scene is over the limit the Save button becomes **Optimize to Save**, the optimizer opens automatically, and the server rejects the save until the scene fits. Run optimization first for production-grade assets (see [Optimizing & Configuring](/docs/guides/optimize)).
 
+{/* claims
+  # The three sizes above, tied to the config, and to the gate that applies it.
+  # This page is prerendered, so a plan change would leave it stating numbers
+  # nobody serves.
+  present  apps/vectreal-platform/app/constants/plan-config.ts   storage_bytes_per_scene: 50 * 1024 * 1024
+  present  apps/vectreal-platform/app/constants/plan-config.ts   storage_bytes_per_scene: 200 * 1024 * 1024
+  present  apps/vectreal-platform/app/constants/plan-config.ts   storage_bytes_per_scene: 500 * 1024 * 1024
+
+  # "the server rejects the save" is the load-bearing half of the sentence.
+  present  apps/vectreal-platform/app/lib/domain/scene/server/scene-settings.operations.server.ts   limitKey: 'storage_bytes_per_scene'
+  present  apps/vectreal-platform/app/lib/domain/scene/scene-size-limit.ts   isSceneOverSizeLimit
+*/}
+
 ---
 
 ## Error handling
