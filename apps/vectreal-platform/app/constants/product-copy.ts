@@ -237,6 +237,7 @@ export const ENTITLEMENT_DISPLAY_LABELS: Record<EntitlementKey, string> = {
 	optimization_preset_high: 'Maximum quality preset',
 	optimization_custom_params: 'Custom optimization parameters',
 	embed_domain_allowlist: 'Domain allowlist',
+	embed_branding_removal: 'Remove Vectreal branding',
 	embed_viewer_customisation: 'Viewer customization',
 	org_multi_member: 'Multi-member workspace',
 	org_roles: 'Role-based access',
@@ -287,6 +288,10 @@ export const ENTITLEMENT_FEATURE_GROUPS: Array<{
 			{
 				key: 'embed_domain_allowlist',
 				label: ENTITLEMENT_DISPLAY_LABELS.embed_domain_allowlist
+			},
+			{
+				key: 'embed_branding_removal',
+				label: ENTITLEMENT_DISPLAY_LABELS.embed_branding_removal
 			},
 			{
 				key: 'embed_viewer_customisation',
@@ -392,6 +397,7 @@ export const STORAGE_USAGE_HINT =
 // ---------------------------------------------------------------------------
 
 export const UPGRADE_FEATURE_HIGHLIGHT_KEYS: readonly EntitlementKey[] = [
+	'embed_branding_removal',
 	'org_multi_member',
 	'org_roles',
 	'support_priority'

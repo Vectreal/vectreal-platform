@@ -431,8 +431,9 @@ import { defaultControlsOptions, VectrealViewer } from '@vctrl/viewer'
 ```
 
 The info popover slot is built from `InfoPopover`, `InfoPopoverTrigger`,
-`InfoPopoverContent`, `InfoPopoverText`, `InfoPopoverCloseButton` and
-`InfoPopoverVectrealFooter`, all exported from the same entry point.
+`InfoPopoverContent`, `InfoPopoverText` and `InfoPopoverCloseButton`, all
+exported from the same entry point. The content is yours: these primitives
+carry no branding of their own.
 
 ---
 

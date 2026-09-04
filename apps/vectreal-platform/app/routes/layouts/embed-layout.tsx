@@ -10,8 +10,14 @@ import {
 import { Route } from './+types/embed-layout'
 import { EmbedRefusal } from '../../components/scene-embed/embed-refusal'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
+import { hasEntitlement } from '../../lib/domain/billing/entitlement-service.server'
+import {
+	resolveEmbedBranding,
+	shouldShowVectrealBranding
+} from '../../lib/domain/embed/embed-branding-policy'
 import {
 	EMBED_RESPONSE_HEADERS,
+	mergeEmbedResponseHeaders,
 	withEmbedResponseHeaders
 } from '../../lib/domain/embed/embed-response-headers'
 import {
@@ -103,12 +109,27 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	  marked `no-store` - while being the only one whose body embeds the token
 	  and the id of the key that authorized it.
 	*/
+	/*
+	  Resolved here rather than in the scene manifest, for two reasons. This is
+	  the only response on the embed path that already knows the owning
+	  organization - the key lookup selects it and `decideEmbedAccess` compares
+	  it - so nothing extra is queried. And these headers are `no-store`, while
+	  the manifest is cached against an ETag keyed on the scene and its last
+	  save; putting a plan answer behind that tag would leave an org that
+	  upgrades serving the old one until it next edited the scene.
+	*/
+	const brandingRemoval = await hasEntitlement(
+		authResult.organizationId,
+		'embed_branding_removal'
+	)
+
 	return data(
 		{
 			projectId,
 			sceneId,
 			tokenFromQuery,
-			authenticatedByApiKeyId: authResult.apiKeyId
+			authenticatedByApiKeyId: authResult.apiKeyId,
+			showsVectrealBranding: shouldShowVectrealBranding(brandingRemoval)
 		},
 		{ headers: EMBED_RESPONSE_HEADERS }
 	)
@@ -129,7 +150,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
  * through to `new Headers(parentHeaders)` and passes these along unchanged.
  */
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
-	return loaderHeaders
+	return mergeEmbedResponseHeaders(loaderHeaders)
 }
 
 /**
@@ -139,9 +160,10 @@ export function headers({ loaderHeaders }: Route.HeadersArgs) {
  * generic boundary, because the other refusals are the ones that must not say
  * which of them happened.
  *
- * `headers` above does not run for a thrown response - React Router builds the
- * error response separately - so the status carries the headers itself, from
- * the same constant the success path uses.
+ * The thrown response carries the headers itself, from the same constant the
+ * success path uses. `headers` above does also run for a boundary route -
+ * React Router slices the matches through the boundary inclusively - so the
+ * two agree rather than one standing in for the other.
  */
 export function ErrorBoundary() {
 	const error = useRouteError()
@@ -174,8 +196,29 @@ export function ErrorBoundary() {
 	throw error
 }
 
-const EmbedLayout = () => {
-	return <Outlet />
+/**
+ * What the embed route needs from this layout.
+ *
+ * Passed as outlet context rather than read back with `useRouteLoaderData`,
+ * matching how the auth layout hands its children the Turnstile token: the
+ * child states the shape it needs and the compiler checks the layout supplies
+ * it, which a route-id string lookup cannot do.
+ */
+export interface EmbedLayoutContext {
+	/**
+	 * Whether this embed carries the Vectreal mark, decided from the plan of
+	 * the organization that owns the scene. Only `/embed` resolves it; the
+	 * internal `/preview` renders no mark at all.
+	 */
+	showsVectrealBranding: boolean
+}
+
+const EmbedLayout = ({ loaderData }: Route.ComponentProps) => {
+	const context: EmbedLayoutContext = {
+		showsVectrealBranding: resolveEmbedBranding(loaderData)
+	}
+
+	return <Outlet context={context} />
 }
 
 export default EmbedLayout

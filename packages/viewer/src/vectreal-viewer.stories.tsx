@@ -14,8 +14,7 @@ import {
 	InfoPopoverCloseButton,
 	InfoPopoverContent,
 	InfoPopoverText,
-	InfoPopoverTrigger,
-	InfoPopoverVectrealFooter
+	InfoPopoverTrigger
 } from './components'
 import { defaultControlsOptions, defaultEnvOptions } from './components/scene'
 import VectrealViewer from './vectreal-viewer'
@@ -382,7 +381,6 @@ export const WithPopover: Story = {
 							This is a customizable overlay slot for contextual viewer help.
 						</p>
 					</InfoPopoverText>
-					<InfoPopoverVectrealFooter />
 				</InfoPopoverContent>
 			</InfoPopover>
 		)
