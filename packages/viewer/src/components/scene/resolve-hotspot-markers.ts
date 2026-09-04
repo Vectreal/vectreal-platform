@@ -11,6 +11,14 @@ export interface HotspotMarker {
 	id: string
 	/** Trimmed, and never empty. */
 	name: string
+	/** Trimmed, or null when the hotspot carries no body text. */
+	body: string | null
+	/**
+	 * Trimmed, or null when the hotspot names no link. Not yet checked for a
+	 * scheme the renderer will accept - `resolveHotspotLink` owns that, and it
+	 * is what decides whether the marker has anything to reveal.
+	 */
+	linkUrl: string | null
 	/** What a screen reader announces, including the step and how many there are. */
 	accessibleName: string
 	position: [number, number, number]
@@ -124,10 +132,10 @@ interface DrawableEntry {
  * mount and never reorders, so document order - and with it tab order - follows
  * whichever order the markers first mounted in.)
  *
- * Everything else here is hardening. The platform's own parser validates most of
- * these fields on save, but it never sees `payloadUrl`, and a direct consumer of
- * `@vctrl/viewer` goes through no parser at all: a non-string `name` would throw
- * on `.trim()` mid-render, and a `NaN` sequence index would make the comparator
+ * Everything else here is hardening. The platform's own parser validates every
+ * one of these fields on save, but a direct consumer of `@vctrl/viewer` goes
+ * through no parser at all: a non-string `name` or `body` would throw on
+ * `.trim()` mid-render, and a `NaN` sequence index would make the comparator
  * return `NaN` and leave the order to the sort implementation.
  */
 export function resolveHotspotMarkers(
@@ -231,6 +239,8 @@ function toMarker(
 		id,
 		name,
 		accessibleName: accessibleName(name, step, stepCount, hidden),
+		body: text(hotspot.body),
+		linkUrl: text(hotspot.linkUrl),
 		position,
 		step,
 		stepCount,

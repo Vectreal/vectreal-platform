@@ -82,6 +82,15 @@ const SceneHotspots = ({
 	const invalidate = useThree((state) => state.invalidate)
 	const [occludedIds, setOccludedIds] =
 		useState<ReadonlySet<string>>(NO_OCCLUSIONS)
+	/**
+	 * Which marker has its content open, at most one.
+	 *
+	 * Owned here rather than by each marker so opening one closes the last: the
+	 * cards are non-modal and anchored to points that can overlap on screen, and
+	 * several open at once is unreadable. It also puts the open marker in reach
+	 * of the occlusion pass below.
+	 */
+	const [openId, setOpenId] = useState<string | null>(null)
 
 	const markers = useMemo(
 		() => resolveHotspotMarkers(hotspots, { includeInternal, includeHidden }),
@@ -132,6 +141,34 @@ const SceneHotspots = ({
 	 * nothing - which is the correct thing for it to find.
 	 */
 	const anchors = useRef(new Map<string, Group>())
+
+	const handleReveal = useCallback(
+		(id: string) => {
+			setOpenId((previous) => (previous === id ? null : id))
+			// Under `frameloop="demand"` nothing else asks for a frame here, and
+			// the card measures its own placement from one.
+			invalidate()
+		},
+		[invalidate]
+	)
+
+	/**
+	 * An open card closes when its marker goes behind the model or leaves the
+	 * list.
+	 *
+	 * An occluded marker takes no pointer events and offers no action, so a card
+	 * left open over hidden geometry would be the one state with no way to
+	 * dismiss it - and it would be describing something the visitor cannot see.
+	 */
+	useEffect(() => {
+		if (!openId) return
+		if (
+			occludedIds.has(openId) ||
+			!markers.some((marker) => marker.id === openId)
+		) {
+			setOpenId(null)
+		}
+	}, [markers, occludedIds, openId])
 
 	const registerAnchor = useCallback((id: string, node: Group | null) => {
 		if (node) anchors.current.set(id, node)
@@ -357,6 +394,8 @@ const SceneHotspots = ({
 					color={color}
 					onActivate={onActivateCamera}
 					onSelect={onSelect}
+					open={marker.id === openId}
+					onReveal={handleReveal}
 					onAnchorRef={registerAnchor}
 				/>
 			))}

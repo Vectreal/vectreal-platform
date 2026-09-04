@@ -151,14 +151,88 @@ describe('resolveHotspotInteraction', () => {
 					occluded: true,
 					canActivate: false,
 					canSelect: true
-				}).toggles
-			).toBe(true)
+				}).announces
+			).toBe('pressed')
 			expect(
 				resolveHotspotInteraction(linked, {
 					occluded: false,
 					canActivate: true
-				}).toggles
-			).toBe(false)
+				}).announces
+			).toBeNull()
+		})
+	})
+
+	describe('revealing content', () => {
+		const reveal = { occluded: false, canActivate: false, canReveal: true }
+
+		it('makes a marker with something to say a button', () => {
+			const interaction = resolveHotspotInteraction(unlinked, reveal)
+
+			expect(interaction.role).toBe('button')
+			expect(interaction.action).toBe('reveal')
+			expect(interaction.focusable).toBe(true)
+		})
+
+		it('announces a reveal as expanded, never as pressed', () => {
+			// The two are different claims about the same control. A reveal shows
+			// content; a press picks the marker up. Announcing one as the other
+			// tells a screen reader the wrong thing about what a click will do.
+			expect(resolveHotspotInteraction(unlinked, reveal).announces).toBe(
+				'expanded'
+			)
+		})
+
+		it('lets selection win, and announces the selection', () => {
+			// Selecting is local and reversible. An editing surface that offers
+			// both has to give a click the cheap one.
+			const interaction = resolveHotspotInteraction(linked, {
+				occluded: false,
+				canActivate: true,
+				canReveal: true,
+				canSelect: true
+			})
+
+			expect(interaction.action).toBe('select')
+			expect(interaction.announces).toBe('pressed')
+			// And never flies away from the viewpoint the author is composing in.
+			expect(interaction.fliesCamera).toBe(false)
+		})
+
+		it('reveals and flies on the same click', () => {
+			// A marker that has something to say and a camera to fly says "look
+			// here, and here is why". The flight is what puts the content's
+			// subject on screen, so they are not alternatives.
+			const interaction = resolveHotspotInteraction(linked, {
+				occluded: false,
+				canActivate: true,
+				canReveal: true
+			})
+
+			expect(interaction.action).toBe('reveal')
+			expect(interaction.fliesCamera).toBe(true)
+		})
+
+		it('flies alone when there is nothing to reveal', () => {
+			const interaction = resolveHotspotInteraction(linked, {
+				occluded: false,
+				canActivate: true
+			})
+
+			expect(interaction.action).toBe('activate')
+			expect(interaction.fliesCamera).toBe(true)
+		})
+
+		it('does neither while occluded, and still announces expanded', () => {
+			const interaction = resolveHotspotInteraction(linked, {
+				occluded: true,
+				canActivate: true,
+				canReveal: true
+			})
+
+			expect(interaction.action).toBe('none')
+			expect(interaction.fliesCamera).toBe(false)
+			expect(interaction.announces).toBe('expanded')
+			expect(interaction.pointerEvents).toBe('none')
 		})
 	})
 })
