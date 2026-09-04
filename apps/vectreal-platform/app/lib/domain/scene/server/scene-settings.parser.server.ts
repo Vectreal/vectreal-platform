@@ -9,6 +9,10 @@ import {
 
 import { UUID_REGEX } from '../../../../constants/utility-constants'
 import { parseActionRequest } from '../../../http/requests.server'
+import {
+	isAllowedHotspotPayloadUrl,
+	MAX_HOTSPOT_URL_LENGTH
+} from '../hotspot-urls'
 import { parseOptimizationReport } from '../optimization-report-guard'
 import {
 	applyDefaultCameraFlag,
@@ -33,6 +37,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * Request parser for scene settings API operations.
  * Handles validation and normalization of incoming requests.
  */
+/**
+ * Ceiling on how many hotspots one scene can persist.
+ *
+ * Sized well above any authored walkthrough and well below a payload that would
+ * degrade an embed: a sequenced tour runs to tens of markers, and the occlusion
+ * pass is throttled to 15Hz, so the cost only becomes visible in the hundreds.
+ */
+const MAX_HOTSPOTS_PER_SCENE = 200
+
 export class SceneSettingsParser {
 	/**
 	 * Parses and validates scene settings request data.
@@ -421,6 +434,16 @@ export class SceneSettingsParser {
 		if (!Array.isArray(hotspots)) {
 			return ApiResponse.badRequest('hotspots must be an array')
 		}
+		// Every hotspot mounts its own portal and takes part in the viewer's
+		// occlusion raycast, which every embed visitor then pays for. A structural
+		// ceiling, not a plan limit: entitlements are resolved asynchronously
+		// against an organization this static parser has no handle on, and a
+		// ceiling that cannot be enforced where the write happens is not a ceiling.
+		if (hotspots.length > MAX_HOTSPOTS_PER_SCENE) {
+			return ApiResponse.badRequest(
+				`hotspots must contain at most ${MAX_HOTSPOTS_PER_SCENE} entries`
+			)
+		}
 
 		// Must stay in step with HotspotStylePreset in @vctrl/core and with the
 		// publisher's STYLE_PRESET_OPTIONS. This set omitted 'svg' while both of
@@ -476,6 +499,34 @@ export class SceneSettingsParser {
 				return ApiResponse.badRequest(
 					`hotspots[${i}].stylePreset must be 'dot', 'image' or 'svg'`
 				)
+			}
+			if (hotspot.payloadUrl !== undefined && hotspot.payloadUrl !== null) {
+				// Shape and size hold for every preset. The column is unbounded
+				// `text` and is read back into every manifest whatever the preset
+				// says, so a 'dot' marker carrying megabytes of dead string is the
+				// same row bloat the hotspot ceiling above exists to stop.
+				if (typeof hotspot.payloadUrl !== 'string') {
+					return ApiResponse.badRequest(
+						`hotspots[${i}].payloadUrl must be a string`
+					)
+				}
+				if (hotspot.payloadUrl.length > MAX_HOTSPOT_URL_LENGTH) {
+					return ApiResponse.badRequest(
+						`hotspots[${i}].payloadUrl must be at most ${MAX_HOTSPOT_URL_LENGTH} characters`
+					)
+				}
+				// The scheme is checked only for the presets that render it. A 'dot'
+				// marker never reaches an `<img src>`, so rejecting a legacy value
+				// there would make an existing scene unsaveable with no field on
+				// screen to correct.
+				if (
+					hotspot.stylePreset !== 'dot' &&
+					!isAllowedHotspotPayloadUrl(hotspot.payloadUrl)
+				) {
+					return ApiResponse.badRequest(
+						`hotspots[${i}].payloadUrl must be an https URL or an inline image`
+					)
+				}
 			}
 			if (
 				hotspot.occlusionEnabled !== undefined &&
