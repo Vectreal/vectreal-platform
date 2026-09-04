@@ -103,12 +103,14 @@ SDK after the `src` is set, or pass `iframeOrigin` explicitly.
 
 For static initial configuration without JavaScript, add query parameters to the iframe `src`:
 
-| Parameter            | Example              | Effect                                |
-| -------------------- | -------------------- | ------------------------------------- |
-| `?camera=<id>`       | `?camera=hero`       | Activates a camera on `viewer_ready`. |
-| `?autoRotate=0`      | `?autoRotate=1`      | Overrides stored auto-rotate state.   |
-| `?transition=<type>` | `?transition=linear` | Overrides stored transition type.     |
-| `?theme=<mode>`      | `?theme=light`       | Viewer color scheme. Default `system`. |
+| Parameter            | Example              | Effect                                         |
+| -------------------- | -------------------- | ---------------------------------------------- |
+| `?camera=<id>`       | `?camera=hero`       | Activates a camera on `viewer_ready`.          |
+| `?autoRotate=0`      | `?autoRotate=1`      | Overrides stored auto-rotate state.            |
+| `?transition=<type>` | `?transition=linear` | Overrides stored transition type.              |
+| `?theme=<mode>`      | `?theme=light`       | `light`, `dark` or `system`. Default `system`. |
+
+`theme` sets the color scheme of the viewer's chrome (the info popover, the playback controls, hotspot labels, the Vectreal badge), not the scene behind it. `system` follows the visitor's own browser setting rather than the embedding page's, because a cross-origin iframe cannot read the host page's CSS, so state `light` or `dark` explicitly when your page forces a scheme of its own.
 
 ## Documentation
 

@@ -280,6 +280,8 @@ present apps/vectreal-platform/app/db/schema/project/projects.ts allowed_embed_d
 absent apps/vectreal-platform/app/db/schema/auth/api-keys.ts allowed_embed_domains
 present apps/vectreal-platform/app/lib/domain/embed/embed-access-policy.ts requesterHost === applicationHost
 present apps/vectreal-platform/app/routes/api/scenes.$sceneId.ts authContext.mode === 'apiKey'
+present apps/vectreal-platform/app/lib/domain/embed/embed-viewer-theme.ts const THEMES: readonly EmbedViewerTheme[] = ['light', 'dark', 'system']
+present apps/vectreal-platform/app/lib/domain/embed/embed-viewer-theme.ts const DEFAULT_EMBED_THEME: EmbedViewerTheme = 'system'
 */}
 
 ---

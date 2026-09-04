@@ -200,8 +200,8 @@ export const PAYMENT_TRUST_COPY = 'Secured by Stripe · Cancel anytime'
 // ---------------------------------------------------------------------------
 
 export const PLAN_OFFER_DESCRIPTIONS: Record<Plan, string> = {
-	free: '10 scenes, 500 MB storage, 3 concurrent published scenes. API access and community support included. No credit card required.',
-	pro: '200 scenes, 10 GB storage, 50 concurrent published scenes, 20 projects. More room to publish; the feature set matches Free.',
+	free: '10 scenes, 500 MB storage, 3 concurrent published scenes. API access and community support included. Embedded scenes carry a small Vectreal badge. No credit card required.',
+	pro: '200 scenes, 10 GB storage, 50 concurrent published scenes, 20 projects. Removes the Vectreal badge from embedded scenes; otherwise the feature set matches Free.',
 	business:
 		'2,000 scenes, 100 GB storage, 500 concurrent published scenes. Adds team collaboration with role-based access (up to 10 seats) and priority support.',
 	enterprise:

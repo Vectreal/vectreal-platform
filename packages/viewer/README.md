@@ -55,8 +55,8 @@ function App() {
 | `shadowLightEditable`          | `boolean`                                               | No       | Renders an in-scene draggable handle for aiming the shadow light. Editing surfaces only |
 | `staticShadowBake`             | `boolean`                                               | No       | Bakes the accumulative shadow in one pass on mount instead of fading it in, default `false` |
 | `bakedShadow`                  | `BakedShadow`                                           | No       | A persisted shadow bake to render instead of recomputing one                     |
-| `popover`                      | `React.ReactNode`                                       | No       | Optional info popover slot                                                       |
-| `loader`                       | `React.ReactNode`                                       | No       | Custom loading UI                                                                |
+| `popover`                      | `React.ReactNode`                                       | No       | Optional info popover slot. Its content is unmounted until the viewer reaches `ready`, after the loader's cross-fade |
+| `loader`                       | `React.ReactNode`                                       | No       | Custom loading UI, default is a built-in spinner. `loader={null}` renders no loader and skips the `loaded` cross-fade, taking the viewer from `loading` straight to `ready` |
 | `loadingThumbnail`             | `ViewerLoadingThumbnail`                                | No       | Optional blurred loading thumbnail                                               |
 | `onScreenshot`                 | `(dataUrl: string) => void`                             | No       | Called when a screenshot is captured                                             |
 | `onScreenshotCaptureReady`     | `(capture: SceneScreenshotCapture \| null) => void`     | No       | Receives a capture function for on-demand screenshots                            |
@@ -434,6 +434,18 @@ The info popover slot is built from `InfoPopover`, `InfoPopoverTrigger`,
 `InfoPopoverContent`, `InfoPopoverText` and `InfoPopoverCloseButton`, all
 exported from the same entry point. The content is yours: these primitives
 carry no branding of their own.
+
+Whatever you pass to `popover` is unmounted, not merely hidden, until the
+viewer reaches `ready` - after the loader's cross-fade, or immediately when you
+pass `loader={null}` and there is no cross-fade to wait for. Slot content
+therefore cannot hold state it needs to survive the load, and a scene that
+never finishes framing never mounts the slot at all.
+
+The slot renders as a bare sibling of the canvas and supplies no positioning of
+its own. Note that the viewer's own container is not positioned either, so
+`InfoPopover`'s `absolute bottom-0` resolves against whatever positioned
+ancestor you give it: put the viewer in a `relative` wrapper if you use the
+slot, or position your own content some other way.
 
 ---
 
