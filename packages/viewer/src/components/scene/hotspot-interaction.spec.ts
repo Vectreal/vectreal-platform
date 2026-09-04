@@ -63,6 +63,25 @@ describe('resolveHotspotInteraction', () => {
 		).toBe('activate')
 	})
 
+	/**
+	 * A marker with nothing to activate still carries a name, and hover was the
+	 * only way to read it. So a keyboard-only visitor, or anyone on a device
+	 * with no hover at all, could not read a published marker that names no
+	 * camera - which is every marker in a scene that carries no cameras.
+	 */
+	it('keeps a marker with nothing to do in the tab order', () => {
+		const inert = resolveHotspotInteraction(unlinked, {
+			occluded: false,
+			canActivate: false
+		})
+
+		expect(inert.focusable).toBe(true)
+		// A focus stop, not a button: the role is what says whether a press does
+		// anything, and here it does not.
+		expect(inert.role).toBe('image')
+		expect(inert.action).toBe('none')
+	})
+
 	it('drops an occluded marker out of the tab order', () => {
 		expect(
 			resolveHotspotInteraction(linked, { occluded: true, canActivate: true })
@@ -72,6 +91,14 @@ describe('resolveHotspotInteraction', () => {
 			resolveHotspotInteraction(linked, { occluded: false, canActivate: true })
 				.focusable
 		).toBe(true)
+		// Including one that offers nothing: it is invisible, so its name is not
+		// worth a stop either.
+		expect(
+			resolveHotspotInteraction(unlinked, {
+				occluded: true,
+				canActivate: false
+			}).focusable
+		).toBe(false)
 	})
 
 	describe('an editing surface that can select', () => {

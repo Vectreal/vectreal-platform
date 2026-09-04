@@ -387,9 +387,17 @@ const HotspotMarker = ({
 						</button>
 					) : (
 						<div
-							className={bodyClasses}
+							className={cn(bodyClasses, FOCUS_RING)}
 							role="img"
 							aria-label={marker.accessibleName}
+							// A focus stop, not a button. Promoting it would announce
+							// something a press does not do; leaving it out left the
+							// marker's name reachable by hover alone, so a keyboard-only
+							// visitor, or anyone on a device with no hover, could not read
+							// it at all.
+							tabIndex={interaction.focusable ? 0 : -1}
+							onFocus={showLabel}
+							onBlur={hideLabel}
 						>
 							{body}
 						</div>

@@ -74,6 +74,25 @@ describe('the marker announces the card it opens', () => {
 	})
 })
 
+describe('a marker with nothing to do is still reachable', () => {
+	it('takes a focus stop on the non-button branch', () => {
+		const imageBranch = marker.split('role="img"')[1]?.split('>')[0]
+
+		expect(imageBranch).toContain('tabIndex={interaction.focusable ? 0 : -1}')
+	})
+
+	it('shows its name on focus, which is the only reason the stop exists', () => {
+		const imageBranch = marker.split('role="img"')[1]?.split('>')[0]
+
+		expect(imageBranch).toContain('onFocus={showLabel}')
+		expect(imageBranch).toContain('onBlur={hideLabel}')
+	})
+
+	it('draws a focus ring, so the stop is visible as well as reachable', () => {
+		expect(marker).toContain('cn(bodyClasses, FOCUS_RING)')
+	})
+})
+
 describe('the hotspot layer owns which card is open', () => {
 	it('opens at most one, toggling the one already open shut', () => {
 		expect(layer).toContain('previous === id ? null : id')

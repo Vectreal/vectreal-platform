@@ -48,6 +48,11 @@ export interface HotspotInteraction {
 	/**
 	 * False while occluded, so an invisible marker is not a tab stop. Focus that
 	 * is already on it survives, which `disabled` would not allow.
+	 *
+	 * True for a marker that offers nothing to do, which is not a contradiction:
+	 * such a marker still carries a name, and hover is the only other way to
+	 * read it. Someone on a keyboard, or on a device with no hover at all, had
+	 * no way to reach that name while this tracked `role`.
 	 */
 	focusable: boolean
 	/**
@@ -106,7 +111,10 @@ export function resolveHotspotInteraction(
 		// thing selection exists to avoid.
 		fliesCamera: !occluded && !canSelect && canFly,
 		announces: canSelect ? 'pressed' : canReveal ? 'expanded' : null,
-		focusable: isButton && !occluded,
+		// Not `isButton && !occluded`. A marker with nothing to activate is still
+		// a marker with a name, and focus is what reveals that name where hover
+		// cannot - which is every keyboard, and every touch device.
+		focusable: !occluded,
 		pointerEvents: occluded ? 'none' : 'auto'
 	}
 }
