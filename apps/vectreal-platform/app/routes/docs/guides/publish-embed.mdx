@@ -16,6 +16,26 @@ To revert to draft, click **Revoke publication** and confirm.
 
 > **Draft scenes are never accessible to external embed principals.** They remain viewable only by authenticated collaborators with project access.
 
+### Show scene info
+
+The **Publish** sidebar's **Viewer** section carries one toggle, **Show scene info**. It adds an info button to the viewer, opening this scene's name and description. Switch it off for a scene whose title and copy already sit on the page around it.
+
+A scene with nothing stored for it shows the button, so every scene published before the toggle existed renders exactly as it did. The setting belongs to the scene rather than to one embed: it applies to embeds and to preview links as soon as you save, with nothing to republish.
+
+### The Vectreal badge
+
+Embeds carry a small **Vectreal** badge in the top right corner of the viewer on the free plan, linking back to vectreal.com. Paid plans do not.
+
+It is independent of **Show scene info**: switching the info button off does not take the badge with it. Internal `/preview` links never render it at all, on any plan.
+
+The badge is resolved from the plan of the organization that owns the scene, at the moment the embed document loads rather than when the scene was published. An upgrade therefore takes effect on the next embed load, not the next scene save. It follows the plan that is actually in effect, so a paid subscription that has lapsed is served as a free one and the badge returns.
+
+{/* claims
+present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar/sections/publish-options.tsx title="Show scene info"
+present apps/vectreal-platform/app/constants/plan-config.ts embed_branding_removal: false
+present apps/vectreal-platform/app/lib/domain/embed/embed-branding-policy.ts return !decision.granted
+*/}
+
 ---
 
 ## Preview API keys
@@ -143,6 +163,8 @@ The hosted preview iframe can also be controlled from the parent page over `post
 	></iframe>
 </div>
 ```
+
+> **Pasting onto a light page?** The viewer's chrome follows the visitor's own browser color scheme by default, which can leave dark controls on a light site. Add `&theme=light` (or `&theme=dark`) to the iframe `src` to state your page's scheme instead - see [URL parameters](/docs/guides/embed-sdk) in the Embed SDK guide.
 
 ### Why the snippet ships a stylesheet
 
