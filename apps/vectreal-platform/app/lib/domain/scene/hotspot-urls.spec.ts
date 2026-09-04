@@ -10,7 +10,10 @@ describe('isAllowedHotspotPayloadUrl', () => {
 		['an https URL', 'https://cdn.example.com/pin.png'],
 		['an inline png', 'data:image/png;base64,AAAA'],
 		['an inline svg', 'data:image/svg+xml;base64,AAAA'],
-		['an inline svg with no parameter', 'data:image/svg+xml,%3Csvg%3E%3C/svg%3E'],
+		[
+			'an inline svg with no parameter',
+			'data:image/svg+xml,%3Csvg%3E%3C/svg%3E'
+		],
 		['an uppercase scheme', 'HTTPS://cdn.example.com/pin.png'],
 		['a mixed-case data media type', 'data:IMAGE/PNG;base64,AAAA']
 	])('accepts %s', (_label, value) => {
@@ -19,7 +22,10 @@ describe('isAllowedHotspotPayloadUrl', () => {
 
 	it.each([
 		['a script URL', 'javascript:alert(1)'],
-		['plain http, which fails silently as mixed content', 'http://x.test/a.png'],
+		[
+			'plain http, which fails silently as mixed content',
+			'http://x.test/a.png'
+		],
 		['an inline document', 'data:text/html;base64,AAAA'],
 		['a bare data prefix', 'data:'],
 		['a scheme with no host', 'https://'],

@@ -206,9 +206,9 @@ describe('hotspot ceilings and payload URLs', () => {
 	})
 
 	it('still rejects a non-string payloadUrl on a dot marker', () => {
-		expect(rejected(parse([hotspot({ stylePreset: 'dot', payloadUrl: 42 })]))).toBe(
-			true
-		)
+		expect(
+			rejected(parse([hotspot({ stylePreset: 'dot', payloadUrl: 42 })]))
+		).toBe(true)
 	})
 
 	it('rejects that same legacy value once the marker shows an image', () => {

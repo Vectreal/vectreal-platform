@@ -54,7 +54,5 @@ export function isAllowedHotspotPayloadUrl(value: string): boolean {
 		return ALLOWED_IMAGE_MEDIA_TYPES.includes(dataMediaType(normalized))
 	}
 
-	return (
-		normalized.startsWith('https://') && value.length > 'https://'.length
-	)
+	return normalized.startsWith('https://') && value.length > 'https://'.length
 }
