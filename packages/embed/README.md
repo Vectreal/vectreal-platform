@@ -108,6 +108,7 @@ For static initial configuration without JavaScript, add query parameters to the
 | `?camera=<id>`       | `?camera=hero`       | Activates a camera on `viewer_ready`. |
 | `?autoRotate=0`      | `?autoRotate=1`      | Overrides stored auto-rotate state.   |
 | `?transition=<type>` | `?transition=linear` | Overrides stored transition type.     |
+| `?theme=<mode>`      | `?theme=light`       | Viewer color scheme. Default `system`. |
 
 ## Documentation
 

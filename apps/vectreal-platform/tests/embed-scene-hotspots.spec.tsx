@@ -61,6 +61,7 @@ function renderEmbed(sceneData?: Partial<ServerSceneData>) {
 		<SceneEmbedViewer
 			file={null}
 			sceneData={sceneData as ServerSceneData | undefined}
+			theme="system"
 		/>
 	)
 	const props = captured.at(-1)
