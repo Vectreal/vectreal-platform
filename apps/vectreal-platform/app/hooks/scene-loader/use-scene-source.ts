@@ -126,7 +126,9 @@ export function useSceneSource({
 		// Applied even when the manifest carries no settings: the save baseline is
 		// written here, and a scene left without one reads as never saved, which
 		// is what an upload is, not what an opened scene is.
-		applySceneSettings(getSettingsFromManifest(manifest) ?? {})
+		applySceneSettings(getSettingsFromManifest(manifest) ?? {}, {
+			isSavedBaseline: true
+		})
 
 		const meta = manifest.meta ?? sceneMetaInitialState
 		setSceneMeta(meta)

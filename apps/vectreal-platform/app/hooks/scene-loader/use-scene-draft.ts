@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
 import { usePrepareGltfDocument } from './use-scene-document-export'
+import { useApplySceneSettings } from './use-scene-settings'
 import {
 	inferOptimizationPreset,
 	persistPendingSceneDraftOrchestrator,
@@ -142,6 +143,7 @@ function useRestorePendingDraft(): boolean {
 	})
 	const [hasSettled, setHasSettled] = useState(false)
 	const restoredRef = useRef(false)
+	const applySceneSettings = useApplySceneSettings()
 
 	const { pathname, search } = location
 
@@ -194,6 +196,19 @@ function useRestorePendingDraft(): boolean {
 					return
 				}
 
+				// The draft carries the composed settings, and `ServerSceneData`
+				// extends `SceneSettings`, so this is the settings object. Applying
+				// it is what puts hotspots, interactions and normalization back into
+				// the atoms: `useApplySceneSettings` is otherwise reached only when a
+				// route manifest arrives, and a restored draft is an unsaved scene
+				// that has none - so composing, signing in and coming back silently
+				// dropped everything the author had placed.
+				//
+				// Not a saved baseline: this scene has no server row, and adopting
+				// what was just restored as the last-saved state would make the
+				// unsaved-changes check report nothing to save.
+				applySceneSettings(draft.sceneData, { isSavedBaseline: false })
+
 				setSceneMetaState(draft.sceneMeta)
 				setLastSavedSceneMeta(draft.sceneMeta)
 
@@ -210,6 +225,7 @@ function useRestorePendingDraft(): boolean {
 			}
 		})()
 	}, [
+		applySceneSettings,
 		draftId,
 		load,
 		navigate,
