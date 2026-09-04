@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
 	EMBED_RESPONSE_HEADERS,
+	mergeEmbedResponseHeaders,
 	withEmbedResponseHeaders
 } from './embed-response-headers'
 
@@ -159,5 +160,41 @@ describe('embed response headers', () => {
 		expect(
 			withEmbedResponseHeaders(response).headers.get('Cache-Control')
 		).toBe('no-store')
+	})
+})
+
+describe('mergeEmbedResponseHeaders', () => {
+	it('states each header exactly once when the loader already set it', () => {
+		// The trap this exists for: `Object.fromEntries` lowercases every name,
+		// so `cache-control` never overwrites `Cache-Control`, both reach the
+		// record, and `new Headers` fills by append - putting
+		// `no-store, no-store` on every embed response.
+		const merged = mergeEmbedResponseHeaders(
+			new Headers(EMBED_RESPONSE_HEADERS)
+		)
+
+		expect(merged.get('cache-control')).toBe('no-store')
+		expect(merged.get('x-robots-tag')).toBe('noindex, nofollow')
+		expect(merged.get('referrer-policy')).toBe(
+			'strict-origin-when-cross-origin'
+		)
+	})
+
+	it('supplies them when the loader set nothing at all', () => {
+		// An uncaught error carries no loader headers, and that 500 document
+		// still has the API token in its URL.
+		const merged = mergeEmbedResponseHeaders(new Headers())
+
+		expect(merged.get('cache-control')).toBe('no-store')
+		expect(merged.get('x-robots-tag')).toBe('noindex, nofollow')
+	})
+
+	it('keeps anything else the loader attached', () => {
+		const merged = mergeEmbedResponseHeaders(
+			new Headers({ 'X-Custom': 'kept' })
+		)
+
+		expect(merged.get('x-custom')).toBe('kept')
+		expect(merged.get('cache-control')).toBe('no-store')
 	})
 })

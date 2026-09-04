@@ -38,7 +38,19 @@ export type EmbedKeyMatch = {
 }
 
 export type EmbedAccessDecision =
-	| { ok: true; apiKeyId: string; projectId: string; userId: string }
+	| {
+			ok: true
+			apiKeyId: string
+			projectId: string
+			userId: string
+			/**
+			 * The organization that owns the project, not the one that owns the
+			 * key. They are checked to be the same above, so either would do; this
+			 * one is named for the question callers ask of it - whose plan governs
+			 * what this embed renders.
+			 */
+			organizationId: string
+	  }
 	| { ok: false; error: EmbedAccessFailure }
 
 export type RequestHostContext = {
@@ -155,6 +167,7 @@ export function decideEmbedAccess(params: {
 		ok: true,
 		apiKeyId: match.apiKeyId,
 		projectId: match.projectId,
-		userId: match.userId
+		userId: match.userId,
+		organizationId: match.projectOrganizationId
 	}
 }

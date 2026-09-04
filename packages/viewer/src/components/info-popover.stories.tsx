@@ -3,8 +3,7 @@ import {
 	InfoPopoverCloseButton,
 	InfoPopoverContent,
 	InfoPopoverText,
-	InfoPopoverTrigger,
-	InfoPopoverVectrealFooter
+	InfoPopoverTrigger
 } from './info-popover'
 
 import type { Meta, StoryObj } from '@storybook/react-vite'
@@ -21,7 +20,7 @@ const meta = {
 		docs: {
 			description: {
 				component:
-					'Accessible information popover with keyboard support and built-in Vectreal footer component.'
+					'Accessible information popover with keyboard support. The content is supplied by the consuming app; the primitives carry no branding.'
 			}
 		}
 	},
@@ -40,7 +39,6 @@ const meta = {
 							pan.
 						</p>
 					</InfoPopoverText>
-					<InfoPopoverVectrealFooter />
 				</InfoPopoverContent>
 			</InfoPopover>
 		</div>
@@ -69,7 +67,6 @@ export const DarkMode: Story = {
 							pan.
 						</p>
 					</InfoPopoverText>
-					<InfoPopoverVectrealFooter />
 				</InfoPopoverContent>
 			</InfoPopover>
 		</div>

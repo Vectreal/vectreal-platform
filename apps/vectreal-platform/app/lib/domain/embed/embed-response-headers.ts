@@ -59,3 +59,31 @@ export function withEmbedResponseHeaders(response: Response): Response {
 		headers
 	})
 }
+
+/**
+ * The headers a rendered `/embed` document goes out with, given whatever the
+ * route's loader attached.
+ *
+ * React Router builds a document response from the route's `headers` export,
+ * and hands it only `loaderHeaders`. A returned or thrown `data(...)` carries
+ * the constant above into those, so the loop below rewrites each name with the
+ * value it already had. An *uncaught* error carries none, and returning
+ * `loaderHeaders` alone put a 500 document on the wire with no `no-store` and
+ * no `X-Robots-Tag` - on the one URL in this app with an API token in its
+ * query string.
+ *
+ * `set` in a loop, not a spread of `Object.fromEntries`. That lowercases every
+ * name, so `cache-control` does not overwrite `Cache-Control`: both keys reach
+ * the record, `new Headers` fills by append, and every embed response goes out
+ * saying `no-store, no-store`. This is the same reason
+ * `withEmbedResponseHeaders` sets rather than appends.
+ */
+export function mergeEmbedResponseHeaders(loaderHeaders: Headers): Headers {
+	const merged = new Headers(EMBED_RESPONSE_HEADERS)
+
+	for (const [name, value] of loaderHeaders) {
+		merged.set(name, value)
+	}
+
+	return merged
+}

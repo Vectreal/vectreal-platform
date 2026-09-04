@@ -257,6 +257,11 @@ describe('decideEmbedAccess', () => {
 		).toEqual({ ok: false, error: 'domain_not_allowed' })
 	})
 
+	/*
+	  `organizationId` is the project's owner, not the key's. They are required
+	  to match above, so the value is the same - but what a caller wants it for
+	  is "whose plan governs this embed", and that is a property of the scene.
+	*/
 	it('returns the key identity on success', () => {
 		expect(
 			decideEmbedAccess({
@@ -268,7 +273,8 @@ describe('decideEmbedAccess', () => {
 			ok: true,
 			apiKeyId: 'key-1',
 			projectId: 'project-1',
-			userId: 'user-1'
+			userId: 'user-1',
+			organizationId: ORG
 		})
 	})
 
@@ -285,7 +291,8 @@ describe('decideEmbedAccess', () => {
 			ok: true,
 			apiKeyId: 'key-1',
 			projectId: 'project-1',
-			userId: 'user-1'
+			userId: 'user-1',
+			organizationId: ORG
 		})
 	})
 })
