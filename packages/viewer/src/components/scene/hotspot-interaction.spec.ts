@@ -190,7 +190,12 @@ describe('resolveHotspotInteraction', () => {
 	})
 
 	describe('revealing content', () => {
-		const reveal = { occluded: false, canActivate: false, canReveal: true }
+		const reveal = {
+			occluded: false,
+			canActivate: false,
+			canReveal: true,
+			revealsInPlace: true
+		}
 
 		it('makes a marker with something to say a button', () => {
 			const interaction = resolveHotspotInteraction(unlinked, reveal)
@@ -207,6 +212,27 @@ describe('resolveHotspotInteraction', () => {
 			expect(resolveHotspotInteraction(unlinked, reveal).announces).toBe(
 				'expanded'
 			)
+		})
+
+		/**
+		 * A host that suppressed the card still needs the click: the event is
+		 * how it knows to open its own panel. Wiring `canReveal` to the presence
+		 * of a reveal handler instead made this marker a `role="img"` with no
+		 * click handler at all - no flight, no event, nothing.
+		 */
+		it('stays a button when the host draws the card, and announces nothing', () => {
+			const interaction = resolveHotspotInteraction(unlinked, {
+				occluded: false,
+				canActivate: false,
+				canReveal: true,
+				revealsInPlace: false
+			})
+
+			expect(interaction.role).toBe('button')
+			expect(interaction.action).toBe('reveal')
+			expect(interaction.focusable).toBe(true)
+			// `aria-expanded` would claim something that never expands.
+			expect(interaction.announces).toBeNull()
 		})
 
 		it('lets selection win, and announces the selection', () => {
@@ -253,7 +279,8 @@ describe('resolveHotspotInteraction', () => {
 			const interaction = resolveHotspotInteraction(linked, {
 				occluded: true,
 				canActivate: true,
-				canReveal: true
+				canReveal: true,
+				revealsInPlace: true
 			})
 
 			expect(interaction.action).toBe('none')

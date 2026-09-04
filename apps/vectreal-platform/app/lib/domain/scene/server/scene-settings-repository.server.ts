@@ -174,8 +174,11 @@ export async function getHotspotsBySceneSettingsId(
 	return rows.map((r) => ({
 		id: r.id,
 		name: r.name,
-		body: r.body ?? undefined,
-		linkUrl: r.linkUrl ?? undefined,
+		// `||`, not `??`: a row written before the parser normalized an empty
+		// string can hold '', and reading that back as '' would report the scene
+		// dirty against a client that sends `undefined` for the same emptiness.
+		body: r.body || undefined,
+		linkUrl: r.linkUrl || undefined,
 		worldPosition: [r.worldPositionX, r.worldPositionY, r.worldPositionZ] as [
 			number,
 			number,

@@ -164,7 +164,13 @@ describe('HotspotsSettingsPanel arming', () => {
 			fireEvent.change(field, { target: { value: entry } })
 		})
 
-		expect(field.value).not.toBe('1')
+		// Both halves, rather than 'not the old value': a handler that wrote
+		// some third thing into the field would pass a negative assertion while
+		// still being wrong. A `type="number"` input reports '' for every
+		// incomplete numeric entry, including a lone minus - that normalization
+		// is the premise of the defect, not a contradiction of it.
+		expect(field.value).toBe('')
+		expect(store.get(hotspotsAtom)[0].worldPosition[0]).toBe(1)
 	})
 
 	it('commits a decimal typed through a trailing point', () => {

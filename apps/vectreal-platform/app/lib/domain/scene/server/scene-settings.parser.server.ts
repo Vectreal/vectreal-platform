@@ -485,6 +485,14 @@ export class SceneSettingsParser {
 						`hotspots[${i}].body must be at most ${MAX_HOTSPOT_BODY_LENGTH} characters`
 					)
 				}
+				// Cleared, not empty. The panel writes `undefined` when an author
+				// empties the field, but a client that normalizes to '' has to
+				// land in the same place: the unsaved-changes comparison folds
+				// absent and null together and deliberately does NOT fold in the
+				// empty string, so an '' stored against a null column would report
+				// the scene dirty on every load and offer a save that changes
+				// nothing. Normalizing here is what keeps that premise true.
+				if (!hotspot.body.trim()) hotspot.body = undefined
 			}
 			if (hotspot.linkUrl !== undefined && hotspot.linkUrl !== null) {
 				if (typeof hotspot.linkUrl !== 'string') {
@@ -492,11 +500,18 @@ export class SceneSettingsParser {
 						`hotspots[${i}].linkUrl must be a string`
 					)
 				}
-				// Checked for every preset, unlike `payloadUrl`. That field is
-				// gated on the preset because rows predating its rule would
-				// otherwise become unsaveable; `link_url` is a new column, so no
-				// stored value can fail this and there is nothing to grandfather.
-				if (!isAllowedHotspotLinkUrl(hotspot.linkUrl)) {
+				// Same normalization, and here it also decides a 400 rather than
+				// a stored value: `isAllowedHotspotLinkUrl('')` is false, so
+				// without this a client clearing a link by sending '' had its
+				// entire scene save refused instead of the link cleared.
+				if (!hotspot.linkUrl.trim()) {
+					hotspot.linkUrl = undefined
+				} else if (!isAllowedHotspotLinkUrl(hotspot.linkUrl)) {
+					// Checked for every preset, unlike `payloadUrl`. That field is
+					// gated on the preset because rows predating its rule would
+					// otherwise become unsaveable; `link_url` is a new column, so
+					// no stored value can fail this and there is nothing to
+					// grandfather.
 					return ApiResponse.badRequest(
 						`hotspots[${i}].linkUrl must be an https URL of at most ${MAX_HOTSPOT_URL_LENGTH} characters`
 					)

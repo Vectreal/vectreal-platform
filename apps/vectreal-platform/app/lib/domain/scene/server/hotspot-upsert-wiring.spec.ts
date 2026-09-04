@@ -36,9 +36,16 @@ const columnsIn = (block: string | undefined): string[] =>
 const written = columnsIn(
 	replaceHotspots?.split('.values(')[1]?.split('.onConflictDoUpdate(')[0]
 )
-const updated = columnsIn(
-	replaceHotspots?.split('set: {')[1]?.split('.returning(')[0]
-)
+const setBlock = replaceHotspots?.split('set: {')[1]?.split('.returning(')[0]
+const updated = columnsIn(setBlock)
+
+/** The snake_case column each key is actually written from. */
+const excludedFor = (column: string): string | undefined =>
+	new RegExp(`\\b${column}: sql\`excluded\\.(\\w+)\``).exec(setBlock ?? '')?.[1]
+
+/** `worldPositionX` is `world_position_x`, and so on. */
+const snakeCase = (column: string): string =>
+	column.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
 
 describe('the hotspot upsert updates every column it inserts', () => {
 	it('found both column lists to compare', () => {
@@ -57,5 +64,10 @@ describe('the hotspot upsert updates every column it inserts', () => {
 		)
 	)('updates %s on a conflict, not only on insert', (column) => {
 		expect(updated).toContain(column)
+		// The name match alone is not enough: a key present but written from the
+		// wrong `excluded.*` column updates a row with a neighbour's value, and
+		// only the two columns the opt-in integration suite covers would catch
+		// it. Every other column had no coverage on the update path at all.
+		expect(excludedFor(column)).toBe(snakeCase(column))
 	})
 })

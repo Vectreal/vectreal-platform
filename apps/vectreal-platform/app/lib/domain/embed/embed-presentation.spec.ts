@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 
 import { resolveEmbedHotspotPresentation } from './embed-presentation'
@@ -64,5 +67,56 @@ describe('resolveEmbedHotspotPresentation', () => {
 				new URLSearchParams([['hotspotColor', '  #fc6c18  ']])
 			).color
 		).toBe('#fc6c18')
+	})
+})
+
+/**
+ * The parser above is thorough and reaches nothing on its own.
+ *
+ * These options are read in one place and forwarded through two components, and
+ * every link in that chain type-checks perfectly while doing nothing. A source
+ * guard rather than a render test, because reaching the embed page needs a
+ * router, a loaded model and a canvas.
+ */
+describe('the presentation reaches the viewer', () => {
+	const read = (file: string) =>
+		readFileSync(
+			join(import.meta.dirname, '../../../components/scene-embed', file),
+			'utf8'
+		)
+	const page = read('scene-embed-page.tsx')
+	const viewer = read('scene-embed-viewer.tsx')
+
+	it('is read from the same query string as the opening commands', () => {
+		expect(page).toContain('resolveEmbedHotspotPresentation(searchParams)')
+	})
+
+	it('is a channel of its own, not a ViewerCommand', () => {
+		// As a command it would execute on `viewer_ready`, so suppressed markers
+		// would draw first and vanish on the ready event.
+		const initialCommands = page
+			.split('function useInitialCommands')[1]
+			?.split('\n}')[0]
+
+		expect(initialCommands).toBeTruthy()
+		expect(initialCommands).not.toContain('hotspot')
+	})
+
+	it('reaches the embed viewer, and the viewer props behind it', () => {
+		expect(page).toContain('hotspotPresentation={hotspotPresentation}')
+		expect(viewer).toContain('hotspotColor={hotspotPresentation?.color}')
+		expect(viewer).toContain(
+			'showHotspotMarkers={hotspotPresentation?.showMarkers}'
+		)
+		expect(viewer).toContain(
+			'revealHotspotContent={hotspotPresentation?.revealContent}'
+		)
+	})
+
+	it('passes undefined where no presentation was given', () => {
+		// Optional chaining rather than a default object, so every surface that
+		// is not an embed gets the viewer's own defaults without restating them.
+		expect(viewer).toContain('hotspotPresentation?.')
+		expect(viewer).not.toContain('hotspotPresentation.showMarkers')
 	})
 })

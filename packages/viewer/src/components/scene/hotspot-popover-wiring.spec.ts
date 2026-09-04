@@ -26,6 +26,7 @@ const marker = read('hotspot-marker.tsx')
 const layer = read('scene-hotspots.tsx')
 const popover = read('hotspot-popover.tsx')
 const viewer = read('../../vectreal-viewer.tsx')
+const interaction = read('hotspot-interaction.ts')
 
 describe('the marker reaches the reveal decisions', () => {
 	it('asks the resolver what there is to reveal, rather than reading fields', () => {
@@ -36,12 +37,59 @@ describe('the marker reaches the reveal decisions', () => {
 	})
 
 	it('tells the interaction resolver whether there is anything to reveal', () => {
-		expect(marker).toContain('canReveal: !!content && !!onReveal')
+		expect(marker).toContain('canReveal: !!content')
 	})
 
 	it('mounts the card only when it is open and has content', () => {
 		expect(marker).toContain('{open && content && (')
 		expect(marker).toContain('<HotspotPopover')
+	})
+})
+
+describe('the card is placed by the resolver that was tested', () => {
+	/**
+	 * The failure this exists for: ten thorough tests over
+	 * `resolveHotspotPopoverPlacement` say nothing about whether anything calls
+	 * it. Delete the measurement and every one of them stays green while the
+	 * card reverts to its default placement and clips at every edge.
+	 */
+	it('measures and calls the resolver', () => {
+		expect(marker).toContain('resolveHotspotPopoverPlacement({')
+		expect(marker).toContain('getBoundingClientRect()')
+		expect(marker).toContain('setPlacement((previous) =>')
+	})
+
+	it('measures in the R3F tree, never inside the portal', () => {
+		// drei renders `Html` children through `ReactDOM.createRoot`, so a
+		// component in there inherits no canvas context: `useThree` and
+		// `useFrame` throw, and the failing root empties its container, taking
+		// the marker's own DOM with it. The card must stay presentational.
+		expect(marker).toContain('useThree((state) => state.gl.domElement)')
+		// The calls, not the words: the card's own docblock names both hooks in
+		// prose to explain why it must not call them.
+		expect(popover).not.toContain('useFrame(')
+		expect(popover).not.toContain('useThree(')
+	})
+
+	it('hands the card its placement rather than letting it decide', () => {
+		expect(marker).toContain('placement={placement}')
+		expect(popover).toContain('popoverClasses[placement.side]')
+	})
+
+	it('gives the open card a portal of its own for the z-index', () => {
+		// Two reasons, both drei's: the marker's wrapper is a stacking context
+		// the card cannot escape, and swapping `zIndexRange` on a mounted `Html`
+		// only takes effect on a frame where the projection moved - which never
+		// happens for a content-only marker on a still camera.
+		expect(marker).toContain('zIndexRange={HOTSPOT_OPEN_Z_INDEX_RANGE}')
+		expect(marker).toContain('zIndexRange={HOTSPOT_Z_INDEX_RANGE}')
+		expect(marker).not.toContain('open ? HOTSPOT_OPEN_Z_INDEX_RANGE')
+	})
+
+	it('renders what the content resolver returned', () => {
+		expect(popover).toContain('{content.body}')
+		expect(popover).toContain('href={content.link.href}')
+		expect(popover).toContain('{content.link.label}')
 	})
 })
 
@@ -66,10 +114,7 @@ describe('the marker announces the card it opens', () => {
 		expect(marker).not.toContain('focusTrap')
 	})
 
-	it('lifts the whole marker out of the closed markers band while open', () => {
-		// The card cannot escape the wrapper drei writes a z-index onto, so the
-		// wrapper is what has to move.
-		expect(marker).toContain('open ? HOTSPOT_OPEN_Z_INDEX_RANGE')
+	it('keeps the two z-index bands apart', () => {
 		expect(marker).toContain('const HOTSPOT_OPEN_Z_INDEX_RANGE = [99, 41]')
 		expect(marker).toContain('const HOTSPOT_Z_INDEX_RANGE = [40, 0]')
 	})
@@ -131,8 +176,13 @@ describe('an activation is reported to whoever is listening', () => {
 			?.split('\t}, [')[0]
 
 		expect(click).toBeTruthy()
-		// Ordering matters: reported once for the whole activation rather than
-		// per branch, so a marker that reveals and flies is not reported twice.
+		// Asserted present BEFORE the ordering comparison, and not folded into
+		// it: `indexOf` answers -1 for a call that is not there at all, and -1
+		// is less than every real index, so the ordering check alone passed
+		// with the report deleted outright.
+		expect(click).toContain('onActivated?.(marker.id, marker.linkedCameraId)')
+		// Reported once for the whole activation rather than per branch, so a
+		// marker that reveals and flies is not reported twice.
 		expect(
 			(click ?? '').indexOf('onActivated?.(marker.id, marker.linkedCameraId)')
 		).toBeLessThan((click ?? '').indexOf("interaction.action === 'reveal'"))
@@ -220,12 +270,36 @@ describe('a host can take the hotspot UI over', () => {
 	})
 
 	it('withholds the reveal handler rather than branching inside the marker', () => {
-		// A marker with no reveal handler is not a reveal button at all - the
-		// interaction resolver already reads it that way - so the click falls
-		// through to the camera and the activation is still reported.
 		expect(layer).toContain(
 			'onReveal={revealContent ? handleReveal : undefined}'
 		)
+	})
+
+	it('keeps a content-only marker activatable when the host draws the card', () => {
+		// The defect this replaced: `canReveal` was `!!content && !!onReveal`,
+		// so suppressing the card made a marker with body text and no camera a
+		// role="img" with no click handler - no flight, no event, nothing for
+		// the host to draw its own card from. Which is the one marker the
+		// option exists for.
+		expect(marker).toContain('canReveal: !!content')
+		expect(marker).not.toContain('canReveal: !!content && !!onReveal')
+		expect(marker).toContain('revealsInPlace: !!onReveal')
+	})
+
+	it('does not claim a card expands when this viewer draws none', () => {
+		expect(interaction).toContain('canReveal && revealsInPlace')
+	})
+
+	it('will not open a card the host asked it not to draw', () => {
+		// Otherwise a host that suppressed the card and then called
+		// `focusHotspot` got one drawn anyway - and could not close it, since
+		// neither the click path nor Escape reaches a handler never passed.
+		const focus = layer
+			.split('const focusHotspot = useCallback')[1]
+			?.split('\t\t[invalidate')[0]
+
+		expect(focus).toBeTruthy()
+		expect(focus).toContain('revealContent && resolveHotspotPopoverContent(')
 	})
 
 	it('reaches the viewer prop a host page sets', () => {

@@ -232,11 +232,17 @@ const SceneHotspots = ({
 			const marker = markersRef.current.find((entry) => entry.id === hotspotId)
 			if (!marker) return
 
-			if (resolveHotspotPopoverContent(marker)) setOpenId(marker.id)
+			// Gated on `revealContent`, or a host that asked this viewer NOT to
+			// draw cards would get one drawn by its own focus call - and could
+			// not close it, since neither the click path nor Escape reaches a
+			// reveal handler that was never passed.
+			if (revealContent && resolveHotspotPopoverContent(marker)) {
+				setOpenId(marker.id)
+			}
 			if (marker.linkedCameraId) onActivateCamera?.(marker.linkedCameraId)
 			invalidate()
 		},
-		[invalidate, onActivateCamera]
+		[invalidate, onActivateCamera, revealContent]
 	)
 
 	useEffect(() => {

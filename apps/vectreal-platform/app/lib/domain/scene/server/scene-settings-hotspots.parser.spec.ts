@@ -242,6 +242,32 @@ describe('hotspot ceilings and payload URLs', () => {
 		)
 	})
 
+	/**
+	 * Cleared is not empty.
+	 *
+	 * The unsaved-changes comparison folds absent and null together and
+	 * deliberately does NOT fold in the empty string, on the stated grounds that
+	 * no producer sends one. The parser is what has to make that true: an ''
+	 * stored against a null column reports the scene dirty on every load and
+	 * offers a save that changes nothing.
+	 */
+	it('reads an emptied field as unset rather than as an empty string', () => {
+		const result = parse([hotspot({ body: '   ', linkUrl: '' })])
+
+		expect(rejected(result)).toBe(false)
+		const [normalized] = (result as { settings: { hotspots: unknown[] } })
+			.settings.hotspots as { body?: unknown; linkUrl?: unknown }[]
+		expect(normalized.body).toBeUndefined()
+		expect(normalized.linkUrl).toBeUndefined()
+	})
+
+	it('clears a link sent as an empty string instead of refusing the scene', () => {
+		// `isAllowedHotspotLinkUrl('')` is false, so without the normalization a
+		// client that cleared a link by sending '' had its entire scene save
+		// refused rather than the link cleared.
+		expect(rejected(parse([hotspot({ linkUrl: '' })]))).toBe(false)
+	})
+
 	it('rejects a non-string body', () => {
 		expect(rejected(parse([hotspot({ body: 42 })]))).toBe(true)
 	})

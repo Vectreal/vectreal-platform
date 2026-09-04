@@ -13,7 +13,7 @@ Two integration paths are available:
 | Path | When to use |
 |---|---|
 | **JavaScript SDK** (`@vctrl/embed`) | You want camera control, event callbacks, or scroll interactions from your page code. |
-| **URL parameters** | You need a static initial state with no JavaScript - set the starting camera or transition type in the iframe `src`. |
+| **URL parameters** | You need no JavaScript - set the opening camera or transition, or hand the hotspot UI to your own page, in the iframe `src`. |
 | **Raw postMessage** | You want zero dependencies and are comfortable implementing the protocol yourself. |
 
 ---
@@ -82,8 +82,8 @@ For zero-JavaScript initial configuration, add parameters to the iframe `src`:
 | `?autoRotate=0` or `?autoRotate=1` | `0` to disable, `1` to enable | Overrides the stored auto-rotate setting |
 | `?transition=<type>` | `none`, `linear`, `object_avoidance` | Overrides the stored transition type |
 | `?hotspots=0` | `0` to hide | Draws no markers. The hotspots stay reachable through `focusHotspot` and still appear in `ready()` |
-| `?hotspotContent=0` | `0` to suppress | Keeps the markers but leaves the card to you. Clicks still fly the camera and still emit `hotspot_activated` |
-| `?hotspotColor=<hex>` | A URL-encoded hex colour, e.g. `%23fc6c18` | Sets the marker fill. Hex only; any other CSS value is ignored |
+| `?hotspotContent=0` | `0` to suppress | Keeps the markers, and the clicks, but draws no card. A click still flies the camera and still emits `hotspot_activated`, which is how your own panel knows to open. `focusHotspot` draws no card in this mode either |
+| `?hotspotColor=<hex>` | A URL-encoded hex colour, e.g. `%23fc6c18` | Sets the marker fill. Hex only; any other CSS value is ignored. The step numeral stays dark ink, so a dark or saturated fill makes it unreadable and an iframe cannot override the ink token - keep the fill light |
 
 ```html
 <!-- Opens on a specific camera with auto-rotate off -->
@@ -93,7 +93,9 @@ For zero-JavaScript initial configuration, add parameters to the iframe `src`:
 ></iframe>
 ```
 
-URL parameters apply once on `viewer_ready`. They do not persist to the stored scene configuration.
+`?camera`, `?autoRotate` and `?transition` apply once, on `viewer_ready`. The three hotspot parameters are not applied at a moment at all - they describe how the viewer renders for as long as it is loaded, which is why suppressing the markers does not make them flash on screen first.
+
+None of them persists to the stored scene configuration.
 
 ---
 
@@ -119,7 +121,7 @@ other origin are dropped.
 |---|---|---|
 | `ready` | `() => Promise<EmbedReadyInfo>` | Resolves when the viewer emits `viewer_ready`. Returns `{ sceneId, cameras, hotspots }`. |
 | `activateCamera` | `(cameraId: string) => void` | Switch to a named camera. |
-| `focusHotspot` | `(hotspotId: string) => void` | Reveal a hotspot's content and fly its camera, as clicking the marker would. |
+| `focusHotspot` | `(hotspotId: string) => void` | Reveal a hotspot's content and fly its camera. Sets rather than toggles, so calling it twice does not close the card; there is no close command. |
 | `setTransition` | `(options: SetTransitionOptions) => void` | Override transition type for subsequent camera switches. |
 | `setControlsEnabled` | `(enabled: boolean) => void` | Enable or disable orbit controls. |
 | `setAutoRotate` | `(enabled: boolean, speed?: number) => void` | Toggle auto-rotate. |
@@ -135,7 +137,7 @@ other origin are dropped.
 
 #### Calls made before the viewer is ready
 
-The camera and controls methods are queued and flushed once the viewer reports ready, so
+The camera, controls, hotspot and animation methods are queued and flushed once the viewer reports ready, so
 you can call them immediately after constructing the SDK. `sendScrollProgress` and
 `sendMessage` are not queued: they post straight to the iframe, and a call made before
 the viewer is ready is silently dropped. Await `ready()` before wiring a scroll handler
@@ -189,7 +191,7 @@ To drive the whole thing yourself, hide the markers and keep the ids:
 <iframe src="https://vectreal.com/embed/<projectId>/<sceneId>?token=KEY&hotspots=0" ...></iframe>
 ```
 
-`focusHotspot` still flies a camera with nothing drawn on the model. Use `?hotspotContent=0` instead to keep the markers and draw only the card yourself.
+`focusHotspot` still flies a camera with nothing drawn on the model. Use `?hotspotContent=0` instead to keep the markers and draw only the card yourself - the markers stay clickable there, so `hotspot_activated` still tells you which one to open.
 
 ---
 
@@ -315,8 +317,12 @@ present apps/vectreal-platform/app/lib/domain/embed/embed-access-policy.ts reque
 present apps/vectreal-platform/app/routes/api/scenes.$sceneId.ts authContext.mode === 'apiKey'
 present packages/embed/src/embed.ts focusHotspot(hotspotId: string)
 present packages/embed/src/protocol.ts case 'focus_hotspot':
-present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts params.get('hotspotColor')
+present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts params.get('hotspots')
 present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts params.get('hotspotContent')
+present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts const HEX_COLOR
+present packages/viewer/src/types/viewer-interactions.ts type: 'hotspot_activated'
+present packages/embed/src/protocol.ts hotspots?: EmbedHotspotDescriptor[]
+present apps/vectreal-platform/app/lib/domain/scene/embed-settings-policy.ts body: undefined, linkUrl: undefined
 present apps/vectreal-platform/app/lib/domain/embed/hosted-preview-bridge.ts resolveHotspotMarkers(hotspots).map
 */}
 

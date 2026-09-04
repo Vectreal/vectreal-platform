@@ -43,6 +43,9 @@ export interface HotspotInteraction {
 	 * a marker carrying both would otherwise announce itself wrongly. Independent
 	 * of occlusion for the same reason `role` is: a marker must not change what
 	 * it announces itself to be mid-orbit.
+	 *
+	 * Null for a marker that reports its activation without drawing anything -
+	 * `aria-expanded` would then claim something that never expands.
 	 */
 	announces: 'pressed' | 'expanded' | null
 	/**
@@ -69,7 +72,8 @@ export function resolveHotspotInteraction(
 		occluded,
 		canActivate,
 		canSelect = false,
-		canReveal = false
+		canReveal = false,
+		revealsInPlace = false
 	}: {
 		occluded: boolean
 		/** Whether the viewer was given somewhere to send an activation. */
@@ -79,8 +83,23 @@ export function resolveHotspotInteraction(
 		 * refuse to draw is not content: `resolveHotspotPopoverContent` decides,
 		 * so a marker whose only body is an unsafe link stays inert rather than
 		 * becoming a button that opens an empty card.
+		 *
+		 * Deliberately independent of whether the viewer will DRAW that content -
+		 * see `revealsInPlace`. A host that suppressed the card still needs the
+		 * click, because the event is how it knows to open its own.
 		 */
 		canReveal?: boolean
+		/**
+		 * Whether this viewer draws the card itself, rather than leaving it to
+		 * the page around it.
+		 *
+		 * Only affects what the control announces. Wiring this to `canReveal`
+		 * instead made a content-only marker completely inert under
+		 * `?hotspotContent=0`: no button, no click handler, and therefore no
+		 * event for the host that asked to draw the card itself - which is the
+		 * one marker that option exists for.
+		 */
+		revealsInPlace?: boolean
 		/**
 		 * Whether the viewer was given somewhere to send a selection. An editing
 		 * surface passes a select handler only while its own tool is armed, so
@@ -110,7 +129,11 @@ export function resolveHotspotInteraction(
 		// flying away from the viewpoint the author is composing in is the one
 		// thing selection exists to avoid.
 		fliesCamera: !occluded && !canSelect && canFly,
-		announces: canSelect ? 'pressed' : canReveal ? 'expanded' : null,
+		announces: canSelect
+			? 'pressed'
+			: canReveal && revealsInPlace
+				? 'expanded'
+				: null,
 		// Not `isButton && !occluded`. A marker with nothing to activate is still
 		// a marker with a name, and focus is what reveals that name where hover
 		// cannot - which is every keyboard, and every touch device.

@@ -86,16 +86,10 @@ SDK after the `src` is set, or pass `iframeOrigin` explicitly.
 
 ## URL parameter shorthand
 
-For static initial configuration without JavaScript, add query parameters to the iframe `src`:
-
-| Parameter            | Example              | Effect                                |
-| -------------------- | -------------------- | ------------------------------------- |
-| `?camera=<id>`       | `?camera=hero`       | Activates a camera on `viewer_ready`. |
-| `?autoRotate=0`      | `?autoRotate=1`      | Overrides stored auto-rotate state.   |
-| `?transition=<type>` | `?transition=linear` | Overrides stored transition type.     |
-| `?hotspots=0`        | `?hotspots=0`        | Draws no markers, keeps them reachable. |
-| `?hotspotContent=0`  | `?hotspotContent=0`  | Markers stay; you draw the card.      |
-| `?hotspotColor=<hex>`| `?hotspotColor=%23fc6c18` | Sets the marker fill. Hex only.  |
+Opening state and hotspot presentation can be set with query parameters on the iframe
+`src`, no JavaScript required — `?camera`, `?autoRotate`, `?transition`, `?hotspots`,
+`?hotspotContent` and `?hotspotColor`. Values and behaviour are tabled once, in the
+[Embed SDK guide](https://vectreal.com/docs/guides/embed-sdk#url-parameters).
 
 ## Documentation
 

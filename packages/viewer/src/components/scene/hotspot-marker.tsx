@@ -1,12 +1,17 @@
 import { Html } from '@react-three/drei'
+import { useFrame, useThree } from '@react-three/fiber'
 import { cn } from '@shared/utils'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { resolveHotspotInteraction } from './hotspot-interaction'
 import HotspotPopover from './hotspot-popover'
-import { resolveHotspotPopoverContent } from './resolve-hotspot-popover'
+import {
+	resolveHotspotPopoverContent,
+	resolveHotspotPopoverPlacement
+} from './resolve-hotspot-popover'
 
 import type { HotspotMarker as HotspotMarkerModel } from './resolve-hotspot-markers'
+import type { HotspotPopoverPlacement } from './resolve-hotspot-popover'
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { Group } from 'three'
 
@@ -19,15 +24,51 @@ import type { Group } from 'three'
 const HOTSPOT_Z_INDEX_RANGE = [40, 0]
 
 /**
- * The band an open marker moves into, above every closed one and still under
- * the viewer's own chrome at 100.
+ * The band the open card's own portal occupies, above every marker and still
+ * under the viewer's chrome at 100.
  *
- * The whole marker moves, not just the card. drei writes its depth-derived
- * value as a z-index on the wrapper div, which makes that div a stacking
- * context - so a card inside it cannot paint over a marker that happens to sit
- * nearer the camera, however high its own z-index is.
+ * The card gets an `Html` of its own rather than riding the marker's. Two
+ * reasons, both of them drei's:
+ *
+ * A card inside the marker's wrapper cannot escape it. drei writes a
+ * depth-derived z-index onto that wrapper, which makes it a stacking context,
+ * so the card could never paint over a marker sitting nearer the camera
+ * however high its own z-index was.
+ *
+ * And swapping the marker's `zIndexRange` while it is mounted does not work:
+ * drei only writes the z-index on a frame where the projection actually moved
+ * (`Html.js:224`), so opening a card on a still camera - which is every
+ * content-only marker, since nothing moves the camera - left the old value in
+ * place until the visitor happened to orbit. A freshly mounted `Html` has no
+ * such problem: it takes `floor(zIndexRange[0] / 2)` immediately on mount.
  */
 const HOTSPOT_OPEN_Z_INDEX_RANGE = [99, 41]
+
+/**
+ * Clearance between the marker's centre and the card's near edge, and between
+ * the card and the edge of the canvas.
+ *
+ * From the CENTRE, not the marker's edge: the card's own portal is centred on
+ * the anchor point, so its CSS offset and the placement resolver's arithmetic
+ * are in one frame. That is why it has to exceed half the 24px hit box (14px
+ * for the image and svg presets) rather than being pure taste.
+ */
+const ANCHOR_GAP_PX = 22
+const CANVAS_MARGIN_PX = 8
+
+/**
+ * How often the placement is re-decided while a card is open, in seconds.
+ *
+ * The card follows its marker for free - both portals are anchored to the same
+ * group - so this only has to catch the marker crossing an edge as the camera
+ * moves. Two `getBoundingClientRect` calls at 10Hz, for at most one open card.
+ */
+const PLACEMENT_INTERVAL_SECONDS = 0.1
+
+const DEFAULT_PLACEMENT: HotspotPopoverPlacement = {
+	side: 'above',
+	offsetX: 0
+}
 
 /**
  * How long the name stays up after a tap.
@@ -171,15 +212,63 @@ const HotspotMarker = ({
 	const touchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 	const rootRef = useRef<HTMLDivElement>(null)
 	const buttonRef = useRef<HTMLButtonElement>(null)
+	const cardRef = useRef<HTMLDivElement>(null)
+	// Seeded at the interval so the first frame after opening measures rather
+	// than waiting one out.
+	const placementElapsed = useRef(PLACEMENT_INTERVAL_SECONDS)
+	const [placement, setPlacement] =
+		useState<HotspotPopoverPlacement>(DEFAULT_PLACEMENT)
+
+	// Valid here and not one level down: this component is in the R3F tree,
+	// while everything inside the `Html` below is in a ReactDOM root of drei's
+	// own, where these hooks throw. See `hotspot-popover.tsx`.
+	const canvas = useThree((state) => state.gl.domElement)
 
 	const content = resolveHotspotPopoverContent(marker)
 	const popoverId = `vctrl-hotspot-popover-${marker.id}`
+
+	useFrame((_state, delta) => {
+		if (!open) return
+		placementElapsed.current += delta
+		if (placementElapsed.current < PLACEMENT_INTERVAL_SECONDS) return
+		placementElapsed.current = 0
+
+		const anchor = rootRef.current
+		const card = cardRef.current
+		if (!anchor || !card) return
+
+		const anchorBox = anchor.getBoundingClientRect()
+		const canvasBox = canvas.getBoundingClientRect()
+
+		const next = resolveHotspotPopoverPlacement({
+			anchor: {
+				x: anchorBox.left + anchorBox.width / 2 - canvasBox.left,
+				y: anchorBox.top + anchorBox.height / 2 - canvasBox.top
+			},
+			size: { width: card.offsetWidth, height: card.offsetHeight },
+			bounds: { width: canvasBox.width, height: canvasBox.height },
+			gap: ANCHOR_GAP_PX,
+			margin: CANVAS_MARGIN_PX
+		})
+
+		// One state write only when the answer moved: this runs in the frame
+		// loop, where an unconditional write would re-render both portals ten
+		// times a second for as long as the card is open.
+		setPlacement((previous) =>
+			previous.side === next.side && previous.offsetX === next.offsetX
+				? previous
+				: next
+		)
+	})
 
 	const interaction = resolveHotspotInteraction(marker, {
 		occluded,
 		canActivate: !!onActivate,
 		canSelect: !!onSelect,
-		canReveal: !!content && !!onReveal
+		// Having something to say makes it a button; whether this viewer draws
+		// the card decides only what it announces.
+		canReveal: !!content,
+		revealsInPlace: !!onReveal
 	})
 
 	// A block body, not a concise one. React 19 treats a *function* returned from
@@ -355,7 +444,7 @@ const HotspotMarker = ({
 			*/}
 			<Html
 				center
-				zIndexRange={open ? HOTSPOT_OPEN_Z_INDEX_RANGE : HOTSPOT_Z_INDEX_RANGE}
+				zIndexRange={HOTSPOT_Z_INDEX_RANGE}
 				style={HTML_WRAPPER_STYLE}
 			>
 				<div
@@ -424,17 +513,40 @@ const HotspotMarker = ({
 					{labelVisible && !open && (
 						<span className={markerClasses.label}>{marker.name}</span>
 					)}
+				</div>
+			</Html>
 
-					{open && content && (
+			{/*
+			  A portal of its own, mounted only while the card is open.
+
+			  Anchored to the same group, so it tracks the marker for free, and
+			  centred on the same point - which is what lets the card's CSS offset
+			  and the placement resolver share one coordinate frame.
+			*/}
+			{open && content && (
+				<Html
+					center
+					zIndexRange={HOTSPOT_OPEN_Z_INDEX_RANGE}
+					style={HTML_WRAPPER_STYLE}
+				>
+					{/*
+					  Zero-size on purpose: it shrink-wraps an absolutely positioned
+					  child, so its box is a point at the marker's centre, and the
+					  card's `bottom`/`top` offset is measured from there.
+					*/}
+					<div className="relative">
 						<HotspotPopover
 							id={popoverId}
 							title={marker.name}
 							content={content}
-							anchorRef={rootRef}
+							placement={placement}
+							gap={ANCHOR_GAP_PX}
+							cardRef={cardRef}
+							onKeyDown={handleKeyDown}
 						/>
-					)}
-				</div>
-			</Html>
+					</div>
+				</Html>
+			)}
 		</group>
 	)
 }
