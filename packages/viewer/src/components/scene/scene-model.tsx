@@ -19,7 +19,6 @@ import {
 	Vector3
 } from 'three'
 
-
 import type {
 	SceneScreenshotCapture,
 	SceneScreenshotOptions

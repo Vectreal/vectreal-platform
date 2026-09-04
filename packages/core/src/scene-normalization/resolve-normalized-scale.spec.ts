@@ -26,10 +26,9 @@ describe('resolveNormalizedScale', () => {
 	})
 
 	it('honours bounds the caller supplies over the defaults', () => {
-		expect(resolveNormalizedScale(50, { enabled: true, maxSize: 10 })).toBeCloseTo(
-			0.2,
-			10
-		)
+		expect(
+			resolveNormalizedScale(50, { enabled: true, maxSize: 10 })
+		).toBeCloseTo(0.2, 10)
 	})
 
 	it.each([

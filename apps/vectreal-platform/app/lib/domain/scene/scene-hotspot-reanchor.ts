@@ -69,10 +69,6 @@ export function reanchorHotspotsForScale(
 
 	return state.hotspots.reduce<CameraHotspotState>((current, hotspot) => {
 		const [x, y, z] = hotspot.worldPosition
-		return placeHotspot(current, hotspot.id, [
-			x * ratio,
-			y * ratio,
-			z * ratio
-		])
+		return placeHotspot(current, hotspot.id, [x * ratio, y * ratio, z * ratio])
 	}, state)
 }
