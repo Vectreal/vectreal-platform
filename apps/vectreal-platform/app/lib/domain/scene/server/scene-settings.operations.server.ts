@@ -859,6 +859,27 @@ export async function publishScene(
 
 		return ApiResponse.success({ ...result, sceneId, stats })
 	} catch (error) {
+		/*
+		  As in the three upload operations above, and for the reason recorded on
+		  `isRoutableDomainError`. Two things are specific to this one.
+
+		  The rethrow goes above `reportServerError`, because an organization
+		  reaching its concurrent-publish limit is the guard working: reporting it
+		  would file one exception per refusal. Untagged, at that - this call site
+		  passes no `request`, so `on_critical_path` would be false and no alert
+		  would fire on it either way.
+
+		  And this is the only one of the four reached through
+		  `runWithIdempotentSceneRequest`, which awaits its operation unguarded and
+		  so cannot record the outcome of a throw. The reservation is left
+		  `pending` rather than moved to `failed`. Nothing user-facing turns on it
+		  - both states answer a same-key retry with the same 409, and the client
+		  mints a fresh request id per attempt - so it is filed rather than fixed
+		  here, in the route file this change does not otherwise touch.
+		*/
+		if (isRoutableDomainError(error)) {
+			throw error
+		}
 		reportServerError(error, {
 			properties: { sceneId: request.sceneId || null }
 		})
