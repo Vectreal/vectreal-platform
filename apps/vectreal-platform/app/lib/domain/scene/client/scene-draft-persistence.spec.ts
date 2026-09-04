@@ -33,6 +33,7 @@ const currentSettings = {
 	shadows: { enabled: false },
 	normalization: { enabled: true, minSize: 0.5, maxSize: 5 },
 	interactions: { scrollProgress: { enabled: true } },
+	presentation: { showInfoPopover: false },
 	hotspots: [hotspot],
 	// Not part of `SceneSettings`, and deliberately present: the payload spreads
 	// this object wholesale, so spread order is the only thing keeping a stale
@@ -72,6 +73,14 @@ describe('persistPendingSceneDraftOrchestrator', () => {
 
 		expect(sceneData.interactions).toEqual(currentSettings.interactions)
 		expect(sceneData.normalization).toEqual(currentSettings.normalization)
+	})
+
+	it('persists the author’s info-popover choice', async () => {
+		// An author who switches the popover off and is sent to sign in gets
+		// that choice back, rather than a scene silently reverted to the default.
+		const { sceneData } = await persistedSettings()
+
+		expect(sceneData.presentation).toEqual({ showInfoPopover: false })
 	})
 
 	it('keeps carrying the settings the literal used to list by hand', async () => {

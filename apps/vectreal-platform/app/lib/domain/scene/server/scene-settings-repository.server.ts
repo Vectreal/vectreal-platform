@@ -47,6 +47,7 @@ export function rowToSceneSettings(
 		environment: row.environment ?? undefined,
 		interactions: row.interactions ?? undefined,
 		normalization: row.normalization ?? undefined,
+		presentation: row.presentation ?? undefined,
 		shadows: row.shadows ?? undefined,
 		hotspots: hotspots.length > 0 ? hotspots : undefined
 	}
