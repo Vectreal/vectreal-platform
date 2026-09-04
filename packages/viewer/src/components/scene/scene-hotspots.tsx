@@ -47,6 +47,12 @@ export interface SceneHotspotsProps {
 	color?: string
 	/** The marker drawn as the current one. */
 	selectedId?: string | null
+	/**
+	 * The camera the viewer is looking through, so the hotspot that owns it can
+	 * say so. Null while the scene camera is active, which is every marker's
+	 * "not here".
+	 */
+	activeCameraId?: string | null
 	onActivateCamera?: (cameraId: string) => void
 	onSelect?: (id: string) => void
 	onPositionSetterReady?: (setter: null | HotspotPositionSetter) => void
@@ -74,6 +80,7 @@ const SceneHotspots = ({
 	includeHidden,
 	color,
 	selectedId,
+	activeCameraId,
 	onActivateCamera,
 	onSelect,
 	onPositionSetterReady
@@ -354,6 +361,13 @@ const SceneHotspots = ({
 					marker={marker}
 					occluded={occludedIds.has(marker.id)}
 					selected={marker.id === selectedId}
+					/*
+					  Compared rather than matched by hotspot id, because the camera
+					  is what the viewer is actually looking through: a marker whose
+					  camera a host activated directly lights up the same way one
+					  the visitor clicked does.
+					*/
+					current={!!activeCameraId && marker.linkedCameraId === activeCameraId}
 					color={color}
 					onActivate={onActivateCamera}
 					onSelect={onSelect}

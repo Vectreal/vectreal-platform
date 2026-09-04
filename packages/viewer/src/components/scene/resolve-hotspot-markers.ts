@@ -33,11 +33,22 @@ export interface HotspotMarker {
 	 * author can find it and unhide it. Never true on a public surface, which
 	 * drops these entirely.
 	 *
-	 * Deliberately not set for `internalOnly`. That is a different fact with a
-	 * different remedy: a hidden hotspot is one the author switched off, an
-	 * internal one is one they meant to keep backstage.
+	 * Deliberately not set for `internalOnly`, which has `internal` of its own:
+	 * a hidden hotspot is one the author switched off, an internal one is one
+	 * they meant to keep backstage, and a marker can be both.
 	 */
 	hidden: boolean
+	/**
+	 * Kept backstage by the author, and drawn only where someone can bring it
+	 * forward - an editing surface asks with `includeInternal`. Never true on a
+	 * public surface, which drops these entirely.
+	 *
+	 * Separate from `hidden` because the two are different facts with different
+	 * remedies: a hidden hotspot is one the author switched off for everyone, an
+	 * internal one is one they meant to keep for themselves. A marker can be
+	 * both, and the canvas has to be able to say so.
+	 */
+	internal: boolean
 	/** Never `image` or `svg` without a `payloadUrl` to go with it. */
 	preset: HotspotStylePreset
 	payloadUrl: string | null
@@ -220,7 +231,7 @@ export function resolveHotspotMarkers(
 }
 
 function toMarker(
-	{ hotspot, id, position, hidden }: DrawableEntry,
+	{ hotspot, id, position, hidden, internal }: DrawableEntry,
 	step: number | null,
 	stepCount: number
 ): HotspotMarker {
@@ -235,6 +246,7 @@ function toMarker(
 		step,
 		stepCount,
 		hidden,
+		internal,
 		// Both payload presets fall back to the dot rather than rendering a broken
 		// image: `payloadUrl` is optional on the type, so an author can pick a
 		// preset and save before choosing the artwork.
