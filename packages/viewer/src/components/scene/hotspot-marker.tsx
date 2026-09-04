@@ -126,6 +126,12 @@ export interface HotspotMarkerProps {
 	onActivate?: (cameraId: string) => void
 	/** Runs when a marker is picked on a surface that selects rather than flies. */
 	onSelect?: (id: string) => void
+	/**
+	 * Runs whenever a visitor activates this marker - a reveal, a flight, or
+	 * both. Never for a selection, which is an editing surface picking the
+	 * marker up rather than a visitor doing anything with it.
+	 */
+	onActivated?: (id: string, cameraId: string | null) => void
 	/** Whether this marker's content is open. Owned by `SceneHotspots`. */
 	open?: boolean
 	/**
@@ -156,6 +162,7 @@ const HotspotMarker = ({
 	color,
 	onActivate,
 	onSelect,
+	onActivated,
 	open = false,
 	onReveal,
 	onAnchorRef
@@ -235,6 +242,12 @@ const HotspotMarker = ({
 			onSelect?.(marker.id)
 			return
 		}
+		if (interaction.action === 'none') return
+
+		// Reported once for the whole activation, before either half of it, so a
+		// host hears about a marker whether it reveals, flies, or does both.
+		onActivated?.(marker.id, marker.linkedCameraId)
+
 		if (interaction.action === 'reveal') onReveal?.(marker.id)
 		// Not an `else`. A marker that has something to say and a camera to fly
 		// does both on one click: the flight is what puts the card's subject on
@@ -248,6 +261,7 @@ const HotspotMarker = ({
 		marker.id,
 		marker.linkedCameraId,
 		onActivate,
+		onActivated,
 		onReveal,
 		onSelect
 	])

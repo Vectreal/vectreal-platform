@@ -49,6 +49,11 @@ export interface SceneHotspotsProps {
 	selectedId?: string | null
 	onActivateCamera?: (cameraId: string) => void
 	onSelect?: (id: string) => void
+	/**
+	 * Runs when a visitor activates a marker, with the camera it flies or null.
+	 * Never for a selection.
+	 */
+	onHotspotActivated?: (id: string, cameraId: string | null) => void
 	onPositionSetterReady?: (setter: null | HotspotPositionSetter) => void
 }
 
@@ -76,6 +81,7 @@ const SceneHotspots = ({
 	selectedId,
 	onActivateCamera,
 	onSelect,
+	onHotspotActivated,
 	onPositionSetterReady
 }: SceneHotspotsProps) => {
 	const camera = useThree((state) => state.camera)
@@ -394,6 +400,7 @@ const SceneHotspots = ({
 					color={color}
 					onActivate={onActivateCamera}
 					onSelect={onSelect}
+					onActivated={onHotspotActivated}
 					open={marker.id === openId}
 					onReveal={handleReveal}
 					onAnchorRef={registerAnchor}

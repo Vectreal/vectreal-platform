@@ -89,6 +89,7 @@ const SceneEmbedPage = ({
 		sceneId,
 		interactions: sceneData?.interactions,
 		cameras: sceneData?.camera?.cameras,
+		hotspots: sceneData?.hotspots,
 		initialCommands
 	})
 

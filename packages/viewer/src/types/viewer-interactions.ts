@@ -89,6 +89,23 @@ export interface CameraChangedInteractionEvent {
 	cameraId: string
 }
 
+/**
+ * Emitted when a visitor activates a hotspot.
+ *
+ * The host already sees `camera_changed` when a marker flies its camera, but
+ * not which marker caused it - and a marker that only reveals content moves no
+ * camera at all, so nothing reached the host for it. `cameraId` is null for
+ * exactly that case.
+ *
+ * Never emitted for a selection: that is an editing surface picking a marker
+ * up, not a visitor doing anything with it.
+ */
+export interface HotspotActivatedInteractionEvent {
+	type: 'hotspot_activated'
+	hotspotId: string
+	cameraId: null | string
+}
+
 /** Emitted when auto-rotate state changes at runtime. */
 export interface AutoRotateChangedInteractionEvent {
 	type: 'auto_rotate_changed'
@@ -117,6 +134,7 @@ export type ViewerInteractionEvent =
 	| AnimationStateChangedInteractionEvent
 	| AutoRotateChangedInteractionEvent
 	| CameraChangedInteractionEvent
+	| HotspotActivatedInteractionEvent
 	| InitialFramingCompletedInteractionEvent
 	| ModelLoadedInteractionEvent
 	| ViewerReadyInteractionEvent

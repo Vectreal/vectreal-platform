@@ -550,6 +550,13 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		[executeViewerCommand]
 	)
 
+	const handleHotspotActivated = useCallback(
+		(hotspotId: string, cameraId: string | null) => {
+			onInteractionEvent?.({ type: 'hotspot_activated', hotspotId, cameraId })
+		},
+		[onInteractionEvent]
+	)
+
 	const handleSceneCameraExecutorReady = useCallback(
 		(executor: null | ViewerCommandExecutor) => {
 			cameraCommandExecutorRef.current = executor
@@ -698,6 +705,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									selectedId={selectedHotspotId}
 									onActivateCamera={handleActivateHotspotCamera}
 									onSelect={onHotspotSelect}
+									onHotspotActivated={handleHotspotActivated}
 									onPositionSetterReady={onHotspotPositionSetterReady}
 								/>
 								{children}

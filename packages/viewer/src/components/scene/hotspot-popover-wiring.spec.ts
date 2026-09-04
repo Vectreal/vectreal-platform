@@ -25,6 +25,7 @@ const read = (file: string) =>
 const marker = read('hotspot-marker.tsx')
 const layer = read('scene-hotspots.tsx')
 const popover = read('hotspot-popover.tsx')
+const viewer = read('../../vectreal-viewer.tsx')
 
 describe('the marker reaches the reveal decisions', () => {
 	it('asks the resolver what there is to reveal, rather than reading fields', () => {
@@ -120,6 +121,38 @@ describe('the hotspot layer owns which card is open', () => {
 		expect(handleReveal).toBeTruthy()
 		expect(handleReveal).toContain('setOpenId(')
 		expect(handleReveal).toContain('invalidate()')
+	})
+})
+
+describe('an activation is reported to whoever is listening', () => {
+	it('reports before either half of the activation, so both are covered', () => {
+		const click = marker
+			.split('const handleClick = useCallback')[1]
+			?.split('\t}, [')[0]
+
+		expect(click).toBeTruthy()
+		// Ordering matters: reported once for the whole activation rather than
+		// per branch, so a marker that reveals and flies is not reported twice.
+		expect(
+			(click ?? '').indexOf('onActivated?.(marker.id, marker.linkedCameraId)')
+		).toBeLessThan((click ?? '').indexOf("interaction.action === 'reveal'"))
+	})
+
+	it('reports nothing for a selection, or for an inert marker', () => {
+		const click = marker
+			.split('const handleClick = useCallback')[1]
+			?.split('\t}, [')[0]
+
+		// Selection returns before the report: an editing surface picking a
+		// marker up is not a visitor doing anything with it.
+		expect(click).toContain("if (interaction.action === 'select') {")
+		expect(click).toContain("if (interaction.action === 'none') return")
+	})
+
+	it('reaches the viewer, which turns it into an interaction event', () => {
+		expect(layer).toContain('onActivated={onHotspotActivated}')
+		expect(viewer).toContain('onHotspotActivated={handleHotspotActivated}')
+		expect(viewer).toContain("type: 'hotspot_activated'")
 	})
 })
 
