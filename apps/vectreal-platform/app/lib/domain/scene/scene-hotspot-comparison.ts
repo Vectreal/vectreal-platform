@@ -22,6 +22,8 @@
 interface HotspotLike {
 	id?: string
 	name?: string
+	body?: string | null
+	linkUrl?: string | null
 	worldPosition?: readonly number[]
 	linkedCameraId?: string | null
 	visible?: boolean
@@ -65,6 +67,15 @@ const sameOptional = (
 	b: string | null | undefined
 ): boolean => (a ?? null) === (b ?? null)
 
+/**
+ * Every field is enumerated by hand, which is why a field added to
+ * `HotspotDefinition` and forgotten here leaves Save disabled after an author
+ * edits it - the save button is driven by this comparison. This is the third
+ * hand-maintained enumeration of the hotspot shape, after the draft payload and
+ * `toSceneSettings`, so `scene-hotspot-comparison.spec.ts` reads
+ * `HotspotDefinition` out of the core type and asserts every field name appears
+ * below. Adding a field to the type and not to this function fails that test.
+ */
 const sameHotspot = (a: HotspotLike, b: HotspotLike): boolean =>
 	a.name === b.name &&
 	a.visible === b.visible &&
@@ -74,6 +85,8 @@ const sameHotspot = (a: HotspotLike, b: HotspotLike): boolean =>
 	// authoring panel falls back to.
 	(a.occlusionEnabled ?? true) === (b.occlusionEnabled ?? true) &&
 	(a.sequenceIndex ?? null) === (b.sequenceIndex ?? null) &&
+	sameOptional(a.body, b.body) &&
+	sameOptional(a.linkUrl, b.linkUrl) &&
 	sameOptional(a.linkedCameraId, b.linkedCameraId) &&
 	sameOptional(a.payloadUrl, b.payloadUrl) &&
 	samePosition(a.worldPosition, b.worldPosition)

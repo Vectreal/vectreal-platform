@@ -155,6 +155,13 @@
       "when": 1788368674707,
       "tag": "0021_youthful_rawhide_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1788523065966,
+      "tag": "0022_polite_harpoon",
+      "breakpoints": true
     }
   ]
 }

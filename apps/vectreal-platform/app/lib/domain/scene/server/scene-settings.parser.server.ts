@@ -10,7 +10,9 @@ import {
 import { UUID_REGEX } from '../../../../constants/utility-constants'
 import { parseActionRequest } from '../../../http/requests.server'
 import {
+	isAllowedHotspotLinkUrl,
 	isAllowedHotspotPayloadUrl,
+	MAX_HOTSPOT_BODY_LENGTH,
 	MAX_HOTSPOT_URL_LENGTH
 } from '../hotspot-urls'
 import { parseOptimizationReport } from '../optimization-report-guard'
@@ -473,6 +475,32 @@ export class SceneSettingsParser {
 			seenIds.add(hotspot.id)
 			if (typeof hotspot.name !== 'string' || !hotspot.name.trim()) {
 				return ApiResponse.badRequest(`hotspots[${i}].name is required`)
+			}
+			if (hotspot.body !== undefined && hotspot.body !== null) {
+				if (typeof hotspot.body !== 'string') {
+					return ApiResponse.badRequest(`hotspots[${i}].body must be a string`)
+				}
+				if (hotspot.body.length > MAX_HOTSPOT_BODY_LENGTH) {
+					return ApiResponse.badRequest(
+						`hotspots[${i}].body must be at most ${MAX_HOTSPOT_BODY_LENGTH} characters`
+					)
+				}
+			}
+			if (hotspot.linkUrl !== undefined && hotspot.linkUrl !== null) {
+				if (typeof hotspot.linkUrl !== 'string') {
+					return ApiResponse.badRequest(
+						`hotspots[${i}].linkUrl must be a string`
+					)
+				}
+				// Checked for every preset, unlike `payloadUrl`. That field is
+				// gated on the preset because rows predating its rule would
+				// otherwise become unsaveable; `link_url` is a new column, so no
+				// stored value can fail this and there is nothing to grandfather.
+				if (!isAllowedHotspotLinkUrl(hotspot.linkUrl)) {
+					return ApiResponse.badRequest(
+						`hotspots[${i}].linkUrl must be an https URL of at most ${MAX_HOTSPOT_URL_LENGTH} characters`
+					)
+				}
 			}
 			if (
 				!Array.isArray(hotspot.worldPosition) ||

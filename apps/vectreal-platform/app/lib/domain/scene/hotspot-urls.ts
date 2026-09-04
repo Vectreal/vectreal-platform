@@ -1,5 +1,6 @@
 /**
- * What a hotspot is allowed to point at.
+ * What a hotspot is allowed to carry: the URLs it may point at, and how much
+ * text it may hold.
  *
  * `payloadUrl` was added to the type and to the `payload_url` column without
  * ever being added to the save parser, so it was the one hotspot field that
@@ -18,6 +19,16 @@
  * make a scene's settings row larger than the model it describes.
  */
 export const MAX_HOTSPOT_URL_LENGTH = 8192
+
+/**
+ * Ceiling on a hotspot's body text, in characters.
+ *
+ * `body` is an unbounded `text` column that is read back into every embed
+ * manifest, so the ceiling is what keeps a scene at the hotspot limit from
+ * shipping megabytes of prose to every visitor. Sized for a paragraph or two,
+ * which is all a marker-anchored popover can show without scrolling.
+ */
+export const MAX_HOTSPOT_BODY_LENGTH = 2000
 
 const ALLOWED_IMAGE_MEDIA_TYPES = [
 	'image/png',
@@ -53,6 +64,25 @@ export function isAllowedHotspotPayloadUrl(value: string): boolean {
 	if (normalized.startsWith('data:')) {
 		return ALLOWED_IMAGE_MEDIA_TYPES.includes(dataMediaType(normalized))
 	}
+
+	return normalized.startsWith('https://') && value.length > 'https://'.length
+}
+
+/**
+ * A marker's link destination: `https:` only.
+ *
+ * Deliberately stricter than `isAllowedHotspotPayloadUrl`, which shares its
+ * length cap but accepts inline images. This value lands in an `<a href>`,
+ * where `javascript:` executes and `data:text/html` navigates to attacker
+ * markup - both inert in the `<img src>` a payload URL reaches. So the rule
+ * here is an allowlist of one scheme rather than a denylist of the schemes
+ * that are known to be dangerous today.
+ */
+export function isAllowedHotspotLinkUrl(value: string): boolean {
+	if (value.length > MAX_HOTSPOT_URL_LENGTH) return false
+
+	// Schemes are case-insensitive per RFC 3986.
+	const normalized = value.toLowerCase()
 
 	return normalized.startsWith('https://') && value.length > 'https://'.length
 }
