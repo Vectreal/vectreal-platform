@@ -118,6 +118,95 @@ describe('HotspotsSettingsPanel arming', () => {
 		expect(store.get(cameraAtom).cameras?.[0].target).toEqual([9, 2, 3])
 	})
 
+	/**
+	 * Clearing the well and retyping is the only way to enter a negative
+	 * coordinate, and it used to be impossible: the handler bailed on `NaN`
+	 * without setting state, and React restored the previous number over the
+	 * input on that same keystroke. The field now keeps the string it is being
+	 * given, so an entry that is not yet a number can sit there until it is one.
+	 */
+	it('lets an axis be cleared and retyped as a negative', () => {
+		arrange()
+		render(<HotspotsSettingsPanel />)
+
+		const field = screen.getByLabelText('X position') as HTMLInputElement
+
+		act(() => {
+			fireEvent.change(field, { target: { value: '' } })
+		})
+
+		// The old value must not have been written back over the empty field.
+		expect(field.value).toBe('')
+
+		act(() => {
+			fireEvent.change(field, { target: { value: '-5' } })
+		})
+
+		expect(store.get(hotspotsAtom)[0].worldPosition).toEqual([-5, 2, 3])
+	})
+
+	it.each([
+		['a lone minus', '-'],
+		['a trailing decimal point', '1.'],
+		['an empty well', '']
+	])('does not write the old number back over %s', (_label, entry) => {
+		// A `type="number"` input reports `""` for any entry that is not yet a
+		// number, these three included - which is exactly why the old handler,
+		// bailing on `NaN`, let React restore the previous digits on that
+		// keystroke. What matters is that the well does not refill itself.
+		arrange()
+		render(<HotspotsSettingsPanel />)
+
+		const field = screen.getByLabelText('X position') as HTMLInputElement
+
+		act(() => {
+			fireEvent.change(field, { target: { value: entry } })
+		})
+
+		expect(field.value).not.toBe('1')
+	})
+
+	it('commits a decimal typed through a trailing point', () => {
+		arrange()
+		render(<HotspotsSettingsPanel />)
+
+		const field = screen.getByLabelText('X position') as HTMLInputElement
+
+		act(() => {
+			fireEvent.change(field, { target: { value: '1.' } })
+			fireEvent.change(field, { target: { value: '1.5' } })
+		})
+
+		expect(store.get(hotspotsAtom)[0].worldPosition).toEqual([1.5, 2, 3])
+	})
+
+	it('leaves the committed position alone while the entry is incomplete', () => {
+		arrange()
+		render(<HotspotsSettingsPanel />)
+
+		act(() => {
+			fireEvent.change(screen.getByLabelText('X position'), {
+				target: { value: '' }
+			})
+		})
+
+		expect(store.get(hotspotsAtom)[0].worldPosition).toEqual([1, 2, 3])
+	})
+
+	it('shows the committed position again after an abandoned entry', () => {
+		arrange()
+		render(<HotspotsSettingsPanel />)
+
+		const field = screen.getByLabelText('X position') as HTMLInputElement
+
+		act(() => {
+			fireEvent.change(field, { target: { value: '' } })
+			fireEvent.blur(field)
+		})
+
+		expect(field.value).toBe('1')
+	})
+
 	it('disarms click-to-place when the panel unmounts', () => {
 		arrange()
 		const { unmount } = render(<HotspotsSettingsPanel />)
