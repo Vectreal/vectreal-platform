@@ -144,6 +144,15 @@ const sequencedFirst = (hotspots: readonly HotspotDefinition[]) => {
  * `SettingRow`'s label is a sibling with no `htmlFor`, so it names nothing to a
  * screen reader. Until that is fixed in its owner, every field here carries its
  * own `aria-label`.
+ *
+ * The field keeps its own string while it is being typed in, and that is the
+ * whole point of it. Committed state holds a number, and a controlled
+ * `type="number"` input reports `""` for any entry that is not yet one - `""`
+ * itself, a lone `-`, a trailing `.`. React re-runs its input restore after
+ * every change event whether or not the handler set state, so a handler that
+ * bails on `NaN` hands the old digits straight back on that keystroke. Clearing
+ * the well was therefore impossible, and with it the only natural way to enter
+ * a negative coordinate - in a scene centred on the origin, half the space.
  */
 const AxisField = memo(
 	({
@@ -154,24 +163,37 @@ const AxisField = memo(
 		axis: (typeof AXES)[number]
 		value: number
 		onChange: (raw: string) => void
-	}) => (
-		<div className="publisher-shell-nested focus-within:ring-ring flex items-center rounded-lg pl-2 focus-within:ring-2">
-			<span
-				aria-hidden
-				className="text-muted-foreground w-3 shrink-0 text-xs font-medium"
-			>
-				{axis}
-			</span>
-			<Input
-				type="number"
-				step="0.1"
-				aria-label={`${axis} position`}
-				value={value}
-				onChange={(event) => onChange(event.target.value)}
-				className="h-8 border-0 bg-transparent px-2 font-mono text-xs shadow-none focus-visible:ring-0"
-			/>
-		</div>
-	)
+	}) => {
+		const [draft, setDraft] = useState<string | null>(null)
+
+		// Committed state wins whenever the field is not mid-edit, so a drag on the
+		// canvas still moves the numbers under the author's cursor.
+		const shown = draft ?? String(value)
+
+		return (
+			<div className="publisher-shell-nested focus-within:ring-ring flex items-center rounded-lg pl-2 focus-within:ring-2">
+				<span
+					aria-hidden
+					className="text-muted-foreground w-3 shrink-0 text-xs font-medium"
+				>
+					{axis}
+				</span>
+				<Input
+					type="number"
+					step="0.1"
+					aria-label={`${axis} position`}
+					value={shown}
+					onChange={(event) => {
+						const raw = event.target.value
+						setDraft(raw)
+						onChange(raw)
+					}}
+					onBlur={() => setDraft(null)}
+					className="h-8 border-0 bg-transparent px-2 font-mono text-xs shadow-none focus-visible:ring-0"
+				/>
+			</div>
+		)
+	}
 )
 
 AxisField.displayName = 'AxisField'
