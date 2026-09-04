@@ -2,6 +2,7 @@ import { cn } from '@shared/utils'
 
 import LoadingShadowPlane from './loading-shadow-plane'
 import LoadingThumbnailBackdrop from './loading-thumbnail-backdrop'
+import { isViewerChromeVisible } from './overlay-chrome-visibility'
 import { VIEWER_LOADING_FADE_DURATION_MS } from '../hooks/viewer-loading.constants'
 
 import type { LoadingState } from '../hooks/use-viewer-loading'
@@ -25,7 +26,10 @@ const Overlay = ({
 	loader,
 	loadingThumbnail
 }: OverlayProps) => {
-	const showLoader = loadingState !== 'ready'
+	const showChrome = isViewerChromeVisible(loadingState)
+	// Derived from the same predicate rather than restated, so the loader and
+	// the chrome cannot both be on screen however that predicate changes.
+	const showLoader = !showChrome
 	const isLoaded = loadingState === 'loaded'
 
 	return (
@@ -72,9 +76,14 @@ const Overlay = ({
 					</div>
 				</div>
 			)}
-			{/* After the loader so the controls never fade in over it. */}
-			{!showLoader && animationControls}
-			{popover}
+			{/*
+			  Gated, not merely ordered after the loader. DOM order never held
+			  this: the popover root carries `z-[100]` and the loader layer is
+			  `absolute inset-0` with no z-index of its own, so the popover won on
+			  stacking whatever the source order was.
+			*/}
+			{showChrome && animationControls}
+			{showChrome && popover}
 		</>
 	)
 }
