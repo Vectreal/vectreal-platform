@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 import { Center } from '@react-three/drei'
 import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
+import { resolveNormalizedScale } from '@vctrl/core'
 import {
 	AnimationSettings,
 	BoundsProps,
@@ -38,7 +39,7 @@ import {
 	useRef,
 	useState
 } from 'react'
-import { AnimationClip, Object3D } from 'three'
+import { AnimationClip, Box3, Object3D, Vector3 } from 'three'
 
 import { AnimationControls, Canvas, Overlay } from './components'
 import {
@@ -492,6 +493,51 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	  marker that moves, needs no migration for scenes already saved, and holds on
 	  every surface rather than only where the publisher wrote it.
 	*/
+	/*
+	  The model's pre-normalization diagonal, held here so `Center` can be told
+	  when to measure again.
+
+	  drei's `Center` reads its children's bounding box in a layout effect whose
+	  dependencies do not include `children`, and `cacheKey` defaults to a
+	  constant - so without a key it measures once on mount and never again. The
+	  normalization scale lives on a group *inside* it, so toggling normalization
+	  rescaled the model while the centering offset kept the pre-scale value, and
+	  the model was left off-centre.
+
+	  It also silently broke the publisher's hotspot re-anchor, which corrects a
+	  marker by the ratio of the two scales. That correction is exact only while
+	  the centering offset scales with the model (`c = S . c0`), which is to say
+	  only while `Center` re-measures. Keying it here is what makes that true.
+
+	  Measured here rather than taken from `SceneModel`'s callback, which reports
+	  from an effect: routing it through state would leave the key one render
+	  behind the scale `SceneModel` had already applied, and `bounds.fit()` - a
+	  passive effect - would frame the model against the previous centering offset
+	  on a model swap.
+
+	  Keyed on `model` alone, exactly as `SceneModel` keys its own measurement, and
+	  that is load-bearing rather than incidental. `Box3.setFromObject` does not
+	  walk up to refresh ancestors, so it reads whatever scale the model is already
+	  mounted under. Re-measuring when the normalization *options* change would
+	  therefore measure an already-scaled model and derive a different scale from
+	  the one `SceneModel` holds. The two agree today only because the sole control
+	  toggles `enabled` - disabled resolves to 1 whatever the input, and enabling
+	  happens from a scale of 1 - so a min/max control added later would break it
+	  silently. Measuring once per model removes the coincidence.
+	*/
+	const rawDiagonal = useMemo(
+		() =>
+			model
+				? new Box3().setFromObject(model).getSize(new Vector3()).length()
+				: 0,
+		[model]
+	)
+
+	const centerCacheKey = useMemo(
+		() => resolveNormalizedScale(rawDiagonal, normalizationOptions),
+		[rawDiagonal, normalizationOptions]
+	)
+
 	const aimedCameras = useMemo(
 		() => resolveHotspotCameraTargets(cameraOptions?.cameras, hotspots),
 		[cameraOptions?.cameras, hotspots]
@@ -619,7 +665,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 										onPlaybackStatusChange={animation.setStatus}
 									/>
 								)}
-								<Center top>
+								<Center top cacheKey={centerCacheKey}>
 									{model && (
 										<SceneModel
 											cameraOptions={cameraOptions}

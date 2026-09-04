@@ -1,9 +1,12 @@
 import { Button } from '@shared/components/ui/button'
 import { Label } from '@shared/components/ui/label'
+import { resolveNormalizedScale } from '@vctrl/core'
 import { motion } from 'framer-motion'
-import { useAtom, useAtomValue } from 'jotai/react'
+import { useAtom, useAtomValue, useStore } from 'jotai/react'
+import { useCallback } from 'react'
 
 import { defaultNormalizationOptions } from '../../../constants/viewer-defaults'
+import { applyHotspotReanchor } from '../../../lib/domain/scene/client/apply-hotspot-reanchor'
 import {
 	normalizationAtom,
 	rawModelDiagonalAtom
@@ -24,6 +27,27 @@ import type { FC } from 'react'
 export const SceneNormalizationNotice: FC = () => {
 	const [normalization, setNormalization] = useAtom(normalizationAtom)
 	const rawDiagonal = useAtomValue(rawModelDiagonalAtom)
+	const store = useStore()
+
+	// Rescaling the model moves it out from under every hotspot, which stores a
+	// world-space point captured under the previous scale. Both scales are known
+	// right here, so the markers move with the geometry instead of detaching.
+	const setNormalizationEnabled = useCallback(
+		(enabled: boolean) => {
+			// Read through the store rather than the render-time closure: the
+			// manifest effect can write `normalizationAtom` between this render and
+			// the click, and a snapshot would put the stale bounds back.
+			const current = store.get(normalizationAtom)
+			const next = { ...current, enabled }
+			applyHotspotReanchor(
+				store,
+				resolveNormalizedScale(rawDiagonal, current),
+				resolveNormalizedScale(rawDiagonal, next)
+			)
+			setNormalization(next)
+		},
+		[rawDiagonal, setNormalization, store]
+	)
 
 	const minSize = normalization.minSize ?? defaultNormalizationOptions.minSize
 	const maxSize = normalization.maxSize ?? defaultNormalizationOptions.maxSize
@@ -48,9 +72,7 @@ export const SceneNormalizationNotice: FC = () => {
 					<Button
 						variant="outline"
 						size="sm"
-						onClick={() =>
-							setNormalization((prev) => ({ ...prev, enabled: false }))
-						}
+						onClick={() => setNormalizationEnabled(false)}
 					>
 						Revert to original size
 					</Button>
@@ -64,9 +86,7 @@ export const SceneNormalizationNotice: FC = () => {
 					<Button
 						variant="outline"
 						size="sm"
-						onClick={() =>
-							setNormalization((prev) => ({ ...prev, enabled: true }))
-						}
+						onClick={() => setNormalizationEnabled(true)}
 					>
 						Normalize size
 					</Button>

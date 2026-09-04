@@ -1,5 +1,6 @@
 import { useBounds } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
+import { resolveNormalizedScale } from '@vctrl/core'
 import {
 	memo,
 	useCallback,
@@ -17,6 +18,7 @@ import {
 	Sphere,
 	Vector3
 } from 'three'
+
 
 import type {
 	SceneScreenshotCapture,
@@ -52,9 +54,6 @@ type OrbitControlsLike = {
 	target: Vector3
 	update: () => void
 }
-
-const NORMALIZATION_DEFAULT_MIN_SIZE = 0.5
-const NORMALIZATION_DEFAULT_MAX_SIZE = 5
 
 const DEFAULT_SCREENSHOT_OPTIONS = {
 	width: 1280,
@@ -196,14 +195,10 @@ const SceneModel = memo((props: ModelProps) => {
 		return box.getSize(new Vector3()).length()
 	}, [object])
 
-	const normalizedScale = useMemo(() => {
-		if (!normalizationOptions?.enabled || rawDiagonal <= 0) return 1
-		const min = normalizationOptions.minSize ?? NORMALIZATION_DEFAULT_MIN_SIZE
-		const max = normalizationOptions.maxSize ?? NORMALIZATION_DEFAULT_MAX_SIZE
-		if (rawDiagonal < min) return min / rawDiagonal
-		if (rawDiagonal > max) return max / rawDiagonal
-		return 1
-	}, [rawDiagonal, normalizationOptions])
+	const normalizedScale = useMemo(
+		() => resolveNormalizedScale(rawDiagonal, normalizationOptions),
+		[rawDiagonal, normalizationOptions]
+	)
 
 	// Dynamic camera clipping planes. drei's one-shot `.clip()` sets near/far tight
 	// to the bounding box at the fit distance, then clips the model the moment the

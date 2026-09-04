@@ -1,3 +1,8 @@
+import {
+	NORMALIZATION_DEFAULT_MAX_SIZE,
+	NORMALIZATION_DEFAULT_MIN_SIZE
+} from '@vctrl/core'
+
 import type {
 	BoundsProps,
 	CameraProps,
@@ -137,8 +142,13 @@ export const normalizeShadowOptions = (
 	}
 }
 
+// Bounds come from `@vctrl/core` rather than being restated here. The publisher
+// computes the scale change it has to move hotspots by, and the viewer computes
+// the scale it actually applies; a second copy of these numbers would let the
+// two disagree, and every marker in an extreme-size scene would drift off the
+// model by the difference.
 export const defaultNormalizationOptions: Required<NormalizationOptions> = {
 	enabled: false,
-	minSize: 0.5,
-	maxSize: 5
+	minSize: NORMALIZATION_DEFAULT_MIN_SIZE,
+	maxSize: NORMALIZATION_DEFAULT_MAX_SIZE
 }
