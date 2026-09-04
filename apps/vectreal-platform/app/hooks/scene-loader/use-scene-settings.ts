@@ -74,7 +74,10 @@ export function useApplySceneSettings() {
 	 * button goes dead on the one flow the draft feature exists for.
 	 */
 	return useCallback(
-		(settings: SceneSettings, { isSavedBaseline }: { isSavedBaseline: boolean }) => {
+		(
+			settings: SceneSettings,
+			{ isSavedBaseline }: { isSavedBaseline: boolean }
+		) => {
 			const bounds = settings.bounds ?? defaultBoundsOptions
 			const environment = settings.environment ?? defaultEnvOptions
 			const camera = settings.camera ?? defaultCameraOptions
