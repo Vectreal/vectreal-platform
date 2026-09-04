@@ -113,8 +113,15 @@ const PublisherPage = () => {
 	const { file } = useModelContext()
 	const setRawDiagonal = useSetAtom(rawModelDiagonalAtom)
 	const setShadows = useSetAtom(shadowsAtom)
-	const { bounds, camera, controls, env, shadows, normalization, hotspots } =
-		useAtomValue(sceneViewerSettingsAtom)
+	const {
+		bounds,
+		camera,
+		controls,
+		environment,
+		shadows,
+		normalization,
+		hotspots
+	} = useAtomValue(sceneViewerSettingsAtom)
 
 	// Persist drags of the in-scene shadow light handle. Debounced so a drag
 	// commits one re-bake when the user settles, not on every pointer move.
@@ -237,7 +244,7 @@ const PublisherPage = () => {
 					model={file?.model}
 					cameraOptions={cameraOptions}
 					controlsOptions={controls}
-					envOptions={env}
+					envOptions={environment}
 					shadowsOptions={shadows}
 					bakedShadow={bakedShadow}
 					onShadowBakeReady={registerShadowBakeCapture}

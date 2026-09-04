@@ -13,6 +13,7 @@ import {
 } from '../../../components/dashboard'
 import { DetailPanelSection } from '../../../components/layout-components'
 import SceneEmbedViewer from '../../../components/scene-embed/scene-embed-viewer'
+import { useAppColorScheme } from '../../../hooks/use-app-color-scheme'
 import { useSceneMetadata } from '../../../hooks/use-scene-metadata'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import { toSceneRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
@@ -167,6 +168,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 
 	const metadata = useSceneMetadata(scene)
 	const sceneState = metadata.scene
+	const colorScheme = useAppColorScheme()
 
 	// Memoized because the viewer is memoized: a fresh object every render would
 	// re-render it on every keystroke in the metadata fields below.
@@ -279,6 +281,14 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							file={file}
 							sceneData={sceneData}
 							loadingThumbnail={loadingThumbnail}
+							/*
+							  The app's own scheme, not the visitor's OS. This panel sits on
+							  a `ds-sunken` well, which is near-white in light mode, so a
+							  viewer following `prefers-color-scheme` would paint dark chrome
+							  onto a light card for anyone whose app theme disagrees with
+							  their system setting.
+							*/
+							theme={colorScheme}
 						/>
 						<ScenePreviewOverlay previewPath={previewPath} />
 					</section>

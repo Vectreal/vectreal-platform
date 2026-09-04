@@ -567,7 +567,8 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 
 	const { loadingState, completeLoadingTransition } = useViewerLoading(
 		hasContent,
-		isInitialFramingComplete
+		isInitialFramingComplete,
+		Boolean(loader)
 	)
 	const shadowsEnabled = shadowsOptions?.enabled ?? false
 	// AO is gated on shadows being enabled so toggling shadows off also tears

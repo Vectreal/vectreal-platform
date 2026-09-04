@@ -3,7 +3,7 @@ title: "Preview a scene the way it will be embedded"
 slug: "preview-a-scene-the-way-it-will-be-embedded"
 excerpt: "Once you have set your cameras, shadows and interactions, preview mode shows you that configuration with the editor gone, on the same page an embed renders. So you can check the work before the scene is published anywhere."
 publishedAt: "2026-08-12"
-updatedAt: "2026-08-12"
+updatedAt: "2026-09-04"
 category: "releases"
 tags:
   - "publisher"
@@ -30,7 +30,7 @@ sceneImage: "/assets/images/newsroom/scene-preview-a-scene-the-way-it-will-be-em
 
 You set up a scene across several tools. Cameras, shadows, the environment, hotspots, how the model responds to a drag. Preview mode takes the editor off the canvas and shows you what all of that adds up to, before the scene is published anywhere.
 
-<video src="/assets/images/newsroom/11/preview-mode-enter.mp4" autoPlay muted loop playsInline aria-label="A black Porsche GT3 in the Vectreal Publisher, surrounded by tool rails, panels and a publish card. Preview mode switches on and the editing surface clears away, leaving the car alone on a dark page with a small Preview badge and a camera switcher along the bottom."></video>
+<video src="/assets/images/newsroom/11/preview-mode-enter.mp4" autoPlay muted loop playsInline aria-label="A black Porsche GT3 in the Vectreal Publisher, surrounded by tool rails, panels and a publish card. Preview mode switches on and the editing surface clears away, leaving the car alone on the page, dark here because the app is in dark mode, with a small Preview badge and a camera switcher along the bottom."></video>
 
 ## Why it is worth a second look
 
@@ -42,9 +42,15 @@ That is the pass preview mode is for. Not a first look at something you just upl
 
 ## What you are looking at is the embed
 
-The page a preview opens is the page an embed renders. One component behind two routes, differing in how the request is authenticated rather than in what appears on screen. Press `H` and the preview badge and camera switcher go too, leaving one faint restore button in the corner and, apart from it, exactly what a visitor gets.
+The page a preview opens is the page an embed renders. One component behind two routes, differing in how the request is authenticated and running the same saved scene either way. Cameras frame the same way, shadows fall the same way, a drag behaves the same way. Press `H` and the preview badge and camera switcher go too, leaving one faint restore button in the corner and, apart from it, near enough what a visitor gets.
 
 So the check you do here is the check. If a camera clips into the model in preview, it clips on someone's product page, and there is nothing to confirm again after publishing.
+
+Near enough, because two things are not identical, and both are worth knowing before you treat a preview as the last word.
+
+An embed carries a small Vectreal mark in the corner on the free plan and loses it on the paid ones. Preview never carries it, on any plan, because it is our own page rather than a placement somebody bought. So a free-plan author is looking at slightly less than their visitor will be.
+
+The color scheme is settled at each end by whoever sits closest to the page. Preview follows the app, because it is inside the app: the preview badge and the camera switcher are drawn in app tokens, and light chrome over a dark scene is its own kind of wrong. An embed sits on a page we cannot see, so it follows the visitor's own browser setting unless the host states one with `?theme=light` or `?theme=dark`. Worth looking at the scene both ways, or pinning the scheme in the URL and looking at the one you pinned.
 
 ## Two ways in
 

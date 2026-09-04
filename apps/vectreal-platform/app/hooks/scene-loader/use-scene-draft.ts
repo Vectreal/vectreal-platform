@@ -56,16 +56,7 @@ export function useSceneDraft() {
 				modelAvailable: Boolean(file),
 				prepareGltfDocumentForUpload: prepareGltfDocument,
 				sceneMetaState,
-				currentSettings: {
-					bounds: currentSettings.bounds,
-					environment: currentSettings.env,
-					interactions: currentSettings.interactions,
-					camera: currentSettings.camera,
-					controls: currentSettings.controls,
-					shadows: currentSettings.shadows,
-					normalization: currentSettings.normalization,
-					hotspots: currentSettings.hotspots
-				},
+				currentSettings,
 				optimizationSettings: optimization.optimizations ?? null,
 				optimizedSceneBytes: optimizationRuntime.optimizedSceneBytes,
 				clientSceneBytes: optimizationRuntime.clientSceneBytes

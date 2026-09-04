@@ -4,6 +4,7 @@ import {
 	ControlsProps,
 	EnvironmentProps,
 	NormalizationOptions,
+	ScenePresentationSettings,
 	SceneSettings,
 	ShadowsProps
 } from '@vctrl/core'
@@ -39,6 +40,7 @@ export const sceneSettings = pgTable(
 		interactions: json('interactions').$type<SceneSettings['interactions']>(), // interactionsAtom data
 		shadows: json('shadows').$type<ShadowsProps>(), // shadowsAtom data
 		normalization: json('normalization').$type<NormalizationOptions>(), // normalizationAtom data
+		presentation: json('presentation').$type<ScenePresentationSettings>(), // presentationAtom data
 
 		// Audit fields
 		createdAt: timestamp('created_at').defaultNow().notNull(),

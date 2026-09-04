@@ -18,15 +18,20 @@ const meta = {
 		docs: {
 			description: {
 				component:
-					'UI layer that displays loading state and optional popover content on top of the canvas.'
+					'UI layer that displays loading state and optional popover content on top of the canvas. Chrome - the popover slot and the playback controls - is drawn only once the scene is ready, so it never lands on top of the loader.'
 			}
 		}
 	},
 	args: {
 		loadingState: 'loading',
 		loader: <LoadingSpinner className="text-primary" />,
+		/*
+		  Positioned like the real `InfoPopover` root, and absolutely, because the
+		  backdrop below is `absolute inset-0`: a static slot paints underneath it
+		  and these stories showed an empty box whatever state they were in.
+		*/
 		popover: (
-			<div className="rounded bg-zinc-900/80 px-2 py-1 text-xs text-white">
+			<div className="absolute bottom-0 left-0 m-2 rounded bg-zinc-900/80 px-2 py-1 text-xs text-white">
 				Overlay popover slot
 			</div>
 		)
@@ -52,9 +57,24 @@ export const Loading: Story = {
 	}
 }
 
+/**
+ * Mid cross-fade: the model is framed and the loader is fading out over it.
+ * Still no chrome - it would appear on top of the loader it is meant to
+ * follow.
+ */
 export const Loaded: Story = {
 	args: {
 		loadingState: 'loaded'
+	}
+}
+
+/**
+ * The only state that draws chrome. Read this against `Loading`: the popover
+ * slot is filled in both, and only here is it painted.
+ */
+export const Ready: Story = {
+	args: {
+		loadingState: 'ready'
 	}
 }
 

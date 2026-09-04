@@ -379,6 +379,26 @@ export interface HotspotDefinition {
 // ---------------------------------------------------------------------------
 
 /**
+ * How the viewer's own chrome is presented on a published scene.
+ *
+ * Chrome the *author* decides about, as opposed to the viewer props a
+ * surface decides about (`showInternalHotspots` and friends). A viewer
+ * affordance that a scene may not want is described here rather than branched
+ * on at the surface that renders it, so every surface agrees.
+ */
+export interface ScenePresentationSettings {
+	/**
+	 * Whether the viewer draws its info affordance - the button that opens the
+	 * scene's name and description.
+	 *
+	 * Absent means shown. Every scene saved before this field existed reads as
+	 * absent, and those scenes already show the popover, so the default has to
+	 * be the one that changes nothing for them.
+	 */
+	showInfoPopover?: boolean
+}
+
+/**
  * Scene settings containing viewer configuration.
  * Used for persisting and restoring scene appearance and behavior.
  */
@@ -401,6 +421,8 @@ export interface SceneSettings {
 	normalization?: NormalizationOptions
 	/** Hotspot definitions. internalOnly hotspots are excluded from the published runtime payload. */
 	hotspots?: HotspotDefinition[]
+	/** How the viewer's own chrome is presented. */
+	presentation?: ScenePresentationSettings
 }
 
 /** Extended GLTF document including optional persisted asset metadata. */

@@ -1,0 +1,1 @@
+ALTER TABLE "scene_settings" ADD COLUMN "presentation" json;

@@ -81,6 +81,7 @@ For zero-JavaScript initial configuration, add parameters to the iframe `src`:
 | `?camera=<id>` | Any saved camera ID | Activates that camera as soon as the viewer is ready |
 | `?autoRotate=0` or `?autoRotate=1` | `0` to disable, `1` to enable | Overrides the stored auto-rotate setting |
 | `?transition=<type>` | `none`, `linear`, `object_avoidance` | Overrides the stored transition type |
+| `?theme=<mode>` | `light`, `dark`, `system` | Color scheme for the viewer's chrome. Defaults to `system`, which follows the visitor's browser setting - set it explicitly when your page forces a scheme of its own |
 
 ```html
 <!-- Opens on a specific camera with auto-rotate off -->
@@ -90,7 +91,9 @@ For zero-JavaScript initial configuration, add parameters to the iframe `src`:
 ></iframe>
 ```
 
-URL parameters apply once on `viewer_ready`. They do not persist to the stored scene configuration.
+`camera`, `autoRotate` and `transition` are applied as commands once on
+`viewer_ready`; `theme` is read straight from the URL instead. None of them
+persist to the stored scene configuration.
 
 ---
 
@@ -277,6 +280,8 @@ present apps/vectreal-platform/app/db/schema/project/projects.ts allowed_embed_d
 absent apps/vectreal-platform/app/db/schema/auth/api-keys.ts allowed_embed_domains
 present apps/vectreal-platform/app/lib/domain/embed/embed-access-policy.ts requesterHost === applicationHost
 present apps/vectreal-platform/app/routes/api/scenes.$sceneId.ts authContext.mode === 'apiKey'
+present apps/vectreal-platform/app/lib/domain/embed/embed-viewer-theme.ts const THEMES: readonly EmbedViewerTheme[] = ['light', 'dark', 'system']
+present apps/vectreal-platform/app/lib/domain/embed/embed-viewer-theme.ts const DEFAULT_EMBED_THEME: EmbedViewerTheme = 'system'
 */}
 
 ---

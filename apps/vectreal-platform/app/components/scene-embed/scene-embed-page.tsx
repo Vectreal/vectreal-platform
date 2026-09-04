@@ -5,11 +5,15 @@ import { useSearchParams } from 'react-router'
 import SceneEmbedInfoPopover from './scene-embed-info-popover'
 import SceneEmbedViewer from './scene-embed-viewer'
 import { useSceneEmbedScene } from './use-scene-embed-scene'
+import VectrealEmbedBadge from './vectreal-embed-badge'
+import { parseEmbedViewerTheme } from '../../lib/domain/embed/embed-viewer-theme'
 import { useHostedPreviewBridge } from '../../lib/domain/embed/hosted-preview-bridge'
 import { isSceneCamera } from '../../lib/domain/scene/scene-camera'
+import { shouldShowInfoPopover } from '../../lib/domain/scene/scene-presentation'
 import CenteredSpinner from '../centered-spinner'
 
 import type {
+	VectrealViewerProps,
 	ViewerCommand,
 	ViewerCommandExecutor,
 	ViewerInteractionEvent
@@ -36,6 +40,20 @@ export interface SceneEmbedPageProps {
 	 * surface, which only exists once the viewer has registered its executor.
 	 */
 	chrome?: (control: SceneEmbedViewerControl) => ReactNode
+	/**
+	 * Color scheme, for a surface that knows its own background.
+	 *
+	 * `/preview` passes the app's, because it draws `PreviewChrome` over the
+	 * viewer in app tokens and the two have to agree. `/embed` passes nothing
+	 * and gets the rule below, which is about a page we cannot see.
+	 */
+	theme?: VectrealViewerProps['theme']
+	/**
+	 * Draws the Vectreal mark over the scene. Decided server-side from the
+	 * owning organization's plan, so only `/embed` passes it; `/preview` is
+	 * internal and carries no mark.
+	 */
+	showsVectrealBranding?: boolean
 }
 
 /** Opening viewer state driven by the embed URL's query parameters. */
@@ -67,6 +85,12 @@ function useInitialCommands(): ViewerCommand[] {
 	}, [searchParams])
 }
 
+/** The color scheme the embed URL asks for, defaulting to the visitor's own. */
+function useEmbedViewerTheme() {
+	const [searchParams] = useSearchParams()
+	return parseEmbedViewerTheme(searchParams.get('theme'))
+}
+
 /**
  * The full-viewport scene page shared by `/embed` and `/preview`.
  *
@@ -77,7 +101,9 @@ function useInitialCommands(): ViewerCommand[] {
 const SceneEmbedPage = ({
 	projectId,
 	sceneId,
-	chrome
+	chrome,
+	theme,
+	showsVectrealBranding = false
 }: SceneEmbedPageProps) => {
 	const { file, isLoadingScene, sceneData, loadError, retrySceneLoad } =
 		useSceneEmbedScene({
@@ -85,6 +111,7 @@ const SceneEmbedPage = ({
 			projectId
 		})
 	const initialCommands = useInitialCommands()
+	const embedTheme = useEmbedViewerTheme()
 	const bridge = useHostedPreviewBridge({
 		sceneId,
 		interactions: sceneData?.interactions,
@@ -184,11 +211,21 @@ const SceneEmbedPage = ({
 				sceneData={sceneData}
 				onCommandExecutorReady={onCommandExecutorReady}
 				onInteractionEvent={onInteractionEvent}
+				theme={theme ?? embedTheme}
+				branding={showsVectrealBranding ? <VectrealEmbedBadge /> : undefined}
+				/*
+				  Omitted, not hidden, when the author switched it off: the slot
+				  takes a node, so passing nothing is how a surface says it has no
+				  popover. Absent settings still get one - see
+				  `shouldShowInfoPopover`.
+				*/
 				popover={
-					<SceneEmbedInfoPopover
-						title={sceneData?.meta?.name?.trim() || undefined}
-						description={sceneData?.meta?.description?.trim() || undefined}
-					/>
+					shouldShowInfoPopover(sceneData?.presentation) ? (
+						<SceneEmbedInfoPopover
+							title={sceneData?.meta?.name?.trim() || undefined}
+							description={sceneData?.meta?.description?.trim() || undefined}
+						/>
+					) : undefined
 				}
 			/>
 			{chrome?.({

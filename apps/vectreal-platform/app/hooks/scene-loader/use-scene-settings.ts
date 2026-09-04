@@ -7,6 +7,7 @@ import {
 	defaultControlsOptions,
 	defaultEnvOptions,
 	defaultNormalizationOptions,
+	defaultPresentationOptions,
 	defaultShadowsOptions,
 	normalizeShadowOptions
 } from '../../constants/viewer-defaults'
@@ -34,6 +35,7 @@ import {
 	hotspotsAtom,
 	interactionsAtom,
 	normalizationAtom,
+	presentationAtom,
 	rawModelDiagonalAtom,
 	selectedCameraIdAtom,
 	shadowsAtom
@@ -57,6 +59,7 @@ export function useApplySceneSettings() {
 	const setControls = useSetAtom(controlsAtom)
 	const setShadows = useSetAtom(shadowsAtom)
 	const setNormalization = useSetAtom(normalizationAtom)
+	const setPresentation = useSetAtom(presentationAtom)
 	const setHotspots = useSetAtom(hotspotsAtom)
 	const setSelectedCameraId = useSetAtom(selectedCameraIdAtom)
 	const setActiveHotspotId = useSetAtom(activeHotspotIdAtom)
@@ -85,6 +88,7 @@ export function useApplySceneSettings() {
 			const shadows = normalizeShadowOptions(settings.shadows)
 			const normalization =
 				settings.normalization ?? defaultNormalizationOptions
+			const presentation = settings.presentation ?? defaultPresentationOptions
 
 			setBounds(bounds)
 			setEnv(environment)
@@ -93,6 +97,7 @@ export function useApplySceneSettings() {
 			setControls(controls)
 			setShadows(shadows)
 			setNormalization(normalization)
+			setPresentation(presentation)
 			setHotspots(settings.hotspots ?? [])
 			setSelectedCameraId(
 				resolveDefaultSceneCameraId(camera.cameras) ??
@@ -110,6 +115,7 @@ export function useApplySceneSettings() {
 							controls,
 							shadows,
 							normalization,
+							presentation,
 							hotspots: settings.hotspots
 						}
 					: null
@@ -125,6 +131,7 @@ export function useApplySceneSettings() {
 			setInteractions,
 			setLastSavedSettings,
 			setNormalization,
+			setPresentation,
 			setSelectedCameraId,
 			setShadows
 		]
@@ -148,6 +155,7 @@ export function useResetSceneState() {
 	const setControls = useSetAtom(controlsAtom)
 	const setShadows = useSetAtom(shadowsAtom)
 	const setNormalization = useSetAtom(normalizationAtom)
+	const setPresentation = useSetAtom(presentationAtom)
 	const setHotspots = useSetAtom(hotspotsAtom)
 	const setSelectedCameraId = useSetAtom(selectedCameraIdAtom)
 	const setActiveHotspotId = useSetAtom(activeHotspotIdAtom)
@@ -168,6 +176,7 @@ export function useResetSceneState() {
 		setControls(defaultControlsOptions)
 		setShadows(defaultShadowsOptions)
 		setNormalization(defaultNormalizationOptions)
+		setPresentation(defaultPresentationOptions)
 		setHotspots([])
 		setSelectedCameraId(
 			defaultCameraOptions.activeCameraId ??
@@ -198,6 +207,7 @@ export function useResetSceneState() {
 		setNormalization,
 		setOptimizationRuntime,
 		setOptimizationState,
+		setPresentation,
 		setRawModelDiagonal,
 		setSceneMetaState,
 		setSelectedCameraId,

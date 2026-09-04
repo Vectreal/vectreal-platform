@@ -9,6 +9,7 @@ import type {
 	ControlsProps,
 	EnvironmentProps,
 	NormalizationOptions,
+	ScenePresentationSettings,
 	ShadowsProps
 } from '@vctrl/core'
 
@@ -50,6 +51,16 @@ export const defaultControlsOptions: ControlsProps = {
 	enableDamping: true,
 	dampingFactor: 0.2,
 	makeDefault: true
+}
+
+/*
+  Shown by default. Every scene saved before the `presentation` column existed
+  reads back as `undefined` here, and those scenes already draw the popover, so
+  the default that changes nothing for them is the only correct one. The
+  publisher toggle is an opt-out.
+*/
+export const defaultPresentationOptions: ScenePresentationSettings = {
+	showInfoPopover: true
 }
 
 export const defaultEnvOptions: EnvironmentProps = {

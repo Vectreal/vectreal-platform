@@ -6,6 +6,7 @@ import { resolveBakedShadowSource } from '../../lib/domain/scene/client/baked-sh
 import CenteredSpinner from '../centered-spinner'
 import { ClientVectrealViewer } from '../viewer/client-vectreal-viewer'
 
+import type { EmbedViewerTheme } from '../../lib/domain/embed/embed-viewer-theme'
 import type { ModelFile, ServerSceneData } from '@vctrl/hooks/use-load-model'
 import type { VectrealViewerProps, ViewerLoadingThumbnail } from '@vctrl/viewer'
 import type { ReactNode } from 'react'
@@ -18,6 +19,33 @@ export interface SceneEmbedViewerProps {
 	loadingThumbnail?: ViewerLoadingThumbnail
 	/** Usually `<SceneEmbedInfoPopover>`; omitted where the surface has its own. */
 	popover?: ReactNode
+	/**
+	 * The Vectreal mark, when the owning plan has not bought its removal.
+	 *
+	 * Separate from `popover` because the author controls one and the plan
+	 * controls the other; they are composed into the viewer's single overlay
+	 * slot here so both are gated on the scene being ready.
+	 */
+	branding?: ReactNode
+	/**
+	 * Color scheme for the viewer's own chrome.
+	 *
+	 * Required, and deliberately without a default. This component renders
+	 * inside somebody else's page as often as inside ours, and
+	 * `ClientVectrealViewer` defaults to `dark` - which is how every embed came
+	 * to render dark chrome on light hosts, with nothing in the tree recording
+	 * that a choice had been made. A default here would only move that silence
+	 * one level up: each surface knows what its own background is, so each
+	 * surface says so. That holds for the surfaces rendering this component;
+	 * the publisher mounts `ClientVectrealViewer` directly and still takes its
+	 * `dark` default, which is its own to fix.
+	 *
+	 * `EmbedViewerTheme` rather than `VectrealViewerProps['theme']`: the
+	 * upstream prop is declared optional, so its type includes `undefined` and
+	 * a required prop would still accept one - landing straight back on the
+	 * wrapper's `dark`.
+	 */
+	theme: EmbedViewerTheme
 	onCommandExecutorReady?: VectrealViewerProps['onCommandExecutorReady']
 	onInteractionEvent?: VectrealViewerProps['onInteractionEvent']
 }
@@ -37,6 +65,8 @@ const SceneEmbedViewer = memo(
 		className,
 		loadingThumbnail,
 		popover,
+		branding,
+		theme,
 		onCommandExecutorReady,
 		onInteractionEvent
 	}: SceneEmbedViewerProps) => {
@@ -83,7 +113,15 @@ const SceneEmbedViewer = memo(
 					staticShadowBake
 					bakedShadow={bakedShadow}
 					loadingThumbnail={loadingThumbnail}
-					popover={popover}
+					popover={
+						popover || branding ? (
+							<>
+								{popover}
+								{branding}
+							</>
+						) : undefined
+					}
+					theme={theme}
 					onCommandExecutorReady={onCommandExecutorReady}
 					onInteractionEvent={onInteractionEvent}
 					loader={<CenteredSpinner text="Preparing scene..." />}

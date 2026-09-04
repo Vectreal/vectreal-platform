@@ -100,14 +100,14 @@ export function usePublisherScene({
 	const { optimizer } = useModelContext(true)
 	const prepareGltfDocumentForUpload = usePrepareGltfDocument()
 
+	/*
+	  Spread, not transcribed. The field list used to be written out here and in
+	  the sign-in draft path, and the two had already drifted apart - so a
+	  setting added to `SceneSettings` reached the save from one of them and was
+	  silently dropped by the other.
+	*/
 	const currentSettings: SceneSettings = {
-		bounds: viewerSettings.bounds,
-		environment: viewerSettings.env,
-		interactions: viewerSettings.interactions,
-		camera: viewerSettings.camera,
-		controls: viewerSettings.controls,
-		shadows: viewerSettings.shadows,
-		normalization: viewerSettings.normalization,
+		...viewerSettings,
 		hotspots:
 			viewerSettings.hotspots.length > 0 ? viewerSettings.hotspots : undefined
 	}
