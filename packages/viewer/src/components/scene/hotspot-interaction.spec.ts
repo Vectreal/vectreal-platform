@@ -161,4 +161,50 @@ describe('resolveHotspotInteraction', () => {
 			).toBe(false)
 		})
 	})
+
+	describe('yielding the hit box to an editing gizmo', () => {
+		/**
+		 * The publisher mounts a transform gizmo on the selected hotspot, and the
+		 * marker's own 24px hit box sits directly over the gizmo's centre handle.
+		 * The 24px floor is a deliberate touch target, so the marker gives the
+		 * pointer up rather than shrinking - the click it would have taken is a
+		 * re-selection of the marker already selected.
+		 */
+		it('takes no pointer while it is the selected marker', () => {
+			expect(
+				resolveHotspotInteraction(linked, {
+					occluded: false,
+					canActivate: true,
+					canSelect: true,
+					selected: true
+				}).pointerEvents
+			).toBe('none')
+		})
+
+		it('leaves every other marker live, which is what keeps this narrow', () => {
+			expect(
+				resolveHotspotInteraction(linked, {
+					occluded: false,
+					canActivate: true,
+					canSelect: true,
+					selected: false
+				}).pointerEvents
+			).toBe('auto')
+		})
+
+		it('changes nothing else about the marker', () => {
+			// Not disabled and not dropped from the tab order: it still announces
+			// itself the same way, and a keyboard still reaches it.
+			const selectedMarker = resolveHotspotInteraction(linked, {
+				occluded: false,
+				canActivate: true,
+				canSelect: true,
+				selected: true
+			})
+
+			expect(selectedMarker.role).toBe('button')
+			expect(selectedMarker.action).toBe('select')
+			expect(selectedMarker.focusable).toBe(true)
+		})
+	})
 })

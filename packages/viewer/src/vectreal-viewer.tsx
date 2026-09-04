@@ -543,6 +543,29 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		[cameraOptions?.cameras, hotspots]
 	)
 
+	/**
+	 * Which camera the viewer is looking through, so the hotspot that owns it
+	 * can draw itself as the one you are standing at.
+	 *
+	 * Taken from the event the camera layer already emits rather than from
+	 * `cameraOptions.activeCameraId`, because that prop is the opening request,
+	 * not the running state - a marker click, a host command and an interaction
+	 * all move the camera without touching it.
+	 */
+	const [activeCameraId, setActiveCameraId] = useState<null | string>(null)
+
+	const handleInteractionEvent = useCallback(
+		(event: ViewerInteractionEvent) => {
+			if (event.type === 'camera_changed') {
+				setActiveCameraId(event.cameraId)
+			} else if (event.type === 'initial_framing_completed') {
+				setActiveCameraId(event.cameraId)
+			}
+			onInteractionEvent?.(event)
+		},
+		[onInteractionEvent]
+	)
+
 	const handleActivateHotspotCamera = useCallback(
 		(cameraId: string) => {
 			executeViewerCommand({ type: 'activate_camera', cameraId })
@@ -653,7 +676,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									onCameraSnapshotCaptureReady={onCameraSnapshotCaptureReady}
 									onCommandExecutorReady={handleSceneCameraExecutorReady}
 									onInitialFramingComplete={handleInitialFramingComplete}
-									onInteractionEvent={onInteractionEvent}
+									onInteractionEvent={handleInteractionEvent}
 								/>
 								{model && animations && animation.shouldMount && (
 									<SceneAnimation
@@ -661,7 +684,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 										animations={animations}
 										options={animationOptions}
 										onCommandExecutorReady={animation.registerExecutor}
-										onInteractionEvent={onInteractionEvent}
+										onInteractionEvent={handleInteractionEvent}
 										onPlaybackStatusChange={animation.setStatus}
 									/>
 								)}
@@ -696,6 +719,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									includeHidden={showHiddenHotspots}
 									color={hotspotColor}
 									selectedId={selectedHotspotId}
+									activeCameraId={activeCameraId}
 									onActivateCamera={handleActivateHotspotCamera}
 									onSelect={onHotspotSelect}
 									onPositionSetterReady={onHotspotPositionSetterReady}

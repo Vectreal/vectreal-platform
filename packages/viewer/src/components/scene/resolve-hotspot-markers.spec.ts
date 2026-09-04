@@ -437,6 +437,40 @@ describe('resolveHotspotMarkers', () => {
 		})
 	})
 
+	describe('a marker the author kept backstage', () => {
+		/**
+		 * `internal` was computed and then dropped, so a backstage marker drew
+		 * identically to a shipping one and the canvas contradicted the sidebar
+		 * beside it - which is the one place the author could see the difference.
+		 */
+		it('says so, where an editing surface asked to see it', () => {
+			const [drawn] = resolveHotspotMarkers(
+				[hotspot({ id: 'a', internalOnly: true })],
+				{ includeInternal: true }
+			)
+
+			expect(drawn.internal).toBe(true)
+			// Not hidden. The two are different facts with different remedies.
+			expect(drawn.hidden).toBe(false)
+		})
+
+		it('carries both facts when a marker is internal and hidden at once', () => {
+			const [drawn] = resolveHotspotMarkers(
+				[hotspot({ id: 'a', internalOnly: true, visible: false })],
+				{ includeInternal: true, includeHidden: true }
+			)
+
+			expect(drawn.internal).toBe(true)
+			expect(drawn.hidden).toBe(true)
+		})
+
+		it('is false for a marker a visitor can see', () => {
+			expect(resolveHotspotMarkers([hotspot({ id: 'a' })])[0].internal).toBe(
+				false
+			)
+		})
+	})
+
 	it('does not mutate the settings it was given', () => {
 		const stored = [
 			hotspot({ id: 'b', sequenceIndex: 1 }),

@@ -60,6 +60,14 @@
 	  behind the model has to be able to say both things at once.
 	*/
 	--vctrl-hotspot-hidden-fill: #a1a1aa;
+	/*
+	  A hotspot the author is keeping backstage, drawn only where they can bring
+	  it forward. Distinct from hidden, because the two facts have different
+	  remedies and a marker can carry both at once: hidden desaturates the
+	  marker, internal rings it. So the ring has to read against the grey fill a
+	  hidden marker takes as well as against the white one.
+	*/
+	--vctrl-hotspot-internal-ring: #6366f1;
 
 	font-family: 'DM Sans Variable', sans-serif;
 }
@@ -234,6 +242,47 @@
 	color: var(--vctrl-hotspot-hidden-fill);
 	border-style: dashed;
 	animation: none;
+}
+
+/*
+  A hotspot the author is keeping backstage.
+
+  A dashed ring outside the marker rather than a colour change, for the same
+  reason the selection is a ring: `hotspotColor` writes the fill as an inline
+  style on the marker root, which beats any stylesheet rule for the same
+  property, so a fill-based cue would vanish on a branded viewer. Dashed, and
+  the hidden cue desaturates, so the two read as different states and a marker
+  that is both shows both.
+
+  Drawn on a pseudo-element rather than as a `box-shadow` on the body, because
+  the body already spends both of its shadow slots on the selection ring and
+  the two states co-occur constantly - the author selects the internal marker
+  in order to change it.
+*/
+.vctrl-viewer-hotspot[data-internal] .vctrl-hotspot-body::after {
+	content: '';
+	position: absolute;
+	inset: -3px;
+	border: 1px dashed var(--vctrl-hotspot-internal-ring);
+	border-radius: 9999px;
+	pointer-events: none;
+}
+
+/*
+  The hotspot whose camera the viewer is looking through: you are standing at
+  this one.
+
+  The resting pulse, held still and opaque, rather than a fourth ring. The
+  animation already draws the eye to every marker equally; stopping it on one
+  is the cheapest way to say "this one", it cannot collide with the selection
+  ring or the internal ring, and it needs no colour of its own - the element
+  already inherits `--vctrl-hotspot-fill`, so it follows a branded viewer.
+*/
+.vctrl-viewer-hotspot[data-current] .vctrl-hotspot-pulse {
+	animation: none;
+	transform: scale(1.5);
+	opacity: 0.9;
+	border-width: 2px;
 }
 
 @media (prefers-color-scheme: dark) {
