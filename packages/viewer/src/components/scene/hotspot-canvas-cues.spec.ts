@@ -35,6 +35,14 @@ const styles = readFileSync(
 )
 
 describe('a backstage marker is drawn as one', () => {
+	const internalRule = styles
+		.split('.vctrl-viewer-hotspot[data-internal] .vctrl-hotspot-body::after')[1]
+		?.split('}')[0]
+
+	it('found the rule to read', () => {
+		expect(internalRule).toBeTruthy()
+	})
+
 	it('marks the root with what the resolver worked out', () => {
 		expect(marker).toContain('data-internal={marker.internal || undefined}')
 	})
@@ -47,22 +55,32 @@ describe('a backstage marker is drawn as one', () => {
 		// `hotspotColor` writes the fill as an inline style on the root, and an
 		// inline declaration beats any stylesheet rule for the same property, so
 		// a fill-based cue would vanish on a branded viewer.
-		const rule = styles
-			.split('.vctrl-viewer-hotspot[data-internal]')[1]
-			?.split('}')[0]
+		//
+		// The full declaration, not the word `border`: `border-radius` contains
+		// it, so a rule reduced to `border: 0` or to nothing but a radius passed
+		// while drawing no ring at all.
+		expect(internalRule).toContain('border: 1px dashed')
+		expect(internalRule).toContain('var(--vctrl-hotspot-internal-ring)')
+		expect(internalRule).not.toContain('--vctrl-hotspot-fill')
+	})
 
-		expect(rule).toContain('border')
-		expect(rule).not.toContain('--vctrl-hotspot-fill')
+	it('generates the pseudo-element it draws on', () => {
+		// Without `content` the `::after` never exists, so every other
+		// declaration in the rule is inert.
+		expect(internalRule).toContain("content: ''")
 	})
 
 	it('stays distinct from the hidden cue, which desaturates', () => {
 		// A marker can be both at once, and the two facts have different
-		// remedies, so one treatment must not be the other.
+		// remedies, so one treatment must not be the other. Asserted on the
+		// INTERNAL rule: reading only the hidden one tested untouched CSS and
+		// passed even with the two cues made identical.
 		const hidden = styles
 			.split('.vctrl-viewer-hotspot[data-hidden] .vctrl-hotspot-body')[1]
 			?.split('}')[0]
 
 		expect(hidden).toContain('grayscale')
+		expect(internalRule).not.toContain('grayscale')
 	})
 })
 
@@ -73,6 +91,16 @@ describe('the marker you are standing at says so', () => {
 		expect(layer).toContain('marker.linkedCameraId === activeCameraId')
 	})
 
+	it('reads no camera as nobody being here, rather than everybody', () => {
+		// Without the guard, `activeCameraId` starts null, an unlinked marker's
+		// `linkedCameraId` is null, and `null === null` lights every one of them
+		// on load and whenever the scene camera is active - the exact opposite
+		// of the cue.
+		expect(layer).toContain(
+			'!!activeCameraId && marker.linkedCameraId === activeCameraId'
+		)
+	})
+
 	it('takes the camera from the event, not from the opening prop', () => {
 		// `cameraOptions.activeCameraId` is the opening request. A marker click,
 		// a host command and an interaction all move the camera without it.
@@ -80,9 +108,18 @@ describe('the marker you are standing at says so', () => {
 			.split('const handleInteractionEvent = useCallback')[1]
 			?.split('\t\t[onInteractionEvent]')[0]
 
+		// A real anchor check, not just truthiness: if the closing split stops
+		// matching, `handler` becomes the rest of the file and every assertion
+		// below passes on text from somewhere else entirely.
 		expect(handler).toBeTruthy()
-		expect(handler).toContain("event.type === 'camera_changed'")
-		expect(handler).toContain('setActiveCameraId(event.cameraId)')
+		expect((handler ?? '').length).toBeLessThan(600)
+
+		// The branch and its body together. `setActiveCameraId(event.cameraId)`
+		// appears in both branches, so asserting it alone let the
+		// `camera_changed` branch be gutted with the test still green.
+		expect(handler).toContain(
+			"if (event.type === 'camera_changed') {\n\t\t\t\tsetActiveCameraId(event.cameraId)"
+		)
 		// Still forwarded: intercepting it must not swallow it.
 		expect(handler).toContain('onInteractionEvent?.(event)')
 	})
