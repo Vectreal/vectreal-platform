@@ -426,6 +426,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		CameraProps['sceneTransition'] | null
 	>(null)
 	const cameraCommandExecutorRef = useRef<null | ViewerCommandExecutor>(null)
+	const hotspotCommandExecutorRef = useRef<null | ViewerCommandExecutor>(null)
 	const animation = useAnimationRuntime({
 		animations,
 		options: animationOptions,
@@ -453,6 +454,9 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 			switch (command.type) {
 				case 'activate_camera':
 					cameraCommandExecutorRef.current?.execute(command)
+					break
+				case 'focus_hotspot':
+					hotspotCommandExecutorRef.current?.execute(command)
 					break
 				case 'set_controls_enabled':
 					setControlsEnabledOverride(command.enabled)
@@ -555,6 +559,13 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 			onInteractionEvent?.({ type: 'hotspot_activated', hotspotId, cameraId })
 		},
 		[onInteractionEvent]
+	)
+
+	const handleSceneHotspotsExecutorReady = useCallback(
+		(executor: null | ViewerCommandExecutor) => {
+			hotspotCommandExecutorRef.current = executor
+		},
+		[]
 	)
 
 	const handleSceneCameraExecutorReady = useCallback(
@@ -706,6 +717,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									onActivateCamera={handleActivateHotspotCamera}
 									onSelect={onHotspotSelect}
 									onHotspotActivated={handleHotspotActivated}
+									onCommandExecutorReady={handleSceneHotspotsExecutorReady}
 									onPositionSetterReady={onHotspotPositionSetterReady}
 								/>
 								{children}

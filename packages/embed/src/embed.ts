@@ -173,6 +173,18 @@ export class VectrealEmbed {
 		this.sendCommand({ type: 'activate_camera', cameraId })
 	}
 
+	/**
+	 * Focus a hotspot: reveal what it says and fly its camera, as clicking the
+	 * marker would.
+	 *
+	 * Ids come from `ready()`, which reports only the hotspots a visitor can
+	 * see. A hotspot the author hid or kept internal is not drawn, and naming
+	 * one here does nothing.
+	 */
+	focusHotspot(hotspotId: string): void {
+		this.sendCommand({ type: 'focus_hotspot', hotspotId })
+	}
+
 	/** Override the transition behaviour for subsequent camera switches. */
 	setTransition(options: SetTransitionOptions): void {
 		this.sendCommand({

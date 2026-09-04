@@ -119,6 +119,10 @@ export function isViewerCommand(value: unknown): value is ViewerCommand {
 			return (
 				typeof value.cameraId === 'string' && value.cameraId.trim().length > 0
 			)
+		case 'focus_hotspot':
+			return (
+				typeof value.hotspotId === 'string' && value.hotspotId.trim().length > 0
+			)
 		case 'set_controls_enabled':
 			return typeof value.enabled === 'boolean'
 		case 'set_auto_rotate':

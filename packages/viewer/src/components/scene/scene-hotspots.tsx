@@ -8,7 +8,9 @@ import {
 	occlusionRayFar
 } from './hotspot-occlusion'
 import { resolveHotspotMarkers } from './resolve-hotspot-markers'
+import { resolveHotspotPopoverContent } from './resolve-hotspot-popover'
 
+import type { ViewerCommandExecutor } from '../../types/viewer-interactions'
 import type { HotspotDefinition } from '@vctrl/core'
 import type { Group, Object3D } from 'three'
 
@@ -54,6 +56,13 @@ export interface SceneHotspotsProps {
 	 * Never for a selection.
 	 */
 	onHotspotActivated?: (id: string, cameraId: string | null) => void
+	/**
+	 * Registers the executor that handles `focus_hotspot`, and `null` on
+	 * unmount. The same shape `SceneCamera` and `SceneAnimation` use: the
+	 * command needs the drawn marker list and the open-card state, both of
+	 * which live here.
+	 */
+	onCommandExecutorReady?: (executor: null | ViewerCommandExecutor) => void
 	onPositionSetterReady?: (setter: null | HotspotPositionSetter) => void
 }
 
@@ -82,6 +91,7 @@ const SceneHotspots = ({
 	onActivateCamera,
 	onSelect,
 	onHotspotActivated,
+	onCommandExecutorReady,
 	onPositionSetterReady
 }: SceneHotspotsProps) => {
 	const camera = useThree((state) => state.camera)
@@ -102,6 +112,17 @@ const SceneHotspots = ({
 		() => resolveHotspotMarkers(hotspots, { includeInternal, includeHidden }),
 		[hotspots, includeInternal, includeHidden]
 	)
+
+	/**
+	 * The drawn list, for the command executor to resolve an id against.
+	 *
+	 * A ref rather than a closure over `markers`: the executor is registered by
+	 * an effect, and a dependency that changes whenever the list does would
+	 * unregister and re-register it on every edit. That is the shape that has
+	 * silently left this viewer with no executor before.
+	 */
+	const markersRef = useRef(markers)
+	markersRef.current = markers
 
 	/**
 	 * Where the gizmo is while a drag is in flight, and whose drag it is.
@@ -175,6 +196,38 @@ const SceneHotspots = ({
 			setOpenId(null)
 		}
 	}, [markers, occludedIds, openId])
+
+	/**
+	 * A host focusing a hotspot does what clicking the marker does.
+	 *
+	 * Resolved against `markers` rather than the stored settings, so a hotspot
+	 * the author hid or kept internal cannot be reached by id: it is not in that
+	 * list on a public surface, and the command falls through doing nothing.
+	 *
+	 * No `hotspot_activated` event follows. That event says a visitor touched
+	 * the marker, and echoing a host's own command back to it as a visitor
+	 * action would be a lie the host cannot tell apart from the real thing.
+	 */
+	const focusHotspot = useCallback(
+		(hotspotId: string) => {
+			const marker = markersRef.current.find((entry) => entry.id === hotspotId)
+			if (!marker) return
+
+			if (resolveHotspotPopoverContent(marker)) setOpenId(marker.id)
+			if (marker.linkedCameraId) onActivateCamera?.(marker.linkedCameraId)
+			invalidate()
+		},
+		[invalidate, onActivateCamera]
+	)
+
+	useEffect(() => {
+		onCommandExecutorReady?.({
+			execute: (command) => {
+				if (command.type === 'focus_hotspot') focusHotspot(command.hotspotId)
+			}
+		})
+		return () => onCommandExecutorReady?.(null)
+	}, [focusHotspot, onCommandExecutorReady])
 
 	const registerAnchor = useCallback((id: string, node: Group | null) => {
 		if (node) anchors.current.set(id, node)

@@ -156,6 +156,49 @@ describe('an activation is reported to whoever is listening', () => {
 	})
 })
 
+describe('a host can focus a hotspot the way a click would', () => {
+	const focusHotspot = layer
+		.split('const focusHotspot = useCallback')[1]
+		?.split('\t\t[invalidate')[0]
+
+	it('found the executor to read', () => {
+		expect(focusHotspot).toBeTruthy()
+	})
+
+	it('resolves the id against the drawn markers, never the stored settings', () => {
+		// A hotspot the author hid or kept internal is not in that list on a
+		// public surface, so a stale host list cannot reach one by id.
+		expect(focusHotspot).toContain('markersRef.current.find(')
+		expect(focusHotspot).toContain('if (!marker) return')
+	})
+
+	it('does what a click does: reveal, and fly if there is a camera', () => {
+		expect(focusHotspot).toContain('resolveHotspotPopoverContent(marker)')
+		expect(focusHotspot).toContain('setOpenId(marker.id)')
+		expect(focusHotspot).toContain('onActivateCamera?.(marker.linkedCameraId)')
+	})
+
+	it('reports no activation, which would echo the host back to itself', () => {
+		expect(focusHotspot).not.toContain('onHotspotActivated')
+	})
+
+	it('reads the list from a ref, so registering it is not re-run per edit', () => {
+		// A dependency that changed with the list would unregister and
+		// re-register the executor on every edit, which is the shape that has
+		// left this viewer with no executor at all before.
+		expect(layer).toContain('const markersRef = useRef(markers)')
+		expect(focusHotspot).not.toContain('markers.find(')
+	})
+
+	it('is registered with the viewer, which routes the command to it', () => {
+		expect(layer).toContain("command.type === 'focus_hotspot'")
+		expect(viewer).toContain(
+			'onCommandExecutorReady={handleSceneHotspotsExecutorReady}'
+		)
+		expect(viewer).toContain("case 'focus_hotspot':")
+	})
+})
+
 describe('the card is safe to put inside a third-party page', () => {
 	it('opens a link in a new context that cannot reach back', () => {
 		expect(popover).toContain('rel="noopener noreferrer"')
