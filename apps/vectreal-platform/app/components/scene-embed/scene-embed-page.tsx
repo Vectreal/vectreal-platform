@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router'
 import SceneEmbedInfoPopover from './scene-embed-info-popover'
 import SceneEmbedViewer from './scene-embed-viewer'
 import { useSceneEmbedScene } from './use-scene-embed-scene'
+import { resolveEmbedHotspotPresentation } from '../../lib/domain/embed/embed-presentation'
 import { useHostedPreviewBridge } from '../../lib/domain/embed/hosted-preview-bridge'
 import { isSceneCamera } from '../../lib/domain/scene/scene-camera'
 import CenteredSpinner from '../centered-spinner'
@@ -68,6 +69,23 @@ function useInitialCommands(): ViewerCommand[] {
 }
 
 /**
+ * How the embed's hotspots appear, from the same query string.
+ *
+ * A channel of its own rather than one more entry in `useInitialCommands`,
+ * because none of these is a `ViewerCommand`. Those are executed once when the
+ * viewer reports ready; suppressing the markers is not something the viewer
+ * does at a moment, it is something it is - as a command it would draw the
+ * markers first and take them away on the ready event.
+ */
+function useHotspotPresentation() {
+	const [searchParams] = useSearchParams()
+	return useMemo(
+		() => resolveEmbedHotspotPresentation(searchParams),
+		[searchParams]
+	)
+}
+
+/**
  * The full-viewport scene page shared by `/embed` and `/preview`.
  *
  * Both routes render exactly the same thing; they differ only in how their
@@ -85,6 +103,7 @@ const SceneEmbedPage = ({
 			projectId
 		})
 	const initialCommands = useInitialCommands()
+	const hotspotPresentation = useHotspotPresentation()
 	const bridge = useHostedPreviewBridge({
 		sceneId,
 		interactions: sceneData?.interactions,
@@ -185,6 +204,7 @@ const SceneEmbedPage = ({
 				sceneData={sceneData}
 				onCommandExecutorReady={onCommandExecutorReady}
 				onInteractionEvent={onInteractionEvent}
+				hotspotPresentation={hotspotPresentation}
 				popover={
 					<SceneEmbedInfoPopover
 						title={sceneData?.meta?.name?.trim() || undefined}

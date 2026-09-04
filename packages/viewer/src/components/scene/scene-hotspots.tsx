@@ -47,6 +47,23 @@ export interface SceneHotspotsProps {
 	includeHidden?: boolean
 	/** Overrides the marker fill for every hotspot in this viewer. */
 	color?: string
+	/**
+	 * Whether the markers are drawn. Default true.
+	 *
+	 * False leaves them resolved but undrawn, so `focus_hotspot` still flies a
+	 * camera by id and a host can still list them. A host driving its own
+	 * navigation needs exactly that combination: nothing on the model, every
+	 * hotspot still reachable.
+	 */
+	showMarkers?: boolean
+	/**
+	 * Whether a marker opens a card of its own. Default true.
+	 *
+	 * False still activates - the camera flies and the activation is reported -
+	 * so a host drawing its own panel gets the event without the viewer drawing
+	 * a second copy of the same text over the model.
+	 */
+	revealContent?: boolean
 	/** The marker drawn as the current one. */
 	selectedId?: string | null
 	onActivateCamera?: (cameraId: string) => void
@@ -87,6 +104,8 @@ const SceneHotspots = ({
 	includeInternal,
 	includeHidden,
 	color,
+	showMarkers = true,
+	revealContent = true,
 	selectedId,
 	onActivateCamera,
 	onSelect,
@@ -372,7 +391,10 @@ const SceneHotspots = ({
 
 		const next = new Set<string>()
 
-		if (model) {
+		// Nothing is drawn, so nothing can be faded. The pass is one raycast per
+		// marker at 15Hz, and a host that suppressed the markers is paying for it
+		// on every visitor's machine for no visible result.
+		if (model && showMarkers) {
 			// r3f updates world matrices after every useFrame subscriber has run, and
 			// `Center` writes its offset in a layout effect, so the pass forced by a
 			// model swap would otherwise test against the previous placement.
@@ -440,7 +462,7 @@ const SceneHotspots = ({
 		)
 	})
 
-	if (markers.length === 0) return null
+	if (markers.length === 0 || !showMarkers) return null
 
 	return (
 		<>
@@ -455,7 +477,7 @@ const SceneHotspots = ({
 					onSelect={onSelect}
 					onActivated={onHotspotActivated}
 					open={marker.id === openId}
-					onReveal={handleReveal}
+					onReveal={revealContent ? handleReveal : undefined}
 					onAnchorRef={registerAnchor}
 				/>
 			))}

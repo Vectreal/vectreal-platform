@@ -101,7 +101,7 @@ describe('the hotspot layer owns which card is open', () => {
 
 	it('hands each marker its own open state and the toggle', () => {
 		expect(layer).toContain('open={marker.id === openId}')
-		expect(layer).toContain('onReveal={handleReveal}')
+		expect(layer).toContain('handleReveal')
 	})
 
 	it('closes a card whose marker went behind the model or left the list', () => {
@@ -196,6 +196,41 @@ describe('a host can focus a hotspot the way a click would', () => {
 			'onCommandExecutorReady={handleSceneHotspotsExecutorReady}'
 		)
 		expect(viewer).toContain("case 'focus_hotspot':")
+	})
+})
+
+describe('a host can take the hotspot UI over', () => {
+	it('draws nothing when the markers are suppressed', () => {
+		expect(layer).toContain('if (markers.length === 0 || !showMarkers)')
+	})
+
+	it('keeps them resolved, so a focus command still flies a camera', () => {
+		// Suppressing by passing no `hotspots` would break `focus_hotspot` and
+		// empty the handshake, which is the opposite of what a host driving its
+		// own navigation needs.
+		const markersMemo = layer
+			.split('const markers = useMemo')[1]
+			?.split(')\n')[0]
+
+		expect(markersMemo).not.toContain('showMarkers')
+	})
+
+	it('stops raycasting for an occlusion nobody can see', () => {
+		expect(layer).toContain('if (model && showMarkers) {')
+	})
+
+	it('withholds the reveal handler rather than branching inside the marker', () => {
+		// A marker with no reveal handler is not a reveal button at all - the
+		// interaction resolver already reads it that way - so the click falls
+		// through to the camera and the activation is still reported.
+		expect(layer).toContain(
+			'onReveal={revealContent ? handleReveal : undefined}'
+		)
+	})
+
+	it('reaches the viewer prop a host page sets', () => {
+		expect(viewer).toContain('showMarkers={showHotspotMarkers}')
+		expect(viewer).toContain('revealContent={revealHotspotContent}')
 	})
 })
 

@@ -195,6 +195,24 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * default pale fill.
 	 */
 	hotspotColor?: string
+	/**
+	 * Whether the hotspot markers are drawn at all. Default true.
+	 *
+	 * For a host page that navigates the scene itself, from the hotspots the
+	 * embed handshake reports. The hotspots stay resolved either way, so
+	 * `focus_hotspot` still flies a camera by id with nothing drawn on the
+	 * model - which is the combination that host needs, and which suppressing
+	 * them by passing no `hotspots` would not give.
+	 */
+	showHotspotMarkers?: boolean
+	/**
+	 * Whether a marker opens a card of its own. Default true.
+	 *
+	 * False still activates: the camera flies and `hotspot_activated` is
+	 * emitted, so a host drawing its own panel gets the event without the viewer
+	 * drawing a second copy of the same text over the model.
+	 */
+	revealHotspotContent?: boolean
 
 	// --- Editor affordances ---
 	// Editing-surface features (e.g. the publisher). Public/embedded viewers omit
@@ -377,6 +395,8 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		normalizationOptions,
 		hotspots,
 		hotspotColor,
+		showHotspotMarkers,
+		revealHotspotContent,
 		// Editor affordances
 		shadowLightEditable,
 		showInternalHotspots = false,
@@ -713,6 +733,8 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									includeInternal={showInternalHotspots}
 									includeHidden={showHiddenHotspots}
 									color={hotspotColor}
+									showMarkers={showHotspotMarkers}
+									revealContent={revealHotspotContent}
 									selectedId={selectedHotspotId}
 									onActivateCamera={handleActivateHotspotCamera}
 									onSelect={onHotspotSelect}
