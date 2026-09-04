@@ -567,6 +567,29 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		[cameraOptions?.cameras, hotspots]
 	)
 
+	/**
+	 * Which camera the viewer is looking through, so the hotspot that owns it
+	 * can draw itself as the one you are standing at.
+	 *
+	 * Taken from the event the camera layer already emits rather than from
+	 * `cameraOptions.activeCameraId`, because that prop is the opening request,
+	 * not the running state - a marker click, a host command and an interaction
+	 * all move the camera without touching it.
+	 */
+	const [activeCameraId, setActiveCameraId] = useState<null | string>(null)
+
+	const handleInteractionEvent = useCallback(
+		(event: ViewerInteractionEvent) => {
+			if (event.type === 'camera_changed') {
+				setActiveCameraId(event.cameraId)
+			} else if (event.type === 'initial_framing_completed') {
+				setActiveCameraId(event.cameraId)
+			}
+			onInteractionEvent?.(event)
+		},
+		[onInteractionEvent]
+	)
+
 	const handleActivateHotspotCamera = useCallback(
 		(cameraId: string) => {
 			executeViewerCommand({ type: 'activate_camera', cameraId })
@@ -576,9 +599,19 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 
 	const handleHotspotActivated = useCallback(
 		(hotspotId: string, cameraId: string | null) => {
-			onInteractionEvent?.({ type: 'hotspot_activated', hotspotId, cameraId })
+			// Through the funnel, not straight out to the prop. Everything the
+			// viewer needs to notice about an interaction is noticed in one place -
+			// `activeCameraId` is tracked there today - and a second path out
+			// would be the shape that reintroduces the split this replaced.
+			// Harmless for this event, which carries no camera state; the next
+			// event added is the one that would pick the wrong path.
+			handleInteractionEvent({
+				type: 'hotspot_activated',
+				hotspotId,
+				cameraId
+			})
 		},
-		[onInteractionEvent]
+		[handleInteractionEvent]
 	)
 
 	const handleSceneHotspotsExecutorReady = useCallback(
@@ -691,7 +724,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									onCameraSnapshotCaptureReady={onCameraSnapshotCaptureReady}
 									onCommandExecutorReady={handleSceneCameraExecutorReady}
 									onInitialFramingComplete={handleInitialFramingComplete}
-									onInteractionEvent={onInteractionEvent}
+									onInteractionEvent={handleInteractionEvent}
 								/>
 								{model && animations && animation.shouldMount && (
 									<SceneAnimation
@@ -699,7 +732,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 										animations={animations}
 										options={animationOptions}
 										onCommandExecutorReady={animation.registerExecutor}
-										onInteractionEvent={onInteractionEvent}
+										onInteractionEvent={handleInteractionEvent}
 										onPlaybackStatusChange={animation.setStatus}
 									/>
 								)}
@@ -736,6 +769,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									showMarkers={showHotspotMarkers}
 									revealContent={revealHotspotContent}
 									selectedId={selectedHotspotId}
+									activeCameraId={activeCameraId}
 									onActivateCamera={handleActivateHotspotCamera}
 									onSelect={onHotspotSelect}
 									onHotspotActivated={handleHotspotActivated}

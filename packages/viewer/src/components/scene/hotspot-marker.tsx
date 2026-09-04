@@ -166,6 +166,14 @@ export interface HotspotMarkerProps {
 	occluded: boolean
 	/** Drawn as the one an editing surface has picked out. */
 	selected?: boolean
+	/**
+	 * Drawn as the marker whose linked camera the viewer is looking through.
+	 *
+	 * Derived from live camera state rather than from the stored hotspot, which
+	 * is why it arrives as a prop like `selected` rather than being resolved
+	 * alongside the fields that are persisted.
+	 */
+	current?: boolean
 	/** Overrides the marker fill. Any CSS colour; undefined keeps the default. */
 	color?: string
 	/** Runs when a hotspot carrying a `linkedCameraId` is activated. */
@@ -205,6 +213,7 @@ const HotspotMarker = ({
 	marker,
 	occluded,
 	selected = false,
+	current = false,
 	color,
 	onActivate,
 	onSelect,
@@ -289,7 +298,8 @@ const HotspotMarker = ({
 		// Having something to say makes it a button; whether this viewer draws
 		// the card decides only what it announces.
 		canReveal: !!content,
-		revealsInPlace: !!onReveal
+		revealsInPlace: !!onReveal,
+		selected
 	})
 
 	// A block body, not a concise one. React 19 treats a *function* returned from
@@ -474,6 +484,8 @@ const HotspotMarker = ({
 					style={colorStyle}
 					data-selected={selected || undefined}
 					data-hidden={marker.hidden || undefined}
+					data-internal={marker.internal || undefined}
+					data-current={current || undefined}
 					onPointerEnter={handlePointerEnter}
 					onPointerLeave={handlePointerLeave}
 					onKeyDown={handleKeyDown}

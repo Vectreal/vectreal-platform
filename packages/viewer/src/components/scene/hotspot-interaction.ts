@@ -62,6 +62,20 @@ export interface HotspotInteraction {
 	 * `none` while occluded. A marker faded almost out of sight must not still
 	 * swallow a click: it would fly the camera somewhere from a target the
 	 * visitor cannot see, and it would pop a label for a marker behind the model.
+	 *
+	 * Also `none` for the marker an editing surface has selected. A surface that
+	 * draws a selection is a surface with an editing affordance at that exact
+	 * point - the publisher mounts a transform gizmo there - and the marker's
+	 * 24px hit box sits on top of the gizmo's centre handle. Shrinking the
+	 * marker is not the fix: 24px is a deliberate touch-target floor.
+	 *
+	 * Two things are given up, not one. The click, which for an already-selected
+	 * marker is only a re-selection. And the hover name: the pointer handlers
+	 * live on the marker root, which is itself `pointer-events-none` and hears
+	 * them only because they bubble up from the body this disables. That is
+	 * acceptable rather than free - the author has just clicked this marker, the
+	 * selection ring says which one it is, and the sidebar names it - and focus
+	 * still shows the label, so a keyboard user loses nothing at all.
 	 */
 	pointerEvents: 'auto' | 'none'
 }
@@ -73,9 +87,17 @@ export function resolveHotspotInteraction(
 		canActivate,
 		canSelect = false,
 		canReveal = false,
-		revealsInPlace = false
+		revealsInPlace = false,
+		selected = false
 	}: {
 		occluded: boolean
+		/**
+		 * Whether an editing surface has this marker picked out, which is also
+		 * where it mounts its gizmo. Only affects the hit box - the role, the
+		 * action and the focus stop are all unchanged, so the marker still
+		 * announces itself the same way and a keyboard can still reach it.
+		 */
+		selected?: boolean
 		/** Whether the viewer was given somewhere to send an activation. */
 		canActivate: boolean
 		/**
@@ -138,6 +160,6 @@ export function resolveHotspotInteraction(
 		// a marker with a name, and focus is what reveals that name where hover
 		// cannot - which is every keyboard, and every touch device.
 		focusable: !occluded,
-		pointerEvents: occluded ? 'none' : 'auto'
+		pointerEvents: occluded || selected ? 'none' : 'auto'
 	}
 }
