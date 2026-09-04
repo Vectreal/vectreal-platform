@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Raycaster, Vector3 } from 'three'
+import { Box3, Raycaster, Vector3 } from 'three'
 
 import HotspotMarker from './hotspot-marker'
 import {
@@ -98,6 +98,12 @@ const SceneHotspots = ({
 	 */
 	const overrideId = useRef<string | null>(null)
 	const overridePosition = useRef(new Vector3())
+
+	/**
+	 * Scratch objects for the per-pass bounding-box measurement, allocated once.
+	 */
+	const measureBox = useRef(new Box3())
+	const measureSize = useRef(new Vector3())
 	/**
 	 * A released hotspot whose anchor still has to be put back where stored state
 	 * says, handled on the next frame rather than inside the release itself.
@@ -276,6 +282,24 @@ const SceneHotspots = ({
 			// model swap would otherwise test against the previous placement.
 			if (forced) model.updateWorldMatrix(true, true)
 
+			/*
+			  The occlusion tolerance is a fraction of the model's own size, so the
+			  diagonal is measured here, once per pass, rather than cached against the
+			  model's identity. Normalization rescales the model through an ancestor
+			  group without replacing the object, so an effect keyed on `model` would
+			  hold a stale diagonal for exactly the edit this tolerance has to survive.
+			  One `Box3` walk at 15Hz is the same order as one of the raycasts below,
+			  and there are as many of those as there are markers - but skipped
+			  entirely when every marker has occlusion off, which is a scene that
+			  casts no rays at all.
+			*/
+			const diagonal = markers.some((marker) => marker.occlusionEnabled)
+				? measureBox.current
+						.setFromObject(model)
+						.getSize(measureSize.current)
+						.length()
+				: 0
+
 			for (const marker of markers) {
 				if (!marker.occlusionEnabled) continue
 				/*
@@ -293,7 +317,7 @@ const SceneHotspots = ({
 
 				target.current.set(...marker.position)
 				direction.current.subVectors(target.current, camera.position)
-				const far = occlusionRayFar(direction.current.length())
+				const far = occlusionRayFar(direction.current.length(), diagonal)
 				if (far === 0) continue
 
 				raycaster.set(camera.position, direction.current.normalize())
