@@ -1,5 +1,119 @@
 # Changelog
 
+## [1.0.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.25.1...workspace-v1.0.0) (2026-09-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* **core:** `OptimizationStats` fields are renamed. `vertices` -> `verticesCount`, `triangles` -> `primitivesCount`, `materials` -> `materialsCount`, `textures` -> `textureBytes`, `meshes` -> `meshBytes`. `texturesCount`, `meshesCount` and `textureResolutions` are unchanged.
+* **publisher:** `@vctrl/core` makes `ModelOptimizer.ensureModelLoaded` private (`hasModel()` answers the same question) and widens `ExportResult` to include `USDZExportResult`, which an exhaustive consumer switch will notice. `@vctrl/hooks` drops `info` from `OptimizationState`; `useOptimizeModel` still returns it, derived.
+* **hooks:** `ShadowsProps` is a plain interface rather than a union discriminated on `type`, so a consumer still passing `type: 'accumulative'` is passing an unknown property.
+* **publisher:** `@vctrl/viewer` reads `ao` off the shadow options directly rather than only when they were tagged accumulative, so a consumer passing `{ enabled: true, ao: true }` gains the ambient-occlusion pass and its per-frame cost.
+* **publisher:** `@vctrl/core` removes `GridProps`, `ShadowType`, `ShadowTypePropBase`, `ContactShadowProps`, `AccumulativeShadowsProps`, `ExportOptions`, `ExportModelOptions`, `ModifiedTextureResources` and `OptimizationStats.nodes`; `exportThreeJSGLB` takes only the object; `optimizeAll` compresses textures unless `textures: false`. `@vctrl/viewer` removes the `gridOptions` prop, `SceneGrid` and `defaultGridOptions`, and renames `defaultShadowOptions` to `defaultShadowsOptions`. `@vctrl/hooks` replaces `load(files)`, `loadFromData` and `loadFromServer` with a single `load(source)`, replaces `isFileLoading` with a `status` union, and removes the `on`/`off` event bus along with `EventTypes`, `EventHandler`, `LoadData`, `SceneLoadOptions` and `SceneDataLoadOptions`.
+
+### Features
+
+* **api-keys:** let a key be rotated in place ([#746](https://github.com/Vectreal/vectreal-platform/issues/746)) ([bae9601](https://github.com/Vectreal/vectreal-platform/commit/bae9601d8cc120ca15ffb56f29e5b41302eb7132))
+* **api-keys:** make disclosing a key a decision the kind has to state ([#799](https://github.com/Vectreal/vectreal-platform/issues/799)) ([2488177](https://github.com/Vectreal/vectreal-platform/commit/2488177a0be6ed8a9c7d714683eee26031106c7f))
+* **api-keys:** store the embed token so it can be read back ([#760](https://github.com/Vectreal/vectreal-platform/issues/760)) ([5d6bb44](https://github.com/Vectreal/vectreal-platform/commit/5d6bb4455701b62cc98446fe64360eaac4403940))
+* **api-keys:** warn before a key expires, and filter the list by status ([#798](https://github.com/Vectreal/vectreal-platform/issues/798)) ([2c90507](https://github.com/Vectreal/vectreal-platform/commit/2c905076c9c5cdbbea0beb46ad2db107785db5fe))
+* **assets:** reclaim uploads whose commit never landed ([#793](https://github.com/Vectreal/vectreal-platform/issues/793)) ([87bd4e2](https://github.com/Vectreal/vectreal-platform/commit/87bd4e2b5883bc6de25b961f71cad54800a249a1))
+* **billing:** refuse uploads while billing is read-only ([#814](https://github.com/Vectreal/vectreal-platform/issues/814)) ([d564cdf](https://github.com/Vectreal/vectreal-platform/commit/d564cdfff57a79d6d36686b57e312f79cb461da8))
+* **embed:** build the snippet from a real key instead of a placeholder ([#735](https://github.com/Vectreal/vectreal-platform/issues/735)) ([9a7868f](https://github.com/Vectreal/vectreal-platform/commit/9a7868f55a3bee2f9e188d9e9c2acb80f018658c))
+* **embed:** say why an embed was refused instead of failing quietly ([#800](https://github.com/Vectreal/vectreal-platform/issues/800)) ([b99a997](https://github.com/Vectreal/vectreal-platform/commit/b99a997d18fa08ebe50acd1874f456ff4d30c071))
+* **newsroom:** add article for previewing scenes without the Publisher ([ad67c71](https://github.com/Vectreal/vectreal-platform/commit/ad67c71df0196e0e89d7250f8fd0678c3f184e9a))
+* **newsroom:** add article for previewing scenes without the Publisher ([7b6ba8d](https://github.com/Vectreal/vectreal-platform/commit/7b6ba8de2ed28bd399016619e3cd73bb3f9368d6))
+* **newsroom:** add deterministic 3d scene generation core ([dbb063e](https://github.com/Vectreal/vectreal-platform/commit/dbb063eee205d804d85c2bbf1dd947b8ce5ba420))
+* **newsroom:** add dev-only scene contact sheet ([ef3e087](https://github.com/Vectreal/vectreal-platform/commit/ef3e087fb3f55263124033c0906165b75cfa87ff))
+* **newsroom:** bake article scene and og images from the scene core ([685f90d](https://github.com/Vectreal/vectreal-platform/commit/685f90d885dc87f7f5bc9309c7941e2bc12afbc6))
+* **newsroom:** generative article visuals and index redesign ([47517a5](https://github.com/Vectreal/vectreal-platform/commit/47517a5d08aad1f76309aeab6a92363cb91a9a1b))
+* **newsroom:** give articles a generative hero header ([0323b1c](https://github.com/Vectreal/vectreal-platform/commit/0323b1c375e54f689d794d805d75fbfe5c3bd0d0))
+* **newsroom:** morph the featured card into the article hero ([0653914](https://github.com/Vectreal/vectreal-platform/commit/06539143800d1d99d63b926a10e36ac693c00eb7))
+* **newsroom:** morph the featured card into the article hero ([7202075](https://github.com/Vectreal/vectreal-platform/commit/7202075296e51856ee2af28f1ad0f82530b308f7))
+* **newsroom:** rebuild the index as a featured story plus editorial rows ([2933f70](https://github.com/Vectreal/vectreal-platform/commit/2933f7075ea01a41f729068babf9bd39ca996552))
+* **newsroom:** replace article 11 with the embed-parity preview piece ([dc6c95d](https://github.com/Vectreal/vectreal-platform/commit/dc6c95d4994a8b5a5a5862a98be31be9198f86f6))
+* **observability:** add error tracking, and report the failures that were being swallowed ([#757](https://github.com/Vectreal/vectreal-platform/issues/757)) ([7b1e957](https://github.com/Vectreal/vectreal-platform/commit/7b1e9578a3501b0abc087d1ff5941e14fc12beff))
+* **publisher:** give a fresh upload its opening view automatically ([f5f4ccc](https://github.com/Vectreal/vectreal-platform/commit/f5f4cccdf9019c38d38fdee44367b93dfa0ee6f6))
+* **publisher:** point a hotspot's camera at its hotspot, and keep it pointed there ([#771](https://github.com/Vectreal/vectreal-platform/issues/771)) ([c36077c](https://github.com/Vectreal/vectreal-platform/commit/c36077c8201046df5fdb48d3082c7afcb2a1c806))
+* **viewer:** give hotspots one renderer, and wire it to every surface ([#764](https://github.com/Vectreal/vectreal-platform/issues/764)) ([dc17722](https://github.com/Vectreal/vectreal-platform/commit/dc1772291aab666c396b165667fdafce2f1ee409))
+* **viewer:** play glTF animation clips ([035b217](https://github.com/Vectreal/vectreal-platform/commit/035b217448803f9008d136f1c12836189d0c2898))
+* **viewer:** play glTF animation clips ([11ff088](https://github.com/Vectreal/vectreal-platform/commit/11ff0880eb32ef0bda03196fe74de4955452d2f1))
+* **viewer:** render scene hotspots ([#755](https://github.com/Vectreal/vectreal-platform/issues/755)) ([64eebc1](https://github.com/Vectreal/vectreal-platform/commit/64eebc114220b92331603e2ac758aa3026735adb))
+
+
+### Bug Fixes
+
+* **a11y:** give the info tooltip a real keyboard trigger, and bound tooltip copy to three lines ([#762](https://github.com/Vectreal/vectreal-platform/issues/762)) ([c2c2693](https://github.com/Vectreal/vectreal-platform/commit/c2c26935e5f4edd4252a40da18dd3e4713c55ea7))
+* **analytics:** stop sending the embed API key to PostHog ([#750](https://github.com/Vectreal/vectreal-platform/issues/750)) ([a211232](https://github.com/Vectreal/vectreal-platform/commit/a211232f83d3fbdf3a508fa9826a76a2c14cf37e))
+* **animation:** close correctness gaps found in review ([715971d](https://github.com/Vectreal/vectreal-platform/commit/715971d27727cef07c04d6eeca4c7bbddfae7eb0))
+* **api-keys:** show the embed key on the route that owns it ([#785](https://github.com/Vectreal/vectreal-platform/issues/785)) ([f49cc6f](https://github.com/Vectreal/vectreal-platform/commit/f49cc6f8040de73e489523bcb0319a8be70021c2))
+* **assets:** collect the superseded GLB when a scene is republished ([#790](https://github.com/Vectreal/vectreal-platform/issues/790)) ([80befd8](https://github.com/Vectreal/vectreal-platform/commit/80befd8bec4cc8d040c50a3214af8827c4f3f7b2))
+* **assets:** key asset reuse on the content hash, and only share referenced rows ([#792](https://github.com/Vectreal/vectreal-platform/issues/792)) ([02b47ea](https://github.com/Vectreal/vectreal-platform/commit/02b47ea82320ce795682b12beb023136f3df19a9))
+* **assets:** reference-count the asset delete on publish revocation ([#789](https://github.com/Vectreal/vectreal-platform/issues/789)) ([6a2717f](https://github.com/Vectreal/vectreal-platform/commit/6a2717fd141de5af7a4885751fb8941df613ecd4))
+* **assets:** remove storage objects before an FK cascade drops their rows ([#794](https://github.com/Vectreal/vectreal-platform/issues/794)) ([335c983](https://github.com/Vectreal/vectreal-platform/commit/335c9837bdd0a09ff3e4663de921a12f865c1459))
+* **auth:** close what reviewing the sign-up fix turned up ([#766](https://github.com/Vectreal/vectreal-platform/issues/766)) ([595a45f](https://github.com/Vectreal/vectreal-platform/commit/595a45f39a82bbfe68ec2b633c142da02fc0f878))
+* **auth:** make email sign-up work, and say why when it does not ([#765](https://github.com/Vectreal/vectreal-platform/issues/765)) ([d94ba00](https://github.com/Vectreal/vectreal-platform/commit/d94ba008de2381cf3a1ba976c37620dc0c800fb3))
+* **auth:** re-mint CSRF tokens stranded by the remix-utils v10 signature change ([87199fa](https://github.com/Vectreal/vectreal-platform/commit/87199fa000c7af9a9b232f1ead959343c9f1829d))
+* **billing:** count rows so the plan limits actually refuse ([#810](https://github.com/Vectreal/vectreal-platform/issues/810)) ([20e8947](https://github.com/Vectreal/vectreal-platform/commit/20e89478d9af4209ecdd4fff8faeeaf23182d876))
+* **billing:** count usage for one organization, the way the guards do ([#816](https://github.com/Vectreal/vectreal-platform/issues/816)) ([81bcea3](https://github.com/Vectreal/vectreal-platform/commit/81bcea31dba5a1cca40be8b6c36a24f0119d76c5))
+* **billing:** enforce the storage allowance where the bytes land ([#813](https://github.com/Vectreal/vectreal-platform/issues/813)) ([1db70a9](https://github.com/Vectreal/vectreal-platform/commit/1db70a9d47d87606a8daf3714488b9497c9f48b6))
+* **billing:** measure organization storage by ownership ([#795](https://github.com/Vectreal/vectreal-platform/issues/795)) ([26acc0e](https://github.com/Vectreal/vectreal-platform/commit/26acc0ed1cd5f78489cbe3e4446202c1ccccace9))
+* **build:** make the package typecheck gates actually compile something ([#723](https://github.com/Vectreal/vectreal-platform/issues/723)) ([38c6487](https://github.com/Vectreal/vectreal-platform/commit/38c64879a00c1774df970effa09cff38396233ec))
+* **consent:** never render consent UI inside external embeds ([9048e2e](https://github.com/Vectreal/vectreal-platform/commit/9048e2ebc0c7d4230c90b754b64122c08166b982))
+* **core:** count meshes instead of weighing them ([#783](https://github.com/Vectreal/vectreal-platform/issues/783)) ([9000982](https://github.com/Vectreal/vectreal-platform/commit/900098243213a7e8eb862a77f34ef113c21acb19))
+* **core:** slugify clip names without a backtracking pattern ([c2ee8be](https://github.com/Vectreal/vectreal-platform/commit/c2ee8be56133056c48e4d1288609c0775d5ebd70))
+* **dashboard:** answer a seat refusal with 403, not 500 ([#815](https://github.com/Vectreal/vectreal-platform/issues/815)) ([09a2d0b](https://github.com/Vectreal/vectreal-platform/commit/09a2d0ba57b80c1a63f80f76aaac6741f57c42a2))
+* **dashboard:** put the API key edit panel back on the radius scale ([#786](https://github.com/Vectreal/vectreal-platform/issues/786)) ([021912a](https://github.com/Vectreal/vectreal-platform/commit/021912acf13e867d2362f9b3217f1e2ad11176cc))
+* **dashboard:** stop nesting a second main landmark in the scene detail page ([#778](https://github.com/Vectreal/vectreal-platform/issues/778)) ([df58a26](https://github.com/Vectreal/vectreal-platform/commit/df58a26472c99f7e094af834550ea514e67fc10d))
+* **dashboard:** tell two identical mutation responses apart ([#779](https://github.com/Vectreal/vectreal-platform/issues/779)) ([2327e65](https://github.com/Vectreal/vectreal-platform/commit/2327e6539a23c9a24260117780dc6cd8864f2444))
+* **docs:** repair the docs page header ([#741](https://github.com/Vectreal/vectreal-platform/issues/741)) ([267acd6](https://github.com/Vectreal/vectreal-platform/commit/267acd66b7971bf454601e7d1aa490b61e3914ab))
+* **embed:** allow wildcard storefront domains ([#737](https://github.com/Vectreal/vectreal-platform/issues/737)) ([6518732](https://github.com/Vectreal/vectreal-platform/commit/6518732afac75f03022c04e73ee0d8a3d0517b55))
+* **embed:** keep tokenized embed URLs out of search indexes ([#748](https://github.com/Vectreal/vectreal-platform/issues/748)) ([5a03773](https://github.com/Vectreal/vectreal-platform/commit/5a03773b28283542edc07c64f5f520629ec41d09))
+* **embed:** let the generated snippet fill a bare flex parent ([#806](https://github.com/Vectreal/vectreal-platform/issues/806)) ([b1582ab](https://github.com/Vectreal/vectreal-platform/commit/b1582abbf91fd399993dc877755217ef0971ba01))
+* **embed:** serve embeds the published GLB instead of the editor's assets ([#734](https://github.com/Vectreal/vectreal-platform/issues/734)) ([e5a0bf5](https://github.com/Vectreal/vectreal-platform/commit/e5a0bf5a77d1288abe08303ec5b547416a0ffd32))
+* **embed:** show the embed code section only when there is code to copy ([#775](https://github.com/Vectreal/vectreal-platform/issues/775)) ([aa44ae5](https://github.com/Vectreal/vectreal-platform/commit/aa44ae5d8a607b5994971bfb4c8ce1f6bd294c50))
+* **home:** size the grid background from the breakpoint, not the user-agent ([e803447](https://github.com/Vectreal/vectreal-platform/commit/e803447e1f906040c2a994da779d9b95d205801d))
+* **hooks:** keep a failed upload from hiding a failed scene load ([5e9676f](https://github.com/Vectreal/vectreal-platform/commit/5e9676f01f61aa53ab74ec3e3fb2d78283fe7045))
+* **hooks:** treat a reset fetcher as no response, not a null one ([#780](https://github.com/Vectreal/vectreal-platform/issues/780)) ([e791371](https://github.com/Vectreal/vectreal-platform/commit/e7913712180bf2c5b4cd180dce2e02c9d698683b))
+* **hotspots:** let a scene containing a hotspot save at all ([#732](https://github.com/Vectreal/vectreal-platform/issues/732)) ([f70f189](https://github.com/Vectreal/vectreal-platform/commit/f70f1892be0876f3999171f7f882d2a580560481))
+* **infra:** give the Fly secret list one home, and the four names it lacked ([#803](https://github.com/Vectreal/vectreal-platform/issues/803)) ([8363a02](https://github.com/Vectreal/vectreal-platform/commit/8363a029cf427452fb70a856951cae744a2599c6))
+* **nav:** paint the global loading bar above the nav ([#742](https://github.com/Vectreal/vectreal-platform/issues/742)) ([37e1993](https://github.com/Vectreal/vectreal-platform/commit/37e199349b80b9bb09b7f22fec4c12b244d8c56a))
+* **nav:** pick the navbar with CSS and keep one instance across the publisher ([52368ac](https://github.com/Vectreal/vectreal-platform/commit/52368ac0949e8217de2f6dffa2c0b44489916af9))
+* **nav:** pick the navbar with CSS and unify it across the publisher ([9e58c82](https://github.com/Vectreal/vectreal-platform/commit/9e58c8264017adb3719a685a56bef1dabe02fcd3))
+* **newsroom:** make the author card reachable on touch and link to LinkedIn ([d1f7cf0](https://github.com/Vectreal/vectreal-platform/commit/d1f7cf026cd6f0c3255657f16ba913a9096f3e47))
+* **newsroom:** make the author card reachable on touch and link to LinkedIn ([15e3b11](https://github.com/Vectreal/vectreal-platform/commit/15e3b11cd40a4e202f8f5def0b29fb627fad2452))
+* **newsroom:** stop prose opacity washing out article images ([2f31982](https://github.com/Vectreal/vectreal-platform/commit/2f3198269ced522db931b96ff290e6fe0b44b38f))
+* **pricing:** make every plan claim match what the product does ([#809](https://github.com/Vectreal/vectreal-platform/issues/809)) ([468d5bc](https://github.com/Vectreal/vectreal-platform/commit/468d5bcd1bfd6df49904f39bac3e77b6b0f6a1d3))
+* **publisher:** a failed load costs nothing ([90cf7be](https://github.com/Vectreal/vectreal-platform/commit/90cf7be0f81dbc9e897192c4333f85ec06cf7d25))
+* **publisher:** anchor a hotspot to the model under the pointer ([#756](https://github.com/Vectreal/vectreal-platform/issues/756)) ([f4c122b](https://github.com/Vectreal/vectreal-platform/commit/f4c122b3fc07196b76fc9c264a3ffec4bbb5d8ed))
+* **publisher:** apply a saved scene once, not on every revalidation ([d903e6d](https://github.com/Vectreal/vectreal-platform/commit/d903e6db95d6876f1c369042fffc8cb5dd6ae860))
+* **publisher:** let a hotspot coordinate hold an entry that is not yet a number ([#821](https://github.com/Vectreal/vectreal-platform/issues/821)) ([797ff7b](https://github.com/Vectreal/vectreal-platform/commit/797ff7bb25ebf5de748d3807f8661a384d5340af))
+* **publisher:** move hotspots with the model when normalization rescales it ([#818](https://github.com/Vectreal/vectreal-platform/issues/818)) ([6f4d01c](https://github.com/Vectreal/vectreal-platform/commit/6f4d01c5a3ff7f091ee7afbbb8434d10403fede1))
+* **publisher:** one answer to which scene is open ([cbcc863](https://github.com/Vectreal/vectreal-platform/commit/cbcc8632e8137e9aba446293367d6d90f1796146))
+* **publisher:** one owner for what the publisher is showing ([9696577](https://github.com/Vectreal/vectreal-platform/commit/9696577d337303d2fd1b8a0725dc2d700f7ec08e))
+* **publisher:** rebuild the hotspot panel on the shell's own surfaces ([#759](https://github.com/Vectreal/vectreal-platform/issues/759)) ([1bfcff9](https://github.com/Vectreal/vectreal-platform/commit/1bfcff9875b3d74fd531d7713854a9938821c6eb))
+* **publisher:** restore a draft with the settings the author composed ([#817](https://github.com/Vectreal/vectreal-platform/issues/817)) ([830d64f](https://github.com/Vectreal/vectreal-platform/commit/830d64fafff6d84b4a89c8b7737588640e93b642))
+* **publisher:** scope a scene tool's affordances to its own open sidebar ([#770](https://github.com/Vectreal/vectreal-platform/issues/770)) ([57908ba](https://github.com/Vectreal/vectreal-platform/commit/57908bad4ddbd72c7999ac116b0729bb62804c79))
+* **scene:** check everything the hotspot save parser accepts ([#820](https://github.com/Vectreal/vectreal-platform/issues/820)) ([8b5f70c](https://github.com/Vectreal/vectreal-platform/commit/8b5f70c1ec7170ef30cdc4a99b59d82f8dddf2f8))
+* **scene:** check the optimization report before trusting it ([#801](https://github.com/Vectreal/vectreal-platform/issues/801)) ([28686c8](https://github.com/Vectreal/vectreal-platform/commit/28686c8e97aa64861687e3e48a7f434945b036ce))
+* **seo:** give every page one address ([#724](https://github.com/Vectreal/vectreal-platform/issues/724)) ([2d79fdd](https://github.com/Vectreal/vectreal-platform/commit/2d79fddb0d7f1432b0a4c59cf3b3eb5ad428ab3d))
+* **seo:** let a mirror deployment speak for itself in robots.txt ([#804](https://github.com/Vectreal/vectreal-platform/issues/804)) ([2aa5d1f](https://github.com/Vectreal/vectreal-platform/commit/2aa5d1f8bcfffdf1a232881904ca58f707867e96))
+* **ui:** close the loose ends from the detail-panel unification ([#758](https://github.com/Vectreal/vectreal-platform/issues/758)) ([2fcb69a](https://github.com/Vectreal/vectreal-platform/commit/2fcb69a665c62f58171bc15a92456497427f2d1b))
+* **ui:** size full-viewport surfaces with dvh so mobile browser chrome cannot clip them ([09c3fa8](https://github.com/Vectreal/vectreal-platform/commit/09c3fa8335879cd20015912e0af8d5e7d57c828a))
+* **viewer:** measure the hotspot occlusion slack against the model ([#819](https://github.com/Vectreal/vectreal-platform/issues/819)) ([787d0b6](https://github.com/Vectreal/vectreal-platform/commit/787d0b695c265f295af1fa3e9dab501f77dd163f))
+* **viewer:** stop a camera snapping mid-flight to a viewpoint it was already flying to ([#769](https://github.com/Vectreal/vectreal-platform/issues/769)) ([c72d3e4](https://github.com/Vectreal/vectreal-platform/commit/c72d3e45fd30891ac8dcc6367d77852309ec2842))
+
+
+### Performance Improvements
+
+* **newsroom:** mount article embeds only when scrolled near ([f89d1a0](https://github.com/Vectreal/vectreal-platform/commit/f89d1a07d9fa78ea284577c128ff76f461c0abd0))
+
+
+### Code Refactoring
+
+* **core:** name every metric field by its unit ([#784](https://github.com/Vectreal/vectreal-platform/issues/784)) ([2f7c7d3](https://github.com/Vectreal/vectreal-platform/commit/2f7c7d377a7bfb51199663ad1648895867ebc447))
+* **publisher:** leave each write to the one place that owns it ([0b04d08](https://github.com/Vectreal/vectreal-platform/commit/0b04d08075d455d3a963be1553d2f2e52d5c61dc))
+
 ## [0.25.1](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.25.0...workspace-v0.25.1) (2026-08-08)
 
 

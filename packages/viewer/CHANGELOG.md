@@ -1,5 +1,38 @@
 # Changelog
 
+## [1.0.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.25.1...viewer-v1.0.0) (2026-09-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* **publisher:** `@vctrl/core` removes `GridProps`, `ShadowType`, `ShadowTypePropBase`, `ContactShadowProps`, `AccumulativeShadowsProps`, `ExportOptions`, `ExportModelOptions`, `ModifiedTextureResources` and `OptimizationStats.nodes`; `exportThreeJSGLB` takes only the object; `optimizeAll` compresses textures unless `textures: false`. `@vctrl/viewer` removes the `gridOptions` prop, `SceneGrid` and `defaultGridOptions`, and renames `defaultShadowOptions` to `defaultShadowsOptions`. `@vctrl/hooks` replaces `load(files)`, `loadFromData` and `loadFromServer` with a single `load(source)`, replaces `isFileLoading` with a `status` union, and removes the `on`/`off` event bus along with `EventTypes`, `EventHandler`, `LoadData`, `SceneLoadOptions` and `SceneDataLoadOptions`.
+
+### Features
+
+* **publisher:** point a hotspot's camera at its hotspot, and keep it pointed there ([#771](https://github.com/Vectreal/vectreal-platform/issues/771)) ([c36077c](https://github.com/Vectreal/vectreal-platform/commit/c36077c8201046df5fdb48d3082c7afcb2a1c806))
+* **viewer:** give hotspots one renderer, and wire it to every surface ([#764](https://github.com/Vectreal/vectreal-platform/issues/764)) ([dc17722](https://github.com/Vectreal/vectreal-platform/commit/dc1772291aab666c396b165667fdafce2f1ee409))
+* **viewer:** play glTF animation clips ([035b217](https://github.com/Vectreal/vectreal-platform/commit/035b217448803f9008d136f1c12836189d0c2898))
+* **viewer:** play glTF animation clips ([11ff088](https://github.com/Vectreal/vectreal-platform/commit/11ff0880eb32ef0bda03196fe74de4955452d2f1))
+* **viewer:** render scene hotspots ([#755](https://github.com/Vectreal/vectreal-platform/issues/755)) ([64eebc1](https://github.com/Vectreal/vectreal-platform/commit/64eebc114220b92331603e2ac758aa3026735adb))
+
+
+### Bug Fixes
+
+* **animation:** close correctness gaps found in review ([715971d](https://github.com/Vectreal/vectreal-platform/commit/715971d27727cef07c04d6eeca4c7bbddfae7eb0))
+* **build:** make the package typecheck gates actually compile something ([#723](https://github.com/Vectreal/vectreal-platform/issues/723)) ([38c6487](https://github.com/Vectreal/vectreal-platform/commit/38c64879a00c1774df970effa09cff38396233ec))
+* **publisher:** move hotspots with the model when normalization rescales it ([#818](https://github.com/Vectreal/vectreal-platform/issues/818)) ([6f4d01c](https://github.com/Vectreal/vectreal-platform/commit/6f4d01c5a3ff7f091ee7afbbb8434d10403fede1))
+* **publisher:** one answer to which scene is open ([cbcc863](https://github.com/Vectreal/vectreal-platform/commit/cbcc8632e8137e9aba446293367d6d90f1796146))
+* **publisher:** rebuild the hotspot panel on the shell's own surfaces ([#759](https://github.com/Vectreal/vectreal-platform/issues/759)) ([1bfcff9](https://github.com/Vectreal/vectreal-platform/commit/1bfcff9875b3d74fd531d7713854a9938821c6eb))
+* **viewer:** measure the hotspot occlusion slack against the model ([#819](https://github.com/Vectreal/vectreal-platform/issues/819)) ([787d0b6](https://github.com/Vectreal/vectreal-platform/commit/787d0b695c265f295af1fa3e9dab501f77dd163f))
+* **viewer:** stop a camera snapping mid-flight to a viewpoint it was already flying to ([#769](https://github.com/Vectreal/vectreal-platform/issues/769)) ([c72d3e4](https://github.com/Vectreal/vectreal-platform/commit/c72d3e45fd30891ac8dcc6367d77852309ec2842))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @vctrl/core bumped to 1.0.0
+
 ## [0.25.1](https://github.com/Vectreal/vectreal-platform/compare/viewer-v0.25.0...viewer-v0.25.1) (2026-08-08)
 
 

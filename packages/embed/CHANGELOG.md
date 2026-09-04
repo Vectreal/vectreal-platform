@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.0.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v0.25.1...embed-v1.0.0) (2026-09-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* **hooks:** `ShadowsProps` is a plain interface rather than a union discriminated on `type`, so a consumer still passing `type: 'accumulative'` is passing an unknown property.
+
+### Features
+
+* **viewer:** play glTF animation clips ([035b217](https://github.com/Vectreal/vectreal-platform/commit/035b217448803f9008d136f1c12836189d0c2898))
+* **viewer:** play glTF animation clips ([11ff088](https://github.com/Vectreal/vectreal-platform/commit/11ff0880eb32ef0bda03196fe74de4955452d2f1))
+
+
+### Bug Fixes
+
+* **build:** make the package typecheck gates actually compile something ([#723](https://github.com/Vectreal/vectreal-platform/issues/723)) ([38c6487](https://github.com/Vectreal/vectreal-platform/commit/38c64879a00c1774df970effa09cff38396233ec))
+* **hooks:** keep a failed upload from hiding a failed scene load ([5e9676f](https://github.com/Vectreal/vectreal-platform/commit/5e9676f01f61aa53ab74ec3e3fb2d78283fe7045))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @vctrl/viewer bumped to 1.0.0
+
 ## [0.25.1](https://github.com/Vectreal/vectreal-platform/compare/embed-v0.25.0...embed-v0.25.1) (2026-08-08)
 
 
