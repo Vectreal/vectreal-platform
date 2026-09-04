@@ -33,6 +33,12 @@ export const sceneHotspots = pgTable(
 
 		name: text('name').notNull(),
 
+		// What the hotspot says when revealed, and where it points. Both
+		// nullable: a marker that only flies its linked camera carries neither,
+		// and every row written before these columns existed is exactly that.
+		body: text('body'),
+		linkUrl: text('link_url'),
+
 		// World-space position stored as three real columns for direct querying.
 		worldPositionX: real('world_position_x').notNull().default(0),
 		worldPositionY: real('world_position_y').notNull().default(0),

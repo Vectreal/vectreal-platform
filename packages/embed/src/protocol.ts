@@ -47,11 +47,37 @@ export interface EmbedCameraDescriptor {
 	fov?: number
 }
 
+/**
+ * One hotspot, as a host page sees it.
+ *
+ * Carries no body, no link and no world position: a host builds navigation
+ * from these, and the content is what the viewer draws. Adding the text here
+ * would put a second copy of it on the page with nothing keeping the two in
+ * step.
+ */
+export interface EmbedHotspotDescriptor {
+	id: string
+	name: string
+	/** The camera this hotspot flies, or null when it only reveals content. */
+	cameraId: string | null
+	/** 1-based place in the navigation sequence, or null when it has none. */
+	step: number | null
+}
+
 export interface HostedPreviewPongMessage {
 	source: typeof HOSTED_PREVIEW_VIEWER_SOURCE
 	type: 'pong'
 	sceneId?: string
 	cameras: EmbedCameraDescriptor[]
+	/**
+	 * Optional, unlike `cameras`.
+	 *
+	 * An iframe and the SDK on the page around it are two separately deployed
+	 * artifacts and can be versions apart. A required field here would make an
+	 * older iframe's pong fail a newer SDK's parse, and the host would then hang
+	 * waiting for a handshake that already arrived.
+	 */
+	hotspots?: EmbedHotspotDescriptor[]
 }
 
 export interface HostedPreviewViewerEventMessage {
@@ -92,6 +118,10 @@ export function isViewerCommand(value: unknown): value is ViewerCommand {
 		case 'activate_camera':
 			return (
 				typeof value.cameraId === 'string' && value.cameraId.trim().length > 0
+			)
+		case 'focus_hotspot':
+			return (
+				typeof value.hotspotId === 'string' && value.hotspotId.trim().length > 0
 			)
 		case 'set_controls_enabled':
 			return typeof value.enabled === 'boolean'

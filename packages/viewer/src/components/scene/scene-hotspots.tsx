@@ -8,7 +8,9 @@ import {
 	occlusionRayFar
 } from './hotspot-occlusion'
 import { resolveHotspotMarkers } from './resolve-hotspot-markers'
+import { resolveHotspotPopoverContent } from './resolve-hotspot-popover'
 
+import type { ViewerCommandExecutor } from '../../types/viewer-interactions'
 import type { HotspotDefinition } from '@vctrl/core'
 import type { Group, Object3D } from 'three'
 
@@ -45,10 +47,39 @@ export interface SceneHotspotsProps {
 	includeHidden?: boolean
 	/** Overrides the marker fill for every hotspot in this viewer. */
 	color?: string
+	/**
+	 * Whether the markers are drawn. Default true.
+	 *
+	 * False leaves them resolved but undrawn, so `focus_hotspot` still flies a
+	 * camera by id and a host can still list them. A host driving its own
+	 * navigation needs exactly that combination: nothing on the model, every
+	 * hotspot still reachable.
+	 */
+	showMarkers?: boolean
+	/**
+	 * Whether a marker opens a card of its own. Default true.
+	 *
+	 * False still activates - the camera flies and the activation is reported -
+	 * so a host drawing its own panel gets the event without the viewer drawing
+	 * a second copy of the same text over the model.
+	 */
+	revealContent?: boolean
 	/** The marker drawn as the current one. */
 	selectedId?: string | null
 	onActivateCamera?: (cameraId: string) => void
 	onSelect?: (id: string) => void
+	/**
+	 * Runs when a visitor activates a marker, with the camera it flies or null.
+	 * Never for a selection.
+	 */
+	onHotspotActivated?: (id: string, cameraId: string | null) => void
+	/**
+	 * Registers the executor that handles `focus_hotspot`, and `null` on
+	 * unmount. The same shape `SceneCamera` and `SceneAnimation` use: the
+	 * command needs the drawn marker list and the open-card state, both of
+	 * which live here.
+	 */
+	onCommandExecutorReady?: (executor: null | ViewerCommandExecutor) => void
 	onPositionSetterReady?: (setter: null | HotspotPositionSetter) => void
 }
 
@@ -73,20 +104,44 @@ const SceneHotspots = ({
 	includeInternal,
 	includeHidden,
 	color,
+	showMarkers = true,
+	revealContent = true,
 	selectedId,
 	onActivateCamera,
 	onSelect,
+	onHotspotActivated,
+	onCommandExecutorReady,
 	onPositionSetterReady
 }: SceneHotspotsProps) => {
 	const camera = useThree((state) => state.camera)
 	const invalidate = useThree((state) => state.invalidate)
 	const [occludedIds, setOccludedIds] =
 		useState<ReadonlySet<string>>(NO_OCCLUSIONS)
+	/**
+	 * Which marker has its content open, at most one.
+	 *
+	 * Owned here rather than by each marker so opening one closes the last: the
+	 * cards are non-modal and anchored to points that can overlap on screen, and
+	 * several open at once is unreadable. It also puts the open marker in reach
+	 * of the occlusion pass below.
+	 */
+	const [openId, setOpenId] = useState<string | null>(null)
 
 	const markers = useMemo(
 		() => resolveHotspotMarkers(hotspots, { includeInternal, includeHidden }),
 		[hotspots, includeInternal, includeHidden]
 	)
+
+	/**
+	 * The drawn list, for the command executor to resolve an id against.
+	 *
+	 * A ref rather than a closure over `markers`: the executor is registered by
+	 * an effect, and a dependency that changes whenever the list does would
+	 * unregister and re-register it on every edit. That is the shape that has
+	 * silently left this viewer with no executor before.
+	 */
+	const markersRef = useRef(markers)
+	markersRef.current = markers
 
 	/**
 	 * Where the gizmo is while a drag is in flight, and whose drag it is.
@@ -132,6 +187,66 @@ const SceneHotspots = ({
 	 * nothing - which is the correct thing for it to find.
 	 */
 	const anchors = useRef(new Map<string, Group>())
+
+	const handleReveal = useCallback(
+		(id: string) => {
+			setOpenId((previous) => (previous === id ? null : id))
+			// Under `frameloop="demand"` nothing else asks for a frame here, and
+			// the card measures its own placement from one.
+			invalidate()
+		},
+		[invalidate]
+	)
+
+	/**
+	 * An open card closes when its marker goes behind the model or leaves the
+	 * list.
+	 *
+	 * An occluded marker takes no pointer events and offers no action, so a card
+	 * left open over hidden geometry would be the one state with no way to
+	 * dismiss it - and it would be describing something the visitor cannot see.
+	 */
+	useEffect(() => {
+		if (!openId) return
+		if (
+			occludedIds.has(openId) ||
+			!markers.some((marker) => marker.id === openId)
+		) {
+			setOpenId(null)
+		}
+	}, [markers, occludedIds, openId])
+
+	/**
+	 * A host focusing a hotspot does what clicking the marker does.
+	 *
+	 * Resolved against `markers` rather than the stored settings, so a hotspot
+	 * the author hid or kept internal cannot be reached by id: it is not in that
+	 * list on a public surface, and the command falls through doing nothing.
+	 *
+	 * No `hotspot_activated` event follows. That event says a visitor touched
+	 * the marker, and echoing a host's own command back to it as a visitor
+	 * action would be a lie the host cannot tell apart from the real thing.
+	 */
+	const focusHotspot = useCallback(
+		(hotspotId: string) => {
+			const marker = markersRef.current.find((entry) => entry.id === hotspotId)
+			if (!marker) return
+
+			if (resolveHotspotPopoverContent(marker)) setOpenId(marker.id)
+			if (marker.linkedCameraId) onActivateCamera?.(marker.linkedCameraId)
+			invalidate()
+		},
+		[invalidate, onActivateCamera]
+	)
+
+	useEffect(() => {
+		onCommandExecutorReady?.({
+			execute: (command) => {
+				if (command.type === 'focus_hotspot') focusHotspot(command.hotspotId)
+			}
+		})
+		return () => onCommandExecutorReady?.(null)
+	}, [focusHotspot, onCommandExecutorReady])
 
 	const registerAnchor = useCallback((id: string, node: Group | null) => {
 		if (node) anchors.current.set(id, node)
@@ -276,7 +391,10 @@ const SceneHotspots = ({
 
 		const next = new Set<string>()
 
-		if (model) {
+		// Nothing is drawn, so nothing can be faded. The pass is one raycast per
+		// marker at 15Hz, and a host that suppressed the markers is paying for it
+		// on every visitor's machine for no visible result.
+		if (model && showMarkers) {
 			// r3f updates world matrices after every useFrame subscriber has run, and
 			// `Center` writes its offset in a layout effect, so the pass forced by a
 			// model swap would otherwise test against the previous placement.
@@ -344,7 +462,7 @@ const SceneHotspots = ({
 		)
 	})
 
-	if (markers.length === 0) return null
+	if (markers.length === 0 || !showMarkers) return null
 
 	return (
 		<>
@@ -357,6 +475,9 @@ const SceneHotspots = ({
 					color={color}
 					onActivate={onActivateCamera}
 					onSelect={onSelect}
+					onActivated={onHotspotActivated}
+					open={marker.id === openId}
+					onReveal={revealContent ? handleReveal : undefined}
 					onAnchorRef={registerAnchor}
 				/>
 			))}

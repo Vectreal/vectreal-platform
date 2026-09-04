@@ -81,6 +81,9 @@ For zero-JavaScript initial configuration, add parameters to the iframe `src`:
 | `?camera=<id>` | Any saved camera ID | Activates that camera as soon as the viewer is ready |
 | `?autoRotate=0` or `?autoRotate=1` | `0` to disable, `1` to enable | Overrides the stored auto-rotate setting |
 | `?transition=<type>` | `none`, `linear`, `object_avoidance` | Overrides the stored transition type |
+| `?hotspots=0` | `0` to hide | Draws no markers. The hotspots stay reachable through `focusHotspot` and still appear in `ready()` |
+| `?hotspotContent=0` | `0` to suppress | Keeps the markers but leaves the card to you. Clicks still fly the camera and still emit `hotspot_activated` |
+| `?hotspotColor=<hex>` | A URL-encoded hex colour, e.g. `%23fc6c18` | Sets the marker fill. Hex only; any other CSS value is ignored |
 
 ```html
 <!-- Opens on a specific camera with auto-rotate off -->
@@ -114,13 +117,16 @@ other origin are dropped.
 
 | Method | Signature | Description |
 |---|---|---|
-| `ready` | `() => Promise<EmbedReadyInfo>` | Resolves when the viewer emits `viewer_ready`. Returns `{ sceneId, cameras }`. |
+| `ready` | `() => Promise<EmbedReadyInfo>` | Resolves when the viewer emits `viewer_ready`. Returns `{ sceneId, cameras, hotspots }`. |
 | `activateCamera` | `(cameraId: string) => void` | Switch to a named camera. |
+| `focusHotspot` | `(hotspotId: string) => void` | Reveal a hotspot's content and fly its camera, as clicking the marker would. |
 | `setTransition` | `(options: SetTransitionOptions) => void` | Override transition type for subsequent camera switches. |
 | `setControlsEnabled` | `(enabled: boolean) => void` | Enable or disable orbit controls. |
 | `setAutoRotate` | `(enabled: boolean, speed?: number) => void` | Toggle auto-rotate. |
 | `setZoomEnabled` | `(enabled: boolean) => void` | Toggle scroll-zoom. |
 | `setPanEnabled` | `(enabled: boolean) => void` | Toggle right-click pan. |
+| `setAnimationPlaying` | `(playing: boolean) => void` | Start or suspend animation playback. |
+| `restartAnimation` | `() => void` | Play the animation program from the beginning. |
 | `sendScrollProgress` | `(progress: number) => void` | Drive scroll-triggered interactions (0–1). |
 | `sendMessage` | `(message: string, payload?) => void` | Trigger a named `host_message` interaction. |
 | `on` | `(type, handler) => () => void` | Subscribe to an event. Returns an unsubscribe function. |
@@ -142,6 +148,9 @@ or sending a host message. `destroy()` discards anything still queued.
 | `viewer_ready` | `void` | The viewer command surface is registered and ready. |
 | `model_loaded` | `void` | The model has finished loading and initial framing is complete. Fires once per load. |
 | `camera_changed` | `{ cameraId: string }` | The active camera changed. |
+| `hotspot_activated` | `{ hotspotId: string, cameraId: string \| null }` | A visitor clicked a marker. `cameraId` is `null` for one that only reveals content. Not emitted for your own `focusHotspot` call. |
+| `animation_state_changed` | `{ playing, activeClipId, complete }` | Playback started, stopped or advanced. `activeClipId` is `null` in simultaneous mode. |
+| `animation_clip_finished` | `{ clipId: string }` | A single clip ran to its end. |
 | `auto_rotate_changed` | `{ enabled: boolean }` | Declared, but the viewer does not currently emit it. |
 | `interaction_event` | `{ eventName, interactionId?, payload? }` | A Publisher-configured `emit_custom_event` interaction fired. |
 
@@ -154,6 +163,33 @@ interface SetTransitionOptions {
   easing?: 'linear' | 'ease_in' | 'ease_out' | 'ease_in_out'
 }
 ```
+
+---
+
+## Hotspots
+
+`ready()` reports the hotspots a visitor can see, so you can build navigation of your own. Hotspots the author hid or kept internal are never listed, and never reachable by id.
+
+```js
+const { hotspots } = await embed.ready()
+// [{ id, name, cameraId, step }]
+
+embed.on('hotspot_activated', ({ hotspotId, cameraId }) => {
+  highlight(hotspotId) // your own panel, in step with the viewer
+})
+
+embed.focusHotspot(hotspots[0].id)
+```
+
+`step` is the 1-based place in the author's navigation sequence, or `null` for a hotspot outside it. Descriptors carry no body text and no link: that content is what the viewer draws, and a second copy on your page would have nothing keeping the two in step.
+
+To drive the whole thing yourself, hide the markers and keep the ids:
+
+```html
+<iframe src="https://vectreal.com/embed/<projectId>/<sceneId>?token=KEY&hotspots=0" ...></iframe>
+```
+
+`focusHotspot` still flies a camera with nothing drawn on the model. Use `?hotspotContent=0` instead to keep the markers and draw only the card yourself.
 
 ---
 
@@ -211,7 +247,7 @@ If you prefer zero dependencies, you can implement the protocol directly. Both s
 
 | `type` | Additional fields | Meaning |
 |---|---|---|
-| `pong` | `sceneId`, `cameras: EmbedCameraDescriptor[]` | Response to `ping` - scene is ready. |
+| `pong` | `sceneId`, `cameras: EmbedCameraDescriptor[]`, `hotspots?: EmbedHotspotDescriptor[]` | Response to `ping` - scene is ready. `hotspots` is absent on iframes older than the field. |
 | `viewer_event` | `event: ViewerInteractionEvent`, `sceneId?` | Viewer lifecycle event. |
 | `interaction_event` | `eventName`, `interactionId?`, `payload?` | A Publisher custom event fired. |
 
@@ -277,6 +313,11 @@ present apps/vectreal-platform/app/db/schema/project/projects.ts allowed_embed_d
 absent apps/vectreal-platform/app/db/schema/auth/api-keys.ts allowed_embed_domains
 present apps/vectreal-platform/app/lib/domain/embed/embed-access-policy.ts requesterHost === applicationHost
 present apps/vectreal-platform/app/routes/api/scenes.$sceneId.ts authContext.mode === 'apiKey'
+present packages/embed/src/embed.ts focusHotspot(hotspotId: string)
+present packages/embed/src/protocol.ts case 'focus_hotspot':
+present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts params.get('hotspotColor')
+present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts params.get('hotspotContent')
+present apps/vectreal-platform/app/lib/domain/embed/hosted-preview-bridge.ts resolveHotspotMarkers(hotspots).map
 */}
 
 ---
@@ -286,10 +327,3 @@ present apps/vectreal-platform/app/routes/api/scenes.$sceneId.ts authContext.mod
 - [Publishing & Embedding](/docs/guides/publish-embed) - publish a scene and create a preview API key
 - [@vctrl/embed](/docs/packages/embed) - full package API reference
 - [@vctrl/viewer](/docs/packages/viewer) - embed the viewer directly in a React app without an iframe
-
----
-
-## Related package references
-
-- [@vctrl/embed](/docs/packages/embed)
-- [@vctrl/viewer](/docs/packages/viewer)

@@ -7,6 +7,7 @@ export {
 
 export type {
 	EmbedCameraDescriptor,
+	EmbedHotspotDescriptor,
 	HostedPreviewCustomEventMessage,
 	HostedPreviewHostMessage,
 	HostedPreviewIncomingMessage,

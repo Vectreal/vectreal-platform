@@ -253,6 +253,42 @@ const occlusionHotspots: StoryHotspot[] = [
 	}
 ]
 
+/**
+ * Content, and the three shapes it comes in. Click a marker to open its card.
+ *
+ * The last two are the rules worth looking at rather than decoration: a marker
+ * near the top of the frame flips its card below instead of drawing it off the
+ * canvas, and a marker whose only content is a link the renderer refuses stays
+ * inert rather than becoming a button that opens an empty card.
+ */
+const contentHotspots: StoryHotspot[] = [
+	{
+		...base('body-only', 'Body only', [-0.75, 0.15, 0.7]),
+		body: 'Cast in one piece, then machined flat so the two halves meet without a shim.'
+	},
+	{
+		...base('link-only', 'Link only', [-0.2, 0.15, 0.7]),
+		linkUrl: 'https://docs.vectreal.com/packages/viewer'
+	},
+	{
+		...base('both', 'Body and link', [0.35, 0.15, 0.7]),
+		sequenceIndex: 0,
+		body: 'The same joint, seen from the other side.',
+		linkUrl: 'https://docs.vectreal.com/packages/viewer'
+	},
+	{
+		// High enough that the card cannot fit above it.
+		...base('near-top', 'Near the top edge', [0.9, 0.95, 0.7]),
+		body: 'Its card flips below, because there is no room for it above.'
+	},
+	{
+		// Refused by `resolveHotspotLink`, so this marker reveals nothing and
+		// stays a plain label.
+		...base('unsafe-link', 'Link the renderer refuses', [-1.2, 0.15, 0.7]),
+		linkUrl: 'javascript:alert(1)'
+	}
+]
+
 const hotspotRender: Story['render'] = (args) => (
 	<VectrealViewer {...args}>
 		<ambientLight intensity={0.8} />
@@ -333,6 +369,24 @@ export const HotspotSelection: Story = {
 		showHiddenHotspots: true,
 		selectedHotspotId: 'step-2',
 		onHotspotSelect: () => {}
+	},
+	render: hotspotRender
+}
+
+/**
+ * A marker with something to say opens a card anchored to it.
+ *
+ * Non-modal on purpose: the card does not trap focus and does not stop the
+ * orbit, so a visitor can keep turning the model while reading it and tab
+ * straight on to the next marker. Escape closes it and puts focus back on the
+ * marker it came from.
+ *
+ * A marker carrying content *and* a linked camera does both on one click. None
+ * of these names a camera, so what is on show here is the card alone.
+ */
+export const HotspotContent: Story = {
+	args: {
+		hotspots: contentHotspots
 	},
 	render: hotspotRender
 }

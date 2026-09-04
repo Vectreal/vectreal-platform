@@ -3,6 +3,8 @@ import { cn } from '@shared/utils'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { resolveHotspotInteraction } from './hotspot-interaction'
+import HotspotPopover from './hotspot-popover'
+import { resolveHotspotPopoverContent } from './resolve-hotspot-popover'
 
 import type { HotspotMarker as HotspotMarkerModel } from './resolve-hotspot-markers'
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
@@ -15,6 +17,17 @@ import type { Group } from 'three'
  * frame, which is also what decides how two overlapping markers stack.
  */
 const HOTSPOT_Z_INDEX_RANGE = [40, 0]
+
+/**
+ * The band an open marker moves into, above every closed one and still under
+ * the viewer's own chrome at 100.
+ *
+ * The whole marker moves, not just the card. drei writes its depth-derived
+ * value as a z-index on the wrapper div, which makes that div a stacking
+ * context - so a card inside it cannot paint over a marker that happens to sit
+ * nearer the camera, however high its own z-index is.
+ */
+const HOTSPOT_OPEN_Z_INDEX_RANGE = [99, 41]
 
 /**
  * How long the name stays up after a tap.
@@ -114,6 +127,20 @@ export interface HotspotMarkerProps {
 	/** Runs when a marker is picked on a surface that selects rather than flies. */
 	onSelect?: (id: string) => void
 	/**
+	 * Runs whenever a visitor activates this marker - a reveal, a flight, or
+	 * both. Never for a selection, which is an editing surface picking the
+	 * marker up rather than a visitor doing anything with it.
+	 */
+	onActivated?: (id: string, cameraId: string | null) => void
+	/** Whether this marker's content is open. Owned by `SceneHotspots`. */
+	open?: boolean
+	/**
+	 * Toggles this marker's content open or closed. A marker with nothing to
+	 * say never calls it, and a surface that does not pass it gets no reveal
+	 * behaviour at all - which is how a host page takes the content for itself.
+	 */
+	onReveal?: (id: string) => void
+	/**
 	 * Hands `SceneHotspots` the anchor group it moves during a drag, and `null`
 	 * on unmount. See the group below.
 	 */
@@ -135,15 +162,24 @@ const HotspotMarker = ({
 	color,
 	onActivate,
 	onSelect,
+	onActivated,
+	open = false,
+	onReveal,
 	onAnchorRef
 }: HotspotMarkerProps) => {
 	const [labelVisible, setLabelVisible] = useState(false)
 	const touchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const rootRef = useRef<HTMLDivElement>(null)
+	const buttonRef = useRef<HTMLButtonElement>(null)
+
+	const content = resolveHotspotPopoverContent(marker)
+	const popoverId = `vctrl-hotspot-popover-${marker.id}`
 
 	const interaction = resolveHotspotInteraction(marker, {
 		occluded,
 		canActivate: !!onActivate,
-		canSelect: !!onSelect
+		canSelect: !!onSelect,
+		canReveal: !!content && !!onReveal
 	})
 
 	// A block body, not a concise one. React 19 treats a *function* returned from
@@ -204,16 +240,49 @@ const HotspotMarker = ({
 	const handleClick = useCallback(() => {
 		if (interaction.action === 'select') {
 			onSelect?.(marker.id)
-		} else if (interaction.action === 'activate' && marker.linkedCameraId) {
+			return
+		}
+		if (interaction.action === 'none') return
+
+		// Reported once for the whole activation, before either half of it, so a
+		// host hears about a marker whether it reveals, flies, or does both.
+		onActivated?.(marker.id, marker.linkedCameraId)
+
+		if (interaction.action === 'reveal') onReveal?.(marker.id)
+		// Not an `else`. A marker that has something to say and a camera to fly
+		// does both on one click: the flight is what puts the card's subject on
+		// screen, so making them alternatives would be a false choice.
+		if (interaction.fliesCamera && marker.linkedCameraId) {
 			onActivate?.(marker.linkedCameraId)
 		}
 	}, [
 		interaction.action,
+		interaction.fliesCamera,
 		marker.id,
 		marker.linkedCameraId,
 		onActivate,
+		onActivated,
+		onReveal,
 		onSelect
 	])
+
+	/**
+	 * Escape closes the card and puts focus back on the marker.
+	 *
+	 * On the root rather than the card, because focus can be on either: the
+	 * marker's own button opens it and stays focused, and this is the only
+	 * ancestor both share. Nothing is trapped - a visitor has to be able to tab
+	 * straight out to the next marker while this is open.
+	 */
+	const handleKeyDown = useCallback(
+		(event: React.KeyboardEvent<HTMLDivElement>) => {
+			if (event.key !== 'Escape' || !open) return
+			event.stopPropagation()
+			onReveal?.(marker.id)
+			buttonRef.current?.focus()
+		},
+		[marker.id, onReveal, open]
+	)
 
 	// Set on the marker root rather than the viewer container: drei portals every
 	// Html separately, so there is no shared ancestor inside the marker layer.
@@ -286,21 +355,24 @@ const HotspotMarker = ({
 			*/}
 			<Html
 				center
-				zIndexRange={HOTSPOT_Z_INDEX_RANGE}
+				zIndexRange={open ? HOTSPOT_OPEN_Z_INDEX_RANGE : HOTSPOT_Z_INDEX_RANGE}
 				style={HTML_WRAPPER_STYLE}
 			>
 				<div
+					ref={rootRef}
 					className={cn(markerClasses.root, occluded && markerClasses.occluded)}
 					style={colorStyle}
 					data-selected={selected || undefined}
 					data-hidden={marker.hidden || undefined}
 					onPointerEnter={handlePointerEnter}
 					onPointerLeave={handlePointerLeave}
+					onKeyDown={handleKeyDown}
 				>
 					<span aria-hidden="true" className={markerClasses.pulse} />
 
 					{interaction.role === 'button' ? (
 						<button
+							ref={buttonRef}
 							type="button"
 							className={cn(
 								bodyClasses,
@@ -308,7 +380,17 @@ const HotspotMarker = ({
 								interaction.action !== 'none' && markerClasses.interactive
 							)}
 							aria-label={marker.accessibleName}
-							aria-pressed={interaction.toggles ? selected : undefined}
+							aria-pressed={
+								interaction.announces === 'pressed' ? selected : undefined
+							}
+							aria-expanded={
+								interaction.announces === 'expanded' ? open : undefined
+							}
+							aria-controls={
+								interaction.announces === 'expanded' && open
+									? popoverId
+									: undefined
+							}
 							aria-disabled={interaction.action === 'none' ? true : undefined}
 							tabIndex={interaction.focusable ? undefined : -1}
 							onClick={handleClick}
@@ -319,16 +401,37 @@ const HotspotMarker = ({
 						</button>
 					) : (
 						<div
-							className={bodyClasses}
+							className={cn(bodyClasses, FOCUS_RING)}
 							role="img"
 							aria-label={marker.accessibleName}
+							// A focus stop, not a button. Promoting it would announce
+							// something a press does not do; leaving it out left the
+							// marker's name reachable by hover alone, so a keyboard-only
+							// visitor, or anyone on a device with no hover, could not read
+							// it at all.
+							tabIndex={interaction.focusable ? 0 : -1}
+							onFocus={showLabel}
+							onBlur={hideLabel}
 						>
 							{body}
 						</div>
 					)}
 
-					{labelVisible && (
+					{/*
+					  The name is already the card's heading, so showing the label over
+					  an open card would print it twice, one above the other.
+					*/}
+					{labelVisible && !open && (
 						<span className={markerClasses.label}>{marker.name}</span>
+					)}
+
+					{open && content && (
+						<HotspotPopover
+							id={popoverId}
+							title={marker.name}
+							content={content}
+							anchorRef={rootRef}
+						/>
 					)}
 				</div>
 			</Html>
