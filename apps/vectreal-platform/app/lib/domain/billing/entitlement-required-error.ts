@@ -16,8 +16,10 @@ import type {
  *
  * `billingState` is carried because the answer differs. An entitlement withheld
  * by the plan is a 403 and an upgrade; the same entitlement withheld because
- * billing went read-only is a 402 and a payment. `publishScene` makes exactly
- * that distinction inline, having no error type to throw.
+ * billing went read-only is a 402 and a payment. `publishScene` still makes
+ * that distinction inline and returns the response itself. That is a free
+ * choice rather than a constraint - the route maps this error to the same two
+ * responses, byte for byte - so either shape is correct there.
  */
 export class EntitlementRequiredError extends Error {
 	readonly entitlementKey: EntitlementKey
@@ -44,10 +46,11 @@ export class EntitlementRequiredError extends Error {
 /**
  * The domain errors the scene route knows how to turn into a response.
  *
- * The three upload operations each wrap their body in a catch that flattens
- * everything to `ApiResponse.serverError`. Adding a second `instanceof` to each
- * of them for every new error type is how that catch quietly starts swallowing
- * the next one, so the question is asked once, here.
+ * Seven operations in `scene-settings.operations.server.ts` wrap their body in
+ * a catch that flattens everything to `ApiResponse.serverError`; the four that
+ * can refuse ask this first. Adding a second `instanceof` to each of them for
+ * every new error type is how that catch quietly starts swallowing the next
+ * one, so the question is asked once, here.
  */
 export function isRoutableDomainError(
 	error: unknown
