@@ -38,19 +38,20 @@ export const persistPendingSceneDraftOrchestrator = async ({
 	const gltfAssets = (gltfJsonToSend as { assets?: unknown }).assets
 	const assetData = await serializeSceneAssetData(gltfData, gltfAssets)
 
+	// Spread the settings rather than listing their fields. `ServerSceneData`
+	// extends `SceneSettings`, so enumerating them here made "dropped" the
+	// default for anything added later: `hotspots`, `interactions` and
+	// `normalization` were all passed by the caller and silently discarded, and
+	// an author who signed in mid-compose got the draft back without them.
 	const sceneData: ServerSceneData = {
+		...currentSettings,
 		meta: {
 			name: sceneMetaState.name,
 			description: sceneMetaState.description,
 			thumbnailUrl: sceneMetaState.thumbnailUrl
 		},
 		gltfJson: gltfData as ServerSceneData['gltfJson'],
-		assetData,
-		bounds: currentSettings.bounds,
-		environment: currentSettings.environment,
-		camera: currentSettings.camera,
-		controls: currentSettings.controls,
-		shadows: currentSettings.shadows
+		assetData
 	}
 
 	return savePendingSceneDraft({

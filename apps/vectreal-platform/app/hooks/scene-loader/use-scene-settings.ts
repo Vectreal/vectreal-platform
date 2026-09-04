@@ -62,8 +62,22 @@ export function useApplySceneSettings() {
 	const setActiveHotspotId = useSetAtom(activeHotspotIdAtom)
 	const setLastSavedSettings = useSetAtom(lastSavedSettingsAtom)
 
+	/**
+	 * Puts a scene's settings into the atoms.
+	 *
+	 * `isSavedBaseline` is explicit at both call sites rather than defaulted,
+	 * because the two callers disagree and getting it wrong is invisible. A scene
+	 * loaded from its route manifest *is* the saved state, so it becomes the
+	 * baseline the unsaved-changes check diffs against. A draft restored from
+	 * this browser has never been saved at all: adopting it as a baseline makes
+	 * `hasUnsavedChanges` false for a scene with no server row, and the Save
+	 * button goes dead on the one flow the draft feature exists for.
+	 */
 	return useCallback(
-		(settings: SceneSettings) => {
+		(
+			settings: SceneSettings,
+			{ isSavedBaseline }: { isSavedBaseline: boolean }
+		) => {
 			const bounds = settings.bounds ?? defaultBoundsOptions
 			const environment = settings.environment ?? defaultEnvOptions
 			const camera = settings.camera ?? defaultCameraOptions
@@ -86,16 +100,20 @@ export function useApplySceneSettings() {
 					'default'
 			)
 			setActiveHotspotId(null)
-			setLastSavedSettings({
-				bounds,
-				environment,
-				interactions: settings.interactions,
-				camera,
-				controls,
-				shadows,
-				normalization,
-				hotspots: settings.hotspots
-			})
+			setLastSavedSettings(
+				isSavedBaseline
+					? {
+							bounds,
+							environment,
+							interactions: settings.interactions,
+							camera,
+							controls,
+							shadows,
+							normalization,
+							hotspots: settings.hotspots
+						}
+					: null
+			)
 		},
 		[
 			setActiveHotspotId,
