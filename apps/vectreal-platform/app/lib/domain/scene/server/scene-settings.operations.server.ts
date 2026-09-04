@@ -341,6 +341,16 @@ export async function uploadSceneAsset(
 			mimeType: uploadResult.mimeType
 		})
 	} catch (error) {
+		/*
+		  A quota refusal is not a server error. These three actions are the only
+		  ones that write bytes, so they are the only ones that can raise the
+		  storage limit, and flattening it here would reach the client as a 500
+		  carrying a quota message - no upgrade prompt, no limit, no plan. The
+		  route's own handler maps it to `ApiResponse.quotaExceeded`.
+		*/
+		if (error instanceof QuotaExceededError) {
+			throw error
+		}
 		return ApiResponse.serverError(
 			error instanceof Error ? error.message : 'Failed to upload scene asset'
 		)
@@ -379,6 +389,16 @@ export async function uploadSceneGltf(
 			mimeType: uploadResult.mimeType
 		})
 	} catch (error) {
+		/*
+		  A quota refusal is not a server error. These three actions are the only
+		  ones that write bytes, so they are the only ones that can raise the
+		  storage limit, and flattening it here would reach the client as a 500
+		  carrying a quota message - no upgrade prompt, no limit, no plan. The
+		  route's own handler maps it to `ApiResponse.quotaExceeded`.
+		*/
+		if (error instanceof QuotaExceededError) {
+			throw error
+		}
 		return ApiResponse.serverError(
 			error instanceof Error ? error.message : 'Failed to upload scene glTF'
 		)
@@ -417,6 +437,16 @@ export async function uploadPublishedGlb(
 			mimeType: uploadResult.mimeType
 		})
 	} catch (error) {
+		/*
+		  A quota refusal is not a server error. These three actions are the only
+		  ones that write bytes, so they are the only ones that can raise the
+		  storage limit, and flattening it here would reach the client as a 500
+		  carrying a quota message - no upgrade prompt, no limit, no plan. The
+		  route's own handler maps it to `ApiResponse.quotaExceeded`.
+		*/
+		if (error instanceof QuotaExceededError) {
+			throw error
+		}
 		return ApiResponse.serverError(
 			error instanceof Error ? error.message : 'Failed to upload published GLB'
 		)

@@ -18,11 +18,13 @@ import { getDbClient } from '../../../db/client'
 import {
 	assets,
 	folders,
+	projects,
 	sceneAssets,
 	scenePublished,
 	scenes
 } from '../../../db/schema'
 import { reportServerError } from '../../observability/report-server-error.server'
+import { assertWithinQuota } from '../billing/quota-enforcement.server'
 
 import type { SceneAssetBinaryDataMap } from '../../../types/api'
 
@@ -257,6 +259,26 @@ function getErrorMessage(error: unknown): string {
  * Existing assets are reused when filename + content hash match, so repeated
  * saves avoid unnecessary uploads.
  */
+/**
+ * The organization whose storage allowance these bytes count against.
+ *
+ * Resolved from the project the assets are being written into, not from the
+ * uploading user: a member can upload into a project owned by an organization
+ * they were invited to, and it is that organization's allowance being spent.
+ */
+async function getProjectOrganizationId(projectId: string): Promise<string> {
+	const [row] = await db
+		.select({ organizationId: projects.organizationId })
+		.from(projects)
+		.where(eq(projects.id, projectId))
+		.limit(1)
+
+	if (!row) {
+		throw new Error(`Project not found: ${projectId}`)
+	}
+	return row.organizationId
+}
+
 export async function uploadSceneAssets(
 	sceneId: string,
 	userId: string,
@@ -264,22 +286,81 @@ export async function uploadSceneAssets(
 	gltfAssets: GLTFAssetData[],
 	requestId?: string
 ): Promise<AssetUploadResult[]> {
-	await ensureStorageBucketOnce()
-
-	const storage = getStorageClient()
-	const folder = await ensureAssetFolder(projectId)
+	/*
+	  Reads first, writes last. Reuse resolution and the quota check below only
+	  need to know which folder to look in, not that one exists, so a request
+	  that is about to be refused writes nothing on the way to being told no:
+	  no folder row, no bucket, no client. A null id is a project with no folder
+	  yet, so there is nothing to reuse and every entry counts as new bytes.
+	*/
+	const existingFolderId = await findAssetFolderId(projectId)
 	const results: AssetUploadResult[] = []
 
-	for (const asset of gltfAssets) {
-		const contentHash = computeAssetHash(asset.data)
-		const fileName = asset.fileName
+	/*
+	  Resolve reuse before uploading anything.
 
-		// Reuse already uploaded project asset when bytes are unchanged.
-		const existingAsset = await findExistingAsset(
-			contentHash,
-			fileName,
-			folder.id
-		)
+	  Two reasons the quota check has to happen here and not at the caller. The
+	  bytes are the server's own `byteLength`, not a figure the client reported;
+	  and the content hash already says which of them are new, so a re-save that
+	  changes nothing adds nothing. `storage_bytes_total` was briefly enforced in
+	  `prepareSceneUpload` against the client's scene size, which double-counted
+	  on every update - the organization sum already included the scene being
+	  saved - and never ran for `upload-scene-asset`, `upload-scene-gltf` or
+	  `upload-published-glb`, which are the three actions that write bytes.
+
+	  Refusing before the first upload also matters: a refusal partway through
+	  the loop below would leave objects in the bucket with no row pointing at
+	  them, and nothing reclaims those.
+	*/
+	const resolved = await Promise.all(
+		gltfAssets.map(async (asset) => {
+			const contentHash = computeAssetHash(asset.data)
+			return {
+				asset,
+				contentHash,
+				existingAsset: existingFolderId
+					? await findExistingAsset(
+							contentHash,
+							asset.fileName,
+							existingFolderId
+						)
+					: null
+			}
+		})
+	)
+
+	const incomingBytes = resolved.reduce(
+		(total, entry) =>
+			entry.existingAsset ? total : total + entry.asset.data.byteLength,
+		0
+	)
+
+	if (incomingBytes > 0) {
+		const organizationId = await getProjectOrganizationId(projectId)
+		await assertWithinQuota({
+			organizationId,
+			limitKey: 'storage_bytes_total',
+			adds: incomingBytes,
+			measure: async () => {
+				const [row] = await db
+					.select({ total: sql<null | string>`sum(${assets.fileSize})` })
+					.from(assets)
+					.innerJoin(folders, eq(folders.id, assets.folderId))
+					.innerJoin(projects, eq(projects.id, folders.projectId))
+					.where(eq(projects.organizationId, organizationId))
+				return Number(row?.total ?? 0)
+			},
+			message: ({ limit }) =>
+				`Storage limit reached for your plan (${Math.round(limit / (1024 * 1024))} MB). Delete a scene or upgrade for more room.`
+		})
+	}
+
+	await ensureStorageBucketOnce()
+	const storage = getStorageClient()
+	const folder = await ensureAssetFolder(projectId)
+
+	for (const { asset, contentHash, existingAsset } of resolved) {
+		const fileName = asset.fileName
 
 		if (existingAsset) {
 			// No metadata rewrite here. This row is referenced by something, so it
