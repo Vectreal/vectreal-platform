@@ -345,6 +345,13 @@ export function buildMeta(
 export function buildPageMeta(
 	page: SeoPageDefinition,
 	rootMeta?: MetaDescriptor[],
+	/*
+	  Every field this helper reads off `page` is omitted here, `structuredData`
+	  included. It was the one that was written from `page` but still accepted
+	  from `options`, so a caller could pass JSON-LD and have it silently
+	  overwritten - which is exactly what the home page did, publishing no
+	  Organization node for as long as the call existed.
+	*/
 	options: Omit<
 		BuildMetaOptions,
 		| 'canonical'
@@ -353,6 +360,7 @@ export function buildPageMeta(
 		| 'imageWidth'
 		| 'imageHeight'
 		| 'type'
+		| 'structuredData'
 		| 'publishedTime'
 		| 'modifiedTime'
 		| 'articleAuthor'

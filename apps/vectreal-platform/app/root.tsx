@@ -31,11 +31,6 @@ import { isAnonymousCacheableRequest } from './lib/http/cacheable-public-paths.s
 import { useErrorReport } from './lib/observability/use-error-report'
 import { posthogMiddleware } from './lib/posthog/posthog-middleware'
 import { buildMeta } from './lib/seo'
-import {
-	buildOrganizationJsonLd,
-	buildWebApplicationJsonLd,
-	buildWebSiteJsonLd
-} from './lib/seo-registry'
 import { commitValidCsrfToken } from './lib/sessions/csrf-session.server'
 
 import type { ShouldRevalidateFunction } from 'react-router'
@@ -43,14 +38,7 @@ import '@shared/components/styles/globals.css'
 import './styles/view-transitions.css'
 
 export const meta: MetaFunction = () => [
-	...buildMeta([], undefined, {
-		canonical: '/',
-		structuredData: [
-			buildOrganizationJsonLd(),
-			buildWebSiteJsonLd(),
-			buildWebApplicationJsonLd()
-		]
-	})
+	...buildMeta([], undefined, { canonical: '/' })
 ]
 
 export const middleware: Route.MiddlewareFunction[] = [posthogMiddleware]
