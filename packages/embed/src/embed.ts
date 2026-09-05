@@ -2,6 +2,7 @@ import {
 	HOSTED_PREVIEW_HOST_SOURCE,
 	HOSTED_PREVIEW_VIEWER_SOURCE,
 	type EmbedCameraDescriptor,
+	type EmbedHotspotDescriptor,
 	type HostedPreviewOutgoingMessage
 } from './protocol'
 
@@ -21,6 +22,11 @@ export interface EmbedOptions {
 export interface EmbedReadyInfo {
 	sceneId: string | undefined
 	cameras: EmbedCameraDescriptor[]
+	/**
+	 * The hotspots a visitor can see. Empty for a scene with none, and also for
+	 * an iframe older than this field - see `HostedPreviewPongMessage`.
+	 */
+	hotspots: EmbedHotspotDescriptor[]
 }
 
 export interface SetTransitionOptions {
@@ -42,6 +48,7 @@ export type EmbedEventMap = {
 		complete: boolean
 	}
 	animation_clip_finished: { clipId: string }
+	hotspot_activated: { hotspotId: string; cameraId: string | null }
 	interaction_event: {
 		interactionId?: string
 		eventName: string
@@ -130,13 +137,18 @@ export class VectrealEmbed {
 				window.clearTimeout(timer)
 				resolve({
 					sceneId: this.sceneId,
-					cameras: this.cameras
+					cameras: this.cameras,
+					hotspots: this.hotspots
 				})
 			}
 
 			if (this.isReady) {
 				window.clearTimeout(timer)
-				resolve({ sceneId: this.sceneId, cameras: this.cameras })
+				resolve({
+					sceneId: this.sceneId,
+					cameras: this.cameras,
+					hotspots: this.hotspots
+				})
 				return
 			}
 
@@ -159,6 +171,18 @@ export class VectrealEmbed {
 	/** Switch to a named camera. */
 	activateCamera(cameraId: string): void {
 		this.sendCommand({ type: 'activate_camera', cameraId })
+	}
+
+	/**
+	 * Focus a hotspot: reveal what it says and fly its camera, as clicking the
+	 * marker would.
+	 *
+	 * Ids come from `ready()`, which reports only the hotspots a visitor can
+	 * see. A hotspot the author hid or kept internal is not drawn, and naming
+	 * one here does nothing.
+	 */
+	focusHotspot(hotspotId: string): void {
+		this.sendCommand({ type: 'focus_hotspot', hotspotId })
 	}
 
 	/** Override the transition behaviour for subsequent camera switches. */
@@ -254,6 +278,9 @@ export class VectrealEmbed {
 
 	private sceneId: string | undefined = undefined
 	private cameras: EmbedCameraDescriptor[] = []
+	// Defaulted rather than left undefined: `ready()` promises an array, and an
+	// iframe older than this field sends no `hotspots` at all.
+	private hotspots: EmbedHotspotDescriptor[] = []
 
 	// ---------------------------------------------------------------------------
 	// Private helpers
@@ -337,6 +364,7 @@ export class VectrealEmbed {
 				this.stopPingPolling()
 				this.sceneId = data.sceneId
 				this.cameras = data.cameras
+				this.hotspots = data.hotspots ?? []
 				this.isReady = true
 				this.flushPendingCommands()
 				break
@@ -367,6 +395,12 @@ export class VectrealEmbed {
 				break
 			case 'camera_changed':
 				this.emit('camera_changed', { cameraId: event.cameraId })
+				break
+			case 'hotspot_activated':
+				this.emit('hotspot_activated', {
+					hotspotId: event.hotspotId,
+					cameraId: event.cameraId
+				})
 				break
 			case 'auto_rotate_changed':
 				this.emit('auto_rotate_changed', { enabled: event.enabled })

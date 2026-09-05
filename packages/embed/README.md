@@ -42,8 +42,9 @@ For production, pin a version (`@vctrl/embed@<version>`) and add a [Subresource 
 
 	const embed = new VectrealEmbed(document.getElementById('vectreal-scene'))
 
-	const { cameras } = await embed.ready()
+	const { cameras, hotspots } = await embed.ready()
 	console.log('Available cameras:', cameras)
+	console.log('Hotspots a visitor can see:', hotspots)
 
 	embed.on('camera_changed', ({ cameraId }) => {
 		console.log('Camera changed to:', cameraId)
@@ -62,52 +63,33 @@ For production, pin a version (`@vctrl/embed@<version>`) and add a [Subresource 
 | `iframeOrigin` | `string` | Auto-detected from `iframe.src` | Expected iframe origin for postMessage security. |
 | `readyTimeout` | `number` | `15000`                         | ms before `ready()` rejects.                     |
 
-### Methods
+### What you can control
 
-| Method                           | Description                                                    |
-| -------------------------------- | -------------------------------------------------------------- |
-| `ready()`                        | Resolves with `{ sceneId, cameras }` when the viewer is ready. |
-| `activateCamera(cameraId)`       | Switch to a named camera.                                      |
-| `setTransition(options)`         | Override transition type, duration, and easing.                |
-| `setControlsEnabled(enabled)`    | Enable or disable orbit controls.                              |
-| `setAutoRotate(enabled, speed?)` | Toggle auto-rotate.                                            |
-| `setZoomEnabled(enabled)`        | Toggle scroll-zoom.                                            |
-| `setPanEnabled(enabled)`         | Toggle right-click pan.                                        |
-| `sendScrollProgress(progress)`   | Drive scroll-triggered interactions (0–1).                     |
-| `sendMessage(message, payload?)` | Trigger a named `host_message` interaction.                    |
-| `on(type, handler)`              | Subscribe to a viewer event. Returns unsubscribe.              |
-| `off(type, handler)`             | Remove a specific handler.                                     |
-| `destroy()`                      | Remove all listeners and stop processing messages.             |
+Cameras and transitions, orbit/zoom/pan, animation playback, hotspots, scroll-driven
+interactions, and named host messages - plus events for each. The full method and event
+tables live in one place, the
+[Embed SDK guide](https://vectreal.com/docs/guides/embed-sdk#api-reference), rather than
+being repeated here where the two copies drift apart.
 
-The camera and controls methods are queued and flushed once the viewer reports ready, so
-you can call them immediately after constructing the SDK. `sendScrollProgress` and
-`sendMessage` are not queued: they post straight to the iframe, and a call made before
-the viewer is ready is silently dropped. Await `ready()` before wiring a scroll handler
-or sending a host message. `destroy()` discards anything still queued.
+Two behaviours worth knowing before you read it:
+
+The camera, controls, hotspot and animation methods are queued and flushed once the
+viewer reports ready, so you can call them immediately after constructing the SDK.
+`sendScrollProgress` and `sendMessage` are not queued: they post straight to the iframe,
+and a call made before the viewer is ready is silently dropped. Await `ready()` before
+wiring a scroll handler or sending a host message. `destroy()` discards anything still
+queued.
 
 The constructor throws when it cannot determine a target origin, which happens when
 `iframeOrigin` is omitted and the iframe's `src` is empty or unparseable. Construct the
 SDK after the `src` is set, or pass `iframeOrigin` explicitly.
 
-### Events
-
-| Type                  | Payload                                   | When                                                                         |
-| --------------------- | ----------------------------------------- | ---------------------------------------------------------------------------- |
-| `viewer_ready`        | `void`                                    | Viewer command surface is registered.                                        |
-| `model_loaded`        | `void`                                    | Model finished loading and initial framing is complete. Fires once per load. |
-| `camera_changed`      | `{ cameraId }`                            | Active camera changed.                                                       |
-| `auto_rotate_changed` | `{ enabled }`                             | Declared, but the viewer does not currently emit it.                         |
-| `interaction_event`   | `{ eventName, interactionId?, payload? }` | Publisher custom event fired.                                                |
-
 ## URL parameter shorthand
 
-For static initial configuration without JavaScript, add query parameters to the iframe `src`:
-
-| Parameter            | Example              | Effect                                |
-| -------------------- | -------------------- | ------------------------------------- |
-| `?camera=<id>`       | `?camera=hero`       | Activates a camera on `viewer_ready`. |
-| `?autoRotate=0`      | `?autoRotate=1`      | Overrides stored auto-rotate state.   |
-| `?transition=<type>` | `?transition=linear` | Overrides stored transition type.     |
+Opening state and hotspot presentation can be set with query parameters on the iframe
+`src`, no JavaScript required — `?camera`, `?autoRotate`, `?transition`, `?hotspots`,
+`?hotspotContent` and `?hotspotColor`. Values and behaviour are tabled once, in the
+[Embed SDK guide](https://vectreal.com/docs/guides/embed-sdk#url-parameters).
 
 ## Documentation
 

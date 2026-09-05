@@ -1,10 +1,17 @@
 import { Html } from '@react-three/drei'
+import { useFrame, useThree } from '@react-three/fiber'
 import { cn } from '@shared/utils'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { resolveHotspotInteraction } from './hotspot-interaction'
+import HotspotPopover from './hotspot-popover'
+import {
+	resolveHotspotPopoverContent,
+	resolveHotspotPopoverPlacement
+} from './resolve-hotspot-popover'
 
 import type { HotspotMarker as HotspotMarkerModel } from './resolve-hotspot-markers'
+import type { HotspotPopoverPlacement } from './resolve-hotspot-popover'
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { Group } from 'three'
 
@@ -15,6 +22,58 @@ import type { Group } from 'three'
  * frame, which is also what decides how two overlapping markers stack.
  */
 const HOTSPOT_Z_INDEX_RANGE = [40, 0]
+
+/**
+ * The band the open card's own portal occupies, above every marker and still
+ * under the viewer's chrome at 100.
+ *
+ * The card gets an `Html` of its own rather than riding the marker's. Two
+ * reasons, both of them drei's:
+ *
+ * A card inside the marker's wrapper cannot escape it. drei writes a
+ * depth-derived z-index onto that wrapper, which makes it a stacking context,
+ * so the card could never paint over a marker sitting nearer the camera
+ * however high its own z-index was.
+ *
+ * And swapping the marker's `zIndexRange` while it is mounted does not work:
+ * drei only writes the z-index on a frame where the projection actually moved
+ * (`Html.js:224`), so opening a card on a still camera - which is every
+ * content-only marker, since nothing moves the camera - left the old value in
+ * place until the visitor happened to orbit.
+ *
+ * A freshly mounted `Html` escapes that by accident rather than by design, and
+ * the mechanism is worth naming because it is not the obvious one: drei seeds
+ * `oldZoom` to 0 (`Html.js:118`), so `|oldZoom - camera.zoom| > eps` is true on
+ * the first frame after mount whatever the camera is doing, and the write at
+ * `Html.js:247` runs. Nothing sets a z-index in the mount effect itself.
+ */
+const HOTSPOT_OPEN_Z_INDEX_RANGE = [99, 41]
+
+/**
+ * Clearance between the marker's centre and the card's near edge, and between
+ * the card and the edge of the canvas.
+ *
+ * From the CENTRE, not the marker's edge: the card's own portal is centred on
+ * the anchor point, so its CSS offset and the placement resolver's arithmetic
+ * are in one frame. That is why it has to exceed half the 24px hit box (14px
+ * for the image and svg presets) rather than being pure taste.
+ */
+const ANCHOR_GAP_PX = 22
+const CANVAS_MARGIN_PX = 8
+
+/**
+ * How often the placement is re-decided while a card is open, in seconds.
+ *
+ * The card follows its marker for free - both portals are anchored to the same
+ * group - so this only has to catch the marker crossing an edge as the camera
+ * moves. Two `getBoundingClientRect` calls at 10Hz, for at most one open card.
+ */
+const PLACEMENT_INTERVAL_SECONDS = 0.1
+
+const DEFAULT_PLACEMENT: HotspotPopoverPlacement = {
+	side: 'above',
+	offsetX: 0
+}
 
 /**
  * How long the name stays up after a tap.
@@ -114,6 +173,20 @@ export interface HotspotMarkerProps {
 	/** Runs when a marker is picked on a surface that selects rather than flies. */
 	onSelect?: (id: string) => void
 	/**
+	 * Runs whenever a visitor activates this marker - a reveal, a flight, or
+	 * both. Never for a selection, which is an editing surface picking the
+	 * marker up rather than a visitor doing anything with it.
+	 */
+	onActivated?: (id: string, cameraId: string | null) => void
+	/** Whether this marker's content is open. Owned by `SceneHotspots`. */
+	open?: boolean
+	/**
+	 * Toggles this marker's content open or closed. A marker with nothing to
+	 * say never calls it, and a surface that does not pass it gets no reveal
+	 * behaviour at all - which is how a host page takes the content for itself.
+	 */
+	onReveal?: (id: string) => void
+	/**
 	 * Hands `SceneHotspots` the anchor group it moves during a drag, and `null`
 	 * on unmount. See the group below.
 	 */
@@ -135,15 +208,88 @@ const HotspotMarker = ({
 	color,
 	onActivate,
 	onSelect,
+	onActivated,
+	open = false,
+	onReveal,
 	onAnchorRef
 }: HotspotMarkerProps) => {
 	const [labelVisible, setLabelVisible] = useState(false)
 	const touchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const rootRef = useRef<HTMLDivElement>(null)
+	const buttonRef = useRef<HTMLButtonElement>(null)
+	const cardRef = useRef<HTMLDivElement>(null)
+	/**
+	 * Seeded at the interval so the first frame after opening measures rather
+	 * than waiting one out, and reseeded on close for the same reason.
+	 *
+	 * The reseed is not tidiness. This ref outlives the card - it used to live
+	 * in the card itself, which mounted and unmounted with it - so without a
+	 * reset the next open resumes from wherever the last one stopped, some
+	 * fraction of the interval in. A card reopened after the camera moved then
+	 * draws at the previous open's placement for up to a tenth of a second,
+	 * which is long enough to render it off the edge of the canvas and animate
+	 * it in the wrong direction before the first measurement corrects it.
+	 */
+	const placementElapsed = useRef(PLACEMENT_INTERVAL_SECONDS)
+	const [placement, setPlacement] =
+		useState<HotspotPopoverPlacement>(DEFAULT_PLACEMENT)
+
+	// Valid here and not one level down: this component is in the R3F tree,
+	// while everything inside the `Html` below is in a ReactDOM root of drei's
+	// own, where these hooks throw. See `hotspot-popover.tsx`.
+	const canvas = useThree((state) => state.gl.domElement)
+
+	const content = resolveHotspotPopoverContent(marker)
+	const popoverId = `vctrl-hotspot-popover-${marker.id}`
+
+	useFrame((_state, delta) => {
+		if (!open) {
+			placementElapsed.current = PLACEMENT_INTERVAL_SECONDS
+			return
+		}
+		placementElapsed.current += delta
+		if (placementElapsed.current < PLACEMENT_INTERVAL_SECONDS) return
+
+		const anchor = rootRef.current
+		const card = cardRef.current
+		// Before the reset, not after: a qualifying frame that finds the card
+		// not yet committed would otherwise burn a whole interval waiting to
+		// try again.
+		if (!anchor || !card) return
+		placementElapsed.current = 0
+
+		const anchorBox = anchor.getBoundingClientRect()
+		const canvasBox = canvas.getBoundingClientRect()
+
+		const next = resolveHotspotPopoverPlacement({
+			anchor: {
+				x: anchorBox.left + anchorBox.width / 2 - canvasBox.left,
+				y: anchorBox.top + anchorBox.height / 2 - canvasBox.top
+			},
+			size: { width: card.offsetWidth, height: card.offsetHeight },
+			bounds: { width: canvasBox.width, height: canvasBox.height },
+			gap: ANCHOR_GAP_PX,
+			margin: CANVAS_MARGIN_PX
+		})
+
+		// One state write only when the answer moved: this runs in the frame
+		// loop, where an unconditional write would re-render both portals ten
+		// times a second for as long as the card is open.
+		setPlacement((previous) =>
+			previous.side === next.side && previous.offsetX === next.offsetX
+				? previous
+				: next
+		)
+	})
 
 	const interaction = resolveHotspotInteraction(marker, {
 		occluded,
 		canActivate: !!onActivate,
-		canSelect: !!onSelect
+		canSelect: !!onSelect,
+		// Having something to say makes it a button; whether this viewer draws
+		// the card decides only what it announces.
+		canReveal: !!content,
+		revealsInPlace: !!onReveal
 	})
 
 	// A block body, not a concise one. React 19 treats a *function* returned from
@@ -204,16 +350,49 @@ const HotspotMarker = ({
 	const handleClick = useCallback(() => {
 		if (interaction.action === 'select') {
 			onSelect?.(marker.id)
-		} else if (interaction.action === 'activate' && marker.linkedCameraId) {
+			return
+		}
+		if (interaction.action === 'none') return
+
+		// Reported once for the whole activation, before either half of it, so a
+		// host hears about a marker whether it reveals, flies, or does both.
+		onActivated?.(marker.id, marker.linkedCameraId)
+
+		if (interaction.action === 'reveal') onReveal?.(marker.id)
+		// Not an `else`. A marker that has something to say and a camera to fly
+		// does both on one click: the flight is what puts the card's subject on
+		// screen, so making them alternatives would be a false choice.
+		if (interaction.fliesCamera && marker.linkedCameraId) {
 			onActivate?.(marker.linkedCameraId)
 		}
 	}, [
 		interaction.action,
+		interaction.fliesCamera,
 		marker.id,
 		marker.linkedCameraId,
 		onActivate,
+		onActivated,
+		onReveal,
 		onSelect
 	])
+
+	/**
+	 * Escape closes the card and puts focus back on the marker.
+	 *
+	 * On the root rather than the card, because focus can be on either: the
+	 * marker's own button opens it and stays focused, and this is the only
+	 * ancestor both share. Nothing is trapped - a visitor has to be able to tab
+	 * straight out to the next marker while this is open.
+	 */
+	const handleKeyDown = useCallback(
+		(event: React.KeyboardEvent<HTMLDivElement>) => {
+			if (event.key !== 'Escape' || !open) return
+			event.stopPropagation()
+			onReveal?.(marker.id)
+			buttonRef.current?.focus()
+		},
+		[marker.id, onReveal, open]
+	)
 
 	// Set on the marker root rather than the viewer container: drei portals every
 	// Html separately, so there is no shared ancestor inside the marker layer.
@@ -290,17 +469,20 @@ const HotspotMarker = ({
 				style={HTML_WRAPPER_STYLE}
 			>
 				<div
+					ref={rootRef}
 					className={cn(markerClasses.root, occluded && markerClasses.occluded)}
 					style={colorStyle}
 					data-selected={selected || undefined}
 					data-hidden={marker.hidden || undefined}
 					onPointerEnter={handlePointerEnter}
 					onPointerLeave={handlePointerLeave}
+					onKeyDown={handleKeyDown}
 				>
 					<span aria-hidden="true" className={markerClasses.pulse} />
 
 					{interaction.role === 'button' ? (
 						<button
+							ref={buttonRef}
 							type="button"
 							className={cn(
 								bodyClasses,
@@ -308,7 +490,17 @@ const HotspotMarker = ({
 								interaction.action !== 'none' && markerClasses.interactive
 							)}
 							aria-label={marker.accessibleName}
-							aria-pressed={interaction.toggles ? selected : undefined}
+							aria-pressed={
+								interaction.announces === 'pressed' ? selected : undefined
+							}
+							aria-expanded={
+								interaction.announces === 'expanded' ? open : undefined
+							}
+							aria-controls={
+								interaction.announces === 'expanded' && open
+									? popoverId
+									: undefined
+							}
 							aria-disabled={interaction.action === 'none' ? true : undefined}
 							tabIndex={interaction.focusable ? undefined : -1}
 							onClick={handleClick}
@@ -319,19 +511,63 @@ const HotspotMarker = ({
 						</button>
 					) : (
 						<div
-							className={bodyClasses}
+							className={cn(bodyClasses, FOCUS_RING)}
 							role="img"
 							aria-label={marker.accessibleName}
+							// A focus stop, not a button. Promoting it would announce
+							// something a press does not do; leaving it out left the
+							// marker's name reachable by hover alone, so a keyboard-only
+							// visitor, or anyone on a device with no hover, could not read
+							// it at all.
+							tabIndex={interaction.focusable ? 0 : -1}
+							onFocus={showLabel}
+							onBlur={hideLabel}
 						>
 							{body}
 						</div>
 					)}
 
-					{labelVisible && (
+					{/*
+					  The name is already the card's heading, so showing the label over
+					  an open card would print it twice, one above the other.
+					*/}
+					{labelVisible && !open && (
 						<span className={markerClasses.label}>{marker.name}</span>
 					)}
 				</div>
 			</Html>
+
+			{/*
+			  A portal of its own, mounted only while the card is open.
+
+			  Anchored to the same group, so it tracks the marker for free, and
+			  centred on the same point - which is what lets the card's CSS offset
+			  and the placement resolver share one coordinate frame.
+			*/}
+			{open && content && (
+				<Html
+					center
+					zIndexRange={HOTSPOT_OPEN_Z_INDEX_RANGE}
+					style={HTML_WRAPPER_STYLE}
+				>
+					{/*
+					  Zero-size on purpose: it shrink-wraps an absolutely positioned
+					  child, so its box is a point at the marker's centre, and the
+					  card's `bottom`/`top` offset is measured from there.
+					*/}
+					<div className="relative">
+						<HotspotPopover
+							id={popoverId}
+							title={marker.name}
+							content={content}
+							placement={placement}
+							gap={ANCHOR_GAP_PX}
+							cardRef={cardRef}
+							onKeyDown={handleKeyDown}
+						/>
+					</div>
+				</Html>
+			)}
 		</group>
 	)
 }

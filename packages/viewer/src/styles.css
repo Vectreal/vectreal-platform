@@ -236,6 +236,52 @@
 	animation: none;
 }
 
+/*
+  The card a marker opens.
+
+  It rises from the marker it belongs to rather than fading in place, so the
+  connection between the two is carried by the motion and the card needs no
+  caret of its own - which it could not have had cheaply anyway: the placement
+  resolver shifts the card sideways to keep it on the canvas, and a caret would
+  have to counter that shift and then stay clear of the corner radius.
+
+  8px of travel, not more. The card is anchored 20px from a marker that stays
+  drawn the whole time, so this only has to read as "from here"; a longer throw
+  turns a 150ms reveal into something the visitor waits out.
+*/
+@keyframes vctrl-hotspot-popover-in {
+	from {
+		opacity: 0;
+		transform: translateX(var(--vctrl-hotspot-popover-shift, -50%))
+			translateY(var(--vctrl-hotspot-popover-rise));
+	}
+}
+
+.vctrl-hotspot-popover {
+	--vctrl-hotspot-popover-rise: 8px;
+	/*
+	  The centring and the resolver's shift, in one place. The component supplies
+	  only the shift, as a custom property, so the animation's `from` can reuse
+	  the same X and move nothing but opacity and Y.
+	*/
+	transform: translateX(var(--vctrl-hotspot-popover-shift, -50%));
+	animation: vctrl-hotspot-popover-in 150ms ease-out;
+}
+
+/*
+  Below the marker, the card rises from the other direction, so both sides read
+  as coming out of the marker rather than one of them sliding past it.
+*/
+.vctrl-hotspot-popover[data-side='below'] {
+	--vctrl-hotspot-popover-rise: -8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.vctrl-hotspot-popover {
+		animation: none;
+	}
+}
+
 @media (prefers-color-scheme: dark) {
 	.viewer[data-theme='system'] {
 		--vctrl-bg: #141414;

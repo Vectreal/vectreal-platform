@@ -437,6 +437,63 @@ describe('resolveHotspotMarkers', () => {
 		})
 	})
 
+	describe('content', () => {
+		it('carries body text and a link through, trimmed', () => {
+			const [drawn] = resolveHotspotMarkers([
+				hotspot({
+					id: 'a',
+					body: '  Cast in one piece.  ',
+					linkUrl: '  https://a.test/spec  '
+				})
+			])
+
+			expect(drawn.body).toBe('Cast in one piece.')
+			expect(drawn.linkUrl).toBe('https://a.test/spec')
+		})
+
+		it('reads a missing or whitespace-only field as no content at all', () => {
+			const [absent] = resolveHotspotMarkers([hotspot({ id: 'a' })])
+			const [blank] = resolveHotspotMarkers([
+				hotspot({ id: 'b', body: '   ', linkUrl: '' })
+			])
+
+			expect(absent.body).toBeNull()
+			expect(absent.linkUrl).toBeNull()
+			expect(blank.body).toBeNull()
+			expect(blank.linkUrl).toBeNull()
+		})
+
+		it('survives a non-string body, which would throw on trim mid-render', () => {
+			// A direct consumer of this package goes through no parser at all.
+			const [drawn] = resolveHotspotMarkers([
+				malformed({
+					id: 'a',
+					name: 'Handle',
+					worldPosition: [0, 0, 0],
+					visible: true,
+					internalOnly: false,
+					stylePreset: 'dot',
+					body: 42,
+					linkUrl: { href: 'https://a.test' }
+				})
+			])
+
+			expect(drawn.body).toBeNull()
+			expect(drawn.linkUrl).toBeNull()
+		})
+
+		it('leaves the scheme to the renderer rather than filtering here', () => {
+			// `resolveHotspotLink` owns that rule, and it is what decides whether
+			// the marker has anything to reveal. Dropping the value here would
+			// hide the field from any consumer drawing its own card.
+			const [drawn] = resolveHotspotMarkers([
+				hotspot({ id: 'a', linkUrl: 'javascript:alert(1)' })
+			])
+
+			expect(drawn.linkUrl).toBe('javascript:alert(1)')
+		})
+	})
+
 	it('does not mutate the settings it was given', () => {
 		const stored = [
 			hotspot({ id: 'b', sequenceIndex: 1 }),

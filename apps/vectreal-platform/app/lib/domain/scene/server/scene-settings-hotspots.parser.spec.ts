@@ -1,3 +1,4 @@
+import { MAX_HOTSPOT_BODY_LENGTH } from '../hotspot-urls'
 import { SceneSettingsParser } from './scene-settings.parser.server'
 
 /**
@@ -217,5 +218,113 @@ describe('hotspot ceilings and payload URLs', () => {
 		])
 
 		expect(rejected(result)).toBe(true)
+	})
+
+	// --- body and link -----------------------------------------------------
+
+	it('accepts a hotspot carrying body text and a link', () => {
+		expect(
+			rejected(
+				parse([
+					hotspot({ body: 'Cast in one piece.', linkUrl: 'https://x.test/a' })
+				])
+			)
+		).toBe(false)
+	})
+
+	it('accepts both absent, and both explicitly null', () => {
+		// The panel clears a field to `undefined`; a value mapped off a database
+		// row arrives as null. Treating either as a value would 400 an ordinary
+		// save of a marker that only flies its camera.
+		expect(rejected(parse([hotspot()]))).toBe(false)
+		expect(rejected(parse([hotspot({ body: null, linkUrl: null })]))).toBe(
+			false
+		)
+	})
+
+	/**
+	 * Cleared is not empty.
+	 *
+	 * The unsaved-changes comparison folds absent and null together and
+	 * deliberately does NOT fold in the empty string, on the stated grounds that
+	 * no producer sends one. The parser is what has to make that true: an ''
+	 * stored against a null column reports the scene dirty on every load and
+	 * offers a save that changes nothing.
+	 */
+	it('reads an emptied field as unset rather than as an empty string', () => {
+		const result = parse([hotspot({ body: '   ', linkUrl: '' })])
+
+		expect(rejected(result)).toBe(false)
+		const [normalized] = (result as { settings: { hotspots: unknown[] } })
+			.settings.hotspots as { body?: unknown; linkUrl?: unknown }[]
+		expect(normalized.body).toBeUndefined()
+		expect(normalized.linkUrl).toBeUndefined()
+	})
+
+	it('leaves the caller\u2019s own payload alone while doing it', () => {
+		// The normalization has to write somewhere, and writing it into the
+		// request payload would mutate the caller's objects - including, on a
+		// rejection, every hotspot before the one that failed.
+		const sent = hotspot({ body: '   ' })
+
+		parse([sent])
+
+		expect((sent as { body?: unknown }).body).toBe('   ')
+	})
+
+	it('clears a link sent as an empty string instead of refusing the scene', () => {
+		// `isAllowedHotspotLinkUrl('')` is false, so without the normalization a
+		// client that cleared a link by sending '' had its entire scene save
+		// refused rather than the link cleared.
+		expect(rejected(parse([hotspot({ linkUrl: '' })]))).toBe(false)
+	})
+
+	it('rejects a non-string body', () => {
+		expect(rejected(parse([hotspot({ body: 42 })]))).toBe(true)
+	})
+
+	it('bounds the body at the shared ceiling', async () => {
+		const withinCap = parse([
+			hotspot({ body: 'a'.repeat(MAX_HOTSPOT_BODY_LENGTH) })
+		])
+		const overCap = parse([
+			hotspot({ body: 'a'.repeat(MAX_HOTSPOT_BODY_LENGTH + 1) })
+		])
+
+		expect(rejected(withinCap)).toBe(false)
+		expect(rejected(overCap)).toBe(true)
+		expect(JSON.stringify(await bodyOf(overCap))).toContain('body')
+	})
+
+	it('rejects a javascript: link', async () => {
+		// This is the field that reaches an `<a href>`, so the scheme rule is the
+		// whole reason it is validated separately from payloadUrl.
+		const result = parse([hotspot({ linkUrl: 'javascript:alert(1)' })])
+
+		expect(rejected(result)).toBe(true)
+		expect(JSON.stringify(await bodyOf(result))).toContain('linkUrl')
+	})
+
+	it('rejects a non-string link', () => {
+		expect(rejected(parse([hotspot({ linkUrl: 42 })]))).toBe(true)
+	})
+
+	it('checks the link on every preset, unlike payloadUrl', () => {
+		// payloadUrl is preset-gated so that rows predating its rule stay
+		// saveable. `link_url` is a new column, so nothing stored can fail this
+		// and there is nothing to grandfather.
+		for (const preset of ['dot', 'image', 'svg']) {
+			expect(
+				rejected(
+					parse([
+						hotspot({
+							stylePreset: preset,
+							payloadUrl: preset === 'dot' ? undefined : 'https://x.test/p.png',
+							linkUrl: 'http://x.test/a'
+						})
+					])
+				)
+			).toBe(true)
+		}
 	})
 })

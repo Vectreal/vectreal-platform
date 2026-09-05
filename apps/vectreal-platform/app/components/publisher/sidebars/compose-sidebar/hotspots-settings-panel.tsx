@@ -21,6 +21,7 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
+import { Textarea } from '@shared/components/ui/textarea'
 import { cn } from '@shared/utils'
 import { resolveHotspotMarkers } from '@vctrl/viewer/hotspots'
 import {
@@ -44,6 +45,10 @@ import {
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { applyHotspotPlacement } from '../../../../lib/domain/scene/client/apply-hotspot-placement'
+import {
+	isAllowedHotspotLinkUrl,
+	MAX_HOTSPOT_BODY_LENGTH
+} from '../../../../lib/domain/scene/hotspot-urls'
 import {
 	PAIRED_HOTSPOT_CAMERA_ID_PREFIX,
 	resolveDefaultSceneCameraId
@@ -786,152 +791,209 @@ const HotspotsSettingsPanel = memo(() => {
 	)
 
 	const renderEditor = useCallback(
-		(hotspot: HotspotDefinition) => (
-			<>
-				<InlineNotice tone={isClickToPlaceActive ? 'warning' : 'neutral'}>
-					{isClickToPlaceActive
-						? 'Click anywhere on the model to move this marker there.'
-						: 'Drag the marker in the scene, or place it from here.'}
-				</InlineNotice>
+		(hotspot: HotspotDefinition) => {
+			const linkErrorId = `hotspot-link-error-${hotspot.id}`
+			// An empty field is not an invalid one: clearing the link is how an
+			// author removes it.
+			const linkIsInvalid =
+				!!hotspot.linkUrl && !isAllowedHotspotLinkUrl(hotspot.linkUrl)
 
-				<Button
-					variant={isClickToPlaceActive ? 'secondary' : 'outline'}
-					size="sm"
-					aria-pressed={isClickToPlaceActive}
-					onClick={() => setIsClickToPlaceActive((active) => !active)}
-					className="publisher-shell-focus w-full gap-1.5"
-				>
-					<Crosshair
-						aria-hidden
-						className={cn(
-							'size-3.5',
-							isClickToPlaceActive && 'animate-pulse motion-reduce:animate-none'
-						)}
-					/>
-					{isClickToPlaceActive ? 'Click the model…' : 'Place on model'}
-				</Button>
+			return (
+				<>
+					<InlineNotice tone={isClickToPlaceActive ? 'warning' : 'neutral'}>
+						{isClickToPlaceActive
+							? 'Click anywhere on the model to move this marker there.'
+							: 'Drag the marker in the scene, or place it from here.'}
+					</InlineNotice>
 
-				<SettingGroup label="Position">
-					<div className="grid grid-cols-3 gap-1.5">
-						{AXES.map((axis, index) => (
-							<AxisField
-								key={axis}
-								axis={axis}
-								value={hotspot.worldPosition[index]}
-								onChange={(raw) =>
-									handlePositionChange(hotspot, index as 0 | 1 | 2, raw)
-								}
-							/>
-						))}
-					</div>
-				</SettingGroup>
-
-				<SettingGroup label="Name">
-					<Input
-						aria-label="Marker name"
-						value={hotspot.name}
-						onChange={(event) => handleRename(hotspot.id, event.target.value)}
-						placeholder="Hotspot name"
-						className="text-sm"
-					/>
-				</SettingGroup>
-
-				<SettingGroup label="Style">
-					<ToggleButtonGroup
-						options={STYLE_PRESET_OPTIONS}
-						value={hotspot.stylePreset}
-						onChange={(preset) =>
-							updateHotspot(hotspot.id, { stylePreset: preset })
-						}
-					/>
-				</SettingGroup>
-
-				<AnimatePresence initial={false}>
-					{hotspot.stylePreset !== 'dot' && (
-						<motion.div
-							key="payload-url"
-							initial={{ height: 0, opacity: 0 }}
-							animate={{ height: 'auto', opacity: 1 }}
-							exit={{ height: 0, opacity: 0 }}
-							transition={{ duration: reduceMotion ? 0 : 0.15 }}
-							className="overflow-hidden"
-						>
-							<SettingGroup label="Asset URL">
-								<Input
-									aria-label="Asset URL"
-									value={hotspot.payloadUrl ?? ''}
-									onChange={(event) =>
-										updateHotspot(hotspot.id, {
-											payloadUrl: event.target.value || undefined
-										})
-									}
-									placeholder="https://…"
-									className="text-sm"
-								/>
-							</SettingGroup>
-						</motion.div>
-					)}
-				</AnimatePresence>
-
-				<SettingGroup
-					label="Linked camera"
-					description="Viewers transition to this camera when they click the marker."
-				>
-					<Select
-						value={hotspot.linkedCameraId ?? 'none'}
-						onValueChange={(value) =>
-							handleRelink(hotspot.id, value === 'none' ? undefined : value)
-						}
+					<Button
+						variant={isClickToPlaceActive ? 'secondary' : 'outline'}
+						size="sm"
+						aria-pressed={isClickToPlaceActive}
+						onClick={() => setIsClickToPlaceActive((active) => !active)}
+						className="publisher-shell-focus w-full gap-1.5"
 					>
-						<SelectTrigger aria-label="Linked camera" className="w-full">
-							<SelectValue placeholder="None" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="none">None</SelectItem>
-							{allCameras.map((entry) => (
-								<SelectItem key={entry.cameraId} value={entry.cameraId}>
-									{entry.name || entry.cameraId}
-								</SelectItem>
+						<Crosshair
+							aria-hidden
+							className={cn(
+								'size-3.5',
+								isClickToPlaceActive &&
+									'animate-pulse motion-reduce:animate-none'
+							)}
+						/>
+						{isClickToPlaceActive ? 'Click the model…' : 'Place on model'}
+					</Button>
+
+					<SettingGroup label="Position">
+						<div className="grid grid-cols-3 gap-1.5">
+							{AXES.map((axis, index) => (
+								<AxisField
+									key={axis}
+									axis={axis}
+									value={hotspot.worldPosition[index]}
+									onChange={(raw) =>
+										handlePositionChange(hotspot, index as 0 | 1 | 2, raw)
+									}
+								/>
 							))}
-						</SelectContent>
-					</Select>
-				</SettingGroup>
+						</div>
+					</SettingGroup>
 
-				<SettingToggle
-					enabled={hotspot.sequenceIndex !== undefined}
-					onToggle={(enabled) => handleMembershipChange(hotspot.id, enabled)}
-					title="In the sequence"
-					description="Include this marker in the order viewers step through."
-				/>
+					<SettingGroup label="Name">
+						<Input
+							aria-label="Marker name"
+							value={hotspot.name}
+							onChange={(event) => handleRename(hotspot.id, event.target.value)}
+							placeholder="Hotspot name"
+							className="text-sm"
+						/>
+					</SettingGroup>
 
-				<SettingToggle
-					enabled={hotspot.visible}
-					onToggle={(enabled) =>
-						updateHotspot(hotspot.id, { visible: enabled })
-					}
-					title="Visible to viewers"
-					description="Show this marker in the published scene."
-				/>
+					<SettingGroup
+						label="Body"
+						description="Shown when a visitor opens the marker."
+					>
+						<Textarea
+							aria-label="Marker body"
+							value={hotspot.body ?? ''}
+							onChange={(event) =>
+								updateHotspot(hotspot.id, {
+									body: event.target.value || undefined
+								})
+							}
+							// The save parser refuses a longer body, and a refusal there
+							// fails the whole scene with a message naming an array index.
+							// The field is the only place an author sees the limit at the
+							// moment it applies.
+							maxLength={MAX_HOTSPOT_BODY_LENGTH}
+							placeholder="What is a visitor looking at?"
+							className="min-h-20 text-sm"
+						/>
+					</SettingGroup>
 
-				<SettingToggle
-					enabled={hotspot.internalOnly}
-					onToggle={(enabled) =>
-						updateHotspot(hotspot.id, { internalOnly: enabled })
-					}
-					title="Editor only"
-					description="Keep the marker in the publisher and leave it out of the embed."
-				/>
+					<SettingGroup label="Link">
+						<Input
+							aria-label="Marker link"
+							type="url"
+							value={hotspot.linkUrl ?? ''}
+							onChange={(event) =>
+								updateHotspot(hotspot.id, {
+									linkUrl: event.target.value || undefined
+								})
+							}
+							aria-invalid={linkIsInvalid || undefined}
+							aria-describedby={linkIsInvalid ? linkErrorId : undefined}
+							placeholder="https://…"
+							className="text-sm"
+						/>
+						{linkIsInvalid && (
+							// Said beside the field rather than left to the save, which
+							// answers a bad link by refusing the entire scene with a
+							// message naming an array index - neither the marker nor the
+							// field the author is looking at.
+							<p id={linkErrorId} className="text-destructive text-xs">
+								Links must start with https://
+							</p>
+						)}
+					</SettingGroup>
 
-				<SettingToggle
-					enabled={hotspot.occlusionEnabled ?? true}
-					onToggle={(enabled) =>
-						updateHotspot(hotspot.id, { occlusionEnabled: enabled })
-					}
-					title="Hide behind geometry"
-					description="Fade the marker when part of the model is in front of it."
-				/>
-			</>
-		),
+					<SettingGroup label="Style">
+						<ToggleButtonGroup
+							options={STYLE_PRESET_OPTIONS}
+							value={hotspot.stylePreset}
+							onChange={(preset) =>
+								updateHotspot(hotspot.id, { stylePreset: preset })
+							}
+						/>
+					</SettingGroup>
+
+					<AnimatePresence initial={false}>
+						{hotspot.stylePreset !== 'dot' && (
+							<motion.div
+								key="payload-url"
+								initial={{ height: 0, opacity: 0 }}
+								animate={{ height: 'auto', opacity: 1 }}
+								exit={{ height: 0, opacity: 0 }}
+								transition={{ duration: reduceMotion ? 0 : 0.15 }}
+								className="overflow-hidden"
+							>
+								<SettingGroup label="Asset URL">
+									<Input
+										aria-label="Asset URL"
+										value={hotspot.payloadUrl ?? ''}
+										onChange={(event) =>
+											updateHotspot(hotspot.id, {
+												payloadUrl: event.target.value || undefined
+											})
+										}
+										placeholder="https://…"
+										className="text-sm"
+									/>
+								</SettingGroup>
+							</motion.div>
+						)}
+					</AnimatePresence>
+
+					<SettingGroup
+						label="Linked camera"
+						description="Viewers transition to this camera when they click the marker."
+					>
+						<Select
+							value={hotspot.linkedCameraId ?? 'none'}
+							onValueChange={(value) =>
+								handleRelink(hotspot.id, value === 'none' ? undefined : value)
+							}
+						>
+							<SelectTrigger aria-label="Linked camera" className="w-full">
+								<SelectValue placeholder="None" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="none">None</SelectItem>
+								{allCameras.map((entry) => (
+									<SelectItem key={entry.cameraId} value={entry.cameraId}>
+										{entry.name || entry.cameraId}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</SettingGroup>
+
+					<SettingToggle
+						enabled={hotspot.sequenceIndex !== undefined}
+						onToggle={(enabled) => handleMembershipChange(hotspot.id, enabled)}
+						title="In the sequence"
+						description="Include this marker in the order viewers step through."
+					/>
+
+					<SettingToggle
+						enabled={hotspot.visible}
+						onToggle={(enabled) =>
+							updateHotspot(hotspot.id, { visible: enabled })
+						}
+						title="Visible to viewers"
+						description="Show this marker in the published scene."
+					/>
+
+					<SettingToggle
+						enabled={hotspot.internalOnly}
+						onToggle={(enabled) =>
+							updateHotspot(hotspot.id, { internalOnly: enabled })
+						}
+						title="Editor only"
+						description="Keep the marker in the publisher and leave it out of the embed."
+					/>
+
+					<SettingToggle
+						enabled={hotspot.occlusionEnabled ?? true}
+						onToggle={(enabled) =>
+							updateHotspot(hotspot.id, { occlusionEnabled: enabled })
+						}
+						title="Hide behind geometry"
+						description="Fade the marker when part of the model is in front of it."
+					/>
+				</>
+			)
+		},
 		[
 			allCameras,
 			handleMembershipChange,

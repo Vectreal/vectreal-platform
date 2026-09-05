@@ -38,9 +38,35 @@ export function redactSettingsForEmbed(
 	settings: SceneSettings,
 	{ bakeAssetId }: { bakeAssetId: string | null }
 ): SceneSettings {
-	const visibleHotspots = settings.hotspots?.filter(
-		(hotspot) => !hotspot.internalOnly
-	)
+	/*
+	  `internalOnly` drops the hotspot. `visible: false` keeps it, minus anything
+	  it has to say.
+
+	  Two toggles, two different promises, and only one of them was ever about
+	  confidentiality - which is why the row survives here at all: it may still
+	  carry a `linkedCameraId` that other settings reference.
+
+	  What the marker carries is a different matter. "Show this marker in the
+	  published scene", switched off, reads to an author as "this does not go
+	  out", and while the only author string on a hidden hotspot was a short
+	  `name` that was a tolerable gap. It is not tolerable for up to 2000
+	  characters of body prose, a link, and an artwork URL that may be an inline
+	  data URI: the viewer draws none of them for a hidden marker, so nothing on
+	  screen would ever tell the author they had been served to every anonymous
+	  embed visitor.
+	*/
+	const visibleHotspots = settings.hotspots
+		?.filter((hotspot) => !hotspot.internalOnly)
+		.map((hotspot) =>
+			hotspot.visible === false
+				? {
+						...hotspot,
+						body: undefined,
+						linkUrl: undefined,
+						payloadUrl: undefined
+					}
+				: hotspot
+		)
 
 	const linkedCameraIds = (hotspots: typeof settings.hotspots) =>
 		new Set(

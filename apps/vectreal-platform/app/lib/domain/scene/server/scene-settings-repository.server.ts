@@ -174,6 +174,11 @@ export async function getHotspotsBySceneSettingsId(
 	return rows.map((r) => ({
 		id: r.id,
 		name: r.name,
+		// `||`, not `??`: a row written before the parser normalized an empty
+		// string can hold '', and reading that back as '' would report the scene
+		// dirty against a client that sends `undefined` for the same emptiness.
+		body: r.body || undefined,
+		linkUrl: r.linkUrl || undefined,
 		worldPosition: [r.worldPositionX, r.worldPositionY, r.worldPositionZ] as [
 			number,
 			number,
@@ -218,6 +223,8 @@ export async function replaceHotspots(
 				id: h.id,
 				sceneSettingsId,
 				name: h.name,
+				body: h.body ?? null,
+				linkUrl: h.linkUrl ?? null,
 				worldPositionX: h.worldPosition[0],
 				worldPositionY: h.worldPosition[1],
 				worldPositionZ: h.worldPosition[2],
@@ -240,6 +247,8 @@ export async function replaceHotspots(
 			setWhere: scopedToScene,
 			set: {
 				name: sql`excluded.name`,
+				body: sql`excluded.body`,
+				linkUrl: sql`excluded.link_url`,
 				worldPositionX: sql`excluded.world_position_x`,
 				worldPositionY: sql`excluded.world_position_y`,
 				worldPositionZ: sql`excluded.world_position_z`,

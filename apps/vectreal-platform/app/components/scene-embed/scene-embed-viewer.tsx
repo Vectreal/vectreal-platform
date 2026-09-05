@@ -6,6 +6,7 @@ import { resolveBakedShadowSource } from '../../lib/domain/scene/client/baked-sh
 import CenteredSpinner from '../centered-spinner'
 import { ClientVectrealViewer } from '../viewer/client-vectreal-viewer'
 
+import type { EmbedHotspotPresentation } from '../../lib/domain/embed/embed-presentation'
 import type { ModelFile, ServerSceneData } from '@vctrl/hooks/use-load-model'
 import type { VectrealViewerProps, ViewerLoadingThumbnail } from '@vctrl/viewer'
 import type { ReactNode } from 'react'
@@ -18,6 +19,11 @@ export interface SceneEmbedViewerProps {
 	loadingThumbnail?: ViewerLoadingThumbnail
 	/** Usually `<SceneEmbedInfoPopover>`; omitted where the surface has its own. */
 	popover?: ReactNode
+	/**
+	 * How the hotspots appear, where the embedding page asked for something
+	 * other than the default. Omitted by every surface that is not an embed.
+	 */
+	hotspotPresentation?: EmbedHotspotPresentation
 	onCommandExecutorReady?: VectrealViewerProps['onCommandExecutorReady']
 	onInteractionEvent?: VectrealViewerProps['onInteractionEvent']
 }
@@ -37,6 +43,7 @@ const SceneEmbedViewer = memo(
 		className,
 		loadingThumbnail,
 		popover,
+		hotspotPresentation,
 		onCommandExecutorReady,
 		onInteractionEvent
 	}: SceneEmbedViewerProps) => {
@@ -79,6 +86,14 @@ const SceneEmbedViewer = memo(
 					  gates, and this surface must never open either.
 					*/
 					hotspots={sceneData?.hotspots}
+					/*
+					  Undefined where the surface passed no presentation, so the
+					  viewer's own defaults apply and nothing here has to restate
+					  them.
+					*/
+					hotspotColor={hotspotPresentation?.color}
+					showHotspotMarkers={hotspotPresentation?.showMarkers}
+					revealHotspotContent={hotspotPresentation?.revealContent}
 					shadowsOptions={shadowsOptions}
 					staticShadowBake
 					bakedShadow={bakedShadow}
