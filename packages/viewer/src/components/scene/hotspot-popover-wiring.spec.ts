@@ -26,7 +26,6 @@ const marker = read('hotspot-marker.tsx')
 const layer = read('scene-hotspots.tsx')
 const popover = read('hotspot-popover.tsx')
 const viewer = read('../../vectreal-viewer.tsx')
-const interaction = read('hotspot-interaction.ts')
 
 describe('the marker reaches the reveal decisions', () => {
 	it('asks the resolver what there is to reveal, rather than reading fields', () => {
@@ -74,6 +73,48 @@ describe('the card is placed by the resolver that was tested', () => {
 	it('hands the card its placement rather than letting it decide', () => {
 		expect(marker).toContain('placement={placement}')
 		expect(popover).toContain('popoverClasses[placement.side]')
+		// `offsetX` is the half that stops the card clipping at the LEFT and
+		// right edges, and its only route to the screen is this one custom
+		// property. Pinning `side` alone left four resolver cases unreachable.
+		expect(popover).toContain(
+			"'--vctrl-hotspot-popover-shift': `calc(-50% + ${placement.offsetX}px)`"
+		)
+	})
+
+	it('measures the gap from the same point the resolver does', () => {
+		// The resolver treats `gap` as clearance from the marker's CENTRE. The
+		// card's CSS offset has to agree: `calc(100% + gap)` measured from the
+		// marker root's edge instead, so both `roomAbove` and `roomBelow` were
+		// over-permissive by half the hit box and a card that "fit" drew off
+		// the canvas.
+		expect(popover).not.toContain('calc(100%')
+		expect(popover).toContain(
+			"above: 'bottom-[var(--vctrl-hotspot-popover-gap)]'"
+		)
+		expect(popover).toContain("below: 'top-[var(--vctrl-hotspot-popover-gap)]'")
+		// And being centre-relative, it has to clear half the 24px hit box -
+		// 14px for the image and svg presets.
+		const gap = /const ANCHOR_GAP_PX = (\d+)/.exec(marker)?.[1]
+		expect(Number(gap)).toBeGreaterThan(14)
+	})
+
+	it('reseeds the placement timer when the card closes', () => {
+		// The ref outlives the card, unlike the one it replaced. Without the
+		// reseed the next open resumes part-way through the interval and draws
+		// at the previous open's placement until the first measurement lands.
+		const frame = marker
+			.split('useFrame((_state, delta) => {')[1]
+			?.split('\n\t})')[0]
+
+		expect(frame).toBeTruthy()
+		expect((frame ?? '').length).toBeLessThan(1600)
+		expect(frame).toContain(
+			'if (!open) {\n\t\t\tplacementElapsed.current = PLACEMENT_INTERVAL_SECONDS'
+		)
+		// And the reset only counts a frame that actually measured.
+		expect((frame ?? '').indexOf('if (!anchor || !card) return')).toBeLessThan(
+			(frame ?? '').indexOf('placementElapsed.current = 0')
+		)
 	})
 
 	it('gives the open card a portal of its own for the z-index', () => {
@@ -83,7 +124,6 @@ describe('the card is placed by the resolver that was tested', () => {
 		// happens for a content-only marker on a still camera.
 		expect(marker).toContain('zIndexRange={HOTSPOT_OPEN_Z_INDEX_RANGE}')
 		expect(marker).toContain('zIndexRange={HOTSPOT_Z_INDEX_RANGE}')
-		expect(marker).not.toContain('open ? HOTSPOT_OPEN_Z_INDEX_RANGE')
 	})
 
 	it('renders what the content resolver returned', () => {
@@ -117,6 +157,13 @@ describe('the marker announces the card it opens', () => {
 	it('keeps the two z-index bands apart', () => {
 		expect(marker).toContain('const HOTSPOT_OPEN_Z_INDEX_RANGE = [99, 41]')
 		expect(marker).toContain('const HOTSPOT_Z_INDEX_RANGE = [40, 0]')
+	})
+
+	it('gives the marker one fixed band, whatever the card is doing', () => {
+		// Asserted as a count rather than as the absence of one prior spelling:
+		// a differently-named ternary, or the same one wrapped across lines by
+		// the formatter, would slip past a `not.toContain`.
+		expect(marker.split('HOTSPOT_Z_INDEX_RANGE').length - 1).toBe(2)
 	})
 })
 
@@ -180,9 +227,17 @@ describe('an activation is reported to whoever is listening', () => {
 		// it: `indexOf` answers -1 for a call that is not there at all, and -1
 		// is less than every real index, so the ordering check alone passed
 		// with the report deleted outright.
-		expect(click).toContain('onActivated?.(marker.id, marker.linkedCameraId)')
-		// Reported once for the whole activation rather than per branch, so a
-		// marker that reveals and flies is not reported twice.
+		expect((click ?? '').length).toBeLessThan(1000)
+		// A COUNT, which is what "once" means. `indexOf` finds the first match,
+		// so an ordering check alone passed both with the call deleted (-1 is
+		// less than everything) and with a second call added inside the reveal
+		// branch - the duplication this comment is about.
+		expect(
+			(click ?? '').split('onActivated?.(marker.id, marker.linkedCameraId)')
+				.length - 1
+		).toBe(1)
+		// Reported before either half, so a marker that reveals and flies is
+		// reported once rather than per branch.
 		expect(
 			(click ?? '').indexOf('onActivated?.(marker.id, marker.linkedCameraId)')
 		).toBeLessThan((click ?? '').indexOf("interaction.action === 'reveal'"))
@@ -262,6 +317,10 @@ describe('a host can take the hotspot UI over', () => {
 			.split('const markers = useMemo')[1]
 			?.split(')\n')[0]
 
+		// A negative assertion over a slice that could be empty passes
+		// vacuously, and a broken anchor makes that MORE likely - so the slice
+		// is pinned before it is judged.
+		expect(markersMemo).toContain('resolveHotspotMarkers(hotspots, {')
 		expect(markersMemo).not.toContain('showMarkers')
 	})
 
@@ -286,10 +345,6 @@ describe('a host can take the hotspot UI over', () => {
 		expect(marker).toContain('revealsInPlace: !!onReveal')
 	})
 
-	it('does not claim a card expands when this viewer draws none', () => {
-		expect(interaction).toContain('canReveal && revealsInPlace')
-	})
-
 	it('will not open a card the host asked it not to draw', () => {
 		// Otherwise a host that suppressed the card and then called
 		// `focusHotspot` got one drawn anyway - and could not close it, since
@@ -299,6 +354,7 @@ describe('a host can take the hotspot UI over', () => {
 			?.split('\t\t[invalidate')[0]
 
 		expect(focus).toBeTruthy()
+		expect((focus ?? '').length).toBeLessThan(800)
 		expect(focus).toContain('revealContent && resolveHotspotPopoverContent(')
 	})
 

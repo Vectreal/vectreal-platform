@@ -39,8 +39,13 @@ const HOTSPOT_Z_INDEX_RANGE = [40, 0]
  * drei only writes the z-index on a frame where the projection actually moved
  * (`Html.js:224`), so opening a card on a still camera - which is every
  * content-only marker, since nothing moves the camera - left the old value in
- * place until the visitor happened to orbit. A freshly mounted `Html` has no
- * such problem: it takes `floor(zIndexRange[0] / 2)` immediately on mount.
+ * place until the visitor happened to orbit.
+ *
+ * A freshly mounted `Html` escapes that by accident rather than by design, and
+ * the mechanism is worth naming because it is not the obvious one: drei seeds
+ * `oldZoom` to 0 (`Html.js:118`), so `|oldZoom - camera.zoom| > eps` is true on
+ * the first frame after mount whatever the camera is doing, and the write at
+ * `Html.js:247` runs. Nothing sets a z-index in the mount effect itself.
  */
 const HOTSPOT_OPEN_Z_INDEX_RANGE = [99, 41]
 
@@ -213,8 +218,18 @@ const HotspotMarker = ({
 	const rootRef = useRef<HTMLDivElement>(null)
 	const buttonRef = useRef<HTMLButtonElement>(null)
 	const cardRef = useRef<HTMLDivElement>(null)
-	// Seeded at the interval so the first frame after opening measures rather
-	// than waiting one out.
+	/**
+	 * Seeded at the interval so the first frame after opening measures rather
+	 * than waiting one out, and reseeded on close for the same reason.
+	 *
+	 * The reseed is not tidiness. This ref outlives the card - it used to live
+	 * in the card itself, which mounted and unmounted with it - so without a
+	 * reset the next open resumes from wherever the last one stopped, some
+	 * fraction of the interval in. A card reopened after the camera moved then
+	 * draws at the previous open's placement for up to a tenth of a second,
+	 * which is long enough to render it off the edge of the canvas and animate
+	 * it in the wrong direction before the first measurement corrects it.
+	 */
 	const placementElapsed = useRef(PLACEMENT_INTERVAL_SECONDS)
 	const [placement, setPlacement] =
 		useState<HotspotPopoverPlacement>(DEFAULT_PLACEMENT)
@@ -228,14 +243,20 @@ const HotspotMarker = ({
 	const popoverId = `vctrl-hotspot-popover-${marker.id}`
 
 	useFrame((_state, delta) => {
-		if (!open) return
+		if (!open) {
+			placementElapsed.current = PLACEMENT_INTERVAL_SECONDS
+			return
+		}
 		placementElapsed.current += delta
 		if (placementElapsed.current < PLACEMENT_INTERVAL_SECONDS) return
-		placementElapsed.current = 0
 
 		const anchor = rootRef.current
 		const card = cardRef.current
+		// Before the reset, not after: a qualifying frame that finds the card
+		// not yet committed would otherwise burn a whole interval waiting to
+		// try again.
 		if (!anchor || !card) return
+		placementElapsed.current = 0
 
 		const anchorBox = anchor.getBoundingClientRect()
 		const canvasBox = canvas.getBoundingClientRect()

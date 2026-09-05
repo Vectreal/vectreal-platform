@@ -261,6 +261,17 @@ describe('hotspot ceilings and payload URLs', () => {
 		expect(normalized.linkUrl).toBeUndefined()
 	})
 
+	it('leaves the caller\u2019s own payload alone while doing it', () => {
+		// The normalization has to write somewhere, and writing it into the
+		// request payload would mutate the caller's objects - including, on a
+		// rejection, every hotspot before the one that failed.
+		const sent = hotspot({ body: '   ' })
+
+		parse([sent])
+
+		expect((sent as { body?: unknown }).body).toBe('   ')
+	})
+
 	it('clears a link sent as an empty string instead of refusing the scene', () => {
 		// `isAllowedHotspotLinkUrl('')` is false, so without the normalization a
 		// client that cleared a link by sending '' had its entire scene save

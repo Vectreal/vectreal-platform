@@ -137,7 +137,8 @@ describe('embed settings policy', () => {
 					internalOnly: false,
 					stylePreset: 'dot',
 					body: 'Unit cost 12 EUR, do not quote below 40',
-					linkUrl: 'https://internal.test/pricing'
+					linkUrl: 'https://internal.test/pricing',
+					payloadUrl: 'https://internal.test/unreleased-render.png'
 				}
 			]
 		})
@@ -147,6 +148,10 @@ describe('embed settings policy', () => {
 		expect(hidden.id).toBe('h-hidden')
 		expect(hidden.body).toBeUndefined()
 		expect(hidden.linkUrl).toBeUndefined()
+		// Artwork by the same argument: for the image and svg presets this is an
+		// author's own file, or an inline data URI of it, and a hidden marker
+		// renders none of it.
+		expect(hidden.payloadUrl).toBeUndefined()
 	})
 
 	it('leaves a visible hotspot\u2019s content alone', () => {

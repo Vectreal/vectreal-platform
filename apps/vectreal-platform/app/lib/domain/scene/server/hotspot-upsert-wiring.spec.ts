@@ -19,7 +19,10 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
+import { getTableColumns } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
+
+import { sceneHotspots } from '../../../../db/schema/project/scene-hotspots'
 
 const source = readFileSync(
 	join(import.meta.dirname, 'scene-settings-repository.server.ts'),
@@ -39,15 +42,41 @@ const written = columnsIn(
 const setBlock = replaceHotspots?.split('set: {')[1]?.split('.returning(')[0]
 const updated = columnsIn(setBlock)
 
-/** The snake_case column each key is actually written from. */
+/**
+ * The database column each key is actually written from.
+ *
+ * Case-insensitive on the keyword: `EXCLUDED.link_url` is valid SQL, and a
+ * guard that read it as no match at all would fail for the wrong reason.
+ */
 const excludedFor = (column: string): string | undefined =>
-	new RegExp(`\\b${column}: sql\`excluded\\.(\\w+)\``).exec(setBlock ?? '')?.[1]
+	new RegExp(`\\b${column}: sql\`excluded\\.(\\w+)\``, 'i').exec(
+		setBlock ?? ''
+	)?.[1]
 
-/** `worldPositionX` is `world_position_x`, and so on. */
-const snakeCase = (column: string): string =>
-	column.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
+/**
+ * What that column is actually called, read from the schema rather than
+ * derived from the property name.
+ *
+ * Deriving it - lower-casing at each capital - happens to reproduce all
+ * thirteen of today's columns, which is exactly why it is the wrong oracle: it
+ * would false-alarm on the first column Drizzle names off-convention, and it
+ * can never notice a schema column renamed while the `excluded.…` literal in
+ * the query stays behind.
+ */
+const columnName = (property: string): string | undefined =>
+	getTableColumns(sceneHotspots)[
+		property as keyof ReturnType<typeof getTableColumns<typeof sceneHotspots>>
+	]?.name
 
 describe('the hotspot upsert updates every column it inserts', () => {
+	it('resolved a real column name for every key it iterates', () => {
+		// Without this, a property the schema does not carry resolves to
+		// `undefined` on both sides of the comparison and passes.
+		for (const column of written) {
+			expect(columnName(column)).toBeTruthy()
+		}
+	})
+
 	it('found both column lists to compare', () => {
 		// Without this the splits above could yield nothing and the assertion
 		// below would pass over two empty lists.
@@ -68,6 +97,6 @@ describe('the hotspot upsert updates every column it inserts', () => {
 		// wrong `excluded.*` column updates a row with a neighbour's value, and
 		// only the two columns the opt-in integration suite covers would catch
 		// it. Every other column had no coverage on the update path at all.
-		expect(excludedFor(column)).toBe(snakeCase(column))
+		expect(excludedFor(column)).toBe(columnName(column))
 	})
 })

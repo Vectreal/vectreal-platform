@@ -222,6 +222,37 @@ describe('hotspot persistence', () => {
 		expect(read.linkUrl).toBeUndefined()
 	})
 
+	/**
+	 * A row written before the parser normalized an empty string.
+	 *
+	 * The read maps with `||` rather than `??` for exactly this: '' coming back
+	 * as '' would report the scene dirty against a client that sends
+	 * `undefined` for the same emptiness, on every load, forever. Nothing on the
+	 * unit gate can reach this - the mapping needs a real row - so it is written
+	 * here, against the column directly rather than through `replaceHotspots`,
+	 * which no longer produces an empty string to store.
+	 */
+	it('reads a legacy empty string back as unset', async () => {
+		const id = randomUUID()
+
+		await db.transaction((tx) =>
+			replaceHotspots(tx, sceneSettingsId, [
+				hotspot({ id, body: 'Said something.' })
+			])
+		)
+		await db
+			.update(schema.sceneHotspots)
+			.set({ body: '', linkUrl: '' })
+			.where(eq(schema.sceneHotspots.id, id))
+
+		const [read] = await db.transaction((tx) =>
+			getHotspotsBySceneSettingsId(tx, sceneSettingsId)
+		)
+
+		expect(read.body).toBeUndefined()
+		expect(read.linkUrl).toBeUndefined()
+	})
+
 	// The whole reason this file exists.
 	it('refuses the legacy non-uuid id, rather than storing it', async () => {
 		const legacy = hotspot({ id: 'hotspot-1755000000000-a1b2c3' })

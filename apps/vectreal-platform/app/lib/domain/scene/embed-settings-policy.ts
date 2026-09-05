@@ -46,18 +46,25 @@ export function redactSettingsForEmbed(
 	  confidentiality - which is why the row survives here at all: it may still
 	  carry a `linkedCameraId` that other settings reference.
 
-	  The text is a different matter. "Show this marker in the published scene",
-	  switched off, reads to an author as "this does not go out", and while the
-	  only author string on a hidden hotspot was a short `name` that was a
-	  tolerable gap. It is not tolerable for up to 2000 characters of body prose
-	  and a link: the viewer never draws them, so nothing on screen would ever
-	  tell the author they had been served to every anonymous embed visitor.
+	  What the marker carries is a different matter. "Show this marker in the
+	  published scene", switched off, reads to an author as "this does not go
+	  out", and while the only author string on a hidden hotspot was a short
+	  `name` that was a tolerable gap. It is not tolerable for up to 2000
+	  characters of body prose, a link, and an artwork URL that may be an inline
+	  data URI: the viewer draws none of them for a hidden marker, so nothing on
+	  screen would ever tell the author they had been served to every anonymous
+	  embed visitor.
 	*/
 	const visibleHotspots = settings.hotspots
 		?.filter((hotspot) => !hotspot.internalOnly)
 		.map((hotspot) =>
 			hotspot.visible === false
-				? { ...hotspot, body: undefined, linkUrl: undefined }
+				? {
+						...hotspot,
+						body: undefined,
+						linkUrl: undefined,
+						payloadUrl: undefined
+					}
 				: hotspot
 		)
 

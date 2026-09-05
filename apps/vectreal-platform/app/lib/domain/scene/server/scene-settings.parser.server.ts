@@ -426,7 +426,14 @@ export class SceneSettingsParser {
 	}
 
 	/**
-	 * Validates and passes through hotspot definitions.
+	 * Validates hotspot definitions, and normalizes an emptied text field to
+	 * absent.
+	 *
+	 * Returns a new array of new objects rather than the one it was given. The
+	 * normalization has to write somewhere, and writing it into the caller's
+	 * objects would mutate the request payload in place - including, on the
+	 * rejection path, every hotspot before the one that failed. Copying keeps
+	 * this a function of its input, which is what its callers already assume.
 	 */
 	private static normalizeHotspots(
 		hotspots: SceneSettings['hotspots'],
@@ -454,6 +461,7 @@ export class SceneSettingsParser {
 		const cameraIds = new Set(cameras.map((c) => c.cameraId))
 		const seenSequenceIndices = new Set<number>()
 		const seenIds = new Set<string>()
+		const normalized: NonNullable<SceneSettings['hotspots']> = []
 
 		for (const [i, hotspot] of hotspots.entries()) {
 			if (!isRecord(hotspot)) {
@@ -485,14 +493,6 @@ export class SceneSettingsParser {
 						`hotspots[${i}].body must be at most ${MAX_HOTSPOT_BODY_LENGTH} characters`
 					)
 				}
-				// Cleared, not empty. The panel writes `undefined` when an author
-				// empties the field, but a client that normalizes to '' has to
-				// land in the same place: the unsaved-changes comparison folds
-				// absent and null together and deliberately does NOT fold in the
-				// empty string, so an '' stored against a null column would report
-				// the scene dirty on every load and offer a save that changes
-				// nothing. Normalizing here is what keeps that premise true.
-				if (!hotspot.body.trim()) hotspot.body = undefined
 			}
 			if (hotspot.linkUrl !== undefined && hotspot.linkUrl !== null) {
 				if (typeof hotspot.linkUrl !== 'string') {
@@ -500,13 +500,14 @@ export class SceneSettingsParser {
 						`hotspots[${i}].linkUrl must be a string`
 					)
 				}
-				// Same normalization, and here it also decides a 400 rather than
-				// a stored value: `isAllowedHotspotLinkUrl('')` is false, so
-				// without this a client clearing a link by sending '' had its
-				// entire scene save refused instead of the link cleared.
-				if (!hotspot.linkUrl.trim()) {
-					hotspot.linkUrl = undefined
-				} else if (!isAllowedHotspotLinkUrl(hotspot.linkUrl)) {
+				// An emptied link is a cleared link, not a bad one:
+				// `isAllowedHotspotLinkUrl('')` is false, so without this branch a
+				// client clearing a link by sending '' had its entire scene save
+				// refused instead of the link cleared.
+				if (
+					hotspot.linkUrl.trim() &&
+					!isAllowedHotspotLinkUrl(hotspot.linkUrl)
+				) {
 					// Checked for every preset, unlike `payloadUrl`. That field is
 					// gated on the preset because rows predating its rule would
 					// otherwise become unsaveable; `link_url` is a new column, so
@@ -614,9 +615,30 @@ export class SceneSettingsParser {
 				}
 				seenSequenceIndices.add(hotspot.sequenceIndex)
 			}
+
+			/*
+			  Cleared, not empty.
+
+			  The panel writes `undefined` when an author empties a field, but a
+			  client that normalizes to '' has to land in the same place: the
+			  unsaved-changes comparison folds absent and null together and
+			  deliberately does NOT fold in the empty string, so an '' stored
+			  against a null column would report the scene dirty on every load
+			  and offer a save that changes nothing. Doing it here is what makes
+			  that comparison's stated premise - that no producer sends one -
+			  true rather than hopeful.
+			*/
+			const text = (value: unknown) =>
+				typeof value === 'string' && value.trim() ? value : undefined
+
+			normalized.push({
+				...hotspot,
+				body: text(hotspot.body),
+				linkUrl: text(hotspot.linkUrl)
+			} as NonNullable<SceneSettings['hotspots']>[number])
 		}
 
-		return hotspots
+		return normalized
 	}
 
 	private static normalizeTransitionConfig(
