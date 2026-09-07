@@ -34,10 +34,15 @@ import { Route } from './+types/checkout'
 import { getDbClient } from '../../../db/client'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
+import {
+	CHECKOUT_GATE_DENIAL,
+	resolveCheckoutGate
+} from '../../../lib/domain/billing/checkout-kill-switch'
 import { getOrgSubscription } from '../../../lib/domain/billing/entitlement-service.server'
 import { syncSubscriptionFromStripe } from '../../../lib/domain/billing/stripe-subscription-sync.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
 import { ensureSameOriginMutation } from '../../../lib/http/csrf.server'
+import { reportServerError } from '../../../lib/observability/report-server-error.server'
 import { getStripeClient } from '../../../lib/stripe.server'
 
 import type { PostHogContext } from '../../../lib/posthog/posthog-middleware'
@@ -122,18 +127,37 @@ export async function action({
 		await loadAuthenticatedUser(request)
 	const responseHeaders = new Headers(headers)
 
-	// Feature flag guard - block checkout when billing-checkout is disabled
-	const posthog = (context as PostHogContext).posthog
-	if (posthog) {
-		const checkoutEnabled = await posthog.isFeatureEnabled(
-			'billing-checkout',
-			user.id
-		)
-		if (!checkoutEnabled) {
-			return ApiResponse.forbidden('Billing checkout is currently disabled', {
-				headers: responseHeaders
-			})
+	/*
+	  The kill switch, which now denies when it cannot be read rather than
+	  skipping itself. See `checkout-kill-switch.ts` for why the old
+	  `if (posthog)` meant checkout was never gated in production at all.
+	*/
+	const gate = await resolveCheckoutGate(
+		(context as PostHogContext).posthog,
+		user.id
+	)
+	if (!gate.allowed) {
+		/*
+		  Only the misconfigured case is reported. `not_enabled` is the expected
+		  state while checkout is deliberately held shut, so reporting it would
+		  file one exception per attempt; `unconfigured` means this deployment
+		  lost its PostHog secrets and every checkout is now failing, which is
+		  the outage nobody noticed last time. A returned response never reaches
+		  `handleError`, so without this the sink sees nothing either way.
+		*/
+		if (gate.reason === 'unconfigured') {
+			reportServerError(
+				new Error(
+					'Checkout refused: the billing-checkout kill switch cannot be evaluated because PostHog is not configured on this deployment.'
+				),
+				{ request, properties: { userId: user.id } }
+			)
 		}
+
+		const denial = CHECKOUT_GATE_DENIAL[gate.reason]
+		return ApiResponse.error(denial.message, denial.status, {
+			headers: responseHeaders
+		})
 	}
 
 	let body: { planId?: unknown; priceId?: unknown; billingPeriod?: unknown }
