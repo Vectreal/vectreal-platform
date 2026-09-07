@@ -68,7 +68,21 @@
 	--vctrl-bg: #141414;
 	--vctrl-hover-bg: #363636;
 	--vctrl-active-bg: #585858;
-	--vctrl-text: #959595;
+	/*
+	  The same #e5e7eb the border below is built from, at full strength.
+
+	  It was #959595, which is dimmer than the host design system's *muted*
+	  foreground and was carrying primary text: 6.2:1 for a title and 5.2:1 for
+	  body at the 90% opacity the surfaces use. Both clear AA, but that floor
+	  assumes ordinary body copy and the smallest of these is 11px. Light mode
+	  ran at 13.3:1 and 10.0:1 for the same roles, so dark was at roughly half
+	  the contrast of its own counterpart - which is the part that reads as
+	  wrong rather than the absolute number.
+
+	  This lands at 14.9:1 and 12.2:1. The value is not new to the palette,
+	  which is why it was picked over a shade tuned to mirror light exactly.
+	*/
+	--vctrl-text: #e5e7eb;
 	--vctrl-border: rgba(229, 231, 235, 0.5);
 }
 
@@ -287,7 +301,8 @@
 		--vctrl-bg: #141414;
 		--vctrl-hover-bg: #363636;
 		--vctrl-active-bg: #585858;
-		--vctrl-text: #959595;
+		/* Kept in step with the explicit dark block above, deliberately. */
+		--vctrl-text: #e5e7eb;
 		--vctrl-border: rgba(229, 231, 235, 0.5);
 	}
 }
