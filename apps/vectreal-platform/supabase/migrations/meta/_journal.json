@@ -169,6 +169,13 @@
       "when": 1788768672358,
       "tag": "0023_wet_gamma_corps",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1788769791815,
+      "tag": "0024_natural_galactus",
+      "breakpoints": true
     }
   ]
 }
