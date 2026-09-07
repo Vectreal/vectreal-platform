@@ -268,13 +268,13 @@ const contentHotspots: StoryHotspot[] = [
 	},
 	{
 		...base('link-only', 'Link only', [-0.2, 0.15, 0.7]),
-		linkUrl: 'https://docs.vectreal.com/packages/viewer'
+		linkUrl: 'https://vectreal.com/docs/packages/viewer'
 	},
 	{
 		...base('both', 'Body and link', [0.35, 0.15, 0.7]),
 		sequenceIndex: 0,
 		body: 'The same joint, seen from the other side.',
-		linkUrl: 'https://docs.vectreal.com/packages/viewer'
+		linkUrl: 'https://vectreal.com/docs/packages/viewer'
 	},
 	{
 		// High enough that the card cannot fit above it.
