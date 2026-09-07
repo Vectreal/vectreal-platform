@@ -27,6 +27,7 @@ import { cn } from '@shared/utils'
 import { Check, Minus, Zap } from 'lucide-react'
 import { Link } from 'react-router'
 
+import { formatLimitValue } from '../../../constants/limit-format'
 import { PLAN_LIMITS, type Plan } from '../../../constants/plan-config'
 import {
 	ANNUAL_DISCOUNT_CLAIM,
@@ -44,22 +45,8 @@ import { BasicCard } from '../../layout-components'
 import type { BillingCheckoutOptions } from '../../../lib/domain/dashboard/dashboard-types'
 
 // ---------------------------------------------------------------------------
-// Limit display config — labels from product-copy, format logic stays here
+// Limit display config — labels and formatting both come from constants
 // ---------------------------------------------------------------------------
-
-export function formatLimitValue(key: string, v: number | null): string {
-	if (key === 'storage_bytes_total') {
-		if (v === null) return 'Custom'
-		const gb = v / (1024 * 1024 * 1024)
-		if (gb >= 1) return `${gb.toLocaleString()} GB`
-		return `${(v / (1024 * 1024)).toLocaleString()} MB`
-	}
-	if (key === 'storage_bytes_per_scene') {
-		if (v === null) return 'Custom'
-		return `${(v / (1024 * 1024)).toLocaleString()} MB`
-	}
-	return v === null ? 'Unlimited' : v.toLocaleString()
-}
 
 const HIGHLIGHTED_LIMITS = PLAN_CARD_LIMIT_KEYS.map((key) => ({
 	key: key as keyof (typeof PLAN_LIMITS)['free'],
