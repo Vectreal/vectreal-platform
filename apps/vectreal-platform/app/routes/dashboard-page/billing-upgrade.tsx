@@ -40,6 +40,7 @@ import {
 	getCheckoutOptions,
 	loadBillingDashboardData
 } from '../../lib/domain/billing/billing-dashboard-loader.server'
+import { resolveCheckoutGate } from '../../lib/domain/billing/checkout-kill-switch'
 
 import type {
 	BillingCheckoutOptions,
@@ -103,18 +104,22 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		includeCheckoutOptions: false
 	})
 
-	const posthog = (context as PostHogContext).posthog
-	const checkoutEnabledPromise = posthog
-		? posthog
-				.isFeatureEnabled('billing-checkout', loaderData.user.id)
-				.then((enabled) => enabled ?? false)
-				.catch(() => true)
-		: Promise.resolve(true) // default to enabled when PostHog is not configured (e.g. local dev)
+	/*
+	  The same rule the action enforces, from the same module. This used to
+	  decide separately and fail open twice over - `.catch(() => true)` on an
+	  unreachable PostHog, and `true` outright when it was not configured - so
+	  the page offered a button the action would now refuse.
+	*/
+	const checkoutGatePromise = resolveCheckoutGate(
+		(context as PostHogContext).posthog,
+		loaderData.user.id
+	)
 
-	const [checkoutOptions, checkoutEnabled] = await Promise.all([
+	const [checkoutOptions, checkoutGate] = await Promise.all([
 		checkoutOptionsPromise,
-		checkoutEnabledPromise
+		checkoutGatePromise
 	])
+	const checkoutEnabled = checkoutGate.allowed
 
 	return data(
 		{
@@ -143,11 +148,19 @@ function BillingUpgradeContent({
 	const checkoutFetcher = useFetcher()
 	const posthog = usePostHog()
 
-	// Client-side flag evaluation - undefined while PostHog is loading; fall back
-	// to the server-resolved value so the button state is correct on first render.
+	/*
+	  The client may close this, never open it.
+
+	  It used to be the authority whenever it had an opinion, so a client that
+	  said yes overrode a server that had said no - and the two evaluate against
+	  different inputs often enough for that to happen: the browser token is a
+	  Docker build arg while the server's is a Fly secret, and the client
+	  evaluates anonymously until analytics consent lets it `identify`. The
+	  action denies either way, so this only decides whether the reader is
+	  offered a button that cannot work.
+	*/
 	const clientFlagEnabled = useFeatureFlagEnabled('billing-checkout')
-	const checkoutEnabled =
-		clientFlagEnabled !== undefined ? clientFlagEnabled : serverCheckoutEnabled
+	const checkoutEnabled = serverCheckoutEnabled && (clientFlagEnabled ?? true)
 
 	const requestedPlan = searchParams.get('plan')
 	const initialPlan = requestedPlan === 'business' ? 'business' : 'pro'
