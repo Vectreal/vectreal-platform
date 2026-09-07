@@ -82,12 +82,20 @@ Both deploy workflows call the shared `shared-fly-deploy.yaml` workflow. The bui
 | Secret | Description |
 |---|---|
 | `FLY_API_TOKEN` | Fly.io deploy token |
-| `VITE_PUBLIC_POSTHOG_TOKEN` / `VITE_PUBLIC_POSTHOG_HOST` | PostHog analytics config (build-time) |
+| `VITE_PUBLIC_POSTHOG_TOKEN` / `VITE_PUBLIC_POSTHOG_HOST` | PostHog analytics config. Needed in two places, not one: see below |
 | `VITE_PUBLIC_POSTHOG_UI_HOST` | Optional PostHog UI host |
 | `VITE_PUBLIC_VECTREAL_API_KEY_PROD` | Optional public API key for demo scenes |
 | `VITE_PUBLIC_DEMO_SCENE_URL` | Optional demo scene URL |
 
 Application runtime secrets (Supabase URLs/keys, `DATABASE_URL`, `CSRF_SECRET`, Stripe keys, Cloudflare Turnstile keys) are managed on Fly.io via the `setup-fly-secrets` scripts rather than as GitHub secrets.
+
+### The PostHog variables belong in both places
+
+The `VITE_PUBLIC_` prefix reads as build-time only, and this page used to say so. They are also read at runtime on the server: `posthog-client.server.ts` takes `VITE_PUBLIC_POSTHOG_TOKEN` and `VITE_PUBLIC_POSTHOG_HOST` from `process.env` on every request.
+
+Because they were set only as build args, `getPosthogClient()` returned `null` for every production request for most of the product's life, and did it silently: its own docstring calls `null` "the normal state of a local dev environment", so production was indistinguishable from an unconfigured laptop. That disabled server-side analytics, the `billing-checkout` flag guard, and the server error sink - which is why an unrelated Stripe webhook failure went unnoticed for months.
+
+So they are needed twice: as a GitHub secret, which `shared-fly-deploy.yaml` passes to the Docker build for the browser bundle, and as a Fly secret, which `setup-fly-secrets.sh` now provisions for the server.
 
 ---
 
