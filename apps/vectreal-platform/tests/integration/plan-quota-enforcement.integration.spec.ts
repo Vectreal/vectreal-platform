@@ -25,6 +25,8 @@ import { randomUUID } from 'node:crypto'
 import { and, count, eq, inArray, isNull } from 'drizzle-orm'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
+import { QuotaExceededError } from '../../app/lib/domain/billing/quota-exceeded-error'
+
 type Schema = typeof import('../../app/db/schema')
 type ProjectRepo =
 	typeof import('../../app/lib/domain/project/project-repository.server')
@@ -408,5 +410,168 @@ describe('plan limits refuse at the boundary', () => {
 			ownerId
 		)
 		expect(prepared.sceneId).toBeTruthy()
+	})
+
+	/*
+	  `scenes_published_concurrent` is the odd one out in this file. It already
+	  counted rows before the migration off `checkQuota`, and it had no coverage
+	  anywhere - so nothing recorded that its refusal never reached the client.
+	  `publishScene` caught its own `QuotaExceededError` and returned
+	  `ApiResponse.serverError`: a 500 carrying the message and none of the
+	  machine-readable half, so no limit, no plan, no upgrade target, no modal.
+
+	  Hence `rejects` rather than an assertion about a returned `Response`, and
+	  `rejects` specifically rather than settling both paths into one value. The
+	  route's catch is what turns this into a quota response and it can only do
+	  that for an error that leaves the operation, so a test that accepts a
+	  *returned* `QuotaExceededError` would pass while the client stayed broken.
+	*/
+
+	/**
+	 * The GLB every published row in these tests points at. Created per test
+	 * rather than in `beforeEach`, so the tests above keep the fixture they were
+	 * written against.
+	 */
+	const makePublishedAsset = async () => {
+		const assetId = randomUUID()
+		await db.insert(schema.assets).values({
+			id: assetId,
+			folderId,
+			name: 'published.glb',
+			type: 'model',
+			filePath: `quota/${assetId}/published.glb`,
+			ownerId
+		})
+		return assetId
+	}
+
+	/** `howMany` already-published scenes, all pointing at the one asset. */
+	const publishScenes = async (
+		howMany: number,
+		assetId: string,
+		intoProject = projectId
+	) => {
+		for (let i = 0; i < howMany; i += 1) {
+			const publishedSceneId = randomUUID()
+			await db.insert(schema.scenes).values({
+				id: publishedSceneId,
+				projectId: intoProject,
+				folderId: null,
+				name: `published ${i}`
+			})
+			await db.insert(schema.scenePublished).values({
+				sceneId: publishedSceneId,
+				assetId,
+				publishedBy: ownerId
+			})
+		}
+	}
+
+	/** The scene a test then tries to publish, plus the asset it would publish. */
+	const sceneAwaitingPublish = async (intoProject = projectId) => {
+		const sceneId = randomUUID()
+		await db.insert(schema.scenes).values({
+			id: sceneId,
+			projectId: intoProject,
+			folderId: null,
+			name: 'wants publishing'
+		})
+		return sceneId
+	}
+
+	const attemptPublish = (sceneId: string, assetId: string) =>
+		sceneOps.publishScene(
+			{
+				action: 'commit-scene-publish',
+				requestId: randomUUID(),
+				sceneId,
+				publishedAssetId: assetId
+			},
+			ownerId
+		)
+
+	const countPublishedInProject = async (scopeProjectId = projectId) => {
+		const [row] = await db
+			.select({ total: count() })
+			.from(schema.scenePublished)
+			.innerJoin(
+				schema.scenes,
+				eq(schema.scenes.id, schema.scenePublished.sceneId)
+			)
+			.where(eq(schema.scenes.projectId, scopeProjectId))
+		return row?.total ?? 0
+	}
+
+	/*
+	  The free baseline is 3, so this refusal needs no override and deliberately
+	  uses none - an override of 3 would match the default and pass even if
+	  override resolution were broken. The allow test below is where the override
+	  earns its keep, by raising the limit above the default.
+	*/
+	it('refuses a publish at the free plan default, and publishes nothing', async () => {
+		const assetId = await makePublishedAsset()
+		await publishScenes(3, assetId)
+		const sceneId = await sceneAwaitingPublish()
+
+		const attempt = attemptPublish(sceneId, assetId)
+		await expect(attempt).rejects.toBeInstanceOf(QuotaExceededError)
+		/*
+		  The whole payload the upgrade modal is built from. `upgradeTo` is the
+		  one the modal renders its call to action from, so an error carrying
+		  `null` there is a modal with no way out of it.
+		*/
+		await expect(attempt).rejects.toMatchObject({
+			limitKey: 'scenes_published_concurrent',
+			currentValue: 3,
+			limit: 3,
+			plan: 'free',
+			upgradeTo: 'pro'
+		})
+
+		expect(await countPublishedInProject()).toBe(3)
+	})
+
+	it('allows a publish when an override raises the concurrent limit', async () => {
+		const assetId = await makePublishedAsset()
+		await publishScenes(3, assetId)
+		const sceneId = await sceneAwaitingPublish()
+		await setLimit('scenes_published_concurrent', 4)
+
+		const response = await attemptPublish(sceneId, assetId)
+
+		expect(response.status).toBe(200)
+		expect(await countPublishedInProject()).toBe(4)
+	})
+
+	/*
+	  Free is the only plan that scopes this count to the project rather than the
+	  organization, and one project cannot tell the two apart. So the second
+	  project holds published scenes of its own, chosen to straddle the limit:
+	  two per project is under the free cap of 3, while the organization total of
+	  four is over it. Flipping `useProjectScopedLimit` to false fails this test
+	  and nothing else.
+
+	  Inserted directly rather than through `createProject`, which would refuse
+	  on `projects_total` long before this limit came into it.
+	*/
+	it('counts published scenes per project on free, not per organization', async () => {
+		const siblingProjectId = randomUUID()
+		await db.insert(schema.projects).values({
+			id: siblingProjectId,
+			organizationId,
+			name: 'Sibling project',
+			slug: `sibling-${siblingProjectId}`
+		})
+
+		const assetId = await makePublishedAsset()
+		await publishScenes(2, assetId)
+		await publishScenes(2, assetId, siblingProjectId)
+		const sceneId = await sceneAwaitingPublish()
+
+		const response = await attemptPublish(sceneId, assetId)
+
+		expect(response.status).toBe(200)
+		expect(await countPublishedInProject()).toBe(3)
+		expect(await countPublishedInProject(siblingProjectId)).toBe(2)
 	})
 })
