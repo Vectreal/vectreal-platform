@@ -41,6 +41,8 @@ You are about to ship a Vectreal embed to production. Your security reviewer wan
    1:1 crop derived from cover; 600×600, webp, <60 KB.
    Output: /public/assets/images/newsroom/04/thumbnail-api-keys-101.webp */}
 
+import { publishedLimit } from '../../../constants/product-copy'
+
 ### Before You Begin
 
 Vectreal API keys are managed in your dashboard at [vectreal.com/dashboard/api-keys](https://vectreal.com/dashboard/api-keys). You need to be an **admin** or **owner** of the organization to create or revoke keys - members can use embeds that depend on a key, but they cannot mint new ones.
@@ -212,27 +214,28 @@ You are building a SaaS product where each of your customers gets their own Vect
 - **Expiration:** 90 days, with a renewal job in your provisioning workflow.
 - **Rotation:** revocation becomes part of off-boarding. When a customer cancels, the revoke step is idempotent and immediate - embed traffic from their domain stops on the next request.
 
-This is the layout most likely to grow past plan limits. The current per-org limits are **2 keys (Free), 10 (Pro), 50 (Business), unlimited (Enterprise)**. If you are crossing those thresholds at customer growth scale, the conversation is about tier rather than security model.
+This is the layout most likely to grow past plan limits. The current per-org limits are **{publishedLimit('free', 'api_keys_per_org')} keys (Free), {publishedLimit('pro', 'api_keys_per_org')} (Pro), {publishedLimit('business', 'api_keys_per_org')} (Business), unlimited (Enterprise)**. If you are crossing those thresholds at customer growth scale, the conversation is about tier rather than security model.
 
 {/* claims
-  # The four numbers in the paragraph above, tied to the config they came from.
-  # They were correct when written and nothing would have noticed if a plan
-  # changed underneath them - this article is prerendered and public.
+  # Three of the four numbers in the paragraph above are read from PLAN_LIMITS
+  # now, so the claims that pinned their literals are gone. Those were always
+  # weaker than they looked: a literal is matched as a substring over the whole
+  # file, so `api_keys_per_org: 2` would have matched a future `: 25`, and
+  # exchanging Free's two keys with Business's fifty left all four green while
+  # this paragraph published both numbers against the wrong plans.
   #
-  # A literal is matched as a substring, so `api_keys_per_org: 2` would also
-  # match a future `: 25`. It still catches a rename, a deletion, and any new
-  # value that does not share the old one's prefix.
-  present  apps/vectreal-platform/app/constants/plan-config.ts   api_keys_per_org: 2
-  present  apps/vectreal-platform/app/constants/plan-config.ts   api_keys_per_org: 10
-  present  apps/vectreal-platform/app/constants/plan-config.ts   api_keys_per_org: 50
+  # The fourth is still a word. Enterprise formats as "Unlimited" and the
+  # sentence wants "unlimited", so it stays hand-written - and its claim stays
+  # with it, because enterprise is the only plan holding null for this key, so
+  # giving Enterprise a number would make this literal vanish from the file.
   present  apps/vectreal-platform/app/constants/plan-config.ts   api_keys_per_org: null
 
-  # And that the limit is enforced by counting rows, which is what makes the
-  # sentence "most likely to grow past plan limits" mean anything. It ran
-  # through `checkQuota` until 2026-09-03; that helper read a counter nothing
-  # incremented, so the ceiling did not exist. It has since been deleted, which
-  # is why the paired `absent ... await checkQuota(` claim is gone: it pinned
-  # the absence of a function that can no longer be called.
+  # What rendering cannot replace is that the limit is enforced by counting
+  # rows, which is what makes "most likely to grow past plan limits" mean
+  # anything. It ran through `checkQuota` until 2026-09-03; that helper read a
+  # counter nothing incremented, so the ceiling did not exist. It has since been
+  # deleted, which is why the paired `absent ... await checkQuota(` claim is
+  # gone: it pinned the absence of a function that can no longer be called.
   present  apps/vectreal-platform/app/lib/domain/auth/api-key-repository.server.ts   limitKey: 'api_keys_per_org'
 */}
 

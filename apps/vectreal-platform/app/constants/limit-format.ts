@@ -25,6 +25,17 @@
  * whichever machine happened to run the render.
  */
 
+/**
+ * The locale published English prose formats its numbers with.
+ *
+ * The pages that carry these numbers are rendered by a machine, not for a
+ * reader with a locale: `/llms.txt` and `/pricing` per request in the
+ * container, the docs and news pages during `docker build`. Neither declares a
+ * `LANG`, so without this the published number would follow a container default
+ * nobody chose. `buildWebSiteJsonLd` already declares `inLanguage: 'en-US'`.
+ */
+export const PUBLISHED_COPY_LOCALE = 'en-US'
+
 export function formatLimitValue(
 	key: string,
 	v: number | null,
