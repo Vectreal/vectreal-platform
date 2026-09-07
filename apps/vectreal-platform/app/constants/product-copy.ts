@@ -39,11 +39,6 @@ export const PLATFORM_SOCIAL_DESCRIPTION =
 // NOTE: `.usda` is in the file-input accept pattern but the loader's
 // ModelFileTypes enum is gltf | glb | usdz only, so a .usda upload is rejected
 // with "Unsupported model format". It is therefore not claimed here.
-export const SUPPORTED_UPLOAD_FORMATS = [
-	'GLB (.glb), the recommended single-file format',
-	'glTF (.gltf + .bin + textures), a multi-file upload; all assets must be included',
-	'USDZ (.usdz), the Apple AR QuickLook format'
-] as const
 
 // Short format names for use in prose (e.g. "GLB, glTF, USDZ")
 export const SUPPORTED_FORMAT_NAMES = ['GLB', 'glTF', 'USDZ'] as const

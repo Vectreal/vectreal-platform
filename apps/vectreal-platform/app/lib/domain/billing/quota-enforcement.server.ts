@@ -1,12 +1,14 @@
 /**
  * Refuses an operation that would take an organization past a plan limit.
  *
- * Counts real rows rather than going through `checkQuota`. That helper reads
- * `org_usage_counters`, and nothing in the app calls `incrementUsage` or
- * `decrementUsage`, so every counter sits at zero and `checkQuota` can never
- * report an exceeded limit. Four call sites routed their guard through it and
- * enforced nothing for the life of the product: a free organization could
- * create its second project by resubmitting the ordinary form.
+ * Counts real rows rather than reading a usage counter, which is the whole
+ * point of it. The `checkQuota` helper it replaced read `org_usage_counters`,
+ * and nothing in the app ever called `incrementUsage` or `decrementUsage`, so
+ * every counter sat at zero and it could not report an exceeded limit for any
+ * organization. Four call sites routed their guard through it and enforced
+ * nothing for the life of the product: a free organization could create its
+ * second project by resubmitting the ordinary form. That helper and its module
+ * are deleted; any counter nothing increments would recreate the same trap.
  *
  * `getQuotaLimit` is used as-is. The limit side reads plan config and per-org
  * overrides and works; only the usage side was inert.

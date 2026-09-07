@@ -229,10 +229,11 @@ This is the layout most likely to grow past plan limits. The current per-org lim
 
   # And that the limit is enforced by counting rows, which is what makes the
   # sentence "most likely to grow past plan limits" mean anything. It ran
-  # through `checkQuota` until 2026-09-03, and that helper reads a counter
-  # nothing increments, so the ceiling did not exist.
+  # through `checkQuota` until 2026-09-03; that helper read a counter nothing
+  # incremented, so the ceiling did not exist. It has since been deleted, which
+  # is why the paired `absent ... await checkQuota(` claim is gone: it pinned
+  # the absence of a function that can no longer be called.
   present  apps/vectreal-platform/app/lib/domain/auth/api-key-repository.server.ts   limitKey: 'api_keys_per_org'
-  absent   apps/vectreal-platform/app/lib/domain/auth/api-key-repository.server.ts   await checkQuota(
 */}
 
 ---
