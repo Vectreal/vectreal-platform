@@ -84,6 +84,7 @@ For zero-JavaScript initial configuration, add parameters to the iframe `src`:
 | `?hotspots=0` | `0` to hide | Draws no markers. The hotspots stay reachable through `focusHotspot` and still appear in `ready()` |
 | `?hotspotContent=0` | `0` to suppress | Keeps the markers, and the clicks, but draws no card. A click still flies the camera and still emits `hotspot_activated`, which is how your own panel knows to open. `focusHotspot` draws no card in this mode either |
 | `?hotspotColor=<hex>` | A URL-encoded hex colour, e.g. `%23fc6c18` | Sets the marker fill. Hex only; any other CSS value is ignored. The step numeral stays dark ink, so a dark or saturated fill makes it unreadable and an iframe cannot override the ink token - keep the fill light |
+| `?theme=<mode>` | `light`, `dark`, `system` | Color scheme for the viewer's chrome. Defaults to `system`, which follows the visitor's browser setting - set it explicitly when your page forces a scheme of its own |
 
 ```html
 <!-- Opens on a specific camera with auto-rotate off -->
@@ -93,7 +94,7 @@ For zero-JavaScript initial configuration, add parameters to the iframe `src`:
 ></iframe>
 ```
 
-`?camera`, `?autoRotate` and `?transition` apply once, on `viewer_ready`. The three hotspot parameters are not applied at a moment at all - they describe how the viewer renders for as long as it is loaded, which is why suppressing the markers does not make them flash on screen first.
+`?camera`, `?autoRotate` and `?transition` apply once, on `viewer_ready`. `?theme` and the three hotspot parameters are not applied at a moment at all - they describe how the viewer renders for as long as it is loaded, which is why suppressing the markers does not make them flash on screen first.
 
 None of them persists to the stored scene configuration.
 
@@ -323,6 +324,8 @@ present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts const 
 present packages/viewer/src/types/viewer-interactions.ts type: 'hotspot_activated'
 present packages/embed/src/protocol.ts hotspots?: EmbedHotspotDescriptor[]
 present apps/vectreal-platform/app/lib/domain/embed/hosted-preview-bridge.ts resolveHotspotMarkers(hotspots).map
+present apps/vectreal-platform/app/lib/domain/embed/embed-viewer-theme.ts const THEMES: readonly EmbedViewerTheme[] = ['light', 'dark', 'system']
+present apps/vectreal-platform/app/lib/domain/embed/embed-viewer-theme.ts const DEFAULT_EMBED_THEME: EmbedViewerTheme = 'system'
 */}
 
 ---

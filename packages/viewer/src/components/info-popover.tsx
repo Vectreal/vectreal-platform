@@ -1,4 +1,3 @@
-import { VectrealLogoSmall } from '@shared/components/assets/icons/vectreal-logo-small'
 import { cn } from '@shared/utils'
 import {
 	createContext,
@@ -31,9 +30,7 @@ const popoverClasses = {
 	modalClosed: 'invisible -translate-x-2 translate-y-2 opacity-0',
 	textContainer: 'grow p-4 mr-4 [&_p]:text-sm [&_p]:text-[var(--vctrl-text)]',
 	closeButton:
-		'absolute right-0 top-0 m-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded border-0 bg-[var(--vctrl-bg)] p-2 text-[var(--vctrl-text)] leading-none appearance-none transition-all duration-300 ease-in-out hover:bg-[var(--vctrl-hover-bg)] active:bg-[var(--vctrl-active-bg)]',
-	footer:
-		'flex cursor-pointer items-center justify-between gap-2 border-t border-[var(--vctrl-border)] bg-[var(--vctrl-bg)] px-4 py-2 text-xs text-[var(--vctrl-text)] visited:text-[var(--vctrl-text)] hover:text-[var(--vctrl-text)] transition-[color,background-color] duration-300 hover:bg-[var(--vctrl-hover-bg)] active:bg-[var(--vctrl-active-bg)] [&_svg]:h-4 [&_svg]:w-4 [&_svg]:text-current'
+		'absolute right-0 top-0 m-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded border-0 bg-[var(--vctrl-bg)] p-2 text-[var(--vctrl-text)] leading-none appearance-none transition-all duration-300 ease-in-out hover:bg-[var(--vctrl-hover-bg)] active:bg-[var(--vctrl-active-bg)]'
 } as const
 
 interface PropsWithChildrenAndClass extends PropsWithChildren {
@@ -165,17 +162,3 @@ export const InfoPopoverCloseButton = ({
 		</button>
 	)
 }
-
-export const InfoPopoverVectrealFooter = ({
-	className
-}: PropsWithChildrenAndClass) => (
-	<a
-		className={cn(popoverClasses.footer, className)}
-		href="https://vectreal.com"
-		target="_blank"
-		rel="noopener noreferrer"
-	>
-		Vectreal viewer
-		<VectrealLogoSmall className="text-current" />
-	</a>
-)

@@ -41,6 +41,7 @@ export type EntitlementKey =
 	| 'optimization_custom_params'
 	// Embed & Viewer
 	| 'embed_domain_allowlist'
+	| 'embed_branding_removal'
 	| 'embed_viewer_customisation'
 	// Organisation & Collaboration
 	| 'org_multi_member'
@@ -69,6 +70,7 @@ export const PLAN_ENTITLEMENTS: Record<
 		optimization_custom_params: true,
 		// Embed & Viewer
 		embed_domain_allowlist: true,
+		embed_branding_removal: false,
 		embed_viewer_customisation: true,
 		// Organisation & Collaboration
 		org_multi_member: false,
@@ -92,6 +94,7 @@ export const PLAN_ENTITLEMENTS: Record<
 		optimization_custom_params: true,
 		// Embed & Viewer
 		embed_domain_allowlist: true,
+		embed_branding_removal: true,
 		embed_viewer_customisation: true,
 		// Organisation & Collaboration
 		org_multi_member: false,
@@ -115,6 +118,7 @@ export const PLAN_ENTITLEMENTS: Record<
 		optimization_custom_params: true,
 		// Embed & Viewer
 		embed_domain_allowlist: true,
+		embed_branding_removal: true,
 		embed_viewer_customisation: true,
 		// Organisation & Collaboration
 		org_multi_member: true,
@@ -138,6 +142,7 @@ export const PLAN_ENTITLEMENTS: Record<
 		optimization_custom_params: true,
 		// Embed & Viewer
 		embed_domain_allowlist: true,
+		embed_branding_removal: true,
 		embed_viewer_customisation: true,
 		// Organisation & Collaboration
 		org_multi_member: true,

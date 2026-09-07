@@ -20,6 +20,7 @@ import {
 	applyDefaultCameraFlag,
 	resolveDefaultSceneCameraId
 } from '../scene-camera'
+import { normalizePresentationSettings } from '../scene-presentation'
 
 import type { SceneSettingsRequest } from '../../../../types/api'
 import type { SceneMetaState } from '../../../../types/publisher-config'
@@ -349,7 +350,8 @@ export class SceneSettingsParser {
 			...sceneSettings,
 			camera: normalizedCamera,
 			interactions: normalizedInteractions,
-			hotspots: normalizedHotspots
+			hotspots: normalizedHotspots,
+			presentation: normalizePresentationSettings(sceneSettings.presentation)
 		}
 	}
 

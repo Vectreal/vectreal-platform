@@ -1,7 +1,7 @@
 import { ModelExporter } from '@vctrl/core/model-exporter'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { motion } from 'framer-motion'
-import { useAtomValue, useSetAtom } from 'jotai/react'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { Loader2 } from 'lucide-react'
 import { useCallback, useRef, useState, type FC } from 'react'
 import { useNavigate, useRevalidator } from 'react-router'
@@ -12,18 +12,22 @@ import {
 	toUpgradeModalPayload
 } from '../../../../../lib/domain/billing/client/billing-limit-error'
 import { publishSceneFromGlb } from '../../../../../lib/domain/scene/client/scene-publish'
+import { shouldShowInfoPopover } from '../../../../../lib/domain/scene/scene-presentation'
 import { hasUnsavedChangesAtom } from '../../../../../lib/stores/publisher-config-store'
 import {
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../../../../lib/stores/scene-optimization-store'
+import { presentationAtom } from '../../../../../lib/stores/scene-settings-store'
 import {
 	buildUpgradeModalState,
 	upgradeModalAtom
 } from '../../../../../lib/stores/upgrade-modal-store'
 import { InlineNotice } from '../../../../layout-components'
 import { ScenePublishStateControl } from '../../../../publishing/scene-publish-state-control'
+import { SettingToggle } from '../../../settings-components'
 import { itemVariants } from '../../animation'
+import { SidebarSection, SidebarSectionContent } from '../../sidebar-section'
 
 import type {
 	PublishSceneResponse,
@@ -54,6 +58,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const { dracoReport } = useAtomValue(optimizationRuntimeAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
 	const setUpgradeModal = useSetAtom(upgradeModalAtom)
+	const [presentation, setPresentation] = useAtom(presentationAtom)
 	const exporterRef = useRef<ModelExporter>(new ModelExporter())
 	const canPublish = Boolean(optimizer?.isReady)
 	const isWorking = publishStatus === 'saving' || publishStatus === 'publishing'
@@ -192,6 +197,13 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		dracoReport
 	])
 
+	const handleToggleInfoPopover = useCallback(
+		(showInfoPopover: boolean) => {
+			setPresentation((previous) => ({ ...previous, showInfoPopover }))
+		},
+		[setPresentation]
+	)
+
 	const statusText =
 		publishStatus === 'saving'
 			? 'Saving latest scene changes before publishing...'
@@ -214,6 +226,23 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 					First publish will save and assign a scene ID automatically.
 				</InlineNotice>
 			)}
+
+			{/*
+			  A section of its own, above the publish control: it describes what
+			  ships, and everything below it is the act of shipping. Bare in the
+			  column it read as one more status line, which is what the
+			  `InlineNotice` strips around it actually are.
+			*/}
+			<SidebarSection title="Viewer">
+				<SidebarSectionContent>
+					<SettingToggle
+						enabled={shouldShowInfoPopover(presentation)}
+						onToggle={handleToggleInfoPopover}
+						title="Show scene info"
+						description="Adds an info button to the viewer, opening this scene's name and description. Applies to embeds and preview links as soon as you save."
+					/>
+				</SidebarSectionContent>
+			</SidebarSection>
 
 			<InlineNotice tone="neutral">{statusText}</InlineNotice>
 
