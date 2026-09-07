@@ -132,13 +132,7 @@ including `catalog:`. Trust it over hand-editing. A package that deliberately
 bundles a dependency declares that as an `ignoredDependencies` entry in
 `eslint.config.mts` with a reason.
 
-## Plan limits: count rows, never `checkQuota`
-
-`checkQuota` reads `org_usage_counters`. Nothing in the app has ever called
-`incrementUsage`, so every counter sits at zero and `hard_limit_exceeded` cannot
-be returned for any organization. Four guards were written against it and none
-of them refused anything: a free organization created its second project by
-submitting the ordinary form again.
+## Plan limits: count the rows, never a usage counter
 
 Enforce with `assertWithinQuota` (`app/lib/domain/billing/quota-enforcement.server.ts`),
 which takes a `measure` callback and counts the rows the limit describes:
@@ -190,7 +184,7 @@ quota fields on a page action.
 | Anti-pattern | Replacement |
 | --- | --- |
 | Access check that relies on RLS, `auth.uid()`, or a hand-written role comparison | `assertDashboardPermission` against the operation table |
-| Quota guard routed through `checkQuota` | `assertWithinQuota`, counting the rows the limit describes |
+| Quota guard reading a usage counter rather than the rows | `assertWithinQuota`, counting the rows the limit describes |
 | 403 for a resource the actor cannot see | 404, so ids cannot be enumerated |
 | Drizzle query inside a route module | Repository function, called through a service when it spans repositories |
 | Shared abstraction created for one current caller | Explicit local code until a second caller exists |
@@ -242,8 +236,5 @@ present  apps/vectreal-platform/app/lib/domain/scene/server/scene-folder-reposit
 present  apps/vectreal-platform/app/lib/domain/project/project-repository.server.ts       limitKey: 'projects_total'
 present  apps/vectreal-platform/app/lib/domain/organization/organization-repository.server.ts  limitKey: 'org_seats'
 present  apps/vectreal-platform/app/lib/domain/scene/server/scene-settings.operations.server.ts  limitKey: 'scenes_total'
-absent   apps/vectreal-platform/app/lib/domain/project/project-repository.server.ts       await checkQuota(
-absent   apps/vectreal-platform/app/lib/domain/organization/organization-repository.server.ts  await checkQuota(
-absent   apps/vectreal-platform/app/lib/domain/scene/server/scene-settings.operations.server.ts  await checkQuota(
 present  apps/vectreal-platform/app/routes/dashboard-page/organizations.$organizationId.tsx  error instanceof QuotaExceededError
 ```

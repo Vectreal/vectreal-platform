@@ -411,14 +411,14 @@ export async function getChildFolders(
 /**
  * Rejects folder creation once an organization is at its plan limit.
  *
- * Counts rows rather than going through `checkQuota`. That helper reads
- * `org_usage_counters`, and nothing in the app calls `incrementUsage` or
- * `decrementUsage` - every counter except a leftover `optimization_runs_per_month`
- * sits at zero, so `checkQuota` can never report an exceeded limit. Routing this
- * through it would look like enforcement and enforce nothing.
+ * Counts rows rather than reading a usage counter. The `checkQuota` helper
+ * this was written to avoid read `org_usage_counters`, which nothing ever
+ * incremented, so routing this through it would have looked like enforcement
+ * and enforced nothing. That helper is deleted; see `assertWithinQuota`, which
+ * generalized this function's shape.
  *
  * `getQuotaLimit` is used as-is: the limit side reads plan config and per-org
- * overrides, and works. It is only the usage side that is inert.
+ * overrides, and always worked. It was only the usage side that was inert.
  */
 async function assertFolderQuota(organizationId: string): Promise<void> {
 	const { limit, effectivePlan } = await getQuotaLimit(

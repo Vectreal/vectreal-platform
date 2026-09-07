@@ -820,10 +820,12 @@ export async function publishScene(
 						.where(eq(projects.organizationId, project.organizationId))
 
 			/*
-			  `getQuotaLimit`, not `checkQuota`. The count above already is the
-			  usage, and checkQuota's usage side reads counters nothing writes, so
-			  the `hard_limit_exceeded` branch that used to be OR'd in here could
-			  never fire. This gate worked only because of the row count.
+			  `getQuotaLimit`, not a usage counter: the count above already is the
+			  usage. The `checkQuota` branch that used to be OR'd in here read
+			  counters nothing wrote, so its `hard_limit_exceeded` case could never
+			  fire and this gate worked only because of the row count. That helper
+			  is deleted; the limit side, which reads plan config and per-org
+			  overrides, is the half that always worked.
 			*/
 			const { limit } = await getQuotaLimit(
 				project.organizationId,

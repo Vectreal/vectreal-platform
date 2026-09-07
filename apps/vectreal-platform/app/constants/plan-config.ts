@@ -5,8 +5,8 @@
  * plan. It used to mirror a set of PRD documents; those were stale and have
  * been removed, so change plans here and nowhere else.
  *
- * Values are intentionally NOT hard-coded in guard logic - callers should
- * use the entitlement-service or usage-service helpers instead.
+ * Values are intentionally NOT hard-coded in guard logic - callers read them
+ * through `hasEntitlement` and `getQuotaLimit` in `entitlement-service.server`.
  *
  * NOTE: Enterprise "Custom" / "Unlimited" values are expressed as
  *       `null` (= unlimited / set via org_limit_overrides).
