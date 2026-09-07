@@ -173,6 +173,22 @@ export function buildWebApplicationJsonLd() {
 	}
 }
 
+/**
+ * The nodes that describe the site itself rather than any one page.
+ *
+ * Grouped because their delivery is a single decision: they belong in every
+ * public document, so they are rendered from `nav-layout` rather than through a
+ * route's `meta`. See `app/components/site-structured-data.tsx` for why route
+ * meta cannot carry them.
+ */
+export function buildSiteStructuredData() {
+	return [
+		buildOrganizationJsonLd(),
+		buildWebSiteJsonLd(),
+		buildWebApplicationJsonLd()
+	]
+}
+
 function nameToSlug(name: string): string {
 	return name
 		.toLowerCase()

@@ -26,10 +26,7 @@ import {
 import { SectionHeader, Section } from '../../components/home/section'
 import { SUPPORTED_FORMAT_NAMES } from '../../constants/product-copy'
 import { buildPageMeta } from '../../lib/seo'
-import {
-	buildOrganizationJsonLd,
-	PUBLIC_SEO_PAGES
-} from '../../lib/seo-registry'
+import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
 
 /*
   Literal colours, deliberately outside the token system.
@@ -52,9 +49,9 @@ const SYNTAX = {
 } as const
 
 export function meta(_: Route.MetaArgs) {
-	return buildPageMeta(PUBLIC_SEO_PAGES.home, undefined, {
-		structuredData: buildOrganizationJsonLd()
-	})
+	// The Organization node this used to pass is rendered across the public site
+	// from `nav-layout` now, and was discarded here in any case.
+	return buildPageMeta(PUBLIC_SEO_PAGES.home)
 }
 
 const SOCIAL_PROOF_ITEMS = [
