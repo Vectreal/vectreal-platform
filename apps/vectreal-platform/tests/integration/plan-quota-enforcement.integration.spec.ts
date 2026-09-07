@@ -1,7 +1,7 @@
 /**
  * Proves the plan limits refuse at the boundary, against a real Postgres.
  *
- * These guards all used to call `checkQuota`, which reads `org_usage_counters`.
+ * These guards all used to call `checkQuota`, which read `org_usage_counters`.
  * Nothing in the app ever called `incrementUsage`, so every counter sat at zero
  * and none of them could fire: a free organization created its second project
  * by resubmitting the ordinary form. A unit test cannot catch that, because the

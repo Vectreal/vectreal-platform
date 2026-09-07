@@ -5,7 +5,6 @@ import { apiKeys } from './auth/api-keys'
 import { orgEntitlementOverrides } from './billing/org-entitlement-overrides'
 import { orgLimitOverrides } from './billing/org-limit-overrides'
 import { orgSubscriptions } from './billing/subscriptions'
-import { orgUsageCounters } from './billing/usage-counters'
 import { consentRecords } from './consent/consent-records'
 import { organizationMemberships } from './core/organization-memberships'
 import { organizations } from './core/organizations'
@@ -37,8 +36,7 @@ export const organizationsRelations = relations(
 			references: [orgSubscriptions.organizationId]
 		}),
 		limitOverrides: many(orgLimitOverrides),
-		entitlementOverrides: many(orgEntitlementOverrides),
-		usageCounters: many(orgUsageCounters)
+		entitlementOverrides: many(orgEntitlementOverrides)
 	})
 )
 
@@ -275,16 +273,6 @@ export const orgEntitlementOverridesRelations = relations(
 	({ one }) => ({
 		organization: one(organizations, {
 			fields: [orgEntitlementOverrides.organizationId],
-			references: [organizations.id]
-		})
-	})
-)
-
-export const orgUsageCountersRelations = relations(
-	orgUsageCounters,
-	({ one }) => ({
-		organization: one(organizations, {
-			fields: [orgUsageCounters.organizationId],
 			references: [organizations.id]
 		})
 	})
