@@ -63,6 +63,25 @@ describe('resolveHotspotInteraction', () => {
 		).toBe('activate')
 	})
 
+	/**
+	 * A marker with nothing to activate still carries a name, and hover was the
+	 * only way to read it. So a keyboard-only visitor, or anyone on a device
+	 * with no hover at all, could not read a published marker that names no
+	 * camera - which is every marker in a scene that carries no cameras.
+	 */
+	it('keeps a marker with nothing to do in the tab order', () => {
+		const inert = resolveHotspotInteraction(unlinked, {
+			occluded: false,
+			canActivate: false
+		})
+
+		expect(inert.focusable).toBe(true)
+		// A focus stop, not a button: the role is what says whether a press does
+		// anything, and here it does not.
+		expect(inert.role).toBe('image')
+		expect(inert.action).toBe('none')
+	})
+
 	it('drops an occluded marker out of the tab order', () => {
 		expect(
 			resolveHotspotInteraction(linked, { occluded: true, canActivate: true })
@@ -72,6 +91,14 @@ describe('resolveHotspotInteraction', () => {
 			resolveHotspotInteraction(linked, { occluded: false, canActivate: true })
 				.focusable
 		).toBe(true)
+		// Including one that offers nothing: it is invisible, so its name is not
+		// worth a stop either.
+		expect(
+			resolveHotspotInteraction(unlinked, {
+				occluded: true,
+				canActivate: false
+			}).focusable
+		).toBe(false)
 	})
 
 	describe('an editing surface that can select', () => {
@@ -151,14 +178,115 @@ describe('resolveHotspotInteraction', () => {
 					occluded: true,
 					canActivate: false,
 					canSelect: true
-				}).toggles
-			).toBe(true)
+				}).announces
+			).toBe('pressed')
 			expect(
 				resolveHotspotInteraction(linked, {
 					occluded: false,
 					canActivate: true
-				}).toggles
-			).toBe(false)
+				}).announces
+			).toBeNull()
+		})
+	})
+
+	describe('revealing content', () => {
+		const reveal = {
+			occluded: false,
+			canActivate: false,
+			canReveal: true,
+			revealsInPlace: true
+		}
+
+		it('makes a marker with something to say a button', () => {
+			const interaction = resolveHotspotInteraction(unlinked, reveal)
+
+			expect(interaction.role).toBe('button')
+			expect(interaction.action).toBe('reveal')
+			expect(interaction.focusable).toBe(true)
+		})
+
+		it('announces a reveal as expanded, never as pressed', () => {
+			// The two are different claims about the same control. A reveal shows
+			// content; a press picks the marker up. Announcing one as the other
+			// tells a screen reader the wrong thing about what a click will do.
+			expect(resolveHotspotInteraction(unlinked, reveal).announces).toBe(
+				'expanded'
+			)
+		})
+
+		/**
+		 * A host that suppressed the card still needs the click: the event is
+		 * how it knows to open its own panel. Wiring `canReveal` to the presence
+		 * of a reveal handler instead made this marker a `role="img"` with no
+		 * click handler at all - no flight, no event, nothing.
+		 */
+		it('stays a button when the host draws the card, and announces nothing', () => {
+			const interaction = resolveHotspotInteraction(unlinked, {
+				occluded: false,
+				canActivate: false,
+				canReveal: true,
+				revealsInPlace: false
+			})
+
+			expect(interaction.role).toBe('button')
+			expect(interaction.action).toBe('reveal')
+			expect(interaction.focusable).toBe(true)
+			// `aria-expanded` would claim something that never expands.
+			expect(interaction.announces).toBeNull()
+		})
+
+		it('lets selection win, and announces the selection', () => {
+			// Selecting is local and reversible. An editing surface that offers
+			// both has to give a click the cheap one.
+			const interaction = resolveHotspotInteraction(linked, {
+				occluded: false,
+				canActivate: true,
+				canReveal: true,
+				canSelect: true
+			})
+
+			expect(interaction.action).toBe('select')
+			expect(interaction.announces).toBe('pressed')
+			// And never flies away from the viewpoint the author is composing in.
+			expect(interaction.fliesCamera).toBe(false)
+		})
+
+		it('reveals and flies on the same click', () => {
+			// A marker that has something to say and a camera to fly says "look
+			// here, and here is why". The flight is what puts the content's
+			// subject on screen, so they are not alternatives.
+			const interaction = resolveHotspotInteraction(linked, {
+				occluded: false,
+				canActivate: true,
+				canReveal: true
+			})
+
+			expect(interaction.action).toBe('reveal')
+			expect(interaction.fliesCamera).toBe(true)
+		})
+
+		it('flies alone when there is nothing to reveal', () => {
+			const interaction = resolveHotspotInteraction(linked, {
+				occluded: false,
+				canActivate: true
+			})
+
+			expect(interaction.action).toBe('activate')
+			expect(interaction.fliesCamera).toBe(true)
+		})
+
+		it('does neither while occluded, and still announces expanded', () => {
+			const interaction = resolveHotspotInteraction(linked, {
+				occluded: true,
+				canActivate: true,
+				canReveal: true,
+				revealsInPlace: true
+			})
+
+			expect(interaction.action).toBe('none')
+			expect(interaction.fliesCamera).toBe(false)
+			expect(interaction.announces).toBe('expanded')
+			expect(interaction.pointerEvents).toBe('none')
 		})
 	})
 })

@@ -153,6 +153,8 @@ describe('hotspot persistence', () => {
 			sequenceIndex: 0,
 			stylePreset: 'svg',
 			payloadUrl: 'https://example.test/marker.svg',
+			body: 'Cast in one piece, then machined flat.',
+			linkUrl: 'https://example.test/spec',
 			occlusionEnabled: false,
 			internalOnly: true,
 			visible: false
@@ -167,6 +169,88 @@ describe('hotspot persistence', () => {
 		)
 
 		expect(read).toEqual(written)
+	})
+
+	/**
+	 * The update half of the upsert, which the insert-only test above cannot
+	 * reach. A surviving hotspot is updated in place rather than deleted and
+	 * reinserted, so every column has to be named twice: once in `values` and
+	 * again in `onConflictDoUpdate.set`. A column missing from the second list
+	 * writes correctly on the save that creates the hotspot and silently
+	 * no-ops on every save after it, which reads to an author as an edit that
+	 * will not stick.
+	 */
+	it('updates a hotspot\u2019s content in place on a second save', async () => {
+		const id = randomUUID()
+
+		await db.transaction((tx) =>
+			replaceHotspots(tx, sceneSettingsId, [
+				hotspot({ id, body: 'First draft.', linkUrl: 'https://a.test/one' })
+			])
+		)
+		await db.transaction((tx) =>
+			replaceHotspots(tx, sceneSettingsId, [
+				hotspot({ id, body: 'Second draft.', linkUrl: 'https://a.test/two' })
+			])
+		)
+
+		const [read] = await db.transaction((tx) =>
+			getHotspotsBySceneSettingsId(tx, sceneSettingsId)
+		)
+
+		expect(read.body).toBe('Second draft.')
+		expect(read.linkUrl).toBe('https://a.test/two')
+	})
+
+	it('clears a hotspot\u2019s content when the author empties both fields', async () => {
+		const id = randomUUID()
+
+		await db.transaction((tx) =>
+			replaceHotspots(tx, sceneSettingsId, [
+				hotspot({ id, body: 'Said something.', linkUrl: 'https://a.test/one' })
+			])
+		)
+		await db.transaction((tx) =>
+			replaceHotspots(tx, sceneSettingsId, [hotspot({ id })])
+		)
+
+		const [read] = await db.transaction((tx) =>
+			getHotspotsBySceneSettingsId(tx, sceneSettingsId)
+		)
+
+		expect(read.body).toBeUndefined()
+		expect(read.linkUrl).toBeUndefined()
+	})
+
+	/**
+	 * A row written before the parser normalized an empty string.
+	 *
+	 * The read maps with `||` rather than `??` for exactly this: '' coming back
+	 * as '' would report the scene dirty against a client that sends
+	 * `undefined` for the same emptiness, on every load, forever. Nothing on the
+	 * unit gate can reach this - the mapping needs a real row - so it is written
+	 * here, against the column directly rather than through `replaceHotspots`,
+	 * which no longer produces an empty string to store.
+	 */
+	it('reads a legacy empty string back as unset', async () => {
+		const id = randomUUID()
+
+		await db.transaction((tx) =>
+			replaceHotspots(tx, sceneSettingsId, [
+				hotspot({ id, body: 'Said something.' })
+			])
+		)
+		await db
+			.update(schema.sceneHotspots)
+			.set({ body: '', linkUrl: '' })
+			.where(eq(schema.sceneHotspots.id, id))
+
+		const [read] = await db.transaction((tx) =>
+			getHotspotsBySceneSettingsId(tx, sceneSettingsId)
+		)
+
+		expect(read.body).toBeUndefined()
+		expect(read.linkUrl).toBeUndefined()
 	})
 
 	// The whole reason this file exists.

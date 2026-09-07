@@ -46,13 +46,16 @@ other origin are dropped.
 
 | Method | Returns | Description |
 |---|---|---|
-| `ready()` | `Promise<EmbedReadyInfo>` | Resolves with `{ sceneId, cameras }` when the viewer is ready. |
+| `ready()` | `Promise<EmbedReadyInfo>` | Resolves with `{ sceneId, cameras, hotspots }` when the viewer is ready. |
 | `activateCamera(cameraId)` | `void` | Switch to a named camera. |
+| `focusHotspot(hotspotId)` | `void` | Reveal a hotspot's content and fly its camera. |
 | `setTransition(options)` | `void` | Override transition for subsequent camera switches. |
 | `setControlsEnabled(enabled)` | `void` | Enable or disable orbit controls. |
 | `setAutoRotate(enabled, speed?)` | `void` | Toggle auto-rotate. |
 | `setZoomEnabled(enabled)` | `void` | Toggle scroll-zoom. |
 | `setPanEnabled(enabled)` | `void` | Toggle right-click pan. |
+| `setAnimationPlaying(playing)` | `void` | Start or suspend animation playback. |
+| `restartAnimation()` | `void` | Play the animation program from the beginning. |
 | `sendScrollProgress(progress)` | `void` | Drive scroll interactions (0–1). |
 | `sendMessage(message, payload?)` | `void` | Trigger a named `host_message` interaction. |
 | `on(type, handler)` | `() => void` | Subscribe to an event. Returns unsubscribe. |
@@ -61,7 +64,7 @@ other origin are dropped.
 
 #### Calls made before the viewer is ready
 
-The camera and controls methods are queued and flushed once the viewer reports ready, so
+The camera, controls, hotspot and animation methods are queued and flushed once the viewer reports ready, so
 you can call them immediately after constructing the SDK. `sendScrollProgress` and
 `sendMessage` are not queued: they post straight to the iframe, and a call made before
 the viewer is ready is silently dropped. Await `ready()` before wiring a scroll handler
@@ -77,6 +80,7 @@ or sending a host message. `destroy()` discards anything still queued.
 interface EmbedReadyInfo {
   sceneId: string | undefined
   cameras: EmbedCameraDescriptor[]
+  hotspots: EmbedHotspotDescriptor[]
 }
 ```
 
@@ -89,6 +93,27 @@ interface EmbedCameraDescriptor {
   fov?: number
 }
 ```
+
+### `EmbedHotspotDescriptor`
+
+```ts
+interface EmbedHotspotDescriptor {
+  id: string
+  name: string
+  /** The camera this hotspot flies, or null when it only reveals content. */
+  cameraId: string | null
+  /** 1-based place in the navigation sequence, or null when it has none. */
+  step: number | null
+}
+```
+
+Only the hotspots a visitor can see are listed. A hotspot the author hid or kept internal
+never appears here and cannot be reached by `focusHotspot`. There is no body or link: that
+content is what the viewer draws, and a second copy on the host page would have nothing
+keeping the two in step.
+
+Absent on an iframe deployed before this field existed, in which case `ready()` reports an
+empty array.
 
 ### `SetTransitionOptions`
 
@@ -107,6 +132,13 @@ type EmbedEventMap = {
   viewer_ready: void
   model_loaded: void
   camera_changed: { cameraId: string }
+  hotspot_activated: { hotspotId: string; cameraId: string | null }
+  animation_state_changed: {
+    playing: boolean
+    activeClipId: string | null
+    complete: boolean
+  }
+  animation_clip_finished: { clipId: string }
   auto_rotate_changed: { enabled: boolean }
   interaction_event: {
     interactionId?: string
@@ -135,6 +167,8 @@ import {
 } from '@vctrl/embed'
 
 import type {
+  EmbedCameraDescriptor,
+  EmbedHotspotDescriptor,
   HostedPreviewIncomingMessage,
   HostedPreviewOutgoingMessage,
   HostedPreviewPingMessage,

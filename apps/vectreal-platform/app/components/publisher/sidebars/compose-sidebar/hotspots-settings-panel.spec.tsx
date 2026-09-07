@@ -15,6 +15,7 @@ import { getDefaultStore } from 'jotai'
 import { describe, expect, it, beforeEach } from 'vitest'
 
 import HotspotsSettingsPanel from './hotspots-settings-panel'
+import { MAX_HOTSPOT_BODY_LENGTH } from '../../../../lib/domain/scene/hotspot-urls'
 import { isClickToPlaceActiveAtom } from '../../../../lib/stores/publisher-config-store'
 import {
 	activeHotspotIdAtom,
@@ -163,7 +164,13 @@ describe('HotspotsSettingsPanel arming', () => {
 			fireEvent.change(field, { target: { value: entry } })
 		})
 
-		expect(field.value).not.toBe('1')
+		// Both halves, rather than 'not the old value': a handler that wrote
+		// some third thing into the field would pass a negative assertion while
+		// still being wrong. A `type="number"` input reports '' for every
+		// incomplete numeric entry, including a lone minus - that normalization
+		// is the premise of the defect, not a contradiction of it.
+		expect(field.value).toBe('')
+		expect(store.get(hotspotsAtom)[0].worldPosition[0]).toBe(1)
 	})
 
 	it('commits a decimal typed through a trailing point', () => {
@@ -328,6 +335,103 @@ describe('HotspotsSettingsPanel selection', () => {
 		rerender(<HotspotsSettingsPanel />)
 
 		expect(screen.getByLabelText('Asset URL')).toBeTruthy()
+	})
+})
+
+describe('HotspotsSettingsPanel content', () => {
+	const openEditor = () => {
+		store.set(hotspotsAtom, [hotspot])
+		store.set(activeHotspotIdAtom, hotspot.id)
+		render(<HotspotsSettingsPanel />)
+	}
+
+	const stored = () => store.get(hotspotsAtom)[0]
+
+	it('writes body text onto the marker being edited', () => {
+		openEditor()
+
+		fireEvent.change(screen.getByLabelText('Marker body'), {
+			target: { value: 'Cast in one piece.' }
+		})
+
+		expect(stored().body).toBe('Cast in one piece.')
+	})
+
+	/**
+	 * Clearing has to leave the field unset, not empty.
+	 *
+	 * An empty string is a different value from an absent one everywhere it
+	 * lands: the dirty-check folds absent and null together and deliberately
+	 * does not fold in the empty string, so a cleared body stored as `''`
+	 * against a null column would report the scene changed on every load and
+	 * offer a save that changes nothing.
+	 */
+	it('leaves the field unset when the author clears it', () => {
+		store.set(hotspotsAtom, [
+			{ ...hotspot, body: 'Said something.', linkUrl: 'https://a.test' }
+		])
+		store.set(activeHotspotIdAtom, hotspot.id)
+		render(<HotspotsSettingsPanel />)
+
+		fireEvent.change(screen.getByLabelText('Marker body'), {
+			target: { value: '' }
+		})
+		fireEvent.change(screen.getByLabelText('Marker link'), {
+			target: { value: '' }
+		})
+
+		expect(stored().body).toBeUndefined()
+		expect(stored().linkUrl).toBeUndefined()
+	})
+
+	it('caps the body at the length the save parser will accept', () => {
+		openEditor()
+
+		expect(screen.getByLabelText('Marker body').getAttribute('maxlength')).toBe(
+			String(MAX_HOTSPOT_BODY_LENGTH)
+		)
+	})
+
+	/**
+	 * The save answers a bad link by refusing the whole scene with a message
+	 * naming an array index, which names neither the marker nor the field. So
+	 * the panel has to say it where the field is.
+	 */
+	it('marks a link the save would refuse', () => {
+		openEditor()
+		const field = screen.getByLabelText('Marker link')
+
+		fireEvent.change(field, { target: { value: 'http://a.test' } })
+
+		expect(field.getAttribute('aria-invalid')).toBe('true')
+		expect(screen.getByText(/must start with https/i)).toBeTruthy()
+		// Named by the field, so a screen reader reaches it from the input.
+		expect(field.getAttribute('aria-describedby')).toBe(
+			screen.getByText(/must start with https/i).getAttribute('id')
+		)
+	})
+
+	it('says nothing about an https link, or about no link at all', () => {
+		openEditor()
+		const field = screen.getByLabelText('Marker link')
+
+		expect(screen.queryByText(/must start with https/i)).toBeNull()
+
+		fireEvent.change(field, { target: { value: 'https://a.test/spec' } })
+
+		expect(field.getAttribute('aria-invalid')).toBeNull()
+		expect(screen.queryByText(/must start with https/i)).toBeNull()
+	})
+
+	it('stops complaining once the link is cleared again', () => {
+		openEditor()
+		const field = screen.getByLabelText('Marker link')
+
+		fireEvent.change(field, { target: { value: 'javascript:alert(1)' } })
+		expect(screen.getByText(/must start with https/i)).toBeTruthy()
+
+		fireEvent.change(field, { target: { value: '' } })
+		expect(screen.queryByText(/must start with https/i)).toBeNull()
 	})
 })
 

@@ -16,6 +16,7 @@ export {
 } from './protocol'
 export type {
 	EmbedCameraDescriptor,
+	EmbedHotspotDescriptor,
 	HostedPreviewCustomEventMessage,
 	HostedPreviewHostMessage,
 	HostedPreviewIncomingMessage,

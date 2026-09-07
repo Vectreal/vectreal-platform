@@ -2,13 +2,16 @@ import {
 	HOSTED_PREVIEW_VIEWER_SOURCE,
 	isHostedPreviewIncomingMessage,
 	type EmbedCameraDescriptor,
+	type EmbedHotspotDescriptor,
 	type HostedPreviewOutgoingMessage
 } from '@vctrl/embed'
+import { resolveHotspotMarkers } from '@vctrl/viewer/hotspots'
 import { useCallback, useEffect, useRef } from 'react'
 
 import type {
 	CameraConfig,
 	CameraProps,
+	HotspotDefinition,
 	SceneInteractionDefinition
 } from '@vctrl/core'
 import type {
@@ -21,6 +24,7 @@ interface UseHostedPreviewBridgeParams {
 	sceneId?: string
 	interactions?: SceneInteractionDefinition[]
 	cameras?: CameraProps['cameras']
+	hotspots?: HotspotDefinition[]
 	/** Commands to execute once on viewer_ready (e.g. from URL params). */
 	initialCommands?: import('@vctrl/viewer').ViewerCommand[]
 }
@@ -60,10 +64,37 @@ function buildCameraDescriptors(
 	}))
 }
 
+/**
+ * The hotspots a host page is allowed to hear about.
+ *
+ * Built through `resolveHotspotMarkers` with its default options, which is the
+ * same filter the renderer uses, so `internalOnly` and hidden markers cannot
+ * reach a parent page. That is not belt and braces here. `redactSettingsForEmbed`
+ * runs in exactly one place, `buildEmbedSceneManifest`, and `/preview` never
+ * reaches it - it always takes the session branch - so the settings this hook
+ * is handed there are unredacted, and this filter is the only thing standing
+ * between an internal marker's name and whichever origin pinged the frame.
+ *
+ * Names and camera ids only. A host builds navigation from these; the body and
+ * the link are what the viewer draws, and a second copy on the page would have
+ * nothing keeping it in step.
+ */
+export function buildHotspotDescriptors(
+	hotspots?: HotspotDefinition[]
+): EmbedHotspotDescriptor[] {
+	return resolveHotspotMarkers(hotspots).map((marker) => ({
+		id: marker.id,
+		name: marker.name,
+		cameraId: marker.linkedCameraId,
+		step: marker.step
+	}))
+}
+
 export function useHostedPreviewBridge({
 	sceneId,
 	interactions,
 	cameras,
+	hotspots,
 	initialCommands
 }: UseHostedPreviewBridgeParams): HostedPreviewBridgeProps {
 	const executorRef = useRef<null | ViewerCommandExecutor>(null)
@@ -74,11 +105,16 @@ export function useHostedPreviewBridge({
 	const firedViewerReadyInteractionIdsRef = useRef(new Set<string>())
 	const lastScrollProgressRef = useRef<null | number>(null)
 	const camerasRef = useRef(cameras)
+	const hotspotsRef = useRef(hotspots)
 	const initialCommandsFiredRef = useRef(false)
 
 	useEffect(() => {
 		camerasRef.current = cameras
 	}, [cameras])
+
+	useEffect(() => {
+		hotspotsRef.current = hotspots
+	}, [hotspots])
 
 	useEffect(() => {
 		sortedInteractionsRef.current = getSortedInteractions(interactions)
@@ -117,7 +153,8 @@ export function useHostedPreviewBridge({
 				source: HOSTED_PREVIEW_VIEWER_SOURCE,
 				type: 'pong',
 				sceneId,
-				cameras: buildCameraDescriptors(camerasRef.current)
+				cameras: buildCameraDescriptors(camerasRef.current),
+				hotspots: buildHotspotDescriptors(hotspotsRef.current)
 			}
 			window.parent.postMessage(pong, replyOrigin)
 		},

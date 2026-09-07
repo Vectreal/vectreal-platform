@@ -22,3 +22,20 @@ export {
 	type HotspotMarker,
 	type ResolveHotspotMarkersOptions
 } from './components/scene/resolve-hotspot-markers'
+
+/*
+  The link rule travels with the field it governs.
+
+  `HotspotMarker.linkUrl` is author-supplied and deliberately unchecked - the
+  marker resolver carries it through so a consumer drawing its own hotspot UI
+  can see it. That only works if the consumer can also reach the rule deciding
+  whether it is safe to put in an `href`, which is the whole reason this module
+  exists rather than the package root: it imports nothing at runtime, so a
+  consumer gets the rule without three and drei behind it.
+*/
+export {
+	resolveHotspotLink,
+	resolveHotspotPopoverContent,
+	type HotspotLink,
+	type HotspotPopoverContent
+} from './components/scene/resolve-hotspot-popover'

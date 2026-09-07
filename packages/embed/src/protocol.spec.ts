@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 
 import { isViewerCommand } from './protocol'
@@ -11,6 +14,7 @@ import { isViewerCommand } from './protocol'
 describe('isViewerCommand', () => {
 	it.each([
 		{ type: 'activate_camera', cameraId: 'front' },
+		{ type: 'focus_hotspot', hotspotId: 'handle' },
 		{ type: 'set_controls_enabled', enabled: false },
 		{ type: 'set_auto_rotate', enabled: true },
 		{ type: 'set_auto_rotate', enabled: true, speed: 0.5 },
@@ -47,5 +51,54 @@ describe('isViewerCommand', () => {
 		{ type: 'seek_animation_clip', clipId: 'spin', time: '1' }
 	])('rejects %j', (command) => {
 		expect(isViewerCommand(command)).toBe(false)
+	})
+})
+
+describe('focus_hotspot', () => {
+	it.each([
+		['no id at all', { type: 'focus_hotspot' }],
+		['a blank id', { type: 'focus_hotspot', hotspotId: '   ' }],
+		['a non-string id', { type: 'focus_hotspot', hotspotId: 42 }]
+	])('refuses %s', (_label, command) => {
+		expect(isViewerCommand(command)).toBe(false)
+	})
+})
+
+/**
+ * Every command in the union has a case in the guard.
+ *
+ * `isViewerCommand`'s `default: return false` drops an unregistered command
+ * silently, with no error on either side of the iframe - so a command added to
+ * the union and forgotten here type-checks, sends, and simply never arrives.
+ * The guard reads the union out of the viewer package rather than repeating it,
+ * so it covers the next command added, not just this one.
+ */
+describe('the guard covers the command union', () => {
+	const viewerTypes = readFileSync(
+		join(import.meta.dirname, '../../viewer/src/types/viewer-interactions.ts'),
+		'utf8'
+	)
+	const protocol = readFileSync(
+		join(import.meta.dirname, 'protocol.ts'),
+		'utf8'
+	)
+
+	const commandTypes = [
+		...viewerTypes.matchAll(
+			/export interface \w+ViewerCommand \{\n\ttype: '(\w+)'/g
+		)
+	].map((match) => match[1])
+
+	const guard = protocol
+		.split('export function isViewerCommand')[1]
+		?.split('\nexport ')[0]
+
+	it('found the union and the guard to compare', () => {
+		expect(commandTypes.length).toBeGreaterThan(5)
+		expect(guard).toBeTruthy()
+	})
+
+	it.each(commandTypes)('registers %s', (type) => {
+		expect(guard).toContain(`case '${type}':`)
 	})
 })

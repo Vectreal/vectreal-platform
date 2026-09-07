@@ -52,6 +52,15 @@ function App() {
 | `envOptions`                   | `EnvironmentProps`                                      | No       | Drei `Environment` configuration                                                 |
 | `shadowsOptions`               | `ShadowsProps`                                          | No       | Shadow behavior configuration                                                    |
 | `normalizationOptions`         | `NormalizationOptions`                                  | No       | Clamps the model's bounding-box diagonal at runtime, without touching the model data |
+| `hotspots`                     | `HotspotDefinition[]`                                   | No       | Point-of-interest markers anchored in world space. Each can carry a body and a link, and fly a linked camera |
+| `hotspotColor`                 | `string`                                                | No       | Overrides the marker fill. The default is neutral so it does not compete with the product. The step numeral stays dark ink, so a dark or saturated fill needs `--vctrl-hotspot-ink` overridden on the container |
+| `showHotspotMarkers`           | `boolean`                                               | No       | Draws the markers, default `true`. `false` leaves them resolved but undrawn, so a host can still reach them by id |
+| `revealHotspotContent`         | `boolean`                                               | No       | Opens a card on click, default `true`. `false` still flies the camera and still reports the activation |
+| `selectedHotspotId`            | `string \| null`                                        | No       | Draws one marker as the current one. Editing surfaces only                       |
+| `showInternalHotspots`         | `boolean`                                               | No       | Draws hotspots the author kept backstage. Editing surfaces only                  |
+| `showHiddenHotspots`           | `boolean`                                               | No       | Draws hotspots the author hid. Editing surfaces only                             |
+| `onHotspotSelect`              | `(id: string) => void`                                  | No       | Picks a marker instead of activating it. Passing it makes selection win over both content and camera |
+| `onHotspotPositionSetterReady`  | `(setter: HotspotPositionSetter \| null) => void`        | No       | Receives a setter that moves a marker without moving the hotspot, for a drag gizmo. Editing surfaces only |
 | `shadowLightEditable`          | `boolean`                                               | No       | Renders an in-scene draggable handle for aiming the shadow light. Editing surfaces only |
 | `staticShadowBake`             | `boolean`                                               | No       | Bakes the accumulative shadow in one pass on mount instead of fading it in, default `false` |
 | `bakedShadow`                  | `BakedShadow`                                           | No       | A persisted shadow bake to render instead of recomputing one                     |
@@ -71,9 +80,7 @@ function App() {
 
 `model` is optional because you can also render scene content via `children`. With neither, nothing renders.
 
-The editor affordances (`shadowLightEditable`, `staticShadowBake`, `bakedShadow`,
-`onShadowBakeReady`, `onShadowLightChange`) exist for editing surfaces such as the
-Publisher. Public and embedded viewers omit them.
+The editor affordances exist for editing surfaces such as the Publisher: `shadowLightEditable`, `staticShadowBake`, `bakedShadow`, `onShadowBakeReady`, `onShadowLightChange`, and the hotspot four above - `selectedHotspotId`, `showInternalHotspots`, `showHiddenHotspots`, `onHotspotSelect` and `onHotspotPositionSetterReady`. Public and embedded viewers omit them.
 
 ---
 
@@ -419,6 +426,7 @@ from a viewer default and override a field:
 | `SceneControls`       | `defaultControlsOptions` |
 | `SceneEnvironment`    | `defaultEnvOptions`      |
 | `SceneShadows`        | `defaultShadowsOptions`  |
+| `SceneHotspots`       | none                     |
 | `SceneModel`          | none                     |
 | `ScenePostProcessing` | none                     |
 

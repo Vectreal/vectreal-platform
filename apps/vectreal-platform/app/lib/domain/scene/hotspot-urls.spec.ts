@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+	isAllowedHotspotLinkUrl,
 	isAllowedHotspotPayloadUrl,
 	MAX_HOTSPOT_URL_LENGTH
 } from './hotspot-urls'
@@ -59,5 +60,41 @@ describe('isAllowedHotspotPayloadUrl', () => {
 
 	it('rejects a media type that merely starts with an allowed one', () => {
 		expect(isAllowedHotspotPayloadUrl('data:image/pngx,AAAA')).toBe(false)
+	})
+})
+
+describe('isAllowedHotspotLinkUrl', () => {
+	it.each([
+		['an https URL', 'https://vectreal.com/docs'],
+		['an uppercase scheme', 'HTTPS://vectreal.com/docs']
+	])('accepts %s', (_label, value) => {
+		expect(isAllowedHotspotLinkUrl(value)).toBe(true)
+	})
+
+	it.each([
+		['a script URL', 'javascript:alert(1)'],
+		['a script URL with mixed case', 'JavaScript:alert(1)'],
+		['plain http', 'http://vectreal.com/docs'],
+		['a bare scheme with no host', 'https://'],
+		['a relative path', '/docs'],
+		['an empty string', '']
+	])('rejects %s', (_label, value) => {
+		expect(isAllowedHotspotLinkUrl(value)).toBe(false)
+	})
+
+	it('rejects an inline document that the payload rule would allow the shape of', () => {
+		// The two rules diverge here on purpose. A payload URL reaches an
+		// `<img src>`, where a `data:` image is the point; a link URL reaches an
+		// `<a href>`, where `data:text/html` navigates to attacker markup.
+		expect(isAllowedHotspotPayloadUrl('data:image/png;base64,AAAA')).toBe(true)
+		expect(isAllowedHotspotLinkUrl('data:image/png;base64,AAAA')).toBe(false)
+		expect(isAllowedHotspotLinkUrl('data:text/html;base64,AAAA')).toBe(false)
+	})
+
+	it('shares the payload rule\u2019s length ceiling', () => {
+		const long = `https://vectreal.com/${'a'.repeat(MAX_HOTSPOT_URL_LENGTH)}`
+
+		expect(long.length).toBeGreaterThan(MAX_HOTSPOT_URL_LENGTH)
+		expect(isAllowedHotspotLinkUrl(long)).toBe(false)
 	})
 })

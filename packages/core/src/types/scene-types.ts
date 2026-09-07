@@ -341,6 +341,18 @@ export type HotspotStylePreset = 'dot' | 'image' | 'svg'
 export interface HotspotDefinition {
 	id: string
 	name: string
+	/**
+	 * Plain text shown when the hotspot is revealed. Plain, not markup: it is
+	 * rendered by a package that runs inside third-party pages, so there is
+	 * nothing here to sanitize on the render side.
+	 */
+	body?: string
+	/**
+	 * Optional destination for the revealed hotspot. `https:` only, and shown
+	 * with its own host as the visible text so a label cannot go stale against
+	 * where it points.
+	 */
+	linkUrl?: string
 	/** World-space 3D position [x, y, z]. */
 	worldPosition: [number, number, number]
 	/**

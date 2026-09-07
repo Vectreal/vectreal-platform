@@ -114,6 +114,91 @@ describe('embed settings policy', () => {
 	})
 
 	/**
+	 * Two toggles, two different promises, and only one of them was ever about
+	 * confidentiality.
+	 *
+	 * `visible: false` keeps the row - other settings may still reference the
+	 * camera it links - but strips what it has to say. "Show this marker in the
+	 * published scene", switched off, reads to an author as "this does not go
+	 * out", and the viewer never draws a hidden marker, so nothing on screen
+	 * would tell them their body text had been served to every anonymous embed
+	 * visitor. Tolerable while the only author string was a short `name`; not
+	 * tolerable for 2000 characters of prose and a link.
+	 */
+	it('strips a hidden hotspot of what it has to say, but keeps the row', () => {
+		const settings = buildSettings({
+			hotspots: [
+				{
+					id: 'h-hidden',
+					name: 'Sole',
+					worldPosition: [0, 0, 0],
+					linkedCameraId: 'cam-public-hotspot',
+					visible: false,
+					internalOnly: false,
+					stylePreset: 'dot',
+					body: 'Unit cost 12 EUR, do not quote below 40',
+					linkUrl: 'https://internal.test/pricing',
+					payloadUrl: 'https://internal.test/unreleased-render.png'
+				}
+			]
+		})
+
+		const [hidden] = redact(settings).hotspots ?? []
+
+		expect(hidden.id).toBe('h-hidden')
+		expect(hidden.body).toBeUndefined()
+		expect(hidden.linkUrl).toBeUndefined()
+		// Artwork by the same argument: for the image and svg presets this is an
+		// author's own file, or an inline data URI of it, and a hidden marker
+		// renders none of it.
+		expect(hidden.payloadUrl).toBeUndefined()
+	})
+
+	it('leaves a visible hotspot\u2019s content alone', () => {
+		const settings = buildSettings({
+			hotspots: [
+				{
+					id: 'h-public',
+					name: 'Sole',
+					worldPosition: [0, 0, 0],
+					visible: true,
+					internalOnly: false,
+					stylePreset: 'dot',
+					body: 'Cast in one piece.',
+					linkUrl: 'https://a.test/spec'
+				}
+			]
+		})
+
+		const [shown] = redact(settings).hotspots ?? []
+
+		expect(shown.body).toBe('Cast in one piece.')
+		expect(shown.linkUrl).toBe('https://a.test/spec')
+	})
+
+	it('does not mutate the settings it was handed', () => {
+		// The strip copies the hotspot rather than editing it: this object is
+		// the caller's, and on the session path it is the live scene settings.
+		const settings = buildSettings({
+			hotspots: [
+				{
+					id: 'h-hidden',
+					name: 'Sole',
+					worldPosition: [0, 0, 0],
+					visible: false,
+					internalOnly: false,
+					stylePreset: 'dot',
+					body: 'Still here afterwards'
+				}
+			]
+		})
+
+		redact(settings)
+
+		expect(settings.hotspots?.[0].body).toBe('Still here afterwards')
+	})
+
+	/**
 	 * The regression that matters most. The publisher only started tagging paired
 	 * cameras `kind: 'hotspot'` recently, so every scene already in the database
 	 * has an untagged one - and `isSceneCamera` reads a missing `kind` as

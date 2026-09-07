@@ -32,6 +32,20 @@ export interface SetControlsOptionsViewerCommand {
 	pan?: boolean
 }
 
+/**
+ * Command that focuses a single hotspot: reveals whatever it has to say and
+ * flies its linked camera, exactly as clicking the marker would.
+ *
+ * For a host driving its own navigation from the hotspot descriptors in the
+ * handshake. Naming a hotspot that is not drawn - one the author hid or kept
+ * internal - does nothing, so a stale host list cannot reach a marker a
+ * visitor is not allowed to see.
+ */
+export interface FocusHotspotViewerCommand {
+	type: 'focus_hotspot'
+	hotspotId: string
+}
+
 /** Command that plays the animation program from the beginning. */
 export interface RestartAnimationViewerCommand {
 	type: 'restart_animation'
@@ -59,6 +73,7 @@ export interface SetAnimationPlayingViewerCommand {
 /** Minimal imperative command surface currently supported by the viewer runtime. */
 export type ViewerCommand =
 	| ActivateCameraViewerCommand
+	| FocusHotspotViewerCommand
 	| RestartAnimationViewerCommand
 	| SeekAnimationClipViewerCommand
 	| SetAnimationPlayingViewerCommand
@@ -89,6 +104,23 @@ export interface CameraChangedInteractionEvent {
 	cameraId: string
 }
 
+/**
+ * Emitted when a visitor activates a hotspot.
+ *
+ * The host already sees `camera_changed` when a marker flies its camera, but
+ * not which marker caused it - and a marker that only reveals content moves no
+ * camera at all, so nothing reached the host for it. `cameraId` is null for
+ * exactly that case.
+ *
+ * Never emitted for a selection: that is an editing surface picking a marker
+ * up, not a visitor doing anything with it.
+ */
+export interface HotspotActivatedInteractionEvent {
+	type: 'hotspot_activated'
+	hotspotId: string
+	cameraId: null | string
+}
+
 /** Emitted when auto-rotate state changes at runtime. */
 export interface AutoRotateChangedInteractionEvent {
 	type: 'auto_rotate_changed'
@@ -117,6 +149,7 @@ export type ViewerInteractionEvent =
 	| AnimationStateChangedInteractionEvent
 	| AutoRotateChangedInteractionEvent
 	| CameraChangedInteractionEvent
+	| HotspotActivatedInteractionEvent
 	| InitialFramingCompletedInteractionEvent
 	| ModelLoadedInteractionEvent
 	| ViewerReadyInteractionEvent
