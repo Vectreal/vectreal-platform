@@ -36,7 +36,19 @@ const link = {
 const meta = {
 	title: 'Viewer/Hotspot Popover',
 	component: HotspotPopover,
-	parameters: { layout: 'centered' },
+	parameters: {
+		layout: 'centered',
+		/*
+		  The workspace decorator renders every story twice and switches themes
+		  with the app's `.dark` class. That is the wrong mechanism here: this
+		  package's tokens hang off `.viewer` and are switched by `data-theme` on
+		  that same element, so `.dark` moves nothing and both panes came out
+		  identical - a card with no resolved background at all, showing the
+		  backdrop straight through itself.
+		*/
+		dualTheme: false,
+		viewerTheme: 'light'
+	},
 	args: {
 		id: 'story-popover',
 		title: 'Machined face',
@@ -50,25 +62,34 @@ const meta = {
 	},
 	decorators: [
 		/**
-		 * Stands in for the marker the card hangs off, over something to stand on.
+		 * A marker to hang off, a surface to sit on, and the token scope both
+		 * need.
+		 *
+		 * `.viewer` is not decoration: every colour this card uses is declared
+		 * there, so without it `--vctrl-bg` and `--vctrl-text` do not resolve and
+		 * the card renders transparent with inherited text - which is how this
+		 * story first shipped, looking plausible because the shadow still drew.
 		 *
 		 * The card is absolutely positioned against the nearest positioned
-		 * ancestor and offset by the gap, so it needs a point to hang off before
-		 * any of its own geometry means anything. The dot is drawn at that point
-		 * so a diff shows the spacing, not only the card.
+		 * ancestor and offset by the gap, so it also needs a point to hang off
+		 * before any of its own geometry means anything. The dot is drawn at that
+		 * point so a diff shows the spacing, not only the card.
 		 *
-		 * The mid-tone backdrop is not decoration. This card is a light surface
-		 * in light and a dark one in dark, and it never appears over a blank
-		 * page - it sits over rendered geometry. On the story background it was
-		 * white on white and black on black, legible only by its shadow, which
-		 * is both untrue to the product and close to useless as a baseline to
-		 * diff against.
+		 * The mid-tone backdrop stands in for the model. This card is a near-white
+		 * surface in light and a near-black one in dark, and it never appears over
+		 * a blank page - on the story background each theme's card all but
+		 * disappeared into it.
 		 */
-		(Story) => (
-			<div className="flex h-[240px] w-[340px] items-center justify-center rounded-[0.75rem] bg-neutral-500">
-				<div className="relative">
-					<div className="absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-neutral-100 ring-1 ring-black/30" />
-					<Story />
+		(Story, context) => (
+			<div
+				className="viewer"
+				data-theme={context.parameters.viewerTheme as 'light' | 'dark'}
+			>
+				<div className="flex h-[240px] w-[340px] items-center justify-center rounded-[0.75rem] bg-neutral-500">
+					<div className="relative">
+						<div className="absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-neutral-100 ring-1 ring-black/30" />
+						<Story />
+					</div>
 				</div>
 			</div>
 		)
@@ -145,5 +166,20 @@ export const LongBody: Story = {
 			body: 'Cast in one piece, then machined flat so the two halves meet without a shim. The tolerance is held across the whole face rather than at the bolt circle alone, which is what lets the assembly seal without a gasket at working temperature.',
 			link
 		}
+	}
+}
+
+/**
+ * The same card on the viewer's dark surface.
+ *
+ * A story of its own rather than a second pane, because the theme is a property
+ * of the `.viewer` element the card lives inside, and rendering the card twice
+ * in one snapshot would put two elements carrying the same `id` in the document
+ * - the id the marker's `aria-controls` points at.
+ */
+export const DarkSurface: Story = {
+	parameters: { viewerTheme: 'dark' },
+	args: {
+		content: { body: 'The same joint, seen from the other side.', link }
 	}
 }
