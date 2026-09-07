@@ -162,6 +162,13 @@
       "when": 1788523065966,
       "tag": "0022_polite_harpoon",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1788768672358,
+      "tag": "0023_wet_gamma_corps",
+      "breakpoints": true
     }
   ]
 }

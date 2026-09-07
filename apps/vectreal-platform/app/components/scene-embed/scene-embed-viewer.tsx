@@ -25,6 +25,7 @@ export interface SceneEmbedViewerProps {
 	 * other than the default. Omitted by every surface that is not an embed.
 	 */
 	hotspotPresentation?: EmbedHotspotPresentation
+	/**
 	 * The Vectreal mark, when the owning plan has not bought its removal.
 	 *
 	 * Separate from `popover` because the author controls one and the plan

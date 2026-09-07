@@ -24,10 +24,11 @@ import { VectrealLogoSmall } from '@shared/components/assets/icons/vectreal-logo
  * the playback controls hold the bottom-right.
  *
  * Full opacity, like that chrome, rather than the faded mark this started as.
- * `--vctrl-text` on `--vctrl-bg` is 6.1:1, but at 70% the whole element
- * composites toward the scene behind it and the label fell to 3.7:1 - under
- * AA for 11px text, on the one element in the viewer a reader is least able to
- * enlarge. Hover moves the background, the way the other chrome does.
+ * A partial opacity composites the whole element toward the scene behind it,
+ * and at 70% the label measured 3.7:1 - under AA for 11px text, on the one
+ * element in the viewer a reader is least able to enlarge. At full strength
+ * `--vctrl-text` on `--vctrl-bg` is 14.9:1 dark and 13.3:1 light. Hover moves
+ * the background, the way the other chrome does.
  */
 export const VectrealEmbedBadge = () => (
 	<a
