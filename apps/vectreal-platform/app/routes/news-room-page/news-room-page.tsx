@@ -2,7 +2,7 @@ import { usePostHog } from '@posthog/react'
 import { Button } from '@shared/components/ui/button'
 import { ArrowRight, Search } from 'lucide-react'
 import { useEffect, useRef } from 'react'
-import { data, Form, Link } from 'react-router'
+import { data, Form, Link, useNavigation } from 'react-router'
 
 import { useConsent } from '../../components/consent/consent-context'
 import { PublicErrorBoundary } from '../../components/errors'
@@ -122,6 +122,12 @@ export function meta(_: Route.MetaArgs) {
 export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 	const { articles, totalArticles, latestSlug, categories, filters } =
 		loaderData
+	const navigation = useNavigation()
+	// The search is a GET Form, so submitting it is a full navigation. Without
+	// this the button gave no sign anything had happened until the page changed.
+	const isSearching =
+		navigation.state === 'loading' &&
+		navigation.location?.pathname === '/news-room'
 	const posthog = usePostHog()
 	const { consent } = useConsent()
 	const viewTrackedRef = useRef(false)
@@ -226,8 +232,13 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 								className="text-body-sm placeholder:text-muted-foreground w-40 bg-transparent md:w-48"
 							/>
 						</label>
-						<Button type="submit" variant="ghost" size="sm">
-							Search
+						<Button
+							type="submit"
+							variant="ghost"
+							size="sm"
+							disabled={isSearching}
+						>
+							{isSearching ? 'Searching' : 'Search'}
 						</Button>
 					</Form>
 				</section>
@@ -236,12 +247,26 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 					{articles.length === 0 ? (
 						<div className="ds-raised rounded-2xl p-8 text-center md:p-10">
 							<h2 className="text-h3 font-heading mb-1">No matching posts</h2>
+							{/*
+							  Echo the query back. "No matching posts" alone leaves the
+							  reader checking the field to see what was actually searched.
+							*/}
 							<p className="text-muted-foreground text-body-sm">
+								{filters.query
+									? `Nothing matched "${filters.query}".`
+									: 'Nothing matched those filters.'}{' '}
 								Try another topic or clear your filters.
 							</p>
 							<div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+								{/*
+								  Clears the search and keeps the category. The old link went
+								  to a bare /news-room, so recovering from one typo also threw
+								  away the topic the reader had chosen.
+								*/}
 								<Button size="sm" asChild>
-									<Link to="/news-room">Show latest</Link>
+									<Link to={buildNewsRoomPath(filters, { query: '' })}>
+										Clear search
+									</Link>
 								</Button>
 								<Button variant="ghost" size="sm" asChild>
 									<Link to="/sign-up">Create free account</Link>

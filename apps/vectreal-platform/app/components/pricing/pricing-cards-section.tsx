@@ -70,8 +70,21 @@ interface PlanCardProps {
 	selectablePlans?: Plan[]
 }
 
+/*
+  The locale is pinned, not left to resolve.
+
+  `undefined` means "the runtime default", and the runtime differs on the two
+  sides of hydration: the container declares no LANG, so the server formats one
+  way and the visitor's browser formats another. Every price on the page is then
+  a hydration mismatch for anyone outside the container's default locale.
+  `product-copy.ts` pins OFFER_LOCALE for the same reason and writes the
+  reasoning out at length; this is the same decision at a call site that missed
+  it.
+*/
+const PRICE_LOCALE = 'en-US'
+
 function formatCurrency(amountCents: number, currency: string) {
-	return new Intl.NumberFormat(undefined, {
+	return new Intl.NumberFormat(PRICE_LOCALE, {
 		style: 'currency',
 		currency: currency.toUpperCase(),
 		maximumFractionDigits: 0

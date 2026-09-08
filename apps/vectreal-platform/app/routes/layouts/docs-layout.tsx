@@ -127,70 +127,82 @@ export default function DocsLayout() {
 			</aside>
 
 			<main className="min-w-0 flex-1 lg:px-8">
-				<div className="ds-overlay z-page-chrome fixed top-12 left-0 mb-4 flex w-dvw items-center justify-between gap-3 px-4 py-1 md:top-16">
-					<Breadcrumb aria-label="Docs breadcrumb">
-						<BreadcrumbList>
-							<BreadcrumbItem>
-								<BreadcrumbLink asChild>
-									<span>
-										{/*
+				{/*
+				  The band is full-bleed and its contents are not. Before, both were:
+				  `left-0 w-dvw px-4` put the breadcrumb 16px from the viewport edge
+				  while the article beneath it sits inside `.container-page`, so on a
+				  1600px viewport the label started 168px left of the thing it labels,
+				  and the gap grew with the window. This is the same defect the footer
+				  had, in a different file.
+
+				  `mb-4` was also dead here - margin does nothing on a fixed element.
+				*/}
+				<div className="ds-overlay z-page-chrome fixed top-12 left-0 w-dvw py-1 md:top-16">
+					<div className="container-page flex items-center justify-between gap-3">
+						<Breadcrumb aria-label="Docs breadcrumb">
+							<BreadcrumbList>
+								<BreadcrumbItem>
+									<BreadcrumbLink asChild>
+										<span>
+											{/*
 										  max-xl, not max-lg. This link and the sheet trigger below
 										  are two spellings of one breadcrumb item and must never
 										  both render. The sheet moved to `xl:hidden` when it took
 										  over the table of contents; this did not follow, so
 										  1024-1279px read "Docs / Docs".
 										*/}
-										<Link className="max-xl:hidden" to="/docs" viewTransition>
-											Docs
-										</Link>
+											<Link className="max-xl:hidden" to="/docs" viewTransition>
+												Docs
+											</Link>
 
-										<DocsMobileNavigation
-											pathname={pathname}
-											headings={headings}
-											activeId={activeId}
-										>
-											{/*
+											<DocsMobileNavigation
+												pathname={pathname}
+												headings={headings}
+												activeId={activeId}
+											>
+												{/*
 											  A real button. `SheetTrigger asChild` adds no tabIndex
 											  of its own, so a span here left the docs sidebar and
 											  the page contents reachable by mouse only - and below
 											  xl that is the entire navigation for the docs section.
 											*/}
-											<button
-												type="button"
-												className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm font-medium"
-											>
-												<Menu className="h-5 w-5" /> Docs
-											</button>
-										</DocsMobileNavigation>
-									</span>
-								</BreadcrumbLink>
-							</BreadcrumbItem>
-							{categoryLabel && (
-								<>
-									<BreadcrumbSeparator />
-									<BreadcrumbItem>
-										{categoryPage ? (
-											<BreadcrumbLink asChild>
-												<Link to={`/docs/${categorySlug}`} viewTransition>
-													{categoryLabel}
-												</Link>
-											</BreadcrumbLink>
-										) : (
-											<BreadcrumbPage>{categoryLabel}</BreadcrumbPage>
-										)}
-									</BreadcrumbItem>
-								</>
-							)}
-							{page?.title && page.title !== categoryLabel && (
-								<>
-									<BreadcrumbSeparator />
-									<BreadcrumbItem>
-										<BreadcrumbPage>{page.title}</BreadcrumbPage>
-									</BreadcrumbItem>
-								</>
-							)}
-						</BreadcrumbList>
-					</Breadcrumb>
+												<button
+													type="button"
+													className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm font-medium"
+												>
+													<Menu className="h-5 w-5" /> Docs
+												</button>
+											</DocsMobileNavigation>
+										</span>
+									</BreadcrumbLink>
+								</BreadcrumbItem>
+								{categoryLabel && (
+									<>
+										<BreadcrumbSeparator />
+										<BreadcrumbItem>
+											{categoryPage ? (
+												<BreadcrumbLink asChild>
+													<Link to={`/docs/${categorySlug}`} viewTransition>
+														{categoryLabel}
+													</Link>
+												</BreadcrumbLink>
+											) : (
+												<BreadcrumbPage>{categoryLabel}</BreadcrumbPage>
+											)}
+										</BreadcrumbItem>
+									</>
+								)}
+								{page?.title && page.title !== categoryLabel && (
+									<>
+										<BreadcrumbSeparator />
+										<BreadcrumbItem>
+											<BreadcrumbPage>{page.title}</BreadcrumbPage>
+										</BreadcrumbItem>
+									</>
+								)}
+							</BreadcrumbList>
+						</Breadcrumb>
+					</div>
 				</div>
 
 				<article

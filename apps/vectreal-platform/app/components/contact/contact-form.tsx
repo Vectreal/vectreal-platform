@@ -17,6 +17,7 @@ import {
 	type ContactActionData,
 	type ContactInquiryType
 } from '../../lib/domain/contact/contact-shared'
+import { InlineNotice } from '../layout-components'
 import { TurnstileWidget } from '../turnstile-widget'
 
 interface ContactFormProps {
@@ -28,6 +29,8 @@ interface ContactFormProps {
 	turnstileToken: string | null
 	onTurnstileSuccess: (token: string) => void
 	onTurnstileError: () => void
+	/** True once the widget has reported an error or expiry. */
+	turnstileFailed: boolean
 	turnstileResetNonce: number
 	isSubmitting: boolean
 	actionData?: ContactActionData
@@ -42,6 +45,7 @@ export function ContactForm({
 	turnstileToken,
 	onTurnstileSuccess,
 	onTurnstileError,
+	turnstileFailed,
 	turnstileResetNonce,
 	isSubmitting,
 	actionData,
@@ -152,6 +156,24 @@ export function ContactForm({
 				resetNonce={turnstileResetNonce}
 				onError={onTurnstileError}
 			/>
+
+			{/*
+			  Turnstile runs `interaction-only`, so in the normal case it renders
+			  nothing at all. That is fine until it is blocked or errors: the submit
+			  button then stays disabled forever with no widget, no message and no
+			  reason, and the only working path off the page is an email address
+			  styled as an aside. Say what happened and point at it.
+			*/}
+			{turnstileFailed && (
+				<InlineNotice tone="warning">
+					Verification could not load, which is usually an extension or a
+					network blocking it. Reload to try again, or email{' '}
+					<a href="mailto:info@vectreal.com" className="underline">
+						info@vectreal.com
+					</a>{' '}
+					directly.
+				</InlineNotice>
+			)}
 
 			<div className="flex flex-wrap items-center gap-3">
 				<Button

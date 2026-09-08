@@ -52,7 +52,16 @@ function FeatureMatrixRow({
 }) {
 	return (
 		<tr className="border-border border-b last:border-0">
-			<th scope="row" className="text-body-sm py-3 pr-4 font-normal">
+			{/*
+			  The label column is sticky. The table needs 640px and a phone gives it
+			  343, so scrolling right to reach Business and Enterprise used to carry
+			  the feature names off screen - leaving a grid of ticks with nothing
+			  saying what they were ticks for.
+			*/}
+			<th
+				scope="row"
+				className="bg-background text-body-sm sticky left-0 py-3 pr-4 font-normal"
+			>
 				{label}
 			</th>
 			{plans.map(({ plan, granted }) => (
@@ -89,7 +98,7 @@ export function FeatureCompareGrid() {
 					</caption>
 					<thead>
 						<tr className="border-border border-b">
-							<th scope="col" className="pr-4 pb-4">
+							<th scope="col" className="bg-background sticky left-0 pr-4 pb-4">
 								<span className="sr-only">Feature</span>
 							</th>
 							{PLANS.map((plan) => (
@@ -113,7 +122,7 @@ export function FeatureCompareGrid() {
 									<th
 										scope="colgroup"
 										colSpan={PLANS.length + 1}
-										className="text-eyebrow py-2 pr-4"
+										className="text-eyebrow sticky left-0 py-2 pr-4"
 									>
 										{label}
 									</th>

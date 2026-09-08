@@ -164,6 +164,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 	const [inquiryType, setInquiryType] =
 		useState<InquiryType>(initialInquiryType)
 	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+	const [turnstileFailed, setTurnstileFailed] = useState(false)
 	const [turnstileResetNonce, setTurnstileResetNonce] = useState(0)
 	const [isResultDismissed, setIsResultDismissed] = useState(false)
 	const prefersReducedMotion = useReducedMotion()
@@ -193,10 +194,12 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 
 	const handleTurnstileSuccess = (token: string) => {
 		setTurnstileToken(token)
+		setTurnstileFailed(false)
 	}
 
 	const handleTurnstileError = () => {
 		setTurnstileToken(null)
+		setTurnstileFailed(true)
 	}
 
 	const handleSubmit = () => {
@@ -287,6 +290,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 											turnstileToken={turnstileToken}
 											onTurnstileSuccess={handleTurnstileSuccess}
 											onTurnstileError={handleTurnstileError}
+											turnstileFailed={turnstileFailed}
 											turnstileResetNonce={turnstileResetNonce}
 											isSubmitting={isSubmitting}
 											actionData={typedActionData}
