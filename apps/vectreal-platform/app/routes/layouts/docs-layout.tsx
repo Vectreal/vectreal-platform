@@ -16,6 +16,7 @@ import { type MetaFunction, Link, Outlet, useLocation } from 'react-router'
 import { DocsMobileNavigation } from '../../components/docs/docs-mobile-navigation'
 import { DocsPageToc } from '../../components/docs/docs-page-toc'
 import { DocsTreeNav } from '../../components/docs/docs-tree-nav'
+import { PublicErrorBoundary } from '../../components/errors'
 import { useDocToc } from '../../hooks/use-doc-toc'
 import {
 	DOC_CATEGORY_LABELS,
@@ -287,3 +288,12 @@ export default function DocsLayout() {
 		</div>
 	)
 }
+
+/*
+  This layout owns 13 MDX routes and the TOC hook that runs on all of them, and
+  it was the one place the boundary was not exported - every leaf route had it.
+  Without it a throw here reaches root.tsx's last-resort fallback, which renders
+  the raw error string on a bare document whose `error` class is defined in no
+  stylesheet.
+*/
+export { PublicErrorBoundary as ErrorBoundary }
