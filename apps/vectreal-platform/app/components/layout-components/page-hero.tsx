@@ -2,7 +2,6 @@ import { cn } from '@shared/utils'
 import { type ReactNode } from 'react'
 
 interface PageHeroProps {
-	eyebrow?: string
 	heading: ReactNode
 	description?: ReactNode
 	actions?: ReactNode
@@ -11,12 +10,16 @@ interface PageHeroProps {
 
 /**
  * Shared above-the-fold hero section used by all main nav pages
- * (docs, contact, newsroom, pricing). Encodes the brand-aligned
- * design spec in one place - gradient background, typography scale,
- * eyebrow label, description, and an actions slot.
+ * (docs, contact, newsroom, pricing). Encodes the brand-aligned design spec in
+ * one place - typography scale, description, and an actions slot.
+ *
+ * There was a label above the heading, and every page passed its own name into
+ * it, in caps. The nav already marks the current page and the H1 already says
+ * what the page is, so it was the third statement of one fact. A reflexive
+ * all-caps label above a heading is a templated-layout tell in its own right,
+ * which is why the prop is gone rather than merely unused.
  */
 const PageHero = ({
-	eyebrow,
 	heading,
 	description,
 	actions,
@@ -44,10 +47,6 @@ const PageHero = ({
 			*/}
 			<div className="container-page pt-24 pb-16">
 				<div className="space-y-4">
-					{eyebrow && (
-						<p className="text-muted-foreground text-eyebrow">{eyebrow}</p>
-					)}
-
 					<h1 className="text-headline font-heading max-w-4xl">{heading}</h1>
 
 					{description && (

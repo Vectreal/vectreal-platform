@@ -260,7 +260,7 @@ export default function DocsLayout() {
 				aria-label="On this page"
 			>
 				<div className="border-border/50 h-full border-l pl-4">
-					<p className="text-muted-foreground mb-3 px-1 text-xs font-semibold tracking-wider uppercase">
+					<p className="text-muted-foreground text-eyebrow mb-3 px-1">
 						On this page
 					</p>
 					<ScrollArea className="h-[calc(100vh-8rem)] pr-2 pb-8">

@@ -114,7 +114,6 @@ export default function DocsIndexPage() {
 	return (
 		<main className="bg-background">
 			<PageHero
-				eyebrow="Documentation"
 				heading={DOCS_PAGE_COPY.heading}
 				description={DOCS_PAGE_COPY.description}
 				actions={

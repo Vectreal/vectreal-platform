@@ -35,7 +35,9 @@ export function CtaPanel({
 			cardClassName="flex flex-col gap-4 p-6 md:p-8"
 			className={cn(className)}
 		>
-			{eyebrow ? <p className="text-orange text-eyebrow">{eyebrow}</p> : null}
+			{eyebrow ? (
+				<p className="text-muted-foreground text-eyebrow">{eyebrow}</p>
+			) : null}
 
 			<h2 className="text-h3 font-heading max-w-2xl">{heading}</h2>
 

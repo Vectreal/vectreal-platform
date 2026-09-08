@@ -51,7 +51,7 @@ export function DocsMobileNavigation({
 							/>
 						</div>
 						<div>
-							<p className="text-muted-foreground mb-2 px-1 text-xs font-semibold tracking-wider uppercase">
+							<p className="text-muted-foreground text-eyebrow mb-2 px-1">
 								On this page
 							</p>
 							<DocsPageToc

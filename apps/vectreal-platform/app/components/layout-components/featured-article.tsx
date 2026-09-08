@@ -59,7 +59,7 @@ export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
 			>
 				<div className="relative z-20 flex min-h-[19rem] flex-col justify-end p-6 md:min-h-[24rem] md:p-9">
 					<p
-						className="text-orange text-eyebrow vt-news-text mb-3"
+						className="text-muted-foreground text-eyebrow vt-news-text mb-3"
 						style={{ viewTransitionName: morph.eyebrow }}
 					>
 						{article.category} · Featured

@@ -1,7 +1,6 @@
 import { usePostHog } from '@posthog/react'
-import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
-import { ArrowRight, Search, X } from 'lucide-react'
+import { ArrowRight, Search } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { data, Form, Link } from 'react-router'
 
@@ -14,8 +13,7 @@ import {
 } from '../../components/layout-components'
 import {
 	getNewsArticles,
-	getNewsCategories,
-	getNewsTags
+	getNewsCategories
 } from '../../lib/news/news-manifest'
 import { buildPageMeta, SITE_URL } from '../../lib/seo'
 import {
@@ -25,17 +23,9 @@ import {
 
 import type { Route } from './+types/news-room-page'
 
-type SortMode = 'newest' | 'oldest'
-
 interface NewsRoomFilters {
 	query: string
 	category: string
-	tag: string
-	sort: SortMode
-}
-
-function parseSortMode(value: string | null): SortMode {
-	return value === 'oldest' ? 'oldest' : 'newest'
 }
 
 function includesCaseInsensitive(value: string, search: string): boolean {
@@ -57,14 +47,6 @@ function buildNewsRoomPath(
 		params.set('category', nextFilters.category)
 	}
 
-	if (nextFilters.tag) {
-		params.set('tag', nextFilters.tag)
-	}
-
-	if (nextFilters.sort !== 'newest') {
-		params.set('sort', nextFilters.sort)
-	}
-
 	const queryString = params.toString()
 	return queryString ? `/news-room?${queryString}` : '/news-room'
 }
@@ -73,8 +55,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url)
 	const query = url.searchParams.get('q')?.trim() ?? ''
 	const category = url.searchParams.get('category')?.trim() ?? ''
-	const tag = url.searchParams.get('tag')?.trim() ?? ''
-	const sort = parseSortMode(url.searchParams.get('sort'))
 
 	let articles = getNewsArticles().map(
 		({ Component: _, ...article }) => article
@@ -98,19 +78,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		articles = articles.filter((article) => article.category === category)
 	}
 
-	if (tag) {
-		articles = articles.filter((article) => article.tags.includes(tag))
-	}
-
-	articles.sort((a, b) => {
-		const timeA = Date.parse(a.publishedAt)
-		const timeB = Date.parse(b.publishedAt)
-		if (sort === 'oldest') {
-			return timeA - timeB
-		}
-
-		return timeB - timeA
-	})
+	articles.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))
 
 	return data({
 		articles,
@@ -122,12 +90,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 		*/
 		totalArticles: getNewsArticles().length,
 		categories: getNewsCategories(),
-		tags: getNewsTags(),
 		filters: {
 			query,
-			category,
-			tag,
-			sort
+			category
 		}
 	})
 }
@@ -144,18 +109,11 @@ export function meta(_: Route.MetaArgs) {
 }
 
 export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
-	const { articles, totalArticles, categories, tags, filters } = loaderData
+	const { articles, totalArticles, categories, filters } = loaderData
 	const posthog = usePostHog()
 	const { consent } = useConsent()
 	const viewTrackedRef = useRef(false)
 	const [featuredArticle, ...remainingArticles] = articles
-	const hasAdvancedFilters =
-		Boolean(filters.category) ||
-		Boolean(filters.tag) ||
-		filters.sort === 'oldest'
-	const hasAnyFilters = Boolean(filters.query) || hasAdvancedFilters
-	const featuredTopics = categories.slice(0, 4)
-	const featuredTags = tags.slice(0, 3)
 	const latestStoryPath = featuredArticle
 		? `/news-room/${featuredArticle.slug}`
 		: '/news-room#news-feed'
@@ -169,24 +127,19 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 		posthog?.capture('newsroom_listing_viewed', {
 			result_count: articles.length,
 			has_query: Boolean(filters.query),
-			has_category_filter: Boolean(filters.category),
-			has_tag_filter: Boolean(filters.tag),
-			sort_mode: filters.sort
+			has_category_filter: Boolean(filters.category)
 		})
 	}, [
 		articles.length,
 		consent?.analytics,
 		filters.category,
 		filters.query,
-		filters.sort,
-		filters.tag,
 		posthog
 	])
 
 	return (
 		<div>
 			<PageHero
-				eyebrow="Newsroom"
 				heading="Launches, engineering notes, and the decisions behind them."
 				description={`${totalArticles} articles on building, optimizing and publishing 3D for the web.`}
 				actions={
@@ -205,111 +158,66 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 			/>
 
 			<div className="container-page pb-20">
-				<section className="mb-8 flex flex-wrap items-center gap-2 md:mb-10">
+				{/*
+				  One axis, not three.
+
+				  This row held fifteen controls in three visual treatments: a search
+				  field, "All", four topics, three tags, a sort toggle and a reset
+				  badge, all wrapping together. Topics and tags rendered identically
+				  while filtering different things, so the row looked like one flat
+				  list of nine equivalent buttons and was none.
+
+				  Tags and sort are gone rather than restyled. Neither was reachable
+				  from anywhere else - no article links a tag - so they were a second
+				  and third axis on a twelve-article index, competing with the one
+				  people actually use.
+				*/}
+				<section
+					aria-label="Filter articles"
+					className="mb-8 flex flex-wrap items-center justify-between gap-4 md:mb-10"
+				>
+					<div className="flex flex-wrap items-center gap-1">
+						<Button
+							variant={filters.category ? 'ghost' : 'secondary'}
+							size="sm"
+							asChild
+						>
+							<Link to={buildNewsRoomPath(filters, { category: '' })}>All</Link>
+						</Button>
+						{categories.map((topic) => (
+							<Button
+								key={topic}
+								variant={filters.category === topic ? 'secondary' : 'ghost'}
+								size="sm"
+								asChild
+							>
+								<Link
+									to={buildNewsRoomPath(filters, { category: topic })}
+									aria-current={filters.category === topic ? 'true' : undefined}
+								>
+									{topic}
+								</Link>
+							</Button>
+						))}
+					</div>
+
 					<Form method="get" className="flex items-center gap-2">
 						<input type="hidden" name="category" value={filters.category} />
-						<input type="hidden" name="tag" value={filters.tag} />
-						<input type="hidden" name="sort" value={filters.sort} />
-						<label className="ds-sunken focus-within:ring-ring/50 inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 transition-shadow focus-within:ring-2">
-							<Search className="text-muted-foreground h-3.5 w-3.5" />
+						<label className="ds-sunken inline-flex h-9 items-center gap-2 rounded-full px-3">
+							<Search className="text-muted-foreground h-4 w-4 shrink-0" />
 							<input
 								type="search"
 								name="q"
 								defaultValue={filters.query}
-								placeholder="Search"
-								aria-label="Search newsroom posts"
-								className="placeholder:text-muted-foreground h-6 w-22 bg-transparent text-xs transition-all duration-300 outline-none focus:w-44 md:w-28 md:focus:w-52"
+								placeholder="Search articles"
+								aria-label="Search newsroom articles"
+								className="text-body-sm placeholder:text-muted-foreground w-40 bg-transparent md:w-48"
 							/>
 						</label>
 						<Button type="submit" variant="ghost" size="sm">
 							Search
 						</Button>
 					</Form>
-
-					<Button
-						variant={
-							!filters.category && !filters.tag && filters.sort === 'newest'
-								? 'secondary'
-								: 'ghost'
-						}
-						size="sm"
-						asChild
-					>
-						<Link
-							to={buildNewsRoomPath(filters, {
-								category: '',
-								tag: '',
-								sort: 'newest'
-							})}
-						>
-							All
-						</Link>
-					</Button>
-
-					{featuredTopics.map((topic) => (
-						<Button
-							key={topic}
-							variant={filters.category === topic ? 'secondary' : 'ghost'}
-							size="sm"
-							asChild
-						>
-							<Link
-								to={buildNewsRoomPath(filters, {
-									category: topic,
-									tag: '',
-									sort: 'newest'
-								})}
-							>
-								{topic}
-							</Link>
-						</Button>
-					))}
-
-					{featuredTags.map((tag) => (
-						<Button
-							key={tag}
-							variant={filters.tag === tag ? 'secondary' : 'ghost'}
-							size="sm"
-							asChild
-						>
-							<Link
-								to={buildNewsRoomPath(filters, {
-									tag,
-									category: '',
-									sort: 'newest'
-								})}
-							>
-								#{tag}
-							</Link>
-						</Button>
-					))}
-
-					<Button
-						variant={filters.sort === 'oldest' ? 'secondary' : 'ghost'}
-						size="sm"
-						asChild
-					>
-						<Link
-							to={buildNewsRoomPath(filters, {
-								sort: filters.sort === 'oldest' ? 'newest' : 'oldest'
-							})}
-						>
-							{filters.sort === 'oldest' ? 'Oldest first' : 'Newest first'}
-						</Link>
-					</Button>
-
-					{hasAnyFilters ? (
-						<Badge
-							variant="secondary"
-							asChild
-							className="h-8 rounded-full px-3"
-						>
-							<Link to="/news-room" className="inline-flex items-center gap-1">
-								Reset
-								<X className="h-3 w-3" aria-hidden="true" />
-							</Link>
-						</Badge>
-					) : null}
 				</section>
 
 				<section id="news-feed" className="scroll-mt-24 space-y-4">

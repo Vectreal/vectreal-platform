@@ -53,7 +53,6 @@ export default function PricingPage() {
 			  description above them and the cards below them already say.
 			*/}
 			<PageHero
-				eyebrow="Pricing"
 				heading={PRICING_PAGE_COPY.heading}
 				description={PRICING_PAGE_COPY.description}
 			/>

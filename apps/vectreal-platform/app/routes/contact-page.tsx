@@ -211,7 +211,6 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 	return (
 		<main>
 			<PageHero
-				eyebrow="Contact"
 				heading="Tell us what you are building"
 				description="Whether you need product support, a business plan discussion, or a partnership conversation, this form routes you straight to the right team."
 			/>
