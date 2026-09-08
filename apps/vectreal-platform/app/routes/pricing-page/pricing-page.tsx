@@ -87,7 +87,6 @@ export default function PricingPage() {
 					period={period}
 					onPeriodChange={setPeriod}
 					prices={prices}
-					showEnterprise={false}
 				/>
 
 				<section aria-labelledby="enterprise-heading" className="mt-16">

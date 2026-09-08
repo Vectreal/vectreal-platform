@@ -6,7 +6,12 @@ import { DocsScenePreview } from '../../components/docs/docs-scene-preview'
 import { PublicErrorBoundary } from '../../components/errors'
 import { PageHero } from '../../components/layout-components'
 import { DOCS_PAGE_COPY } from '../../constants/product-copy'
-import { docsPages, type DocCategory } from '../../lib/docs/docs-manifest'
+import {
+	DOC_CATEGORY_LABELS,
+	DOC_CATEGORY_ORDER,
+	docsPages,
+	type DocCategory
+} from '../../lib/docs/docs-manifest'
 import { buildPageMeta } from '../../lib/seo'
 import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
 
@@ -230,52 +235,51 @@ export default function DocsIndexPage() {
 					</div>
 				</section>
 
-				<DocsSection heading="Guides" className="mt-32">
-					{pagesIn('guides').map((page) => (
-						<DocsRow
-							key={page.slug}
-							to={`/docs/${page.slug}`}
-							title={page.title}
-							{...(page.description ? { description: page.description } : {})}
-						/>
-					))}
-				</DocsSection>
-
 				{/*
-				  The package rows carry their install line. It is the thing a
-				  reader on this section actually wants next, and it is real
-				  product rather than a description of it.
-				*/}
-				<DocsSection
-					heading={DOCS_PAGE_COPY.packagesHeading}
-					description={DOCS_PAGE_COPY.packagesDescription}
-					className="mt-32"
-				>
-					{pagesIn('packages').map((page) => (
-						<DocsRow
-							key={page.slug}
-							to={`/docs/${page.slug}`}
-							title={page.title}
-							{...(page.title.startsWith('@vctrl/')
-								? { aside: `npm i ${page.title}` }
-								: {})}
-							{...(page.description ? { description: page.description } : {})}
-						/>
-					))}
-				</DocsSection>
+				  Every category after "getting-started", in the manifest's own order
+				  and under the manifest's own label. Three of these were hardcoded
+				  and Contributing was folded into the Operations heading, so the
+				  page disagreed with the sidebar and a sixth DocCategory would have
+				  compiled and silently never rendered.
 
-				<DocsSection heading="Operations" className="mt-32">
-					{[...pagesIn('operations'), ...pagesIn('contributing')].map(
-						(page) => (
-							<DocsRow
-								key={page.slug}
-								to={`/docs/${page.slug}`}
-								title={page.title}
-								{...(page.description ? { description: page.description } : {})}
-							/>
-						)
-					)}
-				</DocsSection>
+				  Packages is the one section with more to say than its label, so it
+				  is the one that reads its copy from the copy module.
+				*/}
+				{DOC_CATEGORY_ORDER.filter(
+					(category) => category !== 'getting-started'
+				).map((category) => {
+					const pages = pagesIn(category)
+					if (pages.length === 0) return null
+
+					return (
+						<DocsSection
+							key={category}
+							heading={
+								category === 'packages'
+									? DOCS_PAGE_COPY.packagesHeading
+									: DOC_CATEGORY_LABELS[category]
+							}
+							{...(category === 'packages'
+								? { description: DOCS_PAGE_COPY.packagesDescription }
+								: {})}
+							className="mt-32"
+						>
+							{pages.map((page) => (
+								<DocsRow
+									key={page.slug}
+									to={`/docs/${page.slug}`}
+									title={page.title}
+									{...(page.title.startsWith('@vctrl/')
+										? { aside: `npm i ${page.title}` }
+										: {})}
+									{...(page.description
+										? { description: page.description }
+										: {})}
+								/>
+							))}
+						</DocsSection>
+					)
+				})}
 
 				<div className="mt-16 flex flex-wrap items-center gap-x-6 gap-y-2">
 					<span className="text-muted-foreground text-eyebrow">

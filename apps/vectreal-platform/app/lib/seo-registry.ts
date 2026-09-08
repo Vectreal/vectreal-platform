@@ -3,7 +3,8 @@ import {
 	PLAN_OFFER_DESCRIPTIONS,
 	PLATFORM_FEATURE_LIST,
 	PLATFORM_SOCIAL_DESCRIPTION,
-	PLATFORM_TAGLINE
+	PLATFORM_TAGLINE,
+	PRICING_PAGE_COPY
 } from '../constants/product-copy'
 
 interface NewsArticleStructuredDataInput {
@@ -31,8 +32,13 @@ export const PUBLIC_SEO_PAGES = {
 	},
 	pricing: {
 		title: 'Pricing - Vectreal',
-		description:
-			'Simple, transparent pricing for every workflow. Plans for hobbyists through enterprise studios, with every tier priced in the open.',
+		/*
+		  The page's own description, not a second copy of it. This used to end
+		  "with every tier priced in the open", which the page contradicts: the
+		  Enterprise band on it reads "tell us what you need and we will price it".
+		  Two spellings of one claim is how the two came to disagree.
+		*/
+		description: PRICING_PAGE_COPY.description,
 		canonical: '/pricing'
 	},
 	newsroom: {

@@ -8,7 +8,6 @@ interface CtaPanelProps {
 	eyebrow?: string
 	heading: ReactNode
 	description?: ReactNode
-	/** Badges or similar, shown between the description and the actions. */
 	actions: ReactNode
 	className?: string
 }

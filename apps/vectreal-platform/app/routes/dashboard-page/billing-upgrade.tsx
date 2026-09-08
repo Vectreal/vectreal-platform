@@ -280,7 +280,6 @@ function BillingUpgradeContent({
 					period={billingPeriod}
 					onPeriodChange={setBillingPeriod}
 					prices={checkoutOptions}
-					showEnterprise={false}
 					activePlan={billing.plan}
 					selectedPlan={plan}
 					selectablePlans={['pro', 'business']}

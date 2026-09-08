@@ -7,8 +7,10 @@ const DocsScenePreviewClient = lazy(() => import('./docs-scene-preview-client'))
  *
  * Two separate reasons, both load-bearing. The viewer needs a DOM, so it cannot
  * render during SSR - hence the mounted flag rather than a plain dynamic import.
- * And Three.js plus a GLB is a large payload for a page whose job is to route
- * people to documentation, so it is lazy and never blocks first paint.
+ * And Three.js and the viewer are a large payload for a page whose job is to
+ * route people to documentation, so it is lazy and never blocks first paint.
+ * There is no model file on top of that: the subject is generated geometry,
+ * which is the other half of the same decision.
  *
  * The placeholder holds the same box at every stage, so the surrounding layout
  * does not shift when the viewer arrives.

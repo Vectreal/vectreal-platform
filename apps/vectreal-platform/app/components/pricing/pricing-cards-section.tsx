@@ -7,7 +7,6 @@
  * ─────
  * period / onPeriodChange   – controlled billing-period state
  * prices                    – live Stripe prices (nullable when unavailable)
- * showEnterprise            – renders the Enterprise card (default true)
  * activePlan                – the user's current plan; shown as "Current plan"
  * selectedPlan              – card shown as selected/highlighted
  * onSelectPlan              – when provided, cards are interactive selectors
@@ -97,7 +96,6 @@ function PlanCard({
 	const highlighted = PLAN_HIGHLIGHTED[plan]
 	const fallbackPrices = PLAN_FALLBACK_PRICES[plan]
 
-	const isEnterprise = plan === 'enterprise'
 	const isFree = plan === 'free'
 	const isPaid = plan === 'pro' || plan === 'business'
 	const isActive = plan === activePlan
@@ -193,9 +191,7 @@ function PlanCard({
 				</div>
 				<CardDescription>{tagline}</CardDescription>
 				<div className="pt-2">
-					{isEnterprise ? (
-						<p className="text-h2 font-heading">Custom</p>
-					) : isFree ? (
+					{isFree ? (
 						<div>
 							<span className="text-h2 font-heading">$0</span>
 							<span className="text-muted-foreground text-body-sm ml-1">
@@ -290,11 +286,7 @@ function PlanCard({
 						}}
 					>
 						{isSelected && <Check className="mr-2 h-4 w-4" />}
-						{isSelected
-							? 'Selected'
-							: isEnterprise
-								? 'Contact sales'
-								: `Select ${name}`}
+						{isSelected ? 'Selected' : `Select ${name}`}
 					</Button>
 				</CardFooter>
 			)}
@@ -329,15 +321,19 @@ const periodStateClass = (selected: boolean) =>
 		? 'bg-background text-foreground'
 		: 'text-muted-foreground hover:text-foreground'
 
-const ALL_PLANS: Plan[] = ['free', 'pro', 'business', 'enterprise']
-const PLANS_WITHOUT_ENTERPRISE: Plan[] = ['free', 'pro', 'business']
+/*
+  Enterprise is not a card. It has no price to show and no self-serve checkout,
+  so it gets its own band below the grid on /pricing where it can say "tell us
+  what you need". A `showEnterprise` prop used to switch a fourth card on; both
+  call sites passed false, so every branch behind it was unreachable.
+*/
+const PRICING_CARD_PLANS: Plan[] = ['free', 'pro', 'business']
 
 export interface PricingCardsSectionProps {
 	period: 'monthly' | 'annual'
 	onPeriodChange: (period: 'monthly' | 'annual') => void
 	prices: BillingCheckoutOptions | null
 	/** Include the Enterprise card (default true) */
-	showEnterprise?: boolean
 	/** User's current plan - shows "Current plan" badge */
 	activePlan?: Plan
 	/** Plan currently selected for checkout - highlighted ring */
@@ -352,14 +348,11 @@ export function PricingCardsSection({
 	period,
 	onPeriodChange,
 	prices,
-	showEnterprise = true,
 	activePlan,
 	selectedPlan,
 	onSelectPlan,
 	selectablePlans
 }: PricingCardsSectionProps) {
-	const plans = showEnterprise ? ALL_PLANS : PLANS_WITHOUT_ENTERPRISE
-
 	return (
 		<section>
 			{/*
@@ -407,15 +400,15 @@ export function PricingCardsSection({
 				</div>
 			</div>
 
-			<div
-				className={cn(
-					'grid gap-6',
-					plans.length === 4
-						? 'sm:grid-cols-2 xl:grid-cols-4'
-						: 'sm:grid-cols-3'
-				)}
-			>
-				{plans.map((plan) => (
+			{/*
+			  Three across at md, not at sm. At 640px three columns leave 139px of
+			  content inside each card, and the price row needs about 174px - so
+			  the annual discount badge was clipped by the card's own
+			  overflow-hidden and the limit rows ran their label into their value.
+			  The four-column branch this replaced could not be reached.
+			*/}
+			<div className="grid gap-6 md:grid-cols-3">
+				{PRICING_CARD_PLANS.map((plan) => (
 					<PlanCard
 						key={plan}
 						plan={plan}

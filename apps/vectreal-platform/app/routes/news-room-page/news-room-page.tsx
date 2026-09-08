@@ -90,6 +90,16 @@ export async function loader({ request }: Route.LoaderArgs) {
 		  empty state.
 		*/
 		totalArticles: getNewsArticles().length,
+		/*
+		  Unfiltered for the same reason. The hero sits above the filter row and
+		  describes the whole newsroom, so its "Read the latest" has to mean the
+		  newest article - not the newest match, which under a filter disagreed
+		  with the count beside it and on zero matches pointed at the empty state.
+		*/
+		latestSlug: getNewsArticles()
+			.map(({ publishedAt, slug }) => ({ publishedAt, slug }))
+			.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))[0]
+			?.slug,
 		categories: getNewsCategories(),
 		filters: {
 			query,
@@ -110,13 +120,14 @@ export function meta(_: Route.MetaArgs) {
 }
 
 export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
-	const { articles, totalArticles, categories, filters } = loaderData
+	const { articles, totalArticles, latestSlug, categories, filters } =
+		loaderData
 	const posthog = usePostHog()
 	const { consent } = useConsent()
 	const viewTrackedRef = useRef(false)
 	const [featuredArticle, ...remainingArticles] = articles
-	const latestStoryPath = featuredArticle
-		? `/news-room/${featuredArticle.slug}`
+	const latestStoryPath = latestSlug
+		? `/news-room/${latestSlug}`
 		: '/news-room#news-feed'
 
 	useEffect(() => {
