@@ -2,6 +2,7 @@ import { Button } from '@shared/components/ui/button'
 import { useState } from 'react'
 import { data, Link, useLoaderData } from 'react-router'
 
+import { PublicErrorBoundary } from '../../components/errors'
 import { PageHero } from '../../components/layout-components'
 import {
 	FeatureCompareGrid,
@@ -118,3 +119,10 @@ export default function PricingPage() {
 		</main>
 	)
 }
+
+/*
+  Without this a throw here reached root.tsx's last-resort fallback, which
+  renders the raw error string on a bare document with no nav, no footer and no
+  way back - and whose `error` class is defined in no stylesheet.
+*/
+export { PublicErrorBoundary as ErrorBoundary }

@@ -117,7 +117,7 @@ export default function DocsLayout() {
 	return (
 		<div className="container-page flex gap-0 pb-16">
 			<aside
-				className="sticky top-20 hidden h-[calc(100vh-5rem)] w-64 shrink-0 lg:block"
+				className="sticky top-20 hidden h-[calc(100dvh-5rem)] w-64 shrink-0 lg:block"
 				aria-label="Docs navigation"
 			>
 				<ScrollArea className="h-full pr-4 pb-8">
@@ -256,14 +256,14 @@ export default function DocsLayout() {
 			</main>
 
 			<aside
-				className="sticky top-20 hidden h-[calc(100vh-5rem)] w-64 shrink-0 xl:block"
+				className="sticky top-20 hidden h-[calc(100dvh-5rem)] w-64 shrink-0 xl:block"
 				aria-label="On this page"
 			>
 				<div className="border-border/50 h-full border-l pl-4">
 					<p className="text-muted-foreground text-eyebrow mb-3 px-1">
 						On this page
 					</p>
-					<ScrollArea className="h-[calc(100vh-8rem)] pr-2 pb-8">
+					<ScrollArea className="h-[calc(100dvh-8rem)] pr-2 pb-8">
 						<DocsPageToc headings={headings} activeId={activeId} />
 					</ScrollArea>
 				</div>

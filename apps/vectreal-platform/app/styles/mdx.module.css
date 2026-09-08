@@ -209,8 +209,30 @@
 			color-mix(in oklch, var(--color-foreground) 8%, transparent);
 	}
 
+	/*
+	  Tables scroll rather than push the page sideways.
+
+	  `w-full` does not stop a table exceeding its min-content width. On
+	  `/docs/packages/viewer` seven of twelve tables cannot fit a 375px viewport
+	  - the widest needs 709px against 343px of available column - so the page
+	  itself scrolled horizontally and the article text went with it.
+
+	  `display: block` makes the table its own scroll container, which is the
+	  same answer `pre` above already uses. `width: max-content` with
+	  `min-width: 100%` keeps a narrow table filling the column instead of
+	  shrinking to its content, which is what a bare `display: block` would do.
+
+	  Markdown emits a bare `<table>` with no wrapper to hang `overflow-x` on,
+	  and adding one means a rehype plugin; this is the same result without the
+	  build step.
+	*/
 	table {
-		@apply w-full border-collapse text-sm;
+		@apply border-collapse text-sm;
+		display: block;
+		width: max-content;
+		min-width: 100%;
+		max-width: 100%;
+		overflow-x: auto;
 
 		th {
 			@apply px-3 py-2 text-left font-semibold;

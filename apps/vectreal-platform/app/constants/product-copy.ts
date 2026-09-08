@@ -194,8 +194,24 @@ export const PLAN_FALLBACK_PRICES: Partial<
 	business: { monthly: 79, annualMonthly: 63 }
 }
 
-// Annual billing toggle badge copy.
-export const ANNUAL_DISCOUNT_CLAIM = 'Save up to 20%'
+/*
+  Annual billing toggle badge copy, derived rather than written.
+
+  It was the string 'Save up to 20%', and the same screen computed 21% from the
+  same numbers: `pricing-cards-section` derives each plan's real discount and
+  renders it on the card, so Pro could read "Save 21%" beside a toggle claiming
+  "up to 20%". Pro saves 21% and Business 20%, so "up to" was understating its
+  own best case.
+
+  Computed from the fallback prices, which are the documented reference for what
+  a plan costs. `product-copy.spec.ts` pins the two together, so changing a price
+  without the claim following fails rather than quietly contradicting a card.
+*/
+export const ANNUAL_DISCOUNT_CLAIM = `Save up to ${Math.max(
+	...Object.values(PLAN_FALLBACK_PRICES).map(({ monthly, annualMonthly }) =>
+		Math.round((1 - annualMonthly / monthly) * 100)
+	)
+)}%`
 
 // Trust copy displayed near checkout CTAs.
 export const PAYMENT_TRUST_COPY = 'Secured by Stripe · Cancel anytime'
@@ -255,6 +271,8 @@ export const PRICING_PAGE_COPY = {
 	comparisonHeading: 'What each plan includes',
 	comparisonDescription:
 		'Every entitlement, across all four plans. Limits are per organization.',
+	// The "every entitlement" claim above is pinned by product-copy.spec.ts,
+	// which fails when an entitlement key is added without a row in the grid.
 	enterpriseHeading: 'Enterprise',
 	enterpriseDescription:
 		'Set your own limits and get a dedicated support channel. Tell us what you need and we will price it.'
@@ -274,8 +292,7 @@ export const DOCS_PAGE_COPY = {
 	startHereDescription:
 		'Read them in order. The last one ends with a published scene.',
 	packagesHeading: 'Packages',
-	packagesDescription:
-		'Published to npm and usable without a Vectreal account.',
+	packagesDescription: 'Open source, published to npm, and documented here.',
 	quickLinksLabel: 'Elsewhere'
 } as const
 

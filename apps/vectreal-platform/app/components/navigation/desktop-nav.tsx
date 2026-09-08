@@ -30,13 +30,21 @@ function DesktopNav({
 	return (
 		<nav
 			className={cn(
-				'z-nav fixed top-0 right-0 left-0 items-center justify-center p-4',
+				'z-nav fixed top-0 right-0 left-0 items-center justify-center py-4',
 				className
 			)}
 			aria-label="Main navigation"
 		>
 			<div className="from-background absolute inset-0 z-0 h-16 bg-linear-to-b to-transparent backdrop-blur-sm" />
-			<div className="z-10 flex w-full max-w-7xl items-center justify-between gap-1">
+			{/*
+			  `container-page`, not `max-w-7xl` plus a hand-picked gutter.
+
+			  The measure owns its gutter - 1rem, stepping to 1.5rem at 48rem -
+			  and this chrome picked its own, so it sat inboard or outboard of the
+			  page content it frames depending on the width. `tokens.md` names
+			  this exact failure as the reason the class exists.
+			*/}
+			<div className="container-page z-10 flex items-center justify-between gap-1">
 				{/* Logo */}
 				<Link
 					to="/"

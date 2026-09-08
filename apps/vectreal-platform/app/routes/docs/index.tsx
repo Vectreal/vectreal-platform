@@ -2,6 +2,7 @@ import { Button } from '@shared/components/ui/button'
 import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router'
 
+import { PublicErrorBoundary } from '../../components/errors'
 import { PageHero } from '../../components/layout-components'
 import { DOCS_PAGE_COPY } from '../../constants/product-copy'
 import { docsPages, type DocCategory } from '../../lib/docs/docs-manifest'
@@ -254,3 +255,10 @@ export default function DocsIndexPage() {
 		</main>
 	)
 }
+
+/*
+  Without this a throw here reached root.tsx's last-resort fallback, which
+  renders the raw error string on a bare document with no nav, no footer and no
+  way back - and whose `error` class is defined in no stylesheet.
+*/
+export { PublicErrorBoundary as ErrorBoundary }

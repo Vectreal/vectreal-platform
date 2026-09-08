@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react'
 import { data, Form, Link } from 'react-router'
 
 import { useConsent } from '../../components/consent/consent-context'
+import { PublicErrorBoundary } from '../../components/errors'
 import {
 	ArticleRow,
 	CtaPanel,
@@ -276,3 +277,10 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 		</div>
 	)
 }
+
+/*
+  Without this a throw here reached root.tsx's last-resort fallback, which
+  renders the raw error string on a bare document with no nav, no footer and no
+  way back - and whose `error` class is defined in no stylesheet.
+*/
+export { PublicErrorBoundary as ErrorBoundary }
