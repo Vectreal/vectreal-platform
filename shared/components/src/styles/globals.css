@@ -152,9 +152,9 @@
 	--surface-glow-light: oklch(0.75 0.14 40 / 0.14);
 
 	/*
-	  Typography scale, mirroring `tokens/typography.css` in the Vectreal Design
-	  System. The `.text-*` classes further down consume these rather than
-	  restating the numbers.
+	  Typography scale. This block is the source of truth - there is no separate
+	  design-system package to mirror. The `.text-*` classes further down consume
+	  these rather than restating the numbers.
 
 	  Deliberately plain custom properties and NOT `@theme` keys: `--text-*`,
 	  `--tracking-*`, `--font-*`, `--space-*` and `--container-*` are all Tailwind
@@ -190,19 +190,24 @@
 	--tracking-h4: -0.01em;
 	--tracking-eyebrow: 0.14em;
 
-	/* Spacing scale and page measure, from `tokens/spacing.css`. */
-	--space-1: 0.25rem;
-	--space-2: 0.5rem;
-	--space-3: 0.75rem;
+	/*
+	  The page gutter, and the page measure.
+
+	  This was a twelve-rung spacing scale; ten rungs had no reader anywhere in
+	  the repo and are gone. The two below are the gutter `.container-page`
+	  steps between, and they are kept as names because that rule reads better
+	  with them than with two bare lengths.
+
+	  Do not grow this back into a scale. `--space-*` IS a Tailwind namespace,
+	  but it backs `space-x-*` / `space-y-*` - the child-margin utilities - and
+	  not `p-*` or `gap-*`, which derive from the `--spacing` multiplier. These
+	  sit in `:root`, where a namespace generates nothing at all; moving them to
+	  `@theme` to "make them real" would mint a second `space-x` scale beside
+	  the one Tailwind already derives, which is two systems for one idea.
+	  Spacing in markup is Tailwind's numeric scale, `p-4` and `gap-6`.
+	*/
 	--space-4: 1rem;
-	--space-5: 1.25rem;
 	--space-6: 1.5rem;
-	--space-8: 2rem;
-	--space-10: 2.5rem;
-	--space-12: 3rem;
-	--space-16: 4rem;
-	--space-24: 6rem;
-	--space-36: 9rem;
 	--container-max: 80rem;
 
 	/* Sidebar tokens */
@@ -773,18 +778,6 @@
 		}
 	}
 
-	.highlight-card {
-		@apply from-muted/25 border-border/50 relative inset-0 flex h-full w-full flex-col justify-center gap-2 border-t bg-linear-to-b to-transparent p-4 shadow-xl backdrop-blur-lg content-[''] md:p-6;
-		/* @apply relative z-10 flex h-full w-full flex-col justify-center gap-2 p-4 md:p-6; */
-
-		/* &:before {
-			@apply bg-muted border-border/50 absolute inset-0 -z-10 rounded-xl border shadow-xl backdrop-blur-xl content-[''];
-			}
-
-		&:after {
-			@apply to-muted/50 border-ring/50 absolute inset-0 -z-20 -m-2 rounded-xl border border-solid bg-radial-[at_100%_0%] from-amber-600/50 backdrop-blur-xl content-[''];
-		} */
-	}
 }
 
 @layer utilities {
