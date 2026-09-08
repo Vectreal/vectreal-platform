@@ -112,7 +112,7 @@ export function meta(_: Route.MetaArgs) {
 	return buildPageMeta({
 		...PUBLIC_SEO_PAGES.newsroom,
 		structuredData: buildCollectionPageJsonLd({
-			name: 'Vectreal News Room',
+			name: 'Vectreal Newsroom',
 			url: `${SITE_URL}/news-room`,
 			description: PUBLIC_SEO_PAGES.newsroom.description
 		})
@@ -264,7 +264,6 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 
 							<CtaPanel
 								className="mt-32"
-								eyebrow="Build while you're learning"
 								heading="Turn ideas from these articles into live 3D experiences."
 								description="Create a free account to publish your first scene and keep shipping faster with Vectreal."
 								actions={

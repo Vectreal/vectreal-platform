@@ -42,7 +42,7 @@ export const PUBLIC_SEO_PAGES = {
 		canonical: '/pricing'
 	},
 	newsroom: {
-		title: 'News Room - Vectreal',
+		title: 'Newsroom - Vectreal',
 		description: 'News and product notes from the Vectreal team.',
 		canonical: '/news-room'
 	},

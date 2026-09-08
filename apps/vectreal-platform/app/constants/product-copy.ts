@@ -30,8 +30,15 @@ export const PLATFORM_TAGLINE =
 export const PLATFORM_SHORT_DESCRIPTION =
 	'Vectreal lets developers and teams upload 3D models, run automated optimization pipelines, compose scenes, and publish them as embeddable iframes or via REST API. The viewer requires no WebGL framework on the embedding page.'
 
+/*
+  The most-read string in the product: it is DEFAULT_DESCRIPTION and the home
+  page's meta description. It used to stack two parallel triplets - "creating,
+  sharing, and exploring" then "upload, optimize, and publish" - which is the
+  rhythm rather than the content doing the work, and "exploring" named nothing
+  the product does. One enumeration, of the pipeline that actually exists.
+*/
 export const PLATFORM_SOCIAL_DESCRIPTION =
-	'Vectreal is your platform for creating, sharing, and exploring 3D scenes. Upload, optimize, and publish 3D content in seconds.'
+	'Upload a 3D model, optimize it, and publish it as an embed you can paste into any page. Open-source viewer, no WebGL framework required.'
 
 // ---------------------------------------------------------------------------
 // Supported upload formats
@@ -265,7 +272,7 @@ export const PLAN_OFFER_DESCRIPTIONS: Record<Plan, string> = {
 // ---------------------------------------------------------------------------
 
 export const PRICING_PAGE_COPY = {
-	heading: 'Simple, transparent pricing for every workflow.',
+	heading: 'Start free. Pay when your scenes go live.',
 	description:
 		'Start for free and upgrade when you need more. Every plan includes the core 3D publishing workflow without hidden fees.',
 	comparisonHeading: 'What each plan includes',
@@ -378,7 +385,7 @@ export const ENTITLEMENT_FEATURE_GROUPS: Array<{
 		]
 	},
 	{
-		label: 'Organisation',
+		label: 'Organization',
 		features: [
 			{
 				key: 'org_multi_member',

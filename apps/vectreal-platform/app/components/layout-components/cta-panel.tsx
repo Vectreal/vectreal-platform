@@ -5,7 +5,6 @@ import BasicCard from './basic-card'
 import type { ReactNode } from 'react'
 
 interface CtaPanelProps {
-	eyebrow?: string
 	heading: ReactNode
 	description?: ReactNode
 	actions: ReactNode
@@ -18,11 +17,15 @@ interface CtaPanelProps {
  * The newsroom index and the article page each had their own, agreeing on
  * neither the eyebrow tracking (`wider` vs `0.14em`), the heading size
  * (`text-2xl md:text-3xl` twice, from two different raw scales) nor the gap
- * between the parts. Both also coloured the eyebrow `text-primary`, which is
- * plain foreground - the accent never rendered.
+ * between the parts.
+ *
+ * There is no eyebrow any more. Both call sites filled it with a slogan -
+ * "Built for makers shipping in 3D", "Build while you're learning" - rendered
+ * in caps above a heading that already said the same thing. An eyebrow is a
+ * label for what follows; when there is nothing to label, it is decoration
+ * wearing a label's clothes.
  */
 export function CtaPanel({
-	eyebrow,
 	heading,
 	description,
 	actions,
@@ -34,14 +37,10 @@ export function CtaPanel({
 			cardClassName="flex flex-col gap-4 p-6 md:p-8"
 			className={cn(className)}
 		>
-			{eyebrow ? (
-				<p className="text-muted-foreground text-eyebrow">{eyebrow}</p>
-			) : null}
-
 			<h2 className="text-h3 font-heading max-w-2xl">{heading}</h2>
 
 			{description ? (
-				<p className="text-muted-foreground max-w-2xl leading-relaxed">
+				<p className="text-muted-foreground text-body max-w-2xl">
 					{description}
 				</p>
 			) : null}

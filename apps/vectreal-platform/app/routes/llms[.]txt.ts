@@ -69,7 +69,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		`- [Home](${origin}/): Platform overview, features, and getting started`,
 		`- [Pricing](${origin}/pricing): Plan comparison and upgrade`,
 		`- [Docs](${origin}/docs): Full platform and package documentation`,
-		`- [News Room](${origin}/news-room): Product updates and articles`,
+		`- [Newsroom](${origin}/news-room): Product updates and articles`,
 		`- [About](${origin}/about): Company information`,
 		`- [Contact](${origin}/contact): Support and inquiries`,
 		`- [Changelog](${origin}/changelog): Release history`,

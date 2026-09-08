@@ -149,7 +149,7 @@ export const docsPages: DocPage[] = [
 		slug: 'guides/embed-sdk',
 		title: 'Embed SDK',
 		description:
-			'Control embedded 3D scenes from your page - camera switching, scroll interactions, event callbacks, and the raw postMessage protocol.',
+			'Control embedded 3D scenes from your page: camera switching, scroll interactions, event callbacks, and the raw postMessage protocol.',
 		sourcePath: 'apps/vectreal-platform/app/routes/docs/guides/embed-sdk.mdx',
 		category: 'guides',
 		order: 3,
@@ -193,7 +193,7 @@ export const docsPages: DocPage[] = [
 		slug: 'packages/core',
 		title: '@vctrl/core',
 		description:
-			'Isomorphic 3D model processing - loader, optimizer, and exporter for Node.js and the browser.',
+			'Isomorphic 3D model processing: loader, optimizer and exporter, for Node.js and the browser.',
 		sourcePath: 'apps/vectreal-platform/app/routes/docs/packages/core.mdx',
 		category: 'packages',
 		order: 3,

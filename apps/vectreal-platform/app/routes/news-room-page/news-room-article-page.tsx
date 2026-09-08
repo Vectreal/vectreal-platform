@@ -70,7 +70,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 		})
 	}
 
-	const title = `${loaderData.article.title} - Vectreal News Room`
+	const title = `${loaderData.article.title} - Vectreal Newsroom`
 	const description = loaderData.article.excerpt
 	const canonical = `/news-room/${loaderData.article.slug}`
 
@@ -104,7 +104,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 				}),
 				buildBreadcrumbListJsonLd([
 					{ name: 'Home', item: SITE_URL },
-					{ name: 'News Room', item: `${SITE_URL}/news-room` },
+					{ name: 'Newsroom', item: `${SITE_URL}/news-room` },
 					{ name: loaderData.article.title }
 				])
 			]
@@ -325,7 +325,6 @@ export default function NewsRoomArticlePage({
 				</article>
 
 				<CtaPanel
-					eyebrow="Built for makers shipping in 3D"
 					heading="Ready to publish your first interactive scene?"
 					actions={
 						<>
