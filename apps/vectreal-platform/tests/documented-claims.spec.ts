@@ -106,6 +106,8 @@ const CLAIM_CARRYING_DOCS = [
 	'.agents/skills/vectreal-brand-ux-design/references/typography.md',
 	'.agents/skills/vectreal-brand-ux-design/references/motion.md',
 	'.agents/skills/vectreal-brand-ux-design/references/enforcement.md',
+	'.agents/skills/vectreal-brand-ux-design/references/anti-ai-look.md',
+	'.agents/skills/vectreal-brand-ux-design/references/evidence.md',
 	'apps/vectreal-platform/app/routes/docs/guides/publish-embed.mdx',
 	/*
 	  The SDK page's Security section makes the load-bearing claims about what a

@@ -33,6 +33,11 @@ keyboard access, focus rings and contrast.
 **Look at it.** A design change closes with a screenshot in both themes at real
 breakpoints, never with a claim that it should work.
 
+**Decide, then be consistent.** The things that make a site look machine-made are
+not particular colours or components; they are defaults nobody chose, applied
+uniformly. A choice you can state a reason for is the opposite of a template,
+even when it uses the same ingredients.
+
 ## Where the rules live
 
 The authoritative rules are in the design skill, which agents load automatically
@@ -45,6 +50,8 @@ and humans can read as ordinary markdown:
 | [Typography](.agents/skills/vectreal-brand-ux-design/references/typography.md) | The type scale, the faces, tooltip copy length |
 | [Motion](.agents/skills/vectreal-brand-ux-design/references/motion.md) | Durations, easings, reduced motion |
 | [Enforcement](.agents/skills/vectreal-brand-ux-design/references/enforcement.md) | The ESLint rules, the design specs, how to verify a change |
+| [The look we are avoiding](.agents/skills/vectreal-brand-ux-design/references/anti-ai-look.md) | What marketing surfaces must not look like, and what to do instead |
+| [Evidence](.agents/skills/vectreal-brand-ux-design/references/evidence.md) | What these claims rest on, and which popular numbers are fabricated |
 
 [The skill itself](.agents/skills/vectreal-brand-ux-design/SKILL.md) is a router
 over those five, plus an index of failure modes keyed by symptom — the fastest

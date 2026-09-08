@@ -25,7 +25,8 @@ decorate.
 The practical test: if the animation were removed, would the reader lose
 information about what just happened? A crossfade between two states of the same
 panel passes. A fade-up applied to every section on scroll does not: it is
-decoration wearing the costume of feedback.
+decoration wearing the costume of feedback, and
+[anti-ai-look.md](anti-ai-look.md) bans it by name.
 
 Frequent, low-novelty actions should carry the least motion. A control someone
 uses forty times an hour does not want a spring.

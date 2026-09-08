@@ -38,8 +38,8 @@ There is no `--shadow-*` token scale. Roughly 44 call sites use raw Tailwind
 and the publisher. Introducing a scale is a filed catalogue row, not a thing to
 do in passing — but the rule above governs any *new* surface today.
 
-`rounded-2xl shadow-lg p-6` is the untouched shadcn card default, and shipping it
-unexamined is its own tell.
+`rounded-2xl shadow-lg p-6` is the untouched shadcn card default and is banned on
+marketing surfaces by [anti-ai-look.md](anti-ai-look.md).
 
 ## Variants do not work on these classes
 

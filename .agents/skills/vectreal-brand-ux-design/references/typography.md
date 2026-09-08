@@ -82,7 +82,7 @@ pick a different shape:
 
 One face for headings and one for body, both committed to, is the point. Two
 interchangeable grotesques at similar weights read as an accident rather than a
-decision.
+decision - see [anti-ai-look.md](anti-ai-look.md).
 
 ## Tooltip copy: 140 characters
 

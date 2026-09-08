@@ -16,6 +16,8 @@ Duplicated rules drift, and this repo has the receipts.
 | [typography.md](references/typography.md) | The type scale, the faces, tooltip copy length |
 | [motion.md](references/motion.md) | Durations, easings, and when motion is allowed at all |
 | [enforcement.md](references/enforcement.md) | The ESLint rules, the design specs, claims blocks, the Tailwind scanning hazard, how to verify in a browser |
+| [anti-ai-look.md](references/anti-ai-look.md) | What marketing surfaces must not look like, and what to do instead |
+| [evidence.md](references/evidence.md) | What the design claims rest on, and which popular numbers are fabricated |
 
 ## The one answer worth inlining
 
@@ -39,6 +41,7 @@ wrong form is wrong.
 | A tooltip that has become a paragraph | [typography.md](references/typography.md) |
 | Motion added to decorate; a new animation with no `prefers-reduced-motion` guard | [motion.md](references/motion.md) |
 | A variant on a `ds-*` or `text-*` class silently emitting nothing | [enforcement.md](references/enforcement.md) |
+| A marketing surface that reads as templated: uniform cards, a pill above the H1, decorative gradient | [anti-ai-look.md](references/anti-ai-look.md) |
 | Loading, empty and error states added after the happy path | designed together, always |
 | Accessibility retrofitted after review | keyboard, focus ring, contrast, labels from the start |
 

@@ -52,7 +52,7 @@ Pair radius with padding. `--radius-2xl` is 28px, so a `rounded-2xl` panel padde
 inner blocks are comfortable at `p-3`.
 
 Uniform radius on every element, with identical padding, is a templated-design
-tell: the variation is what reads as decided.
+tell; see [anti-ai-look.md](anti-ai-look.md).
 
 ## Stacking: the `--z-index-*` tiers
 
