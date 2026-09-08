@@ -29,7 +29,7 @@ import { Route } from './+types/billing-upgrade'
 import {
 	FeatureCompareGrid,
 	PricingCardsSection
-} from '../../components/dashboard'
+} from '../../components/pricing'
 import { PLAN_ENTITLEMENTS, type Plan } from '../../constants/plan-config'
 import {
 	ENTITLEMENT_DISPLAY_LABELS,

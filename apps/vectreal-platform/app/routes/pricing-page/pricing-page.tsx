@@ -4,11 +4,11 @@ import { Separator } from '@shared/components/ui/separator'
 import { useState } from 'react'
 import { data, Link, useLoaderData } from 'react-router'
 
+import { BasicCard, PageHero } from '../../components/layout-components'
 import {
 	FeatureCompareGrid,
 	PricingCardsSection
-} from '../../components/dashboard'
-import { BasicCard, PageHero } from '../../components/layout-components'
+} from '../../components/pricing'
 import { PRICING_PAGE_COPY } from '../../constants/product-copy'
 import { getCheckoutOptions } from '../../lib/domain/billing/billing-dashboard-loader.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'

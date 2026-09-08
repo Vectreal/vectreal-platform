@@ -8,12 +8,12 @@ import { cn } from '@shared/utils'
 import { Check, Minus } from 'lucide-react'
 import React from 'react'
 
-import { PLAN_ENTITLEMENTS, type Plan } from '../../../constants/plan-config'
+import { PLAN_ENTITLEMENTS, type Plan } from '../../constants/plan-config'
 import {
 	ENTITLEMENT_FEATURE_GROUPS,
 	PLAN_DISPLAY_NAMES,
 	PLAN_HIGHLIGHTED
-} from '../../../constants/product-copy'
+} from '../../constants/product-copy'
 
 const PLANS: Plan[] = ['free', 'pro', 'business', 'enterprise']
 

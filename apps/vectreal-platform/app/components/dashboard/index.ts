@@ -41,11 +41,6 @@ export { SceneMetricsSection } from './scene-detail/scene-metrics-section'
 export { ScenePublishPanel } from './scene-detail/scene-publish-panel'
 export { SceneShareDrawer } from './scene-detail/scene-share-drawer'
 export { BillingSettingsSection } from './billing/billing-settings-section'
-export { FeatureCompareGrid } from './billing/feature-compare-grid'
-export {
-	PricingCardsSection,
-	type PricingCardsSectionProps
-} from './billing/pricing-cards-section'
 
 export * from './table-columns'
 export * from '../../types/dashboard'

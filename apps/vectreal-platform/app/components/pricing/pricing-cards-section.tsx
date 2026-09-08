@@ -27,8 +27,8 @@ import { cn } from '@shared/utils'
 import { Check, Minus, Zap } from 'lucide-react'
 import { Link } from 'react-router'
 
-import { formatLimitValue } from '../../../constants/limit-format'
-import { PLAN_LIMITS, type Plan } from '../../../constants/plan-config'
+import { formatLimitValue } from '../../constants/limit-format'
+import { PLAN_LIMITS, type Plan } from '../../constants/plan-config'
 import {
 	ANNUAL_DISCOUNT_CLAIM,
 	LIMIT_DISPLAY_LABELS,
@@ -39,10 +39,10 @@ import {
 	PLAN_FALLBACK_PRICES,
 	PLAN_HIGHLIGHTED,
 	PLAN_TAGLINES
-} from '../../../constants/product-copy'
-import { BasicCard } from '../../layout-components'
+} from '../../constants/product-copy'
+import { BasicCard } from '../layout-components'
 
-import type { BillingCheckoutOptions } from '../../../lib/domain/dashboard/dashboard-types'
+import type { BillingCheckoutOptions } from '../../lib/domain/dashboard/dashboard-types'
 
 // ---------------------------------------------------------------------------
 // Limit display config — labels and formatting both come from constants
