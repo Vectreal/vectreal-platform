@@ -61,6 +61,64 @@ jobs:
         with:
           fetch-depth: 0
 
+      # A branch cut from another pull request keeps that pull request's commits.
+      # Once the parent squash-merges, its work sits on main under a new sha, so
+      # this branch's merge base is behind it and GitHub re-renders the parent's
+      # files as this branch's work. Squashing then copies the parent's commit
+      # message into this commit's body and release-please records the one change
+      # twice. #750 was cut from #748 and displayed all six of #748's files after
+      # #748 merged.
+      #
+      # The tell is exact: the three-dot diff GitHub renders names files that
+      # merging would not change, because they already carry that content on the
+      # base branch. Rebasing removes both symptoms because it removes the cause.
+      - name: Check the diff is this branch's own work
+        if: ${{ github.event_name == 'pull_request' }}
+        shell: bash
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          # Explicit refspec: on a pull request, actions/checkout configures
+          # `remote.origin.fetch` for the merge ref, so `git fetch origin main`
+          # would leave `origin/main` stale or absent.
+          git fetch --no-tags --quiet origin "+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF"
+          base="origin/$BASE_REF"
+
+          # merge-tree answers "those two conflict" and "I cannot read one of those"
+          # with the same exit code, so the head has to be known good before its
+          # failure can be read as a conflict. Without this, a head the checkout
+          # does not have would take the skip below and report success.
+          git rev-parse --verify --quiet "$HEAD_SHA^{commit}" > /dev/null || {
+            echo "Head commit $HEAD_SHA is not in this checkout, so nothing was compared."
+            exit 1
+          }
+
+          # A conflicting branch cannot merge at all, so its diff says nothing here.
+          if ! tree=$(git merge-tree --write-tree "$base" "$HEAD_SHA"); then
+            echo "Branch conflicts with $base, so its merge result is undefined. Skipping."
+            exit 0
+          fi
+
+          comm -23 \
+            <(git diff --name-only "$base...$HEAD_SHA" | sort) \
+            <(git diff --name-only "$base" "$tree" | sort) > "$RUNNER_TEMP/displayed-but-unchanged.txt"
+
+          if [[ -s "$RUNNER_TEMP/displayed-but-unchanged.txt" ]]; then
+            echo "This pull request displays files it does not change:"
+            sed 's/^/  /' "$RUNNER_TEMP/displayed-but-unchanged.txt"
+            echo
+            echo "Each already carries this content on $base, so the branch is stacked"
+            echo "on work that has since merged. Rebase onto $base: the diff above is"
+            echo "what reviewers are being shown, and squashing would record those"
+            echo "commits in the changelog a second time."
+            exit 1
+          fi
+
+          echo "Every file in the diff is this branch's own work."
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
 
