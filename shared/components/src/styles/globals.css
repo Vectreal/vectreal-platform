@@ -71,7 +71,30 @@
 	--secondary: oklch(0.97 0 0);
 	--secondary-foreground: oklch(0.205 0 0);
 	--muted: oklch(0.97 0 0);
-	--muted-foreground: oklch(0.556 0 0);
+	/*
+	  Contrast-solved values, not eyeballed ones.
+
+	  Each of the four below was failing WCAG AA on a surface it is actually used
+	  on, and each was solved against `.ds-overlay` (an 8% foreground mix) rather
+	  than against `--background`, because the failures were all on cards: muted
+	  text reads 4.73:1 on a plain page and 3.49:1 inside a nested panel, which
+	  is why this looked fine in a hero and failed in every card in the product.
+
+	  Measured after: muted-foreground 4.55:1 on overlay and 5.57:1 on the page;
+	  destructive 4.50:1 and 5.52:1; ring 3.01:1 on an overlay and 3.69:1 on the
+	  page.
+
+	  `--input` is deliberately NOT raised to the 3:1 that 1.4.11 asks of a
+	  control boundary. Doing that turns every field edge into a heavy grey rule,
+	  and this system separates surfaces by value rather than by outlines - the
+	  whole reason the `ds-*` ladder exists. A field should be identified by its
+	  surface, not by a drawn box. The gap is real and recorded; the answer is a
+	  sunken fill, not a darker border.
+
+	  `contrast-tokens.spec.ts` pins these. Change one and it fails with the
+	  measured ratio, so the next person does not have to rediscover the method.
+	*/
+	--muted-foreground: oklch(0.519 0 0);
 	/*
 	  The hover/focus background for menus, options, and ghost controls, not a
 	  brand colour. It used to point at --orange, which made every dropdown item
@@ -80,11 +103,11 @@
 	*/
 	--accent: oklch(0.97 0 0);
 	--accent-foreground: oklch(0.205 0 0);
-	--destructive: oklch(0.637 0.237 25.331);
+	--destructive: oklch(0.534 0.237 25.331);
 	--destructive-foreground: oklch(0.985 0 0);
 	--border: oklch(0.922 0 0);
 	--input: oklch(0.922 0 0);
-	--ring: oklch(0.708 0 0);
+	--ring: oklch(0.618 0 0);
 
 	/* Success (green) - light theme */
 	--success: oklch(0.627 0.17 145);
@@ -242,11 +265,11 @@
 	/* Neutral hover/focus surface, matching --muted. See the light block above. */
 	--accent: oklch(0.269 0 0);
 	--accent-foreground: oklch(0.985 0 0);
-	--destructive: oklch(0.637 0.237 25.331);
+	--destructive: oklch(0.643 0.237 25.331);
 	--destructive-foreground: oklch(0.985 0 0);
 	--border: oklch(0.269 0 0);
 	--input: oklch(0.269 0 0);
-	--ring: oklch(0.439 0 0);
+	--ring: oklch(0.53 0 0);
 
 	/* Success (green) - dark theme */
 	--success: oklch(0.871 0.15 145);
@@ -489,7 +512,30 @@
 
 @layer base {
 	* {
-		@apply border-border outline-ring/50;
+		@apply border-border;
+	}
+
+	/*
+	  One focus indicator, for everything.
+
+	  This used to be `outline-ring/50` on `*`, which set the colour of the
+	  browser's own outline to a half-alpha ring - about 1.5:1 - and every
+	  control primitive then suppressed that outline and drew its own ring, at
+	  2.3:1 to 2.6:1. So the two ways a thing could be focused in this product
+	  were both under the 3:1 that WCAG 1.4.11 asks for, and links, which no
+	  primitive covers, got the weakest one of all.
+
+	  Declared here rather than per component because focus is not a component
+	  concern: a link, a summary, a `tabindex` div and a button should all say
+	  "you are here" the same way. `--ring` is solved for 3:1 in both themes.
+
+	  An outline rather than a ring: it follows `border-radius`, an
+	  `overflow-hidden` ancestor cannot clip it the way it clips a box-shadow,
+	  and the offset lifts it clear of the control's own edge.
+	*/
+	:focus-visible {
+		outline: 2px solid var(--ring);
+		outline-offset: 2px;
 	}
 
 	html {
