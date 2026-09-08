@@ -7,12 +7,16 @@
  * removed, so this is now the only place these strings live.
  *
  * Rule: keep every claim here checkable against code. Plan and limit shapes come
- * from ./plan-config; supported formats come from the loader and the file-input
+ * from ./plan-config, and the offer descriptions read its values rather than
+ * restating them; supported formats come from the loader and the file-input
  * accept pattern. Do not inline any of these strings in components.
  *
  * Prices are intentionally absent: they are Stripe-managed and loaded
  * dynamically. Point users to /pricing for current rates.
  */
+
+import { formatLimitCount, formatLimitValue } from './limit-format'
+import { PLAN_LIMITS } from './plan-config'
 
 import type { EntitlementKey, LimitKey, Plan } from './plan-config'
 
@@ -194,11 +198,42 @@ export const PAYMENT_TRUST_COPY = 'Secured by Stripe · Cancel anytime'
 // Plan offer descriptions for schema.org WebApplication.offers and llms.txt
 // ---------------------------------------------------------------------------
 
+/*
+  These sentences are English prose that reaches machine readers: `/llms.txt`
+  renders them verbatim and they are the `description` of every schema.org
+  `Offer`. Neither is rendered for a person with a locale - `/llms.txt` and
+  `/pricing` render per request inside the container, and the pages in the
+  prerender list are rendered during `docker build` - and neither the image nor
+  the build stage declares a `LANG`. So an unpinned `toLocaleString` would let
+  the published number depend on a container default nobody chose.
+  `buildWebSiteJsonLd` already declares `inLanguage: 'en-US'`; this agrees.
+
+  Only one interpolated number groups its digits today (Business's 2,000
+  scenes), but every one of them would change numbering system outside a
+  Latin-digit locale.
+*/
+const OFFER_LOCALE = 'en-US'
+
+const limit = (plan: Plan, key: LimitKey) =>
+	formatLimitValue(key, PLAN_LIMITS[plan][key], OFFER_LOCALE)
+
+const count = (plan: Plan, key: LimitKey, noun: string) =>
+	formatLimitCount(key, PLAN_LIMITS[plan][key], noun, OFFER_LOCALE)
+
+/*
+  The sentences stay hand-written. What moves into an interpolation is a number,
+  its unit, and the noun it counts, so a copy edit is still an ordinary string
+  edit - #828 changed the badge line here and would change it the same way today
+  - though a noun is now an argument to `count` rather than plain text.
+
+  Enterprise is left alone deliberately. Every limit it holds is null, which
+  formats as "Unlimited" or "Custom", and "Custom storage" is not a sentence -
+  which is why that entry was already written differently by hand.
+*/
 export const PLAN_OFFER_DESCRIPTIONS: Record<Plan, string> = {
-	free: '10 scenes, 500 MB storage, 3 concurrent published scenes. API access and community support included. Embedded scenes carry a small Vectreal badge. No credit card required.',
-	pro: '200 scenes, 10 GB storage, 50 concurrent published scenes, 20 projects. Removes the Vectreal badge from embedded scenes; otherwise the feature set matches Free.',
-	business:
-		'2,000 scenes, 100 GB storage, 500 concurrent published scenes. Adds team collaboration with role-based access (up to 10 seats) and priority support.',
+	free: `${count('free', 'scenes_total', 'scene')}, ${limit('free', 'storage_bytes_total')} storage, ${count('free', 'scenes_published_concurrent', 'concurrent published scene')}. API access and community support included. Embedded scenes carry a small Vectreal badge. No credit card required.`,
+	pro: `${count('pro', 'scenes_total', 'scene')}, ${limit('pro', 'storage_bytes_total')} storage, ${count('pro', 'scenes_published_concurrent', 'concurrent published scene')}, ${count('pro', 'projects_total', 'project')}. Removes the Vectreal badge from embedded scenes; otherwise the feature set matches Free.`,
+	business: `${count('business', 'scenes_total', 'scene')}, ${limit('business', 'storage_bytes_total')} storage, ${count('business', 'scenes_published_concurrent', 'concurrent published scene')}. Adds team collaboration with role-based access (up to ${count('business', 'org_seats', 'seat')}) and priority support.`,
 	enterprise:
 		'Unlimited scenes, published scenes, projects and seats, with storage sized to your needs. Adds a dedicated support channel. Custom pricing via sales.'
 }
