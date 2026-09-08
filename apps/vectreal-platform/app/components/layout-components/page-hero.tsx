@@ -50,7 +50,7 @@ const PageHero = ({
 						</p>
 					)}
 
-					<h1 className="text-headline max-w-4xl">
+					<h1 className="text-headline font-heading max-w-4xl">
 						{heading}
 					</h1>
 

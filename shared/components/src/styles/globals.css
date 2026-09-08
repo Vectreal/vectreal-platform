@@ -39,6 +39,12 @@
 @import 'tw-animate-css';
 @import '@fontsource-variable/dm-sans/opsz.css';
 @import '@fontsource-variable/dm-sans/opsz-italic.css';
+/*
+  Marketing headings only. `wght.css` rather than the package index: Funnel
+  Display has a single weight axis, so the index adds nothing and the axis file
+  is 17.7 KB for latin.
+*/
+@import '@fontsource-variable/funnel-display/wght.css';
 
 @custom-variant dark (&:is(.dark, .dark *));
 
@@ -354,6 +360,26 @@
 	  `:root`, where it would have collided with Tailwind's own default stack.
 	*/
 	--font-sans: 'DM Sans Variable', sans-serif;
+
+	/*
+	  The marketing heading face, applied by the `font-heading` utility and never
+	  by a rung.
+
+	  Baking a family into `.text-display` or `.text-headline` would change every
+	  dashboard and publisher heading already sitting on those rungs -
+	  `publisher/shell/drop-zone.tsx` uses `text-headline` today - so a marketing
+	  component writes `font-heading` beside the rung and product UI keeps DM
+	  Sans.
+
+	  Named `--font-heading` rather than `--font-display`: `--font-*` is a
+	  Tailwind namespace, so the latter would generate a `font-display` utility
+	  that reads as the CSS `font-display` descriptor.
+
+	  The family is 'Funnel Display Variable'. Fontsource suffixes the variable
+	  cut, and the unsuffixed name matches no `@font-face` in the bundle, so it
+	  would fall through to the fallback silently.
+	*/
+	--font-heading: 'Funnel Display Variable', sans-serif;
 
 	/*
 	  Motion durations, for `var(--duration-fast)` in a rule - which is how the
